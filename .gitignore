@@ -2,3 +2,6 @@
 *.tmp
 Thumbs.db
 *.bak
+skills/**/cache/
+*cookies*.json
+*_cookies*.json
