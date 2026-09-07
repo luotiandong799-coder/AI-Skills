@@ -5,3 +5,6 @@ Thumbs.db
 skills/**/cache/
 *cookies*.json
 *_cookies*.json
+plugins/marketplaces/
+plugins/cache/
+plugins/data/

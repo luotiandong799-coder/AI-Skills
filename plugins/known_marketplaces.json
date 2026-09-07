@@ -1,0 +1,43 @@
+{
+  "cb_teams_marketplace": {
+    "manifestName": "cb_teams_marketplace",
+    "type": "zip",
+    "source": {
+      "source": "zip",
+      "path": "https://download.codebuddy.cn/plugin-marketplace/cb_teams_marketplace-de338e37-a9f8-420c-b110-650e8a928873.zip",
+      "url": "https://download.codebuddy.cn/plugin-marketplace/cb_teams_marketplace-de338e37-a9f8-420c-b110-650e8a928873.zip"
+    },
+    "installLocation": "C:\\Users\\26719\\.workbuddy\\plugins\\marketplaces\\cb_teams_marketplace",
+    "description": "Marketplace from https://download.codebuddy.cn/plugin-marketplace/cb_teams_marketplace-de338e37-a9f8-420c-b110-650e8a928873.zip",
+    "lastUpdated": "2026-09-07T10:27:13.386Z",
+    "autoUpdate": true,
+    "isBuiltIn": true
+  },
+  "codebuddy-plugins-official": {
+    "manifestName": "codebuddy-plugins-official",
+    "type": "zip",
+    "source": {
+      "source": "zip",
+      "path": "https://download.codebuddy.cn/plugin-marketplace/codebuddy-plugins-official-4b9366ac-f7e5-4cef-b60a-99a5229ce2b2.zip",
+      "url": "https://download.codebuddy.cn/plugin-marketplace/codebuddy-plugins-official-4b9366ac-f7e5-4cef-b60a-99a5229ce2b2.zip"
+    },
+    "installLocation": "C:\\Users\\26719\\.workbuddy\\plugins\\marketplaces\\codebuddy-plugins-official",
+    "description": "Marketplace from https://download.codebuddy.cn/plugin-marketplace/codebuddy-plugins-official-4b9366ac-f7e5-4cef-b60a-99a5229ce2b2.zip",
+    "lastUpdated": "2026-09-07T10:27:19.067Z",
+    "autoUpdate": true,
+    "isBuiltIn": true
+  },
+  "workbuddy-builtin": {
+    "manifestName": "workbuddy-builtin",
+    "type": "directory",
+    "source": {
+      "source": "directory",
+      "path": "D:\\腾讯AI\\WorkBuddy\\resources\\app.asar.unpacked\\resources\\plugins\\workbuddy-builtin"
+    },
+    "installLocation": "D:\\腾讯AI\\WorkBuddy\\resources\\app.asar.unpacked\\resources\\plugins\\workbuddy-builtin",
+    "description": "Marketplace from D:\\腾讯AI\\WorkBuddy\\resources\\app.asar.unpacked\\resources\\plugins\\workbuddy-builtin",
+    "lastUpdated": "2026-09-04T12:25:46.646Z",
+    "autoUpdate": false,
+    "isBuiltIn": true
+  }
+}
