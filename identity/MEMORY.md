@@ -33,6 +33,17 @@
 - **context-compressor**（输入侧压缩·读进来只留哪些+会话记忆）→ 关闭：`关掉压缩` / `正常模式`
 - 恢复正常语气：`normal mode` / `正常模式`。全部默认长期开启、用户级。
 
+## VPN 使用规则（用户强制 · 2026-09-07）
+- **用完必须自动关闭**，绝不留后台运行（用户原话："VPN 用完要自动关掉，一定要自动关掉"）。
+- 客户端：`D:\爬楼梯用的\Athena\一元机场.VIP.exe`（Electron，进程名 `一元机场.VIP`）。仅在访问被墙站点（github.com 等）时启动。
+- 关闭标准动作（**无论任务成功、失败还是中断，都必须执行**）：
+  1. 优雅退出：`Get-Process -Name "一元机场.VIP" -EA 0 | ? {$_.MainWindowHandle -ne 0} | % {$_.CloseMainWindow()}`，等 8 秒
+  2. 仍存活则强杀：`Get-Process -Name "一元机场.VIP" -EA 0 | Stop-Process -Force`
+  3. 校验：`Get-Process -Name "*一元机场*" -EA 0` 应为空
+  4. 代理还原：读 `HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings`，若 `ProxyEnable=1` 且 `ProxyServer` 指向 127.0.0.1/localhost，改回 `0`
+  5. 验证 `https://www.baidu.com` 返回 200，确认没把用户网络弄坏
+- 任何自动化/任务：启动 VPN 后，必须把「关闭 VPN」显式写进收尾步骤（含失败与跳过分支）。
+
 ## 重要提醒
 规则完整版在 AGENTS.md，本摘要不可替代全文。若两处冲突，以 AGENTS.md 为准。
 
@@ -56,3 +67,9 @@
 - WorkBuddy「设置→个性化→全局自定义指令」在当前版本**找不到可写入存储**（已排查 settings.json / Preferences / Local Storage leveldb / IndexedDB 均无 instruction 字段）。已放弃——MEMORY.md 通道足够，勿再强改 leveldb（有损坏风险）。
 - workspace 级 AGENTS.md 不自动继承全局：靠 MEMORY.md 引导 + `D:\腾讯AI\AGENTS.md` 父级兜底覆盖。
 - 改规则时单一数据源：`~/.workbuddy/AGENTS.md`；同步到 `D:\腾讯AI\AGENTS.md`、`C:\Users\26719\WorkBuddy\AGENTS.md`、当前 workspace `AGENTS.md`（用 cp 保持 md5 一致）。**Codex 侧 `~/.codex` 原是符号链接（只需改一处），但 2026-09-04 晚已变真实目录，须同时写到 `D:/GPT/codex-home/AGENTS.md` 与 `~/.codex/AGENTS.md` 两处。**
+
+## 每日学习类自动化的通用偏好（2026-09-08 用户确认）
+- 周期学习任务（如每日 deeplearning.ai）必须维护「已学清单 + 候选池」，落地前先比对历史，避免重复学同一条。
+- **当天新内容与已学清单重复 / 无新可落地点时，不空转、不硬凑**：从候选池（往期沉淀但未采纳的好点）挑 1 条落地；候选池空了就重读最近几期主文，挑当时略过、现在能复用的方法。
+- 已学清单与候选池持久化在对应 automation 的 memory.md 里，并在自动化 prompt 中写死该行为。
+- 每日学习信源（2026-09-08 起）：`deeplearning.ai`（The Batch 最新一期 + short-courses Just Added）**+ `https://waytoagi.com/zh` 首页「知识库精选」最新 1–2 期**；WaytoAGI 的「最新 AI 产品和工具」列表是广告位，跳过。
