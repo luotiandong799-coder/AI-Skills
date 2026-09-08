@@ -36,6 +36,13 @@
 ## VPN 使用规则（用户强制 · 2026-09-07）
 - **用完必须自动关闭**，绝不留后台运行（用户原话："VPN 用完要自动关掉，一定要自动关掉"）。
 - 客户端：`D:\爬楼梯用的\Athena\一元机场.VIP.exe`（Electron，进程名 `一元机场.VIP`）。仅在访问被墙站点（github.com 等）时启动。
+- **启动前必须清环境变量（2026-09-08 排查确认，否则进程起不来）**：
+  ```powershell
+  $env:ELECTRON_RUN_AS_NODE=$null; $env:NODE_OPTIONS=$null
+  Start-Process "D:\爬楼梯用的\Athena\一元机场.VIP.exe"
+  ```
+  原因：WorkBuddy 的 shell 注入了 `ELECTRON_RUN_AS_NODE=1` + `NODE_OPTIONS=--require "D:/腾讯AI/WorkBuddy/.../node-language-shim.cjs"`，Electron 应用会继承并 require 该 shim，中文路径传参时 mojibake 成 `D:/锟斤拷讯AI/...` → MODULE_NOT_FOUND 崩溃。**凡是启动第三方 Electron 应用都要先清这两个变量。**
+- github.com 偶发首次 push 超时（`Failed to connect to 443 after 21s`）：**先原样重试 1–2 次**，多数能通，别急着开 VPN。
 - 关闭标准动作（**无论任务成功、失败还是中断，都必须执行**）：
   1. 优雅退出：`Get-Process -Name "一元机场.VIP" -EA 0 | ? {$_.MainWindowHandle -ne 0} | % {$_.CloseMainWindow()}`，等 8 秒
   2. 仍存活则强杀：`Get-Process -Name "一元机场.VIP" -EA 0 | Stop-Process -Force`
