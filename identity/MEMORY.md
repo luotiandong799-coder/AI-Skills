@@ -121,9 +121,10 @@
 - 仍有独当一面的 skill 不删（如 `smooth-browser` 云端 vs `stealth-browser` 本地反检测；`tavily` vs 元宝搜索 走不同服务）。
 - 判据：能反复用、能省步骤、能减少出错的才留；只好看一次的花哨技巧不写。
 
-## VPN 对 git push 无效（2026-09-10 实测，跨项目生效）
-- 客户端「一元机场.VIP」启动后**不会自动开启系统代理**（ProxyEnable 仍 0，配置里的 127.0.0.1:33210 未监听）；真正的代理进程是 `uniproxy`，监听 **127.0.0.1:33233**，但**只对订阅/API 域名放行**，github 的 CONNECT 返回 **405**。必须用户在 GUI 里选节点点连接，自动化做不到。
-- github 443 不通时：**本地 commit 照做**，记「待补 push」，下次先 `git push origin HEAD` 补；不要为 push 反复启停 VPN。
+## github 443 不通的处理（2026-09-10 实测修正，跨项目生效）
+- **github 直连是间歇性阻断，不是永久不通**：18:42 连续 3 次 443 失败 → 19:30 原样重试一次即推送成功。**先隔一会儿原样重试，别急着动 VPN**。
+- VPN 只能自动「启动进程」，**无法自动建立隧道**：Electron 界面在 UIA 树里只有 Pane、无可点击控件（uiautomation 深度遍历 8 层拿不到按钮），GUI 自动化点不了「连接」；代理进程 `uniproxy`（127.0.0.1:33233）只对订阅/API 域名放行，github 的 CONNECT 返回 405。要真正连上必须用户手动点。
+- push 失败时：本地 commit 照做（回滚能力已具备）→ 记「待补 push」→ 下次会话开头先 `git push origin HEAD`；不要为 push 反复启停 VPN。
 
 ## WorkBuddy 自定义模型（BYOK）配置（2026-09-10 验证）
 - 配置文件：`~/.workbuddy/models.json`（数组，字段：`id/name/vendor/url/apiKey/supportsToolCall/supportsImages/supportsReasoning/maxInputTokens/maxOutputTokens/reasoning{defaultEffort,supportedEfforts}`）。改完需**重启 WorkBuddy** 才在选择器出现；改前 `cp` 备份。
