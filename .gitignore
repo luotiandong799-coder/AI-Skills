@@ -8,3 +8,8 @@ skills/**/cache/
 plugins/marketplaces/
 plugins/cache/
 plugins/data/
+
+# SSH 私钥防护（绝不入仓）
+.ssh/
+id_rsa*
+id_ed25519*
