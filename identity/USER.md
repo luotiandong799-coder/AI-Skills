@@ -15,7 +15,7 @@ _Learn about the person you're helping. Update this as you go._
 
 ## Context
 
-测试 / 验证导向：用户通过给出明确指令（如改名、技能开关）检验 agent 是否准确执行，重视"指令即事实"，反对冗余寒暄。技能分工：caveman（输出极简）/ ponytail（决策少写）/ max-token-saver（输出压缩）/ context-compressor（输入压缩），均为用户级长期默认开启。
+测试 / 验证导向：用户通过给出明确指令（如改名、技能开关）检验 agent 是否准确执行，重视"指令即事实"，反对冗余寒暄。技能分工：max-token-saver（输出压缩，2026-09-10 已合并 caveman）/ ponytail（决策少写）/ context-compressor（输入压缩）/ loop-engineering（周期任务自进化），均为用户级长期默认开启。
 
 ---
 
