@@ -1,9 +1,9 @@
 ---
 name: 12306-train-assistant
-description: 12306 查询与订票辅助技能，支持余票查询、经停站查询、中转换乘、候补查询与提交/取消、登录状态检查、密码登录与二维码登录、下单与支付链接获取；当用户提到火车票、高铁票、经停站、中转、候补或 12306 查票时触发。
-description_zh: "12306 全功能辅助：余票/中转/候补/下单/支付，需登录账号"
-description_en: "Full 12306 assistant: ticket query, transfer, waitlist, booking and payment"
-version: 0.1.7
+description: 12306 查询与订票辅助技能（已合并原 12306 轻量查询技能）。两条路径：免登录快速查询（node scripts/query.mjs、scripts/stations.mjs，无需账号，输出 md/html/json）与需登录全功能（client.py：余票、经停站、中转换乘与下单、候补查询/提交/取消、登录状态、密码与二维码登录、订单与支付链接）。查询类需求默认走免登录脚本，仅下单/候补/订单/支付才需要登录。当用户提到火车票、高铁票、余票、时刻表、经停站、中转、候补、12306 查票或订票时触发。
+description_zh: "12306 全功能辅助：免登录查余票/时刻/站点，登录后中转/候补/下单/支付"
+description_en: "Full 12306 assistant: no-login ticket/schedule/station query, plus transfer, waitlist, booking and payment"
+version: 0.2.0
 allowed-tools: Bash,Read
 display_name: "12306-train-assistant"
 display_name_en: "12306-train-assistant"
@@ -31,11 +31,36 @@ visibility: "public"
 用户提到下列需求时触发本技能：
 
 - “查明天北京到上海余票”
+- “北京到上海有哪些高铁 / 时刻表”
 - “G1033 经停站”
 - “深圳到拉萨怎么中转”
 - “把第1个中转方案下单”
 - “候补排队状态怎么样”
 - “12306 登录状态”
+
+## 先选路径：免登录 vs 需登录
+
+- **只问信息**（余票、时刻表、车次、站点、经停）→ 用免登录脚本 `scripts/query.mjs` / `scripts/stations.mjs`，不要走登录流程
+- **要动作**（下单、候补、查订单、支付、乘车人）→ 才用 `client.py`，先 `status` 确认登录态
+
+## 免登录快速查询（node，无需账号）
+
+```bash
+node {baseDir}/scripts/query.mjs 北京 上海            # 默认今天，输出 html 文件路径
+node {baseDir}/scripts/query.mjs 北京 上海 -t G -f md # 只在对话里出 markdown 表格
+node {baseDir}/scripts/query.mjs 上海 杭州 -t G --depart 06:00-12:00 --max-duration 1h --seat ze
+node {baseDir}/scripts/query.mjs 深圳 长沙 --available --arrive -18:00
+node {baseDir}/scripts/query.mjs 广州 武汉 --json
+node {baseDir}/scripts/stations.mjs 杭州              # 站点/城市名解析
+```
+
+常用参数：`-d <YYYY-MM-DD>` 日期、`-t <G|D|Z|T|K>` 车型、`--depart/--arrive <HH:MM-HH:MM>` 时段、`--max-duration <2h|90m>` 最长历时、`--available` 仅有票、`--seat <swz,zy,ze,rw,dw,yw,yz,wz>` 指定席别、`-f <html|md>`、`-o <路径>`、`--json`。
+数据直连 12306 官方接口；站点缓存 7 天于 `{baseDir}/data/stations.json`。
+
+## 工具调用纪律（硬性）
+
+- 回答任何车次 / 余票 / 票价 / 时刻问题前，**必须先执行** `query.mjs` 或 `client.py`
+- **严禁凭记忆**给出车次号、票价、余票数量或统计数字
 
 ## 执行原则
 
