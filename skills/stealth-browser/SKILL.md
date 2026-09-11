@@ -14,6 +14,22 @@ visibility: "public"
 
 Silent, undetectable web automation combining multiple anti-detection layers.
 
+## 路径选择（先判难度，再选工具）
+
+浏览器类任务有多个可用通道，按下面顺序选，**不要一上来就用最重的**：
+
+| 任务 | 走哪条 |
+|---|---|
+| 打开页面、取内容、截图、点选等常规操作 | **内置 `agent-browser`**（默认路径，最轻） |
+| 需要持久登录态（登录一次、后续复用） | 本 skill 的 `--profile` / 会话保存（见下） |
+| 遇到反爬检测、Cloudflare 挑战 | 本 skill `scripts/cf_bypass.py` 或 DrissionPage |
+| 遇到 CAPTCHA | 本 skill `scripts/solve_captcha.py`（需打码平台 key） |
+| 云端自然语言浏览器代理（smooth.sh，需付费 CLI + `smooth-py`） | 仅当本机确已安装 `smooth` 且账号有额度时才用；未安装则走上面几条 |
+
+判断口径：**能静默就用内置通道，被拦住再升到本 skill 的脚本，云端付费通道最后考虑。** 同一任务不要多通道并行试，浪费额度也难定位问题。
+
+（合并说明：原 `smooth-browser` 技能与本事同为浏览器自动化功能位，其云端通道已收进上表；旧目录已删除，git 历史可回溯。）
+
 ## Quick Login Workflow (IMPORTANT)
 
 When user asks to login to any website:

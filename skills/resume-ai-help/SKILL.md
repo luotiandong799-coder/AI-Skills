@@ -2,9 +2,9 @@
 name: resume-ai-help
 display_name: 简历 AI 帮你写
 display_name_en: Resume AI Help Write
-description: 用于直接改写、润色或优化简历内容。当用户要求「优化简历」「改写简历」「润色简历」「帮我写简历」「生成优化版简历」「把这段经历写得更好」，或上传整份简历并要求产出修改后的版本时触发。支持复现简历「AI 帮你写」两阶段追问与优化交互；整份优化固定生成 HTML 和 PDF，单字段优化只返回该字段。仅负责内容创作和改写，不执行整份简历诊断、问题清单或 6 维评分；用户仅要求分析问题、评审或打分时，改用 resume-diagnosis。
-description_zh: 用于直接改写、润色或优化简历内容。当用户要求「优化简历」「改写简历」「润色简历」「帮我写简历」「生成优化版简历」「把这段经历写得更好」，或上传整份简历并要求产出修改后的版本时触发。支持复现简历「AI 帮你写」两阶段追问与优化交互；整份优化固定生成 HTML 和 PDF，单字段优化只返回该字段。仅负责内容创作和改写，不执行整份简历诊断、问题清单或 6 维评分；用户仅要求分析问题、评审或打分时，改用 resume-diagnosis。
-description_en: Use when the user asks to directly rewrite, polish, optimize, or create resume content, including requests such as "optimize my resume", "rewrite my resume", "polish this experience", "help write my resume", or generating a revised version from an uploaded resume. It supports the two-stage ask-and-optimize interaction. Full-resume optimization must produce HTML and PDF, while single-field optimization returns only the revised field. This skill creates or rewrites content but does not perform comprehensive diagnosis, issue reporting, or six-dimension scoring. If the user only asks for analysis, review, feedback, or scoring, use resume-diagnosis instead.
+description: 用于直接改写、润色或优化简历内容。当用户要求「优化简历」「改写简历」「润色简历」「帮我写简历」「生成优化版简历」「把这段经历写得更好」，或上传整份简历并要求产出修改后的版本时触发。支持复现简历「AI 帮你写」两阶段追问与优化交互；整份优化固定生成 HTML 和 PDF，单字段优化只返回该字段。仅负责内容创作和改写，不执行整份简历诊断、问题清单或 6 维评分；用户仅要求分析问题、评审或打分时，本技能不覆盖该范围，直接说明并询问是否改走内容改写。
+description_zh: 用于直接改写、润色或优化简历内容。当用户要求「优化简历」「改写简历」「润色简历」「帮我写简历」「生成优化版简历」「把这段经历写得更好」，或上传整份简历并要求产出修改后的版本时触发。支持复现简历「AI 帮你写」两阶段追问与优化交互；整份优化固定生成 HTML 和 PDF，单字段优化只返回该字段。仅负责内容创作和改写，不执行整份简历诊断、问题清单或 6 维评分；用户仅要求分析问题、评审或打分时，本技能不覆盖该范围，直接说明并询问是否改走内容改写。
+description_en: Use when the user asks to directly rewrite, polish, optimize, or create resume content, including requests such as "optimize my resume", "rewrite my resume", "polish this experience", "help write my resume", or generating a revised version from an uploaded resume. It supports the two-stage ask-and-optimize interaction. Full-resume optimization must produce HTML and PDF, while single-field optimization returns only the revised field. This skill creates or rewrites content but does not perform comprehensive diagnosis, issue reporting, or six-dimension scoring. If the user only asks for analysis, review, feedback, or scoring, state clearly that this skill does not cover that scope and ask whether to proceed with content rewriting instead.
 category: 求职招聘
 version: 2.0.1
 author: wangtengfei
