@@ -1,8 +1,8 @@
 ---
 name: wb-visual-gen
 description: >-
-  生成类视觉任务（AI 生图 / 改图 / 视频 / 3D / 网页前端）的端到端工作流与验收清单。当用户要求生图、写图像 prompt、AI 绘图、做海报/写真/地图/概念图、图生图改图、文生视频/图生视频、3D 生成、AI 做网页/前端页面，或生成结果"不对/不满意要改"时使用。含：需求拆解 → 给材料 → prompt 公式 → 参数 → 生成 → 对照验收清单自评 → 定向迭代（不重生成碰运气）→ 什么算做完。含 GPT-Image-2 六类爆款案例库（references/）。用户级默认可用。
-version: 1.1.0
+  生成类视觉任务（AI 生图 / 改图 / 视频 / 3D / 网页前端）的端到端工作流与验收清单。当用户要求生图、写图像 prompt、AI 绘图、做海报/写真/地图/概念图、图生图改图、文生视频/图生视频、3D 生成、AI 做网页/前端页面，或生成结果"不对/不满意要改"时使用。含：需求拆解 → 给材料 → prompt 公式 → 参数 → 生成 → 对照验收清单自评 → 定向迭代（不重生成碰运气）→ 什么算做完。另含网页/UI 生成的**反 AI 味设计基线**（禁 AI 紫渐变 / 三等分卡片 / Inter 默认 / 假截图 / 假数据名等 AI tells + 上线前检查表），适用于交付页面与 `show_widget` 内联 HTML/SVG。含 GPT-Image-2 六类爆款案例库（references/）。用户级默认可用。触发词：页面太 AI 味、像模板、设计丑、排版改一下、反 AI 味、设计基线。
+version: 1.2.0
 agent_created: true
 sources:
   - WaytoAGI 精选 2026-09-10《GPT Image 2.5 提示词与图像编辑完全指南》（摘要级，飞书正文需登录未取全文）
@@ -10,6 +10,7 @@ sources:
   - WaytoAGI 精选 2026-09-05《AI网站前端设计工作流》：需求→参考稿→生成→对照截图迭代→验收标准
   - deeplearning.ai short courses《AI Agents for Image and Video Generation》：生成→自动评分→未达标迭代闭环
   - 合并自旧 skill `image2-prompts`（B站「星火目」GPT-Image-2 案例库，2026-04-23）
+  - GitHub `Leonxlnx/taste-skill`（Anti-Slop Frontend Skill）AI TELLS 禁令 + Pre-Flight 检查表（2026-09-12 取独有点并入，整包不装：其余为框架专用实现细节）
 ---
 
 # 生成类视觉任务工作流
@@ -72,6 +73,40 @@ sources:
 | 合规 | 伪造截图、真实人物代言、无 AI 标识 | 见第五节红线 |
 
 **"什么算做完"**：清单全过 + 用途可交付（尺寸/格式/标识齐全）。用户没说用途 = 未定标，先问。
+
+## 三·五、网页 / UI 生成：反 AI 味设计基线
+
+来源：GitHub `Leonxlnx/taste-skill`（Anti-Slop Frontend Skill，AI TELLS 禁令 + 62 项 Pre-Flight）。
+**适用：交付的网页/前端页面，以及 `show_widget` 输出的内联 HTML/SVG 视觉**——同样的"AI 默认审美"在这里一样会犯。
+判据：**模型默认的不是设计选择，是没做选择。** AI 味的本质是把"生成器最常输出的样子"当成了方案。
+
+### 硬禁（见到即改，不要等用户提）
+| 类别 | 禁 |
+|---|---|
+| 配色 | AI 紫渐变、霓虹外发光、纯 `#000000`/纯 `#ffffff`、过饱和强调色；**全页最多 1 个强调色，饱和度 <80%** |
+| 布局 | **三等分 feature 卡片横排**（最高频 tell）→ 改 2 列 zig-zag / 非对称网格 / bento；同一布局家族全页最多用一次；zigzag 不得连续 3 个 section |
+| 字体 | 默认 Inter（+ slate-900 中性色）；`Fraunces`/`Instrument_Serif` 作 display serif；sans 标题里插随机 serif 单词（强调用同族的 bold/italic） |
+| 假内容 | `John Doe`/`Acme`/`Nexus`、SVG 蛋形头像、`99.99%`/`50%` 完美数字 → 用有语境的真名与"有机"数字（如 `47.2%`） |
+| 假截图 | **用 div 矩形拼的假终端 / 假 dashboard / 假任务列表 = 头号 tell**，宁可不做预览 |
+| 装饰垃圾 | section 编号 eyebrow（`001 · Capabilities`）、hero 版本标签（`V0.6`/`BETA`）、滚动提示（`Scroll ↓`）、装饰彩点、图片上叠 pill、照片版权 caption、hero 底部装饰文字条、每行都 `border-t`+`border-b` 的长表 |
+| 文案 | 营销填充动词（Elevate / Seamless / Unleash / Next-Gen）；英文文案里 **禁用 em-dash `—` 作分隔符**（改用句号/逗号/换行） |
+
+### 硬做（默认就该对）
+- **Hero 装得下首屏**：标题桌面 ≤2 行，副文本 ≤20 词，CTA 不滚动可见；`min-h-[100dvh]`，**不用 `h-screen`**
+- **bento 格子数 = 内容条目数**（3 项→3 格），不留空格；至少 2–3 格有真实视觉变化（图/渐变/纹理），不要全是白底白字卡
+- **eyebrow 节制**：每 3 个 section 最多 1 个（hero 算 1 个）；能删就删
+- **动效只动 `transform` / `opacity`**，禁 `window.addEventListener('scroll')`；`MOTION>3` 必须 honor `prefers-reduced-motion`；**说要做动效就得真做出来**，做不了就把档位降下来发干净的静态页
+- **深色/浅色同时定**，同页只锁一个主题，不在中段反色；两种模式都实际打开看过
+- 图标只用现成图标库，**不手写装饰 SVG**；图片用真实资源或 `picsum.photos/seed/{描述}/{w}/{h}`，不用坏掉的 Unsplash 链接
+- 多列布局显式写 `<768px` 折叠（`w-full` / `px-4`），不假设框架自动处理
+
+### 交付前自查（任一不过 = 没做完，先修）
+1. 上面"硬禁"表里有没有残留？
+2. 全页强调色是否唯一？按钮文字是否过 WCAG AA？CTA 标签桌面端是否单行？
+3. 布局家族是否 ≥4 种（8 个 section 的页面）？
+4. 有没有 div 假截图 / 手写装饰 SVG / 纯文字极简凑版面？
+5. 每个动效能否一句话说清它在传达什么（层级/叙事/反馈/状态）？说不清就删
+6. 移动端与深色模式实际看过？
 
 ## 四、六类爆款案例索引
 
