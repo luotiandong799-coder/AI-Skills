@@ -9,7 +9,7 @@ import time
 import requests
 from pathlib import Path
 
-SECRETS_DIR = Path.home() / ".clawdbot" / "secrets"
+SECRETS_DIR = Path.home() / ".workbuddy" / "secrets"
 
 
 def load_api_keys():
@@ -46,7 +46,7 @@ def solve_recaptcha_v2(site_key: str, page_url: str, invisible: bool = False, pr
         elif p == 'capsolver' and keys.get('capsolver'):
             return _solve_capsolver_recaptcha(keys['capsolver'], site_key, page_url, invisible)
     
-    raise ValueError("No CAPTCHA API keys configured. Add keys to ~/.clawdbot/secrets/captcha.json")
+    raise ValueError("No CAPTCHA API keys configured. Add keys to ~/.workbuddy/secrets/captcha.json")
 
 
 def solve_recaptcha_v3(site_key: str, page_url: str, action: str = "verify", min_score: float = 0.7, provider: str = None) -> str:

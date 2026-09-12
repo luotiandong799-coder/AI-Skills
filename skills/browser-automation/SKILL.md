@@ -36,7 +36,7 @@ python scripts/stealth_session.py -u "https://target.com" -s sitename --headed -
 # 3) 之后无头复用
 python scripts/stealth_session.py -u "https://target.com" -s sitename --load
 ```
-会话存于 `~/.clawdbot/browser-sessions/<sitename>.json`；登录尝试记录在 `attempts.json`。
+会话存于 `~/.workbuddy/browser-sessions/<sitename>.json`；登录尝试记录在 `attempts.json`。
 
 **会话纪律（来自 smooth 通道的强项，通用适用）**
 - **一个网站一个 profile，命名要有含义**（如 `github-account`、`shop-work`），并把「哪个 profile 对应哪个站点」写进记忆，下次直接复用，不重复登录
@@ -54,7 +54,7 @@ python scripts/stealth_session.py -u "https://target.com" -s sitename --load
 | 代理与身份 | 轮换住宅代理、UA 轮换、时区与语言伪装 | `proxy_rotate.py` |
 
 依赖：`puppeteer-extra` + `puppeteer-extra-plugin-stealth`、`playwright`、`undetected-chromedriver`、`DrissionPage`（`pip install undetected-chromedriver DrissionPage`）。
-打码 key 存 `~/.clawdbot/secrets/captcha.json`，代理池存 `~/.clawdbot/secrets/proxies.json`。
+打码 key 存 `~/.workbuddy/secrets/captcha.json`，代理池存 `~/.workbuddy/secrets/proxies.json`。
 
 执行策略：
 1. **先静默后显示**——先 headless 试，失败或需验证码再切 headed，避免打扰用户

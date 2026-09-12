@@ -13,7 +13,7 @@ from typing import Optional, List, Dict
 from dataclasses import dataclass
 from collections import defaultdict
 
-SECRETS_DIR = Path.home() / ".clawdbot" / "secrets"
+SECRETS_DIR = Path.home() / ".workbuddy" / "secrets"
 
 
 @dataclass

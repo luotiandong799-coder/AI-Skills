@@ -10,8 +10,8 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-SESSIONS_DIR = Path.home() / '.clawdbot' / 'browser-sessions'
-ATTEMPTS_LOG = Path.home() / '.clawdbot' / 'browser-sessions' / 'attempts.json'
+SESSIONS_DIR = Path.home() / '.workbuddy' / 'browser-sessions'
+ATTEMPTS_LOG = Path.home() / '.workbuddy' / 'browser-sessions' / 'attempts.json'
 
 # 设置输出编码
 if sys.platform == 'win32':

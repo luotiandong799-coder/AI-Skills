@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-TASK_DIR = Path.home() / '.clawdbot' / 'tasks'
+TASK_DIR = Path.home() / '.workbuddy' / 'tasks'
 TASK_DIR.mkdir(parents=True, exist_ok=True)
 
 class TaskRunner:

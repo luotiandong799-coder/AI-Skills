@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-SESSIONS_DIR = Path.home() / ".clawdbot" / "browser-sessions"
+SESSIONS_DIR = Path.home() / ".workbuddy" / "browser-sessions"
 
 
 def login_and_save(url: str, session_name: str, wait_for_url: str = None, timeout: int = 300):

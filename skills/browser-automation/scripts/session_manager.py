@@ -11,8 +11,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, List, Any
 
-SESSIONS_DIR = Path.home() / ".clawdbot" / "browser-sessions"
-PROFILES_DIR = Path.home() / ".clawdbot" / "browser-profiles"
+SESSIONS_DIR = Path.home() / ".workbuddy" / "browser-sessions"
+PROFILES_DIR = Path.home() / ".workbuddy" / "browser-profiles"
 
 
 def init_dirs():
