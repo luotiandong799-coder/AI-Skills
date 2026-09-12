@@ -148,7 +148,8 @@
 - **删除后必查引用**：确认无其他技能 / 规则文件 / 自动化 prompt 指向被删技能，有悬空引用一并修掉（2026-09-11 顺手修了 `resume-ai-help` 指向不存在的 `resume-diagnosis`）。
 - **【2026-09-12 纠错 · 证据】上面 09-11 那两批"已删除"记录与实际不符**：`tavily` / `tencent-yuanbao-standard-search` / `smooth-browser` / `stealth-browser` / `zoom-out` / `handoff` / `llm-wiki` **本机 `~/.workbuddy/skills/` 下一直都在**（目录时间停在 2026-09-04，从未删），只在 git 仓库里删掉了。
   - **根因**：写记录时没复核磁盘。**硬规则：删除动作后必须 `ls -1 ~/.workbuddy/skills/` 复核，记录只能写已验证的事实。**
-  - 2026-09-12 已实际删除前 6 个（均已被 `web-search` / `browser-automation` / `wb-spec-driven` 完全覆盖），**用户级技能 28 → 22**；`llm-wiki` 因内容已被 `wb-loop-engineering` v1.4.0 吸收，本轮保留目录但**不再视为独立技能**（下轮确认无引用后删）。
+  - 2026-09-12 已实际删除前 6 个（均已被 `web-search` / `browser-automation` / `wb-spec-driven` 完全覆盖）；**同日第二轮再删 `llm-wiki`**（独有条目——默认落点 `~/.workbuddy/wiki-knowledge/`、初始化四步、页面 frontmatter 模板、Obsidian/Marp/Web Clipper 用法、六类适用场景——已逐条搬进 `wb-loop-engineering` v1.6.0，触发词并集也补进 description）。**用户级技能 28 → 21**。
+  - **用户 2026-09-12 再次强调（已写进 AGENTS.md 0.7 硬性条）**：只要"可能重复"就**同轮做完「合并两支好点 → 成一个新的 → 删掉差的」**；**禁止只标注不执行**（写"已被 X 吸收/待删"却留着目录 = 没做）；不确定是否重复时按重复处理。
   - 同轮纠错：`browser-automation` 陈旧路径 `~/.clawdbot` → `~/.workbuddy`（SKILL.md + 7 脚本）；`university-applications` 名实不符（name=留学申请、内容=命理）→ description 已改写防误触发。
 
 ## github 访问 + Git 安全红线（2026-09-10 实测更新，跨项目生效）
