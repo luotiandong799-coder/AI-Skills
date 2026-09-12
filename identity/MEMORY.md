@@ -146,6 +146,10 @@
   - **保留（无同类重叠，用户领域能力）**：12306 / fund / resume-ai-help / university-applications / image-processor / prompt-library-40 / edge-pwa-shortcut / github / github-ssh-over-443 / windows-migrate-to-d-via-junction / api-gateway / autoresearch。
   - commit `fb878ab`（合并）、`1ed88ae`（规则强化），push 均成功。
 - **删除后必查引用**：确认无其他技能 / 规则文件 / 自动化 prompt 指向被删技能，有悬空引用一并修掉（2026-09-11 顺手修了 `resume-ai-help` 指向不存在的 `resume-diagnosis`）。
+- **【2026-09-12 纠错 · 证据】上面 09-11 那两批"已删除"记录与实际不符**：`tavily` / `tencent-yuanbao-standard-search` / `smooth-browser` / `stealth-browser` / `zoom-out` / `handoff` / `llm-wiki` **本机 `~/.workbuddy/skills/` 下一直都在**（目录时间停在 2026-09-04，从未删），只在 git 仓库里删掉了。
+  - **根因**：写记录时没复核磁盘。**硬规则：删除动作后必须 `ls -1 ~/.workbuddy/skills/` 复核，记录只能写已验证的事实。**
+  - 2026-09-12 已实际删除前 6 个（均已被 `web-search` / `browser-automation` / `wb-spec-driven` 完全覆盖），**用户级技能 28 → 22**；`llm-wiki` 因内容已被 `wb-loop-engineering` v1.4.0 吸收，本轮保留目录但**不再视为独立技能**（下轮确认无引用后删）。
+  - 同轮纠错：`browser-automation` 陈旧路径 `~/.clawdbot` → `~/.workbuddy`（SKILL.md + 7 脚本）；`university-applications` 名实不符（name=留学申请、内容=命理）→ description 已改写防误触发。
 
 ## github 访问 + Git 安全红线（2026-09-10 实测更新，跨项目生效）
 - **✅ 首选解法：remote 用 SSH over 443，直连不需要 VPN。** 实测：`github.com:443` 的 HTTPS 超时 20s 无响应（被墙）；`github.com:22` SSH **通**；`ssh.github.com:443` SSH **通（3/3 稳定）**。原因：封锁是 **TLS SNI 检测**（认 github.com 的 HTTPS 握手），SSH 协议不带 SNI 故放行。已配好 `~/.ssh/id_ed25519`（无 passphrase）+ `~/.ssh/config`（github.com → ssh.github.com:443）+ remote 改 `git@github.com:...`；用户已加公钥，`git push` 直连成功、5 笔积压一次推完。**HTTPS + token 绕不过**（同样走被阻断的 443 TLS）。完整步骤见 skill `github-ssh-over-443`。
