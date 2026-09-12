@@ -1,7 +1,7 @@
 ---
 name: university-applications
 description: '命理 / 玄学一站式解读。**注意：目录名 university-applications 是市场安装包遗留的错名，本技能与留学申请、择校、文书完全无关，留学类问题不要触发本技能。** 能力：八字四柱、紫微斗数、奇门遁甲、六爻、梅花易数、塔罗、星盘、数字命理、九宫飞星风水、合婚择吉、黄历运势。本地档案、可选每日推送（默认关闭）、浏览器六爻界面与 HTML 报告。仅作文化参考，不替代医疗、法律、心理、财务、婚姻等专业建议；遇重大决策请咨询专业人士。触发词：八字、紫微、奇门、六爻、塔罗、星盘、风水、算命、合婚、择吉、运势、命理、玄学。'
-version: 1.2.1
+version: 1.2.2
 metadata:
   displayName: 命理大师
   author:
@@ -353,6 +353,9 @@ node scripts/push-toggle.js status <userId>
 openclaw cron list              # 查看当前已注册任务
 openclaw cron delete <任务ID>    # 也可直接按 ID 删除
 ```
+
+> **⚠️ 环境适配说明（2026-09-12 审计核实）**：当前运行环境是 **WorkBuddy，没有 OpenClaw 运行时**——本机实测 `openclaw` 命令不存在（`command -v openclaw` 无结果）。因此 **每日推送 / `push-toggle.js` 定时任务在本环境不可用**，只能在具备 OpenClaw 运行时的宿主里使用；上面的 `openclaw cron` 命令在本机执行必然报"命令不存在"，不要为此反复排查。
+> 本环境可用的是**命理计算部分**（八字 / 紫微 / 奇门 / 六爻 / 塔罗 / 星盘 / 风水 / 合婚择吉 / 黄历），直接调用本地脚本即可。
 
 推送内容：综合指数、幸运颜色/方位/数字、今日宜忌、风险预警、吉时、每日一言。
 

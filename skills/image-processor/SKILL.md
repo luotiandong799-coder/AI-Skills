@@ -7,8 +7,8 @@ description_zh: "处理用户上传的图片，压缩、缩放、格式转换、
 description_en: "Process images, compress, resize, convert, crop, rotate, flip, grayscale, watermark, rounded corners. Fully local and offline, no cloud service, no API key."
 category: tool
 version: "1.0.0"
-author: "你的合作方名称"
-allowed-tools: "bash, python3, read_file, write_file"
+author: "unknown"
+allowed-tools: "Bash, Read, Write"
 ---
 
 # 图片处理技能指令
