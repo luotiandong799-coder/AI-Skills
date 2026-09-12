@@ -145,7 +145,8 @@
   - `wb-spec-driven` v1.4.0：吸收 `handoff`（跨会话交接文档四段结构、只引用不内联、下一步优先序、建议加载技能）+ `zoom-out`（陌生代码先上浮抽象层取模块/调用地图，不下钻），删两个旧技能。
   - `wb-loop-engineering` v1.4.0：吸收 `llm-wiki`（知识库三层 raw 不可变 / wiki 由 agent 独占写 / schema 共同演进 + ingest-query-lint 三操作 + 好答案归档回库 + log 可 grep），删 `llm-wiki`。**同时落地候选池积压项**（WaytoAGI 09-04《Obsidian 完整分享》三层分层 + 定期健康检查）。
   - `wb-skill-authoring` v1.1.0：新增「去重与合并流程」7 步（先查同类 → 列双方好坏 → 合并装进双方好点 → 触发词取并集 → 删旧目录不留备份 → 删后查引用 → 留痕）。
-  - **保留（无同类重叠，用户领域能力）**：12306 / fund / resume-ai-help / university-applications / image-processor / prompt-library-40 / edge-pwa-shortcut / github / github-ssh-over-443 / windows-migrate-to-d-via-junction / api-gateway / autoresearch。
+  - **保留**：① 用户领域能力（个人自用，**不因"我用不到"而删**）：12306 / fund-v2 / resume-ai-help / university-applications / image-processor / prompt-library-40 / edge-pwa-shortcut；② agent 工作流：github / github-ssh-over-443 / windows-migrate-to-d-via-junction。
+  - **2026-09-12 删除（用户："把没用的就删了"；证据驱动）**：`api-gateway`（依赖 `maton` CLI + Maton 账号 OAuth，本机 `which maton` = NOT FOUND、无任何凭证痕迹 → **客观完全不可用**，占 1.3MB / 224 文件）、`autoresearch`（转化文案 A/B 专用：landing page / ad copy / CTA，与用户工作流无关，历史记录零调用）。**用户级技能 24 → 22**；删除前已查引用（仅本文件提及，已同步更新），无悬空引用。
   - commit `fb878ab`（合并）、`1ed88ae`（规则强化），push 均成功。
 - **删除后必查引用**：确认无其他技能 / 规则文件 / 自动化 prompt 指向被删技能，有悬空引用一并修掉（2026-09-11 顺手修了 `resume-ai-help` 指向不存在的 `resume-diagnosis`）。
 - **【2026-09-12 纠错 · 证据】上面 09-11 那两批"已删除"记录与实际不符**：`tavily` / `tencent-yuanbao-standard-search` / `smooth-browser` / `stealth-browser` / `zoom-out` / `handoff` / `llm-wiki` **本机 `~/.workbuddy/skills/` 下一直都在**（目录时间停在 2026-09-04，从未删），只在 git 仓库里删掉了。
