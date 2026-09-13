@@ -1,0 +1,71 @@
+---
+name: wb-artifact-verification
+description: 对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。
+agent_created: true
+---
+
+# 生成物验证（独立 oracle + 差分 + 变异测试）
+
+## 何时用
+- 用户要"验证生成的代码/结果是否正确""验证能否执行""明确反馈是否成功"。
+- 任何"先产出、再自检"的任务。**不适用**：纯排障找根因（走 `wb-debug-loop`）、需求实现流程（走 `wb-spec-driven`）。
+
+## 铁律
+1. **"跑通了" ≠ "正确"**。只报 exit code 0 不构成验证。
+2. **验证器与被验证物不能同源**。oracle 必须是另一种算法 / 外部常数，不能复用产物里的函数。
+3. **必须证明验证器有检出能力**：注入已知错误（变异体），验证器**必须**报 FAIL。全部变异体被捕获，才允许说"验证成功"。有变异体逃逸 → 结论是"验证器不可信"，不是"产物没问题"。
+4. **失败要在报告里定位到具体检查项**，不许只给一句"有问题"。
+5. 不夸大：同一 agent 写的产物与验证器仍是单上下文，需在结论里显式声明该局限，并说明用什么补偿（独立算法 / 第三方常数 / 变异测试）。
+
+## 三层检查清单
+### A. 生成层（结构/契约）
+- 存在性 + sha256 + 行数（可溯源）
+- `ast.parse` 通过；`python -m py_compile` 真过编译
+- 必需函数/接口齐备，**参数名与顺序**符合约定
+- 反退化扫描：`TODO`/`FIXME`/`...`/空 `pass` 函数体/占位符
+- 自包含性：只 import 标准库（`sys.stdlib_module_names`）
+- CLI/接口契约：`--help` exit 0；非法子命令/非法入参 → 非 0 退出
+- 以模块方式导入并直接调用 API（不止测 CLI）
+
+### B. 执行层（取值正确性）
+每个用例：exit code + 输出可解析 + **schema 键集合完全一致** + **值 == 至少一个 oracle** + **边界值**（0 / 1 / 空 / 负数 / 极值）+ **确定性**（同命令跑两次字节一致）。
+- 差分模糊测试：随机输入 × 2 个以上独立 oracle，全量比对（记录 seed 保证可复现）
+- 内部一致性：若产物输出"结果 + 过程/证据"（如编辑脚本、对齐、trace），必须**重放过程验证能推出结果**，且过程代价 == 结果值
+
+### C. 检出能力层（变异测试）
+- 至少 5 个变异体，覆盖不同失败族：**数值 off-by-one / 过滤条件弱化 / 语义静默归零 / 契约字段改名 / 边界判断翻转**
+- **等价变异体必须先识别再排除**：若变异后语义与原实现完全等价（例：删掉 `sorted(key=(-count, first_pos))` 里的 tie-break —— Python dict 插入序本就等于首次出现序），它**必然逃逸**。这不是验证器失明，必须显式标注为"等价变异体，不计入检出率"，否则会误判验证失败、也会掩盖真正的盲点。
+- 每个变异体**独立目录 + 原始文件名**（见坑 4），`caught = 存在任一 FAIL`
+- 报告里记录 `caught_by`，用于确认是"真实的取值检查"抓到它，而不是无关路径错误
+
+## 生成侧：用用户自接入的端点直接生成（绕开客户端 UI）
+场景：客户端 UI 只给某几档强度，但用户要卡里的档位。做法：读 `~/.workbuddy/cache/acc-product-config-v3.json` 里 `custom-local:*` 条目的 `url` / `apiKey`（凭证**只在内存在用，绝不落盘、绝不打印**），直接 POST。
+- **客户端声明的 `supportedEfforts` 不代表 API 边界**：实测某模型 UI 只声明 `["high"]`，直接发 `reasoning_effort:"medium"` 仍返回 200。→ 想知道边界，只能打一次真实请求。
+- **「接受」≠「被采纳」**：200 只说明服务端不拒绝该值。想证明参数真的改变了行为，必须做 A/B（同 prompt 只改 effort，比较 `reasoning_tokens`），且**必须让每次调用都跑完**——被 `max_tokens` 截断的那次数据无效（会被上限污染成"有差异"的假象）。
+- **推理型模型先探预算**：实测某模型 medium 档为 115 行代码烧掉 19,335 reasoning token / 63,075 字符思考文本；`max_tokens=8192` 时 `finish_reason=length`、8192 token 全花在 reasoning 上、**正文 0 字节**（产物是空的，生成的第一个失败点在这里而不是代码质量）。→ 生成前把上限开到 32k 量级，并检查 `finish_reason` 与 `content_len > 0`。
+- 生成后先做**提取校验**：`finish_reason=stop`、正文非空、行数合理；再从响应里剥离 markdown 围栏并存盘，然后才进 A/B/变异测试。
+- 成本要如实报给用户：这类模型上"中等强度"往往并不便宜。
+
+## 判定口径
+```
+ok = 无 FAIL 且 全部变异体被捕获
+verdict = "SUCCESS" if ok else "FAILURE"   # 同时作为 process exit code
+```
+输出三件套：`REPORT.md`（人读，检查表 + 变异表 + 失败项）+ `verification_report.json`（机读）+ `console.txt`（一行一项摘要）。**退出码 0/1 必须与 verdict 一致**。
+
+## 本机（Windows）落地坑 —— 都踩过
+1. **bash 不可用**：PortableGit shim 缺 `head/dirname/ls`，管道全废 → 改用 PowerShell 或 Read/Write/Glob/Grep 专用工具。
+2. **PowerShell 工具不回传 stdout** → 结论必须由脚本自己写 UTF-8 文件，再用 Read 读回。
+3. **重定向编码**：PS 5.1 的 `>` / `*>` 产 UTF-16（Read 会判为二进制拍死）。用 `| Set-Content -Encoding UTF8` 或让 Python 自己 `write_text(..., encoding="utf-8")`。redirect 目标目录**必须先存在**，否则整条 PowerShell 语句失败、子进程根本不执行（现象极具误导性：日志没生成、子进程却"好像跑过"）。
+4. **按模块名动态导入的检查会误报**：变异体若写成 `mutants/M1-xxx.py`，`import numkit` 会失败 → 把每个变异体放进 `mutants/<name>/numkit.py`，使导入类检查对原件与变异体行为一致。
+5. **`python` 可能是 WindowsApps 桩**：固定用 `C:\Users\26719\.workbuddy\binaries\python\versions\3.13.12\python.exe`。
+6. 产物落 `D:\腾讯AI\yt\outputs\<日期>_<主题>\`，不落 C 盘、不落会话工作区。
+
+## 最小骨架
+```python
+# 1) 独立 oracle（另一种算法，禁止 import 产物里的实现）
+# 2) 检查表：rep.add(id, group, desc, ok, detail) 逐项记 PASS/FAIL + 证据详情
+# 3) 变异：src.replace(old, new)，old 必须先断言 in src，否则记 applied=False（证伪无效）
+# 4) ok = not rep.failed and all(m["caught"] for m in mutants)
+```
+参考实现：`D:\腾讯AI\yt\outputs\2026-09-13_dp41flash_medium_verify\verify\verify.py`（34 检查 / 5 变异体 / 全绿通过）。

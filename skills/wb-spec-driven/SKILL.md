@@ -2,12 +2,12 @@
 name: wb-spec-driven
 description: >-
   规约驱动的多步实现（Spec-Driven Development）。当用户要求做 3 步以上的实现任务、跨会话长任务、或需要自主跑到交付的编码/改造任务时自动应用：先立规约（constitution + 本次变更 spec，含验收标准与范围外）→ 信息不足先澄清、禁止脑补 → 计划-实现-验证循环 → 独立验证 → 交付。融合 Agent 技能地图的执行节奏、重新对齐触发、进度留痕与边界自限；含陌生代码先上浮抽象层取全局地图、以及跨会话交接文档写法（均合并自旧技能）。单次小改动不套用（走 wb-ponytail 决策后直接改）。触发词：多步任务、长任务、按计划执行、自己跑完、交付给我、实现方案、重构、改造、批量修改、跨会话任务、交接、handoff、接手、新会话继续、陌生代码、先看全局、zoom out、spec、验收标准、需求不明确、先澄清、对抗性复核、防静默跳过、决策纪律、设计防呆、防错、poka-yoke。
-version: 1.12.0
+version: 1.12.1
 ---
 
 # wb-spec-driven（多步实现：先立规约，再动手）
 
-来源：deeplearning.ai The Batch issue-369 Spec-Driven Development（JetBrains / Paul Everitt）+ short-course《Spec-Driven Development with Coding Agents》+ Andrew Ng《AI Engineering skills map — Using Coding Agents》；合并已删 skill `task-implement` 的独有价值。
+来源：deeplearning.ai The Batch issue-369 Spec-Driven Development（JetBrains / Paul Everitt）+ short-course《Spec-Driven Development with Coding Agents》+ Andrew Ng《AI Engineering skills map — Using Coding Agents》；合并已删 skill `task-implement` 的独有价值。方法论与 GitHub `obra/superpowers`（28.6 万星开发方法论：先问清需求、再拆计划、测试先行，本周热榜第 5 名，2026-09-13 核对）逐条对照一致，本技能即其等价实现，无需另装。
 
 **核心判断：多步任务失败的根因很少是"不会写"，是"没先说清做什么算做完"。** 规约不是文档负担，是把验收标准提前到动手之前。
 
