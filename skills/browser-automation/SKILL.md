@@ -1,7 +1,7 @@
 ---
 name: browser-automation
 description: 浏览器与网页自动化统一入口（合并原 stealth-browser 与 smooth-browser 两个同类技能，并保留两者各自的强项）。当需要打开网页、填表、抓取网页数据、测试站点、登录后持久复用会话、绕过反爬/Cloudflare/验证码、或跑静默无头自动化时使用。含四条路径：内置 agent-browser（常规默认）→ 持久登录 profile → 本地反检测脚本（CF / 验证码 / 代理 / 会话保存）→ 云端自然语言浏览器代理（smooth.sh，需已安装且有余量）。触发词：打开网站、抓取网页、填表、登录、爬取、自动化网页、绕过 Cloudflare、验证码、无头浏览器、browser automation、scrape、fill the form、log into。
-version: 1.1.0
+version: 1.2.0
 agent_created: true
 sources:
   - 合并自旧 skill `stealth-browser` v1.0.0（本地四层反检测 + 8 个 python 脚本）
@@ -12,7 +12,10 @@ sources:
 
 **核心判断：能静默轻量就用内置通道；被拦住才升级到本地脚本；云端付费通道最后考虑。同一任务不要多通道并行试——浪费额度且难定位问题。**
 
-**前置检查（2026-09-13 实测教训，失败≥2次根因诊断结论）**：`agent-browser open` 首次调用挂起超时（120s+ 被杀、无输出）的根因是 **ms-playwright Chromium 未安装**——open 会在启动时静默下载 ~500MB。用前先探针：`ls "$LOCALAPPDATA/ms-playwright"`（Windows）或 `ls ~/.cache/ms-playwright`（Linux/mac）；目录不存在/为空 → **先 `agent-browser install`（后台跑，约几分钟）再 open**，不要延长超时硬冲（违反 wb-execute-discipline 原则三）。
+**前置检查（2026-09-13 实测教训，两次根因修正）**：
+1. `agent-browser open` 首次调用挂起超时（120s+ 被杀、无输出）的根因是 **ms-playwright Chromium 未安装**——open 会在启动时静默下载 ~500MB。用前先探针：`ls "$LOCALAPPDATA/ms-playwright"`（Windows）或 `ls ~/.cache/ms-playwright`（Linux/mac）；目录不存在/为空 → **先 `agent-browser install`（后台跑，约几分钟）再 open**，不要延长超时硬冲（违反 wb-execute-discipline 原则三）。
+2. **open 前台调用容易被工具超时误杀**：冷启动 + 导航可能超过命令超时 → **用后台模式启动**（`(agent-browser open <url> > log 2>&1 &)` + sleep 后 snapshot），不要立刻下"通道不可用"结论——曾因前台超时误判为"沙箱禁浏览器"，被 example.com 探针证伪。
+3. **代理兼容坑**：VPN（uniproxy 等）开系统代理时，curl 经代理可通但 Chromium 的 CONNECT 隧道被拒（ERR_TUNNEL_CONNECTION_FAILED）——客户端级不兼容，agent 侧无解，标注归属用户（开 TUN 模式 / 换节点）。
 
 ## 一、路径选择
 
