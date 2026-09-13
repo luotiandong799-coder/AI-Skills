@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检（触发词设计 / 描述质量 / 文件拆分 / 跨工具迁移 / 安装前安全审查 / 安装后接线 / 触发评测盲测 / 重复技能的去重与合并流程）。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、技能抢触发、误触发、审计技能、技能过期、拼写错误、乱码、失效工具名、质量硬杠、scoped tools、绝对路径。
-version: 1.8.0
+version: 1.9.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -82,10 +82,18 @@ version: 1.8.0
 - **模板 / 素材放 `assets/`**
 - 判据：**能被代码写死的用脚本，需要判断的留给 SKILL.md**
 
+## 换行符：技能文件必须 LF（跨平台的静默故障）
+来源：agency-agents（279 个 agent 人设库）用 `.gitattributes` 强制 LF 的工程实践。
+- **为什么**：技能靠 YAML frontmatter（`---` 包裹的 `name` / `description` / `version`）被发现和加载。CRLF 会让部分解析器读不到 frontmatter → **技能静默不加载、不报错、只是永远不触发**。这是最难排查的一类故障：文件在、内容对、就是不生效。
+- **Windows 上的成因**：`core.autocrlf=true` 时，git 在 checkout 会把 `.md` 转成 CRLF。仓库若无 `.gitattributes`，下次 git 触碰该文件就会被转换（git 会明确警告 `LF will be replaced by CRLF`）——**此时文件往往仍是 LF，风险是预期性的，别等它炸**。
+- **硬要求**：托管技能的仓库根目录放 `.gitattributes`，写入 `*.md text eol=lf`（需要时加 `*.yml` / `*.json`），让换行符不受本地 autocrlf 影响。
+- **体检项**（并入「审计已启用技能」）：`git ls-files --eol <skill.md>` 看 `w/` 字段，`w/crlf` 即隐患。发现 CRLF 就地转 LF 再提交，不要只改内容。
+- 反模式：只在自己这台机器上改好内容，不锁换行符 → 换机 / 重装 / 换工具后技能凭空不触发，且毫无报错可循。
+
 ## 跨工具迁移
 - 核心约束（触发条件、硬性规则、收尾动作）必须写在 SKILL.md 内，不依赖某个工具的插件 / hook 机制——换工具就失效的约束等于没写
-- 工具特有的能力（如某工具的专属工具调用）在正文里显式标注为"仅 X 下适用"，并给出降级做法
-- 迁移后必查：路径分隔符、命令是否跨平台、编码是否 UTF-8
+- 工具特有的能力（如某工具的专属工具调用）在正文里显式标注为“仅 X 下适用”，并给出降级做法
+- 迁移后必查：路径分隔符、命令是否跨平台、编码是否 UTF-8、**换行符是否 LF**
 
 ## 安装前安全审查（第三方 skill）
 按 P0 / P1 / P2 分级，先审 `SKILL.md` 再审 `scripts/`：

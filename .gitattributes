@@ -1,0 +1,3 @@
+# 统一 LF 换行：CRLF 可能破坏 YAML frontmatter 解析，导致 skill 静默不加载、不报错、永不触发
+# 本机 core.autocrlf=true，若无本文件，git 会在 checkout 把 .md 转成 CRLF
+*.md text eol=lf
