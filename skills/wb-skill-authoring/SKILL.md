@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检（触发词设计 / 描述质量 / 文件拆分 / 跨工具迁移 / 安装前安全审查 / 安装后接线 / 触发评测盲测 / no-skill 对照 / 效果归因 / 重复技能的去重与合并流程）。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、TRACE、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、质量硬杠、scoped tools、绝对路径、组合三平面、展示行为知识分离、agent 组合结构、双路由、meta-router、原生路由、指令改写、指令迭代、执行轨迹、reasoning 轨迹、prompt 自动改进、改了指令还是不行、STOP/WAIT/PROCEED、什么时候不该跑、重复触发、技能快速路径表、指标噪声、重复采样、趋势不是单点、评分器在抖、技能是行为包、指令加工具、可复用行为包、混淆代理、共享身份、授权作用域、按调用方授权、三积木、动作数据指令、谁控制、副作用归模型决定、版本号语义、破坏性变更、按次协商版本、废弃过渡期、迁移路径、non-scope、不做什么、职责边界、选择依据、编码决策、内容作者与触发者、显式选中。
-version: 1.27.0
+version: 1.28.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -146,6 +146,8 @@ version: 1.27.0
 - **参考料放 `references/`**：长清单、模板、映射表按需读取，不常驻上下文
 - **模板 / 素材放 `assets/`**
 - 判据：**能被代码写死的用脚本，需要判断的留给 SKILL.md**
+- **加载契约：只有路由加载，子文件互不加载**（来源：trailofbits/skills·mutation-testing SKILL.md，2026-09-15 实拉）——workflow 与 reference 由 SKILL.md 的路由表**成对指定**（选了哪个 workflow → 一并加载它列出的 references），子文件内部不写"另请参见 X"让加载决策层层扩散；**加载决策收敛在路由一处**，否则上下文涨多少不可控。配套判据：reference 按条件加载的（如"仅 Solidity 目标加载 blockchain-patterns"）在路由表里写明触发条件
+- **跨工具调用间 shell 状态不持久**（来源：同上 second-opinion v2）：每次工具调用是独立 shell——本轮定义的变量下一轮就没了；后一轮要用，就**重新赋值到落盘路径再读**，不假设"刚才 export 过还在"
 
 ## 脚本通道纪律：stdout 是数据通道，日志必须走 stderr（来源 MCP 官方《Build an MCP server》2026-09-15 实访）
 - **STDIO 型进程的 stdout 是协议/数据通道**：往 stdout 里 print 日志会**静默污染**协议流（MCP JSON-RPC 因此直接坏掉）；HTTP 型进程没这个约束。
