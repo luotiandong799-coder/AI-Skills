@@ -1,8 +1,8 @@
 ---
 name: github-ssh-over-443
 description: >-
-  GitHub 连不上 / git push 超时 / GitHub 打不开时用 SSH over 443 绕过。当出现以下情况时应用：`git push` 报 `Failed to connect to github.com:443`、clone/fetch 卡住无响应、github.com 网页打不开、为推代码反复启动 VPN、需要给 GitHub 配置免翻墙访问。核心判断：HTTPS(443) 被 TLS SNI 检测阻断，而 SSH 协议不带 SNI 所以放行——改 remote 为 SSH 即可直连，多数情况根本不需要 VPN。也适用于判断"到底是网络被封还是认证没配好"。
-version: 1.0.0
+  GitHub 连不上 / git push 超时 / GitHub 打不开时用 SSH over 443 绕过。当出现以下情况时应用：`git push` 报 `Failed to connect to github.com:443`、clone/fetch 卡住无响应、github.com 网页打不开、为推代码反复启动 VPN、需要给 GitHub 配置免翻墙访问、**读仓库里的文件/列目录/看最近提交**（raw.githubusercontent.com 同样被墙，应改走 api.github.com）。核心判断：HTTPS(443) 被 TLS SNI 检测阻断，而 SSH 协议不带 SNI 所以放行——改 remote 为 SSH 即可直连，多数情况根本不需要 VPN；取文件内容则走 api.github.com（实测直连 200）。也适用于判断"到底是网络被封还是认证没配好"。
+version: 1.1.0
 ---
 
 # github-ssh-over-443（GitHub 访问被打断时的直连解法）
@@ -49,6 +49,20 @@ timeout 20 ssh -T -o BatchMode=yes git@github.com 2>&1 | tail -1
    git remote set-url origin git@github.com:<用户名>/<仓库>.git
    ```
 5. **验证**：`ssh -T git@github.com` 应返回 `Hi <用户名>! You've successfully authenticated`；随后 `git push` 应一次成功。
+
+## 取仓库文件内容：走 API，不要直连 raw
+实测（2026-09-14）：**`raw.githubusercontent.com` 与 `github.com` 网页同样被墙（HTTP 000）**，但 **`api.github.com` 可直连（200）**。所以"读仓库里的文件"这件事不该走 raw，也不该被迫开 VPN：
+
+```bash
+# 单文件原文（Accept 头决定返回 raw 还是 base64 JSON）
+curl -s -H "Accept: application/vnd.github.raw" \
+  "https://api.github.com/repos/<owner>/<repo>/contents/<path>"
+```
+
+- **列目录 / 全树**：`https://api.github.com/repos/<o>/<r>/git/trees/<ref>?recursive=1`
+- **最近提交（增量监控）**：`https://api.github.com/repos/<o>/<r>/commits?per_page=10`（配 `| python -c` 一屏出 date/sha/message）
+- **批量核多个仓库**：一次 for 循环打 `/repos/<o>/<r>/commits?per_page=1`，比逐站 WebFetch 省时省 token
+- 未认证配额 60 次/小时（按 IP）；本类"每轮几条"的用量够用，撞限再考虑 token。
 
 ## 注意
 - **HTTPS + token 方案无效**：token 也要走被阻断的 443 TLS 通道，绕不过去。
