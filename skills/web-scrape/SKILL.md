@@ -128,6 +128,18 @@ pip install -U crawl4ai && crawl4ai-setup && crawl4ai-doctor
 5. `--selector ".content"`
 6. 仍失败 → 对方防护强，**停止尝试**，换来源或用官方 API
 
+### 403 误拦诊断（来源：GitHub `lobuhi/byp4xx` 方法论合规子集，2026-09-16 实拉）
+
+报 403 先别急着换档/换 IP——先判断是**误拦**还是**真拒绝**：
+
+- **仅限自己有权访问的页面**。先自问：这个页面我本来有权访问吗？没有 → 停止，这是访问控制，不是抓取问题。
+- 有权访问 → 用 URL 规范化变体排除 WAF/CDN 误拦（一次只改一个变量，避免混淆成因）：
+  1. 尾部斜杠：`/path` ↔ `/path/`
+  2. 大小写变体：`/Path` / `/PATH`
+  3. 路径编码：`%2e`、`%2f`、`..;`
+- 仍 403 → 才走 `--tier hard` / `--proxy`（换出口 IP 验证是否为 IP 级误拦）。
+- **禁止**：默认凭据尝试、`X-Custom-IP-Authorization` / `X-Forwarded-For` 伪造来源头等**突破访问控制**手段——与「十一、合规红线」冲突，一律不用。
+
 ## 九、站点难度记忆
 
 探测结果按域名记在 `scripts/.tier-cache.json`（已归一化：去 www、去端口、小写）。
@@ -172,7 +184,7 @@ python scripts/scrape.py "URL" --no-cache # 本次忽略记忆
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | 内容为空/只有导航 | JS 渲染 | `--tier medium` + `--wait 3` |
-| 403 / "Just a moment" | 反爬拦截 | `--tier hard` 或 `--proxy` |
+| 403 / "Just a moment" | 反爬拦截 | 先走「八、403 误拦诊断」（限自己有权访问的页），再 `--tier hard` 或 `--proxy` |
 | 超时 | 页面太重 | 加大 `--timeout` |
 | Markdown 混着广告 | 正文提取失败 | `--selector "article"` |
 | `Executable doesn't exist` | 浏览器未装 | `scrapling install`（不装也能抓静态页） |
