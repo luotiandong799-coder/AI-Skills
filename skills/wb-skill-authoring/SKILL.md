@@ -1,9 +1,9 @@
 ---
 name: wb-skill-authoring
 description: >-
-  评测集、holdout、留出集、正例控制、语义反例、路由请求、评分材料、过窄断言、迎合检查器、证据强度分层、激活率。、查重、双键检索、来源标识、重复落地、回滚版本号、同一源二次消费
+  评测集、holdout、留出集、正例控制、语义反例、路由请求、评分材料、过窄断言、迎合检查器、证据强度分层、激活率。、查重、双键检索、来源标识、重复落地、回滚版本号、同一源二次消费、引用前先验证生产者、指向空来源比不写更糟、抑制兜底、只移植结构不移植假设、兜底链要能解析、名字稳定不等于契约稳定、形状变更、静默拒绝正确产物
   Skill 的写法与体检（触发词设计 / 描述质量 / 文件拆分 / 跨工具迁移 / 安装前安全审查 / 安装后接线 / 触发评测盲测 / no-skill 对照 / 效果归因 / 重复技能的去重与合并流程）。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、TRACE、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、质量硬杠、scoped tools、绝对路径、组合三平面、展示行为知识分离、agent 组合结构、双路由、meta-router、原生路由、指令改写、指令迭代、执行轨迹、reasoning 轨迹、prompt 自动改进、改了指令还是不行、STOP/WAIT/PROCEED、什么时候不该跑、重复触发、技能快速路径表、指标噪声、重复采样、趋势不是单点、评分器在抖、技能是行为包、指令加工具、可复用行为包、混淆代理、共享身份、授权作用域、按调用方授权、三积木、动作数据指令、谁控制、副作用归模型决定、版本号语义、破坏性变更、按次协商版本、废弃过渡期、迁移路径、non-scope、不做什么、职责边界、选择依据、编码决策、内容作者与触发者、显式选中、空泛流程、模型自造技能、技能素材来源、gotchas、控制度校准、脆弱性、给默认不给菜单、干净上下文、快照基线、near-miss、近失、触发率、祈使句、description 上限、name 规范、timing 取舍、调指令算修了吗、缓解不是修复、加固不是修复、改了两遍还是这样、别再加一句必须、指令层兜底、失败发生在指令之后、溯源元数据、provenance、发布分级、晋升门槛、curated/learned 分级、技能 pedigree。
-version: 1.64.0
+version: 1.65.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -743,3 +743,15 @@ grep -rn "<旧名>" ~/.workbuddy/skills /c/Users/26719/.workbuddy/AGENTS.md "D:/
 - 在 **≥2 个独立上下文/项目**中被实际使用并确认有效（对应 ECC「project → global 当且仅当在 2+ 项目见到」的晋升规则）；
 - 已通过 §双键检索确认不是对已发布技能的重复。
 未达则留在本机-only，继续累积证据；禁止为了「凑数」把未验证技能直接发版（呼应「不硬凑 / 不编造 idle commit」铁律）。
+
+## 引用前先验证生产者真的产出它；保留名字不等于保留契约（来源：neolabhq/context-engineering-kit·`grounded-instruction-references.md` + `stable-name-changed-shape.md`，2026-09-17 实拉）
+原文：`When an instruction tells an agent to take a value from a named file, section, or field, first open the producer of that format and confirm it actually emits that value. An instruction pointing at a source that never exists leaves the agent with no defined behaviour — worse than stating no rule at all, because it suppresses the fallback that would otherwise apply. ... port its structure, never its assumptions about what the input contains.`
+`When you change the SHAPE of a block but deliberately keep its NAME so consumers can still locate it, grep those consumers for assertions about the BODY, not just for lookups of the name. A consumer that validates the old shape under the stable name does not fail loudly — it silently rejects every correct artifact the new shape produces.`
+
+- **引用一个来源之前，先打开"生产者"确认它真的产出那个值**：技能里写"取 X 文件的 `#### Verification` 段"，就要先 `grep` 那个文件确认它真有这一段。→ 判据：**指向不存在的来源，比不写这条规则更糟**——不写时还有默认兜底；写了却指空，把兜底也一并抑制了，agent 进入"无定义行为"。
+- **移植模式时，只移植结构，绝不移植"输入里有什么"的假设**：从参考实现搬一套模板/流程过来，最容易顺手把"上游一定会给出 Y"这个假设一起搬过来。→ 判据：**结构是可移植的，输入契约不是**；每个取值点都要对新环境的生产者重新取证一次。
+- **兜底链必须以"总能解析的来源"收尾**：`A if set — otherwise B — otherwise C` 这条链里，C 必须是确定存在的。→ 判据：链上任何一环指空，整条链在那一支上失效，而且失效时没有报错。
+- **改了块的"形状"却故意保留"名字"时，要 grep 消费者对主体的断言，不只是对名字的查找**：只查"谁按这个名字找它"会漏掉最危险的那类——**按旧形状做校验的消费者不会大声失败，它会静默拒绝新形状产出的每一个正确产物**。→ 判据：**名字稳定 ≠ 契约稳定**；形状变更的排查面是"谁断言了内容"，不是"谁引用了标题"。这类消费者即使本轮不改，也要在报告里逐条列出。
+  - 与 §结构体检（脚本路径真实存在）的分工：那条查**路径存在**；本条查**路径里有没有你说的那个字段/段落**，以及**形状变了之后谁会静默失效**。
+- 反模式：写"见 XX 文件的 Y 段"但从没打开过该文件；从别处搬模板时连取值假设一起搬；兜底链最后一环是个不存在的值；保留旧标题改写内容后只 grep 标题引用就宣布兼容。
+- **提升层**：可复用 Skill（引用完整性 / 变更影响面）。

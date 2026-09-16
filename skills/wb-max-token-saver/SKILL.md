@@ -1,8 +1,8 @@
 ---
 name: wb-max-token-saver
 description: >-
-  动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。等价于 Max-Token-Saver 插件的压缩逻辑，在 WorkBuddy 下由本技能直接执行。触发词含 "caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "复利项" / "减少轮数" / "一次调用不是一轮" / "换挡信号" / "能力不足" / "连续不改善" / "热路径" / "后台 pass" / "留痕只存元数据" / "整理移出每轮" / "可自检追问" / "discernment nudge" / "追问具体性" / "别唠叨"；关闭："off" / "正常模式" / "stop caveman" / "normal mode"。、进度流、诊断流、里程碑播报、中间态汇报、失败细节不进进度、审批点优先
-version: 1.15.0
+  动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。等价于 Max-Token-Saver 插件的压缩逻辑，在 WorkBuddy 下由本技能直接执行。触发词含 "caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "复利项" / "减少轮数" / "一次调用不是一轮" / "换挡信号" / "能力不足" / "连续不改善" / "热路径" / "后台 pass" / "留痕只存元数据" / "整理移出每轮" / "可自检追问" / "discernment nudge" / "追问具体性" / "别唠叨"；关闭："off" / "正常模式" / "stop caveman" / "normal mode"。、进度流、诊断流、里程碑播报、中间态汇报、失败细节不进进度、审批点优先、压缩范围、不许删未触及内容、省 token 不是删除许可、净中性不等于无损失、预算关不上就报告增长、不从别处筹 token
+version: 1.16.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -158,3 +158,12 @@ version: 1.15.0
 - 与 §清晰性例外（该啰嗦时必须啰嗦）的分工：该啰嗦的部分放进**诊断流**，不是塞回进度流。
 - 反模式：每一步都贴完整命令输出；长任务只有结尾一段总结、中途完全不可见；把失败堆栈混在进度播报里让人分不清"这是要我处理还是只是记录"。
 - **提升层**：输出 / 工作流。
+
+## 压缩只付在本次变更范围内，不许从没被点名的内容里"筹"token（来源：neolabhq/context-engineering-kit·`.claude/rules/scope-bounded-token-budget.md`，2026-09-17 实拉）
+原文：`When a change adds lines to a prompt or agent file and the project's token-minimalism rule presses back, compress the text you were asked to change — never sections the task never mentioned. Trimming untouched content silently destroys guidance nobody reviewed, and it hides inside a diff that looks like a net-neutral refactor. If the budget still does not close, report the growth; do not fund it from elsewhere.`
+
+- **"省 token"是一条写作准则，不是删除许可证**：当本次改动让文件变长、而精简规则压过来时，**只允许压缩你被要求改的那部分**。→ 判据：**改动范围 = 压缩范围**；任务没提到的段落一律不动。
+- **删掉未触及的内容是最隐蔽的一种破坏**：它**无声**地毁掉没人审过的指导，而且藏在一份"看起来净中性"的重构 diff 里——评审看到增删相抵，会以为什么都没丢。→ 判据：**净中性不等于无损失**；判断依据永远是"删掉的那段是否属于本次任务"，不是"总行数有没有涨"。
+- **预算关不上就报告增长，不许从别处筹钱**：原文 `report the growth`，且在报告里写明"文件从 A 行涨到 B 行，全部来自新增的 X，未压缩任何无关章节"。→ 判据：**增长是可汇报的事实，超预算是需要人来决策的取舍**；自己偷偷抹平 = 替评审做了他没授权的决定。
+- 反模式：为了"+43 行"去删另一节的四条硬规则；看到 diff 增删相抵就认为安全；把"文件离大小上限还远"当成可以顺手清理的理由；压缩完不说删了什么。
+- **提升层**：工具 / 可复用 Skill（压缩纪律的边界）。

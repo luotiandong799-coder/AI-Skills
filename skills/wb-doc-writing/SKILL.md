@@ -1,8 +1,8 @@
 ---
 name: wb-doc-writing
 description: >-
-  技术文档写作与评审（写给人看的文档：设计文档 / RFC / 提案 / 迁移方案 / ADR 决策记录 / 决策日志 / 评审报告）。当用户要求"写设计文档""写方案/RFC""写 ADR""记录一下为什么这么决定""评审这份文档""帮我改/润色这段技术文字""这份文档交付前过一遍""找找文档里的问题"时应用。核心方法论：编辑即诊断（每次编辑必须点名它修的具名缺陷，最小编辑胜出；无缺陷就改写自然或已批准的语言，本身就是缺陷）；缺口标记法（事实无来源写 [source wanted]、主张缺失写 [input wanted]、未完成段写 [DRAFT - input wanted]，删除留洞优于编造）；控制三问（改写后问"哪句还像语言模型 / 增删了事实吗 / 是否以新修辞形式重建了被删模式"，增和删都算错）；不受理清单（禁用构造清单本身不证明任何东西，同一段落多个迹象同时出现才标记）；Why & What 决策框（替代方案必须带最强论点，否则是稻草人）；设计文档完备性五缺陷；ADR 的 Negative 强制非空 + 接受后不可编辑 + append-only 决策日志；评审报告的判决先行与命名空情况；交付前去名测试与冷读整读。触发词：设计文档、RFC、提案、ADR、决策记录、决策日志、superseded、评审文档、文档评审、改文档、润色、技术写作、语言模型味、AI 味、去名测试、source wanted、input wanted、稻草人、Why & What、Negative 不得为空。不适用：做事前的规约与验收标准（走 wb-spec-driven）；交互式教学课程（走 wb-teaching）；生成物的正确性验证（走 wb-artifact-verification）。
-version: 1.2.0
+  技术文档写作与评审（写给人看的文档：设计文档 / RFC / 提案 / 迁移方案 / ADR 决策记录 / 决策日志 / 评审报告）。当用户要求"写设计文档""写方案/RFC""写 ADR""记录一下为什么这么决定""评审这份文档""帮我改/润色这段技术文字""这份文档交付前过一遍""找找文档里的问题"时应用。核心方法论：编辑即诊断（每次编辑必须点名它修的具名缺陷，最小编辑胜出；无缺陷就改写自然或已批准的语言，本身就是缺陷）；缺口标记法（事实无来源写 [source wanted]、主张缺失写 [input wanted]、未完成段写 [DRAFT - input wanted]，删除留洞优于编造）；控制三问（改写后问"哪句还像语言模型 / 增删了事实吗 / 是否以新修辞形式重建了被删模式"，增和删都算错）；不受理清单（禁用构造清单本身不证明任何东西，同一段落多个迹象同时出现才标记）；Why & What 决策框（替代方案必须带最强论点，否则是稻草人）；设计文档完备性五缺陷；ADR 的 Negative 强制非空 + 接受后不可编辑 + append-only 决策日志；评审报告的判决先行与命名空情况；交付前去名测试与冷读整读。触发词：设计文档、RFC、提案、ADR、决策记录、决策日志、superseded、评审文档、文档评审、改文档、润色、技术写作、语言模型味、AI 味、去名测试、source wanted、input wanted、稻草人、Why & What、Negative 不得为空。不适用：做事前的规约与验收标准（走 wb-spec-driven）；交互式教学课程（走 wb-teaching）；生成物的正确性验证（走 wb-artifact-verification）。、复制断言要重新取证、假移植比遗漏更糟、镜像结构可以镜像结论不行、逐字搬移、保住块形态、表格折成散文是编辑、真重复要上报
+version: 1.3.0
 agent_created: true
 ---
 
@@ -257,3 +257,15 @@ Instead of: [被否掉的选项] - [为何不选]
 - 接受了 ADR 又去改正文 → 违反 §六（只许改 Status 行）
 - 决策日志改错条目而不是新增覆盖条 → 违反 §六
 - 引用链接没点开就写"已验证" → 违反 §七
+
+## §十 复制来的断言要在新目标上重新取证；逐字搬移要保住块形态（来源：neolabhq/context-engineering-kit·`reground-transplanted-doc-claims.md` + `verbatim-move-keeps-block-form.md`，2026-09-17 实拉）
+原文：`When documenting a second command, agent, or module by mirroring the structure of its sibling's page, re-verify each transplanted sentence against the NEW target's own source file before keeping it. A claim that is true for the sibling reads as authoritative on the target's page and is indistinguishable from a verified fact, so a false transplant is worse than an omission.`
+`When an instruction says to move or inline content **without summarising or rephrasing**, copy every block in its original form — tables stay tables, fences stay fences — even when a block restates something already stated elsewhere in the destination. Judging a block redundant and folding it into prose is an edit, not a move ... If a block really is duplicated, report the duplication and let the reviewer decide; do not resolve it inside the move.`
+
+- **从兄弟文档/模块镜像结构时，每一句复制过来的断言都要对新目标自己的源文件重新取证**：原文档说"这个命令会暂存输出"，搬到兄弟命令的页面上就必须 `grep` 那个命令的实现，确认它真的有这一步。→ 判据：**假移植比遗漏更糟**——遗漏只是少一条信息，假移植在新页面上读起来和已核实的事实一模一样，没人会去怀疑它。
+- **镜像写法的正确顺序是"先取证，再落笔"**：照着结构写是允许的，**照着结论写不允许**。→ 判据：只有**目标文件本身**能支撑的句子才留下，其余删掉或改正。
+- **"逐字搬移/内联"是形态保全令，不是内容整理许可**：要求不改写地搬一段内容时，**表格还是表格、代码块还是代码块**，哪怕它和目标处的另一段重复。→ 判据：**把表格折成一句散文 = 把"读者扫一眼能找到的表"改没了**，而且这个改动藏在一份"看起来忠实搬运"的 diff 里；**判断冗余并合并是编辑，不是搬移**。
+- **真重复要上报，不在搬移里顺手解决**：发现重复就写进报告，让评审决定留哪份。→ 判据：**去重是需要授权的取舍**；搬运者替评审合并掉，等于在"什么都没改"的表象下改了东西。
+  - 与 §九（干净上下文核查）的分工：那条管**核查已写内容**的纪律（核完只报不改）；本条管**从别处复制内容**时的取证义务与形态保全。
+- 反模式：照抄兄弟页面的描述句；把"另一处已经写过"当作可以折成散文的理由；搬移后在报告里写"内容未改动"却改了块形态；发现重复直接合并而不告知。
+- **提升层**：可复用 Skill（文档复用 / 内容搬运）。
