@@ -1,6 +1,0 @@
-﻿[1/2] https://www.python.org/
-  -> ok | # ok | 档位=easy | 字符数=4404 | 耗时=1.12s | 域名记忆=python.org | 1.9s
-[2/2] https://example.com/
-  -> ok | # ok | 档位=easy(short) | 字符数=167 | 耗时=3.57s | 域名记忆=example.com | 4.87s
-
-报告: ./out\_report.md
