@@ -3,7 +3,7 @@ name: wb-skill-authoring
 description: >-
   评测集、holdout、留出集、正例控制、语义反例、路由请求、评分材料、过窄断言、迎合检查器、证据强度分层、激活率。、查重、双键检索、来源标识、重复落地、回滚版本号、同一源二次消费
   Skill 的写法与体检（触发词设计 / 描述质量 / 文件拆分 / 跨工具迁移 / 安装前安全审查 / 安装后接线 / 触发评测盲测 / no-skill 对照 / 效果归因 / 重复技能的去重与合并流程）。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、TRACE、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、质量硬杠、scoped tools、绝对路径、组合三平面、展示行为知识分离、agent 组合结构、双路由、meta-router、原生路由、指令改写、指令迭代、执行轨迹、reasoning 轨迹、prompt 自动改进、改了指令还是不行、STOP/WAIT/PROCEED、什么时候不该跑、重复触发、技能快速路径表、指标噪声、重复采样、趋势不是单点、评分器在抖、技能是行为包、指令加工具、可复用行为包、混淆代理、共享身份、授权作用域、按调用方授权、三积木、动作数据指令、谁控制、副作用归模型决定、版本号语义、破坏性变更、按次协商版本、废弃过渡期、迁移路径、non-scope、不做什么、职责边界、选择依据、编码决策、内容作者与触发者、显式选中、空泛流程、模型自造技能、技能素材来源、gotchas、控制度校准、脆弱性、给默认不给菜单、干净上下文、快照基线、near-miss、近失、触发率、祈使句、description 上限、name 规范、timing 取舍、调指令算修了吗、缓解不是修复、加固不是修复、改了两遍还是这样、别再加一句必须、指令层兜底、失败发生在指令之后、溯源元数据、provenance、发布分级、晋升门槛、curated/learned 分级、技能 pedigree。
-version: 1.56.0
+version: 1.57.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -391,6 +391,7 @@ grep -rn "<旧名>" ~/.workbuddy/skills /c/Users/26719/.workbuddy/AGENTS.md "D:/
 - **判据**：技能 frontmatter 或治理表里显式写 owner（agent / 用户 / 组）；修改前先确认"我是这个技能的 owner 吗"；**同一文件同一时刻只有一个写者**，非 owner 只能提改动建议、由 owner 合入。
 - 与 §审计的配合：审计时顺带核对 owner 声明是否还在、是否与当前分工一致。
 - 反模式：两人同时 Edit 同一 SKILL.md（后写覆盖先写、无锁无提示）；或技能无主、谁都能改，改了没人知道。
+- **并行写隔离的工程化实现：git worktree（来源：Orca 59K★，agentconn.com 2026-09-01 实拉）**——多 agent 需要同时推进同一仓库时，**给每个 agent 建独立 worktree**（`git worktree add ../repo-<agent> <branch>`），各 agent 在自己的分支/工作树里写，互不产生 index.lock 与覆盖冲突，完成后再逐分支合并回主干。判据：**并发写同一仓库时 worktree 隔离 > 同目录轮流写**；单写者时不需要 worktree，直接主线写。与"同一文件单写者"配合：worktree 解决文件系统级冲突，owner 声明解决逻辑级归属，两者都要。
 
 ## 知识库编译为可导航技能目录树：用导航替代检索（来源：arXiv 2604.14572《Don't Retrieve, Navigate: Distilling Enterprise Knowledge into Navigable Agent Skills》，2026-09-16 实拉）
 文档语料不一定要"检索"，可以**离线编译成层级技能目录树**：聚类文档 → 每层生成 LLM 摘要 → 物化成树形技能文件。服务时 agent 先看鸟瞰图、按分支渐进钻取更细摘要、需要全文才按 ID 取——**导航替代向量检索**。
