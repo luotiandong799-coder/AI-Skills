@@ -1,0 +1,33 @@
+﻿# ok | 档位=easy | 字符数=738 | 耗时=0.11s | 域名记忆=python.org
+[
+  {
+    "name": "PyCon Cameroon 2026",
+    "url": "/events/python-events/2159/",
+    "date": "2026-09-17T00:00:00+00:00"
+  },
+  {
+    "name": "PyBay 2026",
+    "url": "/events/python-events/2136/",
+    "date": "2026-10-03T00:00:00+00:00"
+  },
+  {
+    "name": "PyCon Africa 2026",
+    "url": "/events/python-events/2187/",
+    "date": "2026-10-07T00:00:00+00:00"
+  },
+  {
+    "name": "PyCon Estonia 2026",
+    "url": "/events/python-events/2134/",
+    "date": "2026-10-08T00:00:00+00:00"
+  },
+  {
+    "name": "PyCon Greece 2026",
+    "url": "/events/python-events/2118/",
+    "date": "2026-10-12T00:00:00+00:00"
+  },
+  {
+    "name": "PyCon NL 2026",
+    "url": "/events/python-events/2189/",
+    "date": "2026-10-15T00:00:00+00:00"
+  }
+]
