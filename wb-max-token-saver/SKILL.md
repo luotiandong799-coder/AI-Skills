@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。等价于 Max-Token-Saver 插件的压缩逻辑，在 WorkBuddy 下由本技能直接执行。触发词含 "caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "复利项" / "减少轮数" / "一次调用不是一轮" / "换挡信号" / "能力不足" / "连续不改善" / "热路径" / "后台 pass" / "留痕只存元数据" / "整理移出每轮" / "可自检追问" / "discernment nudge" / "追问具体性" / "别唠叨"；关闭："off" / "正常模式" / "stop caveman" / "normal mode"。、进度流、诊断流、里程碑播报、中间态汇报、失败细节不进进度、审批点优先、压缩范围、不许删未触及内容、省 token 不是删除许可、净中性不等于无损失、预算关不上就报告增长、不从别处筹 token
-version: 1.21.0
+version: 1.22.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -199,3 +199,10 @@ version: 1.21.0
 - **按难度路由，不按习惯**：分类/抽取/格式化/短事实查询跑便宜模型（20-50x 便宜）；routing 框架保留约 95% 前沿质量；路由判据两轴=难度×风险容忍。
 - **dynamic dispatch**：便宜小模型（约 30 token）先分类 trivial/standard/complex 再分派——分档器成本近乎免费。
 - **复合收益与 Batch**：缓存+路由复合可省 80-95%（同查询 uncached frontier vs cached budget）；异步任务走 Batch API 折扣。
+
+## 本地 LLM 部署与量化工程：场景分界选引擎 / Q4_K_M 量化权衡 / 硬件-模型梯度（来源：SpecPicks《Ollama vs vLLM RTX 3060》2026-06-11 + AI Publisher《Local AI Offline Models 2026》2026-06-29 + Exemplar《Local LLM Playbook》2026-06-22 + needaitool《Run Open Source LLMs Locally》2026-05-30 + datallmlab《Run LLMs Locally 2026》2026-07-21 实拉，与 §成本四层互补——那条管 API 调用成本，本条管「自己部署」的资源成本）
+- **引擎按并发选**：单用户本地（Ollama/LM Studio，单二进制+自动 GGUF 量化适配+OpenAI 兼容 API）；多用户高吞吐（vLLM，PagedAttention+continuous batching，需 NV GPU）——**单用户上 vLLM = 把服务级特性闲置**，RTX 3060 12GB 级场景 Ollama 就是正解。
+- **Q4_K_M 是性价比默认**：GGUF Q4_K_M 省约 75% 内存、质量损失 <1%（7B 16GB→4GB；70B→约 40GB）——先跑 Q4_K_M，不够精度再升档，不无脑上 FP16。
+- **格式选型**：GGUF（llama.cpp/Ollama/LM Studio 通用）vs EXL2（ExLlamaV2 纯 GPU、推理速度优先）——有 NV GPU 且只求速度用 EXL2，其余默认 GGUF。
+- **硬件-模型梯度**：8B 默认 / 3B 轻量机 / 30B 最高质——按显存选档位，别用 70B 撑 4GB 卡。
+- **隐私优先架构**：本地 agent + 本地知识库 + 无云（敏感数据不出机器）——个人敏感任务优先本地化，普通任务走 API 更划算。
