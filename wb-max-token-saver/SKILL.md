@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。等价于 Max-Token-Saver 插件的压缩逻辑，在 WorkBuddy 下由本技能直接执行。触发词含 "caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "复利项" / "减少轮数" / "一次调用不是一轮" / "换挡信号" / "能力不足" / "连续不改善" / "热路径" / "后台 pass" / "留痕只存元数据" / "整理移出每轮" / "可自检追问" / "discernment nudge" / "追问具体性" / "别唠叨"；关闭："off" / "正常模式" / "stop caveman" / "normal mode"。、进度流、诊断流、里程碑播报、中间态汇报、失败细节不进进度、审批点优先、压缩范围、不许删未触及内容、省 token 不是删除许可、净中性不等于无损失、预算关不上就报告增长、不从别处筹 token
-version: 1.25.0
+version: 1.26.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -228,3 +228,10 @@ version: 1.25.0
 - **语义缓存**：embedding 余弦相似度匹配请求，重复语义请求免推理——RAG 重复问题场景适用。
 - **提示压缩（LLMLingua-2 类）**：2-5x 输入 token 减少、质量损失最小——长固定上下文可用。
 - **模型路由（RouteLLM threshold）**：查询复杂度匹配模型能力，2x+ 成本降低——先路由再生成。
+
+## 流式 UX 阶段模式：TTFT 是关键指标 / 四阶段加载 / partial JSON 修复 / 增量渲染（来源：hashtrie《Streaming UX》2026-05-12 + ai-tldr《Designing for LLM Latency》2026-06-12 + chiraghasija《Streaming UX Patterns》2026-07-11 + aipromptshub《Streaming LLM UX》2026-06-08 + vidhyasagarthakur《Streaming Response Patterns》2026-05-08 实拉，与 §答案优先互补——那条管「内容形态」，本条管「长输出怎么呈现」）
+- **关键指标是 TTFT 不是总时长**：首 token 300-800ms；用户感知流式响应快约 3 倍（即使总时长相同）；**流式让用户能在错误方向早期打断**。
+- **四阶段加载模式**：TTFT 窗口→骨架屏（形状像预期输出）；流式进行中→尾部闪烁光标；工具调用/检索中间→内联状态行「搜索中…/读文档中…」；错误/超时→错误+重试按钮+**保留部分文本可见**。
+- **不要为解析器缓冲整个响应**：流式前端需要容忍截断的解析器——小栈关闭开放的字符串/数组/对象，再解析修复后的串（partial JSON repair）。
+- **markdown 增量渲染**：markdown 会不完整到达（代码块/表格中途切分）——增量渲染，**不每个 token 重解析整个消息**。
+- **SSE 是默认**：原生浏览器支持/自动重连/标准 HTTP；WebSocket 留给双向需求（语音/agentic 确认/多用户）；fetch+ReadableStream 给自定义协议。
