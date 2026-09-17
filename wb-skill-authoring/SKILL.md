@@ -3,7 +3,7 @@ name: wb-skill-authoring
 description: >-
   评测集、holdout、留出集、正例控制、语义反例、路由请求、评分材料、过窄断言、迎合检查器、证据强度分层、激活率。、查重、双键检索、来源标识、重复落地、回滚版本号、同一源二次消费、引用前先验证生产者、指向空来源比不写更糟、抑制兜底、只移植结构不移植假设、兜底链要能解析、名字稳定不等于契约稳定、形状变更、静默拒绝正确产物。、闭合邻域、技能集封闭、平级、委托链、归属任务、抢活、误触发、激活两个方向、消融基线、运行时轴、路径源、git 源、钉 commit、复现性。、委托式技能、一行委托、部分加载、参考型技能、非驱动护栏、编排层静默、依赖加载可靠性、落盘核验、依赖解析校验分离、解析在边界、离线纯校验、先取后验、能力声明内聚、随技能旅行、不靠外部flag、自包含
   Skill 的写法与体检（触发词设计 / 描述质量 / 文件拆分 / 跨工具迁移 / 安装前安全审查 / 安装后接线 / 触发评测盲测 / no-skill 对照 / 效果归因 / 重复技能的去重与合并流程）。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、TRACE、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、质量硬杠、scoped tools、绝对路径、组合三平面、展示行为知识分离、agent 组合结构、双路由、meta-router、原生路由、指令改写、指令迭代、执行轨迹、reasoning 轨迹、prompt 自动改进、改了指令还是不行、STOP/WAIT/PROCEED、什么时候不该跑、重复触发、技能快速路径表、指标噪声、重复采样、趋势不是单点、评分器在抖、技能是行为包、指令加工具、可复用行为包、混淆代理、共享身份、授权作用域、按调用方授权、三积木、动作数据指令、谁控制、副作用归模型决定、版本号语义、破坏性变更、按次协商版本、废弃过渡期、迁移路径、non-scope、不做什么、职责边界、选择依据、编码决策、内容作者与触发者、显式选中、空泛流程、模型自造技能、技能素材来源、gotchas、控制度校准、脆弱性、给默认不给菜单、干净上下文、快照基线、near-miss、近失、触发率、祈使句、description 上限、name 规范、timing 取舍、调指令算修了吗、缓解不是修复、加固不是修复、改了两遍还是这样、别再加一句必须、指令层兜底、失败发生在指令之后、溯源元数据、provenance、发布分级、晋升门槛、curated/learned 分级、技能 pedigree、pass^k、每次都跑通、一致性指标。、引用只一层深、嵌套引用链、one level deep、引用深度、详见X
-version: 1.93.0
+version: 1.94.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -945,3 +945,10 @@ grep -rn "<旧名>" ~/.workbuddy/skills /c/Users/26719/.workbuddy/AGENTS.md "D:/
 - **输出契约（output_schema）**：返回结构化数据不返回原始 dump（50 列取 agent 需要的 8 列）；分页结果带 total_count 让 agent 知道要不要再取；失败带机器可读错误码 + 下一步建议；必要时带 
 ext_actions 字段引导后续动作。
 - **tool spec 五要素**：description / input_schema / output_schema（成功+失败形状）/ safety（PII 范围、允许域、速率限制）/ 确定性 handler（小、确定、幂等、副作用包确认）——五要素齐了才上线。
+
+## 提示词自动优化方法论：按数据量选 optimizer / 指标三件套 / train-val 严格分离 / 换模型 recompile（来源：DSPy 官方 Optimizers 2026-03-24 + GEPA Optimization 2026-09-09 + BetterTogether API 2026-09-16 + Şükrü Yusuf Kaya《Meta-Prompting & Auto-Optimization》2026-09-17 + FutureAGI《Top 10 Prompt Optimization Tools》2026-08-06 实拉）
+- **optimizer 按数据量选型**：~10 例用 BootstrapFewShot；50+ 例用 BootstrapFewShotWithRandomSearch；只想优化指令保持 0-shot 用 MIPRO；GEPA 让 LM 生成指令变体→跑你的例→留最高分——**手调 prompt 循环被「编译」替代：signature（输入/输出声明）+ metric + examples 喂进去，optimizer 自动搜指令与 few-shot**。
+- **train/dev/test 严格分离**：只在 trainset 上优化、再拿同一数据测分 = 实验室完美、现实弱——独立 valset（调参）+ 独立未动 test（最终判）必设；生产数据会漂移，定期用新数据重新 compile。
+- **优化指标三件套（至少各 1）**：①质量（任务准确率 / RAG faithfulness / 指令遵循分）②成本（token/query 或 $/1000 queries）③约束（拒绝率 / p95 延迟 / 语气合规 / 护栏通过率）——只优化质量→准确但贵；只优化成本→便宜但弱。
+- **prompt 与微调组合序列（BetterTogether）**：p→w（先优化 prompt 再微调，简单常有效）/ p→w→p（微调后再优化一轮，可叠加微调收益）/ w→p（先微调再优化 prompt）——按资源选序列，不是二选一。
+- **换模型 = recompile 不是 rewrite**：同一 signature+metric 换模型重跑 optimizer，指令自动适配新模型——不要人工逐条改 prompt。
