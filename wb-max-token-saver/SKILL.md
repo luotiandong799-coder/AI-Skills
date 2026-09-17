@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。等价于 Max-Token-Saver 插件的压缩逻辑，在 WorkBuddy 下由本技能直接执行。触发词含 "caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "复利项" / "减少轮数" / "一次调用不是一轮" / "换挡信号" / "能力不足" / "连续不改善" / "热路径" / "后台 pass" / "留痕只存元数据" / "整理移出每轮" / "可自检追问" / "discernment nudge" / "追问具体性" / "别唠叨"；关闭："off" / "正常模式" / "stop caveman" / "normal mode"。、进度流、诊断流、里程碑播报、中间态汇报、失败细节不进进度、审批点优先、压缩范围、不许删未触及内容、省 token 不是删除许可、净中性不等于无损失、预算关不上就报告增长、不从别处筹 token
-version: 1.20.0
+version: 1.21.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -191,3 +191,11 @@ version: 1.20.0
 - **级联延迟陷阱**：升级的 query 付 2-3 次**顺序生成+评分**——小模型 300ms + judge 50ms + 升级 1.5s = 1.85s，比直接上大模型 1.5s **慢 23%**；延迟敏感场景（用户盯着 token 流）别级联，直接路由。
 - **RouteLLM 参考数据**：MT Bench 上 14% 的 query 升级到大模型即保 95% 质量（MMLU 类保守口径 54%）——路由匹配时，大模型账单缩成零头。
 - 判据：**路由是模型层的收益放大器**——先问「这个请求真的需要大模型吗」，再谈提示词优化；延迟敏感用直接路由，成本敏感才级联。
+
+## LLM 成本杠杆：prefix caching 经济 / KV 亲和性 / 按难度路由 / 复合收益（来源：Şükrü Yusuf Kaya《Token Economics》2026-09-17 + yage《KV Cache Hit Rate》2026-06-25 + Kanopy《Caching and Routing 80%》2026-04-25 + Collabnix《Cut Token Bill 85%》2026-08-24 + DEV《Agent Cost Optimization》2026-09-11 + BestAIWeb《LiteLLM Routing》2026-07-17 实拉，与 §成本四层互补——那条管「成本构成怎么分」，本条管「怎么省成本」）
+- **先见成本再优化**：部署路由前先做 token 记账与成本可见性——LiteLLM 六路由策略：cost-based-routing 每次选最低成本可用模型，simple-shuffle 默认仅摊负载。
+- **Prefix caching 经济**：稳定前缀（system prompt/policy/RAG context/长文档）服务端缓存，同前缀后续请求低价计费且更快——Anthropic/OpenAI 都支持，先开缓存再谈别的。
+- **KV cache 亲和性是 #1 成本杠杆**：多副本 round-robin 把同前缀请求打到无缓存副本，命中率归零——路由层必须粘性（sticky），同前缀固定同一副本。
+- **按难度路由，不按习惯**：分类/抽取/格式化/短事实查询跑便宜模型（20-50x 便宜）；routing 框架保留约 95% 前沿质量；路由判据两轴=难度×风险容忍。
+- **dynamic dispatch**：便宜小模型（约 30 token）先分类 trivial/standard/complex 再分派——分档器成本近乎免费。
+- **复合收益与 Batch**：缓存+路由复合可省 80-95%（同查询 uncached frontier vs cached budget）；异步任务走 Batch API 折扣。
