@@ -3,7 +3,7 @@ name: wb-skill-authoring
 description: >-
   评测集、holdout、留出集、正例控制、语义反例、路由请求、评分材料、过窄断言、迎合检查器、证据强度分层、激活率。、查重、双键检索、来源标识、重复落地、回滚版本号、同一源二次消费、引用前先验证生产者、指向空来源比不写更糟、抑制兜底、只移植结构不移植假设、兜底链要能解析、名字稳定不等于契约稳定、形状变更、静默拒绝正确产物。、闭合邻域、技能集封闭、平级、委托链、归属任务、抢活、误触发、激活两个方向、消融基线、运行时轴、路径源、git 源、钉 commit、复现性。、委托式技能、一行委托、部分加载、参考型技能、非驱动护栏、编排层静默、依赖加载可靠性、落盘核验、依赖解析校验分离、解析在边界、离线纯校验、先取后验、能力声明内聚、随技能旅行、不靠外部flag、自包含
   Skill 的写法与体检（触发词设计 / 描述质量 / 文件拆分 / 跨工具迁移 / 安装前安全审查 / 安装后接线 / 触发评测盲测 / no-skill 对照 / 效果归因 / 重复技能的去重与合并流程）。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、TRACE、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、质量硬杠、scoped tools、绝对路径、组合三平面、展示行为知识分离、agent 组合结构、双路由、meta-router、原生路由、指令改写、指令迭代、执行轨迹、reasoning 轨迹、prompt 自动改进、改了指令还是不行、STOP/WAIT/PROCEED、什么时候不该跑、重复触发、技能快速路径表、指标噪声、重复采样、趋势不是单点、评分器在抖、技能是行为包、指令加工具、可复用行为包、混淆代理、共享身份、授权作用域、按调用方授权、三积木、动作数据指令、谁控制、副作用归模型决定、版本号语义、破坏性变更、按次协商版本、废弃过渡期、迁移路径、non-scope、不做什么、职责边界、选择依据、编码决策、内容作者与触发者、显式选中、空泛流程、模型自造技能、技能素材来源、gotchas、控制度校准、脆弱性、给默认不给菜单、干净上下文、快照基线、near-miss、近失、触发率、祈使句、description 上限、name 规范、timing 取舍、调指令算修了吗、缓解不是修复、加固不是修复、改了两遍还是这样、别再加一句必须、指令层兜底、失败发生在指令之后、溯源元数据、provenance、发布分级、晋升门槛、curated/learned 分级、技能 pedigree、pass^k、每次都跑通、一致性指标。、引用只一层深、嵌套引用链、one level deep、引用深度、详见X
-version: 1.99.0
+version: 2.0.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -988,3 +988,10 @@ ext_actions 字段引导后续动作。
 - **schema 有效性 ≠ 语义成功**：GPT-OSS 120B 两模式 schema 100% 但语义成功 83%；Qwen3-30B schema 100% 语义仅 31%——**结构合规只保证「格式对」，不保证「内容对」；约束解码后仍要验语义**。
 - **机制**：正则/枚举编译成有限状态机；限制——递归类型、无限制 union 等 schema 特性不支持；strict mode 做法：OpenAI json_schema strict:true / Anthropic required tool use / Gemini response_schema。
 - **函数调用是参数级 schema 强制**：tool use 让模型按声明的 JSON Schema 生成参数，校验可客户端或服务端做——**能用类型化工具就优先于裸 JSON 输出**。
+
+## MCP 服务端设计实务：两级错误语义 / 输入永远不可信 / stderr 约定（来源：Axiom Studio《Writing Efficient MCP Implementations》2026-04-04 + Systems Hardening《Securing MCP Servers》2026-03-17 + MOHA《Building MCP Server Integration》2026-06-30 + Business Tech Navigator《Designing Custom MCP Servers》2026-07-14 + modelcontextprotocol.io《Client Best Practices》2026-08-02 实拉，与 §MCP 选型五标准互补——那条管「选谁的 server」，本条管「自己写/审 server 的契约」）
+- **两级错误语义，别混**：protocol-level errors=JSON-RPC 错误响应（服务端失败：无效 JSON、未知工具名、内部崩溃）；tool-level errors=正常结果 + isError: true（预期域失败：文件不存在、权限拒绝、无效输入）——**agent 按层决策**：protocol 错重试/降级，tool 错读内容处理。
+- **AI 客户端输入永远不可信**：schema 说 number，agent 可能传 shell 命令或 SQL 注入 payload——**服务端内部必须再次验证/清理所有入参**，先按严格 JSON Schema 拒绝不匹配调用再执行。
+- **协议流要干净**：trace/调试日志写 stderr（console.error），不污染 stdout 协议流。
+- **工具描述是防幻觉第一道**：每个工具给详细参数类型声明+用途描述（utility descriptions），让模型少猜参数。
+- **sandbox-originated 调用同规则**：批准脚本 ≠ 批准脚本的每个运行时调用——宿主可分类别批准（如「本次运行允许 ticketing_createIssue」）但仍需 broker 评估；服务端独立运行（不访问其他 server 连接/完整对话历史，除非宿主显式共享）。
