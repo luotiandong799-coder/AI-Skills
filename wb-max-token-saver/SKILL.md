@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。等价于 Max-Token-Saver 插件的压缩逻辑，在 WorkBuddy 下由本技能直接执行。触发词含 "caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "复利项" / "减少轮数" / "一次调用不是一轮" / "换挡信号" / "能力不足" / "连续不改善" / "热路径" / "后台 pass" / "留痕只存元数据" / "整理移出每轮" / "可自检追问" / "discernment nudge" / "追问具体性" / "别唠叨"；关闭："off" / "正常模式" / "stop caveman" / "normal mode"。、进度流、诊断流、里程碑播报、中间态汇报、失败细节不进进度、审批点优先、压缩范围、不许删未触及内容、省 token 不是删除许可、净中性不等于无损失、预算关不上就报告增长、不从别处筹 token
-version: 1.24.0
+version: 1.25.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -220,3 +220,11 @@ version: 1.24.0
 - **量化：精度换速度但要现代方法**：FP16→INT8/INT4 内存减半/四分之一，decode 带宽受限下 4-bit 权重读取快 4x；naive 量化降质——用 AWQ 类激活感知方法。
 - **实测数据：speculative decoding 是实践量级改变**：Qwen3 BF16→FP8 吞吐 4.5→7.9 tok/s、NVFP4 仅 9.7，而 MTP（投机解码）把 FP8/NVFP4 从全并发失败拉到达标——**精度优化单独不够，投机解码变化最大**。
 - **不改变输出分布**：speculative decoding 保持分布等价（draft 匹配则 K token/前向）；vLLM 零拷贝混合批处理再涨 5.2-7.7%。
+
+## 缓存工程与批处理成本杠杆：静态前缀/动态后缀 / 一个动态 token 失效整个缓存 / Batch 50% 折扣（来源：Collabnix《Cut Your Token Bill by 85%》2026-08-24 + Şükrü《Token Economics》2026-09-17 + dev.to《Token Accounting Cache》2026-09-11 + Kinda Technical《Caching and Batching》2026-09-17 + Kunal《Reduce Costs 60%》2026-07-12 + Stochastic Sandbox《Token Costs》2026-08-10 实拉，与 §成本四层互补——那条管「四层成本选型」，本条管「缓存与批处理的具体参数」）
+- **缓存结构铁律：静态全放前面、动态全放后面**——缓存作用于前缀，**靠近顶部的一个动态 token 使下方整个缓存失效**；稳定指令/示例/工具定义在前，变量内容在后。
+- **缓存定价实证（Anthropic 2026-05）**：cache write（首次写缓存）1.25x 输入价、cache read 约 90% off、min cacheable 1024 tokens、TTL 5min 自动续、cached reads 不占 ITPM——**前缀要够长够稳才值得缓存**。
+- **Batch API 是离线负载的 50% 折扣**：50k 请求/批、24h 窗口——适合夜间 evals/批量分类/enrichment/离线摘要/大规模内容生成/周期报告；**非时间敏感才用**。
+- **语义缓存**：embedding 余弦相似度匹配请求，重复语义请求免推理——RAG 重复问题场景适用。
+- **提示压缩（LLMLingua-2 类）**：2-5x 输入 token 减少、质量损失最小——长固定上下文可用。
+- **模型路由（RouteLLM threshold）**：查询复杂度匹配模型能力，2x+ 成本降低——先路由再生成。
