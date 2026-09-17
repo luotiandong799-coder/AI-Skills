@@ -2,7 +2,7 @@
 name: wb-context-compressor
 description: >-
   上下文聚焦（**只管输入侧：源材料 → 我**）。处理长命令输出 / 大日志 / 长文档 / 历史上下文时自动应用：只注入与当前任务相关的信息，不重复搬运无关上下文；摘要不得丢失关键错误、关键数据、关键步骤；用户明确指定要保留 / 参考的内容（偏好、约束、历史产物）不得丢弃；长期指令文件（AGENTS.md / CLAUDE.md / skill）失效时按其被忽略的原因排查而不是重复粘贴；**压缩时机按任务状态定、不按 token 数定（子任务完成才压，半途/卡住禁止压）**；**放进来的材料本身要过准入（模糊/敏感/易变/劣质样例不放进参考资料）且暴露面要最小化（只给必需的那一份、能经工具取就不铺进上下文；投递形态按"引用一次 vs 反复引用"选；授权范围也按最小给）**；**窗口撑满时按四步降级处置（大输入转检索 → 砍工具/MCP 数量 → 限历史轮数 → 才换大模型）；工具定义与工具输出是常驻固定开销：MCP 只挂本次必需、工具输出默认剔除内部元数据、按需重新纳入**；**记忆要持续裁剪而非只存（记忆管理器职责＝检查体积并主动缩减；只有有状态执行体才有记忆；记忆比窗口更早动手）**；验证、测试、安全检查等必要步骤一步不省。**输出侧（我 → 用户）的废话压缩不归本技能，走 `wb-max-token-saver`。** 等价于 context-compressor 插件的聚焦逻辑，在 WorkBuddy 下由本技能直接执行。触发词补：迭代整改、历史反馈重发、评审无记忆、假性不收敛、静默截断、超限报限制、裁了就变义、两次操作落盘、看过的先记下来、注入频率分级、自动注入文件干净、凭据读穿、凭据复制、可移植性、轮换敏感、跨主体继承、同一账号验证、终态隔离、出向披露、数据离开环境、外发域名、外发数据类别、保留时长、是否用于训练、披露不转移责任、降级顺序、先削描述再削条目、折叠不等于删除、可见性不是可达性、降级削减能力、目录折叠、按需取回 schema。、记忆会 stale、摘要过期、一手记录、原始记录检索、记忆失效信号、transcript 检索、记忆不是证据层、检索为空、检索零条、检索条数、先过滤后截断、索引滞后、索引新鲜度、索引覆盖范围、活跃分支、检索确认不存在、L0、L1、L2、目录摘要、abstract、overview、召回单元是目录、先定位区域再下钻、记忆写入三选一、创建合并跳过、记忆膨胀、保留策略、memory policies。、信任分类元数据、provenance分离、来源自证、部分结果告警、检索超时、不冷却全库
-version: 1.99.0
+version: 2.0.0
 ---
 
 # wb-context-compressor（上下文阶段：聚焦相关）
@@ -816,3 +816,11 @@ version: 1.99.0
 - **fetch-then-reason**：声明 search 工具，模型发 query 字符串，代码跑搜索回填结果，模型基于结果作答——比把原始搜索结果塞 prompt 省 token 且更准。
 - **时效与白名单**：start_published_date 过滤（时效敏感）、include/exclude_domains 限定可信源、type=neural 请求全文富化。
 - **进阶架构**：TURA——DAG 任务规划（子任务+数据依赖建模，多跳多工具并行编排）+ 蒸馏执行器（轻量 agent 微调于专家轨迹，解决生产延迟）；WebExpert——经验门（轻量检索经验门控）+ 模式轻 facet 归纳（弱监督 bootstrap 时间/地域/政策/行业维度，非静态词典）；Planner-Executor 范式（Planner 拆任务选 MCP 工具，Executor 执行并评估）。
+
+## RAG 入库与索引管线：解析分级 / 元数据全程携带 / 增量三类更新（来源：Unstructured《RAG Pipeline Best Practices》2026-07-10 + NPBlue《Document Ingestion》2026-06-21 + PromptForge《Pipeline That Stays Accurate》2026-06-10 + Kunal Ganglani《Ingestion Pipelines》2026-09-17 + aipromptshub《Pipeline Architecture》2026-06-27 实拉，与 r55-A 分块策略互补——那条管「怎么切」，本条管「入库整条管线」）
+- **管线**：Raw→Parsing→Cleaning→Metadata→Chunking→Embedding→Storage——每步质量门，早期跳过=后期对垃圾练 embedding；2026-02 基准：recursive 512 token 69% 领先语义 chunking 54%（默认递归有实证）。
+- **解析分级**：PDF 最难（是绘图指令非文本，pypdf 快、pdfminer.six 布局分析好能恢复阅读序）；HTML 先剥导航/页脚/广告/脚本（BeautifulSoup 主内容省 30-60% token）；结构化数据每行/记录渲染成自包含自然语言句再嵌入。
+- **清洗三件**：去 boilerplate、归一化 Unicode、重建断裂段落（解析产生的）——清洗后才切块。
+- **元数据全程携带**：source path/author/timestamp/version 附到每个 element 与 chunk——检索可按文档过滤、审计可溯源到源；连接器保留源对象标识与权限集，减数据漂移。
+- **增量同步而非全量重跑**：只处理新增与变更文档，索引新鲜但计算不随语料线性涨。三类更新：新文档→建 chunk+embedding+索引；修改文档→检测变更段只替换受影响 chunk；删除文档→tombstone 或移除所有关联 chunk。初始批量装载+持续增量=生产标配。
+- **可复现**：embed+index 带版本/commit——索引变更可回溯；embedding 与索引分开存版本。
