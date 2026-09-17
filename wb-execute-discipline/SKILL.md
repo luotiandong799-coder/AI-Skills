@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、重放不计数、崩溃恢复、replay、错误通道、错误负载、定位信息、retryOf、失败处理外置、限流预防、分批、批大小、条件循环、终止条件、无限循环、结构化索取、Elicitation、缺信息要问、错误当空、把失败当空结果、毒化产物、重播种、reseed、传输损坏、信封校验、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、集成决策权、确认词、工作树保留、验证边界、候选物变了、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、切分维度、按关注点切、按文件所有权切、团队规模、并行度不等于人数、关键路径、依赖图、竞争假设、只读角色、blockedBy、维度覆盖、失败恢复阶梯、超时是终态、熔断不换路、降级不持久化、显式选择 strict、先查断点再重做、不许偷偷降标准、最早可重试时间、改向不等于中止、steer、中止已启动的工作、已开始vs已请求、并行批次检查点、跳过留痕、取消不是消失、确认不等于消费、送达确认、投递生命周期窗口、事后补推、后台容量分离、独立并发池、维护类工作、调度器不占槽、自锁、队列满丢谁、drop策略、已入队不等于会执行、输入持久化、不确定不重放、可能已提交、取证深度、浅层扫描、廉价列表、批量扫描、用于选择、用于判定、逐项取证、重复处理、批量退化、全部处理不等于逐项读全、派活传目的、迭代取回、子agent只知字面查询、挂载点频率、延迟预算、Stop hook、UserPromptSubmit、边界点、字符串里的第二副本、教错格式、schema 迁移看不见、find-replace 漏、示例残留、heredoc 副本、旧格式藏正文、提示词里的过期判据
-version: 1.60.0
+version: 1.61.0
 agent_created: true
 ---
 
@@ -623,3 +623,10 @@ agent_created: true
 - **agent 每步验证门**：planning/retrieval/reasoning/execution 各设验证门，不是单一终检——agent 会带着错误中间态继续行动，终检来不及。
 - **检测补充**：self-consistency（同 prompt N 次非零温度采样，答案不一致即标记，math +10-20 点实证）；跨模型一致性（FINCH-ZK 两阶段修正：块级修正+响应级连贯，修正 prompt 含原文块+错误摘要+矛盾证据）。
 - 判据：模型不是权威，是多步推理管线的一环——输出必须过验证循环（批评-修正-重生成）才能交付。
+
+## LLM/Agent 可观测性：OTel 标准为基 + span 分层必抓 + trace 当数据管（来源：OpenTelemetry GenAI 语义约定 + MLflow《Monitoring LLM Performance》2026-05-22 + OpenObserve《Monitor AI Agents》2026-05-05 + Databricks《Tracing to Unity Catalog》2026-05-22 + arXiv 2602.10133 AgentTrace + LangChain《Agent Observability》2026-04-07 实拉）
+- **OTel GenAI 语义约定是底座**：vendor-neutral schema——LLM span 必抓 gen_ai.system / request.model / usage.input_tokens / output_tokens / response.finish_reasons；agent span 加 agent.name / agent.description；tool span 加 tool.name——跨框架/模型/运行时可比。
+- **span 分层**：agent/LLM 调用/tool/guardrail/handoff 各一个嵌套 span（OpenAI Agents SDK Runner.run() 一个 trace 内嵌全部，默认送自家面板、可 OTLP 重定向）；操作名标准化（chat/embeddings/retrieval/execute_tool/invoke_agent）。
+- **trace 当数据管**：OTel trace 直写数据湖表（如 Unity Catalog/Delta），实时高吞吐摄入+长期保留+统一治理——trace 不再是临时日志而是可查询资产。
+- **工具选型两问**：①内置 evaluator 吗（幻觉/提示注入/数据泄露检测）；②计费按什么（按 LLM span 计费≈按真实用量，不按 trace 总量）。框架自带 tracing 快（一个 env var）vs OTel 可移植（需 collector）——先框架后迁 OTel。
+- **AgentTrace 结构化日志协议**：schema-based，跨 cognitive（思维）/operational（操作）/contextual（上下文）三类 trace——可观测性升为安全/可复现/问责使能，支持细粒度调试与失败归因。
