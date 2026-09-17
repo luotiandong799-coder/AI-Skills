@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、重放不计数、崩溃恢复、replay、错误通道、错误负载、定位信息、retryOf、失败处理外置、限流预防、分批、批大小、条件循环、终止条件、无限循环、结构化索取、Elicitation、缺信息要问、错误当空、把失败当空结果、毒化产物、重播种、reseed、传输损坏、信封校验、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、集成决策权、确认词、工作树保留、验证边界、候选物变了、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、切分维度、按关注点切、按文件所有权切、团队规模、并行度不等于人数、关键路径、依赖图、竞争假设、只读角色、blockedBy、维度覆盖、失败恢复阶梯、超时是终态、熔断不换路、降级不持久化、显式选择 strict、先查断点再重做、不许偷偷降标准、最早可重试时间、改向不等于中止、steer、中止已启动的工作、已开始vs已请求、并行批次检查点、跳过留痕、取消不是消失、确认不等于消费、送达确认、投递生命周期窗口、事后补推、后台容量分离、独立并发池、维护类工作、调度器不占槽、自锁、队列满丢谁、drop策略、已入队不等于会执行、输入持久化、不确定不重放、可能已提交、取证深度、浅层扫描、廉价列表、批量扫描、用于选择、用于判定、逐项取证、重复处理、批量退化、全部处理不等于逐项读全、派活传目的、迭代取回、子agent只知字面查询、挂载点频率、延迟预算、Stop hook、UserPromptSubmit、边界点、字符串里的第二副本、教错格式、schema 迁移看不见、find-replace 漏、示例残留、heredoc 副本、旧格式藏正文、提示词里的过期判据
-version: 1.62.0
+version: 1.63.0
 agent_created: true
 ---
 
@@ -638,3 +638,12 @@ agent_created: true
 - **结构有效≠语义有效**：'it parses' 交给平台，语义校验留在自己代码；给模型显式 not found/unknown 出口，别让 schema 逼它编值。
 - **场景选型**：纯 API 求稳→Structured Outputs（0.1% 失败率）；复杂推理+工具→Claude+L1/L2 校验；私有部署→Qwen/Llama+Outlines；金融/医疗高格式要求→strict 或 Outlines 近零失败；<5 扁平字段且可容忍失败→prompt+JSON mode。
 - 判据：能约束解码就不 validate-retry；能 schema 强制就不靠提示词叮嘱格式。
+
+## LLM 推理成本与延迟优化：先攻 prefill / prefix 复用 / 投机解码（来源：Runpod《LLM Inference Optimization》2026-09-13 + AWS《Prefix-Aware Routing》2026-09-10 + Google《Efficient Frontier》2026-03-28 + arXiv 2605.26289 流式工具验证 + vLLM 官方 2026-07-27 实拉）
+- **先攻 prefill**：TTFT 主因是 prefill——system prompt 2k tokens 每次重复就缓存它，省大部分 prefill 成本；流式输出让感知延迟=TTFT 而非总时长。
+- **prefix caching 复用**：RAG/系统 prompt 场景冗余 prefill 浪费 30-80% 计算；相同前缀计算结果复用（vLLM --enable-prefix-caching，prefill 120ms→12ms 实证）。
+- **prefix-aware routing**：同前缀请求路由到同一实例让 KV cache 复用——Llama 3.1 70B P50 TTFT 降 77%、吞吐 +16%、KV 命中 25%→90%+（多实例场景再上）。
+- **speculative decoding**：小 draft 模型生成 K 候选 → 大模型单次并行前向验证——2-4× 加速无质量损失，4-5 token/内存成本 1。
+- **流式工具调用验证器**：brace-balanced JSON parser 流式回调，工具调用结构闭合即 early-stop 信号+滤掉幻觉调用（低延迟 agent 关键）。
+- **防冷启动**：延迟路径用 active workers 而非 scale-to-zero；大 prompt 用 chunked prefill 防阻塞解码流。
+- 判据：先量 TTFT 再优化；先缓存前缀再谈换模型——改配置/换模型会破坏前缀缓存应重开会话。
