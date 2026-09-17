@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、重放不计数、崩溃恢复、replay、错误通道、错误负载、定位信息、retryOf、失败处理外置、限流预防、分批、批大小、条件循环、终止条件、无限循环、结构化索取、Elicitation、缺信息要问、错误当空、把失败当空结果、毒化产物、重播种、reseed、传输损坏、信封校验、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、集成决策权、确认词、工作树保留、验证边界、候选物变了、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、切分维度、按关注点切、按文件所有权切、团队规模、并行度不等于人数、关键路径、依赖图、竞争假设、只读角色、blockedBy、维度覆盖、失败恢复阶梯、超时是终态、熔断不换路、降级不持久化、显式选择 strict、先查断点再重做、不许偷偷降标准、最早可重试时间、改向不等于中止、steer、中止已启动的工作、已开始vs已请求、并行批次检查点、跳过留痕、取消不是消失、确认不等于消费、送达确认、投递生命周期窗口、事后补推、后台容量分离、独立并发池、维护类工作、调度器不占槽、自锁、队列满丢谁、drop策略、已入队不等于会执行、输入持久化、不确定不重放、可能已提交、取证深度、浅层扫描、廉价列表、批量扫描、用于选择、用于判定、逐项取证、重复处理、批量退化、全部处理不等于逐项读全、派活传目的、迭代取回、子agent只知字面查询、挂载点频率、延迟预算、Stop hook、UserPromptSubmit、边界点、字符串里的第二副本、教错格式、schema 迁移看不见、find-replace 漏、示例残留、heredoc 副本、旧格式藏正文、提示词里的过期判据
-version: 1.77.0
+version: 1.78.0
 agent_created: true
 ---
 
@@ -759,3 +759,11 @@ agent_created: true
 - **constrained decoding**：GPT-5 家族/Gemini 2.5 支持，正确使用近零 schema 错误；不支持约束解码的模型（Claude）用可移植方案：schema 放 system prompt + Zod/Pydantic 验证 + 出错重试一次。
 - **业务规则放 validators 不放 schema**：Instructor/Pydantic AI 等把业务校验写进 Pydantic validators，校验失败自动触发重试（InstructorRetry）——schema 只管形状，validators 管对错。
 - **判据**：任何结构化输出进流水线前必须过验证层；只靠 prompt 要求返回 JSON 等于没保护。
+
+## Agent 失败恢复与检查点运行时：四恢复策略 / lease reclaim / 幂等 checkpoint 序列 / C/R 语义感知沙箱（来源：arXiv AgentRewind《Recoverable Execution》2026-08 + Microsoft Foundry《Recover long-running work》2026-08-19 + agentnative《Checkpoint and Resume Pattern》2026-07-26 + arXiv CRAB《Semantics-Aware C/R for Sandboxes》2026-04 + Kunal Ganglani《Memory State Management》2026-07-04 实拉，与 §Agent 人机交接模式互补——那条管「交接时先持久化」，本条管「崩溃后怎么恢复」）
+- **四恢复策略按副作用选型**：Naive rerun（重跑整轮——正确但对非幂等副作用不安全，除非 fenced）/ Framework checkpoints（持久化响应快照，从 checkpoint 后继续）/ Upstream-owned resume（从框架 checkpoint 或自己数据库重建）/ Watermark overlay（小元数据水印，避免上游无法去重的副作用被重复执行）——**重跑是最后手段不是默认**。
+- **lease-based recovery**：durable work identity + 持久化输入 + 租约 + stream replay——进程死丢 lease，后续进程 reclaim 记录并用同一 identity 调 handler；框架保证「请求断开后仍能继续」，agent 自己负责保留有意义进度与防重复副作用。
+- **幂等 checkpoint 序列（每步一存）**：每步前序列化完整状态（消息日志/当前步骤索引/累积工具结果）→ 执行 → 成功后更新 checkpoint → 崩溃加载最后成功 checkpoint 从 N+1 继续——**checkpoint 本身必须幂等**，否则恢复即二次副作用。
+- **C/R 语义感知（沙箱级）**：沙箱累积可变 OS 状态，checkpoint/restore 支持容错、抢占式 spot 实例省成本、RL（Tree GRPO 需大量 checkpoint）——频繁快照+失败恢复+快速恢复。
+- **checkpoint 后端与粒度选型**：Postgres（事务强一致）/ Redis（快）/ object storage（大对象）三选一；粒度=恢复点之间的步数（越细恢复越精确、成本越高）；sync vs async vs exit-only 持久化三档——先定粒度再选后端，别盲目 commit 到框架 checkpointer。
+- **判据**：恢复能力与副作用去重是一对——没有幂等 checkpoint 的「恢复」只是换种方式重跑。
