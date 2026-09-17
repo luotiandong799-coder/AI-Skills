@@ -737,6 +737,12 @@ grep -rn "<旧名>" ~/.workbuddy/skills /c/Users/26719/.workbuddy/AGENTS.md "D:/
 - **上下文成本治理（Anthropic /skill-doctor + OpenClaw）**：**每个已加载技能都在消耗上下文**——SKILL.md 控制在 ~500 词内（"A 500-word SKILL.md is fine"）；定期做**技能加载审计**：统计哪些技能被加载却从未被调用，按上下文成本禁用条目（/skill-doctor 做的事：追踪每个技能是否被调用+显示成本，报告后禁用浪费项）。判据：**"加载但从不调用"= 纯上下文税**，审计信号是"装了没用/每轮都注入却没触发"。
 - 与 §三要素边界/§护栏执行化分工：边界管"写不写禁区"、护栏管"怎么拦住"，本条管"**声明工具面 + 声明触发类别 + 控制加载成本**"——技能从编写到加载的规范侧闭环。
 
+### 技能结构纪律：参考型技能必须声明"不是可驱动流程"；切分前先有两个真实消费者（来源：GitHub `mattpocock/skills`·`docs/engineering/codebase-design.md`，经 gh API 实拉，2026-09-17 学习轮 r91-A）
+
+**参考型技能 vs 驱动型技能必须显式区分**：一个只提供词汇表/方法、没有流程也没有停止规则的技能，若被当作"可执行的驱动流程"调用，agent 会**自己即兴发挥出一个流程**——重读已探索过的代码、擅自重构没让改的东西、烧掉大量 token 才问第一句话（mattpocock 原话："a skill with no process and no stopping rule will improvise one if you point a session at it and say go"）。判据：技能若只是参考层（词汇/原则/检查清单），必须在开头写明"这是参考，不是可独立运行的流程，需在驱动型技能之下使用"；否则它会在没有流程的情况下**伪装成有流程**，失控。→ 落地检查：一个 `SKILL.md` 若整篇都是"是什么/为什么"、没有"做完的判据/下一步动作"，就是参考型，必须补一句驱动关系声明，不能当驱动型用。
+
+**切分判据：出现第二个真实消费者前不要切**（"一个适配器=只是间接层"）：不要为还没有两个不同使用场景的抽象/子技能做切分。单一消费者的"切分"只是间接层，不带来任何复用收益，反而增加路由与维护成本（mattpocock 原话："One adapter means a hypothetical seam. Two adapters means a real one. Don't cut a seam until something actually varies across it"）。判据：只有当**两个不同的调用方/场景**各自需要该切分面时，才切；否则保留单一实现。这是 `wb-ponytail` YAGNI 在"技能结构"上的实例化——区别在于对象是技能/子技能边界而非代码行；与 §重命名必须全链路同步 的"先有第二处再抽公共"同源。
+
 ## 技能级溯源元数据与发布分级（来源：GitHub `affaan-m/ECC`·`docs/SKILL-PLACEMENT-POLICY.md` + `continuous-learning-v2`，经 gh API 实拉，2026-09-16 学习轮 r82-B · 用户本轮新增「GitHub 优质开源仓库也要作为学习来源」）
 
 与 §「规则生命周期要带出处」(rule-level 出处) 互补：那里要求每条规则标来源；这里要求**整个技能文件带一份机器可读的溯源元数据块**，让「这个技能从哪来、何时习得、可信度多高、谁/什么产出」可被脚本检索，直接堵住 r78-A「同一源被二次消费」事故在文件级复发。
