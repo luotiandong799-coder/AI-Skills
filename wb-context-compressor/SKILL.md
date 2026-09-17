@@ -874,3 +874,10 @@ version: 2.6.0
   - 判据：**每轮都变的内容会打掉前缀缓存**；评审"注入了什么"时要同时看"这一轮的注入和上一轮长得像不像"。
 - **与相邻条目分工**：§两次操作即落盘 管**什么时候写下去**；本条管**下一轮怎么读回来**。`wb-max-token-saver` §Prompt 缓存破坏因子 管**静态前置 / 动态后置的排序**；本条管**注入槽位本身的形状固定**（骨架固定 → 前缀不变 → 命中率才稳）。§记忆摘要会 stale 管**拿摘要替代原始记录**的失效；本条管**每轮重新注入原始计划**时取哪几个槽位。
 - **提升层**：工具（注入机制）/ 工作流（长跑会话的目标保持）。
+
+## RAG 评估指标体系与分域 chunk 工程：四指标+目标阈值 / 检索-生成分层评估 / 分域选型 / 改写门控（来源：AI Learning Guides《RAG in Production 2026》2026-05-07 + eastondev《Retrieval Precision vs Generation Quality》2026-04-21 + FutureAGI《Evaluating Chunking Strategies》2026-05-14 + arXiv《Better Together: Complementary Query Rewriting》2026-09-09 + algorion《RAG that actually retrieves》2026-05-06 实拉，与 §RAG 查询改写互补——那条管「改写怎么做」，本条管「评估怎么测 / chunk 怎么分 / 改写何时开」）
+- **RAGAS 四指标 + 目标阈值**：Faithfulness（答案扎根检索上下文，≥0.80）/ Answer relevancy（答了所问，≥0.80）/ Context precision（检索块相关度，≥0.70）/ Context recall（检索覆盖所需信息，≥0.75）——**每项由小 evaluator LLM 独立打分，缺哪项补哪段**。
+- **检索与生成分层评估，不混着看**：Retrieval 用 Recall@K / MRR / NDCG（测「找没找对」）；Generation 用答案相关性 / 事实忠实 / 完整性（测「答得对不对」）——分层才能定位问题在检索还是生成。
+- **chunk 甜点与分域选型**：多数文本 500-1000 tokens/chunk + 100-200 tokens overlap（规则不是法律，按域调）：marketing/FAQ/产品文档→Fixed-512+overlap；代码/混合语言→late-interaction（ColBERT，token 级匹配保标识符）；多语→Jina-ColBERT-v2；表格/结构化 PDF→structure-aware+clause-level（保行列完整性）。
+- **组合改写门控（Better Together）**：rerank+MMR 多样化做 S1 基线 → Query2Doc 作默认升级；低重叠（如企业语料）可组合多种改写，高重叠多相关语料**避免组合**；用 reranker-score 阈值门控改写——**分数高就不改写，控制成本**。
+- **查询理解三招**：改写+扩展（指代消解成独立查询+同义词/领域词扩展喂给词法检索）；分解（复合问题拆子查询分别检索再合并——一次向量检索服务不了两个不同信息需求）。
