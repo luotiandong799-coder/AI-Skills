@@ -2,7 +2,7 @@
 name: wb-context-compressor
 description: >-
   上下文聚焦（**只管输入侧：源材料 → 我**）。处理长命令输出 / 大日志 / 长文档 / 历史上下文时自动应用：只注入与当前任务相关的信息，不重复搬运无关上下文；摘要不得丢失关键错误、关键数据、关键步骤；用户明确指定要保留 / 参考的内容（偏好、约束、历史产物）不得丢弃；长期指令文件（AGENTS.md / CLAUDE.md / skill）失效时按其被忽略的原因排查而不是重复粘贴；**压缩时机按任务状态定、不按 token 数定（子任务完成才压，半途/卡住禁止压）**；**放进来的材料本身要过准入（模糊/敏感/易变/劣质样例不放进参考资料）且暴露面要最小化（只给必需的那一份、能经工具取就不铺进上下文；投递形态按"引用一次 vs 反复引用"选；授权范围也按最小给）**；**窗口撑满时按四步降级处置（大输入转检索 → 砍工具/MCP 数量 → 限历史轮数 → 才换大模型）；工具定义与工具输出是常驻固定开销：MCP 只挂本次必需、工具输出默认剔除内部元数据、按需重新纳入**；**记忆要持续裁剪而非只存（记忆管理器职责＝检查体积并主动缩减；只有有状态执行体才有记忆；记忆比窗口更早动手）**；验证、测试、安全检查等必要步骤一步不省。**输出侧（我 → 用户）的废话压缩不归本技能，走 `wb-max-token-saver`。** 等价于 context-compressor 插件的聚焦逻辑，在 WorkBuddy 下由本技能直接执行。触发词补：迭代整改、历史反馈重发、评审无记忆、假性不收敛、静默截断、超限报限制、裁了就变义、两次操作落盘、看过的先记下来、注入频率分级、自动注入文件干净、凭据读穿、凭据复制、可移植性、轮换敏感、跨主体继承、同一账号验证、终态隔离、出向披露、数据离开环境、外发域名、外发数据类别、保留时长、是否用于训练、披露不转移责任、降级顺序、先削描述再削条目、折叠不等于删除、可见性不是可达性、降级削减能力、目录折叠、按需取回 schema。、记忆会 stale、摘要过期、一手记录、原始记录检索、记忆失效信号、transcript 检索、记忆不是证据层、检索为空、检索零条、检索条数、先过滤后截断、索引滞后、索引新鲜度、索引覆盖范围、活跃分支、检索确认不存在、L0、L1、L2、目录摘要、abstract、overview、召回单元是目录、先定位区域再下钻、记忆写入三选一、创建合并跳过、记忆膨胀、保留策略、memory policies。、信任分类元数据、provenance分离、来源自证、部分结果告警、检索超时、不冷却全库
-version: 2.1.0
+version: 2.2.0
 ---
 
 # wb-context-compressor（上下文阶段：聚焦相关）
@@ -833,3 +833,11 @@ version: 2.1.0
 - **层级显式声明**：「Primary sources (use first): …; Secondary sources (consult if needed): …」让模型知道优先用哪段。
 - **四策略组合**：priority ordering + sliding window + summarization + truncation（硬后备）+ retrieval 按需从窗外拉回——单一策略都不够，生产用组合。
 - **chunk 启发与缓存**：大文档按 75% 最大上下文+10% 重叠切（LangChain 报告最优）；「chat with your data」优先 context caching——比 RAG 简单且省成本（用户传 10 PDF+视频时）。角色化 prompt 库：按任务换 prompt（code review 最小指令/data 输出格式/translation 术语），不一个通用 prompt 打天下。
+
+## Agent 记忆检索与巩固：四层各配独立存储 / consolidation 替换原件 / confidence decay / Hebbian 联想 / 跨存储融合检索（来源：Inductivee《Memory Architecture》2026-08-25 + AWS《Persistent Memory with S3 Vectors》2026-06-08 + arXiv《Human-Inspired Memory Architecture》2026-05-08 + SitePoint《Agent Memory Guide》2026-05-24 + MetaCTO《Memory Production》2026-06-10 实拉，与 §记忆状态管理互补——那条管「分几类怎么注入」，本条管「检索与巩固怎么设计」）
+- **四层记忆各配独立存储与访问模式**：working=上下文窗口（token 感知、超预算用总结优雅逐出）/ episodic=向量索引的交互史（session ID+时间戳）/ semantic=关系存储的事实与偏好 / procedural=few-shot 缓存或微调——不混在一个向量库。
+- **Consolidation（睡眠式巩固）**：周期把相关 episodic 聚成簇、总结成单个语义单元、替换原件——记忆不随使用线性膨胀；摘要调度要定 TTL 强制执行。
+- **Confidence decay**：未被检索或验证强化的记忆，其置信度元数据随时间衰减，低置信在检索结果中排名降——防陈旧记忆霸榜。
+- **Hebbian 联想（共激活强化）**：同被激活的记忆连接动态增强；达到阈值后 hub 节点蒸馏成稳定语义知识，防噪声堆积——交互中在线编码，不攒批。
+- **双路径/跨存储融合检索**：查询同时激活具体 episodic 细节与广泛语义知识（spreading activation）；向量+关键词跨存储融合，重排用相关度+时效加权。
+- **工程顺序**：先建三层存储与共享层 → 再加检索融合与重排 → 最后加 consolidation 调度（TTL 强制）——逐层验证不一步到位。
