@@ -2,7 +2,7 @@
 name: wb-context-compressor
 description: >-
   上下文聚焦（**只管输入侧：源材料 → 我**）。处理长命令输出 / 大日志 / 长文档 / 历史上下文时自动应用：只注入与当前任务相关的信息，不重复搬运无关上下文；摘要不得丢失关键错误、关键数据、关键步骤；用户明确指定要保留 / 参考的内容（偏好、约束、历史产物）不得丢弃；长期指令文件（AGENTS.md / CLAUDE.md / skill）失效时按其被忽略的原因排查而不是重复粘贴；**压缩时机按任务状态定、不按 token 数定（子任务完成才压，半途/卡住禁止压）**；**放进来的材料本身要过准入（模糊/敏感/易变/劣质样例不放进参考资料）且暴露面要最小化（只给必需的那一份、能经工具取就不铺进上下文；投递形态按"引用一次 vs 反复引用"选；授权范围也按最小给）**；**窗口撑满时按四步降级处置（大输入转检索 → 砍工具/MCP 数量 → 限历史轮数 → 才换大模型）；工具定义与工具输出是常驻固定开销：MCP 只挂本次必需、工具输出默认剔除内部元数据、按需重新纳入**；**记忆要持续裁剪而非只存（记忆管理器职责＝检查体积并主动缩减；只有有状态执行体才有记忆；记忆比窗口更早动手）**；验证、测试、安全检查等必要步骤一步不省。**输出侧（我 → 用户）的废话压缩不归本技能，走 `wb-max-token-saver`。** 等价于 context-compressor 插件的聚焦逻辑，在 WorkBuddy 下由本技能直接执行。触发词补：迭代整改、历史反馈重发、评审无记忆、假性不收敛、静默截断、超限报限制、裁了就变义、两次操作落盘、看过的先记下来、注入频率分级、自动注入文件干净、凭据读穿、凭据复制、可移植性、轮换敏感、跨主体继承、同一账号验证、终态隔离、出向披露、数据离开环境、外发域名、外发数据类别、保留时长、是否用于训练、披露不转移责任、降级顺序、先削描述再削条目、折叠不等于删除、可见性不是可达性、降级削减能力、目录折叠、按需取回 schema。、记忆会 stale、摘要过期、一手记录、原始记录检索、记忆失效信号、transcript 检索、记忆不是证据层、检索为空、检索零条、检索条数、先过滤后截断、索引滞后、索引新鲜度、索引覆盖范围、活跃分支、检索确认不存在、L0、L1、L2、目录摘要、abstract、overview、召回单元是目录、先定位区域再下钻、记忆写入三选一、创建合并跳过、记忆膨胀、保留策略、memory policies。、信任分类元数据、provenance分离、来源自证、部分结果告警、检索超时、不冷却全库
-version: 1.91.0
+version: 1.92.0
 ---
 
 # wb-context-compressor（上下文阶段：聚焦相关）
@@ -751,3 +751,11 @@ version: 1.91.0
 - **NMT 初稿+LLM 精修混合**：微调 NMT 出结构忠实初稿 → LLM（可+RAG 示例）润色——域外掉分可恢复（36.17→27.11 chrF++ 的损失靠此找回）。
 - **关键术语 RAG+迭代自检**：先识别关键术语→双语词典检索注入上下文→基于词汇/语义约束迭代精修（长 prompt 幻觉靠自检缓解）。
 - **零样本系统指令格式**：'Output only the [target] translation. No explanations. No quotes. No extra lines.'——纯译文输出禁杂讯；prompting vs fine-tuning 选型：先 prompting，固定场景再 fine-tune（更稳但贵，不互斥）。
+
+## Agent 自修正与反射循环：grounding 分水岭 / 确定性 critique / 双停止条件（来源：Zylos《Agent Self-Correction: Reflexion to PRM》2026-05-12 + DEV《Self-Correcting AI Agent》2026-09-16 + AI/TLDR《Self-Critique Self-Refine》2026-06-13 + Learnixo《Self-Reflection Pattern》2026-06-18 + BestHub《Generate-Reflect-Refine》2026-03-29 实拉，与 ed 1.64 Plan-Reflect-Refine 分工——那条管「计划层 Reflect」，本条管「输出层自修正循环」）
+- **Generate→Reflect→Refine 循环**：生成初稿→按标准（correctness/completeness/指令遵循/安全）批判→修订；重复到质量阈值或最大迭代。
+- **grounding 是分水岭**：执行反馈/DB 查询/检索验证=外部真值信号，自修正可靠得多——无外部信号的自修正可靠性低（模型很难凭自己抓住自己的错）。
+- **critique 可为确定性检查**：JSON parser / unit test runner / schema validator 都能当 critic（不一定是第二 LLM 调用）；critique 比 generation 容易——模型常漏边界但能发现别人输出里的问题。
+- **双停止条件防死循环**：最大迭代（2-3 次）+ critic 显式退出信号（NO ISSUES）；或 refined 答案不再变化时停——无守卫会 ping-pong 发明不存在的问题。
+- **PRM 逐步反馈**：process reward model 提供逐步反馈，长程任务提前回退坏部分轨迹（不用等整条跑完）；多角色 evaluator 去相关错误模式，单 evaluator 抓不到的失败多 evaluator 抓得到。
+- 判据：高价值输出（生产代码/财务/医疗）必须过自修正循环；critic 能确定性就确定性，不能才用第二 LLM；每次修正要有外部证据或明确标准，防无意义空转。
