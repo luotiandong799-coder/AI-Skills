@@ -907,3 +907,11 @@ grep -rn "<旧名>" ~/.workbuddy/skills /c/Users/26719/.workbuddy/AGENTS.md "D:/
 - **每 agent 指标集**：success rate（有效输出率）+ latency（p50/p95/p99）+ token 用量与成本 + retry rate + escalation rate（转人工率）+ accuracy（人工复核确认率）——agent 表现可量化才可改进。
 - **采纳率是系统健康线**：输出被大幅修改=与真实需求有偏差；采纳率 <60% = 系统性问题，重审提示词或工具配置，不是继续微调。
 - 判据：**人设不是角色扮演，是岗位说明书**——有流程、有交付物、有指标、有边界；写不出成功指标的人设不落地。
+
+## LLM-as-judge 可靠性：四类失败模式 / 翻转率实证 / 平衡排列 / 一致性协议（来源：BabelJudge arXiv 2606.22329 + Coin Flip Judge arXiv 2606.13685 + arXiv 2607.08535《When the Judge Changes》2026-09-16 + arXiv 2602.02219《Position Bias in Rubric-Based Judge》实拉，与 §LLM 评估与质量门 互补——那条管「评估体系怎么搭」，本条管「judge 本身怎么不可信」）
+- **judge 四类失败模式**：position bias（位置偏置）/ verbosity bias（冗长偏置）/ order inconsistency（顺序不一致）/ cross-lingual degradation（跨语言退化）——**judge 输出不是真值，先按这四类审计再当闸门**。
+- **翻转率实证**：pairwise 偏好平均 13.6% 翻转、28% 问题超 20%、单题最高 56%；GPT-4o-mini 显著首位偏置（72% A 多数）——**单次 judge 判决不可靠，需要一致性协议**。
+- **rubric 分数选项也有位置偏置**（隐含多选设置）：LLM 偏好 rubric 列表特定位置的分数——**缓解=平衡排列聚合**：每个分数选项均分到各位置，跨平衡排列聚合分数。
+- **一致性协议**：每项 N∈[3,5] 次独立评估+关缓存+AB/BA 双序呈现，报 test-retest 可靠度/自洽性/位置翻转率；偏置审计：双序+长度分析。
+- **按退化金标构造**（无需人工偏好标签）：从高质量参考响应施加受控扰动→金标（偏好参考）由构造已知——测任何 judge 的四类失败模式零人工成本。
+- **可靠性是四维测量属性**（非单一准确率）：judgment validity（有效性）/ bias robustness（偏置鲁棒）/ aggregation independence（聚合独立）/ protocol auditability（协议可审计）。
