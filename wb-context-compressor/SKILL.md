@@ -2,7 +2,7 @@
 name: wb-context-compressor
 description: >-
   上下文聚焦（**只管输入侧：源材料 → 我**）。处理长命令输出 / 大日志 / 长文档 / 历史上下文时自动应用：只注入与当前任务相关的信息，不重复搬运无关上下文；摘要不得丢失关键错误、关键数据、关键步骤；用户明确指定要保留 / 参考的内容（偏好、约束、历史产物）不得丢弃；长期指令文件（AGENTS.md / CLAUDE.md / skill）失效时按其被忽略的原因排查而不是重复粘贴；**压缩时机按任务状态定、不按 token 数定（子任务完成才压，半途/卡住禁止压）**；**放进来的材料本身要过准入（模糊/敏感/易变/劣质样例不放进参考资料）且暴露面要最小化（只给必需的那一份、能经工具取就不铺进上下文；投递形态按"引用一次 vs 反复引用"选；授权范围也按最小给）**；**窗口撑满时按四步降级处置（大输入转检索 → 砍工具/MCP 数量 → 限历史轮数 → 才换大模型）；工具定义与工具输出是常驻固定开销：MCP 只挂本次必需、工具输出默认剔除内部元数据、按需重新纳入**；**记忆要持续裁剪而非只存（记忆管理器职责＝检查体积并主动缩减；只有有状态执行体才有记忆；记忆比窗口更早动手）**；验证、测试、安全检查等必要步骤一步不省。**输出侧（我 → 用户）的废话压缩不归本技能，走 `wb-max-token-saver`。** 等价于 context-compressor 插件的聚焦逻辑，在 WorkBuddy 下由本技能直接执行。触发词补：迭代整改、历史反馈重发、评审无记忆、假性不收敛、静默截断、超限报限制、裁了就变义、两次操作落盘、看过的先记下来、注入频率分级、自动注入文件干净、凭据读穿、凭据复制、可移植性、轮换敏感、跨主体继承、同一账号验证、终态隔离、出向披露、数据离开环境、外发域名、外发数据类别、保留时长、是否用于训练、披露不转移责任、降级顺序、先削描述再削条目、折叠不等于删除、可见性不是可达性、降级削减能力、目录折叠、按需取回 schema。、记忆会 stale、摘要过期、一手记录、原始记录检索、记忆失效信号、transcript 检索、记忆不是证据层、检索为空、检索零条、检索条数、先过滤后截断、索引滞后、索引新鲜度、索引覆盖范围、活跃分支、检索确认不存在、L0、L1、L2、目录摘要、abstract、overview、召回单元是目录、先定位区域再下钻、记忆写入三选一、创建合并跳过、记忆膨胀、保留策略、memory policies。、信任分类元数据、provenance分离、来源自证、部分结果告警、检索超时、不冷却全库。、注入槽位、按长度截、目标被挤出去、goal drift、固定骨架、槽位里的值、cache-safe、前缀缓存、注入像不像上一轮、恢复注入、读回来
-version: 3.2.0
+version: 3.3.0
 ---
 
 # wb-context-compressor（上下文阶段：聚焦相关）
@@ -923,3 +923,10 @@ version: 3.2.0
 - **Critic agent 压缩与标注**：长期记忆 agent 存三类记忆；独立 Critic 压缩原始材料、给 procedural 记忆**标注 guidance 与 reward 信号**——让 actor 下次按信号改进，不是原样存储。
 - **认知映射对照**：sensory=当前输入 / working=对话历史+scratchpad / episodic=过去对话与执行日志 / semantic=偏好与事实 / procedural=成功模式与工具用法；**rehearsal→consolidation**=从对话提取→摘要→持久化。
 - **工作记忆独立管理**：working 保持当前子目标与活跃约束的紧凑更新表示（不进长期库）；检索判据——「新任务与过去哪次经历相似」时才查 episodic。
+
+## 向量索引选型与量化权衡：HNSW 默认收敛 / IVF-PQ recall 代价 / 索引远小于 embedding（来源：arXiv《Empirical Evaluation of Vector Databases》2608.12812 2026-08 + arXiv《Evaluating Embedding Models》2511.22240 + fp8《Vector Databases 2026》2026-07-01 + toolsku《Distributed Vector DB Comparison》2026-01-28 + pythondatabench《LanceDB vs Qdrant vs pgvector》2026-07-27 实拉，与 §嵌入选型互补——那条管「选哪个 embedding」，本条管「索引与存储怎么选」）
+- **HNSW 是 2026 的默认收敛点**：Qdrant/Chroma/pgvector 默认全是 HNSW——**原始 ANN 速度很少是决胜点，过滤、扩展、运维才是**。
+- **HNSW 内存是隐藏成本**：100 万条 1536-dim float32 ≈ 6GB（索引开销前）；量化可砍 4x-32x——内存敏感先量化。
+- **IVF-PQ 的 recall 代价**：十亿向量可压进几十 GB RAM，但代价 5-10% recall；LanceDB 默认 IVF-PQ 在 5/6 数据集 recall<0.90（比图结构牺牲 30-70%）——**默认配置不代表好配置**。
+- **索引的影响远小于 embedding/分块/重排**：Milvus HNSW vs IVF-Flat Acc@3 0.460 vs 0.427——先优化上游，索引微调放最后。
+- **常见 HNSW 参数基线**：Qdrant m:16, ef_construct:100, ef:128, cosine；pgvector m:16, ef_construction:64——ef 越大召回越高但延迟越高；**混合搜索能力**（Qdrant 原生 BM25/SPLADE、Weaviate BM25F、Milvus sparse 2.4+、pgvector 手动 FTS+vector）按需要选。
