@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。等价于 Max-Token-Saver 插件的压缩逻辑，在 WorkBuddy 下由本技能直接执行。触发词含 "caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "复利项" / "减少轮数" / "一次调用不是一轮" / "换挡信号" / "能力不足" / "连续不改善" / "热路径" / "后台 pass" / "留痕只存元数据" / "整理移出每轮" / "可自检追问" / "discernment nudge" / "追问具体性" / "别唠叨"；关闭："off" / "正常模式" / "stop caveman" / "normal mode"。、进度流、诊断流、里程碑播报、中间态汇报、失败细节不进进度、审批点优先、压缩范围、不许删未触及内容、省 token 不是删除许可、净中性不等于无损失、预算关不上就报告增长、不从别处筹 token
-version: 1.26.0
+version: 1.27.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -235,3 +235,10 @@ version: 1.26.0
 - **不要为解析器缓冲整个响应**：流式前端需要容忍截断的解析器——小栈关闭开放的字符串/数组/对象，再解析修复后的串（partial JSON repair）。
 - **markdown 增量渲染**：markdown 会不完整到达（代码块/表格中途切分）——增量渲染，**不每个 token 重解析整个消息**。
 - **SSE 是默认**：原生浏览器支持/自动重连/标准 HTTP；WebSocket 留给双向需求（语音/agentic 确认/多用户）；fetch+ReadableStream 给自定义协议。
+
+## 解码参数实证：T=0 不保证确定性 / JSON 两级约束 / guided decoding 五级 / min_tokens 语义（来源：arXiv《Background Temperature》2604.22411 + Cohere《Structured Outputs》2026-09-16 + Microsoft《Structured Outputs》2026-08-25 + NVIDIA《Guided Decoding》2026-09-08 + modular《Inference Parameters》2026-09-10 + LocalAIMaster《Sampling Parameters》2026-05-01 实拉，与 §流式 UX 互补——那条管「输出怎么呈现」，本条管「输出怎么采样生成」）
+- **T=0 不保证确定性**：输出变异性在名义确定性设置下仍然存在——来自实际系统（批量大小变化、缺 batch-invariant kernels、浮点非结合性、reduction-order 效应）——「背景温度」概念：**要确定性靠 pinned 环境 + 校验，不靠温度 0**。
+- **JSON 两级约束**：JSON mode 只保证「合法 JSON」；**JSON Schema mode 保证符合你给的 schema**（字段类型/必填/枚举）——要结构化契约用后者。
+- **guided decoding 五级约束**：None / JSON / JSON Schema / Regex / EBNF Grammar——按契约强度选，能约束到语法层就不靠提示词保证。
+- **min_tokens 与 stop 语义**：min_tokens 避免响应过早停止；stop/stop_token_ids 在分隔符/节/工具边界停——**边界由 token 模式定，不靠「说好到这就停」**。
+- **top-p 语义表**：0.5 紧（只留前半）/ 0.9 默认 / 0.95 更松允许更多变化 / 1.0 禁用；temperature 0=greedy。
