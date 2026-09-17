@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、重放不计数、崩溃恢复、replay、错误通道、错误负载、定位信息、retryOf、失败处理外置、限流预防、分批、批大小、条件循环、终止条件、无限循环、结构化索取、Elicitation、缺信息要问、错误当空、把失败当空结果、毒化产物、重播种、reseed、传输损坏、信封校验、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、集成决策权、确认词、工作树保留、验证边界、候选物变了、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、切分维度、按关注点切、按文件所有权切、团队规模、并行度不等于人数、关键路径、依赖图、竞争假设、只读角色、blockedBy、维度覆盖、失败恢复阶梯、超时是终态、熔断不换路、降级不持久化、显式选择 strict、先查断点再重做、不许偷偷降标准、最早可重试时间、改向不等于中止、steer、中止已启动的工作、已开始vs已请求、并行批次检查点、跳过留痕、取消不是消失、确认不等于消费、送达确认、投递生命周期窗口、事后补推、后台容量分离、独立并发池、维护类工作、调度器不占槽、自锁、队列满丢谁、drop策略、已入队不等于会执行、输入持久化、不确定不重放、可能已提交、取证深度、浅层扫描、廉价列表、批量扫描、用于选择、用于判定、逐项取证、重复处理、批量退化、全部处理不等于逐项读全、派活传目的、迭代取回、子agent只知字面查询、挂载点频率、延迟预算、Stop hook、UserPromptSubmit、边界点、字符串里的第二副本、教错格式、schema 迁移看不见、find-replace 漏、示例残留、heredoc 副本、旧格式藏正文、提示词里的过期判据
-version: 1.61.0
+version: 1.62.0
 agent_created: true
 ---
 
@@ -630,3 +630,11 @@ agent_created: true
 - **trace 当数据管**：OTel trace 直写数据湖表（如 Unity Catalog/Delta），实时高吞吐摄入+长期保留+统一治理——trace 不再是临时日志而是可查询资产。
 - **工具选型两问**：①内置 evaluator 吗（幻觉/提示注入/数据泄露检测）；②计费按什么（按 LLM span 计费≈按真实用量，不按 trace 总量）。框架自带 tracing 快（一个 env var）vs OTel 可移植（需 collector）——先框架后迁 OTel。
 - **AgentTrace 结构化日志协议**：schema-based，跨 cognitive（思维）/operational（操作）/contextual（上下文）三类 trace——可观测性升为安全/可复现/问责使能，支持细粒度调试与失败归因。
+
+## 结构化输出与 JSON 模式可靠性：constrained decoding / 推理税 / 语义校验分离（来源：belsoft《LLM Structured Output in Production》2026-07-09 + thepromptbench《Reliable JSON》2026-07-13 + Zylos《Constrained Decoding Production Agents》2026-04-11 CRANE + eastondev 选型表 2026-05-06 + acingai《Constrained Decoding》2026-06-29 实拉）
+- **选型阶梯（取最强保证）**：OpenAI/Gemini schema mode（strict）→ Claude forced tool schema → 本地 grammar（Outlines 等）→ prompt-and-parse 仅兜底。
+- **constrained decoding 原理**：schema 编译成 grammar（CFG/FSM）→ 每步解码 mask next-token 分布，违规 token 概率置零——'by construction' 保证非 best-effort；结构失败率 <0.1%；**function calling 就是同一机制**（工具参数 schema 即解码器强制对象）。
+- **局限与推理税**：递归类型/无约束 union 不支持；CRANE（ICML 2025）约束解码会降推理质量（强制偏离高概率序列）——路由/参数 schema 用约束解码，复杂推理别全程约束，必要时交替 constrained/unconstrained。
+- **结构有效≠语义有效**：'it parses' 交给平台，语义校验留在自己代码；给模型显式 not found/unknown 出口，别让 schema 逼它编值。
+- **场景选型**：纯 API 求稳→Structured Outputs（0.1% 失败率）；复杂推理+工具→Claude+L1/L2 校验；私有部署→Qwen/Llama+Outlines；金融/医疗高格式要求→strict 或 Outlines 近零失败；<5 扁平字段且可容忍失败→prompt+JSON mode。
+- 判据：能约束解码就不 validate-retry；能 schema 强制就不靠提示词叮嘱格式。
