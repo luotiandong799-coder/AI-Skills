@@ -3,7 +3,7 @@ name: wb-skill-authoring
 description: >-
   评测集、holdout、留出集、正例控制、语义反例、路由请求、评分材料、过窄断言、迎合检查器、证据强度分层、激活率。、查重、双键检索、来源标识、重复落地、回滚版本号、同一源二次消费、引用前先验证生产者、指向空来源比不写更糟、抑制兜底、只移植结构不移植假设、兜底链要能解析、名字稳定不等于契约稳定、形状变更、静默拒绝正确产物。、闭合邻域、技能集封闭、平级、委托链、归属任务、抢活、误触发、激活两个方向、消融基线、运行时轴、路径源、git 源、钉 commit、复现性。、委托式技能、一行委托、部分加载、参考型技能、非驱动护栏、编排层静默、依赖加载可靠性、落盘核验
   Skill 的写法与体检（触发词设计 / 描述质量 / 文件拆分 / 跨工具迁移 / 安装前安全审查 / 安装后接线 / 触发评测盲测 / no-skill 对照 / 效果归因 / 重复技能的去重与合并流程）。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、TRACE、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、质量硬杠、scoped tools、绝对路径、组合三平面、展示行为知识分离、agent 组合结构、双路由、meta-router、原生路由、指令改写、指令迭代、执行轨迹、reasoning 轨迹、prompt 自动改进、改了指令还是不行、STOP/WAIT/PROCEED、什么时候不该跑、重复触发、技能快速路径表、指标噪声、重复采样、趋势不是单点、评分器在抖、技能是行为包、指令加工具、可复用行为包、混淆代理、共享身份、授权作用域、按调用方授权、三积木、动作数据指令、谁控制、副作用归模型决定、版本号语义、破坏性变更、按次协商版本、废弃过渡期、迁移路径、non-scope、不做什么、职责边界、选择依据、编码决策、内容作者与触发者、显式选中、空泛流程、模型自造技能、技能素材来源、gotchas、控制度校准、脆弱性、给默认不给菜单、干净上下文、快照基线、near-miss、近失、触发率、祈使句、description 上限、name 规范、timing 取舍、调指令算修了吗、缓解不是修复、加固不是修复、改了两遍还是这样、别再加一句必须、指令层兜底、失败发生在指令之后、溯源元数据、provenance、发布分级、晋升门槛、curated/learned 分级、技能 pedigree、pass^k、每次都跑通、一致性指标。、引用只一层深、嵌套引用链、one level deep、引用深度、详见X
-version: 1.85.0
+version: 1.86.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -879,3 +879,11 @@ grep -rn "<旧名>" ~/.workbuddy/skills /c/Users/26719/.workbuddy/AGENTS.md "D:/
 - **enum 2-6 值封顶**：小枚举集精度高，大枚举精度骤降——过大拆分类或改规则匹配。
 - **schema 验证两硬键**：additionalProperties: false + required 显式枚举；复杂 schema 在 prompt 里用 YAML 呈现（少引号转义错），输出仍是 JSON。
 - 判据：**结构化输出的故障大多在 schema 设计期**——示例、字段指令、拆分、显式 null、小 enum 五项齐，parse 才省心。
+
+## 系统提示工程强化：五段框架 / fallback 是失败主源 / 工具指令模式 / Architect's Rule（来源：Microsoft Learn《System Prompt Frameworks for Agent Control》2026-09-10 + Rephrase《System Prompt That Works》2026-03-23 + blckalpaca《12 Design Patterns》2026-06-09 + Best AI Web《Production System Prompt 2026》2026-07-30 实拉，与 §操作手册式 prompt 互补——那条管「结构顺序」，本条管「每段用途与常见失败」）
+- **系统提示五段框架，每段一个稳定性用途**：Identity and role（防角色混乱/范围漂移）+ Behavioral constraints（挡危险动作/注入）+ Scope limitations（界定合法主题/决策边界）+ Escalation triggers（何时拒绝升级——安全阀）+ Output format requirements（结构化 schema——可验证可审计）。
+- **fallback behavior 是最常被跳过的层 = 野外 bot 失败主因**：信息缺失时怎么办、越界时怎么拒——不写，失败时行为由模型随机决定。
+- **工具指令模式**：每个工具写清「何时用 / 何时禁用」（如 search_internal_db：用于存量客户，NICHT 用于一般 web 问题）——强制正确工具选择。
+- **Architect's Rule**：写不出每一层「做什么」就不要写那层；防御层放在文档最后、但在威胁模型中排最先。
+- **输出格式化是可靠性支柱不是美观**：强 prompt 移除每个决策点的猜测，不止最终答案；用小型测试+版本化+反复编辑迭代改进 prompt。
+- 判据：**系统提示像代码一样维护**——分层（每段可解释）、版本化（可回滚）、有测试（可回归）；fallback 与工具指令缺一层，生产里就会以随机行为显形。
