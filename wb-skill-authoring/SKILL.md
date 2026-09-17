@@ -3,7 +3,7 @@ name: wb-skill-authoring
 description: >-
   评测集、holdout、留出集、正例控制、语义反例、路由请求、评分材料、过窄断言、迎合检查器、证据强度分层、激活率。、查重、双键检索、来源标识、重复落地、回滚版本号、同一源二次消费、引用前先验证生产者、指向空来源比不写更糟、抑制兜底、只移植结构不移植假设、兜底链要能解析、名字稳定不等于契约稳定、形状变更、静默拒绝正确产物。、闭合邻域、技能集封闭、平级、委托链、归属任务、抢活、误触发、激活两个方向、消融基线、运行时轴、路径源、git 源、钉 commit、复现性。、委托式技能、一行委托、部分加载、参考型技能、非驱动护栏、编排层静默、依赖加载可靠性、落盘核验、依赖解析校验分离、解析在边界、离线纯校验、先取后验、能力声明内聚、随技能旅行、不靠外部flag、自包含
   Skill 的写法与体检（触发词设计 / 描述质量 / 文件拆分 / 跨工具迁移 / 安装前安全审查 / 安装后接线 / 触发评测盲测 / no-skill 对照 / 效果归因 / 重复技能的去重与合并流程）。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、TRACE、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、质量硬杠、scoped tools、绝对路径、组合三平面、展示行为知识分离、agent 组合结构、双路由、meta-router、原生路由、指令改写、指令迭代、执行轨迹、reasoning 轨迹、prompt 自动改进、改了指令还是不行、STOP/WAIT/PROCEED、什么时候不该跑、重复触发、技能快速路径表、指标噪声、重复采样、趋势不是单点、评分器在抖、技能是行为包、指令加工具、可复用行为包、混淆代理、共享身份、授权作用域、按调用方授权、三积木、动作数据指令、谁控制、副作用归模型决定、版本号语义、破坏性变更、按次协商版本、废弃过渡期、迁移路径、non-scope、不做什么、职责边界、选择依据、编码决策、内容作者与触发者、显式选中、空泛流程、模型自造技能、技能素材来源、gotchas、控制度校准、脆弱性、给默认不给菜单、干净上下文、快照基线、near-miss、近失、触发率、祈使句、description 上限、name 规范、timing 取舍、调指令算修了吗、缓解不是修复、加固不是修复、改了两遍还是这样、别再加一句必须、指令层兜底、失败发生在指令之后、溯源元数据、provenance、发布分级、晋升门槛、curated/learned 分级、技能 pedigree、pass^k、每次都跑通、一致性指标。、引用只一层深、嵌套引用链、one level deep、引用深度、详见X
-version: 1.94.0
+version: 1.95.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -952,3 +952,10 @@ ext_actions 字段引导后续动作。
 - **优化指标三件套（至少各 1）**：①质量（任务准确率 / RAG faithfulness / 指令遵循分）②成本（token/query 或 $/1000 queries）③约束（拒绝率 / p95 延迟 / 语气合规 / 护栏通过率）——只优化质量→准确但贵；只优化成本→便宜但弱。
 - **prompt 与微调组合序列（BetterTogether）**：p→w（先优化 prompt 再微调，简单常有效）/ p→w→p（微调后再优化一轮，可叠加微调收益）/ w→p（先微调再优化 prompt）——按资源选序列，不是二选一。
 - **换模型 = recompile 不是 rewrite**：同一 signature+metric 换模型重跑 optimizer，指令自动适配新模型——不要人工逐条改 prompt。
+
+## 受约束解码与结构化输出选型：掩码机制 / schema 有效性≠语义成功 / 三模式对比（来源：arXiv《When JSON Is Not Enough》2026-07 + FutureAGI《Evaluating Structured Output Modes》2026-05-20 + thepromptbench《Reliable JSON》2026-07-13 + codewithkarani《Constrained Decoding》2026-06-26 + AWS Bedrock《Structured Outputs》2026-02-06 实拉，与 §结构化输出验证互补——那条管「拿到后怎么验」，本条管「机制与模式怎么选」）
+- **受约束解码机制**：采样前把不能合法延续输出的 token 掩码为 -inf，模型只能从保持语法合法前缀的 token 里采样——**「验证后重试」变「非法 token 结构性选不出来」**，不是事后补救。
+- **schema 有效性 ≠ 语义成功**：模型可达 100% schema validity 而语义成功只有 31-83%（GPT-OSS 83% / Qwen3-30B 31%）——**结构化输出只保证形状，不保证内容正确**，语义校验不能省。
+- **strict 模式失败形状**：required-by-default 下 optional 字段会被**静默丢弃**；复杂/嵌套 schema 会被拒——用 strict 前先把真需要的字段全部 required，别依赖 optional 保底。
+- **三模式按需选**：JSON Mode（保证合法 JSON、不保证 schema 合规）→ Function Calling（定义 input_schema 为目标结构，数据以工具参数到达——Anthropic 系主答案）→ Constrained Decoding（token 级掩码，保证 100% 合规）——**要零验证管道就用 constrained，只是想要形状就用 function calling**。
+- **可信任则免验证**：constrained decoding 开启后可以建 zero-validation 数据管道（信任模型输出直接用）——但语义层校验仍独立保留。
