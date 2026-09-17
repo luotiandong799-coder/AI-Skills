@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、重放不计数、崩溃恢复、replay、错误通道、错误负载、定位信息、retryOf、失败处理外置、限流预防、分批、批大小、条件循环、终止条件、无限循环、结构化索取、Elicitation、缺信息要问、错误当空、把失败当空结果、毒化产物、重播种、reseed、传输损坏、信封校验、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、集成决策权、确认词、工作树保留、验证边界、候选物变了、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、切分维度、按关注点切、按文件所有权切、团队规模、并行度不等于人数、关键路径、依赖图、竞争假设、只读角色、blockedBy、维度覆盖、失败恢复阶梯、超时是终态、熔断不换路、降级不持久化、显式选择 strict、先查断点再重做、不许偷偷降标准、最早可重试时间、改向不等于中止、steer、中止已启动的工作、已开始vs已请求、并行批次检查点、跳过留痕、取消不是消失、确认不等于消费、送达确认、投递生命周期窗口、事后补推、后台容量分离、独立并发池、维护类工作、调度器不占槽、自锁、队列满丢谁、drop策略、已入队不等于会执行、输入持久化、不确定不重放、可能已提交、取证深度、浅层扫描、廉价列表、批量扫描、用于选择、用于判定、逐项取证、重复处理、批量退化、全部处理不等于逐项读全、派活传目的、迭代取回、子agent只知字面查询、挂载点频率、延迟预算、Stop hook、UserPromptSubmit、边界点、字符串里的第二副本、教错格式、schema 迁移看不见、find-replace 漏、示例残留、heredoc 副本、旧格式藏正文、提示词里的过期判据
-version: 1.76.0
+version: 1.77.0
 agent_created: true
 ---
 
@@ -751,3 +751,11 @@ agent_created: true
 - **动态分辨率保宽高比**：按 16x16 patch 分解、单图视觉 token 约束在 1024-13312，保留原生宽高比——固定 tiling 会丢形状语义。
 - **跨模态 token 压缩原则**：视觉 token 的信息若已被音频或其他视觉 token 表达则删；对象级视觉 token 换紧凑文本代理（对象短描述）——只留别处没有的信息。
 - **音频走专用编码器**：WHISPER 等 ASR 编码后进 LLM，不直接丢音频波形/原始采样。
+
+## 结构化输出三层验证与修复：schema→语义→业务 / repair-first / validation sandwich / constrained decoding（来源：Supergood《Validation Layer》2026-03-10 + AI/TLDR《Schema Validation》2026-06-12 + openlegion《LLM Structured Output》2026-07-01 + niteagent《5 Patterns》2026-05-16 + Chanl《Structured Outputs》2026-05-19 + PyPI outputguard 2026-08 实拉，与 §工具调用可靠性互补——那条管「调用前参数校验/调用后结果断言」，本条管「模型输出本身怎么验与修」）
+- **三层验证不省**：Tier1 schema+类型（structured outputs 覆盖大半）/ Tier2 语义验证（字段级校验/格式/范围/跨字段逻辑）/ Tier3 业务逻辑（领域规则/策略/HITL 阈值）——schema 合法不等于正确：合法 JSON 里能装编造的价格与幻觉日期。
+- **repair-first 策略**：schema 校验失败先启发式修复（json_repair 修缺逗号/未转义引号/截断/fenced 块，零模型调用）→ 仍不行再 retry（把校验错误附上重发，让模型自纠）——先免费后花钱。
+- **validation sandwich（最常用）**：Pydantic 验证 + 失败重试带错误反馈——重试不是同 prompt 重发，是告诉模型错在哪。
+- **constrained decoding**：GPT-5 家族/Gemini 2.5 支持，正确使用近零 schema 错误；不支持约束解码的模型（Claude）用可移植方案：schema 放 system prompt + Zod/Pydantic 验证 + 出错重试一次。
+- **业务规则放 validators 不放 schema**：Instructor/Pydantic AI 等把业务校验写进 Pydantic validators，校验失败自动触发重试（InstructorRetry）——schema 只管形状，validators 管对错。
+- **判据**：任何结构化输出进流水线前必须过验证层；只靠 prompt 要求返回 JSON 等于没保护。
