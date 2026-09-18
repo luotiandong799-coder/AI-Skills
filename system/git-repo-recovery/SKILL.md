@@ -2,7 +2,7 @@
 name: git-repo-recovery
 description: >-
   本地 .git 损坏时的取证与恢复。当出现 `fatal: not a git repository`（明明 .git 目录还在）、`git fsck` 刷屏 `failed to load pack entry` / `unable to read`、`.git/refs` 或 `packed-refs` 消失、`objects/pack/*.pack` 不见只剩 .idx、git 命令全部报 unknown revision / ambiguous argument、仓库突然"不被识别"时使用。流程：只读取证（reflog 是最重要的幸存线索）→ 分清「refs 丢失可原地重建」还是「pack 损毁只能从远端重取」→ 保留工作树、只换 .git → 三查验收（fsck_rc=0 + HEAD==远端 sha + status 干净）。也适用于：**把敏感/私人文件从 git 历史里彻底清除**（`git filter-repo` 抹路径 + `--force-with-lease` 推送 + 发现「force push 后 GitHub 仍保留不可达对象，旧 SHA 照样匿名可读」这条反直觉事实）、全历史密钥审计（判定到底哪些算敏感）、多副本（live + 镜像）一致性核对、恢复后 status 一堆 M 的真假甄别（stat 假脏 vs 真改动）、autocrlf 造成的 CRLF 漂移排查。触发词：.git 损坏、仓库坏了、not a git repository、failed to load pack entry、pack 丢失、refs 丢失、git 仓库打不开、fsck 报错、reflog 取证、从远端恢复仓库、git 仓库修复、corrupt git repo、recover git repository、objects 损坏、**历史重写、抹除历史、隐私问题、force push、force-with-lease、filter-repo、删掉历史里的文件、旧提交还能读到、仓库重命名、删库重建、密钥审计、敏感内容扫描**。不适用：GitHub 连不上 / push 超时（走 github-ssh-over-443）、只是合并冲突或撤销提交（走 git 常规操作）。
-version: 1.1.0
+version: 1.2.0
 agent_created: true
 ---
 
@@ -117,7 +117,10 @@ python git-filter-repo --force --filename-callback '
 git push --force-with-lease=refs/heads/main:<观察到的远端 sha> <remote> main
 ```
 - **工具获取**：本机 `git filter-repo` 命令未必存在 → 取单文件脚本 `curl -H "Accept: application/vnd.github.raw" https://api.github.com/repos/newren/git-filter-repo/contents/git-filter-repo`（raw.githubusercontent.com 被墙时用 contents API），托管 python 直接跑。
-- **必须用 `--force-with-lease`**：有他人也在推时，远端 tip 会变，普通 `--force` 会无声覆盖对方成果；带租约会自动拒绝（实测成功拦下一次，避免删掉别人的提交）。把"对齐 → clone → 改写 → 校验 → 推送"压在**一条命令里**执行，缩短竞态窗口。
+- **必须用 `--force-with-lease`**：有他人也在推时，远端 tip 会变，普通 `--force` 会无声覆盖对方成果；带租约会自动拒绝。把"对齐 → clone → 改写 → 校验 → 推送"压在**一条命令里**执行，缩短竞态窗口。
+- **⚠️ 但 lease 不等于安全（2026-09-18 亲测踩坑）**：`--force-with-lease` 只担保"远端 tip 等于你观察到的那个值"，**不担保你的分支包含它**。情形：你基于旧基线 A 提交了 C，期间别人推了 B；你观察到的远端是 B，于是 lease 通过，而你的推送会把 **B 整会从分支上抹掉**，且 git 只提示 `(forced update)`、不报错。
+  - **硬校验**：推送前必须 `git merge-base --is-ancestor FETCH_HEAD HEAD`（为真才可推；否则先把 FETCH_HEAD merge/rebase 进来）。
+  - **补救（亲测有效）**：正因为 GitHub 保留不可达对象，被抹掉的提交**还能救回** —— `git fetch origin <被覆盖的 sha>` 把它取回本地，再在**干净克隆**里 `git merge <sha>` 后用**非强制**推送即可完整恢复。若发现被抹掉，立刻先在 GitHub 上确认该 SHA 仍返回 200（`commits/<sha>`），再动手。
 - **验收三查**：① 前后 `HEAD^{tree}` 完全一致；② `git log --all --full-history -- <被删路径>` 命中 **0**；③ fsck=0、技能/文件数一个不少。空提交会被自动剪枝，提交数变少属正常。
 
 ### ★反直觉：force push 之后，旧内容照样能读
