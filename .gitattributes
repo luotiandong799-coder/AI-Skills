@@ -1,3 +1,5 @@
 # 统一 LF 换行：CRLF 可能破坏 YAML frontmatter 解析，导致 skill 静默不加载、不报错、永不触发
 # 本机 core.autocrlf=true，若无本文件，git 会在 checkout 把 .md 转成 CRLF
 *.md text eol=lf
+# 2026-09-18 补：co-learn 的 .txt 快照实测被 autocrlf 写成 CRLF，与 LF 副本漂移 444 行
+*.txt text eol=lf

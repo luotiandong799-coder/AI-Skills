@@ -1,8 +1,8 @@
 ---
 name: github-ssh-over-443
 description: >-
-  GitHub 连不上 / git push 超时 / GitHub 打不开时用 SSH over 443 绕过。当出现以下情况时应用：`git push` 报 `Failed to connect to github.com:443`、clone/fetch 卡住无响应、github.com 网页打不开、为推代码反复启动 VPN、需要给 GitHub 配置免翻墙访问、**读仓库里的文件/列目录/看最近提交**（raw.githubusercontent.com 同样被墙，应改走 api.github.com）。核心判断：HTTPS(443) 被 TLS SNI 检测阻断，而 SSH 协议不带 SNI 所以放行——改 remote 为 SSH 即可直连，多数情况根本不需要 VPN；取文件内容则走 api.github.com（实测直连 200）。也适用于判断"到底是网络被封还是认证没配好"。
-version: 1.1.0
+  GitHub 连不上 / git push 超时 / GitHub 打不开时用 SSH over 443 绕过。当出现以下情况时应用：`git push` 报 `Failed to connect to github.com:443`、clone/fetch 卡住无响应、github.com 网页打不开、为推代码反复启动 VPN、需要给 GitHub 配置免翻墙访问、**读仓库里的文件/列目录/看最近提交**（raw.githubusercontent.com 同样被墙，应改走 api.github.com）。核心判断：HTTPS(443) 被 TLS SNI 检测阻断，而 SSH 协议不带 SNI 所以放行——改 remote 为 SSH 即可直连，多数情况根本不需要 VPN；取文件内容则走 api.github.com（实测直连 200）。也适用于判断"到底是网络被封还是认证没配好"。**先分清"网络不通"还是"本地 .git 损毁"**：git 命令报 `not a git repository`（.git 目录明明还在）、`failed to load pack entry`、refs/pack 消失，那是本地仓库损坏，网络层解决不了 —— 走 `git-repo-recovery` 取证后从远端重取。
+version: 1.2.0
 ---
 
 # github-ssh-over-443（GitHub 访问被打断时的直连解法）
@@ -76,3 +76,11 @@ curl -s -H "Accept: application/vnd.github.raw" \
 - 为 push 反复启停 VPN → 多数情况 SSH 直连就够；本类 VPN 常只能起进程、无法自动建隧道
 - 每次 push 失败就放弃、不做一次性修复 → 同样是每天浪费一次超时
 - 把私钥或含密钥的 config 提交进仓库
+- 把"本地 .git 损坏"误判成"网络被封" → 前者重试/换协议都无效，要先看 `.git/refs` 与 `objects/pack` 是否完好，走 `git-repo-recovery`
+
+## 相邻技能分工
+| 场景 | 走哪个 |
+|---|---|
+| 连不上 GitHub / push 超时 / 被墙 | **本技能**（SSH over 443 + API 取内容） |
+| 本地 `.git` 损毁（`not a git repository`、pack/refs 丢失） | `git-repo-recovery` |
+| 修复后独立验证是否真的生效 | `wb-artifact-verification` |
