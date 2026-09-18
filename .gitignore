@@ -4,7 +4,7 @@ Thumbs.db
 *.bak
 skills/**/cache/
 # 本地工具技能二进制不入库（避免 git 历史膨胀；本体在 D:\腾讯AI\skills 已可用，需时重新下载）
-rg-ffmpeg-tools/bin/
+**/rg-ffmpeg-tools/bin/
 *cookies*.json
 *_cookies*.json
 plugins/marketplaces/
