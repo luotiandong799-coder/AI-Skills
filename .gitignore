@@ -20,3 +20,9 @@ id_ed25519*
 # 文件仍在本地磁盘保留（git rm --cached，非删除），只是不进 GitHub
 /AGENTS.md
 /memory/USER_MEMORY.md
+
+# memory/ 下个人日志与内部状态一律不入公开仓库（2026-09-18）；只保留共学区 co-learn/
+/memory/*.md
+/memory/*.txt
+/memory/*.json
+/memory/automations/
