@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。等价于 Max-Token-Saver 插件的压缩逻辑，在 WorkBuddy 下由本技能直接执行。触发词含 "caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "复利项" / "减少轮数" / "一次调用不是一轮" / "换挡信号" / "能力不足" / "连续不改善" / "热路径" / "后台 pass" / "留痕只存元数据" / "整理移出每轮" / "可自检追问" / "discernment nudge" / "追问具体性" / "别唠叨"；关闭："off" / "正常模式" / "stop caveman" / "normal mode"。、进度流、诊断流、里程碑播报、中间态汇报、失败细节不进进度、审批点优先、压缩范围、不许删未触及内容、省 token 不是删除许可、净中性不等于无损失、预算关不上就报告增长、不从别处筹 token
-version: 1.28.0
+version: 1.29.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -249,3 +249,8 @@ version: 1.28.0
 - **长时自主任务是成本大头**：/goal 跑 20 小时烧 2 亿 token——「不要一个 goal 一路走到黑」不只是效率问题，**也是成本问题**。
 - **成本可观测是优化前提**：没有度量就无法判断优化是否有效——先能分开看三通道，再谈省。
 - 反模式：只看总量以为输出贵；长任务挂机不管烧 token；省 token 但没度量导致优化前后无法对比。
+
+## 输出不止文本：Generative UI 三形态选型 + 工具/状态渲染（来源：DeepLearning.AI《Build Interactive Agents with Generative UI》课程大纲 + CopilotKit docs 2026-09-18 实拉，与 §流式 UX 互补——那条管流式文本呈现，本条管结构化 UI 渲染架构）
+- **Generative UI Spectrum 三分类**：① **Controlled**（开发者完全控制 UI，agent 只提供数据）② **Declarative**（agent 声明要什么组件/卡片/表单，开发者注册组件渲染器）③ **Open-Ended**（agent 自由生成布局）。→ 判据：**按可控性需求选**——要品牌一致性选 Controlled、要按需生成选 Declarative、要完全自由选 Open-Ended。
+- **Tool Call Rendering（工具调用渲染）**：不把工具返回的原始 JSON 甩给用户，而是注册一个组件把调用画成品牌化卡片（参数 + 实时状态 + 最终结果）。→ 判据：**工具结果进 UI 前先问「这坨 JSON 用户怎么读」**——能画成卡片/图表就不丢原始数据。
+- **State Rendering（状态渲染）**：agent 每推进一个节点/发出状态更新，前端就实时渲染——进度条（例：Researching 2/5 complete）、进行中的草稿、反映 agent 状态的 dashboard。→ 判据：**过程状态做成可实时渲染的结构化更新**，而不是攒到最后一次性给结论。
