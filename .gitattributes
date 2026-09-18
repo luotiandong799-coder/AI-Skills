@@ -3,3 +3,13 @@
 *.md text eol=lf
 # 2026-09-18 补：co-learn 的 .txt 快照实测被 autocrlf 写成 CRLF，与 LF 副本漂移 444 行
 *.txt text eol=lf
+# 2026-09-18 补：脚本/配置/自描述文件也锁 LF（本机 core.autocrlf=true，不锁会在 checkout 转 CRLF；
+# CRLF 的 .gitattributes 还会破坏最后一条 pattern 的解析）。已核对索引内这些类型均无 CR，锁定不触发重归一化。
+*.py text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.svg text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
