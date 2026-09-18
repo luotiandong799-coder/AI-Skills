@@ -15,3 +15,8 @@ plugins/data/
 .ssh/
 id_rsa*
 id_ed25519*
+
+# 个人档案 / 运营规则全文（2026-09-18 用户要求收紧暴露面：仓库已转 public，这两份移出版本控制）
+# 文件仍在本地磁盘保留（git rm --cached，非删除），只是不进 GitHub
+/AGENTS.md
+/memory/USER_MEMORY.md
