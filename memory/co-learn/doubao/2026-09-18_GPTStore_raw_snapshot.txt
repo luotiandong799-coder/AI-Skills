@@ -1,0 +1,444 @@
+- generic
+  - generic
+    - generic
+      - image
+      - generic
+        - button [expanded=false, ref=e135]
+    - generic
+      - image "vip"
+      - StaticText "升级VIP"
+      - StaticText "畅享AI智能解题特权"
+      - StaticText "了解详情"
+    - StaticText "聊天历史记录"
+    - paragraph
+      - StaticText "暂无会话历史记录哦～"
+  - generic
+    - StaticText "APP扫码登录"
+    - image "https://www.daxuesoutijiang.com/dx-h5/appdownload.html?uuid=&type=1&pvc=1171"
+    - generic
+      - StaticText "打开大学搜题酱APP或WakeUp课程表APP在 「我的」页点击「电脑端扫码」"
+  - StaticText "下载大学搜题酱App"
+  - StaticText "帮助"
+- generic
+  - generic
+    - generic
+      - link [ref=e68]
+        - SvgRoot
+          - StaticText "ChatGPT"
+      - button "免费注册" [ref=e69]
+        - StaticText "免费注册"
+    - StaticText "GPT"
+    - StaticText "探索并创建结合了指令、额外知识和任何技能组合的自定义版本的 ChatGPT。"
+    - generic
+      - generic [ref=e127] clickable [cursor:pointer, onclick]
+        - StaticText "精选推荐"
+      - generic [ref=e128] clickable [cursor:pointer, onclick]
+        - StaticText "图像"
+      - generic [ref=e129] clickable [cursor:pointer, onclick]
+        - StaticText "编程"
+      - generic [ref=e130] clickable [cursor:pointer, onclick]
+        - StaticText "工作效率"
+      - generic [ref=e131] clickable [cursor:pointer, onclick]
+        - StaticText "写作"
+      - generic [ref=e132] clickable [cursor:pointer, onclick]
+        - StaticText "研究与分析"
+      - generic [ref=e133] clickable [cursor:pointer, onclick]
+        - StaticText "教育"
+      - generic [ref=e134] clickable [cursor:pointer, onclick]
+        - StaticText "生活方式"
+    - generic [ref=e1] focusable [tabindex]
+      - StaticText "精选"
+      - StaticText "本周精选推荐"
+    - generic [ref=e2] focusable [tabindex]
+      - link "Video AI by invideoinvideo 推出的视频人工智能技术 4.0 ★ - AI video maker GPT (Supercharged with Sora 2) - generate engaging videos with voiceovers in any language!4.0 ★ - AI 视频制作工具 GPT（结合了 Sora 2 技术）——可以生成带有各种语言旁白的精彩视频！ 创建者：invideo.io" [ref=e70]
+        - StaticText "Video AI by invideo"
+        - StaticText "invideo 推出的视频人工智能技术"
+        - StaticText "4.0 ★ - AI video maker GPT (Supercharged with Sora 2) - generate engaging videos with voiceovers in any language!"
+        - StaticText "4.0 ★ - AI 视频制作工具 GPT（结合了 Sora 2 技术）——可以生成带有各种语言旁白的精彩视频！"
+        - StaticText "创建者：invideo.io"
+    - generic [ref=e3] focusable [tabindex]
+      - link "Expedia Bring your trip plans to life – get there, stay there, find things to see and do.让您的旅行计划变为现实——前往目的地、在那里停留、探索各种景点和活动。 创建者：expedia.com" [ref=e71]
+        - StaticText "Expedia"
+        - StaticText "Bring your trip plans to life – get there, stay there, find things to see and do."
+        - StaticText "让您的旅行计划变为现实——前往目的地、在那里停留、探索各种景点和活动。"
+        - StaticText "创建者：expedia.com"
+    - generic [ref=e4] focusable [tabindex]
+      - link "Canva Effortlessly design anything: presentations, logos, social media posts and more.轻松设计各种内容：演示文稿、徽标、社交媒体帖子等等。 创建者：community builder创建者：社区建设者" [ref=e72]
+        - StaticText "Canva"
+        - StaticText "Effortlessly design anything: presentations, logos, social media posts and more."
+        - StaticText "轻松设计各种内容：演示文稿、徽标、社交媒体帖子等等。"
+        - generic
+          - StaticText "创建者：community builder"
+          - StaticText "创建者：社区建设者"
+    - generic [ref=e5] focusable [tabindex]
+      - StaticText "热门"
+      - StaticText "社区中最受欢迎的 GPT"
+    - generic [ref=e6] focusable [tabindex]
+      - link "1 Scholar GPT学者 GPT Enhance research with 200M+ resources and built-in critical reading skills. Access Google Scholar, PubMed, bioRxiv, arXiv, and more, effortlessly.利用超过 2 亿份的学术资源以及内置的文献分析工具，提升研究效率。您可以轻松访问 Google Scholar、PubMed、bioRxiv、arXiv 等数据库。 创建者：awesomegpts.ai" [ref=e73]
+        - StaticText "1"
+        - StaticText "Scholar GPT"
+        - StaticText "学者 GPT"
+        - StaticText "Enhance research with 200M+ resources and built-in critical reading skills. Access Google Scholar, PubMed, bioRxiv, arXiv, and more, effortlessly."
+        - StaticText "利用超过 2 亿份的学术资源以及内置的文献分析工具，提升研究效率。您可以轻松访问 Google Scholar、PubMed、bioRxiv、arXiv 等数据库。"
+        - StaticText "创建者：awesomegpts.ai"
+    - generic [ref=e7] focusable [tabindex]
+      - link "2 Fitness, Workout & Diet - PhD Coach 🟢 IMPROVE QUICKLY 🎁 Get Bonus Gift 🎁 Receive turn-key fitness & workout support plus advanced diet & nutrition insights. Trained on 232,625 PhD-level empirical data points. v3.27🟢 提升效果显著 🎁 获得额外奖励 🎁 免费享受全方位的健身与锻炼指导，还能获取专业的饮食与营养建议。该系统基于 232,625 个博士级别的实证数据进行分析。v3.27 版本 创建者：Newgen PhD" [ref=e74]
+        - StaticText "2"
+        - StaticText "Fitness, Workout & Diet - PhD Coach"
+        - StaticText "🟢 IMPROVE QUICKLY 🎁 Get Bonus Gift 🎁 Receive turn-key fitness & workout support plus advanced diet & nutrition insights. Trained on 232,625 PhD-level empirical data points. v3.27"
+        - StaticText "🟢 提升效果显著 🎁 获得额外奖励 🎁 免费享受全方位的健身与锻炼指导，还能获取专业的饮食与营养建议。该系统基于 232,625 个博士级别的实证数据进行分析。v3.27 版本"
+        - StaticText "创建者：Newgen PhD"
+    - generic [ref=e8] focusable [tabindex]
+      - link "3 Consensus共识/达成一致意见 Ask the research, chat directly with the world's scientific literature. Search references, get simple explanations, write articles backed by academic papers.进行学术研究，直接与全球的学术文献进行交流。检索参考资料，获取简洁明了的解释，撰写有学术论文支撑的文章。 创建者：consensus.app" [ref=e75]
+        - StaticText "3"
+        - StaticText "Consensus"
+        - StaticText "共识/达成一致意见"
+        - StaticText "Ask the research, chat directly with the world's scientific literature. Search references, get simple explanations, write articles backed by academic papers."
+        - StaticText "进行学术研究，直接与全球的学术文献进行交流。检索参考资料，获取简洁明了的解释，撰写有学术论文支撑的文章。"
+        - StaticText "创建者：consensus.app"
+    - generic [ref=e9] focusable [tabindex]
+      - link "4 챗 챗GPT로 경험하는 가장 자연스러운 한국어 대화. 한국 문화와 예절을 완벽히 이해하는 챗 GPT가 원어민 스타일의 맞춤형 답변을 제공합니다.通过 ChatGPT，可以体验到最自然的韩语对话。ChatGPT 完全理解韩国文化和礼仪，因此能够提供符合母语者风格的个性化回答。 创建者：gptonline.ai" [ref=e76]
+        - StaticText "4"
+        - StaticText "챗"
+        - StaticText "챗GPT로 경험하는 가장 자연스러운 한국어 대화. 한국 문화와 예절을 완벽히 이해하는 챗 GPT가 원어민 스타일의 맞춤형 답변을 제공합니다."
+        - StaticText "通过 ChatGPT，可以体验到最自然的韩语对话。ChatGPT 完全理解韩国文化和礼仪，因此能够提供符合母语者风格的个性化回答。"
+        - StaticText "创建者：gptonline.ai"
+    - generic [ref=e10] focusable [tabindex]
+      - link "5 Canva Effortlessly design anything: presentations, logos, social media posts and more. 创建者：community builder" [ref=e77]
+        - StaticText "5"
+        - StaticText "Canva"
+        - StaticText "Effortlessly design anything: presentations, logos, social media posts and more."
+        - StaticText "创建者：community builder"
+    - generic [ref=e11] focusable [tabindex]
+      - link "6 Logo Creator Use me to generate professional logo designs and app icons! 创建者：community builder" [ref=e78]
+        - StaticText "6"
+        - StaticText "Logo Creator"
+        - StaticText "Use me to generate professional logo designs and app icons!"
+        - StaticText "创建者：community builder"
+    - generic [ref=e12] focusable [tabindex]
+      - StaticText "由 ChatGPT 提供"
+      - StaticText "ChatGPT 团队创建的 GPT"
+    - generic [ref=e13] focusable [tabindex]
+      - link "1 Monday A personality experiment. You may not like it. It may not like you. 创建者：ChatGPT" [ref=e79]
+        - StaticText "1"
+        - StaticText "Monday"
+        - StaticText "A personality experiment. You may not like it. It may not like you."
+        - StaticText "创建者：ChatGPT"
+    - generic [ref=e14] focusable [tabindex]
+      - link "2 Data Analyst Drop in any files and I can help analyze and visualize your data. 创建者：ChatGPT" [ref=e80]
+        - StaticText "2"
+        - StaticText "Data Analyst"
+        - StaticText "Drop in any files and I can help analyze and visualize your data."
+        - StaticText "创建者：ChatGPT"
+    - generic [ref=e15] focusable [tabindex]
+      - link "3 Hot Mods Let's modify your image into something really wild. Upload an image and let's go! 创建者：ChatGPT" [ref=e81]
+        - StaticText "3"
+        - StaticText "Hot Mods"
+        - StaticText "Let's modify your image into something really wild. Upload an image and let's go!"
+        - StaticText "创建者：ChatGPT"
+    - generic [ref=e16] focusable [tabindex]
+      - link "4 Creative Writing Coach I'm eager to read your work and give you feedback to improve your skills. 创建者：ChatGPT" [ref=e82]
+        - StaticText "4"
+        - StaticText "Creative Writing Coach"
+        - StaticText "I'm eager to read your work and give you feedback to improve your skills."
+        - StaticText "创建者：ChatGPT"
+    - generic [ref=e17] focusable [tabindex]
+      - link "5 Coloring Book Hero Take any idea and turn it into whimsical coloring book pages. 创建者：ChatGPT" [ref=e83]
+        - StaticText "5"
+        - StaticText "Coloring Book Hero"
+        - StaticText "Take any idea and turn it into whimsical coloring book pages."
+        - StaticText "创建者：ChatGPT"
+    - generic [ref=e18] focusable [tabindex]
+      - link "6 Planty I'm Planty, your fun and friendly plant care assistant! Ask me how to best take care of your plants. 创建者：ChatGPT" [ref=e84]
+        - StaticText "6"
+        - StaticText "Planty"
+        - StaticText "I'm Planty, your fun and friendly plant care assistant! Ask me how to best take care of your plants."
+        - StaticText "创建者：ChatGPT"
+    - generic [ref=e19] focusable [tabindex]
+      - StaticText "图像"
+      - StaticText "Transform your ideas into amazing images"
+    - generic [ref=e20] focusable [tabindex]
+      - link "1 Glibatree Art Designer Art Generation Made Easy! This GPT will fill in details about your idea and make four images, each better than you imagined. 创建者：glibatree.com" [ref=e85]
+        - StaticText "1"
+        - StaticText "Glibatree Art Designer"
+        - StaticText "Art Generation Made Easy! This GPT will fill in details about your idea and make four images, each better than you imagined."
+        - StaticText "创建者：glibatree.com"
+    - generic [ref=e21] focusable [tabindex]
+      - link "2 AI 그림 그리기 - 이미지 복원 / 통합 / 편집 / 스타일 변경 AI 그림 그리기 GPT는 이미지 생성에 사용된 프롬프트를 제공하며, 일관된 이미지 생성, 업로드한 이미지 복원 및 통합 기능을 지원합니다. 创建者：chatgwajang.com" [ref=e86]
+        - StaticText "2"
+        - StaticText "AI 그림 그리기 - 이미지 복원 / 통합 / 편집 / 스타일 변경"
+        - StaticText "AI 그림 그리기 GPT는 이미지 생성에 사용된 프롬프트를 제공하며, 일관된 이미지 생성, 업로드한 이미지 복원 및 통합 기능을 지원합니다."
+        - StaticText "创建者：chatgwajang.com"
+    - generic [ref=e22] focusable [tabindex]
+      - link "3 Graphic Designer World-class AI Graphic Design Expert & Creative Director. Specializes in professional, trend-forward, production-ready visual design across all mediums — branding, digital, print, motion, UI/UX, packaging, social, illustration, and emerging formats (AR/VR, 3D, NFTs, etc.). 创建者：Ezra Richard" [ref=e87]
+        - StaticText "3"
+        - StaticText "Graphic Designer"
+        - StaticText "World-class AI Graphic Design Expert & Creative Director. Specializes in professional, trend-forward, production-ready visual design across all mediums — branding, digital, print, motion, UI/UX, packaging, social, illustration, and emerging formats (AR/VR, 3D, NFTs, etc.)."
+        - StaticText "创建者：Ezra Richard"
+    - generic [ref=e23] focusable [tabindex]
+      - link "4 Headshot Pro: Face rating, Hair, Outfit & Photos Turn your photos into polished headshots, LinkedIn/profile pictures, and personal-brand portraits with natural face preservation, better lighting, hair, outfits, and background styling. 创建者：Ash M" [ref=e88]
+        - StaticText "4"
+        - StaticText "Headshot Pro: Face rating, Hair, Outfit & Photos"
+        - StaticText "Turn your photos into polished headshots, LinkedIn/profile pictures, and personal-brand portraits with natural face preservation, better lighting, hair, outfits, and background styling."
+        - StaticText "创建者：Ash M"
+    - generic [ref=e24] focusable [tabindex]
+      - link "5 Generador de Imágenes Este generador de imágenes está diseñado para crear imágenes a partir de descripciones de texto. Con solo introducir un texto sencillo, los usuarios pueden obtener imágenes creativas, por lo que es ideal para artistas, diseñadores o cualquier persona que desee dar vida a sus ideas visualmente. 创建者：unlockall.ai" [ref=e89]
+        - StaticText "5"
+        - StaticText "Generador de Imágenes"
+        - StaticText "Este generador de imágenes está diseñado para crear imágenes a partir de descripciones de texto. Con solo introducir un texto sencillo, los usuarios pueden obtener imágenes creativas, por lo que es ideal para artistas, diseñadores o cualquier persona que desee dar vida a sus ideas visualmente."
+        - StaticText "创建者：unlockall.ai"
+    - generic [ref=e25] focusable [tabindex]
+      - link "6 Action Figure Generator Turn yourself into a photorealistic flat-pack action figure in blister packaging. Create your own action hero with accessories, style, and packaging color — or get a ready-to-use DIY prompt. Free bonus tools help you bring your figure to life. 创建者：AI-for-growth.com" [ref=e90]
+        - StaticText "6"
+        - StaticText "Action Figure Generator"
+        - StaticText "Turn yourself into a photorealistic flat-pack action figure in blister packaging. Create your own action hero with accessories, style, and packaging color — or get a ready-to-use DIY prompt. Free bonus tools help you bring your figure to life."
+        - StaticText "创建者：AI-for-growth.com"
+    - generic [ref=e26] focusable [tabindex]
+      - StaticText "Programming"
+      - StaticText "Write code, debug, test, and learn"
+    - generic [ref=e27] focusable [tabindex]
+      - link "1 DesignerGPT Creates and hosts beautiful websites, seamlessly integrating DALL·E-generated images. Sends the website to Replit for further refining and personal domain. Your all-in-one AI solution for web development. 创建者：Pietro Schirano" [ref=e91]
+        - StaticText "1"
+        - StaticText "DesignerGPT"
+        - StaticText "Creates and hosts beautiful websites, seamlessly integrating DALL·E-generated images. Sends the website to Replit for further refining and personal domain. Your all-in-one AI solution for web development."
+        - StaticText "创建者：Pietro Schirano"
+    - generic [ref=e28] focusable [tabindex]
+      - link "2 Website Generator 🔮 Create a website in seconds! 🔮 Generate, design, write code, and write copy for your website. Powered by B12. Questions? Chat with us at: https://support.b12.io/en/website-generator-chat 创建者：websitegenerator.b12.io" [ref=e92]
+        - StaticText "2"
+        - StaticText "Website Generator"
+        - StaticText "🔮 Create a website in seconds! 🔮 Generate, design, write code, and write copy for your website. Powered by B12. Questions? Chat with us at: https://support.b12.io/en/website-generator-chat"
+        - StaticText "创建者：websitegenerator.b12.io"
+    - generic [ref=e29] focusable [tabindex]
+      - link "3 Ethical Hacker GPT Cyber security specialist for ethical hacking guidance. 创建者：community builder" [ref=e93]
+        - StaticText "3"
+        - StaticText "Ethical Hacker GPT"
+        - StaticText "Cyber security specialist for ethical hacking guidance."
+        - StaticText "创建者：community builder"
+    - generic [ref=e30] focusable [tabindex]
+      - link "4 Grimoire 🧙♂️Code Wizard ✨Learn to vibecode! 20+ Hotkeys for quick coding flows. Type K for cmd menu, P for Projects, R for README. New Grimoire PRO App: https://apple.co/3YRykm3 🧙♂️ v2.9✨📜 创建者：mindgoblinstudios.com" [ref=e94]
+        - StaticText "4"
+        - StaticText "Grimoire"
+        - StaticText "🧙♂️Code Wizard ✨Learn to vibecode! 20+ Hotkeys for quick coding flows. Type K for cmd menu, P for Projects, R for README. New Grimoire PRO App: https://apple.co/3YRykm3 🧙♂️ v2.9✨📜"
+        - StaticText "创建者：mindgoblinstudios.com"
+    - generic [ref=e31] focusable [tabindex]
+      - link "5 R Wizard A specialist in R programming, Data Science, Multivariate Statistics, Machine Learning, and AI/LLM Integration providing accurate and useful guidance. 创建者：maxto" [ref=e95]
+        - StaticText "5"
+        - StaticText "R Wizard"
+        - StaticText "A specialist in R programming, Data Science, Multivariate Statistics, Machine Learning, and AI/LLM Integration providing accurate and useful guidance."
+        - StaticText "创建者：maxto"
+    - generic [ref=e32] focusable [tabindex]
+      - link "6 GPT Icon WEBSITE & APP Super Builder - No Code Build an amazing website or app - in minutes! 创建者：smartprompt.xyz" [ref=e96]
+        - StaticText "6"
+        - image "GPT Icon"
+        - StaticText "WEBSITE & APP Super Builder - No Code"
+        - StaticText "Build an amazing website or app - in minutes!"
+        - StaticText "创建者：smartprompt.xyz"
+    - generic [ref=e33] focusable [tabindex]
+      - StaticText "Productivity"
+      - StaticText "Increase your efficiency"
+    - generic [ref=e34] focusable [tabindex]
+      - link "1 Diagrams: Flowcharts & Mindmaps 🎯 INFOGRAPHICS & VISUALIZATION 💾 DIAGRAMS, CHARTS + ANALYSIS 📊 For CODE: Database, UX, ERD, PlantUML! For Business & Data Analysis: Flowchart, Timeline & more! 创建者：blocksandarrows.com" [ref=e97]
+        - StaticText "1"
+        - StaticText "Diagrams: Flowcharts & Mindmaps"
+        - StaticText "🎯 INFOGRAPHICS & VISUALIZATION 💾 DIAGRAMS, CHARTS + ANALYSIS 📊 For CODE: Database, UX, ERD, PlantUML! For Business & Data Analysis: Flowchart, Timeline & more!"
+        - StaticText "创建者：blocksandarrows.com"
+    - generic [ref=e35] focusable [tabindex]
+      - link "2 Presentation Make Presentations 10x faster - Save as PPT and Google Slides 创建者：slidedecksai.com" [ref=e98]
+        - StaticText "2"
+        - StaticText "Presentation"
+        - StaticText "Make Presentations 10x faster - Save as PPT and Google Slides"
+        - StaticText "创建者：slidedecksai.com"
+    - generic [ref=e36] focusable [tabindex]
+      - link "3 Diagrams: UML, Flowcharts by <ShowMe> Supports: Flowchart, UML, Mindmap, Gantt Chart, ERD, Process Flow, DFD, Org Chart, Venn, Pie, Bar, Wireframe, Blueprint. Presentation: PowerPoint, PPT, Slides, Keynote, Pitch Deck, Templates, Design, Slideshow. Summarize & Visualize Data For: Code Documentation, Projects, Web & Business 创建者：helpful.dev" [ref=e99]
+        - StaticText "3"
+        - StaticText "Diagrams: UML, Flowcharts by <ShowMe>"
+        - StaticText "Supports: Flowchart, UML, Mindmap, Gantt Chart, ERD, Process Flow, DFD, Org Chart, Venn, Pie, Bar, Wireframe, Blueprint. Presentation: PowerPoint, PPT, Slides, Keynote, Pitch Deck, Templates, Design, Slideshow. Summarize & Visualize Data For: Code Documentation, Projects, Web & Business"
+        - StaticText "创建者：helpful.dev"
+    - generic [ref=e37] focusable [tabindex]
+      - link "4 Resume By combining the expertise of top resume writers with advanced AI, we assist in diagnosing and enhancing your resume. | ATS Compatible | Tailor Your Resume for a Specific Job | Note: ChatGPT does not fully support resume downloads. You can do that on JobRight.ai ❤️! 创建者：jobright.ai" [ref=e100]
+        - StaticText "4"
+        - StaticText "Resume"
+        - StaticText "By combining the expertise of top resume writers with advanced AI, we assist in diagnosing and enhancing your resume. | ATS Compatible | Tailor Your Resume for a Specific Job | Note: ChatGPT does not fully support resume downloads. You can do that on JobRight.ai ❤️!"
+        - StaticText "创建者：jobright.ai"
+    - generic [ref=e38] focusable [tabindex]
+      - link "5 Video AI by invideo 4.0 ★ - AI video maker GPT (Supercharged with Sora 2) - generate engaging videos with voiceovers in any language! 创建者：invideo.io" [ref=e101]
+        - StaticText "5"
+        - StaticText "Video AI by invideo"
+        - StaticText "4.0 ★ - AI video maker GPT (Supercharged with Sora 2) - generate engaging videos with voiceovers in any language!"
+        - StaticText "创建者：invideo.io"
+    - generic [ref=e39] focusable [tabindex]
+      - link "6 Slide Maker: PowerPoints, Presentations, Slides Create engaging PowerPoint slides and presentations with Slide Maker GPT! 创建者：aidocmaker.com" [ref=e102]
+        - StaticText "6"
+        - StaticText "Slide Maker: PowerPoints, Presentations, Slides"
+        - StaticText "Create engaging PowerPoint slides and presentations with Slide Maker GPT!"
+        - StaticText "创建者：aidocmaker.com"
+    - generic [ref=e40] focusable [tabindex]
+      - StaticText "Writing"
+      - StaticText "Enhance your writing with tools for creation, editing, and style refinement"
+    - generic [ref=e41] focusable [tabindex]
+      - link "1 GPT Icon Best Website, App & Mobile App Builder Tell us what you want, and see it built! 创建者：writer-gpt.com" [ref=e103]
+        - StaticText "1"
+        - image "GPT Icon"
+        - StaticText "Best Website, App & Mobile App Builder"
+        - StaticText "Tell us what you want, and see it built!"
+        - StaticText "创建者：writer-gpt.com"
+    - generic [ref=e42] focusable [tabindex]
+      - link "2 Cover Letter Boost interviews with compelling cover letters tailored to job applications - simple, quick, effective. 创建者：masterinterview.ai" [ref=e104]
+        - StaticText "2"
+        - StaticText "Cover Letter"
+        - StaticText "Boost interviews with compelling cover letters tailored to job applications - simple, quick, effective."
+        - StaticText "创建者：masterinterview.ai"
+    - generic [ref=e43] focusable [tabindex]
+      - link "3 🟢 CV Resume Writer ◆ CV Builder ◆ ATS Create or improve your CV / Resume for ATS checks and job applications in seconds. 创建者：Curtis Fogelberg" [ref=e105]
+        - StaticText "3"
+        - StaticText "🟢 CV Resume Writer ◆ CV Builder ◆ ATS"
+        - StaticText "Create or improve your CV / Resume for ATS checks and job applications in seconds."
+        - StaticText "创建者：Curtis Fogelberg"
+    - generic [ref=e44] focusable [tabindex]
+      - link "4 Copywriter GPT - Marketing, Branding, Ads Your innovative specialist for scroll-stopping ad copywriting. Viral marketing strategies fine-tuned to your needs! [New] Now supports Image Ads 创建者：Adrian Lin" [ref=e106]
+        - StaticText "4"
+        - StaticText "Copywriter GPT - Marketing, Branding, Ads"
+        - StaticText "Your innovative specialist for scroll-stopping ad copywriting. Viral marketing strategies fine-tuned to your needs! [New] Now supports Image Ads"
+        - StaticText "创建者：Adrian Lin"
+    - generic [ref=e45] focusable [tabindex]
+      - link "5 AI Video Generator & Text to Video Maker GPT Create stunning AI videos from text instantly. The #1 AI Video Generator & Text to Video Maker. Make viral content, animate images, and generate professional results effortlessly. 创建者：community builder" [ref=e107]
+        - StaticText "5"
+        - StaticText "AI Video Generator & Text to Video Maker GPT"
+        - StaticText "Create stunning AI videos from text instantly. The #1 AI Video Generator & Text to Video Maker. Make viral content, animate images, and generate professional results effortlessly."
+        - StaticText "创建者：community builder"
+    - generic [ref=e46] focusable [tabindex]
+      - link "6 Legal & Contracts (Lawyer-Backed/Not Legal Advice) 🏆 The world’s leading legal AI--backed by 2,000+ lawyers on demand. Use the chatbot to instantly draft contracts and conduct research then loop in an attorney to verify. Powered by www.Inhouse.app. (Disclaimer: AI is not a lawyer and cannot give legal advice. Always consult an attorney) 创建者：pulsrai.com" [ref=e108]
+        - StaticText "6"
+        - StaticText "Legal & Contracts (Lawyer-Backed/Not Legal Advice)"
+        - StaticText "🏆 The world’s leading legal AI--backed by 2,000+ lawyers on demand. Use the chatbot to instantly draft contracts and conduct research then loop in an attorney to verify. Powered by www.Inhouse.app. (Disclaimer: AI is not a lawyer and cannot give legal advice. Always consult an attorney)"
+        - StaticText "创建者：pulsrai.com"
+    - generic [ref=e47] focusable [tabindex]
+      - StaticText "Research & Analysis"
+      - StaticText "Find, evaluate, interpret, and visualize information"
+    - generic [ref=e48] focusable [tabindex]
+      - link "1 Scholar GPT Enhance research with 200M+ resources and built-in critical reading skills. Access Google Scholar, PubMed, bioRxiv, arXiv, and more, effortlessly. 创建者：awesomegpts.ai" [ref=e109]
+        - StaticText "1"
+        - StaticText "Scholar GPT"
+        - StaticText "Enhance research with 200M+ resources and built-in critical reading skills. Access Google Scholar, PubMed, bioRxiv, arXiv, and more, effortlessly."
+        - StaticText "创建者：awesomegpts.ai"
+    - generic [ref=e49] focusable [tabindex]
+      - link "2 AskYourPDF Research Assistant Chat & Analyse Documents, Access 400M+ Papers (PubMed, Nature, Arxiv, etc), Analyse PDF (Unlimited PDFs), Generate articles/essays with valid citations, ChatPDF, Analyse and generate references for papers, create and interact with a knowledge base of your files and much more using AskYourPDF. 创建者：Protonlabs" [ref=e110]
+        - StaticText "2"
+        - StaticText "AskYourPDF Research Assistant"
+        - StaticText "Chat & Analyse Documents, Access 400M+ Papers (PubMed, Nature, Arxiv, etc), Analyse PDF (Unlimited PDFs), Generate articles/essays with valid citations, ChatPDF, Analyse and generate references for papers, create and interact with a knowledge base of your files and much more using AskYourPDF."
+        - StaticText "创建者：Protonlabs"
+    - generic [ref=e50] focusable [tabindex]
+      - link "3 Consensus Ask the research, chat directly with the world's scientific literature. Search references, get simple explanations, write articles backed by academic papers. 创建者：consensus.app" [ref=e111]
+        - StaticText "3"
+        - StaticText "Consensus"
+        - StaticText "Ask the research, chat directly with the world's scientific literature. Search references, get simple explanations, write articles backed by academic papers."
+        - StaticText "创建者：consensus.app"
+    - generic [ref=e51] focusable [tabindex]
+      - link "4 Finance & Economics - Stock, Crypto, Trade, Invest Up-to-date market data, news, insights, plus clear explanations of finance, economics, and market theory, sourced from trusted public data. (Disclaimer: Educational only; not financial advice.) 创建者：fin.aieveryday.net" [ref=e112]
+        - StaticText "4"
+        - StaticText "Finance & Economics - Stock, Crypto, Trade, Invest"
+        - StaticText "Up-to-date market data, news, insights, plus clear explanations of finance, economics, and market theory, sourced from trusted public data. (Disclaimer: Educational only; not financial advice.)"
+        - StaticText "创建者：fin.aieveryday.net"
+    - generic [ref=e52] focusable [tabindex]
+      - link "5 PDF Reader In-depth interaction with PDF content. Learn more on my YouTube channel: @Corbin_Brown 创建者：webcafesoftware.com" [ref=e113]
+        - StaticText "5"
+        - StaticText "PDF Reader"
+        - StaticText "In-depth interaction with PDF content. Learn more on my YouTube channel: @Corbin_Brown"
+        - StaticText "创建者：webcafesoftware.com"
+    - generic [ref=e53] focusable [tabindex]
+      - link "6 MARKETING Your expert mentor in advertising >> Guiding Media Professionals working at the Big 6 agencies. 创建者：community builder" [ref=e114]
+        - StaticText "6"
+        - StaticText "MARKETING"
+        - StaticText "Your expert mentor in advertising >> Guiding Media Professionals working at the Big 6 agencies."
+        - StaticText "创建者：community builder"
+    - generic [ref=e54] focusable [tabindex]
+      - StaticText "Education"
+      - StaticText "Explore new ideas, revisit existing skills"
+    - generic [ref=e55] focusable [tabindex]
+      - link "1 Universal Primer The fastest way to learn anything hard. 创建者：Siqi Chen" [ref=e115]
+        - StaticText "1"
+        - StaticText "Universal Primer"
+        - StaticText "The fastest way to learn anything hard."
+        - StaticText "创建者：Siqi Chen"
+    - generic [ref=e56] focusable [tabindex]
+      - link "2 Math Solver Your AI Math Solver, offers step-by-step answers, and helps you learn math and even all subjects, at any educational level. 创建者：studyx.ai" [ref=e116]
+        - StaticText "2"
+        - StaticText "Math Solver"
+        - StaticText "Your AI Math Solver, offers step-by-step answers, and helps you learn math and even all subjects, at any educational level."
+        - StaticText "创建者：studyx.ai"
+    - generic [ref=e57] focusable [tabindex]
+      - link "3 GPT Icon WEBSITE⚡Website & App Builder + Coder 3M+ conversations. Answer 4 quick questions and get your website, online store or mobile app built for you, no coding. AI Web Site Builder & App Generator. 创建者：AIResearchPlus.com" [ref=e117]
+        - StaticText "3"
+        - image "GPT Icon"
+        - StaticText "WEBSITE⚡Website & App Builder + Coder"
+        - StaticText "3M+ conversations. Answer 4 quick questions and get your website, online store or mobile app built for you, no coding. AI Web Site Builder & App Generator."
+        - StaticText "创建者：AIResearchPlus.com"
+    - generic [ref=e58] focusable [tabindex]
+      - link "4 Resume/CV & Interview - Job & Career Coach 🔥 Create or improve your CV / Resume for ATS checks and job applications in seconds, with interview and cover letter support. (by aieveryday.net) 创建者：community builder" [ref=e118]
+        - StaticText "4"
+        - StaticText "Resume/CV & Interview - Job & Career Coach 🔥"
+        - StaticText "Create or improve your CV / Resume for ATS checks and job applications in seconds, with interview and cover letter support. (by aieveryday.net)"
+        - StaticText "创建者：community builder"
+    - generic [ref=e59] focusable [tabindex]
+      - link "5 チャット 日本の文化とビジネスに最適化された多機能 GPT チャット。プログラミング、執筆、データ分析、日常の相談まで、高度な AI アシスタントが日本語で正確にサポートします。 创建者：gptjp.net" [ref=e119]
+        - StaticText "5"
+        - StaticText "チャット"
+        - StaticText "日本の文化とビジネスに最適化された多機能 GPT チャット。プログラミング、執筆、データ分析、日常の相談まで、高度な AI アシスタントが日本語で正確にサポートします。"
+        - StaticText "创建者：gptjp.net"
+    - generic [ref=e60] focusable [tabindex]
+      - link "6 👌Academic Assistant Pro Professional academic assistant with a professorial touch 创建者：siribot.cn" [ref=e120]
+        - StaticText "6"
+        - StaticText "👌Academic Assistant Pro"
+        - StaticText "Professional academic assistant with a professorial touch"
+        - StaticText "创建者：siribot.cn"
+    - generic [ref=e61] focusable [tabindex]
+      - StaticText "Lifestyle"
+      - StaticText "Get tips on travel, workouts, style, food, and more"
+    - generic [ref=e62] focusable [tabindex]
+      - link "1 타로 운세박사 - 세계 1위 무료 인공지능 AI 타로 리딩, 궁합, 연애운, 사주, 직업운 AI 타로 운세박사에요. 재치있는 무료 챗GPT AI 타로 리딩 운세박사와 함께 사랑운, 진로운 등 다양한 운세를 해석해보세요. 정확한 타로 카드 리딩을 통해 과거, 현재, 미래를 분석하고, 원카드, 쓰리카드, 켈틱 크로스 등 다양한 타로 점성술 방식을 제공해요. 운세박사는 연애 타로 전문이에요. 재치 있는 운세박사와 함께 연애운, 진로상담, 인공지능 타로, AI 점성술, 2025년 신년운세, AI 타로 카드 리딩을 지금 봐보세요. | 운세박사 https://aifortunedoctor.com 创建者：doctorfortune.com" [ref=e121]
+        - StaticText "1"
+        - StaticText "타로 운세박사 - 세계 1위 무료 인공지능 AI 타로 리딩, 궁합, 연애운, 사주, 직업운"
+        - StaticText "AI 타로 운세박사에요. 재치있는 무료 챗GPT AI 타로 리딩 운세박사와 함께 사랑운, 진로운 등 다양한 운세를 해석해보세요. 정확한 타로 카드 리딩을 통해 과거, 현재, 미래를 분석하고, 원카드, 쓰리카드, 켈틱 크로스 등 다양한 타로 점성술 방식을 제공해요. 운세박사는 연애 타로 전문이에요. 재치 있는 운세박사와 함께 연애운, 진로상담, 인공지능 타로, AI 점성술, 2025년 신년운세, AI 타로 카드 리딩을 지금 봐보세요. | 운세박사 https://aifortunedoctor.com"
+        - StaticText "创建者：doctorfortune.com"
+    - generic [ref=e63] focusable [tabindex]
+      - link "2 Personal Color Analysis Personal color analyst helping you find your best colors 创建者：Moayad Younes" [ref=e122]
+        - StaticText "2"
+        - StaticText "Personal Color Analysis"
+        - StaticText "Personal color analyst helping you find your best colors"
+        - StaticText "创建者：Moayad Younes"
+    - generic [ref=e64] focusable [tabindex]
+      - link "3 Rizz GPT Relationship Advice Your go-to dating message expert, ready to boost your charm! 创建者：6hive.ee" [ref=e123]
+        - StaticText "3"
+        - StaticText "Rizz GPT Relationship Advice"
+        - StaticText "Your go-to dating message expert, ready to boost your charm!"
+        - StaticText "创建者：6hive.ee"
+    - generic [ref=e65] focusable [tabindex]
+      - link "4 Mia AI, your friend to understand yourself Drop what’s heavy. Find clarity. +1.7M Conversations 创建者：heymia.ai" [ref=e124]
+        - StaticText "4"
+        - StaticText "Mia AI, your friend to understand yourself"
+        - StaticText "Drop what’s heavy. Find clarity. +1.7M Conversations"
+        - StaticText "创建者：heymia.ai"
+    - generic [ref=e66] focusable [tabindex]
+      - link "5 LOGO 🚀 Has a Different Approach to creating your LOGO 🚀 Try allowing it to generate a bunch of different ones and then iterate based on that. Hope you like it 😉 创建者：blocksandarrows.com" [ref=e125]
+        - StaticText "5"
+        - StaticText "LOGO"
+        - StaticText "🚀 Has a Different Approach to creating your LOGO 🚀 Try allowing it to generate a bunch of different ones and then iterate based on that. Hope you like it 😉"
+        - StaticText "创建者：blocksandarrows.com"
+    - generic [ref=e67] focusable [tabindex]
+      - link "6 Image Generator & Editor | LOGO | Photo & Picture 🔥 Create amazing images and explore video generation with powerful AI 😄✨ Edit photos and pictures with ease when needed 🌈 Explore logo and website creation ideas with stunning results 🎨 and a touch of magic 🔮 (by aieveryday.net) 创建者：community builder" [ref=e126]
+        - StaticText "6"
+        - StaticText "Image Generator & Editor | LOGO | Photo & Picture"
+        - StaticText "🔥 Create amazing images and explore video generation with powerful AI 😄✨ Edit photos and pictures with ease when needed 🌈 Explore logo and website creation ideas with stunning results 🎨 and a touch of magic 🔮 (by aieveryday.net)"
+        - StaticText "创建者：community builder"
+  - alert
+  - status
+- generic
+  - image
+  - image
+  - generic
+    - generic
+      - image
+      - image
+    - image
+  - image
+  - image
