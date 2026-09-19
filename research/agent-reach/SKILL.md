@@ -15,7 +15,9 @@ description: >
   backend serves each platform right now.
 
   NOT for: 写报告/数据分析/翻译等内容加工（本 skill 只负责从互联网获取内容）；
-  发帖/评论/点赞等写操作；已有专门 skill 的平台（先用专门 skill）。
+  发帖/评论/点赞等写操作；已有专门 skill 的平台（先用专门 skill）；
+  普通网页/列表页抓取与批量字段提取（走 `web-scrape` —— 本地引擎、三档难度、`--fields`）；
+  需要打开页面/点选/填表/复用真实登录态（走 `browser-automation`）。
 
   【路由方式】SKILL.md 包含路由表和常用命令，复杂场景需按需阅读对应分类的 references/*.md。
   分类：search / social (小红书/推特/B站/V2EX/Reddit/Facebook/Instagram) / career(LinkedIn) / dev(github) / web(网页/文章/RSS) / video(YouTube/B站/播客) / finance(雪球/股票)。
@@ -117,6 +119,16 @@ agent-reach doctor --json
 路由表没有覆盖用户需要的平台或命令时，先用 `opencli list` 查已有适配器，再用
 `opencli <平台> --help` 查看公开命令。发现适配器只证明命令存在，不证明登录态或
 目标内容可用；仅在用户任务明确需要该平台时执行只读命令，并以实际非空内容验收。
+
+## 相邻分工（避免与 web-scrape / browser-automation 抢同一条触发词）
+
+| 需求 | 走哪 |
+|---|---|
+| 平台内容 / 全网调研 / 社交与视频与行情（本技能路由表覆盖的 15 平台） | **本技能** |
+| 普通网页、文档站、列表页 → Markdown，或批量列表页出结构化字段 | `web-scrape`（本地引擎，三档难度 + `--fields`） |
+| 需要打开页面、点选、填表、复用真实登录态 | `browser-automation` |
+
+一句话：**本技能是「平台路由器」，`web-scrape` 是「抓取引擎」。** 用户只给一个普通网址、没有平台特征时，优先 `web-scrape`。
 
 ## 工作区规则
 

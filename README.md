@@ -10,7 +10,7 @@ WorkBuddy 自定义技能 + 记忆 + 身份配置，版本管理并同步到 Git
 
 | 类别 | 说明 | 技能 |
 | --- | --- | --- |
-| `engineering/` | 工程方法（调试/规格/验证/发布/技能工程/QA/教学） | wb-artifact-verification · wb-debug-loop · wb-execute-discipline · wb-release-maintain · wb-skill-authoring · wb-spec-driven · wb-ui-visual-qa · wb-teaching |
+| `engineering/` | 工程方法（调试/规格/验证/发布/技能工程/QA/教学/蒸馏） | distill-cat · wb-artifact-verification · wb-debug-loop · wb-execute-discipline · wb-release-maintain · wb-skill-authoring · wb-spec-driven · wb-ui-visual-qa · wb-teaching |
 | `defaults/` | 三件套（每会话默认长期开启） | wb-ponytail · wb-max-token-saver · wb-context-compressor |
 | `writing/` | 写作/文档/润色/简历/知识蒸馏 | wb-doc-writing · humanizer-zh · resume-ai-help · cangjie-skill |
 | `media/` | 图像/音视频/生图/取证 | wb-visual-gen · image-processor · rg-ffmpeg-tools · wb-media-forensics |
