@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、重放不计数、崩溃恢复、replay、错误通道、错误负载、定位信息、retryOf、失败处理外置、限流预防、分批、批大小、条件循环、终止条件、无限循环、结构化索取、Elicitation、缺信息要问、错误当空、把失败当空结果、毒化产物、重播种、reseed、传输损坏、信封校验、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、集成决策权、确认词、工作树保留、验证边界、候选物变了、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、切分维度、按关注点切、按文件所有权切、团队规模、并行度不等于人数、关键路径、依赖图、竞争假设、只读角色、blockedBy、维度覆盖、失败恢复阶梯、超时是终态、熔断不换路、降级不持久化、显式选择 strict、先查断点再重做、不许偷偷降标准、最早可重试时间、改向不等于中止、steer、中止已启动的工作、已开始vs已请求、并行批次检查点、跳过留痕、取消不是消失、确认不等于消费、送达确认、投递生命周期窗口、事后补推、后台容量分离、独立并发池、维护类工作、调度器不占槽、自锁、队列满丢谁、drop策略、已入队不等于会执行、输入持久化、不确定不重放、可能已提交、取证深度、浅层扫描、廉价列表、批量扫描、用于选择、用于判定、逐项取证、重复处理、批量退化、全部处理不等于逐项读全、派活传目的、迭代取回、子agent只知字面查询、挂载点频率、延迟预算、Stop hook、UserPromptSubmit、边界点、字符串里的第二副本、教错格式、schema 迁移看不见、find-replace 漏、示例残留、heredoc 副本、旧格式藏正文、提示词里的过期判据。、进度单调、到过的最远值、勾选倒退、并发覆写、并行写守卫、不许停的门、block cap、停滞检测、门做成死锁、这次不适用、逃生口、共享 cwd、一次性会话、宿主能力分档、硬阻断、后续注入、仅通知、60+ 平台。、守卫链不对称、拦截是终态、放行是no-op、放行不撤销拦截、handler顺序、守卫顺序变了、撤销拦截、终态与no-op、拦截点语义一致、策略别挂钩子、钩子覆盖面、覆盖面乘强度、安装策略、installPolicy、所有入口都经过。。、通知合并、一条待处理通知、通知文本稳定去重、冻结水位、排空即确认、自我抑制、重启重建通知、增量缺口、historyGap、没变化和被裁掉长一样、完整增量、变更订阅、观察者。、计划文件不是交付物、工作内存、显式归档、handoff索引、重启五问。。、合并语义、默认拼接、循环里倍增、显式 Replace、跨轮累积、inputMapper 冻结、prior 别名、可写工作键、读进来与写回不同名、capture-time tagging、按标签分发、不做名字解析、先数写入次数。、容错不能整批开关、required 标记、failFast 全有全无、混合集合不能快速失败、合并点再强制、严格合并与容错合并、聚合错误要点名、序列没有部分成功、必须给默认分支、上限到达不是成功、错误转给模型是一次授权、覆盖哪条路径、stream 不重试、抛出的错误才重试、返回错误分支、丢弃集、SAVED/RESTORED/DISCARDED、同名不交叉、FlowchartCheckpoint、AgentRunCheckpoint
-version: 2.19.0
+version: 2.20.0
 agent_created: true
 ---
 
@@ -1137,3 +1137,13 @@ agent_created: true
 - **HITL 按工具名白名单触发**：interrupt_on={"send_email": True} 按工具名配置哪些调用要人确认（Python @tool 装饰的函数名即键，TS 用 tool 的 name 参数）。→ 与 §同步审批门 分工：那条管"什么动作该设门"（判据侧），本条管"门的实现=按工具名白名单挂 interrupt"（机制侧）。
 - 与 §工具结果断言层 分工：断言层管"调用返回后打标交还模型"（内容侧）；本条管"在循环哪个点挂钩子"（时机侧）。反模式：所有干预堆在一个点；把横切逻辑写进业务工具本身（不可跨 agent 复用）。
 - **提升层**：可复用 Skill（agent 循环干预设计）。
+
+## Agent 状态两层分工：thread 管会话、context 管单次运行（来源：LangChain agents 官方文档，docs.langchain.com/oss/python/langchain/agents，2026-09-19 实拉）
+- **thread_id 与 context 是两个槽，不是一回事**：`thread_id` 管**会话级**（消息历史、checkpoints 持久化，跨 turn 复用同一 thread 续聊）；`context` 管**运行级**（user_id / API keys / feature flags 等单次调用注入数据，工具和 middleware 在调用时经 `runtime.context` 读取）。两者常同时传，但生命周期不同：thread 跨 turn 存活，context 只活这一次 invoke。
+- **两套 schema 分别定型**：`state_schema=`（AgentState 子类，加 user_id/call_count 等自定义字段进状态）+ `context_schema=`（定义运行时注入的形状）——**状态字段与运行字段分开声明**，不混在一个 schema 里。
+- **middleware 钩子的数据契约**：每个钩子（before_model/after_model 等）签名 = **读当前 AgentState，返回 dict 更新合并回去**（hooks receive the current state and can return a dict of updates to merge back into it）——与 §Agent 循环六干预点 互补：那条管**在哪个点挂钩子**（时机），本条管**钩子的数据进出**（契约：读 state 写 state）。
+- **AgentState.messages append-only**：完整对话历史只追加不替换（new messages are added, never replaced）——与 §合并语义/默认拼接 同源：**历史只进不退，改写历史是特殊操作**。
+- **Harness 能力六域**（同文档）：execution（tools/filesystem/sandbox/代码执行）/ context（summarization/memory/skills/prompt caching）/ planning（todo+subagents 并行隔离）/ fault tolerance（retries/fallbacks/call limits）/ guardrails（PII/content controls）/ steering（HITL 审批）。**create_deep_agent 预组装默认栈**：长任务编码/研究场景把 filesystem+summarization+subagents+prompt caching 打包开箱即用——常用能力按场景预组装，不必每次自行拼 middleware。
+- 与 §Agent = Model + Harness 的分工：那层定义**agent 的组成**（模型 + 环绕它的 harness）；本条管**harness 内部的状态与能力组织**。
+- 反模式：把 per-run 数据写进 thread 状态（污染跨 turn 历史）；钩子直接改 state 而不走返回 dict（不可追踪）；每个 agent 从零组装能力栈（应复用预组装默认栈）。
+- **提升层**：可复用 Skill（agent 状态与 harness 设计）。
