@@ -34,6 +34,7 @@ sources:
 **相邻技能**：
 - 要的是「媒体内容本体」（反爬短链里的视频/图片、逐帧取证、无字幕视频）而不是页面文本 → 转 `wb-media-forensics`（Edge 无头取播放地址 + PyAV 抽帧 + 联络表多模态读图）。本技能只负责把页面打开、把 DOM/数据拿到；拿到播放地址之后的抽帧读图不在这里做。
 - 走五（bsk 本地桥接）时需要该 CLI 的完整命令参考 → 读 `browser-skill`（bsk 官方技能，由 `bsk` 自行安装维护，不在本仓库版本控制内）。
+- **从源码构建扩展、打通 daemon↔Edge 连接**（WXT 构建 exit 0 但 dist 缺 html、daemon 起不来、浏览器掉线、扩展侧载）→ 读 `bsk-local-build-and-connect`（2026-09-19 实战沉淀：根因是 pnpm hoisted linker + 需清 `.wxt`；daemon/Edge 进程需脱离任务树防回收）。
 - 只要页面正文转 Markdown / 批量列表页结构化字段，且不需要交互 → 转 `web-scrape`（本地抓取引擎，三档难度 + `--fields`）。
 
 **升级顺序不可跳级**：遇到失败先怀疑选择器 / 等待时机 / 会话态，再考虑上反检测，最后才上云端。
