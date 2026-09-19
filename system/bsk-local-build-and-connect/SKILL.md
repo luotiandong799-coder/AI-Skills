@@ -133,6 +133,9 @@ INFO session removed: user closed Agent Window session=gmln
 3. **不要为了换入口 URL 连续 navigate**（每换一次页面就肉眼可见地刷一次）。同一个目标页面失败 **1 次**就停下来问用户，别自己连试三次。
 4. `navigate` 报 `tool RPC timed out after 30s` 时**先截图/observe 看是否其实已经加载完**——超时是 RPC 层问题，不等于页面没打开（实测 BOSS直聘 就是这样，截图内容完整）。
 5. 确实要 stop 时，若窗口里还有用户可能在看的内容，**先说一句**再关。
+6. **不要自主重启用户的浏览器**。Edge 进程被回收时，我曾数次用 `explorer.exe` 拉起 Edge —— 若 Edge 开着「继续浏览上次的页面」，重启会把用户上次的页面/标签**恢复出来**，用户看到的就是「你随机打开我收藏的页面」（2026-09-19 真实投诉）。需要 Edge 时**先问用户**，或至少提前说明「我要重启你的 Edge」。
+7. **只导航用户明确指定的 URL**。不要为了"探路"自己开别的页面（找入口、试站点）。失败就停下问，别换着 URL 试。
+8. bsk **没有任何书签/历史命令**（`bsk --help` 可核）—— 无法读用户收藏。若用户说"你打开了我收藏的页面"，真因基本不是 bsk，先怀疑浏览器会话恢复（上一条）。
 
 ## 六、站点兼容性（实测）
 - **BOSS直聘（zhipin.com）对自动化敏感**：会加载 `zhipin-security/web/geek/polyfill/index.js`，其 JS 频繁调用 `console.clear()`、并尝试过 `window.close()`（浏览器报 `Scripts may close only the windows that were opened by them`）。会话跑了十几分钟后 console 缓冲 >6200 条、network >13800 条。
