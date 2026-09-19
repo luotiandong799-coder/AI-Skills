@@ -54,20 +54,29 @@ hoisted linker 会把依赖平铺，破坏 WXT 的多 HTML 入口（multi-page�
 ## 二、daemon 与浏览器连接
 
 ### 症状
-- `bsk daemon start` 后 `Get-NetTCPConnection -LocalPort 52800` 无监听
-- `bsk status` / `bsk doctor` 挂起无输出（在等 localhost 连接）
-- `~/.bsk/daemon.json` 有 pid 但 `Get-Process bsk` 为空 → **daemon 进程被回收了**
+- `bsk status` / `bsk doctor` 挂起无输出
+- `Get-Process bsk` 为空 / `~/.bsk/daemon.json` 里的 pid 已失效
+- 端口 52800 无监听
 
-### 根因
-环境会回收命令派生的子进程。`bsk daemon start`（daemonize 模式）起的后台进程会被 reap。**必须跑在常驻任务里**：
-```powershell
-# 用 run_in_background + dangerouslyDisableSandbox 启动，任务存活则 daemon 存活
-& "C:\Users\26719\.local\bin\bsk.exe" daemon start --foreground
+### 根因（2026-09-19 日志证据，**纠正先前错误结论**）
+**daemon 有「空闲自杀」设计**。`bsk logs` 明确记录：
+
+```
+INFO daemon exceeded idle threshold; exiting   idle_secs=600
+INFO bsk daemon shutting down (idle)
 ```
 
-> **实测寿命**：常驻后台任务的 daemon 活约 3 小时后随任务退出而死亡（`BSK_PROCS=0`、`status` 挂起）。**这是常态，不是故障**——需要 bsk 时先 `tasklist | grep bsk` 看进程，没了就在**当轮**重新起一个常驻任务即可。
+即**无活动满 10 分钟就自动退出**。这**不是**环境回收、也**不是**常驻后台任务被 reap（先前版本这么写是错的，已纠正）。
+**任何 bsk 命令都会自动把 daemon 重新拉起**，所以 `BSK_PROCS=0` / `status` 一开始挂起都属正常，**直接跑命令即可**；看到 pid 变化是它空闲重启的正常现象，不必手动起 daemon。
+
+少数需要手动常驻时：
+```powershell
+& "C:\Users\26719\.local\bin\bsk.exe" daemon start --foreground
+```
 > **计划任务方案不可用**：`schtasks /create` 在本机报「拒绝访问」（需管理员），别走这条路。
-> 想更持久只能靠计划任务/服务，但被权限挡住 → 接受「按需重启」。
+
+### 浏览器掉线的真因
+日志里 `browser disconnected` + `ws read error ... os error 10054` = **Edge 进程本身消失了**（被关掉或被环境回收），与 daemon 无关。daemon 会原地等，Edge 一开、扩展自动重连。
 同理，**Edge 若用 `Start-Process` 直接拉起也会被回收**（日志表现：连接后几秒 `browser disconnected` / `os error 10054`）。实测三种启动法的存活结果：
 
 | 启动方式 | 是否被回收 |
@@ -107,6 +116,23 @@ hoisted linker 会把依赖平铺，破坏 WXT 的多 HTML 入口（multi-page�
 ## 四、沙箱注意
 - `bsk` 连 localhost 的命令（status/doctor/browsers）在沙箱下会挂起 → 一律加 `dangerouslyDisableSandbox`。
 - PowerShell 重定向中文/宽字符输出时，先 `*> utf16.txt` 再用 `Get-Content -Encoding Unicode` 转 ascii，避免乱码。
+
+## 五、别让用户看到「一直在刷新」（会话生命周期纪律）
+**每次 `session start` 都会新开一个浏览器窗口（Agent Window），`session stop` 会把它关掉。** 一个任务里反复 start/stop，用户看到的就是**窗口不停开闭 + 页面反复刷**。
+
+2026-09-19 实测代价：我在一次任务里开了 4 个会话（iyvl / gmln / xbnl / zvel）、navigate 了 6 次，用户的直接反应是**按停止键 + 关掉 Agent 窗口**，日志留痕：
+
+```
+INFO user-interrupt: cancelled inflight tools  session=gmln
+INFO session removed: user closed Agent Window session=gmln
+```
+
+规则：
+1. **一个任务目标 = 一个会话**，用完之前不要 stop、不要重开。
+2. **失败重试要留在同一会话里**；不要用「重开会话」当重试手段。
+3. **不要为了换入口 URL 连续 navigate**（每换一次页面就肉眼可见地刷一次）。同一个目标页面失败 **1 次**就停下来问用户，别自己连试三次。
+4. `navigate` 报 `tool RPC timed out after 30s` 时**先截图/observe 看是否其实已经加载完**——超时是 RPC 层问题，不等于页面没打开（实测 BOSS直聘 就是这样，截图内容完整）。
+5. 确实要 stop 时，若窗口里还有用户可能在看的内容，**先说一句**再关。
 
 ## 相邻技能
 - bsk 的**命令用法 / 借标签页范式**（不是构建搭建）→ 读 `browser-automation` 第五节 + `browser-skill`（bsk 官方技能，`bsk` 自维护）。
