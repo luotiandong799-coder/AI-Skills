@@ -142,5 +142,25 @@ INFO session removed: user closed Agent Window session=gmln
 - **首页会自己跳一次**：`www.zhipin.com/` → `www.zhipin.com/shanghai/?seoRefer=index`（城市页）。这个跳转的瞬间截图为**全白**（PNG 从 ~400KB 掉到 ~28KB），很容易被误判为"页面在反复刷新"。**判断是否真有刷新循环的方法：间隔取两次截图比字节数**——相同即稳定（实测稳定态 824533 字节 ×2）。
 - 别把「站点自身跳转/白屏瞬间」当成 bsk 在乱刷；先比截图字节数、再看 `bsk logs` 有无事件。
 
+## 七、用户要求「打开我收藏的网页」时
+bsk **没有书签/历史命令**，但 Edge 书签是本地 JSON：
+
+```
+C:\Users\26719\AppData\Local\Microsoft\Edge\User Data\Default\Bookmarks
+```
+
+结构：`roots.bookmark_bar` / `roots.other` / `roots.synced`，递归 `children`，`type=url` 的节点带 `name`+`url`。用 PowerShell `ConvertFrom-Json` + 递归解析即可列举。
+
+打开方式（一条一个标签页，`--url` 直接带目标地址）：
+```powershell
+bsk tab create --url "<url>" --session <id> --json   # 默认聚焦新标签；--no-active 可后台开
+```
+
+**红线（2026-09-19 用户当场要求过这条能力，务必守）**：
+- 只在用户**明确要求**时读，绝不主动翻。
+- **不要把整份书签列表打给用户，也不要写进记忆/技能/任何文件**（只报数量 + 你开了哪几条）。
+- **跳过敏感条目**：学校/资助/医疗/银行/支付/账号计费/内网 IP 等一律不开，并**明确告诉用户"涉及个人隐私，我没开"**（不复述内容）。
+- 用户说"随便"也照样守上面两条——"随便"指不必挑，不指可以不设限。
+
 ## 相邻技能
 - bsk 的**命令用法 / 借标签页范式**（不是构建搭建）→ 读 `browser-automation` 第五节 + `browser-skill`（bsk 官方技能，`bsk` 自维护）。
