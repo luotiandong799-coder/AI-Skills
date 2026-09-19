@@ -134,5 +134,10 @@ INFO session removed: user closed Agent Window session=gmln
 4. `navigate` 报 `tool RPC timed out after 30s` 时**先截图/observe 看是否其实已经加载完**——超时是 RPC 层问题，不等于页面没打开（实测 BOSS直聘 就是这样，截图内容完整）。
 5. 确实要 stop 时，若窗口里还有用户可能在看的内容，**先说一句**再关。
 
+## 六、站点兼容性（实测）
+- **BOSS直聘（zhipin.com）对自动化敏感**：会加载 `zhipin-security/web/geek/polyfill/index.js`，其 JS 频繁调用 `console.clear()`、并尝试过 `window.close()`（浏览器报 `Scripts may close only the windows that were opened by them`）。会话跑了十几分钟后 console 缓冲 >6200 条、network >13800 条。
+- **首页会自己跳一次**：`www.zhipin.com/` → `www.zhipin.com/shanghai/?seoRefer=index`（城市页）。这个跳转的瞬间截图为**全白**（PNG 从 ~400KB 掉到 ~28KB），很容易被误判为"页面在反复刷新"。**判断是否真有刷新循环的方法：间隔取两次截图比字节数**——相同即稳定（实测稳定态 824533 字节 ×2）。
+- 别把「站点自身跳转/白屏瞬间」当成 bsk 在乱刷；先比截图字节数、再看 `bsk logs` 有无事件。
+
 ## 相邻技能
 - bsk 的**命令用法 / 借标签页范式**（不是构建搭建）→ 读 `browser-automation` 第五节 + `browser-skill`（bsk 官方技能，`bsk` 自维护）。
