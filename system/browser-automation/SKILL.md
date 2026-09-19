@@ -120,6 +120,8 @@ python scripts/stealth_session.py -u "https://target.com" -s sitename --load
 - 「成功可见即停手，不刷新不复查」——避免无意义轮询与重复动作（与 `wb-debug-loop`「别在同种失败死循环」同源）。
 - 会话成功**与**失败都要 `session stop`（同时归还借出的标签）；**绝不依赖空闲清理、绝不靠重启 daemon 收尾**。
 - 远程/沙箱环境：复用同一 `BSK_HOME` + `BSK_AUTO_START=0`，环境不跨 shell 持久；启动失败重试一次即 `bsk doctor`，不循环启停、不删运行时文件。
+- **本机实测（2026-09-19）：`tab borrow` 报 `confirmation_ui_unavailable`**（「没有用户标签页能显示借用确认框」）。已知触发场景：用户窗口不在前台、或用户标签是 Edge 重启后**恢复的旧标签**（内容脚本未注入，弹不出确认）。已验证无效的绕法：重试、`session start --no-focus` 后重试、`reload --tab-id <用户标签>`（后者直接报 `agent_window_scope`：只能操作 Agent Window 内标签，形成死锁）。**该确认是安全护栏，绝不用改设置/参数绕过**（extension 的 hint 虽然建议「关掉 Automation 设置」，但那是降护栏，不做）。未验证的候选解法：让用户在**被借标签页所在窗口**做一次交互（点该窗口 / 刷新该标签页让内容脚本注入）后重试。
+- **重要观察（2026-09-19）**：**Agent Window 的登录态不保证等于用户标签页的登录态**。实测 `navigate mail.163.com` 与 `navigate mail.163.com/js6/main.jsp`（后者被重定向回登录页）均显示**未登录**，而用户自己那个标签页标题/URL 是已登录的读信页。假设（未验证）：用户标签是 Edge 重启后恢复的**冻结快照**，看着像已登录、实际会话可能已失效；也可能是多 profile 所致。结论：**别假定「用户登录过 → Agent Window 就能访问」**，先实测一次登录态再下结论。
 
 ## 六、云端通道（smooth.sh，可选）
 
