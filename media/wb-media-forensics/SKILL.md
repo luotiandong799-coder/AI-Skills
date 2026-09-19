@@ -2,7 +2,7 @@
 name: wb-media-forensics
 description: 视频 / 图片类内容的取证与提取（反爬短链 → 拿到内容本体 → 抽帧读图）。当用户发来视频分享链接（抖音 / 快手 / B站 / 小红书 / 视频号短链）、要求"看看这个视频讲了什么""视频里推荐的工具/仓库是什么"、页面被反爬拦住拿不到正文、或视频没有可用字幕接口时使用。四步链路：短链解析 → Edge 无头渲染取播放地址 → 下载 + 本地解码抽帧 → 拼联络表多模态读图。触发词：抖音、快手、B站、小红书、视频链接、看看这个视频、视频讲了什么、逐帧、逐帧分析、口播、字幕、抓视频、video frames、media forensics。
 agent_created: true
-version: 1.1.0
+version: 1.2.0
 ---
 
 # wb-media-forensics（媒体内容取证：先取画面，再下结论）
@@ -25,6 +25,13 @@ curl -sIL -A "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit
 - 页面数据在 `window._ROUTER_DATA`：定位后**按大括号配平**取出 JSON 再 `json.loads`
 - 播放地址也可能直接出现在渲染后的 DOM 里，grep `douyinvod|mime_type=video_mp4|\.mp4`
 - 连不上时先看 Edge 是否装在 `C:/Program Files (x86)/Microsoft/Edge/Application/`（另一处是 `Program Files`）
+
+### 二·补：微信视频号（`weixin.qq.com/sph/<id>` 短链）——只有封面可取，视频流拿不到
+实测（2026-09-19）：短链 301 → `https://channels.weixin.qq.com/finder-preview/pages/sph?id=<id>`。该页是 **QR 扫码登录墙**，结论明确：
+- **可取**：封面图（公开 CDN，带 Referer `https://channels.weixin.qq.com/` 可直接下载）、发布时间（`.feed-create-time-wrap` → 如「2026年6月1日」）、画面右上/下方的**标题与字幕文字**（都在封面图里，读图即得）。
+  - 封面 URL 在渲染后 DOM 的 `<img class="video-player" src="https://finder.video.qq.com/251/20304/stodownload?encfilekey=...">`；注意 HTML 里 `&amp;` 要还原成 `&` 再 curl。
+- **取不到**：播放地址、视频本体、ASR 字幕。视频流由点击播放后凭登录态**动态签名**生成，DOM/`window.*`/内联 JSON 里都没有；`.qr-modal-overlay` 会拦截所有 pointer 事件（Playwright `element.click()` 超时；`eval_on_selector(e=>e.click())` 能绕过点击但 QR 弹层立刻重现、`<video>` 仍为空、无任何 video 流请求）。**别再反复重试，直接如实告知用户需要微信登录态。**
+- 兜底：把封面图当 `wb-visual-gen` 不改、直接多模态读图（本次即靠封面读出了标题「用Agent找工作 这么炸裂么?」及一行字幕）；若需完整内容，请用户在微信里打开→转发/保存视频文件或录屏后发来。
 
 ## 三、下载 + 抽帧（本机无 ffmpeg 也能做）
 1. 下载 mp4 **必须带 Referer**，否则 403：
