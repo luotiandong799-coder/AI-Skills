@@ -64,6 +64,10 @@ hoisted linker 会把依赖平铺，破坏 WXT 的多 HTML 入口（multi-page�
 # 用 run_in_background + dangerouslyDisableSandbox 启动，任务存活则 daemon 存活
 & "C:\Users\26719\.local\bin\bsk.exe" daemon start --foreground
 ```
+
+> **实测寿命**：常驻后台任务的 daemon 活约 3 小时后随任务退出而死亡（`BSK_PROCS=0`、`status` 挂起）。**这是常态，不是故障**——需要 bsk 时先 `tasklist | grep bsk` 看进程，没了就在**当轮**重新起一个常驻任务即可。
+> **计划任务方案不可用**：`schtasks /create` 在本机报「拒绝访问」（需管理员），别走这条路。
+> 想更持久只能靠计划任务/服务，但被权限挡住 → 接受「按需重启」。
 同理，**Edge 若用 `Start-Process` 直接拉起也会被回收**（日志表现：连接后几秒 `browser disconnected` / `os error 10054`）。实测三种启动法的存活结果：
 
 | 启动方式 | 是否被回收 |
