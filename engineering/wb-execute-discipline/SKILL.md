@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、重放不计数、崩溃恢复、replay、错误通道、错误负载、定位信息、retryOf、失败处理外置、限流预防、分批、批大小、条件循环、终止条件、无限循环、结构化索取、Elicitation、缺信息要问、错误当空、把失败当空结果、毒化产物、重播种、reseed、传输损坏、信封校验、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、集成决策权、确认词、工作树保留、验证边界、候选物变了、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、切分维度、按关注点切、按文件所有权切、团队规模、并行度不等于人数、关键路径、依赖图、竞争假设、只读角色、blockedBy、维度覆盖、失败恢复阶梯、超时是终态、熔断不换路、降级不持久化、显式选择 strict、先查断点再重做、不许偷偷降标准、最早可重试时间、改向不等于中止、steer、中止已启动的工作、已开始vs已请求、并行批次检查点、跳过留痕、取消不是消失、确认不等于消费、送达确认、投递生命周期窗口、事后补推、后台容量分离、独立并发池、维护类工作、调度器不占槽、自锁、队列满丢谁、drop策略、已入队不等于会执行、输入持久化、不确定不重放、可能已提交、取证深度、浅层扫描、廉价列表、批量扫描、用于选择、用于判定、逐项取证、重复处理、批量退化、全部处理不等于逐项读全、派活传目的、迭代取回、子agent只知字面查询、挂载点频率、延迟预算、Stop hook、UserPromptSubmit、边界点、字符串里的第二副本、教错格式、schema 迁移看不见、find-replace 漏、示例残留、heredoc 副本、旧格式藏正文、提示词里的过期判据。、进度单调、到过的最远值、勾选倒退、并发覆写、并行写守卫、不许停的门、block cap、停滞检测、门做成死锁、这次不适用、逃生口、共享 cwd、一次性会话、宿主能力分档、硬阻断、后续注入、仅通知、60+ 平台。、守卫链不对称、拦截是终态、放行是no-op、放行不撤销拦截、handler顺序、守卫顺序变了、撤销拦截、终态与no-op、拦截点语义一致、策略别挂钩子、钩子覆盖面、覆盖面乘强度、安装策略、installPolicy、所有入口都经过。。、通知合并、一条待处理通知、通知文本稳定去重、冻结水位、排空即确认、自我抑制、重启重建通知、增量缺口、historyGap、没变化和被裁掉长一样、完整增量、变更订阅、观察者。、计划文件不是交付物、工作内存、显式归档、handoff索引、重启五问。。、合并语义、默认拼接、循环里倍增、显式 Replace、跨轮累积、inputMapper 冻结、prior 别名、可写工作键、读进来与写回不同名、capture-time tagging、按标签分发、不做名字解析、先数写入次数。、容错不能整批开关、required 标记、failFast 全有全无、混合集合不能快速失败、合并点再强制、严格合并与容错合并、聚合错误要点名、序列没有部分成功、必须给默认分支、上限到达不是成功、错误转给模型是一次授权、覆盖哪条路径、stream 不重试、抛出的错误才重试、返回错误分支、丢弃集、SAVED/RESTORED/DISCARDED、同名不交叉、FlowchartCheckpoint、AgentRunCheckpoint
-version: 2.13.0
+version: 2.14.0
 agent_created: true
 ---
 
@@ -1062,3 +1062,27 @@ agent_created: true
 ## Task/Progress 双账本：计划账本与进度账本分开维护（来源：Microsoft AutoGen 官方 docs·Magentic-One 架构，2026-09-19 实拉）
 - **外层循环维护 Task Ledger**（任务计划 + 收集的事实与 educated guesses），**内层循环维护 Progress Ledger**（每步自我反思：任务是否完成、进展如何）；**无进展达到 N 步就修订 Task Ledger、重开计划**。
 - 判据：**"计划是什么"与"走到哪了"是两个账本**——混在一个账本里，计划修订会污染进度记录、进度停滞又会被当成计划内容；无进展计数是重计划的触发器，不是可选项。
+
+
+## 中断恢复纪律：节点从头重跑→副作用必须幂等 · 不要 try/except 包 interrupt · 多 interrupt 严格索引匹配（来源：LangGraph interrupts 官方文档，2026-09-19 实拉）
+- **中断恢复时节点从头重跑，中断前的代码会再执行一遍**：resume 后不是从 interrupt 行继续，而是整个节点重跑。→ 判据：**interrupt 之前的副作用必须幂等**（用 upsert 而非 create、副作用放 interrupt 之后、或拆成独立节点）；创建新记录/追加列表这类非幂等操作放 interrupt 前 = 每次 resume 重复执行。
+- **不要用 try/except 包 interrupt 调用**：interrupt 靠抛特殊异常暂停，裸 try/except 会吞掉它导致中断不生效；中断逻辑与错误处理代码分开。
+- **同节点多 interrupt 严格索引匹配**：resume 值按位置与 interrupt 调用一一对应；**不重排、不条件跳过、不用非确定性循环逻辑**包 interrupt，否则索引错位。
+- **payload 必须 JSON 可序列化**：传函数/类实例会无法持久化；resume 值同理。校验输入用 interrupt 循环（无效则带更具体提示再次 interrupt）。
+- **静态 breakpoint（interrupt_before/after）只用于调试，HITL 用动态 interrupt()**：静态断点是编译时钉死，动态中断可放代码任意处、可条件触发。
+- **并行工具调用可能同时生成多个 handoff**：模型并行工具调用时可能一次产出多个 HandoffMessage 导致意外行为（AutoGen Swarm），需禁用 parallel_tool_calls。→ 判据：**交接类工具调用关闭并行**。
+
+## 工具返回值三选一 + return_direct 批量语义 + Command 写状态配对（来源：LangChain tools 官方文档，2026-09-19 实拉）
+- **工具返回三选一**：string（人读文本，模型直接看）/ object（结构化数据供模型推理字段）/ Command（要写状态时用）。→ 判据：**只读查询返回文本或对象；要改状态的返回 Command**。
+- **return_direct 的批量语义**：同批并行工具调用**全部** return_direct 才短路 agent 循环直接返回；只要有非直达的同批工具，则全部结果送回模型再推理一轮。→ 判据：**"结果即答案"型工具才标 return_direct**；需要进一步推理/摘要/链式的不能标。
+- **Command 写状态必须配 ToolMessage**：工具用 Command 更新状态时，须在 update 里带 tool_call_id 匹配的 ToolMessage，否则 ToolNode 抛 ValueError（每个 tool call 必须有对应 ToolMessage）。→ 判据：**写状态的工具调用，结果回执与状态更新成对出现**。
+
+## 检索块与合成块解耦 + 任务自适应检索（来源：LlamaIndex production_rag，2026-09-19 实拉）
+- **检索粒度 ≠ 合成粒度**：小块（句子/摘要）嵌入检索保证命中，大块（句子窗口/整文档）合成保证上下文——embed 句子链接窗口、embed 文档摘要链接 chunks（small-to-big / auto-merging）。→ 判据：**用小块找、用大块读**；大块直接嵌入有 lost-in-the-middle 风险。
+- **结构化检索应对大规模文档集**：metadata filters + auto-retrieval（LLM 推断过滤条件 + 语义查询）vs 文档层级递归检索（先文档级后 chunk 级）——按场景选。
+- **任务自适应检索**：事实问答/摘要/比较需要不同检索策略，用 router/data agent 按任务类型选检索路径。
+
+## 轻量记账三则：双 logger 分工 · query/chat engine 判据 · 声明式 vs 命令式（来源：AutoGen logging + LlamaIndex chat_engines/query_pipeline，2026-09-19 实拉）
+- **trace 与 event 分开记**：低层 trace logger（逐消息/运行时事件）与结构化 event logger（agent 间消息）分开——排查用 trace，业务审计用 event。
+- **单问用 query engine，多轮用 chat engine**：无状态单问不背历史；要上下文连续才用 stateful chat engine。
+- **声明式管线 vs 命令式代码**：QueryPipeline 声明式链/DAG（少样板、可读、可序列化、回调可观测）vs 命令式手写编排——复杂度低时命令式更直接，别为小流程上声明式框架。
