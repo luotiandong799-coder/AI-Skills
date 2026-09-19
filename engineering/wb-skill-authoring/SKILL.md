@@ -950,7 +950,7 @@ grep -rn "<旧名>" ~/.workbuddy/skills /c/Users/26719/.workbuddy/AGENTS.md "D:/
 - **受限参数用 enum，所有参数有描述**：只允许 'celsius'/'fahrenheit' 就别让模型自由发挥；每个参数描述要含类型、有效范围/示例、null/缺省时的行为。
 - **description 答四问**：做什么 / 改什么 / 何时用 / 何时不用（负空间与正空间同等重要）——description 本质是 prompt，是模型判断「该不该调它」的唯一依据；复杂工具至少给一个具体示例。
 - **命名纪律**：工具名用任务语言不用 schema 语言、动词优先、与其他工具区分；**跨上下文绝不重名**——两个叫 list 的工具进同一列表就歧义。
-- **输出契约（output_schema）**：返回结构化数据不返回原始 dump（50 列取 agent 需要的 8 列）；分页结果带 total_count 让 agent 知道要不要再取；失败带机器可读错误码 + 下一步建议；必要时带 
+- **输出契约（output_schema）**：返回结构化数据不返回原始 dump（50 列取 agent 需要的 8 列）；分页结果带 total_count 让 agent 知道要不要再取；失败带机器可读错误码 + 下一步建议；必要时带
 ext_actions 字段引导后续动作。
 - **tool spec 五要素**：description / input_schema / output_schema（成功+失败形状）/ safety（PII 范围、允许域、速率限制）/ 确定性 handler（小、确定、幂等、副作用包确认）——五要素齐了才上线。
 
