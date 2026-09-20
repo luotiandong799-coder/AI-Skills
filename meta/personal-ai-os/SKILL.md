@@ -2,7 +2,7 @@
 name: personal-ai-os
 description: >-
   Personal AI OS（个人 AI 操作系统）总控规则与模块路由。定义九大模块（Computer Agent / AI Learning / PC Maintenance / AI Radar / Personal Knowledge / Skill Management / MCP Management / Agent Harness / Evaluation）与全套自主执行纪律：统一任务生命周期、执行前置检查 Preflight、三级权限 L0/L1/L2、停止条件、重试、幂等与防重复、并发控制、结果验证、证据优先、异常恢复与回滚、任务后清理（临时/缓存/垃圾）、资源边界、敏感数据、审计与持续进化。**凡涉及操作电脑与普通软件、安装/更新/删除 Skill 或 MCP、GitHub 项目选型、电脑维护与清理、任务自主执行与收尾的动作，一律先加载本技能并服从其规则。** 当用户提出「电脑助手 / 帮我操作电脑 / 打开软件 / 输入内容 / 截图 / 桌面自动化 / Personal AI OS / 个人 AI 环境 / 电脑维护 / 系统体检 / 磁盘空间 / 清理缓存 / 清理垃圾 / AI 学习 / AI 信息雷达 / AI 简报 / 知识管理 / 资料整理 / 装技能 / 装 MCP / 这个技能值不值得装 / 帮我评估这个项目 / 帮我清理电脑 / 帮我操作微信或 Office」这类需求时应用。触发词：Personal AI OS、个人AI操作系统、电脑助手、桌面自动化、帮我操作电脑、打开应用、截图、电脑维护、系统体检、磁盘清理、缓存清理、垃圾清理、开机启动项、AI学习、AI信息雷达、每日AI简报、知识管理、第二大脑、装技能、装MCP、Skill管理、MCP管理、评估新能力、执行前置检查、三级权限、停止条件、幂等、回滚、防重复执行、资源边界、任务收尾、审计、personal ai os、desktop assistant、ai radar。
-version: 2.0.0
+version: 2.1.0
 agent_created: true
 ---
 
@@ -466,23 +466,33 @@ Personal AI OS 不允许无限膨胀。定期审查 Skill / MCP / Workflow / Exp
 
 ---
 
-# 附录 C：当前部署状态（2026-09-19 实测）
+# 附录 C：当前部署状态（2026-09-20 实测复验）
 
-| 连接器 | 状态 | 说明 |
+> 复验方式：每个连接器**真机发一次实际调用**，非"看开关是否打开"。
+
+| 连接器 | 状态 | 实测证据 |
 |---|---|---|
-| windows-mcp | ✅ 已验证 | uvx 安装；`args: ["windows-mcp","serve"]`（**必须带 serve**，否则 stdio 握手超时） |
-| playwright | ✅ 已验证 | 本地 npm 包直调 node，`--browser msedge --headless`，复用已装 Edge，无需额外下载浏览器 |
-| filesystem | ✅ 已验证 | 白名单 `D:\腾讯AI` + `D:\AI技能仓库`，C 盘越权已实测被拒 |
-| desktop-commander | ✅ 已验证（只读） | 经 `D:\腾讯AI\tools\desktop-commander-readonly\readonly-proxy.js` 代理，仅暴露读/查看/进程查看类工具，写类工具硬拦截 |
-| GitHub | ✅ connected | `gh` CLI 已登录 `luotiandong799-coder` |
+| windows-mcp | ✅ 端到端通过 | 截图 / `DisplayInventory`(2560×1600@144dpi) / UI 树 / 剪贴板读写 / 开应用 / 点击 全部成功；完整链路＝开记事本→`Clipboard set`→`ctrl+v`→截图确认文字→点"不保存"→进程已退出 |
+| playwright | ✅ 端到端通过 | 导航 `example.com` 与**必应新闻动态页**并抽取可访问性树；headless Edge 带登录态（页面显示已登录账号） |
+| filesystem | ✅ 通过（含越权拒绝） | 白名单 `D:\腾讯AI` + `D:\AI技能仓库`；实测读 `C:\Windows\win.ini` 返回 `Access denied - path outside allowed directories` |
+| desktop-commander | ✅ 通过（只读） | 代理白名单 13 个只读工具（`read_file`/`list_directory`/`list_processes`…），显式拒绝 13 个写/高危工具（`write_file`/`edit_block`/`start_process`…）；实测 `get_config`（v0.2.51）+ `list_processes`（400+ 进程） |
+| GitHub | ✅ connected | `get_me` → `luotiandong799-coder` |
+| agent-mail | ✅ connected | `GetMe` → 别名 `REDACTED-ALIAS`，日发额度 50 封 |
+| sheetagent | ⚠️ 需前置 | 服务存活，但未打开工作簿时返回 `MCP error -32603: No workbook open`（属正常前置缺失，非故障） |
+| genie-baas（云服务） | ⚠️ 无目标 | 需 `applicationId`（取自 `.workbuddy/applications.yaml`）；当前工作区无该文件 → 无应用可查 |
+| weixinpay | ⚠️ 绑定报错 | 服务有响应，但绑定流程返回"无法绑定微信支付AI专属卡：遇到了一些问题，请稍后重试" |
 
 **已知坑（勿重复踩）**
 - Windows MCP 启动参数必须带 `serve` 子命令。
+- **`App` 的 `mode: "launch"` 按开始菜单名检索会失败**（2026-09-20 实测：`name: "notepad"` → `Notepad not found in start menu`）→ 改用 `mode: "launch_executable"` + `executable` 绝对路径（如 `C:\Windows\System32\notepad.exe`）。
+- **`Click` / `Type` 的 `label` 只吃 Snapshot 返回的整数 id，不吃文字**；按坐标点击用 Snapshot 给出的**屏幕坐标**最稳（Screenshot 的图内像素需乘 `Screenshot Coordinate Scale`，实测 1.481481）。
 - 中文输入不走 `Type`（SendKeys 不支持非 ASCII）：先 `Clipboard`（`mode: set`）→ `Shortcut ctrl+v`。
 - `Type` 工具 `loc` 必填（坐标或元素标签），只给 `text` 会报 `Either loc or label must be provided`。
 - 新 Notepad 另存为必须给绝对路径，否则提示"你不能保存到此电脑"。
+- **windows-mcp 限制代理的已知边界**：`Registry` 整项移除、`FileSystem` 的 write/delete/move 拦截，但 **`PowerShell` 工具可执行任意命令，代理拦不住** → 真正兜底仍是系统权限 + 人工确认（勿把它当强隔离）。
 - Windows MCP 服务常驻会占住 stdin，长任务建议分阶段重连，不要一个会话连打几十个动作。
 - PowerShell 工具调用结束时会清理未跑完的子进程，导致 uv 下载中断留陈旧 `.lock`。
+- **清理纪律**：UI 自动化测试收尾必须查残留——2026-09-20 复验时在 `D:\` 根发现上次测试遗留的 `Windows MCP 测试成功.txt`，已清。
 
 ---
 
