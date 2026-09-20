@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。
-version: 1.21.0
+version: 1.22.0
 agent_created: true
 ---
 
@@ -303,6 +303,16 @@ agent_created: true
 
 
 ---
+
+## 假设生效之前，先确认"你眼前的环境"就是"出事的那个环境"；跨系统 bug 的根因常住在查询语义里（来源：topaiskills《How I Fixed a Stubborn Bug Using Systematic Debugging》2026-05-31，2026-09-21 r125-A 独立实拉，此前未读）
+
+- **原文事实**：一个 FastAPI 订单聚合接口把 40 美元算成 400 美元，staging 正常、生产数据一上就错。作者改用假设框架后 45 分钟定位：ORM 用了 `outerjoin(Discount)` 而不是 `join(Discount) + Discount.is_active == True + distinct()`——用户有多条过期促销时查询返回重复订单行，聚合函数把折扣累加多次。**"The difference was a single join method. The AI assistant had defaulted to the safer outer join. It ignored the business rule that only active discounts matter for calculation."** 此前三小时盲试（全栈加日志、凭直觉重写 SQLAlchemy 查询）全部无效，作者自己的判词是 "I was debugging by accident, not by design"。
+- 判据：
+  1. **先核对被测环境本身（schema / 迁移 / 版本）再让假设生效**。原文踩坑：该方法默认"你能立刻拿到准确的 schema"，而他本地缺一次迁移，助手一直引用一张并不存在的 `discount_rules` 表，**白追二十分钟幻影列**——"The framework does not account for schema drift. You have to verify your environment before the hypotheses matter."。判据：**任何假设的第一条前置条件是"我看到的元数据与出事环境一致"**；不一致就先对齐，不要在错误的地图上推理。与 §CI 失败先复现再修（复现不了先怀疑环境差异）分工：**那条怀疑的是 CI 与本地的执行环境**，本条核对的是**数据/契约的形状本身**。
+  2. **先验数据形状，再动逻辑**。改查询之前先看"这条 join 的语义承载了哪条业务规则"——`outer join` 不是实现细节，它等价于"过期促销也参与计算"。判据：**跨系统 bug（DB join / 异步队列 / 第三方 API 响应）先追数据流、再追应用状态**；原文前两条假设（前端取整、Redis 缓存竞态）都死在应用状态层，第三条转向"把 ORM 实际发出的 SQL 打出来"才命中。
+  3. **定位阶段让 AI 只产出"失败点矩阵"，不许它同时提修复**。原文关键动作："I asked the system to generate a test matrix instead of suggesting fixes."——一旦允许它建议改法，会话立刻滑回"先改一版看看"的冲动。判据：**把 AI 在定位阶段的许可动作限制成"列举可证伪的失败点 + 各自一条判别命令"，修复请求单独下一轮再发**。与 §无回路不假设 / §假设必须带预测 分工：那两条管假设本身的质量，本条管**给 AI 的角色边界**。
+- 提升层级：工作流（定位阶段的输入核准与角色边界）+ 可复用 Skill。
+触发词：schema 漂移、幻影列、迁移缺失、先对齐环境、数据形状、join 语义、业务规则住在实现里、失败点矩阵、只许列举不许改、跨系统 bug、数据流先于应用状态、按设计排障不是碰运气。
 
 ## 附录 Z：description 术语索引（2026-09-20 从 description 外置）
 

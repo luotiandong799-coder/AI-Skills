@@ -2,7 +2,7 @@
 name: wb-ponytail
 description: >-
   写代码 / 实现功能类任务前的决策阶梯（YAGNI）。当用户要求写代码、实现功能、加特性、修 bug 涉及编码时自动应用：先判断是否真需要、是否已有现成方案、能否用标准库 / 平台原生 / 已装依赖解决，最后才写最简可用代码。非代码任务（写作、文档、研究、数据分析）不套用；生成类视觉任务（生图/视频/网页）转 `wb-visual-gen`。触发词：少写代码、别造轮子、有没有现成的、能力基线、环境支持吗、这个能删吗、为什么会有这个、留着没用吧、别乱改别的、改动范围、你怎么理解成这样、顺手改一下、agent 架构、别上复杂编排、单一 agent、要不要拆子agent、内建工具还是 MCP、工具白名单、省了多少、收益数字、没有基线就别给数、装了没调用、下载不等于安装、资产清点、不欠改、半迁移状态、复用托底、工具重叠、选错工具、开关三态、默认值覆盖、只读声明、误拒比弱答案更糟、缺席构成语义、修好就是删掉、不改默认除非测量、no-op、本轮用不上、能力协商、能力清单会过期、一个服务一个专职通道。
-version: 1.48.0
+version: 1.49.0
 ---
 
 # wb-ponytail（决策阶段：少写代码）
@@ -412,6 +412,16 @@ JSON Schema 只表达**结构合法性**（类型、必填、枚举），表达�
 
 
 ---
+
+## 测试投入按"这段代码碰什么"分档，不按信仰；方法要写明自己的失效条件（来源：topaiskills《I Tried TDD With an AI Assistant and It Caught a Bug》2026-05-31，2026-09-21 r125-A 独立实拉，此前未读）
+
+- **原文事实**：作者的取舍判据是"碰什么"而不是"重不重要"——"I use this approach for anything that touches money, permissions, or external APIs. Authentication, payment routing, role-based access control, and webhook handlers get the full test-first treatment."；反向也给了明确豁免："throwaway scripts, internal dashboards, and prototype features that will be deleted in two weeks"，理由原文是 "If the code will live for less than a month, the test suite costs more than the bug would."。**同一篇还给了该方法的失效条件**：生产火灾抢修时不套测试先行——"I patch the issue, verify it manually, and write the test afterward." / "It fails under panic. It thrives under structure."
+- 判据：
+  1. **先判"碰什么"，再判"要不要先写测试"**：碰钱 / 权限 / 外部 API / 凭据 / 会回滚不了的副作用 → 测试先行；一次性脚本、内部看板、两周内会删的原型 → 不建套件。判据取**影响面**（错了会波及谁），不取"这段代码我觉得重不重要"这种自我评估。
+  2. **任何流程都要写"什么时候不用它"**。测试先行的适用条件是"calm schedule and clear requirements"，**高压抢修是它的失效区**：此时改为手修 + 手工验证 + 事后补测，并把事后补测当债务记账。判据：**只写"怎么用"不写"什么时候别用"的流程，会在最不合适的场合被套用**（与 §不动默认值除非有真实测量 同族：都是给自己的判断加一条外部约束）。
+  3. 与 §按产物存活期选型（`create-db` 30 分钟实验 vs `@prisma/cli` 下季度还要用）分工：**那条管技术栈与资源**的选择，本条管**验证投入**的选择。两者都用存活期做输入，决策对象不同。
+- 提升层级：决策（验证投入的分档）+ 工作流（方法的失效条件声明）。
+触发词：碰什么、测试投入分档、存活期不到一个月、panic 下失效、事后补测、方法的失效条件、影响面判据、豁免清单。
 
 ## 附录 Z：description 术语索引（2026-09-20 从 description 外置）
 

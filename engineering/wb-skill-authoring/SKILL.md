@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。
-version: 2.39.0
+version: 2.40.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -132,6 +132,16 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 
 
 ---
+
+## frontmatter 闭合后不许留空行；技能互相冲突用"减法"定位（来源：topaiskills《How to Create Your Own AI Agent Skills》2026-05-31 + 《AI Agent Skills FAQ》2026-07-13，2026-09-21 r125-A 独立实拉，此前未读）
+
+- **原文事实（空行）**：作者花一小时排查"agent 为什么不听日期格式化规则"，最后发现是 YAML 闭合 `---` 与首个正文标题之间多了一个空行——"Some parsers treat that blank line as the end of the frontmatter block, while others swallow it into the YAML and fail to parse the whole file."删掉空行立刻恢复。
+- **原文事实（冲突）**：FAQ 把"技能互相冲突"列为实测坑，给出的定位法是**做减法**——"if you get inconsistent answers, try running npx skills remove on your least-used skill and see if quality improves."
+- 判据：
+  1. **闭合 `---` 的下一行必须就是正文，中间不留空行**。与 §CRLF 破坏 frontmatter 分工：**那条管行尾字符**（解析器的第一道门），本条管**闭合与正文之间的空行**（第二道门，且**不同解析器行为相反**——有的当结束、有的吞进 YAML 导致整文件解析失败）。写技能与做审计时两道门都要查；只查第一道会漏掉"文件能被解析但内容被吞"的形态。
+  2. **技能冲突的判定用受控减法，不用静态清单猜**。判据：**"同一类任务输出质量时好时坏"先怀疑技能互相打架**，做法是移除最不常用的那个、跑同一批任务、看质量是否回升；回升即定位到冲突源。与 §Skill 排查冲突（定期列出所有规则来源检查重复与冲突）分工：**那条是静态清单审查**（检查有没有冲突），本条是**运行期受控实验**（在"看起来没冲突但行为不一致"时定位是谁）。
+- 提升层级：可复用 Skill（技能文件的可解析性）+ 工作流（冲突定位方法）。
+触发词：闭合后空行、frontmatter 空行、解析器分歧、整文件解析失败、内容被吞、技能冲突、减法定位、质量时好时坏、移除最不常用。
 
 ## 附录 Z：description 术语索引`），常驻成本归零、检索与交叉引用不受影响
 - 同次重构实测：8 个技能 description **14,444 → 4,185 字（省 10,259 字）**，外置 1,353 个词条到正文，**信息零丢失**；全库常驻描述 **25,818 → 15,882 字（≈省 4,968 tokens）**
