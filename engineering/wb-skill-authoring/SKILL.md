@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。
-version: 2.40.0
+version: 2.41.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -142,6 +142,16 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
   2. **技能冲突的判定用受控减法，不用静态清单猜**。判据：**"同一类任务输出质量时好时坏"先怀疑技能互相打架**，做法是移除最不常用的那个、跑同一批任务、看质量是否回升；回升即定位到冲突源。与 §Skill 排查冲突（定期列出所有规则来源检查重复与冲突）分工：**那条是静态清单审查**（检查有没有冲突），本条是**运行期受控实验**（在"看起来没冲突但行为不一致"时定位是谁）。
 - 提升层级：可复用 Skill（技能文件的可解析性）+ 工作流（冲突定位方法）。
 触发词：闭合后空行、frontmatter 空行、解析器分歧、整文件解析失败、内容被吞、技能冲突、减法定位、质量时好时坏、移除最不常用。
+
+## 采用别人的技能/模板之前，先做三项预检：作者在哪层失明 / 输出结构能不能改 / 前置条件贵不贵（来源：topaiskills《I Let AI Write My PRD for a Week》2026-06-12 +《FAQ: Installing AI Agent Skills》2026-06-17，2026-09-21 r125-B 独立重拉实读，此前未读）
+
+- **原文事实**：① 作者用 `to-prd` 给"仪表盘细粒度权限"写 PRD，产物识别出三个可独立构建的深模块（permission resolver / route guard / audit log），**但完全没提 UI 层**——没有管理员怎么配置权限、没有角色分配的用户流、没有线框图。原文判词："The PRD was architecturally sound and completely blind to the user experience. This is where the skill showed its bias."——该技能作者 Matt Pocock 的公开工作偏后端与类型系统，**产物继承了这个世界观**。② 同一个技能的模板刚性："There's no config file or template override — what you see is what you get."他团队要的 `Success Metrics` / `Rollback Plan` 两节只能手改已发布的 issue。③ 安装 FAQ 给选型问题"两个做同一件事的技能怎么挑"的答案不在市场页："The answer is not in the skills.sh page — it's in the skill's SKILL.md file on GitHub, specifically the comparison with siblings section"；真正决定复用的是前置条件——"does one need a paid API key while another works with a free tier? Does one require a separate CLI installation? These details determine which skill you'll actually use more than once."（"Testing both takes five minutes and beats reading spec sheets."）
+- 判据：
+  1. **先问"它的作者会在哪一层失明"，再决定信它哪一层**。判据：**外部产物在其作者的专业方向上可靠，在作者不做的那一层会静默缺失**——而缺失是"结构上完整"的（模块边界齐全、词汇准确），所以看不出少了什么。采用前点名"这一层的结论我不采信，要自己补"。与 §开发与试用拆两个实例（迭代依据必须是使用者的真实行为）分工：那条管**自研技能的迭代**，本条管**采用第三方产物的预判**。
+  2. **输出结构必须可覆盖，否则适配成本落在每一次产物上**。判据：**问一句"团队的格式跟它不一样时，我改哪里"**；答案是"手改产物"的，等于每次都要重新付一遍适配成本。与 §技能是一份契约 分工：那条说技能应声明"我不做什么"，本条补"**它的输出长什么样、能不能被改**"也是契约的一部分。
+  3. **选型看前置条件成本，不看能力差异**。判据：**要不要付费 key / 要不要另装 CLI / 需不需要额外服务，决定"你会不会用第二次"**；功能强弱决定的是"第一次能不能跑通"。与 §真实榜单怎么读（安装量=入职漏斗、别装模型本来就会的技能）分工：那条管**从榜单上排除**，本条管**剩下的两个之间怎么选**。
+- 提升层级：工作流（第三方产物的采用前检查）+ 决策（选型判据的优先级）。
+触发词：作者偏见、学科盲区、结构完整但缺一层、模板刚性、输出结构不可覆盖、适配成本落在产物、前置条件成本、付费 key、会不会用第二次。
 
 ## 附录 Z：description 术语索引`），常驻成本归零、检索与交叉引用不受影响
 - 同次重构实测：8 个技能 description **14,444 → 4,185 字（省 10,259 字）**，外置 1,353 个词条到正文，**信息零丢失**；全库常驻描述 **25,818 → 15,882 字（≈省 4,968 tokens）**
