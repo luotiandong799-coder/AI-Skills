@@ -2,7 +2,7 @@
 name: wb-ponytail
 description: >-
   写代码 / 实现功能类任务前的决策阶梯（YAGNI）。当用户要求写代码、实现功能、加特性、修 bug 涉及编码时自动应用：先判断是否真需要、是否已有现成方案、能否用标准库 / 平台原生 / 已装依赖解决，最后才写最简可用代码。非代码任务（写作、文档、研究、数据分析）不套用；生成类视觉任务（生图/视频/网页）转 `wb-visual-gen`。触发词：少写代码、别造轮子、有没有现成的、能力基线、环境支持吗、这个能删吗、为什么会有这个、留着没用吧、别乱改别的、改动范围、你怎么理解成这样、顺手改一下、agent 架构、别上复杂编排、单一 agent、要不要拆子agent、内建工具还是 MCP、工具白名单、省了多少、收益数字、没有基线就别给数、装了没调用、下载不等于安装、资产清点、不欠改、半迁移状态、复用托底、工具重叠、选错工具、开关三态、默认值覆盖、只读声明、误拒比弱答案更糟、缺席构成语义、修好就是删掉、不改默认除非测量、no-op、本轮用不上、能力协商、能力清单会过期、一个服务一个专职通道。
-version: 1.50.0
+version: 1.51.0
 ---
 
 # wb-ponytail（决策阶段：少写代码）
@@ -431,6 +431,15 @@ JSON Schema 只表达**结构合法性**（类型、必填、枚举），表达�
   2. **选平台/抽象层时，把"出错了能不能看清内部"当一等指标写进对照表**。判据：**抽象层替你藏起来的东西，会在故障时才露出代价**；低代码省的是搭建成本，付的是排障可见性。选之前问"它坏了以后我第一手能拿到什么"（日志？执行轨迹？还是只有个红色节点？）。与 §能力基线/环境支持吗 分工：那条问**能不能跑**，本条问**坏了能不能查**。
 - 提升层级：决策（自动化的准入与平台选型）+ 工作流。
 触发词：自动化准入、可预测是硬门槛、同输入同流程同输出格式、One-Task Rule、维护负担、出错能不能看清内部、低代码的排障代价、监控一等指标。
+
+## 先判"这次是找答案还是找选项"，再选检索/研究工具（来源：topaiskills《I Replaced Google with an AI Search Agent for a Week》2026-08-01，2026-09-21 r125-C 独立重拉实读，此前未读）
+
+- **原文事实**：作者七天实验的对照表里，除了"答题速度/质量/成本"这些意料之中的行，还有两行给出了反向结论——**Serendipity / discovery：Google High、AI 搜索代理 Low**；**Learning the material：Google High、AI 搜索代理 Low**。原文结论："a pure AI-search workflow is **great for answers and terrible for discovery**. When I knew what I was looking for — an SDK method, a pricing detail, a config flag — the agent was strictly better. When I was exploring — 'what are the options for X', 'what's new in this space' — **Google's link-dense results actually served me better because I wanted the sprawl**."并直言 "Google's ten links are a feature, not a bug, when discovery is the goal."最终保留的是混合式。
+- 判据：
+  1. **问"我要的是收敛到一个答案，还是发散出一批候选"**，答案不同工具不同。判据：**找答案（SDK 方法名 / 定价细节 / 配置开关 / changelog diff）用 agent 摘要**；**找选项（"X 有哪些做法""这个领域最近有什么"）用链接式检索**。用错方向的代价不是慢，是**把本来该看到的东西提前砍掉**——而砍掉的东西你看不见，不会觉得丢了什么。
+  2. **"发散"在探索任务里是特性，不是噪音**。判据：**评估一个工具时，别只测"它给的答案准不准"**，还要测"它让我少看到了什么"——十个蓝链接在答题场景是负担，在探索场景是覆盖面。与 §选平台把"出错时能不能看清内部"当一等指标 同族：两条都是**把隐性代价写进对照表**（一条查可见性，一条查覆盖面）。
+- 提升层级：决策（按任务类型选工具）+ 工作流（混合式用法）。
+触发词：找答案还是找选项、探索型任务、链接密集是特性、覆盖面代价、serendipity、混合式检索、少看到了什么。
 
 ## 附录 Z：description 术语索引（2026-09-20 从 description 外置）
 

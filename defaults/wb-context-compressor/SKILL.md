@@ -2,7 +2,7 @@
 name: wb-context-compressor
 description: >-
   上下文聚焦（**只管输入侧：源材料 → 我**）。处理长命令输出 / 大日志 / 长文档 / 历史上下文时自动应用：只注入与当前任务相关的信息，不重复搬运无关上下文；摘要不得丢失关键错误、关键数据、关键步骤；用户明确指定要保留 / 参考的内容（偏好、约束、历史产物）不得丢弃；长期指令文件（AGENTS.md / skill）失效时按其被忽略的原因排查而不是重复粘贴；**压缩时机按任务状态定、不按 token 数定（子任务完成才压，半途/卡住禁止压）**；放进来的材料要过准入、暴露面要最小化；**窗口撑满时按四步降级（大输入转检索 → 砍工具/MCP 数量 → 限历史轮数 → 才换大模型）**；**记忆要持续裁剪而非只存**；验证、测试、安全检查等必要步骤一步不省。**输出侧的废话压缩不归本技能，走 `wb-max-token-saver`。** 触发词：上下文太长、撑满了、超限、被截断、摘要、保留哪些、别丢关键信息、记忆膨胀、记忆太长、检索不到、找不到以前说的、只给相关的、工具输出太长、MCP 挂太多、历史轮数、换大模型、降级、忘记前面、信息被挤掉、静默截断、裁了就变义、注入文件、条件注入、前缀缓存、恢复注入、压缩预算、总账、脱敏。
-version: 3.29.0
+version: 3.30.0
 ---
 
 # wb-context-compressor（上下文阶段：聚焦相关）
@@ -1195,6 +1195,15 @@ version: 3.29.0
 
 
 ---
+
+## 给 agent 的检索指令必须自带"时效与来源层级"偏好；带引用的产出当目录用不当权威用（来源：topaiskills《I Replaced Google with an AI Search Agent for a Week》2026-08-01，2026-09-21 r125-C 独立重拉实读，此前未读）
+
+- **原文事实**：作者把自己一周全部检索改走 AI 搜索代理（每天约 40 次），七天内出错两次，**两次都不是编造**——"It didn't fabricate URLs or make up API names. Instead, it **over-trusted its sources**: it read a slightly outdated blog post and repeated its stale claims as current truth, and once it summarized a GitHub issue as a resolved bug when the thread actually ended unresolved."原文给的判词："the risk isn't confabulation, it's **staleness and source naivety**."机制是——"**The agent treats all web pages as equally credible. A 2023 tutorial and the official 2026 changelog carry the same weight in its summary.**"而修法只有一行指令："prefer sources from the last 12 months unless I say otherwise"，加进去之后大部分时效问题消失。
+- 判据：
+  1. **时效与来源层级必须由指令显式注入，模型不会自发区分**。判据：**派检索任务时把"要多久以内的、优先哪一级来源"写成指令的一行**，不要让 agent 自己权衡；查"它说错了"时**先查时效与来源层级，再查虚构**——按原文一周的样本，错在"信了旧的"和"信了不该信的"，不在编。与 §检索按信任排序 分工：**那条是我对已经取回的结果排信任序**，本条是**取回之前给 agent 的约束**（两侧都要做，因为模型侧默认一视同仁）。
+  2. **带引用的产出是"指向权威页的目录"，不是权威本身**。原文："Treat the summary as a map, not the destination." / "Search agents don't save you time by being right; they save you time by **making it cheap to check**."判据：**摘要类产物要保留可点回原处的入口，且自己读的时候按"目录"读**——重要的结论点开源核，不重要的信摘要走人；把摘要当结论直接引用等于把"它读到的那一层"当"事实那一层"。与 §摘要不得丢失关键错误/关键数据 分工：那条管**摘要的保真度**，本条管**摘要的使用定位**。
+- 提升层级：工作流（检索指令的构成）+ 输入（摘要的定位）。
+触发词：过度信任来源、时效迟钝、不是编造、一视同仁、时效约束、12 个月内、摘要是地图不是目的地、带引用不等于已核验、让核验变便宜。
 
 ## 附录 Z：description 术语索引（2026-09-20 从 description 外置）
 
