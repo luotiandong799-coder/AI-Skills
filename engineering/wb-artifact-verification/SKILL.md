@@ -1055,3 +1055,10 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 ## 验证三层：语法→schema→业务，业务层最常被跳过（来源：next-gen structured-output 2026-06 + aitoolsguidebook output-parseable 2026-05 + samanvya structured-output 2026-01 实拉，与 §结构化输出错误反馈重试 分工——D78 管“失败后怎么反馈重试”，本条管“验证分几层、哪层最容易跳”）
 - **验证分三层，不能只做前两层：**语法（JSON 能解析吗）→ schema（必填键、类型、enum）→ 业务（领域合理性：退款金额不应为负、cron 应匹配产品限制）——**业务层是团队跳过最多的一层，也是下游会被吃掉的一层。
 - 判据：写验证时问“这个值满足业务规则吗”——只验证了格式和结构，业务层就还是盲区。
+
+## 评测解读纪律：失败分类法九类 + judge 一致率报告四声明（来源：AWS Strands Evals《Failure Detection and RCA》2026-06 + arXiv《Agreement Measurement for Rubric-based LLM Judges》2606.00093 + arXiv RULERS《Locked Rubrics and Evidence-Anchored Scoring》2026 实拉，与 §在线/离线评测分层 分工——D84 管“评测怎么搭”，本条管“评测结果怎么解读才不会骗自己”）
+- **失败分诊用完整分类法，不是“对/错”二值**：九类=hallucination / incorrect actions / orchestration errors / task instruction non-compliance / execution errors / context handling errors / repetitive behavior / LLM output issues / configuration mismatch；每个失败返回 span 位置 + 类别 + 置信度 + trace 证据。判据：**看评测报告时问“失败归到哪一类、证据在哪一行”——只有类别没有证据，等于没说；只有“错了”没有类别，改了也不知道改什么**。
+- **judge 与人类的一致率数字可以被“选择”出来**：同一批判定，取决于四选择——判断量表（几分制）、保留哪些案例（删不删边界）、弃权与无效输出怎么处理、跨条目跨标准的池化方式——可以报出天差地别的一致率。判据：**报告一致率时必须声明这四选择**，否则数字不可比较；看到别家“κ=0.8”先问它怎么处理弃权。
+- **rubric 要可执行，证据要可验证**：RULERS 证明可靠 judging 来自可执行 rubric（判到哪一级给几分）+ 可验证证据（分数必须引到具体文本）+ 校准量表，而不是 prompt 措辞本身；模型自说自话生成的 rubric 标准，可靠性显著低于人工引导的。判据：**写评分标准时问“这条标准能执行吗、分数有证据吗”——两者缺一，judge 只是凭感觉打分**。
+- 提升层级：可复用 Skill（评测解读）。
+

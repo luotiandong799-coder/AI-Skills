@@ -1393,3 +1393,16 @@ version: 3.33.0
 - **少而精：**激进 rerank 到 3-5 块通常优于塞 20 块——每个额外低价值块都加宽“中间”，把真相压到弱区。
 - **recency 强于 primacy：**问题/最终指令放最后 10%（提升常比优化开头更有效）；位置感知 rerank 需显式开启，不自动。
 - 判据：插入上下文时问“最重要的在头尾还是中间”——中间，就是让模型忽视它；卷入块时问“这个块值得占位置吗”——不值，它只在加宽中间。
+
+## Query 变换决策表：Rewrite/Multi-Query/HyDE/Step-back/Decompose/Route 各管一摊（来源：bestaiweb《HyDE, Multi-Query, Step-Back》2026-04 + aigentlab《HyDE・拡張・書き換え》2026-09 + bthek1《Query Transformation》2026-07 + arXiv《Query Optimization Survey》2412.17558 + Manning《Question transformations》2026 实拉，与 §块位置管理 分工——D95 管“检索回来的块放哪里”，本条管“查之前先把问题变成更好查的样子”）
+- **六种变换，各自的主升指标与代价不同**：Rewrite（+1 LLM 调用、检索次数不变，主升**精度**，适合多轮/口语/模糊查询）；Multi-Query / RAG-Fusion（+1 调用生成 N 个 phrasing、N 次检索 union，主升**召回**，适合言外之意易变/取漏）；HyDE（+1 调用生成伪答案文档再嵌入，主升**召回**，补 query-doc 鸿沟）；Step-back（+1 调用抽象一层 + 2× 检索）；Decompose（拆多跳子问 + N× 检索）；Route（+1 调用决定走哪条检索路）。
+- **HyDE 的前提**：伪文档的语义结构与真实文档相似（“读起来像文档不像问题”）；**即使伪答案事实错误，结构对了仍是有效检索信号**——所以别因为“答得不对”就不用它。
+- 判据：选变换时问“这个查询病在哪——精度、召回还是跨多跳”——病在精度用 Rewrite，病在取漏用 Multi-Query/HyDE，病在多跳用 Decompose；用 HyDE 时问“伪文档像文档吗”——只像问题，没补上鸿沟。
+- 提升层级：工作流（检索侧）。
+
+## 重排三档选型：bi/cross/ColBERT；重排≠检索，它只改顺序不增召回（来源：localaimaster《Reranking & Cross-Encoders》2026-05 + ai-tldr《Cross-Encoders vs Bi-Encoders》2026-06 + devopsway《RAG 5/N》2026-06 + markaicode《BGE Reranker》2026-03 + ranjankumar《Reranker Last Line》2026-05 实拉，与 §Query 变换决策表 分工——那条管“查之前”，本条管“查回来之后谁把它们排好”）
+- **三档选型表**：Bi-encoder（首阶段百万级召回，1 向量/文档 ~3KB，快但近似）；Cross-encoder（二阶段重排 top30-100，query+doc 联合注意力，+5-15 NDCG，50-500ms/100 候选——边界条件就是候选集 30-100）；ColBERT（晚交互，每 token 向量 ~30KB，+3-8 NDCG，5-50ms，可替代 bi-encoder 做高精度中段）。
+- **cross-encoder 不增加 recall**：它不找新文档，只把已找到的按相关性重排——**Precision@1 是它的指标，Recall 是检索器的指标**；把重排当检索去测 Recall 提升，测出来的只能是零。
+- 判据：搭 RAG 时问“先检索还是先重排”——重排的前提是先召回（两阶段，不要拿 cross-encoder 当首段）；选档时问“候选集多大”——大于 100，先砍检索再重排。
+- 提升层级：工作流（检索侧）。
+

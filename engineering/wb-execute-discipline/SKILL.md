@@ -1801,3 +1801,19 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **不可重试错误要显式标记，不要用尽所有尝试：**declined payment / validation error 是语义终态——重试 N 次结果相同（缓存拒绝），会把 attempts 全部烧在对抗一个固定结果上。
 - **只重试工具调用，不重试整个 LLM 推理循环：**重试整个循环＝重新付模型、重新调用已成功工具，成本和副作用都被放大。
 - 判据：写重试逻辑时问“这种错误重试会成功吗”——不会，标记为不可重试终止；调用失败时问“重试层级是工具还是整个循环”——整个循环，改成工具级重试。
+
+## 工具 schema 描述写作法：description 是每请求都发的 prompt 文本，不是文档（来源：aiworkflowlab《LLM Tool Schema Design》2026-08 + ai-tldr《Tool Calling Best Practices》2026-06 + deploybase《Best LLM for Function Calling》2026-02 + zylos《Tool-Augmented Agents》2026-04 + chenk《Function Calling》2026-04 实拉，与 §多 Agent 接口契约 分工——那条管“agent 之间传什么”，本条管“单个工具怎么定义才被模型正确调用”）
+- **description 字段是 prompt 文本，不是文档**：它每次请求都随 schema 发给模型——改写描述是工具 schema 上最高杠杆的调整，常大于重构形状本身。坏描述=函数名复述（“Search the database”）；好描述=一句话做什么 + 何时用（以及何时不用）+ 返回什么。
+- **好描述三件事**：命名概念、与相似概念消歧（模型靠描述区分相似工具，不靠名字）、指明何时用/何时不用（“when AND when not”）。
+- **受限参数用 enum，不要 open string**：status: string → enum[pending/active/cancelled] 直接减幻觉面；`additionalProperties:false` + 显式 required 消除约 80% 解析错误。
+- **schema 质量对调用准确率的影响大于模型选择**：实测好 schema 跨模型提升 10-20%；名字动作化（get_current_weather 优于 weather）参与模型的选型判断。
+- 判据：写工具定义时问“description 里有没有写何时不该用”——没写，模型只能靠猜；写参数时问“这个值有枚举吗”——有，就用 enum 封死。
+- 提升层级：可复用 Skill（工具定义质量）。
+
+## 成本归因强制标签：每调用记账给恰好一个 owner；指标用每被接受结果消耗（来源：Zylos《Token Attribution and Cost Allocation》2026-05 + aurametrics《Monitor Token Efficiency》2026-06 + Fiddler《Model AI Tokenomics》2026-07 + dev.to《Token Accounting》2026-09 实拉，与 §成本断路器 分工——D81 管“超预算怎么拦”，本条管“每一分钱怎么记账归因”）
+- **每调用强制打标签，记账给恰好一个 owner**：每个 LLM 请求带 project/team/pipeline step/cost center，在 gateway 层注入，请求派发瞬间决定归属；**未打标请求必须拒绝或丢进未归属桶**——没有“无主账”，否则月末只有一笔总账。
+- **用 tokens per accepted outcome，不用每轮 token 数**：token 效率 = 一段 agent 运行的总 token（输入+输出+缓存+推理）除以“被接受的产出数”（通过验收的答案/合并的 PR/解决的工单/跑完的工作流）——单看每轮 token 会忽略“跑了 20 轮才成功”的真实成本。
+- **账从累计输入来，不从输出算**：输出单价高（约 5×）但量少；每轮重发整个对话历史才是账单大头——所以 prompt 缓存命中率是成本观测第一指标。
+- 判据：写 agent 入口时问“这次调用的 owner 标签在哪”——没有，记不了账；报成本时问“分母是被接受的产出吗”——不是，这个数说明不了效率。
+- 提升层级：工具 / 工作流（成本观测）。
+
