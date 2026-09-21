@@ -398,3 +398,10 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - **四段式，顺序不能省**：① 环境就绪（装依赖、起服务、登好账号）② 读 diff 与代码库拟出**最小的、聚焦的**测试计划 ③ 执行并在关键节点做标注 ④ 把结果作为交付的一部分发出去。判据：**测试计划是从这次改动推出来的，还是从“把所有功能跑一遍”抄来的**——后者产出的长录屏没人看。
 - **进入验证前先找仓库里有没有已约定的规程**：官方 Phase 1 明确包含 “Checks for relevant skills in the repo (under `.agents/skills/`) and follows them if found”。判据：**这个仓库里是不是已经有人写下了“这类改动该怎么验”**——有就按它走，没读完就自创流程，等于把团队约定降级成个人习惯。
 - 提升层级：工作流（验证交付）。
+
+## bug 报告规格是修复上限：轨迹证据富化报告 + gold standard prompt（来源：Al Fahim 等《Bug Report Specification Refinement with Trajectory Guidance》2026-07 + saram.io《Why Your LLM Keeps Fixing the Same Bug》2026-07-17 + The Neural Base《SWE-Bench》2026-04-22 实拉，与 §模型答错四形态互补——那条管“模型被什么带偏”，本条管“喂给修复的规格本身是不是约束瓶颈”）
+- **bug 报告规格质量是修复的主导约束，不是模型**：TrajSpec 用轨迹派生证据富化稀疏 bug 报告，SWE-bench Lite Pass@1 从 41% 提到 72%——同一模型，报告变好修复翻倍。判据：**修复成功率上不去，先查报告里有多少可行动证据（复现步骤/相关文件/失败路径），再怪模型**。
+- **gold standard prompt 结构**：失败测试 + traceback → 先写一段根因解释 → 给最小补丁（修根因不修症状）→ 只展示改动的行（diff 不全文件）→ 不改函数签名。判据：**这条 prompt 同时逼出“诊断”和“最小改动”**，两条都缺的“修一下”提示词换不回稳定修复。
+- **生成 3-5 个独立候选（不同 prompt）+ 全测试套件隔离验证 + 只把通过的给人审**（附 diff/哪些新测试过/覆盖率）——多候选提升命中，全量回归防修 A 坏 B。
+- 提升层级：工作流（排障）。
+

@@ -1479,3 +1479,16 @@ version: 3.33.0
 - **trifecta 特权分离**：单个 agent 不同时拥有 data + untrusted input + egress（数据/不可信输入/出口能力拆开）——三者不共存，注入成功也带不走数据。判据：**给 agent 配权时问“它同时拿到数据、吃进不可信输入、能外发吗”**——三者齐全就是引爆结构。
 - **密钥不进 agent 上下文**：auth proxy 代替——secrets 永不进 prompt/tool args；trace 擦洗+短时 token。判据：**agent 上下文中出现密钥 = 设计错误**。
 - 提升层级：工作流（安全）。
+
+## 系统提示是内核不是知识库：五层堆栈与内容职责分配（来源：aicostcheck《Anthropic Context Engineering Guide》2026-07-26 + edenai《Context Engineering 2026》2026-08-07 + sureprompts《Context Engineering》2026-05-05 实拉，与 §上下文预算管理互补——那条管“窗口预算怎么分”，本条管“每层内容该装什么”）
+- **五层堆栈，各司其职**：minimal system prompt / progressive disclosure / tool design / auto-memory / richer references——系统提示只装稳定行为，不装知识。
+- **内容职责分配一句话**：**稳定行为放 prompt、任务知识放检索、操作指引放工具、持久偏好放记忆**——系统提示是内核（kernel），不是知识库（knowledge base）。判据：**往 system prompt 塞“某领域事实/某任务步骤”前问一句：这属于哪层**——塞错层的结果是知识随提示膨胀、改一次重发全部。
+- **渐进披露配可寻址入口**：细节放外部文件/文档，提示里只留指针与“需要时再读”的触发条件——不用每次全量携带。判据：**这份内容是否每一轮都被用到**——不是就降级为按需读取。
+- **128k 生产分配示例**（供校准）：8-12k system（cached）/ 20-40k retrieved / 10-30k history / 2-10k tool outputs / 1-3k few-shot——检索占比最大且最该被预算约束。
+- 提升层级：工作流（上下文架构）。
+
+## 工作记忆/会话状态 offload：文件 scratchpad 优先，多 agent 共享状态不共享窗口（来源：agentnative《Context Offloading Pattern》2026-07-26 + jatinbansal《Working Memory: Scratchpads, Blackboards》2026-05-18 + AdMem《Advanced Memory》2026-06 实拉，与 §工具输出 offload 互补——那条管“工具结果写文件留引用”，本条管“工作记忆与跨会话状态同样 offload”）
+- **超多轮/跨会话 agent 默认文件 scratchpad**：笔记、待办、中间决策写外部文件，需要时读回——不整段任务扛在窗口里（Anthropic 打游戏 agent 用 NOTES.md 跨 1234 步跟踪进度）。判据：**这个状态这一轮还用不用**——多轮后才用的状态，留窗口 = 白占预算；写文件 = 零占用。
+- **多 agent 共享状态不共享窗口**：子代理之间通过共享文件/存储传状态，不把整个上下文复制给对方——共享窗口 = 每个人都背全量。判据：**子代理交接传“状态文件的路径”还是“状态本身”**——前者是 offload，后者是复制。
+- **working memory=结构化任务状态**：类型化字段/KV/图/文件，由 harness 序列化进 prompt、通过显式工具更新——消息被驱逐后状态仍存活。判据：**驱逐消息后，这次任务还能不能从状态文件续跑**——不能就说明状态跟着消息丢了。
+- 提升层级：工作流（上下文管理）。

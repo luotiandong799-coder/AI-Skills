@@ -1849,3 +1849,16 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **韧性验证靠注入受控失败而非只看理想态**（来源 Strands Agents `chaos_testing` + `recovery_strategy`/`partial_completion` evaluator）：向工具注入超时 / 网络错 / 截断损坏响应，测 agent 在降级下的**部分完成度（用 0–1 连续分而非二元成功）**与**恢复策略质量（是否换路 / 适当重试 / 立即放弃 / 无限重试）**。判据：**标准评测只在理想条件跑，暴露不了脆弱的错误处理；韧性要主动注入失败再量化降级**。
 - **硬约束靠生命周期 hook 担保而非 prompt**（来源 Strands Agents `control-with-hooks`）：删除前人工确认、`cancel_tool` 阻断破坏性工具、runaway 循环拦截——prompt 是请求，hook 是担保（不依赖模型是否"听话"）。判据：**凡"绝不能做 X"的约束，用 hook / 拦截实现，不靠 prompt 祈祷**。
 - 提升层级：工作流（可靠性 + 约束担保）。
+
+## 重试必须改上下文：相同 prompt 重试产出相同无效输出（来源：The Neural Base《100% Valid Outputs》2026-04-22 + codercops《LLM Structured Outputs in 2026》2026-05-10 + explainx《Structured Output with tool_use》2026-06-29 实拉，与 §重试分两类管互补——那条管“transport 与 tool 分开、写操作幂等”，本条管“对同一请求重试时 prompt 要不要变”）
+- **相同 prompt 重试常产出相同无效输出**：原样重发失败请求，模型往往给出同一份坏结果（15% 无效率跨 GPT-4o/Claude 实证）。判据：**重试次数>0 前先问“这次重发和上次有什么不同”**——没有不同的重试只是把同样的坏结果再领回来一次。
+- **指数退避 2s/4s/8s + 改措辞或换上下文**：瞬时失败退避重试；schema/语义类失败必须改 prompt（补说明、换示例、重述字段要求）再重试。判据：**transport 错重试原样，tool 错重试带修改**——两种失败的修法不同，混着处理等于一半重试无效。
+- **validation-with-retry 是 constrained decoding 的兜底**：自托管/无 strict 支持时，jsonschema 校验失败→带具体 ValidationError 信息回喂模型重写——报错内容进重试 prompt。判据：**重试 prompt 必须包含“错在哪”**，空泛的“格式不对请重来”和原样重发一样低效。
+- 提升层级：工作流（可靠性）。
+
+## 测试与修复角色分离：fail-closed harness 冻结测试，Repair 只改源码（来源：ExecCritic《Learn to Test, Test to Improve》2026-09-09 + ai-manual.ru《SWE-bench 验证技巧》2026-03-04 实拉，与 §轻量自动化三模式互补——那条管“自动化形态”，本条管“代码修复时测试与代码谁来管”）
+- **先建测试再修代码，且两边角色分离**：Test agent 独立生成仓库原生测试→fail-closed harness 冻结（不合格不通过）→Repair agent 从执行反馈修订源码、**不改测试**。判据：**修代码的 agent 有改测试的权限 = 它可以修到测试“恰好通过”**——测试必须由独立角色锁定。
+- **每轮 prompt 重贴原始问题上下文**：agent 追着具体错误修，会忘掉原始任务、越修越偏甚至修坏别的——系统消息固定携带原始问题描述。判据：**修复循环每轮都该能回答“原任务是什么”**，答不出就是走偏了。
+- **迭代硬上限 3-5 次**：超限说明任务对当前方法过难，不是继续无界打补丁。判据：**修复轮数设预算，和 §自修复稳定性六控制的 max repair attempts 同向**。
+- 提升层级：工作流（代码修复）。
+
