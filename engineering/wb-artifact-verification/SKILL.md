@@ -1087,3 +1087,17 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - **exploration 与 execution 分离**：exploration SR（提交前是否找到正确目标）与 execution SR（找到后能否完成）分开记+informational coverage（任务相关属性覆盖）——长程失败多半卡在“没找到”，不是“找到后做不完”。判据：**失败复盘先问卡在找还是卡在做**——定位到段，修复才有的放矢。
 - **rubric 分级优于二分**：长程任务用平均 6.1 条分级 rubric（与人类一致性更高）替代单点 pass/fail。
 - 提升层级：可复用 Skill（评测）。
+
+## 合成数据生成评测集：五陷阱 + 种子 5-10x 扩增 + 镜像生产 prompt（来源：futureagi《Definitive Guide to Synthetic Data 2026》2026-05-20 + ailearningguides《LLM Evals 2026》2026-05-20 + Microsoft Learn《Generate a synthetic evaluation dataset》2026-09-01 实拉，与 §评测集配方四件互补——那条管“评测集怎么搭”，本条管“用合成数据扩评测集怎么防劣化”）
+- **五陷阱必检**：①生成器与 judge 同族——judge 认可生成器的失败模式；②无 mode-collapse gate——塌缩数月后才显现，要持续度量多样性；③label leakage——输入编码答案、模型学捷径；④无分布校准——幸存集在生产输入空间外；⑤只报 aggregate——78% 掩盖高风险簇 42%。判据：**合成评测集上线前逐条过五陷阱**，中一条就降级为辅助集。
+- **种子扩增工作模式**：50-200 条真实示例做种子→生成 5-10x→显式要求按种子欠表示的轴变化→pairwise cosine 多样性度量对照真实参考分布。判据：**没有真实种子与多样性度量的合成集 = 自嗨**。
+- **镜像生产 system prompt**：生成用例时用生产同款指令/agent 定义——漂移直接削弱评测信号。判据：**生成 prompt 与生产 prompt 分叉了，评测信号就假了**。
+- **合成+trace 结合**：合成填 launch 前空白与边界，生产轨迹飞轮晋升 golden——不二选一。
+- 提升层级：可复用 Skill（评测数据）。
+
+## judge 三偏差：position/verbosity/self-preference 与缓解（来源：arXiv 2602.02219《Position Bias in Rubric-Based LLM-as-a-Judge》+ 2604.23178《Bias Mitigation Strategies in LLM-as-a-Judge》2026-08-27 + 2604.22891《Self-Preference Bias》2026-06-02 实拉，与 §rubric 可执行互补——那条管“评分标准怎么写”，本条管“judge 打分本身有哪些系统性偏差怎么消”）
+- **position bias（rubric 位置）**：rubric 多选项打分隐式为多选——模型偏好列表中特定位置的分数。缓解：**balanced permutation**——均匀分布各分数选项位置、聚合多轮结果，既暴露又消偏差。判据：**分数选项在 rubric 里位置固定 = 位置偏差没消**。
+- **verbosity bias 按模型异质，不可假设偏好长**：Llama/Gemini +0.24~0.44（偏好长）、Claude Sonnet 4 -0.12（偏好简洁）、GPT-4o 中性——换 judge 模型先标定长度偏好。判据：**你的 judge 偏长还是偏短？没测过就按“都偏长”修 = 修错方向**。
+- **self-preference 多为不确定性非自恋**：能力匹配的代理控制后测量大幅下降——“偏爱自己”大多来自评估不确定性。判据：**自偏好显著时先换能力匹配的代理重测，别直接下“judge 自恋”结论**。
+- **无参考答案时 judge 过宽**：over-credit 错误答案——无参考评估要加校准（随机正确答案对照）。
+- 提升层级：可复用 Skill（评测校准）。

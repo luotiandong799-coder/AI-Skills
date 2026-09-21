@@ -1832,3 +1832,11 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **非文本观察正确打标**：工具返回截图/频谱图等，路由须标格式与用途再交模型，不混入文本流。
 - 判据：做视觉 agent 时问“模型说的‘那个按钮’工具找得到吗”——找不到就是缺接地层；问“整页图是必需的吗”——不是就按需裁剪区域。
 - 提升层级：工作流（多模态检索）。
+
+## 并行工具调用：strict 与 parallel 互斥 / all vs allSettled / safe_parallel / 流式每 id accumulator（来源：aiworkflowlab《Parallel Tool Calls in Production 2026》2026-07-26 + channel.tel《Parallel tool calls: the 5x speedup》2026-06-13 + cursuri-ai《Function Calling Tool Use》2026-05-22 + theneuralbase《Parallel tool calls》2026-04-22 实拉，与 §重试分两类管互补——那条管“失败怎么重试”，本条管“并行调用怎么编排”）
+- **strict:true 与 parallel 互斥（OpenAI）**：并行开启时回退非 strict schema——依赖 100% schema 符合的管道要么关并行、要么事后校验（Anthropic/Google 无此限制）。判据：**开并行前查 provider 文档**：strict 与 parallel 冲突是静默降级，不报错。
+- **all 还是 allSettled 按副作用选**：Promise.all（fail-fast）用于写操作/全部数据必需/部分状态危险；Promise.allSettled（partial success）用于只读查询/部分数据仍有用/有“拿不到 X”的兜底话术。判据：**读多写少用 allSettled，写操作全用 all**。
+- **safe_parallel 才并行**：执行前 validate args→authorization→executable parallel if safe_parallel——有副作用的工具不并行。
+- **强行并行三法**：单条 user message 塞独立请求+低温 0.1-0.3 降推理方差+显式 system prompt 指令。判据：**模型不愿并行时先试这三法，不靠猜**。
+- **流式并行按 id 分 accumulator**：多路参数分片交错到达，每 tool_call_id 一个缓冲，收齐再执行。
+- 提升层级：工作流（工具执行）。

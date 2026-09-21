@@ -1440,3 +1440,23 @@ version: 3.33.0
 - **复杂表用 SQL 接口**：TableRAG 式——离线把表建进关系库，在线查询分解+文本检索+SQL 操作交替，动态在文本理解与表操作间切换。
 - 判据：处理含表文档问“表切完还有列名吗”——没有列名的行 chunk 等于废块；问“这表要不要整表给”——行数少且查询常跨行，整表优于切块。
 - 提升层级：工作流（RAG）。
+
+## Agent 记忆检索：四信号混合 + 作用域键 + 使用率衰减 + 三层划分（来源：Mem0《How to create AI agents with long-term memory》2026-06-02 + augmentable《State of AI Agent Memory 2026》2026-07-27 + baeseokjae《Agent Memory Architecture Guide 2026》2026-05-07 实拉，与 §记忆提取四策略互补——那条管“提取什么怎么存”，本条管“检索与存储架构”）
+- **检索用四信号混合，不用单一向量**：semantic + keyword + entity + graph 四路召回再融合——单一向量漏实体/图关系；关键词漏语义近义。判据：**记忆检索只看相似度，实体与关系查询会漏**。
+- **记忆带作用域键**：user_id/agent_id/session_id/org_id 分层打键——不同用户、不同 agent 的记忆不串。判据：**拉记忆时先按作用域过滤再检索**。
+- **衰减按使用率，不按 TTL**：被反复引用的记忆保留，久未使用的衰减——简单 TTL 会杀掉活跃记忆。
+- **三层划分（Letta/MemGPT）**：core（常驻，persona+关键事实，像 RAM）/ recall（会话历史语义检索，像缓存）/ archival（外部无限存储，像磁盘）——agent 主动管理自身记忆，不把全部历史塞常驻。判据：**核心事实常驻、历史按需检索、归档外部存**——三层职责混在一起，常驻区会膨胀。
+- 提升层级：工作流（记忆）。
+
+## GraphRAG 与 vector 选型：查询复杂度决定；<1000 实体先 metadata filter；Type1→2 增强梯度；图会陈旧（来源：rag-repo《GraphRAG: when a knowledge graph beats plain vector search》2026-08-04 + tianpan《GraphRAG in Production》2026-04-09 + airbyte《Graph RAG vs Vector RAG》2026-04-13 + dioval《GraphRAG vs Vector Search》2026-05-01 实拉，与 §混合检索三阶段互补——那条管“检索管线怎么排”，本条管“要不要上图的判据”）
+- **选型看查询复杂度，不看架构本身**：单片段/单文档查找→vector（快/便宜/易保鲜）；多跳推理/跨文档关系/全局综合→graph。判据：**问的是“哪段像”还是“谁连着谁”**——后者 vector 结构性地弱。
+- **<1000 实体别上图**：well-governed metadata filter 优于 GraphRAG，约 1/10 成本，覆盖大多数场景。判据：**实体数没到千级，先给现有向量索引加 metadata 过滤**。
+- **增强梯度从最便宜起步**：Type 1=metadata filter 派生自现有结构化数据（CRM/组织架构/目录，最便宜）→ Type 2=关系抽取。判据：**先在已知实体类型上做 Type 1，出现检索失败再升 Type 2**。
+- **图会陈旧**：vector 优雅退化；stale graph 静默编码不再成立的关系——图上数据有保鲜机制（版本/时间戳/重抽）再上。
+- 提升层级：工作流（RAG 选型）。
+
+## 时间金字塔总结与压缩失败升级协议（来源：theneuralbase《Hierarchical Summaries》2026-04-22 + zylos《Agent Context Compaction》2026-04-21 + arXiv 2605.04050《LCM: Lossless Context Management》2026-02-14 实拉，与 §上下文预算管理互补——那条管“用多少开始规划着压”，本条管“按时间怎么组织多层 + 压缩失败怎么兜底”）
+- **时间金字塔，不折叠成 blob**：近期交互全保真、稍早轻度总结、更早深度压缩——granularity 随时间递减，细节在当下、只压缩旧的。判据：**总结完只剩一个 blob = 旧的没了、近的也被摊薄**；金字塔保留多粒度供按需回取。
+- **递归层级总结有代价**：summary of summary 指数级丢信息（每层像 low-pass filter，细节先消失）、递归合并放大幻觉；BooookScore：incremental 滚动比 hierarchical 更不连贯。判据：**选深度按任务**——factual QA 用 L1、主题分析可到 L3，不为“看起来完整”压到最深。
+- **压缩失败要升级协议（LCM）**：模型总结输出比输入长（compaction failure）是真实场景——三级 escalation：本层失败→更激进策略→最终确定性 fallback 强制收敛，不许带着“越压越长”继续跑。判据：**压缩后量了没**——输出 ≥ 输入就是失败，走升级而非接受。
+- 提升层级：工作流（压缩）。
