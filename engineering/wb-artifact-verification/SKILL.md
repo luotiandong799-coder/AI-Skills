@@ -1062,3 +1062,17 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - **rubric 要可执行，证据要可验证**：RULERS 证明可靠 judging 来自可执行 rubric（判到哪一级给几分）+ 可验证证据（分数必须引到具体文本）+ 校准量表，而不是 prompt 措辞本身；模型自说自话生成的 rubric 标准，可靠性显著低于人工引导的。判据：**写评分标准时问“这条标准能执行吗、分数有证据吗”——两者缺一，judge 只是凭感觉打分**。
 - 提升层级：可复用 Skill（评测解读）。
 
+## 工具调用评测四步合同 + 工具数量衰减与参数不匹配两个主导事实（来源：futureagi《Evaluating LLM Tool Use: Four-Step Contract》2026-05 + presenc《Tool-Calling Accuracy Benchmarks》2026-05 + chanl《Tool Count Decay Curve》2026-05 + qaskills《Tool Calling Accuracy Testing》2026-06 实拉，与 §工具 schema 描述写作法 分工——D96 管“怎么写好工具定义”，本条管“怎么测模型调得对不对”）
+- **四步合同，逐步打分**：①call-or-no-call——模型该调时调了没、**不该调时别调**（用 10-15% 的 no-call 切片测“保持沉默”这种正确行为，no-call 是有效标签不是失败）；②tool selection——从目录里选对工具（函数名匹配，语义改名防糊弄用 AST 比较而非字符串）；③argument construction——schema 有效且参数语义接地；④execution——真实运行判副作用正确。
+- **工具数量有衰减曲线**：5 个工具 85-91% 准确率，20+ 个掉到 65-78%，**超过约 50 个断崖式下跌**——这直接支持“每请求只注入相关工具子集，绝不注入全部工具”。
+- **参数不匹配占 60-75% 的调用失败**：正确工具、错误参数比选错工具更常见——评测和修 schema 都要把参数层当第一重点。
+- 判据：搭工具评测时问“no-call 算对了吗、参数分开了吗”——两个都没有，测出来的是“它敢不敢调”，不是“调得对不对”。
+- 提升层级：可复用 Skill（工具评测）。
+
+## 结构化输出失败五类：截断是独立错误类；refusal 必须显式检查；形状合法不等于内容正确（来源：aijsonmedic《JSON Repair》2026-07 + inferbase《Structured Outputs and JSON Mode》2026-06 + datastudios《Structured Outputs vs JSON Mode》2026-09 + tensoria《Structured Outputs in Production》2026-05 实拉，与 §验证三层 分工——D94 管“验证分几层、哪层最常跳”，本条管“结构输出本身有哪些失败模式、各怎么处理”）
+- **五类失败分开处理**：①截断（max_tokens 太低，输出中段断在 JSON 中间）——**当独立错误类**，与解析失败分开报，修法是给输出预算而不是重试；②refusal（模型因安全判断拒绝，返回 refusal flag 而非结构）——生产管线必须显式检查这个 flag，不能当解析失败；③schema 幻觉（凭空加字段/漏必填字段）；④类型强制（"42" 字符串 vs 整数）；⑤语义错误（格式完全合法但值错——CEO 认错人）。
+- **Structured Outputs 保证形状，不保证内容**：strict 模式能保证可解析、键存在、类型对，但模型仍能给出形状完美、内容虚构的输出——**schema 约束 + 应用层语义验证必须同时上，缺一个都是半吊子**。
+- 判据：接结构输出时问“截断、拒绝、语义错三种情况都有代码路径吗”——只处理了解析失败，另外三种会在生产里轮流咬人。
+- 提升层级：可复用 Skill（输出校验）。
+
+

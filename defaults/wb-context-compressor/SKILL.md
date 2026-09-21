@@ -1406,3 +1406,25 @@ version: 3.33.0
 - 判据：搭 RAG 时问“先检索还是先重排”——重排的前提是先召回（两阶段，不要拿 cross-encoder 当首段）；选档时问“候选集多大”——大于 100，先砍检索再重排。
 - 提升层级：工作流（检索侧）。
 
+## RAG 输出纪律：三条指令承载大部分重量；claim 级评估，不做 vibe check（来源：devopsness《Hallucination Detection, Grounding and Citations》2026-07 + futureagi《Evaluating RAG Faithfulness Deep Dive》2026-02 + arXiv《DS@GT ARC at LongEval》2607.14400 + langfuse《RAG Faithfulness Evaluation》2026 实拉，与 §Query 变换决策表/重排三档 分工——D98/D99 管“查之前与查回来之后”，本条管“答的时候怎么保证每个主张都有根”）
+- **三条指令承载大部分重量**：①只从提供的上下文回答 ②每个主张都要引用来源 ③上下文没有答案就拒绝——**refusal 路径是大多数人跳过、却拦住最糟失败的那条**（宁可说“查不到”也不编）。
+- **claim 级评估，不做 answer 级 vibe check**：answer-level groundedness 分数是感觉不是证据；正确做法=把答案分解成 claim → 逐 claim 对检索上下文打 grounded 分 → 对模型没用到的 chunk 做矛盾扫描（防 cherry-picking 与 sycophantic 复述用户前提）。
+- **语言指标会与事实接地背离**：ROUGE/BERTScore 高分可能来自参数记忆而非检索上下文——分高不代表接地，评估接地只能看 claim 与证据的对应。
+- 判据：写 RAG 提示时问“没有答案时它拒绝吗”——没写拒绝路径，最坏情况一定会发生；评忠实度时问“是逐 claim 对的吗”——只给总分，等于没评。
+- 提升层级：工作流（RAG 输出侧）。
+
+## 记忆写入分级：Always/If significant/Never 三档；读在关键路径，写出关键路径（来源：cloudrps《Agent Memory Architecture》2026-07 + callsphere《Agent Memory in LangGraph》2026-05 + metacto《Agent Memory Production Architecture》2026-06 + kunalganglani《Agent Memory》2026-09 实拉，与 §记忆提取四策略 分工——那条管“提取什么类型的记忆”，本条管“这个内容值不值得写、写要不要占推理关键路径”）
+- **写入三档分级**：Always write=关键决策、用户明确偏好、错误与解法、关于用户/系统的新事实；Write if significant=新颖信息、对既有理解的修改、有机出现的重要上下文；**Never write=常规确认、重复的程序性步骤、语义记忆里已有的信息、填充轮**——全写=检索噪声堆（haystack 退化），不写=跨会话失忆。
+- **Read 在关键路径，Write 出关键路径**：检索记忆影响本次回答，必须同步、卡 p50；写记忆在响应发出后异步做（后台任务/队列），记忆写入是最终一致——同步写提取会让用户每轮为“记不记得住”付延迟。
+- **write-at-end 模式**：会话开始时加载相关 LTM + 最近 3 条 episode 摘要进 prompt；会话结束跑一次摘要步（重要新事实写 LTM，会话记为 episode）——推理热路径保持快，持久性兜底。
+- 判据：写记忆时问“这条是决策/偏好/错误解法，还是例行确认”——例行确认，不写；设计记忆系统时问“写这一步卡不卡回答的延迟”——卡，移到后台。
+- 提升层级：工作流（记忆写入）。
+
+## few-shot 示例选择纪律：多样性覆盖边界>数量；20+ 示例就动态检索（来源：harshith《Production Prompt Engineering》2026-03 + theneuralbase《Dynamic Few-Shot》2026-04 + agencyscript《Few-Shot Tradeoffs》2026-04 实拉，与 §工具 schema 描述写作法 分工——D96 管“工具怎么描述”，本条管“任务示例怎么选才教得会模型”）
+- **示例多样性覆盖边界，优于数量**：3 个精心选择的示例（一个简单、一个缺字段、一个含歧义信息）胜过一堆彼此相似的例子——few-shot 的收益来自“模型没见过的形状”，不是重复。
+- **20+ 示例就动态检索**：示例库超过 20 条时，推理时按输入语义相似度检索 K 个最相关示例注入——静态示例不抗分布漂移（输入行业/语体一变，固定示例反而带偏）；示例库从生产反馈里增长。
+- **few-shot 的适用面**：格式要求严、领域术语、边界情况——此类任务精心 few-shot 可比 zero-shot 提升 20-50%；通用常识问答不用 few-shot。
+- 判据：挑示例时问“这几个覆盖了哪些失败形状”——都是同一个形状，白占 token；示例库变大时问“还是一次性全塞吗”——是，改成检索注入。
+- 提升层级：可复用 Skill（提示工程）。
+
+
