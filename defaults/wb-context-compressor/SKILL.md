@@ -607,6 +607,7 @@ version: 3.30.0
 - **per-tool 最小权限 profile**：每个工具单独定义 **scope + 最大调用速率 + 出口白名单**（数据能发去哪）——只读查询、无发送/删除权、最小 CRUD；能表达成 IAM 策略就绑到工具上（与 §最小权限 的分工：那条管"agent 整体给多少权"，本条管"单个工具给多少权"）。
 - **guardian pattern（执行前验证）**：独立小验证模型审主 agent 的**计划动作**再执行——三问：①符合用户目标吗 ②涉及无关的文件系统/网络/数据导出吗 ③要的权限超了吗——任一答是即拦截。
 - **注入模式正则预检清单**：`ignore.*previous.*instructions` / `reveal.*prompt` / `act as.*admin` / `system prompt` 等模式在输入进模型前先扫一遍。
+- **第三方技能/脚本审计三层分析：模式匹配 → 去混淆 → LLM 意图分析**（来源：虾小宝「技能安全审计工具」2026-09-21 实拉，补充上一条单层正则的缺口）：第一层正则/签名扫已知恶意模式；第二层**解混淆载荷再看**（混淆可绕过纯正则）；第三层**LLM 意图分析**（语义级识别"想干什么"，抓社会工程/伪装成合法操作）——装第三方 skill/脚本前按三层过，单层正则挡不住混淆载荷。
 - 判据：**每个工具都是注入成功后的爆炸半径**——少一个工具少一块炸面；装工具=扩权限，必须按装权限的流程审。
 
 ## 知识库生命周期治理：TTL+双时态 / 增量三操作 / 内容哈希 / wiki 层主动维护（来源：CSDN《知识过期治理：双时态账本》2026-09-17 + agentswarms《Keeping RAG Honest》2026-05-22 + 腾讯云《2026 RAG 全景》2026-04-14 + Kalinga《Personal Knowledge Base with LLMs》2026-07-14 实拉，与 §记忆文件结构/知识库三级 互补——那条管「目录怎么分」，本条管「内容怎么保鲜、怎么只动变更」）
@@ -701,6 +702,7 @@ version: 3.30.0
 - **procedural playbook 带成败计数**：每条 playbook 存 success_count/failure_count，用户确认修复有效时合并递增，计数作为上下文喂给合并 LLM——证据驱动的方式改进。
 - **记忆剪枝**：记忆 agent 定期剪枝/淘汰冗余记忆，避免超额占用——冗余堆叠会让检索质量退化。
 - **ground-truth-preserving**：记忆系统保留事实真值，不做无根据的模糊化/改写；改写须基于新证据（与 §事实分层 一致）。
+- **代码知识图谱可用确定性解析替代向量检索：tree-sitter AST + Leiden 聚类，免向量库**（来源：colbymchenry/codegraph 2026-09-21 实拉，宣称 59% 更少 token、70% 更少工具调用）：用确定性 AST 解析（tree-sitter）构建图结构再 Leiden 聚类分层，替代"嵌入+向量库"检索——可离线、可复现、无嵌入模型依赖；代码库问答/导航时把"相似度检索"换成"结构化图查询"，减少无谓工具调用与上下文注入（与 §有界遍历的向量+图混合互补：那条用图补关系，这条用图替代向量）。
 
 ## Agent 安全纵深强化：四层防御 / Shadow Mode / 能力对齐 / SPIFFE 身份（来源：AIDDM《AI Agent Defense in Depth Model》2026-05-16 + ypyl《Safety for AI Agents》2026-06-13 + Microsoft Zero Trust《Secure Agentic Systems》2026-03-20 + NoHack《AI Agent Security》2026-08-13 实拉，与 §OWASP 纵深 互补——那条管「威胁与注入」，本条管「防御层怎么布+治理怎么管」）
 - **四层防御模型（AIDDM）**：Edge/Network → Input/Prompt Validation → Reasoning/Runtime → Output/Egress——每层独立职责、独立实现、独立可观测指标；**没有单层扛全部防御，层间缺口必须可见**。

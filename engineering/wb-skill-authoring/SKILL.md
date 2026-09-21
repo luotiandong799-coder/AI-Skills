@@ -1449,3 +1449,9 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 触发词：不采访只综合、原料假设、garbage in thin out、只在结构性决策上确认、前置条件点名去补、disable-model-invocation、触发权。
 
 触发词：成对对照、transcreation、误拒率、拒绝率单独计、包装是变量、跨版本可比性、matched reruns、版本-线束对照表、评测器版本元数据。
+## description 写作规范：第三人称陈述 + what/when 双要素（来源：Anthropic agent-skills best-practices 2026-09-21 实拉）
+- **第三人称陈述**：description 是"这个技能做什么"的客观陈述，不是对模型说话（不写 "you should..."）。
+- **what + when 双要素**：what=做什么（一句话动作），when=何时该触发（场景 + 具体触发词）——反例 "Helps with documents" 只有 what 没有 when、且太泛，模型无法判断何时选它。
+- 判据：写完 description 问自己——一个陌生模型只看这行字，能判断"这条请求归它吗"？判断不了就是太泛。
+- 提升层级：可复用 Skill（description 质量 = 触发准确率）。
+触发词：第三人称描述、what/when 双要素、太泛、触发词列表。
