@@ -1082,5 +1082,8 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - **分桶，别一锅炖**：adversarial 用例与生产样本分开仪表盘、分开 CI 门槛——混在一起 aggregate 好看但攻击鲁棒性悄悄掉；**每个生产事故都进回归桶**（incident post-mortem 产出的用例是永久回归测试，不是一次性）。
 - 提升层级：可复用 Skill（评测治理）。
 
-
-
+## 长程任务完成度：Resolved/Checkpoint 双指标 + exploration 与 execution SR 分离（来源：arXiv 2605.15777《SaaS-Bench》+ 2606.15673《Process-Level Web Agents》2026-08-04 + 2604.24964《Odysseys》2026-08-25 实拉，与 §Task+Process 双评估互补——那条管“结果与过程双维度评分”，本条管“长程任务的部分进度怎么量、卡在哪一段”）
+- **完成度双指标**：Resolved Score（全部 checkpoint 过才计 1）+ Checkpoint Score（权重归一化的部分进度）——区分严格端到端完成与部分进展。判据：**只报 pass/fail 的长程任务，一半完成的活计成零**。
+- **exploration 与 execution 分离**：exploration SR（提交前是否找到正确目标）与 execution SR（找到后能否完成）分开记+informational coverage（任务相关属性覆盖）——长程失败多半卡在“没找到”，不是“找到后做不完”。判据：**失败复盘先问卡在找还是卡在做**——定位到段，修复才有的放矢。
+- **rubric 分级优于二分**：长程任务用平均 6.1 条分级 rubric（与人类一致性更高）替代单点 pass/fail。
+- 提升层级：可复用 Skill（评测）。
