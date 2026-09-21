@@ -504,6 +504,7 @@ Personal AI OS 不允许无限膨胀。定期审查 Skill / MCP / Workflow / Exp
 | Windows 界面自适应重识别（DPI/主题/语言/版本变化） | `windows-ui-adaptive` | 技能 |
 | 第三方桌面软件操作（微信/QQ/原生应用连续交互·即#6） | `win-native-app-automation`（已含，不重复建） | 技能 |
 | Windows 操作经验与自进化（方式择优/失败记忆/复盘/经验进化） | `windows-ops-experience` | 技能 |
+| 智能消息自动回复（微信/QQ/企微/钉钉/飞书等：判断该不该回、按联系人风格回、自学习/复盘） | `smart-message-autoreply` | 技能 |
 | 浏览网页 / 抓页面 / 填表 / 搜索 | **Playwright MCP**（headless，Edge 内核） | mcp.json |
 | 需登录态 / 反爬 / 验证码的浏览器任务 | `browser-automation`、`bsk-drive-logged-in-browser`、`agent-browser` | 技能 |
 | 读写本地文件（限定 D 盘） | **File MCP**（filesystem，白名单 `D:\腾讯AI` + `D:\AI技能仓库`） | mcp.json |
