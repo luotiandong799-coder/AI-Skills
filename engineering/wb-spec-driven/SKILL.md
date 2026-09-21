@@ -1077,3 +1077,10 @@ AC-N、AGPL、Architectural、Bounded、LLM 评委不能兜底、Spike、advisor
 - **diff 按逻辑分组，不按工具默认顺序**：官方明确“Groups changes logically, putting related edits together instead of alphabetical order”，并且**检测复制/移动**——代码被搬走时显示为移动，而不是一大段删除 + 一大段新增。判据：**读者看到的是“这个东西换了地方”还是“它没了又冒出来一个”**；后者会让人误判为新增逻辑而过度审查。
 - **发现必须带置信度分级**：官方 Bug catcher “labels them by confidence level”，severe 才要求立即处理。判据：**一张不分级的发现清单等于把所有发现排成同一优先级**——读者只能自己猜哪条该先看，结果通常是一条都不看。
 - 提升层级：工作流（评审）。
+
+## DAG vs 状态机选型二分；checkpoint 每节点转换持久化（来源：frankx《Multi-Agent Orchestration Patterns》2026-08-24 + mastra《Workflow Orchestration》2026-07-20 + AWS LangGraph EKS《Stateful IT Service Desk》2026-06-26 实拉，与 §何时不上编排互补——那条管“要不要编排”，本条管“上了之后用 DAG 还是状态机”）
+- **二分判据**：固定、无环的依赖链 → **DAG**（数据管线/CI/明确依赖序）；持久业务生命周期、只有特定转换合法、修复可能循环 → **状态机**（审批流/工单生命周期）；生产系统两者可组合。判据：**这个流程会不会“倒回去重来”**——会就状态机，纯向前就 DAG。
+- **checkpoint 在每节点转换自动持久化**：状态入库，人工介入（升级/审批）时全上下文保留，恢复后从断点继续——不是靠文档交接。判据：**中断数小时后恢复，状态还在吗**——在才算 checkpointed。
+- **interrupt 暂停与恢复是显式原语**：挂起执行、持久化状态、条件满足再 resume——等人工/外部输入时不占用循环。
+- 提升层级：工作流（架构选型）。
+
