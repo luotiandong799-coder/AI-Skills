@@ -497,6 +497,12 @@ Personal AI OS 不允许无限膨胀。定期审查 Skill / MCP / Workflow / Exp
 | 需求类型 | 首选能力 | 落点 |
 |---|---|---|
 | 操作 Windows 桌面（开应用/点按钮/输文字/截图/剪贴板/窗口） | **Windows MCP**（`App` / `Click` / `Type` / `Shortcut` / `Clipboard` / `Screenshot` / `Snapshot`） | mcp.json |
+| Windows 控件识别（UIA/FlaUI/pywinauto，控件级定位） | `winapp-ui-automation` | 技能 |
+| Windows 桌面操控（鼠标/键盘/截图/视觉/OCR 定位） | `computer-use-windows` | 技能 |
+| Windows 多引擎 Fallback 路由（UIA→pywinauto→OCR→坐标） | `windows-automation` | 技能 |
+| Windows 命令行执行（文件/进程/服务/网络/系统） | `powershell-windows-cli` | 技能 |
+| Windows 界面自适应重识别（DPI/主题/语言/版本变化） | `windows-ui-adaptive` | 技能 |
+| 第三方桌面软件操作（微信/QQ/原生应用连续交互·即#6） | `win-native-app-automation`（已含，不重复建） | 技能 |
 | 浏览网页 / 抓页面 / 填表 / 搜索 | **Playwright MCP**（headless，Edge 内核） | mcp.json |
 | 需登录态 / 反爬 / 验证码的浏览器任务 | `browser-automation`、`bsk-drive-logged-in-browser`、`agent-browser` | 技能 |
 | 读写本地文件（限定 D 盘） | **File MCP**（filesystem，白名单 `D:\腾讯AI` + `D:\AI技能仓库`） | mcp.json |
