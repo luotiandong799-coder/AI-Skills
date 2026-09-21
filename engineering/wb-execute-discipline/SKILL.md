@@ -1784,3 +1784,20 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **编排写成 YAML 数据，不写成代码：**“你要它干什么”而不是“怎么干”，可以像配置一样审查、版本化、分享。
 - **关键路径用确定性路由，探索用 LLM 路由：**两种不是替代是分工——确定性路由（可测试、可排查、成本可预测）用于已理解的步骤，LLM 路由（灵活但不可预测）用于真正需要判断的节点。
 - 判据：**编排写完问“这是数据还是代码”——代码就不好审查不好版本化；每个节点问“这里真需要模型判断吗”——不需要就用确定性规则。
+
+## 预算耗尽 vs 达成：capped 独立终态、StopReason 枚举带状态供调用者决策、停止检查顺序（来源：OpenHands docs/sdk/guides/agent-server/conversation-goals 2026-08 + samuelfaj token-budget 2026-08 + Precision AI stopping-conditions 2026-04 + agentnative loop-termination 2026-07 实拉 + WB r131 让出建议 4，与 §成本置断器 分工——D81 管“到边界怎么停”，本条管“停下来后这个结果怎么定义、调用者怎么用”）
+- **预算耗尽不等于失败：**可能已产出部分答案、完成重要工具、或停在外部效应发生前——用筹码区分不同终态：completed / budget_tokens / budget_tools / budget_turns / failed；结果必须携带足够状态（部分输出/已完成工具/使用量）供调用者决策，不是干净的“失败”。
+- **停止检查顺序固定：**完成先查→成功次之→预算第三→迭代最后——先看是否达成，再看卡住了什么，顺序弄反就会把“已完成但超预算”记成失败。
+- **no-progress 是独立检测器：**重复相同 tool+args 、状态哈希不变即卡住——与迭代上限的区别：迭代上限等二十个循环才起作用，no-progress 第二次重复就能截断。
+- **每个退出都有原因标签，发可观测性：**done_verified / budget_exhausted / no_progress / max_iterations / human_abort——不标原因的停止，回头只能看到“它停了”。
+- 判据：设计终态时问“预算耗尽与失败是同一个码吗”——同一个，调用者就无法判断“是完成了一半还是真没做”；输出时问“这个结果能让下游接着决策吗”——不能，就是干净失败。
+
+## 流控原语五类语义 + 三层独立刹车：并发上限、限速、合并、硬丢、优先级各管一种（来源：Inngest guides/flow-control + concurrency + throttle + debounce + priority 2026-08/09 实拉 + dreaming.press spend-caps 2026-07 + WB r131 让出语境，与 §后台任务并发背压 分工——D72 管“队列背压+abort 级联”，本条管“流控原语的语义区分”）
+- **五类流控各管一种，不混用：**concurrency（limit+key：每 key 并发上限，如每 user_id 5 并发，映射多租户隔离）vs throttle（窗口内限新 run 启动，FIFO 溢出）vs debounce（静默期后合并重复触发为一次）vs rateLimit（硬丢超限事件）vs priority+batching（VIP 优先、批处理）。
+- **预算三层独立刹车，不靠单一限制：**provider spend cap（账户级）+ gateway budget（中间层）+ loop 硬上限（循环本身）——任一个可能失效，三个都有才算防跑单。
+- 判据：要控流时问“这是并发、频率、重复触发还是优先级问题”——用错原语就是用错机制；担心超支时问“几层独立刹车”——一层就等于单点。
+
+## 工具重试纪律补充：不可重试错误显式标记，只重试工具不重试整个推理循环（来源：agentnative idempotent-retry 2026-07 + NeuralBase error-handling 2026-04 + aitoolsguidebook retry-storm 2026-05 实拉，与 §重试分两类管理 分工——那条管“transport/tool 分开重试”，本条管“什么错误不该重试、重试的粒度是什么”）
+- **不可重试错误要显式标记，不要用尽所有尝试：**declined payment / validation error 是语义终态——重试 N 次结果相同（缓存拒绝），会把 attempts 全部烧在对抗一个固定结果上。
+- **只重试工具调用，不重试整个 LLM 推理循环：**重试整个循环＝重新付模型、重新调用已成功工具，成本和副作用都被放大。
+- 判据：写重试逻辑时问“这种错误重试会成功吗”——不会，标记为不可重试终止；调用失败时问“重试层级是工具还是整个循环”——整个循环，改成工具级重试。
