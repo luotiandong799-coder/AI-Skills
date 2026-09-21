@@ -2,7 +2,7 @@
 name: wb-spec-driven
 description: >-
   规约驱动的多步实现（Spec-Driven Development）。当用户要求做 3 步以上的实现任务、跨会话长任务、或需要自主跑到交付的编码/改造任务时自动应用：先立规约（constitution + 本次变更 spec，含验收标准与范围外）→ 信息不足先澄清、禁止脑补 → 计划-实现-验证循环 → 独立验证 → 交付。含陌生代码先上浮抽象层取全局地图、跨会话交接文档写法、以及「执行前评审」（动手前用三镜头：完整性/一致性/风险）。单次小改动不套用（走 wb-ponytail 决策后直接改）。触发词：多步任务、长任务、按计划执行、自己跑完、交付给我、实现方案、重构、改造、批量修改、跨会话任务、交接、handoff、接手、新会话继续、陌生代码、先看全局、spec、验收标准、需求不明确、先澄清、防静默跳过、设计防呆、防错、执行前评审、评审计划、失败封闭、执行简报、失败处置、回滚还是提交、跳过还是重试、任务准入、交给 AI 多少自主权、实习生判据、错误代价、敏感数据、预算校验、中途提权、无人值守、人工关卡、HITL、不可逆操作、人在环中、可以拒绝、范围治理、静默缩水、分解不缩水、架构不变量、约束漂移、规划包络不等于 SLA、路线图别说成已交付。
-version: 1.52.0
+version: 1.53.0
 agent_created: true
 ---
 # wb-spec-driven（多步实现：先立规约，再动手）
@@ -975,3 +975,15 @@ AC-N、AGPL、Architectural、Bounded、LLM 评委不能兜底、Spike、advisor
   - **"给它看多少上下文"和"让它存多少记忆"是两个决定**：决策要信息足（转发完整会话），归档只归自己的一段（委派 prompt + 响应）。判据：**这两件事混在一起，子代理的记忆会被父会话灌满**，下次单独调用它时带一堆无关的上下文。
 - 提升层级：工作流（多 agent 委派边界）+ 工具（引用传递与取消级联）。
 - 触发词：委派边界、取消级联、abort 传播到子任务、结果引用、contextFromRefs、不复述、引用当数据处理、子代理记忆隔离、未知引用跳过、只归档自己的一段。
+
+
+## 人工介入要分“阻塞”与“留痕”两型；暂停后的续跑不能依赖原来那个进程（来源：Agno 官方 `docs.agno.com/agent-os/approvals/overview` + `docs.agno.com/agent-os/background-execution/hitl-continuations`，2026-09-22 r130-B 独立重拉实读，新信源首读）
+
+- **原文事实**：审批有两种语义，官方并列给出：*`@approval`（default）— "**Blocking.** Run pauses until an admin approves or rejects." 用于 "Deletions, payments, bulk operations"*；*`@approval(type="audit")` — "**Non-blocking.** The run pauses only for the tool's HITL step. A resolved audit record is created after the step completes." 用于 "Compliance logging, activity auditing"*。续跑侧：*"A durable run that pauses for confirmation parks its queue job as `paused`. Continuing it with `background=true` flips the same job back to `queued`, merges your confirmations into its payload, and lets whichever replica claims it finish the run. Kill the server after the `202` and restart it: the continuation still runs."* 队列记录显示 `attempt: 2, max_attempts: 2`。
+- **判据**：
+  - **"要人确认"不是一个动作，是两种语义**：**阻塞型**（不批就不往下走，用于删除/付款/批量）与**审计型**（不拦流程，事后留一条已解决记录，用于合规留痕）。判据：**先问"不批会怎样"——会出事就阻塞，只是要留证就审计**。把审计型当阻塞用会拖死吞吐，把阻塞型当审计用等于没拦住。
+  - **暂停状态必须落在共享存储里，不能落在发起它的那个进程的内存里**：*"Kill the server after the 202 and restart it: the continuation still runs."* 判据：**凡"等人"超过一次请求生命周期的流程，待办必须入库并可被任意副本认领**；存在会话内存里，进程一重启这次暂停就永久卡住（没人能看到它、也没人能继续它）。
+  - **续跑要把人的决定合并进原任务的载荷，而不是新开一个任务**：确认信息 merge 回同一个 job，由任一副本接着跑完。判据：**"继续"是同一任务的第二段，不是第二次执行**；新开一个会导致重复副作用（同一个删除做两遍）。
+  - **续跑要占尝试额度**（`attempt: 2, max_attempts: 2`）：判据：**重试上限要包含"人为续跑"那一次**，否则"暂停→确认→续跑"会把配额吃穿，表现为任务在续跑那一刻直接判失败。
+- 提升层级：工作流（人工介入的两型语义 + durable 续跑）+ 工具（待办状态落共享存储）。
+- 触发词：阻塞审批与审计审批、approval 两型、非阻塞留痕、durable 续跑、paused job、续跑不依赖原进程、任意副本认领、确认合并进载荷、续跑占尝试额度、HITL continuation。

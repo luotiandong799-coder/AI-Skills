@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。
-version: 1.69.0
+version: 1.70.0
 agent_created: true
 ---
 
@@ -994,3 +994,16 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - **与 §验证对象三分类、§判据选型四列 分工**：那两条管**选谁评、用什么评**，本条管**评完之后怎么把一堆分数合成一个可执行的结论**。
 - 提升层级：可复用 Skill（评测结论合成）+ 工作流（CI 门禁与发布裁决）。
 - 触发词：门禁与阈值、gates、verdict、scored、阈值方向、越高越坏、max 阈值、区间阈值、无数值证据不出裁决、notScorable、CI 裁决、硬要求与跟踪指标分开。
+
+
+## 评测失败先分诊三类再动手；好用例要“具体到工具调用”，且清理钩子只能撤新增、撤不了改动（来源：Agno 官方 `docs.agno.com/agent-platform/evals`，2026-09-22 r130-B 独立重拉实读，新信源首读）
+
+- **原文事实**：官方对评测的定位是 *"Evals are regression tests for your agents. Rerun the same prompts against the same agents and behavior drift becomes visible."*。失败处置：*"The coding agent runs the suite, **triages every failure** (bad criteria, real regression, flaky LLM judge), and proposes in-scope fixes."* 好用例四条：*"**Specific.** 'Returns a JSON object with `ticker` and `price`' beats 'Returns the right answer'."*；*"**Stable.** Avoid prompts whose correct answer changes daily. Use phrasing like 'describes a real, recent...' instead of locking in a specific result."*；*"**Scoped to one behavior.** One case per behavior makes failures easy to read."*；*"**Anchored to tools.** `expected_tool_calls` catches the failure mode where the agent confidently makes things up instead of calling a tool."* 清理边界：*"These hooks remove newly created records; **they cannot undo changes to existing records**. Use fictional, unique fixtures and a dedicated test database."*
+- **判据**：
+  - **评测挂了先分诊，不要直接改被测物**：三类原因对应三种完全不同的处置——**判据写错**（改判据）、**真回归**（改代码）、**评委抖**（改评委或换判据）。判据：**看到红灯先问"是谁错了"**，不分类就动手的典型后果是把写错的判据改成更宽松的判据，或把一个偶发抖动当成 bug 改出一堆无关代码。
+  - **用例要具体、稳定、一例一行为**：*"Avoid prompts whose correct answer changes daily"*。判据：**用例断言"形状/行为"，不断言"当天的具体答案"**——需要联网或时效的用例写"引用了至少一个真实来源"这类可稳定成立的表述。一条用例只测一个行为，混测会让失败原因不可读。
+  - **用例要锚定到工具调用**：`expected_tool_calls` 抓的是"没调工具就自信作答"这一类失败。判据：**只测最终答案会漏掉"答案对但路径错"**，答案级断言与工具级断言要成对出现。
+  - **测试清理要先声明它能撤什么**：清理钩子只能删本次新建的记录，**改不动已有记录**。判据：**"跑完自动清理"这句话必须补一句"清理得掉新增、清理不掉修改"**；清不掉的那部分靠**专用测试库 + 虚构唯一 fixture** 隔离，而不是指望清理兜底。
+- **与 §门禁与阈值三层（r130-A）分工**：那条管**分数怎么合成裁决**，本条管**裁决出来是红的时候，先往哪个方向查**。
+- 提升层级：可复用 Skill（评测用例设计）+ 工作流（失败分诊顺序与测试隔离边界）。
+- 触发词：评测失败分诊、bad criteria、真回归、评委抖、用例要具体、用例要稳定、一例一行为、锚定工具调用、expected_tool_calls、清理只能撤新增、专用测试库、evals 是回归测试。
