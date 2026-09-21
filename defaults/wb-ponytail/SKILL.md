@@ -2,7 +2,7 @@
 name: wb-ponytail
 description: >-
   写代码 / 实现功能类任务前的决策阶梯（YAGNI）。当用户要求写代码、实现功能、加特性、修 bug 涉及编码时自动应用：先判断是否真需要、是否已有现成方案、能否用标准库 / 平台原生 / 已装依赖解决，最后才写最简可用代码。非代码任务（写作、文档、研究、数据分析）不套用；生成类视觉任务（生图/视频/网页）转 `wb-visual-gen`。触发词：少写代码、别造轮子、有没有现成的、能力基线、环境支持吗、这个能删吗、为什么会有这个、留着没用吧、别乱改别的、改动范围、你怎么理解成这样、顺手改一下、agent 架构、别上复杂编排、单一 agent、要不要拆子agent、内建工具还是 MCP、工具白名单、省了多少、收益数字、没有基线就别给数、装了没调用、下载不等于安装、资产清点、不欠改、半迁移状态、复用托底、工具重叠、选错工具、开关三态、默认值覆盖、只读声明、误拒比弱答案更糟、缺席构成语义、修好就是删掉、不改默认除非测量、no-op、本轮用不上、能力协商、能力清单会过期、一个服务一个专职通道。
-version: 1.51.0
+version: 1.52.0
 ---
 
 # wb-ponytail（决策阶段：少写代码）
@@ -458,3 +458,21 @@ JSON Schema 只表达**结构合法性**（类型、必填、枚举），表达�
   - **验收顺序有方向：结构 → 行为 → 噪声**。判据：**先 typecheck 再 tests 再 format**，反过来会把格式问题当成功能问题查，也会让结构性损伤藏在测试红里分不清。
 - 提升层级：工作流（冲突处理与验收顺序）+ 决策（放弃的代价）。
 触发词：重来不是解法、abort 禁令、一手来源、双方意图、不发明新行为、验收顺序、typecheck 先行、结构性决策才确认。
+
+
+## 判断「要不要加」之前先分清能力与补偿：别为一个会消失的短板加永久结构（来源：MCP 官方 `modelcontextprotocol.io/community/design-principles` 设计原则八条，2026-09-22 r129-A 独立实拉，新信源首读）
+
+- **原文事实（八条原则，全库零命中）**：
+  1. **Capability over compensation**：*"Models improve faster than protocols evolve. We avoid adding permanent structure to work around limitations that are likely temporary — the limitation fades, but the complexity remains."* 但并非无视现状：*"Optional context that weaker models lean on and stronger ones ignore costs nothing."*
+  2. **Stability over velocity**：*"Adding to a protocol as widely adopted as MCP is easy. Removing from it is nearly impossible. Every addition is a permanent commitment and a cost for client implementers to support... 'no' today leaves the door open while 'yes' closes it forever."*
+  3. **Convergence over choice**：*"There should be one way to solve a problem... Rather than supporting multiple approaches that fragment the ecosystem, we choose a single well-designed path."*
+  4. **Composability over specificity**：*"We don't add protocol features for use cases that can be constructed from these existing building blocks."*
+  5. **Demonstration over deliberation + Interoperability over optimization**：跑得起来的实现压过理论论证；特性要能优雅降级，能力靠显式协商而不是假设对手一样强。
+- **判据（可迁移，落在「先判再加」的决策阶梯上）**：
+  - **先问「这个限制会消失吗」**：要加的东西如果主要在补一个**很可能临时**的短板（当前模型不够强、当前工具缺个字段），默认不加——限制消失那天，复杂度留下来。**唯一例外**：做成"弱者能靠、强者能忽略"的**可选上下文**（零成本），而不是把它变成结构的一部分。
+  - **加法与减法的代价不对称，所以默认答案偏向不加**：加一项 = 永久承诺 + 每个下游都要为它付实现与维护成本；"今天说不"只是留着门，"说是"就是把门永久焊死。判据：**评估「加这个」时把「将来能不能拆掉」当一等属性写进取舍清单**，拆不掉的就得按永久负债计价。
+  - **「两种写法都支持」不是兼容，是把选择成本转嫁给每一个后来者**：多方案并存即生态分裂。判据：**同一问题只留一条官方路径；试验性的放"扩展区"，收敛了的才进"标准区"**——先证明再收编，别同时发两个正式答案。
+  - **能用现有原语拼出来的，不新增特性**：判据：**提新能力之前先回答"用已有三件套能不能拼出来"**；能拼就写清拼法，拼不出来才谈新增。每加一个原语，后面的组合空间就要重新算一遍。
+  - **有可跑实现压过理论论证**：判据：**争不下来的设计争议，交一个能跑的最小实现来裁决**，别继续在文档里辩论。
+- 提升层级：决策（加与不加的判断）+ 工作流（取舍清单里新增"可撤销性"这一列）。
+- 触发词：能力与补偿、补偿性设计、永久结构、临时短板、限制会消失、加法不可逆、可撤销性、一条路径、收敛优于选择、组合优于特化、跑得起来压过理论。

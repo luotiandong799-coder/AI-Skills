@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。
-version: 2.44.0
+version: 2.45.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -1503,3 +1503,20 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
   - 判据：**“agent 会自己造技能”不等于“造出来的能直接上”**——生成只是提案，沙箱验证是门槛；与 §装前检测按漏斗走（av）分工：那条管“装别人技能前怎么筛”，本条管“自己沉淀/生成的技能怎么过门”。
 - 反模式：写技能时把“猜测有用”的配置直接固化成正式版；agent 提议了新技能就直接启用；把陪跑运行和正式运行混为一谈。
 - **提升层**：可复用 Skill（沉淀流程 / 技能生命周期）。
+
+
+## 技能的身份是「来源 + URI」而非名字；读到内容 ≠ 技能已激活（来源：MCP 官方 Skills 扩展规范 `modelcontextprotocol.io/extensions/skills/overview`（SEP-2640 Final，协议修订 2026-07-28），2026-09-22 r129-A 独立实拉，新信源首读）
+
+- **原文事实**：
+  - *"Skill identity consists of the originating server's identity and the skill URI. Names are labels and are not guaranteed to be unique. Hosts **MUST** preserve both server identity and URI in registries, approvals, and caches."* 且 *"Hosts **MUST NOT** identify a resource as a skill solely by its URI scheme."*
+  - *"Reading `SKILL.md` through `resources/read` does not itself activate a skill. To load the skill, the host routes the read through its skill-loading path, which verifies the content and applies any required user approval before loading it into model context."*
+  - 清单必须含 `SKILL.md` 与**每一个支撑文件**的 URI、SHA-256 摘要、字节数；*`skills/list` 返回的每条记录都是完整的，客户端无需再调 `skills/get` 补元数据*。
+  - *"Servers **MAY** return empty or partial listings, but **MUST** respond to `skills/get` for every skill they serve. Hosts **MUST** support loading by URI, including skills that do not appear in a listing."*
+- **判据**：
+  - **身份是二元组，名字只是标签**：同名技能来自不同来源就是两个不同的东西。判据：**注册表、批准记录、缓存这三处，必须同时存"它来自谁"和"它的唯一位置"**；只存名字 = 迟早认错人。与 §技能归属权（同一时刻只有一个 owner 可写）分工：那条管**谁能改它**，本条管**它是谁**。
+  - **判定归属要认声明与来源，不认长相**：长得像技能的（文件名 / 路径形态 / 协议 scheme）不等于就是技能。判据：**任何"看起来像 X 就当 X 处理"的自动化都要改成"声明自己是 X 才当 X 处理"**——形态可以伪造，声明在来源边界内。
+  - **"读到"与"生效"之间必须有一道显式的门**：把技能文件读进内存不等于已启用，加载是**独立路径**，要先校验内容、再过必要的批准，然后才进上下文。判据：**凡是"读取即生效"的设计，等于把校验和批准都绕过去了**；反过来，排查"技能怎么没起作用"时先分清楚是**没读到**还是**读了没加载**。与 §被引用技能静默没加载（目标产物零改动）分工：那条管**编排层漏了这一步**，本条管**读取与激活本来就该是两个动作**。
+  - **清单是视图不是全集**：服务器允许返回空清单或部分清单，但必须对每个它确实提供的技能响应按 URI 的精确取；宿主必须能加载**清单里没出现的技能**。判据：**"列表里没有"只能推出"没列出来"，推不出"不存在"**；需要精确命中时走按 URI 直接取，不要对着清单做存在性判断。与 `wb-artifact-verification` §报告是子集时必须声明 分工：那条管**报告怎么写**，本条管**宿主必须提供绕过清单的取数能力**。
+  - **完整性校验落在清单层**：每个文件带 URI + sha256 + size，内容变动在摘要上可见。判据：**批准/缓存的键用清单指纹，不用"路径 + 文件名字面量"**。
+- 提升层级：可复用 Skill（技能身份与加载语义）+ 工作流（加载与批准的先后关系）。
+- 触发词：技能身份、来源加 URI、名字只是标签、不只是标签、读到不等于激活、读取与激活分离、加载路径、清单视图、按 URI 直取、sha256 清单、不凭 scheme 判定。
