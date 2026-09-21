@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。
-version: 1.32.0
+version: 1.33.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -279,3 +279,23 @@ version: 1.32.0
 > 原 description 里与用户口语无关的内部术语/交叉引用词，已外置到正文。**信息零丢失**：逐条保留，检索与交叉引用不受影响；常驻上下文成本归零。
 
 不从别处筹 token、不许删未触及内容、中间态汇报、关闭："off" / "正常模式" / "stop caveman" / "normal mode"、净中性不等于无损失、压缩范围、失败细节不进进度、安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。等价于 Max-Token-Saver 插件的压缩逻辑，在 WorkBuddy 下由本技能直接执行。触发词含 "caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "复利项" / "减少轮数" / "一次调用不是一轮" / "换挡信号" / "能力不足" / "连续不改善" / "热路径" / "后台 pass" / "留痕只存元数据" / "整理移出每轮" / "可自检追问" / "discernment nudge" / "追问具体性" / "别唠叨"、审批点优先、省 token 不是删除许可、诊断流、进度流、里程碑播报、预算关不上就报告增长
+
+
+## 工具输出减容三档各有价格：先报「花不花钱 × 丢不丢信息」，再按体积分档配（来源：Pydantic AI 官方 `pydantic.dev/docs/ai/harness/tool-output-limits` 三模式与 bands 设计，2026-09-22 r129-B 独立重拉实读，新信源首读）
+
+- **原文事实**（官方自己给的三列表）：
+
+  | 模式 | 成本 | 有损？ | 模型拿到什么 |
+  |---|---|---|---|
+  | `Truncate` | 零 LLM | 是 | 头 / 尾 / 头尾夹取 |
+  | `Spill` | 零 LLM | **否** | 句柄 + 预览，按需回读 |
+  | `Summarize` | 一次 LLM | 是 | 按体积门控的摘要 |
+
+  配置形态是**按体积分档** `Band(over=N, action=...)`，*"The band with the largest threshold that fits wins; anything below the smallest threshold passes through"*；每个动作带 `then` 降级链（写盘失败 → 截断），默认档是 `Spill(then=Truncate())`——*"lossless when a store accepts the write, a bounded truncation otherwise -- zero LLM cost and no silent drop"*。并显式声明它与压缩的分工：*"it moves large tool outputs out of the window at production time, rather than compressing or dropping context already inside it."*
+- **判据**：
+  - **选裁剪手段必须同时报两个数：花不花钱、丢不丢信息**。只报"省了多少 token"会把无损的溢出和有损的截断混成同一件事。判据：**任何"把上下文变小"的动作都要标明它是 `零成本有损` / `零成本无损` / `付费有损` 中的哪一格**，别只写"做了压缩"。与 §成本分型（一次性 vs 边际）分工：那条管**成本的时间形态**，本条管**裁剪手段的价格 × 保真两维**。
+  - **按体积分档，别用一个阈值打天下**：小返回穿过不处理，中等直接夹取，大返回用摘要，超大返回走无损溢出。判据：**"够大才处理"的阈值要有至少两级**，一级阈值必然两头不讨好——小的被误伤、大的省不下来。
+  - **每条裁剪路径都要有降级出口**：无损落盘会失败、摘要会调用失败。判据：**写了 `Spill` 就要写"写不进去怎么办"**，默认答案不是静默丢弃。与 §失败永不阻塞主回复（`wb-debug-loop`）分工：那条管**功能降级**，本条管**裁剪链自己的兜底顺序**。
+  - **"挪出窗口"和"压缩窗口里的东西"是两件事**：溢出发生在**产生时**（内容还没进历史），压缩发生在**已在历史里之后**。判据：**能在产生时挪走的，别等它进了历史再压**——进历史之后每一次请求都要为它付一遍。
+- 提升层级：工具（上下文裁剪手段选型）+ 工作流（分档与降级链）。
+- 触发词：减容三档、花不花钱、丢不丢信息、零成本无损、溢出到文件、按体积分档、band、then 降级链、产生时挪走、不静默丢弃、spill、truncate、summarize。
