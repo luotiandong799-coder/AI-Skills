@@ -2,7 +2,7 @@
 name: wb-spec-driven
 description: >-
   规约驱动的多步实现（Spec-Driven Development）。当用户要求做 3 步以上的实现任务、跨会话长任务、或需要自主跑到交付的编码/改造任务时自动应用：先立规约（constitution + 本次变更 spec，含验收标准与范围外）→ 信息不足先澄清、禁止脑补 → 计划-实现-验证循环 → 独立验证 → 交付。含陌生代码先上浮抽象层取全局地图、跨会话交接文档写法、以及「执行前评审」（动手前用三镜头：完整性/一致性/风险）。单次小改动不套用（走 wb-ponytail 决策后直接改）。触发词：多步任务、长任务、按计划执行、自己跑完、交付给我、实现方案、重构、改造、批量修改、跨会话任务、交接、handoff、接手、新会话继续、陌生代码、先看全局、spec、验收标准、需求不明确、先澄清、防静默跳过、设计防呆、防错、执行前评审、评审计划、失败封闭、执行简报、失败处置、回滚还是提交、跳过还是重试、任务准入、交给 AI 多少自主权、实习生判据、错误代价、敏感数据、预算校验、中途提权、无人值守、人工关卡、HITL、不可逆操作、人在环中、可以拒绝、范围治理、静默缩水、分解不缩水、架构不变量、约束漂移、规划包络不等于 SLA、路线图别说成已交付。
-version: 1.50.0
+version: 1.51.0
 agent_created: true
 ---
 # wb-spec-driven（多步实现：先立规约，再动手）
@@ -947,3 +947,19 @@ AC-N、AGPL、Architectural、Bounded、LLM 评委不能兜底、Spike、advisor
   - **纠偏要带署名进主上下文**：模型得知道这句话是谁说的、凭什么。判据：**注入的纠偏消息必须标明来源与关注点**，否则它会被当成又一次用户偏好，下次换场景就被丢掉。
 - 提升层级：工作流（过程评审的形状）+ 工具（评审者的能力边界）。
 - 触发词：中途评审、陪跑裁判、纠偏是输出、一次一终裁、并发不阻塞、慢了就跳、结束即弃、评审窗口限幅、纠偏带署名、trajectory judge、纠偏还便不便宜。
+
+
+## 密封测试：故障注入挂在工具层、不动被测物；概率注入必须带 seed（来源：Google ADK 官方 `adk.dev/evaluate/environment_simulation`，2026-09-22 r129-C 独立重拉实读，新信源首读）
+
+- **原文事实**：Environment Simulator 坐在 agent 与它的工具之间，*"safely intercept these tool calls during agent execution and replace them with controlled, deterministic responses, **without modifying the agent itself**"*（经 `before_tool_callback` 钩子或插件系统接入，*"no changes to your agent code are required"*）。每个被配置的工具，替换决策按固定顺序走三步：
+  1. **预设注入**（按顺序匹配参数与概率）→ 命中即返回其错误或响应；
+  2. **Mock 策略兜底**（按工具 schema 与状态上下文让 LLM 生成真实感响应）；
+  3. **未在配置中 → 返回 `None`，放行真实工具执行**。
+  官方列出的收益含 *"Test how an agent handles API errors or edge-case responses"*、*"Run evaluations offline"*、*"Produce reproducible test runs by seeding probabilistic injections"*。
+- **判据**：
+  - **要测"它怎么处理异常"，把异常注入到依赖层，不要改被测物**：改被测代码来造故障，测出来的是改过的版本。判据：**故障注入必须挂在被测物的外部边界（工具/回调/网络层）**；做不到这一点，这次测试就不具备对原系统的证明力。与 §验证通道禁止副作用（`wb-artifact-verification`）分工：那条管**验证动作本身不许产生副作用**，本条管**为了验证而造出来的故障应该长在哪**。
+  - **替换决策要有固定顺序，且默认档是"放行真实工具"**：判据：**注入配置没覆盖的工具必须显式放行，不能默认吞掉**——默认拦截会让"没配到"变成"静默伪造结果"，测试全绿而线上全红。顺序写死（预设 → mock → 放行）也让"这次为什么是这个响应"可复算。
+  - **概率性注入必须可复现**：*"reproducible test runs by seeding probabilistic injections"*。判据：**凡是对同一用例按概率返回不同响应的测试，必须带 seed 并把 seed 记进结果**；不带 seed 的随机注入，失败时无法判断是偶发还是真 bug。与 §复现不了先抬高发生率（`wb-debug-loop`）分工：那条管**生产里的低概率 bug 怎么查**，本条管**测试里的人为随机怎么变成可复现**。
+  - **离线密封（hermetic）运行是评测的可选目标，不是默认**：判据：**跑得慢、跑不稳、要花钱的外部依赖，先在测试里替换掉**；但要保留一条走真实依赖的通道，否则"离线全绿"会取代"线上能跑"。
+- 提升层级：工具（测试环境构造）+ 工作流（故障注入的位置与可复现性）。
+- 触发词：密封测试、环境模拟、故障注入挂依赖层、不改被测物、注入顺序、没配到就放行、概率注入带 seed、可复现测试、hermetic、offline eval。

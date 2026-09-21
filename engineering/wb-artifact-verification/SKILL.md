@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。
-version: 1.67.0
+version: 1.68.0
 agent_created: true
 ---
 
@@ -947,3 +947,18 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - 判据：**失败分析写“源步骤→传播路径→显现步骤”，不写“哪步失败了”就完事**——只定位显现点会漏修真正的源头；带 CI/CD 回归套件把典型失败做成持续质量门。
 - 与 §对照成对构造 分工：那条管“评测样本怎么配”，本条管“失败 trace 怎么解剖”。
 
+
+
+## 轨迹断言的严格度是显式三档，选档错了会造出两类假信号（来源：Google ADK 官方 `adk.dev/evaluate/criteria` + `adk.dev/evaluate`，2026-09-22 r129-C 独立重拉实读，新信源首读）
+
+- **原文事实**：工具轨迹比对 `tool_trajectory_avg_score` 提供三种匹配类型，官方逐一给了适用场合：
+  - **`EXACT`**：*"Use EXACT match when you need to enforce a specific tool execution path and consider any deviation—whether in tool name, arguments, or order—as a failure."*
+  - **`IN_ORDER`**：*"ensure certain key tool calls occur in a specific order, but allow for other tool calls to happen in between."*
+  - **`ANY_ORDER`**：*"ensure certain key tool calls occur, but do not care about their order... like your agent issues 5 search queries."*
+  官方另给一张**判据选型表**，每档判据按四列声明能力：`Reference-Based`（要不要标准答案）/ `Requires Rubrics`（要不要评分细则）/ `LLM-as-a-Judge`（要不要评委模型）/ `Supports User Simulation`（能不能跑用户模拟）。此外评测用例里明列 `Expected Intermediate Agent Responses`：*"for a developer/owner of the system, are of critical importance, as they give you the confidence that the agent went through the right path."*
+- **判据**：
+  - **先选严格度档位，再写断言**：三档不是松紧微调，是三把不同的尺子。判据：**该用 `EXACT` 时用了 `ANY_ORDER`，会放过真实的顺序/参数错误；该用 `ANY_ORDER` 时用了 `EXACT`，会把"多查了一次"判成失败**——后者的代价是回归套件天天红，最后被人关掉。选档问一句：**顺序或参数偏一点点，结果会不会不同？** 会 → `EXACT`/`IN_ORDER`；不会 → `ANY_ORDER`。
+  - **判据选型按四列报，不按"高级程度"挑**：判据：**选评分指标先答"我有没有标准答案 / 我有没有评分细则 / 我肯不肯花评委模型 / 要不要模拟用户"**，四列对不上就是选错了工具——有标准答案的别硬上评委，没有评分细则的别指望评委稳定。与 §判定指纹复用（strategy+plugin+assertion+input/output 全匹配才复用）分工：那条管**能不能复用既有判定**，本条管**判定按什么维度选型与定档**。
+  - **多步 / 多 agent 系统要断言中间产物，不只断言最终输出**：中间响应对最终用户可能没意义，但它是"走了对的路"的唯一证据。判据：**只看最终答案的评测会放行"答案对、路径错"**——这种通过率换个输入就崩。与 §多路复核重复命中同一处 = 维度没切开 分工：那条管**复核者维度**，本条管**被断言的层级（中间 vs 最终）**。
+- 提升层级：工具（评测判据选型）+ 工作流（断言严格度的默认选择）。
+- 触发词：轨迹严格度、EXACT、IN_ORDER、ANY_ORDER、判据选型四列、Reference-Based、需要 rubric、评委模型、用户模拟、中间响应断言、路径对不对、答案对但路径错。
