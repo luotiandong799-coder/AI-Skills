@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。
-version: 1.24.0
+version: 1.25.0
 agent_created: true
 ---
 
@@ -339,3 +339,16 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
   - **重试的起点是"已知好点"，不是"最开始"**。判据：**发现走错了先定位最后一个确认正确的状态，从那里换一条路**，从零开始会把已经确认对的判断也一起丢掉。
 - 提升层级：工作流（失败回退与重试起点）+ 工具（回滚作用域声明）。
 - 触发词：回退到已知好点、rewind、回滚留痕、回滚作用域、会话级与全局级、撤销不抹历史、重试起点。
+
+
+## 旁路挂件的失败必须显式选策略并留痕：默认“降级继续”，可选“冒泡为失败”，但两种都要可被程序检出（来源：Mastra 官方 `mastra.ai/docs/subagents`（Delegation hooks → Hook errors 段），2026-09-22 r130-A 独立实拉首读，新信源首读）
+
+- **原文事实**：委派钩子（`onDelegationStart` / `messageFilter` / `onDelegationComplete`）抛错时，*"the delegation continues by default: `onDelegationStart` proceeds with the original prompt, `messageFilter` falls back to the unfiltered context, and `onDelegationComplete` keeps the subagent's original result. Set `hookErrorStrategy: 'throw'` to fail the delegation instead."* 无论选哪种：*"every hook failure is recorded on the run's request context under `__mastra_delegationHookErrors` as a list of `{ hook, primitiveId, toolCallId, runId, name, message }` entries, so you can detect a hook failure programmatically."* 另有两条细节：*"If `onDelegationComplete` throws while handling a failed delegation, the original delegation error remains the surfaced error. The hook isn't invoked again for its own failure."*
+- **判据**：
+  - **旁路的失败只有两种合法处置，且必须显式选，不能吃实现默认**：`continue`（主链路照走，用原始输入/未过滤上下文/原始结果）或 `throw`（把委派判失败）。判据：**先声明这条挂件是"必须有"还是"有了更好"**——必须有就配成 throw，有了更好才配成 continue；不声明等于让框架替你决定主链路的语义。
+  - **选了"降级继续"就必须留痕**：降级的表现是"原样放行"，行为变了但表面无异常。判据：**没有痕的降级 = 既改变行为又不可见**，事后回答不了"这次是不是走了降级路径"。留痕要落到**可程序检出的位置**（请求上下文里的结构列表），不能只写进日志给人看。
+  - **后发的次要错误不得顶替第一个真因**：主链路已经失败时，钩子在处理这个失败时又抛错，对外仍报原来的错误。判据：**保真顺序是先到先得**，排障时第一个真因比"处理失败时又失败"更有价值。
+  - **钩子不为自己的失败再跑一次**（*"The hook isn't invoked again for its own failure."*）：判据：**给旁路写错误处理时，先排除"错误来自旁路自身"这条路径**，否则一次失败变一串。
+- **与 §错误处置四档 分工**：那条管**主链路上冒出来的错误**怎么分档（瞬时/自愈/需人/意外），本条管**观测、通知、过滤这类挂件**的错误——它们不在主链路上，但会静默改变主链路的输入与结论。
+- 提升层级：工作流（旁路失败的处置与留痕）+ 工具（可检出的降级记录）。
+- 触发词：钩子失败、旁路失败、hookErrorStrategy、降级继续、降级要留痕、不自递归、不顶替原错误、观测挂件失败、静默降级。

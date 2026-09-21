@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。
-version: 1.68.0
+version: 1.69.0
 agent_created: true
 ---
 
@@ -982,3 +982,15 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 | Acceptance policy | 组合终态+完整性+成本+风险+人工升级 | 声明门禁接受/拒绝了某版本 | 系统安全/通用/无需审计 |
 - 判据：**先选对验证对象，再谈判据**——把“用户意图是否完整表达”押在 Verifier 上是能力错配；每条验证结论标注“它只能支持什么、不能确立什么”。
 
+
+## 判定结论分三层合成：门禁（必须满分）+ 带方向的阈值指标 + 裁决三值；没有数值证据就不出裁决（来源：Mastra 官方 `mastra.ai/docs/evals/gates-and-verdicts`，2026-09-22 r130-A 独立实拉首读，新信源首读）
+
+- **原文事实**：*"Gates are scorers that must score 1.0, hard requirements that block a run. Thresholds are minimum acceptable scores on tracked metrics. The verdict summarizes the outcome as `passed`, `scored`, or `failed`."* 裁决规则：任一门禁在数据集上均值 <1.0 → `failed`；门禁全过但有阈值指标未达 → `scored`；全过 → `passed`。阈值写法三种：数字（不低于）、`{ min, max }` 区间，且明确 *"Use `max` for scorers where a high score is bad (e.g., hallucination, toxicity)"*；裸 scorer（无阈值）*"still shows up in `result.scores` but doesn't affect the verdict"*。关键约束：*"The verdict field is omitted when no gates or threshold-bearing scorers are provided, and when every configured gate and threshold returned `notScorable()` (no numeric evidence). In those cases `runEvals` still returns `scores` and `summary`."*
+- **判据**：
+  - **"必须全对"和"可以差点"必须分成两个字段，不能合成一个平均分**：门禁是硬要求（如"必须调用了正确工具""无工具错误"），阈值是跟踪指标（如忠实度 >0.7）。判据：**逐条先问"这条不满足这次还算不算过"**——不能就进门禁（要求 1.0），能就进阈值。混在一起时，硬要求会被均值抹平（90% 用例调对工具也显示 0.9 通过），跟踪指标又会硬卡住发布。
+  - **每条阈值必须标方向**：幻觉、毒性这类指标高分是坏的，只写"阈值 0.3"会被读成"达到 0.3 才算过"。判据：**阈值旁注明"越高越好 / 越低越好"**，双向的写 `{ min, max }` 区间。
+  - **裁决要有中间态，不要把"没全绿"压成"失败"**：`scored`（硬要求都过了，只是指标没达标）单独一档。判据：**只有两档的裁决会训练团队忽略它**——一旦"指标略低"和"硬要求没过"显示同一个红灯，红灯就不携带信息了。
+  - **没有数值证据就不出裁决，但明细照给**：全部判定返回"不可评分"时，裁决字段整体省略，`scores` 与 `summary` 仍返回。判据：**"没测到"绝不能渲染成"通过"**；做法是**结论与明细分开输出**——明细永远给，结论按有没有数值证据决定给不给。与 §未检测是一等状态 分工：那条管**单条结果的"未检测"怎么报**，本条管**整轮裁决在证据缺失时怎么出**。
+- **与 §验证对象三分类、§判据选型四列 分工**：那两条管**选谁评、用什么评**，本条管**评完之后怎么把一堆分数合成一个可执行的结论**。
+- 提升层级：可复用 Skill（评测结论合成）+ 工作流（CI 门禁与发布裁决）。
+- 触发词：门禁与阈值、gates、verdict、scored、阈值方向、越高越坏、max 阈值、区间阈值、无数值证据不出裁决、notScorable、CI 裁决、硬要求与跟踪指标分开。

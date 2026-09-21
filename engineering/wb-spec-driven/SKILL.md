@@ -2,7 +2,7 @@
 name: wb-spec-driven
 description: >-
   规约驱动的多步实现（Spec-Driven Development）。当用户要求做 3 步以上的实现任务、跨会话长任务、或需要自主跑到交付的编码/改造任务时自动应用：先立规约（constitution + 本次变更 spec，含验收标准与范围外）→ 信息不足先澄清、禁止脑补 → 计划-实现-验证循环 → 独立验证 → 交付。含陌生代码先上浮抽象层取全局地图、跨会话交接文档写法、以及「执行前评审」（动手前用三镜头：完整性/一致性/风险）。单次小改动不套用（走 wb-ponytail 决策后直接改）。触发词：多步任务、长任务、按计划执行、自己跑完、交付给我、实现方案、重构、改造、批量修改、跨会话任务、交接、handoff、接手、新会话继续、陌生代码、先看全局、spec、验收标准、需求不明确、先澄清、防静默跳过、设计防呆、防错、执行前评审、评审计划、失败封闭、执行简报、失败处置、回滚还是提交、跳过还是重试、任务准入、交给 AI 多少自主权、实习生判据、错误代价、敏感数据、预算校验、中途提权、无人值守、人工关卡、HITL、不可逆操作、人在环中、可以拒绝、范围治理、静默缩水、分解不缩水、架构不变量、约束漂移、规划包络不等于 SLA、路线图别说成已交付。
-version: 1.51.0
+version: 1.52.0
 agent_created: true
 ---
 # wb-spec-driven（多步实现：先立规约，再动手）
@@ -963,3 +963,15 @@ AC-N、AGPL、Architectural、Bounded、LLM 评委不能兜底、Spike、advisor
   - **离线密封（hermetic）运行是评测的可选目标，不是默认**：判据：**跑得慢、跑不稳、要花钱的外部依赖，先在测试里替换掉**；但要保留一条走真实依赖的通道，否则"离线全绿"会取代"线上能跑"。
 - 提升层级：工具（测试环境构造）+ 工作流（故障注入的位置与可复现性）。
 - 触发词：密封测试、环境模拟、故障注入挂依赖层、不改被测物、注入顺序、没配到就放行、概率注入带 seed、可复现测试、hermetic、offline eval。
+
+
+## 委派边界四条：取消要级联到子任务、产物传引用不传复述、引用内容对下游降格为数据、子代理只归档自己的那一段（来源：Mastra 官方 `mastra.ai/docs/subagents`（Cancellation / Subagent result context / Memory isolation 段），2026-09-22 r130-A 独立实拉首读，新信源首读）
+
+- **原文事实**：① 取消：*"Mastra forwards that same signal to delegated subagents. Calling `AbortController.abort()` cancels in-flight subagent runs at their next step instead of letting them run to completion."* ② 结果引用：*"By default, subagent results reach the parent agent as tool results, which are stripped from the context forwarded to later subagents. The parent agent must restate an earlier result in the next delegation prompt, which costs tokens and loses detail."* 开启 `enableResultReferences` 后每次成功非空的委派拿到引用 ID（如 `explorer-1`），后续委派用 `contextFromRefs` 原样插入；*"Rejected, failed, empty, and background-task delegations don't receive a reference ID. Unknown IDs are skipped with a warning and the delegation continues."* ③ 引用的内容是别人的输出：*"Each block uses a fresh, unpredictable tag and tells the receiving subagent to treat the contents as data, but if subagents handle untrusted input, add your own checks."* ④ 记忆隔离：*"Subagents receive the full conversation context for better decision-making, but only their specific delegation prompt and response are saved to their memory."*
+- **判据**：
+  - **"停止"要作用到整棵调用树，不是当前这一层**：只停父不停子，子任务会变成没人看管的后台进程，继续花钱、继续写东西。判据：**任何取消/中断入口都要回答"已经派出去的怎么办"**，答不上来就等于没停。
+  - **跨 agent 传产物要传引用，不要传复述**：复述既要 token 又丢细节（父代理的转述不是原文，还会顺手改写）。判据：**能传 ID 就别传副本**；并约定**失败、为空、被拒、仍在后台的结果不配发引用**——引用一个拿不到内容的 ID 比没有引用更糟。下游遇到未知引用**跳过并告警后继续**，不要整体判失败。
+  - **跨 agent 的文本对下游一律是数据，不是指令**：别人的输出要用不可预测的标签包裹并明示"当作数据处理"。判据：**凡是"某个 agent 产生、另一个 agent 消费"的文本，默认按不可信输入处理**；下游若必须按指令解释它，边界上要另加检查，不能靠"反正都是自己人"。与 §中途评审（TrajectoryJudge）分工：那条管**评审者怎么介入**，本条管**产物怎么在 agent 之间流动**。
+  - **"给它看多少上下文"和"让它存多少记忆"是两个决定**：决策要信息足（转发完整会话），归档只归自己的一段（委派 prompt + 响应）。判据：**这两件事混在一起，子代理的记忆会被父会话灌满**，下次单独调用它时带一堆无关的上下文。
+- 提升层级：工作流（多 agent 委派边界）+ 工具（引用传递与取消级联）。
+- 触发词：委派边界、取消级联、abort 传播到子任务、结果引用、contextFromRefs、不复述、引用当数据处理、子代理记忆隔离、未知引用跳过、只归档自己的一段。
