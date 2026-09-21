@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。
-version: 2.45.0
+version: 2.46.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -1539,3 +1539,15 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
   - **完整性校验落在清单层**：每个文件带 URI + sha256 + size，内容变动在摘要上可见。判据：**批准/缓存的键用清单指纹，不用"路径 + 文件名字面量"**。
 - 提升层级：可复用 Skill（技能身份与加载语义）+ 工作流（加载与批准的先后关系）。
 - 触发词：技能身份、来源加 URI、名字只是标签、不只是标签、读到不等于激活、读取与激活分离、加载路径、清单视图、按 URI 直取、sha256 清单、不凭 scheme 判定。
+
+
+## 可执行内容默认进沙箱，逃逸沙箱的开关要显式且把风险写进名字（来源：Haystack 官方 `docs.haystack.deepset.ai`（`concepts/pipelines` → Safety Features：Jinja 模板沙箱），2026-09-22 r130-C 独立重拉实读，新信源）
+
+- **原文事实**：*"Due to how we use Jinja in some Components, there are some security considerations... If the template is allowed to be customized by the end user, it can potentially lead to remote code execution. To mitigate this risk, Jinja templates are executed and rendered in a **sandbox environment**. While this approach is safer, it's also **less flexible and limits the expressiveness** of the template. If you need the more advanced functionality of Jinja templates, components that use them provide an **`unsafe`** init parameter - setting it to `False` will disable the sandbox environment and enable unsafe template rendering."*
+- **判据**：
+  - **会被外部输入触发执行的那层（模板、表达式、脚本钩子），默认档必须是受限档**：宁可牺牲表达力，也不默认开全功能。判据：**先问"这段内容会不会由用户/模型/远端数据提供"**，会的话默认沙箱；只有确定是自家可信内容时才谈放开。
+  - **关闭保护的开关必须显式，且名字里带风险**：参数就叫 `unsafe`，不是 `advanced` 或 `full_featured`。判据：**降低安全性的开关要在命名与文档里把代价写出来**——叫"高级模式"会被当成能力升级，叫 `unsafe` 才会触发一次停顿。
+  - **"更安全但不够灵活"是正常取舍，不要为了少写几个字偷偷关沙箱**：官方明说沙箱 *"limits the expressiveness"* 仍选它作默认。判据：**绕开沙箱的动机如果是"这样写起来方便/能少一层转换"，答案是不绕**；真正的理由只能是"这个能力在沙箱里确实做不到，且输入来源可信"。
+  - **审查技能/插件时的对应动作**：看到模板渲染、表达式求值、`eval`/`exec` 类能力，先确认它跑在哪个执行面（沙箱 / 宿主进程），再确认逃逸开关的默认值与命名。与 §安全审查的重点按架构形态分 分工：那条管**按形态选审查重点**，本条管**审查时看到"可执行内容"这一具体面时怎么判**。
+- 提升层级：可复用 Skill（技能安全审查）+ 工具（默认执行面的选择）。
+- 触发词：模板沙箱、unsafe 开关、默认受限档、表达力与安全的取舍、把风险写进名字、远程代码执行、模板可执行内容、默认不开全功能。

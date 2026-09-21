@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。
-version: 1.70.0
+version: 1.71.0
 agent_created: true
 ---
 
@@ -1007,3 +1007,15 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - **与 §门禁与阈值三层（r130-A）分工**：那条管**分数怎么合成裁决**，本条管**裁决出来是红的时候，先往哪个方向查**。
 - 提升层级：可复用 Skill（评测用例设计）+ 工作流（失败分诊顺序与测试隔离边界）。
 - 触发词：评测失败分诊、bad criteria、真回归、评委抖、用例要具体、用例要稳定、一例一行为、锚定工具调用、expected_tool_calls、清理只能撤新增、专用测试库、evals 是回归测试。
+
+
+## 评测流水线与被测流水线分开跑：被测产出先落盘，换判据不重跑（来源：Haystack 官方 `docs.haystack.deepset.ai`（`optimization/evaluation` + `evaluation/statistical-evaluation`），2026-09-22 r130-C 独立重拉实读，新信源）
+
+- **原文事实**：统计评测有两种接法，官方明确推荐第一种：*"You can create and run an evaluation pipeline independently... **We recommend this way** because the separation of your RAG pipeline and your evaluation pipeline allows you to **store the results of your RAG pipeline and try out different evaluation metrics afterward without needing to re-run your pipeline every time**."* 另一种是把 Evaluator 接到被测流水线末尾（一次 `pipeline.run()` 里连跑带评）。评测选型上还给了两条：*"**Evaluating individual components or end-to-end pipelines**"*（组件级定位瓶颈，端到端当黑箱看最终输出）；*"**Using ground-truth labels or no labels at all**"*（统计评测要标答，模型评测可不依赖标答但 few-shot 标答能提升评委质量）。
+- **判据**：
+  - **被测的产出先存下来，再拿去评**：*"store the results... without needing to re-run your pipeline every time"*。判据：**重跑一次被测物，同时改变了"被测物"和"随机性"两个变量**——换判据时如果顺带重跑，分数变化归因不了（是判据变严了还是这次跑得不一样）。把输出落盘，换判据就是纯计算。
+  - **端到端当黑箱、组件级定位瓶颈，两者都要有，但用途不同**：判据：**要改哪里用组件级评测，要对外承诺用端到端评测**；只有端到端时，分数掉了不知道是召回还是生成的问题；只有组件级时，各组件都好但拼起来可能不行。
+  - **选"要不要标答"是在选评测的性质，不是省事**：统计评测需要标准答案（可复算、无评委抖动），模型评测不需要标答（能评语义相似度），且 *"few-shot labels included in the prompt can improve the evaluator"*。判据：**能构造标答的场景优先用不依赖模型的判据**——它可复算、无评委方差；只有"正确答案措辞不固定"时才上模型评委，并尽量塞 few-shot 样例稳住它。
+- **与 §评测失败分诊三类（r130-B）、§门禁与阈值三层（r130-A）分工**：那两条管**分数出来后怎么合成与怎么查**，本条管**评测这件事怎么接在被测系统上、重跑与归因怎么控制**。
+- 提升层级：可复用 Skill（评测管线组织）+ 工作流（归因与重跑成本）。
+- 触发词：评测流水线分离、被测产出落盘、换判据不重跑、统计评测与模型评测、要标答不要标答、组件级与端到端、evaluation pipeline 独立、重跑引入噪声。

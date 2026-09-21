@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。
-version: 1.25.0
+version: 1.26.0
 agent_created: true
 ---
 
@@ -352,3 +352,16 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - **与 §错误处置四档 分工**：那条管**主链路上冒出来的错误**怎么分档（瞬时/自愈/需人/意外），本条管**观测、通知、过滤这类挂件**的错误——它们不在主链路上，但会静默改变主链路的输入与结论。
 - 提升层级：工作流（旁路失败的处置与留痕）+ 工具（可检出的降级记录）。
 - 触发词：钩子失败、旁路失败、hookErrorStrategy、降级继续、降级要留痕、不自递归、不顶替原错误、观测挂件失败、静默降级。
+
+
+## 自纠循环必须有“执行前检查”的硬上限；失败要自动留下可续跑的现场快照（来源：Haystack 官方 `docs.haystack.deepset.ai`（`concepts/pipelines/pipeline-loops` → Loop Termination and Safety Limits + `pipeline-breakpoints` → Error Recovery with Snapshots），2026-09-22 r130-C 独立重拉实读，新信源首读）
+
+- **原文事实**：① 循环上限：*"Every pipeline has a per-component run limit, controlled by the `max_runs_per_component` parameter of the `Pipeline` constructor, which is `100` by default. If any component exceeds this limit, Haystack raises a `PipelineMaxComponentRuns` error."* 且 *"The limit is checked **before each execution**, so a component with a limit of 3 will complete 3 runs successfully before the error is raised on the 4th attempt."* 官方给的理由：*"If your loop condition is wrong or never satisfied, the error prevents the pipeline from running indefinitely."* ② 失败快照：*"Pipelines automatically create a snapshot of the last valid state if a run fails. The snapshot contains inputs, visit counts, and intermediate outputs up to the failure. You can inspect it, fix the issue, and resume execution from that checkpoint instead of restarting the whole run."* 快照可从异常对象取（`e.pipeline_snapshot`）、可落盘、可再装载续跑。③ 循环里的组件会跑多次，但 *"For each component that ran, the pipeline returns **only the last-produced output**"*，要留中间产物必须显式传 `include_outputs_from`。
+- **判据**：
+  - **凡是"让它自己重试/自纠"的循环，都要有次数上限，且上限必须在执行前判断**：执行后才判断，等于多跑了一次不该跑的动作（那一次可能有副作用）。判据：**写 while/loop 时先写 `max_runs`，再写循环体**；超限要抛**明确的错误类型**，不能静默跳出——静默跳出会把"没做完"伪装成"做完了"。
+  - **上限的作用是兜住"条件永远不满足"，不是调优**：*"If your loop condition is wrong or never satisfied..."*。判据：**调低上限是排障手段（快速暴露死循环），不是性能参数**；新写的自纠/路由逻辑先用很小的上限跑，确认会收敛再放开。
+  - **失败现场要自动留、可检查、可续跑**：快照里要有输入、访问计数、以及失败前的中间产物。判据：**一次跑砸的流水线，恢复成本不该等于重跑成本**；没有现场快照，就只能"改一点、从头再跑一遍"，既慢又可能因为随机性换了个失败方式。
+  - **循环里的中间产物默认只留最后一次，要留必须显式声明**：判据：**自纠过程的每一轮结论默认是过程量不是结果**，需要审计/复盘时显式打开中间输出（对应 `include_outputs_from`）——“默认全留”会污染输出，“默认全丢”会让复盘无从下手。
+- **与 §回退到已知好点、§错误处置四档 分工**：那两条管**错误出现后怎么回退、怎么分档**，本条管**循环本身的护栏与失败现场的保存**。
+- 提升层级：工作流（自纠循环的护栏）+ 工具（失败快照与续跑）。
+- 触发词：循环硬上限、max_runs_per_component、执行前检查、自纠循环护栏、死循环兜底、失败快照、可续跑现场、从快照恢复、只留最后一次输出、include_outputs_from。
