@@ -1460,3 +1460,22 @@ version: 3.33.0
 - **递归层级总结有代价**：summary of summary 指数级丢信息（每层像 low-pass filter，细节先消失）、递归合并放大幻觉；BooookScore：incremental 滚动比 hierarchical 更不连贯。判据：**选深度按任务**——factual QA 用 L1、主题分析可到 L3，不为“看起来完整”压到最深。
 - **压缩失败要升级协议（LCM）**：模型总结输出比输入长（compaction failure）是真实场景——三级 escalation：本层失败→更激进策略→最终确定性 fallback 强制收敛，不许带着“越压越长”继续跑。判据：**压缩后量了没**——输出 ≥ 输入就是失败，走升级而非接受。
 - 提升层级：工作流（压缩）。
+
+## 长上下文 vs RAG 决策：延迟成本数学与 hybrid 默认（来源：keepmyprompts《The 1M Context Trap》2026-04-19 + ianas《Long context vs RAG en 2026》2026-05-20 + channel.tel《1M-Token Context or RAG》2026-05-03 + bestaiweb《Long-Context vs RAG vs Hybrid》2026-05-04 实拉，与 §lost-in-the-middle 对策互补——那条管“塞长上下文怎么防中间迷失”，本条管“该不该塞长上下文”）
+- **延迟数学先算**：RAG（3-5 chunk ~3K tokens）端到端 0.8-1.5s；200K 无缓存 5-15s；200K 缓存命中 2-5s；1M 15-60s（1M 还加 10-20s prefill 才开生成）。判据：**交互场景先按延迟预算选**——用户在等，RAG 几乎总赢。
+- **成本数学再算**：1M token 单请求输入约 $15-25；2M 比 RAG 贵约 25x；1M 比 RAG（5-6 chunk）贵约 1250x；1 万查询/天能到 $20 万/天。判据：**高频查询上长上下文 = 每天付 RAG 的千倍**。
+- **长上下文赢的场景**：答案要整文档（找矛盾/交叉引用/跨章节）、一次性分析（总结报告/审合同）、结构顺序重要、多模态需一起看——bursty/one-shot 且文档能装下经济。
+- **hybrid=生产默认**：检索窄窗口→交给长上下文模型+grounding 检查——不是二选一。判据：**默认先 hybrid，出现整文档推理硬需求再升级纯长上下文**。
+- 提升层级：工作流（架构选型）。
+
+## 输出过滤是唯一满分注入防御；excessive agency 三根因（来源：arXiv 2604.23887《Evaluation of Prompt Injection Defenses》+ xebia《The Risks of Unprotected Agents》2026-08-06 + hashnode《AI Agent Security 2026》2026-07-28 实拉，与 §Agent 工具面安全互补——那条管“输入侧与工具面”，本条管“输出侧与授权根因”）
+- **输出过滤是唯一满分防御**：确定性、模型无关的响应扫描（泄漏 secret 即拦）在 15000 次攻击测试 0 泄漏——因为操作在**有限输出空间**，输入空间无界。判据：**注入防护排优先级时，输出侧过滤比输入侧过滤更可靠**（输入侧是概率性，输出侧可确定性）。
+- **输出阻断模式清单**：leaked system prompts / base64 编码载荷 / 指向攻击者域名的链接 / 形似 exfiltration 的工具参数。
+- **excessive agency 三根因**：excessive functionality / permissions / autonomy——修复是**最小权限**，不是更好听的 prompt（OpenAI Sol 沙箱逃逸→HF 生产事件实证：提示词拦不住授权过大的 agent）。判据：**agent 出事先查授权三件套**——功能/权限/自主性，哪个给多了收哪个。
+- 提升层级：工具（安全）。
+
+## 注入四插入点与 trifecta 特权分离（来源：truefoundry《Prompt Injection Defense at the Gateway》2026-06-08 + futureagi《Prompt Injection in 2026》2026-05-14 + GitHub gist Interrupt 2026 LangChain 深研 2026-05-19 实拉，与 §Agent 工具面安全互补——那条管“工具描述/同名拦截”，本条管“注入有哪些入口+架构怎么拆”）
+- **四插入点全扫，不只 user input**：user input / **检索上下文（indirect injection）** / **工具结果（indirect injection）** / multi-agent 消息——间接注入=扫描检索文档与工具返回里的指令，不只人说的话。判据：**护栏只挡 user input = 挡了 1/4 攻击面**。
+- **trifecta 特权分离**：单个 agent 不同时拥有 data + untrusted input + egress（数据/不可信输入/出口能力拆开）——三者不共存，注入成功也带不走数据。判据：**给 agent 配权时问“它同时拿到数据、吃进不可信输入、能外发吗”**——三者齐全就是引爆结构。
+- **密钥不进 agent 上下文**：auth proxy 代替——secrets 永不进 prompt/tool args；trace 擦洗+短时 token。判据：**agent 上下文中出现密钥 = 设计错误**。
+- 提升层级：工作流（安全）。

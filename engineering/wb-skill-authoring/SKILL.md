@@ -1617,3 +1617,9 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 - **完整正文是路由信号**：只拿 name+description 路由，全检索方法掉 31-44pp——大规模下“description 写得好就够”不成立，路由/检索要用正文全文。判据：**路由信号只用了元数据吗**——是，大规模场景要上正文级检索（与 §description 是唯一常驻字段 分工：常驻只 description，检索时正文可参与）。
 - 反模式：库一增长就只怪 description 写得差；把“选错”全归因“上下文太长”。
 - 提升层级：可复用 Skill（技能库治理）。
+
+## 技能加载优先级与 agent 级可见性（来源：OpenClaw 官方 docs.openclaw.ai·`tools/skills` + `tools/skills-config` + `concepts/agent`，2026-09-21 实拉，与 §同类技能合并判据互补——那条管“重叠技能怎么合”，本条管“同一技能多处存在时谁生效、给谁可见”）
+- **加载优先级从高到低**：workspace/skills > .agents/skills（项目）> ~/.agents/skills（个人）> ~/.openclaw/skills（托管/本地）——同名技能高优先覆盖低优先；且加载时按环境/配置/二进制存在过滤。判据：**改技能后问“我改的这份在生效层吗”**——同名旧版在更高优先层，改低层等于没改。
+- **agent 级可见性可继承可清空**：agents.defaults.skills 给默认集，agents.list[].skills: [] 显式清空某个 agent——不是所有 agent 都该看到全部技能。判据：**给 agent 配技能按“它需要什么”，不按“库里有什”**。
+- **匹配环境过滤**：技能随 agent 环境（OS/二进制/配置）加载——不满足条件的技能不可见，避免模型拿到用不了的技能。
+- 提升层级：可复用 Skill（技能运维）。
