@@ -1,7 +1,7 @@
 ---
 name: bsk-drive-logged-in-browser
-description: 用 bsk（BrowserSkill）驱动用户「已登录」的 Chromium 浏览器完成实操任务——发邮件、填表、点流程、读页面、抓数据。凡用户说「打开我的浏览器…」「用我登录的 XX 发/做/提交…」「帮我操作网页」「固定标签那个页面…」时使用。核心覆盖 WorkBuddy 环境下的实战坑：daemon 被回收、Agent Window 被关、PATH 缺 coreutils、弹窗确认、用户窗口标签的坐标层。触发词：bsk、BrowserSkill、驱动浏览器、操作已登录浏览器、固定标签、发邮件、163邮箱、填表提交、Agent Window、借用标签、borrow、daemon 被回收、52800、send email。
-version: 1.0.0
+description: 用 bsk（BrowserSkill）驱动用户「已登录」的 Chromium 浏览器完成实操任务——发邮件、填表、点流程、读页面、抓数据。凡用户说「打开我的浏览器…」「用我登录的 XX 发/做/提交…」「帮我操作网页」「固定标签那个页面…」时使用。核心覆盖 WorkBuddy 环境下的实战坑：daemon 被回收、Agent Window 被关、PATH 缺 coreutils、弹窗确认、用户窗口标签的坐标层。触发词：bsk、BrowserSkill、驱动浏览器、操作已登录浏览器、固定标签、发邮件、163邮箱、填表提交、Agent Window、借用标签、borrow、daemon 被回收、52800、send email。（统一入口=browser-automation；本技能为其 bsk 驱动底层实现位，由它路由；两者同一功能位，只划边界不文件级合并。）
+version: 1.1.0
 agent_created: true
 ---
 
@@ -262,5 +262,71 @@ bsk session stop "$SID"
 | `operation denied by the Agent Window sandbox` | 操作用户窗口标签但未借用 | `tab borrow <TAB_ID>` |
 | fill 成功但字段还是空 | React 受控组件 | 改用 evaluate 原生 setter + 事件 |
 | 点发送没反应 | 原生确认弹窗挡住 | `bsk press Enter` |
-| 邮箱页只显示登录页 | Agent 标签无登录态 | 改用用户窗口的已登录标签并 borrow |
+| 邮箱页只显示登录页 | agent 标签冷启动 / 站点按窗口隔离 | 2026-09-20 实测 agent 标签**共享 cookie**（agent 标签 navigate 到 mail.163.com 直接是已登录态）。先试 agent 标签 navigate，被拦再 borrow |
+| `evaluate` 返回 `NF`，但 `observe` 明明列出了那个按钮 | JS 只在顶层 document 跑；或 `innerText` 带换行导致 `===` 不成立 | 见 §10.2：钻 `iframe.contentDocument` + 比较前 `.replace(/\s+/g,'')` |
+| `screenshot` 报 `write screenshot to ...: 系统找不到指定的路径 (os error 3)` | `--out` 用了 MSYS 路径 `/d/tmp/x.png` | 改用 Windows 路径 `--out "D:\tmp\x.png"` |
+| 浏览器起来几秒后又断开（daemon 日志 `browser disconnected`） | 浏览器是前台 Bash 调用的子进程，调用结束被宿主连带杀掉 | 见 §10.1：放进 `run_in_background` 常驻任务里启动 |
+| `CREATE_BREAKAWAY_FROM_JOB` 报 `WinError 5 拒绝访问` | job 不允许逃逸 | 逃不掉，只能靠常驻任务续命 |
+| `tasklist` 说没有 msedge.exe，但浏览器明明在用 | 本沙箱的进程枚举看不到用户进程 | **以 `bsk status` 的 `browsers` 为准**，不要用 tasklist 判断浏览器是否在跑 |
 | 连不上 / daemon 起不来 | 扩展未连或 daemon 缺失 | `bsk status`；缺失就常驻启动，未连就让用户开浏览器 |
+
+---
+
+## 10. 实战补充（2026-09-20 · 网易邮箱授权码全流程跑通）
+
+### 10.1 浏览器没开时，由 Agent 自己拉起来
+- 先看 `bsk status` 的 `browsers`；为空 = 扩展没连。**`tasklist` 在本沙箱里看不到 `msedge.exe`，不要用它判断浏览器是否在跑**，以 bsk 状态为准。
+- 拉起浏览器必须放在 **`run_in_background: true` 的常驻任务**里：`python 脚本 → Popen(msedge.exe, --profile-directory=Default, URL) → while True: sleep(60)`。
+  - 放在前台 Bash 里 Popen，调用一结束浏览器就被宿主连带杀掉（实测 Edge 连上 bsk 17 秒后日志出现 `ws read error / browser disconnected`）。
+  - `CREATE_BREAKAWAY_FROM_JOB` 在本环境**失败**（`WinError 5 拒绝访问`），逃不出 job。
+- 常驻脚本**不要写"退出就重启"逻辑**：否则用户手动关掉浏览器后会被每 30 秒重新弹出来。
+
+### 10.2 evaluate 只作用于顶层文档：跨 iframe 要自己钻
+`bsk evaluate` 的 JS 在**顶层 document** 执行，而 `bsk observe` 会把 iframe 内容一起列出来 —— 于是出现「observe 能看到按钮，evaluate 却返回 `NF`」的假象。
+163 设置页所有弹窗（继续开启 / 短信验证 / 授权码）都在同源 iframe 里，必须这样写：
+
+```js
+(function(){
+  var fs=[].slice.call(document.querySelectorAll('iframe'));
+  for(var i=0;i<fs.length;i++){
+    var d=null; try{d=fs[i].contentDocument}catch(e){continue}
+    if(!d) continue;
+    var c=[].slice.call(d.querySelectorAll('button,a,div,span,strong'))
+      .filter(function(e){return (e.innerText||'').replace(/\s+/g,'')==='目标文字'});
+    if(c.length){
+      var el=c.filter(function(e){return e.tagName==='BUTTON'})[0]||c[c.length-1];
+      ['mouseover','mousedown','mouseup','click'].forEach(function(t){
+        el.dispatchEvent(new MouseEvent(t,{bubbles:true,cancelable:true,view:window}))});
+      return 'clicked F'+i+':'+el.tagName;
+    }
+  }
+  return 'NF';
+})()
+```
+三个要点：① 遍历 `iframe.contentDocument`（必须同源）；② 比较文字前 `.replace(/\s+/g,'')`，否则 `innerText` 里的换行让 `===` 永远不成立、白返回 `NF`；③ 元素经常拿不到 `@eN` ref（如绿底「继续开启」只是个 `strong`），JS 派发整套鼠标事件比 ref 更管用。
+
+### 10.3 没有 ref 的元素怎么点
+有 ref 就 `bsk click @eN`；没 ref 就在（正确的）document 里找 `tagName==='BUTTON'`，找不到就取最内层节点派发事件。别靠截图目测坐标硬点。
+
+### 10.4 screenshot 的 `--out` 必须用 Windows 路径
+`--out /d/tmp/x.png` → `write screenshot to /d/tmp/x.png: 系统找不到指定的路径 (os error 3)`。
+改用 `--out "D:\tmp\x.png"`。落盘后用 Read 看图，这是判断页面真实状态最可靠的手段（判断弹窗遮不遮、字段填没填进去，全靠它）。
+
+### 10.5 网易邮箱 163 授权码全流程（已跑通）
+1. 打开 `mail.163.com`（agent 标签即可，cookie 与用户窗口共享，直接是已登录态）。
+2. 顶部「设置」是 `<a href="javascript:;">`，**单纯 `.click()` 不生效** → 派发 `mouseover/mousedown/mouseup/click` 一整套才会展开下拉。
+3. 下拉里的「POP3/SMTP/IMAP」也没有 ref → 顶层文档里按文字匹配 `li` 后同样派发事件。成功后 URL hash 变为 `#module=options.LinkModule%7C%7B%22link%22%3A%22option_pop3%22%7D`。
+4. 设置正文在 iframe `https://mail.163.com/html/authcode/index.html` 内。「IMAP/SMTP服务」后的「开启」在 observe 里是 `@eN button "IMAP/SMTP服务 | 已关闭 开启"`，可直接 click。
+5. 弹「账号安全提示」→ 点「继续开启」（无 ref，走 §10.2）。
+6. 弹短信验证 → **必须人来**：`bsk request-help --session $SID --title "..." --prompt "把手机 xxx 收到的 6 位验证码填进页面输入框再点验证" --timeout 5m`。用户完成后返回 `outcome=continued`，流程自动接上，不用重新起 session。
+7. 授权码弹窗出现后**从 DOM 精确取，别用截图 OCR**（0/O、l/1 易混）：
+   ```js
+   iframeDoc.body.innerText.match(/[A-Za-z0-9]{16}/g)   // 命中 div.authcode-text-with-copy
+   ```
+8. 点弹窗「确定」落库，再回读 iframe 文本确认 `IMAP/SMTP服务 已开启`。
+9. 授权码**只显示一次**，拿到立刻写进本地配置再往下走。
+
+### 10.6 收尾
+- `bsk session stop $SID`。
+- 借过的标签才需要 `tab return`；**borrow 超时/没借成功就不用管**，标签本来就还在用户窗口。
+- 常驻的浏览器托管任务和 daemon 任务留着，别 stop/restart daemon。
