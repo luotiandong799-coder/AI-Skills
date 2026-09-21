@@ -1,0 +1,62 @@
+---
+name: windows-ops-experience
+display_name: Windows操作经验进化
+version: 1.0.0
+agent_created: true
+description: >-
+  Windows 操作经验与自进化引擎：长期记录每个 Windows 任务的最快/最稳做法、易错点、历史失败原因与解法，沉淀高频操作为可复用流程，并在每次任务后从真实结果学习、比较新旧方法、提升更优者优先级、降低易失败者优先级，经验经实测验证后才更新。与操控底层技能（winapp-ui-automation/computer-use-windows/windows-automation/powershell-windows-cli/windows-ui-adaptive）及 win-native-app-automation 配合——本技能只管"经验积累与进化"，不重复实现操控方法；通用记忆/治理交给 personal-ai-os / agent-guild / knowledge-governance。触发词：Windows经验、操作经验、复盘优化、自学习、越用越聪明、方法择优、失败换路记忆、经验进化、最佳做法、易错点。
+---
+
+# Windows 操作经验与自进化引擎
+
+> 本技能是 Windows 操控的**经验层**。操控"怎么做"在 5 个底层技能 + `win-native-app-automation`；失败诊断在 `wb-debug-loop`；生命周期/权限在 `personal-ai-os`；跨 Agent 记忆在 `agent-guild`。本技能只负责：**把真实任务结果沉淀成可进化经验，并据此调整方法优先级。**
+
+## 一、定位（不重复建设）
+
+| 9 项需求 | 由谁承担 |
+|---|---|
+| 1 智能操控（桌面/软件/窗口/菜单/输入/文件，不依赖坐标） | winapp-ui-automation + computer-use-windows + windows-ui-adaptive + win-native-app-automation |
+| 2 方式择优（软件直操/命令行/快捷键/鼠标 自动选最快最稳） | **本技能提供决策表**（见 §三） |
+| 3 切换接续（多软件切换保持上下文与目标） | personal-ai-os §三 生命周期 + agent-guild |
+| 4 失败换路（换法 + 记住易失败操作规避） | windows-automation（换路）+ **本技能（记住规避）** |
+| 5 速度/错误记忆 | **本技能** |
+| 6 重复自学习 | **本技能** |
+| 7 越用越聪明 | **本技能** |
+| 8 复盘优化 | **本技能** |
+| 9 经验进化 | **本技能** |
+
+## 二、经验库
+
+- 存储：`experience.md`（与本技能同目录，跨项目持久）。
+- 单条经验结构：`场景/任务 → 最优方法(含 why) → 易错点 → 历史失败原因+解法 → 优先级权重 → 验证状态(实测/待验证) → 更新时间`。
+- 只记**跨任务可复用**的；一次性、纯项目噪音不记（与 knowledge-governance 一致：更新旧知识而非无限新建）。
+
+## 三、方式择优决策表（对应需求 2）
+
+| 任务特征 | 优先方式 | 理由 |
+|---|---|---|
+| 批量 / 结构化 / 可重复 | **命令行（powershell-windows-cli）** | 快、稳、可验证、可脚本 |
+| 目标有稳定控件/AutomationId | **控件级（winapp-ui-automation）** | 不依赖坐标，抗布局变化 |
+| 文本输入（尤其中文） | **剪贴板 + 快捷键** | SendKeys 不支持非 ASCII，见 computer-use-windows |
+| 无稳定控件 / 自绘 UI | **视觉 / OCR（computer-use-windows）** | 兜底 |
+| 单点且坐标固定且低风险 | 鼠标点击 | 仅最后手段 |
+
+## 四、闭环（对应需求 4–9）
+
+```
+任务完成 → 复盘（耗时/多余步骤/等待/易错点/冗余）
+→ 写入经验库：最快最稳做法 + 易错点 + 失败原因/解法
+→ 对比历史最优：新法更优 → 升优先级；旧法变慢/失效 → 降优先级
+→ 高频操作沉淀为可复用流程（步骤清单）
+→ 经验必须"实测验证"后才更新/替代旧法，禁止凭推测升级
+```
+
+- **失败换路记忆**：某法失败 → 按 windows-automation 换路；把"易失败操作"记入经验库并标"规避"。
+- **越用越聪明**：比较新旧方法真实结果，优者升、劣者降；跨软件/场景积累最佳经验。
+- **经验进化**：后续真实结果持续修正；旧法变慢或软件变化即调整，新法验证后逐步替代旧法。
+
+## 五、纪律
+
+- 更新前必须**实测验证**，不靠推测。
+- 与 knowledge-governance 一致：更新旧知识，不无限新建重复知识。
+- 不重复实现操控方法，只引用底层技能。
