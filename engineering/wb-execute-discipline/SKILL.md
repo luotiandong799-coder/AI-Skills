@@ -1817,3 +1817,13 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - 判据：写 agent 入口时问“这次调用的 owner 标签在哪”——没有，记不了账；报成本时问“分母是被接受的产出吗”——不是，这个数说明不了效率。
 - 提升层级：工具 / 工作流（成本观测）。
 
+
+## 工具 schema 版本化：registry 管理 + 破坏性变更判定 + 加性默认（来源：korai《Schema Versioning》2026-05 + zylos《Tool Schema Versioning》2026-06 + dreaming.press《Versioning AI Agent Tools》2026-07 + qaskills《Schema Drift Testing》2026-08 + logic《Typed LLM Output Contracts》2026-07 实拉，与 §工具 schema 描述写作法 分工——D96 管“怎么把工具定义写对”，本条管“工具定义以后怎么改才不炸下游”）
+- **schema 用 registry 管理，不用代码散着**：每个工具定义带 `schema_version` 字段，验证 LLM 响应时显式检查版本——改名/加必填/改类型时下游一眼看出哪个版本在跑。
+- **破坏性变更判定（MAJOR）**：删或改必填参数 / 改参数类型（string→integer）/ 重排输出结构破坏下游解析 / 改工具名 / **改工具描述**（即使 JSON schema 一字未动，描述变化也构成 major——描述是模型每请求都读的指令，改它等于改行为）。
+- **默认加性变更**：加可选字段、加新工具、加宽输出——永远不要复用已有字段名干新事、不要给在用工具加必填输入；必须破坏时**先 deprecate 后 remove**，并在描述里写一句人话迁移说明（描述是模型唯一的变更通道）。
+- **behavioral drift 单独盯**：schema 不变、提供商静默更新模型权重，同一 endpoint 输出分布悄悄变——把“schema 没动但行为变了”当一等公民跟踪（定期重测分布，别只测 schema 校验）。
+- 判据：改工具时问“这是加性还是破坏性”——加了必填/改了类型，按 MAJOR 走 deprecate；升级模型后问“行为分布变了吗”——没测分布，静默漂移会替你测。
+- 提升层级：可复用 Skill（工具治理）。
+
+

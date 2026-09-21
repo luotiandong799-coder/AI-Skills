@@ -1075,4 +1075,12 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - 判据：接结构输出时问“截断、拒绝、语义错三种情况都有代码路径吗”——只处理了解析失败，另外三种会在生产里轮流咬人。
 - 提升层级：可复用 Skill（输出校验）。
 
+## 评测集维护：泄漏三源 + corpus manifest + 分桶与事故转回归（来源：ai-tldr《Build a RAG Evaluation Dataset》2026-06 + qaskills《Synthetic Testset Generation》2026-07 + futureagi《Golden Set Design》2026-05 + theneuralbase《Golden Test Set Construction》2026-04 实拉，与 §评测解读纪律 分工——D97 管“评测结果怎么解读”，本条管“评测集本身怎么攒才不会骗自己”）
+- **测试集泄漏三源，逐个堵**：①用 golden questions 去调 prompt（测试集碰了训练）；②同一个模型既生成 eval 数据又作答（自证）；③把 eval 问题粘进 few-shot 示例。判据：**golden set 只能被“最终分数”碰一次**——碰过两次以上，数字就只是记忆。
+- **corpus manifest 先建再入库**：每个文档记录 source ID / revision / checksum / 分类 / 授权标签 / 语言 / 文档类型 / 生效日期 / 纳入原因；排除重复、superseded、未授权、畸形、超范围材料——没有 lineage 的语料，评测出了错无法溯源是文档问题还是模型问题。
+- **golden set 带 provenance 且自检**：存谁标注、何时、置信度；**验证 expected_doc_ids 真实存在于 vectorstore**（黄金用例引用已删除/改名文档是最常见的静默失败）；人工抽审 10-20%（拒掉不用语料也能答的 trivial 题、用参数记忆答而非 chunk 的题、歧义题）。
+- **分桶，别一锅炖**：adversarial 用例与生产样本分开仪表盘、分开 CI 门槛——混在一起 aggregate 好看但攻击鲁棒性悄悄掉；**每个生产事故都进回归桶**（incident post-mortem 产出的用例是永久回归测试，不是一次性）。
+- 提升层级：可复用 Skill（评测治理）。
+
+
 
