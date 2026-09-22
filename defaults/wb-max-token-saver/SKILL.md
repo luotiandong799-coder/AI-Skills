@@ -381,3 +381,12 @@ version: 1.36.0
 - 与 §成本四层/上下文预算的分工：那条管"每层怎么省 token"；本条管"检索来的上下文怎么排位、卡多少预算"——省下的 token 要花在最容易被注意到的位置。
 - 反模式：检索回 50 块全塞进去（超预算被截断，反而降质量）；按检索分数顺序原样排列（最相关的可能沉在中段）；省 token 时把关键块裁掉。
 - **提升层**：工具 / 工作流（检索上下文组装）。
+## System prompt 分层预算：identity/capability/behavioral/context 各层容量不同（来源：Blck Alpaca《System Prompts for Agents: 12 Design Patterns》2026-06-09 + Zylos《Prompt Engineering for AI Agent Systems》2026-03-30 实拉）
+原文：Identity 50-200 tokens / Capability 800-2,000 tokens（含工具 schema）/ Behavioral 200-600 tokens / Context 100-400 tokens（动态）。
+
+- **system prompt 按四层组织，各层有不同 token 预算**：**identity（角色/领域/边界 50-200）**轻量锚定防角色漂移；**capability（可用工具与何时用 800-2000，含 schema）**是大头但只写"工具做什么、什么时候优先用哪个"，不写实现；**behavioral（输出格式/风格/Never X 200-600）**；**context（日期/用户/活动工作流 100-400）动态变化**。
+- **动态层必须放最后且最小**：context 层是唯一每轮变的——与 §Relocation Trick 同源，动态内容放尾部避免污染前缀缓存；budget 上动态层最小化，静态层一次写够。
+- 判据：**加 system prompt 内容先问"它属于哪层、这层预算还有没有"**——把工具实现细节塞进 identity 层、把每轮变化塞进 capability 层，都是层错位，既涨 token 又降稳定。
+- 与 r140-A §技能三级加载分工：那条管"技能文件怎么分层加载（元数据 100t 常驻/正文按需）"；本条管"system prompt 本体怎么分层分配预算"。
+- 反模式：identity 层写成长篇人设；capability 层堆工具调用示例；behavioral 层塞任务上下文；context 层放回静态规则。
+- **提升层**：工具 / 可复用 Skill（提示结构预算）。
