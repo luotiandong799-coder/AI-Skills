@@ -358,3 +358,11 @@ version: 1.36.0
 - **与 §程序化串联的分工**：那条管"流程上模型只在需要判断的环节出现"（编排层）；本条管"单个确定性环节内，代码不进上下文只回输出"（调用层）——两者叠加才是"模型只做判断"的完整实现。
 - 反模式：每次让模型现写解析/校验代码而不是调用预置脚本；把大参考文件直接贴进 prompt 而不是放目录按需读；因为"文件太大"不敢打包明明可以按需读的资源。
 - **提升层**：工具 / 可复用 Skill（token 结构节省）。
+## 记忆 token 分层 + agent 工具化迁移：core 常驻保持小，迁移是工具调用不是批处理（来源：Letta（原 MemGPT）官方文档与 2026-09 实拉、aiworkflowlab《Mem0 vs Letta vs Zep》2026-05-25 + RockB《Agent Memory Frameworks 2026》2026-04-15）
+原文：Letta uses an OS-inspired three-tier architecture: core memory (always in-context, like RAM — the agent always sees this), recall memory (recent conversation history stored outside context but searchable, like cache), and archival memory (unbounded external store the agent queries on demand, like disk). Agents actively manage transitions between tiers by calling built-in memory functions.（core 约 2k tokens）
+
+- **三层记忆按 token 代价分层**：**core（常驻、保持小，~2k，agent 始终可见）** / **recall（历史，在上下文外但可搜索）** / **archival（无限外存，按需查询）**——常驻部分只有 RAM，其余都放"磁盘"按需取。→ 判据：**常驻量是硬预算**——塞进 core 的每一条都占每个 turn 的 token，宁可放 recall/archival 按需检索。
+- **层间迁移是 agent 的工具调用，不是定期批处理**：agent 用内置记忆函数（read/write/edit memory）在运行时主动分页自己的上下文——**self-editing**，而不是等"定期整合"批处理。→ 判据：**记忆管理的颗粒度是"某个时刻需要什么"，不是"某个周期整合一遍"**——批处理式整合（ctx §两级沉淀）适合提炼沉淀，工具调用式迁移适合运行时按需装载，两者互补。
+- 与 ctx §两级沉淀的分工：那条管"日志→长期记忆的沉淀时机与判据"（整理层）；本条管"常驻/可搜/按需三层的 token 预算与运行时装载"（预算层）。
+- 反模式：把大量偏好/历史塞进常驻上下文"图省事"（每 turn 都在烧 token）；记忆只进不出（core 无限膨胀）；非要等"整合时间"才动记忆，而不是按需工具调用。
+- **提升层**：工具 / 工作流（记忆 token 预算）。

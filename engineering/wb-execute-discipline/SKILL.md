@@ -2024,3 +2024,10 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **与 §批处理失败三态的分工**：那条管"批内元素失败后怎么呈现结果"（终止/null 占位/移除）；本条管"单个输出校验失败后怎么补救"（fix/重试/reject）——前者是结果形态，后者是补救路径。
 - 反模式：校验失败一律重试（没有 fix 层）；一律拒绝（把可修复的小问题当硬失败）；把 fix 逻辑写进 validator 本身（检查与修复职责混在一起）。
 - **提升层**：工具 / 工作流（输出校验闭环）。
+## Prompt/配置变更与代码同待遇：test-before-merge，改动前先跑 eval（来源：promptfoo 官方文档与 2026-09 实拉、DataCamp《Promptfoo Tutorial》2026-09-20 + Codex Knowledge Base《Eval-Driven Development》2026-09-18）
+原文：Change a prompt → Open a PR → CI runs the eval → Results appear as a PR comment → Fix if anything fails → Merge when everything passes. Prompt changes get the same test-before-merge treatment as code changes.
+
+- **prompt/配置/技能文件的每次变更，先过评估再合并**：改提示词、改输出契约、改路由规则——这些与改代码一样可能引入回归，**必须跑一组回归用例（改动前基线 + 改动后对比）才允许合并**，而不是"改完感觉没问题就过"。→ 判据：**"感觉没问题"不是 prompt 变更的验收**——与 §spec 四步循环的分工：那条管"代码实现按 spec 验证并把验收提升为回归测试"；本条把同一纪律扩展到 **prompt 与配置变更**，两类变更同走 test-before-merge。
+- **eval 套件是 CI 的一等公民**：promptfoo 类工具把"每个 prompt × 每模型 × 每测试用例"矩阵跑完，失败即 PR 评论列出——**评估结果成为合并门禁，不是事后报告**。
+- 反模式：prompt 改完直接进生产，出了回归才回头查（改代码会做测试，改提示词却裸奔）；eval 只跑一次不再回归（prompt 变更没有基线对比）。
+- **提升层**：工作流 / 可复用 Skill（评估驱动变更）。
