@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores
-version: 2.62.0
+version: 2.63.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -1796,3 +1796,10 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 - **集成层不接管个体配置**：温度、自定义模型、是否追踪都"configured on each judge individually"。判据：**集成只做聚合，不替评委做决定**；把配置提到集成层会让不同用途的评委被迫共用一套参数。
 - 与 §固化 vs 检索的判据 分工无关（那条管知识怎么存）；与 `wb-artifact-verification` §题量优先于单题质量 分工：那条管**题目怎么造**，本条管**多个评分器怎么合成一个数**。
 - 触发词：评委团、集成必须留子分、ensemble、多评委同签名、judge_scores。
+## 把组件生命周期暴露成可订阅事件；向 handler 注入的新元数据必须向后兼容旧签名（来源：Instructor 官方 `python.useinstructor.com/concepts/hooks` 2026-09-23 r147-B 独立实拉首读，清单外新信源）
+- 完成 / 解析各阶段（kwargs / response / usage / error / parse:error / last_attempt）都应是可 `on()` 订阅的事件，而非只能 try/except 包一层——观测点要落在阶段边界，不在外层。
+- 向后兼容硬规则：给 handler 注入重试元数据（`attempt_number` / `max_attempts` / `is_last_attempt`）时，旧签名只接 `error` 的 handler 必须照常工作，新 kwarg 被静默丢弃，不能报错。加字段不破坏老调用。
+- 钩子可组合（`+` / `combine`），且 per-call 钩子与 client 钩子叠加运行——粒度要能到「单次调用」。
+- 触发词：hooks 事件模型、订阅事件、向后兼容签名、per-call hooks。
+- 提升层：可复用 Skill（技能可观测性设计）。
+
