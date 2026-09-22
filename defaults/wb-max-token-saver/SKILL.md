@@ -349,3 +349,12 @@ version: 1.36.0
 - **发送前数 token（token counting 前置）**：请求发出前先数一遍 token，prompt 膨胀在构建时发现，而不是在账单上发现。判据：**"发送前测量"成为流水线一步，不依赖事后看费用**。
 - 反模式：前缀里混入每轮变化的时间戳/随机串；中途编辑旧前缀；会话隔几小时再续跑还指望缓存命中。
 - **提升层**：工作流（成本布局）。
+
+## 脚本输出隔离：确定性操作打包成脚本，代码永不进上下文，只回输出（来源：Anthropic Agent Skills 官方文档 docs.anthropic.com 2026-09-23 实拉）
+原文：When Claude runs validate_form.py, the script's code never loads into the context window. Only the script's output (like "Validation passed" or specific error messages) consumes tokens.；No practical limit on bundled content: Because files don't consume context until accessed, Skills can include comprehensive API documentation, large datasets, extensive examples...
+
+- **确定性操作一律脚本化，运行时只回输出**：校验、转换、提取、批量处理这类不需要模型判断的活，写成脚本由执行环境跑——**脚本代码本身不进上下文，只有输出（"Validation passed"/错误消息）消耗 token**。→ 判据：**"让模型生成等价的临时代码"是双倍浪费**——既烧生成时的思考 token，又烧把代码读进上下文的 token；预置脚本一次打包，每次调用只付输出费。
+- **资源打包零上下文代价**：API 文档、数据库 schema、大示例、参考数据可以**直接捆绑进技能/工具目录**——文件在访问前不占上下文，按需读取单个文件。→ 判据：**"会不会把上下文撑爆"不是捆绑资源的理由**——不进上下文的资源不花钱，只有被读进窗口的那部分才花钱。
+- **与 §程序化串联的分工**：那条管"流程上模型只在需要判断的环节出现"（编排层）；本条管"单个确定性环节内，代码不进上下文只回输出"（调用层）——两者叠加才是"模型只做判断"的完整实现。
+- 反模式：每次让模型现写解析/校验代码而不是调用预置脚本；把大参考文件直接贴进 prompt 而不是放目录按需读；因为"文件太大"不敢打包明明可以按需读的资源。
+- **提升层**：工具 / 可复用 Skill（token 结构节省）。
