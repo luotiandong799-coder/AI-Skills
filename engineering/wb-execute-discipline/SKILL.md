@@ -1972,3 +1972,12 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - 与 §system prompt 参数化离线优化 的衔接：优化后作为新 prompt 版本上线，旧版本保底可回滚。
 - 反模式：模型/prompt/工具混在一个版本号里；改 prompt 不记版本；行为异常无法定位是哪个组件变了。
 - **提升层**：工具（发布管理）。
+
+## 首迭代强制工具调用：低依从模型先调工具再回答（来源：n8n Release Notes 2026-09-21 实拉）
+原文：`The AI Agent node (v3) and Agent Tool (v3) now include an opt-in 'Force Tool Call on First Iteration' option. When enabled, the model must call a tool on its first response of a run, helping smaller or less compliant models (e.g. Mistral Small) stick to tool-calling.`
+
+- **工具循环的起点和终点都要显式控制**：已有 §工具循环必须查终止条件 管"循环怎么停"（看 stop_reason）；本条管"循环怎么开始"——**首轮强制调工具**是可选开关，给小模型/低依从模型用，防止它们首轮直接给文本答案、跳过工具检索就作答。判据：**只控终止不控起点，低依从模型会"不查工具直接答"**——工具调用纪律是两端闭环：起点强制 + 终点判定。
+- **opt-in 不默认**：强制首轮调工具会拖慢每个 run（多一轮工具往返），只在模型依从性差时开，不是所有模型都该开。判据：**先试默认行为，观察到"该调没调"再开强制**——能省就不强制，强制是为依从性兜底不是为所有调用加杠杆。
+- 与 §workflow as tool 的分工：那条管"工具粒度怎么设计"，本条管"模型首轮要不要被逼着用工具"——粒度是设计问题，首轮强制是执行纪律问题。
+- 反模式：给所有模型一律开强制首轮工具（高依从模型白耗一轮）；模型该调工具却自由发挥直接答；只查循环终止不查循环起点。
+- **提升层**：工具（调用纪律 / 依从性兜底）。
