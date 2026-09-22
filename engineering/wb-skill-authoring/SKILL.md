@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill
-version: 2.54.0
+version: 2.55.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -48,6 +48,15 @@ version: 2.54.0
 - **因此写技能时要同时回答两个问题**：① 怎么做（步骤/规则）② 用什么做（脚本 / 命令 / 依赖）。缺第二个，技能就是不完整的。
 - **可复用的判定在"任务"这一层**：按"一类任务"打包，不按"一次操作"、也不按"一个领域"打包——太细会碎片化，太粗会变成什么都往里塞的杂物间。
 - 与「文件拆分」配套：指令进 `SKILL.md`，工具进 `scripts/`、资料进 `references/`，**打包的是同一件事的三种形态**。
+
+## SKILL.md 的兄弟格式：Agent SOP（自然语言工作流，可互转）
+来源：AWS Strands「Agent SOPs」官方博客 + `strands-agents-sops` 包（strandsagents.com/blog/introducing-strands-agent-sops，2026-09-22 r136 首读）。
+SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一件事的两种表示**，不是竞争关系：
+- **共通**：都把「一类任务的做法」固化成可复用、可分享、跨会话的模板；都能被 agent 当 system prompt / 当 skill 调用。
+- **互转**：`strands-agents-sops skills` 把 SOP 直接生成 Anthropic 格式的 `SKILL.md`（每个 SOP 一个目录 + SKILL.md）。反过来写 SOP 时也可借用本技能的 description/触发词写法。
+- **SOP 多给的一步——参数化**：SOP 显式声明 required/optional 参数（带默认值），把单次 prompt 变成灵活模板；本技能写 SKILL.md 时也可在 frontmatter 或正文补「可调参数」段，提升复用面。
+- **步骤约束可借 RFC 2119**：SOP 用 `MUST/SHOULD/MAY` 给每步定半确定语义（见 `wb-spec-driven` §7）。本技能写 SKILL.md 的步骤时同样适用——不可协商写 `MUST`、推荐写 `SHOULD`、可选写 `MAY`，`SHOULD` 被跳过须说明，避免约束退化成装饰。
+- **何时用 SOP 而非 SKILL.md**：工作流偏「人在环中、按步交互、要进度可恢复」（SOP 自带 progress tracking & resumability）时，SOP 更轻；偏「被 agent 静默调用、讲究触发准确性」时，SKILL.md + 本技能体系更合适。二者可并存，SOP 是技能库的补充来源。
 
 ## description 怎么写（决定触发的唯一因素）
 - **写"何时用"，不写"是什么"**：description 是路由器，不是简介。开头就给触发场景（"当用户要求 X / 出现 Y 场景时使用"），其次才是能力范围
