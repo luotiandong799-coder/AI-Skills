@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体
-version: 1.38.0
+version: 1.39.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -370,7 +370,8 @@ version: 1.38.0
 原文：Stop saying "think step by step" — with reasoning models, they're already thinking step by step internally. Repeating this instruction is redundant and may interfere with the model's natural reasoning process.；Let the model choose its approach；Use effort as a fallback — control depth via the effort parameter (low/medium/high/max).
 
 - **对推理模型：删掉 step-by-step 与推理脚手架**——推理模型内部已在分步思考，重复指令冗余甚至干扰；预设框架（"用 SWOT 分析"）变成能力天花板。→ 判据：**标准模型要"逼它想"，推理模型要"别挡它想"**——同一句话在两类模型上是相反效果。与 §零样本 CoT 的分工：那条管标准模型上 CoT 的成本权衡（贵 2-30 倍换 15-40% 准确率）；本条管推理模型上的反向纪律（不加脚手架、让模型自选方法）。
-- **用 effort 参数控深度，不用文字催**：推理深度用 easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文字催"更仔细地想"。→ 判据：**深度是配置不是修辞**——想改深度改参数，改 prompt 既不可控又占 token。
+- **用 effort 参数控深度，不用文字催**：推理深度用
+easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文字催"更仔细地想"。→ 判据：**深度是配置不是修辞**——想改深度改参数，改 prompt 既不可控又占 token。
 - 反模式：给推理模型贴"think step by step"（冗余且干扰）；预设分析框架限死模型选择（框架=天花板）；用长篇"请深入思考"文字催深度（应调 effort）。
 - **提升层**：提示工程 / 输出（推理 token 管理）。
 ## 检索上下文排序与预算：top-few 硬预算 + 关键放首尾（lost in the middle）（来源：Levelop《LLM Context Window: What Works in Production》2026-07-30 + ApX《Long Context Management with Large Retrieved Datasets》2026-09-20 实拉）
@@ -480,3 +481,11 @@ version: 1.38.0
 - 判据：**"有引用"不等于"可审计"**——引用存在只满足第一维；全部主张能逐条回答"谁支持、支持什么、有没有矛盾、核验要多快"才叫可审计。
 - 反模式：报告末尾堆参考文献但正文主张找不到对应条目；来源与主张相关性靠感觉；来源间打架时不标冲突；核验需要重跑整个研究过程。
 - **提升层**：工作流 / 可复用 Skill（研究报告产出标准）。
+## 技能开发两实例迭代闭环：基线→最小草稿→实测→精修（来源：SkillsMP 实拉 zebbern/agent-skills-authoring 转述 Anthropic 推荐模式，2026-09-17 实拉；与 §样例驱动渐进式引导分工——那条管"提示词怎么从样例生成"，本条管"技能开发怎么闭环迭代"）
+- **先建无 skill 基线**：让 agent 在**没有该技能**的情况下跑代表任务，记录真实缺口——不先看缺口就写技能=凭印象写。
+- **写最小草稿**：只写足以补上观测到缺口的最少内容，不一次写全（技能是迭代产物，不是一次成型文档）。
+- **第二实例实测**：用全新 agent 实例加载草稿技能，跑 2-3 个真实 prompt，观察它卡在哪、漏掉哪条指令——新实例没有作者心证，才能暴露"只有作者懂、指令没传达"的缺口。
+- **回改再扩**：把实测观察带回给作者实例精修，满意后才扩大测试集。
+- 判据：**"作者觉得写清楚了"不等于"陌生实例能用"**——必须跨实例验证指令传达；基线对照区分"技能补的"与"模型本来就会的"。
+- 反模式：不测基线直接写；一次写全凭想象补缺口；只在作者自己的会话里自测。
+- **提升层**：可复用 Skill（技能迭代开发流程）。
