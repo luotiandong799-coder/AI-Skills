@@ -2008,3 +2008,11 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - 与 §多 Agent 协作纪律的分工：那条管"拆了之后怎么协作"（接口契约/质检回退），本条管**交接那一刻的消息形态**——两者叠加才是完整交接协议。
 - 反模式：把上一轮完整对话直接塞给下一个 agent（上下文膨胀）；交接消息字段缺失靠接收方"猜着解析"；子 agent 输出自由文本直接拼进主流程。
 - **提升层**：工作流（多 Agent 交接 / 上下文成本）。
+## 结构化输出校验失败回喂：把 ValidationError 转成显式修正请求，不盲目重试（来源：Instructor（Jason Liu）官方文档与 2026-09 实拉、RockB《LLM Structured Outputs Guide 2026》2026-05-10 + openlegion《Structured Output》2026-07-01）
+原文：When Pydantic validation fails, Instructor converts the ValidationError into a follow-up prompt that tells the model exactly what went wrong and asks it to correct the output — a significantly more robust recovery loop than catching a JSON parse exception and retrying blindly.（示例："Validation failed: Rating must be between 1 and 5, got 6. Please fix and try again."）
+
+- **校验失败≠重试，等于构造修正请求**：模型输出过不了 schema 校验时，把校验错误**转成一条明确的 follow-up prompt 回喂**（指出哪个字段、违反什么约束、期望范围），让模型针对错误修正——比"解析失败后盲重试"成功率高一个量级。→ 判据：**回喂的信息量决定修正成功率**——只说"格式不对"是低信息回喂，说出"字段 X 应为 1-5，实际为 6"才是可修正的回喂。
+- **与 §工具结果断言层的分工**：断言层管"调用返回后可疑结果打标交还模型"（哨兵提示）；本条管"结构化输出校验失败后怎么构造修正请求"（显式纠错协议）——打标是"这不对劲"，回喂是"这里错、该怎么改"。
+- **本地/受限模型用 schema→grammar 硬约束**：本地 LLM 无原生 structured output 时，把 JSON schema 转成 grammar 约束（Ollama format 参数类）从源头保证合法，而不是事后反复纠错。→ 判据：**能源头约束就不靠事后回喂**——grammar 约束消灭一类错误，回喂处理剩余错误。
+- 反模式：解析失败就盲重试（不告诉模型错在哪）；只回喂"格式错误"不指出具体字段；有 grammar/constraint 能力却不用、全靠回喂循环。
+- **提升层**：工具 / 工作流（输出校验闭环）。
