@@ -370,7 +370,8 @@ version: 1.38.0
 原文：Stop saying "think step by step" — with reasoning models, they're already thinking step by step internally. Repeating this instruction is redundant and may interfere with the model's natural reasoning process.；Let the model choose its approach；Use effort as a fallback — control depth via the effort parameter (low/medium/high/max).
 
 - **对推理模型：删掉 step-by-step 与推理脚手架**——推理模型内部已在分步思考，重复指令冗余甚至干扰；预设框架（"用 SWOT 分析"）变成能力天花板。→ 判据：**标准模型要"逼它想"，推理模型要"别挡它想"**——同一句话在两类模型上是相反效果。与 §零样本 CoT 的分工：那条管标准模型上 CoT 的成本权衡（贵 2-30 倍换 15-40% 准确率）；本条管推理模型上的反向纪律（不加脚手架、让模型自选方法）。
-- **用 effort 参数控深度，不用文字催**：推理深度用 easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文字催"更仔细地想"。→ 判据：**深度是配置不是修辞**——想改深度改参数，改 prompt 既不可控又占 token。
+- **用 effort 参数控深度，不用文字催**：推理深度用
+easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文字催"更仔细地想"。→ 判据：**深度是配置不是修辞**——想改深度改参数，改 prompt 既不可控又占 token。
 - 反模式：给推理模型贴"think step by step"（冗余且干扰）；预设分析框架限死模型选择（框架=天花板）；用长篇"请深入思考"文字催深度（应调 effort）。
 - **提升层**：提示工程 / 输出（推理 token 管理）。
 ## 检索上下文排序与预算：top-few 硬预算 + 关键放首尾（lost in the middle）（来源：Levelop《LLM Context Window: What Works in Production》2026-07-30 + ApX《Long Context Management with Large Retrieved Datasets》2026-09-20 实拉）
