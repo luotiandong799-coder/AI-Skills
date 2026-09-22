@@ -495,3 +495,9 @@ JSON Schema 只表达**结构合法性**（类型、必填、枚举），表达�
   - **减容只做一次，减完的形态才落历史**：减容若每次请求重算，成本随轮数线性增长且结果可能逐轮漂移。判据：**上下文里的内容按"还会被重发多少次"计价，不按"这一次多大"计价**；处理时机选在**产生时**而不是**每次发送前**。
 - **重型 agent 框架 / workflow boilerplate 会随模型变强成技术债**（来源 Strands Agents "one year of production agents"）：最小架构（system prompt + model + tools）先解决 80%，再按需加 scaffolding；模型能力提升后，为已不成立的难处过度铺垫的框架最先过时。判据：**先最小架构跑通，框架 / 状态机只在最小架构真不够时才加**。
 - 提升层级：工作流（架构选型判据）。
+
+## 推理模型不喂 CoT：内部 scratchpad 时"step by step"是回归（来源：arXiv 2608.03550《Soft Guidance Starts to Outperform CoT Prompting》2026-08-27 + FutureAGI《LLM Prompt Format 2026》2026-08-27 实拉，与 §模型推理 分工——那条管"推理成本和任务难度匹配"，本条管"对推理模型要不要显式要求思考链"）
+- **推理模型自带内部 scratchpad**：GPT-5/Claude Opus 4.7/Gemini 3 Pro 都跑内部草稿，外部再喂"Let's think step by step"**是回归不是增强**——把外部链和内部链叠在一起，输出变长、未必更准。判据：**目标模型是推理专用（reasoning-specialized）时，少写"逐步思考"类指令**；few-shot CoT 也不再是可靠基线。
+- **soft guidance 开始超过显式 CoT**：模型越强，柔和引导（给结构/约束/示例而不要求逐字思考链）比强制"step by step"更稳。判据：**先试零思考指令，输了再加链**——加链是手段不是默认。
+- 反模式：对推理模型照抄 2022 年 davinci 时代的 CoT 模板；把"输出思考过程"当成必须。
+- **提升层**：模型（推理指令形态）。
