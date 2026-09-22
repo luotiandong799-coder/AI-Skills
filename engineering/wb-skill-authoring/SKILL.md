@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill
-version: 2.54.0
+version: 2.56.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -48,6 +48,15 @@ version: 2.54.0
 - **因此写技能时要同时回答两个问题**：① 怎么做（步骤/规则）② 用什么做（脚本 / 命令 / 依赖）。缺第二个，技能就是不完整的。
 - **可复用的判定在"任务"这一层**：按"一类任务"打包，不按"一次操作"、也不按"一个领域"打包——太细会碎片化，太粗会变成什么都往里塞的杂物间。
 - 与「文件拆分」配套：指令进 `SKILL.md`，工具进 `scripts/`、资料进 `references/`，**打包的是同一件事的三种形态**。
+
+## SKILL.md 的兄弟格式：Agent SOP（自然语言工作流，可互转）
+来源：AWS Strands「Agent SOPs」官方博客 + `strands-agents-sops` 包（strandsagents.com/blog/introducing-strands-agent-sops，2026-09-22 r136 首读）。
+SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一件事的两种表示**，不是竞争关系：
+- **共通**：都把「一类任务的做法」固化成可复用、可分享、跨会话的模板；都能被 agent 当 system prompt / 当 skill 调用。
+- **互转**：`strands-agents-sops skills` 把 SOP 直接生成 Anthropic 格式的 `SKILL.md`（每个 SOP 一个目录 + SKILL.md）。反过来写 SOP 时也可借用本技能的 description/触发词写法。
+- **SOP 多给的一步——参数化**：SOP 显式声明 required/optional 参数（带默认值），把单次 prompt 变成灵活模板；本技能写 SKILL.md 时也可在 frontmatter 或正文补「可调参数」段，提升复用面。
+- **步骤约束可借 RFC 2119**：SOP 用 `MUST/SHOULD/MAY` 给每步定半确定语义（见 `wb-spec-driven` §7）。本技能写 SKILL.md 的步骤时同样适用——不可协商写 `MUST`、推荐写 `SHOULD`、可选写 `MAY`，`SHOULD` 被跳过须说明，避免约束退化成装饰。
+- **何时用 SOP 而非 SKILL.md**：工作流偏「人在环中、按步交互、要进度可恢复」（SOP 自带 progress tracking & resumability）时，SOP 更轻；偏「被 agent 静默调用、讲究触发准确性」时，SKILL.md + 本技能体系更合适。二者可并存，SOP 是技能库的补充来源。
 
 ## description 怎么写（决定触发的唯一因素）
 - **写"何时用"，不写"是什么"**：description 是路由器，不是简介。开头就给触发场景（"当用户要求 X / 出现 Y 场景时使用"），其次才是能力范围
@@ -433,6 +442,14 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **硬规则**：规则 / 语气 / 流程放行为层；参考素材放知识层；不要把参考材料当指令灌进行为核心（污染决策且难以审计）。
 - **怎么分**：问一句"这条内容改了，会不会改变 agent 的推理？"——会→行为层；不会、只是被引用→知识层；只影响门面→展示层。
 - 反模式：把长文档整篇塞进 system prompt（既撑爆上下文又模糊行为边界）；用知识文件当"隐藏指令"；展示字段写成长篇能力介绍却从不触发（见「description 怎么写」）。
+
+## 工具别全塞进 prompt：语义检索式工具分发（gateway 模式）
+来源：AWS Bedrock AgentCore Gateway 官方文档（docs.aws.amazon.com/bedrock-agentcore，2026-09-22 r137 首读）。
+工具一多，把全部 tool schema 静态塞进 system prompt 会撑爆上下文、拖慢首 token、且模型在几百个工具里反而选不准。AgentCore 的落地法：把工具收在**一个统一入口（gateway）**后面，agent 按任务上下文**语义检索**出最相关的几个再调用——官方称可"use thousands of tools while minimizing prompt size and reducing latency"。
+- **原则**：工具暴露走「检索分发」而非「全量罗列」。给 agent 一个检索/路由层（MCP 网关、tool registry、RAG-over-tools 都行），它按当前任务挑 3–10 个相关工具注入，不把整本工具目录灌进 prompt。
+- **网关还顺手解决三件事**：① 协议翻译（把 REST API / Lambda / 已有服务转成 MCP-compatible 工具，不用各写集成）；② 凭证注入（每个工具各自的 OAuth / token 由网关代发，agent 不持明文）；③ 进出双向认证（inbound 验 agent 身份、egress 连工具）。这三件是「工具暴露」的工程面，和本技能「工具暴露要看得见」（§11）互补——那条管运行时可见性，这条管规模化分发。
+- **判据**：工具数 < 15 直接全量暴露更简单；工具数上几十、跨多个服务/多种鉴权 → 必须上检索/网关层，否则 prompt 与运维一起崩。
+- 与本技能「组合三平面」的关系：网关是「行为层」的工具调度实现，不改变三平面切分。
 
 ## GPT Store 货架与爆款信任公式（来源 chatgpt.com/gpts 实抓 2026-09-18）
 与「三平面分离」互补——那条讲**内部构造怎么切**，这条讲**对外怎么上架、怎么让人信、怎么写让人点的描述**（市场层）。
@@ -1719,3 +1736,12 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 - 风险：优化器可能过度拟合 metric；每次上线前跑回归。
 - 反模式：在线直接改写 system prompt；优化只盯一个指标忘了行为约束；换版本不跑回归。
 - **提升层**：可复用 Skill（提示优化流程）。
+
+## 技能分发形态判据：演进→插件，稳定→目录（来源：DeepSeek Harness 插件文档 dsh 2026-08-14 实拉）
+原文：Build a plugin if the skill will keep evolving or you want others to install it with one command; for a stable skill you only use locally, copying the directory is simpler — and it lets Claude Code see it too, as a bonus.；A plugin compresses install and update into a single command — that's its entire reason for existing.
+
+- **按"演进性+受众"选分发形态，不默认打包**：技能会持续迭代、或要让别人一条命令装好 → 做成插件（安装+更新压缩成一条命令）；稳定且只自己本地用 → 直接复制目录（更简单，且其他兼容 agent 也能直接看到）。判据：**"会不会变"和"谁要用"决定打包方式，不是"看起来更正式"**。
+- **插件存在的全部理由是"把安装和更新压成一条命令"**：如果技能稳定不再动、也没有别人要装，打包成插件只是增加一层维护面，没有收益。判据：**打包=承诺要维护分发通道**；不打算维护就别打包。
+- 反模式：把本地稳定的私有技能打成插件（多一层无用维护）；演进中的技能用散装目录（每次更新要手工再分发一次）。
+- 与 §闭集评测 的分工：评测管"技能好不好"，本条管"做好的技能用什么形态交付"。
+- **提升层**：可复用 Skill（分发/维护成本）。
