@@ -1,8 +1,8 @@
 ---
 name: wb-release-maintain
 description: >-
-  仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。
-version: 1.1.0
+  仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续
+version: 1.2.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -67,3 +67,11 @@ sources:
 - 反模式：生产入口挂着 `latest`/`DEFAULT`；只记录"更新过"不记录"指到哪版"；回滚靠人肉重放改动；每个环境复制一份配置而不是共用一个不可变版本。
 - **提升层**：工作流（发布与回滚路径）+ 可复用 Skill（技能/依赖的版本钉法同样适用——引用固定版本，不跟 latest）。
 - 触发词：默认端点、跟最新版、latest 上线、版本钉死、具名版本、回滚到哪一版、不可变版本、环境指针、发布后没生效、自动漂移
+
+## 可复现的门票是"输入集也要有版本"，不只是产物有版本（来源：Opik / Comet 官方 `resume_evaluations` + `evaluation/advanced/evaluate_agent_trajectory`（Opik 2.0 起 datasets 与 experiments 为 project-scoped），2026-09-23 r146-C 独立重拉首读，清单外新信源）
+
+- **版本化不只管产物**：官方要求实验必须跑在 **versioned dataset** 上，否则不允许续跑、不允许复现（直接抛异常，不是警告）。判据：**只给产物打版本而输入集没版本，等于把"当时拿什么跑的"这件事丢掉了**。
+- **抽样方式也是输入的一部分**：用了自定义 sampler 或显式条目 id 的实验，续跑还需要当初写下的本地 checkpoint，且**必须在同一台机器上**。判据：**"跑了哪些、按什么顺序跑的"如果只存在于当时的进程里，那次运行就不可复现**——要把抽样决策落盘成产物。
+- **作用域要跟着版本一起写**：Opik 2.0 起数据集与实验是 **project-scoped**，创建时必须指定 `project_name`。判据：**版本号的命名空间要显式声明**，否则同名版本在不同项目下会互相覆盖或找不到。
+- 与 §版本是不可变自包含快照 + 端点决定谁跟最新版 分工：那条管**产物版本与端点指向**（发布面）；本条管**输入/评测集版本与抽样可复现**（复现面）。发布能回滚不等于结果能复现——两件事各需要一套版本。
+- 触发词：输入集版本化、评测集版本、复现门票、未版本化不许续、project-scoped。
