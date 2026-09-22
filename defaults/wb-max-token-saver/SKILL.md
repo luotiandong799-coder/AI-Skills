@@ -373,3 +373,11 @@ version: 1.36.0
 - **用 effort 参数控深度，不用文字催**：推理深度用 easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文字催"更仔细地想"。→ 判据：**深度是配置不是修辞**——想改深度改参数，改 prompt 既不可控又占 token。
 - 反模式：给推理模型贴"think step by step"（冗余且干扰）；预设分析框架限死模型选择（框架=天花板）；用长篇"请深入思考"文字催深度（应调 effort）。
 - **提升层**：提示工程 / 输出（推理 token 管理）。
+## 检索上下文排序与预算：top-few 硬预算 + 关键放首尾（lost in the middle）（来源：Levelop《LLM Context Window: What Works in Production》2026-07-30 + ApX《Long Context Management with Large Retrieved Datasets》2026-09-20 实拉）
+原文：Set a hard token budget for retrieved context and enforce it；it's often beneficial to place the most relevant documents or text chunks either at the very beginning or the very end of the context（对抗 lost-in-the-middle 效应）。
+
+- **检索内容设硬 token 预算，只留 top few 不是 top fifty**：检索回的块按相关性排，只取前几个，总 token 上限硬执行——demo 与生产的差别就在这里。→ 判据：**检索量的判据是"预算"，不是"相关性排序到多少位"**；超过预算宁可少给，不给到截断。
+- **关键内容放上下文开头或结尾**：模型对中间的注意最弱（lost in the middle），最重要的文档/块放最前或最后，对抗注意力衰减。→ 判据：**排序本身是质量杠杆**——同样的内容，放在中段和放首尾效果不同；组装上下文时按重要性排位，不是按检索顺序原样塞。
+- 与 §成本四层/上下文预算的分工：那条管"每层怎么省 token"；本条管"检索来的上下文怎么排位、卡多少预算"——省下的 token 要花在最容易被注意到的位置。
+- 反模式：检索回 50 块全塞进去（超预算被截断，反而降质量）；按检索分数顺序原样排列（最相关的可能沉在中段）；省 token 时把关键块裁掉。
+- **提升层**：工具 / 工作流（检索上下文组装）。

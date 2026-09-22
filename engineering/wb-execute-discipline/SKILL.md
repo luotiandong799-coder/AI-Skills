@@ -2054,3 +2054,11 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **同模型写代码+写测试 = 盲区共享**：模型的错误假设同时写进实现和测试，测试"证明"了错误行为是对的。→ 判据：**测试要通过的判据不止"覆盖了行为"**，还要"对已知坏输入失败"——明确要求测试包含负面用例（坏输入/边界/非法值），与 §AI 生成代码收 diff 五连查分工：那条管"实现收不收货"，本条管"测试是不是真测试"。
 - 反模式：AI 写完代码又让它"顺手写测试"（同盲区）；测试全是对 happy path 的描述；看不到负面用例的测试套件被当成品验收。
 - **提升层**：工具 / 工作流（测试有效性）。
+## Eval 数据集纪律：golden dataset 取自真实生产失败，pass^k 一致性优于最好通过率（来源：Logic《LLM evals explained》2026-07-02 + XYZBytes《Eval-Driven Development: Why Evals Are the New Unit Tests》2026-06-28 + Red Hat《Eval-driven development》2026-03-23 实拉）
+原文：Your golden dataset needs 200 to 500 examples sourced from real production failures, not synthetic data；An agent with 75% per-trial reliability has only a 42% chance of passing all three trials under pass^3；measure all-runs consistency (pass^k), not best-case pass rates。
+
+- **golden dataset 从真实失败来，不从合成数据来**：生产日志里返回错误/低质量输出的案例、打爆过旧部署的边界、真实用户查询分布——合成样本只补"还没见过的输入分布"缺口。起步 20 例即可，不追求一上来几百条。→ 判据：**eval 的价值密度在"它代表真实失败分布"**——全合成用例的套件会测得 100% 通过而生产照常翻车（与 §AI 测试盲区互补：那条管"测试要测坏输入"，本条管"数据从哪来"）。
+- **测 pass^k 一致性，不是最好通过率**：单次通过率 75% 的 agent，pass^3（三试全过）只有 42%——**多跑几次取"全部通过"而非"最高一次"**，才是稳定性度量。
+- **test your tests**：把已知坏用例喂给 eval 套件，确认它会失败——不会失败的用例是无效用例。
+- 反模式：用模型生成一堆"看起来对"的合成用例凑数；汇报最好一次的成绩当稳定性；eval 套件从不验证自身能否抓坏。
+- **提升层**：工作流 / 可复用 Skill（评估数据纪律）。
