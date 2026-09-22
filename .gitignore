@@ -26,3 +26,18 @@ id_ed25519*
 /memory/*.txt
 /memory/*.json
 /memory/automations/
+
+# 凭据 / 本地运行时状态绝不入仓（2026-09-22 用户强制：涉及信息安全的不用 GitHub）
+.env
+.env.*
+*.env
+!*.env.example
+*.pid
+*.log
+*.key
+*.pem
+bridge_state.json
+wb_*.jsonl
+
+# WeChat 网关技能（涉及用户微信信息面）2026-09-22 用户要求撤出公开仓库，本地保留
+/system/wechat-agent-gateway/

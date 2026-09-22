@@ -564,7 +564,7 @@ Personal AI OS 不允许无限膨胀。定期审查 Skill / MCP / Workflow / Exp
 | filesystem | ✅ 通过（含越权拒绝） | 白名单 `D:\腾讯AI` + `D:\AI技能仓库`；实测读 `C:\Windows\win.ini` 返回 `Access denied - path outside allowed directories` |
 | desktop-commander | ✅ 通过（只读） | 代理白名单 13 个只读工具（`read_file`/`list_directory`/`list_processes`…），显式拒绝 13 个写/高危工具（`write_file`/`edit_block`/`start_process`…）；实测 `get_config`（v0.2.51）+ `list_processes`（400+ 进程） |
 | GitHub | ✅ connected | `get_me` → `luotiandong799-coder` |
-| agent-mail | ✅ connected | `GetMe` → 别名 `REDACTED-ALIAS`，日发额度 50 封 |
+| agent-mail | ✅ connected | `GetMe` 可取别名（已隐去），日发额度 50 封 |
 | sheetagent | ⚠️ 需前置 | 服务存活，但未打开工作簿时返回 `MCP error -32603: No workbook open`（属正常前置缺失，非故障） |
 | genie-baas（云服务） | ⚠️ 无目标 | 需 `applicationId`（取自 `.workbuddy/applications.yaml`）；当前工作区无该文件 → 无应用可查 |
 | weixinpay | ⚠️ 绑定报错 | 服务有响应，但绑定流程返回"无法绑定微信支付AI专属卡：遇到了一些问题，请稍后重试" |
