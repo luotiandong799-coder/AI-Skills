@@ -1554,3 +1554,21 @@ version: 3.33.0
 - **写前验证**：记忆写入前过二级模型验证再提交（write-ahead validation）。判据：**写入比读取更该设卡**——记忆一旦写入，会持续影响未来所有轮次。
 - 反模式：记忆只存不审；检测到污染只删条不查来源；把未经验证的工具输出直接写进长期记忆。
 - **提升层**：工具 / 可复用 Skill（记忆安全）。
+
+## 记忆写入只增不覆盖 + 过期软衰减排序：新事实 ADD-only，保鲜靠重排不靠删（来源：Mem0《AI Memory Management for LLMs and Agents》2026-09-18 + 《Semantic Memory for AI Agents》2026-09-18 实拉）
+原文：Production agents need four distinct memory layers: conversation, session, user, and organizational, not just a longer context window.；Mem0's current algorithm uses single-pass ADD-only extraction: new facts are added, not overwritten, so history is preserved rather than silently lost.；Staleness is handled as a soft re-rank, not a hard delete. Memory Decay applies a 0.3×–1.5× recency-based scaling factor; nothing gets erased, and ranking adjusts.
+
+- **写入策略选 ADD-only 不选覆盖**：新事实**只追加、不覆盖旧值**——覆盖会静默丢历史（"用户昨天偏好 X"被"今天偏好 Y"覆盖后，回退到昨天就无法追溯）。判据：**记忆是追加日志不是寄存器**；要表达"变了"用新增一条并标注取代关系，而不是覆写旧条目。与 §记忆提取四策略的分工：那条管"提取什么"，本条管"提取后怎么写"。
+- **过期保鲜用软重排不用硬删**：旧记忆不删除，用 recency 因子（0.3×–1.5×）给相关性打分做**软衰减**——排序降下去但内容还在，需要时仍可召回。判据：**"过时"是检索排序问题，不是存储删除问题**——删了就再也找不回，重排只是让它更难被默认召回到。
+- **记忆分层不是"更长的上下文窗口"**：conversation / session / user / organizational 四层各有生命周期——会话层随轮次、用户层跨会话、组织层跨用户。判据：**分层按"跨什么存活"划分，不按文件大小划分**。
+- 反模式：新事实直接覆盖旧事实（历史丢失）；过期记忆定期批量删除（依赖它的推理断裂）；把所有记忆塞进一个越滚越大的文件当"分层"。
+- **提升层**：工作流 / 可复用 Skill（记忆治理）。
+
+## 技能供应链安全：ed25519 签名 + 可撤销发布者身份；签名证作者不证安全；安装时注册级扫描（来源：OWASP《Agentic Skills Top 10 Security Risks and Mitigations》白皮书 2026-08 + Claude Skills Registry vetting 2026-07 + Snyk/Tessl 注册级扫描新闻 2026-03 实拉）
+原文：Require cryptographic signatures (ed25519) on all published skills; reject unsigned installs. Bind each signature to a resolvable, revocable publisher identity (a key id, a publisher identifier such as a domain or did:web, and a published verification key) - not just a bare key - so a compromised signer can be revoked. A signature proves authorship, not safety: a verified publisher can still ship malicious.；every skill is scanned for known prompt-injection strings (e.g. Ignore previous instructions, You are now DAN, anything that tries to override the system prompt from inside a tool body).
+
+- **装技能先验签名，未签名安装直接拒**：公开分发的技能必须带 ed25519 签名；"作者是谁"不再是信任声明而是可验证事实。判据：**签名解决"谁写的"，不解决"写得安不安全"**——这两个问题分开管。
+- **签名绑可撤销的发布者身份，不绑裸公钥**：身份=key id + 发布者标识（域名/did:web）+ 公布的验证密钥；发布者密钥泄露时可撤销。判据：**可撤销性决定"出事能不能追回"**——绑裸密钥的签名，密钥一泄就无法作废。
+- **安装时注册级扫描**：注册中心在安装时扫已知注入模式（Ignore previous instructions、You are now DAN、工具体内覆写 system prompt 的尝试）——与 §工具面安全的"审 description"分工：那条管"装好后运行时"，本条管"装之前分发链"。
+- 反模式：只信"星标多/下载多"就安装未签名技能；把"发布者已验证"当成"内容已验证"；装了不扫注入模式直接进技能库。
+- **提升层**：可复用 Skill（技能供应链 / 安装治理）。
