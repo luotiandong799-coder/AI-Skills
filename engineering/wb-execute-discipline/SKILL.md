@@ -1997,3 +1997,14 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - 与 §工具结果断言层的分工：断言层是"调用后哨兵"（结果可疑打标），本条是"调用前闸门"（输入无效直接拦）——一个守出口一个守入口。
 - 反模式：把无效/空输入直接喂进 LLM（白付 token 还产出幻觉）；用 LLM 节点做数据清洗（清洗结果本身不稳定）；守卫拦截了却不记录原因（无法区分"被守卫拦下"与"流程没跑到"）。
 - **提升层**：工作流（输入校验 / token 成本控制）。
+## handoff 边界上下文蒸馏：交接传摘要不传历史，边界插小模型提取最小充分上下文（来源：AWS Well-Architected Agentic AI Lens·AGENTCOST01-BP02 2026-09-17 + LangChain handoffs 文档 2026-09-15 + BlckAlpaca《Agent Handoffs》2026-06-09 实拉）
+原文：Replace full conversation history with a summary object containing the task specification, relevant facts, and the constraints the receiving agent must respect. Version the message schema so receivers can reject malformed handoffs.；Insert context distillation at boundaries: add a small-model call or Lambda function that extracts minimum sufficient context before each handoff, so input tokens at transitions reflect current task needs rather than accumulated history.；Never pipe a full sub-agent transcript back to the lead.；Each sub-agent receives a goal, output format, tool/source hints and clear task boundaries. At Anthropic, vague delegations caused duplicated work and gaps in coverage.
+
+- **交接传"摘要对象"不传完整对话历史**：交接消息=任务规格 + 相关事实 + 接收者须遵守的约束，不是原样转发上下文。判据：**交接消息是"为接收者裁剪的简报"，不是"历史回放"**——接收者只需要做当前任务的量。
+- **在交接边界插入上下文蒸馏**：每次 handoff 前用小模型/Lambda 提取"最小充分上下文"，让交接时刻的输入 token 反映当前任务需要，而不是累积历史。判据：**蒸馏位置在边界，不在源头**——源头保持完整，只在交接那一刻压缩到够用。
+- **版本化消息 schema，接收者能拒绝畸形交接**：交接结构带版本号，接收方校验不匹配/字段缺失直接拒收，而不是默默解析失败。判据：**交接契约要可校验**——schema 版本化让"坏交接"成为显式错误而非隐式错乱。
+- **子 agent 结果压成 typed schema 再回传，永远不把子 agent 完整 transcript 管道回主 agent**（Never pipe a full sub-agent transcript back to the lead）。判据：**回传的是结论不是过程**；要看过程另开日志通道。
+- **显式教委托（Teach delegation explicitly）**：每个子 agent 收到 goal + 输出格式 + 工具/来源提示 + 明确边界；Anthropic 经验：模糊委托造成重复劳动和覆盖缺口。判据：**委托指令五要素缺一不可**——目标/格式/工具提示/边界/验收，漏掉哪个子 agent 就用默认猜。
+- 与 §多 Agent 协作纪律的分工：那条管"拆了之后怎么协作"（接口契约/质检回退），本条管**交接那一刻的消息形态**——两者叠加才是完整交接协议。
+- 反模式：把上一轮完整对话直接塞给下一个 agent（上下文膨胀）；交接消息字段缺失靠接收方"猜着解析"；子 agent 输出自由文本直接拼进主流程。
+- **提升层**：工作流（多 Agent 交接 / 上下文成本）。
