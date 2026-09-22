@@ -1989,3 +1989,11 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - 与 §轻量自动化三模式的衔接：Scheduled Batch 管"用什么形态搭"，本条管"定时任务每次唤醒先验信号再决定跑不跑"——webhook 是外部触发省了 gate，定时器+gate 是自建触发门槛。
 - 反模式：定时任务醒来无条件执行（把"该检查"当"该干活"）；gate 查了信号却不留判断记录（无法区分"没变化跳过"与"执行失败"）；把 gate 放进子代理让每次唤醒都白跑一轮主流程。
 - **提升层**：工作流（定时任务信号门控）。
+## LLM 节点前确定性输入守卫：无效输入不进模型（来源：Dify Agentic Workflow 实践《One Workflow, one job》2026-06-22 实拉）
+原文：Condition nodes as guards. Check input validity before LLM nodes to avoid wasting tokens on invalid inputs；Use Code nodes for data cleaning. LLM output is inconsistent; validate and transform with Python/JS before passing to ...
+
+- **LLM 调用前加确定性守卫，无效输入不浪费 token**：流程里每个 LLM 节点前面挂条件/代码节点，先校验输入有效性（缺字段/空值/越界/格式错）——**无效输入在到达模型前被拦截**。判据：**输入守卫管"调用前"，结果断言层管"调用后"，执行前契约 rubric 管"执行前契约满足度"**——三层各管一段，缺输入守卫，垃圾进垃圾出还要付 token。
+- **确定性校验用代码节点，不用 LLM**：数据清洗（去重/转换/格式修正）走确定性 Python/JS 节点，因为 **LLM 输出本身不一致**——用模型清洗模型输出，等于把不确定叠加在不确定上。判据：**能确定性的绝不交给模型**——清洗是确定性操作，模型只做判断与生成。
+- 与 §工具结果断言层的分工：断言层是"调用后哨兵"（结果可疑打标），本条是"调用前闸门"（输入无效直接拦）——一个守出口一个守入口。
+- 反模式：把无效/空输入直接喂进 LLM（白付 token 还产出幻觉）；用 LLM 节点做数据清洗（清洗结果本身不稳定）；守卫拦截了却不记录原因（无法区分"被守卫拦下"与"流程没跑到"）。
+- **提升层**：工作流（输入校验 / token 成本控制）。
