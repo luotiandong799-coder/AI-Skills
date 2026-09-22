@@ -2062,3 +2062,20 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **test your tests**：把已知坏用例喂给 eval 套件，确认它会失败——不会失败的用例是无效用例。
 - 反模式：用模型生成一堆"看起来对"的合成用例凑数；汇报最好一次的成绩当稳定性；eval 套件从不验证自身能否抓坏。
 - **提升层**：工作流 / 可复用 Skill（评估数据纪律）。
+## AI 生成输出按"陌生人上传"对待：不 eval / 不跑 shell / 不渲染不净化 / 不信任 SQL（来源：Prompt Architects《46 Prompt Injection Attacks》2026-06-18 实拉）
+原文：Do not eval() AI-generated code in production without a real sandbox. Do not run AI-generated shell commands. Do not render AI-generated HTML without sanitization. Do not trust AI-generated SQL without parameterization. The model can be manipulated, so its output gets the same suspicion you would give a stranger's upload.
+
+- **模型输出 = 陌生人上传**：模型可以被操纵，所以它的输出得到陌生人上传同等的怀疑——**四不**：AI 生成代码不 eval（除非真沙箱）、不直接跑 AI 生成的 shell 命令、不渲染 AI 生成的 HTML（不净化就不渲染）、不信任 AI 生成的 SQL（不参数化就不执行）。
+- 与 §AI 生成代码收 diff 五连查分工：那条管**审 diff**（import/签名/helper/越权/测试）；本条管**运行边界**（审完也不代表能随便跑——能跑不等于可运行在特权位置）。
+- 判据：**"模型输出能不能执行"和"模型输出对不对"是两个问题**——对也不代表能直接执行；执行级才碰系统边界，先按不可信输入降级处理（沙箱/参数化/净化）。
+- 反模式：AI 写的 SQL 看着对就直连生产库执行；AI 生成的 HTML 直接嵌入页面；eval() 模型输出图省事。
+- **提升层**：工具 / 工作流（输出执行边界）。
+
+## 基准分数不可迁移：lab 到生产有 37% gap，用相对比较不用绝对分（来源：explainx《Terminal-Bench 2.0》2026-05-02 + arXiv 2605.22535《TerminalWorld》2026-08-31 实拉）
+原文：enterprise agentic AI systems exhibit a 37% gap between lab benchmark scores and real-world deployment performance；Terminal-Bench 2.0 上模型 57.0%-82.7%，迁移到 TerminalWorld-Verified 真实任务只有 49.0%-62.5%。
+
+- **基准分是相对标尺，不是能力绝对值**：Terminal-Bench 同批模型 57-82.7%，到真实终端工作流只剩 49-62.5%——**同一组模型在两个环境的排名可能变，绝对分更是会缩水**。→ 判据：**拿基准分评估"够不够格上生产"没有意义；只做相对比较（模型 A vs B、版本 X vs Y），真实能力另在真实任务上测**。
+- **与实验室分数的差距来自环境**：生产是脏上下文、变动的需求、人工协作；基准测的是隔离任务完成。**错误可检测性和纠正易度与成功率同等重要**——生产里"能发现错+能低成本纠正"比"多过两个用例"值钱。
+- 与 §eval 数据集纪律分工：那条管**数据从哪来**（真实失败）；本条管**分数怎么读**（基准=相对标尺，别当生产能力）。
+- 反模式：厂商报 87.6% SWE-bench 就认定生产强；拿基准排名当模型选型唯一依据；把基准分数直接当交付验收线。
+- **提升层**：工作流 / 可复用 Skill（评估读数）。
