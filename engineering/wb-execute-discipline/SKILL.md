@@ -2094,3 +2094,30 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - 与 r141-A §eval 数据集纪律/§检索排序分工：那条管"**评测数据与排序预算**"；本条管"**上线后新鲜度与健康检查**"——构建期与运行期两条腿。
 - 反模式：全部文档统一每天全量重索引（贵且仍可能过期）；只在出事故后查检索；索引漂移了没人发现。
 - **提升层**：工作流（RAG 运行期运维）。
+## LLM-judge 三类偏见的量化缓解：position double-swap / verbosity 长度控制 / self-preference 跨族评判（来源：AI/TLDR《LLM Judge Biases》2026-06-12 + FutureAGI《LLM-Judge Bias Mitigation》2026-05-20 + aiworkflowlab《Bias Calibration》2026-08-02 实拉，与 §judge 校准协议 互补——那条管"人类样本 kappa 校准"，本条管"三类偏见的具体机制"）
+- **position bias（20-30% out of the box，~25% 对比是位置驱动而非质量驱动）**：成对评判**跑两次、位置互换，胜者一致的才成立，翻车的判平局或丢弃**——一致性过滤去掉最噪的一段。→ 判据：**单次位置下的胜负不可信**；只认"两种顺序都赢"的结论。
+- **verbosity bias（更长=更好）**：评判 rubric 显式写"长度不参与评分"，或对比时**归一化长度**再评。
+- **self-preference bias（judge 偏好同族输出 3-10%）**：**评判模型与生成模型用不同族**（生成用 A 家，评判用 B 家）。
+- **leniency drift（分数随时间爬升）**：周期性**重评固定 gold set** 监测漂移，锚定校准示例。
+- **judge 选型**：用**该任务响应准确率最高的模型**当 judge（capability-dependent bias：模型评判能力随其任务能力走）。
+- 反模式：成对评判只跑一次顺序；judge 与生成用同族模型；永远同一套提示词评两年不重校准。
+- **提升层**：工作流 / 可复用 Skill（评估可信度）。
+
+## Prompt 版本生命周期：registry + 版本身份绑定 eval + 生产 tag + 独立部署回滚（来源：AWS Well-Architected Agentic AI Lens AGENTOPS02-BP03/BP01 + Microsoft Learn《Prompt Versioning》2026-09-20 + MLflow Prompt Registry 2026-09-17 实拉，与 r140-B §prompt 变更 eval 门禁 互补——那条管"改动前测试"，本条管"版本管理与回滚"）
+- **prompt 与代码同级关键：版本化**——版本号必须**绑定其 eval 结果**（"customer-support-summarisation-v2.1"的身份=它跑出的评测），不只绑文本 diff。→ 判据：**没有 eval 记录的版本号没有身份**。
+- **生产 tag**：上线时打 production-2026-04-07 永久标记——两个月后要查"当时线上跑的是什么"直接 checkout 该 tag。→ 判据：**tag 是"某日在跑什么"的权威答案**，不是靠人记。
+- **behavioral baseline**：显式指定 known-good 版本（不是"上一个版本"）——回滚目标是它。
+- **registry 化 + 独立于应用代码部署**：prompt 更新不随代码发版，分钟级回滚；非工程师改 prompt 不动代码。
+- 与 §test-before-merge 衔接成完整生命周期：**改→测（门禁）→tag→上线→监控→回滚**。
+- 反模式：prompt 改在代码里发版后才发现行为变了没法回滚；生产 tag 不建，出事后猜"当时是什么版本"；版本号只记文本不记评测。
+- **提升层**：工作流 / 可复用 Skill（Prompt 生命周期）。
+
+## deterministic spine + agentic leaves：业务流程是状态机，agent 是状态内的工人，最终行动权在主干（来源：Microsoft《Stop Letting Agents Run the Workflow》2026-09-01 实拉，与 §多 Agent 编排模式 互补——那条管"什么时候拆/怎么协作"，本条管"谁拥有最终行动权"）
+原文：The business process is a state machine. Agents are workers inside the states. The deterministic spine owns workflow state, allowed transitions, approval boundaries, retry behaviour, idempotency, timeouts, tool execution, audit events, and final action authority.；An agent can recommend the next step. It cannot decide it.
+
+- **确定性主干拥有**：工作流状态、允许转移、审批边界、重试行为、幂等、超时、工具执行、审计事件、**最终行动权**——代码实现、非模型。
+- **agentic 叶子做有界推理**：分类/提取/摘要/推荐/草稿/比较/校验/解释/丰富——推理任务，不碰状态转移。
+- **边界绝对：agent 可以推荐下一步，不可以决定下一步**。→ 判据：**"推荐 vs 决定"是两权分离**；让 agent 决定状态转移 = 把幂等/重试/审计交给非确定性，出事不可追溯。
+- 与 §编排者只编排不干专家活 的合流：编排者（主干）管状态机与行动权，专家 agent（叶子）只管有界推理——**两层职责正交**。
+- 反模式：让 agent 自由决定整个流程走向；状态转移逻辑写在 agent 提示词里；幂等/重试靠 agent 自觉。
+- **提升层**：工作流（编排架构）。
