@@ -2016,3 +2016,11 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **本地/受限模型用 schema→grammar 硬约束**：本地 LLM 无原生 structured output 时，把 JSON schema 转成 grammar 约束（Ollama format 参数类）从源头保证合法，而不是事后反复纠错。→ 判据：**能源头约束就不靠事后回喂**——grammar 约束消灭一类错误，回喂处理剩余错误。
 - 反模式：解析失败就盲重试（不告诉模型错在哪）；只回喂"格式错误"不指出具体字段；有 grammar/constraint 能力却不用、全靠回喂循环。
 - **提升层**：工具 / 工作流（输出校验闭环）。
+## 输出校验三策略：重试 / 修复 / 拒绝——能修不重试，修不了就拒（来源：Guardrails AI（validator 三态机制，50+ Hub validators）2026-09 实拉 + genai.qa《Guardrails AI vs NeMo》2026-06-26 + niteagent《LLM Security Toolkit》2026-07-24）
+原文：You declare the expected output structure (as a Pydantic model) and attach validators from the Guardrails Hub — pre-built checks like profanity-free, regex-match, or valid-range；每个 validator 三态：each can pass, fix, or reject。
+
+- **校验失败的三种处理策略，按"代价最小优先"排序**：① **fix（修复）**——validator 或修复器本地改掉问题（如格式归一、数值截断、去敏感词），不打扰模型；② **re-ask / 回喂重试**——修复器修不了时，把校验错误转成修正请求回喂模型（见 §结构化输出校验失败回喂）；③ **reject（拒绝）**——修不了也重试不动的，直接拒收该输出并进入降级路径。→ 判据：**能本地修就不让模型重跑，能让模型修就不直接拒**——三者是代价递增的阶梯，不是三个并列选项。
+- **"检查"与"修复"是两个能力**：validator 只判 pass/fail，fix 需要独立的修复器（或可自动化的修正规则）——没写修复器就等于只有重试和拒绝两条路。→ 判据：**给每个高频校验失败配一个修复器，比提高重试次数便宜得多**。
+- **与 §批处理失败三态的分工**：那条管"批内元素失败后怎么呈现结果"（终止/null 占位/移除）；本条管"单个输出校验失败后怎么补救"（fix/重试/reject）——前者是结果形态，后者是补救路径。
+- 反模式：校验失败一律重试（没有 fix 层）；一律拒绝（把可修复的小问题当硬失败）；把 fix 逻辑写进 validator 本身（检查与修复职责混在一起）。
+- **提升层**：工具 / 工作流（输出校验闭环）。
