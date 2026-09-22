@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill
-version: 2.58.0
+version: 2.59.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -1754,3 +1754,15 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 - 与 §技能运行时健康运营（反馈信号自动评估）分工：那条管"装好之后用什么信号触发治理"，本条管"**被取用 / 被阅读的当下就留下可归因的轻量信号**"。
 - 反模式：只埋点击量；把使用者的完整上下文当遥测收上来；按写作时间而不是被卡住的次数排维护。
 - **提升层**：可复用 Skill（文档与遥测设计）。
+
+
+## 横切逻辑放全局钩子，局部逻辑放局部钩子；钩子只有三种返回语义，且全局优先会吞掉局部（来源：Google ADK 官方 `adk.dev/plugins` + `adk.dev/callbacks/design-patterns-and-best-practices`，2026-09-22 r140-A 独立重拉首读，新信源首读）
+- **原文事实**：官方并列给出两层——*"While a typical Agent Callback is configured on a single agent, a single tool for a specific task, a Plugin is registered once on the Runner and its callbacks apply globally to every agent, tool, and LLM call managed by that runner... Plugins let you package related callback functions together to be used across your entire agent application."* 且 *"Plugin callbacks have precedence over callbacks implemented at the object level... if a Plugin-level agent callback returns any value, and not an empty (None) response, the Agent, Model, or Tool-level callback is not executed (skipped)."* 钩子的返回语义只有三种：*"To Observe: Implement a hook with no return value (None)"* / *"To Intervene: Implement a hook and return a value... short-circuits the workflow"* / *"To Amend: Implement a hook and modify the Context object... without otherwise interrupting the execution"*。
+- **判据**：
+  - **先判这条逻辑是不是"每个体都要过一遍"**：日志、策略、缓存、监控属于横切，注册一次全局生效；只跟某个体有关的放局部。判据：**同样这段话你是不是正准备在 N 个文件里各写一遍**——是，它就是横切，写进全局规则层，别复制 N 份（复制的必然版本漂移：改了 A 忘改 B，最后谁都不敢删）。
+  - **钩子只有三种返回语义，选错的表现是流程被静默短路**：**观察**（不返回，流程照走）/ **干预**（返回值，后续全部跳过、用返回值当结果）/ **修订**（只改上下文，继续跑）。判据：**这次是想"看看"、"拦下"还是"改一改继续"**；只想记录却顺手 return 了一个值，后面整条链就不跑了，而且报错在最下游。
+  - **层级优先级必须写出来，否则局部逻辑会静默失效**：全局钩子先跑，且它一旦返回非空，局部钩子**根本不执行**。判据：**凡是"局部写了却不生效"的怪现象，先查有没有上层钩子把它吞了**，不要去改局部。
+- 与 §全局 vs 项目本地分层 分工：那条管"这个技能放哪个目录"，本条管"**一条规则/一段逻辑放全局层还是每个体各写一份**"。
+- 反模式：把横切纪律写进每个 SKILL.md；观察型钩子返回了值；局部不生效时只盯着局部改。
+- **提升层**：工作流（拦截点的分层与返回语义）+ 可复用 Skill（规则的放置位置）。
+- 触发词：横切关注点、全局钩子、局部回调、钩子优先级、观察还是干预、返回就短路、规则复制到每个技能、日志策略缓存放哪层。
