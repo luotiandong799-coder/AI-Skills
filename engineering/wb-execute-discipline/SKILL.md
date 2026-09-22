@@ -1981,3 +1981,11 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - 与 §workflow as tool 的分工：那条管"工具粒度怎么设计"，本条管"模型首轮要不要被逼着用工具"——粒度是设计问题，首轮强制是执行纪律问题。
 - 反模式：给所有模型一律开强制首轮工具（高依从模型白耗一轮）；模型该调工具却自由发挥直接答；只查循环终止不查循环起点。
 - **提升层**：工具（调用纪律 / 依从性兜底）。
+## 定时唤醒前变化门控：change gate 先查信号，无变化不执行（来源：OpenClaw 官方 blog《AI agent scheduled tasks: add a change gate before every wake-up》2026-07-20 实拉）
+原文：AI agent scheduled tasks should run on a useful signal, not just a clock. Use a change gate to separate timed reviews from work that only needs an agent when input changes.
+
+- **定时任务跑在"有用信号"上，不只靠时钟**：每天定时醒来 ≠ 每天都要干活——醒来第一件事是**过 change gate**：查输入是否有变化（新数据/新事件/状态变更），**无变化就不执行**，有变化才继续。判据：**时钟决定"何时检查"，信号决定"是否执行"**——两者分开，定时只是检查节奏，执行与否由信号门决定。
+- **两类任务的 gate 用法不同**：①定时审查类（日报/周报/审计）——gate 查"有没有值得报的新东西"，无增量则跳过或发"无变化"短报；②仅输入变化才需要的活（监控/告警/同步）——gate 是主开关，无变化直接睡到下一个检查点。判据：**先问"这活是周期审查还是信号驱动"**——前者 gate 控内容，后者 gate 控执行。
+- 与 §轻量自动化三模式的衔接：Scheduled Batch 管"用什么形态搭"，本条管"定时任务每次唤醒先验信号再决定跑不跑"——webhook 是外部触发省了 gate，定时器+gate 是自建触发门槛。
+- 反模式：定时任务醒来无条件执行（把"该检查"当"该干活"）；gate 查了信号却不留判断记录（无法区分"没变化跳过"与"执行失败"）；把 gate 放进子代理让每次唤醒都白跑一轮主流程。
+- **提升层**：工作流（定时任务信号门控）。
