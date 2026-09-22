@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。
-version: 1.0.0
+version: 1.1.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -54,3 +54,16 @@ sources:
 - **破坏性变更永远放最前并加 ⚠️**：用户最怕升级后悄悄坏掉。
 - **依赖升级是待验证假设**：升级完成 ≠ 升级成功，必须回归测试通过才算。
 - **不越权**：本技能负责"提炼/评估/建议"，实际升级动作与改动以用户指令为准。
+
+## 版本是不可变快照、端点决定谁跟最新版：默认端点自动漂移，生产必须钉具名版本（来源：AWS 官方《Amazon Bedrock AgentCore Developer Guide》`agentcore-runtime/agent-runtime-versioning` 2026-09-23 r144-A 独立实拉首读，此前未读）
+
+- **原文事实**：AgentCore Runtime 每次更新自动生成**新的不可变版本**（"Versions are immutable once created"），且**每个版本自带完整自包含配置**（"Each version contains all the configuration needed for execution"）。端点层有两条路径：`DEFAULT` 端点**自动指向最新版本**；具名端点（如 `production-endpoint`）**必须显式更新才换版本**。
+- **判据**：
+  - **"最新版"是一个会自己动的目标，不能当生产依赖**：默认/隐式指向 latest 的入口，等价于把"什么时候变更"这个决定权交给上游；对外承诺稳定性的入口（生产、发布、对外契约）必须钉**具名版本**，升级是显式动作。
+  - **可回滚的最小单位是"版本"不是"补丁"**：版本不可变 + 自包含，回滚＝把端点指回旧版本号，而不是"把改动改回去"。判据＝**这次回滚需不需要重新拼出旧状态**；需要拼，就说明当时没留不可变快照。
+  - **环境差异靠多个端点表达，不靠多份配置**：dev/staging/prod 各指向不同版本，同一份不可变版本可被多个端点引用；**改环境 = 改指针，不改内容**。
+  - **"更新了"不等于"对外生效了"**：更新动作改的是版本集合，端点不动则调用方看到的仍是旧版。发布收尾要核对**端点现在指向哪版**，不是只核对有没有新版本。
+- 与 §破坏面评估 分工：那条管"升不升、破坏面多大"，本条管"升完之后谁在跟最新版、回滚往哪回"。
+- 反模式：生产入口挂着 `latest`/`DEFAULT`；只记录"更新过"不记录"指到哪版"；回滚靠人肉重放改动；每个环境复制一份配置而不是共用一个不可变版本。
+- **提升层**：工作流（发布与回滚路径）+ 可复用 Skill（技能/依赖的版本钉法同样适用——引用固定版本，不跟 latest）。
+- 触发词：默认端点、跟最新版、latest 上线、版本钉死、具名版本、回滚到哪一版、不可变版本、环境指针、发布后没生效、自动漂移
