@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体
-version: 1.36.0
+version: 1.38.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -349,3 +349,134 @@ version: 1.36.0
 - **发送前数 token（token counting 前置）**：请求发出前先数一遍 token，prompt 膨胀在构建时发现，而不是在账单上发现。判据：**"发送前测量"成为流水线一步，不依赖事后看费用**。
 - 反模式：前缀里混入每轮变化的时间戳/随机串；中途编辑旧前缀；会话隔几小时再续跑还指望缓存命中。
 - **提升层**：工作流（成本布局）。
+
+## 脚本输出隔离：确定性操作打包成脚本，代码永不进上下文，只回输出（来源：Anthropic Agent Skills 官方文档 docs.anthropic.com 2026-09-23 实拉）
+原文：When Claude runs validate_form.py, the script's code never loads into the context window. Only the script's output (like "Validation passed" or specific error messages) consumes tokens.；No practical limit on bundled content: Because files don't consume context until accessed, Skills can include comprehensive API documentation, large datasets, extensive examples...
+
+- **确定性操作一律脚本化，运行时只回输出**：校验、转换、提取、批量处理这类不需要模型判断的活，写成脚本由执行环境跑——**脚本代码本身不进上下文，只有输出（"Validation passed"/错误消息）消耗 token**。→ 判据：**"让模型生成等价的临时代码"是双倍浪费**——既烧生成时的思考 token，又烧把代码读进上下文的 token；预置脚本一次打包，每次调用只付输出费。
+- **资源打包零上下文代价**：API 文档、数据库 schema、大示例、参考数据可以**直接捆绑进技能/工具目录**——文件在访问前不占上下文，按需读取单个文件。→ 判据：**"会不会把上下文撑爆"不是捆绑资源的理由**——不进上下文的资源不花钱，只有被读进窗口的那部分才花钱。
+- **与 §程序化串联的分工**：那条管"流程上模型只在需要判断的环节出现"（编排层）；本条管"单个确定性环节内，代码不进上下文只回输出"（调用层）——两者叠加才是"模型只做判断"的完整实现。
+- 反模式：每次让模型现写解析/校验代码而不是调用预置脚本；把大参考文件直接贴进 prompt 而不是放目录按需读；因为"文件太大"不敢打包明明可以按需读的资源。
+- **提升层**：工具 / 可复用 Skill（token 结构节省）。
+## 记忆 token 分层 + agent 工具化迁移：core 常驻保持小，迁移是工具调用不是批处理（来源：Letta（原 MemGPT）官方文档与 2026-09 实拉、aiworkflowlab《Mem0 vs Letta vs Zep》2026-05-25 + RockB《Agent Memory Frameworks 2026》2026-04-15）
+原文：Letta uses an OS-inspired three-tier architecture: core memory (always in-context, like RAM — the agent always sees this), recall memory (recent conversation history stored outside context but searchable, like cache), and archival memory (unbounded external store the agent queries on demand, like disk). Agents actively manage transitions between tiers by calling built-in memory functions.（core 约 2k tokens）
+
+- **三层记忆按 token 代价分层**：**core（常驻、保持小，~2k，agent 始终可见）** / **recall（历史，在上下文外但可搜索）** / **archival（无限外存，按需查询）**——常驻部分只有 RAM，其余都放"磁盘"按需取。→ 判据：**常驻量是硬预算**——塞进 core 的每一条都占每个 turn 的 token，宁可放 recall/archival 按需检索。
+- **层间迁移是 agent 的工具调用，不是定期批处理**：agent 用内置记忆函数（read/write/edit memory）在运行时主动分页自己的上下文——**self-editing**，而不是等"定期整合"批处理。→ 判据：**记忆管理的颗粒度是"某个时刻需要什么"，不是"某个周期整合一遍"**——批处理式整合（ctx §两级沉淀）适合提炼沉淀，工具调用式迁移适合运行时按需装载，两者互补。
+- 与 ctx §两级沉淀的分工：那条管"日志→长期记忆的沉淀时机与判据"（整理层）；本条管"常驻/可搜/按需三层的 token 预算与运行时装载"（预算层）。
+- 反模式：把大量偏好/历史塞进常驻上下文"图省事"（每 turn 都在烧 token）；记忆只进不出（core 无限膨胀）；非要等"整合时间"才动记忆，而不是按需工具调用。
+- **提升层**：工具 / 工作流（记忆 token 预算）。
+## 推理模型提示反向原则：三删 + effort 控深度，与标准模型 CoT 策略相反（来源：MasterPrompting《Prompting Reasoning Models: o1, o3, Claude Extended Thinking》2026-02-27 + SurePrompts《7 Principles》2026-04-12 + GitCodar 2026-06-28 实拉）
+原文：Stop saying "think step by step" — with reasoning models, they're already thinking step by step internally. Repeating this instruction is redundant and may interfere with the model's natural reasoning process.；Let the model choose its approach；Use effort as a fallback — control depth via the effort parameter (low/medium/high/max).
+
+- **对推理模型：删掉 step-by-step 与推理脚手架**——推理模型内部已在分步思考，重复指令冗余甚至干扰；预设框架（"用 SWOT 分析"）变成能力天花板。→ 判据：**标准模型要"逼它想"，推理模型要"别挡它想"**——同一句话在两类模型上是相反效果。与 §零样本 CoT 的分工：那条管标准模型上 CoT 的成本权衡（贵 2-30 倍换 15-40% 准确率）；本条管推理模型上的反向纪律（不加脚手架、让模型自选方法）。
+- **用 effort 参数控深度，不用文字催**：推理深度用 easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文字催"更仔细地想"。→ 判据：**深度是配置不是修辞**——想改深度改参数，改 prompt 既不可控又占 token。
+- 反模式：给推理模型贴"think step by step"（冗余且干扰）；预设分析框架限死模型选择（框架=天花板）；用长篇"请深入思考"文字催深度（应调 effort）。
+- **提升层**：提示工程 / 输出（推理 token 管理）。
+## 检索上下文排序与预算：top-few 硬预算 + 关键放首尾（lost in the middle）（来源：Levelop《LLM Context Window: What Works in Production》2026-07-30 + ApX《Long Context Management with Large Retrieved Datasets》2026-09-20 实拉）
+原文：Set a hard token budget for retrieved context and enforce it；it's often beneficial to place the most relevant documents or text chunks either at the very beginning or the very end of the context（对抗 lost-in-the-middle 效应）。
+
+- **检索内容设硬 token 预算，只留 top few 不是 top fifty**：检索回的块按相关性排，只取前几个，总 token 上限硬执行——demo 与生产的差别就在这里。→ 判据：**检索量的判据是"预算"，不是"相关性排序到多少位"**；超过预算宁可少给，不给到截断。
+- **关键内容放上下文开头或结尾**：模型对中间的注意最弱（lost in the middle），最重要的文档/块放最前或最后，对抗注意力衰减。→ 判据：**排序本身是质量杠杆**——同样的内容，放在中段和放首尾效果不同；组装上下文时按重要性排位，不是按检索顺序原样塞。
+- 与 §成本四层/上下文预算的分工：那条管"每层怎么省 token"；本条管"检索来的上下文怎么排位、卡多少预算"——省下的 token 要花在最容易被注意到的位置。
+- 反模式：检索回 50 块全塞进去（超预算被截断，反而降质量）；按检索分数顺序原样排列（最相关的可能沉在中段）；省 token 时把关键块裁掉。
+- **提升层**：工具 / 工作流（检索上下文组装）。
+## System prompt 分层预算：identity/capability/behavioral/context 各层容量不同（来源：Blck Alpaca《System Prompts for Agents: 12 Design Patterns》2026-06-09 + Zylos《Prompt Engineering for AI Agent Systems》2026-03-30 实拉）
+原文：Identity 50-200 tokens / Capability 800-2,000 tokens（含工具 schema）/ Behavioral 200-600 tokens / Context 100-400 tokens（动态）。
+
+- **system prompt 按四层组织，各层有不同 token 预算**：**identity（角色/领域/边界 50-200）**轻量锚定防角色漂移；**capability（可用工具与何时用 800-2000，含 schema）**是大头但只写"工具做什么、什么时候优先用哪个"，不写实现；**behavioral（输出格式/风格/Never X 200-600）**；**context（日期/用户/活动工作流 100-400）动态变化**。
+- **动态层必须放最后且最小**：context 层是唯一每轮变的——与 §Relocation Trick 同源，动态内容放尾部避免污染前缀缓存；budget 上动态层最小化，静态层一次写够。
+- 判据：**加 system prompt 内容先问"它属于哪层、这层预算还有没有"**——把工具实现细节塞进 identity 层、把每轮变化塞进 capability 层，都是层错位，既涨 token 又降稳定。
+- 与 r140-A §技能三级加载分工：那条管"技能文件怎么分层加载（元数据 100t 常驻/正文按需）"；本条管"system prompt 本体怎么分层分配预算"。
+- 反模式：identity 层写成长篇人设；capability 层堆工具调用示例；behavioral 层塞任务上下文；context 层放回静态规则。
+- **提升层**：工具 / 可复用 Skill（提示结构预算）。
+## 记忆写入时序：先响应后提取，提取用便宜模型，收尾合并 session→global（来源：Ascheriit《AI Memory Systems for Long-Running Agents》2026-07-02 + OpenAI Agents SDK《Context Engineering for Personalization》2026-01-05 实拉）
+原文：Extraction adds latency; users should receive the response first；SHOULD use a cheap, fast model for extraction (Haiku, gpt-4o-mini) rather than the primary generation model. Extraction is a classification/parsing task, not a reasoning task；收尾 Consolidate session memories into global memory. Deduplicate overlapping notes. Resolve conflicts using recency wins. Clear session memory so the next run starts clean。
+
+- **记忆提取绝不阻塞用户响应**：提取加延迟，用户应先收到响应——提取放到响应之后异步做。→ 判据：**响应路径和记忆路径是两个通道**，记忆提取不得插入主链路。
+- **提取用便宜模型**：提取是分类/解析任务不是推理任务——用 Haiku/gpt-4o-mini 级别，不让生成模型兼职。→ 判据：**任务的"难度定档"先于模型选择**——与 §模型分派"机械执行给便宜模型"同源，记忆提取是典型机械档。
+- **收尾合并 session→global：去重 + 冲突 recency wins + 清空 session 下次干净起跑**——形成可重复循环：注入 → 推理 → 蒸馏 → 合并。
+- 与 ctx §记忆提取四策略/两级沉淀分工：那条管"**提取什么、什么时候提取**"（策略+校验）；本条管"**提取的时序与成本**"（响应后异步 + 便宜模型 + 收尾合并）。
+- 反模式：主模型每次对话边答边存（延迟+贵）；提取塞在主响应前；session 笔记从不合并、越攒越大。
+- **提升层**：工作流 / 可复用 Skill（记忆写入时序）。
+## 代码库上下文：repo map（AST+PageRank+token 预算）+ launch point 决定可见性（来源：Agent Patterns《Repository Map Pattern》2026-09-15 + 13labs《Codebase Too Big》2026-08-11 + Aider repo map 2026-09-15 实拉，与 §检索上下文排序 互补——那条管"结果怎么排/预算怎么定"，本条管"代码库结构怎么进上下文"）
+- **repo map pattern**：tree-sitter 解析出符号（函数/类/方法）+ 调用边与导入边 → **PageRank 算符号重要性**（偏向任务提到的文件）→ **binary-search 把最高排名符号的签名塞进 token 预算** → 每次动作前先读 map 再读代码。→ 判据：**上下文里放"哪些符号存在、怎么连"，不放实现细节**；目录列表/文件样本/关键词 grep 是低信号高浪费。
+- **launch point 决定可见性**：从最窄子目录启动 agent（如 packages/api/），加载该目录及其祖先的说明、不加载兄弟包——**"你在哪启动，它就能看见什么"**。
+- **显式 file set**：提示词点名涉及的文件，胜过让 agent 自己探索。
+- 与 §三级加载（L1 元数据/L2 摘要/L3 按需）合流：repo map 是代码库版的"L1 结构地图"——**先给骨架再按需取肉**。
+- 反模式：整个仓库塞进上下文；靠目录树猜依赖；agent 从仓库根启动结果被兄弟包指令污染。
+- **提升层**：工具 / 工作流（代码库上下文加载）。
+## 工具输出落库指针 + 按需检索召回：大输出不进上下文，进可检索库（来源：GitHub context-mode（Claude Code 上下文治理，2026-06）+ X-CMD 指南 2026-09-07 实拉；与 §脚本输出隔离 互补——那条管"脚本代码永不进上下文只回输出"，本条管"输出比摘要大时怎么办"）
+- **原始输出留在沙箱/子进程/本地库，上下文里只放一行指针**：工具输出落 SQLite（FTS5 全文索引），模型需要数据时用 BM25 检索召回命中片段，不是把整份输出塞回。实测工具输出压缩约 98%。
+- **会话续接同样走检索**：文件编辑、git 操作、任务状态、错误、用户决策全部写入本地库；会话 compact 后**不把整条历史塞回上下文**，用 FTS5+BM25 只召回与当前问题相关的事件。→ 判据：**"存起来"不等于"塞回去"**——持久化的是可检索库，不是待重放的完整转录；重放整条历史=把压缩省的 token 又花回去。
+- **一次批量调用替换多次单步调用**：ctx_batch_execute 一类批处理入口，把 30+ 次工具调用合并为一次调用（结果仍走落库指针）。
+- 与 §脚本输出隔离的分工：那条管"代码不进上下文"，本条管"**输出不进上下文但保证可召回**"；输出小→直接回传（走那条），输出大/需要跨轮追溯→落库指针（走本条）。
+- 反模式：把大输出摘要后丢进上下文（丢失可召回性）；把落库内容整段重放（token 白省）；只存不建索引（存了也找不到）。
+- **提升层**：工具 / 可复用 Skill（输出与上下文的隔离通道）。
+## 精简优先的实证：Claude Code 删掉 80% system prompt 而无评估损失（来源：Anthropic Context Engineering Guide（Claude 5 代）2026-07-24 实拉；与 §system prompt 分层预算 互补——那条管"各层给多少预算"，本条管"预算本身该不该这么大"）
+- **巨指令块不是能力的来源**：Anthropic 对新一代 Claude 删掉 Claude Code 超过 80% 的 system prompt，评估无可见损失——高绩效 agent 的形态是**精简提示 + 更好工具 + 渐进披露 + 记忆 + 结构化引用**，而不是把行为规则全写进提示词。
+- 判据：**新增一条指令前先问"这条能不能由工具描述 / 记忆 / 引用承担"**——提示词里每多一行硬规则，都是对每轮上下文的税；能用结构替代的指令不写进提示词。
+- 与 §分层预算的分工：那条管"身份/能力/行为各多少字合适"，本条管"**总量本身要持续瘦身**"——预算分配不解决"预算过大"的问题。
+- 反模式：靠堆行为规则提升质量（评估往往无收益还拖慢每轮）；把工具能表达的能力写进 system prompt 重复声明。
+- **提升层**：模型 / 工具（提示词瘦身的实证依据）。
+
+## 上下文注入顺序：关键信息放首尾，中间是注意力盲区（来源：Liu et al. 2023《Lost in the Middle》+ 2026 长上下文评测综述（U 型曲线收窄但未消除）2026-07 实拉；与 §只注入相关信息 互补——那条管"注入什么"，本条管"注入的顺序"）
+- **注意力呈 U 型**：关键信息在长上下文首尾时召回最好，在中间系统性下降——2026 前沿模型中间凹陷收窄但未消除。**有效上下文不随长度均匀**：塞得进窗口 ≠ 用得起来。
+- **注入时主动重排**：把最相关的证据/指令放在开头或结尾，别让关键信息埋在中段；多文档时按相关度排布而非按源顺序。
+- 判据：**上下文组装是一次排序决策，不是拼接**——谁放首、谁放尾、谁进中间，直接决定模型能不能用上它；"更多 token 不等于更好答案"。
+- 与 §检索排序预算的分工：那条管"召回多少条"，本条管"召回后怎么排进上下文"。
+- 反模式：按抓取/拼接顺序原样塞入（关键证据随机落在中段）；把要模型重点处理的指令夹在长文档中间。
+- **提升层**：工具 / 工作流（上下文注入质量）。
+## 记忆读取按需触发 + 摘要锚点定向：不 always-on 检索，不确定才查（来源：Oblivion《Self-Adaptive Agentic Memory Control》arXiv 2604.00131 + HiGMem arXiv 2604.18349 2026-08 实拉；与 §记忆写入时序 互补——那条管"什么时候写"，本条管"什么时候读"）
+- **读路径与写路径分开设计**：读路径根据 **agent 不确定性和记忆缓冲充分性**决定何时查记忆，避免冗余的 always-on 访问；写路径只强化**实际贡献了响应的记忆**（不是全记）。
+- **摘要做语义锚点**：先看高层事件摘要，用摘要预测哪些相关轮次值得读，再定向读取那一小簇——比全量向量检索便宜且证据更可靠（HiGMem 实测避免过高检索开销）。
+- **遗忘=可及性衰减，不是删除**：记忆控制靠衰减驱动降低可及性（读不到了但还在），而非显式删除——与 r135-C ADD-only 软衰减同源合流。
+- 判据：**"每轮都查记忆"和"从不查记忆"一样是错的**——只有"不确定答案/当前缓冲不足"时才触发检索；查之前先看摘要锚点缩小范围。
+- 反模式：把全部记忆向量化每轮检索（贵且噪声）；凭感觉随手查（该查不查/不该查乱查）。
+- **提升层**：工具 / 工作流（记忆检索成本控制）。
+
+## 上下文作为演化工件：轨迹提炼教训→结构化增量更新，防内容崩溃（来源：ACE《Agentic Context Engineering》ICLR 2026 + Meta Context Engineering arXiv 2601.21557 2026-08 实拉；与 §prompt 版本生命周期 互补——那条管"版本怎么管"，本条管"内容怎么演化"）
+- **上下文是"演化剧本"不是一次性写的**：三角色流水线维护——**Generator**（用当前上下文解新问题并留全轨迹）→ **Reflector**（审轨迹，提炼成功实践+失败的具体教训）→ **Curator**（把教训转成**结构化局部增量 deltas** 追加/修改上下文）。
+- **增量更新防崩溃**：反复整段重写会让知识丢失、语义漂移；结构化小步追加/修改保留详细知识——"离线（system prompt）和在线（会话上下文）都可以演化"。
+- 判据：**教训进上下文要走"提炼→增量"两步，不是把失败原文贴回去**——贴原文=上下文膨胀；提炼成 deltas=知识累积。
+- 反模式：跑完任务把整个轨迹写进记忆（膨胀）；每轮整段重写 system prompt（丢失积累）；失败教训不落上下文（下次同错）。
+- **提升层**：工具 / 工作流（上下文自我演化）。
+## 样例驱动渐进式引导：让 AI 从样例归纳方法论，人只判断对错（来源：WaytoAGI 文章精选·一泽 Eze《样例驱动的渐进式引导法》2026-07-04 实拉；与 §精简优先实证 互补——那条管"提示词总量怎么瘦"，本条管"提示词怎么从样例生成"）
+- **不给规则给样例**：把 2-3 个理想输入输出样例交给 AI，让它自己从表象里**归纳出方法论**（逻辑分析+抽象总结），用户只对归纳出的方法做对错判断，零星提意见。
+- **迭代回路**：AI 基于用户判断持续反思，总结出更优质的内容生成方法与要求——提示词不是一次写成的，是"样例→归纳→人验收→再归纳"滚出来的。
+- 判据：**"从样例反推方法"比"描述想要什么"门槛低**——描述想要什么需要你先想清楚规则，给样例只需要你选出好例子；AI 负责归纳，人只做验收者。
+- 反模式：直接要求 AI"写个提示词"（它只能泛泛而谈）；用户逐条教规则（把归纳工作揽回自己身上）。
+- **提升层**：可复用 Skill（提示词生成方法）。
+## 上下文显式分节标签：系统指令/检索上下文/对话摘要分块标注，不混单块（来源：maraj.ai《Context Engineering Playbook》2026-04 实拉 + agentpatterns.ai《Context Engineering》2026-05 实拉；与 §上下文注入顺序（U 型注意力置首尾）互补——那条管"各块排在哪"，本条管"各块长什么样、怎么标注"）
+- **完整上下文按显式、带标签的节组织**：[SYSTEM INSTRUCTIONS]（身份/行为/约束）、[RETRIEVED CONTEXT]（按相关度排序的文档）、[CONVERSATION SUMMARY]（历史摘要）——**不要把系统指令、检索内容、对话历史混进一个无区分的大块**。
+- **分节的价值在可定位与可隔离**：模型能区分"这是规则、这是材料、这是历史"，检索注入与对话历史不会淹没指令；后续新增上下文往对应节里放，不重排其他节。
+- **每节内部再排序**：检索节内部按相关度从高到低，最关键的放节首——分节解决"混在一起"，排序解决"节内先后"。
+- 判据：**上下文组装先分节再排序**——分节是结构决策（哪些信息类别该有独立身份），排序是顺序决策（同节内谁先谁后）；两者独立可调。
+- 反模式：全上下文一个大 prompt 块（模型无法区分规则与材料）；给检索节也塞对话历史（隔离失效）。
+- **提升层**：工作流 / 可复用 Skill（上下文组装结构）。
+## 技能加载会话快照：清单会话内定格，变更才刷新（来源：OpenClaw 官方 docs.openclaw.ai·	ools/skills，2026-09 实拉；与 §只注入相关信息 分工——那条管"每轮注入多少"，本条管"技能清单多久重扫一次"）
+- **session 启动时快照 eligible skills 列表，整个 session 复用**：不会每轮重新扫描全部技能——**技能清单是会话级常量，不是每轮变量**。
+- **仅两类事件触发 mid-session 刷新**：① 某个 SKILL.md 文件被修改（watcher 检测）；② 新的 eligible remote node 接入。刷新后的列表**下一 turn 生效**，不打断当前 turn。
+- 判据：**清单定格省的是"反复重扫"的固定成本；变更触发保的是"改完能立刻用上"**——两件事拆开：不因省重扫而错过更新，也不因怕错过更新而每轮重扫。
+- 反模式：每轮都重扫全部技能（把固定成本变成每轮成本）；或反过来整个会话死锁旧清单（改了 SKILL.md 也不刷新）。
+- **提升层**：工作流（技能加载成本控制）。
+
+## 第三方技能选型三判据：安装量/来源信誉/源仓库热度（来源：skills.sh ercel-labs/skills/find-skills，2026-04 实拉；与 WB ctx 工具面安全分工——那个管"装完怎么防注入"（审 description/同名拦截），本条管"装之前先筛掉低质量的"）
+- **装任何第三方 skill 前先过三键**：① **安装量**——1K+ 安装优先，<100 要谨慎（几乎没人用的东西多半有坑）；② **来源信誉**——官方源（vercel-labs/anthropics/microsoft 等）> 未知作者，作者维度先于内容维度；③ **源仓库热度**——回查源仓库 stars/维护活跃度，README 与 issue 是真实质量信号。
+- **三键是过滤器不是证明**：三键全绿只说明"值得进一步看内容"，不替代内容审查（SKILL.md/脚本逐行读、测跑）；三键任一红则默认不装。
+- 判据：**先筛"值不值得看"，再谈"内容安不安全"**——把质量门槛前置到选择阶段，而不是装上后才发现是垃圾。
+- 反模式：看见 description 诱人就装（标题党）；只看 stars 不看作者（刷星仓库）；装了之后才发现缺维护/有坑（选择阶段没筛）。
+- **提升层**：工作流 / 可复用 Skill（技能引入门槛）。
+## 注入出口检测两法：canary 被动证据 + LLM 主动检测器（来源：rapidclaw《Prompt Injection Defense 2026 Playbook》+ Zylos《Defensive Prompt Engineering for Multi-Tool AI Agents》2026-05 实拉；与 WB ctx 工具面安全分工——那个管"入口防注入"（预检清单/审 description），本条管"出口抓已成功的外泄"）
+- **canary token（被动证据，零成本）**：在 system prompt 埋一个唯一、不可猜的字符串，它没有任何正当理由出现在输出、工具调用参数或外发网络请求里——一旦出现，就是**成功外泄的证明**，即使攻击本身是全新的。它把检测问题从"识别所有攻击载荷"（不可能）变成"识别这一个字符串"（平凡）。
+- **LLM 检测器（主动拦截）**：用独立 LLM 当注入检测器审输入，AgentDojo 基准实测（GPT-4o/o4-mini 作检测器）误报/漏报 <1%，移除被检注入后下游攻击成功率 <1%。检测器只审不执行，与被检 agent 模型隔离。
+- 判据：**canary 抓"已经漏了"，检测器抓"正在进来"**——两者互补不替代；canary 成本≈0 常驻，检测器只在敏感入口启用（有额外延迟成本）。
+- 反模式：只装检测器不埋 canary（新攻击载荷检测器可能认不出，没有任何兜底证据）；或只埋 canary 不设入口过滤（漏进来已发生，只能事后证明）。
+- **提升层**：工具 / 可复用 Skill（安全面）。
+
+## 主张级可审计四维（deep research 引用的可审计标准）：来源覆盖/来源健全/矛盾透明/审计成本（来源：arXiv 2602.13855《From Fluent to Verifiable: Claim-Level Auditability for Deep Research Agents》2026-09 实拉；与 ED 引用纪律分工——那个管"引用必须真实可查"，本条管"报告产出怎么证明每条主张都有出处"）
+- **主张级（claim-level）可审计，不是段落级**：报告里每条事实性主张单独挂来源——"这条结论由哪几条来源支持"可逐条回答。
+- **四维测量**：① **provenance coverage**（多少主张有来源覆盖——没覆盖的裸主张是首要风险）；② **provenance soundness**（来源真的支持该主张吗——有来源但不相干的比没来源更误导）；③ **contradiction transparency**（来源间矛盾是否显式标出，而不是挑一边藏一边）；④ **audit effort**（第三方核验这份报告要花多少力气——审计成本是报告质量的一部分）。
+- 判据：**"有引用"不等于"可审计"**——引用存在只满足第一维；全部主张能逐条回答"谁支持、支持什么、有没有矛盾、核验要多快"才叫可审计。
+- 反模式：报告末尾堆参考文献但正文主张找不到对应条目；来源与主张相关性靠感觉；来源间打架时不标冲突；核验需要重跑整个研究过程。
+- **提升层**：工作流 / 可复用 Skill（研究报告产出标准）。

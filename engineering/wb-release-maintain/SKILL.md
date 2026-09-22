@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续
-version: 1.2.0
+version: 1.3.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -75,3 +75,10 @@ sources:
 - **作用域要跟着版本一起写**：Opik 2.0 起数据集与实验是 **project-scoped**，创建时必须指定 `project_name`。判据：**版本号的命名空间要显式声明**，否则同名版本在不同项目下会互相覆盖或找不到。
 - 与 §版本是不可变自包含快照 + 端点决定谁跟最新版 分工：那条管**产物版本与端点指向**（发布面）；本条管**输入/评测集版本与抽样可复现**（复现面）。发布能回滚不等于结果能复现——两件事各需要一套版本。
 - 触发词：输入集版本化、评测集版本、复现门票、未版本化不许续、project-scoped。
+## 幂等键的并发语义：默认隔离级别只防顺序重放，不防并发覆盖；真串行化必须显式配锁（来源：Prefect 官方 `docs.prefect.io/v3/advanced/transactions#idempotency` 2026-09-23 r147-A 独立实拉首读，清单外新信源）
+- 同一 key 的「已提交记录」是幂等判据（`is_committed()` 命中即早退），但它只保证顺序执行的幂等；默认隔离级别 READ_COMMITTED 下，两个同 key 的并发执行会互相覆盖记录，谁先写完算谁的——"保证只执行一次"的默认实现并不防并发。
+- 要真正防并发，必须显式把 `isolation_level=SERIALIZABLE` 且同时提供 `lock_manager`（内存 / 文件 / Redis 三选一）；只设隔离级别不配锁会静默退化成不防并发。
+- 复现 / 重放的门票结论同源延伸：版本化数据集 + 锁，二者缺一则"可重放"是假的。
+- 触发词：幂等键、隔离级别、SERIALIZABLE、race condition、lock_manager。
+- 提升层：工作流（可复现 / 重放的安全前提）。
+
