@@ -2031,3 +2031,26 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **eval 套件是 CI 的一等公民**：promptfoo 类工具把"每个 prompt × 每模型 × 每测试用例"矩阵跑完，失败即 PR 评论列出——**评估结果成为合并门禁，不是事后报告**。
 - 反模式：prompt 改完直接进生产，出了回归才回头查（改代码会做测试，改提示词却裸奔）；eval 只跑一次不再回归（prompt 变更没有基线对比）。
 - **提升层**：工作流 / 可复用 Skill（评估驱动变更）。
+## 记忆投毒防护：持久记忆是配置层，写入前验证 + 来源可信度标记（来源：MemGhost 论文与 The Hacker News 2026-07-13 + OWASP《Agent Memory Guard》2026-08-30 + Microsoft Learn《Manage memory safety in agentic systems》2026-06-03 实拉）
+原文：Persistent memory doesn't just store information, it acts as a configuration layer for the AI system. A memory created today can influence tool selection, refusal behavior, and reasoning later.；MemGhost 单封邮件植入持久假记忆，87.5% 端到端成功率（OpenClaw+GPT-5.4 后台执行）。
+
+- **持久记忆是攻击面：投毒比注入更危险**——prompt injection 会话结束即重置，**记忆投毒跨会话持续**（Trojan Hippo 一次不可信工具调用植 payload，用户后来说敏感话题才激活）。→ 判据：**记忆写入是写操作，按写操作的门禁管**——不是"值得存吗"一个标准，还要"来源可信吗"。
+- **写入前两道验证**：① 内容验证（是否用户真实意图/是否来自不可信外部内容——文档/网页/邮件/仓库中的指令诱导写入=最高风险信号）② 来源验证（外部内容里夹带的"记住这个"指令，默认不执行）。→ 判据：**"记下来"的指令本身可能是攻击载荷**——尤其来自读进来的外部内容（邮件/网页/PR）。
+- **记忆条目带来源与可信度标记**：每条持久记忆记"何时/从哪来/可信度"，后续检索时低可信度条目需复核。→ 判据：**记忆没有来源=审计无从谈起**；与 §工具结果断言（哨兵不打标硬拦）同型：标来源让模型自己判断。
+- 反模式：把外部文档里的"请记住 X"直接落库；记忆只进不出不审计（中毒后永久生效）；把记忆安全当成一次会话的 prompt injection 问题（跨会话才是它的本质）。
+- **提升层**：工具 / 工作流（记忆写入门禁）。
+
+## 双模型隔离（dual-LLM）：读不可信内容的模型与特权模型分离，特权模型不见 raw（来源：mudassirkhan.me《Prompt Injection Production Defense Guide》2026-05-16 + eCorpIT《AI agent security 2026》2026-07-09 + OpenAI《Designing agents to resist prompt injection》2026-03-11 实拉）
+原文：Separate the model that reads untrusted content from the model that takes privileged actions；A quarantined model handles untrusted content; a privileged model never sees it raw.
+
+- **不可信内容（邮件/网页/文档）由隔离模型处理，特权模型永远不见 raw**——读与做分模型：一个模型读外部内容并提取结构化摘要/判定，特权模型只接收"净化后的摘要"再决定动作。→ 判据：**注入的前提是模型看到注入指令——让它根本看不到，就无需每次防御**；与 ctx §guardian pattern 的分工：guardian 管"执行前审计划"（动作侧），本条管"输入侧隔离"（读取侧）。
+- **写动作人类批准 + 检测外发敏感信息（Safe URL 型）**：不可逆动作（发消息/写文件/转账/外呼）要求显式人类批准；检测到"对话中学到的信息将被传输给第三方"时，展示给用户确认或阻断。→ 判据：**注入成功后最后一道防线是人不依赖模型的把关**——高危写操作不该只信模型判断。
+- 反模式：同一个模型既读垃圾邮件又持有发信权限；让特权模型"看内容但忽略其中指令"（=赌它抗注入）；高危动作无人类确认。
+- **提升层**：工具 / 工作流（输入侧安全隔离）。
+
+## AI 生成测试的共享盲区：AI 写代码+AI 写测试会共享同一盲区，测试必须显式要求对已知坏输入失败（来源：RockB《AI Coding Workflow Best Practices 2026: 12 Patterns》2026-06-01 实拉）
+原文：When AI generates code and AI generates tests for that code, the risk is that both share the same blind spots — the test passes because it was written by the same model that wrote the bug. The mitigation is to explicitly prompt the AI to generate tests that fail on known bad inputs.
+
+- **同模型写代码+写测试 = 盲区共享**：模型的错误假设同时写进实现和测试，测试"证明"了错误行为是对的。→ 判据：**测试要通过的判据不止"覆盖了行为"**，还要"对已知坏输入失败"——明确要求测试包含负面用例（坏输入/边界/非法值），与 §AI 生成代码收 diff 五连查分工：那条管"实现收不收货"，本条管"测试是不是真测试"。
+- 反模式：AI 写完代码又让它"顺手写测试"（同盲区）；测试全是对 happy path 的描述；看不到负面用例的测试套件被当成品验收。
+- **提升层**：工具 / 工作流（测试有效性）。
