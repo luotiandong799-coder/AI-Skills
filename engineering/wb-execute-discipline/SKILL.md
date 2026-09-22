@@ -2079,3 +2079,18 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - 与 §eval 数据集纪律分工：那条管**数据从哪来**（真实失败）；本条管**分数怎么读**（基准=相对标尺，别当生产能力）。
 - 反模式：厂商报 87.6% SWE-bench 就认定生产强；拿基准排名当模型选型唯一依据；把基准分数直接当交付验收线。
 - **提升层**：工作流 / 可复用 Skill（评估读数）。
+## 多 Agent 通信压缩：只传接收面 action/state/artifact，不暴露完整生成转录（来源：arXiv 2606.05304《PACT: Protocolized Action-state Communication》2026 实拉）
+原文：projects each non-terminal agent's raw output into a compact public action-state message before it is appended to the shared history. Rather than exposing the sender's full generation transcript, PACT retains only the receiver-facing information needed for continuation: the action taken or required next, the task-relevant state, and the resulting artifact to be used downstream。
+
+- **agent 间消息只投影接收方需要的三件**：**已采取/下一步要求的动作 + 任务相关状态 + 下游要用的产物**——不把发送者的完整生成转录挂进共享历史。→ 判据：**通信内容是"下游要继续需要什么"，不是"上游怎么想的"**；完整推理链留在发送方本地，进共享历史的只有 action-state 投影。
+- 与 §多 Agent 协作纪律（接口契约）分工：那条管"**消息格式结构化、下游能解析**"；本条管"**消息里装什么**"——在结构化之上再砍掉接收方不需要的推理过程，既省共享上下文又防"一个 agent 的思考污染另一个的判断"。
+- 与 r140-C §双模型隔离同源但对象不同：那条管"**特权模型不见 raw 输入**"（模型层）；本条管"**agent 间消息不传完整转录**"（通信层）。
+- 反模式：A agent 把整个思维链+全部工具输出贴给 B；共享黑板越滚越大每个 agent 都读全量；下游 agent 被上游的废话带偏。
+- **提升层**：工作流（多 Agent 通信 / 上下文治理）。
+
+## RAG 新鲜度两档策略 + 三级监控：高利害每块 last_verified 定期重索引，其余指纹变化检测；固定调度合成健康检查（来源：Rag About It《7 RAG Failure Modes》2026-08-06 + 《5 Hidden RAG Pipeline Killers》2026-06-27 实拉）
+- **新鲜度按利害分两档**：高利害集合（合规/定价/合同）给**每块显式 last_verified 时间戳 + 定时重索引**；其余用**摄取时指纹 + 每周比对**——文档变了就作废其全部 chunk 排队重摄取。→ 判据：**新鲜度不是统一刷新频率，是"这个文档变错了要付多大代价"的函数**；高利害显式验证，普通轻量检测。
+- **三级监控**：① **合成健康检查**——固定调度（小时/日）跑一组规范查询对比已知 ground truth，告警条件：top-k 相关度跌破阈值 / 检索结果出现此前没有的新 chunk / 任阶段延迟超历史基线 2σ；② **组件级指标**——分离检索与生成（retrieval hit rate/recall@k/citation accuracy vs faithfulness）；③ **版本治理**——embedding/索引/chunking/摄取策略版本化，文档或模型更换时重评估。
+- 与 r141-A §eval 数据集纪律/§检索排序分工：那条管"**评测数据与排序预算**"；本条管"**上线后新鲜度与健康检查**"——构建期与运行期两条腿。
+- 反模式：全部文档统一每天全量重索引（贵且仍可能过期）；只在出事故后查检索；索引漂移了没人发现。
+- **提升层**：工作流（RAG 运行期运维）。

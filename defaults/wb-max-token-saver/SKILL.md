@@ -390,3 +390,12 @@ version: 1.36.0
 - 与 r140-A §技能三级加载分工：那条管"技能文件怎么分层加载（元数据 100t 常驻/正文按需）"；本条管"system prompt 本体怎么分层分配预算"。
 - 反模式：identity 层写成长篇人设；capability 层堆工具调用示例；behavioral 层塞任务上下文；context 层放回静态规则。
 - **提升层**：工具 / 可复用 Skill（提示结构预算）。
+## 记忆写入时序：先响应后提取，提取用便宜模型，收尾合并 session→global（来源：Ascheriit《AI Memory Systems for Long-Running Agents》2026-07-02 + OpenAI Agents SDK《Context Engineering for Personalization》2026-01-05 实拉）
+原文：Extraction adds latency; users should receive the response first；SHOULD use a cheap, fast model for extraction (Haiku, gpt-4o-mini) rather than the primary generation model. Extraction is a classification/parsing task, not a reasoning task；收尾 Consolidate session memories into global memory. Deduplicate overlapping notes. Resolve conflicts using recency wins. Clear session memory so the next run starts clean。
+
+- **记忆提取绝不阻塞用户响应**：提取加延迟，用户应先收到响应——提取放到响应之后异步做。→ 判据：**响应路径和记忆路径是两个通道**，记忆提取不得插入主链路。
+- **提取用便宜模型**：提取是分类/解析任务不是推理任务——用 Haiku/gpt-4o-mini 级别，不让生成模型兼职。→ 判据：**任务的"难度定档"先于模型选择**——与 §模型分派"机械执行给便宜模型"同源，记忆提取是典型机械档。
+- **收尾合并 session→global：去重 + 冲突 recency wins + 清空 session 下次干净起跑**——形成可重复循环：注入 → 推理 → 蒸馏 → 合并。
+- 与 ctx §记忆提取四策略/两级沉淀分工：那条管"**提取什么、什么时候提取**"（策略+校验）；本条管"**提取的时序与成本**"（响应后异步 + 便宜模型 + 收尾合并）。
+- 反模式：主模型每次对话边答边存（延迟+贵）；提取塞在主响应前；session 笔记从不合并、越攒越大。
+- **提升层**：工作流 / 可复用 Skill（记忆写入时序）。
