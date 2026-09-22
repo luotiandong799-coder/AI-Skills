@@ -1150,3 +1150,9 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - **好奖励函数三性质**：①测真实任务（不是代理指标）②难 hack/难游戏化 ③错时明显失败。判据：**奖励一旦可 hack，训练就是在优化打分表不是优化任务**——过度 shaping 会教模型优化 checklist。
 - **训练前人工核对**：把奖励函数跑在 50-100 个模型输出上，人工检查分数；奖励与判断不一致，先修奖励再训。判据：**奖励是训练的老师，老师错了学生全错**——先验 50-100 个样本的成本远低于训完才发现奖励坏了。
 - 提升层级：工作流（评测）。
+
+## 结构合规靠构造不靠重试：constrained generation 与语义第二层（来源：OpenAI Strict Mode + codercops《LLM Structured Outputs 2026》2026-05-10 + futureagi《Evaluating LLM Structured Output Modes》2026-05-20 实拉，与 §schema 校验互补——那条管“校验-重试”，本条管“结构层最优解与两层分工”）
+- **结构合规靠构造，不靠校验+重试**：constrained generation 在解码层把 token mask 到只有 schema 合法 continuation——结构违规在生成时物理不可能（conformance by construction）；普通 JSON mode 只保证语法合法不保证结构。判据：**要 100% 结构合规就选解码层约束，别把“校验+重试”当默认**——重试是应用层兜底，构造是结构层根治。
+- **schema 校验只保结构，语义正确性要第二层**：structurally valid 但语义错（priority:'urgent' 该选别的）是“wrong but valid”——靠 eval suite 抓，不靠 schema。判据：**两层职责分开**：schema 管形状，eval 管含义，缺第二层时合规率 99.4% 也救不了语义错。
+- **重试必须带错误反馈**：校验失败重试时把“哪里错了”喂回去，不是同 prompt 重发。判据：**无反馈重试=重复掷骰子**。
+- 提升层级：工作流（输出校验）。
