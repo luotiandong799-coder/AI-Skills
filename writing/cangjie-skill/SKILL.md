@@ -1,7 +1,7 @@
 ---
 name: cangjie-skill
 description: "Distill a book, long-video transcript, podcast, course, or interview into a coherent set of executable skills. Use when the user asks to 拆书 / 蒸馏一本书 / 把 XX 书做成 skill / 把这个视频/播客/课程蒸馏成 skill / turn a book or video into skills — i.e. wants the frameworks, principles, and methodologies in long-form content extracted into atomic, reusable Claude skills that an agent can invoke in real-world situations. NOT for simple summarization, book reviews, or role-playing as the author (that is nuwa-skill's job)."
-version: 2.5.0
+version: 2.5.1
 display_name: "仓颉Skill"
 display_name_en: "Cangjie Skill Factory"
 description_zh: "将书籍、长视频、播客或课程蒸馏为一组可执行技能。适用于拆书、蒸馏、把XX做成skill等场景，通过RIA阅读法提取框架、原则、思维模型和方法论，生成原子化可复用的Agent技能。"
@@ -20,6 +20,11 @@ visibility: "public"
 **边界**:
 - ✅ 做: 方法论 / 决策框架 / 清单 / 原则 / 概念体系的蒸馏
 - ❌ 不做: 书摘 / 读后感 / 作者人设角色扮演 (后者请用 nuwa-skill)
+
+**相邻分工（避免与 distill-cat 抢同一句触发词，双向边界，2026-09-24 WB 审计补全）**:
+- **书 / 长视频 / 播客 / 课程 / 媒体型访谈**（长内容 → 技能组重流水线）→ 本技能（RIA-TV++）。
+- **论文 / 会议记录 / 工作语境访谈 / 自己做过的工作**、以及**任何要给已有 skill 补「成长闭环」**→ `distill-cat`（通用五步流程 + 成长功能闭环）。
+- 撞车点「访谈」按语境切分：**公开长内容访谈（播客式 / 转写稿）归本技能**；**工作语境访谈 / 会议记录归 distill-cat**。两者都不做书摘、读后感、角色扮演。
 
 ## 核心方法论: RIA-TV++（v2.5 Bundle 版）
 
