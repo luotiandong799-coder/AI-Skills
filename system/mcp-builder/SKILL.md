@@ -1,7 +1,8 @@
 ---
 name: mcp-builder
-description: Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).
+description: Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).、工具过载、上下文爆、按需加载、渐进式发现、search_tools、catalog/inspect/execute、阈值切换、服务器按需连、代码模式、组合调用、沙箱执行、逐次授权、跨 server 不可信、MCP 调试、Inspector、stdio 日志、协议协商、server/discover、_meta 字段、-32022、-32602、-32021、启动路径
 license: Complete terms in LICENSE.txt
+version: 1.0.0
 ---
 
 # MCP Server Development Guide
@@ -234,3 +235,27 @@ Load these resources as needed during development:
   - XML format specifications
   - Example questions and answers
   - Running an evaluation with the provided scripts
+
+## 工具过载：渐进式发现优于一次性全量注入（来源：MCP 官方 docs.modelcontextprotocol.io client-best-practices，2026-09-23 r150 续跑独立实拉首读，清单外新信源）
+
+- **工具定义占上下文超过阈值就切换加载策略**：当已连接服务的工具定义撑满上下文窗口的 1%–5% 时，从"启动时全量注入"切到"按需发现"。判据：一个 agent 暴露几百个工具时，把所有 tool schema 一次性塞进 context 是反模式——浪费 token、拖慢、降质。
+- **三层 catalog/inspect/execute**：① 只暴露一个轻量 `search_tools` 元工具，返回名称+一行描述；② 模型选定后 `get_tool_details` 才拉全量 schema；③ 拿到完整接口后再调用，中间结果不进 context。
+- **发现策略按场景选**：关键词(BM25/regex) / 向量(语义) / 子代理(小模型选型) / 混合。平台自带 tool-search 时优先用平台能力，只在需要领域排序或权限过滤时才自建。
+- **服务器也按需连**：维护 server 注册表，`enable_server` 才连、`disable_server` 释放上下文；通用 agent 起步只挂少量常驻 server。
+- 与 §代码模式 的分工：本条管"工具定义怎么进 context"；§代码模式 管"多工具调用结果怎么不流经 context"。
+
+## 组合式工具调用：代码模式把中间结果挡在 context 外（来源：MCP 官方 client-best-practices，2026-09-23 r150 续跑独立实拉首读，清单外新信源）
+
+- **链式多工具调用改写成代码，在沙箱里跑，只回传最终摘要**：模型不再逐步调工具、把每个中间结果灌进 context，而是写一段脚本调 typed stub，沙箱执行、只把 `console.log` 的最终一行返回模型。示例：从日志筛错误→逐个建工单，几千条日志不进 context。
+- **沙箱三件套隔离**：① 无直接网络（所有外部通信经 host broker 转发，broker 做鉴权）；② 凭证由 host 持有，生成代码只调 typed 函数；③ 设超时/内存上限防失控。
+- **授权是逐次而非一次性**：批准脚本 ≠ 批准它运行时每个工具调用；broker 对每个调用仍按授权策略评估（可"本脚本内允许 X"的归类批准，但必须逐个评估）。跨 server 数据时，一 server 的结果是另一 server 的不可信输入，broker 对转发调用同样做输入审查，光截断输出拦不住外泄。
+- **错误处理**：MCP 工具错误以 `isError:true` 的成功响应返回，包装层应转成异常让模型 try/catch；脚本未捕获的错作为结果返回，让模型自纠并负责已提交的副作用。
+- 与 §渐进式发现 的分工：那条管"定义进不进 context"；本条管"调用结果过不过 context"。
+
+## 接协议类工具先上 Inspector，再看握手字段（来源：MCP 官方 docs.modelcontextprotocol.io/tools/debugging，2026-09-23 r150 续跑独立实拉首读，清单外新信源）
+
+- **调试 MCP 集成的第一站是 Inspector**：传输无关的交互式测试 UI，连 stdio 或 Streamable HTTP，调 tools/prompts/resources、看通知流。先它，再上客户端日志。
+- **日志落到 stderr（stdio 传输）**：本地 server 不要往 stdout 写日志（会干扰协议）；重要事件记启动步骤/资源访问/工具执行/错误/性能指标。Streamable HTTP 下 stderr 不被客户端捕获，改用服务端聚合或 OpenTelemetry。
+- **排障先看握手与协商字段**：① 协议版本不兼容 → 调 `server/discover` 看支持版本，不匹配报 `UnsupportedProtocolVersionError(-32022)`；② 每个请求必须带 `_meta` 的 `protocolVersion` 与 `clientCapabilities`（否则 `-32602` Invalid params）；③ server 要的能力客户端没声明 → `MissingRequiredClientCapabilityError(-32021)`。先核 `_meta` 与 `server/discover` 两端声明。
+- **常见启动坑**：command 用绝对路径（stdio server 的工作目录可能未定义）；env 只继承受限子集，缺变量显式在配置里给；JSON 非法/缺字段/类型不符是高频原因。
+- 与通用排障循环的分工：复现→最小化→假设→验证 管通用循环；本条管"接 MCP/协议类工具"这一子类特有的第一站与握手判据。
