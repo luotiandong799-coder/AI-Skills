@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体
-version: 1.42.0
+version: 1.45.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -600,3 +600,110 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - 与 §第三方技能选型三判据的分工：那条管"装之前怎么筛"（安装量/信誉/热度）；本条管"**harness 能力边界在哪、插件长什么样**"（形态）。
 - 反模式：只有工具能换、循环/调度写死；工具输出结构不声明（模型只能猜）；插件市场靠手工搬运。
 - **提升层**：工具（可组合架构理念）。
+
+## 长输入编排：文档置顶、query 置底（来源：Anthropic 官方 prompting best-practices Long context tips，platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices 2026-09-23 实拉；与 §上下文注入顺序分工——那条管"U 型注意力关键放首尾"（排位原理），本条管"大输入的具体摆法"（长数据置顶+query 置底））
+原文：For working with large documents or data-rich inputs (>20k tokens), structure your prompt carefully: Place long data near the top of the prompt, above the query, instructions, and examples. This improves performance across all models. Queries at the end can improve response quality.
+
+- **超 20k tokens 时：长数据放顶部、query 放底部**：文档/长输入放最前（在 query、instructions、examples 之上），查询句放最后——官方称全模型性能提升、末尾 query 改善响应质量。→ 判据：**大输入的组装顺序 = 长数据(顶) → 指令/示例(中) → query(底)**，不是按"先问题后材料"的自然顺序。
+- **与检索排序的分工**：检索排序管"多块之间谁先谁后"（相关度）；本条管"**大文档整体 vs 指令 vs 查询的三大块位置**"——层次不同，都做。
+- **与缓存布局的兼容**：长数据置顶与"静态前置动态后置"不冲突——文档是静态可缓存部分，query 是每轮动态部分，两者恰好各占一端。
+- 反模式：把 query 放最前、文档堆后面（模型读到 query 时还没看到材料，且长材料在中段被注意力弱区吃掉）；指令夹在长文档中间。
+- **提升层**：提示工程 / 工作流（长输入编排）。
+
+## 规则文件 200 行上限 + 按路径作用域拆分（来源：Claude Code Advanced Patterns 官方 PDF《Claude Code Advanced Patterns: Subagents, MCP, and Scaling to Real Codebases》2026-09-23 实拉；与 wb-doc-writing §膨胀是症状分工——那条管"术语表删到 lean 再拆"（内容面），本条管"指令/规则文件的规模上限与按路径作用域"（治理面））
+原文：Keep files < 200 lines. Longer files consume more context and can negatively affect instruction adherence.；Organize instructions into multiple files using the .claude/rules/ directory. Rules can also be scoped to specific file paths.
+
+- **指令文件 <200 行是硬上限**：超过 200 行的文件既耗更多上下文，又**降低指令遵从**（越长遵从越差）——不是"内容多所以长"，是"长度本身伤害遵从"。→ 判据：**规则文件超过 200 行先拆，不靠"内容都重要"辩护**。
+- **按路径作用域组织多文件规则**：用 .claude/rules/ 目录把指令拆进多个文件，并**按文件路径作用域**（某规则只对某目录/某类文件生效）——拆 + 作用域，不是只拆不加约束。→ 判据：**规则文件的组织单位是"路径+场景"**，不是"主题清单堆一起"。
+- 与 §技能三级加载的分工：那条管"技能文件元数据/正文/资源分层"；本条管"**规则文件的规模与作用域**"——技能文件是"怎么加载"，规则文件是"多大、管哪片"。
+- 反模式：CLAUDE.md/规则文件越写越长（遵从度悄悄下降）；把所有规则堆一个文件"图省事"；拆分后没有路径作用域（拆了还是每轮全量读）。
+- **提升层**：可复用 Skill（指令文件治理）。
+
+## 实现后独立评审子代理：不带实现上下文（来源：Claude 官方博客 claude.com/blog/subagents-in-claude-code 2026-09-23 实拉；与 wb-execute-discipline §步骤间质检-回退分工——那条管"每步之间过质检函数"（过程面），本条管"复杂实现完成后用无实现上下文的评审者"（收尾面））
+原文：Independent review. After implementing something complex, verification from a subagent that hasn't been influenced by the implementation journey catches what familiarity obscures. The review subagent evaluates the code without knowing what tradeoffs were considered, what approaches were rejected, or what assumptions were made.
+
+- **评审者必须与实现者信息隔离**：评审子代理**不知道**考虑过哪些 tradeoff、拒绝了哪些方案、作了哪些假设——不带实现旅程的旁观视角，专抓熟悉性盲区。→ 判据：**评审前问"这个评审者知道实现过程吗"**——知道得越多，评审越接近自查。
+- **复杂实现完成后必做独立评审**：实现越复杂，实现者越被自己的路径锚定——独立评审不是可选的质量提升，是收尾步骤。→ 判据：**"实现者自评通过"不替代独立评审**——自评带熟悉性偏差。
+- 与 §输出校验参数化 的分工：那条管"最终答案机器校验器"（规则/断言）；本条管"**人类视角的独立评审者**"（信息隔离）。
+- 反模式：让实现者自己评审自己的代码（锚定效应）；评审子代理带着实现的完整上下文（等于没隔离）；小改动也全套独立评审（成本不匹配）。
+- **提升层**：工作流（实现后独立评审）。
+
+## 代码执行 import 白名单：默认最小集 + 显式声明（来源：HF smolagents 官方 hf.co/blog/smolagents + noqta.tn 2026-09-23 实拉；与 §脚本输出隔离分工——那条管"代码不进上下文只回输出"（上下文面），本条管"生成代码能 import 什么"（执行面））
+原文：By default the interpreter blocks all imports except a small allowlist (math, statistics, datetime). Anything your tools rely on must be declared explicitly — this is what keeps generated code safe. (additional_authorized_imports)
+
+- **默认拦截全部 import，只留最小白名单**：解释器默认只允许 math/statistics/datetime——生成代码想用别的库必须显式声明。→ 判据：**代码执行环境的依赖面是"默认禁 + 显式开"**，不是"默认全开再拦"。
+- **工具依赖的包显式声明（additional_authorized_imports）**：agent 写代码调用工具所需的库时，把包名列进白名单——安全与能力之间是显式授权关系。→ 判据：**"代码能 import 什么"是配置不是约定**——靠 prompt 叮嘱"别乱 import"不可靠，白名单是执行层强制。
+- 与 §工具面安全（WB ctx 侧）的分工：那条管"工具描述注入/同名拦截"（工具面）；本条管"**代码 agent 生成的代码本身的 import 面**"（代码执行面）。
+- 反模式：代码执行环境全开 import（生成代码可以偷跑任意库）；靠提示词约束代码行为（执行层没拦，约束是纸的）；工具依赖不声明（运行时才发现缺库）。
+- **提升层**：工具（代码执行安全）。
+
+## 记忆摄取打分门控 + NO_INGEST 显式拒绝（来源：LangFlow 官方 docs.langflow.org/next/memory-bases 2026-09-23 实拉；与 ctx §记忆提取四策略分工——那条管"按类型提取+校验"，本条管"摄取前打分名单与显式拒绝协议"）
+原文：Durable preferences (tools, formats, constraints) / Active projects and milestones (goals, deadlines, multi-step work)；The batch has zero value if it consists entirely of: Transactional tech noise (stack traces, syntax-only debugging) / Conversational filler ("thanks", "got it") / Stale re-statements of facts already established；If the total score is 0, respond with exactly: NO_INGEST
+
+- **摄取前打分：正面两类 + 负面三类**：值得长期存的只有**持久偏好**（工具/格式/约束）与**进行中项目**（目标/截止/多步工作）；**事务性技术噪声**（堆栈、纯语法调试）、**对话填充**、**已有事实的陈旧重述**一律零值。→ 判据：**"要不要存"不是感觉，是打分**——候选片段先过名单，三类噪声直接判死。
+- **总分 0 显式返回 NO_INGEST**：拒绝入库要有显式信号，不是静默跳过——可审计"这条为什么没进记忆"。→ 判据：**零值摄取与静默丢弃的区别，是留不留拒绝痕迹**。
+- **陈旧重述单独列零值类**：已有事实再被重复说一遍不是新记忆——防长期记忆被同义反复灌水。→ 判据：**"重复入库"与"新信息入库"要分开判**，后者才值得打正分。
+- 与 §记忆 token 分层分工：那条管"常驻/可搜/按需三层的预算"；本条管"**进这些层之前，内容先过打分门**"。
+- 反模式：对话里什么都往长期记忆塞（噪声灌水）；拒绝入库时静默（审计时说不清）；把陈旧重述当新记忆存（长期记忆全是重复）。
+- **提升层**：工作流（记忆摄取门控）。
+
+## 远端 MCP 多用户隔离透传：external-user-id（来源：Pipedream 官方 pipedream.com remote MCP 2026-09-23 实拉；与 ctx §per-tool 最小权限分工——那条管"单个工具的权限面"，本条管"远端 MCP 出口按用户隔离"）
+原文：await client.connect({ url: "https://remote.mcp.pipedream.net", headers: { "x-pd-external-user-id": "sarah@acme.com" } })；Your agent picks the tool — auth is already handled
+
+- **一个远端 MCP endpoint 服务多用户，靠 external-user-id 透传身份**：agent 发起 callTool 时带上用户 ID，平台按用户隔离上下文与权限。→ 判据：**多用户共用一个 MCP endpoint 时，用户身份要在请求头显式透传**，不是靠会话偶然隔离。
+- **auth 托管在平台侧**：连接已处理认证，agent 只选工具不碰凭据。→ 判据：**接第三方 API 时把 auth 托管给平台/网关**，agent 侧不持有凭据（与 §脚本输出隔离同源：凭据不进上下文）。
+- 个人用法：自建 agent 通过一个 remote MCP 接入大量 API，auth 免管、用户级隔离免实现。
+- 反模式：多用户共用一个 MCP 端点而不透传用户 ID（上下文/权限互相串）；agent 侧自己存各平台凭据（暴露面）；每个用户各部署一个 MCP server（重复面）。
+- **提升层**：工具（远端 MCP 接入形态）。
+
+## Skill 编排的字段映射是关键步：先声明 schema，再显式对接（来源：腾讯云《用 AI Skills 搭可复现最佳实践：从 0 到发布》cloud.tencent.cn/developer/article/2728515 2026-08-19 实拉；与 harness §插件三件套分工——那条管"插件自己声明输入输出结构"，本条管"两个 Skill 之间怎么对接"）
+原文：编排：把 Skill 串进你的 Agent 工作流（触发条件、调用顺序）；字段映射：明确 Skill 的输入/输出字段怎么接（最关键，详见第四节）；导出：结果落盘或回传；人工复核：留出人工确认环节，别全信自动输出。这 7 步里，3/4/5 最关键。
+
+- **多 Skill 编排的 7 步里，字段映射单独点名最易错**：装 → 编排（触发条件/调用顺序）→ **字段映射（输入/输出字段怎么接）** → 导出 → 复核；3/4/5 最关键。→ 判据：**接两个 Skill 时先写"上游输出字段 → 下游输入字段"的映射表**，不是直接塞整份输出。
+- **先声明 schema，再显式对接**：每个 Skill 的输入输出结构先声明（插件三件套），对接时按字段名映射、做类型匹配检查。→ 判据：**"能跑通"不等于"字段接对了"**——字段映射是编排里最便宜、最隐蔽的错误源。
+- **人工复核留环节**：结果落盘/回传前留人工确认，不全信自动输出（与 §独立评审分工：那条管复杂实现，本条管 Skill 链式输出）。
+- 反模式：两个 Skill 串接时把上游整份输出塞给下游（字段错位靠模型猜）；不做映射表（改一个 Skill 就断链）；自动输出直接外发无复核。
+- **提升层**：工作流 / 可复用 Skill（多 Skill 集成）。
+
+## Agent 成本熔断 + 一键回滚链（来源：数数科技《大模型 Agent 平台落地：从 POC 到生产》2026-07-30 实拉；与 §成本可观测性分工——那条管"三通道分开看"（观测），本条管"预算上限+自动熔断"（拦截）；与 §质检-回退分工——那条管"步骤间重试"，本条管"整系统回滚到无模型链"）
+原文：设置任务级、用户级的 Token 上限和自动熔断策略，避免异常调用导致计费失控；预设人工介入触发器和一键回滚方案，当模型准确率低于阈值或出现严重幻觉时，可及时退回至规则引擎或人工处理。
+
+- **Token 上限要分任务级 + 用户级两层，且自动熔断**：预算超限不是告警等处理，是自动拦截——防一次异常调用把整月预算烧掉。→ 判据：**上限要落在执行路径上（超了停），不是落在监控面板上（超了看）**。
+- **人工介入触发器 + 一键回滚是预设方案**：模型准确率低于阈值 / 严重幻觉时，一键退回**规则引擎或人工**——降级目标不是"换个模型"，是"回到没有模型的确定性链路"。→ 判据：**写降级方案先问"回滚到哪"**——规则引擎/人工是可落地的回滚目标，换模型只是变体。
+- 与 §过升级治理的分工：那条管"送人太频繁怎么调阈值"；本条管"**触发条件满足后怎么回滚**"——一个管路由边界，一个管降级动作。
+- 反模式：只有监控没有熔断（烧完才知道）；降级方案写"交给模型再试一次"（不是回滚是死循环）；回滚无预设目标（临时想退哪）。
+- **提升层**：工作流（成本熔断与降级回滚）。
+
+## 动作敏感记忆五要素：记忆记的不是事实，是行为条件（来源：OpenClaw 官方 docs.openclaw.ai/concepts/memory 2026-09-23 实拉；与 ctx §记忆提取四策略分工——那条管"提取什么+校验"，本条管"存下来的内容必须回答哪五问"）
+原文：A useful action-sensitive memory makes clear: what changes future behavior / when or under what condition it applies / when it expires, or what unlocks action / what the agent should avoid doing / who is the source or owner, if that affects trust or authority.
+
+- **记忆内容要能回答五问**：**改变什么未来行为** / **何时或何条件生效** / **何时过期或什么解锁动作** / **该避免什么动作** / **来源或所有者是谁（影响信任与权限）**——记不下五问的记忆是"事实堆"，不是"行为指导"。→ 判据：**写记忆前先问"这条会改变我下次的哪个行为"**；答不出的不进长期记忆。
+- **过期与解锁是记忆的显式字段**：记忆要写"何时失效"或"什么条件满足后解锁动作"——不写过期条件，记忆会在不该生效时永远生效。→ 判据：**带条件的记忆必须带过期/解锁条件**，与 §记忆读写按需触发（衰减）分工：衰减管"读不到"，过期管"不该生效"。
+- **来源权属影响执行**：记忆标注来源/所有者——来自谁影响信任与授权级别。→ 判据：**记忆不是无主信息**，权限敏感的记忆必须带所有者。
+- 反模式：长期记忆记"世界是圆的"式无行为含义的事实；带条件规则不写过期；记忆不标来源导致越权执行。
+- **提升层**：工作流（记忆内容规格）。
+
+## 子代理 prompt 完整自足：只有 prompt+CLAUDE.md，不许占位符（来源：GitHub Consortium-team/project-creator CAPABILITY.md 2026-04-26 实拉；与 r151-A §独立评审分工——那条管"评审者不带实现上下文"（信息隔离面），本条管"隔离的后果：prompt 必须自足"（书写面））
+原文：A subagent gets ONLY its prompt plus CLAUDE.md — no conversation history, no parent skills, no accumulated context. This isolation is both the strength and the constraint. Because subagents have no conversation context, every value they need must be in the prompt. Never pass placeholder values like [PATH_TO_FILE].
+
+- **子代理的隔离是双刃：没有历史 = prompt 必须完整自足**：子代理拿不到对话历史/父技能/累积上下文——它需要的一切值都必须写进 prompt。→ 判据：**写子代理任务时逐项检查"它需要的每个值是不是都在 prompt 里"**——有依赖对话上下文的，要么写进去，要么不拆。
+- **禁止占位符**：`[PATH_TO_FILE]` 这类占位符对没有上下文的子代理是空值——不是提醒，是缺失。→ 判据：**占位符=漏传参数**；子代理任务里不允许出现未解析的方括号占位。
+- 与 §独立评审的分工：那条保证"评审者不知道实现细节"；本条保证"**子代理知道它该知道的一切**"——隔离的两面。
+- 反模式：给子代理传 `[文件路径]` 占位符期望它自己找；子代理任务依赖父上下文里的信息没写全；拆子任务却不提供它需要的完整输入。
+- **提升层**：可复用 Skill / 工作流（子代理任务书写法）。
+
+## 子代理输出原样透传：父默认会转述，要原文须显式指令（来源：growthengineer.ai Claude Agent SDK Subagents 2026-05-04 实拉；与 §同一份结果两个消费方分工——那条管"模型版/程序版双视图"，本条管"子代理产出交付用户时防父转述失真"）
+原文：If you need verbatim subagent output to reach the end user without parent paraphrasing, add an explicit instruction in the main query() system prompt: "When you receive Agent tool results, pass them through unchanged."
+
+- **父代理把子代理结果当工具结果处理，默认会压缩/转述**：子代理返回的原文经过父，父会按自己的输出习惯改写——需要原文直达到用户时，必须显式声明。→ 判据：**"子代理原文要直达用户"是例外不是默认**，默认父转述；需要原文就在主 prompt 加"pass them through unchanged"。
+- **原样透传是一条显式指令，不是靠"父别多嘴"的叮嘱**：写进主 query() system prompt 才稳定生效。→ 判据：**透传要求要进系统指令层**，与 §可自检追问分工：那条管"父对用户的追问"，本条管"子产出的保真交付"。
+- 反模式：需要子代理原文却任由父转述（细节失真）；期望父自动透传不写指令（行为不稳定）；把转述当"优化"（丢的是子代理的精确输出）。
+- **提升层**：工作流（多级输出交付）。
+
+## 插件安装 10 项安全评测清单（来源：DeepSeek Harness 官方插件评测指南 agentpedia.codes 2026-08-14 实拉；与 ctx §per-tool 最小权限分工——那条管"工具权限面"，本条管"装插件前的完整安全评测协议"）
+原文：Pin a package version or commit / Run on a disposable host and repository / Use synthetic secrets and data / Start with Minimal mode / Deny outbound network access by default / Review every plugin source before installation / Add external approval for mutations / Capture and inspect trajectories / Compare modes with a fixed task set / Maintain a rollback path and delete preview data after evaluation.
+
+- **装任何插件前过 10 项勾选清单**：① 钉版本/commit（复现锚点）② 一次性主机与仓库（隔离实验）③ 合成密钥与数据（不泄真凭据）④ 最小模式起步（能力最小面）⑤ **默认拒绝出网**（网络最小面）⑥ 逐源审代码（不只看描述）⑦ 变更需外部审批（变更=权限动作）⑧ 捕获并检查轨迹（可审计）⑨ 固定任务集对比模式（同基线比较）⑩ 保留回滚路径并删预览数据（评测后可退）。→ 判据：**"装插件"按"上权限"的流程审**——每装一个都是爆炸半径+1（与 ctx 工具面安全同源），10 项里"默认拒绝出网/合成密钥/外部审批变更/回滚路径"是执行硬项。
+- **hot-path 纪律**：高级插件只经文档化扩展缝注册、不改 agent-loop 骨架（零可测开销）。→ 判据：**插件不动核心骨架，只走扩展缝**（与 §harness 全插件化分工：那条管"插件长什么样"，本条管"装之前怎么验、装之后怎么保持骨架干净"）。
+- 反模式：装了再看代码（评测在装之后=已生效）；实验用真凭据真数据（泄露面）；插件能自由出网（数据外泄通道）；评测完不删预览数据不保留回滚路径。
+- **提升层**：工具 / 工作流（插件安全评测协议）。
