@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体
-version: 1.39.0
+version: 1.40.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -489,3 +489,38 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - 判据：**"作者觉得写清楚了"不等于"陌生实例能用"**——必须跨实例验证指令传达；基线对照区分"技能补的"与"模型本来就会的"。
 - 反模式：不测基线直接写；一次写全凭想象补缺口；只在作者自己的会话里自测。
 - **提升层**：可复用 Skill（技能迭代开发流程）。
+
+## 运行时工具集稳定性纪律：不中途换工具/模型，用工具模拟状态迁移，延迟加载而非删除（来源：Claude 官方博客 claude.com/blog《Lessons from building Claude Code: Prompt caching is everything》2026-04-30 实拉；与 §不可变前缀 互补——那条管"字节级前缀稳定"（缓存布局面），本条管"会话运行时工具/模型集合不变"（调用面））
+原文：Don't change tools or models mid-conversation. Use tools to model state transitions (like plan mode) rather than changing the tool set. Defer tool loading instead of removing tools.
+- **工具/模型中途不变更**：换工具或换模型 = 前缀失效 + 行为漂移——缓存前缀按字节匹配，运行时换任何一个成员，其下整段缓存作废。→ 判据：**会话开头定死的工具集与模型，中途不加不减**；要变能力靠追加新工具（前缀末尾追加不破坏既有缓存），不替换旧工具。
+- **用工具模拟状态迁移，不换工具集**：要表达"进入计划模式/只读模式"这类状态变化，用**工具/开关表达状态**（如 plan mode 切换），而不是换一套工具——状态是会话内的变量，工具集是会话内的常量。
+- **延迟加载而非删除**：暂时用不上的工具**推迟加载**而不是从清单里删掉——删除会改变工具列表（前缀+每次调用的 schema 都变）；推迟加载让清单保持稳定。
+- 与 §技能加载会话快照的分工：那条管"技能清单多久重扫一次"；本条管"工具/模型集合在会话内怎么保持不变"。
+- 反模式：中途把工具 A 换成工具 B（前缀失效 + 模型行为重学）；用"换工具"表达状态变化；临场删工具省 token（省的是边际、赔的是整段缓存）。
+- **提升层**：工具 / 工作流（缓存友好的运行时纪律）。
+
+## 缓存命中率当 uptime 监控：缓存破坏按事故告警，fork/分支共享父前缀（来源：Claude 官方博客《Prompt caching is everything》2026-04-30 + developersdigest《Prompt Caching in the Claude API: A Production Guide》2026-04-29 实拉；与 §保持轮次流动防缓存过期 互补——那条管"停顿超 TTL 缓存清零"（时间面），本条管"命中率观测告警 + 分支共享"（运维面））
+原文：Monitor your cache hit rate like you monitor uptime. We alert on cache breaks and treat them as incidents. A few percentage points of cache miss rate can dramatically affect cost and latency. Fork operations need to share the parent's prefix.
+- **缓存命中率是运行时指标，不是一次性优化结果**：改完提示结构后**持续盯命中率**——几个百分点的 miss 率就会显著推高成本与延迟；缓存破坏（cache break）按**事故**处理（告警+定位），不当作"偶尔掉一下"。→ 判据：**命中率下降先找"谁动了前缀"**，而不是先怀疑模型或网络。
+- **fork/分支操作必须共享父前缀**：并行分支/子任务复制父会话时，**共享父级前缀**（复用已缓存部分），不从头重建——否则每个分支都重付一遍缓存写入。
+- **break-even 判据**：前缀在 5 分钟内被复用 >1-2 次就值得缓存；>2k token 的稳定内容（system prompt/技能说明）随每次调用发出是显性收益。→ 判据：**先问"这段前缀复不复用、多久内复用"，再决定要不要为它布缓存**。
+- 与 §不可变前缀的分工：那条管"布局怎么摆"（静态前动态后）；本条管"摆完之后怎么盯"（命中率+告警）+ 分支共享。
+- 反模式：优化完命中率就不再回看；缓存掉点不去定位直接调模型；每个并行分支从头 prefill。
+- **提升层**：工作流（成本观测与告警）。
+
+## 工具返回字段裁剪：工具只回 LLM 需要的字段，非完整 API JSON（来源：n8n Community 实测帖《Each tool you attach to an AI Agent node is re-billed every turn》2026-07-24 实拉；与 §脚本输出隔离/落库指针 互补——那条管"输出不进上下文或转移存储"，本条管"输出内容从源头瘦身（字段级）"）
+原文：Instead of returning complete API responses, our tools now return only the fields the LLM needs (for example, property_name, price, and availability instead of the full JSON). That alone cut thousands of tokens over the course of a run.；Each agent only receives the tools it actually needs, which noticeably reduced prompt size and improved tool selection.
+- **工具响应在源头裁剪到所需字段**：工具写返回时只给 LLM 要用的那几列（property_name/price/availability），不给完整 JSON——实测一次运行省数千 token。→ 判据：**"这段返回模型要读哪几个字段"先于"把结果原样回传"**；能在工具层裁，就不让模型在上下文里裁。
+- **每个 agent 只挂它实际需要的工具**：工具定义每轮都计费（与 §成本分型边际项同源），少挂一个少一份每轮开销，还改善工具选择（工具少，模型选对概率高）。
+- 与 §同一份结果两个消费方分工：那条管"给模型的短、给程序的全，两路分开"；本条管"**给模型的那路，内容本身按字段裁剪**"——裁的是字段不是视图。
+- 反模式：工具把整表/整个 API 响应回传，让模型在上下文里挑；agent 挂满所有可用工具；裁到连判断必需的上下文都丢。
+- **提升层**：工具 / 工作流（输出侧 token 节省）。
+
+## 工具循环的 O(n²) 隐藏账单：每步重放全量历史→固定窗口截断回 O(n)，且要故意为之（来源：dev.to/wartzarbee《smolagents replays its whole memory every step: the O(n²) token bill nobody mentions》2026-08-25 实拉；与 §记忆 token 分层/上下文预算 互补——那条管"常驻量硬预算与按需装载"，本条管"工具循环每步重放的成本机制"）
+原文：This turns the input curve from quadratic back toward linear: a fixed window of history instead of an ever-growing one. You trade some long-range recall for a bounded bill — for most tool-loop tasks that is the right trade, and you make it deliberately instead of discovering it on an invoice.
+- **工具循环每步重放全量历史 = O(n²) 隐藏账单**：多步工具循环里，第 k 步的输入=前 k-1 步全部历史，总输入量是 n² 量级——没人提，但账单上一直在涨。→ 判据：**长工具循环先算"步数 × 每步累计历史"的总量**，而不是只看单步。
+- **固定窗口截断把曲线拉回线性**：上下文只保留最近 N 步（fixed window），丢远距召回换有界账单——多数工具循环任务这是对的取舍。→ 判据：**"故意截断"和"在账单上发现"是两件事**——截断窗口是主动决策，不是等到发票才被迫。
+- **其他杠杆按钝度排序**：先降 max_steps（默认 20 太高，游走 run 能悄悄跑满）→ 再截窗口 → 再换便宜模型。
+- 与 §工具返回字段裁剪的分工：那条管"每次返回的体积"（单步瘦身），本条管"**步与步之间历史怎么累积**"（多步总量）。
+- 反模式：几十步工具循环全量重放历史；等账单爆炸才想到截断；把 max_steps 当不用管的默认值。
+- **提升层**：工作流 / 工具（工具循环成本机制）。
