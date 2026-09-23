@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体
-version: 1.44.0
+version: 1.45.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -673,3 +673,37 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - 与 §过升级治理的分工：那条管"送人太频繁怎么调阈值"；本条管"**触发条件满足后怎么回滚**"——一个管路由边界，一个管降级动作。
 - 反模式：只有监控没有熔断（烧完才知道）；降级方案写"交给模型再试一次"（不是回滚是死循环）；回滚无预设目标（临时想退哪）。
 - **提升层**：工作流（成本熔断与降级回滚）。
+
+## 动作敏感记忆五要素：记忆记的不是事实，是行为条件（来源：OpenClaw 官方 docs.openclaw.ai/concepts/memory 2026-09-23 实拉；与 ctx §记忆提取四策略分工——那条管"提取什么+校验"，本条管"存下来的内容必须回答哪五问"）
+原文：A useful action-sensitive memory makes clear: what changes future behavior / when or under what condition it applies / when it expires, or what unlocks action / what the agent should avoid doing / who is the source or owner, if that affects trust or authority.
+
+- **记忆内容要能回答五问**：**改变什么未来行为** / **何时或何条件生效** / **何时过期或什么解锁动作** / **该避免什么动作** / **来源或所有者是谁（影响信任与权限）**——记不下五问的记忆是"事实堆"，不是"行为指导"。→ 判据：**写记忆前先问"这条会改变我下次的哪个行为"**；答不出的不进长期记忆。
+- **过期与解锁是记忆的显式字段**：记忆要写"何时失效"或"什么条件满足后解锁动作"——不写过期条件，记忆会在不该生效时永远生效。→ 判据：**带条件的记忆必须带过期/解锁条件**，与 §记忆读写按需触发（衰减）分工：衰减管"读不到"，过期管"不该生效"。
+- **来源权属影响执行**：记忆标注来源/所有者——来自谁影响信任与授权级别。→ 判据：**记忆不是无主信息**，权限敏感的记忆必须带所有者。
+- 反模式：长期记忆记"世界是圆的"式无行为含义的事实；带条件规则不写过期；记忆不标来源导致越权执行。
+- **提升层**：工作流（记忆内容规格）。
+
+## 子代理 prompt 完整自足：只有 prompt+CLAUDE.md，不许占位符（来源：GitHub Consortium-team/project-creator CAPABILITY.md 2026-04-26 实拉；与 r151-A §独立评审分工——那条管"评审者不带实现上下文"（信息隔离面），本条管"隔离的后果：prompt 必须自足"（书写面））
+原文：A subagent gets ONLY its prompt plus CLAUDE.md — no conversation history, no parent skills, no accumulated context. This isolation is both the strength and the constraint. Because subagents have no conversation context, every value they need must be in the prompt. Never pass placeholder values like [PATH_TO_FILE].
+
+- **子代理的隔离是双刃：没有历史 = prompt 必须完整自足**：子代理拿不到对话历史/父技能/累积上下文——它需要的一切值都必须写进 prompt。→ 判据：**写子代理任务时逐项检查"它需要的每个值是不是都在 prompt 里"**——有依赖对话上下文的，要么写进去，要么不拆。
+- **禁止占位符**：`[PATH_TO_FILE]` 这类占位符对没有上下文的子代理是空值——不是提醒，是缺失。→ 判据：**占位符=漏传参数**；子代理任务里不允许出现未解析的方括号占位。
+- 与 §独立评审的分工：那条保证"评审者不知道实现细节"；本条保证"**子代理知道它该知道的一切**"——隔离的两面。
+- 反模式：给子代理传 `[文件路径]` 占位符期望它自己找；子代理任务依赖父上下文里的信息没写全；拆子任务却不提供它需要的完整输入。
+- **提升层**：可复用 Skill / 工作流（子代理任务书写法）。
+
+## 子代理输出原样透传：父默认会转述，要原文须显式指令（来源：growthengineer.ai Claude Agent SDK Subagents 2026-05-04 实拉；与 §同一份结果两个消费方分工——那条管"模型版/程序版双视图"，本条管"子代理产出交付用户时防父转述失真"）
+原文：If you need verbatim subagent output to reach the end user without parent paraphrasing, add an explicit instruction in the main query() system prompt: "When you receive Agent tool results, pass them through unchanged."
+
+- **父代理把子代理结果当工具结果处理，默认会压缩/转述**：子代理返回的原文经过父，父会按自己的输出习惯改写——需要原文直达到用户时，必须显式声明。→ 判据：**"子代理原文要直达用户"是例外不是默认**，默认父转述；需要原文就在主 prompt 加"pass them through unchanged"。
+- **原样透传是一条显式指令，不是靠"父别多嘴"的叮嘱**：写进主 query() system prompt 才稳定生效。→ 判据：**透传要求要进系统指令层**，与 §可自检追问分工：那条管"父对用户的追问"，本条管"子产出的保真交付"。
+- 反模式：需要子代理原文却任由父转述（细节失真）；期望父自动透传不写指令（行为不稳定）；把转述当"优化"（丢的是子代理的精确输出）。
+- **提升层**：工作流（多级输出交付）。
+
+## 插件安装 10 项安全评测清单（来源：DeepSeek Harness 官方插件评测指南 agentpedia.codes 2026-08-14 实拉；与 ctx §per-tool 最小权限分工——那条管"工具权限面"，本条管"装插件前的完整安全评测协议"）
+原文：Pin a package version or commit / Run on a disposable host and repository / Use synthetic secrets and data / Start with Minimal mode / Deny outbound network access by default / Review every plugin source before installation / Add external approval for mutations / Capture and inspect trajectories / Compare modes with a fixed task set / Maintain a rollback path and delete preview data after evaluation.
+
+- **装任何插件前过 10 项勾选清单**：① 钉版本/commit（复现锚点）② 一次性主机与仓库（隔离实验）③ 合成密钥与数据（不泄真凭据）④ 最小模式起步（能力最小面）⑤ **默认拒绝出网**（网络最小面）⑥ 逐源审代码（不只看描述）⑦ 变更需外部审批（变更=权限动作）⑧ 捕获并检查轨迹（可审计）⑨ 固定任务集对比模式（同基线比较）⑩ 保留回滚路径并删预览数据（评测后可退）。→ 判据：**"装插件"按"上权限"的流程审**——每装一个都是爆炸半径+1（与 ctx 工具面安全同源），10 项里"默认拒绝出网/合成密钥/外部审批变更/回滚路径"是执行硬项。
+- **hot-path 纪律**：高级插件只经文档化扩展缝注册、不改 agent-loop 骨架（零可测开销）。→ 判据：**插件不动核心骨架，只走扩展缝**（与 §harness 全插件化分工：那条管"插件长什么样"，本条管"装之前怎么验、装之后怎么保持骨架干净"）。
+- 反模式：装了再看代码（评测在装之后=已生效）；实验用真凭据真数据（泄露面）；插件能自由出网（数据外泄通道）；评测完不删预览数据不保留回滚路径。
+- **提升层**：工具 / 工作流（插件安全评测协议）。
