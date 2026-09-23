@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体
-version: 1.39.0
+version: 1.42.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -489,3 +489,114 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - 判据：**"作者觉得写清楚了"不等于"陌生实例能用"**——必须跨实例验证指令传达；基线对照区分"技能补的"与"模型本来就会的"。
 - 反模式：不测基线直接写；一次写全凭想象补缺口；只在作者自己的会话里自测。
 - **提升层**：可复用 Skill（技能迭代开发流程）。
+
+## 运行时工具集稳定性纪律：不中途换工具/模型，用工具模拟状态迁移，延迟加载而非删除（来源：Claude 官方博客 claude.com/blog《Lessons from building Claude Code: Prompt caching is everything》2026-04-30 实拉；与 §不可变前缀 互补——那条管"字节级前缀稳定"（缓存布局面），本条管"会话运行时工具/模型集合不变"（调用面））
+原文：Don't change tools or models mid-conversation. Use tools to model state transitions (like plan mode) rather than changing the tool set. Defer tool loading instead of removing tools.
+- **工具/模型中途不变更**：换工具或换模型 = 前缀失效 + 行为漂移——缓存前缀按字节匹配，运行时换任何一个成员，其下整段缓存作废。→ 判据：**会话开头定死的工具集与模型，中途不加不减**；要变能力靠追加新工具（前缀末尾追加不破坏既有缓存），不替换旧工具。
+- **用工具模拟状态迁移，不换工具集**：要表达"进入计划模式/只读模式"这类状态变化，用**工具/开关表达状态**（如 plan mode 切换），而不是换一套工具——状态是会话内的变量，工具集是会话内的常量。
+- **延迟加载而非删除**：暂时用不上的工具**推迟加载**而不是从清单里删掉——删除会改变工具列表（前缀+每次调用的 schema 都变）；推迟加载让清单保持稳定。
+- 与 §技能加载会话快照的分工：那条管"技能清单多久重扫一次"；本条管"工具/模型集合在会话内怎么保持不变"。
+- 反模式：中途把工具 A 换成工具 B（前缀失效 + 模型行为重学）；用"换工具"表达状态变化；临场删工具省 token（省的是边际、赔的是整段缓存）。
+- **提升层**：工具 / 工作流（缓存友好的运行时纪律）。
+
+## 缓存命中率当 uptime 监控：缓存破坏按事故告警，fork/分支共享父前缀（来源：Claude 官方博客《Prompt caching is everything》2026-04-30 + developersdigest《Prompt Caching in the Claude API: A Production Guide》2026-04-29 实拉；与 §保持轮次流动防缓存过期 互补——那条管"停顿超 TTL 缓存清零"（时间面），本条管"命中率观测告警 + 分支共享"（运维面））
+原文：Monitor your cache hit rate like you monitor uptime. We alert on cache breaks and treat them as incidents. A few percentage points of cache miss rate can dramatically affect cost and latency. Fork operations need to share the parent's prefix.
+- **缓存命中率是运行时指标，不是一次性优化结果**：改完提示结构后**持续盯命中率**——几个百分点的 miss 率就会显著推高成本与延迟；缓存破坏（cache break）按**事故**处理（告警+定位），不当作"偶尔掉一下"。→ 判据：**命中率下降先找"谁动了前缀"**，而不是先怀疑模型或网络。
+- **fork/分支操作必须共享父前缀**：并行分支/子任务复制父会话时，**共享父级前缀**（复用已缓存部分），不从头重建——否则每个分支都重付一遍缓存写入。
+- **break-even 判据**：前缀在 5 分钟内被复用 >1-2 次就值得缓存；>2k token 的稳定内容（system prompt/技能说明）随每次调用发出是显性收益。→ 判据：**先问"这段前缀复不复用、多久内复用"，再决定要不要为它布缓存**。
+- 与 §不可变前缀的分工：那条管"布局怎么摆"（静态前动态后）；本条管"摆完之后怎么盯"（命中率+告警）+ 分支共享。
+- 反模式：优化完命中率就不再回看；缓存掉点不去定位直接调模型；每个并行分支从头 prefill。
+- **提升层**：工作流（成本观测与告警）。
+
+## 工具返回字段裁剪：工具只回 LLM 需要的字段，非完整 API JSON（来源：n8n Community 实测帖《Each tool you attach to an AI Agent node is re-billed every turn》2026-07-24 实拉；与 §脚本输出隔离/落库指针 互补——那条管"输出不进上下文或转移存储"，本条管"输出内容从源头瘦身（字段级）"）
+原文：Instead of returning complete API responses, our tools now return only the fields the LLM needs (for example, property_name, price, and availability instead of the full JSON). That alone cut thousands of tokens over the course of a run.；Each agent only receives the tools it actually needs, which noticeably reduced prompt size and improved tool selection.
+- **工具响应在源头裁剪到所需字段**：工具写返回时只给 LLM 要用的那几列（property_name/price/availability），不给完整 JSON——实测一次运行省数千 token。→ 判据：**"这段返回模型要读哪几个字段"先于"把结果原样回传"**；能在工具层裁，就不让模型在上下文里裁。
+- **每个 agent 只挂它实际需要的工具**：工具定义每轮都计费（与 §成本分型边际项同源），少挂一个少一份每轮开销，还改善工具选择（工具少，模型选对概率高）。
+- 与 §同一份结果两个消费方分工：那条管"给模型的短、给程序的全，两路分开"；本条管"**给模型的那路，内容本身按字段裁剪**"——裁的是字段不是视图。
+- 反模式：工具把整表/整个 API 响应回传，让模型在上下文里挑；agent 挂满所有可用工具；裁到连判断必需的上下文都丢。
+- **提升层**：工具 / 工作流（输出侧 token 节省）。
+
+## 工具循环的 O(n²) 隐藏账单：每步重放全量历史→固定窗口截断回 O(n)，且要故意为之（来源：dev.to/wartzarbee《smolagents replays its whole memory every step: the O(n²) token bill nobody mentions》2026-08-25 实拉；与 §记忆 token 分层/上下文预算 互补——那条管"常驻量硬预算与按需装载"，本条管"工具循环每步重放的成本机制"）
+原文：This turns the input curve from quadratic back toward linear: a fixed window of history instead of an ever-growing one. You trade some long-range recall for a bounded bill — for most tool-loop tasks that is the right trade, and you make it deliberately instead of discovering it on an invoice.
+- **工具循环每步重放全量历史 = O(n²) 隐藏账单**：多步工具循环里，第 k 步的输入=前 k-1 步全部历史，总输入量是 n² 量级——没人提，但账单上一直在涨。→ 判据：**长工具循环先算"步数 × 每步累计历史"的总量**，而不是只看单步。
+- **固定窗口截断把曲线拉回线性**：上下文只保留最近 N 步（fixed window），丢远距召回换有界账单——多数工具循环任务这是对的取舍。→ 判据：**"故意截断"和"在账单上发现"是两件事**——截断窗口是主动决策，不是等到发票才被迫。
+- **其他杠杆按钝度排序**：先降 max_steps（默认 20 太高，游走 run 能悄悄跑满）→ 再截窗口 → 再换便宜模型。
+- 与 §工具返回字段裁剪的分工：那条管"每次返回的体积"（单步瘦身），本条管"**步与步之间历史怎么累积**"（多步总量）。
+- 反模式：几十步工具循环全量重放历史；等账单爆炸才想到截断；把 max_steps 当不用管的默认值。
+- **提升层**：工作流 / 工具（工具循环成本机制）。
+
+## RAG 检索的时效与顺序：先去重后检索 + 时间戳过滤陈旧上下文；提示漂移用类别清单 + 模式解析兜底（来源：Make 官方 make.com/en/how-to-guides/llm-integration《How to build an LLM integration》2026-09-23 实拉；与 §检索上下文排序预算 分工——那条管"召回多少条、放哪"，本条管"检索的时序与数据新鲜度"）
+原文：Stale context: retrieval module read outdated CRM state. Fix by moving retrieval after deduplication or adding a timestamp filter.；Malformed output: prompt drift returns prose instead of structured fields. Fix with a stricter category list and a Text Parser > Match Pattern fallback.
+
+- **陈旧上下文是独立失败类，不归"召回质量"管**：检索模块读到的是过期数据（旧 CRM 状态）——检索本身没错，错在**检索发生在数据变化之前**。→ 判据：**先问"这次检索读的是不是最新状态"再问"召回准不准"**；数据变更/去重操作排在检索之前，或给检索加时间戳过滤。
+- **提示漂移（返回散文而非结构化字段）的修复顺序**：先**收紧类别清单**（枚举范围更严），再挂**模式解析兜底**（Match Pattern fallback）——不是只改提示词措辞。→ 判据：**结构化输出失效时，"更严的枚举"是规则层修复，"模式解析"是解析层兜底**，两层都要，只改语气是无效修复。
+- 与 §结构化输出两态判据 的分工：那条管"怎么判输出对不对"（验证面）；本条管"**输出变回散文时用什么修**"（修复面）。
+- 反模式：检索永远排在写操作后仍读到旧值（忘了加时间戳过滤）；提示词漂移后只改 prompt 措辞（不收紧枚举也不加解析兜底）；把陈旧上下文当成召回质量问题重做 embedding。
+- **提升层**：工作流（RAG 时效与输出修复）。
+
+## 人机路由的过升级治理：收紧置信阈值 + 补边界示例，不是加规则（来源：Make 官方 make.com/en/blog/agentic-process-automation《What is agentic process automation》2026-09-23 实拉；与 wb-execute-discipline §换挡检测分工——那条管"能力不足时换模型"，本条管"把人机路由边界送人太频繁怎么调"）
+原文：Over-escalation: the agent routes too many edge cases to humans. Fix by tightening your confidence threshold and adding clearer boundary examples.
+
+- **过升级是路由问题不是能力问题**：agent 把太多边界 case 交给人工——路由边界太松，不是它"不会做"。→ 判据：**送人太频繁先调阈值与边界示例，不急着换模型**——换模型修不了"该不该送人"。
+- **修复是两件事：收紧置信阈值 + 补清晰边界示例**：阈值管"多自信才算能自主"，边界示例管"哪些案例明确该自主/该送人"——示例让阈值有锚点，阈值让示例可执行。→ 判据：**只调阈值不补示例=阈值没有参照物；只补示例不调阈值=示例不落地**。
+- 与 §答案分档 的分工：那条管"输出的轻重档"（给用户什么）；本条管"**任务去留人机谁做**"（路由给谁）。
+- 反模式：边界 case 送人多就写更多规则（膨胀且难维护）；只调阈值不补边界示例（误伤正常自主）；把过升级误判为模型能力不足去换强模型。
+- **提升层**：工作流（人机路由边界）。
+
+## 模型迁移收尾三清单：集成测试 / 长度控制提示词调优 / 成本-限流重基线化（来源：Claude API skill 官方 platform.claude.com/docs/en/agents-and-tools/agent-skills/claude-api-skill，2026-09-23 实拉；与 §换挡顺序分工——那条管"降档过程怎么回归"，本条管"迁移完成后的收尾交付物"）
+原文：As it edits, the skill explains each change and its motivation inline. On completion, it produces a checklist of items that require manual verification (typically integration tests, length-control prompt tuning, and cost/rate-limit re-baselining).
+
+- **模型迁移完成 ≠ 可以上线**：迁移动作做完后收尾**必须产出需人工核验的清单**——具名三类：① **集成测试**（真实链路跑通）② **长度控制提示词调优**（新模型输出长度特性变了，长/短控制要重调）③ **成本与限流重基线化**（价格、速率上限全变了，原预算与限流假设作废）。→ 判据：**迁移报告结尾必须有"待人工核验项"清单**，没有=迁移只做了一半。
+- **每处修改行内说明动机，不攒到最后解释**：迁移中每个改动当场说明"为什么这么改"——收尾清单只管"还要人验什么"，动机解释在改的时候给。→ 判据：**行内动机 + 收尾清单是两段**，前者防无动机改动，后者防"以为改完就能上"。
+- 与 §可自检追问的分工：那条管"给用户的实质性答案后附具体追问"；本条管"**模型迁移这类工程动作的收尾核验**"——核验对象不同（用户决策 vs 工程迁移）。
+- 反模式：迁移完直接宣布完成（跳过了集成测试/调优/重基线）；改动不解释动机攒到最后；清单只写"请验证"不具名三类项。
+- **提升层**：工作流（模型迁移收尾）。
+
+## 技能触发评测配比规格：20 条 queries 8-10/8-10、每条跑 3 次算触发率、基线对比含 token 用量（来源：agentskills.io 官方规格 agentskills.io/skill.md，2026-09-23 实拉；与 wb-skill-authoring §caliper 闭合邻域分工——那条管"竞争集封闭/两方向计分"（原理面），本条补"具体配比与重复次数"（操作面））
+原文：Test triggering — Create 20 eval queries (8-10 should-trigger, 8-10 should-not-trigger) with varied phrasing, explicitness, and complexity. Run each query 3 times and compute trigger rates. 8. Test output quality — Run 2-3 test cases with the skill and without it (baseline). Grade outputs against assertions. Compare pass rates and token usage.
+
+- **触发评测给固定配比**：20 条 eval queries——8-10 条应触发 + 8-10 条不应触发，措辞/显式度/复杂度都要有变体（防"只有一种问法能触发"）。→ 判据：**触发测试两方向都要覆盖，且各占约一半**；只测"该触发能触发"测不出抢活。
+- **每条 query 跑 3 次再算触发率**：单次触发/不触发是噪声，3 次算率才有统计意义。→ 判据：**触发率=每条 3 次的重现率**，不是"20 条里命中几条"。
+- **输出质量=带技能 vs 无技能基线的对比，且比两样：通过率 + token 用量**：各跑 2-3 个用例，按 assertions 评分；技能既补能力又省 token 才算合格。→ 判据：**基线对比要同时看质量与成本两维**——只提升质量但烧 token 翻倍，不是合格技能。
+- 与 §技能两实例迭代闭环 的分工：那条管"开发怎么闭环"（基线→草稿→实测→回改）；本条管"**闭环里的评测具体怎么配数**"（20 条配比/3 次重复/双维对比）。
+- 反模式：只写 5 条"该触发"的 query 测触发；每条只跑一次就当结果；输出质量测试不做无技能基线；只看通过率不看 token 用量。
+- **提升层**：可复用 Skill（技能评测规格）。
+
+## 记忆按业务主体（actor）归属，能力随调用携带（来源：n8n 官方 blog.n8n.io/node-spotlight-amazon-bedrock-agentcore《Build multi-agent teams that remember every customer with Amazon Bedrock AgentCore》2026-09-23 实拉；与 ctx §记忆分层分工——那条管"记忆怎么分层（core/recall/archival）"，本条管"记忆按什么归属、能力怎么分发"）
+原文：AgentCore's Managed memory is scoped by actor and session, so an Actor ID that identifies the customer rather than any single agent gives every specialist the same history to read and write, and that history outlives an individual workflow execution. And because the tools, skills, model, and instructions travel with each invocation rather than being fixed on a deployed agent, one agent can serve all four specialists instead of provisioning four.
+
+- **记忆作用域=业务主体（actor）×session，不是 agent 实例**：用 Actor ID（识别客户/用户）而非单个 agent 作记忆归属——同一客户的所有专家读写同一份历史，历史**活过单次 workflow 执行**。→ 判据：**问"这段记忆属于谁"而不是"属于哪个 agent"**——按 agent 分记忆，客户跨专家换人后记忆就断了。
+- **能力随调用携带，不固定在部署上**：tools/skills/model/instructions 每次 invocation 一起走——一个 agent 实例可服务多个角色，不用每个角色各部署一个。→ 判据：**"角色"是调用参数不是部署单元**——多角色共享一份部署，省的是部署面（与 §成本四层工作切分同源）。
+- 与 §记忆写入时序的分工：那条管"什么时候写"（响应后异步+便宜模型）；本条管"**写给谁、谁有权读**"（作用域）。
+- 反模式：按 agent 实例分记忆（客户跨 agent 就失忆）；每个角色部署一个 agent（重复部署面）；记忆不过 session（历史活不过单次执行）。
+- **提升层**：工作流（多 agent 记忆作用域）。
+
+## durable execution：父休眠子继续、崩溃不级联（来源：n8n 官方 blog.n8n.io/long-running-agents-beyond-prompt-engineering 2026-09-23 实拉；与 ctx §交接文档四要素分工——那条管"上下文怎么交接"，本条管"执行怎么耐久"）
+原文：Sub-agents get this same durability on their own terms. Each child has its own state, schedules, durable fibers, and lifecycle, and stores its own data colocated under the parent. The property that matters for durability is that the parent doesn't have to stay active while the child works. It can start the work, hibernate, and be woken when the child's schedule or recovery check fires. A crash doesn't take down the whole family at once; each identity...
+
+- **耐久的关键性质：父不必保持活跃**：父发起子任务后可休眠，子按自己的 schedule/recovery check 独立跑，完成后唤醒父。→ 判据：**"父要一直在线等子"是脆弱设计**——长时子任务让父休眠、靠子完成/恢复事件唤醒。
+- **每个子 agent 独立生命周期与持久状态**：state/schedules/durable fibers 各自持有，数据 colocated under parent。→ 判据：**状态与调度是子级资源，不挂在父进程里**——父重启不丢子的状态。
+- **崩溃隔离：一个倒下不连带全家**：每个 identity 独立恢复。→ 判据：**故障域=单个子 agent**——设计时问"这个子挂了，其他人和父怎么办"，答案不该是"一起挂"。
+- 与 §上下文作为演化工件的分工：那条管"内容怎么演化"（Generator/Reflector/Curator）；本条管"**执行过程怎么活下来**"（耐久性）。
+- 反模式：父进程全程盯着子跑；子状态存在父进程里（父一挂全没）；单个子崩溃拖垮全家；长时任务无恢复检查点。
+- **提升层**：工作流（长时 agent 耐久性）。
+
+## 输出校验参数化：最终答案校验器 + 每步前后状态日志（来源：smolagents DeepWiki 配置表 2026-08-29 + Dify 官方 enterprise-docs Agent Strategy Plugin 2026-07-15 实拉；与 wb-execute-discipline §步骤间质检-回退分工——那条管"每步之间过质检函数"，本条管"最终答案专用校验参数 + 每步前后成对记状态"）
+原文（smolagents）：Quality assurance: final_answer_checks=[validator_func]；Per-step type callbacks: step_callbacks={ActionStep: [cb1], PlanningStep: [cb2]}。原文（Dify）：Complex tasks usually take multiple steps, and you need to track each step's result to analyze decisions and refine your strategy. The SDK's create_log_message and finish_log_message let you record state before and after each call, which speeds up problem diagnosis.
+
+- **最终答案校验器是框架一等参数，不是流程外约定**：`final_answer_checks=[validator_func]`——把"最后这坨输出对不对"做成可配置钩子，agent 完成时自动过校验。→ 判据：**"收尾校验"要有独立于每步质检的专用钩子**——每步质检防"走偏"，final check 防"走完了但答案是错的"。
+- **每步前后状态成对记录**：调用前 create_log_message（起始状态）、调用后 finish_log_message（完成状态）——诊断"哪一步决策错了"靠前后对照，不是事后猜。→ 判据：**复杂多步任务每步留"前状态+后状态"**，与 §留痕只存元数据 分工：那条管"存什么字段"，本条管"**前后成对的形态**"。
+- **按步类型注册回调**：ActionStep 和 PlanningStep 各挂各的回调，动作问题与规划问题分开观察。→ 判据：**回调按步类型分挂**——混在一个回调里，动作噪声淹没规划问题。
+- 与 §可自检追问的分工：那条管"给用户的答案后附追问"（人侧）；本条管"**agent 输出的机器侧校验**"（自动化）。
+- 反模式：只做每步质检不做最终答案校验（错答案走完流程才被发现）；日志只记结果不记调用前状态（决策错了无从对照）；所有步类型共用一个回调。
+- **提升层**：工具（输出校验与可诊断性参数）。
+
+## harness 全能力插件化：循环/调度/存储/UI 也是插件（来源：DeepSeek Harness 官方 deepseek.com/harness/en 2026-09-23 实拉；与 §技能模块化分工——那条管"技能层可组合"，本条把 harness 级能力纳入插件面）
+原文：Every capability is a plugin that can be swapped or recomposed: models, tools, skills, sessions, sandboxes, storage, loops, scheduling, and the UI.；Plugins provide every agent capability, including models, tools, skills, sessions, sandboxes, storage, loops...
+
+- **插件化的范围不止工具与技能**：模型/工具/技能/会话/沙箱/存储/**循环（agent loop）**/**调度**/UI 全部可替换重组——连"agent 怎么跑循环"都是可换的。→ 判据：**"可组合"要覆盖执行机制本身**，不只是功能模块——想换循环策略/调度器/存储后端时，不该动核心。
+- **插件三件套契约**：defineTool{name + description + parameters schema} + output.schema + render——工具声明与渲染分离，输出结构可程序消费。→ 判据：**插件的输入（parameters schema）与输出（output.schema）都结构化**，机器才能编排（与 §工具返回字段裁剪同源）。
+- **社区插件的分发形态**：GitHub topic（如 `dsh-plugin`）即插件市场，自然语言装/卸。→ 判据：**插件发现走主题标签 + 声明式安装**，不靠手工拷贝目录。
+- 与 §第三方技能选型三判据的分工：那条管"装之前怎么筛"（安装量/信誉/热度）；本条管"**harness 能力边界在哪、插件长什么样**"（形态）。
+- 反模式：只有工具能换、循环/调度写死；工具输出结构不声明（模型只能猜）；插件市场靠手工搬运。
+- **提升层**：工具（可组合架构理念）。
