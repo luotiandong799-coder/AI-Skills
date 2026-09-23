@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体
-version: 1.40.0
+version: 1.41.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -524,3 +524,40 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - 与 §工具返回字段裁剪的分工：那条管"每次返回的体积"（单步瘦身），本条管"**步与步之间历史怎么累积**"（多步总量）。
 - 反模式：几十步工具循环全量重放历史；等账单爆炸才想到截断；把 max_steps 当不用管的默认值。
 - **提升层**：工作流 / 工具（工具循环成本机制）。
+
+## RAG 检索的时效与顺序：先去重后检索 + 时间戳过滤陈旧上下文；提示漂移用类别清单 + 模式解析兜底（来源：Make 官方 make.com/en/how-to-guides/llm-integration《How to build an LLM integration》2026-09-23 实拉；与 §检索上下文排序预算 分工——那条管"召回多少条、放哪"，本条管"检索的时序与数据新鲜度"）
+原文：Stale context: retrieval module read outdated CRM state. Fix by moving retrieval after deduplication or adding a timestamp filter.；Malformed output: prompt drift returns prose instead of structured fields. Fix with a stricter category list and a Text Parser > Match Pattern fallback.
+
+- **陈旧上下文是独立失败类，不归"召回质量"管**：检索模块读到的是过期数据（旧 CRM 状态）——检索本身没错，错在**检索发生在数据变化之前**。→ 判据：**先问"这次检索读的是不是最新状态"再问"召回准不准"**；数据变更/去重操作排在检索之前，或给检索加时间戳过滤。
+- **提示漂移（返回散文而非结构化字段）的修复顺序**：先**收紧类别清单**（枚举范围更严），再挂**模式解析兜底**（Match Pattern fallback）——不是只改提示词措辞。→ 判据：**结构化输出失效时，"更严的枚举"是规则层修复，"模式解析"是解析层兜底**，两层都要，只改语气是无效修复。
+- 与 §结构化输出两态判据 的分工：那条管"怎么判输出对不对"（验证面）；本条管"**输出变回散文时用什么修**"（修复面）。
+- 反模式：检索永远排在写操作后仍读到旧值（忘了加时间戳过滤）；提示词漂移后只改 prompt 措辞（不收紧枚举也不加解析兜底）；把陈旧上下文当成召回质量问题重做 embedding。
+- **提升层**：工作流（RAG 时效与输出修复）。
+
+## 人机路由的过升级治理：收紧置信阈值 + 补边界示例，不是加规则（来源：Make 官方 make.com/en/blog/agentic-process-automation《What is agentic process automation》2026-09-23 实拉；与 wb-execute-discipline §换挡检测分工——那条管"能力不足时换模型"，本条管"把人机路由边界送人太频繁怎么调"）
+原文：Over-escalation: the agent routes too many edge cases to humans. Fix by tightening your confidence threshold and adding clearer boundary examples.
+
+- **过升级是路由问题不是能力问题**：agent 把太多边界 case 交给人工——路由边界太松，不是它"不会做"。→ 判据：**送人太频繁先调阈值与边界示例，不急着换模型**——换模型修不了"该不该送人"。
+- **修复是两件事：收紧置信阈值 + 补清晰边界示例**：阈值管"多自信才算能自主"，边界示例管"哪些案例明确该自主/该送人"——示例让阈值有锚点，阈值让示例可执行。→ 判据：**只调阈值不补示例=阈值没有参照物；只补示例不调阈值=示例不落地**。
+- 与 §答案分档 的分工：那条管"输出的轻重档"（给用户什么）；本条管"**任务去留人机谁做**"（路由给谁）。
+- 反模式：边界 case 送人多就写更多规则（膨胀且难维护）；只调阈值不补边界示例（误伤正常自主）；把过升级误判为模型能力不足去换强模型。
+- **提升层**：工作流（人机路由边界）。
+
+## 模型迁移收尾三清单：集成测试 / 长度控制提示词调优 / 成本-限流重基线化（来源：Claude API skill 官方 platform.claude.com/docs/en/agents-and-tools/agent-skills/claude-api-skill，2026-09-23 实拉；与 §换挡顺序分工——那条管"降档过程怎么回归"，本条管"迁移完成后的收尾交付物"）
+原文：As it edits, the skill explains each change and its motivation inline. On completion, it produces a checklist of items that require manual verification (typically integration tests, length-control prompt tuning, and cost/rate-limit re-baselining).
+
+- **模型迁移完成 ≠ 可以上线**：迁移动作做完后收尾**必须产出需人工核验的清单**——具名三类：① **集成测试**（真实链路跑通）② **长度控制提示词调优**（新模型输出长度特性变了，长/短控制要重调）③ **成本与限流重基线化**（价格、速率上限全变了，原预算与限流假设作废）。→ 判据：**迁移报告结尾必须有"待人工核验项"清单**，没有=迁移只做了一半。
+- **每处修改行内说明动机，不攒到最后解释**：迁移中每个改动当场说明"为什么这么改"——收尾清单只管"还要人验什么"，动机解释在改的时候给。→ 判据：**行内动机 + 收尾清单是两段**，前者防无动机改动，后者防"以为改完就能上"。
+- 与 §可自检追问的分工：那条管"给用户的实质性答案后附具体追问"；本条管"**模型迁移这类工程动作的收尾核验**"——核验对象不同（用户决策 vs 工程迁移）。
+- 反模式：迁移完直接宣布完成（跳过了集成测试/调优/重基线）；改动不解释动机攒到最后；清单只写"请验证"不具名三类项。
+- **提升层**：工作流（模型迁移收尾）。
+
+## 技能触发评测配比规格：20 条 queries 8-10/8-10、每条跑 3 次算触发率、基线对比含 token 用量（来源：agentskills.io 官方规格 agentskills.io/skill.md，2026-09-23 实拉；与 wb-skill-authoring §caliper 闭合邻域分工——那条管"竞争集封闭/两方向计分"（原理面），本条补"具体配比与重复次数"（操作面））
+原文：Test triggering — Create 20 eval queries (8-10 should-trigger, 8-10 should-not-trigger) with varied phrasing, explicitness, and complexity. Run each query 3 times and compute trigger rates. 8. Test output quality — Run 2-3 test cases with the skill and without it (baseline). Grade outputs against assertions. Compare pass rates and token usage.
+
+- **触发评测给固定配比**：20 条 eval queries——8-10 条应触发 + 8-10 条不应触发，措辞/显式度/复杂度都要有变体（防"只有一种问法能触发"）。→ 判据：**触发测试两方向都要覆盖，且各占约一半**；只测"该触发能触发"测不出抢活。
+- **每条 query 跑 3 次再算触发率**：单次触发/不触发是噪声，3 次算率才有统计意义。→ 判据：**触发率=每条 3 次的重现率**，不是"20 条里命中几条"。
+- **输出质量=带技能 vs 无技能基线的对比，且比两样：通过率 + token 用量**：各跑 2-3 个用例，按 assertions 评分；技能既补能力又省 token 才算合格。→ 判据：**基线对比要同时看质量与成本两维**——只提升质量但烧 token 翻倍，不是合格技能。
+- 与 §技能两实例迭代闭环 的分工：那条管"开发怎么闭环"（基线→草稿→实测→回改）；本条管"**闭环里的评测具体怎么配数**"（20 条配比/3 次重复/双维对比）。
+- 反模式：只写 5 条"该触发"的 query 测触发；每条只跑一次就当结果；输出质量测试不做无技能基线；只看通过率不看 token 用量。
+- **提升层**：可复用 Skill（技能评测规格）。
