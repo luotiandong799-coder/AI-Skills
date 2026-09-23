@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据
-version: 1.95.0
+version: 1.96.0
 agent_created: true
 ---
 
@@ -1376,3 +1376,12 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - **★告警 / 钩子这一类「旁路通道」的失效是静默的，别把它当证据**：ZenML 官方写明三条：①`Hook failures are swallowed. When a lifecycle hook raises, the run or step is not aborted. The exception is captured into the HookInvocation record with status=FAILED and execution proceeds`（**钩子自己抛异常，主体继续跑，不失败、不告警**）；②`Cache hits. A cached step fires no step-level hooks`（**命中缓存的步骤不触发步骤级钩子**，但 run 级钩子照触发）；③`A retried step fires one on_start / on_end pair per attempt. on_success and on_failure fire exactly once, at the terminal outcome`（**同一对钩子的触发次数随重试次数变**，另外两对只在终态触发一次）。→ 判据：①**「没收到告警」有三个可能：没出事 / 钩子自己挂了 / 这一步压根没跑（缓存命中）**——三者从外部看完全一样，所以**告警的缺席不构成任何证据**，要证明"检查跑过了"必须看**它自己留下的 `HookInvocation` 记录及其 `status`**（与 §证明检查真的跑到了 分工：那条讲**非零退出不等于检出**，本条讲**钩子这条旁路连退出码都不给你**）；②**用钩子做计数 / 审计 / 计费会随重试翻倍**——`on_start/on_end` 是 per-attempt 的，`on_success/on_failure` 才是 per-终态的，选错一对就系统性重复或漏记；③**钩子的返回值默认被丢弃**（`Return values are discarded`，要留须显式开 `ZENML_TRACK_LIFECYCLE_HOOK_OUTPUTS=true`）→ 指望钩子顺手产出证据是错的；④`on_init` 失败**不产生自己的记录**，根因只能到 `pipeline_run.exception_info` 找 → **「初始化挂了」在钩子列表里是查不到的**。
 - **提升层**：工具 / 工作流（旁路通道的静默失效面）。
 - 触发词：告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、初始化挂了查不到。
+
+
+## 评测是回归测试：同题重跑看行为漂移；一 case 双检查、失败三分流、清理钩子有边界（来源：Agno 官方 `docs.agno.com/agent-platform/evals`，2026-09-24 r156-A 独立实拉首读，清单内信源此前未深拉）
+- **评测的作用是让漂移可见**：`Evals are regression tests for your agents. Rerun the same prompts against the same agents and behavior drift becomes visible.` 判据：**评测不是打分表，是基线重跑**——同一组输入在改动前后各跑一次，差值才是结论。
+- **一个 case 可挂两类检查，且只跑一次被测**：**judge**（LLM 按 `criteria` 给二元 pass/fail）与 **reliability**（`expected_tool_calls` 断言哪些工具被触发）；两者都设时目标只跑一次、同一份响应喂给两个检查。判据：**语义判定与「有没有真的调工具」必须分开断言**，前者抓答错，后者抓「自信编造而不调工具」。
+- **好 case 四条**：**Specific**（断言结构如「返回含 ticker 与 price 的 JSON」，优于「答对了」）／**Stable**（不用正确答案每天变的题，改写为「描述一个真实的、最近的…」）／**Scoped to one behavior**（一 case 一行为，失败好定位）／**Anchored to tools**（用工具调用断言兜住不调工具的失败模式）。
+- **★清理钩子只能删新建，撤销不了已改坏的**：`These hooks remove newly created records; they cannot undo changes to existing records.` → 配套做法是**虚构且唯一的 fixture + 专用测试库**。判据：**测试后的清理覆盖「新建」，覆盖不了「改坏」**，隔离必须在环境上做，不能指望清理兜底。
+- **失败必须三分流再处置**：**坏标准（criteria 写坏）／真回归／裁判抖动（flaky LLM judge）**——三类动作完全不同（改 case / 改 agent / 换裁判或多次取样）。判据：**不分类直接修，会把「标准写错」修成「改 agent」，把抖动修成真改动**。
+- **触发时机也是设计项**：改 agent 部署前**每次**、每个 PR、对专用环境每日、**升模型版本每次**（模型版本变更等同行为变更）。
