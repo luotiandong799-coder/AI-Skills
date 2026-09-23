@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体
-version: 1.42.0
+version: 1.43.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -600,3 +600,39 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - 与 §第三方技能选型三判据的分工：那条管"装之前怎么筛"（安装量/信誉/热度）；本条管"**harness 能力边界在哪、插件长什么样**"（形态）。
 - 反模式：只有工具能换、循环/调度写死；工具输出结构不声明（模型只能猜）；插件市场靠手工搬运。
 - **提升层**：工具（可组合架构理念）。
+
+## 长输入编排：文档置顶、query 置底（来源：Anthropic 官方 prompting best-practices Long context tips，platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices 2026-09-23 实拉；与 §上下文注入顺序分工——那条管"U 型注意力关键放首尾"（排位原理），本条管"大输入的具体摆法"（长数据置顶+query 置底））
+原文：For working with large documents or data-rich inputs (>20k tokens), structure your prompt carefully: Place long data near the top of the prompt, above the query, instructions, and examples. This improves performance across all models. Queries at the end can improve response quality.
+
+- **超 20k tokens 时：长数据放顶部、query 放底部**：文档/长输入放最前（在 query、instructions、examples 之上），查询句放最后——官方称全模型性能提升、末尾 query 改善响应质量。→ 判据：**大输入的组装顺序 = 长数据(顶) → 指令/示例(中) → query(底)**，不是按"先问题后材料"的自然顺序。
+- **与检索排序的分工**：检索排序管"多块之间谁先谁后"（相关度）；本条管"**大文档整体 vs 指令 vs 查询的三大块位置**"——层次不同，都做。
+- **与缓存布局的兼容**：长数据置顶与"静态前置动态后置"不冲突——文档是静态可缓存部分，query 是每轮动态部分，两者恰好各占一端。
+- 反模式：把 query 放最前、文档堆后面（模型读到 query 时还没看到材料，且长材料在中段被注意力弱区吃掉）；指令夹在长文档中间。
+- **提升层**：提示工程 / 工作流（长输入编排）。
+
+## 规则文件 200 行上限 + 按路径作用域拆分（来源：Claude Code Advanced Patterns 官方 PDF《Claude Code Advanced Patterns: Subagents, MCP, and Scaling to Real Codebases》2026-09-23 实拉；与 wb-doc-writing §膨胀是症状分工——那条管"术语表删到 lean 再拆"（内容面），本条管"指令/规则文件的规模上限与按路径作用域"（治理面））
+原文：Keep files < 200 lines. Longer files consume more context and can negatively affect instruction adherence.；Organize instructions into multiple files using the .claude/rules/ directory. Rules can also be scoped to specific file paths.
+
+- **指令文件 <200 行是硬上限**：超过 200 行的文件既耗更多上下文，又**降低指令遵从**（越长遵从越差）——不是"内容多所以长"，是"长度本身伤害遵从"。→ 判据：**规则文件超过 200 行先拆，不靠"内容都重要"辩护**。
+- **按路径作用域组织多文件规则**：用 .claude/rules/ 目录把指令拆进多个文件，并**按文件路径作用域**（某规则只对某目录/某类文件生效）——拆 + 作用域，不是只拆不加约束。→ 判据：**规则文件的组织单位是"路径+场景"**，不是"主题清单堆一起"。
+- 与 §技能三级加载的分工：那条管"技能文件元数据/正文/资源分层"；本条管"**规则文件的规模与作用域**"——技能文件是"怎么加载"，规则文件是"多大、管哪片"。
+- 反模式：CLAUDE.md/规则文件越写越长（遵从度悄悄下降）；把所有规则堆一个文件"图省事"；拆分后没有路径作用域（拆了还是每轮全量读）。
+- **提升层**：可复用 Skill（指令文件治理）。
+
+## 实现后独立评审子代理：不带实现上下文（来源：Claude 官方博客 claude.com/blog/subagents-in-claude-code 2026-09-23 实拉；与 wb-execute-discipline §步骤间质检-回退分工——那条管"每步之间过质检函数"（过程面），本条管"复杂实现完成后用无实现上下文的评审者"（收尾面））
+原文：Independent review. After implementing something complex, verification from a subagent that hasn't been influenced by the implementation journey catches what familiarity obscures. The review subagent evaluates the code without knowing what tradeoffs were considered, what approaches were rejected, or what assumptions were made.
+
+- **评审者必须与实现者信息隔离**：评审子代理**不知道**考虑过哪些 tradeoff、拒绝了哪些方案、作了哪些假设——不带实现旅程的旁观视角，专抓熟悉性盲区。→ 判据：**评审前问"这个评审者知道实现过程吗"**——知道得越多，评审越接近自查。
+- **复杂实现完成后必做独立评审**：实现越复杂，实现者越被自己的路径锚定——独立评审不是可选的质量提升，是收尾步骤。→ 判据：**"实现者自评通过"不替代独立评审**——自评带熟悉性偏差。
+- 与 §输出校验参数化 的分工：那条管"最终答案机器校验器"（规则/断言）；本条管"**人类视角的独立评审者**"（信息隔离）。
+- 反模式：让实现者自己评审自己的代码（锚定效应）；评审子代理带着实现的完整上下文（等于没隔离）；小改动也全套独立评审（成本不匹配）。
+- **提升层**：工作流（实现后独立评审）。
+
+## 代码执行 import 白名单：默认最小集 + 显式声明（来源：HF smolagents 官方 hf.co/blog/smolagents + noqta.tn 2026-09-23 实拉；与 §脚本输出隔离分工——那条管"代码不进上下文只回输出"（上下文面），本条管"生成代码能 import 什么"（执行面））
+原文：By default the interpreter blocks all imports except a small allowlist (math, statistics, datetime). Anything your tools rely on must be declared explicitly — this is what keeps generated code safe. (additional_authorized_imports)
+
+- **默认拦截全部 import，只留最小白名单**：解释器默认只允许 math/statistics/datetime——生成代码想用别的库必须显式声明。→ 判据：**代码执行环境的依赖面是"默认禁 + 显式开"**，不是"默认全开再拦"。
+- **工具依赖的包显式声明（additional_authorized_imports）**：agent 写代码调用工具所需的库时，把包名列进白名单——安全与能力之间是显式授权关系。→ 判据：**"代码能 import 什么"是配置不是约定**——靠 prompt 叮嘱"别乱 import"不可靠，白名单是执行层强制。
+- 与 §工具面安全（WB ctx 侧）的分工：那条管"工具描述注入/同名拦截"（工具面）；本条管"**代码 agent 生成的代码本身的 import 面**"（代码执行面）。
+- 反模式：代码执行环境全开 import（生成代码可以偷跑任意库）；靠提示词约束代码行为（执行层没拦，约束是纸的）；工具依赖不声明（运行时才发现缺库）。
+- **提升层**：工具（代码执行安全）。
