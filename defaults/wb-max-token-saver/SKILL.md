@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体
-version: 1.41.0
+version: 1.42.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -561,3 +561,42 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - 与 §技能两实例迭代闭环 的分工：那条管"开发怎么闭环"（基线→草稿→实测→回改）；本条管"**闭环里的评测具体怎么配数**"（20 条配比/3 次重复/双维对比）。
 - 反模式：只写 5 条"该触发"的 query 测触发；每条只跑一次就当结果；输出质量测试不做无技能基线；只看通过率不看 token 用量。
 - **提升层**：可复用 Skill（技能评测规格）。
+
+## 记忆按业务主体（actor）归属，能力随调用携带（来源：n8n 官方 blog.n8n.io/node-spotlight-amazon-bedrock-agentcore《Build multi-agent teams that remember every customer with Amazon Bedrock AgentCore》2026-09-23 实拉；与 ctx §记忆分层分工——那条管"记忆怎么分层（core/recall/archival）"，本条管"记忆按什么归属、能力怎么分发"）
+原文：AgentCore's Managed memory is scoped by actor and session, so an Actor ID that identifies the customer rather than any single agent gives every specialist the same history to read and write, and that history outlives an individual workflow execution. And because the tools, skills, model, and instructions travel with each invocation rather than being fixed on a deployed agent, one agent can serve all four specialists instead of provisioning four.
+
+- **记忆作用域=业务主体（actor）×session，不是 agent 实例**：用 Actor ID（识别客户/用户）而非单个 agent 作记忆归属——同一客户的所有专家读写同一份历史，历史**活过单次 workflow 执行**。→ 判据：**问"这段记忆属于谁"而不是"属于哪个 agent"**——按 agent 分记忆，客户跨专家换人后记忆就断了。
+- **能力随调用携带，不固定在部署上**：tools/skills/model/instructions 每次 invocation 一起走——一个 agent 实例可服务多个角色，不用每个角色各部署一个。→ 判据：**"角色"是调用参数不是部署单元**——多角色共享一份部署，省的是部署面（与 §成本四层工作切分同源）。
+- 与 §记忆写入时序的分工：那条管"什么时候写"（响应后异步+便宜模型）；本条管"**写给谁、谁有权读**"（作用域）。
+- 反模式：按 agent 实例分记忆（客户跨 agent 就失忆）；每个角色部署一个 agent（重复部署面）；记忆不过 session（历史活不过单次执行）。
+- **提升层**：工作流（多 agent 记忆作用域）。
+
+## durable execution：父休眠子继续、崩溃不级联（来源：n8n 官方 blog.n8n.io/long-running-agents-beyond-prompt-engineering 2026-09-23 实拉；与 ctx §交接文档四要素分工——那条管"上下文怎么交接"，本条管"执行怎么耐久"）
+原文：Sub-agents get this same durability on their own terms. Each child has its own state, schedules, durable fibers, and lifecycle, and stores its own data colocated under the parent. The property that matters for durability is that the parent doesn't have to stay active while the child works. It can start the work, hibernate, and be woken when the child's schedule or recovery check fires. A crash doesn't take down the whole family at once; each identity...
+
+- **耐久的关键性质：父不必保持活跃**：父发起子任务后可休眠，子按自己的 schedule/recovery check 独立跑，完成后唤醒父。→ 判据：**"父要一直在线等子"是脆弱设计**——长时子任务让父休眠、靠子完成/恢复事件唤醒。
+- **每个子 agent 独立生命周期与持久状态**：state/schedules/durable fibers 各自持有，数据 colocated under parent。→ 判据：**状态与调度是子级资源，不挂在父进程里**——父重启不丢子的状态。
+- **崩溃隔离：一个倒下不连带全家**：每个 identity 独立恢复。→ 判据：**故障域=单个子 agent**——设计时问"这个子挂了，其他人和父怎么办"，答案不该是"一起挂"。
+- 与 §上下文作为演化工件的分工：那条管"内容怎么演化"（Generator/Reflector/Curator）；本条管"**执行过程怎么活下来**"（耐久性）。
+- 反模式：父进程全程盯着子跑；子状态存在父进程里（父一挂全没）；单个子崩溃拖垮全家；长时任务无恢复检查点。
+- **提升层**：工作流（长时 agent 耐久性）。
+
+## 输出校验参数化：最终答案校验器 + 每步前后状态日志（来源：smolagents DeepWiki 配置表 2026-08-29 + Dify 官方 enterprise-docs Agent Strategy Plugin 2026-07-15 实拉；与 wb-execute-discipline §步骤间质检-回退分工——那条管"每步之间过质检函数"，本条管"最终答案专用校验参数 + 每步前后成对记状态"）
+原文（smolagents）：Quality assurance: final_answer_checks=[validator_func]；Per-step type callbacks: step_callbacks={ActionStep: [cb1], PlanningStep: [cb2]}。原文（Dify）：Complex tasks usually take multiple steps, and you need to track each step's result to analyze decisions and refine your strategy. The SDK's create_log_message and finish_log_message let you record state before and after each call, which speeds up problem diagnosis.
+
+- **最终答案校验器是框架一等参数，不是流程外约定**：`final_answer_checks=[validator_func]`——把"最后这坨输出对不对"做成可配置钩子，agent 完成时自动过校验。→ 判据：**"收尾校验"要有独立于每步质检的专用钩子**——每步质检防"走偏"，final check 防"走完了但答案是错的"。
+- **每步前后状态成对记录**：调用前 create_log_message（起始状态）、调用后 finish_log_message（完成状态）——诊断"哪一步决策错了"靠前后对照，不是事后猜。→ 判据：**复杂多步任务每步留"前状态+后状态"**，与 §留痕只存元数据 分工：那条管"存什么字段"，本条管"**前后成对的形态**"。
+- **按步类型注册回调**：ActionStep 和 PlanningStep 各挂各的回调，动作问题与规划问题分开观察。→ 判据：**回调按步类型分挂**——混在一个回调里，动作噪声淹没规划问题。
+- 与 §可自检追问的分工：那条管"给用户的答案后附追问"（人侧）；本条管"**agent 输出的机器侧校验**"（自动化）。
+- 反模式：只做每步质检不做最终答案校验（错答案走完流程才被发现）；日志只记结果不记调用前状态（决策错了无从对照）；所有步类型共用一个回调。
+- **提升层**：工具（输出校验与可诊断性参数）。
+
+## harness 全能力插件化：循环/调度/存储/UI 也是插件（来源：DeepSeek Harness 官方 deepseek.com/harness/en 2026-09-23 实拉；与 §技能模块化分工——那条管"技能层可组合"，本条把 harness 级能力纳入插件面）
+原文：Every capability is a plugin that can be swapped or recomposed: models, tools, skills, sessions, sandboxes, storage, loops, scheduling, and the UI.；Plugins provide every agent capability, including models, tools, skills, sessions, sandboxes, storage, loops...
+
+- **插件化的范围不止工具与技能**：模型/工具/技能/会话/沙箱/存储/**循环（agent loop）**/**调度**/UI 全部可替换重组——连"agent 怎么跑循环"都是可换的。→ 判据：**"可组合"要覆盖执行机制本身**，不只是功能模块——想换循环策略/调度器/存储后端时，不该动核心。
+- **插件三件套契约**：defineTool{name + description + parameters schema} + output.schema + render——工具声明与渲染分离，输出结构可程序消费。→ 判据：**插件的输入（parameters schema）与输出（output.schema）都结构化**，机器才能编排（与 §工具返回字段裁剪同源）。
+- **社区插件的分发形态**：GitHub topic（如 `dsh-plugin`）即插件市场，自然语言装/卸。→ 判据：**插件发现走主题标签 + 声明式安装**，不靠手工拷贝目录。
+- 与 §第三方技能选型三判据的分工：那条管"装之前怎么筛"（安装量/信誉/热度）；本条管"**harness 能力边界在哪、插件长什么样**"（形态）。
+- 反模式：只有工具能换、循环/调度写死；工具输出结构不声明（模型只能猜）；插件市场靠手工搬运。
+- **提升层**：工具（可组合架构理念）。
