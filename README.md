@@ -20,7 +20,8 @@ WorkBuddy 自定义技能 + 记忆 + 身份配置，版本管理并同步到 Git
 | `meta/` | 仓库元信息（SkillHub 迁移记录、plugins） | _bm_skillid_migration.json · plugins/ |
 
 ## 共同学习区
-- `memory/co-learn/` —— 豆包 + WorkBuddy 共享学习地址，详见 [`memory/co-learn/README.md`](memory/co-learn/README.md)。
+- 仓库总入口：[`00_总目录_所有AI入口.md`](00_总目录_所有AI入口.md)（WorkBuddy / 豆包 / Qoder 三方唯一入口，任何 AI 先读它）。
+- `memory/co-learn/` —— 三方共学：`workbuddy/` · `doubao/` · `qoder/`，详见 [`memory/co-learn/README.md`](memory/co-learn/README.md)。
 - `memory/` —— 学习记录与共同学习区；`AGENTS.md` —— 全局规则。
 
 ## 同步约定
