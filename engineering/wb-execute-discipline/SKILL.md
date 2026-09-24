@@ -2566,3 +2566,13 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **stop_reason 逐型处理，不统一当"完成"**：每个终止原因（max_tokens / refusal / 内容过滤 / 正常 end_turn）各配 fallback 链——max_tokens 可能要续跑，refusal 要换路或上报，end_turn 才是成功。把所有 stop 当 done = 把截断当交付。
 - 与既有纪律分工：model fallback 链（认证轮换→同模型有界恢复→换模型）管"哪条路继续"；本条管"**这条路在半路停时，半成品怎么处置**"。降级不持久化/用户显式选择不许覆盖 照常适用。
 - 提升层：工作流（输出交付语义）。
+
+
+## RAG 管线检索后质量门：CRAG 三级路由 + RAGAS 指标诊断分工 + 冲突源暴露（来源：arXiv 2401.15884 CRAG / arXiv 2603.16169 复现 / invra·qaskills·腾讯云 RAGAS / ailearningguides·chenk.top 生产失败模式，2026-09-24 实拉）
+
+- **CRAG 三级路由：检索后生成前插轻量自评**：轻量 evaluator（不是生成大模型本身）给每个 chunk 打置信分。Correct（>τ+）→ decompose-then-recompose 提炼后用本地；Incorrect（全 <τ-）→ 丢弃全部本地结果转 web search；Ambiguous → 内外合并。阈值按数据集调（论文 PopQA 0.59/-0.99、Biography 0.95/-0.91），下限可极低意味着"全错"是少数，大量走 hybrid。判据：naive RAG 不管检索到什么都生成，CRAG 显式回答"这次本地库有没有货"。
+- **RAGAS 诊断分工：哪个分低修哪端，别一上来全改**：Faithfulness 低但 retrieval 好 = 生成端问题（prompt 没锁死"只从上下文答"，模型在用 parametric memory），改 prompt；Context Precision 低 = 相关 chunk 排太后（LLM 有 recency/primacy 效应），加 cross-encoder rerank；Context Recall 低 = 检索端漏召回，改 chunk/embedding/hybrid。前沿模型会"找对了文档但生成时不用"（arXiv 2607.14400）——检索准确率高 ≠ 答案用了上下文，要加引用忠实度指标而不是只看 top-k。
+- **冲突源暴露纪律**：检索结果里新旧政策/草稿/定稿同时出现时，prompt 要让模型列出冲突而不是静默选一个自信输出；embedding 不是一次永久——语料格式/词汇变了，每月 held-out 集重测检索质量，漂移 >5% 重新 embed。
+- **与已有条目分工**：§工具结果断言层 管工具返回值合不合理；本条管 RAG 检索结果值不值得喂给生成。§工具循环查终止 管循环跑不跑；本条管检索质量自评。
+- **提升层**：工作流（RAG 管线）。
+

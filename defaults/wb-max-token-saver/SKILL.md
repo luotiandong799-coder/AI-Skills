@@ -715,3 +715,11 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - **★同一件事只发一张卡，状态变化原地更新**：任务开始发一张状态卡，之后改动这张卡，真正完成时才发一条新通知。判据：**状态刷屏会淹没真正的完成通知**——"更新"和"完成"必须视觉上不同。
 - **★请求批准时，你的职责是给最清晰的情况说明，不是推销某个结论**：说明里要有对象、改动前后差异、所需权限、以及**能不能撤销**；执行之前**再验一次对象与权限**。判据：**把批准画面写成"建议点同意"，就把决策所需的差异信息藏起来了**；批准人要能一眼看出"改的是不是我以为的那个东西"。
 -  与 §进度流与诊断流分开（若已存在）分工：那条管**汇报内容的分渠**；本条管**呈现格式与节奏**。
+
+
+## 推理模型成本三纪律：thinking 也计费 / caching 静默失败 / router 按盈亏平衡（来源：Anthropic 官方 extended-thinking + octomind 2026-09-18 + theneuralbase/channel.tel/syncsoft 实拉，2026-09-24）
+
+- **Thinking 也是计费面，不是免费内部琢磨**：开 extended thinking 后 thinking tokens 按 output 计费（即使不返回给用户）；上一轮 thinking block 进下一轮上下文按 input 计费，多轮 agent 里会滚雪球。Claude 4.6+ 手动 budget_tokens 已 deprecated，用 adaptive（模型自己决定 thinking 多久）。判据：多轮 agent 记账时 thinking 别漏算。
+- **Prompt caching 失败是静默的**：cache miss 不报错不警告，响应一模一样——大多数团队从没拿到缓存折扣不是功能没开，是 prefix 结构不对。结构纪律=稳定 system/工具定义在前、动态用户输入在后；Anthropic 写缓存 1.25x(5min)/2x(1h)，hit rate 不够时写缓存反而亏钱；必须主动测 hit rate，别等账单。
+- **Reasoning router 按盈亏平衡选，不按越难越好**：reasoning 比 standard 贵 10-50 倍——路由阈值=错误代价×概率 是否超过 reasoning 溢价；状态查询/简单 lookup/聊天 UX（用户>3s 就走）用 reasoning 纯浪费；reasoning 超 latency budget 自动回退 fast model，不让用户干等；纯关键词路由会漂移，监控被路由到 reasoning 的请求真受益了吗，季度重训。
+- **提升层**：输出 / 成本工程。

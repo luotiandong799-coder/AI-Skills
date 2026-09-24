@@ -2036,3 +2036,14 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 - 与 line「Knowledge deprecated 迁移 Skills」分工：那条是**演进趋势观察**（别再新建检索条目库），本条是**前置判据**——写新内容前先过这个序列选载体，避免"什么都写进 SKILL.md"或"什么都建库"两个方向的错。
 - 判据一句话：**步骤进技能、问法进模板、能力进工具、事实默认进技能正文**；拿不准时问"这内容每次都要全文在场吗"——要 → 技能/正文，按需召回 → 模板或库。
 - 提升层：可复用 Skill（知识治理）。
+
+
+## LLM-as-Judge 偏差四修法 + judge 与人 agreement 硬上限（来源：arXiv 2604.23178 Judging the Judges / arXiv 2603.24586 / arXiv 2604.06996 / aiworkflowlab 2026-08 / compelframework，2026-09-24 实拉）
+
+- **四种 bias 各有专属修法，不能一刀切**：position bias（pairwise 偏第一选项，15-30% skew）→ 每次判两次互换顺序，两次一致才算赢（2x cost）；verbosity bias（偏长答案 ~15% inflation）→ rubric 显式写"不偏好长答案"并加 conciseness 评分维度；self-preference（偏同家族输出 3-10%）→ judge 必须跨家族，不用被评模型同厂；sycophancy（同意问题里的预设）→ premise-neutral prompt，把问题里的预设摘掉再判。
+- **verbosity bias 方向不固定**：arXiv 2604.23178 实测 Llama/Gemini 偏长（+0.24~0.44），Claude Sonnet 4 反而偏短（-0.12），GPT-4o 中性——不能写死"judge 都偏好长"，要 length-aware 实测自家 judge 方向再加反向 rubric。
+- **judge 与人 agreement 有硬上限**：最强 LLM judge 比多数人类 agreement 低 12-23 个百分点；个性化任务二选一准确率仅 ~70%。判据：LLM judge 分数只用于相对排序和回归监控，不断言"这个答案客观正确"；高风险场景保留人审，judge 通过 ≠ 验收通过。fine-tuned judge 不必然优于通用模型。
+- **rubric pointwise 打分也有 self-preference**：输出不满足 rubric 时，模型对自家输出误判"满足"的概率高 50%+（arXiv 2604.06996）；ensemble 多 judge 能减但不能消除。自家 skill 用同家族模型打 rubric 分会被系统性抬高。
+- **judge 与被评系统共享信号=循环论证（circularity）**：跨家族 judge 不仅是去 self-preference，也是破 circularity。
+- **提升层**：可复用 Skill（评估/评委可靠性）。
+
