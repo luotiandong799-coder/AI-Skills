@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度
-version: 3.00.0
+version: 3.01.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -2206,3 +2206,18 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 - **原文机制**：脚本类指令要**明示 `execute x.py` 还是 `read x.py`**，不让模型猜。
 - 判据：**"用一下 x.py"是一句有歧义的指令**——模型可能把它当脚本跑（产生副作用、花时间），也可能当文件读（只读出内容、什么也没做）。两种结果都不报错：读的那次看起来像"没执行"，跑的那次在用户只想看看的时候已经动了东西。把动词写死成本为零，省掉的是一次误解后的返工。
 - 提升层：可复用 Skill（指令写法）。
+
+## "能跑"与"能读"是两种独立权限：use-only 档下技能正文在 API 层就脱敏、永不下发（来源：agentman.ai /blog/share-the-skill-not-the-secret-use-only 实测，Qoder r205-Q-C C4 报送，2026-09-25 复核后落地；与 §指令里要说清执行还是读 互补）
+- **原文机制**：访问四档 use / read / edit / admin；use-only 下"不能打开、不能读其指令、不能导出"，且"skill body is redacted at the API layer — never sent to the client"；该档审计只记"谁跑了它、何时"。
+- 判据：**共享技能时，分发的单位应是"调用权"而不是"正文可读"**。与 §execute/edit/publish/unpublish 四 scope 互补：那条分"能对流程做什么动作"，本条分"内容本体可不可见"。内部技能含业务口径、供应商名、阈值时，给同事/别的 agent 是"用"还是"看"要分开定——给了运行权不等于把正文交出去，反之亦然。
+- 提升层：可复用 Skill（分发与权限）。
+
+## 授权表每加一档，必须写出它的隐含闭包与"不可关闭项"（来源：Windmill roles_and_permissions 官方文档实测，Qoder r205-Q-C C11 报送，2026-09-25 复核后落地；与上一条"能跑不能读"互补）
+- **原文机制**：官方自陈——"Write mode implicitly includes read permission"；"An operator with read access to a variable can read its value, secrets included, through the API"（读一个变量名即可拿明文密钥）；"run on behalf of is always enabled"（app 永远以某主体身份代跑，无关闭通道）。
+- 判据：**"我只给了只读/只运行"这句话默认是假的**。授权表每新增一档，就在同一行写出它的隐含闭包（写⇒读、读配置⇒读明文密钥、允许代表他人执行⇒结果归属谁）与"不可关闭项"，否则最小可见性判断建立在错误前提上。与上条"能跑不能读"一起构成完整判据：一条说"可以只给执行不给读"（可行设计），一条说"现实实现里读权限会把密钥顺带给你"（默认陷阱）。
+- 提升层：工具 / 安全（权限台账）。
+
+## 任何"禁止类"硬闸门，必须同时声明三件事：豁免名单、生效延迟、它自己是不是可枚举资源（来源：Windmill protection_rulesets 官方文档实测，Qoder r205-Q-C C9 报送，2026-09-25 复核后落地）
+- **原文机制**：规则集是仅管理员可写的独立资源，五条规则可枚举（Disable direct deployment / Disable workspace forking / Restrict public app access / Restrict guest app access / Restrict public run sharing）；"workspace admins and bypass users" 可在规则下行动（豁免身份被写进规则本身）；规则启用后"can take up to 60s to activate"（传播窗口）；dev/prod 环境锁不是另一套机制，只是同一规则集里的保留规则 `dev_workspace_lock`。
+- 判据：① 立任何"禁止类"规则时同轮写出**谁被豁免**——不写就会在事故当天现造一个例外；② "已开启"要等**确认信号**才算真生效（60s 量级传播窗口是真实绕过面）；③ 复合保护政策若只是某条规则的命名实例，**审计时要按规则名逐个查**，查"有没有开生产锁"这种笼统问题问不出真相。
+- 提升层：工具 / 安全（闸门设计）。
