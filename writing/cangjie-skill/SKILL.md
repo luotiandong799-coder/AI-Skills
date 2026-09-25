@@ -1,7 +1,7 @@
 ---
 name: cangjie-skill
 description: "Distill a book, long-video transcript, podcast, course, or interview into a coherent set of executable skills. Use when the user asks to 拆书 / 蒸馏一本书 / 把 XX 书做成 skill / 把这个视频/播客/课程蒸馏成 skill / turn a book or video into skills — i.e. wants the frameworks, principles, and methodologies in long-form content extracted into atomic, reusable Claude skills that an agent can invoke in real-world situations. NOT for simple summarization, book reviews, or role-playing as the author (that is nuwa-skill's job)."
-version: 2.5.2
+version: 2.5.3
 display_name: "仓颉Skill"
 display_name_en: "Cangjie Skill Factory"
 description_zh: "将书籍、长视频、播客或课程蒸馏为一组可执行技能。适用于拆书、蒸馏、把XX做成skill等场景，通过RIA阅读法提取框架、原则、思维模型和方法论，生成原子化可复用的Agent技能。"
@@ -189,3 +189,5 @@ books/<book-slug>/
 - 交付后主动提议把可复用方法论写进记忆或固化成 Skill（doc -> co-learn 沉淀闭环），不自存即丢。
 - 先判「是否跨任务复用」再动手，避免记忆膨胀（见 knowledge-governance 五类处置）。
 - 用户偏好 / 决策类结论落 AGENTS.md / MEMORY.md 对应层，不入公开仓。
+
+> 激活策略：按需启动（仅文档产出/蒸馏任务加载）。

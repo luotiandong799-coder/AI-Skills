@@ -1,7 +1,7 @@
 ---
 name: browser-automation
 description: 浏览器与网页自动化统一入口（合并原 stealth-browser、smooth-browser 与 wb-browser-reuse 三个同类技能，并保留各自强项）。当需要打开网页、填表、抓取网页数据、测试站点、登录后持久复用会话、绕过反爬/Cloudflare/验证码、跑静默无头自动化、或让 Agent 复用你已登录的真实浏览器（不打断你、爆炸半径收敛到一个借出的标签）时使用。含五条路径：内置 agent-browser（常规默认）→ 持久登录 profile → 本地反检测脚本（CF / 验证码 / 代理 / 会话保存）→ 复用真实登录态的本地浏览器桥接 bsk（借不抢 + 类型化人助）→ 云端自然语言浏览器代理（smooth.sh，需已安装且有余量）。触发词：打开网站、抓取网页、填表、登录、爬取、自动化网页、绕过 Cloudflare、验证码、无头浏览器、browser automation、scrape、fill the form、log into、复用登录态、借浏览器、borrow tab、标签页借用、标签页归还、tab borrow、tab return、human-in-the-loop、request-help、bsk、Agent Window、本地浏览器桥接、不打断用户、验证码交还、复用真实浏览器、已登录浏览器自动化、BrowserSkill。
-version: 2.1.0
+version: 2.1.1
 agent_created: true
 sources:
   - 合并自旧 skill `stealth-browser` v1.0.0（本地四层反检测 + 8 个 python 脚本）
@@ -239,3 +239,5 @@ T1 fetch 失败 → T2 补 header → T2 失败 → T3 store action → T3 失�
 原 `stealth-browser`（本地反检测四层 + 脚本）与 `smooth-browser`（云端自然语言代理 + 会话纪律 / 结构化输出 / live-view）是同一功能位的两个重复技能 → 合并为 v1.2.0：**保留 stealth 的全部脚本与反检测能力，同时把 smooth 的会话纪律、任务粒度原则、结构化输出与人工接管流程吸收进来**。
 2026-09-19 再把 `wb-browser-reuse`（腾讯 BrowserSkill 方法论蒸馏）并入本技能 v2.0.0：它覆盖的是同一功能位下的第五条路径「复用你已登录的真实浏览器」，与已有四条路径共享触发词空间（「浏览器自动化 / 抓网页」），独立成 skill 会造成路由二义。并入后**其五条方法论（借不抢 / 确认锚定 / 类型化人助 / 本地优先 / 观测-动作纪律）原样保留**，见五；`browser-automation` 自此是浏览器自动化的**唯一入口**，bsk 的命令细节仍由 `bsk` 自管的 `browser-skill` 承载。
 三个旧目录已删除（git 历史可回溯）。常规任务仍优先用内置 `agent-browser`。
+
+> 激活策略：按需启动（仅浏览器/网页任务加载，非常规任务默认不加载）。
