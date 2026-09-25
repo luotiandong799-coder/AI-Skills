@@ -1,7 +1,7 @@
 ---
 name: cangjie-skill
 description: "Distill a book, long-video transcript, podcast, course, or interview into a coherent set of executable skills. Use when the user asks to 拆书 / 蒸馏一本书 / 把 XX 书做成 skill / 把这个视频/播客/课程蒸馏成 skill / turn a book or video into skills — i.e. wants the frameworks, principles, and methodologies in long-form content extracted into atomic, reusable Claude skills that an agent can invoke in real-world situations. NOT for simple summarization, book reviews, or role-playing as the author (that is nuwa-skill's job)."
-version: 2.5.1
+version: 2.5.3
 display_name: "仓颉Skill"
 display_name_en: "Cangjie Skill Factory"
 description_zh: "将书籍、长视频、播客或课程蒸馏为一组可执行技能。适用于拆书、蒸馏、把XX做成skill等场景，通过RIA阅读法提取框架、原则、思维模型和方法论，生成原子化可复用的Agent技能。"
@@ -124,7 +124,9 @@ books/<book-slug>/
 
 通过的写入 `books/<slug>/verified.md`。不通过的写入 `books/<slug>/rejected/` 并附原因。
 
-**用户轻确认** ★: 筛选完成后,把"通过的 N 个候选标题 + 淘汰的 M 个"列表展示给用户确认,再进入阶段 1.6。
+**确认按需，不逐阶段停** ★: 筛选结果**默认自动继续**，只在出现以下情况才请求确认：
+蒸馏目标不明确 · 筛选边界不明确（通过/淘汰差距很大）· 判断会影响最终 Skill 数量或方向 ·
+多种输出模式都同样合理。普通流程不在阶段之间停下来问。
 
 ### 阶段 1.6 — 独立 Skill 晋级门（产品化验证）
 
@@ -152,9 +154,12 @@ books/<book-slug>/
 
 按 `methodology/07-stage5-deliver.md`:
 1. 生成 `books/<slug>/DIGEST.md` — 面向读者的精华长文
-2. 运行 `python3 scripts/cangjie.py compile --bundle books/<slug>/.cangjie/capabilities --out <目标目录> --output auto`,把决策报告展示给用户轻确认（按推荐 / 改 single / 改 pack）
-3. 询问用户安装位置,把编译产物复制或 symlink 过去
+2. 运行 `python3 scripts/cangjie.py compile --bundle books/<slug>/.cangjie/capabilities --out <目标目录> --output auto`,按编译器推荐直接出产物（只在 single/pack 影响交付形态且用户未指定时轻确认一次）
+3. **安装位置按需问**：用户已给过目标目录 → **直接使用**；已有既有落点惯例（如 `D:\腾讯AI\skills`）→ 直接落；
+   只有完全不知道保存位置、且确实需要落盘时才询问
 4. 告知用户: "已完成,可一键喂给 darwin-skill 自动进化"
+
+> **默认自动推进**：读取 → 提取 → 筛选 → 验证 → 编译 全程自动，只在真正影响用户目标的决策点暂停。
 
 ## 质量红线 (违反则阻止输出)
 
@@ -182,3 +187,12 @@ books/<book-slug>/
 - **保留审计轨迹** — candidates/ 和 rejected/ 都要留
 - **随时可续跑** — 每完成一个阶段就更新 PIPELINE_STATE.md,中断后从状态文件恢复
 - **输出策略持久化** — update/repair 默认沿用原输出模式,不因新增材料静默改变产物形态
+
+## 文档产出后的沉淀闭环（补）
+
+蒸馏完一本书 / 长文 / 会议记录不是终点：
+- 交付后主动提议把可复用方法论写进记忆或固化成 Skill（doc -> co-learn 沉淀闭环），不自存即丢。
+- 先判「是否跨任务复用」再动手，避免记忆膨胀（见 knowledge-governance 五类处置）。
+- 用户偏好 / 决策类结论落 AGENTS.md / MEMORY.md 对应层，不入公开仓。
+
+> 激活策略：按需启动（仅文档产出/蒸馏任务加载）。

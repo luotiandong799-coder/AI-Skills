@@ -1,7 +1,7 @@
 ---
 name: bsk-drive-logged-in-browser
 description: 用 bsk（BrowserSkill）驱动用户「已登录」的 Chromium 浏览器完成实操任务——发邮件、填表、点流程、读页面、抓数据。凡用户说「打开我的浏览器…」「用我登录的 XX 发/做/提交…」「帮我操作网页」「固定标签那个页面…」时使用。核心覆盖 WorkBuddy 环境下的实战坑：daemon 被回收、Agent Window 被关、PATH 缺 coreutils、弹窗确认、用户窗口标签的坐标层。触发词：bsk、BrowserSkill、驱动浏览器、操作已登录浏览器、固定标签、发邮件、163邮箱、填表提交、Agent Window、借用标签、borrow、daemon 被回收、52800、send email。（统一入口=browser-automation；本技能为其 bsk 驱动底层实现位，由它路由；两者同一功能位，只划边界不文件级合并。）
-version: 1.1.0
+version: 1.2.0
 agent_created: true
 ---
 
@@ -330,3 +330,16 @@ bsk session stop "$SID"
 - `bsk session stop $SID`。
 - 借过的标签才需要 `tab return`；**borrow 超时/没借成功就不用管**，标签本来就还在用户窗口。
 - 常驻的浏览器托管任务和 daemon 任务留着，别 stop/restart daemon。
+
+---
+
+## 11. 站点适配器执行位（bb-sites 范式，来自 bb-browser/bb-sites 方法论）
+
+browser-automation §八 定义的站点适配器（一个 JS 函数、页内 eval、返 JSON）在本技能的执行位就是 `bsk evaluate`。映射：
+
+- **T1（仅 Cookie）**：`bsk evaluate "fetch('/api/x?q='+encodeURIComponent('...'),{credentials:'include'}).then(r=>r.json())" --session $SID` 直出 JSON。
+- **T2（Bearer+CSRF）**：evaluate 里从 `document.cookie` 取 `ct0` 等 token，拼 `headers` 后 fetch。
+- **T3（签名）**：evaluate 里取 `__vue_app__.$pinia._s.get('store')` 调 store action，或拦截 `XMLHttpRequest` 抓 response（见 browser-automation §八 决策树）。
+- **逆向抓包**：bsk CLI 未直接暴露 `network --with-body`；要逆向站点 API，走 Edge/Chrome DevTools 的 Network 面板，或用 CDP `Network.enable` 抓请求/响应体，再据此写适配器。**不要为抓包而开远程调试端口**。
+
+**私有适配器收纳**：`~/.workbuddy/browser-adapters/<platform>/<command>.js`（同名覆盖，含登录态/私有站点，不入仓）。执行前先 `bsk tab borrow` 借到带登录态的用户标签（见 §2），用完 `tab return`。

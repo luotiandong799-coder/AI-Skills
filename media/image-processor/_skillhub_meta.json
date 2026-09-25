@@ -6,5 +6,6 @@
   "skillId": "skill_2095470397276463104",
   "description_zh": "处理用户上传的图片，压缩、缩放、格式转换、裁剪、旋转、翻转、灰度、文字水印、圆角；全程离线，不联网、不付费、无需密钥",
   "description_en": "Process images, compress, resize, convert, crop, rotate, flip, grayscale, watermark, rounded corners. Fully local and offline, no cloud service, no API key.",
-  "iconSource": "letter:auto"
+  "iconSource": "letter:auto",
+  "installedContentHash": "sha256:4c74958350fa79d5beb87fcf31b64e2c69e0fc9ef314960bc09a5f3fa3bfd966"
 }

@@ -1,0 +1,19 @@
+{
+  "slug": "wechat-desktop-claw-automatic-control",
+  "name": "微信 PC 端自动控制",
+  "version": "1.1.1",
+  "installedAt": 1790245405535,
+  "source": "skillhub",
+  "namespace": "user_96ce8353",
+  "canonicalName": "@user_96ce8353/wechat-desktop-claw-automatic-control",
+  "iconSource": "https://cloudcache.tencent-cloud.com/qcloud/ui/static/other_external_resource/a78375f1-773e-4817-b4f3-0557b6afd777.png",
+  "labels": {
+    "requires_api_key": "false"
+  },
+  "description_zh": "打开微信桌面端，向指定联系人发送消息、图片、文件等内容。触发词：给某人发微信、打开微信发消息、微信发送、通过微信发给。也支持被其他",
+  "description_en": "通过 pywinauto 自动化操作微信 Windows 桌面端，实现消息、图片、文件的自动发送。",
+  "installs": 10482,
+  "installedContentHash": "sha256:fadb32811a9eb2d7c90065e318d1641678714d84b227ee9936cf087a98751424",
+  "iconLocalPath": "C:\\Users\\26719\\.workbuddy\\skills\\wechat-desktop-claw-automatic-control__skillhub\\_icon.png",
+  "iconDownloadedFrom": "https://cloudcache.tencent-cloud.com/qcloud/ui/static/other_external_resource/a78375f1-773e-4817-b4f3-0557b6afd777.png"
+}

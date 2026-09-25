@@ -5,10 +5,12 @@ description: >
   on the internet — e.g. 全网调研 X / 帮我调研一下 X / 查一下 X / 搜搜 X /
   看看大家怎么评价 X / X 上有什么讨论 / research this topic。
 
-  Also MUST USE when user mentions any platform or shares any URL/链接:
+  Also MUST USE when user asks for content ON a specific platform:
   小红书/xiaohongshu/xhs, Twitter/推特/X, B站/bilibili, Reddit, Facebook,
   Instagram, V2EX, LinkedIn/领英/招聘/求职/jobs, YouTube, GitHub code search, 小宇宙播客,
-  雪球/股票行情, RSS feeds, or any web URL.
+  雪球/股票行情, RSS feeds.
+  【边界】只给一个普通 URL/链接、没有平台特征 → 走 `web-scrape`，不进本技能；
+  需要打开页面/点选/登录态 → 走 `browser-automation`。
 
   15 platforms, multi-backend routing (OpenCLI / per-platform CLIs / APIs).
   Zero config for 6 channels. Run `agent-reach doctor --json` to see which
@@ -31,18 +33,20 @@ metadata:
 
 ## 常驻规则（全程适用）
 
-1. **动手前先体检**：多后端/登录态平台（小红书/Reddit/B站/Twitter/Facebook/Instagram）先跑
-   `agent-reach doctor --json`。`active_backend` 有值时按它选命令组；`active_backend: null`
+1. **体检按需，不默认跑**：只在「任务确实需要该平台」且「登录态 / 后端状态会影响结果」时才跑
+   `agent-reach doctor --json`。单平台简单查询、零配置通道（Exa/Jina/V2EX/bili-cli/gh）直接执行，不先体检。
+   `active_backend` 有值时按它选命令组；`active_backend: null`
    表示 Doctor 为避免触发浏览器 Cookie 读取或远端写入而没有做实时验证，不代表后端不存在。
-   只有用户任务明确需要该平台时，才按对应 reference 的只读命令手动验证。
-2. **声明你在用什么**：开始干活前说一句「使用 agent-reach 的 X 平台 / Y 后端」。
+2. **默认静默，不声明工具**：干活时不说「正在使用 agent-reach 的 X 平台 / Y 后端」。
+   只有三种情况才说明：① 用户主动问数据来源；② 多后端结果冲突需解释；③ 后端/权限差异影响结果。
 3. **失败按 references 里的重试链处理**，不要瞎猜命令。
-4. **全网调研类任务**：组合多平台（Exa 搜索 + Twitter/Reddit 看讨论 + 小红书/B站看中文场景），并行收集再汇总。
-5. **替用户盯版本**：完成一次较大的调研/多平台任务后，顺手跑
-   `agent-reach check-update`（很快，一个 API 调用）。有新版就在收尾汇报里附一句：
-   「Agent Reach 有新版 vX.Y.Z，复制这句话给我即可更新：帮我更新 Agent Reach：
-   https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/update.md」。
-   不要中断当前任务去更新，也不要重复提醒同一个版本。
+4. **平台数量按任务分级，不默认全网并行**：
+   - 简单问题 / 单一明确来源 → **单源优先**（1 个通道）；
+   - 需要交叉验证 → **2 个来源**；
+   - 社区舆情 / 全网调研 / 多角度综合分析 → **多平台并行**。
+   不因为出现"全网""调研"就无脑堆全部平台。
+5. **不默认检查更新**：仅在「用户要求更新」「当前任务涉及版本问题」「检测到明显版本兼容异常」时才跑
+   `agent-reach check-update`。普通任务不额外调用。发现新版**只提示、不自动更新**，由用户授权后再动。
 
 ## 路由表
 

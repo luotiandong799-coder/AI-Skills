@@ -18,5 +18,6 @@
   "description_en": "Manage GitHub issues, PRs, and CI runs",
   "iconSource": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/github.svg",
   "iconLocalPath": "C:\\Users\\26719\\.workbuddy\\skills\\github\\_icon.svg",
-  "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/github.svg"
+  "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/github.svg",
+  "installedContentHash": "sha256:110aef6568fef162c95d19414b18d9c8cbcdf1a0e88ea67f63f1538f47209085"
 }

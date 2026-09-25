@@ -4,5 +4,6 @@
   "source": "marketplace",
   "version": "1.0.0",
   "skillId": "skill_2095257939177164800",
-  "iconSource": "letter:auto"
+  "iconSource": "letter:auto",
+  "installedContentHash": "sha256:8cc757116246252babf857c1e889653d11e6b249845c3550357ff92d22097e11"
 }

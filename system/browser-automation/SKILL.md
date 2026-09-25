@@ -1,7 +1,7 @@
 ---
 name: browser-automation
 description: 浏览器与网页自动化统一入口（合并原 stealth-browser、smooth-browser 与 wb-browser-reuse 三个同类技能，并保留各自强项）。当需要打开网页、填表、抓取网页数据、测试站点、登录后持久复用会话、绕过反爬/Cloudflare/验证码、跑静默无头自动化、或让 Agent 复用你已登录的真实浏览器（不打断你、爆炸半径收敛到一个借出的标签）时使用。含五条路径：内置 agent-browser（常规默认）→ 持久登录 profile → 本地反检测脚本（CF / 验证码 / 代理 / 会话保存）→ 复用真实登录态的本地浏览器桥接 bsk（借不抢 + 类型化人助）→ 云端自然语言浏览器代理（smooth.sh，需已安装且有余量）。触发词：打开网站、抓取网页、填表、登录、爬取、自动化网页、绕过 Cloudflare、验证码、无头浏览器、browser automation、scrape、fill the form、log into、复用登录态、借浏览器、borrow tab、标签页借用、标签页归还、tab borrow、tab return、human-in-the-loop、request-help、bsk、Agent Window、本地浏览器桥接、不打断用户、验证码交还、复用真实浏览器、已登录浏览器自动化、BrowserSkill。
-version: 2.0.0
+version: 2.1.1
 agent_created: true
 sources:
   - 合并自旧 skill `stealth-browser` v1.0.0（本地四层反检测 + 8 个 python 脚本）
@@ -139,7 +139,105 @@ python scripts/stealth_session.py -u "https://target.com" -s sitename --load
 - **试图用参数 / 改浏览器设置绕过确认开关，或在用户拒绝后重复请求人助**（见 5.2 / 5.3）
 - **导航完就宣布任务完成**，或失败后换后端绕限制、在同种失败上死循环（见 5.3）
 
+## 八、站点专用适配器模式（site adapter · 来自 bb-browser/bb-sites 的方法论，非照搬）
+
+**何时写适配器**：通用抓取（web-scrape / agent-browser）能稳定拿到结构化数据 → 不写；只有「某站点高频、需复用登录态、要 JSON 而非 Markdown、且通用通道常被反爬/反解」时才值得沉淀一个**站点专用适配器**。
+
+**一个适配器 = 一个 JS/py 函数，在真实浏览器页内 `eval` 执行，返回结构化 JSON**（不返原始 HTML）。元信息 `@meta` 规范（直接复用 bb-sites 约定）：
+
+```javascript
+/* @meta
+{
+  "name": "platform/command",
+  "description": "一句话",
+  "domain": "www.example.com",
+  "args": {"q": {"required": true, "description": "查询词"}},
+  "capabilities": ["network"],
+  "readOnly": true,
+  "example": "bsk eval '<adapter>'"
+}
+*/
+async function(args){ if(!args.q) return {error:'Missing arg: q'};
+  const r = await fetch('/api/x?q='+encodeURIComponent(args.q), {credentials:'include'});
+  return r.ok ? await r.json() : {error:'HTTP '+r.status, hint:'登录态失效?'}; }
+```
+
+**复杂度分档（自动选方案，依站点 API 复杂度）**：
+
+| Tier | 认证方式 | 做法 | 例 |
+|---|---|---|---|
+| 1 | 仅 Cookie | 页内 `fetch()` 直调 `credentials:include` | Reddit/GitHub/V2EX |
+| 2 | Bearer + CSRF | `eval` 里从 `document.cookie` 取 token 手动拼 header | Twitter/Zhihu |
+| 3 | 请求签名（X-s 等） | 调页内 Pinia/Vuex store action，或拦截 XHR 抓 response | 小红书 |
+
+**决策树**：`fetch` 直调能拿数据 → T1；复制 network 抓到的 header 后能拿 → T2；都不行但站点 Vue+Pinia → T3；全不行 → 退回 UI 操作（click/scroll）+ 读结果，**不做 adapter**。
+
+**执行位**：适配器在真实浏览器页内跑 → 用五（bsk）的 `bsk evaluate` 执行（见 bsk 技能 §11）。headless 通道（agent-browser）也能 eval 但**无登录态**，只适合 T1 公开 API。
+
+**私有适配器收纳**：放 `~/.workbuddy/browser-adapters/<platform>/<command>.js`，同名覆盖社区版，不入仓（含登录态/私有站点）。
+
+## 九、站点任务自动路由（统一执行顺序）
+
+用户说「查 XX 站的热榜 / 搜 XX」时，按此顺序短路，命中即停、不并行试多通道：
+
+```
+1. 专用 Skill（已有针对该站/该任务的技能，如 wechat / wb-media-forensics）→ 直接用
+2. Workflow（已沉淀的可复用工作流）→ 用
+3. MCP（如 playwright / westock / neodata 等专用数据 MCP）→ 用
+4. 真实浏览器站点适配器（bb 范式：复用你登录态、返 JSON）→ bsk eval 跑适配器
+5. 通用浏览器（agent-browser / web-scrape）→ 无登录态需求的取数/取正文
+6. 新建（以上都不行才考虑写新适配器/新 Skill；先走 §八 决策树，别一上来就造）
+```
+
+**路由判据**：要登录态 + 要 JSON + 高频 → 4；纯公开取数/取正文 → 5；有现成专用工具 → 1/2/3。判据不清时问「要不要你的登录态、要不要结构化数据」。
+
+## 十、执行前检查（含 Windows CDP / Profile 兼容性检测）
+
+动手前必查，失败早停别硬冲：
+
+- **浏览器在跑？** 复用真实浏览器前先 `bsk status --json`，看 `browsers` 非空；**本沙箱 `tasklist` 看不到用户进程，以 bsk 状态为准**（勿用 tasklist 判）。
+- **登录态有效？** 别假设「用户登录过 = 能访问」；先 `bsk evaluate "document.cookie.includes('session')"` 或导航一次实测，再下结论（实测 Agent Window 登录态 ≠ 用户标签登录态）。
+- **Profile 可复用？** Windows 上 Edge/Chrome 的 User Data 目录（`%LOCALAPPDATA%\Microsoft\Edge\User Data\Default` / `...\Chrome\User Data\Default`）可被 CDP 复用；bsk 已封装，勿自己起 `--remote-debugging-port=0.0.0.0` 的裸 Chrome（暴露风险）。
+- **目标站点反爬等级？** 先看通用通道是否够；被拦再上适配器/反检测，最后才云端。
+- **写权限？** 私有适配器目录 `~/.workbuddy/browser-adapters` 不存在先建；别写进技能仓库（含登录态）。
+
+## 十一、失败降级策略（失败不出新 Skill）
+
+任一层失败，**降级而非新建**：
+
+```
+T1 fetch 失败 → T2 补 header → T2 失败 → T3 store action → T3 失败
+→ 退回 UI 操作(click/scroll)+读结果（bsk 路径）
+→ 仍不行 → 通用浏览器 agent-browser / web-scrape
+→ 仍不行 → request-help 交人（登录/CAPTCHA/OTP）
+→ 全部失败 → 如实报告，不编造「已完成」，不为此新建 Skill
+```
+
+铁律：导航/点击本身不算完成（同 §5.3）；同种失败不换后端绕限制死循环；不伪造成功。
+
+## 十二、安全规则（高风险浏览器工具 · 强化 §5.4）
+
+- **daemon 默认 loopback**：bb 类 daemon 默认绑 `127.0.0.1`（bsk 用 52800 loopback）。**禁止绑 `0.0.0.0` 或开远程 CDP**，除非用户显式要做 Tailscale/ZeroTier 远程且已知风险；一旦远程必须显式配对 + 确认。
+- **外部动作需确认**：发消息/提交/付款/删东西等写操作，走 request-help 或扩展确认开关（锚定在 Agent 够不到处，prompt/参数盖不掉）。
+- **隐私不落盘**：不枚举历史/书签/密码/自动填充；适配器只回结构化业务数据，不 dump cookie/ token 全文；审计日志不含输入值与截图。
+- **用完清理**：session stop 归还标签；私有适配器与登录态留本地不入仓；不 `rm` 运行时文件。
+- **本地优先**：数据不出机器，远程模式须用户选定 daemon。
+
+## 十三、未来 GitHub 浏览器项目学习机制（复用 co-learn 纪律）
+
+再来类似 bb-browser/bb-sites 的 GitHub 项目，按此判是否融入：
+
+1. **先查功能位重叠**：本仓库浏览器能力 = browser-automation(入口) + bsk(真实浏览器) + web-scrape(取正文) + playwright MCP + media-forensics。**重叠 >60% 即不新建 Skill**，只吸收独有点。
+2. **看有没有 llms.txt / 机器可读索引**：有则直拉，成本低一数量级（co-learn 铁律）。
+3. **独有点判定**：只落「WB 现有能力没有」的方法（如 bb 的 site-adapter 范式、Tier 决策树、network 逆向流程）——且落进已有技能对应功能位，不另开文件。
+4. **不照搬、不装 npm 包当 Skill**：方法论蒸馏进 SKILL.md；要真用某 CLI 走 MCP/命令接入，不在仓库里复制其源码。
+5. **落地后必跑**：52 文件 PyYAML 机检（CRLF/STRAY_CR/FFFD/desc≤1024）+ repo↔live sha256 一致。
+
+---
+
 ## 合并说明
 原 `stealth-browser`（本地反检测四层 + 脚本）与 `smooth-browser`（云端自然语言代理 + 会话纪律 / 结构化输出 / live-view）是同一功能位的两个重复技能 → 合并为 v1.2.0：**保留 stealth 的全部脚本与反检测能力，同时把 smooth 的会话纪律、任务粒度原则、结构化输出与人工接管流程吸收进来**。
 2026-09-19 再把 `wb-browser-reuse`（腾讯 BrowserSkill 方法论蒸馏）并入本技能 v2.0.0：它覆盖的是同一功能位下的第五条路径「复用你已登录的真实浏览器」，与已有四条路径共享触发词空间（「浏览器自动化 / 抓网页」），独立成 skill 会造成路由二义。并入后**其五条方法论（借不抢 / 确认锚定 / 类型化人助 / 本地优先 / 观测-动作纪律）原样保留**，见五；`browser-automation` 自此是浏览器自动化的**唯一入口**，bsk 的命令细节仍由 `bsk` 自管的 `browser-skill` 承载。
 三个旧目录已删除（git 历史可回溯）。常规任务仍优先用内置 `agent-browser`。
+
+> 激活策略：按需启动（仅浏览器/网页任务加载，非常规任务默认不加载）。

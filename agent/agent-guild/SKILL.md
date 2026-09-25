@@ -17,13 +17,13 @@ description: |
   能力：读/写共享身份、规则、焦点；收件箱交接；每日日志；跨 agent 学习台账
   （错误/纠正/特性请求 → 复发追踪 → 晋升规则或萃取共享 skill）；数据卫生
   （bootstrap 后自动 groom：过期日志/焦点/台账归档、审计轮转，防数据劣化）；
-  `ag init/adopt/bootstrap/doctor/groom/upgrade/learn/review/resolve`（upgrade
-  自动从 skillhub/github/clawhub 查最新版并更新）。
+  `ag init/adopt/bootstrap/doctor/groom/upgrade/learn/review/resolve`
+  （upgrade **只查新版并提示，绝不自动更新**——更新须用户授权，见 §升级纪律）。
   未加入？先跑 docs/ONBOARDING.md。、审批模式、分层授权、只读免审、gated actions、Manual/Auto/YOLO、Auto≠沙箱、授权启发式、越权复核、目标驱动、goal、rubric、验收标准、定义完成、粘滞质量门、amend/pause/resume、逐轮评分、记忆与技能、AGENTS.md、按需加载、always-loaded、on-demand、全局vs项目
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.3.0
+version: 1.4.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -77,17 +77,15 @@ python3 <SKILL_DIR>/scripts/ag.py init <your-agent-name>
 python3 <SKILL_DIR>/scripts/ag.py bootstrap <your-agent-name>
 ```
 
-一次读全：用户画像 → 日程 → 最高优先级戒律 → 在做的项目 → 各 agent 当前焦点 → 你的未读收件箱。
+**轻量优先（默认不全量读）**：Session 开始只加载**最小必要上下文**——
+`identity/profile.md`（用户是谁）+ `rules/universal.md`（戒律）+ 与当前任务直接相关的那一份。
+其余（`ROUTINE.md` 日程 / `projects/active.md` 项目 / `current-focus.md` 各 agent 焦点 / 未读收件箱）
+**按需读取**：任务提到才读，不预判全读。
 
-| 文件 | 内容 |
-|---|---|
-| `identity/profile.md` | 用户是谁 |
-| `identity/ROUTINE.md` | 日程 / 习惯 |
-| `rules/universal.md` | 最高优先级戒律 |
-| `projects/active.md` | 用户当前在做什么 |
-| `handoff/shared-state/current-focus.md` | 各 agent 当前焦点 |
+**只有以下场景才执行完整 bootstrap**（一次读全）：
+跨 Agent 协作任务 · 长任务 · 需要长期记忆/上下文连续 · 任务交接 · 用户明确要求读取完整上下文。
 
-读到什么就按什么做。**没读就动手 = 违反协议。** 之后按需再读 `toolchain/*.md`、其他 `rules/*.md`。
+读到什么就按什么做。之后按需再读 `toolchain/*.md`、其他 `rules/*.md`。
 
 ### M2 — Write memory after substantive work
 
@@ -172,6 +170,18 @@ If the CLI is unavailable (no Python, sandboxed runtime), fall back to the
 manual file operations below — Edit in place, never Write-overwrite a shared
 file. Every capability in this skill is reachable by plain file reads/writes;
 the CLI only adds atomicity and an audit trail.
+
+## 升级纪律（禁止自动升级）
+
+外部组件（Skill / MCP / 插件 / 外部脚本 / 权限相关组件）一律：
+
+```
+检查更新 → 发现新版 → 告知变化与风险 → 用户明确授权 → 更新 → 验证
+```
+
+- **禁止**：发现新版就自动升级。`ag upgrade` 只做「查询 + 提示」，不落地替换。
+- 更新前必须能说明：改了什么、是否影响现有配置/数据、如何回滚。
+- 更新后必须验证（doctor / 冒烟），失败则回滚到上一版本。
 
 ## Capability 1 — Read shared user context
 
@@ -315,3 +325,18 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **判据：常驻 vs 按需**：通用且每次都要的放记忆（always-loaded）；任务专属、只在特定场景才用的放技能（on-demand）。不要为了"全加载"把所有知识塞进 AGENTS.md——那会撑爆上下文且稀释重点。
 - **额外记忆文件要被 AGENTS.md 引用才生效**：放在 `.deepagents/` 的附加文件，启动时并不自动读，必须在 AGENTS.md 里指名，agent 需要时再去读取。
 - 与 §三档审批 / §目标驱动 的分工：那两条管行为边界与验收；本条管"知识该常驻还是按需"，决定 context 装什么。
+
+## Skill Evaluation（技能评估/淘汰/优化 · 学习闭环的一部分）
+
+用户要求「Skill Evaluation 的 skill 学习必须做」。本学习技能除从外部信源学习外，也承担**内部技能库的健康审计**：
+
+- **审计脚本**：`D:\腾讯AI\yt\scripts\skill_eval.py`（托管 python 运行），扫描 `D:\AI技能仓库` 全部 SKILL.md，产出 `D:\腾讯AI\yt\outputs\skill-eval\<日期>_eval.md`（技能总数、机检异常、重叠候选 Jaccard≥0.3）。
+- **机检**：CRLF / STRAY_CR / FFFD / description≤1024，异常即 LF 化修复（repo 与 live 同步），修后重跑 sha256。
+- **重叠处置**：运行时治理 vs 编写期 ≠ 重复保留；同功能层 Jaccard>0.6 才列合并/淘汰候选。**淘汰/合并属 L2，须用户确认才执行，不擅自强删。**
+- **调度**：不另建自动化；作为本学习技能的职责，随现有学习循环（agent-guild 上下文）每次运行附带或周期性触发。
+- 参考方法：wb-skill-authoring（评估/去重合并）、knowledge-governance（重叠/归档）、agent-evolution（生命周期治理）。
+
+## r186 审计落地（Qoder r189-Q-C #5 审计，2026-09-25 实拉核验，全库 0 命中净新）
+
+- **共享记忆按发言人身份定权＋in-flight 查重＋why 溯源**：多源记忆按来源身份定权（决策者 > 参与者 > bot 默认剔除）；写共享资产前查 in-flight 防并发重复劳动；结论行带 why 式溯源锚点。判据：共学栈直接同域——多源记忆按来源身份定权，避免无差别信任。来源 r189-Q-C（SkillApt / relore 实证）。
+

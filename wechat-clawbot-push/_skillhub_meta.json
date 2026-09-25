@@ -1,0 +1,13 @@
+{
+  "name": "微信 ClawBot 推送助手",
+  "installedAt": 1790245359961,
+  "source": "marketplace",
+  "version": "1.0.0",
+  "skillId": "skill_2098351674209259520",
+  "description_zh": "微信 ClawBot 个人推送助手——把 WorkBuddy 的任务结果、完成通知、待确认提醒主动推送到用户自己的个人微信。基于腾讯官方 iLink / OpenClaw 协议的自托管 stdio MCP 服务器，零第三方依赖（仅 Python 标准库），凭证仅存本机。当用户希望\"任务完成后微信提醒我\"、要求把结论/报告/告警推送到手机微信，或需要安装、配置、排查 wechat-clawbot-push 连接器时使用。每位同事安装后绑定各自的微信即可独立使用，互不影响。",
+  "description_en": "Personal WeChat push assistant via ClawBot. Proactively pushes WorkBuddy task results, completion notices, and confirmation reminders to the user's own personal WeChat. Self-hosted stdio MCP server built on Tencent's official iLink / OpenClaw protocol, zero third-party dependencies (Python standard library only), credentials never leave the local machine. Use this skill when the user wants to be notified on WeChat after a task finishes, asks to push conclusions, reports, or alerts to their phone, or needs to install, configure, or troubleshoot the wechat-clawbot-push connector. Each teammate installs and binds their own WeChat independently.",
+  "iconSource": "https://openplatform-cdn.codebuddy.cn/public/common/capability_cover/d2a68b94-0dbb-440c-8195-656a81cbc82e/7258ed52-a999-4c9d-a542-f16babbd3ec4.png",
+  "installedContentHash": "sha256:67788954dd2f85a902972871f959778118dfc12657fbb7d1c66f8062f7aa1f75",
+  "iconLocalPath": "C:\\Users\\26719\\.workbuddy\\skills\\wechat-clawbot-push\\_icon.png",
+  "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/common/capability_cover/d2a68b94-0dbb-440c-8195-656a81cbc82e/7258ed52-a999-4c9d-a542-f16babbd3ec4.png"
+}
