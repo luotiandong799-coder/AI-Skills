@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、崩溃恢复、限流预防、分批、批大小、条件循环、终止条件、无限循环、缺信息要问、把失败当空结果、毒化产物、传输损坏、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、确认词、验证边界、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、注入失败测韧性、hook 担保硬约束、部分完成度连续分、并发上限、槽位释放、暂停占槽、超限行为、队列代价、并发不是限流、可用余量、容量快照、自己记账、跑完不释放、客户端超时不等于取消、等待时释放、挂起即释放、检查点重放、不死锁、占槽还是放手、可重放性、失败传播、部分成功、下游被跳过、跳过传染、旁支是绿的、停了不等于收权、令牌leeway、工具里叫停、工具内重试、停止是完成不是取消、兄弟调用、调用次数上限、上限会重置、批次截断、上限算谁的、工具钩子、改参数再调、钩子顺序、顶替返回值、暂停不是失败、熔断状态、错误回调收不到暂停、步骤级定位、span 过滤、过滤器抛错、保数据不保性能、按类型粗筛、过滤顺序、我不处理、责任链、部分处理、下一个处理器、待处理请求、挂起、拦截被吞、拒答当正常输出、严格模式、默认放过、审批门、执行前一刻阻断、暂停落盘、批准过期、动态阈值、三级分类、置信不是授权、可逆性、能不能撤销、谁授权的、可重试标记、首个响应即终局、广播不等于会签、超时分支、没人回、挂起双出口、取消链接、resume 与 cancel、挂起等回调、字段级自由度、按动作授权
-version: 3.07.0
+version: 3.10.0
 agent_created: true
 ---
 
@@ -2894,3 +2894,43 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - 提升层：工作流 / 安全 / 状态治理。
 - **平台自陈不隔离＝隔离责任下沉到基础设施四层（r187-A A1，来源 Langflow `security`）**：平台明示"同一进程内不做用户隔离、不限制本地磁盘与网络访问"，多租户隔离只能由基础设施层承担；官方给出可枚举的四层：进程级（不共享同一进程）／磁盘级（不共享可写持久存储）／网络级（不通达私有网络）／数据库级（不能访问或改共享库）。判据：**"平台有用户/账号体系"不等于"平台做了隔离"**——验收隔离必须按这四层逐项举证，缺任一层即判无隔离；默认假设要从"平台大概隔离了"翻转成"平台不隔离，除非四层都能证明"。与"多租户隔离默认关闭"（开关默认态）不同层：这条管的是**平台根本不提供该能力时责任归谁、按什么清单验收**。提升层：安全 / 部署。
 - **"超时放弃"必须短于"接管租约"（r187-C C2，来源 n8n `deploy/host-n8n/configure-n8n/durable-scheduler` 2026-09-25 实拉）**：轮询型触发跑太久会被判定放弃（默认 45 秒），官方硬性要求这个超时**必须小于执行租约时长**，否则另一实例按租约接管这次运行时，被"放弃"的那次可能还在跑 → 同一任务双跑；配置越界时系统在启动时告警。判据：**凡"超时即放弃 + 他人接管"的组合，"超时 < 租约"是一条硬序关系，不是两个各自可调的旋钮**；定超时前先回答"放弃之后谁接手、接手那一刻旧的死透没有"。与「定时任务错拍三策略」不同面：那条管**错过的执行补不补跑**，本条管**正在跑的执行被放弃与接管之间的重叠窗口**。提升层：调度 / 并发安全。
+
+## 并发槽的第三种释放条件：按时间衰减（decay）——同一个"槽"原语既能表达并发上限，也能表达速率限制（来源：Prefect 官方 `docs.prefect.io/v3/concepts/global-concurrency-limits`，2026-09-25 r188-A 独立实拉首读，新主源首读）
+- **★"占用的终点由什么决定"才是这个闸门到底限什么的唯一判据**：官方把并发与限流做成同一个"槽"原语，区别只在槽何时归还——①**操作完成即释放**（`a slot is occupied for the entire duration of the operation and released when the operation completes`）＝并发上限；②**按 `slot_decay_per_second` 到点自动释放**（`slots are automatically released over time rather than waiting for an operation to complete`）＝速率限制；③租约到期未续约而释放＝崩溃回收。→ 判据：**别看旋钮叫 concurrency 就以为它限并发**，先问"槽什么时候还"；**启用 decay 之后"占用槽数 ≠ 在飞数"**，拿占槽数当在飞数做容量账必然偏低，据此算出的余量是假的。
+- **★"拿不到槽是否放行"与"续约失败是否报错"必须是两个独立旋钮**：`strict` 只控制获取不到槽时是否放行（官方：`Use strict=True when you need absolute certainty that concurrency limits are being enforced`），`raise_on_lease_renewal_failure` 单独控制续租失败的行为（官方：`Controls lease renewal failure behavior independently of the strict parameter`），两者可组合出"获取严格、但容忍长任务的瞬时续租抖动"（`strict=True` + `raise_on_lease_renewal_failure=False`）。→ 判据：**执行严格性与持有期健壮性分开调**；合成一个开关只能得到"要么动不动失败、要么该拦的拦不住"，且长任务跑得越久越容易被自己的续租抖动误杀。
+- **关阀门和拆阀门是两种操作**：限制有 active/inactive 两态，inactive 时槽不占用、代码不被阻塞，官方明写其用途是 `temporarily disabling enforcement without deleting the limit configuration`。→ 判据：**临时放开限流走"停用态"，不要删配置来"关闭"**——删掉之后既说不清当时上限是多少、也回不到原状态，而"停用"留下了配置与可审计的开关痕迹。
+- 与 §占着槽 ≠ 在跑 分工：那条管**"暂停/等人工"仍占槽**（释放条件是终态，不是"不在跑"）；本条管**释放条件的另一维度——按时间归还**，以及闸门的两个严格性旋钮与可停用态。
+- **提升层**：工作流 / 工具（并发与限流的语义契约）。
+
+## 版本兼容的方向是单向不等式：客户端 ≤ 服务端（来源：Prefect 官方 `docs.prefect.io/v3/get-started/install.md`，2026-09-25 r188-A 独立实拉首读）
+- 官方原文：`keep your client version compatible with the server (generally, client version less than or equal to server version)`。→ 判据：**两端版本兼容不是"差不多就行"，而是有方向的**——客户端可以比服务端旧（服务端向下兼容旧客户端），反过来用新客户端连旧服务端会出未定义行为。→ 落地成一条可执行检查：**升级顺序永远是"先服务端、后客户端"**，且**回滚顺序永远是"先客户端、后服务端"**（否则回滚后的服务端立刻被更新的客户端顶穿）。
+- 与 §构型期/运行期持久性分档 + 版本回滚连持久文件区一起回滚 分工：那条管**回滚要连带哪些持久区**；本条管**两端有版本差时先动哪一端**。
+- **提升层**：工作流 / 部署（版本偏斜的处置顺序）。
+
+## 带外干预不进事件流：唯一真相源只覆盖"流内"，运维动作必须自带独立审计三元组（来源：Temporal 官方 `docs.temporal.io/activity-operations`，2026-09-25 r188-B 独立实拉首读，新主源首读）
+- 官方明写：`Activity Operations don't produce Event History events. Nothing that reads the Event History - Workflow code, Replays, or external tooling - will see that an Operation occurred.`，且 `Evidence of an Operation is gone when the Activity completes or the Workflow closes`（没有持久记录证明它被暂停/重置/改过参数），能看到的只有 UI 里"谁做的、什么时候做的、原因（`--reason`）"。→ 判据：**"事件历史/日志流是唯一真相源"这句话只对"流内动作"成立**；凡是**在主事件流之外对运行中对象做的干预**（暂停、重置、改超时、手工改表、热修配置、后台 kill），**流内代码、重放、外部工具一律看不见**——它们不是"少记了一条"，是**根本不在这个面上**。
+- **★因此带外干预必须自带三元组：谁 / 何时 / 原因，且原因强制非空**。官方用 `--reason` 把原因做成一等字段；缺了它，事后只能知道"被人动过"，不知道"为什么动"。→ 判据：**任何运行期干预入口，原因字段与操作者、时间同等重要，不允许留空**；**改完流水不算交付，留下"谁改的、为什么改"才算**。
+- **★证据的存活期默认跟对象走，不等于审计需要的保留期**：干预痕迹在对象结束时就消失（`Evidence ... is gone when the Activity completes`），而事件历史有自己的保留期。→ 判据：**"能看到"和"事后还能看到"是两件事**——带外干预的记录要单独设保留期，别指望它跟着业务对象的生命周期一起走完。
+- 与 §耐用工作流把"事件历史"当唯一真相源 分工：那条管**流内动作必须以事件历史为准、崩溃靠重放恢复**；本条管**它的边界**——**流外干预不在其中**，所以必须另建审计面。与 §审计动作单列类 + 保留期按环境分档 分工：那条管**审计动作怎么分类、留多久**；本条给出**一条识别判据：先问这个动作会不会写进主事件流，答案是否就要强制三元组**。
+- **提升层**：工作流 / 可复用 Skill（可观测与审计面）。
+
+## 运行期干预四态语义必须逐项声明：暂停不停表、重置留检查点、请求成功不等于生效（来源：Temporal 官方 `docs.temporal.io/activity-operations/{pause,reset,unpause,terminate}`，2026-09-25 r188-B 独立实拉首读）
+- **★"暂停"停的是派发与重试，不是截止时钟**：官方写 `A Paused Activity can still time out. Pause doesn't stop or extend the Schedule-To-Close Timeout.`。→ 判据：**暂停前先处理时限**——凡"暂停等外部条件"的动作，暂停的同时必须延长总时限（`update-options`）或改用不受总时限约束的形态，否则会出现"还在暂停、却已被判超时失败"；**暂停 ≠ 停表**是默认假设，不是异常。
+- **★"重来一次"必须明确回答三件事**：①**重试计数与退避**：Reset 清掉 attempts 与 backoff 并立刻派新尝试（`Clears retry state (attempts, backoff) and schedules a new execution`）；②**进度检查点留不留**：`Heartbeat details survive a Reset`，要真正从头来必须显式 `--clear-heartbeat-details`；③**父流程感不感知**：`Resetting an Activity doesn't affect the parent Workflow`。→ 判据：**调用"重跑/重置"前，先回答"计数归零吗、检查点保留吗、上层知道吗"**——三个都是默认有值的（默认归零、默认保留、默认不知道），不声明就等于接受了默认，而默认常常不是你想要的。
+- **★中断请求是 best-effort，回执不等于生效**：`a Request Cancel, Reset, or Pause request can succeed without the operation taking effect`，而且**不心跳的活动根本收不到中断信号**，会一直跑到 Start-To-Close 超时；`Terminate` 才是唯一不依赖心跳、也不能被代码拒绝的那一档。→ 判据：**"取消/暂停"分两档——可协商的请求与不可协商的终止**，用错档就会得到"我明明取消了它还在跑"；**发出请求后必须回读状态确认，不能把 API 成功当成动作已生效**。
+- **幂等是这些操作的默认属性**：Pause / Unpause / Reset 都明写 idempotent（对已暂停的再暂停无效），但**父子双双暂停时必须分别解除**（`If both are active, both must be Unpaused before the Activity resumes`）。→ 判据：**"操作幂等"不等于"解除条件唯一"**——多层闸门叠加时，解除要逐层做，恢复前先枚举所有还在生效的暂停源。
+- 与 §占着槽 ≠ 在跑 分工：那条管**暂停期间仍占并发槽**；本条管**暂停期间时钟仍在走、以及重置时检查点与计数的默认取舍**。
+- **提升层**：工作流 / 工具（运行期控制面的语义契约）。
+
+## 审计保留期由"最耐用的那份副本"决定，不是由查询视图决定；外置归档不回填历史（来源：Windmill 官方 `docs.windmill.dev/docs/core_concepts/audit_logs`，2026-09-25 r188-C 独立实拉首读，新主源首读）
+- 官方原文：`If you also export audit logs to object storage, the database is no longer the only durable copy, so you can set the database retention much lower (for example a few days, enough to keep the in-app audit log view useful) while keeping a complete long-term history in your bucket.`。→ 判据：**在线库保留期只需覆盖"人在界面里回头看"的窗口，长期留存交给归档层**——把两件事绑在一起，会得到"要么在线库贵到离谱、要么历史根本留不住"；**先问"最耐用的副本在哪"，再定在线库留多久**。
+- **★外置只覆盖开启之后的增量，历史不回填**：`No history is backfilled: only audit logs created after the setting is enabled are exported.`。→ 判据：**归档能力的启用时刻是一条分界线**——"我们有一份长期归档"这句话只对分界线之后为真，分界线之前的数据仍然只活在原处、会随在线保留期一起消失；**需要完整历史就必须把这条分界线写进说明，而不是默认归档等于全量**。
+- **导出者要唯一**：`In a highly available deployment a single server performs the export at a time.`。→ 判据：**归档/导出这类"搬运型"任务必须有单一执行者**，多副本同时搬会产生重复与漏搬；判它是配置对了还是真的在跑，看的是"当前谁在搬"，不是"有几个副本都配了导出"。
+- 与 §审计动作单列类 + 保留期按环境分档、§带外干预不进事件流 分工：前两条管**审计动作怎么分类、留多久、以及哪些动作根本不在主流里**；本条管**把长期留存与在线视图拆成两层后的取值方法**，以及**分层切换那一刻的历史缺口**。
+- **提升层**：工作流 / 可复用 Skill（审计与留存架构）。
+
+## 限流的维度写在"键里"：并发键的构成决定这个上限是按什么切的（来源：Windmill 官方 `docs.windmill.dev/docs/core_concepts/concurrency_limits`，2026-09-25 r188-C 独立实拉首读）
+- 官方给出自定义并发键：`Concurrency keys are global, you can have them be workspace specific using the variable $workspace.`、`You can also use an argument's value using $args[name_of_arg].`，并明写 `The Concurrency limit operates globally and across flow runs`（默认跨所有 flow run 生效）。→ 判据：**"一个脚本限 5 个并发"这句话没说完——上限的计数范围由键里放了什么决定**：键里没有 `$workspace`，十个租户就共用一个 5；把参数放进键，限额就按该参数值分片。**改限额前先看键，改维度要改键而不是改数字**。
+- **限流的初衷是保护下游 API，不是保护自己的资源**：`Its primary goal is to prevent exceeding the API Limit of the targeted API, eliminating the need for complex workarounds using worker groups.`——官方明说它是用来替代"为了限流而拆 worker group"这类绕法的。→ 判据：**先分清这个闸门是"保护下游"还是"保护自己"**；保护下游的限流必须**贴着被调用方给的上限**设，且**跨调用方共享一个池子**（否则改一个脚本就绕过了限制）。
+- 与 §并发上限的三个前提（槽位按终态释放 / 超限行为显式选 / 并发不是万能旋钮）、§并发槽的第三种释放条件 分工：那两条管**槽什么时候还、超限怎么办**；本条管**槽按什么维度分桶**——**先定桶（键），再定桶里放几个（上限），最后定满桶怎么办（排队/失败）**，顺序颠倒就会得到"数字看着对、实际限错了对象"。
+- **提升层**：工作流 / 工具（限流的键设计）。

@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.16.0
+version: 1.17.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -177,3 +177,9 @@ sources:
 - **迁移丢失清单（210B12）**：做技能/配置迁移时维护一份**丢失清单**——哪些字段/行为/默认值在目标格式里没有对应、会静默丢失；清单空才叫"无损迁移"，非空必须显式告知用户并给兜底。
 - **官方 validator 契约＋lenient 两档自建（211C6）**：有官方校验器就用官方契约（字段/格式以官方为准）；没有时自建**两档**校验器——strict（发布门用，全过才发）与 lenient（本地预览用，只标可疑不阻断）；两档共用同一份规则定义，lenient 只是放宽阈值。
 - **默认值翻转写迁移语义（211C8）**：当某个默认值**翻转**（true→false 或反之）时，必须写一条**迁移语义说明**——旧用户在哪天之前按旧默认行为、之后按新默认，且提供回退开关；默认值翻转本质是行为破坏性变更，不准"悄悄改"。
+
+## 主环境升级前必须存在"可回退点"：备份 → 隔离试跑 → 再升级主环境（来源：Langflow 官方 `docs.langflow.org/next/release-notes`，2026-09-25 r188-C 独立实拉首读复核；本条来自 Qoder r222 批在 live 的未版本化写入，经实拉复核后正式落版）
+- 官方原文（升级隔离）：`If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then import your flows to the new ...`。→ 判据：**"就地升级 + 出问题再回滚"不是回退方案，是赌博**——真正的可回退点由两件东西组成：**可导入的数据备份（导出）** + **一个与生产隔离的、跑过新版本的验证环境**；**破坏性变更只有在隔离环境里验证过才算验证过**。
+- **★升级动作的顺序不可压缩**：先导出备份 → 在独立 venv / VM / 容器装新版本 → 导入数据跑一遍 → 通过后再升主环境。→ 判据：**升级路径上"备份"和"隔离"是两道不同的闸**——备份防的是"回不去"，隔离防的是"没试过就上"；**只做备份不隔离 = 带着一份可能已经被新版本写坏的数据回退**。
+- 与 §依赖版本按引入时刻冻结 + 升级前先快照（wb-skill-authoring r187-A）、§版本兼容单向不等式（wb-execute-discipline r188-A）分工：那两条管**版本怎么钉、两端谁先动**；本条管**动之前必须准备好什么**——**可回退点是升级的前置条件，不是升级失败后的补救**。
+- **提升层**：工作流 / 部署（升级与回退）。
