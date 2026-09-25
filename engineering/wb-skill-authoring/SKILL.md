@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度
-version: 3.09.0
+version: 3.10.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -2292,3 +2292,16 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 - **审计基线与抑制纪律（r199-Q-C C2）**：复扫必带指纹基线只报新增问题；豁免两级（glob 抗措辞漂移／sha256 精确但内容一改即失效重审）；每条豁免必附 reason＋pin scanner_version；检测器面补 `whitespace_padding`（空白/填充即攻击面）、`mcp_rug_pull`（批准后变脸）。判据：抑制一次不能永久隐身，扫描器换代不能误比对。
 - **依赖版本按引入时刻冻结＋升级显式分档（r187-A A2，来源 Langflow `concepts-components` Component versions）**：组件/依赖一旦被加入某条流程，该实例就锁在加入那一刻的版本与状态，上游升级不会自动漂移过去；升级是显式动作并按"是否含破坏性变更"分档提示（无破坏性标 Update ready），升级前系统先创建备份快照。判据：**依赖"从没被自动改过"不等于"被 pin 住"**——前者只是默认冻结（升级仍能发生且不留痕），要变成契约必须显式 pin 且不可绕过（见"pin 的不可绕过性"）；任何批量升级必须先快照再改，顺序不可倒。提升层：版本治理 / 供应链。
 - **评审锚定"钉住的版本"，发布署名归提交者（r187-C C1，来源 n8n `build/manage-workflows/workflow-reviews` 2026-09-25 实拉）**：评审对象是一个已保存版本的快照（pinned version），**评审期间新保存只产生更新的版本、不挪动被审锚点**，要换审必须显式再次提交；审批通过后系统自动发布该版本，而**发布动作以"提交者"身份执行**（不是审批者），使发布历史与审计链归属于提出变更的人；同一工作流同时只允许一个 open review；当前实现**不允许撤回已提交的评审**；评审覆盖范围是一个工作流，子工作流各自独立评审。判据：**审批必须绑在不可变快照上，否则"审批→发布"之间存在夹带变更的窗口**；"谁批的"与"谁发布的"必须可分别归属，**审批权不等于发布署名权**。与 ed「审批门控三时间参数」（超时/同意不缓存/不可撤销）不同层：那条管单次审批交互的时间属性，本条管**审批与版本锚点、发布归属、并发评审数的结构关系**。提升层：发布治理 / 审计。
+
+## 发现面与调用面两层定级；凭证继承创建者权限；安全配置缺失要启动失败；加密密钥是集群级状态（来源：Langflow 官方 `docs.langflow.org/next/a2a-server` + `/next/api-keys-and-authentication`，2026-09-26 r189-B 独立实拉首读）
+
+原文：`The agent card itself is always public, so clients can always discover the agent.`；`Whether that endpoint requires a key depends on the authentication settings of the flow's project`。
+原文：`All API keys created with the Langflow CLI have superuser privileges because the command requires superuser authentication, and Langflow API keys adopt the privileges of the user who created them.`
+原文：`When you start a Langflow server with authentication enabled, if the required password is not set, then startup fails instead of creating a default password.`
+原文：多实例部署（如 Kubernetes）必须显式设置加密 key 以 `ensure consistent encryption across instances`。
+
+- **"可被发现"与"可被调用"必须分开定级**：能力卡片（agent card）永远公开、用于被发现；端点是否要 key 取决于所属项目的认证设置。判据：**把描述面当秘密是假安全，把调用面当公开是真事故**——两层各定各的级，别用一个开关管两边。
+- **凭证权限继承创建者，不是独立配置项**：API key 取的是创建它的那个用户的权限。判据：**凭证是身份的延伸，不是权限的载体**——给低权限主体发 key 不会自动降权；超管创建的 key 就是超管钥匙。要降权只有换创建者或换主体，改 key 本身没用。
+- **安全配置缺失要启动失败，不要生成默认凭据**：缺密码就起不来，而不是造一个默认密码让你"先跑起来"。判据：**默认凭据是永远不会被改的凭据**——fail closed 的成本是一次部署失败，fail open 的成本是一台常年裸奔的实例。
+- **加密密钥是集群级状态，不是实例级状态**：横向扩容时各实例自造 key 会互相解不开。判据：**多副本能跑通不代表多副本能协作**——加密密钥必须显式外置并在实例间同步。
+- 反模式：靠"卡片不公开"做访问控制；给服务账号发 key 却假设它低权限；启动时自动生成默认口令；多副本各用自己的加密 key。

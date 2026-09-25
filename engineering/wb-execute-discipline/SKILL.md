@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、崩溃恢复、限流预防、分批、批大小、条件循环、终止条件、无限循环、缺信息要问、把失败当空结果、毒化产物、传输损坏、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、确认词、验证边界、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、注入失败测韧性、hook 担保硬约束、部分完成度连续分、并发上限、槽位释放、暂停占槽、超限行为、队列代价、并发不是限流、可用余量、容量快照、自己记账、跑完不释放、客户端超时不等于取消、等待时释放、挂起即释放、检查点重放、不死锁、占槽还是放手、可重放性、失败传播、部分成功、下游被跳过、跳过传染、旁支是绿的、停了不等于收权、令牌leeway、工具里叫停、工具内重试、停止是完成不是取消、兄弟调用、调用次数上限、上限会重置、批次截断、上限算谁的、工具钩子、改参数再调、钩子顺序、顶替返回值、暂停不是失败、熔断状态、错误回调收不到暂停、步骤级定位、span 过滤、过滤器抛错、保数据不保性能、按类型粗筛、过滤顺序、我不处理、责任链、部分处理、下一个处理器、待处理请求、挂起、拦截被吞、拒答当正常输出、严格模式、默认放过、审批门、执行前一刻阻断、暂停落盘、批准过期、动态阈值、三级分类、置信不是授权、可逆性、能不能撤销、谁授权的、可重试标记、首个响应即终局、广播不等于会签、超时分支、没人回、挂起双出口、取消链接、resume 与 cancel、挂起等回调、字段级自由度、按动作授权
-version: 3.10.0
+version: 3.12.0
 agent_created: true
 ---
 
@@ -2934,3 +2934,37 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **限流的初衷是保护下游 API，不是保护自己的资源**：`Its primary goal is to prevent exceeding the API Limit of the targeted API, eliminating the need for complex workarounds using worker groups.`——官方明说它是用来替代"为了限流而拆 worker group"这类绕法的。→ 判据：**先分清这个闸门是"保护下游"还是"保护自己"**；保护下游的限流必须**贴着被调用方给的上限**设，且**跨调用方共享一个池子**（否则改一个脚本就绕过了限制）。
 - 与 §并发上限的三个前提（槽位按终态释放 / 超限行为显式选 / 并发不是万能旋钮）、§并发槽的第三种释放条件 分工：那两条管**槽什么时候还、超限怎么办**；本条管**槽按什么维度分桶**——**先定桶（键），再定桶里放几个（上限），最后定满桶怎么办（排队/失败）**，顺序颠倒就会得到"数字看着对、实际限错了对象"。
 - **提升层**：工作流 / 工具（限流的键设计）。
+
+## 终止条件是有状态的：触发后须显式 reset 才能复用，run 结束只自动复位一次（来源：AutoGen 官方 `microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/termination.html`，2026-09-26 r189-A 独立实拉首读，新主源）
+
+原文：`Once a termination condition has been reached, it must be reset by calling reset() before it can be used again.`；`They are stateful but reset automatically after each run (run() or run_stream()) is finished.`
+
+- **终止判据不是纯谓词，是带状态的对象**：一旦判定终止就必须 `reset()` 才能再判一次。判据：**"跑到哪了"是判据的内部状态，不是外部传参**——不复位就复用，第二个任务会在开局被判成已终止。
+- **自动复位只发生在 run 边界**：框架在每轮 run 结束时自动清状态，但跨 run 复用同一条件对象时，复位是调用方的责任。判据：**依赖"上次跑完应该干净了"是隐式假设，显式 reset 才是契约**。
+- 与 §工具循环必须查终止条件 分工：那条管"循环怎么停"（看 stop_reason），本条管"停止判据自身的状态生命周期"。
+- 反模式：把终止条件当无状态函数反复调用；跨任务复用前不复位；在终止条件里累计跨任务的计数。
+
+## 团队状态复用按"任务相关性"分叉；阻塞式人在环只配用于短交互（来源：AutoGen 官方 `.../tutorial/teams.html` + `.../tutorial/human-in-the-loop.html`，2026-09-26 r189-A 独立实拉首读）
+
+原文：`It is usually a good idea to reset the team if the next task is not related to the previous task.`；`if the next task is related to the previous task, you don't need to reset and you can instead resume the team.`
+原文：When UserProxyAgent is called during a run, it blocks the execution of the team until the user provides feedback or errors out. `Due to the blocking nature of this approach, it is recommended to use it only for short interactions that require immediate feedback from the user, such as asking for approval or disapproval with a button click, or an alert requiring immediate attention otherwise failing the task.`
+
+- **复用多 agent 团队状态的判据是"目标是否同一"，不是"时间是否相近"**：同一目标续做 → resume（保留会话历史与轮次位置）；换目标 → reset。判据：**团队状态是任务上下文不是通用记忆**——目标换了还留着旧上下文等于污染新任务。
+- **阻塞式人在环 = 把人的响应延迟直接变成系统延迟**：整个团队停在原地等人。只适合审批/二选一/告警确认这类秒级反馈；人可能几分钟到几小时才回的环节，拆成"run 到终止 → 外部给反馈 → 再 run"的循环，不要在 run 中途阻塞。判据：**人工节点的代价由等待时间决定，不由节点数量决定**。
+- 反模式：换目标了还 resume 复用旧团队；把开放式提问做成阻塞式人工节点；用阻塞人工节点接"人可能隔天才回"的环节。
+
+## 审批决策要落进会话历史：重载看到的是已决断结果，不是再弹一次（来源：Langflow 官方 `docs.langflow.org/next/agents-tools`，2026-09-26 r189-B 独立实拉首读，LangFlow 首次作主源深拉 `/next/` 内容区）
+
+原文：`When the agent attempts to call that tool, the run pauses until a human selects Approve or Reject in the Playground. The decision is stored in chat history, so reloading the session shows the resolved decision instead of prompting again.`
+
+- **人工审批是"事件"不是"瞬时中断"**：批准/拒绝的结果必须作为一条持久化记录写进会话历史，重放或重载读到的是已决断态，而不是把流程倒回待审批点重新问。判据：**同一件事只该问一次人**——审批反复弹窗会把人训练成无脑点同意，审批就失去了意义。
+- **审批记录与业务历史必须同源**：分开存会导致回放时对不上"这一步是批了还是拒了"。判据：**审批是流程事实的一部分，不是旁路日志**。
+- 反模式：审批结果只存内存、重连后重弹；把"再问一次"当幂等重试；审批记录与会话历史分开落库。
+
+## 观测端点默认有界且锚定最新：长历史的监控永不整体序列化（来源：Langflow 官方 `docs.langflow.org/next/api-monitor`，2026-09-26 r189-B 独立实拉首读）
+
+原文：`The endpoint always returns a bounded page anchored at the most recent messages, so a flow with a long history never serializes in full.`
+
+- **监控/观测端点的默认姿态是"有界 + 锚定最新"，不是"全量"**：历史再长也只回一页，且该页以最新消息为锚。判据：**观测通道的代价必须与历史长度解耦**——跑了几万步的流程，看一眼当前状态不该付出全量序列化的代价。
+- **分页方向本身就是语义**：从最新往回翻 = "我现在怎么样"；从最旧往后翻 = "我经历过什么"。前者是运维视角，后者是审计视角，不能共用一个接口默认。判据：**默认页回答的是当前问题还是历史问题，决定了值班时能不能用**。
+- 反模式：监控接口默认返回完整历史；分页从最旧开始导致越翻越慢且看不到当前状态；把"能全量拉出来"当作可观测性强的证据。
