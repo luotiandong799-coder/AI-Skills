@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕
-version: 1.59.0
+version: 1.60.0
 agent_created: true
 ---
 
@@ -690,3 +690,17 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - **提前结束工作流（`$.flow.exit()` 或预置 End Workflow 动作）时可以配一个 reason**，官方明写 "This reason will be surfaced when inspecting the event execution"。
 - 判据：**"没走到最后一步"有两种成因——被前面挡住了，和跑到了但主动退出**，留痕上不写原因就分不开，事后只能靠猜。与 dl §Agent 退出靠显式终止原因 分工：那条管**模型侧**有没有给出终止信号，本条管**人工/编排侧**的提前退出要不要把原因写进执行记录。
 - 提升层：可观测性 / 排障。
+## 环境重置成本决定"容忍污染"的程度：重建越贵，越容易把排查成本转嫁给模型（来源：Activepieces《What Is Harness Engineering》2026-09-27 实拉）
+- **原文要点**：`When a sandbox takes 30 seconds to refresh, DevOps teams tend to let agents struggle in "dirty" environments to save time, whereas a 100ms refresh rate makes a clean-slate strategy the most efficient path for the model.` —— 同一批人、同一个 agent，只因**沙箱重建延迟从 30s 降到 100ms**，最优策略就从"在脏环境里继续"翻转成"推倒重来"。
+- 判据：**"要不要从干净环境重来"不是品味问题，是一个由重置成本决定的策略变量**。重置便宜 → 干净重来（模型面对的是已知初始态，症状可复现）；重置昂贵 → 人会不自觉地容忍污染环境，于是 agent 的失败里混进"环境里残留了什么"这个额外未知数，排查难度按未知数个数增长。
+- 实操含义：报告一个 agent 失败时，**先回答"它是从什么状态开始的"**——如果答案是"不确定，环境被前面的尝试改过"，那么这条失败记录的诊断价值接近零。判据：**便宜的重置是"最小化"这一步能不能做的前提**；没有便宜重置，"最小化"就只能靠推理，不靠复现。
+- 与 §失败现场要自动留、可检查、可续跑 分工：**那条管"现场要留下来"，本条管"留下来之后，什么时候该丢弃现场推倒重来"**——留现场是为了不复现不出的 bug，重建便宜则是为了不让现场变成污染源。
+- 提升层：工作流 / 工具。
+
+## 参数微变的循环抓不住：按"同一工具在同一执行内的调用次数"计数，而不是按参数签名去重（来源：Activepieces《Building a Reliable Harness for Multi-Agent AI Systems》2026-09-27 实拉）
+- **原文要点**：`the highest financial risk lies in "semantic loops," where an agent attempts to solve a task by repeatedly calling the same tool with slightly different parameters`；`When an LLM receives a "Tool Error" response, its default behavior is to hallucinate a new parameter, leading to a cascade of tokens that provides zero utility.`；排查手法是 `filtering logs for identical tool calls occurring within a single execution ID`，从而找出 `which specific prompts lack the exit conditions`。
+- 判据：**"换了个参数再试一次"是循环，不是进展**。签名去重（同参数同工具才计数）会在参数每次微变时全部漏判——agent 看起来一直在"尝试新办法"，实际是在同一个死胡同里抖动。
+- 因此循环检测要**按工具计数**（同一 execution 内同一工具被调用 N 次即告警/终止），并且**告警的落点是 prompt 缺退出条件**，不是"这个工具坏了"。判据：**计数命中说明写 prompt 时没回答"什么时候该放弃"，补的是退出条件；只加调用上限而不补退出条件，agent 会在上限处静默终止并交出一份残缺结果**。
+- 反模式：把语义循环当"模型不够聪明"去换模型；或对同一个工具设两个不同名字绕开计数（等于主动拆掉自己的护栏）。
+- 与 `wb-execute-discipline` §4xx 签名防重发闸 分工：**那条管"确定性失败（4xx）的重复调用要在发出前短路"，本条管"非确定性失败下参数微变的抖动循环"**——前者按签名拦得住，后者必须按次数才拦得住。
+- 提升层：可观测性 / 工作流。

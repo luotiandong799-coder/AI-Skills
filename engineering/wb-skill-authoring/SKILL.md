@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度
-version: 3.12.0
+version: 3.13.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -389,3 +389,10 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 本正文只保留写法与评测决策级核心。方法论来源、判据推导、反模式、特殊场景全部在
 [references/knowledge-base.md](references/knowledge-base.md)（完整知识库，下沉于 2026-09-26）。
 **先 Grep 定位关键词，再读对应节**。主题速查：内容从哪来（真实专长）· 调指令是缓解不是修复 · 控制度按脆弱性 · 四个高价值实操模式 · RubricForge 评分标准 · 上线后度量 · 双集 train/validation · 引擎与规格解耦 · 改版钉到最低分项。
+## 技能内脚本的 agentic 契约：输出尺寸要可预测，因为 harness 会截断（来源：agentskills.io《Using scripts in skills》2026-09-27 实拉）
+- **原文要点**：`Many agent harnesses automatically truncate tool output beyond a threshold (e.g., 10-30K characters), potentially losing critical information. If your script might produce large output, default to a summary or a reasonable limit, and support flags like --offset so the agent can request more information when needed. Alternatively, ... require agents to pass an --output flag that specifies either an output file or - to explicitly opt in to stdout.`
+- 判据：**脚本作者要为"输出会被截断"负责，不能让 agent 去猜被截掉了什么**。默认给摘要或合理上限 + `--offset` 翻页；若输出天生大且不好分页，就**强制 `--output` 显式 opt-in**（`-` 才写 stdout）。
+- 同族契约（同一节原文，配套记忆）：①**禁止交互式提示**（agent 跑在非交互 shell，等 TTY 输入会无限挂起，缺参数要直接报错并给出可选项与用法）；②**`--help` 是 agent 学接口的主要入口**（简述+flags+示例，但要短，因为它同样占上下文）；③**报错要说清"错在哪/期望什么/可以试什么"**（`Error: --format must be one of: json, csv, table. Received: "xml"`）；④**结构化输出优先 + stdout 放数据、stderr 放诊断**；⑤**幂等、可拒绝歧义输入、破坏性操作给 `--dry-run`、不同失败类型给不同退出码并写进 `--help`**。
+- 与 `wb-context-compressor` §大输入转检索 分工：**那条管"已经拿到的大材料怎么塞进上下文"，本条管"脚本从一开始就该产出多大的输出"**——一个在消费端补救，一个在生产端设上限。
+- 反模式：脚本一次吐几百 KB 让 harness 静默截断（丢的往往是尾部的关键错误）；或用对齐的空白表格当输出（agent 与 `jq/cut/awk` 都不好解析）。
+- 提升层：工具 / 可复用 Skill。

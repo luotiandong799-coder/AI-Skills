@@ -3,7 +3,7 @@ name: skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.1.0
+version: 1.2.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "skills-security-check"
 display_name_en: "skills-security-check"
@@ -425,3 +425,9 @@ Step C: 是否包含恶意意图？
 3. 不跳过任何搜索步骤
 4. 提供完整的行号和代码片段
 5. 给出明确的安全评分和使用建议
+## Skill 安全风险九类分层（T01–T09）：审查要按"攻击面层级"过，不按文件顺序过（来源：腾讯 AI-Infra-Guard `Tencent/AI-Infra-Guard` README + SkillTrustBench，2026-09-27 实拉）
+- **原文要点**：Skill 安全风险被分成 5 层 9 类 —— **A·指令与记忆**：T01 Skill 指令劫持、T02 记忆投毒；**B·代码执行**：T03 远程载荷下载执行、T04 内嵌恶意代码；**C·系统权限**：T05 权限提升与未授权访问、T06 系统驻留；**D·工具链与依赖**：T07 工具劫持与仿冒、T08 不安全依赖；**E·代码质量**：T09 不安全编码实践。
+- 判据：**"扫了一遍没发现问题"要能说清扫了哪几层**。分层的作用是防漏项——只看了代码（B/E）不等于看过指令与记忆（A）和依赖（D）；而 A 层（指令劫持 / 记忆投毒）恰恰是纯代码扫描最容易整层跳过的一类，因为它藏在 Markdown 正文里。
+- 附带一条诚实性要求：**扫描器自身要给四元组指标，不能只报一个分**。SkillTrustBench 上不同模型 F1 0.974–0.985 看着都很好，但拆开看取舍明显——Gemini 3.5 Flash 精确率最高 0.9947、召回只有 0.9641；Claude Opus 4.6 召回最高 0.9974、误报率 0.0663。判据：**选扫描模型/阈值时看的是 Recall 与 FPR 的取舍，不是一个 F1**；漏判（恶意技能过关）和误报（正常技能被拦）的代价不对等，不能用一个平均数糊过去。
+- 反模式：把"自动化扫描通过"当作安全结论（工具自身有召回上限）；或只扫本地文件正文不扫脚本与依赖声明（等于只覆盖 A 层的一半）。
+- 提升层：可复用 Skill / 工作流。
