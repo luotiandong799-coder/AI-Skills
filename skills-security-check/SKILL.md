@@ -3,7 +3,7 @@ name: skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.2.0
+version: 1.3.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "skills-security-check"
 display_name_en: "skills-security-check"
@@ -430,4 +430,13 @@ Step C: 是否包含恶意意图？
 - 判据：**"扫了一遍没发现问题"要能说清扫了哪几层**。分层的作用是防漏项——只看了代码（B/E）不等于看过指令与记忆（A）和依赖（D）；而 A 层（指令劫持 / 记忆投毒）恰恰是纯代码扫描最容易整层跳过的一类，因为它藏在 Markdown 正文里。
 - 附带一条诚实性要求：**扫描器自身要给四元组指标，不能只报一个分**。SkillTrustBench 上不同模型 F1 0.974–0.985 看着都很好，但拆开看取舍明显——Gemini 3.5 Flash 精确率最高 0.9947、召回只有 0.9641；Claude Opus 4.6 召回最高 0.9974、误报率 0.0663。判据：**选扫描模型/阈值时看的是 Recall 与 FPR 的取舍，不是一个 F1**；漏判（恶意技能过关）和误报（正常技能被拦）的代价不对等，不能用一个平均数糊过去。
 - 反模式：把"自动化扫描通过"当作安全结论（工具自身有召回上限）；或只扫本地文件正文不扫脚本与依赖声明（等于只覆盖 A 层的一半）。
+- 提升层：可复用 Skill / 工作流。
+
+## 审查别拿"符合性代理"当技术证据：记录面要按三类缺陷主动查，不看厂商标签（来源：Activepieces 官方博客《AI Vendor Questions for Audit Trail Integrity in 2026》，2026-09-27 r199-B 实拉 20,901B）
+
+- **★合规报告是"流程执行到没到"的快照，不是"数据动没动过"的技术证明**：原文 "A SOC2 Type II report is a **snapshot of process adherence** rather than a technical proof of data immutability"——它能说明"有这个策略"，证明不了"上周二那一行没被动过"。判据：**审查一个 skill 或一个供应商时，把"它出示了什么凭证"和"我能自己复核什么"分成两列，结论只准写在后一列。**
+- **合规代理 vs 技术现实的三维对照**（原文表格）：完整性证明＝第三方叙述性报告 vs **密码学哈希**；数据控制权＝厂商黑盒托管 vs **自持基础设施**；逻辑可见性＝不透明 API vs **可读可追的代码**。三条都要落在"我能自己复核"的一侧，否则那批 claims 只是 claims。
+- **★常见审计缺陷按这三类主动查**（原文引 Codequiry：**每 100 个代码库有 83 个存在未检出的审计缺陷**）：①**该触发时没触发**（失败认证请求绕过了日志中间件）②**日志注入**（塞回车伪造出一条看起来合法的记录）③**没有完整性校验**（DBA 删行不留任何痕迹）。→ 审查脚本类 skill 时，除了看它"做了什么"，还要看**它声称会留痕的事情有没有在每个出口真的被写**；第 ① 类最容易被漏——它不报错，只是安静地少一条。
+- **read-only 不等于 append-only**：想要"补得上、删不掉"必须让存储语义显式成立（原文 WORM / 对象锁 / 只写一次的桶），只在应用层标个只读挡不住同一进程里的后续写。
+- 与 §Skill 安全风险九类分层（T01–T09）的分工：那条按攻击面层级把 host / data / script / deps 过一遍；本条补的是**"记录与举证"这一层**——动手脚往往不改行为，改的是事后能不能解释。
 - 提升层：可复用 Skill / 工作流。
