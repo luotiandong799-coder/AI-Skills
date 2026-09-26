@@ -2,7 +2,7 @@
 name: mcp-builder
 description: Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).、工具过载、上下文爆、按需加载、渐进式发现、search_tools、catalog/inspect/execute、阈值切换、服务器按需连、代码模式、组合调用、沙箱执行、逐次授权、跨 server 不可信、MCP 调试、Inspector、stdio 日志、协议协商、server/discover、_meta 字段、-32022、-32602、-32021、启动路径
 license: Complete terms in LICENSE.txt、三原语、工具资源提示、反模式、巨型服务器、批量变体、什么时候不该用、stdio、Streamable HTTP、无状态默认、会话头、OAuth 2.1、受众绑定、签发者、细粒度范围、一次性补齐、握手是契约、协议错误、工具执行错误、isError、可重试标记、建议动作
-version: 1.2.0
+version: 1.3.0
 ---
 
 # MCP Server Development Guide
@@ -298,3 +298,10 @@ Load these resources as needed during development:
 - 因此参数配置要走**两阶段**：`configure`（取当前 prop 的可选值）→ `reload`（按已配值重算剩余参数集合）→ 再 `configure`，而不是一次性假定一张固定入参表。
 - 与 §工具过载：渐进式发现 分工：**那条管"工具太多时怎么分批暴露"，本条管"单个工具的字段集合本身会变"**。
 - 提升层：工具。
+
+## 给 agent 的凭证必须是短期且降域的；执行前还要过一道计划校验（来源：Activepieces `blog/agentic-ai-security-why-our-control-model-must-evolve`，2026-09-27 r198-B 实拉 17,592B）
+- **★静态长期密钥给 agent 等于留一道永久后门**：会话一旦被劫持，攻击者拿到的是不过期的钥匙。凭证要**几分钟级过期**，且**按具体操作降域**（能写某个目录就不给整个存储桶）。判据：**凭证有效期越长，"检测到入侵"到"止损"之间的窗口里能造成的损害越大**。
+- **★警惕混淆代理人（confused deputy）导致的静默提权**：agent 常拿到高于请求者的系统权限——低权限用户问一句"总结一下最近的薪酬讨论"，agent 却用自己的高权限服务账号去读私有频道，**请求合法、权限越界、日志无异常**。判据：**权限必须按"这次请求的实际发起者"降域，而不是按"执行者拥有的最大能力"发放**；服务账号权限不是 agent 的默认权限。
+- **★工具调用之前插一道计划校验**：在推理完成、工具尚未执行之间，用一次独立的守卫审查检查计划是否符合业务规则。判据：**推理一旦进入工具执行就不可逆；事后审计只能记录损失，事前校验才能避免损失**。
+- **★审计要看每一步工具调用各自的输入与输出，不能只看最终结果**：只看结果的话，一次"合法的导出 API 调用"就是一次数据外泄却毫无痕迹。**推理轨迹到工具调用的转折点是最值得留痕的位置**。
+- 与 §权限范围要细（2018 年以来那条）的分工：那条管 OAuth 范围怎么切；本条管凭证时效 + 请求者降域 + 执行前拦截这三件它没覆盖的事。
