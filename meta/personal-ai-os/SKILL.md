@@ -504,7 +504,7 @@ Personal AI OS 不允许无限膨胀。定期审查 Skill / MCP / Workflow / Exp
 | Windows 桌面操控（鼠标/键盘/截图/视觉/OCR 定位） | `computer-use-windows` | 技能 |
 | Windows 多引擎 Fallback 路由（UIA→pywinauto→OCR→坐标） | `windows-automation` | 技能 |
 | Windows 命令行执行（文件/进程/服务/网络/系统） | `powershell-windows-cli` | 技能 |
-| Windows 界面自适应重识别（DPI/主题/语言/版本变化） | `windows-ui-adaptive` | 技能 |
+| Windows 界面自适应重识别（DPI/主题/语言/版本变化） | `winapp-ui-automation`（§五 自适应重识别，2026-09-26 并入） | 技能 |
 | 第三方桌面软件操作（微信/QQ/原生应用连续交互·即#6） | `win-native-app-automation`（已含，不重复建） | 技能 |
 | Windows 操作经验与自进化（方式择优/失败记忆/复盘/经验进化） | `windows-ops-experience` | 技能 |
 | 智能消息自动回复（微信/QQ/企微/钉钉/飞书等：判断该不该回、按联系人风格回、自学习/复盘） | `smart-message-autoreply` | 技能 |

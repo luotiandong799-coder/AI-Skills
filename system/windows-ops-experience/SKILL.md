@@ -4,7 +4,7 @@ display_name: Windows操作经验进化
 version: 1.0.0
 agent_created: true
 description: >-
-  Windows 操作经验与自进化引擎：长期记录每个 Windows 任务的最快/最稳做法、易错点、历史失败原因与解法，沉淀高频操作为可复用流程，并在每次任务后从真实结果学习、比较新旧方法、提升更优者优先级、降低易失败者优先级，经验经实测验证后才更新。与操控底层技能（winapp-ui-automation/computer-use-windows/windows-automation/powershell-windows-cli/windows-ui-adaptive）及 win-native-app-automation 配合——本技能只管"经验积累与进化"，不重复实现操控方法；通用记忆/治理交给 personal-ai-os / agent-guild / knowledge-governance。触发词：Windows经验、操作经验、复盘优化、自学习、越用越聪明、方法择优、失败换路记忆、经验进化、最佳做法、易错点。
+  Windows 操作经验与自进化引擎：长期记录每个 Windows 任务的最快/最稳做法、易错点、历史失败原因与解法，沉淀高频操作为可复用流程，并在每次任务后从真实结果学习、比较新旧方法、提升更优者优先级、降低易失败者优先级，经验经实测验证后才更新。与操控底层技能（winapp-ui-automation【含环境自适应重识别，windows-ui-adaptive 已于 2026-09-26 并入】/computer-use-windows/windows-automation/powershell-windows-cli）及 win-native-app-automation 配合——本技能只管"经验积累与进化"，不重复实现操控方法；通用记忆/治理交给 personal-ai-os / agent-guild / knowledge-governance。触发词：Windows经验、操作经验、复盘优化、自学习、越用越聪明、方法择优、失败换路记忆、经验进化、最佳做法、易错点。
 ---
 
 # Windows 操作经验与自进化引擎
@@ -15,7 +15,7 @@ description: >-
 
 | 9 项需求 | 由谁承担 |
 |---|---|
-| 1 智能操控（桌面/软件/窗口/菜单/输入/文件，不依赖坐标） | winapp-ui-automation + computer-use-windows + windows-ui-adaptive + win-native-app-automation |
+| 1 智能操控（桌面/软件/窗口/菜单/输入/文件，不依赖坐标） | winapp-ui-automation（含自适应重识别）+ computer-use-windows + win-native-app-automation |
 | 2 方式择优（软件直操/命令行/快捷键/鼠标 自动选最快最稳） | **本技能提供决策表**（见 §三） |
 | 3 切换接续（多软件切换保持上下文与目标） | personal-ai-os §三 生命周期 + agent-guild |
 | 4 失败换路（换法 + 记住易失败操作规避） | windows-automation（换路）+ **本技能（记住规避）** |

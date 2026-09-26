@@ -4,7 +4,7 @@ display_name: Windows控件识别
 version: 1.0.0
 agent_created: true
 description: >-
-  Windows UI 元素识别与控件级定位：用 UIA/UIA3（FlaUI、pywinauto、UIAutomation COM）枚举并识别窗口、按钮、输入框、菜单、列表、树、表格等元素，以 AutomationId/Name/ControlType/运行时 ID 做控件级定位与交互，不依赖固定屏幕坐标。适用于目标程序暴露无障碍树、需稳定可重复定位桌面控件的场景；Qt 类自绘应用（如微信 4.x 暴露 0 元素）退回 vision/OCR（见 computer-use-windows 与 win-native-app-automation）。触发词：UIA、UIAutomation、控件识别、控件级定位、FlaUI、pywinauto、AutomationId、无障碍树、元素定位、窗口枚举。
+  Windows UI 元素识别与控件级定位：用 UIA/UIA3（FlaUI、pywinauto、UIAutomation COM）枚举并识别窗口、按钮、输入框、菜单、列表、树、表格等元素，以 AutomationId/Name/ControlType/运行时 ID 做控件级定位与交互，不依赖固定屏幕坐标。适用于目标程序暴露无障碍树、需稳定可重复定位桌面控件的场景；Qt 类自绘应用（如微信 4.x 暴露 0 元素）退回 vision/OCR（见 computer-use-windows 与 win-native-app-automation）。含环境自适应重识别（原 windows-ui-adaptive 已并入，2026-09-26）：DPI/分辨率/主题/语言/窗口大小/软件版本/动态界面变化时按稳定属性重新定位目标。触发词：UIA、UIAutomation、控件识别、控件级定位、FlaUI、pywinauto、AutomationId、无障碍树、元素定位、窗口枚举、DPI适配、分辨率适配、界面变化、动态布局、主题适配、语言适配、窗口大小变化、控件重识别、自适应定位。
 ---
 
 # Windows UI 元素识别（通用"眼睛"层）
@@ -38,7 +38,22 @@ description: >-
 - `ExpandCollapsePattern`（菜单/树展开）· `SelectionItemPattern`（列表/单选）· `TogglePattern`（勾选）
 - 识别后**读回元素属性/状态**确认目标正确，再交互。
 
-## 五、与操控层衔接
+## 五、环境自适应重识别（合并自 windows-ui-adaptive，2026-09-26）
+
+**铁律：不依赖固定坐标、不依赖固定布局。** 同一控件在不同机器/版本/缩放下坐标不同，只有属性与相对特征是稳定的。环境变化导致原定位失效时，按本节重识别。
+
+| 变化 | 风险 | 应对 |
+|---|---|---|
+| **DPI / 缩放** | 像素坐标漂移 | 用 UI 树坐标 / 相对比例，禁硬编码像素 |
+| **主题（浅/深）** | 颜色判据失效 | 颜色阈值分浅深两套，或改用非颜色特征 |
+| **语言（中/英）** | 文本定位失败 | 用 ClassName/AutomationId/控件结构 |
+| **窗口大小/位置** | 绝对坐标错 | 基于窗口 rect 实时计算目标区 |
+| **软件版本升级** | 控件树结构变 | 退回视觉/OCR，重新探查树 |
+| **动态界面（弹窗/加载）** | 目标暂不存在 | 等待+轮询，确认出现再定位 |
+
+重识别流程：感知当前环境（DPI/主题/语言/窗口状态）→ 比对"当前状态 → 目标状态" → 用最稳属性重定位 → **读回属性/截图校验目标确实是预期的** → 环境再变则重新走本流程。
+
+## 六、与操控层衔接
 
 - 本技能只产出"目标元素 + 定位方式"，实际点击/输入交给 `computer-use-windows` 或 `win-native-app-automation`。
 - 无法可靠识别时，由 `windows-automation` 决策降级到下一引擎。
