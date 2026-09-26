@@ -194,7 +194,7 @@
 
 复核命令（命中数**必须为 0** 才算改完）：
 ```bash
-grep -rn "<旧名>" ~/.workbuddy/skills /c/Users/26719/.workbuddy/AGENTS.md "D:/AI技能仓库"
+grep -rn "<旧名>" ~/.workbuddy/skills /c/Users/26719/.workbuddy/AGENTS.md "D:/腾讯AI/skills"
 ```
 - **判定：「改名」的完成标志不是新名生效，是旧名再也搜不到。**
 - 旧名要留历史痕迹时，**紧挨着写"现名 = X"**——历史记录可以提旧名，但读者要能一眼对上，否则下一个人会照着旧名去找。
@@ -553,7 +553,7 @@ grep -rn "<旧名>" ~/.workbuddy/skills /c/Users/26719/.workbuddy/AGENTS.md "D:/
 理由：① 满足用户反复要求的「来源标识」落到文件级、可审计；② 与 §双键检索共用 `source` 值，落地前 `grep source` 即可秒判是不是已消费过的源；③ confidence 让「候选池→已学」的晋升有数字依据，不靠感觉。
 
 ### 2. Curated(发布) vs Learned/Imported(本机-only) 分级
-- **Curated（发布库）**：进 `D:\AI技能仓库`、随 GitHub push 发布的技能；必须经双键查重 + 多轮验证，且 provenance.confidence ≥ 0.8。
+- **Curated（发布库）**：进 `D:\腾讯AI\skills`（仓库真身；旧 `D:\AI技能仓库` 已删）、随 GitHub push 发布的技能；必须经双键查重 + 多轮验证，且 provenance.confidence ≥ 0.8。
 - **Learned / Imported（本机-only）**：从某次会话/某源临时习得或导入、尚未验证的技能；**默认不进发布库、不 push**；只在本机 `~/.workbuddy/skills/` 待用，带 provenance 块。
 - 边界：发布库里只放「验证过、可复用、非临时」的技能；任何「本轮从 X 源提了一点」先落本机-only，别直接进发布库污染版本历史。
 
