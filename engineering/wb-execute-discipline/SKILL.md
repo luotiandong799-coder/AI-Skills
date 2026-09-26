@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、崩溃恢复、限流预防、分批、批大小、条件循环、终止条件、无限循环、缺信息要问、把失败当空结果、毒化产物、传输损坏、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、确认词、验证边界、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、注入失败测韧性、hook 担保硬约束、部分完成度连续分、并发上限、槽位释放、暂停占槽、超限行为、队列代价、并发不是限流、可用余量、容量快照、自己记账、跑完不释放、客户端超时不等于取消、等待时释放、挂起即释放、检查点重放、不死锁、占槽还是放手、可重放性、失败传播、部分成功、下游被跳过、跳过传染、旁支是绿的、停了不等于收权、令牌leeway、工具里叫停、工具内重试、停止是完成不是取消、兄弟调用、调用次数上限、上限会重置、批次截断、上限算谁的、工具钩子、改参数再调、钩子顺序、顶替返回值、暂停不是失败、熔断状态、错误回调收不到暂停、步骤级定位、span 过滤、过滤器抛错、保数据不保性能、按类型粗筛、过滤顺序、我不处理、责任链、部分处理、下一个处理器、待处理请求、挂起、拦截被吞、拒答当正常输出、严格模式、默认放过、审批门、执行前一刻阻断、暂停落盘、批准过期、动态阈值、三级分类、置信不是授权、可逆性、能不能撤销、谁授权的、可重试标记、首个响应即终局、广播不等于会签、超时分支、没人回、挂起双出口、取消链接、resume 与 cancel、挂起等回调、字段级自由度、按动作授权
-version: 3.16.0
+version: 3.18.0
 agent_created: true
 ---
 
@@ -3000,3 +3000,33 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - 反模式：只设一个全局 max steps 当万能闸；每条工具路径各配各的调用上限；对 4xx 做指数退避式原样重试；压缩阈值贴着 100% 窗口设。
 - 判重留痕（本轮不落）：E2B 沙箱三模式 / run_receipt 零开销收据 → ed §沙箱与隔离层级、§子代理作用域（r190-C）已落；`cuga_lite_blocked_claim_retry`（假性拒答带纠正消息重试一次）→ ed description 有「拒答当正常输出」触发词但正文未见展开，记入候选池待深判；shortlister 双层阈值（35 隐藏 / 128 bind 上限）→ 与「最小可见工具面」同面，数字细节不立条。
 - **提升层**：工作流 / 工具（调用预算记账与防重发闸）。
+
+## 停用/豁免状态必须分支粒度、由停止者自己解除（来源：LangFlow PR #15029 `fix(graph): keep Component.stop() branches inactive while a sibling completes`，2026-09-27 独立实拉 GitHub API 原文；与 §草稿与发布版是两个实体、§关阀门和拆阀门是两种操作 分工）
+
+- **图级共享停用集合 + 任一兄弟完成即全量重置 = 被停用的分支会复活**：`Component.stop()` 把下游分支标 `INACTIVE` 写进图级 `Graph.inactivated_vertices`；流式构建驱动并发跑兄弟顶点，**每个**完成的顶点都调 `graph.reset_inactivated_vertices()`，把全部停用一起释放。停止者还在 await 时，任意先完成的兄弟就把它的分支重新激活，停止者返回后调度器看到 `ACTIVE` 就真的执行了（官方复现日志 `[MRE_VICTIM] ERROR: stopped branch executed`）。修复方式是引入归属映射 `branch_inactivation_sources: dict[source_vertex_id, set[vertex_id]]`，`reset_inactivated_vertices(source_id)` **只释放该停止者自己停的那部分**。
+- → 判据：**停止 / 豁免 / 跳过状态不许放在"一个全局集合 + 一次全量清零"的结构里**。谁停的谁解，解除事件的发起方必须是停止者自身的完成事件，不能是"任意一个兄弟任务完成了"。批量子任务里"某一条失败就把所有暂停标记清空重来"，是同一个 bug 的翻版。
+- **跨轮复用会带进陈旧归属**：`sort_vertices()` 在每轮开始用 `mark_all_vertices()` 重置状态时**必须同时清空归属映射**，否则上一轮残留的条目会在复用的图上重新停用顶点。→ 判据：**周期 / 循环任务的恢复路径要显式清陈旧停止信号**；暂停快照里挂着的 hold 只有等它自己的停止者重跑才会释放。
+- **旧数据缺字段时按旧语义放行**：历史缓存 / checkpoint 里的停用项没有 source，重置按 `inactivated_vertices - held` 释放（无主条目沿用旧语义），否则一旦有新 stop 记录，老条目会永久卡死。→ 判据：**给状态结构加字段要同时给出"老数据缺这个字段"的兼容路径**——兼容不是"读进来不报错"，是"语义仍然正确"。
+- 反模式：用"任一任务完成即重置全局停用集合"表达并发；把停止标记挂在父流程上由父流程统一清；加了归属字段却不为历史快照补默认路径。
+- **提升层**：工作流 / 工具。
+
+## r224批好方法（2026-09-27，来源：skillsmp p80-82 / Dify / n8n / LangFlow / Activepieces / Make / Pipedream / OpenClaw / agentskills.io / deeplearning.ai 实拉）
+- **AI 输出交付前走三层事实验证**（来源：skillsmp p82 doublecheck，github/awesome-copilot ★39,255）：①从输出里提取可验证主张 ②web 搜索找支持或反驳来源 ③对抗式幻觉审查 → 结构化验证报告带来源链接给人审。与 §工具结果断言层 分工：那条管**工具返回值**打 _suspicious 标记，本条管**模型输出的事实层**——涉及对外结论/数字/引用时必须走三层，不能只验格式。判据：**校验格式≠校验事实**。
+- **外部工具参数用运行时占位让 agent 填**（来源：n8n $fromAI('name','说明') 机制）：HTTP 请求等工具的参数字段写占位符+语义说明，agent 在运行时按上下文自动填参——**把"静态配置死"变成"运行时自适应"**，减少为每个场景复制工具。反模式：每个变体都新建一个工具节点。
+- **agent 迭代上限 = 最长真实工具链 + 2**（来源：n8nlogic《n8n AI Agent Node Reference 2026》）：Max Iterations 不是越大越好——设为最长工具链+2，既给足余量又防死循环；默认值下工具循环失控是 agent 卡死最高发原因。
+- **AI 视频多镜头一致性：3D 空间锁定 + 180°轴线规则 + 双提示词体系**（来源：skillsmp p82 storyboard-consistency）：首帧提示词锁角色/场景，视频提示词锁运镜，全程守 180°轴线（不越轴=正反打不穿帮）——**角色换脸/场景换景/空间越轴三大崩塌各有对应防线**，不是笼统写"保持一致"。
+- **去 AI 味/长文重写默认保量润色，用滚动段落摘要防前后不一致**（来源：skillsmp p82 igc-down-skill，实测 AIGC 率 >50%→11%）：**为降 AI 味大幅删短是错的**——默认保留原信息量只改表达；长文分段改写时维护滚动段落摘要（前文要点随身带），会话记忆避免重复释义。判据：**删内容 ≠ 去 AI 味**，删是最后手段。
+- **按用户 Word 模板转换时逐项验证格式件**（来源：skillsmp p82 docx-template-translator）：pandoc --reference-doc 单独不够——封面/声明/TOC/标题编号/三线表/公式/引用/视觉逐项核对模板；**格式件一个不验就交付 = 交付半成品**。
+- **RAG 检索用"双层过滤器"**（来源：Dify Knowledge Retrieval 双层设置）：KB 级决定初始候选池 → 节点级再 rerank/缩小——**连续两道过滤器而不是一道**；rerank 加权分=语义相似度与关键词匹配的相对权重；配 Summary Index（摘要挂 chunk 上一起返回）治"碎片检索丢上下文"。判据：**检索质量问题先查"是不是只有一道过滤"**。
+- **SKILL.md 规格常量**（来源：agentskills.io Specification）：name ≤64 字符小写连字符且**必须匹配目录名**；description 1-1024 字符同时写"做什么+何时用"（agent 加载前唯一可见内容）；SKILL.md <500 行；发现预算约 100 tokens（name+desc）；只允许 scripts/references/assets 三个子目录；描述用第三视角 gerund 式（"Extract text..." 而非 "This skill helps..."）。
+- **技能来源验证用 owner 限定 + commit 钉定**（来源：OpenClaw openclaw skills verify @owner/）：不同 owner 可用同名技能，**必须 @owner/ 限定引用避免歧义**；verify 输出含 commit-pinned 来源 URL——**验证的是"钉死的那一版"不是"同名技能"**。反模式：只信技能名不看来源归属。
+- **提升层**：工作流 / 可复用 Skill / 工具。
+
+## 上线前先过模拟门：合成用户 + 模拟工具输出，与生产相关性达标才放行（来源：arXiv 2609.30137《Screen Before You Serve: Simulation for Production Customer Experience AI Agents at 140M Scale》，2026-09-27 独立实拉 export.arxiv.org 摘要原文；与 §eval 框架针对 AI 特有失败类型 分工）
+
+- 原文：`We present a hypothesis-driven simulation workflow for screening candidate CX agents before deployment. Synthetic customers react to agent responses and simulated tool outputs enable multi-step agentic workflows without invoking production backends. Across 4 deployed versions, simulated and production version-level binary evaluator scores show high correlation.`
+- → 判据：**新流程 / 新技能上线前，先在"合成用户 + 模拟工具输出"的环境里跑多步演练**——不碰生产后端就能覆盖完整链路；并且**模拟评估分与生产版本级评估分的相关性达标**才放行。跑通了不算数，相关性才是门槛。
+- **模拟门的价值是让大范围探索变得可行**：论文在模拟面筛了 16,000+ 次对话的开源权重配置，只把选中的那一组拿去做线上 A/B（自助率 +8.82pp、tNPS 无显著变化）。→ 判据：**线上实验是稀缺资源，只用来验证模拟筛出来的少数候选**；模型 / 推理档位 / prompt 的粗筛一律放在模拟面。
+- 与 §eval 框架针对 AI 特有失败类型（新测试用 shadow mode 并行跑观察 flakiness / 误报）分工：那条是**上线后**并行观察新测试的稳定性，本条是**上线前**的准入门——一个管"改完有没有回归"，一个管"这次能不能上"。
+- 反模式：只靠生产 A/B 选配置（把探索成本直接转嫁给用户）；模拟跑通即放行、从不校验模拟与生产的相关性；拿模拟的**绝对分**下结论——论文用的是**版本级分数的相关性**，不是绝对分。
+- **提升层**：工作流 / 可复用 Skill。

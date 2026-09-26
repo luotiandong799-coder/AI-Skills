@@ -1352,3 +1352,12 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 
 - **检索收益被覆盖度门控（r202-Q-C C2）**：库再小、覆盖不到就没收益——须按 coverage 分层报告；与 §RAE 遵循率、§技能库规模税 构成"数量轴 vs 覆盖轴 vs 遵循轴"三互补维度。判据：少装不够，覆盖不到同样零收益。
 
+
+## 状态迁移独立成命令、默认 dry-run、apply 后复跑归零；不可逆迁移须显式标注（来源：Dify 1.16.0 / 1.16.1 / 1.17.1 release notes「Model Type Migration」，2026-09-27 独立实拉 api.github.com/repos/langgenius/dify/releases 原文）
+
+- 原文：`Back up the database before applying the migration. The command runs in dry-run mode by default; review the output before rerunning it with --apply. The migration is idempotent and can be safely rerun.`
+- **三步验收**：①迁移从升级流程里**剥离成独立命令**（官方明写 `not included in flask db upgrade`）；②**默认只报告不写**（dry-run），人审阅输出后再 `--apply`；③靠幂等性**复跑一次看是否归零**当完成判据——不是"apply 退出码 0"就算完。
+- **不可逆必须前置声明**：1.17.1 的 revision `5578e028b2f2` 明写 `downgrade()` 是故意的 no-op（枚举改名后新旧行无法区分），并强制 `Back up your database before upgrade`。→ 判据：**迁移类操作先问"能回滚吗"**；答案是不能时，备份从"建议"升级为**前置步骤**，并且要在发布说明里点名哪个 revision 不可逆。
+- 与 §失败样例须可原样重放 分工：那条给"验证可重现"，本条给"状态迁移的验收形状（报告 → 审阅 → 执行 → 复跑归零）"。
+- 反模式：把数据迁移藏进常规升级命令一起跑（跑没跑、跑成什么样都不可见）；apply 成功即宣布完成、不复跑归零；默认就写库，只靠"提供 --dry-run 参数"让人自己想起来加。
+- **提升层**：工作流。

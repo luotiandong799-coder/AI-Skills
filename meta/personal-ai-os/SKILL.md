@@ -2,7 +2,7 @@
 name: personal-ai-os
 description: >-
   Personal AI OS（个人 AI 操作系统）总控规则与模块路由。定义九大模块（Computer Agent / AI Learning / PC Maintenance / AI Radar / Personal Knowledge / Skill Management / MCP Management / Agent Harness / Evaluation）与全套自主执行纪律：统一任务生命周期、执行前置检查 Preflight、三级权限 L0/L1/L2、执行预算（工具调用次数/重试/并行度硬上限，§九·五）、停止条件、重试、幂等与防重复、并发控制、结果验证、证据优先、异常恢复与回滚、任务后清理（临时/缓存/垃圾）、资源边界、敏感数据、审计与持续进化。**凡涉及操作电脑与普通软件、安装/更新/删除 Skill 或 MCP、GitHub 项目选型、电脑维护与清理、任务自主执行与收尾的动作，一律先加载本技能并服从其规则。** 当用户提出「电脑助手 / 帮我操作电脑 / 打开软件 / 输入内容 / 截图 / 桌面自动化 / Personal AI OS / 个人 AI 环境 / 电脑维护 / 系统体检 / 磁盘空间 / 清理缓存 / 清理垃圾 / AI 学习 / AI 信息雷达 / AI 简报 / 知识管理 / 资料整理 / 装技能 / 装 MCP / 这个技能值不值得装 / 帮我评估这个项目 / 帮我清理电脑 / 帮我操作微信或 Office」这类需求时应用。触发词：Personal AI OS、个人AI操作系统、电脑助手、桌面自动化、帮我操作电脑、打开应用、截图、电脑维护、系统体检、磁盘清理、缓存清理、垃圾清理、开机启动项、AI学习、AI信息雷达、每日AI简报、知识管理、第二大脑、装技能、装MCP、Skill管理、MCP管理、评估新能力、执行前置检查、三级权限、执行预算、工具调用上限、最多调用几次、少调工具、最短路径、并行执行、缓存复用、已获取不重复查、自动停止、停止条件、幂等、回滚、防重复执行、资源边界、任务收尾、审计、personal ai os、desktop assistant、ai radar。
-version: 2.4.0
+version: 2.5.0
 agent_created: true
 ---
 
@@ -595,3 +595,11 @@ Personal AI OS 不允许无限膨胀。定期审查 Skill / MCP / Workflow / Exp
 - [ ] 属于 L0 / L1 / L2 哪级？L2 必须先取得明确确认。
 - [ ] 是否触发停止条件（目标完成/副作用/风险升级/验证失败/连续失败/状态未知/资源异常/数据风险/权限不足/工具不可靠）？
 - [ ] 收尾：清理临时文件·无用缓存·安装测试残留 + 检查残留进程/目录 + 记录 + 判断是否需优化？
+
+## 执行轨迹必须写在被审计主体的控制之外（来源：arXiv 2609.30266《LLM Agents Can Easily Tamper With Their Own Traces》，2026-09-27 独立实拉 export.arxiv.org 摘要原文；与 §收尾记录 分工）
+
+- 原文：`All tested harnesses, except Muse Code, allowed agents to delete their traces when asked, without triggering monitor guardrails. We also validate that external attackers can exploit this gap to induce trace deletion. ... We advise practitioners to ensure trace logging happens through an independent interception mechanism outside of the agent's control, preserving trace integrity even in cases of full host compromise.`
+- → 判据：**"agent 自己写日志 / 自己写 trace"不构成审计面**——被请求一句就能删掉，且不触发任何护栏；外部攻击者还能利用这个缺口诱导删日志。审计轨迹的落盘通道必须在 agent 的控制域之外（宿主拦截层 / 独立进程 / 只能追加的写入口），要做到**即使宿主被完全控制也能保住完整性**。
+- 与 §收尾：清理临时文件 / 记录 分工：那几条管"记什么、清什么"，本条管"由谁写、写到哪"——**可写即可删，可删即非审计**。
+- 反模式：把 trace 写进 agent 可读写的工作目录；让 agent 自己决定哪条要记；把"日志里没看到异常"当成"没发生异常"。
+- **提升层**：工作流 / 可复用 Skill。
