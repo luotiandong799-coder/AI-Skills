@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、改中间值、场景测试、调试不污染历史、Last run、重放打最新版、重放不等于复现、钉版本重放、冻结上游、只重跑下游、钉住上游、置信门槛
-version: 2.29.0
+version: 2.30.0
 agent_created: true
 ---
 
@@ -312,3 +312,19 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 反模式：改了上游却继续引用下游旧结论（最常见）；或反过来——一有改动就把整个任务树标失效、全量重跑（把"严格"误做成"全部作废"）。
 - 与 §状态迁移三步验收（独立命令/默认 dry-run/审阅后 --apply/复跑归零）分工：**那条管"迁移动作本身怎么验收"，本条管"迁移之后，之前那些已验收的中间结果还算不算数"**。
 - 提升层：工作流 / 可复用 Skill。
+
+## 审计要抽样"标记为成功"的运行：静默逻辑失败不在失败日志里（来源：Activepieces《Why a workflow can run successfully and still be wrong》2026-09-17，2026-09-27 实拉，原文字段坐实）
+- **原文要点**：`When an automation completes its entire run without triggering an error code, yet produces an output that is factually wrong or business-damaging, a silent logical failure has occurred.` 引 OpenAdapt 研究：`out of seven transactional fault classes, the system detects only 2. Five out of seven faults silently pass through the workflow.` 给出的审计方法是三步：`1. Identify the 'Golden Record' (the source of truth). 2. Sample 10 successful runs from the last 7 days... 3. Manually compare the workflow output against the source.`
+- 判据：**只审计失败样本，等于把检出率的天花板钉在"系统会报错的那部分"上**。5/7 的故障族不报错，这类故障在失败日志里永远不存在——任何"看失败记录找问题"的流程对它们的结构性盲区是 100%，不是"漏了一些"。
+- 因此审计样本必须**从"成功"那一堆里抽**，且要有对照基准：先确定真源（Golden Record），再把"系统判定成功"的输出与之逐条比。判据：**没有真源做对照，抽样只是多看几遍同样的输出**；没有限定最近窗口（7 天 / 10 条），抽样会退化成"挑几条看得顺眼的"。
+- 反模式：跑一遍全绿就宣布通过；或只看执行历史里的绿色对勾（原文：`Relying on the green checkmarks in your execution history is insufficient`，因为引擎只能确认"代码没崩"，不知道折扣有没有被重复应用、线索有没有被路由给已停用用户）。
+- 与 §失败注入（变异测试）分工：**那条管"证明验证器有检出能力"，本条管"验证器的输入样本本身偏不偏"**——抽样不覆盖成功样本，变异体做得再多也测不到"成功但错"这一族。
+- 提升层：工作流 / 可复用 Skill。
+
+## 结构校验通过不等于语义校验通过：值要过范围 / 一致性 / 新鲜度三类断言（来源：同一 Activepieces 文章，2026-09-27 实拉）
+- **原文要点**：对照表给出同一字段的两级检查——「Order Quantity」`Schema Check (Passes): Is Integer?` / `Semantic Check (Fails): Is within historical range?`；「Customer Email」`Matches Regex?` / `Does domain have a valid MX record?`；「Discount Code」`Is String?` / `Is the current date before expiry?`。并给出三类断言：`Apply range checks to flag values that fall outside of realistic historical parameters. Implement consistency checks that compare the new output against the previous state to detect impossible jumps in data.`
+- 判据：**schema 校验证明"字段长得对"，语义校验才证明"这个值在业务上可能"**。整数、正则、字符串类型全过，仍然可以是"数量超出历史区间""域名没有 MX 记录""折扣码已过期"——这三类错全部通过结构校验，也全部会在下游造成实际损失。
+- **★成功状态码与有效负载是两件事**：原文反例是物流商的 shipping API `returned a 200 OK status while delivering an empty JSON object because the authentication token lacked specific permissions`，工作流只检查连接成功，于是"成功"地把五百条记录更新为 null。判据：**200 只是握手，不是内容**；收到响应必须校验"负载里有没有预期那些键"，否则等于把空白支票当付款收下。
+- 第三类断言**新鲜度**容易被忽略：`Fetching data from a stale cache results in a 200 OK status code, but provides a value that no longer reflects reality.` 判据：**缓存命中也是一次"成功"，但它的值可能已经不代表现实**；凡是值会影响决策的读取，都要能回答"这个值是哪一时刻的"。
+- 与 §合法 JSON 不等于合规 分工：**那条管"能不能解析 / 字段合不合规范"，本条管"合规之后，值在业务语义上成不成立"**。
+- 提升层：工具 / 可复用 Skill。

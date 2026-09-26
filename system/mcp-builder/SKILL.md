@@ -2,7 +2,7 @@
 name: mcp-builder
 description: Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).、工具过载、上下文爆、按需加载、渐进式发现、search_tools、catalog/inspect/execute、阈值切换、服务器按需连、代码模式、组合调用、沙箱执行、逐次授权、跨 server 不可信、MCP 调试、Inspector、stdio 日志、协议协商、server/discover、_meta 字段、-32022、-32602、-32021、启动路径
 license: Complete terms in LICENSE.txt、三原语、工具资源提示、反模式、巨型服务器、批量变体、什么时候不该用、stdio、Streamable HTTP、无状态默认、会话头、OAuth 2.1、受众绑定、签发者、细粒度范围、一次性补齐、握手是契约、协议错误、工具执行错误、isError、可重试标记、建议动作
-version: 1.1.0
+version: 1.2.0
 ---
 
 # MCP Server Development Guide
@@ -290,3 +290,11 @@ Load these resources as needed during development:
 - **★两类错误的处理方式相反**：协议错误（未知工具、畸形请求、服务端故障）走 JSON-RPC 错误码，模型基本修不了；**工具执行错误放在结果体里并置错误标记，里面要写清"哪里不对"，因为这一类模型能改参数重试**。判据：**把可修复的错误扔进协议错误，等于主动放弃模型的自纠正能力**。
 - **★工具错误要自带可重试标记与建议动作**：现行工具错误没有错误码结构，无法声明是否可重试、是否部分成功、副作用是否已经发生；因此在文本里显式给出"能不能重试"和"下一步该干什么"。判据：**缺了可重试标记，调用方只能在"盲目重试"和"一律放弃"之间二选一**。
 - **★错误消息要区分"重试安全"与"副作用已发生"**：已经落地的副作用不能靠重试来"修正"。判据：**不区分这两者，重试会把一次失败变成两次副作用**。
+
+## 参数集合会随前值变化：先配置再重载，且重载后的新 schema 句柄必须被后续调用引用（来源：Pipedream `pipedream.com/docs/connect/components/actions.md`「Configuring dynamic props」，2026-09-27 实拉）
+- **原文要点**：组件的部分参数（dynamic props，定义里标 `reloadProps: true`）其**可取集合依赖先前参数的取值**；配完一个这样的 prop 后必须再调一次 `POST /v1/connect/components/props` 重算剩余参数集合，响应返回一个代表新集合的句柄 `dynamicProps.id`（如 `dyp_6xUyVgQ`），并注明 `If this is ID is not provided, the set of props will be based on the definition of the component that was retrieved initially.`
+- 判据：**工具的 schema 不是一个常量，可能是一个函数**。把"首次取到的参数定义"当成完整契约一路用下去，会在参数集合已经变化之后仍按旧集合填值——填出来的请求要么缺字段，要么带着已经不存在的字段。
+- **★最危险的不是报错，是静默回落**：不引用新句柄时系统**不报错**，而是静默回落到最初那份定义。判据：**"没报错"在这里等于"用错了 schema 但没人告诉你"**；凡是"重算后返回一个代表新状态的句柄"的接口，都要把"后续调用是否携带该句柄"列为硬性检查项。
+- 因此参数配置要走**两阶段**：`configure`（取当前 prop 的可选值）→ `reload`（按已配值重算剩余参数集合）→ 再 `configure`，而不是一次性假定一张固定入参表。
+- 与 §工具过载：渐进式发现 分工：**那条管"工具太多时怎么分批暴露"，本条管"单个工具的字段集合本身会变"**。
+- 提升层：工具。
