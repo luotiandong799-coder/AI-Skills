@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、崩溃恢复、限流预防、分批、批大小、条件循环、终止条件、无限循环、缺信息要问、把失败当空结果、毒化产物、传输损坏、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、确认词、验证边界、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、注入失败测韧性、hook 担保硬约束、部分完成度连续分、并发上限、槽位释放、暂停占槽、超限行为、队列代价、并发不是限流、可用余量、容量快照、自己记账、跑完不释放、客户端超时不等于取消、等待时释放、挂起即释放、检查点重放、不死锁、占槽还是放手、可重放性、失败传播、部分成功、下游被跳过、跳过传染、旁支是绿的、停了不等于收权、令牌leeway、工具里叫停、工具内重试、停止是完成不是取消、兄弟调用、调用次数上限、上限会重置、批次截断、上限算谁的、工具钩子、改参数再调、钩子顺序、顶替返回值、暂停不是失败、熔断状态、错误回调收不到暂停、步骤级定位、span 过滤、过滤器抛错、保数据不保性能、按类型粗筛、过滤顺序、我不处理、责任链、部分处理、下一个处理器、待处理请求、挂起、拦截被吞、拒答当正常输出、严格模式、默认放过、审批门、执行前一刻阻断、暂停落盘、批准过期、动态阈值、三级分类、置信不是授权、可逆性、能不能撤销、谁授权的、可重试标记、首个响应即终局、广播不等于会签、超时分支、没人回、挂起双出口、取消链接、resume 与 cancel、挂起等回调、字段级自由度、按动作授权
-version: 3.15.0
+version: 3.16.0
 agent_created: true
 ---
 
@@ -2988,3 +2988,15 @@ pm run build），agent 会频繁参考这些命令；让模型"猜命令"是最
 - **子代理的工具面默认是"全给"，声明才收窄——漏声明等于静默拿到全部权限**：原文 `An agent that lists apps: or mcp_servers: receives tools from those only; an agent that lists neither still receives everything`，且名称**按注册时的键精确匹配、途中无人改写**。官方还记录了一次行为变更：`mcp_servers:` 条目现在也计为命名 app，此前只声明 `mcp_servers:` 的 roster 会拿到整个注册表——`it worked by accident`。→ 判据：**收窄靠显式声明，不是靠默认**；于是"少写一行"的失败方向是**权限变大**，而且不报错。与 sa §最小可见工具面 分工：那条要求"按身份给最小工具集"，本条点出"不声明就是全集"这个反向默认，两个方向都要检查。
 - **遥测默认关闭、开启后默认只记时长，不记参数与结果**：`run_receipt` 默认 false（`zero overhead when disabled`）；开启后工具追踪进入 `timings-only` 模式——`only name, app and duration are recorded — never arguments, results or errors`，除非显式传 `track_tool_calls=True`。收据本身给的是 tokens / llm calls / tool calls / 时间 / 最慢工具，而**不是金额**（`Tokens, not cost`，因为自托部署的单价平台不知道）。→ 判据：**"花到哪去了"要能回答，但答案不必包含内容**——先用时长与计数定位，再把内容级追踪当单独的、需要额外开关的动作；把两者绑在一个开关上，等于一开观测就把载荷也收了。与 §成本置断器 分工：那条管"到边界怎么停"，本条管"平时怎么记账、记到多细"。
 - 判重留痕（本轮不落）：稳定性门 87% + 必须 `-n0` 串行（并行会让阈值聚合失效）→ 属 CI 配置细节，与 av §flaky / §种子重跑 同面且更窄，不立条；E2B 沙箱三模式（per-session / single / per-call）→ ed §沙箱与隔离层级 已落。
+
+## 调用上限三档分工 · 确定性拒绝按签名防重发 · 压缩触发点给估算误差留余量（来源：GitHub `cuga-project/cuga-agent` `src/cuga/settings.toml`，2026-09-26 r193-B 复核实拉）
+
+原文（三档调用上限，同一计数器跨全部工具路径）：`max_tool_calls_per_run = 256`——`one user turn (prepare resets it), across every tool path (registry, MCP/SDK providers, plain python tools, skills, runtime fs/shell, agent delegation)`；`max_tool_calls_per_block = 100`——`Fail-fast guard, not a ceiling: breaching it is recoverable, the model reflects and retries with a fresh block budget — max_tool_calls_per_run above is what actually bounds spend`；`max_tool_calls_per_thread = 2000`——`per conversation, never reset. The absolute ceiling: bounds a long thread that max_tool_calls_per_run (per turn) cannot`。
+
+- **块级闸是"快速失败+可恢复"，轮级闸才管真实花费，线程级闸兜长会话**：破块级闸的后果是"模型反思后拿新块预算重来"，不算失败；真正约束开销的是每轮清零的 per_run，per_run 兜不住的长会话由永不清零的 per_thread 作绝对天花板。判据：**设上限先分清三个作用域各拦哪种故障**——单块失控、单轮超支、跨轮漂移是三种不同故障，一个数字压不住三种。
+- **调用计数必须跨所有工具路径统一记账，不按路径分发**：`across every tool path` 明确 registry、MCP/SDK、python 工具、skills、fs/shell、agent delegation 全部计入同一计数器。判据：**按路径各设各的上限 = 给总开销开洞**——每条路径都"没超自己的份"，总量早已爆掉。
+- **确定性拒绝（4xx）按调用签名防重发：先升级警告、后客户端短路**（Rejected-call guard #599）：同一签名（`same endpoint + same arguments`）被明确拒绝后，第 1 次重复在返回中附加醒目 `[Repeated failure] ... do not re-issue unchanged`；第 2 次起 `further identical calls are refused WITHOUT reaching the API, returning the stored error plus an explicit directive`——**拦截发生在请求发出之前，下游配额不被烧**。计数器在任一成功的变更调用或任务边界清零（`Counters clear on any successful mutating call and at /api/reset (task boundary)`）。判据：**确定性拒绝不是瞬时错误，原样重发只会得到同一个错**；两级策略比"无限重试"和"一拒就拉黑"都稳——先给模型自纠机会，再短路止损。与 §换路之前先辨错误类型 分工：那条判定"4xx=确定性错误、重试无意义"，本条给出工程执行形态（签名追踪 → 升级警告 → 发出前短路）。
+- **压缩触发点要给 token 估算误差留余量**：`trigger_fraction = 0.70` 注释明写从 0.75 下调，原因 `our token estimator undercounts vs some providers' real tokenizers, e.g. WatsonX, by ~20% on JSON/dict-heavy prompts`。判据：**"达到 X% 就触发"的 X，安全值 = 目标线 − 估算器在该载荷形态上的最大低估幅度**——按理想分词假设设阈值，真触发时窗口往往已经实际超限。与 cc §压缩时机按任务状态定 分工：那条管"任务走到哪一步该压"，本条管"阈值数字本身要减掉测量误差"。
+- 反模式：只设一个全局 max steps 当万能闸；每条工具路径各配各的调用上限；对 4xx 做指数退避式原样重试；压缩阈值贴着 100% 窗口设。
+- 判重留痕（本轮不落）：E2B 沙箱三模式 / run_receipt 零开销收据 → ed §沙箱与隔离层级、§子代理作用域（r190-C）已落；`cuga_lite_blocked_claim_retry`（假性拒答带纠正消息重试一次）→ ed description 有「拒答当正常输出」触发词但正文未见展开，记入候选池待深判；shortlister 双层阈值（35 隐藏 / 128 bind 上限）→ 与「最小可见工具面」同面，数字细节不立条。
+- **提升层**：工作流 / 工具（调用预算记账与防重发闸）。
