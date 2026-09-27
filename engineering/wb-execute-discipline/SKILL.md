@@ -3804,3 +3804,38 @@ px -y @lobehub/market-cli skills install <skill> --agent cursor；LobeHub 市场
 - **腾讯 SkillHub 安装**：WorkBuddy 内置技能市场一键装（**单次 ≤10 个优先核心款避免冲突**）；对话式安装标准提示词 根据 https://skillhub.cn/install/skillhub.md 安装 Skillhub商店；ZIP 上传/CLI 五种导入。
 - 判据：**装技能按参数精细控制（单技能/指定 agent/全局）；批量装限 10 个内防冲突；对话安装用官方安装脚本提示词**。
 - 提升层：可复用 Skill。
+
+## 发布前三类测试 + 快照版本 + Chat/Embed/API 三出口（来源：Dify Agent 教程 + Roster Service deepwiki，2026-09-27 实拉）
+- **发布前测试三类问题**：① 知识库有明确答案的 ② 答案模糊的 ③ 完全超出范围的——重点看 agent 是否**承认不确定并用 fallback 而不编造**；logs+annotation 显示每轮调用的工具与检索段落，按记录查错比猜快。
+- **快照发布**：publish_agent 把当前 draft 配置发布为 AgentConfigSnapshot；发布后应用/工作流可用，可回滚。
+- **Chat/Embed/API 三出口**：public chatbot URL（可主题化+conversation starters）+embed 代码+API/MCP server URL；test 不影响发布版。
+- 判据：**发布前按三分类测真实问题；版本用快照管理可回滚；对外暴露选 Chat/Embed/API 三出口**。
+- 提升层：工作流。
+
+## n8n 队列模式生产架构 + 生产纪律五条（来源：n8n 生产部署指南集合，2026-09-27 实拉）
+- **队列模式架构**：Webhook/Main node（UI+API，**不执行只推 job 到 broker**）+ Redis 队列（弹性缓冲扛流量尖峰）+ 无状态 workers（拉 job 执行，可水平扩 docker compose --scale n8n-worker=3）；**PostgreSQL+Redis+Queue mode 是唯一生产 setup，其他都临时**。
+- **切换时机**：~80% CPU 转 queue 模式；EXECUTIONS_MODE=queue+QUEUE_HEALTH_CHECK_ACTIVE=true。
+- **生产纪律五条**：① **pin 版本不 :latest**（升级可破 webhook workflows）② execution pruning 必须（否则 2-4 周磁盘满）③ encryption key 生成一次存 secrets manager 绝不进 Git ④ SQLite 扛不住并发——Postgres 必须 ⑤ Community 版无 SSO/audit 需 Enterprise 预算；K8s 应对 100+ workflows。
+- 判据：**生产先 UI/执行分离；80% CPU 才切队列；版本钉死+数据剪枝+密钥外置**。
+- 提升层：工作流。
+
+## GNAP git 原生 agent 协调 + siyuan 自托管知识空间（来源：GitHub Top 100 榜单 + Trendshift，2026-09-27 实拉）
+- **GNAP（Git-Native Agent Protocol）**：通过 **4 个 JSON 文件在 git repo** 协调 AI agents——**no server, no DB**，任何 agent 可参与。
+- **siyuan 46.5K★**：开源隐私优先自托管知识工作空间，**人类与 AI agents 一起工作**（人机协作知识库）。
+- **LibreChat 44.9K★**：全功能 ChatGPT clone（Agents/MCP/Skills/多模型/Code Interpreter/OpenAPI Actions/消息搜索/安全多用户 auth）。
+- 判据：**轻量 agent 协调用 git 原生协议免 server；知识库选隐私优先自托管让人机共同维护**。
+- 提升层：工具。
+
+## 渐进披露三级 token 量化 + 整个文件系统即披露（来源：Anthropic Skills 官方指南 + Lessons from building Claude Code，2026-09-27 实拉）
+- **三级 token 成本**：Level 1 frontmatter 常载 ~100 tokens（只够判断何时用）→ Level 2 SKILL.md body 触发时载 <5k tokens（完整指令）→ Level 3 捆绑文件按需（近乎无限）。
+- **SKILL.md body 保持 <500 行**，逼近就拆 references/ 子文件。
+- **技能是文件夹不是 markdown 文件**：整个文件系统是 context engineering 与渐进披露——**告诉 Claude 文件清单它会在适当时读**；详细函数签名与用法拆 references/api.md。
+- **不过度约束**：除非高重要领域；技能最好编码特定意见/知识/best practices。
+- 判据：**写技能先算三级 token 预算；正文超 500 行拆文件；用文件清单做披露地图**。
+- 提升层：可复用 Skill。
+
+## OpenClaw hooks 纪律 + 内部 hooks 与插件 hooks 分工（来源：docs.openclaw.ai automation/hooks，2026-09-27 实拉）
+- **两类 hooks**：内部 hooks（Gateway 内小脚本，响应 agent 生命周期事件 /new /reset /stop、session compaction、Gateway 启动、消息流；目录自动发现 openclaw hooks 管理）；**插件 hooks**（进程内扩展点，可校验/修改 agent 运行、工具调用、消息流、会话生命周期、子 agent 路由、Gateway 安装/启动）。
+- **hooks 纪律**：重启/进程退出会丢 in-flight 工作 → **副作用短而有界**：handler 内 await 该等的工作、网络调用设超时、限制数据大小、可重复操作幂等；**不用 void doHeavyWork(e) 逃逸 handler 的等待/错误边界**（会活过会话/进程）。
+- 判据：**外部自动化用小脚本 hooks；进程内拦截用插件 hooks；handler 里工作必须有界幂等不逃逸**。
+- 提升层：工作流。
