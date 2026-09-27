@@ -4437,3 +4437,39 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **命名由 frontmatter 非路径**：SKILL.md frontmatter 定义技能名，目录路径不影响；skills/ 文件夹最高优先级 override 一切。→ 判据：技能身份看 frontmatter 不看目录；同名冲突时 skills/ 目录胜。
 - **技能结构**：SKILL.md（instructions 必需）+tools/（scripts 可选）；验证 openclaw tools list 看加载。→ 判据：新技能先最小结构（SKILL.md+可选 tools），注册后 tools list 核验加载。
 - **提升层**：可复用 Skill。
+
+## 嵌套 Agent 节点 + Allowed tools 白名单 + 意图路由护栏（来源：Dify Agent 编排/工具调用面，2026-09-27 实拉）
+- **嵌套 Agent**：一个 agent 作为另一 agent 的工具调用（v1.3+）——专用 LLM 角色涌现行为，别建一个什么都干的 god-agent。→ 判据：任务跨多个专业角色时拆嵌套 agent，单一巨无霸 agent 是反模式。
+- **Allowed tools 白名单**：Agent node 可选 Allowed tools list——有名单只发名单内工具给模型，留空发全部。→ 判据：只给任务需要的工具，缩小模型选择面防乱调。
+- **Agentic RAG**：Agent node 集中决策（意图分析/工具编排/来源选择/重试逻辑），迭代检索而非一次性 retrieve-then-generate。→ 判据：检索质量不足时从一次检索升级到 agent 迭代检索。
+- **意图路由护栏**：workflow 定义结构分支，模型提供预定义类别内意图解释，最终路由规则驱动可观察——智能提升决策质量不削弱运营护栏。→ 判据：路由决策分层——模型出解释，规则出最终决定，可审计。
+- **提升层**：工作流。
+
+## HTTP 错误默认值 vs 生产批量 + Error Trigger 集中处理（来源：n8n HTTP Request/错误处理面，2026-09-27 实拉）
+- **默认错误处理是单条流程正确**：非 2xx 停止——单条处理默认 fine（失败停止记录通知下次重试）；生产批量场景要改。→ 判据：逐条处理保留默认；批量处理改 Continue On Fail 自己分叉。
+- **Continue On Fail 按 statusCode 分支**：node 不抛错把 response 含 status 送 output，用 IF 分叉——4xx 数据错误 5xx 临时故障分开处理。→ 判据：4xx 是数据问题（修数据），5xx 是临时故障（重试），分道处理。
+- **Error Trigger 集中错误处理**：特殊触发器不能手动运行仅其他 workflow 失败激活——输出失败 workflow 名/错误消息/节点。→ 判据：错误统一进 error-handler workflow 通知，不在各 flow 里各写各的。
+- **AI Agent 工具错误在 Tool node 层处理**：Agent 把 Tool 400/500 当致命停止——在 Tool node 设置 Ignore 错误，不是 agent 全局设置。→ 判据：工具级错误就地处理，别让 agent 全局吞掉。
+- **ECONNREFUSED 连续请求**：容器内 localhost 是容器自己；快速开关 socket 导致——中间插 Wait 1-2 秒。→ 判据：连续 HTTP 请求见 ECONNREFUSED 先插延时，再查别的。
+- **提升层**：工作流/工具。
+
+## Structured Output 组件 + Message History 会话隔离 + MMR 检索（来源：LangFlow Chat 输出/配置面，2026-09-27 实拉）
+- **Structured Output 组件**：llm + input_value + system_prompt（格式指令）+ schema_name——LLM 抽取并格式化输出。→ 判据：要固定字段输出用 structured output 组件配 schema，别让模型自由发挥。
+- **Message History session_id 分隔**：session_id 分隔不同用户/应用记忆，sender_type 过滤 User/Machine。→ 判据：多用户共用同一 flow 时自定义 session_id 隔离记忆，防串上下文。
+- **MMR 检索去冗余**：Max Marginal Relevance 平衡相关性与多样性，Similarity with score threshold 带最低分。→ 判据：检索结果重复度高用 MMR；只要高置信用 score threshold。
+- **Model Providers 全局配置**：profile→Settings→Model Providers 选 provider 填 API key 一次配全。→ 判据：provider 配置全局一次，组件引用，不逐组件填 key。
+- **提升层**：工具/工作流。
+
+## 会话双层 + Decision Ledger 决策账本 + Honcho 跨会话记忆（来源：OpenClaw 记忆/会话管理面，2026-09-27 实拉）
+- **会话双层**：session store（sessions.json 元数据 last activity/toggles/token counters，可编辑/删除）+ transcript（完整会话文件）分离。→ 判据：元数据与正文分两层存，轻量操作不读重 transcript。
+- **Decision Ledger**：结构化日志记录每个重大选择（date/rationale/outcome）——类似问题几个月后查 ledger 不重复决策。→ 判据：重大取舍进决策账本，回看时先查账本再重新权衡。
+- **Honcho 跨会话记忆**：每轮对话持久化，context 跨 session resets/compaction/channel switches；用户建模（偏好/事实/沟通风格）+agent 建模（性格/学习行为）。→ 判据：跨会话记忆需求用专用服务（每轮持久化+双建模），超出 Markdown 文件的场景才上。
+- **提升层**：工作流/工具。
+
+## skills.sh 发布路径：telemetry 收录 + PR 路径 + topics 索引（来源：skills.sh 发布/创建面，2026-09-27 实拉）
+- **发布无特殊命令**：技能放 git repo+分享 repo，npx skills add 安装时 telemetry 自动收录进 skills.sh——无 registry submission flow。→ 判据：发布技能=公开 repo+可安装即可，不追求收录表单。
+- **或 PR 到 vercel-labs/skills**：skill name+GitHub URL+category+one-line description，merged 后 npx skills add owner/repo 可装。→ 判据：要快速进官方索引走 PR 路径。
+- **GitHub topics 索引**：repo 加 agent-skills/ai-skills topic——marketplace 按 topic 抓 public repos。→ 判据：发布技能仓库必加 topic，否则索引不到。
+- **发布后聚合器自抓**：SkillsMP/claudemarketplaces/ClawHub 自调度抓取，别追着各聚合器手动提交。→ 判据：发布后等着聚合器抓，重复手动提交是浪费。
+- **skill-container 模式**：GHCR 发布不可变镜像版本，SKILL.md frontmatter image 指官方镜像 tag。→ 判据：技能要版本化发布用容器镜像 tag，不可变可回滚。
+- **提升层**：可复用 Skill/工作流。
