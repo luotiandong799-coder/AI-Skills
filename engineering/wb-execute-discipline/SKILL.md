@@ -6698,3 +6698,49 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Claude Agent SDK 四组件**：Tool Definitions/Context Compaction 自动摘要/Sub-agent Orchestration/MCP Integration——SDK 把记忆压缩与子代理编排做成内置件。
 - **Managed Agents API**：platform beta/agents：model_config/permission_policy（agent_toolset_20260401/always_ask）——权限策略可编程。
 - **提升层**：可复用 Skill（协议演进跟踪）。
+## Dify 自定义模型两配置法：predefined-model 统一凭据 · customizable-model 每模型凭据 · 凭据删除即删模型（来源：dify mintlify model-providers + enterprise-docs creating-new-model-provider + legacy docs new-provider + Marketplace modelhub 2026-07/09 实拉，与 §插件安全评级卡互补——那条管"装插件怎么审"，本条管"模型供应商怎么接"）
+- **predefined-model**：用户配置统一供应商凭据一次，即可用该供应商全部预置模型——适合固定模型集供应商。
+- **customizable-model**：每模型单独配置凭据——适合本地部署/微调模型（Xinference 每模型有唯一 model_uid，LLM 与 Text Embedding 同接需各配一个）；model_credential_schema 声明扩展字段（模型名等）。
+- **凭据管理纪律**：Add/Edit/Delete credential+设 default；**删唯一 credential 该模型也被删除**——删前确认不是唯一凭据。
+- **插件市场形态**：modelhub 聚合多供应商模型（DeepSeek/Kimi）；aimlapi 支持 OpenAI-compatible 自定义 model ID；SageMaker 自部署模型供应商插件。
+- **提升层**：工具（模型接入治理）。
+
+## n8n MCP server 双形态：实例级内建 vs workflow 自建端点 · Docker companion 免暴露（来源：docs.n8n.io accessing-n8n-mcp-server + workflows 18003/17314/18118/18279 + blog.n8n.io best-mcp-servers/one-click-70 2026-06/09 实拉，与 §MCP 工具数量上限互补——那条管"通用设计"，本条管"n8n 平台两形态"）
+- **实例级 MCP server（内建）**：Settings→Instance-level MCP 开关；客户端连上后可搜索标记 available 的 workflow、读元数据与触发器、触发运行 exposed workflows、创建编辑 workflows——coding agents 程序化建 workflow。
+- **workflow 自建 MCP 端点（声明式）**：MCP Trigger 收 tool call→同 workflow 按 action 路由→工具节点执行；header token/bearer 保护；五工具模式（search_workflows/add_workflow/remove_workflow/list...）；CRM 读写工具 gated 暴露给 Claude/ChatGPT。
+- **70+ 一键 MCP servers**：Node 面板直接连（Airtable/Grafana/Miro/New Relic/Jotform/PandaDoc+Notion/Stripe/GitLab/Apify/Linear/monday/HF），OAuth 快速流。
+- **自托管 Docker 形态**：MCP server 作 companion container 同 Docker 网络——内置 DNS 服务名直连，**不需暴露公网端口**。
+- **提升层**：工作流（MCP 暴露方式）。
+
+## LangFlow bundle 分发与版本演进：pip 即装即发现 · lfx-bundles opt-in · HITL gated tool calls（来源：docs.langflow.org extensions-overview + bundles-pinecone + release-notes + langflow.org blog 1.11/1.12 2026-07/09 实拉，合并 §LangFlow Extension 脚手架——那条管"组件怎么写"，本条补"怎么分发+版本演进"）
+- **Extension=bundle 独立维护发布**：组件包与核心分开 release；uv pip install lfx-xxx 后**服务启动自动发现加载进 palette，无需配置**；lfx extension list 查已加载。
+- **lfx-bundles 元包**：按需 opt-in `uv pip install "lfx-bundles[<bundle>]"`；全装 `uv pip install "lfx[bundles]"`。
+- **发布流程**：python -m build 建 wheel+sdist→twine upload 发 PyPI→目标环境 pip install→启动发现。
+- **1.11 演进**：HITL gated tool calls（工具调用闸门+审查）/A2A protocol/AG-UI streaming（Workflow API）；Text/JSON/Table Operations 合并；NextPlaid/Paddle/Oracle/Valkey/EmpirioLabs 新 bundle。
+- **1.12 演进**：OpenTelemetry service health+flow runs 可观测；core 只装 curated provider 集，opt-in 单独装，**报错点名缺包**。
+- **提升层**：可复用 Skill（组件分发）。
+
+## Make AI Agent 六步构建：plan→build→configure→tools→knowledge→test · 五类型 · 工具场景包装（来源：help.make.com create-your-first-ai-agent + sales-outreach use-case + make.com blog ai-marketing-agents/trust-through-transparency/autonomous-ai + Make Academy unit-2 2026-02/09 实拉，与 §Make blueprint 互补——那条管"场景上线"，本条管"agent 构建流程"）
+- **六步流程**：plan（先搭框架）→build scenario→configure（角色/任务/输入）→add tools（能力）→add knowledge（上下文）→test before live。
+- **Instructions 三要素**：role+task+expected input——像给新分析师 brief，别只写"你是 XX"。
+- **五类型**：Assistant（客服）/Synthesizer（多源结构化摘要）/Routing（条件树失控时动态选流程）/Qualifier（按标准决策：lead scoring/内容审核）/Orchestrator。
+- **模型策略**：先高质量推理模型确认 agent 工作正常→再切快/省模型——**验证期与生产期可不同模型**。
+- **scenario 作 tool 的包装**：Start a scenario（触发器）开头+Return output 结尾——被调用的工具场景标准形态。
+- **自主 AI 四步+异常纪律**：Enrichment 验证→Decision 对照 ICP→Action 起草发送+提醒→Exception handling：AI 不确定就**不猜**（记录待人工）。
+- **提升层**：工作流（agent 构建）。
+
+## Claude Code subagents 与 hooks 生命周期：.claude/agents/ 文件形态 · SubagentStart/Stop 事件匹配 · hooks 零上下文成本（来源：code.claude.com sub-agents + claude.com steering blog 2026-06 + docs.anthropic.com sub-agents 实拉，合并 §hooks 实现选型/§决策控制——那条管"类型与失败语义"，本条补"subagent 文件形态+生命周期事件"）
+- **subagent=markdown 文件**：.claude/agents/ 下；YAML frontmatter（name/description+可选 model/tool access）后正文成为该 subagent 的 system prompt；**name/description/tool list 会话开始加载，正文不自动调用**——按需 Agent 调用，省上下文。
+- **hooks 两配置处**：subagent frontmatter 内（仅该 subagent 激活时）+settings.json（会话级，也作用于 subagent 内部）；SubagentStart/SubagentStop 事件按 agent type name 匹配——**生命周期可自动化**。
+- **五类型**：command/HTTP/mcp_tool 确定性触发；prompt/agent 用 Claude 判断——确定性管住必须做的，判断性管需要理解的。
+- **hooks 零上下文成本**：外部执行，不返回消息则不进上下文——**副作用（lint/安全检查）不污染对话**。
+- **适用判据**：每次 commit 自动审查/安全检查没人记得也跑/CI 质量门本地化——需要"无条件执行"的都用 hooks。
+- **提升层**：可复用 Skill（生命周期自动化）。
+
+## skills.sh 发布流程与 QA 门槛：格式三规则 · 双位发布策略 · 六项 QA 清单（来源：skills.sh skill-creator + getknack where-to-publish + maketocreate shipping your own + qaskills how-to-publish + developertoolkit building-custom-skills 2026-05/08 实拉，与 r265C skills.sh 目录互补——那条管"生态规模"，本条管"怎么发布"）
+- **格式三规则**：name ≤64（小写字母数字连字符）且**目录名=frontmatter name**；description 说明做什么+何时激活（≤1024 但 2-4 句为佳；塞十个无关触发器=该拆两个 skill）；body 为 Markdown 指令。
+- **打包校验**：skill-creator 自动验 frontmatter/命名/目录/描述/文件组织/资源引用，验证过才打 .skill 文件。
+- **提交流**：PR 到 vercel-labs/skills：name/GitHub URL/category/一行描述；数天合并后 npx skills add owner/repo 数小时内可装。
+- **双位发布策略**：自己的 GitHub repo=source of truth→镜像 skills.sh 求覆盖→PR anthropics/skills 求凭证（merge 本身就是 credential）。
+- **QA 六项门槛**：元数据有效/工作流循证（区分事实/假设/缺上下文/验证）/资源测试（正反用例）/选择评估（正激活+附近负不激活）/QA 结果改善敏感度可靠性可维护性/安全审查（权限依赖数据访问可执行行为披露）。
+- **提升层**：可复用 Skill（发布管线）。
