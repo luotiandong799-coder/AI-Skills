@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.33.1
+version: 3.34.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -474,3 +474,18 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **判据**：① 当工具/技能数量上到十几个，**扁平清单会退化**——模型看得见全部名字，却看不见「A 必须在 B 之前」「C 的入参来自 D 的产物」；这类错误表现为**选对了工具、调错了顺序**。② **顺序约束要显式写进技能正文**（前置条件 / 产出被谁消费），不能指望从名字推断。③ 与 `wb-max-token-saver` 的「可见工具 30–50 就衰减」互补——那条管**数量**带来的衰减，本条管**结构**缺失带来的错序；减数量与补顺序是两件事，不能互相替代。
 - 与 §家族内触发边界仲裁 互补——那条管「同一族里谁响应这个请求」（横向竞争），本条管「同一族里谁必须先跑」（纵向依赖）。
 - 提升层：可复用 Skill / 工作流。触发词：工具顺序、API 发现、调用顺序、依赖关系、工具集组织、扁平清单。
+
+## 同一份 SKILL.md 会被 40+ 异构客户端直接消费：按「最小公分母」写，别用任何单客户端私有特性（来源：agentskills.io 官方 Client Showcase（2026-09-28 r211-B 独立实拉）+ docs.openclaw.ai 首页（同期独立实拉）；与 §技能家族与多渠道分发（r206-B）互补——那条管「发布到几个面」，本条管「写的时候能被多少种客户端读得动」）
+- **消费端清单是异构的**：官方 Showcase 同时列了 Claude、ChatGPT & Codex、Cursor、VS Code、Gemini CLI、GitHub Copilot、Kiro、Goose、OpenHands、Letta、Amp、opencode、Roo Code、TRAE、Factory、Qodo、Mistral AI Vibe、Spring AI、Snowflake Cortex Code、Pulumi Neo、JetBrains Junie、Databricks Genie Code、OpenClaw 等 40+ 客户端；规范由 Anthropic 发起后作为**开放标准**发布，接受外部贡献。
+- **可被普遍消费的最小公分母只有三样**：`name` + `description` + Markdown 正文（规范明示 "metadata (name and description, at minimum) and instructions"）；`scripts/`、`references/`、`assets/` 是可选且**只在 Activation/Execution 阶段按需加载**。
+- **因此有三条硬约束**：① 正文不得依赖某一客户端独有的能力（专有命令、专有 frontmatter 字段、专有目录约定）——依赖了不会报错，只会在其他客户端**静默退化成普通散文**；② 脚本路径用相对路径与 POSIX 兼容写法（OpenClaw 官方并列给出 macOS / Linux / WSL2 / 原生 Windows 四条安装路径，Windows 不是例外而是并列一等公民）；③ 关键行为不能只写在 `scripts/` 里，必须在正文留一行人类可读的等价说明——脚本在无执行环境 / 未授权执行的客户端里根本不会跑。
+- **判据**：把技能想象成「要发给一个你不认识的实现者读」——凡是只有你自己这套环境才懂的部分，都是它在别处失效的地方。写完自问：**这个技能在我的客户端之外的第二种客户端上，行为会不会变？**
+- 提升层：可复用 Skill / 工具。触发词：跨客户端、客户端兼容、最小公分母、开放标准、私有特性、静默退化、相对路径、Windows 一等公民。
+
+## 品质形容词不配锚点就是废话：官方自己把「distinctive」改成了「反例对照 + 显式确认」（来源：anthropics/skills PR #1713 "Update frontend-design skill to avoid generic design defaults"，2026-09-28 r211-B 经 GitHub API 取 diff 实拉核验；与 §易变上游规则只放链接（r208-A，同仓库 PR#1825）同源不同条——那条管链接，本条管措辞）
+- **原文（被改掉的版本）**：`pin it yourself before designing: name one concrete subject... and state your choice` —— 「自己定，然后声明你的选择」。
+- **改后版本**：`identify it yourself before designing, **and confirm with the client**` —— 把「内部猜测 + 自我声明」升级为**一次对外确认动作**。判据：**只要求模型「声明」等于允许它自己给自己发许可证；要求「确认」才引入第二方。**
+- **同时给形容词补了可对照反例**：新增一句 `a design for a toy for girls aged 8–11 will be very aesthetically different from a dashboard for financial analysts`。判据：**"distinctive / opinionated / 高质量 / 专业"这类词在没有对照物时不可判别**——模型只会用它见得最多的那个模板当作「符合要求的输出」。
+- **通则可核验的写法**：每写一个品质形容词，必须同时给三者之一——① 一个具体反例（「A 长这样，B 长那样，本技能要的是 B」）；② 一个可执行的确认动作（问谁、问什么、拿到什么算确认）；③ 一组可数的判据（数字 / 字段 / 清单长度）。**三者全无 → 删掉这个形容词**，它只在增加字数。
+- **自检**：grep 技能正文里的 `distinctive|opinionated|专业|高质量|合理|优雅|完善`，逐条问「凭什么说现在这份输出符合/不符合」；答不上就是待补锚点。
+- 提升层：模型 / 可复用 Skill。触发词：形容词、distinctive、opinionated、反例对照、显式确认、不可判别、模板输出、品质词要有锚点。
