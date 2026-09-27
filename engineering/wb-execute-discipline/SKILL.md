@@ -6966,3 +6966,28 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Nodes as tools（新特性）**：HTTP Request 节点/其他普通节点可直接作为 agent 工具——LangChain Agent 决定何时用哪个工具（Telegram 模板：HTTP Request tool+Telegram node tool 替代自定义 workflow tool，bot 更灵活）。
 - **LangChain Code node**：自托管专属——完全可定制 agent 提示词，省掉保留 tool-calling 功能的 token 消耗。
 - **提升层**：工作流（agent 输出与工具形态）。
+## Anthropic prompt caching 经济与三个 cache-buster：TTL 定价 · 自动/显式断点 · 变量永不进前缀（来源：platform.claude.com/docs prompt-caching 2026-09 实拉 + Agent Patterns《Prompt Caching Architectural Discipline》2026-09-24 实拉，合并 §上下文预算与链式提示——那条管"预算纪律"，本条管"缓存机制与经济"）
+- **TTL 经济数字（2026 默认）**：5-min ephemeral 默认 / 1-hour extended 略高写成本；缓存写 1.25x（5-min 档）/2x（1-hour 档）正常输入价；缓存读约 0.1x；最小可缓存块 1024 tokens（Opus 4.7/Sonnet）。
+- **两种启用方式**：Automatic caching=顶层 cache_control 自动把断点放最后可缓存块并随对话前移（多轮最佳）；Explicit block-level breakpoints=手动按不同变更频率分段缓存。
+- **三个 cache-buster（新增内容前先问"会话内会不会变"）**：改 tool definitions / 切换模型 / 向 prefix 注入变量数据——变量放 dynamic tail，永不进 prefix；compaction 后必须验证 prefix 字节级保留（压缩"看似保留"实则改了前缀=缓存全失效）。
+- **价值排序**：system prompt（2,000-token 级）第一个该缓存；工具定义第二大高价值目标；cached 内容放 prompt 开头、breakpoint 放最后稳定块、调用在 5 分钟生命周期内。
+- **提升层**：工具（成本治理）。
+
+## OpenClaw 模型路由三策略与配额感知 condition：分层路由省 50-90% · provider 前缀引用 · 配额表达式（来源：claw-crew.com/learn/model-routing 2026-07 + docs.openclaw.ai providers/openrouter + vercel-ai-gateway + gpt4free guide 2026-05 实拉，合并 §OpenClaw Gateway 路由纪律——那条管"路由权属原则"，本条管"路由策略与表达式机制"）
+- **三策略**：manual switching（手动）/ primary-thinking tiering（主-思考分层）/ multi-tier complexity-based（按复杂度多层路由）——省 50-90% API 成本，简单任务用便宜模型、复杂推理留贵模型。
+- **provider 前缀模型引用**：`openrouter/fusion`（多模型评估融合终答）、`vercel-ai-gateway/anthropic/claude-opus-4.6`（按前缀路由上游）——模型引用自带命名空间，不必记各厂商细节。
+- **配额感知 condition**：provider 级条件表达式如 `quota.models.X.remaining > 0 and error_count < 3`——按剩余配额与错误计数动态换 provider，防配额耗尽才崩。
+- **routing config**：strategy fallback + chain ["anthropic","ollama"]；rateLimiting global tokensPerDay。
+- **提升层**：工作流（成本-质量编排）。
+
+## Dify 自托管部署资源规格与升级纪律：Compose 2.24+ · 7+8+1 拓扑 · 生产 4+/16GB · 升级走 release tag（来源：dify 官方 docker-compose 快速部署 + enterprise-docs 生产部署 + dev.to dify-review-2026 实拉，合并 §生产部署秘密键纪律——那条管"密钥环境变量"，本条管"部署拓扑与资源"）
+- **资源规格**：Min 2 CPU/4GB RAM；生产推荐 4+ cores/16GB；同机跑本地模型 +8GB per 7B 参数。企业级 K8s：6 worker nodes 各 8CPU/32GB 支撑 ~3000 DAU。
+- **容器拓扑**：7 core services（api/api_websocket/worker 等）+8 dependent components+一次性 init_permissions（退出属正常，不是故障）；docker compose ps 核对 Up/healthy。
+- **升级纪律**：git clone --branch latest release tag（不用 main）；跟 release 文档走、不删不认识的容器；SECRET_KEY 用 openssl rand -base64 42；生产配 HTTPS（Nginx+Certbot Let's Encrypt），不长期纯 HTTP。
+- **提升层**：工作流（自托管工程）。
+
+## Pipedream cloud-only 平台边界事实与迁移 playbook：无自托管 · Source Available License · Workday 收购（来源：rapidevelopers 迁移 playbook 2026-07 + kestra/versustool/lowcode 对比 + nocodeworkflows 2026-07 实拉，Pipedream 章节均为组件/开发面，平台部署边界为新事实面）
+- **平台边界（选型判据）**：Pipedream cloud-only、无自托管——runtime 归平台，GitHub 仓库是 source-available 组件注册表（Source Available License 2022-01-03 proprietary），不是可部署平台；受管 serverless 主要在 US AWS，EU-only 数据驻留非标准自助（regulated EU 需 sales）。
+- **决策含义**：严格数据主权/合规/每执行费用归零的需求 → n8n（自托管 CE）或 Activepieces（MIT 商用自由）替代；Workday 2025 末收购后产品仍活但平台属性不变。
+- **迁移 playbook**：迁代码到标准栈=Vercel Functions/Supabase Edge Functions + 托管队列 Upstash QStash 重建 workflow execution（组件代码可搬，运行时不可搬）。
+- **提升层**：工具（选型判断）。
