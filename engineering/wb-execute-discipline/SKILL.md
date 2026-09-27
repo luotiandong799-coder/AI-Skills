@@ -7106,3 +7106,51 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Custom Roles 细粒度**：Platform Admin→Security→Project Roles 创建自定义角色——权限集如 READ_FLOW/WRITE_FLOW/READ_APP_CONNECTION/WRITE_APP_CONNECTION/READ_RUN 按组织需求拼装。
 - **治理配套**：SCIM Provisioning（IdP 自动同步用户/组）；Visibility Control（按团队显隐集成）；SSO（Okta/Entra）+audit logs+secret managers（凭据自持 vault）。
 - **提升层**：工作流（权限治理）。
+## Anthropic 长上下文提示与 Claude Code 导航：长文档置顶 · query 末尾 +30% · 本地遍历 vs RAG（来源：platform.claude.com prompting-best-practices + anthropic.com effective-context-engineering + claude.com how-claude-code-works + effective-harnesses 2025-11/2026-09 实拉，合并 §上下文工程——那条管"窗口管理"，本条管"长文档排布与代码库导航"）
+- **长上下文排布**：20k+ tokens 时把长文档/输入放提示顶部（query/instructions/examples 之上）；**query 放末尾**——测试中复杂多文档输入响应质量提升至 30%。
+- **context awareness**：Opus 4.6/4.5 等模型能跟踪剩余 token 预算——把"还剩多少空间"交给模型自己管理，长任务分阶段提示。
+- **Claude Code 大代码库导航**：像工程师一样遍历文件系统/读文件/grep 找——本地运行、无需代码库索引上传服务器；与 RAG 式（嵌入全库+检索 chunk）是两种不同设计——本地代理胜在无需预建索引、跟随引用。
+- **harness 长运行 agent 两折**：initializer agent 首次运行建立环境+scaffolding；coding agent 每次会话只做增量进展并**留清晰 artifacts 给下一会话**——一次只做一个 feature。
+- **compaction cache-safe forking**：压缩时用与父对话完全相同的 system prompt/user context/system context/tool definitions，prepend 父对话消息+append 压缩提示为末尾新 user message——缓存前缀复用不失效。
+- **提升层**：工具（长上下文与代码库工作）。
+
+## Dify Agent 节点与函数调用节点：自主工具控制 · ParameterExtractor · reverse invocation（来源：dify.ai nodes/agent + instagit function-calling-agent-patterns + enterprise-docs reverse-invocation-node + deepwiki workflow-architecture 2026-02/07 实拉，合并 §Dify Agent 策略——那条管"策略面"，本条管"节点实现面"）
+- **Agent 节点**：给 LLM 工具自主控制——迭代决定用什么工具何时用；动态推理而非预规划每一步；适合 GPT-4 等强模型。
+- **ParameterExtractorNode**：用 function calling 做结构化数据提取——内部构造 system prompt 注入用户查询模板；QuestionClassifier 同理做 LLM 路由。
+- **reverse invocation**：插件可反向调用 ParameterExtractor/QuestionClassifier 节点——两者封装复杂 prompt+code 逻辑，用 LLM 处理硬编码规则难解任务。
+- **Workflow vs Chatflow**：同一节点库与执行模型——区别在触发方式与交互形式；Workflow 一次运行端到端（自动化/批处理/文档处理/后端流水线）。
+- **提升层**：工作流（函数调用与节点编排）。
+
+## n8n 隐式循环与显式循环：每 Item 执行一次 · SplitInBatches · 表达式 crossover（来源：agentupdate n8n-tutorial 04 + docs.n8n.io splitinbatches + n8n.school expressions + logicworkflow cheatsheet + community nested-loop 2026-05/09 实拉，合并 §n8n 数据转换——那条管"转换模式"，本条管"循环与数据操作"）
+- **隐式循环黄金规则**：每个节点默认对每个 Item 执行一次——上游 N Items 下游执行 N 次，零循环代码；先想"能否靠隐式循环"，再上显式循环。
+- **Loop Over Items（SplitInBatches）**：显式控制——保存原始输入、每迭代返回批量、done 输出合并所有处理数据；适用 API 限流/顺序处理/完全控制。
+- **跨批表达式**：$input.all().map(i => i.json.email).join(', ')；reduce 归约/removeDuplicates——不需 Code Node 时先用表达式。
+- **表达式 vs Code Node crossover**：多 item 归并单 item/复杂数组重构/依赖多步/带 break 循环/新建 items/表达式过长不可读 → 用 Code Node；否则表达式。
+- **提升层**：工作流（循环与数据处理）。
+
+## deeplearning.ai agent 评估方法论：组件级 eval · 评估器选择 · 三评估方法（来源：corporate.deeplearning.ai agentic-ai + evaluating-ai-agents + justbeingresourceful video-agents + techademy patterns-not-frameworks 2026-05/08 实拉，合并 §评估驱动——那条管"评估原则"，本条管"agent 专项评估流程"）
+- **组件级评估**：把 agent 拆成组件逐个测——准备测试例子/选评估器（code-based 或 LLM-as-a-Judge）/定指标；比整链评估好定位失败点。
+- **结构化实验**：把评估组织成实验——迭代输出质量与 agent 路径；可观测性先行（记录每一步）再评估。
+- **视频/视觉 agent 三评估方法**：SigLIP 图像-文本相似度评分（可编程数字分）/LLM-based judges（自定义标准如品牌一致性——灵活捕捉定性不匹配）/structured rubric（评分量表）。
+- **patterns not frameworks**：agentic 设计模式课程教底层逻辑（reflection/tool use/planning/multi-agent）——跨框架可迁移，不绑定某个库。
+- **提升层**：可复用 Skill（agent 评估）。
+
+## OpenClaw 模型供应商配置：密钥层级 · 供应商表 · Ollama 本地 · CLI onboard（来源：docs.openclaw.ai concepts/model-providers + providers/fireworks + providers/arcee + gateway/configuration-examples + getopenclaw switching-models 2026-03/09 实拉，合并 §OpenClaw 模型路由——那条管"路由与网关"，本条管"供应商接入"）
+- **密钥配置层级**：OPENCLAW_LIVE_<PROVIDER>_KEY（单个实时覆盖最优先）；<PROVIDER>_API_KEYS（逗号分隔多 key 轮换）；models.providers.<id>.apiKey 引 env var 或硬编码。
+- **供应商表**：BytePlus ARK（国际版火山引擎）；Vercel AI Gateway（vercel-ai-gateway/anthropic/claude-opus-4.6）；OpenAI（openai/gpt-5.1-codex）；Fireworks（OpenAI-compatible，默认 glm-5p2-fast）；Arcee（直接或走 OpenRouter）。
+- **Ollama 本地**：ollama pull 模型+export OLLAMA_API_KEY="ollama-local"（任意值不验证）——零成本本地模型接入。
+- **CLI 入职与路由**：openclaw onboard --auth-choice <provider>-api-key；gateway 配置 provider order 控制路由顺序（anthropic: ["anthropic:api"]）。
+- **提升层**：可复用 Skill（模型接入与路由）。
+
+## Pipedream 环境变量与秘密管理：env vars 分离 · 组件限制 · secret props 加密（来源：pipedream.com docs environment-variables + code/nodejs + python + privacy-and-security/best-practices + components/api secret-prop 2026-02/09 实拉，Pipedream 章节均为 components/HTTP/发布面，秘密管理面为新增）
+- **两类存储**：Pipedream 集成的 app → connected accounts；不支持的 app/任意配置数据 → environment variables——密钥永不写进代码。
+- **代码内访问**：JS 用 process.env.VARIABLE_NAME；Python 用 os.environ["VAR"]；值私有安全。
+- **组件限制**：env vars 在 sources/actions 内不可直接访问——sources 用 secret props 引用敏感数据；actions 在对象浏览器选择 env var 传给步骤。
+- **secret props**：secret:true 密码式隐藏输入+加密存数据库+运行时解密（仅 string props）——组件作者处理敏感输入的标准姿势。
+- **提升层**：工具（秘密管理）。
+
+## LangFlow API 端点与 tweaks：Responses 兼容 · build 流事件 · tweaks 覆写（来源：docs.langflow.org api-reference-api-examples + api-openai-responses + api-build + workflow-api + api-flows-run + docs.langflow.cn custom-component 2026-08/09 实拉，合并 §LangFlow 部署 API——那条管"background 轮询"，本条管"端点全景与参数覆写"）
+- **端点全景**：/health_check（探活）；/api/v1/responses（OpenAI Responses API 兼容——model=FLOW_ID+input 直接用 OpenAI 客户端调 Langflow）；/api/v1/build/$FLOW_ID/flow（返回 job ID 流式事件）；/api/v1/run/FLOW_ID（input_type/output_type 运行）；/api/v2/workflows（mode=background 轮询/stream+stream_protocol=agui）。
+- **tweaks 覆写**：run 请求带 tweaks——按 component_id+parameter_name 覆写任意组件参数，同一 flow 不同调用传不同参数。
+- **custom_component API**：POST 代码构建自定义组件并返回节点；update 更新构建配置；validate/code 校验 Python 片段——全远程 API 化。
+- **提升层**：工作流（API 集成）。
