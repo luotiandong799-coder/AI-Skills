@@ -3585,3 +3585,42 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **多智能体共享知识库**：知识库在多个智能体应用间共享——公众号矩阵一个库答所有号，**知识资产统一管理**。
 - 判据：**召回前先元数据过滤；做好的应用转成插件复用；知识库按共享资产管不按应用管**。
 - 提升层：工作流。
+
+## 凭据对 Agent 不可见：非 admin 可赋权不可提取 + 生产部署 15 实践（来源：n8n blog AI Agent Sandboxes + best practices for deploying AI agents in production，2026-09-27 实拉）
+- **凭据不可见**：n8n 凭据加密 at rest；**非 admin builder 可把凭据赋给 workflow 但不能查看/提取原始数据；AI Agents 本身无凭据访问权**——防 agent 泄漏凭据。
+- **Agent 沙箱最小权限**：capability scoping + least-privilege——**agent 只能访问 approved tools**，prompt injection 引发的越权动作面就小。
+- **生产部署 15 实践要点**：human-in-the-loop 工作流；secrets 管理与合规；版本控制/变更管理；错误处理与 fallback；测试验证；RBAC 限制编辑；TLS 加密传输+at rest 加密；审计日志流 SIEM。
+- 判据：**凭据给 workflow 不给 agent；agent 的工具集先收敛再放开；上线清单含 HITL+回退+测试三件**。
+- 提升层：工作流。
+
+## 插件安全评级卡：安装前看 outbound/域名/权限（来源：Dify Marketplace 2026-09 实拉）
+- **安全评级**：Dify Marketplace 每个插件带 **Security Rating（A/B）+ 声明的 outbound calls/访问域名/内存存储上限**（"Private network address—this plugin accesses an internal network host" 明示）——**安装前可见**，与 r235-C 工具面安全互补（那条管运行时，本条管市场审查面）。
+- **Creator Center & Template Marketplace**：发布 workflow 模板、一键采用，**可挂 PartnerStack affiliate 链接赚订阅佣金**——模板分发本身可变现。
+- **A2A Client 插件**：Dify 插件可接入 A2A 协议（agent 间互联）。
+- 判据：**装插件先读安全评级卡与 outbound 声明；发布模板可挂 affiliate；协议面往 A2A 扩展**。
+- 提升层：工具。
+
+## Claude Code 官方三纪律：修剪 CLAUDE.md / trust-then-verify gap / 两败后清场（来源：code.claude.com docs best-practices，2026-09-27 实拉）
+- **CLAUDE.md 太长 Claude 会忽略一半**——重要规则淹没在噪声里。修法：**无情修剪**——Claude 已经能正确做的不写指令，删掉或转成 hook。
+- **trust-then-verify gap**：Claude 给出看似合理的实现但**不处理边界情况**。修法：**永远给验证（tests/scripts/screenshots）；验证不了就不交付**。
+- **无限探索**：没有约束的探索烧光上下文。修法：**限制探索范围/步骤**。
+- **两败后 /clear**：同一任务修正两次仍错→**上下文已被失败路径污染**，/clear 后重写一条干净的 prompt。
+- **@path imports + .claude/rules/**：按文件类型/路径限定规则范围，规则不全局生效。
+- 判据：**规则文件先瘦身再谈加内容；交付必须有验证产物；失败两次即重置会话**。
+- 提升层：工作流。
+
+## 单 URL 聚合 MCP + 项目级隔离 + 凭据不透传（来源：Activepieces docs MCP Server/Embeddable MCP，2026-09-27 实拉）
+- **单 URL 聚合**：Activepieces MCP Server **一个 URL 暴露你连接的所有 pieces**——AI 通过一个连接跨全部 app 调 action（largest open source MCP server；400+ app 各配 MCP server 可聚合）。
+- **项目级授权隔离**：MCP Server 开关/工具类别/URL 都在项目 Settings 里，**authorizations 按项目**——一个助手连多个项目互不越权。
+- **凭据绝不通过 MCP 暴露**：连接凭据存 server-side，MCP 只透传工具调用——与 n8n"凭据对 agent 不可见"同源。
+- **Embeddable MCP**：后端 code→token 交换嵌入 app。
+- 判据：**多 app 用一个聚合 MCP URL；隔离按项目；凭据层与工具层分离**。
+- 提升层：工具。
+
+## 全局模型提供商配置防凭据蔓延 + MCP 先注册后添加 + Flow DevOps 工具链（来源：LangFlow 1.8/1.9 release notes，2026-09-27 实拉）
+- **全局 provider 配置**：1.8 起模型提供商在**全局 Model providers pane 配置**，不再散在每个组件里——**减少凭据 sprawl**，一处改全局生效。
+- **MCP 先注册后添加**：1.9 MCP Tools 不再从 Agents 组件列表加——**先在 Settings 注册 server，再从 MCP sidebar 添加**；Langflow MCP Client 可直接连 Claude Code/IBM Bob 等 IDE/编码 agent。
+- **Flow DevOps Toolkit**：1.9 提供流部署工具链；+Langflow Assistant（产品内 AI 助手）+token usage display。
+- **Agentics bundle**：LLM 填表/折叠/生成表格数据（表格数据 agentic 化）。
+- 判据：**凭据集中配置不散组件；MCP server 先注册后使用；部署有专门工具链**。
+- 提升层：工具。
