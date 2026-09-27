@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.19.0
+version: 1.20.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -199,3 +199,11 @@ sources:
 - **★最小暴露面：内部端口不上宿主映射**：辅助服务的端口只开在内部网络，绕过统一访问控制等于绕过鉴权、审计与限流。判据：**多开一个映射端口，就多一条不走网关的路**。
 - **★升版时先修正数据卷权限，再降权运行**：旧卷的属主可能是 root，升级脚本要先把权限归位，然后以非 root 用户跑业务进程。判据：**直接降权跑，第一个写操作就会因为卷不可写而失败，而报错会指向业务代码而不是权限**。
 - 与 §前置检查（外部依赖）的分工：那条管"运行前把依赖查一遍"；本条管"运行时这些依赖按什么顺序起、挂了各自怎么办"。
+
+## 改一个共享文件，必须连带 bump 所有 import 它或受它影响的组件版本（来源：Pipedream docs《Components Guidelines and Patterns》§Versioning，2026-09-27 r200-A 实拉 43,774B）
+
+- **★版本号声称的是"内容"；改动传播到依赖方之后，依赖方不 bump 就等于版本号在撒谎**：原文规则 "if you update a file, you must increment the versions of all components that import or are affected by the updated file"。判据：**改的是共享文件，bump 就不是一次而是 N 次**；只 bump 被直接编辑的那个文件，等于给下游发了一个内容变了、版本号没变的包。
+- **★本地反复自增出来的版本不是发布版本**：开发期在自己账号里可能已经把版本推到 `0.1.5`，提交时要把它"归位"到注册表里应有的号（新增组件 `0.0.1`；原版本 `0.1.0` 修 bug → `0.1.1`）。判据：**发布版本号按"这次改动相对已发布版本属于哪一档"算，不按本地累计自增算**。
+- **★改动级别与三档号要对齐**：MAJOR=不兼容 API 变更 / MINOR=向后兼容地加功能 / PATCH=向后兼容地修 bug。判据：**先定性再 bump**——凭"改了不少就加 MINOR"，会一路把破坏性变更藏进小版本。
+- 与 §依赖健康门、§循环依赖 的分工：那两条管"依赖能不能升、升之前过什么门"；本条管"**升级动作本身要传染到哪些版本号**"。
+- 提升层：工作流 / 可复用 Skill。

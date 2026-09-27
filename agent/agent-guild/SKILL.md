@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.5.0
+version: 1.6.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -349,3 +349,11 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **不可验证的留痕在法律上等于没有留痕**：原文结论 "An unverifiable audit trail is legally indistinguishable from no audit trail at all"。→ §Capability 9 的"只搬不删 + 写 audit.jsonl"要配一个**能读回、能对上条数**的校验动作，保证"写过了"之外还要保证"当时写的那份还在"。
 - 与 §Capability 9 groom、§Capability 11 记忆库固定文件分工 的分工：那两条管"过期数据怎么归档""文件按类别重写"；本条管"**两套记录的用途、成本与完整性要求本就不同**，以及**留痕的写入路径必须独立于被测对象**"。
 - 提升层：工作流 / 可复用 Skill。
+
+## Capability 13 — 留痕的范围由"显式输出"决定，不由"算过什么"决定（来源：Pipedream 官方 docs《Security Best Practices》，2026-09-27 r200-A 实拉 6,456B）
+
+- **★★平台只持久化"从步骤返回或打印出来的数据"，内存里的中间变量一份都不进日志**：原文列出的保留范围 = 事件源发出的事件数据 + `console` 日志/错误 + 步骤导出（step exports）+ 错误栈里带的数据。判据：**想知道一份记录会不会留下，别看"这个东西有没有被算出来"，看"它有没有被 return / 打印 / 导出"**——同一份客户名单，在变量里过一遍不留痕，`console.log` 一行就永久留下。
+- **★要收缩留痕面，动的是"输出"不是"计算"**：原文给的做法是改代码，**移除日志与步骤导出**，而不是不去做那个计算。判据：**留痕面与计算面是两层，脱敏要在出口做**；把"不敏感"寄托于"我只是临时用一下"，迟早被一次 `console.log` 或一次报错捅出去。
+- **★错误栈是留痕的旁路**：平台保留一段有限的事件历史，而**错误栈会自动把字段带进留痕**——一次异常就能把本来没导出的内容永久化。判据：**设计输出时必须连异常路径一起想**：这条路径会带出什么，决定了失败时留痕面有多大。
+- 与 §Capability 12 的分工：那条管"诊断日志与审计留痕是两种东西、且留痕通道不能挂在被测对象上"；本条管"**单次记录里到底装进哪些字段**"——一个定通道，一个定内容。
+- 提升层：可观测性 / 工作流。

@@ -3,7 +3,7 @@ name: skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.3.0
+version: 1.4.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "skills-security-check"
 display_name_en: "skills-security-check"
@@ -440,3 +440,12 @@ Step C: 是否包含恶意意图？
 - **read-only 不等于 append-only**：想要"补得上、删不掉"必须让存储语义显式成立（原文 WORM / 对象锁 / 只写一次的桶），只在应用层标个只读挡不住同一进程里的后续写。
 - 与 §Skill 安全风险九类分层（T01–T09）的分工：那条按攻击面层级把 host / data / script / deps 过一遍；本条补的是**"记录与举证"这一层**——动手脚往往不改行为，改的是事后能不能解释。
 - 提升层：可复用 Skill / 工作流。
+
+## 控制门的延迟会诱发绕过：安全开销本身就是合规率的一部分（来源：Activepieces《AI Agent Security vs Application Security in 2026》§Latency overhead of security checks，2026-09-27 r200-B 实拉 22,167B）
+
+- **★★每加一层检查都在给主路径加毫秒，加够了用户就会绕开它**：原文 "If a security proxy adds 500ms to a generation, users often bypass official tools for unsecured accounts"，并给出目标：**基础设施要轻到能在 10ms 内执行完安全逻辑**。判据：**设计控制门时先测它对主路径加了多少延迟**，延迟本身就是一个合规指标——门越重，走门的人越少，最后只剩"我们有流程"的假象。
+- **★按 TTFB（首字节时间）而不是平均耗时评估检查层**：用户感知的是等待。判据：**看检查层加在"用户开始看到东西之前"的那段时间上**——加在尾部往往无害，加在首字节之前会直接改变使用行为。
+- **★安全执行的溢价可能超过被保护资产本身**：原文 "secure execution environments carry a premium that can exceed the cost of the LLM tokens themselves"。判据：**把安全执行环境的溢价与被保护资产的价值放在一起比**——为低风险内部 bot 上 MicroVM 级隔离，付的是固定运营成本，换来的是没人需要的边界。
+- **★持久下来的每一字节都是攻击面**：原文 "Every byte of persistent data is a target"。→ 审查 Skill 时把**它写进了哪些持久位置**单独列一项：持久化不是中性实现细节，能无状态就不要落盘，落了盘就要说清留存多久、谁删。
+- 与 §Skill 安全风险九类分层（T01–T09）、§审计三类缺陷 的分工：那两条管"有哪些攻击面""记录能不能举证"；本条管"**加上去的防护会不会因为太慢或太贵而被绕开、被关掉**"。
+- 提升层：工作流 / 可复用 Skill。

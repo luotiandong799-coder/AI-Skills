@@ -2,7 +2,7 @@
 name: mcp-builder
 description: Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).、工具过载、上下文爆、按需加载、渐进式发现、search_tools、catalog/inspect/execute、阈值切换、服务器按需连、代码模式、组合调用、沙箱执行、逐次授权、跨 server 不可信、MCP 调试、Inspector、stdio 日志、协议协商、server/discover、_meta 字段、-32022、-32602、-32021、启动路径
 license: Complete terms in LICENSE.txt、三原语、工具资源提示、反模式、巨型服务器、批量变体、什么时候不该用、stdio、Streamable HTTP、无状态默认、会话头、OAuth 2.1、受众绑定、签发者、细粒度范围、一次性补齐、握手是契约、协议错误、工具执行错误、isError、可重试标记、建议动作
-version: 1.3.0
+version: 1.4.0
 ---
 
 # MCP Server Development Guide
@@ -305,3 +305,11 @@ Load these resources as needed during development:
 - **★工具调用之前插一道计划校验**：在推理完成、工具尚未执行之间，用一次独立的守卫审查检查计划是否符合业务规则。判据：**推理一旦进入工具执行就不可逆；事后审计只能记录损失，事前校验才能避免损失**。
 - **★审计要看每一步工具调用各自的输入与输出，不能只看最终结果**：只看结果的话，一次"合法的导出 API 调用"就是一次数据外泄却毫无痕迹。**推理轨迹到工具调用的转折点是最值得留痕的位置**。
 - 与 §权限范围要细（2018 年以来那条）的分工：那条管 OAuth 范围怎么切；本条管凭证时效 + 请求者降域 + 执行前拦截这三件它没覆盖的事。
+
+## 隔离能划多细，取决于重建这个边界要多久（来源：Activepieces《AI Agent Security vs Application Security in 2026》，2026-09-27 r200-B 实拉 22,167B）
+
+- **★★沙箱边界的粒度由启动延迟决定，不是由安全需求决定**：原文对比——VM 起一个全新 OS 要数秒；容器比 VM 快但仍有冷启动；**Wasm 模块 10ms 内启动，于是可以"每次工具调用起一个新沙箱"（micro-sandbox per action）**。判据：**先量"重建一个干净边界要多久"，再决定边界划在哪一层**——重建是秒级就只能按任务或会话隔离，重建是毫秒级才谈得上按单次调用隔离。
+- **★一次性沙箱顺带解决跨任务残留**：容器在一次任务与下一次之间会留东西，**Wasm 沙箱可以每次请求丢弃重建**，从结构上消掉残留数据泄漏。判据：**"用完即弃"只有在丢弃成本足够低时才是选项**；成本高时只能靠清理逻辑兜底，而清理逻辑本身会漏。
+- **★隔离越强冷启动越慢，慢到让多步推理超时就是把可用性赔进去了**：原文指出更高隔离级别会增加冷启动延迟，可能导致 agent 在多步推理中超时。判据：**隔离等级与超时预算一起定**——只盯边界强度不管启动时间，出来的沙箱会先被超时打死。
+- 与 §凭证分钟级过期 + 请求者降域、§调用前计划校验 的分工：那两条管"权限给多细、执行前拦什么"；本条管"**执行环境这个壳有多厚、多久能换一个**"。
+- 提升层：工具。

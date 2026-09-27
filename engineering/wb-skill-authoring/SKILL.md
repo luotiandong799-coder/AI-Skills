@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度
-version: 3.13.0
+version: 3.14.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -396,3 +396,26 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 与 `wb-context-compressor` §大输入转检索 分工：**那条管"已经拿到的大材料怎么塞进上下文"，本条管"脚本从一开始就该产出多大的输出"**——一个在消费端补救，一个在生产端设上限。
 - 反模式：脚本一次吐几百 KB 让 harness 静默截断（丢的往往是尾部的关键错误）；或用对齐的空白表格当输出（agent 与 `jq/cut/awk` 都不好解析）。
 - 提升层：工具 / 可复用 Skill。
+
+## 命名要带时态：事件型用过去时，动作型用主动时（来源：Pipedream docs《Components Guidelines and Patterns》§Component Key Pattern，2026-09-27 r200-A 实拉 43,774B）
+
+- **★名字里的时态在替读者回答"这件事发生了没有"**：原文规则——**source（事件源）的 key 用过去时动词，描述已经发生的事件**（`linear_app-issue-created-instant`）；**action 的 key 用主动动词，描述将要发生的动作**（`linear_app-create-issue`）。判据：**命名之前先问这个东西是"报告一件已发生的事"还是"发起一件将发生的事"**，时态写反，调用方对"要不要再触发一次"的判断会跟着反。
+- **★时态混乱是误触发的来源之一**：把"已创建"写成"创建"，调用方会以为调它会去创建；把"创建"写成"已创建"，调用方会以为它只是个通知。判据：**同族命名里时态必须一致**——混着用的时候，人只能靠记忆分辨，agent 只能靠猜。
+- 提升层：可复用 Skill。
+
+## 指针的措辞决定路由可靠性：先磨措辞，磨不动才内联（来源：skills.sh `mattpocock/skills/writing-for-agents`，2026-09-27 r200-C 实拉 75,462B 页面 / 2,436B 正文）
+
+- **★★决定 agent 什么时候去取材料的，是指针的措辞，不是它指向的那份材料**：原文定义 *context pointer*——留在 agent 上下文里、点名某份上下文外材料、并编码"什么条件下该去取它"的引用；技能的 `description` 就是一种 pointer，`AGENTS.md` 里点名某文档的那一行也是同一种东西。判据：**一份必须拿到的材料挂在一条弱措辞的指针后面 = 一个方差 bug**（有时取到，有时取不到）；补材料不如补措辞。
+- **★升级路径是固定的：先 sharpen 措辞，措辞磨到头仍不可靠才内联材料**：原文 "sharpen the wording first, and inline the material only if sharpening fails"。判据：**内联是最后一个手段**——它救的是这一处，代价是常驻上下文永久变贵；先动措辞成本更低，且不透支预算。
+- **★一个 branch 一条触发，同义词是同一个 branch 写了两遍**：原文 "Synonyms that rename a single branch are one branch written twice; collapse them"——把同一件事换几种说法全列上去不是提高召回，是把预算重复花在同一条路径上。判据：**能合并成一个 branch 的写法必须合并，只保留真正会走出不同路径的分支**。
+- **★指针里要砍掉正文已经自带的身份**：原文 "Cut identity the body already carries"——材料自己会说清自己是什么的那部分，不必在指针里再讲一遍。
+- 与 §description 三条机检纪律 的分工：那条管描述字段的机械约束（首句位置 / 追加只加末尾 / ≤1024）；本条管**措辞够不够锋利，以及"措辞 → 内联"这条升级路径**。
+- 提升层：可复用 Skill。
+
+## 两种预算：model-invoked 花上下文负载，user-invoked 花人的认知负载（来源：skills.sh `mattpocock/skills/writing-great-skills`，2026-09-27 r200-C 实拉 75,086B 页面 / 2,550B 正文）
+
+- **★技能存在的理由是"从随机系统里拧出确定性"，而确定性的度量是过程不是输出**：原文 "Predictability — the agent taking the same *process* every run, not producing the same output — is the root virtue"。判据：**评估一个技能好不好，看它能不能让 agent 每次走同样的流程**；拿"两次输出是否一字不差"当标准，是把随机系统的正常波动误判成缺陷。
+- **★调用方式的选择是两种负载的取舍**：**model-invoked** 保留 `description`，agent 能自主触发、别的技能也能引用它，代价是描述每轮都占上下文（context load）；**user-invoked** 把描述从 agent 视野里摘掉，零上下文负载，代价是**你自己成了索引**（cognitive load）——只有手动敲名字才能调，别的技能也够不到它。判据：**只在"agent 必须自己够到它"或"别的技能必须引用它"时才付 context load**；只是偶尔手敲的技能做成 user-invoked 不亏。
+- **★user-invoked 技能多到记不住时，解药是一个 router skill**：原文 "that piled-up cognitive load is cured by a router skill"——一个 user-invoked 技能把其他技能的名字与各自何时用列出来。判据：**认知负载堆到记不住，不是把每个技能都改成 model-invoked，而是加一层索引**；前者把成本转回上下文，后者只付一份。
+- 与 §命名时态、§description 三条机检纪律 的分工：那两条管"名字与描述怎么写对"；本条管"**这个技能到底要不要对模型可见**"——先定可见性，再打磨描述。
+- 提升层：可复用 Skill / 工作流。
