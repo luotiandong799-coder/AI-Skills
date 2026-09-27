@@ -5205,3 +5205,35 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **四补位模式**：CLAUDE.md 分层/hooks SessionStart（脚本注入）/claude-mem（capture-compress-replay）/graphify（knowledge graph 可查询）——按需选择。→ 判据：项目稳定用 CLAUDE.md；要自动沉淀用 claude-mem 类 capture-compress-replay。
 - **1M context 定价信号**：全窗口标准定价无倍数（900K 请求与 9K 同单价）——大窗口不再惩罚。→ 判据：长上下文任务成本已平，大窗口方案可与 RAG 并存比较。
 - **提升层**：工作流。
+
+## Dify Conversation Variables：会话级可变状态 + append 记忆模式（来源：Dify conversation variables 面，2026-09-27 实拉，与 §Dify Agent 记忆体系互补——那条管记忆节点，这条管显式会话状态）
+- **Conversation Variables（Chatflow only）**：会话级持久，跨多轮 chatflow runs 单会话；作用域 sys.conversation_id（不同会话独立副本）；是唯一可变变量类型，Variable Assigner 节点写入。→ 判据：跨轮状态（待办/计数/偏好）用会话变量显式存，别让模型靠对话猜。
+- **append 模式记忆**：Array[object] 变量 append 持续追加记忆（简化 OpenAI memory 模式：每轮追加新记忆条目；类型转换需 escape node）。→ 判据：记忆=结构化的追加条目，配 escape 节点保证类型正确。
+- **提升层**：工作流。
+
+## n8n Retriever 工具化：ai_tool 输出 + 两阶段检索 + RRF 融合（来源：n8n vector retriever 面，2026-09-27 实拉，与 §n8n RAG 生产实践互补——那条管入库，这条管给 agent 用）
+- **Retrieve Documents (As Tool for AI Agent) 模式**：Vector Store 节点 ai_tool 输出接 AI Agent Tool input；Tool Name=暴露给 agent 的函数名，Tool Description 指导何时用。→ 判据：检索对 agent 是"工具"不是"步骤"——Tool Name/Description 决定 agent 何时主动调用。
+- **两阶段检索**：文件描述检索（metadata 相似度过滤限文件数）→ 文档 chunk 检索（仅在命中文件内取 chunk）。→ 判据：先找对文件再取细节，比全库 top-k 命中率高且省 token。
+- **混合融合**：dense+sparse prefetch 结果用 RRF 融合（n8n-nodes-qdrant-hybrid）；Vector Store Retriever+QA Chain 组合。→ 判据：混合检索融合用 RRF，无需调权重。
+- **提升层**：工具。
+
+## LangFlow Custom Components：Python 组件四要素 + 扩展安全开关（来源：LangFlow custom components 面，2026-09-27 实拉，与 §LangFlow 调试 DevOps 互补——那条管验证部署，这条管自建组件）
+- **自定义组件结构**：继承 Component 的 Python 类；类级属性（display_name/description/icon）标识描述；input/output 列表决定数据流；方法定义行为；内部变量做错误处理与日志。→ 判据：平台缺节点时先写 Python 组件复用（Pandas/httpx 随便用），不绕道外部服务。
+- **硬性规则**：method 后字符串必须与自定义方法名一模一样，输出与方法强绑定——写错直接运行报错。→ 判据：组件方法绑定是编译期约束，改名要同步。
+- **扩展机制**：lfx extension init my-extension 脚手架（extension.json v0 manifest/pyproject.toml/src 规范布局），打包可 pip 安装；Langflow Assistant 可生成组件代码。→ 判据：多组件封装成 bundle 再分发。
+- **安全开关**：LANGFLOW_ALLOW_CUSTOM_COMPONENTS 环境变量可禁用自定义 Python 组件执行（受控部署）；配合 LANGFLOW_COMPONENTS_PATH 白名单。→ 判据：自定义代码=执行任意 Python，生产部署要么白名单要么禁掉。
+- **提升层**：工具。
+
+## Claude MCP 生产规范：按意图分组 + OAuth 2.1 + job ID 长运行（来源：Claude MCP best practices 面，2026-09-27 实拉，与 §MCP 生态观察互补——那条管趋势，这条管 server 质量）
+- **工具按意图分组，不按 endpoint 镜像**：少而精、描述好的工具胜过穷举式 API 镜像；别把 API 1:1 包成 MCP server。→ 判据：工具数不是 KPI，agent 会选错比没有工具更糟。
+- **Remote server 做分发**：唯一跨 web/mobile/cloud-hosted agents 的配置，各主要客户端优化消费。→ 判据：要让 agent 处处可用就上 remote server。
+- **生产清单**：Zod 校验在 handler 边界；长运行工具返回 job ID+status resource（不阻塞）；stderr 结构化日志每请求；MCP Inspector smoke test 进 CI；versioned server name+加性 schema 变更；HTTP transport 必须 auth（OAuth 2.1 或 signed tokens）；per-tool rate limits+timeouts；replay capture 调试。→ 判据：MCP server 当正式 API 运维：输入校验/鉴权/限流/可观测/回放五件套。
+- **transport 选择**：Streamable HTTP 官方推荐（SSE deprecated）。→ 判据：新 server 一律 streamable HTTP。
+- **三机制分工**：Tools/MCP=外部系统访问；CLAUDE.md=项目上下文；Hooks=确定性自动化（必须固定在 lifecycle 事件）。→ 判据：选机制看需求：外部状态→MCP，项目常识→CLAUDE.md，必须执行→Hooks。
+- **提升层**：工作流。
+
+## ModelScope 微调与数据集：MSAgent-Bench + ms-swift + 部署 Skill（来源：ModelScope 微调/数据集/Agent 面，2026-09-27 实拉，与 §国内 agent 平台生态互补——那条管平台，这条管微调落地）
+- **MSAgent-Bench 数据集**：598k 对话综合工具数据集（通用 API/模型 API/面向 API 问答/API 无关指令），多轮对话模式微调开源 LLM 出 agent 能力。→ 判据：要让小模型会用工具，先用现成 agent 指令数据集微调再上业务。
+- **ms-swift 轻量微调**：整理业务数据→ms-swift 微调→评估调整前后（紫皮书学练赛路径）；0.8B 级模型可完整跑通行业 Agent 流水线（硬件门槛低）。→ 判据：个人微调首选小模型+ms-swift，先跑通再换大模型。
+- **创空间部署 Skill**：Gradio/Streamlit/Docker/static website 部署；创建/代码同步/部署/日志监控/明文与 secret 变量管理/自动诊断修复——部署即 Skill 化。→ 判据：部署这类高频工程动作用可复用 Skill 固化，含 secret 变量管理。
+- **提升层**：可复用 Skill。
