@@ -6172,3 +6172,41 @@ pm create @n8n/node（declarative/custom 模板）——declarative 风格适合
 - **OpenClaw MCP 双向**：openclaw mcp serve 让 OpenClaw 当 MCP server（Codex/Claude Code 直接对话），list/show/set/unset 管出站 server 定义；配置文件列 servers 自动启动+discover capabilities，免写代码连数十工具。
 - **生产就绪四件套**（deeplearning.ai 生态实践）：step limiter（防失控循环）+ intent classifier for routing + tool call validator for destructive action + business-aware logging——上规模前实现，不是出了事故再补；agent eval 用 task completion rate/avg turn count/cost。
 - **提升层**：工具（协议/集成）。
+## Dify 并行分支与聚合：并行不能互读 · 聚合看模式 · 声明式边带熔断（来源：Dify v0.8.0 parallel branch + orchestrate-node docs + Human Input Node 2026-03 实拉，与 §Dify Agent 记忆治理互补——那条管"记忆窗口"，本条管"并行编排语义"）
+- **并行语义三条**：并行分支同时执行**不能读彼此变量**；汇聚处 downstream node 可读所有分支；serial 中每 node 可读链上任何早期 node 变量——设计分支时先想"分支间要不要共享数据"，要共享就放上游或汇聚后再算。
+- **聚合按模式选工具**：Variable Aggregator 只用于 exclusive branches（一次只跑一条路径）；**并行分支合并必须用 Code/Template node**，所有变量须同数据类型。→ 判据：**"哪个分支跑了"决定聚合工具**——互斥分支用 Aggregator，并行分支用 Code/Template。
+- **单路径上限 50 nodes、最大并行度 ≤10**：超出先拆 workflow 或分层，别堆单路径。
+- **声明式边定义带熔断**（2026 引擎增强）：edge "user_profile → [profile_enrich, geo_lookup]" type parallel aggregation merge_by_key on_failure policy circuit_break error_codes [E_TIMEOUT/E_UNAUTHORIZED]——成功按 key 合并响应；任一服务返回指定错误码触发熔断器阻止后续依赖链。→ 判据：**并行分支的失败策略在边声明里定，不是事后查**——circuit_break 让一个分支失败不至于拖死整条依赖链。
+- **Human Input Node 三按钮分支**：Confirm（approve）/Regenerate（request changes）/Forward（escalate）各映射分支，timeout 3 天无人响应自动 forward——人类判断进自动化，超时不卡死。
+- **提升层**：工作流（并行编排）。
+
+## n8n 向量记忆与检索管线：store 与 pipeline 同等重要 · 记忆知识库双通道分离（来源：blog.n8n.io《AI Agent Memory》2026-07 + n8n workflow 6829/7663 + community dual-layer pattern 2026-03 实拉，与 §Dify Agent 记忆治理互补——那条管"窗口与维护"，本条管"向量检索管线质量"）
+- **retrieval pipeline 与 store 同等重要**：向量搜索按相似度+re-ranking 取回——"返回 50 个边际相关记忆比返回 5 个高度相关更糟"。→ 判据：**调优优先级=embedding model/similarity threshold/re-ranking 管线，不是只换更大的向量库**；检索质量以"取回的有用性"计，不以"取回数量"计。
+- **记忆与知识库双通道分离**：Postgres Chat Memory 存对话历史+Supabase Vector Store 存知识库文档，agent 合成两者——对话记忆（短、时间相关）与知识库（长、内容相关）是两种检索模式，合一个通道两败俱伤。
+- **持久记忆三模式**：Qdrant/Pinecone/MongoDB Atlas Vector Store/Supabase pgvector；daily self-learning（每日把 Google Docs 转 vector 进知识库）；dual-layer Postgres+pgvector（nightly pipeline：schedule→get last_vector_id→query Postgres→embed→upsert）。
+- **存提取结果不存原始对话**：sub-workflow 先 Extract Memory Info（提取关键信息）再存——记忆是提炼过的，不是会话流水账。
+- **native 节点+秒换 embedding**：Pinecone/Qdrant/Weaviate/Supabase 原生节点，cluster node architecture 秒换 embedding models——换模型不重接管线。
+- **提升层**：工作流（记忆检索）。
+
+## LangFlow 多 Agent 编排：native LangGraph 集成 · supervisor 形态 · narrow tool sets（来源：langflow.org multi-agent guide + v1.8.4 review + tekai catalog 实拉，与 §多Agent协作纪律互补——那条管"拆了怎么协作"，本条管"视觉编排具体怎么搭"）
+- **native LangGraph 集成是差异化能力**（v1.8.3/1.8.4）：graph-based 多 agent workflows 支持 cycles/conditional branching/state persistence——纯 drag-drop 平台复制不了；可视化定义 agent nodes/conditional edges/shared state schemas，**编译成可运行 LangGraph 应用**——视觉层不降能力。
+- **supervisor 编排形态**：User query→Supervisor Agent→Research Agent（RAG+web）/Code Agent（tools+sandbox）/Writer Agent（summarize+format）→Final output；conversation management+conditional edges 路由。→ 判据：**编排模式先画清楚再摆节点**——supervisor 分发、pipeline 串行、对等 swarm，形态决定连线。
+- **narrow tool sets per agent**：每个 agent 只挂自己域的少量工具——工具面窄=决策正确率高+注入面小（与 §per-tool 最小权限同源）。
+- **MCP 双向支持**：v1.8.3 起 MCP 同时 server+client——LangFlow 既消费外部 MCP 工具也把自己暴露给外部 agent。
+- **提升层**：工具（视觉编排）。
+
+## Activepieces 版本管理与发布：step 钉版本永不 auto-upgrade · draft-publish 锁 · Git release 预览（来源：activepieces.com piece-syncing + flows/versioning + project-releases + project-replace-cli 实拉，与 §n8n 节点供应链互补——那条管"社区节点发布"，本条管"平台内 step/flow 版本纪律"）
+- **step 钉死确切 piece 版本，flows 永不 auto-upgrade**：加 step 记录当时版本（0.5.3），升级显式通过 builder 点版本号，跨 minor/major 边界 dialog 警告——**隐性升级是自动化最危险的事**（行为悄悄变），钉版本是唯一防法。
+- **draft-publish 两态**：draft 随便编辑；publish 后锁住不可编辑；编辑 published flow 自动建新 draft 复制 published 版本——**总可回上一版本在 draft 里改，不影响线上 published**。
+- **Git 项目 release**：连 Git repo 后 push 全部 flows/connections/tables；release 预览全部变更——Flow Changes（新建/更新/删除）+Connection Changes（**新连接是 placeholder 必须 release 后重连**）+Table Changes 带指标。→ 判据：**连接是环境绑定的，flow 是代码**——release 时连接要人重连，别当自动完成。
+- **Project Replace CLI 幂等收敛**：同 major 版本且 dest>=source；重跑收敛 source 状态（typed deep-equality 跳过未变，失败项重试）——迁移可重入，不怕半途失败。
+- **Pieces CI/CD**：dev 离线改→package.json 升版本→PR→merge 后跑 CLI 或 GitHub/GitLab Action 同步。
+- **提升层**：工具（版本治理）。
+
+## 跨平台 Agent 指令与 Skills 生态：AGENTS.md 优先级 · custom agents frontmatter · 市场合并装入口（来源：docs.github.com customize-copilot + awesome-copilot learning-hub + claude.com《Claude Marketplace》2026-09-23 + docs.openclaw.ai tools/skills 实拉，与 §Copilot Agent Skills 规格互补——那条管"三目录与 frontmatter 属性"，本条管"跨平台指令体系与安装渠道"）
+- **AGENTS.md 是跨平台标准**：Copilot 和其他 AI assistants 都认；可存仓库任意位置，**最靠近目录树的 AGENTS.md 优先**——指令按目录层级就近覆盖。
+- **文件优先级表**：AGENTS.md（project root/nested，跨平台）> .github/copilot-instructions.md（Copilot 专属）> .github/instructions/*.instructions.md（topic-specific 细粒度）> ~/.copilot/instructions/**（用户级全项目）> CLAUDE.md/GEMINI.md（兼容）——**写指令先定受众与层级**：跨工具用 AGENTS.md，单工具用专属文件，个人习惯放用户级。
+- **custom agents = *.agent.md 文件**（.github/agents/ 目录）：frontmatter YAML name/description/tools/model/handoffs/agents/target/user-invokable——persona+tool access+guardrails+model preference 四要素；org owners 可建 org-level（.github/.github-private repo）。
+- **Skills 装入口合并**（Claude 2026-03-31）：partner-skills directory+connector list+plugin marketplace 合并到 claude.ai/customize——typed filter（Skills/connectors/plugins）+search+install；个人账户装 community Skills，Team/Enterprise admin 可 pin 到全员；Claude Marketplace（2026-09-23）另管 plugins/connectors/agents/products/service partners（企业买第三方服务，别和 skills 市场混淆）。
+- **OpenClaw skill dev 参照**：manifest.json（name/description/parameters JSON schema——manifest 告诉 LLM skill 做什么）+index.js execute(context{message,memory,tools})；发布 ClawHub 80% 分成给 creator；plugin skill 与 bundled/managed/agent/workspace 同名时被覆盖——命名冲突规则要提前知道。
+- **提升层**：可复用 Skill（指令体系/安装渠道）。
