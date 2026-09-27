@@ -3769,3 +3769,38 @@ ame ≤64 字符、仅小写字母数字连字符、禁 XML 标签、**禁保留
 - **结构化实验**：改 prompt/模型/agent 逻辑跑实验提升表现；再配 error analysis+component-level evals+latency/cost optimization。
 - 判据：**agent 评估先 trace 再分级评估（router/skill/trajectory）；用收敛分查步数效率；改一项跑一次实验不叠改**。
 - 提升层：工作流。
+
+## 插件开发五步 + 安全隔离三机制（来源：Dify Plugin Architecture deepwiki + datasource plugin 文档，2026-09-27 实拉）
+- **开发五步**：Setup（装 Dify Plugin CLI）→ Define（plugin manifest+schema）→ Develop（hot reload 支持）→ Test（remote debugging 验证）→ Publish（提交 Marketplace 或 GitHub 分发）；打包 dify plugin package . -o xxx.difypkg。
+- **安全隔离三机制**：沙箱执行（受控运行时）+**权限模型（显式能力授予）**+资源限制（CPU/内存/网络）。
+- **SchemaRAG 插件实例**：自动分析数据库结构建知识库+NL2SQL，多库自动语法适配（MySQL/PostgreSQL/MSSQL/Oracle/DM 达梦）。
+- 判据：**插件开发走五步闭环（hot reload+remote debug）；装第三方插件先看权限声明；RAG 增强可用 Schema 分析类插件**。
+- 提升层：工具。
+
+## MCP 网关三件套：工具注册表 + 意图验证 + 审计（来源：n8n Intelligent MCP Gateway 模板，2026-09-27 实拉）
+- **把 REST API 转成结构化 AI 可访问**：MCP client 指向 webhook URL，网关做中间层。
+- **三件套**：① **Claude 意图验证+参数校验**（验证调用是否合法意图）② **Google Sheets 当工具注册表**（记录 API 端点+rate limit 跟踪+审计日志）③ **SMTP 策略违规告警**。
+- **企业版**：RBAC 策略表+session registry+审计日志+JWT token 验证+tenant 级组织数据策略。
+- 判据：**开放 MCP 工具给 agent 前套网关三层（注册表/意图验证/审计）；工具目录放表格可审计可扩展**。
+- 提升层：工作流。
+
+## 多 agent 同跑隔离 worktrees + prompt caching（来源：Orca/OpenClacky 开源 agent 项目，2026-09-27 实拉）
+- **Orca**：桌面 agent IDE 同跑 **30+ coding agents**（Claude Code/Codex/OpenCode 等）**各自隔离 git worktrees**；terminal splits+embedded Chromium+SSH remotes+GitHub/Linear 集成；YC-backed MIT。
+- **OpenClacky**：高效开源 coding agent——**prompt caching+16 核心工具+skill extensions**（6K+ stars MIT）。
+- 判据：**多 agent 并行跑在隔离 worktree 防互相污染；长上下文任务用 prompt caching 省费**。
+- 提升层：工具。
+
+## Compliance API 本地会话端点 + Agent SDK 四能力（来源：Claude Code Compliance API + Agent SDK overview，2026-09-27 实拉）
+- **Compliance API**：本地 session endpoints 返回会话 transcripts（含 Chrome sessions）；活动日志不能单独判断 agent 访问是否合法——需 identity governance 配合。
+- **Agent SDK 四能力**：内置工具（read/write/edit/run/search web）+**hooks**（agent 生命周期关键点跑自定义代码）+**subagents**（专项子任务）+**MCP**（外部工具/数据）。
+- **组织管控**：managed-settings.json disableWorkflows:true 组织级禁用动态工作流；Enterprise RBAC 自定义角色逐组控制。
+- 判据：**审计要日志+身份治理双轨；agent 生命周期扩展用 hooks；组织禁用走 managed-settings**。
+- 提升层：工具。
+
+## skills CLI 参数矩阵与对话安装（来源：skills.sh/LobeHub 安装文档 + 腾讯 SkillHub 教程，2026-09-27 实拉）
+- **npx skills 参数矩阵**：skills find [query] 交互/关键词搜；skills add owner/repo --skill skill-name 装单技能；--all -y 全装；--agent claude-code/cursor 指定 agent；--global 用户级全局；skills check/update 更新检查。
+- **LobeHub market-cli**：
+px -y @lobehub/market-cli skills install <skill> --agent cursor；LobeHub 市场 334,137 Skills。
+- **腾讯 SkillHub 安装**：WorkBuddy 内置技能市场一键装（**单次 ≤10 个优先核心款避免冲突**）；对话式安装标准提示词 根据 https://skillhub.cn/install/skillhub.md 安装 Skillhub商店；ZIP 上传/CLI 五种导入。
+- 判据：**装技能按参数精细控制（单技能/指定 agent/全局）；批量装限 10 个内防冲突；对话安装用官方安装脚本提示词**。
+- 提升层：可复用 Skill。
