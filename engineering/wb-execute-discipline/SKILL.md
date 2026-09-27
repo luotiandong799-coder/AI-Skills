@@ -6285,3 +6285,37 @@ pm create @n8n/node（declarative/custom 模板）——declarative 风格适合
 - **信任边界**：Gateway=control plane+policy surface（auth/tool policy/routing），Node=remote execution surface；Gateway 默认绑定 loopback，拒绝非 loopback bind 无认证路径；**credential/system 路径 deny-list 不能禁用**——dangerouslyAllowExternalBindSources 只放宽 allowed-roots。
 - **容器硬化规格**：--user 1000:1000 --cap-drop=ALL --read-only --security-opt no-new-privileges/seccomp/apparmor。
 - **提升层**：工作流（权限治理）。
+## Dify 变量作用域五类表：输入/输出/环境/会话各管一段 · 仅会话变量可改（来源：deepwiki.com dify-docs 4.1-variables-and-data-types + 4-core-platform-features + CSDN Dify 架构深挖 2026-06 实拉，与 §Dify 变量交接契约互补——那条管"节点间传值格式"，本条管"变量作用域与生命周期"）
+- **五类型作用域**：Input variables（workflow start 到所有下游节点）/Output variables（仅产生节点下游）/Environment variables（所有节点）/Conversation variables（单会话所有 turn，仅 chatflow）/sys.* 系统变量（所有节点，chatflow 中 sys.conversation_id 例外）。
+- **生命周期表**：start.* 单次执行/{node_name}.* 下游单次执行/sys.* 单次执行/env.* 应用生命周期（Trigger 节点除外）/Conversation variables 随 sys.conversation_id 存活。
+- **不可变性**：input/output/env 变量创建后不可修改——**只有 conversation variables 支持 Variable Assigner 更新**；变量在工作流执行完成后垃圾回收。
+- **sys.workflow_run_id** 记录每次执行日志，用于跟踪历史执行。
+- **提升层**：工作流（变量治理）。
+
+## n8n 子工作流工程：三流拆分 · 3+ 复用判据 · Budget Guard 子工作流（来源：blog.n8n.io Production AI Playbook Complex Agent Patterns 2026-06 + n8nresources 子工作流判据 2026-07 + n8nlogic 节点阈值 2026-04 + community budget guard 实拉，与 §n8n 多 Agent 互补——那条管"agent 编排"，本条管"子工作流复用与拆分边界"）
+- **三流拆分模式**：Flow A Webhook Gateway（Webhook Trigger→Execute Workflow Engine→Respond to Webhook）+Flow B Sub-Workflow Gateway（When Executed by Another Workflow trigger→Execute Workflow Engine）+Flow C Core Engine（实际处理步骤）——**同一套处理逻辑同时暴露为 webhook 和子工作流时拆成三个微工作流**，不塞进一个 canvas。
+- **子工作流判据**：相同逻辑出现在 3+ workflows/逻辑频繁变化（通知模板/API endpoints/格式规则）/要隔离测试共享逻辑/多团队成员共享 utility 带定义接口——一次性逻辑不值得；30-40 节点以上拆，20 节点以下线性不拆。
+- **工具分组子工作流**：相关工具组（task cluster/research cluster）分离成子工作流经 Execute Workflow 工具调用——**版本化+独立测试，不 redeploy 整个 agent**。
+- **Budget Guard Sub workflow**：集中 guard 子工作流查共享 state（Postgres/Redis）评估预算策略，超预算返回字符串阻断工具执行——预算治理下沉到独立子工作流。
+- **提升层**：工作流（复用架构）。
+
+## Activepieces webhook 签名验证：code step 验 HMAC · nonce 防重放 · schema versioning 路由（来源：resources.activepieces.com webhook-workflows + CSDN Activepieces 部署实战 2026-09 + activepieces.com setup-app-webhooks + security practices 实拉，与 §Make Webhook 安全互补——那条管"默认无认证的坑"，本条管"平台内签名验证怎么做"）
+- **签名验证四步**：code step 用共享密钥计算 HMAC→早期拒绝不匹配→记录计算签名+请求时间戳审计→nonce storage 防重放——**先验签后处理**。
+- **schema versioning 路由**：payload 加 schema version 字段→按版本路由条件→每版本独立 transformation steps→保持旧 routes 直到 producers 迁移——增量 rollout 无 breaking change。
+- **webhook URL 默认 security-through-obscurity**（长随机 ID）——生产敏感数据必须加签名验证；piece 级 webhook secret 经 AP_APP_WEBHOOK_SECRETS env 配置。
+- **凭证治理**：256-bit 加密存储+无 API 检索+data masking 日志敏感信息 censored。
+- **提升层**：工作流（webhook 安全）。
+
+## GitHub Agentic Workflows：Markdown 定义自动化 · 编译 Actions · 多引擎 frontmatter（来源：github.github.com/gh-aw + github.blog changelog 2026-02/06 + github.blog engineering 2026-07 + githubnext Agentics Beyond Code 实拉）
+- **形态**：.github/workflows/*.md 用自然语言 Markdown 定义自动化目标→编译成标准 Actions YAML——**复用现有 runner groups+policy constraints**，不是新的执行体系。
+- **多引擎**：frontmatter engine 属性选 GitHub Copilot（默认）/Claude Code/Google Gemini/OpenAI Codex，每引擎独立认证 secret。
+- **典型用途**：issue triage/CI failure analysis/PR reviews/documentation updates/repository maintenance——**reasoning 类自动化**（不是 if-then 固定规则）。
+- **安全**：Security-first by design；sandbox 标准 Docker+preview cloud-hypervisor；参考实践 Daily Security Red Team Agent 每晚扫描 backdoors/secret leaks/supply-chain compromise。
+- **提升层**：工具（仓库自动化）。
+
+## 上下文预算与链式提示：pin 契约 · 检索 3 个不是 30 个 · chaining 省 4.5x 迭代（来源：musketeerstech prompt best practices 2026-07 + skillgenio advanced prompt chaining 2026-05 + aitoolsatlas system prompts production 2026-03 实拉，与 §上下文预算管理互补——那条管"何时规划压缩"，本条管"提示侧怎么用预算与链式结构"）
+- **上下文当预算不当倾倒场**：pin system prompt+output contract；summarize/drop 旧 turns；**检索 3 个相关文档，不是 30 个相邻的**——检索质量在塞满的上下文里退化、延迟爬升、每 loop 都为全部 token 付费。
+- **Prompt chaining**：复杂任务分解为 sequence connected prompts，输出为下一输入——实测比单 prompt 减少 4.5x 手动迭代；生产 AI workflow 的默认形态。
+- **长 system prompt 稳定性三招**：末尾重复关键指令（首尾失忆补偿）/structured output 强制格式/role anchoring（"Remember, you are the ANALYST, not the writer"）。
+- **对抗输入测试**：edge cases/empty inputs/unexpected languages/misleading inputs 都要测——正常输入通过不代表 prompt 稳。
+- **提升层**：可复用 Skill（提示工程）。
