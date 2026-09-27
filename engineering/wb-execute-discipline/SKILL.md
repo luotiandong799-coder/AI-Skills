@@ -5870,3 +5870,37 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **多接口+Hub 共享**：Python API/CLI（smolagent/webagent）/Gradio web UI；agents/tools 可从 HF Hub 加载分享（Gradio Spaces）。→ 判据：复用社区 agent 从 Hub 拉，不再从零写。
 - **任何 LLM**：transformers 本地/inference API/OpenAI/Anthropic via LiteLLM。→ 判据：框架不锁模型，换模型不改 agent 逻辑。
 - **提升层**：工具。
+
+## Dify 多智能体编排：嵌套 agent 调用 + coordinator 路由 + 跨 agent 容错（来源：DEV 5 Hidden Uses 2026-04-25 + CSDN 多智能体协同 2026-09-17 + dify-hosting guide，2026-09-27 实拉，与 §Agent 节点互补——那条管单 agent 形态，这条管多 agent 协作编排）
+- **嵌套 agent 调用**：v1.3+ 一个 agent 可作为 tool 被另一个 agent 调用——emergent behavior 跨特化 LLM 角色；生产用 coordinator agent 路由工作到专化 agents（research/data/writer）。→ 判据：单 agent 干不动的拆成专化 agents + 协调者，不建 god-agent。
+- **跨 agent 通信容错**：4 种容错方案（角色化封装/状态感知/动态协商/上下文反馈）；工作流不硬编码执行顺序，agent 实时协商编排。→ 判据：多 agent 链路必须有跨 agent 通信容错，不能假设上游必成功。
+- **Sub-workflow 模块化**：reusable workflow components 从 parent workflows 调用；整个多智能体 workflow 可暴露为 REST endpoints。→ 判据：通用 agent 逻辑下沉子 workflow，父流程组合调用。
+- **Agent Node 独立配置**：每个 agent 单独选 model/system prompt/tools/structured output。→ 判据：专化 agent 各自配置，不共享一套参数。
+- **提升层**：工作流。
+
+## LangFlow 安全基线：SECRET_KEY + 部署边界 + CVE 修复链（来源：docs.langflow.org security/deployment-prod-best-practices + CSA 2026-09-08 + IBM bulletin 2026-08-24 + CVE-2026-5027/0768，2026-09-27 实拉，与 §API 认证互补——那条管调用认证，这条管部署安全与攻击面）
+- **SECRET_KEY 必设**：LANGFLOW_SECRET_KEY 加密敏感数据，不设则自动生成但不推荐生产。→ 判据：生产环境显式设置 secret key，不用自动生成值。
+- **部署边界**：绑定 localhost+reverse proxy（Nginx/HAProxy）+OAuth2/mTLS/managed API keys 而非内建 basic auth；公网不需要就放 VPN/防火墙后；network egress 只放行 LLM+cloud provider APIs（防 IRC C2/SOCKS 隧道回连）。→ 判据：框架不直接绑公网 IP，网关层做真认证。
+- **CVE 修复链**：CVE-2026-5027 path traversal→RCE（LANGFLOW_AUTO_LOGIN=false+显式认证）；CVE-2026-0768 validate 端点无认证→root RCE（更新 patch/IP allowlist/短命 least-privilege credentials）；IBM：PythonFunction 缺 runtime code-execution gate 绕过 allow_custom_components=false（升级 1.11.0+）。→ 判据：升级到修复版本+验证 validate 等端点认证+不用长期凭证。
+- **提升层**：工具。
+
+## Anthropic 工具设计纪律：合并工具 + hand 解耦 + scope 指令化（来源：console.anthropic.com implement-tool-use + engineering/managed-agents 2026-04-08 + alignment security 2026-08-31，2026-09-27 实拉，与 §tool use 互补——那条管调用实现，这条管工具面设计）
+- **合并相关操作为更少工具**：create_pr/review_pr/merge_pr 分组为单工具带 action 参数——更少更强大工具减少 selection ambiguity。→ 判据：同一对象上的操作合并成一个工具+action 参数，不逐动作建工具。
+- **brain/hands 解耦**：managed agent 中每个 hand=tool execute(name, input)→string；接口统一支持 custom tool/MCP/own tools，harness 不关心 sandbox 形态，brain 可换 hand。→ 判据：工具接口统一为 name+input→string，执行环境解耦。
+- **scope 用指令表述**："You should not access the internet" 优于 "You do not have internet access"——边界写成指令而非环境声明；evaluators 持续监控 thinking/actions/network。→ 判据：安全边界按行为指令写，不按环境事实写。
+- **前后台分工**：Claude Code 管 complex interactive work，Claude Tag 管 background/proactive（monitor bug reports/open fix PRs/tag engineer）。→ 判据：交互式与后台型任务分 agent，各自专精。
+- **提升层**：工具。
+
+## GitHub Actions Reusable + Agentic Workflows：workflow_call + secrets 继承 + Markdown 编译 YAML（来源：docs.github.com reusing-workflow-configurations + github.blog Agentic Workflows 2026-06-11 + security roadmap 2026-03-30，2026-09-27 实拉，与 §供应链安全互补——那条管依赖验证，这条管 CI 复用与 agentic 自动化）
+- **Reusable workflows**：uses 关键字在 job 级调用；on.workflow_call 定义 inputs/outputs 并映射 secrets 给 called workflow——避免复制粘贴。→ 判据：CI 公共流程做成 reusable workflow，参数+secrets 显式声明。
+- **Agentic Workflows（public preview）**：自然语言 Markdown 定义自动化，GitHub 编译成标准 Actions YAML；coding agents 做 issue triage/CI failure analysis/doc updates；复用现有 runner groups/policy constraints。→ 判据：能用 agentic 自动化做的推理型任务用自然语言定义，仍走 Actions 管线。
+- **2026 security roadmap**：Scoped secrets & reusable workflow inheritance（GA 中）——credentials 只在 workflow+execution context 都可信时签发；policy-first security model。→ 判据：复用 workflow 时 secrets 按作用域继承，不给全量访问。
+- **Self-repo 语法**：uses: $/ 引用同 repo action/workflow 精确 commit 无需 checkout。→ 判据：同仓库复用用 $/ 钉死 commit。
+- **提升层**：工作流。
+
+## OpenClaw 浏览器自动化：Playwright headless + CDP + recovery loop（来源：launchmyopenclaw 2026-05-27 + openclawforge 2026-03-05 + docs.openclaw.ai tools/browser + unpkg browser.md，2026-09-27 实拉，与 §computer use 互补——那条管桌面控制，这条管 web 自动化）
+- **内置 browser skill**：openclaw skills add @openclaw/skill-browser，Playwright 驱动 sandboxed Chromium 服务端运行，headless 无需 Chrome extension。→ 判据：web 自动化优先用平台内置 browser skill，不另装扩展。
+- **双模式**：managed browser（独立运行）/extension relay（配合现有 Chrome）；CDP 驱动真实 Chrome：JS 执行/SPA/session 持久。→ 判据：JS 重度页面用真实 Chrome 而非 scraper。
+- **recovery loop**：bundled browser-automation skill 教 agent snapshot/stale-ref/manual-blocker 恢复循环，先 check status/tabs。→ 判据：页面状态失效先 snapshot 重读再动作。
+- **screenshot monitoring**：捕获页面状态视觉证据，比较随时间变化并对异常告警。→ 判据：页面监控用截图对比+告警而非只看 HTML。
+- **提升层**：工具。
