@@ -1,0 +1,44 @@
+# r274C 学习轮留痕（2026-09-28）
+
+## 信源实拉清单（10 站全量逐站，查询词与全表错开）
+| # | 信源 | 状态 | 实拉内容 |
+|---|---|---|---|
+| 1 | Dify（插件/市场面） | ✓ | **插件四类型**（Tools 工具——Chatflow/Workflow/Agent 可用外部工具——完整工具集+API 实现——可构建自定义端点；Agent 策略——定义 Agent 节点内部推理决策逻辑——工具选择/调用/结果处理；Extensions——HTTP webhooks 集成外部服务；Datasources——外部内容源）；**Marketplace**（v1.0.0 启动——official/partner/verified community——Trending 安装量——一键安装）；**插件系统设计**（解耦模块——独立操作+外部集成——Endpoint 插件/反向调用/多运行时 local/SaaS/enterprise/安全）；**ToolMCP**（Dify tools API 转 MCP compatible API——dify 1.2.0+）；**OpenAI Tools 插件**（一个 provider 配置供全部工具 credentials——加工具/配模型选项/绑 workflow 变量）；**Apify 插件**（20,000+ ready-made web tools 结构化数据——business names/ratings/prices/reviews structured JSON——比 generic crawlers markdown 强）；**企业插件开发**（模型作插件打包/工具/策略/扩展/数据源） |
+| 2 | n8n（子工作流面） | ✓ | **数据传递**（n8n JSON——父任何结构可发；context object 模式——触发实体（new order/webhook payload/form submission）+metadata——子工作流 $json 收——无特殊语法；链多个 Execute Sub-Workflow）；**Input 定义三模式**（Define using fields——input names+data types——调用工作流自动 pull in；Define using JSON example——示例 JSON 展示期望 items+types；Static Data——固定 JSON 忽略输入）；**返回数据**（子工作流最后节点输出=父 Execute Workflow 节点输出——Respond to Webhook 节点配置 data 成为父输出；Edit Fields 只返父需要的字段）；**Call n8n Workflow Tool**（把任意 workflow 打包成 AI agent 可调工具——独立 workflow 带自己 trigger/logic/output——父 agent 像调其他工具传输入收结构化结果——执行路径可预测或同 agent 逻辑多 workflow 复用→sub-workflow 更干净）；**两模式**（Process and return transformed data——Trigger→HTTP→Code Transform→Edit Fields Shape Output；Aggregate multiple items——Trigger→Loop→Process Each→Aggregate Summary） |
+| 3 | LangFlow（模板/自定义组件面） | ✓ | **Templates**（预建 flow 起点——basic 少组件到 complex 多组件+sub-flows；Basic Prompting——chat input+预定义指令 prompt→LLM；Vector Store RAG 两 sub-flows——Load Data 加载嵌入+内容进 vector DB/Retriever 检索；Simple Agent——Agent 连接 LLM+Calculator+URL 工具→Chat Input/Output）；**贡献模板规范**（description 简短信息——视觉编辑器展示目的/用例；Lucide 图标；只用 Core components+Bundles——不用非 codebase 自定义组件；README/quickstart）；**自定义组件**（Python class 继承 Component；class-level 属性识别描述；input/output lists 决定数据流；methods 定义行为逻辑；内部变量 error handling+logging——HelloComponent 示例 display_name/description/inputs/outputs/build_message）；**Use cases**（ready-made agents+RAG templates——call transcription+classification/Chunk Classification 文档处理）；**共享**（个人使用或分享其他用户） |
+| 4 | Activepieces（MCP 面） | ✓ | **开源最大 MCP server**（MCP=Claude/Cursor 调用外部工具开放标准；一 server 暴露 760+ apps 为 AI 工具——单 URL 全部 piece——AI 跨全部 actions 单连接调用）；**与 single-app server 区别**（多数 MCP server 覆盖一个 app；Activepieces 一个 URL 暴露所有连接 piece）；**AI MCP**（非单独安装——与 760+ 其他 apps 同一 URL——连接 AI 一次每个 action 成工具——cloud/self-host）；**MCP piece**（可 self-host——connections/data 留在自己环境；Claude/Cursor/Windsurf 任意 MCP client 调 MCP actions 为工具）；**Embeddable MCP**（用户 app 内点 Authorize 按钮——backend 拿 token 跑用户 automations——backend 跑 connect steps 存 token；用户 popup 点 Authorize；正常 OAuth）；**启用**（Settings→MCP Server 开启——粘贴 server URL 到 client config——首次 OAuth 认证）；**AI-first automation**（agent 自己选工具——已连接 apps+任何指向 MCP server；approval 门控 money-touching steps；Tables 数据所有 flow/agent 读写） |
+| 5 | Make（优化面） | ✓ | **Bundle-Size**（模块 bundle 大小影响操作开销）；**Filter/Aggregatoren**（过滤器+聚合器减少不必要操作）；**Sub-Szenarien & Parallelisierung**（子场景=Make 的函数——可复用构建块清晰 Interface（Input+Output）——三性能优势：Parallelisierung 异步自己 Workers 跑/Granularität 单个子场景定向缩放或重新部署/Wartbarkeit bug fix 一处）；**队列系统**（stagger 场景执行+尊重 API rate limits——最多 3 场景并发+FIFO buffer 其余——增加总构建时间但消除失败；exponential backoff retries 处理瞬时限流）；**Make+MCP**（游戏开发管线——AI 助手/MCP 交叉） |
+| 6 | Pipedream（AI 集成层面） | ✓ | **定位**（"The integration layer for AI agents"——Managed auth+10,000+ tools across 3,000+ APIs——npm i @pipedream/sdk——给 agent 10,000+ tools；Connect 集成基础设施——managed auth/10,000 prebuilt tools+triggers/raw proxy for everything else——agent 与应用之间一切）；**框架调用**（高级 function calling 用 code block+llamaindex/langchain——自动处理 function calling/retry——function logic 里调用 Pipedream Workflow HTTP Endpoint 做动作）；**对比 n8n**（n8n 内建 LangChain first-class workflow nodes——AI Agent 节点选模型/attach Tool 节点/Vector Store memory——30 分钟 ReAct agent 无 Python 代码；Pipedream 偏集成层） |
+| 7 | Anthropic（输出 token/流式面） | ✓ | **max_tokens**（单次模型输出最大 token——各模型自己限制——reasoning chain token 计入限制——thinking 启用时 max_tokens 必须 > budget_tokens——达限 stop_reason=max_tokens）；**stream**（默认 false——true 时 SSE 格式逐事件返回）；**流式 API**（.stream() 保持 HTTP 连接活——text_stream 迭代；stream.get_final_message()；message_start/message_delta/message_stop 事件类型；usage 含 cache_creation_input_tokens/cache_read_input_tokens/input_tokens/output_tokens）；**Claude Opus 4-8**（context 1M tokens/max output 128K；hits output cap finish_reason="length"——续 message 继续）；**Extended Thinking**（thinking enabled+budget_tokens——max_tokens 16000+budget 10000——思维 token 计入 max_tokens——max_tokens 20000+budget 16000 输出预算规划） |
+| 8 | deeplearning（LLMOps 面） | ✓ | **Automated Testing for LLMOps（CircleCI）**（每次变更自动化 CI pipeline 评估 LLM 应用——更快更安全开发——1h12m）；**Evaluating and Debugging Generative AI（W&B）**（MLOps 工具管理/版本化/调试/实验）；**LLMOps（Google Cloud Erwin）**（1-2h 完整 automated fine-tuning-to-deployment pipeline——监督指令微调+部署自定义 LLM——QA chatbot 案例）；**Machine Learning in Production（Andrew Ng）**（10h59m——端到端 ML 生产系统设计——project scoping/data needs/modeling/deployment——baseline/concept drift/持续改进——41 视频课+5 分级作业）；**LLMOps 核心**（ML lifecycle/pipelines/data validation/model serving/monitoring/continuous training/TFX）；**Generative AI with LLMs**（project lifecycle——use cases/pre-training/fine-tuning/evaluation） |
+| 9 | GitHub（Codespaces 面） | ✓ | **Dev containers**（Docker 容器专门配置完整开发环境——codespace 工作在 VM 上 dev container——仓库可配置定制环境——工具+runtimes；无配置默认 image）；**默认 image 预装 ML 库**（Numpy/pandas/SciPy/Matplotlib/seaborn/scikit-learn/Keras/PyTorch/Requests/Plotly——机器学习开箱）；**devcontainer.json 定制**（Docker image/extensions/port forwarding/environment variables/editor 配置——Configuration-as-Code——提交仓库所有人可复现——本地+cloud 同配置）；**Claude-Flow Setup**（.devcontainer/devcontainer.json 单命令 curl 安装）；**Copilot Agent Kit**（Codespaces 装——模型选择器 Opus 推荐/GPT-5 或 Codex）；**Stable Diffusion**（Codespaces 跑 AI 图像生成）；**MCP rust-sdk devcontainer**（预配置依赖工具的一致开发环境——本地+Codespaces 同配置） |
+| 10 | OpenClaw（技能/委托面） | ✓ | **Delegate architecture**（named delegate——自有身份"代表"组织成员行动——从不冒充人类——自己账号发/读/排程+显式委托权限——从个人多 agent 路由扩展到组织部署）；**AgentSkills-compatible skill folders**（教 agent 工具——plugin skills 插件启用时加载——参与正常 skill 优先级——metadata.openclaw.requires.config 门控）；**Per-agent vs shared skills**（per-agent <workspace>/skills 仅该 agent 见；shared ~/.openclaw/skills 全机 agent 见；extra shared folders skills.load.extraDir 配置）；**declarative agent manifest**（delegationMode suggest/prefer——prompt-only 委托强度；allowAgents string[] allowlist——sessions_spawn 目标 agent ids——["*"] 任意——省略=仅自身；model provider/model 默认 spawn 子 agent 模型）；**Sub-Agent Orchestration**（父 agent 汇总或按 handoff 成功标准直接报用户——enable 需 config allowlist 含允许 spawn agent IDs）；**run-openclaw-agents 技能**（active sessions 管理/ACP agents 路由/跨平台 message Discord/Slack/Telegram/多 agent 管道 fan-out/fan-in/supervisor/chain-of-responsibility）；**多 agent 团队**（openclaw agents bind/openclaw skills add --agent——每 agent 只加载需要技能） |
+
+## 判重（双键检索结果）
+- Dify 插件：库内 §Dify 插件/生态类锚点——插件四类型/ToolMCP/Apify 结构化/OpenAI Tools 单 provider 为独有增量 ≥40% → 落地（增量合并）
+- n8n 子工作流：库内 §n8n 工作流类锚点——context object 传递/input 定义三模式/Call n8n Workflow Tool 为独有增量 ≥40% → 落地
+- LangFlow 模板/组件：库内 §LangFlow 组件类锚点——Templates 层级/贡献规范/Python class 结构为独有增量 ≥40% → 落地
+- Activepieces MCP：库内 §Activepieces/§MCP 生态类锚点——760+ apps 单 URL/Embeddable MCP/启用流程为独有增量 ≥40% → 落地
+- Make 优化：库内 §Make 类锚点——sub-scenarios 并行化/队列+backoff/rate limits 为独有增量 ≥40% → 落地
+- Pipedream AI：库内 §Pipedream 组件/集成类锚点——AI 集成层定位/10,000 tools/框架调用模式为独有增量 ≥40% → 落地（增量合并）
+- Anthropic 输出：库内 §Anthropic 流式类锚点——max_tokens>budget 规则/SSE 事件/Opus 4-8 限制为独有增量 ≥40% → 落地
+- deeplearning LLMOps：库内 §课程生态类锚点——LLMOps CI/Evaluating Debugging/ML in Production 为独有增量 ≥40% → 落地（增量合并）
+- GitHub Codespaces：库内 §GitHub 环境类锚点——dev containers/默认 image ML 库/Configuration-as-Code 为独有增量 ≥40% → 落地
+- OpenClaw 技能/委托：库内 §OpenClaw/§多 agent 类锚点——Delegate 架构/技能作用域/manifest allowAgents 为独有增量 ≥40% → 落地（增量合并）
+
+## 独点落地（10 个）
+| 轮 | 文件(建议落点) | 版本(建议) | 独有点 | 提升层 |
+|---|---|---|---|---|
+| r274C-1 | wb-execute-discipline | 3.40.0+ | Dify 插件生态与市场 | 可复用 Skill |
+| r274C-2 | wb-execute-discipline | 3.40.0+ | n8n 子工作流模式 | 工作流 |
+| r274C-3 | wb-execute-discipline | 3.40.0+ | LangFlow 模板与自定义组件 | 可复用 Skill |
+| r274C-4 | wb-execute-discipline | 3.40.0+ | Activepieces 统一 MCP server | 工具 |
+| r274C-5 | wb-execute-discipline | 3.40.0+ | Make 子场景并行化优化 | 工作流 |
+| r274C-6 | wb-execute-discipline | 3.40.0+ | Pipedream AI 集成层 | 工具 |
+| r274C-7 | wb-execute-discipline | 3.40.0+ | Anthropic 输出预算与流式 | 工具 |
+| r274C-8 | wb-execute-discipline | 3.40.0+ | deeplearning LLMOps 课程 | 可复用 Skill |
+| r274C-9 | wb-execute-discipline | 3.40.0+ | GitHub Codespaces 开发环境 | 工具 |
+| r274C-10 | wb-execute-discipline | 3.40.0+ | OpenClaw 技能作用域与委托架构 | 工作流 |
+
+## 复核
+十独点均有当日实拉来源；均增量合并或新面；无并入未落地项。垃圾：本轮未产生临时文件。

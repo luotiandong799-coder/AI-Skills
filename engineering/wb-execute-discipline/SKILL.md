@@ -8022,3 +8022,78 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **持久化边界（诚实声明）**：除非 persistent storage 集成（vector DB/saved memory file）——数据 session 结束/context 满即忘；可显式要求 agent 自己总结会话要点存下轮用。
 - **MemoryLake 插件**：ClawHub——跨 session/device 持久——text/images/files/tables 统一索引——同 store 可用 Claude/ChatGPT/MCP 工具——跨平台统一记忆。
 - **提升层**：工作流（记忆持久化）。
+## Dify 插件生态与市场：四类型 · ToolMCP 桥 · Apify 结构化（来源：dify.ai blog introducing-dify-plugins/dupdub + marketplace.dify.ai + enterprise-docs getting-started-dify-plugin + CSDN 插件生态 2025-01/2026-09 实拉，合并 §Dify 插件——那条管"工具调用"，本条管"插件生态与市场面"）
+- **插件四类型**：Tools 工具（Chatflow/Workflow/Agent 可用外部工具——完整工具集+API 实现——可构建自定义端点）；Agent 策略（定义 Agent 节点内部推理决策逻辑——工具选择/调用/结果处理）；Extensions（HTTP webhooks 集成外部服务）；Datasources（外部内容源）。
+- **Marketplace 生态**：v1.0.0 启动——official/partner/verified community 插件——Trending 安装量——一键安装。
+- **插件系统设计**：解耦模块——独立操作+外部集成——Endpoint 插件/反向调用/多运行时 local/SaaS/enterprise/安全。
+- **ToolMCP 桥**：Dify tools API 转 MCP compatible API——dify 1.2.0+——Dify 工具面接 MCP client。
+- **OpenAI Tools 插件模式**：一个 provider 配置供全部工具 credentials——加工具/配模型选项/绑 workflow 变量。
+- **Apify 插件**：20,000+ ready-made web tools 结构化数据——business names/ratings/prices/reviews structured JSON——比 generic crawlers markdown 强——直接进 LLM 处理。
+- **提升层**：可复用 Skill（插件生态）。
+
+## n8n 子工作流模式：context object 传递 · input 定义三模式 · Call Workflow Tool（来源：docs.n8n.io flow-logic/subworkflows + n8nautomation complete-guide + n8nlogic how-to-call + blog production-ai-playbook 2026-04/09 实拉，合并 §n8n 工作流——那条管"流程面"，本条管"复用与传参面"）
+- **数据传递**：n8n JSON——父任何结构可发；**context object 模式**——触发实体（new order/webhook payload/form submission）+metadata——子工作流 $json 收——无特殊语法；可链多个 Execute Sub-Workflow。
+- **Input 定义三模式**：Define using fields（input names+data types——调用工作流自动 pull in）；Define using JSON example（示例 JSON 展示期望 items+types）；Static Data（固定 JSON 忽略输入）。
+- **返回数据**：子工作流最后节点输出=父 Execute Workflow 节点输出——Respond to Webhook 节点配置 data 成为父输出——Edit Fields 只返父需要的字段。
+- **Call n8n Workflow Tool**：把任意 workflow 打包成 AI agent 可调工具——独立 workflow 带自己 trigger/logic/output——父 agent 像调其他工具传输入收结构化结果——执行路径可预测或同 agent 逻辑多 workflow 复用→sub-workflow 更干净。
+- **两模式**：Process and return transformed data（Trigger→HTTP→Code Transform→Edit Fields Shape Output）；Aggregate multiple items（Trigger→Loop→Process Each→Aggregate Summary）。
+- **提升层**：工作流（复用与传参）。
+
+## LangFlow 模板与自定义组件：Templates 层级 · Python Component class（来源：docs.langflow.org concepts-flows/custom-components/extensions-quickstart + contributing-templates + use-cases 2026-06/09 实拉，合并 §LangFlow 组件——那条管"组件使用"，本条管"模板与自建"）
+- **Templates 层级**：预建 flow 起点——basic 少组件到 complex 多组件+sub-flows——Basic Prompting（chat input+预定义指令 prompt→LLM）/Vector Store RAG（两 sub-flows Load Data+Retriever）/Simple Agent（Agent 连接 LLM+Calculator+URL 工具）。
+- **贡献模板规范**：description 简短信息——视觉编辑器展示目的/用例；Lucide 图标；只用 Core components+Bundles——不用非 codebase 自定义组件；README/quickstart。
+- **自定义组件结构**：Python class 继承 Component；class-level 属性识别描述；input/output lists 决定数据流；methods 定义行为逻辑；内部变量 error handling+logging——HelloComponent 示例 display_name/description/inputs/outputs/build_message。
+- **Use cases**：ready-made agents+RAG templates——call transcription+classification/Chunk Classification 文档处理。
+- **提升层**：可复用 Skill（模板与自建组件）。
+
+## Activepieces 统一 MCP server：760+ apps 单 URL · Embeddable MCP（来源：activepieces.com mcp + pieces/mcp + docs embeddable-mcp + mcp/zoho-rm 2026-08/09 实拉，合并 §Activepieces/§MCP 生态——那条管"平台面"，本条管"MCP 桥面"）
+- **开源最大 MCP server**：MCP=Claude/Cursor 调用外部工具开放标准——一 server 暴露 760+ apps 为 AI 工具——单 URL 全部 piece——AI 跨全部 actions 单连接调用。
+- **与 single-app server 区别**：多数 MCP server 覆盖一个 app——Activepieces 一个 URL 暴露所有连接 piece。
+- **AI MCP 非单独安装**：与 760+ 其他 apps 同一 URL——连接 AI 一次每个 action 成工具——cloud/self-host。
+- **Embeddable MCP**：用户 app 内点 Authorize 按钮——backend 拿 token 跑用户 automations——backend 跑 connect steps 存 token；用户 popup 点 Authorize；正常 OAuth。
+- **启用**：Settings→MCP Server 开启——粘贴 server URL 到 client config——首次 OAuth 认证。
+- **AI-first automation**：agent 自己选工具——已连接 apps+任何指向 MCP server；approval 门控 money-touching steps；Tables 数据所有 flow/agent 读写。
+- **提升层**：工具（MCP 桥）。
+
+## Make 子场景并行化优化：Sub-Szenarien 三优势 · 队列+backoff（来源：till-freitag make-performance-operations-optimierung + dredyson AAA game pipeline 2026-04/05 实拉，合并 §Make 类锚点——那条管"数据面"，本条管"性能面"）
+- **Sub-Szenarien 三性能优势**：Parallelisierung（子场景异步自己 Workers 跑）/Granularität（单个子场景定向缩放或重新部署）/Wartbarkeit（bug fix 一处）——子场景=Make 的函数——可复用构建块清晰 Interface（Input+Output）。
+- **Bundle-Size+Filter/Aggregatoren**：模块 bundle 大小影响操作开销；过滤器+聚合器减少不必要操作。
+- **队列系统**：stagger 场景执行+尊重 API rate limits——最多 3 场景并发+FIFO buffer 其余——增加总构建时间但消除失败；exponential backoff retries 处理瞬时限流。
+- **提升层**：工作流（性能优化）。
+
+## Pipedream AI 集成层：managed auth · 10,000 tools · 框架调用模式（来源：pipedream.com homepage + community recommended-openai + baeseokjae pipedream-vs-n8n 2026-01/09 实拉，合并 §Pipedream 组件——那条管"组件开发"，本条管"AI 集成层"）
+- **定位**：The integration layer for AI agents——Managed auth+10,000+ tools across 3,000+ APIs——npm i @pipedream/sdk——给 agent 10,000+ tools；Connect 集成基础设施——managed auth/10,000 prebuilt tools+triggers/raw proxy for everything else。
+- **框架调用模式**：高级 function calling 用 code block+llamaindex/langchain——自动处理 function calling/retry——function logic 里调用 Pipedream Workflow HTTP Endpoint 做动作。
+- **对比 n8n**：n8n 内建 LangChain first-class workflow nodes——AI Agent 节点选模型/attach Tool 节点/Vector Store memory——30 分钟 ReAct agent 无 Python 代码；Pipedream 偏集成层。
+- **提升层**：工具（AI 集成）。
+
+## Anthropic 输出预算与流式：max_tokens>budget 规则 · SSE 事件 · Opus 限制（来源：docs.anthropic.com streaming + tencentcloud message protocol + reapi claude-opus-4-8 + yourdocs extended-thinking 2026-03/09 实拉，合并 §Anthropic 流式——那条管"批处理"，本条管"输出与流式面"）
+- **max_tokens 规则**：单次模型输出最大 token——各模型自己限制——**reasoning chain token 计入限制**——thinking 启用时 max_tokens 必须 > budget_tokens——达限 stop_reason=max_tokens。
+- **stream**：默认 false——true 时 SSE 格式逐事件返回——.stream() 保持 HTTP 连接活——text_stream 迭代；stream.get_final_message()。
+- **事件类型与 usage**：message_start/message_delta/message_stop——usage 含 cache_creation_input_tokens/cache_read_input_tokens/input_tokens/output_tokens。
+- **Claude Opus 4-8 限制**：context 1M tokens/max output 128K——hits output cap finish_reason="length"——续 message 继续。
+- **Extended Thinking 预算规划**：thinking enabled+budget_tokens——max_tokens 16000+budget 10000——思维 token 计入 max_tokens——max_tokens 20000+budget 16000。
+- **提升层**：工具（输出与流式）。
+
+## deeplearning LLMOps 课程系：CI 评估 · Evalu/Debug · ML in Production（来源：learn.deeplearning.ai LLMOps topic + corporate machine-learning-in-production + datacamp best-llmops 2026-04/09 实拉，合并 §deeplearning 课程生态——那条管"课程清单"，本条管"LLMOps 路径"）
+- **Automated Testing for LLMOps（CircleCI）**：每次变更自动化 CI pipeline 评估 LLM 应用——更快更安全开发——1h12m。
+- **Evaluating and Debugging Generative AI（W&B）**：MLOps 工具管理/版本化/调试/实验。
+- **LLMOps（Google Cloud Erwin）**：1-2h 完整 automated fine-tuning-to-deployment pipeline——监督指令微调+部署自定义 LLM——QA chatbot 案例。
+- **Machine Learning in Production（Andrew Ng）**：10h59m 端到端 ML 生产系统设计——project scoping/data needs/modeling/deployment——baseline/concept drift/持续改进。
+- **LLMOps 核心**：ML lifecycle/pipelines/data validation/model serving/monitoring/continuous training/TFX。
+- **提升层**：可复用 Skill（LLMOps 方法）。
+
+## GitHub Codespaces 开发环境：dev containers · 默认 ML image · Configuration-as-Code（来源：docs.github.com dev-containers/deep-dive/machine-learning + VS Code remote + raoulbia claude-flow setup + MCP rust-sdk DEVCONTAINER 2026-03/09 实拉，合并 §GitHub 环境——那条管"Actions 面"，本条管"开发环境面"）
+- **Dev containers**：Docker 容器专门配置完整开发环境——codespace 工作在 VM 上 dev container——仓库可配置定制环境——工具+runtimes——无配置默认 image。
+- **默认 image 预装 ML 库**：Numpy/pandas/SciPy/Matplotlib/seaborn/scikit-learn/Keras/PyTorch/Requests/Plotly——机器学习开箱。
+- **devcontainer.json 定制**：Docker image/extensions/port forwarding/environment variables/editor 配置——**Configuration-as-Code**——提交仓库所有人可复现——本地+cloud 同配置。
+- **AI 环境场景**：Claude-Flow Setup 单命令 curl 安装 .devcontainer；Copilot Agent Kit 模型选择器 Opus 推荐；Stable Diffusion 图像生成；MCP rust-sdk 预配置依赖工具一致环境。
+- **提升层**：工具（开发环境）。
+
+## OpenClaw 技能作用域与委托架构：per-agent vs shared · manifest allowAgents · delegate（来源：docs.openclaw.ai delegate-architecture + openclaw-ai skills + openclawplaybook skills-guide + NVIDIA declarative-agents-manifest + toolify sub-agents 2026-02/09 实拉，合并 §OpenClaw/§多 agent——那条管"记忆/网关面"，本条管"技能作用域与委托"）
+- **Delegate architecture**：named delegate——自有身份"代表"组织成员行动——从不冒充人类——自己账号发/读/排程+显式委托权限——从个人多 agent 路由扩展到组织部署。
+- **技能作用域**：per-agent <workspace>/skills 仅该 agent 见；shared ~/.openclaw/skills 全机 agent 见；extra shared folders skills.load.extraDir 配置；AgentSkills-compatible skill folders 插件启用时加载——metadata.openclaw.requires.config 门控。
+- **declarative agent manifest**：delegationMode suggest/prefer（prompt-only 委托强度）；allowAgents string[] allowlist（sessions_spawn 目标 agent ids——["*"] 任意——省略=仅自身）；model provider/model 默认 spawn 子 agent 模型。
+- **Sub-Agent Orchestration**：父 agent 汇总或按 handoff 成功标准直接报用户——enable 需 config allowlist 含允许 spawn agent IDs——CLI 管理监控。
+- **多 agent 团队**：openclaw agents bind --agent coding --channel/openclaw skills add --agent research web-search——每 agent 只加载需要技能；跨平台 message Discord/Slack/Telegram；管道设计 fan-out/fan-in/supervisor/chain-of-responsibility。
+- **提升层**：工作流（技能作用域与委托）。
