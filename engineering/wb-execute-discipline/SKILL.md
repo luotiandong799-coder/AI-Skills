@@ -3383,3 +3383,31 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **工具权限三策略**：always_allow（自动批准）/ always_ask（每次询问）/ 拒绝——**工具权限不是二元的，三档按敏感度选**。
 - 判据：**装技能看三维认证标；配工具按敏感度选权限档；不确定就 always_ask**。
 - 提升层：可复用 Skill。
+
+## 记忆三工具分工 + 事件条件意图 + 结构化记忆（来源：docs.openclaw.ai memory/Honcho/Memory-Wiki，2026-09-27 实拉）
+- **记忆访问三工具各管一摊**：memory_search（语义搜索，措辞不同也能命中）/ memory_get（读特定文件或行范围）/ intent（事件条件 standing intents——"条件满足才触发"的长期意图，可显式取消）。
+- **跨会话记忆（Honcho）**：每轮对话后持久化 → 跨 session reset/compaction/channel switch 携带；为用户与 agent 各建画像（preferences/facts/communication style）；parent agent 自动跟踪 spawned agents。
+- **Memory-Wiki 结构化**：claims + evidence、矛盾检测、freshness tracking（时效追踪）、编译知识摘要——**记忆不是记事本，是有证据的断言库**。
+- 判据：**记忆分三工具用（搜/读/意图）；重要事实记 claims+evidence；跨会话要画像不要裸日志**。
+- 提升层：工作流。
+
+## Skill 生命周期五步：match 只读元数据，激活才加载全文（来源：agentskills.io 规范 + skills.sh 生态，2026-09-27 实拉）
+- **标准生命周期**：discover（扫目录）→ load metadata（只读 name+description）→ match（按任务匹配合适技能）→ activate（加载完整指令）→ execute（跑脚本/资源）。
+- **关键省 token 点**：match 阶段只读 metadata，**不加载全文**——只有命中的技能才花 token 读全文（与 wb-execute-discipline 匹配纪律互补：那条管"先判断再匹配"，本条管"匹配时只读元数据"）。
+- **生态已统一**：npx skills add owner/repo 一条命令装到各 agent 目录（~/.claude/skills、~/.cursor/skills、~/.copilot/skills、~/.gemini/skills…canonical ~/.agents/skills）——**技能即文件夹+SKILL.md，跨 agent 复用**。
+- 判据：**技能匹配先过 metadata 关，别一上来读全文**。
+- 提升层：可复用 Skill。
+
+## 技能包方法论：工程原则写进技能 + 三仓分层治理（来源：obra/superpowers 290K stars，2026-09-27 实拉）
+- **技能包 = 完整方法论**：superpowers 把 TDD/YAGNI/DRY 作为强制约束写进技能，agent 从 brainstorming → 规划 → 实现 → code review 全程被结构化流程引导——**技能不只教动作，还约束流程纪律**。
+- **subagent-driven 开发**：任务拆解/实现/验证交给 subagent，主 agent 编排。
+- **三仓分层**：主 repo（稳定生产）+ lab（实验技能）+ marketplace（策展插件市场）——**实验与稳定分离，好技能经策展进市场**。
+- 判据：**建技能包时把"必须遵守的工程原则"写进技能本身；实验技能放 lab 不经策展不上生产**。
+- 提升层：可复用 Skill。
+
+## CodeAgent vs ToolCallingAgent：代码动作省 30% LLM 步（来源：Hugging Face smolagents，2026-09-27 实拉）
+- **CodeAgent（code-as-action）**：agent 输出 Python 代码而非 JSON 工具调用——代码更富表现力（import 库/循环/条件/链式/内联处理边界），难基准上**少 30% LLM steps 且性能更高**（CodeAct 思路）。
+- **ToolCallingAgent**：JSON 工具调用，互操作性强——**外部系统/跨框架要 JSON，自己内部执行链用代码更省**。
+- **视觉 web 自动化**：截图→VLM 解释→驱动真实浏览器（点击/导航）——**视觉闭环自动化**。
+- 判据：**选实现时问"这个动作要外部互操作吗"**——要就 ToolCalling（JSON），不要就 CodeAgent（代码省步）。
+- 提升层：工作流。
