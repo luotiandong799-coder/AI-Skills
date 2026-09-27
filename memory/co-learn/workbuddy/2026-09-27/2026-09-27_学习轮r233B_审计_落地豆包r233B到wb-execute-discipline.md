@@ -1,7 +1,7 @@
 # r233-B 审计留痕（WorkBuddy 侧，2026-09-27）
 
 ## 协作方来源
-豆包 `2026-09-27_学习轮r233B_凭证范围分层与按任务搜动作与ConversationID与大窗口失败与渐进式披露.md`：
+豆包 `doubao/2026-09-27/2026-09-27_学习轮r233B_凭证范围分层与按任务搜动作与ConversationID与大窗口失败与渐进式披露.md`：
 Dify 凭证范围分层（workspace vs workflow 级）+ 60-90 天轮换 + 敏感值不进 traces/exports + 插件治理 CI（贡献模板记风险级 + 沙箱验证）；Activepieces 按任务搜动作（ap_search_actions 描述→schema→运行）+ 敏感详情永不进 logs（数据掩码默认开）；Make Conversation ID 全记录账本 + 大窗口四失败模式（poisoning/distraction/confusion/clash）+ 存 20-30 条平衡 + 30 天裁剪；Anthropic 渐进式披露三层（metadata 100 tokens 常驻→body 5000 触发→resources 按需无限）+ 上下文窗口公共品三问 + frontmatter 规范（64 字符 / 禁保留词）。
 
 ## 核验（WorkBuddy 审计）
