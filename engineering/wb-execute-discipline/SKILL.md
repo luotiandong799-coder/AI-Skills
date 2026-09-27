@@ -5721,3 +5721,41 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **vector 记忆**：elite-longterm-memory skill 用 vector database 存 facts/decisions 跨会话语义搜索召回（无需手动查找）。→ 判据：跨会话事实召回用向量记忆，语义搜索代替逐文件翻。
 - **文件即记忆**：配置文件也都是记忆（路径/约定/长期项目上下文）。→ 判据：项目长期上下文写配置/规范文件，不只靠对话记忆。
 - **提升层**：工作流。
+
+## Dify Chatflow 多模态与变量：会话变量 + 图片检索 + Vision 知识库（来源：Dify docs LLM/Knowledge Retrieval nodes + key-concepts + multimodal-retrieval，2026-09-27 实拉，与 §多模态检索互补——那条管检索排序，这条管 Chatflow 应用侧）
+- **Chatflow 会话变量**：conversation-specific 变量 persist over multi-turn Chatflow runs；LLM 节点可开 memory；可流式输出文本/图像/文件。→ 判据：多轮对话状态用会话变量，不用外部数据库硬塞。
+- **Vision 知识库**：多模态知识库标 Vision tag，支持 cross-modal retrieval（文本↔图像互查）；Query Images 用图片变量搜索（每图≤2MB）；多模态知识库的 rerank 模型也须多模态。→ 判据：图文混合库配多模态 embedding+多模态 rerank，查询可带图。
+- **LLM Node 文件处理**：file variables 给多模态模型（GPT-4V 处理图/Claude 直接 PDF/其他先预处理）；Vision detail：High 准但耗 token，Low 快省。→ 判据：按图复杂度选 detail，PDF 直接喂 Claude 免预处理。
+- **多模态流程模式**：检索文本+图像 chunks→LLM Node with Vision 提取信息→变量聚合节点合并检索结果+分析→输出。→ 判据：图文问答用"检索→视觉分析→聚合输出"三段。
+- **分流处理**：gpt 类模型图直接 vision、文档先转文本——List Operator 节点分流图/文档两个分支。→ 判据：混合上传按模态分流处理，不混一条链。
+- **提升层**：工作流。
+
+## n8n Vector Store 工具语义与 RAG 模板：Retrieve as Tool + name/description 匹配 + metadata 过滤（来源：n8n docs Simple Vector Store + n8n workflows RAG 模板库（Firecrawl/Gemini/Claude/Couchbase/Pinecone），2026-09-27 实拉，与 §RAG Starter 互补——那条管模板架构，这条管 Vector Store 工具化语义）
+- **Vector Store 作 Agent 工具**：Retrieve Documents (as Tool for AI Agent) 模式——agent 按 vector store 的 name+description 匹配问题决定是否调用。→ 判据：多个向量库时给每个写清 name/description，让 agent 自己选库。
+- **Rerank 选项**：Simple Vector Store 可开 Rerank Results，需连 rerank 模型。→ 判据：检索质量不够就挂 rerank 节点。
+- **分块参数**：Recursive Character Text Splitter 1000 字符/200 overlap 保留边界上下文。→ 判据：网页/文档摄取默认 1000/200 重叠分块。
+- **metadata 过滤**：Upstash 等 SQL-like metadata filters 按属性动态过滤查询；Pinecone upsert 带 source/schema/table/primary_key metadata。→ 判据：结构化源入向量库带完整 metadata，查询可过滤。
+- **记忆与库分工**：Postgres Chat Memory 管多轮对话历史，Supabase Vector Store 管知识检索（agent 的 tool）。→ 判据：对话记忆与知识库分开两个存储，别混一个。
+- **提升层**：工具。
+
+## Claude Code auto mode 三 Tier 权限模型 + IAM 分层（来源：Anthropic engineering claude-code-auto-mode + code.claude.com security/permissions + IAM，2026-09-27 实拉，与 §OpenClaw 沙箱互补——那条管隔离边界，这条管权限模式）
+- **auto mode 三 Tier**：Tier1 预批准窄规则（"allow running code formatters"）；Tier2 项目目录内写/编辑免分类器（routine coding 不付 latency，git 可审查）；Tier3 transcript classifier 只有真正 downside 动作才到达。→ 判据：长任务用 auto mode 分层，比全跳过安全。
+- **bypassPermissions 例外**：跳过权限提示包括 protected paths（.git/.claude）；cross-session messaging safeguards 仍生效；官方警告"dangerous and destructive，只应在隔离环境"。→ 判据：全跳过权限仅在隔离环境/一次性容器里用。
+- **IAM 工具分层**：Read-only（File reads/LS/Grep 免批）/Bash（需批，per-project directory+command 永久 yes）/File Modification（需批，session 结束前 yes）。→ 判据：按工具类型分层授权，读免批/写需批/命令白名单。
+- **/permissions 审计**：定期查看权限规则与来源 settings.json；/sandbox 沙箱命令免问；敏感仓库项目级权限+dev container 隔离。→ 判据：权限配置当资产定期审计，敏感库单独收紧。
+- **团队治理**：managed settings 强制组织标准，权限配置进版本控制，OpenTelemetry metrics 监控使用。→ 判据：团队级权限走托管配置+版本化，不用个人口头约定。
+- **提升层**：工具。
+
+## Make 路由变量与 Data Stores：Router 多 filters + System variables + 持久存储（来源：Make help router + academy routing + keerok 变量/Data Stores，2026-09-27 实拉，与 §Functions 互补——那条管模块化，这条管分支与状态）
+- **Router 分叉**：数据按条件走不同路径（同批数据不同处理）；每 route 可配多 filters（ET/OU 条件）+calculated variables 动态决策。→ 判据：同源多分支处理用 Router+每路 filter，不复制场景。
+- **变量体系**：模块间变量（counters/dynamic thresholds/auth tokens）；{{var.error_count}} 追踪失败数；System variables（run ID/scenario name/team/org metadata）构建动态 flows。→ 判据：跨模块状态用变量，跨场景用自定义变量，元数据用 System variables。
+- **Data Stores 持久存储**：Data structures 创建→Add a record/Search records；用例 caching AI 结果跨执行复用。→ 判据：跨执行缓存/状态用 Data Store，不靠变量（变量不跨执行）。
+- **嵌套聚合**：{{flatten(map(map(map(1.results;"content");"results");"organic"))}} 展开多层数组聚合。→ 判据：分页/多层结果用嵌套 map+flatten 聚合，别写死页码。
+- **提升层**：工作流。
+
+## OpenClaw ClawHub 生态：install 命令家族 + inspect 前置审查 + 来源记录（来源：docs.openclaw.ai clawhub + tools/skills + cli/skills，2026-09-27 实拉，与 §skills.sh 互补——那条管跨工具安装，这条管 ClawHub registry 全流程）
+- **安装命令家族**：openclaw skills install @owner/slug（--version 锁版本/--global 装所有本地 agent）/skills-sh:owner/repo/slug 外部引用/git:owner/repo@ref/./path/to/skill --as my-tool。→ 判据：按来源形态选命令：registry 用 @owner/slug，GitHub 用 git:，本地用路径。
+- **安装前审查**：clawhub inspect <slug> 先看权限再安装；安装自动下载验证 package，下个对话立即生效。→ 判据：第三方 skill 安装前 inspect 权限清单，同意再装。
+- **来源记录**：安装记录 source metadata，后续更新解析同一 registry package。→ 判据：更新走记录来源，不换源重装。
+- **全局安装**：--global 装所有本地 agent 共享，避免逐个 agent 重复装。→ 判据：通用技能 --global，专用技能按 agent 装。
+- **提升层**：可复用 Skill。
