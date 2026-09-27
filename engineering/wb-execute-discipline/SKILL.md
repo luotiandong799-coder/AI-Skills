@@ -6351,3 +6351,34 @@ pm create @n8n/node（declarative/custom 模板）——declarative 风格适合
 - **ToolCallingAgent=JSON/text tool calls** 行业标准格式——两种行动格式并存，按任务选。
 - **执行安全**：LocalPythonExecutor（AST 解析）或 Sandbox；model-agnostic（transformers/Ollama/HF Inference/OpenAI/Anthropic/Bedrock/Azure/LiteLLM 皆可）。
 - **提升层**：工具（轻量 agent 框架选型）。
+## LangFlow 会话分隔纪律：默认 session_id=flow ID · custom ID 隔离 · 三存储面（来源：docs.langflow.org memory + agents + memory-bases + api-monitor 实拉，与 §LangFlow 记忆基互补——那条管"语义记忆怎么存"，本条管"会话怎么切分"）
+- **默认坑**：默认 session_id=flow ID，一个 flow 所有消息存同一 session——多用户共用时上下文互相污染；**多用户/多应用跑同一 flow 必须用 custom session_id**（如 user ID 作 session_id），按会话隔离。
+- **三存储面分工**：Agent 组件内置 chat memory 默认启用（滚动上下文窗口按 session ID 检索近期消息，够用即可）；Message History 组件（messages 表按时间序，需要显式存取/接 Mem0/Redis 时用）；Memory Bases（向量化语义检索，跨会话召回最相关而非最近）。**需求是"最近"还是"最相关"决定选哪个**。
+- **可观测**：monitor API 按 flow_id/session_id/sender/sender_name 过滤、order_by 排序——多会话排障先按 session 隔离再查。
+- **提升层**：工作流（多租户会话治理）。
+
+## Make webhook 响应契约：四字段 · JSON Pass-through 默认 No · 日志保留期（来源：developers.make.com webhooks + apps.make.com gateway + academy webhooks GET + make.com help webhooks 实拉，与 §Make Webhook 安全互补——那条管"认证验签"，本条管"响应与留痕"）
+- **响应模块四字段**：type（json/urlencoded/text，默认 json）/status（HTTP 状态码）/headers（自定义头）/body（响应体）——要返回 JSON 必须 content-type: application/json 头；要 redirect 用 status 3xx+location 头。
+- **JSON Pass-through 默认 No**：webhook 原始 body 默认不进执行记录——第三方数据要透传必须在创建时设 YES；原始 JSON 丢了可从 data store 存一份防丢。
+- **日志保留期**：enterprise 30 天/其他计划 3 天，过保留期删除；Webhook execution log 可看 request（timestamp/URL/method/headers/query/body）+response（status/headers/body）+Parsed items；Get webhook logs API /hooks/{hookId}/logs。
+- **提升层**：工作流（webhook 响应与留痕契约）。
+
+## Claude Code 插件源与安装作用域：marketplace 四源 · --scope 三作用域 · org 内部市场（来源：code.claude.com discover-plugins + plugins/cli-reference + claudemarketplaces.com + support.claude.com 实拉，与 §Anthropic 预建 Skills 互补——那条管"有什么 skills"，本条管"怎么装到哪"）
+- **marketplace 四源**：GitHub repo（owner/repo，#ref pin branch/tag）/任意 host 的 git repo/本地目录或文件/hosted marketplace.json——/plugin marketplace add <source> 下载目录使插件可用。
+- **安装三作用域**：--scope local（gitignored，个人开发默认）/--scope project（提交共享给团队）/--scope user（个人跨项目）——按"这份插件要不要进仓库"选。
+- **组织级分发**：官方 Anthropic marketplace 或自建 org 内部 marketplace，把 marketplace 链接写进 settings.json 每个开发者自动添加。
+- **skill 命令来源**：个人/项目 skill 命令来自目录名；plugin skill 命令来自 frontmatter name；plugin skill 在 change applied 或 restart 时下载。
+- **提升层**：工具（插件安装与分发）。
+
+## OpenClaw Skill Workshop 提案生命周期：propose→inspect→apply · 提案 frontmatter（来源：docs.openclaw.ai tools/creating-skills + tools/skill-workshop 实拉，与 §ClawHub 安装互补——那条管"装别人发布的"，本条管"自己起草走审批"）
+- **提案代替直接写**：agent 起草的技能或需 operator 审查才能上线的技能，用 openclaw skills workshop propose-create --name --description --proposal <file> 走提案——不直接写 SKILL.md。
+- **生命周期**：propose-create → inspect（查看提案状态/内容）→ apply（通过后写 active SKILL.md）；提案文件用 proposal-only frontmatter（name/description/status: proposal/version/date）。
+- **发布前检查**：ClawHub 发布前核对 SKILL.md 完整——name、description 与所有 availability 控制字段齐备。
+- **提升层**：可复用 Skill（技能审批流）。
+
+## ModelScope Skills 生态：83,099 社区技能 · 安装三式 · Ultron 群体智能（来源：modelscope.cn/skills + collections/modelscope/awesome-skills + modelscope.cn/learn Ultron 实拉，与 §ModelScope 微调分工——那条管"模型训练面"，本条管"技能生态面"）
+- **规模与格式**：ModelScope Skills Central 83,099 个社区技能（MS-Agent × Skills 解锁）；技能=Markdown+YAML 头（name 字段调用名/description 字段模型判断何时自动调用），复杂技能带脚本文件。
+- **安装三式**：
+px skills add <collection-url>（通用）/pip install modelscope && modelscope download --collection（Python）/curl install.sh --collection（shell）。
+- **Ultron 群体智能**：ModelScope 开源（2026-05-11）群体智能基础设施——让一群 agent 共享经验/共享技能/共享画像，解决"换会话失忆/同一个坑全队踩"；AIPC Skills 模式=本地 OCR+RAG（localhost 全本地企业文档不出机）。
+- **提升层**：工具（本土技能市场）。
