@@ -3988,3 +3988,36 @@ px -y @lobehub/market-cli skills install <skill> --agent cursor；LobeHub 市场
 - **Streaming 输入模式是推荐态**：持久交互会话、长生命周期进程，能处理用户输入/中断/权限请求/会话管理——比 single mode 更完整；Tool runner SDK 用 stream=True + get_final_message() 累积最终消息。
 - **SSE 桥接**：异步生成器桥 Server-Sent Events（FastAPI + Agent SDK streaming），Web 端免轮询实时收更新。
 - **提升层**：工具。
+
+## 上下文工程四件套：路由/压缩/隔离/记忆 + 存储选型（来源：n8n Blog Context Engineering + Production AI Playbook + Let's Viz memory 教程，2026-09-27 实拉）
+- **四件套分工，不靠一个节点硬扛**：① IF/Switch 节点**动态上下文选择**——按意图/用户类型路由不同检索路径；② Code node/Basic LLM Chain **压缩数据**——总结历史、提取结构化事实后再进上下文窗口；③ **子工作流隔离**——每个子 agent 自己的上下文，只给需要的工具和数据；④ **memory sub-nodes 管历史**——几轮、存哪、何时清。→ 判据：上下文不是"越大越好"，是"该给的给、不该给的别进窗口"。
+- **窗口量化**：Window Buffer Memory 滑窗最近 k 交互——4096 token 上下文留 5-10 轮够用；事务型 agent 记最后 4-6 条消息即可；要回忆旧事实才加向量检索。→ 判据：会话型 agent 先试 5-10 轮，别默认全记。
+- **存储选型表**：Postgres Chat Memory（生产+审计要求，5-20ms）/ Redis Chat Memory（可扩展 chatbot、session store，1-5ms）/ Buffer（原型）；Simple Memory 的 session key 决定会话（两用户不同 key 不同历史），**session key 映射 trigger 的用户/会话 ID，不是 execution ID**。
+- **Dynamic Context Trimmer Node**：AI Agent 节点前显式裁剪对话历史适配 token 上限——放长对话流水线里当闸门。
+- **提升层**：工作流。
+
+## 广播模式并行 + API 幂等三件套（来源：Dify error handling/API async response 设计 + DEV 社区 Dify 实战，2026-09-27 实拉）
+- **广播模式替代线性串行**：一触发器同时激活多个 Agent 并行，等全部结果返回统一聚合——延迟从 O(n) 降到 O(1)。大多数团队默认线性串行（Agent A→B→C）是 Dify 工作流最被误用的点。→ 判据：多个互不依赖的 agent 任务，先问"能不能广播并行"，别默认排队。
+- **工具响应失配是隐性故障源**：自定义工具返回 JSON 字段名与 Agent 预期 schema 不一致（user_id vs userId）时，解析失败**不抛错、转空值传递**——静默污染下游。→ 判据：接外部工具先对齐字段名契约；怀疑"数据怎么空了"时查 schema 匹配。
+- **API 幂等三件套**：Idempotency-Key header（Redis-backed 24h TTL，客户端重试不重复执行）；per-tenant 并发守卫（SQL COUNT 默认 50，超限返回 429）；zombie reaper 定时任务强制失败卡死的执行行。→ 判据：对外暴露工作流 API 时，幂等键+并发上限+卡死清理三样都配齐。
+- **提升层**：工作流。
+
+## 多 agent 四角色 + 两 agent 链质量门（来源：Make Sub-Agents 官方公告 + Keerok 多 agent 编排指南，2026-09-27 实拉）
+- **四角色是分工模板不是数量**：Router agent（分类请求→路由）/ Specialist agents（领域专精：账号/退款/审批准备）/ Validator agent（评审质量、合规、准确度）/ Orchestrator（协调多步收结果）。→ 判据：要拆多 agent 时先对号入座这四角色，缺谁补谁，别从"拆几个"出发。
+- **Sub-Agents 编排**：orchestrator 读入消息→路由给 specialist→边缘 case 转人类交接 agent；财务例：文档检查/发票匹配/审批准备各自 specialist 处理完返回一个清晰结果。
+- **两 agent 链质量门**：Agent1 起草 → Agent2 接收草稿、按你定义的质量 rubric 评估——通过才发，不通过重写。比单遍输出质量显著更高。→ 判据：交付型生成（邮件/文案/代码）默认挂一个 rubric 评审 agent 在出口，成本低收益高。
+- **提升层**：工作流。
+
+## 技能编写五建议 + 两次纠正失败后 /clear（来源：Anthropic Help Center custom skills + Claude Code best practices，2026-09-27 实拉）
+- **五条建议是编写默认值**：① 聚焦——不同工作流分开技能，多个聚焦技能组合优于一个大技能；② 清晰描述——Claude 用 description 决定何时调用，写清楚适用场景；③ 先简单——先 Markdown 基础指令再加复杂脚本，可随时扩展；④ 用示例——skill.md 里放输入/输出示例，展示"成功长什么样"；⑤ 增量测试——边建边测。
+- **字段上限硬约束**：name ≤64 字符（小写数字连字符、无 XML、无保留字）；description ≤1024 字符（非空、无 XML）。
+- **Claude Code 上下文卫生**：不相关任务之间 /clear；**两次纠正仍错时，/clear 并重写更好的初始 prompt**——上下文已被失败的尝试污染，继续纠正在脏上下文里打转。→ 判据：同一错被纠第二次，先清上下文重写提示词，不是第三次硬纠。
+- **提升层**：可复用 Skill。
+
+## skills CLI 免安装直接用 + update 智能跳过（来源：skills.sh CLI Reference + vercel-labs/skills README + @fkbender/skills-cli，2026-09-27 实拉）
+- **免安装直接用**：
+px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 agent（... | claude）——想试一个技能不必先装进库。→ 判据：评估新技能用 use 先试，确认值得再 add。
+- **命令集**：find（交互/关键词，可 --owner 限定）/ add（GitHub 或其他源）/ update（批量更新全部已装）。
+- **update 智能跳过**：tree SHA 比较——技能内容没变就跳过，不白刷版本号；重跑 install 同一命令即完成更新；list 显示安装 scope（全局/项目）。
+- 与 §技能市场安装方法论 的分工：那条管"装什么范围怎么装"，本条管"免安装试用+更新时的跳过逻辑"。
+- **提升层**：工具。
