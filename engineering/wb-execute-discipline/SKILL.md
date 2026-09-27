@@ -5904,3 +5904,40 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **recovery loop**：bundled browser-automation skill 教 agent snapshot/stale-ref/manual-blocker 恢复循环，先 check status/tabs。→ 判据：页面状态失效先 snapshot 重读再动作。
 - **screenshot monitoring**：捕获页面状态视觉证据，比较随时间变化并对异常告警。→ 判据：页面监控用截图对比+告警而非只看 HTML。
 - **提升层**：工具。
+
+## n8n AI Agent 生命周期管理：发布版本 + 审批工具 + 退休流程（来源：blog.n8n.io introducing-n8n-agents 2026-09-25 + 15 best practices 2026-01-08 + production-ai-playbook 2026-06-09 + autonomous-ai-agents 2026-09-10，2026-09-27 实拉，与 §Agents 编排互补——那条管怎么搭，这条管怎么管）
+- **draft/published 双版本**：Agent 编辑进 draft，live 继续跑旧版；publish 后所有调用它的 workflow 一起更新；restore/revert/unpublish 可用。→ 判据：agent 变更走草稿-发布，不直接改线上。
+- **敏感工具审批**：标记 tool 需 approval，agent 暂停等 Approve/Reject 后从断点继续。→ 判据：高风险工具挂审批门，agent 自动暂停等裁决。
+- **退休流程**：Deprecated 文件夹+deactivate 全部 triggers+监控 1-2 周确认不再执行。→ 判据：弃用 agent 三步骤，不直接删。
+- **可靠性控制按生命周期排序**：Model selection（运行前）→Prompt structure→Output schemas（validate 产出）→Tool design→Guardrails（输入前+输出前过滤）→Routing logic（前/中/后）。→ 判据：控制手段按 agent 生命周期顺序布置，缺哪环查哪环。
+- **生产降级三路径**：retry simpler prompt（约束决策空间）→fall back simpler model（窄 scope 单步 LLM）→escalate human review。→ 判据：复杂 agent 链失败按序降级，不重试同复杂度。
+- **长运行 agent**：polling with backoff（增量延迟+cap）；宽自动化=独立可重试多步 pipeline 交 workflow engine；sub-agent 各自 state/schedules/durable fibers。→ 判据：长任务 agent 用退避轮询与子任务隔离状态。
+- **提升层**：工作流。
+
+## LangFlow 限流配额与成本：RATE_LIMIT 变量 + 无原生队列 + token 成本主导（来源：docs.langflow.org api-keys-and-authentication + ciphernutz langflow-vs-n8n 2026-06-17 + checkthat pricing，2026-09-27 实拉，与 §部署安全互补——那条管攻击面，这条管容量与成本）
+- **内置限流变量**：LANGFLOW_RATE_LIMIT_PER_MINUTE=5（单 IP 登录尝试）；LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE=20（单 IP 未认证 public flow 运行，isolated anonymous principal 单独限流）。→ 判据：生产按 IP 设登录与公共 flow 限流，不用默认值当没限制。
+- **无原生分布式队列**：LangFlow 靠外部基础设施/API gateway/custom middleware 处理大规模流量尖峰；n8n 原生并发节流防 429。→ 判据：LangFlow 高并发前先接网关层节流。
+- **token 成本主导**：10k queries/day 时 LLM tokens 主导成本；单个未优化组件（default timezone tool 每次注入 ~4600 tokens）可花 -240/day。→ 判据：查成本先查每次运行注入多少常量 token，砍默认重组件。
+- **MIT 唯一 OSI 许可**：LangFlow 是四平台中唯一 fully OSI-approved unrestricted license。→ 判据：选型时 license 自由度是硬差异。
+- **提升层**：工具。
+
+## Anthropic Batch API：50% 折扣 + 300k 输出上限（来源：platform.claude.com batch-processing，2026-09-27 实拉，与 §tool use 互补——那条管交互调用，这条管批量吞吐）
+- **批量 50% 折扣**：异步批量请求价格减半，适合无实时要求的任务。→ 判据：非实时批量任务走 batch API，不占交互额度。
+- **output-300k beta 头**：output-300k-2026-03-24 将 batch max_tokens 提到 300,000（Opus 5.5/5/4.8/4.7/4.6、Sonnet 5/4.6）。→ 判据：长输出批量请求带 beta 头扩上限。
+- **custom_id 管理**：每个 request 带 custom_id，结果按 id 关联回任务。→ 判据：批量任务每条请求带业务 id，不靠顺序对结果。
+- **提升层**：工具。
+
+## GitHub Actions Cache 权限：cache-mode 最小权限 + scoped tokens（来源：docs.github.com dependency-caching + github.blog cache-mode 2026-09-10 + @actions/cache v2，2026-09-27 实拉，与 §Reusable+Agentic 互补——那条管复用，这条管缓存治理）
+- **cache-mode 四级**：read（只恢复）/write（恢复+保存）/write-only（只保存）/none（禁用），scoped cache tokens 强制执行。→ 判据：job 只读缓存就给 read，不给 save 权限。
+- **缓存存储上限**：用户 repo 最大 10TB；org 由 org 配置决定；提高存储限制减缓驱逐。→ 判据：缓存驱逐频繁先查存储配额是否过低。
+- **setup-\* actions 自动缓存**：包管理器 setup-* actions 自动创建/恢复依赖缓存，无需手写 cache action。→ 判据：依赖缓存优先用 setup-* 自动管理。
+- **@actions/cache v2**：缓存服务重写（2025-02-01 起 rollout，legacy 同日落幕），旧版本 deprecated。→ 判据：用新 cache 服务版本，别用 deprecated 旧版。
+- **多层缓存+cache warming**：Docker 层缓存+构建缓存分层，实测 25-30% build time 减少。→ 判据：慢 CI 先做多层缓存+预热。
+- **提升层**：工作流。
+
+## OpenClaw 多渠道接入：29 channels + built-in/plugin 分层（来源：docs.openclaw.ai features/channels + openclawforge nostr 2026-02-20 + openclawhq 2026-06，2026-09-27 实拉，与 §插件市场互补——那条管插件分发，这条管消息渠道接入）
+- **渠道分层**：built-in（Discord/Google Chat/iMessage/IRC/Signal/Slack/Telegram/WebChat/WhatsApp）+ bundled plugins（Feishu/LINE/Matrix/Mattermost/Teams/Nextcloud/Nostr/QQ Bot/Synology/Tlon/Twitch/Zalo）+ third-party（WeChat）。→ 判据：接渠道先查 built-in，再 bundled，最后 third-party。
+- **单 Gateway 多渠道**：单进程连渠道插件+WebChat+移动节点；单实例可同时响应 WhatsApp customer-facing+Slack internal。→ 判据：多渠道场景跑单 Gateway，不各起实例。
+- **渠道实现差异**：Feishu=WebSocket bot，Google Chat=HTTP webhook，iMessage=native macOS imsg bridge，Teams=Bot Framework。→ 判据：接渠道按官方接入形态实现，不套统一假想。
+- **Nostr 签名链**：relay→WebSocket→event processor→filtering（pubkey/hashtag/event type）→agent reasoning→signed response；crypto 签名需安全管理 private keys。→ 判据：接入签名型渠道先建私钥安全管理。
+- **提升层**：工具。
