@@ -5643,3 +5643,42 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **错误分类**：AccountValidationError（第三方认证失败/凭证变更过期）/RateLimitError（超 API 限流被 block）。→ 判据：认证类错误查凭证，限流类错误等窗口或加重试。
 - **incomplete executions 管理**：ConnectionError/RateLimitError 临时错误可重试（同模块设置重跑）。→ 判据：临时性错误重跑同设置，永久性错误改流程。
 - **提升层**：工作流。
+
+## Anthropic structured outputs 官方路径：JSON outputs + Strict tool use + tool_choice（来源：Anthropic console.anthropic.com·build-with-claude/structured-outputs + prompting best practices，2026-09-27 实拉，与 §结构化输出互补——那条管 Schema 通用做法，这条管 Anthropic 官方两特性）
+- **两个互补特性**：JSON outputs（output_config.format 获取特定 JSON 格式）+Strict tool use（strict: true 保证工具名+输入 schema 校验），可独立或一起用。→ 判据：要 JSON 用 output_config.format，要工具调用校验用 strict: true。
+- **官方结构化路径是 tool use**：tool_choice 强制模型调用特定工具，比纯 prompt JSON 更稳。→ 判据：生产管道结构化输出优先 tool_choice 强制，别只靠提示词。
+- **Prompt 结构顺序**：Task context→Background data（静态内容适合 prompt caching）→Detailed task description→Examples（few-shot XML）→Conversation history→Reminder of guidelines（反幻觉/拒答）→Thinking step-by-step→Output formatting。→ 判据：长 prompt 按此顺序排，静态背景前置供缓存。
+- **Tell what to do 而非 what not to do**："Your response should be composed of smoothly flowing prose paragraphs." 优于 "Do not use markdown"；XML format indicators 用 <tags> 包格式要求。→ 判据：格式控制写正向指令+XML 标签，不写否定句。
+- **Final reminders**：关键约束在结尾重复（Do not guess/Only conclusions supported by evidence）。→ 判据：重要约束首尾各声明一次。
+- **提升层**：模型。
+
+## n8n 触发器编排与幂等：多规则 schedule + webhook 生产 URL + 幂等表 + Error Trigger（来源：n8n docs Schedule Trigger + n8n.io workflows 多租户提醒/渠道提醒模板 + CSDN 触发器详解，2026-09-27 实拉，与 §Error Workflow 互补——那条管失败路由，这条管触发器侧编排）
+- **Schedule Trigger 多规则**：Seconds/Minutes/Hours/Days/Weeks/Months/Custom Cron 间隔，一个节点可加多条 Trigger Rules 跑不同 schedule；注意指定系统时区或 TZ 环境变量。→ 判据：不同频率用多规则单节点，别复制多个触发器。
+- **Webhook Trigger 生产/测试 URL 分开**：外部 HTTP GET/POST 触发，Production URL 用于生产对接。→ 判据：开发期用测试 URL，正式对接切 Production URL。
+- **幂等表防重发**：多租户提醒场景 schedule 每分钟查临近 deadline events，reminders_sent 表记录已发送，同提醒永不重发。→ 判据：定时扫描类流程配已处理标记表，防窗口重叠重复执行。
+- **Error Trigger 排障渠道**：下游 API 失败时 Error Trigger 触发发排障 alert 到同渠道带具体修复指令。→ 判据：错误通知发到业务同渠道+修复指引，不是另开无人看的地方。
+- **多通道并行**：Multi-channel reminder（Telegram/Email/Slack）+Split Items 逐条并行处理+Channel Router 分流。→ 判据：多渠道通知用 Split+Router 编排，逐条处理防冲突。
+- **提升层**：工作流。
+
+## Activepieces HITL 审批：To-Do 暂停 + 审批人免 seat + role-based routing（来源：Activepieces resources·automation-for-internal-approvals/glossary/human-in-the-loop-ai/product/ai-agent-builder，2026-09-27 实拉，与 §waitpoint 幂等互补——那条管等待点幂等，这条管人工审批编排）
+- **To-Do 审批步**：暂停自动化要求人审核/批准 AI 输出，决策点人 approve/modify/reject，捕获的输入传给下游。→ 判据：不可逆/高影响动作前插审批步，"Nothing moves until someone signs off"。
+- **审批人无需账号无需 seat**：外部审批人点链接即可决策，不用给席位。→ 判据：跨团队审批用链接式决策，别为审批人建账号。
+- **Role-based routing**：条件逻辑+Tables 查找映射请求类型/成本中心/owner 到正确审批人，分配任务+升级延迟。→ 判据：多级审批按角色路由+超时升级，不手动找审批人。
+- **Execution Logs**：step-level logs 记录 inputs/outputs/timing/failure points。→ 判据：审批流程全程留执行日志，事后可查每一步。
+- **Agent guardrails**：定义 tool access 通过特定 workflows+高影响动作前加 approval——agent 提议并准备变更，人批准后才执行。→ 判据：agent 自动化里不可逆动作走"提议-批准-执行"，与审批策略即代码互补。
+- **提升层**：工作流。
+
+## Make LLM 输出三步验证：Filter 非空 + 规范化 + confidence 阈值（来源：Make how-to-guides/llm-integration，2026-09-27 实拉，与 §LLM 输出质检互补——那条管通用质检，这条管 Make 具体三步）
+- **三步验证链**：Filter 检查 category 字段非空且匹配定义列表→Set Variable 规范化 casing+trim whitespace→Filter 检查 confidence 分数 >0.7 阈值。→ 判据：LLM 输出下游映射前过"非空→规范→置信阈值"三步。
+- **AI 输出概率非确定**：AI 模板需 prompt design+JSON output parsing+error handling。→ 判据：AI 自动化模板把输出解析和错误处理当一等公民。
+- **验证是保险不是 overhead**：验证模块消耗 credits，但错分类 bundle 路由到错误系统清理成本更高。→ 判据：花小钱验证，别让错分类进下游系统。
+- **蓝图复用**：场景可保存 blueprint（模块+设置+mapped values）跨组织分享/备份/复用。→ 判据：可复用场景存 blueprint，别从零重建。
+- **提升层**：工作流。
+
+## OpenClaw connectors 集成面：200+ 集成 + MCP server/client 双模式 + 本地 iMessage 路由（来源：docs.openclaw.ai + openclawforge + launchmyopenclaw + openclaw.pt v2026.6.5，2026-09-27 实拉，与 §沙箱信任边界互补——那条管隔离，这条管连接）
+- **200+ 工具集成**：内置 channels WhatsApp/Telegram/Discord/Slack/iMessage/Signal+15+，外部 Zapier/email/calendar/CRM/web services 经 openclaw hub 免编码连接。→ 判据：接入平台先查 hub 现成连接器，免编码优先。
+- **MCP 双模式**（v2026.6.5）：既作 server 暴露工具给其他 agent，也作 client 消费外部 MCP servers；MCP 连 500+ 工具。→ 判据：跨 agent 共享工具用 MCP server 模式，消费外部工具用 client 模式。
+- **iMessage 本地路由**：macOS 本地 iMessage 数据库接 OpenClaw，蓝气泡绕过 Apple 公共 API 限制（本地 relay）。→ 判据：受限平台用本地 relay 通道，不依赖公共 API。
+- **邮件即自动化**：bundled imap trigger 路由认证入站邮件到隔离会话，用 reader agent 工具策略。→ 判据：入站邮件按工具策略进隔离会话处理。
+- **Gateway 可靠性**：connection pooling+circuit breaker（v2026.6.5 beta）。→ 判据：多平台连接用连接池+熔断，防单点拖垮。
+- **提升层**：工具。
