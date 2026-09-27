@@ -6015,3 +6015,43 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **版本历史**：每 scenario 自动 version history，一键 revert（Scenario←History←version←Restore）。→ 判据：改坏了直接回滚历史版本，不手工重搭。
 - **Team templates 与 Environment Variables**：Team templates 只给同事分享保持内部逻辑一致；Environment Variables 跨 scenarios 共享。→ 判据：跨场景公共配置用环境变量，团队分享走 team template。
 - **提升层**：工作流。
+## AI Agent 可观测性四件套：原生 trace · 默认 audit trail · Guardrails 违规计数 · 调试三级（来源：n8n 官方 blog《Building AI Agent Observability》《LLM Observability》《AI Audit Trail》+ docs.n8n.io release notes，2026-08/06/07 实拉）
+- **execution trace 是默认属性，不是外挂系统**：n8n 每 execution step 原生记录——agent 调了哪些工具、每节点 input/output、agent 如何走完 workflow；AI audit trail 每 run 自动生成结构化记录（workflow ID/run ID/node-level inputs/outputs/timestamps/error states）**无需额外 instrumentation**；self-host 时敏感 prompt 不离开你的环境。→ 判据：**审计是默认属性**——需要专门搭审计系统的平台，审计必然漏一块。
+- **OpenTelemetry 原生支持，无 sidecar**：workflow executions 直接发射 OTel traces，现有 Jaeger/Datadog/Grafana Tempo/Honeycomb/New Relic/Splunk 直接可见；每 execution 一个 root trace span（workflow ID/name/execution ID）；不需要 sidecar/custom exporter/timing hacks。→ 判据：**接入面 = 你已有的可观测后端**，换 OTel 后端不用改 workflow 本体。
+- **违规与升级都要量化**：Guardrails 节点把违规路由到独立 workflow 分支，按 violation type（jailbreak attempt/PII/blocked content）递增 Data Table 计数，长期查 pattern；HITL 升级率 = 打标的 escalation 分支触发数 ÷ 总执行数百分比。→ 判据：**安全指标不是"有没有违规"，是违规类型分布与升级率**——没有计数就没有趋势。
+- **调试三级映射**：execution-level metadata（总览哪步错）→ step-by-step trace inspection（单步重执行/断点查 input output）→ model-level config（查模型配置/指令跟随）。→ 判据：**先元数据定位，再 trace 细查，最后才动模型配置**——跳级调试是在猜。
+- **LangFuse 模板**：按 execution 分组 trace-create，stable id = trace-<executionId>，session-<workflowId> 分组——execution ID 关联可跨系统追溯。
+- **提升层**：工作流（可观测性/调试）。
+
+## Dify 高并发与成本治理五则：Redis 读写分离 · 并行分支 · 节点级 token 监控（来源：阿里云《Beyond Demo-Grade Architecture for Dify》2026-06 + dify-hosting《What's New in Dify 2026》2026-03 + CSDN《Dify 工作流性能优化指南》2026-09 实拉）
+- **单 Redis 节点是 200+ QPS 的吞吐瓶颈**：默认架构所有 session 读写集中单节点，瓶颈不是内存不足，而是网络 I/O + 单线程命令处理扛不住并发连接；解法是 Cluster 改造读写分离。→ 判据：**压测先看共享状态层的连接模型**——Redis/MQ 这类单线程命令处理的服务，QPS 高时先怀疑它们而不是模型。
+- **执行耗时过长的五大原因**：任务调度阻塞（异步任务队列 Celery+Redis/RabbitMQ 处理不足→任务等待）、Celery worker 满载、消息中间件连接数达上限、队列长度与消费者负载失衡。→ 判据：**先监控队列长度和消费者负载，再动 workflow 本体**——很多"workflow 慢"其实是调度层慢。
+- **并行分支是 2026 引擎的最大提速项**：不同 workflow 路径同时执行而非顺序，多个独立 API/LLM 调用场景延迟大降；条件逻辑升级（更多比较运算符+嵌套条件）；loop/iteration 节点处理文档/API 结果列表。→ 判据：**独立步骤的并行是白捡的延迟**——串行只是默认，不是要求。
+- **按节点监控 token，最贵节点换小模型**：Dify 记录每节点 token 计数，识别最贵节点，分类任务换小模型（GPT-4o Mini）；生产 workflow **固定模型版本**防漂移。→ 判据：**成本优化先在节点粒度找大头**——全局换模型不如换掉最贵的那一两个节点。
+- **workflow 发布为工具**（v0.6.9）：publish workflow as tool + iteration + parameter extractor，批量处理（如自动批处理邮件）不再手写。
+- **提升层**：工作流（性能/成本治理）。
+
+## Anthropic Server-side Compaction 工程面：beta 头 · 触发时机 · server-side tools 的 token 误算坑（来源：Anthropic 官方 docs.anthropic.com/en/docs/build-with-claude/compaction + context-editing + agentic-ai.readthedocs ContextEngineering/anthropic 章节，2026-03/09 实拉）
+- **Compaction 是服务端自动上下文管理**：接近 context window limit 时自动把旧上下文总结成简洁摘要替换；不只延长度，还保质量——conversation 越长 response quality 越降，压缩恢复质量。→ 判据：**长对话的默认策略是 server-side compaction，不是客户端自己写摘要代码**。
+- **启用方式**：beta header compact-2026-01-12；Messages API 的 context_management.edits 加策略 compact_20260112；Bedrock 上 Converse API 不支持、InvokeModel 支持。→ 判据：**启用参数是 API 层的显式选择**，不是模型自动行为。
+- **整 transcript 扁平化**：compaction 把 user/assistant/tool calls/tool results/prior compaction blocks 全部 flatten 进一个 summary（cookbook research agent 实测：180K 触发、turn 4 生效、摘要 ~2,783 token）——**压缩后的对话是"摘要+新内容"，旧细节不可恢复**，重要指令要重声明。
+- **坑：server-side tools（web search/web fetch）会让 SDK 算错 token**：search 后 API response 可能显示 input_tokens: 63000, cache_read_input_tokens: ...，SDK 按错值算导致 compaction 时机错误（过早/过晚）。→ 判据：**用了 server-side tools 就别信 SDK 的 usage 计数**，触发时机要自己盯。
+- **Claude Code Auto Compact 演进**：2025 年底触发提前到 64–75% 用量避免压缩失败；2.0.64（2026-02）压缩即时化。→ 判据：**压缩失败比压缩早更贵**——留出失败重试的余量。
+- **提升层**：模型（上下文管理）/工作流。
+
+## GitHub Copilot Agent Skills 规格：三目录 · frontmatter 白名单 · 内建 agents 分工（来源：docs.github.com/concepts/agents/about-agent-skills + learn.microsoft.com/visualstudio/ide/copilot-agent-skills + github.blog《How to maximize GitHub Copilot's agentic capabilities》，2026-04/05/09 实拉）
+- **Agent Skills = 可复用指令包**：教 Copilot agents 特定任务（跑构建流水线/生成样板代码/遵循团队编码规范），一次定义处处一致。→ 判据：**skills 是"行为的可复用单元"**，与 Claude/Anthropic Skills 同一物种、不同分发渠道。
+- **三目录 + 个人目录**：project skills 存 .github/skills、.claude/skills 或 .agents/skills；personal skills 存 home 目录跨项目共享。→ 判据：**放哪决定共享范围**——repo 内=项目级，home=个人全局。
+- **agent mode 自动发现并激活**：Copilot 从 repo+user profile 自动发现 skills，agent 自己判断相关性并激活，激活时在 chat 显示（透明）。→ 判据：**发现是自动的，激活是 agent 的决策**——skill 描述写不清就永远不被激活。
+- **frontmatter 三属性**：compatibility（环境要求，如目标产品/系统包）、metadata（任意 key-value）、llowed-tools（空格分隔的 pre-approved 工具白名单，skill 只能用它）。→ 判据：**allowed-tools 是 skill 级最小权限**——不给白名单的 skill 不该乱调工具。
+- **内建 agents 分工**：@debugger（用 call stacks/variable state 系统化诊断，不止读报错）、@modernize（.NET/C++ 框架与依赖升级，感知项目图、标记 breaking changes）、Plan agent（只读探索代码库→产出 implementation plan→hand off 给 agent mode 执行）。→ 判据：**计划与执行分离到两个 agent**——Plan agent 只读，执行交给 agent mode。
+- **计费**：Copilot harness 的 agents 按 usage 计费，构建/测试/评估 agents 都消耗 Copilot Credits。
+- **提升层**：可复用 Skill（分发/规格/触发）。
+
+## Make AI Sub-Agents：scenario 内 agent 委派 · context 过载拆分的信号（来源：Make 官方 community《Feature Spotlight: Make AI Sub-Agents》2026-09-01 + help.make.com AI Agent docs + email triage 指南 2026-05 实拉）
+- **Sub-Agents 解决单 agent 过载**：AI workflows 长大（更多决策/工具/边界情况）后把一切塞进一个 Make AI Agent 会崩——too much context、too many instructions、出错太难 debug；Sub-Agents 让 agent 把任务委派给其他 agent，scenario 内实现 agent orchestration。→ 判据：**"一个 agent 装所有"的崩溃信号是上下文与指令过载**——出现就拆，不是等它真崩。
+- **Agent 模块配置一次，任意 scenario 引用**：Make AI Agents > Run an agent 模块配置好后可在任何 scenario 引用同一 agent（邮件 triage 例：system prompt 是 triage 逻辑所在，用被吸收者的口吻写，Role line 开头）。→ 判据：**agent 是命名实体不是流程内联代码**——配置一次、多处引用、可 chattable。
+- **MCP tools 扩展工具面**：Add MCP 按钮接入非标准工具，agent 统一决策选对的 mcp/module/scenario 工具——**工具选择权交给 agent，不是写死**。
+- **Webhook-triggered AI agent**：custom webhook module 收第三方数据→agent 处理→回复 webhook（双向），适合外部服务喂数据。
+- **生产可观测**：要绝对清晰"什么数据进了 agent、什么逻辑应用了、什么推给下游"——visual debugging + multi-model routing 是 Make 生产化支撑。
+- **提升层**：工作流（agent 编排）。
