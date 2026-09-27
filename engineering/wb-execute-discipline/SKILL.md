@@ -3911,3 +3911,40 @@ px -y @lobehub/market-cli skills install <skill> --agent cursor；LobeHub 市场
 - **self-contained + one job**：脚本/模板/示例随步骤放文件夹；一个技能一件事（不是三技能 trench coat）；文件多→token 多，无关/死文件增加上下文窗口。
 - 判据：**新技能先跑五步流程；确定性逻辑落脚本；素材用真实 artifacts 不用通用文章；测试 description 激活回环**。
 - 提升层：可复用 Skill。
+
+## RAG 检索三模式选型 + 语义/关键词双权重 + Multi-path 并发（来源：Dify Knowledge Retrieval 官方文档 + DeepWiki Knowledge Base and RAG System，2026-09-27 实拉）
+- **检索三模式按查询选型**：向量检索（自然语言/复杂主题）；全文检索（精确术语：产品码/名称/ID，快且可预测）；混合检索（语义+全文+reranker，最佳准确率但慢且需 rerank 模型）。
+- **双权重自定义比例**：Weighted Score 语义权重/关键词权重（0-1）；semantic=1 纯向量、keyword=1 纯关键词，自定义比例平衡两者——仅 High Quality 索引模式可用。
+- **Multi-path Retrieval**：同时查询 Context 里所有知识库→collect 全部对齐内容→Rerank 策略选最合适——多库并发更全面准确。
+- **K 值调优纪律**：K 保守开始再升（太大噪声混入、太小漏召回）；阈值不高不低；必要 rerank"上澄み"。
+- 判据：**查询是精确术语走全文、自然语言复杂走向量、都要就混合+rerank；多库场景用 Multi-path 并发再 rerank**。
+- 提升层：工作流。
+
+## 记忆是画布一等节点 + ReAct 已内建原生 tool calling（来源：n8n AI Agent Memory 官方博客 + ReAct Agent 架构演进，2026-09-27 实拉）
+- **记忆画布化**：记忆是工作流可配置部分——AI Agent 节点连接 memory sub-nodes 定义对话历史存储/持久时长/何时检索或清除；每个记忆节点设置与 agent 逻辑同画布可见（BufferWindow/Data Table 持久/Postgres）。
+- **ReAct 演进判断**：现代 LLM（GPT-5/Claude/Gemini）原生 tool calling 处理推理-行动循环，显式 ReAct prompting 大多不再需要；Tools Agent 在此基础上加持久记忆/可配置 max iterations/全执行可追溯——ReAct 行为（think-act-observe-repeat）免手动 prompting。
+- **Multi-Agent 委派**：AI Agent Tool 把一个 agent 配成另一个 agent 的工具（orchestrator 有几个工具其中一个是子 agent）。
+- 判据：**搭 agent 先问"记忆放哪层"（滑窗/持久/检索）；新模型别再手写 ReAct prompt；多 agent 用工具委派不用硬编码 handoff**。
+- 提升层：工作流。
+
+## 模型价目矩阵 + 缓存/Batch 成本结构（来源：Anthropic/Claude Platform pricing 官方页 + Opus 5.5 发布，2026-09-27 实拉）
+- **价目矩阵**：Sonnet 5 /（introductory，9/1 起 /）；Opus 5.5 /（比 Opus 5 / 便宜——新一代旗舰降价）；Fable 5.1 / 旗舰；Haiku 4.5 /。
+- **缓存价格分层**：cache reads .20-0.50 vs 普通输入 -5——**缓存读比新输入便宜约 20 倍**；5m cache writes/1h cache writes 递增；高频复用前缀必须走 prompt caching。
+- **Batch API 半价**：输入输出 50% 折扣；可容忍延迟的批量任务走 Batch 不走路。
+- 判据：**选型先看价目矩阵（旗舰换代常降价）；同前缀重复注入走缓存；非实时批量走 Batch 半价**。
+- 提升层：模型。
+
+## ClawHub 安装源五形态 + 发布安全元数据（来源：docs.openclaw.ai ClawHub how-it-works + CLI skills，2026-09-27 实拉）
+- **安装源五形态**：@owner/slug（ClawHub registry）、skills-sh:owner/repo/slug、git:owner/repo@main、./path/to/skill --as custom-name（本地改名装）、--force（覆盖重装）——按信任与可更新性选源。
+- **双 CLI 分工**：openclaw（消费侧 search/install/update）vs clawhub CLI（发布侧 auth/publishing/delete-undelete）——装和发是两套命令。
+- **安全元数据**：包元数据含最小 Gateway 版本/目标主机/环境要求/工件加密摘要——装插件先看这四字段。
+- **记录 install source metadata**：更新解析同一 registry 包，不漂移。
+- 判据：**装技能按"要能更新→registry 源；要钉版本→git@commit；要本地改造→path"；插件发布带最小版本+加密摘要**。
+- 提升层：工具。
+
+## 万能 skill 自创建 + zip 路径归一化跨平台（来源：阿里云 JVS Claw 发布 + Cloud Agents CN 更新日志，2026-09-27 实拉）
+- **万能 skill 自创建**：JVS Claw 提供自进化"万能 skill"——用户吩咐"如果没有这个技能，请搜索并创建"，智能体自行搜索最合适 skill 完成任务——**把"找技能"做成可执行动作**，不给就搜建。
+- **zip 路径归一化**：Skills 上传 zip 时自动归一化 Windows 反斜杠路径——Mac/Windows 跨平台行为一致（打包技能用 / 路径或依赖平台归一化）。
+- **并发资源锁**：并发添加资源走 FOR UPDATE 锁杜绝相互覆盖；卡死会话自动恢复。
+- 判据：**技能缺失时把"搜索并创建"作为显式 fallback 动作；技能包路径跨平台归一化**。
+- 提升层：可复用 Skill。
