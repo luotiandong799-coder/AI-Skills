@@ -6516,3 +6516,35 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **ZIP 导入根结构**：ZIP 根必须是 skill 目录本身（my-skill/ + resources/ 同级）；**文件直接放 ZIP 根=不可导入**。
 - **级别优先级**：enterprise > personal > project > plugin——同名 skill 高优先级覆盖低优先级，别在低层重复定义同名。
 - **提升层**：可复用 Skill（打包与目录规范）。
+## n8n agent 窗口记忆截断陷阱与 session key 纪律：窗口外完全遗忘 · tool_calls 切半 payload 非法 · key 别用静态值（来源：n8n workflows 16052/5819/17520 + community 303653/303085 + blog.n8n.io Production AI Playbook 实拉，与 §n8n 向量记忆互补——那条管"长期检索管线"，本条管"窗口缓冲记忆的坑"）
+- **窗口缓冲=最后 N 条，窗口外完全遗忘**：K 可配，适合单 agent 会话/客服（5-10 轮足够）；一旦滑出窗口 agent 彻底忘掉——需要跨会话语义保留的走向量记忆。
+- **截断陷阱**：窗口切掉 assistant 的 tool_calls 消息但留下 tool response 在窗口顶部→发给 OpenAI 的 payload 非法（"role tool must follow tool_calls"）。修法：K 够大不截活跃 tool-call 对，或用偶数消息数窗口。
+- **session key 纪律**：key=真实会话标识（如 Teams conversation ID），别用静态值——静态 key 会让所有用户共享同一份上下文（用户互看对方历史）。
+- **判据**：给窗口 K 时先问"会不会截到 tool-call 对"；设 session key 时问"不同用户会不会串上下文"。
+- **提升层**：工作流（窗口记忆配置纪律）。
+
+## Make 调度四类型与轮询成本量化+延迟去重：on-demand 配 webhook 队列 · 每分钟轮询≈43,200 credits/月 · delay 前写 pending 防重（来源：help.make.com schedule-a-scenario + use-apify Make API + make.com email-sorting guide + Dre Dyson 1-month delay 实拉，与 §Make 并发治理互补——那条管"并发与限速"，本条管"调度形态与成本"）
+- **调度四类型**：indefinitely（每 N 秒）/ on-demand（仅 API 触发）/ once（指定时间一次）/ immediately（尽快）。
+- **on-demand+webhook 队列**：webhook 到达→立即确认事件+信息存队列→你用 Make API/Run Once 决定何时拉取——事件不丢、执行时间你定。
+- **轮询成本是量化题**：每分钟轮询≈43,200 credits/月（还没处理一条邮件）；15 分钟=2,880。间隔选择=成本与延迟的平衡点，VIP 通道用 webhook 免轮询。
+- **延迟去重模式**（长 delay 防重复动作）：delay 前写 Data Store 记录 status="pending"→delay 后读记录，已被其他场景改为其他状态→跳过并记原因——多路径可能影响同一记录时必用。
+- **提升层**：工作流（调度与成本量化）。
+
+## Pipedream deploy/draft 模型与环境分离：deploy 后不可回滚 · 完整历史只在 GitHub Sync · dev/prod 凭证隔离（来源：docs-proxy.pipedream.net migrate-from-v1 + pipedream.com connect/environments + cli/reference + glossary 实拉，与 §Pipedream GitHub Sync 互补——那条管"怎么同步仓库"，本条管"版本与环境的形态"）
+- **每 workflow=live deployed 版本+editable draft**：discard draft 回滚到上次 deployed；**deploy 之后无自动回滚**——上线前把 draft 阶段当实验区，deploy 当发布。
+- **完整版本历史只在 GitHub Sync**：Pipedream 无原生 per-step 版本历史/diff UI，要 git 级历史/评审/回滚就开 GitHub Sync（changelog+merge→production→deploy）。
+- **Connect 两环境**：development/production，connected accounts 与 credentials 各自隔离；dev 全功能免费，发布时 pd publish --connect-environment 指定目标环境。
+- **提升层**：工具（部署纪律）。
+
+## Claude Code Tasks 生命周期与任务分组：todo 四态 · TodoWrite 高频是硬要求 · CLAUDE_CODE_TASK_LIST_ID 分组（来源：code.claude.com agent-sdk todo-tracking + FlorianBruniaux claude-code-ultimate-guide task-management + claudearchitect tasks-vs-todos 实拉，与 §Claude Code memory 四层互补——那条管"记忆层级"，本条管"任务怎么跟踪"）
+- **todo 生命周期四态**：Created(pending)→Activated(in_progress)→Completed→Removed——agent 端到端可见，用户可实时跟进度。
+- **TodoWrite/TodoRead 高频使用是系统提示硬要求**：不做计划跟踪会忘掉重要任务；用 todo 拆解大任务、给用户可见性。
+- **任务分组**：CLAUDE_CODE_TASK_LIST_ID 环境变量指定任务列表，支持 parent/child 任务+依赖声明（hash 依赖 auth）。
+- **提升层**：工作流（agent 任务跟踪纪律）。
+
+## GitHub Actions 复用选型：reusable 复用整 workflow · composite 合成 step 组 · $/ 自仓库语法免 checkout（来源：docs.github.com reusing-workflow-configurations + reuse-workflows + metadata-syntax + github.blog self-repository syntax 2026-07-30 实拉，与 §GitHub Actions 缓存互补——那条管"依赖缓存"，本条管"工作流怎么去重"）
+- **选型判据**：要复用"整 workflow（多 job 多 step）"→ reusable workflow（on.workflow_call 定义 inputs/outputs/secrets 映射）；要复用"一组 step 作为单个 job step"→ composite action（runs.using: 'composite'）。
+- **$/ 自仓库语法**（2026-07-30）：uses: $/ 开头指向自己仓库在运行中精确 commit，无需 checkout——同仓库 action/workflow 引用首选。
+- **YAML anchors**：复用整段 job 配置用 anchor（&base_job + *base_job），配置级去重不占 action 抽象。
+- **安全 roadmap**：scoped secrets & reusable workflow inheritance 进入公开预览→GA；给可复用 workflow 传 secrets 时按最小面映射。
+- **提升层**：工作流（CI 复用选型）。
