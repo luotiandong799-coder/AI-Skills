@@ -6250,3 +6250,38 @@ pm create @n8n/node（declarative/custom 模板）——declarative 风格适合
 - **Claude Code Dynamic Workflows**（2026-05-28 GA）：Claude 动态写 orchestration scripts 跑 tens-hundreds parallel subagents 单 session、交付前自查——**harness for every task**：按任务现场写自己的 harness，默认面向 coding、资料类需 custom harness；Routines（2026-04-14）：一次配置（prompt+repo+connectors）按 schedule/API/GitHub event 三触发运行在 web infra（不依赖本地开着）。
 - **serverless 执行形态参照**（Pipedream）：无 native agent primitives（no memory abstraction/no orchestration node）、execution cap 750s、1 credit≈30s@256MB——**形态对比时先问：这个执行器给 agent 什么原语**，没有原语就要自己在 workflow 层补。
 - **提升层**：工作流（session 治理/执行形态）。
+## n8n 版本管理增量：命名版本防修剪 · Restore 不影响生产 · 快照锁定（来源：docs.n8n.io view-change-history + save-and-publish-workflows + blog.n8n.io Autosave 2026-01 + n8n workflow 14925 + Backup Manager v1.6.0 2026-09 实拉，与 §Activepieces 版本管理互补——那条管"step/flow 版本纪律"，本条管"n8n 平台内回退与自托管备份"）
+- **版本历史四操作**：Unpublish workflow（移出生产）/Restore previous version（恢复工作但不影响生产执行）/Publish another version/**Name a version to protect it from pruning**——命名版本防修剪，关键版本必须命名。
+- **Autosave 滚动回退**：生产引入 bug→Version History 面板→旧版本 three-dots→Publish this version→生产瞬间回退——**回退与重新发布是一步**，不是 undo 再改。
+- **MCP 判 draft/published 差异**：workflow.activeVersion.sameAsDraft boolean——false 时 published 图与 draft 不同，读 MCP 返回的 published 图字段而不是 top-level nodes。
+- **自托管 free 无版本历史**→GitHub 同步 workflow（git commit 版本控制，全历史+回滚+审计）；Backup Manager Surgical Snapshots：lock snapshot 防 retention 删除/download zip 归档/cloud sync S3/GDrive/OneDrive。
+- **提升层**：工作流（版本治理）。
+
+## Activepieces 重试策略矩阵：步骤级重试开关 · 运行级两种续跑 · 并发排队退避（来源：activepieces.com mcp/tools + resources api-workflow-automation + glossary auto-retry + admin-guide manage-concurrency 2026 实拉，与 §Make 错误处理互补——那条管"错误处理策略"，本条管"重试的开关粒度与续跑语义"）
+- **重试三级**：平台 auto-retry 内置（transient errors 自动重试不停流程）+步骤级 retryOnFailure boolean（CODE/PIECE steps，默认 false 需显式开）+运行级 ap_retry_run 手动重跑失败 run。
+- **ap_retry_run 两策略**：FROM_FAILED_STEP（从失败步骤恢复、保留前面步骤输出）/ON_LATEST_VERSION（用当前 published 版本重跑整个 flow）——**续跑与重跑是两种语义**，恢复用前者、版本已变用后者。
+- **并发排队退避**：项目达并发上限时新 runs 不丢弃→排队+exponential backoff→槽空自动启动——**限流不丢任务**。
+- **幂等三件套**：idempotency keys+correlation IDs 存 Tables 检测重复短路径短路；分支+backoff 让 transient 重试不重复处理；失败进 review queue HITL。
+- **Step-level run logs**：每步记录 inputs/outputs/timings/errors+replay runs——重试后能回放看失败上下文。
+- **提升层**：工作流（重试治理）。
+
+## Claude Code hooks 决策控制增量：PreToolUse 可改写参数 · hooks 不能跳过 · Function Hooks 中间件（来源：docs.anthropic.com claude-code/hooks + code.claude.com agent-sdk/hooks + claude.com steering blog 2026-06 + GitHub #91870 Function Hooks proposal 2026-09 实拉，与 §hooks 实现选型互补——那条管"类型选型与 exit 语义"，本条管"执行前决策控制与中间件演进"）
+- **PreToolUse 是安全第一 hook**：decision control allow/deny/ask 三态；接收 tool_name/tool_input/tool_use_id；**可改写 tool args 再放行**（rewrite arguments before execution）；非零 exit code 完全阻塞工具调用。
+- **PostToolUse/PostToolUseFailure**：工具成功后记录审计（matcher Edit/Write/WebFetch/WebSearch log 全部文件变更）；工具失败后处理/记录错误——**成功与失败各有钩子**，别只挂成功侧。
+- **hooks vs instructions 的本质区别**：CLAUDE.md 指令模型"读且通常遵循"，hooks 是 pipeline machinery **模型不能跳过**——"when you need something to happen every single time without exception, that's what hooks are for"。→ 判据：**必须每次都发生的事用 hook，可以偶尔不遵守的用 instructions**。
+- **Function Hooks（proposal）**：in-process TypeScript modules 包裹 Claude Code 行为（Express-style），shared $ object+next() continuation 中间件组合——比 shell hooks 更强组合性，跟踪演进。
+- **提升层**：工作流（执行前门控）。
+
+## Make 性能优化与监控：聚合器+bulk 省 70% 操作 · Router 并行省 50% 时间 · 监控四指标（来源：keerok.tech Make 高级教程 2026-05 + Make Waves '25 发布 + aidaum 场景优化 2026-04 实拉，与 §Make 错误处理互补——那条管"失败怎么兜底"，本条管"场景怎么省钱提速"）
+- **两个量化杠杆**：操作消耗过多→聚合器+bulk calls（实测 -70% 操作）；场景慢（2 分钟级）→Router 并行替代顺序（实测 -50% 时间）——**先量化再动手**：知道当前操作数/时长才知道该上哪个。
+- **监控 dashboard 四指标**：每 scenario 操作消耗（对照限额）/success-error rates（识别退化场景）/平均执行时间（性能回归检测）/items processed（业务影响）——自动化更新到 Sheets/Airtable。
+- **精简步骤**：移除 <5% success contribution 的步骤；错误率目标至少降 15%。
+- **If-Else+Merge 模块**（2026 初 all plans）：原生条件分支+分支汇聚，替代嵌套复杂逻辑。
+- **提升层**：工作流（成本与性能）。
+
+## OpenClaw 权限模式与信任边界：ask/auto/full 三模式 · Node pairing 门控 · deny-list 不可禁用（来源：docs.openclaw.ai tools/permission-modes + exec-approvals + gateway/pairing 2026.3.31+ + start/why-openclaw trust-boundary + 安全指南 Docker hardened 实拉，与 §ExecApprovals 生命周期互补——那条管"审批生命周期"，本条管"模式语义与信任边界"）
+- **permission-modes 三模式表**：ask（allowlist 匹配+不匹配时询问——新命令人审）/auto（allowlist 匹配+auto-review——编码 session 受保护访问）/full（无 prompt 执行——信任 host/session 过审批门）。exec-approvals 对应 deny/allowlist/full；Gateway/节点默认 full。
+- **Node pairing 门控（2026.3.31+ breaking）**：node commands 禁用直到 node pairing 批准——device pairing 单独不够；首次连接自动请求 pairing，未批准前 pending node commands filtered；SSH BatchMode+StrictHostKeyChecking=yes 验证机器 ownership。
+- **信任边界**：Gateway=control plane+policy surface（auth/tool policy/routing），Node=remote execution surface；Gateway 默认绑定 loopback，拒绝非 loopback bind 无认证路径；**credential/system 路径 deny-list 不能禁用**——dangerouslyAllowExternalBindSources 只放宽 allowed-roots。
+- **容器硬化规格**：--user 1000:1000 --cap-drop=ALL --read-only --security-opt no-new-privileges/seccomp/apparmor。
+- **提升层**：工作流（权限治理）。
