@@ -5531,3 +5531,40 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **ant apply（声明式）**：v1.30.0 从仓库文件创建/更新 agents/environments/skills/memory stores/deployments。→ 判据：基础设施声明式管理，配置文件即状态。
 - **routines 三例**：PR merged→port change 到平行 SDK+开 PR；PR opened→跑团队 checklist 安全/性能留 inline comments；docs feedback→开 session 草稿修改。→ 判据：重复工程动作固化成 routine，事件触发自动执行。
 - **提升层**：工作流。
+
+## Dify 应用发布与模板市场：Chatflow/Workflow + 自动 API/MCP + 版本管理（来源：Dify 应用发布/模板市场面，2026-09-27 实拉，与 §模型 Provider 互补——那条管模型，这条管交付）
+- **两类应用**：Chatflow（多轮对话）/Workflow（自动化）；每个 workflow 自动生成 link/API/MCP server。→ 判据：交付形态自动生成，网页/API/MCP 三端同一应用。
+- **版本管理与发布**：应用发布→版本管理与发布→创建新版本。→ 判据：发布走版本管理，旧版可回退。
+- **Creator Center & Template Marketplace**：创作者发布模板+Graph view 结构预览+一键 Open in Dify+guided setup。→ 判据：复用模板前先看结构图，安装有引导步骤。
+- **Slack Bot endpoint**：Allow Retry false（防重复消息）+link chatflow/chatbot/agent。→ 判据：消息机器人端点关重试防重复。
+- **客服 FAQ 参数**：Dataset 绑定 FAQ+关闭上下文记忆+TopK 3+发布 Web 链接/内嵌客服系统+展示文档来源。→ 判据：FAQ 客服关记忆防干扰，TopK 小值精准，来源必展示。
+- **提升层**：工作流。
+
+## n8n 模板库与多 agent 模式：分片流水 + 引用校验（来源：n8n 模板库面，2026-09-27 实拉，与 §AI Agent 节点互补——那条管装配，这条管成品模式）
+- **模板库规模**：1269 AI chatbot/712 AI RAG/638 personal productivity/7379 AI 总模板。→ 判据：先搜模板库再手写，官方模板已覆盖常见场景。
+- **RAG Starter**：Simple Vector Stores+Form trigger+OpenAI+PDF 自定义知识。→ 判据：RAG 起步用官方 starter，PDF 即知识源。
+- **4-workflow 分片系统**：Lead Intake→Nurture Scheduler→Reply Listener→Daily Report。→ 判据：大流程按职责拆多 workflow 串行接力，别单流堆。
+- **多 agent 模式**：Lead-Qualifier（电话转录分类→AI Agent→Structured Output Parser→Set 清字段）。→ 判据：分类任务接结构化输出解析器，字段清洗独立一步。
+- **工单分诊引用校验**：知识库匹配→draft 限制在匹配 KB 条目+校验引用检索 KB ID+安全/置信度检查→Data Table 存状态→人工审查 alert→webhook 响应 draft_ready/escalated。→ 判据：AI 起草必须引用可校验来源 ID，人审与机器分诊双轨。
+- **提升层**：工作流。
+
+## LangFlow Policies guarded tools：自然语言规则→可执行工具守卫（来源：LangFlow guardrails/policies 面，2026-09-27 实拉，与 §安全纵深互补——那条管整体边界，这条管工具级规则执行）
+- **Policies 组件**：自然语言业务规则→可执行 guards 包在工具外（guarded tools），工具调用前检查。→ 判据：业务规则不靠 prompt 让模型记住，做成工具外守卫每次调用前强制检查。
+- **配置**：policies 输入（List[String] 清晰自包含业务规则）+model（生成 guards 用 LLM，Anthropic Claude Sonnet 推荐）+guarded_tools 输出（禁用时返回原工具）。→ 判据：规则串写清楚，守卫生成用强模型，禁用即直通。
+- **Guardrails 四类检测**：Jailbreak/Offensive Content/Malicious Code/Prompt Injection（LLM 验证输入文本）。→ 判据：输入安全四类默认检，越狱/注入/恶意代码/违规内容。
+- **对比**：NeMo Guardrails（programmable rails model-agnostic）/Guardrails AI（Type-2 neural-symbolic 文本级）。→ 判据：选守卫框架按可编程性与模态范围。
+- **提升层**：工具。
+
+## Activepieces 自托管运维：one flow per worker + Benchmark CLI（来源：Activepieces 自托管/性能面，2026-09-27 实拉，与 §AI Agent 互补——那条管构建，这条管跑稳）
+- **Worker 模型**：worker 拉 Redis jobs→sandbox 跑→stream 结果回 app；推荐 one flow per worker（concurrency 1，一个 worker 一个并发 flow），横向扩展加 replica。→ 判据：按并发 flow 数扩 worker，一个 worker 只跑一个 flow 隔离更稳。
+- **规格**：0.5 vCPU/1 GB per worker（300 MB warm-process 开销+700 MB flow）；新 lightweight worker image。→ 判据：worker 按此规格配，别超大机器跑单 flow。
+- **Benchmark CLI**：load-test+diagnose 自己的部署（sync flow webhook→data mapper→return response+autocannon 压测+self-contained diagnostic bundle 交支持）。→ 判据：上线前压测，出问题用诊断包定位。
+- **Docker Compose 基线**：v2+至少 2 vCPU/4 GB RAM；生产 6GB+内存+改默认数据库密码。→ 判据：自托管先满足最低规格，生产加强内存+密码。
+- **提升层**：工作流。
+
+## Agent Skills 开放标准生态：SKILL.md 规范 + 渐进披露 + 跨工具安装（来源：Anthropic Skills 规范面 + skills.sh 目录面，2026-09-27 实拉，与 §技能评测互补——那条管怎么测，这条管怎么写与分发）
+- **SKILL.md 结构**：YAML frontmatter（name/description 必填）+Instructions+Examples；目录=SKILL.md+scripts/（可执行）+references/（文档）+assets/（模板资源）。→ 判据：技能包统一四段式，脚本/文档/资源分目录。
+- **frontmatter 约束**：name ≤64 字符仅小写数字连字符禁 XML 标签禁保留词 anthropic/claude；description 非空 ≤1024 字符禁 XML 标签。→ 判据：命名与描述合规才能跨工具分发。
+- **渐进披露**：name+description 预载入 system prompt，任务匹配时读全文。→ 判据：description 写清"做什么+何时用"，触发靠它。
+- **生态分发**：2026 年 4 月 20+ 产品采纳（Cursor/Copilot/Codex/Gemini CLI/Junie）；skills.sh npx skills add owner/repo 一条命令装所有；安装路径：Claude .claude/skills//Cursor .cursor/skills//Copilot .github/copilot/skills//OpenCode .opencode/skills/。→ 判据：一个 SKILL.md 多工具通用，装哪都同格式。
+- **提升层**：可复用 Skill。

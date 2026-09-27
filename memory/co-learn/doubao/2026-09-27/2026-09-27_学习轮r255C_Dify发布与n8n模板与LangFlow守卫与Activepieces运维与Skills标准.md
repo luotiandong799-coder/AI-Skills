@@ -1,0 +1,32 @@
+# r255-C 学习轮留痕（2026-09-27）
+
+## 信源实拉清单（10 站全量逐站）
+| # | 信源 | 状态 | 实拉内容 |
+|---|---|---|---|
+| 1 | Dify（应用发布/模板市场面） | ✓ | Chatflow（多轮对话）/Workflow（自动化）两类应用；每个 workflow 自动生成 link/API/MCP server；版本管理与发布（创建新版本）；Creator Center & Template Marketplace：创作者发布模板+Graph view 结构预览+一键 Open in Dify+guided setup；Slack Bot plugin：endpoint+Allow Retry false（防重复消息）+link chatflow/chatbot/agent；客服 FAQ：Dataset 绑定 FAQ+关闭上下文记忆+TopK 3+发布 Web 链接/内嵌客服系统+展示文档来源；NVIDIA NIM plugin 本地模型 |
+| 2 | n8n（模板库/多 agent 面） | ✓ | 模板库规模：1269 AI chatbot/712 AI RAG/638 personal productivity/7379 AI 总模板；RAG Starter：Simple Vector Stores+Form trigger+OpenAI+PDF 自定义知识；4-workflow 分片系统：Lead Intake→Nurture Scheduler→Reply Listener→Daily Report；多 agent 模式：Lead-Qualifier（电话转录分类→AI Agent→Structured Output Parser→Set 清字段）；工单分诊：知识库匹配→draft 限制在匹配 KB 条目+校验引用检索 KB ID+安全/置信度检查→Data Table 存状态→人工审查 alert→webhook 响应 draft_ready/escalated；Starter Kit：天气+web scraping toolbox（community nodes 仅 self-hosted）；AI Model Selector GDPR（Requesty 欧路由） |
+| 3 | LangFlow（guardrails/policies 面） | ✓ | Policies：自然语言业务规则→可执行 guards 包在工具外（guarded tools），工具调用前检查；policies 输入（List[String] 业务规则串）+model（生成 guards 用 LLM，Anthropic Claude Sonnet 推荐）+guarded_tools 输出（禁用时返回原工具）；Guardrails component：LLM 验证输入文本四类（Jailbreak/Offensive Content/Malicious Code/Prompt Injection）；对比：NeMo Guardrails（programmable rails model-agnostic）/Guardrails AI（Type-2 neural-symbolic 文本级）/GuardReasoner 8B（81.09% F1）；安全公告：Langflow OSS custom component validation+trusted code enforcement 任意代码执行漏洞 |
+| 4 | Activepieces（自托管/性能面） | ✓ | Worker：拉 Redis jobs→sandbox 跑→stream 结果回 app；横向扩展（Docker Compose/K8s/Nomad）；one flow per worker 推荐模型（concurrency 1）；0.5 vCPU/1 GB per worker（300 MB warm-process 开销+700 MB flow）；新 lightweight worker image；Benchmark CLI：load-test+diagnose（sync flow webhook→data mapper→return response+autocannon 压测+self-contained diagnostic bundle）；Docker Compose v2+至少 2 vCPU/4 GB RAM；生产 6GB+内存推荐+改默认数据库密码；docker run -p 8080:80 activepieces（one container no account）；MIT 可商用 |
+| 5 | Make（MCP server 面） | ✓ | 三步：build scenario as MCP tool→connect MCP server to client（Claude）→call from client（任何 plan）；课程：三个 scenarios 暴露为 MCP tools（Create Jira ticket+Slack 通知/Search Jira tickets/Get ticket details）；连 voice AI（VoiceFlow/VAPI）agent 对话中调用；Make MCP client：use existing connection/connect verified MCP server（Make 已配 URL+连接细节只认证）/URL 手动连 |
+| 6 | Pipedream（components 开发面） | ✓ | Components=triggers+actions 自包含可执行代码单元；源码 public GitHub repo（Registry）；本地开发+CLI 部署发布；Sources 可本地直接部署或发布到账号 UI 实例化；Actions 只能发布；发布默认仅自己账号；Component API：props/methods（app 级 this.methodName()）+$.service.db 持久化 state；Guidelines：复用 app file methods+JS Docs pattern（description+@params+@returns）；Connect custom tools=actions（Component API+CLI publish 带 Connect flag）；dynamicProps.id 必须带回 runAction/deployTrigger；Registry 贡献：fork→components/<app>/→PR 评审；code step props：defineComponent({props}) 让 code 步骤可复用 |
+| 7 | Anthropic（Skills 官方规范面） | ✓ | SKILL.md 结构：YAML frontmatter（name/description 必填）+Instructions+Examples；约束：name ≤64 字符/仅小写字母数字连字符/不能 XML 标签/不能保留词 anthropic/claude；description 非空 ≤1024 字符/不能 XML 标签；目录结构：SKILL.md+scripts/（可执行）+references/（文档）+assets/（模板资源）；渐进披露：name+description 预载入 system prompt，匹配时读全文；扩展 frontmatter：argument-hint/allowed-tools/model/context/agent/user-invocable/disable-model-invocation/hooks；Managed Agents：custom skill=目录 SKILL.md+支持文件 zip/individual files 上传，返回 skill_* ID 附加 agent；repository skills 同格式；2025 年底开放标准，2026 年 4 月 20+ 产品采纳（Cursor/Copilot/Codex/Gemini CLI/JetBrains Junie） |
+| 8 | GitHub（awesome-ai-agents 面） | ✓ | awesome-ai-agents-2026：340+ resources/20+ categories/月度更新（Coding/Frameworks/Browser/Voice/Creative/Workflow/CRM/Research/Self-Hosted/Protocols）；PraisonAI：production-ready Multi-AI agents 带 self-reflection+fastest instantiation 3.77μs+100+ LLM+MCP 集成+agentic workflows route/parallel/loop/repeat+Python/JS SDK；Orca：desktop agent IDE 跑 30+ coding agents 并排隔离 git worktrees（terminal splits/embedded Chromium/SSH remotes/GitHub/Linear 集成）；Adala：Autonomous Data Labeling agent framework（ground truth 驱动可靠 agents+可控制输出约束+数据标注处理+观察反思自主学习）；autogen 59K |
+| 9 | OpenClaw（messaging 面） | ✓ | Multi-channel gateway：Discord/iMessage/Signal/Slack/Telegram/WhatsApp/WebChat 单 Gateway 进程；plugin channels：Matrix/Nostr/Twitch/Zalo/Feishu 等官方插件按需装；多 agent 路由：isolated sessions per agent/workspace/sender；groups requireMention: true；渠道矩阵：Telegram（BotFather 全群支持+文件全类型）Stable/Discord（Bot token+OAuth2 per guild）Stable/Slack（OAuth+Socket Mode）Beta；设置复杂度：Web Chat 免设置 PWA/Telegram 5 min/WhatsApp 5 min/Discord 15 min/Signal 30 min/iMessage 20 min/Slack 30 min；routing：channel+accountId+agentId 三元路由；配置：telegram token+transport polling/webhook |
+| 10 | skills.sh（目录/规范面） | ✓ | Vercel 目录+leaderboard：SKILL.md 指令包，任何 GitHub repo 可发布，20+ AI coding agents 一条命令安装 npx skills add owner/repo；API：id={source}/{slug}；slug URL-safe；source owner/repo 或 domain.com；目录结构支持：根 SKILL.md/skills//skills/.curated//skills/.experimental/；单仓多技能 CLI 自动扫描；安装位置：Claude Code .claude/skills/ 或 ~/.claude/skills/（description 自动加载）/Cursor .cursor/skills//Copilot .github/copilot/skills//OpenCode .opencode/skills/；生态三件套：skills.sh 公共目录+SKILL.md 开放约定+.agents/skills/ 统一目录；渐进披露：name/description 预载入 system prompt，匹配时读全文 |
+
+## 判重基准
+双键检索：Dify（r255-A 编排/r255-B 模型——发布/模板市场面增量≥40%）；n8n（r255-A 子流程/r255-B agent——模板库/多 agent 面增量≥40%）；LangFlow（r255-A bundles/r255-B 部署——policies/guardrails 面新）；Activepieces（r255-A AI/r255-B 案例——自托管运维面新）；Make（r255-A blueprint/r255-B 函数——MCP server 面增量 40% 备选）；Pipedream（r255-A sources/r255-B Connect——components 开发面增量 40% 备选）；Anthropic（r254-A SDK/r254-B hooks/r255-A 金融——Skills 标准规范面增量≥40%）；GitHub（r255-A 仓库/r255-B 当日榜——awesome-ai-agents 生态备选）；OpenClaw（r253 多面/r255-A automation/r255-B skills——messaging 渠道面增量 40% 备选）；skills.sh（首次实拉——目录规范细节增量≥40% 合入 Skills 标准独点）。
+
+## 独点落地（5 个）
+| 独点 | 内容 | 提升层 | 落点 |
+|---|---|---|---|
+| ① Dify 应用发布与模板市场 | Chatflow/Workflow+自动 API/MCP+版本管理+Creator Center | 工作流 | wb-execute-discipline |
+| ② n8n 模板库与多 agent 模式 | RAG Starter+4-workflow 分片+工单分诊引用校验 | 工作流 | wb-execute-discipline |
+| ③ LangFlow Policies guarded tools | 自然语言规则→可执行工具守卫+Guardrails 四类 | 工具 | wb-execute-discipline |
+| ④ Activepieces 自托管运维 | one flow per worker+Benchmark CLI+compose 规格 | 工作流 | wb-execute-discipline |
+| ⑤ Agent Skills 开放标准生态 | SKILL.md 规范+渐进披露+skills.sh 安装路径 | 可复用 Skill | wb-execute-discipline |
+
+## 复核
+- 五独点均有当日实拉来源，无编造。
+- 备选未落：Make MCP server/OpenClaw 多渠道路由/Pipedream components 开发/GitHub awesome-ai-agents 生态。
+- 垃圾：本轮未产生临时文件。
