@@ -5377,3 +5377,41 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **Edit with AI**：workflow builder 内 AI 编辑现有 workflow/代码 step/报错调试，部署回 Pipedream。→ 判据：改流用自然语言给 AI 改，IDE 里完成闭环。
 - **Connect SDK**：npm i @pipedream/sdk；10,000+ tools/3,000+ APIs/managed auth。→ 判据：agent 接外部能力先查 Connect 现成 tools，托管认证免自建 OAuth。
 - **提升层**：工具。
+
+## Dify 知识库管线与分块策略：五段管线 + 清洗 + 元数据过滤 + 父子模式（来源：Dify 知识库面，2026-09-27 实拉，与 §多路召回互补——那条管检索，这条管入库）
+- **五段管线**：数据源（文件/在线文档/云盘/爬虫）→提取（文本/表格/图片/扫描件）→处理（分块/增强/清洗/代码）→存储（向量/全文/元数据/图片）→检索（语义/关键词/混合/重排）。→ 判据：RAG 质量按管线分段排查，哪段出问题改哪段。
+- **分块按文档类型匹配**：自动分段+自动清洗（不了解参数选自动）；高密度技术文档自定义 800 tokens chunk+150 overlap。→ 判据：默认自动起步，密度高再自定义，分块后预检查每块上下文是否保留。
+- **清洗去噪音**：去重复 header/footer/页码/导航菜单。→ 判据：脏文档先洗再切，噪音直接影响检索质量。
+- **元数据过滤**：tag 文档（product: billing/type: FAQ），按查询只检索相关子集。→ 判据：文档按类别打标签，过滤比硬塞更准。
+- **父子模式**：hierarchical_model 父分段下挂子分段，API 更新分段重触发索引。→ 判据：父子结构保全局上下文，更新走 API 重索引。
+- **测试分块**：用固定代表性问题对比分块设置。→ 判据：分块好不好用问题集测，不凭感觉。
+- **提升层**：工作流。
+
+## n8n Queue Mode 横向扩展：main + Redis + workers + 共享密钥（来源：n8n queue mode 面，2026-09-27 实拉，与 §Error Workflow 互补——这条管吞吐）
+- **执行流**：main 实例处理 timers+webhooks，生成（不运行）执行 → 传 execution ID 给 Redis（BullMQ）→ 下一个可用 worker 拉取执行。→ 判据：main 只入队不执行，workers 拉活，职责分离。
+- **开启条件**：EXECUTIONS_MODE=queue（main+每个 worker）+ 共享同一 Redis + 同一 Postgres + 同一 N8N_ENCRYPTION_KEY。→ 判据：三件共享缺一不可，加密密钥不一致=worker 解不开凭据。
+- **并发调优**：n8n worker --concurrency=5（默认 10）；docker compose up -d --scale n8n-worker=N。→ 判据：压测定并发，按负载加减 worker。
+- **无执行丢失**：workers 忙时 job 在队列等待，不丢。→ 判据：高峰期 job 排队是特性，别当故障。
+- **提升层**：工作流。
+
+## LangFlow Memory Bases 与多向量检索：per-flow 语义长期记忆 + ColBERT/ColPali（来源：LangFlow memory bases 面，2026-09-27 实拉，与 §A2A/§lfx 扩展互补——这条管记忆与检索）
+- **Memory Base**：per-flow vector store 自动摄取对话消息，跨会话语义检索（嵌入向量按语义相似度返回最相关上下文）。→ 判据：要跨会话连续性（"记得上周讨论的"）用 Memory Base；仅会话内用标准 chat buffer。
+- **vs 前两者**：Message History=chronological 取最近；Knowledge Base=手动填充；Memory Base=自动摄取+语义。→ 判据：三种记忆按"要时序还是要语义/要手动还是要自动"选型。
+- **DB Providers**：1.10 可配置向量数据库后端；1.8 本地知识库=数据不每次 run 从远端重取。→ 判据：向量库可换可本地化，省重复摄取。
+- **多向量检索**：1.11 lfx-nextplaid——ColBERT-style late interaction+ColPali 视觉文档检索，零胶水代码。→ 判据：严肃 RAG 上多向量（late interaction 精排+视觉文档），别只用单向量。
+- **Guardrails 组件**：LLM prompt 校验 flow。→ 判据：flow 出口加 Guardrails，LLM 当校验器。
+- **提升层**：工作流。
+
+## Activepieces Polling 与事件幂等：DedupeStrategy + unique key 短路 + 幂等键（来源：Activepieces polling 面，2026-09-27 实拉，与 §Tables 游标互补——那条管增量，这条管去重策略）
+- **Polling 去重两策略**：DedupeStrategy.TIMEBASED（按 timestamp 检测新 items）/LAST_ID（last item ID 之后）；On Enable 存 last state。→ 判据：端点支持时间戳用 TIMEBASED，只有 ID 用 LAST_ID。
+- **run 返回数组**：单 polling 可含多 triggers，每个 item 触发 flow。→ 判据：一次轮询多触发，item 粒度分发。
+- **事件幂等**：Tables 存 unique event key，每 run 开始检查已处理短路；幂等键+correlation IDs 检测重复。→ 判据：入站事件先查键再处理，重复投递不重复写。
+- **重试安全**：条件分支+backoff——瞬时失败重试不重复处理；DLQ 收 rate limit 溢出。→ 判据：重试与幂等配套，失败进死信不丢不重。
+- **提升层**：工作流。
+
+## Claude Code Hooks 事件契约：PreToolUse 可阻塞 + PermissionDenied retry + matcher（来源：Claude Code hooks 面，2026-09-27 实拉，与 §Output Styles 互补——这条管执行拦截）
+- **事件表**：PreToolUse（工具调用前，可阻塞可修改）/PostToolUse（结果后，审计）/PostToolUseFailure（失败处理）/PostToolBatch（整批解析后每批注入一次约定）/PermissionRequest（需权限决策）/PermissionDenied（自动模式拒绝）。→ 判据：拦截在 PreToolUse，留痕在 PostToolUse，错误在 PostToolUseFailure，约定注入用 PostToolBatch。
+- **PermissionDenied retry**：hookSpecificOutput.retry:true 告诉模型可重试；classifier 无判定时忽略 retry。→ 判据：拒绝要分"可重试"与"硬拒绝"，retry 标志只在有判定时有效。
+- **matcher 面**：Bash/Edit/Write/Read/Glob/Grep/Agent/WebFetch/WebSearch/MCP 工具名——settings.json 配置。→ 判据：hooks 按工具名挂 matcher，安全脚本拦 Bash/Edit/Write。
+- **SDK hooks**：Python+TS 拦截控制 agent 行为。→ 判据：代码化 agent 用 SDK hooks 嵌治理，不用 shell 包装。
+- **提升层**：可复用 Skill。
