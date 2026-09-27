@@ -4148,3 +4148,32 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **基线快照对照**：新技能以"无技能"为基线；改旧技能以"改动前快照"为基线——并发跑 with-skill vs baseline。→ 判据：评测结论必须相对基线说，无基线=无数值。
 - **生态质量判据**：SkillsBench 47,150 公共技能平均质量 6.2/12；策展技能提升 pass rate 平均 16.2 百分点（医疗 +51.9）——目录大小≠质量，装技能先看评测。
 - **提升层**：可复用 Skill。
+
+## Agent 即一等实体：中心化管理 + nested agent 作工具（来源：Dify Agents/多 Agent 编排，2026-09-27 实拉）
+- **Invite an Agent 中心化管理能力**：发布 agent 后所有使用它的 workflow 自动获得更新（"full-time employee" 模型）——能力改一处，全工作流生效。→ 判据：agent 能力集中管，workflow 只引用，不复制。
+- **Nested agent nodes**：一个 agent 可作为 tool 被另一 agent 调用（v1.3+）——专业 LLM 角色涌现行为，避免 god-agent 单点。→ 判据：多 Agent 场景优先"专家 agent 互相调用"，不搭一个什么都干的 monolith。
+- **聊天构建 agent**：对话生成 agent 自动产生可复用 skills 保留上下文，完成后可加入 workflow 更大流程。→ 判据：agent 从对话迭代出来，不一次写完。
+- **提升层**：工作流。
+
+## AI 记忆子节点选型 + 检索质量优先（来源：n8n AI Agent Memory 实践，2026-09-27 实拉）
+- **记忆子节点选型**：Simple Memory（window buffer 最后 N 条，窗口可配——会话型够用）/ Postgres/Redis/MongoDB Chat Memory（数据库持久——多会话长期）。→ 判据：会话内用窗口，跨会话用数据库，别拿窗口硬扛长期。
+- **检索管线比存储重要**：向量搜索返回 50 条边缘相关记忆不如 5 条高相关——调 embedding 模型/相似度阈值/rerank。→ 判据：记忆质量看召回相关性，不看召回数量。
+- **sessionId 隔离**：每用户/每窗口独立 session ID 保持对话分离，不同用户不串记忆。→ 判据：多用户场景 session ID 必须隔离。
+- **提升层**：工作流。
+
+## Subagent 三纪律 + 独立评审（来源：Anthropic Claude Code Subagents，2026-09-27 实拉）
+- **三纪律**：单职责（一个 subagent 一件事，多做会被为错误理由委托）/ 受限工具（read-only reviewer 只 read-only tools）/ 详细 prompt（具体指令、示例、约束进 system prompt）。→ 判据：委托前先问"它只做一件事吗、工具够用且不超、prompt 里给示例了吗"。
+- **独立 review 防熟悉盲区**：评审 subagent 不知道实现过程（tradeoff/被拒方案/假设），外部视角发现主会话漏的问题。→ 判据：复杂实现后让"没参与实现"的 subagent 独立评审，不让主会话自评。
+- **三选型**：Parallel Claude（独立终端+worktree 多无关任务）/ Subagents（主会话委托聚焦子任务）/ Agent Teams（大任务拆分独立工作流协调）。→ 判据：先分场景再选型，别都堆成 subagents。
+- **提升层**：工作流/可复用 Skill。
+
+## 工具搜索按任务语义 + honest no-match（来源：Activepieces Tool Search，2026-09-27 实拉）
+- **按任务搜索不按名字**：ap_search_actions/ap_search_triggers 接受自然语言描述（"send a message to a Slack channel"）返回语义相似排名最相关工具。→ 判据：工具多时按任务描述搜，不靠记名字。
+- **honest no-match**：低于相关度阈值的结果被丢弃而不是返回次优——没有就不给，避免 agent 用错工具。→ 判据：工具搜索宁可空返回，不硬凑次优匹配。
+- **提升层**：工具。
+
+## 多通道共享上下文 + 纯文本记忆 + per-agent 隔离（来源：OpenClaw agent 能力，2026-09-27 实拉）
+- **多通道共享上下文**：单 agent 实例同时处理 25+ 消息平台，WhatsApp 开始 Discord 继续上下文不丢。→ 判据：多平台 agent 共享一份上下文，不按平台分记忆。
+- **纯文本记忆**：无数据库无 embeddings store——plain text files 用户完全控制 agent 记忆。→ 判据：记忆文件化=用户可审可控，优先于黑盒向量库。
+- **per-agent sandbox + tool 隔离**：每个 agent 独立 sandbox 与工具限制；群聊 mentionPatterns+allowlists 严格门控。→ 判据：多 agent 时每 agent 独立权限面，群聊只在被 @ 时响应。
+- **提升层**：工具/工作流。
