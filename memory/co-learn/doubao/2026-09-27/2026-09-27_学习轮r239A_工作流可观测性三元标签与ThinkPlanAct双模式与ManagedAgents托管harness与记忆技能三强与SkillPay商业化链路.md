@@ -1,0 +1,32 @@
+# r239-A 学习轮留痕（2026-09-27）
+
+## 信源实拉清单（10 站全量逐站）
+| # | 信源 | 状态 | 实拉内容 |
+|---|---|---|---|
+| 1 | Dify（可观测/运维面） | ✓ | 2026 日志审计体系（OpenTelemetry 标准、结构化 JSON 日志、TraceID 分布式追踪、实时审计告警，覆盖采集/脱敏/溯源/告警/留存五环节）；工作流引擎声明式 JSON Schema 驱动（YAML→可编程/可观测/可热重载运行时实体，AI 辅助生成编排效率+400%）；所有节点默认暴露 OpenTelemetry trace span+workflow_id/step_id/attempt_id 三元标签；/debug/workflow/{id}/trace 交互式执行图谱；日志 JSONPath 查询 log --filter '$.step=="llm_generate" && $.tokens>2048'；Dify 1.14.1 Workflows Become a Team Asset（built→continuously used and reused）；阿里云 SLS 集成（各中间节点失败比率漏斗分析、LLM 节点 token 消耗实时告警钉钉/电话）；企业版三部署（托管专属/客户自管 VPC/完全隔离本地） |
+| 2 | n8n（Agent 架构/模板面） | ✓ | Think-Plan-Act 架构（Llama-4 reasoning）：THINK mode 生成结构化推理 goal/subgoals/tools/assumptions→ACT mode 逐步执行子目标；模块化 Agent Loop 框架（"不是 flow 是 framework"）；多 agent CEO-orchestrator 模板（CEO 委派 Marketing/Operations/Finance 三专家→PDF→分享，清晰 minimal 公司隐喻）；路由请求到专业 agent（子工作流解耦+switch 加新 agent，Reminder/Email/Meeting）；Recursive Writing & Editing agents（Edit Handler code node 检查 previous edits 默认空串）；MCP Supabase server RAG+multi-tenant CRUD（动态表名隔离）；Conversation Memory 节点；Shopify 多模块自动化（客服升级/商品推荐/弃单恢复） |
+| 3 | LangFlow（release notes 面） | ✓ | 1.10：Assistant 构建整个 flows、Memory bases 长期记忆基础件、可配置向量数据库后端、7 语言国际化；1.11：HITL 门控工具调用+审查、A2A、AG-UI streaming、多向量检索（ColBERT 晚期交互+ColPali 视觉文档检索）；1.12：OpenTelemetry（service health+flow runs）；1.9：Flow DevOps Toolkit、MCP 支持 IDE+coding agents、token usage display；1.8：Global model provider、V2 workflow APIs、Guardrails 组件（LLM 校验 flows）、Agentics bundle（tabular 数据填充/折叠/生成）、LiteLLM bundle、streamable HTTP transport for MCP |
+| 4 | Activepieces（AI-ready/平台健康面） | ✓ | Agent 一等实体（从 flow step 里的 settings bag→被命名/被 brief/可对话/可复用；一句话生成：写"summarise my unread emails every morning"→自动起草 agent 含 name/instructions/tools from connected apps）；AI-ready metadata（0.85.4：hundreds of pieces 加 AI 元数据、non-agent actions 标 audience='human'、builder docs 要求新 action/trigger 必须带 AI metadata）；平台健康 dashboard（0.85.0：run success rates/live queue depth/30-day health history 一个 dashboard；step 失败一键 AI 帮助）；flow builder formula & data manipulation functions；agent 知道何时暂停（draft→check rules→wait review before sending） |
+| 5 | Make（Agent 类型/多模态/子 agent 面） | ✓ | 六类 agent 定位（Support agent 客服/帮助台/知识库；Synthesizer 多源拉取结构化总结 研究/竞对/报告；Routing 动态选 workflow 条件树不可管理时；Qualifier 按标准评估决策 lead scoring/筛选/审核；Orchestrator 编排）；多模态 agent（接受分析产出 PDF/images/CSVs 直接 canvas 输入输出，免外部 OCR）；Make AI Sub-Agents（agent 作为工具装进其他 agent；主 agent 收任务→选专业子 agent→返回结果，无需硬编码 handoff）；GPT-5.6 Luna/Terra/Sol 家族（速度/业务判断/深度推理三型，scenario 按步骤路由/总结/审查/规划用合适智能级）；Gemini 3.8 Flash |
+| 6 | Pipedream（组件/CLI/v2 builder 面） | ✓ | v2 workflow builder（编辑与测试分离 editing mode 不影响 live workflows；多语言 Node/Python/Golang/bash；粒级测试测单个 step；每 workflow 多触发器；改进表单）；pd CLI init 模板（pd init source/pd init connect、pd update SOURCE_ID --code URL）；Component API Interface props 基础设施抽象（HTTP/Timer interfaces 声明 source 如何被调用→定义事件形状）；source-available component registry（GitHub 免 boilerplate；无代码 building blocks 或脚手架自定义；PR 贡献新组件）；Pipedream 被 Workday 收购（2025-11 签署 deal closed，与 Sana/Flowise 同列） |
+| 7 | Anthropic（Managed Agents/新模型面） | ✓ | Claude Managed Agents（public beta：全托管 agent harness，安全沙箱+内置工具+SSE 流式；API 创建 agents/配置容器/运行 sessions；managed-agents-2026-04-01 beta header；effort level 可设；webhooks 覆盖 environment+memory 生命周期；多 agent 编排+自托管沙箱 AWS 可用）；Claude Opus 5.5（claude-opus-5-5：长时 agentic 编程+知识工作；默认 1M context window、128k 最大输出、adaptive thinking）；CLI ant（Claude API 命令行客户端：更快交互+原生集成 Claude Code+API 资源版本化到 YAML 文件）；Claude Agent SDK（在 Claude Code harness 上构建自己的 agent）；Python SDK v1.0（httpx→httpx2 fork） |
+| 8 | skills.sh（榜单/记忆技能面） | ✓ | All Time 1,548,173 installs 总榜（find-skills 3,505,780 最装；git-guardrails-claude-code 396.4K；skill-creator anthropics）；记忆技能三强（memory-merger 12,870 installs+38,671★；deep-agents-memory 15,745；obra remembering-conversations 9,163——跨会话持久记忆到文件/存储）；设计品味技能热潮（7 个最快上升搜索中 4 个是设计技能：Ui Ux Pro Max/Frontend Design/Impeccable/Design Taste Frontend，"Developers are installing taste"）；Caveman 技能（~75% 输出 token 削减同时保留技术细节 +50% 搜索增长）；官方技能质量评分（LangChain excellent 100/Trust 88） |
+| 9 | 腾讯 SkillHub（SkillPay/发布面） | ✓ | SkillPay 支付体系（2026-07-16 上线：技能分发+Agent 调用+技能支付同链路打通；商家上架 Pay Skill 获面向 Agent 收费能力；平台负责来源认证/内容完整性校验/可信调用入口；微信支付底层）；发布五步（整理高频提示词/工作流→按规范填输入输出参数完成测试→接入 SkillPay 标识→发布设置勾选+完善说明文档→持续优化迭代）；AI 辅助生成发布（描述→技能名称/描述/分类/标签/指令内容自动生成）；效率智能体工具集（SkillHub 沉淀超 7 万 skill；腾讯全系产品 Skill 化 文档/会议/乐享/地图）；三大破局（本土化中文语境/安全化/场景化+国内高速镜像+Top50 精选榜单）；智能开发助手生成 Skills 包（澄清后输出 ZIP：SKILL.md/scripts/依赖声明；"Use defaults" AI 自动推断） |
+| 10 | deeplearning.ai（新课程面） | ✓ | 新课程方向：Building Adaptive AI Agents（2026-08-26）、Build Interactive Agents with Generative UI（2026-05-06）、A2A: The Agent2Agent Protocol、AI Agents for Image and Video Generation、Document AI: From OCR to Agentic Doc Extraction、AI Coding Workflows: From Cloud to Local、Agent Memory: Building Memory-Aware Agents（Oracle 合作：持久性/连续性/随时间学习，"Most agents forget. Each new session starts from zero"）、Fast & Efficient LLM Inference with vLLM（9 视频 3 labs）、AI Coding Workflows: Hybrid to Local（JetBrains PyCharm 合作，开源权重时刻控制/选择/成本） |
+
+## 判重基准
+双键检索：Dify（r238-A/B/C 已落，独有增量=OpenTelemetry 三元标签+/debug 交互图谱+JSONPath 日志过滤）；n8n（r238-B/C 已落，独有增量=Think-Plan-Act 双模式+CEO 委派多 agent 模板）；LangFlow（r238 已落，Memory bases/Guardrails 为独有但本批不单列）；Activepieces（r238-B 已落，AI-ready metadata/健康 dashboard 独有但本批不单列）；Make（r238 已落，Sub-Agents 独有但本批不单列）；Pipedream（r238 已落，v2 builder 独有但本批不单列）；Anthropic（r238-B 已落 Agent SDK，Managed Agents+ant CLI 独有增量明显）；skills.sh（r238-B/C 已落，记忆技能三强选型+设计品味热潮独有）；腾讯 SkillHub（r237-A/r238 已落，SkillPay+AI 辅助发布独有）；deeplearning（多轮已落，新课程方向独有但本批不单列）。
+
+## 独点落地（5 个）
+| 独点 | 内容 | 提升层 | 落点 |
+|---|---|---|---|
+| ① Dify 工作流可观测性 | OpenTelemetry trace span+workflow_id/step_id/attempt_id 三元标签；/debug/workflow/{id}/trace 交互图谱；JSONPath 日志过滤；五环节审计（采集/脱敏/溯源/告警/留存） | 工作流 | wb-execute-discipline |
+| ② n8n Think-Plan-Act 双模式 | THINK 结构化推理（goal/subgoals/tools/assumptions）→ACT 执行子目标；CEO 委派三专家多 agent 模板；子工作流解耦路由 | 工作流 | wb-execute-discipline |
+| ③ Anthropic Managed Agents+ant CLI | 全托管 harness（沙箱+内置工具+SSE+多 agent 编排）；ant CLI API 资源 YAML 版本化；Opus 5.5 1M context | 工具 | wb-execute-discipline |
+| ④ skills.sh 记忆技能三强选型 | memory-merger/deep-agents-memory/remembering-conversations 跨会话持久化选型；设计品味技能 4/7 上升搜索信号 | 可复用 Skill | wb-execute-discipline |
+| ⑤ SkillHub SkillPay 商业化链路 | 分发+调用+支付三通；发布五步；AI 辅助生成发布（描述→元数据+指令自动生成） | 工作流 | wb-execute-discipline |
+
+## 复核
+- 五独点均有当日实拉来源，无编造。
+- 功能套件检查：wb-ponytail（Caveman 同源技能生态热度验证）、wb-max-token-saver、wb-context-compressor 无新可优化项。
+- 垃圾：本轮未产生临时文件。

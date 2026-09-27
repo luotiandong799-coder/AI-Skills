@@ -3839,3 +3839,38 @@ px -y @lobehub/market-cli skills install <skill> --agent cursor；LobeHub 市场
 - **hooks 纪律**：重启/进程退出会丢 in-flight 工作 → **副作用短而有界**：handler 内 await 该等的工作、网络调用设超时、限制数据大小、可重复操作幂等；**不用 void doHeavyWork(e) 逃逸 handler 的等待/错误边界**（会活过会话/进程）。
 - 判据：**外部自动化用小脚本 hooks；进程内拦截用插件 hooks；handler 里工作必须有界幂等不逃逸**。
 - 提升层：工作流。
+
+## 工作流可观测性四件套：OpenTelemetry trace span + 三元标签 + 交互式图谱 + JSONPath 日志过滤（来源：Dify 2026 日志审计权威指南 + 工作流引擎增强实录 + 阿里云 SLS 集成，2026-09-27 实拉）
+- **默认暴露 trace**：所有工作流节点默认暴露 OpenTelemetry trace span，携带 workflow_id/step_id/attempt_id **三元标签**——重试/并行同一步骤靠 attempt_id 区分，不只看 step_id。
+- **交互式执行图谱**：/debug/workflow/{id}/trace 接口返回带时间轴的交互式执行图谱——排障先看图不猜。
+- **JSONPath 日志过滤**：结构化日志支持 log --filter '$.step == "llm_generate" && $.tokens > 2048'——按字段精准捞异常节点，不整段翻日志。
+- **审计五环节**：采集/脱敏/溯源/告警/留存全链路（OpenTelemetry+TraceID 关联+实时审计告警联动）；漏斗分析看各中间节点失败比率定位异常高发环节；LLM token 消耗超阈值实时告警。
+- 判据：**每个工作流先确认有没有 trace span+三元标签；排障走 /debug 图谱+JSONPath 过滤；生产挂 token 告警**。
+- 提升层：工作流。
+
+## Think-Plan-Act 双模式 agent 架构 + CEO 委派多 agent 模板（来源：n8n workflows 模板 Think-Plan-Act with Llama-4 reasoning + Collaborative sales planning，2026-09-27 实拉）
+- **THINK/ACT 双模式**：THINK mode 生成结构化推理（goal/subgoals/tools/assumptions）→ ACT mode 逐步执行子目标——推理与执行分离，agent 先想清楚再动手，不是边想边做。
+- **CEO 委派模板**（多 agent 最简模式）：一个 orchestrator（CEO）委派 Marketing/Operations/Finance 三专家产出计划→导出 PDF→分享——公司隐喻让角色边界清晰可教。
+- **子工作流解耦路由**：agent 逻辑拆到子工作流，switch 逻辑加新 agent 只改一处；Recursive Writing/Editing 用 Edit Handler code node 检查 previous edits 默认空串（迭代编辑不丢上下文）。
+- 判据：**复杂 agent 任务先 THINK 结构化推理再 ACT 执行；多 agent 用 CEO 委派模板；路由解耦到子工作流**。
+- 提升层：工作流。
+
+## Claude Managed Agents 托管 harness + ant CLI 资源 YAML 版本化（来源：Claude Platform release notes + Managed Agents quickstart，2026-09-27 实拉）
+- **全托管 agent harness**：Claude Managed Agents（public beta）= 安全沙箱+内置工具+SSE 流式，API 创建 agents/配置容器/运行 sessions——不想自维护 agent loop 直接用托管 harness；effort level 可设；webhooks 覆盖 environment+memory 生命周期；多 agent 编排+自托管沙箱 AWS 可用。
+- **ant CLI**：Claude API 命令行客户端，**API 资源版本化到 YAML 文件**（像 IaC 管 API 资源）；原生集成 Claude Code。
+- **Opus 5.5**：长时 agentic 编程+知识工作，默认 1M context window、128k 最大输出、adaptive thinking。
+- 判据：**要托管就整 harness 不拼 homegrown loop；API 资源用 ant CLI 存 YAML 可版本化**。
+- 提升层：工具。
+
+## 记忆技能三强选型 + 设计品味技能热潮信号（来源：skills.sh 总榜 + Skillselion guides + DEV 趋势，2026-09-27 实拉）
+- **跨会话记忆技能选型**：memory-merger（12,870 installs+38,671★）/ deep-agents-memory（15,745）/ obra remembering-conversations（9,163）——都持久化到文件/存储跨会话；选型看安装量+star+作者生态。
+- **设计品味热潮**：7 个最快上升 Claude Code 技能搜索中 4 个是设计技能（Ui Ux Pro Max/Frontend Design/Impeccable/Design Taste Frontend）——"developers are installing taste"；Caveman ~75% 输出 token 削减保留技术细节（与本库 ponytail 同源生态热度验证）。
+- 判据：**装记忆技能先看三强选型与持久化机制；技能趋势信号=最快上升搜索，不止看总量**。
+- 提升层：可复用 Skill。
+
+## SkillHub SkillPay 商业化链路 + AI 辅助生成发布（来源：央广网腾讯 SkillPay 报道 + 腾讯云开发者社区发布教程，2026-09-27 实拉）
+- **SkillPay 三通**：技能分发+Agent 调用+技能支付同一条链路打通；平台负责来源认证/内容完整性校验/可信调用入口，微信支付底层——个人技能可收费的商业化闭环。
+- **发布五步**：① 整理高频提示词/工作流确保输出稳定可复用 ② 按规范填输入输出参数完成测试 ③ 接入 SkillPay 标识 ④ 发布设置勾选+完善说明文档 ⑤ 持续优化迭代。
+- **AI 辅助生成发布**：官网发布页根据描述自动生成技能名称/描述/分类/标签/指令内容——写技能元数据不用从零起。
+- 判据：**个人技能要变现走 SkillPay 链路；发布按五步走；元数据用 AI 辅助生成再人工校准**。
+- 提升层：工作流。
