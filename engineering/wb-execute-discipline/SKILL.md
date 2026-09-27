@@ -4086,3 +4086,34 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **编写检查清单**：无跨 agent/skill 重复规则；每条约束有后果；命令可复制粘贴+文件级作用域；示例引用真实文件（不发明）；"stuck 时怎么办"指导；行≤100 字符；代码块带语言说明符。
 - **frontmatter 分工**：frontmatter 给机器读（name≤64 匹配目录名/description≤1024 做什么+何时用）；content 给任何 agent 读（用途/认证/脚本输入输出）。
 - **提升层**：可复用 Skill。
+
+## 变量全路径引用 + 聚合器 + 人工审批节点（来源：Dify workflow 文档/human input 节点，2026-09-27 实拉）
+- **全路径引用防变量丢失**：跨节点取上游数据用 {{node_2.user_name}} 全路径格式，不用短引用 {{user_name}}——短引用在节点间传递会静默失效。→ 判据：工作流里凡"上游输出喂下游"，一律写全路径。
+- **特殊变量语义**：#context#=知识检索输出组装；#histories#=对话记忆（TokenBufferMemory）；#files#=视觉文件变量。→ 判据：prompt 里这几类数据用平台保留字，不手拼 JSON。
+- **Variable Aggregator 汇聚分支**：互斥分支输出汇聚到一致类型；array 模式收集所有分支输出成 list，再交给 Code 节点处理。→ 判据：多分支下游需要"全部分支结果"时用 array 聚合，别只取一条。
+- **Human Input 节点**：人工判断进自动化流程——表单内联（一个人把关）或邮件发送给决策人（操作者与决策者分离，敏感数据需经理审批）。
+- **提升层**：工作流。
+
+## 确定性 AI 安全栈：无 LLM 前置过滤（来源：n8n 生产 AI agent 栈模板，2026-09-27 实拉）
+- **Code nodes only 前置三检**：PII 脱敏→重复检测→注入拦截全部在 AI 之前用确定性代码做完——命中即 STOPPED AT SECURITY，LLM 根本看不到脏数据。→ 判据：AI 入口前挂"确定性闸门"：脱敏/去重/注入扫描用代码做，不靠模型自觉。
+- **并发防重**：FOR UPDATE SKIP LOCKED 防止并发 webhook 触发重复 AI 响应；错误监控 workflow 抓 DNS/连接失败并告警；凭据全走 credential manager 不硬编码。→ 判据：并发入口加行级锁/幂等键，错误单独一条监控链路。
+- **JSON 强制输出**：显式 System Message "Extract the following fields and return valid JSON only...Use null for any field not present"+ Response Format 设 JSON Object。→ 判据：要结构化结果就双保险：prompt 声明字段清单+响应格式强制 JSON。
+- **提升层**：工作流。
+
+## piece 双角色 + 审批门控（来源：Activepieces pieces 框架/blog，2026-09-27 实拉）
+- **piece = workflow 构件 + MCP server 双角色**：一个 TypeScript piece 既当流程积木又暴露为 MCP server 供 AI agent 发现调用（400+ MCP servers）。→ 判据：搭自动化能力时，同一集成做成"人类拖拽+AI 调用"双形态，一份代码两处用。
+- **Approval 门控**：触碰 money/customers/production 的步骤加人工审批，其余自动跑。→ 判据：自动化分级放权——高风险步骤门控，低风险全自动。
+- **Chat to Automation**：自然语言描述任务→平台生成起始 flow 供精修——AI 起草、人精修。
+- **提升层**：工具/工作流。
+
+## 场景转 MCP 工具 + 结构化输出（来源：Make MCP academy/场景实践，2026-09-27 实拉）
+- **场景暴露为 MCP tools**：把场景做成 MCP server（如 create Jira ticket+Slack 通知/搜索 tickets/详情三场景组），voice AI 平台对话中直接调用。→ 判据：已有自动化流程对外复用=包成 MCP 工具，一次建好 N 处调。
+- **MCP client 自动选工具**：AI 模块连 CRM MCP server（get_account/get_deals/get_contacts/get_activities/update_account），AI 根据上下文自动决定调用哪些。→ 判据：集成层暴露"原子工具集"，让 agent 自己编排，别把流程写死。
+- **结构化 JSON 输出写库**：会议转写→总结 prompt 返回 JSON{title, attendees, decisions(数组), action_items(带 owner+due_date), key_insights}→直接写结构化页面。→ 判据：LLM 输出先约束成字段化 JSON 再落库，后续筛选/汇总零解析成本。
+- **提升层**：工作流。
+
+## credit 计量纪律（来源：Pipedream 定价/credit 文档，2026-09-27 实拉）
+- **credit 成本随内存缩放**：1 credit=30 秒 compute@256MB；512MB 双倍、1GB 四倍——步骤内存设得越高跑得越贵。→ 判据：无状态轻步骤用最低内存档跑，重任务才提内存。
+- **超限硬停**：credits 超限 workflow 中途停止（hard caps stop a workflow mid-run）——成本不是事后账单是运行中断，预算监控前置。→ 判据：跑长任务前先估 credits，超限=流程断不是慢。
+- **开发测试不耗 credits**：development/builder 测试跑调试不扣额度——调试在 dev 环境做，生产才计费。
+- **提升层**：工具。
