@@ -7382,3 +7382,60 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **指标绑定业务风险**：generic metrics 几乎总是错——选指标绑"犯错成本"（cost of being wrong），不绑泛化分数。
 - **课程情报**：Evaluating AI Agents（Arize 2h36m）；Improving Accuracy（Lamini+Meta——SQL agent+指标+self-reflection）；Fine-tuning & RL（SFT/RLHF+评估引导迭代）。
 - **提升层**：可复用 Skill（评估指标）。
+## Dify HTTP Request 节点：全 HTTP 方法 · SSRF proxy 保护 · 模板变量插值（来源：dify-6c0370d8.mintlify.app http-request + deepwiki dify-docs http-request + dify-hosting workflow 2026-03/09 实拉，合并 §Dify 节点聚合——那条管"流程控制节点"，本条管"外部调用节点"）
+- **HTTP Request 节点**：连接外部 API/web services——fetch data/send webhooks/upload files/集成任意接受 HTTP 的服务；全方法 GET/HEAD/POST/PUT/PATCH/DELETE；auth/headers/query params/timeouts/body 全用 workflow variables 配置。
+- **安全默认**：所有请求经 SSRF proxy service（防 SSRF 攻击）；敏感 API key 存 Dify 环境变量（secret variable），不硬编码节点配置。
+- **模板变量插值**：URL 构造 {{ $vars.datasetId }}；响应（JSON/Text/raw）供后续节点。
+- **Code 节点边界**：Code 节点跑在沙箱——需要外部网络调用时改用 HTTP Request 节点。
+- **提升层**：工作流（外部调用）。
+
+## n8n AI Agent 记忆子节点：memory 只挂 Agent · Tools Agent 接口 · 三类记忆存储（来源：docs.n8n.io langchain-in-n8n + tools-agent + blog n8n ai-agent-memory + production-ai-playbook 2026-02/09 实拉，合并 §n8n 多 agent 编排——那条管"agent 间分工"，本条管"agent 记忆层"）
+- **Memory 子节点只挂 AI Agent root node**：n8n 的 chain 节点不支持 memory（不能引用早前消息）——要会话记忆必须用 agent 不用 chain。
+- **Tools Agent**：外部工具和 API 执行动作取信息；理解各工具能力决定用哪个；实现 Langchain tool calling interface（描述可用工具和 schema）；改进输出解析保标准输出格式。
+- **三类记忆存储**：Simple Memory（Window Buffer）最常见——存最近 N 条；database-backed：Postgres Chat Memory/Redis Chat Memory/MongoDB Chat Memory（持久化）。
+- **上下文权衡**：太多 token 浪费+慢+混淆模型；太少决策缺信息——记忆窗口按任务调。
+- **Manager Agent 案例**：Memory（BufferWindow）连 ai_memory input 记住用户与子 agent 的对话。
+- **提升层**：可复用 Skill（agent 记忆）。
+
+## LangFlow Traces 与可观测集成：trace+span 表 · Arize/Openlayer/Langfuse · flow 作 MCP（来源：docs.langflow.org traces + integrations-arize + integrations-openlayer + integrations-langfuse 2026-08/09 实拉，合并 §LangFlow 调试——那条管"开发期调试"，本条管"生产期可观测"）
+- **内置 Traces**：记录 flow/components 详细执行 trace——debug/latency/token usage 无需外部服务；trace+span 表存 Langflow DB；Flow Activity+Trace Details UI 查看。
+- **Arize 集成**：OpenTelemetry+OpenInference 标准；Arize AX（托管云/enterprise 自托管）/Arize Phoenix（开源本地）；UUID trace 是 Langflow components 的 trace。
+- **Openlayer 自动捕获**：component hierarchy 父子关系/LangChain callbacks 嵌套 LLM 调用/timing metrics/inputs outputs/user context/error tracking。
+- **Langfuse**：自动收集发送 trace 数据——开源 LLM observability。
+- **flow 可作 MCP server 暴露**：Claude Code/Cursor/Desktop 等 MCP 客户端直接把 flow 当工具调用——flow 既是应用又可嵌入。
+- **提升层**：工具（可观测）。
+
+## Activepieces 触发器三类型：Polling vs Webhook vs App Webhook · POLL_INTERVAL · PollingJob（来源：activepieces.com create-trigger + polling-trigger + environment-variables + mintlify workers 2026-05/09 实拉，合并 §Activepieces 触发器生命周期——那条管"生命周期钩子"，本条管"触发类型选型"）
+- **三类型对比**：Polling（延迟 5-15 分钟/API calls 定期轮询/setup 简单/用户 setup 无）；Webhook（即时/on event only/setup 中等/用户注册）；App Webhook（即时/on event/setup 简单/平台处理无需用户）——要即时性用 webhook 系，无 webhook 用 polling。
+- **Polling 机制**：run 每 5 分钟执行——timestamp 范围取新数据或遍历直到 last item id；返回新 items 数组；store 存 timestamp 续跑；默认间隔 AP_TRIGGER_DEFAULT_POLL_INTERVAL=5（分钟）。
+- **Worker 架构**：PollingJob 由 cron（默认 5 分钟）触发——load trigger config→onEnable hook→fetch new items。
+- **超时**：AP_FLOW_TIMEOUT_SECONDS=600 单 flow run 上限（也限 agent piece tool/chat action/MCP ap_run_action 占 worker slot 时长）；AP_TRIGGER_TIMEOUT_SECONDS 限 polling。
+- **提升层**：工具（触发选型）。
+
+## Make 模板用例：AI 入职自动化 · 购物车恢复 · Word 模板+OpenAI（来源：make.com ai-automation-examples + use-apify templates + make.com docx-templater-openai 2026-03/09 实拉，合并 §Make 团队模板——那条管"模板协作"，本条管"可复用场景模式"）
+- **AI 入职自动化**：Airtable watch 新员工 onboarding stage 设为 Welcome Message → Slack welcome 消息——无人值守触发式通知。
+- **购物车恢复**：Shopify Watch Events（trigger）→ Sleep 1 小时（等完成窗口）→ Get Order 检查是否完成 → 未完成 Klaviyo 恢复邮件带确切购物车物品——Sleep 门控+状态检查后行动。
+- **Word 模板+OpenAI**：OpenAI 分析客户数据→填充 Word 模板生成个性化提案；AI 总结数据→格式化 Word 报告；会议音频转写→Word 纪要；合同生成填充变量条款。
+- **提升层**：可复用 Skill（场景模板）。
+
+## Pipedream Schedule 与执行限制：intervalSeconds/cron+timezone · 30s/60s/750s（来源：pipedream.com connect/components/triggers + sources + components/contributing/sources-quickstart + workflows/limits 2024-2026 实拉，合并 §Pipedream 触发器部署——那条管"部署流程"，本条管"调度定义与配额"）
+- **schedule 定义**：intervalSeconds（秒频率）或 cron（自定义 schedule+timezone）；timer interface $.interface.timer default intervalSeconds（source 默认 15 分钟）。
+- **Cron Scheduler 事件属性**：interval_seconds/cron string/timestamp/timezone_configured/timezone_utc。
+- **Schedule source**：内置 Schedule app——每分钟到 1 年；cron 控制具体星期（'0 8 * * 1-5' 8AM UTC 周一至五）；最小 1 分钟间隔；2026-04 起所有 plans 含 free tier。
+- **执行限制**：HTTP/email-triggered workflow 默认 30s/执行；cron-triggered 默认 60s；paid tiers 750s（12.5min）max——超限抛 Timeout 停止。
+- **提升层**：工作流（调度与配额）。
+
+## Anthropic Prompt Caching 自动模式与成本模型：自动/显式 breakpoint · turn 数平方成本 · 90% 节省（来源：platform.claude.com prompt-caching + optimizing-for-cost-and-intelligence + dev.to caching math 2024-08/2026-09 实拉，合并 §缓存定价与盈亏平衡——那条管"价格与阈值"，本条管"启用方式与成本结构"）
+- **两种启用**：automatic caching（无需标记）或显式 cache_control breakpoints（5-min/1-hour TTL；最多 4 breakpoints）。
+- **成本模型**：40-turn 任务把首轮前缀发 40 次——成本≈turn 数平方增长；缓存不停止重发但每次重发约 1/10 成本+更快：prefix 按 cache-read 率（0.1x）计费，每 turn 只为新内容付 cache-write（1.25x 5m/2x 1h）。
+- **定价锚点（Opus 4.5）**：base input $5/MTok；5m write $6.25；1h write $10；hit $0.50；output $25。
+- **实际收益**：重复高量负载最多省 90% input 成本；cache hits 延迟改善 2x+；真实案例 $720→$72/月。
+- **提升层**：可复用 Skill（成本工程）。
+
+## OpenClaw 技能创建分发：SKILL.md bundle · My skills/ClawHub · 无需传统编程（来源：docs.openclaw.ai creating-skills + openclawlab + launchmyopenclaw + openclawforge developer-guide 2026-02/09 实拉，合并 §OpenClaw 技能三目录——那条管"目录与 frontmatter"，本条管"创建与分发流程"）
+- **创建**：SKILL.md bundle（YAML frontmatter 定义能力）+可选 tools/ 脚本；~/.openclaw/workspace/skills/ 是最高优先级位置（覆盖一切）；可直接让 agent 创建（"创建一个技能检查我的 Todoist 任务"→agent 生成文件）；个人 profile 技能走 Plugins→Skills→My skills——无需 host shell 访问或改共享 Gateway 设置。
+- **技术栈**：技能开发只需 Markdown/YAML/清晰技术写作——无需传统编程；插件开发需 JS/TS+Node.js；集成需 API 读写能力+脚本。
+- **分发**：ClawHub 分享；Hub 激活即扩展能力无需 coding。
+- **Agent 定义**：system prompt（个性）+skills（可用工具）+model preferences（LLM 选择）+behavior settings（compaction/memory/limits）；capabilities.agent.skills 枚举（含 @myorg/web-search 组织技能）。
+- **指令质量**：instructions 必须 explicit/sequential/unambiguous——歧义导致不可预测 agent 行为。
+- **提升层**：可复用 Skill（技能创建分发）。
