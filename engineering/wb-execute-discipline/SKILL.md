@@ -4707,3 +4707,40 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **自定义指令**：natural language 描述 coding style/best practices，反馈反映仓库规范。→ 判据：给 AI reviewer 喂仓库风格指令，输出贴合约定。
 - **re-review 不自动**：push 变更后不会自动 re-review，除非配置。→ 判据：改完想再审需显式触发，不指望自动。
 - **提升层**：工具/工作流。
+
+## 插件市场发布流程 + 模板市场（来源：Dify 插件/市场面，2026-09-27 实拉）
+- **市场发布流程**：插件 PR 到官方插件仓库（langgenius/dify-plugins），reviewer+自动化 12 项检查通过后上架——社区插件经审核进入官方目录。→ 判据：自研插件走 PR+审核流程，不私下分发。
+- **安装通道**：Marketplace 一键安装 / GitHub 仓库安装；插件脚手架支持调试模式。→ 判据：插件开发用脚手架调试模式，发布选市场或仓库通道。
+- **模板市场**：Creator Center 发布 workflow 模板，用户一键采用；PartnerStack affiliate 链接赚订阅佣金。→ 判据：可复用流程发布成模板，一采用即传播。
+- **插件类型**：Tool/模型 provider/MCP 客户端；案例（搜索/Excel 分析/ComfyUI/OpenAI Deep Research 工具）。→ 判据：按能力类型选插件形态。
+- **提升层**：工具/可复用 Skill。
+
+## webhook 分层安全：HMAC+raw body+反代限流（来源：n8n webhook 安全面，2026-09-27 实拉）
+- **内建认证不足**：n8n webhook 默认 none 认证=裸奔；内置 Basic/Header/JWT 不验 payload 完整性、不防 replay。→ 判据：公网 webhook 默认视为不安全，必须加层。
+- **HMAC-SHA256 签名**：共享 secret 绑定请求、防篡改；timing-safe comparison 比对；raw body capture——n8n 解析 body 后 JSON 重序列化可能不匹配原签名，要用原始 body 计算。→ 判据：签名校验用原始 body+恒定时间比较，防重放防篡改。
+- **限流在反代层**：n8n 无内建 rate limiting，Nginx limit_req/Caddy rate_limit 配 100-500 req/min；429+Retry-After。→ 判据：webhook 限流放反向代理，别指望平台内建。
+- **分层防护流**：Client→Webhook→Identity→Guard→Allowed?→Business Logic→200/429——IP allowlisting+token/HMAC+rate limit 叠层。→ 判据：公网入口叠身份+守卫+限流三层，缺一层漏一层。
+- **多租户隔离**：每租户唯一 secret key+时间戳防 replay+加密凭证+隔离 execution。→ 判据：多租户 webhook 按租户分密钥+隔离执行。
+- **提升层**：工作流/工具。
+
+## prompt caching 纪律：TTL 选择 + 前缀稳定 + 静默 miss 监控（来源：Anthropic prompt caching 面，2026-09-27 实拉）
+- **两种启用**：Automatic caching（顶层 cache_control 系统自动把 breakpoint 加到最后 cacheable block 随对话增长前移——多轮对话用）；Explicit breakpoints（手动在 system prompt/tool list/长文档后放标记）。→ 判据：多轮对话用自动，固定前缀用显式。
+- **TTL 选择**：默认 5 分钟（从请求开始计时；stream 时间算进 TTL）；1h TTL 可选（writes 2x vs 5min 1.25x）。→ 判据：<5min 间隔用 5min 免费刷新；agentic 长任务/长对话用 1h。
+- **计费模型**：cache writes 125% base/reads 10% base——稳定前缀写一次多次读，70-90% 账单削减。→ 判据：把稳定内容（system/tool list/长文档）放前缀，变化内容放后。
+- **静默 miss 监控**：log cache_creation_input_tokens/cache_read_input_tokens 两字段，命中率下降=前缀漂移。→ 判据：缓存命中率纳入监控，静默 miss 变大声。
+- **提升层**：工作流/上下文管理。
+
+## Actions 供应链硬化：SHA pin + env 传 secret + OIDC + scoped secrets（来源：GitHub Actions 安全面，2026-09-27 实拉）
+- **第三方 action pin 完整 SHA**：tag 可移动=两次 run 执行不同代码；40 字符 commit SHA 不可变免疫 force-push。→ 判据：第三方 action 钉 SHA 不钉 tag。
+- **secrets 经 env 传**：命令行参数在进程列表可见，env 块引用  不进 process table。→ 判据：secret 走 env 不走命令行参数。
+- **结构化数据不做 secret**：JSON/XML/YAML blob 导致日志脱敏失败（精确匹配难）；每个敏感值单独 secret。→ 判据：秘密按值拆分，不用 blob 封装。
+- **OIDC 代替长驻 key**：repo/branch-scoped trust policies，不用静态 cloud key 存 secrets manager。→ 判据：云访问用 OIDC 短令牌，不留长驻凭证。
+- **Scoped secrets（2026 新）**：绑定 repo/org、branch/environment、workflow identity/path；reusable workflows 无需 caller 显式传 secret。→ 判据：凭证绑定执行上下文，不默认广泛流动。
+- **提升层**：工作流/工具。
+
+## Tool Mode 组件变工具 + 条件路由（来源：LangFlow 工具选择面，2026-09-27 实拉）
+- **Tool Mode**：任何组件可变成工具（加 Toolset port 连 Agent Tools port）；Run Flow 组件把别的 flow 变工具。→ 判据：要 agent 用的能力开 Tool Mode 挂到 Tools port。
+- **工具类型**：Search/Calculator/Python REPL/API calls/Custom Python——按需挂，不堆全部。→ 判据：工具集按任务选，挂太多稀释选择质量。
+- **条件路由**：agent 按 query 类型选工具（HTTP/搜索/函数判断）；生产 agent 失败主因=外部 API 超时/500→工具节点包裹错误处理。→ 判据：工具调用按查询类型路由，外部调用包错误处理。
+- **function description 优化**：name 动词开头/description 写用途场景/parameters 标注类型描述。→ 判据：工具描述按 function calling 规范写，提高选择准确率。
+- **提升层**：工作流/工具。
