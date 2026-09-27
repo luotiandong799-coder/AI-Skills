@@ -8256,3 +8256,73 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Skill 组成**：SKILL.md 主指令+Scripts bash/node/python 做重活+Reference files API docs/templates/examples+Assets images/data——条件激活 conditional activation——baseDir 使用。
 - **Workshop/ClawHub**：Skill Workshop 从零 build+test custom skill——ClawHub 发布分享——portable——no-code skill builder 视觉界面<10 分钟配置激活。
 - **提升层**：可复用 Skill（工具定义）。
+## Dify 权限管理与团队协作：RBAC 四角色 · 团队+工作区双级 · 知识库权限单独（来源：mintlify dify workspace team-members + enterprise-docs members/workspace-management + deepwiki workspace-and-team/tenants 2025-03/2026-09 实拉，合并 §Dify 权限——那条管"部署运维"，本条管"权限与团队"）
+- **四内置角色**：Owner 完全控制每工作区一个；Admin 管理成员+模型提供商+Editor 全权；Editor 创建编辑删除 apps+知识库；Normal 只用发布应用。
+- **RBAC 工作区级**：每位成员团队级+工作区级两维度权限——应用级权限继承工作区——team members 根据 workspace permissions 看应用——应用可用 workspace 配置的模型/knowledge bases/installed integrations。
+- **Owner/Admin 边界**：Owner billing/model providers/workspace settings——create/delete/transfer workspace；Admin 管理成员除 owner/配置模型/安装插件/创建编辑删除应用/管理知识库/查看计费。
+- **Enterprise 双级**：Team-level 普通成员/系统管理员——Workspace 级 Admin/Normal——添加后无法移除成员；知识库权限单独控制 Owner/Admin/Editor 可创建——谁可见用 KB settings 单独控制。
+- **提升层**：工作流（权限管理）。
+
+## n8n 版本控制与变更管理：Source Control · 环境分支 push-pull · workflow history（来源：docs.n8n.io source-control push-pull/create-environments + logicworkflow git-automation + getflowkit --separate + triumphoid native + ocadefusion restore + n8n.io deploy-workflow 2025-10/2026-07 实拉，合并 §n8n 版本控制——那条管"调试测试"，本条管"版本与 CI/CD"）
+- **内置 Source Control**：自托管 enterprise license——Settings→Source Control——连接 Git repo——push 序列化 workflows+credentials metadata（不序列化 credential values 保持加密）+variables 进 repo——pull 反向同步。
+- **环境分支**：built on Git——link instance to Git branch——push-pull 模式移动 work between environments——dev/production 两环境；推荐不 push+pull 同一 instance（dev push，prod pull 分工）。
+- **Workflow history**：n8n 保存版本到 instance database 不是 Git——save/restore/pull 时建新版本——Community 用户 24 小时版本。
+- **Git 自动化工作流**：export JSON→commit repo→每 workflow 一个文件（--separate flag diff 可读/冲突可解）→PR→review diff→merge→CI/CD deploy staging/prod；git show {hash}:workflows/name.json > restore.json→API POST /api/v1/workflows 导入；Smart versioning fetch 现有文件 SHA 比较 raw content——无变化跳过 commit 防 clutter。
+- **提升层**：工作流（版本与 CI/CD）。
+
+## LangFlow 1.x 版本演进：1.10 Memory bases · 1.11 HITL/A2A · Extensions bundles（来源：langflow.org blog 1-10/scaling-langflow + docs.langflow 1.10.0 release-notes/bundles-agentics/extensions + starstruk releases 2026-06/09 实拉，合并 §LangFlow 版本——那条管"外部集成"，本条管"版本演进"）
+- **1.10**：Assistant flow building——Memory bases 长期语义记忆——DB Providers 可配置向量数据库后端——interface 七语言；Agentics bundle LLM 变换表格数据 aMap/aReduce——arXiv 2603.04241 Logical Transduction Algebra。
+- **1.11**：Human-in-the-Loop checkpoints——A2A protocol——AG-UI streaming Workflow API；multi-vector retrieval lfx-nextplaid 扩展 bundle ColBERT-style late interaction/ColPali。
+- **1.9**：MCP client for Bob (IBM)/Claude Code——Settings 页 Langflow MCP Client——MCP Tools 注册 servers 再添加。
+- **Scaling 1.9-1.10**：依赖裁剪/worker 生命周期管理/Linux CoW——~89% 内存消耗降低——production readiness；Extensions component bundles 独立于 core 维护发布——每 bundle 独立 pip 包 lfx-duckduckgo/lfx-arxiv。
+- **提升层**：工具（平台能力）。
+
+## Activepieces 监控与排障：Runs view · 日志上限 · Bull Board 队列（来源：activepieces.com docs troubleshooting/truncated-logs/event-streaming/options + postmortems 2026-03 + csdn 部署优化 + qloudrdp guide + automation use-cases 2026-04/09 实拉，合并 §Activepieces 监控——那条管"Pieces 生态"，本条管"运行监控与排障"）
+- **Runs view**：内置 Runs 视图左侧导航——每次执行日志 timestamp/duration/status Success/Failed/Running——full step-by-step trace inputs/outputs——重试/回放任务。
+- **日志上限**：AP_MAX_FLOW_RUN_LOG_SIZE_MB=50——大文件用内置 file storage Files/File 传；docker compose -p activepieces logs -f app/worker。
+- **失败策略**：Action 节点失败——中断默认/跳过非核心节点/触发补偿逻辑回滚+通知。
+- **Queues Dashboard（Bull Board）**：调度与内部 flow run 问题——failed jobs 不正常需调查——delayed jobs=暂停/未来调度/轮询迭代/临时失败重试按 backoff policy。
+- **Postmortem 教训**：Redis QueueEvents overload——无 alerting on Redis output buffer growth/pub-sub lag——加 alerting Redis memory/output buffer/runsMetadata queue lag；centralized run logs timestamp/inputs/step-level outcomes——alert failure patterns——track SLAs/retry counts/error categories——checkpoints 恢复最后安全步。
+- **提升层**：工作流（监控排障）。
+
+## Make 版本历史与恢复：60 天版本历史 · Scenario recovery · 执行历史恢复（来源：help.make.com restore-and-recover/introducing-scenario-recovery + experienceleague restore + boost-space + dredyson 5-methods 2026-03/07 实拉，合并 §Make 版本——那条管"执行机制"，本条管"版本与恢复"）
+- **Version history**：访问并恢复之前手动保存的场景版本——最多 60 天。
+- **Scenario recovery**：自动保存 blueprint 随工作——browser crash/lost connection/accidental tab close 恢复未保存变更——全 plan。
+- **恢复操作**：Previous Versions 菜单→Pick the version→OK——恢复版本不自动保存——给版本起名描述变更——Download blueprint——View changes 比较两版本。
+- **恢复被删场景**：Scenarios History 通用历史——Deleted [scenario name] 动作——显示用户；执行历史恢复从 execution history 用 Shift+click+drag 复制模块——<15 分钟恢复。
+- **提升层**：工作流（版本恢复）。
+
+## Pipedream 平台架构与执行模型：执行路径 · event sources 独立资源 · Projects（来源：pipedream.com docs control-flow/sources/glossary/quickstart/components-api + integrationatlas platforms + tencent mcp 2025-05/2026-09 实拉，合并 §Pipedream 架构——那条管"HTTP 端点"，本条管"平台与执行模型"）
+- **执行路径**：触发时运行的具体 steps+顺序——简单线性 workflow 顶到底每步都在执行路径——非线性 workflow 步骤可能不执行依 control flow operators+prior steps results——Executed Path 模式。
+- **事件源**：event sources 独立于 workflow 的资源——同 source 触发多个 workflow——HTTP/cron/email/app-based triggers；Execution=事件触发 workflow 的运行实例——execution environment=VM+内部平台代码——worker 实例。
+- **Projects**：workflows 必须建在 Projects——组织+协作——GitHub Sync 启 git-based version control。
+- **组件 API**：deactivate hook 自动调用 source 更新/删除时——删 webhook subscription；CLI 部署组件——手动/schedule/HTTP 调用——跨执行维持 state——unique/greatest 策略 dedup 事件——managed OAuth。
+- **平台栈**：serverless runtime+workflow service——SDKs 处理 3000+ APIs 用户认证——source-available triggers/actions——one-click OAuth/key-based。
+- **提升层**：工具（平台架构）。
+
+## Anthropic 嵌入与向量检索：不提供 embedding · Voyage · contextualized chunk（来源：platform.claude.com embeddings/cookbook contextual-embeddings + docs.voyageai embeddings/contextualized/quickstart/multimodal 2024-09/2026-09 实拉，合并 §Anthropic 嵌入——那条管"客户端 SDK"，本条管"嵌入与检索"）
+- **Anthropic 不提供自己的 embedding 模型**：推荐 Voyage AI——state-of-the-art 模型——金融/医疗定制模型——bespoke fine-tuned。
+- **Voyage 端点**：POST https://api.voyageai.com/v1/embeddings——curl/客户端；voyageai Python 包——VOYAGE_API_KEY 环境变量。
+- **Contextualized chunk embeddings**：voyage-context-4——per chunk context window 32,000——context length 120,000 tokens——embedding dimension 1024 默认/256/512/2048——通用+多语言检索质量优化。
+- **Contextual retrieval cookbook**：query_cache 缓存 query embedding——voyage-2 模型——k=20 搜索；多模态嵌入 v1/multimodalembeddings——text/images/interleaving——2025-12-08 起 URL 参数约束 redirects 数限制。
+- **提升层**：工具（嵌入检索）。
+
+## deeplearning 数据工程课程：Data I/O · Event-Driven Agentic Doc · Manning agent=函数（来源：learn.deeplearning.ai data-io/data-analytics + LlamaIndex event-driven + manning AI-data-engineering chapters + coddykit ai-agents 2026-02/09 实拉，合并 §deeplearning 数据——那条管"AI 安全"，本条管"数据工程"）
+- **Data I/O and Preprocessing with Python and SQL**：Module 1 Web scraping & text preprocessing——数据源/清理/ETL/ELT——Beautiful Soup 解析 HTML——Practice Lab；Module 2 APIs & numerical cleaning；Data Analytics 专修 scraping tables with Pandas/string methods replace/contains/casting/handling missing values。
+- **Event-Driven Agentic Document Workflows（LlamaIndex 1h19m）**：事件驱动 agentic workflow 处理文档填表——RAG+human-in-the-loop；Functions, Tools and Agents with LangChain 工具与 agent 基础。
+- **Manning AI data engineering**：AI-powered web scraping——agent=小单用途函数 typed input/output contract Pydantic——普通代码编排序列/重试/校验/数据传递——程序化搜索收集候选 URL→LLM 显式 criteria 排序结构化决策 confidence+reasoning——HTML 清洗 rules+class-pattern filters 缩 token——Pydantic schema+prompt 替代脆弱 selectors——guardrails 倾向 null 不猜。
+- **提升层**：可复用 Skill（数据工程方法）。
+
+## GitHub Projects 与敏捷规划：Projects v2 · 内置 5 workflows · ProjectOps AI（来源：docs.github.com about-projects + github.blog GA + github.github.com gh-aw projectops + geekyscript/topictrick/tms 2022-07/2026-09 实拉，合并 §GitHub Projects——那条管"API 集成"，本条管"规划与自动化"）
+- **Projects v2**：规划工具 user/org 级——连接 issues/PRs/draft issues 到可自定义 table/board/roadmap 视图——filter/sort/group——custom fields priority/estimate/dates——内置 workflow 自动设字段/自动 archive/自动 add from repo——GraphQL ProjectsV2 API+GitHub Actions 更大控制。
+- **内置自动化 5 triggers**：Workflows 设置菜单无代码——item added/changed 设字段——archive 条件——add from repo 条件；Board 自动化 Todo 列新 issues 自动加入/In Progress 被 assign 移动/Done 关闭移动/Reopen 移回。
+- **ProjectOps（gh-aw）**：AI-powered GitHub Projects 管理——新 issue/PR 到达 agent 分析决定归属/status/fields（priority/effort）/创建更新结构——Safe outputs 分开 scoped jobs 最小权限——agent job 看不到 Projects token。
+- **与代码集成**：PR merged/issues closed/labels 变化自动更新——不用手动状态更新。
+- **提升层**：工具（规划自动化）。
+
+## OpenClaw 安装配置与 CLI：install 脚本 · onboarding wizard · gateway daemon（来源：docs.openclaw.ai getting-started/install/onboarding-overview/wizard + openclaw-ai.com install + open-claw.me quickstart 2025-02/2026-09 实拉，合并 §OpenClaw 安装——那条管"工具定义"，本条管"安装配置"）
+- **安装**：curl -fsSL https://openclaw.ai/install.sh | bash——macOS/Linux；PowerShell iwr -useb install.ps1 | iex——Windows；其他 Docker/Nix/npm；install-cli.sh 本地前缀 ~/.openclaw；VPS 避免第三方 1-click 镜像——clean base OS 自己装。
+- **CLI 全局安装**：npm install -g openclaw@latest。
+- **Onboarding**：openclaw onboard——Quick start/Custom setup——检测已有 AI 访问——验证所选连接真实 completion——配置 provider picker/Skip for now/foreground Gateway；--flow quickstart/manual；--install-daemon 装后台服务；--no-onboard CI 跳过。
+- **Gateway 服务**：openclaw gateway install——Ctrl+C 停前台——daemon 后台自动启动 Gateway——wizard 配置 auth/gateway settings/optional channels。
+- **提升层**：工具（安装配置）。
