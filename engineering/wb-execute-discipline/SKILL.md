@@ -6991,3 +6991,36 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **决策含义**：严格数据主权/合规/每执行费用归零的需求 → n8n（自托管 CE）或 Activepieces（MIT 商用自由）替代；Workday 2025 末收购后产品仍活但平台属性不变。
 - **迁移 playbook**：迁代码到标准栈=Vercel Functions/Supabase Edge Functions + 托管队列 Upstash QStash 重建 workflow execution（组件代码可搬，运行时不可搬）。
 - **提升层**：工具（选型判断）。
+## Anthropic Memory tool 协议与 context editing：结构化笔记 · check-memory-first · 选择性清除（来源：docs.anthropic.com memory-tool + context-editing + anthropic.com engineering effective-context-engineering 2025-09/2026-03 实拉，合并 §上下文工程——那条管"预算纪律"，本条管"记忆工具协议与细粒度清除"）
+- **Structured note-taking（agentic memory）**：agent 定期把笔记写到 context window 外的持久化内存（Claude Code to-do list / NOTES.md 模式）——跨复杂任务追踪进度与依赖，不需要重读全部历史。
+- **Memory tool 客户端侧协议**：API 提供协议与工具 schema，应用实现存储；auto-injected system prompt 建立 check-memory-first："ALWAYS VIEW YOUR MEMORY DIRECTORY BEFORE DOING ANYTHING ELSE"——模型在工具循环里自己决定何时存、存什么。
+- **Context editing（细粒度清除）**：对话历史增长时选择性清除特定内容——context 是有限资源、收益递减、无关内容降低模型专注；比整体压缩更精细的 runtime 控制。
+- **@mention 文件引用纪律**：引用文件时 prefer 代码内文件（HTML mockup 优于设计描述或截图）——高保真指令、模型最懂的语言。
+- **提升层**：工具（记忆协议 / 上下文治理）。
+
+## OpenClaw 技能权限三门与 Operator Install Policy：agent/sandbox/network 三闸 · L1-L3 分级 · secret 当轮注入（来源：docs.openclaw.ai tools/skills-config 2026-09-28 + getopenclaw.ai permissions-sandbox-security + openclawskills.best docs + learnopenclaw.com api-keys 实拉，合并 §Agent 工具面安全——那条管"工具描述注入/同名拦截"，本条管"技能安装与运行权限"）
+- **三权限门**：agents.list[].tools.allow/deny（agent 级工具权限）→ tools.sandbox.tools.allow（沙箱级工具过滤）→ sandbox.docker.network（容器网络）——三层叠加不是替代。
+- **Operator Install Policy（安装闸）**：security.installPolicy 用可信本地命令在源码 stage 后、安装/更新前批准或阻止 skill+plugin 安装（targets: skill/plugin；exec command+timeout）——对 ClawHub/上传/Git 本地技能与依赖安装器统一生效。
+- **L1-L3 安全分级**：L1 read-only 或最小副作用（免审）；L2 写数据或调外部 API（需 review）；L3 敏感操作（严格审批）——技能入口标注分级，审批按级走。
+- **四权限审计**：fileRead/fileWrite/network/shell 四权——无技能应同时持有全部四权；audit log 记录权限使用；安全默认=默认无网络、默认无 shell（或每命令确认）、优先只读技能、高危技能进沙箱。
+- **secret 注入作用域**：skills.entries.*.env / apiKey 只在 agent 那一轮注入 host 进程、不进沙箱环境；secrets 永不进 prompts 和 logs。
+- **提升层**：可复用 Skill（安装与运行安全）。
+
+## Dify 插件开发四类与 Agent Strategy 开放标准：Tool/Agent Strategy/Extensions/Bundles · 策略插件 CLI · 自定义模型四步（来源：enterprise-docs.dify.ai plugin 开发指南 + cheatsheet + tool-plugin + agent-strategy-plugin + dify.ai blog agent-node 实拉，合并 §Dify 插件市场与发布流程——那条管"分发面"，本条管"开发面"）
+- **四类插件**：Tool（工具扩展）/ Agent Strategy（自定义推理策略——ReAct/CoT/ToT）/ Extensions（HTTP Webhook 集成外部服务）/ Bundles（多插件打包分发）。
+- **Agent Strategy 开放标准**：CLI 快速创建策略插件；自定义配置表单与可视化组件；可集成前沿学术算法（Tree-of-Thoughts）——Dify Agent Node=Workflows 内的 LLM 自主决策，策略决定 LLM 如何选工具。
+- **Tool Plugin 结构**：/tools 目录+Tool 类+dify_plugin 依赖；provider 实现凭证验证——失败抛 ToolProviderCredentialValidationError（验证成功才请求工具服务）；provider 是工具归属单位。
+- **Customizable Model 四步**：①model provider 文件 ②按模型类型建独立 code 文件（llm/text_embedding 分层维护）③开发 ④打包（dify plugin package ./yourapp）。
+- **提升层**：工作流（平台扩展开发）。
+
+## n8n 错误工作流模式与数据转换排障六步：Error Trigger+dedicated workflow · Continue 两路径 · 先最小复现再锁 schema（来源：calmops n8n-advanced-workflow-patterns + evalics production-setup + dev.to six-reliability-patterns + workflowtipster data-formatting-errors 2026-01/08 实拉，合并 §n8n 工具失败两层架构——那条管"工具层失败与记忆排障"，本条管"错误工作流与数据格式排障"）
+- **错误工作流模式**：主 workflow 失败→Error Trigger 节点拉起 dedicated error workflow（独立错误处理流程）；Continue（error output）让失败项路由到错误分支、成功项继续——批量处理需要失败日志/回退路径时用 Continue。
+- **AI 输出验证门**：LLM 输出在 Code node 验证并 throw——空串/JSON 带 markdown fences/拒答/截断对象直接进写节点=静默空行（几周后才发现，且分不清哪些单没处理）；错误事件归一化→LLM 分类（category/severity/root cause/transient）→dedup hash 去重告警。
+- **数据转换排障六步**：locate failing node→inspect resolved values→identify contract break（JSON/date/items）→reproduce minimal payload→normalize at source→lock schema for future runs；Edit Fields (Set) 专做数据转换（分离转换与业务逻辑），不要用表达式节点硬塞。
+- **提升层**：工作流（错误路径与数据治理）。
+
+## LangFlow 生产部署 API 面：异步 workflow 轮询 · Flow DevOps SDK · headless runtime（来源：docs.langflow.org api-reference / workflow-api 1.9.0 / deployment-prod-best-practices / flow-devops-sdk / api-keys-and-authentication 2026-09 实拉，LangFlow 章节均为版本/命令/MCP 面，部署 API 面为新增）
+- **Workflow API 异步模式**：/api/v2/workflows POST mode=background 提交后台任务→轮询 status（completed/failed/cancelled）取 output.text——长任务不阻塞同步请求。
+- **Flow DevOps Toolkit SDK**：配置 production.url + api_key_env（环境变量注入而非明文）——一套代码切换 dev/prod 环境。
+- **K8s 生产部署**：Runtime 用 headless backend-only 镜像（只服务 API 不跑可视化编辑器，省资源）；最小 2Gi RAM+1000m（1CPU）per instance ×3 replicas+HPA；API 认证 env 组：LANGFLOW_AUTO_LOGIN=False / SUPERUSER / SECRET_KEY / NEW_USER_IS_ACTIVE=False / ENABLE_SIGNUP=False。
+- **提升层**：工作流（生产化部署）。
