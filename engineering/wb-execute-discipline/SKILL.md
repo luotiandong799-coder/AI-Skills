@@ -6785,3 +6785,42 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **注册表贡献**：Fork Pipedream Registry→components/<app>/ 目录建组件→PR 审查合入——社区组件与官方同源。
 - **Connect dynamicProps**：dynamicProps.id（dyp_xxx）在后续 runAction/deployTrigger 调用**必须携带**——漏带即失败。
 - **提升层**：工作流（组件开发）。
+## Dify Agent 节点策略选择：Function Calling vs ReAct · Agent Strategy 插件 · Agent vs Tool Node（来源：dify mintlify nodes/agent + marketplace agent strategy + deepwiki agent-tool-nodes + dify.ai agent-node blog + instagit function-calling-patterns 2026-02/09 实拉，与 §Dify 迭代节点互补——那条管"变量与迭代"，本条管"决策脑怎么选型"）
+- **Function Calling vs ReAct 两策略**：FC=用 LLM 原生函数调用，经 tools 参数直接传 tool definitions，模型内建机制决定何时调用——适合 GPT-4/Claude 3.5 等强 FC 模型（已知流程、API 参数明确时最稳）；ReAct=结构化提示引导显式 Thought→Action→Observation 推理循环，不依赖模型原生 FC——适合路径不确定、多步骤、需边做边判断的模型。
+- **Agent Strategy 插件**：可插拔推理算法模块，决定 LLM 怎么思考、怎么用工具；官方插件 FunctionCallAgentRunner 持续循环检测工具调用+ParameterExtractorNode 组合成健壮 agent。
+- **Agent Node vs Tool Node 选型**：Tool Node=特定工具恒定需要/输入参数确定/单次调用足够/工作流已控制选择/无需推理（图像生成/预设参数搜索/固定 API 调用）；Agent Node=路径不确定/多步/需决策。
+- **1 作业 1 目的**：Agent 节点把"决策脑"插入固定流程，按单任务单目标设计最稳。
+- **提升层**：工作流（节点编排）。
+
+## n8n 多 agent 编排模式：AI Agent Tool 委托 · Supervisor 分级 · 置信度路由+回退（来源：n8n blog production-ai-playbook complex-agent-patterns + n8n workflows 6158/13965/6186/11109/15026 2026-02/09 实拉，合并 §多Agent协作纪律——那条管"通用五模式+协作纪律"，本条补"n8n 平台实现面"）
+- **AI Agent Tool 委托机制**：一个 agent 把另一个 agent 配置为可调用的工具——orchestrator 持有若干工具、其中一或多个是子 agent；主 agent 收初始输入决定要做什么。这是 n8n 多 agent 架构的主机制。
+- **Supervisor 分级**：中央 Supervisor 分析查询→按路由委托给最合适专用 agent（news/product/academy 等）；Jarvis 三层 Donna→supervisor 三线→子 agent 各 workflow；Governance Agent 编排 4 子 agent 汇入不可变审计日志。
+- **置信度路由+回退**：Supervisor 把请求分类 simple/complex，返回 confidence score+reasoning；置信度低于阈值时走 email fallback 人工处理而非硬派。
+- **Director/CEO 分级 swarm**：Director agent 作项目经理用实时市场数据编排 6 专用 worker；CEO agent 读 brief 调 3 工具 agent 一次、合并结果、解决冲突。
+- **提升层**：工作流（多 agent 编排）。
+
+## LangFlow 版本化与兼容升级：Version History 保存/回滚 · --upgrade-flow check/safe · 部署版本不是画布（来源：docs.langflow.org concepts-flows 1.9.0 + pypi lfx 1.11.0 + IBM community deploy-from-langflow 2026-06 + milvus blog export-json 实拉，合并 §LFX 全命令与 A2A 发布——那条管"发布管线命令"，本条补"版本管理与兼容"）
+- **Version History**：flow 编辑器侧栏存版本；Save 捕获当前状态为 saved version；预览只读；Restore 替换当前草稿——版本即部署单元。
+- **--upgrade-flow 兼容模式**：lfx serve 启动时 check=报告不兼容即失败/safe=内存中应用安全升级；flow 与 LFX 版本有兼容模型。
+- **导出即版本控制**：导出 FLOW_NAME.json 记录所有节点/边/元数据→可 git 版本化、共享、复现；"部署的是版本不是画布"——明确选择哪个版本上线，更新受控可预测。
+- **提升层**：可复用 Skill（流程工程）。
+
+## Activepieces 企业治理四角色与最小权限：RBAC 角色 · SSO/SCIM/审计 · secret manager（来源：activepieces.com docs permissions + product governance + blog ai-agents-enterprise + security practices 2025/2026 实拉，与 §Activepieces Git Sync 互补——那条管"版本同步"，本条管"权限与安全"）
+- **四默认角色**：Admin（全部含计费）/Editor（建发 flow）/Operator（运行）/Viewer（只读）；默认不符就自定义角色（Platform Admin→Security→Project Roles→Create Role 选细粒度权限）。
+- **企业安全件**：SSO（Okta/Entra）、SCIM 从 IdP 自动同步用户组、16 审计事件类型、HashiCorp Vault 等 secret manager 凭据留自家保险库、piece 访问控制按团队显示隐藏集成。
+- **最小权限实践**：每集成每环境独立凭据、限定 scope、集中 secret 管理、按功能分段 workflow、定期复查访问；自托管满足更严内控。
+- **AI Copilot in builder**：自然语言描述想做什么→建议步骤与逻辑；flow 坏了 Copilot 帮助定位；AI SDK 可建自定义 agents（读输入→推理→跨 app 行动）。
+- **提升层**：工具（治理与安全）。
+
+## Make 团队模板与执行日志治理：Team templates 私有→发布→公共 · 全文检索执行历史 · 模板命名纪律（来源：help.make.com create-and-manage-scenario-templates + scenario-sharing + pricing execution-log + onlinetoolguides scenario-examples 2026-06/09 实拉，合并 §Make 场景模板与分享——那条管"blueprint+链接分享"，本条补"团队模板与日志治理"）
+- **Team templates 生命周期**：默认团队内私有→发布后链接分享任意用户→可提交评审转公共模板库——分享粒度分级。
+- **执行历史取证**：每场景运行全记录（各模块流过什么数据/哪里出错）；full-text execution log search 全文检索定位排查；存储天数按套餐——执行日志是可检索的取证层。
+- **模板治理纪律**：命名 Purpose/Owner/Version；定时复查共享模板的连接/凭据/安全设置；沙箱测试再发布生产。
+- **提升层**：工作流（模板复用治理）。
+
+## Pipedream Agent Builder 与智能/执行分层：Agent Builder · Edit with AI · Conduit 网关（来源：pipedream.com changelog + aiagents.wiki agents/pipedream + agenticindex vendors/pipedream + shopclawmart openclaw-pipedream 2026-03/09 实拉，与 §Pipedream components 互补——那条管"组件怎么写"，本条管"agent 与执行层分工"）
+- **Agent Builder**：提示/生成/部署 agents——理解意图、从连接系统拉数据、代表用户行动（触发任务/更新记录/发通知）。
+- **Edit with AI**：workflow builder 内用自然语言直接改现有 workflow/代码步骤。
+- **Conduit 网关**：让员工安全地把自有 app 连到 AI（企业级早期接入）。
+- **智能层与执行层分离**：OpenClaw=智能层（推理、规划、监控、决策、适配）；Pipedream=执行层（可靠运行、错误处理、重试、日志、缩放）——agent 经 REST API 把平台当 toolkit 用（创建/触发 workflow、读执行日志、管理 data stores、响应失败）。
+- **提升层**：工作流（agent 平台架构）。
