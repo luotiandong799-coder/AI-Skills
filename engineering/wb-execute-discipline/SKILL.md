@@ -5604,3 +5604,42 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **规格刻意最小**：文件夹+SKILL.md 两个必填 frontmatter+可选 scripts/references/assets；可移植性是核心卖点——跨兼容平台无需修改。→ 判据：写技能按最小规格，可移植比花哨更重要。
 - **治理缺口**：采用远超安全团队认知（40+ 客户端），但治理/安全审查滞后。→ 判据：生态越大越要自己的装前审计流程，不因平台多就省。
 - **提升层**：可复用 Skill。
+
+## Dify 插件开发工程：脚手架 + Agent Strategies + 远程调试 + 市场审核门槛（来源：Dify enterprise-docs plugin dev + PyPI dify_plugin + CSDN 插件开发全解析，2026-09-27 实拉，与 §插件市场发布互补——那条管上架交付，这条管怎么开发）
+- **dify plugin init 脚手架**：交互式创建插件模板（name/author/description），Windows/Linux/macOS 各有二进制。→ 判据：开发插件先脚手架生成骨架，别手写目录。
+- **插件四大类**：Agent Strategies（自定义推理策略 ReAct/CoT/ToT 赋能自主 Agent）/Extensions（HTTP Webhooks 与外部服务集成复杂逻辑）/Bundles（多插件组合成包分发部署）/Models-Tools（模型与工具接入）。→ 判据：按插件类型选模板，Agent 推理也能插件化。
+- **远程调试**：INSTALL_METHOD=remote + REMOTE_INSTALL_URL=debug.dify.ai:5003 + key，python -m main 启动后插件出现在 Workspace 插件管理页，团队可共用。→ 判据：本地改+远端实例热加载验证，插件管理页看调试实例。
+- **市场发布审核门槛**：SDK pin ≥ dify_plugin>=0.5.0；reviewer 跑 test-plugin-install 必须无错安装打包（10 项检查含 SDK 版本）。→ 判据：提交市场前先过审核检查单，SDK 版本是最常见拒因。
+- **模块解耦**：插件系统把插件市场/Endpoint 插件/反向调用/多运行时（local/SaaS/enterprise）解耦，独立运行+外部集成。→ 判据：扩展能力按模块解耦评估，别捆死主应用。
+- **提升层**：可复用 Skill。
+
+## n8n workflows as code：export/import CLI + 凭据 stub + prod protected（来源：n8n community《How can we promote a dev workflow to prod》+ n8n.io workflows 模板 + n8n-as-code，2026-09-27 实拉，与 §GitOps 三环境互补——那条管环境模型，这条管 n8n 具体命令）
+- **CLI 导出导入**：n8n export:workflow --all --separate --output=./workflows 导出单文件，n8n import:workflow --separate --input=./workflows 导入；同 ID 覆盖更新。→ 判据：工作流版本化靠 CLI 导出成文件，导入按 ID 原地覆盖。
+- **凭据 stub 推送**：dev→prod 推送时凭据以 stub 形式不含 secret，在 prod 创建一次后复用；凭据备份 npx n8n export:credentials --backup + git diff 有变化才 commit。→ 判据：密钥不进仓库，prod 凭据人工建一次。
+- **prod protected**：prod 实例设 protected 禁止任何人直接编辑，改动全走 git 流程。→ 判据：生产环境只读，变更走代码评审。
+- **CI/CD 导入**：GitHub webhook 接收 push→过滤 .json 工作流文件→下载部署；智能 scrub 实例特定元数据保节点/连接/核心设置；GitHub API 查 SHA 对比 raw 内容没变跳过 commit。→ 判据：部署自动但幂等，没变化的提交要跳过防历史噪音。
+- **显式同步**：n8n-as-code/n8nc CLI 走 git 风格（status/pull/edit local/push --verify），不静默覆盖本地或远端。→ 判据：工作流同步要显式确认，禁止后台静默覆盖。
+- **提升层**：工作流。
+
+## Anthropic context editing：选择性清除过期工具结果 + compaction 策略（来源：Anthropic docs.anthropic.com·build-with-claude/context-editing + compaction + anthropic.com/news/context-management，2026-09-27 实拉，与 §压缩后规则重声明互补——那条管压缩后行为，这条管运行时自动清）
+- **context editing 动机**：上下文是有限资源回报递减，无关内容降低模型专注度——逼近 token 限制时自动清除过期 tool calls/results，保留对话流，延长 agent 运行时间。→ 判据：长 agent 任务开 context editing，让过期工具结果自动让位。
+- **两种策略**：Tool result clearing（clear_tool_uses_20250919，超阈值自动清 tool use/result 对）/Thinking block clearing（clear_thinking_2025…）。→ 判据：按内容类型分开清，工具结果和思考块独立策略。
+- **compaction 策略**：compact_20260112 加到 context_management.edits，自动 drop compaction 块前所有消息块从摘要继续；beta header compact-2026-01-12。→ 判据：超窗用 compaction 而非硬截断，摘要续跑。
+- **text editor tool**：str_replace 精确替换/view 查看/insert 插入——Claude 直接改文件而非只建议。→ 判据：文件修改给文本编辑工具，精确替换优于整文件重写。
+- **与 caching 分工**：caching 管"重复前缀省 token"，context editing 管"过期内容让位"。→ 判据：长会话两者并用——前缀缓存+尾部清理。
+- **提升层**：工作流。
+
+## 腾讯 SkillHub 四道防线与 TRACE 五维：三线审核 + 最小权限 + 数据外传检测（来源：腾讯云开发者社区 SkillHub×腾讯安全 + TRACE 评测体系 + 审计 3 万 Skill 报告，2026-09-27 实拉，与 §插件安全评级互补——那条管通用评级，这条管平台级技能安全体系）
+- **三线并行审核**：内容合规过滤+科恩实验室深度漏洞扫描+云鼎实验室 AI 模型安全评估三条独立流水线，全过才上架，任一不过拒绝并通知修改，安全评估报告可查。→ 判据：技能上架审核按三条独立流水线，报告对外可见。
+- **TRACE 五维评测**（2026-05-21 腾讯新闻科技+SkillHub+玄武实验室联合发布，国内首个面向真实使用场景的严选体系）：Trust（含最小权限评估项）/Reliability/Adaptability/Convention(Compliance)/Effectiveness。→ 判据：技能质量评估用五维框架，最小权限是信任维核心项。
+- **四道防线**：本地→分发→运行→治理层层设防。→ 判据：安全不只在入口，分发后运行期与治理期都要有防线。
+- **网络请求监控+数据外传检测**：检测未经授权网络请求；分析技能代码识别用户数据发外部服务器逻辑。→ 判据：装技能前查它的网络行为，数据外传逻辑要能审计。
+- **审计发现**：3 万个 Skill 审计发现不止代码投毒——多引擎协同扫描上架前，恶意 Skill 清除下架，可疑行为标风险特征透明可见；WAF 支持存量版本化重扫。→ 判据：上架前自动化多引擎扫描，存量随规则升级重扫。
+- **提升层**：工具。
+
+## Make 四类 error handler 选型：Resume/Ignore/Rollback/Break + incomplete executions 管理（来源：Make help.make.com·rollback-error-handler/retry-error-handler/break-error-handler/manage-incomplete-executions，2026-09-27 实拉，与 §事务回滚边界互补——那条管边界，这条管四类选型）
+- **四类 handler 矩阵**：Resume（错误用替代值继续，如汇率 API 失败用默认汇率）/Ignore（跳过该 bundle 继续其他，最常用）/Rollback（撤销 scenario 开始后支持事务模块的变更；不支持事务的如 Gmail 发邮件/Dropbox 删文件无法撤销；failed bundle 不继续，scenario 标 error 但不禁用）/Break（移除 erroring bundle 存 incomplete execution，可自动或手动完成）。→ 判据：按失败容忍度选——可替代值→Resume；单条跳过→Ignore；需事务一致→Rollback；需人工排→Break。
+- **顺序处理开关**：Process data in order——每次运行完成才启动下一个，不完整执行未解决不处理新 runs。→ 判据：有依赖顺序的场景开顺序处理，防乱序污染。
+- **错误分类**：AccountValidationError（第三方认证失败/凭证变更过期）/RateLimitError（超 API 限流被 block）。→ 判据：认证类错误查凭证，限流类错误等窗口或加重试。
+- **incomplete executions 管理**：ConnectionError/RateLimitError 临时错误可重试（同模块设置重跑）。→ 判据：临时性错误重跑同设置，永久性错误改流程。
+- **提升层**：工作流。
