@@ -7649,3 +7649,74 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Observability Pillars for LLMs**：logs/metrics/traces 三元组适配 LLM 特定 token usage+output quality；Feedback Loops——捕获用户反馈信号路由回 eval/fine-tuning 管道，闭环生产观测与模型改进。
 - **LLMOps（Google Cloud）**：Fundamentals/Data Preparation/Automation and Orchestration with Pipelines。
 - **提升层**：可复用 Skill（可观测闭环）。
+## Dify Variable Aggregator 聚合互斥分支：array 模式 · 并行合并 · 原 Variable Assigner（来源：dify-6c0370d8.mintlify variable-aggregator + dify-hosting workflows guide 2026-09 + dify.ai blog workflow-major-update 2024-05 实拉，合并 §Dify 节点聚合——那条管"节点聚合基本"，本条管"分支收敛与版本演进"）
+- **Variable Aggregator（原 Variable Assigner）**：收敛互斥工作流分支为单一输出——If/Else、Question Classifier 创建互斥分支（每 run 只有一路执行）；分支产出同类型时通常需每分支重复下游节点——聚合节点消除重复：下游只需定义一次处理。
+- **array 模式**：收集所有分支输出成列表，再用 Code 节点处理——并行分支（如两 LLM 同时调用）在 End 前合并。
+- **DSL 结构**：groups/group_name/output_type/variables/value_selector——变量选择器引 '节点ID'+变量名。
+- **工作流版本演进**（Workflow Major Update）：Iteration（循环）+ Parameter Extractor（参数提取）+ Publish Workflow as a Tool（发布为工具）三特性同批推出。
+- **提升层**：工作流（分支收敛）。
+
+## n8n HTTP Request/Code/Sub-workflow 三节点：Import cURL · 两种 Mode · 复用（来源：docs.n8n.io httprequest + executeworkflow + kursn8n kod-sub-workflow 2026-06/09 实拉，无历史 n8n 三节点专题锚点新面）
+- **HTTP Request 节点**：REST API 查询——两创建方式（参数配置/Import cURL）；Import 解析 method/URL/headers/query/body 入字段；**Import cURL 把所有参数值变 string**——API 需要非字符串类型时手动转；可附 AI agent 当工具用。
+- **Execute Sub-workflow 节点**：host 跑另一工作流——Database 加载（From list/Workflow ID——URL /workflow/ 含 ID）或 File/Clipboard。
+- **Code 节点两种 Mode**：Run Once for All Items（$input.all() 一次处理整包并返回数组——ETL 场景适合）；Run Once for Each Item（每 item 一次）——不是装饰性选项，决定代码运行次数与数据形态。
+- **提升层**：工具（节点复用）。
+
+## LangFlow 双 subflow RAG 与 Knowledge Base：Load 与 Retriever 分离 · KB 不重 ingest（来源：docs.langflow.org 1.9.0 components-models + starter-projects-vector-store-rag + 1.10.0 knowledge-base 2026-08/09 实拉，合并 §LangFlow 记忆——那条管"记忆类型"，本条管"RAG 架构与知识库"）
+- **Vector Store RAG 模板双 subflow**：Load Data subflow（加载嵌入内容入向量库——只在该跑时跑）+ Retriever subflow（按用户查询向量搜索取上下文）——分离因为不需每次 flow run 都重新 ingest。
+- **组件要求**：两组件连同一向量库；Retriever 侧用相同 embedding model（否则向量空间不一致）。
+- **Knowledge Base**：Langflow 向量数据库存 embeddings 供 flows——默认 Chroma 本地，可配外部 provider（Chroma Cloud/OpenSearch/Postgres pgvector）；**不随每次 flow run 重新 ingest 数据**（比组件内嵌更高效）；与 memory bases 共享 DB Providers 配置。
+- **提升层**：工作流（RAG 架构）。
+
+## Activepieces pieces 开发 CLI 与 Trigger 三技术：脚手架 · Polling/Webhook/App Webhook · CI/CD（来源：activepieces.com docs build-pieces create-trigger/piece-definition + pieces-ci-cd + docs/mcp/tools 2026-05/09 实拉，合并 §Activepieces Code Step/MCP——那条管"平台能力"，本条管"自建 piece 开发流程"）
+- **Trigger 三技术**：Polling（周期调用端点查变化）；Webhooks（单 URL 听用户事件）；App Webhooks/Subscriptions（用 developer app 订阅）——create trigger 时选 technique。
+- **CLI 脚手架**：npm run cli pieces create（Piece Name/package name/type community 三问）；npm run cli actions create；npm run cli triggers create（folder/display name/description/technique）；或 @activepieces/cli 的 ap init + ap dev（TypeScript 项目：Jest/ESLint Activepieces rules/热重载）。
+- **Piece 定义结构**：createPiece({name/displayName/actions/triggers})；createAction({name/displayName/run: async (context)})
+- **CI/CD**：AP_API_KEY；离线开发+package.json 升版本；PR 合并后手动跑 CLI 或 GitHub/GitLab Action 同步。
+- **MCP 工具**：ap_run_action（单次执行 piece action 不建 flow——one-shot "check inbox"；engine 直接跑）；ap_research_pieces（发现 pieces）。
+- **提升层**：可复用 Skill（自建 pieces）。
+
+## Make Router 分支与 fallback：原生分支 · fallback route · 蓝导出不含私钥（来源：make.com router + help.make.com step-2-add-a-router/introducing-scenario-sharing 2026-01/09 实拉，合并 §Make 蓝图——那条管"复用"，本条管"分支路由"）
+- **Router 原生工具**：分场景到多模块链——每条 route 按条件处理数据不同；Filters 定条件（less than/greater than 等操作符）；**路由排序**+**fallback route**（处理不适合其他 route 的数据——fallback 也能设 filter）；例：客户咨询按类型路由到不同团队 Slack 频道。
+- **添加 Router**：默认创建两条路径，+ 按钮加更多。
+- **Router 部分模块不执行坑**：conditional true 仍不执行——常见排查要导出 scenario blueprint 看映射设置（Export Blueprint 不含连接私钥/信息）。
+- **提升层**：工作流（分支路由）。
+
+## Pipedream Connect SDK 与远程 MCP：connect token · 任意 Node 框架 · 远程 MCP（来源：pipedream.com docs connect sdk/api + connect + workflows/building-workflows/triggers + code/python 2026-03/09 实拉，合并 §Pipedream 组件——那条管"组件构建"，本条管"连接用户与嵌入"）
+- **Connect SDK**：@pipedream/sdk——PipedreamClient({clientId/clientSecret/projectId/projectEnvironment})；tokens.create({externalUserId}) 建 connect token；用于任何 Node.js 框架（Express/Next.js/Fastify/Hono）+浏览器。
+- **SDK 自动刷新 access tokens + invoke workflows**——OAuth 生命周期由 SDK 管。
+- **远程 MCP**：client.connect({url: "https://remote.mcp.pipedream.net", headers: {"x-pd-external-user-id": userId}})——agent 选工具 auth 已处理；callTool({name: "slack-send-message", arguments})。
+- **HTTP Request Action**：Postman 式配置——连接 account 自动配置 authorization headers（如 Slack Bearer）。
+- **Python 返回响应**：pd.respond({status, body})——HTTP-triggered workflows；至少 body。
+- **提升层**：工具（嵌入与连接）。
+
+## Anthropic Agent SDK 与 Tool Runner：Claude Code as library · 自动工具循环 · server-side tools（来源：code.claude.com agent-sdk overview/quickstart + platform.claude.com tool-runner + console.anthropic.com web-search-tool 2025-11/2026-09 实拉，合并 §Anthropic 工具循环——那条管"手写循环"，本条管"SDK 封装与服务器端工具"）
+- **Agent SDK**：Claude Code as library（Python/TS）——同样的 agent loop/context management/tools/permissions/sessions/hooks；query() 主入口返回 async iterator 流消息（async for）。
+- **Tool Runner**：每工具定义成函数传 client.beta.messages.tool_runner()——内建错误封装/结果格式化/会话管理；每 iteration 查 Claude 是否要 tool use 自动跑送回；break 随时结束；到无 tool use 或 max_iterations 止。
+- **Client SDK vs Agent SDK**：Client SDK 自己实现 tool loop；Agent SDK Claude 处理——封装度升级。
+- **server-side tools**：web_search/web_fetch/code_execution/tool_search——服务器运行；Claude 决定何时搜索（一次请求可多次）；最终响应带 cited sources；**调用方从不构造 tool_result**。
+- **takeover 责任**：接管某 iteration 时 runner 不 append assistant message/tool results——自己保持 conversation 合法（append assistant message+tool result）、让循环能在无 tool call 时退出、传 max_iterations 绑定。
+- **提升层**：可复用 Skill（Agent 封装）。
+
+## deeplearning Reflection 模式与课程生态：Agentic AI 模块结构 · 新课清单（来源：learn.deeplearning.ai agentic-ai + corporate.deeplearning.ai evaluating-ai-agents/building-and-evaluating-data-agents + community short-course 2026-06/09 实拉，合并 §deeplearning 评估——那条管"评估方法"，本条管"课程结构与 Reflection 模式"）
+- **Agentic AI 课程模块结构**（9h55m）：Module 2 Reflection Design Pattern（自我反思改进输出——Ungraded Lab: Improving SQL Generation with Reflection）；Module 3 Tool use；Module 4 Practical Tips（evals/error analysis/component-level evaluations/prioritizing next steps）。
+- **Reflection 模式**：任务输出后让 agent 反思自身输出再改进——SQL 生成等任务提升质量。
+- **数据 Agent 评估**：Building and Evaluating Data Agents（Snowflake 1h59m）——What is a Data Agent/Construct Multi-Agent Workflow/Expand Capabilities/Observe Agent Performance/Measure Agent's GPA——**GPA 测量**=给 agent 行为打分。
+- **课程生态清单**：Evaluating AI Agents（Arize）；AI Code Review（2026-09-14 新）；RFT with GRPO；Fast LLM Inference；On-Device AI；Generative UI；AutoGen；LLMOPs Automated Testing；Pydantic for LLM Workflows；DSPy；Spec-Driven Development；Multi-vector Image Retrieval。
+- **提升层**：可复用 Skill（反思与课程地图）。
+
+## GitHub awesome-agent-skills 生态：1,500+ skills · Copilot skills · 20 工程工作流（来源：heatdrop VoltAgent awesome-agent-skills + docs.github.com about-agent-skills + hcd.ai repositories + dev.to 30-repos 2026-06/09 实拉，合并 §GitHub 生态——那条管"框架仓库"，本条管"技能目录生态"）
+- **awesome-agent-skills（VoltAgent）**：1,400+/1,500+ agent skills 精选目录——聚合官方定义（Anthropic/Google/Stripe/Cloudflare 等）+社区提交；跨 Claude Code/Cursor/Copilot/Gemini CLI 使用；31.8k★/3.4k forks。
+- **GitHub Copilot agent skills**：官方支持创建/共享 skills——anthropics/skills + github/awesome-copilot 社区集；gh skill CLI 发现。
+- **Addy Osmani agent-skills**：20 production-grade engineering workflows 按 dev lifecycle 打包（Define/Plan/Build/Verify/Review/Ship）。
+- **其他 awesome 系列**：jim-schwoebel/awesome_ai_agents（1,500+ agents）；kyrolabs/awesome-agents；ComposioHQ/awesome-claude-skills（最大 Claude skills 列表）；korchasa awesome-ai-agents（React Doctor/flow 21k★/AgentGPT 36k★）；agency-agents 140k★（每 agent 专家各有性格/流程/deliverables）。
+- **技能生态站点**：skills.sh / agentskills.io / skillrepo.dev / skillmd-claude-code / mdskills.ai。
+- **提升层**：可复用 Skill（技能目录导航）。
+
+## OpenClaw CLI 权限与后台服务：onboarding · 后台常驻 · TCC 三桶（来源：docs.openclaw.ai start/wizard-cli-reference + platforms/macos + nodes/computer-use + cli/approvals 2026-03/09 实拉，合并 §OpenClaw 信任边界——那条管"agent 权限模型"，本条管"宿主配置与系统权限"）
+- **CLI onboarding**：openclaw setup——Quick start 检测 AI 可用性/选连接/真实 completion 验证/开 web dashboard；macOS/Linux/WSL2/原生 Windows 均支持。
+- **后台常驻**：macOS LaunchAgent（需登录会话，headless 用自定义 LaunchDaemon）；Linux/WSL2 systemd user unit（loginctl enable-linger 注销后继续；可能写 /var/lib/systemd/linger 需 sudo，先免 sudo 试）；原生 Windows Scheduled Task 优先、创建被拒则 fallback。
+- **macOS 权限三桶**：Computer Control 状态分别查 Accessibility/Event Posting/Screen Recording——TCC 独立存储桶（屏幕捕获可在输入被拒时仍工作）；Desktop/Documents/Downloads 文件权限——文件读/目录列表挂起需给同一进程上下文授权；Full Disk Access——运行 OpenClaw 的进程（Terminal/VS Code/iTerm）授权后重启 gateway。
+- **Exec approvals**：system.run 受控——~/.openclaw/exec-approvals.json 存 Security/ask/allowlist。
+- **approvals CLI**：openclaw approvals set --node <id> --stdin JSON——defaultAction deny + rules 白名单（pattern/action）。
+- **提升层**：可复用 Skill（宿主权限）。
