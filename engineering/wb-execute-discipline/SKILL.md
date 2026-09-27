@@ -6869,3 +6869,41 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **安全四道防线**：工作区技能模式把可执行 TypeScript 代码转纯 Markdown——外部代码拿不到本地执行权限；推荐非 ROOT 普通用户运行；自动更新开关交用户防热更新投毒；全链路 TLS+定期渗透测试。
 - **企业多端调用**：CLI 批量部署版本管理/自然语言对话调用/打包下载 Zip 离线部署/管理员审核（安全扫描后管理员审核）。
 - **提升层**：工作流（技能发布与安全）。
+## Dify 插件市场与发布流程：Plugins 三类 · Marketplace PR 审查 · Chatflow Invoker（来源：marketplace.dify.ai + enterprise-docs.dify.ai marketplace-listing + dify.ai blog plugins/v1.0 2025-2026 实拉，与 §Dify 迭代节点/Agent 策略互补——那条管"节点面"，本条管"插件分发面"）
+- **插件机制**：v1.0 把 Models 与 Tools 迁移到 Plugins——Agent Strategies/Extensions/Bundles 三类；Marketplace 聚合分发官方/合作伙伴/社区贡献，支持本地部署。
+- **发布到 Marketplace**：对 langgenius/dify-plugins 开 PR；预提交检查清单+12 reviewer checks+自动化检查；批准后所有用户一键安装。
+- **Chatflow Invoker 跨 Chatflow 调用**：把任意 chatflow 变成画布节点——工作流可互相调用（6,292 installs 级热门插件）；数据源插件（Bright Data web scraper）可进 Knowledge Pipeline。
+- **提升层**：工作流（插件分发与复用）。
+
+## n8n 工具失败处理两层架构：编排静默重试 vs LLM 推理恢复 · Never Error/Continue on Fail · 记忆污染排障（来源：n8n blog production-ai-playbook + llm-tool-calling-error-handling + best-practices + community threads 2026-01/08 实拉，合并 §LLM 路由网关/§成本断路器 fallback——那条管"请求路由+模型 fallback"，本条补"工具层失败与记忆排障"）
+- **两层架构**：orchestration 管基础设施级重试（指数退避 transient API 错误，静默）；LLM 管需上下文的推理式恢复（应用级问题）——清晰指挥链，不靠单一英雄。
+- **fallback 链两层**：模型层 premium 中断/限流→换执行上下文到次级云商或本地开源；工具层主工具调用失败→接住路由到备用工具。重试降级：更简单 prompt 重试（减少决策空间）→更简单模型单步窄 prompt（用灵活性换可靠性）→关键工作流升级人工审查。
+- **工具失败不崩流程**：HTTP Request 工具 Never Error 开关保持节点 green——失败作为工具响应返回 agent 而非终止执行；On Error=Continue Using Error Output 同样语义。
+- **记忆污染排障**：tool_use block 无匹配 tool_result 的损坏对话导致卡死——清 session/memory（或 Chat Memory Manager Delete Messages）恢复，比改代码快。
+- **提升层**：工作流（错误处理）。
+
+## LangFlow 多 agent supervisor 编排：Supervisor 路由 · 窄工具集 · flows 变 MCP tools（来源：explainx.ai langflow-multi-agent + pyshine langflow-multi-agent + langflow.org framework-guide + pypi langflow 2025-2026 实拉，与 §LangFlow 版本化互补——那条管"版本与兼容"，本条管"多 agent 编排形态"）
+- **supervisor 模式**：User query→Supervisor Agent→Research（RAG+web search）/Code（tools+sandbox）/Writer（summarize+format）子 agent→Final output——条件边或 supervisor 节点路由。
+- **设计原则**：每 agent 窄工具集；agent 组件连多个 Tool 组件——LLM 决定调哪个工具、观察结果、继续或返回；可链式（research agent→writer agent）。
+- **部署面**：flows 可部署为 REST API 或 MCP server（变 tools for MCP）；Langflow 自身也是 MCP client；SSE 流式+sessionized API 调用；IBM watsonx Orchestrate 可把 flow 发布为 agent 可调工具。
+- **提升层**：工作流（多 agent 编排）。
+
+## Activepieces Agent Builder 与工具选择：自然语言建 agent · 工具=app/MCP/自有自动化 · Run Agent 迭代（来源：activepieces.com product ai-agent-builder + pieces/ai + blog ai-agents-enterprise 2025-2026 实拉，合并 r267A 企业治理——那条管"权限与安全"，本条补"agent 怎么建怎么选工具"）
+- **Agent builder**：描述任务用简单语言→系统转成能处理工具的 working agents；agent 用哪些 app/flows/files 由你圈定，它决定步骤并执行；需检查的动作先等 approval。
+- **工具选择**：任何 app action/自有自动化（workflow）/MCP server/上传文件——工具集按任务圈定。
+- **Run Agent piece**：复杂多步任务推理、用工具、迭代直到完成；Classify Text 自定义标签分类；structured extraction 转 JSON。
+- **agent 行为**：看输入数据→推理条件→决定下一步工具；知道何时暂停而非盲目行动——起草响应查规则等 review 再发。
+- **提升层**：工具（agent 构建）。
+
+## Make HTTP v4 与错误处理链：Error Handler · Retry error handler · AccountValidation 排障（来源：apps.make.com http-legacy + help.make.com throw/retry-error-handler/manage-incomplete-executions + community.make.com webhook-response 2026-03/09 实拉，与 §Make 团队模板互补——那条管"模板治理"，本条管"HTTP 与错误路径"）
+- **HTTP version 4**：简化设置、更安全 keychain 存储、原生 pagination（旧版 http legacy 可切换回）。
+- **Error Handler**：右键 HTTP request→Add Error Handler——出错走独立路径的特定步骤（backup plan），不把错误吞进主线。
+- **Retry error handler**：暂停 failed bundle、存错误消息/mappings/剩余 flow；自动或手动重试不完整执行——临时错误（ConnectionError/RateLimitError）可重试；AccountValidationError 凭据失效→Reauthorize（必须用原账号）。
+- **incomplete execution 管理**：定位失败执行日志→Details→Resolve 重定向到问题模块修复。
+- **提升层**：工作流（HTTP 与错误路径）。
+
+## Pipedream components 进阶：Async options 分页 · dynamicProps · 3-4 选项指南（来源：pipedream.com docs connect/components/triggers + components/guidelines + docs-proxy api reference 2026-07/09 实拉，合并 §Pipedream components 开发——那条管"props 声明与持久化"，本条补"交互面与动态性"）
+- **Async options**：props 值可编程生成（基于实时 API 响应）；options() 返回数组或 label/value 对象；page/prevContext 保留给分页——返回 {options, context:{nextPageToken}} 翻页。
+- **3-4 选项指南**：只纳入 API 最相关的 3-4 个选项作 props 优化可用性；避免让用户输入 ID 值——用 async options 下拉选择。
+- **dynamicProps**：动态 props 返回 dyp_ id，后续 runAction/deployTrigger 调用必须携带，否则失败。
+- **提升层**：可复用 Skill（组件开发）。
