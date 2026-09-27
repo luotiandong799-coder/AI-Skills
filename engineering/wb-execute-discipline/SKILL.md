@@ -4991,3 +4991,37 @@ ode_output.type 命名模式带类型。→ 判据：引用变量前确认其类
 - **官方 Action**：anthropics/claude-code-action 处理 authentication/rate limiting/output formatting；密钥走 GitHub Secrets。→ 判据：GitHub Actions 接 Claude Code 用官方 Action，不手写鉴权胶水。
 - **链式与校验**：--continue/--resume/session IDs 链式多步 pipeline；结构化 prompt 注入 file tree/recent diffs/test results；多轮循环每次迭代过测试+lint 回喂失败；git checkpoint/rollback 自动恢复坏迭代；merge 前 human review gate。→ 判据：无人值守 agent 输出必须过测试校验环+git 回滚点+人工放行，缺一不可。
 - **提升层**：工具/工作流。
+
+## Dify 编排选型：FC vs ReAct 判据 + nested agent + Agentic RAG 节点（来源：Dify 编排策略面，2026-09-27 实拉）
+- **Agent 策略两选判据**：Function Calling——LLM 原生函数调用（tools 参数直传内置机制决定何时何法调工具），适合 GPT-4/Claude 3.5/GLM-4 等原生支持模型；ReAct——结构化提示 Thought→Action→Observation 显式推理循环，适合 Llama/Qwen/Mistral 等开源无 FC 模型，也想看清完整推理时用。→ 判据：模型有原生函数调用用 FC，没有或要透明推理用 ReAct。
+- **nested agent 互调**：v1.3+ 一个 agent 节点可把另一个 agent 当作工具调用——跨专业角色组合出现单 agent 无法复制的行为。→ 判据：需要专业分工时用 agent 嵌 agent，别塞进单 agent。
+- **Agentic RAG 决策引擎**：Agent Node 集中封装 intent analysis/tool orchestration/source selection/retry logic 全部 agent 行为，配多检索工具（vector+hybrid+search+自定义 API）。→ 判据：RAG 需自主选源重试时用 Agent 节点编排，固定流程用 Workflow。
+- **固定流程防随机**：简单场景让模型自己决定调哪个工具；流程固定顺序的多步操作（投诉→订单号→工单→通知）用 Chatflow/Workflow 钉死防随机变化。→ 判据：顺序敏感流程不交给模型自由编排。
+- **提升层**：工具/工作流。
+
+## n8n 错误工作流生态：全局 Error Trigger + 分类去重 + 重试分级（来源：n8n 错误工作流面，2026-09-27 实拉）
+- **Error Trigger 全局化**：workflow settings 指定 error workflow，任何执行失败自动触发；同一 error workflow 服务多个 workflow；捕获 workflow name/execution URL/last node executed/error message。→ 判据：实例统一挂一个错误处理工作流，别每个 workflow 各写一套。
+- **AI 诊断增强**：Error Trigger 传完整错误上下文（message/stack trace/failing node）给 LLM Agent 分析 root cause/potential solutions/impact/urgency；输出 Severity Level+Quick Resolution。→ 判据：错误通知里带 AI 根因+等级+速修建议，值班可直接行动。
+- **错误分类 7 型+去重**：Auth Error/Rate Limit/Network/Data Config/Not Found/Server Error/Permission；每类 severity（Critical/High/Medium）+suggested fix（如 "Re-authenticate credential for: [node name]"）；LLM 分类失败 fallback UNKNOWN；dedup hash 分组相似错误→Jira 已开 issue 则 append recurrence comment 否则新开。→ 判据：同类错误重复告警先按 hash 去重，分类失败给 UNKNOWN 兜底。
+- **重试状态码分级**：retryable 408/409/425/429/500/502/503/504；not retried 400/401/403/404/422；backoff waitSeconds=min(maxDelay, baseDelay*指数)+jitter。→ 判据：重试白名单按状态码分，4xx 客户端错误不重试。
+- **日志分层**：ErrorLog/AuditLog Data Tables 中央日志工作流记录长期追踪。→ 判据：错误告警+长期日志分两路，告警给实时可见性日志给趋势分析。
+- **提升层**：工作流/可复用 Skill。
+
+## LangFlow 嵌入与 API 触发：chat widget + OpenAI Responses 兼容端点（来源：LangFlow 嵌入/API 面，2026-09-27 实拉）
+- **嵌入 chat widget**：最少输入 host_url（必须 HTTPS 无尾斜杠）+flow_id；Share→Embed into site 复制 snippet 插进网站 body；React/Angular/HTML 三形态。→ 判据：flow 要对话界面直接嵌 widget，别自建聊天 UI。
+- **OpenAI Responses API 兼容端点**：POST /api/v1/responses——现有 OpenAI client 库只改 model 名即用 Langflow flow，最小代码改动。→ 判据：已有 OpenAI 代码接 Langflow 走兼容端点，改 model 名即可。
+- **API 触发**：POST /api/v1/… 带 x-api-key header+input_value body；可在任何服务端触发 flow。→ 判据：非对话场景用 API 触发，widget 是对话场景的壳。
+- **输出安全摘要**：邮件/日历类集成只返回摘要不含完整 payload/机密数据。→ 判据：敏感数据集成默认摘要输出，不泄全文。
+- **提升层**：工作流。
+
+## Agent 构成与限制：instruction + knowledge + run 间无记忆（来源：Activepieces AI agent builder 面，2026-09-27 实拉）
+- **Agent 三构件**：instruction（做什么/用什么数据/怎么响应）+允许的 tools（任何集成、你的 automation、你的 MCP servers）+knowledge（上传文件或保持更新的 tables）。→ 判据：建 agent 先写清指令+圈工具+喂知识三件套，缺一不完整。
+- **两个硬限制**：run 之间不记忆任何东西（每次运行从零开始）；无 SharePoint/Drive/Notion 实时同步（知识快照非实时）。→ 判据：依赖跨轮记忆或实时文档同步的场景别选无状态 agent，先持久化或同步再建。
+- **Run Agent piece**：复杂多步任务推理+准确用工具+迭代直至完成；测试在 builder 内用 plain language 输入/动作/结果即时可见。→ 判据：agent 行为先在 builder 内跑真实测试再上线，别凭感觉发布。
+- **提升层**：工具。
+
+## Claude 模型选型纪律：2026 模型矩阵按负载匹配（来源：Claude 模型对比面，2026-09-27 实拉）
+- **模型矩阵**：Opus 5.5——大多数工作负载起步；Fable 5.1——复杂推理+长时间 agent 工作（或 Opus 5.5 高 effort 不够时）；Opus 4.6——1M context beta 深度推理/复杂编码/分析（/）；Sonnet 4.6——最佳价值日常编码/通用任务（/，Claude Code 默认）；Haiku 4.5——速度成本优先快速任务/分类/聊天（200K//）。→ 判据：按负载复杂度+成本选档，日常用 Sonnet、深度推理才升 Opus。
+- **Sonnet 5 agentic-coding 强**：top-tier accuracy 可比 opus 级、比 Sonnet 4.6 step-function 提升——编码 agent 场景 Sonnet 5 性价比首选。→ 判据：agentic coding 先试 Sonnet 5，不够再升 Opus。
+- **Opus 5 效率基准**：Zapier automation bench 榜首且不花更多 token——自动化任务复杂但预算敏感时 Opus 5 是效率选项。→ 判据：评估指标看"成绩/token 成本"比，不只比原始分数。
+- **提升层**：模型。
