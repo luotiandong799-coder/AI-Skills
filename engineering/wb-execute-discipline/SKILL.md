@@ -6824,3 +6824,48 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Conduit 网关**：让员工安全地把自有 app 连到 AI（企业级早期接入）。
 - **智能层与执行层分离**：OpenClaw=智能层（推理、规划、监控、决策、适配）；Pipedream=执行层（可靠运行、错误处理、重试、日志、缩放）——agent 经 REST API 把平台当 toolkit 用（创建/触发 workflow、读执行日志、管理 data stores、响应失败）。
 - **提升层**：工作流（agent 平台架构）。
+## agentskills.io 规范字段约束与目录结构：frontmatter 五字段 · scripts/references/assets · 两类集成（来源：agentskills.io specification + home + integrate-skills + env.dev agent-skills 2026-03/09 实拉，历批未用此站）
+- **frontmatter 字段约束**：name 必填 ≤64 字符（小写字母/数字/连字符，首尾不能连字符，须匹配目录名）；description 必填 ≤1024（做什么+何时用）；license 可选（许可名或捆绑文件引用）；compatibility 可选 ≤500（环境要求：目标产品/系统包/网络访问）；metadata 可选（任意键值 author/version）。
+- **目录结构**：SKILL.md 必填（YAML frontmatter+Markdown body）；scripts/ 可选可执行代码；references/ 可选按需加载文档；assets/ 可选模板/图片/数据文件。
+- **两类集成形态**：filesystem-based agents（bash/unix 环境最强大——模型 cat SKILL.md 激活，资源经 shell 访问）；tool-based agents（无专用计算机，按目录扫描+加载 metadata）。
+- **Skills Card**：配套文档详述 owner/已知风险/限制/评审状态——发布者责任面。
+- **提升层**：可复用 Skill（技能打包规范）。
+
+## Full Stack Skills 编排链与 agents.md 流水线：编排链 · PM→Engineer→QA 循环 · 全栈四步（来源：agskills.dev wshobson agents workflow-patterns + Google Codelabs autonomous-ai-developer-pipelines + agenticskills full-stack-ai-workflow 2026-02/09 实拉）
+- **编排规模**：184 专业 agent/150 agent skills/16 workflow orchestrators/98 commands——全栈开发/安全加固/ML 流水线/事件响应多 agent 协调。
+- **编排链模式**：ML pipeline data-scientist→data-engineer→ml-engineer→mlops-engineer→performance-engineer——每个角色只管自己一段。
+- **agents.md+skills.md 流水线**（Antigravity）：PM 读文件→Full-Stack Engineer 执行 generate_code.md→QA 执行 audit_code.md→用户反馈则 PM 重读修订→循环直到 "Approved"——角色切换即上下文切换，技能文件是执行契约。
+- **全栈 AI 工作流四步**：前端 Server/Client Component→数据库 schema+RLS+Supabase MCP 迁移→数据集成 GitHub/Sentry/Supabase MCP→auth 保护。
+- **提升层**：工作流（全栈 agent 编排）。
+
+## 智谱 AgentMore Agentic 扩展四组合：Skills+MCP · Skills+Subagent · CLAUDE.md+Skills · Hook+MCP（来源：docs.bigmodel.cn coding-plan agentic-extension + agentmore.chatglm.cn + zhipuai research 2026-02/09 实拉，r265B 拉过未落地）
+- **Skills+MCP**：MCP 提供连接，Skills 定义使用方式——Skills 描述数据库 schema（连接与语义分离）。
+- **Skills+Subagent**：Skills 启动多个 Subagent——/audit 同时运行安全与性能检查（并行扇出）。
+- **CLAUDE.md+Skills**：全局规则+按需知识——CLAUDE.md 定义 API 规范（常驻规则与按需知识分离）。
+- **Hook+MCP**：Hook 调用外部系统——修改关键文件后发送 Slack 通知（事件驱动联动）。
+- **AgentMore 平台**：多 Agent 云端协作；Skills 技能广场=内置推荐+Skillhub+开源社区三来源，一键安装不消耗 Token；共享工作区公共+私密；复杂任务拆多步骤由不同 Agent 协作。
+- **提升层**：可复用 Skill（扩展组合模式）。
+
+## OpenClaw /subagents 命令与线程绑定嵌套认证：list/log/info/kill · thread-bound allowlist · depth caps（来源：docs.openclaw.ai tools/subagents + tools/slash-commands + tools/steer 2026-09 实拉，合并 §子代理 session 治理——那条管"session 生命周期与执行形态"，本条补"命令面与线程绑定"）
+- **/subagents 命令面**：list 查看会话子 agent 运行；log id|# [limit] [tools] 看某次运行的聊天轮次/工具调用；info id|# 运行元数据（状态/时间戳/会话 ID/记录路径/清理）；kill id|#|all 杀运行。
+- **报告与可见性**：子 agent 向其 parent/requester session 汇报；/subagents 只读可见性，/steer 目标当前会话 active run。
+- **线程绑定**：thread-bound sub-agent sessions 绑定 channel thread，allowlist+archive 规则。
+- **嵌套与认证**：nested sub-agents 有 depth caps、announce chain、auth——构建 orchestrator 时必须查。
+- **/session unbind**：分离当前对话而不关闭其 agent session；/acp 管理 ACP 会话与运行时（spawn/cancel/steer/close/permissions/timeout 等，运行时控制需外部 owner 或内部 Gateway admin 身份）。
+- **提升层**：工作流（子代理运维）。
+
+## DeepSeek Harness 插件开发 SDK：defineTool 注册 · cordis.patch.yml · dsh plugin add 验证（来源：deepseek.com/harness + CSDN harness 插件开发 + cnblogs harness 上手/实战 + tencent cloud 必备清单 2026-08/09 实拉，合并 §Harness 全插件化——那条管"harness 架构形态"，本条补"插件怎么开发安装"）
+- **defineTool 注册**：ctx.tools.register(defineTool({name/description/parameters/execute}))——工具注册即插件能力。
+- **cordis.patch.yml**：直接写包名，Node 自动去依赖里找；export function apply(ctx) 加载逻辑。
+- **dsh-plugin-sdk**：definePlugin({name, setup(ctx)}) 启动时注册 ToolSchema。
+- **安装验证**：dsh plugin --profile demo add ./hello-plugin——首次自动初始化 profile。
+- **生态判据**：Cordis 接口稳定性+安装/更新/权限/兼容统一规范+脚手架/调试/分发渠道——决定生态能否做起来。
+- **Copilot 集成**：DeepSeek V4 for Copilot Chat 保留 Copilot 的 agent mode/tool calling/skills/MCP。
+- **提升层**：可复用 Skill（插件开发）。
+
+## 腾讯 SkillHub CLI 发布与安全四道防线：login→init→push→publish · 工作区技能模式 · 企业多端（来源：skillhub.cloud.tencent.com tutorials + cloud.tencent.com techpedia 2618 + developer.tencent 安全方案/四道防线 2026-03/09 实拉，库内无 SkillHub 章节）
+- **frontmatter 发布格式**：slug/displayName/version/summary/license——发布前置条件。
+- **CLI 流程**：skillhub login（OAuth 凭证存 ~/.skillhub/auth.json）→skillhub init --name --category（标准项目结构）→skillhub push（推远程）→skillhub publish（发布公开目录）；网页可视化/CLI/Agent 自动化三发布方式，版本可追溯随时回滚。
+- **安全四道防线**：工作区技能模式把可执行 TypeScript 代码转纯 Markdown——外部代码拿不到本地执行权限；推荐非 ROOT 普通用户运行；自动更新开关交用户防热更新投毒；全链路 TLS+定期渗透测试。
+- **企业多端调用**：CLI 批量部署版本管理/自然语言对话调用/打包下载 Zip 离线部署/管理员审核（安全扫描后管理员审核）。
+- **提升层**：工作流（技能发布与安全）。
