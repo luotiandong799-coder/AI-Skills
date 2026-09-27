@@ -3471,3 +3471,41 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **Skill Workshop 双态治理**：技能创建走 proposal（待定草稿+内容+目标绑定+scanner 状态+hash+回滚元数据）→ **applied 才变 live skill**——**技能上生产必须经过 proposal→applied 两道状态**；workshop storage 与 session workspace 分离。
 - 判据：**定时任务加条件守卫；技能变更走双态（草稿→生效）；重复声明原地更新**。
 - 提升层：工作流。
+
+## 多 agent 输出纪律：字符串 gotcha · 每 run 超时 · final_answer_checks（来源：smolagents 1.26 + The Neural Base 生产实践，2026-09-27 实拉）
+- **agent 输出只是字符串**：多 agent 顺序调用时，传结构化数据（dict/list）**必须显式转 JSON 字符串**，否则下一个 agent 看到的是 epr() 不是有效 JSON。
+- **无全局 timeout**：每个 gent.run() 单独设超时，否则卡死的 LLM 规划循环会挂死整个工作流。
+- **内建校验**：inal_answer_checks 参数让 agent 在返回前校验最终答案（_validate_final_answer），planning_interval 控制规划节奏——**答案不是"生成出来"就完，过一道校验再交**。
+- **沙箱执行不支持多 agent**：E2B/Modal/Docker 沙箱里跑 CodeAgent 时，**不可信输入处理要隔离到独立子 agent**，架构上先分。
+- 判据：**agent 间传参用 JSON 字符串；每个 run 设超时；生产 agent 开 final_answer_checks**。
+- 提升层：工作流。
+
+## 结构化输出解析器：schema 自动注入 + auto-fix 自愈（来源：n8n Structured Output Parser+社区实践，2026-09-27 实拉）
+- **Require Specific Output Format + Structured Output Parser**：JSON Schema 定义字段类型/enum/描述，**parser 自动把格式指令注入 prompt**——不用再在 prompt 里写 JSON 格式说明。
+- **Auto-fixing Output Parser**：首次解析失败时**自动把坏输出+错误喂回模型要求修正格式**——最小努力最大收益，专治弱模型。
+- **schema 来源二选一**：Generate from JSON Example（自动生成，所有字段必填）/ Define using JSON Schema（手动，可控性高）。
+- **手动校验循环上限**：不用 parser 时用 schema 检查+runIndex 计数重试，**最多 4 次防无限循环**。
+- 判据：**AI 输出进下游前必过 schema 校验；格式错误走 auto-fix 或限次重试，不裸传**。
+- 提升层：工具。
+
+## agent 评测三支柱：框架三组件解耦 · 三证据通道 · 必经状态骨架（来源：AgentCompass/Claw-Eval/GitHub Copilot 验证，2026-09-27 实拉）
+- **评测框架三组件解耦**：Benchmark / Harness / Environment 独立配置（AgentCompass）——**换模型换环境不重写评测逻辑**，可扩展多框架。
+- **三证据通道**：每条 agent 运行录 execution traces + audit logs + environment snapshots 三通道（Claw-Eval 300 任务 2159 rubric）——**判定有据可查，能诊断 reward-hacking 等细微失败**。
+- **必经状态 dominator analysis**：合并轨迹图提取"成功必经状态"，**自动过滤可选状态（如 loading spinner）**——三层次等价检测（视觉指标+LLM 语义分析）判断两状态是否逻辑等价。
+- 判据：**agent 评测=封闭任务集+轨迹证据+必经状态骨架**；结果先过"是否忠实于工具返回数据"（reasoning faithfulness）再谈准确率。
+- 提升层：可复用 Skill（评测方法）。
+
+## 技能商业化 + per-flow 记忆自动摄入（来源：腾讯 SkillPay+Langflow 1.10，2026-09-27 实拉）
+- **SkillPay 模式**：技能分发+Agent 调用+技能支付同链路打通——商家上架 Pay Skill 即获向 Agent 收费能力，平台管来源认证/内容完整性校验/可信调用入口——**"技能可收费"成为平台级能力**。
+- **Agentic RAG**：基于 Agent Loop 的 RAG——RAG 不再是单次检索，检索/判断/再检索在 loop 里迭代。
+- **Memory bases**：per-flow 向量存储**自动摄入对话消息**、跨 session 持久化（区别于 session-scoped memory）——**记忆不需要手动存，对话进来就自动入库**。
+- **知识库本地化**：本地向量库让数据**免每次远程 fetch 重复摄入**。
+- 判据：**技能上架先想"谁付钱谁审核"；记忆优先自动摄入；RAG 迭代式而不是一次性**。
+- 提升层：工作流。
+
+## 托管 MCP 服务器：静态 URL + per-user auth + 工具发现内建（来源：Pipedream Connect/MCP，2026-09-27 实拉）
+- **2600+ 集成 app 发布为 MCP servers**：一个静态 URL（https://mcp.pipedream.net/v2）+ OAuth——**agent 选工具时 auth 已处理**，不用为每个 API 写集成代码。
+- **工具发现内建**：agent 通过 list_tools 自己找需要的工具，**远程 MCP 一台服务器给 1 万+ 工具**。
+- **兼容任何 MCP client**：ChatGPT/Claude/Cursor/Windsurf 同一 URL——**写一次接入，处处可用**。
+- 判据：**要接大量第三方 API 时优先托管 MCP（认证/发现/执行外包），不自己逐家写 SDK**。
+- 提升层：工具。
