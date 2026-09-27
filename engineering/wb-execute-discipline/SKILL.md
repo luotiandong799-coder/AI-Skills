@@ -4205,3 +4205,34 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **Claude Context（Zilliz）**：一次 MCP 安装给 coding agent 整代码库语义搜索——免每次对话加载文件，~40% token 节省。→ 判据：代码库级检索用语义搜索 MCP 而非逐文件读入。
 - **Maskit 脱敏网关**：自动遮蔽 AI 服务请求中敏感数据，流式响应中无缝恢复——敏感信息本地留；支持 Cursor/Claude Code 等可配置 Base URL 工具。→ 判据：敏感数据出本地前先脱敏，响应回来再恢复，私密内容不出域。
 - **提升层**：工具。
+
+## Summary Index + Child Chunks 检索钩子（来源：Dify 知识库/RAG 面，2026-09-27 实拉）
+- **Summary Index 轻量图语义检索**：每 chunk 附 summary 字段使语义相关内容一起检索——比 GraphRAG 轻量；summary 匹配则共享 summary 的所有 chunks 一起返回。→ 判据：要"相关内容一起召回"但不想上 GraphRAG 复杂度时，用 chunk 级 summary 索引。
+- **Child Chunks 检索钩子**：Parent-child 模式搜 child 返 parent；child 可当 parent 语义标签/检索提示，重写 child 不影响 parent。→ 判据：父子块结构下把 child 当检索钩子用，细粒度召回+完整上下文返回。
+- **检索模式选型**：N-to-1 多知识库合并结果推荐大多数场景 vs Multi-path 每库分别检索适合并行。→ 判据：多数场景 N-to-1，需要并行独立处理才 Multi-path。
+- **提升层**：工作流。
+
+## 两层错误处理 + AI 分类三分 + dead-letter 重放（来源：n8n 错误处理/生产面，2026-09-27 实拉）
+- **两层错误处理**：node-level Retry On Fail（maxTries+wait 网络抖动 429 就地重试）+ Error Trigger workflow（报警/dead-letter/记录失败）。→ 判据：瞬态就地重试，残余交 Error Trigger——一层就地一层兜底，别混。
+- **Continue on Fail + 找不到路径“Env:UV_CONFIG_FILE”，因为该路径不存在。 找不到路径“Env:PIP_CONFIG_FILE”，因为该路径不存在。 找不到路径“Env:CUA_PACK_DIR”，因为该路径不存在。 字段**：单失败请求不杀整执行，找不到路径“Env:UV_CONFIG_FILE”，因为该路径不存在。 找不到路径“Env:PIP_CONFIG_FILE”，因为该路径不存在。 找不到路径“Env:CUA_PACK_DIR”，因为该路径不存在。 供下节点判断重试或继续。→ 判据：部分失败想继续的节点开 Continue on Fail，用 找不到路径“Env:UV_CONFIG_FILE”，因为该路径不存在。 找不到路径“Env:PIP_CONFIG_FILE”，因为该路径不存在。 找不到路径“Env:CUA_PACK_DIR”，因为该路径不存在。 字段分支。
+- **AI 分类三分重试**：分类 transient/permanent/needs_human→仅瞬态指数退避重试→非重试/预算耗尽 dead-letter 注册表夜间重放。→ 判据：重试前先分类，永久失败/需人介入不进重试循环。
+- **错误分类 7 型**：Auth/Rate Limit/Network/Data-Config/Not Found/Server Error/Permission；监控排除自身执行防告警循环。→ 判据：错误分类定型后报警才可聚合，别逐条无差别告警。
+- **提升层**：工作流。
+
+## Memory Tool check-memory-first 协议 + 工具响应上限（来源：Anthropic context engineering 面，2026-09-27 实拉）
+- **Context Engineering 范式**：从一次性 Prompt 到生命周期 Context——"optimizing the utility of tokens against the inherent constraints of LLMs"，be informative yet tight。→ 判据：上下文是整体信息环境，prompt 只是其一——按 token 效用优化整个上下文。
+- **Memory Tool 协议**：模型通过持久文件目录跨会话存/取；auto-injected system prompt 建立 check-memory-first："ALWAYS VIEW YOUR MEMORY DIRECTORY BEFORE DOING ANYTHING ELSE... Your context window might be reset at any moment"。→ 判据：上下文随时可能重置，动作前先查记忆目录——记忆先行协议写进系统提示。
+- **工具响应上限 25,000 tokens**：工具带分页/范围选择/过滤/截断默认合理值。→ 判据：工具输出设上限+分页，防单次工具调用撑爆上下文。
+- **提升层**：工作流/可复用 Skill。
+
+## Binding 路由 + ACP 协议 + cloud session（来源：OpenClaw 多 agent 路由/记忆面，2026-09-27 实拉）
+- **Binding 路由架构**：agent=完整 per-persona scope（workspace 文件/agentDir/模型注册/session store）；binding 映射 channel account→agent；入站消息经 binding 路由。→ 判据：多 agent 按 channel 隔离路由，每 agent 完整独立 scope。
+- **Session Router 按 session key 路由**：Gateway 收 Message→按 Message Session Key 路由到某 agent session；每 agent 至少一个 main session。→ 判据：消息-会话准确匹配靠 session key，不靠猜测。
+- **ACP 协议跨 agent 通信**：sessions_spawn 委托任务/sessions_send 直接通信；thread-bound persistent sessions。→ 判据：跨 agent 委托用 spawn/send 显式协议，不混在普通会话里。
+- **Cloud session 远程执行所有权归 Gateway**：编码工作在另一台机器跑，Gateway 保持对话/workspace/模型凭证所有权；session 与持久状态远程失败后存活，reclaimed/suspended workers 下条消息重启。→ 判据：远程执行但所有权归主进程，失败后状态存活可重启。
+- **提升层**：工作流。
+
+## MCP RCE Guard：从声明语义合成 per-tool 策略（来源：GitHub 生态面，2026-09-27 实拉）
+- **Layer-3 RCE 防御**：MCP servers 策略合成——从声明语义合成 per-tool 策略执行时强制；关闭 sidecar scanners（mcp-armor）和 stdio wrappers（mcp-stdio-shellguard）抓不到的 tool-injection-RCE 类。→ 判据：RCE 防御做在执行层策略强制，不做扫描器事后抓。
+- **SDL-MCP cards-first 上下文系统**：Symbol Delta Ledger——cards-first context 给 coding agents 省 token 改善上下文。→ 判据：代码上下文管理可用增量卡片账本而非整文件常驻。
+- **提升层**：工具。
