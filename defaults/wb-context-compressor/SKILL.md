@@ -175,3 +175,6 @@ version: 3.83.0
 本正文只保留压缩决策级核心。方法论来源、判据推导、反模式、特殊场景全部在
 [references/knowledge-base.md](references/knowledge-base.md)（完整知识库，下沉于 2026-09-26）。
 **先 Grep 定位关键词，再读对应节**。主题速查：压缩质量门与焦点引导 · 记忆提取四策略 · 记忆投毒防御 · 压缩后规则重声明 · 上下文位置工程（首尾效应）· RAG 检索管线 · 上下文分级治理 · Agent 安全纵深 · MCP 安全五则 · 记忆存储强化 · PKM 三职责。
+
+### 三级 token 预算量化（来源：Anthropic Skills 官方指南 2026-09-27 实拉）
+技能/长文档渐进披露的 token 成本：Level 1 frontmatter 常载约 100 tokens（只够判断何时用）→ Level 2 主体触发时载 <5k tokens（完整指令）→ Level 3 捆绑文件按需近乎无限。SKILL.md 主体保持 <500 行，逼近就拆 references/ 子文件；整个文件系统是 context engineering——文件清单本身就是披露地图。
