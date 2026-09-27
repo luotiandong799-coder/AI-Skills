@@ -5342,3 +5342,38 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **登录态复用是"last mile"痛点**：BrowserSkill（4.7K TS）——无痕浏览器被验证码/短信/SSO 拦，AI 网页任务最别扭的是登录状态。→ 判据：浏览器 agent 优先复用持久登录态，别每次开无痕重验。
 - **BrowserAct**：anti-detection/持久会话/并行执行/SkillHub 100K+ skills——真实受保护动态页面不封不丢态。→ 判据：被反爬/动态页拦时上 anti-detection 方案，防封防断。
 - **提升层**：工具。
+
+## Dify 插件市场与交付五形态：Marketplace 治理 + 应用即产物（来源：Dify Marketplace 面，2026-09-27 实拉，与 §Dify 多面互补——这条管插件生态与交付形态）
+- **Marketplace 800+ 插件**：模型供应商/工具/数据源/MCP 集成，一键安装；团队跨应用复用已审批插件，无需逐项目重复配置。→ 判据：功能优先查 Marketplace 现成插件，别自造轮子；审批后全队复用。
+- **应用交付五形态**：standalone web app / backend service API / tools in other Dify apps / MCP servers / marketplace templates。→ 判据：一个 flow 按消费方选交付形态，五种出口同一构建。
+- **生态治理**：Trust Is a Feature——marketplace 清单+调用数据双重治理。→ 判据：装插件看治理信号（官方/社区/调用量），不装来路不明的。
+- **Creator Center 模板市场**：创作者发布 workflow 模板一键采用。→ 判据：成熟流程沉淀成模板进市场，复用他人模板起步。
+- **提升层**：工作流。
+
+## n8n Error Workflow 与断点恢复：Error Trigger + Continue on Fail + Last Successful Step（来源：n8n error handling 面，2026-09-27 实拉，与 §Code node 契约互补——这条管失败处理）
+- **Error Workflow**：Workflow Settings 设置；执行失败触发；必须以 Error Trigger 开头；同一 error workflow 可复用多 workflow；发邮件/Slack 告警。→ 判据：上线前必配 error workflow——像烟雾报警器，不阻止火灾但第一时间通知。
+- **Continue on Fail**：HTTP 单请求失败不杀整个执行，输出含 找不到路径“Env:UV_CONFIG_FILE”，因为该路径不存在。 找不到路径“Env:PIP_CONFIG_FILE”，因为该路径不存在。 找不到路径“Env:CUA_PACK_DIR”，因为该路径不存在。 字段，下节点判断重试/继续。→ 判据：可容忍单点失败的任务开 Continue on Fail，别让一个请求毁掉整条链路。
+- **AI 错误诊断**：Error Trigger 传完整错误上下文（message/stack trace/failing node）给 LLM 根因分析，结构化输出 category/confidence/remediation。→ 判据：错误上下文全量喂诊断模型，输出结构化便于自动决策。
+- **断点恢复**：扫描 status='failed' and retry_count<max → 读 Last Successful Step 从断点恢复，而非重启全流程。→ 判据：长流程失败按断点续跑，配合重试计数防死循环。
+- **模型 failover 链**：主模型失败自动回退备模型（fail_count 计数+指数退避）。→ 判据：关键 LLM 调用配 fallback 链，限流/宕机不中断。
+- **提升层**：工作流。
+
+## LangFlow lfx 扩展工程与安全开关：extension.json 结构 + ALLOW_CUSTOM_COMPONENTS（来源：LangFlow custom component 面，2026-09-27 实拉，与 §自定义组件互补——那条管单组件写法，这条管工程化与安全）
+- **Custom Component 结构**：继承 Component 类；display_name/description/icon 元数据；inputs（MessageTextInput 等）+Outputs+process 逻辑。→ 判据：组件=元数据+输入输出契约+处理逻辑三段。
+- **lfx extension init 工程化**：extension.json（v0 manifest）+pyproject.toml（pip-installable）+src/lfx_my_extension（__init__.py）——loader 期望的规范布局。→ 判据：扩展按官方骨架脚手架，可安装可加载。
+- **安全开关**：LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false 禁用自定义组件执行（受控部署）；LANGFLOW_COMPONENTS_PATH 白名单 allow-list。→ 判据：生产环境默认关自定义执行，白名单放行。
+- **组件 bundle**：相关组件按服务商打包成 bundle，贡献回 Langflow 走 bundle 流程。→ 判据：组件成群发布，按 provider 聚合。
+- **提升层**：工具。
+
+## Activepieces Webhook 安全与 waitpoint：HMAC 验签 + nonce 防重放 + 回调暂停恢复（来源：Activepieces webhook 面，2026-09-27 实拉，与 §Schedule/§run 可观测互补——这条管入站安全与暂停）
+- **Webhook 安全清单**：secret tokens+HTTPS+TLS+每次请求验签+payload 结构验证+严格认证+rate limit+审计日志+端点不公开+定期轮换凭据。→ 判据：公开 webhook 全项过一遍，缺一项就是攻击面。
+- **HMAC 签名验证**：Code step 计算比较（shared secret），早期拒绝不匹配；记录签名+时间戳审计；nonce 存储防重放。→ 判据：验签放第一步，重放靠 nonce 挡。
+- **webhook waitpoints**：flow 暂停到特定回调 URL 被调用（run 唯一 URL，带 body/headers/query 到下步；async+sync respond-when-done）；Delay waitpoints 暂停到计划时间戳自动恢复。→ 判据：等外部回调/定时恢复用 waitpoint，释放 worker 不白等。
+- **Event Streaming**：审计事件转发 webhook 建自定义告警。→ 判据：审计流接 webhook，告警自由编排。
+- **提升层**：工作流。
+
+## Pipedream CLI 与 AI 编辑：pd init/publish/deploy + Edit with AI（来源：Pipedream CLI 面，2026-09-27 实拉，与 §REST/§triggers 互补——这条管本地开发与 AI 改流）
+- **CLI 工作流**：pd init（app/action/source 模板生成）；pd init connect（Connect 项目初始化：项目/OAuth client/demo app）；pd login；pd publish action.js（发布 component 为 action）；pd deploy my-source.js（本地部署 source）；pd events -n 10 <source>（取最近事件）。→ 判据：组件开发走本地 CLI 全链路，模板起步不手写骨架。
+- **Edit with AI**：workflow builder 内 AI 编辑现有 workflow/代码 step/报错调试，部署回 Pipedream。→ 判据：改流用自然语言给 AI 改，IDE 里完成闭环。
+- **Connect SDK**：npm i @pipedream/sdk；10,000+ tools/3,000+ APIs/managed auth。→ 判据：agent 接外部能力先查 Connect 现成 tools，托管认证免自建 OAuth。
+- **提升层**：工具。
