@@ -4320,3 +4320,27 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **评测基准选记忆方案**：agentmemory 95.2% R@5 on LongMemEval-S（超 mem0 68.5%/Letta 83.2%），~170K tokens/年 vs paste-full ~19.5M。→ 判据：选记忆方案先看标准评测（LongMemEval）与 token 年成本，不凭直觉。
 - **单二进制 MCP-native 记忆**：Perseus Vault 一个 Rust 二进制一个 SQLite 文件给 AI agents durable cross-session memory，无 Docker/Postgres/cloud，55 MCP tools。→ 判据：个人/离线场景记忆服务用单二进制+单文件，不拉重基建。
 - **提升层**：工具。
+
+## 四形态发布 + 输出 Schema 收紧 + Extension 发布流程（来源：Dify 发布面 + n8n Agent 面 + LangFlow 组件面，2026-09-27 实拉）
+- **同一逻辑四形态交付**：Dify 发布=web app/API endpoint/embeds/MCP-compatible tools 四形态，一次构建四处消费；Publish as a Tool 把 workflow 打包成工具给其他 Agent。→ 判据：工作流设计时先想"它会被什么消费"——网页/API/嵌入/MCP 工具，四形态共用同一逻辑。
+- **API 密钥两级权限**：应用密钥仅作用该应用；知识库密钥权限更大（可访问账户下所有可见知识库）需格外保管。→ 判据：密钥最小范围，范围大的密钥单独管控。
+- **Structured Output Parser 一次定义永久生效**：AI Agent 节点开 Require Specific Output Format→接 parser（Auto-fixing/Item List/Structured）；Define using JSON Schema 提供 field types/enums/descriptions，parser 自动注入格式指令简化 prompt，响应后按严格规则校验（category 永远精确 "billing" 绝不 "Billing"）。→ 判据：AI 输出进下游前必须过 schema 校验；格式指令交给 parser 注入，prompt 不手写 JSON 要求。
+- **动态模型路由**：按 query 内容/目的路由最合适 LLM（coding→Opus 4/reasoning→Gemini Thinking Pro/general→GPT 4.1 mini/search→Perplexity）。→ 判据：单模型做全部任务=成本与质量双输；路由器先分类再调模型。
+- **Extension 发布全流程**：build（python -m build 建 wheel+sdist）→ ship（twine upload 发 PyPI）→ 装（pip install lfx-xxx）→ 起（langflow run，discovery 发生在 server startup）。→ 判据：组件打包发布走 wheel→PyPI→pip 标准链，server 启动时自动发现。
+- **提升层**：工作流/工具。
+
+## Hooks 确定性纪律 + Skill Gotchas 节（来源：Claude Code agentic coding 面，2026-09-27 实拉）
+- **CLAUDE.md/skills 是请求不是保证**：必须发生的事放 hook——PreToolUse/PostToolUse/SessionStart 生命周期，可跑 shell 命令/HTTP 请求/prompt/subagent；shell/HTTP hook 不占 token 低 context cost。→ 判据：想"每次必做"就进 hook，想"通常做"才写进 CLAUDE.md/skills。
+- **On-demand hooks**：skill 被调用时才激活、会话期有效——opinionated 保护钩子（/careful 阻塞 rm -rf/DROP TABLE/force-push）平时不干扰。→ 判据：危险操作的保护钩子做成 skill 触发的 on-demand，不全时开启。
+- **Skill Gotchas 节是最高信号**：从常见失败点构建，随使用持续更新（"subscriptions 表是 append-only"）。→ 判据：技能里最有价值的是"踩过的坑"清单，写进 Gotchas 节并随实战累积。
+- **任务分解**：复杂任务拆成顺序 focused commands（schema→API→购物车），每命令单一清晰目标；给示例与约束（"Follow this existing API pattern"）优于抽象要求。→ 判据：给 AI 的命令一次一个目标，配具体示例而非抽象描述。
+- **PostCompact hook**：压缩后重设关键指令（与 §压缩后规则重声明 呼应，机制化落地）。→ 判据：压缩规则重发可做成 PostCompact hook 自动执行，不靠每轮自觉。
+- **提升层**：可复用 Skill。
+
+## Dual-LLM 读行动分离 + 外传阻断（来源：prompt injection 缓解面，2026-09-27 实拉）
+- **Dual-LLM 架构**：读不可信内容的模型与有工具访问的模型分离——reader 只传结构化摘要给 acting model，绝不传 raw text；攻击者只能影响结构化 label，不能注入命令到 acting model。→ 判据：不可信内容读取与行动执行分两个模型，中间只传摘要。
+- **Safe URL 外传阻断**：检测助手是否试图把对话中获取的信息传输给第三方——展示待传信息请求确认，或直接阻断并指示换方式完成。→ 判据：外发动作前过外传检测，信息离开前先确认。
+- **context separation 性价比最高**：停止把不可信内容插进 system prompt——安全改进/实现成本比最高。→ 判据：不可信内容只进 user 层或独立标签区，绝不混入 system 指令区。
+- **allow-listing 优于黑名单**：验证输入对已知好值（路径在允许目录内），而非过滤已知坏模式（traversal 序列）。→ 判据：白名单校验永远先于黑名单过滤。
+- **LLM 工具参数当 untrusted**：模型提供的函数参数按 web API user input 一样对待。→ 判据：工具参数过校验再执行，不因来自模型而信任。
+- **提升层**：模型/工作流。
