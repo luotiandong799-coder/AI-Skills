@@ -3659,3 +3659,42 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **生态口径**：全球 AI Agent 工具 44 万+、AI Skill 近 30 万、日均新增 1300+（官方实时口径，修正早期"76 万+"营销数字）。
 - 判据：**技能来源分内置/企业/自定义三层，导入走 ZIP；数字认官方实时口径不认营销口径**。
 - 提升层：可复用 Skill（技能分发生态）。
+
+## LLM 路由三模式：成本强制 / SLA 分级 / Failover（来源：n8n blog LLM Routing，2026-09-27 实拉）
+- **查询级成本强制**：把计算成本钉在每次查询级别执行，而不是在聚合账单里事后发现超支。
+- **SLA 分级路由**：按订阅/SLA 层级路由——premium 用户给更快更强的模型，free 用户给成本优化响应；**路由决策发生在 session 级、第一个 token 处理之前**，基于订阅状态做，不基于请求内容事后判断。
+- **Failover routing**：监测 provider 可达性，主模型不可用或返回降级响应时自动改道另一 provider——**不需要改凭据或改 workflow 内执行**。
+- 判据：**路由决策先于 token；成本按查询级强制；降级自动 failover**。
+- 提升层：工作流。
+
+## HITL 检查点 + A2A + AG-UI + OpenTelemetry（来源：LangFlow 1.11/1.12 release blog，2026-09-27 实拉）
+- **1.11**：**Human-in-the-Loop checkpoints**（流程中设人工检查点）+ **A2A 协议支持**（agent 间互联）+ **AG-UI streaming**（Workflow API 流式）。
+- **1.12**：**OpenTelemetry** 覆盖 service health 与 flow runs——流/服务健康可观测标准化。
+- **1.10.3 安全加固**：outbound request protection + Docker + MCP stdio/component code access 加固。
+- **内存优化**：1.10.0 preload.py + Linux Copy-on-Write 内存共享（LANGFLOW_GUNICORN_PRELOAD=true）。
+- 判据：**生产编排要有人工检查点；agent 间协议（A2A）与可观测（OTel）进版本主线**。
+- 提升层：工具。
+
+## Agent 策略插件化选型 + Allowed tools 白名单 + Agentic RAG 迭代框架（来源：Dify Agent Node / Agent Strategy docs，2026-09-27 实拉）
+- **策略二选一按模型能力**：Function Calling（模型原生工具定义走 tools 参数，GPT-4/Claude 3.5 类）vs ReAct（Reason+Act 显式推理循环）；**策略是插件化逻辑模块，可换**。
+- **Allowed tools 白名单**：Agent 节点接受可选 Allowed tools 列表——**指定名字则只发这些工具给模型并允许运行，留空才全量**；工具暴露面可控。
+- **Agentic RAG 框架**：Agent Node 集中决策引擎组合意图分析+工具编排+来源选择+重试逻辑；**迭代循环：分析意图→选工具/来源→重写查询→评估证据→重试或回退**（提高 grounding，代价是延迟/成本/复杂度）。
+- 判据：**策略按模型选；工具白名单优先；RAG 走迭代循环不一把梭**。
+- 提升层：工具。
+
+## 全插件化 Harness + 技能管理插件（注入开销统计+模型可见性治理）+ 知识图谱记忆（来源：DeepSeek Harness docs + dsh.do 插件市场，2026-09-27 实拉）
+- **Everything is a plugin**：DSH 把模型/工具/技能/会话/沙箱/存储/循环/调度/UI 全部做成可插拔积木——**能力都可换可重组**。
+- **skills-management 插件**：一页管理本机所有 coding agent 技能（Claude/ZCode/Codex 等十余执行器一键收编进用户库）；内置 6600+ 技能市场；**注入开销（token/字符）统计与排序**+**模型可见性治理**+市场每日自动同步。
+- **graph-memory 插件**：从对话抽**结构化三元组**建知识图谱，**压缩上下文 75%**，跨会话经验复用（单 Go 二进制，无 LLM 无 embeddings）。
+- **dsh-market**：找插件本身被做成插件（harness 内浏览/搜索/安装+按已装推荐）。
+- 判据：**能力组件化可插拔；技能带注入开销与可见性治理；记忆用结构化三元组压缩**。
+- 提升层：工具。
+
+## 一句话生成 Agent + Agent 一等实体 + AI Copilot 排障（来源：Activepieces changelog + AI Agent builder，2026-09-27 实拉）
+- **一句话建 agent**：Agents 页打开就是 prompt 框——写"summarise my unread emails every morning"→自动生成草稿 agent（**名字+指令+需要的工具从已连接 app 自动推导**）。
+- **Agent 一等实体**：从 flow step 里的设置包变成可命名/可 brief/可对话/可复用的独立实体。
+- **AI Copilot**：构建时自然语言建议步骤与逻辑；**流坏了 Copilot 帮定位**。
+- **agent 知道何时 pause**：草拟回复+查规则+等 review 再发（HITL 内建）。
+- **你的模型你的 key**：admin 一次配置 provider，团队共用。
+- 判据：**agent 从"步骤里的设置"升格为"可对话实体"；一句话能生成带工具推导的草稿；排障交给 Copilot**。
+- 提升层：工具。
