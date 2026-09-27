@@ -7154,3 +7154,60 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **tweaks 覆写**：run 请求带 tweaks——按 component_id+parameter_name 覆写任意组件参数，同一 flow 不同调用传不同参数。
 - **custom_component API**：POST 代码构建自定义组件并返回节点；update 更新构建配置；validate/code 校验 Python 片段——全远程 API 化。
 - **提升层**：工作流（API 集成）。
+## Anthropic 提示角色与推荐结构：system=behavior/user=task · 别过度约束角色 · task contract 六问（来源：platform.claude.com prompting-best-practices + docs.anthropic.com system-prompts + claude.com blog best-practices + promptlayer how-to-apply + dev.to prompting-101 2025-11/2026-09 实拉，合并 §提示工程——那条管"方法与技巧"，本条管"角色与结构规范"）
+- **system=behavior / user=task**：角色与规则放 system prompt；任务特定指令放 user turn——职责分离，行为一致性与任务灵活性兼得。
+- **别过度约束角色**：role prompting 有效但别过火——"You are a helpful assistant" 常优于"world-renowned expert 只会术语永不犯错"；超具体角色写法：你有 N 年经验的非常具体角色+亲历过特定失败模式+用指定框架思考+说话直接。
+- **推荐结构五段**：Task description（角色+任务+成功标准）→ Dynamic content（图片/PDF/检索文档等输入）→ Detailed instructions（逐步清单）→ Examples（输入输出示例）→ Repeat critical instructions（末尾重申关键约束）。
+- **task contract 六问**（写 prompt 前先答）：Input 收到什么/Output 返回什么格式/Rules 必须做与禁止做/Context 可用什么背景/Failure behavior 信息缺失或歧义怎么办/Evaluation 如何判定成功。
+- **提升层**：工具（提示结构）。
+
+## n8n 子工作流工具与 Manager Agent：workflow 打包成工具 · 五阶段路由 · Thinking Space（来源：blog.n8n.io production-ai-playbook + docs.n8n.io toolworkflow/build-agents + workflows 4150/7066/7158 2026-02/09 实拉，合并 §n8n 多agent 编排——那条管"编排结构"，本条管"子工作流工具化"）
+- **Call n8n Workflow Tool 节点**：把任意 n8n workflow 打包成 agent 可调工具——子工作流独立 trigger/logic/output，父 agent 像调工具一样传输入收结构化结果。
+- **sub-workflows vs 内联 AI 节点**：执行路径可预测/同一 agent 逻辑跨 workflow 复用→子工作流更清晰——比 Agent 节点内堆工具更易维护。
+- **Execute Workflow 五阶段路由模式**：Initialise（CONFIG 节点集中全部默认：provider/model/temperature/token limit/response format）→ Normalise（inbound 合并默认+强转 string+去 null 字节）→ 模型特化处理 → 路由 → 输出。
+- **Manager Agent 模式**：评估输入分派给专用子 agent（各带 role/memory/model）；n8n Agents 内 Add agent 用"When should this agent be used?"描述分派条件。
+- **Thinking Space 模式**：空子工作流当可复用 scratchpad——多次用 Tool Workflow 节点调用，各工具唯一命名（Initial thoughts 等）让模型多步推理留痕。
+- **提升层**：工作流（子工作流工具化）。
+
+## Dify 会话变量与 Variable Assigner：会话级记忆 · 变量作用域表 · 系统变量（来源：dify.ai blog conversation-variables + legacy-docs start 系统变量 + release variable-assigner + deepwiki chatflow-specific 2024-08/2026-07 实拉，Dify 章节均为 RAG/节点/插件面，会话状态面为新增）
+- **Conversation Variables**：Chatflow 短期记忆单元——同一 conversation_id 内跨轮持久化，支持用户个性化/状态化工作流/进度跟踪；模拟 OpenAI Memory。
+- **变量作用域表**：Input/Output Variables 单次运行不可变；Conversation/Session Variables 会话级可变、跨轮读写（Variable Assigner 节点写入）。
+- **系统变量**：sys.query（初始输入）/sys.files（上传图片）/sys.dialogue_count（对话轮数）——编排时直接用。
+- **LLM Memory 节点级**：节点内跨多次 LLM 调用保持（USER 模板可自定义注入格式）——不跨对话持久，与 Conversation Variables 互补。
+- **提升层**：工作流（会话状态管理）。
+
+## OpenClaw 信任边界与默认安全：每 gateway 一边界 · Gateway/Node 分离 · 一切读取不可信（来源：trust.openclaw.ai + docs.openclaw.ai gateway/security + openclawdoc security/overview + swfte openclaw-security 2026-03/09 实拉，合并 §OpenClaw 安全纵深——那条管"权限与门禁"，本条管"信任模型与治理"）
+- **默认安全**：DM Policy 默认 pairing（未知发送者须配对+过期码）；Exec Security 默认 deny+ask: on-miss（危险命令要审批）；shell/browser/file_write 默认禁用直到显式启用；API keys 永不记录、敏感配置状态打码。
+- **信任边界**：每 gateway 一个信任边界——单 operator 或互信团队；OpenClaw 不是敌对多租户边界；混合信任/对抗用户必须拆边界（separate gateway+credentials，最好独立 OS 用户/主机）。
+- **Gateway vs Node 角色分离**：Gateway=控制面+策略面（auth/tool policy/routing）；Node=远程执行面（commands/device actions）；配对后 node actions 视为 trusted operator actions。
+- **治理配套**：出站网络按域名限制；rate limiting 防资源压垮；audit logging 每工具调用记录；allow-list 依赖注册表（agent 安装包副作用——限制批准注册表+记录每个安装事件）。
+- **一切读取视为不可信输入**：网页/邮件/消息可携带 prompt-injection——靠 action-level policy（工具权限）而非 prompt discipline 作控制。
+- **提升层**：可复用 Skill（信任模型与治理）。
+
+## LangFlow 组件构建与发现机制：method 匹配 · __init__ 注册 · PyPI 扩展（来源：docs.langflow.org contributing-components + contributing-bundles + extensions-quickstart + langflow-assistant + concepts-components 2026-07/09 实拉，合并 §LangFlow 组件 API——那条管"API 调用"，本条管"组件开发与分发"）
+- **组件代码接口**：组件 code 决定可视化配置选项+输入验证；定义 inputs/outputs/method——**method 名必须匹配 outputs 列表的 method 字段**（Langflow 据此调用生成每个输出）；name 可选默认类名。
+- **发现机制**：组件注册到目录 __init__.py 导出入口——组件发现机制据此知道组件与参数类型；新组件须重建（make install_frontend/build_frontend/install_backend）。
+- **分发两径**：Bundle 贡献（Langflow 仓库内+frontend 图标三文件）；PyPI 扩展（python -m build+twine upload+pip install lfx-my-extension——服务器启动自动发现，palette 出现无需配置）。
+- **Langflow Assistant**：提示生成自定义组件（描述 input/output/超时/错误处理/typed methods）——模型驱动生成代码，再人工复核。
+- **提升层**：可复用 Skill（组件开发）。
+
+## Make Webhook 响应与 40 秒时效：Custom Webhook 唯一 URL · Status/Body · 响应超时（来源：make.com help webhooks + academy exchanging-data + community google-calendar + help.webhook-triggered-ai-agent 2024-06/2026-07 实拉，合并 §Webhook 端点化/§HTTP 集成——那条管"形态与集成"，本条管"响应与时效"）
+- **Custom Webhook 模块**：每个 scenario 独立唯一 webhook URL——不可跨 scenario 共用；第三方调用即触发（即时触发器 vs 定时轮询）。
+- **Webhook Response 模块**：定制 HTTP 响应两字段 Status（2xx 成功/3xx 重定向/4xx 客户端错误）+Body；配合 JSON 模块映射+headers 声明类型。
+- **40 秒时效**：Webhook Response 必须放在 scenario 末尾且在其到达后 40 秒内完成，否则调用方超时——同步请求的响应窗口是硬约束，长流程要异步化（先回 2xx 再后台处理）。
+- **提升层**：工作流（Webhook 响应）。
+
+## Pipedream 触发器部署与事件属性：event 字段 · Connect deploy · webhook 投递层级（来源：pipedream.com docs sources + connect/components/triggers + connect/webhooks + rest-api subscriptions 2026-02/09 实拉，合并 §Pipedream sources/调度——那条管"定时与组件"，本条管"触发器部署"）
+- **HTTP 触发器 event 属性**：body/client_ip/headers/method/path/query/url——处理请求时按字段取数。
+- **Connect triggers.deploy**：client.triggers.deploy({externalUserId, id, webhook_url})——返回 triggerId+endpoint_url；带 webhook_url 时 Pipedream 把事件 POST 投递到该 URL。
+- **投递层级**：trigger 级 webhook_url 优先于 project 级默认；project 级设一个 URL 覆盖所有 triggers。
+- **REST subscriptions**：POST /subscriptions?emitter_id=&event_name=&listener_id= 建立事件订阅（组件/工作流事件触发接收方）。
+- **HTTP Response 配置**：触发器可配 Full HTTP Request（取完整请求）或 Return custom response from your workflow（自定响应）。
+- **提升层**：工作流（触发器部署）。
+
+## Activepieces 触发器生命周期：Trigger 三字段 · onEnable 状态初始化 · shared secret 验证（来源：activepieces.com build-pieces create-trigger + piece-reference webhook-trigger + npm simplyprint + mintlify create-trigger 2026-04/08 实拉，合并 §Activepieces 触发器三技术——那条管"三种技术选型"，本条管"生命周期实现"）
+- **Trigger 定义三字段**：Display Name（用户所见）/Description（UI 说明用途）/Technique（polling 或 webhook）。
+- **Polling 生命周期**：TriggerStrategy.POLLING+onEnable 初始化状态（context.store.put('lastId', null)）+onDisable 清理+test 测试返回样例。
+- **Webhook 生命周期**：On Enable 用 context.webhookUrl 向第三方注册+store webhook Id；On Handshake 返回挑战响应（部分服务要求）；app 集成注册唯一 webhook（启用注册/禁用注销）。
+- **安全**：incoming payload 按 per-webhook shared secret 验证（如 X-SP-Secret 头）。
+- **提升层**：工作流（触发器实现）。
