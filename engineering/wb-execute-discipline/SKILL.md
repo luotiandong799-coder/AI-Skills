@@ -5492,3 +5492,42 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **三阶段 adoption playbook**：foundation→pilot→scale。→ 判据：行业落地按基础-试点-规模化分阶段，别一步全上。
 - **subagent delegation 注意**：headless 多 agent 部署是 research preview，触碰真实客户工作需额外审查。→ 判据：多 agent 无人值守先审查再碰真实生产。
 - **提升层**：工具。
+
+## Dify 模型 Provider 管理：随时切换 + IAM 自动刷新 + 工具插件（来源：Dify 模型/工具面，2026-09-27 实拉，与 §工作流引擎互补——那条管编排，这条管模型供给）
+- **Model Provider 随时切换**：Settings→Model Provider 装 LLM（OpenAI/Anthropic/Gemini/Grok），应用运行中可换。→ 判据：多 provider 并存，按成本/质量随时换模型。
+- **Bedrock IAM Role 认证**：每次调用自动刷新凭据（boto3 fresh session 从磁盘/IMDS 取最新），凭据轮换透明免 daemon 重启。→ 判据：云上模型用 IAM Role 免维护静态 key，轮换零停机。
+- **Ollama 本地/云**：chat/completion/vision/embeddings/tool calling/streaming/thinking 全支持。→ 判据：本地私有模型走 Ollama，Base URL 用 host root。
+- **OpenAI Tools plugin**：一个 provider 配置供所有工具；工具绑定 workflow 变量。→ 判据：工具插件一次配凭据多处用，输入接变量。
+- **发布形态**：独立网页/网站嵌入/API/MCP 服务。→ 判据：按消费方选发布（网页/嵌入/API/MCP）。
+- **Agent 调 Workflow**：复杂业务工作流封装成单 prompt+一次 human approval。→ 判据：把长流程压缩成 agent 可调的一个工具，人审批留关口。
+- **提升层**：工具。
+
+## n8n AI Agent 节点：Tools Agent 原生 tool-calling + 连接类型表（来源：n8n AI agent 节点面，2026-09-27 实拉，与 §子工作流互补——那条管结构，这条管 agent 装配）
+- **Tools Agent 是默认类型**：模型原生 tool-calling（不是从自由文本解析 tool 请求）→OpenAI/Anthropic/Gemini 都可靠。→ 判据：新流程一律 Tools Agent，旧类型（Conversational/ReAct/OpenAI Functions）教程忽略。
+- **AI 连接类型表**：ai_languageModel（必须）/ai_tool（推荐）/ai_memory（Window/Buffer/Summary）/ai_outputParser（可选）/ai_embedding+ai_vectorStore（RAG）。→ 判据：装配 agent 按表配连接，模型必配、工具推荐、RAG 才配向量。
+- **agent 最小骨架**：chat trigger+memory node+ai agent node with tools+workflow。→ 判据：对话 agent 从四件套起步。
+- **n8n vs LangGraph**：LangGraph=control-flow substrate 无原生 SaaS connector；n8n 低代码事件驱动（HTTP/conditional routing/AI nodes）免 custom agent code。→ 判据：要现成集成目录选 n8n，要细粒度图状态机选 LangGraph。
+- **state passing**：n8n 用 per-execution state passing 替代 centralized MCP memory。→ 判据：简单流程用执行内状态传递，别引中央记忆。
+- **提升层**：工作流。
+
+## LangFlow 生产部署：Docker + 多 worker + K8s headless runtime（来源：LangFlow 部署面，2026-09-27 实拉，与 §Workflow API 互补——那条管调用，这条管跑在哪儿）
+- **Docker 基础**：EXPOSE 7860；官方镜像默认 LANGFLOW_AUTO_LOGIN=false+SUPERUSER_PASSWORD；自定义镜像可 AUTO_LOGIN=true。→ 判据：生产默认关自动登录，测试才开。
+- **多 worker**：LANGFLOW_DATABASE_URL postgresql+LANGFLOW_WORKERS=3（>1 生效）+LANGFLOW_GUNICORN_PRELOAD=true+LANGFLOW_JOB_QUEUE_TYPE=redis。→ 判据：要并发就 Postgres+Redis+多 worker 三件套。
+- **Kubernetes 分层**：backend 服务 1Gi RAM/0.5 CPU 1 replica；runtime（production headless 仅服务 API）2Gi RAM/1000m 3 replicas。→ 判据：IDE 与 runtime 分离部署，runtime 无头只出 API。
+- **headless mode**：LANGFLOW_BACKEND_ONLY 环境变量启动无界面服务。→ 判据：程序化执行环境开 backend-only。
+- **外部 PostgreSQL 强烈推荐**：替代默认 SQLite 提升扩展性与可靠。→ 判据：K8s 部署必须外置数据库。
+- **提升层**：工作流。
+
+## Make Functions 与聚合模式：IML 函数模块化 + Iterator/Aggregator 正确流（来源：Make 函数/模块面，2026-09-27 实拉，与 §Blueprint 互补——那条管复用，这条管数据变换）
+- **Make Functions app**：IML 函数从 mapping fields 变独立模块（可视化链式变换）；空输入（空/null/缺失）→输出空结果不停止 scenario。→ 判据：复杂变换用独立函数模块链式排，别写嵌套代码。
+- **新内置函数**：arraydiff/arrayintersect/set/escapejson（比较数组找新增缺失/更新集合/准备 raw JSON）。→ 判据：数组比对直接 arraydiff/arrayintersect 少写模块。
+- **Iterator vs Aggregator 正确流**：多文件 LLM 分析——Find files→combined list→iterator（只做上传）→array aggregator（收集上传 ID）→一次 LLM call。→ 判据：LLM 调用必须放聚合之后，放 iterator 路由内 model 只看到一个文件。
+- **模块四类**：Actions（Get/Create/Update/Delete）/Search/Iterator（数组拆个体）/Aggregator（多个合一个）。→ 判据：按操作选模块类型，拆合成对用。
+- **提升层**：工作流。
+
+## Claude Code GitHub Actions 与 routines：@claude 响应 + ant apply + 例行自动化（来源：Claude Code CI/routines 面，2026-09-27 实拉，与 §Hooks 事件契约互补——那条管本地事件，这条管仓库级自动化）
+- **GitHub Actions 集成**：复制 examples/claude.yml；@claude mention issue/PR 时响应，ANTHROPIC_API_KEY secret 认证；自动化安全审查 action 自动审每个 PR。→ 判据：仓库级 AI 协作从 mention 触发+安全审查起步。
+- **autonomous loop 配置**：claude setup-token→gh secret set CLAUDE_CODE_OAUTH_TOKEN（或 ANTHROPIC_API_KEY）。→ 判据：CI 里跑 Claude 先配 token secret，OAuth token 优先。
+- **ant apply（声明式）**：v1.30.0 从仓库文件创建/更新 agents/environments/skills/memory stores/deployments。→ 判据：基础设施声明式管理，配置文件即状态。
+- **routines 三例**：PR merged→port change 到平行 SDK+开 PR；PR opened→跑团队 checklist 安全/性能留 inline comments；docs feedback→开 session 草稿修改。→ 判据：重复工程动作固化成 routine，事件触发自动执行。
+- **提升层**：工作流。

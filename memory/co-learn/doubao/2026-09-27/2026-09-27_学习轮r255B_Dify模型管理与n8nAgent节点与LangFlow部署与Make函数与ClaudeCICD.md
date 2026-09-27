@@ -1,0 +1,32 @@
+# r255-B 学习轮留痕（2026-09-27）
+
+## 信源实拉清单（10 站全量逐站）
+| # | 信源 | 状态 | 实拉内容 |
+|---|---|---|---|
+| 1 | Dify（模型/工具面） | ✓ | Model Provider：Settings→Model Provider 装 LLM（OpenAI/Anthropic/Gemini/Grok）随时切换；Ollama 本地/云（chat/completion/vision/embeddings/tool calling/streaming/thinking）；Bedrock plugin：IAM Role 认证每次调用自动刷新凭据（boto3 fresh session，凭据轮换透明免 daemon 重启）；Volcengine Ark Endpoint ID（LLM/embedding/speech-to-text）；OpenAI Tools plugin：一个 provider 配置供所有工具+绑定 workflow 变量；SageMaker/GPUStack/GMI Cloud（微调模型+function calling+自定义 endpoint）；发布选项：独立网页/网站嵌入/API/MCP 服务；让 Agent 调用 Dify Workflows 直接：复杂业务工作流变单 prompt+一次 human approval |
+| 2 | n8n（AI agent 节点面） | ✓ | Tools Agent 是当前默认 agent 类型：模型原生 tool-calling（非从自由文本解析）→OpenAI/Anthropic/Gemini 可靠；旧类型（Conversational/ReAct/OpenAI Functions）别用；AI 连接类型表：ai_languageModel（必须）/ai_tool（推荐）/ai_memory（Window/Buffer/Summary）/ai_outputParser（可选）/ai_embedding/ai_vectorStore（RAG）；n8n Agents：chat trigger+memory node+ai agent node with tools+workflow；n8n vs LangGraph：LangGraph=control-flow substrate 无原生 SaaS connector 目录，n8n 低代码事件驱动+HTTP/conditional routing/AI nodes 免 custom agent code；LangChain Code node self-hosted only；n8n 管 workflow 协调+state management，用 per-execution state passing 替代 centralized MCP memory |
+| 3 | LangFlow（部署面） | ✓ | Docker：EXPOSE 7860；官方镜像默认 LANGFLOW_AUTO_LOGIN=false+SUPERUSER_PASSWORD；自定义镜像可 AUTO_LOGIN=true；容器化应用：FROM langflowai/langflow:latest+建文件夹+COPY+启动命令；Caddyfile 部署：langflow+caddy reverse proxy；多 worker：LANGFLOW_DATABASE_URL postgresql+LANGFLOW_WORKERS=3+LANGFLOW_GUNICORN_PRELOAD=true+LANGFLOW_JOB_QUEUE_TYPE=redis；Kubernetes：外部 PostgreSQL 强烈推荐（替代 SQLite）；LANGFLOW_BACKEND_ONLY headless mode；backend 1Gi RAM/0.5 CPU 1 replica；runtime production（headless 仅服务 API）2Gi RAM/1000m 3 replicas；外部 PostgreSQL 双实例 7860/7861 |
+| 4 | Activepieces（模板/案例面） | ✓ | AI Workflow 案例：Perplexity 查公司摘要→AI 分优先级 Low/Medium/High/Hot→验证 lead 真实性→时间戳记录→spam 分离日志；No-code 案例：社区消息监控（实时收集+存表+紧急问题立即浮出）；企业流程自动化（SOX 合规）：Chat Interface 收集数据→HTTP pieces 查信用局/内部风险模型→Human Approval 超 $50K 双签+审计日志→self-hosted network-gapped 敏感数据不出防火墙→custom branding；PushPlus 微信通知：HTTP 步骤+Token 存 Secrets |
+| 5 | Make（模块/函数面） | ✓ | Make Functions app：IML 函数从 mapping fields 变独立模块（可视化链式数据转换）；空输入行为（空/null/缺失→输出空结果不停止 scenario）；新内置函数：arraydiff/arrayintersect/set/escapejson（比较数组找新增缺失/更新集合/准备 raw JSON 少用模块）；模块类型：Actions（Get/Create/Update/Delete）/Search/Iterator（数组拆个体）/Aggregator（多个合一个）；Iterator vs Aggregator 坑：多文件 LLM 分析——Find files→combined list→iterator（只做上传）→array aggregator（收集上传 ID）→一次 LLM call；常见错误：LLM 模块放 iterator 路由内（model 只看到一个文件）；Array Aggregator 指定 Source Module |
+| 6 | Pipedream（Connect/managed auth 面） | ✓ | Managed auth：3,000+ APIs；hosted OAuth clients+secure token storage+automatic refresh；用户连接免碰凭据；Connect Link：hosted connect flows 免建 UI 或 BYO OAuth clients；凭据加密存储 scoped per project；OAuth vs key-based apps；Use end user's auth：workflow 触发按 user ID 查对应账户；pd init connect；OAuth client（client ID+secret）；MCP server 提供 agent 10,000+ tools；developer auth=client credential OAuth；SDK 前端连接账号/服务端取账号信息调 workflow |
+| 7 | Claude Code（CI/routines 面） | ✓ | Claude Code GitHub Actions：复制 examples/claude.yml 到 .github/workflows/；@claude mention issue/PR 时响应，ANTHROPIC_API_KEY secret 认证；自动化安全审查 action 自动审每个 PR 安全漏洞；Foundry：CI/CD 集成+生成测试 workflow（pull_request paths 过滤 src/agents/**）；autonomous loop：claude setup-token→gh secret set CLAUDE_CODE_OAUTH_TOKEN（或 ANTHROPIC_API_KEY）；ant CLI v1.30.0：ant apply 从仓库文件创建/更新 agents/environments/skills/memory stores/deployments（声明式）；routines：PR merged→port change to Go SDK+开 PR；bespoke code review：PR opened 跑团队 checklist 安全/性能留 inline comments；feedback resolution：docs widget 报 issue→Claude 开 session 草稿修改 |
+| 8 | GitHub（当日榜面） | ✓ | 2026-09-27：paperclipai/paperclip（manage agents at work TS ai）/vectorize-io/hindsight（Agent Memory That Learns Python ai）/dream-num/univer（Office Harness for AI Agents：Spreadsheets/Docs）/block/buzz（hive mind 通信 Rust）/rohitg00/ai-engineering-from-scratch（Learn it Build it Ship it，827 stars today）/openbao/openbao（364 stars）/mattpocock/skills；awesome-claude-skills 75,683；unsloth 76,839（本地跑训练 LLM：GGUF/MLX/Qwen3.8/DeepSeek-V4/MiniMax-H3/Gemma 4/FLUX） |
+| 9 | OpenClaw（skills 开发面） | ✓ | Skill Workshop：governed path 创建更新 generated skills；proposal（pending draft+content+target binding+scanner state+hashes+rollback metadata）apply 才 live；propose mode 每次变更需 review；开发方法：clawhub skill install log-triage 找类似改（比从零写快+battle-tested structure）/手动写（SKILL.md+tools/）/问 OpenClaw 生成；发布：GitHub repo+clawhub.yaml（name/version/description/author/homepage）；ClawHub 10,700+ skills（Communication/Productivity/CRM/Developer/Commerce）；CLI：search/install @owner/slug --version/git:owner/repo@main/./path --as custom-name/--force；Node.js 18+openclaw CLI |
+| 10 | deepseek-plugin.org（插件面） | ✓ | DeepSeek Harness："Everything is a plugin"；每个能力都是插件可替换重组：models/tools/skills/sessions/sandboxes/storage/loops/scheduling/UI；MIT 许可证；npm 或 Git 分发插件组合包；GitHub dsh-plugin 专题社区入口；DSH 插件市场：8,000+ dsh plugins（deepseek-plugin npm 包搜索浏览）；dshmarket 可视化插件市场（dsh plugin --profile web add dshmarket）；LoopX：长周期 Agent 的 provider-neutral 本地优先状态内核与控制平面（持久化 Goal/Todo/门禁/证据/配额/恢复/交接）；dsh-plugin-sentinel：插件安装前静态安全审计（生命周期脚本/动态执行）；DeepSeek V4 for Copilot Chat VS Code 插件；awesome-deepseek-integration 54 款应用/插件（24 应用/3 Agent 框架/3 RAG 框架） |
+
+## 判重基准
+双键检索：Dify（r255-A 编排面已落——模型 Provider 管理面增量≥40%）；n8n（r255-A 子流程面已落——AI agent 节点面增量≥40%）；LangFlow（r255-A bundles 面已落——生产部署面新）；Activepieces（r255-A AI 面已落——案例面增量弱备选）；Make（r255-A blueprint 面已落——函数模块面增量≥40%）；Pipedream（r254 多面/r255-A sources——Connect managed auth 增量 40% 备选）；Claude Code（r254-B hooks 面——CI/routines 面新）；GitHub（r254-C/r255-A 榜面——当日榜弱）；OpenClaw（r253-A skills/r254-C 审批/r255-A automation——Skill Workshop 治理面增量 40% 备选）；deepseek-plugin.org（首次实拉——Harness 插件生态，个人价值存档备选）。
+
+## 独点落地（5 个）
+| 独点 | 内容 | 提升层 | 落点 |
+|---|---|---|---|
+| ① Dify 模型 Provider 管理 | 随时切换+Bedrock IAM 自动刷新+OpenAI Tools | 工具 | wb-execute-discipline |
+| ② n8n AI Agent 节点 | Tools Agent 原生 tool-calling+连接类型表 | 工作流 | wb-execute-discipline |
+| ③ LangFlow 生产部署 | Docker/多 worker/K8s headless runtime | 工作流 | wb-execute-discipline |
+| ④ Make Functions 与聚合模式 | IML 函数模块化+Iterator/Aggregator 正确流 | 工作流 | wb-execute-discipline |
+| ⑤ Claude Code GitHub Actions 与 routines | @claude 响应+ant apply+routines 自动化 | 工作流 | wb-execute-discipline |
+
+## 复核
+- 五独点均有当日实拉来源，无编造。
+- 备选未落：Pipedream Connect managed auth/OpenClaw Skill Workshop/DeepSeek Harness 插件生态（首拉存档）/Activepieces 案例面/GitHub 当日榜。
+- 垃圾：本轮未产生临时文件。
