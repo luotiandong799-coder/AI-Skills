@@ -4637,3 +4637,37 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **开发流程**：openclaw plugins init 脚手架→defineToolPlugin 写→TS ESM 构建 JS→plugins build 生成 manifest→inspect --runtime 检查。→ 判据：插件按流程构建，发布前 inspect 运行时。
 - **ClawHub 发布分工**：skills 用 clawhub skill publish；plugin packages 用 clawhub package publish——命令不同别混。→ 判据：按产物类型选发布命令。
 - **提升层**：工具/可复用 Skill。
+
+## Conversation 变量跨轮持久 + 跨迭代引用技巧（来源：Dify 对话变量/记忆面，2026-09-27 实拉）
+- **Conversation vs Workflow 变量**：Conversation Variables 会话级跨多轮持久（to-do list/token cost），Variable Assigner 节点在任何流程点写入/更新；Workflow Variables 单次执行结束即重置（Input/Output 单次 run immutable）。→ 判据：跨轮状态用 Conversation 变量，单次执行用 Workflow 变量。
+- **多轮记忆窗口**：LLM 节点开启 Memory（记忆窗口如最近 20 轮，同一 session 持续累积）；Memory node-specific 不跨对话持久。→ 判据：多轮上下文靠记忆窗口，窗口大小按成本可控设。
+- **迭代器跨轮引用技巧**：n+1 轮引用 n 轮输出——把变量赋给 conversation variable 再全局引用。→ 判据：跨迭代引用先落 conversation 变量再全局取，别在迭代内重算。
+- **Mem0 strict fact-binding**：memory 字段先 Peek 再看；JSON 说 memory 是 X 就必须确定 X。→ 判据：记忆注入先读后答，事实绑定不漂移。
+- **提升层**：工作流/工具。
+
+## Code 节点返回契约 + Run Once for All Items（来源：n8n Code 节点/数据变换面，2026-09-27 实拉）
+- **返回格式契约**：JS 模式必须返回 [{json:{...}}] 数组对象（json key 包装，canonical mode-portable）；.all()/.first()/.item 取数据。→ 判据：Code 节点输出统一 [{json:{...}}] 结构，跨模式可移植。
+- **Run Once for All Items 模式**：批量变换推荐（for...of + map/filter 变换全部 items）。→ 判据：批量变换用 Run Once 模式，不逐 item 跑。
+- **不用 n8n 表达式**：Code 节点里用 JS template literals 不用 {{ }} 表达式。→ 判据：代码内插值用模板字符串，别混表达式语法。
+- **try...catch 包裹外部调用**：外部 API/复杂逻辑包 try-catch 优雅处理，不 halt 整个 workflow。→ 判据：外部调用包 try-catch，单点失败不炸全流。
+- **提升层**：工具/工作流。
+
+## RAG 两段式模板 + 内置记忆 session 分组 + 模型路由（来源：LangFlow RAG 对话/记忆路由面，2026-09-27 实拉）
+- **两段式 RAG**：Load Data 子流程（摄取+embedding+入库）与 Retriever 子流程（检索+重建+生成）分离——重复索引+聊天界面；两 subflows 连接同一 vector store。→ 判据：摄取与检索分离成子流程，同库连接。
+- **内置 chat memory 按 session 分组**：Agent 组件默认启用，按 session ID 分组滚动上下文窗口；custom session ID 分割不同用户/应用（同 flow 跑多用户时）。→ 判据：多用户共用 flow 时用自定义 session ID 隔离记忆。
+- **Memory bases vs Message History**：Memory bases 向量化长期聊天历史语义检索跨 session；Message History 按时间序取最近。→ 判据：需要语义回忆用 Memory bases，最近消息用 Message History。
+- **smart model routing**：按复杂度/成本/性能动态路由每个请求到最优模型（GPT-4 贵 3.5 有时不够）。→ 判据：请求级选模型按复杂度分档，别全程最贵。
+- **提升层**：工作流/工具。
+
+## Hook 事件清单 + 生命周期四步 + Plugin vs internal 分工（来源：OpenClaw hooks/事件面，2026-09-27 实拉）
+- **Hook 事件清单**：command:new（/new）/command:reset（/reset）/command:stop（/stop）/command（通用监听器）/session:compact:before（压缩总结历史前）/session:compact:after（压缩完成）/session:patch（修改会话属性）。→ 判据：压缩前后有钩子可挂，状态变更可监听。
+- **Hook 生命周期四步**：Event Generation（序列化 JSON 事件类型+timestamp+source agent ID+payload）→ Gateway Routing（路由表找订阅 hooks）→ Filter Evaluation（filter 条件不符丢弃）→ Handler Execution。→ 判据：hook 按四步流走，过滤条件先行。
+- **Plugin hooks vs internal hooks**：Plugin hooks in-process 扩展点（inspect/change agent runs/tool calls/message flow/session lifecycle/subagent routing/installs/Gateway startup）；internal hooks 是操作员装的小 HOOK.md 脚本（command/Gateway 事件）。→ 判据：深度介入用 Plugin hooks，轻量事件用 HOOK.md 脚本。
+- **提升层**：工具/工作流。
+
+## 六类 agentic workflow + 事件驱动路由（来源：GitHub Agentic Workflows 面，2026-09-27 实拉）
+- **六类模板**：Continuous triage（自动总结/打标/路由 issues）/ Continuous documentation（README 对齐代码）/ Continuous code simplification（找改进开 PR）/ Continuous test improvement（评估覆盖率加测试）/ Continuous quality hygiene（调查 CI 失败提修复）/ Continuous reporting（仓库健康报告）。→ 判据：仓库自动化按六类模板选型起步。
+- **agent 输出进 PR 由确定性检查接管**：lint/test/security/build + CODEOWNERS/required reviews 门。→ 判据：agent 产出走 PR，确定性检查+人审接管。
+- **事件驱动 agent 路由**：状态变更触发不同 agent，无中心 orchestrator（issue opened→triage agent→label ready-for-implementation→implementer）。→ 判据：工作流按状态机拆 agent，事件触发不设总协调者。
+- **编排模式四选**：Single Agent（简单原子任务）/ Fan-Out（独立并行 matrix）/ Sequential Chain（step N 输出进 step N+1 needs+artifact handoff）/ Event-Driven（outcome 触发 workflow_run/repository_dispatch）。→ 判据：先定编排模式再搭。
+- **提升层**：工作流/工具。
