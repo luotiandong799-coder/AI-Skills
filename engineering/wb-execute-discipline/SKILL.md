@@ -7060,3 +7060,49 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Make Functions App**：IML 函数从映射字段升级为独立模块——链式步骤式数据转换，避免嵌套代码；空输入行为=输出空结果不停场景（不误报失败）。
 - **Aggregator 纪律**：Iterator 逐行处理后再聚合（可映射具体列）；聚合器必须指定 Source Module（聚合哪模块之后的 bundles——通常 Iterator 后或循环最后模块）；Table Aggregator 出 HTML 表格适合邮件报告。
 - **提升层**：工作流（数据转换与聚合）。
+## Anthropic 结构化输出 json_schema 与 strict tool use：强制 schema · 子集限制 · 工具定义三字段（来源：platform.claude.com structured-outputs + claude.com blog + strict-tool-use + docs.anthropic.com implement-tool-use 2025-11/2026-09 实拉，合并 §输出校验——那条管"验证层"，本条管"生成期强制结构"）
+- **json_schema format**：output_config.format.type=json_schema+schema 对象——properties/required/additionalProperties=False 强制响应精确匹配；消除 schema 解析错误与失败工具调用（public beta 保证响应匹配 schema 或工具定义）。
+- **strict tool use**：工具 input_schema 用 enum/format(date 等)/additionalProperties false 强制参数合规——调用前就拦下非法参数。
+- **JSON Schema 子集限制**：enum 仅 strings/numbers/booleans/nulls；const/anyOf/allOf 有限支持；$ref/$defs 与递归 schema 不支持；Array minItems 仅 0/1——复杂 schema 先压平为嵌套对象。
+- **工具定义三字段**：name 匹配 ^[a-zA-Z0-9_-]{1,64}$；description 详细纯文本（何时用/行为）；input_schema JSON Schema 对象。
+- **提升层**：工具（生成期结构约束）。
+
+## Dify 混合检索与重排：语义+全文融合 · rerank 默认禁用 · score threshold 语义（来源：dify.ai rag + blog hybrid-search-rerank + release docs setting-indexing-methods + deepwiki retrieval strategies 2026-07/09 实拉，合并 §Dify RAG 检索配置——那条管"检索配置基础"，本条管"混合与重排调优"）
+- **混合检索流程**：语义+全文两路检索→融合（fuse）→重排（可选）——RetrievalService._retrieve 同时执行两路再合并；hybrid 权重可配置（语义/全文各自加权）。
+- **Rerank 模型**：默认禁用——启用需在 Integrations→Model Provider 配置第三方 Rerank API key；重排器排序混合检索返回的 chunks，让 LLM 访问更精确信息；多模态 embedding 需配多模态 rerank。
+- **score threshold 语义**：混合+重排启用时，阈值必须作用于**重排后**分数而非 pre-rerank/fusion 分数（该 bug 已修）——不配 rerank 时回退向量分数阈值过滤。
+- **选型判据**：precision 与 recall 都重要→hybrid；大语料/短语匹配/传统搜索引擎行为→full_text。
+- **提升层**：工作流（检索调优）。
+
+## Make 错误处理器四语义与场景恢复：Resume/Commit/Rollback/Break · incomplete execution · 60 天版本（来源：help.make.com retry-error-handler + break-error-handler + restore-recover-scenario + scenario-recovery + how-toai 5-patterns + everestx failed-bundles 2026-03/09 实拉，合并 §Make 错误处理链——那条管"HTTP 错误链"，本条管"处理器语义与恢复"）
+- **四错误处理器语义**：Resume=造假输出保持流（邮件失败记"失败日志"继续处理）；Commit=事务"处理确认"（DB 多模块部分成功即确认）；Rollback=事务"处理取消"（部分失败全回滚）；**Break=incomplete execution 存储+可重试（生产场景最常用）**。
+- **Break 细节**：错误时存储错误消息/mappings/剩余场景流为 incomplete execution——自动或手动完成；失败进队列而非丢弃。
+- **恢复三件套**：Incomplete executions（保存失败 blueprint+模块输入输出到失败模块——rerun 防丢失）；Scenario recovery（后台自动保存 blueprint——崩溃/断连/误关恢复，但 recovery≠autosave，恢复后需手动保存）；Version history 60 天版本回滚。
+- **Failed Bundles Data Store 模式**：错误路由写 Data Store（scenario_name/bundle_data JSON/error_message/timestamp/replayed）——修复后按记录回放。
+- **提升层**：工作流（错误恢复）。
+
+## n8n Chat Hub 与模型参数：Custom Agents · @mentions 多 agent · 生成参数三旋钮（来源：docs.n8n.io advanced-ai chat-hub + intro-tutorial + workflows multi-agent-mentions/high-speed-gpt-oss/chatwoot-routing 2026-02/06 实拉，合并 §n8n AI agent/§多agent 编排——那条管"编排结构"，本条管"聊天模型与参数配置"）
+- **Chat Hub 两级 agent**：Custom Agents（name/description/system prompt 自定义指令——简单重复任务可靠化）；workflow agents（复杂场景——仅 Chat Trigger+streaming 启用的 workflow 可发布到 Chat Hub）。
+- **多 agent @mentions**：OpenRouter identifier（"openai/gpt-4o"/"anthropic/claude-3.7-sonnet"）+systemMessage 人格——用户显式 @ 唤起指定 agent。
+- **模型生成三旋钮**：Completion Tokens 按响应长度（短答 150/详细 500+/长文 1000+）；Top P 0.9 多数应用（更低更聚焦）；Reasoning Effort 复杂推理任务提高计算投入。
+- **记忆选择**：Data Table 存会话字段+Data Table Tool（结构化多会话）；Redis Chat Memory（消息历史持久化）。
+- **提升层**：工作流（聊天模型配置）。
+
+## LangFlow MemoryBase 语义记忆与向量组件：语义检索 vs 最近消息 · MemoryBase 配置 · Vector Store 体系（来源：docs.langflow.org memory-bases + components-vector-stores + memory + bundles-chroma/valkey/datastax + templates local-rag 2026-08/09 实拉，LangFlow 章节均为版本/部署/调试面，记忆面为新增）
+- **MemoryBase vs Message History**：Message History 从 messages 表按时间顺序取最近消息；MemoryBase 把消息嵌入向量存储、按**语义相似**检索最相关上下文——跨会话长程历史的关键差异。
+- **MemoryBase 配置字段**：display name/linked kb_name/embedding model/ingestion threshold/auto-capture/preprocessing；backend_type/backend_config 活在关联 KnowledgeBase 行。
+- **Vector Store 组件体系**：读写向量数据（embedding storage/vector search/Graph RAG/OpenSearch/Elasticsearch/Vectara）；基于 LangChain vector store 实例；Chroma（远程/内存带持久化）、Valkey（FT 索引）、Astra DB（Data API+DevOps API）；本地 RAG 模板=ChromaDB+Ollama 全本地无网络。
+- **提升层**：工作流（语义记忆与向量检索）。
+
+## OpenClaw 插件配置体系：allow/deny 白黑名单 · configSchema 验证 · 声明式安装 · tool plugins（来源：docs.openclaw.ai tools/plugin + plugins/tool-plugins + openclaw-ai.com configuration + insiderllm plugins-skills-guide 2026-03/09 实拉，合并 §OpenClaw 技能安装/插件——那条管"安装门禁"，本条管"插件配置与 SDK"）
+- **插件配置结构**：plugins.enabled（主开关）/allow（白名单——设置后未列 id 不能加载）/deny（拒绝列表——deny 获胜）/load.paths（额外插件文件目录）/entries.<id>.enabled+config（每插件开关与配置）。
+- **配置验证**：plugin config 按 manifest 中 JSON Schema 验证；用户配置经 plugins.entries.<id>.config 注入；插件在注册时经 api.pluginConfig 收到配置。
+- **声明式安装**：installs.<id>.source（npm 等）+spec 声明式安装；CLI 命令 openclaw plugins enable <plugin-id> 启用。
+- **tool plugins SDK**：defineToolPlugin({id/name/description/tools()})；configSchema 可选——省略则 strict empty object schema（manifest 仍含 configSchema 字段）；channel 插件用 defineChannelSetupContract 定义配置字段。
+- **提升层**：可复用 Skill（插件治理）。
+
+## Activepieces RBAC 细粒度权限：四默认角色 · Custom Roles 权限集 · SCIM/可见性（来源：activepieces.com admin-guide permissions + product governance + blog ai-agents-enterprise + pricing 2026-07/09 实拉，合并 §Activepieces 企业治理——那条管"治理控制点"，本条管"角色权限矩阵"）
+- **四默认角色**：Admin（全权含 billing）/Editor（创建/编辑/运行）/Operator（运行）/Viewer（只读）——按角色权限表（View Flows 四角色都有，写操作逐级收窄）。
+- **Custom Roles 细粒度**：Platform Admin→Security→Project Roles 创建自定义角色——权限集如 READ_FLOW/WRITE_FLOW/READ_APP_CONNECTION/WRITE_APP_CONNECTION/READ_RUN 按组织需求拼装。
+- **治理配套**：SCIM Provisioning（IdP 自动同步用户/组）；Visibility Control（按团队显隐集成）；SSO（Okta/Entra）+audit logs+secret managers（凭据自持 vault）。
+- **提升层**：工作流（权限治理）。
