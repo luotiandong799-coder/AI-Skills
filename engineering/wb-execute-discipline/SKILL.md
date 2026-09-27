@@ -6482,3 +6482,37 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **GitHub 触发源即插即用**：New Commit / Workflow Run Completed（Instant）/ Project Item Status Changed / issue opened；事件源 emit 事件触发 workflow。
 - **消费方式**：REST API 或**私有实时 SSE 流**消费事件源——不用轮询。
 - **提升层**：工具（工作流版本化与事件接入）。
+## Dify 四套上下文语法并存与 Jinja2 混用陷阱：prompt 用 {{#node#}} · Jinja2 用 {{ node }} · 混用必炸（来源：dify mintlify llm node + template node + deepwiki workflow fundamentals 实拉，与 §Dify 变量作用域互补——那条管"变量生命周期"，本条管"模板语法集怎么用对"）
+- **四套语法各管一段，别混**：prompt templates 文本插值 {{#node_name.field#}}（LLM 提示词内）/ Jinja2 模板 {{ node_name.field }}（edition_type:"jinja2" 时，支持循环 {% for %} 条件/过滤器如 {{ llm_1.text | upper }}）/ system variables {{#sys.user_id#}}/environment {{#env.API_KEY#}}/conversation 变量 {var}。
+- **旧记法混用是典型坑**：{{#conversation.user_name#}} 是错的，正解 {{ conversation.user_name }}——从旧系统迁移模板时最容易带错记法。
+- **Template 节点=编程式文本**：loops/conditionals/filters、dot notation 嵌套访问（{{ user.name }} {{ items[0].title }}）、if-else 条件内容。
+- **判据**：写模板时先声明"这是哪种上下文"再选语法；混用记法等于把变量引用写成死链，运行时静默取不到值。
+- **提升层**：提示工程 / 工作流（模板语法纪律）。
+
+## n8n HTTP 分页反例与手动分页：内置分页重试从第 1 页重跑 · 嵌套 body 够不到 · cursor 在 headers（来源：docs.n8n.io http-request pagination + community 302346/267031 + n8n workflows 3218 实拉，与 §n8n 执行数据互补——那条管"存多少"，本条管"分页怎么拉全"）
+- **内置分页的坑**：Retry on Fail 会从第 1 页重跑整个节点，超时页已拉的数据全丢——**长分页别依赖内置分页+重试组合**。
+- **可靠修复=手动分页**：关 Pagination，建循环，每页独立 HTTP Request（取 cursor 继续），Retry on Fail 按页生效——每页是一个独立可重试单元。
+- **$pageCount 计数器**：Update a Parameter in Each Request 设 page 参数，Complete Expression 用响应判停（如当前页>=最后页）。
+- **内置分页够不到的场景**：pageNumber 嵌套在 URL-encoded JSON body 里（分页功能只能到直接 query param/body field）——动态构建 RequestBody；cursor 藏在 response headers（Shopify page_info）——启用 Include Response Headers and Status。
+- **提升层**：工作流（分页与重试组合纪律）。
+
+## Make 聚合器丢数据陷阱与对象游标分页：Router 多分支只聚合一个 route · Data Store 存 cursor 手动循环（来源：community.make.com 113679 + Dre Dyson pagination loops 2026-05 实拉，与 §Make 性能优化互补——那条管"聚合器省钱"，本条管"聚合器什么时候丢数据"）
+- **已知陷阱**：场景经过 Router 多分支后，Array Aggregator 有时只包含一个 route 的 items——**聚合前先确认各分支产出都进了同一聚合通道**；改 Aggregator source module/重查映射字段无效时，考虑在分支内各自聚合再合并。
+- **对象游标分页**（object cursor 会让内置分页失败）：Data Store 存 serialized cursor → HTTP 响应含新 paginationKey 就更新记录，无则清空 → filter 判"cursor 为空退出循环"——把分页状态持久化，天然可恢复。
+- **嵌套展开**：flatten(map(map(map(1.results;"content");"results");"organic")) 逐层解嵌套数组，进聚合前先归一。
+- **提升层**：工作流（聚合与分页组合坑）。
+
+## GitHub Actions 缓存安全与 key 设计：缓存可被 PR 读 · 不存 secrets · key=hashFiles 锁文件（来源：docs.github.com dependency-caching + github awesome-copilot CI/CD best-practices + devopsness cache-dependencies 实拉，与 §GitHub Agentic Workflows 互补——那条管"自动化怎么定义"，本条管"依赖缓存怎么存"）
+- **缓存是共享可读的**：任何人能开 PR 就能读 base branch 的缓存内容——**不写 secrets/tokens/credentials**，敏感值走 Secrets。
+- **缓存可被投毒**：extracted caches 可能修改后续执行的文件→恶意代码执行；用 least-privilege workflows/cache-mode 限权。
+- **key 设计是命中率的全部**：标准配方=runner.os+包管理器+语言版本+锁文件哈希——依赖变才失效。
+- **restore-keys 前缀回退**：精确 key 未命中→前缀匹配→restore-keys→再跨分支试——部分匹配也省时间。
+- **setup-* 动作自动缓存**：常见包管理器的 setup-* 动作带 cache input，声明即可，别手写 actions/cache。
+- **提升层**：工具 / 工作流（CI 缓存纪律）。
+
+## Anthropic skills 仓库结构与 ZIP 导入：SKILL.md 解剖 · frontmatter 仅 name+description · ZIP 根结构（来源：resources.anthropic.com skills guide PDF + support.claude.com custom skills + docs.anthropic.com slash-commands 实拉，与 §Copilot Agent Skills 规格互补——那条管"Copilot 侧规格"，本条管"Anthropic 侧结构+打包"）
+- **官方 skill 目录解剖**：skill-name/ 下 SKILL.md 必填（YAML frontmatter+instructions）/ scripts 可选可执行 / references 可选按需加载 / assets 可选模板——**references/assets 只在需要时加载**，别把常驻内容塞进 references。
+- **frontmatter 仅 name+description 必填**：description 是 Claude 判断何时调用的唯一依据——写清楚触发条件就是最大的质量投资。
+- **ZIP 导入根结构**：ZIP 根必须是 skill 目录本身（my-skill/ + resources/ 同级）；**文件直接放 ZIP 根=不可导入**。
+- **级别优先级**：enterprise > personal > project > plugin——同名 skill 高优先级覆盖低优先级，别在低层重复定义同名。
+- **提升层**：可复用 Skill（打包与目录规范）。
