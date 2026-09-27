@@ -4918,3 +4918,38 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **Activepieces 模板共享**：Export Flow as JSON→Share File→Import→Each user sets up connections——模板内不含连接，各人配自己的；只分享不含敏感信息/专有逻辑的模板。→ 判据：模板共享=导出导入+各自配连接，发布前检查敏感内容。
 - **Dify provider 计费归属**：system providers 走 Dify 订阅 credits（1 AI response=1 input+1 output 计 1 次，与 token 数无关）；custom providers 直接向模型厂商计费（更高 rate limits）；API keys grant workspace-wide 模型访问，admin 只给可信成员。→ 判据：按"订阅 credits vs 直连厂商"选计费归属，API key 权限按工作区模型访问面授予。
 - **提升层**：工具/工作流。
+
+## 混合检索重排纪律：hybrid 融合 + Rerank 重打分 + 元数据过滤（来源：Dify 混合检索/重排面，2026-09-27 实拉）
+- **重排放检索最后阶段**：先前置检索（百万文档相关性计算低效），再 Rerank 合并排序不同检索系统结果。→ 判据：检索链路=前置召回→融合→重排，不跳过中间层。
+- **Hybrid Search=dense+sparse 互补**：dense vector cosine 抓语义相似（概念/改写问法）；sparse/BM25 keyword 抓精确匹配（产品码/名称/技术术语）；两者融合后再 Rerank 重打分重排。→ 判据：混合检索先于重排，代码/名称类查询靠 BM25 兜底。
+- **Rerank Model 默认禁用**：需先在 Integrations 配 API key；多模态 embedding 必须配多模态 rerank（否则检索图像被排除）。→ 判据：开 Rerank 前先配好模型；多模态库配多模态重排。
+- **Weighted Score 前置条件**：仅当所有知识库都 High Quality 模式索引时可用。→ 判据：想用加权分数先统一索引质量模式。
+- **Top K 纪律**：K 小起步防噪声、阈值不高不低、必要时重排取上澄；配合 Metadata Filtering（标签/分类过滤检索对象）先缩范围再检索。→ 判据：K 和阈值按噪声调，能先按元数据过滤就别全库搜。
+- **提升层**：工作流。
+
+## n8n Agent 一等实体：定义一次、用到处（来源：n8n AI agent 新形态面，2026-09-27 实拉）
+- **Agent 从节点内嵌升级为项目一等实体**：旧 AI Agent 节点定义在单 workflow（存在只到 workflow 运行结束）；新 Agent 定义一次（own builder+own memory+own project home），Workflow 用 Message an Agent 节点发消息——同一 agent 同时答 Slack、跑 schedule、服务其他 workflow。→ 判据：跨场景复用的 agent 建为一等实体，不重复嵌进每个 workflow。
+- **ReAct 并入 Tools Agent**：standalone ReAct Agent 已 deprecated；Tools Agent 内置迭代推理+工具选择+观察决策——现代 LLM 无需独立 ReAct 节点。→ 判据：agent 工具循环用 Tools Agent 形态，别搭独立 ReAct 包装。
+- **AI Assistant 建 workflow**：自然语言描述→规划→在你选的项目里建→测试→修错；产物是标准 n8n workflow 可再编辑。→ 判据：能说清就让它先建骨架，人只改细节。
+- **多 agent 委托**：AI Agent Tool 把第二 agent 配置成 tool；orchestrator 的工具之一是完整配置的 agent（自己的模型/指令）。→ 判据：需要专业分工时把 agent 当工具挂，编排者只编排。
+- **提升层**：工具/工作流。
+
+## 多向量检索评测：PLAID 增益证据 + LLM-as-a-judge 实操（来源：LangFlow 检索评测面，2026-09-27 实拉）
+- **PLAID 多向量检索评测数据**：text 单向量 top-100+多向量 rerank 90.7 vs 多向量 via PLAID 94.7；image 单向量 22.6、top-100+rerank 56.6、PLAID 89.7——多向量对图像/长文档检索增益巨大。→ 判据：图像或长技术文档检索优先试多向量方案，单向量分数低不要硬扛。
+- **LLM-as-a-judge 落地形态**：Langfuse self-host 接 flow 输出——Score Value（如 0.94）+Score Comment（评估理由）成对返回，评估可审计。→ 判据：评测不只给分数，强制配理由字段。
+- **评测方法论**：define rubric→test set 100-500 cases→faithfulness+instruction-following+task-specific evaluators 跑 workflow 输出。→ 判据：无 rubric 无测试集的"感觉变好了"不算评测。
+- **数据质量校验模板**：业务规则校验数据集（syntax/logic/decimal precision）→合规记录进 clean、违规进 quarantine（带原因）→汇总指标（failure rates by rule/top error types）供优先修复。→ 判据：数据进系统前先过规则校验+隔离，汇总错误类型定修复优先级。
+- **提升层**：可复用 Skill。
+
+## Claude Code 安全模型：沙箱隔离 + 权限边界 + 搜索摘要化（来源：Claude Code security 面，2026-09-27 实拉）
+- **三层沙箱**：sandboxed bash（filesystem+network isolation，/sandbox 定义自主边界，减少权限提示）；OS 级沙箱（macOS Seatbelt/Linux bubblewrap：读允许、工作区内写、网络默认拒绝——实测 84% 权限提示减少，runtime 开源可审计）；Manual 目录边界（只写启动文件夹及子文件夹，改父目录需显式权限，可读外部）。→ 判据：自主运行区域用 /sandbox 圈死，网络默认拒绝；提示疲劳就用 OS 沙箱替代全放开。
+- **--dangerously-skip-permissions 红线**：root/sudo 下拒绝启动；仅用于隔离环境（容器/VM/dev container 无网）；Cloud sessions 不 honor。→ 判据：跳权限只配隔离环境，生产/本机根权限禁止。
+- **Web search 摘要化防注入**：搜索结果摘要而非原始内容直接进上下文——降低恶意网页 prompt injection。→ 判据：外部网页内容进上下文先过摘要层，别原样喂。
+- **五部分安全模型层叠**：permissions system（决定允许什么）+tool access（单能力范围）+MCP permissions（外部集成）+sandboxing（OS 级隔离）+auditability（事后审计）——各解决一个问题，叠加用。→ 判据：安全配置按五层逐层补齐，缺一层就漏一块。
+- **提升层**：工具。
+
+## Copilot custom agents：.agent.md 定义完整工作风格（来源：GitHub Copilot custom agents 面，2026-09-27 实拉）
+- **形态**：.agent.md 文件放 repo 的 .github/agents/ 目录；YAML frontmatter+Markdown 指令；定义 prompts/tools/MCP servers（agent profile）；repo-level 只适用所在 repo；Copilot CLI 用 /agent 选择。→ 判据：团队固定开发风格编码成 agent 文件，随 repo 走。
+- **与 instructions/skills 三区分**：instructions 被动应用；skills 处理单个任务；agents 定义完整工作风格——整个会话怎么思考、用什么工具、怎么沟通。→ 判据：按"风格级/任务级/被动级"选载体，别把风格塞进单任务 skill。
+- **Agent HQ 生态**：Claude/Codex 可选作 agent；automated first-pass review（developer 看到前 Copilot 先修初版问题）；metrics dashboard（public preview 追踪使用与影响）；audit logging。→ 判据：多 agent 并行时接 metrics 追踪，agent 生成工作要有可审计性。
+- **提升层**：可复用 Skill。
