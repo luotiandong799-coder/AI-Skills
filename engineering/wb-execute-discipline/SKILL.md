@@ -5453,3 +5453,42 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **严格情况不可软化**：inline eval/heredocs 任何 fallback 设置都不能放宽。→ 判据：解析器绕过类命令硬锁，fallback 不救。
 - **版本更新要点**：移除旧 cat SKILL.md 兼容 allowlist 绕过路径；手工审批走 trusted /approve 路由；node pairing 需审批。→ 判据：审批路径单一可信，节点配对先批准再执行。
 - **提升层**：工作流。
+
+## Dify 工作流引擎增强：Runtime Prompt Graph + 并行/循环/错误捕获 + Human Input（来源：Dify 工作流编排面，2026-09-27 实拉，与 §日志三通道互补——这条管编排能力）
+- **Runtime Prompt Graph**：UI 拖拽多阶段推理节点（提问→意图识别→知识库路由→多源融合→合规重写），可版本化可 A/B 测试 workflow.yaml。→ 判据：多阶段推理用运行时图编排，别把整条链塞进一个 prompt。
+- **Execution Graph IR**：节点统一抽象为确定性输入/输出 Schema+显式生命周期事件；DSL 编译器实时生成带版本签名执行图+CLI 触发编译。→ 判据：改流程走编译生成执行图，带版本签名可回滚。
+- **2026 编排能力**：并行节点执行/条件分支支持正则+JSON path 查询/循环节点迭代列表/节点级错误捕获和重试/变量池全局共享。→ 判据：独立节点并行、列表迭代循环、节点级重试，别把循环硬写成多节点复制。
+- **Human Input node（v1.13）**：执行到节点流程暂停+表单发指定人+填字段点决策按钮+沿对应分支继续。→ 判据：需要人判断的关口放 Human Input，把人机交接做成原生节点。
+- **New Agent 独立化**：Agent 从工作流临时节点拆成独立应用可复用资源（模型/Prompt/Skills/文件/工具一处维护），可独立运行或 Workflow Agent 节点调用。→ 判据：同一能力多处用就拆成独立 Agent 资产，一处维护多端复用。
+- **图片/文档分流**：List Operator 拆分上传文件到图片/文档分支（图片走 vision/文档先转文本）。→ 判据：多模态输入按类型分流处理，别统一走一条链。
+- **提升层**：工作流。
+
+## n8n 子工作流模块化：Execute Workflow + 复用/拆分/调试（来源：n8n 子流程面，2026-09-27 实拉，与 §Webhook 认证互补——这条管结构拆分）
+- **子工作流机制**：Execute Workflow node 调另一 workflow；被调方首节点用 Execute Sub-workflow Trigger。→ 判据：跨 workflow 调用成对使用，子流首节点必须是 Sub-workflow Trigger。
+- **两大用途**：复用（多 workflow 拉数据统一调一个生成报表）/拆大 workflow 防内存问题。→ 判据：出现重复段或单流过大就拆子流。
+- **调试**：右键 Open sub-workflow/CTRL+SHIFT+O 快速导航多流。→ 判据：多流自动化调试从入口直接跳子流。
+- **AI 节点结构（LangChain 更名）**：AI Agent 是主节点；Chain 做序列；AI Memory/Embeddings/Vector Store 是子节点挂到 AI Agent/Chain。→ 判据：找"LangChain"节点已过时，按 AI 类别找 AI Agent 主节点+挂子节点。
+- **搜索工具接入**：SearchApi community node/Bright Data MCP+n8n-nodes-mcp/Brave MCP+Telegram。→ 判据：agent 要联网搜索优先 MCP 搜索 server 接入。
+- **提升层**：工作流。
+
+## LangFlow lfx-bundles 生态：opt-in 扩展 + 按需安装（来源：LangFlow bundles 面，2026-09-27 实拉，与 §lfx 扩展工程互补——那条管写扩展，这条管装生态）
+- **lfx-bundles metapackage**：bundle 是可选扩展，Langflow 与 standalone LFX 均可：uv pip install "lfx-bundles[<bundle>]"。→ 判据：要第三方集成先装对应 bundle，不装不加载。
+- **常用 bundle**：Code Agents（代码 agent）/LangChain bundle（CSV Agent/SQL Agent/NL2SQL/Retrieval QA/Self Query Retriever/JSON Agent/VectorStoreRouterAgent）/Composio（aggregate Composio Tools 供 agent 当工具）/CrewAI Sequential Task Agent。→ 判据：数据库问答用 SQL Agent bundle，工具目录用 Composio aggregate。
+- **1.10 四新 bundle**：lfx-arxiv/lfx-docling/lfx-duckduckgo/lfx-ibm（作为依赖附带）。→ 判据：要 arXiv/文档解析/搜索/IBM 能力直接装对应 bundle。
+- **1.12 OpenTelemetry**：service health+flow runs 观测。→ 判据：生产观测开 OTel，别只看节点日志。
+- **安装确认**：lfx extension list 确认加载；一次装全部无 Torch opt-in 用 "langflow[bundles]"。→ 判据：装完先 extension list 确认，再谈用。
+- **提升层**：工具。
+
+## Activepieces AI Agent 与防幻觉：JSON schema + 写入前校验 + review gate（来源：Activepieces AI agent/files 面，2026-09-27 实拉，与 §MCP Server 互补——那条管 AI 接入，这条管可靠性）
+- **AI Agent Builder**：进程任务（如 inbox 发票）；工具自选（任意 app action/自己的自动化/MCP server/上传文件给它读）；模型+key 由 admin 一次配（OpenAI/Anthropic/Gemini/Azure/Bedrock）。→ 判据：agent 工具按任务选，模型 provider 统一配一次。
+- **防幻觉三层**：①强制结构化输出（JSON schema）+写入前校验 ②从 curated Tables/APIs 检索事实+引用/来源字段 ③高影响更新加 review gate。→ 判据：写库前必过 schema 校验，事实靠检索+引用，高影响动作人审。
+- **Hosted Forms**：文本/长文本/文件/toggle 字段托管页；流程暂停等人（Refund request Waiting for a person）。→ 判据：要人填数据的环节用托管表单节点。
+- **Document Processing**：AI 解析 PDF/图片→提取结构化字段→normalize 日期金额→JSON 映射下游；Tables 存元数据/提取值/状态。→ 判据：文档入数据走 AI 提取+规范化+状态表，别直接灌原文。
+- **提升层**：工作流。
+
+## Anthropic 金融 agents 模板：10 模板 + plugin vs Managed Agent 部署（来源：Anthropic 金融 agents 面，2026-09-27 实拉，与 §Agent SDK 互补——那条管开发，这条管行业模板）
+- **10 个 ready-to-run 模板**：pitch book/KYC screening/GL reconciler/month-end closing/credit memo/Earnings Reviewer（读财报 transcript+监管文件更新财务模型+flag 关键变化风险因素）/Statement Auditor（报表一致性完整性审计准备）。→ 判据：金融高频任务先查模板，不从头写。
+- **双部署形态**：Claude Cowork/Claude Code plugins（分析师本地用）+Claude Managed Agents cookbooks（/v1/agents 部署）；vertical plugins（底层 skills/slash commands/data connectors 单独装）。→ 判据：本地桌面用插件，无人值守用 Managed Agents；只要技能层可单装 vertical plugin。
+- **三阶段 adoption playbook**：foundation→pilot→scale。→ 判据：行业落地按基础-试点-规模化分阶段，别一步全上。
+- **subagent delegation 注意**：headless 多 agent 部署是 research preview，触碰真实客户工作需额外审查。→ 判据：多 agent 无人值守先审查再碰真实生产。
+- **提升层**：工具。
