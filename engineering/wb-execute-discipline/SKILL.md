@@ -5759,3 +5759,44 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **来源记录**：安装记录 source metadata，后续更新解析同一 registry package。→ 判据：更新走记录来源，不换源重装。
 - **全局安装**：--global 装所有本地 agent 共享，避免逐个 agent 重复装。→ 判据：通用技能 --global，专用技能按 agent 装。
 - **提升层**：可复用 Skill。
+
+## Dify 语义缓存与 KV 复用：意图一致性判定 + 多级协同缓存 + WORM 模式（来源：CSDN Dify SAMCC + arXiv 2603.03301 + NVIDIA Dynamo agentic-inference，2026-09-27 实拉，与 §Prompt Caching 互补——那条管 provider 侧缓存，这条管应用侧语义缓存）
+- **语义缓存范式跃迁**：SAMCC（Semantic-Aware Multi-tier Coherent Cache）把提示/上下文窗口/嵌入向量指纹/模型推理路径联合建模，命中从字面匹配转向意图一致性判定。→ 判据：高频同意图查询用语义缓存，别只靠字面 LRU/LFU。
+- **工程配置**：Dify config.yml enable_caching: true + cache_duration: 300 减服务器负载提响应。→ 判据：自托管 RAG 开缓存并设过期时长。
+- **向量索引缓存**：SemanticCaching 用 Faiss flat index（支持 Milvus/HNSWlib）做嵌入缓存查找。→ 判据：语义缓存库用向量索引查最近邻，不到 1ms 级别别用暴力扫。
+- **KV Cache WORM 模式**：agentic workloads 读多写少（实测 11.7x read/write ratio）：system prompt+growing conversation prefix 算一次后续全 cache 读。→ 判据：长会话 agent 服务重点优化 KV 复用率，跨 worker 共享+保活。
+- **多模态统一语义空间**：v1.11.0 图文进共享坐标系，Image-to-Text/Text-to-Image/Image-to-Image。→ 判据：图文混合检索用统一 embedding 空间。
+- **提升层**：工作流。
+
+## Anthropic Agent SDK subagents 工程：Agent tool + resume + max_turns + 状态共享三方式（来源：Anthropic docs agent-sdk/subagents + cookbook dynamic-workflows + production guides，2026-09-27 实拉，与 §多Agent协作纪律互补——那条管编排模式，这条管 SDK 级工程细节）
+- **调用与提示**：subagents 经 Agent tool 调用须在 allowedTools；prompt 显式点名（"Use the code-reviewer agent to..."）；description 写清何时用让 Claude 匹配任务。→ 判据：subagent 要能被子 agent 调用 + 名字在 prompt 显式出现 + description 决定触发。
+- **恢复会话**：capture session_id→parse agentId from Agent tool result→第二次 query 传 resume: sessionId。→ 判据：跨 query 续跑 subagent 任务用 resume 机制。
+- **动态 workflow vs 自主委托**：自主委托版 lead agent turn by turn 决定，不保证委托每块/合并/验证，结果全落回 lead context（4 次 OK 400 次不行），plan 只在 context 中断重来；dynamic workflow 翻转：脚本决定跑什么，中间结果存外部。→ 判据：>4 次委托或需恢复用脚本驱动 workflow，不靠 agent 自主链。
+- **子任务粒度**：一 subagent 一离散子任务，别塞三件事一个 prompt；强制结构化返回（JSON/markdown table/fixed summary）防 parent bloated；max_turns 设上限（research agent 通常 ≤15）。→ 判据：subagent 返回必须结构化，轮次有上限。
+- **用武之地判据**：context isolation（读 50 文件不 bloating parent）/parallelism（并发，慢的最慢者定总时长）/specialized instructions/tool restrictions（reviewer 只读不写）时用；2 个任务 B 依赖 A 不用；总运行 <5 秒不用（spawn overhead 超收益）。→ 判据：独立 3+ 任务每 10+ 秒才拆 subagent，串行/短任务别拆。
+- **安全边界**：tools 字段=security boundary（least privilege）；subagent 不能 spawn subagent（不把 Agent 放 subagent tools）。→ 判据：subagent 工具集按最小权限，禁止递归 spawn。
+- **状态共享三方式**：prompt serial passing（小数据顺序）/shared KV store（Redis 并行同数据）/event sourcing（冲突解决/审计）。→ 判据：按并发与审计需求选共享方式，顺序小数据用 prompt 直传。
+- **提升层**：工具。
+
+## GitHub 供应链攻击面：Miasma/Comment and Control/OIDC trusted publishing（来源：NSFOCUS Miasma + CSA Shai-Hulud/Megalodon + CSA Claude Code Action 注入 + Codex Comment and Control，2026-09-27 实拉，与 §GitHub Actions 安全互补——那条管正配置，这条管已发生的攻击类）
+- **OIDC trusted publishing 单点爆破**：Miasma 用被控账号滥用 GitHub Actions OIDC trusted publishing 铸 publish tokens，同一 publishing path 覆盖 namespace 全部 95 projects——单 compromised workflow 可得每包 token。→ 判据：trusted publishing 按最小包范围配，别一个 workflow 覆盖整个 namespace。
+- **Comment and Control 攻击类**：单 PR title（零权限外部贡献者）同时劫持 Claude Code Security Review agent/Gemini CLI Action/Copilot Coding Agent 窃取 secrets——agentic CI/CD 最重要供应链威胁。→ 判据：agent 跑 CI 必须隔离不可信输入（PR title/comment 不进 agent prompt），Codex proxy 架构是正确防御。
+- **批量恶意提交**：Shai-Hulud Wave 2 用 throwaway accounts+forged CI bot identities 六小时推 5,718 commits 到 5,561 repos backdoor CI/CD。→ 判据：审查 CI bot 身份真实性与 commit 来源，不只信名字。
+- **AgentBaiting**：LLM 自己把假仓库 surface 给用户成 unwitting delivery channel（FakeGit 7,600 repos 部署 SmartLoader→StealC）。→ 判据：AI 搜索/推荐仓库结果先验来源与星数/活跃度，防假仓库投毒。
+- **GitHub App 权限校验漏洞**：checkWritePermissions 无条件信任任何 GitHub App actor（CVSS 7.8）导致无 write 攻击者触发全仓库 compromise。→ 判据：权限校验函数必须验证 actor 身份与真实权限，不信 App 声明。
+- **提升层**：工作流。
+
+## OpenClaw hooks 事件驱动：plugin hooks + internal hooks + webhooks（来源：docs.openclaw.ai plugins/hooks + automation/hooks + automation，2026-09-27 实拉，与 §定时任务互补——那条管排期，这条管事件触发）
+- **Plugin hooks**：api.on("hook_name", handler) 注册 typed handler，可 change prompts/gate tools/customize replies/plugin lifecycle。→ 判据：插件级拦截用 api.on typed hook。
+- **Internal hooks**：JS/TS handlers 在 Gateway process 跑，事件：/new /reset /stop、session compaction、gateway startup、message flow；从 hook directories 发现，openclaw hooks 管理；bundled hooks 内置。→ 判据：生命周期副作用（存 context/审计日志）用 internal hooks，不写插件。
+- **执行顺序**：handlers 顺序=family listeners 先 exact listeners，注册顺序内。→ 判据：多 hook 同事件时按 family→exact 顺序预期执行。
+- **Webhooks**：inbound webhooks=Gateway HTTP hooks for external callers；POST /hooks/wake /hooks/agent /hooks/<name>。→ 判据：外部系统触发 agent 用 inbound webhook 端点。
+- **提升层**：可复用 Skill。
+
+## deeplearning.ai Agentic AI 方法论：反思模式 + 组件级评估 + 四模式（来源：deeplearning.ai Agentic AI（Andrew Ng）+ Agent Skills with Anthropic + 新课程列表，2026-09-27 实拉，与 §评估驱动互补——那条管评测法，这条管 agent 设计模式课程）
+- **四大 agentic design pattern**：reflection（自我反思改进输出）/tool use（接外部工具）/planning（任务规划）/multi-agent workflows（多 agent 协作）。→ 判据：agent 设计先选模式组合，反思模式用于输出质量提升。
+- **反思模式评估**：direct generation vs reflection 对比评估改进幅度（"Evaluating the impact of reflection"）。→ 判据：上反思前先测基线差异，不无脑加轮次。
+- **组件级评估**：evals+error analysis prioritizing next steps+component-level evaluations（拆组件单独评）。→ 判据：agent 管线按组件单独评估，错误分析定优先级再迭代。
+- **Agent Skills 开放标准**：Agent Skills with Anthropic 课程教开放标准格式 reusable skills+组合成 workflow。→ 判据：技能按开放 SKILL.md 标准封装可跨 agent 复用。
+- **课程面**：新课程 Building Adaptive AI Agents/Evaluating AI Agents/A2A Protocol/Build Interactive Agents with Generative UI——按需补课。→ 判据：需要时按主题选对应 short course。
+- **提升层**：工作流。
