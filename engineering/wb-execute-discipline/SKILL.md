@@ -8390,3 +8390,66 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **管理命令**：openclaw channels add 交互式设置认证配置——配置或 Web UI 添加——platform-specific credentials（bot token/API keys）；Discord 配置=OAuth2 scopes bot/Send Messages/Read Message History/View Channels→授权→paste token→Channel ID。
 - **多通道**：同时跑多平台——自动按 chat 路由——dispatcher 归一化入站消息到同 agent runtime 行为一致——context 跨平台携带；自定义通道 channel adapters 构建自有发布社区（Telegram Bot API long polling/webhooks 例）。
 - **提升层**：工具（通道接入）。
+## Dify 工作流高级控制：Variable Aggregator · If-Else 条件 · Parallel 分支（来源：mintlify dify variable-aggregator + deepwiki langgenius/dify-docs node-system + dify blog parallel-branch + dify-hosting workflow guide 2024-09/2026-09 实拉，合并 §Dify 工作流——那条管"发布嵌入"，本条管"控制结构"）
+- **Variable Aggregator 变量聚合器**：收敛互斥分支为单一输出——If/Else、Question Classifier 创建互斥分支每 run 只一路径——避免下游重复——全部聚合变量须同数据类型——运行时只有实际执行分支贡献值——支持 String/Number/Object/Boolean/Array——v0.6.10+ advanced feature；array 模式收集全部分支输出到列表。
+- **If-Else 节点**：条件求值路由——IF/ELIF 多个/ELSE——AND/OR 复杂条件——text patterns contains/starts with——value comparisons equals/greater than——empty states；**Question Classifier** 基于意图分类路由查询到不同处理分支；**Template 节点** Jinja 变换格式化数据。
+- **Parallel Branch（v0.8.0）**：并行加速处理——双 IF/ELSE 嵌套（缺失公司信息并行搜公司/抓页面/总结；缺失问题并行生成多问题）——End 节点前合并。
+- **错误处理分工**：LLM/HTTP/Code/Tool 节点失败用内置 retry/default-value/fail-branch 处理——不是 If/Else 的活（If/Else 管业务条件）。
+- **提升层**：工作流（控制结构）。
+
+## n8n 多用户与权限管理：实例角色 · 项目角色 · 工作流共享 · SSO 供应（来源：docs.n8n.io understand-instance-roles + see-available-roles + custom-roles + workflows/sharing + blog custom-project-roles-sso 2026-01/09 实拉，合并 §n8n 权限——那条管"实例配置"，本条管"多用户 RBAC"）
+- **实例角色**：每用户一个 instance role——三内置 Owner/Admin/Member——可建 custom instance roles 粒度权限；**项目角色**：三用户角色 Admin/Editor/Viewer——Project Admin 最高（管理项目设置/成员邀请移除改角色/项目内 workflows/credentials/executions/创建 end-user credentials 仅 admin）。
+- **自定义项目角色**：仅限所在项目生效——同一用户不同项目可有不同角色；**工作流共享**：两工作流角色 creator/editor——不能改 owner 除非删用户——共享允许 editors 用工作流里所有 credentials 含未显式共享的。
+- **SSO/用户供应**：IDP-driven role sync——从 IdP 同步用户与角色到 instance+project 级——按用户或 IdP 组——自动分配到项目与角色（IAM 一体化）。
+- **提升层**：工作流（团队协作治理）。
+
+## LangFlow 多 Agent 编排：五 agent 深研流 · Judge/Router · agent 嵌套（来源：langflow.org build-multi-agent-system/deep-research/gpt-5-router + docs.langflow starter-projects-dynamic-agent/sequential-agent/1.1 components-agents 2024-11/2026-08 实拉，合并 §LangFlow Agent——那条管"数据组件"，本条管"多 Agent 编排"）
+- **五 agent 深研流**：Research Planner 拆复杂问题 3-7 子问题→Source Finder 带 web search 检索→Summarization 工具调用提取关键事实→Reviewer 识别缺口提后续问题→Professional Research Writer 综合成报告——每 agent 清晰职责+单一任务。
+- **Judge/Router 模式**：judge agent 评估查询路由到专业下游——User Query→Judge Agent→Router→Specialized Agent——default/think 路由（比单一巨型 agent 便宜可控）。
+- **Agent 嵌套**：tool mode——agent 把其他 agent 当工具调用——递归编排多层——Langflow 1.1 agent 组件支持；**Sequential tasks agent**：多 Agent 组件单 flow——每 agent 连独特工具——Prompt 连 Agent Instructions 控制行为——逐 agent 建立前 agent 工作。
+- **CrewAI 分层 crew**：Hierarchical crew——Manager 角色 agent 连 LLM 推理任务选工具；**supervisor**：只看到高层工具做域级路由决策非个别 API 级。
+- **提升层**：可复用 Skill（多 Agent 编排模式）。
+
+## Activepieces 分支循环与数据转换：loop context · 公式函数 · MCP 分支工具（来源：mintlify.wiki activepieces passing-data/loops-branches/engine + activepieces docs using-formulas/mcp/tools + resources data-processing 2026-05/09 实拉，合并 §Activepieces 分支——那条管"工作流设计"，本条管"分支循环与数据"）
+- **数据传递表达式**：Array Operations map/filter/reduce——{{ trigger.items[0] }} 首项/{{ trigger.items.length }} 长度——Object Operations——步骤间直接引用前序输出。
+- **Loop on items**：loop context {item, index, total}——executeSteps 每迭代——results push——output/success/iterations；**循环嵌套分支**：loop 里 router（EXECUTE_FIRST_MATCH）——分支里再嵌套 loop。
+- **公式函数**：if(order.total > 1000; "High value"; "Standard") 三参条件——length(trim(user_input)) 组合清洗；**MCP 分支工具**：ap_flow_structure 看现有分支条件与索引——ap_add_branch 加条件分支插到 fallback Otherwise 之前。
+- **数据转换能力**：JavaScript steps 字段清洗/类型转换/归一化/记录重塑——internal tables 存储跨 run 状态/去重逻辑/查找值——并行路径更新相关系统不阻塞主流程。
+- **提升层**：工作流（分支循环与数据转换）。
+
+## Make 过滤器路由器与聚合器：Router+fallback · Filter 门控 · Array Aggregator（来源：make.com help router + use-apify routers-filters-guide + automatemyjob aggregators + keerok advanced scenarios 2024-06/2026-05 实拉，合并 §Make 路由——那条管"模块类型"，本条管"路由与聚合"）
+- **Router**：分支场景流为多模块链——每路由按条件处理数据——Filter 用操作符 less than/greater than——按序排列路由+fallback 路由处理不匹配数据——fallback 也可设 filter。
+- **Filter**：两模块间附加条件门控——下一模块只在条件为真时运行——Router 里每分支放 filter 决定哪分支执行——设置：wrench 图标/连接线→Set up a filter→有意义 label（"Lead source = Email"）。
+- **Array Aggregator**：收集多 bundles 合并单数组——发结构化列表给 API/批量插行/传对象集合给下游——20 订单行项 enrich 后聚合批量插库一次 API；Aggregator 解决逆问题从多源合并数据。
+- **高级路由模式**：数据类型路由 B2B→CRM B2C→不同邮件 campaign；动态优先级评分路由；多通道编排单 trigger 喂 Slack/CRM/ticketing；fallback 链 主→次→三级降级功能；转换模块 Text Parser regex/JSON 模块/Data stores。
+- **提升层**：工具（路由聚合体系）。
+
+## Pipedream 子工作流与流程控制：Parallel · Switch/If-Else · loops=code（来源：pipedream.com docs control-flow/parallel/switch/ifelse + changelog + integrationatlas 2026-05/09 实拉，合并 §Pipedream 控制——那条管"代码步骤"，本条管"流程控制"）
+- **运算符**：If/Else beta 单路径逻辑分支多输入变量；Delay 1ms-1年；Filter 规则停止或继续；End Workflow 提前终止；Switch 单路径分支基于单输入变量值——规则定义顺序影响执行路径；Parallel 多路径分支可过滤规则执行所有匹配分支——顺序不影响路径。
+- **Parallel 详解**：创建分支/重命名/导出数据到父 flow——不相关 LLM 查询并行做然后父 flow 引用响应——分支 last-step exports 合并回父流。
+- **循环**：loops 就是代码——Node.js step 写 for loop 调 action——区别于 Power Automate/Make 显式 Apply to each/Iterator 原语；retry/delay per-step 可配置；pd.flow.exit 条件内提前退出工作流 exit("reason")。
+- **提升层**：工具（流程控制）。
+
+## Anthropic 系统提示与角色工程：XML 标签结构化 · role 锚定 · Sonnet 规则（来源：platform.claude.com prompting-best-practices + docs.anthropic system-prompts + clauder-navi 15 templates 2026-03/09 实拉，合并 §Anthropic 提示——那条管"系统提示输出校验"，本条管"XML 结构化工程"）
+- **XML 标签结构化**：XML tags 帮 Claude 无歧义解析复杂 prompt——混合 instructions/context/examples/variable inputs 时每类内容自己的标签 <instructions>/<context>/<input>——减少误解——官方推荐——训练数据含 XML 风格分隔符——比 Markdown headings 更可靠区分引用/命令/输出示例。
+- **常见标签模式**：<role> 锚定 Claude 视角先读激活相关知识过滤语气——"Senior backend engineer" vs "helpful assistant" 不同响应；<context> 行动前需要的一切（约束/背景/已有决策）不内联任务；数据分隔 <document>/<article>。
+- **Sonnet 特殊性**：低延迟+锐利指令跟随——显式 XML 标签定义 context/input data/rules 得确定性结果——<code_to_review>/<formatting_rules>——长输入多文档时官方推荐 XML 而非 Markdown。
+- **提升层**：可复用 Skill（提示工程模板）。
+
+## deeplearning 工作流自动化课程：Agentic AI 四模式 · 课程谱系（来源：learn.deeplearning.ai courses + coursera agentic-ai/ai-agents-in-langgraph + scaler agents courses 2026-05/09 实拉，合并 §deeplearning 课程——那条管"语音音频"，本条管"工作流自动化课程"）
+- **Agentic AI 四设计模式**：Reflection（AI 批评自己迭代改进——自动化代码评审）；Tool Use（连数据库/API/外部服务真行动）；Planning（拆复杂任务可执行步骤适应意外）；Multi-Agent（协调多个专业 AI 系统）——评估优化 performance metrics/error analysis/production deployment。
+- **课程谱系**：AI Agents in LangGraph（Harrison Chase+Tavily Rotem Weiss——agentic search）；Building Code Agents with smolagents（54m——agents 写执行代码完成任务）；Practical Multi AI Agents with crewAI（2h49m 协作解决复杂业务任务）；Functions Tools and Agents with LangChain（LCEL 组合 chains/agents）；Windsurf AI Coding Agents（1h30m Agentic IDE）。
+- **提升层**：可复用 Skill（课程方法谱系）。
+
+## GitHub 分支保护与仓库治理：受保护分支 · 合并队列 · rulesets 规则清单（来源：docs.github.com about-protected-branches/managing-merge-queue/available-rules-for-rulesets 2026-06/09 实拉，合并 §GitHub 治理——那条管"Actions 生态"，本条管"分支保护"）
+- **受保护分支**：branch protection rule——推变更前强制工作流/要求含合并 PR——默认禁用 force pushes 到匹配分支+防止删除——可选禁用/启用额外设置——bypass lists 仅组织仓库可加。
+- **合并队列**：管理员要求 base branch 保护 "Require merge queue"——自动合并忙碌分支 PR——保证分支不被不兼容变更打断——Merge method merge/rebase/squash、Build concurrency、进入队列前要求更新/等待 checks。
+- **rulesets 规则清单**：Require PR reviews/Require status checks/Require conversation resolution/Require signed commits/Require linear history/Require merge queue/Require deployments succeed/Lock branch/Do not allow bypassing/restrict pushes——线性历史要求 squash/rebase 允许；org 级 rulesets 无 merge queue 规则——repository 级才有。
+- **提升层**：工具（仓库治理）。
+
+## OpenClaw CLI 命令与配置参考：CLI 结构 · gateway 认证模式 · token auth 建议（来源：docs.openclaw.ai cli/configure + cli/gateway + openclawlab CLI Reference + howtouseopenclaw gateway 2026-02/09 实拉，合并 §OpenClaw CLI——那条管"聊天通道"，本条管"CLI 配置"）
+- **CLI 结构**：configure/config/gateway call/health/acp/status/monitor；gateway start/stop/restart 进程控制（配置变更后 restart）；monitor 本地监控 dashboard 默认端口 18790。
+- **Gateway 认证模式**：--bind loopback/lan/tailnet/auto/custom 监听绑定；--auth none/token/password/trusted-proxy；--token/--password override 也设 CLAWDBOT_GATEWAY_TOKEN/CLAWDBOT_GATEWAY_PASSWORD；--gateway-auth password/--gateway-password 显式；Tailscale Funnel 仍需 password；--gateway-token-ref-env 非交互 SecretRef。
+- **token auth 建议**：即使 loopback 也建议开着 token-auth——本地 WS 客户端需认证——token 模式明文 token 生成/保存（默认）或 SecretRef opt-in；password 模式交互式也支持。
+- **acp**：ACP bridge 连 IDEs 到 Gateway——CLI ACP 服务器。
+- **提升层**：工具（CLI 配置）。
