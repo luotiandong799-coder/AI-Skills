@@ -4344,3 +4344,31 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **allow-listing 优于黑名单**：验证输入对已知好值（路径在允许目录内），而非过滤已知坏模式（traversal 序列）。→ 判据：白名单校验永远先于黑名单过滤。
 - **LLM 工具参数当 untrusted**：模型提供的函数参数按 web API user input 一样对待。→ 判据：工具参数过校验再执行，不因来自模型而信任。
 - **提升层**：模型/工作流。
+
+## Webhook 响应四形态选型 + Build 异步事件流（来源：n8n Webhook 面 + LangFlow API 面，2026-09-27 实拉）
+- **Webhook 响应四形态**：All Entries（数组）/First Entry JSON（JSON 对象）/First Entry Binary（二进制）/No Response Body。→ 判据：按调用方要什么定响应形态，别默认全量数组。
+- **默认同步响应是慢工作流陷阱**：When Last Node Finishes 只适合几秒内完成的同步工作流；40 秒 workflow 会被调用方/反向代理超时切断——即使 run 在 n8n 内完成。→ 判据：响应重要且工作流慢时，用 Respond to Webhook 节点立即回响应，再继续后台处理（hand control 解耦）。
+- **Streaming response**：Webhook Response Mode 设 Streaming+AI Agent 节点 Enable Streaming ON，流式输出。→ 判据：要打字机效果/长输出提前给调用方，开 streaming，别等全部完成。
+- **Build 异步 job 事件流**：/build 返回 job_id，/build//events 流式取执行结果。→ 判据：长构建别同步等响应，job_id+events 轮询流式取。
+- **A2A server 模式**：Langflow 可作 A2A server，message/stream SSE JSON-RPC 帧。→ 判据：Agent 间通信优先标准协议（A2A/SSE），不自己造私有轮询。
+- **提升层**：工作流/工具。
+
+## Data Store 持久化三模式（来源：Make Data Store/变量面，2026-09-27 实拉）
+- **checkpoint/cursor 模式**：多步长流程（email 序列/分页导出）用单条 Data Store 记录作游标（export_cursor），跨 scheduled runs 恢复位置。→ 判据：跨轮次记住"做到哪了"用一条 cursor 记录，不重复处理。
+- **AI 响应缓存**：hash 查询→text similarity>90% 返回缓存→7-day TTL；FAQ 类 30-40% 命中率。→ 判据：高频同质查询先查缓存再调 LLM，7 天 TTL 保新鲜。
+- **roundtrip 变量 scope 陷阱**：SetVariables scope: roundtrip 变量跨多次执行周期持久；与 webhook trigger 多 routes/branching 组合时 scope 会混淆。→ 判据：变量作用域写清（roundtrip/单 cycle），webhook+分支组合时逐路由验证 scope。
+- **可见性**：Scenario Builder 直接显示 context 在哪捕获/传递/写入/丢失——记忆架构可见而非隐藏 field mapping。→ 判据：记忆流要能被"看见"，构建器里检查 context 传递路径。
+- **提升层**：工作流/工具。
+
+## 工具合并 + Schema 质量 + Programmatic tool calling（来源：Anthropic Tool use 面，2026-09-27 实拉）
+- **相关操作合并成更少工具**：create_pr/review_pr/merge_pr 合成单工具带 action 参数——减少选择歧义。→ 判据：工具数量少而能力大，宁合并带参数，不碎拆。
+- **Schema 质量是工具可靠性最大预测器**：模型按名称/描述/参数文档选工具；两工具听起来像就会选错，失败不可见直到用户抱怨。→ 判据：工具描述差异化写到"同场景只有一个匹配"；input_examples 给复杂输入/嵌套对象/格式敏感参数提供 schema 验证过的示例。
+- **Programmatic tool calling**：小固定开销（容器启动/脚本生成）换 tool-result tokens 与 round-trips 大节省。强适合：fan-out 并行（50 端点/20 记录）、大工具结果先过滤/聚合/总结再进 context、agentic search 迭代查询。→ 判据：批量同构调用/大结果先聚合，走程序化调用省 token 省轮次。
+- **tool_choice auto**：默认模型判断——答案已在 context 就直接回答不调工具。→ 判据：不强制每次都调工具，context 已有答案就直答。
+- **提升层**：模型/工作流。
+
+## Skill Packs 打包分发 + 多目录结构（来源：skills.sh 创建/贡献面，2026-09-27 实拉）
+- **Skill Packs**：多技能捆一个 pack，skills.sh/p/<pack-id> URL 分发——一个 URL 传整个能力集，免复杂配置共享。→ 判据：成套技能按 pack 打包分发，单 URL 交付。
+- **多目录结构单仓库多技能**：根 SKILL.md/skills//skills/.curated//skills/.experimental/——CLI 自动扫描，一仓库装多技能。→ 判据：技能仓库按目录分层组织，CLI 扫描即可发现，无需注册表账户。
+- **npx skills add owner/repo**：无 registry 账户直接安装；安装 telemetry 自动入榜。→ 判据：技能安装走 owner/repo 直装，贡献者自动获得可见性。
+- **提升层**：可复用 Skill。
