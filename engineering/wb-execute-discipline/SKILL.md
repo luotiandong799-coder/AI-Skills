@@ -5276,3 +5276,35 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **安装管理三命令**：clawhub install <skill-name>（10,700+ skills）/clawhub update --all（更新全部）/clawhub sync --all（扫描本地+发布更新）。→ 判据：技能管理有统一 CLI 生命周期（装/更/同步），别手工拷贝。
 - **安全**：安装时 VirusTotal scan passed 验证；openclaw skill configure <name> 交互配置（OAuth/API key）。→ 判据：第三方技能装前过病毒扫描；凭据配置走官方配置入口不写死。
 - **提升层**：可复用 Skill。
+
+## Dify 环境变量与凭据作用域：Secret 类型 + workspace/workflow 级 + SECRET_KEY 纪律（来源：Dify 环境变量/secrets 面，2026-09-27 实拉，与 §Dify 会话变量互补——那条管运行态状态，这条管配置态密钥）
+- **环境变量含 Secret 类型**：API key 等用 Secret 类型在 workflow 内 HTTP 请求节点/外部工具分离，不落明文。→ 判据：工作流里的密钥一律走 Secret 型环境变量，节点引用不硬编码。
+- **凭据作用域两级**：workspace 级（共享内部工具，多 workflow 复用同一套）/workflow 级（隔离）。→ 判据：多流程共用选 workspace 级，单流程隔离选 workflow 级——共享=复用，隔离=最小暴露。
+- **SECRET_KEY 纪律**：32 字节强随机；首次启动前设置；运行中改会登出用户/失效文件 URL/失 OAuth 凭据（不轮换）。→ 判据：签名密钥首启前生成一次，之后不碰；DB/REDIS 默认口令必须替换。
+- **敏感内容掩码**：SENSITIVE_CONTENT_MASKING 自动掩码身份证/手机号。→ 判据：AI 输出过 PII 的入口开自动掩码兜底。
+- **提升层**：工作流。
+
+## n8n Code node 契约：{json:...} 数组输出 + 两模式选择 + JS 优先（来源：n8n Code node 面，2026-09-27 实拉，与 §n8n Retriever 工具化互补——那条管节点接线，这条管自定义代码）
+- **输出契约**：必须返回数组，每元素 {json:{...}}（JS/Python 一致）；单结果也包数组；返回裸对象/原始值数组会失败；null/空数组停止该分支。→ 判据：写 code node 先记住下游要 item 形状，返回格式错=静默断流。
+- **两模式**：Run Once for All Items（默认，聚合/排序/过滤全数据集，.all()）/Run Once for Each Item（逐项变换，.item.json）。→ 判据：全量操作选 All Items，逐项映射选 Each Item——模式选错语义就错。
+- **JS 优先**：95% 用 JS（全 n8n helper .httpRequest/Luxon DateTime/无外部库限制/文档好）；Python 仅标准库/更熟/数据变换更适合时。→ 判据：自托管 code node 默认 JS，省外部库踩坑。
+- **提升层**：工具。
+
+## LangFlow Chat Widget 嵌入：host_url/flow_id props + workflow=API/MCP 双形态（来源：LangFlow chat widget 面，2026-09-27 实拉，与 §LangFlow 生产部署互补——那条管后端上线，这条管前端接入）
+- **嵌入 chat widget**：Share→Embed into site→snippet 放 <body>；props host_url（必须 HTTPS 不含路径）+flow_id；<langflow-chat> CDN 组件或 React/Angular。→ 判据：flow 变网站对话=一行组件，不用自建前端轮子。
+- **workflow 双形态**：Deploy as API（或导出 JSON）/Deploy as MCP server——每个 workflow 变成 tool 可集成任何框架/栈。→ 判据：同一 flow 按消费方选形态：程序调 API，agent 调 MCP。
+- **Langflow Assistant**：内嵌 AI 开发助手（自然语言生成自定义组件/排查 flows/实时文档指导）。→ 判据：开发环境 AI 化=IDE 内问即得，别切终端/文档页。
+- **提升层**：工作流。
+
+## Activepieces 可观测与运营限制：run log checkpoint + 30 天保留 + MCP 查运行（来源：Activepieces runs 面，2026-09-27 实拉，与 §Activepieces 自定义 piece 互补——那条管建，这条管看）
+- **Durable Execution run log**：每 flow run 一个压缩 checkpoint 文件（含恢复所需一切）；每 finished step 一条（input 隐藏 secrets/output/status/duration/error）；loop/router 分支嵌套父 step；run-level tags。→ 判据：跑挂了从 checkpoint 恢复而不是重跑全 flow；日志含恢复点=可续跑。
+- **运营限制**：worker 内存 1GB；paused flow 30 天（AP_PAUSED_FLOW_TIMEOUT_DAYS）；执行数据保留 30 天（AP_EXECUTION_DATA_RETENTION_DAYS）；生产 worker 并发设 1（cloud 默认 1/self-host 默认 5）。→ 判据：长时间挂起的 flow 会过期，长流程按 checkpoint 设计；生产并发=1 保顺序。
+- **MCP 查运行**：ap_list_runs/ap_get_run（flowId/status/limit 过滤默认 10 max 50）。→ 判据：agent 可直接查 flow 运行状态做监控闭环。
+- **提升层**：工具。
+
+## Claude Code Output Styles：Concise/Caveman 极简 + 关键内容永不压缩（来源：Claude Code output styles 面，2026-09-27 实拉，与 §Claude Code subagents 互补——那条管分工，这条管说话方式）
+- **Concise 官方风格**：结果先行，去前言/叙述/复盘；简单问题 1-3 句；工程工作与 Default 一样彻底；v2.1+。→ 判据：日常对话开 Concise，工程照做不缩水。
+- **Caveman 社区风格**：极小输出行动导向（finding/fix/next step；代码任务 prose<5 行；命令输出 1-3 bullets；高置信直接陈述）。→ 判据：盯输出长度的场景用 Caveman 级约束，省上下文字数。
+- **永远不压缩的内容**：完整错误报告、安全警告、破坏性操作确认。→ 判据：极简风格只压叙述不压安全信息——丢了确认=丢了防护。
+- **模型趋势**：最新 Claude 更简洁自然/直接 grounded（事实进展报告非自我庆祝）/可能跳过 tool call 后总结——要可见性需显式 prompt。→ 判据：别假设模型会主动汇报，关键动作后要结果就显式要。
+- **提升层**：可复用 Skill。
