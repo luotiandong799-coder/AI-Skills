@@ -3509,3 +3509,42 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **兼容任何 MCP client**：ChatGPT/Claude/Cursor/Windsurf 同一 URL——**写一次接入，处处可用**。
 - 判据：**要接大量第三方 API 时优先托管 MCP（认证/发现/执行外包），不自己逐家写 SDK**。
 - 提升层：工具。
+
+## 对话式 Agent 构建与生产化三件套：chat-to-agent · 错误定位 · 密钥限定（来源：Dify 2026-08/09 发布，2026-09-27 实拉）
+- **chat-to-agent**：Build agents by chatting——对话式创建 agent，平台**自动生成可复用 skills 并保留对话上下文**，就绪后可直接加入 workflow。
+- **run-log 错误定位**：Workflow Node Locator 把运行日志错误**直接链接到画布对应节点**——排查不用再翻节点找。
+- **密钥限定**：v1.17.1 支持**特定数据集限定 API 密钥**——一个 key 只能访问指定知识库。
+- **Human Input node**（v1.13）：workflow 暂停等人审，web/email 交付审查表单，支持动态表单+模型推理文本展示+按决策分支路由+超时策略与 fallback——**人机交接是节点不是补丁**。
+- 判据：**agent 用对话建不用配置建；错误先定位节点再猜；密钥按数据集最小化**。
+- 提升层：工作流。
+
+## Agent 一等实体 + 免账号试用 + 确定性优先（来源：n8n Agents 2026-09-25 + Gateway credits + Production Playbook，2026-09-27 实拉）
+- **agent 是一等实体**：定义一次到处用——Slack 里聊、定时跑、任意 workflow 里调用**同一个 agent**（区别于工作流里的 AI Agent 节点）。
+- **Gateway credits**：v2.36 起 6 个模型提供商+5 个工具服务**无需建账号/API key**开箱即用——试用新模型跳过账号设置。
+- **确定性步骤优先于 AI 步骤**：rule-based 能解决就不上 AI——**AI 处理每一步不必要：更慢、更贵、更不可靠**；production 里确定性+AI 混合编排。
+- 判据：**agent 按实体定义不按场景复制；能确定性绝不 AI；新模型先用 gateway 免账号试**。
+- 提升层：工作流。
+
+## Skill 安全审查三面 + 缓存稳定 + 规格硬约束（来源：Anthropic Agent Skills overview 2026-09 + skills-guide，2026-09-27 实拉）
+- **审 unusual patterns**：意外网络调用、文件访问模式、与声明目的不符的操作——**外部 URL 内容是最大风险面：fetched 内容可能含恶意指令，可信技能的外部依赖变化也会被攻陷**。
+- **工具误用面**：恶意 Skill 可以以有害方式调用工具（文件操作/bash/代码执行）——**装任何 skill 前按这三面过一遍**。
+- **prompt caching 稳定性**：改 skills 列表会打破缓存——**生产缓存性能最优时 skills 列表保持稳定**，别频繁增删。
+- **规格硬约束**：name ≤64 字符小写字母数字连字符、禁 XML 标签、禁保留词 anthropic/claude；description 非空 ≤1024。
+- **多技能组合**：Excel 数据分析+PPT/Word 报告+PDF 导出/领域逻辑+文档生成——**按文档类型/域组合，不用的大技能别塞（影响性能）**。
+- 判据：**装第三方 skill=扩权限；外部 fetch 内容按注入处理；缓存友好=列表稳定**。
+- 提升层：可复用 Skill（安全审查）。
+
+## Skill 注入成本确定性 + 只诊断不执行 + 自动 patch 发布（来源：docs.openclaw.ai 2026-09-27 实拉）
+- **注入成本确定性**：技能 eligible 时注入紧凑 XML 块——**base 开销+每技能 ~97 字符+name+description，成本线性可预测**——技能数量与上下文开销成正比，别堆无谓技能。
+- **Custodian 只诊断不执行**：read-only diagnose 技能推荐修复步骤但**从不执行**，只有显式批准的修复才跑 doctor --fix；五段式 playbook 保持 secret 值不出 prompts/logs。
+- **clawhub 版本发布**：skill publish 跳过未变内容；新技能 1.0.0，**后续变更自动发 patch 版本**——发布即版本化。
+- **Skills vs Plugins 分界**：Skills=教新能力、keyword 触发、per-message；Plugins=扩展 gateway 基础设施、启动加载、per-session——**判断标准：改的是什么就归哪类**。
+- 判据：**每技能 ~97 字符是注入税；诊断与修复分离；发布自动打补丁版本**。
+- 提升层：可复用 Skill（发布/治理）。
+
+## AI-ready 工具目录：描述任务→自动找 action→查 schema→运行（来源：Activepieces 2026-09 changelog，2026-09-27 实拉）
+- **piece 目录按 AI 友好重构**：agent 通过 MCP server 连接后，**描述任务即可在数百 pieces 中找到正确 action，检查 schema 后运行**——工具发现从"人查文档"变成"agent 自描述检索"。
+- **audit logs**：agent 调用全程留痕——**agent 自治的审计基线**。
+- **统一 MCP server**：765 个 integrations 一个 MCP server 暴露（May 2026 数据）——**跨 app 工具面收敛到一个入口**。
+- 判据：**工具目录要 AI 可检索（任务描述→action）；agent 行为要可审计；集成面收敛**。
+- 提升层：工具。
