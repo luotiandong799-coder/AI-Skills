@@ -4533,3 +4533,35 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **可选 metadata**：metadata.openclaw.os（OS 过滤）与 metadata.openclaw.requires.bins（PATH 必带二进制声明）。→ 判据：依赖外部二进制时显式声明 requires.bins，缺依赖早暴露。
 - **分组不影响 name**：子文件夹分组，name 仍来自 frontmatter 不来自路径。→ 判据：技能名以 frontmatter 为准，路径只做组织。
 - **提升层**：可复用 Skill。
+
+## SkillHub 本土镜像 + SkillPay 付费链路（来源：腾讯 SkillHub 平台面，2026-09-27 实拉）
+- **本土化镜像定位**：腾讯云 Lighthouse 团队基于 OpenClaw ClawHub 生态做的高速镜像平台——国内节点+Top50 精选榜单+中文社区，解决国内用 OpenClaw 技能生态的核心痛点。→ 判据：技能源选择优先国内可直连镜像，别裸连海外。
+- **SkillPay 付费链路三方分工**：商家上架 Pay Skill 收费；平台负责来源认证/内容完整性校验/可信调用入口；微信支付底层保障。→ 判据：付费技能要过来源认证与完整性校验，调用入口可信。
+- **规模**：76 万+ Skills、3000 万+ 下载量。→ 判据：技能搜索先查国内平台再补海外。
+- **提升层**：工具/工作流。
+
+## Agentic 四设计模式 + A2A 开放协议（来源：deeplearning.ai Agentic AI/A2A 课程面，2026-09-27 实拉）
+- **四设计模式**：reflection（反思改进输出）/ tool use（接外部工具）/ planning（规划工作流）/ multi-agent workflows（多智能体协作）。→ 判据：搭 agent 先定用哪个模式，混搭前先单独跑通。
+- **记忆工程一等基础设施**：long-term memory external to the model/persistent/structured——不是附赠功能是基础设施。→ 判据：记忆设计在架构层，不在对话层补。
+- **A2A Agent2Agent 协议**：跨框架连接 agent 免 extensive custom integration。→ 判据：多框架 agent 互通优先 A2A，别手写胶水。
+- **提升层**：模型/工作流。
+
+## 规范字段约束 + 触发全靠 description（来源：agentskills.io 开放标准规范，2026-09-27 实拉）
+- **字段精确约束**：name 必填 max 64 字符（小写+数字+连字符，不以连字符开头结尾，匹配父目录）；description 必填 max 1024（非空，描述做什么+何时用）；compatibility 可选 max 500（环境需求：产品/系统包/网络）。→ 判据：name 卡 64 字符内，description 写清"做什么+何时用"。
+- **触发全靠 description**：description carries the entire burden of triggering——激活判断只读它。→ 判据：触发词写进 description 第一段，别指望模型读正文。
+- **标准只定义三件事**：格式（YAML frontmatter+Markdown 正文）/ 触发机制（when 或 description 匹配）/ 加载方式（目录+发现规则）。→ 判据：写技能先对齐三件事再落笔。
+- **生态爆发曲线**：2025 底只有 Claude Code→2026 初 30+ 平台、GitHub 技能 2,600+。→ 判据：技能按开放标准写，一次写到处跑。
+- **提升层**：可复用 Skill。
+
+## 工具合并 + 签名硬约束 + guardrail 强制（来源：Hugging Face smolagents 面，2026-09-27 实拉）
+- **减少 LLM 调用次数**：两个工具合并为一个统一工具（travel distance+weather→return_spot_information 一个函数同时调两个 API 返回连接输出）——降成本/延迟/错误风险；优先确定性函数非 agentic 决策。→ 判据：相邻工具先合并，确定性优先于让模型决策。
+- **工具签名硬约束**：每个参数+返回类型都要 type hints；docstring 解释工具做什么；Args section 描述每个参数——缺失初始化直接报错（严格是 feature）。→ 判据：签名不完整不许上线，报错当编译期检查。
+- **max_steps 分场景**：在线工作负载 5-8 低值，离线研究 20+；默认值跑复杂任务会失败。→ 判据：按任务场景设步数上限，别用默认。
+- **guardrail 强制校验**：final answer 前 agent 必须调用 validate_output 工具。→ 判据：输出校验做成 agent 必经工具，不靠自觉。
+- **提升层**：工作流/工具。
+
+## Skill 自进化闭环 + 外部技能统一检索（来源：ModelScope Ultron/Skills Central 面，2026-09-27 实拉）
+- **分数驱动自进化**：Skill 分数提升才接受新版本，分数下降回滚到上一版本——Skill 是随群体经验持续生长的能力单元，不是写一次就静止的文档。→ 判据：技能迭代带评测门，退化即回滚。
+- **80000+ 外部技能统一检索**：Skill Hub 打通 ModelScope，跨团队复用内部经验+检索外部技能。→ 判据：建技能前先检索外部 8 万+ 技能池，能复用不重写。
+- **多模态工具接入**：文本/图像/语音/视频生成同框架（自然语言描述生成短视频）。→ 判据：Agent 框架选型先确认多模态工具接入能力。
+- **提升层**：可复用 Skill。
