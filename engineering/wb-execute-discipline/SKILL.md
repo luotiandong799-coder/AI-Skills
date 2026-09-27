@@ -3223,3 +3223,29 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **Human Input node（v1.13.0）**：工作流暂停人工审核，恢复带 approved / edited / rerouted 三种决策——**人工不是只能"批/不批"，还能改后批或改路由**。
 - 判据：**意图分类场景先问"模型输出直接决定动作吗"**——应该改成"模型输出决定类别，路由逻辑决定动作"；人工审核位要提供三种恢复决策而不是二元。
 - 提升层：工作流。
+
+## 实时协同编辑与元数据过滤：团队资产的两种落地（来源：Dify 1.14 release + v1.1.0 Metadata as Knowledge Filter，2026-09-27 实拉）
+- **工作流协同编辑是团队资产化前提**：1.14 支持同 workspace 成员同图并发编辑、graph 实时同步、在线状态、谁在改哪个节点可见——**"一个人做出来"到"团队一起维护"之间，缺的是并发编辑与可见性**；self-hosted 默认关闭需显式开 ENABLE_COLLABORATION_MODE。
+- **元数据作 RAG 过滤与访问控制**：用元数据（Metadata）精确过滤知识检索并做访问控制——**RAG 过滤不只是相关性，还有权限维度**：先按元数据圈定可见集，再做语义检索（与"向量+关键词双路召回"互补：那条管召回，本条管先按权限裁剪语料）。
+- 判据：**上生产的多人在用工作流，先问"谁在改哪个节点看得见吗"**；知识库检索先问"元数据权限层在哪"。
+- 提升层：工具 / 工作流。
+
+## Agentic 模式三选一 + 生产可靠性记账字段（来源：n8n blog agentic design patterns + production playbook，2026-09-27 实拉）
+- **按使用频率排序的三种 agent 模式**：① 确定性管线 + 一个 agent 步骤（其余全是普通节点，只在一个需要判断的点放 agent——**大多数情况的正解**）② 单 agent with tools（agent 自主决定工具调用顺序）③ orchestrator with sub-agents（AI Agent Tool 把第二个 agent 配成第一个 agent 的工具）——**先默认①，复杂了再升②③**。
+- **生产可靠性记账（"Add the Boring Reliability"）**：每次运行记 input / decision / model / cost estimate / approval result 到 Sheet/表/库——**记"这次喂了什么、模型选了啥、花了多少钱、谁批了"**；失败或输出解析坏掉时告警自己。
+- 判据：**设计 agent 流程先问"全流程都要判断吗"**——不是就退回①；上线前把五字段记账位留好。
+- 提升层：工作流。
+
+## 错误处理四指令 + 死信三落点：按故障类型选指令（来源：Make docs error handlers + LLM 集成指南，2026-09-27 实拉）
+- **错误处理路由挂在几乎任意模块上，只在出错时运行**；四个指令语义分明：**Ignore**（继续流程，适合可选数据）/ **Resume**（忽略错误进下一模块，适合瞬时故障）/ **Rollback**（回滚此前所有操作=原子事务，适合关键写操作）/ **Commit**（标记已处理防重处理）——**按"要不要重跑/要不要回滚"选，不是一刀切**。
+- **畸形响应与瞬时故障分开处理**：Resume 给瞬时故障，**Break 给畸形输出（要人工审查）**——模型输出不符合 schema 是"该停"不是"该跳过"。
+- **死信三落点**：Log 到 Google Sheet + 发 #scenario-errors Slack 频道 + 写 dead-letter Airtable 行——**错误信息三处可查：日志、告警、死信队列**。
+- 判据：**接错误处理先问"这个模块失败后应该重跑、跳过、回滚还是标记完成"**，四个指令对应四个答案。
+- 提升层：工作流。
+
+## Hooks 五类型 + PreToolUse 退出码 + 自改进技能循环（来源：Anthropic Claude Code hooks 文档，2026-09-27 实拉）
+- **hooks 五类型，确定性与判断型分开**：command / HTTP / mcp_tool 是**确定性触发**；prompt / agent 用**模型判断**决定输出——**"每次 X 自动做 Y"的必然行为必须进确定性 hook，不能靠提示词叮嘱**（与 §自动化用 hooks 类机制同源，本条补五类型清单）。
+- **PreToolUse 退出码语义**：退出码 2 = **阻断**工具执行，0 = 放行；工具输入以 JSON 从 stdin 到达——**Git 安全网：block force push / hard reset / destructive clean 是单条最值得装的 hook**。
+- **自改进技能循环**：reflection hook 在技能被调用后跑，评估"这次技能帮上忙了吗"，没帮上就建议编辑 SKILL.md；reflections 存 learnings 文件，技能下次加载时读——**技能自改进 = 反射钩子 + 学习文件回读，不是靠人手动复盘**。
+- 判据：**"每次必然做"的行为先找确定性 hook；技能要变好，先装 reflection→learnings 循环**。
+- 提升层：工具 / 可复用 Skill。
