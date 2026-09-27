@@ -3948,3 +3948,43 @@ px -y @lobehub/market-cli skills install <skill> --agent cursor；LobeHub 市场
 - **并发资源锁**：并发添加资源走 FOR UPDATE 锁杜绝相互覆盖；卡死会话自动恢复。
 - 判据：**技能缺失时把"搜索并创建"作为显式 fallback 动作；技能包路径跨平台归一化**。
 - 提升层：可复用 Skill。
+
+## 变量交接契约 + 迭代并行 + Session Variable（来源：Dify Key Concepts/Workflow Web Apps/Hello Dify iteration，2026-09-27 实拉）
+- **跨节点变量是显式交接契约，不是自动魔法**：每个要跨节点边界的变量需要两个显式动作——源节点声明它为 output、接收节点用完整路径引用。漏任一侧，工作流照常执行、不报错，数据静默消失（"Nothing breaks. The data just disappears"）。→ 判据：接不通先查"源声明了输出吗/接收用了全路径吗"，这是 Dify 跨节点数据丢失第一大根因。
+- **命名纪律**：节点输出用描述性名（user_data/search_results/formatted_response），input 引用显式标来源节点——变量流可读=可排障。
+- **三类变量的可变性不同**：Session Variable（chatflow 专属）经 Variable Assigner 可改且跨轮持久；用户输入每 run 固定不可更新。→ 判据：要跨轮记住的状态放 Session Variable，不要试图改用户输入。
+- **迭代节点**：输入必须 array，内置 items（当前元素）/index（索引）；**Parallel Mode 显式开启并行数**——推理模型（DeepSeek R1 类）逐条翻译慢，开并行从顺序变同时执行显著提效。
+- **分支汇聚**：互斥分支输出并入同一变量（下游一致类型），或用 array 模式收集全部分支输出成列表再 Code 节点处理；分支没接 Output 节点就不返回值；多个 Output 节点每个变量名唯一。
+- **批处理模式**：Run Batch 标签页→下载 CSV 模板（输入变量列结构）→每行填一次执行的数据→上传并行跑+实时进度。→ 判据：同一工作流跑多组输入的活儿，用 Batch 而非复制 N 个流。
+- **提升层**：工作流。
+
+## 并发按负载类型调 + Little 定律算 worker（来源：n8n Docs queue-mode + n8n.spot concurrency 指南，2026-09-27 实拉）
+- **并发是"按负载类型选"不是统一默认**：--concurrency 默认 10，官方建议 5 或更高；但真正该做的是按工作流类型调——**I/O 密集**（HTTP/DB/webhook，大多时间等外部服务）每 worker 10–20；**CPU 密集**（大变换/图像处理/重 Code 节点）每 worker 2–5 并靠加 worker 扩容。
+- **DB 连接池陷阱（非显然）**：低并发+大量 worker 会耗尽数据库连接池，导致处理延迟和失败——worker 数×并发数要和连接池容量匹配，不能只盯着并发数字。
+- **起始规则**：1 worker ≈ 1 可用 vCPU；2-CPU 服务器从 --concurrency=5 起步，按内存使用上调；生产并发上限可用 N8N_CONCURRENCY_PRODUCTION_LIMIT=5 控制。
+- **Little 定律算 worker 规模**：worker 数 × 并发 ≈ 峰值 RPS × 平均执行秒数——先量峰值和平均耗时，再定 worker×并发，不拍脑袋。
+- **配套生产项**：Redis 6.2+ 需 AOF（appendonly yes）+ PostgreSQL 替代 SQLite；worker 无端口只连 Redis/Postgres。
+- 与 §n8n 队列模式生产架构 的分工：那条管"要不要上队列+架构形态"，本条管"上了之后并发/worker 怎么定量"。
+- **提升层**：工作流。
+
+## 错误类型三分 + 三策略重试 + checkpoint 恢复（来源：Activepieces Execution Engine + automation use-cases + postmortem，2026-09-27 实拉）
+- **错误先分型再处理**：STEP_ERROR（带 stepName+message+details.statusCode=429 类限流）/ TIMEOUT_ERROR（执行超时）/ SANDBOX_ERROR——不同型走不同处理路径。
+- **三种重试策略互补**：① step-level 自动重试指数退避（可配最大尝试次数）② flow-level error handler catch block（任何步骤失败进兜底分支）③ manual retry UI 按钮从失败步骤原地重跑。→ 判据：瞬时错误自动重试，永久错误走 catch，需要人看的标失败，别一条路走到黑。
+- **可靠性组合件**：指数退避+熔断器+死信队列（DLQ）；限流按状态码分支；幂等键防重复；webhook 用 idempotency keys+correlation IDs 存 Tables，检测到重复直接短路跳过。
+- **checkpoint 恢复**：store checkpoints 让操作员从**最后安全步骤**恢复（审批暂停捕获决定+评论后 resume），而不是整条重跑。→ 判据：长流程失败重跑前，先问"有没有 checkpoint 可以从半途续"，没有才整条跑。
+- **监控教训（内部 postmortem）**：Redis 队列深度增长率/计划任务量尖峰必须自动化告警——那次事故是**客户先发现**而不是监控先报警。
+- **提升层**：工作流。
+
+## SKILL.md description 是唯一所见 + allowed-tools 限制权限（来源：skills.sh/localskills SKILL.md 格式 + agentskills.io 规范 + DeepWiki spec，2026-09-27 实拉）
+- **description 是文件里最重要一行**：渐进披露下模型在调用前只见 name+description，它决定技能加载与否。强 description 三部分：**做什么 + 何时用（触发条件）+ 具体任务短语/文件类型**，<1024 字符、无 XML 标签。→ 判据：写 description 用"用户会怎么说"的短语，不是功能清单。
+- **allowed-tools 是技能级权限闸**：frontmatter 里限制技能激活时可用工具（如只读技能不许编辑文件）——技能权限下沉到包本身。
+- **frontmatter 跨平台差异**：agentskills.io 规范允许 name/description/license/metadata/compatibility/allowed-tools；Claude settings importer **拒绝未识别字段**——同一技能跨平台发布要按目标平台裁剪 frontmatter，别堆全家桶。
+- **name 硬规则**：kebab-case、无空格大写、匹配文件夹名、≤64 字符；body 用 ## 二级标题+具体示例。
+- 与 §技能创建五步 的分工：那条管"创建流程五步"，本条管"SKILL.md 格式细节与权限字段"。
+- **提升层**：可复用 Skill。
+
+## fine-grained tool streaming + Streaming 输入模式（来源：Anthropic docs fine-grained-tool-streaming + Agent SDK streaming，2026-09-27 实拉）
+- **细粒度工具流式**：任意工具设 eager_input_streaming=true 即可开启（全模型全平台：Claude API/Bedrock/Vertex/Foundry，无 beta 头）——工具输入边生成边流，长输入工具不用等全部生成完。→ 判据：工具输入重（长文本/大参数）时开 eager_input_streaming，缩短首 token 到工具执行的路径。
+- **Streaming 输入模式是推荐态**：持久交互会话、长生命周期进程，能处理用户输入/中断/权限请求/会话管理——比 single mode 更完整；Tool runner SDK 用 stream=True + get_final_message() 累积最终消息。
+- **SSE 桥接**：异步生成器桥 Server-Sent Events（FastAPI + Agent SDK streaming），Web 端免轮询实时收更新。
+- **提升层**：工具。
