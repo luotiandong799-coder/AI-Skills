@@ -6548,3 +6548,38 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **YAML anchors**：复用整段 job 配置用 anchor（&base_job + *base_job），配置级去重不占 action 抽象。
 - **安全 roadmap**：scoped secrets & reusable workflow inheritance 进入公开预览→GA；给可复用 workflow 传 secrets 时按最小面映射。
 - **提升层**：工作流（CI 复用选型）。
+## MCP 工具数量上限与 defer_loading：30-40 tools 质量骤降 · 每 server 一产品域 · 按需搜索（来源：calmops MCP Server Development Complete Guide + atalupadhyay Building MCP Servers Code-Mode Era + loooop.dev Anthropic MCP Development v18 + genta.dev MCP Server Guide 2026-04/06/09 实拉，与 §MCP 安全互补——那条管"装工具怎么审"，本条管"MCP server 怎么设计与暴露"）
+- **30-40 tools/context 是质量上限**（Anthropic 内部评测）：agent 质量过此线骤降。→ 判据：工具面要瘦——scope=每 server 一个 coherent 产品域（jira-server/postgres-server/stripe-server），别做 80 工具的 platform-server。
+- **细粒度工具优于 action 参数**：create_user/update_user/delete_user 分三个，比一个 create_user(action:"...") 更好推理+更安全。
+- **defer_loading: true 按需加载**：注册数千工具、非必需的不预载，agent 用 Tool Search 按需搜索——工具面大而不压上下文。
+- **server 安全纪律**：server-side strict schema 验证+fail closed；sensitive 数据 redact/truncate，凭证不进工具描述/resource payload；audit trails 记录谁调了啥（sessionId/toolName/effective scope）。
+- **提升层**：可复用 Skill（MCP server 设计）。
+
+## n8n 企业身份治理：SSO 四通道与 agent 身份继承 · Token Exchange 嵌入免登录（来源：n8n.io enterprise + blog.n8n.io custom-project-roles-sso + ai-agent-identity-management + docs.n8n.io token-exchange/release-notes 2026-01/05/07 实拉，与 §n8n 可观测互补——那条管"看执行状态"，本条管"谁有权看/跑/改"）
+- **SSO 四通道**：SAML/LDAP/OIDC（v1.x 起）+用户供给；IdP groups→instance/project roles 自动映射，权限跟组织生命周期走（入职/换岗/离职自动同步）。
+- **Custom Project Roles+环境组合**：细粒度权限（workflows/credentials/variables 分权）+环境隔离=生产安全迭代。
+- **Token Exchange (RFC 8693)**：iframe 嵌入免登录（用户见 n8n 无独立登录页）/delegated API 带完整审计归因；**IdP role claim=全局角色真相源**，每次 exchange 覆盖 UI 角色，未识别角色/global:owner 拒绝。
+- **AI agent 身份**：SSO/OIDC 把 agent 会话绑定认证用户→继承用户作用域权限（而非共享 service account）；HTTP 集成集中 OAuth 凭证管理（refresh/scopes/grant 出 workflow）。
+- **提升层**：工具（身份治理纪律）。
+
+## Activepieces 轮询触发器三钩子与两策略：onEnable/run/onDisable · ID vs timestamp · 数据同步游标（来源：activepieces.com create-trigger + triggers overview + automation-for-data-sync + deployment workers 2026-05/08 实拉，与 §Activepieces webhook 验签互补——那条管"webhook 入口安全"，本条管"轮询触发器怎么写"）
+- **轮询触发器三钩子**：onEnable（初始化状态如 lastId）→ run（默认每 5 分钟拉取，时间戳范围或 last item ID 增量）→ onDisable（清理）。
+- **两轮询策略**：Polling by ID vs Polling by timestamp——按 id 或 updated_at 检测新增（Drupal/Snowflake 实例）；Worker 侧 PollingJob 由 Cron 调度。
+- **数据同步纪律**：webhook/event/cron triggers 启动同步；Tables 存 cursor+last-seen timestamps 推进增量；HTTP/code/built-in 加工 normalize+merge 保持 identifier 一致（写 CRM/数据库不产生重复记录）。
+- **Redis 队列**：轮询 job 入 Redis，失败重执行；spike 时延迟不丢。
+- **提升层**：工作流（轮询触发器与增量同步）。
+
+## Pipedream event source 与触发器部署 API：两类触发器 · props+dedup+kv store · pd.triggers.deploy（来源：pipedream.com docs triggers/sources/connect-triggers/components + docs-proxy sources 2026-07/09 实拉，与 §Pipedream draft 模型互补——那条管"版本与部署"，本条管"事件入口与触发器"）
+- **两类触发器**：App-based event sources（第三方事件如 Twitter/Google Calendar）vs native triggers（HTTP/timer/cron/manual）。
+- **Sources 能力面**：props 部署时收用户输入；emit 事件→触发 workflow→SSE 实时消费或 API 程序化消费；内置 kv store 存状态；内置 deduping strategies 防重发。
+- **pd.triggers.deploy API**：为 end user 部署 triggers（id+externalUserId+webhookUrl 回调），第三方事件流直入你的 app。
+- **Connect workflow HTTP 触发**：x-pd-environment/x-pd-external-user-id 头标识环境与用户；test event 可选历史事件或新发。
+- **提升层**：工具（事件入口工程）。
+
+## GitHub agent 生态新仓库：herdr 编码运行时 · pi 一体工具包 · ai-memory 跨供应商记忆 · openhuman 本地优先（来源：GitHub Top100 AI Agents + Trending Recap 2026-09-21/22 + ai-hippo leaderboard 实拉，与 §GitHub Agentic Workflows 互补——那条管"工作流自动化定义"，本条管"agent 生态形态"）
+- **herdr**（Rust 40.8k★）："the runtime your coding agents live on"——编码 agent 的运行时层，agent 挂在上面的宿主。
+- **pi**（earendil-works）：Unified LLM API+agent loop+TUI+coding agent CLI 一体——一个包覆盖调用/循环/界面/编码入口。
+- **ai-memory**（akitaonrails）：跨 agent 供应商的编码 CLI 长期记忆+handoff 支持——记忆不绑死单一家 agent。
+- **openhuman**（tinyhumansai）：开源 agent harness，本地优先记忆+编排+工作流。
+- 形态趋势：编码 agent 从"编辑器插件"走向"独立运行时+统一记忆层"；GNAP=git repo 4 JSON 文件协调多 agent（无 server 无 DB）。
+- **提升层**：可复用 Skill（生态形态观察）。
