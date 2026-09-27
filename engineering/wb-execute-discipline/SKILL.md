@@ -6210,3 +6210,43 @@ pm create @n8n/node（declarative/custom 模板）——declarative 风格适合
 - **Skills 装入口合并**（Claude 2026-03-31）：partner-skills directory+connector list+plugin marketplace 合并到 claude.ai/customize——typed filter（Skills/connectors/plugins）+search+install；个人账户装 community Skills，Team/Enterprise admin 可 pin 到全员；Claude Marketplace（2026-09-23）另管 plugins/connectors/agents/products/service partners（企业买第三方服务，别和 skills 市场混淆）。
 - **OpenClaw skill dev 参照**：manifest.json（name/description/parameters JSON schema——manifest 告诉 LLM skill 做什么）+index.js execute(context{message,memory,tools})；发布 ClawHub 80% 分成给 creator；plugin skill 与 bundled/managed/agent/workspace 同名时被覆盖——命名冲突规则要提前知道。
 - **提升层**：可复用 Skill（指令体系/安装渠道）。
+## Dify 错误处理与重试：重试优先于异常处理 · fallback 模式 · LLM JSON 输出校验（来源：Dify v0.14.0 error handling + legacy docs + deepwiki error patterns + dev.to《为什么90%团队用错》2026-09 实拉，与 §Dify 并行分支互补——那条管"并行怎么编排"，本条管"节点失败怎么兜底"）
+- **重试优先于异常处理**：同时开启时先重试运行节点，重试仍失败再启用异常处理机制——**两层兜底按序触发**，别只配一层。
+- **Retry Settings**：最多 10 次自动重试、可配间隔（最大 5000ms）——管临时问题；Error Handling 定义 fallback paths 让 workflow 继续跑，别让单节点失败中断整条链（v0.14.0 前会）。
+- **四种兜底模式**：API 错误→重试+指数退避+fallback model providers（LLM 节点配备用模型）+**"Continue on Error"**（非关键 LLM 调用）+If-Else 错误分支处理失败。→ 判据：**关键节点配备用模型，非关键节点开 Continue on Error**——不是所有节点同等对待。
+- **执行的是 published 版本不是 draft**：IsDraftWorkflowError（draft 不能执行需 publish）/WorkflowHashNotEqualError（workflow 被修改需 refresh）——改完记得 publish，报错先查版本。
+- **LLM JSON 输出三段校验**（90% 团队用错点）：json.loads 直解→失败 re 提取 {…} 片段（DOTALL）→jsonschema.validate 校验 schema——**LLM 结构化输出不校验就进下游=定时炸弹**（与 §工具结果断言层互补：那条管工具返回值，这条管 LLM 文本）。
+- **提升层**：工作流（容错）。
+
+## n8n Guardrails 节点双方向：输入保护模型 · 输出保护用户 · check/sanitize 两模式（来源：blog.n8n.io AI Agent Governance 2026-07 + docs.n8n.io guardrails + n8n workflow 11141 九层套件 2026-02 实拉，与 §工具面安全互补——那条管"agent 架构与工具威胁"，本条管"文本流经 workflow 时的策略检查点"）
+- **双方向检查**：输入 guardrails 在消息进 AI 模型前扫（jailbreak 尝试/关键词/PII/secret keys）保护模型；输出 guardrails 在 AI 回复出模型后扫保护用户——**一个节点两个方向都要挂**。
+- **两模式**：check mode 拆 pass/fail 分支（拦截继续处理）；sanitize mode 打码（redact）后继续——**能打码就不拦**，拦截是最后手段。
+- **9 层套件参考**：keyword blocking（profanity+banned terms）/jailbreak detection/NSFW filtering/PII detection（email/phone/credit card）/secret key detection（API keys/tokens）/topical alignment（保持话题）/URL whitelisting/credential URL blocking（URL 内嵌密码）/custom regex（员工 ID/订单号）。
+- **工作流级捕捉，不留给模型**：guardrails 在 workflow 层扫——"catch unsafe content at the workflow level, without leaving it to the model"；威胁检测→lockdown+log 到审计表+stop execution（Hub and Spoke 客服模式）。
+- **LLM-based guardrails 需 Chat Model 连接**；hard ceiling 用 Code node。
+- **提升层**：工作流（策略执行）。
+
+## LangFlow RAG 评测：RAGAS 四维 · 最小验证集 · 多向量检索实测数据（来源：langflow.org 1.11.0 NextPlaid 评测数据 + AI Response Evaluation System 模板 + RAGAS 框架 + ailearnings 最小集 2026 实拉，与 §Agent 评测三层框架互补——那条管"agent 整体评测怎么分层"，本条管"RAG 系统专属怎么量化"）
+- **RAGAS 四维是 RAG 评测行业标准**（LLM-as-judge 分解）：Context Precision（检索块与查询相关性）/Context Recall（语料中相关信息覆盖完整性）——需 ground truth；Faithfulness（答案主张被 context 支持）/Response Relevancy（答案回应问题）——无需 ground truth。→ 判据：**无标注也能评 Faithfulness+Relevancy，有标注才评 Precision+Recall**——评测上线先跑无标注两维。
+- **最小验证集数量**：20 问起步（easy factual+multi-step reasoning+out-of-scope 三类），生产监控 100-200 问；golden set=10 问带 expected answers+scoring rule（5 easy+5 hard）freeze 成 regression——**评测集是冻结的回归基线，不是临时抽查**。
+- **多向量检索实测增益**（1.11.0 NextPlaid）：Text 单向量 top-100+rerank=90.7 vs PLAID 多向量=94.7；Image 单向量=22.6 vs top-100+rerank=56.6 vs PLAID=89.7——**对图片/视觉文档，多向量检索是质变（22.6→89.7）**，纯文本增益约 4 分。
+- **Eval 系统模板**：RAG quality checks（context sufficiency+groundedness 阻止 ungrounded outputs）/同 prompt 多模型自动选高分/HITL QA（低分标记审查、高分自动发）——**评测结果直接接入发布门禁，不只是报告**。
+- **提升层**：可复用 Skill（RAG 评估）。
+
+## Make Webhook 安全：默认无认证 · HMAC 原生做不了 · IMTHEADERS 坑（来源：beyondscale 2026-06 + triumphoid Shopify HMAC 指南 + make community IMTHEADERS 2025-12 + automationcompare 实拉，与 §webhook 端点化互补——那条管"怎么暴露端点"，本条管"怎么认证与验签"）
+- **Custom Webhook 默认公开 URL 无认证**：任何知道 URL 的系统可触发+传任意数据——两类事故：workflow flooding（耗尽执行容量/重复触发下游）+data injection（恶意 payload 影响 AI/SaaS 下游）。→ 判据：**公开 webhook URL 默认不安全，必须自己加认证层**。
+- **认证基线**：X-Webhook-Token header 比较 stored secret（base64 编码+toBinary 解码）；只接受 POST+validate Content-Type；TLS；**idempotency**（重放幂等）。
+- **关键坑：Make Custom Webhook 不暴露 raw request body**（先 parse JSON）——HMAC 需要 raw bytes，所以**无法 natively 在 Make 场景内做 HMAC**；工作方案=Cloudflare Worker 前置（收 raw→verify HMAC→成功才转发 Make）。→ 判据：**需要 HMAC 验签的 webhook 别指望平台原生做**——前置一层轻量代理收 raw body 验签再转发。
+- **IMTHEADERS 坑**：Parse headers 开启时 Make 把 headers 塞进 bundle 的 IMTHEADERS 字段且无法阻止——**HMAC 计算必须排除 IMTHEADERS**（rebuild body without that field 再算），否则永远不匹配；签名值本身可从 IMTHEADERS 读。
+- **平台验证回调**：Meta 类要求返回 ONLY raw hub.challenge（无引号无 JSON wrapper）text/plain 且 3 秒内——别让重逻辑阻塞验证响应。
+- **提升层**：工作流（安全接入）。
+
+## 子代理 session 治理与自动化执行：深度≤2 层 · compaction 前静默落盘 · 动态编排脚本（来源：docs.openclaw.ai tools/subagents + session-management-compaction + v2026.4.9 Dreaming + claude.com Dynamic Workflows/Routines 2026-04/05 + pipedream docs 实拉，与 §多Agent协作纪律互补——那条管"拆了怎么协作"，本条管"session 生命周期与执行形态"）
+- **sub-agent 模型分层**：重/重复任务用便宜模型（agents.defaults.subagents.model），主 agent 留高质量模型——成本控制是拆 sub-agent 的第一理由（另两个：clean sessions/parallel work）。
+- **深度限制 ≤2 层**：sub-agent 默认可再 spawn，deep nesting 成倍涨 token——**大多数任务不需要超过 2 层**，超了就拆顶层。maxChildrenPerAgent=5，sessions_spawn 非阻塞（立即返回 accepted+runId，结果后到）。
+- **session 隔离**：sub-agent 自己 context，不自动看 main 全 memory——main 显式传 relevant context，防 context bloat；sessions_yield 结束当前 turn 等结果，subagents 工具 list/cancel 后台工作。
+- **compaction 前静默落盘**：自动压缩前 OpenClaw 可先执行 silent agent 动作写长期状态到磁盘（memory/YYYY-MM-DD.md）——**压缩不能删关键上下文**，关键状态提前落盘再让压缩发生。
+- **Dreaming 记忆整合**：聚合最近 30 sessions/7 天历史→识别 recurring patterns（重复任务/系统错误/风格偏好/高效 workflow）→生成 consolidated memory artifact 注入 session 起始——与 §记忆整合互补（那条管"日志→长期"，这条管"跨 session 模式提取"）。
+- **Claude Code Dynamic Workflows**（2026-05-28 GA）：Claude 动态写 orchestration scripts 跑 tens-hundreds parallel subagents 单 session、交付前自查——**harness for every task**：按任务现场写自己的 harness，默认面向 coding、资料类需 custom harness；Routines（2026-04-14）：一次配置（prompt+repo+connectors）按 schedule/API/GitHub event 三触发运行在 web infra（不依赖本地开着）。
+- **serverless 执行形态参照**（Pipedream）：无 native agent primitives（no memory abstraction/no orchestration node）、execution cap 750s、1 credit≈30s@256MB——**形态对比时先问：这个执行器给 agent 什么原语**，没有原语就要自己在 workflow 层补。
+- **提升层**：工作流（session 治理/执行形态）。
