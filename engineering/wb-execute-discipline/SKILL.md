@@ -6907,3 +6907,44 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **3-4 选项指南**：只纳入 API 最相关的 3-4 个选项作 props 优化可用性；避免让用户输入 ID 值——用 async options 下拉选择。
 - **dynamicProps**：动态 props 返回 dyp_ id，后续 runAction/deployTrigger 调用必须携带，否则失败。
 - **提升层**：可复用 Skill（组件开发）。
+## Dify RAG 检索配置与 Parent-Child 分块：Hybrid 权重合并 · Top K/阈值 · 两级 chunk（来源：nerdleveltech dify-rag-chatbot + deepwiki langgenius dify-docs knowledge-base-rag + dify-hosting.com guides dify-rag + readoss dify rag-pipeline + dev.to dify 5-hidden-uses 2026-03/09 实拉，库内无 Dify RAG 检索章节）
+- **Hybrid Search 两种合并方式**：权重合并（semantic weight 0-1 与 keyword weight 0-1 自定义比例——semantic=1 纯向量、keyword=1 纯关键词）或 reranking（第三方 rerank 模型如 cohere-rerank，精度最高但慢）。典型配置：vector 0.7/keyword 0.3 + Top K 3 + Score Threshold 0.5。
+- **per-dataset score threshold**：每个数据集单独调检索阈值——代码文档/法律合同/技术手册按结构定制。
+- **Parent-Child 两级分块**：父块上下文+子块精确语义（ChildChunk 先 split 再 split）；General 模式=paragraph+recursive 可配置 size/overlap；Q&A 模式面向问答。
+- **Knowledge Pipeline**：节点式文档摄取编排——解决传统 RAG 三大痛点（分散数据源/解析丢图表公式信息/黑盒难诊断）。
+- **提升层**：工作流（RAG 配置）。
+
+## n8n Git 源控与版本化纪律：Git 环境 push-pull · role 权限 · 跳过无变化 commit（来源：docs.n8n.io source-control-environments create-environments/push-pull + administer use-source-control + blog.n8n.io best-practices-deploying-ai-agents + n8n workflows 5081/15795 2026-01/06 实拉，库内 n8n 面无版本化章节）
+- **内置 Git 源控**：instance 链接 Git branch，push-pull 模式建 dev/prod 环境。**role 权限**：owner/admin 可 push+pull，project admin 只能 push 不能 pull（拉取需 owner 级）。
+- **pull 会短暂中断**：pull 已发布 workflow 会 un-publish 再 republish——几秒 downtime，生产窗口规划。
+- **智能版本化**：deploy 前 scrub instance 特定元数据（保节点/连接/核心设置）；GitHub API 查 SHA 对比 raw content——没变就跳过 commit 防垃圾提交；环境路由 sandbox/prod。
+- **commit 消息纪律**：❌"Updated workflow" ✅"Added retry logic to handle API rate limits in a customer service agent"——消息必须说明改了什么为什么。
+- **提升层**：工作流（版本化纪律）。
+
+## LangFlow 记忆面：Memory bases 语义检索 vs 时序 · session ID 隔离 · 内置 chat memory（来源：docs.langflow.org memory/memory-bases/message-history/agents + langflow.org blog langflow-1-10 + docs 1.8.0 agents 2026-06/09 实拉，库内 LangFlow 面无记忆章节）
+- **Memory bases（1.10）**：per-flow vector store 自动摄取对话消息——跨 session 持久化；**语义检索返回最相关上下文**，区别于 Message History 按时间顺序取最近。
+- **session ID 隔离**：默认 session ID=flow ID——所有消息一个大会话；多用户 flow 用自定义 session ID（如 user ID）隔离各用户聊天上下文。
+- **内置 chat memory**：Agent 组件默认启用 Langflow storage 足够大多数场景；Message History 组件可改存 Mem0/Redis 专用记忆库；向量库后端可配置（1.10 DB Providers）。
+- **提升层**：工作流（记忆架构）。
+
+## Pipedream 并发/限流/重试队列语义：concurrency=1 保序 · maxRetries=10 · 事件队列（来源：pipedream.com docs workflows settings concurrency-and-throttling + troubleshooting + code/python/rerun + integrationatlas + digitalbydefault 2026-03/09 实拉，与 §Pipedream components 互补——那条管"组件怎么写"，本条管"执行面怎么控"）
+- **并发控制**：concurrency=1 强制串行顺序执行（每事件等前一事件完成）；并行加 workers；disable=无限并行。**并发即正确性**：Stripe 场景单 worker 防 race condition。
+- **maxRetries 默认 10**：超限进下一步；要异常处理从 step raise Exception。
+- **事件队列语义**：webhook 一秒 100 次→queued 按配置并发处理；step 失败自动重试——消息队列可靠性内置，无需自管 RabbitMQ/SQS。
+- **重试策略**：指数退避（1s→4s→16s）；读 Retry-After 头；rate limit（429）重试 3-5 次；500 持久错误 2-3 次后 fallback/通知。
+- **提升层**：工作流（执行控制）。
+
+## Claude Code hooks/slash/plugins 扩展点：五类 hooks · PostCompact 重注入 · 命令与插件打包（来源：claude.com blog steering-claude-code-skills-hooks-rules-subagents + how-to-configure-hooks + claude-code-plugins + raw.githubusercontent anthropics claude-code plugins README 2025-10/2026-06 实拉，与 §Claude Code Subagents 互补——那条管"子代理"，本条管"hooks/命令/插件"）
+- **Hooks 五类**：command/HTTP/mcp_tool/prompt/agent——前三个确定性触发；生命周期事件驱动；**完全绕过 compaction**（配置住 main context 外，低成本）。用途：确定性自动化——跑 linter、完成发 Slack、block 命令、PreCompact 备份 chat history。
+- **PostCompact hook**：压缩后重新注入关键指令（与 §压缩后规则重声明 同源不同实现——那条靠 system 重发，本条靠 hook 自动化）。
+- **Slash commands**：.claude/commands/deploy.md 创建 /deploy——可复用 prompt 快捷命令。
+- **Plugins 打包**：commands/agents/skills/hooks/.mcp 组合打包——跨项目团队共享一致 tooling；单文件共享。
+- **提升层**：可复用 Skill（agent 扩展点）。
+
+## Make 场景蓝图七块与 Router fallback：Intake→Normalize→Enrich→Route→Write→Notify→Audit · 子场景复用（来源：thinkbot make-scenario-blueprint + make.com blog agent-workflow-memory + how-to-guides llm-integration + keerok advanced-scenarios 2026-02/07 实拉，合并 §Make HTTP 错误链——那条管"HTTP 模块错误路径"，本条补"场景整体架构模式"）
+- **七个可复用块**：Intake（webhook/poll/call）→Normalize（canonical payload/field cleanup/defaults）→Enrich（lookups/dedupe/context）→Route（业务分支）→Write（CRM/DB 更新）→Notify（Slack/email）→Audit（logging/metrics）——跨用例大多数 flow 归约到同构块。
+- **子场景复用**：共享逻辑（normalization/dedupe/assignment/formatting）做可复用 sub-scenario，不复制粘贴。
+- **Router fallback 必带**：每条 route 是目标系统非代码分支；按优先级配置+末尾 fallback 接住不匹配 bundle——**没有 fallback 的 bundle 静默消失无日志**。
+- **Error handler 三策略选择**：Resume+fallback 多数生产场景；Ignore 太危险（静默吞错）；Rollback 用于事务场景。
+- **HITL 路由**：AI 置信度>90% 自动发送；低置信度/敌对情绪→Slack/Zendesk flag 带预起草响应待人工。
+- **提升层**：工作流（场景架构）。

@@ -1,0 +1,34 @@
+# r268A 学习轮留痕（2026-09-28）
+
+## 批前前置（判重基准）
+WorkBuddy 新学内容盘点：HEAD==origin/main==9fd9cb98（r267 批末后 WB 新跑 r207 批次：r207-A 技能触发面三机制 wb-skill-authoring 3.27 / r207-B agent 复用生命周期+显式交接契约 agent-guild 1.10 / r207-C 家族内触发边界仲裁+mts 成本基础设施簇 1.50）；workbuddy 留痕 r266A/B/C+r267A/B/C 六条在档；SKILL.md 尾部仍为 r267C 六章（len=682,895，豆包自留地未受 r207 影响）。WB r207 内容在 wb-skill-authoring/agent-guild/mts 自留技能，与平台信源判重无交集。
+
+## 信源实拉清单（10 站全量逐站，查询词与 r267 全批及 r266/r265 全表错开）
+| # | 信源 | 状态 | 实拉内容 |
+|---|---|---|---|
+| 1 | Dify（RAG/知识库面） | ✓ | **Hybrid Search**（同时执行 vector+full-text，权重合并或 reranking；semantic weight 0-1/keyword weight 0-1——semantic=1 纯向量、keyword=1 纯关键词；rerank 用第三方模型 cohere-rerank）；**检索参数**（Top K/Score Threshold/per-dataset score threshold 精细调）；**chunking**（500-1000 token；General（paragraph+recursive 可配置 size/overlap）/Parent-Child 两级（ChildChunk 先 split 再 split——语义检索子块+父块上下文）/Q&A 模式；FixedRecursiveCharacterTextSplitter）；**Knowledge Pipeline**（节点式编排文档摄取——解决传统 RAG 三大痛点：分散数据源/解析丢信息（图表公式）/黑盒难诊断） |
+| 2 | n8n（版本控制/环境面） | ✓ | **内置 Git 源控**（instance 链接 Git branch；push-pull 模式 dev/prod 环境；role 控制：owner/admin 可 push+pull，project admin 只能 push 不能 pull）；**pull 短暂中断**（pull 已发布 workflow 会 un-publish 再 republish——几秒 downtime）；**CI/CD**（webhook 导入部署模板；导出 JSON 存 Git 完整变更历史/commit 消息/PR 协作/回滚）；**智能版本化**（scrub instance 特定元数据保节点/连接/核心设置；GitHub API 查 SHA 对比 raw content 没变就跳过 commit 防垃圾提交；环境路由 sandbox/prod）；**commit 消息纪律**（❌"Updated workflow" ✅"Added retry logic to handle API rate limits in a customer service agent"） |
+| 3 | LangFlow（记忆面） | ✓ | **Memory bases**（1.10 新——per-flow vector store 自动摄取对话消息；跨 session 持久化；语义检索返回最相关上下文 vs Message History 时序取最近；agent 连 Memory Base 组件从 vector store 检索）；**session ID 隔离**（默认 session ID=flow ID 所有消息一个大会话；多用户 flow 用自定义 session ID（user ID 作 session ID）隔离各用户聊天上下文）；**内置 chat memory**（Agent 组件默认启用 Langflow storage）；**Message History 组件**（存/取 Langflow storage 或 Mem0/Redis 专用记忆库）；**向量库后端可配置**（1.10 DB Providers；DataStax Astra DB Chat Memory 组件） |
+| 4 | Activepieces（触发器面） | ✓ | **三种触发器技术**（Polling 周期调端点查变化/Webhooks 单 URL 监听用户事件/App Webhooks Subscriptions 用 OAuth2 开发者 app 收所有授权事件单 URL）；**Catch Webhook**（任意 HTTP method GET/POST/PUT/DELETE 唯一 URL 触发）；**触发与调度**（webhooks/事件/manual/cron-like；delays/parallel/loops 协调时序与量）；**内建控制**（auth/rate limits/idempotency；凭据加密+data masking）；**Tables**（存 case state/owners/timestamps 查询更新协调 handoff/dedup/异常） |
+| 5 | Make（场景设计模式面） | ✓ | **Agent workflow memory 模板**（trigger→Data Store/source lookup keyed to customer/case→normalize 稳定结构→AI 决策→routers/filters 分支→write 更新状态）；**场景蓝图七块**（Intake→Normalize canonical payload→Enrich lookups/dedupe/context→Route 业务分支→Write CRM/DB 更新→Notify→Audit logging/metrics）；**子场景复用**（共享逻辑 normalization/dedupe/assignment/formatting 做可复用 sub-scenario）；**Error handler 策略**（Resume+fallback 多数生产；Ignore 危险静默吞错；Rollback 事务场景）；**Router fallback 必带**（每条 route 是目标系统非代码分支；按优先级+末尾 fallback 接住不匹配 bundle——没有 fallback 的 bundle 静默消失无日志）；**降级链**（Webhook→Validation→Try Primary→Secondary→Tertiary degraded→Team notification+Error log+Manual queue）；**HITL 路由**（AI 置信度>90% 自动发送；低置信度→Slack/Zendesk flag 预起草响应待人工） |
+| 6 | Pipedream（并发/限流/重试面） | ✓ | **并发控制**（定义多少事件并行；concurrency=1 强制串行顺序执行保序；并行加 workers；disable 无限并行）；**maxRetries**（默认 10；超限进下一步；要异常 raise Exception）；**HTTP QPS**（~10 req/s/endpoint 超出 429；突发可容忍；付费可申请更高）；**资源限制**（body 512KB/email 30MB/日志导出 6MB/tmp 2GB/事件保留 7 天 free/运行 30 分钟/day free；default 256MB 最高 10GB；timeout HTTP 30s/cron 60s 最高 300s）；**队列语义**（webhook 一秒 100 次→queued 按配置并发处理；step 失败自动重试——消息队列可靠性无需自管 RabbitMQ/SQS）；**指数退避**（1s→4s→16s；读 Retry-After 头；rate limit 重试 3-5 次；500 持久错误 2-3 次后 fallback/通知） |
+| 7 | Anthropic（Claude Code hooks/命令面） | ✓ | **Hooks 五类**（command/HTTP/mcp_tool/prompt/agent；前三个确定性触发）；**hooks 特性**（生命周期事件触发；完全绕过 compaction；配置住 main context 外低成本）；**用途**（确定性自动化：跑 linter/完成发 Slack/block 命令/PreCompact 备份 chat history）；**PostCompact hook**（压缩后重新注入关键指令）；**PostToolUse 格式化示例**（matcher Write\|Edit + bun run format）；**Slash commands**（.claude/commands/deploy.md 创建 /deploy——与 skill 同名冲突 resolution）；**Plugins 打包**（commands/agents/skills/hooks/.mcp 组合跨项目团队共享一致 tooling）；**模型 flag**（--model opus/sonnet；-p 非交互；-c 继续） |
+| 8 | deeplearning.ai（RAG 课程面） | ✓ | **RAG 完整课**（Zain Hasan 24h33m/49 视频/10 graded——ANN algorithms/vector databases/Weaviate API/chunking/query parsing/cross-encoders+ColBERT/reranking/LLM sampling/agentic RAG/RAG vs fine-tuning/生产监控）；**核心内容**（semantic search/BM25/Reciprocal Rank Fusion/Weaviate chunking+indexing/chatbots/production monitoring） |
+| 9 | GitHub（awesome skills 清单面） | ✓ | **聚合清单生态**（philipbankier/awesome-agent-skills；hesreallyhim/awesome-claude-code 全套生态；ComposioHQ/awesome-claude-skills 最大 Claude skills 清单；sickn33/antigravity-awesome-skills 900+ 可装 npx 安装；heilcheng/awesome-agent-skills 多平台）；**voltagent/awesome-agent-skills**（1,500 官方技能——42 trail of bits/21 anthropic/17 fal.ai/15 netlify）；**shubham saboo/awesome-llm-apps**（132k stars 100+ agents/skills）；**skillsllm 结构化表**（Skill/Platform/Use case/Includes/Status/Risk 字段）；**addyosmani agent-skills**（20 生产级工程工作流 packaged——Define/Plan/Build/Verify/Review/Ship 六阶段） |
+| 10 | OpenClaw（记忆检索面） | ✓ | **内置记忆引擎**（vector search over MEMORY.md+memory/*.md；hybrid 语义向量+关键词 BM25；CJK trigram tokenization 中日韩支持；sqlite-vec 加速；chunks ~400 tokens 80-token overlap；per-agent SQLite；watcher debounced 默认启用）；**memory_search**（措辞不同也找到语义相关；vector 找语义相似；BM25 找精确匹配 IDs/error strings/config keys）；**memory-lancedb 插件**（官方外部记忆插件——LanceDB 存长期记忆；模型 turn 前自动召回+response 后捕获重要事实；OpenAI-compatible embedding 或本地）；**Mem0 插件**（mem0/vector_store.db 无需外部 DB）；**hash 去重**（SHA-256 未变化文件永不重嵌——零浪费 API 调用） |
+
+## 判重
+双键检索：Dify RAG 检索配置（库内无 RAG 检索配置章节——新面落）；n8n Git 源控（库内 §6633/§6673 LangFlow 版本化、n8n 面无版本化——新面落）；LangFlow 记忆（库内 §6175 记忆四类为 n8n、LangFlow 面无记忆章节——新面落）；Pipedream 并发/限流（库内 §Pipedream components 开发/进阶/Agent Builder——执行面并发无——新面落）；Claude Code hooks/slash/plugins（库内 §Subagents r266B——hooks 扩展面无——新面落）；Make 场景蓝图（库内 §HTTP/错误链 r267C 管模块级——场景级七块+Router fallback+子场景复用增量≥40% 合并保留增量落）；Activepieces 触发器（并入记录）；deeplearning.ai RAG 课程（并入记录）；GitHub awesome 清单（并入记录）；OpenClaw 记忆检索引擎（库内 §记忆三层管架构——检索引擎参数/CJK trigram/LanceDB 插件并入记录保留）。
+
+## 独点落地（6 个）
+| 轮 | 文件(建议落点) | 版本(建议) | 独有点 | 提升层 |
+|---|---|---|---|---|
+| r268A-1 | wb-execute-discipline | 3.21.0+ | Dify RAG 检索配置与 Parent-Child 分块 | 工作流 |
+| r268A-2 | wb-execute-discipline | 3.21.0+ | n8n Git 源控与版本化纪律 | 工作流 |
+| r268A-3 | wb-execute-discipline | 3.21.0+ | LangFlow 记忆面：Memory bases 语义检索与 session 隔离 | 工作流 |
+| r268A-4 | wb-execute-discipline | 3.21.0+ | Pipedream 并发/限流/重试队列语义 | 工作流 |
+| r268A-5 | wb-execute-discipline | 3.21.0+ | Claude Code hooks/slash/plugins 扩展点 | 可复用 Skill |
+| r268A-6 | wb-execute-discipline | 3.21.0+ | Make 场景蓝图七块与 Router fallback（增量合并 §HTTP/错误链） | 工作流 |
+
+## 复核
+六独点均有当日实拉来源；r268A-6 增量合并落地（场景级七块 ≥40% 独有增量）；并入记录：Activepieces 触发器三技术+Tables、deeplearning.ai RAG 课程、GitHub awesome 清单、OpenClaw 记忆检索引擎参数。垃圾：本轮未产生临时文件。
