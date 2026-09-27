@@ -4236,3 +4236,32 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **Layer-3 RCE 防御**：MCP servers 策略合成——从声明语义合成 per-tool 策略执行时强制；关闭 sidecar scanners（mcp-armor）和 stdio wrappers（mcp-stdio-shellguard）抓不到的 tool-injection-RCE 类。→ 判据：RCE 防御做在执行层策略强制，不做扫描器事后抓。
 - **SDL-MCP cards-first 上下文系统**：Symbol Delta Ledger——cards-first context 给 coding agents 省 token 改善上下文。→ 判据：代码上下文管理可用增量卡片账本而非整文件常驻。
 - **提升层**：工具。
+
+## Queue-based Graph Engine + Graphon 拓扑执行（来源：Dify 编排/队列面，2026-09-27 实拉）
+- **Queue-based 执行引擎**：workflow engine 重建围绕 queued graph execution——支持 pause/resume 中间、breakpoint、human-in-the-loop、trigger-based execution。→ 判据：需要长 workflow 可暂停/恢复/断点/人审时，选 queue-based 引擎而不是线性执行。
+- **Graphon 拓扑排序执行计划**：stored graph config→Graphon Graph；拓扑排序构建 DAG 依赖图→识别就绪节点→前置完成触发执行→通知下游重复。→ 判据：工作流执行前先算执行计划（拓扑排序），就绪即触发，避免串行等待。
+- **生产 agent 配置**：max_steps 10/max_parallel_tool_calls 3/timeouts 分层（step 5s total 60s）/queue 路由/state_store。→ 判据：生产 agent 显式配步数上限+并行工具数+超时分层+状态存储。
+- **提升层**：工作流。
+
+## Embedding/维度匹配纪律 + Metadata 引用来源（来源：n8n 向量库/嵌入面，2026-09-27 实拉）
+- **Embedding 模型必须匹配**：ingestion 用啥 retrieval 用啥，不匹配向量空间不对齐出垃圾。→ 判据：索引与检索用同一 embedding 模型，换模型必须重建索引。
+- **Dimension matching 是 #1 pitfall**：text-embedding-3-large 3072 维，vector store 表/索引必须匹配，不匹配静默失败。→ 判据：建库前核对 embedding 输出维度与 store 配置，维度错误是静默的。
+- **Metadata 引用来源信号**：检索返回 chunk 带 metadata（source URL/title）让 agent 引源=信任信号；文档太大装不进上下文时关 metadata。→ 判据：RAG 输出要可溯源就存 metadata 并随 chunk 返回。
+- **提升层**：工作流。
+
+## 自托管平台安全边界 + Flow DevOps Toolkit（来源：LangFlow 安全/部署面，2026-09-27 实拉）
+- **无租户隔离是默认**：单进程不 enforce user 隔离、不限制磁盘/网络访问；flow visibility 为易用非安全；多租户靠基础设施级安全——责任在自己。→ 判据：自托管 AI 平台默认无租户隔离，多人共用必须自己加基础设施级隔离。
+- **生产安全基线**：readOnlyRootFilesystem:true 防未授权修改；密钥存 K8s secrets/Vault；禁 LANGFLOW_AUTO_LOGIN；反代+认证；不暴露端口。→ 判据：部署清单五件套（只读根文件系统/密钥外置/禁自动登录/反代认证/不暴露端口）。
+- **Flow DevOps Toolkit SDK**：lfx init 脚手架，版本化/测试/部署 flows 从终端，environments.yaml 控制部署——替代手动 export/import JSON。→ 判据：flow 当代码管（版本化+环境配置+终端部署），别用 UI 手动搬 JSON。
+- **提升层**：工具。
+
+## Skill 创作三层选择 + 先评测后建（来源：Anthropic skill 创作面，2026-09-27 实拉）
+- **三层选择**：prompt caching 给稳定指令/长参考/多轮重复；tools+scripts 给确定性操作（文本易错/贵）；extended thinking 只给真正难的推理。→ 判据：同一能力先选层——缓存复用、脚本防漂移、深度思考只给难活。
+- **先评测后建**：先在代表任务上跑 agent 观察在哪挣扎/缺上下文→针对性建 skill；task 失败是 spec——模型已处理好的不进 skill，每 token 与对话竞争。→ 判据：skill 内容来自实测失败点，不是"觉得有用"的清单。
+- **每 skill 3-5 测试查询**：覆盖应该触发/不该触发/模糊边缘，跨模型层测试。→ 判据：技能交付前写触发/不触发/边缘三组测试查询。
+- **提升层**：可复用 Skill。
+
+## Everything-is-a-Plugin + 跨任务 skill 复用（来源：GitHub 生态面，2026-09-27 实拉）
+- **Everything-is-a-Plugin 框架哲学**：deepseek-harness 208k★——每个组件从数据处理到模型执行都可插件替换/扩展。→ 判据：框架设计把每个环节做成可插拔，替换组件不重写主流程。
+- **跨任务 skill 复用记忆 OS**：MemOS——ultra-persistent memory/hybrid-retrieval/cross-task skill reuse，35.24% token 节省。→ 判据：记忆层支持跨任务复用已学技能+混合检索，是长期 token 节省的主要来源。
+- **提升层**：工具/工作流。
