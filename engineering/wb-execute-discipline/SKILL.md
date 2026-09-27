@@ -3442,3 +3442,32 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **技能产物可交互**：agent 运行技能时在对话里渲染**交互 HTML 组件**（表单/图表/配置面板）——**技能输出从文本升级为可操作 UI**（首次使用前指示 agent 为技能建 UI）。
 - 判据：**评技能先跑评测维度再看描述；技能产物能交互就别只吐文本**。
 - 提升层：可复用 Skill。
+
+## 编排三模式：Fan-Out/Fan-In Wait 聚合 · Queue 调度执行分离 · executionTrace 审计（来源：n8n 官方生产指南+模板，2026-09-27 实拉）
+- **四拓扑模式**：Orchestrator-Executor（子工作流+AI Agent Tool 节点）/ Pipeline 链（顺序连接）/ Parallel Fan-Out/Fan-In（分支+merge）——**拓扑层与行为层分开选**。
+- **Fan-In 用 Wait 节点聚合**：并行任务跑完后，项目管理器被 Wait 暂停，**等所有任务完成收到确认才恢复**并聚合结果——别用固定 sleep。
+- **Queue mode**：Redis 队列 + worker 并发，**调度与执行分离**——长任务不阻塞其他工作流。
+- **executionTrace**：Orchestrator 返回**每个 agent 的 token 用量**审计轨迹——**多 agent 成本可追溯**。
+- 判据：**并行聚合用事件（Wait/回调）不用轮询；编排与执行分离用队列；多 agent 成本看 executionTrace**。
+- 提升层：工作流。
+
+## 迭代节点三错误策略 + 并行边界 + 循环/迭代选型（来源：Dify Iteration 节点文档+生产实测，2026-09-27 实拉）
+- **迭代错误响应三策略**：终止（遇错即停并报异常）/ 忽略并继续（错误轮次输出 null 继续后续）/ 移除错误输出（跳过错误条目）——**批量处理按容错需求选**。
+- **性能边界是真实约束**：并行最多 10 元素、迭代 30 元素上限、10 分钟超时——**设计批量任务先算边界**，别设计完跑崩。
+- **循环 vs 迭代选型**：迭代=对已有数组逐项处理（列表→每项子流程→数组输出）；循环=根据本轮结果决定是否继续（退出条件）——**"处理一批数据"用迭代，"跑到满足条件"用循环**。
+- 判据：**批量先定错误策略与边界，再选迭代还是循环**。
+- 提升层：工作流。
+
+## Agent SDK vs Managed Agents：runtime 归属决定选型（来源：Anthropic Claude Agent SDK/Managed Agents 文档，2026-09-27 实拉）
+- **Claude Agent SDK**：与 Claude Code 同一 harness（agent loop/内建工具/权限系统/上下文管理/subagent 协调），**loop 跑在你的进程里**——数据本地、工具本地执行、成本按你基础设施算。
+- **Managed Agents**：Anthropic 托管 harness + 生产基础设施（state/memory/permissions/scheduled execution），**loop/沙箱/session 全托管**——不自己维护 agent runtime。
+- **选型判据五问**：客户数据住哪 / 工具和 API 怎么执行 / 要什么可观测性 / 成本怎么算 / 谁运维 runtime——**答案决定用托管还是 SDK**。
+- 判据：**先定"runtime 归谁"，再谈 agent 功能**；自己维护 runtime 的团队用 SDK，要生产级省运维用 Managed。
+- 提升层：工作流。
+
+## cron 条件触发 + 同声明原地更新 + Skill Workshop 双态治理（来源：docs.openclaw.ai 2026.7.1 + skill-workshop，2026-09-27 实拉）
+- **cron watch 条件触发**：外部命令完成或 watch 条件变化才跑完整 agent——**"有事才跑"而不是定时空转**，省资源省 token。
+- **reapply 原地更新**：重发同一声明更新目标 job，**保留 identity 与历史不建重复 schedule**——改计划不改任务实体。
+- **Skill Workshop 双态治理**：技能创建走 proposal（待定草稿+内容+目标绑定+scanner 状态+hash+回滚元数据）→ **applied 才变 live skill**——**技能上生产必须经过 proposal→applied 两道状态**；workshop storage 与 session workspace 分离。
+- 判据：**定时任务加条件守卫；技能变更走双态（草稿→生效）；重复声明原地更新**。
+- 提升层：工作流。
