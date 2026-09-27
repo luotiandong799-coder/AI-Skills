@@ -4744,3 +4744,41 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **条件路由**：agent 按 query 类型选工具（HTTP/搜索/函数判断）；生产 agent 失败主因=外部 API 超时/500→工具节点包裹错误处理。→ 判据：工具调用按查询类型路由，外部调用包错误处理。
 - **function description 优化**：name 动词开头/description 写用途场景/parameters 标注类型描述。→ 判据：工具描述按 function calling 规范写，提高选择准确率。
 - **提升层**：工作流/工具。
+
+## 并行分支执行引擎：总时长≈最长分支 + 统一队列调度（来源：Dify 工作流执行引擎面，2026-09-27 实拉）
+- **并行分支**：多分支并发执行；数据库写异步非阻塞；复杂并行 workflow 总时长≈最长分支时长（非分支之和）。→ 判据：独立分支并行跑，总耗时按最长分支算。
+- **统一队列调度**：所有任务进统一队列，调度器管依赖和顺序减少并行错误；灵活执行起点（任意节点开始 支持部分运行/恢复/子图调用）。→ 判据：复杂图用统一队列管依赖，部分重跑从指定节点起。
+- **流式协调**：ResponseCoordinator 处理多节点流式输出（token-by-token LLM 生成/长任务分阶段结果）。→ 判据：多节点流式输出需协调器，不全靠单节点流。
+- **性能调优表**：Slow API→加 API replicas；Task backlog→加 Worker/celeryWorkerAmount；DB 连接耗尽→max_connections/连接池优化；OOM→加内存；CPU throttling→加 CPU。→ 判据：按症状查表调资源，不瞎猜。
+- **生产架构**：微服务拓扑（orchestration/tool execution/memory/model gateway 分离）；每服务≥3 replicas+异步任务队列（RabbitMQ/Redis Streams）；stateless executors 水平扩展。→ 判据：编排与执行分层+无状态执行器可水平扩展。
+- **提升层**：工作流/工具。
+
+## Agents 一次设随处用 + AI Agent Tool 多 agent 委托（来源：n8n AI Agent 构建面，2026-09-27 实拉）
+- **可复用 Agents**：agent 设一次随处用（名字/指令/工具/skills 封装成可复用单元）；AI Assistant 草拟再精修。→ 判据：常用 agent 封装成可复用单元，不每次重搭。
+- **workflow 即工具**：每个已建 workflow 都是 agent 可用的工具无需改——复用现有流程作能力。→ 判据：把已验证 workflow 挂给 agent 当工具，不重写。
+- **AI Agent Tool 委托**：多 agent 架构——orchestrator 的工具之一是另一个 agent（委托子任务）。→ 判据：子任务委托给专门 agent，编排者只分配。
+- **Max Iterations 纪律**：设最长工具链+2；系统消息命名允许动作+最终答案格式。→ 判据：迭代上限按真实链长+余量，系统消息钉动作与输出格式。
+- **Return Intermediate Steps**：显示 agent 决策细节=工具调用出问题第一反应。→ 判据：工具调用异常先开决策轨迹，不盲改提示词。
+- **提升层**：工作流/工具。
+
+## lfx 扩展验证链 + 组件测试纪律（来源：LangFlow 自定义组件/扩展面，2026-09-27 实拉）
+- **静态验证器**：lfx extension validate 解析 manifest 报类型错误，默认不执行 imports（安全）；--execute-imports 只在信任源时用。→ 判据：第三方扩展先静态验证不执行导入，信任源才跑导入探针。
+- **async 优先**：组件方法用异步（aiofile/anyio.Path 文件交互性能兼容）。→ 判据：组件 I/O 用异步，避免阻塞。
+- **测试纪律**：ComponentTestBase 类；测试文件按组件分组类 Test<ClassName>；无独立测试函数只有类内方法。→ 判据：组件测试按组件分类组织，类内方法全覆盖。
+- **安全测试模式**：validate_cloud 配置校验/ssrf_protection URL 过滤对抗恶意输入。→ 判据：组件配置校验+SSRF 防护纳入测试。
+- **提升层**：工具/可复用 Skill。
+
+## extended thinking 流式 + 工具调用组合（来源：Anthropic extended thinking 面，2026-09-27 实拉）
+- **thinking 流式事件**：thinking_delta events 在 content_block_delta 内；块结束前 signature_delta；之后文本块照常流式。→ 判据：解析流式 thinking 认 thinking_delta/signature_delta 事件对。
+- **budget 配置**：thinking type enabled+budget_tokens（max_tokens 需覆盖 thinking budget）；adaptive 自适应模式。→ 判据：开 thinking 时 max_tokens 要盖住 budget，防截断。
+- **速率不保证**：streamed events 不保证恒定速率（有延迟）；get_final_message() SDK 自动累积。→ 判据：流式不做恒定速率假设，用 SDK 累积收尾。
+- **think-then-act 组合**：thinking 与工具调用组合（Think-and-Search agent；content_block_start 判断类型分流处理）。→ 判据：复杂推理任务先 thinking 后工具调用，按块类型分流。
+- **提升层**：工作流/工具。
+
+## Copilot 定制三层：instructions/agents/skills（来源：GitHub Copilot 定制面，2026-09-27 实拉）
+- **repo instructions 优先级**：.github/copilot-instructions.md 根目录；自然语言 Markdown；应用于仓库内所有请求；优先于 org instructions。→ 判据：仓库规范写进 copilot-instructions.md，全局优先。
+- **Custom agents**：.github/agents/*.agent.md；persona+tool restrictions+handoffs+sub-agents；可建只读 reviewer。→ 判据：专用角色建 custom agent 配工具权限边界。
+- **Skills 位置**：.github/skills/ .claude/skills/ .agents/skills/ 仓库级共享；~/.copilot/skills/ 个人级。→ 判据：团队技能放仓库目录随版本库共享，个人技能放用户目录。
+- **MCP 扩展**：Copilot cloud agent 用本地/远程 MCP servers 工具。→ 判据：agent 能力扩展走 MCP 配置。
+- **定制三层分工**：Agents=dedicated roles/Hooks=security checkpoints/Skills=on-demand skill directories。→ 判据：按角色/钩子/技能三层选定制形态。
+- **提升层**：工具/可复用 Skill。
