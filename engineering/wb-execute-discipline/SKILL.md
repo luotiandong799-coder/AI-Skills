@@ -5835,3 +5835,38 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **市场命令族**：openclaw plugins marketplace entries/list/refresh（--expected-sha256 校验）；--marketplace 装 claude-compatible 插件；bare 名从 npm 装。→ 判据：安装先查 marketplace 来源，校验 sha256。
 - **发布流程**：clawhub package publish your-org/your-plugin --dry-run 预检后发布，用户 clawhub: 前缀安装。→ 判据：插件发布走 ClawHub 包流程，dry-run 先验。
 - **提升层**：可复用 Skill。
+
+## Dify API Key 权限与租户安全：权限绕过 / 三类 Key / DifyTap 四漏洞（来源：CSDN《Dify权限配置避坑手册》2026-05-05 + DeepWiki RBAC + Zafran DifyTap 披露，2026-09-27 实拉，与 §RBAC 互补——那条管用户角色，这条管 API Key 与租户隔离）
+- **API Key 默认绕过 UI 角色**：/v1/chat-messages 用 API Key 调用默认拥有 app:run 全局权限，不受 UI 中 App Editor/App Viewer 角色约束；修复=启用 API_KEY_SCOPE_ENFORCEMENT 环境变量并重启。→ 判据：API Key 调用面独立于 UI 角色面，两个都要管。
+- **三类 API Key 按作用域选**：Service（full workspace 后端集成/自动化脚本）/App（single app 前端嵌入/移动端，同 key 服务所有终端用户以 user 值区分）/Knowledge（知识库操作/文档上传）；key 继承生成者权限。→ 判据：按接入面选 key 类型，不用 service key 干 app 的活。
+- **五角色+企业 RBACService**：OWNER/ADMIN/EDITOR/NORMAL/DATASET_OPERATOR，应用级权限继承；Enterprise 版 RBACService 细粒度扩展。→ 判据：最小权限按角色矩阵配，关键操作（模型配置）限 Owner/Admin。
+- **DifyTap 四漏洞缓解**：跨租户 AI chat 泄露/最小认证读内部 API/渗出上传文档——缓解=Admin UI 失效全部 API keys+docker restart dify-redis 强制 session 过期。→ 判据：安全事件后作废全部 keys+重启 session store，不只改单个 key。
+- **提升层**：工作流。
+
+## n8n 分层错误处理与恢复：错误类型分离 + 结构化 error 返回（来源：n8n Community《Design Error Handling》2026-07-26 + n8nlogic 2026-06-03 + toolient 2026-01-11 + n8nresources 2026-06-08 实拉，与 §Error Workflow 互补——那条管错误触发通知，这条管分层策略与恢复）
+- **错误按类型分层，各配不同动作**：临时错误（API timeout/rate limits/network）→backoff 重试；永久错误（401/malformed payload）→alert 不重试；可预测错误（空数组）→fail loudly on purpose。→ 判据：per-node Retry On Fail 管瞬态，alert 管永久，先分类再定动作。
+- **三模式隔离**：A) try/catch 隔离 risky calls 主路径只在输出有效时继续、错误路径持久化+告警；B) sub-workflow containment 关键步骤独立 sub-workflow fail fast 返回结构化 error outputs 给 parent；C) soft-fail+hard validation gate。→ 判据：高风险调用走隔离路径，复杂管线用子流程包围。
+- **AI agent tool failure 结构化返回**：Code node 内 wrap tool logic try/catch，返回 {success:false, error:e.message} 而非 throw。→ 判据：工具失败返回结构化对象让 agent 分支处理，不炸整个 workflow。
+- **错误日志进表**：Google Sheets 每错误一行 timestamp/workflow/failed node/message/retry count/是否自动解决/execution URL。→ 判据：错误日志可回溯、可统计，含 execution URL 定位。
+- **提升层**：工作流。
+
+## LangFlow API 认证与 Global Variables 透传：x-api-key / JWT / 请求级全局变量（来源：docs.langflow.org api-keys-and-authentication + jwt-authentication + external-authentication + api-flows-run + api-openai-responses，2026-09-27 实拉，与 §Workflow API 互补——那条管 API 能力，这条管认证与变量透传）
+- **API Key 认证双通道**：1.5+ 大部分端点需认证；x-api-key header 或 query parameter；LANGFLOW_API_KEY env；/v1/run/ 默认需 key。→ 判据：API 调用统一带 key，存 env 不硬编码。
+- **JWT 认证**：HS256 默认开（LANGFLOW_ALGORITHM），对称/非对称，stateless 无 DB 存储，凭据自动过期。→ 判据：用户级认证用 JWT，免 DB 查 key。
+- **外部认证 Keycloak**：LANGFLOW_EXTERNAL_AUTH_TOKEN_HEADER/JWKS_URL/ISSUER/AUDIENCE 接已有 IdP。→ 判据：企业环境接现有 SSO，不另起炉灶。
+- **请求级全局变量**：X-LANGFLOW-GLOBAL-VAR-* header 传 flow 全局变量（变量名自动转大写，优先于 OS env，仅本次请求有效）。→ 判据：单次请求覆盖配置用 header 传，不改全局。
+- **OpenAI Responses 兼容**：model 字段必须 flow ID 或 endpoint name；tools 参数不支持。→ 判据：用 Responses API 调 flow 时 model 填 flow ID。
+- **提升层**：工具。
+
+## Activepieces MCP Server 工具分类：ap_* 七类 + Discovery 语义搜索（来源：activepieces.com docs/mcp + mcp/ 页面 + hivebook，2026-09-27 实拉，与 §MCP Server 互补——那条管 MCP 能力，这条管服务器工具组织）
+- **每 project 一个 MCP server**：Settings→MCP Server 开启 https://<instance>/mcp OAuth 认证，760+ apps 单 URL 暴露给 AI as tools，单 connection 跨所有 pieces。→ 判据：多 app 自动化只接一个 MCP 端点，不每 app 一个 server。
+- **ap_* 工具七类**：Discovery（always on read-only：flows/pieces/connections/tables/runs+语义搜索 action/trigger catalog）/Flow Management（create/duplicate/rename/publish/enable-disable）/Flow Building/Router & Branching/Annotations/Tables/Testing & Runs。→ 判据：agent 先 Discovery 语义搜索找工具，再 Flow Management 建流。
+- **MCP 2.0+400 servers**：400+ MCP servers 覆盖；MCP 2.0 支持。→ 判据：选择平台自带 MCP 生态的平台减少单点 server 维护。
+- **提升层**：工具。
+
+## smolagents CodeAgent 架构：代码即动作 + 30% 减调用（来源：Hugging Face docs smolagents 1.26.0 + EveryDev + Morph 2026，2026-09-27 实拉，与 §awesome-ai-agents 互补——那条管框架榜单，这条管 smolagents 具体架构）
+- **CodeAgent 写 Python 而非 JSON**：模型写并执行标准 Python code 直接调用工具，而非生成 rigid JSON tool calls——complex benchmarks 上减少约 30% LLM calls。→ 判据：工具密集任务优先代码型 agent 架构。
+- **极简核心**：agent 逻辑约 1,000 行代码，抽象保持 minimal。→ 判据：轻量 agent 用 smolagents 类库，不引重框架。
+- **多接口+Hub 共享**：Python API/CLI（smolagent/webagent）/Gradio web UI；agents/tools 可从 HF Hub 加载分享（Gradio Spaces）。→ 判据：复用社区 agent 从 Hub 拉，不再从零写。
+- **任何 LLM**：transformers 本地/inference API/OpenAI/Anthropic via LiteLLM。→ 判据：框架不锁模型，换模型不改 agent 逻辑。
+- **提升层**：工具。
