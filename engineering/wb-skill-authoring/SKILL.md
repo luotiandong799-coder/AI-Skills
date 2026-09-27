@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.22.0
+version: 3.23.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -476,6 +476,13 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **B) 阿里千问 Agent/Skill 平台生命周期**（来源 千问 APP 开放公告 + 通义千问大会，2026-09-27 实拉）：100+ 云产品封装为**标准化 Skill 包**（agent 按需调用如函数，配 CLI 免登录调用）；平台负责模型+流量+安全审查，开发者负责场景设计与专业知识；上架走**审核 + 分发 + 未来计费/分成**三段。判据：skill 发布须过审核门；能力封装为 agent 可直接调用的标准包是分发趋势（与 §技能是"指令+工具"打包 一致）。
 - **E) Flowise 评估与护栏层**（来源 docs.flowiseai.com，2026-09-27 实拉）：Evaluations 一等公民（Datasets + Evaluators + Evaluations）；Human-in-the-Loop 原生；Safety = 输入审核 + 输出后处理；安全控制 RBAC/SSO/加密凭据/限流/受限域；支持 air-gapped 离线部署。判据：生产级 agent 平台把「评估」和「护栏」当原生能力而非事后补；面向生产的 skill 应声明评估与护栏策略。
 - 交叉引用：@显式调用跳过路由（SkillHub 头部声明）已在 r202-A 落本技能 3.19.0，本条不重复。
+
+## 技能供应链可信与三层评测（r204 三轮 · 2026-09-27）
+> 来源：ClawHub skillsign(MIT live) / Agent Foundry / NVIDIA SkillEvaluator(Apache2)。与 r202-B 内容寻址、r252-C 质量信号互补，重叠<60% 落。
+- **A) 技能密码学签名与信任链（skillsign）**：作者 Ed25519 私钥对目录逐文件 SHA-256 manifest 签名，安装验签 + 本地信任表(~/.skillsign/trusted/)；provenance/isnad 记录签名者顺序；时间戳感知撤销(pre-compromise 签名仍有效)；ATP 本地信任图追踪 identity(ed25519)/capabilities/reputation，领域特定 + Bayesian 更新。ClawdHub 实测 286 技能 12 未签名藏执行路径、3 凭据窃取、47 未声明读 ~/.ssh ~/.aws。判据：与 r202-B 互补(那条管字节完整性 what，本条管作者身份 who)；第三方技能进门 = 验签 + 信任链 + 撤销。提升层：可复用 Skill/工具。触发词：技能签名、Ed25519、skillsign、isnad、信任链、密钥撤销。
+- **B) 市场质量分级 S/A/B/C（Agent Foundry，37k 技能）**：第三方市场以显式 S/A/B/C 等级作发现/筛选信号，对标 Tier1 质量分四维度。判据：与 r252-C A「SkillHub 四档可信度」同属市场级质量信号，S/A/B/C 更直观可作排序键。提升层：可复用 Skill。触发词：Agent Foundry、S/A/B/C 评级、技能质量分级。
+- **C) 技能三层评测（NVIDIA SkillEvaluator）**：Tier1 静态体检(schema/PII/license/quality/unicode/lint，质量分 0-100，证据不足标 INCOMPLETE 不谎报安全) / Tier2 语义重叠去重(embedding+LLM 分类，人审候选非机械删) / Tier3 Skill Lift 配对 with/without 对练(Harbor 沙箱，947 cases 均值 +0.2134，72.8% 正增益)。判据：Tier3 = §效果归因 no-skill 对照的自动化版，补静态体检 + 语义去重两道前置门；"INCOMPLETE 不谎报安全"强化 §审计面=参数表。提升层：可复用 Skill/工作流。触发词：SkillEvaluator、Tier1 静态、Tier2 去重、Tier3 Skill Lift、语义重叠、INCOMPLETE、with/without 对练。
+- SkillDepot(分润) 本轮未获可信源，pending 不落。
 
 - **★任何会过期的自我声明，必须绑定到"声明错了就报错"的机制（compiler / linter / tests / CI），而不是靠一段自证文字**：原文的九原则核心——把仓库对自己的声明（"这里能做 X""这个接口长这样"）绑到会失效的检查上，而不是写进 prose 让人信任。判据：**只写在文档里、靠人肉读 = 没绑定**（人不会每次都读，读也不一定发现错）；能跑的检查才是兜底。
 - **★这条对 skill description / AGENTS.md / spec 同样成立**：技能描述声称"我能做 X"——若 X 的真伪只能靠人读，它就会悄悄腐烂；应该把"X 是否还成立"挂到一条可跑的检查上（CI / 脚本 / 评测用例 / 触发评测诱饵）。判据：**自我声明的价值 = 它能多快被发现是假的**；不可证伪的声明不是纪律，是愿望。
