@@ -8326,3 +8326,67 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Onboarding**：openclaw onboard——Quick start/Custom setup——检测已有 AI 访问——验证所选连接真实 completion——配置 provider picker/Skip for now/foreground Gateway；--flow quickstart/manual；--install-daemon 装后台服务；--no-onboard CI 跳过。
 - **Gateway 服务**：openclaw gateway install——Ctrl+C 停前台——daemon 后台自动启动 Gateway——wizard 配置 auth/gateway settings/optional channels。
 - **提升层**：工具（安装配置）。
+## Dify 应用发布与嵌入：7 种发布方式 · iframe+script 嵌入 · Pre-Fill Hidden Fields（来源：mintlify dify embedding-in-websites/user-input + csdn 应用发布与被集成的7种方式 + atmarkit dify 嵌入 2025-07/2026-09 实拉，合并 §Dify 发布——那条管"权限团队"，本条管"发布与嵌入"）
+- **发布 7 种方式**：hosted WebApp/API endpoints/embeds/MCP-compatible tools/工具引用/工具添加配置/MCP 服务端/Chrome 浏览器扩展/iframe+script 嵌入/API 调用——每 app 自动 REST API——API Reference 拿 key——n8n/Zapier 直接调用。
+- **iframe 嵌入**：<iframe src="https://udify.app/chatbot/YOUR_APP_TOKEN" width="100%" height="600" frameborder="0">——始终可见/全功能/可定制；script 嵌入=浮动 widget 按钮或自定义 UI（三种嵌入：iframe/浮动 widget 按钮/custom UI）。
+- **Pre-Fill Hidden Fields**：发布面板 Web App 区 Embedded > Pre-Fill Hidden Fields——填入值烘焙进 iframe URL 和 script snippet 的 inputs 对象——每位访问者自己的值（登录用户 ID/所在页面等）——app 无需改动即可多租户化。
+- **提升层**：工具（发布嵌入）。
+
+## n8n 模板与社区生态：模板库分类 · RAG starter · 自托管无 key 模板（来源：n8n.io workflows categories + community.n8n.io importable templates + n8ntemplates.me + prompts.brightcoding 280+ templates 2026-03/09 实拉，合并 §n8n 模板——那条管"版本控制"，本条管"模板生态"）
+- **模板库规模**：Support 888 workflows/AI RAG 712/AI Chatbot 1269——分类浏览；RAG Starter Template=Simple Vector Stores+Form trigger+OpenAI——PDF 自定义知识给 Agent。
+- **模板实践形态**：lead follow-up: Webhook→normalize→validate email→append Sheets→Gmail→Slack→log failures；Stripe Payment→Fulfillment→Receipt；Form→Sheets+Slack——clean commented JSON import-ready（无 paid nodes 零付费节点）。
+- **自托管 AI 模板无 API key**：AI Blog Writer 4 阶段 research/outline/draft/edit；Social Media Generator；YouTube-to-Newsletter；Competitor Intelligence Monitor；Email Auto-Responder 分类/过滤/草稿——Ollama 本地跑。
+- **WhatsApp AI 销售助手模板**：结构化 system prompt 一次一个问题/不编价格/不编链接；外部文本文件动态定价查询——真实业务引用流范本。
+- **提升层**：可复用 Skill（模板复用）。
+
+## LangFlow 数据组件与数据库集成：SQL Database · NL 查库 · BigQuery/Astra/Db2（来源：docs.langflow.org components-data/1.8.0 bundles-langchain/1.9.0 bundles-google/1.10.0 bundles-datastax/enterprise-database-guide + langflow templates customer-segmentation/bigquery 2025-10/2026-09 实拉，合并 §LangFlow 数据——那条管"版本演进"，本条管"数据组件"）
+- **SQL Database 组件**：SQLAlchemy 兼容数据库执行 SQL——PostgreSQL/MySQL/SQLite；CQL 走 DataStax bundle；可与 Agent 组件改造支持自然语言查询——同 SQL 数据多查询方式。
+- **BigQuery 组件**：Google bundle——参数化 SQL 查询公开数据集（bigquery-public-data.github_repos）——原始结果流入 DataFrame Operations/Parser 转文本/结构化供 LLM——服务账号需 BigQuery Job User 角色。
+- **SQL Agent（LangChain bundle）**：基于 Agent core——参数 llm/database/top_k——SELECT 返回行数限制；DataStax Astra DB CQL 输出 JSON 对象列表+projection fields+number_of_results；IBM Db2 Vector Store 用 DB2VS 实例读写远程 enterprise-grade。
+- **RFM 客户分层模板**：agent 详细指令 RFM（Recency/Frequency/Monetary）+人口统计——访问完整数据库 schema——执行 SQL 返回结构化分析建议。
+- **提升层**：工具（数据集成）。
+
+## Activepieces 工作流设计与最佳实践：命名/测试/文件夹/错误处理/Router（来源：mintlify.wiki activepieces workflows/building-flows + activepieces blog inbound-lead/5-mcp-flows + resources cross-system/reporting + csdn 实战 2025-04/2026-08 实拉，合并 §Activepieces 设计——那条管"监控排障"，本条管"构建实践"）
+- **最佳实践清单**：描述性命名 flows/steps（好 displayName="Send Welcome Email to New Users" 坏="Flow 1"）；发布前真实数据测试；用文件夹组织相关 flows；error handling 分支+失败通知；复杂步骤加 notes 帮未来维护者；定期检查执行日志。
+- **构建原则**：先简单——增量构建每步测过再加下一步；Router 条件分支过滤发送者/主题/文件类型/前序数据——每分支独立 actions——避免一开始建不必要分支。
+- **AI-powered inbound lead 流范本**：Netlify 表单→Perplexity 研究→Claude 评分优先级→Claude 标记 spam→Gmail 自动回复→Sheets 日志→Slack 通知——AI 步骤摘要/提取/分类 next action；凭据加密+data masking 日志不显示敏感细节。
+- **MCP flows 模板**：Airtable MCP 合同文档追踪/CRM 去重修复/自动发邮件回填——5 个模板起步。
+- **提升层**：可复用 Skill（流设计方法）。
+
+## Make 模块类型与核心概念：Actions 四型 · If-Else/Merge · 模板四阶段（来源：help.make.com types-of-modules/2026 + make.com blog waves-25 + use-apify make templates 2025-10/2026-09 实拉，合并 §Make 模块——那条管"版本恢复"，本条管"模块类型"）
+- **Actions 类型**：处理服务检索数据——最常见模块——Get/Create/Update/Delete——Delete 注意有些服务不支持删除（会报错要检查）。
+- **If–Else 与 Merge 模块**：2026 早全 plan 推出——原生复杂条件逻辑分支场景——Merge 合并场景（减少长链条）；AI-assisted workflow building 即将推出。
+- **模板四阶段形态**：Trigger（webhook/schedule/app event）→Modules（fetch+map 数据）→Filter/router（条件分支）→Action（写 CRM/Slack/Sheets）——大量模板都是这一个形状的变体——新场景套模板形状最快。
+- **提升层**：工具（模块体系）。
+
+## Pipedream 代码步骤与多语言：Node.js v20 · Python 限制 · 步骤模型（来源：pipedream.com docs code/python + connect/workflows + integrationatlas platforms/pipedream + digitalbydefault review 2026-03/09 实拉，合并 §Pipedream 代码——那条管"平台架构"，本条管"代码步骤"）
+- **语言支持**：Node.js v20 访问 npm 400,000+ 包；Python 用 Pipedream SDK+PyPI；Go/Bash 处理 edge cases——每步都可代码（真 Node.js/Python 在 managed serverless 跑，不是伪代码）。
+- **Python 限制**：只能作 code step 语言——Components 系统只支持 Node.js——Python 不能发布为可复用 pre-built action/trigger（复用处用 Node）。
+- **步骤模型**：code 拿 incoming event+所有前序 steps 输出作输入——return 或 assign 到 step output 流到下一步；内置 Flow control/Concurrency and throttling/Key-value stores/Error handling/VPCs。
+- **连接账户**：OAuth tokens 运行时注入——axios 里 this.slack.$auth.oauth_access_token 直接调 Slack chat.postMessage——导入 connected accounts 即免密钥。
+- **提升层**：工具（代码步骤）。
+
+## Anthropic 视觉与图像理解：三图像来源 · people identification 拒绝 · Files API（来源：platform.claude.com vision/working-with-messages + docs.anthropic vision 2026-02/09 实拉，合并 §Anthropic 视觉——那条管"嵌入检索"，本条管"视觉图像"）
+- **三种图像来源**：base64 内嵌 request body；URL 引用线上托管图；file_id Files API 上传一次引用多次——支持媒体类型 jpeg/png/gif/webp。
+- **入口**：claude.ai 上传/拖拽；Playground 加到 User 消息块；API image content blocks——client.beta.files.upload file=(name, f, media type)。
+- **限制**：people identification——Claude 不能用于识别（命名）图中人物会拒绝；coordinate-based workflows 有专门指引（图形位置坐标工作流）。
+- **提升层**：工具（视觉能力）。
+
+## deeplearning 语音与音频 AI：Whisper 架构 · API 定价 · 本地 vs 云（来源：theneuralbase whisper/whisper-api + aiwiki whisper + jameshu ch18 + zero-to-ai + kindatechnical 2022-09/2026-09 实拉，deeplearning 站内语音课程面实拉 Whisper 生态事实，合并 §deeplearning 语音——那条管"数据工程"，本条管"语音音频"）
+- **Whisper 架构**：encoder-decoder transformer——mel spectrograms→text autoregressive——680,000 小时多语言多任务监督音频——单模型多语言转写/英译/语言识别/时间戳预测——无需微调跨语言口音领域。
+- **API 定价**：$0.006/分钟 hosted whisper-large-v2——四舍五入到秒——不用本地 GPU/无基础设施。
+- **本地 vs 云**：CPU/GPU 灵活/无 API 限制（本地转写 TB 级）/成本可预测/延迟控制 sub-100ms/开源权重可审计/社区扩展——云端替代（Google/AWS/Azure）cloud-only。
+- **提升层**：可复用 Skill（语音处理选型）。
+
+## GitHub Actions 生态与 Marketplace：规模 · 高频 actions · 供应链攻击（来源：qytera tutorial + wasilzafar deep-dive + unilink tutorial + nesbitt security + arxiv 2103.12224/2407.05519 + tms 2021/2026-09 实拉，合并 §GitHub Actions——那条管"Projects 规划"，本条管"Actions 生态"）
+- **Marketplace 规模**：2026 超 30,000 actions（2024 过 10,000）——最大可复用 CI/CD 组件生态；主要维护者 actions/* 官方（checkout/setup-node/cache/upload-artifact）+ docker/*（build-push-action@v6）。
+- **高频 actions**：actions/checkout@v4 几乎每个 workflow——先找 marketplace 再写自定义 shell——大多数需求已有 battle-tested action。
+- **研究事实**：arXiv 2103.12224——3190 repos 708 unique actions 20 类——最常用 CI/utilities/deployment——median action 添加两次；Apps vs Actions：Actions 免费自定义单任务自动化，Apps 可免费/付费带 paywall。
+- **供应链风险（2026）**：LiteLLM/Telnyx/elementary-data/lightning/mistralai 恶意 wheel——Trivy chain 收割 PyPI token/cache poison+OIDC token theft/stale long-lived token——第三方 action 需审来源与版本。
+- **提升层**：工具（CI/CD 生态）。
+
+## OpenClaw 通道与聊天集成：50+ 通道 · channels add · 多通道路由（来源：docs.openclaw.ai channels + openclawdoc channels + openclaw.cc channels + myopenclaw integrations + clawdocs custom-channels 2026-02/09 实拉，合并 §OpenClaw 通道——那条管"安装配置"，本条管"聊天通道"）
+- **50+ 通道**：Telegram/WhatsApp/Discord/Slack/Signal/iMessage/Microsoft Teams/Matrix/LINE/Lark/Google Chat/WebChat widget——单 Gateway 一个 agent 多 app；Telegram 内置核心 grammY Bot API 支持群组；Discord Bot API+Gateway 服务器/频道/私信；SMS Twilio webhook 官方插件；BlueBubbles iMessage REST API 编辑/撤回/特效/回应/群组管理。
+- **管理命令**：openclaw channels add 交互式设置认证配置——配置或 Web UI 添加——platform-specific credentials（bot token/API keys）；Discord 配置=OAuth2 scopes bot/Send Messages/Read Message History/View Channels→授权→paste token→Channel ID。
+- **多通道**：同时跑多平台——自动按 chat 路由——dispatcher 归一化入站消息到同 agent runtime 行为一致——context 跨平台携带；自定义通道 channel adapters 构建自有发布社区（Telegram Bot API long polling/webhooks 例）。
+- **提升层**：工具（通道接入）。
