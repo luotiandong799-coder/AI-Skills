@@ -4405,3 +4405,35 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **Jev 决策化 compaction**：Claude Code plugin 替换 compaction summary——每个 tool call/result 一次快请求评分，过时 drop/truncate。→ 判据：压缩不靠摘要生成而靠逐项评分决策（保留/丢弃/截断），保活关键工具结果。
 - **Agentic tooling 主导信号**：builder 从 prompt wrappers 进入 full agent infrastructure。→ 判据：新工具先问"是否 agent 基础设施层"，prompt wrapper 类不投入。
 - **提升层**：工具/工作流。
+
+## Variable Aggregator 汇聚互斥分支 + Human Input 人工介入（来源：Dify 工作流编排/变量面，2026-09-27 实拉）
+- **Variable Aggregator**：If/Else、Question Classifier 等互斥分支汇聚为单一输出——下游只需定义一次处理，避免每分支重复下游节点。→ 判据：多分支产同型输出时先汇聚再处理，不复制下游。
+- **Human Input Node 三决策按钮**：表单显示用户 query+LLM 分析，comment 输入变输出变量供下游；Confirm/Regenerate/Forward 各映射分支；Timeout 无响应自动 Forward。→ 判据：需要人审时挂人工节点，审批意见进下游变量，超时自动升级不卡死。
+- **节点失败 vs 业务条件分工**：If/Else 用于业务条件；LLM/HTTP/Code/Tool 失败用内置 retry/default-value/fail-branch。→ 判据：失败处理走平台内建机制，不用 If/Else 包错误分支。
+- **系统变量**：sys.workflow_run_id/sys.timestamp/sys.conversation_id 供跟踪执行。→ 判据：审计需求直接用系统变量记 run/时间/会话。
+- **提升层**：工作流。
+
+## LangChain 原生并入 AI 套件 + Agent 记忆分层（来源：n8n AI Agent/LangChain 面，2026-09-27 实拉）
+- **LangChain 节点已并入 AI 套件**：不再是单 LangChain 节点，功能分散多个 AI 节点（聊天模型/向量存储/文档加载器）。→ 判据：找 LangChain 功能去 AI 类别下找分散节点，别搜单节点名。
+- **Agent 记忆分层**：Postgres/Redis Chat Memory 存对话历史时序；向量存储（Pinecone/Weaviate/Qdrant）存语义/情节记忆做相似检索。→ 判据：时序记忆用 Chat Memory，语义检索记忆用向量库，两层各管各的。
+- **cache-first RAG**：LangCache+Redis 向量库先查缓存再检索——客服高频场景快+省钱。→ 判据：高频同质问答走 cache-first，缓存命中省 LLM 调用。
+- **原型内存 store 上线换 DB**：vectorStoreInMemory 原型验证，生产换持久 DB。→ 判据：原型用内存 store 跑通，上线前换 DB 不丢数据。
+- **提升层**：工作流/工具。
+
+## Agentics bundle：表格数据 LLM 操作（来源：LangFlow 组件/模板面，2026-09-27 实拉）
+- **aMap/aReduce/aGenerate**：aMap 逐行填列；aReduce 多行折叠成一行；aGenerate 按 schema 生成合成行——LLM 转换表格数据三操作。→ 判据：表格处理按操作类型选组件：逐行变换用 aMap，聚合用 aReduce，造数据用 aGenerate。
+- **CSV Agent pattern**：Chat Input/Output+LangChain CSV Agent——LLM 直接推理 CSV 文件回答查询。→ 判据：让 agent 直接问答 CSV 用 CSV Agent 组合，别自己写解析。
+- **组件分组复用**：grouped components 存为 reusable custom components；flow import/export JSON 完整资产。→ 判据：常用组件分组存复用，flow 整体导出/导入做资产迁移。
+- **提升层**：工具。
+
+## Claude 模型分级选型 + 升级信号（来源：Anthropic Claude Code 模型选择面，2026-09-27 实拉）
+- **模型分级**：Haiku 机械任务（查找/变量重命名，Low effort）；Sonnet 默认（写函数/测试/多文件编辑，Medium 速度快）；Opus 架构设计/调试失败测试（High）；Fable 5 最难题（跨切重构/并发 bug/昂贵迁移）。→ 判据：按任务判断成本分级，常驻最贵模型是浪费。
+- **升级信号区分模型/执行问题**：Claude 有全部相关 context、明确试过、仍错→升级模型；跳文件/没跑测试/中途放弃重构→不是模型问题是执行问题，别升级。→ 判据：先查执行完整性（读全文件/跑测试）再决定升不升模型。
+- **先轻后重**：先 Haiku 快模型实现→测试→性能达标→考虑降 effort 或降模型，只在能力缺口时升级。→ 判据：轻模型起步达标够用不升级；effort 按工作类型整体调，不逐任务调。
+- **提升层**：模型/工作流。
+
+## Skill Workshop 治理路径（来源：OpenClaw 工具/技能开发面，2026-09-27 实拉）
+- **proposal→apply 变 live**：技能更新走 proposal（pending draft+content+target binding+scanner state+hashes+rollback metadata），应用后才生效。→ 判据：技能改动可回滚（rollback metadata），先 proposal 后 apply 不直接覆盖。
+- **命名由 frontmatter 非路径**：SKILL.md frontmatter 定义技能名，目录路径不影响；skills/ 文件夹最高优先级 override 一切。→ 判据：技能身份看 frontmatter 不看目录；同名冲突时 skills/ 目录胜。
+- **技能结构**：SKILL.md（instructions 必需）+tools/（scripts 可选）；验证 openclaw tools list 看加载。→ 判据：新技能先最小结构（SKILL.md+可选 tools），注册后 tools list 核验加载。
+- **提升层**：可复用 Skill。
