@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体、状态卡只发一次、原地更新、动作词加对象加约束、置信信号、进度时间线、批准画面、改了什么、能不能撤销、推销结论
-version: 1.47.0
+version: 1.48.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -729,3 +729,6 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - **Prompt caching 失败是静默的**：cache miss 不报错不警告，响应一模一样——大多数团队从没拿到缓存折扣不是功能没开，是 prefix 结构不对。结构纪律=稳定 system/工具定义在前、动态用户输入在后；Anthropic 写缓存 1.25x(5min)/2x(1h)，hit rate 不够时写缓存反而亏钱；必须主动测 hit rate，别等账单。
 - **Reasoning router 按盈亏平衡选，不按越难越好**：reasoning 比 standard 贵 10-50 倍——路由阈值=错误代价×概率 是否超过 reasoning 溢价；状态查询/简单 lookup/聊天 UX（用户>3s 就走）用 reasoning 纯浪费；reasoning 超 latency budget 自动回退 fast model，不让用户干等；纯关键词路由会漂移，监控被路由到 reasoning 的请求真受益了吗，季度重训。
 - **提升层**：输出 / 成本工程。
+
+## Qoder 净新（2026-09-27 · 全量消化）
+- **按实测费用记账，不按 token 数**（实测：编排式双模型 token +70%、交互轮数 ~3x、费用反降 36%）——"花 token ≠ 花钱"，token 预算若以 token 数为唯一口径会系统性误判；跨调用**只传定向简报与部分结果、不传完整对话日志**是拿到缓存折扣（读缓存约 1/10 价）的前置条件，压缩的成本收益要按费用口径算。
