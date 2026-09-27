@@ -5171,3 +5171,37 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **范围选择**：阿里云 SkillsPortal/通用 CLI 支持"当前项目（可随项目提交 Git，安装路径项目根目录）或全局"；localskills install <slug> --target cursor claude --project --symlink（平台/范围/安装方法选择可跳过）。→ 判据：技能随项目走选 --project（可提交可回滚），个人通用选全局。
 - **自动检测安装**：Databricks aitools CLI 自动检测支持的 coding agents 并安装对应 skills/plugins。→ 判据：官方 SDK 类技能用其 CLI 自动装，省去手选 target。
 - **提升层**：工具。
+
+## Dify Agentic RAG 与 Knowledge Pipeline：Agent Node 决策引擎 + 可视化 ETL（来源：Dify RAG/knowledge pipeline 面，2026-09-27 实拉，与 §Dify Agent 记忆体系互补——那条管记忆，这条管检索）
+- **Agentic RAG 的 Agent Node**：集中决策引擎=意图分析+工具编排+源选择+重试逻辑；agent 迭代分析意图/选工具选源/改写查询——区别于 one-shot retrieval-then-generation。→ 判据：检索要"会选会改查"就用 agent 循环检索，单次向量查询解决不了意图分化。
+- **动态源选择+fallback**：agent 动态选 1-2 个相关 collection；结果不足切 Google Search fallback（Legal Research Agent 模板）。→ 判据：多知识库场景让 agent 选库，配外部搜索兜底，别一次全查。
+- **Knowledge Pipeline=可视化 RAG ETL**：源连接/文档解析/chunking 策略逐节点可见，text/images/tables/scans 插件化；多模态检索（text+image chunks+LLM Vision）。→ 判据：RAG 的 ETL 环节也要可视化可调，解析/chunk 是独立节点不是隐藏步骤。
+- **外部知识库**：TiDB Vector 分布式向量存储/InfraNodus GraphRAG 外部知识源（刷新延迟显示+测试查询验证连通）；Tavily live web 管线（LLM 提取信息生成 Q&A 对）。→ 判据：外部知识源接入后先跑测试查询验证，不验证等于没接。
+- **提升层**：工作流。
+
+## n8n agent memory 分层：Window Buffer + 画布化 memory + 双两层记忆（来源：n8n agent memory 面，2026-09-27 实拉，与 §n8n RAG 生产实践互补——那条管知识库，这条管会话记忆）
+- **Window Buffer（最常用）**：存最后 N 条消息作上下文，窗口可配；超窗完全遗忘（trade-off）。→ 判据：会话连贯用窗口记忆，但窗口外信息=不存在，关键事实要外存。
+- **memory 节点画布化**：AI Agent 连接 memory 子节点，存储方式/持久时长/何时检索或清除全可见可配（contextWindowLength 默认 10、sessionKey 自定义）。→ 判据：记忆是画布上的一等节点，不是黑盒参数——每部分都可调可查。
+- **per-user isolation**：sessionKey 用唯一会话 ID（Teams channelId/webhook timestamp），每对话独立记忆窗口。→ 判据：多用户场景记忆必须按会话隔离，sessionKey 选准比窗口大小更关键。
+- **双两层记忆**：Layer1 Postgres（memoryPostgresChat，custom session key 每用户独立，15 消息窗口即时加载）→ Layer2 pgvector 长期语义检索。→ 判据：短/长期两层，短期即时加载+长期语义召回，单层扛不住。
+- **提升层**：工具。
+
+## LangFlow 调试与 DevOps：Playground/Traces/lfx validate/版本历史（来源：LangFlow testing/export 面，2026-09-27 实拉，与 §LangFlow Memory Base 互补——那条管记忆组件，这条管验证部署）
+- **Playground 调试记忆**：可运行流/对话/查看输入输出/实时改 LLM 记忆微调响应；可删单条测试消息或整个 session。→ 判据：测流时把测试垃圾消息删掉再交付，记忆被污染会影响后续行为。
+- **Traces 内置可观测**：每次 run 一个 trace（span 链），记录延迟/token 用量，按 session/status/时间排序，可下载 JSON——无需外部 observability。→ 判据：先看内置 traces 再上外部观测，够用就不引依赖。
+- **Flow DevOps SDK**：lfx validate 本地验证 flow JSON 格式正确再推送（1.9 起，版本化/测试/终端部署）。→ 判据：flow 也要本地校验再上线，与代码 CI 同纪律。
+- **版本历史**：点时间版本保存/只读预览/恢复早期版本；项目级 export 备份（API /flows/download）。→ 判据：改 flow 前先存版本，回滚有据。
+- **提升层**：工具。
+
+## Activepieces MCP server：单 URL 全平台 + 按任务搜动作 + 数据 masking（来源：Activepieces MCP 面，2026-09-27 实拉，与 §Activepieces AI builder 互补——那条管建 agent，这条管 MCP 接入）
+- **内置 MCP server**：一个 URL 暴露 763+ apps 全部动作，Claude/Cursor/Codex 任一 MCP client 可驱动整个平台；OAuth 浏览器认证首次连接；可自托管（连接和数据留自己环境）。→ 判据：多 app 自动化给 AI 用，首选平台内置 MCP 单端点，不逐个配工具。
+- **按任务搜动作**：ap_search_actions 等工具按任务描述找动作（不是按名字）→inspect schema→run（AI-ready pieces）。→ 判据：动作搜索面向任务语义，面对数百集成时"描述→schema→执行"是唯一可扩展路径。
+- **数据 masking**：敏感细节不出现在 logs（MCP workflow 场景）。→ 判据：AI 经 MCP 动生产数据时开 masking，日志不留敏感值。
+- **提升层**：工具。
+
+## Claude Code 三层记忆：CLAUDE.md / Auto Memory / Memory Tool（来源：Claude Code memory 面，2026-09-27 实拉，与 §Claude Code subagents 互补——那条管编排，这条管跨会话记忆）
+- **三层分工**：CLAUDE.md=显式项目记忆（root 加载，跨 session/成员轮换/repo clone 存活，层级机制大仓库重要）；Auto Memory（v2.1.59+ 默认写 MEMORY.md，首个 200 行或 25KB 会话开始加载）=隐式学习层（会话中自主发现写回）；Memory Tool=API 层（长运行程序化 agent）。→ 判据：项目约定写 CLAUDE.md，学到的模式让它自动进 MEMORY.md，程序化场景走 Memory Tool API。
+- **记忆边界**：Auto Memory 不跨工具/repo/团队（切 Cursor 就断）——跨工具要 Mem0 类方案。→ 判据：跨工具长期记忆需求别指望原生，另接记忆层。
+- **四补位模式**：CLAUDE.md 分层/hooks SessionStart（脚本注入）/claude-mem（capture-compress-replay）/graphify（knowledge graph 可查询）——按需选择。→ 判据：项目稳定用 CLAUDE.md；要自动沉淀用 claude-mem 类 capture-compress-replay。
+- **1M context 定价信号**：全窗口标准定价无倍数（900K 请求与 9K 同单价）——大窗口不再惩罚。→ 判据：长上下文任务成本已平，大窗口方案可与 RAG 并存比较。
+- **提升层**：工作流。
