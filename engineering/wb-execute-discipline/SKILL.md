@@ -4565,3 +4565,37 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **80000+ 外部技能统一检索**：Skill Hub 打通 ModelScope，跨团队复用内部经验+检索外部技能。→ 判据：建技能前先检索外部 8 万+ 技能池，能复用不重写。
 - **多模态工具接入**：文本/图像/语音/视频生成同框架（自然语言描述生成短视频）。→ 判据：Agent 框架选型先确认多模态工具接入能力。
 - **提升层**：可复用 Skill。
+
+## Iteration vs Loop 选择 + 前次迭代引用知识网络（来源：Dify 工作流编排/迭代节点面，2026-09-27 实拉）
+- **Iteration 与 Loop 分工**：Iteration 对数组每个 item 逐项执行相同步骤直到全部输出（输入必须是 list 对象，Parallel Mode 最大并行度 10，适合批量翻译/处理邮件/跨社媒分发）；Loop 循环直到条件满足。→ 判据：对列表逐项处理用 Iteration，等条件达成用 Loop，别混用。
+- **Loop 前次迭代引用**：Loop with Previous Iteration Reference 让节点可访问 current+previous 迭代输出——"creates a knowledge network, accumulates knowledge, avoids redundant work, sharpens focus with each cycle"（与标准变量线性路径 Node1→Node2→Node3 不同）。→ 判据：跨迭代需要引用前次结果时，用前次迭代引用而非重算。
+- **系统变量三件**：sys.workflow_run_id（记录运行状态/执行日志）/ sys.timestamp（每次执行开始时间）/ sys.conversation_id（会话分组上下文）。→ 判据：需要追踪运行/会话归属时用系统变量，不自己造。
+- **Context Variables 保留来源归因**：知识检索输出注入 LLM context 输入，自动跟踪 citations 让用户看信息来源。→ 判据：RAG 输出带 citations，来源可回溯。
+- **提升层**：工作流/工具。
+
+## 记忆四型 + session key 纪律 + autonomous heartbeat（来源：n8n AI Agent 记忆模式面，2026-09-27 实拉）
+- **记忆四型选型**：Simple Memory Window Buffer（存最后 N 条消息，消息出窗口完全忘记，适合单 agent 对话/客服）/ Persistent memory（会话总结+embedding+向量库长期召回）/ Data table memory（session_id 定位行，滑动窗口 10 轮）/ Dual-layer（Postgres 短期 15 条即时加载+pgvector 长期）。→ 判据：短期对话用窗口，长期回忆用向量，混合场景双层。
+- **session key 按会话 ID 设**：设成 Teams conversation ID/username 而非静态值——同一 key 用户互见上下文；窗口限 N 条 token 成本可预测。→ 判据：session key 必须能区分会话主体，别共享静态值。
+- **记忆在 canvas 可见**：AI Agent 节点连 memory 子节点定义存储方式/持久时长/何时检索清除。→ 判据：记忆配置与 agent 逻辑同画布可见可查。
+- **autonomous heartbeat**：每小时触发器让 agent 主动检查/处理待办任务并行动。→ 判据：agent 自主行动用周期心跳触发，不靠用户每条消息唤醒。
+- **提升层**：工具/工作流。
+
+## Run Flow 组件化 + globals vs tweaks 分工（来源：LangFlow 流变量/高级特性面，2026-09-27 实拉）
+- **Run Flow 组件**：把另一个 flow 作为当前 flow 的 subprocess 运行——chain flows/条件运行/attach 到 Agent 组件作工具；配 agent 时 name+description metadata 自动生成用于 agent 注册工具。→ 判据：流程复用优先组件化子流程，挂 agent 工具时元数据自动生成。
+- **globals vs tweaks 分工**：request-scoped globals 用于大值/跨 run 共享/超 HTTP header 限制；tweaks 用于一次性组件覆盖。→ 判据：请求级共享大值走 globals，单次覆盖走 tweaks，别混。
+- **Assistant 生成完整 flow**：自然语言描述→生成完整 connected flow（不只单个组件）。→ 判据：复杂工作流先让 Assistant 起底稿再手调。
+- **Guardrails 组件验证 flows**：通过 issue prompts 校验。→ 判据：flow 交付前过 Guardrails。
+- **提升层**：工作流/工具。
+
+## 四种 error handler 分工 + 可逆/不可逆分类（来源：Make 错误处理/回滚面，2026-09-27 实拉）
+- **四种 handler 按错误类型选**：Break（临时错误重试 API rate limit/网络超时，保证投递）/ Ignore（可选模块静默跳过，nice-to-have 富化不阻塞主流程）/ Rollback（事务流 undo 先前所有模块，创建订单→扣款→卡失败删订单）/ Commit（显式提交）。→ 判据：临时错误用 Break 重试，可选增强用 Ignore，事务流用 Rollback。
+- **回滚只限事务模块**：支持事务的（mysql/data store）可回滚；不支持的（gmail send email/dropbox delete file）无法撤销。→ 判据：回滚前确认模块支持事务，不可逆操作别指望回滚。
+- **可逆/不可逆操作分类**：每个操作分类——不可逆操作（payment/email/永久删除）执行前过 approval 或 human-handoff 阈值；partial failure 目标带系统回一致状态（compensation+saga）。→ 判据：不可逆操作 gated behind 人工确认，安全护栏 least privilege/dry-run/幂等键/timeouts。
+- **提升层**：工作流。
+
+## Gotchas 节 + 评测驱动建技能 + description 第一杠杆（来源：Anthropic 技能写作最佳实践面，2026-09-27 实拉）
+- **Gotchas 节是最高信号**：从 Claude 用技能时的常见失败点积累（"subscriptions 表是 append-only"），理想上随时间更新捕获。→ 判据：技能正文必带 Gotchas 节，从真实失败点积累。
+- **先评测再建**：识别 agent 能力差距→运行代表性任务看哪里 struggle→增量建技能补短板（不先写后测）。→ 判据：建技能先跑评测找差距，再动手写。
+- **四实践**：具体可行动（确切命令+预期输出）/每个可预见失败模式含错误处理/清晰引用捆绑文件精确路径/progressive disclosure（SKILL.md 聚焦核心，细节移 references 带链接）。→ 判据：指令带错误处理与精确路径，长内容按需加载。
+- **description 第一杠杆**：Nail the description first——没有其他修复比 description 更能提升触发准确率；Should-not-trigger 3-5 个确认无误报/scope creep；Held-out validation 约 40% 检查泛化。→ 判据：触发不准先改 description，别动正文。
+- **提升层**：可复用 Skill。
