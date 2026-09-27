@@ -4599,3 +4599,41 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **四实践**：具体可行动（确切命令+预期输出）/每个可预见失败模式含错误处理/清晰引用捆绑文件精确路径/progressive disclosure（SKILL.md 聚焦核心，细节移 references 带链接）。→ 判据：指令带错误处理与精确路径，长内容按需加载。
 - **description 第一杠杆**：Nail the description first——没有其他修复比 description 更能提升触发准确率；Should-not-trigger 3-5 个确认无误报/scope creep；Held-out validation 约 40% 检查泛化。→ 判据：触发不准先改 description，别动正文。
 - **提升层**：可复用 Skill。
+
+## 检索模式三选 + Query 重写 + 上线前验证（来源：Dify RAG/Agent 应用模式面，2026-09-27 实拉）
+- **检索模式三选**：语义检索（向量相似度，同义词/意译强）/ 全文检索（关键词精确，型号/专名/代码）/ 混合检索（vector 0.7+keyword 0.3 权重+TopK+Score Threshold）。→ 判据：按查询性质选——自然语言用语义，精确码用全文，混合加权折中。
+- **多路径检索可配重排**：Keyword & Semantic Weighted Score 加权 + Rerank Model 选择（Cohere/Jina）提升准确率。→ 判据：召回不准先加重排，别只调 TopK。
+- **Query 重写增强**：用户问很泛的问题不直接映射单 chunk 时，先加一步 query rewrite 再检索。→ 判据：泛问题先改写查询再进检索阶段。
+- **上线前验证清单**：用"设想问题清单"验证准确性/引用来源/语气，小群体验证后再全量公开。→ 判据：RAG 上线前过设想问题清单，不直接裸发。
+- **信息缺失显式指示**：知识库无信息时指示 LLM 不靠一般知识乱答。→ 判据：检索无果走明确路径，禁止模型自由发挥。
+- **提升层**：工作流/工具。
+
+## Call n8n Workflow 工具模式 + DLQ + 结构化错误记录（来源：n8n 子工作流/错误处理面，2026-09-27 实拉）
+- **子工作流工具化**：AI agent 工具逻辑放独立子工作流，specific nodes 开 Continue on Fail——子工作流总能完成并回传响应，防主工作流死掉；别让工具"技术上失败"，工具返回业务错误消息而非抛异常。→ 判据：agent 工具用子工作流封装，故障就地消化不炸主流程。
+- **错误类型分离**：临时错误（timeout/rate limit/network）backoff 重试；永久错误（invalid data/missing credentials/failed validation）停+送审。→ 判据：重试前先分错误类型，永久错误重试是浪费。
+- **DLQ dead letter queue**：重试耗尽后原始 payload+最终错误写持久存储（Supabase/Postgres），操作员检查后重放——比 Slack 消息（早上就滚出视野）强。→ 判据：重试耗尽进 DLQ 持久化，不丢给聊天消息。
+- **结构化错误记录**：每错误一行（timestamp/workflow name/failed node/error message）落 Sheets/持久存储。→ 判据：错误日志按行结构化，字段固定可检索。
+- **中心错误工作流**：Error Trigger 开头，多 workflow 共用；email 是难忽略的升级通道。→ 判据：生产 workflow 配中心错误流+email 升级。
+- **提升层**：工作流/工具。
+
+## Policies 守卫工具 + eval-to-guardrail + 质量门（来源：LangFlow Guardrails/评测面，2026-09-27 实拉）
+- **Policies 组件守卫工具**：自然语言业务规则→可执行守卫包在工具外，tool calls 运行前检查——不靠模型记住 prompt 里的限制。→ 判据：限制性规则做成工具守卫，别塞进 prompt 指望记住。
+- **eval-to-guardrail 生命周期**：离线评测逻辑转生产运行时保护，不重写集成代码——测试期验证的 metrics 直接部署为实时 guardrails。→ 判据：评测指标能转生产守卫就转，别写两套。
+- **质量门阻断部署**：model performance/latency/safety metrics 低于阈值自动阻塞部署。→ 判据：发布前过质量门，不达标不放行。
+- **五校验点**（ACS 开放控制标准）：input/LLM/state/tool execution/output——确定性控制逻辑（classifier endpoints/LLM judges/custom content filters）放对位置。→ 判据：agent 生命周期五处设控制点，策略 YAML 可移植可审计。
+- **trace-level/session-level 评测**：tool selection/retries/retrieval misses/loop behavior/session handoffs 是生产失败点，要 first-party trajectory rubric。→ 判据：多步 agent 评测看轨迹级，不只终答案。
+- **提升层**：工具/工作流。
+
+## Waitpoint durable checkpoint + 两种 pause 类型（来源：Activepieces 人工审批/暂停恢复面，2026-09-27 实拉）
+- **Waitpoint durable 模型**：run 标记 PAUSED，执行状态持久化，resume 后 action 再调用一次；waitpoints survive worker restarts；同一 action 跑两次（一次建 waitpoint 一次读 resume payload）。→ 判据：暂停即持久化，重启不丢状态；暂停 action 必须幂等可二次调用。
+- **两种 pause 类型**：Webhook waitpoints（唯一 callback URL 调用即 resume，carry body/headers/queryParams，支持 async+synchronous respond-when-done）/ Delay waitpoints（到调度时间自动 resume，释放 worker 容量）。→ 判据：等人用 Webhook，等时间用 Delay。
+- **Approval 模式**：pause run→collect reviewer decision→resume 按 outcome；captured inputs 传下游；paused run 保持 30 天；approver 无需账号/座位。→ 判据：不可逆动作前挂 approval 门，审批输入进下游。
+- **Tables 存结构化上下文**：conversation state/entity mappings/task history 跨 run 读写，防重复处理。→ 判据：跨 run 状态存表，防重复。
+- **提升层**：工具/工作流。
+
+## defineToolPlugin 契约 + TypeBox schema + 发布分工（来源：OpenClaw 自定义工具/插件开发面，2026-09-27 实拉）
+- **defineToolPlugin 只加工具**：只加 agent-callable tools 的插件（无 channel/model provider/hook/service/setup backend）；生成 manifest metadata 供发现工具无需加载 runtime code。→ 判据：纯工具插件用 defineToolPlugin，别拖无关能力。
+- **registerTool 契约**：name/description/parameters（TypeBox Type.Object schema）/outputSchema/execute——schema 校验参数与输出。→ 判据：工具注册带 schema，参数输出都校验。
+- **开发流程**：openclaw plugins init 脚手架→defineToolPlugin 写→TS ESM 构建 JS→plugins build 生成 manifest→inspect --runtime 检查。→ 判据：插件按流程构建，发布前 inspect 运行时。
+- **ClawHub 发布分工**：skills 用 clawhub skill publish；plugin packages 用 clawhub package publish——命令不同别混。→ 判据：按产物类型选发布命令。
+- **提升层**：工具/可复用 Skill。
