@@ -6096,3 +6096,40 @@ pm create @n8n/node（declarative/custom 模板）——declarative 风格适合
 - **webhook 超限进队**：默认 parallel processing，请求超 plan limit 进 queue；scenario rate limit（默认 100）防 instant trigger 跑太频繁超服务限。
 - **run 命名与重放**：custom run naming 含 environment/scenario key/event type/entity id 便于搜历史；run replay 配幂等做 backfill 和调试。
 - **提升层**：工作流（并发治理）。
+## Agent 记忆体系：挂载目录当记忆库 · JIT 取回 · 会话 log 持久（来源：Anthropic docs memory-tool + claude.com《Managed Agents Memory》2026-04 + dreaming.press《Clear/Compact/Remember》2026-07 实拉，与 §记忆提取四策略互补——那条管"提取什么"，本条管"记忆存在哪怎么取"）
+- **记忆工具 = 文件目录，不学新 API**：Managed Agents memory store 是 workspace-scoped 文本文档集合，挂载为目录（/mnt/memory/）进 agent container——agent 用**已经会的 bash/file tools** 读写，零新 API 模式；memory tool（memory_20250818）GA 于全部 Claude 4+，模型只请求 file ops（view/edit/create/delete）。
+- **JIT context retrieval，不全量加载**：记忆按需取回——不把全部相关知识 upfront 塞进窗口，agent 存下学到的、需要时 pull back；active context 聚焦当前相关。→ 判据：**记忆的价值在取回时机，不在存了多少**——一次性把整个知识库塞进 prompt 不是记忆，是塞爆。
+- **会话 log 是窗口外的 context object**：session 作为 context object 持久存于 session log（不活在 context window 内），getEvents() 让 brain 按事件流的位置切片 interrogate——pick up from wherever。
+- **记忆分层模拟人脑双存储**：快速经验写短期（午餐细节）→ 离线 consolidate 到长期皮层（重要经历保留）——对应 agent 的短期上下文与长期记忆文件两级。
+- **progress file（CHANGELOG.md）是跨会话长期记忆**：track 当前状态/完成任务/**失败方法+为何失败**/checkpoint 准确率表/已知限制——failed approaches 尤其重要，否则连续 agent 会重复同样的失败。→ 判据：**失败记录比成功记录更值钱**——不知道"什么路走不通"的 agent 每次都重走。
+- **提升层**：模型（记忆机制）/工作流。
+
+## n8n LLM 路由与 AI 网关：模型选择进配置 · 请求过闸 · 归一化出口（来源：n8n blog《LLM Routing》2026-06 + n8n workflows 16330/7004/13590 + Portkey《n8n Best Practices》2026-04 实拉，与 §n8n 可观测性互补——那条管"跑了之后怎么监控"，本条管"请求怎么路由怎么过闸"）
+- **routing 是可视化的版本化 workflow，不埋 custom code**：n8n 在 orchestration layer，Model Selector node + 原生 provider 集成定义"哪个模型处理哪类请求"——改路由是改 workflow，无部署周期。→ 判据：**路由逻辑必须可见可版本化**——埋在代码里的路由等于不可审计的黑盒。
+- **分类路由两件套**：① 分类节点（agent with strict output rules）把请求分型（basic lookup vs complex analysis / cost vs latency vs type）② 按型选模型（Opus 级给复杂，便宜模型给简单）——ML classifier 按复杂度路由可省至 60% 成本，配 semantic caching（identical/near-identical 请求直接返回缓存）。
+- **多 provider 归一化出口**：Switch node 分发到各 provider HTTP Request 节点（注意差异：Gemini 强制 application/json response MIME，其他用 prompt-based JSON guidance）；Code node 收口统一（strip code fences / repair malformed JSON / 从 API 响应拉真实 token 计数）——下游只看到一种形状。
+- **MCP 网关六步**：Tool Registry Lookup（工具名→后端 API 配置+权限 scope）→ Intent Verification（参数安全/well-formed/policy）→ Rate Limit & Quota Check → Execute → Normalize & Enrich（标准化成 MCP tool result schema）→ Audit & Log（immutable）——工具调用不过网关就是裸奔。
+- **网关化架构**：AI gateway 挡在 agent 与 provider APIs 之间，routing/access control/observability/guardrails 在请求到 model **前**应用；model/provider 切换移出 workflow 进**配置中心**（全局改动不碰 workflow）；centralized credential management。→ 判据：**切模型不应该是改流程**——模型选择是配置，编排是流程，混在一起就每次都要动代码。
+- **提升层**：工作流（模型路由/网关）。
+
+## Agentic RAG：检索由 agent 决策，不是固定管线（来源：arXiv 2501.09136《Survey on Agentic RAG》+ arXiv 2506.10408《Reasoning Agentic RAG》+ Dify blog agentic-rag + deeplearning.ai《Agentic AI》四设计模式 实拉，与 §RAG 检索面互补——那条管"怎么检得准"，本条管"检索本身要不要 agent 化"）
+- **Agentic RAG 的范式转变**：检索不再是一次性 retrieve-then-generate——LLM 作为 autonomous agent 主动管理检索：识别知识缺口（identify knowledge gaps）、决定**何时和检索什么**（when and what to retrieve）、迭代细化（iterative refinement）+ 自适应检索策略，可与 search engines/APIs 交互。→ 判据：**静态 RAG 适合"问题稳定、知识面固定"；查询多变、需要多轮收敛就用 agentic**——agent 化检索的成本是延迟和 token，收益是复杂问题的收敛质量。
+- **Agent Node 决策引擎**：intent analysis → tool orchestration → source selection → retry logic 封装进单一 agent 节点（Dify 实现）；LLM 动态决定查哪个知识库/取多少 chunks（v1.2+）。
+- **stack memory 强化多步检索**（AgenticRag-R1，arXiv 2608.29622）：多步推理/检索/记忆用 stack memory 分层——先推理再检索再记忆，跨多步不丢中间状态。
+- **Agentic AI 四设计模式**（deeplearning.ai）：Reflection（AI 批评自己工作迭代）/ Tool use / Planning / Multi-agent collaboration——agentic RAG 是 Tool use + Planning 在检索域的实例。
+- **提升层**：工作流（检索范式）。
+
+## OpenClaw 自动化四形态 + Task Flow：触发分四类，多步用 Flow（来源：docs.openclaw.ai automation + cyber-tao 教程 + claw.mobile《Heartbeat Guide》2026-04 实拉，与 §定时任务记账互补——那条管"cron 怎么写对"，本条管"自动化用什么触发形态"）
+- **四类触发各管一摊**：Cron（定时）/ Webhooks（外部事件）/ Heartbeats（周期性系统健康检查）/ Event Handlers（对特定消息过滤反应，onMessage filter urgent|...）——按事件来源选形态，别都用 cron 轮询。
+- **Task Flow 是多步编排 substrate**：durable multi-step flows（managed/mirrored sync modes、revision tracking、openclaw tasks flow list|show|cancel）——"多步研究然后总结"用 Task Flow，"session reset 跑脚本"用 Hooks（HOOK.md lifecycle events）。→ 判据：**用例选型**：多步编排→Flow，生命周期钩子→Hooks，定时→Cron，外部事件→Webhook，健康检查→Heartbeat。
+- **Wake events = 中断信号**：heartbeat 是 persistent pulse（等下一个 interval），wake event 立即 fire 并注入任意 message 进 session——监控脚本检测到异常→ fire wake event 让 agent 立刻处理，不等定时。
+- **自然语言 workflow**：描述"当新 lead 填表→enrich→score→A-tier 则排电话"即建 workflow；built-in error handling/retries/escalation。
+- **提升层**：工具（触发形态）/工作流。
+
+## Pipedream 错误处理与重试：平台重试有盲区 ·  订阅 · 精细重试在 code step（来源：docs.pipedream.com http + troubleshooting + Zapier《Compare》2026-09 实拉，与 §重试分两类管互补——那条管"transport/tool 怎么分"，本条管"平台级重试的边界"）
+- **平台 auto-retry 有明确盲区**：失败 step 最多 8 次重试/10 小时 span/exponential backoff（Advanced plan 起），但**不重试 out-of-memory 和 timeout 错误**——最常发生的两种失败模式平台不兜；低 tier unhandled error 直接停 workflow。→ 判据：**先查平台重试覆盖什么**，盲区自己补——OOM/timeout 类失败要自建处理，别以为 auto-retry 全兜。
+- ** channel 订阅全部错误**：一个 subscription 接住 workflow 所有错误，不逐个 step 处理——统一错误流优于散点 catch。
+- **$.flow.rerun 在 try...catch 里做自定义重试**：catch rate limit error → 解析 Retry-After 头 → wait 指定时长 → 原 payload 重试；catch validation error → 转换数据修正 payload 重试——code step 级精细控制，重试策略跟错误类型走。
+- **Event History replay 一键补跑**：可重放单个或批量 past events（含 bulk replay failed events）——失败重跑不是重新构造事件。
+- **用户看不到错误原文**：每 failure mode 给 human-readable message + suggested next step（不丢 stack trace 给用户）；log_error(error_type, model, user_id, details) 按错误类型监控找系统性问题；重试配 fallback chains/circuit breakers/DLQ。
+- **提升层**：工作流（错误处理/重试）。
