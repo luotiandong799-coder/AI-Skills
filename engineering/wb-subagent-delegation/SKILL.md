@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.5.0
+version: 1.6.0
 agent_created: true
 ---
 
@@ -92,3 +92,10 @@ agent_created: true
 - **★实证锚点**：Devin Fusion（lead Claude Fable 5.1 + sidekick SWE-2）在 Coding Agent Index v1.5 上匹配 Claude Code 用同模型（62分），但每个任务便宜 **36%**（$7.90 vs $12.40）；Sakana Fugu 走 dispatcher 派单（低成本模型拆任务派给池里最合的模型）是另一种已被验证的形态。判据：**多模型不是噱头——架构对，能在同质量下明显降本；但"哪个模型当 sidekick"要按实测效率选，不是按单 token 单价选**（SWE-2 比更便宜也更聪明的 GPT-5.6 Luna 又快又省）。
 - 与 §拓扑选型（分层 hierarchical）、§同 run 同 trace 的分工：那条管"派出去之后怎么连""记录在一处"；本条补"**连的是两个不同档位的模型、且各自保缓存**"这一具体成本形态，与 `wb-max-token-saver` 的"整体成本四层"互补但本体是委派架构（重叠 <60%）。
 - 提升层：工作流 / 成本。
+
+## 意图路由双轨：模型只解释意图，执行保持确定性（来源：Dify blog intent-based email routing，2026-09-27 r232 并发线手交 / WorkBuddy 实拉核验）
+
+- **★分类场景先问"模型输出直接决定动作吗"——应改成"模型决定类别，路由逻辑决定动作"**：原文 "Interpretation is model-based; execution remains deterministic"——LLM 作为固定节点上的路由分析者，从预定义类别集里选 intent + confidence + structured verification，taxonomy 在流程内固定、模型不能发明新类别。判据：**让模型做"解释/归类"这种它擅长且可逆的判断，把"执行动作"钉死在确定性逻辑里**。
+- **★高置信非敏感自动路由，敏感或低置信进人工审查**：人工审核位提供三种恢复决策（approved / edited / rerouted），不只是"批/不批"。判据：**凡是"模型吐个标签就直接触发业务动作"的设计，都是把不确定性的代价转嫁给下游；双轨把解释与执行解耦，模型只负责它该负责的**。
+- 与 §拓扑选型（集中路由）、§双模型主-副手 的分工：那些管"派出去之后怎么连""两个模型怎么省"；本条管"**单步里，模型的判断权该到哪为止**"——解释归模型，动作归逻辑。
+- 提升层：工作流。
