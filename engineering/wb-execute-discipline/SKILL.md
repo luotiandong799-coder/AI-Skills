@@ -4503,3 +4503,33 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **CSWSH 教训**：WebSocket origin validation gap 偷 gateway auth token（CVSS 8.8）——一键禁用确认提示/逃容器/执行任意命令。→ 判据：对外暴露的 agent UI 必须校验 WebSocket origin，token 泄露链要防。
 - **每日安全审计 cron**：firewall/fail2ban/SSH 配置/openclaw.json .env 文件权限/开放端口/Docker 状态/是否 root 运行——报昨日差异。→ 判据：agent 主机安全靠每日对比审计，报 anomaly 不报全量。
 - **提升层**：工具/工作流。
+
+## 分段策略三选 + chunk 发布后不可改 + 检索/召回测试共用接口（来源：Dify 知识库/分段/检索面，2026-09-27 实拉）
+- **分段策略对比**：General Chunker（固定大小+可自定义分隔符+相邻 overlap 保留上下文）vs Parent-child 模式（父/子 chunk 双粒度）vs 增强递归分隔（paragraph→sentence→word 分隔符层级）。→ 判据：文档类型定策略——普通文档自动按段落标题分，技术密集自定义 800 tokens+150 overlap。
+- **chunk 结构发布后不可改**：入库前定结构，发布后只管理 chunk 列表（增/批量添加）。→ 判据：先定分段再入库，改结构要重建知识库。
+- **检索/召回测试共用接口**：生产检索与召回测试走同一 API。→ 判据：测试即生产，接口不分开维护。
+- **提升层**：工作流。
+
+## 向量检索质量 > 数量 + 原生 embedding 子节点（来源：n8n AI 节点/向量存储面，2026-09-27 实拉）
+- **50 个边缘相关不如 5 个高相关**：检索质量靠 tuning embedding 模型/相似度阈值/重排序，不靠数量。→ 判据：先调相似度阈值和重排，别加召回数量。
+- **vector DB 节点要原生 embedding 子节点**：每个向量库节点都要配 embedding 子节点（免费替代 NVIDIA NIM 多模态）。→ 判据：换向量库同时检查 embedding 子节点配套。
+- **文件类型路由**：Switch 按 PDF/Word/Excel/CSV 分路由到对应提取器，表格行存 raw JSONB。→ 判据：多格式入库先按类型分流，各自最优提取。
+- **提升层**：工作流/工具。
+
+## Memory vs Knowledge vs Chat 三型记忆分工（来源：LangFlow 记忆/向量/知识库面，2026-09-27 实拉）
+- **Memory base vs Knowledge base**：memory base 自动摄取会话消息跨 session 持久；knowledge base 不随 flow run 重复摄取更高效。→ 判据：会话记忆用 memory base，静态知识用 knowledge base，不混用。
+- **Chat memory vs vector store memory**：chat memory 专为存取聊天消息设计（Agent/Message History 提供）；vector store 面向语义检索文本块。→ 判据：按用途选记忆型——对话历史用 chat memory，文本检索用向量库。
+- **DB Providers 共享**：knowledge/memory bases 共享同一配置（Chroma 本地默认/Cloud/OpenSearch/pgvector）。→ 判据：向量后端做成共享配置，一改全通。
+- **提升层**：工具/工作流。
+
+## 技能三级加载 + 打包规范 + 写作原则（来源：Anthropic Agent Skills 面，2026-09-27 实拉）
+- **三级加载**：Level 1 Metadata 总是加载/Level 2 Instructions 触发时加载/Level 3 Resources and code 按需加载——progressive disclosure。→ 判据：技能文件分层放——metadata 常驻，指令触发载，资源按需取。
+- **打包规范**：ZIP 根必须是技能文件夹（不是子文件夹）；文件夹名=技能名。→ 判据：打包检查根目录结构，错根导致安装失败。
+- **写作原则**：只含模型缺的上下文；解释 WHY 不只 WHAT；特异性匹配任务脆弱性。→ 判据：写技能只补模型不知道的，脆弱任务写更具体指令。
+- **提升层**：可复用 Skill。
+
+## frontmatter 契约 + requires.bins 依赖声明 + 分组不影响 name（来源：OpenClaw skills authoring 面，2026-09-27 实拉）
+- **frontmatter 必填**：name（唯一标识小写+数字+连字符）/ description（一行，agent 和 slash-command discovery 共用）。→ 判据：description 一行写完，别写长文。
+- **可选 metadata**：metadata.openclaw.os（OS 过滤）与 metadata.openclaw.requires.bins（PATH 必带二进制声明）。→ 判据：依赖外部二进制时显式声明 requires.bins，缺依赖早暴露。
+- **分组不影响 name**：子文件夹分组，name 仍来自 frontmatter 不来自路径。→ 判据：技能名以 frontmatter 为准，路径只做组织。
+- **提升层**：可复用 Skill。
