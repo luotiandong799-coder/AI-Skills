@@ -3548,3 +3548,40 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **统一 MCP server**：765 个 integrations 一个 MCP server 暴露（May 2026 数据）——**跨 app 工具面收敛到一个入口**。
 - 判据：**工具目录要 AI 可检索（任务描述→action）；agent 行为要可审计；集成面收敛**。
 - 提升层：工具。
+
+## 动态工作流：单脚本编排多子 Agent + 运行中调并发 + Bot 远程触发（来源：智谱 ZCode 3.14.0/3.14.3，2026-09-27 实拉）
+- **动态工作流**：3.14.0 起用**单个脚本编排多个 sub-agent 协作复杂任务**——脚本即编排器，不必拖节点图。
+- **运行中调并发**：3.14.3 运行中的工作流**可直接调整并发上限，无需停止任务**——压测/调优不打断执行。
+- **Bot 远程触发**：飞书/微信 @ bot 即可触发并推进 ZCode Agent 任务——**远程推进不占桌面**。
+- **统一工作流**：tasks/context/permissions/file references/Review 合一，长任务连续不中断。
+- 判据：**编排可以是一个脚本；并发上限动态可调；长任务用 bot 远程驱动**。
+- 提升层：工作流。
+
+## 评测对象扩展到 router 与 skill：不只评输出（来源：deeplearning.ai《Evaluating AI Agents》Arize 课程，2026-09-27 实拉）
+- **Lab 3: 加 router 和 skill 评估**——评测面从"最终回答对不对"扩展到"**路由选得对不对、技能触没触发对**"（与 caliper 激活评测同源互补）。
+- **Data Agents GPA 度量**：给 agent 打 GPA（分能力项评分→总分），**可观测性能→归因→改进闭环**。
+- **结构化的评估**：把评估拆成可加结构的 lab（agent 构建→router/skill 评估→加结构）——**评测先分层再合分**。
+- 判据：**评测清单里 router 和 skill 各占一行；agent 质量用 GPA 式分项可归因**。
+- 提升层：可复用 Skill（评测面扩展）。
+
+## 会话级 send 工具 + sub-agent 默认回审（来源：docs.openclaw.ai concepts/session-tool + tools/subagents，2026-09-27 实拉）
+- **sessions_send**：在同一 Gateway 上**运行另一个 session 并可选等待**——session 间委托是工具不是手写。
+- **conversations_send**：**发送到外部会话而不运行本地 session**——纯投递与执行解耦。
+- **sub-agents**：背景 agent run 各自独立 session（agent:agentId:subagent:uuid），**默认把结果 announce 回请求者审查**；每个 run 都作为 background task 跟踪。
+- 判据：**跨 session 委托用 send 工具；外部投递不走本地执行；子 agent 结果默认回审不静默入库**。
+- 提升层：工具。
+
+## Code-as-action 高于 JSON schema：最小 agent loop 哲学（来源：Hugging Face smolagents + ml-intern，2026-09-27 实拉）
+- **动作即代码**：smolagents 证明**把动作写成代码比脆弱的 JSON schema 更能抬高推理上限**（CodeAgent Python 动作 vs ToolCallingAgent）；JSON schema 是"fragile"的中间表示。
+- **1000 行 agent loop**：agent 不需要 planner/router/memory module/50-class 类型层级——**需要一个选工具跑工具的 loop**。
+- **VLM 视觉支持**：agent 看网页内容→基于所见决策点击/导航——**视觉进 loop 不用专门框架**。
+- **ml-intern 研究 loop**：研究论文→查引用→GPU 沙箱实现→迭代构建——**研究岗也可 agent 化**。
+- 判据：**动作优先写成代码；循环最小；视觉/研究能力都是 loop 的扩展不是新框架**。
+- 提升层：工作流。
+
+## 知识库元数据召回过滤 + 应用转插件 + 多智能体共享知识库（来源：腾讯云智能体平台 2026-09 产品动态，2026-09-27 实拉）
+- **元数据召回匹配**：知识库文档/问答关联键值对 Metadata——**检索召回阶段先用元数据匹配用户问题关键实体（产品编码/文档名/作者）过滤再召回**，比纯向量命中准；元数据也随知识喂给大模型辅助生成。
+- **应用→插件**：Plugin Marketplace 支持**基于已发布应用创建插件**，像其他工具一样用于 Agent/工作流——**应用成果可再工具化**。
+- **多智能体共享知识库**：知识库在多个智能体应用间共享——公众号矩阵一个库答所有号，**知识资产统一管理**。
+- 判据：**召回前先元数据过滤；做好的应用转成插件复用；知识库按共享资产管不按应用管**。
+- 提升层：工作流。
