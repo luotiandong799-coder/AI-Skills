@@ -7439,3 +7439,66 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Agent 定义**：system prompt（个性）+skills（可用工具）+model preferences（LLM 选择）+behavior settings（compaction/memory/limits）；capabilities.agent.skills 枚举（含 @myorg/web-search 组织技能）。
 - **指令质量**：instructions 必须 explicit/sequential/unambiguous——歧义导致不可预测 agent 行为。
 - **提升层**：可复用 Skill（技能创建分发）。
+## Dify Workflow vs Chatflow 与 App 类型选型：单轮批处理 vs 每轮对话 · Agent/Text Generator 分工（来源：dify-6c0370d8 mintlify key-concepts + build/workflow-chatflow + dify.ai get-started blog 2026-03/07 实拉，合并 §Dify Agent 节点——那条管"Agent 节点内部"，本条管"应用类型选型"）
+- **Workflow vs Chatflow**：Workflow 单轮批处理任务（webapp 界面+API 批访问）；Chatflow 每轮对话触发——额外能力：会话变量存储更新/LLM 节点 memory/流式文本图像文件——要多轮状态用 Chatflow，单次处理用 Workflow。
+- **App 类型选型判据**：Agent（任务需 AI 自主推理+外部工具，非固定步骤序列——让 AI 想怎么解）；Text Generator（结构化内容输出——Cold Email Writer/会议纪要助手，填几个字段出完整草稿）。
+- **Agent 节点文件返回**：可返回文件（单文件 50MB 上限）；Instructions and Context 描述任务。
+- **对话式建 agent**：聊天方式建 agent——自动生成可复用 skills 并在对话中保持上下文；建好后再加入 workflow 组成更大流程（aug 2026 新能力）。
+- **提升层**：工作流（应用选型）。
+
+## n8n Retry On Fail 参数与退避公式：Max Tries≤5/Wait≤5000ms · 默认不重试四码 · 三层错误处理（来源：n8n.io workflows retries + n8nresources retry-logic + xbstack productionizing + n8nlogic catch-retry-alert 2026-03/07 实拉，合并 §n8n 错误三模式——那条管"错误分层"，本条管"重试参数与公式"）
+- **节点级 Retry On Fail**：Settings 开关；Max Tries 上限 5（常见基线 3）；Wait Between Tries 上限 5000ms（基线 2000-3000ms）——只用于有界瞬时失败（HTTP/API/DB 调用）。
+- **默认不重试状态码**：400/401/403/404/422——重试这些等于重复失败请求。
+- **指数退避公式**：waitSeconds = min(maxDelaySeconds, baseDelaySeconds * 2^(attempt-1))；finalWait = waitSeconds ± random(jitterPercent)——抖动防止同步重试风暴。
+- **工作流级重试循环**：复杂场景用 Code+Wait+IF 节点搭；或 REST API /api/v1/executions/{id}/retry 重试失败执行。
+- **三层错误处理分工**：node-level Retry On Fail（有界瞬时）→ 最终失败路由 Error Workflow（日志+告警）→ 保留 failed executions 供重试（current/original workflow）；副作用仍需幂等键。
+- **超时分类**：一种 timeout 类不应直接进重试循环——Code 节点超时重试无意义（每次都重跑同样慢的代码）。
+- **提升层**：可复用 Skill（重试工程）。
+
+## LangFlow Tweaks 单次覆盖与程序化运行：/run 单次不持久 · flow.tweak 新对象 · LFX .py（来源：docs.langflow.org quickstart + typescript-client + lfx-run + workflow-api-quickstart 2025-05/2026-09 实拉，合并 §LangFlow API 端点与 tweaks——那条管"端点清单"，本条管"tweaks 语义与程序化运行"）
+- **Tweaks 语义**：请求携带临时修改 flow 参数——单次运行覆盖组件设置，不修改底层配置、不跨运行持久——同 flow 不同运行可带不同 tweaks。
+- **TS client**：tweaks 对象 { model_name: "gpt-4o-mini" }；flow.tweak("OpenAIModel-KqkTB", {...}) 创建新 flow 对象（原对象仍用原设置）；session_id 分离/续接对话。
+- **程序化运行**：LFX run 接受 .py 脚本定义 flows（uv run lfx run simple_agent.py）；Workflow API beta mode:"background" 返回 job_id 排队作业；/process /predict 已废弃统一 /run。
+- **认证**：x-api-key 头；uv run langflow run --env-file .env。
+- **提升层**：可复用 Skill（API 调用）。
+
+## Activepieces Router 分支路由：EXECUTE_FIRST_MATCH · 操作符集 · 分支数据回传（来源：activepieces.com mcp/tools + mintlify engine/router-executor + workflows/loops-branches + blog ai-inbound 2025-04/2026-08 实拉，无历史锚点新面）
+- **Router step**：条件分支基于表达式——文本 contains/数字 Greater Than/Exists 等操作符；caseSensitive 控制文本比较；conditions 数组多条件。
+- **执行模式**：executionType EXECUTE_FIRST_MATCH（命中第一匹配分支即执行）。
+- **分支数据**：router.output.branches[] 返回 branchIndex/branchName/evaluation——下游可读分支结果。
+- **MCP 工具**：ap_update_branch 更新分支条件或名称不触碰内部步骤——运行中调整路由不重建流程。
+- **流程操作 API**：stepLocationRelativeToNewParent AFTER/INSIDE_LOOP/INSIDE_BRANCH——把步骤移到分支内/循环内；LOCK_FLOW 并发保护。
+- **AI 路由案例**：spam filter 输出 contains "true" → log → END，else 继续主流程；分支隔离风险步骤（失败只影响该支）。
+- **提升层**：工作流（分支路由）。
+
+## Pipedream npm 导入与 platform axios：import 即用 · app props managed auth · axios($,...)（来源：pipedream.com workflows/nodejs + http + docs-proxy components/api + quickstart 2024-08/2026-09 实拉，合并 §Pipedream 组件结构——那条管"组件文件形态"，本条管"代码步骤写 HTTP"）
+- **npm 导入**：workflow 默认无包——import axios from "axios" 顶层导入即用（400k+ 包）。
+- **@pipedream/platform axios**：import { axios } from "@pipedream/platform"——props type:"app" 声明连接（managed auth 自动注入）；axios($, {method/url/headers/data}) 发请求；$ 服务对象管理返回。
+- **defineComponent 结构**：props（app 连接+入参定义）→ run({steps, $})（steps.trigger.body 访问触发数据；return 传下游）。
+- **http_request prop 类型**：组件内声明 default method/url 复用。
+- **v1→v2**：require 改 import；run 签名 {steps, $}。
+- **提升层**：可复用 Skill（代码步骤）。
+
+## Anthropic Structured Outputs strict 模式：messages.parse · strict:true grammar-constrained · Agent SDK structured_output（来源：platform.claude.com structured-outputs + strict-tool-use + agent-sdk/structured-outputs + datallmlab 2025-11/2026-09 实拉，合并 §Anthropic 结构化输出——那条管"基础用法"，本条管"strict 与 SDK 强约束"）
+- **messages.parse output_format**：Pydantic BaseModel 直接定义输出结构——output_format=APIResponse，返回 response.parsed 已验证对象。
+- **strict tool use**：strict: true 保证工具输入匹配 JSON Schema——grammar-constrained sampling 约束模型 token 采样到 schema-valid 输出——工具参数零解析错误。
+- **Agent SDK structured_output**：JSON Schema 传 outputFormat（TS）/output_format（Python）；完成后 result 消息含 structured_output 字段带验证数据。
+- **json_schema 格式**：output_config.format type "json_schema"+schema；schema 可由 Zod z.toJSONSchema() 或 Pydantic model_json_schema() 生成。
+- **input_examples**：工具定义可选示例数组帮 Claude 理解用法（降低误用）。
+- **JSON Schema 限制**：enum 仅字符串/数字/布尔/null；const/anyOf/allOf/$ref/$defs 受限（Bedrock 文档）——复杂 schema 需简化。
+- **提升层**：可复用 Skill（输出约束）。
+
+## deeplearning.ai LLMOps CI 与生产课程：变更即评估 · RAG 生产五要素 · 部署课程体系（来源：learn.deeplearning.ai LLMOps automated-testing + corporate RAG M5 + corporate fine-tuning-rl + scaler courses 2024-12/2026-09 实拉，合并 §deeplearning 评估指标——那条管"指标选型"，本条管"生产评估流水线"）
+- **LLMOps CI 自动化测试**：创建自动 CI pipeline——每次变更评估 LLM 应用——更快更安全的开发迭代（Pinecone 课程）。
+- **RAG Systems in Production 五要素**：production 挑战识别/实现 RAG 评估策略/logging monitoring observability/tracing 系统/customized evaluation——加 quantization 与 cost vs response quality 权衡。
+- **Fine-tuning & RL post-training**：SFT/RLHF 改善 instruction following/reasoning/safety；评估引导改进（build evals reveal problems→choose data+rewards→iterate）；生产就绪 cost-aware——promotion/serving 规划/monitor/compute budget。
+- **Serverless 部署**：Serverless LLM Bedrock 课程——serverless 技术部署+prompt 定制。
+- **提升层**：可复用 Skill（生产评估）。
+
+## OpenClaw 重启恢复与快照：自动重派会话 · 重放只读保护 · sess load 快照（来源：docs.openclaw.ai gateway/restart-recovery + concepts/session + clawhub sess + openclawai checkpoint 2026-02/09 实拉，合并 §OpenClaw 会话持久化——那条管"会话存档"，本条管"崩溃恢复与快照"）
+- **Restart recovery**：gateway 启动几秒后自动重派每个标记会话——合成系统消息告知 agent 前轮被重启打断、从现有 transcript 继续；若最终回复已生成未交付，把文本包含进消息让 agent 直接交付不重做——重启不取消用户任务。
+- **重放安全过滤**：重建的 turn 只允许只读核心工具+被明确判定安全的插件工具（即使 Code 模式关闭）——防重放执行副作用。
+- **重放语义**：中断 turn 重放保留已记录 tool calls 与结果（含嵌套工具）；完成回复或新用户消息关闭该 turn 重放；恢复等待期间消息 pending——用户不必重发。
+- **tombstoned sessions**：被标记废弃的会话保留独立恢复路径进入新会话。
+- **快照/检查点**：sess load <name> 恢复快照（live transcript 先自动备份 pre-load~<timestamp>，--no-backup 跳过）；session.snapshot("name") 建保存点后 resume()；checkpoint-restore --latest/--force/--workspace-only。
+- **提升层**：可复用 Skill（恢复与快照）。
