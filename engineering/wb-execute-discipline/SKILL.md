@@ -4177,3 +4177,31 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **纯文本记忆**：无数据库无 embeddings store——plain text files 用户完全控制 agent 记忆。→ 判据：记忆文件化=用户可审可控，优先于黑盒向量库。
 - **per-agent sandbox + tool 隔离**：每个 agent 独立 sandbox 与工具限制；群聊 mentionPatterns+allowlists 严格门控。→ 判据：多 agent 时每 agent 独立权限面，群聊只在被 @ 时响应。
 - **提升层**：工具/工作流。
+
+## Iteration vs Loop 选型 + Parameter Extractor 桥（来源：Dify 迭代/循环节点，2026-09-27 实拉）
+- **Iteration node 管数组批处理**：数组输入（Parameter Extractor/Code/Knowledge Retrieval/HTTP 响应），内置变量 items[object]（当前元素）+ index[number]（从 0 开始），Sequential/Parallel 模式并行最大 10。→ 判据：对数组逐项跑同一套步骤用 Iteration。
+- **Loop node 管条件循环**：循环变量+结束条件+最大循环次数——与 iteration 不同，按条件迭代不按数组。→ 判据：需要"直到满足条件才停"用 Loop，别用 Iteration 硬凑。
+- **Parameter Extractor 桥接非结构化→结构化**：LLM 从自然语言提取工具/API 所需结构化参数。→ 判据：自然语言输入进结构化工具前先过参数提取节点。
+- **提升层**：工作流。
+
+## Durable Execution：中断从最后 checkpoint 续跑防重复副作用（来源：Activepieces Durable Execution，2026-09-27 实拉）
+- **checkpoint 恢复**：worker 死亡时新 worker 重用每个已完成步骤的保存输出，只跑第一个未完成步骤——防重复发邮件/重复扣款/重复 API 调用；覆盖 crash/deploy/长暂停/重试。→ 判据：长流程必须能从最后已完成步骤续跑，不允许整跑重来。
+- **队列优先级分型**：EXECUTE_PROPERTY（运行时动态属性）/EXECUTE_VALIDATION（运行前校验）/EXECUTE_TRIGGER_HOOK（触发前后特殊逻辑）各为独立 job 类型。→ 判据：运行时属性加载/校验/触发 hook 分队列，不混进执行队列。
+- **提升层**：工具/工作流。
+
+## Hooks 五类型：确定性 vs 判断型二分（来源：Anthropic Claude Code Hooks，2026-09-27 实拉）
+- **确定性 hooks**：command/HTTP/mcp_tool——按规则触发，执行确定性；**判断型 hooks**：prompt/agent——用 Claude 判断输出。→ 判据：要"必然发生"的动作用确定性 hooks，要"看情况生成"的用判断型，别混。
+- **hooks 低上下文成本**：结果注入而非全文——触发点小开销大收益。→ 判据：能用 hooks 固化规则就不用长 prompt 反复声明。
+- **CLAUDE.md 会话开始就读**：/init 生成 starter 基于项目结构再精化；含 Bash 命令/代码风格/工作流规则。→ 判据：项目级持久上下文放 CLAUDE.md，会话开始即生效。
+- **提升层**：工具/工作流。
+
+## SKILL.md frontmatter 是唯一触发读取；body 按需加载（来源：skills.sh/Anthropic skill-creator 技能创作，2026-09-27 实拉）
+- **frontmatter 唯二字段**：name+description 是 Claude 决定技能何时被用的唯二读取字段——清晰全面写触发条件；body 触发后才加载（按需加载不占上下文）。→ 判据：触发质量全在 name/description，正文写得再好触发不对也没用。
+- **目录命名规范**：分类目录 lowercase 无空格、skill 目录 lowercase-hyphen、支持文件 lowercase-hyphen.md、persona Title Case。→ 判据：目录命名统一机器可读，防跨平台换行/大小写问题。
+- **实证研究**：arXiv 2607.01456 对 SKILL.md 的 systematic study（"From Anatomy to Smells"）——SKILL.md 编写实践可查证。→ 判据：技能编写规范有实证依据可迭代。
+- **提升层**：可复用 Skill。
+
+## 语义代码库搜索 MCP + 本地隐私脱敏网关（来源：GitHub Zilliz Claude Context / Maskit，2026-09-27 实拉）
+- **Claude Context（Zilliz）**：一次 MCP 安装给 coding agent 整代码库语义搜索——免每次对话加载文件，~40% token 节省。→ 判据：代码库级检索用语义搜索 MCP 而非逐文件读入。
+- **Maskit 脱敏网关**：自动遮蔽 AI 服务请求中敏感数据，流式响应中无缝恢复——敏感信息本地留；支持 Cursor/Claude Code 等可配置 Base URL 工具。→ 判据：敏感数据出本地前先脱敏，响应回来再恢复，私密内容不出域。
+- **提升层**：工具。
