@@ -7720,3 +7720,71 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Exec approvals**：system.run 受控——~/.openclaw/exec-approvals.json 存 Security/ask/allowlist。
 - **approvals CLI**：openclaw approvals set --node <id> --stdin JSON——defaultAction deny + rules 白名单（pattern/action）。
 - **提升层**：可复用 Skill（宿主权限）。
+## Dify Agent 工具配置与插件参数：三要素 · Strategy 四参 · 自定义接入标准（来源：dify-6c0370d8.mintlify nodes/agent + enterprise-docs.dify.ai tool-plugin/agent-strategy-plugin + marketplace.dify.ai firecrawl 2024-01/2026-09 实拉，合并 §Dify Agent 节点——那条管"Agent 节点配置"，本条管"工具面与插件参数"）
+- **工具配置三要素**：Authorization（API keys/credentials 配在 workspace）；Description（说明工具做什么、何时用——引导 Agent 决策）；Parameters（必需/可选输入带验证）——三者缺一，Agent 不会正确调用工具。
+- **Agent Strategy Plugin 四参数**：model / tools / query / **maximum_iterations**（防过度计算）——自定义 agent 策略插件核心。
+- **自定义工具接入标准**：tweak API 匹配 OpenAPI/Swagger 或 OpenAI Plugin 标准——外部工具接入 Dify 后全团队可用；另有 MCP 工具/HTTP 请求/沙箱代码。
+- **内置工具**（Wikipedia/Google/Brave Search）+ 插件市场（Firecrawl/Tavily——安装→申请 API key→To Authorize）。
+- **提升层**：可复用 Skill（工具接入）。
+
+## n8n AI Agent 向量库与记忆进阶：Vector DB 选型 · 子节点即内存 · RAG 模板（来源：blog.n8n.io best-vector-database/ai-agent-memory + n8n.io workflows supabase/couchbase/pinecone 2026-02/08 实拉，合并 §n8n 记忆四类——那条管"记忆类型"，本条管"向量库与 agent 装配"）
+- **Vector DB 选型**：Pinecone/Qdrant/Weaviate/Supabase 原生节点；in-memory simple vector store 起步模板——生产换库不必重建；**cluster 节点架构秒换 embedding 模型**（试新模型不重排管线）。
+- **Upstash Vector Store**：AI Companion Node——直接插 AI Agent/Q&A Chain/Vector Store Tool 子节点；**Server-Side Auto-Embeddings**（内置 embedding 模型免单独 API key）；SQL-like metadata filters 动态过滤。
+- **memory sub-nodes**：每个 AI Agent 节点接受一个 memory 子节点；Chat Memory Manager 高级功能（check memory size/clear 特定 entries）——memory 作为 workflow primitives 接线。
+- **RAG 模板模式**：PostgreSQL→Pinecone schema auto-discovery（自动发现表结构、选文本富表、行转 embedding 文档、增量索引 per-table sync state）；webhook 语义搜索配对 workflow。
+- **提升层**：工作流（RAG 装配）。
+
+## LangFlow Memory Bases 与 Playground 审查：跨会话语义记忆 · 工具使用可见（来源：docs.langflow.org 1.9.0 agents/message-history/concepts-playground + explainx.ai langflow-guide 2026-06/09 实拉，合并 §LangFlow 记忆——那条管"记忆组件"，本条管"记忆基与调试"）
+- **内置 chat memory**：Agent 组件默认开启——rolling context window per session ID；**自定义 session ID** 隔离不同用户/应用跑同一 flow。
+- **Memory Bases（1.10+）**：per-flow 向量存储自动 ingest 会话消息、跨会话语义检索——用户要"记得上周聊的"用它；会话内用 standard buffer——两种记忆按需求选。
+- **Message History 组件**：组合 chat history+message storage——Langflow storage 或 Mem0/Redis；内置 memory 够用则不必加。
+- **Playground Agent 审查**：打印 agent 用过的 tools + 每 tool 输出——监控工具使用与响应逻辑。
+- **LFX/API 部署**：/flows/upload POST、/flows/{id}/run、/stream（SSE 流式）、/info。
+- **提升层**：工作流（记忆基与调试）。
+
+## Activepieces Webhook 幂等与重试策略：idempotency · schema version · worker 参数（来源：activepieces.com automation-use-cases webhook-workflows/api-workflow-automation + docs manage-concurrency + worker 架构 + breaking-changes 2026-05/09 实拉，合并 §Activepieces 认证——那条管"认证"，本条管"可靠性"）
+- **Webhook 安全重试**：幂等键+correlation IDs 存 Tables 查重→短路重复 run；条件分支+backoff——瞬时失败重试不重复处理账单/工单/更新。
+- **签名/schema 版本**：payload 加 schema version 字段按版本路由；每版本维护转换步骤；**旧路由保持活动直到 producer 迁移**。
+- **并发队列**：project 并发上限——达限新 run 排队+指数退避自动重试；**flow runs 不丢弃**，最终执行。
+- **Worker defaultJobOptions**：attempts 3 / backoff exponential delay 1000 / removeOnComplete age 3600 / removeOnFail 7 天；EXECUTE_VALIDATION 跑前检查；delayed jobs=paused flows/upcoming polling/retrying。
+- **HandshakeStrategy**：NONE（默认）/HEADER_PRESENT/QUERY_PRESENT/BODY_PARAM_PRESENT——webhook 握手校验。
+- **/sync breaking change**：run 失败不再 hold 30 秒后 408 空 body——FAILED/INTERNAL_ERROR 立即返回终态给调用方。
+- **提升层**：工作流（可靠性）。
+
+## Make 调度队列与顺序/并行处理：Immediately · 队列限速 · 处理模式（来源：help.make.com schedule-a-scenario + academy-content make-intermediate-webhooks + flowspag/automation4mi 指南 2026-01/06 实拉，合并 §Make 调度——那条管"调度选项"，本条管"执行模式与队列"）
+- **Schedule 选项**：At regular intervals（默认 15 分钟；免费最小 15 分钟，付费至 1 分钟）/ Once / Every day / Days of week / Monthly / Specified dates / On demand / **Immediately**（数据到达或事件发生立即执行）。
+- **Immediately+webhook 队列**：可设最大 run 数/分钟（1-100）——防 webhook 洪峰打爆下游。
+- **Data Processing 模式**：Sequential（顺序稳定调试）/ Parallel（并行处理多 item——付费）；Priority execution（Pro+）——按处理需求选模式。
+- **Polling vs Instant**：Polling 每 X 分钟查新数据（Gmail/RSS/表格）；Webhook 事件即时（表单/Stripe）。
+- **Run once 测试**：点 Run once 试跑——每模块变绿再启用。
+- **提升层**：工作流（执行模式）。
+
+## Pipedream 内置包与浏览器自动化：import 即用 · browsers 包 · managed auth（来源：pipedream.com docs workflows code nodejs/nodejs/browser-automation + v3/components + quickstart 2026-02/09 实拉，合并 §Pipedream npm 导入——那条管"导入用法"，本条管"内置能力面"）
+- **npm 直接 import**：默认无包安装——import axios 部署时自动下载最新版 bundle；无 package.json/npm install。
+- **@pipedream/browsers**：导出 puppeteer & playwright 同接口（browser(opts?)）——workflow 内浏览器自动化。
+- **platform axios 优势**：自动管理凭据/错误处理——大多数 HTTP 用例用它而非裸 axios。
+- **managed auth**：3,000+ apps OAuth/key-based——组件连接账号自动注入。
+- **async 坑**：大多 Node 包返回 Promises——axios 不加 await 不发送请求。
+- **提升层**：工具（内置能力）。
+
+## Anthropic Message Batches 批处理：50% 折扣 · 24h 窗口 · 幂等轮询（来源：platform.claude.com build-with-claude/batch-processing + anthropic.com news message-batches-api + console.anthropic.com api 2024-10/2026-09 实拉，无历史批处理锚点新面）
+- **Batches API**：多条 Messages 请求异步处理——创建即开始；最多 24 小时（多数 1 小时内）；**50% 折扣**；单批最多 10,000 queries；免自管队列/rate limits。
+- **状态语义**：processing 结束 = 每请求 succeeded/errored/canceled/expired；ExpiresAt=创建后 24 小时——**过期未完成即失效**，需设计"批没跑完怎么办"。
+- **轮询**：GET /v1/messages/batches/{id} 幂等——可轮询；results_url 取结果；结果可用 29 天。
+- **适用**：customer feedback 分析/翻译/批量评分——不要求实时响应的任务全走批处理。
+- **提升层**：可复用 Skill（成本与吞吐）。
+
+## GitHub Copilot coding agent 工作流：issue→PR · 内置三重扫描 · 每 session worktree（来源：github.blog copilot-coding-agent-101/whats-new + github.github.io awesome-copilot + learn.microsoft.com copilot-agent-skills 2026-01/09 实拉，合并 §GitHub 生态——那条管"仓库目录"，本条管"agent 工作流"）
+- **Coding agent**：自主处理低-中复杂度任务——review repo 上下文（相关 issues/PR discussions/custom instructions）；修复 bug/增量特性/重构/测试覆盖/文档/secret scanning 加速/技术债；**PR 需 human approval 后 CI 才跑**。
+- **内置安全检查**：code scanning/secret scanning/dependency vulnerability checks 直接在 workflow 内——已知 CVE 或疑似 API key 在 PR 打开前标记。
+- **Copilot app 每 session 独立 git worktree**：真实隔离副本——并行 agent session 互不干扰；app 管理 worktree 无手动清理。
+- **agent skills 存放**：markdown 文件教专门工作流——.github/skills/、~/.copilot/skills/、.agents/skills/——相关时自动加载；skills 与 custom agents（persona+tool set）/custom instructions（一般偏好）分工。
+- **提升层**：工具（agent 工作流）。
+
+## OpenClaw SKILL.md 编写规范：frontmatter 控制位 · requires 块 · 四最佳实践（来源：docs.openclaw.ai tools/creating-skills + raw.githubusercontent openclaw docs/tools/skills.md + skills.sh skill-creator 2026-03/09 实拉，合并 §OpenClaw 技能创建分发——那条管"分发"，本条管"编写规范"）
+- **SKILL.md 唯一硬要求**：YAML frontmatter + Markdown 指令；最少 name（slug 小写字母数字连字符）+ description（一行显示给 agent/发现结果——**最重要**，写清触发条件）。
+- **frontmatter 控制位**：user-invocable（true 默认暴露 slash 命令）；disable-model-invocation（false 默认——true 时从 system prompt 排除仍可 /skill 跑）；command-dispatch: tool（slash 命令直连工具绕过模型）+ command-tool + command-arg-mode raw。
+- **requires 块**：bins（[jq, ripgrep]）+ env（[LOG_SERVICE_PATH]）+ config——声明依赖，缺则别跑。
+- **四最佳实践**：Be concise（教做什么，不教怎么当 AI）；Clear Triggers（"当用户问 X 时用此技能"）；Safety（exec/bash 防命令注入）；Test locally（openclaw agent --message 测试再分享）。
+- **标准**：遵循 AgentSkills spec（agentskills.io）——跨 agent 可移植。
+- **提升层**：可复用 Skill（技能编写）。
