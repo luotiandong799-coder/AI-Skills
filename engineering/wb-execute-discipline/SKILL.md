@@ -4295,3 +4295,28 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **Git-native 协调**：GNAP 通过 git repo 里 4 个 JSON 文件协调 AI agents，无 server 无 DB——git 即状态与接口。→ 判据：小规模多 agent 协调优先考虑 git 文件作状态层，省去 server/DB。
 - **skills.json 版本化配置**：committed to Git 可 review diffable 记录哪些 skills 激活；air-gapped 环境用自包含二进制。→ 判据：技能激活清单进版本控制，变更可 review 可回滚。
 - **提升层**：工具。
+
+## Agent 工具点名引导 + 输出规范化（来源：Dify 提示面 + n8n 数据转换面，2026-09-27 实拉）
+- **工具点名引导**：agent 默认"模型基于每 query 动态决定何时用哪个工具"；要更精确，在 prompt 里点名工具名+描述何时用（"用 WebSearch 查实时数据，用 Calculator 做计算"）。→ 判据：想让 agent 稳定用某工具，写进 prompt 点名，不靠模型猜。
+- **Prompt 接口按模型类型适配**：chat 模型用 message roles（System 行为/User 输入/Assistant 示例），completion 模型用纯文本续写。→ 判据：提示模板按模型类型换形态，不一套通用。
+- **LLM 输出当 untrusted input**：agent/LLM 节点输出后接 tiny Code node 三件事——去 fence+前言，从第一个 { 或 [ 到最后匹配 } 或 ] 取子串再解析。→ 判据：AI 生成的 JSON/结构输出先过规范化节点再进下游，防格式漂移杀半夜执行。
+- **Webhook payload 单点归一化**：不在 raw payload 上分支；Webhook 后单个 Code node 归一化到固定 schema，防御性读 key——schema shift 只碰这一个 node。→ 判据：外部 payload 只在一个节点归一化，下游全部依赖固定 schema。
+- **提升层**：工作流。
+
+## Memory base 语义检索 + 多向量检索（来源：LangFlow 向量库/RAG 面，2026-09-27 实拉）
+- **Memory base 按语义取最相关**：把消息嵌入 vector store 按语义相似度检索最相关上下文，区别于 Message History 按时间顺序取最近消息。→ 判据：跨会话记忆用语义检索（取"相关"）不用时间序列（取"最近"）。
+- **Knowledge base 不重摄取**：预摄取一次，flow run 不重摄取；默认本地 Chroma，可配外部 provider（Chroma Cloud/OpenSearch/PGVector）。→ 判据：RAG 库加载一次后复用，每次跑流程都重摄取是反模式。
+- **多向量检索（ColBERT/ColPali）**：lfx-nextplaid 支持 ColBERT-style late interaction + ColPali-style 视觉文档检索，无需 glue code。→ 判据：检索精度不够时先试 late interaction/视觉文档检索，再考虑换库。
+- **提升层**：工具。
+
+## Prompt caching 成本模型（来源：Anthropic 上下文工程面，2026-09-27 实拉）
+- **成本不对称**：cache reads 0.10× 正常输入价格，writes 1.25×（5m TTL）或 +100%（1h TTL）。→ 判据：缓存命中率决定真实成本，重复上下文必须缓存。
+- **breakpoint 位置纪律**：cache_control 放最后一个跨请求一致的块，绝不放 per-request 变化内容上；对话超 20 块用多 breakpoint。→ 判据：缓存点只在稳定内容上，变化段不缓存。
+- **1h TTL 用于低频率工作流**：document review queues/overnight batch/scheduled jobs 用 1 小时 TTL（5 分钟不够）。→ 判据：低频率批处理配 1h TTL 保缓存热。
+- **Cache 不存 raw text**：存 KV cache+cryptographic hashes，适合 ZDR 型数据保留承诺。→ 判据：有数据保留合规要求的用缓存不违反承诺。
+- **提升层**：模型/工作流。
+
+## 评测基准驱动记忆选型 + 单二进制记忆 server（来源：GitHub 生态面，2026-09-27 实拉）
+- **评测基准选记忆方案**：agentmemory 95.2% R@5 on LongMemEval-S（超 mem0 68.5%/Letta 83.2%），~170K tokens/年 vs paste-full ~19.5M。→ 判据：选记忆方案先看标准评测（LongMemEval）与 token 年成本，不凭直觉。
+- **单二进制 MCP-native 记忆**：Perseus Vault 一个 Rust 二进制一个 SQLite 文件给 AI agents durable cross-session memory，无 Docker/Postgres/cloud，55 MCP tools。→ 判据：个人/离线场景记忆服务用单二进制+单文件，不拉重基建。
+- **提升层**：工具。
