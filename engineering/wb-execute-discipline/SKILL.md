@@ -3734,3 +3734,38 @@ ame ≤64 字符、仅小写字母数字连字符、禁 XML 标签、**禁保留
 - **Skill Workshop（治理路径）**：agent/operator 创建 **proposal**（pending 草稿+目标绑定+扫描状态+hash+回滚元数据），**applied 才成为 live skill**。
 - 判据：**插件=技能打包单元（随启用加载）；PDF 走原生路由+fallback；技能变更走 proposal→applied 双态**。
 - 提升层：工具。
+
+## 模板变现 + 人机交接节点 + 子工作流发布为工具（来源：Dify Creator Center & Template Marketplace + Human Input Node 博客，2026-09-27 实拉）
+- **Creator Center & Template Marketplace（Build·Share·Earn）**：creator 发布 workflow 模板，用户发现/试用/**一分钟采用**；可选 **PartnerStack affiliate 链接**——模板驱动的订阅获经常性佣金。
+- **Human Input 节点（v1.13.0）**：工作流可暂停等人审，恢复时**批准/编辑/改道**——人机交接成为 Workflow 原生部分。
+- **子工作流发布为工具**：Executor 工作流发布为 workflow tool 挂到 Agent 节点（如 Daily GitHub Action Executor Agent：主编排 cron 决策+执行子工作流触发 GitHub Actions）。
+- 判据：**工作流资产化靠模板市场+affiliate；需要人拍板的点用 Human Input 节点；可复用的执行子流程发布为工具挂进 agent**。
+- 提升层：工作流。
+
+## AI 工作流延迟三杠杆：token 生命周期 / 并行 / 超时预算（来源：n8n Blog Reducing AI Workflow Latency，2026-09-27 实拉）
+- **延迟来自 token 生命周期**：prefill（预填充）与 decoding（解码）阶段；延迟优化从理解这两段开始，不只看总耗时。
+- **三个实际生效的模式**：**parallel execution**（并行执行不串行）、**timeouts**（给节点设超时防挂死）、**budgets**（预算控制成本与量）。
+- 判据：**优化延迟先拆 prefill/decoding；多路并行+超时+预算三件套一起上**。
+- 提升层：工作流。
+
+## Code Execution 与 Web Search 同跑免计费 + auto mode classifier + 三层安全审查（来源：platform.claude.com code execution tool + Claude Code auto mode + security-guidance 插件，2026-09-27 实拉）
+- **gVisor 隔离沙箱 + Python REPL + bash**；同容器跨请求状态持久；默认无外部网络。
+- **与原生 Web Search/Fetch 同跑时不收代码计算费**——先裁剪 web 数据再填上下文窗口（code_execution_20260120 加 REPL 状态持久化+沙箱内程序化工具调用）。
+- **auto mode classifier**：子 agent 启动前分类器评估目标动作风险，只限高风险动作（生产环境变更/外部服务访问/大规模文件系统操作）。
+- **security-guidance 三层审查**：每编辑快速模式检查+每轮末尾模型审查+commit/push 深度 agentic 审查，规则存 .claude/claude-security-guide。
+- 判据：**带 Web 检索的代码执行用原生配套免计费；自动模式高风险动作先过 classifier；代码安全三层审查按编辑/轮/提交分级**。
+- 提升层：工具。
+
+## 技能市场安全实证：7.5% 恶意率 + agentic 攻击绕过 + 装前扫描强制（来源：RankClaw/Unit 42/Koi Security 审计 + clawhub-skill-scanner，2026-09-27 实拉）
+- **ClawHub 现实**：RankClaw 审计 14,706 技能中 **1,103 恶意（7.5%）**；ClawHub 已移除 ~2,419 可疑（5,705→3,286）；VirusTotal 合作（2026-02-07）但**只抓已知签名**；3+ 举报自动隐藏。
+- **新型 agentic 攻击**：Unit 42 发现恶意包用 agentic 攻击技术**绕过自动扫描**（2026-02~05）；"What Would Elon Do" 恶意技能 bot 投票冲上榜首偷 .env；CVE-2026-28458 Browser Relay auth bypass。
+- **装前强制扫描**：clawhub-skill-scanner 装任何技能前 deep code analysis（恶意模式/凭据访问/数据外泄），不安全则阻断安装。
+- 判据：**装第三方技能前必读源码+跑扫描器；高下载量不等于安全（可被 bot 投票操纵）；病毒库只能挡已知签名**。
+- 提升层：工作流。
+
+## Agent 评估五 Lab 与收敛分：从 trace 到 router/skill/trajectory 分级评估（来源：deeplearning.ai Evaluating AI Agents（Arize AI）+ Agentic AI Module 4，2026-09-27 实拉）
+- **Lab 链**：Building agent → Tracing agents → **router+skill evaluations**（路由与技能选择评估）→ **trajectory evaluations**（轨迹评估）→ structure；用收集的 trace 建测试样例+为 LLM-as-a-judge 准备详细 prompt。
+- **convergence score（收敛分）**：评估 agent 是否在**高效步数内**响应查询。
+- **结构化实验**：改 prompt/模型/agent 逻辑跑实验提升表现；再配 error analysis+component-level evals+latency/cost optimization。
+- 判据：**agent 评估先 trace 再分级评估（router/skill/trajectory）；用收敛分查步数效率；改一项跑一次实验不叠改**。
+- 提升层：工作流。
