@@ -1,16 +1,30 @@
+---
+name: ai-input-enhancement-system
+description: >-
+  WB 统一 AI 信息入口的总架构原则：外部信息如何归一进 AI、如何判断价值、如何路由到正确 Skill、隐私与记忆边界。当要梳理「统一输入/信息入口/输入增强/WeChatBridge/输入路由/价值判断/聊天增强/任务提取」或 WB 输入层架构时使用。本文件是编排/元层原则，不替代各引用 Skill 的执行细节。触发词：统一输入、信息入口、输入增强、WeChatBridge、输入路由、价值判断、聊天增强、任务提取、记忆管理、开源学习、Fast/Deep 执行。
+version: 1.0.0
+compatibility: WorkBuddy；引用 media/ engineering/ defaults/ agent/ system/ rules/ 下现有 skill（不重复建）
+---
+
 # AI 输入入口增强系统（WeChatBridge 融合终版）
 
-> 版本：1.0.0
-> 来源：用户 2026-09-27 提供原文，按「合理存用 / 不盲目复制 / 删无用话语」清理并交叉引用现有 skill 后落地。本文件为**编排/元层原则文档**，非新 skill；与现有 skill 重叠 >60% 处一律引用，不重复建。
-> 总入口见 `00_总目录_所有AI入口.md`。
+> 本文件为**编排/元层原则文档**，非新 skill。与现有 skill 重叠 >60% 处一律引用，不重复建。总入口见 `00_总目录_所有AI入口.md`。
+
+## 边界（先读）
+本文件定义「入口如何归一、何时路由」，**能力由引用 Skill 提供**，不是执行手册。它不是 `wb-context-compressor` 的副本，也不是 `wb-spec-driven` 的路由表——价值判断细节看 context-compressor，流程/路由细节看 spec-driven，验证看 artifact-verification。
+
+## STOP / WAIT / PROCEED
+| 状态 | 动作 |
+|---|---|
+| 已有 Skill 覆盖该能力 | **STOP**——直接引用，不重复写 |
+| 要落地新输入能力 | **WAIT**——先查现有 skill 重叠；>60% 则引用不建 |
+| 确属独特点 | **PROCEED**——落到对应 skill 或本文件独点段 |
 
 ## 目标
-将 WB 打造成统一 AI 信息入口。让微信、QQ、浏览器、截图、图片、文件、剪贴板、网页等信息快速进入 AI：
-
+将 WB 打造成统一 AI 信息入口：
 ```
 信息获取 → 内容理解 → 价值判断 → 任务提取 → 调用 Skill/Agent → 执行验证 → 经验沉淀
 ```
-
 少重复操作，提 AI 使用效率。
 
 ---
@@ -21,10 +35,10 @@
 新输入能力先查已有：消息处理 / Windows 操控 / 文件处理 / 浏览器 / 记忆管理 / 自动化 / 执行验证 类 skill。
 - 已有能完成 → 直接复用
 - 已有不足 → 合并增强
-- 禁止：为单一功能建重复 skill、重复建设、为数量增无价值 skill
+- **禁止**：为单一功能建重复 skill、为数量增无价值 skill
 
 # 二、统一 AI 输入层（AI Input Layer）
-所有外部信息先经统一输入层。
+所有外部信息先经统一输入层，归一为 `{ type, source, raw, meta }`。
 
 ## 文本输入
 来源：微信复制文本 / QQ 消息 / 浏览器文本 / 网页内容 / 剪贴板 / 文档文字。直入处理流。
@@ -41,7 +55,7 @@
 ```
 读取 → 分析 → 总结 → 提取行动项
 ```
-实现见 `engineering/wb-doc-file-intel`、腾讯文档系技能；浏览器来源见 `system/browser-automation`。
+实现见 `engineering/wb-doc-file-intel`、腾讯文档系（`tencent-docs` / `tencent-docx`）；浏览器来源见 `system/browser-automation`。
 
 # 三、统一信息处理流程
 ```
@@ -75,7 +89,7 @@
 普通消息：分析 → 生成建议
 重要消息：生成 → 检查 → 用户确认 → 发送
 ```
-禁止：未经确认自动发高风险消息。
+**禁止**：未经确认自动发高风险消息。
 
 # 六、自动任务提取
 聊天/文件/网页分析后自动提取：
@@ -94,11 +108,11 @@
 所有输入 → AI Input Router → 判断需求 → 调用对应能力
 ```
 调用顺序：① 专用 Skill ② 已有 Workflow ③ 通用能力 ④ 新建能力。
-禁止：多 Skill 同时抢占任务。未匹配走显式默认路由（`wb-spec-driven` 1.100 Fallback，不静默丢弃）；跨 agent 交接见 `agent/agent-guild`。
+**禁止**：多 Skill 同时抢占任务。未匹配走 `wb-spec-driven` 的显式默认路由（不静默丢弃）；跨 agent 交接见 `agent/agent-guild`。
 
 # 八、隐私安全规则
 默认：不读微信数据库 / 不扫无关聊天 / 不取未授权信息 / 只处理用户主动提供内容。
-高风险操作（自动发消息 / 删文件 / 改重要数据 / 外部账号操作 / 权限变化）须：执行前确认 → 执行中检查 → 执行后验证。
+高风险操作（自动发消息 / 删文件 / 改重要数据 / 外部账号操作 / 权限变化）**必须**：执行前确认 → 执行中检查 → 执行后验证。
 细则：敏感输入走 `wb-artifact-verification` 护栏四模式（block/redact/retry/require-approval）+ secret/PII 检测器；密钥/token 不提交（`rules/06`）；用户真实文件优先回收站。
 
 # 九、记忆管理规则
@@ -111,7 +125,7 @@
 ```
 发现 → 分析核心能力 → 查已有体系重复 → 删无用部分 → 改造成 WB 能力 → 合并进现有系统
 ```
-禁止：直接复制项目 / 引复杂无用功能 / 增重复 skill。调度见自动化 `070cce0c`；信源含腾讯 SkillHub `skillhub.cn/skills?sortBy=score` 分数面。
+**禁止**：直接复制项目 / 引复杂无用功能 / 增重复 skill。调度见自动化 `070cce0c`；信源含腾讯 SkillHub `skillhub.cn/skills?sortBy=score` 分数面。
 
 # 十一、执行标准
 简单任务：Fast 模式（直接做，先报步数）。复杂任务：Deep 模式（计划→实现→验证，`wb-spec-driven` + `wb-debug-loop`，失败≥2 次必根因）。
