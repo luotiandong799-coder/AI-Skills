@@ -6948,3 +6948,21 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Error handler 三策略选择**：Resume+fallback 多数生产场景；Ignore 太危险（静默吞错）；Rollback 用于事务场景。
 - **HITL 路由**：AI 置信度>90% 自动发送；低置信度/敌对情绪→Slack/Zendesk flag 带预起草响应待人工。
 - **提升层**：工作流（场景架构）。
+## OpenClaw SecretRef 三源与环境优先级：env/file/exec 接入 · 绝不覆盖已有值 · 多环境密钥文件（来源：docs.openclaw.ai help/environment + gateway/secrets + start/why-openclaw/secrets + openclaw.expert secrets-management 2026-03/09 实拉，库内仅 Dify 秘密键纪律，OpenClaw secrets 面为新增）
+- **SecretRef 对象统一凭据引用**：`{source:"env",provider:"default",id:"VAR"}`——每个受支持凭据字段都可引用；config 的 env 块自身不解析 SecretRef/file:...（引用从进程环境在激活时解析）。
+- **providers 三源**：default（env）/file（~/.openclaw/secrets.json，mode json 或 singleValue）/exec（命令 resolver——1Password/Vault/Bitwarden/sops 以此接入）。SecretRef 把内联凭据从配置里拿掉，暴露面取决于所选 provider。
+- **环境变量优先级（高→低）**：Process env > cwd .env > global ~/.openclaw/.env；规则=**绝不覆盖已有值**。
+- **多环境密钥文件**：config.yml 共享 + secrets.dev.env/secrets.staging.env/secrets.prod.env 分环境；OPENCLAW_SECRETS_FILE 切换。gateway token 存 .env 不 commit，bind 保持 localhost。
+- **提升层**：可复用 Skill（凭据治理）。
+
+## Make wait-resume-complete 业务信号暂停续做 + 场景内 multi-model 分步路由（来源：make.com blog agent-workflow-memory 2026-05-05 + llm-agents 2026-04-14 + autonomous-ai 2026-04-21 实拉，合并 §Make 场景蓝图——那条管"静态七块"，本条管"状态化暂停与分步模型路由"）
+- **wait-resume-complete 模式**：首操作创建状态并暂停，直到稍后信号到达（approval/payment/文档上传）；信号再触发 scenario 时检索 prior record 交给 agent 续做下一步，全连续性。与错误恢复三件套分工：那条管"出错后恢复"，本条管"正常业务流程的信号等待"。
+- **multi-model orchestration**：单 scenario 内不同步骤路由不同模型——分类/提取/摘要用快速廉价模型、起草/推理重活用重模型；测 latency/cost/capability 谱系；不重建架构、不绑定单 provider。与 §LLM 路由三模式分工：那条是网关请求级策略（成本强制/SLA/Failover），本条是工作流步骤级编排。
+- **AI Sub-Agents 编排**：orchestrator 实时调 specialist——按请求需求而非固定路径；每个 sub-agent 自己的 tools/system prompt/job（CRM lookup/退款/发票审核）；逐个测试优化再插回。
+- **提升层**：工作流（状态化编排）。
+
+## n8n Tools Agent 强制输出格式与 Nodes as tools：Require Specific Output Format 开关 · 节点即工具（来源：docs.n8n.io cluster-nodes langchain.agent tools-agent + n8n workflows 2592 agentic-telegram 2026-02/04 实拉，合并 §n8n 结构化输出解析器与 §workflow as tool——那条管"解析器节点/封装工具"，本条补"agent 节点内强制格式与节点即工具新形态"）
+- **Require Specific Output Format**：Tools AI Agent 节点开关——on 时 n8n 强制 agent 输出符合指定格式（在 agent 内约束，区别于独立解析器节点的事后 schema 注入+auto-fix）。
+- **Nodes as tools（新特性）**：HTTP Request 节点/其他普通节点可直接作为 agent 工具——LangChain Agent 决定何时用哪个工具（Telegram 模板：HTTP Request tool+Telegram node tool 替代自定义 workflow tool，bot 更灵活）。
+- **LangChain Code node**：自托管专属——完全可定制 agent 提示词，省掉保留 tool-calling 功能的 token 消耗。
+- **提升层**：工作流（agent 输出与工具形态）。
