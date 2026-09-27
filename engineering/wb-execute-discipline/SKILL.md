@@ -6445,3 +6445,40 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **信任策略三纪律**：subject-claim 限制到具体 branch/environment；**绝不让 PR workflow 承担生产角色**；生产环境走 environment protection rules 审批。
 - **Dependabot 免长凭据**：Dependabot 用 OIDC 认证私有 registry，不再需要 repository secrets 存长期凭据。
 - **提升层**：工具（CI 凭证安全）。
+## Dify 知识库 chunking 参数与插件 adaptive 规则：chunk 500-1000 · overlap 10-25% · Parent Mode 两形态（来源：dify mintlify knowledge-pipeline-orchestration + Dify Marketplace markdown_chunker 插件 + dify-hosting RAG guide 2026-03 实拉，与 §RAG 分块选型树互补——那条管"策略怎么选"，本条管"Dify 平台参数怎么给"）
+- **Dify 推荐参数带**：通用文档 chunk 500-800、技术文档 800-1200；overlap 建议为分段长度 10-25%；多数文档 600 tokens + 100 overlap 为理想起点；默认 500 tokens、上限 4000、强制分段在超限时触发。
+- **Parent Mode 两形态**：Paragraph（按段落拆子块）/ Full Document（整文档作父块）——直接检索粒度由父块形态决定。
+- **Advanced Markdown Chunker 插件 adaptive 规则**：实际 overlap = min(overlap_size, chunk_size × 0.35)——**overlap 不是固定值，随 chunk 缩小自动收敛**，防大 chunk 高重叠浪费 embedding；strategy 五选 auto/code_aware/list_aware/structural/fallback（代码/列表/结构感知切分）。
+- **提升层**：工作流（知识库入库参数）。
+
+## Make 嵌套决策与场景成本优化：nested if-else 同图 · 源头过滤 · 禁用未用路由（来源：help.make.com nested-if-else-and-merge + Dre Dyson advanced techniques 2026-05 实拉，与 §Make 错误处理互补——那条管"失败怎么办"，本条管"逻辑怎么写省、场景怎么瘦"）
+- **Nested if-else and Merge（2026-09 可用）**：一个 scenario 内多级决策，if else 内嵌 if else，**不用散到多条 router 链**——相关分支同处一图，review 一眼看全、可追溯。
+- **源头过滤**：别拉 1000 条过 20 模块最后丢 950——**尽量在源头 filter**，链条越短 operations 越少。
+- **禁用未用 router 路由**：不活跃路由执行时**仍被评估、耗 operations**——不用就禁用，每月审计一次。
+- **Sleep 代替高频轮询**：用 Sleep 模块延后批次而非每分钟轮询 API，省 operations。
+- **AI 场景拆分小调用**：extract JSON / classify severity / response draft 各一调用——每个调用更简单、更省、更可缓存。
+- **提升层**：工作流（场景成本与可维护性）。
+
+## Claude Code Plan/auto mode 权限安全：plan 编辑永不批准 · auto 丢弃任意代码执行规则 · 内置 read-only 集不可配置（来源：code.claude.com permission-modes + permissions + Anthropic engineering auto mode 2026-03 实拉，与 §Claude 插件作用域互补——那条管"装什么"，本条管"运行时给多少权"）
+- **Plan mode 编辑永不 auto-approve**：即使 allow rule 匹配，文件编辑仍走 canUseTool 回调——计划模式没有"静默改文件"路径。
+- **dontAsk 不跳过安全检查**：读写命令全自动但未授权操作静默拒绝——"不问了"≠"全放行"，高度安全环境用它而非 Broad Access。
+- **blockReadsOutsideWorkingDirectories 持久化**：选"Block from now on"后写进用户设置，**跨会话跨权限模式生效**——一次性拒绝变成全局默认。
+- **auto mode 进入时丢弃任意代码执行规则**：blanket shell / wildcarded 解释器（python/node/ruby）/ 包管理器 run 全部 drop——auto 不等于授予一切。
+- **内置 read-only bash 集不可配置**：ls/cat/head/tail/grep/find/wc/diff/stat/du/cd/read-only git 免提示；要提示需显式 ask/deny 规则覆盖。
+- **提升层**：工具（运行时权限面）。
+
+## OpenClaw 任务队列与重试语义：handoff 30min 退避 · blocked 保留 7 天 · transient/permanent 分类（来源：docs.openclaw.ai automation/tasks + cli/cron + OpenClaw Playbook background-processes 2026-05 实拉，与 §执行态与交付态分开互补——那条管"状态怎么记"，本条管"队列与重试的具体语义"）
+- **durable handoff 30 分钟带封顶指数退避重试**；queued handoff **未确认交付前不算 delivered**；delivery 达限/永久失败→blocked 终态，**canonical result 保留 7 天**。
+- **tasks retry = fenced 新交付代**；tasks dismiss = 记录有意不交付——"重试"与"放弃"都有显式原语，不留僵尸任务。
+- **cron 退避阶梯**：recurring 连续失败 30s/1m/5m/15m/60m 指数退避，成功自动重置；one-shot 终态后禁用。
+- **LiveSessionModelSwitchError 上限 2 次**：模型切换失败重试会持久化切换的 provider/model，外循环限 2 次后中止——**有上限的自动切换，不无限循环**。
+- **transient vs permanent 分类**：rate limit/provider overload/network/server/Cloudflare=transient 重试；auth/config/validation=permanent 不重试——不是每个失败都值得退避重试，也不是每个都值得报人。
+- **Telegram long-polling 8 分钟静默死**（issue #7526）：无报错、消息停止到达，需显式 retry policy 把硬失败转自愈重连。
+- **提升层**：工作流（任务队列与重试语义）。
+
+## Pipedream GitHub Sync 双向同步：改哪边都生效 · branches/diffs/PRs · REST/SSE 消费事件源（来源：pipedream.com docs workflows/quickstart + glossary + apps/github 实拉，与 §Pipedream 错误处理互补——那条管"平台重试边界"，本条管"工作流怎么版本化"）
+- **GitHub Sync 双向**：Pipedream 内改→push GitHub；本地改→push GitHub→deploy Pipedream——**两个方向都生效**，工作流进 git 版本控制。
+- **开发形态**：branches 开发、commit/pull 变更、看 diffs、开 PR——工作流像代码一样走评审。
+- **GitHub 触发源即插即用**：New Commit / Workflow Run Completed（Instant）/ Project Item Status Changed / issue opened；事件源 emit 事件触发 workflow。
+- **消费方式**：REST API 或**私有实时 SSE 流**消费事件源——不用轮询。
+- **提升层**：工具（工作流版本化与事件接入）。
