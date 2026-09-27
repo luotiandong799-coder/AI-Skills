@@ -3624,3 +3624,38 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **Agentics bundle**：LLM 填表/折叠/生成表格数据（表格数据 agentic 化）。
 - 判据：**凭据集中配置不散组件；MCP server 先注册后使用；部署有专门工具链**。
 - 提升层：工具。
+
+## Agent 单职责 boring 准则 + 推理与置信度不因工具失败丢失（来源：n8n blog Introducing n8n Agents + community Shopify triage agent，2026-09-27 实拉）
+- **boring 即最高评价**：agent 每个只做一件小事——"Get account context（拉 CRM 账户+查合同状态+打分）/ Add a note（记一个 note，就这么多）/ Page on-call（发一条紧急工单）"——**它work 且 boring，是对 workflow 的最高评价**。
+- **推理保留**：Shopify 退换货 triage agent **总是返回 reasoning 字符串 + confidence 分数，绝不只是 verdict**——即使 Shopify API 调用失败，失败告警也携带 AI 的推理链；低置信/模糊案例先路由到 Slack 人工，再触发外部动作。
+- 判据：**agent 职责窄到"就这一件事"；输出必须带推理+置信度；工具失败不许丢推理**。
+- 提升层：工作流。
+
+## Skill 编写官方清单：500 行上限 / 一层引用 / 渐进披露（来源：platform.claude.com Agent Skills best practices，2026-09-27 实拉）
+- **官方检查清单**：Description 具体且含关键术语+含"做什么"和"何时用"；**SKILL.md body 小于 500 行**；额外细节放独立文件；**不含时效敏感信息**（或放 old patterns 区）；术语一致；示例具体不抽象；**文件引用一层深**；**渐进披露**（progressive disclosure）按需展开；工作流步骤清晰。
+- **多 Skill 组合**：任务跨多文档类型时组合（Excel 数据分析+PPT 演示；Word 报告+PDF 导出）；**避免包含未用的 Skill**（影响性能）。
+- **Managed Agents**：system/tools 放 agent 不放 session，**agent 创建一次、session 每次执行**（Agent(once)→Session(each run)）。
+- 判据：**写技能先过 500 行/一层引用/渐进披露三关；多技能按需组合；agent 与 session 生命周期分离**。
+- 提升层：可复用 Skill（技能编写质量门）。
+
+## Delegate 架构：加固先行 + 每组织一 Agent + 信任分级（来源：docs.openclaw.ai concepts/delegate-architecture，2026-09-27 实拉）
+- **扩展模式**：**每组织一个 delegate agent**；**先加固**——tool restrictions/sandbox/hard blocks/audit trail，然后通过 IdP 授**最小权限**；定义 **standing orders**（自主操作常设命令）；cron 调度定期任务；**随信任建立再调整能力层级**。
+- **skills 按 agent 可见性**：gents.defaults.skills 共享基线，gents.entries.*.skills agent 特定——**基线继承+个体覆盖**。
+- **tool policy 前置**：工具策略在**模型调用前**强制执行——策略移除某工具，则该轮模型收不到它的 schema。
+- **权限分层**：acpx permissionMode/nonInteractivePermissions 独立于 exec 审批；官方插件免能力同意，第三方插件非交互不授新能力。
+- 判据：**上线先加固后授权；agent 按组织隔离；能力随信任渐进放开**。
+- 提升层：工作流。
+
+## Trace 视图节点级定位 + 多观测平台集成 + AgentOps 成本监控（来源：Dify blog + AgentOps，2026-09-27 实拉）
+- **Trace 视图**：每次 workflow/agent run 记录**节点耗时、prompt 构造、token 用量、响应延迟、失败信息**；**检查中间值定位出错节点**（与 r236-A 节点定位互补：那条管定位方法，本条管观测载体）。
+- **观测平台集成**：Langfuse/LangSmith/Arize/Opik/W&B Weave 多平台对接；阿里云 AgentLoop 做 full-stack observability（每个 agent/tool call/model inference 的 token 与延迟精确追踪，**定位成本热点**：频繁超时重试的工具、token 异常消耗的 prompt 模板）。
+- **AgentOps 成本**：跨 agent 追踪 token/cost 花销；微调用保存的 completions 便宜 25 倍。
+- 判据：**trace 要能看中间值和节点耗时；成本热点要能定位到具体工具/模板**。
+- 提升层：工具。
+
+## Skills 广场三分类 + ZIP 导入 + 腾讯生态内置（来源：腾讯云智能体开发平台 Skills 广场 + SkillHub，2026-09-27 实拉）
+- **三分类**：内置 Skills（平台安全审查+质量验证；覆盖办公文档/医疗健康/图像处理/音视频/搜索 7 大场景；含腾讯文档/腾讯 IMA/QQ 浏览器/腾讯乐享等腾讯生态原生）／企业共享／自定义（**ZIP 格式导入**）。
+- **即装即用**：首批 28 内置 Skills，ClawPro 中安装使用，后续融合更多智能体场景。
+- **生态口径**：全球 AI Agent 工具 44 万+、AI Skill 近 30 万、日均新增 1300+（官方实时口径，修正早期"76 万+"营销数字）。
+- 判据：**技能来源分内置/企业/自定义三层，导入走 ZIP；数字认官方实时口径不认营销口径**。
+- 提升层：可复用 Skill（技能分发生态）。
