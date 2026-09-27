@@ -3698,3 +3698,39 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **你的模型你的 key**：admin 一次配置 provider，团队共用。
 - 判据：**agent 从"步骤里的设置"升格为"可对话实体"；一句话能生成带工具推导的草稿；排障交给 Copilot**。
 - 提升层：工具。
+
+## Skill 字段规格 + 触发双向调优 + 运行时容器限制（来源：platform.claude.com Agent Skills overview + The Complete Guide to Building Skills for Claude，2026-09-27 实拉）
+- **字段规格**：
+ame ≤64 字符、仅小写字母数字连字符、禁 XML 标签、**禁保留词 anthropic/claude**；description 非空 ≤1024、禁 XML 标签。
+- **触发双向诊断**：**undertriggering**（该加载没加载）→ description 加细节/术语关键词；**overtriggering**（无关查询也加载/用户禁用）→ 加 negative triggers、更具体。
+- **运行时限制（代码执行容器）**：**无网络访问**（不能发外部 API）、**无运行时包安装**（只用预装包）、**隔离环境**（默认 fresh container）。
+- 判据：**写技能先过字段规格；触发问题按 under/overtriggering 两向诊断；容器内技能默认断网**。
+- 提升层：可复用 Skill（技能编写规格）。
+
+## 全部 app 发布为 MCP servers：单端点万工具 + per-user auth（来源：Pipedream changelog + mcp.pipedream.com，2026-09-27 实拉）
+- **2600+ integrated apps 全部发布为 MCP servers**（个人免费、开发者部署到 AI apps/agents）；托管端点 emote.mcp.pipedream.net——**10,000+ tools from 3,000+ APIs，单 MCP 端点**。
+- **per-user auth + tool discovery built-in**：工具按每个用户已连接账户运行，agent 自己发现所需工具。
+- **streamable HTTP transport 支持**（新增，另支持 SSE/stdio）；debug flag 让开发者看 tool call 实际发什么 API。
+- 判据：**要"一个端点接全部工具"选托管 MCP 聚合；按用户隔离授权；新 transport 用 streamable HTTP**。
+- 提升层：工具。
+
+## Agent 建在场景画布内 + 激进透明 + Maia 对话构建（来源：Make next-gen AI Agents + Maia blog，2026-09-27 实拉）
+- **agent 与场景同画布**：agent 在 scenario builder 里 built/run/debugged——创建解释输入、选工具、适应工作流的 agent 不用离开画布。
+- **激进透明**：agent 存在自动化画布内，**每个决策可见、可审、可控**，就在构建处。
+- **Maia**：对话式 AI 同事——自然语言 create/modify/debug 自动化，**把自然语言翻译成可视化步骤**；public beta 全付费计划，free 30 天试用。
+- 判据：**agent 调试留在构建画布；决策透明可审；对话式构建（Maia）降低门槛**。
+- 提升层：工具。
+
+## ClawHub 排行观察：Self-Improving 419K + Ontology Memory + Agent Browser（来源：clawoneclick/parallel.ai ClawHub 排行 + 社区共识，2026-09-27 实拉）
+- **Self-Improving Agent 419K+ downloads**（3K+ stars，公共注册表最强社区信号）：agent 记录自身发现、批判自己输出、数周使用中持续改进；**跑持续周期任务的首装**。
+- **Ontology Memory ~188K**：跨会话持久长期记忆（本体重叠记忆）；**Google Workspace (gog) ~185K**；**Felo Search ~145K**（AI 优化搜索带引用）。
+- **Agent Browser（社区公认第一必装）**：语义搜索技能库、按需求匹配推荐最佳 Skill、一键安装+自动配置。
+- 判据：**长期运行 agent 先装自改进环；跨会话记忆选本体类；装技能用语义匹配推荐**。
+- 提升层：可复用 Skill（技能选装策略）。
+
+## Plugin 自带技能 + PDF 一等工具 + Skill Workshop proposal 治理（来源：docs.openclaw.ai tools/skills + Skill Workshop + March 2026 update，2026-09-27 实拉）
+- **插件可打包技能**：openclaw.plugin.json 的 skills 字段列技能目录（相对插件根）；**插件启用时技能加载**——browser 插件自带 browser-automation 技能；插件技能目录在运行时合并。
+- **PDF 一等工具**：内置 pdf 工具——**原生 PDF 分析路由 Anthropic/Google（原生支持 PDF），其余 fallback 文本/图像提取**；gents.defaults.pdfModel 可专用模型。
+- **Skill Workshop（治理路径）**：agent/operator 创建 **proposal**（pending 草稿+目标绑定+扫描状态+hash+回滚元数据），**applied 才成为 live skill**。
+- 判据：**插件=技能打包单元（随启用加载）；PDF 走原生路由+fallback；技能变更走 proposal→applied 双态**。
+- 提升层：工具。
