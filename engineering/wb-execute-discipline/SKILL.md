@@ -7211,3 +7211,65 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Webhook 生命周期**：On Enable 用 context.webhookUrl 向第三方注册+store webhook Id；On Handshake 返回挑战响应（部分服务要求）；app 集成注册唯一 webhook（启用注册/禁用注销）。
 - **安全**：incoming payload 按 per-webhook shared secret 验证（如 X-SP-Secret 头）。
 - **提升层**：工作流（触发器实现）。
+## n8n 错误处理三模式与全局 error workflow：isolation/sub-workflow/DLQ · 重试默认表 · 熔断（来源：n8nlogic n8n-error-handling + witscode patterns + n8nflow reliability-guide + n8nresources retry-logic + workflows 15459 backoff + community large-production 2025-05/2026-07 实拉，合并 §n8n 错误工作流——那条管"排障六步"，本条管"生产错误架构"）
+- **两错误类**：NodeApiError（API/外部服务失败）与 NodeOperationError（操作/验证/配置问题）——节点实现按类型区分处理与提示。
+- **重试默认表**：默认重试 408/409/425/429/500/502/503/504；不重试 400/401/403/404/422；退避 waitSeconds = min(maxDelay, baseDelay * 2^retry) + jitter。
+- **三模式**：A 节点级隔离+错误路由（推荐默认——隔离 HTTP/DB/外部 API 风险调用，主路径仅有效输出继续，错误路径持久化失败+告警）；B 子工作流隔离（关键步骤独立子工作流 fail fast 返回结构化错误给父）；C 死信队列（重试耗尽后原始 payload+最终错误写 durable store 供检查回放——不丢失败作业）。
+- **全局 error workflow 铁律**：任何 n8n 实例第一件配置的事——Error Trigger+Slack 告警，赋给每个关心的工作流；Retry on Fail 放每个网络节点（3 tries）；On Error Stop 用于整体无效场景，Continue 只用于部分成功可接受且错误分支有去处。
+- **workflow 级重试循环**：Code+Wait+IF 指数退避；HTTP 调 n8n API 按 execution ID 重试；失败详情存储（workflow_id/tenant_id/error step/retry count）——关键动作幂等防重试重复。
+- **circuit breaker**：连续失败熔断（Redis 状态 OPEN+RESET_TIMEOUT 自动复位）——比无限重试更能保护下游。
+- **提升层**：工作流（错误架构）。
+
+## LangFlow 生产部署与扩展：headless runtime · HPA · 多 worker Redis Streams · 89% 内存降（来源：docs.langflow.org deployment-prod-best-practices + deployment-multi-worker + scaling-langflow + refft langflow + tekai catalog 2026-06/09 实拉，合并 §LangFlow 部署 API——那条管"端点调用"，本条管"生产规模与资源"）
+- **生产 runtime 形态**：headless backend-only 服务（--backend-only）——程序化执行 flow API、无视觉编辑器；最小 2Gi RAM+1000m（1 CPU）×3 replicas；HPA 按 CPU 动态扩缩。
+- **多 worker 与共享队列**：LANGFLOW_WORKERS 增并发；每进程自带内存 build queue——多 worker 必须加 Redis-backed job queue（Redis Streams）让任一 worker 服务任一 job。
+- **资源事实**：v1.9-v1.10 依赖裁剪+worker 生命周期+Linux CoW 达 ~89% 内存降；基准（单 setup）：简单 flow 200-500ms/复杂多 agent 2-5s/内存 150-300MB/自托管并发 50-100。
+- **生产缺口（自托管需自补）**：不内置 auth/rate limiting/数据库持久化；OSS 无 RBAC；缓存层有内存泄漏风险（数据密集型 RAG 崩溃）——补法：Vault secrets 注入+外部 PostgreSQL+Prisma AIRS 扫描。
+- **指标与扩展**：监控 P50/P95/P99 延迟/错误率/外部 API 成本/检索命中率；高成本模型推理拆独立水平扩展服务+批处理+缓存；向量检索调 k 邻居/shard。
+- **提升层**：工作流（生产部署）。
+
+## Dify 可观测性与标注回复：Phoenix/LangSmith trace · 日志标注 · Annotation Reply 命中（来源：dify.ai blog arize + langsmith-langfuse + boosting-chatbot-quality + monitor/logs + monitor/annotation-reply 2023-12/2026-07 实拉，合并 §Dify 节点/评估——那条管"流程实现"，本条管"监控反馈闭环"）
+- **可观测层接入**：Arize-Phoenix/LangSmith/Langfuse——每次模型调用/工具调用/链步骤自动 trace（inputs/outputs/latencies/metadata）；不改猜测 prompt 调整为什么有用/更糟。
+- **日志功能**：对话日志完整 input/output 历史+timing+系统元数据；用户反馈 thumbs up/down+评论；系统上下文 model/token 消费/响应时间/errors——标注日志可用于模型微调。
+- **Annotation Reply**：调试时预标注 AI 回复对齐期望（演示前给关键客户）；命中跟踪（哪些标注被匹配/频率/相似度）+覆盖率分析（持续不命中=覆盖缺口）+问题模式+匹配质量——数据飞轮。
+- **Monitoring 标签**：总对话数/token 使用/session 长度——高层系统性洞察（延迟/成本异常）。
+- **提升层**：可复用 Skill（监控反馈闭环）。
+
+## Anthropic 缓存定价与盈亏平衡：5m +25% / 1h 2× / hit 10% · 2 reads 回本 · 破坏因素（来源：platform.claude.com prompt-caching + docs.anthropic.com/es + markaicode cut-costs + theneuralbase how-it-works 2026-03/09 实拉，合并 §Anthropic prompt caching——那条管"机制与 breakpoints"，本条管"成本账与配置纪律"）
+- **定价结构**：5m cache writes +25% base input；1h cache writes 2× base；cache hits 10% base input price；breakpoints 本身免费。
+- **盈亏平衡**：write 成本 2 次 read 回本——第三次起每次 read 省 90%；缓存目标：system prompts/tool definitions/大文档等重复段。
+- **破坏因素**：提示中图像变化/工具使用配置修改会破坏缓存（前缀不再匹配）——稳定段前置，易变段放缓存点之后。
+- **成本示例**：Pilot（1000 req/day 20k ctx）$60/月 vs 无缓存 $600；Production（10000 req/day）$600 vs $6000——高重复场景省 ~90%。
+- **提升层**：工具（成本优化）。
+
+## OpenClaw 技能三目录与 frontmatter：优先级覆写 · 字段表 · Skills≠权限（来源：docs.openclaw.ai/ru tools/skills + openclaw-ai.com + tryopenclaw complete-guide + openclawplaybook + openclawcenter CLI 2026-03/09 实拉，合并 §OpenClaw 技能权限/§插件配置——那条管"权限门与配置体系"，本条管"技能目录与元数据"）
+- **三目录优先级**：Workspace skills（~/.openclaw/workspace/skills/ 最高优先，个人技能）> Managed skills（~/.openclaw/skills/ ClawHub 安装跨 agent 共享）> Bundled（预装）——同名高优先覆写低优先。
+- **frontmatter 字段**：name（snake_case 必填）/description（必填，给 agent 看的一行）/metadata.openclaw.os（OS 过滤）/requires.bins（PATH 二进制）/requires.config（配置键）——加载时按环境过滤。
+- **Skills ≠ 权限**：指令文件只教"何时怎么用工具"——执行仍受权限系统管；装第三方技能前 review 内容（treat like third-party code）。
+- **CLI 管理**：skills list/info/search "keyword"/update/uninstall/enable；ClawHub 60+ curated 技能单命令安装。
+- **提升层**：可复用 Skill（技能组织）。
+
+## Make 数组聚合与嵌套处理：map/get 内置 · Array Aggregator 嵌套坑 · reduce（来源：make.com community map-empty + trouble-aggregating-nested + xjavascript reduce 2025-11/2026-07 实拉，合并 §Make Data Store——那条管"存储"，本条管"数组变换"）
+- **内置函数**：map/get/first/last 访问数组内集合值——map(array; key; [key for filtering]) 返回过滤值数组。
+- **Array Aggregator 嵌套坑**：从 aggregator 输出提取嵌套数组字段时 map 易返回空——先确认 key 路径（如 Relevantnost[].Name）；复杂嵌套（suppliers[].offer.variants[].prices）用 flatten+map 逐层或 Make Code 单模块 JS 处理成结构化数组。
+- **reduce 归约**：聚合数组最强工具——迭代累积单结果（分组求和/按标识聚合）。
+- **提升层**：工作流（数组变换）。
+
+## Pipedream 运行时限制与暂停恢复：30s/60s/750s · 内存分段 · suspend 24h/7d（来源：pipedream.com docs control-flow + rerun + nodejs + community timeouts + browser-automation + triggers upload 2023-11/2026-08 实拉，合并 §Pipedream 限制面——那条管"并发/重试/限流"，本条管"运行时资源"）
+- **执行限制**：HTTP/Email 触发默认 30s；cron 默认 60s；paid 上限 750s（12.5 分钟）；每 segment 上限 12 分钟——长任务拆段或异步。
+- **内存分段**：可为 selected steps 单独扩内存（浏览器自动化推荐 2GB）——不必整个 workflow 高内存，省 credits。
+- **暂停/恢复**：pd.flow.suspend 默认 24h 自动取消，可设最长 7 天 timeout（ms）——异步等外部回调的标准姿势。
+- **上传与浏览器**：HTTP body 默认 512KB——pipedream_upload_body=1 query 或 x-pd-upload-body: 1 header 传任意大小；浏览器自动化离开前必须关浏览器实例否则 step 不交接控制权。
+- **提升层**：工具（运行时治理）。
+
+## Activepieces 认证配置：PieceAuth.OAuth2 · Override 品牌 · quick token（来源：activepieces.com build-pieces piece-reference/authentication + admin-guide manage-oauth2 + mcp/overview + embedding embeddable-mcp + endpoints connections/upsert 2026-02/09 实拉，合并 §Activepieces 连接面——那条管"连接管理"，本条管"认证体系"）
+- **PieceAuth.OAuth2**：displayName/grantType AUTHORIZATION_CODE/authUrl/tokenUrl/scope 声明——认证收集定义在 piece 代码层。
+- **Override OAuth2 Apps**：Platform Admin→Setup→Pieces 用自己的 Client ID/Secret——授权屏显示自己公司名（品牌）+更高限额；SSO 支持 Google OAuth+SAML Okta。
+- **Quick token（无 OAuth 流）**：generateMcpToken() 前端基于已配 embed session 拿 token——无 app 注册/PKCE/popup；MCP 连接 OAuth 首次浏览器认证，credentials 永不暴露（连接秘密/API keys 加密）。
+- **提升层**：可复用 Skill（认证体系）。
+
+## deeplearning.ai RAG chunking 策略：课程结构 · 固定尺寸 overlap · arXiv 系统结论（来源：corporate.deeplearning.ai retrieval-augmented-generation + arxiv 2601.14123 + csdn chunking 2026-01/08 实拉，合并 §RAG 检索——那条管"检索与重排"，本条管"分块与课程方法论"）
+- **课程结构**：RAG 课程（Intermediate 24h33m，Weaviate+真实新闻数据集）——Module 3 IR with Vector DBs：Chunking+Advanced chunking+Query parsing+Cross-encoders/ColBERT+Reranking；Module 2 BM25/semantic/hybrid；Module 4-5 prompt design/evaluation/deployment。
+- **chunking 策略**：固定尺寸 N tokens+M overlap（基础）；advanced techniques（结构化/语义分块）。
+- **arXiv 系统结论**：更大 chunk 减少检索上下文数但窄证据错过时增加 abstention；summaries/explanations 用小区块，factoid QA C≈2.5k；减少"NONE"响应增大 C+更小 S；避免 overlap；默认 sentence chunking——分块是一阶设计选择，决定 RAG 可靠性与成本。
+- **提升层**：可复用 Skill（RAG 分块方法论）。
