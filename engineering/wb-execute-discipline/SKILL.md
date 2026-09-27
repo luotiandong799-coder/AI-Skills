@@ -4117,3 +4117,34 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **超限硬停**：credits 超限 workflow 中途停止（hard caps stop a workflow mid-run）——成本不是事后账单是运行中断，预算监控前置。→ 判据：跑长任务前先估 credits，超限=流程断不是慢。
 - **开发测试不耗 credits**：development/builder 测试跑调试不扣额度——调试在 dev 环境做，生产才计费。
 - **提升层**：工具。
+
+## 知识库分块三策略 + 检索四层 + 插件四件套（来源：Dify Knowledge/plugin marketplace，2026-09-27 实拉）
+- **分块三策略**：General（sentence/paragraph 简单分段）/ Parent-Child（层级，官方推荐——父块上下文+子块检索）/ Q&A pairs（问答对）。→ 判据：默认 Parent-Child，需要精确片段才 General，知识是问答形态才 Q&A。
+- **检索配置四层**：metadata filtering（元数据预筛）→ node-level retrieval settings（节点级检索设置）→ rerank+weighted scoring（重排加权）→ vision-marked 跨模态检索。→ 判据：RAG 调优按层走：先元数据筛，再混合检索，最后 rerank。
+- **插件 .difypkg 四件套**：Tool definitions（OpenAPI specs 自定义工具）/ Node types（新 Workflow 节点）/ Model integrations（新 LLM/embedding/rerank）/ UI extensions（自定义配置界面）。→ 判据：平台扩展面按四类归档，一类一份。
+- **提升层**：工作流/工具。
+
+## 错误恢复续跑：Scan + Resume（来源：n8n production 错误恢复实践，2026-09-27 实拉）
+- **不重启整个 workflow，从断点续跑**：Scan（定时 workflow 扫 status=failed 且 retry_count<max 的表）+ Resume（读 Last Successful Step 用 Switch/子 workflow 从该点触发）。→ 判据：长流程失败恢复优先"续跑"——重跑整条=重复已完成副作用。
+- **错误分层两件套**：node-level Retry On Fail（maxTries+wait）管瞬时（429/网络 blip）；Error Trigger workflow 管剩下的（alerting/dead-letter/记录失败）。→ 判据：节点内重试 vs 全局错误链分工——别全堆一层。
+- **LLM tool calling 错误可视化**：单条 visual execution trace 显示哪个 tool call 失败、为什么、LLM 传了什么参数——排查不用翻终端日志。→ 判据：AI agent 排查先看 trace，别 grep 日志。
+- **提升层**：工作流。
+
+## 自托管 AI 平台安全：组件执行开关 + 单例缓存漏洞 + 公网暴露（来源：Langflow 安全公告/CVE，2026-09-27 实拉）
+- **自定义组件执行开关**：LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false 禁用自定义 Python 组件执行（受控部署）；配合 LANGFLOW_COMPONENTS_PATH 白名单放行可信组件。→ 判据：生产部署默认关自定义代码执行，白名单逐个放。
+- **进程级全局单例缓存秘密=租户边界漏洞**：voice mode 的 process-global ElevenLabs client singleton 缓存第一个用户的 API key 供所有后续租户复用→跨租户计费欺诈。→ 判据：任何"进程内单例缓存第一个用户的秘密"都是多租户事故——每请求从自己的存储取密钥。
+- **自托管平台不放公网**：CVE-2026-33017 未认证 RCE——实例放认证代理/VPN 后，host/container 级 egress filtering 限制出站到必需端点。→ 判据：AI 工作流平台默认内网+VPN 访问，egress 白名单。
+- **提升层**：工具/可复用 Skill。
+
+## Just-In-Time 检索 + 首窗框架 + 项目 RAG 四则（来源：Anthropic 上下文工程实践/Claude 项目 RAG，2026-09-27 实拉）
+- **轻量标识符替代预载**：旧范式 preload（预载所有潜在相关数据）；新范式 JIT——传 ID 不传完整对象，agent 需要时调 get_user() 取详情。→ 判据：上下文里放标识符不放整对象，用才取——窗口省着用。
+- **首窗搭框架后续迭代**：第一个 context window 用来建框架（写测试/建 setup scripts），后续窗口迭代 todo-list；结构化格式写测试（tests.json）支撑长期迭代。→ 判据：长任务第一个窗口干"基建"，别急着干正事。
+- **项目 RAG 四则**：上传全面内容；清晰描述文件名；相关内容分组同项目；提问时引用具体文档名帮模型聚焦搜索。→ 判据：给模型的知识先过"文件名清晰+分组+提问点名"三关。
+- **提升层**：工作流。
+
+## 技能评测八层 + 配对评估 + 基线快照（来源：SkillsBench/OpenSkillEval/评测手册，2026-09-27 实拉）
+- **评测分八层不塌成一个分数**：routing（该不该触发）/ deterministic contract（确定性契约）/ trajectory（轨迹）/ final state（最终态）/ semantic quality（语义质量）/ repeated-run reliability（重跑稳定）/ cost（成本）/ security（安全）——只用需要的层，别合成一个模糊分。→ 判据：技能评测按层报告，每层独立可改。
+- **配对评估缓解位置偏差**：LLM judge 从两个系统选更好，双顺序各比一次，一致偏好接受、冲突记平局。→ 判据：对比评测双序跑，避免位置偏差。
+- **基线快照对照**：新技能以"无技能"为基线；改旧技能以"改动前快照"为基线——并发跑 with-skill vs baseline。→ 判据：评测结论必须相对基线说，无基线=无数值。
+- **生态质量判据**：SkillsBench 47,150 公共技能平均质量 6.2/12；策展技能提升 pass rate 平均 16.2 百分点（医疗 +51.9）——目录大小≠质量，装技能先看评测。
+- **提升层**：可复用 Skill。
