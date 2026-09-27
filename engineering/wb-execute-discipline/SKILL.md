@@ -5682,3 +5682,42 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **邮件即自动化**：bundled imap trigger 路由认证入站邮件到隔离会话，用 reader agent 工具策略。→ 判据：入站邮件按工具策略进隔离会话处理。
 - **Gateway 可靠性**：connection pooling+circuit breaker（v2026.6.5 beta）。→ 判据：多平台连接用连接池+熔断，防单点拖垮。
 - **提升层**：工具。
+
+## Dify RAG 混合检索重排：rerank 语义校准中枢 + 混合检索 RRF + 多模态（来源：CSDN Dify 向量检索重排序全链路 + Dify multimodal-retrieval + Dify agentic-rag + arXiv SemEval-2026 Task 8，2026-09-27 实拉，与 §知识库管线互补——那条管摄取分块，这条管检索排序）
+- **Rerank 是检索链路"语义校准中枢"**：向量相似度高≠语义相关（长尾查询/多义词/领域术语场景）；从粗筛到精排的关键跃迁。→ 判据：检索后必须重排，尤其长尾/多义词查询。
+- **混合检索两条腿**：语义检索+关键词 BM25 同时跑，RRF 或加权融合合并结果；召回 Top-100 后用 Cross-Encoder 逐对精排 Top-5 给 LLM。→ 判据：生产 RAG 默认混合检索，重排收敛到 5 条内再喂模型。
+- **Dify 三种检索模式**：全文搜索（关键词精确术语 product codes/names/IDs 快可预测）/语义/混合（语义+全文+reranker 最准但慢需 rerank 模型如 cohere-rerank）。→ 判据：按查询类型选模式，精确标识符用全文，开放问题用混合。
+- **多模态检索**：Multimodal Embedding 首轮快速匹配 + Multimodal Reranking 评估 query/text/images 相关性，优先最重要视觉和文本证据。→ 判据：含图文知识库用多模态 embedding+rerank 双段。
+- **Agentic RAG**：Agent Node 集中决策引擎（intent analysis/tool orchestration/source selection/retry logic），Qdrant（vector & hybrid）/Google Search/custom APIs 原生工具。→ 判据：多源检索用 agent node 决策选源+重试，不写死单源。
+- **提升层**：工作流。
+
+## n8n 表达式与 Luxon 日期库：/ + JMESPath + diffTo（来源：n8n docs datetime/expression-reference + work-with-dates-and-times，2026-09-27 实拉，与 §表达式静默失败互补——那条管排错，这条管函数库）
+- **模板语言 Tournament**：n8n 自定义模板语言+扩展方法/变量/数据转换函数；两个库：Luxon（日期时间）+JMESPath（JSON 查询）。→ 判据：日期操作用 Luxon，JSON 深查用 JMESPath，别自写。
+- **/**：=Luxon DateTime 当前时间戳；=当前时间午夜 0 点。→ 判据：当天日期比较用 （可重复），精确时刻用 。
+- **常用链**：.toFormat('yyyy-MM-dd')/.plus({days:7})/diffTo(otherDateTime, unit) 差值/DateTime.day 月中天。→ 判据：跨日计算用 plus/minus，差值用 diffTo 带单位。
+- **内置转换函数**：endOfMonth()/extract(datePart 默认 week)。→ 判据：周期任务边界用 endOfMonth/extract，不手算。
+- **Date & Time node**：格式转换+Luxon 全支持；Code node 内也可用。→ 判据：批量日期转换用节点，单值用表达式。
+- **提升层**：工具。
+
+## Anthropic MCP 生产实践：keep servers thin + 授权服务端强制 + CI smoke tests（来源：Bitontree MCP 生产四课 + blog.paulserban MCP 授权 + sunpeak Claude Connector 部署 + AWS prescriptive guidance + arXiv 2603.13417，2026-09-27 实拉）
+- **MCP server 生产四课**：keep servers thin（typed wrapper around 现有 API/database，业务逻辑进 agent 不进 server）/version the protocol/handle cold start/budget for tool sprawl。→ 判据：MCP server 只做 API 薄封装，业务逻辑放 agent 或工作流。
+- **授权一等公民**：2026-07-28 spec OAuth-aligned authorization 把 token scope 到客户端最小操作集，服务端强制（客户端自称意图不可信）；删除工具 grant 比只读更窄。→ 判据：工具授权按最小操作集签发，服务端独立校验，不信客户端声明。
+- **生产部署**：CI 跑 protocol/E2E/visual/build/security checks；不可变 staging artifact 不重建提升；post-deploy smoke tests 覆盖 discovery/auth/one tool/one UI/one error；dashboards+alerts 覆盖 real protocol and tool boundaries；rollback 文档化测试。→ 判据：MCP 服务上线走 CI+冒烟+可回滚，协议边界要监控。
+- **AWS 选型**：Lambda 快速原型/ECS 生产（simplicity+flexibility 平衡），基线运行后自动容量建议。→ 判据：原型用 serverless，生产按流量评估后选容器服务。
+- **冷启动与工具膨胀**：冷启动要处理（timeout 预算分配），工具数量膨胀要预算管理。→ 判据：工具数设预算上限，超限合并或裁剪。
+- **提升层**：工具。
+
+## Make 生产监控与日志：Success rate + 执行日志 + Reasoning Panel（来源：Keerok Make 生产监控 + roborhythms Make review + Make autonomous-ai + Make email-sorting how-to，2026-09-27 实拉，与 §四类 error handler 互补——那条管失败怎么处理，这条管生产怎么盯）
+- **核心监控指标**：Success rate（目标 >98%）/Average execution time（识别慢模块>5s）/Operations consumption（/月 10,000 ops）/Error rate by module（找脆弱点加 fallback）。→ 判据：生产场景盯成功率+模块级错误率+执行时长+操作消耗四个数。
+- **执行日志**：每 run step-by-step log 输入输出 JSON；Pro tier 全文搜索日志。→ 判据：排查用模块级日志（输入/输出 JSON），全文搜索提升排障速度。
+- **结构化日志仪表盘**：Set Variable 记 key steps，自动喂 Google Sheet/Notion dashboard（scenario_id 模板）。→ 判据：关键流程用变量记日志喂看板，自动留痕。
+- **Reasoning Panel**：AI agent 每 run 显示调了哪些工具/顺序/每步决定。→ 判据：AI agent 流程上线前用 Reasoning Panel 审查工具调用链。
+- **告警与测试**：每关键分支配 Error handler（API 失败发 Slack/email 非静默）+retry 3 次带延迟；上线前受控消息集测试+前两周保持 oversight；"误分类紧急邮件的 triage agent 比没有更糟"。→ 判据：关键分支有告警+重试，AI 分类类 agent 先受控测试再上线。
+- **提升层**：工作流。
+
+## OpenClaw 记忆分层与压缩前 flush：USER.md/MEMORY.md/每日日志 + vector 记忆（来源：docs.openclaw.ai/concepts/memory + getopenclaw 永久记忆 + openclawplaybook 记忆搜索 + clawkit 长期记忆，2026-09-27 实拉，与 §记忆四策略互补——那条管提取策略，这条管文件分层与压缩衔接）
+- **三层文件记忆**：USER.md（可选，稳定偏好/沟通风格/关系/active-project context 写成 directives，会话开始加载单独小预算）/MEMORY.md（长期记忆 durable facts+decisions，boot-md hook 加载始终在 context）/memory/YYYY-MM-DD.md（每日详细笔记）。→ 判据：偏好进 USER.md，事实决策进 MEMORY.md，过程进每日日志。
+- **压缩前 memory flush**：session 接近 auto-compaction 阈值时触发 silent reminder 让模型先存 durable memories 再压缩（"acknowledges how models actually fail"——模型不会自己记得写下来）。→ 判据：长会话在压缩前强制一次记忆落盘，防止压缩丢关键事实。
+- **vector 记忆**：elite-longterm-memory skill 用 vector database 存 facts/decisions 跨会话语义搜索召回（无需手动查找）。→ 判据：跨会话事实召回用向量记忆，语义搜索代替逐文件翻。
+- **文件即记忆**：配置文件也都是记忆（路径/约定/长期项目上下文）。→ 判据：项目长期上下文写配置/规范文件，不只靠对话记忆。
+- **提升层**：工作流。
