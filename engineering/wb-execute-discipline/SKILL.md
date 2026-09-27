@@ -3274,3 +3274,30 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **成本数字**：读缓存 0.1x 输入价、写缓存至多 2x；90% hit rate 时  会话约 ——**缓存命中率是直接的钱**。
 - 判据：**会话内"改 system/换工具/换模型"都是缓存杀手**，能建模成消息或工具状态转移就别改前缀。
 - 提升层：工具 / 工作流。
+
+## 凭证范围分层与插件治理 CI：凭据按边界放、插件按流程审（来源：Dify credential best practices + plugin governance blog，2026-09-27 实拉）
+- **凭证范围分层**：workspace-level 凭证给内部工作流、workflow-level 凭证给隔离项目——**凭据边界跟着工作流边界走**；密钥 60-90 天轮换，成员离职立即轮换。
+- **敏感值不进会外泄的位置**：API key 不进 prompts / Code nodes / notes / request bodies——**这些位置会出现在 traces 或 workflow exports 里**；用 credential fields 或 secured request headers。
+- **插件治理流程化**：PR 贡献模板记录 author/plugin/version/risk level/隐私披露；CI 分 blocking errors 与 warnings，沙箱验证——**插件入库是流水线不是人工点头**。
+- 判据：**凭据先问"哪个边界用"再存；插件先问"贡献模板+CI 沙箱在哪"再装**。
+- 提升层：工具 / 工作流。
+
+## 按任务搜动作 + 敏感掩码：MCP 下 agent 找动作的方式（来源：Activepieces changelog + MCP overview，2026-09-27 实拉）
+- **按任务搜，不按名字搜**：agent 通过 MCP 时用 p_search_actions 按任务描述找 action、检查 schema 再运行——**动作发现从"记住名字"变成"描述任务→读 schema→执行"**，跨数百 pieces 不靠记忆。
+- **敏感详情永不进 logs**：数据掩码默认开启——**日志能审行为，不能审内容**（与遥测不携带 content 同源，补动作面）。
+- 判据：**给 agent 的工具面先问"按任务找得到吗"再问"敏感值会漏进日志吗"**。
+- 提升层：工具 / 工作流。
+
+## Conversation ID 全记录 + 大窗口失败模式：对话上下文的记账与代价（来源：Make Academy context engineering，2026-09-27 实拉）
+- **Conversation ID 是对话的账本**：每次 agent 交互唯一标识，存完整记录（instructions / messages / knowledge / tools 输入输出 + thinking / tool calls / tool responses）——**上下文工程第一步是"这份对话的可审计记录存在哪"**。
+- **窗口越大越失败**：context poisoning（毒化）/ distraction（分心）/ confusion（困惑）/ clash（冲突）——**大窗口不是免费午餐，是失败模式的温床**。
+- **存储平衡**：存最近 20-30 条消息平衡上下文与 token 成本；30 天自动裁剪——**记忆要"够用+保鲜"，不是"全存"**。
+- 判据：**窗口开大前先列"毒化/分心/冲突"三个失败模式会怎么发生**。
+- 提升层：工作流。
+
+## 渐进式披露三层 + 上下文窗口公共品三问（来源：Anthropic agent skills 官方 + 实战，2026-09-27 实拉）
+- **三层加载**：Level 1 metadata（name+description，约 100 tokens 常驻）→ Level 2 SKILL.md body（<5000 tokens，触发时加载）→ Level 3 bundled resources（按需，无限制）——**技能内容能装多少不取决于上下文，取决于"按需加载"分了几层**。
+- **上下文窗口是公共品**：写每节前三问——Claude 真需要这个吗 / 训练里已知道吗 / 这段值得 token 成本吗——**"每段 justify 自己的 token 成本"是 authoring 的默认纪律**。
+- **frontmatter 规范**：name ≤64 字符、仅小写字母数字连字符、禁 XML 标签、禁保留词（anthropic/claude）；description 非空 ≤1024；SKILL.md 理想 <500 行。
+- 判据：**技能越写越长时先问"放 metadata 还是 body 还是 resources"**，三层各有 token 预算。
+- 提升层：可复用 Skill。
