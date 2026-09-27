@@ -4883,3 +4883,38 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **插件方向清单**：UI 皮肤/会话增强/记忆（OpenViking 跨会话记忆）/工具/工作流/多 agent/自动化/视觉（modlens 给模型装眼睛）/侧边工作台（better-sidebar）/快速引用（dsh-at-file）/多源搜索（dsh-web-search-pro）/费用看板（dsh-cost-meter）。→ 判据：个人提效先看记忆/搜索/费用三方向现成插件。
 - **商业化长尾观察**：9 块 9 皮肤是 ToC，数据库巡检/云部署编排插件是 ToB——开源可插拔 harness 天然适合私有定制。→ 判据：评估插件生态价值看垂直场景插件，不是皮肤数量。
 - **提升层**：可复用 Skill。
+
+## 并行工具调用控制：独立只读并行、副作用按序（来源：Anthropic tool use/parallel 面，2026-09-27 实拉）
+- **disable_parallel_tool_use 语义**：tool_choice=auto 时置 true 确保 Claude 至多用一个工具；agent loop 每轮只能处理一个动作（如 computer use）时必须置 true 返回最多一个 tool_use。→ 判据：并行能力取决于你的循环能不能同时处理多个 tool_use 结果，不能就关掉。
+- **并行策略选择**：独立只读操作并行安全、低延迟；有副作用工具按序（asyncio.gather 或顺序或组合，按工具行为选）。→ 判据：只读扇出并行，写操作排队，别混。
+- **多 tool_use block**：Sonnet 4.6/Opus 4.8 单响应可返回多个 tool_use block（独立调用）——round-trip latency 主导 agent UX；2025 式三顺序轮询 vs 2026 式三并行。→ 判据：多独立请求让模型一次返回，别串行等。
+- **内置工具面**：code execution/tool search 跑在 Anthropic 基础设施，直接看结果；除非与并行调用组内其他工具冲突。→ 判据：内置工具无需自己执行，但别把它放进有冲突的并行组。
+- **AsyncAnthropic 并发**：独立 prompt 用 async 客户端并发请求减总延迟。→ 判据：批量独立请求走 async，串行是延迟浪费。
+- **提升层**：工具/工作流。
+
+## GitHub MCP Server 与 agent 侧 secret 扫描（来源：GitHub agent skills/MCP 面，2026-09-27 实拉）
+- **官方 MCP server 面**：28,300+ stars/51 tools；OAuth 或 PAT；自动 scope filtering 基于 OAuth token 权限——agent 只能用 token 有权的工具。→ 判据：接官方 MCP 用 OAuth 拿最小 scope，靠 token 权限自动过滤工具面。
+- **secret scanning in AI coding agents**：MCP server 在 commit/PR 前扫代码变更暴露的 secrets（Secret Protection 仓库 public preview）——写代码时就拦截泄露。→ 判据：编码 agent 配 secret 扫描工具，提交前先查。
+- **Copilot code review agent skills+MCP GA**（2026-07-29）：review 时调用团队内部工具与编码标准（SKILL.md 放 .github skill 子目录）；MCP 拉第三方平台上下文——reviewer 从通用变对照 YOUR standards。→ 判据：让 review 引擎跑你的技能文件与 MCP 上下文，别用通用 review。
+- **MCP 生态规模**：97M 月 SDK 下载/500+ 公开 servers（2026 de facto 标准）；projects_list/get 新工具 50% token reduction。→ 判据：选 agent 工具优先 MCP 形态，生态就是标准。
+- **提升层**：工具/可复用 Skill。
+
+## OpenClaw skill 开发：三级优先级与 frontmatter 命名（来源：OpenClaw skill 开发面，2026-09-27 实拉）
+- **三级优先级**：workspace skills（~/.openclaw/workspace/skills/ 最高——个人）/ managed skills（~/.openclaw/skills/ 次——ClawHub 安装跨 agent 共享）/ bundled（预装）；同名冲突按优先级。→ 判据：个人定制放 workspace，共享能力放 managed，别混层级。
+- **frontmatter name 命名**：skill 由 SKILL.md frontmatter name 命名，不是文件夹路径——可放子文件夹分组组织。→ 判据：改名只改 frontmatter，文件夹可随意归类。
+- **创建三路径**：CLI scaffold（openclaw skill create my-skill 生成骨架 SKILL.md+scripts）/ 装现成改（clawhub skill install log-triage 落 workspace 后读改——比从零快且有实战结构）/ 手写（md+YAML frontmatter name+description+正文 instructions/examples/guidelines）。→ 判据：先找相似现成技能改，不从零写。
+- **提升层**：可复用 Skill。
+
+## 自托管 AI 框架升级纪律：兼容矩阵 + 破坏性变更清单（来源：LangFlow 版本/升级面，2026-09-27 实拉）
+- **LFX 兼容矩阵**：Langflow 1.10.x↔LFX 1.10.x；1.11.x↔1.11.x；1.9 及更早先 lfx upgrade --upgrade-flow=safe 应用安全组件 schema 升级；LFX 0.5.x standalone 不再兼容 1.10+ 流程。→ 判据：升级前查主程序与配套 CLI 的版本配对表，跨代先跑 safe 升级。
+- **升级前查破坏性变更清单**：1.11 移除 legacy langflow 默认密码；PyTorch 依赖组件默认不含——升级博客的 breaking changes 段先读。→ 判据：升级前逐条对照 breaking changes，密码/依赖类先改配置。
+- **版本漏洞教训**：1.6.0-1.6.3 .env 不读（安全漏洞）；1.7.0 persisted state 丢失被 yank 换 1.7.1；CVE-2025-68477/68478 需 ≥1.7.1。→ 判据：踩到被 yank 版本立即升到修复版，不留在坏版本。
+- **导出备份**：API GET /api/v1/projects/download/+x-api-key 导出 projects；新虚拟环境装新版。→ 判据：升级前先 API 导出全部 projects，装新环境不原地覆盖。
+- **提升层**：工具/工作流。
+
+## 凭证与模板的共享语义：分享模板不分享连接（来源：n8n/Activepieces/Dify 面，2026-09-27 实拉）
+- **n8n 凭证共享=分享模板不是连接**：end-user credential 分享到其他 project，对方看到"连接自己的账户"选项、得不到原 owner 连接；每用户每模板只连接一次，该连接在所有分享到的 project 解析。→ 判据：凭证共享说清"对方要自己连"，不是把密钥交出去。
+- **Service account 模式**：admin 建凭证→分享给用户/角色；用户可选用但看不到/编辑不了实际 API key/密码；PATCH /credentials/:id 支持 isPartialData:true 合并——适合自动 secret rotation。→ 判据：共用账号凭证由 admin 建+分享，密钥轮换走 API 合并更新。
+- **Activepieces 模板共享**：Export Flow as JSON→Share File→Import→Each user sets up connections——模板内不含连接，各人配自己的；只分享不含敏感信息/专有逻辑的模板。→ 判据：模板共享=导出导入+各自配连接，发布前检查敏感内容。
+- **Dify provider 计费归属**：system providers 走 Dify 订阅 credits（1 AI response=1 input+1 output 计 1 次，与 token 数无关）；custom providers 直接向模型厂商计费（更高 rate limits）；API keys grant workspace-wide 模型访问，admin 只给可信成员。→ 判据：按"订阅 credits vs 直连厂商"选计费归属，API key 权限按工作区模型访问面授予。
+- **提升层**：工具/工作流。
