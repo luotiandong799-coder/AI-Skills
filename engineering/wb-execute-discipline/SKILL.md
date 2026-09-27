@@ -4813,3 +4813,36 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **动态矩阵**：fromJSON(needs.job1.outputs.matrix) 上游产出矩阵；needs 上下文取依赖 job outputs。→ 判据：矩阵内容由上游动态产出，减少手工维护。
 - **表达式与上下文**：数据类型 boolean/null/number/string；contexts secrets/strategy/matrix/needs/vars；repository_dispatch payload 建矩阵。→ 判据：表达式用显式类型与上下文，不裸拼字符串。
 - **提升层**：工作流/工具。
+
+## LLM 应用可观测性：异步派发 + 第三方集成 + 集成层隔离（来源：Dify 可观测性面，2026-09-27 实拉）
+- **异步派发架构**：OpsTraceManager 异步可扩展派发 rich trace 到多第三方平台；凭证加密/动态 provider 实例化/重试机制；集成层异步后台 workers **不影响应用运行时性能**——外部平台故障不影响用户应用。→ 判据：可观测性写入走异步后台，平台挂了不拖垮主流程。
+- **第三方集成面**：Langfuse/LangSmith/Arize Phoenix/Opik/W&B Weave；workflow/chatflow 全节点分布式追踪；token 用量成本追踪；每节点延迟分析；错误追踪含全上下文与堆栈；A/B 实验跟踪。→ 判据：每节点延迟/token 成本/错误堆栈都可查，不靠猜。
+- **TraceID 关联**：结构化 JSON 日志+分布式追踪 TraceID 关联+实时审计告警；Trace 视图检查中间值定位出错节点。→ 判据：一次运行一条链路，出错节点靠 trace 视图定位。
+- **提升层**：工具/工作流。
+
+## 表达式安全写法与转换职责分离（来源：n8n 表达式/数据映射面，2026-09-27 实拉）
+- **安全表达式**：可选链+fallback {{ .user?.profile?.email ?? '' }}；数组安全访问 {{ .items?.[0]?.name ?? 'No items' }}——避免嵌套对象 null 崩溃。→ 判据：取值一律带可选链与默认值，不裸引用深层路径。
+- **转换职责分离**：以转换为目标用 Edit Fields (Set) 节点（添加字段/修改值/删除重命名），分离数据转换与业务逻辑；表达式做轻转换就地做。→ 判据：纯转换走 Set 节点，逻辑代码不进字段表达式堆。
+- **凭证优先**：API keys/tokens 用 credentials 而非 env vars——env vars 明文出现在流程上下文。→ 判据：密钥走凭证系统，不落环境变量与表达式。
+- **提升层**：工具/工作流。
+
+## 自托管 AI 框架部署安全基线（来源：LangFlow 部署/认证面，2026-09-27 实拉）
+- **安全基线**：LANGFLOW_AUTO_LOGIN=False；非默认 LANGFLOW_SECRET_KEY；反代+认证；CORS 具体 origins 不放开。→ 判据：自托管框架默认关自动登录，公网只经认证反代。
+- **JWT 分级**：HS256 对称单服务器/开发；RS256 非对称生产公私钥对。→ 判据：单机开发用 HS256，生产换 RS256。
+- **外部认证**：LANGFLOW_EXTERNAL_AUTH_ENABLED=true；Keycloak JWKS/OIDC；内置 JWT 先试外部兜底——现有凭证与外部共存。→ 判据：企业环境接 OIDC，内置认证作回退。
+- **API 密钥权限**：x-api-key 认证；密钥只返回一次立即存储；密钥权限 Read/Execute 按需配置。→ 判据：API 密钥最小权限，只返回一次即存。
+- **未认证 RCE 教训**：CVE-2026-5027/33017——不直接暴露公网、反代/VPN 边界、出站过滤限制 base64-exfil 通道。→ 判据：框架进程出站白名单，防回调式数据外带。
+- **提升层**：工具/工作流。
+
+## Claude Code hooks：事件驱动 + 确定性阻断（来源：Anthropic Claude Code hooks 面，2026-09-27 实拉）
+- **事件覆盖全生命周期**：UserPromptSubmit/PreToolUse/PostToolUse/PostToolUseFailure/PostToolBatch/SubagentStart/SubagentStop/TaskCreated/PreCompact/SessionStart/Stop/ConfigChange——进出每个关键点都有钩子。→ 判据：要做拦截/记录/备份选对应事件，不拼装临时方案。
+- **阻断模式**：top-level decision: block+reason；exit code 2 blocks；continue:false。→ 判据：硬拦截靠显式 block，软放行靠退出码与 continue 标志。
+- **注册位置与类型**：settings.json/managed policy/skill-agent frontmatter；command/HTTP/mcp_tool 确定性触发 vs prompt/agent 用 Claude 判断。→ 判据：需要确定执行选确定性类型，需要语义判断才用 prompt/agent 型。
+- **exec form 与 shell form**：command+args 直接 spawn 无 shell 介入——避免 shell 注入；async 后台不阻塞。→ 判据：可控输入走 exec form，不可信输入不进 shell。
+- **典型用途**：PreToolUse 拦截危险命令/验证路径/自动批准安全操作；PostToolUse 格式化/lint/日志；PreCompact 备份 transcript 保留重要决定；SessionStart 注入 git status/TODO/环境。→ 判据：按"危险前置拦截、结果后置处理、压缩前备份"布局钩子。
+- **提升层**：工具/可复用 Skill。
+
+## agent-first 工具生态分层观察（来源：GitHub trending 生态面，2026-09-27 实拉）
+- **生态分层**：编码 agent 运行时（herdr "the runtime your coding agents live on" 40.8k Rust）/ 全插件化框架（deepseek-harness "Everything is a Plugin" 208k）/ 多通道个人助手（OpenClaw 363k）/ 手机读屏副驾（jev-chat-jarvis 6.6k Kotlin QQ/X/飞书候选回复）/ 自改进学习循环（Hermes Agent 113k）/ 可审计自进化（Evolver 6.7k）/ 精简本地（ZeroClaw 30.5k Rust、NanoClaw 27.8k 容器隔离）。→ 判据：个人助手赛道分化出"多通道/手机副驾/自进化/精简"四向，按场景选型。
+- **基础设施面**：统一模型网关（new-api 48.9k OpenAI/Claude/Gemini 兼容转换）/ agentic 数据库（TiDB vector search）/ 低代码 AI（JeecgBoot 47.9k "Skills 生成→在线配置→代码生成→手工合并"）。→ 判据：模型网关与向量数据库成为 agent 基础设施标配。
+- **提升层**：可复用 Skill。
