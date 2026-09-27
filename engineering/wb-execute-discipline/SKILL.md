@@ -7024,3 +7024,39 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Flow DevOps Toolkit SDK**：配置 production.url + api_key_env（环境变量注入而非明文）——一套代码切换 dev/prod 环境。
 - **K8s 生产部署**：Runtime 用 headless backend-only 镜像（只服务 API 不跑可视化编辑器，省资源）；最小 2Gi RAM+1000m（1CPU）per instance ×3 replicas+HPA；API 认证 env 组：LANGFLOW_AUTO_LOGIN=False / SUPERUSER / SECRET_KEY / NEW_USER_IS_ACTIVE=False / ENABLE_SIGNUP=False。
 - **提升层**：工作流（生产化部署）。
+## Anthropic tool_choice 三值与工具描述纪律：any/tool/none 语义 · ≥3-4 句描述 · 优先描述非示例（来源：platform.claude.com tool-use/define-tools + implement-tool-use + anthropic.com engineering advanced-tool-use 2025-11/2026-09 实拉，合并 §工具循环终止条件——那条管"循环怎么停"，本条管"工具定义与选择语义"）
+- **tool_choice 三值**：any=必须用其中一个工具但不强制特定（模型自选）；tool=强制用特定工具；none=禁用工具（默认）。
+- **描述纪律（性能最重要因素）**：每个工具描述 ≥3-4 句、复杂工具更多——覆盖"做什么/何时用（何时不用）/每参数含义与行为影响/不返回什么信息/名字歧义"；**优先描述而非示例**（示例可加但不是主力）。
+- **高级工具使用三特性**：Tool Search Tool（搜索工具不占上下文窗口——数千工具可及）；Programmatic Tool Calling（代码执行环境调工具减上下文影响）；Tool Use Examples（演示如何有效用工具的通用标准）。
+- **工具写作原则**：选对工具（不做什么也重要）/命名空间化定义功能边界/返回有意义上下文/优化工具响应 token 效率/用 eval 自动评估工具质量。
+- **提升层**：工具（工具定义质量）。
+
+## OpenClaw 会话两层持久化与 Incognito：sessions.json+transcript.jsonl · 树结构 append-only · 内存会话（来源：docs.openclaw.ai concepts/session + reference/session-management-compaction + docs2.openclaw.ai main-session/memory-honcho 2026-05/09 实拉，合并 §子代理 session 治理——那条管"生命周期与执行形态"，本条管"存储结构与记忆加载"）
+- **两层持久化**：Session store（sessions.json）——key/value 映射 sessionKey→SessionEntry，小、可变、安全编辑（可删条目），管会话元数据；Transcript（<sessionId>.jsonl）——append-only 带树结构（id+parentId），存真实对话+工具调用+压缩摘要，用于重建未来模型上下文。
+- **Incognito 内存会话**：session entry/transcript/compaction state 只进 process memory 不上盘——Gateway 重启即消失、不跑自动 memory flush、reset/delete 不建 archive（Codex-backed runs 默认 ephemeral 不写本地状态文件）。
+- **记忆加载机制**：MEMORY.md（curated 长期记忆）加载进每个新会话；daily notes memory/YYYY-MM-DD.md 按需搜索、/new /reset 后近期内容 re-priming；Honcho 提供跨会话记忆——每 AI 回合后持久化对话，用户画像（preferences/facts/style）与 agent 画像（personality/behaviors）持续建模，会话重置/压缩/频道切换上下文照常。
+- **提升层**：工作流（会话与记忆治理）。
+
+## Dify 节点聚合与人工介入：Variable Aggregator 汇聚互斥分支 · Human Input 暂停续做 · 早停省 token（来源：dify.ai workflows + blog human-input-node + deepwiki node-system-overview + blog deepresearch/parallel-branch 2026-03/09 实拉，合并 §Dify 迭代节点/§Agent 策略——那条管"节点面基础"，本条管"聚合/人工/早停三模式"）
+- **Variable Aggregator（分支收敛）**：If/Else 与 Question Classifier 产生互斥分支（每轮只跑一支），输出同类时用聚合器提供单一输出变量给下游——消除每分支重复定义下游节点。
+- **Human Input 节点（v1.13.0）**：执行到该节点暂停→表单发指定人→审批/修改/评论/转交/超时处理→沿对应分支继续——人机交接原生进 workflow。
+- **早停模式**：IF/ELSE 检测 Parameter Extractor 错误消息→直接路由 Output 结束，不浪费 token 继续无意义生成；条件支持 IF/ELIF 多路径+AND/OR+文本 contains/starts with+值比较+空态。
+- **提升层**：工作流（分支收敛与人工介入）。
+
+## n8n Webhook HMAC 深度防护：签名验身份 · replay 窗口 · payload 白名单 · timing-safe 比较（来源：n8n.io workflows 14486 secure-ai-agent-webhook + community webhook-authentication + docs webhook credentials 2026-02/09 实拉，合并 §Webhook 端点化——那条管"端点形态"，本条管"公开端点安全层"）
+- **四层 HMAC 模板**：①HMAC-SHA256 验发送者身份 ②raw body 逐字节签名保完整性 ③replay protection 拒绝过期时间戳（默认 5 分钟窗口）④payload 白名单过滤阻断未授权字段；HMAC 比较用 timing-safe 函数（crypto.timingSafeEqual）。
+- **认证矩阵**：Basic/Header（x-api-key）/JWT（Passphrase 或 PEM Key）/None 四选一；加 IP(s) Allowlist 限调用方；GET webhook 仅 IoT/简单场景可用 ?secret= 查询参数+IF 节点验证。
+- **纵深防御扩展**（community）：Auth profiles（HMAC timestamp+nonce/JWT JWKS/API Key/Combo HMAC+IP allow-deny）+replay（timestamp+nonce）+per-IP rate limiting（memory/Redis）+Content-Type allowlist+body size caps+mTLS proxy headers。
+- **提升层**：工具（公开端点安全）。
+
+## LangFlow 评估调试面：Traces 双层 span · 可观测三集成 · flaky node 调试纪律（来源：docs.langflow.org traces 1.8 + integrations-openlayer/langfuse/arize + langflow.org guides multi-agent/GPT-5-routing 2026-08/09 实拉，LangFlow 章节均为版本/MCP/部署面，评估调试面为新增）
+- **Traces 双层 span**：component spans（每组件输入/输出/延迟/错误）+LangChain spans（链/工具/检索器/LLM 调用含模型名与 token 用量）——不依赖外部可观测服务即可排障。
+- **可观测集成**：Openlayer/Langfuse/Arize 自动收集 tracing 发送分析（OpenTelemetry/OpenInference）。
+- **flaky node 调试纪律**：step-by-step 跑节点+检查输入输出+临时 Chat Output taps 可视化中间值+输出约束为简单 schema（lists/objects）让失败显眼、下游解析简单；多 agent 关键步骤加 Chat Output 验证推理、独立任务并行减延迟。
+- **提升层**：工作流（评估与调试）。
+
+## Make Data Store 模块与函数 App：模块全表 · IML 函数模块化 · Aggregator 设置纪律（来源：help.make.com data stores + new-make-functions-app + academy advanced-functions + use-apify data-stores-guide 2026-03/09 实拉，合并 §Make DataStore 数据存储——那条管"存储基础"，本条管"模块操作面与聚合"）
+- **Data Store 模块全表**：Delete All/Get a Record（唯一 key）/Search Records（过滤条件）/Check Existence（返回 true-false 不取数据）/Count Records/Add-or-Replace——按操作类型选模块，别用 get 当 exists 用。
+- **Make Functions App**：IML 函数从映射字段升级为独立模块——链式步骤式数据转换，避免嵌套代码；空输入行为=输出空结果不停场景（不误报失败）。
+- **Aggregator 纪律**：Iterator 逐行处理后再聚合（可映射具体列）；聚合器必须指定 Source Module（聚合哪模块之后的 bundles——通常 Iterator 后或循环最后模块）；Table Aggregator 出 HTML 表格适合邮件报告。
+- **提升层**：工作流（数据转换与聚合）。
