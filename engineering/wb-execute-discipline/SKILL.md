@@ -6616,3 +6616,43 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Freedom Levels 三档**：high=纯文本指令（灵活上下文任务）/medium=参数化脚本/slow=确定性脚本——按任务性质选自由档，不一律上脚本。
 - **触发质量测试**：should-not-trigger 3-5 条防误触发/scope creep；held-out 约 40% 验证修复泛化；**"描述先钉死，没有别的修复比它更提升触发准确度"**。
 - **提升层**：可复用 Skill（authoring 量化基准）。
+## Dify 多 agent 编排：嵌套 agent 节点 · Agentic RAG · New Agent 对话构建（来源：dev.to 5-hidden-uses + dify-hosting ai-agent guide + dify.ai blog new-agent 2026-08 + CSDN 多智能体协同 YAML 2026-09 实拉，与 §Dify 并行分支互补——那条管"并行编排语义"，本条管"agent 嵌套与构建方式"）
+- **嵌套 agent 节点（v1.3+）**：一个 agent 把另一个 agent 当 tool 调用——专业角色可组合出单 agent 无法复现的涌现行为；分工=coordinator 收请求→research/data/writer 专家→聚合。
+- **Agent Node workflows 的 Agentic RAG**：agent 迭代分析意图→选工具/源→重写 query→评估证据——非一次性 retrieve-then-generate；复杂问答按此搭。
+- **New Agent 对话构建**（2026-08-27）：与 agent 聊天自动生成可复用 skills+保留会话上下文；就绪后把它作为节点加进 workflow 参与更大流程——聊天产物直接进管线。
+- **串行链 YAML 形**：researcher→summarizer→validator，edges 定义 source/target 依赖、inputs 传上游 output。
+- **提升层**：工作流（多 agent 构建方式）。
+
+## n8n 模板质量判据与生产化清单：四件缺一宁可重建 · 模板约 70% 重写（来源：n8n.spot best-templates + taskifylabs n8n-templates-library + buildberg + thinkbot production playbook 2026-04/06 实拉，与 §n8n 子工作流工程互补——那条管"拆分边界"，本条管"选模板还是从零+模板怎么硬化"）
+- **模板质量四件判据**：①清晰节点命名（不是"HTTP Request1"）②显式错误处理 ③注释/sticky notes 说明意图 ④近期版本——缺一通常快于重建。
+- **生产化追加五件**：每个失败点错误处理+指数退避重试+输入校验防坏数据传播+idempotency 防重复 webhook 事件+监控 dashboard（用户发现前检测失败）。
+- **模板 vs 从零**：验证想法/学新 node/复制错误处理批量模式/一次性个人自动化→用模板；客户数据安全合规/复杂 Agent+Vector Store 面→从零。**预期模板最终约 70% 重写**——模板是学习加速器不是交付物。
+- **pattern library 理念**：manager 模式（有状态处理+overlap protection）+function/utility workflow 复用+错误日志——可复制的积木比 plug-and-play 模板更有价值。
+- **提升层**：可复用 Skill（模板选用与硬化）。
+
+## LangFlow 自定义组件与 Extension 脚手架：Component 基类 · lfx extension init · DevOps Toolkit（来源：docs.langflow.org components-custom-components + extensions-quickstart + contributing-bundles + langflow.org blog 1.9 + deployment-block-custom-components 2026-04/09 实拉，与 §LangFlow 多 Agent 编排互补——那条管"编排形态"，本条管"组件怎么开发与安全"）
+- **自定义组件四要素**：继承 Component 的 Python class+class 级属性（标识描述）+inputs/outputs 列表（数据流）+methods（行为逻辑）；内部变量管错误处理与 logging。
+- **Extension 脚手架**：lfx extension init my-extension→extension.json（v0 manifest）+pyproject.toml（pip 可装）+src/lfx_my_extension 布局——规范让 bundle 可装载可分发。
+- **Flow DevOps Toolkit SDK（1.9）**：lfx init 建部署脚手架，environments.yaml 控制 dev/prod 部署——flow 从本地到生产的版本化管线。
+- **组件安全**：LANGFLOW_COMPONENTS_PATH 同类别覆盖/allow-list 绕过开关 LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=false/组件类别 allow-list LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST——生产环境默认锁白名单。
+- **ALTK Post-tool JSON 处理**：大 JSON 工具响应现场生成 Python 代码提取相关数据→减少上下文尺寸。
+- **提升层**：可复用 Skill（组件开发规范）。
+
+## Activepieces 自定义 piece：TS 模块三件套 · 三触发器技术含 App Webhooks Subscriptions（来源：activepieces.com build-pieces start-building/create-action/create-trigger + piece-reference triggers overview + docs mcp/tools 2026-05/09 实拉，与 §Activepieces 版本管理互补——那条管"版本纪律"，本条管"piece 怎么写"）
+- **Piece=标准 TS 模块**：createPiece({name, displayName, actions, triggers})；action=createAction({name, displayName, run: async(context)=> 用 context.input 执行并返回 outputs})——props 收输入、run 执行、outputs 回传。
+- **CLI 脚手架**：npm run cli actions create / triggers create——定义 piece 名/显示名/参数。
+- **三触发器技术**：Polling（周期查端点）/Webhook（单 URL 监听）/App Webhooks Subscriptions（OAuth2 dev app 在单 URL 收全部授权用户事件——三种里唯一"推送订阅"型，数据实时且免轮询）。
+- **MCP 暴露**：400+ pieces 经 MCP 服务器供 agent 调用；ap_search_actions/ap_search_triggers 自然语言描述检索动作/触发器。
+- **提升层**：工具（piece 开发）。
+
+## Make blueprint 生产化框架：subscenarios 积木 · 幂等键 · correlation_id · 激活前导出（来源：help.make.com blueprints + thinkbot blueprint framework + use-apify make-api tutorial + dredyson scenario recovery 2026-03/05/08 实拉，与 §Make 场景并发互补——那条管"执行并发"，本条管"场景复用与上线流程"）
+- **Blueprint=可复用场景版本**（modules/settings/mapped values 全含）：导出备份/共享组织内外/重用于新账号；模板流程=复制进账号→连账号（OAuth/API key）→调 filters/mappings/schedules→test mode 端到端验证→激活（15-30 分钟）；API 克隆 POST /scenarios/{source_id}/clone。
+- **生产级 blueprint 五默认**：①subscenarios 稳定积木（upsert contact/create ticket/send alert 归一化输出）②幂等键 ③error handlers 接 incomplete executions+重试+限流 ④instrumentation：correlation_id+结构化日志+告警路由+runbook（replay/backfill）⑤激活前导出 blueprint→受控 clone+激活清单。
+- **粘贴重建纪律**：Ctrl+V 复制模块后逐模块核对 connections/webhooks/API keys——别假设粘贴即就绪。
+- **提升层**：工作流（场景上线框架）。
+
+## DeepSeek Harness 全插件化：Everything is a plugin · dsh 8,000+ 插件生态（来源：deepseek.com/harness + npm deepseek-plugin + dsh.do 画廊 + api-docs.github_copilot 2026-08/09 实拉，与 §Claude Code 插件源互补——那条管"装到哪"，本条管"harness 架构形态"）
+- **Harness 架构原则**：**每个能力都是插件，可换可重组**——models/tools/skills/sessions/sandboxes/storage/loops/scheduling/UI 全部插件化；换模型/换存储/换 UI 不改核心（npx @deepseek-ai/dsh web 起步）。
+- **dsh 插件市场**：deepseek-plugin.org 8,000+ 插件（AI 生成 wiki 页+GitHub star 排行+安装命令）；deepseek-plugin npm 包在 agent 内 search_plugins 直接安装；dsh.do 画廊（深链 /s 分享/README 自动封面/标签反查）。
+- **Copilot 集成**：DeepSeek V4 Pro/Flash 进 Copilot Chat 模型选择器，保留 agent mode/tool calling/skills/MCP——模型可换而能力面保留。
+- **提升层**：可复用 Skill（harness 架构观察）。
