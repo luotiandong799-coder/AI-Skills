@@ -6382,3 +6382,34 @@ pm create @n8n/node（declarative/custom 模板）——declarative 风格适合
 px skills add <collection-url>（通用）/pip install modelscope && modelscope download --collection（Python）/curl install.sh --collection（shell）。
 - **Ultron 群体智能**：ModelScope 开源（2026-05-11）群体智能基础设施——让一群 agent 共享经验/共享技能/共享画像，解决"换会话失忆/同一个坑全队踩"；AIPC Skills 模式=本地 OCR+RAG（localhost 全本地企业文档不出机）。
 - **提升层**：工具（本土技能市场）。
+## n8n 执行数据保存策略：成功不存失败全存 · 剪枝默认 · 分块防 OOM（来源：docs.n8n.io execution-data + fix-memory-issues + community.n8n.io Code node OOM 案例 2026-07 实拉，与 §n8n 可观测互补——那条管"看执行状态"，本条管"执行数据存多少怎么留"）
+- **高频大 payload 防 OOM 技巧**：EXECUTIONS_DATA_SAVE_ON_SUCCESS=none（成功不写巨量 payload）+ 保留 EXECUTIONS_DATA_SAVE_ON_ERROR=all（失败仍可调试）——两个一起配，防写盘拖垮实例。
+- **剪枝默认参数**：EXECUTIONS_DATA_PRUNE_MAX_COUNT 默认 10,000（超量从旧到新删）；EXECUTIONS_DATA_MAX_AGE 默认 336h（14 天）；new/running 状态执行不删；Insights 保留 365 天（N8N_INSIGHTS_MAX_AGE_DAYS）封顶 730 天。
+- **内存治理三分**：分块处理（10,000 行改 200 行/execution）；避免 Code node（解析巨型嵌套数组易 OOM）；避免手动执行大批量；子工作流只给父返回有限数据。
+- **AI Agent 记忆**：每个 AI Agent 节点接受一个 memory sub-node；Chat Memory Manager 可查大小/清特定条目。
+- **提升层**：工作流（执行数据与内存治理）。
+
+## LangFlow LFX 无头执行：独立包 · serve/run · Workflow API background（来源：docs.langflow.org lfx-overview + workflow-api + pypi lfx 实拉，与 §LangFlow 记忆互补——那条管"会话怎么切"，本条管"流程怎么无头跑"）
+- **LFX=Langflow Executor**：轻量 CLI+Python 库，从 flow JSON 无头运行（stateless、minimal dependencies、no database、no UI）——比 --backend-only 更轻，无需装完整 Langflow 包。
+- **两命令**：lfx serve（起服务）/lfx run my_flow.json "问句" --format json|text|message|result（直接跑拿 stdout）；flow graph 存内存免数据库加载开销。
+- **Workflow API（Beta）双模式**：mode stream（流式）/mode background（**立即返回 job_id 异步执行**，GET /api/v2/workflows?job_id 查结果）——长流程不阻塞调用方。
+- **提升层**：工具（无头执行与异步编排）。
+
+## Make 场景模板与分享：blueprint · Scenario sharing 链接 · API clone（来源：help.make.com blueprints + introducing-scenario-sharing + developers.make.com templates + thinkbot blueprint 框架 实拉，与 §Make Webhook 互补——那条管"webhook 响应"，本条管"场景怎么复用分发"）
+- **blueprint=可复用场景版本**（含模块/模块设置/mapped values）——导出备份、换账号迁移、分享导入；**生产级流程：导出 blueprint 再激活**，上生产走 controlled clone+activation checklist。
+- **Scenario sharing 比 blueprint 更灵活**：链接分享，**无需登录即可看公开页，链接总是最新保存版**——demo 和外部展示用分享，重分发用 blueprint/模板。
+- **Templates 画廊**：make.com/en/templates 按 app/category/use case 过滤，Use Template 一键复制，所有 plan 含 free；API clone：POST /scenarios/{source_id}/clone {teamId,name}。
+- **共享逻辑下沉 subscenario**：稳定输入输出+canonical payload+共享逻辑移入 subscenario，每个 subscenario 当内部服务（明确契约可预测输出）。
+- **提升层**：工作流（场景复用与分发）。
+
+## Claude Code memory 四层：Enterprise · User · Project · Local + on-demand（来源：code.claude.com memory + claude.com steering blog + support.claude.com 实拉，与 §AGENTS.md 层级互补——那条管"通用 agent 指令文件"，本条管"Claude 专属记忆层级"）
+- **四层定位**：Enterprise policy（系统级 CLAUDE.md，IT/DevOps 分发，个人不可排除）/User（~/.claude/CLAUDE.md 个人全项目偏好）/Project（./CLAUDE.md 或 .claude/CLAUDE.md 团队共享版本控制）/Local（./CLAUDE.local.md 个人项目级，**加 .gitignore**，最后读）。
+- **根 CLAUDE.md 全量加载**：session start 加载，**compaction 后重读不丢失**；**子目录 CLAUDE.md on-demand**——Claude 读该目录文件时才加载（模块级规则），不在 session start 全载；目录层级上方 CLAUDE.md 全量加载。
+- **与 AGENTS.md 并行**：AGENTS.md 可独立或与 CLAUDE.md 一起加载——多 agent 协作仓库用 AGENTS.md 时注意两套文件并存的分工。
+- **提升层**：工作流（长期记忆分层）。
+
+## RAG 分块选型树：fixed→semantic→parent-child→late→RAPTOR · 结构感知 · 元数据必含（来源：futureagi advanced-chunking + blockchain-council production RAG + aiagents vector-db best-practices 实拉，与 §LangFlow RAG 评测互补——那条管"RAG 效果怎么测"，本条管"入库前怎么切"）
+- **选型树**：recall 低→semantic（长文）；recall 和大 LLM context 都要→parent-child（小块检索+大块喂 LLM，生产最优平衡）；文档跨块成义（法律/科学/多节报告）→late chunking（配长上下文模型）；需多跳→RAPTOR 层级；其余默认 recursive 512+overlap。
+- **结构感知分块**：Markdown/HTML 按 heading 边界先切，段超 token 预算再细分——比固定窗口提升检索精度；metadata 必含（source/section title/page/date）支撑过滤与引用。
+- **hybrid sparse+dense**：dense 向量恒配 BM25/SPLADE（罕见词/命名实体召回）；**pin embed model+距离 metric+chunker 配置**到存储旁保证可复现；chunk 为原子事实+deliberate overlap（10-20%）；embedding max length 超限静默截断（chunk 别超模型上限）。
+- **提升层**：可复用 Skill（RAG 入库工程）。
