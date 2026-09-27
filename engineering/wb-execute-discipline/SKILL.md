@@ -3249,3 +3249,28 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **自改进技能循环**：reflection hook 在技能被调用后跑，评估"这次技能帮上忙了吗"，没帮上就建议编辑 SKILL.md；reflections 存 learnings 文件，技能下次加载时读——**技能自改进 = 反射钩子 + 学习文件回读，不是靠人手动复盘**。
 - 判据：**"每次必然做"的行为先找确定性 hook；技能要变好，先装 reflection→learnings 循环**。
 - 提升层：工具 / 可复用 Skill。
+
+## 双索引方法与 Summaries 桥接层：语义与关键词倒排按成本选（来源：Dify docs knowledge base，2026-09-27 实拉）
+- **两种索引方法**：High-Quality = embedding 语义索引（准、花 token）；Economical = 每 chunk 提取 10 关键词建倒排索引（零 embedding token 成本、精度低）——**先按"检索精度 vs token 成本"选索引，而不是默认语义**；Economical 不够再升级 High-Quality。
+- **Summaries 桥接查询-内容差距**：高质索引下 raw chunk 仍难对齐用户查询时（太具体/太吵/结构复杂），**给 chunk 生成摘要作为浓缩语义层**，让 chunk 核心意图显式——**摘要不是替代 chunk，是检索的辅助语义层**。
+- 判据：**知识库检索不到 → 先查"摘要层建了吗"，再查"该不该换索引方法"**。
+- 提升层：工具 / 工作流。
+
+## 分块实证结论 + 决策矩阵：简单分块常优于复杂（来源：RAG 2026 实证 + Dify chunker，2026-09-27 实拉）
+- **实证结论：简单赢**——recursive character splitting + fixed-size 512 token 一致优于复杂语义/命题分块，且便宜好维护；**先上简单方案，证据不足别上复杂分块**。
+- **按文档类型选结构**：structural chunking（按 headings/paragraphs/tables/code blocks 切）适合技术文档；hierarchical chunking（段落+章节+文档多粒度存、多级检索）最准最贵，**检索质量比延迟重要才用**。
+- **三大分块错误**：>1000 token（稀释相关性）/ 零重叠（丢边界上下文）/ 切在代码块或表格中间（破坏语义连贯）；重叠 10-20% 捕获相邻上下文。
+- 判据：**分块参数拍板顺序：固定大小 512 → 结构分块 → 层级分块**，每升一级都要有"更复杂确实更准"的证据。
+- 提升层：工作流。
+
+## Project 级隔离单元：一个实例分租多团队（来源：n8n docs projects + blog custom roles，2026-09-27 实拉）
+- **Project 是隔离单元**：workflow / credentials / data / variables / execution history 一起隔离——**共享一个实例而不变成 free-for-all 的关键是把"凭证+数据+历史"圈进同一个隔离边界**（与 Activepieces 治理四件套互补：那条管身份与记录，本条管资源边界）。
+- **自定义项目角色 + SSO 用户供给**：按项目分配角色（Project Editor 等），SSO 供给用户——**角色跟项目走，不跟全局走**。
+- 判据：**多人共用实例前先问"每团队的资源边界在哪"**——凭证、数据、执行历史必须同界。
+- 提升层：工作流。
+
+## 缓存工程五则 + 成本数字：前缀缓存是性能杠杆（来源：Anthropic prompt caching 官方文档 + Claude Code 实战，2026-09-27 实拉）
+- **五则**：① 缓存稳定可复用内容（system 指令/背景/大上下文/高频工具定义）放 prompt 开头 ② 前缀顺序 tools → system → messages，**断点放在保持稳定的最后一个块** ③ 状态变化（plan mode/日期）**用 messages 插入，不改 system** ④ **不要中途换工具或模型**——工具集用工具建模状态转移，延迟加载而不是移除 ⑤ **监控 cache hit rate 像监控 uptime**。
+- **成本数字**：读缓存 0.1x 输入价、写缓存至多 2x；90% hit rate 时  会话约 ——**缓存命中率是直接的钱**。
+- 判据：**会话内"改 system/换工具/换模型"都是缓存杀手**，能建模成消息或工具状态转移就别改前缀。
+- 提升层：工具 / 工作流。
