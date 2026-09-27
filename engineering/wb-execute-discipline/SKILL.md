@@ -6413,3 +6413,35 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **结构感知分块**：Markdown/HTML 按 heading 边界先切，段超 token 预算再细分——比固定窗口提升检索精度；metadata 必含（source/section title/page/date）支撑过滤与引用。
 - **hybrid sparse+dense**：dense 向量恒配 BM25/SPLADE（罕见词/命名实体召回）；**pin embed model+距离 metric+chunker 配置**到存储旁保证可复现；chunk 为原子事实+deliberate overlap（10-20%）；embedding max length 超限静默截断（chunk 别超模型上限）。
 - **提升层**：可复用 Skill（RAG 入库工程）。
+## Dify 知识库权限三作用域：角色不继承 · 显式授权 · 文档自动禁用（来源：CSDN Dify 权限配置避坑手册 2026-05 + dify mintlify knowledge manage 实拉，与 §Dify DSL 迁移互补——那条管"配置怎么版本化"，本条管"谁能读哪些知识"）
+- **三作用域边界**：team_member_role（团队角色）/app_permission（应用级权限）/dataset_access_control（数据集访问控制）作用域互不自动继承——**App Viewer 角色默认不自动获得其团队数据集读取权**，需管理员显式授 dataset:read。
+- **External Knowledge Base 只读连接**：Dify 对外部知识库只有检索权，不能修改外部内容——外部源保留完整控制权时用连接而非迁移。
+- **文档自动禁用**：长期不更新/不被检索的文档自动禁用（Sandbox 7 天/Pro&Team 30 天）——**闲置文档静默退出检索**，可一键重新启用；KB 设置修改限 owner/admin/editor。
+- **提升层**：工作流（知识库多租户权限）。
+
+## LangFlow CUGA 上下文治理：planner-executor · 大对象 variables 摘要 · guarded tools（来源：langflow.org CUGA 企业 Agent 博客 + policies-guarded-tools + explainx Langflow 指南 2026 实拉，与 §LangFlow Policies 守卫工具互补——那条管"规则怎么变守卫"，本条管"长任务上下文怎么控"）
+- **planner-executor 子任务隔离**：规划器拆任务、执行器做 tool calling+glue code 管 loops/conditionals/data transform——子任务隔离防单上下文过大。
+- **大对象不进 message history**：大数据用 variables 存，短期记忆只存 variables 摘要——**避免把大对象载入消息历史撑爆 context**。
+- **guarded tools**：Policies 组件把自然语言业务规则转成可执行守卫，工具调用执行前检查——比"hope 模型记住 prompt 规则"可靠。
+- **工具节点包装**：explicit timeout 参数 + 工具失败 fallback 消息给 LLM + 每次工具调用打日志。
+- **提升层**：工作流（长任务上下文治理）。
+
+## Make 版本历史与恢复：version history · Scenario Trash 30 天 · run replay（来源：help.make.com restore-and-recover-scenario + scenario-run-replay + community releases July 2026 实拉，与 §Make 错误处理五模式互补——那条管"失败怎么处理"，本条管"改坏了怎么回退"）
+- **version history**：手动保存的版本可随时恢复；**scenario recovery** 检索未保存变更（意外会话中断后找回）。
+- **Scenario Trash（2026-07 新功能）**：删除的场景进 Trash，**30 天内一键恢复**——删除有安全窗口，不立即永久删。
+- **Scenario run replay**：用之前某次 run 的 trigger data 在当前版本重放——测试、解决错误、**backfill 数据无需新 trigger 数据**，所有 plan 可用。
+- **Rollback error handler 边界**：能回滚支持事务的模块（mysql/data store），**不能 undo 非事务模块**（gmail send/dropbox delete）——事务边界决定能回滚什么。
+- **提升层**：工作流（场景版本与恢复）。
+
+## Claude prompt caching 计费：write 1.25× · read 10% · 前缀匹配命中率（来源：platform.claude.com prompt-caching + 阿里云 Claude Code 成本治理 2026-04 + claudelab 减半实战 2026-04 实拉，与 §token 成本分工——那条管"输出按需裁剪"，本条管"输入前缀缓存省钱"）
+- **计费三部分**：cache write（5min TTL=base×1.25/1h TTL=2×）/cache read（10%；Fable 5.1/Mythos 5.1=2.5%；Opus 5.5=5%）/regular uncached 全价；**breakpoints 本身不收费**。
+- **前缀匹配**：请求起始字节流与上次完全一致即命中缓存——**统一模板+固定系统提示词+工具定义放前面**，动态内容放后段不破坏前缀。
+- **实测**：标准化研发流程缓存命中率 ~84%，整体支出降 ~76%（阿里云社区）；长重复系统提示词工作负载成本可减半。
+- **提升层**：工具（输入成本治理）。
+
+## GitHub Actions OIDC：id-token write · sub immutable · PR 禁生产角色（来源：docs.github.com openid-connect + oidc reference + systemshardening OIDC 指南 2026-05 实拉，与 §供应链硬化互补——那条管"第三方节点来源"，本条管"CI 云凭证怎么免长期密钥"）
+- **免长期密钥**：workflow 请求 id-token: write 权限，官方 configure-aws-credentials 内部处理 token fetch+STS 调用——token 单 job 自动过期（~1h）、不存 secret、每次生成，无需轮换。
+- **sub immutable（2026-07-15 起新仓库）**：默认 subject 含 owner ID+repo ID——旧格式只用 org/repo 名，**命名空间回收后他人可创建相同 subject 冒用**；aud 条件设 sts.amazonaws.com。
+- **信任策略三纪律**：subject-claim 限制到具体 branch/environment；**绝不让 PR workflow 承担生产角色**；生产环境走 environment protection rules 审批。
+- **Dependabot 免长凭据**：Dependabot 用 OIDC 认证私有 registry，不再需要 repository secrets 存长期凭据。
+- **提升层**：工具（CI 凭证安全）。
