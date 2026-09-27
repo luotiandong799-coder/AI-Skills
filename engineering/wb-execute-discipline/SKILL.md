@@ -3356,3 +3356,30 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **多 agent 脆弱点**：agent 之间用 JSON parser 传数据"held together with hope"；给 agent 硬删除权却不许它问权限是反模式——**编排层要显式契约，权限动作要留询问口**。
 - 判据：**验收 agent 时"结果对"还不够，还要问"路径对吗"**——router 选错技能但结果碰巧对，是隐藏的定时炸弹。
 - 提升层：工作流。
+
+## 表达式静默失败三类 + 实例级 Error Workflow（来源：n8n 官方与社区，2026-09-27 实拉）
+- **静默 bug 三类（不报错只错结果）**：①表达式缺 = 前缀（{{ .field }} → 应为 ={{ .field }}）显示为字面文本——**三个最常被复制的模板都带这个 bug**；②字段在 Fixed 模式，{{ }} 被当字符串常量不解析（n8n 只在 Expression 模式求值）；③日期感知字段悄悄错（写入字面值）。
+- **实例级 Error Workflow 一次配置**：内置 Error Trigger 捕获实例内所有 workflow 崩溃（message/stack trace/failing node）→ AI 分析 root cause/解决方案/影响/紧急度——**配一次，全实例覆盖，每个 workflow 不再各自做错误处理**。
+- **Switch 节点必开 Fallback 连 Error/Notify**：没匹配到分支时静默失败 → 开启后 misrouted executions 报警不静默。
+- 判据：**表达式字段先问"这是 Expression 模式吗、有 = 前缀吗"；错误处理问"有实例级 Error Workflow 吗"**。
+- 提升层：工作流。
+
+## 人机交接节点 + 变量三层（来源：Dify docs，2026-09-27 实拉）
+- **Human Input 节点（v1.13 起）**：把"必须人签字/人工判断"的步骤 native 进 workflow——**自动化处理大部分，关键决策留人**；edge cases handoff 给人而不是让自动化硬走。
+- **变量三层，各有用途**：环境变量（可持 LLM 节点共享的模型配置，改一处全更新）；Conversation Variables（Chatflow 专属，单会话多轮持久化，Variable Assigner 节点读写）；系统变量（全局预设）。**preset 变量 userinput.files 是 legacy，新应用用自定义 file input**。
+- 判据：**"这一步能不能没人管？"不能就用 Human Input；跨轮状态用 Conversation Variable 不用堆 prompt**。
+- 提升层：工作流。
+
+## 长上下文排版：长数据置顶 + query 置底 + prompt-audit（来源：Anthropic long-context tips，2026-09-27 实拉）
+- **长文档/大数据（>20k token）放 prompt 顶部**，在 query/instructions/examples 之上；**query 放末尾**——复杂多文档输入测试响应质量提升最高 30%。
+- **多文档用 XML 标签包裹**结构与元数据；Claude Opus 4.6/4.5 有上下文意识，能跟踪剩余 token 预算。
+- **prompt-audit 反模式审计**：对 prompts/skills/tool descriptions 跑自动审计（成本与性能反模式）——**技能与提示词也要定期体检**。
+- 判据：**长输入先排版再交：文档在上、问题在底；技能文件定期 prompt-audit**。
+- 提升层：工作流。
+
+## 技能市场三维认证 + 工具权限三策略（来源：阿里虾小宝/lingma Cloud Agents，2026-09-27 实拉）
+- **技能三维认证**：安全性 / 完整性 / 可执行性——装第三方技能先过这三关（与 wb 工具安全"审 description"互补：那条管注入，本条管市场级认证维度）。
+- **自定义审核开放**：技能是否合规由用户把关——**审核权下沉到使用侧**。
+- **工具权限三策略**：always_allow（自动批准）/ always_ask（每次询问）/ 拒绝——**工具权限不是二元的，三档按敏感度选**。
+- 判据：**装技能看三维认证标；配工具按敏感度选权限档；不确定就 always_ask**。
+- 提升层：可复用 Skill。
