@@ -4021,3 +4021,35 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **update 智能跳过**：tree SHA 比较——技能内容没变就跳过，不白刷版本号；重跑 install 同一命令即完成更新；list 显示安装 scope（全局/项目）。
 - 与 §技能市场安装方法论 的分工：那条管"装什么范围怎么装"，本条管"免安装试用+更新时的跳过逻辑"。
 - **提升层**：工具。
+
+## RAG 排障顺序 + Agentic RAG 重试（来源：Dify 官方教程/Agentic RAG 模板，2026-09-27 实拉）
+- **先查检索质量，再改 prompt**：检索结果差时，先看源头——**缺失或分错块的源无法靠改 prompt 修复**。→ 判据：RAG 回答差，第一动作是 Inspect retrieval（源文档/分块/嵌入），不是调 prompt。
+- **Agentic RAG 重试链**：Agent 自动选 1-2 个 collection 做 Hybrid Search；检索质量低→重试其他 collections 或切换外部搜索（Google/Tavily）；再 LLM 总结。→ 判据：让 agent 对"检索不足"有主动行动权（换库/换路），不要单路检索一把梭。
+- **全托管 RAG 流水线**：ingestion→chunking→embedding→vector storage→retrieval→reranking 一键配齐（Weaviate/Qdrant/Milvus/Pinecone/pgvector/Chroma）。→ 判据：个人知识库优先托管流水线，自己搭嵌入+检索链路前先确认没有现成闭环。
+- **提升层**：工作流。
+
+## 调试四步 + debug 字段 + Fallback Service 模式（来源：n8n 官方社区 Execution Logs 调试流程 + n8nlogic 错误分层，2026-09-27 实拉）
+- **调试四步不动生产**：① 打开失败执行日志（不碰生产工作流）→ ② 找失败节点，记名字+错误消息 → ③ 查该节点输入数据 → ④ 判断数据是否如预期。→ 判据：先看日志再猜原因；一上来就改生产流程是调试反模式。
+- **debug 字段技术**：临时加 items.length + _debug_sample={{ .items[0] }} 输出全原始数据+抽样字段，看失败前一刻数据长啥样；IF 节点做条件日志（仅当数据满足特定条件才记）。→ 判据：需要"失败瞬间快照"时用 debug 字段，验完即删。
+- **Fallback Service 模式**：主 API 节点 continueOnFail: true + lwaysOutputData: true → IF 节点检查错误 → 切换备用服务。→ 判据：关键外部依赖加一层备用路由，别让主服务挂=整个工作流挂。
+- **错误分层三层**：per-node Retry On Fail（瞬时错误）→ error workflow 通知（Slack/Email 告警）→ fallback service（备用服务）。Error Trigger 只在 live/activated 时运行。
+- **提升层**：工作流。
+
+## A2A 协议 + NextPlaid 多向量检索 + Gunicorn preload（来源：Langflow 1.11 release blog，2026-09-27 实拉）
+- **A2A（Agent-to-Agent）协议**：发布 flow 供其他 agent 调用；flow 内也能调远程 A2A agent——默认关闭（LANGFLOW_A2A_ENABLED=true 开启）。→ 判据：跨 agent 协作要显式开协议开关，别假设默认互通。
+- **NextPlaid 多向量检索**：ColBERT-style late interaction + ColPali-style 视觉文档检索开箱，无需 glue code——检索不止 embedding 一种形态。→ 判据：视觉/长文档检索需求先查有没有现成多向量扩展，不手搓。
+- **Gunicorn preload 内存优化**：LANGFLOW_GUNICORN_PRELOAD=true 让重初始化只在 master 进程 fork 前做一次（加载组件/构建 types cache/建 starter projects）→ 每个 worker 不再重复初始化，内存大省+启动更可靠。→ 判据：多 worker 部署下，把一次性能做的初始化提前到 master 进程做。
+- **提升层**：工具/工作流。
+
+## Hooks 优先级 + 权限模式分级（来源：Anthropic Claude Code Hooks reference + SDK permissions，2026-09-27 实拉）
+- **hooks 判定优先级 deny > ask > allow**：任一 hook 返回 deny，操作即被阻塞——其他返回 allow 的 hook 不能推翻；检查顺序=规则→权限→默认 Ask。→ 判据：给 agent 配安全钩子时，"有一票否决权"是设计前提。
+- **hooks 当安全代码用**：PreToolUse/PostToolUse 拦截每个工具调用；好用例=阻断读 secret 路径、阻断编辑 .github/.claude/.mcp.json/部署清单/基础设施文件；PermissionRequest 事件可在权限对话框时刻代用户 allow/deny。→ 判据：安全关键路径用 hooks 硬拦，不等模型自觉。
+- **权限模式分级+动态切换**：default（受控执行）/ acceptEdits（隔离目录快速迭代）/ bypassPermissions（跳过提示，生产或敏感系统避免）；按任务进度和信心动态切（先 default 再 acceptEdits）。→ 判据：全程 bypassPermissions 是高风险默认值，模式跟着任务阶段走。
+- **hook 供应链安全**：hooks 是会在会话启动时执行的代码（CVE-2025-59536：恶意 repo 注入 hooks）——只装自己写/审过的 hook，SHA256 校验，不从不可信 repo 装。
+- **提升层**：可复用 Skill。
+
+## skills.sh API 三端点 + 发现顺序（来源：skills.sh API Reference + find-skills 技能，2026-09-27 实拉）
+- **API 三端点**：/api/v1/skills 分页 leaderboard；/search 按名或描述搜；/curated 官方策展集。→ 判据：找技能先走 API 拿结构化列表，别只靠页面浏览。
+- **发现顺序**：先查 leaderboard（按安装量排名=久经考验），再跑 CLI 搜索补漏；all-time + 24h trending 两个视图对照看生态收敛方向。→ 判据：热门不等于正确，但"大家都在装"是质量信号之一，与人工策展互补。
+- **开放 vs 策展对照**：skills.sh ~67 万技能开放未策展（任何人可发布）；tech-leads-club 80 个技能人工策展且过静态分析+Snyk 扫描。→ 判据：装陌生技能默认走"开放市场+自己审"路线，安全敏感场景选策展集。
+- **提升层**：工具。
