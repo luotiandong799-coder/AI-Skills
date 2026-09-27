@@ -5800,3 +5800,38 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **Agent Skills 开放标准**：Agent Skills with Anthropic 课程教开放标准格式 reusable skills+组合成 workflow。→ 判据：技能按开放 SKILL.md 标准封装可跨 agent 复用。
 - **课程面**：新课程 Building Adaptive AI Agents/Evaluating AI Agents/A2A Protocol/Build Interactive Agents with Generative UI——按需补课。→ 判据：需要时按主题选对应 short course。
 - **提升层**：工作流。
+
+## Dify Agent 节点编排：对话建 Agent + 双策略 + Iterations cap + YAML IaC（来源：Dify blog New Agent + docs Agent node + agentpatternscatalog，2026-09-27 实拉，与 §Agentic RAG 互补——那条管 Agent 决策内容，这条管 Agent 构建与编排形态）
+- **对话建 Agent**：Build agents by chatting——Dify 自动生成可复用 skills 且对话中保持 context，完成后可加入 workflow 做更大流程。→ 判据：快速原型用对话生成 agent，沉淀为 reusable skills 后进 workflow。
+- **Agent Node 是确定性步骤**：Workflow 内嵌 agent 行为作为 DAG 一个确定性节点（生产多 agent 系统推荐方式）；proper agent primitive 非 prompt wrapper with retry。→ 判据：生产多 agent 用 Agent Node 嵌 workflow，不单独堆 prompt+重试。
+- **双执行策略**：Function Calling（原生支持模型）/ReAct（Thought→Action→Observation），bounded by Maximum Iterations safety cap。→ 判据：模型不支持 FC 用 ReAct，且必须设迭代上限。
+- **双向 MCP**：Client 连外部 MCP Servers 注册 tools 到 Agent tool list；Server 暴露 Dify apps 给外部系统调用。→ 判据：Dify 作 MCP 消费者与生产者，统一工具目录。
+- **YAML IaC**：workflow 可导出 YAML 实现 Infrastructure-as-Code，团队可版本管理。→ 判据：workflow 配置进版本库用 YAML 导出。
+- **提升层**：工作流。
+
+## n8n Agents 编排与事件模式：workflows 作 tools + Message an Agent + execution_id 关联（来源：n8n blog Introducing n8n Agents + 15 best practices + event 模板，2026-09-27 实拉，与 §Vector Store 互补——那条管工具语义，这条管 agent 与 workflow 互调）
+- **Agents 与 workflows 并列**：agents sit next to workflows；agent 可用 workflows 作 tools——决定 agent 在系统中能做什么；Message an Agent node 从 workflow 内调用 agent。→ 判据：agent 能力边界=可调用的 workflow 集合，双向互调。
+- **触发器选型**：Scheduled triggers（批处理/报告/维护不需实时）/Application event triggers（Gmail 新邮件/Salesforce 更新/云存储上传）/Execute sub-workflow trigger（父启动子）。→ 判据：按实时性选触发器，批处理用 schedule，平台事件用 app trigger。
+- **事件关联模式**：webhook 收票→execution_id 关联每次运行→记 START event→agent 处理→记 EVENT 收尾；guardrails 校验生成→Data Table 存储→按优先级路由。→ 判据：事件驱动流程用 execution_id 贯穿全链路日志。
+- **提升层**：工作流。
+
+## LangFlow 可观测性：1.12 OpenTelemetry + Openlayer 捕获 + Helicone 弃用（来源：Langflow blog 1.12 + docs Openlayer + Langfuse/LangSmith 对比，2026-09-27 实拉，与 §Make 监控互补——那条管场景监控，这条管 flow 级可观测）
+- **1.12 原生 OTel**：emits traces/metrics/logs 描述服务健康，plain OTLP 任何兼容后端（NewRelic/Instana），env OTEL_EXPORTER_OTLP_ENDPOINT/OTEL_SERVICE_NAME。→ 判据：Langflow 服务健康监控用 OTLP 标准导出。
+- **Openlayer 自动捕获**：component hierarchy（parent-child）/nested LLM calls 在父组件内/timing metrics/inputs outputs 自动类型转换/user context（user ID+session ID）/error tracking。→ 判据：flow 级追踪看组件父子树+用户上下文，不用手动插桩。
+- **Langfuse 原生集成**：v1.0.17+ chat/API 时查看对话 traces。→ 判据：Langflow 对话追踪首选 Langfuse 原生集成。
+- **Helicone 弃用警示**：2026-03 被 Mintlify 收购进维护模式，Langfuse 是最接近的活跃开源替代。→ 判据：新项目不选 Helicone，用活跃维护的观察平台。
+- **提升层**：工作流。
+
+## Anthropic computer use GA：toolset + browser toolset + HIPAA + Dispatch（来源：Claude blog computer-use-skills-api-files-api + dispatch-and-computer-use + AI Wiki，2026-09-27 实拉，与 §Claude Code 权限互补——那条管权限，这条管桌面/浏览器操作工具）
+- **双 toolset 分工**：computer_toolset_20260801 操作整个桌面/legacy app（无自动化接口）；browser_toolset_20260801 web 页面内——暴露 page structure+element references 而非仅 screenshot+coordinates。→ 判据：桌面级操作用 computer toolset，页面内操作用 browser toolset。
+- **browser use 元素定位**：agent 读页面结构对特定 field/button 操作而非屏幕位置。→ 判据：网页自动化优先 DOM 元素引用，不靠坐标。
+- **工具优先层级**：direct tool integration→computer use fallback。→ 判据：有 API/工具优先 API，无接口才降级 screen control。
+- **合规与分发**：computer use eligible for HIPAA workloads under BAA；Dispatch 移动端发任务到桌面；Bedrock+Vertex AI 可用。→ 判据：敏感负载确认 BAA 覆盖，长任务可手机 Dispatch 启动。
+- **提升层**：工具。
+
+## OpenClaw 插件市场与 tool plugins SDK：plugin SDK + marketplace 命令族 + clawhub publish（来源：docs.openclaw.ai plugins/tool-plugins + building-plugins + cli/plugins + plugin-inventory，2026-09-27 实拉，与 §ClawHub 互补——那条管 skills 安装，这条管插件开发与市场）
+- **Tool plugins SDK**：openclaw>=2026.5.17 导出 openclaw/plugin-sdk/tool-plugin；package root 需 dist/+openclaw.plugin.json。→ 判据：开发工具插件用官方 SDK 包规范。
+- **插件可加能力**：messaging channel/model provider/local CLI backend/agent tool/hook/media provider。→ 判据：按需扩展类型选插件形态，不改核心。
+- **市场命令族**：openclaw plugins marketplace entries/list/refresh（--expected-sha256 校验）；--marketplace 装 claude-compatible 插件；bare 名从 npm 装。→ 判据：安装先查 marketplace 来源，校验 sha256。
+- **发布流程**：clawhub package publish your-org/your-plugin --dry-run 预检后发布，用户 clawhub: 前缀安装。→ 判据：插件发布走 ClawHub 包流程，dry-run 先验。
+- **提升层**：可复用 Skill。
