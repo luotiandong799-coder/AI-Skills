@@ -7502,3 +7502,73 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **tombstoned sessions**：被标记废弃的会话保留独立恢复路径进入新会话。
 - **快照/检查点**：sess load <name> 恢复快照（live transcript 先自动备份 pre-load~<timestamp>，--no-backup 跳过）；session.snapshot("name") 建保存点后 resume()；checkpoint-restore --latest/--force/--workspace-only。
 - **提升层**：可复用 Skill（恢复与快照）。
+## Dify 分块策略与索引方法：六类分块 · 向量化 vs 关键词 · weight 免 rerank（来源：dify.ai rag + deepwiki dify-docs 8.4 + dify-hosting rag guide 2026-03/09 实拉，合并 §Dify 混合检索——那条管"检索合并"，本条管"分块与索引选型"）
+- **分块策略按文档类型匹配**：通用/常规（默认）/长上下文/父子/表格/Q&A——结构化表用表格块，问答对用 Q&A 块，长文档用父子块（父块上下文+子块精确）。
+- **索引方法取舍**：向量化（高质量语义检索，成本高）；关键词（经济型，精确匹配快）——按向量化成本与语义深度取舍。
+- **混合检索 weight settings**：全文+向量同时执行+重排序选最佳；可不配 rerank API——直接设语义/关键词权重（Semantic=1/Keyword=0 纯向量；0/1 纯关键词；自定义比例平衡）；配 rerank 模型则模型优化合并结果；TopK+Score Threshold 过滤。
+- **分块大小**：200-500 token 推荐（Dify 官方）——太大向量计算慢+检索噪声。
+- **Knowledge Pipeline 编排**：Chunker 分段→KB 设块结构+检索设置→User Input 字段——企业文档/混合文件类型/精确控制处理参数。
+- **提升层**：工作流（RAG 选型）。
+
+## n8n Webhook HMAC 与防重放：内置认证四法 · timingSafeEqual · 5 分钟窗口（来源：n8n.spot webhook-security + n8nworkflows hmac-sha256 + GitLab CVE-2026-86080 + xbstack production-hardening 2026-01/09 实拉，合并 §n8n Webhook 防护——那条管"入口防护"，本条管"签名与防重放"）
+- **内置认证四法**：Basic auth/Header auth/JWT auth/None——Webhook 节点可直接要求认证；但不原生校验 payload 完整性、不防重放。
+- **HMAC-SHA256 签名验证**：Webhook 收→Function 节点 crypto.createHmac('sha256', secret).update(payload) 与签名比对——GitHub 风格（X-Hub-Signature-256）；timingSafeEqual 防时序攻击；raw body 逐字节签名证完整性防篡改。
+- **防重放**：请求 timestamp 过期即拒（默认 5 分钟窗口）；事件 ID 幂等（X-GitHub-Delivery/Stripe event.id 全局唯一；无则拼接核心字段算数据哈希）——防重复执行副作用。
+- **IP allowlisting 补充层**：签名+白名单组合闭环。
+- **CVE-2026-86080 教训**：GitHub Trigger 422 reuse path 跳过 webhook secret 存储→签名验证 fail-open——任何"复用路径跳过存储"的绕过都必须当 fail-open 修。
+- **提升层**：可复用 Skill（webhook 加固）。
+
+## LangFlow 自定义组件结构与发布：Component 类 · inputs/outputs · PyPI 扩展（来源：docs.langflow.org 1.8.0 custom-components + langflow-assistant + extensions-quickstart + DEVELOPMENT.md 2024-07/2026-09 实拉，合并 §LangFlow 组件构建——那条管"内置机制"，本条管"自研组件与发布"）
+- **Component 类结构**：继承 Component；class-level 属性（display_name/description/icon）；inputs 列表+outputs 列表定数据流；methods 定义行为逻辑；内部变量做错误处理与日志。
+- **lfx 导入**：from lfx.custom import Component；lfx.io FloatInput/MessageTextInput/Output——新形态组件 API。
+- **自定义组件作 agent 工具**：Core/Bundles 菜单 New Custom Component→Code pane 写 Python——agent flow 可直接用。
+- **发布扩展**：python -m build（wheel+sdist）→ twine upload PyPI；pip install lfx-my-extension；服务器启动 discovery 自动进 palette 无需配置——组件可复用生态。
+- **开发热重载**：LFX_DEV=1 后端重启生效+浏览器 refresh。
+- **langflow-builder-mcp**：add_custom_component(flow_id, tool_mode=True, code=...) 远程建组件。
+- **提升层**：可复用 Skill（组件开发）。
+
+## Activepieces 沙箱模式与表达式限制：四执行模式 · 128MB isolate · 网络守卫（来源：activepieces.com sandboxing + env-vars + known-limits + network-security + SentinelOne CVE-2026-73083 2026-07/09 实拉，合并 §Activepieces Code Step 沙箱——那条管"code step 用法"，本条管"沙箱配置与边界"）
+- **AP_EXECUTION_MODE 四模式**：UNSANDBOXED（默认，自托管裸跑）/SANDBOX_PROCESS（进程级）/SANDBOX_CODE_ONLY（仅 code step 隔离）/SANDBOX_CODE_AND_PROCESS——按暴露面选。
+- **SANDBOX_CODE_ONLY 细节**：每个 Code step 独立 isolated-vm 上下文——128MB/isolate（AP_SANDBOX_MEMORY_LIMIT 配置）；require 移除（无 npm）；step 后 dispose；无 Linux namespace 机制。
+- **表达式限制**：16384 源字符/2048 tokens/depth 64/10000 评估访问/1048576 输出字符——长循环复杂表达式会被拒。
+- **KV 状态**：512KB cap、128 字符 key——不适合大负载存储。
+- **执行限制**：flow run 与单 action 均 10 min（AP_FLOW_TIMEOUT_SECONDS=600）；cloud worker concurrency 1。
+- **网络守卫**：AP_NETWORK_MODE=STRICT 独立于沙箱——限制 code 可达网络（DNS/socket 钩子）。
+- **CVE-2026-73083 教训**：SANDBOX_CODE_ONLY 曾 bypass——importFresh 委托 Node require 在隔离边界前加载模块、顶层语句在 host 引擎执行——沙箱边界必须覆盖"加载期"而非仅"执行期"。
+- **提升层**：工具（沙箱治理）。
+
+## Make 聚合器与 IML 函数：Array/Text/Numeric 三聚合 · 独立模块化函数（来源：apps.make.com make-functions + help.make.com aggregator + developers.make.com iml + community map-join 2025-03/2026-09 实拉，合并 §Make 数组聚合——那条管"嵌套处理"，本条管"聚合器选型与函数库"）
+- **Make Functions app**：IML 函数之前只能在映射字段内用——现可作为独立模块做数据变换；空输入行为——映射值空/null/missing 输出空结果不停止场景。
+- **聚合器三类型**：Array Aggregator（多 bundle 合并成一个数组——如 10 行数据成 JSON 数组）；Text Aggregator（多 bundle 文本拼接+分隔符）；Numeric Aggregator（求和/平均/最大/最小）——先想清聚合输出形态再选。
+- **IML 函数清单**：flatten（递归扁平化）/join（数组拼串分隔符）/keys（对象属性数组）/last/length——组合 {{ join(map(...); delimiter) }} 多返回值拼文本。
+- **Iterator+聚合器组合**：split() 数组→Iterator→Text Aggregator 合并（如取首字母）。
+- **Tools 集成**：Increment function（首次返回 1 每次+1——计数器）；Get/Set variable（跨运行状态）。
+- **嵌套数组**：flatten/map 处理 suppliers[].offer.variants[].prices 级深嵌套；更复杂用 JS Code 模块。
+- **提升层**：工作流（数据变换）。
+
+## Pipedream 调度 UTC 与 Schedule API：五类型 · 默认 UTC 无选择器 · CLI 部署（来源：pipedream.com connect/triggers + workflows/triggers + integrationatlas UTC + pipedream blog cli 2020-04/2026-09 实拉，合并 §Pipedream Schedule 与执行限制——那条管"限制与配额"，本条管"调度配置与时区"）
+- **Schedule API 五类型**：Custom Interval（每 N 小时/分钟/秒）/Daily（每天具体时间+timezone）/Weekly（一周多天）/Monthly（每月多天）/Cron——按日历需求选。
+- **schedule 定义**：intervalSeconds 秒频率；cron 自定义+timezone 可选——组件 props cron object。
+- **UTC 默认无选择器（坑）**：schedule triggers 默认 UTC——UI 无时区选择器，必须手动换算（EST UTC-5 → 12:00 UTC 才能 7am EST）；'0 8 * * 1-5' 8AM UTC 周一至五；保存前核对 next run 预览。
+- **Cron Scheduler 事件属性**：interval_seconds/cron/timestamp/timezone_configured/timezone_utc。
+- **timer interface**：$.interface.timer default intervalSeconds（source 默认 15 分钟）。
+- **CLI 部署**：pd deploy --run cronjob.js --timer --frequency 15s；cron 表达式 --cron。
+- **提升层**：可复用 Skill（调度时区）。
+
+## Anthropic Server-side Compaction 保真：compact_20260112 · keep-verbatim 区 · tool-result 占位（来源：platform.claude.com compaction + context-editing + agentnative compaction-pattern + dreaming.press cross-vendor 2025-09/2026-09 实拉，合并 §Server-side Compaction——那条管"机制与重声明"，本条管"保真与分区"）
+- **Server-side compaction 推荐策略**：自动摘要旧上下文接近窗口时；扩展有效上下文长度；保持活动上下文小——对话变长模型保持焦点难，响应质量下降（不止 token cap）。
+- **启用与参数**：compact_20260112 策略加 context_management.edits；summary_prompt 自定义摘要提示；阈值——低阈值更频繁窗口更小，高阈值更多上下文但风险达限；用 token counting endpoint 精确长度；大量 server-side tools 时避免 compaction（工具边角）。
+- **keep-verbatim 区（永不摘要）**：system prompt+工具 schema（字节稳定也保 prefix-cache 命中）；任务声明+验收标准；最近 5-7 turns 保留完整——生产指南收敛值。
+- **tool-result clearing 第一杠杆**：stale 可重取的工具输出替换为占位符——保留"调用发生+返回一行"记录——最便宜的降本。
+- **保真案例**：压缩摘要保留 3/3 高层事实但 0/3 晦涩细节（附录表格单元格）——自定义 summary prompt 点名 must-keep specifics（ID/数字/开放问题/未读项）；关键 specifics 在压缩前写外部 memory。
+- **提升层**：可复用 Skill（压缩保真）。
+
+## OpenClaw 沙箱权限模型：Level 分级 · scope 三档 · exec 三模式（来源：openclawdoc sandbox + docs.openclaw.ai security + openclawplaybook security-model + useclaw sandbox-guard 2026-03/09 实拉，合并 §OpenClaw 信任边界——那条管"信任原则"，本条管"沙箱实现"）
+- **沙箱是主安全边界**：限制 agent 在宿主看/做——即使被攻陷也不能大面积破坏；权限 Level 分级（write=沙箱边界内创建/修改/删除——file_write）。
+- **scope 三档**：agents.defaults.sandbox.scope "agent"（默认，agent 级隔离）/“session”（按会话更严格）/“shared”（单容器/工作空间共享）——防 agent 互访用 agent/session。
+- **容器边界**：完整 Gateway 跑 Docker（容器边界）；工具沙箱=host Gateway+沙箱工具（Docker 默认后端）——生产高风险任务不直接跑宿主。
+- **exec 安全模式**：deny（完全禁用 exec 工具）/allowlist（仅预批准命令）/full（任意命令，默认，最高风险）——高风险环境必须 deny 或 allowlist。
+- **安全默认**：出厂阻断破坏性系统命令/文件访问限制工作区/外部发送数据需批准。
+- **子代理沙箱**：非 main 会话（子代理/cron/隔离任务）Docker 沙箱——无网络默认+只读根文件系统+受限工作区。
+- **sandbox-guard skill**：未信任技能生成安全 Docker 沙箱（Minimal profile 起）——技能带权限运行，恶意 shell 访问可攻陷全系统，沙箱限制爆炸半径。
+- **提升层**：可复用 Skill（沙箱治理）。
