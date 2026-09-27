@@ -5981,3 +5981,37 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **3 命令安装**：npm install -g openclaw → openclaw init → openclaw gateway start；Node 18+；Windows 10+/macOS 12+/Linux。→ 判据：服务器部署用 3 命令 CLI，桌面用原生 app。
 - **桌面/手机端能力**：gateway 常驻后台，模型设置/消息通道接入/MCP/gateway 管理；能调用屏幕摄像头、系统语音。→ 判据：要本地感知能力用原生端（摄像头/语音/屏幕）。
 - **提升层**：工具。
+
+## Dify Summary Index 与多路径检索：轻量替代 GraphRAG + 免外部模型 Rerank（来源：dify.ai blog 1.12.0 2026-02-05 + mintlify knowledge-retrieval + dify-hosting RAG guide 2026-09-01，2026-09-27 实拉，与 §错误处理互补——那条管失败，这条管检索质量）
+- **Summary Index（1.12.0）**：每个 chunk 附加 summary 字段，语义相关内容一起检索；summary 匹配后共享/语义相近 chunks 一起返回；GraphRAG 建实体关系图复杂度高，Summary Index 是轻量替代。→ 判据：要"整段上下文"又不想上 GraphRAG，先试 Summary Index。
+- **多路径检索 Rerank 两档**：Weighted Score（语义/关键词权重滑块，仅 High Quality 索引，**无外部模型调用成本**）vs 外挂 Rerank Model（重新打分排序，加延迟加成本；多模态 KB 需 multimodal rerank）。→ 判据：成本敏感选 Weighted Score，精度优先选外挂 rerank。
+- **检索优化三件套**：① 清洗源文档（去重复页眉页脚页码导航）② metadata filtering（tag 分类如 product: billing/type: FAQ）③ 固定代表性问题集比较 chunking 设置。→ 判据：改 chunking/索引前先跑同组问题集做 A/B，不凭感觉。
+- **混合检索+跨文档引用**：semantic+keyword 混合，rerank 后进 LLM；多文档检索出跨文档 citations。→ 判据：多 KB 问答开混合检索，答案引用可追溯。
+- **提升层**：工作流。
+
+## LangFlow 生产部署：Runtime headless + 外置 PostgreSQL + Redis job queue（来源：docs.langflow.org deployment-prod-best-practices + langflow.org blog scaling 2026-06-09 + blog 1.9/1.10/1.12，2026-09-27 实拉，与 §Playground 调试互补——那条管开发，这条管上线）
+- **Runtime（production）headless**：只服务 Langflow API，不跑可视化编辑器；最小 2Gi RAM+1000m CPU/实例×3 replicas；**外置 PostgreSQL 强推**（默认 SQLite 换掉保扩展性可靠性）。→ 判据：生产环境用 Runtime 部署+PostgreSQL，编辑器只在开发机。
+- **Redis-backed job queue（1.10）**：flow build events 跨多个 Gunicorn/Uvicorn workers 共享；默认 asyncio in-memory queue 不变。→ 判据：多 worker 部署配 Redis 队列，否则 build 事件不同步。
+- **Flow DevOps Toolkit SDK（1.9）**：lfx init 创建脚手架，environments.yaml 控制部署，版本化/测试/部署 flows 从 terminal。→ 判据：flows 走版本化部署用 lfx，不手工复制粘贴。
+- **内存治理**：依赖剪枝+worker 生命周期管理+Linux CoW——~89% 内存降。→ 判据：生产内存吃紧先看依赖与 worker 生命周期，不硬加实例。
+- **提升层**：工具。
+
+## OpenClaw Webhook TaskFlow：/hooks/wake 与 /hooks/agent 双入口（来源：docs.openclaw.ai webhook 配置 + openclaw.cn v2026.4.7 教程 2026-04-09 + openclawplaybook 2026-04-12，2026-09-27 实拉，与 §多渠道互补——那条管渠道，这条管外部触发）
+- **两个 ingress endpoint 分工**：POST /hooks/wake 用于 nudge 主 session；POST /hooks/agent 触发 agent 工作流。→ 判据：只提醒现有会话用 wake，要跑新任务用 agent。
+- **配置骨架**：endpoint URL+select event；认证 API Key 或 HMAC signature（含在 headers）；message 模板支持 {{body.service}} 变量插值。→ 判据：每个 webhook 必配 secret/HMAC，模板变量引用 payload 字段。
+- **最佳实践**：failed deliveries 加重试逻辑；处理前验证 payload；长任务 async 处理；全事件 logging。→ 判据：webhook 入口配重试+校验+日志三件套。
+- **应用例**：CRM lead 创建→welcome message+nurture sequence；Linear mention/assign/approve→Cloudflare Tunnel 唤醒 agent 即时反应。→ 判据：外部系统事件直连 agent 工作流，不轮询。
+- **提升层**：工作流。
+
+## Anthropic Vision 能力边界：分辨率跃升与强项/弱项清单（来源：docs.anthropic.com vision + roboflow blog opus-4.7 2026-05-06 + developersdigest vision-api-production-guide 2026-05-20，2026-09-27 实拉，与 §system prompt 工程互补——那条管文本，这条管图像输入）
+- **能力边界硬约束**：counting 只给近似值（大数量小物体不准）；**AI-generated 图片无法识别，别用它鉴别真假图**；handwriting 弱。→ 判据：视觉任务先对照强/弱项清单，弱项换方案。
+- **分辨率跃升**：Opus 4.7 接受 2,576px long edge（≈3.75MP），较 4.6 的 1.15MP 提升 3.3x——text-dense 文档/图表/截图显著变好。→ 判据：读图表/截图优先高分辨率输入模型，低于 1.2MP 的旧档别用于文档类。
+- **Vision API 强项清单**：structured docs（invoice/receipt/tax forms/lab reports）、charts/graphs（series/axis labels/trend）、UI screenshots（element identification/design feedback/accessibility）、code-in-images、diagrams（flowchart/architecture/ER）、tables（skewed/multi-column 也能回干净）。→ 判据：生产选型按强项清单匹配任务，文档/图表/UI 是甜区。
+- **提升层**：模型。
+
+## Make 场景分享与版本：link 分享永远最新 + 版本历史一键回滚（来源：help.make.com blueprints + introducing-scenario-sharing 2026-01-19 + automation4mi teams/versioning 2026-04-01，2026-09-27 实拉，与 §HTTP v4 互补——那条管请求，这条管场景复用）
+- **Scenario sharing**：link/社媒分享场景，**永远显示最新保存版**（无需 export/import/reexport/copy）；viewer 无需 login/make account 看 public page。→ 判据：演示/分享场景用 link，比模板更省事。
+- **Blueprints**：可复用版本含 modules/settings/mapped values；备份/换账号/分享 import。→ 判据：要复用或备份用 blueprint，要实时演示用 sharing link。
+- **版本历史**：每 scenario 自动 version history，一键 revert（Scenario←History←version←Restore）。→ 判据：改坏了直接回滚历史版本，不手工重搭。
+- **Team templates 与 Environment Variables**：Team templates 只给同事分享保持内部逻辑一致；Environment Variables 跨 scenarios 共享。→ 判据：跨场景公共配置用环境变量，团队分享走 team template。
+- **提升层**：工作流。
