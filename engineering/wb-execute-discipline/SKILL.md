@@ -6656,3 +6656,45 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **dsh 插件市场**：deepseek-plugin.org 8,000+ 插件（AI 生成 wiki 页+GitHub star 排行+安装命令）；deepseek-plugin npm 包在 agent 内 search_plugins 直接安装；dsh.do 画廊（深链 /s 分享/README 自动封面/标签反查）。
 - **Copilot 集成**：DeepSeek V4 Pro/Flash 进 Copilot Chat 模型选择器，保留 agent mode/tool calling/skills/MCP——模型可换而能力面保留。
 - **提升层**：可复用 Skill（harness 架构观察）。
+## Dify 环境变量三类型与 Secret 凭证治理：String/Number/Secret · 只读全局 · 凭证两作用域（来源：dify mintlify key-concepts + deepwiki langgenius dify-docs workflow-fundamentals + CSDN Dify 进阶 2026-08 + decodo web-scraping-in-dify 2026-05 + radmodules Dify GKE 实拉，与 §Dify 记忆治理互补——那条管"agent 记忆窗口"，本条管"密钥与配置放哪"）
+- **环境变量三类型**：String（API 端点/配置值/文本常量）+Number（阈值/限额/乘数）+Secret（API key/DB 密码，UI 显示 ******）；app 级定义、执行期**只读**（节点全局可读，流程/对话中不可修改）；命名不可重复，前端"环境"面板统一管理。
+- **Secret 的用途**：密钥放环境变量不放 app 内——**分享 DSL 不暴露**；一个变量可持有多 LLM 节点共享的模型配置，编辑变量即更新所有引用节点；Conversation Variables（Chatflow 会话级动态信息多轮持久）与 env 变量分工。
+- **凭证两作用域**：workspace 级（共享内部工具、多 workflow 复用一套设置）vs workflow 级（流程隔离）——共享工具用 workspace，隔离流程用 workflow。
+- **生产密钥落地**：加密 at rest；GKE 用 Secret Manager 注入 pod，明文不出现在 pod spec；SECRET_KEY（JWT 签名/会话加密）生成一次运行期不可轮换、所有 pod 同值。
+- **提升层**：工具（密钥治理）。
+
+## n8n 记忆四类与数据删除面：工作/情景/语义分类 · Session ID 隔离 · 删除即知识保鲜（来源：blog.n8n.io ai-agent-memory 2026-07 + llm-memory 2026-05 + workflows 15738/8008/6158 实拉，合并 §n8n 向量记忆与检索管线——那条管"store 与 pipeline"，本条补"记忆分类+删除纪律"）
+- **记忆四类**：工作记忆（Simple Memory 窗口最近 N 条，可配窗口大小）/情景记忆（Postgres/Redis/MongoDB Chat Memory 时序）/语义记忆（向量库 Pinecone/Weaviate/Qdrant/Supabase 相似检索）——按类型选存储，不一把抓。
+- **失效模式**：无总结或遗忘策略→历史膨胀拖慢每次响应——窗口记忆必须配总结/裁剪。
+- **Session ID 隔离**：chat trigger 每浏览器窗口自动唯一 sessionId——多用户会话天然隔离。
+- **数据删除面（知识保鲜）**：scheduled trigger 周期性查删除标记表→删向量记录+删源文件——**RAG 系统"删"和"加"同等重要**，知识库保持当前。
+- **提升层**：工作流（记忆架构）。
+
+## LangFlow LFX 全命令与 A2A 发布：validate→status→push 闭环 · Draft→Live 状态机（来源：docs.langflow.org lfx-overview + workflow-api + lfx-serve + a2a-server + api-reference 2026-09 实拉，合并 §LangFlow LFX 无头执行——那条管"serve/run 无头跑"，本条补"发布管线全命令+agent 发布形态"）
+- **LFX CLI 全命令**：lfx init（脚手架 CI 模板）/lfx login（验证远程实例）/lfx create（模板建 flow JSON）/lfx validate（推前校验）/lfx requirements（从组件依赖生成 requirements.txt）/lfx status（本地 vs 远程比对）/lfx push（按 stable ID 推送）——**本地 flow 进远程的版本化闭环**。
+- **Developer API 开关**：LANGFLOW_DEVELOPER_API_ENABLED=true 开 developer API（uv run langflow run --env-file .env）；lfx serve 暴露 POST /flows/{flow_id}/run 且必带 LANGFLOW_API_KEY（公网可访问）。
+- **Build API job 流**：POST /v1/build/{flow_id}/flow 返回 job ID→GET events 流式→cancel——长构建可异步跟踪。
+- **A2A server 发布状态机**：LANGFLOW_A2A_ENABLED；flow 状态 Draft→Save 发布→Live serve——**agent 间协议暴露与 UI 发布解耦**。
+- **提升层**：工作流（发布管线）。
+
+## Activepieces Git Sync 与 release 流程：Push Everything 全推 · staging 16h 验证 · connection diff 修正（来源：activepieces.com project-releases + handbook playbooks/releases + pieces-ci-cd + breaking-changes 2026-07/09 实拉，合并 §Activepieces 版本管理——那条管"step 钉版本"，本条补"整项目 Git 同步与发布"）
+- **Git Sync 全量/定向**：Push Everything 把 flows+connections+tables 全推 Git（配 commit message）；也可单 flow/table 推——**连接与表一并版本化**，不只流程。
+- **Release 流程**：dedicated staging 先行，每更新验证 ≥16 小时再上生产；每日 production promotion 只推验证过的稳定构建。
+- **Custom Pieces CI/CD**：离线开发→package.json 递增版本→PR 合 main→CLI 或 GitHub/GitLab Action 触发同步。
+- **connection diff 修正（breaking change）**：应用 release 时 connection 引用变更现在被 diff 识别——flow 只改 connection 也会被应用；旧行为静默保留旧连接+新连接 MISSING（已修复）。
+- **SemVer 分级**：major 破坏性需用户行动/minor 新功能兼容/patch bugfix——piece 版本语义化。
+- **提升层**：工作流（发布治理）。
+
+## Make Data Store 幂等状态机：key 先行 · complete/in_progress/needs_review 三分 · Failed Bundles 重放队列（来源：automationwarrior make-data-stores-guide 2026-08 + everestx replay queue 2026-05 + make.com agent-workflow-memory 2026-05 + dreyson configuration data store 2026-05 实拉，与 §Make 聚合器互补——那条管"分页 cursor"，本条管"状态与重放"）
+- **幂等状态机**：可复现 key→查存在→complete 安全停/in_progress 或 needs_review 走文档化恢复规则/不存在建处理记录→下游→更新状态——**状态字段让重跑安全**。
+- **重放队列**：错误 handler 把失败 bundle 写 "Failed Bundles" 表（scenario_name/bundle_json/error_message/timestamp/replayed）；独立 replay scenario 读取重试并标记——**失败不丢、可追溯重放**。
+- **agent 记忆架构可视化**：Scenario Builder 直看 context 捕获/传递/写入/丢失；data store read→AI 模块→write 更新=外部记忆无需单独数据库。
+- **配置参数化**：操作阈值存配置 data store，按 client 调 batch size 不改 scenario；scenario 开头 Search 查配置映射变量，不硬编码。
+- **提升层**：工作流（状态化自动化）。
+
+## MCP 2026-07-28 规范发布：Stateless core · server.discover · Roots/Sampling/Logging deprecated（来源：blog.modelcontextprotocol.io 2026-07-28-release-candidate + claude.com bringing-mcp + nerdleveltech MCP guide 2026-09 实拉，与 §MCP 工具数量上限互补——那条管"开发面"，本条管"规范版本演进"）
+- **规范时间线**：release candidate 2026-05-21 锁定→2026-07-28 最终发布；十周验证窗口；SDK tier 系统下 Tier 1 SDK 需窗口内支持。
+- **核心变化**：**Stateless core**（服务端无状态化，降客户端复杂度——Claude 已采纳）/ server.discover / Multi Round-Trip Requests / subscriptions/listen / Tasks extension；**Roots/Sampling/Logging 弃用**——写新 server 不再依赖旧特性。
+- **Claude Agent SDK 四组件**：Tool Definitions/Context Compaction 自动摘要/Sub-agent Orchestration/MCP Integration——SDK 把记忆压缩与子代理编排做成内置件。
+- **Managed Agents API**：platform beta/agents：model_config/permission_policy（agent_toolset_20260401/always_ask）——权限策略可编程。
+- **提升层**：可复用 Skill（协议演进跟踪）。
