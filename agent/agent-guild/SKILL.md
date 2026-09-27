@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.8.0
+version: 1.9.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -377,3 +377,21 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **反回音室不变量**：被注入上下文的内容带来源标记且永不二次抽取入库；cron/自动化会话产物默认剥夺晋升资格，需人工会话复现后方可入精选。
 - **记忆条目「锚+计数+调权」**（hindsight）：每条持久信念带原始出处引用锚与被复核计数；新证据到手**调整置信权重而非覆盖重写**，保留"何时开始相信什么"的审计线（覆盖写入会丢审计线，调权让过时程度可量化）。
 - **共享记忆按发言人定权**：决策者>参与者>bot（默认剔除）；写共享资产前查 in-flight 防并发重复劳动；结论行带 why 式溯源锚点。
+
+## r205-C 净新两点（2026-09-27 独立实拉）
+
+### Capability 16 — 凭据与执行体容器级物理分离 + 输出四级管线（来源：GitHub Agentic Workflows 官方安全架构，经 agentpatterns.ai / aidevme 2026-09-27 r205-C 实拉）
+- **★三种凭据分装三个容器，agent 容器零密钥**：LLM 凭据在 **API proxy 容器**（agent 经代理调用，看不到 key）；MCP 凭据在 **MCP gateway 容器**（按仓库策略路由，HTTP 转发）；**agent 容器**只带防火墙出网白名单 + 只读 /host 挂载 + tmpfs 覆盖 + chroot jail。判据：**密钥不该和会读不可信输入的那个进程共处一个故障域**——agent 被提示注入打穿时，手上是没有任何凭据的。
+- **★四个信任边界分层，token 绑在配置层不在 agent 内**：Substrate（VM 隔离 + 内核强制通信边界）/ Configuration（声明式权限分派 + token 绑定）/ Planning（分阶段工作流 + 显式数据交换）。判据：**权限是声明出来的，不是运行时协商出来的**。
+- **★写操作走 safe-outputs 四级管线，没有临时写权限**：Operation filtering（限可调 API）→ **Volume limiting**（封顶次数，如"最多 3 个 PR"）→ Content sanitization（剥掉 URL 与 secrets）→ Moderation（确定性分析后才允许下游投递）。判据：**"能不能写"之外必须还有"写多少 / 写什么内容 / 谁复核"三道闸**——只管能不能写，一次失控就是无限 blast radius。
+- **★默认只读 + agent 产的 PR 永不自动合并**：先把流程跑成只读/只评论、证明低噪音后再开放 label / 建 PR。判据：**放权按观测到的行为渐进，不按预期行为一次性给**。
+- 与 §Capability 12 留痕通道独立于被测对象、§Capability 13 留痕范围由显式输出决定 的分工：那两条管"记录怎么写、写哪些字段"；本条管"**执行体手里有什么、能往外做什么**"——一个定留痕，一个定权限。
+- 提升层：工作流 / 安全边界。
+
+### Capability 17 — 记忆晋升的三门 + 污点门控 + 压缩前静默 flush + 注入截断可观测（来源：OpenClaw 官方 `docs.openclaw.ai/concepts/memory`，2026-09-27 r205-C 实拉）
+- **★后台巩固（dreaming）晋升带三门，不是"够久就升"**：候选必须同时过 **score / recall-frequency / query-diversity** 三道门槛才进长期记忆；**taint gated**——不可信来源与系统派生候选**永不进入巩固提示词，也永不走持久晋升通道**。判据：**晋升是带门槛的筛选，不是时间到了搬家**；自动化产物默认剥夺晋升资格（与 §Qoder 反回音室不变量同向）。
+- **★人工复核面与机器排序面分开**：`DREAMS.md` 是人看的复核面（含 rewrite counts 与 highlights、可 grounded backfill 回放旧日志并可 `--rollback`）；短期 SQLite 存储是机器排序面；`MEMORY.md` **只由深度晋升写入**。判据：**人看的面、机器排的面、最终生效的文件，三者各一份，不要合并**。
+- **★压缩前静默 flush 用私有对话副本**：compaction 前跑一个静默轮提醒 agent 存记忆，该轮用**对话的私有副本**，其 housekeeping 消息不会出现在后续用户轮（即使被中断）；只读/无 workspace 的沙箱跳过 flush；可为该轮单独指定小模型降本。判据：**"保存记忆"这个动作本身不能污染用户可见的对话**。
+- **★超预算只截断注入副本、磁盘原文保留，并把截断当信号**：`MEMORY.md` 超 bootstrap 预算时磁盘文件不动，只截断注入上下文的副本；用 `/context list` 看 raw vs injected 大小与截断状态——**截断是"该把细料迁去 memory/*.md"的信号，不是"该删内容"**。判据：**先让它可观测（raw vs injected 各有数字），再决定搬还是加预算**。
+- 与 §Capability 9 groom、§Qoder 记忆条目「锚+计数+调权」的分工：groom 管过期数据归档（只搬不删）；「锚+计数+调权」管单条信念的置信度更新方式；本条管"**从短期到长期的晋升这道门怎么设、人看什么、机器排什么**"。
+- 提升层：可复用 Skill / 记忆治理。
