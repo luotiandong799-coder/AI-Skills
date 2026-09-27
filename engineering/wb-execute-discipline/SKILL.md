@@ -7942,3 +7942,83 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **路由决策**：platform identity（Telegram vs Slack 不同处理——threads/inline keyboards）+user/chat ID（work/personal 分离会话）——映射 platform chat ID→session ID。
 - **节点与记忆**：macOS/iOS/Android/headless 经 WebSocket 连但声明 role: node+caps/commands；每 host 一个 Gateway（唯一开 WhatsApp session 处）；MEMORY.md 跨 session 持久；canvas host /__openclaw__/canvas/。
 - **提升层**：工作流（网关与路由）。
+## Dify 实时调试与变量检查：Variable Inspector · 变量修改不重跑上游（来源：dify.ai blog 1.5.0-real-time-workflow-debugging + deepwiki 6-debugging/6.1-variable-inspector + mintlify agent 2025-06/2026-08 实拉，合并 §Dify 工作流——那条管"编排面"，本条管"调试与变量面"）
+- **实时调试（1.5.0）**：保存节点产生内容+实时追踪变量——单步测试个体步骤无需昂贵重跑/手动输入；全局控制中心所有变量实时内容——不再逐节点翻 input/output。
+- **Variable Inspector**：任意时刻全部变量实时可见——输入/输出/环境/conversation 变量（chatflows）——节点级/工作流级/系统变量 sys.query。
+- **变量修改模式（关键调试技巧）**：执行到目标节点→打开 Inspect→编辑缓存变量（支持 JSON 复杂类型）→run step 下游用修改值——**不重跑上游节点**——测试边界用例不重复执行昂贵操作（LLM 调用/API 请求）。
+- **Agent 节点 Execution Controls**：Max Iterations 安全上限防死循环——简单任务 3-5 迭代/复杂研究 10-15；Memory TokenBufferMemory——记忆多少前消息——大窗口多上下文增 token 成本。
+- **Conversation Variables**：短时记忆单元——chatflows 多轮临时存储——模拟 OpenAI Memory；Array[Object] 存收集的记忆——Variable Assigner 写/LLM 节点读；类型匹配 String/Number/Object/Array——源输出与目标输入不匹配报错。
+- **提升层**：可复用 Skill（调试与变量）。
+
+## n8n 长期记忆 dual-layer 模式：短窗 Postgres + 长期 pgvector · 定时摘要 pipeline（来源：n8n.io blog ai-agent-memory + workflows 6829/7663/15738 + community 279359 2026-02/07 实拉，合并 §n8n 记忆——那条管"记忆类型"，本条管"持久化架构"）
+- **记忆存储分两类**：Postgres Chat Memory/Redis Chat Memory chronological 存对话历史；语义/情节记忆需相似性检索——vector store（Pinecone/Weaviate/Qdrant）嵌入索引按需搜索。
+- **Vector Store Memory 子节点**：每次请求索引当前消息→检索最相似 chunks→喂 LLM 额外上下文——RAG 模式。
+- **dual-layer 模式（实测最佳）**：Layer 1 Postgres 短窗——自定义 session key（username）每用户自己历史+15 条上下文窗口——即时加载无额外调用——处理"What did I just ask you"；Layer 2 Supabase pgvector 长期——会话摘要嵌入——跨会话召回。
+- **长时记忆 pipeline**：独立定时 flow——Postgres 拉新聊天→聚合摘要（Haiku 4.5）→生成 embeddings（OpenAI）→Supabase vector 存未来 RAG 检索——多通道 WhatsApp 助手。
+- **sessionId 隔离**：chat trigger 自动生成唯一 Session ID per browser window——个体对话完全分离。
+- **提升层**：工作流（记忆架构）。
+
+## LangFlow 向量检索配置与多向量检索：hybrid search · vectorize · NextPlaid（来源：docs.langflow.org components-vector-stores/bundles-datastax/bundles-elastic/next + blog blog-nextplaid 2026-07/09 实拉，合并 §LangFlow RAG——那条管"RAG 工作流"，本条管"检索配置面"）
+- **search_method 二选一**：Hybrid Search 或 Vector Search——集合需配置支持；hybrid 需建集合时程序化设置；hybrid_search_query JSON 自定义——组合向量相似+关键词匹配。
+- **Embedding 一致性**：Load Data 子流加载嵌入+内容进 vector DB；Retriever 子流跑向量搜索——两组件连同一 store；**已含 embeddings 的 store 必须用同模型**——混模型降质量。
+- **Astra DB vectorize**：有集成可删 OpenAI Embeddings 组件——自动从 Ingest Data+Search Query 生成 embeddings。
+- **Elastic bundle**：embedding_model_name 选择；vector_field 默认 chunk_embedding；number_of_results 默认 10。
+- **Multi-Vector Retrieval（1.11.0 NextPlaid）**：lfx-nextplaid 扩展——ColBERT-style late interaction + ColPali-style visual document retrieval 开箱即用无胶水代码——多向量检索进 serious RAG。
+- **提升层**：工具（检索配置）。
+
+## Activepieces 调度触发器与测试：Schedule 六类型 · auto-retries · step logs（来源：activepieces.com pieces/schedule + resources scheduling-workflows + mintlify building-flows 2026-06/09 实拉，合并 §Activepieces 触发器——那条管"触发器类型"，本条管"调度与验证"）
+- **触发四类**：计划查询（Programados）/Webhooks 立即接收/Temporizadores 按日期频率/Manuales 用户决定启动。
+- **Schedule 触发器六类型**：Every X Minutes/Every Hour/Every Day 3 字段/Every Week 3 字段/Every Month 3 字段/Cron Expression 2 字段——cron_trigger 每工作日 9 AM——日报/周期数据同步/定时通知/维护任务。
+- **调度工作流能力**：时区感知+recurring runs 触发多步流无需外部事件；**Auto-retries 重跑失败步骤处理瞬时错误+step-level 执行日志**——时序问题可追溯/重跑决定文档化/下游更新按 run 验证。
+- **测试流程**：Test flow 按钮；webhook curl/Postman POST /api/v1/webhooks/YOUR_WEBHOOK_ID；实时看执行。
+- **提升层**：工作流（调度与验证）。
+
+## Make Data Store 适用边界与键设计：dedup/counter/lookup/queue · hierarchical keys（来源：everestx set-up-make-data-stores + use-apify data-stores-guide + the-ai-alliance gofannon data-store-patterns 2026-03/05 实拉，合并 §Make 数据存储——那条管"存储面"，本条管"模式与键设计"）
+- **适用边界**：dedup 去重/counters 计数器/lookup tables 查询表/queues 队列——**NOT for** 大数据集/复杂查询/实时分析。
+- **三模式**：Dedup（处理前查 record ID 在 store——在则跳过）；Counter（跨场景 run 增量——速率限制/批跟踪/简单分析）；Lookup table（小引用数据——货币代码/国家映射）。
+- **模块操作**：Add/Replace 按键创建或覆盖/Update 改字段/Delete 单记录/Delete All 清空/Get 按键取/Search 过滤检索。
+- **Hierarchical keys**：key 前缀组织 project:{project}:config——多项目不冲突——类 Dapr App ID||key 命名约定——多实例共享同一 store 防碰撞。
+- **提升层**：可复用 Skill（数据存储模式）。
+
+## Pipedream 组件开发与发布：三态 · 本地开发+CLI · custom tools（来源：pipedream.com docs components/actions + docs-proxy quickstart/REST + connect custom-tools + migrate-from-v1 2026-08/09 实拉，合并 §Pipedream 组件——那条管"组件概念"，本条管"开发与发布"）
+- **组件三态**：Sources 可本地部署或发布后 UI 实例化；Actions 只能发布——UI 加进 workflows；发布组件默认仅自己账号——team 账号可共享。
+- **本地开发**：本地编辑器+自有 GitHub repo 维护——Pipedream CLI 部署/发布。
+- **Component API**：defineComponent；v2 workflow builder 同一 API 支持工作流内建组件——v1 不可能。
+- **HTTP Request Action**：Postman-like 界面配置 headers/body/连 account——Slack Bearer token 自动配置授权头。
+- **REST API+SSE**：组件事件 REST API 批量取或 SSE stream 连——外部 app 取组件处理数据。
+- **Actions 复用判据**：步骤间复用同代码→做 action；可发布 Pipedream registry 全网。
+- **Custom tools（Connect）**：自定义工具=actions——组件 API+CLI pd publish 带 Connect flag——自定义 sources 即将到来；executeQuery 方法被 proxy service 替换——必须用该方法支持 proxy 特性。
+- **提升层**：可复用 Skill（组件开发）。
+
+## Anthropic Computer Use/Browser Use：toolset 选型 · GA 四能力模式（来源：platform.claude.com browser-use-tool/computer-use-tool + essamamdani GA guide + TerminalSkills claude-computer-use + ai-damn update 2026-07/09 实拉，合并 §Anthropic 工具面——那条管"工具调用"，本条管"环境交互选型"）
+- **Browser use tool**：Claude 导航/读/交互 webpages——应用跑的浏览器；**双通道工作**——结构（accessibility tree/elements/forms/tabs）+截图/viewport coordinates；browser_toolset_20260801。
+- **Computer use tool**：截图+鼠标/键盘自主桌面交互——WebArena 单 agent SOTA；beta header computer-use-2026；computer_toolset_20260801 可用 Claude API+Google Cloud。
+- **选型判据**：任务在 webpage 内→browser use 更贴合（成员工具读页操作页不需完整桌面环境）；桌面 GUI/任意 app→computer use。
+- **GA（2026-08）**：四能力成 coherent 应用模式——desktop control/browser interaction/reusable procedural skills/persistent file handling；**应用仍拥有 browser/desktop executor**——Anthropic 不托管自主员工。
+- **执行循环**：Claude 请求 action（click/type/scroll）应用 Playwright 执行→repeat；multi-action calls 降低任务完成时间与调用次数；无 selectors——看屏幕控制——GUI 工作流/无 CSS selectors 浏览器自动化/桌面 app 测试。
+- **提升层**：工具（环境交互）。
+
+## deeplearning 多模态课程系：Multimodal Llama 3.2 · Search+RAG · audio vs image tokens（来源：corporate.deeplearning.ai multimodal-llama-3-2/building-multimodal-search-and-rag + learn.deeplearning.ai index + theneuralbase multimodal 2026-04/09 实拉，合并 §deeplearning 课程生态——那条管"课程清单"，本条管"多模态方法与路径"）
+- **Multimodal Llama 3.2 短课**：image classification/vision reasoning/tool use；prompting/tokenization/built-in+custom tool calling；Llama stack 标准化接口。
+- **Multimodal Search and RAG（Weaviate）**：contrastive learning 实现多模态检索+RAG——图像/文本统一向量空间。
+- **Multimodal Data Pipelines（Snowflake）**：image/audio/video 转 LLM-ready text 管道——多模态应用底座。
+- **Audio tokens vs image patches（关键差异）**：音频时间采样 token/图像空间网格 patches——模型理解各模态差异核心。
+- **Computer Use with Anthropic 课程**：API/多模态请求/真实世界 prompting/缓存/工具使用/computer use——桥接多模态与操作。
+- **提升层**：可复用 Skill（多模态方法）。
+
+## GitHub Copilot CLI Agent 模式：Autopilot vs /delegate · Plan mode · 程序化（来源：docs.github.com copilot-cli autopilot/delegate/best-practices/run-programmatically + github.blog GA/custom-agents/agentic-workflows 2026-01/09 实拉，合并 §GitHub Copilot——那条管"Copilot 面"，本条管"CLI Agent 模式"）
+- **Autopilot vs /delegate（关键区别）**：Autopilot 本地 CLI session 跑——给全权限本地机器工作可旁观；/delegate 委托 CCA 云端跑——工作发生位置不同。
+- **终端原生+GitHub 集成**：无上下文切换；repos/issues/PRs 自然语言访问现有 GitHub 账号认证；agentic build/edit/debug/refactor 计划执行复杂任务；MCP-powered extensibility。
+- **Plan mode**：Shift+Tab 切换——先分析请求/问澄清问题/建结构化实施计划再写代码——审批后执行。
+- **自定义 agents**：.github/agents 目录 agent profile——/agent slash command 选择。
+- **程序化运行**：copilot --allow-all-tools -p "Kill the process using port 3000"——单命令传 prompt——脚本/CI/CD/自动化；headless；/fleet 大任务提速。
+- **控制度可调**：每步审批到全自主——GA（2026-02-25）自主 coding agent plan/执行多步/编辑文件/跑测试/迭代完成。
+- **提升层**：工具（CLI Agent）。
+
+## OpenClaw 记忆持久化与 session 存储：三文件 · sessions.json/transcript · 持久化边界（来源：docs.openclaw.ai concepts/memory/main-session + openclawai faq + openharmonyclaw session-management + memorylake plugin 2026-02/09 实拉，合并 §OpenClaw 记忆——那条管"记忆文件"，本条管"持久化与存储面"）
+- **三文件**：MEMORY.md 长期——持久事实/偏好/决定——session 开始加载；memory/YYYY-MM-DD.md 日志 append-only——会话记录；**压缩前 agent flush 持久事实进 daily notes**——长对话不静默丢失。
+- **会话机制**：daily notes 按需搜索+/new//reset 后近期 re-prime；跨会话回忆；session 开始读 today+yesterday——纯 Markdown 无云服务丢失。
+- **session 存储结构**：sessions.json key/value sessionKey→SessionEntry——小可变安全编辑——session metadata/current id/last activity/toggles/token counters；<sessionId>.jsonl append-only transcript 树结构。
+- **持久化边界（诚实声明）**：除非 persistent storage 集成（vector DB/saved memory file）——数据 session 结束/context 满即忘；可显式要求 agent 自己总结会话要点存下轮用。
+- **MemoryLake 插件**：ClawHub——跨 session/device 持久——text/images/files/tables 统一索引——同 store 可用 Claude/ChatGPT/MCP 工具——跨平台统一记忆。
+- **提升层**：工作流（记忆持久化）。

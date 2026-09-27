@@ -1,0 +1,44 @@
+# r274B 学习轮留痕（2026-09-28）
+
+## 信源实拉清单（10 站全量逐站，查询词与全表错开）
+| # | 信源 | 状态 | 实拉内容 |
+|---|---|---|---|
+| 1 | Dify（Agent/调试面） | ✓ | **实时调试（1.5.0）**（保存节点产生内容+实时追踪变量；单步测试无需昂贵重跑/手动输入；全局控制中心所有变量实时内容）；**Variable Inspector**（任意时刻全部变量实时可见——输入/输出/环境/conversation 变量（chatflows）——节点级/工作流级/系统变量 sys.query；**变量修改**——执行到目标节点→编辑缓存变量（JSON 复杂类型）→run step 下游用修改值——不重跑上游——测试边界用例不重复执行昂贵操作）；**Agent 节点**（Max Iterations 安全上限防死循环——简单任务 3-5/复杂研究 10-15；Memory TokenBufferMemory——记忆多少前消息——大窗口多上下文增 token 成本）；**Conversation Variables**（短时记忆单元——chatflows 多轮临时存储——模拟 OpenAI Memory；Array[Object] 存收集记忆——Variable Assigner 写/LLM 节点读；类型匹配 String/Number/Object/Array——不匹配报错）；**可追溯**（节点输出/变量/执行路径/日志——每事务追溯到检索过程/模型调用/工具使用/用户/设备） |
+| 2 | n8n（记忆面） | ✓ | **记忆类型与存储**（长期持久化——外部 vector store Pinecone/Weaviate/Qdrant + Postgres Chat Memory/Redis Chat Memory——chronological 存对话历史；语义/情节记忆需相似性检索）；**Vector Store Memory 子节点**（每次请求索引当前消息→检索最相似 chunks→喂 LLM 额外上下文——RAG）；**持久聊天记忆 workflow**（Qdrant 永久检索；语义搜索 embedding；Cohere reranking 保证最相关记忆；metadata 结构化；无上下文窗口限制）；**dual-layer 模式**（Layer 1 Postgres 短窗——自定义 session key（username）每用户历史+15 条窗口——即时加载；Layer 2 Supabase pgvector 长期——会话摘要嵌入——处理"What did I just ask"与跨会话）；**长时记忆 pipeline**（独立定时 flow——Postgres 拉新聊天→聚合摘要（Haiku 4.5）→embeddings（OpenAI）→Supabase vector 存未来 RAG——多通道 WhatsApp 助手）；**sessionId**（chat trigger 自动唯一 Session ID per browser window——个体对话完全分离）；**高级节点**（postgres-advanced-memory schema 支持多 schema+自动建表+session tracking；cognee——memory port 只携带 chat history——让 agent 搜图谱需 attach cognee 节点） |
+| 3 | LangFlow（向量/检索面） | ✓ | **vector store 组件**（Astra DB/OpenSearch/PGVector——search_method 二选一 Hybrid/Vector——集合需配置支持；hybrid 需建集合时设置）；**hybrid_search_query**（JSON 自定义——组合向量相似+关键词匹配）；**Embedding 组件**（Load Data 子流加载嵌入+内容进 vector DB；Retriever 子流跑向量搜索——两组件连同一 store）；**Elastic bundle**（embedding_model_name/vector_field 默认 chunk_embedding/number_of_results 默认 10）；**Astra DB vectorize**（有集成可删 OpenAI Embeddings 组件——自动生成 embeddings from Ingest+Search Query；已含 embeddings 的 store 必须同模型——混模型降质量）；**Multi-Vector Retrieval（1.11.0 NextPlaid）**（lfx-nextplaid 扩展——ColBERT late interaction + ColPali visual document retrieval 开箱即用无胶水代码） |
+| 4 | Activepieces（调度/测试面） | ✓ | **触发四类**（Programados 计划查询/Webhooks 立即接收/Temporizadores 按日期频率/Manuales 用户决定）；**Schedule 触发器**（Every X Minutes/Every Hour/Every Day 3 字段/Every Week 3 字段/Every Month 3 字段/Cron Expression 2 字段）；**cron_trigger**（piece-schedule 每工作日 9 AM——日报/周期数据同步/定时通知/维护任务）；**测试流程**（Test flow 按钮；webhook curl/Postman POST /api/v1/webhooks/YOUR_WEBHOOK_ID；实时看执行）；**调度工作流**（时区感知+recurring runs 触发多步流无需外部事件；**Auto-retries 重跑失败步骤处理瞬时错误+step-level 执行日志**——时序可追溯/重跑决定文档化/下游更新按 run 验证）；**piece 开发**（.env.dev AP_DEV_PIECES 加 gelato→重启 backend→refresh frontend；load sample data 测试）；**发布 playbook**（scheduled daily 9AM UTC build canary/migrations 阻断部署/workflow_call/manual dispatch） |
+| 5 | Make（Data Store 面） | ✓ | **适用**（dedup 去重/counters 计数器/lookup tables 查询表/queues 队列——NOT for 大数据集/复杂查询/实时分析）；**Dedup 模式**（处理前查 record ID 在 store——在则跳过）；**Counter**（跨场景 run 增量——速率限制/批跟踪/简单分析）；**Lookup table**（小引用数据——货币代码/国家映射）；**模块操作**（Add/Replace 按键创建或覆盖/Update 改字段/Delete 单记录/Delete All 清空/Get 按键取/Search 过滤检索）；**Hierarchical keys**（key 前缀 project:{project}:config——多项目不冲突——类 Dapr App ID||key 防碰撞——多实例共享同一 store） |
+| 6 | Pipedream（组件开发面） | ✓ | **组件三态**（Sources 可本地部署或发布后 UI 实例化；Actions 只能发布——UI 加进 workflows；发布组件默认仅自己账号——team 可共享）；**本地开发**（本地编辑器+自有 GitHub repo 维护——CLI 部署/发布）；**Component API**（defineComponent；v2 builder 同一 API 工作流内建组件）；**HTTP Request Action**（Postman-like 配置 headers/body/连 account——Slack Bearer 自动配置授权头）；**REST API+SSE**（组件事件批量取/SSE stream 连——外部 app 取数据）；**Actions 复用判据**（步骤间复用同代码→做 action；可发布 registry 全网）；**Custom tools（Connect）**（自定义工具=actions——组件 API+CLI pd publish 带 Connect flag——自定义 sources 即将到来）；**executeQuery**（被 proxy service 替换——必须用该方法支持 proxy 特性） |
+| 7 | Anthropic（Computer Use/Browser 面） | ✓ | **Browser use tool**（Claude 导航/读/交互 webpages——应用跑的浏览器；结构 accessibility tree/elements/forms/tabs+截图+viewport coordinates 双通道；browser_toolset_20260801）；**Computer use tool**（截图+鼠标/键盘自主桌面交互；WebArena 单 agent SOTA；beta header computer-use-2026；computer_toolset_20260801 可用 API+Google Cloud）；**选型**（任务在 webpage 内→browser use 更贴合——成员工具读页操作页不需完整桌面；桌面 GUI/任意 app→computer use）；**GA（2026-08）**（四能力 coherent 模式——desktop control/browser interaction/reusable procedural skills/persistent file handling；Computer use+Skills API GA/Files API GA；**应用仍拥有 executor**——Anthropic 不托管自主员工）；**执行循环**（Claude 请求 action（click/type/scroll）应用 Playwright 执行→repeat——Browserless 云托管+stealth+proxies）；**multi-action calls（2026-09）**（降任务完成时间与调用次数）；**TerminalSkills**（无 selectors——看屏幕控制——GUI/无 CSS selectors 浏览器自动化/桌面 app 测试） |
+| 8 | deeplearning（多模态面） | ✓ | **Multimodal Llama 3.2 短课**（image classification/vision reasoning/tool use；prompting/tokenization/built-in+custom tool calling；Llama stack 标准化接口）；**Building Multimodal Data Pipelines**（Snowflake——image/audio/video 转 LLM-ready text 管道 1h1m）；**Multimodal Search and RAG**（Weaviate 1h22m——contrastive learning 多模态检索+RAG）；**Gemini multimodal prompting**（2h28m）；**Prompt Engineering for Vision Models**（Stable Diffusion 1h32m——object detection/in-painting）；**Hugging Face**（transformers 几行做 text/audio/image/multimodal——VQA/image search/captioning——Gradio/Spaces 部署）；**Audio tokens vs image patches**（音频时间采样 token/图像空间网格 patches——模态理解差异关键）；**Computer Use with Anthropic 课程**（API/多模态请求/真实世界 prompting/缓存/工具使用/computer use） |
+| 9 | GitHub（Copilot CLI 面） | ✓ | **Autopilot mode**（无需逐步输入——初始指令后自主跑完——本地 CLI session 跑；全权限本地工作）；**/delegate**（委托 Copilot 自主工作——CCA 云端——区别：autopilot 本地 vs delegate 云端）；**终端原生**（无上下文切换；GitHub 集成开箱——repos/issues/PRs 自然语言+现有账号认证；agentic build/edit/debug/refactor；**MCP-powered extensibility**）；**Plan mode**（Shift+Tab——先分析请求/问澄清/建结构化实施计划再写代码）；**自定义 agents**（.github/agents agent profile——/agent 选择）；**程序化运行**（copilot --allow-all-tools -p "Kill process port 3000"——脚本/CI/CD/自动化；headless）；**/fleet**（大任务提速）；**GA（2026-02-25）**（自主 coding agent——plan/执行多步工作流/编辑文件/跑测试/迭代完成——控制度可调） |
+| 10 | OpenClaw（记忆面） | ✓ | **三文件**（MEMORY.md 长期——持久事实/偏好/决定——session 开始加载；memory/YYYY-MM-DD.md 日志 append-only；压缩前 agent flush 持久事实进 daily notes 防长对话静默丢失）；**会话机制**（MEMORY.md 每 fresh session 加载；daily notes 按需搜索+/new//reset 后近期 re-prime；**跨会话回忆**）；**纯 Markdown**（无云服务丢失——workspace 文件；session 开始读 today+yesterday）；**分层**（Global MEMORY.md ~/.openclaw/workspace——跨所有项目/sessions——preferences/identity/cross-project conventions/durable truths——最高价值层）；**session 存储**（sessions.json key/value sessionKey→SessionEntry——小可变安全编辑——session metadata/current id/last activity/toggles/token counters；<sessionId>.jsonl append-only transcript 树结构）；**持久化边界**（除非 persistent storage 集成——vector DB/saved memory——数据 session 结束/context 满即忘；可显式要求自己总结存下轮）；**MemoryLake 插件**（ClawHub——跨 session/device 持久——text/images/files/tables 统一索引——同 store 可用 Claude/ChatGPT/MCP——跨平台统一）；**跨平台持久**（WhatsApp/Telegram/Discord/Slack 任何平台保留上下文——长期工作流连续） |
+
+## 判重（双键检索结果）
+- Dify 调试/变量：库内 §Dify 工作流/变量类锚点——实时调试 1.5.0/Variable Inspector 修改不重跑上游/Iterations 阈值/Conversation Variables 为独有增量 ≥40% → 落地
+- n8n 记忆：库内 §n8n 记忆类锚点——dual-layer Postgres+pgvector/长时记忆 pipeline/Vector Store Memory 子节点为独有增量 ≥40% → 落地（增量合并）
+- LangFlow 向量：库内 §LangFlow RAG 类锚点——hybrid 配置/Astra vectorize/Multi-Vector Retrieval NextPlaid 为独有增量 ≥40% → 落地（增量合并）
+- Activepieces 调度：库内 §触发器类锚点——Schedule 六类型/cron_trigger/Auto-retries+step logs 为独有增量 ≥40% → 落地
+- Make Data Store：库内 §数据存储类锚点——适用边界/hierarchical keys/操作表为独有增量 ≥40% → 落地（增量合并）
+- Pipedream 组件：库内 §组件类锚点——三态/本地开发+CLI/HTTP Request Action/custom tools 为独有增量 ≥40% → 落地
+- Anthropic Computer Use：库内 §Anthropic 工具类锚点——browser_toolset/computer_toolset/选型/GA 模式/multi-action 为独有增量 ≥40% → 落地
+- deeplearning 多模态：库内 §课程生态（r273A）——多模态课程系/audio vs image tokens/Computer Use 课程为独有增量 ≥40% → 落地（增量合并）
+- Copilot CLI：库内 §Copilot 类锚点——Autopilot vs delegate/Plan mode/.github agents/程序化/headless 为独有增量 ≥40% → 落地
+- OpenClaw 记忆：库内 §记忆三文件类锚点——session 存储/持久化边界/MemoryLake/压缩前 flush 为独有增量 ≥40% → 落地（增量合并）
+
+## 独点落地（10 个）
+| 轮 | 文件(建议落点) | 版本(建议) | 独有点 | 提升层 |
+|---|---|---|---|---|
+| r274B-1 | wb-execute-discipline | 3.39.0+ | Dify 实时调试与变量检查 | 可复用 Skill |
+| r274B-2 | wb-execute-discipline | 3.39.0+ | n8n 长期记忆 dual-layer 模式 | 工作流 |
+| r274B-3 | wb-execute-discipline | 3.39.0+ | LangFlow 向量检索配置与多向量检索 | 工具 |
+| r274B-4 | wb-execute-discipline | 3.39.0+ | Activepieces 调度触发器与测试 | 工作流 |
+| r274B-5 | wb-execute-discipline | 3.39.0+ | Make Data Store 适用边界与键设计 | 可复用 Skill |
+| r274B-6 | wb-execute-discipline | 3.39.0+ | Pipedream 组件开发与发布 | 可复用 Skill |
+| r274B-7 | wb-execute-discipline | 3.39.0+ | Anthropic Computer/Browser Use 选型 | 工具 |
+| r274B-8 | wb-execute-discipline | 3.39.0+ | deeplearning 多模态课程 | 可复用 Skill |
+| r274B-9 | wb-execute-discipline | 3.39.0+ | GitHub Copilot CLI Agent 模式 | 工具 |
+| r274B-10 | wb-execute-discipline | 3.39.0+ | OpenClaw 记忆持久化与 session 存储 | 工作流 |
+
+## 复核
+十独点均有当日实拉来源；均增量合并或新面；无并入未落地项。垃圾：本轮未产生临时文件。
