@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体、状态卡只发一次、原地更新、动作词加对象加约束、置信信号、进度时间线、批准画面、改了什么、能不能撤销、推销结论
-version: 1.46.0
+version: 1.47.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -515,6 +515,12 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - 与 §同一份结果两个消费方分工：那条管"给模型的短、给程序的全，两路分开"；本条管"**给模型的那路，内容本身按字段裁剪**"——裁的是字段不是视图。
 - 反模式：工具把整表/整个 API 响应回传，让模型在上下文里挑；agent 挂满所有可用工具；裁到连判断必需的上下文都丢。
 - **提升层**：工具 / 工作流（输出侧 token 节省）。
+
+## 按需装载工具/能力 + 缓存安全的节奏提醒：上下文要"省"也要"不忘"（来源：Pydantic AI on-demand capabilities / tool-search / system-reminders，2026-09-27 实拉）
+- **按需装载，不预付全部 schema**：工具/能力默认只给模型一个**单行目录条目**，具体指令与 schema **只在被实际调用时才拉进上下文**——大量工具的 agent 只为用到的工具付 token（与 §工具返回字段裁剪 同一方向：那条管"返回的体积"，本条管"工具定义本身的体积"）。判据：**工具越多，越不能把所有 schema 常驻**；能搜索/延迟加载就别全量注入。
+- **长任务用节奏提醒对抗指令遗忘，且不破坏缓存**：系统提醒按**节奏或条件**重新注入（如"你忘了最初的约束吗"），实现上必须 **cache-safe**（不移动已缓存前缀），否则提醒一来把整段前缀缓存打崩、反而更贵。判据：**长运行里"重要指令会不会被冲掉"是独立风险，不能靠一次性 system prompt 解决**；但重注方式必须保证不 bust 缓存。
+- 与 §记忆 token 分层 分工：那条管"常驻量硬预算与按需装载历史"，本条管"工具定义的按需装载"与"运行中指令保活"。
+- 提升层：工具（按需装载）/ 工作流（指令保活）。
 
 ## 工具循环的 O(n²) 隐藏账单：每步重放全量历史→固定窗口截断回 O(n)，且要故意为之（来源：dev.to/wartzarbee《smolagents replays its whole memory every step: the O(n²) token bill nobody mentions》2026-08-25 实拉；与 §记忆 token 分层/上下文预算 互补——那条管"常驻量硬预算与按需装载"，本条管"工具循环每步重放的成本机制"）
 原文：This turns the input curve from quadratic back toward linear: a fixed window of history instead of an ever-growing one. You trade some long-range recall for a bounded bill — for most tool-loop tasks that is the right trade, and you make it deliberately instead of discovering it on an invoice.
