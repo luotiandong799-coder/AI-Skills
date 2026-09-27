@@ -6133,3 +6133,42 @@ pm create @n8n/node（declarative/custom 模板）——declarative 风格适合
 - **Event History replay 一键补跑**：可重放单个或批量 past events（含 bulk replay failed events）——失败重跑不是重新构造事件。
 - **用户看不到错误原文**：每 failure mode 给 human-readable message + suggested next step（不丢 stack trace 给用户）；log_error(error_type, model, user_id, details) 按错误类型监控找系统性问题；重试配 fallback chains/circuit breakers/DLQ。
 - **提升层**：工作流（错误处理/重试）。
+## Dify Agent 记忆治理：窗口是成本开关 · 维护四操作 · 生产架构拆记忆服务（来源：Dify docs agent node + mem0《Configure Agent Memory》2026-09 + markaicode《Dify Agent Architecture》2026-05 + aiagentmemory.org 实拉，与 §Agent 记忆体系互补——那条管"记忆存哪怎么取"，本条管"agent 记忆窗口与维护怎么治理"）
+- **记忆窗口是成本开关不是默认值**：Agent node 的 Memory 用 TokenBufferMemory 控制记住多少 previous messages——窗口越大上下文越多 token 成本越高；起步 Window Size 50-100，按任务复杂度调；API 调用总传 conversation_id 保持连续性。→ 判据：**窗口大小跟任务需要的上下文绑定，不跟"能放多少"绑定**——能放下不等于该放下。
+- **Max Iterations 是防无限循环的安全阀**：简单任务 3-5 次迭代，复杂研究 10-15——按任务复杂度设，不是统一默认。
+- **记忆维护四操作**：Summarization（定期把长对话总结成高层记忆）/ Pruning（删过期/不相关/冗余）/ Prioritization（高频访问或关键信息提权）/ Hierarchical Memory（按细节层级组织，先概览后细节）——记忆是主动维护的资产，不是只增不减的日志。
+- **生产架构三分离**：stateless agent executors 水平扩展 10,000+ 并发无共享内存瓶颈 / queue-based dispatching 解耦 orchestration 与 execution（慢工具不阻塞整个 workflow）/ **separate memory service**（Redis+PostgreSQL）独立于 orchestrator——避免 LLM context window 限制消耗编排堆内存；记忆检索只占 2% 成本。
+- **记忆生命周期管理**（mem0 插件）：Entity Scoping（user_id/agent_id/run_id 分域）+ Score Normalization（统一 0-1 相似度）+ forgetting curve（access-log 驱动遗忘曲线，低频记忆自然衰减，可加 hard TTL）。
+- **记忆 JSON 先预处理再喂 LLM**：复杂 JSON 记忆响应先过 Code node 整理成干净文本——省 token + 提升 LLM 提取稳定性（直接喂复杂 JSON 费 token 且提取不可靠）。
+- **提升层**：工作流（记忆治理）。
+
+## n8n HITL 审批三模式：真监督要让"看到的参数=执行的参数"（来源：docs.n8n.io human-in-the-loop-tools + blog.n8n.io《Production AI Playbook: Human Oversight》2026-03 + workflow 16663/9039 实拉，与 §多Agent质检互补——那条管"结果回退"，本条管"高险动作要人批准"）
+- **三模式按风险选**：Inline chat approval（Chat node Send and Wait for Response，输出直接展示在聊天里批改）/ Tool call approval gates（AI Agent 工具连接上加审批门——高险动作如 DB 写/发外部消息，必须人批才执行）/ Wait node+integrations checkpoint（Wait 节点暂停等 Slack/Gmail/Discord 审批）。→ 判据：**工具级审批门管"高险动作"，checkpoint 管"整段输出"**——不是同一个粒度。
+- **HITL vs HOTL**：HITL=必须等人批准才继续（人类在环内）；HOTL=人在旁监控可干预（human-on-the-loop）——按动作后果严重度选，不是都上 HITL。
+- **批准请求必须展示"确切 tool+参数"**：reviewer 看到 AI 想调用什么、用什么参数；批准后**只有参数匹配才继续执行**（TrustLoop 节点实现）——"批准了 A 却执行了 B"等于没监督。→ 判据：**真监督的验收标准=人批准的内容与系统执行的内容逐字节一致**。
+- **安全审批基础设施**：审批链接 HMAC 签名+expiry 防篡改（过期/无效触警报）；Postgres 存 request context+channel ID+timestamp；每次决定写审计轨迹；Slack button callback 先 200 响应再查库 merge 防超时。
+- **采纳路径：从最高风险先加**：不一次给所有 workflow 加监督——先找单个最高风险 AI workflow 上监督，学会再扩展（生产 playbook 原文）。
+- **提升层**：工作流（审批/监督）。
+
+## LangFlow Memory bases：语义记忆替代时间序 · 多向量检索 · 推理记忆审计（来源：docs.langflow.org memory-bases + Langflow 1.10/1.11 发布 + Neo4j agent memory 集成 实拉，与 §RAG 检索面互补——那条管"知识库怎么检"，本条管"会话记忆怎么检"）
+- **Memory base = per-flow 语义记忆**（v1.10+）：自动 ingest 对话消息到 vector store，按**语义相似度**返回最相关上下文——**不是** Message History 组件的 chronological order（时间序取最近）。→ 判据：**"记得上周讨论过什么"是语义检索任务，不是时间序任务**——用错组件就取回最近但无关的上下文。
+- **Memory base vs knowledge base**：knowledge base 手动 populate，memory base 自动 ingest 会话——对话记忆自动沉淀，知识库手动维护。
+- **多向量检索开箱即用**（1.11 lfx-nextplaid）：ColBERT-style late interaction + ColPali-style visual document retrieval，无需 glue code——图文混合文档检索不再自己拼。
+- **Reasoning Memory 审计**（Neo4j 集成）：每次 tool call 存为 graph node，形成完整可查询的推理轨迹——"agent 每一步调了什么工具为什么"可审计，不只记对话内容。
+- **提升层**：工具（语义记忆组件）。
+
+## Make 错误处理五模式：事务边界决定能回滚什么 · 持久 DLQ 超保留期（来源：help.make.com rollback-error-handler + Make Academy error handlers + use-apify《Build Resilient Scenarios》2026-03 + Richard Lemon 三模块 2026-05 实拉，与 §Pipedream 错误处理互补——那条管"平台重试边界"，本条管"错误处理策略矩阵"）
+- **五模式按意图选**：Resume（设 substitute value 流程继续——邮件失败用"失败日志"继续）/ Commit（事务部分成功时确认已成功的）/ Rollback（停场景+回滚支持事务的模块）/ Break（保存 incomplete execution 供重试——一般运营场景默认）/ 无 handler 时默认 Rollback。→ 判据：**选型问"这次失败该停、该跳还是该存"**：可跳过的失败→Resume，必须完整一致的→Rollback，不能丢的→Break 存下来重试。
+- **Rollback 的事务边界**：只能回滚支持 transaction 的模块（MySQL/data store）；**不能撤销不支持事务的**（Gmail 已发邮件/Dropbox 已删文件）——错误发生后外部副作用已经发生，回滚救不了。→ 判据：**破坏性/不可逆动作前先想"错了怎么退"**——退不了的模块要在流程里前置审批或校验。
+- **Persistent DLQ 超保留期**：高价值 bundle 失败写外部表（Airtable：完整 bundle+error+status 字段），第二个定时 scenario poll 重试 status="failed" 且 last_attempt>1 小时——**platform 的 incomplete execution 有保留期，自建 DLQ 没有**。
+- **三模块常备**：centralised Log to store（集中日志）+ noisy Notify me（失败必通知）+ opinionated Guardrail（显式验证假设）——"无聊但有效"的容错结构。
+- **Retry vs Resolve**：temporary error（ConnectionError/RateLimitError）直接 retry（可批量）；需改 module settings 的 resolve——先分错误类型再决定动作。
+- **提升层**：工作流（错误处理策略）。
+
+## MCP 2026-07-28 规格：stateless 核心 · 扩展框架 · 双向 serve（来源：claude.com《Bringing MCP 2026-07-28》+ blog.modelcontextprotocol.io 2026-07-28 RC + clawdocs.org MCP servers + docs.openclaw.ai cli/mcp 实拉，MCP 协议演进为工具层基础设施知识）
+- **Stateless core 是最大变更**：MCP 从 bidirectional stateful 协议变成 request/response——servers 可部署 serverless/edge 并水平扩展（之前有状态会话锁死扩展性）；发布节奏：2026-05-21 冻结 RC，2026-07-28 正式发布，10 周给 SDK/client 验证。→ 判据：**写 MCP server 按无状态设计**——把会话状态挪到客户端或外部存储，别依赖协议层状态。
+- **新能力清单**：Multi Round-Trip Requests（一次多轮往返）/ subscriptions/listen（订阅变更）/ OAuth 2.1 authorization 硬化 / cacheable list results（列表结果可缓存）/ 正式扩展框架（MCP Apps+Tasks 进扩展，**12 个月弃用窗口**）/ Roots/Sampling/Logging deprecated、新增 server/discover。
+- **生态量级**：97M+ monthly SDK downloads、10,000+ active public MCP servers（2025-12 数据）；2024-11-25 发布、2025-12 捐 Linux Foundation；N×M 集成问题塌缩为 N+M。
+- **OpenClaw MCP 双向**：openclaw mcp serve 让 OpenClaw 当 MCP server（Codex/Claude Code 直接对话），list/show/set/unset 管出站 server 定义；配置文件列 servers 自动启动+discover capabilities，免写代码连数十工具。
+- **生产就绪四件套**（deeplearning.ai 生态实践）：step limiter（防失控循环）+ intent classifier for routing + tool call validator for destructive action + business-aware logging——上规模前实现，不是出了事故再补；agent eval 用 task completion rate/avg turn count/cost。
+- **提升层**：工具（协议/集成）。
