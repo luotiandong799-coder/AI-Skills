@@ -4953,3 +4953,41 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **与 instructions/skills 三区分**：instructions 被动应用；skills 处理单个任务；agents 定义完整工作风格——整个会话怎么思考、用什么工具、怎么沟通。→ 判据：按"风格级/任务级/被动级"选载体，别把风格塞进单任务 skill。
 - **Agent HQ 生态**：Claude/Codex 可选作 agent；automated first-pass review（developer 看到前 Copilot 先修初版问题）；metrics dashboard（public preview 追踪使用与影响）；audit logging。→ 判据：多 agent 并行时接 metrics 追踪，agent 生成工作要有可审计性。
 - **提升层**：可复用 Skill。
+
+## Dify 变量类型纪律：类型系统 + 聚合器同类型 + 来源归属（来源：Dify 变量/数据类型面，2026-09-27 实拉）
+- **变量类型系统**：string/number/integer/boolean/object/file/array[string]/array[number]/array[object]/array[boolean——节点输出按 
+ode_output.type 命名模式带类型。→ 判据：引用变量前确认其类型，数组类变量按元素类型处理。
+- **Variable Aggregator 同类型约束**：聚合的所有变量必须共享同一数据类型（string/number/object/boolean/array/file）。→ 判据：想聚合先统一变量类型，别混型聚合。
+- **User Input 字段类型防无效输入**：dropdown 预定义选项保数据一致性防无效输入；Number 限数值（数量/评分/ID）；Checkbox 输出 true/false。→ 判据：用户输入字段按数据语义选控件类型，别用自由文本收结构化数据。
+- **Context Variables 保留来源归属**：知识检索节点输出接 LLM context 输入（Answer using only this context）；Dify 自动追踪来源——RAG 答案可回源。→ 判据：RAG 上下文走专用 context 通道拿来源归属，别裸拼进 user 消息。
+- **系统变量**：sys.user_id（每用户唯一标识）/sys.app_id（应用标识）区分对话用户与定位应用。→ 判据：按用户/应用分流用系统变量，不自建会话标识。
+- **提升层**：工具/工作流。
+
+## n8n 版本管理纪律：滚动回退 + 发布语义 + 备份链（来源：n8n 版本管理面，2026-09-27 实拉）
+- **Version History 滚动回退**：Autosave 后每个版本可回退——找旧版本→Publish this version→生产立即恢复（5 分钟前上线的 bug 版立即撤）。→ 判据：改 workflow 前先确认版本历史存在；出问题回退发布而非手改。
+- **发布语义四操作**：Unpublish（移出生产）/Restore（恢复版本但不影响生产执行——先恢复再发布两段式）/发布另一版本/Name a version（命名防 pruning 删除）。→ 判据：生产恢复分"还原+发布"两步走，重要版本命名锁定。
+- **self-hosted 备份链**：无内建 version history→自动化备份 workflow 到 GitHub/Drive（检测 new/edited/renamed/deleted→smart commit messages+index tracking→可恢复全部或单个；commit 级粒度+visual diffs+one-click rollback）。→ 判据：自托管实例必须配 workflow 备份流水线，GitHub 同步是标准解。
+- **Surgical Snapshots**：备份管理器按 scope 快照（All Active/All）+retention（每 workflow 保最后 10）+restore 即时无重启+lock 防删。→ 判据：快照策略给保留数上限和锁定机制，别无限堆。
+- **提升层**：工作流。
+
+## LangFlow 模板与组件复用：贡献规范 + 分组复用 + JSON 往返（来源：LangFlow 模板/组件市场面，2026-09-27 实拉）
+- **贡献模板规范**：description 简短展示在视觉编辑器；图标用 Lucide；**只用 Core components and Bundles，不用自定义组件**（模板要可移植）；附 README/quickstart。→ 判据：发布模板前检查组件来源，含自定义组件的模板别人装不上。
+- **组件分组复用**：分组组件可存进 Core components 菜单作可复用自定义组件；flows 可 import/export JSON（完整资产可搬）。→ 判据：跨 flow 复用逻辑先存组件菜单，再组装模板。
+- **模板库定位**：100+ ready-made（RAG pipelines/business automation/document processing/multi-agent）；选模板跳过重复搭建只调业务逻辑；Starter Project 默认文件夹组织。→ 判据：新 flow 先搜模板再手搭，从骨架起步。
+- **典型模板模式**：市场情报（自主 web research+第三方验证+战略综合）；反馈洞察（webhook JSON 解析→sentiment/urgency/pain points/recommended actions 结构化字段）；CSV Agent（LLM+CSV 文件路径，自然语言查数据）。→ 判据：按场景复用这些成熟组件组合，不重写。
+- **提升层**：可复用 Skill。
+
+## webhook 契约四件套：握手策略 + 版本化 + 签名验证 + waitpoints（来源：Activepieces webhook 面，2026-09-27 实拉）
+- **握手策略**：WebhookHandshakeStrategy 可选 NONE（默认）/HEADER_PRESENT/QUERY_PRESENT/BODY_PARAM_PRESENT——生产 webhook 至少选一个标记位识别真实调用。→ 判据：webhook 入口配握手标记，别裸 NONE 生产。
+- **payload 版本化**：payload 加 schema version 字段按版本路由；每版本维护 transformation steps；旧路由保持活跃直到 producers 迁移——增量 rollout 防破坏。→ 判据：webhook 协议演进带版本字段+旧路由过渡期，不许一刀切。
+- **签名验证**：code step 计算 HMAC 比对 shared secret，不匹配早期拒绝；记录 signature+timestamp 审计；nonce 存储防重放。→ 判据：接收 webhook 先验签再处理，防重放必须 nonce。
+- **waitpoints 双模式**：webhook waitpoint 暂停 flow 至特定 callback URL 被调（URL run-unique 携带 request body/headers/query 到下一步）；async/sync respond-when-done 两模式；worker 重启存活。→ 判据：需要回调续跑用 waitpoint，URL 一次一签，异步还是同步按响应要求选。
+- **提升层**：工具/工作流。
+
+## Claude Code headless 管线纪律：确定性 + 预算上限 + 官方 Action（来源：Claude Code headless 面，2026-09-27 实拉）
+- **-p 管道模式**：非交互单命令（Git push/PR comment/nightly cron/CI stage 触发；产出 machine-readable 结果给管线消费）。→ 判据：CI 集成用 -p 管道模式，交互模式不进流水线。
+- **--bare 确定性模式**：CI 需要每次同样结果时用（repeatable/predictable），不用默认多变模式。→ 判据：管线内跑 agent 加 --bare 保确定性。
+- **硬上限双保险**：--max-budget-usd（绝对美元上限覆盖 input/output tokens+tool uses，达到即停）；--max-turns（限制推理/工具循环，超限返回部分结果+"Maximum turns reached" 防无限循环）。→ 判据：任何无人值守 agent 运行都必须设预算与轮次双上限。
+- **官方 Action**：anthropics/claude-code-action 处理 authentication/rate limiting/output formatting；密钥走 GitHub Secrets。→ 判据：GitHub Actions 接 Claude Code 用官方 Action，不手写鉴权胶水。
+- **链式与校验**：--continue/--resume/session IDs 链式多步 pipeline；结构化 prompt 注入 file tree/recent diffs/test results；多轮循环每次迭代过测试+lint 回喂失败；git checkpoint/rollback 自动恢复坏迭代；merge 前 human review gate。→ 判据：无人值守 agent 输出必须过测试校验环+git 回滚点+人工放行，缺一不可。
+- **提升层**：工具/工作流。
