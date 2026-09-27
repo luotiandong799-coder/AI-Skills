@@ -4782,3 +4782,34 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **MCP 扩展**：Copilot cloud agent 用本地/远程 MCP servers 工具。→ 判据：agent 能力扩展走 MCP 配置。
 - **定制三层分工**：Agents=dedicated roles/Hooks=security checkpoints/Skills=on-demand skill directories。→ 判据：按角色/钩子/技能三层选定制形态。
 - **提升层**：工具/可复用 Skill。
+
+## 应用类型选型 + 流式桥 + MCP 嵌 Agent（来源：Dify 应用类型/API 编排面，2026-09-27 实拉）
+- **应用类型选型**：Workflow/Chatflow 为主；Chatbot/Agent/Text Generator 基础型同引擎下层；Agent=任务需 AI 推理选下一步用工具；Text Generator=结构化内容输出。→ 判据：按"任务要不要自主决策"选型，不默认对话。
+- **Agent 策略**：Agent Strategies 定义思考行动方式（Function Calling 等），按模型能力与任务需求选。→ 判据：agent 行为由策略显式定义，不隐式。
+- **流式桥**：Chatflow Invoker 把 Chatflow 转成节点；universal streaming interface 调用工具——模型/Agent/Workflow/Chatflow 只要有流式输出接口都能集成保留流式能力。→ 判据：跨平台流式能力用统一流式接口桥接，保 stream 不降级。
+- **MCP 嵌入**：MCP SSE 插件 HTTP+SSE 与多 server 通信动态发现外部工具；MCP Agent Strategy 把 MCP 直接嵌进 Workflow Agent 节点自主决定调用。→ 判据：外部工具接 MCP 协议，agent 节点内自主调。
+- **提升层**：工具/工作流。
+
+## queue mode：调度与执行拆分（来源：n8n 队列模式/生产面，2026-09-27 实拉）
+- **主实例生成、worker 执行**：main 处理 timers/webhooks 生成（不运行）执行；execution ID 传 Redis 队列；worker 拉取执行；EXECUTIONS_MODE=queue；共享 Redis+Postgres+N8N_ENCRYPTION_KEY。→ 判据：高并发部署拆调度与执行，共享队列与存储与密钥。
+- **水平扩展**：加/减 workers 应对负载；workers stateless 并行执行长任务不影响 UI 响应。→ 判据：容量按 worker 数伸缩，执行无状态。
+- **bounded pool 防洪峰**：worker 从有界池拉任务，解耦 Postgres 写入速度与实际工作耗时——防 webhook 洪峰压垮数据库。→ 判据：写入吞吐与执行耗时解耦，队列有界。
+- **提升层**：工作流/工具。
+
+## Memory bases：向量化语义记忆 vs 时间顺序记忆（来源：LangFlow 记忆/存储面，2026-09-27 实拉）
+- **两级记忆选型**：Message History 时间顺序检索（默认 Langflow storage，可附 Mem0/Redis）；Memory bases per-flow 向量存储自动摄入对话消息按语义相似度返回最相关上下文跨会话持久。→ 判据：要"最近说了啥"用时间序列，要"相关历史"用语义向量。
+- **内置默认**：Agent 内置 chat memory 默认启用 Langflow storage 大多数用例够——先默认再升级。→ 判据：默认内置够用就不外挂存储。
+- **向量存储配置**：namespace/embedding/metric（cosine/euclidean/dot_product）/setup_mode Sync Async Off/cache_vector_store 加速读。→ 判据：向量库参数显式配，读热点开缓存。
+- **提升层**：工作流/工具。
+
+## 错误处理四型 + incomplete executions（来源：Make 错误处理/恢复面，2026-09-27 实拉）
+- **四型 handler**：Break 只停出错 bundle 存 incomplete execution 其他 bundle 继续（生产最有用）；Ignore 忽略错误移除 bundle 继续下一个；Resume 用替代输出替换模块输出；Rollback 撤销先前模块。→ 判据：按失败语义选型——批量继续用 Break，可选模块用 Ignore，可降级用 Resume，需回滚用 Rollback。
+- **incomplete executions**：失败 run 保存 data+blueprint 可重跑防信息丢失（模块设置/输入/输出到失败模块）——可调查可重试。→ 判据：失败现场留档，能自动或手动重跑。
+- **恢复**：scenario recovery 自动保存 blueprint 恢复未保存更改；version history 60 天恢复。→ 判据：构建期自动备份+版本历史兜底。
+- **提升层**：工作流/工具。
+
+## 动态矩阵 + 表达式上下文（来源：GitHub Actions expressions/matrix 面，2026-09-27 实拉）
+- **Matrix strategy**：单 job 定义多变量组合自动创建多 job run（多语言版本/多 OS 测试）。→ 判据：组合测试面用矩阵展开，不手写重复 job。
+- **动态矩阵**：fromJSON(needs.job1.outputs.matrix) 上游产出矩阵；needs 上下文取依赖 job outputs。→ 判据：矩阵内容由上游动态产出，减少手工维护。
+- **表达式与上下文**：数据类型 boolean/null/number/string；contexts secrets/strategy/matrix/needs/vars；repository_dispatch payload 建矩阵。→ 判据：表达式用显式类型与上下文，不裸拼字符串。
+- **提升层**：工作流/工具。
