@@ -5132,3 +5132,42 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **平台组合**：智谱清流=零/低代码编排+企业知识库 RAG+效果评测迭代闭环+AutoGLM 界面操作代理——"平台编排+代理执行"组合；AgentMore=多 Agent 协作+Skills 市场（基础免费）。→ 判据：平台选型看编排与执行是否协同（编排层+代理层同产线）。
 - **AutoGLM 能力信号**：50+ 步长操作跨 app 执行；GLM-PC 像人一样操作计算机。→ 判据：长步骤跨 app 自主操作已产品化，复杂 GUI 任务可委托此类代理。
 - **提升层**：工作流。
+
+## Dify Agent 记忆体系：TokenBuffer 窗口 + 1.0 长期记忆三能力 + conversation_id 契约（来源：Dify agent memory/orchestration 面，2026-09-27 实拉）
+- **窗口型短期记忆**：Agent 节点 Memory=TokenBufferMemory，窗口大小=记忆多少轮（大窗口上下文多但 token 贵）；开启后设 Window Size 50-100 起步。→ 判据：记忆窗口按 token 预算定，不是按"轮数感觉"定。
+- **API 连续性契约**：外部调用始终传 conversation_id 保持多轮连续性——不传每次都是新会话。→ 判据：聊天类 API 集成 conversation_id 是必传参数，不是可选。
+- **迭代上限防死循环**：Max Iterations 安全上限——简单任务 3-5，复杂研究 10-15。→ 判据：按任务复杂度设迭代上限，宁可多设复杂任务也不让它无限转。
+- **1.0+ 长期记忆三能力**：自动记忆（AI 从对话提取关键事实）/手动记忆（开发者显式写）/记忆检索（语义相似取相关记忆）+ 记忆过期 TTL。→ 判据：长期记忆设计=提取+写入+检索+过期四件套，缺过期会无限膨胀。
+- **生产记忆架构**：Redis 热数据（LRU 1 小时 TTL）+ PostgreSQL 持久化 + 滑窗上下文摘要（stay within token limits 不丢关键历史）。→ 判据：热/冷两层 + 滑窗摘要，单层存储扛不住长会话。
+- **插件记忆三工具模式**：Hindsight Retain/Recall/Reflect、MemOS 自动保存（交互后存事实摘要+用户偏好，检索增强个性化）——记忆插件的标准工具面。→ 判据：要跨 run 长期记忆，用"存/取/反思"三工具插件接入 workflow，不让每次执行从无状态开始。
+- **提升层**：工作流。
+
+## n8n RAG 生产实践：本地嵌入 + 混合检索 + 知识保鲜删除（来源：n8n RAG 面，2026-09-27 实拉）
+- **本地嵌入管线**：Ollama nomic-embed-text / mxbai-embed 生成嵌入 + Qdrant/Supabase pgvector 存储；递归字符分块 overlapping。→ 判据：本地嵌入免 API 费，个人 RAG 首选 Ollama 系。
+- **混合检索**：Qdrant 768 维 dense vector + BM25 sparse vector 字段（per-point sparse payload）——hybrid RAG over PDFs。→ 判据：纯向量检索 miss 精确术语时开 sparse 混合，字段在 collection 创建时定义。
+- **知识保鲜删除流程**：scheduled trigger 定期查 Google Sheet 标记 deleted 记录→从 vector store 移除+删源文件——知识库必须能"遗忘"已删文档。→ 判据：RAG 入库要有配套删除路径，只进不出=过期知识永驻。
+- **参数纪律**：chunk 1000 字符+100 重叠；上传 <10MB 防解析超时；MongoDB Atlas vector index 名 data_index 必须与 n8n 配置匹配；Supabase match 函数名匹配；query flow 加缓存检查。→ 判据：chunk 大小/索引名/函数名三处一致才通，先钉参数再跑管线。
+- **提升层**：工作流。
+
+## LangFlow Memory Base 三分类：语义检索 vs 时间顺序 vs 手工填充（来源：LangFlow memory 面，2026-09-27 实拉）
+- **Memory Base=per-flow vector store**：自动摄取会话消息，跨 session 持久，语义检索返回最相关上下文（不是最近消息）。→ 判据：要"记得相关的"用 Memory Base；要"按时间回放"用 Message History。
+- **三套记忆机制分工**：Memory Base（向量化+语义检索）/ Message History（messages 表时间顺序，sessionID 过滤）/ knowledge base（手工填充领域知识）——各有用途不混用。→ 判据：选组件先问"取哪类信息、怎么取"——相关度/时间序/静态知识。
+- **Agent 内置 chat memory**：默认启用用 Langflow storage，多数场景够用；特殊场景（跨 flow、专用 DB）才上 Message History + Mem0/Redis。→ 判据：默认先吃内置，需求不足再换专用组件，不上头。
+- **1.10 DB Providers**：知识库向量后端可配置（RedisVectorStore/ValkeyVectorStore 等 LangChain 实例驱动，provider 参数：连接串/index 名/schema）。→ 判据：向量后端按部署位置选，参数三件套（连接/index/schema）对齐。
+- **提升层**：工具。
+
+## Claude Code subagents 三形态与编排纪律（来源：Claude Code subagents 面，2026-09-27 实拉）
+- **三种并行形态**：fan-out/fan-in（parent 并行 N 个等全部合成——研究/多文件分析/并行 review）；pipeline（A 输出作 B 输入——research→plan→execute）；background（后台跑）。→ 判据：任务可拆独立块用 fan-out；有严格先后用 pipeline；不阻塞主线用 background。
+- **编排循环**：分析任务→识别子任务→构造 Agent tool call（详细 prompt）→子代理隔离上下文执行→返回→synthesize 检查正确性→finalize 或再 spawn。→ 判据：parent 每轮收结果先查正确性再决定收尾或再派，不默认一次到位。
+- **防 merge conflict**：spawn 前做 file-level dependency analysis——列出每个子任务将触碰的文件，验证无重叠。→ 判据：并行改文件先查触碰集，重叠就串行或划边界。
+- **防跑飞**：step budget 显式写进 subagent 指令（"no more than 20 tool calls"）+ Agent View 监控；卡住 kill 重启。→ 判据：子代理也要预算，不能无限工具循环。
+- **动态选择**：description 字段具体+面向动作（Claude Code 按上下文智能选 subagent）。→ 判据：description 写"做什么+何时用"，决定被选中的概率。
+- **规模天花板**：tool-calling 每轮并行有上限；code-execution 递归 harness（Task() 脚本编排 spawn）可发上千 subagent。→ 判据：超过几十个并行先考虑脚本化 spawn，不走每轮 tool call。
+- **提升层**：工作流。
+
+## skills 安装 CLI 生态：npx/gh/databricks/localskills 四通道（来源：skills.sh CLI 安装面，2026-09-27 实拉）
+- **skills CLI（主通道）**：npx skills add <owner>/<skill-name> 免安装直跑；--skill 指定包内具体技能（npx skills add vercel-labs/agent-skills --skill vercel）；支持 18+ agents（Cline/Windsurf/GitHub Copilot 等）。→ 判据：跨 agent 装技能默认 skills CLI，一条命令装到 workspace。
+- **GitHub CLI**：v2.90+ gh skill install github/awesome-copilot；@tag 钉版本（documentation-writer@v1）。→ 判据：要可复现版本用 gh + tag，别装 latest 漂移。
+- **范围选择**：阿里云 SkillsPortal/通用 CLI 支持"当前项目（可随项目提交 Git，安装路径项目根目录）或全局"；localskills install <slug> --target cursor claude --project --symlink（平台/范围/安装方法选择可跳过）。→ 判据：技能随项目走选 --project（可提交可回滚），个人通用选全局。
+- **自动检测安装**：Databricks aitools CLI 自动检测支持的 coding agents 并安装对应 skills/plugins。→ 判据：官方 SDK 类技能用其 CLI 自动装，省去手选 target。
+- **提升层**：工具。
