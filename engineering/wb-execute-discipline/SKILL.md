@@ -4473,3 +4473,33 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **发布后聚合器自抓**：SkillsMP/claudemarketplaces/ClawHub 自调度抓取，别追着各聚合器手动提交。→ 判据：发布后等着聚合器抓，重复手动提交是浪费。
 - **skill-container 模式**：GHCR 发布不可变镜像版本，SKILL.md frontmatter image 指官方镜像 tag。→ 判据：技能要版本化发布用容器镜像 tag，不可变可回滚。
 - **提升层**：可复用 Skill/工作流。
+
+## Usage Priority + VECTOR_STORE 插拔 + VISION 多模态标记（来源：Dify 嵌入/模型提供面，2026-09-27 实拉）
+- **自带 API key 与 AI credits 共存**：Usage Priority 控制先用哪个再 fallback 哪个。→ 判据：自费 key 与平台额度并存时显式设优先级，不默认。
+- **向量库可插拔**：VECTOR_STORE 环境变量换库（tablestore/opensearch/腾讯云）不换应用。→ 判据：向量库选择做成配置项，迁移换值不重写。
+- **VISION badge**：多模态 embedding/rerank 模型标记 VISION——图片向量化参与检索。→ 判据：多模态场景选 VISION 标记模型，图片才有检索入口。
+- **提升层**：工具/工作流。
+
+## execution_id 关联全 run 事件（来源：n8n 模板/集成生态面，2026-09-27 实拉）
+- **唯一 execution_id 贯穿**：webhook 收工单生成唯一 execution_id 关联 run 每个事件（START/EVENT 日志）——全链路可追踪。→ 判据：自动化处理外部输入时首先生成关联 id，每个后续事件都带它。
+- **工单 triage 模式**：AI Agent 读工单+知识库+置信度草稿响应+数据表工具记 EVENT。→ 判据：支持工单场景照此组合，置信度随草稿输出供人判断。
+- **提升层**：工作流。
+
+## IDE vs Runtime 双形态 + lfx serve（来源：LangFlow API/部署面，2026-09-27 实拉）
+- **部署双形态**：IDE（可视化编辑器开发）与 Runtime（headless backend 只服务 API 生产）分离——生产不挂编辑器。→ 判据：生产环境跑 headless runtime，编辑器只在开发环境。
+- **lfx serve**：FastAPI 服务器把 flows 暴露为 HTTP API（POST /flows/{flow_id}/run），public server 必须 LANGFLOW_API_KEY。→ 判据：暴露 flow API 必配 key，防公开服务器裸奔。
+- **多 worker 共享 build queue**：LANGFLOW_WORKERS 增并发，每个进程自己的内存 build queue 除非加 Redis-backed job queue。→ 判据：多 worker 并发必须加共享队列，否则各进程各自排队。
+- **提升层**：工具/工作流。
+
+## 五层上下文工程栈 + system prompt 内核 vs 知识库分层（来源：Anthropic 提示工程/上下文管理面，2026-09-27 实拉）
+- **五层栈**：minimal system prompts + progressive disclosure + tool design + auto-memory + richer references——每层刻意设计。→ 判据：上下文工程按五层逐层设计，不把全部堆进 prompt。
+- **system prompt 是内核不是知识库**：稳定行为进 prompt，任务特定知识进检索，操作指导进工具，持久偏好进记忆。→ 判据：分层放内容——prompt 只放稳定行为，其余按性质分流。
+- **Progressive Disclosure**：不 dump 全部 context 进第一条消息，最小指令起步让模型按需问。→ 判据：长上下文分步披露，别一口气灌满。
+- **@ 引用文件**：references 让 Claude 引用深信息——HTML mockup 优于描述/截图。→ 判据：给设计意图优先给高保真文件而非文字描述。
+- **提升层**：模型/工作流。
+
+## Exec Approvals 生命周期 + 每日安全审计 cron（来源：OpenClaw 安全/事件/权限面，2026-09-27 实拉）
+- **Exec Approvals 增强**（2026.6.6+）：Cwd-Bound Reusable Approvals（绑定工作目录的复用批准，批准只在那个目录有效）+ Scoped Cron Grants（作用域 cron 授权）+ Revocable MCP App Access（可撤销 MCP 应用访问）。→ 判据：agent 权限批准要绑定上下文——目录作用域、cron 分作用域、MCP 可撤销。
+- **CSWSH 教训**：WebSocket origin validation gap 偷 gateway auth token（CVSS 8.8）——一键禁用确认提示/逃容器/执行任意命令。→ 判据：对外暴露的 agent UI 必须校验 WebSocket origin，token 泄露链要防。
+- **每日安全审计 cron**：firewall/fail2ban/SSH 配置/openclaw.json .env 文件权限/开放端口/Docker 状态/是否 root 运行——报昨日差异。→ 判据：agent 主机安全靠每日对比审计，报 anomaly 不报全量。
+- **提升层**：工具/工作流。
