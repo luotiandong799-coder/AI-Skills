@@ -5568,3 +5568,39 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **渐进披露**：name+description 预载入 system prompt，任务匹配时读全文。→ 判据：description 写清"做什么+何时用"，触发靠它。
 - **生态分发**：2026 年 4 月 20+ 产品采纳（Cursor/Copilot/Codex/Gemini CLI/Junie）；skills.sh npx skills add owner/repo 一条命令装所有；安装路径：Claude .claude/skills//Cursor .cursor/skills//Copilot .github/copilot/skills//OpenCode .opencode/skills/。→ 判据：一个 SKILL.md 多工具通用，装哪都同格式。
 - **提升层**：可复用 Skill。
+
+## OpenClaw 沙箱信任边界：mode 三态 + 双重 bind mount 校验 + deny-list 不可禁用（来源：OpenClaw docs.openclaw.ai·start/why-openclaw/the-trust-boundary + gateway/sandboxing + gateway/sandbox-vs-tool-policy-vs-elevated，2026-09-27 实拉，与 §审批策略互补——那条管请求层，这条管执行隔离）
+- **sandbox mode 三态**：off（全部 host 直跑）/non-main（仅非主会话沙箱——群/频道常见"意外"）/all（全部沙箱）。→ 判据：显式选 mode，别默认 off 让群消息也能碰宿主。
+- **bind mount 双重校验**：规范化路径+解析最深存在祖先后再验一次，symlink 绕过尝试 fail closed。→ 判据：挂载路径两遍校验，符号链接绕过走失败关闭。
+- **凭据与系统路径 deny-list 不可禁用**：dangerouslyAllowExternalBindSources 只放宽 allowed-roots 检查，不放开 deny-list。→ 判据：敏感路径黑名单是硬底线，override 选项改的是白名单不是黑名单。
+- **tools.elevated 是显式逃生路线**：sandbox 外执行 exec（gateway 默认/node），/exec 指令仅授权发件人且按会话持久；要硬禁 exec 用工具策略否定。→ 判据：逃出沙箱要走审批过的显式通道，不是配置洞。
+- **per-agent sandbox**（v2026.1.6+）：每个 agent 独立 sandbox+tool 限制（个人 agent off，第三方 agent 沙箱）。→ 判据：按 agent 身份配隔离，别全局一刀切。
+- **提升层**：工具。
+
+## Anthropic prompt caching 架构纪律：automatic vs 显式断点 + 三个 cache-busters（来源：Anthropic platform.claude.com·build-with-claude/prompt-caching + agentpatterns.ai/context-engineering/prompt-caching-architectural-discipline，2026-09-27 实拉，与 §Caching 成本模型互补——那条管账，这条管怎么布）
+- **两种启用**：Automatic caching（顶层 cache_control，系统自动把断点放最后可缓存块并随对话前移，适合多轮）；显式块级断点（不同区块变更频率不同时手动分）。→ 判据：多轮对话用 automatic，混合频率内容用显式断点。
+- **三个 cache-busters**：改工具定义/换模型/向前缀注入变量数据——都会打爆缓存。→ 判据：新增 prompt 内容先问"会话内会变吗"，会变就放动态尾不放前缀。
+- **缓存内容放 prompt 开头**：系统指令/背景信息/大上下文/常用工具定义；断点放在保持不变的最后一个块。→ 判据：稳定内容前置，断点划在"不再变"的边界。
+- **2026 默认价**：5 分钟 TTL ephemeral（写 1.25x 输入价，读约 10% 输入价）；1 小时 TTL（写 2x）；最小可缓存块 1,024 tokens。→ 判据：前缀 5 分钟内复用 1-2 次以上才值得缓存（>2k tokens 的 system prompt/skills/RAG 稳定文档/多轮历史）。
+- **压缩保前缀**：验证压缩步骤让前缀 byte-for-byte 不变——前缀变了缓存全失效。→ 判据：压缩后核验前缀逐字节一致。
+- **提升层**：工作流。
+
+## n8n 认证选型与动态凭据：Predefined 优先 + 表达式凭据 + 多租户（来源：n8n docs.n8n.io·integrations/builtin/credentials/httprequest + community.n8n.io，2026-09-27 实拉，与 §凭证范围分层互补——那条管授权面，这条管接线方式）
+- **Predefined Credential Type 优先**：内置/社区节点支持的平台直接用预定义凭据——token 存储+OAuth 自动刷新，免自配 endpoint；Generic 仅平台不支持才用（八种：Basic/Custom/Digest/Header/OAuth1/OAuth2/Query auth）。→ 判据：有预定义先用预定义，别手搓认证。
+- **credential 字段支持表达式**：运行时动态解析（隔离测试显示 undefined 属正常）——多租户 workflow 的 URL/Header 从 Webhook 输入取（spreadsheetId/googleToken）。→ 判据：多租户凭据/地址参数化，一套 workflow 跑所有租户。
+- **环境变量直传 header**：{{ .MY_API_KEY }} 免 saved credential 权限错误，配 retry on fail 处理网络断。→ 判据：单租户密钥走 env 直传，网络抖动靠节点重试。
+- **提升层**：工具。
+
+## DSH 插件安全供应链：审计工具链 + fail-closed 护栏（来源：npm dsh-secure-audit/dsh-plugin-audit/dsh-defend + dsh.so + CSDN《12 小时 50k Star》2026-09-27 实拉，与 §插件安全评级互补——那条管装前评级，这条管审计与运行护栏）
+- **dsh-secure-audit**：只读安全审计 11 项检查（config/sessions/plugins/paths/network/env/host）映射 OWASP LLM+Agentic Top 10。→ 判据：装插件前跑只读审计，按 OWASP 框架归因。
+- **dsh-plugin-audit**：静态审计插件目录（source/package.json/cordis.patch.yml）返回 permission profile card（Risk: REVIEW 人工评审）。→ 判据：审计输出权限画像卡，高风险转人工。
+- **dsh-defend**：确定性规则库（不调模型）捕获移植词汇+宽容变体，基准 27/28 防回归。→ 判据：防注入用确定性规则，别把模型当安检门。
+- **DSH 运行护栏**（第三方实测）：fail-closed（无沙箱后端 Bash 直接拒绝+精确错误原因）/审批必须写 justification 否则拒绝/三档权限（Read Only/Workspace Write/Full access，切 Full 过风险确认）/防循环（连续重复调用同一工具自动注入提醒）。→ 判据：护栏三件套——失败关闭+理由审批+权限分档。
+- **提升层**：工具。
+
+## Agent Skills 生态治理与规模：开放标准时间线 + Agentic AI Foundation（来源：agentskills.io/home + leo-laboratory 生态速览 + anomity.ai 治理缺口分析，2026-09-27 实拉，与 §开放标准生态互补——那条管 SKILL.md 怎么写与分发，这条管生态治理与规模）
+- **时间线**：2025-12-18 Anthropic 发布规格于 agentskills.io 并由 Agentic AI Foundation 托管→2026-01 MCP 捐赠 Linux Foundation→2026-03 agentskills.io 成为生态公认开放标准→2026-05 35+ 平台+agentskill.sh 技能数破 110,000。→ 判据：标准演进看基金会托管与平台采纳数，别只看单家宣布。
+- **规模事实**：GitHub 技能仓库从几百暴增 2,600+；getsentry 交付 480+ 技能集合；40+ 客户端（含数据平台 Databricks/Snowflake）；公开注册表合计 180,000+ distinct skills。→ 判据：选技能先查多注册表聚合，规模即生态健康度。
+- **规格刻意最小**：文件夹+SKILL.md 两个必填 frontmatter+可选 scripts/references/assets；可移植性是核心卖点——跨兼容平台无需修改。→ 判据：写技能按最小规格，可移植比花哨更重要。
+- **治理缺口**：采用远超安全团队认知（40+ 客户端），但治理/安全审查滞后。→ 判据：生态越大越要自己的装前审计流程，不因平台多就省。
+- **提升层**：可复用 Skill。
