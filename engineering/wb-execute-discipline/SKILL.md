@@ -5415,3 +5415,41 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **matcher 面**：Bash/Edit/Write/Read/Glob/Grep/Agent/WebFetch/WebSearch/MCP 工具名——settings.json 配置。→ 判据：hooks 按工具名挂 matcher，安全脚本拦 Bash/Edit/Write。
 - **SDK hooks**：Python+TS 拦截控制 agent 行为。→ 判据：代码化 agent 用 SDK hooks 嵌治理，不用 shell 包装。
 - **提升层**：可复用 Skill。
+
+## Dify 日志三通道与 trace 定位：六类日志 + 应用/组件/后端协同（来源：Dify 日志监控面，2026-09-27 实拉，与 §知识库管线互补——这条管排障）
+- **六类日志数据**：Message Log（用户输入与模型输出原文）/Tool Usage Log（调用参数/函数/返回值/耗时）/Retrieval Trace（检索到的文档段落与向量信息）/Feedback（满意/不满意按钮）/Token 使用计数（token/花费/模型分布）/调试信息（中间提示词拼接）。→ 判据：排障先看该看的那一类，别翻全量。
+- **三通道协同**：应用级（调试→日志页，时间倒序完整 trace ID 链路）+组件级（点节点看输入输出元数据）+后端服务（dify-api worker.log/api.log/orchestrator.trace）。→ 判据：Trace ID 跨通道联动检索，失败节点红色+错误堆栈定位。
+- **日志级别**：开发 DEBUG/生产 INFO 或 WARN。→ 判据：按环境设级别，别全开 DEBUG 撑爆存储。
+- **企业治理**：防篡改审计日志实时 SIEM+单次调用级别全追踪+Prompt 历史 PII 脱敏。→ 判据：合规场景审计日志防篡改+PII 脱敏双管。
+- **提升层**：工作流。
+
+## n8n Webhook 认证分层与 HMAC 补层：Header Auth 起步 + 完整性/防重放（来源：n8n webhook 认证面，2026-09-27 实拉，与 §Error Workflow 互补——这条管入站认证）
+- **认证选型**：Header Auth 几乎一切；JWT 当 caller 讲 JWT（密码学验证非手动轮换 shared secret）；Basic 最弱仅调用系统不支持别的才用。→ 判据：默认 Header Auth，caller 发 JWT 用 JWT，别无选择才 Basic。
+- **内置认证不验证 payload 完整性/防重放** → 用 HMAC-SHA256+raw body capture+timing-safe comparison+IP allowlisting 补层。→ 判据：公开 webhook 别只靠认证头，签名验身+防篡改+防重放三层。
+- **HMAC 重放保护模板**：认证（HMAC-SHA256 验签）+完整性（raw body byte-for-byte 签名）+重放保护（拒绝过期时间戳，默认 5 分钟）+payload 白名单过滤。→ 判据：重放窗口 5 分钟起步，payload 白名单挡未知字段。
+- **弱方案识别**：GET webhook 用 secret query 参数+IF node 校验（仅 IoT 等无更好方法才用）。→ 判据：query secret 是最后手段，能 Header/HMAC 就别用。
+- **多租户**：每租户唯一 secret key+时间戳防重放+rate limit+凭据加密+按租户隔离执行。→ 判据：多租户 webhook 密钥按租户分，隔离执行。
+- **提升层**：工作流。
+
+## LangFlow Workflow API 与 LFX serve：v2 三模式 + lfx run/serve（来源：LangFlow API/lfx 面，2026-09-27 实拉，与 §Memory Bases 互补——这条管程序化执行）
+- **Workflow API v2**：POST /api/v2/workflows，sync/stream/background 三模式（flow_id 必须）。→ 判据：同步要结果/流式要逐事件/后台要长任务，按需选模式。
+- **v1 兼容**：POST /v1/run/{flow_id_or_name}；advanced run 显式 inputs/outputs/tweaks。→ 判据：改输入输出用 advanced run 显式传参。
+- **自动生成 snippets**：API access pane 直接出 Python/JS/curl 代码。→ 判据：嵌代码先取官方 snippet，别手写。
+- **LFX run**：fetch 远端 flow 再运行；jq 改 model 再跑（"modify flow before running"）。→ 判据：运行前用 jq 改 flow JSON，同一 flow 换模型再跑。
+- **LFX serve**：FastAPI 把 flows 暴露为 POST /flows/{flow_id}/run；需 LANGFLOW_API_KEY（公开访问）。→ 判据：flow 转 HTTP API 用 lfx serve，公开必须带 key。
+- **提升层**：工具。
+
+## Activepieces MCP Server 与 AI Agent：每 project 内置 MCP + pieces 作 MCP（来源：Activepieces MCP 面，2026-09-27 实拉，与 §Polling/§Webhook 互补——这条管 AI 接入）
+- **内置 MCP server**：每 project 一个（非每 piece）；Settings→MCP Server 开启；client 指向 https://<instance>/mcp；OAuth 认证（首次浏览器）；暴露 ap_* tools。→ 判据：AI 助手接 Activepieces 走内置 MCP，自然语言建流/管表/测自动化。
+- **pieces 作 MCP**：280+（后 400+）open source pieces 可作 MCP（自托管/cloud）。→ 判据：要把集成目录给 agent 用，选 pieces 作 MCP 免自建。
+- **3 steps 接入**：Connect Tools in UI→Add Server URL to Claude/Cursor/Windsurf→Ask AI。→ 判据：客户端加 URL 即可，认证 OAuth 免手动。
+- **AI agent 知道何时暂停**：draft→check rules→wait for review before sending。→ 判据：agent 出外发动作前先暂停等审批，不盲目发。
+- **提升层**：工作流。
+
+## OpenClaw Exec Approvals 策略即代码：policy + allowlist + approval 三同意（来源：OpenClaw permissions 面，2026-09-27 实拉，与 §Skills 开发互补——这条管执行安全）
+- **安全互锁**：沙箱 agent 在真实主机跑命令，policy+allowlist+（可选）user approval 三同意才运行。→ 判据：三把锁齐了才放行，缺一不跑。
+- **三模式**：deny（全锁）/allowlist（仅白名单）/full（全允许=提升模式）。→ 判据：默认 allowlist，敏感主机 deny，测试才 full。
+- **三控制分离**：sandbox 决定在哪运行/tool policy 决定哪些工具存在/deny always wins；无审批 UI 可达时 deny by default。→ 判据：三个决策分开设，拒绝永远优先。
+- **严格情况不可软化**：inline eval/heredocs 任何 fallback 设置都不能放宽。→ 判据：解析器绕过类命令硬锁，fallback 不救。
+- **版本更新要点**：移除旧 cat SKILL.md 兼容 allowlist 绕过路径；手工审批走 trusted /approve 路由；node pairing 需审批。→ 判据：审批路径单一可信，节点配对先批准再执行。
+- **提升层**：工作流。
