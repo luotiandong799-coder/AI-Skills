@@ -3301,3 +3301,32 @@ Dify v0.12+ 把整个应用（提示词/工作流/工具集成/参数）序列�
 - **frontmatter 规范**：name ≤64 字符、仅小写字母数字连字符、禁 XML 标签、禁保留词（anthropic/claude）；description 非空 ≤1024；SKILL.md 理想 <500 行。
 - 判据：**技能越写越长时先问"放 metadata 还是 body 还是 resources"**，三层各有 token 预算。
 - 提升层：可复用 Skill。
+
+## 四类易错节点各自的错误处理形态 + retry 白名单（来源：Dify error handling docs + 重试策略实战，2026-09-27 实拉）
+- **按节点类型配错误处理**：LLM 节点（无效响应/API 问题/限流）设默认输出或条件分支；HTTP 节点（404/500/超时）配重试间隔+错误消息+备选路径；Tool 节点主工具失败快速切备份工具；Code 节点配 fallback 路径——**"统一错误处理"不存在，四类节点四种形态**。
+- **重试只针对瞬时错**：retry_on 白名单 = 5xx + timeout；**4xx 是逻辑错误，重试只会放大坏请求**（配合 If/Else 把 4xx 导向错误处理分支，别让坏数据污染后续步骤）。
+- **退避参数**：base_delay × backoff_factor^attempt + jitter 随机抖动防集中重试。
+- 判据：**写重试前先分类"瞬时还是逻辑"**——5xx/timeout 重试，4xx 分支处理。
+- 提升层：工作流。
+
+## GitOps 三环境 + 凭证配置分层：工作流版本化的工程化（来源：n8n source control environments + CI/CD 实战，2026-09-27 实拉）
+- **Git 是 source of truth**：每个 workflow/credential 是 repo 里的 JSON 文件；UI 保存→external hooks 自动导出磁盘；Git deploy→启动自动导入——**双向同步，两处不打架**。
+- **三环境凭证差异**：dev 用 mock/test API 凭证、staging 用外部系统测试账号+同队列同 worker 配置、prod 用真实凭证——**环境间真正隔离的是凭证与外部服务，不是代码**。
+- **CI 管验证与回滚**：CI 验证 workflow JSON 合法；promote 单命令、回滚单命令。
+- **agent 可直写**：Claude Code/任何 agent 写 JSON 到 workflows/ 目录 commit 即可部署，无需 UI——**工作流即代码，自动化本身可被自动化**。
+- 判据：**工作流要上 GitOps 先问"凭证三层分好了吗、JSON 有 CI 校验吗"**。
+- 提升层：工作流。
+
+## Hook 确定性 vs 建议性 + 拒绝工具调用的正确姿势（来源：Claude Code hooks 文档 + 实战，2026-09-27 实拉）
+- **Hooks 是确定性保证**：CLAUDE.md 指令是 advisory（可能被忽略），hooks 是 deterministic（必须发生）——**"每次都必须做、零例外"的事用 hook，不用指令**。
+- **拒绝工具调用的正确姿势**：hookSpecificOutput.permissionDecision + permissionDecisionReason——**比裸非零退出好，模型能看懂原因**；Stop 事件里 decision: block with reason 必须在 JSON 顶层，不能嵌在 hookSpecificOutput 下。
+- **超时按事件分档**：多数事件给数分钟，user-input 事件只给几十秒——**接在用户输入事件上的逻辑必须快速返回或委托**。
+- 判据：**hook 输出结构先问"decision 在顶层吗、reason 给了吗"**——结构错位会让拒绝被静默忽略。
+- 提升层：工具。
+
+## 四类记忆形式：把"可复用工作流"当成一类记忆（来源：DeepLearning.AI + Oracle Agent Memory 课程，2026-09-27 实拉）
+- **四类记忆**：Working（当前正在想什么：scratchpad/notes/TODOs）→ Episodic（具体过往事件：历史对话/发生过的错误）→ Semantic（稳定事实：领域知识/私有 schema）→ **Procedural（可复用工作流与技能链）**——**"怎么做一件事"的方法本身也是记忆，且是最该沉淀成技能的一类**。
+- **每轮执行留下 traces**：每一轮 loop 的痕迹落进四类记忆之一——**任务收尾时主动问"这轮的产物该进哪类记忆"**。
+- **长期记忆是一等基础设施**：外部于模型、持久、结构化——**不是塞进上下文，是建基础设施存**（与 wb-context-compressor 记忆章节互补，本条补 Procedural 一类）。
+- 判据：**沉淀技能时先问"这是 Procedural 记忆吗"**——可复用方法→技能链，一次性事实→Semantic/Episodic。
+- 提升层：可复用 Skill。
