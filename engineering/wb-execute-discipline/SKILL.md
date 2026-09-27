@@ -4053,3 +4053,36 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **发现顺序**：先查 leaderboard（按安装量排名=久经考验），再跑 CLI 搜索补漏；all-time + 24h trending 两个视图对照看生态收敛方向。→ 判据：热门不等于正确，但"大家都在装"是质量信号之一，与人工策展互补。
 - **开放 vs 策展对照**：skills.sh ~67 万技能开放未策展（任何人可发布）；tech-leads-club 80 个技能人工策展且过静态分析+Snyk 扫描。→ 判据：装陌生技能默认走"开放市场+自己审"路线，安全敏感场景选策展集。
 - **提升层**：工具。
+
+## 生产部署秘密键纪律（来源：Dify 自托管文档/enterprise-docs 环境变量，2026-09-27 实拉）
+- **强随机秘密键 + 首启前设置**：SECRET_KEY 用 openssl rand -base64 42 生成（42 位 base64 强 key），必须在首次启动前设置；ENCRYPT_IV 16 位 hex。→ 判据：部署清单第一项=秘密键生成，漏掉=默认弱 key 上线。
+- **开发默认值必须替换**：DIFY_AGENT_SERVER_SECRET_KEY 等带 development default 的变量，生产必须显式替换（secrets.token_urlsafe(32)）。→ 判据：凡文档标注"You must replace it in production"的变量，上线前逐个 grep 确认。
+- **外部数据库 + URL 四元组统一**：生产推荐外部 Postgres/Redis（DB_HOST 独立于容器）；CONSOLE_API_URL/CONSOLE_WEB_URL/SERVICE_API_URL/APP_API_URL 四个 URL 必须一致指向公开入口。→ 判据：自托管平台的访问地址以四元组为单位核对，只改一个 URL=前端/API 端口错位。
+- **DEPLOY_ENV 区分**：PRODUCTION 默认；TESTING 会在前端显示环境色标——测试环境别冒充生产。
+- **提升层**：工具/工作流。
+
+## Code node 输出结构纪律 + 深拷贝（来源：n8n Code Node 官方文档/实践，2026-09-27 实拉）
+- **Code node 必须返回 [{json: ...}] 数组**：.all() 拿全部输入 items；返回值是外层数组+每项 {json: 实际数据}——忘掉这个结构=下游节点收到坏形状。→ 判据：写 Code node 先定返回结构，再写业务逻辑。
+- **深拷贝防意外突变**：处理复杂对象先 JSON.parse(JSON.stringify(original)) 克隆再改，避免意外修改原对象（浅拷贝引用共享）。→ 判据：凡是"读原数据+产新数据"的变换，先克隆再动。
+- **合并对象后写覆盖先写**：{...a, ...b} 中 b 的字段覆盖 a 的同名字段——合并前想清楚哪个优先级。
+- **表达式内联**：{{ .body.city }} 在字段里直接取数；["NodeName"] 跨节点引用；JMESPath 查 JSON。
+- **提升层**：工作流/工具。
+
+## 组件开发规范 + 字段废弃纪律（来源：Langflow 自定义组件文档/组件贡献指南，2026-09-27 实拉）
+- **组件命名与类型纪律**：输入字段名稳定语义明确（input_value/query/data/model）；输出方法名用动词（build_message/run_model/parse_data）；总写返回类型注解；返回 Message/Data/DataFrame，少裸返回复杂原生对象；重要结果赋 self.status；不要改组件类名。→ 判据：自定义组件当成公共 API 写——名字定了就别改，类型必须可读。
+- **字段废弃纪律**：移除字段/输出会让已连的边断开、改变组件行为——标记 deprecated 保留原位；确需移除要有迁移计划并提前通知。→ 判据：向后兼容靠"废弃不删除"，删除是最后手段。
+- **Extension 结构**：lfx extension init 脚手架；extension.json v0 manifest + pyproject.toml（pip-installable）+ src 包——组件按扩展包分发。
+- **提升层**：可复用 Skill。
+
+## 错误处理五型选型（来源：Make Academy error handlers/help 文档，2026-09-27 实拉）
+- **五型各管一种场景**：Resume（忽略错误继续下一记录——批量处理）/ Ignore（可选增强模块静默跳过不阻塞主流程）/ Commit（确认错误前成功操作然后停）/ Rollback（撤销自场景开始所有变更——只对事务型模块如 MySQL/Data Store 有效，Gmail 发邮件/Dropbox 删文件无法撤销）/ Break（失败执行存 incomplete queue 稍后自动重试——瞬时错误如限流/超时用）。→ 判据：选错误处理先问"这一步的失败能不能回滚"——不能回滚的模块别指望 Rollback。
+- **场景串行保序**：Process data in order 让每次执行完成再开始下一个；有不完整执行时新 run 暂停直到解决——保序场景的开。
+- **重试调度纪律**：认证/权限错误立即告警并暂停调度；限流慢下来/批量/等待，避免重试放大 bursts；超时用退避重试（示例 5/10/15 分钟）。→ 判据：重试策略跟错误类型走：瞬时=退避，权限=暂停，限流=降速。
+- **提升层**：工作流。
+
+## 评估驱动技能编写（来源：arXiv 2607.25032 + SkillMD 检查清单，2026-09-27 实拉）
+- **先写评估再写技能**：无技能跑代表任务→记录模型在哪失败/缺上下文→失败转成小测试集（预期行为）→测基线→写最小指令过测试→迭代。→ 判据：技能瞄准真实缺口而不是想象缺口——评估先行。
+- **skill smells 反模式**（arXiv 实证）：SKILL.md 内容应保持高层，上下文特定指导委托给 references/scripts——把具体场景硬塞进主文件是 smell。
+- **编写检查清单**：无跨 agent/skill 重复规则；每条约束有后果；命令可复制粘贴+文件级作用域；示例引用真实文件（不发明）；"stuck 时怎么办"指导；行≤100 字符；代码块带语言说明符。
+- **frontmatter 分工**：frontmatter 给机器读（name≤64 匹配目录名/description≤1024 做什么+何时用）；content 给任何 agent 读（用途/认证/脚本输入输出）。
+- **提升层**：可复用 Skill。
