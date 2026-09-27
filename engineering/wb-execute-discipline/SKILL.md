@@ -7860,3 +7860,85 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **扩展面**：channels/model providers/agent harnesses/tools/skills/speech/realtime transcription/voice/media understanding/generation/web fetch/web search。
 - **社区生态**：5,705+ community-built extensions；ClawHub registry；Bundled/Managed/Workspace 三档技能架构；@1claw 29 工具（secrets/vaults/policies/sharing/signing/transactions/env/automations/memory/approvals——EVM+Bitcoin/Solana/XRP/Cardano/Tron）。
 - **提升层**：可复用 Skill（插件生态）。
+## Dify 知识库管理进阶：Summary Index · Multimodal Retrieval · Knowledge Pipeline（来源：dify.ai blog 1.12.0-summary-index/multimodal-retrieval + mintlify knowledge/knowledge-pipeline-orchestration + deepwiki 4-core-systems 2026-01/07 实拉，合并 §Dify RAG 检索——那条管"检索面"，本条管"知识库结构与索引面"）
+- **RAG 三步骤**：Retrieval（先检索知识库相关内容）→ Augmented（检索结果+用户 query 合成增强上下文）→ Generation（LLM 生成）——知识库作为额外 truth 源而非只靠预训练数据。
+- **Summary Index（1.12.0）**：碎片检索问题——只返最相关单片段、模型上下文不足；GraphRAG 建实体关系图但实现复杂；Summary Index 轻量替代——**每 chunk 附 summary 字段**使语义相关内容一起检索。
+- **Multimodal retrieval**：Multimodal Embedding 第一轮快速相似匹配 + Multimodal Reranking 评估 query-text-image 相关性——视觉+文本证据优先给 LLM 最准确上下文。
+- **Knowledge Pipeline（1.16.0）**：Data Source→Data Processing（Extractor+Chunker）→KB Node（Chunk Structure+Retrieval Setting）→User Input Field→Test & Publish。
+- **索引方法**：High quality；三种分段策略——paragraph/parent-child/QA；检索设置 vector retrieval/rerank（gte-rerank）/Top K/Score Threshold。
+- **提升层**：可复用 Skill（RAG 知识库）。
+
+## n8n 错误处理两层架构与 retry 模式：node-level + Error Trigger · 可复用 retry workflow（来源：n8n.io workflows handle-api-retries + blog.llm-tool-calling-error-handling + community centralized-error-handling + workflowden 7-patterns 2026-04/09 实拉，合并 §n8n 错误三模式——那条管"错误类型"，本条管"架构与模式"）
+- **两层错误处理**：node-level Retry On Fail（maxTries+wait）处理瞬时失败（网络抖动/429 多数就地解决）；Error Trigger workflow 处理剩余——alerting/dead-letter/记录失败。API retry-from-failed 是"重跑执行"不是保证续跑。
+- **Retry On Fail 配置**：Max Tries 3 + Wait Between Tries 5000ms——静默重试、全尝试耗尽才失败。
+- **可复用 retry 模式**：Execute Workflow 节点调用——运行瞬时操作→分类结果→重试可重试失败（指数退避+抖动）→最大次数停止→Slack/email alerts——任何 workflow 可复用。
+- **LLM tool calling 错误处理**：n8n 可视化执行 trace——哪个 LLM tool call 失败、为何、LLM 尝试传什么参数——无重 DevOps 基础设施的生产级可靠性。
+- **错误路由**：瞬时错误→retry 路径；其余→alert 路径；Wait 2 分钟+HTTP POST n8n REST API retry endpoint；错误工作流 Error Trigger+Slack 每 workflow 设置；Set 节点 min(maxDelay, baseDelay×2^(attempt-1)) 指数退避。
+- **7 模式**：Continue on Fail（所有节点可开——失败不停走下一节点，但错误分支必须路由到某处）、Retry On Fail、Error Trigger 等。
+- **提升层**：工作流（可靠性模式）。
+
+## LangFlow Agent 性能优化：CUGA 阈值 · Agentics token 策略 · Scaling（来源：docs.langflow.org bundles-cuga/bundles-codeagents/bundles-agentics + blog scaling-langflow/1.7 2025-12/2026-09 实拉，合并 §LangFlow Tool Mode——那条管"工具化"，本条管"性能与阈值"）
+- **CUGA bundle**：lite_mode true 默认——小工具集加速；lite_mode_tool_threshold 25——少于阈值自动开 CugaLite；shortlisting_tool_threshold 35——工具超阈值启用 find_tools 过滤子集再决策——省 token 提升大工具集性能。
+- **Code Agents**：input_value/llm 必填/tools 可选/max_iterations 默认 10 范围 1-100。
+- **Agentics token 策略**：aMap 随行数扩/aReduce 一次全发/aGenerate 随实例扩——小批或采样降本；batch 默认 10 max 25（大 batch 提吞吐增延迟）。
+- **多 agent 模型混选**：每节点选模型——planning 小模型/检索工具友好/合成大模型——agent 作可复用工具组合可测。
+- **Scaling Langflow**：Uvicorn workers fork 继承预构建状态——OS 只读内存页跨 30+ workers 共享不复制 RAM；gc.freeze() 冻结。
+- **ALTK（Agent Lifecycle Toolkit）**：SPARC tool validation + 智能 JSON 响应后处理。
+- **提升层**：工作流（Agent 性能）。
+
+## Activepieces AI Agent 构成与记忆：三件套 · 两限制 · 记忆三类型（来源：activepieces.com product/ai-agent-builder + blog ai-agent-development/how-to-create-ai-agents + docs overview 2025-07/2026-09 实拉，合并 §Activepieces AgentBuilder——那条管"构建入口"，本条管"构成与记忆"）
+- **Agent 构成三件套**：instruction + 允许的工具 + 知识；工具=任意集成/其他自动化/自己的 MCP servers；知识=上传文件或保持更新的 tables。
+- **两限制（明示边界）**：run 间不记忆；无 SharePoint/Drive/Notion 实时同步。
+- **接入 workflow**：触发器（Zendesk New Ticket/webhook）+Agent step——填 input 告诉 agent 用触发数据做什么；触发方式 webhooks/schedules/system events/manual runs。
+- **记忆三类型**：短时（近期步骤——知道刚发生什么）/长时（文档/历史结果）/用户记忆（偏好——多步可靠）。
+- **构建步骤**：Agents→New Agent→name+description→instructions→Add Tool——From Piece 320+ 集成或 From Flow 转工具。
+- **Human Review + Tables**：approval/manual-input 暂停 run 捕获编辑确认再恢复；Tables 存 prior prompts/entity IDs/validation flags——跨 run 复用历史避免重复 action。
+- **提升层**：可复用 Skill（Agent 构建）。
+
+## Make Rollback/Break/Incomplete Executions：事务回滚语义 · Break 队列 · 重跑（来源：help.make.com rollback-error-handler/manage-incomplete-executions/throw + academy incomplete-executions/error-handlers + use-apify guide 2026-03/09 实拉，合并 §Make 错误恢复——那条管"错误处理方式"，本条管"指令语义与队列"）
+- **Rollback handler**：停场景+回滚事务支持模块（mysql/data store）；**不能撤销非事务模块**（gmail 发送/dropbox 删除）；失败 bundle 不继续；history 标 error 但场景不禁用。**默认行为**——无 handler 或 incomplete executions 启用时 ACID 模块自动回滚。
+- **Break 指令**（生产最有用）：失败送 Incomplete Executions 队列而非丢弃——Make 可自动重试（配重试次数）——适合"特定记录失败跳过不杀整个场景"。
+- **Commit**：错误也保留之前工作只停本次执行——部分成功场景。
+- **Incomplete executions**：保存失败 blueprint+日志详情（settings/input/output 到失败模块）——可调查可重跑；ConnectionError/RateLimitError 可 retry——同 settings 再跑一次。
+- **Throw**：条件抛错——JSON parse 可选抛 BundleValidationError 模拟。
+- **提升层**：工作流（错误指令语义）。
+
+## Pipedream 错误处理与可观测：maxRetries · $errors 订阅 · 执行日志 replay（来源：pipedream.com docs workflows rerun/code/python + docs-proxy http + npm @pipedream/sdk + listicler comparison 2026-08/09 实拉，合并 §Pipedream 平台边界——那条管"平台能力"，本条管"错误与观测"）
+- **maxRetries**：默认 10；超限进下一步；需异常处理 raise Exception。
+- **$errors channel**：subscription 订阅 workflow 全部错误——不必逐个处理。
+- **$.flow.rerun**：try...catch 内重试失败 API 请求。
+- **执行日志 + 单键 replay**：每步 input/output/error state；失败事件可单键 replay——API down 2h、50 webhook 失败全 replay 无数据丢失——恢复场景核心。
+- **Runs tab**：每 run 显示 payload/code output/API response；失败红标+错误消息；Settings>Notifications 错误邮件（catch 订阅失效/token 过期）。
+- **SDK 自动重试**：指数退避默认 2 次；retryStatusCodes legacy 配置。
+- **try/catch 模式**：catch 块 $.send.http 或 fallback 消息告警"更新发生了但详情取不到"。
+- **提升层**：工作流（可观测与恢复）。
+
+## Anthropic 缓存架构纪律：automatic/explicit · 分批修剪 · immutable prefix（来源：platform.claude.com prompt-caching + claude.com blog lessons-from-building-claude-code/best-practices-computer-browser + agentpatterns prompt-caching-architectural-discipline + developersdigest production-guide 2026-04/09 实拉，合并 §Anthropic 缓存经济——那条管"定价与缓存概念"，本条管"架构纪律"）
+- **两种启用**：Automatic caching（顶层 cache_control——系统自动 breakpoint 到最后 cacheable block 随对话前移——多轮自动缓存）；Explicit breakpoints 手动。
+- **布局纪律**：稳定内容（system instructions/背景/大上下文/频繁工具定义）放 prompt 开头；breakpoint 分隔 prefix 段；**会话末尾+可编辑内容前设 breakpoint 最大化命中**；缓存候选——>2k tokens 每调用必发/RAG 稳定文档/多轮对话到 last assistant turn/批量文档分析（缓存指令换文档）/agent loops。
+- **Claude Code 经验**：用 messages 不用 system prompt 改动（plan mode/日期插 messages）；**别中途换工具/模型**——用工具建模状态转换、延迟加载工具而非移除；**监控 cache hit rate 像监控 uptime**。
+- **滚动缓冲坑**：逐条剪除破坏缓存——**分批修剪**（keep_n 全分辨率→超 keep_n+interval 一次性替换最旧 interval 为占位）保持 prefix 字节相同几轮再一次性失效。
+- **immutable prefix pattern**：stable prefix（system prompt→tool definitions→project instructions）+growing tail（conversation history）——高缓存效率 agent 共同布局。
+- **提升层**：可复用 Skill（缓存架构）。
+
+## deeplearning Agentic AI 课程与高级模式：四模式 · LangGraph 高级 · RAG 进阶（来源：staging.deeplearning.ai courses/agentic-ai + learn.deeplearning.ai search AI-Frameworks + coursera agentic-ai-langchain-langgraph + pablordoricaw learning-path 2026-07/09 实拉，合并 §deeplearning 课程生态——那条管"课程清单"，本条管"Agent 方法与模式"）
+- **Agentic AI 四模式**：Reflection（AI 自评迭代改进——自动化 code review）/Tool Use（连数据库/API/外部服务执行动作）/Planning（拆可执行步骤可适应）/Multi-Agent（多专用 AI 协调复杂 workflow 不同部分）——Python 实践。
+- **课程体系**：AI Agents in LangGraph（LangGraph+Tavily agentic search）；Long-Term Agentic Memory（LangMem）；Multi AI Agent Systems with crewAI（自然语言设计 agent 团队超单 LLM）；Agentic AI with LangChain/LangGraph（Reflection/Reflexion/ReAct 架构、agent orchestration、agentic RAG 路由查询）。
+- **高级模式**：conditional routing（按输出内容分支——topic 分类路由分析师）；critique loops（Writer→Reviewer→Writer 带迭代计数防死循环）；parallel scatter-gather（扇出多 researcher 节点+reducer 合并——results: Annotated 列表）。
+- **RAG 进阶**：Self-RAG/Corrective RAG/Adaptive RAG——超标准 RAG 的检索质量路径。
+- **提升层**：可复用 Skill（Agent 方法）。
+
+## GitHub MCP 2026-07-28 规范与 Registry：stateless core · Registry 验证（来源：blog.modelcontextprotocol.io 2026-07-28 posts + github.blog changelog github-mcp-server + raw api-evangelist/mcp apis.yml 2026-07/09 实拉，合并 §GitHub MCP 生态——那条管"MCP 工具面"，本条管"协议版本与注册"）
+- **MCP 2026-07-28 规范**（最大版本）：stateless protocol core——MCP 部署易扩展；Multi Round-Trip Requests；header-based routing；cacheable list results；authorization hardening；formal extensions framework；updated Tier 1 SDKs（Python/TypeScript/Go/C#）。
+- **GitHub MCP Server**：2026-07-23 提前支持最新 spec；新工具管理 GitHub Projects。
+- **MCP Registry**（2026-07-27 preview）：开放目录+API 提升公开 MCP servers 可发现性——server definitions 发布+客户端发现；API freeze v0.1；支持 GitHub OAuth/OIDC/DNS/HTTP ownership verification。
+- **Copilot MCP**：开放标准定义应用如何与 LLM 共享上下文——扩展 Copilot 连数据源/工具。
+- **提升层**：工具（协议与注册）。
+
+## OpenClaw Gateway 架构与路由：单源真相 · 配对系统 · 四档 scope（来源：docs.openclaw.ai concepts/architecture + enricopiovano deep-dive + safeclaw gateway + openclawblog how-it-works 2026-02/09 实拉，合并 §OpenClaw 平台——那条管"平台能力"，本条管"网关与消息路由"）
+- **Gateway 单源真相**：sessions/routing/channel connections 唯一真相——单进程多通道（Discord/iMessage/Signal/Slack/Telegram/WhatsApp/WebChat）+插件通道（Matrix/Nostr/Twitch/Zalo）；hub-and-spoke WebSocket 控制面 pub-sub——单控制点/统一 session 管理/无核心修改可扩展。
+- **协议**：WebSocket text frames JSON payloads；首 frame 必须 connect；请求 {type:"req", id, method, params}→{type:"res", id, ok, payload|error}；事件 {type:"event", event, payload, seq?, stateVersion?}。
+- **消息路由**：channel adapter 归一化内部格式→pairing 系统（新发送者配对码批准除非 open DM policy）→session router 按 scope——main/per-peer/per-channel-peer/per-account-channel-peer→消息队列进 session lane。
+- **路由决策**：platform identity（Telegram vs Slack 不同处理——threads/inline keyboards）+user/chat ID（work/personal 分离会话）——映射 platform chat ID→session ID。
+- **节点与记忆**：macOS/iOS/Android/headless 经 WebSocket 连但声明 role: node+caps/commands；每 host 一个 Gateway（唯一开 WhatsApp session 处）；MEMORY.md 跨 session 持久；canvas host /__openclaw__/canvas/。
+- **提升层**：工作流（网关与路由）。
