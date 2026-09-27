@@ -5308,3 +5308,37 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **永远不压缩的内容**：完整错误报告、安全警告、破坏性操作确认。→ 判据：极简风格只压叙述不压安全信息——丢了确认=丢了防护。
 - **模型趋势**：最新 Claude 更简洁自然/直接 grounded（事实进展报告非自我庆祝）/可能跳过 tool call 后总结——要可见性需显式 prompt。→ 判据：别假设模型会主动汇报，关键动作后要结果就显式要。
 - **提升层**：可复用 Skill。
+
+## Dify 循环与迭代节点：迭代=列表逐条 + 循环跨迭代状态 + 最大次数/break（来源：Dify 循环迭代面，2026-09-27 实拉，与 §Dify 多路召回/§环境变量互补——这条管控制流）
+- **迭代节点=对数组逐条执行相同步骤**（输入须为列表对象）；循环节点=迭代的友好版。→ 判据：输入先格式化为列表再迭代，形状不对=整条路径空转。
+- **循环变量跨迭代传递状态**：Deep Research 六变量（findings/executed_querys/current_loop/visited_urls/image_urls/knowledge_gaps）——每轮基于先前发现构建。→ 判据：跨轮状态显式建模成循环变量，别靠全局变量。
+- **循环收敛三件套**：最大迭代次数（默认上限 100，超出自动终止触发中断）+ break_conditions 提前退出 + 循环内条件判断。→ 判据：凡是循环必配"最多跑 N 次"与"什么情况停"，防死循环烧额度。
+- **2026 引擎升级**：并行节点执行（独立节点真并行）+ 条件分支支持正则/JSONPath + 节点级错误捕获与重试。→ 判据：独立分支放开并行；匹配逻辑用正则/JSONPath 免写代码。
+- **提升层**：工作流。
+
+## LangFlow A2A：发布 flow 为 Agent 端点 + 调用远程 A2A + OTel 可观测（来源：LangFlow A2A 面，2026-09-27 实拉，与 §Chat Widget/§生产部署互补——这条管 agent 互联）
+- **A2A 协议开关**：LANGFLOW_A2A_ENABLED=true 开启（默认关，1.11）；发布 flow 供其他 agent 调用，flow 内也能调远程 A2A agents。→ 判据：agent 间协作先开 A2A，flow 即 agent 端点。
+- **Agent Card 标准**：/.well-known/agent.json（skills/modalities/endpoints 元数据）——agent 对外可见的第一步。→ 判据：对外暴露 agent 先挂 Agent Card，供发现与调用契约。
+- **可观测**：1.12 OpenTelemetry（OTLP 兼容任何 backend），服务健康+flow runs 统一监控。→ 判据：flow 上线带 OTel 埋点，跨框架统一看。
+- **安全警示**：A2ABreak Multi-Hop Identity Loss——身份仅传输层建立不跨 hop 传播，多跳委托链下游无法验证原始主体与委托来源。→ 判据：多跳委托必须显式传播身份/委托凭证，别假设协议替你做了。
+- **提升层**：工作流。
+
+## Activepieces Schedule 触发器与增量处理：cron+timezone + Tables 游标（来源：Activepieces schedule 面，2026-09-27 实拉，与 §run 可观测/§custom piece 互补——这条管触发与增量）
+- **Schedule piece**：6 triggers；Cron Expression（2 fields）+ every_hour 预设；flow JSON schedule{cronExpression, timezone}。→ 判据：定时触发用 schedule piece，时区显式写在 flow 定义。
+- **后台任务增量模式**：scheduled triggers+条件逻辑限新增/变更记录；在 Tables 持久化 last successful cursor/timestamp 只处理 delta。→ 判据：周期任务必配游标——重跑只处理增量，不重放全量。
+- **三件套**：Delay steps（等待外部系统）+ 自动重试（恢复瞬时 API 失败）+ cron-like schedules。→ 判据：后台任务把"等/重试/定时"显式建进 flow。
+- **提升层**：工作流。
+
+## Anthropic Custom Skills 四通道：frontmatter + 全产品创建 + skills.create API + 版本钉（来源：Anthropic skills cookbook 面，2026-09-27 实拉，与 §预建 4 技能互补——这条管自定义创建）
+- **SKILL.md 契约**：YAML frontmatter（name/description）驱动；Custom Skills 打包领域专长+组织知识。→ 判据：技能文件第一行是 name+description，命名即触发面。
+- **四通道创建**：Claude Code 创建 / Claude API 上传 / claude.ai 设置添加 / AWS-Foundry Skills API 上传。→ 判据：同一技能四通道同源，选当下最顺手的一条发布。
+- **API 面**：POST /v1/skills（files 同顶层目录含 SKILL.md/display_name）；调用时指定 type+skill_id，可 version 钉版本。→ 判据：生产调用钉版本，避免技能内容漂移。
+- **社区 5 步**：~/.claude/skills/<name>/ → SKILL.md（元数据+正文）→ scripts/和 reference/ → 重启 → 测试迭代。→ 判据：技能结构=md+脚本+参考，迭代靠重启后实测。
+- **提升层**：可复用 Skill。
+
+## GitHub Browser Agent 生态：hybrid 提取 + CLI 化 + 登录态复用 + anti-detection（来源：GitHub browser agent 面，2026-09-27 实拉，与 §GitHub 生态观察互补——这条管浏览器执行面）
+- **browser-use**（113K+ stars MIT）：Playwright+vision+DOM hybrid 提取——网页对 agent 可访问的标准答案。→ 判据：agent 上网页选 hybrid 提取（视觉+DOM 互补），别只靠一种。
+- **vercel-labs/agent-browser**（40K）：浏览器自动化 CLI for AI agents。→ 判据：浏览器操作做成 CLI 子进程，agent 直接调不写 GUI 代码。
+- **登录态复用是"last mile"痛点**：BrowserSkill（4.7K TS）——无痕浏览器被验证码/短信/SSO 拦，AI 网页任务最别扭的是登录状态。→ 判据：浏览器 agent 优先复用持久登录态，别每次开无痕重验。
+- **BrowserAct**：anti-detection/持久会话/并行执行/SkillHub 100K+ skills——真实受保护动态页面不封不丢态。→ 判据：被反爬/动态页拦时上 anti-detection 方案，防封防断。
+- **提升层**：工具。
