@@ -6744,3 +6744,44 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **双位发布策略**：自己的 GitHub repo=source of truth→镜像 skills.sh 求覆盖→PR anthropics/skills 求凭证（merge 本身就是 credential）。
 - **QA 六项门槛**：元数据有效/工作流循证（区分事实/假设/缺上下文/验证）/资源测试（正反用例）/选择评估（正激活+附近负不激活）/QA 结果改善敏感度可靠性可维护性/安全审查（权限依赖数据访问可执行行为披露）。
 - **提升层**：可复用 Skill（发布管线）。
+## Dify 迭代节点与变量管理：Iteration items/index · Aggregator 收敛互斥分支 · Assigner 数组操作（来源：dify mintlify variable-aggregator + release-1-16 iteration + deepwiki node reference + dify-hosting workflow guide 2026-05/09 实拉，合并 §Dify 并行分支与聚合——那条管"并行语义"，本条补"迭代与变量节点全集"）
+- **Iteration 节点**：输入须为**列表对象**（来自 Parameter Extractor/Code/知识检索/HTTP 响应）；内置 items[object]（当前元素）+index[number]（从 0 起）；顺序/并行两模式；输出数组命名——批量翻译/邮件处理/多平台内容分发。
+- **Variable Aggregator**：把 If/Else、Question Classifier 的**互斥分支**收敛为单一输出——同类型输出时下游只定义一次；array mode 收所有分支输出为列表再交给 Code 处理。
+- **Variable Assigner（Chatflow only）**：写入会话变量——overwrite/clear/set/算术/数组操作（append/extend/remove）。
+- **List Operator**：filter（按属性）/sort（ASC/DESC）/select（首/末 N 项）——数组整形三件套。
+- **提升层**：工作流（节点编排）。
+
+## n8n AI 网关成本断路器与提供商 fallback：pre-flight budget · 自动回退 · 请求日志取证（来源：community.n8n.io alephant-n8n-nodes 2026-05 + n8n workflow 13590 + Portkey n8n-best-practices 2026-04 实拉，合并 §n8n Guardrails 双方向/§LLM 路由网关——那条管"输入输出闸门+路由"，本条补"钱与可用性治理"）
+- **成本断路器（pre-flight）**：昂贵 AI 步骤**前**跑 Budget Status，超预算用 IF 回退便宜模型或整条停止——成本失控是静默的，必须主动闸。
+- **提供商 fallback 与负载均衡**：网关在提供商间路由——失败自动回退到备用提供商，高峰期跨提供商分发——workflow 逻辑与提供商绑定解耦。
+- **请求日志取证**：requestLogId 拉全量请求级数据（body/头/延迟/成本）——生产异常排查时按 ID 精确定位，做 incident workflow 下游。
+- **提升层**：工作流（成本与可用性治理）。
+
+## Make 新函数与 JSON 注入防护：arraydiff/arrayintersect/set/escapeJSON · HTTP body 不自动转义（来源：help.make.com functions-standalone + community 111383/108965 + apps.make.com make-functions 2026-05/07 实拉，与 §Make Data Store 幂等互补——那条管"状态化自动化"，本条管"数据整形与安全注入"）
+- **四新内置函数**：arraydiff(array1;array2) 找新增/缺失记录；arrayintersect 取双数组共有值（找匹配/共享标签/跨系统重复）；set(collection;key;value) 不重建结构直接加/覆盖键值；escapeJSON(text) 转义引号/反斜杠保 raw JSON 有效。
+- **JSON 注入坑（高危）**：HTTP "Make a request" 的 body **不自动转义**映射变量——变量含 JSON 保留字符即 invalid；构建有效 JSON 用 Transform to JSON / Create JSON（Data Structure）；发送前对文本字段 escapeJSON。
+- **Make Functions App**：IML 函数从映射字段升级为**独立模块**——可视化数据转换，定义空/null/missing 输入行为。
+- **提升层**：工具（数据整形）。
+
+## Anthropic 上下文工程细节：tool use block 重发 · prompt cache breakpoints 10% · context awareness（来源：docs.anthropic.com context-editing + claude.com harnessing-claudes-intelligence/best-practices-computer-browser + 01.me context-engineering-from-claude 2026-03/09 实拉，合并 §Server-side Compaction 工程面——那条管"beta 头与触发"，本条补"重发机制与缓存/感知"）
+- **compaction 与 tool use 交互**：SDK 触发 compaction 时若工具响应 pending，**先移除 tool use block 再生成摘要**——Claude 恢复后若仍需要会重新发起工具调用；服务端工具重度使用时避免 compaction（token 计数不准）。
+- **prompt cache breakpoints**：按断点写缓存，命中时缓存 token 是基础价 **10%**——长上下文重复前缀（系统提示/工具描述/长文档）放断点前。
+- **context awareness**：Claude 4.6/4.5 可跟踪剩余上下文窗口（token budget）——任务编排与上下文管理更自主；Messages API stateless，harness 每轮必须打包全部上下文。
+- **CU 三层方案**：server-side compaction 约 150k input tokens 触发+custom prompt+客户端截断对齐两视图——长会话命中缓存大部分轮次、总输入受控、compaction 后仍保有足够历史不丢任务。
+- **skills 设计**：轻量指南按需找信息、不过度约束除非重要；长 skill 用 **progressive disclosure** 拆多文件；编码特定意见/知识/最佳实践。
+- **提升层**：可复用 Skill（上下文工程）。
+
+## OpenClaw 记忆三层与 MEMORY.md 纪律：short/long/episodic · 存位置不存密钥 · 五层纵深（来源：docs.openclaw.ai concepts/memory + open-claw.me complete-guide + openclawskills.best elite-longterm-memory + learnopenclaw.ai memory-systems 2026-02/09 实拉，与 §Agent 记忆体系互补——那条管"通用记忆挂载"，本条管"OpenClaw 平台形态"）
+- **三层记忆**：short-term（会话上下文，会话后清）/long-term（MEMORY.md 持久事实与偏好，会话开始加载）/episodic（过往交互日志，模式识别）——层级分明的持久理解。
+- **MEMORY.md 内容纪律**：curated 稳定信息（API 配置/重要决策与理由/反复问题解法/项目结构约定），手动添加自动索引；**存密钥位置不存密钥本身**；daily memory/YYYY-MM-DD.md 管运行上下文。
+- **会话 transcripts**：自动把前一会话存成带 LLM 生成描述性 slug 的时间戳文件——索引可搜索，跨会话可回查。
+- **五层记忆纵深**（社区 skill）：Hot RAM（SESSION-STATE.md 活跃任务，**survive compaction**）/Warm（LanceDB 语义搜索 auto-recall）/Cold（Git-Notes 结构化决策 permanent）/Archive（MEMORY.md+daily curated）/Cloud（SuperMemory 跨设备 sync，可选）——按频率与持久性分层。
+- **提升层**：可复用 Skill（记忆架构）。
+
+## Pipedream components 开发：props 显式声明 · label 镜像 UI · $.service.db 持久化（来源：pipedream.com docs components + contributing/api + contributing/guidelines + sources-quickstart + actions-quickstart 2026-07/09 实拉，与 §Connect SDK 互补——那条管"调用面"，本条管"组件怎么写"）
+- **props 纪律**：部署时接受用户输入的自定义属性，代码里 this.propName 引用；v2 必须**显式声明先于使用**（旧 params 模型已废弃）；label 镜像 app UI 熟悉名（Twitter 参数 "q"→label "Search Term"），独立于变量名。
+- **Source 开发**：$.service.db 作 prop 注入持久化状态，run() 里取回——跨调用保存 cursor/游标。
+- **Action 开发**：name/description/key/version/type:action+props——自包含可执行单元。
+- **注册表贡献**：Fork Pipedream Registry→components/<app>/ 目录建组件→PR 审查合入——社区组件与官方同源。
+- **Connect dynamicProps**：dynamicProps.id（dyp_xxx）在后续 runAction/deployTrigger 调用**必须携带**——漏带即失败。
+- **提升层**：工作流（组件开发）。
