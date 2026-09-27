@@ -5243,3 +5243,36 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **★撤销语义**：审核在 "Changes requested" 状态下，提交新版本 → 审核**自动重置回 Waiting for review（pending）**，不是沿用旧批准。→ 判据：已通过的对象一旦被改，批准必须失效重走，不能"改了还沿用旧 green"。
 - **★门禁有盲区（须补治理）**：Workflow Review 只 gate **pinned 版本的节点+连接**；credentials、variables、data tables、sub-workflows、workflow settings **不在 diff 内、审核开启时仍可改**。→ 判据：别以为"开了审核就全管住了"，缺口处要另加治理（权限/变更管控）。
 - **提升层**：工作流（审批门工程化，与 §同步审批门 / §proposal 治理 互补——那条管"什么设门/怎么治理"，本条管"门的具体冻结范围 + 撤销重置机制 + 盲区"）。
+
+## Dify Multi-path Retrieval：多知识库同时召回 + Rerank + 引用开关（来源：Dify knowledge retrieval 面，2026-09-27 实拉，与 §Dify Agentic RAG 互补——那条管 agent 选源，这条管检索合并）
+- **Multi-path Retrieval**：同时查询 Context 连接的全部知识库，收集所有相关 chunks，最终 Rerank 策略选最优。→ 判据：多库场景用多路召回+rerank，别串行查库；聚合实现=结果收集共享列表→去重+rerank。
+- **检索三模式**：vector search（语义）/full-text（BM25 关键词）/hybrid；rerank 用 Cohere Rerank 等。→ 判据：选模式看语料：精确术语用 full-text，语义查用 vector，混合最稳。
+- **Citations and Attribution**：Chatflow 默认响应旁展示引用可关（Studio→Add Features 开关）；引用来源段落+Jump to Knowledge Base 链接。→ 判据：给用户的答案开引用，可溯源=可核错。
+- **多模态知识库**：text+image 统一语义空间（AWS Bedrock/Google Vertex/Jina/Tongyi 多模态 embedding+rerank；Vision 标签跨模态）。→ 判据：图文混合资料用多模态 embedding 进同一知识库，别拆两条管线。
+- **提升层**：工作流。
+
+## n8n AI Agent Tool：agent 作为工具 + Tool calling 内建（来源：n8n AI Agent tools 面，2026-09-27 实拉，与 §n8n Agent 记忆分层互补——那条管记忆，这条管编排）
+- **AI Agent Tool 节点**：root agent（orchestrator）可把其他 agent 配置成 tool 调用——工具本身是完整配置的 agent 有自己的模型。→ 判据：多 agent 编排首选 agent-as-tool（orchestrator 决策、子 agent 干活），比手写分工代码简单。
+- **Tool calling 内建 AI Agent 节点**：视觉连接工具，平台处理执行循环（model structured request→API call→back）；Tools Agent=Langchain tool calling 接口（描述工具+schemas）+标准输出格式+增强输出解析。→ 判据：工具即插即用，schema 由节点声明，agent 自动决定何时调用。
+- **MCP 支持**：agents 可连任何 MCP-compatible tool server（标准化工具执行）。→ 判据：外部能力优先找 MCP server，一条通道通所有 agent。
+- **提升层**：工作流。
+
+## LangFlow 生产部署：headless runtime + K8s 最低配 + lfx 部署控制（来源：LangFlow deploy production 面，2026-09-27 实拉，与 §LangFlow 调试 DevOps 互补——那条管验证推送，这条管上线形态）
+- **Langflow runtime（production）**：headless backend-only 服务专注 Langflow API；flows 作为 endpoints 暴露，只跑 serve 每个 flow 的进程。→ 判据：生产只跑 runtime 不跑编辑器；flow=endpoint，进程按需。
+- **最低资源**：2Gi RAM+1000m(1CPU)/实例×3 replicas；外部 PostgreSQL 推荐（替代默认 SQLite）。→ 判据：小规格×3 副本比大规格单点稳；数据层必须外部化。
+- **lfx 部署控制**：lfx init 项目→environments.yaml（local→production；api_key_env 环境变量名引用 API key）。→ 判据：环境配置进文件不写死；API key 用环境变量名引用。
+- **Docker 形态**：--backend-only --env-file --host 0.0.0.0 --port 7860，LANGFLOW_AUTO_LOGIN 开发用。→ 判据：容器化+env 文件解耦配置。
+- **提升层**：工作流。
+
+## Activepieces 自定义 piece：TypeScript 开发 + .tgz 安装 + 本地开发开关（来源：Activepieces custom piece 面，2026-09-27 实拉，与 §Activepieces MCP server 互补——那条管消费，这条管自建）
+- **自定义 piece 流程**：TypeScript 框架建 triggers+actions；npm run pieces -- build --name=your-piece-name 生成 dist/packages/pieces/your-piece-name tarball→Platform Admin→Catalogue→Pieces→Install Piece。→ 判据：平台缺集成先自建 piece（.tgz 一键装），不用绕道外部脚本。
+- **本地开发**：AP_DEV_PIECES 环境变量（逗号分隔列表）从本地 dist 加载不走 DB。→ 判据：开发迭代走 AP_DEV_PIECES 免装包，改完重启即生效。
+- **类型与认证**：Piece Type=custom（自用）/community（共享）；PieceAuth.CustomAuth 收集属性（base_url+access token）。→ 判据：自定义认证=属性收集，无 OAuth 也能接私有 API。
+- **CI/CD**：离线开发→package.json 增版本→PR main→merge 后 CLI 或 GitHub/GitLab Action 同步。→ 判据：piece 版本跟 package.json，PR 驱动发布。
+- **提升层**：工具。
+
+## OpenClaw skills 开发：frontmatter 命名 + clawhub 三命令 + VirusTotal 验证（来源：OpenClaw skills 开发面，2026-09-27 实拉，与 §OpenClaw memory 架构互补——那条管记忆，这条管技能）
+- **Skills=SKILL.md+支持文件**：目录 ~/.openclaw/workspace/skills/ 可子文件夹组织，命名由 frontmatter（name/description）决定。→ 判据：技能身份由 frontmatter 定义不按目录名；描述决定触发。
+- **安装管理三命令**：clawhub install <skill-name>（10,700+ skills）/clawhub update --all（更新全部）/clawhub sync --all（扫描本地+发布更新）。→ 判据：技能管理有统一 CLI 生命周期（装/更/同步），别手工拷贝。
+- **安全**：安装时 VirusTotal scan passed 验证；openclaw skill configure <name> 交互配置（OAuth/API key）。→ 判据：第三方技能装前过病毒扫描；凭据配置走官方配置入口不写死。
+- **提升层**：可复用 Skill。
