@@ -8178,3 +8178,81 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **工具权限**：allow/deny 配置——内置高风险工具组 group:runtime（exec/bash）/group:fs（read/write）——deny 示例 read/write/edit/apply_patch/exec/process/browser/canvas/nodes/cron/gateway/image。
 - **可信操作员**：Authenticated gateway callers=trusted operators——localhost/loopback Control UI+gateway WS 用 shared secret token/password 认证。
 - **提升层**：工作流（权限模型）。
+## Dify 提示词编排与变量注入：双花括号变量 · Context Variables · 节点变量传递（来源：mintlify dify LLM node/quick-start/workflow-101 + deepwiki dify-docs + dify.ai blog translation + agentskills dify-dsl-generator 2025-02/2026-09 实拉，合并 §Dify 提示词——那条管"会话变量"，本条管"编排与注入"）
+- **变量引用双花括号**：{{variable_name}}——变量在到达模型前替换为实际值——System: You are a technical documentation expert. User: {{user_input}}。
+- **消息角色**：Chat models 用 message roles System 行为/User 输入/Assistant 示例；completion models 用简单文本续写。
+- **Context Variables**：注入外部知识保留 source attribution——RAG 场景。
+- **节点间变量传递**：每节点收上游输入变量产出下游消费输出变量——{{node_name.variable_name}} 语法——{{userinput.query}}{{llm.text}}{{template.result}}。
+- **Iteration 节点**：迭代节点像小 workflow——有自己的 start/output variables——多语言翻译工具案例；IF/ELSE+Parameter Extractor 参数提取→条件分支。
+- **RAG 链路**：User Input→Knowledge Retrieval top-5 chunks→LLM answer with context→Output——LLM Prompt: "Answer the question using only the retrieved context. If the answer is not present, say so."——variable picker 插入。
+- **dify-dsl-generator**：DSL 生成——需求分析→节点设计→流程连接→DSL 输出——识别节点类型/LLM 提示词/代码逻辑/HTTP 参数/输出格式。
+- **提升层**：工作流（提示词编排）。
+
+## n8n 调试与测试最佳实践：四环境测试 · Pinned Data · 条件日志（来源：support.n8n.io optimize-debug + community staging/pinned-data/four-part + logicworkflow testing + n8n.spot logging + workflows.so debug-handbook 2025-07/2026-09 实拉，合并 §n8n 调试——那条管"错误处理"，本条管"调试与测试"）
+- **四环境测试**：DEV/STAGING/PRODUCTION/ERROR——STAGING 复制生产 workflow 改→测→小心带进生产；PRODUCTION 激活真实跑。
+- **Pinned Data 测试**：坏输入测试——重复跑 CRM 是否建第二条记录（幂等测试）——空 name 测试邮件 "Hi there, !"——happy path 只测不够。
+- **Staging 替换表**：主邮箱→测试收件箱/活 Google Sheet→假数据副本/活 CRM→sandbox/生产 DB→测试 DB/活 API→sandbox key。
+- **调试技巧**：NoOp/Set 节点带表达式加 debug 字段——_debug_sample = {{ $json.items[0] }}；IF node 只按条件记录——items.length；Limit Execution Data——Settings>Workflows "Don't save execution progress"——Production Mode 限制存储；SplitInBatches 分批处理。
+- **个体节点测试**：Execute Node 单节点——看输入输出——转换错误/意外结构；Execution 面板完整历史；Evaluations for AI workflows——CI/CD 集成测试。
+- **提升层**：可复用 Skill（调试测试）。
+
+## LangFlow 外部集成与 Webhook：Webhook+Parser · API 端点 · A2A server（来源：docs.langflow.org webhook/component-webhook/api-flows-run/api-reference/concepts-publish/a2a-server + langflow 1.7 blog + langflow.cn 2025-04/2026-09 实拉，合并 §LangFlow 集成——那条管"部署 API"，本条管"外部触发与认证"）
+- **Webhook 组件**：HTTP POST 触发 flow——接收外部系统 payload——解析传给其他组件——调 API/写 DB/聊 LLM；非有效 JSON 包装进 payload 对象。
+- **Webhook+Parser 组合**：Parser 从原始 payload 提取相关数据——Data 输出连 Parser Data 输入——Template 字段解析为结构化文本。
+- **API 端点**：/webhook POST 启 flow——API access pane→Webhook curl tab 自动生成 POST /webhook；POST /v1/webhook/{flow_id_or_name}；OpenAI Responses API POST /v1/responses OpenAI-compatible 格式执行 flow。
+- **Webhook 认证**：Langflow 1.7 前未认证——现 LANGFLOW_WEBHOOK_AUTH_ENABLE=True 要求 API key——header 或 query 发送。
+- **A2A server**：Langflow 作为 A2A server——jsonrpc 2.0 message/send——agent-to-agent 协议；Python/JS/curl snippets 自动生成。
+- **提升层**：工作流（外部集成）。
+
+## Activepieces Pieces 生态与自定义：763 pieces · TypeScript SDK · 发布 CI/CD（来源：activepieces.com pieces/community-pieces/manage-pieces/pieces-ci-cd/publish-piece + blog zapier-vs-make + automationatlas + freecodecamp 2023-05/2026-09 实拉，合并 §Activepieces Pieces——那条管"MCP 集成"，本条管"生态与自定义开发"）
+- **Pieces 定义**：app integration——bundles 该 app 的 triggers+actions——drag into flow——763 pieces today/5,736 actions——**所有 plan 免费含 self-hosted**——按 runs 定价不按 piece。
+- **Community pieces**：用户创建集成——填 gaps/niche needs/未官方支持——通过 Marketplace 分享——约 60% pieces 来自外部贡献者。
+- **自定义 piece**：TypeScript 写——npm 包发布——TypeScript SDK——出现在 visual builder 像 native。
+- **CLI 工作流**：ap create-piece my-custom-piece→cd pieces→npm install→npm run build→npm run test；npm run pieces -- build --name=your-piece-name 生成 tarball——org 内上传 .tgz。
+- **发布流程**：CLI publish——扫描 packages/pieces/——查 name+version package.json——未发布则 build+upload 到 API endpoint——piece versioning——CI/CD 离线开发→increment version→PR 到 main→merged 后 CLI/GitHub Action 同步。
+- **提升层**：工具（Pieces 生态）。
+
+## Make 场景执行机制与 Bundle：Bundle 模型 · Incomplete queue · Break+Auto-Retry · DLQ（来源：help.make.com step-9-test + academy incomplete/webhook-queues + community reorder + use-apify error-handling + getordersyncpro execution-model + till-freitag retry + azguards DLQ + autopilot aggregator 2026-01/09 实拉，合并 §Make 执行——那条管"监控运营"，本条管"执行机制与重试"）
+- **Bundle 模型**：Make 以 bundle 处理数据——单次执行可处理 1 或数千 bundle——每模块顺序处理 bundles——bundle 47 出错不影响 1-46——取决于错误处理配置。
+- **Incomplete executions**：Break 指令→存 Incomplete Executions queue——Monitoring 下——每 entry 显示 error/bundle data/retry status——手动重试/编辑 bundle/删除——retention Free 30 天/paid 更长——Store incomplete executions 开——模块失败无 handler 时存 exact data+state——稍后 UI 或自动恢复。
+- **Break 重试策略**：Break+Auto-Retry 瞬态错误 429/502/503/timeouts——attempts 3+interval；执行不停止——错误 bundle 继续后续 bundle——第 2 bundle 错第 3 照常跑。
+- **Webhook 队列**：默认并行处理但大量请求同时到达超限进队列——每 plan 不同 limit；sequential processing；DLQ 策略 webhook 溢出——AWS Lambda/SQS FIFO 摄入——按 MessageGroupId 顺序执行——reconciliation worker 完成后 DEL DLQ_LOCK 键。
+- **Aggregator**：Iterator 后多 bundles 收回——Array/Text/Numeric 三型——5 order line items→Text Aggregator→单 email；Run once 测试 output bubbles 数字=operations processed/credits used。
+- **提升层**：工作流（执行机制）。
+
+## Pipedream HTTP 端点设计：默认 200 · $.respond · Component API（来源：pipedream.com docs triggers/connect-webhooks/component-api + miro test-endpoint + integrationatlas abandoned-cart + cdata suitecrm 2023-07/2026-09 实拉，合并 §Pipedream HTTP——那条管"错误处理"，本条管"HTTP 端点设计"）
+- **默认 HTTP 响应**：有效请求→200 OK+默认 payload "Success!"——可自定义。
+- **HTTP trigger**：HTTP / Webhook trigger——response type "Return a custom response"——unique webhook URL https://xxxx.m.pipedream.net。
+- **$.respond**：自定义响应 status/headers/body——Miro challenge 案例：status 200 headers body {challenge}。
+- **Component API 响应属性**：status integer required 200=success 100-599/headers object optional/body stringobjectbuffer optional。
+- **Connect webhooks**：CONNECTION_SUCCESS/CONNECTION_ERROR 事件——connect_token/environment/connect_session_id/error；Shopify 等场景 webhook 交付需 200 OK——返回 custom response。
+- **提升层**：工具（HTTP 端点）。
+
+## Anthropic API 客户端与 SDK：Pydantic models · Agent SDK · timeout 缩放（来源：docs.anthropic.com client-sdks + platform.claude.com agent-sdk quickstart/typescript-sdk + TerminalSkills anthropic-sdk + code.claude 2026-01/09 实拉，合并 §Anthropic SDK——那条管"Server Tools"，本条管"客户端与 SDK"）
+- **Client SDKs**：Python 同步/异步客户端+Pydantic models——JS/TS——client.messages.create model/max_tokens/messages。
+- **Agent SDK**：claude-agent-sdk——Python uv 安装/pip；TS npm @anthropic-ai/claude-agent-sdk——agent.py/agent.ts——agentic loop 流式消息——ClaudeAgentOptions/AssistantMessage/ResultMessage——query() 函数。
+- **TypeScript SDK**：timeout 配置——默认 timeout 由 max_tokens 缩放最多 60 分钟——可 request/client level override——new Anthropic({apiKey}) 默认环境变量；Auth ANTHROPIC_API_KEY——支持第三方 API 提供商认证；package.json type=module TS 顶层 await。
+- **提升层**：工具（客户端 SDK）。
+
+## deeplearning AI 安全课程：GuardrailsAI · Red Teaming · ADK callbacks（来源：learn.deeplearning.ai search LLMOps/eval-monitoring + corporate ADK/CrewAI 2026-01/08 实拉，合并 §deeplearning 安全——那条管"LLMOps 生产"，本条管"安全与防护"）
+- **GuardrailsAI**：Safe and reliable AI via guardrails——LLM 应用超越 POC 到 production——guardrails 控制 1h42m Beginner。
+- **Red Teaming LLM Applications（Giskard 1h29m）**：红队识别评估 LLM 应用漏洞。
+- **WhyLabs Quality and Safety**：评估 LLM 应用安全防护风险——监控安全措施。
+- **ADK Voice Agents**：guardrails with callbacks——filter unsafe sources/enforce rules/log tool activity——agents 更安全可预测 production-ready。
+- **MCP security 威胁模型**：agents=LLMs in loop with tools——MCP 是 plugging tools 开放标准——生产运行 MCP servers 治理；CrewAI Multi-Agent João Moura——single agents→multi-agent 生产部署。
+- **提升层**：可复用 Skill（安全方法）。
+
+## GitHub API 与自动化集成：REST vs GraphQL · rate limits · Octokit 选型（来源：docs.github.com graphql-migrating/rate-limits/rest-best-practices + dxrf API-citizenship + pkgpulse octokit + github.blog azure-pipelines + namespacecomm handbook 2023-09/2026-09 实拉，合并 §GitHub API——那条管"供应链安全"，本条管"API 集成"）
+- **REST vs GraphQL**：GraphQL 单请求指定所需数据减少 over-fetch/under-fetch——复杂嵌套数据——REST 多请求；迁移用 Global node ID 跨 API 版本引用对象。
+- **Rate limits**：100 concurrent requests 上限 REST+GraphQL 共享；REST 900 points/min/GraphQL 2000 points/min；404 vs 403——私有资源凭据不足返回 404 而非 403——404 先查 auth 再查资源存在。
+- **Best practices**：Accept header 稳定+API version；请求前校验必填字段；undocumented fields 非契约；GraphQL 只请求用到的字段——查询小且 purpose-built——typed models 使 schema drift 明显；exponential backoff——缓存响应。
+- **PAT 认证**：PAT 而非密码——least privilege——只给必要 permissions；Octokit 库 @octokit/rest ~8M weekly/标准 REST endpoints repos/issues/PRs/users/orgs；@octokit/graphql ~4M；github-api ~200K。
+- **提升层**：工具（API 集成）。
+
+## OpenClaw 工具定义与自定义：SKILL.md 结构 · 自定义工具 · Workshop/ClawHub（来源：docs.openclaw.ai tools/creating-skills/skills + sfailabs custom-tools + openclawforge/launchmyopenclaw/tryopenclaw/learnopenclaw + openclawhq 2026-03/09 实拉，合并 §OpenClaw 工具——那条管"权限模型"，本条管"工具定义与开发"）
+- **Skills 结构**：SKILL.md 目录+YAML frontmatter（name/description/required tools）+Markdown instructions——加载多个 roots 按 precedence order——load 时按 environment/config/binary presence 过滤。
+- **Skills 作用**：教 agent 何时何用工具——不直接执行——指导 agent reasoning/actions——match description 时加载指令逐步跟随。
+- **自定义工具结构**：tools/inventory-check/tool.json schema+index.js implementation——schema 告诉 agent 工具做什么+接受什么参数。
+- **Skill 组成**：SKILL.md 主指令+Scripts bash/node/python 做重活+Reference files API docs/templates/examples+Assets images/data——条件激活 conditional activation——baseDir 使用。
+- **Workshop/ClawHub**：Skill Workshop 从零 build+test custom skill——ClawHub 发布分享——portable——no-code skill builder 视觉界面<10 分钟配置激活。
+- **提升层**：可复用 Skill（工具定义）。
