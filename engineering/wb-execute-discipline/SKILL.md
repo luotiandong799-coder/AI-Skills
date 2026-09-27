@@ -8097,3 +8097,84 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Sub-Agent Orchestration**：父 agent 汇总或按 handoff 成功标准直接报用户——enable 需 config allowlist 含允许 spawn agent IDs——CLI 管理监控。
 - **多 agent 团队**：openclaw agents bind --agent coding --channel/openclaw skills add --agent research web-search——每 agent 只加载需要技能；跨平台 message Discord/Slack/Telegram；管道设计 fan-out/fan-in/supervisor/chain-of-responsibility。
 - **提升层**：工作流（技能作用域与委托）。
+## Dify 部署架构与性能调优：症状→方案表 · 单机分界线 · 队列扩容判据（来源：enterprise-docs.dify.ai performance/production-deployment + markaicode timeout-fix/10k-architecture/scalable/redis/docker + besthub production-ready 2026-01/08 实拉，合并 §Dify 自托管——那条管"部署形态"，本条管"性能与扩容"）
+- **Performance Tuning 症状→方案表**：Slow API response→增加 API replicas；Task backlog→增加 Worker replicas/celeryWorkerAmount；Database connection exhaustion→max_connections/优化连接池；OOM→增加 memory；CPU throttling→增加 CPU limits。
+- **单机 Compose vs 微服务分界线**：官方单服务器 Compose 内部工具/低流量够用——monolith 跳过网络跳——>~500 RPM 才拆；拆四微服务 API/Worker/Web/Plugin+async broker Redis/RabbitMQ+ingress——API 4 replicas 10K rpm/Worker 按 LLM queue 深度扩——防级联失败/零停机。
+- **队列深度扩容判据**：docker compose exec redis redis-cli LLEN dify_tasks——>50 超 60 秒加 replica——每 replica 并发处理一个任务。
+- **扩容顺序**：scale stateless workers 先于任何 stateful——--scale worker=3；TLS 前置/Postgres/Redis 只内网不暴露。
+- **Redis 外部化**：REDIS_SOCKET_TIMEOUT/HEALTH_CHECK_INTERVAL/RETRY_RETRIES/MAX_CONNECTIONS——CELERY_AUTO_SCALE 按队列深度而非固定数量——降 60% 延迟。
+- **生产矩阵**：SERVER_WORKER_AMOUNT=1 默认限制单节点 QPS——调高不调 DB 会连接耗尽——对齐 API 并发/PostgreSQL 连接池/组件资源。
+- **提升层**：工作流（部署与扩容）。
+
+## n8n 触发器类型与事件驱动：五类触发器 · webhook vs app event · Schedule 必须 publish（来源：docs.n8n.io webhook/scheduletrigger + blog best-practices-ai-agents + community introduction + czlonkowski n8n-workflow-patterns 2025-12/2026-09 实拉，合并 §n8n 触发器——那条管"Webhook 安全"，本条管"触发器类型"）
+- **触发器类型清单**：app event/schedule/webhook call/another workflow/AI chat/manual trigger——HTTP Request 节点也可作起点；可多触发器挂一个 workflow。
+- **Webhook 触发器**：外部事件实时响应——form submission/payment gateway/API callback——唯一 URL 任意服务 POST——结束返回数据；Processing 模式 Webhook→Validate→Transform→Respond/Notify。
+- **Schedule 触发器**：cron 类似——固定 interval/time——**必须 save+published**——时区设置 workflow timezone 优先。
+- **Application event vs webhook**：webhook 单隔离事件实时响应（外部系统调用）；app event 平台侧事件（新邮件等第三方平台）——按事件来源选。
+- **HTTP API Integration 模式**：Trigger→HTTP Request→Transform→Action→Error Handler。
+- **提升层**：工具（触发器）。
+
+## LangFlow 提示词与模型配置：双花括号转义 · Agent Instructions · 模型路由注入（来源：docs.langflow.org 1.10.0 components-prompts + agents + langflow.org gpt5-routing + rubythalib tutorial + csdn 入门案例 2025-08/2026-09 实拉，合并 §LangFlow 提示词——那条管"模板"，本条管"提示词管理与生产配置"）
+- **Prompt Template 动态变量**：{VARIABLE_NAME} 花括号变量——双花括号 {{literal}} 转义字面量防被当变量——"This is a template with {{literal text}} and a {variable}"。
+- **Agent Instructions**：system_prompt 字段自定义指令——每次对话应用——与 Input input_value 叠加——Chat Input 组件可提供。
+- **模型路由+Prompt 注入模式**：Smart Model Routing——两分支各拖 Prompt Template 注入 user query+judge_value——Pro tip：template 保持 minimal——变量越多越难调试。
+- **生产环境配置**：env variables/API key 定期轮换/chunk size 500-1500 字符/embedding 选型/caching 减少重复调用/monitor token 控成本/fallback response。
+- **RAG QA 模式**：检索结果→Prompt Template 注"Here are 4 relevant passages. Now answer using only those passages"→ChatOpenAI。
+- **提升层**：可复用 Skill（提示词管理）。
+
+## Activepieces 自托管与部署：单容器 · Compose 坑 · Worker 水平扩展（来源：activepieces.com docs docker-compose/docker/open-source/workers/overview/environment-variables/aws + engineering playbooks 2026-05/09 实拉，合并 §Activepieces 部署——那条管"企业治理"，本条管"部署与 Worker 架构"）
+- **Docker 单容器**：docker run -p 8080:80 -v ~/.activepieces:/root/.activepieces -e AP_DB_TYPE=PGLITE -e AP_REDIS_TYPE=MEMORY——一切跑一个容器。
+- **Compose 关键坑**：两个服务共享 .env——AP_FRONTEND_URL 必须=public URL——否则 worker 打不开 socket Workers 页空——docker compose -p activepieces up -d。
+- **Worker 架构**：worker 容器跑 flows——从 Redis 拉 job——每 job 跑在 sandbox——结果流回 app——**水平扩展**——推荐 one flow per worker（concurrency 1）——fleet 大小从单个数估算。
+- **app/worker 拆分**：同 image 两角色 AP_CONTAINER_TYPE=APP/WORKER/WORKER_AND_APP——拆分后 heavy runs 不再拖慢 UI。
+- **生产必填**：tools/deploy.sh 生成预填 .env——❗ 标记 production 必填变量；部署选项 curl 快速装/Helm chart/K8s/Nomad/AWS ECR stack。
+- **提升层**：工作流（部署与 Worker）。
+
+## Make 场景监控与运营分析：执行历史排查 · 错误类型 · API 监控+幂等守卫（来源：help.make.com scenario-history + academy errors/incomplete + workflowpick guide + thinkbot playbook + use-apify API tutorial + how-toai 5 patterns 2026-02/09 实拉，合并 §Make 类锚点——那条管"场景设计"，本条管"监控与运营"）
+- **执行历史排查**：History tab→failed run→Errors 面板命名失败模块+失败类型——status bubble 绿/黄/红——duration 近 40 分钟警示——operations used 每模块调用计费——Data IN/OUT 点击模块看进出数据。
+- **错误类型**：Module Timeout Error——模块>40s 处理/获取第三方 API 数据即报——修复=改 Limit；Authorization failed/Bundle 等。
+- **错误处理**：scenario 出错 run 停止+email 通知——run history 点模块看详情——出错停止处理该 bundle 及其后 bundles——Incomplete executions log 保存每模块 input/output/execution details。
+- **Make API 监控**：GET /api/v2/scenarios/{id}/logs 按 status(1=success/2=warning/3=error)/date/duration 过滤——GET executions/{executionId} 详细 outputs+error messages——定时拉执行日志+告警失败/异常 duration/ops 尖峰——生成每日健康报告——程序化重试 incomplete executions——**幂等守卫 event_id store 防重试重复副作用**。
+- **外部 DB 趋势**：执行记录趋势看不清——错误时向 Notion/Airtable 外部 DB 写时间/场景名/错误。
+- **提升层**：工作流（监控运营）。
+
+## Pipedream 错误处理与重试：auto-retry 8 次/10h · 429 vs 400 · Debug with AI（来源：pipedream.com docs errors/rerun/http/build-with-ai/limits + apiverve integration + listicler best-tools 2025-05/2026-09 实拉，合并 §Pipedream 错误——那条管"可观测"，本条管"错误处理与重试"）
+- **Auto-retry**：自动重试错误事件——瞬态错误——服务 down/请求超时——**gated to Advanced plan**——per workflow setting——失败 step 最多重试 8 次 10 小时窗口 exponential backoff——OOM/timeout 错误不重试；Event History 单/批量重放过去事件。
+- **maxRetries 默认 10**：Python rerun——超限 workflow 走下一步——需处理时 raise Exception；$.flow.rerun 在 try...catch 内重试失败 API 请求——HTTP 请求失败不能设 secondary action。
+- **429 vs 400**：429 值得重试/400 永不——blanket retry 浪费调 malformed 请求——flow.exit("Bad input, not retrying")。
+- **Debug with AI**：步骤结果点 Debug with AI——AI 调试建议——好 prompt 例子"Add error handling to the HTTP request step that retries 3 times with exponential backoff when receiving a 429 status code"。
+- **执行限制**：cron-triggered 默认 60s/execution——超时抛 Timeout error 停止——部分 logs 附事件——可按 plan 提高上限。
+- **提升层**：工具（错误处理）。
+
+## Anthropic Server Tools 与 Web Search：基础设施执行 · 启用流程 · 错误码（来源：docs.anthropic.com web-search-tool/tool-use-examples/tool-search-tool + platform.claude.com overview + support enable-web-search 2025-06/2026-09 实拉，合并 §Anthropic 工具——那条管"工具循环"，本条管"Server Tools 面"）
+- **Server tools**：web_search/web_fetch/code_execution/tool_search 跑在 Anthropic 基础设施——直接看结果无需处理执行——除非与某 client tool 同组并行调用。
+- **Web search 启用**：组织管理员 Console 启用；Organization settings>Capabilities Owner/Primary Owner 开启——workspace 级——成员聊天左下角 + 按钮选 Web search——不需要的对话可关。
+- **Web search 错误码**：query_too_long 查询超长/request_too_large 搜索请求过大——长 domain filter list/unavailable 内部错误；pause_turn stop reason API 可暂停轮次。
+- **Tool search tool+MCP**：mcp-client-2025-11-20 beta header——mcp_toolset+default_config 延迟加载 MCP 工具。
+- **Tool use 模型**：Claude 基于 request+tool description 决定何时调用——返回结构化调用应用执行——agentic loop。
+- **提升层**：工具（Server Tools）。
+
+## deeplearning RAG 课程路径：26h RAG · Advanced RAG · Agentic RAG（来源：learn.deeplearning.ai retrieval-augmented-generation + corporate course info + datacamp best-RAG + coursera building-agentic-rag-llamaindex + scaler agents-courses 2026-04/09 实拉，合并 §deeplearning 课程——那条管"LLMOps"，本条管"RAG 路径"）
+- **RAG 课程（26h3m Intermediate）**：RAG 概述/Andrew Ng 对话——检索+生成如何协同——设计各组件建可靠灵活 RAG 系统。
+- **Module 2 IR 基础**：检索架构/metadata filtering/keyword search TF-IDF/semantic search/hybrid search/chunking/query parsing——healthcare/e-commerce 应用。
+- **Prompt design/evaluation/deployment**：利用检索上下文写 prompt/评估 RAG 性能/生产管道。
+- **Advanced RAG（TruEra/LlamaIndex 2h）**：advanced 检索方法 sentence-window/auto-merging 优于 baseline——评估迭代管道性能。
+- **Agentic RAG**：检索+决策结合——agent 决定何时检索/检索什么/怎么用——依赖内部文档/策略/知识库需 grounding/citations/traceability 时用——router agent Q&A+summarization+传参/research agent 多文档+调试控制。
+- **提升层**：可复用 Skill（RAG 方法）。
+
+## GitHub 安全与供应链防护：GHAS 五件套 · push protection · CodeQL 默认（来源：docs.github.com quickstart/security-features + github.blog beginners/6-settings + microsoft learn GHAS + github.blog security-lab 2026-01/09 实拉，合并 §GitHub 安全——那条管"Actions 面"，本条管"供应链防护"）
+- **GitHub Advanced Security 五件套**：code scanning（CodeQL 语义分析）/secret scanning（检测暴露凭证）/dependency scanning（Dependabot 易受攻击包）/dependency review（PR 影响分析）/security advisories（策展漏洞情报）。
+- **Secret scanning+push protection**：自动检测意外提交 secrets API keys/credentials——**push protection 阻止包含机密提交**——repo 级/org 级（org 为所有仓库启用）；GitGuardian 2026：2025 公开 GitHub 泄漏 28.65M 新 secrets +34% 年增——AI-assisted commits 泄漏率约基线 2 倍。
+- **Dependabot**：依赖保持更新——继承引入库漏洞——识别易受攻击包——依赖扫描。
+- **CodeQL 默认设置**：自动确定扫描语言/query suites/触发事件——public repo 免费——检测不安全 GitHub Actions workflows。
+- **启用与关闭**：Settings→Security→Advanced Security→Enable→CodeQL Set up Default；revoke 后 Close→Revoked→Close alert。
+- **提升层**：工具（供应链安全）。
+
+## OpenClaw 权限与安全模型：个人助手模型 · per-agent max_level · 工具组 deny（来源：openclawdoc.com sandbox + docs.openclaw.ai gateway/security + SECURITY.md + openclawplaybook security-model/safety-rails + openclawai best-practices 2026-03/09 实拉，合并 §OpenClaw 权限——那条管"委托架构"，本条管"权限与安全模型"）
+- **个人助手模型**：one trusted operator boundary per gateway——不设计隔离互相敌意用户——多不可信用户=共享委托工具权限——multi-tenant 需其他方案。
+- **Per-agent 权限声明**：agents.safe-agent.permissions.max_level read——只能 read 级工具——tools 列表 web_search/calculator/file_read；power-agent max_level execute——file_write 等。
+- **Channel 认证分层**：验证消息发送者身份——默认仅 owner user ID 触发工具执行——allowedUsers/publicChannels 配置；DM policy/allowlists/DM session isolation/context visibility/command authorization。
+- **Slash 命令授权**：commands.useAccessGroups——channel allowlist 空或含 "*" 命令对该 channel 开放。
+- **工具权限**：allow/deny 配置——内置高风险工具组 group:runtime（exec/bash）/group:fs（read/write）——deny 示例 read/write/edit/apply_patch/exec/process/browser/canvas/nodes/cron/gateway/image。
+- **可信操作员**：Authenticated gateway callers=trusted operators——localhost/loopback Control UI+gateway WS 用 shared secret token/password 认证。
+- **提升层**：工作流（权限模型）。
