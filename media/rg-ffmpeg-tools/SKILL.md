@@ -23,11 +23,11 @@ author: "doubao"
 
 ## 调用方式
 
-工具绝对路径为 `D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\`，例如：
+工具绝对路径为 `D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\`，例如：
 
 ```powershell
-& 'D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\rg.exe' --version
-& 'D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\ffmpeg.exe' -version
+& 'D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\rg.exe' --version
+& 'D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\ffmpeg.exe' -version
 ```
 
 ## 常用命令示例
@@ -36,35 +36,35 @@ author: "doubao"
 
 ```powershell
 # 在目录中搜索关键词（递归、带行号、彩色）
-& 'D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\rg.exe' '关键词' 'D:\目标目录'
+& 'D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\rg.exe' '关键词' 'D:\目标目录'
 
 # 只搜 .py / .md 文件
-& 'D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\rg.exe' -g '*.py' 'def main' 'D:\目标目录'
+& 'D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\rg.exe' -g '*.py' 'def main' 'D:\目标目录'
 
 # 统计匹配文件数
-& 'D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\rg.exe' -l '关键词' 'D:\目标目录' | Measure-Object
+& 'D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\rg.exe' -l '关键词' 'D:\目标目录' | Measure-Object
 ```
 
 **ffmpeg 音视频处理**：
 
 ```powershell
 # 格式转换（mp4 -> mp3 提取音频）
-& 'D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\ffmpeg.exe' -i '输入.mp4' -vn '输出.mp3'
+& 'D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\ffmpeg.exe' -i '输入.mp4' -vn '输出.mp3'
 
 # 视频抽帧（每秒 1 帧输出为图片）
-& 'D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\ffmpeg.exe' -i '输入.mp4' -vf "fps=1" '帧_%03d.jpg'
+& 'D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\ffmpeg.exe' -i '输入.mp4' -vf "fps=1" '帧_%03d.jpg'
 
 # 裁剪片段（从第 10 秒开始截 30 秒）
-& 'D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\ffmpeg.exe' -ss 10 -i '输入.mp4' -t 30 -c copy '输出.mp4'
+& 'D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\ffmpeg.exe' -ss 10 -i '输入.mp4' -t 30 -c copy '输出.mp4'
 
 # 压缩视频（H.264，CRF 23）
-& 'D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\ffmpeg.exe' -i '输入.mp4' -c:v libx264 -crf 23 '输出.mp4'
+& 'D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\ffmpeg.exe' -i '输入.mp4' -c:v libx264 -crf 23 '输出.mp4'
 ```
 
 **ffprobe 元数据**：
 
 ```powershell
-& 'D:\AI技能仓库\skills\rg-ffmpeg-tools\bin\ffprobe.exe' -v error -show_format -show_streams '输入.mp4'
+& 'D:\腾讯AI\skills\media\rg-ffmpeg-tools\bin\ffprobe.exe' -v error -show_format -show_streams '输入.mp4'
 ```
 
 ## 说明

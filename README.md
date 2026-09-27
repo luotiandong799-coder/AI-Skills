@@ -1,4 +1,4 @@
-# AI技能仓库
+# AI-Skills 技能仓库（唯一真身 D:/腾讯AI/skills）
 
 WorkBuddy 自定义技能 + 记忆 + 身份配置，版本管理并同步到 GitHub。豆包与 WorkBuddy 共用 `memory/co-learn/` 一起学习。
 

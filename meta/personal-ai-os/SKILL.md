@@ -2,7 +2,7 @@
 name: personal-ai-os
 description: >-
   Personal AI OS（个人 AI 操作系统）总控规则与模块路由。定义九大模块（Computer Agent / AI Learning / PC Maintenance / AI Radar / Personal Knowledge / Skill Management / MCP Management / Agent Harness / Evaluation）与全套自主执行纪律：统一任务生命周期、执行前置检查 Preflight、三级权限 L0/L1/L2、执行预算（工具调用次数/重试/并行度硬上限，§九·五）、停止条件、重试、幂等与防重复、并发控制、结果验证、证据优先、异常恢复与回滚、任务后清理（临时/缓存/垃圾）、资源边界、敏感数据、审计与持续进化。**凡涉及操作电脑与普通软件、安装/更新/删除 Skill 或 MCP、GitHub 项目选型、电脑维护与清理、任务自主执行与收尾的动作，一律先加载本技能并服从其规则。** 当用户提出「电脑助手 / 帮我操作电脑 / 打开软件 / 输入内容 / 截图 / 桌面自动化 / Personal AI OS / 个人 AI 环境 / 电脑维护 / 系统体检 / 磁盘空间 / 清理缓存 / 清理垃圾 / AI 学习 / AI 信息雷达 / AI 简报 / 知识管理 / 资料整理 / 装技能 / 装 MCP / 这个技能值不值得装 / 帮我评估这个项目 / 帮我清理电脑 / 帮我操作微信或 Office」这类需求时应用。触发词：Personal AI OS、个人AI操作系统、电脑助手、桌面自动化、帮我操作电脑、打开应用、截图、电脑维护、系统体检、磁盘清理、缓存清理、垃圾清理、开机启动项、AI学习、AI信息雷达、每日AI简报、知识管理、第二大脑、装技能、装MCP、Skill管理、MCP管理、评估新能力、执行前置检查、三级权限、执行预算、工具调用上限、最多调用几次、少调工具、最短路径、并行执行、缓存复用、已获取不重复查、自动停止、停止条件、幂等、回滚、防重复执行、资源边界、任务收尾、审计、personal ai os、desktop assistant、ai radar。
-version: 2.5.0
+version: 2.5.1
 agent_created: true
 ---
 
@@ -510,7 +510,7 @@ Personal AI OS 不允许无限膨胀。定期审查 Skill / MCP / Workflow / Exp
 | 智能消息自动回复（微信/QQ/企微/钉钉/飞书等：判断该不该回、按联系人风格回、自学习/复盘） | `smart-message-autoreply` | 技能 |
 | 浏览网页 / 抓页面 / 填表 / 搜索 | **Playwright MCP**（headless，Edge 内核） | mcp.json |
 | 需登录态 / 反爬 / 验证码的浏览器任务 | `browser-automation`、`bsk-drive-logged-in-browser`、`agent-browser` | 技能 |
-| 读写本地文件（限定 D 盘） | **File MCP**（filesystem，白名单 `D:\腾讯AI` + `D:\AI技能仓库`） | mcp.json |
+| 读写本地文件（限定 D 盘） | **File MCP**（filesystem，白名单 `D:\腾讯AI` + `D:\腾讯AI\skills`） | mcp.json |
 | 查看系统/进程/环境信息（只读） | **Desktop Commander 只读代理**（`list_processes` / `get_file_info` / `list_directory` / `read_file`） | mcp.json + 代理脚本 |
 | 排障（报错、崩溃、变慢、跑不起来） | `wb-debug-loop` | 技能 |
 | 多步实现 / 交付类改造 | `wb-spec-driven` | 技能 |
@@ -564,7 +564,7 @@ Personal AI OS 不允许无限膨胀。定期审查 Skill / MCP / Workflow / Exp
 |---|---|---|
 | windows-mcp | ✅ 端到端通过 | 截图 / `DisplayInventory`(2560×1600@144dpi) / UI 树 / 剪贴板读写 / 开应用 / 点击 全部成功；完整链路＝开记事本→`Clipboard set`→`ctrl+v`→截图确认文字→点"不保存"→进程已退出 |
 | playwright | ✅ 端到端通过 | 导航 `example.com` 与**必应新闻动态页**并抽取可访问性树；headless Edge 带登录态（页面显示已登录账号） |
-| filesystem | ✅ 通过（含越权拒绝） | 白名单 `D:\腾讯AI` + `D:\AI技能仓库`；实测读 `C:\Windows\win.ini` 返回 `Access denied - path outside allowed directories` |
+| filesystem | ✅ 通过（含越权拒绝） | 白名单 `D:\腾讯AI` + `D:\腾讯AI\skills`；实测读 `C:\Windows\win.ini` 返回 `Access denied - path outside allowed directories` |
 | desktop-commander | ✅ 通过（只读） | 代理白名单 13 个只读工具（`read_file`/`list_directory`/`list_processes`…），显式拒绝 13 个写/高危工具（`write_file`/`edit_block`/`start_process`…）；实测 `get_config`（v0.2.51）+ `list_processes`（400+ 进程） |
 | GitHub | ✅ connected | `get_me` → `luotiandong799-coder` |
 | agent-mail | ✅ connected | `GetMe` 可取别名（已隐去），日发额度 50 封 |

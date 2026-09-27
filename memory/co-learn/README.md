@@ -4,7 +4,7 @@
 
 ## 地址（同一物理目录，两处可见）
 - 本地实时：`D:\腾讯AI\skills\memory\co-learn\`（NTFS junction → 仓库 `memory/co-learn\`）
-- GitHub：`AI技能仓库/memory/co-learn/`
+- GitHub：`AI-Skills 仓库 memory/co-learn/`
 
 ## 目录
 - `doubao/` —— 豆包产出。用户粘贴或豆包自写，命名 `YYYY-MM-DD_主题.md`。
