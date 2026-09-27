@@ -1,24 +1,24 @@
 ---
-name: ai-input-enhancement-system
+name: ai-input-enhancement
 description: >-
-  WB 统一 AI 信息入口的总架构原则：外部信息如何归一进 AI、如何判断价值、如何路由到正确 Skill、隐私与记忆边界。当要梳理「统一输入/信息入口/输入增强/WeChatBridge/输入路由/价值判断/聊天增强/任务提取」或 WB 输入层架构时使用。本文件是编排/元层原则，不替代各引用 Skill 的执行细节。触发词：统一输入、信息入口、输入增强、WeChatBridge、输入路由、价值判断、聊天增强、任务提取、记忆管理、开源学习、Fast/Deep 执行。
+  WB 统一 AI 信息入口的总架构原则与输入路由：外部信息如何归一进 AI、如何判断价值、如何路由到正确 Skill、隐私与记忆边界。当用户要梳理「统一输入/信息入口/输入增强/WeChatBridge/输入路由/价值判断/聊天增强/任务提取」或 WB 输入层架构，或要新增输入类能力时应用。本技能是编排/元层原则，不替代各引用 Skill 的执行细节，重叠>60% 一律引用不重复建。触发词：统一输入、信息入口、输入增强、WeChatBridge、输入路由、价值判断、聊天增强、任务提取、记忆管理、开源学习、Fast/Deep 执行。
 version: 1.0.0
 compatibility: WorkBuddy；引用 media/ engineering/ defaults/ agent/ system/ rules/ 下现有 skill（不重复建）
 ---
 
 # AI 输入入口增强系统（WeChatBridge 融合终版）
 
-> 本文件为**编排/元层原则文档**，非新 skill。与现有 skill 重叠 >60% 处一律引用，不重复建。总入口见 `00_总目录_所有AI入口.md`。
+> 本技能为**编排/元层原则**，非执行手册，能力由引用 Skill 提供。总入口见 `00_总目录_所有AI入口.md`。
 
 ## 边界（先读）
-本文件定义「入口如何归一、何时路由」，**能力由引用 Skill 提供**，不是执行手册。它不是 `wb-context-compressor` 的副本，也不是 `wb-spec-driven` 的路由表——价值判断细节看 context-compressor，流程/路由细节看 spec-driven，验证看 artifact-verification。
+本技能定义「入口如何归一、何时路由」，**能力由引用 Skill 提供**，不是执行手册。它不是 `wb-context-compressor` 的副本，也不是 `wb-spec-driven` 的路由表——价值判断细节看 context-compressor，流程/路由细节看 spec-driven，验证看 artifact-verification。
 
 ## STOP / WAIT / PROCEED
 | 状态 | 动作 |
 |---|---|
 | 已有 Skill 覆盖该能力 | **STOP**——直接引用，不重复写 |
 | 要落地新输入能力 | **WAIT**——先查现有 skill 重叠；>60% 则引用不建 |
-| 确属独特点 | **PROCEED**——落到对应 skill 或本文件独点段 |
+| 确属独特点 | **PROCEED**——落到对应 skill 或本技能独点段 |
 
 ## 目标
 将 WB 打造成统一 AI 信息入口：
