@@ -7328,3 +7328,57 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Piece 同步三类型**：Official（Activepieces cloud registry 自动同步）/Custom（npm registry 平台级手动）/Private（.tgz upload）。
 - **两级管理**：Platform Admin 全平台装/卸；Project Admin 项目级 show/hide（不同团队隔离）；生态事实：pieces 是 npm 包 TypeScript typed framework，60% 社区贡献，280+ 全开源且全部可作 MCP。
 - **提升层**：可复用 Skill（发布分发）。
+## n8n 表达式与数据结构：{{ }} 动态参数 · $json/$input/$node/$jmespath · json key 包裹（来源：docs.n8n.io data/expressions + data/expression-reference + courses/level-two + expression-testing skill 2026-02/09 实拉）
+- **表达式优先**：{{ }} 内联 JS 风格代码动态设参数值（读 previous nodes/workflow metadata/env vars）——能即时预览计算值，能用表达式就用；复杂转换才用 Code 节点。
+- **常用表达式**：$json.body.city（当前项 JSON）；$input.item.json（等价简写）；$node["Name"].json.id（访问其他节点）；方法调用 $json.name.toLowerCase()；$jmespath(obj, expression) 查询复杂嵌套对象（无效返回 undefined）。
+- **数据结构**：n8n 期望 array of objects 每对象包 json key（Code node [{json:{...}}]）——写错 key 下游全空。
+- **Set 节点**：={{ $json.score * 2 }} 表达式赋值；拖拽 data mapping 免写表达式。
+- **提升层**：工作流（数据转换）。
+
+## Dify 文件处理与分段策略：Knowledge Pipeline Chunker · Doc Extractor 节点 · 800/150 技术文档（来源：deepwiki dify-docs document-processing + knowledge-pipeline-orchestration + dify.ai workflow-file-upload + pyshine dify 2024-10/2026-09 实拉，合并 §RAG chunking 策略——那条管"通用切块"，本条管"Dify 具体工具与参数"）
+- **Chunker 类型**：Q&A Processor（处理电子表格问答对——结构化 Q&A 数据从 CSV/Excel）；General Chunker（基础文档）。
+- **文本预处理规则**：替换连续空格/换行/tab 为单空格；自动删除 URL 和邮箱地址。
+- **工作流文件上传**：文档（TXT/PDF/HTML）用 Doc Extractor 节点提取为字符串变量；音视频需 audio-to-text 或关键帧提取；gpt-4o-audio-preview 类模型可直接处理音频。
+- **分段策略**：自动（引擎检测自然边界：段落/章节/句 separators，推荐最优化分隔）；自定义——技术文档 800-token chunks + 150-token overlap；FixedRecursive/EnhanceRecursiveCharacterTextSplitter。
+- **提升层**：工作流（RAG 预处理）。
+
+## LangFlow Memory Base 三类记忆：向量化语义检索 vs 时间序 vs 手动知识库（来源：docs.langflow.org memory-bases + memory + message-history + 1.8.0 datastax + 1.12 knowledge 2025-07/2026-09 实拉，合并 §LangFlow 语义记忆——那条管"组件"，本条管"记忆类型分工"）
+- **三类记忆分工**：Memory Base（向量化格式存长期 chat history——跨会话语义检索最相关上下文，自动嵌入向量存储）；Message History（messages 表按时间顺序取最近消息）；Knowledge Base（手动填充，检索文档知识）——按需选型：要"相关上下文"用语义检索，要"最近对话"用时间序，要"文档事实"用知识库。
+- **Chat memory vs vector store**：chat memory 专为存/取聊天消息数据库构建（Agent 和 Message History 组件内置访问各自数据库作 memory）；vector stores 设计为语义搜索文本 chunks。
+- **内置记忆**：Agent 组件默认启用 Langflow storage chat memory——多数场景够用；需要专用库（Mem0/Redis/Astra DB）才接 Message History 组件；{memory} 代码在 prompt 创建 memory input port。
+- **版本变更**：1.12 起默认安装不含多数 vector store bundles（Chroma 本地仍默认）——额外 provider 需安装。
+- **提升层**：工具（记忆选型）。
+
+## Activepieces Code Step 与沙箱：TS code + npm packages · AP_EXECUTION_MODE 隔离（来源：activepieces.com docs sandboxing + mcp/tools + create-action + mintlify engine/workflows + TerminalSkills 2026-03/09 实拉，合并 §Activepieces 认证——那条管"连接配置"，本条管"代码执行与隔离"）
+- **Code step**：export async function code(inputs)——数据转换 map/toUpperCase/reduce；packages {} 声明 npm 依赖（导入外部库执行专门计算，无需外部服务）。
+- **执行引擎**：Piece Executor 动态加载 pieces at runtime（pieceName/actionName/input）；CODE 类型步骤含 sourceCode+packages+input。
+- **沙箱选择**：flow code 永远跑在 sandbox 包裹 engine 进程；AP_EXECUTION_MODE 是自托管最重要安全选择——决定恶意 flow 被限制到单 worker pod 还是能触内核；SANDBOX_CODE_ONLY（V8 沙箱）：快轻量、不支持 NPM、多租户安全、reusable workers。
+- **MCP 工具面**：PIECE 调用参数 pieceName/actionName/input/auth/continueOnFailure/retryOnFailure。
+- **提升层**：可复用 Skill（代码步骤）。
+
+## Make 调度选项与外部 cron：默认 15 分钟 · 六类调度 · webhook 任意间隔（来源：help.make.com schedule-a-scenario + academy webhooks queues + crontap integration 2026-05/06 实拉，合并 §Make 场景蓝图——那条管"场景搭建"，本条管"调度设置"）
+- **调度选项**：At regular intervals/Once/Every day/Days of week/Days of month/Specified dates/On demand——按需选型；默认每 15 分钟。
+- **调度用途判据**：要特定时间跑（每日中午/每隔周二/每 15 分钟备份）→ Schedule settings；要任意自定义间隔 → 外部 cron 服务（Crontap）打 webhook URL 触发场景——触发与执行解耦。
+- **提升层**：工作流（调度）。
+
+## Pipedream Data Stores 状态持久化：key-value CRUD · TTL · $.service.db · File store（来源：pipedream.com docs using-data-stores + data-management/data-stores + v3/components/api + glossary 2024-08/2026-09 实拉，合并 §Pipedream 运行时——那条管"执行限制"，本条管"跨执行状态"）
+- **Data Stores**：内置 key-value store——持久状态跨 workflow 共享；CRUD 全支持；set(key, '') 删除值保留 key；TTL 秒级过期自动删除（留空不失效）。
+- **DB service prop**：$.service.db——组件专用 key-value store 跨执行保持状态；值必须 JSON-serializable。
+- **API 动作**：add/update multiple records、append to record（仅数组可 append）、check key existence、delete single record。
+- **用途**：save API 结果/用户输入/interim data；后续 step/workflow read/update/enrich；tracking process statuses/aggregating metrics。
+- **File store**：项目级 filesystem——所有 workflow 共享；Project secret 加密且 UI 不可读。
+- **提升层**：工具（状态持久化）。
+
+## Anthropic MCP Connector 直接集成：Messages API 直连远程 server · stdio/streamable HTTP · SDK 双实现（来源：platform.claude.com mcp-connector + anthropic news model-context-protocol + developersdigest mcp-guide + dzone 2024-11/2026-09 实拉，合并 §MCP 规范——那条管"协议规范"，本条管"Claude 侧接入方式"）
+- **MCP connector**：Messages API 直接连远程 MCP server——无需独立 MCP client；旧版 mcp-client-2025-04-04 已弃用。
+- **架构三件**：Client（Claude Desktop/Code/custom app）/Transport（stdio 本地进程；streamable HTTP 远程——前 SSE）/Server（暴露 resources/tools/prompts）；capability negotiation 在初始化期间。
+- **SDK 双实现**：每个 SDK 同时含 client+server，支持两种 transport；server-exposed primitives + client-exposed sampling/roots/elicitation。
+- **企业替代**：前 MCP 时代连接 CRM 需 custom code+手动认证+自己管 context window——每新系统重建；MCP 标准化 client-server 架构一次替换。
+- **提升层**：可复用 Skill（MCP 接入）。
+
+## deeplearning.ai 评估指标子类：agent 四类指标 · 指标绑定业务风险（来源：learn.deeplearning.ai evaluating-ai-agents + community improving-accuracy + corporate fine-tuning-RL + survey agent evaluation 2024-08/2026-09 实拉，合并 §agent 评估方法论——那条管"评估流程"，本条管"评估指标与课程体系"）
+- **Agent 评估指标子类**：Planning（Plan Quality 计划对齐专家/ground-truth；Node F1 计划选工具准确率；Step Success Rate 步骤执行成功率）；Reasoning（Next-tool Prediction Accuracy 每推理步预测下一个正确工具）。
+- **通用指标**：LLM-as-Judge 最强自动化评估；Perplexity 质量信号；Safety refusal rate；Over-refusal（良性提示拒绝率应低）；Hallucination 是否编造事实。
+- **指标绑定业务风险**：generic metrics 几乎总是错——选指标绑"犯错成本"（cost of being wrong），不绑泛化分数。
+- **课程情报**：Evaluating AI Agents（Arize 2h36m）；Improving Accuracy（Lamini+Meta——SQL agent+指标+self-reflection）；Fine-tuning & RL（SFT/RLHF+评估引导迭代）。
+- **提升层**：可复用 Skill（评估指标）。
