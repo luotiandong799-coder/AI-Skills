@@ -6583,3 +6583,36 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **openhuman**（tinyhumansai）：开源 agent harness，本地优先记忆+编排+工作流。
 - 形态趋势：编码 agent 从"编辑器插件"走向"独立运行时+统一记忆层"；GNAP=git repo 4 JSON 文件协调多 agent（无 server 无 DB）。
 - **提升层**：可复用 Skill（生态形态观察）。
+## Dify MCP 双向发布：app→MCP server 与 server_code 凭证 · Endpoint 扩展与 DSL 迁移依赖（来源：dify.ai blog v1-6-0-built-in-two-way-mcp-support + turn-your-dify-app-into-an-mcp-server + deepwiki application-publishing + alibabacloud A2A 2026-02/07/09 实拉，与 §MCP 工具数量上限互补——那条管"server 设计"，本条管"Dify 侧怎么发布与迁移"）
+- **MCP 双向原生（v1.6.0）**：把任意 MCP server 当工具导入；发布 app 暴露为 MCP server——只需填 service description（让外部 LLM 知道何时调用）+parameter description（文档 Start 节点每个输入）→ 平台发 server URL。
+- **server_code 16 字符 token=访问凭证**：POST /mcp/server/<server_code>/mcp，无独立 API key/bearer——凭证即 URL 片段，发布后按密钥管理。
+- **Endpoint 扩展机制**：Extension 插件处理自定义 HTTP 请求+reverse calls（自定义 web 界面/OpenAI-compatible API/异步事件触发）——一条 Dify app 可同时以 hosted/API/embed/MCP 多形态对外。
+- **DSL 导出含 MCP server 依赖**：跨环境迁移必须①同 server ID 添加对应 MCP server ②完成其 OAuth 授权 ③URL 在新环境可达——漏一步 DSL 导入后工具调用静默失败。
+- **提升层**：工具（发布形态与迁移纪律）。
+
+## n8n 工具网关五步：收调→验证→注册表→意图校验→限流（来源：n8n.io workflows route-mcp-tool-calls-through-an-intelligent-gateway + blog.n8n.io tool-calling-llm + llm-tool-calling-error-handling 2026-02/04/07 实拉，与 §per-tool 熔断互补——那条管"故障隔离粒度"，本条管"AI 工具调用的入口治理"）
+- **工具调用过网关**（MCP tool calls routed through a gateway）：①Webhook 收 AI agent/MCP client 的 tool request ②Validate & Authenticate——验 API key/JWT/校验 MCP schema ③Tool Registry Lookup——解析请求的工具名到后端 API 配置与权限 scope ④LLM Intent Verification——独立确认 tool call 参数安全、结构良好、在策略内 ⑤Rate Limit & Quota Check——per-client 限制后执行。
+- **判据**：AI 直接调工具=把"谁能调什么、参数是否越权"完全交给模型；过网关=验证与授权变成可审计的显式环节。高风险工具（写库/发消息/退款）必须过网关。
+- **错误可观测**：n8n 单条可视化执行 trace 直接显示哪个 tool 失败/为何/LLM 尝试传的参数——排障不靠翻终端日志。
+- **提升层**：工作流（工具调用治理）。
+
+## LangFlow 知识库 Load/Retriever 子流分离与 DB Providers（来源：docs.langflow.org knowledge + knowledge-base + components-models + langflow.org blog 1.10/1.11 2026-06/07/09 实拉，与 §LangFlow 生产部署互补——那条管"部署形态"，本条管"知识库怎么搭"）
+- **知识库=向量数据库**（存 embeddings 供 flow 检索）：默认 Chroma 本地，可配 Chroma Cloud/OpenSearch/Postgres pgvector；knowledge bases 与 memory bases 共享 DB Providers（Settings→DB Providers 统一配置）。
+- **Load Data 子流与 Retriever 子流分离**：Load 子流=读文件→chunk→embed→写入向量库，**不随每次 flow run 重灌**（重灌=每次跑都重新切块嵌入，成本与延迟爆炸）；Retriever 子流只做查询时检索。→ 判据：**索引与查询是两个生命周期**，同一个 flow 里分开建。
+- **多向量检索**（1.11.0 lfx-nextplaid）：ColBERT-style late interaction+ColPali 视觉文档检索开箱即用——严肃 RAG 的下一步。
+- **RAG 管线标准形**：embed 查询→相似度检索→可选 rerank→Prompt Template 插上下文→LLM→grounded 回答。
+- **提升层**：工作流（知识库架构）。
+
+## Activepieces 无座位审批与角色路由（来源：resources.activepieces.com automation-for-internal-approvals + glossary human-in-the-loop-ai + product ai-agent-builder 2026-01/06/09 实拉，与 §HITL 审批三要素互补——那条管"审批设计通用原则"，本条管"平台级审批形态"）
+- **Approval 步骤**：暂停 run→收集 reviewer 决策→按结果恢复 flow→captured inputs 传下游更新与通知；**To-Do step** 同族（暂停等人批/审）。
+- **无座位审批**：审批人不需要账号、不需要 seat——跑审批环节不发 license。
+- **角色路由**：条件逻辑+Tables 查找把 request type/cost-center/owner 映射到正确 approver→assign tasks+escalation delays（超时升级）。
+- **敏感连接审批**：sensitive connections 在使用前要求审批——凭证级 gate 先于执行级 gate。
+- **提升层**：工作流（审批闭环）。
+
+## Anthropic skill authoring 量化约束：64/1024/500/100tokens/三档自由/触发测试（来源：docs.anthropic.com skill-authoring best-practices + support.claude.com how-to-create-custom-skills + skillmd skill-creator 2026-01/03/07 实拉，与 §skill 内容结构纪律互补——那条管"内容怎么合格"，本条管"尺寸与触发质量的硬指标"）
+- **frontmatter 限额**：name 64 字符（小写/数字/连字符 kebab-case）、description 1024 字符；body <500 行；附加细节放单独文件，引用一层深。
+- **三级加载成本**：L1 metadata（name/description）**恒载约 100 tokens/skill**——技能装得越多恒载越高；L2 body 触发才载；L3 reference/脚本按需。→ 判据：**装技能 = 每技能 100 tokens 的常驻上下文税**，描述写差=税照付但触发率低。
+- **Freedom Levels 三档**：high=纯文本指令（灵活上下文任务）/medium=参数化脚本/slow=确定性脚本——按任务性质选自由档，不一律上脚本。
+- **触发质量测试**：should-not-trigger 3-5 条防误触发/scope creep；held-out 约 40% 验证修复泛化；**"描述先钉死，没有别的修复比它更提升触发准确度"**。
+- **提升层**：可复用 Skill（authoring 量化基准）。
