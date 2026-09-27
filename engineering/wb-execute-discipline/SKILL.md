@@ -3874,3 +3874,40 @@ px -y @lobehub/market-cli skills install <skill> --agent cursor；LobeHub 市场
 - **AI 辅助生成发布**：官网发布页根据描述自动生成技能名称/描述/分类/标签/指令内容——写技能元数据不用从零起。
 - 判据：**个人技能要变现走 SkillPay 链路；发布按五步走；元数据用 AI 辅助生成再人工校准**。
 - 提升层：工作流。
+
+## Agent Node 1 job 1 purpose：决策脑插入固定流程 + 工具语义权重排序 + 错误处理三选（来源：Dify Agent node 官方文档 + Dify 工具优先级排序实战，2026-09-27 实拉）
+- **1 job 1 purpose**：Agent Node 是固定流程里的"决策脑"——程序性步骤委派给 LLM 自主推理，对错误/未定义分支更鲁棒；一个节点只干一个目的，不是全能手。
+- **工具语义权重排序**：Agent 不按固定顺序调工具，通过语义理解模块分析请求意图+对话状态，实时计算每个工具匹配权重（语义相关性/执行延迟维度评分）——天气+地理位置→地理解析工具高优先，保证后续参数完整。
+- **错误处理三选**（LLM/HTTP/Code/Tool 节点内置）：stop / 返回类型默认值 / fail branch 路由——按节点类型和业务要求选，不是全 stop。
+- **Chain Executor 注入清单**：用户原始 Query/上次 Memory 状态/预设 Prompt 模板/工具集（函数签名+描述+用法）/中间中断点与缓存 Retry/目标模型接口——知道执行器喂了什么才能调好 agent。
+- 判据：**每个 Agent Node 先回答"这一个节点只干哪一件事"；工具多时按语义权重排序不固定顺序；节点失败策略显式三选一**。
+- 提升层：工作流。
+
+## 错误分层三型 + 测试四件套 + 不可变 artifact 回滚（来源：n8n Error Handling Complete Guide + Stop Testing Your Workflows Wrong + n8n CI/CD GitOps，2026-09-27 实拉）
+- **错误按类型选工具，不一套重试打天下**：瞬时错误（网络 flake/API hiccup）→per-node Retry On Fail；永久错误（401/畸形 payload）→告警，不是 5 次无意义重试；可预测错误（期待数据却是空数组）→loudly fail on purpose。阻塞错误（节点失败停）与静默错误（API 200 空 body）都要处理。
+- **测试四件套**：pinned data 坏输入测试 / staging workflow / 顶部加验证 / dry-run mode；配套 error workflow+检查 logs——"fix 80-90% of production failures before they ever happen"。
+- **不可变发布回滚**：CI 生成 tagged release artifact（workflows 目录 tarball）；部署错→git revert 触发管道自动重新导出部署正确版本。
+- 判据：**错误处理先分类（瞬时/永久/可预测）再选工具；生产前跑测试四件套；发布留不可变 artifact 支持 git revert 回滚**。
+- 提升层：工作流。
+
+## Claude Code 权限三态 + 设置五层级 + 运行时 /permissions 管理（来源：Claude Code settings/permissions 官方文档 + 权限配置最佳实践，2026-09-27 实拉）
+- **权限三态前缀匹配**：allow 数组（如 Bash(git diff *)）/ ask 数组（如 Bash(git push *)）/ deny 数组（排除敏感文件：Read(./.env)、Read(./secrets/**)、WebFetch、Bash(curl *)）——前缀匹配不是正则。
+- **设置五层级**：managed（企业）/ local（.claude/settings.local.json gitignored）/ project（.claude/settings.json shared via git）/ user（~/.claude/settings.json personal）/ plugin（hooks.json）——project 提交 git，local 不提交。
+- **运行时管理**：Claude 工作时 /permissions 打开 dialog 增删规则，下次工具调用即生效——不用重启会话。
+- **三层防护分工**：Sandbox（OS 进程隔离，防 breakout）/ Hooks（可编程拦截每个工具调用，强制策略）/ Permissions（用户批准门）——不只靠权限做安全。
+- 判据：**权限按"永远 deny 凭据和破坏性操作→ask 影响大但必要→allow 已验证"配置；从严格开始逐步放宽；部署前测试配置**。
+- 提升层：工具。
+
+## MCP 安全四机制 + Embeddable 单按钮授权（来源：Activepieces MCP Server 官方文档 + Embeddable MCP，2026-09-27 实拉）
+- **MCP 安全四机制**：① OAuth 认证（token 自动处理，client 负责）② 凭据永不暴露（connection secrets/API keys/OAuth tokens 从不被任何工具返回）③ project-scoped（所有操作限定认证项目）④ 敏感设置（ap_setup_guide 返回 UI 配置指引而非通过 MCP 处理 secrets——安装配置类操作引导用户去界面做，不让模型碰 secret）。
+- **Embeddable MCP 授权模式**：用户点击 app 内 Authorize 按钮→后端拿 token 跑该用户自动化——标准 OAuth，用户零配置，后端持 token。
+- 判据：**接 MCP 先核对四机制（凭据零返回是底线）；敏感配置走 setup 引导不在工具里透传 secret；嵌入场景用单按钮 OAuth 授权**。
+- 提升层：工具。
+
+## 技能创建五步 + deterministic parts are code（来源：Agent Skills Field Guide + Anthropic skills 最佳实践 + agentskills.io，2026-09-27 实拉）
+- **创建五步**：① 无技能先完成任务 ② 记录你重复提供的信息（上下文/偏好/程序性知识）③ 识别可复用模式（BigQuery 分析→表名/字段定义/过滤规则）④ synthesize 成技能 ⑤ 测试激活（ask agent 触发，不激活→查 description 是否匹配用户意图）。
+- **deterministic parts are code**：必须精确的步骤是 agent 跑的脚本，不是散文解释——确定性逻辑给代码，模糊逻辑给提示词。
+- **从真实 artifacts 综合优于通用文章**：从团队实际 incident reports+runbooks 综合的数据管道技能，优于从通用"数据工程最佳实践"文章综合的。
+- **self-contained + one job**：脚本/模板/示例随步骤放文件夹；一个技能一件事（不是三技能 trench coat）；文件多→token 多，无关/死文件增加上下文窗口。
+- 判据：**新技能先跑五步流程；确定性逻辑落脚本；素材用真实 artifacts 不用通用文章；测试 description 激活回环**。
+- 提升层：可复用 Skill。
