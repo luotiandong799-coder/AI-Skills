@@ -6055,3 +6055,44 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **Webhook-triggered AI agent**：custom webhook module 收第三方数据→agent 处理→回复 webhook（双向），适合外部服务喂数据。
 - **生产可观测**：要绝对清晰"什么数据进了 agent、什么逻辑应用了、什么推给下游"——visual debugging + multi-model routing 是 Make 生产化支撑。
 - **提升层**：工作流（agent 编排）。
+## 工具结果太大三选一 + 静默截断是最大坑（来源：dreaming.press《How to Handle a Tool Result Too Large for the Context Window》2026-07 + Anthropic docs handling-stop-reasons + TianPan《Silent Tool Truncation》2026-05 实拉，与 §Compaction 互补——那条管上下文整体，本条管单次工具结果）
+- **截断 structured payload 是最后手段**：JSON/CSV 被切 mid-token 会变成不可解析的东西，更糟的是**抹掉了"查询返回空"和"返回太多被剪掉"的区别**——模型基于 corrupted premise 自信推理。→ 判据：**宁可返回 count+分页，也不截断**；truncate 只用于 flat text 且你愿意丢尾。
+- **大结果三选一**：Truncate（最后手段）/ **Paginate**（分页让模型按需取）/ **Hand back a handle**（返回引用让模型再取，re-fetchable 时最便宜的 loss——机械编辑零推理成本）。→ 判据：**先问"结果能不能重取"**——能就返 handle，不能就分页，实在不行才截断。
+- **静默截断是 agent 最危险的失败模式**：agent 调外部工具（API/file read/web scrape）输出超 input ceiling 时**静默剪掉**，模型基于被剪输入继续推理——它不报错、不显式停，输出却建立在错误前提上。→ 判据：**agent 化调用必须显式检查工具结果完整性**（长度/截断标记），不能假设工具返回的就是全部。
+- **code execution with MCP 模式**：不给模型直接消费 tool outputs，给 code-execution 环境让模型调工具、进程内过滤、只返回 distilled answer——实测 150,000 token 中间数据 → 2,000 token（98.7% 降）。→ 判据：**中间数据在进程内消化，只把结论放回上下文**——这是工具结果治理的终极形态。
+- **stop_reason==max_tokens 时检查末块**：若最后 content block 是**不完整 tool_use**，用更高 max_tokens 重发而不是当成功；截断的文本响应 append notice 告知读者不完整；续写用 streaming。
+- **渲染 cap ≠ context cap**：Claude Code 表格 200 行 +"… N more rows"只是终端渲染限制，MCP 返回的 3MB 数据照样全进 context——**别把 UI 上的截断当成上下文没超**。
+- **提升层**：模型（工具结果治理）/工作流。
+
+## Agent 评测三层框架 + 中间难度采样：评估像测试代码那样分层（来源：DeepEval 官方+AgDex《How to Evaluate AI Agent Tools 2026》2026-04 + arXiv 2603.23749《Efficient Benchmarking of AI Agents》+ arXiv 2609.02783《EarlyEval》+ Anthropic《Demystifying evals for AI agents》2026-01 实拉，与 §评测驱动开发互补——那条管开发流程，本条管 agent 评测怎么搭）
+- **三层评估，每层一个成本/确定性档**：Level 1 断言式单元测试（快、确定性、每次 commit 跑，抓明显回归）；Level 2 trace 级 + LLM-as-judge（慢、概率性、跑 curated 数据集，抓人眼能注意的微妙质量问题）；Level 3 在线评估 + A/B（连续、生产流量，抓数据集没覆盖的）。→ 判据：**三层各司其职，别用 Level 3 的成本做 Level 1 的事，也别指望 Level 1 抓到 Level 3 才暴露的问题**。
+- **agent eval 检查面不止最终答案**：final answer/tool selection/arguments/execution trajectory/recovery behavior/cost/latency/safety/downstream side effects——"看起来对"不够，如果 agent 用了错系统、重复了动作、过度重试。→ 判据：**agent 评测断言的是轨迹+状态，不只 final message**（深度 agent 每 datapoint 可有自己的 success criteria）。
+- **GEval 元指标**：plain English 定义评估标准，LLM 按标准打分——主观维度（语气合适/响应完整）不用写复杂打分函数。→ 判据：**标准写人话，打分交模型**——别为每个主观维度手写规则。
+- **中间难度采样省 44-70% 评测成本**：absolute score 预测会漂移但 rank-order 稳定，所以只评估历史通过率 30-70% 的中间难度任务（Item Response Theory 依据）——太难/太简单任务区分度低，跳过不损失排序精度。→ 判据：**评测任务池按历史通过率过滤**，不是按直觉选。
+- **EarlyEval 提前停**：LightGBM success/failure 分类器超校准阈值即停 agent run，省 13-26% steps、至多 44.1% 成本——确定性失败不必跑完。
+- **框架分形**：DeepEval（开源 pytest-native）/Braintrust（SaaS eval 原语）/LangSmith（LangChain 栈 observability+eval）/Patronus（安全面）——按部署形态选，不按名气排。
+- **提升层**：可复用 Skill（评测方法）。
+
+## OpenClaw sub-agent 委派与隔离：spawn 隔离 · 模型分工 · 去中心化协调（来源：OpenClaw Playbook《Sub-Agents Guide》2026-03 + openclawai《Subagent workspace isolation》2026-06 + LaunchMyOpenClaw《Multi-Agent Workflows》2026-07 实拉，与 §Make Sub-Agents 互补——那条管"什么时候拆"，本条管"拆了怎么隔离怎么协调"）
+- **spawn 时给足上下文，agent 在隔离里跑**：sessions_spawn({task, agentId, label, timeoutSeconds})——子 agent 只拿到你提供的 context，独立工作目录+独立 task context copy+独立 session lock（v2026.5.28 硬化）：两个并行 agent 不能覆盖彼此文件、不能读半成品状态、hook context prompt-local。→ 判据：**隔离是默认不是配置**——能互相写文件的并行 agent 等于没并行。
+- **子 agent 按任务选模型**：coding→sonnet 级（能办且划算）、simple research→haiku 级（快便宜）、complex analysis→opus 级（省着用）、writing→sonnet 级。→ 判据：**模型分工表写在配置里**——简单任务用贵模型是浪费，复杂任务用便宜模型是返工。
+- **每 agentId 是 fully isolated persona**：不同 channel 可绑不同 phone/account，AGENTS.md/SOUL.md 定义个性——多 agent 不是"一个模型多个名字"，是隔离人格。
+- **AGENTS.md 声明可用 sub-agents，Triage Agent 拆活并行**：复杂任务由 Triage Agent 拆成子任务分给 specialist agents 并行跑。
+- **去中心化协调优于中央编排（复杂项目）**：subagents 通过**共享 state files** 协调而非中央 orchestrator——中央模式主 agent 会成 traffic cop 瓶颈；多 repo 重构/研究 sprint/内容管线这类并行工作流用共享状态文件。→ 判据：**编排者只拆活不传话**——状态走共享文件，任务走 spawn。
+- **委派要五阶段记账**（Intelligent Delegation，DeepMind arXiv 2602.11865）：task tracking / sub-agent performance logging / automated verification / fallback chains / multi-axis task scoring——委派出去不等于不管。
+- **提升层**：工作流（agent 编排/隔离）。
+
+## n8n community node 发布供应链硬化：provenance 强制 · GitHub Actions 发布 · declarative 模板（来源：docs.n8n.io community-nodes/build + verification-guidelines + @n8n/create-node，2026-04/05/09 实拉，与 §GitOps/供应链章节互补——那条管 workflow 本身，本条管第三方节点怎么安全进生态）
+- **2026-05-01 起验证节点必须 GitHub Actions + provenance 发布**：n8n 不再接受本地直接发布的验证节点；provenance statement 让任何人密码学验证"特定 workflow 从特定 repo+commit 构建的包"。→ 判据：**可验证的构建来源是生态准入前提**——本地构建的包无法证明来源。
+- **发布流程自动化**：npm publish 由 .github/workflows/publish.yml 处理（version tag push 触发），带 provenance attestation——开发者本地不碰发布。
+- **脚手架**：
+pm create @n8n/node（declarative/custom 模板）——declarative 风格适合任何 REST API：描述 requestDefaults 等声明式配置，少写代码；@n8n/node-cli bundles n8n for local dev，不用全局装 n8n。
+- **验证指南**：按 guidelines 构建才能提交 Creator Portal 验证；只有开启"verified community nodes"的用户可发现安装验证节点。
+- **提升层**：工具（节点供应链）/可复用 Skill（发布流程）。
+
+## Make 场景并发治理：顺序处理防竞态 · rate limit · 分布式 mutex（来源：help.make.com scenario-settings + schedule-a-scenario + Make Academy《Scenarios and webhook queues》2026-05 + Azguards《Race Conditions in Make.com》2026-04 实拉，与 §Sub-Agents 互补——那条管 agent 编排，本条管场景执行并发）
+- **Dirty Write Cliff 是并行 webhook 的静默灾难**：并行 webhook 突发（如 Stripe payload 涌入）碰撞乐观状态管理，无 native row-level locking → 丢数据/损坏执行状态；解法是 REST 驱动分布式 mutex（ephemeral Redis 层）严格原子执行跨隔离 worker threads。→ 判据：**并行处理不等于可以乱写状态**——有共享写入的场景要么顺序执行要么上锁。
+- **sequential processing 一开即防竞态**：scenario settings 选"process data in order"——每个 run 完成才开始下一个，有 incomplete execution 时不处理新 runs；官方建议：同实体多 bundle 的场景（如同一 Jira issue）开顺序处理。→ 判据：**同实体竞争→顺序处理；不同实体→可并行**——按数据冲突粒度选，不按性能冲动选。
+- **webhook 超限进队**：默认 parallel processing，请求超 plan limit 进 queue；scenario rate limit（默认 100）防 instant trigger 跑太频繁超服务限。
+- **run 命名与重放**：custom run naming 含 environment/scenario key/event type/entity id 便于搜历史；run replay 配幂等做 backfill 和调试。
+- **提升层**：工作流（并发治理）。
