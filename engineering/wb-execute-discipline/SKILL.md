@@ -4846,3 +4846,40 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **生态分层**：编码 agent 运行时（herdr "the runtime your coding agents live on" 40.8k Rust）/ 全插件化框架（deepseek-harness "Everything is a Plugin" 208k）/ 多通道个人助手（OpenClaw 363k）/ 手机读屏副驾（jev-chat-jarvis 6.6k Kotlin QQ/X/飞书候选回复）/ 自改进学习循环（Hermes Agent 113k）/ 可审计自进化（Evolver 6.7k）/ 精简本地（ZeroClaw 30.5k Rust、NanoClaw 27.8k 容器隔离）。→ 判据：个人助手赛道分化出"多通道/手机副驾/自进化/精简"四向，按场景选型。
 - **基础设施面**：统一模型网关（new-api 48.9k OpenAI/Claude/Gemini 兼容转换）/ agentic 数据库（TiDB vector search）/ 低代码 AI（JeecgBoot 47.9k "Skills 生成→在线配置→代码生成→手工合并"）。→ 判据：模型网关与向量数据库成为 agent 基础设施标配。
 - **提升层**：可复用 Skill。
+
+## 工具设计契约四要素与窄工具优于宽包装（来源：Make/Anthropic/AWS 工具面，2026-09-27 实拉）
+- **工具描述即 prompt 的实操化**：OpenAI intern test——人类只看文档能否正确调用该工具；工具名称、描述、示例、边界、参数文档都是 agent 工作 prompt 的一部分。→ 判据：每个工具过一遍 intern test，说不清怎么调就重写描述。
+- **窄工具优于宽包装**：get_invoice_by_id(invoice_id: str) 远安全于 query_database(sql: str) 把原始 SQL 交给 LLM；输入输出用类型化 schema 校验。→ 判据：工具按"单一职责+类型化签名"建，不给 LLM 宽执行面。
+- **工具契约四要素**（AWS Bedrock AgentCore）：clear name（getQuarterlyRevenue 而非 getData）/ explicit parameters（region: string EMEA|APAC|AMER）/ return format（{revenue: number, currency, period}）/ error conditions（404 季度不存在、503 服务不可用）。→ 判据：工具文档必须含名字/参数/返回/错误四段，缺一不可。
+- **namespacing 分组**：工具重叠或用途模糊时 agent 会混淆选哪个；按服务前缀分组（asana_search/jira_search）划清边界。→ 判据：工具一多就按服务域前缀命名。
+- **agent 工具最小权限**：每个 agent 最小 tools/scopes/data/action+风险动作 approval gates+监控每次工具调用+定期移除不再需要权限；数据边界写进 prompt（Only orders from last 90 days/Only data for authenticated customer）。→ 判据：agent 权限按"现在这个任务需要什么"配，不是按"它可能干什么"配。
+- **提升层**：工具/可复用 Skill。
+
+## Pipedream 组件生态：自包含单元 + registry 结构 + CLI 发布（来源：Pipedream components 面，2026-09-27 实拉）
+- **components=自包含可执行代码单元**：triggers 与 actions 统称 components；用户配置输入→产出输出；源码公开在 GitHub 主仓库（11.7K stars）。→ 判据：需要新集成先查 registry 现成组件，不写样板代码。
+- **registry 目录结构**：components/ 下每 app 一个目录（airtable/README.md + airtable.app.mjs + package.json + actions/ + sources/）——app 定义+动作+事件源分文件。→ 判据：贡献组件照目录骨架填，app 定义集中一处。
+- **本地开发+CLI 发布**：本地编辑器开发、代码放自己 repo；sources 可直接从本地部署或 publish；**actions 只能 publish**——发布后默认仅自己账号可用，publish 到 team 才共享。→ 判据：本地维护代码，发布走 CLI，动作组件一律先 publish。
+- **MCP 双形态**：remote MCP server 或 self-host 二选一；2700+ APIs/10000+ tools；Connect SDK 3000+ apps 嵌进自己的 App/Agent 做统一鉴权（pd.triggers.deploy 部署 webhook 事件；per-user auth 单次调用）。→ 判据：把 Pipedream 能力嵌进自家产品用 Connect SDK，鉴权统一到 per-user。
+- **许可证边界**：source-available registry license——代码可读可改但禁止用来跑竞争 SaaS。→ 判据：复用组件前看许可证，商业竞争场景不直接搬。
+- **提升层**：工具/工作流。
+
+## agent skills frontmatter 契约：元数据加载与正文动态加载（来源：Anthropic skills/frontmatter 面，2026-09-27 实拉）
+- **description+when_to_use 合并截断 1536 字符**：技能列表里二者合并展示并计入 1536 字符 cap——用关键用例开头，超长会被截掉。→ 判据：技能描述第一句就是"做什么+何时用"，前 1536 字符内给完触发信息。
+- **仅元数据常驻，正文按需加载**：会话开始只加载 name+description；正文（SKILL.md body）在调用时动态加载（slash command 或自动触发）。→ 判据：把触发判断全部压进 description，正文假设"被选中后才被读"。
+- **name 契约**：display name 可选、目录名兜底；lowercase/numbers/hyphens max 64；agentskills.io spec 要求 name required 而 Claude Code optional。→ 判据：跨平台发布的技能显式写 name，不依赖目录名。
+- **保留词与一致性**：anthropic-helper/claude-tools 为保留词；技能集合命名一致便于文档引用。→ 判据：发布前查保留词表，集合内命名风格统一。
+- **提升层**：可复用 Skill。
+
+## 国内 agent 平台生态观察：三模式/技能市场/跨端协议（来源：腾讯元器/智谱 AgentMore/阿里阿宝面，2026-09-27 实拉）
+- **腾讯元器**：标准/单工作流/Multi-Agent 三应用模式；发布渠道管理（元器官网默认不可改删，可加微信公众号/小程序/微信客服/API；公众号授权审核后微信端 AI 分身）；测试验证→发布正式环境。→ 判据：国内微信生态分发选元器，多渠道发布一次配置。
+- **智谱 AgentMore**：智能体协作+技能市场扩展；多角色并行+工具调用；创建 Agent 安装 Skills；AutoGLM 自主执行 50+ 步长步骤跨 app。→ 判据：个人智能体要技能市场现成 Skills 用 AgentMore，长步骤操作看 AutoGLM 型。
+- **阿里阿宝/AHA**：超级服务智能体阿宝万余项服务 AI 化接入（出行/点餐/文旅/政务八大场景）；AHA 跨端智能体互联协议（手机/车企/大模型多智能体协同）；CoPaw/JVS Claw 零代码养虾生态（无需配置节点与 API 密钥、万能 skill 自进化）。→ 判据：跨端智能体互联已成国内大厂共识方向，个人接入看零代码平台。
+- **大模型五阶段**（智谱）：Chat→Coding→Agent→Co-work→Autonomous AI 顺序跨越——当前阶段交付完整多步任务链。→ 判据：评估 agent 能力看它交付的链条长度，不是单轮问答质量。
+- **提升层**：可复用 Skill。
+
+## DSH 插件生态：Everything is a Plugin 的具体化（来源：deepseek plugin 生态面，2026-09-27 实拉）
+- **全可替换插件面**：模型/工具/UI/SKILL/MCP/API 全部是插件；"大模型负责理解推理，Harness 负责执行，插件让 AI 按需获得专业能力"。→ 判据：选 harness 看它的插件面是否覆盖模型/工具/UI/SKILL 全层。
+- **生态规模与市场入口**：deepseekplugin.cn 28 用途分类/6725 可安装验证/8330 结果；dsh-market 设置页内浏览搜索安装、分类筛选、一键更新停用、配置备份；dsh plugin add dsh-plugins-store 安装。→ 判据：装插件走市场内建入口，分类筛选+一键更新管理。
+- **插件方向清单**：UI 皮肤/会话增强/记忆（OpenViking 跨会话记忆）/工具/工作流/多 agent/自动化/视觉（modlens 给模型装眼睛）/侧边工作台（better-sidebar）/快速引用（dsh-at-file）/多源搜索（dsh-web-search-pro）/费用看板（dsh-cost-meter）。→ 判据：个人提效先看记忆/搜索/费用三方向现成插件。
+- **商业化长尾观察**：9 块 9 皮肤是 ToC，数据库巡检/云部署编排插件是 ToB——开源可插拔 harness 天然适合私有定制。→ 判据：评估插件生态价值看垂直场景插件，不是皮肤数量。
+- **提升层**：可复用 Skill。
