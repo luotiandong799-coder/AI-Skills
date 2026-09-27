@@ -4372,3 +4372,36 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **多目录结构单仓库多技能**：根 SKILL.md/skills//skills/.curated//skills/.experimental/——CLI 自动扫描，一仓库装多技能。→ 判据：技能仓库按目录分层组织，CLI 扫描即可发现，无需注册表账户。
 - **npx skills add owner/repo**：无 registry 账户直接安装；安装 telemetry 自动入榜。→ 判据：技能安装走 owner/repo 直装，贡献者自动获得可见性。
 - **提升层**：可复用 Skill。
+
+## 检索双层过滤 + 三级 Metadata 过滤 + 多模态检索（来源：Dify 知识库/检索面，2026-09-27 实拉）
+- **检索双层过滤**：knowledge base 层决定初始结果池，knowledge retrieval node 层 rerank 收窄/重排——两个连续过滤器，别把两层当一层调。→ 判据：先调 KB 层定池子大小，再调 node 层 rerank 精度。
+- **三种检索选型**：Semantic（向量语义，自然语言问题）/Full-Text（BM25 关键词，产品码/ID 精确匹配快速可预测）/Hybrid（语义+全文+reranker 最准但慢需 rerank 模型）。→ 判据：精确项查询走全文，概念查询走语义，两者混合走 hybrid+rerank。
+- **三级 Metadata 过滤**：Disabled/Manual（显式条件对象）/Automatic（LLM 从用户自然语言查询提取过滤条件）。→ 判据：查询含"只要 XX 部门/某时间段"时开 Automatic，让 LLM 抽过滤条件，别硬编码。
+- **多模态检索**：VISION badge 多模态 embedding+rerank；图片 chunk 级管理——多模态模型图片向量化参与检索；文本模型图片仅附件随 chunk 返回。→ 判据：要检索图片内容选多模态模型，只要图片作附件文本模型即可。
+- **提升层**：工作流/工具。
+
+## Code Node 契约 + 社区 JSON parser 多提取法（来源：n8n 数据转换/Code node 面，2026-09-27 实拉）
+- **Code Node 输入输出契约**：输入 [{json:{...}}]，输出必须同构 return [{json:{...}}]；默认 JavaScript，不支持 require（除内置库）不能装 npm 包。→ 判据：Code 节点只做纯函数转换，复杂逻辑拆多节点。
+- **数组转 JSON 字符串**：.messages.toJsonString() 内联转合法 JSON；或 Raw/Custom body JSON.stringify。→ 判据：HTTP 请求传数组字段用 toJsonString，别让模板引擎拆坏。
+- **Code node 作最终安全网**：parser 后校验（route 不在白名单 throw）阻塞下游。→ 判据：LLM 输出解析后必过白名单校验，不合格直接抛错不流向下游。
+- **社区 JSON parser 多提取法**：Smart Detection/First-Last/All/Between Markers（markdown 代码块）/Custom Regex——AI 输出常在对话/代码块内嵌 JSON。→ 判据：从 LLM 回复挖 JSON 用专用 parser 的 Markers/Regex 模式，别手写正则硬抠。
+- **提升层**：工作流。
+
+## Memory bases per-flow 自动摄取 + DB Provider 时点绑定（来源：LangFlow 记忆/存储面，2026-09-27 实拉）
+- **Memory bases**：per-flow vector stores 自动摄取会话消息，跨 sessions 持久会话上下文——区别于 session-scoped memory。→ 判据：要跨会话记住对话历史用 per-flow memory base，接 agent 自动检索。
+- **DB Provider 时点绑定**：Settings→DB Providers 选 provider 应用于所有新建；已有 KB/memory 继续用创建时的 provider 不迁移。→ 判据：切向量库后旧数据不搬家，新旧并存按创建时点隔离。
+- **Local DB 组件**：Chroma DB 增强版 Ingest/Retrieve 两模式，自动 collection 管理，持久化 cache 目录。→ 判据：本地原型用 Local DB 零配置，生产换远端 provider。
+- **提升层**：工具。
+
+## Prompt caching 双模式 + 批量免延迟溢价（来源：Anthropic 上下文工程面，2026-09-27 实拉）
+- **Automatic vs Explicit 双模式**：Automatic 单 cache_control 顶层字段系统自动把 breakpoint 放最后 cacheable block 随对话推进；Explicit 手动标最多 4 个 breakpoint。→ 判据：多轮对话用 automatic，RAG 文档/指令稳定段用 explicit 精确控制。
+- **成本细节**：cached reads 10% base input price；5-min TTL 默认/1h extended；write multipliers 1.25x（5min）/2x（1h）；breakpoint 前 min 1024 tokens（Fable 5 direct 512，Bedrock 仍 1024）。→ 判据：缓存块凑够 min tokens 再断点；长 TTL 只给稳定内容（写乘数 2x）。
+- **breakpoint 位置纪律**：放稳定内容边界——RAG 文档更新不失效工具/指令缓存。→ 判据：动态内容（RAG）放断点前，静态指令放断点后。
+- **Message Batches API**：免 latency premium 异步批量处理；Token counting 发送前测量请求，prompt bloat 构建时发现。→ 判据：不急着要结果的大批量走 batches；发请求前先数 token 看是否膨胀。
+- **提升层**：工作流。
+
+## 自进化 Context Database + 决策化 compaction（来源：GitHub 生态面，2026-09-27 实拉）
+- **OpenViking 模式**：Self-evolving Context Database for AI Agents——统一 Agent Memory/Knowledge RAG/Skills 于一个上下文库。→ 判据：记忆+RAG+技能共用一库时按"自进化 context db"整合，别三套隔离。
+- **Jev 决策化 compaction**：Claude Code plugin 替换 compaction summary——每个 tool call/result 一次快请求评分，过时 drop/truncate。→ 判据：压缩不靠摘要生成而靠逐项评分决策（保留/丢弃/截断），保活关键工具结果。
+- **Agentic tooling 主导信号**：builder 从 prompt wrappers 进入 full agent infrastructure。→ 判据：新工具先问"是否 agent 基础设施层"，prompt wrapper 类不投入。
+- **提升层**：工具/工作流。
