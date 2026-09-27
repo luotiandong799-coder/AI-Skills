@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度
-version: 3.14.0
+version: 3.15.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -419,3 +419,25 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **★user-invoked 技能多到记不住时，解药是一个 router skill**：原文 "that piled-up cognitive load is cured by a router skill"——一个 user-invoked 技能把其他技能的名字与各自何时用列出来。判据：**认知负载堆到记不住，不是把每个技能都改成 model-invoked，而是加一层索引**；前者把成本转回上下文，后者只付一份。
 - 与 §命名时态、§description 三条机检纪律 的分工：那两条管"名字与描述怎么写对"；本条管"**这个技能到底要不要对模型可见**"——先定可见性，再打磨描述。
 - 提升层：可复用 Skill / 工作流。
+
+## 技能静默成本与描述截断治理：不触发也花钱、触发短语放最前、/doctor 查截断（来源：Anthropic《Skill Costs》实测 + claude.com/blog/lessons-from-building-claude-code，2026-09-27 r231-B/C 实拉）
+- **技能不触发也花钱**：5 技能 × 7 小时实测，dormant skills 描述层 **231K tokens 占 11% 账单**，3 个从没触发的技能占 18%——**每个 description 每轮都进上下文，装技能不是免费的**（与 §两种预算·model-invoked context load 同源：那条管"可见性取舍"，本条管"装了之后的账单"）。
+- **提交技能前用 token counting API 估算描述成本**，超预算先砍描述再装。
+- **触发短语放描述最前**：上下文压力下 description 会被截断，**截掉的就是调用入口**；`/doctor` 可检查描述是否被缩短。
+- **副作用技能禁止自动调用**：deploy/commit/notify 类设 `disable-model-invocation: true`——有副作用的技能不该被模型顺手调用；触发权=风险权。
+- **触发信号诊断表**：不加载→描述加细节关键词；过度触发→加负面触发更具体；输出不一致→加 examples/ 好输出示例。
+- 判据：**描述是技能唯一的广告位**——先量它的每轮成本，再把最重要的触发词放最前；副作用技能手动触发。
+- 提升层：可复用 Skill。
+
+## Gotchas section 是技能最高信号内容：从失败点积累，随时间更新（来源：claude.com/blog/lessons-from-building-claude-code，2026-09-27 r231-C 实拉）
+- **技能的 Gotchas 区写"用这个技能时真实撞到的失败点"**，随使用持续更新（Anthropic 例：subscriptions 表是 append-only 是踩过坑才知道的）——**价值一半在别人踩过的坑，把坑写进 Gotchas 不是写进正文**。
+- 判据：写技能时先问"用的时候最容易在哪出错"，Gotchas 区是该答案的固定归宿；正文写怎么做，Gotchas 写别怎么做、为什么。
+- 与 §技能写作十项 checklist 的分工：checklist 管"结构齐不齐"，本条管"失败经验的沉淀位置"。
+- 提升层：可复用 Skill。
+
+## 工具描述即 prompt：模型完全按描述决定调用，每个描述=迷你操作手册（来源：musketeerstech.com《Prompt Engineering Best Practices for AI Agents 2026》+ pickaxe.co，2026-09-27 r231-C 实拉，与 §工具描述可注入 互补——那条管"安全面"，本条管"写法的质量面"）
+- **工具型 agent 里模型依据 name/description/parameter docs 决定调用什么、传什么参数**——**模糊描述产生错误调用，没有 system prompt 能修**；每个工具描述按写 prompt 的标准写（做什么/何时用/参数契约）。
+- **单 agent 封顶约 4 个 action**：更复杂→waterfall 路由到专门 sub-agents，**不把 10 个工具塞进一个 prompt**（工具数超过认知负载就拆层）。
+- **atomic-over-composite（单 action 单能力）**（Activepieces 设计哲学，2026-09-27 r231-A 实拉）：每个 action 只做一件能力、输入显式化——复合操作拆成原子步，模型好理解、失败好定位；配 throttling 防 agent 淹没 API。
+- 判据：**写工具描述按写 prompt 的标准来，不是填空**；工具超过 4 个就分层，不硬塞。
+- 提升层：可复用 Skill。
