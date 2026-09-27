@@ -5099,3 +5099,36 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **inputs 类型匹配**：boolean/number/string 类型必须与 called 声明一致；输出可返回 caller 后续 job 使用。→ 判据：定义时钉死类型，调用时按类型传。
 - **跨仓库共享**：uses: owner/repo/.github/workflows/file.yml@ref；github 上下文永远关联 caller；called 自动获得 github.token/GITHUB_TOKEN；secrets 值从日志 redacted。→ 判据：共享自动化走 reusable workflow+显式契约，token 交给平台注入。
 - **提升层**：工作流。
+
+## Activepieces worker 架构与沙箱：拆 app/worker + SANDBOX_CODE_ONLY + 一 flow 一 worker（来源：Activepieces worker/execution 面，2026-09-27 实拉）
+- **容器角色拆分**：同镜像两角色由 AP_CONTAINER_TYPE 选择——APP（只服务 API/UI，不再拉 flow，重 run 不拖慢界面）/ WORKER（只执行）/ WORKER_AND_APP。→ 判据：生产把执行与界面拆开，AP_CONTAINER_TYPE=WORKER 只配 APP 侧 AP_FRONTEND_URL+AP_WORKER_TOKEN。
+- **沙箱策略**：AP_EXECUTION_MODE 是自托管最重要的安全选择——UNSANDBOXED/SANDBOX_PROCESS/SANDBOX_CODE_ONLY/SANDBOX_CODE_AND_PROCESS；企业推荐 SANDBOX_CODE_ONLY（V8 隔离，多租户安全+非特权容器+Cloud 同款+K8s 安全基线内）。→ 判据：多租户/企业部署钉 SANDBOX_CODE_ONLY，别用 UNSANDBOXED。
+- **并发与资源**：AP_WORKER_CONCURRENCY 默认 5；生产推荐 1（一 worker 一 flow，0.5vCPU/1GB，约 300MB 温进程开销）；AP_REUSE_SANDBOX=true 复用 engine 进程。→ 判据：稳定优先把并发钉 1，用 worker 数量扩缩容而非提升单机并发。
+- **崩溃恢复**：runs durable 自动 re-queue——可无 drain 滚动重启/重部署/驱逐 worker，无 in-flight 丢失。→ 判据：升级 worker 直接滚动替换，不依赖优雅关闭钩子。
+- **提升层**：工具。
+
+## Anthropic 预建 Skills 与 API 集成：code execution tool + 挂载 + 审查（来源：Anthropic Skills 官方库 API/managed agents 面，2026-09-27 实拉，增量并入 r249-B frontmatter 契约）
+- **API 层集成**：Agent Skills 经 messages API 的 code execution tool 集成——预建 pptx/xlsx/docx/pdf 四类文档技能直接可用；Managed Agents attach pre-built/custom skills，支持从 GitHub repo 加载挂到 session。→ 判据：API/托管 agent 要文档处理能力先挂预建 skill，不自己写文档生成逻辑。
+- **Skills 自动触发**：agent 相关时自动调用，无需用户手动指定；custom skills 可打包领域专长与组织知识跨产品可用。→ 判据：触发靠 relevance 不靠手动点名，与 §技能评测闭合邻域 的 activates 显式点名互补（那是评测期，这是运行期）。
+- **自定义技能安全审查**：附可执行代码谨慎；不硬编码敏感信息（API key/密码）；下载的 skills 启用前审查；外部服务访问用 MCP 连接而非内嵌凭据。→ 判据：装第三方 skill 先审文件再 enable，凭据一律走 MCP/环境变量。
+- **提升层**：工具。
+
+## OpenClaw 身份三层与 heartbeat：SOUL/IDENTITY/config 分离 + 自主运行循环（来源：OpenClaw agents concepts/identity 面，2026-09-27 实拉）
+- **身份三层分离**：Soul（SOUL.md 行为哲学/声音/价值观——"who it fundamentally is"）/ Identity（IDENTITY.md 呈现与 persona）/ Configuration（openclaw.json+TOOLS.md 技术能力与模型选择）——改呈现不改本质。→ 判据：人设/呈现/能力三文件分开维护，改口吻不碰行为规则。
+- **stateful agent**：进程间保留记忆——简单记住名字到复杂调试会话进度；无状态 agent 每个 prompt 都是白板。→ 判据：跨交互任务用 stateful（记忆持久化），一次性查询可用无状态。
+- **层级 agent 模型**：parent 收任务拆解委派；sub-agent 隔离 session 执行返回结果；result routing 汇总。→ 判据：复杂任务 parent 拆、子隔离做、结果集中回，与 §多 Agent 协作纪律互补。
+- **heartbeat 自主运行**：定期查任务列表、评估需行动项、行动或等下一周期——本地优先自主 agent 的推进方式。→ 判据：常驻 agent 用 heartbeat 周期驱动，不靠每条消息被动唤醒。
+- **提升层**：工作流。
+
+## HF Skills 标准化与 Skill Card：OpenAPI 工具定义 + Card 三件套 + 版本管理（来源：Hugging Face skills 面，2026-09-27 实拉）
+- **Agent Skills 格式标准化**：HF Skills 是标准 Agent Skills 格式（SKILL.md YAML frontmatter），兼容 Claude Code/Codex/Gemini CLI/Cursor 四 runtime；工具定义用 OpenAPI 规范+JSON schema——LLM 原生理解的结构。→ 判据：技能发布面用统一 SKILL.md 格式+机器可读工具 schema，跨 runtime 复用。
+- **Skill Card 三件套**：类似 Model Card——清晰描述能力/限制/适用场景/评估指标。→ 判据：技能元数据四要素齐（能做什么/边界/何时用/怎么评），缺评估指标的 Skill Card 不可信。
+- **版本管理与兼容性矩阵**：Skills 可像模型一样版本控制，支持 A/B 测试迭代优化；标注每个 skill 在不同模型（GPT-4o/Claude/Gemini）上的表现差异降低选型成本。→ 判据：技能变更走版本+兼容性标注，换模型前先查矩阵。
+- **零本地脚本**：hf skills 用 uv 内联依赖（PEP 723）打包 Python 脚本——查询远程数据集（DuckDB）/调度云端 GPU 微调（AutoTrain/Training Cluster）无需本地安装。→ 判据：技能内脚本用内联依赖自包含，目标机器零安装。
+- **提升层**：可复用 Skill。
+
+## 大模型五阶段：Chat→Coding→Agent→Co-work→Autonomous AI（来源：智谱 AgentMore/清流面，2026-09-27 实拉）
+- **五阶段阶梯**：Chat（交付一次性问答）→ Coding（交付可运行代码）→ Agent（交付完成的多步任务链）→ Co-work（交付可被专业人士复核的专业成果）→ Autonomous AI（交付持续自主运行的系统）——必须按顺序跨越，每阶段有明确技术门槛。→ 判据：判断"产品到哪个阶段"看交付物形态（答案/代码/任务链/可复核成果/自主系统），不按宣传词。
+- **平台组合**：智谱清流=零/低代码编排+企业知识库 RAG+效果评测迭代闭环+AutoGLM 界面操作代理——"平台编排+代理执行"组合；AgentMore=多 Agent 协作+Skills 市场（基础免费）。→ 判据：平台选型看编排与执行是否协同（编排层+代理层同产线）。
+- **AutoGLM 能力信号**：50+ 步长操作跨 app 执行；GLM-PC 像人一样操作计算机。→ 判据：长步骤跨 app 自主操作已产品化，复杂 GUI 任务可委托此类代理。
+- **提升层**：工作流。
