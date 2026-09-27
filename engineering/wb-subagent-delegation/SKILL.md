@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.4.0
+version: 1.5.0
 agent_created: true
 ---
 
@@ -83,3 +83,12 @@ agent_created: true
 - **★trace 要能区分"基础设施失败"与"prompt 里的逻辑错误"**：原文按步记录输入输出，用来分辨是基础设施挂了还是 agent 的指令写错了。判据：**子代理回传失败时必须带足够信息让主代理判断"重试有没有用"**——基础设施类重试有效，逻辑类重试只会再错一次。
 - 与 §执行环境隔离（显式句柄）、§拓扑选型 的分工：那两条管"产物放哪""块怎么连"；本条管"**连起来之后整条链的记录在不在一处、能不能整条取走**"。
 - 提升层：工作流 / 可复用 Skill。
+
+## 双模型主-副手编排：强模型规划审查 + 廉价模型执行，各持上下文与缓存（来源：The Batch issue-372「One Agent Works, Another Directs」Devin Fusion / Sakana Fugu 实测，2026-09-27 r232-A 实拉，Cognition 独立评估 + Artificial Analysis Coding Agent Index v1.5）
+
+- **★一个强 lead 管规划与审查，一个廉价 sidekick 干大部分执行活**：lead 负责消解用户请求歧义、写 plan、审 sidekick 的产出；sidekick 读/改/测并回报。两者**各自持有自己的工具与上下文（各自的 prompt cache）**，不是把任务从一个模型顺次交给另一个。判据：**"用两个模型"的省法不是路由切换，是"让贵的只做贵的活（规划/审查/难块），便宜的做重复执行活"**；lead 在 sidekick 卡住时收回任务重派。
+- **★交换的是 brief / 结果 / 反馈，不是整段对话**：lead 给 sidekick 的 task brief 写明约束与成功标准；sidekick 回传结果与问题；彼此不搬对方的全量上下文。判据：**每个 agent 保住自己的上下文与缓存折扣的前提是"只传契约不传历史"**——把全文塞给对方就退化成单 agent 长上下文，缓存红利消失。
+- **★换模型必须在 compaction 边界做，否则省下的钱被重填缓存吃掉**：普通"中途把任务交给另一个模型"会清空缓存，按 frontier 价格重填就把路由省下的钱抵消掉；compaction（agent 总结前文缩小上下文，缓存本就被丢弃）是换模型的零成本时机——轻量分类器在 compaction 时判断是否把 sidekick 的活交回 lead、或把 sidekick 角色升级成更强模型。判据：**模型路由的净收益 = 省下的 token − 重填缓存的成本；换模型必须挑缓存本来就要丢的时机，否则路由是负优化**。
+- **★实证锚点**：Devin Fusion（lead Claude Fable 5.1 + sidekick SWE-2）在 Coding Agent Index v1.5 上匹配 Claude Code 用同模型（62分），但每个任务便宜 **36%**（$7.90 vs $12.40）；Sakana Fugu 走 dispatcher 派单（低成本模型拆任务派给池里最合的模型）是另一种已被验证的形态。判据：**多模型不是噱头——架构对，能在同质量下明显降本；但"哪个模型当 sidekick"要按实测效率选，不是按单 token 单价选**（SWE-2 比更便宜也更聪明的 GPT-5.6 Luna 又快又省）。
+- 与 §拓扑选型（分层 hierarchical）、§同 run 同 trace 的分工：那条管"派出去之后怎么连""记录在一处"；本条补"**连的是两个不同档位的模型、且各自保缓存**"这一具体成本形态，与 `wb-max-token-saver` 的"整体成本四层"互补但本体是委派架构（重叠 <60%）。
+- 提升层：工作流 / 成本。
