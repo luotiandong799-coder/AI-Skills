@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.25.0
+version: 3.26.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -27,7 +27,6 @@ version: 3.25.0
 - **披露预算要有硬数字**（来源：agentskills.io Specification，2026-09-27 实拉）：`name`≤64 / `description`≤1024 且**必须带关键词触发词**（帮 agent 在启动时从全部技能里识别相关任务）/ `compatibility`≤500；正文 `SKILL.md` **控制在 500 行以内**，超出拆到 `references/`；文件引用**只下探一级**（避免引用链套引用链把上下文切碎）；加载分三档——元数据 ~100 token（常驻）/ 正文 <5000 token（激活时）/ 资源按需。判据：**超过预算不叫"内容多"，叫"没做渐进披露"**。
 - **技能可从自身 trace 里挖，但晋升要人批**（来源：deeplearning.ai《Building Adaptive AI Agents》(Oracle)，2026-09-27 实拉）：把 agent 的执行轨迹（traces）转成**可复用、经人批准的技能**是一条合法的生产线——但**自动挖掘≠自动上线**，晋升为正式技能前必须过人工批准门（避免把一次偶然跑对的路径固化成规则）；与之并列的第一等决策是**"改模型本身"还是"建技能"**：模型在任务上系统性不行才考虑换/训模型，只是缺流程知识就该建技能，二者别混。
 - **只写跑过的**：没实际执行过的流程不写进技能，否则变成假规则
-
 ## 写"什么时候不该跑"：STOP / WAIT / PROCEED 快速路径表
 
 来源：GitHub `william-london/ownframework-loop` `.agents/skills/of-loop-{build,review}/SKILL.md`（2026-09-14 增量）。好的技能不只写"怎么用"，还在**最前面**用一张表声明**当前状态下该做什么**：
@@ -41,7 +40,6 @@ version: 3.25.0
 - **STOP 分支最重要**：技能被反复触发是最大的隐性浪费，"已经做完了"时必须能直接退出，而不是再跑一遍。
 - **WAIT ≠ 自己动手补**：缺前置物时**不要自己创建它**（评审技能不得自己去创建构建产物），否则两个角色变成同一个角色，独立性没了。
 - 声明"不该跑"比声明"该跑"更能防止误触发，也是**负向边界的可执行版**（不只是"不适用于…"，而是"遇到 X 就 STOP / WAIT"）。
-
 ## 技能是"指令 + 所需工具"的打包，不是一段文字
 
 来源：n8n Docs《Build and manage agents》（2026-09-14 实访 Markdown 原文）：*Skills = reusable behavior bundles that package instructions with the tools needed for a specific task.*
@@ -50,7 +48,6 @@ version: 3.25.0
 - **因此写技能时要同时回答两个问题**：① 怎么做（步骤/规则）② 用什么做（脚本 / 命令 / 依赖）。缺第二个，技能就是不完整的。
 - **可复用的判定在"任务"这一层**：按"一类任务"打包，不按"一次操作"、也不按"一个领域"打包——太细会碎片化，太粗会变成什么都往里塞的杂物间。
 - 与「文件拆分」配套：指令进 `SKILL.md`，工具进 `scripts/`、资料进 `references/`，**打包的是同一件事的三种形态**。
-
 ## SKILL.md 的兄弟格式：Agent SOP（自然语言工作流，可互转）
 来源：AWS Strands「Agent SOPs」官方博客 + `strands-agents-sops` 包（strandsagents.com/blog/introducing-strands-agent-sops，2026-09-22 r136 首读）。
 SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一件事的两种表示**，不是竞争关系：
@@ -59,7 +56,6 @@ SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一
 - **SOP 多给的一步——参数化**：SOP 显式声明 required/optional 参数（带默认值），把单次 prompt 变成灵活模板；本技能写 SKILL.md 时也可在 frontmatter 或正文补「可调参数」段，提升复用面。
 - **步骤约束可借 RFC 2119**：SOP 用 `MUST/SHOULD/MAY` 给每步定半确定语义（见 `wb-spec-driven` §7）。本技能写 SKILL.md 的步骤时同样适用——不可协商写 `MUST`、推荐写 `SHOULD`、可选写 `MAY`，`SHOULD` 被跳过须说明，避免约束退化成装饰。
 - **何时用 SOP 而非 SKILL.md**：工作流偏「人在环中、按步交互、要进度可恢复」（SOP 自带 progress tracking & resumability）时，SOP 更轻；偏「被 agent 静默调用、讲究触发准确性」时，SKILL.md + 本技能体系更合适。二者可并存，SOP 是技能库的补充来源。
-
 ## description 怎么写（决定触发的唯一因素）
 - **写"何时用"，不写"是什么"**：description 是路由器，不是简介。开头就给触发场景（"当用户要求 X / 出现 Y 场景时使用"），其次才是能力范围
 - **把用户的原话写进去**：用户会说的说法（含中英文、口语、错拼）都列进触发词——模型靠语义匹配，不靠理解你的命名
@@ -67,7 +63,6 @@ SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一
 - **边界写进描述**：明确"不适用于什么"（如 ponytail 写"非代码任务不套用"），防误触发比补充触发词更省事
 - **负向边界声明成段**（来源：阿里云 Skills / ModelScope 生态的通用写法）：能力封装类技能在描述或正文开头写显式的 `不适用于：…` 段（如支付宝 skill 写"不用于微信支付、银联支付、对账、红包等非收单场景"）——把最容易误触发的一批相邻场景**点名排除**，比只写正向触发词收得准得多
 - **一处修改即可生效**：description 是唯一被常驻加载的字段，正文只在触发后才读——所以约束的第一层防线必须在 description 里
-
 ## 描述的两条硬规格与一条写法纪律（来源：agentskills.io 官方 Specification / Optimizing descriptions，2026-09-15 实拉新站）
 `agentskills.io` 是 Agent Skills 的**官方开放规范站**（原在 `anthropics/skills/spec/`，现为独立站，`/llms.txt` 有全量索引）。它给 description 定了可机检的边界，另有一条反直觉的写法纪律：
 - **硬规格**：`name` 1–64 字符、只能小写字母/数字/连字符、**不得以连字符开头或结尾、不得出现连续连字符、必须与父目录同名**；`description` **上限 1024 字符**且非空。名称不与目录同名是巡检能直接抓的静默故障。**name 另禁含保留词 `claude` / `anthropic`**（否则上传校验拒绝打包——anthropics/skills #1605「rename to avoid reserved words」2026-08-18 实拉确认；Agent Skills 标准把这两个词列为保留，作者不可写入名称）。
@@ -75,7 +70,6 @@ SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一
 - **倾向强势（err on the side of being pushy）**：显式列举适用场景，**包括用户没有直接点出领域词的情形**（"即使他没说'CSV'或'分析'"）。宁可多列，触发不足比过宽更难发现。
 - **面向用户意图，不写实现机制**：agent 拿用户原话去匹配，匹配的是用户想达成什么，不是技能内部怎么实现。
 - **反直觉事实：简单请求可能根本不查技能**（来源：同上《Optimizing descriptions》）。agent 通常只对**超出自身能力**的任务去翻技能库——"读一下这个 PDF"这类单步请求，即使描述完美匹配也可能不触发，因为基础工具就能做。**该触发却没触发时，这是第 0 层原因**，先排除它再改描述。
-
 ## 追加触发词只准加在末尾；加在开头会挤掉首句（2026-09-20 本仓库实修，来源：WorkBuddy 线 D4 描述层重构）
 
 **实测事故**：本仓库 7 个 `wb-*` 技能长期用「把新一批触发词补到 description 开头」的方式增补。累积若干轮后，两个技能的首句被彻底挤走——`wb-skill-authoring` 的 description 以 `、评估型输出、按能力透视、` 开头（**一个孤立顿号起头**），`wb-ponytail` 以 `、产物存活期、TTL、` 开头，真正的功能句"Skill 的写法与体检（…）""写代码 / 实现功能类任务前的决策阶梯（YAGNI）"被推到**第 200–300 字符之后**。
@@ -108,7 +102,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
   3. **重述类指令不要把范围钉死在一句上**。判据：**说"重讲那个"而不是"重讲上一句"，把回退距离交给执行方**——它比你知道是哪一段开始断的。
 - 提升层级：可复用 Skill（正文长度与指令措辞）+ 模型（指令如何被服从）。
 - 触发词：三行即设计、技能长度是训练信号、verbosity matters、命名输出还是状态、be concise 陷阱、wait you lost me、重述范围、长技能教坏模型。
-
 ## 被别的技能引用时"静默没加载"的运行期信号：目标产物零改动，要在调用处显式点名（同来源 `domain-modeling` 参考技能自述失败模式，与 §技能静默不加载（CRLF 破坏 frontmatter） 分工——那条管"解析器读不到 frontmatter"，本条管"**frontmatter 没问题、也确实被引用了，但模型跳过了它**"）
 
 - **原文事实**：`domain-modeling` 是一个**常跑在别的技能底下**的参考技能——`grill-with-docs` 驱动它、`wayfinder` 画图时加载它、`triage` 用它维持工单词汇。文档承认自动调用是它最弱的一环：**"when grill-with-docs or wayfinder say to load it, models frequently load grilling and skip this one"**。识别信号被明写出来：**一次 grilling 会话结束，而你的 `CONTEXT.md` 一行没动**——那就是它没被加载。修法同样明写：**在你真正在意的时候，把技能名字显式点出来**（"name the skill explicitly alongside the other one"）。另一条同源事实：**未经评审的、由 agent 生成的术语表，比没有术语表更糟**——原文称其为 "*confident-sounding lore that later sessions treat as truth*"，后续会话会把它当既定事实引用。
@@ -121,7 +114,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 
 
 ---
-
 ## 技能是一份契约：把字节花在"我不做什么"上，并声明输入与输出（来源：topaiskills.com「repo-intake-and-plan-narrative-experience」（RigorPilot `repo-intake-and-plan`，SKILL.md 仅 2,123 字节）2026-09-21 独立实拉，与 §负向边界（不适用于）声明成段 分工——那条管"**哪些场景别触发**"，本条管"**触发之后，我承担什么、不承担什么、进出各是什么形状**"）
 
 - **原文事实**：这个技能的 SKILL.md 极短，且**把大部分字节花在拒绝上**——不装环境、不下大资产、不执行实质性复现命令、不做高风险补丁决策；description 块本身就是一份拒绝清单（环境搭建 / 资产下载 / 命令执行 / 最终报告 / 论文检索 / 端到端编排，六条）。同时它把两端钉死：**输入契约＝一个仓库路径 + README**；**输出契约＝五件东西**（结构摘要 / 文档化命令清单 / 候选分类 / 最小可信复现建议 / 显著的歧义与风险）。作者的阅读体验被原样记下：**"Reading the SKILL.md felt like reading a contract for a service that guarantees, up front, what it won't do to you."**
@@ -131,7 +123,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
   3. **拒绝清单越长，技能越容易被正确调用**。判据：**当技能的能力面明显小于名字暗示的范围时，拒绝清单的收益高于正向描述**——使用者是靠"它不是干这个的"来定位它的。
 - 提升层级：可复用 Skill（技能契约结构）。
 - 触发词：技能契约、输入契约、输出契约、拒绝清单、我不做什么、what it won't do、产出枚举到件数、能力面小于名字。
-
 ## 明写"模型的参数化知识不是真值"：知识未落地前，模型的任务是找源不是作答（来源：topaiskills.com「teach-skill-faq」（Matt Pocock `teach`）2026-09-21 独立实拉，与 §技能要声明原料假设 互补——那条管"从对话里综合"，本条管"**从模型自己的权重里取**"）
 
 - **原文事实**：`teach` 的 SKILL.md 明写 **"never trust your parametric knowledge"**——在 `RESOURCES.md` 被充实之前，模型的职责是**去找高质量的外部资源**，并且**每一课都要挂满引用**（"Lessons should be littered with citations to back every claim"）。技能建立在一条显式假设上：**模型内置的知识不是地基，是有待对照可信来源核验的起点**。同源还有一条准入门槛：**没有 mission 就先访谈再教**——格式文件原话 "**a bad mission is worse than no mission**"。
@@ -144,7 +135,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 
 
 ---
-
 ## frontmatter 闭合后不许留空行；技能互相冲突用"减法"定位（来源：topaiskills《How to Create Your Own AI Agent Skills》2026-05-31 + 《AI Agent Skills FAQ》2026-07-13，2026-09-21 r125-A 独立实拉，此前未读）
 
 - **原文事实（空行）**：作者花一小时排查"agent 为什么不听日期格式化规则"，最后发现是 YAML 闭合 `---` 与首个正文标题之间多了一个空行——"Some parsers treat that blank line as the end of the frontmatter block, while others swallow it into the YAML and fail to parse the whole file."删掉空行立刻恢复。
@@ -154,7 +144,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
   2. **技能冲突的判定用受控减法，不用静态清单猜**。判据：**"同一类任务输出质量时好时坏"先怀疑技能互相打架**，做法是移除最不常用的那个、跑同一批任务、看质量是否回升；回升即定位到冲突源。与 §Skill 排查冲突（定期列出所有规则来源检查重复与冲突）分工：**那条是静态清单审查**（检查有没有冲突），本条是**运行期受控实验**（在"看起来没冲突但行为不一致"时定位是谁）。
 - 提升层级：可复用 Skill（技能文件的可解析性）+ 工作流（冲突定位方法）。
 触发词：闭合后空行、frontmatter 空行、解析器分歧、整文件解析失败、内容被吞、技能冲突、减法定位、质量时好时坏、移除最不常用。
-
 ## 采用别人的技能/模板之前，先做三项预检：作者在哪层失明 / 输出结构能不能改 / 前置条件贵不贵（来源：topaiskills《I Let AI Write My PRD for a Week》2026-06-12 +《FAQ: Installing AI Agent Skills》2026-06-17，2026-09-21 r125-B 独立重拉实读，此前未读）
 
 - **原文事实**：① 作者用 `to-prd` 给"仪表盘细粒度权限"写 PRD，产物识别出三个可独立构建的深模块（permission resolver / route guard / audit log），**但完全没提 UI 层**——没有管理员怎么配置权限、没有角色分配的用户流、没有线框图。原文判词："The PRD was architecturally sound and completely blind to the user experience. This is where the skill showed its bias."——该技能作者 Matt Pocock 的公开工作偏后端与类型系统，**产物继承了这个世界观**。② 同一个技能的模板刚性："There's no config file or template override — what you see is what you get."他团队要的 `Success Metrics` / `Rollback Plan` 两节只能手改已发布的 issue。③ 安装 FAQ 给选型问题"两个做同一件事的技能怎么挑"的答案不在市场页："The answer is not in the skills.sh page — it's in the skill's SKILL.md file on GitHub, specifically the comparison with siblings section"；真正决定复用的是前置条件——"does one need a paid API key while another works with a free tier? Does one require a separate CLI installation? These details determine which skill you'll actually use more than once."（"Testing both takes five minutes and beats reading spec sheets."）
@@ -164,8 +153,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
   3. **选型看前置条件成本，不看能力差异**。判据：**要不要付费 key / 要不要另装 CLI / 需不需要额外服务，决定"你会不会用第二次"**；功能强弱决定的是"第一次能不能跑通"。与 §真实榜单怎么读（安装量=入职漏斗、别装模型本来就会的技能）分工：那条管**从榜单上排除**，本条管**剩下的两个之间怎么选**。
 - 提升层级：工作流（第三方产物的采用前检查）+ 决策（选型判据的优先级）。
 触发词：作者偏见、学科盲区、结构完整但缺一层、模板刚性、输出结构不可覆盖、适配成本落在产物、前置条件成本、付费 key、会不会用第二次。
-
-
 ## 常驻规则只做路由表，实体内容下沉到技能；「自动批准」不是「只允许」——同一个字段名在两处语义相反（来源：Devin 官方 `docs.devin.ai/cli/extensibility/rules` + `/cli/extensibility/skills/creating-skills` + `/product-guides/knowledge`，2026-09-22 r132-A 独立重拉首读，新信源首读）
 
 - **官方推荐模式：用 rule 引用具体场景该用哪个 skill，而不是把内容写进 rule**。官方原话：为提高编码能力、加快完成、降低成本，**尽可能用 Skills 代替 Rules，Rules 与 AGENTS 要保持尽可能小**。与 §机制选型表 分工——那条管"按加载时机与付费点，四类机制怎么挑"，本条管"**已经决定内容不常驻之后，规则文件里还剩下什么**"：只剩指向，不留正文。
@@ -175,25 +162,19 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **技能权限是叠加不是替换**：技能不能授予上层（项目/组织）已经 deny 的权限，所以**不能靠写一个技能给自己提权**。判据：想让技能多用一点，先查上层有没有禁用；上层禁用了，改技能无效。
 - **停用 ≠ 删除**：临时无关但队友或将来可能还会用的条目，用 disable 保留而不是删。判据：**"以后还有没有可能用"由谁判断**——如果别人也可能用，就 disable 不删。
 - 演进佐证：Devin 自己的 Knowledge（带触发描述的检索式知识条目）已标记 deprecated，正在自动迁移到 Skills。**"按需加载的技能"正在吃掉"检索式知识库"这个位置**——新写的长期上下文优先做成技能，别再建一套要靠检索召回的条目库。
-
-
 ## 一个子代理一个独立入口，别用一个入口靠参数分发；防递归要两道（来源：Inngest 官方 `inngest.com/docs-markdown/ai-patterns/sub-agent-delegation`，2026-09-22 r132-B 独立重拉首读，此前未读）
 
 - **官方推荐：给不同的子代理各自一个独立工具，而不是一个工具加"选哪个子代理"的参数**——原话 "LLMs often do better with separate tools for separate sub-agents rather than a single tool with different parameters for selection"。判据：**这个选择是"做哪件不同的事"还是"同一件事的不同参数"**——前者拆成不同入口，后者才留作参数。与本技能 §一个工具只做一件事 分工：那条管"单个工具的动作面要窄"，本条管"**多个同类能力之间的分发方式**"。
 - 落到技能系统上就是：**不要写一个"万能技能 + 类型参数"**。写成两个技能、两个触发词，让路由在入口就分完；靠参数在技能内部分支，等于把路由成本从宿主身上搬到技能正文里，还得靠模型读完全文才知道该走哪支。
 - **专用化不需要新机制**：通用子代理起步即可， specialization 靠**任务描述 + 可用工具集**两件事就够了（"The task description and available tools are enough to specialize behavior."）。判据：**想加一个专职角色之前，先问是不是改任务描述与工具集就能做到**——能就不新增实体。
 - **防递归是两道，缺一不可**：①**工具集层面**——子代理的工具集里不放委派工具（它根本没有派活的能力）；②**硬上限层面**——子代理单独设较低的迭代/重试上限。判据：**只靠一层会不会被绕过**——工具集会改、上限会调，两层同时失效才会失控。
-
-
 ## 要给别人（别的 agent）用的能力，契约必须显式声明，不靠实现推断；消费方不同形状就不同（来源：CrewAI 官方 `docs.crewai.com/v1.15.22/en/guides/tools/publish-custom-tools` + `/en/concepts/collaboration`（Best Practices → Clear Role Definition），2026-09-22 r132-C 独立重拉首读，此前未读）
 
 - **输入契约显式声明，别让框架从签名推断**：官方推荐对"要发布出去"的工具显式给 `args_schema`——理由不是校验，是**显式契约带来更好的 agent 行为与更清晰的文档**；推断出来的只够作者自己用。判据：**这个能力会不会被不是作者的人或 agent 用**——会就把输入形状、默认值、每个字段的含义全写出来；只自己用一次的可以省略。
 - **输出同理**：返回结构化数据时显式给输出模型，"用户和 agent 都能靠字段名取用"。判据：**拿结果的一方是照字段名取值，还是在字符串里找数字**——后者说明缺了一层声明。
 - **角色 / 技能之间不能笼统重叠**：官方反例同样是 "General Assistant" / "Helper"。判据：**两个角色各自能干什么，去掉交集还剩什么**——交集大于各自独有部分就该合并，而不是靠 description 里多写几个词把它们分开。与 §同类技能合并判据 分工：那条管"怎么合并"，本条管"**什么时候其实早该合了**"。
-
 ## 附录 Z：description 术语索引`），常驻成本归零、检索与交叉引用不受影响
 - 同次重构实测：8 个技能 description **14,444 → 4,185 字（省 10,259 字）**，外置 1,353 个词条到正文，**信息零丢失**；全库常驻描述 **25,818 → 15,882 字（≈省 4,968 tokens）**
-
 ## 该触发却没触发：按序排查
 0. **这个任务是否本来就不需要技能？**（超出模型自身能力的任务才会去查技能库——单步简单请求没触发不等于描述有问题，见上节末条）
 1. 描述里有没有用户实际会说的那几个词？
@@ -201,45 +182,37 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 3. 文件位置对不对（用户级 `~/.workbuddy/skills/` vs 工作区 `.workbuddy/skills/`）？
 4. frontmatter 语法是否合法（`name` / `description` 必填，YAML 缩进别错）？
 5. 改完 skill 后会话没重开 → 读的仍是旧版本
-
 ## 不该触发却触发
 - description 过宽（写成了"所有 AI 相关任务"）
 - 多技能触发词打架 → 显式写出优先级，或收窄其中一条
 - 名字太泛（`helper` / `utils`）→ 改成能被语义区分的名字
-
 ## 双路由防呆：原生路由存在时，不要常驻 meta-router（来源 addyosmani/agent-skills #557）
 宿主已能按 description 原生发现并激活技能（渐进披露）时，**不要再把"技能路由表 / meta-skill"整份常驻进 system prompt / 规则文件**——同一任务被两套路由器处理：多耗常驻上下文 + 路由结果可能打架。二选一：
 - 原生路由在 → 各技能写好 description 即可，meta 层只做"接线表"（指向谁管什么，一行一个），不复制路由逻辑
 - 原生路由不在 → 才用 meta-skill / 常驻路由表兜底
 - 反模式：装了原生渐进披露的宿主，又把 25 个技能的索引塞进 always-on 上下文"图省事"；或同一任务在技能内和规则文件里各写一套分流逻辑
 - 自反检查：本库技能靠 description 原生触发 → 任何新技能**只写 description + 分工表一行**，禁止再造一份"何时用哪个技能"的常驻长清单
-
 ## 显式 @调用跳过路由：用 @标识 直接点名绕过模糊路由器（来源：腾讯 SkillHub 技能广场分数面 skillhub.cn/skills?sortBy=score，2026-09-27 实拉，17万技能规模头部「编程专家.Skill」声明「支持 @标识 显式调用跳过路由」）
 - **模糊路由会误配/漏配**：靠 description 关键词做自动激活，长尾意图容易错配或漏配；允许用户在对话里用 `@技能名` 显式点名，可让该技能**绕过模糊路由器直接激活**，把"猜你要哪个"变成"你点名哪个"。
 - **实拉证据**：SkillHub 分数排序面头部技能（编程专家.Skill / dev-expert 等）在描述里明写「支持 @标识 显式调用跳过路由」——这是技能级的可选路由优化，不是宿主强制机制。
 - **判据**：当某技能**高频被错配/漏配**、且用户有明确调用意图时，在 description 里声明"支持 @技能名 直接调用"是降低路由 misfire 的低成本手段；它与 §双路由防呆 分工——那条管"别叠两层路由器"，本条管"给确定意图一条绕过模糊路由的直通车"。
 - 提升层：可复用 Skill / 工作流（路由可靠性）。
-
 ## 技能供应链内容完整性：摘要钉死批准 + 逐文件 size/SHA256 校验（来源：MCP skills 扩展 io.modelcontextprotocol/skills，SEP 2640，2026-09-27 实拉）
 - **内容寻址的技能完整性**：MCP skills 扩展规定 Host 激活技能前必须逐文件校验 `size` + `SHA-256 digest`，且**持久化批准绑定到完整文件 URI + digest 集合**——任一文件变更/增删都撤销批准、需重新获取。技能条目带 `resources[].digest/size` manifest，Host 不得提前取文件、批准只绑 manifest；上限 **16 MiB / 512 文件每技能**，资源可标 `dynamic`（生成内容、无稳定 digest）。
 - **判据**：把"这个技能可信"从"读一遍文档"升级为"字节级摘要钉死 + 批准绑 digest"——内容被篡改或任何文件变动立即失效重批。与 §安装前安全审查（可溯源/无旁路/单一职责）互补：那条管"进门三判据"，本条管"进门后内容完整性如何不被静默破坏"。
 - 提升层：可复用 Skill / 工具（供应链完整性）。
-
 ## 声明式依赖清单 + 元数据失配扫描（来源：OpenClaw skill-format / ClawHub 安全分析，2026-09-27 实拉）
 - **声明式运行依赖**：frontmatter 用 `requires.env`（必填环境变量）/ `requires.bins`（必装 CLI）/ `requires.anyBins`（至少一个）/ `requires.config`（配置文件）+ `install`（brew/node/go/uv 声明式安装）——把"技能跑起来需要什么"写成机器可读清单。
 - **元数据失配扫描**：ClawHub 安全分析**交叉比对"代码实际引用的密钥/二进制"与"frontmatter 声明"**——代码用了某 key 但 frontmatter 没声明 → 判元数据失配并标记。声明即契约，未声明即 flagged。
 - **判据**：第三方技能进门审查从"人读代码找依赖"变成"声明清单 + 自动失配扫描"；与 §无旁路（禁读环境变量与文件系统）分工——那条管"运行时不越权读"，本条管"安装前声明与代码是否一致、自动发现瞒报"。
 - 提升层：可复用 Skill / 工具（安装审查自动化）。
-
 ## 技能设计「流程优于文档」：带证据检查点的工作流，而非会被略读的散文（来源：Addy Osmani agent-skills 框架 / theagenttimes 2026-09-27 实拉，26K★，六阶段 SDLC 技能 Define/Plan/Build/Verify/Review/Ship）
 - **把技能写成工作流而非参考文档**：Osmani 的判据——"把 2000 字测试最佳实践散文塞进上下文，agent 读完生成像模像样的文字然后跳过真测试；把工作流（先写失败测试→跑→看失败→写最小代码过→看通过→重构）放进去，agent 才有事可做、你才有可验证物"。技能本质是**带检查点、产出证据、有明确定义退出标准的工作流**，不是漂亮 markdown。
 - **判据**：写技能时每个阶段要有"做完了能拿什么证据证明"的出口，而非"读完了就懂了"的散文；与 §Gotchas（失败经验沉淀位置）、§持久声明纪律（声明绑会失效的机制）互补——那些管"坑写哪、声明怎么不腐烂"，本条管"正文该是工作流还是参考文档"。
 - 提升层：可复用 Skill（写法）。
-
 ## 发布即冻结运行环境 + 升级静默丢失禁令（来源 Qoder r263-A 审计落地，Dify 1.17 Home Snapshot / LangFlow PR14926·PR14913，2026-09-26 实拉）
 - **发布即冻结运行环境**：技能"发布"除冻结文本版本外，须声明其运行环境前置（依赖/文件状态清单）；运行异常先比对环境清单而非重读正文——"升级后为什么坏了"常是环境飘移不是正文错。提升层：可复用 Skill。
 - **升级静默丢失禁令**：契约变更（改名、字段可见性、依赖边）迁移时——①判定逻辑收敛为单一共享函数供多路径复用（两路径各写一份必漂移）；②任何被丢弃的连接/字段必须登记为 brokenEdges 类告警显式报出，禁止"更新成功但拓扑悄悄变了"。提升层：可复用 Skill。
-
 ## 触发评测：发布前盲测（新技能 / 改过 description 必做）
 来源：GitHub `kangarooking/cangjie-skill`（★9.8k，MIT）阶段 4「压力测试」——把"description 能不能被触发"从**事后排查**升级为**发布前可测**。写得再好，没测过就是碰运气。
 
@@ -407,7 +380,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 
 
 ---
-
 ## 按需阅读（渐进披露，不要常驻加载）
 
 本正文只保留写法与评测决策级核心。方法论来源、判据推导、反模式、特殊场景全部在
@@ -420,13 +392,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 与 `wb-context-compressor` §大输入转检索 分工：**那条管"已经拿到的大材料怎么塞进上下文"，本条管"脚本从一开始就该产出多大的输出"**——一个在消费端补救，一个在生产端设上限。
 - 反模式：脚本一次吐几百 KB 让 harness 静默截断（丢的往往是尾部的关键错误）；或用对齐的空白表格当输出（agent 与 `jq/cut/awk` 都不好解析）。
 - 提升层：工具 / 可复用 Skill。
-
-## 命名要带时态：事件型用过去时，动作型用主动时（来源：Pipedream docs《Components Guidelines and Patterns》§Component Key Pattern，2026-09-27 r200-A 实拉 43,774B）
-
-- **★名字里的时态在替读者回答"这件事发生了没有"**：原文规则——**source（事件源）的 key 用过去时动词，描述已经发生的事件**（`linear_app-issue-created-instant`）；**action 的 key 用主动动词，描述将要发生的动作**（`linear_app-create-issue`）。判据：**命名之前先问这个东西是"报告一件已发生的事"还是"发起一件将发生的事"**，时态写反，调用方对"要不要再触发一次"的判断会跟着反。
-- **★时态混乱是误触发的来源之一**：把"已创建"写成"创建"，调用方会以为调它会去创建；把"创建"写成"已创建"，调用方会以为它只是个通知。判据：**同族命名里时态必须一致**——混着用的时候，人只能靠记忆分辨，agent 只能靠猜。
-- 提升层：可复用 Skill。
-
 ## 指针的措辞决定路由可靠性：先磨措辞，磨不动才内联（来源：skills.sh `mattpocock/skills/writing-for-agents`，2026-09-27 r200-C 实拉 75,462B 页面 / 2,436B 正文）
 
 - **★★决定 agent 什么时候去取材料的，是指针的措辞，不是它指向的那份材料**：原文定义 *context pointer*——留在 agent 上下文里、点名某份上下文外材料、并编码"什么条件下该去取它"的引用；技能的 `description` 就是一种 pointer，`AGENTS.md` 里点名某文档的那一行也是同一种东西。判据：**一份必须拿到的材料挂在一条弱措辞的指针后面 = 一个方差 bug**（有时取到，有时取不到）；补材料不如补措辞。
@@ -435,7 +400,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **★指针里要砍掉正文已经自带的身份**：原文 "Cut identity the body already carries"——材料自己会说清自己是什么的那部分，不必在指针里再讲一遍。
 - 与 §description 三条机检纪律 的分工：那条管描述字段的机械约束（首句位置 / 追加只加末尾 / ≤1024）；本条管**措辞够不够锋利，以及"措辞 → 内联"这条升级路径**。
 - 提升层：可复用 Skill。
-
 ## 两种预算：model-invoked 花上下文负载，user-invoked 花人的认知负载（来源：skills.sh `mattpocock/skills/writing-great-skills`，2026-09-27 r200-C 实拉 75,086B 页面 / 2,550B 正文）
 
 - **★技能存在的理由是"从随机系统里拧出确定性"，而确定性的度量是过程不是输出**：原文 "Predictability — the agent taking the same *process* every run, not producing the same output — is the root virtue"。判据：**评估一个技能好不好，看它能不能让 agent 每次走同样的流程**；拿"两次输出是否一字不差"当标准，是把随机系统的正常波动误判成缺陷。
@@ -443,7 +407,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **★user-invoked 技能多到记不住时，解药是一个 router skill**：原文 "that piled-up cognitive load is cured by a router skill"——一个 user-invoked 技能把其他技能的名字与各自何时用列出来。判据：**认知负载堆到记不住，不是把每个技能都改成 model-invoked，而是加一层索引**；前者把成本转回上下文，后者只付一份。
 - 与 §命名时态、§description 三条机检纪律 的分工：那两条管"名字与描述怎么写对"；本条管"**这个技能到底要不要对模型可见**"——先定可见性，再打磨描述。
 - 提升层：可复用 Skill / 工作流。
-
 ## 技能静默成本与描述截断治理：不触发也花钱、触发短语放最前、/doctor 查截断（来源：Anthropic《Skill Costs》实测 + claude.com/blog/lessons-from-building-claude-code，2026-09-27 r231-B/C 实拉）
 - **技能不触发也花钱**：5 技能 × 7 小时实测，dormant skills 描述层 **231K tokens 占 11% 账单**，3 个从没触发的技能占 18%——**每个 description 每轮都进上下文，装技能不是免费的**（与 §两种预算·model-invoked context load 同源：那条管"可见性取舍"，本条管"装了之后的账单"）。
 - **提交技能前用 token counting API 估算描述成本**，超预算先砍描述再装。
@@ -452,22 +415,18 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **触发信号诊断表**：不加载→描述加细节关键词；过度触发→加负面触发更具体；输出不一致→加 examples/ 好输出示例。
 - 判据：**描述是技能唯一的广告位**——先量它的每轮成本，再把最重要的触发词放最前；副作用技能手动触发。
 - 提升层：可复用 Skill。
-
 ## Gotchas section 是技能最高信号内容：从失败点积累，随时间更新（来源：claude.com/blog/lessons-from-building-claude-code，2026-09-27 r231-C 实拉）
 - **技能的 Gotchas 区写"用这个技能时真实撞到的失败点"**，随使用持续更新（Anthropic 例：subscriptions 表是 append-only 是踩过坑才知道的）——**价值一半在别人踩过的坑，把坑写进 Gotchas 不是写进正文**。
 - 判据：写技能时先问"用的时候最容易在哪出错"，Gotchas 区是该答案的固定归宿；正文写怎么做，Gotchas 写别怎么做、为什么。
 - 与 §技能写作十项 checklist 的分工：checklist 管"结构齐不齐"，本条管"失败经验的沉淀位置"。
 - 提升层：可复用 Skill。
-
 ## 工具描述即 prompt：模型完全按描述决定调用，每个描述=迷你操作手册（来源：musketeerstech.com《Prompt Engineering Best Practices for AI Agents 2026》+ pickaxe.co，2026-09-27 r231-C 实拉，与 §工具描述可注入 互补——那条管"安全面"，本条管"写法的质量面"）
 - **工具型 agent 里模型依据 name/description/parameter docs 决定调用什么、传什么参数**——**模糊描述产生错误调用，没有 system prompt 能修**；每个工具描述按写 prompt 的标准写（做什么/何时用/参数契约）。
 - **单 agent 封顶约 4 个 action**：更复杂→waterfall 路由到专门 sub-agents，**不把 10 个工具塞进一个 prompt**（工具数超过认知负载就拆层）。
 - **atomic-over-composite（单 action 单能力）**（Activepieces 设计哲学，2026-09-27 r231-A 实拉）：每个 action 只做一件能力、输入显式化——复合操作拆成原子步，模型好理解、失败好定位；配 throttling 防 agent 淹没 API。
 - 判据：**写工具描述按写 prompt 的标准来，不是填空**；工具超过 4 个就分层，不硬塞。
 - 提升层：可复用 Skill。
-
 ## 持久声明纪律：自我声明必须绑定会失效的机制，而非自证（来源：skillsmp.com/skills p98「context-architecture」No.9727，2026-09-27 r232-B 实拉；skillsmp 全量 10,991 技能中唯一把"声明可信度"上升为原则的一条）
-
 ## 跨平台 Skill/Agent 生态观察（r252-C 实拉 · 2026-09-27）
 
 > 来源：腾讯 SkillHub 分数面、阿里千问 Agent/Skill 开放平台、Flowise 官方文档。重叠>60% 不落，仅记与「技能质量 / 市场 / 评估」直接相关的独点。落点避开豆包自留地 wb-execute-discipline / wb-context-compressor。
@@ -476,7 +435,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **B) 阿里千问 Agent/Skill 平台生命周期**（来源 千问 APP 开放公告 + 通义千问大会，2026-09-27 实拉）：100+ 云产品封装为**标准化 Skill 包**（agent 按需调用如函数，配 CLI 免登录调用）；平台负责模型+流量+安全审查，开发者负责场景设计与专业知识；上架走**审核 + 分发 + 未来计费/分成**三段。判据：skill 发布须过审核门；能力封装为 agent 可直接调用的标准包是分发趋势（与 §技能是"指令+工具"打包 一致）。
 - **E) Flowise 评估与护栏层**（来源 docs.flowiseai.com，2026-09-27 实拉）：Evaluations 一等公民（Datasets + Evaluators + Evaluations）；Human-in-the-Loop 原生；Safety = 输入审核 + 输出后处理；安全控制 RBAC/SSO/加密凭据/限流/受限域；支持 air-gapped 离线部署。判据：生产级 agent 平台把「评估」和「护栏」当原生能力而非事后补；面向生产的 skill 应声明评估与护栏策略。
 - 交叉引用：@显式调用跳过路由（SkillHub 头部声明）已在 r202-A 落本技能 3.19.0，本条不重复。
-
 ## 技能供应链可信与三层评测（r204 三轮 · 2026-09-27）
 > 来源：ClawHub skillsign(MIT live) / Agent Foundry / NVIDIA SkillEvaluator(Apache2)。与 r202-B 内容寻址、r252-C 质量信号互补，重叠<60% 落。
 - **A) 技能密码学签名与信任链（skillsign）**：作者 Ed25519 私钥对目录逐文件 SHA-256 manifest 签名，安装验签 + 本地信任表(~/.skillsign/trusted/)；provenance/isnad 记录签名者顺序；时间戳感知撤销(pre-compromise 签名仍有效)；ATP 本地信任图追踪 identity(ed25519)/capabilities/reputation，领域特定 + Bayesian 更新。ClawdHub 实测 286 技能 12 未签名藏执行路径、3 凭据窃取、47 未声明读 ~/.ssh ~/.aws。判据：与 r202-B 互补(那条管字节完整性 what，本条管作者身份 who)；第三方技能进门 = 验签 + 信任链 + 撤销。提升层：可复用 Skill/工具。触发词：技能签名、Ed25519、skillsign、isnad、信任链、密钥撤销。
@@ -490,7 +448,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **★与"先写文档"冲动相反**：多数人面对"声明会过期"的反应是补一句文档；正确反应是**加一条会红的自动检查**。文档会被忽略、会过期、会和人手改的代码脱节；检查不会。
 - 与 §技能静默成本（描述的成本）、§Gotchas（失败经验沉淀位置）的分工：那两条管"描述花多少钱、坑写哪"；本条管"**声明本身怎么才能不腐烂**"——把真伪检查自动化，不靠文字自律。
 - 提升层：可复用 Skill / 工作流。
-
 ## Qoder 净新全量消化·第一批（r187–r310 共 16 点 · 2026-09-27；细则在 references/knowledge-base.md §Qoder 净新）+ r205-A 市场级机器安全扫描（见 KB §Qoder 净新 23）
 - **维护量化定律**（arXiv 2607.00911，41,662 样本）：53% 技能采纳后零修改、复用≈一次性拷贝、改动压倒性为增补式 → 写法分「稳定流程 + 外置项目绑定」两段，体检优先清「引入后零修改」堆积。
 - **导航行为四信号**（Anthropic best-practices）：把读取行为当遥测——意外读取顺序=结构不直观应重排 / 引用未被跟=链接不显式 / 被反复读=上提进正文 / 从未被读=删除或改触发。
@@ -498,3 +455,8 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **作者/审查者分离**：agent 自写自审通过，留痕必须标「未经第二方审查」，用户复核才算闭环。
 - **装前量化阈值**：禁符号链接与 `..`/绝对路径、条目≤10000、解压≤500MB、压缩比≤100、深度≤8；同步/他机导入技能的捆绑命令默认不执行，按来源显式再信任。
 - **触发面即攻击面**（ISM）：description 语义匹配可被隐式劫持（人工审查仅拦 2.9%）→ 准入加对抗样本回放；多源扫描结论归一为单一风险等级+显式 Pending，徽标互矛盾按最低可信处理。
+## 技能家族与多渠道分发：命名空间前缀 + setup 引导技能 + 单一真身仓库（来源：skills.sh 榜单 2026-09-27 r206-B 独立实拉（All Time 安装 1,568,868；mattpocock/skills 11 个技能合计 4.3M、open.feishu.cn 一组 lark-* 21 个合计 16.0M、microsoft/azure-skills 8.5M，头部出现 setup-matt-pocock-skills 898.5K 这类安装器技能）；GitHub dotnet/skills 5,494 星（厂商官方语言技能仓）、netresearch/skill-repo-skill（技能仓库结构 + multi-channel distribution）交叉取证；与 §技能供应链可信 互补——那条管「单个技能可信不可信」，本条管「一组技能怎么组织与分发」）
+- **家族用前缀共享命名空间**：lark-doc / lark-okr / lark-markdown、azure-messaging / microsoft-foundry——同族技能靠前缀被一起检索到，也让边界自解释。
+- **一个 setup 引导技能当入口**：家族超过约 5 个就应有一个 setup-<家族> 技能负责装与配，避免用户逐个找。
+- **多渠道分发 = 一个真身 + 多个发布面**：仓库是唯一真身，目录站/市场/包管理器是发布面；判据：**任何一处出现分歧，以真身为准，不在发布面上改。**
+- 细则（含各平台规模与本轮判重）见 references/knowledge-base.md §r206-B。

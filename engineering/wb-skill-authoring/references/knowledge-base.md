@@ -1980,3 +1980,17 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 21. **兼容性四型归因**（arXiv 2608.11888，307 例）：主题相关≠可兼容——实现缺陷 68.8% / 过度程序化 62.6% / 上下文膨胀 / 依赖解析，先分类再定位根因层。
 22. **工具暴露通道权衡**：MCP registry 接入牺牲逐参数 granular control 且每次调用叠加 context 开销；需严格参数锁定/高频调用的工具走平台内置工作流工具通道。
 23. **★市场级机器安全扫描（提交时 + 持续重扫）**（来源：Snyk × Vercel skills.sh 官方博客，2026-09-27 r205-A 独立实拉）：`npx skills add` 安装时由注册中心侧调用扫描 API 做深度安全分析，结果以 **Security Verified 徽章 + Security Leaderboard** 显式暴露给安装者；引擎（agent-scan / mcp-scan）是 **LLM judge + 确定性规则双层**——技能是"代码+自然语言"混合产物，纯静态分析扫不到藏在 SKILL.md 指令里的提示注入，必须两层都要。扫描覆盖 **8 类安全策略**；量化基线：CRITICAL 级检测器对已确认恶意技能**召回 90–100%**、对 top100 合法技能**误报 0%**（这个区分度才使它能当提交时自动闸门）；**不是一次性**——检测能力升级与新威胁出现时重新评估已上架技能。关键概念 **toxic flows**：看似无害的 prompt 能触发恶意动作，单看代码无异常，要按"指令意图 × agent 能力"判。判据：**装第三方技能前看有没有机器扫描信号与徽章；没有的市场，自己按 8 类策略过一遍并钉版本**。与"内容寻址完整性（what）/ Ed25519 作者签名（who）"分工：那两条管"包有没有被换、谁签的"，本条管"**包本身就是恶意的**"——三者互补，缺一不可。提升层：可复用 Skill / 供应链安全。
+
+## r206-B 技能家族与多渠道分发（2026-09-27 实拉）
+- 实拉数字：skills.sh All Time 1,568,868 安装；mattpocock/skills 家族（grill-me 1.2M / teach 717.7K / domain-modeling 707.1K / codebase-design 684.4K / diagnosing-bugs 670.9K / implement 621.0K / ask-matt 619.9K / wayfinder 573.3K / to-spec 569.8K / research 569.0K / code-review 623.6K）合计 4.3M；setup-matt-pocock-skills 898.5K；open.feishu.cn 一组 lark-* 21 个合计 16.0M；microsoft/azure-skills 一组 13 个合计 8.5M；genmedia-labs/skills 2.8M；heygen-com/hyperframes 4 个。
+- SkillsMP 规模：Computer and Mathematical 2,103,881 / Business 340,647 / Arts 141,550 / Office 67,817；头部 obra/superpowers·brainstorming 289.8k、anthropics/skills·frontend-design 177.5k。
+- GitHub 生态：dotnet/skills 5,494 星（厂商官方语言技能仓，证实「官方维护家族」模式成立）；netresearch/skill-repo-skill 21 星（明确以 multi-channel distribution 为卖点的技能仓库结构指南）。
+- 判重：与 §技能供应链可信（who/what 完整性）、§r252-C 市场质量信号（可信度分档）互补不重叠——本条只管「一组技能的组织与分发」。
+- 不落：agentskills.io 客户端生态清单（50+ 客户端，纯登记）、agentic-qe 485 星（QA 专用 agent fleet，非通用方法论）。
+
+### r206-B 下沉（自正文移入）
+## 命名要带时态：事件型用过去时，动作型用主动时（来源：Pipedream docs《Components Guidelines and Patterns》§Component Key Pattern，2026-09-27 r200-A 实拉 43,774B）
+
+- **★名字里的时态在替读者回答"这件事发生了没有"**：原文规则——**source（事件源）的 key 用过去时动词，描述已经发生的事件**（`linear_app-issue-created-instant`）；**action 的 key 用主动动词，描述将要发生的动作**（`linear_app-create-issue`）。判据：**命名之前先问这个东西是"报告一件已发生的事"还是"发起一件将发生的事"**，时态写反，调用方对"要不要再触发一次"的判断会跟着反。
+- **★时态混乱是误触发的来源之一**：把"已创建"写成"创建"，调用方会以为调它会去创建；把"创建"写成"已创建"，调用方会以为它只是个通知。判据：**同族命名里时态必须一致**——混着用的时候，人只能靠记忆分辨，agent 只能靠猜。
+- 提升层：可复用 Skill。
