@@ -7572,3 +7572,80 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **子代理沙箱**：非 main 会话（子代理/cron/隔离任务）Docker 沙箱——无网络默认+只读根文件系统+受限工作区。
 - **sandbox-guard skill**：未信任技能生成安全 Docker 沙箱（Minimal profile 起）——技能带权限运行，恶意 shell 访问可攻陷全系统，沙箱限制爆炸半径。
 - **提升层**：可复用 Skill（沙箱治理）。
+## Dify 触发器三类型与发布限制：Schedule/Plugin/Webhook · User Input 才能发布（来源：dify.ai blog which-trigger + introducing-trigger + mintlify key-concepts + start-node 2025-11/2026-08 实拉，合并 §Dify Workflow vs Chatflow——那条管"应用选型"，本条管"触发与发布"）
+- **三种 Trigger 类型**：Schedule Trigger（预设时间/间隔——周期可预测任务：日报/数据清理/健康检查；hourly/daily/weekly/monthly/cron 精细；提供 timestamps 变量供下游）；Plugin Trigger（监听集成插件事件——Slack/GitHub 等第三方 app 事件订阅）；Webhook Trigger（收 HTTP 请求——通用接口对接任何支持 webhook 系统；回调 URL+自定义 query 参数/请求头+真实业务数据解析）。
+- **Start 节点互斥**：User Input（直接交互/API 调用）与 Trigger（自动运行）同一画布不能共存——切换 right-click>Change Node。
+- **发布限制**：仅 User Input workflows 可发布为 web apps/MCP servers/backend service APIs/复用工具——触发器启动的工作流不能对外发布（自动运行用途）。
+- **事件订阅式**：Webhook 连接外部系统具体事件（customer completed payment/form submitted/new lead）触发整条工作流。
+- **配额**：Plugin/Schedule/Webhook 触发事件免费档 20,000/month；Unlimited Triggers/workflow。
+- **提升层**：工作流（触发选型）。
+
+## n8n IF/Switch/Merge 分支与合并：三节点分工 · Split>Process>Merge · Always Output（来源：n8n.io workflow-logic + docs.n8n.io if + n8n.spot condition-config + getflowkit merge 2026-02/09 实拉，合并 §n8n 循环与分支——那条管"循环结构"，本条管"分支与合并"）
+- **IF 节点**：二元决策 true/false；10 比较操作符（equals/not equals/greater/less/contains/not contains/is empty/is not empty 等）；Combine 字段 AND/OR 多条件。
+- **Always Output Data 坑**：IF 后接 Merge 必须开——否则未命中分支无输出、Merge 收不到；且 Merge+IF 会触发 IF 两条输出都执行（数据流互相拉取）。
+- **Switch 节点**：多条件 Case n/Default——Rules 模式（直接比较）或 Expression 模式（JS 逻辑）；多分支比链式 IF 高效（两分支以上用 Switch）。
+- **Merge 节点**：重组分支——Append 堆叠输出/Combine 按标识符配对；"Split>Process>Merge" 是关键模式（先分治再合并）。
+- **Filter 分工**：筛掉 item 不创建分支（不路由）——与 IF/Switch 用途不同。
+- **多 IF 链**：status active→Check Permission；role admin→Full Access——链式权限检查。
+- **提升层**：工作流（分支合并）。
+
+## LangFlow 模板规范与 Store API：提交三要素 · 导出三方式 · Shareable Playground（来源：docs.langflow.org contributing-templates + concepts-flows-import + 1.8.0 concepts-overview/playground + api-reference 2026-07/09 实拉，合并 §LangFlow 模板——那条管"模板使用"，本条管"模板提交与共享"）
+- **模板提交规范**：name ≤3 词、每词首字母大写（Blog Writer/Travel Planning Agent）；description 简短展示于视觉编辑器说明用途用例。
+- **Store API**：GET /v1/starter-projects/（模板列表）；POST /v1/store/components/（分享组件到 Store）；PATCH /v1/store/components/{id}（更新已分享组件）。
+- **导出三方式**：Projects 页 More>Export（单/全项目 Download）；编辑时 Share>Export；API /flows/download。
+- **Share 菜单五选项**：API access（自动生成 Python/JS/curl 代码片段）；Export（本地 JSON）；MCP Server（暴露 flow 为工具给 MCP 客户端）；Embed into site（HTML/React/Angular 嵌入）；Shareable Playground（分享只读交互界面）。
+- **Shareable Playground**：/public_flow/$FLOW_ID 公开 URL——他人无需安装 Langflow/API key 即可交互聊天、查看结果。
+- **提升层**：可复用 Skill（模板生态）。
+
+## Activepieces MCP 平台与 Embeddable MCP：内置 server · 763 apps · OAuth 授权（来源：activepieces.com mcp + docs/mcp/overview + ai-agent-builder + embeddable-mcp 2025-06/2026-09 实拉，合并 §MCP 规范——那条管"MCP 协议面"，本条管"Activepieces 平台能力"）
+- **内置 MCP server**：AI 助手经自然语言建 flows/管理 tables/测试自动化；mcpServers url 配置；OAuth 浏览器认证首次。
+- **最大开源 MCP server**：连接 Claude/Cursor/Codex 驱动全平台——763 apps；免费所有 plan（cloud/self-hosted）。
+- **MCP Tool piece**：创建工具 MCP 客户端可调用执行 flow（4 字段）；Actions=Activepieces 一切可做皆可 drop 进 flow。
+- **AI Agent Builder 限制**：Max steps 20 per run；own model（OpenAI/Anthropic/Gemini/Azure/Bedrock）；External MCP 让 agent 用自有 MCP servers；Human Approvals 运行等人批准。
+- **Embeddable MCP**：用户点 Authorize 按钮→后端拿 token 运行该用户自动化——正常 OAuth；后端跑 connect 步骤保持 token——把 agent 能力嵌进自己 app。
+- **提升层**：工具（MCP 平台）。
+
+## Make 蓝图克隆与链接分享：blueprints 备份 · sharing 链接总最新 · API clone（来源：help.make.com blueprints + scenario-sharing + clone-a-scenario + use-apify api-tutorial 2026-03/09 实拉，合并 §Make 场景蓝图——那条管"蓝图使用"，本条管"分享与克隆机制"）
+- **Scenario blueprints**：保存/复制成蓝图（含模块/模块设置/映射值）——快速搭建不用从零开始；备份场景（丢访问权限/换账号导出保存复用）；分享蓝图他人导入文件。
+- **Scenario sharing 与 blueprints 区别**：公共场景页链接/社媒分享——任何有链接者可查看或登录复制副本编辑；链接总显示最新保存版本（无需导出/导入/重新导出流程）——持续协作用 sharing，归档复用用 blueprints。
+- **克隆**：同团队/跨团队——模块设置+连接全带；同团队只需重设 webhooks（若有）；跨团队需设置目标连接。
+- **模板**：预配置自动化蓝图（模块序列/连接/数据映射逻辑）——make.com/en/templates 按 app/category/use case 浏览；Use Template 复制进工作区；所有 plan 含免费；落 inactive 先审再激活。
+- **API clone**：POST /scenarios/{source_id}/clone json {teamId, name}——程序化复制场景。
+- **提升层**：工作流（复用与协作）。
+
+## Pipedream secret props 与秘密管理：env 限制 · GUID shared secrets · connected accounts（来源：docs-proxy.pipedream.com components/api + environment-variables + components/guidelines + security best-practices 2025-05/2026-09 实拉，无历史 Pipedream 秘密锚点新面）
+- **env vars 在组件内受限**：sources/actions 不直接访问 env vars——组件可被任何人用，无法保证用户环境有特定变量；sources 用 secret props 引用敏感数据；actions 在 object explorer 选变量传给 step。
+- **私有组件模式**：私有 actions/triggers 无直接 workspace/project 变量访问——为所需变量加 prop；API keys 配 secret prop、set value {{process.env.YOUR_ENV_VAR}} 安全引用。
+- **secret props 规范**：用户必须输入敏感数据一律 secret props；Shared Secrets——GUID 生成 shared secret 存 $.service.db key、用存值验证入站事件（webhook 校验）。
+- **两存法**：Pipedream 集成 app→connected accounts；不支持 app 或任意配置数据→env vars；禁止硬编码 secrets 进 code steps。
+- **configure 端点**：POST /v1/connect/{project_id}/components/configure——动态取 prop 候选值（否则静态/free-form）。
+- **app prop 引用坑**：configuredProps payload 用 googleSheets（驼峰）而非 google_sheets——错引用报 oauth_access_token undefined。
+- **提升层**：可复用 Skill（秘密管理）。
+
+## Anthropic Usage & Cost API 监控：Admin API · cost_report · spend cap（来源：docs.anthropic.com usage-cost-api + platform.claude.com rate-limits/overview + cookbook observability + agent-sdk cost-tracking 2025-08/2026-09 实拉，合并 §Anthropic 缓存定价——那条管"价格参数"，本条管"用量监控与对账"）
+- **Usage & Cost Admin API**：程序化访问历史用量与成本——精确 token counts（比 response token counting 准）；Cost Reconciliation 对账财务；认证=Admin API key/OAuth org:admin scope/非 workspace 限制个人 key（workspace API keys 不行）。
+- **端点**：GET /v1/organizations/cost_report（服务级美元成本拆分，美分十进制字符串）；/v1/organizations/analytics/user_cost_report（每用户成本）；get-messages-usage-report（uncached input tokens/workspace_id/starting_at/has_more/next_page 分页）。
+- **监控维度**：uncached input/output/cache creation/reads；跨 models/workspaces/API keys；cache efficiency 与 server tool usage——不是只看 response counting。
+- **用途三类**：Usage Monitoring（消费模式→优化成本）；Cost Attribution（跨团队/项目分配）；finance/chargeback 报告。
+- **spend cap**：Start/Build/Scale tiers 月支出上限——达上限请求停止；Billing 页查看/设限。
+- **请求头**：Authorization Bearer 或 x-api-key（legacy）；anthropic-workspace-id 多 workspace key 必填（wrkspc_ 前缀）。
+- **Agent SDK cost tracking**：每交互 token 用量详情（并行工具+多步对话场景需专门跟踪）。
+- **提升层**：可复用 Skill（用量监控）。
+
+## OpenClaw ClawHub 市场：publish/install/search · source metadata · 技能包生态（来源：docs.openclaw.ai clawhub quickstart/how-it-works + theoperatorvault clawhub-guide + imclaw faq 2026-02/09 实拉，合并 §OpenClaw 技能创建分发——那条管"技能本地管理"，本条管"市场分发"）
+- **ClawHub 市场**：官方技能市场；skill=含 SKILL.md 的文件夹+可选支持文件。
+- **publish**：clawhub skill publish <path> --slug --name --changelog——跳过未变化内容；新技能 1.0.0 起；需认证会话；包过自动化扫描后公开；社区评分反馈增可见性（开放提交模型比 SkillHub 技能多）。
+- **install 两法**：openclaw skills install @owner/<slug>（装进活动 workspace skills/）；clawhub install <slug>（装 ./skills 当前目录）；--version --global。
+- **search/update/verify**：clawhub search <keyword>（description/version/install count，可 pipe grep）；openclaw skills update @owner/ --global / --all；verify @owner/ --card 打印 Skill Card；clawhub sync --all。
+- **source metadata**：OpenClaw 记录 install source——更新时解析同一 registry 包；ClawHub CLI 支持 registry-managed 文件夹（workspace 外）。
+- **包类型**：clawhub package publish；plugins install clawhub:<package>——技能与插件双通道。
+- **前置**：npm i -g clawhub；无 openclawcli ClawHub 操作不工作。
+- **提升层**：可复用 Skill（市场分发）。
+
+## deeplearning LLMOps 可观测与反馈闭环：Evaluating AI Agents · 可观测支柱 · Feedback Loops（来源：learn.deeplearning.ai evaluating-ai-agents + corporate llmops + codersarts observability + elevify llmops-guide 2026-04/09 实拉，合并 §deeplearning 评估——那条管"评估指标与工具"，本条管"可观测与闭环"）
+- **Evaluating AI Agents 课程（Arize 2h36m）**：Tracing agents/Monitoring agents（observability 洞察步骤、debug）；component-level evals（code-based vs LLM-as-a-Judge 选型）；把评估结构化为 experiments 迭代输出质量+agent 路径。
+- **LLM 可观测专门课程**：LangSmith+Langfuse 生产级 observability+incident response——prompt chains/token costs/hallucination patterns/silent quality degradation 都需要专用工具（传统监控不适配）。
+- **工具选型**：LangSmith current_trace().invoke 每 chain 捕获 requests/responses/latency；MLflow 单平台（实验+模型+traces，10-100 req/day overhead 不可测）——已有 MLflow 就避免第二个观测平台。
+- **Observability Pillars for LLMs**：logs/metrics/traces 三元组适配 LLM 特定 token usage+output quality；Feedback Loops——捕获用户反馈信号路由回 eval/fine-tuning 管道，闭环生产观测与模型改进。
+- **LLMOps（Google Cloud）**：Fundamentals/Data Preparation/Automation and Orchestration with Pipelines。
+- **提升层**：可复用 Skill（可观测闭环）。
