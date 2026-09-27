@@ -7273,3 +7273,58 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **chunking 策略**：固定尺寸 N tokens+M overlap（基础）；advanced techniques（结构化/语义分块）。
 - **arXiv 系统结论**：更大 chunk 减少检索上下文数但窄证据错过时增加 abstention；summaries/explanations 用小区块，factoid QA C≈2.5k；减少"NONE"响应增大 C+更小 S；避免 overlap；默认 sentence chunking——分块是一阶设计选择，决定 RAG 可靠性与成本。
 - **提升层**：可复用 Skill（RAG 分块方法论）。
+## n8n Queue Mode 与并发控制：主实例不执行 · Redis/BullMQ 队列 · 并发与 DB 连接池陷阱（来源：docs.n8n.io hosting/scaling/queue-mode + control-concurrency + n8nlogic queue-mode + n8nautomation scale + n8n.spot scaling-science + community oracle-sessions 2025-11/2026-07 实拉，合并 §n8n 错误工作流——那条管"单机排障"，本条管"水平扩展"）
+- **Queue mode 架构**：主 n8n 实例只处理 timer/webhook 并生成（不执行）workflow execution；execution ID 传 Redis 队列（BullMQ），下一个可用 worker 拉取执行——加/减 worker 即水平扩缩。
+- **并发控制**：N8N_CONCURRENCY_PRODUCTION_LIMIT（默认 10，-1 回退）全局封顶 worker 并发；worker --concurrency 默认 10、官方推荐 ≥5；每并发执行约 +256MB 内存。
+- **连接池陷阱**：worker 数×并发交互——大量 worker+低并发会耗尽数据库连接池（max sessions ≈ workers × pool）；原生节点（Oracle 等）并发 DB session 尤其易炸；估算总内存 = worker 数×并发×256MB。
+- **扩展前置**：Redis 6+；PostgreSQL 共享持久层；autoscaling 构建可自动加 worker（数百并发）。
+- **提升层**：工作流（水平扩展）。
+
+## Anthropic 工具循环与迭代上限：while 直到 stop_reason · 10/25 硬上限 · 子代理 summary 回父（来源：platform.claude.com build-a-tool-using-agent + agent-sdk/agent-loop + developersdigest production-patterns + claude blog loops 2026-03/09 实拉，合并 §工具循环终止条件——那条管"查 stop_reason 防无限"，本条管"循环工程化参数"）
+- **while 循环正确形态**：Ring 1 假设只调一次工具是错的——真实任务多次调用（创建事件→读确认→再创建）；正确写法 while 循环持续执行工具并喂回结果，直到 stop_reason 不再是 tool_use。
+- **硬迭代上限防 runaway**：交互流 10 次/批处理 25 次封顶；per-tool timeout 防慢工具阻塞循环；监控平均迭代/会话——creep upward 提示 schema 回归或下游 API 变化。
+- **缓存工具定义降成本**：tool definitions 随每个请求发送——工具定义段缓存。
+- **子代理策略**：subagent 全新对话（无父消息历史，但加载自己 system prompt+CLAUDE.md）；仅最终响应作为 tool result 回父——父上下文只增长 summary 而非全转录。
+- **loop 四型选择**：Turn-based（检查——探索/决策）、Goal-based（停止条件——知道 done 长啥样）、Time-based（触发——工作发生在项目外）、Proactive（提示——周期性明确工作）。
+- **提升层**：可复用 Skill（循环工程）。
+
+## Dify 外部知识源与双向 MCP：External Knowledge API · Knowledge Pipeline · Agent 节点动态工具（来源：legacy-docs.dify.ai external-knowledge-api + v1-6-0 two-way-mcp + knowledge-pipeline tavily + deepwiki api-extensions 2025-06/2026-08 实拉，合并 §Dify RAG 检索——那条管"内置知识库检索"，本条管"外部 RAG 接入与 MCP 编排"）
+- **External Knowledge API**：自定义知识库服务（Endpoint URL+API Key）——Dify 请求自动追加 /retrieval；响应 records[]（metadata/score/title/content）；API 连接可跨多个知识库复用；InfraNodus GraphRAG/LlamaCloud 均走此协议。
+- **Knowledge Pipeline**：RAG 工作流全新起点——组件可插拔（upload/parse/chunk/embed）；Tavily 等实时数据源插件直接进管道。
+- **双向 MCP**：workflow 内编排 MCP 工具；Agent 节点动态路径（运行期选工具）——如反馈分流三 agent（正向→Marketing/技术→Support/产品建议→需求文档）。
+- **API 扩展点**：app.external_data_tool.query 基于用户输入或工作流变量取外部数据。
+- **提升层**：工作流（外部 RAG 接入）。
+
+## OpenClaw 自动化三调度与 CLI：at/every/cron · trigger-script supervisor · Gateway scheduler（来源：docs.openclaw.ai cli/cron + automation/cron-jobs + openclawplaybook cron-jobs + learnopenclaw automation 2026-02/09 实拉，合并 §定时任务记账判据——那条管"排期语义怎么写对"，本条管"OpenClaw 具体能力与语法"）
+- **三调度类型**：at（一次性，ISO 8601 时间戳）；every（固定间隔 ms）；cron（5 字段或 6 字段带秒 + IANA 时区）。
+- **CLI 语法**：openclaw cron add/create（schedule 在前 prompt 在后）；--name/--tz/--session/--system-event（系统级事件）/--wake now；--trigger-script ./watch-pr-ci.js（本地脚本文件创建 supervisor，脚本变化触发 agent 响应 CI 状态）；--session isolated 隔离会话。
+- **Gateway scheduler 概念**：内置调度器持久化任务、精确时刻唤醒 agent、可选投递输出到任意消息通道——无外部服务、无脆弱 crontab；agent 从"聊天机器人"变"员工"。
+- **报告自动化模板**：读数据（CSV）→模板生成→周环比计算→flag 超阈值指标（如 15%）→保存投递。
+- **提升层**：工具（自动化调度）。
+
+## LangFlow Tool Mode 工具化：组件变工具 · description 驱动选择 · Code Agents 参数（来源：docs.langflow.org agents + agents-tools + agents-tool-calling + 1.9.0 components-agents + bundles-codeagents + bundles-composio 2025-05/2026-09 实拉，合并 §LangFlow 组件构建——那条管"怎么写组件"，本条管"组件如何工具化进 agent"）
+- **Tool Mode**：任何组件头菜单开启后变工具——输入动态改变、增加 Toolset port 连接 Agent 的 Tools port；API Request 等非工具类组件也能经 Tool Mode 被 agent 使用。
+- **工具注册**：函数包装为 Tool 对象（通用接口）；agent 靠 Tool description 决定何时用哪个工具；一 agent 可挂多工具、每工具多 action。
+- **工具生态接入**：Composio 单服务组件（Gmail 等）Toolset 连 Agent；MCP Tools 组件连 MCP server；CUGA Agent 企业多 agent+MCP 案例。
+- **Code Agents 参数**：max_iterations（默认 5 范围 1-50）；code_execution_mode stepwise（逐步执行）/full（全部一起）；LangChain bundle 另有 max_execution_time/early_stopping_method/verbose。
+- **提升层**：可复用 Skill（组件工具化）。
+
+## Pipedream 组件结构 Actions/Sources：.app.mjs · 能力差异 · Registry · Connect 两实现（来源：pipedream.com components/contributing + api + actions-quickstart + connect/components + docs-proxy migrating 2024-08/2026-09 实拉，合并 §Pipedream components——那条管"组件规范"，本条管"结构分工与开发模式"）
+- **结构分工**：.app.mjs 管真实 API 调用（axios 封装 API URL+token）；common.mjs 管跨组件共享逻辑（结构等价）。
+- **Actions vs Sources 能力差异**：actions 只能作 workflow step（props 捕获输入，return/$.export 输出 JSON 给后续 step）；sources 有 lifecycle hooks+dedupe strategies+emit 事件（可独立监听）——actions 无这些。
+- **迁移**：legacy actions→component actions 时 params→props。
+- **Registry 与 Connect**：PipedreamHQ/pipedream components 目录（每集成一目录：README/app.mjs/package.json/actions）；Connect components（triggers+actions 自包含可执行单元）实现二选一：backend SDK 自建前端 或 connect-react 前端 SDK 预建组件。
+- **提升层**：工具（组件开发）。
+
+## Make HTTP 分页与退避重试：HTTP v4 原生分页 · cursor 直到 null · {{2^(attempt-1)}}（来源：apps.make.com/http + everestx make-http + keerok advanced-tutorial + developers.make.com sdk modules 2025-04/2026-09 实拉，合并 §Make Webhook——那条管"触发器"，本条管"HTTP 客户端与分页"）
+- **HTTP v4**：简化设置+更安全 keychain 存储+原生分页；旧集成用 v3 legacy。
+- **分页模式**：cursor-based（Stripe/Shopify/Slack next_cursor/has_more——提取传下一请求直到 null/空）；offset 分页响应 < page size 即末页；Make 内可用 Repeater 模块或递归场景 fetch 全页；SDK pagination 指令（mergeWithParent/repeat 条件重发+delay+limit）。
+- **指数退避重试**：Tools>Sleep 动态公式 {{2^(bundle.attempt-1)}}——attempt2=2s/3=4s/4=8s 后告警；5xx 重试退避、4xx 通知不重试。
+- **提升层**：工作流（HTTP 可靠性）。
+
+## Activepieces 发布与市场：publish CLI · 三分享方式 · 两级管理 · 60% 社区（来源：activepieces.com build-pieces publish-piece + bundling-pieces + sharing-pieces/overview + private + install/architecture piece-syncing + admin-guide manage-pieces 2026-05/09 实拉，合并 §Activepieces 生命周期/认证——那条管"触发器与连接"，本条管"发布分发"）
+- **发布流程**：npm run build-piece（打包 .tgz）→ npm run publish-piece-to-api（打包上传平台 endpoint；API Key 从 Admin 生成）；三问题向导。
+- **三种分享**：Contribute Back（贡献回主仓库）/Community（npm 直接发布分享）/Private（私有上传 Platform Admin→Pieces）。
+- **Piece 同步三类型**：Official（Activepieces cloud registry 自动同步）/Custom（npm registry 平台级手动）/Private（.tgz upload）。
+- **两级管理**：Platform Admin 全平台装/卸；Project Admin 项目级 show/hide（不同团队隔离）；生态事实：pieces 是 npm 包 TypeScript typed framework，60% 社区贡献，280+ 全开源且全部可作 MCP。
+- **提升层**：可复用 Skill（发布分发）。
