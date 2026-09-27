@@ -4671,3 +4671,39 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **事件驱动 agent 路由**：状态变更触发不同 agent，无中心 orchestrator（issue opened→triage agent→label ready-for-implementation→implementer）。→ 判据：工作流按状态机拆 agent，事件触发不设总协调者。
 - **编排模式四选**：Single Agent（简单原子任务）/ Fan-Out（独立并行 matrix）/ Sequential Chain（step N 输出进 step N+1 needs+artifact handoff）/ Event-Driven（outcome 触发 workflow_run/repository_dispatch）。→ 判据：先定编排模式再搭。
 - **提升层**：工作流/工具。
+
+## 异常处理三选项 + 异常分支重定向（来源：Dify 错误处理/重试面，2026-09-27 实拉）
+- **异常处理三选项**：无（直接抛出报错中断流程）/ 默认值（预定义值替代原节点异常输出 下游继续）/ 异常分支（预编排异常分支执行）。→ 判据：节点失败先定处理策略，中断/兜底/分支三选一。
+- **异常分支重定向**：error_type+error_message 变量捕获错误细节，触发后续动作（通知/备份工具激活）。→ 判据：异常分支用错误变量驱动后续，不吞错也不裸奔。
+- **Fallback model providers**：LLM 节点配备份模型，主模型失败自动切。→ 判据：关键 LLM 调用配备份模型。
+- **Backoff with jitter**：429/5xx/timeout 用 exponential backoff+jitter；Retry-After 头活用；5xx 早放弃；maxRetries 防无限循环。→ 判据：重试带退避+上限，5xx 不恋战。
+- **节点类型分工**：If/Else 用于业务条件；LLM/HTTP/Code/Tool 失败用内建 retry/default-value/fail-branch。→ 判据：业务分支用条件节点，失败处理用内建机制。
+- **提升层**：工作流/工具。
+
+## 记忆四型选型 + 夜间批量总结管线（来源：n8n AI agent 记忆面，2026-09-27 实拉）
+- **记忆四型选型**：Simple Memory Window Buffer（最常见 存最近 N 条消息 窗口可配置）/ Postgres/Redis/MongoDB Chat Memory（chronological 持久跨 session）/ Vector store（Pinecone/Weaviate/Qdrant/MongoDB Atlas 语义+情节记忆 按需搜索）。→ 判据：对话窗口用 Simple，持久时间序用 DB Chat，语义回忆用 Vector。
+- **夜间批量记忆管线**：Schedule trigger→Get last_vector_id→Query Postgres→聚合总结（小模型）→生成 embeddings→存 vector DB——分批增量不重拉全量。→ 判据：长期记忆走定时批量管线，按 last_vector_id 增量。
+- **双库模式**：Postgres 存原始对话 + Supabase pgvector 存检索索引（match_documents 相似搜索函数）。→ 判据：原始与检索分库，raw 在关系库检索在向量库。
+- **会话 ID 隔离**：chat trigger 每浏览器窗口唯一 Session ID，用户对话完全分离。→ 判据：多用户记忆按 session ID 隔离。
+- **提升层**：工具/工作流。
+
+## Supervisor 响应式监控 + 质量评估条件路由（来源：LangFlow 多 agent 编排面，2026-09-27 实拉）
+- **Supervisor vs Orchestrator**：orchestrator 规定调用顺序；supervisor 响应式监控 agent 输出决定 retry/escalate/proceed——high uncertainty 分数→要求更多分析。→ 判据：复杂判断用 supervisor 看结果决策，别用死顺序。
+- **质量评估条件路由**：每个 agent 完成后 supervisor 评估输出 vs quality criteria（规则或 LLM），不达标重做/升级。→ 判据：agent 结果过质量评估再放行下游。
+- **拆解式 planner**：Research Planner 把问题拆 3-7 个自包含子问题再分发——子问题自包含不互相依赖。→ 判据：多 agent 研究先拆自包含子问题。
+- **supervisor 实现**：读全进度总结决定下一个 worker 或 END（LangGraph StateGraph 条件边）。→ 判据：supervisor 是条件路由节点，读进度选下一步。
+- **提升层**：工作流/工具。
+
+## 手动重试双策略 + 幂等键防重复（来源：Activepieces 错误处理/重试面，2026-09-27 实拉）
+- **手动重试双策略**：FROM_FAILED_STEP（从失败 step 恢复——flow logic 正确 失败瞬时）/ ON_LATEST_VERSION（最新版本重启——flow logic 修过）。→ 判据：逻辑没错从失败步续跑，修过逻辑用新版本重启。
+- **Retryable vs Non-retryable**：Retryable=Network timeouts/429/500/503；Non-retryable=400 等。→ 判据：先分可重试性再配重试。
+- **幂等键+correlation IDs**：Tables 存检测重复，短路重复 run；webhook 重复投递防重复处理。→ 判据：重复投递靠幂等键短路，不重处理。
+- **部分失败处理**：分支隔离风险 step+补偿动作回滚+Tables 持久中间状态+重试进 review queue 人工处理。→ 判据：部分失败走隔离+回滚+人工队列，不隐藏错误。
+- **提升层**：工具/工作流。
+
+## Copilot code review 双路径 + 自定义指令（来源：GitHub Copilot code review 面，2026-09-27 实拉）
+- **手动 vs 自动 review**：默认手动 assign（gh pr create --reviewer @copilot / gh pr edit PR --add-reviewer @copilot）；可配置所有 PR 自动 review。→ 判据：按仓库节奏选手动/自动，默认手动防噪音。
+- **行级可应用建议**：Copilot 扫描 code changes+相关 context，给自然语言评论+指定行/文件的具体代码建议，几击应用。→ 判据：AI review 输出行级可应用建议，不只泛泛意见。
+- **自定义指令**：natural language 描述 coding style/best practices，反馈反映仓库规范。→ 判据：给 AI reviewer 喂仓库风格指令，输出贴合约定。
+- **re-review 不自动**：push 变更后不会自动 re-review，除非配置。→ 判据：改完想再审需显式触发，不指望自动。
+- **提升层**：工具/工作流。
