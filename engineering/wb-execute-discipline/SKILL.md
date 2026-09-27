@@ -5941,3 +5941,43 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **渠道实现差异**：Feishu=WebSocket bot，Google Chat=HTTP webhook，iMessage=native macOS imsg bridge，Teams=Bot Framework。→ 判据：接渠道按官方接入形态实现，不套统一假想。
 - **Nostr 签名链**：relay→WebSocket→event processor→filtering（pubkey/hashtag/event type）→agent reasoning→signed response；crypto 签名需安全管理 private keys。→ 判据：接入签名型渠道先建私钥安全管理。
 - **提升层**：工具。
+
+## Dify 错误处理三选项与模型 fallback 链（来源：legacy-docs.dify.ai error-handling + dify.ai blog v0.14.0 + DEV hidden-uses 2026-06-19 + Human Input Node 2026-03-03，2026-09-27 实拉，与 §节点交接契约互补——那条管数据传递，这条管失败处理）
+- **异常三选项**：无（抛错中断流程）/默认值（预定义输出替代内置异常输出，下游继续）/异常分支（执行预编排分支）。→ 判据：关键节点必配默认值或异常分支，不许裸奔中断。
+- **Code 节点重试**：最多 10 次自动重试，间隔最大 5000ms；失败可定义 fallback 路径让工作流继续。→ 判据：临时处理问题开重试，逻辑错误走 fallback。
+- **error_type/error_message 变量**：异常分支里用这两个变量捕获错误细节，触发通知或备份工具激活。→ 判据：异常分支不是空降，要消费错误变量做后续动作。
+- **模型 fallback 链**：provider-level routing 配 primary→secondary→tertiary cheap model，模型 outage/rate limit 时 pipeline 不整体失败。→ 判据：关键 LLM 节点配多级模型链，不单点依赖。
+- **Human Input 节点**：wait duration 超时自动结束或走 timeout branch（提醒/转发）；Confirm/Regenerate/Forward 三按钮各映射分支；3 天无人响应自动转发。→ 判据：人审节点必配超时与升级路径，不无限等。
+- **If/Else 检查关键节点输出**：HTTP 4xx 路由到错误处理分支，不静默 corrupt 数据。→ 判据：外部调用后先验状态码再进主流程。
+- **提升层**：工作流。
+
+## n8n Git 版本控制与 GitOps：分支环境 + 凭据排除 + AI 写 JSON 即建工作流（来源：docs.n8n.io source-control-environments + blog.n8n.io announcing-autosave 2026-01-13 + community gitops 2026-02-26，2026-09-27 实拉，与 §Agent 生命周期互补——那条管发布，这条管版本与部署）
+- **Git-based source control**：instance owners/admins 可 push+pull，project admins 只能 push 不能 pull。→ 判据：按角色给 pull 权限，不是人人可拉。
+- **每环境一条 Git branch**：dev/staging/prod 各一分支，promotion=merge+pull on target instance；**Credentials 默认排除 repo** 单独处理。→ 判据：环境晋升走 merge，凭据永不出现在 repo。
+- **Autosave History panel**：track changes/instant rollbacks/publish previous version。→ 判据：改坏了从历史面板一键回滚，不手工还原。
+- **Concurrency Protection**：同事编辑时锁 Read-Only 防互相覆盖。→ 判据：多人同编一个 workflow 时自动只读锁。
+- **GitOps：AI agent 写 JSON 即创建**：workflows 和 credentials 都是 repo 里 JSON 文件，two-way sync（UI 保存→external hooks 导出；Git 部署→启动 auto-import），AI agent 写 JSON 到 workflows/ 目录 commit 即创建 workflow，无需 UI。→ 判据：要程序化创建 workflow 就写 JSON 进 repo，不走 UI 点击。
+- **提升层**：工作流。
+
+## Pipedream 错误重放与 MCP isError（来源：pipedream.com docs errors + troubleshooting + connect/mcp/developers + zapier compare 2026-09-16，2026-09-27 实拉，与 §test event 纪律互补——那条管开发，这条管故障处理）
+- **REST 查询 workflow 错误**：/v1/workflows/{id}/\/event_summaries 列出最近 100 个 errors。→ 判据：排查历史失败先查 REST 错误列表，不靠翻 UI。
+- **failed events 一键 replay**：事件流架构支持失败事件重放（API down 2h 50 events failed→replay all 50 无数据丢失）。→ 判据：批量失败先确认可重放，再决定人工还是自动补。
+- **MCP tool 失败返回 isError: true**：MCP server 按 spec 返回结果让 LLM 看到错误自行决定，而非 protocol-level 错误。→ 判据：工具失败结果交还模型决策，不中断协议。
+- **auto-retry 边界**：failed step 最多 8 次/10 小时指数退避（付费 Advanced），不覆盖 OOM/Timeout。→ 判据：重试策略先确认覆盖范围，OOM/Timeout 自己处理。
+- **source logs**：pipedream.com/sources/{dcid} 查看触发 logs 与 emitted events。→ 判据：trigger 不触发先查 source logs。
+- **提升层**：工具。
+
+## Anthropic System Prompt 工程：XML 分区 + 输出格式最高杠杆 + 运行时组装（来源：docs.anthropic.com use-xml-tags + promtable cheatsheet 2026-06-01 + synscribe harness 2026-06-15，2026-09-27 实拉，与 §工具设计纪律互补——那条管工具，这条管系统提示）
+- **XML tags 分区**：<instructions>/<context>/<examples> 区分规则与参考数据；一致描述性 tag 名；嵌套自然层级（documents→document index=n）。→ 判据：提示 3+ 分区时用 XML 标签切语义边界。
+- **输出格式规范是最高杠杆组件**：一致输出格式→可靠下游处理；structured output JSON（answer/confidence/sources_needed/follow_up）。→ 判据：应用接入先固定输出 schema，下游解析零猜。
+- **escape hatch**：告诉 Claude 不知道时做什么（拒绝/澄清），不给它猜的自由。→ 判据：每条系统提示都要有"不知道怎么办"。
+- **推荐结构**：role+capabilities+constraints+format，examples 放 user turns；constraints 写成 positive always/negative never。→ 判据：系统提示按角色-能力-约束-格式骨架，示例放对话侧。
+- **system prompt 是程序不是文档**：Claude Code 运行时从 ~28 个小 section 组装（各自独立缓存+条件包含），按 app（CLI vs desktop）/surface（interactive vs SDK vs background）/model fork。→ 判据：长系统提示拆可缓存小段条件组装，不写单一巨型文档。
+- **提升层**：模型。
+
+## OpenClaw 桌面/移动原生 App：v2026.7.1 原生端 + 3 命令安装（来源：docs.openclaw.ai releases/2026.7.1 + openclaw.ai 官网 + imclaw desktop guide，2026-09-27 实拉，与 §多渠道互补——那条管渠道，这条管安装与桌面形态）
+- **原生端发布**：v2026.7.1 推出官方 iOS/Android/macOS 原生 app（大更新），Windows 走 Windows Hub（原生 WinUI 桌面应用，Win10 2004+/Win11，无需管理员权限）。→ 判据：个人部署优先官方原生端，不用命令行硬扛。
+- **Command Center**：内置聊天+会话/节点状态/诊断单窗口；系统托盘常驻后台+开机自启；网关切换本地 WSL/远程 URL/SSH 隧道。→ 判据：多端管理在 Command Center 一个窗口看全。
+- **3 命令安装**：npm install -g openclaw → openclaw init → openclaw gateway start；Node 18+；Windows 10+/macOS 12+/Linux。→ 判据：服务器部署用 3 命令 CLI，桌面用原生 app。
+- **桌面/手机端能力**：gateway 常驻后台，模型设置/消息通道接入/MCP/gateway 管理；能调用屏幕摄像头、系统语音。→ 判据：要本地感知能力用原生端（摄像头/语音/屏幕）。
+- **提升层**：工具。
