@@ -4265,3 +4265,33 @@ px skills use owner/repo@skill 生成该技能的 prompt，管道直接喂给 ag
 - **Everything-is-a-Plugin 框架哲学**：deepseek-harness 208k★——每个组件从数据处理到模型执行都可插件替换/扩展。→ 判据：框架设计把每个环节做成可插拔，替换组件不重写主流程。
 - **跨任务 skill 复用记忆 OS**：MemOS——ultra-persistent memory/hybrid-retrieval/cross-task skill reuse，35.24% token 节省。→ 判据：记忆层支持跨任务复用已学技能+混合检索，是长期 token 节省的主要来源。
 - **提升层**：工具/工作流。
+
+## 可观测四环节 + 外部 trace 栈矩阵（来源：Dify 可观测性/审计面，2026-09-27 实拉）
+- **审计四环节**：应用层/API 网关/向量数据库/模型调用四大核心环节都做结构化日志+敏感操作标记+实时告警+合规导出；部署阶段即完成策略对齐避免运行时审计盲区。→ 判据：生产 LLM 应用的审计日志按四个环节分别接入，不是只记应用层。
+- **外部 trace 栈矩阵**：traces 流到 7 个外部栈（Langfuse/LangSmith/Opik/W&B Weave/Arize/Phoenix/Alibaba ARMS）over OpenTelemetry。→ 判据：观测平台按 OpenTelemetry 标准可插拔，选一个栈长期用不锁死。
+- **Run 级可观测**：Run History + Variable Inspector 中间值 + 每 node 类型化错误元数据。→ 判据：排查工作流问题先看 run 历史+中间变量+节点级类型化错误。
+- **提升层**：工作流。
+
+## Agent RBAC 三权分离 + 凭证不暴露（来源：n8n 认证/权限/治理面，2026-09-27 实拉）
+- **三权分离**：谁能编辑 workflow/谁能执行/每次执行可达哪些凭证——三权独立；Editor 不自动有 execute 权，execute 权不授予凭证访问。→ 判据：agent 的权限按"编辑/执行/凭证"三槽分别授，不叠送。
+- **Credentials 加密不暴露给 agent**：API 密钥存在加密凭证库，agent 调用时不经手明文。→ 判据：agent 自动化里 API 密钥不可见，泄漏面为零。
+- **OAuth2 Token Exchange（RFC 8693）**：delegated API access 系统代用户动作带全审计归因；IdP 是全局角色真相源，每次 exchange 覆盖 UI 角色。→ 判据：第三方代操作走 token exchange 保留审计归因，角色以 IdP 为准。
+- **提升层**：工作流。
+
+## Worker 横向扩展模型（来源：Activepieces 部署/扩展面，2026-09-27 实拉）
+- **concurrency-1 worker + replicas 扩展**：一 worker 一并发 flow，小尺寸容器；吞吐靠加 replicas 不靠加宽容器；slots=containers×concurrency 保持总槽位。→ 判据：自动化执行器横向扩展用"窄容器+加副本"，不用"宽容器+多并发"。
+- **算术扩展 1:10**：workers=峰值并发 flow 数，apps=ceil(workers/10)；每 10 workers 加 1 app。→ 判据：应用节点数按 worker 数 1:10 估，避免过度供给。
+- **小 Redis 足够**：千级 jobs/s 很少成瓶颈，扩展先加 worker/Postgres。→ 判据：队列基础设施按"瓶颈在后端不在队列"假设排。
+- **提升层**：工作流。
+
+## MCP 安全最佳实践清单（来源：Anthropic MCP 面，2026-09-27 实拉）
+- **默认 read-only**：按 server 按 project 开写权限，仅工作流需要时开。→ 判据：MCP 服务器默认只读，写权限逐个授权。
+- **least-privilege tokens**：fine-grained PAT 限特定 repo、DB role 限 schema、OAuth scope 只读；永不 account-wide admin。→ 判据：token 按最小作用域签发，按需收紧。
+- **secrets 不进 shell history**：secrets 放 env/secrets manager，不提交配置、不 inline 在安装命令。→ 判据：密钥三条线（环境变量/管理器/不提交）都是死线。
+- **fetched content 当 untrusted**：外部抓取内容按不可信处理，不直接执行/注入。→ 判据：远程内容进 prompt 前先当潜在注入处理。
+- **提升层**：工作流/工具。
+
+## GNAP Git-Native Agent Protocol + skills.json 版本化（来源：GitHub 生态面 + skills.sh CLI 面，2026-09-27 实拉）
+- **Git-native 协调**：GNAP 通过 git repo 里 4 个 JSON 文件协调 AI agents，无 server 无 DB——git 即状态与接口。→ 判据：小规模多 agent 协调优先考虑 git 文件作状态层，省去 server/DB。
+- **skills.json 版本化配置**：committed to Git 可 review diffable 记录哪些 skills 激活；air-gapped 环境用自包含二进制。→ 判据：技能激活清单进版本控制，变更可 review 可回滚。
+- **提升层**：工具。
