@@ -6319,3 +6319,35 @@ pm create @n8n/node（declarative/custom 模板）——declarative 风格适合
 - **长 system prompt 稳定性三招**：末尾重复关键指令（首尾失忆补偿）/structured output 强制格式/role anchoring（"Remember, you are the ANALYST, not the writer"）。
 - **对抗输入测试**：edge cases/empty inputs/unexpected languages/misleading inputs 都要测——正常输入通过不代表 prompt 稳。
 - **提升层**：可复用 Skill（提示工程）。
+## Dify DSL 迁移与版本控制：YAML 导出导入 · Git 管编排 · 声明式 Patch（来源：dify-6c0370d8.mintlify.app key-concepts + app-management + deepwiki.com/langgenius/dify 3.5-cross-environment + dev.to Dify 5 hidden uses + mack-peng/dify-dsl-builder 实拉）
+- **DSL 形态**：所有 Dify app 可导出为 YAML DSL，可直接导入创建 app——跨实例移植+分享；导出内容：app 配置+元数据/workflow 编排+节点设置/模型参数+prompt 模板/知识库连接引用（不含数据本体）。
+- **隐藏用法**：workflow 导出 YAML→Git 版本控制/diff 部署差异/内置 tracing API 重放历史执行逐步——**编排当代码管，不只在画布上点**。
+- **声明式修改**：dify-dsl-builder YAML Patch System（18 operations）npx dify-dsl-cli apply patch.yml 自动 validate 非零退出；VS Code Dify DSL Visualizer 手改 YAML（含 agent 改）立即更新 graph，原生 undo/redo，一键 publish 到 workspace。
+- **提升层**：工具（工作流编排的代码化管理）。
+
+## n8n Agent 工具成本纪律：每 turn 重计费 · 描述是 per-turn 税 · 大返回先 trim（来源：blog.n8n.io deterministic-steps-ai-steps + make-agents-more-reliable + n8n community 304536/299774 + community 293285 Skills-in-n8n 实拉，与 §多 Agent 接口契约互补——那条管"agent 之间传什么"，本条管"Agent 节点上的工具怎么选才不烧钱"）
+- **每 attach 一个工具到 Agent node，每个 turn 都重新计费**：精简 tool description（per-turn tax，terse-but-clear 胜过段落）；**不要 just-in-case 附加工具**——5 个少用工具和 5 个常用工具每 turn 一样贵；工具返回大 JSON blob 而 agent 只要 2 个字段，先 trim 再回上下文。
+- **工具参数三类型混用**：FromAI（agent 决定）/expressions（动态传值）/fixed mode（静态值）——同工具多 agent 用不同 static values，一个工具多种用途不用复制。
+- **Structured Output Parser 已知不可靠**：替代=自定义循环手动校验 agent 输出（gpt-4.1 实测更稳）；或 "Require Specific Output Format"+ "Define using JSON Schema" 提供 schema（field types/enums/descriptions），parser 自动注入格式指令、prompt 里不再写 JSON 格式要求。
+- **Anthropic-style Skills 落 n8n**：Postgres skills 表 name 主键+description manifest+content 全文——progressive disclosure 按需加载。
+- **提升层**：工作流（Agent 成本治理）。
+
+## Make Router/Filter 判据矩阵：选型四判据 · 末尾必须 fallback · 无 fallback 静默丢数据（来源：use-apify routers-filters-guide 2026-03 + automatemyjob Make advanced 2026-03 + make.com llm-integration guide 2026-05 + devfoil filter-router 实拉，与 §Make 性能优化互补——那条管"场景省钱提速"，本条管"分支逻辑怎么选型不漏数据"）
+- **Filter vs Router 四判据**：单条件过滤放行=Filter（简单通/断）；条件分支各走不同处理=Router（每 route 首连线设 Filter）；同数据多路并行传递=Router 不带 Filter；只做 spam 阻断=Filter（挡住即可）。
+- **Router 必须配 fallback**：routes 按优先级顺序配置+末尾 fallback 接住不匹配任何条件的数据——**无 fallback 时匹配不到的路由 bundle 静默消失且无日志**（关键判据：丢数据是静默的）。
+- **Filter 运算符全集**：Text（Equal/Contains/Starts with/Matches pattern regex）/Numeric（Greater/Less/Between）/Date（Before/After/Between dates）/Existence（Exists/Does not exist）/Array（Contains item/Does not contain item）+AND/OR 条件组。
+- **LLM 集成模式**：Router 把 AI 结构化输出转业务结果，每 route=目的系统不是 code branch；规则路由不够时再升级 autonomous AI agents。
+- **提升层**：工作流（分支选型）。
+
+## Copilot CLI agent 生态：四运行模式 · 内建 agents 并行 · Rubber Duck 第二意见（来源：github.blog changelog 2026-02-25/2026-06-02 + docs.github.com custom-agents/skills + developer.microsoft hands-on course 实拉，与 §GitHub Copilot Agent Skills 规格分工——那条管"skills 文件怎么定义"，本条管"CLI 运行模式与审查机制"）
+- **四运行模式**（agent picker）：Agent mode（默认，自主执行任务）/Ask mode（快速问答）/Custom agents（.agent.md 定义个性化 agent）/Plan mode（先规划后写码，Shift+Tab 循环进出，ask_user 工具提问澄清）。
+- **内建 specialized agents 多 agent 并行**：Explore（快速 codebase 分析）/Task（跑 builds/tests）/Code Review（高信号 change review）/Plan（实施规划）——autopilot mode 下 Copilot 自主执行工具/命令/迭代不需批准。
+- **Rubber Duck 第二意见**：orchestrator 选 Claude 模型时 Rubber Duck=另一模型家族（GPT-5.4）检查 agent 工作，surfacing 高价值 concerns（missed details/assumptions/edge cases）——**模型交叉审查不是装饰**。
+- **Skills 兼容**：SKILL.md YAML frontmatter 同 ARIS 格式，Copilot CLI v0.130+（GA 2026-05）原生支持无需 mirror——主流 skills 直接可用。
+- **提升层**：工具（CLI 自动化）。
+
+## smolagents CodeAgent：代码即行动 · 单步组合多工具 · ~30% 少步骤（来源：huggingface.co/learn/agents-course + pypi smolagents 1.26.0 + deepwiki.com/huggingface/smolagents + andrew.ooo review 实拉）
+- **CodeAgent=LLM 写 Python 代码作为 action**（非 JSON tool call）：单步可调两工具并组合结果/迭代列表/定义 helper/处理条件——任何 Python 可表达的逻辑一步完成；HF 基准 ~30% 更少 steps、硬任务分更高。
+- **ToolCallingAgent=JSON/text tool calls** 行业标准格式——两种行动格式并存，按任务选。
+- **执行安全**：LocalPythonExecutor（AST 解析）或 Sandbox；model-agnostic（transformers/Ollama/HF Inference/OpenAI/Anthropic/Bedrock/Azure/LiteLLM 皆可）。
+- **提升层**：工具（轻量 agent 框架选型）。
