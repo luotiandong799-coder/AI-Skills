@@ -5025,3 +5025,42 @@ ode_output.type 命名模式带类型。→ 判据：引用变量前确认其类
 - **Sonnet 5 agentic-coding 强**：top-tier accuracy 可比 opus 级、比 Sonnet 4.6 step-function 提升——编码 agent 场景 Sonnet 5 性价比首选。→ 判据：agentic coding 先试 Sonnet 5，不够再升 Opus。
 - **Opus 5 效率基准**：Zapier automation bench 榜首且不花更多 token——自动化任务复杂但预算敏感时 Opus 5 是效率选项。→ 判据：评估指标看"成绩/token 成本"比，不只比原始分数。
 - **提升层**：模型。
+
+## Dify OpenAI 兼容端点与凭据纪律：协议四选 + key 不进共享面（来源：Dify OpenAI 兼容端点面，2026-09-27 实拉）
+- **兼容插件范围**：OpenAI Compatible Dify App 插件唯一支持 Chat Completions 端点（/models /embeddings 不支持）；支持 memory mode+streaming/non-streaming+Bearer API key。→ 判据：让 Dify app 被 OpenAI 客户端调用走兼容插件，确认对方只用 Chat Completions。
+- **协议四选**：Dify Workflow（兼容 Dify workflow runtime 接口）/ Dify Chatflow（会话+流式输出）/ OpenAI Chat Completions（OpenAI SDK/兼容客户端）/ Native Protocol（AgentRun 直接映射 Flow 起点字段）——按调用方选。→ 判据：会话场景 Chatflow、无状态调用 Workflow、现有 OpenAI 代码走 Chat Completions、要原生命令映射走 Native。
+- **Responses vs Chat Completions**：OpenAI provider 里 Responses 是推荐协议且为官方模型默认；仅兼容端点或模型 API 面要求时才选 Chat Completions。→ 判据：新接入优先 Responses，兼容性需要才降级 Chat Completions。
+- **凭据纪律**：API key 存 Dify credential store/server-side secret——不进 repo、browser bundle、screenshot、共享 workflow export；接入前先外部最小测试（同端点同凭据最小调用）。→ 判据：任何模型 key 只进凭据存储层，出现在共享面即泄漏。
+- **提升层**：工作流。
+
+## n8n AI Assistant 与生成 workflow 双验证链：自然语言建流 + 构建前后两轮校验（来源：n8n AI Assistant 面，2026-09-27 实拉）
+- **AI Assistant 内建建流 agent**：自然语言描述→规划 workflow→在选中 project 构建→测试→修错误；产物是标准 n8n workflow 可开可编辑可发布（Preview cloud 2.29.9+）。→ 判据：简单自动化直接用 AI Assistant 生成，产出按标准 workflow 走发布流程。
+- **MCP 生成 workflow 验证链**：search_templates 找 2,646 模板真实模式→validate_node_minimal+validate_node_operation **构建前预验证**→validate_workflow+validate_workflow_connections+validate_workflow_expressions **构建后验证**→n8n_create_workflow 部署→n8n_validate_workflow 确认部署。→ 判据：AI 生成的 workflow 过"构建前节点预验证+构建后全量验证"双闸再部署，部署后回读确认。
+- **RAG chat assistant 参考模式**：Chat Trigger→AI Agent→Postgres Chat Memory 多轮→Supabase Vector Store 工具→OpenAI Embeddings。→ 判据：多轮 RAG 助手按此骨架搭，记忆与向量检索拆两处。
+- **多模态路由**：Switch 按 voice/image/document/text 分流→Merge 统一 prompt→Manager Agent。→ 判据：多模态输入先按类型路由再合并，别让 agent 硬解一切。
+- **提升层**：工作流/可复用 Skill。
+
+## 依赖冲突解析五法：查重 / overrides / BOM / 满足集 / 互兼容选择器（来源：Make modules 面实拉，2026-09-27）
+- **npm 查重**：
+pm ls <pkg> 看重复实例与来源路径；"Cannot find module" 或运行期怪行为多半是版本冲突。→ 判据：冲突先定位谁依赖了什么版本，不盲改。
+- **overrides 强制版本**：npm 8.3+ overrides 字段是"最正确"的强制手段；legacy-peer-deps 是最后手段——先查包是否有更新版本再考虑。→ 判据：能用 overrides 钉版本就不用 legacy-peer-deps 绕过解析。
+- **Gradle BOM 集中管理**：依赖约束/BOM 保证模块内版本一致，减冲突。→ 判据：多模块项目把公共依赖版本集中到 BOM/约束表。
+- **Terraform 满足集解析**：root aws>=5.0.0/module A>=5.50.0/module B——取满足全部约束的最高版本。→ 判据：多模块依赖取交集最高，不单按某个模块的需求定。
+- **互兼容选择器**：submodule-version 等工具选最新互兼容版本；范围冲突时报告各模块请求范围并保持项目不变。→ 判据：自动选型工具冲突时先出报告再动手，别静默改。
+- **提升层**：工具。
+
+## Claude Agent SDK 与 Managed Agents：库跑 Claude Code binary + 服务端 agent API（来源：Claude Agent SDK 面，2026-09-27 实拉）
+- **Agent SDK**：Python+TypeScript；与你进程里跑的 Claude Code binary 相同 tools/agent loop/context management——内置工具/权限/sessions/hooks 全部可编程。→ 判据：要在自己应用里嵌 Claude Code 能力用 Agent SDK，不自己重写 agent loop。
+- **安装即得 runtime**：
+pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依赖，多数安装无需单独装 Claude Code。→ 判据：SDK 自带 runtime，部署不额外装 CLI。
+- **Managed Agents API（beta）**：agents.create/update/retrieve；可指定 model（claude-opus-5）+mcp_servers（url type）+agent_toolset（default_config enabled）——服务端托管的 agent 对象。→ 判据：需要平台托管 agent 生命周期用 Managed Agents API，本地进程用 Agent SDK，两条线不混。
+- **例 code review agent**：读文件/搜代码自主+结构化反馈+进度追踪（Claude Code CLI+SDK TS+Opus 4.5）。→ 判据：以 CLI+SDK 组合快速搭专业 agent，别从零写调度。
+- **提升层**：工具。
+
+## OpenClaw Gateway 路由纪律：模型从不决定路由 + agent 按 persona 隔离（来源：OpenClaw gateway 路由面，2026-09-27 实拉）
+- **Gateway=router**：每 inbound 消息打同一 Gateway 进程；检查 origin（channel+peer）路由到正确 agent+session；回复回原 channel——模型从不决定路由。→ 判据：路由是确定性配置不是模型行为，模型只负责会话内容。
+- **多 agent 隔离**：每 agent 自己 workspace/state directory（agentDir）/SQLite session history；inbound 经 bindings 路由。→ 判据：多 persona 用多 agent+各自独立状态目录，别共享一个大脑。
+- **Channel routing 优先级**：qualified "<channel>:<peerId>" key 优先于 unqualified peer key；agent group threads 用 top-level broadcast 配置多 agent 处理一条 inbound。→ 判据：细粒度路由 key 优先，广播组成员各自独立会话。
+- **多通道归一化**：channel adapter 把 webhooks/API polling/WebSockets/bot tokens 归一化成同一事件流进 agent core——行为跨 surface 一致。→ 判据：多通道接入先归一化事件，再进同一 agent runtime。
+- **权限分层**：组会话 Docker 沙箱隔离防误操作；主会话工具 host 最高权限。→ 判据：群聊/共享会话降权限进沙箱，私人主会话才给高权限。
+- **提升层**：工作流。
