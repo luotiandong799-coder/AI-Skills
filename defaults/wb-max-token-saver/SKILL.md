@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体、状态卡只发一次、原地更新、动作词加对象加约束、置信信号、进度时间线、批准画面、改了什么、能不能撤销、推销结论
-version: 1.50.2
+version: 1.50.3
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -61,77 +61,8 @@ version: 1.50.2
 - **markdown 增量渲染**：markdown 会不完整到达（代码块/表格中途切分）——增量渲染，**不每个 token 重解析整个消息**。
 - **SSE 是默认**：原生浏览器支持/自动重连/标准 HTTP；WebSocket 留给双向需求（语音/agentic 确认/多用户）；fetch+ReadableStream 给自定义协议。
 
-## 解码参数实证：T=0 不保证确定性 / JSON 两级约束 / guided decoding 五级 / min_tokens 语义（来源：arXiv《Background Temperature》2604.22411 + Cohere《Structured Outputs》2026-09-16 + Microsoft《Structured Outputs》2026-08-25 + NVIDIA《Guided Decoding》2026-09-08 + modular《Inference Parameters》2026-09-10 + LocalAIMaster《Sampling Parameters》2026-05-01 实拉，与 §流式 UX 互补——那条管「输出怎么呈现」，本条管「输出怎么采样生成」）
-- **T=0 不保证确定性**：输出变异性在名义确定性设置下仍然存在——来自实际系统（批量大小变化、缺 batch-invariant kernels、浮点非结合性、reduction-order 效应）——「背景温度」概念：**要确定性靠 pinned 环境 + 校验，不靠温度 0**。
-- **JSON 两级约束**：JSON mode 只保证「合法 JSON」；**JSON Schema mode 保证符合你给的 schema**（字段类型/必填/枚举）——要结构化契约用后者。
-- **guided decoding 五级约束**：None / JSON / JSON Schema / Regex / EBNF Grammar——按契约强度选，能约束到语法层就不靠提示词保证。
-- **min_tokens 与 stop 语义**：min_tokens 避免响应过早停止；stop/stop_token_ids 在分隔符/节/工具边界停——**边界由 token 模式定，不靠「说好到这就停」**。
-- **top-p 语义表**：0.5 紧（只留前半）/ 0.9 默认 / 0.95 更松允许更多变化 / 1.0 禁用；temperature 0=greedy。
-
-
-## 输出不止文本：Generative UI 三形态选型 + 工具/状态渲染（来源：DeepLearning.AI《Build Interactive Agents with Generative UI》课程大纲 + CopilotKit docs 2026-09-18 实拉，与 §流式 UX 互补——那条管流式文本呈现，本条管结构化 UI 渲染架构）
-- **Generative UI Spectrum 三分类**：① **Controlled**（开发者完全控制 UI，agent 只提供数据）② **Declarative**（agent 声明要什么组件/卡片/表单，开发者注册组件渲染器）③ **Open-Ended**（agent 自由生成布局）。→ 判据：**按可控性需求选**——要品牌一致性选 Controlled、要按需生成选 Declarative、要完全自由选 Open-Ended。
-- **Tool Call Rendering（工具调用渲染）**：不把工具返回的原始 JSON 甩给用户，而是注册一个组件把调用画成品牌化卡片（参数 + 实时状态 + 最终结果）。→ 判据：**工具结果进 UI 前先问「这坨 JSON 用户怎么读」**——能画成卡片/图表就不丢原始数据。
-- **State Rendering（状态渲染）**：agent 每推进一个节点/发出状态更新，前端就实时渲染——进度条（例：Researching 2/5 complete）、进行中的草稿、反映 agent 状态的 dashboard。→ 判据：**过程状态做成可实时渲染的结构化更新**，而不是攒到最后一次性给结论。
-
-## 语音三集成模式：嵌入式 / 叠层 / 可调用工具（来源：DeepLearning.AI《Voice for AI Agents and Applications》2026-09-19 实拉，与 §Generative UI 三形态同族——都是「能力接入形态选型」）
-- **三种模式**：① **Embedded Voice**（嵌入式：语音内建在 agent 主流程，会话全程语音优先）② **Voice Layered**（叠层：给现有文本 agent 外面叠一层语音接口，不动核心逻辑）③ **Voice as Callable Tool**（可调用工具：语音只是 agent 众多工具之一，按需调用）。
-- **判据：按改造深度与使用频率选**——新建从零做选 Embedded；已有 agent 要加语音选 Layered（改动最小）；语音只是能力之一、多数时候用文本选 Callable Tool。
-- 反模式：已有文本 agent 硬改成嵌入式语音（动核心逻辑成本高）；把语音当工具却要求它全程接管（职责错配）。
-
-## AI 设计三形态 + 描述失败模式而非枚举实例（来源：Anthropic frontend-design skill 深读，dev.to Skillselion 2026-09-19 实拉）
-- **AI 生成设计聚类三形态（默认而非选择）**：① 暖奶油底（近 #F4F1EA）+ 高对比衬线展示字 + 陶土色强调；② 近黑底 + 单一亮酸绿/朱红强调；③ 大报式版式（发丝线、零圆角、密集报纸式列）。判据：三形态对某些 brief 都合法，问题在它们是默认不是选择——出图/出页面先自查是否落入任一形态，是则主动偏离。
-- **黑名单会腐烂，失败模式描述才通用**：早期版禁字体名（Inter/Roboto/紫渐变），重写版全部换成失败模式描述——禁名单在新默认出现那天就失效，描述能跨字体/框架/年份识别模式。判据：写约束时描述「要避免的失败模式」而非枚举它的实例。
-- **把大胆花在一个地方 + 移除一件配饰**：全页面只留一个签名元素承担 boldness，其余克制；定稿前删掉一件多余元素（Chanel 镜子建议）。
-
-## 动效描述词汇（vibe coding 表达层）（来源：WaytoAGI《Vibe Coding 网页动效词典》2026-09-19 实拉）
-- 描述动效别只说「丝滑/高级/像苹果官网」：淡入 Fade / 滑入 Slide / 交错出现 Stagger / 模糊显现 Blur reveal / 按行显现 Line reveal；触发维度=悬停/滚动/点击/状态变化。判据：把抽象感觉翻译成具体动效名+触发条件，模型才能稳定复现。
-
-## 语音 agent 评估补充：多模态评估器 + 同步频道（来源：DeepLearning.AI Voice 课程 deep dive 2026-09-19 实拉）
-- **语音 agent 用多模态评估器验收**：语音结果不能只看文本转录，要评估器同时看音频+转写+动作（evaluation-driven development）；**同步频道**：语音与点击/键盘可并存于同一会话通道，不是二选一。
-
----
-
-
-## 同一份结果，两个消费方要两种形状：给模型的短且说人话，给程序的完整可解析；改一边不动另一边（来源：CrewAI 官方 `docs.crewai.com/v1.15.22/en/guides/tools/publish-custom-tools`（`format_output_for_agent`），2026-09-22 r132-C 独立重拉首读，此前未读）
-
-- **一个结果两种视图**：官方设计是 `format_output_for_agent()` **只改变 agent 看到的那一层**，直接调用方（`tool.run(...)`）仍然拿到完整的结构化值。判据：**这段输出接下来谁在读**——模型读的要短、要说人话；程序读的要全、要能解析。
-- **不要互相迁就**：为了让模型省 token 就把程序侧也压成字符串，等于把结构化信息一次性丢掉；反过来把整份 JSON 塞给模型，等于拿 token 买它根本不看的字段。判据：**两边各自最少需要什么**——分别给，不要取并集。
-- **改视图不影响本体**：官方明确这个覆写只改 agent 看到的表示，不改返回值本体。判据：**调整给模型的措辞时，程序侧的行为会不会变**——会变说明你把视图和本体焊死了。
-- 落点：写工具 / 脚本 / 报告时，**"人（或模型）看的版本"与"机器消费的版本"分开产出**；压缩只压前者，后者保持完整。与 §压缩只管输出侧 分工：那条管"压缩归谁管"，本条管"**同一个产物压了之后另一路消费者怎么办**"。
-
-## 附录 Z：description 术语索引（2026-09-20 从 description 外置）
-
-> 原 description 里与用户口语无关的内部术语/交叉引用词，已外置到正文。**信息零丢失**：逐条保留，检索与交叉引用不受影响；常驻上下文成本归零。
-
-不从别处筹 token、不许删未触及内容、中间态汇报、关闭："off" / "正常模式" / "stop caveman" / "normal mode"、净中性不等于无损失、压缩范围、失败细节不进进度、安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。等价于 Max-Token-Saver 插件的压缩逻辑，在 WorkBuddy 下由本技能直接执行。触发词含 "caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "复利项" / "减少轮数" / "一次调用不是一轮" / "换挡信号" / "能力不足" / "连续不改善" / "热路径" / "后台 pass" / "留痕只存元数据" / "整理移出每轮" / "可自检追问" / "discernment nudge" / "追问具体性" / "别唠叨"、审批点优先、省 token 不是删除许可、诊断流、进度流、里程碑播报、预算关不上就报告增长
-
-
-## 工具输出减容三档各有价格：先报「花不花钱 × 丢不丢信息」，再按体积分档配（来源：Pydantic AI 官方 `pydantic.dev/docs/ai/harness/tool-output-limits` 三模式与 bands 设计，2026-09-22 r129-B 独立重拉实读，新信源首读）（细则已下沉 KB）
-- 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §工具输出减容三档各有价格：先报「花不花钱 × 丢不丢信息」，再按体积分档配（来源：Pydantic AI 官方 `pydantic.dev/docs/ai/harness/tool-output-limits` 三模式与 bands 设计，2026-09-22 r129-B 独立重拉实读，新信源首读）。
-## 裁剪只作用于“给模型的视图”，存储里的完整历史不动：上下文可以少带，事实不能少存（来源：Agno 官方 `docs.agno.com/context/agent/filter-tool-calls-from-history`（`max_tool_calls_from_history` 设计），2026-09-22 r130-B 独立重拉实读，新信源首读）
-
-- **原文事实**：`max_tool_calls_from_history` 用来 *"limit the number of tool calls in context ... to manage context size and reduce token costs **while still maintaining complete history in your database**"*。示例里上下文只保留最近 3 次工具调用，同时用 `SqliteDb` + `add_history_to_context=True` 把**全部**轮次照常落库；页面专门并排列出 `In Context`（被裁过的）与 `In DB`（未过滤的）两列，说明这两份不是一份。
-- **判据**：
-  - **上下文里的历史 ≠ 系统里的历史，裁剪只能作用于前者**：给模型看的那份是**视图**，可以只留最近 N 条；落库的那份是**事实**，一条都不许少。判据：**任何"少带一点历史"的动作都要同时回答"完整那份还在不在"**——视图裁了、底层也跟着裁，等于为了省这一轮的钱把可回溯性卖掉。
-  - **裁完必须还能回到原文**：省下来的上下文要能在需要时按 ID / 句柄回读完整记录。判据：**"省了"和"丢了"的区别，就是还能不能取回来**；取不回来的裁剪是有损压缩，要在结论里按有损记，别写成"优化"。
-  - **削减的是重复出现的那一类，不是所有历史一视同仁**：工具调用（尤其是大返回）在多轮里反复重发，是上下文里性价比最低的部分。判据：**先按"重发次数 × 单次体积"排序，从最贵的那一类开始裁**，而不是按时间从头砍。
-- **与 §减容三档（花不花钱 × 丢不丢信息）分工**：那条管**选哪种裁剪手段**，本条管**裁剪作用在哪一层**（视图层 vs 事实层）。
-- 提升层级：工具（上下文裁剪的作用层）+ 工作流（上下文与存储的分工）。
-- 触发词：裁剪只作用于视图、上下文与存储两份、完整历史落库、max_tool_calls_from_history、省了不等于丢了、可回溯、按重发次数排、in context 与 in DB。
-
-## 摘要时保头尾、记下被压掉了谁；压缩器要能串联；撞到上下文窗口才压＝已经失败过一次（来源：OpenHands 官方 `docs.openhands.dev/sdk/arch/condenser`，2026-09-22 r131-C 独立重拉首读，新信源首读）
-
-- **压缩器要能串联，不是一个做所有事**：`PipelineCondenser` 把多个压缩器按顺序串起来（例：先删过期事件 → 再摘要 → 最后兜底截断）。判据：一次压缩同时要「省体积」「保语义」「防超限」时，别指望单个策略全包——**拆成串，每一级只答一个问题**。
-- **摘要保头尾、只压中间**：`keep_first`（默认 4）保留开头若干条原文，末尾若干条也保留原文，中间那一段才交给 LLM 生成摘要。判据：**开头装的是任务与目标，末尾装的是现在在哪**——压掉任何一头，模型要么忘了要去哪，要么接不上当前这步。
-- **压缩必须留痕，不能静默替换**：摘要要包成一个 `Condensation` 事件并带上 `forgotten_event_ids`（被压掉的是哪几条），而不是把原文就地抹掉。判据：事后要能回答「这段结论是从哪几条推出来的」；答不出，这条压缩就是不可审计的。
-- **触发两路，别只留手动**：自动（阈值触发，如事件数 > `max_size` 默认 120，每步检查一次）+ 手动（撞到上下文窗口错误后强制压）。判据：**只在撞窗后才压，等于每次都先失败一次**——默认值就是让你在正常路径上先压。
-- **摘要用更便宜的模型**：压缩用的 LLM 通常与推理用的不是同一个（官方配置：`llm`，"often cheaper model than reasoning LLM"）。判据：摘要是机械活，别拿最贵的模型干。
-- 与 §裁剪只作用于视图层 分工：那条管「压在哪一层」，本条管「**压的时候保什么、留什么痕迹、以及多级怎么串**」。
-- **提升层**：模型（喂给模型的上下文形态）+ 工具（压缩策略配置）。
-
-
-
+## 解码参数实证：T=0 不保证确定性 / JSON 等 6 节（细则已下沉 KB）
+- 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §解码参数实证：T=0 不保证确定性 / JSON 等 6 节（第 1 组）。
 ## 不可变前缀：缓存友好的提示布局 + 发送前数 token（来源：AgentPatterns《Prompt Caching: Architectural Discipline》2026-07-18 + munderdiffl.in 2026-06-04 + hidekazu-konishi 2026-06-07 实拉，与 §压缩只付本次范围 分工——那条管"省 token 的边界"，本条管"省 token 的布局"）
 - **不可变前缀模式（immutable prefix）**：稳定内容（system prompt→工具定义→项目指令）放最前，易变内容（对话历史/最新工具结果）放最后——缓存命中依赖**字节级相同前缀**，中间改一个字整个前缀失效。判据：**稳定内容前置、易变内容后置，且前缀在会话中保持 byte-identical**。
 - **append 不 rewrite**：会话中途想改前缀内容，用追加/新增段落表达，不回编辑旧前缀——回编辑让缓存前缀失效，等于把前面的钱重付一遍。判据：**"改前缀"先问"能不能改成追加"**。
