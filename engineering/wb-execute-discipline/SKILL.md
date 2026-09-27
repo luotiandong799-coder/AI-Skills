@@ -5064,3 +5064,38 @@ pm install @anthropic-ai/claude-agent-sdk 捆绑平台原生 binary 为可选依
 - **多通道归一化**：channel adapter 把 webhooks/API polling/WebSockets/bot tokens 归一化成同一事件流进 agent core——行为跨 surface 一致。→ 判据：多通道接入先归一化事件，再进同一 agent runtime。
 - **权限分层**：组会话 Docker 沙箱隔离防误操作；主会话工具 host 最高权限。→ 判据：群聊/共享会话降权限进沙箱，私人主会话才给高权限。
 - **提升层**：工作流。
+
+## Dify HTTP 请求节点认证与凭据：认证三子型 + 多步 API 认证-取数（来源：Dify HTTP Request 节点面，2026-09-27 实拉）
+- **认证类型矩阵**：No Auth（不加头）与 API Key 三子型——Basic（加 base64 Basic 头）、Bearer（Authorization: Bearer）、custom（自定义头名+自定义值），经 HttpRequestNodeAuthorization 配置。→ 判据：接外部 API 先按对方认证形态选子型，别都当 Bearer。
+- **多步 API 认证-取数模式**：Step1 POST /auth 用 {{env.api_user}}/{{env.api_pass}} 拿 token → Step2 GET 带 token 取数——凭据走 env 变量不进节点正文。→ 判据：两步认证流程用 env 引用，token 不进 workflow 导出。
+- **敏感 key 存 Dify environment variables 不硬编码进 node config**；Verify SSL certificate toggle 按需开关。→ 判据：节点配置里出现的都是 {{env.X}} 引用，值只活在环境变量层。
+- **提升层**：工作流。
+
+## n8n 时区三源纪律：TZ / GENERIC_TIMEZONE / workflow zone 一处不修全（来源：n8n Schedule Trigger 时区面，2026-09-27 实拉）
+- **时区优先级**：Schedule Trigger 用 workflow timezone（若设）否则 instance timezone（self-host 默认 America/New_York；Cloud 检测 owner 时区 fallback GMT）。→ 判据：先给 workflow 设 timezone，再依赖实例默认。
+- **self-host 读三处时区**：TZ / GENERIC_TIMEZONE 环境变量 / workflow zone——只修一处只修一部分问题，可偏数小时。→ 判据：排期错小时先排查三处是否一致，别只改一处。
+- **Date & Time 节点显式同 zone**：避免 UTC 相关 bug（"all Date & Time nodes explicitly use the same zone"）。→ 判据：日期计算节点显式钉同一 zone，不靠继承。
+- **排期建议**：实例或 workflow settings 设正确时区；cron   8 * * 1-5 保证工作日不周末；booking 系统含 public holiday calendar+重叠检测+晚餐休息排除 6PM-8PM+时区处理。→ 判据：真实业务调度把假日历/冲突检测/时段排除当成需求面，不是可选项。
+- **提升层**：工作流。
+
+## LangFlow Agent 组件与工具端口：Agent=主要执行体 + 任何组件可作工具（来源：LangFlow Agent 组件面，2026-09-27 实拉）
+- **Agent 组件**：agent flow 的主要 actor——LLM 集成响应 chat/file upload；可用 base LLM 自带工具 + Tools 端口连接的任何 Langflow 组件作工具，**包括其他 Agent 组件与 MCP Tools 组件的 MCP servers**。→ 判据：要扩展 agent 能力优先接 Tools 端口（组件/子 agent/MCP），不重写 agent 本体。
+- **CodeAct Agent (Smolagents)**：迭代生成+执行 Python 代码——每步写代码→沙箱解释器执行→输出决定下一步直到最终答案。→ 判据：需写码解题的 agent 用 CodeAct，代码执行与推理交替推进。
+- **CUGA Agent（IBM Configurable Generalist Agent）**：复杂 enterprise 自动化——拆任务/计划/驱动浏览器/写码调 API，配合你给的 tools。→ 判据：多步企业自动化用 CUGA 型 agent，别用单一 LLM 硬扛。
+- **旧 LangChain bundle 换组件**：CSV Agent 的 allow_dangerous_code 安全开关慎开；VectorStoreRouterAgent 等建议换 Agent/SQL Database 组件。→ 判据：新流优先通用 Agent 组件，旧 bundle 只在不迁移时用。
+- **Agentics bundle**：aGenerate 合成数据/aMap 逐行自然语言变换/aReduce 聚合——schema 驱动。→ 判据：数据合成/变换/聚合三件套按 schema 用，天然并行可复算。
+- **提升层**：工具。
+
+## 场景版本恢复与构建前 snapshot：版本历史 + 自动 blueprint + [ARCHIVE] 命名（来源：Make scenario version/recovery 面 + Latenode 版本控制最佳实践，2026-09-27 实拉）
+- **Version history 保留 60 天**：可访问并恢复此前手动保存的场景版本。→ 判据：改坏回退看版本历史，保留窗口 60 天。
+- **Scenario recovery（所有 plan）**：编辑时自动保存 blueprint；浏览器崩溃/断连/误关 tab 后可恢复未保存更改。→ 判据：编辑中被打断先找 recovery，不手动重搭。
+- **Restore 不自动保存**：恢复的版本若不再手动保存，当前状态会丢——恢复后立刻存一次。→ 判据：任何 restore 动作后立即手动保存，防二次丢失。
+- **构建前 snapshot 最佳实践（Latenode）**：动工作场景前先 Duplicate/Clone 并改名 [ARCHIVE] Workflow_Name_v1.0；每次 save/run 自动留版本可回滚。→ 判据：改生产自动化前先建存档副本，命名带 [ARCHIVE] 前缀防误当活版。
+- **提升层**：工作流。
+
+## GitHub Actions 可复用 workflow：三阶段 inputs/secrets + 嵌套再传（来源：GitHub Actions reusable workflows 面，2026-09-27 实拉）
+- **三阶段使用 input/secret**：called workflow 用 on.workflow_call 定义 inputs/secrets → caller 用 with: 传 inputs、secrets: 传 secrets → called 内用 inputs/secrets context。→ 判据：复用面先定义契约（输入/密钥清单），调用面再传参。
+- **嵌套 reusable 再传**：secret 传给嵌套可复用 workflow 必须再经 jobs.<job_id>.secrets 显式传递，不自动透传。→ 判据：两级复用链条逐级显式传 secret，别假设透传。
+- **inputs 类型匹配**：boolean/number/string 类型必须与 called 声明一致；输出可返回 caller 后续 job 使用。→ 判据：定义时钉死类型，调用时按类型传。
+- **跨仓库共享**：uses: owner/repo/.github/workflows/file.yml@ref；github 上下文永远关联 caller；called 自动获得 github.token/GITHUB_TOKEN；secrets 值从日志 redacted。→ 判据：共享自动化走 reusable workflow+显式契约，token 交给平台注入。
+- **提升层**：工作流。
