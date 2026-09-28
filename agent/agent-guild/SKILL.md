@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.19.0
+version: 1.20.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -482,3 +482,10 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - 两个易漏点：`scope: "shared"` **忽略 per-agent binds，只认全局 binds**；挂 `/var/run/docker.sock` "effectively hands host control to the sandbox"，只能刻意为之。工作区访问（`workspaceAccess`）与 bind 模式互相独立。
 - 判据：凡"把宿主机目录给执行体看"的配置，默认给只读、明确作用域优先级（共享作用域会吃掉个体配置）、并对路径做**解析后复检**而不是只查字面。与 Cap22（分界线与逃生口）互补：那条管进程边界，本条管**边界上被主动开的洞**。
 - 提升层：工具。触发词：bind mounts、默认读写、:ro、符号链接逃逸、shared 忽略单 agent、docker.sock、挂载穿透。
+
+
+## Cap25 沙箱的网络边界要单独声明：跑在云上 = 私网不可达（来源：docs.dify.ai `llms-full.txt`《New Agent》2026-09-29 r288-C 独立 curl 实拉原文核验；与 Cap22/24 构成跨厂沙箱边界三角）
+- 原文："The agent's sandbox runs in the cloud, so **hosts on your private network aren't reachable**. Public URLs work; for internal material, add it to the agent's Files instead."
+- 判据：沙箱边界不止文件系统与进程，**网络可达域**同样被切——把执行体搬进沙箱或云端，等于同时切断它对内网资源的访问；需要内网材料时走"上传进工作区"，不要去打通网络。
+- **跨厂对照（闭合 r212 遗留「沙箱边界声明是否跨平台通则」）**：三家都显式且保守地写下能力上限——openclaw 明说 "not a perfect security boundary"、Dify 明说"私有网络不可达"，两家都把隔离默认态与逃生口分开管理。**通则成立**：凡提供隔离执行的产品，官方文档都会写明"能挡什么"；照抄这种句式写自家边界，**写不出"能挡什么"的隔离就是没想清楚的隔离**。
+- 提升层：工具。触发词：沙箱网络边界、私网不可达、云上沙箱、边界声明、跨厂对照。
