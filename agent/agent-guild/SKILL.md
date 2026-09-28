@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.18.0
+version: 1.19.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -474,3 +474,11 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - 原文：目录发现 "uses `ls` without granting shell execution"；自定义后端可选实现 `SandboxFsBridge.readDirectory({ filePath, cwd, signal })`，而 "`ls` is hidden when it is absent, and OpenClaw does **not** fall back to reading the host filesystem."
 - 判据：**降级默认 fail-closed**——可选能力缺失时隐藏入口，而不是用次优实现顶上；因为"回退"多数时候等于放宽边界（此处回退就是拿宿主机文件系统给模型看）。对照 AV 已有的"静默降级是失败模式"，本条给的是正向设计写法：**没有就是不提供**。
 - 提升层：工具。触发词：不回退、能力缺失、隐藏工具、fail-closed、SandboxFsBridge、ls 隐藏。
+
+
+## Cap24 挂载是把沙箱戳穿的口子：默认读写、双层路径校验、shared 作用域忽略单 agent 配置（来源：docs.openclaw.ai《Sandbox vs tool policy vs elevated》2026-09-29 r288-B 独立 curl 实拉原文核验）
+- 原文："`docker.binds` **pierces** the sandbox filesystem: whatever you mount is visible inside the container with the mode you set (`:ro` or `:rw`). **Default is read-write if you omit the mode**"——漏写模式即最宽权限，源码/密钥类必须显式 `:ro`。
+- 校验做两遍：先对**归一化源路径**校验，再**沿最深存在祖先解析后校验一次**；原文 "Symlink-parent escapes do not bypass blocked-path or allowed-root checks"，且不存在的叶子路径同样安全校验（`/workspace/alias-out/new-file` 经符号链接父目录解析到被封路径则拒绝挂载）。
+- 两个易漏点：`scope: "shared"` **忽略 per-agent binds，只认全局 binds**；挂 `/var/run/docker.sock` "effectively hands host control to the sandbox"，只能刻意为之。工作区访问（`workspaceAccess`）与 bind 模式互相独立。
+- 判据：凡"把宿主机目录给执行体看"的配置，默认给只读、明确作用域优先级（共享作用域会吃掉个体配置）、并对路径做**解析后复检**而不是只查字面。与 Cap22（分界线与逃生口）互补：那条管进程边界，本条管**边界上被主动开的洞**。
+- 提升层：工具。触发词：bind mounts、默认读写、:ro、符号链接逃逸、shared 忽略单 agent、docker.sock、挂载穿透。
