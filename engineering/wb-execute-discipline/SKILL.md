@@ -10078,3 +10078,63 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **插件信任分层**：dshmarket 可视化市场（npm 1000+ 包）+ dsh.so registry（L5 运行测试通过 / L4 sandbox-install 验证）——**装插件前先看信任层级**（与 §MCP 选型五标准 同构）。
 - **记忆插件模式**：Mem0（自动召回+自动捕获+search_memory）/ graph-memory（会话提取结构化三元组、压缩上下文 75%、跨会话复用）——**记忆能力以插件形式即插即用**。
 - **提升层**：工作流（Agent 运行时架构）。
+
+## API 发布与密钥纪律：后端调用 + 每用户隔离（来源：Dify enterprise docs get-started + deepwiki governance + aliyun PAI 部署，2026-09-29 实拉）
+- **API 密钥应用级创建**：仅作用于该应用、一个密钥服务所有终端用户；Bearer Token 认证（Authorization: Bearer YOUR_API_KEY）——**密钥粒度=应用，不跨应用复用**。
+- **只在后端调用 API**：嵌入前端/客户端应用的密钥可被提取和滥用——**密钥不出后端进程**（与 §凭证不硬编码 同构）。
+- **用户隔离**：每个 API 请求可带 user 参数区分不同人；每个 workflow 有自己的 key；可被外部调度（XXL-JOB 等）——**多用户场景用 user 参数做身份维度，不共用密钥**。
+- **提升层**：工作流（API 发布）。
+
+## 凭证十类型与 credential-only：认证按场景选型（来源：n8n docs httprequest credentials + custom operations + credentials-files，2026-09-29 实拉）
+- **HTTP Request 十种认证**：Predefined credential type / Basic / Custom / Digest / Header / Bearer / OAuth1 / OAuth2 / Query / Simplified Custom Auth——**先选认证形态再配凭证**。
+- **credential-only nodes**：只设凭证不提供独立节点的集成（在 HTTP Request 节点使用）；predefined credential type 替代 generic——**"只有凭证也能用"=集成的最小形态**。
+- 自定义节点 credentials 文件：IAuthenticateGeneric（type generic，properties auth username/password）——**凭证定义与节点逻辑分离**。
+- **提升层**：工具（凭证体系）。
+
+## 存储后端可配置与持久化：Memory bases + DB Providers（来源：Langflow docs memory-bases + components-vector-stores + memory + blog 1.10，2026-09-29 实拉；与 r284A 记忆分类合并增量）
+- **Memory bases 三态对照**：按 flow 向量存储/自动摄取会话/跨会话语义检索——vs Message History（时序检索）vs knowledge base（手动填充）——**长期记忆按语义取，不只按时间取**。
+- **DB Providers 可配置向量后端**：Settings→DB Providers 选 Chroma/Chroma Cloud/OpenSearch；Local DB=增强版 Chroma（Ingest/Retrieve 双模式、自动 collection 管理、内置持久化到 cache 目录）——**向量库后端可换，组件接口不变**。
+- 默认存储 SQLite（路径按 OS）；knowledge 索引配置（默认 index langflow_knowledge/vector_field/text）——**先知道默认存储在哪，再谈持久化**。
+- **提升层**：工具（存储）。
+
+## 错误处理与并发排队：retryOnFailure + 队列化（来源：Activepieces docs mcp tools + manage-concurrency + engine + project-replace CLI，2026-09-29 实拉）
+- **Step 错误三类**：Step Errors / Timeout Errors / Sandbox Errors；**retryOnFailure/continueOnFailure 布尔参数（默认 false）**——**错误按类型分流，重试/继续/失败三选一**。
+- **并发达限不丢弃**：新 run 排队+指数退避自动重试，槽位空出后下一个开始——**限流=排队不是丢包**。
+- **幂等与恢复**：idempotency keys+correlation IDs 存 Tables 检测重复短路；failed payload 持久化到表控制重处理；**Project Replace CLI 恢复靠重跑不是回滚**（按 externalId 匹配，崩溃后下次 diff 检测完成）——**恢复语义=可重放，不依赖回滚**。
+- **提升层**：工作流（错误处理）。
+
+## Webhook 响应模块：同步自定义响应（来源：Make help webhook-triggered-ai-agent + apps gateway + use-apify webhooks，2026-09-29 实拉）
+- **Custom webhook 生成唯一 URL**：每个 scenario 用各自 webhook 不能共用——**webhook=per-scenario 身份，不跨场景复用**。
+- **Webhook response 模块**：控制响应（status/body/headers），Stripe 等要求特定响应体确认收到（{received:true}）——**"确认收到"响应体因平台而异，显式配**。
+- 默认 200 OK 立即返回；同步自定义响应用 Webhook Response 模块；数据结构自动确定——**默认立即确认，需要业务响应就加模块**。
+- **提升层**：工具（Webhook）。
+
+## Schedule 触发器与 UTC 时区：内置 cron 源（来源：Pipedream docs triggers + connect components + automationatlas，2026-09-29 实拉；与 r284C 触发器类型合并增量）
+- **Schedule 触发器=内置 cron 源，无需 app 连接**；cron 对象两种：intervalSeconds 或 cron 表达式+timezone——**定时不依赖外部服务，选间隔或 cron**。
+- **默认 UTC 运行**：按团队时区需调 offset（EST=UTC-5 则 12:xx 触发 07:00）——**时区错位是最常见的静默坑**。
+- **timer interface**：props 定义 $.interface.timer，default intervalSeconds；标准 cron 语法（0 8 * * 1-5）；2026-04 起所有计划含 free tier——**定时能力组件化+免费可用**。
+- **提升层**：工具（调度）。
+
+## Skills 目录结构与加载机制：大小写严格 + 按需加载（来源：code.claude.com skills + anthropic complete guide PDF + claude docs how-to，2026-09-29 实拉；与 r284B 硬约束合并增量）
+- **SKILL.md 大小写严格**：必须恰好是 SKILL.md（skill.md 和 SKILL.MD 被拒）——**文件名是契约，大小写也是**。
+- **目录结构**：SKILL.md（必需）+ scripts/（可执行代码）+ references/（按需加载文档）+ assets/（模板）——**references 让 SKILL.md 保持 lean**。
+- **加载机制**：会话开始只加载 name 和 description，完整 body 在调用时才加载（slash 命令或自动匹配）——**只有元数据常驻上下文，body 按需进**（与 §procedural 记忆同构）。
+- **提升层**：可复用 Skill（编写规范）。
+
+## Agentic Workflows Markdown 编译：自然语言→Actions（来源：github.github.com gh-aw + docker blog sandboxes + docs.github agentic workflows，2026-09-29 实拉；与 r284A 合并增量）
+- **Markdown 定义工作流**：放 .github/workflows/，编译成标准 Actions YAML（.lock.yml）——**自然语言目标→确定性编译产物**。
+- **多引擎支持**：GitHub Copilot/Claude Code/Google Gemini/OpenAI；gh aw add-wizard 安装——**引擎可换，工作流定义不变**。
+- **Docker Sandboxes 作 agent runtime**：microVM 隔离+网络策略+secrets 注入——**agent 有环境控制权，但隔离+最小权限**。
+- **提升层**：工作流（仓库自动化）。
+
+## 三层记忆与时间图谱：Graphiti 时间感知（来源：imclaw lesson 12 + openclawai audit + docs.openclaw.ai memory + hub surrealdb，2026-09-29 实拉；与 r284A 记忆架构合并增量）
+- **三层持久记忆**：Markdown + ChromaDB vectors + NetworkX knowledge graph——**文本+向量+图三形态，各管一摊**。
+- **memory-wiki 插件**：持久知识编译成 wiki 仓库（确定性页面结构、结构化断言与证据、矛盾跟踪与时效性）——**记忆仓库化，可查询可审计**。
+- **Graphiti 时间感知**："切到 PostgreSQL"标记旧关系结束、带时间戳新建——**知识图带时间维度，回答"现在的状态"**（与 §记忆分层 互补）。
+- **提升层**：工具（记忆系统）。
+
+## ModelScope-Agent：提示组装器与工具生态（来源：arxiv modelscope-agent + pypi ms-agent + toolify openclaw skill + csdn 实践，2026-09-29 实拉）
+- **Prompt generator 组装上下文**：system prompt/API schema/retrieved knowledge/conversation history/few-shot examples，按查询类型+LLM 最大长度选配——**上下文按查询动态组装，不是全量塞**。
+- **Agents-A1**：35B 达万亿参数性能（agentic reasoning/工具使用/指令跟随）——**小参数量靠 agent 编排追平大模型**。
+- **ModelScope API skill for OpenClaw**：发现/查询/下载 194,000+ 模型与 80,000+ 技能；集成官方工具（web_browser/代码解释器/Qwen-VL 图像理解）——**模型库本身即技能库，可被 agent 直接调用**。
+- **提升层**：工作流（模型生态）。
