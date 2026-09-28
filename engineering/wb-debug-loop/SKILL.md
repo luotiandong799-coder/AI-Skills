@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕
-version: 1.67.0
+version: 1.68.0
 agent_created: true
 ---
 
@@ -43,23 +43,7 @@ agent_created: true
 ## 二·五、修复验证：补丁是待验证假设（细则已下沉 KB）
 - 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·五、修复验证：补丁是待验证假设。
 > 本节（二·五·五、修在调用方收敛处：只修被报告的路径 = 修…）原文已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
-## 二·五·六、修复不能由"容错装置"构成：先问它纠正根因，还是安排活下去（来源：GitHub `thedotmack/claude-mem`·`docs/merge-rubric.md`，2026-09-16 实拉）（细则已下沉 KB）
-- 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·五·六、修复不能由"容错装置"构成：先问它纠正根因，还是安排活下去（来源：GitHub `thedotmack/claude-mem`·`docs/merge-rubric.md`，2026-09-16 实拉）。
-## 二·六、失败经验记忆（按错误签名索引）
-来源：DeepSeek 插件 `MisakaNet`(#42)——Git 驱动失败经验网络，报错自动检 290+ 修复路径，相似错误自动召回。
-**同一个错第二次才查根因 = 第一次白查。** 把"这次怎么查出来的"固化成可被召回的经验：
-- **按错误签名索引**：用错误类型 + 关键栈帧 / 报错码 / 触发条件做 key（不是整段日志），相似错误命中即召回历史修复路径
-- **写回时机**：根因确认、修复通过回归后，立刻记一条（签名 → 根因 → 最小修复 → 回归命令）；落在 skill / 记忆文件，不只在本次会话
-- **复用门槛**：只记会重复的（同类错误出现 ≥2 次才升格为程序记忆）；一次性怪错记情景记忆即可，别写进规则
-
-## 二·六·五、日志即线索：报错先翻译成可行动清单，不整段读日志（来源：Claude Code 自动化 Skill·Terminal Sense + CI Fixer，用户提供文章 2026-09-17）
-**日志不是用来"读完"的，是用来"翻译"的**。拿到报错输出先做三件事：
-- **提取信号行**：错误类型 + 关键栈帧 + 首个异常行（不是整段日志）→ 映射到最可能的根因类别（缺依赖/权限/网络/数据格式/状态过期/竞态）
-- **翻译成下一步行动**：每条信号对应一条可执行动作（"缺模块 → 装依赖后重跑同命令"，"404 → 查路由/URL 拼写"，"超时 → 查远端服务与网络出口"），不给"请检查一下"这类空话
-- **CI 失败先复现再修**：流水线失败第一步永远是**本地复现**（跑同一命令/同一环境），复现不了先怀疑环境差异（CI 镜像/缓存/权限），不直接猜代码；复现成功 → 走六步循环最小修复 → 回归通过才算修好
-判据：**报错信息是输入，行动清单是输出**；翻译不出来就补测（缩小到最小复现），不靠重跑碰运气。
-- 与 §一"修复必须配回归"互补：回归是防复发，这条是"下次查得更快"
-
+<!-- 2026-09-29 r290 下沉：容错装置/失败经验记忆/日志即线索 3 节 → references/knowledge-base.md §r111 批 -->
 ## 二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节（细则已下沉 KB）
 - 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节。
 ## 无从观测就发「此处可能不完整」旗标，绝不伪造逐条信号（来源：GitHub `footprintjs/agentfootprint`·`docs/proposals/005-trajectory-assembler.md`「Model-internalized context is UNDETECTABLE … do NOT claim untrackedSources detects it … standing caveat, never a false per-frame stamp」「degrade, never throw」, 2026-09-19 实拉，学习轮 r111）
@@ -497,3 +481,9 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 判据：① 看到"工具被拒"先问**这是哪一类控制**——改错层等于白改；② 排查工具一律先取**生效值**而不是配置值，且生效值必须**带来源层级**（否则你改了 global 却被 agent 层盖掉）；③ 工具策略有五层（profile / byProvider profile / global·per-agent allow-deny / byProvider allow-deny / 仅沙箱内生效的 sandbox policy），定位时从最具体层往下数。
 - 与 §规则突然不执行先取证其是否还在上下文（1.66.0）同属归因次序，但对象不同：那条查**指令还在不在**，本条查**控制位在哪一层生效**。
 - 提升层：工具。触发词：工具被拒、sandbox explain、生效值、五层策略、non-main、elevated、归因次序。
+
+## 诊断输出要分「给人看的粗桶」与「给机器读的稳定原因码」两层；先分清「根本没发出调用」还是「发了但失败」（来源：docs.openclaw.ai/auth-credential-semantics 2026-09-29 r290-B 独立 curl 实拉 24,733B 原文核验）
+- 原文："Probe results carry a `status` bucket (`ok`, `auth`, `rate_limit`, `billing`, `timeout`, `format`, `unknown`, `no_model`) plus a **stable `reasonCode` when the probe never reached a model call**"；七个稳定码 = `excluded_by_auth_order` / `missing_credential` / `expired` / `invalid_expires` / `unresolved_ref` / `ineligible_profile` / `no_model`；"Eligibility checks report `ok` as the reason code for usable credentials."
+- 原文（对齐要求）："These semantics keep **selection-time and runtime auth behavior aligned**. They are shared by `resolveAuthProfileOrder` / `resolveApiKeyForProfile` / `openclaw models status --probe` / `openclaw doctor` auth checks."
+- 判据：① 故障分两族——**没跑起来**（配置/凭据/选型，有稳定原因码）与**跑了但失败**（服务端结果）；绝大多数被误判成"模型不行"的故障其实在第一族，先取原因码再动手；② 原因码是**对外契约不是日志文案**——要稳定、可枚举、可用完了还准，改动要走版本；③ **选择期与运行期必须共用同一套判定**（探针说可用、真跑却失败 = 两处语义漂移，属设计缺陷不是偶发）；④ `ok` 也要占一个码位，别用空值表示成功——空值无法区分"没检查"与"检查通过"（与 AV 2.44.0「未检查是独立结论值」同向）。
+- 提升层：工具/工作流。触发词：reasonCode、status bucket、稳定原因码、选择期运行期对齐、没发出调用、凭据不可用。

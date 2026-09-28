@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.20.0
+version: 1.21.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -346,15 +346,7 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **共享记忆按发言人身份定权＋in-flight 查重＋why 溯源**：多源记忆按来源身份定权（决策者 > 参与者 > bot 默认剔除）；写共享资产前查 in-flight 防并发重复劳动；结论行带 why 式溯源锚点。判据：共学栈直接同域——多源记忆按来源身份定权，避免无差别信任。来源 r189-Q-C（SkillApt / relore 实证）。
 
 
-## Capability 12 — 两类记录要分开：诊断日志可以丢，审计留痕缺一段就等于没有（来源：Activepieces 官方博客《AI Vendor Questions for Audit Trail Integrity in 2026》，2026-09-27 r199-B 实拉 20,901B）
-
-- **★先按用途分，再按用途决定存多久**：原文区分 **logs**（面向开发者的临时诊断工具，原文用词 *transient*）与 **audit trails**（面向审计方的永久法律记录，要记到"谁、在什么时候、对哪条受限数据做了什么"的粒度）。判据：**这份记录是拿来排查问题的，还是拿来事后举证的**——前者可丢、可截断、可以按量付费；后者少一段就等于全废。
-- **★必须在写入之前分，不能事后筛**：原文给的量级是每 ingest 1TB/月：AWS CloudWatch $500 / GCP Cloud Logging $500 / Azure Monitor $2,760，成本随量线性增长 → **先把噪音当 truth 全量收进来再挑，预算已经花完了**。映射到协会：`log/YYYY-MM-DD.md`（诊断）与 `log/audit.jsonl`（取证）自建立时就是两条独立通道，不要合并写入之后再靠 groom 区分。
-- **★★留痕通道不能挂在被观测的那个对象上**：原文指出主服务降级会产生 **silent gaps**——日志机制往往耦合于正在失败的那个应用，于是最关键的窗口一个事件都没录进去，而状态页**不会把这段报成"数据丢失"**。判据：**写下"某动作发生过"的那条路径，不能与这个动作本身共用同一个故障域**。agent 侧的对应写法：收尾证据落盘到独立位置并回读校验，而不是指望同一段会话上下文还活着。
-- **不可验证的留痕在法律上等于没有留痕**：原文结论 "An unverifiable audit trail is legally indistinguishable from no audit trail at all"。→ §Capability 9 的"只搬不删 + 写 audit.jsonl"要配一个**能读回、能对上条数**的校验动作，保证"写过了"之外还要保证"当时写的那份还在"。
-- 与 §Capability 9 groom、§Capability 11 记忆库固定文件分工 的分工：那两条管"过期数据怎么归档""文件按类别重写"；本条管"**两套记录的用途、成本与完整性要求本就不同**，以及**留痕的写入路径必须独立于被测对象**"。
-- 提升层：工作流 / 可复用 Skill。
-
+<!-- 2026-09-29 r290 下沉：Capability 12 诊断日志与审计留痕分仓 → references/knowledge-base.md §r199-B 批 -->
 ## Capability 13 — 留痕的范围由"显式输出"决定，不由"算过什么"决定（来源：Pipedream 官方 docs《Security Best Practices》，2026-09-27 r200-A 实拉 6,456B）
 
 ## Capability 14 — 多 Agent 编排：文件化 handoff + 评估器闭环 + 迭代上限（来源：GitHub Copilot agent mode / custom agents 实战文，2026-09-27 r252-C 实拉）
@@ -489,3 +481,14 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - 判据：沙箱边界不止文件系统与进程，**网络可达域**同样被切——把执行体搬进沙箱或云端，等于同时切断它对内网资源的访问；需要内网材料时走"上传进工作区"，不要去打通网络。
 - **跨厂对照（闭合 r212 遗留「沙箱边界声明是否跨平台通则」）**：三家都显式且保守地写下能力上限——openclaw 明说 "not a perfect security boundary"、Dify 明说"私有网络不可达"，两家都把隔离默认态与逃生口分开管理。**通则成立**：凡提供隔离执行的产品，官方文档都会写明"能挡什么"；照抄这种句式写自家边界，**写不出"能挡什么"的隔离就是没想清楚的隔离**。
 - 提升层：工具。触发词：沙箱网络边界、私网不可达、云上沙箱、边界声明、跨厂对照。
+
+
+## Cap26 机器人入站是独立于人、独立于 API 的第三条通道："看得见"与"会触发"是两个开关，互聊护栏是滑动窗口不是硬阻断（来源：docs.openclaw.ai/channels/bot-loop-protection 2026-09-29 r290-B 独立 curl 实拉 5,889B；与 Cap18 入站准入双门 allowFrom+requireMention 互补——那条管人类入站，本条管 bot 入站）
+- 原文：Discord/Slack 在支持 `allowBots` 的频道默认接受 bot 消息（走正常 mention 与访问规则），显式 `allowBots: false` 才关；"**Bot messages can remain visible as conversation context independently of turn admission.**"；"Pair loop protection bounds rapid exchanges between two bot identities. It is a **sliding-window rate guard**, so **slower exchanges below the budget can continue**."
+- 判据：① 入站治理要回答两个**独立**问题——这条消息**能否进入上下文**（可见性）与**能否驱动一次回合**（准入）；多 agent 群里只读旁听是一等配置，不是靠拉黑；② 两个 bot 互相激发的死循环不能用"禁止 bot 触发"一刀切——代价是砍掉所有合法的 bot 协作；正确形态是**速率护栏**（窗口内超预算才停），低于预算的正常慢速对话照常跑。
+- 提升层：工具。触发词：bot 入站、allowBots、可见不等于触发、滑动窗口、互聊死循环、旁听模式。
+
+## Cap27 定时任务"没跑"有五个独立原因，其中两个是静默开关；创建者权限与投递目标是两个字段（来源：docs.openclaw.ai/automation/cron-jobs/troubleshooting 2026-09-29 r290-B 独立 curl 实拉 4,407B）
+- 原文："Check the `cron.enabled` config setting and `OPENCLAW_SKIP_CRON` in the Gateway's launch environment. **Either can disable automatic runs**; clear both disable settings and restart the Gateway to enable scheduling."；"`reason: not-due` in run output means the manual run was checked with `--due` and the job was not due yet."；"`handler-unavailable` means the heartbeat service was not registered or stopped during the wait. The attempt is recorded as skipped."；"If a capped job's **stored named creator account** is unavailable, the run fails **before model/tool execution**… **changing the delivery `--account` does not change creator authority**."
+- 判据：① 排查顺序 = **双静默开关（配置位 + 环境变量位，任一即全停）→ 宿主时区 vs `--tz` → 是否真的到期（`not-due` 是正常结果不是故障）→ 心跳/执行器是否注册（`handler-unavailable`）→ 创建者账号是否还在**；② 排障命令梯由粗到细（status → gateway status → automations status → list → runs → heartbeat last → logs --follow → doctor），**先确认系统级再确认作业级**，倒着查会把正常状态误判成故障；③ **投递目标 ≠ 权限主体**——改收件人不改权限，任何"换个账号重发就好了"的修复都是假修复，必须回到创建者身份。
+- 提升层：工具/工作流。触发词：定时任务没跑、cron.enabled、SKIP_CRON、not-due、handler-unavailable、创建者账号、投递目标不等于权限。
