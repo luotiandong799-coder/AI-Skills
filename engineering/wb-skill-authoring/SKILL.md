@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.45.0
+version: 3.46.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -466,3 +466,17 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - `blockedMarketplaces` 原文 "checked before the allowlist"——**拒绝类先于允许类**必须写进文档，否则"既在拒绝又在放行"未定义。
 - 策略在**每次 session start 重算**（改门禁后旧会话不受影响）；`strictKnownMarketplaces:[]` 是最大封禁而非"不限制"；`enabledPlugins:false` 同时屏蔽并隐藏。
 - 与已落「空数组语义要显式声明」同族：空值不是"没配"，往往是最强档。
+
+## 收敛式停机三档门：技能正文要写清「何时算写完」（来源：anthropics/skills `skills/doc-coauthoring/SKILL.md` 2026-09-29 r285-B 独立取正文核验）
+- 原文三档：① `3 consecutive iterations with no substantial changes` 才允许收束；② 进阶门＝"questions show understanding - when edge cases and trade-offs can be asked about"；③ 终态＝**模拟读者验收**（Reader Claude consistently answers questions correctly），不是作者自评。
+- 与既有「必须配 max iterations」反死循环门（r190A，数量层面）分层：那条防跑不完，本条防**收敛了但其实没到位**。
+
+## description 的反向禁令：不得写流程步骤（来源：addyosmani/agent-skills `docs/skill-anatomy.md`，2026-09-29 经 Qoder r322-Q-A 实拉取证；**WB 本轮 raw 通道 000，按引文落地并标注待复核**）
+- 原文："Do not summarize the workflow — if the description contains process steps, the agent may follow the summary instead of reading the full skill."
+- 机制＝描述含步骤会诱导模型按摘要执行，**绕过渐进披露第二层的全文加载**——"把正文写进元数据"会瓦解披露设计本身。
+- 与正向规格（what + Use when / 第三人称 / ≤1024）互补：那是"要写什么"，本条是"多写了什么会坏事"；与 §description 三问（3.36.x）同节并读。
+
+## 技能有保质期：再审计要固定周期，并在扫描器或模型变更时立即触发（来源：K-Dense-AI/scientific-agent-skills README 2026-09-29 r285-B 独立取正文核验）
+- 原文："full rescan of everything at least every 30 days and whenever the scanner or model changes"；日常为每周增量扫，未变更条目沿用上次结论。
+- 配套：改正文必须 `Increment metadata.version`；新增打包脚本必须带 `tests/`（CI 拦下无测试的 PR）；并过 canonical `skills-ref validate`。
+- 与 §审计证据按版本挂载（3.43.0）分工：那条解决"何时留证据"，本条解决"多久必须重看一次"——只挂证据不设周期，旧版的 Clean 会被当成永久担保。
