@@ -8453,3 +8453,73 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **token auth 建议**：即使 loopback 也建议开着 token-auth——本地 WS 客户端需认证——token 模式明文 token 生成/保存（默认）或 SecretRef opt-in；password 模式交互式也支持。
 - **acp**：ACP bridge 连 IDEs 到 Gateway——CLI ACP 服务器。
 - **提升层**：工具（CLI 配置）。
+## Dify 安全与数据隐私：企业版 RBAC/SSO · 合规认证 · 内容审核三选项（来源：dify.ai dify-enterprise + security.dify.ai controls + blog soc2-iso27001-gdpr + blog trust-is-a-feature + blog palo-alto + openguardrails 2025-04/2026-09 实拉，合并 §Dify 安全——那条管"工作流控制"，本条管"安全合规"）
+- **企业版安全特性**：SSO via SAML/OIDC；fine-grained RBAC 到 workflow 级；SCIM provisioning；session policies；按需部署 K8s Helm Chart+AWS Terraform 模块+隔离网络；数据主权 VPC/区域/边界内+Bring-your-own-key 加密+无模型训练泄露；多租户隔离 单集群多业务单元 租户级配额/计费/访问策略。
+- **合规认证**：SOC 2 Type I&II、ISO/IEC 27001:2022、GDPR（DPA/隐私政策维护/年度 ROPA 更新）。
+- **内容审核三选项**：OpenAI Moderation（内置 6 主类 13 子类但缺细粒度定制）；Custom Keywords（自定义关键词需手动维护）；API Extension（外部审核 API 高级灵活）。
+- **Palo Alto 插件**：AI Runtime Security——输入检查扫 prompts 拦 prompt injection/DoS/不安全链接；输出保护防个人数据泄露和恶意内容；Workflows/Agents/Chatflows 无缝集成无需重训。
+- **插件生态治理**：本地验证安全解压/包内容/secret patterns/manifest 字段（source/contact/privacy）/README 质量/依赖 OSV 漏洞检查/Python 编译安全模式/network.domains 声明（动态构造 SDK URL 可规避静态分析）；权限=团队成员单位、部署级知识分割 Partial Members、工具最小权限（AI 只读客户数据库）。
+- **提升层**：工作流（安全合规基线）。
+
+## n8n JSONata 与数据变换：表达式 vs 数据节点 · JMESPath · JSONata Mapper（来源：docs.n8n.io expressions/expression-reference/data-transformation + npm n8n-nodes-jsonata-mapper + n8n docs PT 2026-03/09 实拉，合并 §n8n 数据——那条管"多用户权限"，本条管"数据变换"）
+- **表达式 vs 数据节点**：expressions 是 JS-like 代码直接放节点参数 {{ ... }} 语法——动态设参数值用前序节点数据/workflow metadata/env vars——提供即时预览计算值——能 expression 就 expression（优先于数据节点）。
+- **表达式参考**：array.map(x = x.id) 变换数组项；$jmespath(obj, expression) 用 JMESPath 查询复杂嵌套对象——无效返回 undefined——n8n 支持 Luxon（日期）+JMESPath（JSON 查询）两库。
+- **数据访问**：$json 当前项——$('Node Name').json 指定节点——$input.all() 所有项；示例：$json.produtos[0].nome 首项/length 计数/filter+map+join/reduce 求和 toFixed(2)。
+- **JSONata Mapper 社区节点**（n8n-nodes-jsonata-mapper）：源 JSON 字段映射目标路径；JSONata 表达式灵活变换；点符号嵌套目标；JSON Schema 验证源+目标；缺字段默认值；必填检查；AI-assisted 映射生成（LLM 通用 provider）；调试输出。
+- **提升层**：工具（数据变换）。
+
+## LangFlow 输出解析与结构化输出：Structured Output · Output Schema · Parser（来源：docs.langflow.org structured-output/components-processing/parser/1.10.0 agents + langflow.org templates data-extraction 2025-04/2026-09 实拉，合并 §LangFlow 输出——那条管"多 Agent 编排"，本条管"结构化输出"）
+- **Structured Output 组件**：LLM 变换任意输入为结构化数据（JSON/Table/Data/DataFrame）——自然语言格式指令+输出 schema 定义——从文档提取细节（邮件/论文）——验证层转 agent 响应为一致 JSON 格式。
+- **Output Schema 参数**：表字段 Name（输出字段名）/Description（用途）/Type（数据类型 str/int）——定义模型输出结构与类型。
+- **legacy Output Parser**：已替换为 Structured Output+Parser 组件——原 CommaSeparatedListOutputParser 转 CSV ["item1","item2"]；**Parser 组件**：Message 输出空或意外值=输入与解析模式映射错误/输入空值/不适合纯文本提取；从搜索结果 JSON 提取 text 字符串传 Prompt Template 避免整块原始结果喂 LLM。
+- **Agent Structured Response（1.10.0）**：agent 回复按 Output Schema 格式化为结构化 Data——Agent 组件输出标签选 Structured Response——Open table 配置——模板例：合同 8 字段（legal_name/legal_document/business_address/email/phone/representative_name/id/address）schema 验证 database-ready。
+- **提升层**：工具（结构化输出）。
+
+## Activepieces 版本控制与环境：Project Releases · Git Sync · 环境体系（来源：activepieces.com docs project-releases/git-sync/pieces-ci-cd/project-replace-cli + mintlify git-sync + blog make-vs-activepieces 2025-08/2026-09 实拉，合并 §Activepieces 版本——那条管"分支循环"，本条管"版本与环境"）
+- **Project Releases**：Git 连接项目——Push Everything 推所有 flows/connections/tables 到 Git——commit message→Push；也可单独推特定 flows/tables。
+- **Git Sync**：外部备份+environments+版本历史——flow 名旁箭头 Push to Git——提交+推送；Pull from 仓库；审批流 development/production 两分支+标准 PR 做审批步骤。
+- **Pieces CI/CD**：离线开发修改 pieces→package.json 增量版本→PR 到 main→合并后手动跑 CLI 或 GitHub/GitLab Action 触发同步；**环境体系**：Preview（per-PR 临时需 preview label）/Staging/Canary（每日从 main 切）/Production。
+- **Project Replace CLI**：Environments 特性需目标平台 plan——platform-scoped API key（SERVICE principal）两实例——同 project id 格式——两部署同 major 版本目标≥源；Breaking Changes：连接引用变更现在被 diff 看见——flow 只改连接也会被应用（之前静默保留旧连接 MISSING）。
+- **提升层**：工作流（版本治理）。
+
+## Make 错误处理与场景健康：Incomplete executions · Break/Retry · 重试模式（来源：make academy incomplete-executions/error-handlers + help.make retry-error-handler/manage-incomplete-executions/break-error-handler + workflowpick error-handling-guide + use-apify error-handling 2025-09/2026-09 实拉，合并 §Make 错误——那条管"过滤器路由"，本条管"错误处理"）
+- **Incomplete executions**：失败 run 保存数据+blueprint——rerun 防丢信息——启用后错误时保存 scenario blueprint+log 详情（模块设置/输入/输出数据到失败模块）。
+- **Retry error handler**：失败 bundle 暂停——存错误消息/mappings/剩余 flow——自动或手动重试（例：新订单触发写订单数据失败）；**Break error handler**：移除 erroring bundle 从场景流——存 incomplete execution——按设置自动完成或存人工解决——最有效于临时错误 ConnectionError。
+- **重试模式**：Retry with Exponential Backoff（error handler route on module→Sleep 30s→Router 回原模块→Set Variable 计数限 3 次）；Fallback Module（主 API 失败备用）；Break+Auto-Retry（瞬态 429/502/503/Timeout——attempts 3/interval 15 分钟/allow storing yes）。
+- **管理**：仅激活 scenario 可重试 incomplete executions——Incomplete executions tab→选择重试；**监控**：每场景执行记录+incomplete 列表——外部 DB（Notion/Airtable）记趋势（时间/场景名/错误）。
+- **提升层**：可复用 Skill（错误处理模式）。
+
+## Pipedream 环境变量与秘密管理：env vars · connected accounts vs env · 外部凭证运行时（来源：pipedream.com docs environment-variables/privacy-and-security/nodejs/external-auth/cli reference + docs-proxy component api 2026-02/09 实拉，合并 §Pipedream 秘密——那条管"流程控制"，本条管"秘密管理"）
+- **env vars 分离秘密与静态配置**：API key 不直接放代码——process.env.API_KEY 引用——workflow 代码/step 可引用——值私有。
+- **安全最佳实践**：秘密两种存储——Pipedream 集成 app→connected accounts 链接；不支持 app 或任意配置→environment variables——绝不直接放代码。
+- **组件限制**：env vars 在 sources/actions 不可直接访问（组件任何人可用不能保证用户有变量）——sources 用 secret props 引用敏感数据——actions 在 object explorer 选变量传 step。
+- **外部凭证运行时**：HashiCorp Vault/AWS Secrets Manager/DB/Nango——两种方式：HTTP request 传或 fetch from DB/secrets store 步内；CLI pd config file 含 API keys（XDG_CONFIG_HOME 时 $XDG_CONFIG_HOME/pipedream）；SDK PipedreamClient clientId/clientSecret/projectId/projectEnvironment production。
+- **提升层**：工具（秘密管理）。
+
+## Anthropic 模型选择与能力基准：四模型谱系 · 规格 · 基准对比（来源：platform.claude.com models/overview + anthropic.com news opus-5/sonnet-5/opus-5-5/opus-4-6 + model card addendum 3.5 2026-02/09 实拉，合并 §Anthropic 模型——那条管"系统提示"，本条管"模型选型"）
+- **四模型谱系**：Fable 5.1（严苛推理+长时 agentic 工作）；Opus 5.5（长时 agentic coding+知识工作）；Sonnet 5（速度+智能最佳组合）；Haiku 4.5（最快模型近前沿智能）。
+- **规格**：上下文 1M/1M/1M/200K；max output 128K/128K/128K/64K；knowledge cutoff Jun 2026/Jun 2026/Jan 2026/Feb 2025。
+- **关键基准**：Opus 5（法律 agent 显著提升——低推理层级保持质量——比 Opus 4.8 max reasoning 少 26% tokens）；Sonnet 5 接近 Opus 4.8 更低价格；Opus 5.5 CursorBench 4.0 57.8%（vs Fable 51.8%/Opus 5 46.6%/GPT-5.6 Sol 41.7%）、GDPval-AA v2.1 1846；SWE-bench Opus 4.6 80.8%（vs GPT-5.4 ~78%/Gemini 2.5 Pro ~76%）。
+- **选型判据**：任务难度匹配模型档——简单任务用 Haiku（快+省），长时 agentic/coding 用 Opus/Fable，默认性价比用 Sonnet——不要无脑最高档。
+- **提升层**：模型（选型知识）。
+
+## deeplearning 上下文工程与 RAG 进阶：RAG 课程体系 · Advanced RAG · 7-stage pipeline（来源：corporate.deeplearning.ai retrieval-augmented-generation/building-evaluating-advanced-rag + coursera rag + classcentral best-rag-courses + di37 context-engineering-bootcamp 2026-02/09 实拉，合并 §deeplearning RAG——那条管"工作流自动化课程"，本条管"RAG 课程与管线"）
+- **RAG 课程**（Coursera，Zain Hasan Together.ai/U Toronto）：5 模块 26 小时 49 视频 9 代码 10 评分作业——语义搜索 vs BM25 vs Reciprocal Rank Fusion——组件级系统构建（非端到端 demo）；keyword/semantic/hybrid search、chunking、query parsing——healthcare/e-commerce。
+- **Advanced RAG（LlamaIndex+TruEra）**：Jerry Liu+Anupam Datta——2 小时免费——RAG Triad of metrics、Sentence-window retrieval、Auto-merging retrieval——6 lessons 4 code examples；**Multimodal RAG**：LangChain+BridgeTower（Intel）chat with videos。
+- **7-stage RAG pipeline**：document ingestion→chunking strategies→embedding→vector indexing（FAISS）→retrieval→cross-encoder reranking→context assembly——background indexing 生产系统——TF-IDF sparse vs dense——hybrid search+RRF——RAG evaluation metrics。
+- **提升层**：可复用 Skill（RAG 课程方法与管线）。
+
+## GitHub Releases 与版本管理：自动 release notes · semantic-release · release-please（来源：docs.github.com automatically-generated-release-notes + dev.to release-please + geekworkbench automated-releases + devconfcz journey-of-automation + HYDRV RELEASES 2023-02/2026-09 实拉，合并 §GitHub Release——那条管"分支保护"，本条管"版本发布"）
+- **自动生成 release notes**：Draft a new release→Choose a tag（现有/新建版本号）→Target 分支→.github/release.yml 配置——YAML 指定 PR labels/作者排除——创建新类别列 PR 标签——changelog.exclude.labels 排除列表。
+- **Conventional PR 流程**：脚本收集合并 PRs 自上次 release——conventional commits 格式定版本生成 changelog——推 changelog PR——PR merge 触发 changelog_to_tag.yml workflow 建 tag+release。
+- **semantic-release**：自动版本化+changelog 生成——tag_format v${version} 默认——.releaserc.json；**release-please**：根据 commits 自动确定 semver bump（major/minor/patch）——生成/更新特殊 PR 含版本号 bump 进 package.json+完整生成 changelog——merge 触发发布。
+- **CHANGELOG.md**：conventional commits 生成——parse commit messages between tags——按类型 features/fixes/breaking changes 分类——append 顶部；Tag 格式 v 开头（v1.0.0）——workflow 读匹配 changelog entry 转 Added/Changed/Fixed——上传 artifact 建 GitHub Release；commit 提取版本 [release] v1.2.3 grep。
+- **提升层**：工具（版本发布自动化）。
+
+## OpenClaw 插件与扩展系统：插件四来源 · ClawHub · 构建发布（来源：docs.openclaw.ai tools/plugin + plugins/building-plugins + docs2.claw community plugins/cli/plugins + fast.io plugins-guide 2026-02/09 实拉，合并 §OpenClaw 插件——那条管"CLI 配置"，本条管"插件生态"）
+- **插件四来源**：git 仓库（branch/tag/commit——openclaw plugins install git:github.com/owner/repo@branch）；local path（开发测试——install --link ./my-plugin）；marketplace（Claude-compatible marketplace——install --marketplace）；npm-pack（本地打包 tarball）。
+- **安装解析**：按名装无来源→内置优先级顺序——ClawHub 先查无则 npm fallback；bare package specs 匹配 bundled plugin id 特殊兼容行为——确定性安装显式指定来源。
+- **构建发布**：Node >=22+npm/pnpm——plugin 不必进 OpenClaw 仓库——ClawHub 或 npm publish——用户 install clawhub:<package-name>——plugins inspect my-plugin --runtime --json 诊断。
+- **ClawHub**：公共社区插件主发现面——live package listing/release history/scan status/install hints——外部 channel catalogs 合并（~/.openclaw/mpm/plugins.json/catalog.json、~/.openclaw/plugins/catalog.json）；社区插件类型 channels/tools/providers/hooks；marketplace 支持 Claude-compatible extensions 其他框架插件不经 repackage 直接拉入——plugins.load.paths。
+- **CLI 管理**：list installed/inspect diagnose/uninstall update/marketplace feeds。
+- **提升层**：工具（插件扩展）。
