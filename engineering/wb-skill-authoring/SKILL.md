@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.39.0
+version: 3.40.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -285,6 +285,8 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **面向分发的技能要按"可分发性"反推命名，不是先起名再想分发**：该 commit message 明示改名的唯一目的是 make the skill packageable，无其他内容改动。判据：**命名争议先问"它要不要上传"，要上传就受保留字与长度双重约束**。
 - 提升层：可复用 Skill / 工具。触发词：技能改名、打包失败、上传校验、保留字、技能名规范、description 超限、marketplace 条目、可分发性。
 
+- **防同名接管要落到"归一化后比较"，不是比较字符串**（来源：Claude Code 技能文档 `code.claude.com/docs/en/skills.md`，2026-09-28 r315-Q-C 实拉，作本条目**升级**）：官方规则——保留名 `synced`（**任意大小写**）与 `anthropic-skills`/`anthropic-skills:*` **直接不加载**；且 **"name matching ignores case, spacing, invisible characters, compatibility forms"**（全角字符视为同名）。判据：① 技能体检脚本里加一条**同名冲突判定**——把待安装/新建技能名做归一化（转小写、去空格、剥不可见字符 U+200B/U+200E/U+2060 等、NFKC 兼容形式折叠、全角转半角）再比对库内既有技能与保留名清单——**只看字面比较会漏掉同形欺骗**（与 0.7「同类判定看功能不看名字」原则层互补，本条补可执行算法）；② 自建**保留名清单**（如 synced/master/system/core），防外部包用我方命名习惯反向冒充；③ 归一化后同名的技能若确为不同物，**拒绝安装而非后者覆盖前者**（与 §技能仓治理 stored name 不可变 配套）。
+
 ## 易变上游规则只放链接不放副本，改链接时同步校正已漂移断言（来源：github.com/anthropics/skills commit `3337550` / PR #1825，2026-09-28 r208-A 独立实拉）
 - **会变的外部数字/规则（计费、限额、配额、价格、SLA）不要复述进技能正文，改为指向上游文档对应小节**：PR 把 claude-api 技能里每句 refusal billing 的规则改成指向文档"How refusals are billed"小节，而不是在技能内重述规则。判据：**副本一旦复制就与上游解耦，漂移是时间问题而非概率问题**。
 - **改链接的那一次，必须顺带核对并修正技能内已漂移的旧断言**：同一 PR 同时修正两条与文档不符的说法（无输出前的拒答计入速率限制；流中拒答对已 stream 的输出同样计费）。判据：**只换链接不改正文 = 保留了错误信息又给了正确出处，比不换更糟（读者会以为正文与链接一致）**。
@@ -394,6 +396,11 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **实证**：mattpocock/skills 同仓两条分发路相反哲学——Claude Code plugin 是 **managed read-only bundle、自动更新（"subscribe rather than fork"）**，skills.sh 是**把可编辑文件拷进你 repo（"Nothing updates behind your back; pull on demand with npx skills update"）**；README 警告 **"installing both leaves you with every skill twice"**；作者把决策写成 ADR 文件留档。
 - **判据**：① 同一技能禁止同时走「订阅制插件」与「文件拷贝」两条通道装进同一宿主，装前查重复；② 订阅制条目按"可能被上游改写"对待（升级即改行为、我方无否决权），文件拷贝制按"版本冻结、升级须显式动作"对待；③ 这类分发选择用 ADR/一行决策留痕，不散在聊天记录。
 - 提升层：工作流。触发词：分发双通道、订阅制 vs 文件拷贝、安装重复、ADR 留痕、上游改写。
+
+## 同一份 SKILL.md 有「规范字段集」与「宿主扩展字段集」两轨，走错轨是硬报错（来源：Claude Code 技能文档 `code.claude.com/docs/en/skills.md` + anthropics/skills `.claude-plugin/marketplace.json`，2026-09-28 r315-Q-C 实拉；与 §分发双通道（r312-Q-B 上游可被改写）互补——那条管"分发通道风险"，本条管"一份文件两种合法字段集"）
+- **实证**：规范/可分发侧经 `package_skill.py`/上传路径**只接受 `name, description, license, compatibility, metadata, allowed-tools` 六个字段**，原文 **"packaging or upload fails with a hard error"**；而宿主增强侧（Claude Code 本地）另有一整套扩展字段——`context: fork`（+`agent`/`background`）、`model`、`arguments`/`$name` 占位符、`disable-model-invocation`、`user-invocable`、`disallowed-tools`、`${CLAUDE_SKILL_DIR}`/`${CLAUDE_PLUGIN_ROOT}`/`${CLAUDE_PLUGIN_DATA}`，且**"All fields are optional. Only `description` is recommended"**（本地侧宽松）。第二处同轨证据：Anthropic marketplace.json 用 **`strict:false`** + 每个 plugin **显式列 `skills:["./skills/xlsx",…]`**；仓内 `spec/agent-skills-spec.md` 已降为一句指针 **"The spec is now located at agentskills.io/specification"**（规范外移到中立站）。
+- **判据**：① **技能文件要标"目标轨"**——凡使用宿主专有字段（fork 上下文、指定 model、占位符参数）即**放弃跨宿主可分发性**，打包前必须按六字段白名单自检，多一个字段就预期失败；② **唯一安全的扩展位是 `metadata` map**（这把 r185-A"元数据扩展槽防冲突"从建议升级为有报错依据的规则，二者合并）；③ 学 `strict:false`+显式清单做法：**技能索引里逐个列出技能路径，不靠目录扫描**——目录扫描会把半成品/备份目录一并暴露（我方 `D:\腾讯AI\skills` 有 .bak 与临时目录时同风险）；④ 规范外移到中立域（agentskills.ai）后，**仓内不应再维护规范副本**，我方技能仓里的"规范说明"也应只留指针（与 §镜像只指向本体、禁另立副本 同构）。
+- 提升层：可复用 Skill。触发词：字段双轨、打包六字段、strict:false、metadata 扩展槽、规范外移指针、显式技能清单。
 
 ## 技能正文必须内建「宿主既有约定 > 本技能全部指南」的让渡条款（来源：raw.githubusercontent.com/anthropics/skills/main/skills/xlsx/SKILL.md 2026-09-28 r312-Q-B 实拉；r279-C 复核）
 - **实证**：Anthropic 官方 `skills/xlsx/SKILL.md` 硬约束末尾原文 "When editing an existing file, match its conventions exactly — they override every guideline here"；同文件要求**每个假设/硬编码数字就地注明并给可核外部出处**（样本 "Company 10-K FY2024 Page 45 [SEC EDGAR URL]"）。
