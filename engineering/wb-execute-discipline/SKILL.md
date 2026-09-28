@@ -10138,3 +10138,58 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Agents-A1**：35B 达万亿参数性能（agentic reasoning/工具使用/指令跟随）——**小参数量靠 agent 编排追平大模型**。
 - **ModelScope API skill for OpenClaw**：发现/查询/下载 194,000+ 模型与 80,000+ 技能；集成官方工具（web_browser/代码解释器/Qwen-VL 图像理解）——**模型库本身即技能库，可被 agent 直接调用**。
 - **提升层**：工作流（模型生态）。
+
+## r285C 学习轮落地（2026-09-29；来源 Dify/n8n/LangFlow/Activepieces/Make/Pipedream/Claude Code/GitHub/agentskills/WaytoAGI 十站实拉）
+
+### LLM 应用可观测四件套：多平台异步分发 / Trace ID 传播 / 自动 trace / 审计日志（来源：Dify observability 文档，2026-09-29 实拉）
+- **trace 要异步分发到多个平台，不绑死一家**：OpsTraceManager 模式——凭证加密存、provider 动态实例化、重试机制，把一次调用 trace 同时推给 LangSmith/Langfuse/Arize Phoenix/阿里 ARMS 多家。→ 判据：可观测是多出口不是单出口，换平台不重改埋点。
+- **Trace ID 传播：响应里带 trace header，日志就能和 trace 对上**：Flask 用 after_request hook 注入 OpenTelemetry trace headers——用户侧报一个错，拿请求里的 trace ID 就能跨日志/跨服务追完整链路。→ 判据：埋点只在入口不够，**传播头（propagation）才让 trace 跨服务可关联**。
+- **用 Arize Phoenix 类开源可观测层看 prompt 改动效果**：模型调用/工具调用/链步骤自动 trace，输入输出+延迟元数据都留——"prompt 改了一版为什么变好/变坏"不再靠猜。→ 判据：**评估驱动（吴恩达方法论）落地在可观测层**：改 prompt 前先能看基线，改后 diff 看效果。
+- **审计日志单独建**：资源变更/权限操作/配置调整结构化记录，支持精确过滤查询与导出，服务运营跟踪/安全审计/合规三类需求。→ 判据：业务日志管排查，审计日志管问责，两个桶别混。
+
+### 数据血缘 item linking：每个输出都知道自己是哪个输入生的（来源：n8n Data Mapping / Item Linking 文档，2026-09-29 实拉）
+- **pairedItem 属性 = 数据血缘**：n8n 每个输出 item 带 pairedItem 指回产生它的输入 item；`$input.item`（当前节点输入的链接 item）与 `$('Node').item`（沿链回溯某节点的父 item）能逆查来源。→ 判据：多对多变换（拆分/合并/循环）后仍能追溯"这行数据哪来的"，排错第一问。
+- **Code 节点必须手动 supply item linking**：返回数据时设 `{ json: ..., pairedItem: 0 }`，否则后续 `$("node").item` 不可用——**代码节点的血缘不自动，忘了配就是断链**。→ 判据：写 Code 节点返回结构时，pairedItem 和 json 一起配。
+- **表达式三引用**：`$json`（当前 item 数据）、`$node["X"].json`（任意命名节点输出）、`$('X').json`（现代等价写法）；老式 `{{ }}` 双花括号仍可用。→ 判据：跨节点取数优先 `$()` 新写法，兼容双花括号。
+
+### 认证双通道：API key 数据库 vs 环境变量、JWT 三种算法（来源：LangFlow API keys / JWT 配置文档，2026-09-29 实拉）
+- **API key 验证两种模式，部署形态决定选哪个**：`db`（默认，数据库验证、UI/CLI 创建管理）vs `env`（LANGFLOW_API_KEY 环境变量，K8s/CI-CD 预注入免建库）——请求带 x-api-key header 或 query 参数。→ 判据：一次性/CI 场景用 env 模式，省掉数据库配置；正式 UI 管理用 db 模式。
+- **JWT 认证三算法**：`LANGFLOW_ALGORITHM` 选 HS256/RS256/RS512（默认 HS256）；HS256 用 `LANGFLOW_SECRET_KEY` 签名；RS256/RS512 用 `LANGFLOW_PRIVATE_KEY/PUBLIC_KEY`（RSA 对）。→ 判据：多服务共享认证用 RSA 系列（公钥验签不分发密钥），单服务内 HS256 够用。
+- **K8s 部署密钥放 secrets + secretKeyRef 引用**（values.yaml 配置），不写死在镜像或环境变量明文。→ 判据：密钥进 K8s Secret 对象，env 只做引用。
+
+### 单一 MCP server 桥接全部工具：AI agent 一个连接触达 760+ 应用（来源：Activepieces MCP / AI Agents 文档，2026-09-29 实拉）
+- **一个 MCP server 暴露整个集成库**：Activepieces 每个 piece 自动成为 MCP server，一个 server URL 让 Claude/Cursor/Windsurf 等任何 MCP client 触达 760+ app——**AI 客户端与业务应用之间只隔一个受管 server，不用每 app 配一个 MCP**。→ 判据：集成多的场景，选"自动暴露"的平台而非逐个手配 MCP。
+- **AI-ready pieces：按任务描述找动作，不按名字找**：`ap_search_actions` 工具搜索（agent 描述任务→返回候选 action）+ AI metadata + audience 字段；agent 找到后检查 schema 再运行。→ 判据：给 agent 的目录按"能干什么"组织，不是按"叫什么"。
+- **工作流可暴露为可调用工具**（MCP Tool Exposure）：把 workflow 定义成工具（结构化输入），外部 AI 系统调用它执行查/建 ticket/发更新等动作，结果返回调用模型；关键步可插 Human Review Steps（审批暂停、人工捕获编辑/决策后继续）。→ 判据：把"人审"当成流程一等公民，不只挂在最后。
+
+### Data Store 六操作：读与写分离、存在性检查不拉数据（来源：Make Data Store 模块指南，2026-09-29 实拉）
+- **Data Store 操作全集**：Delete All Records（清空）/ Get a Record（唯一 key 读单条）/ Search Records（条件过滤读）/ Check the Existence（返回 true/false）/ Count Records（聚合计数）/ Add-Replace（写入更新）。→ 判据：查"在不在/有多少"用 Existence/Count，不拉全量数据——**存在性检查与计数不取数据，省流量省解析**。
+- 与既有 §Data Store 持久化 的分工：那条管"跨 run 存不丢"，本条管"怎么高效地读/查/清"。
+
+### 组件三级分享与代码复用四通道（来源：Pipedream Components / GitHub Sync / Node.js 文档，2026-09-29 实拉）
+- **组件分享三级**：Verified Components（官方 source-available 注册表，GitHub PR 审核，可信+一致模式+官方支持）→ 私有发布（workspace 私有组件）→ 全局注册表（REST API 可取任何全球发布组件）。→ 判据：默认用 Verified，自研先私有再考虑贡献。
+- **GitHub Sync 引私有组件必须前缀 workspace 名**：workflow.yaml 中组件 key 不加 `@workspacename` 前缀会解析失败——**版本管理走 Git 时，私有组件标识带命名空间是硬语法**。
+- **代码复用四通道**：step exports（run({steps,$}) 步间传数据）/ publish action from Node.js code step（dashboard 发布可复用 action，ALPHA）/ create action from code（Pipedream CLI 本地开发发布）/ 自定义 Node.js 模块（隔离复用常量、GraphQL 串、简单函数）。→ 判据：**"复用"有四种粒度**——数据级用 exports、逻辑级用模块、组件级用 action 发布。
+- common 模块抽象跨组件复用（.app.mjs 模式），trade-off：端用户定制复杂度上升——抽象收益 vs 可定制性按需权衡。
+
+### Hooks 事件体系与决策字典：每次工具调用都能拦/改/放（来源：Claude Code Hooks reference + Agent SDK，2026-09-29 实拉）
+- **Hooks 事件分类四层**：会话级 SessionStart/SessionEnd；turn 级 UserPromptSubmit/Stop/StopFailure；agentic loop 内每次工具调用 PreToolUse/PostToolUse；其他 Setup（--init-only/CI 一次性准备）/ UserPromptExpansion（可阻断扩展）/ FileChanged（matcher 监控文件）/ DirectoryAdded / WorktreeCreate。→ 判据：**要拦什么就挂哪层**——拦工具调用挂 PreToolUse，初始化准备挂 Setup。
+- **Hook 回调返回决策字典**：`{}` = 允许工具执行；带 `permissionDecision: 'deny'` = 阻断；`updatedInput` = 重写参数（示例：拦 Write 把 file_path 前缀改成 /sandbox，重定向到沙箱目录）。→ 判据：hooks 是"可编程的权限层"，不只拦还能改——**重写参数比拒绝更优雅**。
+- **SDK 双方式 hooks**：filesystem hooks（settings.json 里 shell 命令，与交互会话相同）+ programmatic hooks（query() 直接传回调，应用进程内跑、返回结构化决策）。→ 判据：进程内回调能返回结构化决策（拦/改/放），适合自动化宿主。
+- **沙箱启动**：`npx @anthropic-ai/sandbox-runtime claude` 在配置的 filesystem/network 边界内启动 Claude Code。→ 判据：不可信目录/网络操作先套沙箱 runtime。
+
+### 安全前移：依赖扫描与密钥扫描在 commit/开 PR 之前（来源：GitHub MCP Server changelog，2026-09-29 实拉）
+- **dependabot toolset 依赖漏洞扫描**：AI coding agent 按提示调用→把依赖信息发到 GitHub Advisory Database→返回结构化结果（受影响包/严重度/推荐修复版本）——**检查发生在写代码阶段，不是上线后**。→ 判据：把"依赖有没有洞"做成 agent 可调用工具，扫描前移到 PR 打开前。
+- **secret scanning 前置**：MCP 兼容 agent/IDE 在 commit 或开 PR 前扫代码暴露密钥（需 GitHub Secret Protection 开启）——**泄漏的凭证不进仓库**。→ 判据：密钥检查走工具前置扫描，不靠事后巡检。
+- 远程 GitHub MCP Server（api.githubcopilot.com/mcp）GitHub 托管，host 不支持远程时用本地版。→ 判据：MCP host 兼容性决定用远程还是本地版。
+
+### 技能注册表三形态与信任信号：目录 / 开放注册表 / 官方市场（来源：agentskills.io / agentskills.codes / agskills.dev 实拉，2026-09-29）
+- **三形态并存**：AgenticSkills.io（精选目录 189+ 验证技能、16 类、按平台/质量/用例过滤）→ agentskills.codes（开放注册表 19,296 可安装技能、每日扫描、一条命令 `npx degit` 安装、兼容各主流 coding agent）→ AISkillstore（官方市场，遵循 Agent Skills 规范，快速安装=复制 prompt 让 Claude Code 下载保存）。→ 判据：**按可信度选入口**——要质量看目录，要全量看开放注册表，要官方看市场。
+- **信任信号**：Agent Skill Exchange 显示 live taxonomy + Industry Collections（finance/media/legal/healthcare/ecommerce）+ trust/adoption signals——**装技能前先看采用信号与类别**。
+- 生态规模参照：安全技能库 754 skills、26 domains、MITRE ATT&CK + NIST CSF 2.0 mapping；例子 flomo-web-crud、okx-agentic-wallet。→ 判据：生态已到"按域筛选"规模，选技能 = 选域 + 看信任信号。
+
+### 共学社区可复用：向量化问答 + 每日直播共学 + 布鲁姆学习路径（来源：WaytoAGI 飞书知识库 + 9200AI 指南，2026-09-29 实拉）
+- **知识库向量化问答**：飞书群集成 AI 问答机器人，知识库全文向量化，用户提问直接映射到原文段落并给出出处链接——**问答带出处，不是黑箱生成**。→ 判据：团队知识库做 AI 问答时，答案必须可回溯到原文段落。
+- **共学防弃学**：每日晚 8 点直播共学（千人同时在线）——"一个人看文档容易放弃"，**共学把学习从单人任务变成群体节奏**。→ 判据：个人学习曲线陡峭的内容，用共学/直播节奏兜底。
+- **学习路径用布鲁姆分类法设计**（记忆→理解→应用→分析→评价→创造），推荐从生成式 AI 基础（李宏毅课程）起步。→ 判据：给学习者设计路径按认知层级递进，不按资料堆放。
+- 内容资产形态：AI 入门系列 + AI 精选系列 + AI 应用与前沿，整理成"可检索/可引用/可复用"的知识资产（9200 指南 900 万学习者规模）。→ 判据：知识库的交付标准是"可检索可引用"，不是"写得多"。
