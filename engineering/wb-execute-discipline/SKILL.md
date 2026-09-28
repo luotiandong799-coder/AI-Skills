@@ -9963,3 +9963,58 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Directional Stimulus Prompting**：小刺激槽引导 tone/证据规则/简洁性，不改主 prompt——**细粒度控制用独立刺激槽，别污染主指令**（与本库 §提示架构标签分离 同构）。
 - **提示设计六要素**：Task objective / context / role / audience / examples / output format；系统提示设计（System vs user、role setting、constraints、output specifications）——**写提示前六要素逐个确认**（与用户常驻"工程化指令模板"互证）。
 - **提升层**：模型（提示工程）。
+
+## 低代码节点纪律：沙箱与网络分离 / 数组批处理 / 测试先行（来源：DeepWiki Dify http-code + mintlify iteration + n8n docs agent + langflow custom components + activepieces passing-data，2026-09-29 实拉）
+- **沙箱与网络分离**：Code 节点（Python/JS）跑沙箱、**不能做外部网络调用——需要网络调用就用 HTTP Request 节点**；敏感 API key 存环境变量不硬编码节点配置——**"沙箱里只能算，要联网走专用节点"**。
+- **数组批处理三形态**：Dify Iteration（数组→每元素跑子工作流，item/index 变量可用）/ Make Iterator（数组拆 bundles 逐个处理）/ n8n 等平台同理——**批量任务先想"数组在哪里、怎么拆、怎么合"**。
+- **测试先行纪律**（Activepieces）：每个步骤添加前必须先测试（Test me）保证能访问上一步数据——避免选错数据发布后破坏流程；**触发器测试差异：polling 可 Test flow/load sample data；webhook 不能 Test Flow（用静态 sample data），须发布后执行真实事件再查运行**。
+- **提升层**：工具（节点纪律）。
+
+## AI Agent 三型与记忆子节点：Tools/Conversational/ReAct 分工（来源：n8n docs tools-agent + conversational-agent + react-agent + blog ai-agent-memory + production playbook，2026-09-29 实拉）
+- **三型 agent 分工**：Tools Agent（工具调用接口+标准输出格式，配外部服务）/ Conversational Agent（系统 prompt 描述工具+解析 JSON tool calls，chatbot，**memory 不跨会话持久**）/ ReAct Agent（CoT+行动计划循环，**不支持 memory 子节点**）——**选型先问"要不要工具/要不要多轮记忆"**。
+- **记忆子节点按存储选**：Simple Memory（Window Buffer 存最近 N 条）/ Postgres / Redis / MongoDB Chat Memory；Session Key 表达式按 user 隔离——**对话记忆=窗口还是持久化，取决于业务**。
+- **Agent root node=有界执行环境**：LLM/记忆/工具/检索都是子节点可视化接入——**编排可视化=可审计，适合非纯代码场景**。
+- **提升层**：工作流（Agent 编排）。
+
+## 自定义组件化三件套：Component 类 / bundle / extension（来源：Langflow docs custom-components + contributing-bundles + extensions-quickstart + langflow-assistant，2026-09-29 实拉）
+- **自定义组件结构**：继承 Component 类 + 类级元数据（display_name/description/icon）+ 输入输出列表 + 方法行为逻辑 + 内部错误处理——**组件=元数据声明+逻辑方法，别的都归框架**。
+- **打包与分享两级**：bundle（相关组件按服务提供商分组，入 lfx components 文件夹）/ extension（lfx extension init：extension.json manifest + pyproject + src）——**单组件→bundle→extension 的规模化路径**。
+- **AI 生成组件**：Langflow Assistant 可用提示词生成组件代码（"Create a custom component URLTitleExtractor with input/output/timeout handling/clean docstring"）——**组件代码也可以提示工程化**。
+- **提升层**：工具（组件化）。
+
+## 迭代-聚合配对与嵌套坑：iterator 必须配 aggregator（来源：Make help iterator + aggregator + community nested-collections + array-aggregator-scope，2026-09-29 实拉）
+- **迭代必配聚合**：每个 iterator/list/search 模块必须配对一个 aggregator 模块（迭代范围闭合）——**"拆了不合"是数组处理最常见的坏味道**。
+- **聚合类型**：Array aggregator（多 bundle→数组）/ Text aggregator（构建 JSON/CSV/HTML）——**按目标产物选聚合器**。
+- **嵌套迭代坑**：row → 再 iterate images 后 aggregator 失去 row-level 边界（rowId 分组不工作）；Array aggregator 不闭合迭代范围 → 后模块每迭代跑一次——**嵌套迭代必须在每一层配对应的聚合，单层聚合救不了双层拆分**。
+- **提升层**：工具（数组处理）。
+
+## 触发器类型与排期形态：App/HTTP/Schedule 三分 + cron 对象（来源：Pipedream docs triggers + connect components triggers + quickstart + integrationatlas，2026-09-29 实拉）
+- **触发器类型清单**：App triggers（Twitter/GitHub 等）/ HTTP / Webhook / Schedule（cron）/ Email / RSS——**先列可用触发器再选**。
+- **Schedule 两种粒度**：intervalSeconds（秒频率）或 cron 对象（自定义 cron + timezone，如 "cron": "0 8 * * 1-5"）；**要指定星期几必须用 cron 而非 simple interval**——**频率规则复杂就上 cron**。
+- **HTTP/Webhook trigger**：生成唯一 URL，部署后每个请求跑一次——**对外触发=一个 URL 的事**。
+- **提升层**：工具（触发器）。
+
+## Agent Skills 目录与安装 CLI：npx skills add + 自动发现机制（来源：skills.sh docs + api + ailinklab ecosystem + agentskill.sh，2026-09-29 实拉）
+- **安装一条命令**：npx skills add owner/repo（例 vercel-labs/agent-skills），免全局安装——**装技能像装 npm 包**（与用户常驻"技能库统一 CLI 管理"互证）。
+- **零配置发现**：CLI 自动搜索仓库已知目录（skills/、.agents/skills/、.claude/skills/）+ manifest（.claude-plugin/marketplace.json）——**"按惯例放目录"就够被发现**。
+- **目录级治理**：API 提供 installs（去重安装数）/ sourceType / installUrl / **isDuplicate（检测 fork/拷贝）**——**目录自己查重，避免装到重复技能**。
+- **提升层**：可复用 Skill（技能分发）。
+
+## 官方 GitHub MCP：远程托管 + 工具面分组（来源：Microsoft developer blog + learn.microsoft build-mcp-plugins + mcpservers.org + GitHub docs，2026-09-29 实拉）
+- **官方 server 双形态**：远程托管（https://api.githubcopilot.com/mcp/）+ 本地 Docker 部署——**不想装就用托管端点**。
+- **工具面分组**：context（当前用户与 GitHub 上下文，**强烈推荐**）/ actions（CI/CD）/ code_security（Code Scanning）/ copilot / dependabot / discussions / gists——**按域取工具，不整包装**（与 §per-tool 最小权限 同构）。
+- **生态互通**：Copilot SDK / Microsoft 365 Declarative Agent / Agent Framework / AWS Bedrock 都接同一 server——**官方 server=跨平台的统一 GitHub 接口**。
+- **提升层**：工具（GitHub 集成）。
+
+## 自动化三件套：Cron / Heartbeat / Webhook 分工与配置（来源：OpenClaw docs cron + automation cron-jobs + learnopenclaw automation + openclawbook webhooks，2026-09-29 实拉）
+- **三种自动化分工**：Cron（精确排期：enabled/store jobs.json/maxConcurrentRuns/retry maxAttempts 3）/ Heartbeat（~30 分钟定期检查 HEARTBEAT.md）/ Webhook（外部事件即时触发）——**按"精确度 vs 频率 vs 实时性"选形态**。
+- **webhook 配置**：hooks enabled+token（shared-secret）+path /hooks；认证 Authorization: Bearer token；cron 每 job 可 delivery.mode="webhook" + delivery.to="url"——**对外暴露的钩子必须有 token 认证**。
+- **Wakeups 一等公民**：job 可请求 "wake now" vs "next heartbeat"——**"现在就醒"和"下个心跳醒"是两种调度语义**。
+- **提升层**：工作流（自动化）。
+
+## smolagents CodeAgent：代码即动作 + 沙箱 + Hub 分享（来源：HF agents-course + PyPI smolagents + deepwiki built-in tools + kdnuggets + ai-tldr，2026-09-29 实拉）
+- **CodeAgent=生成 Python 代码执行动作**（而非 JSON/文本 tool calls）；ToolCallingAgent=JSON-based（不需要代码执行）——**"想复杂推理用代码动作，想可解释用 JSON 调用"**。
+- **模型/工具双无关**：本地 transformers/Ollama、HF providers、OpenAI/Anthropic/Azure/Bedrock、100+ LLMs via LiteLLM；工具来自 MCP/LangChain/HF Hub Space——**框架两头解耦，生态即工具库**。
+- **沙箱代码执行**：Blaxel/E2B/Modal/Docker——**跑模型生成的代码必须进沙箱**（与 §MCP 安全护栏 同构）。
+- **Hub 分享**：工具和 agents 可通过 HF Hub 分享/加载——**agent 资产也可以版本化分发**。
+- **提升层**：工具（Agent 框架）。
