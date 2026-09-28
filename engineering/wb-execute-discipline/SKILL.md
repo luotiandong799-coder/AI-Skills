@@ -9768,3 +9768,69 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **从零构建的学习顺序**：Intuition（直觉）→ Sampling（采样，含代码）→ Neural Network（网络结构）→ Training（训练）→ Controlling（控制生成）→ Speeding Up（加速）——**"先懂原理再动手再优化"是生成模型学习的标准序**。
 - **"建模型"比"调 API"学得多**：课程目标=从零构建并训练自己的扩散模型、实现加速采样算法（10x）——**要掌握技术，得走实现路线不是调用路线**（与 §模型推理层 分工：学习是模型侧，落地是工具侧）。
 - **提升层**：工作流（学习路径）。
+
+## 实时调试与变量检查面板：免重跑上游、响应验证模式（来源：Dify 1.5.0 real-time debugging blog + deepwiki variable-inspector + workflows.so debug handbook，2026-09-28 实拉）
+- **变量检查面板=调试主入口**：画布底部全局面板实时显示全工作流所有变量；**直接编辑缓存变量值再 run step 下游节点，不必重跑昂贵上游（LLM 调用/API 请求/DB 查询）**——"改数据测分支"与"重跑整链"解耦。
+- **调试流程固定**：执行到目标节点→打开面板→编辑变量→只跑下游——**单步调试只重放受影响段，不重放上游**。
+- **响应验证模式**：AI 节点后跟 Condition 节点校验输出（要 JSON 就加第二个节点验证合法性）——**生成结果过校验门再进下游**（与 §输出侧校验 同构）。
+- 日志定位：Last Run 日志看节点输入输出上下文；DEBUG=true LOG_LEVEL=DEBUG 只用于非生产。
+- **提升层**：工具（调试）。
+
+## 等待恢复与检查点幂等：落库边界、resumeUrl、checkpointing（来源：n8n docs Wait node + execution cookbook + n8n community idempotency-checkpointing，2026-09-28 实拉）
+- **短等待不落库，长等待落库释放 worker**：<65 秒等待进程继续跑；>=65 秒 offload 执行数据到数据库、worker 完全释放（无悬挂进程）——**"要不要持久化"按等待时长自动分界**。
+- **恢复靠 URL 不靠轮询**：execution.resumeUrl=调用恢复等待工作流的 webhook URL（与 §等待完成靠通知不靠轮询 同构）。
+- **无状态工作流失败重启=盲目重跑/跳过**：checkpointing=DB 存 last processed page/cursor，重启从该页开始；写幂等=upsert/unique keys——**"断点续跑"依赖状态落库+写入幂等两件事**。
+- **分页超时教训**：内建分页失败重跑整节点 page 1→关内建分页手动分页（每页独立请求、Retry on Fail 每页生效）——**重试粒度要降到可恢复单元**。
+- 长任务：job_id 键存阶段状态，子工作流入口查状态跳过已完成阶段。
+- **提升层**：工作流（恢复可靠性）。
+
+## 组件输入类型体系：类型即契约、JSON 端口、Table 专用（来源：LangFlow docs data-types + components-io + custom-components + components-data，2026-09-28 实拉）
+- **输入类型决定组件契约**：TextInput/IntInput/BoolInput/DropdownInput/DataInput/MessageTextInput/DataFrameInput——**自定义组件先声明输入类型，类型即接口**。
+- **JSON 端口=结构化对象通道**：JSON 类型含 text_key 主文本字段，传 key-value 结构化信息（用户画像/设置）——**结构化数据走 JSON 端口，不塞进文本**。
+- **Table 类型只连 DataFrameInput**：表格数据有专用类型，端口匹配严格——**类型不匹配连不上，是保护不是限制**。
+- Input/Output 组件（input_value/sender/sender_name/session_id）统一聊天输入契约。
+- **提升层**：工具（组件接口设计）。
+
+## 定时触发与增量模式：cron、时区、last cursor（来源：Activepieces piece-schedule + mintlify workflows concepts + resources background-jobs，2026-09-28 实拉）
+- **定时触发两种形态**：预设粒度（Every X Minutes/Hour/Day/Week/Month）+ cron 表达式（自定义精确规则，时区感知，如 "0 12 * * SUN#2" 每第二个周日）——**规律间隔用预设，精确规则用 cron**。
+- **定时作业防重复处理**：定时触发器+条件逻辑限制只处理新/变更记录；Tables 持久化 last cursor/timestamp，只处理增量（delta）——**"定时跑全量"会重复，跑增量才安全**（与 §重放幂等 衔接）。
+- cron 触发器配置：pieceName=@activepieces/piece-schedule、triggerName=cron_trigger、input=cronExpression。
+- **提升层**：工作流（定时作业）。
+
+## Webhook 认证与安全：URL 保密、请求头过滤、验证公式（来源：Make help webhook + developers make custom-apps webhooks + community basic-auth，2026-09-28 实拉）
+- **webhook URL 是凭据不是链接**：泄露可被触发消耗 operations——**嵌入网页=危险，webhook URL 按密钥保管**（与 §秘密存储分层 同构）。
+- **收侧认证三件套**：Get request headers 选项取请求头 + map()/get() 提取 authorization 头过滤 + Basic Auth 验证公式（Basic {{base64(user:pass)}}）——**开放端点靠头校验兜底**。
+- **发侧测试**：Postman 是测试 webhook 调用的标准工具（精确构造 GET/POST+query 参数）。
+- API 侧：Authorization: Token 头；OAuth 2.0 authorization code flow with refresh token（confidential clients 才存 Client Secret）。
+- **提升层**：工具（webhook 安全）。
+
+## 并发节流与执行时限：workers、rate、队列、冷启动（来源：Pipedream docs concurrency-throttling + limits + troubleshooting，2026-09-28 实拉）
+- **两个旋钮分清楚**：concurrency=并发 workers 数（workers=1 串行化）；throttling=execution rate（0-10000 events/interval）——**"同时跑几个"与"每秒跑几个"是两个独立控制**。
+- **超限行为可配**：事件进队列（queue size 可设）或丢弃——**超载策略（缓冲 vs 丢）先想好再配**。
+- **执行时限按触发类型分**：HTTP/Email 触发默认 30s、Cron 触发默认 60s，超时抛 Timeout error 停止——**长时间任务要拆子流程或异步化**（与 §n8n 等待恢复 衔接：>30s 的工作流必须设计等待点）。
+- **cold start 真实存在**：约 5 分钟不活动后首次请求需 spin up 新环境（延迟）——**对延迟敏感的端点要有保活或接受首请求慢**。
+- **提升层**：工具（执行治理）。
+
+## 权限配置语法：allow/ask/deny、Tool(filter)、Bash 可绕过警告（来源：Claude Code docs permissions + permission-modes + settings reference，2026-09-28 实拉）
+- **权限三态**：allow（自动许可）/ask（确认）/deny（禁止）；语法 Tool(filter)：Bash(npm run lint)、Read(./.env)——**"放行/询问/禁止"逐工具逐模式声明**。
+- **deny 即排除清单**：敏感文件用 deny 排除（WebFetch/Bash(curl:*)/Read(./.env)/Read(./secrets/**)）——**权限先写不放行的，再写放行的**（最小权限默认）。
+- **Bash patterns 是前缀匹配、可被绕过**：Bash(rm -rf *) 拦不住 rm -rf /x——**不要把 Bash 权限当安全边界，真正的敏感命令靠模式精确+人工审**。
+- 治理：disableBypassPermissionsMode/disableAutoMode=disable 强制禁止绕过；additionalDirectories 扩展工作目录；$schema 提供 IDE 自动补全+内联校验。
+- **提升层**：工具（权限治理）。
+
+## Copilot 指令分层体系：仓库级与路径级两层（来源：GitHub Docs add-repository-instructions + response-customization + coding-agent best-practices，2026-09-28 实拉）
+- **两层指令按作用域分**：仓库级 .github/copilot-instructions.md（仓库内所有请求）/ 路径级 .github/instructions/NAME.instructions.md（匹配指定路径文件的请求）——**全局约定放仓库级，模块专属放路径级**（与 §AGENTS.md 写作规范 同构：分层替代单文件堆砌）。
+- **内容三件套**：项目概览（目的/背景）+编码标准约定（命名/格式/最佳实践）+工具/库/框架及版本号——**"项目是什么+怎么写+用什么"三段式**。
+- **自定义 agents 可声明能力**：cloud agent 自定义 agents：description（必填）+tools 列表（含 MCP tools）——**agent 即"描述+工具白名单"的声明式对象**。
+- **提升层**：工作流（指令分层）。
+
+## 多渠道网关架构：单 gateway 桥接多平台、同 agent 共享记忆（来源：OpenClaw docs channels + learnopenclaw agentchannels + NVIDIA messaging-channels，2026-09-28 实拉）
+- **gateway=消息平台与 agent 之间的桥**：一个 Gateway 进程接入 Discord/Telegram/WhatsApp/Slack/iMessage/Teams/Signal/Matrix/WebChat 等 50+ 渠道（插件扩展）——**"agent 在哪"与"你在哪"解耦**。
+- **多渠道并行=同一 agent**：config.yaml 配多个 gateway 同时跑，同一 agent 处理所有渠道任务、共享同一 memory/context（WhatsApp 发任务 Telegram 查进度=同一个 agent）——**跨渠道一致性靠共享状态，不是每渠道各养一个 agent**。
+- **渠道接入差异**：WhatsApp 用 Baileys 二维码配对；WeChat host 侧 QR 扫码采集 token；WebChat 基于 WebSocket——**每种渠道一个接入方式，文档对照配置**。
+- **提升层**：工具（多渠道接入）。
+
+## 2026 课程方向信号：记忆基建、Agentic 文档、代码评审（来源：DeepLearning.AI community short-course announcements，2026-09-28 实拉）
+- **2026 短课主线**：Agent Memory（长期记忆=外部、持久、结构化的一等基础设施）/ Adaptive Agents（自适 agent）/ Document AI（OCR 丢版式信息→agentic 抽取）/ AI Code Review / Prompt Compression and Query Optimization / Semantic Caching for AI Agents——**官方课程方向=行业能力风向标：记忆、文档抽取、缓存、代码评审**。
+- **"记忆工程"被提为基建**：Agent Memory 课程把长期记忆当外部持久结构化基础设施（Oracle AI Database+LangChain+LLM 流水线）——**与本库 §记忆分层 相互印证：记忆是工程不是提示词**。
+- **提升层**：工作流（学习路径）。
