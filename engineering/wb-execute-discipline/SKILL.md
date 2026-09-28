@@ -9199,3 +9199,62 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **内置 hooks 模式**：session-memory（/new /reset 存会话到 /memory/）、bootstrap-extra-files（glob 注入引导文件）、command-logger（命令审计日志）、compaction-notifier（压缩前后聊天通知）——**可作为自建 hooks 的参考模板**。
 - **plugin hooks vs HOOK.md**：plugin hooks=进程内扩展点（可 inspect/change agent runs、tool calls、message flow、subagent routing、Gateway startup）；HOOK.md=小型操作员脚本——**深度定制走 plugin、轻量自动化走 HOOK.md**。
 - **提升层**：可复用 Skill（事件驱动自动化骨架）。
+
+## Dify 检索三模式与重排设置（来源：dify-6c0370d8-release mintlify setting-indexing-methods + dify.ai blog hybrid-search-rerank-rag-improvement + aliyun/tencentcloud/weaviate 集成文档 2023-11/2026-09 实拉，合并 §Dify RAG——那条管"分块/混合检索概述"，本条管"三模式选型与检索参数"）
+- **三检索模式**：Vector（语义相似）/ Full-text（关键词精确，适合产品码/ID/名称——快且可预期）/ **Hybrid（推荐）**（全文+向量同时跑再重排）。
+- **检索设置参数**：Rerank 模型（gte-rerank/cohere-rerank）、Top K（默认 3）、Score Threshold——**重排是混合检索提精度关键**。
+- **多模态 embedding**：Vision 图标模型把文档提取的图片也嵌入索引，图文跨模态检索；混合权重可调（weaviate alpha 默认 0.75，向量/关键词加权如 0.7/0.3）。
+- **提升层**：工具（检索选型与调参）。
+
+## n8n HTTP 节点重试与限流（来源：docs.n8n.io httprequest/common-issues + rate-limits + n8nlogic/n8nnode/n8nautomation 实践 2026-04/06 实拉，合并 §n8n 错误——那条管"错误处理总则"，本条管"HTTP 节点具体配置"）
+- **Retry on Fail**：节点 Settings 开启，Max Tries 上限 5、Wait Between Tries 上限 5 秒、指数退避可选——**处理瞬时错误最便宜的可靠性 win**；限流场景把 Wait 设 > 限流间隔。
+- **429 专门分支**：Continue On Fail=true + If 节点查 `$json.error.response.status === 429` → 走等待/重试逻辑，避免 workflow 整体停止。
+- **Timeout 必设**：合理超时（如 30s）防挂死；重试全败后还可调 REST 端点 `/api/v1/executions/{execution_id}/retry` 手动重跑。
+- **提升层**：工具（HTTP 可靠性）。
+
+## LangFlow 自定义组件与安全开关（来源：docs.langflow.org components-custom-components + contributing-components + extensions-quickstart + deployment-block-custom-components 2024-07/2026-09 实拉，合并 §LangFlow 平台——那条管"工具/嵌入/秘密"，本条管"自定义组件"）
+- **组件结构**：继承 Component 类；class 属性（display_name/description/icon）；inputs/outputs 列表定义数据流（MessageTextInput、Output(method=build_message)）；方法实现行为+内部错误处理与日志变量——**每个节点就是可编程 Python 对象**。
+- **自定义组件可作 agent 工具**：Code pane 输 Python 即建可被 agent 调用的工具；bundles 贡献（xxx_component.py + __init__.py）。
+- **安全开关**：`LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` 禁止自定义组件创建，防止**任意代码执行**——**开放自由功能同时必须给生产关闭开关**（与 §工具面安全同源）。
+- **提升层**：工具（组件开发与安全）。
+
+## Activepieces flow 版本与 piece 钉版（来源：activepieces.com docs flows/versioning + install/architecture/piece-syncing + resources cross-team 2026-05/08 实拉，合并 §Activepieces 平台——那条管"流程控制/AI/MCP"，本条管"版本治理"）
+- **draft→publish 两态**：draft 随便编辑，publish 版**锁定不可编辑**；编辑已发布 flow 自动新建 draft 并复制发布版——**发布版与草稿隔离，可随时回滚**。
+- **piece 版本钉版**：每 step 记录确切 piece 版本（如 0.5.3），**flow 从不自动升级**；升级显式经 builder，跨 minor/major 有警告——**确定性优先于"总是最新"**。
+- **版本化自动化**：跨团队共享的 flow 改动可审核、测试、上线不打断依赖交接。
+- **提升层**：工具（版本治理）。
+
+## Make 审计日志与 PII 脱敏（来源：help.make.com audit-logs + developers.make.com scenarios logs API + dredyson execution logs + thinkbot playbook + reco secure 2025-11/2026-07 实拉，合并 §Make 平台——那条管"调试/数据存储/优化"，本条管"审计与合规"）
+- **审计日志**：Enterprise 计划，记录谁改 scenario 何时改（org owner/admin/team admin 访问）——**排障先看谁动的**；Logs API 按 module 取操作日志（execution id/timestamp/status）。
+- **执行日志存结构快照**：日志保留执行时整个 module 布局——**审计时区分 live 结构与历史快照**（改触发/删场景后旧结构仍在日志里）。
+- **PII 脱敏**："Data is confidential" 设置不存 payload 数据；受限场景加非 PII telemetry（counts/request IDs/timestamps）到外部表——**合规与可调试兼得**；audit trail 记录 run_id/trigger_id/model_id/action_taken 等可重放。
+- **提升层**：工具（审计与脱敏）。
+
+## Pipedream 事件源与去重策略（来源：pipedream.com docs workflows/building-workflows/triggers + sources + components + connect/components/triggers + rss.pipedream.com 2026-05/09 实拉，合并 §Pipedream 平台——那条管"调度/组件/认证"，本条管"事件源"）
+- **事件源两特性**：独立资源可触发**多个** workflow（建一次多处用）；HTTP/Timer 两接口触发 run()。
+- **source 内置能力**：props 部署时收输入、emit 事件、built-in key-value store（this.db 存状态）、**deduping strategies（内置去重）**——**去重是 source 标配不是自己写**。
+- **RSS 三消费**：SSE 私有流实时 / 触发 workflow 逐条处理 / REST 批处理——同一事件源三种消费路径。
+- **提升层**：工具（事件源设计）。
+
+## Anthropic 缓存定价与启用（来源：platform.claude.com prompt-caching + anthropic.com news prompt-caching 2024-08/2026-09 实拉，合并 §Anthropic 缓存——那条管"cache_control 用法"，本条管"定价与启用方式"）
+- **定价乘数**：5m 缓存写=1.25×输入单价、1h 写=2×、命中/刷新仅 **10%**（Opus 4.7：$5→写 $6.25/$10→命中 $0.50，输出 $25/MTok）——**命中成本是输入的一折**。
+- **两种启用**：Automatic caching（请求顶层加 cache_control 字段，系统自动缓存稳定前缀）/ 显式 breakpoint 控制缓存段——**自动模式零成本接入**。
+- **适用**：大 system prompt/文档/长对话历史反复用同一前缀时收益最大；配 Batch API 进一步降非实时任务成本。
+- **提升层**：工具（缓存成本模型）。
+
+## GitHub Copilot agent 模式（来源：github.blog agent-mode-101 + code.visualstudio.com copilot-agent-mode + docs.github.com chat-in-ide + fr about-coding-agent 2025-02/2026-09 实拉，合并 §GitHub Copilot——那条管"Copilot 基础"，本条管"agent 模式"）
+- **agent 模式定位**：chat 底部 agents dropdown 选 Agent——**autonomous peer programmer**：分析 codebase→读文件→propose edits→跑命令/测试→响应编译/lint 错误→自动纠错循环直到完成。
+- **命令确认**：建议的 terminal 命令需用户确认后运行——**自主执行边界是用户放行的**。
+- **coding agent vs agent mode 区别**：coding agent 在 GitHub Actions 环境自主完成 issue/chat 任务并建 PR（异步、CI 环境）；agent mode 在本地 IDE 直接改（同步、本地环境）——**按执行环境选形态**。
+- **提升层**：工具（agent 编码模式选型）。
+
+## deeplearning 微调与 PEFT（来源：learn.deeplearning.ai fine-tuning-and-reinforcement-learning + generative-ai-with-llms + thenеuralbase fine-tuning 2026-04/05 实拉，合并 §deeplearning 平台——那条管"评估/多代理/提示"，本条管"微调决策"）
+- **先做微调决策再动手**：Fine-tuning Decision（是否值得微调 vs 提示/RAG）、Data Strategy（数据质量与规模）、PEFT 优先（LoRA/QLoRA 在有限数据上定制）——**提示与 RAG 解决不了才微调**。
+- **技术谱**：instruction fine-tuning（单任务/多任务）→ RLHF/reward modeling（对齐）→ PPO/GRPO（RL 算法）——课程按"后训练"整条链讲。
+- **提升层**：工作流（微调决策路径）。
+
+## OpenClaw 多代理与渠道路由（来源：openclaw-ai.com multi-agent + docs.openclaw.ai channel-routing + beaverslab config-channels + getopenclaw 配置指南 2026-03/09 实拉，合并 §OpenClaw 平台——那条管"配置/会话/技能/hooks"，本条管"多代理与渠道"）
+- **多代理路由**：tools.agentToAgent（enabled + allow 列表控制哪些 agent 可互调）——**跨 agent 调用默认关闭、白名单放行**。
+- **渠道路由**：每个 provider 独立配置块（channels.telegram/discord/slack/whatsapp 等），凭据各异（Telegram botToken、Discord botToken+applicationId、Slack botToken+appToken+signingSecret、WhatsApp phoneNumberId+accessToken+webhookUrl）——**令牌一律走环境变量**。
+- **渠道级控制**：allowFrom（允许号码/ID）、textChunkLimit/chunkMode（分片）、mediaMaxMb、groups requireMention、max_messages_per_hour/cooldown_seconds（限流）、auto_reply/typing_indicator——**每渠道按场景调行为**。
+- **提升层**：可复用 Skill（多代理与渠道路由骨架）。
