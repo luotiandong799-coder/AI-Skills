@@ -10325,3 +10325,66 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **CLI 商店 agentskill.sh**：search/info/install 单技能或整套（browse 热门/install code-review）——**命令行安装是技能分发的默认形态**。
 - **LobeHub**：~170k 技能，分类浏览、UI 好；claudemarketplaces.com ~6,700 条（广覆盖少策展）。→ 判据：策展质量 > 数量——SkillsMP 覆盖最大但零策展，装前必审源。
 - **选型判据四问**：curation 质量 / 版本化能力 / 安装方式 / 团队功能（私有+回滚+角色）——localskills.sh 是强替代（版本回滚+团队角色+一次安装多工具）。
+
+## r286C 学习轮落地（2026-09-29；来源 Dify/n8n/LangFlow/Activepieces/Make/Pipedream/Anthropic/GitHub/OpenClaw/Harness 十站实拉）
+
+### Agent 双策略与工具白名单：Function Calling vs ReAct 按模型选（来源：Dify Agent docs + Agent Strategy 插件，2026-09-29；与 §提示词编排互补——那条管"编排结构"，本条管"agent 推理策略与工具面"）
+- **两种推理策略**：Function Calling（模型原生函数调用，更可靠高效、推理链干净，适合 GPT-4/Claude 3.5 等强函数调用模型）/ ReAct（Thought→Action→Observation 显式循环，透明可调试）。→ 判据：**策略选型看模型能力**——强函数调用模型用 FC，弱或需可调试用 ReAct。
+- **Allowed tools list（工具白名单）**：Agent 节点可选白名单，只送白名单工具给模型——**收缩工具面，防跑偏与注入面扩大**。→ 判据：agent 的工具面 = 白名单，不是全部连接工具。
+- **Agent Strategy 插件**：可自定义推理方法（Multi-turn reasoning / Tool orchestration / Context management / Termination control 四框架）——**推理策略可插拔，不锁死一种**。
+- **自定义工具三法**：OpenAPI/Swagger 粘贴自动解析 / OpenAI Plugin 标准 / 代码方式——**有 OpenAPI 先粘贴，不手写胶水**；session.tool.invoke() 显式调用（provider/tool_name/parameters）。
+
+### 模板生态与生产级模板三要素：import-ready JSON + setup guide + 注意事项（来源：n8n workflows 目录 + community，2026-09-29 实拉）
+- **模板生态规模**：12,404 workflow templates（AI 分类 7,379、CRM 471、Engineering 529）——**垂直分类齐全，先搜模板再手搭**。
+- **生产级模板三要素**：clean commented JSON（import-ready）+ setup guide（凭证配置顺序）+ 注意事项——**发布模板按三要素打包，缺一不可复用**。→ 判据：可导入 + 可配置 + 可预期 = 生产级。
+- **垂直行业自动化包**（33 包：bookkeeping/legal/healthcare 等，每包 10 个预建 JSON + 国家变体 + 设置指南）——**按行业打包是分发趋势**。
+- **self-hosted AI 模板**（Ollama 本地模型，无 API key）——**本地模型工作流模板已成体系**；社区贡献循环：improve → share back。
+
+### 自定义组件与扩展机制：Component 类 + lfx extension 分发（来源：Langflow custom components + extensions docs，2026-09-29 实拉）
+- **自定义组件结构**：继承 Component 类 + class-level attributes（display name/description/icon）+ inputs/outputs 列表 + methods + error handling/logging——**组件五件套，缺一不完整**。
+- **extension 新机制**（lfx extension init）：extension.json v0 manifest + pyproject.toml pip-installable + src 布局——**扩展化是组件分发新形态，pip 可安装**。→ 判据：组件要分享先打 extension 包。
+- **Langflow Assistant**：prompt 生成组件代码（"Create a custom component URLTitleExtractor with input/output/timeout/error handling"）——**组件也用 AI 生成初稿**。
+- **组件更新纪律**：无 breaking changes 用 Update（单组件）；有 breaking changes 用 Review（先快照再更新）——**升级先快照，防断连**。
+- **安全**：LANGFLOW_COMPONENTS_PATH 替换整个 category；allow-list 由 admin 控制 env；LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=false 防越权——**组件路径是注入面，白名单控制**。
+
+### MCP 工具检索与 AI-ready Pieces：按任务搜不按名字搜（来源：Activepieces changelog + MCP pages，2026-09-29；与 §MCP 生态互补——那条管"单 server 760+ apps"，本条管"agent 侧检索与自研 pieces"）
+- **Tool search（ap_search_actions）**：agent 描述任务→按任务找到 action→检 schema→运行——**工具发现从"名字匹配"升级为"任务匹配"**。→ 判据：工具面再大，agent 也要能按意图检索，不然等于没有。
+- **AI-ready Pieces**：tool search + AI metadata + audience——**piece 目录为 agent 设计（元数据够 AI 判断）**。
+- **Custom API Pieces**：TypeScript 把内部 API 变成可复用 action（typed inputs / auth handling / consistent responses）——**内部 API 封装成 piece 才可进 agent 工具面**。
+- **Run logs & retries**：step-level logs 捕获输入输出——**MCP 调用留痕可审计**；自托管完全控制数据。
+
+### 内置 AI Toolkit 与七类 AI 工作流：无 key 起步 + 模块化（来源：Make LLM integration guide + OpenAI module，2026-09-29 实拉）
+- **Make AI Toolkit**：内置 Categorize Text/Classify/Summarize 等模块，**无需外部 API key、所有计划可用**——**轻 AI 活先查平台内置模块，不急着接外部 LLM**。
+- **OpenAI 模块**：Chat Completions（GPT-4o/mini/o1/o3）/DALL-E/Whisper/Embeddings，模块 UI 直接配 model/temperature/system prompt，{{variable}} 传动态数据——**模块内配置，不写胶水**。
+- **典型 AI workflow 七类**：Gmail 摘要分类 / Typeform 打分 / 工单主题 / Google Docs 摘要 / 发票提取 / 评论情感 / 博客创作——**高频模板形态，可抄骨架**。
+- **LLM 成本治理三档执行栈**：live（真实调用）/ cached（缓存命中）/ surrogate（替代模型） + budget-aware routing——**成本敏感时先建三档路由**。
+
+### 事件源独立资源与去重：source 与 workflow 解耦（来源：Pipedream components docs，2026-09-29 实拉）
+- **组件两类**：sources（事件源，独立资源，props 接受用户输入，HTTP/timer/cron/手动触发）+ actions（操作，写 API）——**事件源与 workflow 解耦：同一 source 可触发多个 workflow**。→ 判据：多 workflow 共用事件，source 独立建，不各自开 trigger。
+- **source 开发三件**：props 声明 app（type: "app", app: "github"）+ dedupe: "greatest" 去重策略 + run() 逻辑——**去重策略显式声明，防重复消费**。
+- **10,000+ 预建 triggers/actions（public registry）**：每 app 工具列表（如 Salesforce 61 actions/12 triggers）——**先查 registry 再用**；Connect proxy：3,000+ APIs 任意请求。
+
+### MCP connector 接入：URL + OAuth，免 client 实现（来源：Claude MCP connector docs + Help Center，2026-09-29；与 §连接器互补——那条管"能力面"，本条管"接入流程与认证"）
+- **MCP connector**：直接接入 MCP server 无需实现 MCP client（Messages API 调用 MCP 工具，list_tools → tool_runner）——**API 侧接 MCP 免 client 层**。
+- **接入流程**：Settings → Connectors → Add custom → URL（HTTPS 公网可达）+ OAuth Client ID/Secret → Connect——**远程 MCP 四步接好**；只支持 tool calls（规范子集）；Streamable HTTP / SSE 传输；单请求多 server。
+- **组织级授权**：IdP 集成，provision once / scope by group / revoke via IdP，跨 Claude chat/Code/Cowork 一致——**MCP 权限并入统一身份治理，不放飞**。
+- **Interactive connectors**（Salesforce/Slack 等）：内置工作工具交互（检索对话/生成草稿/格式/发布前审）——**企业工具以交互式 connector 形态进 Claude**。
+
+### 内建安全扫描三重与 /security-review：PR 前 flag 三件套（来源：GitHub blog Copilot changelogs，2026-09-29；与 §安全前置互补——那条管"agent 整体安全流程"，本条管"Copilot 内建扫描清单"）
+- **Copilot coding agent 内建三重扫描**：code scanning + secret scanning + dependency vulnerability checks（PR 开之前 flag）——**扫描前置到 PR 前，不是 CI 阶段**。code scanning 原本 GHAS 付费，Copilot coding agent 免费。
+- **/security-review slash command**（CLI 2026-06 + Copilot app 2026-07）：AI 驱动漏洞扫描进日常编码流——**安全审查命令化，随叫随用**。
+- **第三方 coding agent 安全验证**（2026-06）：CodeQL 分析 + Advisory Database 依赖检查 + secret scanning，发现问题 agent 自行修复后 finalize PR——**第三方 agent 交的代码也过安全闸**。
+- **GitHub MCP server**：secret scanning GA + dependency scanning preview（dependabot toolset）——**MCP 让 agent 提交前扫密钥与依赖**；Dependabot alerts 可指派 AI agent 修复（Autofix 不需 Copilot 订阅）。
+
+### slash 命令与节点调用：诊断/配置/调试四命令 + idempotency-key（来源：OpenClaw CLI + slash commands docs，2026-09-29；与 §命令域互补——那条管"CLI 八域"，本条管"slash 命令细节与节点幂等调用"）
+- **slash 四命令**：/status（快速诊断）/ trace（会话级 plugin trace）/ config（持久化配置）/ debug（运行时内存配置覆盖，需 commands.debug:true）——**诊断用 status+trace，配置持久用 config、临时用 debug**。→ 判据：先 /status 定位，再决定改哪层配置。
+- **/tools**：回答运行时"这个 agent 现在能用什么"——**运行时工具问答，不读配置**。
+- **host bash**：`! <cmd>` 或 `/bash <cmd>` 跑宿主机 shell——**容器内外命令入口分家**。
+- **nodes invoke 幂等**：--node/--command/--params/--invoke-timeout/**--idempotency-key**——**节点远程调用带幂等键防重复执行**（同 §重放幂等）。
+
+### Harness 生态与视觉插件：SKILL.md 兼容 + ModLens 外挂视觉（来源：DeepSeek Harness 发布 + dsh-plugin 生态，2026-09-29；与 §Cordis 互补——那条管"插件架构"，本条管"生态规模与视觉能力外挂"）
+- **DeepSeek Harness（DSH）**：2026-08-13 MIT 开源 agent runtime（v0.1 developer preview），"agent-assembly runtime" 不是另一个 Codex——**定位是组装运行时，不重复造 Codex**。
+- **SKILL.md 兼容**：你的 SKILL.md 文件夹在 DSH 直接用（Agent Skills 兼容）——**技能格式通用化，跨运行时免迁移**。→ 判据：技能按标准 SKILL.md 写，未来任何兼容运行时直接带走。
+- **生态节奏**：npm @deepseek-ai/dsh 四天六个版本（0.1.0-rc.6）；GitHub dsh-plugin topic 1,200+ repos 快速增长——**新运行时生态指数级起量，插件先行的验证**。
+- **ModLens**：第一个 vision 插件，给纯文本模型外挂视觉（粘贴图片出结构化 JSON 证据：OCR/版面/语义）——"vision bridge for every text-only coding agent"——**文本模型视觉能力走插件外挂，不换模型**。
+- **HF Skills**：AI/ML 任务定义（dataset creation/model training/evaluation），与 Codex/Claude Code/Gemini CLI/Cursor 互操作——**ML 任务也标准化为技能**。
