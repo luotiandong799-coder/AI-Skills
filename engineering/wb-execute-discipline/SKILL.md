@@ -9705,3 +9705,66 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **与 §Agent 安全纵深 的分工**：那条管防御（架构/输入/输出侧护栏）；本条管进攻侧（主动找漏洞）——**防御测"挡得住吗"，红队测"哪里挡不住"**。
 - **每步配代码示例+分级测验**：课程以视频+Code Example+Graded Quiz 组织——**方法学课程的最小闭环=概念+实操+考核**。
 - **提升层**：工作流（安全测试方法论）。
+
+## 文档索引流水线与索引方法约束：Extract→Transform→Load、索引不可降级、引用归因（来源：Dify docs knowledge-pipeline-orchestration + deepwiki rag-pipeline + dify-hosting rag-guide，2026-09-28 实拉）
+- **文档入库四阶段**：Extract（格式特定提取器）→ Transform（清洗+按规则分块：Paragraph/ParentChild/QA）→ Load（embedding+向量+元数据）→ 索引状态逐文档跟踪——**"提取-转换-装载"是 RAG 入库的通用骨架**（与 §向量+关键词双路召回 衔接：先入库后检索）。
+- **索引方法选型不可逆**：High Quality（向量 embedding）创建后不可降级 Economical——**索引质量选型要在建库前定，建了不能反悔**。
+- **引用与归因是可信回答的一部分**：开启 Citations and Attributions 后输出展示引用文档名、可跳转原文段——**"说出来的话要有出处"落到产品功能，不是靠叮嘱**。
+- 索引前先预览分块+代表性检索测试；PDF 上传前去页眉页脚页码（脏文本检索质量差）。
+- **提升层**：工具（RAG 入库）。
+
+## Merge 多流合并模式：Append/Combine/SQL/Choose、短者定输出（来源：n8n docs merge node + synta merge guide + emilingemarkarlsson merge modes，2026-09-28 实拉）
+- **合并先问"追加还是配对"**：Append=堆叠流（顺序拼接）；Combine 内三选=按字段（SQL inner join，用稳定 key 如 email 连接两条流）/按位置（zip 配对）/全部组合（笛卡尔积）——**连接语义决定用哪个模式，配错等于数据错**。
+- **按位置合并的截断语义**：输入长度不等时短者决定输出，长出的丢弃——**"zip"模式会静默丢数据，配用前确认两流等长或可接受截断**。
+- 高级：SQL Query（在合并节点内跑 SQL 语句）、Choose Branch（按条件保留一支）、多输入支持（1.49.0+）、等所有输入就绪才合并。
+- **提升层**：工具（数据流合并）。
+
+## 模板库参考实现分类：starter project 是"可改造起点"不是成品（来源：LangFlow docs starter-projects + deepwiki flow-patterns，2026-09-28 实拉）
+- **模板按模式分类，不按功能堆**：Simple Agent（agent+工具）/ Vector Store RAG（入库+检索两流程）/ Multi-Agent（多 agent 分解）/ Web Scraping（结构化抽取）/ Code Generation（schema 约束生成）/ Prompt Chaining / Memory Chatbot / Blog Writer（模板变量）——**学模板先认模式，再改组件**。
+- **模板 JSON 即配置**：starter projects 以 JSON 文件存于 initial_setup/starter_projects/——**模板可版本化、可 diff、可当配置管理**。
+- 新任务先查模板库：**已有参考实现时，改造优于从零搭**（与 §工作任务先查 GitHub 现成可改 同构）。
+- **提升层**：工具（模板复用）。
+
+## 持久化等待点：waitpoint、两类暂停、durable 重放（来源：Activepieces docs waitpoints + durable-execution + flow-control + flow-runs API，2026-09-28 实拉）
+- **waitpoint=持久化检查点**：run 状态置 PAUSED、执行状态持久化、resume 时同一 action 第二次调用（一次建点、一次读恢复载荷）——**"暂停-恢复"不是进程挂起，是状态落库+重放**。
+- **两类暂停按恢复源选**：DELAY=到特定时间戳自动恢复（定时等待）；WEBHOOK=外部 HTTP callback 触发恢复（URL 对 run 唯一、携带请求体/头/参数进下一步）——**"等时间到"用 DELAY，"等外部事件"用 WEBHOOK**。
+- **durable execution 统一重放路径**：worker crash/部署→队列重分配→加载 log 重放；暂停恢复→resume job 入队→重放 run；重试失败步骤复用同一 log——**所有中断（崩溃/暂停/重试）走同一条重放路径，正确性可审计**。
+- 人审场景：Approval 步骤=暂停等审、捕获 decision/comments、恢复走选中路径（API：Resume Paused Run）。
+- **提升层**：工作流（长流程可靠性）。
+
+## 自动化目录治理：子文件夹、标签、命名规范、批量编辑（来源：Make community releases-august-2026 + feature-spotlight-subfolders + keerok advanced-scenarios，2026-09-28 实拉）
+- **层级放文件夹，状态放标签**：子文件夹承载多级层级（client→project），标签承载状态（production/test/deprecated/critical）——**"归属"与"状态"两个维度分开管，互不伪装**。
+- **命名规范模板化**：[DOMAIN]-[ACTION]-[SOURCE_SYSTEM]→[TARGET_SYSTEM]-[VERSION]（例 [CRM]-Sync Contacts-HubSpot→Airtable-v2.1）——**场景名即文档，读名知全貌**。
+- **批量编辑是治理的杠杆**：多选移动子文件夹/批量增删标签——**治理动作要能批量，否则没人做**。
+- 连接命名标注 owner+scope；网格视图=文件夹+过滤+搜索组合。
+- **提升层**：工作流（资产目录治理）。
+
+## 托管凭据生命周期：OAuth 自动刷新、旋转、分层存储、KMS（来源：Pipedream docs connected-accounts + rest-api auth + privacy-security best-practices，2026-09-28 实拉）
+- **凭据托管=免运维刷新**：OAuth 由平台托管（自动 refresh、紧密保管），Accounts Page 统一管理（连接/查看访问/删除）——**能托管就不自建刷新逻辑**。
+- **旋转是标准动作**：Rotate client secret（旋转后旧 secret 不可再见）；密钥旋转是"当前值只出一次"的契约——**旋转=即时失效+一次性展示**。
+- **秘密存储分层**：平台集成支持→connected accounts；不支持/任意配置→environment variables；**绝不存代码**——**分层不是偏好，是不存代码的强制落点**。
+- 加密基线：AWS KMS AES-256-GCM、年度自动轮换、SOC 1/2/3。
+- **提升层**：工具（凭据安全）。
+
+## 输出风格体系：替换人格、保留工具、三层分工（来源：Claude Code docs output-styles + anthropic agent-sdk modifying-system-prompts + claude-blog output-styles，2026-09-28 实拉）
+- **output style=替换整个系统提示词（保留全部工具能力）**：内置 Proactive/Concise/Explanatory；自定义用 /output-style:new [description]——**"风格"和"能力"解耦，换人格不换工具箱**。
+- **三层提示词分工**：CLAUDE.md 加项目上下文（标准） / --append-system-prompt 追加临时指令 / output styles 替换人格与领域焦点——**上下文、追加、替换是三个动作，别混用**。
+- **项目级保存**：settings.local.json 的 outputStyle 字段按项目存，不同项目不同风格——**风格跟随项目上下文，不是全局一刀切**。
+- **提升层**：工具（输出定制）。
+
+## Claude 生态目录地图：技能/钩子/命令/CLAUDE.md/MCP 分类分布（来源：GitHub hesreallyhim/awesome-claude-code（82K+ stars）+ trackawesomelist + claudelab ecosystem，2026-09-28 实拉）
+- **生态五大类+分布**：Tooling（40+：用量监控 ccflare）/ Hooks（9：TDD Guard、CC Notify 桌面通知）/ Slash-Commands（35+：/commit /tdd /create-pr）/ CLAUDE.md Files（25+：按语言模板）/ MCP Servers（Notion/Linear/Figma/Playwright）+ Workflows（TDD/重构）——**按类找资源，不按名字猜**。
+- **钩子类工具补齐桌面体验**：CC Notify=输入需要/任务完成时桌面通知+一键跳回 VS Code+时长显示——**agent 在后台跑时，通知是唯一不靠轮询的感知通道**（与 §等待完成靠通知不靠轮询 同构）。
+- **人审闭环工具模式**：MDXG Redline=浏览器行内评论→结构化 JSON（按标题路径+行号）→skill 应用到精确行——**"人批注-机器执行"用结构化中间件解耦**。
+- **提升层**：工作流（生态选型地图）。
+
+## agent 身份三层架构：soul 内部行为、IDENTITY.md 外部呈现、配置层能力（来源：OpenClaw docs cli/agents + launchmyopenclaw identity-architecture + NVIDIA declarative manifest，2026-09-28 实拉）
+- **身份三层分离，可换外貌不改内核**：soul（内部行为）vs IDENTITY.md（外部呈现：name/theme/emoji/avatar）vs 配置层（openclaw.json/TOOLS.md：技术能力/工具访问/模型选择）——**改人设不碰灵魂，改能力不碰人设**。
+- **identity 字段集**：set-identity 写 name/theme/emoji/avatar（workspace 相对路径/URL/data URI）——**身份字段结构化，可脚本化设置**。
+- **agent 声明式清单有硬约束**：id 小写字母数字+_/-、1-32 字符、首字母、不能 main；workspace/agentDir 自动填充——**manifest 校验规则防撞名防越权**。
+- **提升层**：工具（agent 配置）。
+
+## 从零构建路径的课程结构：概念→采样→网络→训练→控制→加速（来源：DeepLearning.AI How Diffusion Models Work 课程大纲，2026-09-28 实拉）
+- **从零构建的学习顺序**：Intuition（直觉）→ Sampling（采样，含代码）→ Neural Network（网络结构）→ Training（训练）→ Controlling（控制生成）→ Speeding Up（加速）——**"先懂原理再动手再优化"是生成模型学习的标准序**。
+- **"建模型"比"调 API"学得多**：课程目标=从零构建并训练自己的扩散模型、实现加速采样算法（10x）——**要掌握技术，得走实现路线不是调用路线**（与 §模型推理层 分工：学习是模型侧，落地是工具侧）。
+- **提升层**：工作流（学习路径）。
