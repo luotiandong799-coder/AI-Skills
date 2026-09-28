@@ -10518,3 +10518,72 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **DeepSeek TUI 技能系统**：/skills 列出 /skill <name> 激活 /skill new scaffold /skill install github:<owner>/<repo> /skill update——**CLI/TUI 都有标准技能命令族**。
 - **推理模型使用定位**：推理型无需用户提供详细步骤指令，理解真实需求直接给答案；更懂"人话"——**给推理模型的目标指令 vs 给通用模型的步骤指令，写法不同**。
 - **colleague-skill（dsh 生态）**：把同事聊天记录蒸馏为 AI Skill——**把人际语料蒸馏成可复用技能**的又一实例。
+
+## r287C 学习轮落地（2026-09-29；来源 Dify/n8n/LangFlow/Activepieces/Make/Pipedream/Anthropic/GitHub/OpenClaw/HF 十站实拉）
+
+### 嵌套 agent 与 Agentic RAG：agent 当工具调 agent（来源：Dify blog + agent docs + Nacos A2A plugin，2026-09-29；与 §Agent 双策略互补——那条管"怎么选"，本条管"agent 间怎么嵌套"）
+- **嵌套 agent 节点（v1.3+）**：一个 agent 把另一个当工具调用——专用 LLM 角色间涌现行为，单一 agent 无法复现；**"别建一个什么都干的 god-agent，拆成专业 agent"**——**嵌套=把一个 agent 封装成工具给另一个 agent**。
+- **agent 节点 = 临时工**：证明价值后 promote 到 Agents 复用；**两个节点邀请同一 agent 仍各自独立 sandbox——节点间传数据要 declare as outputs 下游引用**——**同 agent 多实例互不污染，数据靠显式输出传递**。
+- **Agentic RAG**：agent 迭代分析意图/选工具与源/重写查询/评估证据/重试或回退——**比一次性 retrieve-then-generate 更扎实但延迟成本复杂度更高，按需启用**。
+- **协调者-专家模式**：Coordinator → Research/Data → Writer——**同 §编排模式：路由者只路由**。
+- **A2A 协议插件（Nacos）**：Dify 双向 A2A——调用外部 A2A agents 且能被当 A2A agent 调用；**MCP 双向同理：作为 client 调外部 server，也能作为 server 暴露任意 flow**——**协议双向=既能用别人的也能被别人用**。
+
+### 工作流导入四路与 CI/CD 模板：workflow 也进版本控制（来源：n8n workflow templates 库，2026-09-29）
+- **三种导入路径**：Import from Clipboard（JSON）/ Import from File（.json）/ Templates → Import from URL——**workflow 交换标准=JSON 文件**。
+- **跨实例导入模板**：API 检索 → 动态表单选择 → 格式化 → 创建到目标实例（用户控制，未选不导入）——**迁移要可控：不静默全量搬**。
+- **Magic Inbox P2P**：Teleport workflows 跨 n8n 服务器（docker/cloud/self-hosted），whitelist 限制可信发送者——**跨环境搬工作流可走白名单 P2P**。
+- **GitHub webhook 模板**：仓库 push → 过滤 .json 文件 → 下载 → CLI import → 清理临时文件——**workflow 版本控制 + CI/CD 部署：把编排文件当代码管**（同 §Pieces CI/CD、§DevOps Toolkit：全平台都在往"编排即代码"收敛）。
+- **MCP server 模板**：n8n 建 Gmail/Supabase MCP server（webhook /mcp/tool/supabase/:userId 多租户）——**用 n8n 直接搭 MCP server 给 agent 用**。
+
+### 自定义组件与 MCP 双向：flow 即 MCP server（来源：Langflow components + mcp-server + lfx-mcp docs，2026-09-29；与 §组件互补——那条管"组件形态"，本条管"组件开发与 MCP 接入"）
+- **自定义组件结构**：Python class 继承 Component + class-level attributes + input/output lists + methods + 内部变量错误处理日志——**组件=继承 + 属性声明 + 输入输出清单 + 方法**。
+- **MCP Tools 组件**：连接任意 MCP server 把函数暴露为工具（HTTP/SSE、Streamable HTTP）——**flow 内直接用外部 MCP 工具**。
+- **flow 作为 MCP server 暴露**：Share → MCP Server，每个 flow 一个 tool，**可编辑 tool name/description 让 agent 清楚用途**——**暴露给 agent 的工具要起好名字写清描述**（同 §工具描述是注入面）。
+- **lfx-mcp**：MCP server 连接 coding agent 到 Langflow 实例——终端构建/验证/运行 flows，**agent 创建的 flows 出现在 UI**——**coding agent 直接编排 flow 平台**。
+- **LANGFLOW_ALLOW_CUSTOM_COMPONENTS 环境变量**控制自定义组件开关——**能力开关进配置**。
+
+### Durable Execution checkpoint：run log 即恢复点（来源：Activepieces durable execution + known limits docs，2026-09-29）
+- **run log = 单个压缩 checkpoint 文件**：含一切恢复 run 所需，可在 fresh worker 上恢复——**执行日志同时是恢复点**。
+- **结构**：每个完成 step 一条（按 step name 键控：input（**secrets hidden**）/output/status/duration/error message）；loop iterations 和 router branches 同构嵌套在父 step 下；run-level tags——**日志按 step 键控、敏感值隐藏、嵌套结构同构**。
+- **技术上限**：flow run log 25MB（cloud）/50（self-host）、step output slice 32KB、step input truncate 2KB——接近上限截断大 input 显示 (truncated)——**大输出切片、大输入截断，日志永不爆**。
+- **checkpointed run log with replay-and-skip recovery after worker death**；waitpoints 暂停 run 最长 30 天——**断点续跑：worker 死后重放跳过已完成步**。
+- **piece 验证**：构造 fake context（propsValue/auth/store）调 action.run(ctx) 断言输出——**集成测试不依赖真实服务**。
+
+### 数据结构重确定与 client credentials：sample body 定义 schema（来源：Make custom webhook + app updates，2026-09-29；与 §Webhook 场景互补——那条管"场景骨架"，本条管"webhook 输入处理"）
+- **Re-determine data structure**：Make 解析 sample body 创建结构化变量 bundle——每个 JSON payload 字段变场景变量——**发一个 sample 请求让平台推断字段结构，后续全部字段可用**。
+- **client credentials auth（OAuth2 client credentials flow）**：从 Make 服务器直接认证（client id + secret），**场景不需要 user login 和 consent screen**；但**不用作 instant trigger（watch events）模块**——**服务端认证免交互，但事件类触发仍需用户授权连接**。
+
+### 多工作流事件源与 deploy API：source 一次部署多端消费（来源：Pipedream triggers + connect webhooks + workflows docs，2026-09-29；与 §事件源独立互补——那条管"独立运行"，本条管"部署与消费"）
+- **同一 source 触发多个 workflow**：事件源独立资源，deploy source 时定义 webhook URL 或 workflow ID 消费事件——**一次采集、多流消费**。
+- **Connect webhooks**：用户成功连接账号或错误时 POST 到 URL（CONNECTION_SUCCESS / CONNECTION_ERROR），**payload 不含用户凭证**——**连接状态事件流，凭证不外泄**。
+- **pd.triggers.deploy API**：编程化部署触发器（externalUserId、webhookUrl）——**给用户部署特定 trigger、按用户配置参数、API 管理**。
+- **trigger events API**：无 webhook 也能拉最近事件（轮询）——**webhook 与轮询双通道，都留**。
+
+### Skills 渐进披露细节：脚本只收输出、代码不进上下文（来源：Anthropic claude-api-skill + skills-explained blog，2026-09-29；与 §Skills 结构互补——那条管"结构规范"，本条管"加载机制"）
+- **SKILL.md body 建议 <5000 tokens 且 <500 行**：请求匹配 description → agent 读 body；然后才按指示读 bundled reference files 或跑 bundled scripts——**脚本执行只收输出，代码永不进上下文窗口**——**把逻辑放脚本、不放指令：执行结果进上下文，源码不进**。
+- **progressive disclosure 分层**：metadata 先加载（~100 tokens）判断相关性，再按需加载 body/引用/脚本——**先给判断用的壳，再给执行的肉**。
+- **Claude API skill 按项目语言与任务面加载**：只加载语言/表面（Messages API 或 Managed Agents）/具体任务（tool use/streaming/batches）相关文档——**文档加载按情境裁剪**。
+- **Managed Agents session 作为 context object**：存于 session log（getEvents() 选事件流位置切片，brain 从任何位置继续）——**context 存在于窗口之外，按需切片取回**。
+- **1M window 到 Sonnet 4**（beta）：成本敏感开发者可处理整个 codebase——**长窗口下沉到低成本档**。
+
+### GitHub MCP 最小权限矩阵：fine-grained token 按需映射（来源：GitHub MCP server 安全分析 + Invariant Labs 漏洞 + developer toolkit 指南，2026-09-29；与 §工具面安全互补——那条管"四个威胁"，本条管"GitHub 具体权限映射"）
+- **fine-grained token 映射表**：读代码/PR→contents:read+pull_requests:read；建 PR/分支→contents:write+pull_requests:write；读 CI→actions:read；管理 issue→issues:write——**最小权限要落到 scope 级**。
+- **Invariant Labs GitHub MCP 漏洞**：架构级 prompt-injection——**恶意 public issue 可引导 agent 泄露 private-repo 数据**；缓解=least-privilege tokens + **one-repo sessions**——**MCP 工具面是可注入面，权限就是爆炸半径**（同 §工具面安全）。
+- **经典错误**：full repo + full workflow scope 的 classic PAT；正确=**fine-grained PAT 限定特定 repo 最小权限**（只读 PR 审查=read-only token scoped to one repo）——**不许全权 token**。
+- **no secrets in tool arguments**：服务器端 secrets manager 注入凭证，模型永不提供/看见 secret 参数——**凭证只进环境，不进参数**。
+- **least privilege 按实例**：每个 MCP server 实例只访问任务所需 secrets；github:all / filesystem:* 类 token=无约束——**隔离爆炸半径按实例**。
+
+### 自定义命令与会话命令族：yaml 定义命令、脚本参数模板化（来源：OpenClaw slash commands + CLI + custom commands 指南，2026-09-29；与 §CLI 八域互补——那条管"命令范围"，本条管"自定义与会话控制"）
+- **自定义命令 commands/<name>.yaml**：name/description/usage/script with {{ env }} 参数——**脚本参数模板化：/deploy prod 变成 script ./scripts/deploy.sh prod**。
+- **commands.bash 布尔（默认 false）**：启用 !<cmd> 执行 host shell 命令（alias /bash <cmd>），**要求 tools.elevated 白名单**——**shell 执行默认关、开也要过白名单**。
+- **会话命令族**：/new [model]（归档当前会话开新）/ /reset [soft [message]]（**soft 保留 transcript 丢弃 CLI backend session ids 重跑 startup**）/ /name <title> / /compact [instructions]——**会话归档/重置/改名/压缩四个控制点**。
+- **诊断命令分层**：/status 快速诊断 /trace 会话级 plugin trace /config 持久化配置 /debug 纯运行时覆盖（内存非磁盘，需 commands.debug: true）——**持久配置与临时覆盖分开**。
+- **/kill <id|#|all> 无确认中止子 agent**；directives（/think /fast /elevated /exec /model 等）**在模型看到前从消息剥离**——**指令是控制面，不进入模型输入**。
+
+### HF Skills 生态与 Agent 模型全景：skills CLI 精确安装单技能（来源：modelslab HF skills 分析 + agskills 目录 + csdn 技能仓库盘点 + ModelScope 模型页，2026-09-29；与 §HF Skills 互补——那条管"仓库结构"，本条管"生态规模与模型侧"）
+- **huggingface/skills（7,374 stars，一周 +5,938）**：Agent Skills format 标准化打包 instructions/scripts/resources 成文件夹供任意 coding agent 发现使用——**最快 repo 之一，格式标准化的市场验证**。
+- **npx skills add <repo> --skill <name>**：精确安装单技能——**技能库 CLI 支持按名精确装**（同 §统一 CLI）。
+- **hugging-face-datasets skill**：Dataset Viewer REST API + npx tooling，**零 Python 依赖**——split/config discovery、row pagination、text search、filtering、SQL via parquetlens、dataset upload via CLI——**复杂生态能力封装成零依赖 skill**。
+- **ms-agent 1.6.0rc1**：计划全面支持 Anthropic Agent Skills 协议——**Agent Skills 协议成跨平台标准**（同 §协议标准）。
+- **Agent 模型生态**：Agents-A1（35B：long-horizon trajectories 把多步 agent runs 变可训练目标；三阶段 full-domain SFT → domain teacher → multi-teacher distillation）/ Qwen-AgentWorld（7 域 world model：MCP/Search/Terminal/SWE/Web/OS/Android，10M+ 轨迹）/ Nex-N2（Agentic Thinking 统一 reasoning/tool use/environment execution 闭环）——**模型侧把"工具使用"内化成训练目标**。
+- **技能仓库全景**：huggingface/skills 1.1w star / MiniMax-AI/skills 1.4w star（2026-09-24）——**大厂集体开源技能仓库**。
