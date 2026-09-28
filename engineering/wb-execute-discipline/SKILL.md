@@ -9258,3 +9258,67 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **渠道路由**：每个 provider 独立配置块（channels.telegram/discord/slack/whatsapp 等），凭据各异（Telegram botToken、Discord botToken+applicationId、Slack botToken+appToken+signingSecret、WhatsApp phoneNumberId+accessToken+webhookUrl）——**令牌一律走环境变量**。
 - **渠道级控制**：allowFrom（允许号码/ID）、textChunkLimit/chunkMode（分片）、mediaMaxMb、groups requireMention、max_messages_per_hour/cooldown_seconds（限流）、auto_reply/typing_indicator——**每渠道按场景调行为**。
 - **提升层**：可复用 Skill（多代理与渠道路由骨架）。
+
+## Dify 插件市场与治理：官方标签分级 / PR 审核流 / 插件类型（来源：marketplace.dify.ai + dify.ai blog trust-is-a-feature-how-dify-is-governing-a-growing-plugin-ecosystem + blog dify-v1-0-building-a-vibrant-plugin-ecosystem + dify-6c0370d8-release-1-16-0.mintlify.site develop-plugin/publishing 2025-02/2026-09 实拉，合并 §Dify 平台——那条管"变量/供应商/检索"，本条管"插件生态"）
+- **Marketplace 官方目录**：928 列出插件中 263 带官方标签、907 有安装记录——**装插件先看官方标签与安装量**，社区/伙伴插件单独分级。
+- **插件四类型**：Models（模型供应商）/ Tools（工具）/ Data Sources（数据源）/ Triggers（触发）——**一个插件可能含多类型能力**。
+- **发布走 PR 审核**：提交 langgenius/dify-plugins 仓库 PR，过 12 项 reviewer checks 才上架——**官方市场的"信任"是流程产物**；装插件也要按同标准自查（来源可信/功能声明匹配/权限范围）。
+- **生态案例**：EdgeOne Pages 插件（ZIP/HTML 即时部署 public URL）、DupDub 音频插件（转写/声纹克隆/TTS）——**插件市场把第三方能力变成一键安装**。
+- **提升层**：工具（插件选型与治理）。
+
+## n8n 二进制数据三节点与数据键规范（来源：docs.n8n.io data/data-structure + specific-data-types/binary-data + courses/level-two/chapter-2 + n8n.io workflows 5155/8780/8867/7882 2026-02/06 实拉，合并 §n8n 数据——那条管"数据转换"，本条管"二进制处理"）
+- **三个专用节点**：Convert to File（输入数据→文件）/ Extract From File（二进制→JSON）/ Read-Write Files from Disk——**文件类流程先想这三件套**。
+- **item 双键规范**：每个 item 必有 `json` 键；有文件时加 `binary` 键（data=Base64 必需、mimeType/fileExtension 最佳实践）——**下游节点按键取数，缺键即空**。
+- **分支丢二进制修复**：某分支处理过 binary 后下游会丢原数据——用 **Combine by Position** 把原分支（带 data）与分析分支（带 content）按位置合并，恢复单 item 双字段；`$(nodeName).item` 可回取任意前节点 binary。
+- **循环批处理**：form 多文件生成 Files_0/Files_1 多属性；Split In Batches 配 `reset:false` 保循环正确。
+- **提升层**：工具（二进制管线）。
+
+## LangFlow API key 与认证机制（来源：docs.langflow.org 1.10.0/api-keys-and-authentication + workflow-api + lfx-serve + 1.8.0/jwt-authentication + configuration-authentication 2025-07/2026-09 实拉，合并 §LangFlow 平台——那条管"秘密/组件/嵌入"，本条管"认证"）
+- **API key 双通道**：`x-api-key` header 或 query 参数；默认 `/v1/run/$FLOW_ID` 就要 key——**key 只允许访问创建者用户的 flows/components（租户隔离）**。
+- **校验位置可切**：默认对 DB 校验，可配置改对环境变量校验（适合无 DB 部署）。
+- **lfx serve 形态**：起 FastAPI server 把 flow 暴露为 `POST /flows/{flow_id}/run`——**公开可访问 server 必须配 LANGFLOW_API_KEY**。
+- **JWT 与加密**：支持对称/非对称 JWT（HS256 默认、可配 RS256/512，LANGFLOW_ALGORITHM）；LANGFLOW_SECRET_KEY 用 Fernet 加密敏感数据——**外部调用三种凭证形态：API key / JWT / OAuth，按暴露面选**。
+- **提升层**：工具（认证选型）。
+
+## Activepieces 项目治理与 RBAC（来源：activepieces.com product/governance-and-management + docs about/changelog + resources cross-team/operational/business 2026-05/09 实拉，合并 §Activepieces 平台——那条管"版本/流程/AI"，本条管"治理"）
+- **Projects 隔离**：每团队独立空间 sealed off；agent 归属项目——**项目决定 agent 可达的 connections/flows/files**（换项目前先看成本预览）。
+- **细粒度 RBAC**：Admin/Editor 角色上再拆 Create/Edit/Run 动作；SSO（Okta/Entra）+SCIM 自动同步用户组——**权限按动作粒度过，不只按角色**。
+- **App 白名单**：组织层决定哪些 app 可用；IT 管理 service accounts 一次建、团队复用——**"允许装什么"是组织决策不是个人决策**。
+- **运维纪律**：每 flow 定义 owner/backup owner/escalation path，改动过 review gates，发布 runbooks——**跨团队协作先定责任与门禁**。
+- **提升层**：工具（治理骨架）。
+
+## Make 连接管理与外部 provider（来源：help.make.com connect-external-providers + manage-ai-agents 2026-03/09 实拉，合并 §Make 平台——那条管"调试/审计/优化"，本条管"连接"）
+- **外部 provider 连接**：Manage providers 对话框里连非内建服务（如 Relevance AI：填 name/api key/region/project）——**内建集成之外可直连第三方 API**。
+- **AI agents 配置 tab**：create/duplicate/configure/delete agents；**agents 与 connections 一样团队共享**——复制 agent 做变体比从零建快。
+- **提升层**：工具（连接与代理管理）。
+
+## Pipedream 应用目录与 registry 结构（来源：pipedream.com apps/ + docs/components/contributing + components/guidelines + apps/pcloud + apps/raven-tools 2024-05/2026-09 实拉，合并 §Pipedream 平台——那条管"组件开发/事件源"，本条管"公共目录"）
+- **公共目录规模**：3,224 apps / 14,966 registry tools 一个集成层——**先查目录再手写集成**。
+- **registry 结构**：components/[app-slug]/（[app-slug].app.mjs 定义认证与基础方法 + actions/ + sources/ 各一目录）——**每个 app 目录=该 app 的全部能力面**。
+- **app slug 复用**：slug 用于 MCP headers 与 tool keys；`https://pipedream.com/llms` 提供机器可读索引——**给 agent 的入口是 llms.txt 不是人读页面**。
+- **提升层**：工具（目录复用）。
+
+## Anthropic Claude Code 双记忆系统（来源：code.claude.com/docs/en/memory + support.claude.com claude-code-power-user-tips + console.anthropic.com memory-tool + vc.ru auto-memory-v-claude-code 2026-03/09 实拉，合并 §Anthropic 平台——那条管"缓存/工具/思考"，本条管"记忆"）
+- **CLAUDE.md vs auto memory 分工**：CLAUDE.md=**你写**的指令与规则（每会话开始加载）；auto memory=**Claude 自己写**的 learnings/patterns（~/.claude/projects/<project>/memory/，四类笔记 user/feedback/build/debug，MEMORY.md 作索引）——**一个你管行为，一个它记经验**。
+- **两者都是 context 不是强制配置**：要硬性阻止某动作必须用 PreToolUse hook——**记忆给倾向，hook 给强制**。
+- **memory tool（API 面）**：Claude 可跨会话 create/read/update/delete 记忆文件；SDK 用 BetaAbstractMemoryTool 子类实现 handler。
+- **server-side memory（claude.ai 面）**：Settings>Memory 可 pause（停写保留）/reset（全删不可逆）/逐条删——**在线记忆是可管理的资源不是黑盒**。
+- **提升层**：工具（记忆系统设计）。
+
+## 腾讯 SkillHub：国内技能市场与 TRACE 评测（来源：skillhub.cloud.tencent.com + cloud.tencent.com developer/techpedia/2618 + skillhub skills/cjg-skill-forge + skills/wechat-ai-publisher 2026-06/09 实拉——新增信源站点）
+- **平台定位**：中国优化 Skills 社区，8万+ Skills，国内高速镜像秒装，三线并行安全审核；支持 WorkBuddy/QClaw/ima 多产品——**国内技能分发主渠道之一**。
+- **TRACE 评测体系**：首发帮助用户识别高质量 Skill——**装技能先看评测分，不只看标题**。
+- **SkillPay 商业化**：经验封装成 Skill → 被调用产生价值与回报——**把个人工作流打包成可复用、可计价的资产**（与四象限"能减少重复→留/能形成稳定工作流→融合"直接对应）。
+- **技能锻造炉（元技能）**：创建/升级/重铸/审计，10 维加权评分尺——**技能自评与迭代的现成模板**（对应 wb-skill-authoring 的评测面）。
+- **提升层**：可复用 Skill（国内市场与评测）。
+
+## deeplearning 代理编排研究（来源：charonhub.deeplearning.ai The Batch + introducing-deeplearning-ai-pro 2025-10/2026-09 实拉，合并 §deeplearning 平台——那条管"评估/多代理/微调"，本条管"新研究"）
+- **Meta 消息传递研究**：agent 间 message passing 提升性能、减少冗余；**一个 agent 可当另一个的 memory surrogate（记忆替身）**——编排里显式传递消息比共享全部上下文划算（对应 §多Agent 协作的分工）。
+- **Pro 生态**：150+ 课程（Agentic AI、LLM Post-training by Sharon Zhou、PyTorch 证书）——**一个订阅覆盖全课程库**。
+- **提升层**：工作流（代理编排证据）。
+
+## OpenClaw dashboard 配对与设备凭据（来源：docs.openclaw.ai web/dashboard + cli/dashboard + getopenclaw.ai help/dashboard-web-ui-guide 2026-05/09 实拉，合并 §OpenClaw 平台——那条管"渠道/hooks/配置"，本条管"控制面"）
+- **Gateway Control UI**：默认 /（gateway.controlUi.basePath 可改）；本地 http://127.0.0.1:18789/；`openclaw gateway status` 验证监听。
+- **配对机制**：`openclaw dashboard` 生成 short-lived 一次性 owner pairing link → 签名浏览器获得 durable administrator device credential——**重开 dashboard 不依赖共享 Gateway token**；同一浏览器重开 fresh handoff 可修复受限设备凭据（1008 pairing required 场景）。
+- **远程访问**：TLS 开启时 https/wss；远程机连接需 Gateway token 或配对——**控制面凭据分"一次性配对"与"持久设备凭据"两态**。
+- **提升层**：工具（控制面接入）。
