@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.17.0
+version: 1.18.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -459,3 +459,18 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - 最反直觉的一条：**凭据穿透只借不复制**——从 agent 的 OAuth 过期或刷新失败时会穿透读到主 agent 同 profile id 的凭据、取更鲜的 token，**但不把 refresh token 写进从 agent 的库**；要完全独立只能在该 agent 内自己登录，手工搬运仅限 `api_key`/`token` 静态档（OAuth refresh 材质默认不可移植）。
 - 路由原文 "Bindings are deterministic and most-specific wins."，九级次序：exact peer → parent peer → peer wildcard → guild+roles → guild → team → account → channel → default agent。
 - 判据：多 agent 同机共存时，**隔离的单位是状态目录不是进程**——"各跑各的进程"不等于凭据不串。
+
+
+## Cap22 执行隔离画的是「分界线」不是「开关」：Gateway 常驻宿主机，只有工具执行进沙箱；策略先于沙箱、逃生口显式且按会话持久（来源：docs.openclaw.ai《Sandboxing》+《What gets sandboxed》2026-09-29 r288-A 独立 curl 实拉原文核验）
+- 原文："The Gateway process always stays on the host; only tool execution moves into the sandbox when enabled."；沙箱默认关闭，由 `agents.defaults.sandbox`（全局）/ `agents.entries.*.sandbox`（单 agent）/ 创建者角色强制策略三处控制。
+- **次序**："Tool allow/deny policies still apply before sandbox rules. If a tool is denied globally or per-agent, sandboxing doesn't bring it back."——沙箱**不升权**，被拒的工具进了沙箱照样被拒。
+- **逃生口显式且可持久**：`tools.elevated` 让 `exec` 跑到沙箱外（默认 `gateway`，目标为 node 时 `node`）；`/exec` 只对授权发送者生效并**按会话持久**；要彻底禁用须走 tool policy deny，不能靠 elevated 的默认状态。反向两条：创建者角色强制沙箱的会话**逃不出去**；沙箱整体关闭时 `tools.elevated` 无意义（exec 本就在宿主机）。
+- **边界要诚实**：官方原话 "This is not a perfect security boundary, but it materially limits filesystem and process access when the model does something dumb."——先说清能挡什么，不宣称挡住什么。
+- 判据：谈隔离必答三件事——**分界线画在哪**（哪个进程在里、哪个在外）、**次序**（策略 → 沙箱 → 逃生口）、**逃生口谁能开、开多久**；自家文档照抄"不是完美边界"句式写明能力上限。
+- 与 Cap16（凭据与执行体物理分离）、Cap21（agentDir 独占）分工：那两条管凭据与状态目录，本条管**执行体与宿主机的分界与逃生口**。
+- 提升层：工具/工作流。触发词：沙箱、sandbox、elevated、执行隔离、分界线、逃生口、策略先于沙箱、不是完美边界。
+
+## Cap23 可选能力缺失时把入口藏掉，不回退到更宽的路径（fail-closed 而不是 fail-open）（来源：docs.openclaw.ai《What gets sandboxed》2026-09-29 r288-A 独立 curl 实拉原文核验）
+- 原文：目录发现 "uses `ls` without granting shell execution"；自定义后端可选实现 `SandboxFsBridge.readDirectory({ filePath, cwd, signal })`，而 "`ls` is hidden when it is absent, and OpenClaw does **not** fall back to reading the host filesystem."
+- 判据：**降级默认 fail-closed**——可选能力缺失时隐藏入口，而不是用次优实现顶上；因为"回退"多数时候等于放宽边界（此处回退就是拿宿主机文件系统给模型看）。对照 AV 已有的"静默降级是失败模式"，本条给的是正向设计写法：**没有就是不提供**。
+- 提升层：工具。触发词：不回退、能力缺失、隐藏工具、fail-closed、SandboxFsBridge、ls 隐藏。

@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.52.0
+version: 2.53.0
 agent_created: true
 ---
 
@@ -484,3 +484,12 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 官方明言 "It's not a backend access control, and some data paths fall outside its scope."，并列出四条豁免：① Code 节点 `console.log` 输出（生产进 stdout 与日志基建）；② 节点间数据流（下游节点仍可把原文外发）；③ Webhook 响应体是原文；④ 库内数据未加密，脱敏只在 API 出口施加，直读数据库可见原文。
 - 判据：**遮蔽只改「人看到什么」，不改「数据能去哪」**——宣称封住了敏感面时，逐条问这四条口子是否仍在。
 - 与 §失败证据可诊断性预算（2.39.0）互补：那条管「日志留不留 payload」，本条管「留了或抹了之后，还有哪些面在裸奔」。
+
+
+## 「可关闭的开关」也可能是单向门：启用即无回滚，关掉 = 数据永久不可读（来源：docs.n8n.io《Rotate encryption keys》2026-09-29 r288-A 独立 curl 实拉原文核验）
+- **双层密钥模型**：实例密钥 `N8N_ENCRYPTION_KEY` 是主密钥，"set at deployment time… never changes"，只用来保护数据加密密钥；轮换的是**数据加密密钥**，它以密文形式存在库里。轮换后旧密文仍可读，n8n 在该记录**下次更新时静默重加密**（lazy re-encryption）。
+- 原文硬约束：启用是 "a one-way change. There's no rollback path."；移除 `N8N_ENV_FEAT_ENCRYPTION_KEY_ROTATION` 或降级版本 → "makes all data encrypted after you enabled the feature **permanently inaccessible**"；且 "There's no automated tool to convert data encrypted in the new format back to the legacy format. The only recovery path is restoring from a database backup taken before you enabled the feature."
+- API 面：轮换需 `encryptionKey:manage` 全局 scope，且 "n8n never returns key material in API responses, only metadata such as the ID, algorithm, status, and timestamps."
+- 判据三条：① **凡"启用类"特性，验收项必须包含"能不能关回去"**——关不回去的，先建备份点再开，并把备份点写进验收记录（不是写在脑子里）；② **"仍可读"是隐性状态**：惰性重加密让库里同时存在新旧两种密文格式，验证必须两种都覆盖，只测新写入的数据会漏；③ **管理接口回 200 + 元数据 ≠ 密钥可用**：拿到 ID/算法/状态不等于真能解密，凭据类接口必须另做一次真实加解密往返才算验过。
+- 与 §读侧先行的灰度升级律（debug-loop 1.65.0）互补：那条管**版本错配**的代价，本条管**特性开关的不可逆性**；与 §遮蔽不是访问控制（2.52.0）同向——都是"宣称的效果 ≠ 实际封住的面"。
+- 提升层：工作流。触发词：密钥轮换、单向迁移、无回滚、one-way、关掉 flag 数据不可读、惰性重加密、元数据不等于密钥。
