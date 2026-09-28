@@ -9456,3 +9456,59 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **模型登录两阶段**：网关主机先 claude auth login（Claude Code 本地登录）→ openclaw models auth login --provider anthropic --method cli 指向 claude-cli 后端；或 export PROVIDER_API_KEY 直配——**模型凭据集中在网关主机**。
 - **auth.mode:none 仅单机本地**；openclaw doctor --fix 一键启用 token 认证——**关闭认证要显式且只限本地**。
 - **提升层**：工具（网关安全）。
+
+## 自动化模板生态与一键导入形态：先找现成模板，不重复造轮子（来源：n8n 官方 marketplace 1000+ 模板 + n8nmarkets.com/n8ntemplatestore/n8ntemplates.me 第三方市场 + n8n.spot 汇总，2026-09-28 实拉）
+- **模板获取渠道分层，价值密度排序**：官方 marketplace（1000+，核心团队+社区，质量最稳）→ 第三方付费市场（$9-$200，生产级带支持，如 AI Automation Starter Kit）→ 免费导航站（n8nfreeshare 16000+ 分类目录）→ 代理机构博客（带上下文的生产注记）。**别一上来就写 workflow/场景，先查三层现成模板**。
+- **导入形态=workflow JSON 打包**：load bundled workflow JSON → connect credentials → activate，自托管或云皆可——**"模板即代码"的迁移形态**，与 §重复工作流固化为资产 同构：模板的字段名/凭证要求/集成需求写进描述，复制成本趋零。
+- **选模板判据**：看 category 是否匹配、node breakdown（节点拆分说明）、integration requirements（要哪些凭证）、one-click import 能力；付费模板看更新日期与支持承诺。
+- **提升层**：工具（模板复用 / 交付形态）。
+
+## AI 工作流 Playbook 目录化：用例按"团队×影响×成熟度"组织，场景=触发器+条件分支+模块模板（来源：Make AI Playbook playbook.make.com + make.com/blog/ai-automation-examples + TripleTen 案例 + Activepieces 用例库，2026-09-28 实拉）
+- **Playbook 是"用例目录"不是"教程堆"**：Make AI Playbook 按团队（Sales/HR/Marketing）、影响（帮助优先级排序/自动交付）、AI maturity stage（加速/自动化类型）三轴分类——**给"该做什么自动化"提供决策索引，而不是给单个怎么做**。
+- **可复制 AI 场景的最小骨架**：触发器（Airtable 监控/表单/新行）→ 条件分支（Router，按 urgency/状态分流）→ 模板化动作（Slack 欢迎/邮件摘要）——**80% 的 AI 自动化是"事件→判断→通知/入库"三段**，先跑通三段再叠加。
+- **human-in-the-loop 是 AI 自动化的一等公民**：Activepieces 工作流可**暂停到指定用户输入**（人工 review 阶段）再继续——AI 过滤初筛（如简历筛选打 0-100 分）、人拍板终审。判据：**自动化负责"减重复"，人负责"下判断"**，把人工环节显式设计进流程而不是事后补救。
+- **提升层**：工作流（用例决策 / 人机分工）。
+
+## Agent 平台的插件化架构：模型与工具插件化、策略与引擎解耦、端点插件接外部事件（来源：Dify v1.0 发布 dify.ai/blog/dify-v1-0 + dify-plugin-system-design-and-implementation + agent-node 介绍，2026-09-28 实拉）
+- **模型/工具整体迁移为插件**：Dify v1.0 把 Models/Tools 迁到 Plugins（可独立安装/卸载/运行），推 Dify Marketplace 共享生态——**平台内核保持小而稳，能力全部走插件面扩展**（与 Agent Skills 能力包"可组合/版本化/可审计"同构）。
+- **Agent 策略（Strategy）与引擎解耦**：Agent node 采用可插拔推理算法（内置 ReAct Think-Act-Observe / Function Calling 两种，可下载替换，升级"发动机"不影响整车架构）——**决策逻辑与执行引擎分离**，换推理算法不用改工具/流程。
+- **Endpoint/Extension 插件接外部事件**：Endpoint plugin 把真实世界用例接进内部生态（处理外部 Webhook）；Extension 是 Dify 内托管的自定义服务（代码可定制）——**平台留"外部世界入口"而不是只做内部闭环**。
+- **知识检索可加元数据过滤**：v1.1 Metadata as Knowledge Filter——RAG 检索按元数据精确过滤+访问控制，提升精度与安全。
+- **提升层**：工具（平台架构观 / 扩展面设计）。
+
+## 自然语言业务规则→可执行工具护栏（guarded tools）：buildtime 生成 guard 代码、runtime 执行检查（来源：Langflow blog《Policies: Turning Natural-Language Rules into Guarded Tools》2026-05 + docs.langflow.org，2026-09-28 实拉）
+- **规则不是提示词，是可执行守卫**：Policies 组件把自然语言业务规则（"只有管理员能改价格"）在 buildtime 生成 guard 代码，runtime 包在工具外层、**工具调用前检查**——比"把规则写进 prompt 祈祷模型记住"高一个确定级（与 §自动化用 hooks 类必然执行机制 同源：能编译成代码的规则就不要靠提示词）。
+- **guarded tools 形态**：业务规则→组件→生成守卫代码→包裹原工具；调用时先过守卫再执行。判据：**合规/权限/边界类规则能表达式化就走守卫，只有判断型规则留给模型**。
+- 配套：1.8 起 V2 workflow API（响应更简）、1.10 Memory bases 长期语义记忆（可配置向量库后端）、1.11 stream 支持 AG-UI 协议——平台演进方向=语义记忆+结构化 API+护栏。
+- **提升层**：可复用 Skill（规则→护栏的转化方法）。
+
+## 程序化模板化：用 REST API 从分享链接创建 workflow，AI 在代码步内生成代码（来源：Pipedream docs rest-api/examples/workflows + docs v3/code/nodejs/ai-code-generation，2026-09-28 实拉）
+- **workflow 可分享为模板，REST API 程序化创建**：create workflow endpoint 从 workflow share link 创建，传入自己的 connected accounts/step props 作为配置——**工作流本身成为可编程资产**（CI 化/批量部署），与 §重复工作流固化为资产 的"可复用 Skill 四块结构"同构。
+- **代码步内 AI 生成代码**：在 code step 里用 AI 写实现（props 自动接线），模型生成 axios/API 调用代码——**"胶水代码"是最适合 AI 生成的部分**（样板化、上下文局部、易验证）。
+- **事件流模式标准化**：示例模式（Slack 触发词→Asana 任务、Calendar→Slack 通知、tweet→SQS/EventBridge/Lambda）——**同构事件流可复用，换触发源/换目标即可**。
+- **提升层**：工具（程序化资产 / 胶水代码 AI 化）。
+
+## 自定义斜杠命令：命令即 Markdown 文件，文件名即命令名，frontmatter 声明工具与触发（来源：Anthropic console docs agent-sdk/slash-commands + claude.com/blog using-claude-md-files + 迁移坑清单，2026-09-28 实拉）
+- **命令=文件**：.claude/commands/xxx.md（文件名即命令名，内容即命令行为）；Project 级（项目共享）与 Personal 级（~/.claude/commands/ 跨项目）两级作用域；**同名命令文件可覆盖内置 skill（shadowing）**——团队可覆盖个人/内置。
+- **frontmatter 是命令的"接口声明"**：description（菜单显示）、model（指定模型）、allowed-tools（授权工具白名单）、disable-model-invocation: true（**防止模型从上下文自动调用，只允许用户显式触发**）、user-invocable: true（出现在 / 菜单）。
+- **插件=四个扩展点的打包**：slash commands + agents + MCP servers + hooks 组合打包分享——**扩展点组合成可分发单元**，与 Agent Skills 能力包同构。
+- **迁移坑清单（照查）**：/ 菜单不显示→缺 user-invocable: true；工具限制无效→allowed_tools（下划线）应为 allowed-tools（连字符）；参数没展开→旧 $1 应替换为 $ARGUMENTS；模型乱触发→加 disable-model-invocation: true。
+- **提升层**：可复用 Skill（命令化交互 / 接口声明）。
+
+## 自主技能生成器：/learn 主题→搜索+浏览器→文档综合为可复用技能（来源：虾小宝 AI Agent Skills 地图 skillhub.wanuai.cn v3.0.3 + 阿里云 FunClaw 帮助文档，2026-09-28 首次实拉）
+- **技能可"从网络学来"**：自主技能生成器技能（/learn <主题>）用网络搜索+浏览器工具发现/提取/综合文档，为不熟悉的技术生成可复用技能——**技能工厂自动化**（与 §学习型任务只内化可用方法 同向：把"学新工具→写成技能"本身流水线化）。
+- **中国 Agent Skills 生态**：虾小宝 v3.0.3 聚合中国 AI Agent Skills 地图（含三项认证、自主生成器）——中文技能库存在且活跃，可作为信源补充。
+- **FunClaw 技能集命名法**：find-agentrun-skills（发现技能）/ fc-vpc-proxy（VPC 代理）/ searxng（搜索引擎）/ agent-browser（浏览器）/ self-improvement（自我优化对话）——**技能名=能力动词+对象**，一看即懂。
+- **提升层**：可复用 Skill（技能自动生成 / 技能库生态）。
+
+## AI 课程三档结构与认证阶梯：Short Course（1-2hr 免费 Accomplishment）/ Course（3-10hr 证书）/ Professional Certificate（10+hr 职业证书）（来源：learn.deeplearning.ai + info.deeplearning.ai 知识库 + corporate.deeplearning.ai，2026-09-28 实拉）
+- **三档对应三种学习意图**：Short Course=快速上手具体技能（1-2hr，免费，PRO 完成得 Accomplishment 非官方证书）；Course=系统学一门课（3-10hr，可分享证书）；Professional Certificate=职业认证（10+hr）。判据：**"补一个技能点"走 Short Course，"建立知识体系"走 Course，"背书求职"走 Professional Certificate**——按目标选档位，不为证书付档位溢价。
+- **证书与 Accomplishment 区分**：Short Course 不给官方证书（避免稀释证书价值），PRO 用户得 Accomplishment 作为完成凭证——**"完成证明"与"能力认证"是两种信用**。
+- 配套：证书可验证（证书 ID 链接）；Build with Andrew 等 PRO 专属课完成评估得证书。
+- **提升层**：工作流（学习选型 / 证书定位）。
+
+## 跨会话记忆的工程实现：捕获会话→AI 压缩→未来会话注入相关上下文（来源：GitHub 周榜 claude-mem 94,765★ README + 极客公园 OpenClaw 生态报道，2026-09-28 实拉）
+- **跨会话记忆=捕获+压缩+注入三段流水线**：claude-mem 捕获 agent 会话里做的一切 → AI 压缩 → 未来会话注入相关上下文，兼容 Claude Code/OpenClaw/Codex/Gemini/Hermes/Copilot/OpenCode 多端——**与 §记忆流水线（日志→洞察→长期记忆）同向的工程化实现**，且做成通用工具层。
+- **agent 安全默认的三种路线**：ZeroClaw（Rust 重写，secure by default：默认拒公网暴露、限制文件访问范围）、NanoClaw（每对话独立容器、OS 级隔离替代应用层权限检查）、TrustClaw（云服务，OAuth 托管凭据+远程沙箱执行）——**"默认拒绝暴露"是 agent 平台的安全基线**（与 §Agent 工具面安全 同向：少暴露少爆炸）。
+- **agent 生态可复用模式**：Orca（并行 agent 舰队 ADE）、Comp AI CRM（agentic-first CRM：agent 直接操作 CRM）、Maestro（多 agent 编排）、EnvoyMesh（去中心化 P2P 自治 agent）——**agent 不是单点工具，是围绕它的生态层（IDE/CRM/编排/网格）**。
+- **提升层**：工具（记忆工程实现 / 安全默认 / 生态视野）。
