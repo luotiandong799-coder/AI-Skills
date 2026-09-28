@@ -10951,3 +10951,75 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **原生无并行子代理**：smolagents 不原生并行跑子代理，用 concurrent.futures+threading 自实现——**要并行自己编排**。
 - **生产前四查**：执行环境（哪个沙箱）/工具权限（给哪些工具）/密钥边界（哪些 secret 可见）/smoke check（先小样本验证）——**进 AI 宿主前先定边界，再放权**。
 - 提升层：可复用 Skill。触发词：CodeAgent、sandbox='e2b'、ToolCallingAgent、生产前四查、threading 并行。
+## r291C 十独点（2026-09-29 实拉）
+
+### 1. Human Input 人工审核节点：Dify 的暂停-表单-分支恢复机制（来源：Dify 官方《The Human Input Node》+ CSDN《Dify工作流人工介入》+ 掘金《Dify+RAGFlow 合同审查》2026-03-03/2026-09-17/2026-03-23 实拉）
+- **暂停-表单-分支恢复**：流程执行到 Human Input 节点时暂停，表单发给指定人；人工审阅、填字段、点决策按钮后，流程沿对应分支继续——**人机交接是工作流原生节点，不是事后补救**。
+- **三输出变量**：`__action_id`（用户操作名：yes/no）+ `__action_value`（操作值：是/否）+ `__rendered_content`（表单内容）——下游 LLM/分支按这三个值决定走向。
+- **Workflow vs Chatflow 终节点契约**：Workflow 用 Output 节点（可选）、Chatflow 用 Answer 节点（必须）——**应用类型选后不可改，开工前定**。
+- **人机协作判据**：置信度低于阈值（如 0.7）→ 暂停流程 → 通知人工确认 → 再回复——**该人审的必须停下等人，别让模型硬答**。
+- 提升层：工作流。触发词：Human Input 节点、__action_id、人工审核、置信度阈值、Chatflow Answer 必须。
+
+### 2. LangChain 并入 AI 套件：n8n 的 AI Agent 节点解剖（来源：n8n Community《langchain node integrated into AI suite》+ AI Workflow Lab《AI Agent node anatomy》+ 腾讯云《n8n+AI工作流》+ n8n workflow《Gemini+Langfuse》2026-07-02/2026-06-10/2026-07-16/2026-03-02 实拉，与 r284C n8n 智能体/r289A 子工作流合并增量）
+- **不再有单一 LangChain 节点**：功能拆进原生 AI 分类（找 AI Agent 不是找 LangChain）——**升级后找不到旧节点是并入不是删除**。
+- **AI Agent 节点=可视化 AgentExecutor**：子节点 Chat Model/Memory/Tool/Output Parser 通过 8 种 AI 连接类型协作——**每个连接都是依赖注入端口，插哪个模型/记忆由连线决定**。
+- **langchain code 节点**：自定义 LLM 模型，配 callbacks 接 Langfuse 等可观测性平台——**要自定义/要追踪走 code 节点，别在原生节点里硬求**。
+- 提升层：工具。触发词：AI Agent 节点、8 种 AI 连接类型、AgentExecutor、langchain code、Langfuse callbacks。
+
+### 3. Prompt 模板组件：LangFlow 的结构化提示与动态变量（来源：docs.langflow.org《Prompt Template》+ langflow.cn《提示模板》+ CSDN《LangFlow 1.x 入门》2026-09-04/2026-07-24/2026-09-02 实拉，与 r291B 自定义组件合并增量）
+- **Prompt 组件=结构化输入**：自然语言+固定值+动态变量，为 LLM/agent 提供基准上下文，**与聊天消息、文件上传等输入分离**——提示和消息是两个输入通道，不混。
+- **模板加变量自动生成字段**：写 `{变量}` 自动在组件上建字段，可连其他组件输入——**prompt 编排自动化不需要写代码**。
+- **trace_type="prompt"**：提示组件在追踪里单列类型——**排查看得到提示本身**。
+- 提升层：工具。触发词：Prompt Template、动态变量、与聊天输入分离、trace_type=prompt。
+
+### 4. 版本控制：Activepieces 的 Project Releases 与 Pieces CI/CD（来源：activepieces.com/docs《Project Releases》《Custom Pieces CI/CD》《Project Replace CLI》+ AutomationAtlas 2026-09-27/2026-06-10/2026-09-26/2026-09-16 实拉）
+- **Project Releases 三来源**：Git（从连接的 Git 仓库拉）/ Project（复制本实例另一项目 flow）/ Rollback（恢复先前 release 状态）——**发布三通道，回滚是二等公民不用怕**。
+- **Git 连接前置**：需要 Environments 功能开启；连接后可 push 全部 flows/connections 到仓库——**flow 即代码的前提是 Environments**。
+- **Flow versioning 内建**：publish/draft 状态+回滚能力——**每个 flow 自带草稿/发布两态**。
+- **Custom Pieces CI/CD**：生产环境里 Activepieces 当自建 npm registry——piece 在 package.json 升版→PR 合 main→手动 CLI 或 GitHub/GitLab Action 触发同步。
+- **Project Replace CLI 约束**：两部署必须同 major 版本、目标版本 ≥ 源版本——**跨环境搬运有版本门槛**。
+- 提升层：工具。触发词：Project Releases、Git 拉取/Rollback、publish/draft、npm registry 模型、Project Replace CLI。
+
+### 5. AI Toolkit 与双通道：Make 的文本 AI 模块与模型选择（来源：Make Apps《Make AI Toolkit》+ Make《How to build an LLM integration》+ help.make《Claude Opus 5》+ community.make《Execute an action with AI》2026-09-25/2026-05-27/2026-08-03/2026-06-30 实拉，与 r291B 执行日志/r291A 存储合并增量）
+- **AI Toolkit 八大文本模块**：analyze sentiment / categorize / identify language / extract information / standardize / summarize / translate / chunk——**常用文本任务做成即插即用模块，不写 prompt**。
+- **AI provider 双通道**：所有计划可用 Make AI provider（走 Make credits）；付费计划可加自定义 provider 连接（OpenAI 等，BYOK 控花费）——**内置白嫖、自定义控权，按需选**。
+- **Claude Opus 5 支持**：extended thinking 默认开，low/medium/high 三档 effort——**长上下文推理模型进平台，effort 可调**。
+- **MCP Client "Execute an action with AI"**：模块里选 provider——**MCP 动作内嵌 AI 步骤，provider 可换**。
+- 提升层：工具。触发词：AI Toolkit、八大模块、Make AI provider、BYOK、Claude Opus 5、effort 三档。
+
+### 6. AI 面：Pipedream 的预建 LLM actions 与模型中立（来源：Zapier 对比《Pipedream AI token allowance》+ sim.ai《Pipedream》+ AI Workflow Lab《Zapier vs Make vs n8n vs Pipedream》+ agenticindex 2026-09-16/2026-09-13/2026-08-04/2026-09-27 实拉）
+- **AI token allowance 计费**：OpenAI app 预建 LLM actions 走 managed connection，按 AI token allowance 计（免费 100 万/advanced 最高 5000 万）——**平台代付不走个人 key，额度统一管**。
+- **workflow 步骤任意代码**：每一步可任意 Node/Python，"add Claude"=npm install @anthropic-ai/sdk——**LLM 集成就是装 SDK，无平台抽象**。
+- **并行/非依赖 LLM 调用**：workflow 可并行跑互不依赖的 LLM 调用——**并行是平台能力，不用自己编排**。
+- **模型中立**：MCP server 把工具给客户自己的模型（Vercel AI SDK/OpenAI/Anthropic/Gemini 任一），模型选择与 key 归客户——**工具面与模型面解耦**。
+- 提升层：工具。触发词：AI token allowance、预建 LLM actions、任意代码步骤、并行 LLM 调用、模型中立。
+
+### 7. 提示工程精确化：Anthropic 的示例三要求与"愿望 vs 规格"（来源：Anthropic《Prompting best practices》+ innovatetechie《Patterns That Actually Work》+ DreamHost《25 techniques tested》2026-02-28/2026-08-07/2026-07-31 实拉，与历史提示工程轮次合并增量）
+- **示例三要求**：Relevant（贴近实际用例）/ Diverse（覆盖边界，避免学走样）/ Structured（XML 标签包裹）——**示例是控制格式/语气/结构最可靠的手段，few-shot 大幅提准**。
+- **XML 标签=最强分段信号**：Claude 被训练把标签当语义边界——**context/task/rules 分域包裹**。
+- **"愿望 vs 规格"**："Be concise" 是愿望；"5 bullets, each under 15 words" 是规格——**指令被忽略时改精确不改更长**；反模式是堆 caveats 自相矛盾。
+- **数据与指令分离 + 防幻觉组合**：处理材料与处理要求分开放；明确"不知道就说不知道"+限定只依据提供材料作答——**防幻觉最直接的一招**。
+- **结构化分层**：Anthropic 自家 system prompt 也按行为/产物/搜索指令/知识截止分节——**提示结构本身可当模板抄**。
+- 提升层：可复用 Skill。触发词：few-shot 三要求、XML 分段、愿望 vs 规格、数据指令分离、防幻觉组合。
+
+### 8. Agent Mode 2026：Copilot cloud agent 的推理档位与画布（来源：GitHub Changelog《reasoning level》《auto mode》《Copilot app cancanvases》+ GitHub Blog《coding agent what's new》2026-08-03/2026-06-17/2026-06-02/2026-02-26 实拉）
+- **reasoning level 可调**：委派 cloud agent 时按模型支持度设推理档位——高=更优复杂答案但更耗 token/credits——**复杂度与成本手动权衡**。
+- **auto model selection（GA）**：Copilot 按请求复杂度与模型可用性自动选模型（2026-06-17 全计划可用）——**自动模式优化 token 使用保质量**。
+- **cloud agent 脱离 PR 工作流**：可在分支上干活不建 PR，何时开 PR 由你控——**agent 不再绑定 PR 形态**。
+- **canvases 双向工作表面**：agent 干活时更新画布，人可直接在画布上编辑/重排/批准/重定向——**AX（agent experience）开端：界面为人+agent 共操**。
+- **BYOK**：Business/Enterprise 可链自己的 API key（OpenRouter/Foundry/Google/Anthropic/OpenAI），本地 Ollama 也行——**企业模型选型权交回客户**。
+- 提升层：工具。触发词：reasoning level、auto model selection、分支不建 PR、canvases、BYOK。
+
+### 9. Multi-Agent 编排：OpenClaw 的三拓扑与隔离 persona（来源：Blink《OpenClaw Multi-Agent Orchestration》+ openclaw-ai docs《Multi-Agent Routing》+ AI Agent Insights《sessions_spawn》+ launchmyopenclaw 2026-04-13/2026-03-18/2026-09-07/2026-07-23 实拉，与 r291B 渠道面合并增量）
+- **三拓扑选型表**：Manager+Specialists（复杂多域工作流）/ Pipeline Relay（顺序清晰交接）/ Parallel Pool（同质高量任务）——**先选拓扑再设计团队**。
+- **agent 完全隔离 persona**：每个 agentId 是独立 persona——独立 workspace 四文件（AGENTS.md 行为/SOUL.md 身份/MEMORY.md 记忆/TOOLS.md 工具）+ per-channel accountId（不同号码/账号）——**隔离到 persona 级**。
+- **sessions_spawn 工具**：父 agent 派生隔离子 agent（特定任务/模型配置/权限范围）→ 完成后回收——**分层架构的原语，不是框架**。
+- **Triage Agent 协调**：拆复杂任务→专家 agent 并行处理→汇总——**编排者是路由不是执行者**。
+- **openclaw agents add**：一条命令建 agent 并绑独立渠道（Telegram/Slack 各管各）——**多 agent 部署是 CLI 操作**。
+- 提升层：可复用 Skill。触发词：三拓扑、隔离 persona、sessions_spawn、Triage Agent、agents add。
+
+### 10. 学习路径信号：WaytoAGI 的 Agent Skills 蓝皮书与实操共学（来源：WaytoAGI 飞书《Claude Agent Skills 蓝皮书》+ waytoagi.com《AI编程共学》+ 晚8点共学资料库 2026-09-27/2026-07-23/2026-07-12 实拉）
+- **Agent Skills 蓝皮书学习曲线**：五篇二十章，从"Skill 是给普通人最好的礼物"讲起 → Agent Team → 自动进化收尾——**技能学习有完整曲线，不是散落教程**。
+- **实操导向的共学项目清单**：图片字幕生成器/网页金句卡片/AI 博客/中文名字生成器/表情包生成器/Life Coach 应用/浏览器智能插件/个人网页与小程序/优质文章推荐网站——**九个小而完整项目串起整套技能**。
+- **晚8点共学资料库**：直播回放+共学文档+智能纪要+海报——**知识沉淀带过程产物，不只给结论**。
+- 提升层：可复用 Skill（学习路径信号）。触发词：Agent Skills 蓝皮书、五篇二十章、九实操项目、晚8点共学。
