@@ -9579,3 +9579,64 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **安装前检查**：clawhub inspect '<slug>' 检查权限和代码再装；实验技能进沙箱；审输出后批准破坏性动作（merge/deploy/写文件）——**装技能=扩权限，按装权限的流程审**（与 §工具描述可注入 同向）。
 - **插件可自带技能**：openclaw.plugin.json 的 skills 目录随插件加载（浏览器插件带 browser-automation 技能）；优先级=同名 bundled/managed/agent/workspace 覆盖插件技能——**技能随插件分发，同名覆盖规则明确**。
 - **提升层**：可复用 Skill（技能写作 / 安全安装）。
+
+## 分支收敛与列表操作：互斥分支聚合为单变量、数组操作节点化（来源：Dify docs variable-aggregator + legacy-docs + deepwiki variables + deepresearch 案例，2026-09-28 实拉）
+- **互斥分支的输出用聚合节点收敛**：If/Else、Question Classifier 只执行一路，下游要分别复制——Variable Aggregator 把分支输出合并为单变量，下游只定义一次——**"分支多、下游一"是聚合节点的标准用法**。
+- **类型约束在配置时强制**：聚合变量必须同数据类型（String/Number/Object/Boolean/Array[T]），配置期报错——**接口约束前置，运行时才炸的错变成配置时就发现**。
+- **数组操作节点化**：List Operator（按属性过滤/排序 ASC-DESC/取前 N 项）；Variable Assigner 写会话变量（overwrite/clear/set/算术/数组 append/extend/remove）——**循环累积用 append 别用 overwrite（DeepResearch：append 累积 findings、IF-ELSE 查 shouldContinue）**。
+- **提升层**：工具（流程收敛 / 数组操作）。
+
+## Webhook 响应模式的四种选型：立即回、末节点回、专用节点回、流式回（来源：n8n docs webhook node + respond-to-webhook + common-issues + community，2026-09-28 实拉）
+- **四种响应模式对应四种契约**：Immediately=200+"Workflow started"（fire-and-forget，回调方不等结果）；When Last Node Finishes=全流程执行后返回末节点输出（可配状态码/字段名）；Using Respond to Webhook node=在流程中间自定义响应；Streaming response=实时流式返回（AI agent 场景）——**先定"回调方要什么"，再选模式**。
+- **streaming 的隐藏规则**：仅 Response Mode=Using Respond to Webhook 时可用；Immediate 与 streaming 不可同用——**streaming 不是独立开关，是响应模式组合出来的**。
+- **测试与生产 URL 分离**：/webhook-test/ 与 /webhook/ 分环境；Wait 节点 resume webhook suffix 保证多 Wait 节点唯一——**测试入口独立=敢拿真实回调试**。
+- **提升层**：工具（webhook 契约设计）。
+
+## 组件目录分层：Core 通用 + Bundle 集成 + 自定义组件即工具（来源：Langflow docs concepts-components + bundles + agents-tools + legacy-core-components，2026-09-28 实拉）
+- **组件分三层找**：Core components=平台基础通用（Inputs/Outputs/Data、循环/解析）；Bundles=第三方集成打包（LangChain 文本分割器、Composio 聚合工具、Agentics 表格转换）；自定义=自己写——**先查 Core，再查 Bundle，最后才自定义**。
+- **自定义组件=Python 代码即工具**：New Custom Component→Code 面板写 Python，组件自动成为 agent 可用工具——**"工具"的最小形态是带声明的函数**（name/description 即工具契约）。
+- **legacy 组件有替换路径**：Legacy banner 提示→Search by provider/service/name 找新组件→无直接替换考虑替代——**组件淘汰不是让你重写流程，是先查迁移路径**。
+- **提升层**：工具（组件选型 / 工具化）。
+
+## 流程控制基元与进程状态：Router/Loop/并行/重试 + 内建表存状态（来源：Activepieces docs mcp/tools + execution engine + resources 用例，2026-09-28 实拉）
+- **控制流四基元**：Router（表达式条件分支）、Loop（遍历数组，顺序/并行）、delays、auto-retries——**多数业务流程=分支+循环+延迟+重试的组合**。
+- **进程状态用内建表**：Tables 存路由矩阵/区域映射/审批异常状态，多步共享同一进程状态（不靠外部 spreadsheet）——**跨步骤状态放平台内建存储，别用文件/邮件接力**。
+- **控制流可编程**：ap_add_branch MCP 工具给 router 加条件分支（插到 Otherwise 前）——**流程结构可被 agent 程序化修改**，配置即 API。
+- **提升层**：工作流（流程设计 / 状态管理）。
+
+## 数据持久化配额与限制：先查配额再设计，记录上限与每周期处理量是硬约束（来源：Make pricing + use-apify data stores guide + help.make.com types-of-modules，2026-09-28 实拉）
+- **Data store 是跨 run 的共享状态**：像 spreadsheet worksheet，scenario 间共享/传递数据——**有状态的数据用 data store，无状态的走变量**。
+- **配额是设计输入不是事后发现**：记录上限 512KB/条；大小按套餐（Core 1MB/store、Pro/Teams 10MB）；每 10k operations 数据存储 10MB、webhook 队列 667——**设计前先对表查配额**，超配方案（分表/归档）提前做。
+- **模块级上限**：Searches 每 run 最多 3200 对象或 5MB；每模块 5MB/run——**大表分批处理，别指望一次拉全**。
+- **提升层**：工具（配额预算 / 数据设计）。
+
+## Event Source 架构：source 独立于 workflow，一源多流、事件可外部消费（来源：Pipedream docs sources + components + triggers + troubleshooting，2026-09-28 实拉）
+- **event source 是独立资源**：source 运行于 workflow 之外，一个 source 可触发多个 workflow；事件经 API/SSE 供外部消费——**"事件生产"与"事件消费"解耦**（与 §Webhook 端点化 同构）。
+- **source 内置治理能力**：props 接收配置、HTTP/timer/cron/manual 触发、emit 事件、内建 KV store 状态、内建 deduping 策略——**去重与状态是触发器的标配，不用自己写**。
+- **polling source 自动补历史**：timer-based polling sources 定时轮询，多数会拉近期历史事件方便开发——**轮询触发也要有状态和去重**。
+- **提升层**：工具（事件架构）。
+
+## 子代理的深度/并发/权限治理：默认 3 层 20 并发，工具白名单做只读代理，优先级五级（来源：Anthropic code.claude.com docs sub-agents + agent-sdk/subagents，2026-09-28 实拉）
+- **深度与并发是硬限制**：默认主 agent 下 3 层子代理（设 1 则禁止再 spawn）；默认 20 个并发（超出拒绝 spawn）——**递归 spawn 会失控，平台用默认限制兜底；任务设计按"层数≤3、并发≤20"规划**。
+- **tools 字段=最小权限**：省略=继承所有工具；指定=只能用列出的（只读分析 agent 模式：能查代码不能改文件/跑命令）——**子代理按最小工具面建，不继承是常态**。
+- **禁用与优先级**：deny 数组禁用特定 subagent（Agent(name)）；位置优先级五级（组织 Managed > 会话 --agents > 项目 .claude/agents/ > 个人 ~/.claude/agents/ > 插件）——**同名覆盖顺序明确，谁先谁后可断言**。
+- **提升层**：可复用 Skill（子代理治理）。
+
+## 课程结构与评估方法论：分周视频+笔记+分级测验，评估用单一实数指标（来源：learn.deeplearning.ai generative-ai-with-llms 课程页 + theailearner 评估方法论，2026-09-28 实拉）
+- **课程=周级结构**：每周 Video（4-10min）+ Lecture Notes + Graded Quiz（1h）——**学习产品的最小单元是"短视频+笔记+测验"**，测验分级（graded）保证完成度。
+- **评估用单一实数指标**：多个指标难比较（一组 precision 60/recall 40 vs 另一组 30/70），合并成单一实数才好排序——**评估驱动开发：指标先收敛成单一可排序数，再谈优化**。
+- **幻觉缓解首选 grounded retrieval**：温度调参/更大词表/更多层都不如检索锚定——**RAG 是幻觉的结构性解药**。
+- **提升层**：工作流（课程设计 / 评估方法论）。
+
+## Agent 框架四层架构与工具契约：Pydantic 工具定义、显式通信图、harness 目录化（来源：reinventing.ai 四层架构 + Agency Swarm + harnesses.sh + top10.dev + 小鹏 GitHub 排行，2026-09-28 实拉）
+- **2026 框架进入四层架构标准化（LAMP 时刻）**：模型层/编排层/工具层/交互层分工成型，新框架按层对号入座——**选框架先问它补哪一层，不是整栈重造**。
+- **工具契约用类型化模型**：Agency Swarm 工具=Pydantic 模型（全验证+类型安全+错误处理）；显式通信图（operator 决定谁跟谁通信）——**与 §MCP 类型化接口 同构：工具边界可验证**。
+- **harness 目录化**：harnesses.sh 75 款 harness、9 轴能力 schema（curated cross-vendor）——**harness 选型有可比较的能力轴**（与 §MCP 选型五标准 同向）。
+- **生态信号**：OpenClaw 283k★、superpowers 113.5k★（技能框架无营销爆红）、nanobot/CowAgent（轻量自托管个人 agent）、DeepSeek Harness "Everything is a Plugin"——**"可运行技能框架"与"本地轻量 agent"是 2026 星数主流**。
+- **提升层**：工具（框架选型 / 工具契约）。
+
+## 技能目录生态全景：open format 定义、分类规模、安全域映射（来源：agentskills.io home + agenticskills.io + agskills.dev + agentskills.codes，2026-09-28 实拉）
+- **技能=文件夹+SKILL.md（open format）**：最少 name+description 元数据+指令，可捆绑脚本/参考/模板——**格式极简是生态扩张的前提**。
+- **目录规模分级**：agentskills.codes 19,296 技能（Coding 6,343/Productivity 1,216/Planning 786/Data 692）；AgenticSkills 181+ 策展；agentskills.me 492——**"海量索引站+策展精选站"双层结构**：找技能先用索引站搜，拿不准用策展站。
+- **安全域技能可映射框架**：Anthropic cybersecurity skills 754 技能 26 域（MITRE ATT&CK + NIST CSF 2.0 映射 + Navigator layer）——**技能可对齐行业标准框架，按框架查技能**。
+- **提升层**：可复用 Skill（技能检索 / 生态导航）。
