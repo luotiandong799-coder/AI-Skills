@@ -11226,3 +11226,60 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **蓝皮书五篇二十章**：从"Skill 是给普通人最好的礼物"到 Agent Team/自动进化——**完整学习曲线的官方结构**。
 - **平台规模**：900 万 AI 学习者、知识库对话+每日精华——**知识库可对话检索**。
 - 提升层：可复用 Skill。触发词：布鲁姆六阶、五篇二十章、知识库对话。
+## r293A 十独点（2026-09-29 实拉）
+
+### 1. 模板市场与可编程工作流：Dify Creator Center 与 JSON Schema 引擎（来源：dify.ai《Creator Center & Template Marketplace》+ CSDN《dify2026 工作流引擎增强实录》2026-03-10/2026-05-05 实拉，新面）
+- **Creator Center & Template Marketplace**：创作者发布模板、用户发现/试运行/一键采用；加入 Affiliate Program 靠模板链接带来的订阅赚最高 5% 持续佣金——**模板即分发物+可变现**（与 r292C n8n 模板库互补：那条管"模板库有哪些"，本条管"模板生态怎么运转"）。
+- **声明式 JSON Schema 工作流引擎**：2026 引入，流程逻辑从静态 YAML 配置升维为可编程、可观测、可热重载的运行时实体；可视化 DSL+AI 辅助生成，编排效率提升约 4 倍——**工作流定义从配置走向程序**。
+- **版本管理即 Git**：Prompt/变量/模型配置/工作流节点全链路版本化，一键发布+快速回滚，DSL 导出跨工作区迁移——**配置技术债靠版本化治理**。
+- 提升层：工作流。触发词：Creator Center、Template Marketplace、JSON Schema 引擎、DSL 迁移、配置版本化。
+
+### 2. 节点知识注入：n8n-MCP 与 Data Table 记忆（来源：n8n.io/workflows《Multi-session chat agent with Data Table memory》+ 抖音/n8n-MCP 介绍 2026-05-31/2026-05-04 实拉，与 r292B Agents/r292C 模板合并增量）
+- **n8n-MCP**：MCP 服务器把大量节点知识注入 AI 上下文，解决通用模型"参数盲区"（不了解节点细节配置常报错）；三部署=托管 dashboard（免安装 100 次/天免费）/ Docker·Railway（生产自主掌控）/ npx 源码本地联调——**把节点知识做成可注入上下文，AI 配工作流不再瞎猜**。
+- **Data Table memory by session ID**：OpenAI chat agent 按 session ID 把长期对话记忆持久化在 n8n Data Table，跨会话续聊——**Data Table 即长期记忆后端**（与 r292C Make data store 记忆互补：不同平台同模式）。
+- 提升层：工具。触发词：n8n-MCP、节点知识注入、参数盲区、Data Table memory、session ID。
+
+### 3. 多向量检索：LangFlow NextPlaid 与 ColBERT 嵌入（来源：langflow.org《1.11.0 Multi-Vector Retrieval is Here with NextPlaid》+ docs.langflow.org《Manage vector data》+ langflow.org/templates《Local RAG with Ollama and ChromaDB》2026-07-23/2026-09-03/2026-06-26 实拉，与 r292B Memory Bases/DB Providers 合并增量）
+- **NextPlaid 多向量检索**：连接运行中的 NextPlaid server 做 ingestion/search，vLLM Multivector Embeddings 从 ColBERT 兼容模型产生 token-matrix embeddings——**多向量（每个 token 多向量）比单向量检索精度更高**。
+- **Chroma Cloud 接入**：Settings→DB Providers 配 API Key/Tenant/Database——**托管向量库即插即用**。
+- **全本地 RAG 模板**：Ollama+ChromaDB 本地文件知识源，完全数据隐私/合规——**敏感数据走全本地链路**。
+- 提升层：工具。触发词：NextPlaid、多向量检索、ColBERT、token-matrix embeddings、全本地 RAG。
+
+### 4. AI 模板即产品：Activepieces 的克隆即用模板库（来源：activepieces.com/blog《AI Workflow Automation Examples》《5 MCP Flows with Airtable》《How To Automate Newsletter Curation》2026-04-07/2025-05-12/2025-07-17 实拉，与 r292A 触发器/r292C 嵌入合并增量）
+- **业务场景模板化**：CV Scanning and Scoring（AI 摘要+按 JD 打分+结果入 Sheets+合格者自动归档）/ Newsletter Curation（3-5 句摘要+受众分段+CTA）/ Lead Nurturing（AI 随机选 lead+文章+随机延迟模拟自然时机）——**模板按完整业务闭环设计，克隆即用**。
+- **Airtable MCP 5 类模板**：Vendor Assessment（Slack 搜反馈→AI 分析→自动归档 Airtable）等——**MCP+业务表=开箱模板**。
+- 提升层：工作流。触发词：克隆即用模板、CV 打分、Newsletter Curation、Airtable MCP。
+
+### 5. 团队模板与危机路由：Make 的分层响应（来源：help.make.com《Scenario templates》+ keerok.tech《Advanced Make.com Tutorial》2026-05-13/2026-05-02 实拉，与 r292A 错误语义/r292C 记忆合并增量）
+- **团队模板共享**：Templates 左侧栏→Team templates tab→团队模板，Options→+Create scenario 即复制——**团队级场景复用机制**。
+- **危机管理分层路由模板**：社交媒体负面关键词触发 → OpenAI 情绪评分（1-10）+ 紧急度（low/medium/critical）→ 按档路由：Critical=Slack @channel+PagerDuty 建 incident+SMS 高管；Medium=Slack #support+Zendesk 工单；Low=记录——**先评分再分层路由，不是一刀切告警**（与 §错误语义互补：那条管模块错误怎么处理，本条管业务事件怎么分流）。
+- 提升层：工作流。触发词：团队模板、危机管理、情绪评分、分层路由、PagerDuty。
+
+### 6. 模板分享与 AI 工具面：Pipedream Share Link 与 MCP server（来源：pipedream.com/docs《Example: Create a Workflow》+ agenticindex.io/vendors/pipedream + n8n.io/workflows《Pipedream MCP server 集成》2026-09-16/2026-09-27/2026-02-20 实拉，与 r292B 组件契约/r292C Connect 合并增量）
+- **Workflow Share Link**：分享工作流生成唯一 key（含 triggers/steps/settings），但私有资源（connected accounts/sources/data stores）需重新填充——**模板分享≠凭证分享**。
+- **10,000+ prebuilt tools across 3,000+ APIs** + managed OAuth——**平台即 AI 的工具超市**。
+- **Pipedream MCP server**：可被 n8n 等其他平台集成，一个 MCP server 让 AI 接触 2,700+ APIs/10,000+ tools——**MCP server 作为跨平台工具面**。
+- 提升层：工具。触发词：Workflow Share Link、MCP server、prebuilt tools、managed OAuth。
+
+### 7. Gotchas 章节与技能选择纪律：Claude Code 官方实践（来源：claude.com/blog《Lessons from building Claude Code: How we use skills》+ dev.to《6 Claude Code Skills You Should Actually Install》+ claude.com/blog《Steering Claude Code》2026-06-03/2026-08-10/2026-06-18 实拉，与 r291A 注入/r292B SDK 模式合并增量）
+- **Gotchas 章节是技能最高信号内容**：从"Claude 用该技能时的常见失败点"构建，随使用持续更新（例："subscriptions 表是 append-only"）——**技能文件里的陷阱清单比教程更有价值**（与 wb-debug-loop 失败经验按签名索引互补：那条管"失败怎么记"，本条管"技能里专门设陷阱章节"）。
+- **每阶段恰好一个技能**：同一阶段装多个技能会让 Claude 犹豫该调哪个、行为不可预测——**按阶段选一个，不堆同质技能**。
+- **无怜悯删减**：Claude 不靠指令已能做对的事，删掉或转成 hook——**指令只留模型猜不到的**。
+- 提升层：可复用 Skill。触发词：Gotchas 章节、每阶段一技能、删减转 hook。
+
+### 8. skills.sh CLI 参数面与 VSCode 管理（来源：skills.sh/docs + developer.cloud.tencent.cn《find-skills 94.1K 装机量》+ marketplace.visualstudio.com《Skills.sh Agent Skills Manager》2026-05-12/2026-04-01/2026-09-07 实拉，与 r292A 遥测合并增量）
+- **CLI 参数面**：-g 全局安装（~/<agent>/skills/ 跨项目可用）/ -y 跳过确认 / --skill 单装一个技能 / @commit·tag 钉版本保可复现 / npx skills find 交互式搜索界面——**安装粒度与版本钉定齐全**。
+- **VSCode 扩展**：侧边栏浏览 Marketplace/查看已装、点 Install、右击已装技能用首选 agent 启动/预览 SKILL.md/分享团队——**GUI 管理技能生命周期**。
+- 提升层：可复用 Skill。触发词：-g 全局安装、--skill、@commit 钉版本、skills find、VSCode 扩展。
+
+### 9. 框架选型矩阵：按目标选 agent 框架（来源：aiworkflowpro.com《AI Agent Comparison 2026》+ niftytechfinds《Best Open Source AI Agent Frameworks on GitHub 2026》+ firecrawl《Best open source frameworks 2026》2026-08-05/2026-07-24/2026-06-05 实拉，与 r291B 沙箱/r292A 生态合并增量）
+- **按 use case 选型矩阵**：messaging 网关+自我改进→Hermes；编码天花板→Claude Code；开源模型自由→OpenCode/Aider；企业 SWE→OpenHands；MCP 生态→Goose；沙箱安全→Codex CLI；最广平台覆盖+多 agent 编排→OpenClaw——**先定目标再选框架，没有通吃赢家**。
+- **快速推荐表**：初学→Langflow；浏览器自动化→Browser-Use；企业→Microsoft Agent Framework；生产系统→LangGraph；多 agent 团队→CrewAI；本地 AI→OmniRoute+Agno；工作流自动化→n8n——**不同需求落到不同框架**。
+- **框架数据面**：CrewAI 56.9k★/LangGraph 39.4k★（3.2M npm 下载/周）/OpenAI Agents SDK 28.6k★/Mastra 27.1k★ TS/smolagents 28.8k★ code-as-action——**选型先看维护活跃度**。
+- 提升层：工具。触发词：框架选型矩阵、use case 选型、code-as-action、快速推荐表。
+
+### 10. 信息查找分层与 AI 批判：吴恩达提示工程新课（来源：learn.deeplearning.ai《AI Prompting for Everyone》+ charonhub.deeplearning.ai 课程说明 2026-05-01/2026-09-01 实拉，与 r291A 课程信号/r292A 四模式合并增量）
+- **pretrained knowledge vs web search 分界**：先问模型已知什么，需要时效/核实再开 web search——**知识分层：内部记忆先行，外部检索按需**。
+- **deep research 模式**：复杂问题用 deep research 出带来源的完整报告——**长调研交给专门模式**。
+- **AI critique 模块**：让 AI 批判性评估自己的输出——**自我批判是提示工程一环**（与 §输出校验互补：那条管"输出格式校验"，本条管"让模型审自己的内容"）。
+- 提升层：可复用 Skill。触发词：pretrained knowledge、web search 分界、deep research、AI critique。
