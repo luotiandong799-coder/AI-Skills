@@ -8655,3 +8655,69 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **插件状态持久化**：registerSessionExtension(...) 存 JSON 兼容会话状态，Gateway sessions.pluginPatch 更新，Control UI 经 pluginExtensions 渲染——插件状态不丢失。
 - **memory 分层**：每日 md 日志（近期）+MEMORY.md 永久参考卡（持久事实）——新会话只加载当日+昨日日志，更老的移出即时视野。
 - **提升层**：工具（会话记忆与事件驱动）。
+
+## Dify 语音对话与 TTS/STT（来源：dify.ai marketplace voice plugins + mintlify app toolkit 2025-08/2026-07 实拉，合并 §Dify 多模态——那条管"视觉/文件"，本条管"语音对话构建"）
+- **App Toolkit 语音双件**：Text to Speech（配语言/音色把 AI 回复转音频）+Speech to Text（开麦克风输入——**须先配默认 STT 模型（Integrations>Model Provider>Default Models），否则 Features 面板不出现该开关**）。
+- **语音助手插件生态**：ElevenLabs（TTS/STT）、Fish Audio（TTS+voice cloning）、Agora/腾讯 TRTC Conversational AI（实时语音对话，配 App ID/Secret/Region）；语言参数必须匹配 ASR/LLM 支持格式（如 en 键值）。
+- **判据**：语音功能不是模型能力，是"默认模型配置+插件市场"两层——配错层不显示。
+- **提升层**：工具（语音入口）。
+
+## n8n 凭据管理与外部密钥（来源：docs.n8n.io external-secrets + manage-credentials + n8nautomation guide 2026-04/09 实拉，合并 §n8n 安全——那条管"权限/多用户"，本条管"凭据存储与共享语义"）
+- **External secrets**：凭据加密存 n8n 库+外部 vault（Vault/AWS Secrets Manager）集中管多环境——**用时才加载**，多层安全。
+- **credential sharing 语义**：分享的是 **template 不是 connection**——他项目用户看不到原始连接，各自连自己账号；每用户每模板只连一次，该连接在共享进的每个项目自动解析。
+- **credential overwrites**：全局设凭据数据用户不可见（OAuth "Connect" 按钮免暴露 client secret）——Editor UI 默认隐藏被覆盖字段。
+- **OAuth**：存 access+refresh token，过期自动刷新，同凭据跨 workflow 复用。
+- **多租户隔离**：tenant 凭据分存、动态按 tenant_id 加载、角色限制——绝不硬编码凭据进 workflow/共享配置对象。
+- **提升层**：工具（凭据面）。
+
+## LangFlow RBAC 角色与外部认证（来源：docs.langflow.org authorization + external-authentication + security 2026-07/09 实拉，合并 §LangFlow 权限——那条管"权限总览"，本条管"角色模型与认证边界"）
+- **内置三角色**：viewer（flow:read/project:read/deployment:read/file:read/variable:read/knowledge_base:read）/ developer（viewer+flow:write/flow:execute/file:write/variable:write）/ admin（全资源全动作）——permission slug 粒度。
+- **roles API 自定义角色**：可建新角色，但**角色分配须注册 enforcement plugin 后才生效**。
+- **外部认证**：JWT claim 映射 access level（缺省 viewer）；LANGFLOW_EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS=true 时**外部供给用户不能用 API key 绕过 JWT claim 上限**。
+- **租户隔离边界（重要反例）**：官方安全文档明示 Langflow 自身**不做租户隔离**、不限制磁盘/网络资源访问——多租户必须基础设施级隔离（K8s 等），应用层只是"为易用设计"。
+- **提升层**：工具（权限模型）。
+
+## Activepieces 连接与 OAuth 自动续期（来源：activepieces.com docs piece-reference/auth + embeddable-mcp + project-variables 2026-07/09 实拉，合并 §Activepieces 连接——那条管"连接概念"，本条管"token 生命周期与复用"）
+- **refresh callback 自动续期**：Piece Auth 配 refresh 回调后，Activepieces 取 token 一次缓存服务端，注入每个 action/trigger 的 `context.auth.access_token`；**到期前 15 分钟自动续**（短寿命 token 钳到半生命周期）。
+- **Embeddable MCP token**：15 分钟过期→refresh_token grant 换新；revoke 断连。
+- **预定义连接**：platform admin 经 API 建全局连接+创建 API Key，嵌入用户免重输凭据——只有 platform admin 可编辑/删全局连接。
+- **Project Variables**：项目级命名值（API key/webhook URL/Slack channel ID/feature flag）任意 flow 步骤引用；Editor/Admin 经 API reveal 端点取明文。
+- **提升层**：工具（连接生命周期）。
+
+## Make 监控与通知配置（来源：till-freitag make-monitoring 2026-04 实拉，合并 §Make 监控——那条管"执行监控工具"，本条管"通知配置判据"）
+- **通知分级配置**（per user/per scenario）：scenario stop 默认开（mail+in-app）；**Incomplete Executions 有 DLQ 逻辑才开**，否则刷屏成噪音；Operations limit reached 开给 account owner。
+- **噪音判据**：没有错误处理（DLQ/重试）时通知迅速变噪音——**通知质量取决于错误处理链路，不只是开关**。
+- **可接**：Datadog/Better Stack/自定义 webhook 通知出口。
+- **提升层**：工作流（可观测性）。
+
+## Pipedream 定价与配额（来源：pipedream.com docs pricing + limits + automationatlas 2026-05/09 实拉，合并 §Pipedream 平台——那条管"平台能力"，本条管"成本模型"）
+- **credit 定义**：1 credit=30s@256MB 执行。
+- **档位**：Free=100 credits/天+3 workflows；Basic $29/mo=2000 credits/天；Advanced $79/mo=10000 credits/天；Business 定制（volume discount/HIPAA）。
+- **规则**：event sources 无限（各自限制内）；付费计划不封顶但超量加收（可手动设 usage cap 控成本）；免费计划每日额度不可超。
+- **计费模型差异**：执行积分制（Pipedream）≠ Zapier task 制 ≠ Make operation 制——选型要按自己负载形态对。
+- **提升层**：工具（成本模型）。
+
+## Anthropic 用量与成本 API（来源：platform.claude.com docs usage-cost-api + agent-sdk cost-tracking + code.claude.com 2026-05/09 实拉，合并 §Anthropic 成本——那条管"token 优化"，本条管"用量/账单核算"）
+- **Usage & Cost Admin API**：/v1/organizations/cost_report（服务级成本，USD 以 cent 十进制字符串返回）+ /v1/organizations/usage_report（按分钟/小时/天桶，可拆 product/model/context window/region/speed）——替代仅靠 response token 计数。
+- **Agent SDK cost-tracking 三语义**：① 每个 step 只计费一次（多个 assistant 消息同 ID 用其一）；② result message 含**累计** total_cost_usd+usage dict（per-step 明细不在单消息上）；③ modelUsage 按模型分解（Haiku subagent vs Opus main 看 token 去向）。
+- **对账注意**：失败对话、缓存 token 定价、偶发报告不一致都要计入——成本跟踪不等于 response.usage 相加。
+- **提升层**：工具（成本核算）。
+
+## deeplearning MCP 课程（来源：deeplearning.ai mcp-build-rich-context + scrimba review 2026-04/05 实拉，合并 §MCP 课程——那条管"MCP 概念"，本条管"FastMCP 实操路径"）
+- **课程主线**：FastMCP 建本地 MCP server（暴露 tools/resources/prompt templates）→MCP Inspector 测试→chatbot 内建 MCP client 动态连接→连 Anthropic 参考 servers（filesystem 文件操作/fetch 网页转 markdown）→配置 Claude Desktop→远程 server 部署。
+- **2 小时定位**：client-server 架构+自定义工具+远程部署都覆盖；Python only、无证书——当"上手课"不当"完整课程"。
+- **DataCamp Advanced MCP 增量**：sampling（server 把 prompt 交回客户端模型，自己不用持 API key）、stream log/progress 通知、跨 transport 通信。
+- **提升层**：可复用 Skill（MCP 构建方法）。
+
+## GitHub Actions 缓存优化（来源：docs.github.com caching + costops.dev key-design + dominicrodemer 2026-02/05 实拉，合并 §GitHub Actions 复用——那条管"复用/secrets"，本条管"缓存提速"）
+- **缓存硬限制**：7 天未访问条目被清除；repo 总缓存上限 10GB；超限按最后访问时间从旧到新驱逐。
+- **key 设计（核心）**：OS+包管理器+**lockfile hash**（勿用 commit SHA——每次提交都 miss 即 cache thrash）；分层 restore keys（前缀部分命中）+分离依赖/构建缓存+默认分支预热（PR 起跑就热）。
+- **内建缓存**：setup-node `cache: 'npm'`/setup-python `cache: 'pip'` 一行开缓存；npm ci 优于 install。
+- **收益**：命中省 60-80% 构建时间；Docker layer cache+Turborepo remote cache 叠加（monorepo 跨机复用）。
+- **提升层**：工具（CI 提速）。
+
+## OpenClaw 浏览器自动化（来源：openclawforge browser-setup + docs.openclaw.ai browser + launchmyopenclaw 2026-03/05 实拉，合并 §OpenClaw 工具——那条管"MCP/CLI"，本条管"浏览器能力"）
+- **双模式**：managed browser=专用 Chrome/Edge/Chromium 隔离 profile（Gateway 内本地 loopback 小服务控制，**不碰个人浏览器**）；extension relay=复用你现有 Chrome。
+- **内置 browser skill**：Playwright 驱动沙箱 Chromium（headless 可跑服务器），agent 经单一 browser 工具开标签/截图/读内容/点按/填表/端到端流程。
+- **生态**：browser-use 插件（导航/点击/填表/提取）；Browser Relay（聊天内网页自动化，WhatsApp/Telegram/Discord 内触发）；Rust agent-browser CLI（结构化命令导航/点击/输入/快照）。
+- **提升层**：工具（网页自动化）。
