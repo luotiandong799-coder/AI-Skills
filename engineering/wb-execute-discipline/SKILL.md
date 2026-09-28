@@ -11283,3 +11283,64 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **deep research 模式**：复杂问题用 deep research 出带来源的完整报告——**长调研交给专门模式**。
 - **AI critique 模块**：让 AI 批判性评估自己的输出——**自我批判是提示工程一环**（与 §输出校验互补：那条管"输出格式校验"，本条管"让模型审自己的内容"）。
 - 提升层：可复用 Skill。触发词：pretrained knowledge、web search 分界、deep research、AI critique。
+## r293B 十独点（2026-09-29 实拉）
+
+### 1. 摘要索引与重排适配：Dify 知识库生产要点（来源：dify.ai/blog《Dify 1.12.0 Summary Index》+ CSDN《如何高效构建一个RAG知识库》+ deepwiki《Knowledge Base Integration》2026-02-05/2026-07-29/2026-09-02 实拉，与 r291B/r292A 知识库合并增量）
+- **Summary Index（摘要索引）**：为每个 chunk 自动生成摘要作为检索索引，解决"碎片化检索→只见局部不见全文"；摘要质量直接影响检索性能，自动生成结果建议人工复核——**检索索引可以是摘要而非原文**。
+- **Rerank 模型适配坑**：RAG 必备 Rerank 但 OpenAI 只提供 Embedding 无 Rerank、腾讯混元/部分 DeepSeek 版本有适配 bug 无可用 Rerank——**选模型前先查 Rerank 支持**（与 r292A 多模型配置互补：那条管模型怎么配，本条管 Rerank 特定的坑）。
+- 提升层：工具。触发词：Summary Index、chunk 摘要、Rerank 适配、检索索引。
+
+### 2. 子工作流体系：n8n 的复用与并行（来源：docs.n8n.io《Execute Sub-workflow》《Execute Sub-workflow Trigger》+ blog.n8n.io《Production AI Playbook: Complex Agent Patterns》+ n8n.io/workflows《parallel sub-workflow execution》2026-09-10/2026-05-06/2026-06-09/2026-03-02 实拉，与 r291A n8n 合并增量）
+- **Execute Sub-workflow 四种调用**：by workflow ID / 本地文件加载 / workflow JSON 作参数 / 按 URL 目标——**子工作流可打包可引用**。
+- **sub-workflow conversion 自动重构**：选中节点组自动转成子工作流，跨节点表达式自动更新为参数——**重构自动化，不是手改**。
+- **嵌套循环绕行**：n8n 标准 Loop 节点嵌套不工作，用主工作流每迭代调一次子工作流可靠实现——**平台限制用子工作流绕行**。
+- **并行+wait-for-all 设计模式**：异步并行启动多个子工作流，再统一等待全部完成合并——**并行编排有成熟模板**。
+- 提升层：工作流。触发词：Execute Sub-workflow、Sub-workflow Trigger、子工作流转换、嵌套循环、wait-for-all。
+
+### 3. Agentics 与 Guardrails：LangFlow 1.8 新组件（来源：langflow.org/blog《Langflow 1.8》+ docs.langflow.org/1.9.0《Agentics bundle》+ docs.langflow.org/1.10.0《Agents》2026-03-06/2026-07-27/2026-09-17 实拉，与 r292B extension/bundles 合并增量）
+- **Agentics bundle（LLM 表格数据变换）**：aMap 用 LLM 逐行填列 / aReduce 把多行折叠成一行 / aGenerate 合成新行——**LLM 直接做表格 ETL**（与 r292C n8n ETL 互补：同模式跨平台）。
+- **Guardrails 组件**：给 LLM 发 prompt 验证 flow 输出再放行——**内置校验闸门**（与 §工具结果断言互补：那条管"结果可疑打标"，本条管"平台级验证组件"）。
+- **Agent 组件可作工具**：任何 Langflow 组件都能接 Tools 端口，包括其他 Agent 组件与 MCP Tools——**嵌套 agent 即组合**。
+- 提升层：工具。触发词：Agentics、aMap/aReduce/aGenerate、Guardrails 组件、Agent 作工具。
+
+### 4. 单 URL 全 piece MCP：Activepieces 的 MCP 面（来源：activepieces.com/mcp《Largest Open Source MCP Server》+ docs《Embeddable MCP》+ blog《MCP: Everything You Need To Know》2026-09-27/2026-09-16/2025-06-04 实拉，与 r292A Webhook/r292C 嵌入合并增量）
+- **单 URL 暴露全部 piece**：一个 MCP server URL 让 AI 跨所有已连接 app 调用 actions，OAuth 首次认证——**MCP 入口聚合，不用每 app 配一个 server**。
+- **Embeddable MCP 授权流**：Ask→authRequestId→app 内 Authorize popup→code→token→运行用户 flows——**嵌进自家应用的 MCP 授权三步流**。
+- **280+ 开源 MCP 收录**：可自托管或用云，Settings→MCP Server 开启——**MCP 库即插件市场**。
+- 提升层：工具。触发词：单 URL MCP、Embeddable MCP、authRequestId、OAuth 首次认证。
+
+### 5. 聚合器三陷阱：Make Array Aggregator 的关闭作用域（来源：community.make.com《Array aggregator is not closing the iteration scope》《aggregator returns incomplete data》《aggregate multiple HTTP downloads into ONE request》2026-07-09/2026-08-21/2026-01-14 实拉，与 r292A 错误语义/r293A 模板合并增量）
+- **陷阱一·作用域不闭合**：聚合器配置不对时（Source Module 错/Group by 错），聚合器后的模块仍每迭代跑一次——**检查聚合器是否真的"关闭了迭代作用域"**。
+- **陷阱二·嵌套迭代丢上下文**：数组聚合器聚合的是 bundles 不是操作；两层 Iterator 嵌套后 row 级上下文已丢失，聚合器没有稳定的"行边界"可折叠——**嵌套迭代前先想清楚聚合边界**。
+- **陷阱三·分支数据缺失**：Router 分支处理过的 items 可能没进最终聚合数组（只含一个路由的数据）——**聚合结果要抽样核对全分支**。
+- 提升层：工作流。触发词：聚合器作用域、嵌套迭代、聚合边界、分支数据缺失。
+
+### 6. HTTP 响应驱动重试：Pipedream 端点控制（来源：upstash.com《QStash+Pipedream 集成》+ pipedream.com/docs《Component API Reference》+ docs-proxy《Triggers》2026-09-12/2026-09-27/2024-08-18 实拉，与 r292B/C Pipedream 合并增量）
+- **自定义响应驱动上游重试**：Pipedream 默认恒 200；配 QStash 时把 HTTP trigger 配成自定义响应、出错返回非 200，QStash 收到非 200 自动重试——**用 HTTP 状态码当重试信号**（与 §重试两类管互补：那条管重试怎么退避，本条管"非 200 即重试信号"）。
+- **自定义域名端点**：`https://endpoint.yourdomain` 托管端点——**白标 webhook 端点**。
+- **this.http.respond()/$.respond()**：source 的 run() 内可主动回 HTTP 响应——**事件源可同步应答**。
+- 提升层：工具。触发词：非 200 重试、自定义域名、$.respond、QStash。
+
+### 7. 官方仓库结构：Anthropic skills 的 skills/spec/template 三区（来源：support.claude.com《How to create custom skills》+ claude.com/blog《Building agents with Skills》+ CSDN《Claude 官方 Skills 仓库上手指南》2026-07-22/2026-01-22/2026-09-18 实拉，与 r291A 注入/r292A Skills 合并增量）
+- **仓库三区结构**：`skills/`=官方实现示例（50+，文档/开发/创意设计/企业沟通四类）、`spec/`=Agent Skills 开放规范、`template/`=技能模板——**规范/示例/模板分层存放**。
+- **foundational skills**：文档/表格/PPT/PDF 等基础能力编码了最佳实践，Claude 自动按需调用——**基础技能平台内置**。
+- **.claude/skills 随 repo 版本化**：团队把技能放仓库与代码同版本，Skills API 自动拾取上传——**技能与代码同源版本化**。
+- 提升层：可复用 Skill。触发词：anthropics/skills、skills/spec/template 三区、foundational skills、随 repo 版本化。
+
+### 8. description 即开关：skills.sh 发布规范（来源：maketocreate.com《Shipping Your Own Skill》+ infoq.com《Vercel Introduces Skills.sh》+ skills.sh《find-skills》2026-05-20/2026-02-04/2026-04-16 实拉，与 r292A 遥测/r293A CLI 合并增量）
+- **description 是触发开关**：Claude 每轮只读已装技能的 description（progressive disclosure 捷径），凭 description 决定加载哪个 body——**description 决定技能被不被用**（与 r291A 注入机制互补：那条管加载机制，本条管"写 description 的分量"）。
+- **name 规范**：kebab-case、无空格，既是目录名也是 registry slug——**命名即地址**。
+- **find-skills 三标准**：安装量 1K+ 优先（<100 谨慎）、官方来源可信（vercel-labs/anthropics/microsoft）、查源仓库 stars——**装技能前照三标准筛**。
+- 提升层：可复用 Skill。触发词：description 即开关、kebab-case、find-skills 三标准、progressive disclosure。
+
+### 9. 生态玩家 vs 专家：2026 编码工具格局（来源：dev.to《Copilot vs Claude Code 2026》+ levelop.dev《Best AI Coding Agents 2026》+ superblocks.com《Claude vs Copilot》2026-09-19/2026-08-22/2026-08-05 实拉，与 r293A 框架选型合并增量）
+- **Copilot agent 模式时间线**：2026-03 GA 的 agent 模式（研究仓库→建计划→改代码→开 PR）+ agentic code review（收集全项目上下文再建议、可直接喂给 coding agent 出修复 PR）——**IDE 内 agent 闭环已成型**。
+- **定位对比**：Copilot=IDE 内 AI 层（autocomplete/chat/PR 审查/CLI，最广 IDE 支持）；Claude Code=终端自主 agent（无 GUI 无 autocomplete，深度自主推理）——**生态玩家 vs 专家，多数开发者两者都要**。
+- **定价锚点**：Copilot Pro $10/月（Cursor 一半价）；MIT/Microsoft 4,800 开发者研究称最高 55% 生产力提升——**性价比与证据基准**。
+- 提升层：工具。触发词：agent 模式、agentic code review、生态玩家 vs 专家、Copilot Pro $10。
+
+### 10. 记忆工程与生成式 UI：deeplearning.ai Agent 课程新面（来源：community.deeplearning.ai《Agent Memory: Building Memory-Aware Agents》《Build Interactive Agents with Generative UI》《Agent Skills with Anthropic》+ corporate.deeplearning.ai《Agentic AI》2026-07-15/2026-05-06/2026-01-31/2026-09-22 实拉，与 r292A 四模式/r293A 新课合并增量）
+- **Agent Memory 课**：长期记忆是"一等基础设施"——外部于模型、持久、结构化；Oracle AI Database+LangChain 构建——**记忆工程独立成课**（与 wb-context-compressor 记忆分层互补：那条管记忆怎么分层，本条管"记忆=基础设施"的工程化）。
+- **Generative UI 课**：agent 按需生成图表/表单/白板等自定义 UI，不止输出文本——**agent 输出面从文本扩展到 UI**。
+- **Agent Skills with Anthropic**：开放标准格式，一次构建跨 skills-compatible agent 部署——**技能标准化的官方课**。
+- 提升层：可复用 Skill。触发词：Agent Memory、长期记忆基础设施、Generative UI、Skills 开放标准。
