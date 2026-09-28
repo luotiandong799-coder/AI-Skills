@@ -9082,3 +9082,60 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **agent 字段**：model（provider/model id）、system_prompt（人格与行为）、channels（监听渠道，默认 terminal）、memory.backend（sqlite/redis）。
 - **多 agent 路由**：agents.list 定义命名 agent（workspace/model）→ bindings 匹配 channel/account/peer 路由到对应 agent（如 work agent 绑定 whatsapp 特定群）；**agentToAgent 默认关 + allow 白名单显式开**（呼应最小权限）；broadcast groups 一个消息并行广播到多 agent；subagents 声明（allowAgents/delegationMode/requireAgentId、tools profile minimal）。
 - **提升层**：可复用 Skill（声明式多 agent 配置）。
+
+## Dify 会话变量与变量解析纪律（来源：dify-6c0370d8.mintlify nodes/llm + dify.ai blog conversation-variables + CSDN 变量语法避坑 + nocode 会话变量 2024-08/2026-09 实拉，合并 §Dify RAG/Agent——那条管"检索/Agent 节点"，本条管"变量系统与解析纪律"）
+- **会话变量 6 类型**：String/Number/Object/Array[string]/Array[number]/Array[object]；变量赋值节点写入；**append mode**（Array[object] 持续追加=简易 OpenAI memory，三轮已落记忆体系的本面=变量承载）。
+- **解析纪律**：① 变量名大小写敏感（user_name≠UserName，解析器不匹配）② 用变量选择器插入上游引用，别手打路径 ③ 占位符无值时默认渲染**空字符串**（不报错中断）——要严格就开 Strict Mode ④ 节点输出按 ID 引用 {{llm_xxx.output}}。
+- **Context Variables**：外部知识注入同时保留来源归属（RAG 上下文的变量形态）。
+- **提升层**：工具（变量系统与解析）。
+
+## n8n 表达式系统与 JSONata/JMESPath（来源：docs.n8n.io expression-reference + data-mapping + jsonata docs string/object-functions 2025-04/2026-09 实拉，合并 §n8n 数据/错误/AI——那条管"转换/AI 节点"，本条管"表达式层"）
+- **表达式对象**：$json（当前项）/ $binary / $("NodeName").first()/.item/.all()（取前序节点）/ $now/$today/$workflow/$node 上下文——表达式与 Code node 通用同一套。
+- **两种查询语法**：$jmespath() 用 JMESPath 查复杂嵌套对象（返回 undefined 表示无效表达式）；JSONata 函数式（$string/$merge/toJsonString 等）——**嵌套深用 JMESPath、要转换计算用 JSONata**。
+- **提升层**：工具（表达式/数据变换）。
+
+## LangFlow 嵌入发布三形态（来源：docs.langflow.org embedded-chat-widget + concepts-publish + concepts-api + npm react-native-langflow-chat 2024-10/2026-09 实拉，合并 §LangFlow API——那条管"API 执行"，本条管"发布嵌入"）
+- **三形态**：① Chat Widget（web component，HTML script 标签 + host_url 必须 HTTPS + flow_id）② 前端框架嵌入（React/Angular 属性化，RN 有 npm 包）③ API 代码片段（Python/JS/curl 自动生成）。
+- **发布入口**：Share→Embed into site（生产嵌入）vs Shareable Playground（体验分享，非生产运行）；Chat Input/Output 组件 + Files Input 开启文件对话。
+- **提升层**：工具（发布嵌入选型）。
+
+## Activepieces MCP 单入口（来源：activepieces.com docs/mcp/overview + pieces/mcp + embedding/embeddable-mcp + mcp/* 各 app 页 2026-08/09 实拉，合并 §Activepieces 平台——那条管"部署/流程"，本条管"MCP 集成"）
+- **单 server 驱动全平台**：一个 MCP server URL 暴露 763+ apps（Personal AI/AITable/AirTable/ProvenExpert 等均同一入口）——**client 只连一次**，每个已连接 app 的动作都变成可调用工具。
+- **认证**：OAuth 首次浏览器授权；可嵌入 MCP 流程（authRequestId→用户点 Authorize→code→token→代用户跑 flows）；MCP piece（flow 内 1 trigger+1 action 与 760+ apps 混排）。
+- **客户端**：Claude/Cursor/Codex/VS Code/ChatGPT/Devin 等；Settings→MCP Server 开启。
+- **提升层**：工具（MCP 单入口集成）。
+
+## Make 场景优化四杠杆（来源：till-freitag make-performance + keerok advanced tutorial + dredyson consolidate scenarios 2026-04/05 实拉，合并 §Make 平台——那条管"Webhook/调试/数据存储"，本条管"操作优化"）
+- **四杠杆**：① Filters 条件执行（只处理匹配记录，省 ~80% 无用操作）② Aggregators 批量（Array 聚合 50 条→1 次 bulk API 调用，省 ~98% 操作；Text 聚合→Slack/邮件正文；Numeric 聚合→求和均值）③ Sub-Scenarios 并行化（=函数，拆职责并行跑）④ **合并小场景成大工作流**（最高 ROI：省 operation count + 降云资源）。
+- **可靠性配套**：指数退避+缓存降 ~90% API 错误、去重过滤器省 ~40% 操作。
+- **提升层**：工作流（场景操作优化）。
+
+## Pipedream REST/MCP 认证（来源：pipedream.com docs rest-api/auth + rest-api + connect/api-proxy + connect/mcp/developers 2025-06/2026-09 实拉，合并 §Pipedream 平台——那条管"调度/webhook/代码"，本条管"API 认证"）
+- **REST API 双认证**：OAuth access token / User API keys，均 `Authorization: Bearer <token>`；OAuth 为推荐。
+- **Connect SDK**：clientId/clientSecret/projectEnvironment/projectId 初始化；API Proxy 用 client_credentials grant 换 token——**终端用户场景必须自建 OAuth client（oauthAppId）**。
+- **MCP server 认证头**：Bearer token + x-pd-project-id + x-pd-environment + x-pd-external-user-id（系统内稳定用户 ID）+ x-pd-app-slug——**多租户/多 app 上下文靠请求头区分**。
+- **提升层**：工具（API 认证）。
+
+## Anthropic subagent 定义与工具限制（来源：code.claude.com sub-agents + claude.com blog subagents/skills-explained + platform.claude.com skills-guide 2025-03/2026-09 实拉，合并 §Anthropic 工具/思考/缓存——那条管"工具结果/思考/成本"，本条管"subagent 定义"）
+- **subagent 定义**：markdown 文件（.claude/agents/，YAML frontmatter name/description/model/tools/skills/mcpServers + body=system prompt）——**隔离的专用助手**。
+- **skills 预载**：subagent 的 skills 字段=启动时**完整注入**上下文（不是仅描述）；未列出的 project/user/plugin skills 仍可经 Skill tool 按需发现。
+- **工具限制**：omit=继承全部工具（默认）、specify=只能用列出的工具——**只读分析 agent 不给改文件/跑命令权**；有副作用技能设 disable-model-invocation: true 禁止模型自动触发。
+- **与 CLAUDE.md 分工**：CLAUDE.md 全时加载塑造每个交互；skill 按需加载（显式调用或任务匹配）。
+- **提升层**：工具（subagent 定义）。
+
+## GitHub reusable workflows+matrix（来源：docs.github.com reusing-workflows + using-a-matrix + workflow-syntax + dev.to best practices 2024-09/2026-09 实拉，合并 §GitHub 生态——那条管"Actions 安全/Copilot/容器"，本条管"工作流复用与矩阵"）
+- **reusable workflows**：on.workflow_call 定义 inputs/outputs/secrets 映射，跨仓库调用——**避免复制粘贴、一处维护**。
+- **与 agentic 互补**：agentic workflow 调用**已批准的确定性 reusable workflow** 而非复制逻辑——**agent 不确定性收敛到人批过的确定性步骤**。
+- **matrix 策略**：单 job 定义变量组合自动生成多 run；include 追加特殊组合、exclude 跳过不支持组合；matrix 可直接给 reusable workflow 传不同 inputs。
+- **提升层**：工具（CI 复用与矩阵）。
+
+## deeplearning agent 四设计模式（来源：charonhub.deeplearning check-out course + learn.deeplearning agentic-ai + building-ai-browser-agents 2025-10/2026-05 实拉，合并 §deeplearning 评估/多代理——那条管"评估/crewAI"，本条管"四模式"）
+- **Andrew Ng 四 agentic 设计模式**：① Reflection（agent 审视自身输出并改进）② Tool use（LLM 驱动应用决定调哪些函数）③ Planning（拆复杂任务成可执行步骤、偏离时适配）④ Multi-agent collaboration（多专门系统分工）——**课程先第一原理构建再框架**。
+- **Browser Agents 决策优化**：AgentQ 框架=MCTS+self-critique+DPO 教 agent 决策策略——**浏览器 agent 的搜索-批判-偏好三件套**。
+- **提升层**：工作流（agent 设计模式）。
+
+## OpenClaw 记忆分层与 MEMORY.md（来源：docs.openclaw.ai concepts/memory + learnopenclaw core-concepts + openclawplaybook memory-search + openclawconsultant memory-management 2026-03/09 实拉，合并 §OpenClaw 会话/配置——那条管"会话持久化/配置路由"，本条管"记忆文件分层"）
+- **三层文件**：MEMORY.md（长期 curated：持久事实/偏好/决策，会话开始 boot-md hook 加载）/ memory/YYYY-MM-DD.md（每日 append-only 日志）/ 会话自动归档（session database，可检索全文）。
+- **维护节奏**：**周审日志→提取模式/洞察→更新 MEMORY.md**——日志天天记、档案定期整理（与本库 §记忆两级沉淀同构，本面=OpenClaw 落地形态）。
+- **成本边界**：记忆文件过大 inflate 每次请求 token——**每工作区文件实际上限几千词**，超了就蒸馏（与 §token 治理同源）。
+- **提升层**：可复用 Skill（记忆分层工作流）。
