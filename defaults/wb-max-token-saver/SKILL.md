@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体、状态卡只发一次、原地更新、动作词加对象加约束、置信信号、进度时间线、批准画面、改了什么、能不能撤销、推销结论
-version: 1.51.0
+version: 1.52.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -466,3 +466,14 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 ## 提醒/追问型输出要写死次数上限 + 负面清单（来源：anthropics discernment-nudge 2026-09-28 r313-Q-A 实拉 + r279-C 复核；与 wb-skill-authoring §提醒类技能触发上限 并条）
 - **判据**：凡"每轮补一句建议/核查提示"型输出（去 AI 味提醒、防跑偏提示、落地提醒）**写死一个次数上限**（如每会话最多一次），并把"什么时候不提醒"作为同等篇幅的独立章节——没有负面清单的提醒会随对话变长退化为噪音，持续降信任且不计入 token 预算，无法被现有预算机制拦截。
 - 提升层：输出。触发词：提醒上限、追问噪音、负面清单、once per conversation。
+
+## 治理档位要成对出现，且「续活」必须区分交互写与非交互写；压缩要有损失准入门（来源：docs.openclaw.ai`/gateway/config-agents/sessions` 与 `/reference/memory-config` 2026-09-28 r283-C 独立 curl 实拉逐句核验）
+- **实证**：① 会话保留告一组档位——`pruneAfter 30d` / `archiveDashboardAfter 7d` / `maxEntries 5000` / `maxDiskBytes 10gb` / `highWaterBytes = 80% of maxDiskBytes` / `coldStorage.afterDays 30`，且 "`reset` … `none` disables automatic reset and is the default"、`daily` 按 `atHour`、`idle` 按 `idleMinutes`，"When both configured, **whichever expires first wins**"。② **续活判据原文**："Daily reset freshness uses the session row's **`sessionStartedAt`**; idle reset freshness uses **`lastInteractionAt`**. Background/system-event writes such as **heartbeat, cron wakeups, exec notifications, and gateway bookkeeping can update `updatedAt`, but they do not keep daily/idle sessions fresh**."③ **压缩的损失门**：`phases.deep.maxPriorEntryLossFraction` 默认 `0.25`，原文释义 "**Reject** consolidation or append compaction that removes more than this fraction of prior entries"；同组还有 `maxPromotedSnippetTokens 160`。
+- **判据**：① **清理策略不能只有一种执行力**——凡是会删东西的自动化，都要提供"只报不删"与"到线才删"两档，否则无法先观察再下手。② **自动任务会把自己永久保活**：心跳/定时/后台记账虽然更新了时间戳，但按官方口径**不算续活**——判定活跃度时必须区分"用户交互写"与"系统非交互写"，否则清理规则永远等不到该清理的对象。③ **压缩必须有事前损失门**：不是压完再测召回率，而是**先算出会丢掉的比例，超限直接 reject 本次压缩**（与 r203 已落的"压缩反证召回率"互补：一个是事前门、一个是事后测）。
+- 提升层：工作流。触发词：只报不删、到线才删、highWaterBytes、pruneAfter、心跳不算续活、lastInteractionAt、压缩损失门、0.25 reject、压缩 reject。
+
+## 成本账按「时长 × 内存档位 × 段数」归因，并显式列出豁免项与是否结转（来源：pipedream.com/docs/pricing.md 2026-09-28 r283-C 独立 curl 实拉全文核验；续 mts 1.51.0「按实测费用记账不按 token」）
+- **实证**：原文 "Pipedream charges **one credit per 30 seconds of compute time at 256MB of memory (the default) per workflow segment**"；"**Unlike some other platforms, Pipedream does not charge for usage based on the number of steps**"；"Credits are not charged for workflows during **development or testing**"、"If an active workflow isn't executed in a billing period **no credit usage is incurred**"；内存 "increase credit usage in **intervals of 256MB**"，官方对照表：256MB 下线性 1 秒＝1 credit、15 秒＝1、35 秒＝2、延迟前后各 15 秒＝**2**、分支三段＝**3**；换成 **1GB 同样的流程＝4 / 4 / 8 / 8 / 24** credits。**另有一条反向豁免**：事件源触发时 "the **source execution is included for free**"（限 public registry 源，私有源照算）。
+- **判据**：mts 1.51.0 说"按实测费用记账"，但没给**费用的构成式**。本条给出三因子（**时长 × 内存档位 × 段数**）与两类豁免（开发测试执行、周期内未运行）和一条反向免费项。**关键推论**：分支与延迟都按段叠加计费 → 同样总耗时的流程，**切几段、走几条分支直接决定账单**，与栈内的"少调几次"不是一回事；而"每隔多久轮询一次"这种空跑，只要没有实际调用就不计费。
+- **落地动作**：给 agent 或脚本估成本时，估的是 `段数 × ceil(时长/单位) × 档位倍数`，不是调用次数；同时把"开发/测试运行"与"源触发"这类免费项从账单里显式剔除，避免为不存在的开销做优化。
+- 提升层：工作流。触发词：credits、30 秒一段、256MB 一档、按段计费、不按步数、开发测试不计费、源执行免费、结转、成本构成式。

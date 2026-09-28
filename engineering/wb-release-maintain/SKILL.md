@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.20.0
+version: 1.21.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -207,3 +207,39 @@ sources:
 - **★改动级别与三档号要对齐**：MAJOR=不兼容 API 变更 / MINOR=向后兼容地加功能 / PATCH=向后兼容地修 bug。判据：**先定性再 bump**——凭"改了不少就加 MINOR"，会一路把破坏性变更藏进小版本。
 - 与 §依赖健康门、§循环依赖 的分工：那两条管"依赖能不能升、升之前过什么门"；本条管"**升级动作本身要传染到哪些版本号**"。
 - 提升层：工作流 / 可复用 Skill。
+
+## 安装态声明式对账：启动即 reconcile，缺失即装、版本即纠、**多余即卸**（来源：docs.n8n.io`integrations/community-nodes/installation-and-management/environment-variable-installation.md` 2026-09-28 r283-C 独立 curl 实拉原文核验）
+- **实证**：`N8N_COMMUNITY_PACKAGES_MANAGED_BY_ENV=true` → 原文 "n8n **reconciles the installed packages against the list on every startup, installing missing packages, correcting versions, and uninstalling packages not in the list**"，且启用瞬间就会卸掉不在名单内的包（官方用 warning hint 强调），**Community nodes 设置页同时转为只读**；每条 `{name, version?, checksum?}`，`checksum` 为 **SHA-512（`sha512-...`）且要求 `version` 已设**；未列入 vetted registry 的包则不会跨重启对齐版本；另有官方 blocklist。
+- **判据**：常见的安装审计只做**单向**——「有没有在清单里的都装上」；真正的声明式管理多一个**反向动作：不在清单里的被视为漂移并清除**。少了反向动作，手工装的东西会永久残留，声明清单与实际状态逐渐分叉而无人察觉。配套两点：① 设置页转只读，杜绝"UI 手工改一口"；② 校验值（checksum）必须绑定具体版本号，否则摘要没有锚点。
+- **落地动作**：技能/依赖目录维护时，每季度做一次双向对账表（缺装 / 版本不符 / **未在册**），第三类的处置要显式决策（补进清单 or 卸载），不得默认放过。
+- 提升层：工作流 / 可复用 Skill。触发词：声明式安装、reconcile、多余即卸、MANAGED_BY_ENV、漂移清除、设置页只读、sha512 绑定版本、blocklist。
+
+## 发布是一次「可部分生效」的变更，不是一个布尔事件（来源：docs.n8n.io 发布态 machine 2026-09-28 r283-C 经 Qoder r317-Q-B 实拉取证 + WB 判重复核）
+- **实证**：publish 按钮共有 8 态，其中 **`Published, partial`**（部分 trigger 激活失败 → **不回滚**，保留已激活的，可重新发布）与 `Failed to publish`（全失败但已发布版本仍然保留）；publish 是异步的，且只注册发生变化的 trigger。
+- **判据**：**「没发布成功」不等于「什么都没变」**。部分成功且不回滚意味着此刻线上处于一个混合态：一部分单元已经按新逻辑跑，另一部分还是旧的。此时若简单地"重来一次"，就要保证它是幂等的；若简单地"回滚键址"（以为一切未变），就会漏掉已经生效的那部分。
+- **落地动作**：发布动作必须产出三件事——① 哪些单元已生效的清单；② 哪些未生效及失败原因；③ 重发的入口只对未生效部分起作用。只返回一个成功/失败布尔位的发布接口，验收时判不合格。
+- 提升层：工作流。触发词：Published, partial、部分成功不回滚、发布异步、只注册变化的 trigger、混合态、幂等重发。
+
+## 版本不是说删就删：具名免回收、产生点要显式、 可用性按套餐分档（来源：docs.n8n.io 版本与源码管理章 2026-09-28 r283-C 经 Qoder r317-Q-B 实拉取证 + WB 判重复核）
+- **实证**：**Named versions 永不被自动裁剪**；Draft 与 Latest 不可删；版本创建点＝保存 / Restore（恢复前会先存当前）/ **Git pull**（版本存在实例库、**不进 Git**），而**改 workflow settings 不产生版本**；可用性阶梯：全量 Enterprise / Cloud Pro 近 5 天 / 所有用户近 24 小时。
+- **判据**：自动裁剪是常态时，**必须有"钉住"机制**让关键版本免于回收；同时要明确定义**哪些动作产生版本、哪些不产生**——"改了配置却不留版本"是典型的审计盲点（改了什么、什么时候改的，全部不可查）。
+- **落地动作**：发布物做三件事：① 重要版本打具名标签，标记对自动回收免疫；② 列出"产生版本/不产生版本"的动作白名单，把配置类改动也纳入留痕；③ 声明历史版本的可用窗口，避免用户以为"旧版本永远能回滚"。
+- 提升层：工作流。触发词：具名版本、不被裁剪、版本产生点、改设置不产生版本、恢复先存当前、可用性阶梯、钉住版本。
+
+## 依赖写成区间，就必须同时定义「怎么解析」与「解不出来怎么报」（来源：code.claude.com/docs/en/plugins/dependencies.md 2026-09-28 r283-C 经 Qoder r317-Q-B 实拉取证 + WB 判重复核）
+- **实证**：`plugin.json` 的 `dependencies` 数组支持 semver 区间 `^2.0` / `~2.1.0`；发版靠 git tag **`<plugin-name>--v<version>`** + `claude plugin tag --push`；**区间重叠时取最高**；解不出区间时报**具名错误** `has conflicting version requirements` / `Dependency … has no git tag satisfying`；跨市场依赖需显式开关 `allowCrossMarketplaceDependenciesOn`。
+- **判据**：只说"我依赖 ^2.0"是不够的——**区间必须配解析规则**（区间重叠时怎么办）与**报错面**（解析失败时的具名错误）。只锁具名版本或只写区间都不完整：前者失去兼容弹性，后者失去确定性。报错必须具名，否则使用者只会看到安装失败而不知道是哪一条区间无法满足。
+- **落地动作**：声明依赖时同时给出：区间写法 + 冲突解析策略 + 失败时的具名错误信息；跨来源依赖显式开白，不静默放行。
+- 提升层：可复用 Skill。触发词：semver 区间、取最高、has no git tag satisfying、区间重叠、跨市场依赖、依赖解析规则、报错具名。
+
+## 更新与运行态解耦：旧副本延迟回收，批量更新要抖动（来源：code.claude.com/docs/en/plugins/loading.md 2026-09-28 r283-C 经 Qoder r317-Q-B 实拉取证 + WB 判重复核）
+- **实证**：**旧版本缓存目录后台清理要等 14 天后才删**（官方理由：保住已经在跑的会话）；交互会话在首条消息之后**随机延迟最长十分钟**再做后台自动更新；改盘后需 `/reload-plugins` 或新会话才生效；`--plugin-dir` 与某个 id 同名的副本**不加载**。
+- **判据**：**替换一个正在被使用的东西，不能就地删除**。两条具体做法：① 旧版本保留到"确认没有会话在用它"再回收（这里用 14 天的粗粒度窗口）；② 批量更新加**随机抖动**，避免所有会话在同一时刻涌去拉更新（雷同群效应会造成自我造成的流量峰）。
+- **落地动作**：热更新方案写明三个数——旧副本保留窗口、自动更新的抖动范围、变更何时对新会话生效；三者缺一，更新就是不可控的。
+- 提升层：工作流。触发词：延迟回收、14 天、随机抖动、autoupdate 削峰、旧副本、reload 才生效、同名副本不加载。
+
+## 更新通道数与回滚能力必须成对设计；一条外发通道不等于一个开关（来源：docs.openclaw.ai`/clawhub` 与 `/platforms` 2026-09-28 r283-C 经 Qoder r317-Q-B 实拉取证 + WB 判重复核）
+- **实证**：① `openclaw update --channel` **只有 stable / dev 两档**，且**文档通篇没有回滚章节**——开启多通道却没有降级路径。② **遥测双开关**：产品分析受环境变量控制，而"部署快照"每日上报（副本数/CPU/内存/版本/DB-Redis RTT/execution mode/sandbox memory/concurrency）**不受环境变量控制、只能在 UI 关**。③ 相关：依赖动作锁 commit SHA 而非 tag；动作的"己读过状況"由 systemd plist 管理。
+- **判据**：① **没有文档化的回滚路径，就不该开第二个更新通道**——通道越多、越需要有路返回。② **"我把开关都关了"这个结论需要逐个通道验证**：同一产品的不同外发分属不同控制面（环境变量 / UI），关掉**看得见的那个**不等于把两个都关了。审计外发面时，必须枚举控制面而不是枚举直觉里的开关。
+- **落地动作**：给出回滚路径（具名版本→cd→如何装回）之后才允许发布第二个更新通道；清点遥测时按"控制面清单"（环境变量 / UI / 后台服务）逐项确认，并写下 UI 才能关的那几项。
+- 提升层：工具 / 工作流。触发词：更新通道、没有回滚章节、stable/dev、遥测双开关、部署快照、UI 才能关、控制面清点。
