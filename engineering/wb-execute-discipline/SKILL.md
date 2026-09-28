@@ -9322,3 +9322,71 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **配对机制**：`openclaw dashboard` 生成 short-lived 一次性 owner pairing link → 签名浏览器获得 durable administrator device credential——**重开 dashboard 不依赖共享 Gateway token**；同一浏览器重开 fresh handoff 可修复受限设备凭据（1008 pairing required 场景）。
 - **远程访问**：TLS 开启时 https/wss；远程机连接需 Gateway token 或配对——**控制面凭据分"一次性配对"与"持久设备凭据"两态**。
 - **提升层**：工具（控制面接入）。
+
+## Dify 迭代与循环编排：Iteration/Loop/Parallel/Error Response（来源：dify.ai blog deepresearch + deep-research-workflow + enhancing-gpt-researcher + mintlify orchestrate-node + pyshine Dify 平台解析 2024-11/2026-07 实拉，合并 §Dify 平台——那条管"Agent 节点/变量/检索"，本条管"循环编排"）
+- **Iteration 与 Loop 分用**：Iteration 处理数组元素（每个元素跑一轮子流程）；Loop 在条件满足前重复——**列表型任务用 Iteration，条件型重复用 Loop**。
+- **Loop 变量 vs 标准变量**：Loop 的 Previous Iteration Reference 让节点访问当前与之前迭代的输出，形成知识累积网络——**循环内不只读本轮，可引用历史轮结果避免重复工作**。
+- **Parallel Mode 与 Error Response**：迭代可并行（最大并行度=API 速率上限）；单个迭代项异常不影响其他项——**批量子任务并行+隔离失败**。
+- **graphon 执行引擎**：工作流是 DAG，引擎拓扑排序建执行计划、无依赖节点进 worker pool 并发、变量池维护状态——**编排器视角：节点是声明式，执行是引擎调度**。
+- **提升层**：工具（循环编排）。
+
+## n8n Code 节点规范与模式选择（来源：docs.n8n.io get-coding-help-from-ai + n8nlogic n8n-code-node-js-python + logicworkflow code-node + csdn n8n-code-node 教程 + n8nautomation guide 2025-12/2026-09 实拉，合并 §n8n 平台——那条管"表达式/二进制/重试"，本条管"Code 节点"）
+- **铁律：返回 `{ json: {...} }` 数组**——最常坏在返回裸对象或无 json 包装；读输入用 `$input.all()`（All Items 模式）。
+- **模式二选一**：Run Once for Each Item=就地逐条转换；Run Once for All Items=跨记录聚合或数量变化（100→1 / 1→100）——**是否改变条数决定选哪个模式**。
+- **代码纪律**：不用 n8n 表达式、用 JS 模板字面量；守卫子句防 null/undefined；优先 map/filter 不手动循环；命名描述性（Calculate Order Totals 而非 Code）；**每节点一件事、超 50 行拆多节点或 sub-workflow**。
+- **秘密与依赖**：API key 用凭证管理不硬编码；环境变量可授权外部 npm 模块——**Code 节点不是放秘密的地方**。
+- **提升层**：工具（代码节点质量）。
+
+## LangFlow 多代理编排：agent 当工具 / judge 路由 / MCP 部署（来源：langflow.org guides build-a-multi-agent-system + blog deep-research-multi-agent + blog langflow-1-1 + blog gpt-5 model routing + docs components-agents 2024-11/2026-09 实拉，合并 §LangFlow 平台——那条管"agent 工具/认证"，本条管"多代理"）
+- **agent 可作工具**：tool mode 让 agent 调 agent（递归编排、嵌套组合），1.1 起有专门 agent component——**多代理系统=把 agent 当可组合积木**。
+- **judge 路由模式**：Judge Agent 评估查询→Router 分发给专业 agent（default/think 等模型路由）——**先判类型再分派，比单 agent 全干省成本**。
+- **深研流水线角色分置**：研究者出子问题→Summarization agent 提取→Reviewer agent 查缺口/反方观点→Professional Research Writer 成稿；**final writer 用大模型、前段保持 lean 控成本**——同任务不同阶段用不同模型档位。
+- **MCP 双向**：flow 可部署为 MCP server 供外部 agent 当工具调用；也是 MCP client 消费别的 server——**把流程封装成标准协议工具，跨系统复用**。
+- **提升层**：工作流（多代理编排）。
+
+## Activepieces piece 构建与两级管理（来源：activepieces.com docs build-pieces/misc/build-piece + pieces-ci-cd + admin-guide manage-pieces + install architecture + build-pieces sharing-pieces 2026-06/09 实拉，合并 §Activepieces 平台——那条管"自定义 piece/项目治理"，本条管"构建与目录管理"）
+- **piece = monorepo 包**：packages/pieces 下每 piece 一个目录；CLI 构建成 `.tgz` 归档——**生产环境 Activepieces 本身当 npm registry 存所有 piece 版本**。
+- **CI/CD 同步**：CLI 扫描 packages/pieces/custom/ 按 name+version 比对，缺的自动打包上传——**自定义 piece 走 CI 发布而非手动传**。
+- **两级管理**：Platform Admin 全局装删；Project Admin show/hide 特定项目可用 piece——**"平台能装"与"项目能用"是两层权限**（与 §项目治理 RBAC 互补）。
+- **依赖隔离**：外部库装进 piece 自己的 package.json（bun install --save），不污染 monorepo——**piece 依赖自治**。
+- **提升层**：工具（piece 工程化）。
+
+## Make 回滚与错误处理器语义（来源：help.make.com rollback-error-handler + restore-and-recover-scenario + academy error-handlers + use-apify make-com-error-handling-guide + everestx error handlers 2026-03/09 实拉，合并 §Make 平台——那条管"错误重试/连接"，本条管"回滚语义"）
+- **Rollback 默认语义**：停止 run 并回滚 ACID 模块（无 error handler 且 incomplete executions 禁用时是默认）；**不是所有模块支持真回滚**——HTTP/API 调用只标记失败、无法撤销已发出的请求。
+- **四种处理器按场景选**：Ignore（锦上添花不阻塞主流程）/ Break（停止、warning）/ Rollback（事务流：create order→charge card→失败删 order）/ Commit（部分完成仍有价值，保留到失败点写入）——**按"失败后数据该怎样"选，不按"要不要重试"选**。
+- **恢复双通道**：Version history 恢复手动保存版本；Scenario recovery 找回未保存改动（会话中断）——**改场景前先存版本**；删除进垃圾箱 30 天可还原。
+- **提升层**：工具（错误处理选型）。
+
+## Pipedream webhook 签名验证（来源：pipedream.com docs/connect/webhooks + privacy-and-security/best-practices + community thread 2025-08/2026-09 实拉，合并 §Pipedream 平台——那条管"webhook/事件源"，本条管"签名"）
+- **入站投递签名**：Pipedream 对每个 trigger webhook 投递用 HMAC-SHA256，`x-pd-signature` 头（t=timestamp,v1=hmac）——**验签=用共享 secret 重算比较，防第三方伪造**。
+- **app 特定签名**：Typeform 用 sha256=hmac、Drip 提供 HMAC 验证 action——**各 app 签名算法不同，按官方指引各自实现**。
+- **出站不自动签名**：Pipedream 发 HTTP 到你的端点时不自动加签名头——**要验证来源必须自己实现校验逻辑**。
+- **HTTP trigger 属性面**：body/client_ip/headers/method/path/query/url 全暴露，验证逻辑可放 workflow 首步——**"Return custom response" 模式配合验证做入口守卫**。
+- **提升层**：工具（webhook 安全）。
+
+## Anthropic Agent Skills 规范与按需加载（来源：anthropic.com engineering equipping-agents + claude.com blog skills + platform.claude.com skills-guide + console.anthropic.com quickstart + arxiv 2602.12430 2025-10/2026-09 实拉，合并 §Anthropic 平台——那条管"记忆/subagent"，本条管"Skills"）
+- **Skill = 目录**：SKILL.md（YAML frontmatter：name kebab-case + description）+ 可选 scripts/references/assets 子目录——**文件系统组织而非单文件**。
+- **按需加载机制**：启动只预载几十 token 元数据进 system prompt，触发时才加载全文——**大技能库无上下文惩罚**。
+- **四特性**：Composable（技能可堆叠、Claude 自动识别协调）/ Portable（Claude apps/Code/API 同格式）/ Efficient / Powerful（可含可执行代码，比 token 生成可靠）——**封装格式统一是跨端复用的前提**。
+- **Skills API**：预构建（PowerPoint/Excel/Word/PDF，日期版本）vs 自定义（skver_ 版本、workspace 私有）——**两来源由 List Skills endpoint 的 source 字段区分**。
+- **提升层**：可复用 Skill（官方格式）。
+
+## agentskills.io 开放格式与目录（来源：agentskills.io home/skill + agenticskills.io + agskills.dev + skills.sh openclaw skills 2026-07/09 实拉——新增信源站点）
+- **开放格式标准**：skill 目录=SKILL.md（元数据+指令）+ scripts/references/assets；激活预算 <5000 tokens——**格式与 Anthropic Skills 同源，跨 Claude Code/Cursor/Copilot/VS Code**。
+- **目录生态**：agenticskills.io 189+ verified skills 16 类；agskills.dev 754 skills 5-framework 映射；skills.sh 收录——**多目录可查，装前先验证**。
+- **llms.txt 机器索引**：agentskills.io/llms.txt 供 agent 直接发现——**站点给 agent 的入口是 llms.txt**（与 Pipedream 同模式）。
+- **symlinks 共享**：VS Code 等工具用 symlink 跨工具复用同一技能目录——**一份技能多处挂载**。
+- **提升层**：可复用 Skill（跨平台分发）。
+
+## deeplearning agentic RAG 路由器（来源：corporate.deeplearning.ai building-agentic-rag-with-llamaindex + retrieval-augmented-generation 2026-04/09 实拉，合并 §deeplearning 平台——那条管"评估/多代理/编排"，本条管"RAG"）
+- **router 是最简 agentic RAG**：一个 query 先经 router 选 Q&A 或 summarization 两个 query engine 之一——**先从路由做起，别一上来就全工具 agent**。
+- **多文档扩展**：router→多文档 agent（工具使用+推理+决策）——**单文档路由验证后再扩文档面**。
+- **RAG 组件设计面**：keyword/semantic/hybrid search、chunking、query parsing、prompt design、evaluation、deployment 各自独立设计——**检索与生成组件分别调优**（对应吴恩达评估驱动方法论）。
+- **提升层**：工作流（RAG 路由）。
+
+## OpenClaw 附件处理与 outcome markers（来源：openclawdoc.com docs agents file-management + docs.openclaw.ai start/openclaw + openclaw.academy attachment-outcome-markers + clawbot 2026-04-27 release + openclawforge file-uploads 2026-02/09 实拉，合并 §OpenClaw 平台——那条管"渠道/仪表板/记忆"，本条管"附件"）
+- **附件落盘与通知**：上传经渠道存 sandbox `uploads/<agent>/document.pdf`，agent 自动被通知；模板变量 {{AttachmentPath}}/{{AttachmentUrl}}/{{AttachmentContentType}}/{{AttachmentDir}} 把附件交进命令——**渠道附件→沙箱文件→模板注入**。
+- **outcome markers（不静默丢弃）**：每个附件记处置结果（handled / handed to native vision / not selected by first-only policy / capability disabled / denied by scope / processing failed）——**"没处理"必须有记录，不是悄悄丢**。
+- **attachments 数组字段**：file_name/mime_type/size_bytes/download_url——**自定义 skill 从 request body 取这四字段**。
+- **文件工具安全姿态**：file_fetch/dir_list/dir_fetch/file_write 四工具 default-deny，per-node path policies + operator approval——**文件读写默认拒绝、逐节点放行**（与 §工具面安全互补）。
+- **提升层**：工具（附件管线）。
