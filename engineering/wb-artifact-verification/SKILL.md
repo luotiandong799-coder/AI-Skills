@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.46.0
+version: 2.47.0
 agent_created: true
 ---
 
@@ -422,21 +422,6 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **验收动作**：升级前后各做一次「四类清单」比对——① 脚本里的 CLI/API 引用是否还在；② 依赖的 UI 入口是否已被隐藏；③ 文档/书签/配置里的名称与路径是否随外观重命名更新；④ 本期安全结论来自哪个独立通道。**只看 Breaking changes 标题的升级验收是残缺的。**
 - 提升层：工作流 / 工具。触发词：release notes、升级前检查、破坏性变更、分阶段弃用、UI 先消失、外观重命名、cosmetic rename、安全修复缺失、发布说明盲区、CLI 命令替换。
 
-## 载荷按体量分档换存储介质，且清理规则必须读当前生效档位（来源：docs.n8n.io binary-data.md 2026-09-28 r313-Q-A 实拉 + r279-B 复核；接在 §隐性配额与扩容反向效应 之后）
-- **实证**：n8n `N8N_DEFAULT_BINARY_DATA_MODE` 在 memory(default)/filesystem/s3/azure/database 间切换，每档独立上限（`N8N_BINARY_DATA_DATABASE_MAX_FILE_SIZE` 默认 512 MiB、明文 "Can't exceed 1024" 因 DB 列宽），落盘路径 `N8N_BINARY_DATA_STORAGE_PATH`；文档明确 **"Binary data pruning operates on the active binary data mode."**（裁剪只作用于当前激活档）。
-- **判据**：① 技能/工具的大产物（报告/导出/媒体/缓存）应**显式分档**——小对象留上下文、中对象落文件、大对象走外部存储，**每档设自己上限**，不一个全局阈值一刀切；② **保留/清理策略必须与"当前实际生效的介质档位"绑定**：档位改了清理配置没跟着改，就出现"瘦身规则打在没启用的档位上"的**静默失效**（与 §隐性配额"超限记成节点失败"同族，但那条是回传配额、本条是清理错档）；③ 验收断言"当前档位 + 该档位上限 + 该档位清理路径"三者一致，缺一即判不合格。
-- 提升层：工具（验收判据属 AV）。触发词：介质分档、active binary data mode、清理错档、静默失效、512 MiB、落盘路径绑定。
-
-## 限制类别具名失败词汇 + 禁假成功（来源：pipedream.com/docs/limits + www.activepieces.com/docs/install/reference/breaking-changes + enterprise-docs.dify.ai 2026-09-28 r313-Q-A/r313-Q-C 实拉 + r279-B 复核；与 §可提升vs不可提升 互补）
-- **实证**：每类限制（体积/载荷/时长/配额/速率）必须有各自**可辨的具名错误 token**——Pipedream `413 Payload Too Large` / `Function Payload Limit Exceeded` / `Timeout` / `Runtime Quota Exceeded` 四分立；Activepieces v0.91 明文**取消**「把拒绝/截断掩蔽为布尔 true」；反例 Dify v1.16.1 内置截断**不告警**。
-- **判据**：验收清单新增一条——凡技能回传外部结果，必须声明其超限属于哪一类并给出该类**具名错误 token**；**截断/拒绝绝不允许返回成功态**——编排器据此选择"截断 or 旁路"而非"重试注定失败的调用"。
-- 提升层：工作流 / 工具。触发词：具名错误、限制类别、413、禁假成功、掩蔽为 true、截断不告警。
-
-## 不变量不可被标量平均分摊掩盖（来源：github.com/magnus919/agent-skills（agent-evals-and-observability/SKILL.md）2026-09-28 r313-Q-C 实拉 + r279-B 复核；与 §独立证据源 / §收敛分 相邻）
-- **实证**：验收分数化时，安全/隐私/授权/副作用属**不变量**——任一项破线即整轮不过，**不得被标量平均分摊掩盖**（非加权项）。配套"非显著 ≠ 等价" + 成对比较；比较前必须先固定**不可变数据集版本 + manifest（来源/同意/污染审查）**；已验证事故**回流为评测用例**。
-- **判据**：凡给技能打综合分时，把"安全/隐私/授权/副作用"列为**不变量项**——它们不是扣分项，是门；任何把它算进加权平均的评分设计都在掩盖破线。
-- 提升层：工作流。触发词：不变量、不可平均、标量平均掩盖、门而非扣分、数据集版本固定、事故回流评测。
-
 ## 超限的第 4 态：配额债务会连「还债动作」一起冻结（来源：docs.dify.ai`en/cloud/use-dify/knowledge/knowledge-storage-limit.md` 2026-09-28 r283-A 独立实拉原文核验；续 r211-A §容量上限可提升 vs 不可提升 的三态表）
 - **实证**：Dify 知识库分档 **Sandbox 50 MB / Professional 5 GB / Team 20 GB**，原文「Once usage reaches your plan's limit, the workspace can no longer add knowledge content.」紧接着一句才是关键：**「Uploading documents, adding or editing chunks, restoring archived documents, and re-indexing operations such as changing chunk settings are all blocked」，且「including in knowledge bases that use Economical indexing」**。另有一条降级态：**「If a downgrade or an expired subscription leaves your data above the new plan's limit, nothing is deleted: your apps can still retrieve from these knowledge bases, but adding content stays blocked」**。
 - **判据**：r211-A 的三态（显式报错 / 静默丢弃 / 伪装成功）描述的都是**被拒的那一次请求怎么失败**；本条是第四态——**超限会把既有内容的自救与整改通道一并锁死**：改分块参数、重索引、恢复归档这些"为了降回限额以下而必须做的动作"本身也被禁。于是「先删点东西腾空间」这条路在写侧冻结时走不通，只能删文档或升配。
@@ -484,3 +469,14 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **判据**：运行时能看到静态看不到的东西，但**FPR 8.0% 意味着纯运行时探测会误伤约 8% 的正常技能**。结论应写成**两级流水线**：静态筛出可疑面（便宜、不误伤），再对可疑者做运行时复探（贵、但有行为证据），而不是二选一。
 - **落地动作**：技能体检流程里显式标注每一级的**精度与误伤率**；用运行时结果单独下"结论禁止"的决策前，必须有静态证据或人工复核兜底。
 - 提升层：工具 / 模型。触发词：Runtime Skill Audit、FPR 8%、TPR、静态＋运行时两级、运行时探测、误伤率、自进化攻击。
+
+## 压缩/摘要产物要做「约束留存」回归门：约束失效是二值的，不是渐变（来源：arXiv 2606.22528《Governance Decay: How Context Compaction Silently Erases Safety Constraints in Long-Horizon LLM Agents》2026-09-28 r284-A 独立拉 abstract 原文核验）
+- **实证**：1,323 episodes / 7 模型族，约束完整在位时违规率 **0%** → 压缩后 **30%**（部分模型 59%）；关键在**二值性**——约束被摘要保住 → 违规仍 **0%**；被丢弃 → **38%**，不存在"部分生效"。配套基准 `ConstraintRot`、攻击 `Compaction-Eviction Attack`、防御原语 **`Constraint Pinning`**（约束原文隔离出有损压缩，违规回到 0%）。
+- **判据**：凡经过自动压缩/摘要/裁剪的上下文，把「硬约束条款原文是否仍在场」做成**字符串级可机检**的回归项——在场才算有效，不在场即判"约束已失效"，**不按降级处理、不做概率估计**。防御侧做法：硬约束（禁止动作、权限边界、必须人工确认项）走 **原文透传**，不喂给摘要器。
+- 与 `wb-context-compressor` 的压缩策略（豆包自留地）不重叠：本条是**验证动作**——压缩之后怎么证明约束还在。
+- 提升层：工具（可机检的门）。触发词：压缩后约束失效、Governance Decay、Constraint Pinning、二值失效、约束留存、上下文裁剪回归。
+
+## 被当题库/基线复用的产物必须列入自动清理豁免（来源：docs.n8n.io《Manage execution data》2026-09-28 r284-A 独立实拉 + agentskills.io《Adding skills support》客户端规范独立实拉）
+- **实证**：n8n 修剪条件 = 年龄 `EXECUTIONS_DATA_MAX_AGE` 默认 **336h（14 天）** 或条数 `EXECUTIONS_DATA_PRUNE_MAX_COUNT` 默认 **10,000**（从旧到新删），安全缓冲 `EXECUTIONS_DATA_HARD_DELETE_BUFFER` **1h**；原文硬豁免一条——**"Annotated executions (for example, executions with tags or ratings) are never pruned."**；SQLite 下删了也不释放磁盘，需 `DB_SQLITE_VACUUM_ON_STARTUP`。客户端规范同向：**"exempt skill content from pruning"**，理由是技能指令被裁掉后"模型继续运行但没了专业指令，**没有任何可见报错**"。
+- **判据**：任何会被**反复复算**的证据资产——评测集、标注样本、人工基线、黄金用例、回归对比快照——必须显式挂清理豁免，不能跟随默认保留期一起被修剪。**题库蒸发是无声故障**：下一次回归跑在残缺集上，分数照常输出、看起来一切正常。反面同理：技能正文/常驻指令不得进"可回收"区。
+- 提升层：工作流。触发词：清理豁免、题库蒸发、never pruned、exempt from pruning、默认保留期、回归集被删。
