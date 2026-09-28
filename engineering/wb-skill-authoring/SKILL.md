@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.38.0
+version: 3.39.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -249,6 +249,7 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **副作用技能禁止自动调用**：deploy/commit/notify 类设 `disable-model-invocation: true`——有副作用的技能不该被模型顺手调用；触发权=风险权。
 - **触发信号诊断表**：不加载→描述加细节关键词；过度触发→加负面触发更具体；输出不一致→加 examples/ 好输出示例。
 - 判据：**描述是技能唯一的广告位**——先量它的每轮成本，再把最重要的触发词放最前；副作用技能手动触发。
+- **清单本身的预算是"模型上下文窗口的 1%"，溢出时按调用频率削减 description 而非拒绝加载**（来源：Claude Code 技能文档 `code.claude.com/docs/en/skills.md` 全文端点，2026-09-28 r315-Q-C 实拉，作本节能**计量口径**升级）：官方 **"skill-listing budget scales at 1% of the model's context window"**，溢出时丢弃顺序 **"starting with the skills you invoke least"**，被削的是 **description 文本**（可降到 `skillOverrides:"name-only"`），另有 `skillListingMaxDescChars`/`skillListingBudgetFraction`/`SLASH_COMMAND_TOOL_CHAR_BUDGET` 三旋钮与 `/doctor`、`/skill-doctor`、`--debug` 三诊断入口；`description`+`when_to_use` 合并 **"truncated at 1,536 characters in the skill listing"**，正文 **"Keep SKILL.md under 500 lines"**。判据：① 库规模成本 ≈ min(预算, 每技能首 1536 字符 × 技能数)，**超预算的代价由最少用的技能承担**——新技能边际成本取决于它被调用多少次，预计低频就主动写成 name-only 或合并进家族；② **触发关键词必须落在 description 前 1536 字符内**（超出部分在清单里根本不存在）；③ 失效诊断顺序：先 `claude plugin validate`/`/skill-doctor` 确认字段解析 → 再看是否被清单预算削掉 description → 最后才怀疑模型不遵守。
 - 提升层：可复用 Skill。
 ## Gotchas section 是技能最高信号内容：从失败点积累，随时间更新（来源：claude.com/blog/lessons-from-building-claude-code，2026-09-27 r231-C 实拉）
 - **技能的 Gotchas 区写"用这个技能时真实撞到的失败点"**，随使用持续更新（Anthropic 例：subscriptions 表是 append-only 是踩过坑才知道的）——**价值一半在别人踩过的坑，把坑写进 Gotchas 不是写进正文**。
@@ -295,6 +296,7 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **变更公告必须带三要素：截止日期 + 影响的具体模块名 + 需要的动作**：上述每条都给了明确日期与受影响的模块/连接。判据：**只说"某服务将升级"的公告等于没发；没有截止日期和模块名的通知无法被使用者转成待办。**
 - **分级标注要能一眼区分"会坏"和"要改"**：Breaking change（会坏，必须改）与 Action required（还能跑，但需迁移）是两类，混在一起会让使用者对真正的 P0 麻木。判据：**分级的目的不是整理信息，是让使用者能排序。**
 - **对技能/包装的推论**：包装第三方能力的技能，其正文应写明"上游变更如何到达使用者"（版本钉 / 弃用提示 / 失败时的指向），而不是假设使用者会自己盯上游。判据：**封装的价值是屏蔽复杂度，不是屏蔽变化——变化必须透传，复杂度才被屏蔽。**
+- **破坏性变更可写成一条机械规则，不用主观分级**（来源：Activepieces 官方 piece 版本规则 `docs/.../piece-versioning.mdx`，经 api.github.com/contents 通道，2026-09-28 r314-Q-B 实拉，作本条目**判定侧**升级）：官方原文 **"any removal is breaking, any required addition is breaking, everything else is not"**（配 semver；另有 `minimumSupportedRelease` 声明依赖的宿主最低兼容版本）。判据：① 改技能/升级前先查两类动作——**删掉任何字段/文件/步骤**、或**把任何可选项变必填**——命中即破坏，其余一律非破坏，**无需主观判断**；② 配套引入 `minimumSupportedRelease` 式字段，让不兼容在**安装前**就失败而非运行中失败；③ 本点是"向下告知义务"的**判定侧**补充——那条管"怎么告知"，本条管"怎么判定"（闭合 WB r208 点名索取的"平台/RFC 层正式定义"）。
 - 提升层：可复用 Skill / 工作流。触发词：上游变更、破坏性变更、弃用通知、Breaking change、Action required、封装层告知、间接依赖、截止日期、模块名。
 
 ## 技能市场的商业化层：付费/分润、插件入口、赛事供给——规模数字要按面拆开读（来源：腾讯 SkillHub 技能广场 `skillhub.cn/skills?sortBy=score` 2026-09-28 r209-A 独立实拉；导航区同时挂出「插件 NEW」`skillhub.cn/plugins`、「SkillPay」、「大赛」`skillhub.cn/contest` 三个入口；页面声明共 17.0 万技能，来源分「全部来源 / 认证企业 / 用户自主发布」，排序面分 score / 近期飙升 / 下载量 / 最近上新，部分技能标「需配置 API Key」）。与 §技能家族与多渠道分发 互补——那条管"一个真身多发布面"，本条管"市场用什么机制把供给拉进来"
@@ -302,7 +304,13 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **供给端三条腿要分开看：发布、售卖、激励**（发布 Skill / SkillPay / 大赛），一条腿的繁荣不代表另两条——本轮 17.0 万技能是"发布"口径，与下载量、score 不同面。判据：**引用市场规模数字必须写明是哪个面的口径**；"17 万技能"不等于"17 万有人用"。
 - **来源标签先于内容判断**：页面把来源分为公开渠道 / 认证企业 / 用户自主发布，并在页脚声明"使用前请注意识别相关风险"。判据：**市场自己都不背书的来源，使用者更不能默认可信**；采纳第三方技能先看来源标签再看描述。
 - **"需配置 API Key"是准入门槛信号，写在卡片上而非藏在文档里**：头部技能（腾讯文档、ima-skills、钢联 AI）在列表页直接标出。判据：**有前置依赖的技能必须把依赖写在能被看到的地方**，否则用户安装即失败。
+- **付费技能的"验收"验的是支付链路不是技能质量；争议与退款整体让渡给支付渠道，平台声明自己不是交易方**（来源：腾讯 SkillHub SkillPay 官方门槛 + bundle 内付费治理字段，api.skillhub.cn + skillhub.cn，2026-09-28 r314-Q-B 实拉；闭合 WB r210/r211/r212 连续三轮 pending 的验收口径）：原文门槛 **"提交后平台将核验完整的微信 AI 支付下单链路，校验无误才可审核通过"**；价格约束 **最小 0.01 元、最大 100 元、单位「元/次」**，字段面 `paid`/`paidWhitelistOnly`/`amount`/`currency`/`pricing`；入驻需**人脸实名**；退款原文 **"用户可在对应微信/支付宝账单发起咨询或退款，平台依据所选渠道规则协助处理"**；平台免责 **"不作为该笔交易的收款方或服务实际提供方"**。判据（三点可迁移）：① 凡我方交付物涉及外部副作用（推仓/发消息/写库），**验收标准须含端到端链路跑通且状态可回查**，只看产物合格不够；② "协助处理 + 依渠道规则"是把争议责任外置到既有仲裁机制——遇到"我改坏了用户的东西"同理（明确指向 git 历史/回收站这类既有回滚机制，而非自承诺恢复）；③ 若要给技能加付费面，必须同时备齐"实名 + 链路核验 + 免责定位"三件，缺一就不该开。
 - 提升层：可复用 Skill / 工作流。触发词：技能付费、SkillPay、技能分润、技能市场、大赛、插件入口、来源标签、认证企业、需配置 API Key、市场规模口径。
+
+## 技能仓治理：生效 / 隔离 / 下架三态 + 标识符不可变（来源：ClawHub moderation + docs.openclaw.ai/clawhub，2026-09-28 r314-Q-B 实拉；与 §分发双通道（r312-Q-B 上游可被改写）互补——那条管"分发通道风险"，本条管"仓内可疑技能的处置流程"）
+- **技能状态不该是"装/不装"二值，市场级实践是三值以上**：ClawHub moderation 原文 **"A listing may be held, hidden, quarantined, revoked, or otherwise unavailable"**（五种非生效态，quarantine 与 revoked/hidden 并列）；**"Signed-in users can report… Moderators can review reports, hide or restore content, and ban abusive accounts"**（举报→人工复核→可恢复的双向动作）；违规恢复走独立申诉入口 `appeals.openclaw.ai`；防同名接管的唯一明文机制是 **"Catalog lists may shorten long names visually without changing the stored name"**（**stored name 不可变**，展示名可变）；条目暴露 `verificationTier:"source-linked"` 分级字段。
+- **判据**：① 审计发现可疑技能时，**先转"隔离态"（保留文件 + 记录理由 + 禁用触发，不删）**，判清后再决定 restore/删除——现在"发现重复/可疑就直接删或只标注"是二值化导致要么丢能力要么留风险；② **技能目录名一旦落地就不可变**（改名＝身份变更，会让外部引用与安装记录指向错对象）；③ 给每个技能补 `verificationTier` 式分级（source-linked / 实拉验证 / 未验证），让"这条建议的证据强度"变成字段而非行文语气；④ 处置必须可逆且有第二人复核——我方由 WorkBuddy 单点审计，至少留"用户一句话可回滚"的显式恢复路径（与 AGENTS 0.8 同向）。
+- 提升层：工作流（技能仓治理）+ 可复用 Skill（分级字段）。触发词：技能下架、quarantine 隔离态、stored name 不可变、verificationTier、申诉恢复、技能仓治理。
 
 ## description 内容合规门禁：触发面不是广告位、不是恐吓位（来源：腾讯 SkillHub 技能广场 skillhub.cn/skills?sortBy=score 2026-09-28 r210-A 独立实拉）
 - **实证（三类污染同一页并存）**：① **导流型**——「专利初稿助手」（3620.0 万）在技能介绍正文末尾直接写「学习交流欢迎联系微信号 A26dian4」；② **自夸型**——「编程专家.Skill」（278160.5 万）自称「P8 级编程助手，25 年实战经验」，头衔写进能力描述；③ **恐吓触发型**——「web-tools-guide」（21625.3 万）写「Without reading this skill, you WILL handle failures incorrectly」，用「不读就必错」逼触发。
