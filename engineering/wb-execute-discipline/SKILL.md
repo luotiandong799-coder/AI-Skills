@@ -10193,3 +10193,69 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **共学防弃学**：每日晚 8 点直播共学（千人同时在线）——"一个人看文档容易放弃"，**共学把学习从单人任务变成群体节奏**。→ 判据：个人学习曲线陡峭的内容，用共学/直播节奏兜底。
 - **学习路径用布鲁姆分类法设计**（记忆→理解→应用→分析→评价→创造），推荐从生成式 AI 基础（李宏毅课程）起步。→ 判据：给学习者设计路径按认知层级递进，不按资料堆放。
 - 内容资产形态：AI 入门系列 + AI 精选系列 + AI 应用与前沿，整理成"可检索/可引用/可复用"的知识资产（9200 指南 900 万学习者规模）。→ 判据：知识库的交付标准是"可检索可引用"，不是"写得多"。
+
+## r286A 学习轮落地（2026-09-29；来源 Dify/n8n/LangFlow/Activepieces/Make/Pipedream/Anthropic/GitHub/OpenClaw/HuggingFace 十站实拉）
+
+### 混合编排纪律：确定性工具先行、Agent 只管复杂段、条件当 guard（来源：Dify Workflow Studio / Agent Node 文档 + agentlist.top 实践，2026-09-29 实拉）
+- **Hybrid Agent/Tool 模式**：能确定性做的事用 Tool Node（取数/执行），Agent Node 只处理复杂/可变部分（分析/决策）——**省 agent 开销、保确定性、设计者控制关键调用**。→ 判据：不是"全流程 agent 化"，而是"确定性优先，agent 补不确定段"。
+- **条件节点当 guard，进 LLM 前校验**：无效输入在进 LLM 前被条件分支拦掉，不浪费 token 与调用。→ 判据：**LLM 是昂贵资源，guard 管入口**——先校验再调用，不先调用再校验。
+- **Iteration 优先于 Loop**：Iteration 可并行化子流（平台相关），数量级更快；Loop 串行。→ 判据：批量数据处理选 Iteration，只有强依赖才 Loop。
+- **Code 节点做数据清洗**：LLM 输出不稳定，先过 Python/JS 校验转换再进下游。→ 判据：模型输出当原料，确定性代码当加工线。
+- **节点级错误处理**：LLM/HTTP/Code/Tool 节点支持 retries + 失败行为三选（停止/返回类型化默认值/走 fail 分支）。→ 判据：每个节点都要声明"失败后怎么办"，不留隐式崩溃。
+- **嵌套 Agent：一个 agent 可把另一个当工具调用**（v1.3+），emergence behavior——不做 god-agent，拆专业 agent 互相调用。→ 判据：复杂任务按专业拆 agent，用"agent 调用 agent"组合，不堆单 agent 能力。
+
+### 工具故障隔离与模型故障转移：子工作流兜底 + 结构化错误 + failover 链（来源：n8n blog + community 实拉，2026-09-29；与 §n8n 错误处理互补——那条管"错误类型与重试"，本条管"agent 工具层的故障隔离"）
+- **工具逻辑放子工作流，用 "Call n8n Workflow" 工具而不是直接工具节点**：子工作流内部节点开 Continue on Fail，保证子工作流总返回干净响应给 agent——**已知 bug：Agent 的 Continue on error 不捕获直接工具节点的错误**，只有子工作流隔离才可靠。→ 判据：**agent 的工具失败必须在子工作流边界消化**，不让异常穿透主流程。
+- **Code 节点 try/catch 返回结构化错误对象**（`{success:false, error:msg}`）而非抛异常——agent 能看到"什么错了"而不是看到"崩了"。→ 判据：错误也是数据，结构化回传才能被 agent 决策。
+- **模型故障转移链**：Agent Variables 节点递增 fail_count，主模型失败自动 fallback 到备选模型/供应商——处理 API 错误、限流、模型宕机不中断流程。→ 判据：生产级 agent 要配 fallback 链，单模型是单点故障。
+- **Execution Data 节点附加可搜索元数据**（user ID/entry point/outcome/session ID）：执行失败可按字段过滤，不翻几百次 run。→ 判据：给执行打标=给排错建索引。
+- **HITL 安全路径**：高端模型多次失败生成无效工具调用后，自动路由到 human-in-the-loop 或确定性安全路径，防全系统停滞。→ 判据：agent 无法自主解决时有"降级出口"，不是死循环。
+
+### 语义缓存与评估基础设施：缓存版本化按 schema 失效 + 统一多 Agent 评估（来源：arXiv 2601.11687 + MASEval + LangChain blog，2026-09-29 实拉）
+- **语义缓存需要失效机制**：底层数据 schema 变化时缓存响应失效——**缓存版本化 + schema hash 比对**（schema 变了缓存即失效）。→ 判据：语义缓存不是只加不减，"数据模型变了缓存作废"必须写成规则。
+- **缓存需初始填充**：用精选 reference QA 对预热（论文 1,021 对覆盖常见查询模式），新查询逐渐填充——缓存质量随时间提升。→ 判据：语义缓存冷启动靠预热集，不靠碰运气。
+- **多 Agent 系统用统一评估库**（MASEval 模式）：标准化抽象跑任何 agent 实现（smolagents/LangGraph/自定义）对 GAIA/MMLU 或自定义任务——评估基础设施是一等公民。→ 判据：多 agent 系统的评测接口统一，换实现不换评测。
+- **Agent Framework 原生发 OTel spans**（configure_otel_providers()）：agent 执行进 LangSmith 等平台不需要框架依赖。→ 判据：可观测是框架原生能力，不是后装。
+
+### 版本钉死与状态化分支：piece 版本 pinning + Tables 存跨 run 上下文（来源：Activepieces piece-syncing + Tables 文档，2026-09-29 实拉）
+- **每步钉死 piece 版本**（如 0.5.3），升级走 builder 显式选择，跨 minor/major 弹警告——**版本不自动漂移，改动是显式决定**。→ 判据：流程稳定靠 pin 版本，升级是审计动作不是背景噪音。
+- **Flow Versioning：publish/draft 状态 + 回滚**；Flow Templates 跨项目/团队复用。→ 判据：流程当代码管（版本+回滚+模板复用），不当一次性配置。
+- **Tables 存结构化上下文**（prior prompts/entity IDs/validation flags）：stateful branching 跨 run 复用历史、避免重复动作——prompts 存 Tables 带 version 字段/owners/rollout flags。→ 判据：**状态放数据层（Tables）不放流程逻辑**，LLM workflow 才能跨 run 有记忆。
+- **flow builder 内置 formula & data manipulation functions**：分支/循环里直接做数据处理，少写胶水代码。
+
+### 错误处理五指令与死信通道（来源：Make Academy + help.make.com，2026-09-29 实拉）
+- **Error Handler 五指令**：Resume（忽略错误继续下一模块）/ Ignore（跳过当前 bundle 其他继续）/ Rollback（撤销场景开始后所有事务模块更改）/ Commit（确认错误前更改）/ Break（移除出错 bundle 存 incomplete execution，自动或手动完成）。→ 判据：**五指令按语义选**——瞬时故障 Resume、单条坏数据 Ignore、事务类 Rollback/Commit、需人工的 Break。
+- **Rollback 只对支持事务的模块有效**（MySQL/Data Store）；Retry error handler 暂停失败 bundle、存错误消息+映射+剩余流程，自动或手动重试。→ 判据：先确认模块是否事务型，再决定 Rollback 是否可用。
+- **错误 handler 与场景调度配对**：Retry 的延迟与次数按场景重要性调（维护数小时的用少次数长间隔，过载型用多次数短间隔）。→ 判据：重试参数跟着业务窗口走，不固定默认。
+- **dead-letter 实践**：错误日志进 Google Sheet / Slack #scenario-errors / dead-letter Airtable——**错误进可查询通道，不只打日志**。→ 判据：失败要能批量复盘，要有"错误收件箱"。
+- **LLM 集成 stale context**：检索读到过期 CRM 状态——修复=去重后检索或加时间戳过滤。→ 判据：RAG 的上下文新鲜度用数据层保证（去重/时间戳），不靠运气。
+
+### 触发器四类与订阅多源：HTTP/Cron/Email/Event sources + 组件生命周期 hooks（来源：Pipedream Triggers / Connect webhooks / Components guidelines，2026-09-29；与 §Pipedream 触发器互补——那条管"触发器形态"，本条管"分类与生命周期"）
+- **触发器四类**：HTTP（请求触发）/ Cron（时间调度）/ Email（入站邮件）/ Event sources（app 事件如 Twitter/Google Calendar）。→ 判据：选触发器先问"事件从哪来"，不默认 HTTP。
+- **subscriptions API：一个 workflow 监听多个事件源**（emitter_id/listener_id）——单 workflow 跑 10 个 RSS 源，不用建 10 个。→ 判据：同构多源事件用订阅 API 收束，一对多不复制工作流。
+- **组件生命周期 hooks**：activate()/deactivate() 自动管理 webhook 订阅（实例化时建、停用时删）——**资源生命周期挂组件生命周期，不残留僵尸订阅**。→ 判据：webhook 订阅的建/删是成对的生命周期操作。
+- **Connect webhooks 事件**：CONNECTION_SUCCESS/CONNECTION_ERROR，payload 不含用户凭证——**凭证不进 webhook payload，走服务端取**。→ 判据：连接事件可监控，但敏感数据不可进事件流。
+- REST API 批量取事件：`/v1/sources/{id}/events?n=1`（最近优先可变数量）。
+
+### 上下文工程三层组合与缓存定价：token counting / context engineering / model selection（来源：Anthropic Prompt caching + toolchew 六模式，2026-09-29 实拉）
+- **缓存定价先算账再上**：cache read 0.10×、write 1.25×；TTL 5 分钟默认（write 无额外费）/ 1 小时 extended（write 2×）——**静态前缀超几千 token 且多次调用时缓存才划算**。→ 判据：缓存是成本杠杆，read/write 价差决定收益阈值。
+- **cache_control breakpoint 最多 4 个**：缓存 breakpoint 前所有 token 的 KV 状态；增量缓存——每轮对话最后 block 标 cache_control，后续自动复用最长前缀。→ 判据：把稳定前缀（system prompt/长文档/few-shot）放 breakpoint 前，变动部分放后。
+- **server-side compaction 是长对话/agentic 工作流推荐策略**：接近窗口上限自动总结旧上下文——保持 active context 聚焦。→ 判据：长任务上下文管理默认用 compaction，不自建复杂摘要逻辑。
+- **三层组合不是替代**：token counting（发前测，build time 抓 bloat）/ context engineering（trim/summarize/externalize，少带）/ model selection（每单元工作路由到能胜任的最小模型，frontier 留给真正需要的部分）——**三层叠加，一层省不够**。→ 判据：先测后剪再换模型，顺序执行。
+
+### 专用代理与并行执行：Explore/Task/Plan/Code-review 分工 + fleet 并行（来源：GitHub Copilot CLI 文档 + changelog，2026-09-29；与 §Copilot 代理互补——那条管"coding agent 能力面"，本条管"CLI 代理分工与命令面"）
+- **专用 agents 分工**：Explore（快速代码分析，不污染主上下文）/ Task（跑命令，成功摘要失败全输出）/ Plan（分析依赖结构出实现计划）/ Code-review（高信噪比，只报真问题）/ Research（深研带引用）/ Rubber duck（建设性批评）。→ 判据：**按任务性质选代理**，主上下文只留综合，分析/跑测/审查交给隔离代理。
+- **/fleet 并行子 agent 执行**；/delegate 交给 cloud agent；/remote 从 GitHub.com 或 mobile 控制本地会话。→ 判据：可并行拆的任务用 fleet，资源受限用 cloud delegate。
+- **自定义 agent profile 放 `.github/agents` 目录**（仓库级），/agent 选择。→ 判据：团队代理配置进仓库版本管理，不散在个人设置。
+- **copilot --allow-tool='write'** 允许免确认文件编辑；/after 30m 调度非重复 prompt。→ 判据：免确认权限按工具粒度给，不整包放开。
+
+### ACP 外部 harness 与委托上下文最小化：Codex/Claude Code/Gemini CLI 当可编程后端（来源：OpenClaw ACP agents + release notes，2026-09-29 实拉）
+- **ACP backend 插件跑外部 coding harness**（Codex/Claude Code/Gemini CLI）：`sessions_spawn` runtime:"acp"，把聊天线程变成编码工作区（`/acp spawn --agent claude --thread auto|here`）。→ 判据：**外部 CLI 当可编程后端用**，不只在终端交互。
+- **子 agent 上下文默认最小化**：只给 AGENTS.md+TOOLS.md，persona/记忆/用户/heartbeat 文件排除在委托 worker 之外——**窄任务 worker 不需要人格与记忆上下文**。→ 判据：委托上下文=任务所需最小集，不给人格/记忆（既省 token 又防信息泄漏到 worker）。
+- **兼容更新回滚**：失败更新恢复前包与配置；Unified Plugins workspace（ClawHub + bundled 一处管理）；/steer 实时引导 active run 不新开 turn。→ 判据：插件治理三件套——回滚/集中管理/运行中引导。
+- sessions 原生绑定 + transcript mirror + tool/media/terminal-outcome/settled-turn results（结果分层交付）。
+
+### think-in-code harness 与 AI/ML 技能标准化（来源：Hugging Face Skills + harnesses.sh + ModelScope，2026-09-29；与 §Agent Skills 生态互补——那条管"生态规模"，本条管"HF 的实现形态"）
+- **模型写可执行 Python 作动作格式，不写 JSON 工具调用**：HF 'agents that think in code' harness（~1,000 行核心、Apache 2.0），可选沙箱（E2B/Docker/WebAssembly）、managed sub-agents、Hub 分享 tools+agents。→ 判据：**动作格式选"代码"而非"JSON 调用"**时，表达力与可执行性更直接，但要配沙箱。
+- **HF Skills 标准化 AI/ML 任务定义**（huggingface/skills，7,374 stars）：数据集创建/模型训练/评估做成 agent skills，兼容 Claude Code/Codex/Gemini CLI/Cursor——从脆弱的原始代码生成转向结构化工具执行。→ 判据：**ML 工作流技能化=声明式定义+结构化执行**，不靠模型现写训练代码。
+- **Agents-A1**（InternScience 35B MoE）：GAIA 96、SciCode 44.3，tool use/function calling 原生——35B 级 agent 模型达万亿参数级性能；Nex-N2 Agentic Thinking 闭环（需求理解→任务规划→代码实现→环境反馈→评估调试→持续迭代）。→ 判据：小模型 agent 化 + 闭环迭代可逼近大模型效果，选型不只看参数。
