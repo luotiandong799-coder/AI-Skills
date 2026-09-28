@@ -11160,3 +11160,69 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **子智能体独立会话**：agent:<id>:subagent:<uuid>，完成后通知回请求方渠道——**子任务有独立会话+回执渠道**。
 - **NO_REPLY 抑制流式**：2026.1.10 起后台轮次以 NO_REPLY 开头则抑制草稿流式传输——**后台操作不泄露部分输出**。
 - 提升层：工作流。触发词：任务账本、queued/running/terminal、childSessionKey、NO_REPLY、Heartbeat。
+## r292C 十独点（2026-09-29 实拉）
+
+### 1. 插件治理：Dify marketplace 的安全评级与发布验证管线（来源：Dify Blog《Trust Is a Feature》+ DeepWiki《Plugin Development and Security》+ marketplace.dify.ai 插件页 2026-09-09/2026-08-30/2026-09-24 实拉，与 r292A 模型适配层/r292B 沙箱隔离合并增量）
+- **安全评级**：marketplace 每个插件带 Security Rating（S/A 级）+ 最后检查时间——**装插件先看评级与检查时间，老而未检=风险**。
+- **发布验证管线**：作者验证防冒充 → 依赖扫描（pip 安装时）→ 沙箱测试 → Marketplace API 校验 → 版本唯一性——**上架即过五关**。
+- **资源限制声明**：max memory（128-256MB）+ 访问域名声明——**插件权限最小化可审计**。
+- **A2A 插件**：Agent-to-Agent 协议插件——**Agent 间互调走向标准化**。
+- 提升层：工作流。触发词：Security Rating、发布验证管线、作者验证、资源限制、A2A。
+
+### 2. 模板市场内容面：n8n 的文件转换与 ETL 管道（来源：n8n.io/workflows 模板库+ n8n Community《PO extractor 免费发布》+ n8ntemplatestore《Data Pipeline Automation》2026-09-04/2026-05-22/2026-06-29 实拉，与 r292A Webhook/r292B Agents 合并增量）
+- **文件转换模板五类**：PDF 文本提取 / DOCX→PDF / 图片批量缩放 / 音频转码 / 批量多格式——**可导入 JSON 即用**。
+- **数据管道免外部 ETL**：extract-transform-load 一条链（API/DB 提取→JS 转换→业务规则校验→目标加载）+ 分页多源聚合——**ETL 不进 n8n 外**。
+- **免费模板发布**：社区作品可提交官方模板库——**模板即分发物**。
+- 提升层：工作流。触发词：文件转换模板、ETL 管道、分页多源聚合、模板库。
+
+### 3. 大工具响应压缩与规格建流：LangFlow 的工具面（来源：docs.langflow.org《ALTK bundle》《LFX MCP server》《OpenAI Responses API》2026-09-06/2026-09-16/2026-09-07 实拉，与 r291C prompt 组件/r292B 扩展合并增量）
+- **post-tool JSON 处理**：大 JSON 工具响应动态生成 Python 代码提取相关数据、压缩上下文——**大响应先榨干再进上下文**（与 §上下文预算互补：那条管预算，本条管单次大响应压缩）。
+- **OpenAI Responses API 兼容端点**：POST /api/v1/responses，换 model 名即用现有 OpenAI 客户端——**兼容端点免改客户端**。
+- **LFX MCP create_flow_from_spec**：一条请求按规格建流+validate_flow+run_flow——**流程即规格可编程**。
+- **Agent 组件 Tools 端口**：任何组件（含其他 Agent 与 MCP Tools）可连——**一切皆工具**。
+- 提升层：工具。触发词：post-tool JSON 处理、Responses API 兼容、create_flow_from_spec、Tools 端口。
+
+### 4. 嵌入授权闭环：Activepieces 的 OAuth 三步流（来源：activepieces.com《Embed Builder》《Embeddable MCP》《Data Tables》2026-09-27/2026-09-16/2026-09-28 实拉，与 r292A Embeddable 概念合并增量）
+- **Embed Builder**：iframe+SDK configure 方法——**白标流程构建器进自家产品**。
+- **Embeddable MCP 完整授权流**：authRequestId → Authorize 弹窗 → code → token → 跑用户 flows——**授权三步闭环，token 不落前端**。
+- **Data Tables 内置存储**：结构化表存流程数据——**流程内数据持久化免外挂 DB**。
+- 提升层：工具。触发词：Embed Builder、authRequestId、Authorize 弹窗、Data Tables。
+
+### 5. 数据存储做记忆：Make 的读→AI→写闭环（来源：make.com《Agent workflow memory》+ help.make.com《Knowledge files for AI agents》《Make AI Tools Open Beta》2026-05-05/2026-07-03/2026-01-19 实拉，与 r292A 错误语义/r292B webhook 面合并增量）
+- **data store 模块做外部记忆**：场景先读 store → AI 模块 → 写 store 更新记录——**记忆=存储读写闭环，场景构建器直接可视化**。
+- **知识文件双通道**：静态文件（品牌指南/政策）走 AI Agent app 直传；频繁更新走 Knowledge app——**静态与动态分通道**。
+- **AI Tools 免 prompt 模块**：9 个内置模块（情感分析/文本分类/信息提取/摘要/翻译/语言识别）——**常见任务免写 prompt 免配第三方 AI**。
+- 提升层：工作流。触发词：data store 记忆、知识文件双通道、AI Tools、免 prompt 模块。
+
+### 6. 外部用户关联与托管授权：Pipedream Connect 细节（来源：pipedream.com/docs《Connect Overview》《Managed Auth Quickstart》《Connect Link》2026-09-27/2026-09-23/2026-09-21 实拉，与 r291B Connect/r292B 组件契约合并增量）
+- **external_user_id 关联模型**：你的系统用户 ID 驱动授权与调用（≤250 字符）——**代理授权挂在你的用户体系上**。
+- **Connect Link 零构建**：托管连接流，用户秒连账户——**授权 UI 不用自己写**。
+- **managed auth**：托管 OAuth 客户端+安全存储+自动刷新，你永远不碰凭证——**凭证隔离于应用**。
+- **BYO OAuth clients**：可用自己的 OAuth 客户端替代托管——**托管与自持可切换**。
+- 提升层：工具。触发词：external_user_id、Connect Link、managed auth、BYO OAuth。
+
+### 7. MCP 实践面：Tool Search 与团队级 .mcp.json（来源：stacknovahq《MCP Servers Frontend Devs Guide》+ top-mcps《Best MCPs for Claude Code》+ claude.com《Building agents that reach production systems with MCP》+ maketocreate《MCP Setup Guide 2026》2026-06-16/2026-05-05/2026-04-22/2026-05-18 实拉，与 r289B/r291B MCP 治理合并增量）
+- **Tool Search 按需加载**：2026 起会话启动只加载工具名+服务器指令，完整 schema 按任务需要再取——**工具 schema 惰性加载降启动 token**。
+- **.mcp.json 团队提交**：repo 根提交，${VAR_NAME} 引用环境变量使 secret 不进 Git，队友自动获得同一套 MCP——**MCP 配置随代码走**。
+- **远程 MCP**：claude mcp add --url 加远程服务器——**远程 server 是 2026 新通道**。
+- **Form/URL auth 模式**：OAuth 完成后留在用户流内；URL 模式交浏览器收 credential、不经 MCP 客户端——**敏感凭证不经 MCP 客户端**。
+- 提升层：可复用 Skill。触发词：Tool Search、.mcp.json、远程 MCP、Form/URL auth。
+
+### 8. 分层技能栈：按层装配的全栈技能组合（来源：agenticskills.io《Build a Full-Stack App with AI Agents》+ besthub《Top 20 Skills》+ lobehub《Skills Marketplace》2026-02-21/2026-06-06/2026-09-27 实拉，与 r292A skills.sh 合并增量）
+- **按层装配**：Layer1 前端（vercel-react-best-practices+frontend-design）→ Layer2 数据库（supabase-postgres-best-practices）→ Layer3 认证（better-auth-best-practices）→ Layer6 部署（vercel-deploy）——**全栈=分层技能栈，每层 npx skills add**。
+- **技术栈自动检测**：从文件/配置/目录结构检测项目栈，自动加载框架特定技能——**栈检测驱动技能加载**。
+- **角色推荐组合**：初创=PRD Generator+Fullstack Developer+Frontend Design；大型=API Design Principles+Code Reviewer——**按项目阶段配技能**。
+- 提升层：可复用 Skill。触发词：分层技能栈、技术栈检测、按层装配、角色推荐。
+
+### 9. 技能市场治理：SkillHub 的 TRACE 评测与 SkillPay（来源：腾讯云开发者社区《什么是 SkillHub》《Lighthouse 与 SkillHub》+ 央广网《SkillPay 支付体系》+ 腾讯网《腾讯回到主场》2026-06-10/2026-06-11/2026-07-17/2026-09-12 实拉，与 r290A SkillHub 数据面合并增量）
+- **TRACE 严选评测框架**：2026-05-21 腾讯科技+SkillHub+玄武实验室发布，国内首个面向 Skill 真实使用场景的五维度评测——**技能市场进入评测驱动**。
+- **SkillPay 支付体系**：2026-07-16 上线，技能分发+Agent 调用+支付同链路，微信支付底层——**付费技能商业化闭环**。
+- **实名发布**：腾讯云人脸核身，加密存储仅用于身份核实——**发布治理=实名**。
+- **规模与产品 Skill 化**：7.8 万→10 万+ Skill、2 个月下载 3000 万+；腾讯会议/地图/企微能力可被 Agent 直接调用——**大厂产品整体 Skill 化**。
+- 提升层：可复用 Skill。触发词：TRACE 评测、SkillPay、实名发布、产品 Skill 化。
+
+### 10. 布鲁姆六阶学习法：WaytoAGI 的学习路径（来源：waytoagi.com《AI 学习路径》+ 9200.cn《通往 AGI 之路》+ waytoagi.feishu.cn《Claude Agent Skills 蓝皮书》2026-09-28/2026-08-28/2026-09-27 实拉，与 r291C 蓝皮书路径合并增量）
+- **布鲁姆六阶**：记忆→理解→应用→分析→评价→创造——**学习路径按认知层次进阶，不跳阶**。
+- **蓝皮书五篇二十章**：从"Skill 是给普通人最好的礼物"到 Agent Team/自动进化——**完整学习曲线的官方结构**。
+- **平台规模**：900 万 AI 学习者、知识库对话+每日精华——**知识库可对话检索**。
+- 提升层：可复用 Skill。触发词：布鲁姆六阶、五篇二十章、知识库对话。
