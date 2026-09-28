@@ -11344,3 +11344,65 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Generative UI 课**：agent 按需生成图表/表单/白板等自定义 UI，不止输出文本——**agent 输出面从文本扩展到 UI**。
 - **Agent Skills with Anthropic**：开放标准格式，一次构建跨 skills-compatible agent 部署——**技能标准化的官方课**。
 - 提升层：可复用 Skill。触发词：Agent Memory、长期记忆基础设施、Generative UI、Skills 开放标准。
+## r293C 十独点（2026-09-29 实拉）
+
+### 1. 六类插件与 Agent Strategy：Dify 插件体系（来源：enterprise-docs.dify.ai《Agent Strategy Plugin》《Tool Plugin》+ lobehub《dify-plugin 六类型》+ pkg.go.dev《dify-plugin-daemon》2026-09-25/2026-09-27/2026-09-23/2026-09-23 实拉，与 r292C 插件安全合并增量）
+- **六类插件分类法**：Tool（API 调用/逻辑/文件处理）/ Trigger（webhook 启动工作流）/ Extension（自定义 HTTP 端点承载 OAuth/webhook）/ Model（加模型供应商）/ Datasource（接外部存储导入文档）/ Agent Strategy（自定义推理策略）——**按职责分类插件，不按实现语言**。
+- **Agent Strategy Plugin**：给 LLM 推理与决策逻辑——选工具、调用、处理结果；可写 Function Calling 策略让模型自主取时间——**推理策略可插拔**。
+- **daemon 生命周期管理**：插件安装/升级/远程调试 key/API 路由全由 daemon 编排，任务状态持久化+超时回收——**插件运行时是守护进程**。
+- 提升层：工具。触发词：六类插件、Agent Strategy、dify-plugin-daemon、插件生命周期。
+
+### 2. $fromAI() 与工具描述：n8n 的 AI 参数面（来源：n8n.io/workflows《AI agent web search using SearchAPI》《AI agents can retrieve assets with Contentful tool MCP server》《Find step-by-step recipes from API Ninjas》2026-02-26/2026-02-28/2026-02-28 实拉，与 r292B Agents/r293A n8n-MCP 合并增量）
+- **AI Expressions `$fromAI()`**：节点参数用 `$fromAI()` 占位，AI 运行时自动填充——**参数由 AI 按上下文生成，不用预绑定**。
+- **工具描述引导 AI 使用**：HTTP Request Tool 的 description 写"Use the query parameter to specify the food..."，AI 凭描述决定何时调用——**工具描述即调用指南**（与 §description 即开关互补：那条管技能 description，本条管工具 description）。
+- **工作流暴露为 MCP 工具**：MCP server trigger 把整个工作流变成外部可调 MCP 工具（call_brave_search_agent），Roo Code 等客户端直接连——**工作流=可发布 MCP 工具**。
+- 提升层：工作流。触发词：$fromAI、工具描述、MCP server trigger、工作流即工具。
+
+### 3. headless runtime：LangFlow 生产部署面（来源：docs.langflow.org《Deploy the Langflow production environment on Kubernetes》《lfx serve》《Flow DevOps Toolkit SDK》2026-09-08/2026-09-16/2026-09-13 实拉，与 r292B bundles/r293B Agentics 合并增量）
+- **Runtime 生产模式**：headless（backend-only）服务只服务 Langflow API、无可视化编辑器，flows 以端点暴露，只跑服务该 flow 所需进程——**生产与编辑分离**（与 r293A Dify JSON Schema 引擎互补：同为"定义与运行解耦"）。
+- **LFX serve**：FastAPI server 暴露 `POST /flows/{flow_id}/run`，必须配 LANGFLOW_API_KEY（公开服务器）——**一条命令把 flow 变 API**。
+- **Flow DevOps Toolkit SDK**：配置 `url + api_key_env` 环境变量引用——**DevOps 化 flow 部署**；外置 PostgreSQL 强推荐，最小 2Gi RAM+1CPU×3 副本。
+- 提升层：工具。触发词：headless runtime、lfx serve、Flow DevOps SDK、生产部署。
+
+### 4. Piece Auth 与预置连接：Activepieces 认证面（来源：activepieces.com/docs《Piece Auth》《Predefined Connections》+ pieces 页 2026-08-25/2026-07-27/2026-09-28 实拉，与 r293A 模板/r293B MCP 合并增量）
+- **Piece Auth 声明式认证**：auth 作为参数定义在 createPiece/createTrigger/createAction，类型在 trigger/action 中可推断；密钥显示为 masked input，用户密码/API key 安全存储——**认证声明即契约**。
+- **predefined connections**：嵌入应用时预置连接，用户免重输认证凭据——**嵌入场景免重复授权**。
+- **763 pieces/5,736 actions**（2026-09 数据），每个 piece 可被 Claude/Cursor/Windsurf 经 MCP 暴露——**平台规模锚点**。
+- 提升层：工具。触发词：Piece Auth、predefined connections、masked input、763 pieces。
+
+### 5. 失败保留与重跑：Make 错误处理深化（来源：help.make.com《Retry error handler》《Break error handler》+ academy.make.com《Incomplete executions》2026-09-08/2025-09-18/2026-05-21 实拉，与 r292A 四策略合并增量）
+- **Retry handler 细节**：暂停失败 bundle、存错误消息+映射+剩余流程，作为"超时角落"；重试次数/间隔按应用重要性调（维护几小时→少次数长间隔；过载→多次短间隔）——**重试参数按场景定**。
+- **Incomplete executions**：启用后失败时保存场景 blueprint+日志（模块设置/输入/输出到失败模块），可重跑防信息丢失——**失败现场可复现重跑**（与 §失败经验按签名索引互补：那条管经验怎么记，本条管"失败现场怎么留"）。
+- **Break 自动解决**：临时错误（ConnectionError 等）自动补跑，顽固错误留存人工——**自动解决临时错**。
+- 提升层：工作流。触发词：Retry handler、incomplete executions、Break 自动解决、失败现场。
+
+### 6. Managed Auth 与收购验证：Pipedream Connect 深化（来源：pipedream.com/docs《Connect Quickstart》《Managed Auth Quickstart》+ agenticindex.io/vendors/pipedream + rywalker.com/research/pipedream 2026-09-22/2026-09-23/2026-09-27/2026-06-11 实拉，与 r292C Connect/r293A ShareLink 合并增量）
+- **Managed Auth 双通道**：服务端 SDK 用 externalUserId 生成 token（2,500+ APIs 代理）/ Connect Link 在无法执行 JS 或开 iFrame 时兜底——**两种认证入口按环境选**。
+- **网关定位**：SSO、访问策略、每用户权限、完整审计跟踪一处置管——**员工安全连 app 给 AI 的网关**（与 §per-tool 最小权限互补：那条管单个工具权限，本条管平台级访问治理）。
+- **Workday 收购**：2025-11-19 宣布、2026-01-31 完成（金额未披露）——**MCP 集成迄今最大验证事件**；SOC 2 Type 2+HIPAA BAA 可签。
+- 提升层：工具。触发词：Managed Auth、Connect Link、externalUserId、Workday 收购。
+
+### 7. Skills API 参数面：container 注入与目录上传（来源：platform.claude.com/docs《Agent Skills overview》《Skills Guide》+ claude.com/blog《computer use, Skills API, Files API》2026-09-29/2026-09-28/2026-08-20 实拉，与 r292B SDK/r293B 仓库结构合并增量）
+- **container 参数指定技能**：`"skills": [{"type":"anthropic","skill_id":"pptx","version":"latest"}]` + code execution tool 前置——**API 级技能注入，模型自带容器**。
+- **目录整包上传**：Python SDK `files_from_dir(dir)` 传整个目录、CLI `ant apply` 传目录本身——**技能目录一键上云**。
+- **同批发布**：Skills API+Files API+computer use 一起上 Claude Platform，Microsoft Foundry 同步可用——**技能 API 进入平台主线**。
+- 提升层：可复用 Skill。触发词：container 参数、skill_id、files_from_dir、ant apply。
+
+### 8. 生态规模与周榜：skills.sh 数据面（来源：rywalker.com/research/skills-sh + dev.to《find-skills Wins》+ CSDN《TOP 100 最受欢迎技能》+ nxplace《Weekly Skill Leaderboard》2026-06-11/2026-09-24/2026-08-03/2026-08-09 实拉，与 r292A 遥测/r293B 三标准合并增量）
+- **规模锚点**：2026-06 ~669,670 个 skills；find-skills 2.0M（后 3.4M）安装、frontend-design 531.8K（后 881.3K）——**技能生态半年增长曲线**。
+- **TOP 结构**：find-skills/grill-me（1.1M）/frontend-design/agent-browser（840.6K）——**搜索/拷问/设计/浏览器四类需求最大**（grill-me 已是我们既有技能，赛道被验证）。
+- **分类周榜**：context-compression 榜首（muratcankoylan，长会话压缩策略）——**上下文压缩是社区头号需求**（与我们 wb-context-compressor 同赛道，印证方向）。
+- 提升层：可复用 Skill。触发词：669K skills、find-skills 3.4M、grill-me 1.1M、context-compression 榜首。
+
+### 9. 能力包时代：GitHub Agent Skills 主线（来源：CSDN《2026年第37周GitHub趋势周报》+ topon.tech《Standout GitHub Repos of 2026》+ github.blog《GitHub Agentic Workflows》2026-09-25/2026-07-22/2026-02-16 实拉，与 r292A 生态/r293A 框架合并增量）
+- **Agent Skills 能力包时代**：openai/skills、anthropics/skills 集中上线，焦点从单体 Agent 转向**可组合/版本化/可审计**的技能模块；Skills 把提示词/工具调用/权限/业务流程封装成独立资产——**技能模块化=2026 主线**（与我们技能治理方向一致）。
+- **GitHub Explore 新增标签**：agent skills、子 Agent 开发、SDLC——**平台官方认可新赛道**。
+- **Agentic Workflows**：2026-02-16 发布，仓库任务自动化（Daily Repo Report 等）——**GitHub 原生 agent 工作流**。
+- **2026 提交量预测**：275M/周、全年约 140 亿（14× 年增长）——**AI 驱动提交爆炸**。
+- 提升层：工具。触发词：能力包时代、可组合/版本化/可审计、agent skills 标签、Agentic Workflows。
+
+### 10. 高级检索与课程退役策略：deeplearning.ai RAG 面（来源：corporate.deeplearning.ai《Building and Evaluating Advanced RAG》《RAG 大课》+ community.deeplearning.ai《Building Multimodal Search and RAG 说明》2026-05-08/2026-04-26/2026-08-13 实拉，与 r293B 记忆工程课合并增量）
+- **两种高级检索法**：sentence-window retrieval（句子级窗口带上下文）与 auto-merging retrieval（自动合并小节点回父节点）——**比基线 RAG 管道表现更好**（与 r293A 多向量检索互补：那条管嵌入粒度，本条管检索窗口策略）。
+- **RAG triad 指标**：上下文相关性/接地性/答案相关性三件套评估管道——**RAG 评估有标准三元组**。
+- **课程退役策略**：模型/库弃用后 Jupyter notebook 退役改 video-only——**代码会过时，架构价值保留**（与 wb-doc-writing 缺口标记法互补：同类"内容过时怎么处理"思路）。
+- 提升层：可复用 Skill。触发词：sentence-window、auto-merging、RAG triad、video-only 退役。
