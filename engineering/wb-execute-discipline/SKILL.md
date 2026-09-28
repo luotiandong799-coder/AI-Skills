@@ -11023,3 +11023,70 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **实操导向的共学项目清单**：图片字幕生成器/网页金句卡片/AI 博客/中文名字生成器/表情包生成器/Life Coach 应用/浏览器智能插件/个人网页与小程序/优质文章推荐网站——**九个小而完整项目串起整套技能**。
 - **晚8点共学资料库**：直播回放+共学文档+智能纪要+海报——**知识沉淀带过程产物，不只给结论**。
 - 提升层：可复用 Skill（学习路径信号）。触发词：Agent Skills 蓝皮书、五篇二十章、九实操项目、晚8点共学。
+## r292A 十独点（2026-09-29 实拉）
+
+### 1. 变量聚合器与多模型适配层：Dify 的分支收敛与网关（来源：Dify《变量聚合节点》+ dify-hosting《Dify Workflows Guide 2026》+ CSDN《Dify 全链路 LLMOps 平台实战》2026-09-03/2026-09-18/2026-09-24 实拉，与 r289A 变量作用域链合并增量）
+- **变量聚合节点**：将多分支输出聚合为一个变量，实现下游统一配置——**不同分支相同作用的变量映射为一个输出变量，避免下游重复定义**。
+- **array 模式**：收集全部分支输出成列表，交给 Code 节点处理——**聚合不只有"选一个"，还能"全收"**。
+- **Output 节点契约**：可多个 Output 节点，但分支无 Output 返回空值——**返回什么由分支显式声明**。
+- **多模型适配层**：Model Adapters+API Gateway 层，原生集成 OpenAI/Anthropic/Google/Qwen/文心/GLM 等——**换模型是换适配器不是改流程**。
+- 提升层：工作流。触发词：变量聚合器、array 模式、Model Adapters、API Gateway、Output 返回空。
+
+### 2. Respond to Webhook：n8n 的同步响应模式与防火墙（来源：n8nlogic《n8n Webhook Node: Triggers, Auth & Responding (2026)》+ n8n workflow《Webhook Firewall》+ devstudioit《n8n orchestrator》2026-06-15/2026-05-30/2026-07-11 实拉）
+- **Immediately 模式的陷阱**：同步短工作流方便，但 40 秒工作流会被调用方/反代超时切断——**只要响应重要就用 Respond to Webhook 节点**，它把响应控制交给独立节点。
+- **认证 Webhook**：请求头校验 secret（如 x-perly-key 对 PERLY_WEBHOOK_SECRET）——**公开端点必须验签，别裸奔**。
+- **Webhook 防火墙**：进 CRM 前过 IF+Regex 拒畸形邮件/垃圾——**入站先过滤，保护下游系统**。
+- **生产/测试双 URL**：保存节点生成 test+production 两个 URL——**开发用 test，上线切 production**。
+- 提升层：工作流。触发词：Respond to Webhook、Immediately 陷阱、x-perly-key、Webhook 防火墙、双 URL。
+
+### 3. Memory bases：LangFlow 的 flow 级持久对话记忆（来源：docs.langflow.org《Manage memory bases》+ Langflow Blog《1.10 released: Memory bases, DB Providers》+ explainx.ai《Langflow Guide 2026》2026-09-02/2026-06-09/2026-06-26 实拉，与 r289B 知识库机制合并增量）
+- **flow 级向量存储**：Memory bases 自动摄取该 flow 的会话历史，跨会话持久——**区别于 session-scoped 内存，换会话不丢上下文**。
+- **embedding 模型复用**：检索复用摄取时的 embedding 模型，查询向量与存储向量保持可比——**换 embedding 模型=老向量全废，别乱换**。
+- **DB Providers**：知识库向量数据库后端可配置（Astra/Chroma 等）——**向量后端可替换，不锁死一家**。
+- 判据：用户要"记得上周聊过什么"→Memory bases；只要本次会话内→普通 chat memory buffer。
+- 提升层：工具。触发词：Memory bases、flow 级记忆、跨会话持久、embedding 复用、DB Providers。
+
+### 4. Webhook 三阶段与 Embeddable MCP：Activepieces 的触发生命周期与宿主登录（来源：activepieces.com《Webhook Trigger》《App Webhooks》《Embeddable MCP》+ CSDN 部署指南 2026-08-28/2026-09-26/2026-09-16/2026-09-24 实拉，与 r291B 嵌入 JWT 流合并增量）
+- **Webhook Trigger 三阶段**：On Enable 用 context.webhookUrl 向第三方注册并把 webhook Id 存 store / On Handshake 完成握手 / 收事件——**生命周期状态要持久化，重启后能恢复**。
+- **App Webhooks 单约束**：Slack/Square 每 OAuth2 应用只支持一个 webhook，需开发者门户手动配 + AP_APP_WEBHOOK_SECRETS 环境变量注入签名密钥——**平台级限制只能外部注册+注入密钥**。
+- **Embeddable MCP**：嵌入时用户在你应用内登录（不经 Activepieces），点一个 Authorize 按钮→后端拿 token 跑该用户自动化——**嵌入场景的 MCP 授权入口在宿主应用**。
+- 提升层：工具。触发词：On Enable/Handshake、webhookUrl、AP_APP_WEBHOOK_SECRETS、Embeddable MCP、Authorize 按钮。
+
+### 5. 错误处理语义：Make 的四策略与蓝图重跑（来源：help.make.com《Rollback error handler》《Retry error handler》《Incomplete executions》+ workflowpick《Error Handling Guide 2026》+ wallet.platoniq《Patterns That Actually Work》2026-09-08/2026-05-21/2026-05-12/2026-05-04 实拉，与 r289C 错误处理器四型合并增量）
+- **四策略语义辨析**：Ignore（继续）/ Retry（重试）/ Rollback（停 run+撤销本 run 已做变更）/ Commit（停止但标记成功）——**Commit 危险但 legacy API 有时必要；Rollback 与 Commit 是"真撤销 vs 假装成功"的分野**。
+- **按错误类型分流**：{{error.type}}/{{error.message}} 变量+Router——Rate Limit 等 1 分钟重试、认证错误通知管理员、数据错误跳过该条——**错误处理是分支逻辑不是单一回调**。
+- **三模块骨架**：每个场景都放 Log 存储模块+Notify 通知模块+Guardrail 显式验证假设模块——**兜底三件套，无聊但防翻车**。
+- **Incomplete executions**：失败时保存 blueprint+模块设置/输入/输出日志，可重跑——**失败现场可回放，不丢信息**。
+- 提升层：工作流。触发词：Rollback error handler、Commit 标记成功、error.type、三模块骨架、Incomplete executions。
+
+### 6. 事件源独立部署：Pipedream 的 source-workflow 解耦（来源：pipedream.com/connect + 腾讯云《Pipedream 自动化平台》+ ai.godsun.pro《Pipedream 基础篇》+ lobehub Pipedream skill 2026-09-21/2026-09-25/2026-09-16/2026-09-23 实拉，与 r291B Connect/r291C AI 面合并增量）
+- **事件源独立于 workflow**：source 先收集事件流（GitHub/Slack/Airtable/RSS），workflow 订阅——**收集与处理解耦，一个 source 可喂多个 workflow**。
+- **单工作流多触发器**：一条 workflow 可挂 HTTP+cron+邮件+app 事件多个触发器——**触发源可组合**。
+- **多语言步骤**：Node.js/Python/Go/Bash 任选，import 任意 npm/python 包——**步骤语言自由，不锁生态**。
+- **Secrets 环境变量**：密钥放环境变量/Secrets 设置，不硬编码在代码——**凭证与代码分离**。
+- 提升层：工具。触发词：事件源、source 独立部署、多触发器、多语言步骤、Secrets 环境变量。
+
+### 7. Skills 注入机制与 API GA：Anthropic 的仓库级技能挂载（来源：platform.claude.com《Skills》+ Cookbook《pick up a repo's .claude/skills automatically》+ localskills.sh《Anthropic Skills Explained》2026-09-26/2026-07-23/2026-07-09 实拉，与历史 anthropics/skills 轮次合并增量）
+- **.claude/skills 自动注入**：session 挂载 GitHub repo 时，根目录 .claude/skills 被扫描，每个 skill 的名称/描述/路径注入 system prompt，模型用内置工具读 SKILL.md——**挂载即生效，无需上传/安装**。
+- **Skills API GA**：2026-08-30 Claude API 上 Skills API 退出 beta——**官方 API 通道就绪**。
+- **三表面**：仓库源（github.com/anthropics/skills）+ 格式规范文档 + 各产品行为——**理解 Anthropic skills 要分三个面**。
+- 提升层：可复用 Skill。触发词：.claude/skills、自动扫描注入、Skills API GA、三表面。
+
+### 8. 遥测排行榜与元技能：skills.sh 的信任度信号（来源：rywalker.com《skills.sh》+ ailinklab《Vercel Is Building the npm for Agent Skills》+ 连享会《Agent Skills 指南(4)》+ sofindai 2026-06-11/2026-05-26/2026-07-19/2026-07-15 实拉，与 r290A SkillHub 数据面合并增量）
+- **规模与头部**：~669,670 skills（2026-06），top=vercel-labs find-skills 2.0M installs、frontend-design 531.8K——**头部集中度极高，找技能先看头部**。
+- **匿名遥测驱动排行榜**：all-time+24h trending+热门三视图，安装量聚合即信任度——**安装量是社群验证信号**。
+- **npx skills add owner/repo**：一条命令装任何 GitHub 托管的 SKILL.md——**分发=git 引用，不依赖中心仓库**。
+- **find-skills 元技能**：以技能管技能——**装一个元技能替你做技能发现**。
+- 提升层：可复用 Skill。触发词：find-skills、遥测排行榜、npx skills add、frontend-design、元技能。
+
+### 9. 生态新事件：Google skills 仓库 / DeepSeek 插件框架 / NVIDIA OpenShell（来源：Google Cloud Blog《Google's Official Skills Repository》+ HelloGitHub《DeepSeek 智能体框架》+ 智东西《NVIDIA 开放智能体安全平台》+ CSDN 周报 2026-04-23/2026-09-28/2026-09-29/2026-09-28 实拉）
+- **Google 官方 skills 仓库**：google/skills 起步 13 skills 聚焦 Google Cloud（AlloyDB/BigQuery/Cloud Run/GKE + Well-Architected 三支柱）——**巨头按同一 SKILL.md 标准发布=标准收敛信号**。
+- **DeepSeek 一切皆插件**：模型适配器/工具/会话日志/智能体循环都是可替换插件+开箱 Web UI——**框架级可插拔，连循环本身都能换**。
+- **NVIDIA OpenShell 安全运行时**：安全运行时边界+全栈治理（软件/硬件/计算/机器人系统）——**agent 安全下沉到运行时层**。
+- 提升层：工具。触发词：google/skills、DeepSeek 插件化、OpenShell、安全运行时。
+
+### 10. Agentic 四模式完整框架：deeplearning.ai 的课程信号（来源：learn.deeplearning.ai《Agentic AI》+ community《Agent Skills with Anthropic》+ community《Agent Memory》+ learn《LLMs as Operating Systems》2026-08-28/2026-01-31/2026-07-15/2026-09-04 实拉，与 r291A 课程信号合并增量）
+- **四设计模式**：Reflection（AI 批评自己产出并迭代，如自动 code review）/ Tool Use（连数据库/API 真做事）/ Planning（拆步骤+遇意外自适应）/ Multi-Agent（多专家分工）——**agentic 的完整模式谱系，缺一个都不算系统化**。
+- **Agent Skills 课程**：开放标准一次构建跨 agent 部署（Anthropic 合作）——**技能标准化进入课程化**。
+- **LLMs as OS**：MemGPT/Editable memory/Agentic RAG——**记忆即操作系统资源**。
+- 提升层：可复用 Skill。触发词：四设计模式、Reflection、Tool Use、Planning、Multi-Agent、MemGPT。
