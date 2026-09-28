@@ -10810,3 +10810,73 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Skills 技能广场三模块**：内置推荐 + SkillHub + 开源社区；免费开放超 7.4 万个专业技能包（微信读书/美团优惠券等第三方生活与工作服务）；**一键安装且不消耗额外 Token**（模块化封装，调用时零额外成本）。
 - **共享工作区**：公共+私密共享文件空间，群组实时共享资料协同文档；**多平台一键接入**：微信/飞书等无缝接入；流程自动化：重复操作沉淀为可复用流程；协作扩展：团队把常用任务封装成能力模块持续调用迭代。
 - 提升层：工作流。触发词：AgentMore、技能广场、多角色并行、共享工作区、不消耗 Token、智谱清言。
+## r291A 十独点（2026-09-29 实拉）
+
+### 1. 工作流节点三面：Dify 的 HTTP 请求/代码沙箱/MCP 节点与四类异常处理（来源：DeepWiki《HTTP Request and Code Execution Nodes》+ Dify legacy docs《error-handling》+ 技术栈《从 Dify 工作流说起》+ CSDN《Dify 第2课：工作流编排实战》2026-09-16/2026-04-23/2026-07-23/2026-07-16 实拉，与 r287A 错误处理/r289B 分支循环合并增量）
+- **HTTP Request 节点模块化架构**：模板变量替换 + 灵活鉴权 + **SSRF 防护** + 超时管理 + 动态请求体序列化（Get/Post/Put/Delete 全方法，响应 JSON/文本/raw 供下游节点使用）。
+- **代码执行节点跑在沙箱里**：安全与资源限制（Python/JS 补足 LLM 计算短板）；敏感 API key 放 Dify 环境变量，不硬编码进节点配置。
+- **MCP 节点**：配置 MCP Server + Tool + 输入 Schema——外部能力已按 MCP 协议提供时，按统一方式发现和调用（与普通 Tool 节点分工：Tool 是平台内已定义能力复用，MCP 是外部协议能力接入）。
+- **四类节点新增异常处理机制**：LLM / HTTP / 代码 / 工具——工作流不是只靠条件分支兜错，关键节点自带错误处理。
+- 提升层：工具。触发词：HttpRequestNode、SSRF 防护、代码执行沙箱、MCP 节点、四类节点异常处理。
+
+### 2. RAG 编排管道：n8n 的向量库节点与缓存优先模式（来源：n8n Docs《RAG in n8n》+ n8n workflows《Cache-first RAG using Redis》《Smarter RAG with enriched retrieval》2026-04-16/2026-03-02 实拉）
+- **Vector Store 节点双操作**：Insert Documents（摄取）与 Retrieve（查询）——agent 访问自定义知识前先入库存量，Default Data Loader 负责分块（Recursive Character Text Splitter），Embedding 模型按需选。
+- **metadata enrichment 异步管道**：调度任务定期抓新 chunk → LLM 给每个 chunk 打元数据（topics/use_case/risks/audience/summary）→ 写入向量库供检索过滤——**检索质量靠入库时的元数据富化，不靠查询时硬凑**。
+- **cache-first RAG**：查询先打 Redis 语义缓存（LangCache），命中直接返回，跳过嵌入+向量检索；未命中才走完整检索链。
+- **rerank 重排序**：Cohere reranker 在语义检索后二次排序——初检 top-k 大、重排后送 LLM 的小，质量与成本兼得。
+- 提升层：工作流。触发词：Vector Store 节点、Default Data Loader、metadata enrichment、cache-first RAG、LangCache、rerank。
+
+### 3. API 三端点：LangFlow 的 Workflow API 与 OpenAI 兼容面（来源：docs.langflow.org《Workflow API》《Flow trigger endpoints》《OpenAI Responses API》2026-09-11/2026-09-07/2026-09-05 实拉）
+- **Workflow API（POST /api/v2/workflows）三模式**：`sync`（等完整 JSON 一次返回）/ `stream`（SSE 实时事件流）/ `background`（先拿 job，再轮询或回调）——**短流程用 sync、长流程用 background、要实时感用 stream**。
+- **OpenAI Responses API 兼容端点（POST /api/v1/responses）**：现有 OpenAI 客户端库只需改 model 名即可调 LangFlow——**换推理后端的迁移成本降到改一个字符串**。
+- **advanced run（/v1/run/advanced/{flow_id}）**：显式传 `inputs`/`outputs`/`tweaks`——精确控制流入参与出参，不像普通 run 依赖模板默认。
+- **build flow 流式事件**：POST /build/$FLOW_ID/flow 返回 job ID 用于流式执行事件（调试与前端进度用）。
+- 提升层：工具。触发词：/api/v2/workflows、sync/stream/background、/api/v1/responses、advanced run、tweaks。
+
+### 4. CODE step 工具面：Activepieces 的源码读取与热重载（来源：activepieces.com/docs《MCP tools》《build-pieces》+ CSDN《Activepieces 开源实战解析》2026-09-27/2026-09-23/2026-05-27/2026-09-24 实拉，与 r289B piece 双重身份合并增量）
+- **MCP 工具 ap_read_step_code**：读取 CODE step 的完整源码+package.json+输入映射——**untruncated**，而 ap_flow_structure 把代码截断到 300 字符；调试时用前者拿全量。
+- **AP_DEV_PIECES 环境变量热重载**：本地开发把 piece 名加进该变量 → 编辑后重启后端自动重建 → 前端刷新即见——**改 piece 不用整装发布**。
+- **createAction 四要素**：name（唯一标识）+ displayName（界面名）+ props（参数声明，Property.ShortText/LongText/Dropdown+refreshers 联动刷新）+ run（执行逻辑，context.propsValue 取参）——**props 声明即表单**，refreshers 让下拉选项依赖其他字段动态刷新。
+- 提升层：工具。触发词：ap_read_step_code、AP_DEV_PIECES、createAction、refreshers、Property.Dropdown。
+
+### 5. Data Store 结构先行：Make 的 schema 契约与跨场景持久化（来源：use-apify.com《Make.com Data Stores: Persist and Query Data Between Scenario Runs》2026-03-15 实拉，与 r284A Make 存储/r289C Pipedream Data Store 合并增量）
+- **结构先行**：建 Data Store 前先定义 Data Structure（schema=列布局）——**先定列再建表**，记录按结构校验，杜绝自由字段漂移。
+- **跨场景持久化**：Data Store 用于场景间传状态（已处理邮件 ID 去重/滚动配置/聚合结果）——**scenario run 之间唯一的内建持久层**（场景变量每次 run 重置，Data Store 不重置）。
+- 与 Pipedream Data Store 分工：Pipedream 是 Brotli 压缩 KV+TTL（轻状态），Make 是结构化的表（带 schema 的记录）——**KV 适合键值状态，结构化表适合去重集合与统计聚合**。
+- 提升层：工作流。触发词：Data Structure、schema 先行、跨场景持久化、scenario run、去重集合。
+
+### 6. HTTP 响应语义：Pipedream 的 customResponse 与事件消费面（来源：pipedream.com/docs《Triggers》《Sources》+ docs-proxy《Component API》+ Upstash《QStash integration》2026-09-28/2026-05-13/2026-09-12 实拉）
+- **HTTP trigger 事件七属性**：body/client_ip/headers/method/path/query/url——一次请求的完整上下文都在 `trigger.event`。
+- **customResponse + this.http.respond()**：自定义 HTTP 响应（状态码+体），source 的 run() 内直接应答客户端。
+- **HTTP sources = 可 API 管理的 request bins**：唯一端点收任意请求，可查看每次请求明细，用后删源——**临时接收入口首选**。
+- **返回非 200 触发外部重试**：默认 Pipedream 恒返 200（吞掉错误），配 QStash 等外部队列时需自定义响应返回非 200，让上游重试——**默认 200 是静默错误放大器**。
+- **事件消费双通道**：REST API 或私有实时 SSE 流消费事件源发出的事件（不只靠 workflow 绑定）。
+- 提升层：工具。触发词：customResponse、this.http.respond、request bins、非 200 重试、SSE 流。
+
+### 7. MCP 连接与工具面治理：两段式 connector 与三暴露面（来源：modelcontextprotocol.io《Connect to remote MCP Servers》+ agentsapis.com《Claude API + MCP》+ essa mamdani《Complete Guide to MCP in 2026》2026-08-26/2026-08-07/2026-05-03 实拉，与 r289C Copilot MCP allowlists 互补——那条管企业治理，本条管协议连接面）
+- **远程 MCP 连接先验证 authenticity**：只连可信源，审查认证时请求的权限，**别让 MCP 端点成为带高权限的入口**；多连接按用途/项目组织，定期清理不用的 connector。
+- **两段式 connector**：`mcp_servers` 条目定义连接（命令/URL）+ `mcp_toolset` 条目配置**启用该服务器的哪些工具**——不是全量加载，工具面按需收窄。
+- **Server 三暴露面**：tools（LLM 可调用的函数）+ resources（只读数据流）+ prompts（可复用模板）——**resources 是只读的，不经过 LLM 生成**。
+- **传输选型**：本地 stdio / 远程 Streamable HTTP（推荐）/ 边缘 WebSocket；ClientSession 管理连接生命周期（连接/列工具/调用）。
+- 提升层：可复用 Skill。触发词：mcp_servers、mcp_toolset、Streamable HTTP、resources 只读、ClientSession。
+
+### 8. Copilot Memory 机制：仓库级记忆的捕获-验证-过期（来源：GitHub Blog《Building an agentic memory system for GitHub Copilot》+ changelog《Copilot Memory now on by default》2026-01-15/2026-03-04 实拉，与 r289C Copilot 治理合并增量）
+- **自动捕获仓库级 memories**：编码规范/架构模式/关键跨文件依赖——**agent 跨会话累积知识，不靠用户显式指令**。
+- **严格单仓库限定 + 应用前对照当前代码验证**：记忆只属于一个仓库，复用前先对照当前代码库校验——**stale 或不准确的上下文绝不使用**。
+- **28 天自动过期**：记忆保鲜靠过期而非人工清理。
+- **Pro/Pro+ 默认开启（public preview）**，跨 coding agent / code review / CLI 生效——**一次学习多入口复用**。
+- **与 Knowledge Base 分工**：Knowledge Base=Enterprise-only（索引自定义文档做 org-aware 建议）；Memory=仓库学习——**文档索引与经验记忆是两回事**。
+- 提升层：工具。触发词：Copilot Memory、仓库级记忆、28 天过期、代码验证防 stale、Knowledge Base Enterprise-only。
+
+### 9. 沙箱三键：OpenClaw 的 mode/scope/backend 与策略分层（来源：docs.openclaw.ai《Sandboxing》《Multi-agent sandbox and tools》《Security》2026-09-26/2026-09-12/2026-09-27 实拉，与 r288 agent-guild 沙箱网络边界互补——那条管网络边界，本条管配置面）
+- **三键控制**：`mode`（off/non-main/all，默认 off）+ `scope`（agent/session/shared，默认 agent）+ `backend`（docker/ssh/openshell，默认 docker）——**模式决定何时沙箱，范围决定沙箱寿命，后端决定隔离技术**。
+- **策略分层优先级**：byProvider allow/deny → tools.sandbox.tools（沙箱工具策略）→ agents.entries.*.tools.sandbox.tools（per-agent）→ tools.subagents.tools（子 agent）——**provider 级→工具级→agent 级→子 agent 级逐层收窄**。
+- **Docker 危险选项显式命名**：dangerouslyAllowReservedContainerTargets / dangerouslyAllowExternalBindSources / dangerouslyAllowContainerNamespaceJoin——**危险能力必须点名才开，默认全关**。
+- **openclaw sandbox CLI**：管理沙箱运行时并检查**生效**策略（不是看配置猜）。
+- 提升层：工具。触发词：sandbox.mode、scope session、backend docker、byProvider、dangerouslyAllow、openclaw sandbox。
+
+### 10. 课程方向信号：DeepLearning.AI 2026 记忆工程与文档智能（来源：deeplearning.ai community《Agent Memory: Building Memory-Aware Agents》《Document AI: From OCR to Agentic Doc Extraction》+ Oracle Blogs 2026-07-15/2026-04-07/2026-03-18 实拉）
+- **记忆工程=一等基础设施**（Agent Memory 课程，与 Oracle 合作）：长期记忆**外部于模型、持久、结构化**——大部分 agent 单会话内正常、会话一结束全丢；记忆工程把它当基础设施建（Oracle AI Database + LangChain + LLM pipelines）。
+- **Document AI 的布局感知**（LandingAI 课程）：传统 OCR 只提文本、**丢失布局信息**——合并单元格表格、图表与标题的关系、多列阅读顺序；agentic 提取重建结构。判据：**文档提取的难点不是字符识别，是布局结构还原**。
+- **Generative UI**（CopilotKit 课程）：agent 按需生成图表/表单/白板等自定义 UI——**agent 输出不止文本，可生成交互界面**。
+- 提升层：可复用 Skill（学习信号/方法方向）。触发词：记忆工程、外部于模型、布局感知 OCR、合并单元格、Generative UI。
