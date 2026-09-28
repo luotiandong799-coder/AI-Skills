@@ -10664,3 +10664,78 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **目录治理分层（选目录 = 选信任模型）**：Anthropic 官方（人工精选/验证）/ skills.sh（开放 npm 式、builder 侧审计）/ SkillsMP（约 190 万从 GitHub 抓取、**无审查——装前自查**）/ SkillHub（7,000+ AI 评估自动打分）/ Agensi（评审后上架 + 8 点安全扫描）。
 - **agentskills.sh 命令商店**：search / info / install / install-skillset（一次装整套）/ list。
 - 提升层：工作流。触发词：skills.sh、SkillsMP、装前自查、技能目录治理、agentskills.sh、install-skillset。
+## r289B 十独点（2026-09-29 实拉）
+
+### 1. 条件分支与循环节点契约：Dify 的 IF/ELSE 与迭代输出（来源：CSDN《Dify工作流多条件分支实战指南》《Dify工作流复杂条件组合技巧》+ dify-hosting.com《Guía Workflows Dify 2026》2026-09-14/2026-08-28/2026-03-01 实拉）
+- **IF/ELSE 节点 = 条件分支**：字符串比较/数值阈值/regex 匹配/包含检查/内容验证，可加多个 Else If 实现复杂路由；**条件表达式用类 JavaScript 语法（如 user.age >= 18）**。
+- **默认路径 = 所有条件不满足时的执行分支**——条件判断可定义"匹配跳转目标节点 + 默认路径"。
+- **建议用 IF/ELSE 做错误处理**：LLM 置信度低时路由到备选响应而非不确定结果——**分支即兜底**。
+- **循环节点输出契约**：`{{#node_id.output#}}` = 循环输出数组、`{{#node_id.iteration#}}` = 当前迭代数。
+- **Jinja2 模板转换**：多变量组合与格式化数据。
+- 提升层：工作流。触发词：IF/ELSE、Else If、默认路径、条件表达式、循环节点、iteration。
+
+### 2. 画布分组与语言扩展：n8n Canvas Groups 与 Code node Python（来源：n8n 官方 Community《Announcing Canvas Groups》+ n8n 官方博客《Easier connections to 70 MCP servers》+ n8n Docs《v1.0 Migration guide》2026-08-28/2026-08-10/2026-09-22 实拉）
+- **Canvas Groups（2.28.3+ 云端与自托管）**：把相关节点折叠成单个命名块——**抽象复杂部分/把大工作流拆成可独立管理的小节**；操作：拖选框或 Shift 点击选择节点 → 成组。
+- **一键连接 70 个 MCP servers（2026-08）**：Airtable/Grafana/Miro/New Relic/Jotform/PandaDoc 加入 Notion/Stripe/GitLab/Apify/Linear/monday.com——**节点面板直接加**。
+- **Code node 支持 Python（pyodide 模块）**：1.0 迁移后可选；**1.0 前添加的 Code node 不可用 Python**——升级注意。
+- **SharePoint 节点默认 v2**（Microsoft Graph API，OAuth2/Entra service principal）；**3.0 breaking：Gmail Trigger 版本 1-1.3 合并为 1.4 行为**（Max Emails per Poll 每次轮询生效，默认 10 最多 50）。
+- 提升层：工具。触发词：Canvas Groups、折叠节点组、Code node Python、pyodide、70 MCP servers、3.0 breaking。
+
+### 3. 知识库机制与 MCP 发布：LangFlow 向量库不重摄取（来源：docs.langflow.org《Manage vector data》《Knowledge Base》2026-09-02/2026-09-21 + CSDN《OpenRAG实战》2026-09-20 实拉，与 r285C LangFlow 记忆合并增量）
+- **knowledge base = 向量数据库存 embeddings**：默认 Chroma 本地存储，可配外部 provider（Chroma Cloud/OpenSearch/Postgres pgvector）；**knowledge bases 与 memory bases 共享 DB Providers**。
+- **knowledge bases 不随每次 flow run 重新摄取数据**——一次摄取多次查询，比每次重建便宜得多。→ 判据：**文档更新才重摄取，flow run 只查不写**。
+- **Langflow 支持发布为 MCP Server**——知识库可直接成为 Claude/Cursor 等 AI 工具的外部知识库（2026 MCP 主流化路径）。
+- **OpenRAG 架构**：Docling 解析 chunk → OpenSearch 向量+关键词混合检索 → Langflow RAG flow。
+- 提升层：工具。触发词：knowledge base、Chroma、pgvector、不重摄取、发布为 MCP Server、OpenRAG。
+
+### 4. piece 双重身份与 auth 契约：Activepieces 构建机制（来源：brightcoding.dev《Activepieces: 400+ MCP Servers》+ activepieces.com/docs《Piece Definition》《Manage pieces》+ LobeHub 技能 2026-06-16/2026-09-07/2026-09-27 实拉，与 r287A Pieces CI/CD 合并增量）
+- **type-safe pieces framework 全 TypeScript**；**每个 piece 双重身份：工作流构建块 + MCP server（AI agents 可发现/调用）**——贡献一个 piece 立即可供 Claude Desktop/Cursor/Windsurf 等 MCP 兼容接口用。
+- **piece auth 定义契约**：oauth2 带 authorizationUrl/tokenUrl/scopes，**clientIdEnvKey/clientSecretEnvKey 从环境变量取**（凭证不进代码）。
+- **Piece Type 二选一**：custom（定制方案）或 community（分享社区）。
+- **CLI 流程**：ap create-piece → npm run build → npm run test；构建后上传 tarball .tgz（`npm run pieces -- build --name=...`）。
+- 提升层：工具。触发词：piece 双重身份、clientIdEnvKey、Piece Type、create-piece、tarball 上传。
+
+### 5. 版本历史与场景恢复：Make 的恢复≠自动保存（来源：help.make.com《Restore and recover scenario》《Introducing Scenario recovery》《Scenario run replay and naming capabilities》2026-07-16/2026-03-18/2026-01-19 实拉）
+- **Version history 保留 60 天**：访问并恢复此前保存的场景版本——回滚非预期改动/排查错误/安全试验新配置；**实验前先保存 baseline 版本**。
+- **Scenario recovery（2026-03 全计划）**：编辑中会话中断（浏览器崩溃/断网/误关 tab）自动保存 blueprint，返回时一键恢复；恢复的版本在 history 明确标记。
+- **关键：recovery ≠ autosave**——恢复后仍需点 Save 才永久生效。→ 判据：**recovery 只是找回，不是提交**。
+- **Scenario run replay**：用之前 run 的 trigger 数据在当前版本重放——测试/解决错误/backfill 无需新 trigger 数据；**自定义 run name** 区分 history 中的 run。
+- **blueprints = 可复用版本**（模块+设置+映射值）可导出/分享/备份（失去访问或换账号时救场）。
+- 提升层：工具。触发词：Version history、baseline、Scenario recovery、recovery 不是 autosave、run replay、blueprints。
+
+### 6. 执行限制与超时治理：Pipedream 的默认值与边界（来源：pipedream.com/docs《Troubleshooting》《Control Flow》《Pause Resume Rerun》+ Integration Atlas《Pipedream》2026-09-28/2026-08-29/2026-06-06 实拉）
+- **默认超时：HTTP/email 触发器 30s、cron 60s**；**每段 workflow segment 上限 12 分钟**——control flow 边界重置 timeout，长跑工作流可跨段执行。
+- **默认内存 256MB/工作流，最大 10GB（套餐相关）**；**内存 ↑ 比例提升 CPU**——CPU 密集任务买更多内存可更快完成（计费随内存涨）。
+- **$.send.http() 请求超时 5 秒**（含 DNS/连接/写 body/服务处理/读 body）。
+- **pd.flow.suspend 默认 24h 自动取消**，可自定义 timeout（毫秒）。
+- **async 警告识别**："This step was still trying to run code when the step ended" = 忘了 await Promise / 没 promisify 回调。
+- 提升层：工具。触发词：默认超时 30 秒、segment 12 分钟、256MB、$.send.http 5 秒、suspend 24 小时、await 警告。
+
+### 7. 记忆加载模式与上下文预算：Claude Code 的 CLAUDE.md 机制（来源：code.claude.com/docs《How Claude remembers your project》+ claudecodeclub.ai《The CLAUDE.md File》+ maketocreate.com《CLAUDE.md Best Practices》2026-09-28/2026-07-25/2026-05-29 实拉，与既有 CLAUDE.md 写作纪律合并增量）
+- **加载模式两值**：`claude-md-or-agents-md`（默认）= 读 CLAUDE.md，或没有 CLAUDE.md/CLAUDE.local.md 时读 AGENTS.md；`claude-md-and-agents-md` = 两者一起读（每目录 CLAUDE.md 在前 AGENTS.md 在后）。
+- **AGENTS.md 去重**：Claude Code 跳过已加载的 AGENTS.md——CLAUDE.md 导入或 symlink 的不重复读。
+- **/init 生成 CLAUDE.md 草稿**（构建命令/测试命令/结构概览/发现的约定）；imports 优先读（@ 导入文件先读，然后读剩余）。
+- **每行花上下文预算**：CLAUDE.md 每次会话加载——保持精简（Anthropic 官方建议）；**Claude 主动过滤与当前任务无关的内容——臃肿文件与你的实际规则竞争注意力**。→ 判据：**文件里每行都要过"这个规则模型猜不到吗"的检查**。
+- 提升层：工具。触发词：claude-md-or-agents-md、AGENTS.md 去重、/init、上下文预算、导入优先读。
+
+### 8. 安全加固清单：GitHub Actions 的 2026 基线（来源：GitHub Blog《Actions 2026 security roadmap》+ safeguard.sh《Security Hardening》+ aikido.dev《GitHub Actions checklist》+ pranava0x0.github.io《CI/CD Hardening》2026-03-30/2026-07-02/2026-07-07/2026-08-21 实拉）
+- **scoped secrets（2026 路线图）**：secrets 绑定显式执行上下文（repo/org、branch/env、workflow identity/paths）；**secrets 不再隐式继承，访问需匹配显式上下文；修改过/意外的 workflow 不会收到凭证**；可信可复用 workflow 无需调用方显式传 secrets。
+- **pin 第三方 action 到完整 commit SHA**：tag 可变——2025 tj-actions/reviewdog retag 攻击（tag 被重指向偷凭证代码，下次运行静默执行）。
+- **GITHUB_TOKEN 默认 read-only**（工作流级默认，job 级按需写）；**公开仓库不用 pull_request_target**。
+- **env: 映射传递不可信输入**（环境变量=净化边界，shell 展开把它当数据不当代码）——适用所有用户可控上下文（PR 标题/issue 正文/commit 消息/分支名/评论）；**用 JS action 替代内联脚本**处理 context 值。
+- **OIDC 替代长期云凭证**：工作流换短命云凭证 scoped 到特定 role，云侧信任策略 pin repo+branch；删除并轮换暴露 secrets；**结构化数据不当 secret（redaction 会失败）**。
+- 提升层：工具。触发词：scoped secrets、pin commit SHA、retag 攻击、GITHUB_TOKEN read-only、env 净化边界、OIDC。
+
+### 9. 技能编写规范：OpenClaw 的 SKILL.md 最小契约（来源：docs.openclaw.ai《Creating skills》《Skills》2026-09-29/2026-09-23 实拉，与 wb-skill-authoring 合并增量）
+- **SKILL.md 最小要求 = frontmatter 的 name + description**；description 显示给 agent + 斜杠命令发现——**保持一行 <160 字符**；name 用小写字母/数字/连字符，**目录名与 frontmatter name 对齐**。
+- **技能放 skills/ 目录（workspace 下）**，可子目录组织；**OpenClaw 遵循 AgentSkills 规范**（与 Anthropic 兼容）。
+- **最佳实践**：简洁明了——指示模型做什么而不是如何成为 AI；**安全第一——skill 用 bash 时确保提示词不允许来自不受信任用户输入的任意命令注入**；本地测试 `openclaw agent --message "use my new skill"`。
+- **Skill Workshop = 审查和批准 agent 起草的技能提案**——agent 起草的 skill 也走人审。
+- 提升层：可复用 Skill。触发词：SKILL.md 最小契约、description 160 字符、目录名对齐、AgentSkills 规范、Skill Workshop。
+
+### 10. 本土化技能平台：腾讯 SkillHub 的机制与商业化（来源：腾讯云《SkillHub 介绍》《产品动态》《SkillPay 上线》+ 央广网《腾讯上线SkillPay》2026-07-14/2026-03/2026-07-16/2026-07-17 实拉，r289A 对比表仅一行提及，本次加深挖掘）
+- **定位**：基于 OpenClaw 官方开源生态的本土化技能平台（腾讯云 Lighthouse 团队）——**ClawHub 国内镜像**，标准化 AI 技能包分发；支持网页+命令行两种方式上传发布，**自带版本管理/安全扫描/质量评分**；技能包遵循统一规范，可直接被 OpenClaw/Cursor/Claude Code 加载。
+- **规模**：半年聚合近 8 万 Skill，月下载量 1700 万+，累计 6000 万+——国内最大 Skill 创建与分发平台；全球 AI Agent 工具总量 44 万+，AI Skill 近 30 万，日均新增 1300+。
+- **SkillPay 支付体系（2026-07）**：技能分发 + Agent 调用 + 技能支付三方打通——Agent 付费技能商业化（企业三步接入）。
+- **三类技能**：内置（平台安全审核+质量验证，覆盖办公/医疗/图像/音视频等 7 大领域；SkillHub 社区来源自动检测新版本自动更新）/ 企业共享（审批后企业内复用）/ 自定义（ZIP 导入）。
+- 提升层：工作流。触发词：SkillHub、ClawHub 镜像、SkillPay、内置技能自动更新、版本管理安全扫描。
