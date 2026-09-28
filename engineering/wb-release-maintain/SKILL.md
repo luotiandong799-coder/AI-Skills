@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.21.0
+version: 1.22.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -243,3 +243,9 @@ sources:
 - **判据**：① **没有文档化的回滚路径，就不该开第二个更新通道**——通道越多、越需要有路返回。② **"我把开关都关了"这个结论需要逐个通道验证**：同一产品的不同外发分属不同控制面（环境变量 / UI），关掉**看得见的那个**不等于把两个都关了。审计外发面时，必须枚举控制面而不是枚举直觉里的开关。
 - **落地动作**：给出回滚路径（具名版本→cd→如何装回）之后才允许发布第二个更新通道；清点遥测时按"控制面清单"（环境变量 / UI / 后台服务）逐项确认，并写下 UI 才能关的那几项。
 - 提升层：工具 / 工作流。触发词：更新通道、没有回滚章节、stable/dev、遥测双开关、部署快照、UI 才能关、控制面清点。
+
+## 限速的正确实现是「入队匀速」，不是丢弃也不是 sleep；漏跑要自动重处理（来源：Make Help Center `scenario-rate-limits-for-instant-triggers.md`（createdAt 2025-07-28）2026-09-29 r285-A 独立实拉 200 逐句核验）
+- 原文："When a scenario reaches its configured scenario run limit, it queues and processes requests gradually as the limit allows" / "Sudden spikes get distributed evenly" / "**Missed executions get reprocessed automatically**"；节奏由系统处理，"no sleep modules needed"。
+- 与已落 ponytail 1.74.0「入队不丢事件」互为官方佐证（那条是计费侧，本条是执行侧）。
+- 同族附证：n8n `N8N_SCHEDULER_MISFIRE_GRACE=60` + `N8N_SCHEDULER_RETENTION=86400` 与 `…_FAILED_RETENTION=604800` —— **成功与失败账本分档定窗**，不要共用一个保留期。
+- ⚠ 同一厂商同一问题的官方答复会随时段翻转（旧社区口径相反），判据以**带 createdAt 的文档页**为准。

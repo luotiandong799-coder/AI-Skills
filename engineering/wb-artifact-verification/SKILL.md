@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.48.0
+version: 2.49.0
 agent_created: true
 ---
 
@@ -405,29 +405,6 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 与 §错误通道入参契约分叉（r209-B）互补——那条管「失败信息长成什么样」，本条管「成功路径上哪些地方会静默变成失败」。
 - 提升层：工作流 / 可复用 Skill。触发词：容量验收、隐性配额、回传通道、扩容、连接池、at-most-once、leader 选举。
 
-## 容量上限要先分「能不能靠加钱/升级解决」：明示不可提升项才是真架构约束（来源：pipedream.com/docs/workflows/limits（2026-09-28 r211-A 独立实拉）+ Make Help Center Webhook 限制 / 套餐配额（同期独立实拉）；与 §隐性配额与扩容的反向效应（r210-B，n8n 64 MiB 回传通道）互补——那条管「成功路径上哪里会静默变失败」，本条管「同一个超限现象在别家是什么语义、以及哪些上限根本买不动」）
-限流与体积超限在两家平台上有**三种互不相识的失败语义**，排障时不能互换解释：
-- **① 显式语义（Pipedream）**：HTTP 请求体默认 **512 KB**，超出返回 **413 Payload Too Large**；平均 **10 QPS** 超出返回 **429**；日志 + step exports + 原始 event 三者**合计 6 MB**，超出抛 **Function Payload Limit Exceeded**，官方原文 **This limit cannot be raised**；`/tmp` 磁盘 **2 GB**，同样 **cannot be raised**；email 触发 payload 另算 **30 MB**（与 HTTP 不同口径）。
-- **② 静默降级为「成功」（Make）**：Webhook 响应超时 **40 秒**未到，Make 返回 **200 Accepted**（不是超时错误）；webhook payload 上限 **5 MB（5,242,880 bytes）**，官方原文 **regardless of the subscription tier**；webhook 若 **5 天（120 小时）**未挂任何场景会被自动停用并返 **410 Gone**；入口 **30 req/s** 超出返 **429**；webhook 日志只留 **3 天**（Enterprise 30 天）。→ **「200」不等于「处理完了」，也不等于「没超限」**。
-- **③ 官方预留的绕过开关**：Pipedream 对 512 KB 提供两种显式旁路——query `pipedream_upload_body=1` 或 header `x-pd-upload-body: 1`，可上传至 **5 TB**。**判据：遇到上限先查文档有没有「官方旁路参数」，有则不是架构约束，是调用方式问题。**
-- **可提升 vs 不可提升的分层（设计阶段必须查清）**：可提升——Pipedream 内存 256 MB→10 GB（且**计费与内存配置成正比**，提性能即提成本）、执行超时 HTTP/Email 默认 30 s、Cron 默认 60 s，上限 Free 300 s / 付费 750 s、QPS 付费可申请上调；Make 最大文件 5 MB(Free)/100 MB(Core)/250 MB(Pro)/500 MB(Teams)/1000 MB(Enterprise)、单次执行 5 min(Free)/40 min(付费)、执行日志 7/30/60 天、数据传输 512 MB(Free) 与 5 GB per 10,000 credits。
-- **验收判据**：列容量约束时给每项打两个标签——「能否提升」与「超限时表现（显式报错 / 静默丢弃 / 伪装成功）」；任何标为 cannot be raised 或 regardless of tier 的项，必须写进设计前提，**不允许用「以后升级套餐」搪塞**；任何「超时也算成功」的返回码（200 Accepted）必须单独断言，否则验收会把降级当成通过。
-- 提升层：工作流 / 工具。触发词：413、429、Payload Too Large、Function Payload Limit、不可提升、cannot be raised、regardless of tier、200 Accepted、静默降级、配额分层、旁路参数、pipedream_upload_body、上限能不能升。
-
-## 升级前读 release notes 要看四个区，其中两个不在「Breaking changes」标题下（来源：docs.n8n.io/release-notes 2026 年 9 月三个版本 2.38.1 / 2.39 / 2.40 逐条实拉，2026-09-28 r211-C；与 debug-loop §读侧先行的灰度升级律（r210-B）互补——那条管「版本错配时先升读侧还是写侧」，本条管「动手之前从发布说明里取什么」）
-- **① 明写破坏性变更（有标题，最容易看）**：2.40 把 CLI 的 `git-connections` 命令组整体换成 `promotion-provider` / `promotion-connection`，原文要求依赖它的脚本做迁移。判据：**CLI / API 级别的替换只影响自动化脚本，不影响 UI 用户，因此最容易被漏掉**——升级前必须 grep 自己的脚本与 CI 里有没有旧命令。
-- **② 分阶段弃用：UI 先消失，底层还在（没有独立标题）**：2.39 把 Code 节点的 `Ask AI` 标签从编辑器 UI 隐藏，原文说明底层设置、API endpoint 与组件**暂时保留**，AI Transform 节点不受影响。判据：**「看不见了」不等于「移除了」，但也绝不是「还在」**；它是一条明确的时间线——UI 先撤，底层后清。凡是依赖某个 UI 入口的流程，在这一刻就已经断了。
-- **③ 纯外观重命名：功能不变但要改引用（最像噪音，实则改路径）**：2.38.1 把 `n8n credits` / `n8n Connect` 更名为 `Gateway credits`，设置页从 `/settings/n8n-connect` 迁到 `/settings/gateway-credits`（旧链接自动重定向），原文明确 cosmetic rename only。判据：**外观重命名改的是文档、书签、脚本里的路径与文案**；不当成变更处理，下次照旧链接找就找不到。
-- **④ 「发布说明里没有的分类」不等于「没有这类变更」**：三个 9 月版本**均未出现 Security fixes 分类条目**，且整页未使用 Breaking changes / Security 分类标题，条目是按 feature 平铺的。判据：**发布说明的格式本身就是观测盲区**——没有安全分类的发布说明，不能读成「本期没有安全问题」，只能读成「这个渠道不披露安全信息」；要安全结论必须另找 advisory / CVE 通道。
-- **验收动作**：升级前后各做一次「四类清单」比对——① 脚本里的 CLI/API 引用是否还在；② 依赖的 UI 入口是否已被隐藏；③ 文档/书签/配置里的名称与路径是否随外观重命名更新；④ 本期安全结论来自哪个独立通道。**只看 Breaking changes 标题的升级验收是残缺的。**
-- 提升层：工作流 / 工具。触发词：release notes、升级前检查、破坏性变更、分阶段弃用、UI 先消失、外观重命名、cosmetic rename、安全修复缺失、发布说明盲区、CLI 命令替换。
-
-## 超限的第 4 态：配额债务会连「还债动作」一起冻结（来源：docs.dify.ai`en/cloud/use-dify/knowledge/knowledge-storage-limit.md` 2026-09-28 r283-A 独立实拉原文核验；续 r211-A §容量上限可提升 vs 不可提升 的三态表）
-- **实证**：Dify 知识库分档 **Sandbox 50 MB / Professional 5 GB / Team 20 GB**，原文「Once usage reaches your plan's limit, the workspace can no longer add knowledge content.」紧接着一句才是关键：**「Uploading documents, adding or editing chunks, restoring archived documents, and re-indexing operations such as changing chunk settings are all blocked」，且「including in knowledge bases that use Economical indexing」**。另有一条降级态：**「If a downgrade or an expired subscription leaves your data above the new plan's limit, nothing is deleted: your apps can still retrieve from these knowledge bases, but adding content stays blocked」**。
-- **判据**：r211-A 的三态（显式报错 / 静默丢弃 / 伪装成功）描述的都是**被拒的那一次请求怎么失败**；本条是第四态——**超限会把既有内容的自救与整改通道一并锁死**：改分块参数、重索引、恢复归档这些"为了降回限额以下而必须做的动作"本身也被禁。于是「先删点东西腾空间」这条路在写侧冻结时走不通，只能删文档或升配。
-- **验收动作**：报容量约束时必须同时回答两个问题——① 超限时**新写入**怎么失败；② 超限状态下**整改动作本身**是否仍可执行。二者答案不同的系统（检索仍可用、写侧全冻）必须分开断言，**不许用"还能读"推导出"还能修"**。
-- 提升层：工作流 / 工具。触发词：配额冻结、超限锁死整改、re-indexing blocked、降级后只读、还债动作被禁、存储分档、50 MB / 5 GB / 20 GB。
-
 ## 值语义判据必须具名：同一系统里可以并存两套「空」，判空不声明口径即假成功（来源：docs.n8n.io`build/work-with-data/transform-data/expression-reference/{string,number}.md` 与 expression-reference.md 2026-09-28 r283-A 独立实拉逐句核验）
 - **实证**：① `String.toNumber()` 原文「**Throws an error** if the string doesn't start with a valid number」——不是静默 NaN；② `String.toBoolean()` 原文「`0`, `false` and `no` resolve to `false`, everything else to `true`. **Case-insensitive**」；③ **两套空判据并存**：`Number.isEmpty()` 原文「Returns `true` if the number is `0`, `NaN`, `null`, or `undefined`」（**含 0**），而 `$ifEmpty` 的空集是「`undefined`, `null`, an empty string `''`, an array where `value.length` returns `false`, or an object where `Object.keys(value).length` returns `false`」（**不含 0**）。④ 官方自己给了警示 hint：原文「`isEmpty()` **isn't a null check**. On a number it treats `0` as empty, so `$json.count.isEmpty()` returns `true` for **both a missing field and a field set to `0`**」，并指定规避法「compare directly … or use the **exists** operator in the If node」。
 - **判据**：任何"判空 / 判假 / 判是否为数"的断言，必须**先声明用哪一套判据**；两套判据在同一运行时内可共存且对同一输入给出相反答案（`0` 在 Number.isEmpty 下为真、在 $ifEmpty 下为假）。把**「字段缺失」与「字段取值为零」被同一谓词合并**视为明确的假成功源——它让"没有数据"和"数据为零"无法区分。强转也同理：**抛错与静默转换是两种失败面**，必须先确认该系统是哪种。
@@ -490,3 +467,8 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **实证**：SafeEvolve（`verifier-decomposed rewards` + 两阶段 SFT-RL）在 AgentDojo 上对 Qwen3.5-4B 取得 **ASR 降低 3×** 的同时**良性效用 59.79% → 61.86%**——安全与能力**不必然此消彼长**。对照 DeFuse（r166A）只给攻击侧 34.3%→7.5–8.1%，缺良性侧数据。
 - **判据**：任何以"更安全"为卖点的改动（收紧权限、加拦截、删能力、加免责），验收必须**同跑一套良性用例集**并给出前后对比数字。缺良性集就无法区分「真变强」与「把能力一起砍了」——后者在攻击指标上同样好看。反向同理：报告里出现"安全性大幅提升 + 未说明良性侧"即判**证据不完整**，不因方向正确而放行。
 - 提升层：工具。触发词：同测良性用例、安全效用权衡、ASR 降了但能力呢、防护改动验收、benign utility。
+
+## 判「它没执行」之前先证明「它在当前视图里可见」：默认过滤器会制造假故障（来源：Make Help Center History 页 + 客服口径，2026-09-29 经 Qoder r319-Q-A 实拉取证 + WB 同域独立实拉 200 核验）
+- History 页默认勾选 "Hide checked runs"，官方客服证实由此产生"漏跑"错觉；同页另一形态：保密执行的 Replay 按钮**要么消失、要么可点但提示 cannot be displayed**，官方未给 exact conditions。
+- 附证：Dify 侧日志按套餐保留 30 天、"Older entries are permanently deleted—upgrading later doesn't recover them"——**历史证据会永久缺席**，排障时不能假设"以后升级就能取回"。
+- 与 §闸门自带拦截计数（2.46.0）是同一坑的两面：那条是拦下不记账，本条是记了账但对当前视图不可见。

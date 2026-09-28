@@ -1411,3 +1411,26 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - **判据**：凡给技能打综合分时，把"安全/隐私/授权/副作用"列为**不变量项**——它们不是扣分项，是门；任何把它算进加权平均的评分设计都在掩盖破线。
 - 提升层：工作流。触发词：不变量、不可平均、标量平均掩盖、门而非扣分、数据集版本固定、事故回流评测。
 
+<!-- ==== r285 下沉（原文零删减；SKILL.md 正文逼近 500 行预算，按最旧批次移出）==== -->
+## 容量上限要先分「能不能靠加钱/升级解决」：明示不可提升项才是真架构约束（来源：pipedream.com/docs/workflows/limits（2026-09-28 r211-A 独立实拉）+ Make Help Center Webhook 限制 / 套餐配额（同期独立实拉）；与 §隐性配额与扩容的反向效应（r210-B，n8n 64 MiB 回传通道）互补——那条管「成功路径上哪里会静默变失败」，本条管「同一个超限现象在别家是什么语义、以及哪些上限根本买不动」）
+限流与体积超限在两家平台上有**三种互不相识的失败语义**，排障时不能互换解释：
+- **① 显式语义（Pipedream）**：HTTP 请求体默认 **512 KB**，超出返回 **413 Payload Too Large**；平均 **10 QPS** 超出返回 **429**；日志 + step exports + 原始 event 三者**合计 6 MB**，超出抛 **Function Payload Limit Exceeded**，官方原文 **This limit cannot be raised**；`/tmp` 磁盘 **2 GB**，同样 **cannot be raised**；email 触发 payload 另算 **30 MB**（与 HTTP 不同口径）。
+- **② 静默降级为「成功」（Make）**：Webhook 响应超时 **40 秒**未到，Make 返回 **200 Accepted**（不是超时错误）；webhook payload 上限 **5 MB（5,242,880 bytes）**，官方原文 **regardless of the subscription tier**；webhook 若 **5 天（120 小时）**未挂任何场景会被自动停用并返 **410 Gone**；入口 **30 req/s** 超出返 **429**；webhook 日志只留 **3 天**（Enterprise 30 天）。→ **「200」不等于「处理完了」，也不等于「没超限」**。
+- **③ 官方预留的绕过开关**：Pipedream 对 512 KB 提供两种显式旁路——query `pipedream_upload_body=1` 或 header `x-pd-upload-body: 1`，可上传至 **5 TB**。**判据：遇到上限先查文档有没有「官方旁路参数」，有则不是架构约束，是调用方式问题。**
+- **可提升 vs 不可提升的分层（设计阶段必须查清）**：可提升——Pipedream 内存 256 MB→10 GB（且**计费与内存配置成正比**，提性能即提成本）、执行超时 HTTP/Email 默认 30 s、Cron 默认 60 s，上限 Free 300 s / 付费 750 s、QPS 付费可申请上调；Make 最大文件 5 MB(Free)/100 MB(Core)/250 MB(Pro)/500 MB(Teams)/1000 MB(Enterprise)、单次执行 5 min(Free)/40 min(付费)、执行日志 7/30/60 天、数据传输 512 MB(Free) 与 5 GB per 10,000 credits。
+- **验收判据**：列容量约束时给每项打两个标签——「能否提升」与「超限时表现（显式报错 / 静默丢弃 / 伪装成功）」；任何标为 cannot be raised 或 regardless of tier 的项，必须写进设计前提，**不允许用「以后升级套餐」搪塞**；任何「超时也算成功」的返回码（200 Accepted）必须单独断言，否则验收会把降级当成通过。
+- 提升层：工作流 / 工具。触发词：413、429、Payload Too Large、Function Payload Limit、不可提升、cannot be raised、regardless of tier、200 Accepted、静默降级、配额分层、旁路参数、pipedream_upload_body、上限能不能升。
+
+## 升级前读 release notes 要看四个区，其中两个不在「Breaking changes」标题下（来源：docs.n8n.io/release-notes 2026 年 9 月三个版本 2.38.1 / 2.39 / 2.40 逐条实拉，2026-09-28 r211-C；与 debug-loop §读侧先行的灰度升级律（r210-B）互补——那条管「版本错配时先升读侧还是写侧」，本条管「动手之前从发布说明里取什么」）
+- **① 明写破坏性变更（有标题，最容易看）**：2.40 把 CLI 的 `git-connections` 命令组整体换成 `promotion-provider` / `promotion-connection`，原文要求依赖它的脚本做迁移。判据：**CLI / API 级别的替换只影响自动化脚本，不影响 UI 用户，因此最容易被漏掉**——升级前必须 grep 自己的脚本与 CI 里有没有旧命令。
+- **② 分阶段弃用：UI 先消失，底层还在（没有独立标题）**：2.39 把 Code 节点的 `Ask AI` 标签从编辑器 UI 隐藏，原文说明底层设置、API endpoint 与组件**暂时保留**，AI Transform 节点不受影响。判据：**「看不见了」不等于「移除了」，但也绝不是「还在」**；它是一条明确的时间线——UI 先撤，底层后清。凡是依赖某个 UI 入口的流程，在这一刻就已经断了。
+- **③ 纯外观重命名：功能不变但要改引用（最像噪音，实则改路径）**：2.38.1 把 `n8n credits` / `n8n Connect` 更名为 `Gateway credits`，设置页从 `/settings/n8n-connect` 迁到 `/settings/gateway-credits`（旧链接自动重定向），原文明确 cosmetic rename only。判据：**外观重命名改的是文档、书签、脚本里的路径与文案**；不当成变更处理，下次照旧链接找就找不到。
+- **④ 「发布说明里没有的分类」不等于「没有这类变更」**：三个 9 月版本**均未出现 Security fixes 分类条目**，且整页未使用 Breaking changes / Security 分类标题，条目是按 feature 平铺的。判据：**发布说明的格式本身就是观测盲区**——没有安全分类的发布说明，不能读成「本期没有安全问题」，只能读成「这个渠道不披露安全信息」；要安全结论必须另找 advisory / CVE 通道。
+- **验收动作**：升级前后各做一次「四类清单」比对——① 脚本里的 CLI/API 引用是否还在；② 依赖的 UI 入口是否已被隐藏；③ 文档/书签/配置里的名称与路径是否随外观重命名更新；④ 本期安全结论来自哪个独立通道。**只看 Breaking changes 标题的升级验收是残缺的。**
+- 提升层：工作流 / 工具。触发词：release notes、升级前检查、破坏性变更、分阶段弃用、UI 先消失、外观重命名、cosmetic rename、安全修复缺失、发布说明盲区、CLI 命令替换。
+
+## 超限的第 4 态：配额债务会连「还债动作」一起冻结（来源：docs.dify.ai`en/cloud/use-dify/knowledge/knowledge-storage-limit.md` 2026-09-28 r283-A 独立实拉原文核验；续 r211-A §容量上限可提升 vs 不可提升 的三态表）
+- **实证**：Dify 知识库分档 **Sandbox 50 MB / Professional 5 GB / Team 20 GB**，原文「Once usage reaches your plan's limit, the workspace can no longer add knowledge content.」紧接着一句才是关键：**「Uploading documents, adding or editing chunks, restoring archived documents, and re-indexing operations such as changing chunk settings are all blocked」，且「including in knowledge bases that use Economical indexing」**。另有一条降级态：**「If a downgrade or an expired subscription leaves your data above the new plan's limit, nothing is deleted: your apps can still retrieve from these knowledge bases, but adding content stays blocked」**。
+- **判据**：r211-A 的三态（显式报错 / 静默丢弃 / 伪装成功）描述的都是**被拒的那一次请求怎么失败**；本条是第四态——**超限会把既有内容的自救与整改通道一并锁死**：改分块参数、重索引、恢复归档这些"为了降回限额以下而必须做的动作"本身也被禁。于是「先删点东西腾空间」这条路在写侧冻结时走不通，只能删文档或升配。
+- **验收动作**：报容量约束时必须同时回答两个问题——① 超限时**新写入**怎么失败；② 超限状态下**整改动作本身**是否仍可执行。二者答案不同的系统（检索仍可用、写侧全冻）必须分开断言，**不许用"还能读"推导出"还能修"**。
+- 提升层：工作流 / 工具。触发词：配额冻结、超限锁死整改、re-indexing blocked、降级后只读、还债动作被禁、存储分档、50 MB / 5 GB / 20 GB。

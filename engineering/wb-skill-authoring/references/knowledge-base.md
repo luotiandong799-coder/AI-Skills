@@ -2223,3 +2223,29 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 
 
 ---
+
+<!-- ==== r285 下沉（原文零删减；SKILL.md 正文逼近 500 行预算，按最旧批次移出）==== -->
+## 市场 changelog 可能是「同步管道」自动生成，不是作者手写（来源：api.skillhub.cn/api/v1/skills/<slug> 2026-09-28 r313-Q-A 实拉；r279-A 复核）
+- **实证**：腾讯 SkillHub 技能详情 JSON 里 `latestVersion.changelog` 原文为 "Synced by skillhub pipeline"，`namespace` 写成 `@clawhub_zachary2024/amazon-deep-research-v4`（`@clawhub_` 前缀=上游镜像来源），bundle 内出现 clawhub.ai 域名——该市场条目是上游仓库的**自动同步副本**。
+- **判据**：① 装前审查把 **changelog 文本真伪**列为一条——形如 "Synced by … pipeline"、无实质变更描述的，版本历史不可信，**必须回溯上游仓库 commit/tag** 再决定；② 同一技能在多市场镜像时，**市场版本号 ≠ 上游版本号**，去重键取「作者标识 + 内容摘要」而非「市场 + 版本号」；③ 我方镜像型条目要在元数据写「上游源 + 本仓同步时刻」，别让人误读成自研。
+- 提升层：可复用 Skill / 工作流。触发词：changelog 伪迹、Synced by pipeline、镜像副本、上游指纹、市场版本号不可信、去重键。
+
+## 技能包上限是「软上限 + 静默截断」，不是报错（来源：docs.openclaw.ai/clawhub/skill-format + langflow releases/latest 2026-09-28 r313-Q-A 实拉；r279-A 复核）
+- **实证**：ClawHub 规定 "Total bundle size: 50MB"，实际解析 "SKILL.md + up to ~40 bounded UTF-8 files (best-effort cap)"——**超出不报错，多余文件被静默丢弃**；Langflow 1.12.3 修复项 "Enforce aggregate expanded-size limit for flow ZIP imports"（限**解压后总大小**，非压缩包体积）。ClawHub 全站 MIT-0，**「paid skills / per-skill pricing / paywalls / revenue sharing」验证不通过**——部分市场用统一许可直接排除付费面。
+- **判据**：① 写多文件技能时**内容排位即预算分配**——被平台丢弃的文件不报错，关键规则/必需脚本必须落预算内（前 N 个文件），超出的部分按"不存在"设计降级路径；② 体积预算区分**压缩体积 vs 解压后总大小**两口径（zip 导入类只验前者=zip-bomb 面）；③ 学 `.clawhubignore` 这类**作者侧显式排除清单**，与其被动截断不如主动声明"哪些文件不进包"。
+- 提升层：可复用 Skill。触发词：软上限、静默截断、best-effort cap、解压后总大小、忽略清单、付费面被许可排除。
+
+## 导航/聚合型技能要「负声明 + 空依赖数组」自证零执行面（来源：raw.githubusercontent.com/zai-org/GLM-skills/main/glm-master-skill/SKILL.md 2026-09-28 r312-Q-B 实拉；r279-A 复核）
+- **实证**：智谱官方 `glm-master-skill` 把自身定性为 documentation-only master skill，正文用 ✅/❌ 四行写明「只介绍技能、只给安装链接、**不运行任何本地脚本、不使用 subprocess**」，frontmatter 同时给 `metadata.openclaw.requires.env: []`、`bins: []`——**以空数组向宿主证明无权限需求**。
+- **判据**：凡「聚合/导航/目录」类技能（我方 index 型条目同理）**必须在 description 与正文双处显式声明零执行面**，并把 requires 的 env/bins 写成**空数组而非省略**——省略＝宿主无法区分"无需求"与"未声明"，这是依赖门（r215-Q-A）的反向面。
+- 提升层：可复用 Skill。触发词：负声明、零执行面、空依赖数组、documentation-only、requires 省略、导航技能自证。
+
+## 分发通道决定「谁能背后改我的技能」，双通道并装=每个技能两份（来源：github.com/mattpocock/skills README + .agents/adr/0002 2026-09-28 r312-Q-B 实拉；r279-C 复核）
+- **实证**：mattpocock/skills 同仓两条分发路相反哲学——Claude Code plugin 是 **managed read-only bundle、自动更新（"subscribe rather than fork"）**，skills.sh 是**把可编辑文件拷进你 repo（"Nothing updates behind your back; pull on demand with npx skills update"）**；README 警告 **"installing both leaves you with every skill twice"**；作者把决策写成 ADR 文件留档。
+- **判据**：① 同一技能禁止同时走「订阅制插件」与「文件拷贝」两条通道装进同一宿主，装前查重复；② 订阅制条目按"可能被上游改写"对待（升级即改行为、我方无否决权），文件拷贝制按"版本冻结、升级须显式动作"对待；③ 这类分发选择用 ADR/一行决策留痕，不散在聊天记录。
+- 提升层：工作流。触发词：分发双通道、订阅制 vs 文件拷贝、安装重复、ADR 留痕、上游改写。
+
+## 同一份 SKILL.md 有「规范字段集」与「宿主扩展字段集」两轨，走错轨是硬报错（来源：Claude Code 技能文档 `code.claude.com/docs/en/skills.md` + anthropics/skills `.claude-plugin/marketplace.json`，2026-09-28 r315-Q-C 实拉；与 §分发双通道（r312-Q-B 上游可被改写）互补——那条管"分发通道风险"，本条管"一份文件两种合法字段集"）
+- **实证**：规范/可分发侧经 `package_skill.py`/上传路径**只接受 `name, description, license, compatibility, metadata, allowed-tools` 六个字段**，原文 **"packaging or upload fails with a hard error"**；而宿主增强侧（Claude Code 本地）另有一整套扩展字段——`context: fork`（+`agent`/`background`）、`model`、`arguments`/`$name` 占位符、`disable-model-invocation`、`user-invocable`、`disallowed-tools`、`${CLAUDE_SKILL_DIR}`/`${CLAUDE_PLUGIN_ROOT}`/`${CLAUDE_PLUGIN_DATA}`，且**"All fields are optional. Only `description` is recommended"**（本地侧宽松）。第二处同轨证据：Anthropic marketplace.json 用 **`strict:false`** + 每个 plugin **显式列 `skills:["./skills/xlsx",…]`**；仓内 `spec/agent-skills-spec.md` 已降为一句指针 **"The spec is now located at agentskills.io/specification"**（规范外移到中立站）。
+- **判据**：① **技能文件要标"目标轨"**——凡使用宿主专有字段（fork 上下文、指定 model、占位符参数）即**放弃跨宿主可分发性**，打包前必须按六字段白名单自检，多一个字段就预期失败；② **唯一安全的扩展位是 `metadata` map**（这把 r185-A"元数据扩展槽防冲突"从建议升级为有报错依据的规则，二者合并）；③ 学 `strict:false`+显式清单做法：**技能索引里逐个列出技能路径，不靠目录扫描**——目录扫描会把半成品/备份目录一并暴露（我方 `D:\腾讯AI\skills` 有 .bak 与临时目录时同风险）；④ 规范外移到中立域（agentskills.ai）后，**仓内不应再维护规范副本**，我方技能仓里的"规范说明"也应只留指针（与 §镜像只指向本体、禁另立副本 同构）。
+- 提升层：可复用 Skill。触发词：字段双轨、打包六字段、strict:false、metadata 扩展槽、规范外移指针、显式技能清单。

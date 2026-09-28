@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.44.0
+version: 3.45.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -377,31 +377,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 与 §市场同内容多副本与分数分叉 互补——那条给「同描述副本怎么挑」，本条给「怎么一次性找出这批副本」（按作者聚类）。
 - 提升层：工作流 / 可复用 Skill。触发词：作者聚类、技能去重、批量判重、同作者多技能、作者前缀、供给方指纹。
 
-## 市场 changelog 可能是「同步管道」自动生成，不是作者手写（来源：api.skillhub.cn/api/v1/skills/<slug> 2026-09-28 r313-Q-A 实拉；r279-A 复核）
-- **实证**：腾讯 SkillHub 技能详情 JSON 里 `latestVersion.changelog` 原文为 "Synced by skillhub pipeline"，`namespace` 写成 `@clawhub_zachary2024/amazon-deep-research-v4`（`@clawhub_` 前缀=上游镜像来源），bundle 内出现 clawhub.ai 域名——该市场条目是上游仓库的**自动同步副本**。
-- **判据**：① 装前审查把 **changelog 文本真伪**列为一条——形如 "Synced by … pipeline"、无实质变更描述的，版本历史不可信，**必须回溯上游仓库 commit/tag** 再决定；② 同一技能在多市场镜像时，**市场版本号 ≠ 上游版本号**，去重键取「作者标识 + 内容摘要」而非「市场 + 版本号」；③ 我方镜像型条目要在元数据写「上游源 + 本仓同步时刻」，别让人误读成自研。
-- 提升层：可复用 Skill / 工作流。触发词：changelog 伪迹、Synced by pipeline、镜像副本、上游指纹、市场版本号不可信、去重键。
-
-## 技能包上限是「软上限 + 静默截断」，不是报错（来源：docs.openclaw.ai/clawhub/skill-format + langflow releases/latest 2026-09-28 r313-Q-A 实拉；r279-A 复核）
-- **实证**：ClawHub 规定 "Total bundle size: 50MB"，实际解析 "SKILL.md + up to ~40 bounded UTF-8 files (best-effort cap)"——**超出不报错，多余文件被静默丢弃**；Langflow 1.12.3 修复项 "Enforce aggregate expanded-size limit for flow ZIP imports"（限**解压后总大小**，非压缩包体积）。ClawHub 全站 MIT-0，**「paid skills / per-skill pricing / paywalls / revenue sharing」验证不通过**——部分市场用统一许可直接排除付费面。
-- **判据**：① 写多文件技能时**内容排位即预算分配**——被平台丢弃的文件不报错，关键规则/必需脚本必须落预算内（前 N 个文件），超出的部分按"不存在"设计降级路径；② 体积预算区分**压缩体积 vs 解压后总大小**两口径（zip 导入类只验前者=zip-bomb 面）；③ 学 `.clawhubignore` 这类**作者侧显式排除清单**，与其被动截断不如主动声明"哪些文件不进包"。
-- 提升层：可复用 Skill。触发词：软上限、静默截断、best-effort cap、解压后总大小、忽略清单、付费面被许可排除。
-
-## 导航/聚合型技能要「负声明 + 空依赖数组」自证零执行面（来源：raw.githubusercontent.com/zai-org/GLM-skills/main/glm-master-skill/SKILL.md 2026-09-28 r312-Q-B 实拉；r279-A 复核）
-- **实证**：智谱官方 `glm-master-skill` 把自身定性为 documentation-only master skill，正文用 ✅/❌ 四行写明「只介绍技能、只给安装链接、**不运行任何本地脚本、不使用 subprocess**」，frontmatter 同时给 `metadata.openclaw.requires.env: []`、`bins: []`——**以空数组向宿主证明无权限需求**。
-- **判据**：凡「聚合/导航/目录」类技能（我方 index 型条目同理）**必须在 description 与正文双处显式声明零执行面**，并把 requires 的 env/bins 写成**空数组而非省略**——省略＝宿主无法区分"无需求"与"未声明"，这是依赖门（r215-Q-A）的反向面。
-- 提升层：可复用 Skill。触发词：负声明、零执行面、空依赖数组、documentation-only、requires 省略、导航技能自证。
-
-## 分发通道决定「谁能背后改我的技能」，双通道并装=每个技能两份（来源：github.com/mattpocock/skills README + .agents/adr/0002 2026-09-28 r312-Q-B 实拉；r279-C 复核）
-- **实证**：mattpocock/skills 同仓两条分发路相反哲学——Claude Code plugin 是 **managed read-only bundle、自动更新（"subscribe rather than fork"）**，skills.sh 是**把可编辑文件拷进你 repo（"Nothing updates behind your back; pull on demand with npx skills update"）**；README 警告 **"installing both leaves you with every skill twice"**；作者把决策写成 ADR 文件留档。
-- **判据**：① 同一技能禁止同时走「订阅制插件」与「文件拷贝」两条通道装进同一宿主，装前查重复；② 订阅制条目按"可能被上游改写"对待（升级即改行为、我方无否决权），文件拷贝制按"版本冻结、升级须显式动作"对待；③ 这类分发选择用 ADR/一行决策留痕，不散在聊天记录。
-- 提升层：工作流。触发词：分发双通道、订阅制 vs 文件拷贝、安装重复、ADR 留痕、上游改写。
-
-## 同一份 SKILL.md 有「规范字段集」与「宿主扩展字段集」两轨，走错轨是硬报错（来源：Claude Code 技能文档 `code.claude.com/docs/en/skills.md` + anthropics/skills `.claude-plugin/marketplace.json`，2026-09-28 r315-Q-C 实拉；与 §分发双通道（r312-Q-B 上游可被改写）互补——那条管"分发通道风险"，本条管"一份文件两种合法字段集"）
-- **实证**：规范/可分发侧经 `package_skill.py`/上传路径**只接受 `name, description, license, compatibility, metadata, allowed-tools` 六个字段**，原文 **"packaging or upload fails with a hard error"**；而宿主增强侧（Claude Code 本地）另有一整套扩展字段——`context: fork`（+`agent`/`background`）、`model`、`arguments`/`$name` 占位符、`disable-model-invocation`、`user-invocable`、`disallowed-tools`、`${CLAUDE_SKILL_DIR}`/`${CLAUDE_PLUGIN_ROOT}`/`${CLAUDE_PLUGIN_DATA}`，且**"All fields are optional. Only `description` is recommended"**（本地侧宽松）。第二处同轨证据：Anthropic marketplace.json 用 **`strict:false`** + 每个 plugin **显式列 `skills:["./skills/xlsx",…]`**；仓内 `spec/agent-skills-spec.md` 已降为一句指针 **"The spec is now located at agentskills.io/specification"**（规范外移到中立站）。
-- **判据**：① **技能文件要标"目标轨"**——凡使用宿主专有字段（fork 上下文、指定 model、占位符参数）即**放弃跨宿主可分发性**，打包前必须按六字段白名单自检，多一个字段就预期失败；② **唯一安全的扩展位是 `metadata` map**（这把 r185-A"元数据扩展槽防冲突"从建议升级为有报错依据的规则，二者合并）；③ 学 `strict:false`+显式清单做法：**技能索引里逐个列出技能路径，不靠目录扫描**——目录扫描会把半成品/备份目录一并暴露（我方 `D:\腾讯AI\skills` 有 .bak 与临时目录时同风险）；④ 规范外移到中立域（agentskills.ai）后，**仓内不应再维护规范副本**，我方技能仓里的"规范说明"也应只留指针（与 §镜像只指向本体、禁另立副本 同构）。
-- 提升层：可复用 Skill。触发词：字段双轨、打包六字段、strict:false、metadata 扩展槽、规范外移指针、显式技能清单。
-
 ## 技能正文必须内建「宿主既有约定 > 本技能全部指南」的让渡条款（来源：raw.githubusercontent.com/anthropics/skills/main/skills/xlsx/SKILL.md 2026-09-28 r312-Q-B 实拉；r279-C 复核）
 - **实证**：Anthropic 官方 `skills/xlsx/SKILL.md` 硬约束末尾原文 "When editing an existing file, match its conventions exactly — they override every guideline here"；同文件要求**每个假设/硬编码数字就地注明并给可核外部出处**（样本 "Company 10-K FY2024 Page 45 [SEC EDGAR URL]"）。
 - **判据**：写技能时显式给一条优先级声明——**操作既有工件/既有仓库时以对象自身约定为准，本技能规则让位**，否则技能会把自身风格强加到用户既有产物上（与 0.7「宿主产物不可逆改动需谨慎」同向）；「逐处内联标注假设 + 外部可核出处」比现有 AV 的"结论级标注"更细一档，作 AV 产物侧实例。
@@ -470,3 +445,24 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **实证**：规范写明正文**可在发现时缓存、也可在 activation 时才读**（"reading it at activation time"），并支持**跨激活热更新**与重复激活 **skip re-injection**；而 WB 自有 r175-C 已落「渲染正文进入即常驻、后续轮次不重读文件」。**同一行为两说**。
 - **判据**：**不要假设技能正文修改在当前会话内生效**——改完技能要**新开会话复验**，否则会把"实现没重读"误判成"我改错了"。写技能时同理：不要在正文里写"如果你刚改过我，请重新读我"这类依赖客户端行为的指令。
 - 提升层：可复用 Skill。触发词：改完技能没生效、会话内热更新、activation 时读正文、最小公分母、新开会话复验。
+
+## 解析器要有「格式降级重试」，且自由文本字段不是能力契约（来源：agentskills.io`client-implementation/adding-skills-support.md` 2026-09-29 r285-A 独立实拉全文核验）
+- 未加引号的冒号会让 YAML 解析失败（原文示例 `description: Use this skill when: the user asks about PDFs`），处置是**包引号或改 block scalar 后重试**，不是直接报错——大量跨客户端失配源于标点而非语义。
+- `compatibility` 是 500 字符自由文本、`allowed-tools` 官方自标 Experimental 且跨宿主实现有差异 → **两者都不能当门禁判据**；`metadata` 是唯一安全扩展位（自定义键名要够独特防冲突）。
+- 与 §跨客户端最小公分母（3.34.0）互为正反：那条管"别依赖私有特性"，本条管"解析层要容忍别人的不合规"。
+
+## 技能校验失败要分档：可容忍缺陷告警后照常加载，致命缺陷才丢弃（来源：同上，2026-09-29 r285-A 独立实拉）
+- 宽松校验表：`name` 与目录名不匹配 / 超 64 字符 → **warn, load anyway**；`description` 缺失或 YAML 完全不可解析 → **skip the skill**。禁止"一律跳过"或"一律加载"两个极端。
+- 被过滤的技能要**从目录整条隐去**（原文 "Hide filtered skills entirely"），而不是列出来在激活时拦——否则模型会反复去试一个不该存在的入口。
+- 项目级技能的加载前置是**仓库信任判定**（gating on a trust check），不是内容检查：防的是不可信仓库静默注入指令。
+- 与 AV §闸门自带拦截计数（2.46.0）不同轴：那条管"拦下要留痕"，本条管"丢弃要分档 + 可见面要清干净"。
+
+## 从分发清单里删 ≠ 停止分发：删除会传导到用户机器，改名必须留映射（来源：Claude Code `plugins/marketplace-reference`，2026-09-29 经 Qoder r319-Q-A 实拉取证；**WB 本轮该 docs 通道未达，按引文落地并标注待复核**）
+- `forceRemoveDeletedPlugins:true` 原文语义＝"你从清单里移除的插件会在用户机器上被卸载"——**删除有两个必须显式选的语义**（保留已装 / 传导卸载）。
+- `renames`（former→current，映射到 `null` 表示不迁移）＝改名不留映射会把旧名位空出来供仿冒；仿冒被处理时"卸载其插件**并删除已保存数据**"（数据不是附属物，是同生共死）。
+- 与 §下架语义择一（r312-Q-B）相邻：那条立原则，本条给字段位与后果实证。
+
+## 黑白名单门禁必须写明求值次序，且策略按会话起点重算（来源：同上；待复核同前）
+- `blockedMarketplaces` 原文 "checked before the allowlist"——**拒绝类先于允许类**必须写进文档，否则"既在拒绝又在放行"未定义。
+- 策略在**每次 session start 重算**（改门禁后旧会话不受影响）；`strictKnownMarketplaces:[]` 是最大封禁而非"不限制"；`enabledPlugins:false` 同时屏蔽并隐藏。
+- 与已落「空数组语义要显式声明」同族：空值不是"没配"，往往是最强档。
