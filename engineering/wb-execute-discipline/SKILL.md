@@ -10880,3 +10880,74 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Document AI 的布局感知**（LandingAI 课程）：传统 OCR 只提文本、**丢失布局信息**——合并单元格表格、图表与标题的关系、多列阅读顺序；agentic 提取重建结构。判据：**文档提取的难点不是字符识别，是布局结构还原**。
 - **Generative UI**（CopilotKit 课程）：agent 按需生成图表/表单/白板等自定义 UI——**agent 输出不止文本，可生成交互界面**。
 - 提升层：可复用 Skill（学习信号/方法方向）。触发词：记忆工程、外部于模型、布局感知 OCR、合并单元格、Generative UI。
+## r291B 十独点（2026-09-29 实拉）
+
+### 1. Agent 策略可插拔：Dify 的推理算法模块与调用契约（来源：Dify 官方《Agent Node Introduction》+ Marketplace《Agent Strategies》+ DeepWiki《Agent Strategy Plugins》+ enterprise-docs《Agent Strategy Plugin》2026-09-28/2026-09-25/2026-08-31/2026-03-12 实拉，与 r284A Dify 策略/r289A agent loop 合并增量）
+- **Agent Strategy=可插拔推理算法模块**：定义工具怎么用、问题怎么解——**像把车的发动机与控制系统分离**，升级"动力系统"不动整体架构。
+- **Function Calling vs ReAct 选型判据**：有原生 function calling 的模型（GPT-4/Claude 3.5 类）用 Function Calling（工具定义经 tools 参数直传，LLM 内建机制决定何时调用）；不支持 FC 的开源模型（Llama/Qwen/Mistral）用 ReAct（Thought→Action→Observation 显式推理循环，透明可看全推理）。**判据：先问"模型有没有原生 FC"再选策略**。
+- **cot_agent 两策略处于自治-控制谱系两端**：多步推理/工具编排/上下文管理/终止控制四职责；Iteration Limit 限制单次 agent 执行迭代次数。
+- **插件内调用工具契约**：`session.tool.invoke({provider, tool_name, parameters})`——模型产出参数后由插件显式发起调用。
+- 提升层：工具。触发词：Agent Strategy、Function Calling vs ReAct、cot_agent、Iteration Limit、session.tool.invoke。
+
+### 2. queue mode 架构：n8n 的主-从执行拆分与单实例陷阱（来源：n8n Docs《Queue mode》+ n8nlogic《Scale With Workers & Redis》+ AutomateLab《queue mode with Redis and worker》+ n8n Community 2026-05-20/2026-06-10/2026-05-18/2026-07-27 实拉，与 r287A 队列面合并增量）
+- **queue mode 三件套**：`EXECUTIONS_MODE=queue` 设到 main 与每个 worker；Redis 做消息 broker（执行 ID 入队）；Postgres 13+ 持久化（**SQLite 不推荐**）。
+- **主-从职责拆分**：main 进程只收触发与 webhook、把执行 ID 交给 broker；**worker 进程真正跑执行**。
+- **单实例陷阱**：开了 queue mode 却没有独立 worker 进程 → 工作流全部 pending 永不执行（main 只调度不处理队列）——**排查 pending 先查有没有 worker**。
+- **全进程共享 N8N_ENCRYPTION_KEY**：main 与 worker 必须同库同 key，否则凭证解不开。
+- **横向扩展**：docker compose `--scale n8n-worker=N`；worker 开 health 端点（queue_health_check_active）。
+- 提升层：工具。触发词：EXECUTIONS_MODE=queue、worker 进程、Redis broker、N8N_ENCRYPTION_KEY、--scale n8n-worker。
+
+### 3. 自定义组件开发：LangFlow 的 Component 类与安全开关（来源：docs.langflow.org《Create custom Python components》《Block custom components》+ langflow.org.cn《代理组件》2026-09-17/2026-09-08/2026-05-04 实拉，与 r284C LangFlow 组件面合并增量）
+- **Component 类四要素**：继承 Component 的 Python 类 + 类属性（display_name/description/icon）+ inputs/outputs 列表（决定数据流）+ methods（行为与逻辑）+ 内部错误处理与日志变量。
+- **tool_mode=True**：输入标记 tool_mode 后该组件可被 agent 当工具调用——**自定义组件不写 MCP 也能进工具面**。
+- **安全开关**：`LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` 阻断自定义组件创建——**自定义组件=任意代码执行面，生产可整体关掉**。
+- **bundle 组织**：组件按服务商分组提交回项目（lfx/components 目录）——**回馈社区的最小单位是 bundle 不是单个组件**。
+- 提升层：工具。触发词：class Component、inputs/outputs 列表、tool_mode=True、LANGFLOW_ALLOW_CUSTOM_COMPONENTS、bundle。
+
+### 4. embedding 嵌入 SDK：Activepieces 的 iframe 白标与 JWT 认证流（来源：activepieces.com/docs《Embed Builder》《Provision Users》《Embed Connections》《Navigation》2026-09-27/2026-09-10/2026-06-17/2026-09-20 实拉）
+- **嵌入 SDK 三参数**：`activepieces.configure({instanceUrl, jwtToken, containerId})`——iframe 把整个流程构建器嵌进自己的产品。
+- **JWT 认证交换流**：你后端用签名密钥生成 JWT → iframe query 参数传入 → 换更长期 token——**嵌入不是免认证，是认证移交给你管**。
+- **按需连接**：`activepieces.connect({pieceName:'@activepieces/piece-google-sheets'})` 打开连接对话框——**用户连哪个 app 由代码触发，不预埋全部**。
+- **导航同步 handler**：iframe 内路由变化触发 handler，可同步到浏览器历史——**嵌入态要接管导航事件，否则产品内体验断裂**。
+- **白标商用定位**：embedding 是商业版能力（非 MIT 核心），含 provision users 自动开通与隐藏/显示指定 piece。
+- 提升层：工具。触发词：embedding SDK、activepieces.configure、JWT 交换、activepieces.connect、导航同步、白标。
+
+### 5. 执行历史留存与观测契约：Make 的日志梯度与结构化字段（来源：AutomationAtlas《monitor and debug automation workflows》+ till-freitag《Monitoring & Observability for make.com》2026-07-14/2026-04-16 实拉）
+- **执行日志留存梯度**：Make Execution History 7 天（免费）/30 天（付费）/60 天（Enterprise），**全数据流+JSON payload**——调试窗口随计划等级伸缩。
+- **结构化日志五字段**：timestamp/scenario_id/scenario_name/execution_id/**correlation_id**/step/status——**correlation_id 贯穿一次执行的所有步骤**，是跨步追踪的锚。
+- **附带：Dify 无原生调度**：Dify workflow 不支持原生定时执行，用 XXL-JOB 等外部调度器补（cron/一次性+内建告警+观测）——**平台没有调度就外部挂，不在平台里硬找**。
+- 提升层：工作流。触发词：Execution History、留存梯度、correlation_id、JSON payload、XXL-JOB 调度。
+
+### 6. Connect 集成面：Pipedream 的托管认证与远程 MCP（来源：pipedream.com/docs《Connect》《Managed Auth Quickstart》《Connect API》《Pipedream MCP for Developers》+ changelog 2026-09-22/2026-09-23/2026-03-02/2026-05-28/2026-09-22 实拉）
+- **external_user_id 关联模型**：传你自己系统的用户 ID（≤250 字符）发起连接与代调用——**Pipedream 账号对应用户，动作以其身份执行**。
+- **Connect API+SDK 双端**：服务端调 Connect API 发起连接流与取凭证；前端用 SDK 或托管 URL 走连接流——**认证流程托管，代码级控制集成行为**。
+- **托管 MCP server**：`https://remote.mcp.pipedream.net`，请求头带 Bearer token + x-pd-project-id + x-pd-environment + x-pd-external-user-id——**3000+ 应用的 MCP 化出口**。
+- **API proxy**：无预构建工具时代理转发请求并附加已连接用户的凭证——**冷门 app 也能代调**。
+- 提升层：工具。触发词：external_user_id、managed auth、remote.mcp.pipedream.net、x-pd-external-user-id、API proxy。
+
+### 7. hooks/subagents/checkpoints：Claude Code 的确定性控制层（来源：Claude 官方《Steering Claude Code》+ blakecrosley《Hooks Explained》+ totalum《subagents production playbook》+ CSDN《机制全景》2026-06-18/2026-07-01/2026-08-11/2026-09-16 实拉，与 r289A agent loop 合并增量）
+- **31 个 hook 事件三节奏**：每会话一次（SessionStart/SessionEnd）/每轮对话一次（UserPromptSubmit 等）/每次工具调用；可挂 shell 命令/HTTP 端点/LLM prompts——**确定性层包在 agent 外面，指令可忽略、hooks 不能**。
+- **SubagentStop hook 附加上下文**：子代理结束、摘要到达 lead 前触发，payload 含 hookSpecificOutput.additionalContext——**hook 不只是一元错误门，还能扩展子代理回合**。
+- **subagents 独立上下文窗口**：.claude/agents/*.md（YAML frontmatter：name/description/model/工具访问），只回摘要+元数据——**防上下文膨胀的最强工具**；2026-06 起可嵌套 5 层，允许显式 allowed_tools 列表。
+- **checkpoints 后悔药**：每回合 prompt 前拍代码快照，保留最近 100 个，默认 30 天清理（cleanupPeriodDays）——**空输入框双击 Esc 或 /rewind 恢复**。
+- 提升层：工具。触发词：hook 事件、SubagentStop、additionalContext、独立上下文窗口、checkpoints、cleanupPeriodDays。
+
+### 8. GitHub Models 退役与 Foundry 迁移（来源：GitHub Docs《GitHub Models》+ Microsoft Learn《Upgrade from GitHub Models to Microsoft Foundry Models》+ Azure《Foundry Models》2026-09-27/2026-08-21/2026-09-28 实拉）
+- **GitHub Models 2026-07-30 完全退役**：playground/model catalog/inference API/BYOK 全部下线，任何客户不可用——**押注平台实验性服务前先看生命周期承诺**。
+- **迁移目标=Microsoft Foundry Models**：仍在调 GitHub Models inference endpoint 的应用按官方步骤迁移。
+- **Foundry 旗舰规格**：gpt-5.6-sol（2026-07-09）：105 万 context（922k 输入/128k 输出）、Responses API、**multi-agent orchestration（preview）**、computer use、结构化输出——**模型能力面在向 agent 编排与计算机使用扩展**。
+- 提升层：工具。触发词：GitHub Models 退役、Foundry Models、gpt-5.6-sol、BYOK 下线。
+
+### 9. channels 渠道面：OpenClaw 的配对模式与一键渠道（来源：docs.openclaw.ai《聊天渠道》《CLI channels》+ openclawlaunch《Gateway 配置指南》《微信接入》2026-08-15/2026-09-10/2026-09-11/2026-08-29 实拉，与 r284B 插件/r287A 协议合并增量）
+- **dmPolicy: "pairing" 配对模式**：只有通过 Gateway UI 完成配对的用户才能对话——**最安全，防陌生人滥用你的 API 额度**。
+- **官方插件一键装**：`openclaw plugins install @openclaw/...` 一条命令装渠道；Telegram 内置核心（grammY Bot API，支持群组）；Discord（Bot API+Gateway，服务器/频道/私信）。
+- **50+ 渠道适配器**：WhatsApp（Baileys+QR 配对）/Slack/Signal/iMessage/Teams 等；不支持的平台可写自定义渠道（channel adapters 指南）。
+- **vault 存 token**：`openclaw vault set TELEGRAM_BOT_TOKEN "..."`，配置里 `${TELEGRAM_BOT_TOKEN}` 引用——**密钥进 vault 不进明文 config**。
+- 提升层：工具。触发词：dmPolicy pairing、openclaw plugins install、grammY、渠道适配器、openclaw vault。
+
+### 10. CodeAgent 与沙箱显式化：smolagents 1.26.0 生产面（来源：PyPI《smolagents 1.26.0》+ theneuralbase《Code agents vs tool-call agents》+ 博客园《CodeAgent boundary》2026-05-29/2026-04-22/2026-06-29 实拉，与 r284C smolagents 合并增量）
+- **CodeAgent vs ToolCallingAgent 关键区别**：CodeAgent 的动作是**可执行 Python 代码片段**（一次 action 内可嵌套函数/循环/条件组合——多个搜索一次发）；ToolCallingAgent 是 JSON 工具调用——**代码型行动表达力强，代价是要可信执行环境**。
+- **sandbox 生产显式指定**：`CodeAgent(..., sandbox='e2b')` 或 `sandbox='local'`——默认本地解释器，生产必须显式选；e2b 需 E2B_API_KEY 且每次执行约 +25s 延迟。
+- **原生无并行子代理**：smolagents 不原生并行跑子代理，用 concurrent.futures+threading 自实现——**要并行自己编排**。
+- **生产前四查**：执行环境（哪个沙箱）/工具权限（给哪些工具）/密钥边界（哪些 secret 可见）/smoke check（先小样本验证）——**进 AI 宿主前先定边界，再放权**。
+- 提升层：可复用 Skill。触发词：CodeAgent、sandbox='e2b'、ToolCallingAgent、生产前四查、threading 并行。
