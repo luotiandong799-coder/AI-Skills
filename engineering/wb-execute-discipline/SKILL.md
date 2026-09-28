@@ -10259,3 +10259,69 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **模型写可执行 Python 作动作格式，不写 JSON 工具调用**：HF 'agents that think in code' harness（~1,000 行核心、Apache 2.0），可选沙箱（E2B/Docker/WebAssembly）、managed sub-agents、Hub 分享 tools+agents。→ 判据：**动作格式选"代码"而非"JSON 调用"**时，表达力与可执行性更直接，但要配沙箱。
 - **HF Skills 标准化 AI/ML 任务定义**（huggingface/skills，7,374 stars）：数据集创建/模型训练/评估做成 agent skills，兼容 Claude Code/Codex/Gemini CLI/Cursor——从脆弱的原始代码生成转向结构化工具执行。→ 判据：**ML 工作流技能化=声明式定义+结构化执行**，不靠模型现写训练代码。
 - **Agents-A1**（InternScience 35B MoE）：GAIA 96、SciCode 44.3，tool use/function calling 原生——35B 级 agent 模型达万亿参数级性能；Nex-N2 Agentic Thinking 闭环（需求理解→任务规划→代码实现→环境反馈→评估调试→持续迭代）。→ 判据：小模型 agent 化 + 闭环迭代可逼近大模型效果，选型不只看参数。
+
+## r286B 学习轮落地（2026-09-29；来源 Dify/n8n/LangFlow/Activepieces/Make/Pipedream/Anthropic/GitHub/OpenClaw/技能市场 十站实拉）
+
+### RAG 评估四指标与 Summary Index：评估先于优化，摘要字段补上下文（来源：Dify Knowledge + aikickstart RAG pipeline + Dify 1.12.0 博客，2026-09-29；与 §RAG 检索优化互补——那条管"检索参数"，本条管"评估口径与上下文补全"）
+- **RAG 评估四指标（RAGAS 式）**：Answer relevance（答案是否回答问题）/ Context precision（检索 chunk 相关性）/ Faithfulness（答案是否忠于 context）/ Citation accuracy（引用正确性）——**评估口径固定，优化才有对照**。→ 判据：先立评估再看指标，不先调参数后找分数。
+- **Summary Index（轻量 GraphRAG 替代）**：每 chunk 附 summary 字段，语义相关内容一起检索——解决"只返回最相关单片段、模型缺上下文"的碎片化问题，比 GraphRAG 实现简单得多。→ 判据：**上下文完整性优先于召回单点**——碎片化召回是 RAG 答案质量差的第一来源。
+- **多模态检索两阶段**：Embedding（首轮向量粗匹配）+ Reranking（二次精排视觉/文本证据）——粗筛快、精排准。→ 判据：检索质量=召回（粗）+排序（精），两段都要。
+- **优化实测方向**（CSDN benchmark）：自定义 chunk 策略 + 混合检索 + per-dataset score threshold → P95 1240→380ms、NDCG@3 +4.2×、误召回率 18.6%→4.3%。→ 判据：**阈值按数据集调**（per-dataset），不全局一刀切。
+
+### 数据转换三选与 AI 生成代码：表达式就近 / Code 复杂 / AI Transform 语义（来源：n8n Docs expressions + workflows 模板，2026-09-29 实拉）
+- **转换三选**：表达式 `{{ }}`（轻转换，$json.body.city/$json.score*2，不加节点保逻辑就近）/ Code 节点（复杂 JS/Python，返回 [{json:data}]）/ AI Transform 节点（LLM 语义转换）。→ 判据：轻的用表达式、重的用 Code、语义的用 AI——不一律塞 Code 节点。
+- **Code 节点 AI 辅助**：写自然语言 prompt 让 AI 生成 JS（"Return a single line of text with all usernames comma-separated"）→ 生成、改、测循环。→ 判据：代码步用 prompt 生成初稿，人工审改后测试。
+- **JS 数据技巧**：Object.keys/values 取键值、{...defaults,...overrides} 合并、解构删除 {password,...safeData}、Object.fromEntries 重命名——**转换逻辑用标准 JS 手法，不写复杂胶水**。
+- **API key 用 proper credentials 不用环境变量**：n8n 凭证系统管密钥，环境变量只在需要时用。→ 判据：密钥走凭证管理器，不进 env 不写进节点参数。
+
+### 部署性能与多 worker：headless runtime + worker 生命周期 + Redis job queue（来源：Langflow Scaling + K8s best practices，2026-09-29 实拉）
+- **生产部署用 headless runtime**（backend only 跑 API），前端可视化只在开发态——**生产不扛 UI 开销**。K8s 最小资源：frontend 512Mi/0.3 CPU、backend 1Gi/0.5 CPU。
+- **内存优化三大件**（v1.9→v1.10 ~89% 内存下降）：依赖裁剪 + worker 生命周期管理 + Linux Copy-on-Write——**部署内存问题先查这三处**。
+- **多 worker 起步从少**：LANGFLOW_WORKERS 从少开始防 OOM（默认 5），配 GUNICORN_PRELOAD + max-requests+jitter 防内存泄漏累积。→ 判据：worker 数按实测内存调，不是越大越好。
+- **Redis-backed job queue（1.10+）**：跨 Gunicorn/Uvicorn worker 与副本共享 build events——多 worker 下事件不丢。
+- 性能优化清单：缓存 LLM 调用 / batch 节点 / 异步 I/O / 连接池 / Prometheus+Grafana 实时监控；.env 永不入库。
+
+### 触发器三技术与数据脱敏：Polling / Webhooks / Subscriptions 三分（来源：Activepieces trigger overview + resources，2026-09-29 实拉）
+- **触发器三技术**：Polling（定时轮询端点查变更，简单但延迟）/ Webhooks（单 URL 监听用户事件，实时）/ App Webhooks Subscriptions（OAuth2 开发者 app 单 URL 收所有授权事件，最省资源）——**选型看实时性需求与事件源能力**。→ 判据：事件源支持订阅就用 subscription，不支持才轮询。
+- **数据脱敏（data masking）**：敏感细节不出现在日志——**凭证/敏感字段在日志层打码**，排错不泄密。→ 判据：日志可见性与安全冲突时，安全优先，脱敏后记录。
+- **内置控制项**：Branching / retries / waitpoints / subflows / error handling / human approvals——**重活都内建，不自己搭**；cron-like 调度时区感知。
+- **Chat 起草流程**：AI-first 工作台里用对话起草 flows，人工确认后再发布。→ 判据：AI 起草 + 人审 = 快速且可控。
+
+### 蓝图参数规范与备份纪律：canonical payload + Required 标注 + JSON 导出（来源：ThinkBot blueprint framework + Make help，2026-09-29；与 §场景蓝图互补——那条管"八块结构"，本条管"参数契约与备份"）
+- **参数契约规范**：snake_case 命名 / 必需字段标 Required（坏 payload 快速失败）/ 每个参数加 description / 有限值用 Select（防业务逻辑漂移）/ 数组定义嵌套 item 类型 / 集合稳定时定义 specification / 可选字段给默认值。→ 判据：**蓝图参数是契约**，命名/类型/描述/枚举齐全才可复用。
+- **设计围绕 canonical payload**：路由和映射绑定到统一 payload 结构，app 字段变更时只改映射不改路由——**用中间 schema 隔离外部字段漂移**。
+- **分离 orchestration 与 utilities**：可复用工具逻辑放 subscenarios，主场景只编排——**工具可独立测试与复用**。
+- **备份纪律**：导出 scenario blueprint JSON 是**唯一完整恢复机制**（丢失场景可全量恢复）——定期导出 + 描述性命名。→ 判据：自动化场景当代码管：导出备份 + 版本 + 恢复演练。
+
+### 代码步结构与 MCP 接入：defineComponent + $.export + 预处理过滤（来源：Pipedream workflow docs，2026-09-29 实拉）
+- **代码步骨架**：`defineComponent({ async run({ steps, $ }) { ... $.export("key", value); return ... } })`——**$.export 显式导出，下游步骤 steps.xxx 引用**。
+- **AI 代码生成流式进编辑器**：写 prompt → 生成 → 修改 → 测试循环；props 自动刷新显示连接账号与输入字段。→ 判据：代码步用 AI 生成初稿 + 人工验证，不手写全量。
+- **预处理过滤模式**：Slack 消息去 @botname 提取纯问题文本再送 GPT；过滤短消息/机器人消息防误触发——**LLM 输入先清洗，不送脏数据**。
+- **MCP connect**：Pipedream MCP 接 Vercel AI SDK（clientId/clientSecret 鉴权）——**平台 MCP 化，agent 可调全部集成**。→ 判据：集成面用 MCP 暴露给 agent，不走手工 API 胶水。
+- **$.respond()/$.flow.exit()**：webhook 响应与流程终止显式控制；签名校验失败立即 exit。
+
+### Skills API 与触发调优：upload 版本化 + undertrigger/overtrigger 双诊（来源：Anthropic Skills API + Best Practices + complete guide PDF，2026-09-29；与 §Skills 结构互补——那条管"文件规范"，本条管"API 与触发质量"）
+- **Skills API + Files API**：skill=instructions+scripts+templates 文件夹，任务需要时才加载；**Skills API 上传/版本化自己的 skill 并 attach 到请求，跑在 Claude 代码执行沙箱（不用自己 host）**。→ 判据：技能版本化走 API 走 Git，attach 按请求给。
+- **触发双诊**：undertriggering（该加载没加载/用户手动启用）→ description 加细节与关键词；overtriggering（无关查询也加载/用户禁用）→ 加 negative triggers、更具体——**description 是唯一 metadata，调优全在它**（max 1024 字符）。
+- **SKILL.md 体量**：body 建议 <500 行，详细 checklists/templates/examples 放 references——**主文件薄、细节外置**。
+- **Skills vs subagents 分工**：Skills=任何 Claude 实例可加载的能力（训练材料）；subagents=独立完整 agent（自管上下文与工具权限）——**配合用：code-review subagent 用语言特定 skill**。→ 判据：能力用 Skill 给，独立工作流用 subagent 给。
+- **可移植性是核心**：一个 SKILL.md 文件夹无修改跑 Claude Code/Codex CLI/Cursor/Antigravity + 9 更多 agent——**警惕厂商锁定**（专有扩展或专有分发渠道）；Unix-style 路径跨平台，Windows-style 报错。
+
+### GitHub Search/Actions API 权限粒度：code search 限流 + per-permission 声明（来源：GitHub REST docs + Actions workflow syntax，2026-09-29 实拉）
+- **code search API 限流极低**（10/分钟）——批量代码搜索走 gh CLI legacy 引擎或限速排队；regex 搜索 API 还不可用。→ 判据：code search 当低频操作设计，不做轮询源。
+- **Actions workflow runs 查询**（2026-09 变更）：按 workflow/event/status/branch 搜索返回"less precise but more accurate"记录数——**口径变了，比对历史数字要小心**。
+- **GITHUB_TOKEN 权限按粒度声明**：pull-requests/security-events 等 read/write 分列——**Dependabot/secret scanning alerts 不能用 workflow 权限读，需 GitHub App 或 PAT**。→ 判据：权限声明最小化+按需升级，读不到的用专用 token。
+- **gh api 内嵌 workflow**：GH_TOKEN 走 secrets，workflow 里直接跑 REST；GraphQL+Actions 自动化 Project（PR ready for review → 加 task 设 Status/日期）。
+
+### 四记忆文件与 Memory-Wiki：USER/MEMORY/daily/wiki 分层（来源：OpenClaw memory concepts + openclaw.cn 教程，2026-09-29；与 §记忆持久化互补——那条管"三层记忆"，本条管"文件分工与结构化知识"）
+- **四记忆文件分工**：USER.md（稳定偏好/沟通风格/关系/活动项目上下文，指令式，会话开始小预算加载）/ MEMORY.md（长期记忆：持久非 profile 事实与决定）/ memory/YYYY-MM-DD.md（daily logs，append-only，会话开始读今天+昨天）/ memory-wiki（结构化知识）——**分层各管一段，不混装**。→ 判据：偏好进 USER、事实进 MEMORY、当日动态进 daily、结构知识进 wiki。
+- **沉淀节奏**：重要信息会话中写入 daily → 定期 review daily 更新 MEMORY.md → "remember" 指令直接写记忆文件——**日志天天记、档案定期整理**（同 §记忆两级沉淀）。
+- **Memory-Wiki（v2026.4.7）**：结构化知识系统（分类+链接）vs 向量语义搜索——**不是更长上下文，是跨会话 agent 可读可写的 Wiki**。
+- **三态存储**：Short-term Context（RAM）/ Long-term Structured Storage（SQLite/JSON）/ Semantic Memory（向量库 RAG：Pinecone/Milvus）——按访问模式选态。
+- **MEMORY.md 适合内容**：API 配置位置（不是 key 本身）/ 项目结构约定 / 重要决定与理由 / 反复问题解决方案——**存"在哪里"不存"密钥"**。
+
+### 技能市场分层与安装命令：npx skills add 生态（来源：skills.sh / SkillsMP / agentskill.sh / localskills 对比，2026-09-29；与 §生态规模互补——那条管"规模数字"，本条管"目录分层与安装方式"）
+- **生态四层**：排行榜目录（skills.sh：安装数排名，npx skills add <owner/repo> 一键安装，57k+）/ 聚合索引（SkillsMP：自动索引 GitHub，215 万 SKILL.md，无策展，Google 式）/ 注册表（ClawHub：registry 版本化、agent-native CLI）/ 官方仓库（anthropics/skills：Git 历史版本、手动拷贝）——**选型看 curation 与版本化需求**。
+- **CLI 商店 agentskill.sh**：search/info/install 单技能或整套（browse 热门/install code-review）——**命令行安装是技能分发的默认形态**。
+- **LobeHub**：~170k 技能，分类浏览、UI 好；claudemarketplaces.com ~6,700 条（广覆盖少策展）。→ 判据：策展质量 > 数量——SkillsMP 覆盖最大但零策展，装前必审源。
+- **选型判据四问**：curation 质量 / 版本化能力 / 安装方式 / 团队功能（私有+回滚+角色）——localskills.sh 是强替代（版本回滚+团队角色+一次安装多工具）。
