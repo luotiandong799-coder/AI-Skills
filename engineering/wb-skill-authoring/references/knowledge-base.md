@@ -2266,3 +2266,16 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 - **因此写技能时要同时回答两个问题**：① 怎么做（步骤/规则）② 用什么做（脚本 / 命令 / 依赖）。缺第二个，技能就是不完整的。
 - **可复用的判定在"任务"这一层**：按"一类任务"打包，不按"一次操作"、也不按"一个领域"打包——太细会碎片化，太粗会变成什么都往里塞的杂物间。
 - 与「文件拆分」配套：指令进 `SKILL.md`，工具进 `scripts/`、资料进 `references/`，**打包的是同一件事的三种形态**。
+
+## 采用别人的技能/模板之前，先做三项预检：作者在哪层失明 / 输出结构能不能改 / 前置条件贵不贵（来源：topaiskills《I Let AI Write My PRD for a Week》2026-06-12 +《FAQ: Installing AI Agent Skills》2026-06-17，2026-09-21 r125-B 独立重拉实读，此前未读）
+
+- **原文事实**：① 作者用 `to-prd` 给"仪表盘细粒度权限"写 PRD，产物识别出三个可独立构建的深模块（permission resolver / route guard / audit log），**但完全没提 UI 层**——没有管理员怎么配置权限、没有角色分配的用户流、没有线框图。原文判词："The PRD was architecturally sound and completely blind to the user experience. This is where the skill showed its bias."——该技能作者 Matt Pocock 的公开工作偏后端与类型系统，**产物继承了这个世界观**。② 同一个技能的模板刚性："There's no config file or template override — what you see is what you get."他团队要的 `Success Metrics` / `Rollback Plan` 两节只能手改已发布的 issue。③ 安装 FAQ 给选型问题"两个做同一件事的技能怎么挑"的答案不在市场页："The answer is not in the skills.sh page — it's in the skill's SKILL.md file on GitHub, specifically the comparison with siblings section"；真正决定复用的是前置条件——"does one need a paid API key while another works with a free tier? Does one require a separate CLI installation? These details determine which skill you'll actually use more than once."（"Testing both takes five minutes and beats reading spec sheets."）
+- 判据：
+  1. **先问"它的作者会在哪一层失明"，再决定信它哪一层**。判据：**外部产物在其作者的专业方向上可靠，在作者不做的那一层会静默缺失**——而缺失是"结构上完整"的（模块边界齐全、词汇准确），所以看不出少了什么。采用前点名"这一层的结论我不采信，要自己补"。与 §开发与试用拆两个实例（迭代依据必须是使用者的真实行为）分工：那条管**自研技能的迭代**，本条管**采用第三方产物的预判**。
+  2. **输出结构必须可覆盖，否则适配成本落在每一次产物上**。判据：**问一句"团队的格式跟它不一样时，我改哪里"**；答案是"手改产物"的，等于每次都要重新付一遍适配成本。与 §技能是一份契约 分工：那条说技能应声明"我不做什么"，本条补"**它的输出长什么样、能不能被改**"也是契约的一部分。
+  3. **选型看前置条件成本，不看能力差异**。判据：**要不要付费 key / 要不要另装 CLI / 需不需要额外服务，决定"你会不会用第二次"**；功能强弱决定的是"第一次能不能跑通"。与 §真实榜单怎么读（安装量=入职漏斗、别装模型本来就会的技能）分工：那条管**从榜单上排除**，本条管**剩下的两个之间怎么选**。
+- 提升层级：工作流（第三方产物的采用前检查）+ 决策（选型判据的优先级）。
+触发词：作者偏见、学科盲区、结构完整但缺一层、模板刚性、输出结构不可覆盖、适配成本落在产物、前置条件成本、付费 key、会不会用第二次。
+
+## 描述的两条硬规格与一条写法纪律（来源：agentskills.io 官方 Specification / Optimizing descriptions，2026-09-15 实拉新站）
+- 本节细则已下沉至 `references/knowledge-base.md §描述的两条硬规格与一条写法纪律`（原文零删减，2026-09-29 r286-C 下沉）。

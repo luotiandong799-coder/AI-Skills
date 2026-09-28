@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.50.0
+version: 3.51.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -58,9 +58,7 @@ SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一
 - **边界写进描述**：明确"不适用于什么"（如 ponytail 写"非代码任务不套用"），防误触发比补充触发词更省事
 - **负向边界声明成段**（来源：阿里云 Skills / ModelScope 生态的通用写法）：能力封装类技能在描述或正文开头写显式的 `不适用于：…` 段（如支付宝 skill 写"不用于微信支付、银联支付、对账、红包等非收单场景"）——把最容易误触发的一批相邻场景**点名排除**，比只写正向触发词收得准得多
 - **一处修改即可生效**：description 是唯一被常驻加载的字段，正文只在触发后才读——所以约束的第一层防线必须在 description 里
-## 描述的两条硬规格与一条写法纪律（来源：agentskills.io 官方 Specification / Optimizing descriptions，2026-09-15 实拉新站）
-- 本节细则已下沉至 `references/knowledge-base.md §描述的两条硬规格与一条写法纪律`（原文零删减，2026-09-29 r286-C 下沉）。
-
+> 本节（描述的两条硬规格与一条写法纪律（来源：agentski…）原文已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 ## 追加触发词只准加在末尾；加在开头会挤掉首句（2026-09-20 本仓库实修，来源：WorkBuddy 线 D4 描述层重构）
 
 **实测事故**：本仓库 7 个 `wb-*` 技能长期用「把新一批触发词补到 description 开头」的方式增补。累积若干轮后，两个技能的首句被彻底挤走——`wb-skill-authoring` 的 description 以 `、评估型输出、按能力透视、` 开头（**一个孤立顿号起头**），`wb-ponytail` 以 `、产物存活期、TTL、` 开头，真正的功能句"Skill 的写法与体检（…）""写代码 / 实现功能类任务前的决策阶梯（YAGNI）"被推到**第 200–300 字符之后**。
@@ -135,15 +133,7 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
   2. **技能冲突的判定用受控减法，不用静态清单猜**。判据：**"同一类任务输出质量时好时坏"先怀疑技能互相打架**，做法是移除最不常用的那个、跑同一批任务、看质量是否回升；回升即定位到冲突源。与 §Skill 排查冲突（定期列出所有规则来源检查重复与冲突）分工：**那条是静态清单审查**（检查有没有冲突），本条是**运行期受控实验**（在"看起来没冲突但行为不一致"时定位是谁）。
 - 提升层级：可复用 Skill（技能文件的可解析性）+ 工作流（冲突定位方法）。
 触发词：闭合后空行、frontmatter 空行、解析器分歧、整文件解析失败、内容被吞、技能冲突、减法定位、质量时好时坏、移除最不常用。
-## 采用别人的技能/模板之前，先做三项预检：作者在哪层失明 / 输出结构能不能改 / 前置条件贵不贵（来源：topaiskills《I Let AI Write My PRD for a Week》2026-06-12 +《FAQ: Installing AI Agent Skills》2026-06-17，2026-09-21 r125-B 独立重拉实读，此前未读）
-
-- **原文事实**：① 作者用 `to-prd` 给"仪表盘细粒度权限"写 PRD，产物识别出三个可独立构建的深模块（permission resolver / route guard / audit log），**但完全没提 UI 层**——没有管理员怎么配置权限、没有角色分配的用户流、没有线框图。原文判词："The PRD was architecturally sound and completely blind to the user experience. This is where the skill showed its bias."——该技能作者 Matt Pocock 的公开工作偏后端与类型系统，**产物继承了这个世界观**。② 同一个技能的模板刚性："There's no config file or template override — what you see is what you get."他团队要的 `Success Metrics` / `Rollback Plan` 两节只能手改已发布的 issue。③ 安装 FAQ 给选型问题"两个做同一件事的技能怎么挑"的答案不在市场页："The answer is not in the skills.sh page — it's in the skill's SKILL.md file on GitHub, specifically the comparison with siblings section"；真正决定复用的是前置条件——"does one need a paid API key while another works with a free tier? Does one require a separate CLI installation? These details determine which skill you'll actually use more than once."（"Testing both takes five minutes and beats reading spec sheets."）
-- 判据：
-  1. **先问"它的作者会在哪一层失明"，再决定信它哪一层**。判据：**外部产物在其作者的专业方向上可靠，在作者不做的那一层会静默缺失**——而缺失是"结构上完整"的（模块边界齐全、词汇准确），所以看不出少了什么。采用前点名"这一层的结论我不采信，要自己补"。与 §开发与试用拆两个实例（迭代依据必须是使用者的真实行为）分工：那条管**自研技能的迭代**，本条管**采用第三方产物的预判**。
-  2. **输出结构必须可覆盖，否则适配成本落在每一次产物上**。判据：**问一句"团队的格式跟它不一样时，我改哪里"**；答案是"手改产物"的，等于每次都要重新付一遍适配成本。与 §技能是一份契约 分工：那条说技能应声明"我不做什么"，本条补"**它的输出长什么样、能不能被改**"也是契约的一部分。
-  3. **选型看前置条件成本，不看能力差异**。判据：**要不要付费 key / 要不要另装 CLI / 需不需要额外服务，决定"你会不会用第二次"**；功能强弱决定的是"第一次能不能跑通"。与 §真实榜单怎么读（安装量=入职漏斗、别装模型本来就会的技能）分工：那条管**从榜单上排除**，本条管**剩下的两个之间怎么选**。
-- 提升层级：工作流（第三方产物的采用前检查）+ 决策（选型判据的优先级）。
-触发词：作者偏见、学科盲区、结构完整但缺一层、模板刚性、输出结构不可覆盖、适配成本落在产物、前置条件成本、付费 key、会不会用第二次。
+> 本节（采用别人的技能/模板之前，先做三项预检：作者在哪层失明…）原文已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 ## 常驻规则只做路由表，实体内容下沉到技能；「自动批准」不是「只允许」——同一个字段名在两处语义相反（来源：Devin 官方 `docs.devin.ai/cli/extensibility/rules` + `/cli/extensibility/skills/creating-skills` + `/product-guides/knowledge`，2026-09-22 r132-A 独立重拉首读，新信源首读）
 
 - **官方推荐模式：用 rule 引用具体场景该用哪个 skill，而不是把内容写进 rule**。官方原话：为提高编码能力、加快完成、降低成本，**尽可能用 Skills 代替 Rules，Rules 与 AGENTS 要保持尽可能小**。与 §机制选型表 分工——那条管"按加载时机与付费点，四类机制怎么挑"，本条管"**已经决定内容不常驻之后，规则文件里还剩下什么**"：只剩指向，不留正文。
@@ -496,3 +486,10 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 识破法：引用任何目录数字前先问一句**"它统计的是对象还是事件"**（技能个数 / 安装次数 / 下载次数 / 仓库星数），再看榜首与总量是否同一量级。与 §父级复制 / §家族求和（3.35.0）合成完整三类，识破动作统一为"取 2+ 条目交叉比数字 + 问统计对象"。
 - 附登记：agentskills `clients.md` 客户端清单实测 **46 个**（此前"40+"为估值，已精确化，不改结论只改口径精度）。
 - 提升层：可复用 Skill（选型与证据引用）。触发词：口径混用、收录数 vs 安装量、榜首大于全站、数字失真。
+
+
+## 沙箱内自装的工具不进清单，且「能不能用起来」取决于模型档位：声明式依赖清单 ≠ 实际可执行面（来源：docs.dify.ai `llms-full.txt`《New Agent》2026-09-29 r288-C 独立 curl 实拉全文核验）
+- 原文："Beyond the Dify tools you add here, the agent can also install and run command-line tools on its own inside the sandbox when it needs one. **Those tools don't appear in the Tools list.**"；agent 自带沙箱 20 GB 存储，"it runs commands, installs programs, and reads and writes files"，环境变量经 Advanced Settings 注入供沙箱内读取。
+- 原文（模型耦合）："Older models often can't make full use of the sandbox: a common symptom is an agent that **never runs commands or installs tools, even when the task needs it**."
+- 判据：① **工具/依赖清单不等于可执行面**——凡有沙箱或运行时自装能力的系统，审计必须多问一层"运行时又装了什么"，声明式清单只能覆盖**声明那一刻**的面（与 3.20.0 依赖清单互补：那条管怎么声明，本条管声明之外的隐形面）；② **能力是否生效取决于模型档位**，且失效形态是**静默不作为**（从不调用），不是报错——验证沙箱/工具能力时要专门造"非调用不可"的题，而不是看有没有报错（与 AV 2.54.0 评测题契约同向）。
+- 提升层：工具/模型。触发词：自装工具、不进清单、可执行面、旧模型用不好沙箱、静默不作为、sandbox 20GB。

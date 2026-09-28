@@ -42,13 +42,7 @@ agent_created: true
 
 ## 二·五、修复验证：补丁是待验证假设（细则已下沉 KB）
 - 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·五、修复验证：补丁是待验证假设。
-## 二·五·五、修在调用方收敛处：只修被报告的路径 = 修好了报告，没修好 bug（来源：riekelt/principal-engineer·grounding-before-coding，2026-09-15 实拉）
-
-- bug 报告只点名**一条症状、一条路径**；动手前先找齐通往你要改的代码的**每条路线**（grep 调用点 / 引用链）
-- 缺陷长在**共享物**上时，守卫放共享处：**diff 更小，且覆盖工单从没提过的兄弟路径**。补丁只打在被报告的那条路径上，等于替报告打了补丁
-- 与 §二·五 互补：那边管"补丁修得真不真"（变体来自根因），这边管"补丁该打在哪"（位置选收敛点）——**位置选错，后面的变体验证再严也只是在错误的修复上空转**
-- 修复前把"这个改动不能破坏的不变量"列成清单：以旧 bug 命名的测试、带解释性注释的守卫、编码了血泪阈值的常量——它们标记着历史上出过的事故
-
+> 本节（二·五·五、修在调用方收敛处：只修被报告的路径 = 修…）原文已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 ## 二·五·六、修复不能由"容错装置"构成：先问它纠正根因，还是安排活下去（来源：GitHub `thedotmack/claude-mem`·`docs/merge-rubric.md`，2026-09-16 实拉）（细则已下沉 KB）
 - 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·五·六、修复不能由"容错装置"构成：先问它纠正根因，还是安排活下去（来源：GitHub `thedotmack/claude-mem`·`docs/merge-rubric.md`，2026-09-16 实拉）。
 ## 二·六、失败经验记忆（按错误签名索引）
