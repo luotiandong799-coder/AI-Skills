@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕
-version: 1.68.0
+version: 1.69.0
 agent_created: true
 ---
 
@@ -487,3 +487,8 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 原文（对齐要求）："These semantics keep **selection-time and runtime auth behavior aligned**. They are shared by `resolveAuthProfileOrder` / `resolveApiKeyForProfile` / `openclaw models status --probe` / `openclaw doctor` auth checks."
 - 判据：① 故障分两族——**没跑起来**（配置/凭据/选型，有稳定原因码）与**跑了但失败**（服务端结果）；绝大多数被误判成"模型不行"的故障其实在第一族，先取原因码再动手；② 原因码是**对外契约不是日志文案**——要稳定、可枚举、可用完了还准，改动要走版本；③ **选择期与运行期必须共用同一套判定**（探针说可用、真跑却失败 = 两处语义漂移，属设计缺陷不是偶发）；④ `ok` 也要占一个码位，别用空值表示成功——空值无法区分"没检查"与"检查通过"（与 AV 2.44.0「未检查是独立结论值」同向）。
 - 提升层：工具/工作流。触发词：reasonCode、status bucket、稳定原因码、选择期运行期对齐、没发出调用、凭据不可用。
+
+## 局部调试未必比整体便宜：部分执行要满足入口契约，且数据一大反而只能整跑（来源：docs.n8n.io《Types of executions》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验）
+- 原文："Partial executions are manual executions that only run a subset of your workflow nodes."；报错一 "**The destination node is not connected to any trigger. Partial executions need a trigger.**"（手动含部分执行会尽量模拟生产，因此仍要求 trigger 节点描述执行时机）；报错二 "Please execute the whole workflow, rather than just the node. (**Existing execution data is too large.**)" —— "Partial executions involve **sending data and workflow logic to the n8n backend** in a way that isn't required for full executions."；官方绕法用 limit 节点压小输出。
+- 判据：① **"只跑一段"不等于"少跑"**——部分执行要把数据与逻辑一起回传后端，数据越大越跑不动，局部调试的成本曲线与整体执行相反；遇到"局部跑不了"先怀疑**载荷**而不是怀疑环境；② 即使只验证中间一个节点，也要满足**入口契约**（有 trigger），本地复现缺入口是最常见的假故障；③ 收缩输出（limit / 取样）是让局部调试可行的标准手段，但**它是调试期装置，验证完要撤**（与 §探针要能一次撤干净 同向）。
+- 提升层：工具/工作流。触发词：partial execution、部分执行、需要 trigger、数据过大只能整跑、limit 节点、局部调试更贵。

@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.55.0
+version: 2.56.0
 agent_created: true
 ---
 
@@ -42,25 +42,7 @@ agent_created: true
 - 每个变异体**独立目录 + 原始文件名 + 随机目录名**（见坑 4 与"侧盲"），`caught = 打完到达标记后存在任一 FAIL`
 - 报告里记录 `caught_by`，用于确认是"真实的取值检查"抓到它，而不是无关路径错误
 
-## 生成侧：用用户自接入的端点直接生成（绕开客户端 UI）
-- 本节细则已下沉至 `references/knowledge-base.md §生成侧：用用户自接入的端点直接生成`（原文零删减，2026-09-29 r286-C 下沉）。
-
-## 验证完整性三查（证明"检查真的跑到了"）
-- 本节细则已下沉至 `references/knowledge-base.md §验证完整性三查`（原文零删减，2026-09-29 r286-C 下沉）。
-
-## 验证通道禁止副作用（借验证之名做外部动作 = 最难发现的越权）
-来源：GitHub `william-london/ownframework-loop` `docs/WORK_PACKET_FORMAT.md` §Required validation（2026-09-14 增量捕获）。
-
-`required_validation` 是**可执行策略**：先过命令守卫、只在准备好的工作树里跑、设**有界超时**、记录**精确退出码**。除此之外有一条硬边界——
-
-**必须验证"这条命令通过之后，外部状态有没有变化"。会变 → 它不是验证，拆出去。**
-
-- 典型伪装：借"验证"跑发布 / 部署 / 推送 / 外发消息 / 远端写——**它是通过检查的那一类动作，因此最不容易被质疑**。
-- 判定问一句：**这条命令"成功"的那一刻，世界上有什么东西被改变了？**（远端分支、线上配置、别人的收件箱、账户余额）有 → 它属于执行层，不是验证层。
-- 与 `wb-spec-driven` §七·1「APPROVED ≠ 执行权」同构但不同层：**那条管状态不代表授权，本条管命令本身携带的副作用**——一条命令可以同时"通过检查"且"干了不该干的事"。
-- 时间边界也是验证的一部分：**无界超时的验证不算验证**（跑不完和跑不出错无法区分），必须有上界并区分"超时"与"失败"。
-
-> 本节（独立性的硬保证：评审者工具集里没有"写"…）原文已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
+<!-- 2026-09-29 r290 下沉：生成侧直连端点/完整性三查/验证通道禁副作用 3 节 → references/knowledge-base.md §早期批 -->
 ## 评估按阶段换形态：前期轻量人工比对，后期指标化回归
 来源：n8n Docs《Understand why to test》《Use metrics to measure quality》（2026-09-14 实访 Markdown 原文）。
 
@@ -494,3 +476,14 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 判据：做升级 / 回滚 / 迁移前，把三个问题写进验收单——**回滚含哪些状态**、**升级能否找回历史数据**、**到期是禁用还是删除、谁能恢复**。
 - 与 §容量上限二分「可提升 vs 明示不可提升」（2.41.0）同族：那条问"能不能加"，本条问"加了之后历史数据还在不在"。
 - 提升层：工作流。触发词：回滚覆盖范围、升级不恢复、日志保留 30 天、自动禁用、静默停用、速率限制下一分钟。
+
+## 测试替身必须写明「生产忽略它」：钉数据/mock 的生效域是显式契约，不是环境巧合（来源：docs.n8n.io《Types of executions》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验；与 §2.38.0 测试例从真实 trace 造 互补——那条管"测试例从哪来"，本条管"替身在哪个执行态生效"）
+- 原文："When performing manual executions, you can use data pinning to 'pin' or freeze the output data of a node… On future runs, instead of executing the pinned node, n8n will substitute the pinned data and continue following the flow logic… **Production executions ignore all pinned data.**"
+- 判据：① 任何替身机制（mock / pin / fixture / 缓存回放）都要在文档里**显式写出它在生产态被忽略**——不写这句，使用者只会往两个方向错：以为假数据会进生产（不敢用），或以为生产也走替身（敢上线）；② 反向也成立：**替身在哪个态生效，就要在那个态验证**——只跑手动态等于没验证生产路径；③ 替身是**开发期加速器**不是**生产期保险丝**，上线前要有一次无替身的完整执行。
+- 提升层：工具/工作流。触发词：data pinning、mock 生效域、生产忽略、替身、fixture、手动执行 vs 生产执行。
+
+## 评测指标先分「需要参考答案」与「可直接判定」两类；前者贵、后者可全量跑（来源：docs.n8n.io《Use metrics to measure quality》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验；与 §2.38.0 组件级评测分工 互补——那条管"哪个组件用哪种评测"，本条管"单个指标要不要基准答案"）
+- 原文："Metrics can be deterministic functions (such as the distance between two strings) or you can calculate them using AI. Metrics often involve checking how far away the output is from a **reference output** (also called ground truth). To do so, the dataset must contain that reference output. **Some evaluations don't need this reference output though** (for example, checking text for sentiment or toxicity)."
+- 原文（汇总与下钻）："Metric-based evaluations can assign one or more scores to each test run, which you can compare to previous runs. **Individual scores get rolled up** to measure performance on the whole dataset… track how those metrics change between runs and **drill down into the reasons for those changes**."
+- 判据：① 建指标前先分类——**要 ground truth 的**（距离/相似度/精确匹配，数据集必须带参考答案，构造成本是主要开销）与**可直接判的**（情感、毒性、格式合规、长度，无需参考答案，可全量常态化跑）；把两类混在一个分数里，等于把可全量跑的信号埋进只能抽样跑的成本里；② 指标要**逐条记 + 向上汇总 + 跨运行可比 + 可下钻到原因**四件事同时做——只记总分就失去了"为什么变了"；③ 生产冒出的边界例要**回灌测试集**再评，否则评测集永远是开发期的那份。
+- 提升层：工具/模型。触发词：metric-based evaluation、ground truth、reference output、毒性、情感、汇总下钻、边界例回灌。
