@@ -10018,3 +10018,63 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **沙箱代码执行**：Blaxel/E2B/Modal/Docker——**跑模型生成的代码必须进沙箱**（与 §MCP 安全护栏 同构）。
 - **Hub 分享**：工具和 agents 可通过 HF Hub 分享/加载——**agent 资产也可以版本化分发**。
 - **提升层**：工具（Agent 框架）。
+
+## 提示词编排双界面与变量聚合：CHAT/COMPLETE 分型 + Variable Aggregator（来源：Dify docs llm node + blog prompt orchestration + deepwiki workflow fundamentals，2026-09-29 实拉）
+- **按模型类型选提示界面**：CHAT 模型用 System/User/Assistant 三消息角色（System 定行为、User 输入、Assistant 示例）；COMPLETE 模型用 Context/Conversation History/Query/Variables 块自由调整——**先定模型族再定提示结构**。
+- **提示词引用工作流变量**：双花括号 {{variable_name}}，变量在到达模型前替换；**系统变量 sys.app_id/sys.workflow_id/sys.timestamp、环境变量 env.*、Chatflow 从 Redis/PostgreSQL 加载会话变量**——**"变量注入发生在模型看到之前"=模板安全的前提**。
+- **Variable Aggregator**：合并分支输出到单一变量（**聚合变量必须同数据类型**，运行时仅实际执行的分支贡献值）——**条件分支后必接聚合，否则下游要复制一份**。
+- **提升层**：工具（提示编排）。
+
+## Webhook 响应三模式与流式：Immediately / Last Node / Respond to Webhook（来源：n8n docs webhook node + respond-to-webhook + streaming，2026-09-29 实拉）
+- **响应三模式**：Immediately（状态码+Workflow got started）/ When Last Node Finishes（最后节点输出）/ Using Respond to Webhook Node（自定义 Response Code/Headers/body JSON/Text/Binary/Redirect/No Data）——**先想"调用方要什么响应"再选模式**。
+- **Streaming response**：实时流式返回，需触发节点+至少一个节点配置流式——**长任务对调用方友好就流式**。
+- **测试/生产 URL 分离**：/webhook-test/ vs /webhook/；Response Data 选项 All Incoming Items/Binary File/First Incoming Item/JSON/JWT Token；常见坑 Response Data>First Entry JSON+Property Name（默认 data）——**测试路径与生产路径必须隔离**。
+- **提升层**：工具（Webhook）。
+
+## Tool Mode：把组件变成工具的最短路径（来源：Langflow docs agents + datastax components + pyshine 八类，2026-09-29 实拉）
+- **Tool Mode 机制**：在组件头菜单启用，把组件变成工具（修改组件 inputs），连接 Toolset 端口→Agent 的 Tools 端口——**"组件→工具"是开关不是重写**。
+- **Agent=LLM 推理引擎选择工具**；100+ 内置组件八大类：Agents（ReAct/Tool Calling/CrewAI）/LLMs/Vector Stores/Retrievers/Tools/Memory——**组件库按类别索引，找能力先看类**。
+- **流可作工具导出**：Langflow 流导出 JSON 可作 watsonx Orchestrate 工具——**编排产物本身也是工具资产**。
+- **提升层**：工具（组件化）。
+
+## 凭证与变量治理：Secret Manager 接入 + Project Variables 单点改（来源：Activepieces docs secret-managers + project-variables + passing-data，2026-09-29 实拉）
+- **Secret Manager 接入**：连接对话框点钥匙图标选 secret manager+secret path，集成 HashiCorp Vault 等外部密钥系统——**凭证托管给外部系统，本地只存引用**。
+- **Project Variables**：命名值、作用域单项目、任何步骤可引用（API key/webhook URL/Slack channel ID/feature flag），不在 flow 步骤里——**旋转 key 只改一处**（与 §凭证不硬编码 同构）。
+- **变量引用类型**：Step Outputs（{{ trigger.body.name }}）/ Connections（{{ connections.my_database.host }}）/ Router 分支数据——**三类引用按来源选，别硬塞常量**。
+- **提升层**：工具（凭证治理）。
+
+## 场景蓝图八块与模板治理：Intake→Normalize→Enrich→Route→Write→Notify→Audit（来源：ThinkBot make scenario blueprint + help.make templates + use-apify 四段，2026-09-29 实拉）
+- **场景蓝图八块**：Intake（webhook/poll/call）→ Normalize（canonical payload/field cleanup/defaults）→ Enrich（lookups/dedupe/context fetch）→ Route（分支）→ Write（CRM/DB）→ Notify（Slack/email）→ Audit（logging/metrics/run notes）——**所有场景几乎都收敛到这八块，按块搭骨架**。
+- **围绕 canonical payload 设计**：路由和映射在 app 变化后存活；subscenarios 分离编排与可复用工具（清晰 I/O 契约）；router/iterator/aggregator 有意使用而非习惯；生产可靠性第一天（retries/idempotency/logging/alerting）——**设计先行，模板只是起点**。
+- **模板两级**：Team templates（私有/链接分享）/ Public templates（公开库 7500+，审核后入）——**内部一致性用 team 模板，生态贡献走公开库**。
+- **提升层**：工作流（场景设计）。
+
+## HTTP 请求自动认证与 Component API：连接即认证（来源：Pipedream docs http + component api + quickstart，2026-09-29 实拉）
+- **HTTP Request Action=Postman 式界面**（headers/body/连接 account），**连接 app 自动配置 authorization headers**（Slack Bearer token 等）——**认证跟随连接，不手写**。
+- **Component API**：props 定义 http_request（type: http_request，default method/url），async run() 用 this.httpRequest——**HTTP 能力组件化声明式复用**。
+- Python 步骤 import requests（内置无需 pip install）；HTTP 触发事件字段 body/client_ip/headers/method——**代码步骤零安装**。
+- **提升层**：工具（HTTP 集成）。
+
+## MCP 直连与 SDK 原生转换：connector + mcp_tool()（来源：platform.claude.com mcp-connector + claude-world SDK helpers + Claude Code advanced patterns，2026-09-29 实拉）
+- **MCP connector**：直接从 Messages API 连接远程 MCP 服务器（无需单独 MCP client）；旧版 mcp-client-2025-04-04 已弃用——**远程 MCP=API 直连，少一层客户端**。
+- **SDK 原生 helpers**：mcp_tool()/async_mcp_tool()/mcp_message() 一键转换 MCP 工具到 Anthropic API 格式；tool_runner 运行——**转换一行代码，不手写协议粘合**。
+- **Claude Code mcp add server-name**；工具/CLAUDE.md/Hooks/MCP 四件套分工——**MCP=外部工具标准协议，与 Hooks/CLAUDE.md 各管一摊**。
+- **提升层**：工具（MCP 集成）。
+
+## Copilot coding agent：安全扫描前置 + automations 定时（来源：github.blog what's-new coding agent + schedule-automate + CLI GA，2026-09-29 实拉）
+- **内置安全扫描前置**：code scanning/secret scanning/dependency vulnerability 在 PR 打开前标记（依赖已知问题/疑似 commit 的 API key）——**安全在合入前挡，不靠事后审查**。
+- **cloud agent 不限 PR 流程**：可在 branch 工作不建 PR；model picker+self-review+custom agents+CLI handoff——**agent 从"改 PR"扩到"整段开发"**。
+- **automations**：定时或仓库事件自动运行（triage issues 自动打 bug 标签）——**agent 自动化=排期+事件触发**（与 §自动化三模式 同构）。
+- **提升层**：工作流（Agent 开发）。
+
+## OpenClaw CLI 分区与 slash 命令：命令按域索引（来源：docs.openclaw.ai cli + slash-commands + openclaw-cli watch，2026-09-29 实拉）
+- **CLI 按域分区**：Setup / Reset-backup（backup/migrate/reset）/ Messaging（message/agent/mcp）/ Health（status/health/sessions/audit）/ Gateway（logs/system）/ Network（connect/nodes/worker）/ Runtime（approvals/sandbox/tui/browser）/ Models（infer/memory/wiki）——**找命令先找域，域内命令不多**。
+- **slash 命令治理**：/diagnostics（owner-only 支持报告，每次 exec 审批）/ /tasks（后台任务）/ /context list|detail|map|json（**解释上下文如何组装**）/ /usage off|tokens|full|reset|cost（per-response usage footer 控制）——**上下文与用量都可命令行检查**。
+- **watch -d**：守护进程监控 gateway 崩溃自动重启——**守护模式=长期运行的标配**。
+- **提升层**：工具（CLI 治理）。
+
+## DeepSeek Harness Cordis：全插件化 agent 运行时（来源：deepthink.ltd cordis + agentpedia harness guide + dsh.so + npm mem0-plugin + skillhub graph-memory，2026-09-29 实拉）
+- **一切皆插件**：模型适配器/工具注册表/会话日志/沙箱/存储后端/agent 循环/任务调度器/UI 都可替换——**能力不硬编码进单体 agent 循环，按配置组合运行时**。
+- **插件信任分层**：dshmarket 可视化市场（npm 1000+ 包）+ dsh.so registry（L5 运行测试通过 / L4 sandbox-install 验证）——**装插件前先看信任层级**（与 §MCP 选型五标准 同构）。
+- **记忆插件模式**：Mem0（自动召回+自动捕获+search_memory）/ graph-memory（会话提取结构化三元组、压缩上下文 75%、跨会话复用）——**记忆能力以插件形式即插即用**。
+- **提升层**：工作流（Agent 运行时架构）。
