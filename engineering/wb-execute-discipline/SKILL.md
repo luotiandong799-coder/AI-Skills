@@ -9512,3 +9512,70 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **agent 安全默认的三种路线**：ZeroClaw（Rust 重写，secure by default：默认拒公网暴露、限制文件访问范围）、NanoClaw（每对话独立容器、OS 级隔离替代应用层权限检查）、TrustClaw（云服务，OAuth 托管凭据+远程沙箱执行）——**"默认拒绝暴露"是 agent 平台的安全基线**（与 §Agent 工具面安全 同向：少暴露少爆炸）。
 - **agent 生态可复用模式**：Orca（并行 agent 舰队 ADE）、Comp AI CRM（agentic-first CRM：agent 直接操作 CRM）、Maestro（多 agent 编排）、EnvoyMesh（去中心化 P2P 自治 agent）——**agent 不是单点工具，是围绕它的生态层（IDE/CRM/编排/网格）**。
 - **提升层**：工具（记忆工程实现 / 安全默认 / 生态视野）。
+
+## RAG 检索两级设置与权重配置：KB 级定初始池、节点级再排序，权重可免 Rerank API（来源：Dify docs setting-indexing-methods + deepwiki retrieval-methods + dify-hosting RAG guide，2026-09-28 实拉）
+- **两级检索=两层连续过滤器**：知识库级设置决定初始结果池，知识检索节点级设置进一步重排/收窄——**"池子大小"与"排序策略"分开配**，先粗取后精排。
+- **权重配置可免 Rerank 模型**：Hybrid Search 并行全文+向量，Weight Settings 直接设语义/关键词权重（Semantic=1,Keyword=0 纯向量；反之为纯关键词；自定义比例平衡）——**没有 rerank 模型时用权重融合兜底**，有再上 Rerank。
+- **检索参数可 JSON 化配置**：{retrieval_mode:hybrid, keyword_weight:0.4, vector_weight:0.6, top_k:5}——**检索配置是结构化参数不是玄学**，调优有迹可循。
+- 判据：精确词匹配（产品码/ID）走全文/关键词；自然语言复杂问题走向量；两者都要且能接受延迟走混合+rerank。
+- **提升层**：工具（RAG 检索调优）。
+
+## 表达式引擎的边界：嵌套查询用 JMESPath、复杂逻辑不进表达式（来源：n8n docs expression-reference + rapidevelopers + n8n.school + agentic-qe skill，2026-09-28 实拉）
+- **$json=当前项输入，表达式双模式**：每个字段有 Fixed（固定值）/Expression（运行时求值）两模式；表达式=JS 风格，双花括号包裹。
+- **嵌套 JSON 用 $jmespath() 查询**：过滤数组/选字段/展平结构（如 $jmespath($json.users, '[*].name')），不用手写多层 $json 链。
+- **复杂逻辑不进表达式**：avoid reduce 等重逻辑写在表达式里（难读难调），放 Code 节点——**表达式管取值，代码管变换**。
+- **提升层**：工具（表达式/数据提取边界）。
+
+## 记忆三分法：向量化聊天记忆 / 时间序消息 / 手动知识库，三类用途不同（来源：Langflow docs memory-bases + next/memory + message-history + knowledge，2026-09-28 实拉）
+- **三类记忆明确分工**：Memory bases=向量化长期聊天历史（嵌入向量库、按语义相似度返回最相关上下文）；Message History=时间序（按 messages 表顺序检索最近消息）；Knowledge base=手动填充的知识文档。判据：**"找回最相关的历史对话"走语义记忆，"找回最近说了啥"走时间序，"回答领域问题"走知识库**。
+- **聊天记忆≠向量库**：chat memory 专为存储/检索聊天消息设计（Agent 内建默认启用，接 Mem0/Redis 扩展）；vector store 做语义搜索文本块——**别拿知识库组件存聊天，也别拿聊天组件当 RAG**。
+- **安装面在瘦身**：1.12 起大多数 vector store bundles 不在默认安装（按需另装，知识库仍用本地 Chroma）——**默认安装面越小，供应链风险越小**。
+- **提升层**：可复用 Skill（记忆选型）。
+
+## AI agent 构建五步框架与审批门禁：思考方式→持久记忆→工具→执行框架→护栏测试（来源：Activepieces blog ai-agent-development + how-to-build-ai-agents + ai-agents-for-enterprise，2026-09-28 实拉）
+- **五步构建框架**：①定义 agent 如何思考（instructions）②建持久上下文记忆 ③接工具（From Piece 集成 / From Flow 把已有流程转成工具）④设执行框架 ⑤**加护栏与测试**——"护栏与测试"是最后一步但不可省。
+- **Approval points 分级审批**：碰钱/客户/生产环境的步骤加审批门禁，其余放行——**按动作风险分级，不全部审也不全放**（与 §guardian pattern 同向：高风险动作人工把关）。
+- **自然语言建 agent**：给 agent 命名+描述+instructions，工具自选（所有已连 app + MCP server）——**不用 prompt engineering 也能起步，指令即文档**。
+- **Router 分数路由**：评分后按阈值分叉（score>4 合格路径继续，低分退出）——**AI 打分+确定性路由组合**。
+- **提升层**：工作流（agent 构建 / 审批分级）。
+
+## Webhook 队列语义与安全清单：排队按批次处理、字段先定义后验证、HMAC 验签（来源：Make help webhooks + growwstacks + automationcompare + workflowpick，2026-09-28 实拉）
+- **scheduled webhook 是排队不是直通**：请求累积到队列，按 Maximum number of results 每调度周期处理 N 个（默认 2）——**量大的 webhook 别指望即时**，设计时按"批次延迟"预期（与 §触发窗口 同向）。
+- **数据字段先定义后验证**：webhook advanced settings 定义字段名/类型/必填标记，只处理完整正确数据——**入口校验前置，脏数据不进场**。
+- **webhook 安全清单**：HTTPS 强制、secret token header 比对、**HMAC 签名验 payload 完整性**、拒绝非常用 HTTP 方法（只收 POST）、幂等性处理——**收外部请求一律按"不可信输入"处理**。
+- **提升层**：工具（Webhook 治理）。
+
+## 代码步 props 抽象：builder 传参、app 自动接线、发布为可复用 action（来源：Pipedream docs workflows code nodejs + using-props + sharing-code，2026-09-28 实拉）
+- **props=代码步的"接口参数"**：从 workflow builder 传参（字符串/下拉/账号），代码步跨 workflow 复用而不用改代码——**把代码步当成函数，props 当函数签名**。
+- **app prop 自动接线**：type:'app', app:'slack' 声明即连账号（OAuth/refresh 平台托管）——**凭证不进代码，代码不碰凭证**。
+- **代码步可发布为 action**：加 version/name/key/type 四属性即转可复用、可共享组件——**"写一次→发布→全库复用"的组件化路径**（与 §重复工作流固化为资产 同构）。
+- 注意：props 仅 Node.js 代码步支持（Python/Bash/Go 无）。
+- **提升层**：工具（组件化 / 凭证隔离）。
+
+## Hook 事件三节奏与关键钩子：会话/轮次/工具调用三频次，PreCompact 与 PermissionRequest 是治理抓手（来源：Anthropic code.claude.com hooks-guide + hooks reference + claude.com how-to-configure-hooks，2026-09-28 实拉）
+- **hooks 按三频次组织**：per session（SessionStart/SessionEnd）、per turn（UserPromptSubmit/Stop/StopFailure）、per tool call（PreToolUse/PostToolUse）——**先想"这事在哪个频次管"，再选 hook**。
+- **PreCompact=压缩前救生筏**：context 压缩前备份转录、保留重要决策——**与 §压缩后规则重声明 配套：压缩前留痕，压缩后重发规则**。
+- **PermissionRequest=权限治理点**：弹权限框前自动批准测试命令、阻止敏感文件访问——**在"是否允许"这个决策点注入规则**。
+- **prompt-based hooks 让规则可判断**：Stop（智能决定是否继续干）、SubagentStop（评估子代理完成度）、UserPromptSubmit（LLM 验证用户提示）、PreToolUse（上下文感知权限决策）——**用模型做守卫，规则不再是 if 硬编码**。
+- **提升层**：可复用 Skill（hook 选型 / 压缩治理）。
+
+## Skill 商店生态战局：广场三模块、零 Token 安装、官方 Skills 上市场（来源：7niu + 36kr + ai-indeed + 智谱 docs.bigmodel + 实在智能，2026-09-28 实拉）
+- **技能商店成为平台标配**：腾讯/阿里/字节/智谱/美团/小红书 2026 年 3-5 月密集上线 skill 商店（火山 findskill 企业级多源整合、扣子支持 skill 售卖、美团 xia345 收录 7000+ Skill）——**技能分发正在平台化，个人技能可上架**。
+- **AgentMore 广场三模块**：内置推荐（官方严选）/ Skillhub（7.4万+免费技能）/ 开源社区；一键零 Token 安装、可卸载管理——**"官方精选+社区海量+开源"是商店的标准结构**。
+- **官方 Skills 是质量锚点**：智谱官方 Skills（图像 captioning/视觉 grounding/文档写作/简历筛选/提示词生成 + GLM-OCR 文字/表格/手写/公式识别）上 ClawHub——**大厂用官方技能示范生态，个人可对标质量**。
+- **提升层**：工具（技能生态视野）。
+
+## 技能 CLI 生态：npx 免安装、find 发现、多 target 单命令、版本化可见性（来源：skills.sh docs + localskills + hermes-agent docs + tekai，2026-09-28 实拉）
+- **CLI 即技能包管理器**：skills CLI 开源（vercel-labs/skills 13.1k★ MIT，npx 免全局安装）；npx skills add owner/repo 一条命令安装（拉仓库→检测本地 agent→写进各 agent 技能目录），支持 40-51 个 agent——**技能像 npm 包一样装，一次发布多端生效**。
+- **多 target 单命令**：localskills install acme/api-conventions --target cursor claude windsurf 一条命令写多个 agent 目录——**多端安装参数化**。
+- **命令链含发现与预览**：hermes skills browse/search --source skills-sh / inspect（安装前预览权限代码）/ install——**装前看、装后管**（与 OpenClaw inspect 同构）。
+- **版本化+可见性**：技能可版本化+回滚、可见性分 public/private/unlisted、带下载分析——**技能发布与软件发布同规范**。
+- **提升层**：可复用 Skill（技能分发管理）。
+
+## 技能写作三原则与安装前检查：激活条件具体、限制工具、指令精简；clawhub inspect 先看再装（来源：insiderllm OpenClaw guide + docs.openclaw.ai skills + learnopenclaw + openclawforge，2026-09-28 实拉）
+- **激活条件写具体**："当用户要 standup"优于模糊指令——**触发条件精确=少误触发**（与 §caliper 闭合邻域评测 同向：激活可测的前提是条件可判）。
+- **限制引用的工具**：技能只用 git 就别引导浏览网页/读随机文件——**技能的工具面越小，出错面和权限面越小**。
+- **指令精简**：每个技能都占 context token，500 词 SKILL.md 是合适量级——**技能不是文档，是低成本高触发率的小包**。
+- **安装前检查**：clawhub inspect '<slug>' 检查权限和代码再装；实验技能进沙箱；审输出后批准破坏性动作（merge/deploy/写文件）——**装技能=扩权限，按装权限的流程审**（与 §工具描述可注入 同向）。
+- **插件可自带技能**：openclaw.plugin.json 的 skills 目录随插件加载（浏览器插件带 browser-automation 技能）；优先级=同名 bundled/managed/agent/workspace 覆盖插件技能——**技能随插件分发，同名覆盖规则明确**。
+- **提升层**：可复用 Skill（技能写作 / 安全安装）。
