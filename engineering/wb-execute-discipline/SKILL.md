@@ -8962,3 +8962,63 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **会话存储**：sessions.json 元数据 + <sessionId>.jsonl append-only transcript（树结构 id/parentId 可重建会话）——**会话是可迁移资源**，备份=备份这两个文件。
 - **Honcho 扩展**：用户/agent 画像（preferences/facts/style）、语义搜索过去观察（不只当前会话）——跨会话跨 channel 记忆。
 - **提升层**：可复用 Skill（记忆分层与备份）。
+
+## Dify 环境变量与秘密管理（来源：enterprise-docs.dify.ai environment-variables + deepwiki workflow-system-fundamentals + juejin Dify 变量详解 + saiteki-ai dify-variable 2025-05/2026-09 实拉，合并 §Dify 平台——那条管"平台能力"，本条管"密钥与配置管理"）
+- **环境变量三型**：String（端点/常量）/ Number（阈值/限制）/ Secret（API key/密码——UI 显示 ******、**导出 DSL 时防泄露**）；应用级存储、执行时只读、引用语法 {{env.VAR}}——**机密与环境依赖值必进环境变量**，工作流定义与代码里不落明文。
+- **部署密钥纪律**：SECRET_KEY 用 `openssl rand -base64 42` 生成、**首启前必须设置**、所有 pod 共享同一值且运行中不旋转；DIFY_AGENT_SERVER_SECRET_KEY 生产替换开发默认；GKE 实践=SECRET_KEY+DB 密码存 Secret Manager 注入 pod，明文永不进 pod spec。
+- **Dev/Stage/Prod 切换**：环境变量让环境切换只改配置不改工作流定义——可复现 + 安全双赢。
+- **提升层**：工具（配置与密钥管理）。
+
+## n8n 外部秘密管理（来源：docs.n8n.io external-secrets + playbooks enterprise-features + community multi-tenant + logicworkflow env files 2025-12/2026-07 实拉，合并 §n8n 部署——那条管"部署形态"，本条管"凭据治理"）
+- **external secrets**：凭据字段引用 `{{$vault.secret.path}}` 或 `$env:SECRET_NAME`，运行时取最新版——AWS Secrets Manager/Azure Key Vault/Google Secret Manager/HashiCorp Vault/1Password/Akeyless 任选，凭据在多个 n8n 环境集中管理。
+- **多租户隔离三要三不要**：共享 workflow 逻辑、租户凭据分离存储、tenant_id 动态加载；不要硬编码凭据、不要所有租户塞一个共享 config、不要让 workflow 访问其他租户凭据。
+- **_FILE 后缀**：敏感值从文件读（DB_PASSWORD_FILE=/run/secrets/db_password）接 Docker secrets——环境变量里不出现明文。
+- **提升层**：工具（凭据治理）。
+
+## LangFlow API 程序化执行（来源：docs.langflow.org api-flows-run + workflow-api + api-build + lfx-run + typescript-client 2024-12/2026-09 实拉，合并 §LangFlow 组件——那条管"组件能力"，本条管"对外执行接口"）
+- **run 两档**：`/v1/run/{flow_id_or_name}` 基础调用；`/v1/run/advanced/{flow_id}` 显式 inputs/outputs/tweaks——需要运行时改组件参数用 advanced。
+- **Workflow API 三模式**：`/api/v2/workflows` sync（等完整 JSON 结果）/ stream（SSE 实时事件）/ background（后台异步）——**按调用方需求选**：等结果用 sync、实时进度用 stream、长任务用 background。
+- **headless 运行**：`--backend-only` 无前端暴露 API（自动化/测试用）；LFX CLI `lfx run` 一次执行流式 stdout 无需 API key、`lfx serve` 暴露 HTTP 端点；自动生成 Python/JS/curl 代码片段、TypeScript client。
+- **提升层**：工具（对外执行接口）。
+
+## Activepieces AI pieces 与 Agent Builder（来源：activepieces.com pieces/ai + pieces/openai + product/ai-agent-builder + resources llm-workflows 2026-05/09 实拉，合并 §Activepieces piece——那条管"自定义 piece 开发"，本条管"AI 能力集成"）
+- **AI piece 即插即用**：Text AI（Ask AI）等 6 actions、MIT 开源可自托管、与 760+ apps 同一 flow 组合——**无代码 LLM 调用**，模型选择+Creativity 参数直接配。
+- **AI Agent Builder**：admin 配 provider 一次（OpenAI/Anthropic/Gemini/Azure/Bedrock 或任意兼容端点）；approval-before 执行、max steps 20/run 上限；**外部 MCP=让 agent 用自己的 MCP servers**。
+- **MCP 双向**：MCP 把 workflows/tools 暴露给外部 AI 系统调用——flow 变工具。
+- **提升层**：工具（AI 能力接入）。
+
+## Make 场景历史与调试（来源：help.make.com scenario-history + make devtool + academy incomplete-executions + make blog code-app 2024-04/2026-09 实拉，合并 §Make 平台——那条管"蓝图/团队/webhook"，本条管"可观测性"）
+- **Scenario history 双通道**：run 记录（时间/名称/状态 success-warning-error/时长/操作数/credits）+ 用户改动日志（谁改了什么）——改坏了能回看变更轨迹。
+- **执行日志是快照**：反映运行时刻的 scenario 结构，**不反映当前 live 结构**——改 trigger（尤其 webhook 切换）后旧结构可能残留，排查时别拿日志当现状。
+- **调试三件套**：DevTool Scenario Debugger（按模块名/ID 搜历史日志）；incomplete executions（防数据丢失窗口）；Make Code App 每执行实时 inputs/outputs/error logs——**凌晨 3 点出故障，靠它定位不翻外部系统**。
+- **提升层**：工具（可观测性与排障）。
+
+## Pipedream webhook 安全（来源：pipedream.com docs connect/webhooks + sources + privacy-and-security best-practices + connect 2025-03/2026-09 实拉，合并 §Pipedream CLI——那条管"CLI 开发"，本条管"入站端点防护"）
+- **签名验证**：Pipedream 对每次 webhook 投递用 HMAC-SHA256 签名（x-pd-signature 头 t=timestamp+v1=signature）——**服务端验签防伪造投递**。
+- **授权默认关闭要手动开**：HTTP 触发器默认公开无授权；配置 custom token 或 OAuth；第三方服务自有认证机制时用 Validate Webhook Auth action 零代码校验；配置 auth 后不合法请求直接被丢弃（不扣执行）。
+- **Connect 代理**：3,000+ APIs、用户凭据加密 rest 按 project scope、**永不经过你的服务器**、一个 API 调用即可撤销账号——对外集成的凭据不落自己代码。
+- **提升层**：工具（入站端点安全）。
+
+## Anthropic 扩展思考（来源：platform.claude.com extended-thinking + adaptive-thinking + aiwiki + apiscout 2025-11/2026-09 实拉，合并 §Anthropic 成本——那条管"成本四层/预算"，本条管"思考预算调参"）
+- **budget_tokens 规则**：最小 1,024；必须 < max_tokens（**思考与最终答案共享输出预算**）；>32K 常不消耗满——预算到顶不减反浪费延迟。
+- **手动 vs 自适应**：manual（thinking: {type:"enabled", budget_tokens:N}）= 可预测延迟/精确成本控制；adaptive（max_tokens 硬限 + effort 软指导）——**Opus 4.6 起 budget_tokens 手动模式 deprecated，迁移 adaptive**。
+- **调参与实测**：从最小预算开始逐步增找到最优区间；成本=8k 输入+4k thinking 约 3 倍账单（抓一个 bug 值不值判断）；延迟 1-2k=+2-4s、4-8k=+5-10s、10-20k=+10-25s——**延迟敏感任务给低预算，难度敏感任务才加预算**。
+- **提升层**：工具（思考预算调参）。
+
+## GitHub Models 与迁移（来源：github.blog introducing-github-models + docs.github.com quickstart + learn.microsoft.com foundry 2024-10/2026-08 实拉，合并 §GitHub 生态——那条管"Actions/Copilot/技能市场"，本条管"模型服务"）
+- **形态**：playground（side-by-side 双模型同 prompt 实时对比、model presets 保存 prompts/参数/messages）；API（PAT with models scope→curl 调用）；隐私承诺 prompts/outputs 不与模型提供商共享。
+- **⚠️ 2026-07-30 已退役**：playground/model catalog/inference API/BYOK 全部下线——旧集成代码需迁移到 **Microsoft Foundry Models**；GitHub Models 与 GitHub Copilot 是独立服务（Copilot 不受影响）。
+- **提升层**：工具（模型服务选型与迁移意识）。
+
+## deeplearning 多代理课程（来源：deeplearning.ai courses crewai（multi-ai-agent-systems + practical + design-develop-deploy）+ docs.crewai.com overview 2026-04/09 实拉，合并 §deeplearning 课程——那条管"评估/RAG/编码/记忆"，本条管"多代理编排课程体系"）
+- **课程主线**：Multi AI Agent Systems（agents 关键元素/tools/多 agent 协作、customer support、event planning、financial analysis）→ Practical（复杂 crews、内外集成、项目规划/估算/分配、progress report）→ Design Develop Deploy（38 视频 6 代码 7 作业、production-ready agents）。
+- **CrewAI 框架要点**：Crews（agent 团队协作单元）+ Flows（事件驱动编排，or_/and_ 逻辑操作符、@start/@listen）；hierarchical process（manager agent 监督）、conditional tasks、async kickoff；生产特性=zoom-in/zoom-out 观测、配置版本化。
+- **可内化**：多 agent 系统按"课程三阶"自评——先要素（agent/tool/协作）→ 再复杂编排（conditional/async）→ 后生产（观测/版本化/部署）；与 §多Agent协作纪律 互补（那条管"何时拆怎么协作"，本条管"学习路径"）。
+- **提升层**：可复用 Skill（多代理编排学习与落地路径）。
+
+## OpenClaw 技能与插件开发（来源：docs.openclaw.ai tools/creating-skills + openclawlab plugin + VISION.md + openclawroadmap skills-development 2026-02/09 实拉，合并 §OpenClaw 平台——那条管"安装/配置/会话/多代理"，本条管"扩展开发"）
+- **Skill 形态**：workspace/skills/<name>/SKILL.md，**按 frontmatter 命名而非文件夹路径**（子文件夹仅组织）；插件可随附 skills（openclaw.plugin.json 列出目录）。
+- **插件分发**：npm 分发、manifest（name/version/description/secrets 声明）、CLI 命令 kebab/camel 避免与核心冲突、openclaw init my-plugin 脚手架；skills 可私有或发 ClawHub（80% 分成给作者）。
+- **VISION 设计原则**：core 保持 lean（**每行核心工具/提示/配置键对所有 operator 收 per-call tax**）——可选能力尽量插件化，不是核心无脑加。
+- **自举**：Skill 可自举（agent 给自己写并安装新 Skill）——能力演进从"人写"到"agent 生产/消费/验证知识闭环"。
+- **提升层**：可复用 Skill（扩展开发与分发模式）。
