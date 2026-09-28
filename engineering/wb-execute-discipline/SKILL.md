@@ -10453,3 +10453,68 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **四大 marketplace**：Skills.sh / Claude Skills Registry / Hugging Face Skills Hub / Microsoft Copilot Studio Skills Marketplace——**SKILL.md 格式成为新 wire protocol（"Agent Skills Are the New APIs"）**。
 - **SkillsMP 定位**：跨平台聚合器（mostly forks/mirrors）、80,000+ 条目、无自有安装命令（点击 install 跳转原目录）——**聚合目录≠registry，装不装看原站**。
 - **skill-creator（anthropics/skills）**：创建/修改/评估、evals、variance analysis、优化 description 触发准确率——**官方把"写技能"也做成了技能**。
+
+## r287B 学习轮落地（2026-09-29；来源 Dify/n8n/LangFlow/Activepieces/Make/Pipedream/Anthropic/GitHub/OpenClaw/DeepSeek 十站实拉）
+
+### RAG 两级过滤与 chunk 参数：KB 定池 + 节点 rerank（来源：Dify knowledge retrieval + RAG 指南，2026-09-29；与 §RAG 评估互补——那条管"怎么评"，本条管"检索参数怎么配"）
+- **两级过滤是两个连续过滤器**：KB 设置决定初始结果池，节点设置再 rerank/缩小池——**配检索先分两层：池子在哪层定、排序在哪层调**。
+- **Rerank 设置**：Weighted Score（semantic vs keyword 相对权重，**仅 High Quality 模式可用**）+ 独立 Rerank Model——**重排模型与 embedding 是两回事，可分开选**。
+- **多模态检索**：Embedding 一轮快速相似匹配 + Reranking 评估 query/text/image 具体相关性——**多模态先粗筛再精排**。
+- **RAG 精度配置**：test chunking against source structure（用固定代表性问题集对比）/ clean source（**去重复页眉页脚页码导航，噪音伤检索**）/ metadata filtering（tag 文档 "product: billing" 供过滤）——**数据清洗先于参数调优**。
+- **chunk 参数**：200-500 tokens 事实问答 / 500-1000 摘要；overlap 10-20% 最优——**chunk 大小跟任务类型走**。
+- 模型避坑：部分国产模型无可用 Rerank、OpenAI 只有 Embedding 无 Rerank——**选 Rerank 模型先查厂商支持**。
+
+### $fromAI 与表达式五模式：LLM 填参数值（来源：n8n expression reference + AI coding help docs，2026-09-29；与 §表达式三选互补——那条管"选哪种"，本条管"表达式写法与 AI 参与"）
+- **$fromAI(key, description?, type?, defaultValue?)**：LLM 提供节点参数值——key 只含字母数字下划线连字符，**提供 description 结果更好**——**节点参数可以让 LLM 现场生成**。
+- **表达式五模式**：Basic {{ $json.field }} / Nested {{ $json.user.email }} / Array {{ $json.items[0] }} / **Node reference {{ $node["Name"].json.id }}（节点名要引号、大小写敏感、精确匹配）** / Method call {{ $json.name.toLowerCase() }}——**节点引用是最易错的一种：名不对就静默空**。
+- **AI coding help 用 dot notation** 引用 incoming node data（personal_info.first_name）帮 AI 理解——**给 AI 的上下文用点路径比整对象清晰**。
+- **$jmespath 旧语法迁移**：$jmespath($json.body.meta_data, "[?key == 'xxx'].value")[0] 改用 .find()——**平台语法升级要留迁移路径**。
+
+### Flow DevOps Toolkit 与内存优化：flows 走版本化部署（来源：Langflow blog 1.9 + scaling + deployment docs，2026-09-29；与 §部署互补——那条管"运行时形态"，本条管"部署流水线与资源"）
+- **Runtime（production）headless**：backend only 服务只服务 Langflow API——生产 flows 程序化执行不需要 visual editor；**最小 2Gi RAM + 1000m CPU/实例、3 replicas；HPA 按 CPU 扩缩**。
+- **Flow DevOps Toolkit SDK（1.9）**：lfx init 创建项目 scaffold、environments.yaml 控制部署——**flows 从本地到生产的版本化/测试/部署全从终端走**（同 §Pieces CI/CD：平台都开始给 flow/piece 上 DevOps）。
+- **内存优化 89%**（v1.9-v1.10）：dependency pruning + worker lifecycle management + Linux CoW——**大降内存靠砍依赖和借 OS 机制，不是调配置**。
+- **NextPlaid（1.11.0）**：ColBERT retrieval 作为 Rust service（PLAID index，REST over Axum + MmapIndex + SQLite metadata）——**高性能检索下沉到编译型服务**。
+- **生产 observability**：LangSmith/LangFuse 监控 + API key RBAC——**上生产先接观测与认证**。
+
+### Webhook 生命周期与 Event Streaming：enable/handshake/disable 三段（来源：Activepieces trigger lifecycle + event streaming docs，2026-09-29）
+- **Webhook Trigger 生命周期**：On Enable 用 context.webhookUrl 注册第三方 webhook 并存 webhook ID 到 context.store；On Handshake 处理 challenge；**Disable 用 store 取 ID 删除**——**webhook 触发器三段式生命周期，ID 存 store 供停用回收**。
+- **触发器三形态**：Polling（定期轮询）/ Webhooks（单 URL）/ App Webhooks (Subscriptions)（OAuth2 app 单 URL 收授权事件）——**按事件来源选触发形态**。
+- **App Webhooks 局限**：Slack/Square 每个 OAuth2 app 只支持一个 webhook，需 developer portal 手动配置——**平台限制要提前查**。
+- **Event Streaming**：平台 audit events（flow run failures/新登录/项目发布）转发到 webhook → 自己 flow 路由到 Slack/Gmail/Teams——**把平台审计事件变成自己工作流的输入**（同 §审计）。
+
+### fan-out then fan-in 四步：迭代后立即校验（来源：Make scenario playbook + community 模式帖，2026-09-29；与 §蓝图参数契约互补——那条管"蓝图怎么传参"，本条管"批处理怎么成型"）
+- **四步**：Iterate（拆 per-item bundles）→ **Validate early（迭代后立即丢弃/隔离无效项，避免浪费下游处理）** → Transform（归一化 currency/SKU/category mapping）→ **Aggregate（构建单一下游 payload，一次 API 调用）**——**fan-out 后的校验放最前，聚合放最后**。
+- **操作注意**：iteration 成倍放大下游模块运行——**文档化期望数组大小、应用 limits**（同 §爆炸半径：数组大小=成本倍数）。
+- **经典模式**：HTTP Webhook 收数组 → Iterator → Router（按 total 路由 premium/standard）→ Aggregator → HTTP Response 返回 summary JSON——**路由分桶 + 聚合回包的批处理骨架**。
+
+### 组件两类型与生命周期：sources 独立、actions 寄生（来源：Pipedream components + component API docs，2026-09-29；与 §trace_id 互补——那条管"追踪"，本条管"组件形态"）
+- **两类型**：sources（**必须实例化、独立资源运行**，常用作 trigger，也可独立 serverless 函数）/ actions（workflow 步骤，**不能独立运行**）——**触发器是资源、动作是步骤，形态不同**。
+- **生命周期 hooks**：activate()/deactivate()——update 时先 invoke deactivate → 更新代码 props → 再 activate，**组件 ID 不变**——**更新走"停-改-启"，ID 保持引用稳定**。
+- **actions 预建 code steps**：连接管理/错误处理封装，只需指定参数——**把常用集成包装成参数化动作**。
+- **AI code generation**：prompt → 流式生成代码 → connected accounts/props 自动刷新——**AI 生成代码自动识别需要的外部配置**。
+
+### Managed Agents 服务化：Agent 配置即资产（来源：Anthropic release notes + 腾讯云 Claude API 演进分析，2026-09-29）
+- **Claude Managed Agents（2026-04）**：创建 Agent 配置（模型、system prompt、工具、MCP servers、Skills）→ 通过 API 启动 Session → Anthropic 托管沙箱——**"Agent 作为服务"：配置即资产，沙箱托管**（Agent SDK 是"Claude Code 作为库"，Managed Agents 是"Agent 作为服务"）。
+- **version 字段 optional**：更新时提供=optimistic concurrency（**mismatch 返回 409**），省略=无条件应用——**资源更新带版本做乐观并发，防覆盖**。
+- **session thread event streams 支持 event deltas**（增量事件）——**长会话订阅增量而非全量**。
+- **Python SDK v1.0**：移除 Text Completions legacy 与 temperature/top_p、要求 Python 3.10+——**SDK 大版本砍旧面，升级前查 breaking**。
+
+### Copilot Code Review 技能化与 effort levels：SKILL.md 进 review（来源：GitHub changelog code review 系列，2026-09-29；与 §Copilot 安全互补——那条管"扫描"，本条管"审查"
+- **gh pr create --reviewer @copilot**：创建 PR 时请求 Copilot 审查；已有 PR 用 gh pr edit——**审查请求可编程化**。
+- **agent skills + MCP 进 review（2026-07-29 GA）**：SKILL.md 带进 review 让 Copilot 调团队内部工具和 coding standards——**把组织标准装进审查**。
+- **effort levels（Lite/Balanced GA）**：按 PR 复杂度风险匹配审查深度——文档更新/小修复用 Lite，复杂逻辑/安全敏感/跨服务变更用 Balanced（复杂 PR 路由更高推理模型）——**审查深度与风险匹配，不全量深审**。
+- **计费变化**：2026-06-01 起消耗 GitHub Actions minutes——**AI 审查入账单，按用量评估**。
+
+### 记忆信任边界与 session hook：不可信内容只作证据（来源：OpenClaw memory overview + learnopenclaw session-memory，2026-09-29；与 §记忆分层互补——那条管"分几层"，本条管"写入门槛与自动机制"）
+- **非信任内容只作证据**：可信评审确认前不存为 durable memory——**外部/低置信内容不许直接进长期记忆**（同 §证据分级）。
+- **action-sensitive boundaries**：失去 timing/authority/expiry/safe-to-act 上下文会导致 agent 以后做错事时，用这些边界——**记事实要连"何时生效/谁授权/何时过期/能否安全执行"一起记**。
+- **scheduled tasks vs memory 分工**：精确提醒/定时检查/周期工作走 scheduled tasks，memory 只总结持久上下文——**时效任务不塞记忆**。
+- **session-memory hook**：会话结束自动触发 → 总结要点 → 追加当日日志 → 打时间戳和话题标签——**会话收尾记忆自动化**（同 §两级沉淀）。
+- **ontology Skill**：结构化持久记忆（people/projects/tasks 跨会话），知识图谱化——**regular context memory 记"多少"，ontology 记"什么与怎么查"**。
+
+### DeepSeek Copilot 插件与 TUI 技能系统：V4 进模型选择器（来源：DeepSeek API docs + DeepSeek TUI + 博客园 dsh 分析，2026-09-29；与 §Harness 互补——那条管"外壳"，本条管"接入面"）
+- **DeepSeek V4 for Copilot Chat**：VS Code 插件把 V4 Pro/Flash 加进 Copilot 模型选择器，仍可用 Copilot Agent 模式/工具调用/Skills/MCP——**第三方模型通过插件进官方 IDE 助手，保留全部 agent 能力**。
+- **DeepSeek TUI 技能系统**：/skills 列出 /skill <name> 激活 /skill new scaffold /skill install github:<owner>/<repo> /skill update——**CLI/TUI 都有标准技能命令族**。
+- **推理模型使用定位**：推理型无需用户提供详细步骤指令，理解真实需求直接给答案；更懂"人话"——**给推理模型的目标指令 vs 给通用模型的步骤指令，写法不同**。
+- **colleague-skill（dsh 生态）**：把同事聊天记录蒸馏为 AI Skill——**把人际语料蒸馏成可复用技能**的又一实例。
