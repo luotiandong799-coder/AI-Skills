@@ -8523,3 +8523,71 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **ClawHub**：公共社区插件主发现面——live package listing/release history/scan status/install hints——外部 channel catalogs 合并（~/.openclaw/mpm/plugins.json/catalog.json、~/.openclaw/plugins/catalog.json）；社区插件类型 channels/tools/providers/hooks；marketplace 支持 Claude-compatible extensions 其他框架插件不经 repackage 直接拉入——plugins.load.paths。
 - **CLI 管理**：list installed/inspect diagnose/uninstall update/marketplace feeds。
 - **提升层**：工具（插件扩展）。
+
+## Dify Creator Center 与模板市场（来源：dify.ai blog creator-center-template-marketplace + marketplace.dify.ai templates 2026-06/09 实拉，合并 §Dify 发布与共享——那条管"app 嵌入分享"，本条管"工作流模板市场"）
+- **Creator Center+Template Marketplace**：创作者发布 workflow 模板→用户发现/试用/一键采用——解决共享难（导出文件/发链接/手动 setup）。
+- **发布流程**：模板提交走 Creator Center→Pending 审核→通过后发布 Marketplace；Pending 期间可撤回。Explore 页模板直接试用不进 workspace，**5-message trial allowance** 先体验再采用。
+- **Marketplace 反馈面**：精选/点赞/星级评分/文字反馈；Trending Now/Recently Published；Open in Dify 一键。
+- **官方模板线**：File Translation（Chatflow 多语言专业翻译）/Deep Research 工作流/Investment Analysis Report Copilot/Knowledge Retrieval+Chatbot/Meeting Minutes——LangGenius 官方直接给可跑模板。
+- **提升层**：工作流（模板复用与发布）。
+
+## n8n AI Agent 记忆体系（来源：blog.n8n.io ai-agent-memory + docs.n8n.io advanced-ai/conversational-agent 2026-09 实拉，合并 §n8n 记忆——那条管"记忆四类存储"，本条管"AI Agent 节点怎么接记忆"）
+- **记忆是工作流可配置部分**：AI Agent 节点连记忆子节点，画布可见——存哪/持续多久/何时取/何时清全部显式配置。
+- **Simple Memory**=实例内建内存，**不跨会话持久**（docs 明说 Memory doesn't persist between sessions）；Buffer memory=短程滑动窗口（last 10 messages 等）；Data Table memory=按 session_id 持久长程（multi-session chat agent 模板 16052，支持 name/email 查找过去上下文+身份验证流）。
+- **外接持久**：Postgres Chat Memory（7381 RAG 模板）/Redis Chat Memory（5816）；Conversation Memory 节点记住最近几条。
+- **判据**：AI Agent 不加记忆节点=不保存上下文——多轮/个性化场景必须显式挂记忆子节点。
+- **提升层**：工具（AI Agent 记忆编排）。
+
+## LangFlow Docker 生产部署（来源：docs.langflow.org deployment-docker/multi-worker + hashicorp langflow-vault-prisma-airs-eks 2026-09 实拉，合并 §LangFlow 部署——那条管"API 与远程部署"，本条管"Docker 生产化"）
+- **升级不丢数据**：数据放 persistent volumes/bind mounts（`./langflow-data`）——升级只换容器镜像。
+- **多 worker**：LANGFLOW_WORKERS>1 + LANGFLOW_GUNICORN_PRELOAD=true + LANGFLOW_JOB_QUEUE_TYPE=redis + LANGFLOW_REDIS_QUEUE_URL + LANGFLOW_SUPERUSER 环境变量。
+- **生产栈**：Traefik 终止 HTTPS+Langflow 7860+PostgreSQL 存 flows/users/settings（proxy/internal 网络隔离）；远程服务器 Caddy 反代 80/443 卷挂 Caddyfile。
+- **headless 生产**（HashiCorp EKS）：--backend-only 只跑后端把 flow 暴露成 API 端点无视觉编辑器 + 外部 PostgreSQL + Vault 注入 secrets + Prisma AIRS 扫描输入输出恶意内容。
+- **提升层**：工具（LangFlow 生产部署）。
+
+## Activepieces 触发器类型（来源：activepieces.com build-pieces triggers overview/webhook-trigger + pieces webhook/github 2026-06/09 实拉，合并 §Activepieces Webhook——那条管"webhook 触发动作"，本条管"触发器三技术体系"）
+- **三种触发技术**：Polling（周期轮询端点查变化）；Webhooks（单 URL 收事件）；App Webhooks/Subscriptions（OAuth2 developer app 单 URL 收授权用户事件，Not Supported 标注）。
+- **Trigger Technique 字段**：POLLING/WEBHOOK 指定类型；Trigger Display Name/Description 供 UI 展示。
+- **Webhook 生命周期**：On Enable 用 context.webhookUrl 注册第三方 app+store webhook Id；On Handshake 部分服务需握手。
+- **触发源**：webhooks/schedules（cron-like）/connected app events/manual runs；Catch Webhook 收任意 HTTP method、Respond and Wait for Next Webhook；工作流可用 dedup keys/条件分支/计划对账 catch missed events。
+- **提升层**：工具（触发器体系）。
+
+## Make HTTP 模块与认证（来源：apps.make.com/http + use-apify make-com-http-module-tutorial 2026-03/09 实拉，合并 §Make HTTP——那条管"HTTP 分页/请求"，本条管"认证与连接管理"）
+- **HTTP v4 新版本**：简化设置、更安全 keychain 存储、原生分页；旧版在 version 下拉选 v3（legacy）。
+- **认证四方式**：API Key header（Authorization 或 X-API-Key）；Bearer token（Authorization: Bearer YOUR_TOKEN）；Basic auth（模块内 Use Authentication toggle→username+password）；OAuth 2.0 client credentials（Token URL+client_id/secret）。
+- **keychain 连接复用**：Create a keychain 存凭证→Add to 请求→可重命名连接→同一连接后续请求自动带认证 header。
+- **适用**：下载网页/访问文件/调用 API/触发 webhook 全走 HTTP app。
+- **提升层**：工具（API 集成认证）。
+
+## Pipedream 组件库体系（来源：pipedream.com docs components/connect/components + contributing 2026-08/09 实拉，合并 §Pipedream 组件——那条管"组件 API/进阶"，本条管"registry 与消费"）
+- **两类组件**：sources（必须实例化、独立资源运行、常用作 workflow 触发器、可 standalone serverless、props 收用户输入、HTTP/timer/cron/manual 触发）+ actions（可复用代码步骤、type: action、集成 app）。
+- **Registry 结构**：GitHub `components/` 每 app 一目录（airtable.app.mjs/package.json/actions/sources）；**10,000+ prebuilt triggers and actions**（主页实数），3,000+  APIs 的 auth SDK。
+- **消费方式**：SDK+playground 本地跑；actions 处理连接逻辑/错误管理——只用指定参数；contributing 规范（description 含原文文档链接格式、type: action）。
+- **提升层**：工具（组件库与复用）。
+
+## Anthropic 安全与红队实践（来源：anthropic.com news constitutional-classifiers/fable-safeguards + platform.claude.com mitigate-jailbreaks 2025-02/2026-09 实拉，合并 §Anthropic 安全——那条管"安全防护纵深"，本条管"红队与越狱防线"）
+- **Red-team 自己的 agent**：部署前用故意含注入的文档/邮件/tool outputs 测试，确认 Claude 忽略注入且 screening/confirmation 步骤兜底。
+- **工具面分类器**：computer use/browser use 工具跑额外分类器扫描 tool 返回（screenshots/page text）潜在 prompt injection，steer Claude 验证指令来源。
+- **Jailbreak 严重度框架**：与 Glasswing 合拟——轻微不良行为↔广泛有害输出分级；Constitutional Classifiers 防 universal jailbreaks（独立挑战 183 人约 3000h，最成功策略=cipher/编码绕过输出分类器、role-play 系统提示、有害词替换如 Soman→water、prompt-injection）。
+- **红队判据**：按最坏案例测（worst case）不按平均——区分普通 benchmark；bug bounty+内部/外部红队并跑。
+- **提升层**：模型/工作流（安全防线）。
+
+## deeplearning 评估课程（来源：learn.deeplearning.ai evaluating-ai-agents + chatgpt-building-system + pythonandr tier3 2026-04/09 实拉，合并 §deeplearning 评估——那条管"提示工程课程体系"，本条管"评估方法论"）
+- **Evaluating AI Agents（Arize 2h36m）**：按 agent 组件选 evaluator（code-based/LLM-as-a-Judge/human annotations）；skills+router 决策评估=从收集 traces 建测试样例+LLM-as-a-judge 详细 prompt；convergence score 算 agent 能否高效步数内响应。
+- **Building Systems with ChatGPT API**：多步系统拆成 subtask pipeline（multistage prompts）+评估 inputs/outputs 的 safety/accuracy/relevance。
+- **Fine-tuning & RL for LLMs（post-training）**：SFT+RLHF 提升 instruction following/reasoning/safe behavior；**evals 引导改进**=build evals 揭示问题→选数据奖励→迭代；cost-aware 上线监控（promotion/serving/monitor/compute/budget）。
+- **评估原则**：generic metrics 几乎总错——指标绑业务风险与错误成本（binary Likert 等）。
+- **提升层**：可复用 Skill（评估驱动迭代）。
+
+## GitHub Actions 复用与 secrets（来源：docs.github.com reusing-workflows + reusing-workflow-configurations + using-secrets-in-github-actions 2025-03/2026-09 实拉，合并 §GitHub Actions 生态——那条管"marketplace 动作"，本条管"复用与 secret 传递"）
+- **对比表（2026-09 版 vs 2022 版）**：可复用工作流=多 jobs/每步实时日志/可用 secrets/可用 if: conditionals/普通 YAML/**最大 10 层嵌套（2022 版 4 层）**/不可发布 marketplace；组合动作=无 jobs/整体记一步/不可 secrets/不可 if/**最多 10 个组合动作**/可发布 marketplace/每动作独立文件夹。
+- **workflow_call**：定义 inputs+secrets；调用方 jobs.<job_id>.secrets 传具名 secrets 或 secrets.inherit 全传；**嵌套复用 workflow 必须用 jobs.<job_id>.secrets 传**。
+- **secrets 限制**：不能直接在 if: 条件引用——先设 job-level env vars 再条件运行 step。
+- **提升层**：工具（CI/CD 复用治理）。
+
+## OpenClaw MCP 服务器（来源：docs.openclaw.ai tools/mcp + cli/mcp + openclawplaybook 2026-04/09 实拉，合并 §OpenClaw MCP——那条管"MCP 服务器接入"，本条管"配置面与两种模式"）
+- **配置**：openclaw.json mcp.servers（JSON5；url/transport: streamable-http/enabled/connectionTimeoutMs/requestTimeoutMs/**toolFilter include** 白名单如 search/read_* 防 prompt 膨胀）。
+- **CLI 管理**：`openclaw mcp add`（--url/--transport/--auth oauth/--oauth-scope/--timeout/--include）+ `mcp doctor <name> --probe` 探测健康 + `mcp status --verbose`；本地脚本 --command node --arg ./dist/mcp-server.js --cwd --env；远程 OAuth 优先、静态 header 避免明文 bearer。
+- **两种模式**：Serve mode=`openclaw mcp serve`（stdio 或 --url wss://gateway-host:18789 + token/password 远程）；Registry mode=list/show/set/unset 管理 OpenClaw-owned 出站 MCP 定义。
+- **Apps 面**：mcp.apps.enabled true→sandbox-only HTTP(S) 监听 gateway+1 端口（默认 18790），ChatGPT/Cursor/Windsurf 可经 MCP 连外部工具。
+- **提升层**：工具（外部工具集成）。
