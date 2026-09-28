@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.47.0
+version: 3.50.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -41,13 +41,8 @@ version: 3.47.0
 - **WAIT ≠ 自己动手补**：缺前置物时**不要自己创建它**（评审技能不得自己去创建构建产物），否则两个角色变成同一个角色，独立性没了。
 - 声明"不该跑"比声明"该跑"更能防止误触发，也是**负向边界的可执行版**（不只是"不适用于…"，而是"遇到 X 就 STOP / WAIT"）。
 ## 技能是"指令 + 所需工具"的打包，不是一段文字
+- 本节细则已下沉至 `references/knowledge-base.md §技能是"指令 + 所需工具"的打包，不是一段文字`（原文零删减，2026-09-29 r286-C 下沉）。
 
-来源：n8n Docs《Build and manage agents》（2026-09-14 实访 Markdown 原文）：*Skills = reusable behavior bundles that package instructions with the tools needed for a specific task.*
-
-- **一个技能 = 一类任务的指令 + 完成它所需的工具**，二者一起交付。只给指令不给工具，执行时还得现找；只给工具不给指令，模型不知道何时用、怎么用。
-- **因此写技能时要同时回答两个问题**：① 怎么做（步骤/规则）② 用什么做（脚本 / 命令 / 依赖）。缺第二个，技能就是不完整的。
-- **可复用的判定在"任务"这一层**：按"一类任务"打包，不按"一次操作"、也不按"一个领域"打包——太细会碎片化，太粗会变成什么都往里塞的杂物间。
-- 与「文件拆分」配套：指令进 `SKILL.md`，工具进 `scripts/`、资料进 `references/`，**打包的是同一件事的三种形态**。
 ## SKILL.md 的兄弟格式：Agent SOP（自然语言工作流，可互转）
 来源：AWS Strands「Agent SOPs」官方博客 + `strands-agents-sops` 包（strandsagents.com/blog/introducing-strands-agent-sops，2026-09-22 r136 首读）。
 SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一件事的两种表示**，不是竞争关系：
@@ -64,12 +59,8 @@ SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一
 - **负向边界声明成段**（来源：阿里云 Skills / ModelScope 生态的通用写法）：能力封装类技能在描述或正文开头写显式的 `不适用于：…` 段（如支付宝 skill 写"不用于微信支付、银联支付、对账、红包等非收单场景"）——把最容易误触发的一批相邻场景**点名排除**，比只写正向触发词收得准得多
 - **一处修改即可生效**：description 是唯一被常驻加载的字段，正文只在触发后才读——所以约束的第一层防线必须在 description 里
 ## 描述的两条硬规格与一条写法纪律（来源：agentskills.io 官方 Specification / Optimizing descriptions，2026-09-15 实拉新站）
-`agentskills.io` 是 Agent Skills 的**官方开放规范站**（原在 `anthropics/skills/spec/`，现为独立站，`/llms.txt` 有全量索引）。它给 description 定了可机检的边界，另有一条反直觉的写法纪律：
-- **硬规格**：`name` 1–64 字符、只能小写字母/数字/连字符、**不得以连字符开头或结尾、不得出现连续连字符、必须与父目录同名**；`description` **上限 1024 字符**且非空。名称不与目录同名是巡检能直接抓的静默故障。**name 另禁含保留词 `claude` / `anthropic`**（否则上传校验拒绝打包——anthropics/skills #1605「rename to avoid reserved words」2026-08-18 实拉确认；Agent Skills 标准把这两个词列为保留，作者不可写入名称）。
-- **写法用祈使句，不要用陈述句**：写"**当用户要 X 时使用**"，不写"本技能做 X"。agent 是在决定**要不要行动**，所以描述要告诉它**何时行动**；能力介绍句不触发。
-- **倾向强势（err on the side of being pushy）**：显式列举适用场景，**包括用户没有直接点出领域词的情形**（"即使他没说'CSV'或'分析'"）。宁可多列，触发不足比过宽更难发现。
-- **面向用户意图，不写实现机制**：agent 拿用户原话去匹配，匹配的是用户想达成什么，不是技能内部怎么实现。
-- **反直觉事实：简单请求可能根本不查技能**（来源：同上《Optimizing descriptions》）。agent 通常只对**超出自身能力**的任务去翻技能库——"读一下这个 PDF"这类单步请求，即使描述完美匹配也可能不触发，因为基础工具就能做。**该触发却没触发时，这是第 0 层原因**，先排除它再改描述。
+- 本节细则已下沉至 `references/knowledge-base.md §描述的两条硬规格与一条写法纪律`（原文零删减，2026-09-29 r286-C 下沉）。
+
 ## 追加触发词只准加在末尾；加在开头会挤掉首句（2026-09-20 本仓库实修，来源：WorkBuddy 线 D4 描述层重构）
 
 **实测事故**：本仓库 7 个 `wb-*` 技能长期用「把新一批触发词补到 description 开头」的方式增补。累积若干轮后，两个技能的首句被彻底挤走——`wb-skill-authoring` 的 description 以 `、评估型输出、按能力透视、` 开头（**一个孤立顿号起头**），`wb-ponytail` 以 `、产物存活期、TTL、` 开头，真正的功能句"Skill 的写法与体检（…）""写代码 / 实现功能类任务前的决策阶梯（YAGNI）"被推到**第 200–300 字符之后**。
@@ -485,3 +476,23 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 现状是按**工具名/命令名单**判危险，新工具名一出现即漏判；改为属性组合：**是否外发 / 是否写盘 / 是否删除 / 是否需凭证 / 是否不可逆**。
 - 判据：工具名只是属性的载体；新增技能或工具时**只需标属性即自动纳入闸门**，不用回改名单。
 - 与豆包权限四档、guild 1.12.0（HITL 锁在执行通道层）、SA 2.65.0（无旁路）分工：那几条管"在哪拦/分几档"，本条管"按什么判"。
+
+
+## 升级策略要写成可选档位而不是开关，且对外标识符发布即冻结（来源：Dify 官方 llms-full.txt「Integrations / update strategy」2026-09-29 r286-A 独立实拉 2.99MB 全文核验 + Activepieces 官方仓 `.agents/skills/piece-builder/SKILL.md` 经 cdn.jsdelivr.net 取原文核验）
+- Dify 原文："Each category ... has its own update strategy (off, patch versions only, or always the latest), applied to every integration in the category or a chosen subset."——**三档 + 可按类别或子集分别施加**，比「钉版 vs 滚动」二选一多一个中间档（只滚 patch）。
+- Activepieces 原文："Action/trigger `name` fields are permanent — never change them after publishing; flows store them by name."——**对外标识符发布即冻结**，下游按名持久引用，改名等于断链。
+- 判据：任何「要不要自动更新」的答案都不该是布尔——先给三档，再问受众面（全类别 / 子集）。与 §破坏性变更机械判定（3.39.0）分工：那条判「什么算破坏」，本条给「以什么节奏接受变更 + 什么永不许变」。
+
+
+## 钩子 / 扩展是「进程内受信代码」不是沙箱脚本：入口面与事件面是两个独立开关（来源：docs.openclaw.ai《Hooks》2026-09-29 r286-B 独立实拉原文核验）
+- 原文："Internal hooks are trusted code, not sandboxed scripts."——与「装来的第三方脚本」是两套威胁模型；同页并列 "These are separate systems. `hooks.internal` configures ... event handlers; `hooks.enabled` configures HTTP ingress."，**入口开关与事件处理器开关互不替代**。
+- 判据：任何"插件 / 钩子"类扩展先分两类——**进程内受信代码**（拿宿主全权限，只能靠来源审查与安装门禁）vs **沙箱脚本**（可限权）；把前者按后者管＝限了个寂寞。
+- 排障次序：钩子没执行时先分清查哪个面（入口 enabled 还是事件 internal），再谈逻辑。
+- 与 §内容寻址 + Ed25519 签名（3.20.x）互补：那条管"装进来的是不是那份"，本条管"装进来之后它以什么身份在跑"。
+
+
+## 目录数字失真第三形态：同一页混用两种聚合口径（来源：skills.sh 首页 2026-09-29 r286-C 独立实拉原文核验 + agentskills.io/clients.md 同轮实拉）
+- 实测同页两个数字：站标 **All Time (1,467,427)**＝收录技能数；榜首 `find-skills` 的 `"installs":3607107`（3.6M）＝安装次数。**3.6M > 1.467M**，即"榜首比全站还多"——不是数据错，是两个口径相邻展示且未标注。
+- 识破法：引用任何目录数字前先问一句**"它统计的是对象还是事件"**（技能个数 / 安装次数 / 下载次数 / 仓库星数），再看榜首与总量是否同一量级。与 §父级复制 / §家族求和（3.35.0）合成完整三类，识破动作统一为"取 2+ 条目交叉比数字 + 问统计对象"。
+- 附登记：agentskills `clients.md` 客户端清单实测 **46 个**（此前"40+"为估值，已精确化，不改结论只改口径精度）。
+- 提升层：可复用 Skill（选型与证据引用）。触发词：口径混用、收录数 vs 安装量、榜首大于全站、数字失真。

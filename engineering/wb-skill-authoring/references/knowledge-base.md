@@ -2249,3 +2249,20 @@ DSH 把整个产品拆成插件：**模型适配器、工具注册表、会话�
 - **实证**：规范/可分发侧经 `package_skill.py`/上传路径**只接受 `name, description, license, compatibility, metadata, allowed-tools` 六个字段**，原文 **"packaging or upload fails with a hard error"**；而宿主增强侧（Claude Code 本地）另有一整套扩展字段——`context: fork`（+`agent`/`background`）、`model`、`arguments`/`$name` 占位符、`disable-model-invocation`、`user-invocable`、`disallowed-tools`、`${CLAUDE_SKILL_DIR}`/`${CLAUDE_PLUGIN_ROOT}`/`${CLAUDE_PLUGIN_DATA}`，且**"All fields are optional. Only `description` is recommended"**（本地侧宽松）。第二处同轨证据：Anthropic marketplace.json 用 **`strict:false`** + 每个 plugin **显式列 `skills:["./skills/xlsx",…]`**；仓内 `spec/agent-skills-spec.md` 已降为一句指针 **"The spec is now located at agentskills.io/specification"**（规范外移到中立站）。
 - **判据**：① **技能文件要标"目标轨"**——凡使用宿主专有字段（fork 上下文、指定 model、占位符参数）即**放弃跨宿主可分发性**，打包前必须按六字段白名单自检，多一个字段就预期失败；② **唯一安全的扩展位是 `metadata` map**（这把 r185-A"元数据扩展槽防冲突"从建议升级为有报错依据的规则，二者合并）；③ 学 `strict:false`+显式清单做法：**技能索引里逐个列出技能路径，不靠目录扫描**——目录扫描会把半成品/备份目录一并暴露（我方 `D:\腾讯AI\skills` 有 .bak 与临时目录时同风险）；④ 规范外移到中立域（agentskills.ai）后，**仓内不应再维护规范副本**，我方技能仓里的"规范说明"也应只留指针（与 §镜像只指向本体、禁另立副本 同构）。
 - 提升层：可复用 Skill。触发词：字段双轨、打包六字段、strict:false、metadata 扩展槽、规范外移指针、显式技能清单。
+
+## 描述的两条硬规格与一条写法纪律（来源：agentskills.io 官方 Specification / Optimizing descriptions，2026-09-15 实拉新站）
+`agentskills.io` 是 Agent Skills 的**官方开放规范站**（原在 `anthropics/skills/spec/`，现为独立站，`/llms.txt` 有全量索引）。它给 description 定了可机检的边界，另有一条反直觉的写法纪律：
+- **硬规格**：`name` 1–64 字符、只能小写字母/数字/连字符、**不得以连字符开头或结尾、不得出现连续连字符、必须与父目录同名**；`description` **上限 1024 字符**且非空。名称不与目录同名是巡检能直接抓的静默故障。**name 另禁含保留词 `claude` / `anthropic`**（否则上传校验拒绝打包——anthropics/skills #1605「rename to avoid reserved words」2026-08-18 实拉确认；Agent Skills 标准把这两个词列为保留，作者不可写入名称）。
+- **写法用祈使句，不要用陈述句**：写"**当用户要 X 时使用**"，不写"本技能做 X"。agent 是在决定**要不要行动**，所以描述要告诉它**何时行动**；能力介绍句不触发。
+- **倾向强势（err on the side of being pushy）**：显式列举适用场景，**包括用户没有直接点出领域词的情形**（"即使他没说'CSV'或'分析'"）。宁可多列，触发不足比过宽更难发现。
+- **面向用户意图，不写实现机制**：agent 拿用户原话去匹配，匹配的是用户想达成什么，不是技能内部怎么实现。
+- **反直觉事实：简单请求可能根本不查技能**（来源：同上《Optimizing descriptions》）。agent 通常只对**超出自身能力**的任务去翻技能库——"读一下这个 PDF"这类单步请求，即使描述完美匹配也可能不触发，因为基础工具就能做。**该触发却没触发时，这是第 0 层原因**，先排除它再改描述。
+
+## 技能是"指令 + 所需工具"的打包，不是一段文字
+
+来源：n8n Docs《Build and manage agents》（2026-09-14 实访 Markdown 原文）：*Skills = reusable behavior bundles that package instructions with the tools needed for a specific task.*
+
+- **一个技能 = 一类任务的指令 + 完成它所需的工具**，二者一起交付。只给指令不给工具，执行时还得现找；只给工具不给指令，模型不知道何时用、怎么用。
+- **因此写技能时要同时回答两个问题**：① 怎么做（步骤/规则）② 用什么做（脚本 / 命令 / 依赖）。缺第二个，技能就是不完整的。
+- **可复用的判定在"任务"这一层**：按"一类任务"打包，不按"一次操作"、也不按"一个领域"打包——太细会碎片化，太粗会变成什么都往里塞的杂物间。
+- 与「文件拆分」配套：指令进 `SKILL.md`，工具进 `scripts/`、资料进 `references/`，**打包的是同一件事的三种形态**。
