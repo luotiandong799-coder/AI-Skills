@@ -10388,3 +10388,68 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **生态节奏**：npm @deepseek-ai/dsh 四天六个版本（0.1.0-rc.6）；GitHub dsh-plugin topic 1,200+ repos 快速增长——**新运行时生态指数级起量，插件先行的验证**。
 - **ModLens**：第一个 vision 插件，给纯文本模型外挂视觉（粘贴图片出结构化 JSON 证据：OCR/版面/语义）——"vision bridge for every text-only coding agent"——**文本模型视觉能力走插件外挂，不换模型**。
 - **HF Skills**：AI/ML 任务定义（dataset creation/model training/evaluation），与 Codex/Claude Code/Gemini CLI/Cursor 互操作——**ML 任务也标准化为技能**。
+
+## r287A 学习轮落地（2026-09-29；来源 Dify/n8n/LangFlow/Activepieces/Make/Pipedream/Anthropic/GitHub/OpenClaw/技能市场 十站实拉）
+
+### 节点内建错误处理与变量引用纪律：retries + failure behavior 三选（来源：Dify workflow guide + LLM node docs，2026-09-29 实拉）
+- **节点内建错误处理三选**：LLM/HTTP/Code/Tool 节点支持 retries + failure behavior——**stop（停）/ typed default value（返回类型化默认值）/ fail branch（走失败分支）**。→ 判据：**每个易错节点先定失败行为，别让它裸崩**。
+- **每个 LLM 节点单一职责**：分类/生成/规则格式化分开（不同阶段需要不同验证）——**与 §多Agent 按技能建 同源：节点也按职责切**。
+- **run logs 监控 token 用量**（inputs/outputs/latency/usage）——**工作流 token 成本靠日志盯，不是靠感觉**。
+- **变量引用格式 {{#节点ID.变量名#}}**：用鼠标点选插入，不要手打（手打常见断流）——**变量引用是字符串精确匹配，格式错=静默断流**。
+- **生产密钥纪律**：DIFY_AGENT_SERVER_SECRET_KEY 等 dev 默认值生产必须替换（secrets.token_urlsafe(32) 生成）——**自托管平台先查 dev 默认密钥**。
+
+### Queue Mode 更新顺序纪律：先停 worker 防 ghost triggers（来源：n8n docs queue-mode + community ghost triggers 帖，2026-09-29；与 §部署互补——那条管"架构形态"，本条管"更新与运维纪律"）
+- **Queue Mode 架构**：main 只处理 timer/webhook 生成执行 ID → Redis（Bull）队列 → worker 消费执行 → 写回数据库；EXECUTIONS_MODE=queue。
+- **更新顺序纪律**：先停全部 workers → 停 main → 重启 main → 再拉 workers——**main 在 workers 还跑着时重启，trigger 重新注册会生成重复（ghost triggers）**。→ 判据：**队列模式更新按序停启，跳过一步就可能重复执行**。
+- **EXECUTIONS_TIMEOUT** 限制单次执行时长（限制 ghost execution 伤害）——**执行超时上限是兜底闸**。
+- **清理 stale Bull jobs**：redis-cli KEYS "bull:n8n*" 手动清——**队列残留要主动清**；N8N_ENCRYPTION_KEY 所有 worker 必须相同（不一致=解密失败）。
+- **规模判据**：<1,000 执行/天 Regular；1,000-10,000 Queue 2-3 workers；>10,000 auto-scaling；关键任务 multi-main HA——**先估量再选架构**；dev/prod 分离 + workflow 版本化（Git/JSON 导出）。
+
+### 提示词评估四陷阱与触发时机：holdout + adversarial + 校准 judge + golden 保鲜（来源：explainx/sureprompts/bestprompt 评估指南，2026-09-29 实拉，与 §提示词编排互补——那条管"怎么写"，本条管"怎么评"）
+- **评估四陷阱**：①用调优数据评估会高估（**holdout 独立测试集**）②只测 happy path（**评估集 ≥20% adversarial/异常输入**）③judge 未校准（**先校准再信**）④golden dataset 不更新（**每季度加 10-20 生产样例、退役平凡样例**）。→ 判据：**评估集要与调优集分离、含对抗输入、judge 可信、随生产漂移保鲜**——四缺一，分数不可信。
+- **触发评估三时机**：prompt 变更 / model 变更（provider 更新、pin bump——**静默更新回归看不见直到用户抱怨**）/ infrastructure 变更（检索索引、embedding、工具输出格式）——**每次变更跑 golden set，进 CI 再 merge**。
+- **五步迭代法**：minimal prompt → 跑 5-10 次（一次运行≠信号）→ 诊断失败模式 → **一次只改一个变量（无例外）** → 版本化（prompt + test set + scoring rubric）。
+- **评估工具选型**：Promptfoo（CI-friendly 轻量）/ LangSmith（LangGraph 近）/ Langfuse（开源自托管、EU GDPR）/ DeepEval（pytest 原生）——**按 CI 亲和与合规选**。
+
+### Agents 可复用可对话与 Pieces CI/CD：agent 是一等公民（来源：Activepieces changelog 2026-09 + pieces-ci-cd docs，2026-09-29 实拉）
+- **Agents 可复用、可对话、可放置（Reusable, Chattable, Yours to Place）**：agent 不再是 flow step 里的设置包，而是**命名/简报/对话/复用的一等公民**；一句话建 agent（prompt box 描述工作即可）——**agent 资产化，不随 flow 步骤散落**。
+- **agent 链式串联**：嵌入 flow 作 step，提供 prompt 让它知道该步任务；多个 agent 链起来各管一段——**agent 编排 = 链式职责分配**。
+- **Pieces CI/CD**：离线开发 → 增量 piece version（package.json）→ PR → merged 后 CLI 或 GitHub Action 触发同步——**piece 像 npm 包一样走版本化 PR 流水线**。
+- **Piece Builder Skill for AI coding agents**（.agents/skills/piece-builder：Patterns/Triggers/Outputs/Build commands）——**平台把自己的 piece 开发规范做成 Skill 喂给 coding agent**——技能化的又一佐证。
+
+### HTTP 模块错误处理：无 bundle 子场景三法 + Resume 通知（来源：Make community HTTP module 帖，2026-09-29 实拉）
+- **HTTP 无 bundle 返回三法**：子场景只负责 HTTP 调用（≥1 bundle 返回 webhook response 200；<1 bundle 返回错误码 + 主场景 BREAK error handler）——**HTTP 成败转成子场景的错误信号，主场景只管 BREAK/继续**。
+- **Bad Request 排查顺序**：required parameter 缺失或 null（尤其 iterator 映射的字段）——**先查映射字段，不是查 URL**。
+- **错误通知模式**：HTTP module 右键 → Add error handler → Resume → Slack 通知（含 {{2.statusCode}} + {{2.data}}）——**错误处理链：捕获 → 恢复 → 通知带状态码**；**429 检查 Retry-After 头**。
+
+### trace_id 跨执行追踪与 pd.flow.retry：重放也是同一事件（来源：Pipedream triggers + rerun docs，2026-09-29 实拉）
+- **trace_id 跨执行追踪锚**：同一原始事件的所有执行（含重放）共享同一 trace_id——**重放/重试后的排障靠 trace_id 归并，不靠 ts**。→ 判据：事件字段里 replay（boolean）+ trace_id 一起看，重放事件可识别、可归并。
+- **pd.flow.retry 暂停/恢复**：外部服务 HTTP callback 回来后同一步处理（TIMEOUT 86400*1000 等一天）——**长等待用 retry 挂起，不占执行**（同 §等待者不占资源）。
+- **Connect API 项目作用域**：TypeScript/Python/Java SDK + REST API + OpenAPI spec，资源 scoped to projects；list triggers API（GET /v1/connect/{project_id}/triggers，搜索+app 过滤）——**集成资源按项目隔离，API 可编程化**。
+
+### Skills frontmatter 硬约束与膨胀拆分：name ≤64 + allowed-tools（来源：Anthropic skill authoring best practices + Help Center，2026-09-29；与 §触发双诊互补——那条管"触发准不准"，本条管"frontmatter 硬约束与文件结构"）
+- **frontmatter 强制两字段**：name（**≤64 字符、仅小写字母数字连字符、不能含 XML 标签、不能含保留词 "anthropic"/"claude"**）+ description（非空、**≤1024 字符**、不能含 XML 标签、写清做什么和何时用）——**硬约束不满足直接无效**。
+- **可选字段**：allowed-tools（无需询问即可用的工具）/ model（指定模型）/ license / compatibility / metadata.author——**工具权限可声明在技能头**。
+- **膨胀拆分法**：SKILL.md 变大后拆分到独立文件引用；**mutually exclusive 或极少同用的上下文分开引用减少 token 用量**——**拆分按"是否常一起用"切，不按章节切**。
+- **code 双角色**：可执行工具 + 文档——**明确 Claude 是直接跑脚本还是读进上下文参考，不默认**。
+- **写作纪律**：keep it focused（多聚焦技能组合性更好）/ include examples（输入输出示例展示成功长什么样）/ test incrementally / Think from Claude's perspective。
+
+### Agentic Workflows 渐进启用与 token 优化：staged 晋升 + 剪 MCP tools（来源：GitHub blog agentic workflows + token efficiency 帖，2026-09-29 实拉）
+- **渐进启用**：先低风险输出（comments/drafts/reports）再 PR creation；coding 先 goal-oriented（重构/测试覆盖/简化）再 feature work；**report 指令具体定义 "good"（format/tone/links/when to stop）**——**agent 自动化按风险分级放权**。
+- **safe-outputs staged 晋升线**：staged: false → true，判据四件（Restraint/Injection resistance/Output quality/Cost）——**自动化护栏可灰度：表现稳定才开写权限**。
+- **2026-06-11 起无需 PAT**：内置 GITHUB_TOKEN + Copilot 计费单一权限 flag——**agentic workflow 权限收敛到内置 token**。
+- **token 优化两招**：Optimizer 交叉比对 tool manifests 与实际调用**剪掉未用 MCP tools（每调用省 8-12KB 上下文）**；**GitHub CLI 替代 GitHub MCP 做数据读取**——**工具面越大上下文越贵，剪未用的**。
+- **Docker Sandboxes 作 agent runtime**：microVM 隔离 + network policy + secrets injection——**agent 环境隔离即安全**；least-privilege：permissions: issues: write contents: read 而非 write-all。
+
+### ACP 三命令与配置族：spawn / steer / attach（来源：OpenClaw ACP agents docs + DeepWiki，2026-09-29；与 §ACP 会话互补——那条管"会话概念"，本条管"操作命令与配置"）
+- **三命令**：/acp spawn codex（起新 ACP session，runtime: "acp", agentId: "codex"）/ **/acp steer <id> <instruction>（向活动 agent 发新指令不新开会话）** / **/acp attach <id>（把当前消息通道绑定到特定 ACP session 输出）**——**steer 是"续聊"，attach 是"接管"**。
+- **配置族（plugins.entries.acpx）**：acp.enabled / acp.dispatch.enabled / acp.backend（acpx）/ acp.allowedAgents（["codex","claude"]）/ acp.maxConcurrentSessions（8）/ acp.stream.coalesceIdleMs（300）——**外部 agent 的并发与白名单可配置**。
+- **persistent ACP bindings**：绑定会话在 /new 和 /reset 时重置 runtime——**话题绑定可跨消息与重启保持**。
+- **pluginToolsMcpBridge**：让 Codex/Claude Code 调用 OpenClaw 插件工具（memory recall/store）——**外部 harness 可桥接内部工具**。
+
+### 技能市场生态规模与 find-skills：npm for Agent Skills（来源：skills.sh/Vercel + maketocreate + agensi 生态盘点，2026-09-29；与 §技能市场互补——那条管"分层生态"，本条管"规模数据与安装路径"）
+- **skills.sh（Vercel vercel-labs）**：MIT 开源，2026 年初发布，CLI skills + web directory leaderboard——**"npm for Agent Skills"**；安装 npx skills add <name>，跨 Claude Code/Codex CLI/Cursor/OpenClaw。
+- **规模数据**：数百技能、410,000+ 总安装；top3：find-skills（1.5M installs）/ frontend-design（420K）；**find-skills 技能 900K+ 周安装**——**"找技能"本身是最热技能，说明发现是痛点**。
+- **四大 marketplace**：Skills.sh / Claude Skills Registry / Hugging Face Skills Hub / Microsoft Copilot Studio Skills Marketplace——**SKILL.md 格式成为新 wire protocol（"Agent Skills Are the New APIs"）**。
+- **SkillsMP 定位**：跨平台聚合器（mostly forks/mirrors）、80,000+ 条目、无自有安装命令（点击 install 跳转原目录）——**聚合目录≠registry，装不装看原站**。
+- **skill-creator（anthropics/skills）**：创建/修改/评估、evals、variance analysis、优化 description 触发准确率——**官方把"写技能"也做成了技能**。
