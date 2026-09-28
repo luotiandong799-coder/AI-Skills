@@ -9834,3 +9834,68 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **2026 短课主线**：Agent Memory（长期记忆=外部、持久、结构化的一等基础设施）/ Adaptive Agents（自适 agent）/ Document AI（OCR 丢版式信息→agentic 抽取）/ AI Code Review / Prompt Compression and Query Optimization / Semantic Caching for AI Agents——**官方课程方向=行业能力风向标：记忆、文档抽取、缓存、代码评审**。
 - **"记忆工程"被提为基建**：Agent Memory 课程把长期记忆当外部持久结构化基础设施（Oracle AI Database+LangChain+LLM 流水线）——**与本库 §记忆分层 相互印证：记忆是工程不是提示词**。
 - **提升层**：工作流（学习路径）。
+
+## 工作流 DSL 版本控制与 CI/CD：YAML 进 Git、Admin API 不覆盖、生命周期五阶段（来源：Dify deepwiki workflow-system-fundamentals + application-management + CSDN CI/CD + dev.to hidden-uses，2026-09-29 实拉）
+- **工作流即代码**：每个工作流可导出为 DSL YAML → 存 Git 仓库 → diff 不同部署 → CI/CD 管道发布 → 导入其他实例——**"用代码管工作流"与"用 UI 点工作流"的分界**（与 §Scheduled Batch 轻量自动化互补：那条管形态，这条管版本治理）。
+- **应用生命周期五阶段**：Build&Configure → Debug&Test（逐步执行+变量检查+历史日志）→ Publish（web app+API keys+访问设置）→ Monitor（日志/指标/反馈）→ Update（版本控制+回滚）——**发布前五阶段走全再上线**。
+- **坑：Admin API 总是创建新 app、不能覆盖已有**（同一 DSL 发布两次=两个 app）；`completed-with-warnings` 通常=DSL version 字段过旧——**发布脚本必须做"是否已存在"重叠校验**。
+- **提升层**：工作流（版本治理）。
+
+## n8n 表达式访问体系：三记号 + JMESPath + 具名节点（来源：n8n docs expressions-for-data-transformation + expression-reference + logicworkflow，2026-09-29 实拉）
+- **表达式变量表**：`$json`（当前 item 的 JSON）/ `$node["Name"].json.id`（按名访问其他节点）/ `$input.item/.all()/.first()/.last()` / `$binary`（二进制数据）——**取数先想清"当前 item 还是指定节点"**。
+- **访问记号三分**：点记号 `$json.user.address.city`（已知结构）/ 括号记号 `$json['user-data']['street-address']`（特殊字符字段）/ 可选链 `$json.user?.address?.city ?? fallback`（不确定结构防崩）——**结构确定用点、字段名特殊用括号、可能缺值用可选链**。
+- **JMESPath**：`$jmespath()` 从复杂嵌套对象提取数据，表达式无效返回 undefined——**深度嵌套查询用 JMESPath 而非一长串点链**。
+- **提升层**：工具（表达式）。
+
+## 聊天记忆与向量记忆是两类：用途不同、不可互换（来源：LangFlow docs memory + memory-bases + bundles-redis + langflow-1.10 blog + redis.io blog，2026-09-29 实拉）
+- **chat memory ≠ vector store memory**：chat memory 专为存/取聊天消息设计（Agent/Message History 组件把它当 memory 用，回忆过去对话）；vector store 面向文本块语义搜索——**"记对话"与"搜知识"用不同的存储机制**（与本库 §记忆分层 同构：记忆类型决定存取方式）。
+- **Memory bases（1.10）=每 flow 的向量库**：自动摄入对话消息、跨 session 持久会话上下文（替代 session-scoped memory）——**"跨会话记得住"靠 per-flow 向量库，不靠 session 变量**。
+- **Redis 记忆工作流**：Redis Chat Memory 组件 + RPC 端到端记忆（短时/长时存 Redis、RedisVL 向量化语义记忆+元数据混合检索）——**语义+元数据混合检索优于纯相似度**。
+- **坑：Redis 缓存与 job queue 必须不同 DB index**（cache 默认 DB 0、queue 默认 DB 1；同 index 混合产生不可预测行为）——**同一 Redis 不同用途分库隔离**。
+- **提升层**：工具（记忆）。
+
+## 分支循环嵌套与 Router 输出结构：ap_add_branch、JS 步骤 schema 化（来源：Activepieces mintlify passing-data + workflows + loops-branches + MCP tools，2026-09-29 实拉）
+- **Router 输出结构固定**：`router.output.branches[]` 数组（branchIndex/branchName/evaluation 条件结果）——**下游读分支结果读 branches 数组，不猜字段名**。
+- **loop 与 branch 可互相嵌套**：LOOP 动作（items+loopActions）、BRANCH 动作（conditions 数组）；loop 内 router、router 内 loop——**嵌套是数据处理的常态，不是特殊场景**。
+- **MCP 可改流结构**：ap_add_branch 在 fallback Otherwise 前插入条件分支（flowId+routerStepName）——**流结构可被 agent 程序化修改**（工具面治理要按此设计权限）。
+- **JS 步骤做 schema 化**：字段清洗/类型转换/规范化/记录重塑，把上游 payload 映射成一致 schema 再写 API/DB——**"入口统一 schema"是数据管线的第一道门**。
+- **提升层**：工作流（分支循环）。
+
+## 无状态场景 + Data Store 持久化：跨 run 记忆的分界（来源：Make help scenario-variables + everestx data-stores + use-apify guide + keerok，2026-09-29 实拉）
+- **scenarios 默认无状态，Data Store 给跨 run 记忆**："toy automation vs production infrastructure 的分界"——**要生产级就得上持久化，变量只在单 run 内活**。
+- **Data Store=key-value 表**：防重用 key=已处理 ID 存 timestamp、计数 key=counter、lookup key=查询键；字段=name+type（Text/Number/Boolean）——**"上次到哪了/处理过没/累计多少"都放 Data Store**（与 §等待恢复落库 同构）。
+- **三种变量分层**：系统变量（只读）/ 场景变量（单 run 临时，set/get variable 工具）/ 自定义变量（组织/团队级 Pro+，跨场景共享）——**作用域越大权限越严**。
+- **提升层**：工具（持久化）。
+
+## 组件即可复用代码步骤：props/return/版本化三件套（来源：Pipedream docs components + actions + quickstart + component API，2026-09-29 实拉）
+- **Actions=预建组件**：封装连接逻辑/错误处理，用户只填参数；源码在公开 GitHub repo——**"把 API 集成封装成动作"是复用的最小单元**。
+- **组件三特性**：props 接受用户输入、return JSON 可序列化数据、name/key/version/type 可发布到注册表——**组件=有契约的代码步骤（输入/输出/版本）**。
+- **生命周期 hooks**：deploy()/activate() 可选 hooks + 部署生成组件 ID；source 用 `$.service.db`（get/set）持久化状态——**组件状态管理与代码逻辑分离**。
+- **Python 不可复用**：components 只支持 Node.js，Python 代码步骤复用=复制粘贴——**要跨 workflow 复用就用 Node 组件，别用 Python 步骤**。
+- **提升层**：工具（组件化）。
+
+## MCP 连接管理命令链：add/list/add-json + Directory + marketplace（来源：Claude Code docs mcp-configuration + mcp + claude.com extensions，2026-09-29 实拉）
+- **命令三连**：`claude mcp add`（连接 server）、`claude mcp list`（显示认证状态 ! Needs authentication）、`claude mcp add-json`（传 mcpServers 内部对象）——**CLI 管理优于手改配置文件**。
+- **Anthropic Directory=已审查连接器**：claude.ai/directory 的远程服务器与 Claude Code 同一 MCP 基础设施、可直接 claude mcp add——**装 MCP 先查官方目录（审查过的）**（与 §MCP 选型五标准互补）。
+- **插件 marketplace**：`/plugin marketplace add anthropics/claude-plugins-official` + `/plugin install mcp-server-dev@claude-plugins-official`；marketplace.json 是目录文件（git repo 或 HTTPS、pin revision）——**插件源可审计、可锁版本**。
+- **提升层**：工具（MCP 治理）。
+
+## GitHub Agentic Workflows：Markdown 定义 + Docker Sandbox + safe-outputs 护栏（来源：GitHub Blog agentic-workflows + Docker blog sandboxes + GitHub Docs，2026-09-29 实拉）
+- **自然语言定义自动化**：在 .github/workflows/ 写 Markdown 描述目标 → gh aw 编译成 .lock.yml 标准 Actions → 跑 coding agent（Copilot/Claude Code/Gemini/Codex）——**"用自然语言写 CI"替代手写 YAML 步骤**（与 §轻量自动化三模式互补：那条管形态，这条管 agent 化）。
+- **隔离运行时**：Docker Sandboxes（2026-07）= agent 在 microVM 隔离 + 网络策略 + secrets 注入——**agent 代码能力越强，沙箱隔离越必须**。
+- **safe-outputs handler 护栏模板**：title 前缀 [docs]、label、draft: true（从不自动合并）、base branch 限 main/release/*、reviewer 指定——**AI 生成 PR 的输出护栏：可识别、不自动合并、限分支**。
+- **提升层**：工作流（智能自动化）。
+
+## 记忆即普通 Markdown 文件：无隐藏状态 + 三态记忆 + LCM（来源：OpenClaw docs concepts/memory + openclawforge stateful-agents + claw.mobile LCM，2026-09-29 实拉）
+- **模型只记得保存到磁盘的内容（无隐藏状态）**：记忆=agent workspace 的 Markdown 文件——**"它到底记得什么"=看文件，不是看感觉**（与本库 §记忆分层 同构）。
+- **双文件记忆**：memory/YYYY-MM-DD.md 每日日志（append-only、会话开始读今日）+ MEMORY.md 精炼长期记忆（会话开始加载）——**日志天天记、档案定期整理**。
+- **三态记忆**：short-term context（RAM 易失）/ long-term structured（SQLite/JSON 持久可查）/ semantic memory（向量库语义检索）——**按查询方式选存储形态：精确查用结构化、模糊查用向量**。
+- **LCM Lossless Context Management**：自动决定保全文/压缩/归档——**无损上下文管理是"记得住还不爆窗口"的关键**（与 §上下文预算管理 同构）。
+- **提升层**：工具（记忆架构）。
+
+## Agent Skills 生态现实：百万级注册表 + 12% 恶意 + 安全优先目录（来源：Vercel state-of-agent-skills + agentskillexchange roundup + env.dev + nxplace，2026-09-29 实拉）
+- **体量**：skills.sh 7 个月达 100 万 skills、近 2.8 亿 installs；SkillsMP 索引约 190 万公共 skills；2026-03 跨过"严肃基础设施"门槛（87K+ stars、30+ 平台采用）——**Agent Skills 已是基础设施级生态**。
+- **标准**：AgentSkills.io spec=事实上的跨平台标准（Anthropic 2025-10 发起，Google/Microsoft/独立工具采纳）——**装技能认准开放标准格式**（与 §官方 SKILL.md 规范 互证）。
+- **安全是最大风险**：审计 skills 26% 含漏洞、12% 恶意（跨注册中心）；Snyk ToxicSkills 13.4% 关键问题——**从公共注册表装技能=装第三方代码，必须过安全扫描与最小权限**（与 §工具描述可注入 同构）。
+- **市场分散**：8 个竞争注册中心（2025-12 1 个→2026 Q2 8 个）；2,500+ Claude Code plugin marketplaces；安全优先目录兴起（Cisco 标记 exfiltration）——**选目录先看有没有安全扫描**。
+- **提升层**：工作流（生态治理）。
