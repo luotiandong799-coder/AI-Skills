@@ -9899,3 +9899,67 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **安全是最大风险**：审计 skills 26% 含漏洞、12% 恶意（跨注册中心）；Snyk ToxicSkills 13.4% 关键问题——**从公共注册表装技能=装第三方代码，必须过安全扫描与最小权限**（与 §工具描述可注入 同构）。
 - **市场分散**：8 个竞争注册中心（2025-12 1 个→2026 Q2 8 个）；2,500+ Claude Code plugin marketplaces；安全优先目录兴起（Cisco 标记 exfiltration）——**选目录先看有没有安全扫描**。
 - **提升层**：工作流（生态治理）。
+
+## RAG 检索三策略与轻量 GraphRAG：加权/rerank/metadata/summary（来源：Dify blog n-to-1 + 1.12.0 summary-index + deepwiki retrieval + dify-hosting RAG guide，2026-09-29 实拉）
+- **检索模式三分**：向量（语义相似）/ 全文（精确匹配：产品码/ID/名称）/ 混合（精度与召回平衡）——**按查询类型选检索模式，不是默认向量**。
+- **Rerank 必配**：多路径检索=关键词&语义加权评分 + rerank 模型（Cohere/Jina）重新打分排序；多模态知识库必须选 Vision 标记 rerank 模型否则图片被排除——**检索完必须重排，Top K 在重排后取**。
+- **Summary Index=轻量 GraphRAG**（Dify 1.12.0）：每个 chunk 附 summary 字段，summary 匹配时同/语义相关 chunks 一起检索——**碎片检索→全文上下文的低成本方案（比 GraphRAG 实体图便宜）**。
+- **检索质量四前置**：metadata 过滤（product: billing/type: FAQ 标签）/ 清洗源文档（页眉页脚页码导航）/ 固定代表性问题集测试分块 / 索引两档（High-Quality 向量 vs Economical 关键词）——**"召回差"先查数据与分块，别只换模型**。
+- **提升层**：工作流（RAG）。
+
+## 错误处理三层与重试状态码分层：节点级/工作流级/AI 分诊（来源：n8n workflows triage-retry + backoff-jitter + mintlify error-handling + n8nautomation guide，2026-09-29 实拉）
+- **三层错误处理**：node-level Retry on Fail（瞬时错误最便宜的可靠性收益；Max Tries≤5、Wait Between Tries≤5s）+ Error Workflow（全局集中错误处理+通知，**新实例第一件事**）+ workflow-level retry loops（Code/Wait/IF，指数退避 `min(maxDelay, baseDelay×2^(attempt-1))`）——**先节点级兜底，再全局收口，复杂重试走循环**。
+- **重试状态码分层**：可重试 408/409/425/429/500/502/503/504；不可重试 400/401/403/404/422——**按状态码决定是否重试，别全量重试**（与 §重试分两类管 互补：那条管 transport/tool 分型，这条管码表）。
+- **AI 分诊+重试计数**：每事件最多 3 次、指数退避、n8n API 重试失败执行、OpenTelemetry 遥测；continueOnFail 仅非关键步骤；最终 fallback=紧急通知节点——**"可自动重试"要有置信度门槛和预算，超了就通知人**。
+- **提升层**：工作流（错误处理）。
+
+## 多 Agent 流水线编排三模式：专才流水线 / agent-as-tool / supervisor（来源：Langflow guides multi-agent + blog deep-research + CUGA + docs dynamic-agent，2026-09-29 实拉）
+- **专才流水线（五 agent 深度研究）**：Planner 拆 3-7 子问题 → Source Finder（web 搜索取高信号链接）→ Summarization（工具调用提取事实）→ Reviewer（找缺口提后续）→ Writer（综合成报告）——**每个 agent 单一职责+明确交接物**（与 §多 Agent 协作纪律"按技能建 agent"互证）。
+- **agent-as-tool 递归编排**：agent 可调用其他 agent 作为工具（1.1 tool mode），嵌套式动态问题解决——**把 agent 当工具用，组合出层次化系统**。
+- **Supervisor 模式**：User query → Supervisor → Research/Code/Writer agents；CrewAI hierarchical crew（Roles/Goals/Backstories + Manager）——**复杂任务先选编排模式再动手**。
+- **提升层**：工作流（多 Agent）。
+
+## 触发器两技术选型与 webhook 生命周期：polling vs webhook、On Enable 注册（来源：Activepieces docs create-trigger + webhook-trigger + MCP tools，2026-09-29 实拉）
+- **触发器=启动 flow，actions=触发后执行**：Trigger Technique 二选一 polling（周期查端点）或 webhook（单 URL 监听事件）——**"能推送就别轮询"**。
+- **Webhook 触发器生命周期**：On Enable 用 context.webhookUrl 注册第三方 webhook + store webhook Id；On Handshake 有些服务需成功握手；App Webhooks（OAuth2 订阅式）当前 Not Supported——**做 webhook 集成按 enable/handshake/disable 三钩子写**。
+- **MCP 自然语言搜触发器**：ap_search_triggers（"when a new row is added to a Google Sheet"）返回触发器名——**agent 可 NL 检索触发器与动作，流搭建走向自然语言**。
+- **提升层**：工具（触发器）。
+
+## Router=分支+fallback：filter 前置 + 错误处理路由（来源：Make help modules/router + apps.make http + academy webhooks + help throw，2026-09-29 实拉）
+- **Router 结构**：分支多条 chain，每条 route 首连线 Filter 设条件（less than/greater than 等运算符）+ **fallback route 处理不匹配其他 route 的数据**——**"都没有匹配"必须有去处，fallback 兜底**（与 §分支循环 router.output 同构：不同平台同纪律）。
+- **两分支场景**：数据找到/没找到 + Filter 前置；**错误处理模式：router 后两 routes（数据正常 + 错误处理路径 Sleep+重试）**；Throw 模拟可选抛错——**"没数据"与"有数据但错了"分两条路**。
+- **HTTP v4**：简化 setup、更安全 keychain 存储、原生 pagination——**新版本优先，旧版 v3 legacy 明确标注**。
+- **提升层**：工具（路由）。
+
+## 事件重放与显式暂停：Replay 重跑原始事件、suspend/resume 是真检查点（来源：Pipedream docs event-history + rerun + community，2026-09-29 实拉）
+- **Event History 批量操作**：Replay（修复 bug 后重跑失败事件）+ Delete（scrub 事件）——**批量重放失败事件=修 bug 后的标准收尾**。
+- **重放语义**：从**原始入站事件数据**重新执行（不是从失败步骤恢复 mid-run）——**"重放"=重跑全流程，不是续跑**；真 checkpoint/resume 只存在于显式 $.flow.suspend()/resume() 暂停点。
+- **$.flow.rerun=单步多次运行**：外部 API 轮询完成或服务回调处理——**单步重入（rerun）≠ 整流重放（replay），两套机制别混**。
+- **部署模型**：Deploy 按钮 Draft→Active；GitHub Sync 做完整历史/回滚（无原生 per-step 版本历史）——**版本历史靠 GitHub Sync 补**。
+- **提升层**：工作流（重放）。
+
+## SKILL.md 官方硬约束：命名/描述/大小/版本格式四道线（来源：Anthropic Complete Guide PDF + platform.claude.com agent-skills overview + skills-guide，2026-09-29 实拉）
+- **命名硬约束**：文件必须精确 SKILL.md（case-sensitive）；文件夹 kebab-case 且与 name 匹配；name≤64 字符（仅小写字母/数字/连字符、无 XML 标签、无保留词 "anthropic"/"claude"）；description 非空≤1024 字符——**写技能前先过命名检查**（与 §官方 SKILL.md 规范 互证：那条管结构，这条管硬约束）。
+- **大小与上传**：总量<30MB 未压缩；自定义 skill=目录 zip 或单文件上传，返回 skill_* ID——**资源类技能注意体积上限**。
+- **版本格式**：Anthropic Skills=日期型（20251013/latest）；Custom Skills=epoch 时间戳——**官方技能用日期版本，自定义用时间戳版本**（与 §版本化 同构）。
+- **预加载机制**：启动时 agent 预加载 name+description——**description 是触发入口，写准它**。
+- **提升层**：可复用 Skill（技能规范）。
+
+## GitHub agent 生态信号：harness 层兴起 + 运行时/人设/数据层（来源：harnesses.sh + yuxiaopeng ranking + bitdoze + dev.to trending + 极客公园，2026-09-29 实拉）
+- **harness 层兴起**：harnesses.sh 档案 75 harnesses（9-axis capability schema，OpenClaw 382K stars #1）；awesome-harness-engineering（memory/evals/verification/orchestration 纪律清单）——**"模型外围的脚手架"成为独立品类，值得按周学一个 pattern**。
+- **运行时/人设/数据三层新锐**：herdr 40.9K Rust（coding agents 的运行时）；agency-agents 149K（300+ agent personas 一条命令装）；TiDB 为 agentic workloads 构建（ACID+事务+分析+向量搜索）——**agent 基建往下沉：运行时、人设包、专用数据库**。
+- **RAG 学习资源**：RAG_Techniques 29.6K（高级 RAG 技术 notebook 教程）——**学习型仓库当 syllabus 用**。
+- **提升层**：工作流（生态选型）。
+
+## 插件系统类型化边界：defineToolPlugin + 可发现/验证/测试/禁用/升级（来源：OpenClaw docs plugins + tool-plugins + cheat-sheet + playbook，2026-09-29 实拉）
+- **defineToolPlugin=纯工具插件**：只加 agent 可调用工具（无 channel/provider/hook/service），生成 manifest 元数据供发现、不加载运行时——**"只加工具"用轻量插件，别拉全家桶**。
+- **插件注册面**：Gateway RPC methods / HTTP handlers / Agent tools / CLI commands / Background services / Skills / Auto-reply commands；api.registerCommand（name/description/acceptsArgs/requireAuth/handler）——**扩展点按需注册**（与 §MCP 安全护栏 同构：工具面=爆炸半径）。
+- **安装与市场**：openclaw plugins install ./custom-plugin（--link 链接模式）；skills search/install；plugins marketplace list/install plugin@marketplace——**CLI 一条命令装技能/插件**。
+- **类型化边界**：OpenClaw 可 discover/validate/test/disable/upgrade 插件——**插件系统要有验证与禁用能力，不能装了就不能卸**。
+- **提升层**：工具（插件治理）。
+
+## 提示工程进阶三件：Meta-Prompting / DSP / 六要素（来源：vibeengines roadmap + iamautodidact + besthub learning path + Promptise，2026-09-29 实拉）
+- **Meta-Prompting**：用模型生成/完善/批评 prompts（"Rewrite this prompt to be more specific"/"What's missing from this prompt?"）——**模型自己就是提示工程加速器**（与 §提示工程方法论 互证：迭代而非一次成型）。
+- **Directional Stimulus Prompting**：小刺激槽引导 tone/证据规则/简洁性，不改主 prompt——**细粒度控制用独立刺激槽，别污染主指令**（与本库 §提示架构标签分离 同构）。
+- **提示设计六要素**：Task objective / context / role / audience / examples / output format；系统提示设计（System vs user、role setting、constraints、output specifications）——**写提示前六要素逐个确认**（与用户常驻"工程化指令模板"互证）。
+- **提升层**：模型（提示工程）。
