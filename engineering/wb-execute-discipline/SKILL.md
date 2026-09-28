@@ -9139,3 +9139,63 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **维护节奏**：**周审日志→提取模式/洞察→更新 MEMORY.md**——日志天天记、档案定期整理（与本库 §记忆两级沉淀同构，本面=OpenClaw 落地形态）。
 - **成本边界**：记忆文件过大 inflate 每次请求 token——**每工作区文件实际上限几千词**，超了就蒸馏（与 §token 治理同源）。
 - **提升层**：可复用 Skill（记忆分层工作流）。
+
+## Dify 模型供应商配置与负载均衡（来源：dify-6c0370d8.mintlify model-providers + dify.ai blog deepseek-api-down-again + dify blog openai-o1 + enterprise-docs plugin 2024-09/2026-09 实拉，合并 §Dify 平台——那条管"RAG/Agent/变量"，本条管"供应商配置"）
+- **供应商接入**：Settings→Model Providers 选供应商（OpenAI/Anthropic/Google/Cohere/通义/DeepSeek 等）→ 填 API key → Dify 先校验再开放给工作区；marketplace 插件安装 provider（可配 base URL 走代理/网关，如 DeerAPI/TrueFoundry AI Gateway）；OpenAI-API-compatible 插件接非官方模型。
+- **双轨与回退**：自有 key 与平台 AI credits 可共存，**Usage Priority 控制先用哪个、失败回退哪个**——按成本/限流策略决定主用与兜底。
+- **每模型负载均衡**：同一模型配多把 key，round-robin 或 auto-switching 分发——**高负载/限流时保持在线**（DeepSeek R1 断供场景官方三策略）。
+- **提升层**：工具（供应商与高可用配置）。
+
+## n8n 模板生态（来源：docs.n8n.io use-templates + n8n.io workflows 分类页 + n8nlogic/n8n-library/n8ntemplates.me 2026-05/07 实拉，合并 §n8n 平台——那条管"数据/AI/表达式"，本条管"模板复用"）
+- **官方社区库**：n8n.io/workflows 数千模板（AI chatbot 1269+、CRM 471+、engineering 534+），**任何人可贡献质量参差**——导入后必须自己填 credentials + 调配置。
+- **第三方案源**：n8n-library.com（2348 免费按类目整理）、n8ntemplates.me（12000+ 带 AI 生成）——**模板质量需人审**。
+- **高价值模板模式**："把现有 n8n workflow 封装成 MCP server"（engineering 类）——**designing agent tools for outcome**：agent 拿到的是端到端工作流而非单步工具。
+- **提升层**：工具（模板复用与 MCP 化）。
+
+## LangFlow 环境变量与秘密管理（来源：docs.langflow.org configuration-global-variables + environment-variables + api-keys-and-authentication + deployment-kubernetes-prod 2026-07/09 实拉，合并 §LangFlow 平台——那条管"组件/API/嵌入"，本条管"配置与秘密"）
+- **两类变量分工**：全局变量（DB 存储 + secret key 加密，存可复用 credentials，可从 env var 源导入）vs 环境变量（LANGFLOW_PORT/LOG_LEVEL 等部署级设置）——**应用密钥用全局变量、部署配置用 env**。
+- **LANGFLOW_SECRET_KEY**：Fernet 加密敏感数据 + JWT HS256 签名；**不设会自动生成，但生产必须显式设**（否则重启即换、多实例不一致）。
+- **K8s 生产**：Kubernetes secrets + secretKeyRef 引用（values.yaml env valueFrom）或外部 secrets manager（HashiCorp Vault）；JWT 可升 RS256/512（PRIVATE_KEY/PUBLIC_KEY）。
+- **提升层**：工具（秘密管理）。
+
+## Activepieces AI 动作面（来源：activepieces.com pieces/ai + pieces/openai + pieces/contextual-ai + pieces/straico + blog rss-aggregator 2023-05/2026-09 实拉，合并 §Activepieces 平台——那条管"流程/MCP/AI pieces 概述"，本条管"AI 动作明细"）
+- **AI piece 三动作**：Ask AI（选 provider+model+prompt 生成，例 RSS 聚合用 gpt-4o）、Summarize Text（长邮件/文章压摘要）、Run Agent（复杂多步任务：reasoning+tools+iterate 直到完成）。
+- **AI MCP 6 工具**：Ask AI/Summarize/Generate Image 等在同 run 内与其他 app 步骤链式调用——**AI 动作可与其他 760+ apps 混排**。
+- **RAG 动作**：Straico RAG Prompt Completion（发 prompt 到指定 RAG 模型）——检索增强生成的动作化。
+- **提升层**：工具（AI 动作选型）。
+
+## 调度时区纪律（来源：aws EventBridge Scheduler + learn.microsoft Recurrence trigger/Logic Apps + prefect schedules + unifyapps schedule + oracle resource-scheduler 2026-01/09 实拉，通用调度器实拉，非 Make 特有——合并 §定时记账判据——那条管"排期语义/执行态"，本条管"时区与 DST"）
+- **时区必须显式指定**：按**业务时区**定义调度，不按服务器时区（UnifyApps/Azure 均此原则）；未指定时区时 DST 会让触发漂移 1 小时（Logic Apps 明确警告）。
+- **平台差异**：EventBridge 按指定时区自动调 DST；Oracle Resource Scheduler 只用 UTC 不自动调——**选平台前先确认 DST 策略**。
+- **cron day_or 再确认**：Prefect day_or 默认 True=日与周 OR 匹配（与 §cron 判据同构）——**排期跨平台仍有同样的"或"陷阱**。
+- **提升层**：工作流（调度器选型与配置）。
+
+## Pipedream 组件开发与 Registry（来源：pipedream.com docs v3/components + components/contributing + components/contributing/sources-quickstart + actions-quickstart + connect/components 2026-02/09 实拉，合并 §Pipedream 平台——那条管"认证/代码步骤"，本条管"组件开发"）
+- **组件两类**：Sources（触发器）可本地开发经 CLI 部署、或发布后 UI 实例化；Actions 只能发布后经 UI 添加——**source 热重载、action 走发布**。
+- **pd dev 工作流**：`pd dev source.js` 本地开发模式，**保存即自动更新部署组件**（CLI attach 监听文件变化）——本地编辑+GitHub repo 维护+CLI 部署。
+- **Registry 贡献**：fork PipedreamHQ/pipedream → components/<app>/sources|actions/ 子文件夹 → PR 审核；TypeScript 组件支持；REST API 建 source 需先建 component（拿 id/code/configurable_props）。
+- **提升层**：工具（组件开发管线）。
+
+## Claude Code hooks 事件面（来源：code.claude.com hooks-guide + hooks reference + claude.com blog how-to-configure-hooks 2025-12/2026-09 实拉，合并 §Anthropic 平台——那条管"subagent/思考/缓存"，本条管"hook 自动化"）
+- **事件全集**：Setup/UserPromptSubmit/UserPromptExpansion/PreToolUse/PostToolUse/PostToolUseFailure/PostToolBatch/Notification/MessageDisplay/SubagentStart/SubagentStop/Stop/SessionStart/SessionEnd/ConfigChange/PermissionRequest/PreCompact/TaskCreated——**覆盖会话生命周期+工具调用+压缩前后**。
+- **PreToolUse=工作马**：工具执行前可 block、放行免提示、改输入、升级用户审批——**护栏主入口**；PostToolUse 成功后不可 block 但可注入上下文（audit trail/lint 警告/通知）。
+- **PreCompact 保数据**：压缩会丢细节，hook 在压缩前备份 transcript/状态——**与本库 §压缩重声明互补**（那条管规则失效，本条管数据抢救）。
+- **提升层**：工作流（hook 自动化与护栏）。
+
+## GitHub 代码搜索 CLI/API（来源：cli.github.com gh_search_code + docs.github.com rest/search/search + api.github.com 端点 2026-04/09 实拉，合并 §GitHub 生态——那条管"Actions/工作流/Copilot"，本条管"代码搜索"）
+- **三入口**：gh search code（CLI）；REST /search/code（q+qualifiers、text-match JSON 高亮、page/per_page/sort/order）；gh api 子命令直接发 REST 请求。
+- **legacy 限制**：搜索 API 由 legacy code search engine 驱动——**regex 搜索等新特性 API 没有、结果可能与 github.com 不一致**；要最新功能走 web UI。
+- **qualifiers 生产力**：in:file/language:/repo:/path:/org: 等限定——**先限定再搜，命中率更高**。
+- **提升层**：工具（代码检索）。
+
+## deeplearning Prompt 工程两原则（来源：corporate.deeplearning.ai chatgpt-prompt-eng + learn.deeplearning 课程大纲 + CSDN 中文版笔记 2023-04/2026-09 实拉，合并 §deeplearning 评估——那条管"评估驱动/四模式"，本条管"提示工程基线"）
+- **两原则**：① 写**清晰、具体的指令**（模型听不懂弦外之音——要什么直接说）② **给模型思考时间**（让模型推理而非赶结论）。
+- **Iterative 迭代开发**：写 prompt→跑→分析失败原因→改进——**提示工程=评估驱动的迭代过程**（与 §评估驱动开发同构）。
+- **任务谱**：Summarizing/Inferring（提取结构化数据）/Transforming（翻译改写）/Expanding/Chatbot（系统消息+消息序列构建角色）。
+- **提升层**：工作流（提示工程基线）。
+
+## OpenClaw hooks 自动化（来源：docs.openclaw.ai automation/hooks + openclaw-ai.com hooks + beaverslab hooks/plugin-hooks 2026-04/09 实拉，合并 §OpenClaw 平台——那条管"配置/会话/记忆/技能"，本条管"事件自动化"）
+- **hooks=事件驱动脚本**：agent 事件触发时在 Gateway 内运行（目录自动发现+CLI 管理，类似 skills）；事件含 command:new/reset/stop、session:compact:before/after、session:patch、agent:bootstrap。
+- **内置 hooks 模式**：session-memory（/new /reset 存会话到 /memory/）、bootstrap-extra-files（glob 注入引导文件）、command-logger（命令审计日志）、compaction-notifier（压缩前后聊天通知）——**可作为自建 hooks 的参考模板**。
+- **plugin hooks vs HOOK.md**：plugin hooks=进程内扩展点（可 inspect/change agent runs、tool calls、message flow、subagent routing、Gateway startup）；HOOK.md=小型操作员脚本——**深度定制走 plugin、轻量自动化走 HOOK.md**。
+- **提升层**：可复用 Skill（事件驱动自动化骨架）。
