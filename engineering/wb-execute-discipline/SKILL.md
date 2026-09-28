@@ -11090,3 +11090,73 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Agent Skills 课程**：开放标准一次构建跨 agent 部署（Anthropic 合作）——**技能标准化进入课程化**。
 - **LLMs as OS**：MemGPT/Editable memory/Agentic RAG——**记忆即操作系统资源**。
 - 提升层：可复用 Skill。触发词：四设计模式、Reflection、Tool Use、Planning、Multi-Agent、MemGPT。
+## r292B 十独点（2026-09-29 实拉）
+
+### 1. 可观测性与沙箱隔离：Dify 的中间值检查与外部 traces（来源：agenticindex《Dify Observability》+ CSDN《Dify 日志监控 3 种策略》+ open-network《Dify 1.16.1 发布》2026-09-26/2026-06-12/2026-08-31 实拉，与 r289A HTTP 语义/r292A 聚合器合并增量）
+- **Variable Inspector**：Run History 视图可查每个节点的中间值——**调试检索质量下滑先看中间值，不用猜哪步坏了**。
+- **traces 流到外部栈**：OpenTelemetry 标准流到 Langfuse/LangSmith/Opik/W&B Weave/Arize/Phoenix/阿里云 ARMS 七个栈——**可观测性不锁平台，trace 是标准协议**。
+- **沙箱网络隔离**：1.16.1 Agent 沙箱加 Squid 代理隔离+bearer token 认证——**代码执行出网要过代理+鉴权**。
+- 提升层：工作流。触发词：Variable Inspector、OpenTelemetry traces、Squid 代理隔离、Run History。
+
+### 2. n8n Agents：定义一次随处用的独立实体（来源：n8n Blog《Introducing n8n Agents》+ n8n Community 2026-09-25/2026-09-06 实拉，与 r292A Webhook 面合并增量）
+- **Agent 是独立实体不是节点**：定义一次，随处使用——直接聊天/作为 workflow 节点/接 Slack/定时跑——**一个 agent 多种挂载面**。
+- **Skills 按需加载**：可复用指令+参考文件，agent 需要时加载，跨 agent 共享——**技能是 agent 的共享库**。
+- **Sub-agents**：一个 agent 可以调用另一个 agent——**agent 可嵌套**。
+- **Knowledge 文件 grounding**：上传 csv/pdf/markdown/txt 文件让答案有据——**grounding 走文件上传+向量存储**。
+- 提升层：工具。触发词：n8n Agents、定义一次随处用、Sub-agents、Knowledge 上传。
+
+### 3. extension 打包与 MCP 构建：LangFlow 的组件分发（来源：docs.langflow.org《Build your first extension》《Contribute component bundles》+ PyPI langflow-builder-mcp 2026-09-03/2026-09-04/2026-09-08 实拉，与 r291B 组件安全开关/r292A 记忆库合并增量）
+- **extension 规范布局**：lfx extension init 生成 extension.json v0 manifest + pyproject.toml（pip 可装）+ src 包——**组件按标准包结构分发**。
+- **bundles 组件组**：贡献回项目须归入与服务商相关的 bundle——**共享组件按服务商分组**。
+- **langflow-builder-mcp**：用 MCP 接口构建/管理组件——**组件的构建本身可自动化**。
+- 提升层：可复用 Skill。触发词：lfx extension、extension.json、bundles、langflow-builder-mcp。
+
+### 4. 轮询触发三阶段：Activepieces 的游标去重（来源：activepieces.com《Polling Trigger》+ DeepWiki《Action and Trigger Types》+ activepieces.com Snowflake 集成 2026-08-20/2026-09-21/2026-09-27 实拉，与 r292A Webhook 三阶段合并增量）
+- **On Enable 存游标**：last timestamp 或最近 item id 存 context store——**增量起点持久化**。
+- **Run 每 5 分钟增量取**：从游标时间戳取新项或遍历到 last item id，返回新项数组——**轮询=游标推进**。
+- **test 函数**：返回最近项用于测试——**测试不污染生产游标**。
+- **游标去重**：context.store 记 last processed ID 防重复——**轮询必须幂等**。
+- 判据：平台不提供 webhook 才用轮询；轮询必配游标。
+- 提升层：工具。触发词：Polling Trigger、游标、context.store、last processed ID、On Enable。
+
+### 5. Webhook 数据面：Make 的 pass-through 与 HTTP v4（来源：apps.make.com《Webhooks》《HTTP legacy》+ make.com《Webhooks help》+ academy-content《HTTP POST》2026-08-04/2026-03-13/2026-05-21 实拉，与 r292A 错误语义合并增量）
+- **JSON pass-through**：webhook 设置开启后访问原始 JSON——**不要只吃解析后的字段，原始体是调试底牌**。
+- **payload 上限 5MB**：webhook Content-Length 上限 5MB——**大负载走别路，别硬塞 webhook**。
+- **每场景独立 webhook URL**：各场景各用各的 URL，不复用——**一个 webhook 一个用途**。
+- **HTTP v4**：新版本简化配置+更安全 keychain 存储+原生分页——**升级旧 HTTP 模块的理由**。
+- 提升层：工具。触发词：JSON pass-through、5MB 上限、HTTP v4、keychain 存储、原生分页。
+
+### 6. 组件接口契约：Pipedream 的 timer/http 声明（来源：pipedream.com/docs《Component API Reference》《Deploying Triggers》《Destinations HTTP》2026-09-27/2026-07-14/2026-06-19 实拉，与 r292A 事件源合并增量）
+- **$.interface.timer**：props 里声明 type，intervalSeconds 或 cron+timezone 定义调度——**定时是组件声明不是外部配置**。
+- **$.interface.http**：HTTP 接口声明+customResponse 选项（默认 false）——**要不要自定义响应显式声明**。
+- **Destination 异步投递**：HTTP destination 在 workflow 完成后才发——**投递与执行解耦，不等网络**。
+- 提升层：可复用 Skill。触发词：$.interface.timer、$.interface.http、customResponse、Destination 异步。
+
+### 7. SDK 工具模式：Schema 质量与程序化调用（来源：console.anthropic.com《Programmatic tool calling》+ Developers Digest《Tool Use Production Patterns》+ rapidclaw《Claude Agent SDK in Production》+ jangwook《SDK 实战指南》2026-03-23/2026-06-11/2026-04-30/2026-05-13 实拉）
+- **Schema 质量=可靠性最大预测因子**：模型按名称/描述/参数文档选工具，两工具听起来像就会选错——**工具 schema 用词必须互斥可辨**。
+- **程序化调用三要求**：详细输出描述（JSON 结构/字段类型）/ 返回结构化数据 / 响应简洁——**工具返回是给程序解析的，不是给人读的**。
+- **Agent SDK 免手写循环**：不用自己写 while stop_reason=="tool_use"——**SDK 内置 agentic loop**。
+- **幂等键**：idempotency_key 必须按逻辑发送唯一——**写操作先查再发，别盲重**。
+- **ToolError 而非 raise**：返回 ToolError 对象而不是抛异常——**工具错误是数据不是中断**。
+- 提升层：可复用 Skill。触发词：Schema 质量、程序化调用、idempotency_key、ToolError、allowedTools。
+
+### 8. SOC 职业分类：SkillsMP 的发现层（来源：agentify.ia.br《Guia Definitivo skillsmp.com》+ everydev.ai《Skills Marketplace》+ d9249《SkillsMP》+ aisckool《Top 5 Marketplaces》2026-04-27/2026-09-02/2026-05-06/2026-04-05 实拉，与 r290A SkillHub/r292A skills.sh 合并增量）
+- **规模**：280k~425k 开源 SKILL.md 聚合（GitHub 源，口径随月份涨）——**发现层聚合而非自产**。
+- **SOC 职业分类**：按美国劳工部职业分类标准给技能分职业——**按职业找技能，比按关键词更贴需求**。
+- **AI 语义搜索+公开 API**：语义检索+可编程访问——**发现层可被工具调用**。
+- 提升层：可复用 Skill。触发词：SkillsMP、SOC 分类、语义搜索、公开 API、发现层。
+
+### 9. 记忆/编排/终端基准：GitHub 生态新项目面（来源：yuxiaopeng《Github Ranking AI》+ agentindex.app《Trending》+ ai-tldr《New AI GitHub Repos》+ curatia 2026-09-28/2026-09-17/2026-09-22/2026-09-27 实拉，与 r292A 生态面合并增量）
+- **mempalace**：59.3k stars 最佳基准开源 AI 记忆系统——**记忆系统有基准可考**。
+- **ruflo**：Claude 多 agent swarms 编排平台（72.7k）——**编排平台专攻 swarms**。
+- **ToolJet AI**：企业应用生成平台，经 MCP 从 Claude Code/Codex/Cursor 构建——**MCP 成 IDE 接入标准**。
+- **Dirac**：Terminal-Bench-2 榜首开源编码 agent——**终端基准是编码 agent 试金石**。
+- 提升层：工具。触发词：mempalace、ruflo、ToolJet AI、Dirac、Terminal-Bench-2。
+
+### 10. 任务账本：OpenClaw 的"任务是记录不是调度器"（来源：docs.openclaw.ai《自动化/后台任务/会话工具/子智能体/会话管理》2026-09-04/2026-08-23/2026-09-01/2026-09-23 实拉，与 r291B hooks/r291C 编排合并增量）
+- **任务=记录不是调度器**：定时任务+Heartbeat 决定何时运行，任务跟踪发生了什么；Heartbeat 轮次不创建任务——**调度与记账分离**。
+- **状态机五终态**：queued→running→terminal（成功/失败/超时/已取消/丢失）——**终态含丢失，账本才完整**。
+- **双会话引用**：childSessionKey（工作执行处）+requesterSessionKey（发起者）——**执行与发起分开记**。
+- **子智能体独立会话**：agent:<id>:subagent:<uuid>，完成后通知回请求方渠道——**子任务有独立会话+回执渠道**。
+- **NO_REPLY 抑制流式**：2026.1.10 起后台轮次以 NO_REPLY 开头则抑制草稿流式传输——**后台操作不泄露部分输出**。
+- 提升层：工作流。触发词：任务账本、queued/running/terminal、childSessionKey、NO_REPLY、Heartbeat。
