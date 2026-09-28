@@ -8842,3 +8842,62 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **models providers**：mode merge 覆盖默认；自定义 provider=baseUrl/apiKey/api（openai-completions）/authHeader/headers/models 列表（可接本地 litellm 代理）；agent 级 providers/autoProviders/timeoutSeconds。
 - **provider 选择权衡**：Anthropic/OpenAI 强但隐私外发、Ollama 免费全本地；模型厂商云端 agent（Kimi Claw）自动配模型免选型。
 - **提升层**：工具（配置方法）。
+
+## Dify 可观测性（LLMOps 集成）（来源：dify.ai blog langsmith-langfuse + arize + deepwiki external-observability + langfuse.com integration 2024-07/2026-09 实拉，合并 §Dify 平台——那条管"插件/检索"，本条管"监控调试"）
+- **外部 LLMOps 集成**：支持 LangSmith/Langfuse/Arize Phoenix 等 7 个第三方平台转发 traces/metrics/logs——集中监控、调试、分析；Langfuse 在 app Monitoring 设置加 Third-party LLMOps provider 即启用。
+- **OpenTelemetry**：Dify API after_request hook 注入 X-Trace-Id/X-Span-Id 到 HTTP 响应头，外部日志设施可关联。
+- **内置 vs 外部**：内置面板+执行日志够日常；需要跨应用对比/人工标注评估→接外部平台；Dify Cloud 提供用量/延迟/成本/错误一览与日志历史。
+- **提升层**：工具（监控调试）。
+
+## n8n 源控制与 GitOps（来源：docs.n8n.io source-control-environments push-pull + create-environments + n8n community GitOps 2026-02/07 实拉，合并 §n8n 部署——那条管"扩展/队列"，本条管"版本化与发布"）
+- **内置 Source Control**（Settings→Source Control，Enterprise）：push=序列化 workflows、credentials metadata（**凭据值保持加密不进 repo**）、variables 到 Git 仓库；pull 反向同步。
+- **环境模式**：dev/prod 各链接一个 Git 分支，push-pull 在环境间搬动工作；官方建议不推荐同一实例 push+pull（易冲突）。
+- **GitOps 路径**：workflows/ 目录 JSON 文件即工作流定义——AI agent 写文件+commit 即可创建 workflow；`--separate` 每 workflow 一个文件（否则单 JSON 难 diff/无法合冲突）。
+- **提升层**：工作流（版本控制与发布）。
+
+## LangFlow 可观测性（来源：docs.langflow.org deployment-prod-best-practices + integrations-arize + traces + langflow.org blog 1.12 2025-06/2026-09 实拉，合并 §LangFlow 部署——那条管"K8s 部署"，本条管"观测接入"）
+- **内建 Traces**：Langflow 1.9+ 记录 flow/component 级执行 trace（trace/span 表，Flow Activity/Trace Details 页面）——调试、量延迟、track token 用量无需外部服务。
+- **外部平台一键接入**：设环境变量即启用 Langfuse/LangSmith/LangWatch/Openlayer/Arize/Instana-Traceloop——低摩擦专业级观测；1.12 起 OpenTelemetry 管 service health+flow runs。
+- **K8s 生产监控**：ELK/Fluentd 集中日志、Prometheus+Grafana 实时指标（CPU/内存/磁盘）。
+- **提升层**：工具（观测接入）。
+
+## Activepieces 嵌入（来源：activepieces.com docs embedding embed-builder + embeddable-mcp + overview 2026-09 实拉，合并 §Activepieces 平台——那条管"部署/开发"，本条管"嵌入产品"）
+- **Embed Builder**：iframe 把整个 builder 嵌入你的应用（品牌化、containerId + builder 选项 disableNavigation/hideFlowName + dashboard hideSidebar）——客户在你产品内建自动化。
+- **Provision users + Preset connections**：用户由 token 创建免二次登录；预设连接免客户自己配置；Embeddable MCP=authRequestId→Authorize popup→code→token 换取→以 token 跑用户 flows。
+- **判据**：把 workflow 创建做成产品功能→嵌入；仅内部团队→自托管独立实例。
+- **提升层**：工具（嵌入产品化）。
+
+## Make 团队与角色（来源：help.make.com teams + custom-roles 2026-07/09 实拉，合并 §Make 平台——那条管"蓝本/数据存储"，本条管"组织治理"）
+- **Teams 边界**：组织下至少一个 team；templates/connections/webhooks/keys/devices/data stores/data structures/custom functions/credential requests 全部归属唯一 team 且不可换——成员只见本 team 数据。
+- **Custom roles**（Enterprise）：组织/团队级自定义角色+权限，替代默认角色；private instance 不支持。
+- **提升层**：工具（组织治理）。
+
+## Pipedream CLI 开发（来源：pipedream.com docs cli/reference + components contributing + connect/mcp 2026-02/09 实拉，合并 §Pipedream 平台——那条管"协作/认证"，本条管"本地开发循环"）
+- **pd dev**：把本地文件部署为组件并 attach，保存即自动更新线上组件（source 开发主模式）；pd login 先链接账号。
+- **publish 纪律**：action 只能 publish（不能 dev 模式跑）；TypeScript 组件必须先编译到 dist 再 publish（直接部署 TS 失败）。
+- **GitHub sync 本地编辑**：clone 项目→VSCode 改→push dev branch→Pipedream UI 加载分支→Git Actions pull——支持完整本地工作流。
+- **提升层**：可复用 Skill（组件开发循环）。
+
+## Anthropic Batch API（来源：platform.claude.com batch-processing + anthropic.com news message-batches 2024-10/2026-09 实拉，合并 §Anthropic 成本——那条管"缓存"，本条管"批量降本"）
+- **Message Batches API**：异步处理大批量 Messages 请求；创建即开始，24 小时内完成（多数 <1 小时）；**成本 -50%**、吞吐更高。
+- **适用**：评估/翻译/反馈分析等非实时大规模操作；每批最多 10,000 个查询；结果 29 天内可取。
+- **组合**：与 Prompt Caching/数据驻留叠加（同 r278A 缓存条）；判据=非实时任务优先 Batch 而非实时 API。
+- **提升层**：工具（批量处理降本）。
+
+## deeplearning Agent Memory 课程（来源：deeplearning.ai agent-memory-building-memory-aware-agents + long-term-agentic-memory-with-langgraph + oracle blogs 2026-03/07 实拉，合并 §deeplearning 课程——那条管"RAG/编码代理"，本条管"agent 记忆体系"）
+- **问题定义**：agent 会忘——每次会话从零开始、上下文被丢弃、没有从已做之事学习的机制；常见 workaround=塞满上下文/重载会话日志/临时检索。
+- **分层记忆**：Long-Term Agentic Memory with LangGraph=semantic（事实）→+episodic（经历）→+procedural（流程）逐步叠加；Memory-Aware Agent 启动时加载先前上下文。
+- **write-back loop**：agent 自主更新自己的记忆（写回循环），语义搜索扩展工具访问。
+- **提升层**：可复用 Skill（agent 记忆架构）。
+
+## GitHub Actions service containers（来源：docs.github.com service-containers + freecodecamp + gitdash infrastructure-as-sidecar 2025-01/2026-09 实拉，合并 §GitHub Actions 安全——那条管"供应链防线"，本条管"集成测试基建"）
+- **services**：job 并行跑真实 Docker 容器（Postgres/Redis/RabbitMQ/MongoDB 等）；Linux runner 必须（容器/容器 job）。
+- **health check**：options 指定 --health-cmd（pg_isready 等）+--health-interval/--health-timeout/--health-retries——等容器就绪再跑步骤，避免"启动与就绪混为一谈"的偶发失败。
+- **Infrastructure as a Sidecar**：不 mock 基础设施——代码直连真实一次性容器，job 结束容器消失；矩阵可测多版本数据库。
+- **提升层**：工具（集成测试基建）。
+
+## OpenClaw 多代理编排（来源：docs.openclaw.ai concepts/multi-agent + tools/swarm + openclawplaybook sub-agent + learnopenclaw multiagent 2026-03/09 实拉，合并 §OpenClaw 平台——那条管"安装/配置"，本条管"子代理体系"）
+- **Multi-agent routing**：一个 Gateway 进程跑多个隔离 agent（各自 workspace/state dir/SQLite 会话历史、多 channel 账号），bindings 把入站消息路由到对应 agent。
+- **Sub-agents 编排**：主代理拆任务→sessions_spawn 创建子代理（隔离上下文）→并发执行→结果自动回推→主代理组装；subagents 工具 list/steer/kill 管理。
+- **深度与声明式控制**：maxSpawnDepth 默认 1，开 2 解锁 orchestrator 模式（主→编排者→多 worker 扇出）；declarative manifest 的 delegationMode（suggest/prefer）、allowAgents allowlist、model 指定。
+- **提升层**：可复用 Skill（子代理编排方法）。
