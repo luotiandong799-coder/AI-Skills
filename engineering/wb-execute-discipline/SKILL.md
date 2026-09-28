@@ -9640,3 +9640,68 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **目录规模分级**：agentskills.codes 19,296 技能（Coding 6,343/Productivity 1,216/Planning 786/Data 692）；AgenticSkills 181+ 策展；agentskills.me 492——**"海量索引站+策展精选站"双层结构**：找技能先用索引站搜，拿不准用策展站。
 - **安全域技能可映射框架**：Anthropic cybersecurity skills 754 技能 26 域（MITRE ATT&CK + NIST CSF 2.0 映射 + Navigator layer）——**技能可对齐行业标准框架，按框架查技能**。
 - **提升层**：可复用 Skill（技能检索 / 生态导航）。
+
+## 节点级错误处理三策略：重试优先、类型化默认值、失败分支（来源：Dify legacy-docs error-handling + mintlify code node + deepwiki error-handling-patterns，2026-09-28 实拉）
+- **三策略按序选**：重试（LLM/HTTP/Code/Tool 节点，最多 10 次、间隔最大 5000ms）→ 类型化默认值（失败返回 typed default 继续跑）→ 失败分支（fail branch 路由异常处理逻辑）——**重试管瞬时、默认值管非关键、失败分支管关键路径**。
+- **重试与异常处理同时开启时优先重试**：先重试节点，重试仍失败才走异常处理机制——**"重试一次成本 vs 直接降级"先试便宜的**。
+- **错误处理是节点属性不是流程冗余**：不用在节点内编排复杂逻辑或加额外节点应对错误——**平台内建三策略是首选，自己写重试/降级是最后手段**。
+- 参考：指数退避重试 + 回退模型提供商（主模型 API 错→备用模型）+ If-Else 错误分支。
+- **提升层**：工具（错误恢复）。
+
+## 可观测三层：内置痕迹 → OTel 追踪 → 日志流外送；中心化审计表（来源：n8n docs logging + otel tracing + blog llm-observability + ai-agent-governance + n8n workflow 15347，2026-09-28 实拉）
+- **可观测分三层递进**：① 内置执行痕迹（节点输入输出可查，零配置调试）→ ② OpenTelemetry 追踪（N8N_OTEL_ENABLED；agent 追踪 N8N_AGENTS_TRACING_ENABLED；Grafana Tempo 工作流/节点 span）→ ③ 日志流外送（log streaming：Datadog/Loki/云存储，**支持匿名化脱敏后外发**）——**先吃免费层，再决定要不要上重型**。
+- **日志脱敏是外送前提**：execution data redaction（Enterprise）剥离敏感用户数据后再出实例——**日志出域先脱敏，审计要求同时满足隐私**。
+- **中心化错误日志模式**：Error Trigger 捕获未处理错误→写入共享 Data Tables（AuditLog/ErrorLog 两张表），跨 workflow 复用同一日志工作流——**错误日志做成服务，不做成每个 workflow 的复制品**。
+- **提升层**：工具（可观测 / 审计）。
+
+## 生产数据库迁移与多 worker 依赖：SQLite 默认、PG 生产、Redis 队列（来源：Langflow docs configuration-custom-database + enterprise-database-guide + deployment-multi-worker + deployment-prod-best-practices，2026-09-28 实拉）
+- **默认 SQLite 只够单机**：Langflow 默认 sqlite:///./langflow.db，生产推荐外部 PostgreSQL 15+——**本地开发保持默认，上生产第一步换共享数据库**。
+- **多 worker = 共享 DB + 队列**：LANGFLOW_DATABASE_URL 指向外部 PG + LANGFLOW_JOB_QUEUE_TYPE=redis + LANGFLOW_GUNICORN_PRELOAD=true——**"多个 worker"不是多进程副本，是共享状态的横向扩展**。
+- **向量库与业务库同源**：pgvector 作 vector provider（PG 开 vector 扩展+CREATE 权限）——**RAG 向量与业务数据放同一数据库，少一套组件**。
+- **提升层**：工具（部署架构）。
+
+## piece 开发与发布流水线：本地 dist 开发、版本化、CI/CD 同步（来源：Activepieces docs build-pieces overview + development-setup + pieces-ci-cd + publish-piece + community-pieces，2026-09-28 实拉）
+- **本地开发用 dist 直载**：AP_PIECES_SYNC_MODE 让本地开发从 dist 目录加载 pieces（不碰数据库）——**开发态与运行态解耦，改完才同步**。
+- **贡献流水线四步**：离线开发→package.json 递增版本→PR→合并后 CLI/GitHub Action 触发同步——**版本号是发布的钥匙，忘递增=不会发布**。
+- **custom/community 二分**：custom=自用定制，community=共享社区（走测试→贡献→审查质量/安全/可用性→市场分发）——**先按用途定分类，再决定发布通道**。
+- **提升层**：可复用 Skill（集成开发流水线）。
+
+## 场景克隆状态保持与蓝图回放：轮询状态可选、blueprint 复用、replay 调试（来源：Make help clone-a-scenario + blueprints + functions-standalone-module-setup + thinkbot scenario-blueprint-framework，2026-09-28 实拉）
+- **克隆时显式选轮询状态**：Yes=从原场景最后处理项继续（无缝接续），No=从模块设置初始位置开始（干净重跑）——**克隆默认语义是"接着干"还是"重来"，取决于触发器状态**。
+- **蓝图=可复用版本**：blueprint 含模块设置+映射值，可备份（防账号丢失）、跨账号导入、组织内外分享——**自动化资产化的最小单元是蓝图**（与 §重复工作流固化为资产 同构）。
+- **replay 战术**：用历史触发数据重跑当前版本场景（调试/恢复/受控回填，耗 credits 非批量）；上线流程=克隆生产→staging→改→replay 代表历史 run→临时禁用通知路由防重复——**先重放旧数据验新逻辑，再切流量**。
+- **提升层**：工作流（发布战术 / 资产复用）。
+
+## 部署不可变与版本治理：immutable deploy、手动回滚、Git 同步补齐历史（来源：Pipedream docs migrate-from-v1 + workflows/git + community version-history threads，2026-09-28 实拉）
+- **deploy 不可变**：已部署的 workflow 不可回退（v2 无自动 rollback），只能编辑或部署新版本——**"线上版本不可篡改"是默认契约，变更=新版本**。
+- **手动回滚路径**：Versions 标签页选择旧版本点 Deploy 恢复为 active——**没有自动回滚不代表不能回滚，保留手动出口**。
+- **GitHub Sync 补齐行级历史**：未部署变更进 undeployed-changes 前缀分支；changelog 追踪全部 git 活动（合并失败排查）——**平台无版本历史时，用 Git 同步拿回全量历史**（与 §知识库 Git 唯一同步后端 同构）。
+- **提升层**：工具（版本治理）。
+
+## 动态工作流与后台执行：JS 编排脚本、routines 定时、后台完成语义（来源：Claude Code docs workflows + agents + headless + routines + scheduled-tasks + Claude blog dynamic-workflows，2026-09-28 实拉）
+- **dynamic workflows=脚本化编排**：Claude 为任务写 JS 脚本，运行时后台执行大量 subagent、会话保持响应；适用超单会话任务（全库 bug 扫查/500 文件迁移/多角度研究交叉核验）——**"任务大过一个会话"时，把编排写成可读可重跑的脚本**。
+- **后台执行有完成语义**：claude -p 会保持打开直到后台 subagent/workflow 完成（默认 10 分钟连续 idle 上限）；/workflows 监控运行中/已完成进度——**后台任务不是 fire-and-forget，要能查进度**。
+- **routines=配置打包自动跑**：prompt+repos+connectors 打包成 routine，云端/自托管定时触发（hourly/nightly/weekly）——**定期任务固化为可复用配置单元**（与 §Scheduled Batch 互补：那条管形态，这条管打包结构）。
+- **scheduled tasks 错过不补**：任务时间在忙时错过，idle 后只 fire 一次（不补每次错过的）——**对定时任务预期写"窗口内触发一次"，不写"每次都补"**。
+- **提升层**：工作流（大规模编排 / 后台执行）。
+
+## AGENTS.md 写作规范：代码示例优先、边界声明、150 行上限、随代码更新（来源：GitHub Blog how-to-write-a-great-agentsmd（2500+ 仓库）+ agentexperience.ax + addyosmani.com 15-agents-md + localskills agents-md-complete-guide，2026-09-28 实拉）
+- **代码示例胜过解释**：一个真实代码片段展示风格，胜过三段描述——"Show what good output looks like"。
+- **设明确边界（负面指令最有用）**："Never commit secrets"是最常见有效约束；告诉 agent 永不碰什么（secrets/vendor/production config）——**负面指令防止最常见错误，比正面描述省钱**。
+- **具体化技术栈**："React 18 with TypeScript, Vite, Tailwind"不是"React 项目"——**版本与技术栈写全，agent 不猜**。
+- **150 行以内**：每 token 每次请求都加载，长文件拖慢 agent 并淹没关键指令——**精简=性能，不是风格**。
+- **随代码变更同步更新**：构建/测试命令或约定变化时同一 PR 更新 AGENTS.md——**stale 指令比没有更糟（主动误导）**。
+- **提升层**：可复用 Skill（项目指令文件）。
+
+## 多 agent 团队编排：角色模板四件套、team CLI 扩缩、registry 路由（来源：OpenClaw docs cli/agents + agent-team guide + launchmyopenclaw multi-agent + howtouseopenclaw multi-agent，2026-09-28 实拉）
+- **角色模板四件套**：coordinator（Chief of staff 协调专家作单点）/ researcher（收集证据返回引用简报）/ writer（简报+素材→草稿）/ reviewer（对照需求检查产物返回可操作发现）——**通用团队骨架：协调-调研-写作-审查**。
+- **team CLI 可编程扩缩**：openclaw team add-agent/remove-agent/scale --agents [count]——**团队大小是配置不是架构**。
+- **registry 决定路由**：AGENTS.md=agent registry（列出所有可用 agent 及角色/能力/工具约束），Triage Agent 读它决定何时部署哪个专家——**路由决策数据化，放文件不放代码**。
+- **隔离粒度**：每 agent 独立 workspace+auth+routing；sandbox per-agent（off/all，scope agent=每 agent 一容器）；Dashboard 卡片（绿 active/黄 idle/红 disconnected+restart/归档）——**隔离与状态可视是团队可运维的前提**。
+- **提升层**：工作流（多代理编排）。
+
+## LLM 红队方法论：漏洞总览 → 人工红队 → 规模化 → LLM 互测（来源：DeepLearning.AI Red Teaming LLM Applications（Giskard）课程大纲，2026-09-28 实拉）
+- **红队四步进阶**：① Overview of LLM Vulnerabilities（先建漏洞心智模型）→ ② Red Teaming LLMs（人工构造攻击）→ ③ Red Teaming at Scale（规模化自动化）→ ④ Red Teaming LLMs with LLMs（用 LLM 互测）——**先知道有哪些洞，再手测，再规模化，最后机器互测**。
+- **与 §Agent 安全纵深 的分工**：那条管防御（架构/输入/输出侧护栏）；本条管进攻侧（主动找漏洞）——**防御测"挡得住吗"，红队测"哪里挡不住"**。
+- **每步配代码示例+分级测验**：课程以视频+Code Example+Graded Quiz 组织——**方法学课程的最小闭环=概念+实操+考核**。
+- **提升层**：工作流（安全测试方法论）。
