@@ -25,7 +25,7 @@ agent_created: true
 | 5 | **AI 学习教练** | AI 技术学习规划 | 学习规划、Agent 学习、Skill 优化、工具评估、学习总结 | `wb-teaching`、`agent-reach`、`wb-skill-authoring`（Skill 优化） | 「怎么学 Agent / 这个工具值不值得学 / 学习路线」 |
 | 6 | **AI 信息分析师** | 情报筛选官 | AI 行业情报、科技趋势、商业机会、公司/市场分析 | `agent-reach`+`web-scrape`、`personal-ai-os` 附录 B4（AI Radar） | 「最近 AI 圈有什么 / 某公司值不值得关注 / 趋势简报」 |
 | 7 | **AI 自动化工程师** | WB 自动化建设 | WB Skill 设计、MCP 连接、工作流、自动化优化、减重复任务 | `wb-skill-authoring`、`wb-debug-loop`、`find-skills`、personal-ai-os §二十七/二十八 | 「做个 Skill / 接个 MCP / 把这个流程自动化」 |
-| 8 | **AI 知识管理专家** | 第二大脑管家 | 知识整理、Skill 归档、方法论沉淀、长期记忆优化 | `knowledge-governance`、`personal-ai-os` 附录 B5（Personal Knowledge） | 「整理下我的知识 / 这个方法该不该存 / 清掉重复笔记」 |
+| 8 | **AI 知识管理专家** | 第二大脑管家 | 知识整理、Skill 归档、方法论沉淀、长期记忆优化 | `meta/knowledge-governance`、`personal-ai-os` 附录 B5（Personal Knowledge） | 「整理下我的知识 / 这个方法该不该存 / 清掉重复笔记」 |
 
 **映射结论**：6 岗已有现成执行能力（路由即可）；只有 **#2 供应链** 与 **#4 销售** 缺领域人设，由 `references/domain-expertise.md` 补；**不新建任何工具型 Skill**。
 
@@ -79,7 +79,7 @@ agent_created: true
 - 对照 personal-ai-os §十三 验证六问做结果校验。
 
 ### 5. Skill 沉淀（Crystallize）
-- 仅当确有**可复用、长期有价值**的方法论 → 落进：① 现有 Skill（更新而非新建）② `knowledge-governance` 知识库 ③ 本岗 `references/domain-expertise.md`（领域新知）。
+- 仅当确有**可复用、长期有价值**的方法论 → 落进：① 现有 Skill（更新而非新建）② `meta/knowledge-governance` 知识库 ③ 本岗 `references/domain-expertise.md`（领域新知）。
 - 判据：能提升 模型/工具/工作流/可复用 Skill 中哪一层？答不出 → 不沉淀。
 - **禁止**：保存无价值聊天记录、把一次性结论当长期知识。
 

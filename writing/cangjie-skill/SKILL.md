@@ -192,7 +192,7 @@ books/<book-slug>/
 
 蒸馏完一本书 / 长文 / 会议记录不是终点：
 - 交付后主动提议把可复用方法论写进记忆或固化成 Skill（doc -> co-learn 沉淀闭环），不自存即丢。
-- 先判「是否跨任务复用」再动手，避免记忆膨胀（见 knowledge-governance 五类处置）。
+- 先判「是否跨任务复用」再动手，避免记忆膨胀（见 meta/knowledge-governance 五类处置）。
 - 用户偏好 / 决策类结论落 AGENTS.md / MEMORY.md 对应层，不入公开仓。
 
 > 激活策略：按需启动（仅文档产出/蒸馏任务加载）。

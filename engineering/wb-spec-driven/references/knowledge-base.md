@@ -911,3 +911,27 @@ AC-N、AGPL、Architectural、Bounded、LLM 评委不能兜底、Spike、advisor
 - **事件类型即路由**：流程的每一步按**事件类型**自动触发，要加分支就**定义一个新事件类型**，而不是在步骤里写 if/elif 判断。→ 判据：**把路由条件从"步骤内部的判断"提升到"事件的类型系统"**，分支才是可枚举、可审计的；与 sd §状态机五件套 分工：那条管状态与边的结构，本条管边被什么触发、怎样才算"新增一条边"。
 - **依赖注入的共享与隔离是显式开关**：共享资源（连接、客户端、配置）由框架按 Resource 注入，**共享还是每步独立是显式声明**，既不要每步自己 new，也不要默认全局单例。→ 判据：**"谁和谁共用一个实例"必须写在配置里**，靠默认值会产生隐式的跨步耦合（缓存互相污染、并发互相踩）。与 sd §子流程调用契约 分工：那条管调用边界，本条管调用背后共享了什么。
 - 提升层：工作流 / 规约。
+
+## 【下沉 2026-09-28 r283-A】spec-driven 正文压回 500 行内 —— r198-C / r199-C 三节（原文零删减）
+
+## 长任务的状态对象要能分辨四件事，"从未运行"不能伪装成"失败"或"成功"（来源：Tencent/AI-Infra-Guard `docs/api_data_update.md`，2026-09-27 经 api.github.com contents 接口实拉）
+- **原文要点**：同步接口的 `data` 对象给出 `running`（是否有同步在进行）、`success`（上次同步是否成功，**`null` if never run**）、`started_at`、`finished_at`（**`null` if still running**）、`files_updated`、`ref`。失败响应的 `message` 直接带出底层原因：`git clone failed: exit status 128\nfatal: unable to access 'https://github.com/...'`。
+- 判据：**用单个布尔 `success` 表示长任务状态，必然把三种完全不同的情况压成两种**——"从没跑过"（`success: null`）、"正在跑"（`running: true` 且 `finished_at: null`）、"跑完且失败"（`success: false`）在二值里只能拿到 `false`。于是"还没开始"会被当成"做过且失败"，触发一轮本来不需要的重试或告警；"还在跑"会被当成"已结束"，下游拿到的是半成品。
+- 因此状态契约至少要有**两个独立维度 + 一个可空结果**：`running`（进行中？）、`finished_at`（什么时候结束的，未结束为 `null`）、`success`（结束时才取值，从未运行为 `null`）。判据：**"没有值"和"值为 false"是两个不同的事实**，把它们合并就等于主动销毁一次失败与一次未执行之间的区别。
+- **★失败消息要透传底层原始错误**：失败响应里带的是 `exit status 128` + git 的原始 `fatal:` 行，不是一句"同步失败"。判据：**把底层错误翻译成自己的措辞，等于让排障的人从"哪个命令、什么退出码、什么致命信息"退回到"反正失败了"**；透传成本几乎为零，诊断价值差一个量级。
+- 与 `wb-artifact-verification` §消息类四态 分工：**那条管"一次发送动作的终态怎么分族"，本条管"一个后台任务在任意时刻被查询时，状态字段要怎么设计才不会撒谎"**。
+- 提升层：工具 / 工作流。
+
+## 展示层可本地化，契约层永不本地化（来源：腾讯 AI-Infra-Guard `docs/api-checker-integration.md`，2026-09-27 r198-C 经 `api.github.com contents/docs` 实拉 7,798B）
+- **★把输出字段分成两层，本地化只准改上层**：给人看的（摘要、标题、说明）可以随语言变；给程序判定的（结论、风险等级、状态码、字段名）**必须与语言无关、取值固定**。判据：**下游一旦按文案做分支，`"通过"` 和 `pass` 就是两个系统**。
+- **★语言参数的影响范围要写死在契约里**：明确声明它只影响哪几个字段，其余一律不变；调用方据此才敢在不改动解析逻辑的前提下换语言。判据：**不声明影响范围，换语言就成了换协议**。
+- **★省略语言时必须有确定的默认值，不能交给下游猜**：默认值是什么、作用在哪一层，要和可枚举取值一起写清。判据：**"没传就自己看着办"必然产生两套互不相认的输出**。
+- 与 §验收标准 的分工：那条管"验收要可判定"；本条管"让它保持可判定的那条边界画在哪"——结论字段在边界内，文案在边界外。
+
+## 规划阶段只产决策不产交付物；总纲是索引不是仓库（来源：skills.sh 技能目录 `mattpocock/skills/wayfinder` + `mattpocock/skills/to-spec` 正文，2026-09-27 r199-C 实拉；skills.sh 本轮恢复可达 200）
+- **★先分清两种产物**：wayfinder 原文把票据定义为 **decision tickets**——"questions whose resolution is a decision, **not slices of a build to execute**"。规划阶段默认产出的是"一个决定"，不是"一段待执行的构建"；原文写明 "produce decisions, not deliverables"。
+- **★"想直接动手干"的冲动是边界信号，不是效率信号**：原文 "The pull to just do the work is usually the signal you've reached the edge of the map and it's time to hand off"。判据：**在立规约阶段冒出"干脆我直接做了吧"时，正确动作是收尾交接，而不是顺着往下写**——那说明能决定的部分已经决定完了。
+- **★总纲是 index，不是 store**：原文 "The map is an **index, not a store** … a decision lives in exactly one place, its ticket, so the map never restates it, only gists it and links"。**一条决定只准活在一处**，总纲只做摘要 + 链接，绝不复制正文。判据：**在总纲里复述决定的那一刻，就造出了第二份会各自漂移的副本**（与 §单一真源类的路径纪律互补：那些管文件落在哪，本条管**决定本身**落在哪）。
+- **★引用按名字，不按编号**：原文 "refer to it by that name, **never by a bare id, number, or slug**. A wall of `#42, #43, #44` is illegible"；编号包在名字里面，不替代名字。判据：**给人读的东西，标识符不能当标题用**。
+- **★别回头追问，先把已有上下文合成一版**：to-spec 原文 "**Do NOT interview the user; just synthesize what you already know**"。判据：**追问的成本由用户付，改一版草稿的成本由你付**——上下文已够时先给出可改的草稿，把"澄清"降级成"让人改"；只有缺的是**外部事实**（凭据、意图、环境值）时才真的开口问，二者不冲突。
+- 提升层：工作流 / 可复用 Skill。

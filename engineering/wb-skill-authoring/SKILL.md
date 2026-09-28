@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.41.0
+version: 3.42.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -426,3 +426,26 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **实证**：官方字段面有专门的持久目录 **`${CLAUDE_PLUGIN_DATA}`（原文 "survives plugin updates"）**，与只读的 `${CLAUDE_SKILL_DIR}` / `${CLAUDE_PLUGIN_ROOT}` 分列；同步型技能原文 **"downloads synced skills and never uploads them"**（永不回写上游），同步检查节奏 **"about every 10 minutes"**，入站内容做消毒（"removes control characters… escapes angle brackets"）。第三方同构实证：智谱 `glmv-stock-analyst` 用 `{SKILL_DIR}` 占位符、**输出落 `os.getcwd()` 的 workspace 而非技能目录**，并在正文自带版本号 **"stock-analyst v3.2"**。
 - **判据**：①凡技能需要记忆/缓存/状态（跑批游标、上次学到哪），**必须写进独立数据目录并明确该目录不受技能文件更新影响**——否则一次订阅制自动更新就吃掉游标；②技能自带版本标识写在正文（v3.2 式），使"我用的到底是哪一版"可独立于仓库历史回答；③同步/镜像型技能一律按**单向只读**对待，本地改动不会回传，**不要在同步型技能里写"本地经验"**；④入站消毒（控制字符/尖括号转义）作为"从市场拉技能"的固定预处理，与防注入纪律同线。
 - 提升层：可复用 Skill（结构约定）+ 工具（落盘路径）。触发词：CLAUDE_PLUGIN_DATA、跨升级保留、同步型只下不上、游标落盘、技能自版本、入站消毒。
+
+## 计数失真第三形态：数据源自己承认不精确——先看「自认标记」再决定要不要横向比对（来源：skillsmp.com 分页块 2026-09-28 r283-B 经 Qoder r316-Q-A 实拉取证 + WB 判重复核；续 sa 3.35.0 ③）
+- **实证**：分页块 `{total:1200, totalIsExact:false, isCapped:true, maxResults:1200}`——数据源**明写总数不精确、结果集已封顶**；语言字段兜底枚举 `mul`(mixed) / `und`(undetermined)，元数据缺失时给 `null`。
+- **判据**：3.35.0 ③ 的前两形态（父级复制 / 家族求和）都**要横向比对才能识破**；本形态不需要——数据源主动挂了「我不精确」的标签。**判据顺序因此改写：读任何计数，先看有没有自认不精确／封顶标记；没有，才需要去同族比对。** 附带：兜底枚举（`mul`/`und`/`null`）本身就是「这份元数据不完整」的明示，不能当真实值参与排序。
+- 提升层：工具。触发词：totalIsExact、isCapped、自认不精确、封顶标记、mul、und、目录数字失真第三形态。
+
+## 机器读端点的探测次序：robots.txt 的 Allow 行 → 站点自述 /api/llms.txt → 才轮到猜端点（来源：skillsmp.com/robots.txt 与 /api/llms.txt 2026-09-28 r283-B 独立 curl 实拉全文核验）
+- **实证**：`robots.txt` 对 `ClaudeBot` 明写 `Allow: /api/llms.txt`、`Disallow: /api/`、`Disallow: /api/github-contents`、`Disallow: /auth/`、`Crawl-delay: 5`；顺着 `Allow` 那一行取到的 `/api/llms.txt` 是**站点自述的机器读契约**：「REST API for searching and discovering **3M+ Agent Skills**」，匿名 50/天·10/分钟、API Key 500/天·30/分钟、`Daily counters reset at 00:00 UTC`、限额只作用于 `/api/v1/skills/search` 不作用于 `/mcp`；MCP 面 `POST /mcp` 无鉴权、「There is no daily MCP quota」，但 **Ingress 50 POST/10s/IP × valid tool call 30/60s/IP，且 "A valid tool call consumes **both** ingress and tool-call capacity"**，「On HTTP 429: honor Retry-After」。
+- **判据**：抓外部站时**先读 robots 的 Allow/Disallow 与站点自述 llms.txt，再猜端点**——一次就能拿到配额、鉴权、端点全集，而不是反复试错。**额度分层是相乘不是相加**：一次有效调用同时扣两层，只盯一层会算错容量。
+- **落地动作**：新建信源时固定三步：① `robots.txt` 找 Allow 行里的机器读入口；② 取 `/llms.txt`、`/api/llms.txt`、`/openapi.json`；③ 把配额/鉴权/429 处理写进抓取脚本再开始批量拉。
+- 提升层：工具。触发词：robots.txt Allow、api/llms.txt、站点自述契约、机器读端点、探测次序、额度相乘、429 Retry-After、Crawl-delay。
+
+## 最小自证机检：把「声明数」钉死到「表内求和」，双语各验一次（来源：full-stack-skills `scripts/validate_catalog.py` + `.github/workflows/catalog-check.yml` 2026-09-28 r283-B 经 Qoder r316-Q-A 实拉取证；与 sa 3.35.0 ③ 互为正反）
+- **实证**：30 行脚本做的事——`repositories.txt` 必须 **sorted and unique**；只统计表格中 label==repository 的行；做 **duplicate / missing / unexpected 三集合比对**；正则抓 README 标题里的声明数字，断言 `declared_packages == len(inventory)` 且 `declared_skills == sum(表内计数)`；**`README.md` 与 `README.en.md` 双语各跑一次**；成功打印 `README.md: 50 packages, 774 skills`。
+- **判据**：sa 3.35.0 ③ 教「怎么识破别人目录数字失真」，本条是反面——**用最小 CI 把自己目录的声明数与表内求和钉死**。它的边界也说清楚：**只校验可数一致性，不校验技能质量**——别把它当成质量门。
+- **落地动作**：任何"目录/清单/总表"类文件，挂三条断言：条目排序且唯一、声明总数 == 条目数、声明分项和 == 各表求和；多语言副本逐份各验。
+- 提升层：可复用 Skill。触发词：自证机检、声明数、表内求和、sorted and unique、双语各验、catalog-check、可数一致性不是质量。
+
+## 规范通过 ≠ 规范背书：合规检查只能证明"没犯它列的错"（来源：agentskills.io`/specification` 2026-09-28 r283-B 经 Qoder r316-Q-A 实拉取证；与 r312-Q-B「零执行面负声明」互补）
+- **实证**：官方规范 optional 字段**全集只有 4 个**——`license` / `compatibility` / `metadata` / `allowed-tools`；全文**无 version 字段、无发布语义、无缓存语义、无依赖解析语义、无安全边界章节、无错误码语义**；失败语义唯一出处是 "Scripts should … be self-contained / include helpful error messages / handle edge cases gracefully"（should 级，非 MUST）。进披露预算倒是带数字（Metadata ~100 tokens / Instructions < 5000 tokens recommended / SKILL.md < 500 lines）。
+- **判据**：一个技能**通过规范校验**，只说明它没犯规范列出的那几条错；**规范没写的维度（版本、依赖、安全边界、错误语义）等于没有背书**。与「零执行面负声明」互补：那条是被审对象自证，本条是**规范本身不提供担保**。
+- **落地动作**：引用"符合 XX 规范"作为可信依据时，必须同时列出**该规范不覆盖的维度**，否则就是拿合规当质量证明。
+- 提升层：可复用 Skill。触发词：规范不给担保、合规不等于背书、optional 字段全集、无 version 语义、无安全边界章节、should 不是 MUST。

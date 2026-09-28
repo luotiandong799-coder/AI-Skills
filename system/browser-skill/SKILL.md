@@ -1,5 +1,5 @@
 ---
-name: browser-skill
+name: system/browser-skill
 description: |
   Use when the user asks to automate their logged-in Chromium browser: visit
   and read pages, fill forms, scrape data, click through flows, regression-test
@@ -8,7 +8,7 @@ description: |
   (统一入口为 browser-automation；本技能是其 bsk 驱动底层实现位，由它路由。)
 ---
 
-# browser-skill
+# system/browser-skill
 
 Use `bsk` to work in an **Agent Window** with the user's existing logins. User tabs
 require explicit borrowing. This skill does not install the extension or handle

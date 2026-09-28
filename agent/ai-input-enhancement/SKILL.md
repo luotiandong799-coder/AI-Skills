@@ -81,7 +81,7 @@ compatibility: WorkBuddy；引用 media/ engineering/ defaults/ agent/ system/ r
 
 ## 1. 自动理解上下文
 分析：沟通对象 / 当前主题 / 前后关系 / 用户目的 / 历史相关信息 → 输出当前情况、核心问题、建议方案。
-通道：`wechat-desktop-claw-automatic-control__skillhub`（只发不读）、`workbuddy-claw-wechat-send`；对外发消息见 `rules/04_wecom企业微信`（默认先确认，企微直发原样透传）。
+通道：`system/wechat-desktop-claw-automatic-control__skillhub`（只发不读）、`system/workbuddy-claw-wechat-send`；对外发消息见 `rules/04_wecom企业微信`（默认先确认，企微直发原样透传）。
 
 ## 2. 回复辅助
 生成时考虑：联系人关系 / 历史交流方式 / 当前语境 / 用户表达习惯。

@@ -1,5 +1,5 @@
 ---
-name: knowledge-governance
+name: meta/knowledge-governance
 display_name: "AI智能体记忆与技能治理"
 display_name_en: "AI Memory & Skill Governance"
 description: "AI 智能体记忆与技能统一治理：解决记忆无限膨胀、身份/事实/偏好混层、技能内容重叠重复三大问题。分层判据（身份层/记忆层/画像层/技能层/外部记忆）+ 五类处置动作（保留/合并/压缩/外置技能/归档）+ 安全护栏，零信息丢失防膨胀。部署为定时任务后全自动巡检执行，无需人工触发。"

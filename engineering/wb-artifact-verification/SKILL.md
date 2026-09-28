@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.44.0
+version: 2.45.0
 agent_created: true
 ---
 
@@ -354,34 +354,6 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 与 dl §探针要能一次撤干净、seam 太浅本身就是结论 的分工：那条管"临时探针的回收"与"接缝太浅给的是虚假信心"；本条管"**还没插之前，该选哪个层级、开几个**"。与 §验证要能脚本化跑 互补：那条管跑得起来，本条管挂点选得对。
 - 提升层：可复用 Skill / 工作流。
 
-## 输出可信度三态测量法：Groundedness / Faithfulness / Hallucination 是三个独立度量，不能混为一谈（来源：Activepieces《Groundedness vs Faithfulness vs Hallucination》2026-09-27 r232-C 实拉）
-
-- **★三者是三个不同的「输出质量」度量，判据各自独立**：**Groundedness（有据）**＝回答是否被检索到的上下文支撑（claim 对不对得上来源）；**Faithfulness（忠实）**＝回答是否与模型自己的推理链一致（有没有自相矛盾、私自加戏）；**Hallucination（幻觉）**＝出现了来源与推理都支撑不了的凭空断言。判据：**做输出审计时先分清楚"在测哪一个"**——同一句话可能 grounded 但 unfaithful（拽了真来源却没按来源推理），也可能 faithful 但不 grounded（推理自洽却没依据）。
-- **★这和"幻觉缓解分层"是测量与缓解的分工，不是一回事**：`wb-execute-discipline` 的 grounding→忠实性 judge→自校正 是**怎么让输出变好**；本条是**怎么测出来坏在哪**——先用三态定位"是没依据 / 是自相矛盾 / 是凭空编"，再决定上哪道缓解。判据：**没测出是哪一态就上缓解，等于盲修**。
-- **★三态都要有可跑的检查，不能只靠人读**：groundedness 用检索召回比对、faithfulness 用推理链一致性 judge、hallucination 用"claim 是否在来源/推理里找得到"的抽取校验。判据：**把三态落成可自动化跑的检查，才叫评估；停在文字定义上只是名词**。
-- 提升层：可复用 Skill / 模型。
-
-## 遥测默认不携带 prompts/completions：可观测性必须抓执行痕迹，但不发提示词与补全（来源：Langflow 1.12 发布说明「OpenTelemetry for service health and flow runs」2026-09-27 r232-C 实拉）
-
-- **★给 agent / flow 加可观测性时，OTLP 遥测要能发到任意后端、但默认不携带 prompts 与 completions**：Langflow 1.12 的 OpenTelemetry 支持"发送 flow runs / 服务健康度，但不发提示词与补全内容"。判据：**遥测的价值在"能重建一次执行轨迹、定位哪步慢/错"，不在"把用户输入和模型输出全量外发"**；把 payload 也发走既没必要又制造隐私与合规面。
-- **★"能重建轨迹"与"泄露内容"是正交的两件事**：trace / span / 耗时 / 节点输入输出 schema / 错误码这些足够定位问题；实际的 prompt 文本与模型补全属于用户数据与模型产物，默认脱敏或留本地。判据：**可观测性设计的第一问是"这一帧发了什么"，而不是"能不能发全部"**。
-- 与 §验证挂点（seam）按三条判据选 的分工：那条管"验证插桩挂哪一层"；本条管"**遥测/日志这一层的默认载荷边界**"——抓痕迹可以，发内容不行。
-- 提升层：可复用 Skill / 工作流。
-
-## AI 模块后置三步验证管线：字段检查→归一化→置信阈值（来源：Make.com LLM 集成指南，2026-09-27 r232 并发线手交 / WorkBuddy 实拉核验）
-
-- **★模型输出进业务路由前必须过三步**：① Filter 检查关键字段非空且在预定义清单内（拒绝幻觉出来的非法值）；② Set Variable 归一化大小写、trim 空白（让后续比较稳定）；③ Filter 检查 confidence 高于设定阈值（如 0.7）才放行。判据：**模型输出不是"结论"，是"待验证的输入"——进业务前先用确定性步骤过滤一遍。**
-- **★验证成本是保险不是开销**：验证模块耗 credits，但误分类路由到错误系统的清理成本更高。判据：**把验证当作"出事后擦屁股的钱"是错的，它是"让错误别出门"的保费**。
-- **★模型选型从小的开始**：先小模型跑通，不行再升大；验证管线先立，再谈换更大的模型。判据：**先有"错的能被拦住"，才有资格谈"用多强的模型"。**
-- 与 §输出可信度三态测量法 的分工：那条管"输出本身可信度怎么测（有据/忠实/幻觉）"；本条管"**输出进了业务之前，怎么用确定性步骤把它挡在门外**"。
-- 提升层：工具 / 可复用 Skill。
-
-## 廉价判别模型前置筛查：小决策用专用小模型，不只看大模型（来源：kerpopule/hermes-jev-skills 实测，2026-09-27 r203-C 核验，来源 Qoder r303 C4）
-- **★可复用 Skill 的"加载哪个 / 该不该注入"这类小决策，用廉价判别模型跑**，不占用大模型推理：web 注入筛查 **79 个真实攻击捕获 70 个**（原生正则扫描仅 11），**1520 个干净块 0 误拦**，约 0.2s/条。
-- **★双指标报告**：召回（抓住多少攻击）+ 误拦率（干净块被挡多少）都要报，单看召回会掩盖误伤。→ 判据：前置筛查是"第一道廉价闸门"，大模型做最终判定；误拦率必须可观测，否则会静默丢内容。
-- **★与本技能护栏四模式互补**：那条管"内容离开 agent 前怎么处置（block/redact/retry/approve）"，本条管"用哪种模型做这道筛查最划算"——小模型前置，大模型兜底。
-- **提升层**：工具 / 可复用 Skill（路由与筛查）。
-
 ## Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 - **审计置信五档**（ClawHub）：放行/注意/警告/封禁/扫描出错，不做布尔 PASS/FAIL；低于置信门槛的证据只后台参考、不进对外阻断报告。
 - **审计覆盖台账**（cloudflare security-audit-skill）：unit×check 粒度记"谁审了哪些路径"，多轮按 fingerprint 增量合并、每指纹一条终态，下一轮从台账缺口起猎。
@@ -464,3 +436,33 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **实证**：验收分数化时，安全/隐私/授权/副作用属**不变量**——任一项破线即整轮不过，**不得被标量平均分摊掩盖**（非加权项）。配套"非显著 ≠ 等价" + 成对比较；比较前必须先固定**不可变数据集版本 + manifest（来源/同意/污染审查）**；已验证事故**回流为评测用例**。
 - **判据**：凡给技能打综合分时，把"安全/隐私/授权/副作用"列为**不变量项**——它们不是扣分项，是门；任何把它算进加权平均的评分设计都在掩盖破线。
 - 提升层：工作流。触发词：不变量、不可平均、标量平均掩盖、门而非扣分、数据集版本固定、事故回流评测。
+
+## 超限的第 4 态：配额债务会连「还债动作」一起冻结（来源：docs.dify.ai`en/cloud/use-dify/knowledge/knowledge-storage-limit.md` 2026-09-28 r283-A 独立实拉原文核验；续 r211-A §容量上限可提升 vs 不可提升 的三态表）
+- **实证**：Dify 知识库分档 **Sandbox 50 MB / Professional 5 GB / Team 20 GB**，原文「Once usage reaches your plan's limit, the workspace can no longer add knowledge content.」紧接着一句才是关键：**「Uploading documents, adding or editing chunks, restoring archived documents, and re-indexing operations such as changing chunk settings are all blocked」，且「including in knowledge bases that use Economical indexing」**。另有一条降级态：**「If a downgrade or an expired subscription leaves your data above the new plan's limit, nothing is deleted: your apps can still retrieve from these knowledge bases, but adding content stays blocked」**。
+- **判据**：r211-A 的三态（显式报错 / 静默丢弃 / 伪装成功）描述的都是**被拒的那一次请求怎么失败**；本条是第四态——**超限会把既有内容的自救与整改通道一并锁死**：改分块参数、重索引、恢复归档这些"为了降回限额以下而必须做的动作"本身也被禁。于是「先删点东西腾空间」这条路在写侧冻结时走不通，只能删文档或升配。
+- **验收动作**：报容量约束时必须同时回答两个问题——① 超限时**新写入**怎么失败；② 超限状态下**整改动作本身**是否仍可执行。二者答案不同的系统（检索仍可用、写侧全冻）必须分开断言，**不许用"还能读"推导出"还能修"**。
+- 提升层：工作流 / 工具。触发词：配额冻结、超限锁死整改、re-indexing blocked、降级后只读、还债动作被禁、存储分档、50 MB / 5 GB / 20 GB。
+
+## 值语义判据必须具名：同一系统里可以并存两套「空」，判空不声明口径即假成功（来源：docs.n8n.io`build/work-with-data/transform-data/expression-reference/{string,number}.md` 与 expression-reference.md 2026-09-28 r283-A 独立实拉逐句核验）
+- **实证**：① `String.toNumber()` 原文「**Throws an error** if the string doesn't start with a valid number」——不是静默 NaN；② `String.toBoolean()` 原文「`0`, `false` and `no` resolve to `false`, everything else to `true`. **Case-insensitive**」；③ **两套空判据并存**：`Number.isEmpty()` 原文「Returns `true` if the number is `0`, `NaN`, `null`, or `undefined`」（**含 0**），而 `$ifEmpty` 的空集是「`undefined`, `null`, an empty string `''`, an array where `value.length` returns `false`, or an object where `Object.keys(value).length` returns `false`」（**不含 0**）。④ 官方自己给了警示 hint：原文「`isEmpty()` **isn't a null check**. On a number it treats `0` as empty, so `$json.count.isEmpty()` returns `true` for **both a missing field and a field set to `0`**」，并指定规避法「compare directly … or use the **exists** operator in the If node」。
+- **判据**：任何"判空 / 判假 / 判是否为数"的断言，必须**先声明用哪一套判据**；两套判据在同一运行时内可共存且对同一输入给出相反答案（`0` 在 Number.isEmpty 下为真、在 $ifEmpty 下为假）。把**「字段缺失」与「字段取值为零」被同一谓词合并**视为明确的假成功源——它让"没有数据"和"数据为零"无法区分。强转也同理：**抛错与静默转换是两种失败面**，必须先确认该系统是哪种。
+- **验收动作**：断言清单里凡出现 `isEmpty` / `ifEmpty` / falsy 判断 / 类型转换，逐条标注所依据的判据集合与"零值归属"，并补一条 `=== null`（或 exists 运算符）的缺失性断言与之并列。
+- 提升层：工具。触发词：判空口径、isEmpty、$ifEmpty、0 算不算空、缺失 vs 为零、静默转换、case-insensitive、falsy 集、throws an error。
+
+## 基线抑制：在他人工件上改动后验收，必须拿原工件跑同一校验器取差集（来源：github.com/anthropics/skills `skills/docx/SKILL.md` 2026-09-28 r283-A 经 `github.com/.../raw/main/...` HTML 通道独立取正文核验；附同族顺序契约）
+- **实证**：原文命令 `python scripts/office/validate.py out.docx **--original doc.docx**`（注释「XSD checks; `--auto-repair` fixes common issues」），另有 `--author "<the name you redlined under>"` 用于校验每一处改动都被 revision 标记包住——原文说明这是「easy to do by accident and **invisible in the accepted view**」。附条（同族顺序契约）：「Do all structural work — add, delete, reorder — before editing any slide's content」，`clean.py` 须在 `<p:sldIdLst>` 定型后才跑；`add_slide.py` 不传 `-o` 就**原地覆写输入**；zip 必须「从目录内 + 先 `rm -f ../out.docx`」，否则已删部件会存活。
+- **判据**：对"在别人给的工件上改动"的产物做校验时，**继承来的缺陷会污染判定**——第三方模板自带的 XSD 错误会让校验永远红，真缺陷被淹没在噪声里。正确动作是**同一校验器对原工件跑一遍做基线，只取差集**才算自造缺陷。同理，结构未定型就先动内容，会让清理脚本白跑一遍。
+- **验收动作**：凡"改别人给的文件"类任务，验收命令必须带 `--original`（或等价基线参数）；无基线参数的校验器，改为"改动前先跑一次、改动后再跑一次、比对差异"三步。
+- 提升层：工具。触发词：基线抑制、--original、继承缺陷、第三方模板污染、结构先于内容、原地覆写、差集才算自己的。
+
+## 评测规模要写成可复算的乘法式，并显式声明可用记录数（来源：github.com/muratcankoylan/Agent-Skills-for-Context-Engineering `research-evidence.md` 2026-09-28 r283-A 经 Qoder r316-Q-A 实拉取证 + WB 逐条判重复核）
+- **实证**：原文把基准口径写成 **「50 prompts × 4 models × 3 reps = 600 calls」，并声明「600/600 可用记录、0 格式失败」**；检索器约束 `stdlib-only + 1.5MB 上限 + 30s 超时`；路由 Top-1 0.913 / Top-3 0.973；上下文重写 top-1 0.255→0.489。
+- **判据**：「触发率 ≥0.5」「零失败」这类结论只有在同时给出**样本轴 × 模型轴 × 重复轴 = 总调用数**与**可用记录数 / 格式失败数**时才能被独立复算。只报一个百分比的评测结论等于不可证伪——分母没写，就不知道它跑了多少次、失败有没有被悄悄丢掉。
+- **验收动作**：评测报告头部固定四元组：总调用数（乘积式）+ 可用记录数 + 格式失败数 + 单调用超时/体积上限；四者缺一，该评测结论不得作为落地判据。
+- 提升层：可复用 Skill。触发词：评测规模、可复算、600 calls、可用记录数、格式失败、分母、重复次数、Top-1 触发率。
+
+## 并行前先问有没有判卷器：没有可信判卷器时多路采样不产生收益（来源：arXiv 2602.18998《Benchmark Test-Time Scaling of General LLM Agents》2026-09-28 r283-A 独立拉 abstract 原文核验）
+- **实证**：原文（General AgentBench，10 个主流 LLM agent × search/coding/reasoning/tool-use）「we find that **neither scaling methodology yields effective performance improvements in practice, due to two fundamental limitations: context ceiling in sequential scaling and verification gap in parallel scaling**」，且从领域基准迁到通用 agent 场景出现 substantial performance degradation。
+- **判据**：**并行扩展被 verification gap 封顶**——多轨迹采样之后如果**没有可靠的判卷器**，多出来的轨迹不会产生收益；此时预算应转向单路的上下文容量（context ceiling）而非继续加路数。反过来，**先有判卷器，再谈多路投票/自一致/重排**，否则只是在制造无法裁决的候选。
+- **验收动作**：设计"多跑几次取最好"的方案前，先写出判卷器（用什么判、判错率多少、谁能复核）；答不出判卷器的多路方案一律退回单路 + 加上下文。
+- 提升层：模型 / 工作流。触发词：verification gap、context ceiling、判卷器、多路采样、自一致投票、并行扩展、测试时扩展、采样几次。

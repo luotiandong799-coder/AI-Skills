@@ -4,7 +4,7 @@ display_name: 智能消息自动回复
 version: 1.1.0
 agent_created: true
 description: >-
-  智能消息自动回复 + 自学习 + 优化复盘。监听微信/QQ/企业微信/钉钉/飞书/Telegram/Slack/Teams 新消息，识别联系人与群聊、消息类型与重要度、场景与连续上下文，判断是否回复，按联系人/群聊独立风格生成回复，并从真实结果做自学习、错误学习、效果学习与复盘，持续进化经验。只做"消息大脑"（识别/判断/风格/经验/复盘/发送前九步检查）；读发消息的驱动走 win-native-app-automation，Windows 操作方式择优走 windows-ops-experience，权限/停止条件/清理走 personal-ai-os，通用记忆治理走 knowledge-governance。触发词：自动回复、消息自动回复、智能回复、帮我回消息、监听微信消息、回微信、回QQ、回复风格、联系人风格学习、消息分类、该不该回、自动回复边界、防重复发送、防回环、回复复盘、回复经验、消息大脑、群消息处理。
+  智能消息自动回复 + 自学习 + 优化复盘。监听微信/QQ/企业微信/钉钉/飞书/Telegram/Slack/Teams 新消息，识别联系人与群聊、消息类型与重要度、场景与连续上下文，判断是否回复，按联系人/群聊独立风格生成回复，并从真实结果做自学习、错误学习、效果学习与复盘，持续进化经验。只做"消息大脑"（识别/判断/风格/经验/复盘/发送前九步检查）；读发消息的驱动走 win-native-app-automation，Windows 操作方式择优走 windows-ops-experience，权限/停止条件/清理走 personal-ai-os，通用记忆治理走 meta/knowledge-governance。触发词：自动回复、消息自动回复、智能回复、帮我回消息、监听微信消息、回微信、回QQ、回复风格、联系人风格学习、消息分类、该不该回、自动回复边界、防重复发送、防回环、回复复盘、回复经验、消息大脑、群消息处理。
 ---
 
 # 智能消息自动回复（消息大脑）
@@ -18,7 +18,7 @@ description: >-
 | 读消息 / 发消息 / 未读红点识别 / 会话列表滚动 / `wechat-send.ps1` / 焦点与键盘注入 | **`win-native-app-automation`**（唯一驱动层） |
 | Windows 操作方式择优（键盘 / 命令行 / 控件级 / 视觉）、操作经验进化 | **`windows-ops-experience`** |
 | 权限分级 L0/L1/L2、停止条件、失败恢复、任务后清理、资源边界 | **`personal-ai-os`** |
-| 通用记忆治理（去重 / 分层 / 防膨胀 / 过期） | **`knowledge-governance`**、跨 Agent 交接走 `agent-guild` |
+| 通用记忆治理（去重 / 分层 / 防膨胀 / 过期） | **`meta/knowledge-governance`**、跨 Agent 交接走 `agent-guild` |
 | 交付物独立验证 | **`wb-artifact-verification`** |
 | **本技能独占** | 消息识别与分类、是否回复判断、联系人×场景风格经验、连续对话上下文、经验库与可信度分级、经验检索、自学习/错误学习/效果学习/复盘、九步发送前检查、防重复与防回环 |
 
@@ -128,7 +128,7 @@ description: >-
 | 失败 | 验证后被否定 | 降低优先级 |
 | 过期 | 联系人习惯 / 软件 / 场景已变 | 自动降级 |
 
-> 与 `knowledge-governance` 一致：**更新旧经验，不无限新建重复经验。**
+> 与 `meta/knowledge-governance` 一致：**更新旧经验，不无限新建重复经验。**
 
 ---
 

@@ -4,7 +4,7 @@ display_name: Windows操作经验进化
 version: 1.0.0
 agent_created: true
 description: >-
-  Windows 操作经验与自进化引擎：长期记录每个 Windows 任务的最快/最稳做法、易错点、历史失败原因与解法，沉淀高频操作为可复用流程，并在每次任务后从真实结果学习、比较新旧方法、提升更优者优先级、降低易失败者优先级，经验经实测验证后才更新。与操控底层技能（winapp-ui-automation【含环境自适应重识别，windows-ui-adaptive 已于 2026-09-26 并入】/computer-use-windows/windows-automation/powershell-windows-cli）及 win-native-app-automation 配合——本技能只管"经验积累与进化"，不重复实现操控方法；通用记忆/治理交给 personal-ai-os / agent-guild / knowledge-governance。触发词：Windows经验、操作经验、复盘优化、自学习、越用越聪明、方法择优、失败换路记忆、经验进化、最佳做法、易错点。
+  Windows 操作经验与自进化引擎：长期记录每个 Windows 任务的最快/最稳做法、易错点、历史失败原因与解法，沉淀高频操作为可复用流程，并在每次任务后从真实结果学习、比较新旧方法、提升更优者优先级、降低易失败者优先级，经验经实测验证后才更新。与操控底层技能（winapp-ui-automation【含环境自适应重识别，windows-ui-adaptive 已于 2026-09-26 并入】/computer-use-windows/windows-automation/powershell-windows-cli）及 win-native-app-automation 配合——本技能只管"经验积累与进化"，不重复实现操控方法；通用记忆/治理交给 personal-ai-os / agent-guild / meta/knowledge-governance。触发词：Windows经验、操作经验、复盘优化、自学习、越用越聪明、方法择优、失败换路记忆、经验进化、最佳做法、易错点。
 ---
 
 # Windows 操作经验与自进化引擎
@@ -29,7 +29,7 @@ description: >-
 
 - 存储：`experience.md`（与本技能同目录，跨项目持久）。
 - 单条经验结构：`场景/任务 → 最优方法(含 why) → 易错点 → 历史失败原因+解法 → 优先级权重 → 验证状态(实测/待验证) → 更新时间`。
-- 只记**跨任务可复用**的；一次性、纯项目噪音不记（与 knowledge-governance 一致：更新旧知识而非无限新建）。
+- 只记**跨任务可复用**的；一次性、纯项目噪音不记（与 meta/knowledge-governance 一致：更新旧知识而非无限新建）。
 
 ## 三、方式择优决策表（对应需求 2）
 

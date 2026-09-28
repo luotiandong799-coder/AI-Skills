@@ -1,5 +1,5 @@
 ---
-name: workbuddy-claw-wechat-send
+name: system/workbuddy-claw-wechat-send
 description: Send a text message to the user through the local WorkBuddy assistant's WeChat channel (Claw / weixinClawBot bot). Use this skill when a task requires pushing a notification or result to the user via their connected WeChat bot, e.g. "send me this via WeChat", "push to my WeChat", or an automation that delivers messages through the local assistant's WeChat channel.
 version: "1.0.0"
 display_name: 微信助理消息推送

@@ -1,6 +1,6 @@
 ---
 name: bsk-local-build-and-connect
-description: 本地构建腾讯 BrowserSkill（bsk）扩展并打通 daemon↔Edge 扩展连接。当出现以下情况时使用：从源码构建 BrowserSkill 扩展；WXT 构建 exit 0 但 dist 里没有 html（popup.html / audit.html / long-screenshot.html 缺失，只剩 manifest 和 chunks）；`bsk daemon start` 后端口 52800 不监听 / `bsk doctor` `bsk status` 挂起无输出；bsk 显示浏览器连上了又掉线（os error 10054）；需要 Side-load 自建扩展替代商店版。触发词：browser-skill、bsk、BrowserSkill 构建、WXT 构建、wxt build、扩展 dist 没有 html、nested html entry point、popup.html 缺失、daemon 起不来、52800、浏览器掉线、扩展侧载、load-extension。
+description: 本地构建腾讯 BrowserSkill（bsk）扩展并打通 daemon↔Edge 扩展连接。当出现以下情况时使用：从源码构建 BrowserSkill 扩展；WXT 构建 exit 0 但 dist 里没有 html（popup.html / audit.html / long-screenshot.html 缺失，只剩 manifest 和 chunks）；`bsk daemon start` 后端口 52800 不监听 / `bsk doctor` `bsk status` 挂起无输出；bsk 显示浏览器连上了又掉线（os error 10054）；需要 Side-load 自建扩展替代商店版。触发词：system/browser-skill、bsk、BrowserSkill 构建、WXT 构建、wxt build、扩展 dist 没有 html、nested html entry point、popup.html 缺失、daemon 起不来、52800、浏览器掉线、扩展侧载、load-extension。
 version: 1.0.0
 agent_created: true
 ---
@@ -163,4 +163,4 @@ bsk tab create --url "<url>" --session <id> --json   # 默认聚焦新标签；-
 - 用户说"随便"也照样守上面两条——"随便"指不必挑，不指可以不设限。
 
 ## 相邻技能
-- bsk 的**命令用法 / 借标签页范式**（不是构建搭建）→ 读 `browser-automation` 第五节 + `browser-skill`（bsk 官方技能，`bsk` 自维护）。
+- bsk 的**命令用法 / 借标签页范式**（不是构建搭建）→ 读 `browser-automation` 第五节 + `system/browser-skill`（bsk 官方技能，`bsk` 自维护）。
