@@ -9390,3 +9390,69 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **attachments 数组字段**：file_name/mime_type/size_bytes/download_url——**自定义 skill 从 request body 取这四字段**。
 - **文件工具安全姿态**：file_fetch/dir_list/dir_fetch/file_write 四工具 default-deny，per-node path policies + operator approval——**文件读写默认拒绝、逐节点放行**（与 §工具面安全互补）。
 - **提升层**：工具（附件管线）。
+
+## Dify 会话记忆与变量：Conversation Variables / Variable Assigner / 双内存（来源：dify.ai blog conversation-variables + v0.7.0 memory + deepwiki chatflow-specific + juejin 多轮记忆 + mem0 ai config 2024-08/2026-09 实拉，合并 §Dify 平台——那条管"编排循环/插件"，本条管"会话记忆"）
+- **Conversation Variables = 会话级短期记忆**：chatflow 多轮间保留关键细节（Variable Assigner 节点读写）；Workflow 无状态单次——**要连续对话用 Chatflow，一次性任务用 Workflow**。
+- **双内存分层**：TokenBufferMemory 短期（LLM 节点开 memory，Window Size 50-100 起步）vs Knowledge Base+向量库长期——**短期窗口缓冲、长期向量召回**（与 §记忆提取四策略分工：那条管提取策略，本条管存储形态）。
+- **API 连续性**：每次调用必须传 conversation_id 才能维持记忆线；会话历史与元数据经 GET /messages、sys.conversation_id/sys.dialogue_count 可取——**外部调用方要自己保存会话 ID**。
+- **外部记忆插件**：Mem0 类插件补 Add/Search/Update/Delete Memory（含时间戳、AND/OR 过滤）——**记忆不止一种，可外挂**。
+- **提升层**：工作流（会话记忆）。
+
+## n8n AI Agent 节点：统一 Tools Agent / 输出解析器 / 回退模型（来源：docs.n8n.io AI-Agent-node + conversational-agent + plan-execute-agent + tools-agent + blog n8n-agents 2026-03/09 实拉，合并 §n8n 平台——那条管"Code 节点/二进制"，本条管"AI Agent"）
+- **1.82 起统一为 Tools Agent**：旧 agent 类型设置移除，全部按工具代理工作——**现代 agent 只有一个形态：带工具的目标完成者**。
+- **必须连工具 sub-node**：Agent 节点至少要一个工具子节点；Conversational Agent 用于聊天（Chat Trigger+memory sub-node，**memory 不跨会话持久**）——**chat 场景要自己接记忆持久化**。
+- **Plan and Execute Agent**：先建高层计划再逐步执行——**结构化复杂任务先计划后执行**（对应 deeplearning 多代理课程）。
+- **Require Specific Output Format**：Auto-fixing / Item List / Structured Output Parser 三选一强制输出结构；Enable Fallback Model 主模型失败用备份——**输出结构化+模型回退是生产底线**。
+- **提升层**：工具（AI Agent 装配）。
+
+## LangFlow 向量存储 RAG 管线（来源：docs.langflow.org vector-store-rag + knowledge + chat-with-rag + blog 1.11 multi-vector + templates local-rag 2025-06/2026-09 实拉，合并 §LangFlow 平台——那条管"多代理/认证"，本条管"RAG 管线"）
+- **RAG 拆两个子流程**：Load Data 子流程（文件→分块→embed→入库，只管加载）与 Retriever 子流程（查询→相似检索→生成，只管应答）——**加载与检索分离，加载只在需要时跑**。
+- **向量组件面**：embedding 存储、similarity search、Graph RAG traversals、OpenSearch；本地 RAG 用 Ollama+ChromaDB 全本地无外部网络——**从全本地到托管库按需选**。
+- **1.11 多向量检索**：ColBERT late interaction + ColPali 视觉文档检索（lfx-nextplaid 免胶水代码）——**向量检索已从单嵌入向量进化到多向量/视觉检索**。
+- **提升层**：工具（RAG 管线装配）。
+
+## Activepieces 错误处理与重试（来源：mintlify.wiki error-handling + deepwiki retry-error-handling + resources ai-llm-workflows 2025-12/2026-09 实拉，合并 §Activepieces 平台——那条管"piece 构建/治理"，本条管"错误处理"）
+- **每步双开关**：Continue on Failure（失败继续）/ Retry on Failure（自动重试）在步骤配置面板逐项开——**错误处理是每步决策不是全局开关**。
+- **两级重试**：自动 action-level 重试（指数退避、只对瞬态失败）；手动 flow-level 重试策略（对持久失败按策略恢复）；Execution error types 分类失败模式判重试资格——**瞬态自动、持久手动**。
+- **AI workflow 错误模式**：validation 步骤强制必填、log prompt IDs+outputs 审计、分支重试/回退/升级、run status 记表、未解决转人工 review；LLM 输出先 JSON schema 结构化验证再写动作、检索事实+引用减幻觉、checkpoint 恢复——**AI 输出进写操作前必须过结构校验**。
+- **webhook 幂等**：幂等键+correlation ID 存表防重复、短路径短路重跑——**重试安全靠幂等不靠开关**。
+- **提升层**：工具（错误处理配置）。
+
+## Make 模板与蓝图（来源：help.make.com scenario-templates + create-and-manage-scenario-templates + blueprints + use-apify templates 2026-03/09 实拉，合并 §Make 平台——那条管"回滚/连接"，本条管"模板复用"）
+- **模板两级制**：Public（Make+社区、7500+ 用例）vs Team（团队创建，默认私有→发布可链接分享→提交评审可转 public）——**先内部沉淀，成熟再公开**。
+- **Blueprint = 可复用版本**：含模块+模块设置+映射值；用于备份（换账号/丢失时恢复）、导出分享、导入复用——**场景蓝图是 Make 的备份与复用载体**（与 §回滚的 Version history 互补：蓝图管"跨账号迁移"，版本管"站内恢复"）。
+- **AI 模板注意点**：prompt design / JSON 输出解析 / 错误处理是三处最需手调的位置——**模板是起点不是终点**。
+- **提升层**：工具（模板复用）。
+
+## Pipedream 并发与节流（来源：pipedream.com docs concurrency-and-throttling + community 951/8143 + docs-proxy troubleshooting 2022-10/2026-09 实拉，合并 §Pipedream 平台——那条管"签名/目录"，本条管"并发控制"）
+- **Concurrency=并行 worker 数，设 1=串行有序**：前一个执行完才处理下一个，保证事件处理顺序——**要 in-order 处理就锁 1 worker**。
+- **Throttling=execution rate controls**：限每单位时间执行数；超限事件进 workflow 专属 FIFO 队列（免费上限 100，可提到 10000）——**并发管并行度、节流管速率，队列兜底**。
+- **冷启动**：约 5 分钟不活动后首次请求需 spin up 新环境——**低频接口把冷启动当预期延迟**。
+- **全局节流方案**：单 workflow 统一管理并发，再按请求属性（如 path）转发到具体 workflow——**内建不支持优先级，要优先级自建队列**。
+- **提升层**：工具（执行控制）。
+
+## Anthropic 工具设计原则：合并工具 / Tool Search / 五原则（来源：console.anthropic.com implement-tool-use + anthropic.com advanced-tool-use + writing-tools-for-agents 2025-09/2026-03 实拉，合并 §Anthropic 平台——那条管"Skills/记忆"，本条管"工具设计"）
+- **合并相关操作**：create_pr/review_pr/merge_pr 并成一个工具加 action 参数——**更少更能力的工具减少选择歧义**（与 §工具面安全"少一个工具少一块炸面"同向）。
+- **Tool Search 的适用边界**：工具定义>10K tokens、10+ 工具、MCP 多 server、选择准确率问题→先搜索再调用；<10 工具或全部高频用没必要——**小工具库不加搜索层**。
+- **writing tools 五原则**：选对要实现的（和不实现的）工具 / namespacing 定义边界 / 返回有意义 context / 优化 token 效率 / 提示工程描述与 spec——**工具描述是被注入的，按提示工程标准写**。
+- **computer use 提示**：每步后截图评估结果、显式展示评估过程——**动作后验证结果防"假设成功"**（与 §工具结果断言互补）。
+- **提升层**：可复用 Skill（工具设计）。
+
+## skills.sh 技能目录与 CLI（来源：skills.sh + officialskills.sh + docs/api + find-skills + rywalker research 2026-03/09 实拉——新增信源站点）
+- **目录+排行榜形态**：Vercel 维护；SKILL.md 指令包、任何 GitHub 仓库可发布、20+ AI coding agent 一条命令安装（npx skills add owner/repo）——**目录是"GitHub 仓库→可装技能"的索引层**。
+- **官方 curated 集**：makers 教自己产品（微软/Vercel/Anthropic/WordPress/OpenAI 官方技能库），API 提供 /api/v1/skills/curated——**官方技能=产品方自己的最佳实践包**。
+- **find-skills 技能**：发现+验证+安装闭环（npx skills find / add），把目录能力变成 agent 自己的工具——**"找技能"本身可以是个技能**。
+- **提升层**：可复用 Skill（技能分发）。
+
+## deeplearning 软件工程课程生态（来源：learn.deeplearning.ai generative-ai-for-software-development + blog jetbrains hybrid-local + corporate ai-python 2026-04/08 实拉，合并 §deeplearning 平台——那条管"RAG/编排"，本条管"课程方法论"）
+- **软件工程专精**：prompt LLM 做编码任务→复杂设计模式与数据库架构；保持人对代码质量与设计决策的控制权（Gartner 预测 70% 开发者 2028 前用 AI 编码）——**AI 是编码伙伴不是代码主人**。
+- **Hybrid to Local 课程**（JetBrains Paul Everitt）：开源权重模型动机=控制/选择/成本——**从云端到本地是成本与控制的连续谱**（对应 §成本四层）。
+- **AI Python 入门**（Andrew Ng）：用 AI 助手调试代码、解释概念——**学习场景本身可用 AI 当教练**。
+- **提升层**：工作流（课程方法论）。
+
+## OpenClaw 网关认证（来源：docs.openclaw.ai gateway/authentication + web/dashboard + gateway + docs2 trusted-proxy-auth + howtouseopenclaw 2026-02/09 实拉，合并 §OpenClaw 平台——那条管"附件/仪表板"，本条管"网关认证"）
+- **默认 localhost 也要求认证**：gateway.auth.token/password（或 OPENCLAW_GATEWAY_TOKEN 环境变量）；客户端在 WebSocket 握手 connect.params.auth.token/password 传凭据——**本地也不裸奔**。
+- **Tailscale 身份复用**：gateway.auth.allowTailscale:true 时用 Tailscale Serve 身份头；trusted-proxy 模式经身份头映射 identityScopes（逐 scope 授权）——**内网信任链可替代密码**。
+- **模型登录两阶段**：网关主机先 claude auth login（Claude Code 本地登录）→ openclaw models auth login --provider anthropic --method cli 指向 claude-cli 后端；或 export PROVIDER_API_KEY 直配——**模型凭据集中在网关主机**。
+- **auth.mode:none 仅单机本地**；openclaw doctor --fix 一键启用 token 认证——**关闭认证要显式且只限本地**。
+- **提升层**：工具（网关安全）。
