@@ -8591,3 +8591,67 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **两种模式**：Serve mode=`openclaw mcp serve`（stdio 或 --url wss://gateway-host:18789 + token/password 远程）；Registry mode=list/show/set/unset 管理 OpenClaw-owned 出站 MCP 定义。
 - **Apps 面**：mcp.apps.enabled true→sandbox-only HTTP(S) 监听 gateway+1 端口（默认 18790），ChatGPT/Cursor/Windsurf 可经 MCP 连外部工具。
 - **提升层**：工具（外部工具集成）。
+
+## Dify 会话变量与记忆（重建；来源：dify.ai blog conversation-variables + deepwiki dify-docs + mem0 dify-agent-memory 2024-08/2026-09 实拉，合并 §Dify 会话变量——那条管"会话变量基础"，本条管"记忆构建与可变性语义"）
+- **Conversation Variables 是可变的持久变量**：Chatflow 专用，跨多 turn 持续（write/update 用 Variable Assigner 节点）——Input/Output 变量不可变仅单次 workflow run，conversation 变量持久整个会话。
+- **Array[object] 记忆模式**：用 Array[object] 型变量持续 append 新记忆（三属性结构），可设默认值；官方 OpenAlike memory 简化实现即此。
+- **读取即注入**：LLM 节点从变量读上下文（用户偏好/事实/上传文件引用）——记忆不是"模型记住"，是显式变量读写。
+- **判据**：需要跨 turn 状态/个性化就用 conversation 变量+Variable Assigner，普通 workflow 变量每次执行重置。
+- **提升层**：工作流（有状态对话）。
+
+## n8n Webhook 响应模式与异步回调（重建；来源：docs.n8n.io webhook node + community 80495 + n8nautomation patterns 2026-05/06 实拉，合并 §n8n Webhook——那条管"webhook 触发"，本条管"响应与异步"）
+- **四种响应模式**：Immediately（立即返回"Workflow got started"）/ When Last Node Finishes（返回末节点输出）/ Respond to Webhook 节点（工作流内任意点自定义响应）/ Streaming response（实时数据流回，需 trigger 配 Streaming+下游节点支持）。
+- **异步模式**：先返回 202/200 立即确认，后台继续执行，完成后经回调 webhook 恢复/回推结果——**Wait 节点超过 64 秒的外部响应场景改异步**（同步等待会超时）。
+- **Streaming 判据**：AI Agent 流式输出需 Webhook trigger 设 Streaming response+agent 选项开 Enable Streaming，可去掉单独 Respond 节点。
+- **提升层**：工作流（Webhook 后端模式）。
+
+## LangFlow API 全局变量与会话记忆（重建；来源：docs.langflow.org api-openai-responses + api-flows-run + memory + workflow-api 2026-09 实拉，合并 §LangFlow API——那条管"API 端点部署"，本条管"全局变量与记忆隔离"）
+- **全局变量经 header 传**：`X-LANGFLOW-GLOBAL-VAR-{NAME}` 自定义 header 传动态值（API keys/user IDs/每次请求变化的配置）；**header 优先于环境变量**；仅本次请求有效不持久；FALLBACK_TO_ENV_VARS 可兜底引用不存在变量。
+- **会话记忆默认大锅饭**：默认 session ID=flow ID，一个 flow 所有聊天全存一个大会话——**多用户 flow 必须自定义 session ID（如 user ID）隔离上下文**，也便于日志定位。
+- **Workflow API（Beta）**：POST /api/v2/workflows/{id} 支持 input_value+session_id+mode=background 后台处理。
+- **提升层**：工具（API 参数与记忆隔离）。
+
+## Activepieces Pieces 生态与平台治理（重建；来源：activepieces.com docs manage-pieces + piece-syncing + aitrendtool 2026-07/09 实拉，合并 §Activepieces 平台——那条管"企业治理/自托管"，本条管"Pieces 两级管理与版本 pin"）
+- **两级管理**：Platform Admin 全平台安装/移除 pieces；Project Admin 仅 show/hide 特定项目——平台级锁边界，项目级按团队裁剪。
+- **版本 pin（关键）**：每步记录添加时的精确 piece 版本（如 0.5.3）并 pin 住——**flows 永不自动升级**，升级是 builder 里的显式动作；piece-syncing 拉新版本无需升级服务器。
+- **治理最佳实践**：从 allowlist 模式开始（先紧后松）、生产锁计划防未授权改动、文档化 allowlist 理由、季度审计。
+- **企业层（packages/ee 商业许可）**：SAML SSO/SCIM/RBAC/audit logs/private pieces/platform API keys。
+- **提升层**：工具（Pieces 治理与升级控制）。
+
+## Make 自定义 Webhook 模块（重建；来源：help.make.com webhook-triggered-ai-agent + make.com help webhooks + apps.make.com gateway 2026-04/08 实拉，合并 §Make Webhook——那条管"Webhook 基础"，本条管"自定义 Webhook 实操"）
+- **每 scenario 独享**：Custom webhook 模块生成唯一 HTTPS URL；**一个 webhook 不能用于多个 scenario**（官方明示 each scenario must use its own webhook）。
+- **流程**：Builder 加 Webhooks>Custom webhook→Add 配置名称保存生成端点→测试发 sample data→执行日志验证字段映射→激活后持续监听。
+- **变体**：custom mailhooks（邮件入站）；webhook responses（回写响应）；Webhook-triggered AI agent 官方教程=第三方服务推数据触发 agent。
+- **提升层**：工具（事件入口）。
+
+## Pipedream Sources 与事件触发器（重建；来源：pipedream.com docs sources + components/triggers + data-management emit 2026-02/09 实拉，合并 §Pipedream Sources——那条管"Sources 基础"，本条管"部署与事件流"）
+- **HTTP source 即 request bin**：唯一 endpoint 收任意请求，可查看 payload/headers 详情，用后删 source 与其事件——可全程 API 管理。
+- **customResponse**：$.interface.http 接口配 customResponse: true 可自定义对客户端的 HTTP 响应（respond() 方法）。
+- **事件驱动解耦**：workflow 可 emit 事件（$.send.emit()）触发其他 workflow 或被 REST API 消费——REST /subscriptions?emitter_id={id}&listener_id={id} 建立订阅；**单 workflow 可听 10 个不同源的 events**。
+- **提升层**：工具（事件架构）。
+
+## Anthropic Tool Use 与流式 SDK（重建；来源：platform.claude.com docs tool-runner + streaming + api primer 2026-05/09 实拉，合并 §Anthropic Tool Use——那条管"工具调用基础"，本条管"SDK 流式与循环"）
+- **tool_runner（beta SDK）**：client.beta.messages.tool_runner(model, tools) 简化多轮工具循环——每轮迭代 yields stream 对象，stream=True 增量处理，get_final_message() 取累积消息。
+- **流式事件**：SSE（server-sent events）逐步返回；Java createStreaming→StreamResponse<RawMessageStreamEvent> 逐 chunk；TS/Python stream 迭代 event.type；CLI `ant messages create --stream --format jsonl`。
+- **细粒度工具流式（beta）**：tool use 支持参数值级细粒度 streaming。
+- **提升层**：工具（流式工具循环）。
+
+## deeplearning 提示工程课程体系（重建；来源：deeplearning.ai chatgpt-prompt-eng + prompt-engineering-with-llama-2 + classcentral 2026-04/09 实拉，合并 §deeplearning 提示工程——那条管"课程总体"，本条管"具体课程内容"）
+- **ChatGPT Prompt Engineering for Developers**：两大原则（写清晰具体指令+给模型思考时间）+系统化工程；四大任务 Summarizing/Inferring/Transforming/Expanding——推断模块教**非结构化文本→结构化提取**（情绪/主题分类，接数据管道）。
+- **Prompt Engineering with Llama 2 & 3**：开源模型提示最佳实践；Llama Guard 模型做安全过滤——安全/负责任的 AI 应用构建。
+- **Prompt 组件论**：Role/Task/Context/Examples/Output Format 逐组件修改（Udacity/udemy 同源方法论，角色+任务+上下文+示例+输出格式）。
+- **提升层**：可复用 Skill（提示工程方法论）。
+
+## GitHub Dependabot 供应链安全（重建；来源：docs.github.com dependabot-security-updates + quickstart + dependabot.yml options 2026-04/09 实拉，合并 §GitHub 安全——那条管"供应链总览"，本条管"Security Updates 配置面"）
+- **分组安全更新**：dependabot.yml 用 `groups` + `applies-to: security-updates` 让 Dependabot **单 PR 更新多个依赖**（按包管理器）；multi-ecosystem groups 跨包管理器分组（如 docker+terraform 同组）。
+- **启用路径**：Settings→Advanced Security→Enable alerts/security updates/version updates 三开关；public repo 默认强制开。
+- **私有源**：dependabot.yml registries 支持 git 类型（username x-access-token+PAT）等私有包源。
+- **versioning strategy**：默认 app 提高最小版本要求/library 加宽 allowed version。
+- **提升层**：工具（依赖供应链自动化）。
+
+## OpenClaw Hooks 与会话记忆自动化（重建；来源：docs.openclaw.ai hooks + openclawforge guide + lucaberton session-memory 2026-02/07 实拉，合并 §OpenClaw Hooks——那条管"插件系统"，本条管"会话记忆与事件钩子"）
+- **session-memory hook**：/new、/reset 事件触发保存会话上下文到 `<workspace>/memory/YYYY-MM-DD-slug.md`（必须配置 workspace.dir）；新会话启动时按上下文线索（用户身份/渠道/时间）检索记忆、按相关度排序、**Top-K 注入 system context**——会话带历史知识启动。
+- **bootstrap-extra-files**：agent:bootstrap 事件按 glob 注入额外启动文件。
+- **插件状态持久化**：registerSessionExtension(...) 存 JSON 兼容会话状态，Gateway sessions.pluginPatch 更新，Control UI 经 pluginExtensions 渲染——插件状态不丢失。
+- **memory 分层**：每日 md 日志（近期）+MEMORY.md 永久参考卡（持久事实）——新会话只加载当日+昨日日志，更老的移出即时视野。
+- **提升层**：工具（会话记忆与事件驱动）。
