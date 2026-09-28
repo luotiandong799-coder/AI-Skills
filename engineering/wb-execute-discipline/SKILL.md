@@ -9022,3 +9022,63 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **VISION 设计原则**：core 保持 lean（**每行核心工具/提示/配置键对所有 operator 收 per-call tax**）——可选能力尽量插件化，不是核心无脑加。
 - **自举**：Skill 可自举（agent 给自己写并安装新 Skill）——能力演进从"人写"到"agent 生产/消费/验证知识闭环"。
 - **提升层**：可复用 Skill（扩展开发与分发模式）。
+
+## Dify Agent 节点与策略（来源：dify-6c0370d8.mintlify.app nodes/agent + marketplace agent plugin + dify.ai blog agent-node + v1-6-0 MCP + dify-hosting agents guide 2025-03/2026-09 实拉，合并 §Dify RAG/平台——那条管"检索/分块/环境变量"，本条管"自主 agent 节点"）
+- **Agent 节点职责**：把多步固定流程的部分步骤交给 LLM 自主决策（迭代决定用哪个工具）——**适合分诊/变体任务**，确定流水线别用。
+- **策略选择**：Function Calling（GPT-4o/Claude 等原生函数调用模型）vs ReAct（无原生函数调用开源模型）；Agent Strategy 是可扩展模板（可自实现 CoT/ToT/GoT 等推理形态）。
+- **工具面控制**：Allowed tools list 只发送/运行列出的工具（空=全列表）——**收窄工具面=收窄注入与误用面**；嵌套 agent（v1.3+ 一个 agent 调另一个作 tool）实现专业化分工；MCP Agent Strategy 把 MCP 工具直接嵌入 Agent 节点。
+- **提升层**：工具（自主 agent 编排）。
+
+## n8n LangChain 集成（来源：docs.n8n.io langchain-in-n8n + n8n workflows 3326/4972 + blog ai-agents + n8n vs langgraph 2025-02/2026-09 实拉，合并 §n8n 数据/错误——那条管"转换/重试"，本条管"AI 节点层"）
+- **AI nodes=LangChain JS 实现**：agent/LLM/memory 各组件可配置、可与任意 n8n 节点混接；Conversation Agent 内建、SQL Agent（本地 SQLite）等专型。
+- **LangChain Code node**（自托管 only）：需要粒度控制 prompts 或省掉保留 tool-calling 功能 token 时用——**内建 agent 不够细就下沉代码**。
+- **生产特性**：per-node execution history + OpenTelemetry 可接 Langfuse；**encrypted credentials 不给 agent 访问**（agent 能用工具但拿不到明文密钥）——与 §工具面安全同源。
+- **提升层**：工具（AI 节点选型）。
+
+## LangFlow agent 工具（来源：docs.langflow.org agents + agents-tools + bundles-codeagents + bundles-cuga + langflow blog ai-coding-agent 2025-05/2026-09 实拉，合并 §LangFlow 组件/记忆——那条管"组件/记忆/API"，本条管"agent 工具化"）
+- **Tool Mode 挂工具**：任何 Langflow 组件（含其他 agent、MCP servers）开 Tool Mode 挂到 Agent Tools 端口——**组件即工具，无胶水代码**。
+- **自定义组件作工具**：Python 代码（langflow.custom Component + io 输入/输出 + schema Data）；Code Agents 参数 max_iterations 默认 10（1-100）防无限步。
+- **CUGA**（ConfigUrable Generalist Agent）=Playwright 浏览器自动化 + structured output 的通用 agent；MCP filesystem server 让 coding agent 安全读写项目目录。
+- **提升层**：工具（agent 工具面扩展）。
+
+## Activepieces 流程控制（来源：activepieces blog zapier-vs-make + mintlify wiki workflows/engine + docs mcp tools + resources branching-flows 2023-05/2026-08 实拉，合并 §Activepieces 平台——那条管"部署/触发/AI"，本条管"流程控制块"）
+- **逻辑块在主线可见**：Branches/loops/delay 直接放主 flow 可视化——**逻辑藏菜单的平台可读性差**；Router Executor 按表达式评估执行匹配分支（fallback=Otherwise）。
+- **Branch Action 结构**：conditions 数组（firstValue 比较）——多条件路由；MCP 工具 ap_add_branch 程序化加分支；分支 flow=条件逻辑的结构结果（条件=规则、分支=路径）。
+- **内建 assistant + Test 按钮**：英文描述→建议步骤/写自定义块代码；每块可测——**构建期即验证**。
+- **提升层**：工具（流程控制设计）。
+
+## 聚合查询成本权衡（来源：firebase.google.cn write-time aggregations + cloud.google datastore aggregation-queries + doris aggregate model 2024-08/2026-07 实拉，合并 §Make 数据存储——那条管"Make data store"，本条管"聚合实现选型"）
+- **write-time vs read-time 聚合**：文档/记录少时 read-time（查询时算）便宜；**量大时 write-time（写入时维护聚合值）便宜**——Firebase 事务内维护 numRatings/avgRating 模式。
+- **预聚合模型**（Doris Aggregate Key）：导入/后台合并阶段预聚合、只存聚合结果——省存储 + 加速查询，适合"明细汇总型"场景（月销/交易总额/点击量）。
+- **聚合查询**（Datastore count/sum/avg）：单次返回汇总值，比逐条取实体便宜。
+- **提升层**：工作流（数据管道聚合设计）。
+
+## Pipedream code steps（来源：pipedream.com docs workflows/code nodejs+python + http + quickstart + components quickstart 2024-10/2026-09 实拉，合并 §Pipedream 平台——那条管"调度/webhook/CLI"，本条管"代码步骤运行时"）
+- **两运行时**：Node.js（defineComponent async run({steps,$})、$.export 导出数据）；Python（def handler(pd)、pd.steps["trigger"] 引用、返回 dict）——Go/Bash 亦有。
+- **props 仅 Node**：workflow builder 传参复用步骤只有 Node code step 支持（Python/Bash/Go 无）——**要参数化复用选 Node**。
+- **连接账号进 code step**：Node/Python 直接用 connected accounts 发 HTTP——catch errors/重试/单步多 API 请求；$.service.db 在 source 间持久化状态；npm 包直接 import。
+- **提升层**：工具（代码步骤运行时）。
+
+## Anthropic 提示缓存定价（来源：platform.claude.com prompt-caching + pricing + anthropic news 2024-08/2026-09 实拉，合并 §Anthropic 工具/思考——那条管"工具结果/思考预算"，本条管"缓存机制与成本"）
+- **两启用法**：automatic（请求顶层 cache_control 字段，系统自动断点）+ 手动 breakpoints（cache_control: {"type":"ephemeral"} 精确控制缓存段）——大 system prompt/文档/对话历史重复处理时缓存。
+- **定价**：写缓存比基础输入价**贵 25%**、用缓存内容**仅 10%** 基础输入价（Opus 4.8 input $5 / cache write $6.25 / cache read $0.50 每 MTok）——**重复上下文次数越多越赚**；读缓存也降延迟。
+- **成本组合拳**：缓存（重复上下文）+ Batch API（非时效任务）+ 监控 token 用量（找优化点）。
+- **提升层**：工具（成本与延迟优化）。
+
+## GitHub Copilot agent mode（来源：github.blog agent-mode-101 + vs code blog introducing agent mode + github docs chat-in-ide 2025-02/2026-09 实拉，合并 §GitHub 生态——那条管"Copilot 最佳实践/Models/技能市场"，本条管"agent 模式"）
+- **agent mode 定位**：编辑器内实时同步协作者——分析 codebase 全上下文、计划并执行多步方案、运行命令/测试、调外部工具、**迭代到任务完成**（响应编译/lint 错误、监控终端与测试输出、自动纠正循环）。
+- **与 coding agent 区别**：coding agent=后台异步代理；agent mode=实时流式、**watch steps + 随时干预 + 改动全本地**；terminal 命令需人确认后才跑。
+- **能力开关**：Tools→Manage 启用/禁用能力并加自定义工具——**按任务收窄工具面**。
+- **提升层**：工具（AI 编程协作模式）。
+
+## LLM 可观测工具全景（来源：mlflow.org top-llm-observability + langchain llm-observability-tools + newrelic blog + dev.to top10 + galileo blog 2026-04/09 实拉，合并 §deeplearning 评估——那条管"评估驱动开发/指标"，本条管"可观测平台选型"）
+- **选型五向**：① 部署模型（托管/自托管）② OpenTelemetry 原生度（改造成本）③ span 深度（每 LLM 调用/工具调用/检索步骤细节）④ 评估与质量打分（LLM-as-a-judge/语义相似度/人工 review）⑤ 成本跟踪（按模型/功能/用户看 token 花费）。
+- **工具表**：MLflow（端到端 GenAI 生命周期、30M+ 月下载、OpenTelemetry-compatible）；LangSmith（LangChain 团队、agent debugging+evals、专家标注 traces）；Arize Phoenix（RAG 调试、OpenInference 标准、自托管）；Langfuse（自托管、observability+prompt 管理、ClickHouse）；Opik（Apache-2.0、LLM-as-a-judge、production monitoring）；Helicone（低延迟代理+缓存）；AgentOps（自主 agent 监控）。
+- **判据**：已有栈（Datadog 选 Datadog LLM Observability）；要自托管选 Langfuse/Phoenix；LangChain 生态选 LangSmith；低延迟/成本代理选 Helicone。
+- **提升层**：可复用 Skill（可观测选型工作流）。
+
+## OpenClaw 配置与多 agent 路由（来源：openclawroadmap config + openclawdoc agents overview + openclaw-ai multi-agent + howtouseopenclaw channel-routing 2026-02/09 实拉，合并 §OpenClaw 平台——那条管"安装/配置/会话/开发"，本条管"声明式配置与路由"）
+- **单主配置 config.yaml**：gateway + channels（WhatsApp/Telegram/Discord/Slack 15+）+ providers（Anthropic/OpenAI/Gemini/DeepSeek/Ollama 本地）+ agents + memory + advanced——模型无关、全声明式。
+- **agent 字段**：model（provider/model id）、system_prompt（人格与行为）、channels（监听渠道，默认 terminal）、memory.backend（sqlite/redis）。
+- **多 agent 路由**：agents.list 定义命名 agent（workspace/model）→ bindings 匹配 channel/account/peer 路由到对应 agent（如 work agent 绑定 whatsapp 特定群）；**agentToAgent 默认关 + allow 白名单显式开**（呼应最小权限）；broadcast groups 一个消息并行广播到多 agent；subagents 声明（allowAgents/delegationMode/requireAgentId、tools profile minimal）。
+- **提升层**：可复用 Skill（声明式多 agent 配置）。
