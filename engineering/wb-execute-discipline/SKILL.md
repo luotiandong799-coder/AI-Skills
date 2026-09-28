@@ -8901,3 +8901,64 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Sub-agents 编排**：主代理拆任务→sessions_spawn 创建子代理（隔离上下文）→并发执行→结果自动回推→主代理组装；subagents 工具 list/steer/kill 管理。
 - **深度与声明式控制**：maxSpawnDepth 默认 1，开 2 解锁 orchestrator 模式（主→编排者→多 worker 扇出）；declarative manifest 的 delegationMode（suggest/prefer）、allowAgents allowlist、model 指定。
 - **提升层**：可复用 Skill（子代理编排方法）。
+
+## Dify 知识库分块与检索设置（来源：dify.ai blog parent-child-retrieval + dify docs setting-indexing-methods + deepwiki knowledge-retrieval + CSDN dify 实例 2024-12/2026-08 实拉，合并 §Dify RAG——那条管"混合检索/rerank"，本条管"分块参数与索引方法"）
+- **索引方法两档**：High-Quality（向量/全文/混合检索全可用）vs Economical（仅倒排索引、成本低但检索设置少）；**混用场景**=部分知识库高精度部分省钱，按内容价值分流。
+- **Parent-child 分块**：父块（Paragraph 按分隔符与最大块长切 / Full Doc 整篇）+ 子块（细粒度、重叠），检索命中子块回传父块上下文——**小块召回、大块上下文**；对"精确检索但需全篇语境"的文档最优。
+- **分块参数实测配置**：最大块长 500 token（过长语义稀释）、分隔符双换行 \n\n、重叠 50 token 防语义截断、预处理去冗余换行与空白；知识检索节点 TopK 默认 3、Score Threshold 0.5、rerank Weighted Score 调语义/关键词权重；Economical 模式可给 chunk 加关键词（≤10）提可检索性。
+- **提升层**：工具（RAG 参数化）。
+
+## n8n 错误处理分层与重试（来源：n8nlogic blog + dev.to ciphernutz + n8nnode retry + n8n workflows 16744/15459 2026-03/06 实拉，合并 §n8n 数据——那条管"数据转换"，本条管"失败处理策略"）
+- **错误分层**：瞬时错误（网络/限流）走 per-node Retry On Fail（2-3 次、指数退避 1s/2s/4s）；**可预测错误（空数组等）fail loudly 故意失败**；永久错误（401/畸形 payload）直接告警不浪费重试。
+- **AI 分诊重试模式**：Error Trigger 捕获失败→Anthropic 分类 transient/logic+OpenTelemetry 遥测→per-incident 重试计数器（≤3）→指数退避→n8n API 重跑失败执行→记录结果；可复用重试子工作流（Execute Workflow 调用、退避+jitter、可配最大次数）。
+- **兜底**：全部重试失败→最终节点紧急通知（Slack/邮件）；Executions 页手动重试兜底。
+- **提升层**：工作流（失败处理体系）。
+
+## LangFlow 会话记忆体系（来源：docs.langflow.org message-history + memory + memory-bases + guides-chat-memory 2025-03/2026-09 实拉，合并 §LangFlow 存储——那条管"向量存储/记忆组件"，本条管"会话记忆分层"）
+- **默认即记忆**：Agent 组件内建 chat memory 默认开启（Langflow storage、按 session ID 检索、最小配置=消息数）；Chat Input/Output 有 should_store_message 开关——**不需要就关，省存储**。
+- **Message History 组件**：Langflow storage 或 Mem0/Redis 外部存储；检索按时间顺序，输出结构化或解析——会话内上下文用这个。
+- **Memory Base 层级**：向量化嵌入 messages、按语义相似度检索最相关上下文（跨会话长期记忆）；区别于 Message History（时间顺序）与知识库（人工填充）——**三类记忆按"时效 vs 语义"分工**。
+- **提升层**：工具（记忆分层选型）。
+
+## Activepieces 触发器与事件流（来源：activepieces.com docs create-trigger + webhook-trigger + event-streaming + resources webhook-workflows 2026-05/09 实拉，合并 §Activepieces 平台——那条管"部署/开发/嵌入"，本条管"触发与事件订阅"）
+- **Trigger Technique 两型**：polling（定时轮询）vs webhook（事件推送）；Webhook 触发器 flow 发布时 register、删除时 unregister，sampleData 给示例。
+- **Catch Webhook + Respond and Wait**：任意 HTTP 方法接入；**Respond and Wait for Next Webhook**=返回响应并挂起，等下一个 webhook 再恢复 flow——两阶段交互场景（请求→处理→回调）标准解。
+- **Event Streaming**：把 audit events（flow lifecycle/run status/connection changes/user activity/admin actions）转发到 webhook→flow 路由到 Slack/Gmail/Teams——**平台事件即自动化输入**。
+- **提升层**：工具（触发事件面）。
+
+## Make Webhook 配置（来源：apps.make.com gateway + help.make.com webhook-triggered-ai-agent + academy webhooks GET + smartrepl custom webhooks 2026-05/09 实拉，合并 §Make 平台——那条管"蓝图/团队/数据存储"，本条管"webhook 接入"）
+- **Custom webhook 模块**：生成唯一 URL 由第三方调用；**webhook 只能放场景开头**（作为 instant trigger）；一个 webhook 只能用于一个场景。
+- **Redetermine data structure**：自动探测入站数据结构（避免手配字段）；Webhook response 模块可回 404/状态码/body（GET 查询接口用）。
+- **HTTP 模块认证四型**：No auth/API key/Basic Auth/OAuth 2.0 client credentials——按服务商要求选型；无原生集成时用 HTTP 模块做通用 API 调用（Bearer 头）。
+- **提升层**：工具（入站接入）。
+
+## Pipedream 定时调度（来源：pipedream.com docs sources + connect/components/triggers + blog one-second-cron + workflows/limits 2023-08/2026-07 实拉，合并 §Pipedream 平台——那条管"CLI/协作"，本条管"调度触发"）
+- **Schedule 触发两档**：预设间隔（15/30min、每小时、每天定时、每周、每月）+ **Cron Expression**（完整控制星期/时区）——要精确到具体时间点/星期必须用 cron 而非间隔。
+- **组件级 timer**：source 开发用 `$.interface.timer`，default intervalSeconds；一秒级 cron jobs（Custom Interval trigger）——近实时批处理。
+- **执行时限预算**：HTTP/Email 触发 30s/次、cron 触发 60s、付费档 750s——**长任务别挂 webhook 触发**，改 cron 或拆子任务。
+- **提升层**：工具（调度选型）。
+
+## Anthropic 工具结果与结构化输出（来源：platform.claude.com structured-outputs + agent-sdk/structured-outputs + console tool-use + claude code custom-tools 2025-11/2026-09 实拉，合并 §Anthropic 工具——那条管"Computer Use/缓存"，本条管"输出契约"）
+- **tool_result 三形态**：字符串 / 嵌套 content blocks / document blocks；**structuredContent**=JSON 机器可读数据与 content 并存；isError=true 显式标记工具失败——**工具返回值即机器可读，别让模型从文本里再解析**。
+- **Structured outputs 两特性**：JSON outputs（output_config.format 约束响应 JSON）+ **Strict tool use（strict:true 强制工具名与输入 schema 校验）**——防幻觉工具名/参数。
+- **Agent SDK structured outputs**：定义 JSON Schema→agent 自由用任意工具完成任务→**最终返回 validated JSON 匹配 schema**（result 带 structured_output 字段）——"过程自由、结果受控"。
+- **提升层**：工具（输出契约）。
+
+## 技能市场发现与安装生态（来源：skills.sh docs + everydev SkillsMP + kdnuggets top5 + marketplace VS Code agent-skills + deepwiki awesome-agent-skills 2026-02/09 实拉，合并 §GitHub 生态——那条管"Actions/Copilot"，本条管"技能分发渠道"）
+- **安装命令**：`npx skills add <owner/repo>`（skills.sh，可加 --skill 精确装单个）；`npx skills find <query>` 发现；装到对应工具路径（.cursor/skills/ 等）。
+- **SkillsMP**：280,000+ 开源 skills 聚合、AI 搜索/分类、npx/bunx/pnpm 一键安装；无官方 CLI 需下载 ZIP——**社区大盘靠它搜，官方/大厂技能靠 skills.sh**。
+- **安全过滤**：VS Code Agent Skills 扩展有 9-stage security pipeline；装第三方技能前审描述与来源（呼应 §工具面安全）。
+- **提升层**：可复用 Skill（技能分发与安装工作流）。
+
+## deeplearning 评估驱动开发（来源：NVIDIA GTC dlit81725 + AI Engineering Masterclass + DeepEval 课程 2026-05/09 实拉，合并 §deeplearning 课程——那条管"RAG/编码/记忆"，本条管"评估方法论"）
+- **Eval-Driven Design**：human-created datasets 迭代改进；continuous eval + iterate 循环（含 prompt 改动实验）——**先有评估集再改系统，不是改完再想怎么测**。
+- **发布门禁**：shadow mode 用真实流量对比输出 → canary rollout 监控延迟/成本/错误并自动回滚 → golden dataset（专家验证的输入输出对）跑确定性单元测试 → field-level eval scores 门禁 CI/CD 部署。
+- **指标面**：Answer Relevancy/Faithfulness/Precision/Recall/G-Eval + Golden Datasets + trace-based 组件级测试——**测试从"整体对话"下沉到"单个组件"**。
+- **提升层**：可复用 Skill（评估驱动迭代法）。
+
+## OpenClaw 会话与记忆持久化（来源：docs.openclaw.ai main-session + memory-honcho + learnopenclaw memory + openclawplaybook session-management 2026-05/09 实拉，合并 §OpenClaw 平台——那条管"安装/配置/多代理"，本条管"记忆分层与会话存储"）
+- **三层记忆**：短期=会话上下文（自动）；中期=每日日志（session-memory hook 自动、天到周、偶尔审查）；长期=MEMORY.md（无限期、**每周人工策展保持精简**）——三层责任分开，不是一层塞满。
+- **compaction 前刷持久事实**：长对话压缩前把 durable facts 写进每日日志，防静默丢失（呼应 §压缩后规则重声明）；/new /reset 后重注近期日志。
+- **会话存储**：sessions.json 元数据 + <sessionId>.jsonl append-only transcript（树结构 id/parentId 可重建会话）——**会话是可迁移资源**，备份=备份这两个文件。
+- **Honcho 扩展**：用户/agent 画像（preferences/facts/style）、语义搜索过去观察（不只当前会话）——跨会话跨 channel 记忆。
+- **提升层**：可复用 Skill（记忆分层与备份）。
