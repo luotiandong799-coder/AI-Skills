@@ -10739,3 +10739,74 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **SkillPay 支付体系（2026-07）**：技能分发 + Agent 调用 + 技能支付三方打通——Agent 付费技能商业化（企业三步接入）。
 - **三类技能**：内置（平台安全审核+质量验证，覆盖办公/医疗/图像/音视频等 7 大领域；SkillHub 社区来源自动检测新版本自动更新）/ 企业共享（审批后企业内复用）/ 自定义（ZIP 导入）。
 - 提升层：工作流。触发词：SkillHub、ClawHub 镜像、SkillPay、内置技能自动更新、版本管理安全扫描。
+## r289C 十独点（2026-09-29 实拉）
+
+### 1. 模型配置与供应商插件：Dify 的系统默认推理模型与三配置共存（来源：博客园《Dify 超快速构建AI agent 一文入门智能体》+ 阿里云百炼《Dify接入百炼模型》+ Dify Marketplace Bedrock 插件 2026-03-25/2026-09-22/2026-09-23 实拉）
+- **系统默认推理模型（System Reasoning Model）**：创建应用使用的默认推理模型；**对话名称生成、下一步问题建议等功能也用该默认模型**——换默认模型会同时改变这些衍生行为。
+- **模型插件市场安装**（Dify Marketplace）：**predefined-model + customizable-model + fetch-from-remote 三种配置方式可共存**——配置了供应商统一凭据可用预定义+远程模型，新增模型后可额外自定义。
+- **OpenAI-API-compatible 插件可接任意兼容 OpenAI 的端点**（如阿里云百炼 compatible-mode/v1）——不受供应商官方插件限制。
+- **插件类别含 LLM/rerank/embedding 三类模型**（如 Bedrock 插件预定义 llm+rerank+embedding 且支持自定义模型配置）——选型时三类都要配。
+- 提升层：工具。触发词：系统默认推理模型、System Reasoning Model、predefined-model、customizable-model、fetch-from-remote、OpenAI-API-compatible。
+
+### 2. 权限生命周期自动化：n8n 的 SSO 与用户供给（来源：n8n 官方 Blog《Custom Project Roles and User Provisioning via SSO》+ n8n Docs《OIDC》《Instance roles》《Release notes 1.x》2026-01-21/2026-09-28/2026-09-26/2026-06-25 实拉）
+- **SSO + User provisioning**：IdP（Okta/Azure AD/Google Workspace）登录时自动分配每个用户的 instance role 和 project roles——**权限生命周期跟随组织**（入职/角色变更/离职自动同步，免手工管理）。
+- **JIT provisioning（n8n 内定义映射）**：管理员在 n8n 内写 group-to-role 映射表达式（`$claims` 对象访问 OIDC claims，表达式返回 true 即分配所选角色，规则从上到下评估，**每次登录重新评估**）——IdP 只需发标准 group 数据，映射逻辑留在 n8n。
+- **三内置 instance role：Owner/Admin/Member + 自定义角色**（granular permissions）；SSO 环境变量：N8N_SSO_MANAGED_BY_ENV / N8N_SSO_USER_ROLE_PROVISIONING=instance_role / N8N_SSO_OIDC_LOGIN_ENABLED 等；2FA enforcement。
+- 提升层：工具。触发词：User provisioning、JIT provisioning、$claims、instance role、N8N_SSO_OIDC。
+
+### 3. 生产部署与内存治理：LangFlow 的 Runtime 与 89% 内存降（来源：docs.langflow.org《Best practices for Kubernetes》《Deploy with multiple workers》+ langflow.org Blog《Scaling Langflow》+ RockB《Langflow Review 2026》2026-09-08/2026-09-04/2026-06-09/2026-05-05 实拉）
+- **生产用 Runtime（headless 后端）部署**：只服务 Langflow API、无可视化编辑器——**生产执行与编辑环境分离**；最小资源 2Gi RAM + 1000m（1 CPU）/实例 × 3 副本。
+- **v1.9.0→v1.10.0 内存优化**：依赖裁剪 + worker 生命周期管理 + Linux Copy-on-Write，**内存消耗 ~89% 减少**。
+- **多 worker 配置**：LANGFLOW_WORKERS / LANGFLOW_WORKER_TIMEOUT / LANGFLOW_GUNICORN_PRELOAD / GUNICORN_CMD_ARGS（--max-requests --max-requests-jitter）——**worker 太多本地库 OOM，先少后调**。
+- **LANGFLOW_DEPLOYMENT_PROFILE=prod 生产预检**（默认 dev 跳过）；**MCP server export：任何 flow 可编译成 MCP 兼容服务器**——Cursor/Claude Desktop/LangGraph 可当标准工具调用（tool factory 定位）。
+- **安全基线**：LANGFLOW_CORS_ORIGINS 指定来源（禁通配）、不直接暴露 7860 端口（Nginx/Caddy 反代）、HTTPS、API key 轮换、RBAC；性能：缓存 LLM 调用/批处理节点/异步工作流/连接池/Prometheus+Grafana 监控；PostgreSQL HA（流复制主写副本读+故障转移）。
+- 提升层：工具。触发词：headless Runtime、LANGFLOW_WORKERS、Copy-on-Write、生产预检、MCP server export、7860 端口。
+
+### 4. 触发器三技术与事件流：Activepieces 的 Webhook 生命周期（来源：activepieces.com/docs《Triggers Overview》《Webhook Trigger》+ resources.activepieces.com《Event Streaming》《Webhook-Based Systems》2026-06-17/2026-08-28/2026-09-27/2026-05-31 实拉）
+- **三种触发器技术**：Polling（周期调用端点查变化）/ Webhooks（单 URL 监听用户事件）/ App Webhooks Subscriptions（OAuth2 developer app 收所有授权用户事件）。
+- **Webhook Trigger 生命周期契约**：**On Enable 用 context.webhookUrl 向第三方注册 webhook 并存储 webhook Id 到 store**；**On Handshake 某些服务要求 challenge 握手**——注册+握手+存储三段，缺一不可。
+- **Catch Webhook 触发器接受任意 HTTP 方法**（GET/POST/PUT/DELETE）；**Webhook 双角色**：触发器（收数据起流）或动作（流末发通知）。
+- **Event Streaming**：把平台审计事件转发到 webhook（常见模式：指向流内 flow → 路由到 Slack/Gmail/Teams/custom HTTP）——**反应 flow run 失败/新登录/项目发布，用平台自身流做监控**；API 自动化配 retries with backoff、circuit breakers。
+- 提升层：工作流。触发词：Polling、Catch Webhook、On Enable、context.webhookUrl、Event Streaming、circuit breaker。
+
+### 5. 错误处理器四型与告警升级：Make 的 Resume/Commit/Rollback/Break（来源：Make Academy《Error handlers》+ help.make.com《Break error handler》《Fix errors and warnings》+ HowtoAI《5 种错误监控模式》+ WorkflowPick《Error Handling Guide》2026-05-21/2025-09-18/2026-09-25/2026-05-13/2026-05-12 实拉）
+- **错误处理器四型 + 选择表**：**Resume**（造假输出保持流——邮件发送失败时继续处理失败日志）/ **Commit**（事务处理确认——DB 多模块部分成功时确认）/ **Rollback**（事务取消——DB 部分失败整体回滚）/ **Break**（保存 incomplete execution + 重试——停止会误事的一般运营场景）。
+- **Break handler 机制**：从流程移除错误 bundle，Make 存错误消息+映射+剩余流程为 incomplete execution，可按设置自动完成或存到人工解决。
+- **Notifications 标签页**启用错误邮件通知；**更精细做法=专门监控场景**；**Slack 告警**：Error Handler 连 Slack Send a Message，含场景名/错误类型/错误消息/发生时间 + 失败执行深链。
+- **Email digest 模式**：data store 收集全天错误，每天发一封摘要——**别为每次瞬态错误 ping 团队**；Make API Get incomplete executions 做每日健康报告（6AM cron）。
+- 提升层：工作流。触发词：Resume、Commit、Rollback、Break、incomplete execution、Email digest、Get incomplete executions。
+
+### 6. 跨运行状态与调度：Pipedream 的 Data Store 与 TTL（来源：pipedream.com/docs《Using Data Stores》《Component API》+ Integration Atlas《Pipedream》+ Automation Atlas《Schedule》2026-08-06/2026-09-27/2026-06-06/2026-04-20 实拉）
+- **Data Stores = 内建 KV 存储**：Brotli 压缩、JSON 可序列化，项目内任意 workflow 可读写——**跨 run 追踪状态（幂等键/滚动聚合/最后同步时间戳）无需真数据库**；scope=workspace，可 dashboard 编辑，有计划限制。
+- **set 方法第三参数 TTL（秒）**——记录自动过期（临时值/会话历史清理）。
+- **较重状态用自带 DB connectors**（Postgres/MySQL/Supabase/MongoDB）——KV 与真库分界：轻状态 KV，重状态连库。
+- **调度触发器（2026-04 起所有套餐含免费）**：预设间隔（15/30 分钟、每小时、每天、每周、每月）+ 自定义 cron 表达式；**组件级 KV：$.service.db**（component-specific，跨执行保持状态）；x-pd-nostore header 或 retention 控制可关闭日志。
+- 提升层：工具。触发词：Data Store、TTL、幂等键、$.service.db、x-pd-nostore、Schedule API。
+
+### 7. 缓存命中工程：Anthropic Prompt Caching 的 TTL 双档（来源：Anthropic 官方 Docs《Prompt caching》+ tokenoptimize.dev《Designing for Prompt Cache Hits》+ techearl.com《How to Cut LLM API Costs》+ AI Workflow Lab《Praxis-Guide》2026-09-29/2026-06-14/2026-05-18/2026-06-21 实拉，与 wb-max-token-saver 缓存治理合并增量）
+- **自动缓存**：请求顶层加单个 cache_control 字段，系统自动管理 cache breakpoint（移到对话增长时最后一个可缓存块并前移）——**多轮会话推荐起点，不用手工摆 breakpoint**。
+- **显式块级 breakpoints**：按不同变化频率缓存不同段时用（system instructions/背景信息/大上下文/频繁工具定义；**放提示开头效果最佳；breakpoint 放语义边界**）。
+- **硬数字**：最小缓存块 1024 tokens（Opus 4.7/Sonnet 4.6）、2048（Haiku 4.5）；**最多 4 个 cache_control breakpoints/请求**；缓存前缀创建顺序：tools → system → messages。
+- **TTL 双档成本**：5 分钟（默认：写成本 1.25× 输入、**命中成本 10%**——高频端点/会话/批处理/紧耦合 agent 最佳）与 1 小时（extended cache：写成本 2×、命中 10%）；**成本最多降 90%**。对比：Gemini 显式 CachedContent API 最小 32768 tokens（Pro）/4096（Flash）。
+- 提升层：工具。触发词：cache_control、breakpoint、1024 tokens、5 分钟 TTL、extended cache、命中成本 10%。
+
+### 8. 治理面集中化：GitHub Copilot 的 managed settings 与 MCP 白名单（来源：GitHub Blog《Enterprise managed settings》《MCP allowlists》《Enterprise teams model policy targeting》+ wellarchitected.github.com《Governing agents》2026-07-27/2026-08-06/2026-07-31/2026-04-13 实拉）
+- **Enterprise managed settings 覆盖 Copilot app 和 cloud agent**（managed-settings.json：企业所有者定义 guardrails——**哪些插件/市场可用、能否绕过审批提示**；Copilot 客户端自动强制）；**Copilot app 独立 policy**（不再依赖 Copilot CLI policy 开关）。
+- **MCP allowlists（2026-08）**：allowedMcpServers / deniedMcpServers 集中控制客户端可运行的 MCP servers——批准依赖的、阻止不可信/不合规的。
+- **Enterprise teams model policy targeting（2026-07 公测）**：user-based model policy——AI 管理员设企业基线模型集，再给特定 team 授额外模型（按角色/前沿团队实验）；**Enterprise team specialization（2026-08）**：按 team 定制 managed settings（分项配置文件）。
+- **模型访问强制**：显式选择允许模型并定期评审 allowlist（GA 新模型评审后启用、deprecated 退役前确保替代已启用）；cost centers + premium request allowance 管理支出；**Enterprise-Managed Authorization（EMA）IdP 驱动 MCP auth 流**。
+- 提升层：工具。触发词：managed-settings.json、allowedMcpServers、model policy targeting、EMA、cost centers。
+
+### 9. 会话存储结构与记忆整合：OpenClaw 的 session/transcript 与 Dreaming 参数（来源：docs.openclaw.ai《会话管理深入解析》+ openclawplaybook.ai《Session Management》+ openclaw.pt《v2026.4.9 Dreaming》+ launchmyopenclaw《MEMORY.md Guide》2026-09-23/2026-05-06/2026-04-11/2026-03-01 实拉，与 wb-context-compressor 记忆分层合并增量）
+- **记忆三层**：短期（当前会话）/ 长期（永久 MEMORY.md——用户画像/事实）/ 情景（永久——重要交互事件）。
+- **会话存储结构**：sessions.json（session store：键值映射 sessionKey→SessionEntry，Gateway 管理可变运行时状态：当前会话 ID/最近活动/开关/令牌计数器）+ transcript（仅追加树形 JSONL：id+条目）。
+- **每日日志循环**：memory/YYYY-MM-DD.md + MEMORY.md 永久参考卡；**新会话加载今天+昨天日志（更早掉出直接视野）**；会话结束 agent 写短命上下文到每日日志 + 更新 MEMORY.md 持久事实（旧/更正条目更新或移除）。
+- **Dreaming 整合参数（v2026.4.9）**：schedule: after-session、sessionWindow: 30、dayWindow: 7、relevanceThreshold: 0.6、decayRate: 0.05、outputPath: .openclaw/memory/consolidated.json——**长期记忆整合是可配置的定期任务，不是随缘**。
+- **记忆丢失根因**：任务状态只在会话期间模型上下文窗口里，**显式写入 MEMORY.md/每日记忆才跨重启存活**（临时推理/未保存中间变量随会话消失）；v2026.7.1：记忆提供商不可用时明确提示失败而非看似完整答案。
+- 提升层：工具。触发词：sessions.json、transcript JSONL、昨天日志加载窗口、Dreaming、relevanceThreshold、记忆丢失根因。
+
+### 10. 多 Agent 协作平台：智谱 AgentMore 的技能广场与工作区（来源：AI工具箱《AgentMore》+ PROMPT.CN《AgentMore》+ NovaTools《AgentMore官网》+ 猫目社区《AgentMore》2026-05-25/2026-09-01/2026-09-22/2026-09-14 实拉，与 r289A 技能市场治理/r289B 腾讯 SkillHub 合并增量）
+- **智谱清言推出的 AI 智能体协作与 Skills 扩展平台（2026-05-25 发布）**：多 Agent 协作、技能市场扩展、任务执行与工作流编排；**基于大模型 Agent 框架，支持多角色并行与工具调用**。
+- **Skills 技能广场三模块**：内置推荐 + SkillHub + 开源社区；免费开放超 7.4 万个专业技能包（微信读书/美团优惠券等第三方生活与工作服务）；**一键安装且不消耗额外 Token**（模块化封装，调用时零额外成本）。
+- **共享工作区**：公共+私密共享文件空间，群组实时共享资料协同文档；**多平台一键接入**：微信/飞书等无缝接入；流程自动化：重复操作沉淀为可复用流程；协作扩展：团队把常用任务封装成能力模块持续调用迭代。
+- 提升层：工作流。触发词：AgentMore、技能广场、多角色并行、共享工作区、不消耗 Token、智谱清言。
