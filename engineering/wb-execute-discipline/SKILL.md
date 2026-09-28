@@ -8782,3 +8782,63 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **新手引导**：`openclaw onboard` 配置 auth/gateway/可选 channels（--install-daemon 装服务）；`openclaw status` 验证。
 - **桌面**：Windows Hub 原生配套应用（设置/托盘/聊天/节点模式/本地 MCP 模式）；LLM provider=Anthropic/OpenAI API key 或本地 Ollama。
 - **提升层**：工具（部署方法）。
+
+## Dify 插件系统（Tool/Model/Endpoint）（来源：enterprise-docs.dify.ai plugin dev + dify.ai blog plugin-system-design 2025-03/2026-09 实拉，合并 §Dify 平台——那条管"检索/编排"，本条管"插件扩展"）
+- **三类插件**：Tool（工具提供方，可带可选 endpoint）、Model（模型集成）、Endpoint/Extension（纯 HTTP 服务——在 Dify 内跑 HTTP server，OpenAI-compatible 格式，插件可调用 Dify app 并统一返回格式）。
+- **Tool Provider 开发**：实现凭证校验逻辑，失败抛 ToolProviderCredentialValidationError；校验成功才请求工具服务；第三方插件=提供 JSON 文件 URL 即加载。
+- **插件沙箱约束**：不用 open()/read()/write() 直接文件操作、不依赖本地文件存状态——临时数据用 memory 变量、持久数据用 Dify 的 KV 存储 API。
+- **提升层**：工具（插件扩展）。
+
+## n8n 数据转换与聚合（来源：docs.n8n.io aggregate + itemlists 移除说明 + logicworkflow 2024-06/2026-04 实拉，合并 §n8n 数据——那条管"表达式"，本条管"列表形态转换"）
+- **Item Lists 已拆**（1.21.0 移除）→ Aggregate / Limit / Remove Duplicates / Sort / Split Out / Summarize 各管一职。
+- **Aggregate=多 item→单 item（n→1）**：模式 Individual Fields（逐字段聚合）或 All Item Data（全部数据成单列表）；典型用途=逐个处理后重组、汇总多条记录、构造含对象数组的 payload（如 AI 一次收到一个 rich context block 而非 16 条消息）。
+- **Code 节点 Run Once For All Items**：$input.all() 处理全局过滤/排序/去重/groupBy/聚合；Merge（Append 模式）合并两路数据流。
+- **提升层**：工具（数据形态转换）。
+
+## LangFlow 向量存储与记忆（来源：docs.langflow.org memory-bases + knowledge-base + components-vector-stores 2025-08/2026-09 实拉，合并 §LangFlow 组件——那条管"自定义组件"，本条管"存储/记忆接线"）
+- **Memory Base vs Message History**：memory base 把聊天历史 embedding 进向量库按语义相似度检索（返回最相关上下文），Message History 按时序取最近消息。
+- **Knowledge Base**：默认 Chroma 本地向量库，可配 Chroma Cloud/OpenSearch/PGVector（知识库与记忆库共享同一 DB providers 配置）。
+- **Load Data subflow 与 Retriever subflow 分离**：加载子流（文件→chunk→embedding→索引）只在需要时跑，检索子流每次查询跑——避免每次 flow run 重复 ingest。
+- **提升层**：工具（存储接线）。
+
+## Activepieces 自定义 piece 开发（来源：activepieces.com docs build-pieces 2026-05/09 实拉，合并 §Activepieces 部署——那条管"自托管"，本条管"写 piece"）
+- **TypeScript SDK**：定义 triggers/actions/authentication 扩展平台；Piece Type=custom（自用）/community（可分享）。
+- **本地开发循环**：AP_DEV_PIECES=逗号分隔 piece 列表→从本地 dist 加载（非数据库）→改后重启后端+刷新前端 7 秒内可见。
+- **认证**：PieceAuth.CustomAuth（props 自定义）/PieceAuth.SecretText；CLI 生成（npm run cli triggers create / actions create）；方向=多语言 Wasm 执行。
+- **提升层**：可复用 Skill（平台扩展开发方法）。
+
+## Make 蓝本与模板体系（来源：help.make.com blueprints + scenario-templates + scenario-sharing 2026-01/06 实拉，合并 §Make 平台——那条管"数据存储"，本条管"复用与分发"）
+- **Scenario blueprint**=可复用版本（含模块设置/映射值）：导出备份、导入复用、分享他人；**是 Make 的版本控制原语**（export/import 是主要版本管理手段）。
+- **Team templates vs Public templates**：团队模板含公司设置/API keys/权限，仅团队可用；公开模板社区分享。
+- **Scenario sharing**=链接分享实时最新版、观众无需登录（适合 demo）——比导出/导入/复制更直接。
+- **提升层**：工具（复用分发）。
+
+## Pipedream 协作与权限（来源：pipedream.com docs workspaces + projects access-controls + sharing + git 2024-02/2026-09 实拉，合并 §Pipedream Connect——那条管"终端用户认证"，本条管"团队内部权限"）
+- **Workspace 三角色**：Owner（全控含删 workspace）/Admin（管设置/成员/安全，不能删或管 Owner）/Member（默认，按项目权限）。
+- **分享工作流不分享 connected accounts**：复制出的工作流在需要账号的步骤显示插槽，由使用者连自己的账号。
+- **GitHub Sync 部署阻断**：合并提交者无法验证有权用某 connected account 时，Pipedream 阻断部署（block deploys）——防越权走 git 通道。
+- **提升层**：工具（协作安全）。
+
+## Anthropic Computer Use 工具集（来源：platform.claude.com computer-use-tool + console.anthropic 2026-03/09 实拉，合并 §Anthropic 工具——那条管"函数调用/缓存"，本条管"桌面操作"）
+- **computer_toolset_20260801**：一条 tools 入口给 Claude 17 个成员工具（screenshot/mouse 点击拖拽移动/keyboard 输入快捷键）——客户端工具集，非模型内建。
+- **工作循环**：截图 PNG→视觉语言模型解释布局、识别可交互元素坐标→发出结构化动作（click at coordinate/type/press/scroll）→宿主环境执行→新截图继续。
+- **可增强**：与 bash/text editor 工具组合做更全面自动化；beta 功能，模型支持范围（Sonnet 4.5/Haiku 4.5/Opus 4.1）。
+- **提升层**：工具（桌面自动化）。
+
+## deeplearning 函数调用与编码代理课程（来源：deeplearning.ai functions-tools-agents-langchain + building-coding-agents 2026-04 实拉，合并 §deeplearning 课程——那条管"提示工程/评估"，本条管"agent 工程课程"）
+- **Functions Tools and Agents with LangChain**：LCEL 简化链与 agent 定制；函数调用用于 tagging/extraction/tool selection/routing（结构化输出）。
+- **Building Coding Agents with Tool Execution**：执行环境三档=本地/容器/sandboxed microVM（E2B 云环境内置隔离+资源控制）；构建数据分析师 agent（探索 CSV→摘要）。
+- **agent=LLM+tools in a loop**：单次函数调用≠agent——用 for 循环处理多并发 tool calls、while 循环持续到 LLM 完成才成 agent loop。
+- **提升层**：可复用 Skill（agent 工程方法）。
+
+## GitHub Copilot 编码代理最佳实践（来源：docs.github.com copilot coding-agent best-practices + github.blog agentic + Microsoft learn agent-skills 2026-02/09 实拉，合并 §GitHub 生态——那条管"Actions 安全"，本条管"代理编程协作"）
+- **任务范围三要素**：清晰问题描述+完整验收标准（要不要单测）+指明要改哪些文件——issue 即代理的提示词。
+- **可靠 setup 与上下文**：copilot-setup-steps.yml 让代理能自信 build/test（flaky tests 会让代理挣扎）；.github/instructions/ 提供模式约定，上下文越足输出越好。
+- **技能规范**：SKILL.md 保持 <500 行、详细材料放 references/；重复性任务写成 skill；Secure Sandboxes（2026-06 公测，MXC 限制文件系统/网络）是最高杠杆加固项。
+- **提升层**：可复用 Skill（代理协作规范）。
+
+## OpenClaw 配置体系（来源：docs.openclaw.ai gateway configuration-examples + config-agents + insiderllm 2026-04/09 实拉，合并 §OpenClaw 部署——那条管"安装"，本条管"配置结构"）
+- **gateway**：auth（token 必须对象格式 UUID）、port（默认 18789）、controlUi（allowInsecureAuth）。
+- **models providers**：mode merge 覆盖默认；自定义 provider=baseUrl/apiKey/api（openai-completions）/authHeader/headers/models 列表（可接本地 litellm 代理）；agent 级 providers/autoProviders/timeoutSeconds。
+- **provider 选择权衡**：Anthropic/OpenAI 强但隐私外发、Ollama 免费全本地；模型厂商云端 agent（Kimi Claw）自动配模型免选型。
+- **提升层**：工具（配置方法）。
