@@ -8721,3 +8721,64 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **内置 browser skill**：Playwright 驱动沙箱 Chromium（headless 可跑服务器），agent 经单一 browser 工具开标签/截图/读内容/点按/填表/端到端流程。
 - **生态**：browser-use 插件（导航/点击/填表/提取）；Browser Relay（聊天内网页自动化，WhatsApp/Telegram/Discord 内触发）；Rust agent-browser CLI（结构化命令导航/点击/输入/快照）。
 - **提升层**：工具（网页自动化）。
+
+## Dify 混合检索与重排（来源：dify.ai hybrid-search-rerank + legacy-docs rerank + deepwiki langgenius/dify 2023-11/2026-07 实拉，合并 §Dify RAG——那条管"知识库接入"，本条管"检索策略配置"）
+- **Hybrid Search**=向量+全文检索并行执行，权重合并（semantic weight 0-1 / keyword weight 0-1，设为 1 即纯向量/纯关键词）或 rerank 合并。
+- **Rerank model**（Cohere/bge-reranker 等）对候选文档按与查询语义对齐度重排——放检索流程末段先粗召回再精排；多模态 embedding 知识库须配多模态 rerank（Vision 标记）。
+- **多路检索**：应用挂多个知识库时 retriever 扫全部相关文本再合并；rerank 默认关闭，需先在 Integrations>Model Provider 配好 rerank API key。
+- **判据**：检索质量=召回（Hybrid）与排序（Rerank）两段各管一截，weighted score 只在全部知识库 High Quality 索引时可用。
+- **提升层**：工具（RAG 检索）。
+
+## n8n Queue 模式与横向扩展（来源：docs.n8n.io hosting/scaling queue-mode + n8n scalability benchmark 2025-09/2026-06 实拉，合并 §n8n 部署——那条管"运行模式"，本条管"扩展与 HA"）
+- **Queue 模式**=main 实例只处理 timer/webhook 生成 execution ID，经 Redis（Bull）队列由 worker 拉取执行；EXECUTIONS_MODE=queue 开启。
+- **worker 横向扩展硬条件**：所有 worker 须**共享同一 encryption key**（否则解不开凭据）；并发建议 IO 密集 10-20/worker、CPU 密集较低；每 worker ≥5 并发防耗尽 DB 连接池（workers×pool 是峰值公式）。
+- **multi-main HA**（Enterprise 自托管）=多个 main 共享同一 PostgreSQL+Redis；benchmark：Queue 模式 72 rps、延迟<3 秒、200 虚拟用户零失败。
+- **提升层**：工具（扩展架构）。
+
+## LangFlow 自定义组件（来源：docs.langflow.org components-custom + langflow-builder-mcp + langflow assistant 2024-07/2026-09 实拉，合并 §LangFlow 组件——那条管"内置组件"，本条管"自己写组件"）
+- **结构**：继承 Component 类 + class-level 属性（display_name/name/类型）+ Input/Output 列表 + build 方法（返回 Data）。
+- **inline vs file-based**：inline code（langflow-builder-mcp 把 Python 发给 API 动态评估建 node template，存节点上免重启）；file-based 走文件+component_index.json 缓存重建。
+- **开发热循环**：LFX_DEV=1 后端随文件变更自动重启+浏览器 refresh 即见新组件；Langflow Assistant 可从 prompt 生成组件代码（含 timeout 处理/typed methods）。
+- **提升层**：可复用 Skill（组件扩展方法）。
+
+## Activepieces 自托管部署（来源：activepieces.com docs install docker/docker-compose + vultr deploy 2026-07/09 实拉，合并 §Activepieces 平台——那条管"生态治理"，本条管"自托管路径"）
+- **Docker 快速**：单容器嵌入式数据库（数据在 ~/.activepieces），`docker run -p 8080:80 -v ~/.activepieces:/root/.activepieces activepieces/activepieces`——零配置可跑。
+- **Docker Compose 生产**：Docker Compose v2+≥2 vCPU/4 GB RAM+Windows WSL2；PostgreSQL+Redis；deploy.sh 生成 .env。
+- **app/worker 拆分**：同一镜像 AP_CONTAINER_TYPE=APP（停拉 flow，只服务 API/UI，重跑不卡界面）/ WORKER_AND_APP。
+- **提升层**：工具（部署路径）。
+
+## Make Data Store 状态持久化（来源：use-apify make.com data stores guide 2026-03 实拉，合并 §Make 数据——那条管"数据转换"，本条管"跨运行状态"）
+- **Data Store**=跨 scenario 运行持久化/查询数据的模块——像轻量 KV 表。
+- **真实模式=checkpoint/cursor**：多步流程（多天邮件序列/分页导出）用单条记录当检查点记住上次停在哪；Get a Record（key="export_cursor"）读回继续。
+- **判据**：需要跨调度运行记住位置→Data Store 单记录做状态；不需要持久→场景内变量。
+- **提升层**：工具（状态管理）。
+
+## Pipedream Connect 托管认证（来源：pipedream.com docs connect managed-auth + api-reference 2026-08/09 实拉，合并 §Pipedream 平台——那条管"执行/配额"，本条管"给终端用户做认证"）
+- **Managed Auth**：建 Pipedream OAuth client（client ID/secret）；给 end users 跑 workflow 必须用**你自己的自定义 OAuth client**（在各三方服务注册、传 oauthAppId）。
+- **external_user_id**：你的系统用户 ID（限 250 字符）关联账号——检索该用户账号信息、以他名义执行；环境隔离（dev/prod）按 external_user_id+环境存凭据。
+- **MCP 代理**：app 的每个动作暴露为 Pipedream 远端 MCP tool，客户端带 end user ID，Connect 自动解析其账号——**你方不存任何 token**。
+- **提升层**：工具（B2B 认证面）。
+
+## Anthropic Prompt Caching（来源：platform.claude.com prompt-caching + pricing + openrouter best-practices 2024-08/2026-09 实拉，合并 §Anthropic 成本——那条管"用量核算"，本条管"缓存降本机制"）
+- **定价结构**：5m cache writes=1.25x 基础输入价、1h writes=2x、hits&refreshes=0.1x（Fable 5.1/Mythos 5.1 命中 2.5% 标准输入价，Opus 5.5 命中 5%）；与 Batch API 折扣/数据驻留叠加。
+- **启用方式**：自动缓存=在 message 加 cache_control breakpoint（5 分钟 TTL 自动）；或手动管理。
+- **官方组合拳**：高频重复上下文→缓存；非实时任务→Batch API；持续监控用量找优化点。
+- **提升层**：工具（成本优化）。
+
+## deeplearning Agentic RAG 课程（来源：deeplearning.ai building-agentic-rag-with-llamaindex + theneuralbase 2026-04/05 实拉，合并 §RAG 工程——那条管"RAG 概念/检索"，本条管"agentic loop 升级路径"）
+- **三阶课程主线**：router（查询路由到 Q&A/summarization 引擎）→ router agent 加 tool calling（LLM 选函数+推断参数）→ research assistant agent（多轮迭代式）。
+- **agentic RAG 本质**：用 loop 代替线性 retriever→prompt→answer——LLM 自己决定是否检索、检什么、结果够不够、要不要再搜（LangChain create_tool_calling_agent / LlamaIndex）。
+- **判据**：单轮问答够用就线性 RAG；需要多步推理/结果不足重搜→agentic。
+- **提升层**：可复用 Skill（RAG 升级方法）。
+
+## GitHub Actions 安全加固（来源：docs.github.com secure-use + github.blog supply-chain + securitylab new-patterns 2025-01/2026-09 实拉，合并 §GitHub Actions 复用——那条管"复用/secrets"，本条管"供应链防线"）
+- **最小权限**：GITHUB_TOKEN 显式 `permissions: contents: read` 等，绝不默认全开；2026 路线图=写权限不再含 secret 管理权限（scoped secrets 单独角色）。
+- **fork 防护**：避免 pull_request_target 触发（fork 代码不可信）；workflow_run 加 `event_name != 'pull_request'` 守卫；第三方 Actions 钉 SHA（不只 tag）。
+- **产物与供应链**：artifacts 一律视为不可信（解压临时目录+校验再使用）；CodeQL 免费审 workflow；runner 预装软件有 SBOM 可扫。
+- **提升层**：工具（CI 安全）。
+
+## OpenClaw 安装与部署（来源：docs.openclaw.ai install + getting-started + openclawforge setup 2026-02/09 实拉，合并 §OpenClaw 平台——那条管"能力面"，本条管"落地路径"）
+- **安装**：脚本（macOS/Linux/WSL2 `curl -fsSL https://openclaw.ai/install.sh | bash`；Windows PowerShell `iwr -useb .../install.ps1 | iex`）；或 npm `npm install -g openclaw@latest`/`npx openclaw@latest`；需 Node.js 22.19.0+。
+- **新手引导**：`openclaw onboard` 配置 auth/gateway/可选 channels（--install-daemon 装服务）；`openclaw status` 验证。
+- **桌面**：Windows Hub 原生配套应用（设置/托盘/聊天/节点模式/本地 MCP 模式）；LLM provider=Anthropic/OpenAI API key 或本地 Ollama。
+- **提升层**：工具（部署方法）。
