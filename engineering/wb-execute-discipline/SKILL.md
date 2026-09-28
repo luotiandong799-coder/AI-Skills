@@ -10587,3 +10587,80 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **ms-agent 1.6.0rc1**：计划全面支持 Anthropic Agent Skills 协议——**Agent Skills 协议成跨平台标准**（同 §协议标准）。
 - **Agent 模型生态**：Agents-A1（35B：long-horizon trajectories 把多步 agent runs 变可训练目标；三阶段 full-domain SFT → domain teacher → multi-teacher distillation）/ Qwen-AgentWorld（7 域 world model：MCP/Search/Terminal/SWE/Web/OS/Android，10M+ 轨迹）/ Nex-N2（Agentic Thinking 统一 reasoning/tool use/environment execution 闭环）——**模型侧把"工具使用"内化成训练目标**。
 - **技能仓库全景**：huggingface/skills 1.1w star / MiniMax-AI/skills 1.4w star（2026-09-24）——**大厂集体开源技能仓库**。
+## r289A 十独点（2026-09-29 实拉）
+
+### 1. 变量作用域链与会话级持久化：Dify 的三级查找与显式输出契约（来源：DeepWiki langgenius/dify-docs《Workflow System Fundamentals》+ promptindexhub《Dify Workflow Not Saving Variables Between Nodes》+ CSDN《Dify 第5课:架构设计深挖》《变量传递为何失败》2026-09-21/2026-06-20/2026-03-27 实拉）
+- **Workflow 级变量 = `{{node_name.variable_name}}` 路径语法，作用域=单次执行**：每次运行重置，不跨运行携带。
+- **会话级变量经 Variable Assigner 节点持久化**：同一 conversation_id 永续，设计不明清即跨轮次引用——多轮对话要记住的东西用会话变量，单轮内流转用 workflow 变量，别混。
+- **系统变量全集（只读、全局）**：sys.user_id / sys.app_id / sys.workflow_id / sys.workflow_run_id / sys.files；Chatflow 另多 sys.query / sys.dialogue_count / sys.conversation_id——**Workflow 与 Chatflow 系统变量集不同**，查文档按应用类型取。
+- **显式声明输出否则不自动传播**：节点尝试访问上游"undefined"变量，根因通常是上游没在 outputs 里显式声明该字段。
+- **作用域链查找顺序：节点变量 → 会话变量 → 环境变量，同名节点变量优先**；局部变量可覆盖同名全局变量但不影响全局。
+- 判据：报"变量 undefined"先查三件事——上游有没有显式输出、变量名路径对不对、作用域层级对不对；想跨轮次记住 → 会话变量，别塞 workflow 变量。
+- 提升层：工作流。触发词：变量作用域、Variable Assigner、会话变量持久化、sys.workflow_run_id、显式声明输出。
+
+### 2. 子工作流输入契约：n8n 三模式与 Call n8n Workflow Tool（来源：n8n 官方 docs《Sub-workflows》《Execute Sub-workflow》+ n8n 官方博客《Production AI Playbook: Complex Agent Patterns》+ synta.io《Execute Workflow Node Guide》2026-09-20/2026-06-09/2026-05-29 实拉）
+- **子工作流输入三模式**：Define using fields below（定义输入名与类型，父调用自动拉入字段）/ Define using JSON example（示例 JSON 对象）/ Accept all data（**方便但生产不安全**——field/JSON 更安全因为调用方可见期望值）。→ 判据：**生产用 fields 或 JSON，Accept all data 只宜快速试验**。
+- **数据流自动**：父输入 items 直接进子工作流 trigger（Execute Sub-workflow Trigger）；**子工作流最后节点输出 = 父节点输出**。
+- **Call n8n Workflow Tool：把任何 workflow 打包成 AI agent 可调用工具**——独立触发/逻辑/输出，父 agent 像调工具一样传 inputs 收结构化结果。→ 判据：**执行路径可预测或需跨多 workflow 复用同一 agent 逻辑 → 用 sub-workflow 而非 AI agent node**。
+- **只映射子工作流真正需要的字段**；输入名用业务语义命名（不是节点历史）。
+- 提升层：工作流。触发词：子工作流、Execute Sub-workflow、Accept all data、Call n8n Workflow Tool、Input data mode。
+
+### 3. 提示词模板的转义与全局变量通道：LangFlow 双花括号与请求头（来源：docs.langflow.org《Prompt Template》+ docs.langflow.org/1.8.0《OpenAI Responses API》+ python.langchain.ac.cn《部分格式化提示词模板》2026-09-04/2026-09-02 实拉）
+- **单大括号 {VARIABLE_NAME} = 动态变量；双大括号 {{literal}} = 转义字面大括号**，防止模板里的花括号文本被解释成变量。
+- **全局变量经 API 传：`/responses` endpoint 接受自定义 header `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}`**——API keys / user IDs / 动态配置走这条，不进模板本体。
+- Prompt 节点输出接 LLM 系统消息槽作全局角色指令；**LangChain 侧 partial_variables 支持字符串与 callable 两类预填值（callable 运行时惰性求值）**。
+- **变量名拼写/下划线必须与传入 key 完全一致**，否则 KeyError（`{user_name}` 与 `{"username": ...}` 是两个变量）。
+- 提升层：工具。触发词：提示词模板、双花括号转义、X-LANGFLOW-GLOBAL-VAR、partial_variables、KeyError。
+
+### 4. Agent 三要素与流内定位：Activepieces 的指令+工具+知识（来源：activepieces.com《AI Agent Development》《AI Agent Builder》2026-04-03/2026-09-25 实拉，与 r287A Agent 资产化合并增量）
+- **agent 三要素 = 指令（instruction）+ 允许的工具 + 给的知识（上传文件/表格）**；工具可以是任何集成（678+ pieces）、另一个自动化（flow as tool）、自己的 MCP servers。
+- **两个限制要提前知道：runs 之间不记忆、无 SharePoint/Drive/Notion 实时同步**——知识要么上传要么表格常更新，别假设它会去拉在线文档。
+- **agent 作为 flow 的一个 step 插入**：处理数据并传给流程下一部分；flow 内给 prompt 指定该 step 任务；**链式 agent（research/writing/review 分工）**——每个 agent 处理流程不同部分。
+- **human approval steps 暂停执行直到人确认**；结构化数据输出 push clean JSON 进集成工具。
+- 提升层：工具。触发词：agent 三要素、flow as tool、runs 之间不记忆、human approval、链式 agent。
+
+### 5. 数组合并与聚合分组的 rowId 契约：Make 的 merge/aggregator 陷阱（来源：Make Academy《String and array conversion》+ Make 官方社区《aggregate multiple HTTP downloads into ONE Gemini request》2026-05-21/2026-01-14 实拉，与 r287B fan-out/fan-in 合并增量）
+- **merge() 合并同结构数组**；用 Set Variable 模块承接让输出清晰。
+- **Array Aggregator 多 bundle 合成单数组**（批量插入/结构化列表传下游 API）。
+- **关键坑：聚合分组依赖 rowId 一致性**——rowId 缺失或不一致则无法正确分组，下游模块会跑 N 次而不是 1 次。→ 判据：**聚合前先把 rowId 保进每个 bundle**（clean fix 第一步），再检查"是否 1 输出 bundle/row"。
+- **Map + Get/First 内置函数取数组值**：`map(complex array; key; [filter key]; [csv values])`；Text Parser（regex）/ JSON Parser / Iterator 逐项处理。
+- 提升层：工具。触发词：merge()、Array Aggregator、rowId 一致性、map()、N 次运行。
+
+### 6. 凭证三通道与外部认证：Pipedream 的 secrets 存放决策（来源：pipedream.com/docs《Security Best Practices》《Passing External Credentials at Runtime》《Running Workflows for Your End Users》2026-09-20/2026-09-24 实拉，与 r285A 认证合并增量）
+- **secrets 两通道：connected accounts（平台支持时）或 environment variables（任意配置数据）**——永不硬编码在代码里。
+- **外部认证 External auth：从 DB/secrets store 取凭证**——账户选择器右下选 "Use external authentication"，按提示填 oauth_access_token / api_key。
+- **给最终用户跑 workflow 必须用自己的 custom OAuth clients**：自己向第三方服务注册 OAuth app，把 client credentials 加进 Pipedream，连接最终用户账号时带 oauthAppId。
+- **迁移到代码的映射表**：$auth 引用 → 环境变量；OAuth connected app → Supabase Vault / 服务端环境变量（每个 OAuth app 重新授权并先记录所有 scope）；data store → 对应 KV。
+- 提升层：工具。触发词：connected accounts、Use external authentication、custom OAuth clients、oauthAppId、迁移到代码。
+
+### 7. Agent loop 的实现契约与 Managed Agents 迁移映射（来源：platform.claude.com《Build a tool-using agent》《Migration》+ code.claude.com《Agent SDK overview》《How the agent loop works》2026-09-21/2026-09-25/2026-09-17 实拉，与 r284 工具循环终止条件合并增量）
+- **agent loop = while 循环，stop_reason != "tool_use" 才停（end_turn 停止）**——Ring 1 假设"Claude 只调一次工具"是错的，真实任务常需多次调用（建事件→读确认→再建）。
+- **toolRunner() 返回 async iterable，for await...of 迭代**（tool call loop）；每次迭代处理 Claude 返回的消息，循环内处理后 runner 检查是否继续。
+- **Agent SDK 把 Claude Code 的工具/agent loop/上下文管理变成库**（Python/TypeScript）。
+- **Managed Agents 迁移映射**：@tool 函数 → 在 Agent 上声明 `{"type": "custom", ...}`（客户端处理 agent.custom_tool_use events 并回 user.custom_tool_result）；内置工具 → `{"type": "agent_toolset_20260401"}` 在 session sandbox /workspace 内跑。
+- **错误 subtype 处理**：error_max_budget_usd = 预算超限；turn limit 命中可 "Resume with higher limit" 恢复会话续跑。
+- 提升层：工具。触发词：stop_reason、toolRunner、agent_toolset、error_max_budget_usd、Resume with higher limit、custom_tool_result。
+
+### 8. 自定义 agent 文件契约与指令热更新限制：GitHub Copilot 的 .agent.md（来源：GitHub Blog《From one-off prompts to workflows》+ Microsoft Learn《Copilot specialized agents》《Customize responses using instruction files》2026-06-09/2026-09-16 实拉，与 r287B Copilot 技能化合并增量）
+- **自定义 agent = 仓库 `.github/agents/*.agent.md`**（YAML frontmatter + Markdown 指令）；Copilot CLI 里用 `/agent` 斜杠命令选自定义 agent。
+- **custom instruction files 带 YAML header 的 applyTo 字段**嵌入仓库（编码规范/架构决策/项目指南）——Chat 处理请求时自动读入并合入响应，不用每条 prompt 重复上下文。
+- **custom instructions 改动不立即生效于活动 CLI 会话**——要应用需退出当前会话后 resume（`copilot --continue`）或开新会话（`/new`）。→ 判据：**改完指令文件发现没生效，先检查是不是还在旧会话**，别当 bug 查。
+- Copilot code review 支持 agent skills + MCP（2026-07-29 GA）——review 时调用团队内部工具/标准，SKILL.md 放仓库即接入。
+- 提升层：工作流。触发词：.agent.md、applyTo、/agent、custom instructions 不生效、copilot --continue。
+
+### 9. 插件架构与能力同意机制：OpenClaw 的 capability consent（来源：docs.openclaw.ai《Plugins》《Building plugins》《Plugin hooks》《Plugin SDK overview》《Manage plugins》2026-09-26/2026-09-28 实拉）
+- **插件扩展面**：channel / model provider / agent harness / tools / skills / speech / realtime transcription / voice / media understanding / web fetch / web search。
+- **安装与发布**：`openclaw plugins install clawhub:<package>`（ClawHub 发布）或 npm 裸包；插件作者把包发到 ClawHub 即可，无需并入 OpenClaw 主仓库。
+- **能力同意机制（capability consent）**：`/plugins install clawhub:<package> --accept-capabilities`——聊天安装与启用走同一能力同意；**要求同意时先审查回复里的 capabilities 再重跑带 --accept-capabilities 的命令**。
+- **插件 hooks**：`api.on("hook_name", handler)` 注册类型化处理器；三套 hook 系统（typed plugin hooks / before_tool_call 等）覆盖改 prompt、门控工具、定制回复、生命周期事件。
+- **Capability model**：registerProvider / registerCliBackend / registerEmbeddingProvider / registerSpeechProvider；Plugin SDK = 插件与 core 之间的 typed contract。
+- **CLI 命令族**：plugins update / registry / doctor / init / build。
+- 提升层：工具。触发词：capability consent、--accept-capabilities、ClawHub、registerProvider、plugin hooks、plugins doctor。
+
+### 10. 技能市场的治理分层与安全警告：装前自查是底线（来源：skills.sh/docs + rywalker.com《skills.sh》+ agentman.ai《Agent Skills Ecosystem Report 2026》+ NXplace《AI Agent Skills Gold Rush》+ agentskills.leo-laboratory.com《生态系速览》2026-06/2026-09 实拉，与 r287A 技能市场 npm 化合并增量）
+- **npx skills add <repo> 一行装**：fetch 仓库 → 检测本地 agent → 写入正确目录，支持 51 个 agent（Claude Code/Cursor/Codex/Copilot/Gemini 等）。
+- **规模与速度**：skills.sh 2026-01-20 Vercel 发布；2026-06 约 66.9 万 skills；2026-09 达 100 万 skills + 约 2.8 亿 installs（7 个月，GitHub 用 27 个月到 1M——史上最快）；排行榜基于匿名遥测（find-skills 约 200 万 installs）。
+- **安全警告：社区统计约 36% 技能带风险**——技能就是可执行指令包，装前必须读 SKILL.md 审指令内容。
+- **目录治理分层（选目录 = 选信任模型）**：Anthropic 官方（人工精选/验证）/ skills.sh（开放 npm 式、builder 侧审计）/ SkillsMP（约 190 万从 GitHub 抓取、**无审查——装前自查**）/ SkillHub（7,000+ AI 评估自动打分）/ Agensi（评审后上架 + 8 点安全扫描）。
+- **agentskills.sh 命令商店**：search / info / install / install-skillset（一次装整套）/ list。
+- 提升层：工作流。触发词：skills.sh、SkillsMP、装前自查、技能目录治理、agentskills.sh、install-skillset。
