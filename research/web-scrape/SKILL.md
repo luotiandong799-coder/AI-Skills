@@ -150,6 +150,14 @@ pip install -U crawl4ai && crawl4ai-setup && crawl4ai-doctor
 - 仍 403 → 才走 `--tier hard` / `--proxy`（换出口 IP 验证是否为 IP 级误拦）。
 - **禁止**：默认凭据尝试、`X-Custom-IP-Authorization` / `X-Forwarded-For` 伪造来源头等**突破访问控制**手段——与「十一、合规红线」冲突，一律不用。
 
+### 判「未达」前先穷举同主族镜像通道，未达计数记在通道级不是站级（来源：2026-09-28 r314-Q-B 实拉实证）
+
+一个主站被 WAF 挡 ≠ 该处内容拿不到。实证：`make.com/en/help` 与 release-notes 带浏览器 UA 仍 **403**、`help.make.com` 连接 **000**（本栈曾连续 ≥6 轮据此判 Make「未达」），但 **`community.make.com/t/<id>.json` 与 `/search.json?q=` 完全无 WAF**，直接取到发布栏与功能专题全文；同理 **`docs.activepieces.com` `fetch failed`**，但 **`api.github.com/repos/<org>/<repo>/contents/docs` + raw .mdx** 拿到全部规则原文。同类通道还有：SPA 壳站从前端 bundle 挖 API 基址（`skillhub.cn` → `api.skillhub.cn` 匿名可读）、无 /api 的站读首页 SSR/RSC 内嵌 JSON（`skills.sh` 全量榜单）、`raw.githubusercontent` 不通时改 `/contents`、`/readme` 的 base64。
+
+- **未达判定门槛**：任一站写「未达」前至少探这 4 条通道——①同域 `.json` / Discourse API，②上游 GitHub 仓库文档树（+ raw），③前端 bundle 里的 API 基址，④SSR payload / 内嵌 JSON；全灭才写未达，并把已探通道逐条列出。
+- **计数口径**：连续 N 次未达 → 淘汰信源，按**通道级**计数不按站级——否则"站活着、只是主路径被挡"会被误杀（Make 即此例）。
+- **更正义务**：既往轮次若据 403 判过某站不可达，重新打通时要在产出里点名旧结论并更正。
+
 ## 九、站点难度记忆
 
 探测结果按域名记在 `scripts/.tier-cache.json`（已归一化：去 www、去端口、小写）。
