@@ -11970,3 +11970,70 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **skills vs tools/MCP/subagents 四者对比**（Agent Skills with Anthropic 课程）：skills=按需加载的可复用知识包；tools=函数调用；MCP=外部工具接入协议；subagents=分工执行——**"选型先回答'这是知识、函数、接入还是分工'"**。
 - **组合模式**：skills+MCP+subagents 组 agentic 系统（专门知识+外部数据源+分工）——**"三者是组合件不是替代件"**。
 - 提升层：工作流。触发词：MCP Inspector、FastMCP、参考服务器 filesystem/fetch、skills vs tools/MCP/subagents、按需加载、组合 agentic 系统。
+## r297C 十独点（2026-09-29 实拉）
+
+### 1. 分块参数值与自适应块：Dify RAG 调参面（来源：dify-6c0370d8-release-1-16-0.mintlify.site/en/cloud/use-dify/knowledge + marketplace.dify.ai/plugin/asukhodko/markdown_chunker + runoob.com/ai-agent/dify-usage + withnext.net 2026-03-05/2026-06-05/2026-07-02/2026-07-22 实拉，与 r296C Parent-child 合并增量）
+- **参数具体值**：中文内容 500 token 左右（太长检索不精准、太短丢上下文）；技术文档 800 token+150 重叠；重叠 10-20% 必设（缓解句子中途切断的上下文缺失）——**"r296C 管层级结构，本条管块大小与重叠的具体量级"**。
+- **自动 vs 自定义模式**：自动=按段落/标题分割（初回够用）；自定义=精度追求时——**"先自动建立基线，再按检索失败调自定义"**。
+- **自适应块大小**：Advanced Markdown Chunker——代码密集内容→最大 1.5x 基础块、简单文本→0.5x（按内容复杂度自动优化）——**"块大小跟随内容复杂度，不全局一个值"**。
+- **chunk 级管理**：禁用/编辑坏 chunk、加关键词——**"坏块就地修，不重建整个库"**。
+- 提升层：工作流。触发词：中文 500 token、重叠 10-20%、自适应块大小、1.5x/0.5x、chunk 级编辑、自动 vs 自定义分块。
+
+### 2. 执行关联与预算熔断：n8n 可观测面（来源：blog.n8n.io/ai-agent-observability + ai-audit-trail + docs.n8n.io/release-notes + community.n8n.io/t/introducing-alephant-n8n-nodes 2026-05-21/2026-06-08/2026-07-24/2026-08-14 实拉，与 r297B #3 OTel 合并增量）
+- **execution ID 作关联键**：每个执行有唯一 execution ID，通过 HTTP Request 节点传给下游或作 OTel trace 头——**"跨系统重建一次执行=追踪同一个 ID"**（r297B 管 OTel 进主版本，本条管关联机制）。
+- **审计轨迹是默认属性**：每次运行自动生成结构化记录（workflow ID/run ID/节点 IO/时间戳/错误状态），零额外插桩——**"可审计是平台默认，不是另建系统"**。
+- **预算熔断器**：Run Budget Status 前置在昂贵 AI 步骤前，超支时 IF 回退便宜模型或停整个工作流——**"花钱前先查预算，超了就降级或停"**。
+- 提升层：工具。触发词：execution ID、trace/correlation header、审计轨迹默认、预算熔断器、Run Budget Status、回退便宜模型、跨系统重建执行。
+
+### 3. 自定义组件发布纪律：LangFlow 组件面（来源：docs.langflow.org/next/contributing-components + 1.10.0/deployment-block-custom-components + dev.to/guidance_white/cve-2026-17633 + 1.8.0/troubleshoot 2026-07-30/2026-09-03/2026-09-17/2026-09-21 实拉，与 r297A #3 guard RCE 合并增量）
+- **不重命名 class/name**：前端测 type 属性，改名破坏所有现有用户——**"组件改名=破坏性变更，默认不做"**（r297A 管 guard 生成器 RCE，本条管自定义组件整体发布纪律）。
+- **Update vs Review 更新**：无破坏用 Update 单组件；有破坏用 Review 看全部更新+建快照再更新——**"破坏性更新先快照再动手"**。
+- **全局关闭开关**：LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false 阻止创建自定义组件+改代码（防任意代码执行）——**"自定义代码是特性也是风险，可整体关"**。
+- **CVE-2026-17633**：/api/v1/custom_component 认证 RCE（IBM 2026-08-05 披露，langflow 1.0.0-1.x）——**"自定义组件 API 本身是攻击面，不部署就不暴露"**。
+- 提升层：可复用 Skill。触发词：不重命名 class/name、Update vs Review、快照、ALLOW_CUSTOM_COMPONENTS=false、CVE-2026-17633、custom_component API。
+
+### 4. Agent 构建上限与集中 provider：Activepieces AI builder 面（来源：activepieces.com/product/ai-agent-builder + resources.activepieces.com/ai-agent + blog/ai-agent-development 2026-04-03/2026-08-25/2026-09-25 实拉，与 r295B 审批门合并增量）
+- **Max steps 20 per run**：单次 agent 运行步数上限 20——**"运行上限防失控循环，超限即停"**（r295B 管审批门，本条管步数硬上限）。
+- **Your model, your key**：admin 一次性配置 provider（OpenAI/Anthropic/Gemini/Azure/Bedrock 或任意兼容端点）——**"模型与密钥集中管理，使用者不碰 key"**（与 r297B #6 托管 OAuth 同族：认证配置集中化）。
+- **外部 MCP 可接**：agent 用自己的 MCP servers——**"平台 pieces 不够时接自管 MCP 扩展工具面"**。
+- **指令起手式**：描述任务→连工具→立即运行→测想法→再细化逻辑——**"先跑通再打磨，不先花时间雕逻辑"**。
+- 提升层：工作流。触发词：Max steps 20、运行上限、your model your key、admin 集中 provider、外部 MCP、指令起手式、先跑通再打磨。
+
+### 5. 四 agent 类型选型：Make 智能体面（来源：make.com/en/blog/make-ai-agents-trust-through-transparency + help.make.com/make-ai-agent-new-app 2026-02-11/2026-09-17 实拉，与 r295A 多智能体五模式合并增量）
+- **四类型按任务选**：Synthesizer（多源拉取→结构化摘要；研究/竞品分析/报告生成）/Routing（分析输入→动态选正确工作流；**条件逻辑树变得不可管理时用**）/Qualifier（按标准评估输入做决策；线索评分/申请筛选/内容审核）/Orchestrator（协调多工具或 agent 完成大任务）——**"r295A 管编排模式，本条管单任务该用哪种 agent"**。
+- **Routing 判据**：条件逻辑树不可管理→改用 Routing agent 动态选——**"可维护性拐点是换 agent 的信号"**。
+- **透明性**：Trust through transparency——agent 决策过程对用户可见——**"自主性越高，透明性要求越高"**。
+- 提升层：工作流。触发词：Synthesizer/Routing/Qualifier/Orchestrator、四 agent 类型、逻辑树不可管理、动态选工作流、线索评分、透明性。
+
+### 6. 事件源独立复用与 dedupe：Pipedream source 面（来源：pipedream.com/docs/sources + components + workflows/building-workflows/triggers + connect/components/triggers 2026-07-14/2026-08-31/2026-09-27 实拉，与 r296C 多触发器合并增量）
+- **source 独立于 workflow**：事件源作为独立资源运行，**一个 source 可触发多个 workflow**——"消费一次、多流复用"（r296C 管触发器种类，本条管 source 资源化复用）。
+- **sources vs actions**：sources 用 `this.$emit` 发事件触发 workflow（带 dedupe 策略）；actions 用 `$return` 返回数据——**"触发靠 emit+去重，动作靠 return"**。
+- **两类部署触发器**：App-based event sources+Native triggers（Connect API 管用户的 source）——**"给终端用户部署的是 source 不是 action"**。
+- **source props 接受部署输入**：HTTP/timers/cron/手动触发皆可——**"source 是可配置的独立资源"**。
+- 提升层：工作流。触发词：event source 独立资源、一源多流、this.$emit、dedupe 策略、App-based event sources、部署触发器。
+
+### 7. 官方评测要求与 Skills 2.0 评测链：Claude skill 评测面（来源：platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices + enterprise + mindstudio.ai/blog/claude-code-skills-2-evaluation-ab-testing + vibehackers.io/claude-code/skills/evals-danielmiessler 2026-03-13/2026-07-13/2026-09-22/2026-09-25 实拉，与 r296A 先评测后构建合并增量）
+- **官方最低评测要求**：每技能≥3 评测场景；Haiku/Sonnet/Opus 三模型都测；真实使用场景+团队反馈——**"评测是发布门槛不是可选项"**（r296A 管评测先行原则，本条管官方要求的具体内容）。
+- **基线对比量化**：无技能（15 往返消息/3 失败 API 调用/12000 tokens）vs 有技能（2 澄清问题/自动执行）——**"证明技能价值=与无技能基线对比数字"**。
+- **Skills 2.0 评测功能**：加权 rubric 自动评分+A/B 并行版本对比+评分按版本存储+批量评测+生产流量采样监控——**"评测从一次性动作变持续管线"**。
+- **pass@k 最低 pass@3**：单次运行无统计意义——**"多跑几次取通过率，别拿一次结果当结论"**。
+- 提升层：可复用 Skill。触发词：≥3 评测场景、三模型测试、基线对比、加权 rubric、A/B 版本、pass@3、生产监控、评分按版本存。
+
+### 8. 发布供应链验证：gh skill publish 面（来源：github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli + docs.localskills.sh/cli + npmjs.com/package/skills-agent 2026-04-16/2026-06-28/2026-08-18 实拉，与 r296C skills CLI 命令集合并增量）
+- **gh skill publish 双验证**：验证 agentskills.io spec + 检查远端设置（tag protection/secret scanning/code scanning）——**"发布前自动查供应链卫生，不只查格式"**（r296C 管命令有哪些，本条管发布侧验证内容）。
+- **不可变 release 防回购劫持**：即使有人拿到 repo 控制权也改不了现有 release——**"发布产物不可变=历史版本不可篡改"**。
+- **skills-agent publish 门槛**：lint 失败非零退出——**"lint 是发布闸门，不过就不发"**。
+- 提升层：工具。触发词：gh skill publish、agentskills.io spec、tag protection、不可变 release、secret scanning、发布闸门、lint 失败非零退出。
+
+### 9. 编码 agent 自检与上下文工具面：GitHub Copilot 面（来源：github.blog/ai-and-ml/github-copilot/whats-new-with-github-copilot-coding-agent + code.visualstudio.com/docs/agents/reference/workspace-context + learn.microsoft.com/visualstudio/ide/copilot-agent-skills 2026-02-26/2026-09-05/2026-09-16/2026-09-21 实拉，与 r296C Copilot 三阶合并增量）
+- **coding agent 新特性**：model picker+self-review+内置安全扫描+custom agents+CLI handoff——**"自检与安全扫描是 agent 内建，不是外挂"**（r296C 管三层结构，本条管 agent 运行时能力）。
+- **workspace context 工具面**：#githubRepo 语义搜索（owner/repo 定位源码片段）/#githubTextSearch 文本搜索——**"agent 看代码=语义+文本双路检索"**（与 §两阶段检索互补：工具面接的是同一检索思想）。
+- **三层分工**：custom agents（persona+工具集，.agent.md）< custom instructions（通用偏好，.instructions.md）< skills（聚焦任务指导，SKILL.md，任何 agent 自动发现）——**"三文件三职责，不混写"**。
+- 提升层：工作流。触发词：self-review、内置安全扫描、model picker、CLI handoff、#githubRepo、#githubTextSearch、.agent.md、三层分工。
+
+### 10. 记忆工程与轨迹→技能学习：deeplearning Agent Memory 面（来源：community.deeplearning.ai/t/new-course-enroll-in-agent-memory + blogs.oracle.com/developers/oracle-and-deeplearning-ai-launch-new-agent-memory-course + learn.deeplearning.ai/courses/building-adaptive-ai-agents 2026-03-18/2026-07-15/2026-09-06 实拉，与 r295A 记忆四层合并增量）
+- **记忆工程=上下文工程下一层**：长期记忆作为外部于模型、持久、结构化的 first-class 基础设施——**"上下文工程管单次会话，记忆工程管跨会话"**（r295A 管记忆分层，本条管记忆工程定位）。
+- **写回环**：agent 能自主更新自己的记忆（write-back loops）——**"记忆不只有读，还要让 agent 能写回"**。
+- **轨迹→技能学习**（Building Adaptive AI Agents）：用 agent 执行留下的 traces 提炼行为技能（trajectory-to-skill learning）——**"执行记录是技能原料，跑过的路沉淀成可复用能力"**。
+- **stateful Memory Aware Agent**：启动时载入先前上下文+组装相关上下文/状态/工具/输出——**"启动即恢复上下文，不冷启动"**。
+- 提升层：工作流。触发词：记忆工程、上下文工程下一层、写回环、轨迹→技能学习、trajectory-to-skill、stateful agent、启动载入上下文。
