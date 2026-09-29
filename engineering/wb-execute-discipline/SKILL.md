@@ -12954,3 +12954,68 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **私有注册表防御**：生产不从公共注册表拉技能；镜像+审查后提升+只从私有源安装；扫描器失效（混淆/归档字节码隐藏 payload 绕过 ClawHub/Cisco/skills.sh）——"防御=私有镜像+审查"。
 - **AI 记忆层生态**：agentmemory 28.9k（#1 持久记忆基于真实基准）/TencentDB Team Memory 20k（团队记忆多 agent）/Letta LoCoMo 74%/vLLM Fast Start（GPU 常驻后量化权重重启免重载）——"生态=记忆层+Fast Start"。
 - 提升层：工作流。触发词：RRF 融合、cross-encoder 重排、Parent Document 两阶段、Graph RAG 兜底、ToxicSkills 13.4%/36.82%、私有注册表、vLLM Fast Start。
+
+## r302A 十独点（判重基线 r284~r301 全量；每点=来源清单+判重说明+提升层+触发词）
+
+### 1. 长上下文提示编排三律：长数据置顶 / query 置尾 / XML 结构化（来源：platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices 2026-09-15 实拉，与 r285C/r286A 上下文类合并增量——那条管上下文窗口，本条管长输入编排）
+- **长文档/大数据放 prompt 顶部**（20k+ tokens 输入场景），置于 query/指令/示例之前。
+- **查询放末尾最多提升响应质量 30%**（复杂多文档输入实测）。
+- **多文档用 <document> XML 标签+索引结构化**内容与元数据。
+- 提升层：模型（提示工程）。触发词：长文档置顶、query 置尾 +30%、<document> 标签。
+
+### 2. 缓存断点四层布局与 1024 token 最小块（来源：platform.claude.com/docs/en/build-with-claude/prompt-caching 2026-09-18 + theneuralbase.com/anthropic-api/learn/advanced 2026-04-14 + markaicode.com 2026-03-12 实拉，与 r288A 缓存合并增量——那条管缓存 TTL，本条管断点布局）
+- **四断点**：①tools 定义（末工具 cache_control）②可复用静态指令 ③RAG context 独立缓存（更新文档不失效 tools/指令缓存）④conversation history（final user message 增量缓存）。
+- **最小可缓存块 1024 tokens**：更短静默忽略（cache_creation_input_tokens: 0）；缺 model 或 cache_control 任一静默失效，用 response.usage.cache_creation_input_tokens 验证激活。
+- **价格判据**：写入 1.25×（5min TTL）/2×（1h TTL），命中 10% input；前缀 5 分钟内复用 >1-2 次即缓存；<150K tokens 同会话复用→prompt caching，过大/跨会话→RAG。
+- 提升层：工作流（成本优化）。触发词：缓存断点四层、1024 最小块、RAG 独立缓存、cache_creation_input_tokens 验证。
+
+### 3. n8n 数据转换决策框架与 Edit Fields 操作集（来源：docs.n8n.io/build/work-with-data/transform-data/expressions-for-data-transformation 2026-09-26 + logicworkflow.com/blog/n8n-data-transformation 2025-12-02 + n8n.spot 2026-06-10 + nodox.ai 2026-01-15 实拉，与 r300B 数据转换合并增量——那条管数组变换，本条管决策框架）
+- **四选决策**：单值访问/格式化→表达式；加/重命名/删字段→Edit Fields(Set)；数组↔items→Split Out/Aggregate；复杂条件/大数据集→Code。
+- **Edit Fields 操作集**：Rename/Remove/Move（嵌套 user.name→userName）；Manual Mapping（拖拽默认字段名=值名，Fixed|Expressions 切换）与 JSON 输出双模式。
+- **58+ 内置方法**：字符串/数学/布尔/JMESPath；实用表达式（split('@')[1] 提域名、replace(/[^0-9]/g,'') 清洗）。
+- **最佳实践**：早期节点预处理、转换与业务逻辑分离、转换前先 Filter。
+- 提升层：工具/工作流。触发词：转换四选决策、Edit Fields Rename/Remove/Move、Manual Mapping 拖拽、58 内置方法。
+
+### 4. Langflow Output Parser 与 Structured Output 组件（来源：docs.langflow.org/components-helpers 2026-04-14 + /1.9.0/parser 2026-07-30 + /1.10.0/structured-output 2026-09-18 + /batch-run 2026-09-04 实拉，与 r291C 提示模板合并增量——那条管模板变量，本条管输出解析）
+- **format_instructions 注入**：Output Parser 的 format_instructions 输出接 Prompt 组件，模板含 {format_instructions} 变量——LLM 明确知道输出格式。
+- **Parser 四参**：input_data（JSON/Table）+pattern（{KEY_NAME} 模板）+sep+clean_data（去空行）。
+- **Structured Output**：llm+input_value+system_prompt（提取格式化指令）+schema_name；Batch Run→Parser 用 {text_input}/{model_response} 变量；双大括号 {{literal}} 转义。
+- 提升层：工具。触发词：format_instructions 注入、Parser pattern、Structured Output schema_name、双大括号转义。
+
+### 5. Make 错误处理五指令矩阵与 Fallback/DLQ 模式（来源：use-apify.com/blog/make-com-error-handling-guide 2026-03-15 + help.make.com/rollback-error-handler 2026-09-08 + workflowpick.com 2026-05-12 + thinkbot.agency 2026-07-07 + keerok.tech 2026-05-18 实拉，与 r297B 错误四选项合并增量——那条管选项语义，本条管矩阵+模式）
+- **五指令**：Rollback（停止标失败+回滚，默认）/Commit（停止标成功保留已完成）/Resume（忽略+替代值）/Break（停止）/Ignore（静默跳过）。
+- **分类矩阵**：瞬态→指数退避（1/2/4/8s）→quarantine 待人工；数据校验→跳过+reason code；认证→立即告警+暂停；限流→减速批处理。
+- **Fallback**：主 API 失败→并行 error-handler 路由备份服务（SendGrid→Mailgun 先成功者赢）；**DLQ**：高价值场景失败不丢→写队列（Google Sheet）待处理。
+- 提升层：工作流。触发词：五指令矩阵、Fallback 并行路由、Dead Letter Queue、指数退避 1/2/4/8。
+
+### 6. Pipedream SDK 双端与 pd publish/dev 开发流（来源：pipedream.com/docs/connect/workflows 2026-09-24 + /connect/api-reference/sdks 2026-07-18 + /docs/cli/reference 2026-09-01 + actions-quickstart 实拉，与 r293C ManagedAuth/r292B Connect 合并增量——那条管认证，本条管开发流）
+- **SDK 双端**：前端 connectAccount（tokenCallback 按需颁 token）；服务端 PipedreamClient/createBackendClient（clientId+clientSecret+projectId）取账号信息+代表用户调 workflow。
+- **开发流**：pd publish <file> 发布 action（key 全账号唯一）；pd dev 开发模式（附加部署+监视本地文件热更新）；TS 组件编译 dist 后 publish dist 路径。
+- **私有 action**：CLI/Node Code Step 发布→My Actions 使用；$.send.http() 异步 HTTP。
+- 提升层：工具/工作流。触发词：createBackendClient、tokenCallback 按需颁 token、pd publish/dev、私有 action My Actions。
+
+### 7. GitHub Actions 安全加固：self-hosted 风险模型与 token/secrets 治理（来源：docs.github.com security-hardening-for-github-actions 2025-07-05 + learn.microsoft.com configure-self-hosted-runners 2026-07-06 + secure-use-reference 2025-07-24 实拉，与 r291B/r295B 安全合并增量——那条管供应链，本条管 Actions 运行面）
+- **风险模型**：GitHub-hosted runner=临时干净隔离 VM；self-hosted 无此保证，**可被 fork+PR 持久攻陷**窃取 secrets——**公有仓库几乎绝不用 self-hosted**；任何有写权限者可读全部 repo secrets。
+- **token 最小权限**：GITHUB_TOKEN 默认只读 repo contents，按 job 增加；secrets 永不存明文 workflow（org/repo/env 三级）；运行日志自动 redact（精确匹配+常见编码）。
+- **runner 组治理**：runner groups 管控访问/分布/安全策略；ephemeral runners 自动移除；监控+审计+OS 补丁。
+- 提升层：工作流（安全）。触发词：self-hosted 持久入侵、GITHUB_TOKEN 默认只读、secrets 三级配置、runner groups。
+
+### 8. OpenClaw 插件四层架构与插件随附 Skills（来源：docs.openclaw.ai/plugins/architecture 2026-09-27 + /tools/skills 2026-09-21 + /plugins/bundles 2026-09-27 + documentation.openclaw.ai 2026-05-08 实拉，与 r301B OpenClaw 配置合并增量——那条管配置项，本条管插件架构）
+- **四层**：Manifest+discovery→Enablement+validation（enabled/disabled/blocked/专属槽）→Runtime loading（原生 in-process 中央注册表/JS 走 Node/TS 编译/bundle 归一化）→Surface consumption。
+- **插件随附 Skills**：plugin.json 声明 skills 目录（相对插件根），启用即加载（browser 插件带 browser-automation skill）；metadata.openclaw.requires.config 门控。
+- **Bundle 兼容**：commands/.cursor/commands/agents/output-styles→skill roots；HOOK.md hook packs；MCP config 并入 embedded settings。
+- **registerTool API**：register(api){api.registerTool({name,description,parameters:Type.Object,execute})}。
+- 提升层：可复用 Skill（插件化）。触发词：插件四层架构、plugin.json skills 目录、bundle 兼容层、registerTool Type.Object。
+
+### 9. Dify 插件发布流水线：12 检查与市场治理（来源：enterprise-docs.dify.ai release-to-dify-marketplace 2026-07-13 + dify.ai/blog/trust-is-a-feature 2026-09-09 + CSDN 217 案例 2026-06-22 + faq 2026-07-15 实拉，与 r293A 模板市场/r291C 插件治理合并增量——那条管生态治理，本条管发布检查）
+- **12 检查失败表**：PR 语言（CJK）、项目结构（缺 manifest/README/PRIVACY/_assets）、作者含 langgenius/dify、默认图标、版本已存在、README 中文（走 readme/README_zh_Hans.md）。
+- **217 案例**：OpenAPI 缺 info.description/servers/安全方案、响应体未过 JSON Schema 校验、未实现 GET /health（非 200）。
+- **市场治理**：PR→langgenius/dify-plugins→自动检查+1 周评审；Python 插件 dify-plugin>=0.9.0；版本重复→升版重建重测。
+- **开发指南**：品牌一致/端到端远程调试/README 英文+设置步骤+凭据/无夸大宣传/错误消息清晰/认证步骤完整/隐私政策。
+- 提升层：工作流（发布治理）。触发词：12 项 reviewer checks、manifest/README/PRIVACY/_assets、GET /health 健康检查、dify-plugin>=0.9.0。
+
+### 10. Progressive Disclosure 三级加载与 token 成本表（来源：deepwiki.com/microsoft/agent-skills/5.3-progressive-disclosure-pattern 2026-03-07 + learn.microsoft.com agent-framework/agents/skills 2026-09-18 + arxiv.org/pdf/2602.12430v2 + aman.ai 2026-09-04 实拉，与 r292C/r296B 技能结构合并增量——那条管结构要素，本条管加载成本）
+- **三级加载**：L1 Metadata（frontmatter name+description，~50-100 token/技能，启动加载）；L2 Instructions（SKILL.md 正文，~500-2000 token，description 匹配激活）；L3 Resources（references/scripts/assets，显式请求）。
+- **四阶段（MS）**：Advertise（~100 token 注入系统提示词）→Load（load_skill 检索完整 SKILL.md，<5000 token 推荐）。
+- **类比**：技能="新员工入职指南"（L1 目录/L2 章节/L3 附录）；未使用技能几乎零成本——上下文窗口是共享资源。
+- 提升层：可复用 Skill（架构）。触发词：三级渐进披露、L1 50-100 token、Advertise/Load 四阶段、load_skill 工具。
