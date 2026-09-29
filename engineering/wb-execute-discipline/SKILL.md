@@ -13656,3 +13656,40 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 
 ### 编码 agent 可观测性
 **OpenTelemetry：每 agent 转换/prompt-response/沙箱断言导出 span——每个自动 PR 推理轨迹可审计**；**traces 验证调用正确性不只输出（Monocle 确保做了正确调用）**；**生产证据闭环：捕获全路径（源材料→提取字段出处→提交→专家修正）→结构化问题→发现→定向 eval→工程任务**；AgentDebugX Detect-Attribute-Recover-Rerun 闭环+DeepDebug 多轮根因（全局轨迹+结构化调查+交叉质询）。
+## r308C AI 评估工程与 LLM-as-Judge（来源：futureagi/arXiv/AWS/Google/anthropic/braintrust 系列实拉）
+
+### LLM-as-judge 校准与五大偏差
+**校准目标：Cohen's kappa >0.6 vs 人工标签，>0.8 强；position bias 测量：pairwise 校准集（100-300 例已知胜者）每对跑两次（A/B 互换），翻转比例>5%=真偏差（frontier 典型 10-15%）——消解=随机化顺序+聚合**；**五大偏差各自消解：position（偏好第一 15-30%→双顺序）/verbosity（偏好长回答 ~15%→显式反长度指令）/self-preference（偏好同族 3-10%→跨族评判）/sycophancy（同意前提→中性提示）/instruction-following→分条 rubric 准则**；**rubric 也有 position bias（分数选项位置偏好）——balanced permutation 均匀分布分数选项，聚合多次排列提升与人类相关性**；**生产校准集 30-50 例 SME；pin judge 精确快照；校准=迭代循环（标集→跑→查分歧→更新准则→同集+holdout 重跑→跟踪一致性）**。
+
+### Judge 选型：kappa per dollar + 级联
+**选 judge=自家校准集上比 kappa per dollar；fine-tuned judge（Luna-2/Prometheus 2）赢熟 rubric 成本延迟，frontier 赢未见开放式推理——生产常态=fine-tuned 第一层+frontier 升级复杂 case**；**decision-only judge（裁决+标签概率）常规评估离 GPT-6 差 3 点内但 0.36% 费用——置信分数可靠可分级升级**；**ensemble+任务特定 criteria 注入 +13.5pp 到 85.8%（小模型获益不成比例，cheap 2-model $0.044/grade vs Opus $0.42）；领域 reward model 1.5-8B 匹敌大 prompt judge→100% 流量覆盖可行**。
+
+### Eval-driven 四要素与 CI 门控
+**eval suite=golden 输入集（真实生产失败构建非 happy path）+评分函数（确定性检查优先，judge 最后手段）+阈值（mean+尾百分位双门；常失败=无信号）**；**CI 触发契约：PR 触及 prompt/model/retrieval config/tool schema/agent loop→全量 golden→vs main 基线→非协商失败或超容差则 PR 失败；报告附 case 翻转/judge 推理**；**环境晋升门：dev 子集→staging 全量→生产前安全评估，低于阈值 CI 阻塞**；**三级测试：smoke（15-20 例 <3 分钟）→full（PR 前 100-200 例）→deep（发布前 5+ 次/例）**；**statistical gate：Welch t-test/z-test/p95 对 7 天基线 delta；exit codes 0/2/3/6/7 硬契约**。
+
+### Eval 数据工程：三集分离与防泄漏
+**train/dev/eval 三集：eval 集开发前创建、开发期永不触碰（不调 prompt/不 fine-tune/不人肉修 eval 失败）**；**污染检测 n-gram overlap；有时间分量则时间分离**；**分层采样 common/edge/adversarial/demographic/difficulty bins——95% 简单例子抓不住关键失败；70% 查询是 X→suite 反映分布**；**golden 四类：happy path/edge（短长/格式/含糊/矛盾约束）/adversarial（注入/有害/提系统提示）/known failures**；**gold-standard 答案专家创建审阅——自动生成的 golden 不是 golden（最小 100-200 例）；警惕 10-30% 污染/5-20 分通胀/stale evals**。
+
+### 在线评估与漂移监控
+**online eval 评真实流量样本（after the fact）补 offline：测试集外边界/渐进漂移/实时变更回归（曾让两周回归无人察觉）——offline=pre-flight，online=连续仪器**；**采样 5-10%+错误和升级必 100% 打分；低成本统计检查决定何时跑更贵重新评分（级联）**；**漂移：7 天滚动均值+标准差，今日跌超 1.5σ 告警；安全 page/质量 ticket；对最后绿窗口比较**；**embedding 余弦>0.15 分布转移；PSI 抓数据漂移（ground truth 延迟时）；分层抽样 200-500 traces 按 intent/persona/语言，拉 14-28 天防过拟合单次活动**。
+
+### Agent 评估：轨迹优先于结果
+**模型评估（静态基准测能力）vs agent 评估（动态轨迹/工具调用/非确定性任务结果）——agent 评估优先 Task Success Rate per scenario，完整轨迹日志算 Trajectory Efficiency 和 Tool Call Accuracy**；**轨迹匹配四模式：strict（结构+工具调用同序精确）/unordered（同结构任意序）；顺序变体 exact/in-order/any-order**；**工具调用四问：调用精度（右工具右参数无冗余）/工具选择（右且必要）/输入精度/输出使用**；**trajectory recall：需查 Database+Wiki 只查 Wiki=0.5；三证据通道（执行轨迹/审计日志/环境快照）+2159 rubric 项**。
+
+### 多模态评估：MLLM-as-judge 与跨模态对齐
+**跨模态对齐评分：rubric+文本输出+图像给视觉 judge；评估器 Overall Quality/Correctness/Faithfulness/Instruction Following**；**grounded verification 三步：观察（描述图像）→声明提取（分解响应）→一致性验证（每声明对照观察二进制 1/0）——强制推理落到证据**；**幻觉检测：图像+3 陈述标 True/False**；**WorldSense：强制音视频协同（去掉任一模态必然答错）——最强 Gemini 2.5 Pro 仅 65.1%，开源接近随机；AVBench 10 维（视觉/音频质量+跨模态一致性）+偏好学习评估器；多粒度=轻量专家+MLLM 组合**。
+
+### 失败分类学与 triage 纪律
+**agent 失败 5 类分类学，真实事故堆叠 2-3 类：诊断=从头到尾走 trace 停在第一个坏类别——早期错误污染下游一切（planner 选错工具序列，跑在错 plan 里的工具不是 bug，planner 才是；修工具层=类别不匹配补丁不泛化）**；**triage 四步：汇总指标→逐 case 下钻→失败聚类找系统性模式→traces 下钻找精确失败轮/工具调用**；**失败检测器输出：分类+置信+因果链（根因→症状）+修复建议（system prompt 还是 tool definitions）**。
+
+### 连续改进环与失败 trace 升级
+**eval 失败+生产错误自动生成新测试用例→与 prompt 版本版本化→验证修旧失败不引回归**；**每周抽样失败 traces→按用户段/intent/judge 分 bucket→最难的 5-10% 提升进 eval 集带版本标签——每个提升的 trace 是未来 PR 不能打破的回归**；**改进 loop 三问：任务成功吗/阶段级归因（retrieval/tool/truncation/guardrails/post-processing）/变更影响（失败概率动了吗）**；**行动项具体/有主/有日期；先排高方差（不稳→重跑再下结论）再调 rubric；基线本就差（≤2/5）可能需简化场景**。
+
+### 评估=发货契约
+**eval 契约意义三样东西：labeled golden dataset+评分方法+通过率阈值——Gherkin 验收标准不消失变成 eval cases；接受=分布上的阈值不是单次示例**；**治理切分：谁定义 eval 集/谁定义阈值/谁能豁免——契约强制力来自治理**。
+
+### 在线评估采样与离线-在线分工
+**异步 evals：响应交付后评 faithfulness/答案质量/agent 行为不阻塞用户**；**采样：正常流量抽一部分，错误和升级 100% 打分**；**feedback loop：标记 traces→review→label→加回归集；release control：shadow/canaries/gating 在广 rollout 前**；**OpenAI 编码 agent 监控：低延迟监控系统（最大推理努力）审查 agent 交互，告警与用户意图不一致或违反安全/合规动作——记录并分析 chain-of-thought 和动作**。
+
+### 评估工具链选型
+**框架对比：DeepEval（Python+pytest+CLI 50+ 指标 Apache2.0 综合）/Promptfoo（YAML+CLI+TS MIT prompt 对比+AI 安全红队）/RAGAS（Python RAG 专用 5 核心 reference-free）/Phoenix（OTel 原生可观测）/Braintrust（托管全生命周期）/Langfuse（生产 traces+评分开源）/OpenAI Evals（官方 registry）**；**选型判据=evals 住哪：terminal（Promptfoo）/Python+CI（DeepEval）/生产 traces（Langfuse/Phoenix）/托管仪表板（Braintrust）/安全能力（Inspect AI）/受监管（Patronus）；promptfoo 结果留本地无集中跟踪；DeepEval 主导 Python 生态、Promptfoo 主导 JS**。
