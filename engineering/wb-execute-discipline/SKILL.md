@@ -11661,3 +11661,60 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **AI Coding Workflows**（2026-09-06，r293 已落）；Multi AI Agent Systems with crewAI 在列。
 - 判据：**课程主线=代码评审/文档抽取/设备端记忆/自适应 agent**——H2 学习清单按这四个词排。
 - 提升层：可复用 Skill。触发词：AI Code Review、Document AI、Agentic Doc Extraction、OCR、crewAI。
+## r296A 十独点（2026-09-29 实拉）
+
+### 1. 工作流 YAML 版本化与节点失败三选项：Dify 工程面（来源：dev.to《5 Hidden Uses of the 145K-Star Open Source AI Stack》+ dify-hosting.com《Dify Workflows Guide》2026-06-19/2026-09-03 实拉，与 r295A 多智能体编排合并增量）
+- **工作流导出 YAML 进 Git**：每个 Dify workflow 可导出为 YAML，版本控制、diff 部署差异、用内置 tracing API 逐步回放任何历史执行——**可视化编排不排斥 Git 工作流，YAML 即源码**。
+- **节点级失败行为三选项**：LLM/HTTP/Code/Tool 节点失败时选①停止 ②返回类型化默认值 ③走失败分支——**失败行为是节点属性，不是全局开关**。
+- **v1.3+ 嵌套 agent 节点**：一个 agent 调用另一个 agent 作工具，跨专用 LLM 角色的涌现行为——**单 god-agent 拆成可嵌套的专用 agent**（HN 热帖：编排框架替代单体 agent 设置）。
+- 提升层：工具。触发词：导出 YAML、版本控制、tracing API、回放、失败分支、类型化默认值、嵌套 agent、god-agent。
+
+### 2. 工具描述 token 成本与模型分工：n8n 生产面（来源：blog.n8n.io《Production AI Playbook: Complex Agent Patterns》+ renezander.com《5 Production Patterns》+ christopheralarcon.com《n8n AI Agent Tutorial》2026-06-09/2026-04-12/2026-06-14 实拉，与 r295B 混合管道合并增量）
+- **工具描述=每次请求的 token 税**：每个工具描述都进每次请求的上下文；15 个工具只用 3 个就拆成专注 agent——**工具越少越准越省**（与 r296A deeplearning ≤200 字量纲互补）。
+- **分类/生成模型分工**：路由决策用 Haiku（约便宜 10x），生成用 Sonnet——**按任务难度分配模型，不是全流程一个模型**。
+- **Boring Reliability**：要长期留的工作流，每次运行日志写进 Sheet/Postgres/Notion，保存 input/decision/model/cost estimate/approval result；可重试处加重试；失败或输出解析器坏了就告警——**"无聊的可靠性"=每次运行留痕**（与 r295C 分诊闭环互补：那个管自动分类，本条管全量留档）。
+- 提升层：工作流。触发词：工具描述 token、拆专注 agent、Haiku 分类、Sonnet 生成、模型分工、Boring Reliability、每次运行留痕。
+
+### 3. 提示词生成组件与逐行数据变换：LangFlow 组件面（来源：docs.langflow.org/1.10.0/langflow-assistant + bundles-agentics 2026-08-09/2026-07-27 实拉，与 r295B 组件管控合并增量）
+- **Langflow Assistant 生成组件**：直接描述"Create a custom component URLTitleExtractor with: input text / output list / timeout+per-URL error handling / clean docstring"——**组件即代码，提示词直接生成，模型驱动建组件**。
+- **aMap 逐行变换**：自然语言指令+输出 schema 逐行处理数据（一行进一行出），默认并发批次 10，token 随行数线性——**批量 LLM 变换的"行级语义"，不是整表塞进去**。
+- 提升层：工具。触发词：Assistant 生成组件、URLTitleExtractor、aMap、逐行变换、并发批次、输出 schema。
+
+### 4. 提示库与错误捕获中央表：Activepieces 工程面（来源：activepieces.com/resources/automation-for-ai-workflows + automation-for-llm-workflows 2026-05-31 实拉，与 r295C 错误分诊合并增量）
+- **提示库**：把提示模板版本化存 tables，流中引用；验证步骤强制必需输入；日志记 prompt ID 与输出便于审计——**提示模板当资产管（版本化+审计），不当字符串散落**。
+- **错误捕获中央表**：每个风险步骤包 retries/timeouts/fallback branch；错误集中写表（payload/step/correlation ID）；通知正确渠道、暂停人工分诊、从最后 checkpoint 恢复——**错误表带 correlation ID，恢复从 checkpoint 不从头**（r295C 的增量：恢复点）。
+- **版本审批提升+失败阈值自动回滚**：版本经审批提升，失败率超阈值自动回滚——**发布有门，回滚自动**。
+- 提升层：工作流。触发词：提示库、版本化模板、prompt ID、中央错误表、correlation ID、checkpoint 恢复、失败阈值回滚。
+
+### 5. AI 自动化候选三特征判据：Make 选型面（来源：make.com/blog《What is AI automation?》+ academy-content.make.com MCP course 2026-05-21/2026-05-19 实拉，与 r295C AI Toolkit 合并增量）
+- **三特征判据**：运行频繁（≥10 次/周）+ 现在需人工读自由文本输入 + 输出结构化（下游系统可用）——**三者占二即候选**；占一别 AI 自动化，先修流程。
+- **Make 作 MCP client**：场景内连 CRM 的 MCP server（get_account/get_deals/get_contacts 工具），AI 模块自动决定调哪个工具——**低代码平台直接吃 MCP 工具面**（与 r295A Pipedream MCP 同向：MCP 成为平台标准接口）。
+- 提升层：工具。触发词：三特征、10 次/周、自由文本、结构化输出、MCP client、自动选工具。
+
+### 6. 公开 Webhook 必须入站认证：Pipedream Connect 安全面（来源：pipedream.com/docs/connect/workflows 2026-09-24 实拉，与 r295C 触发面合并增量）
+- **公开 webhook 不认证=任何人可触发**：为终端用户跑 workflow 时，HTTP webhook 最常用但**强烈推荐创建 Pipedream OAuth client 认证入站请求**——**"谁都能 POST"不是可接受的默认**。
+- 事件源（Slack/Gmail 等）是第二种触发方式，不暴露裸端点。
+- 提升层：工具。触发词：Connect、OAuth client、入站认证、公开 webhook、事件源、谁都能 POST。
+
+### 7. 先评测后构建与渐进披露：Agent Skills 生产面（来源：anthropic.com/engineering/equipping-agents + claude.com/blog/skills-explained + support.claude.com custom skills 2025-10-16/2026-03-05/2026-07-22 实拉，与 r295A 评测八层合并增量）
+- **先评测后构建**：在代表性任务上跑 agent，观察哪里挣扎/缺上下文 → **增量建技能补短板**，不预先堆技能——评测驱动建技能（与 r295A 评测八层互补：那个管评测方法，本条管"评测结果→建什么技能"）。
+- **SKILL.md 膨胀拆分**：拆成多文件引用；互斥或极少同时用的上下文**分开路径**（减 token）——结构随内容长，不一个文件扛到底。
+- **metadata 渐进披露**：会话开始只加载 name+description（~100 token）判断相关性，全量 body 触发才加载——**技能是延迟加载的，不是全量常驻**（上下文治理的直接实现）。
+- 提升层：可复用 Skill。触发词：先评测后构建、增量建技能、膨胀拆分、互斥路径、渐进披露、100 token、延迟加载。
+
+### 8. gh skill 官方命令与版本钉定：skills CLI 生态面（来源：github.blog/changelog 2026-04-16 + docs.localskills.sh/cli 2026-09-03 实拉，与 r295B/C skills CLI 合并增量）
+- **gh skill**：GitHub CLI 内置命令，发现/安装/管理/发布 agent skills——**官方 CLI 入场，技能安装进 git 主流程**。
+- **localskills npm 风格版本钉定**：`my-skill@1.2.3` 精确、`^1.2` 范围——**技能可钉版本，防更新破坏**（与 r295A Pin SHA 同族：钉版本是供应链卫生）。
+- 命令面：skills find/add/check/update + add-skill --list/--skill/--global——**查更新是独立命令（check），不是手动 diff**。
+- 提升层：可复用 Skill。触发词：gh skill、官方 CLI、localskills、@1.2.3、版本钉定、skills check、add-skill。
+
+### 9. 官方技能位置约定与 GitSkills 数据集：GitHub 生态面（来源：docs.github.com About agent skills + arxiv 2608.10906《Git Skills》2026-09-26/2026-07 实拉，与 r295B 生态盘点合并增量）
+- **技能位置约定**：项目级=.github/skills 或 .claude/skills 或 .agents/skills（随仓库走）；个人级=~/.copilot/skills 或 ~/.agents/skills（跨项目）——**"放哪里"已成规范，跟仓库走 vs 跟人走**。
+- **GitSkills 数据集**：2026-07 从 282,200 公开仓库抓 3,797,117 个 SKILL.md（去重 1,877,981 不同内容）——**技能数量已到百万级，值得做语料研究**。
+- 提升层：可复用 Skill。触发词：.github/skills、~/.copilot/skills、跟仓库走、跟人走、GitSkills、SKILL.md 数据集。
+
+### 10. RAG 自评提示三要素与中文分块口径：检索工程面（来源：arXiv 2412.12322《RAG Playground》+ CSDN《对话 Agent 全链路架构》2026-04-06/2026-08-24 实拉，与 r295C 分块策略合并增量）
+- **RAG 自评提示三要素**：①显式逐步推理格式 ②检索信息必需置信度评分 ③搜索结果质量结构化分析——混合检索+自评可达 72.7% pass rate；**自评提示是 RAG 的免费增益**。
+- **工具描述单条 ≤200 字**：简洁精准——**与"工具描述 token 税"（r296A n8n）配套的量纲**。
+- **中文分块口径**：通用文档 512 字符、技术文档 256 字符、重叠 10-20%——**中文按字符不按 token，技术文档减半**（r295C 800-token 是英文文档口径，两套并存）。
+- 提升层：工作流。触发词：自评提示、逐步推理、置信度评分、质量结构化、72.7%、≤200 字、512 字符、256 字符、重叠率。
