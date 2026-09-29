@@ -428,3 +428,12 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 判据：① **重试的最小单位必须显式钉在"单个请求"上**——写成"重试这个流程"会把已完成且有副作用的步骤重放一遍；复合流的正确形态是**只重试当前步、已完成步不重放**；② **"发出去但没收到应答"是第三态，不是失败也不是成功**：网络重置/超时/丢响应后重发，等于把一个可能已生效的写操作再做一次；正确处置是**先对账（reconciliation）再决定**，而不是无条件 replay——尤其写类操作（push/pull/发消息）；③ **内层的重试不能吃掉外层预算**：下层库自己重试 N 次再返回一个失败，外层看到的是"一次失败"，实际消耗远大于账目；两者必须分开计数，且外层要有**掐断内层长等待的手段**（如注入 `x-should-retry: false`），否则一个 60s+ 的 `Retry-After` 会让整条运行被单点拖死；④ **不该重试的错误不进重试预算**：鉴权失败、计费失败、提供方拒答重试一万次也不会变成功，正确路径是**直接落到降级/换身份/换模型**，把它们塞进瞬态预算只会延后真正的切换并耗尽额度；⑤ **故障窗口的清除条件要写成"有实际进展"**：一次成功的完整响应才清零，部分流/工具活动不清零——否则"看起来在动"会无限续命一个实际已故障的窗口。
 - 与已落 §幂等（会被重跑的东西必须幂等）分工：那条管"重跑后世界不变"的设计要求；本条管"**什么该被重跑、由哪一层计数、什么情况不许重跑**"。与 §判死前先回查真实执行状态 分工：那条管判死结论要先验证；本条管**已发出未确认的写操作如何处置**。
 - 提升层：工作流 / 工具。触发词：per request 重试、复合流不重放、歧义态、先对账再重放、内层重试独立计数、x-should-retry、不可重试类直落降级、故障窗口清除条件。
+
+
+## §r322C 恰好一次的成立前提：在途时间上界 + 崩溃-恢复重复计数（2026-09-30 r322C WB 独立实拉）
+
+### 1. 只靠「验证/对账」永远达不到恰好一次，必须另配在途时间上界
+- **实证**（独立 curl 实拉 `arxiv.org/abs/2609.29095`，200/44,254B）：「We prove that **no verification-only policy is exactly-once under late commits without a bound on in-flight time**. Waiting works when such a bound is short and known, but with heavy-tailed in-flight delays even an hour of waiting per episode falls short of offering an idempotency key on every write.」；量化——「the same frontier models duplicate in **56%** and **74%** of episodes, and the contract explains **81%**」（25,930 episodes / 9 models / 3 harnesses / LIMBO 六服务十二故障模式，含 late commits、redelivery、partial batches）。
+- **判据**：写「恰好一次」验收时，除已落的**结算标记 + 合并前钩子**外，还必须声明**在途时间上界**（多久之后可认定"不会再来了"）；上界未知或重尾时，"等一会儿"不是解法——**给每个写操作发幂等键**才是（键的存在性本身把重复率从 28% 降到 4% 这一 Qoder 转引数值本轮未独立复核，登记为待补）。
+- **配套**：崩溃-恢复场景要查**执行痕迹计数**而非看结果——「恢复跑成功 ≠ 只执行过一次」。
+- 提升层：工具。触发词：恰好一次、在途上界、late commit、重复率、崩溃恢复重复计数。

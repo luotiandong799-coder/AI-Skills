@@ -2541,3 +2541,36 @@ version: 3.61.0
 - 判据：① **发布的作用域是"新会话"，不是"所有会话"**——会话一旦选中就钉在该修订上，改技能不会回溯改写在跑的会话；因此"我改完了怎么不生效"的标准答案是**显式 refresh/重新挂载**，而不是怀疑没保存；② 修订要**整包不可变且含可执行位与便携路径**，但**排除共享/属主/时间戳/归档顺序**这些与内容无关的变量——哈希面必须是"内容"，否则同一内容因打包方式不同产生假新版本；③ 并发编辑要**冲突失败而不是后写覆盖**（陈旧编辑直接报冲突），否则两个会话各改一处会静默丢一半；④ **"从哪里加载"与"谁能看见"必须拆成两个控件**：混在一起时"换个目录放"会顺带改变可见性；子级列表**非空即整体替换**（不合并），避免"想收紧却继承了默认全集"；⑤ 任何白名单/放行面都要**显式写出它不是什么**——allowlist 管技能可见性，**不是宿主 shell 的授权边界**，把可见性当成权限会漏掉 exec 面；⑥ 豁免开关**必须有它绕不过的那一层**（`always` 绕得掉依赖与配置，绕不掉平台硬过滤）——能让一个开关绕开一切的设计等于没有边界。
 - 判非：Qoder r344-Q-A「Activepieces 草稿零传播/惰性继承」与本条①同向且 WB 已独立取证 → 以本条为准不重复落；「定价指令丢弃」「LangFlow 等待态原子接管」本轮 curl 未在 openclaw skills.md / langflow 页取到原文（Activepieces docs curl 000 不可达）→ 证据未达，不落。
 - 提升层：工具 / 可复用 Skill。触发词：immutable revision、会话钉死、stale edit conflict、发布只对新会话生效、location vs visibility、allowlist 非空整体替换、非授权边界、os 硬过滤、always 不可豁免、64 技能上限。
+
+
+## §下沉自 SKILL.md（豆包 r322B 技能平台配额与信任面 2026，内容原样保留，仅迁出正文控行）
+## 技能平台配额与信任面 2026：硬配额对照/技能健康五指标/分层评测/执行隔离/凭证边界（来源：platform.claude.com skills-guide×8/arxiv 2605.10990/agent-skill-bus/lobehub agent-self-improvement/iwoszapar evals-manual/skillscheck/spec-weave/code.claude.com permissions+sub-agents+permission-modes+settings-example+agent-sdk/learn.microsoft sre-agent/docker blog/developers.redhat ring model/google gke/telleroutlook agentkit/redhat+nvidia openshell，r322B，与 §技能评测闭合邻域/§技能库治理互补——那些条管"评测方法/治理流程"，本条管"平台配额/健康指标/执行隔离/凭证信任面"）
+- **平台硬配额与命名规范**：Claude API=每请求 max 20 skills；上传 max 30MB（全文件合计非压缩）；name max 64 字符（小写/数字/连字符 only、无 XML 标签、保留字 anthropic/claude 禁）；description max 1024 字符。**判据：写技能前先查目标平台配额与命名约束（各平台数字体系不同）**。
+- **技能漂移=契约违反（SKILLGUARD）**：技能随环境/模型变化悄悄失效是契约破坏；已知漂移验证 100% precision/76% recall，49 真实技能 86% conservative precision 发现 live drift；**违反契约使修复可操作（one-round success 10%→78%）**；DRIFTBENCH=880-pair 退化 benchmark。**判据：技能带可验证契约（输入/输出/行为声明）；定期跑漂移检测，修复按契约定位**。
+- **技能健康五指标与遥测**：all-time average（基线）/recent average（窗 7d）/trend direction（improving/stable/declining/broken）/consecutive failure count/flagged status；遥测六维=usage freq/exec time/error rate/trigger accuracy/user satisfaction（SQLite/JSON 日志），含 unused-skill detection+cross-skill dependency mapping；Tool choice accuracy 下降（Excellent→Moderate）=指令或 tool description 缺口。**判据：技能健康用"基线+窗口+趋势+连续失败+标记"量化，不只靠感觉**。
+- **分层评测与风险分层**：eval 分层= routing/deterministic contract/trajectory/final state/semantic quality/repeated-run reliability/cost/security——只用需要的层但绝不合成一个模糊分；P1 business critical（trigger precision+recall≥90%、behavior 无超声明边际回归、judge≥85%+分歧人审）vs P2 low risk（≥85%、contract 通过+effect 非负、advisory）；tool-call accuracy=首次即正确调用占比（失败调用加 retry turn 涨推理成本，新部署 67%→30 天技能积累 80%）。**判据：评测分层不合并；按风险等级设触发/行为/裁判门槛**。
+- **技能审计与 policy-as-code**：审计四工具=staleness report/audit（幻觉包+prompt injection+dangerous commands+dead URLs）/lint（metadata 完整性）/policy（.skill-policy.yml policy-as-code）+budget（token 测量）；skill allowlist=预批名单（名单外需安全 sign-off）+扫描进 CI（critical/high 阻断 merge）；**marketplace 优化 discovery+volume，registry 优化 trust boundaries（13% 漏洞率问题）**。**判据：装第三方技能走 allowlist+扫描+审计；信任规则 policy-as-code**。
+- **权限模式谱与分类器**：权限模式=default(manual)/acceptEdits/auto/dontAsk/bypassPermissions/plan；bypassPermissions 跳提示（含 .git/.claude 受保护路径）但 cross-session safeguards 仍生效；Manual=read-only 起步逐项批准；**subagent 分类器三检查点=spawn 前评估任务描述/运行中每动作同主会话规则（frontmatter permissionMode 被忽略）/完成复核——权限由父会话强制，子自声明无效**；maxTurns 达限返回 partial 可续。**判据：子 agent 权限不可自声明**。
+- **Hook 强制与沙箱兜底**：PreToolUse hook 先于每步且 bypassPermissions 也生效（唯一不被 bypass 的拦截层）；sandbox enabled+failIfUnavailable（建不起来拒绝启动）+allowUnsandboxedCommands=false+network.allowedDomains 限定（用户不可加域）；第三方技能能 auto-update 不经 re-review=每次更新都是新未审代码。**判据：hook 是 bypass 也生效的强制层；沙箱失败即拒跑；禁 auto-update 免审**。
+- **执行隔离四模型**：①reasoning 与 tool execution 分离计算边界（推理主 runtime，工具执行 micro VM）②每 agent 独立可销毁环境（能装包/跑服务但不达 host 或他 agent，出错毁掉重开——隔离不是权限）③内核级强制=seccomp/Landlock/netns per-binary/per-path/per-endpoint，策略在进程外（攻破也不能覆盖）→pod 安全标准/SELinux/NetworkPolicy ④gVisor 每容器 guest kernel 拦截 syscall（breach 不升级到节点）。**判据：工具执行与推理分边界；环境可销毁；策略内核级在进程外**。
+- **凭证网络边界注入与 egress**：credentials 永不进沙箱（proxy 在网络边界注入——攻破 agent 也无可窃取）；policy 可表达"agent 可达 api.github.com 但沙箱内其他进程不可"；allowedHosts 空=网络全关（不能 DNS/fetch/WebSocket）；**盲区=经 allowed hosts 外泄（偷的数据上传到允许读的同一 host）→限具体路径+governance egress monitoring**。**判据：凭证在边界注入不入沙箱；egress 白名单空=全关；allowed-host 外泄需监控**。
+- **基础设施监控≠agent 有效性监控**：CloudWatch 显示"系统执行正确"不显示"agent 是否帮用户达成目标"——"requests to the unintended specialist while infrastructure metrics stay green"；技能审计只读不修改，数据不足报 "N/A — insufficient session data"。**判据：绿的基建指标不证明 agent 有效；审计只读出报告**。
+
+
+## §r322C 并发写仲裁三件套与幂等契约四元组（2026-09-30 r322C WB 独立实拉）
+
+### 1. 并发写仲裁：陈旧写必须报冲突，相同保存必须是 no-op
+- **实证**（独立 curl 实拉 `docs.openclaw.ai/tools/skills.md`，200/39,705B）：「**Identical saves are no-ops.** A **stale edit fails with a conflict** instead of overwriting a newer revision. A **session retains its selected skill IDs and revisions**... Published changes are available to new sessions.」
+- **判据**：共享技能/配置的写入面要同时满足三条——① **陈旧写报冲突拒写**（禁 last-writer-wins 静默覆盖）；② **相同内容重复保存不产生新修订**（否则重放一次多一个版本，污染版本面与回滚点）；③ **运行中的会话钉死所选修订**（防同一次任务中途换版本）。反面实证：缺 ①② 时「同版本重复上传」行为无法定义。
+- 与 §修订整包不可变且只对新建会话生效（r321A）分工：那条管**修订发布后的生效范围**，本条管**写冲突与重复写的仲裁**。
+- 提升层：工具 / 工作流。触发词：陈旧写、冲突拒写、no-op 保存、会话钉修订、last-writer-wins。
+
+### 2. 幂等契约要写成四元组；占用时点在执行真正开始之后
+- **实证**（独立 curl 实拉 `docs.stripe.com/api/idempotent_requests`，200/1,336,845B）：「We save results only **after the execution of an endpoint begins**. If incoming parameters fail validation, or the request conflicts with another request that's executing concurrently, we don't save the idempotent result because no API endpoint initiates the execution. **You can retry these requests.**」；「Subsequent requests with the same key return the same result, **including 500** errors.」。
+- **外部约束**（独立 curl 实拉 `rfc-editor.org/rfc/rfc9110.txt`，200/502,941B §9.2.2）：「A proxy **MUST NOT** automatically retry non-idempotent requests. A client **SHOULD NOT** automatically retry a failed automatic retry.」
+- **判据**：凡声明「支持幂等」的技能/工具，规格里必须写四元组 `(键作用域, 占用时点, 失败是否回放, 保留期)`——本例占用时点=**执行开始后**（校验失败/并发冲突不消耗键 ⇒ 可安全重试），已结算后**失败响应也要原样回放**（否则调用方见错重试 ⇒ 二次执行）；中间层**不得**自动重试非幂等请求，**重试本身不得再被自动重试**。
+- 提升层：工作流。触发词：幂等键四元组、占用时点、失败回放、500 原样回放、代理不得自动重试。
+
+### 本轮判非（不落）
+- Kafka 持久身份+单调序号去重 / `FencedInstanceIdException`（Qoder r351-Q-B B2）：本轮独立 curl 取 `kafka.apache.org/43/design` 得 200/57,425B，但两处关键串 0 命中 ⇒ **WB 未独立复核，登记为待补证据**。
+- 重叠触发三域让路与四种处置选型（B5）、`PAUSED` 计入 finished（r353 A5）：本轮未独立实拉，登记为待补。
