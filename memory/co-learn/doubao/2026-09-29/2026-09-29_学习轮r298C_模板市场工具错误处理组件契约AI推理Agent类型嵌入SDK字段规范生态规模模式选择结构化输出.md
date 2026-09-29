@@ -1,0 +1,19 @@
+# r298C 学习轮（2026-09-29，十站实拉→十独点）
+
+判重基线：r284~r297 + r298A/B。查询词与 r298A/B 全错开（本轮=模板市场/工具错误处理/组件契约/AI推理引擎/Agent类型/嵌入SDK/字段规范/生态规模/模式选择/结构化输出主题）。
+
+## 十站实拉 → 十独点
+| # | 站 | 独点 | 判重 | 提升层 |
+|---|---|---|---|---|
+| 1 | Dify | Marketplace 插件八类可过滤（Models/Tools/Data Sources/Triggers/Agent Strategies/Extensions/Bundles）；Creator Center+Template Marketplace（2026-03-10 创作者发模板一键采用+Affiliate 赚佣金）；团队复用已审批插件跨应用免重复配置；Snippets 节点组跨工作流复用；workflow DSL 导入导出 | 独立落地（未落过 Dify Marketplace） | 工具 |
+| 2 | n8n | 工具错误=致命停止 vs 工具响应（工具节点 On Error→Continue (Using Error Output)，agent 收到错误作为工具响应自愈）；最高影响修复=工具描述互斥 Use when 条款防自调用无限循环；agent 只决策不直接调 HTTP（数据传普通 HTTP 节点+continue on fail+IF 检查）；Execution Data 节点附加可搜索元数据；AI 错误工作流（Error Trigger→LLM 分析根因/方案/影响/紧急度） | 合并保留增量（r298A #10 条件工具执行+§try/except，本点=On Error 输出模式+Use when 互斥+决策执行分离） | 工作流 |
+| 3 | Langflow | 组件=Component 类对象；BUNDLE_API.md=组件可用面契约（契约外可能破坏）；POST /v1/custom_component+/v1/validate/code API 构建校验；LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false 阻断任意代码执行+COMPONENTS_PATH 白名单；目录治理优先于 custom-code 设置无 superuser 绕过；Langflow Assistant 自然语言生成组件；CodeAct Agent（smolagents 沙箱执行） | 独立落地（组件开发契约+安全开关面） | 工具 |
+| 4 | Activepieces | AI 动作集（ask/analyze/explain/draft/decide+Summarize+Categorize 自定义标签分流+Extract Structured Data 提取名称/金额）；AI-Ready Pieces（ap_search_actions 按任务搜工具非名字+AI metadata）；MCP 暴露 workflows 为可调用工具；agent 知道何时暂停（draft→查规则→等审→再发送）；Custom Tools TypeScript createAction | 合并保留增量（r298B #4 AI 两步模式，本点=AI 动作粒度+tool search+MCP 暴露） | 工作流 |
+| 5 | Make | 四 agent 类型（Conversational 问答检索/Synthesizer 多源结构化摘要/Routing 动态选工作流条件树不可管时/Qualifier 按标准评估决策）；Make 插件 for ChatGPT（对话中构建/运行/搜索/审查自动化）；客户体验 agent 模式（取询问→搜知识库→判断上下文→直接答或升级人工带完整研究路径）；Build by prompt/drag-drop/MCP 三方式 | 合并保留增量（r297C #4 四 agent 类型，本点=ChatGPT 插件构建+升级人工带研究路径） | 工作流 |
+| 6 | Pipedream | Pipedream Connect=嵌入式（app 开发者把 Pipedream 集成目录嵌进自家产品/agent；managed auth+approved client IDs+durable components）；Conduit 网关（员工安全连接 app 到 AI agents，SSO+访问策略）；托管 MCP servers 10,000+ 工具跨 3,000+ API；任意步骤 Node/Python/Go/Bash 混编 npm install SDK | 合并保留增量（r297A #6 远程 MCP 免自托管，本点=Connect 嵌入式+Conduit 员工网关） | 工具 |
+| 7 | Anthropic | SKILL.md 字段硬规则：name kebab-case 仅小写字母数字连字符≤64 字符禁 XML 标签禁保留词 anthropic/claude 应与目录名一致；description 必含做什么+何时用（触发条件）≤1024 字符无 XML 含用户可能说的具体任务提及文件类型；目录=SKILL.md 必须+scripts/references/assets 可选；内置技能短名（pptx/xlsx）vs 自定义 skill_01abc ID；skill-lint npm 抓缺字段/畸形工具定义/未声明依赖 | 合并保留增量（r297A #7 frontmatter 保留词+r298A #7 目录结构，本点=字段长度上限+触发条件+ID 形态+skill-lint） | 可复用 Skill |
+| 8 | skills.sh | 1 百万技能里程碑（7 个月达 1M+2.8 亿 installs，GitHub 花 27 个月达 100 万）；顶流 find-skills 2.0M/frontend-design 531.8K 头部效应；AI Tool 类 232,115 技能最丰富；发布链=skill-lint→GitHub repo→tag releases→Skills.sh+Claude Skills Registry→镜像 HF；竞品目录分策展（SkillHub AI 评估/Agensi 8 点扫描）vs 无策展（SkillsMP 190 万 scraped） | 合并保留增量（r297A #8 遥测+r298A #8 四大市场，本点=规模里程碑+发布链完整步骤） | 工具 |
+| 9 | GitHub | Copilot Agent picker 四模式（Agent 默认全自主/Ask 快速问答/Custom 个性化/Plan 先计划后实现）；Agents panel 模型选择器（简单任务快模型/复杂重构强模型/默认自动）；插件捆绑四件套（/plugin install owner/repo，插件可捆 MCP servers+agents+skills+hooks）；自定义 agent %USERPROFILE%/.github/agents/ 用户级随身；技能发现多目录（.claude/skills/+.agents/skills/）；Ask Questions 工具（agent 可问澄清单选/多选/自由文本/推荐答案）；Plan agent 四阶段 Discovery→Alignment→Design→Refinement | 合并保留增量（r297C #9 Copilot+r298A #9 Agent Plugins，本点=模式选择器/模型选择器/插件捆绑/Ask Questions） | 工具 |
+| 10 | deeplearning | 结构化输出四路径：Structured Outputs API（原生 schema 约束保证合法 JSON）+Retry-based（重试到合法）+Outlines（第三方）+Beyond JSON（结构化生成超越 JSON）；结构化输出 vs 函数调用（单请求保证 schema 快省/不能 opt out/可能幻觉填空 vs 条件逻辑多步推理灵活）；并行+嵌套函数调用；OpenAPI spec 构建访问 web 服务的函数调用；NexusRavenV2 开源函数调用模型 | 合并保留增量（r298A #10 并行全解析，本点=结构化输出四路径+嵌套调用+OpenAPI 构建） | 工作流 |
+
+判重口径：增量判定。10 独点=2 独立+8 合并保留增量，零纯重复。

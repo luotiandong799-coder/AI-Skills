@@ -12182,3 +12182,87 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **高级检索两法**：sentence-window retrieval（句子窗口检索：检索句子+带邻居窗口）+ auto-merging retrieval（自动合并：先小块后合并大块）——"基线之上两种成熟高级检索"。
 - **内联评估**（data agents）：agent 运行中自评目标/计划/行动对齐度，运行时调整计划；最终答案质量与计划执行分别测——"评估不只在事后，运行时内联调计划"。
 - 提升层：工作流。触发词：RAG Triad、Context Relevance、Groundedness、Answer Relevance、sentence-window、auto-merging、内联评估、运行时调计划。
+## r298C 十独点（2026-09-29 实拉）
+
+### 1. Marketplace 八类插件与 Creator Center：Dify 生态面（来源：marketplace.dify.ai + dify.ai/blog/dify-creator-center-template-marketplace-share-your-workflows + agenticindex.io/vendors/dify 2026-03-10/2026-09-17/2026-09-26 实拉，独立落地——未落过 Dify Marketplace）
+- **插件八类可过滤**：Models/Tools/Data Sources/Triggers/Agent Strategies/Extensions/Bundles——"按类型浏览插件市场，不靠关键词碰运气"。
+- **Creator Center+Template Marketplace**（2026-03-10 上线）：创作者发布 workflow 模板，用户一键采用；Affiliate Program 赚订阅佣金——"模板发布可变现，生态自增长"。
+- **团队复用已审批插件**：跨应用复用已审批插件，无需逐项目重复配置——"审批一次，全程复用"。
+- **Snippets 节点组复用**：一组节点可跨工作流共享复用——"节点片段=工作流乐高块"。
+- **workflow DSL 导入导出**：模板即 DSL 文件可交换——"模板=DSL 文件，可移植"。
+- 提升层：工具。触发词：Marketplace 八类、Creator Center、Template Marketplace、一键采用、已审批插件复用、Snippets 节点组、DSL 导入导出。
+
+### 2. 工具错误转响应与互斥描述：n8n AI agent 错误处理面（来源：blog.n8n.io/llm-tool-calling-error-handling + community.n8n.io/t/297687 + aiworkflowlab.dev/article/n8n-ai-agent-infinite-loop-fix + n8n.io/workflows/10066 2026-03-02/2026-05-31/2026-06-01/2026-07-03 实拉，与 r298A #10 条件工具执行+§工具函数 try/except 合并增量——那条管调用前校验，本条管工具出错后怎么交回）
+- **工具错误=致命停止 vs 工具响应**：AI Agent 把工具 400/500 当致命停止；工具节点设置 On Error→Continue (Using Error Output)——agent 把错误当工具响应读、尝试换法自愈，而不是整个 workflow 死掉——"错误改道进输出通道，agent 自愈"。
+- **最高影响修复=互斥 Use when 描述**：每个工具描述以 "Use when..." 开头且彼此互斥，防止重叠工具自调用无限循环——"描述互斥=防 agent 无限循环最高杠杆修复"。
+- **agent 只决策不直接调 HTTP**：别让 agent 直接调 HTTP 工具；agent 只决定做什么，数据传给普通 HTTP Request 节点+continue on fail+IF 节点检查——"决策与执行分离，错误路径在正常节点层处理"。
+- **执行打标签可过滤**：Execution Data 节点附加可搜索元数据（user IDs/entry points/outcomes/session）——"执行级元数据=事后按字段过滤排障"。
+- **AI 错误工作流**：Error Trigger→LLM 深度分析错误根因/解决方案/影响/紧急度，格式化后通知——"错误分诊也交给 AI，不裸抛堆栈"。
+- 提升层：工作流。触发词：On Error Continue、Using Error Output、工具错误转响应、Use when 互斥、防无限循环、决策执行分离、Execution Data 标记、AI 错误工作流。
+
+### 3. 组件契约与代码执行开关：Langflow 自定义组件安全面（来源：docs.langflow.org/components-custom-components + extensions-quickstart + deployment-block-custom-components + langflow.org/blog/langflow-1-9 2026-04-13/2026-09-03/2026-09-15/2026-09-17 实拉，独立落地——组件开发契约与安全开关面）
+- **BUNDLE_API.md 契约**：bundle=可装 pip 包；bundle 代码可用面全列在 BUNDLE_API.md，**契约外不是 API 可能随版本破坏**——"扩展面显式文档化，契约外不许碰"。
+- **组件=Component 类对象**：继承 Component 类、覆写基类方法，`self.log()` 记录——"组件开发有固定类骨架"。
+- **API 构建校验端点**：POST /v1/custom_component（代码建节点）+ /v1/custom_component/update + /v1/validate/code（校验 Python 片段）——"组件代码可编程化构建与校验"。
+- **任意代码执行默认要策略**：LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false 阻断自定义组件（防任意代码执行）；配合 LANGFLOW_COMPONENTS_PATH 白名单——"自定义组件=代码执行，受控部署默认关"。
+- **目录治理优先**：Catalog governance 覆盖 custom-code 设置，无 superuser 绕过——"治理策略优先于个体设置，管理员也绕不过"。
+- **Langflow Assistant 生成组件**：自然语言描述→生成组件代码（含 docstring+typed methods+错误处理）——"AI 写组件骨架"。
+- **CodeAct Agent**：smolagents CodeAgent 迭代写代码→沙箱解释器执行→用输出决定下一步——"代码执行 agent 沙箱化"。
+- 提升层：工具。触发词：BUNDLE_API.md 契约、bundle pip 包、/v1/validate/code、ALLOW_CUSTOM_COMPONENTS=false、COMPONENTS_PATH 白名单、目录治理优先、Langflow Assistant 生成组件、CodeAct Agent。
+
+### 4. AI 动作集与按任务搜工具：Activepieces AI 面（来源：activepieces.com/pieces/ai + /mcp/ai + /product/ai-agent-builder + /docs/about/changelog 2026-09-01/2026-09-03/2026-09-25 实拉，与 r298B #4 AI 两步模式合并增量——那条管人审流程，本条管 AI 动作粒度与工具发现）
+- **AI 动作集**：ask/analyze/explain/draft/decide（8 字段）+Summarize Text+Categorize Text（自定义标签让流程知道下一步）+Extract Structured Data（从邮件/发票/扫描件拉名称/金额）——"结构化提取=AI 动作，不只聊天"。
+- **AI-Ready Pieces 按任务搜工具**：ap_search_actions 按任务描述搜 action 而非按名字；AI metadata+audience 让 agent 找到并检查 schema 后运行——"目录为 AI 设计：按任务找工具"。
+- **MCP 暴露 workflows 为工具**：Model Context Protocol 把 workflows 暴露成可调用工具——"工作流=agent 可调工具"。
+- **agent 知道何时暂停**：draft 响应→查规则→等人工审→再发送——"agent 不盲动，敏感动作等人"。
+- **Custom Tools TypeScript**：createAction 自定义集成——"TS 定义自定义工具"。
+- 提升层：工作流。触发词：AI 动作集、Extract Structured Data、Categorize 标签分流、ap_search_actions、按任务搜工具、MCP 暴露工作流、agent 暂停等人审、createAction。
+
+### 5. 四 agent 类型与升级人工带证据：Make agent 面（来源：make.com/en/blog/make-ai-agents-trust-through-transparency + /blog/make-plugin-chatgpt + /solutions/automate-customer-experience + /blog/ai-marketing-agents 2026-02-11/2026-09-16/2026-09-24/2026-09-25 实拉，与 r297C #4 四 agent 类型合并增量——那条管类型清单，本条管构建方式与升级路径）
+- **四 agent 类型**（Trust through transparency）：Conversational（问答/检索知识/格式化响应，客服/帮助台）+Synthesizer（多源拉取结构化摘要，研究/竞品分析）+Routing（分析输入动态选工作流，条件树不可管理时用）+Qualifier（按标准评估输入做决定）——"四类型按任务性质选，不是一刀切"。
+- **Make 插件 for ChatGPT**：ChatGPT 对话中描述结果（每周状态报告/AI agent 草拟回复）→Make 创建并连接所需 app+按 schedule/trigger 运行——"聊天内建自动化，跑在 Make 云上不依赖 ChatGPT 开着"。
+- **客户体验 agent 模式**：取询问→搜知识库→判断是否够上下文→直接答或升级人工**带完整研究路径**；每次解决路径可记录可审计——"上下文不足=升级人工并附证据链"。
+- **Build by prompt/drag-drop/MCP 三方式**：提示词/拖拽/MCP 三种构建入口——"构建入口按人习惯选"。
+- 提升层：工作流。触发词：Conversational/Synthesizer/Routing/Qualifier、Make 插件 ChatGPT、聊天建自动化、升级人工带研究路径、上下文不足升级、Build by prompt。
+
+### 6. Connect 嵌入式与 Conduit 网关：Pipedream 平台面（来源：pipedream.com/docs/changelog + pipedream.com + aiworkflowlab.dev/article/zapier-vs-make-vs-n8n-vs-pipedream-2026 2026-08-04/2026-09-12/2026-09-22 实拉，与 r297A #6 远程 MCP 免自托管合并增量——那条管 MCP 供给，本条管嵌入与网关形态）
+- **Pipedream Connect 嵌入式**：app 开发者把 Pipedream 核心功能嵌进自家产品/agent；managed authentication+approved client IDs+durable components——"集成目录可嵌入，一套 SDK 管几千 API"。
+- **Conduit 网关**：员工安全连接 app 到 AI agents（SSO+访问策略）——"员工↔agent 连接加网关层"。
+- **托管 MCP servers**：10,000+ 工具跨 3,000+ API，Zapier MCP 面直接竞争者——"托管 MCP 工具面=平台竞争核心"。
+- **任意步骤可代码**：Node/Python/Go/Bash 混编，"add Claude"=npm install SDK——"代码灵活=与低代码平台的核心差异"。
+- 提升层：工具。触发词：Pipedream Connect、嵌入自家产品、managed auth、Conduit 网关、SSO 访问策略、托管 MCP 1 万工具、任意步骤代码。
+
+### 7. 字段硬规则与 skill-lint：SKILL.md 规范面（来源：console.anthropic.com/docs/en/agents-and-tools/agent-skills/best-practices + resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf + mr.technology/payloads/agent-skills-marketplace-2026 2026-03-12/2026-07-03/2026-07-22 实拉，与 r297A #7 frontmatter 保留词+r298A #7 目录结构合并增量——那条管保留词与目录，本条管字段上限与 lint）
+- **name 硬规则**：kebab-case 仅小写字母数字连字符；≤64 字符；无 XML 标签；禁保留词 anthropic/claude；应与目录名一致——"命名=机器可解析契约"。
+- **description 硬规则**：必含"做什么+何时用（触发条件）"两要素；≤1024 字符；无 XML 标签；含用户可能说的具体任务；提及相关文件类型——"触发条件必须写进 description，这是激活判据"。
+- **目录三选件**：SKILL.md 必须，scripts/（可执行代码）+references/（按需读文档）+assets/（模板）可选——"最小=单文件，扩展按需加目录"。
+- **ID 两形态**：内置技能用短名（pptx/xlsx/docx/pdf）；自定义生成 skill_01abc 形态 ID——"内置短名 vs 自定义 ID 形态不同"。
+- **skill-lint 防漂移**：npm 可装开源 linter 抓缺字段/畸形工具定义/未声明依赖/不安全 handler——"发布前 lint，格式问题机检"。
+- **标准跨 30+ 平台**：Agent Skills 开放标准被 OpenAI Codex/Gemini CLI/Cursor/GitHub Copilot 采用——"同一 SKILL.md 跨平台可装"。
+- 提升层：可复用 Skill。触发词：kebab-case 64 字符、保留词 anthropic/claude、description 触发条件 1024、目录三选件、skill_ ID、skill-lint、30 平台采用。
+
+### 8. 1M 技能里程碑与发布链：skills.sh 生态面（来源：aicrier.com/post/0vuxy9z1brw4o8efuvu3 + ecosistemastartup.com + getknack.ai/blog/where-to-publish-skill-md + agentman.ai/blog/agent-skills-ecosystem-report-2026 2026-05-21/2026-06-25/2026-09-25 实拉，与 r297A #8 遥测+r298A #8 四大市场合并增量——那条管市场清单，本条管规模与发布步骤）
+- **1M 技能里程碑**：7 个月达 100 万技能+约 2.8 亿 installs；GitHub 花 27 个月才到 100 万仓库——"技能生态增速史无前例"。
+- **顶流头部效应**：find-skills 2.0M installs；Anthropic frontend-design 531.8K——"头部技能垄断安装量"。
+- **AI Tool 类最丰**：232,115 技能为最大类别——"工具类=技能最大品类"。
+- **完整发布链**：skill-lint→推 GitHub repo→tag releases→发布 Skills.sh+Claude Skills Registry→开源镜像 Hugging Face——"多市场发布链，一步不缺"。
+- **目录分策展模型**：SkillHub 7,000+ AI 评估/Agensi 8 点安全扫描/ClaudeSkills.info 社区审查 vs SkillsMP ~190 万 scraped 无审查——"策展 vs 无策展目录，装前自己看"。
+- 提升层：工具。触发词：1M 技能 7 个月、2.8 亿安装、find-skills 2.0M、AI Tool 232K、发布链 skill-lint→tag→双注册→镜像、策展 vs scraped。
+
+### 9. Agent picker 四模式与插件捆绑：Copilot 编排面（来源：github.blog/changelog/2026-06-02 + /2026-04-29 + /ai-and-ml/github-copilot/whats-new-with-github-copilot-coding-agent + marketplace.visualstudio.com/items/GitHub.copilot-chat/changelog 2026-02-26/2026-04-29/2026-06-02/2026-08-13 实拉，与 r297C #9 Copilot+r298A #9 Agent Plugins 合并增量——那条管运行时与插件规范，本条管模式选择与模型选择）
+- **Agent picker 四模式**：Agent 模式（默认全自主执行）/Ask 模式（快速问答）/Custom agents（个性化）/Plan 模式（先建结构化实施计划供审再实现）——"四模式按任务选，计划与执行解耦"。
+- **Agents panel 模型选择器**：简单任务（加单测）用快模型；复杂重构/带边界集成测试升级强模型；默认自动——"按任务难度选模型，不是全流程一个模型"。
+- **插件捆绑四件套**：/plugin install owner/repo；插件可捆 MCP servers+agents+skills+hooks——"插件=四件套捆绑包，装一次全上"。
+- **自定义 agent 用户级随身**：%USERPROFILE%/.github/agents/ 用户级定义跨项目——"个人 agent 跨项目携带"。
+- **技能发现多目录**：.claude/skills/ + .agents/skills/ + 既有目录——"技能发现多目录兼容"。
+- **Ask Questions 澄清工具**：agent 可问澄清问题（单选/多选/自由文本/推荐答案高亮）——"agent 不确定就问，带推荐答案降成本"。
+- **Plan agent 四阶段**：Discovery→Alignment→Design→Refinement（/plan 斜杠命令）——"结构化计划工作流可调用"。
+- 提升层：工具。触发词：Agent picker 四模式、Plan 模式、模型选择器、按难度选模型、插件捆绑四件套、.github/agents、Ask Questions 澄清、Plan 四阶段。
+
+### 10. 结构化输出四路径与嵌套函数调用：deeplearning 输出面（来源：learn.deeplearning.ai/courses/getting-structured-llm-output + corporate.deeplearning.ai/courses/function-calling-and-data-extraction-with-llms + classcentral.com/course/coursera-function-calling-and-data-extraction-with-llms-298010 + theneuralbase.com/function-calling 2026-04-22/2026-04-29/2026-09-17 实拉，与 r298A #10 并行全解析合并增量——那条管工具调用循环，本条管结构化输出路径与嵌套）
+- **结构化输出四路径**：Structured Outputs API（原生 schema 约束，保证合法 JSON）+Retry-based（重试直到合法）+Outlines（第三方结构化生成）+Beyond JSON（结构化生成超越 JSON 格式）——"四路径按约束强度与依赖选"。
+- **结构化输出 vs 函数调用**：Structured Outputs=单请求保证 schema、更快更省、不能 opt out、模型可能幻觉填空；function calling=条件逻辑/多步推理灵活——"ETL 用结构化输出，多步决策用函数调用"。
+- **并行+嵌套函数调用**：LLM 一次计划执行多个函数调用（并行+嵌套）——"复杂 agent 工作流=调用图不是线性链"。
+- **OpenAPI spec 驱动**：用 OpenAPI 规范构建访问 web 服务的函数调用——"API 文档直接转函数定义"。
+- **开源函数调用模型**：NexusRavenV2 专用开源函数调用模型——"函数调用有专用开源模型可选"。
+- 提升层：工作流。触发词：结构化输出四路径、Retry-based、Outlines、Beyond JSON、保证合法 schema、不能 opt out、嵌套函数调用、OpenAPI spec 转函数、NexusRavenV2。
