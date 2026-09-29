@@ -11778,3 +11778,65 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **LLM-as-a-Judge vs code-based 选择**：code-based 确定性高，LLM judge 灵活但要看标准定义——**评测器选择本身是决策点**（r295A 评测八层的补充：那个管测什么，本条管用什么测）。
 - **视频生成评测三方法**：SigLIP 图像-文本相似度（程序化数值可行动）+ LLM judge（自定义标准，抓定性错配）+ 结构化 rubric——**生成类产物评测要数值+语义+规则三管齐下**。
 - 提升层：工作流。触发词：observability、组件评测、code-based、LLM-as-a-Judge、实验化迭代、GPA 量纲、SigLIP、结构化 rubric。
+## r296C 十独点（2026-09-29 实拉）
+
+### 1. Parent-child 层级分块与子块改写：Dify RAG 工程面（来源：dify-6c0370d8.mintlify.site knowledge-pipeline-orchestration + maintain-knowledge-documents + runoob.com/dify 2026-06-05/2026-06-10/2026-07-02 实拉，与 r295C 知识库不重摄取/r296A 中文分块合并增量）
+- **Parent-child 双层层级**：父块保丰富上下文、子块做精确匹配——**"检索命中子块、回答用父块"解决长文档的匹配粒度与上下文完整矛盾**（与 r296A"分块 512/256+重叠 10-20%"互补：那个管单层参数，本条管双层结构）。
+- **子块改写桥接查询缺口**：把子块改写成关键词/摘要/用户常见问题形态（LED 状态指示灯例：blinking light/won't turn on/red light）——**"用户会怎么问"决定子块怎么写，不是原文抄**。
+- **分块参数按文档类型**：技术密集 800 token+150 重叠；中文 500 token、重叠 50-100（10-20%）——**先定文档类型再定参数，不套一个默认值**。
+- 提升层：工作流。触发词：Parent-child、子块改写、bridging query gap、双层分块、技术密集 800/150、中文 500。
+
+### 2. 子代理即工具与草稿纸模式：n8n 子代理编排面（来源：n8n.io/workflows 7158 manager-agent + 11580 customer-support + 7066 thinking-space + blog.n8n.io Production Playbook 2026-02-26~2026-06-09 实拉，与 r295A 多智能体异构工具链合并增量）
+- **子代理即工具**：AI Agent Tool 把第二个 agent 配置成工具，编排 agent 决定何时调用——**"子代理是工具的一种"，不是独立运行的兄弟进程**（r295A 管"拆不拆"，本条管"拆了怎么接"）。
+- **模板陷阱：子代理必须拆独立 workflow**：Main Orchestrator+Sub-Agents 放同一视图不工作——拆成独立 workflow，再在编排里更新 Workflow ID 指向新 workflow——**"子代理=独立 workflow+显式 ID 引用"是配置铁律**。
+- **Thinking Space 草稿纸**：可复用"收文本"子 workflow 当 scratchpad，主 workflow 用 Tool(Workflow) node 多次调用并命名（Initial thoughts/Revised/...）——**多步推理工具化：把"想一下"变成可命名、可复用、可审计的工具**。
+- 提升层：工作流。触发词：子代理即工具、AI Agent Tool、拆独立 workflow、Workflow ID、Thinking Space、草稿纸、scratchpad。
+
+### 3. 三类记忆形态判据：LangFlow 记忆面（来源：docs.langflow.org/memory-bases + langflow.org/blog/langflow-1-10 + explainx.ai 2026-09-08/2026-06-09/2026-06-26 实拉，与 r296A Assistant/r295C 知识库合并增量）
+- **三类记忆三选一**：Message History（按时间倒序取最近，会话内）/ Memory Base（1.10+ per-flow 向量存储，自动摄取对话消息，**跨会话语义检索**）/ Knowledge Base（手动填充知识）——**先问"要时间线还是要语义还是要知识"，再选组件，不默认全上**。
+- **跨会话连续性判据**：用户期望"remember what we discussed last week"→ Memory Base；仅当前会话内→ chat memory buffer——**记忆形态由用户期望的跨会话性决定**（与 §上下文预算互补：那个管窗口内，本条管跨会话）。
+- **Agent 组件内置 chat memory 默认开启**（按 session ID，可配消息数）——**先确认内置够不够，再上外部队列**。
+- 提升层：工具。触发词：Memory Base、Message History、Knowledge Base、三类记忆、跨会话语义检索、session ID、chat memory buffer。
+
+### 4. 目录为 AI 改造：Activepieces AI-ready 面（来源：activepieces.com/pieces + changelog AI-Ready Pieces + mcp 2026-09-28/2026-09-03 实拉，与 r296B 规模模型合并增量）
+- **763 pieces/5736 actions 全免费**（含 free cloud 与 self-hosted）——**集成能力是默认项不是付费项**。
+- **Tool Search 按任务找 action**：ap_search_actions 用任务描述定位动作，agent 通过 MCP 能"描述任务→找 action→看 schema→执行"——**目录按人设计是按名字找，按 agent 设计是按任务找**（与 r295B MCP 选型互补：那个管装不装，本条管目录怎么被 AI 消费）。
+- **单 URL MCP server 暴露全部已连接 pieces**：不用每 app 一个 server——**"一个连接面+760 工具"降低 agent 配置成本**。
+- 提升层：工具。触发词：763 pieces、Tool Search、ap_search_actions、AI metadata、单 URL MCP、按任务找 action。
+
+### 5. 模块工具化与输出过滤：Make AI 面（来源：help.make.com introducing-module-tools-for-ai-agents + 2026 changelog sub-agents + apps.make.com ai-tools 2026-01-19/2026-07-27/2026-09-25 实拉，与 r295C AI Toolkit 合并增量）
+- **AI Toolkit 9 预置模块免写 prompt**：sentiment/categorize/extract/summarize/translate/identify language/standardize/chunk/request anything——**常见 AI 任务先查预置模块，不每次写 prompt 或建第三方 AI 账户**。
+- **模块工具化**：单模块可直接作 agent 工具（以前必须建 scenario 手动配输入输出）——**"一个模块一个工具"消除包装层，agent 拿到的粒度更细**。
+- **sub-agents as tools+工具输出过滤**（2026-07-27）——**子代理可作工具 + 输出可过滤**（与 r296C n8n 子代理即工具同族：两平台同趋势）。
+- 提升层：工具。触发词：AI Toolkit、9 模块、模块工具化、单模块作工具、sub-agents as tools、工具输出过滤。
+
+### 6. 一工作流多触发器与 respond/emit 分离：Pipedream 触发器面（来源：pipedream.com/docs/workflows + sources + components/contributing/sources-quickstart 2026-09-23/2026-02-26/2026-07-30 实拉，与 r295C $.send.http/r296B 组件 API 合并增量）
+- **一工作流多触发器**：不同事件（HTTP+定时+app 事件）都能触发同一 workflow——**"同一套处理逻辑接多个入口"不必复制 workflow**。
+- **custom domains**：端点可托管在 endpoint.yourdomain.com——**webhook 端点可以挂自己域名**。
+- **respond/emit 职责分离**：this.http.respond() 快速回 webhook（验证/握手用）vs this.$emit() 发事件（进 workflow），state 用 this.db.get/set——**"回给调用方"与"喂给下游"是两个动作，分开写**（与 r296B 组件 hooks 互补：那个管生命周期，本条管响应路径）。
+- 提升层：工作流。触发词：多触发器、distinct events、custom domains、http.respond、$emit、db.get/set、响应与事件分离。
+
+### 7. SKILL.md 是编排者不是百科全书：技能架构判据（来源：github.com/allonsy-studio/agent-skills/docs/skill-architecture + console.anthropic.com best-practices + resources.anthropic.com Complete Guide 2026-07-18/2026-03-12 实拉，与 r295C frontmatter/r296B 四层结构合并增量）
+- **正文 <500 行且是"编排者"**：SKILL.md 指方向不装百科，深度进 references/（一级深，>100 行带目录）——**"这个技能是什么结构"与"全部细节"分层，正文只留结构**（与 r296B 四层结构互补：那个管由浅入深，本条管<500 行红线）。
+- **确定性操作打包成脚本**：能脚本化的（表单填写/验证）进 scripts/ 执行，不让模型重新推导——**"能确定性算的别让模型想"**（与 r295A"重复工作流先手动 3-5 次再编码"互补：那个管何时编码，本条管编码什么）。
+- **目录骨架**：SKILL.md（必）+ scripts/（可执行代码）+ references/（按需加载文档）+ assets/（模板）——**四目录是默认形态**。
+- 提升层：可复用 Skill。触发词：编排者、非百科全书、500 行、references 一级深、确定性脚本化、四目录骨架。
+
+### 8. skills CLI 四命令与精确安装：技能分发工具面（来源：vercel-labs/skills README + skills.sh/docs/cli + npmjs.com skillsmgr 2026-09-20/2026-03-28/2026-09-02 实拉，与 r296A gh skill+版本钉定合并增量）
+- **四命令集**：npx skills find（搜索，可 --owner 限定）/ add（安装）/ update（更新全部已装）/ init（当前目录建 SKILL.md 或新子目录）——**"搜-装-更-建"闭环都在 CLI，不靠网页**（与 r296A localskills 版本钉定互补：那个管钉版本，本条管命令面）。
+- **--skill 精确安装**：`npx skills add nvidia/skills --skill cuopt-numerical-optimization-api`——**一个仓库多技能时用 --skill 挑单个，不整包装**（与 r295A"五窄技能"同族：技能粒度越小越可组合）。
+- **packs 未列出集合**：一条命令装一组（不要求登录，只需 pack URL）；.zip/.skill 包也能装——**分发形态：仓库/pack/压缩包三通道**。
+- 提升层：工具。触发词：npx skills find/add/update/init、--skill 精确安装、packs、.zip、.skill 包。
+
+### 9. instructions/skills/agents 三阶：Copilot 定制层次（来源：awesome-copilot.github.com building-custom-agents + code.visualstudio.com agent-skills 2026-09-27/2026-05-28 实拉，与 r296A 官方位置约定合并增量）
+- **三阶区分**：instructions（被动应用）< skills（处理单个任务）< agents（**完整工作风格**：定义 Copilot 怎么想、拿什么工具、怎么交流整个会话）——**先判断要"改行为"还是"加技能"还是"换人格"，再选载体**（与 r295A Copilot 专用 agents 互补：那个管已存在的 agents，本条管三阶怎么选）。
+- **name 必须匹配父目录名**：非法字符（slash/colon/dot/namespace 前缀）导致**静默加载失败**——**"名字不合规=技能静默不存在"最坑，因为不报错**（r295C frontmatter 硬约束的 Copilot 版实例）。
+- **license 可选字段**（描述适用许可）——**发布侧要带许可**。
+- 提升层：可复用 Skill。触发词：instructions/skills/agents 三阶、完整工作风格、name 匹配父目录、静默失败、license。
+
+### 10. 两阶段检索与高级 RAG：deeplearning RAG 课程面（来源：corporate.deeplearning.ai RAG 课程 + staging.deeplearning.ai Module 4/5 + learn.deeplearning.ai Building and Evaluating Advanced RAG 2026-04-26/2026-02-28/2026-07-11 实拉，与 r295C ColBERT/r296A 中文分块合并增量）
+- **两阶段检索**：ANN 粗召回（向量库近似最近邻）+ reranking 精排（cross-encoder/ColBERT）——**粗召回保覆盖率、精排提精度，两步分开做**（r295C ColPali 的检索管线化实例）。
+- **高级 RAG 方法**：sentence-window（按句窗取上下文）与 auto-merging（自动合并相关块）超 baseline——**先有 baseline 再谈高级法，方法选择要能对比**。
+- **agentic RAG vs RAG vs fine-tuning 三态区分**：检索增强是"接外部知识"，agentic 是"自主决定怎么检索"，微调是"改模型本身"——**先定方案形态再投入**。
+- **生产模块三件**：评测策略+日志/监控/可观测性+部署——**RAG 上线≠接完检索，生产还要评测与观测**。
+- 提升层：工作流。触发词：两阶段检索、ANN 粗召回、reranking、cross-encoder、sentence-window、auto-merging、agentic RAG、RAG vs fine-tuning。
