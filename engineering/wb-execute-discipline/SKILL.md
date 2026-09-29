@@ -13693,3 +13693,40 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 
 ### 评估工具链选型
 **框架对比：DeepEval（Python+pytest+CLI 50+ 指标 Apache2.0 综合）/Promptfoo（YAML+CLI+TS MIT prompt 对比+AI 安全红队）/RAGAS（Python RAG 专用 5 核心 reference-free）/Phoenix（OTel 原生可观测）/Braintrust（托管全生命周期）/Langfuse（生产 traces+评分开源）/OpenAI Evals（官方 registry）**；**选型判据=evals 住哪：terminal（Promptfoo）/Python+CI（DeepEval）/生产 traces（Langfuse/Phoenix）/托管仪表板（Braintrust）/安全能力（Inspect AI）/受监管（Patronus）；promptfoo 结果留本地无集中跟踪；DeepEval 主导 Python 生态、Promptfoo 主导 JS**。
+## r309A Agent 安全与提示注入纵深防御（来源：arXiv ClawGuard/AgentVisor/OWASP 2026/Auth0/IETF/Claude Code 官方/OpenAI GPT-Red 系列实拉）
+
+### 间接注入三类通道与运行时守卫
+**注入三通道：直接（用户输入）/间接（RAG 检索文档、网页、邮件、工具输出）/MCP 工具投毒（恶意工具描述使恶意动作看似良性或任务相关）**；**ClawGuard 模式：运行时在每次工具调用边界强制 user-confirmed 规则集——把"对齐依赖"的不确定防御转成确定性可审计机制，在真实世界影响产生前拦截对抗性工具调用；从用户陈述目标自动推导任务特定访问约束（不靠模型修改/基础设施变更/手工规则）**；**AgentVisor：语义虚拟化=语义权限分离+审计协议+语义故障恢复——近零攻击成功率保持高任务完成**；**持久记忆注入：注入写入长期记忆后续会话静默执行（跨会话后门）——记忆写入必须认证+检查**。
+
+### 防御提示工程五模式
+**①显式信任标签：外部检索内容进上下文前包 wrapper（`<retrieved_content trust_level="untrusted" source="...">`）+元指令约束解释**；**②上下文分区（数据包裹）：分隔符结构性分离指令与数据**；**③输入消毒：剥离/转义检索文档标记模式到达模型前**；**④输出验证（参数清洗）：工具执行层拒绝无效越界参数——LLM 可被骗但执行层必须拒绝**；**⑤工具策略在模型外强制：策略进 runtime 不进 prompt**。判据：单靠提示语是相信对齐。
+
+### 四点扫描蓝图
+**User Ingress Scan（用户输入→runtime）/Context Scan（外部 grounding 数据源→runtime，显式在拼接进 prompt 前）/Tool Output Scan（动态工具输出→runtime）/Egress Response Scan（模型最终文本→用户）——覆盖直接+间接+工具面+输出面；扫描点贴数据汇入 runtime 的每个边界，漏一点就是一条注入通道**。
+
+### 沙箱执行规范
+**agent 生成代码永不运行在 agent 进程自身特权/网络/文件系统**；**ephemeral 容器：512MB/0.25vCPU/180s 硬超时/无持久存储/仅目标 API 网络；凭证运行时注入（secrets 机制）不烘焙进镜像**；**agent 生成文件写 ephemeral 层 teardown 销毁——主机文件系统永不暴露**；**受限 shell：无 sudo/cgroup 资源限制/进程数限制防 fork bomb/无主机网络命名空间**；**Kata Containers：每 agent 会话独立内核——被攻陷也逃不出内核边界**。判据：身份不够时沙箱兜底。
+
+### 工具调用治理面
+**AGT 模式：MCP client 与 tool server 间运行时治理层，每工具调用按策略评估（定义扫描→策略评估→响应检查）；治理 agent 动作而非模型输出**；**agent-airlock：deny-by-default+幽灵参数剥离（多传的非 schema 参数被剥离——攻击者/幻觉注入的隐藏参数）**；**mcpkernel：DLP Guard（跨工具多跳泄露：PII in→HTTP out=阻断）+确定性信封（hash+签名 trace 可重放）+防篡改 append-only 审计（SIEM 导出）**；**OpenShell：不改 agent 本体套在 Claude Code/Codex 外运行时强制边界**。
+
+### MCP/技能供应链投毒与防线
+**实测：Snyk 扫 3,984 skills 发现 1,467 恶意 payload（36% 缺陷率）；ClawHavoc 投毒 1,184 skills；91% 恶意 skills 结合间接注入与 malware——审查指令而非只审代码**；**Markitdown MCP SSRF 读云实例元数据；.pth 文件每次解释器启动自动执行；MCP SDK STDIO=配置到命令直接执行（设计缺陷）**；**能力模型缺失：server 声明 tool schema 不声明能力需求——声称"搜索文件"可执行任意 shell**；**OWASP AST10：ed25519 签名所有发布 skill 拒绝未签名安装；签名绑定可解析可撤销发布者身份（key id+域名/did:web+验证 key）不只裸 key；签名证明作者不证明安全**；**manifest 是 JSON server 是代码——查 command 引用二进制可信？npx -y 不熟包？运行时下载？**。
+
+### 输出护栏八件事与 PII 工具链
+**guardrail 八件事：输入验证（畸形/超大/对抗输入花 token 前拒绝）/内容审核（hate/violence/self-harm/sexual）/PII 检测脱敏（模型看到前或记录前 mask）/主题限制/**；**Presidio：OSS PII 检测脱敏（NER+正则+规则+checksum 检测器，多语言）；OpenAI Privacy Filter：开放权重小模型高吞吐 PII**；**Guardrails AI：typed schema 强制验证+确定性校验+程序化输出纠正——验证通过才返回客户端**；**sentinelguard 网关：OpenAI 兼容 API+虚拟 keys+模型别名+复杂度路由+provider 池+成本路由+故障转移**。
+
+### 自动红队与对抗训练
+**GPT-Red：自动红队模型用于对抗训练（前代模型对其注入攻击高度脆弱；对抗训练后显著更抗）**；**HackAgent：开源 agent 红队工具包；数十万尝试每个明显成功由 3 judge 模型小组独立复核（红队防假阳性）**；**ADVERSA：fine-tuned 70B 攻击者消除攻击侧安全拒绝；guardrail 退化测成连续每轮合规轨迹而非离散越狱事件**；**STING：step-by-step illicit plan 基于良性人设+自适应跟进+judge 追踪阶段；time-to-first-jailbreak 建模（discovery curves/hazard-ratio）**；**RIFT-Bench：发现→扫描两阶段 105 自适应探针；agentic 红队 15 目标类别 3 风险域（安全 5：凭据泄漏/系统提示词泄漏/工具滥用/供应链/对齐完整性）**。
+
+### Agent 身份与委托授权
+**委托授权：子 agent 每个需 parent 权限子集范围 grant，整棵委托树可被原始主体撤销（DAAP）**；**AI Agents Are Not Users：委托上下文记录 agent 作 actor+用户作 subject——下游见"agent X 代表 user Y 以委托权 Z 行动"而非"service account 做了事"；专属审计线索独立于底层工具日志**；**防篡改审计：ACAP hash-chained append-only（每 entry 承诺前 entry hash）；actor_chain claim：可加密验证的有序 actors 记录替代仅信息 act claim**；**特权膨胀缓解：每 agent 实例唯一/作用域/短生命周期身份——orchestrator 把自身凭证传子 agent=所有子 agent 同 orchestrator 权限（ASI06 反模式）**；**OAuth 2.1 CIBA：敏感操作前人工审批+随时撤销**。
+
+### OWASP Agentic Top 10 与 Least Agency
+**ASI01-ASI10：planning/tool use/identity/supply chain/code execution/memory/inter-agent communication/cascading failures/human-agent trust/rogue agents**；**Least Agency and Least Privilege for Tools：per-tool profile（scopes/最大速率/出口白名单）；数据库只读、邮件无 send/delete、最小 CRUD；尽量表达成 IAM 策略绑每工具**；**资源成本放大=denial-of-wallet：per-agent/per-task 预算+步骤预算+成本异常告警+halt-on-budget-breach 默认**；**级联失败：递归深度硬限制+子 agent 生成限制+执行时间资源上限+异常生成模式告警+熔断器**；**ASI09：agent 感知权威本身是攻击向量（欺诈/钓鱼经可信接口）**。
+
+### Agent 平台加固清单
+**sandboxed bash tool：文件系统+网络隔离（/sandbox 定义自主边界）**；**工作目录边界：Manual 只写启动目录+子目录，父目录需明确权限**；**allow 列表不推断命令危险；protected paths（.git/.claude）永远保护**；**web 搜索摘要化：摘要而非原始内容直入上下文——降恶意网页注入**；**auto mode 三层分类器：Tier1 只读低成本直接批/Tier2 项目内文件操作无分类器（版本控制可审查）/Tier3 transcript classifier 看一切其他——只有真实下行风险动作到最终层**；**hooks 拦截每个工具调用（Pre/PostToolUse）强制策略**；**cleanupPeriodDays 缩短明文 transcripts 留存**。
+
+### Agent 数据合规要点
+**法律依据文档化（合法利益三阶平衡测试记录）；同意=肯定动作（预勾选不算），对 agent 脆弱因 scope 中途漂移**；**对话是个人数据：transcript 含可识别元素——保留策略按工作区可配默认应用，transcripts/embeddings/聚合指标不同保留期**；**删除=有效删除非逻辑删除+留文档痕迹**；**记忆四义务：法律依据/透明（告诉记住什么记多久为什么）/擦除（所有存储层含向量索引真删）/最小化（存必需不存全 transcript）**；**function creep：agent 聚合重组多源个人数据超原目的（香港 PDPO 重点）；中国《生成式 AI 办法》第 11 条训练数据来源合法+去标识化**。
