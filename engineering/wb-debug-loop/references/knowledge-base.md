@@ -389,3 +389,35 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 原文：**Aggregate expiry reports `update-activation-timeout` and retains ownership until writers settle; it does not authorize rollback or restart.** / **A verified rollback does not automatically start triage**: the previous generation is running again, and the report keeps the failing check as the reason. / **A command whose owner exits or loses its lease cannot start another native mutation or commit its pending config changes.**
 - 判据：① 「探测超时 → 判死」只完成"报告 + 保留所有权"，**不自动授权任何修复动作**——把超时当回滚触发条件，会在未确认状态下把流量交回上一代，制造"回滚掩盖故障"；② 回滚是一道**独立门**：需要已验证的回滚（verified rollback）才允许把服务交回前一代并让其继续服务，且**回滚成功不等于进入分诊/修复流程**，两者互不自动触发；③ 所有权/租约是 mutation 的门——失去 owner/lease 的进程不能再启动新的变更，也不能提交挂起配置，这条要写进"谁有权改"的判据；④ 通用化到排障：观察到超时 → 先保留现场与所有权 → 由人或显式策略决定回滚，禁止"超时即回滚"的隐式耦合。
 - 提升层：工作流 / 工具。触发词：回滚授权、超时不是回滚、判死与回滚两门、ownership lease、verified rollback。
+
+
+<!-- r320C 自 SKILL.md 下沉（正文预算腾挪） -->
+## 超时不是回滚授权：判死与回滚是两个门；只有「已验证回滚」才交回前一代，且与分诊互不自动触发（来源：docs.openclaw.ai cli/update repair-and-recovery，2026-09-30 r320A 实拉）
+
+
+## 审计/日志写入器禁止「全局单向闭锁」：坏事件只拒该条，失败作用域不许从单条升级到全流（来源：openclaw/openclaw issue #160734（P1，labels 含 impact:data-loss、clawsweeper:source-repro），2026-09-30 r320C api.github.com 实拉 200）
+- 原文：**A single `DataCloneError` from one event latches a `unavailable` flag that nothing ever resets, after which every audit record — run lifecycle, tool actions, message lifecycle, execution identity and decision receipts — is dropped. There is no recovery short of a process restart, and the operator sees exactly one log line.** 定位 `src/audit/audit-event-writer.ts:258-291`；`unavailable`（line 60）是 **a one-way latch. Nothing in the file ever sets it back to `false`.**；同文件相邻分支（279-285）**deliberately do not latch — they reject only the offending payload**，唯独 `record-event` 分支是异类；issue 判语 **a silently dead audit trail is a compliance problem, not just a bug.**
+- 判据：① 一个写入器的失败作用域必须是**单条**：坏数据只丢这一条并留一条 rejection 占位（保 FIFO 与序号连续），绝不允许把"这条写不进去"升级成"从此所有都写不进去"；② 任何 `unavailable` / circuit-breaker 态都要**可复位且有时限**（time-bounded 或 count-based，且只统计同一形态的重复失败），永久闭锁等于把可观测性一次性关闭；③ 更隐蔽的是**只报一行**：`persistenceFailureWarned` 把告警也 latch 住，运维看到一条日志就以为只有一条失败——告警的去重不能掩盖故障的持续；④ 同文件内不同分支行为不一致本身就是信号：同类失败应当同构处理，出现"只有这条路会闭锁"时按 bug 处理；⑤ 通用化到技能/脚本：写日志、写台账、写审计的地方都要问"写失败会连累后续吗"，会连累的改成单条拒绝 + 显式复位。
+- 提升层：工具 / 工作流。触发词：单向闭锁、one-way latch、审计静默失效、失败作用域、只报一行、reset 路径缺失。
+
+## 故障必须有「显式人工恢复入口」：自动对账失败要降级给人，超时不授权回滚也不删 retained state（来源：docs.openclaw.ai/cli/update/status-and-history.md，2026-09-30 r320C 实拉 200）
+- 原文：**The timeout does not authorize rollback or removal of retained update state. If migration or pending recovery prevents a safe history write, the updater reports the timeout and preserves that state for its owning runtime to reconcile.**；恢复入口 **Inspect `openclaw update status` and `openclaw doctor`, and wait for the owning updater and its children to stop before running `openclaw update repair`**；自动对账边界 **Older interrupted runs may lack the target build identity needed for that check ... a matching version number alone is insufficient ... use `openclaw update repair` when recovery is needed.**
+
+- 判据：① 自动恢复要设**能力边界并对边界诚实**：能自动对账的条件要写清（需要 target build identity 等），条件不满足就**显式降级到人工入口**，而不是假装已恢复；② 「版本号相同」不等于「状态一致」——恢复判定不能只看版本号，要看 build identity/校验结果；③ 保留 retained state 交 owning runtime 对账，比"超时就回滚或清状态"安全：状态是恢复的证据，删了就没法对账；④ 与 §超时不是回滚授权 同族互补：那条讲"超时不开回滚门"，本条补"超时也不删状态 + 必须存在人工入口 `repair`"；⑤ 通用化：任何"卡住"的流程都要有一个**文档化的人工命令**，并且该命令在文档中要能被 grep 到（本例 `openclaw update repair` 在多处重复出现）。
+- 提升层：工作流 / 工具。触发词：显式人工恢复入口、retained state 对账、自动恢复能力边界、版本号不等于状态一致、降级给人。
+
+
+<!-- r320C 下沉 -->
+## 失败先分两类，恢复方向相反：平台失败前向重试，应用失败后向补偿（来源：Temporal 官方《Application failures》`docs.temporal.io/encyclopedia/application-failures` 2026-09-23 r144-C 独立重拉首读，此前未读）
+
+- **原文事实**：官方按"在哪被检测到、由谁缓解"把失败切成两类。**平台失败**（服务中断、网络中断、Worker 崩溃、环境问题）由持久化执行**透明兜住**，"Your application code does not need to account for these failures"，恢复方式是 **forward recovery**：重试该操作，成功就从失败点继续，**不撤销已完成的工作**。**应用失败**（无效输入、业务规则违反、外部服务调用失败）由你的代码产生，"**do not resolve on their own through retries alone**"，恢复往往是 **backward recovery**：**撤销一部分已完成的工作**回到先前状态（例：扣款失败时要释放已锁定的库存）。
+- **判据**：
+  - **收到失败先判"再跑一次会不会自己变好"**：会（环境抖、节点崩、网络断）→ 前向恢复，重试即可，**别动已完成的部分**；不会（输入非法、规则违反、外部返回错误）→ 重试只是重复同一个错误，必须走后向恢复或改输入/改代码。
+  - **后向恢复的代价是"已经做过的要撤回"**：所以每做一步对外有副作用的事，都要提前想好它的反操作；**没有反操作的步骤不要随便重试**。
+  - **别把平台问题当成逻辑 bug 去改代码**：环境类失败改代码通常无效且会引入新问题；先证明它是应用失败再动代码。
+  - **别把应用失败交给重试兜**：重试一个必然失败的调用只会放大延迟与日志噪声，且会让"到底失败在哪一步"更难定位。
+- 与 §重试策略三型（抛错方声明 NonRetriable/RetryAfter/默认退避）分工：那条管"**抛错的一方怎么声明**"，本条管"**收到失败的一方往哪个方向恢复**"——重试还是补偿，两者配合才完整。
+- 与 §回退到已知好点 分工：那条管"撤销到某个点并保留痕迹"，本条管"**什么时候该撤销而不是重试**"。
+- 反模式：一律重试；对非法输入做指数退避；平台抖动时去改业务逻辑；补偿动作本身没做幂等导致越补越乱。
+- **提升层**：工作流（失败处理路径）+ 工具（恢复动作）。
+- 触发词：重试还是补偿、前向恢复、后向恢复、平台失败、应用失败、环境还是逻辑、再跑一次会不会好、要不要回滚、撤销已做的、没有反操作
