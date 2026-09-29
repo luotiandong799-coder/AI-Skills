@@ -12648,3 +12648,83 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **生产语音课程**：Voice Agent Components+Optimizing Latency（LiveKit/RealAvatar）——"生产语音=组件+延迟优化"。
 - **课程流 2026**：Voice for AI Agents/ADK Live Voice/Building Voice Agents for Production+AI Agents for Image and Video Generation——"多模态课程流=语音+图像视频生成"。
 - 提升层：工作流。触发词：语音三集成模式、embedded layered callable tool、ADK 模块化、LiveKit 延迟优化、AI Agents for Image and Video。
+## r300C 十独点（2026-09-29 实拉）
+
+### 1. 变量聚合收敛与错误内置分工：Dify 工作流控制面（来源：dify-6c0370d8-release-1-16-0.mintlify.site/en/cloud/use-dify/nodes/ifelse + deepwiki.com/langgenius/dify-docs/5.3-agent-nodes + /5-plugin-development + dify-6c0370d8.mintlify.app/en/cloud/use-dify/nodes/variable-aggregator + dify-hosting.com/en/guides/dify-workflow + dify-6c0370d8.mintlify.app/en/quick-start 2026-03-16/2026-05-14/2026-06-06/2026-07-29/2026-09-03 实拉，与 r298B 变量作用域/聚合器合并增量——那条管变量，本条管控制流与错误分工）
+- **If-Else 结构**：IF/ELIF/ELSE 多分支+AND/OR 逻辑+比较运算符（包含/开始是/为空/regex 匹配）——"If-Else=IF/ELIF/ELSE"。
+- **控制流节点族**：If-Else（条件路由）/Question Classifier（LLM 分类路由）/Iteration（数组顺序处理+当前项访问）——"控制流=条件/分类器/迭代"。
+- **Variable Aggregator 收敛**：互斥分支（If/Else、Question Classifier）产出同类型时聚合为单一输出变量，下游只定义一次——"聚合器=分支收敛单一输出"。
+- **错误内置分工**：LLM/HTTP/Code/Tool 节点失败用内置 retry/default-value/fail-branch 处理，If-Else 只用于业务条件——"错误=内置重试/默认值/失败分支"。
+- **低置信早停**：LLM 分类低置信度→早停分支防浪费 token/生成无用内容——"低置信=早停防浪费"。
+- 提升层：工作流。触发词：If-Else ELIF ELSE、Question Classifier、Iteration 数组顺序、Variable Aggregator 收敛互斥分支、错误内置 retry fail-branch、低置信早停。
+
+### 2. Error Trigger 单点与字段分支：n8n 错误处理面（来源：docs.n8n.io/flow-logic/error-handling + community.n8n.io/t/297211 + n8nresources.dev/blog/2026-07-16-n8n-sub-workflows-build-reusable-logic + logicworkflow.com/nodes/execute-sub-workflow-node + synta.io/blog/n8n-execute-workflow-node-guide-2026 + n8nlogic.com/blog/n8n-error-handling-catch-retry-alert-failures-2026 2025-12-24/2026-03-14/2026-05-29/2026-05-30/2026-06-03/2026-07-16 实拉，与 r299C fail-branch/错误三层合并增量——那条管错误策略，本条管 error workflow 单点与字段分支）
+- **Error Trigger 单点**：Error Trigger 节点开头的 error workflow，在 Settings 指定；任何未处理错误触发并传完整错误上下文——"error workflow=单点错误处理"。
+- **子错误默认阻断**：子工作流抛错→父停在 Execute 节点（保护数据完整性）；Continue On Fail 让父继续——"子错误=默认阻断+Continue On Fail"。
+- **干净分支模式**：Always Output Data OFF+Execute 节点后接 IF 查 {{ $json.error !== undefined }}（错误输出带 error 对象，成功不带）——"错误分支=IF 查 error 字段"。
+- **成功标志路由**：子工作流返回 success 字段，父 IF 查 {{ $json.success }} 假分支→Slack 警报/日志/重试触发——"成功标志=success 字段路由"。
+- **三层错误**：节点级 On Error（Stop/Continue/Continue using error output）+工作流级 Error workflow+子工作流级；网络节点 Retry On Fail 3 次~2500ms，非网络失败默认 Stop——"错误=节点/工作流/子级三层"。
+- 提升层：工作流。触发词：Error Trigger、error workflow 单点、Continue On Fail、IF 查 error 字段、success 字段路由、三层错误、Retry On Fail 3 次。
+
+### 3. Agent Tool Mode 嵌套与深度研究四 agent：Langflow 多 agent 编排面（来源：docs.langflow.org/1.9.0/agents-tools + /agents + /components-agents + /sequential-agent + langflow.org/guides/build-a-multi-agent-system-with-langflow + /blog/how-to-build-a-deep-research-multi-agent-system + /1.10.0/bundles-agentics 2025-07-25/2025-08-15/2026-07-30/2026-08-09/2026-08-17/2026-09-08 实拉，与 r297A 生成组件+r300B KB 合并增量——那条管组件生成，本条管多 agent 编排）
+- **Agent 作为工具**：第二 Agent 设 Tool Mode→附主 Agent 的 Tools port=多 agent 流——"agent=Tool Mode 嵌套"。
+- **任何组件可作工具**：其他 agent+MCP servers（MCP Tools 组件）+LLM 基础工具——"工具=组件+MCP"。
+- **深度研究四 agent**：子问题 agent→Summarization agent（只提相关事实）→Reviewer（查覆盖缺口/反视角/新子问题）→Research Writer（大模型收尾，早期节点用小模型省钱）——"多 agent=子问题/总结/审阅/写作"。
+- **Agentics bundle**：aMap（行级 NL 指令+输出 schema 一行进一行出）/aReduce（多行合一）/aGenerate（合成行）——"Agentics=行转换/聚合/合成"。
+- **部署与可观测**：API 或 MCP server 化 flow 成工具；LangSmith/LangFuse 可观测——"部署=API/MCP+可观测"。
+- 提升层：工具。触发词：Tool Mode 嵌套、MCP Tools 组件、深度研究四 agent、Reviewer 反视角、aMap aReduce aGenerate、flow 成 MCP server。
+
+### 4. 轮询双策略与触发三技术：Activepieces 触发器面（来源：activepieces.com/docs/build-pieces/building-pieces/create-trigger + /docs/build-pieces/piece-reference/triggers/overview.md + /docs/build-pieces/piece-reference/triggers/polling-trigger + /pieces/schedule + /pieces/drupal + resources.activepieces.com/automation-use-cases/automation-for-workflow-automation 2026-05-31/2026-06-17/2026-06-24/2026-08-20/2026-09-20/2026-09-27 实拉，与 r299B 触发三分法合并增量——那条管触发机制分类，本条管轮询策略）
+- **触发三技术**：Polling（周期调端点查变化）/Webhooks（单 URL 听事件）/App Webhooks（OAuth2 开发者 app 订阅授权用户事件，Not Supported）——"触发三技术=轮询/webhook/app订阅"。
+- **轮询双策略**：Timebased（时间戳检测新项）/LastId（ID 检测新项）——"轮询=时间戳/ID 双策略"。
+- **Schedule 触发家族**：Every X Minutes/Hour/Day/Week/Month+Cron Expression——"调度=六种"。
+- **触发属性**：Trigger Display Name/Description/Technique（polling 或 webhook）——"触发=名称/描述/技术三属性"。
+- 提升层：工具。触发词：触发三技术、Timebased 时间戳、LastId ID 策略、Every X Minutes、Cron Expression、App Webhooks OAuth2。
+
+### 5. 四指令语义与 Fallback Route：Make 错误处理面（来源：workflowpick.com/reviews/make-com-error-handling-guide-fix-scenarios-that-fail-2026 + workflows.nl/handleidingen/make-com-beginnersgids-eerste-workflow-2026 + alltomate.com/blogs/make-com-error-handling + com.make.cab/make-error-troubleshooting-guide-2 + use-apify.com/blog/make-com-routers-filters-guide + community.make.com/t/114177 2026-01-31/2026-03-15/2026-04-04/2026-05-12/2026-07-23/2026-08-31 实拉，与 r299C 错误三层/fail-branch 合并增量——那条管错误路由，本条管四指令语义与 fallback）
+- **错误处理器路由**：右键模块 Add error handler 连新路由；模块失败→执行错误路由不停止场景——"错误处理器=模块级路由"。
+- **四指令精确语义**：Rollback（当前 bundle 改动全回滚，事务流）/Commit（已处理保存并停，标记成功，批处理）/Resume（造假输出继续流程，邮件失败日志继续处理）/Break（incomplete 执行保存+重试）——"四指令=回滚/提交/恢复/中断"。
+- **Fallback route**：Router 分支=catch-all else；其他分支全跳过时自动跑，不配过滤条件——"Fallback=兜底 else"。
+- **错误分叉**：错误路由加 Router 按 {{error.type}}/{{error.message}} 分（Rate Limit 等待重试/认证通知管理员/数据跳过）——"错误分叉=按 error.type"。
+- **重试前置幂等**：Retry 前 External-ID/Upsert/Dedup-check 防重复创建——"重试=先幂等"。
+- 提升层：工作流。触发词：Add error handler、Rollback Commit Resume Break、Fallback route、error.type 分叉、External-ID Upsert、幂等。
+
+### 6. CLI 版本强制与依赖范围符：Pipedream 组件开发面（来源：pipedream.com/docs/components/api + /docs/v3/components/actions-quickstart + /docs/workflows/contributing/components/guidelines + /docs/cli/reference + /docs/workflows/building-workflows/code/nodejs + docs-proxy.pipedream.net/docs/components/quickstart/nodejs/sources 2024-06-12/2025-02-26/2025-02-28/2026-05-16/2026-09-01/2026-09-27 实拉，与 r299B 版本历史+r300B webhook 合并增量——那条管版本历史，本条管组件开发与版本强制）
+- **组件三要素**：version（semver 必需）+type（source/action）+props+async run()——"组件=version/type/props/run"。
+- **版本强制**：改组件不改 version→CLI 报错——"版本=CLI 强制"。
+- **--dev 迭代**：自动替换 version 为 0.0.<unix-timestamp>，无需手动 bump——"dev=时间戳版本"。
+- **依赖范围符**：import axios from "axios@~0.20.0"（只补丁）/got@^11.0.0（补丁+minor；0.x 下 ^ 只匹配 patch）——"依赖=~ 补丁 ^ 补丁+minor"。
+- **跨执行状态**：$.service.db 存计数/状态——"状态=db 服务"。
+- **Sources 与 Actions 差异**：Sources 本地部署或发布；Actions 仅发布——"形态=source 可部署/action 仅发布"。
+- 提升层：工具。触发词：组件 version 强制、CLI 报错、--dev 时间戳、axios@~0.20.0、got@^11.0.0、$.service.db。
+
+### 7. Strict 语法约束与类型化 Schema：Claude 结构化输出面（来源：platform.claude.com/docs/en/build-with-claude/structured-outputs + /docs/en/agents-and-tools/tool-use/strict-tool-use.md + console.anthropic.com/docs/en/agent-sdk/structured-outputs + classic.docs.ag2.ai/latest/docs/use-cases/notebooks/notebooks/agentchat_anthropic_structured_outputs + claude-wiki.com/get-structured-output-from-agents.html 2025-11-26/2025-11-30/2026-05-21/2026-09-02/2026-09-25/2026-09-29 实拉，与 r300A schema 质量合并增量——那条管 schema 质量判据，本条管 strict 机制）
+- **结构化输出**：type=json_schema+schema+additionalProperties:False——"结构化输出=json_schema 约束"。
+- **strict:true 机制**：grammar-constrained sampling 约束 token 采样到 schema 合法输出，保证 tool inputs 匹配 JSON Schema——"strict=语法约束采样"。
+- **类型化 schema**：Zod（TS）/Pydantic（Python）生成 JSON Schema+解析为全类型对象（autocomplete+type check）——"schema=Zod/Pydantic 生成"。
+- **SDK outputFormat**：多轮工具使用后仍返回验证 JSON，不符则 re-prompt——"SDK=输出格式+重提示"。
+- **两种模式**：JSON Outputs（response_format）+Strict Tool Use（strict:true）——"双模式=JSON 输出+严格工具"。
+- 提升层：模型。触发词：json_schema additionalProperties、strict 语法约束采样、grammar-constrained sampling、Zod Pydantic 生成、outputFormat re-prompt、双模式。
+
+### 8. 三型 evals 与统计回归：技能评测面（来源：anthropic.com/engineering/demystifying-evals-for-ai-agents + kunalganglani.com/blog/evaluate-ai-agents-production + /blog/agent-evaluation-harness-replay + arxiv.org/pdf/2603.02601 + zylos.ai/research/2026-04-20-ai-agent-testing-strategies-simulation-regression + pypi.org/project/evalview/0.5.0 + harness.io/blog/how-do-you-actually-test-an-ai-agent-a-look-at-harness-ai-evals 2026-01-09/2026-04-20/2026-07-12/2026-08-05/2026-09-22/2026-09-27 实拉，与 r299A 评测三步+r298B 迭代循环合并增量——那条管评测流程，本条管回归评测与统计框架）
+- **三型 evals**：capability（低通过率起步，target 任务 hill-climb）/regression（近 100% 通过率防回退）/probe（探测特定能力）——"三型=能力爬坡/回归防退/探测"。
+- **三级框架**：L1 断言单测（每 commit 快确定性）/L2 trace 评测 LLM-as-judge（curated 数据集慢概率）/L3 在线 A/B（生产流量）——"三级=L1断言/L2 judge/L3 在线"。
+- **统计回归**：AgentAssay=Neyman-Pearson 框架（α 控制假警报/1-β 控制漏检），sequential testing 省 token——"回归=Neyman-Pearson 错误率"。
+- **CI 基线 diff**：evalview=golden baseline diffing+CI 阻断——"回归=基线 diff+CI 阻断"。
+- **评测四要素**：Target（评测对象）/Dataset（golden 版本化域分组，生产长成）/Metrics（50+ 内置含轨迹评测）/Replay（工具调用录制回放稳定测试）——"评测=target/dataset/metrics/replay"。
+- 提升层：可复用 Skill。触发词：三型 evals、capability hill-climb、regression 100%、probe、L1 断言 L2 judge L3 在线、Neyman-Pearson、golden baseline diffing、Replay 录制回放。
+
+### 9. 冷却期与分组更新：GitHub 依赖治理面（来源：github.blog/security/supply-chain-security/tame-dependabot-group-your-updates-slow-the-cadence-keep-security-fast + ai-heartland.com/security/renovate-dependabot-supply-chain-attack-defense + cncf.io/blog/2026/06/12/securing-ci-cd-for-an-open-source-project-locking-down-dependencies + docs.github.com/en/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security/controlling-dependencies-updated + mattsch.com/blog/2026/03/28/harden-your-github-actions-workflows-with-zizmor-dependency-pinning-and-dependency-cooldowns + aicodingguild.com/blog/dependency-updates-stay-current-without-breaking-things 2026-03-28/2026-04-14/2026-05-14/2026-06-12/2026-07-29/2026-08-18 实拉，与 r299A 供应链钉SHA+r300A OIDC 合并增量——那条管 OIDC/钉 SHA，本条管冷却期与分组）
+- **versioning-strategy**：Dependabot 对 app 升 minimum 版本；对 library 拓宽版本区间（新旧都允许）——"版本策略=app 升最小值/library 拓宽"。
+- **cooldown 冷却期**：default 3 天/patch 3/minor 5/major 7 天——防维护者接管型攻击（发布后数小时-数天被 yank）——"冷却期=分档等待"。
+- **分组更新**：groups 把 minor+patch 合一个 PR；GitHub Actions 更新单独 PR——"分组=合并小更新"。
+- **Actions SHA pin**：Renovate pinGitHubActionDigests+pinDigests:true=SHA pin 注释版本，永不回退 mutable ref——"Actions=SHA pin"。
+- **工具分工**：Renovate 管应用依赖+Dependabot 管 Actions——"分工=Renovate 应用/Dependabot Actions"。
+- 提升层：工具。触发词：versioning-strategy、cooldown 冷却期 3/3/5/7、groups minor+patch、pinGitHubActionDigests、pinDigests、Renovate Dependabot 分工。
+
+### 10. 提示三块与评估课程：deeplearning 课程面（来源：learn.deeplearning.ai/courses/ai-prompting-for-everyone/information + /search?topic=Prompt+Engineering&topic=Agents + /?bot=1 + coursefacts.com/guides/best-llm-ai-agent-courses-2026 + datacamp.com/hi/blog/best-prompt-engineering-courses 2026-05-01/2026-07-28/2026-08-02/2026-08-31/2026-09-24/2026-09-28 实拉，与 r299A 评测三步+r300A 课程流合并增量——那条管课程地图，本条管提示课程结构）
+- **提示三块**（AI Prompting for Everyone，Andrew Ng 3h4m）：find information（AI 搜索+深度研究模式）/brainstorm & write（thought partner 诚实反馈+自然文本）/create & build（图像生成+简单 app）——"提示课程=信息/写作/构建三块"。
+- **评估课程**：Evaluating AI Agents（Arize AI）=结构化评估改进迭代 agent——"评估课程=结构化评估迭代"。
+- **编码 agent 课程**：Claude Code: A Highly Agentic Coding Assistant（Anthropic）——"编码 agent 课程"。
+- **课程体系**：30+ 短课程覆盖 LLM 基础→高级 agent 架构（LangChain/LangGraph+Anthropic 提示资源）——"课程体系=30+ 覆盖"。
+- 提升层：工作流。触发词：AI Prompting for Everyone、find information、brainstorm write、create build、Evaluating AI Agents、Claude Code 课程、30+ 短课程。
