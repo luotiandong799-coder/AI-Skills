@@ -250,3 +250,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 
 ### 渐进披露三级数字 + skill 是文件夹
 **三级：YAML frontmatter 常驻 system prompt（~100 tokens，够判断何时用）→ SKILL.md 命中时加载（<5k tokens 全指令）→ 捆绑文件按需读取**；**"skill 是一个文件夹不只是 markdown 文件——整个文件系统是上下文工程的一种形式"**（Claude Code 实践：告诉 Claude skill 里有哪些文件、它按需读）。
+## r306A 嵌入式向量库选型/本地RAG检索（来源：dreaming.press 2026-07-22 + 腾讯云 2026-06-24 + readerfi 2026-04-17 + modemguides 2026-04-04 实拉）
+
+### 嵌入式向量库选型三档
+**sqlite-vec：零依赖默认（SQLite 扩展、向量与数据同 .db、暴力 KNN 无 server），个人/单应用 RAG 上限约几万 chunks**（实测 14,200 vec/s 写、2.1ms p50、空闲 RAM 8MB）；**Chroma：原型快（内存索引、~500K 向量、最友好 API）；LanceDB：超 RAM（磁盘原生、Lance 列式、内置版本化/time-travel、混合 vector+fulltext、1M+）**。判据：**个人 RAG 默认 sqlite-vec；要元数据过滤和快原型用 Chroma；数据超 RAM 或要版本化评测用 LanceDB**。
+
+### PKM 反固定 512-token 块 + raw/wiki/output 目录法
+**笔记有结构：用 heading-aware chunking（一个 H2/H3 节+列表项=一个块），不要固定 512 token**；Karpathy 方法：**CLAUDE.md=每会话自动读的"大脑"（vault 规则），raw/（不可变源文档）+ wiki/（LLM 生成维护页）+ output/（查询结果）分目录**；未整理笔记造成"上下文污染"。判据：**本地知识库的检索质量先靠分块策略，再靠检索算法**。

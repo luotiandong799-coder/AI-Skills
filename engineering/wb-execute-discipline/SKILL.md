@@ -13464,3 +13464,25 @@ Orca ADE（59k stars）：并行 25+ coding agents 跑 worktrees；scientific-ag
 
 ### 层次化反思 + AND/OR 树规划
 **层次化反思：agent 显式评估进度+诊断失败模式再决定下一步，反思成为 subgoal 终止/转换/执行的控制机制**；AND/OR 规划树（Or 节点=备选策略，可回退）；**leaf task 小到 1-2 次工具调用**；顶层 3-5 phases→每 phase 具体行动；**Planner（强模型长窗口）+ Executors（小模型高通量）+ 共享记忆层（防冗余工作）**；规划结构含 ownership metadata+资源预算+交接协议。
+## r306A 本地推理选型/量化/本地语音/能效评测（来源：dev.to ollama-vs-vllm 2026-06-02 + specpicks 2026-04-30 + localaimaster 2026-06-20 + arXiv 2608.00008 2026-09-08 实拉）
+
+### 本地推理引擎选型阈值
+**~10 并发/GPU 以下：Ollama 单进程（桌面/边缘/单用户，低成本）；~10 并发以上：vLLM（PagedAttention+continuous batching）**；Q4_K_M 最佳平衡；**OpenAI-compatible API 自由切换后端**。
+
+### 量化>参数 + 量化分级阶梯
+**q5_K_M 比 q4_K_M 工具调用准确率高 ~6 点，超过 8B→13B 参数差距**；**Q5_K_M 保留 ~99.5% 能力生产推荐；Q6_K 收益极小仅 Q5 失败才用**；量化省 40% 电 +5-15ms 延迟、INT8 1-2% perplexity 损失。
+
+### grammar-constrained sampling 质量悬崖
+**7B 级模型+grammar 约束：工具 JSON 有效率 95%+；无约束 70-80s——质量悬崖是工程选择不是模型限制**；Gemma 4 原生 function calling+constrained decoding 结构化输出生产可用；**工具调用结构完整校验后再用**。
+
+### 本地小模型失败模式 #1 = tool-call hallucination
+**约 38% 小模型 agent 失败源于无效工具参数**；Llama-3.2-3B 恢复率 48%、**31% 幻觉出"修复"**；Qwen3 恢复 65%；Llama-3.3-70B ~97% 良构调用。判据：**小模型接工具前先测错误恢复率，幻觉修复率高的不能进自动循环**。
+
+### 本地语音全离线栈
+**faster-whisper（GPU 4x/CPU 2x）+ 本地 LLM + Kokoro/Piper TTS**；Kokoro 82M 主流语言+Piper ~99M ONNX 长尾 CPU 实时；链路 **Audio→VAD(Silero)→STT→LLM→TTS→Audio**；wake word 防误唤醒。
+
+### 本地能效指标：tok/s/W 与 J/token
+**能耗与参数量不线性：gemma3:1b 0.56 J/token vs 7B-Mistral 4x 多**；同硬件 Qwen 3.6 27B 0.056 tok/s/W vs Llama 3.1 70B 0.022（2.5x）；**3-shot prompting 提升运行时与能效不损质量**；高 MMLU 不一定必要（54.6% MMLU 但教学评分强，人类验证 r=0.967）。判据：**选本地模型看 tok/s/W 和 J/token，光看 MMLU 会选错**。
+
+### OpenJarvis 五原语 + Gemma4 encoder-free + ModelScope 生态
+Stanford OpenJarvis：**推理/agent/记忆/学习全设备内，距最佳云端 3.2 点内；五核心原语拆解可审计"智能/逻辑/状态在哪"；评测把 energy/FLOPs/latency/dollar 当一等公民**；Gemma 4 12B **encoder-free 多模态（视觉音频直入 backbone 无编码器）16GB 笔记本可跑**；ModelScope **modelscope-hub CLI 下载/缓存/离线（local_files_only）/部署 MCP server/CI 集成**；端侧 APXInf 全栈优化 FP8 延迟降 10.7x 成功率持平。
