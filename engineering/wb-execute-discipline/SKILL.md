@@ -13991,3 +13991,70 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 - **llama.cpp b5092+ 支持 Qwen3/Qwen3MoE；GGUF 2/3/4/5/6/8-bit 量化**；llama-server 关键参数：--ctx-size 131072 / -ngl GPU offload / -fa flash attention；本地编译获得 CPU 优化。
 - **Qwen3.8/DeepSeek V4/Glimmer 已训练支持推理 effort 级别（low/medium/high）**。
 - 判据：**本地推理选型三看：尺寸（VRAM）/许可（Apache 2.0）/推理开关（/think、effort 级别）**。
+
+## 个人效率自动化与工作流编排（来源：r311B 批 2026-09-29 实拉：N8N Lab + n8nflow + anhtu.dev + Pickaxe + arXiv 2604.23049 + Plavno + ofeng.org + Pega + thesaaslibrary + forkoff + TinyCommand + supergood.ai + Triumphoid + go-tools + TheClawTips + Vercel cron + Dify 官方 + Stanford CS224G + Microsoft Durable Agents + AI/TLDR + Azure + Louis Bouchard + Decoding AI + GitHub llm-safe-haven + dev.to n8n 自托管 + CSDN + AWS OpenClaw + Viblo + coommit + ToolJunction + Taskade）
+
+### 个人 AI 助手五段架构
+- **Ingestion Layer（trigger 监控 Gmail/Calendar/Slack 新事件）→ Cognitive Routing（非结构化数据路由到 LLM，system prompt 输出标准化 JSON 元数据：intent/urgency/entities）→ State Management（提取任务/摘要/上下文更新 Notion/Airtable 台账）→ Execution Branches（Email/Task/Calendar/Research 分支并行）→ State Updates（结果写回源平台）**。
+- **多 agent 结构按工具域划分**：memory_base（长期知识库）/ todo（Todoist）/ email（Gmail）/ calendar / research（Wikipedia/Web Search）/ project（Google Sheets）。
+- 判据：**个人助手=收口路由+统一状态层+按工具域分支，分支数按功能覆盖定不按固定数量**。
+
+### HITL 三模式矩阵+四维度+监督式自主
+- **In-the-loop（人在每个风险动作前批准/拒绝/编辑，agent 暂停——不可逆高风险动作）/ On-the-loop（实时监控+异常干预，agent 运行——可停止/回滚的快速流）/ Out-of-the-loop（事后审计日志——可逆高频低风险）**。
+- **四维度：intervention conditions (WHEN) / role resolution (WHO) / interaction semantics (WHAT) / communication channel (WHERE)**。
+- **监督式自主=最有效模式：agent 决定"高风险"动作→不立即执行→序列化预期动作推入 review queue（system 处理 90%，人处理 10% 有实质后果的）**；**HITL 耐久性：审查可能花几小时/几天，服务重启/新代码部署时 workflow 等待中——后端挑战是让 flow 持久（review 状态落库）**；决策边界先行+可审计轨迹（inputs/decisions/reviewer actions/outcomes）。
+- 判据：**先按风险-可逆性选三模式，再定四维度；审查状态必须持久化**。与 §执行态与交付态的分工：那条管"结果交没交回去"，本条管"人在哪个环节介入、介入状态怎么保存"。
+
+### 自动化三大失败模式+绿色工作流做无用功
+- **Trigger Rot（触发腐烂）：触发在启动时准确但随数据/工具配置变化退化——隐形无错误告警；Context Collapse（上下文坍塌）：多步 AI 工作流每步传递不完整上下文→貌似合理但错误输出；Integration Debt Trap（集成债务陷阱）：未文档化的 webhook 连接在底层工具更新时坏掉没人会修**。
+- **false path 没建→数据形状变化后每次运行走 false 路径静默终止——"workflow 没坏，它正在精确执行你画的图"；vacuous check（空洞校验）：校验步骤通过因为它没什么可校验（对空集返回 true——数学上正确、实际无用）**。
+- **断的分类：坏一次=selector/wait/credential 过期（修补）；每月坏=selector drift+反爬（集中 selector+监控+维护轮换预算——结构性信号，开始评估 API 替代）；太慢=UI 层执行每步等渲染（并行化——最强 API 信号，后端调用无渲染等待）**；Rate Limiting：前 N 次成功然后失败，429 在日志——API rate limit 比你想象的低。
+- 判据：**自动化上线前补 false path 和异常路径；每月坏一次=结构信号不是运气；每个自动化需要 fallback/rollback/escalation 计划**。
+
+### workflow 文档与所有权轮换
+- **每个 workflow 需要一段话描述（做什么/为什么存在/关掉会坏什么）存可找处，plain English**；**季度轮换所有权——只有一人能解释的 workflow 是风险不是特性**；30-50% 开发者资源消耗在修坏 bot（RPA 维护陷阱）——维护成本必须进选型决策。
+- 判据：**无人能解释的自动化=负债；文档+轮换是两剂最小药**。
+
+### 幂等性是 job 的属性不是 scheduler 的
+- **cron 无 retry/错过恢复/并发控制——设计为"如果今天已发送就不发送"而非"9 点发今天的报告"：错过/重复/重叠执行都安全**。
+- **幂等三法：存 last-processed timestamp / 事件用唯一 ID / 写前检查今天的输出是否已存在**；**锁模式防重叠：redis SET NX EX TTL（拿不到锁=已有实例在跑直接跳过）或 flock 基于锁文件**——cron 不阻止重叠执行，job 比间隔长会多实例并发。
+- **平台重试是常态不是意外：Vercel 会重试 cron——网络超时/冷启动超限/部署交换都可能让同一 tick 触发两次→重复邮件/重复扣款/重复 DB 变更**；Google Cloud Scheduler 显式指数退避重试，AWS EventBridge 会重新入队。
+- 判据：**任何 cron 动作按"跑两次结果相同"设计；重叠场景用锁，重放场景用幂等键**。与 §重试分两类管 的分工：那条管"调用失败怎么重试"，本条管"定时任务天然会重复执行，设计就要抗重放"。
+
+### 瞬时失败与逻辑失败分开重试
+- **重试 timeout/rate limits（瞬时），不盲目重试坏 prompt 或权限问题（逻辑失败重试永远一样失败）**；平台级重试语义（指数退避/重新入队）要写进设计。
+- 判据：**重试策略按失败类别配置；逻辑失败必须走告警而非重试**。
+
+### Agentic RAG：检索步骤代理化
+- **Dify v1.2+ Agentic RAG：检索本身由 LLM agent 驱动——迭代分析意图、选工具和来源、重写查询、评估证据、重试或回退；动态决定检索什么/查哪些知识库/取多少 chunk（按问题复杂度）**；超越 one-shot retrieval-then-generation：提升 grounding 和可靠性，但加延迟/成本/复杂度。
+- **隐藏用法：自定义 chunking 策略/hybrid search（vector+keyword）/per-dataset score thresholds——按文档结构（代码文档/法律合同/技术手册）微调检索**。
+- 判据：**检索是否代理化按问题复杂度路由——简单问题别付 agentic RAG 的延迟账**。
+
+### Agent 节点五纪律+单节点单职责
+- **清晰工具描述（agent 何时何用）/ 适当迭代限制（防 runaway 成本）/ 详细指令（角色/目标/约束）/ 记忆管理（上下文保留 vs token 效率平衡）**；**每个 LLM 节点一件事做好，避免多合一 prompt**；关键节点输出检查：HTTP 4xx 引到错误处理分支而不是静默损坏数据；Writer-Reviewer 模式：research → writer（角色 prompt）→ reviewer（最终 LLM 节点复查）。
+- 判据：**节点粒度=一节点一职责；错误分支与正常分支同等待遇**。
+
+### 编排模式四类+三种路由
+- **Prompt Chaining：每步 activity 自动 checkpoint——中途崩溃从最后完成步恢复，不重耗 token；步间可插程序化验证门；chaining 固定线性路径子任务构建时预定义 vs Orchestrator-Workers 运行时动态分解开放目标**。
+- **Parallelization 两子型：Sectioning（输入分解独立块并行再合并——文档不同章节）/ Voting（同 prompt 多次独立上下文+多数投票——正确性比成本重要）**。
+- **三种路由：LLM Router（灵活慢）/ Semantic Router（embedding 相似度，快确定性）/ Keyword Router（正则，最快低灵活）**。
+- **编排对比：Sequential（线性，早段失败传播无并行）/ Concurrent（并行多视角，结果矛盾需冲突解决）/ Group chat（共识/头脑风暴，会话循环难控）**。
+- 判据：**选型先问"步骤顺序固定吗"——固定走 chaining，开放走 orchestrator；能并行就并行（Sectioning/Voting 二选一）**。与 §多 Agent 协作纪律 的分工：那条管"拆了之后怎么协作"，本条管"编排模式选型+路由分类"。
+
+### 个人内容管线：plain Markdown 连接+人保留关键决策
+- **研究 agent + 写作工作流 + 并行视觉 workers + expand-and-narrow 标题循环 + 翻译 skill；plain Markdown 文件连接各阶段（可审计可编辑的中间产物）**；自动化研究/草稿/媒体制作/打包/翻译，但**保留主题选择/方向/结构/个人见解/最终编辑——人管关键决策**。
+- **Generator-Reviewer-Editor 循环：Reviewer 0.0 temperature 对照 guideline/research/profiles 审查，返回结构化 review objects（Pydantic），有问题→循环**；草稿后定向 follow-up 改特定元素（tone/length/structure）而非整体重写。
+- 判据：**管线自动化执行，但主题/方向/最终编辑永远留人；阶段间用明文文件交接**。
+
+### 个人自动化安全四则
+- **凭证加密代理：MCP server 加密存储 API 凭证在本地+充当安全代理，agent 通过它调 API；2026-04 研究者演示 Claude Code/Gemini CLI/GitHub Copilot 三个编码 agent 通过单次 prompt injection 泄露 secrets**。
+- **n8n 凭证：N8N_ENCRYPTION_KEY 加密存储，key 丢失或更改→所有已存凭证不可读——强 key（openssl rand -hex 32）存服务器外（密码管理器/加密备份）永不 commit**。
+- **运行环境隔离：开源 Agent 必须 Docker/VM 隔离部署，严禁直接装日常办公/生产主机（规避沙箱逃逸）；数据先脱敏再处理，严禁明文敏感信息输入公有云 Agent；全链路审计（操作日志+行为审计+定期核查）**。
+- **OpenClaw gateway 永不暴露公开互联网——gateway auth token 就是你的密码，经常轮换，存环境文件不硬编码 config**。
+- 判据：**个人自动化=凭证加密代理+运行隔离+全链路审计三件套；secrets 永不进 prompt 上下文**。与 §Agent 工具面安全 的分工：那条管"工具面四个威胁"，本条管"自托管/凭证存储的具体做法"。
+
+### 第二大脑自动化管线
+- **Meeting → Notes → Actions：录音器（Granola/Fathom/Otter/Apple 内置转写）→ transcript 落 Inbox → AI 提取 action items/decisions/open questions → 确认后归档到正确项目；Article → Distilled note（web clipper → AI 蒸馏）**。
+- **5 个重复命令替代"感觉"：/plan-week /daily-prep /process-inbox /end-day /review-week——把工作流编码成可重复命令**；零手工整理目标：捕获到一个可搜索地方，30 秒内自然语言取回，月高亮→10 分钟合成简报（$40/mo 全系统）。
+- **Capture 第一定律：frictionless capture——生物大脑是想法工厂不是仓库，灵感瞬间 offload**；Workspace DNA 循环：Memory → Intelligence（AI agent 分析）→ Execution（自动化行动）→ Memory——从原始笔记到组织知识到自动执行的闭环。
+- 判据：**第二大脑=捕获零摩擦+检索自然语言+定期合成，缺一不可；命令化优于感觉化**。
