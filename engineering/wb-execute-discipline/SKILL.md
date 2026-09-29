@@ -13548,3 +13548,40 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 
 ### 评测工具链分工 + 生产调试清单
 **Promptfoo：CI 秒级回归（90+ 提供商/67+ 攻击插件）；Braintrust：上线前深评（人+LLM judge）；DeepEval：RAG 专项（RAGAS）；LangSmith：tracing 根因**；promptry 断言语义回归；**生产排障：捕获完整上下文→最小复现→失败类型→输入有效性→隔离段落→模型特有性→系统修复**；失败模式分开度量（schema/缺字段/幻觉/错标签/拒答）。
+## r307C 多智能体编排与自动化工作流（来源：novakit 2026-04-19 + a2a-protocol 1.0 + kunalganglani 2026-08-02 + AWS Strands 2026-07-23 实拉）
+
+### 五编排模式适用性矩阵
+**orchestrator-worker 生产最广泛：orchestrator 分解/委派/合成，workers 互不通信；强模型 orchestrator+便宜 worker 省 40-60%**；supervisor 中央路由（audit-heavy 适用，风险=manager 瓶颈）；hierarchical 嵌套 supervisor（大域上下文隔离，延迟敏感避免）；swarm 对等（探索/创意，风险=无限循环）；pipeline 固定顺序（文档处理/ETL，输入可变避免——错误级联）。**先问"真需要多个专家角色吗"——多数系统单 agent 就够**。
+
+### Fan-out/Fan-in 与并行化
+**Fan-out 广播+Fan-in 聚合（map-reduce 变体），并行砍延迟，聚合需全部结果**；Sectioning（输入拆独立块并行合并）vs Voting（同 prompt 多跑多数投票，正确性>成本场景）；Concurrent 同输入多视角合并；多模型投票（不同模型/温度并行）；**每并行分支独立 checkpoint 可单独失败重试。并行前确认子任务真独立**。
+
+### 控制流硬限制
+**agent 失控是产品 bug，靠 limits 修不靠 prompts 修**；四控制项：max steps 硬停（如 25 工具调用）/token budget 硬上限/wall clock timeout（如 5 分钟）/circuit breaker（错误率>X% 触发路由 fallback）；**先设上限再放权**。
+
+### 重试-退避-补偿一体设计
+**三模式必须一起设计——agent 经工具产生副作用（写入/邮件/付款），盲目重试会双扣/双发/重复记录**；failure classes 分类再重试；**写操作必须幂等键**；checkpoint after each tool action；strict I/O contracts（每个调用验证 schema）；**五 agent 各 98%→整链 90%，链越长越需每环质量门**；七恢复模式：retries/circuit breakers/validation gates/sagas/checkpoints/budget guardrails/human escalation。错误处理的核心是"失败后世界状态是什么"。
+
+### 熔断器应用于 agent 层
+**每个外部工具调用都应包熔断器（Nygard Release It! 经典模式）**；三层：工具级（连续失败 N 禁用）/agent 级/编排级；检测：per-message age/委托图循环检测/task-age alerting；缓解：等待超时/循环打破（N 次弹跳断）/升级 supervisor/回退单 agent；fault injection 基线与故障可复现对比。
+
+### A2A vs MCP 分工
+**MCP 管工具与上下文集成（agent 内）；A2A 管 agent 间通信协调（横向：发现能力/委派任务/交换结果/跨框架保持状态）——MCP 在 agent 内，A2A 在 agent 间**；A2A v1.0（Google 发起捐 Linux Foundation）：signed agent cards/多租户/多协议绑定（HTTP/gRPC/WebSocket）/版本协商。工具用 MCP、协作用 A2A，层次错位是常见错误。
+
+### 确定性骨架+agent 节点
+**agent 赢：自由文本/文档/截图输入+意图解释；hybrid：agent 推理→webhook 执行确定性动作**；确定性=亚毫秒/固定审计/合规结构性强制；agentic=2-15 秒/动态选工具/需运行时监控；**Agent Runtime 原则：模型放高不确定/高利害分支，低风险重复交程序**；**low-value foreach（批量抓取/整理/导出）不用 agent**；canonical hybrid：agent 分类提取→结构化 JSON+置信度→RPA 确定性执行。生产默认=确定性骨架+agent 节点。
+
+### 七工作流拓扑与 Reflexion
+**七拓扑：Prompt Chaining/Routing/Parallelization/Orchestrator-Workers/Evaluator-Optimizer/ReAct/Human-in-the-Loop**；prompt chaining 步间可选检查换每步准确率；**Reflexion：ReAct 加自评（假设/哪里错/怎么做不同）→critique 追加→重试，成本 2-3x**；review-and-critique：generator→critic 按标准 approve/reject/return；plan-and-execute+ReAct 结合：plan 后每步 ReAct。模板选择=任务结构匹配。
+
+### agent 评估五维+轨迹评估
+**五维：Correctness（golden+LLM-judge）/Tool Use Accuracy（schema 校验）/Efficiency（turns+tokens）/Robustness（对抗输入）/Safety（red-teaming）**；**trajectory eval 五项：Tool choice/args/Retrieval grounding/Step efficiency/Termination——任一项错，答案再漂亮也是失败**；LLM-as-judge 需人标校准（Pearson）；AWS 三层评估（检索工具→步骤→Output quality>90%+GoalSuccessRate）全过才部署。只看最终正确率漏"路径烂答案凑巧对"。
+
+### 渐进式上线与生产监控
+**pilot→threshold（事前商定数字如每千决策最大 override rate）→full→持续评估（每周加真实失败，变更跑回归）**；监控：success rate per task type/cost per task trend（涨=drift）/tool error rates/tool-call mix shifts（突然 3x search）/retry distribution/safety counters/token per step；**成本延迟四杠杆顺序：observability→model routing（按风险分层）→context discipline（传结构化输出+artifact links 不传 raw history）→prompt caching**。
+
+### 任务分解工程化
+**DAG 依赖图（边=must-complete-before），critical path 决定最小时间**；**Kahn 拓扑排序验循环依赖→reject 回退顺序执行**；分解产出结构化 JSON（dependencies/tool mappings/risk controls）非自然语言清单；粒度 3-5 大阶段、深度 3-4 层、必含验证步骤、为失败规划替代路径；欠分割/重复/过分割执行前用检查程序落掉。
+
+### 委托契约四要素 + RSTD
+**DeepMind 判据：分解到每个子任务能写测试——无法程序化表达成功标准=粒度不够**；委托契约四要素：是什么/怎么验证（测试/lint/构建/人工审查）/允许哪些工具（scoped）/失败怎么办；**RSTD：>3 文件拆 per-module；每子任务产 schema-validated checkpoint；失败两次升级父线程带结构化错误报告；上游被修改则下游不重试**；不在单 turn 做多文件重构。
