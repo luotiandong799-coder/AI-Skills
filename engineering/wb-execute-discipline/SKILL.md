@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、崩溃恢复、限流预防、分批、批大小、条件循环、终止条件、无限循环、缺信息要问、把失败当空结果、毒化产物、传输损坏、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、确认词、验证边界、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、注入失败测韧性、hook 担保硬约束、部分完成度连续分、并发上限、槽位释放、暂停占槽、超限行为、队列代价、并发不是限流、可用余量、容量快照、自己记账、跑完不释放、客户端超时不等于取消、等待时释放、挂起即释放、检查点重放、不死锁、占槽还是放手、可重放性、失败传播、部分成功、下游被跳过、跳过传染、旁支是绿的、停了不等于收权、令牌leeway、工具里叫停、工具内重试、停止是完成不是取消、兄弟调用、调用次数上限、上限会重置、批次截断、上限算谁的、工具钩子、改参数再调、钩子顺序、顶替返回值、暂停不是失败、熔断状态、错误回调收不到暂停、步骤级定位、span 过滤、过滤器抛错、保数据不保性能、按类型粗筛、过滤顺序、我不处理、责任链、部分处理、下一个处理器、待处理请求、挂起、拦截被吞、拒答当正常输出、严格模式、默认放过、审批门、执行前一刻阻断、暂停落盘、批准过期、动态阈值、三级分类、置信不是授权、可逆性、能不能撤销、谁授权的、可重试标记、首个响应即终局、广播不等于会签、超时分支、没人回、挂起双出口、取消链接、resume 与 cancel、挂起等回调、字段级自由度、按动作授权
-version: 3.37.0
+version: 3.38.0
 agent_created: true
 ---
 
@@ -14469,3 +14469,14 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 - **Checkpointing**：把长工作流拆成命名阶段，在每个边界持久化状态，失败从最后好检查点恢复而非从头重启；配合每步截图+动作+推理的完整日志（session replay）做离线调试。判据：**长任务按阶段做检查点，恢复点优先于重跑**。
 - **评测真相：离线高分是"进步幻觉"**：Online-Mind2Web（300 任务/136 真实站）人工评测显示多数 agent 大幅低于离线表现，仅 Claude Computer Use 3.7/Operator 接近；2026 现状=渲染与感知已解决、自然语言目标理解已解决（WebArena 14.41%→逼近 78.24% 人类基线）、真实站多步任务部分解决（在线最佳 ~61.3%、典型 ~30%）；基准按感知形态选：厂商消费产品报 VisualWebArena/OSWorld（截图 grounded）、开源工具报 WebArena（DOM 消费）、研究论文三者全报。判据：**评估必须含在线真实任务子集；不拿离线分当真实能力**。
 - **GUI Agent 选型与 SDK 化**：UI-TARS-2 迭代训练管道=多轮 RL+SFT+rejection sampling+continual pre-training，System-2 RL 让模型显式分解目标、验证中间状态、错误回溯；@ui-tars/sdk 允许组合 planning/reasoning 模型（o1/DeepSeek-R1）实现规划-推理-执行分离；选型判据=目标环境有无 API：legacy 桌面无接口用视觉 agent，web 有 DOM 用 DOM-based agent。判据：**先问目标软件有没有结构化接口，再决定视觉 agent 还是 DOM agent；视觉 agent 里规划模型与执行模型分开**。
+## AI 工作流自动化深挖 2026：80/20 平台选型/六类触发器/queue mode/三层错误处理/失败重跑是账单真凶/DLQ 数据契约/失败自动分诊/退避+全抖动/自托管成本账/确定性任务不用 agent（来源：theplanettools+n8n vs dify+ayautomate+aisuperthinkers+n8n production best-practices+aiworkflowlab+xbstack+n8n tool-calling+dev.to lars+zalt+novapixel+williamspurlock+n8n workflow 16744+latenode+baeseokjae+layer3labs+pickaxe+dev.to sam+aivanguard+langchain-runner+mindstudio hermes，r327C，与 §轻量自动化三模式 互补——那条管"用什么形态搭"，本条管"平台实操细节/错误处理/成本"）
+- **80/20 平台选型**：n8n=通用自动化平台（400+ 集成），LLM 是链条中一个节点；Dify=LLM-first 平台，模型居中、RAG/工具/记忆/输出格式化围绕模型；判据=工作负载 80% AI 选 Dify、80% 管道（Slack→CRM→email）选 n8n；Dify RAG=文档上传/分块/embedding/索引/混合检索+rerank 引导式一站式。判据：**用 80/20 负载分布选平台，不是看功能清单**。
+- **六类触发器对应六种 AI 员工行为**：Webhook（响应外部系统，实时）/Schedule（时间间隔，批处理）/App Event/ Chat/Form/Manual；触发器选错=建了永不执行的 agent；webhook 配 Respond to Webhook 节点返回 AI 结果。判据：**先定"AI 员工行为模式"再选触发器**。
+- **子工作流 execute 触发器 + queue mode**：Execute Workflow 触发子工作流=比 webhook 更安全（不暴露外部系统），可定义参数保证预期格式；MCP Trigger 节点秒建 MCP server；单进程够 <500 执行/天，之上必须 queue mode（主进程接触发写 Redis、worker 独立执行、graceful restart 不丢进行中工作流）。判据：**内部调用走子工作流触发器；>500 执行/天切 queue mode**。
+- **三层错误处理**：节点级 Retry On Fail 只用于有界瞬时失败；最终失败路由到 Error Workflow 记录+告警；保留失败执行以便用当前/原始工作流重试；副作用步骤仍需幂等键；LLM 步骤重试默认=3 次、初始 1s、乘数 2x、最大 8s、抖动 20%；同步用户面路径 cap 2 次并表面化。判据：**重试分层管：瞬时靠节点重试，终局靠错误工作流，副作用靠幂等键**。
+- **账单爆炸真凶：失败步骤重跑**：AI 账单爆炸通常不是 token 贵，是同一失败步骤重跑 3 次（Code 节点超时→整链重试→LLM 步骤又烧钱）；修法=超时类错误不进重试循环、按调用设重试预算。判据：**先查"失败步骤重跑了几次"再谈 token 优化**。
+- **数据契约 + 死信队列（DLQ）**：无论怎么 prompt，AI 终会生成非法数据；编排层设严格数据契约（schema 校验）并把失败路由到 DLQ——坏数据进死信队列而非丢弃/硬重试；自愈分层=L1 步骤断言（schema/实体/结果范围/副作用回执/延迟预算，fail closed）+ L2 运行级评测（面向客户/资金 agent 打分输出）。判据：**AI 输出设契约+DLQ，非法数据进死信队列不硬重试**。
+- **AI 失败自动分诊**：触发执行错误→LLM 分类瞬时还是逻辑→瞬时指数退避重试、逻辑建 Jira issue→OpenTelemetry 遥测→per-incident 重试计数器（上限 3）决定是否够格自动重试。判据：**AI 分诊失败类型再决定重试 or 建单，带重试计数上限**。
+- **指数退避+全抖动+Retry-After 解析**：生产标准=指数退避配全抖动（防 thundering herd）；主动解析限流端点的 Retry-After 头覆盖默认间隔；电路断路器防级联失败。判据：**重试=指数退避+全抖动；限流端点必须解析 Retry-After**。
+- **自托管成本账**：n8n Community Edition=零平台费零用量上限、400+ 集成；云版按执行量扩展；PII/财务/专有文档 agent=自托管是正确的选择（数据不出网络、控制 LLM 可达性与并发）；Pipedream=每步可写 JS/Python/TS/Go/Bash、serverless 运行时、内建可观测性。判据：**敏感数据 agent 必须自托管；高执行量时自托管固定成本胜出**。
+- **确定性任务不用 agent**：能确定性完成的用 plain workflow（webhook→OpenAI 节点→响应），不需要 agent 循环；四层架构=Trigger（Webhook=实时/Schedule=批处理）→处理→AI 动作→交付；langchain-runner=零配置暴露成 webhook endpoints+cron schedules+HTTP triggers；cron 触发必带 timezone（不写=UTC，业务小时自动化几乎总错）。判据：**确定性任务用 workflow 不用 agent；调度永远显式时区**。
