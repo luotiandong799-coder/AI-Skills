@@ -1,0 +1,19 @@
+# r301B 学习轮（2026-09-29，第 2 组十站全量实拉→十独点）
+
+判重基线：r284~r301A。查询词与 r291~r301A 全错开（本轮=工作流变量作用域与迭代节点/错误处理与重试策略/MCP接入与记忆库/触发三技术与Waitpoint/Router与DataStore/重试与重放/MCP权限与CLAUDE.md分层/技能评测基准与度量/Copilot三层指令/评估框架与OpenClaw配置主题）。
+
+## 十站实拉 → 十独点
+| # | 站 | 独点 | 判重 | 提升层 |
+|---|---|---|---|---|
+| 1 | Dify | 变量作用域矩阵=start.*（全部下游）/node.*（下游）/sys.*（全节点）/env.*（应用生命周期）/Conversation variables（Chatflow 全节点）；迭代节点=数组输入+子工作流逐元素运行（顺序/并行）+内置 items/index 变量+{{#node_id.iteration#}} 当前迭代数；HTTP 节点={{variable_name}} 深层访问（{{api_response.data.items[0].id}}）+{{#node_id.status_code#}}/{{#node_id.body#}}；作用域陷阱=工作流级变量每次执行重置，会话级变量走 Variable Pool | 合并保留增量（r300A 变量聚合，本点=作用域矩阵+迭代节点） | 工作流 |
+| 2 | n8n | 两层错误处理=节点级 Retry On Fail（maxTries=3+Wait=5s 典型；限流服务 30s）管瞬时失败+Error Trigger workflow 管剩余（告警/dead-letter/记录）；指数退避+jitter（Code 节点重试循环 1/2/4/8/16s）；HTTP 状态码策略=429 延迟重试/500-504 重试 3-5 次/401 刷新 token 重试/404 跳过（Continue on Fail）/422 记录人工检查；全部失败→最终节点紧急通知 | 合并保留增量（r300C Error Trigger，本点=重试策略+退避 jitter） | 工作流 |
+| 3 | Langflow | MCP Tools 组件=一个组件对应一个 MCP server（JSON 配置/启动命令/HTTP/SSE URL）；Streamable HTTP 支持（1.7 起任意 transport 连 MCP，Langflow 项目亦可暴露为 MCP server）；Memory Bases=聊天历史向量化+语义检索（区别于 Message History 按时间序）；Knowledge Bases=Chroma 默认+外部 provider（Chroma Cloud/OpenSearch/pgvector），知识/记忆库共享 DB provider；lfx-mcp=终端构建验证运行 flows | 合并保留增量（r300B 多向量检索，本点=MCP 接入+语义记忆库） | 工具 |
+| 4 | Activepieces | 触发三技术=Polling（定时轮询）/Webhooks（单 URL 监听）/App Webhooks Subscriptions（OAuth2 开发者应用接收全部授权事件）；CLI 创建=npm run cli triggers create；Webhook Trigger=HTTP body 在 context.payload.body+Disable 用 context.store 删 webhook；Waitpoint=WEBHOOK 类型挂起流程+resume URL 回调恢复 | 合并保留增量（r300C 轮询双策略，本点=触发三技术+Waitpoint） | 工具 |
+| 5 | Make | Router=场景流分多路由+每路由多过滤（AND/OR）+计算变量动态决策+fallback 路由处理不匹配数据；Data Store=场景内持久化（addRecord/search）+去重检查模式（记录存在→终止路径，不存在→继续）；Failed Bundles 重放队列=错误时写 bundle 到 data store+独立重放场景读/重试/标记 replayed | 合并保留增量（r300C Fallback Route，本点=Router+Data Store 重放队列） | 工作流 |
+| 6 | Pipedream | Auto-retry 默认 maxRetries=10，超过→流程继续下一步或 raise 异常；错误通知=失败发给配置的 error listeners；重放=事件日志 Replay Event+批量重放（修复 bug 后重跑错误事件）+删除事件；部署后不可回滚到先前版本；$attempt 对象+cancel_url 取消重试 | 合并保留增量（r301A 并行分支，本点=重试重放面） | 工作流 |
+| 7 | Claude Code | MCP 工具权限四语法=mcp__servername__toolname（精确）/mcp__puppeteer__*（通配）/mcp__*__*（全部）+allow/deny 数组；deny 危险命令=Bash(rm -rf *)/git push --force*/git reset --hard*/sudo*/chmod 777*/Edit(.env*)；CLAUDE.md 四层作用域=Managed（组织级全用户）/Project（./CLAUDE.md git 共享）/User（~/.claude 个人）/Local（./CLAUDE.local.md 不提交）；.mcp.json 配置+--mcp-debug 排障 | 合并保留增量（r301A SubagentHooks，本点=MCP 权限语法+四层作用域） | 工具 |
+| 8 | 技能评测 | SkillsBench=87 任务 8 域+curated Skills+确定性验证器，curated Skills 提升平均通过率 33.9%→50.5%（+16.6pp）；NVIDIA SkillEvaluator=静态检查+真实任务 with/without skill，300+ 验证技能，平均 Skill Lift Correctness 41 点/Effectiveness 39 点；Skill coverage=轨迹级测试充分性度量（自然语言指令→半结构化约束→覆盖判定）；技能演化四范式=execution feedback/trajectory distillation/compression/RL | 合并保留增量（r300A 评测双分数，本点=SkillsBench 数据+Skill coverage） | 可复用 Skill |
+| 9 | GitHub | Copilot 三层自定义指令=组织级（org 高标准基线，GitHub 网站生效）/仓库级（.github/copilot-instructions.md）/路径级（.github/instructions/NAME.instructions.md）；@copilot 提及修复合并冲突+PR 上 Fix with Copilot 按钮；copilot coding agent=自定义指令+MCP servers 扩展数据源 | 合并保留增量（r300B Copilot Harness，本点=指令分层+@copilot） | 工具 |
+| 10 | deeplearning | Agentic AI 课程主题=多专家 agent 协作/MCP（M x N→M+N）/Evals（客观指标或 LLM-as-judge）；三级评估框架=Level1 assertion 单元测试（快速确定性每 commit）/Level2 trace-based LLM-as-judge（curated 数据集）/Level3 在线评估 A/B（生产流量）；三大评估范围=End-to-end 黑盒/Trajectory 完整轨迹/Component-level 单步；OpenClaw skills.entries 配置=apiKey source env+按 agent 可见性+单行 frontmatter 限制；Trending=cloudflare/security-audit-skill 月 19.4k 持续榜首+bilawalsidhu/gods-eye-view 月 37.5k | 合并保留增量（r301A 课程地图，本点=三级评估框架+OpenClaw 配置） | 工作流 |
+
+判重口径：增量判定。10 独点全为合并保留增量（各有≥40% 独有增量），零纯重复零编造。

@@ -12810,3 +12810,76 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **官方技能矩阵**：anthropics/vercel-labs/microsoft/azure-skills/HashiCorp/Redis/LiveKit——"官方=厂商矩阵"。
 - **Trending 技能**：cloudflare/security-audit-skill 19.4k 月星（多阶段安全审计+机器可读发现）+Tencent/BrowserSkill 周 4.5k——"trending=安全审计+浏览器技能"。
 - 提升层：工作流。触发词：课程 60/43/32、A2A 协议、On-Device Memory、Generative UI、skills.sh 安装榜、security-audit-skill。
+## r301B 十独点（2026-09-29 实拉）
+
+### 1. 变量作用域矩阵与迭代节点：Dify 工作流面（来源：deepwiki.com/langgenius/dify-docs/4-core-platform-features + dify-6c0370d8-release-1-16-0.mintlify.site/en/cloud/use-dify/nodes/iteration + dify-6c0370d8.mintlify.app/en/cloud/use-dify/nodes/http-request + adg.csdn.net/6952476f5b9f5f31781b565e + promptindexhub.com/dify-workflow-not-saving-variables-between-nodes-fix 2025-10-03/2026-03-16/2026-05-14/2026-05-22/2026-07-29/2026-08-27 实拉，与 r300A 变量聚合合并增量——那条管收敛，本条管作用域与迭代）
+- **作用域矩阵**：start.*（全部下游节点）/node.*（节点下游）/sys.*（所有节点）/env.*（应用生命周期）/Conversation variables（Chatflow 全节点，sys.conversation_id 生命周期）——"作用域=五类生命周期"。
+- **迭代节点**：数组输入+子工作流逐元素运行（顺序/并行）+内置 items（当前元素）/index（索引）变量——"迭代=数组+items/index"。
+- **HTTP 深层访问**：{{variable_name}} 双花括号+深层对象 {{api_response.data.items[0].id}}；{{#node_id.status_code#}}/{{#node_id.body#}}——"HTTP=深层对象访问"。
+- **作用域陷阱**：工作流级变量（{{node_name.variable_name}}）每次执行重置；会话级变量走 Variable Pool——"陷阱=工作流级每执行重置"。
+- 提升层：工作流。触发词：变量作用域矩阵、迭代节点 items/index、深层对象访问、工作流级变量重置、Conversation variables。
+
+### 2. 两层错误处理与重试策略：n8n 错误面（来源：community.n8n.io/t/best-practice-for-centralized-error-handling-and-retry-from-failed-step-in-production-workflows/300785 + witscode.com/blogs/n8n-error-handling + rajsuyash.com/blog/n8n-error-handling-best-practices.html + ai-uchi.ru/articles/nestabilnye-api-v-n8n + sciencetrace.com/n8n-professional-course/error-handling-and-debugging 2026-01-06/2026-01-29/2026-03-01/2026-04-14/2026-05-22/2026-09-20 实拉，与 r300C Error Trigger 合并增量——那条管触发，本条管重试策略）
+- **两层错误处理**：节点级 Retry On Fail（maxTries=3+Wait=5s 典型；限流服务 30s）管瞬时失败+Error Trigger workflow 管剩余（告警/dead-letter/记录失败）——"两层=节点重试+错误触发"。
+- **退避+jitter**：Code 节点重试循环 1/2/4/8/16s 指数退避+Wait 节点——"退避=指数+jitter"。
+- **状态码策略**：429=增加延迟重试/500-504=重试 3-5 次/401=刷新 token 重试/404=跳过（Continue on Fail）/422=记录人工检查——"状态码=五类动作"。
+- **最终兜底**：全部重试失败→最终节点发送紧急通知——"兜底=紧急通知节点"。
+- 提升层：工作流。触发词：两层错误处理、Retry On Fail maxTries、指数退避 jitter、状态码策略 429/401/404/422、紧急通知兜底。
+
+### 3. MCP 接入与记忆库：Langflow 工具面（来源：docs.langflow.org/1.8.0/mcp-client + /1.10.0/mcp-tutorial + /next/memory-bases + /1.10.0/knowledge + /lfx-mcp + langflow.org/blog/langflow-1-7 2025-12-22/2026-07-23/2026-08-09/2026-09-02/2026-09-13/2026-09-16 实拉，与 r300B 多向量检索合并增量——那条管检索，本条管 MCP 与记忆库）
+- **MCP Tools 组件**：一个组件对应一个 MCP server（JSON 配置/启动命令/HTTP/SSE URL）——"MCP=一组件一 server"。
+- **Streamable HTTP**：1.7 起任意 transport 连 MCP；Langflow 项目亦可暴露为 MCP server——"传输=Streamable HTTP"。
+- **Memory Bases**：聊天历史向量化+语义检索（区别于 Message History 按时间序）——"记忆=向量语义检索"。
+- **知识库 provider**：Chroma 默认+外部（Chroma Cloud/OpenSearch/pgvector）；知识/记忆库共享 DB provider——"知识库=共享 provider"。
+- **lfx-mcp**：终端连接 Langflow 实例构建/验证/运行 flows——"CLI=lfx-mcp"。
+- 提升层：工具。触发词：MCP Tools 组件、Streamable HTTP、Memory Bases 语义检索、知识库共享 provider、lfx-mcp。
+
+### 4. 触发三技术与 Waitpoint：Activepieces 触发面（来源：activepieces.com/docs/build-pieces/piece-reference/triggers/overview.md + /webhook-trigger + /flow-control.md + /pieces/webhook + resources.activepieces.com/automation-use-cases 2026-06-17/2026-08-20/2026-08-23/2026-08-28/2026-09-01 实拉，与 r300C 轮询双策略合并增量——那条管轮询，本条管触发全谱）
+- **触发三技术**：Polling（定时轮询端点）/Webhooks（单 URL 监听用户事件）/App Webhooks Subscriptions（OAuth2 开发者应用接收全部授权事件）——"触发=轮询/webhook/订阅三式"。
+- **CLI 创建**：npm run cli triggers create 生成新触发——"创建=CLI 命令"。
+- **Webhook Trigger 契约**：HTTP body 在 context.payload.body+Disable 用 context.store 取 webhook ID 删除——"webhook=body/store"。
+- **Waitpoint 挂起**：WEBHOOK 类型 waitpoint+resume URL，流程挂起等待回调恢复——"挂起=WEBHOOK waitpoint"。
+- 提升层：工具。触发词：Polling/Webhooks/App Webhooks 三式、npm run cli triggers create、context.payload.body、WEBHOOK waitpoint resume URL。
+
+### 5. Router 与 Data Store：Make 流控面（来源：make.com/en/help/modules/router + help.make.com/step-2-add-a-router + everestx.com/tutorials/make/set-up-make-data-stores + use-apify.com/blog/make-com-data-stores-guide + liziu.com/make-integromat 2026-03-03/2026-03-15/2026-04-13/2026-05-21/2026-05-26/2026-06-09 实拉，与 r300C Fallback Route 合并增量——那条管单路由，本条管 Router+Data Store）
+- **Router 多路由**：场景流分多路由+每路由多过滤（AND/OR）+计算变量动态决策+fallback 路由处理不匹配数据——"Router=多路由+fallback"。
+- **Data Store 持久化**：场景内数据库（addRecord/search），前次运行数据下次引用，用于去重/状态跟踪——"存储=场景内持久化"。
+- **去重检查模式**：检查记录存在→存在终止路径，不存在→继续处理——"去重=存在即停"。
+- **Failed Bundles 重放**：错误时写 bundle 到 data store+独立重放场景读/重试/标记 replayed——"重放=失败 bundle 队列"。
+- 提升层：工作流。触发词：Router 多路由 fallback、Data Store addRecord、去重检查存在即停、Failed Bundles 重放队列。
+
+### 6. 重试与重放：Pipedream 恢复面（来源：pipedream.com/docs/workflows/building-workflows/errors + /code/python/rerun + /workflows/event-history + /docs/deprecated/migrate-from-v1 + community/t/what-is-the-api-for-retrying-the-latest-workflow-event/12094 2024-12-17/2025-02-28/2026-07-21/2026-08-16/2026-09-21/2026-09-28 实拉，与 r301A 并行分支合并增量——那条管控制流，本条管恢复面）
+- **Auto-retry 默认 10**：maxRetries 默认 10，超过→流程继续下一步或 raise 异常——"重试=默认 10 次"。
+- **错误通知**：失败发给配置的 error listeners——"通知=error listeners"。
+- **批量重放**：事件日志选择 Replay Event+批量重放（修复 bug 后重跑错误事件）+删除事件——"重放=批量 Replay Event"。
+- **不可回滚**：部署后无法回滚到先前版本；GitHub Sync 序列化 YAML——"版本=部署不可回滚"。
+- **取消重试**：$attempt 对象+cancel_url 手动取消重试态——"取消=cancel_url"。
+- 提升层：工作流。触发词：maxRetries 默认 10、error listeners、批量 Replay Event、部署不可回滚、$attempt cancel_url。
+
+### 7. MCP 权限与 CLAUDE.md 分层：Claude Code 配置面（来源：code.claude.com/docs/en/permissions + qiita.com/LemonCake/items/4f043eb440066319dfa6 + cloud.tencent.com/developer/article/2649076 + thepromptshelf.dev/blog/mcp-json-configuration-reference-2026 + claude-architect.dataopslabs.com/learn/3-4 2026-02-19/2026-04-01/2026-05-25/2026-06-02/2026-07-02/2026-09-26 实拉，与 r301A SubagentHooks 合并增量——那条管 subagent/hooks，本条管权限与分层）
+- **MCP 权限四语法**：mcp__servername__toolname（精确）/mcp__puppeteer__*（通配）/mcp__*__*（全部）+allow/deny 数组——"权限=精确/通配/全部"。
+- **deny 危险命令**：Bash(rm -rf *)/git push --force*/git reset --hard*/sudo*/chmod 777*/Edit(.env*)——"deny=六类危险操作"。
+- **CLAUDE.md 四层**：Managed（系统配置目录组织级全用户）/Project（./CLAUDE.md git 共享）/User（~/.claude 个人偏好）/Local（./CLAUDE.local.md 不提交）——"分层=四层作用域"。
+- **.mcp.json+调试**：项目/全局/.mcp.json 配置 MCP server+--mcp-debug 排障——"配置=.mcp.json+--mcp-debug"。
+- 提升层：工具。触发词：mcp__server__tool 四语法、deny rm -rf/git push --force、CLAUDE.md 四层作用域、.mcp.json、--mcp-debug。
+
+### 8. 技能评测基准与度量：技能效果面（来源：arxiv.org/pdf/2602.12670v4 SkillsBench + developer.nvidia.com/blog/evaluating-ai-agent-skill-performance-with-nvidia-skillevaluator + arxiv.org/html/2606.20659v2 + skillsbench.ai/skillsbench.pdf + arxiv.org/pdf/2606.11435 2026-02-26/2026-06-04/2026-06-25/2026-07-04/2026-08-19 实拉，与 r300A 评测双分数合并增量——那条管双分数，本条管基准数据与覆盖度量）
+- **SkillsBench 数据**：87 任务 8 域+确定性验证器；curated Skills 提升平均通过率 33.9%→50.5%（+16.6pp，域间 +4.5~+34 波动）——"基准=+16.6pp 平均提升"。
+- **Skill Lift 度量**：NVIDIA SkillEvaluator=静态检查+真实任务 with/without skill；300+ 验证技能平均 Correctness 41 点/Effectiveness 39 点；Claude Code 平均 Lift 高于 Codex，产品域 +2~+46——"度量=Correctness/Effectiveness 双分"。
+- **Skill coverage**：轨迹级测试充分性度量（自然语言指令→半结构化约束→覆盖判定 Pass/Fail）——"覆盖=轨迹约束覆盖"。
+- **演化四范式**：execution feedback/trajectory distillation/compression/RL——"演化=四范式"。
+- 提升层：可复用 Skill。触发词：SkillsBench 33.9→50.5、Skill Lift Correctness/Effectiveness、Skill coverage 约束覆盖、演化四范式。
+
+### 9. Copilot 三层指令与 @copilot：GitHub Copilot 定制面（来源：docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions + /en/enterprise-cloud@latest/copilot/how-tos/use-copilot-agents/cloud-agent/use-cloud-agent-on-github + /en/copilot/tutorials/cloud-agent/get-the-best-results + /en/enterprise-cloud@latest/copilot/tutorials/roll-out-at-scale/govern-at-scale/maintain-codebase-standards 2025-08-15/2026-03-13/2026-09-09/2026-09-16/2026-09-21/2026-09-28 实拉，与 r300B Copilot Harness 合并增量——那条管评测 harness，本条管指令分层）
+- **三层自定义指令**：组织级（org 高标准基线，仅 GitHub 网站生效）/仓库级（.github/copilot-instructions.md 全仓库）/路径级（.github/instructions/NAME.instructions.md 匹配路径文件）——"指令=组织/仓库/路径三层"。
+- **@copilot 修复冲突**：PR 评论 @copilot 提及触发修复合并冲突+merge box 的 Fix with Copilot 按钮——"修复=@copilot 提提及"。
+- **coding agent 扩展**：copilot coding agent=自定义指令+MCP servers 扩展数据源工具——"扩展=指令+MCP"。
+- **支持面**：Copilot Chat VS Code/coding agent/其他 IDE/GitHub 网站/code review（copilot-instructions.md 文件）——"支持=多面生效"。
+- 提升层：工具。触发词：组织/仓库/路径级指令、copilot-instructions.md、@copilot 修复冲突、Fix with Copilot、MCP 扩展 coding agent。
+
+### 10. 评估框架与 OpenClaw 配置：deeplearning+OpenClaw 面（来源：corporate.deeplearning.ai/courses/agentic-ai + kunalganglani.com/blog/evaluate-ai-agents-production + deepeval.com/guides/guides-ai-agent-evaluation + docs.openclaw.ai/tools/skills + gaojihao.github.io/github-hot/trending-monthly.html 2026-02-02/2026-07-12/2026-09-17/2026-09-23/2026-09-27/2026-09-29 实拉，与 r301A 课程地图合并增量——那条管课程清单，本条管评估框架与配置）
+- **三级评估框架**：Level1 assertion 单元测试（快速确定性每 commit）/Level2 trace-based LLM-as-judge（curated 数据集）/Level3 在线评估 A/B（生产流量持续）——"评估=三级渐进"。
+- **三大评估范围**：End-to-end 黑盒（输入输出）/Trajectory 完整轨迹（推理+工具调用）/Component-level 单步隔离——"范围=E2E/轨迹/组件"。
+- **OpenClaw skills.entries**：JSON5 配置=entries.{skill}={enabled/apiKey/env/config}；apiKey source env+按 agent 可见性（agents.defaults.skills）+单行 frontmatter 解析限制——"配置=entries+apiKey env"。
+- **Trending 补拉**：security-audit-skill 月 19.4k 持续榜首+bilawalsidhu/gods-eye-view 月 37.5k——"trending=安全审计+卫星视角"。
+- 提升层：工作流。触发词：三级评估框架 assertion/trace/online、三大评估范围、skills.entries 配置、apiKey source env、gods-eye-view。
