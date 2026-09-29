@@ -13264,3 +13264,63 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - OpenAI 审计 SWE-bench Pro ~30% 任务损坏、2026 初停报 Verified（gold-patch 逐字复现）；SWE-bench Pro 抗污染替代低 25-30 点；ProMax 多语言重构 170 实例 7 语言；Dialogue-SWEBench 对话驱动+用户模拟器。
 - 提升层：模型 / 工作流。触发词：SWE-bench、收敛、scaffold 差异、ProMax、gold-patch。
 
+
+## r303C 学习章（2026-09-29）：执行纪律补强（来源：code.claude.com/docs/en/hooks + anthropics/claude-plugins-official + docs.langchain.com/oss/python/langgraph/persistence + langchain.com/blog/delta-channels + pypi.org openai-agents 0.6.7 + larsderidder/framework-analysis + pypi.org smolagents 1.26.0 + agentskills.zhcn.dev/specification + arXiv 2608.08453 + github.blog agentic-workflows + docs.github.com + n8n.io/workflows/16744 + docs.n8n.io/flow-logic/error-handling + pipedream.com/docs/sources + dev.to RAG-evaluation-2026 + llm4agents.com/blog/graphiti-mem0-agent-memory + vectorize.io mem0-vs-zep，2026-09-29 实拉）
+
+### 1. Claude Code hooks 事件模型与权限决策四值：调用前结构化拦截（工具/可复用 Skill 层）
+- PreToolUse 在工具调用前触发，可 block/修改调用（如拦危险 shell）；PostToolUse 执行后触发、用于文件变更审计轨迹；PermissionRequest 权限弹窗时触发；PermissionDenied 拒绝时输出 `hookSpecificOutput.retry:true` 可指示模型重试被拒调用——但分类器未产出 verdict 时 Claude Code 忽略 retry。
+- PreToolUse 的 `permissionDecision` 四值：allow / deny / ask / defer——hook 不只拦，还能把决定权交回（defer）。
+- **subagents 与主 agent 共享同一套 hooks**；插件内 hooks 定义在 `hooks/hooks.json`。
+- 判据：与"工具结果断言层"（调用后打标）互补——hooks 是调用前机制，且决策粒度四值不是二值。触发词：PreToolUse、permissionDecision、PermissionDenied、hooks.json。
+
+### 2. LangGraph 双持久层 + DeltaChannel：修 O(N²) 快照成本（工具层）
+- 双系统：checkpointers=线程级短期记忆（每 super-step 存 checkpoint 到 thread，支持时间旅行/中断恢复）；stores=跨线程长期记忆。
+- 默认 full-snapshot 按 O(N²) 增长；DeltaChannel 每步只存 delta、每 K 步写全量快照——存储平坦、恢复延迟有界、旧线程透明升级。
+- 生产 connector：DynamoDBSaver（AWS 官方）、MongoDBSaver（Azure 官方）；TTL 支持 delete（连 run+checkpoint）与 keep_latest。
+- 判据：先定"要不要时间旅行/中断恢复"再选 checkpointer；长会话必须上 delta 通道。触发词：checkpoint、stores、DeltaChannel、时间旅行。
+
+### 3. OpenAI Agents SDK：handoff 是专用工具调用、guardrail 异步跑输出流（工具/工作流层）
+- Swarm 演化；核心原语 agents/handoffs/guardrails/sessions/tracing；100+ provider。
+- handoff=转移控制权的专门化工具调用（可观测、可审计）；sessions 自动管理会话历史。
+- **guardrails 对 agent 响应输出流异步运行**：文本会话检查 output text deltas、音频会话检查 transcript deltas，违规立即切断；GuardrailAgent 是 `Agent` 类的 drop-in 替换。
+- Codex 生产安全四件套：managed configuration + constrained execution + network policies + agent-native logs。
+- 判据：换人用 handoff、"防违规"用 guardrail（异步流上检查、不阻塞生成）；日志用 agent 原生格式。触发词：handoffs、guardrails、GuardrailAgent、output deltas。
+
+### 4. smolagents：CodeAgent vs ToolCallingAgent + AST 白名单 + 生产显式 sandbox（工具层）
+- CodeAgent 写 Python 编排工具（step=一次完整代码执行，无法拦截程序内单次工具调用）；ToolCallingAgent 发 JSON 工具调用（无第二解释器）。
+- 默认 LocalPythonExecutor 基于 AST 执行、import 白名单（`additional_authorized_imports` 显式扩权）；生产必须显式 `sandbox='e2b'`（云沙箱、约 25s/次延迟）或 `sandbox='local'`。
+- 判据：计算已入沙箱用 ToolCallingAgent（更轻）；要编排复杂工具链用 CodeAgent；默认本地执行只适合实验。触发词：CodeAgent、LocalPythonExecutor、additional_authorized_imports、e2b。
+
+### 5. Agent Skills frontmatter 硬规范 + 两级加载成本模型（可复用 Skill 层）
+- frontmatter 仅 name/description 必填：name≤64 字符、小写字母数字单连字符、**必须匹配目录名**与 `^[a-z0-9]+(-[a-z0-9]+)*$`；description≤1024"做什么+何时用"；license/compatibility/metadata 可选；规范兼容运行时**忽略未识别 key**→跨 agent 可移植。
+- 两级加载：会话开始仅注入每个已装技能 name+description（约 **100 tokens/技能**），模型据此决定是否加载 body——库能装很多技能却不付全部内容成本。
+- 138K SKILL.md 实证：可复用性依赖 frontmatter 质量——模型只凭 name+description 判断是否加载，描述差=技能永远不被发现。
+- 判据：写技能先过 frontmatter 校验（名称匹配目录、描述含触发场景）；description 是唯一"售卖窗口"。触发词：frontmatter、name 校验、两级加载、100 tokens。
+
+### 6. GitHub Agentic Workflows：Markdown 定义 + safe-outputs 白名单 + gh aw compile（工作流/工具层）
+- `.github/workflows/*.md`=YAML frontmatter（on/permissions/safe-outputs/tools）+ Markdown 自然语言指令定义自动化。
+- `gh aw compile` 编译为 `.lock.yml` 标准 Actions——复用现有 runner groups 与策略约束；合并 main 即自动生效。
+- 安全优先：**safe-outputs 白名单限制模型副作用动作**（如 create-issue 的 title-prefix/labels/allowed 限定取值）；permissions 最小化；tools/toolset 限定工具子集。
+- 判据：模型负责决策、safe-outputs 负责圈定决策范围；发布=合并 main。触发词：Agentic Workflows、safe-outputs、gh aw compile、.lock.yml。
+
+### 7. n8n 错误三层：节点 Retry / 错误工作流 / API 重放（工作流层）
+- Layer1 节点级 Retry On Fail 管瞬时错误；Layer2 工作流级 Error Workflow（Error Trigger 首节点）捕未处理失败；Layer3 API 级 `POST /api/v1/executions/{id}/retry` body `{"loadWorkflowExecution":true}` 重放。
+- 永久错误（401/畸形 payload）告警不要五次重试；Continue on Fail 让单节点失败不杀执行、输出带 `$error` 供下一节点决策；死信=retryCount≤3 后转 Jira/Slack。
+- 判据：错误按瞬时/永久/可预测三分类各一处理路径；重试预算与退避硬编码。触发词：Error Trigger、Continue on Fail、executions/retry、loadWorkflowExecution。
+
+### 8. Pipedream event source 与 workflow 解耦：一源多流 + 内置去重（工具/工作流层）
+- **event source 是独立于 workflow 的资源**：单一 source 可触发多个 workflow、可被 app 经 API 消费事件。
+- triggers 两类=app-based event sources（第三方服务事件）与 native triggers（HTTP/Schedule/Email/RSS）；组件 props 部署时收输入、内置 key-value store、**内置 deduping 策略**。
+- 判据：一源多流就把 source 独立出来；要消费事件就 API 拉，不重复部署。触发词：event source、deduping、app-based sources、native triggers。
+
+### 9. RAG 评估四核心指标配对：检索问题 vs 生成问题（工作流/可复用 Skill 层）
+- 两对指标：**检索对=context precision**（检索块相关性+排序）+ **context recall**（标准答案要点被检索到多少）；**生成对=faithfulness**（每个论断被检索上下文支持，0.6≈约 40% 论断无依据）+ **answer relevance**（judge 基于回答生成反事实问题、与原问题算语义相似度）。
+- 阈值：faithfulness>0.85 生产、>0.95 高利害域；**四指标必须同 run 计算**——否则分不清坏答案是检索问题还是生成问题（两者修复方向相反）。
+- 范围与盲点：faithfulness 只对 RAG 范围（真实但上下文不支持的论断也算失败）；标准指标假设索引可信，0.95 faithfulness 仍可能因陈旧/未拥有内容错。
+- 判据：低分先看哪对——检索对低改索引/分块，生成对低改 prompt/上下文。触发词：faithfulness、context precision、context recall、answer relevance、反事实问题。
+
+### 10. Agent 记忆选型分层：Mem0 工作记忆 + Graphiti 时间档案（工具层）
+- Mem0=个性化优先、向量存储+可选知识图谱；聊天回忆**优于朴素 RAG**（存提取事实非原始块），省 80-90% token、低延迟。
+- Zep/Graphiti=时间知识图谱，事实带时间戳、有效窗口保留版本历史，能答"上个季度说了什么"式时间问题；LongMemEval 63.8% vs Mem0 49.0%。
+- 可分层：Mem0 活跃会话工作记忆 + Graphiti 长期档案；框架互相承认对方强项。
+- 判据：要不要时间维度——不要用提取事实向量存储，要就上时间知识图谱。触发词：Mem0、Graphiti、时间知识图谱、有效窗口、LongMemEval。
