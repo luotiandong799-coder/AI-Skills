@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.52.0
+version: 3.53.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -471,3 +471,13 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 原文：`stats: {downloads: 1287043, installs: 8107, stars: 311, versions: 22}` —— 下载:安装 ≈ **158:1**，下载:收藏 ≈ 4137:1。
 - 判据：**同一条记录里的 downloads / installs / stars 不是同一个动作的三种说法，而是漏斗的三段**；拿 downloads 当 popularity 去和别家的 installs 排序，等于拿曝光量比留存。引用任何单一数字前先问"这个数字统计的是对象还是事件"（§r286-C），再问"它在漏斗哪一段"。
 - 提升层：模型/工具。触发词：downloads、installs、stars、量级差、漏斗、单数字不可比。
+
+## 技能的分发形态决定版本绑定语义：library 技能默认跟随最新版，embedded 技能才钉在包里（来源：docs.dify.ai `llms-full.txt`《Skills》2026-09-29 r294-A 独立 curl 实拉 2.99MB 全文核验；与 §r286-A 升级策略三档 互补——那条管"宿主允不允许自动升"，本条管"消费侧拿到的到底是哪一版"）
+- 原文："You can keep up to 500 skills in the library and share them workspace-wide. When you publish an update to a skill, **every agent that uses it picks up the latest version**."；"You can add **up to 20 library skills** to an agent, and it follows the latest published version of each."；embedded skill = "one the agent keeps to itself"，包内需含 `SKILL.md`，默认 ≤50 MB（`UPLOAD_SKILL_FILE_SIZE_LIMIT` 可调）。
+- 判据：① **同一平台内两种打包形态的版本语义是相反的**——共享库技能是"活引用"（上游发布即全网生效，作者改一行，所有引用它的 agent 行为当场变），嵌入技能是"死快照"（行为随包固定，升级要重新打包分发）；做能力治理时先问"这条引用是活引用还是死快照"，活引用必须配变更告知（§3.30.0 向下告知义务），否则上游一次静默改动就是一次全下游事故；② **配额是三个互不相干的维度，别混着说**——库存容量（500）、单 agent 挂载数（20）、单个包体积（50MB），任一项触顶的处置动作完全不同（清库 / 拆 agent / 拆包），报"技能满了"之前先指名是哪一层。
+- 提升层：工具/工作流。触发词：library skill、embedded skill、跟随最新版、活引用、死快照、500 上限、20 上限、50MB 包。
+
+## 关掉市场是「切断增量」不是「切断存量」：一条开关的四条连锁要逐项列清（来源：同上 `MARKETPLACE_ENABLED` 环境变量说明，2026-09-29 r294-A 独立实拉核验；与 §r285 RM 1.22.0「发布可部分生效非布尔」同向，本条给的是断供面的完整清单）
+- 原文：禁用后 ① 控制台隐藏浏览与安装入口；② API 拒绝 Marketplace 插件的**安装与升级**；③ 周期升级检查（`ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK`）停止；④ "**Already-installed plugins keep working**, and installing from GitHub or a local package stays available when permitted by the installation policy."；另有"Template import itself is unaffected. However, if an imported template requires Marketplace plugins that are not already installed, **those dependencies cannot be installed while Marketplace is disabled**."
+- 判据：① 把"关开关"当**状态转移**写清四条边——入口面（看不见）、安装面（装不了）、**升级面（已装的也升不了，这条最易漏，等于把存量钉在旧版还停止了漏洞修复）**、存量面（继续跑）；② **断供 ≠ 停服**——已装组件继续工作，所以"禁用市场"后不能假设能力立刻消失，也不能假设还能打补丁；③ **模板依赖是断供的隐性受害者**：模板本身能导入，但它依赖的市场插件装不上 → 导入成功≠可运行，验收模板必须跑到依赖解析完成。
+- 提升层：工作流/工具。触发词：MARKETPLACE_ENABLED、市场禁用、断供、已装继续工作、拒升级、模板依赖装不上。
