@@ -11529,3 +11529,69 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Agentic AI 课程**：反射/工具使用/规划/多 agent 工作流四大设计模式+外部工具集成（数据库/API/Web 搜索/代码执行）+评估优化（性能指标/错误分析/生产部署）+degrees of autonomy——**自主度是谱系不是开关**。
 - **Agent Memory 新课**（Oracle 合作）：长期记忆=**模型外、持久、结构化的一等基础设施**（Oracle AI Database+LangChain+LLM 管道）——**记忆不是上下文残留，是被构建的基础设施**（与 r293A 记忆课同向，本条=课程面新增）。
 - 提升层：可复用 Skill。触发词：四大设计模式、反射、规划、自主度谱系、记忆=模型外基础设施、Oracle AI Database。
+## r295B 十独点（2026-09-29 实拉）
+
+### 1. 循环与变量节点语义：Dify 工作流面（来源：dot-ai《ループノード完全解説》+ jishuzhan《常用节点怎么选》+ CSDN《循环终止条件详解》2026-04-16/2026-07-23/2026-04-10 实拉，与 r295A 编排面合并增量）
+- **Loop vs Iteration 选择判据**：**前次输出依赖后次就用 loop（while）**；**纯数组逐条处理用 iteration**——iteration 是循环的友好版，自定义程度妥协换非技术用户上手。
+- **循环变量 1.2.0 革新**：1.2.0 前手动创建前置变量维护索引；1.2.0+ 自动管理循环变量——**平台自动管理状态=少一类人为 bug**。
+- **防死循环硬规则**：`loop_count` 最大迭代数必设；while 条件可 break 提前退出——**任何循环都要有上限+退出条件**。
+- **变量节点职责**：变量聚合器=汇合互斥分支（IF/ELSE 各分支→聚合→公共后续）；变量赋值=更新会话状态/循环页码/累计结果——**"更新状态"归赋值、"合并分支"归聚合，别混用**。
+- 提升层：工作流。触发词：Loop vs Iteration、循环变量、loop_count、break_conditions、变量聚合器、变量赋值。
+
+### 2. 确定性+AI 混合管道与子工作流判据：n8n 生产面（来源：blog.n8n.io《Production AI Playbook: Deterministic Steps & AI Steps》+《Complex Agent Patterns》2026-04-02/2026-06-09 实拉，与 r295A 重试面合并增量）
+- **AI 步骤后接确定性校验**：AI 分类 → Code 节点验证分类与置信度 → Guardrails 节点查 NSFW/密钥 → IF 分支——**AI 输出的把关用确定性节点做，不靠"再让 AI 自查"**（与 r295A 节点级重试互补）。
+- **flat vs sub-workflow 判据**：线性 3-5 步无分支/单人维护/一次性逻辑/还在原型期 → 扁平；**复制同逻辑到多个工作流、>15 步、多分支 → 拆子工作流**——拆的动机是复用，不是规模。
+- **Tools Agent 配置**：system message 显式命名允许动作+精确最终答案格式；Max Iterations=最长真实工具链+2——**迭代上限按真实链路算，防无限循环也不误杀**。
+- 提升层：工作流。触发词：确定性步骤、Guardrails 节点、输出校验、flat vs sub-workflow、复制同逻辑、Max Iterations。
+
+### 3. 自定义组件执行管控与精简安装：LangFlow 部署面（来源：langflow.org/blog 1.9/1.12 + docs.langflow.org extensions 2026-04-13/2026-09-01/2026-09-03 实拉，与 r295A 安全基线合并增量）
+- **LANGFLOW_ALLOW_CUSTOM_COMPONENTS**：管理员可禁用自定义 Python 组件执行；配 `LANGFLOW_COMPONENTS_PATH` 做 allow-list——**"允许名单"比"默认全开"安全**（与 r295A AUTO_LOGIN 同族：默认收紧）。
+- **1.12 精简安装**：`uv pip install langflow` 只含精选 provider 集，opt-in providers 按需装——**默认安装面=攻击面，越精简越安全**。
+- **extensions 脚手架**：`lfx extension init` 生成 canonical 布局（extension.json manifest + pyproject.toml + src/）——**组件即包，可 pip 安装**。
+- 提升层：工具。触发词：ALLOW_CUSTOM_COMPONENTS、COMPONENTS_PATH、allow-list、uv 精简安装、opt-in providers、lfx extension。
+
+### 4. MCP 生态与 webhook 双角色：Activepieces 平台面（来源：blog.brightcoding.dev《400+ MCP Servers》+ tecnobits《Webhooks en Activepieces》2026-06-16/2026-08-30 实拉，与 r295A Flow-as-Tool 合并增量）
+- **400+ MCP servers 原生集成**：type-safe pieces 框架写就，agent 直接调——**自动化平台转型 agent 工具面是 2026 主线**（与 r295A 单端点万工具同向）。
+- **webhook 双角色**：作触发器（收外部数据启流）或作动作（流程末尾向外部系统发通知）——**同一个 webhook 概念两头都能用**，集成库外工具靠它。
+- **社区贡献生态**：~60% pieces 社区贡献，全部 npm 发布、开源可自托管——**平台能力=官方+社区双层**。
+- 提升层：工具。触发词：400+ MCP、type-safe pieces、webhook 双角色、触发器或动作、社区贡献、npm 发布。
+
+### 5. Webhook 双向与 mailhook：Make 触发面（来源：help.make.com《Webhook-triggered AI agent》+《Mailhook-triggered AI agent》+ workflowpick《Webhooks for Beginners》2026-07-03/2026-04-20 实拉，与 r295A Make AI Agent 合并增量）
+- **webhook-triggered AI agent 双向**：新数据发到 webhook → agent 处理 → 回复写回 webhook——**外部服务→Make→外部服务一条 webhook 打通**，第三方便携数据首选。
+- **mailhook**：email webhook 收到新邮件**即时触发**（不是定时拉取）——**邮件事件也要事件驱动，别轮询**。
+- **webhook vs polling 判据**：对方**没有轮询触发器**（如 Stripe payment_intent.succeeded）时 webhook 是**唯一路径**——**先查有没有轮询触发器，没有就用 webhook**。
+- 提升层：工具。触发词：webhook 双向、回写 webhook、mailhook、邮件即时触发、webhook vs polling、无轮询触发器。
+
+### 6. 异步模式与数据存储：Pipedream 运行面（来源：aitoolscoop《Pipedream》+ integrationatlas《Pipedream》+ pipedream.com glossary 2026-05-21/2026-06-06/2026-09-28 实拉，与 r295A MCP 端点合并增量）
+- **异步处理双模式**：parallel（并行）与 queued（排队）执行——**高吞吐事件流按模式选，别默认全并行**。
+- **Data stores**：持久 KV 存储跨工作流执行保持状态——**工作流间共享状态用专用存储，不塞上下文**（与 r294A 记忆分工：那条管会话记忆，本条管工作流状态）。
+- **版本控制回滚**：跟踪工作流改动可回退到前版——**自动化也要版本管理**。
+- **注意**：默认超时 60 秒；Workday 2025-11-19 宣布收购（2026-01 完成预期）——**平台路线图风险要盯**。
+- 提升层：工具。触发词：parallel/queued、Data stores、持久 KV、版本回滚、默认超时 60s、Workday 收购。
+
+### 7. 技能生态头部盘点：Agent Skills 仓库面（来源：dev.to《GitHub Trending AI Agent Skills》+ pyshine《Awesome Agent Skills》+ orangebot《Antigravity Skills》2026-09-01/2026-04-22/2026-08-16 实拉，与 r294C 模板生态合并增量）
+- **addyosmani/agent-skills 98.4K**：围绕 SDLC 六阶段（定义/规划/构建/验证/评审/发布）20 技能——**按开发生命周期组织技能库**（与 r294C 分层目录同向）。
+- **affaan-m/ECC 268K**：agent harness 性能优化系统（skills/instincts/memory）——**"怎么让 agent 跑得快"本身成了最大的仓库**。
+- **antigravity-awesome-skills 889+**：Google Antigravity 品牌集合——**IDE 厂商各自建技能生态**。
+- **Anthropic 官方 skills 仓库**：参考 agentskills.io 行业标准开源——**官方带头标准化**。
+- 提升层：可复用 Skill。触发词：addyosmani、ECC、antigravity、SDLC 六阶段、官方 skills 仓库、harness 优化。
+
+### 8. 多 agent 分发与匿名共享：skills.sh CLI 面（来源：ailinklab《skills.sh》+ cloud.tencent.com《find-skills》+ docs.localskills.sh 2026-05-26/2026-04-01/2026-08-18 实拉，与 r295A Pin SHA 合并增量）
+- **一次 add 全 agent 分发**：`npx skills add` 自动检测本机 51 个 agent（Claude Code/Cursor/Codex/Copilot/Windsurf/Cline/Gemini CLI…）写进各自技能目录——**安装一次=全家分发**。
+- **四核心命令**：find（搜索）/ add（安装）/ check（查更新）/ update（更新全部）——**管理闭环就四条**。
+- **--skill 精确安装**：`npx skills add owner/repo --skill webhook-debug` 只装单个——**从合集里精确取件**。
+- **localskills 匿名共享**：`localskills share` 免账号共享，首次用生成 Ed25519 密钥对——**技能分发也要有匿名通道**。
+- 提升层：可复用 Skill。触发词：51 个 agent、自动分发、npx skills find/add/check/update、--skill、localskills share、Ed25519。
+
+### 9. 输出形态技能与免费聚合：GitHub 趋势面（来源：CSDN《GitHub开源项目周报 37周》+《日报 9-2》+ yuxiaopeng Github-Ranking 2026-09-25/2026-09-13/2026-09-29 实拉，与 r294C 模板生态合并增量）
+- **输出形态技能霸榜**：i-have-adhd（让 AI 先说答案）/ caveman（说短话省 token）/ humanizer（去 AI 写作痕迹）——**2026 霸榜的是"怎么说话"不是"做什么"**（与 r294B caveman 落地同向：输出纪律成主赛道）。
+- **freellmapi 29K**：34 个免费 LLM provider、635 免费模型端点聚合成单 /v1 端点+智能路由+自动 failover+加密 key——**免费聚合+自动切换=个人零成本实验通道**。
+- **RAG_Techniques 29.6K**：高级 RAG 技术 notebook 合集（每技术带教程）——**RAG 技巧库是学习型资产**。
+- 提升层：可复用 Skill。触发词：i-have-adhd、caveman、humanizer、输出形态技能、freellmapi、免费 provider 聚合、RAG_Techniques。
+
+### 10. 新课面：deeplearning.ai 自适应与设备端记忆（来源：community.deeplearning.ai 公告 + YouTube DeepLearningAI 2026-08-26/2026-09-24 实拉，与 r295A Agentic 合并增量）
+- **Building Adaptive AI Agents**（2026-08-26）：自适应 agent 构建新课。
+- **Building AI Assistants with On-Device Memory**（2026-09-24）：**设备端记忆**——记忆放本机不进云（与 r295A 记忆=基础设施同向：位置也是一等决策）。
+- **Spec-Driven Development with Coding Agents**（JetBrains 合作）：规约驱动开发+编码 agent——r293B 相关已落地，本条=课程面确认。
+- 判据：**课程跟进看"新主题词"**——adaptive/on-device memory/spec-driven 三个词就是 2026 H2 主线。
+- 提升层：可复用 Skill。触发词：Adaptive AI Agents、On-Device Memory、设备端记忆、Spec-Driven Development。
