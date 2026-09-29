@@ -494,7 +494,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 
 ## 撤销与审核分层：吊销只阻断后续发布、不推翻既有审核结论；恢复走 successor 重跑检查并保留失败尝试为审计史（来源：docs.openclaw.ai clawhub/publishing，2026-09-30 r320A 实拉）
 
-## 撤销做成版本级状态机：单版本 deprecated（带 statusMessage）与整包 deleted 两种粒度，批量状态变更须回报 updatedCount；标识符与版本号不可变、内容改写禁用 bulk（来源：MCP registry admin-operations，2026-09-30 r320B 实拉）
 
 
 ## 修订整包不可变且发布只对新会话生效、陈旧编辑报冲突不覆盖；「加载位置」与「谁能看见」是两个独立控件且子级列表非空即整体替换；硬平台过滤不可被 always 豁免（来源：docs.openclaw.ai/tools/skills.md，2026-09-30 r321A 独立实拉 39,741B；细则见 references/knowledge-base.md §r321A）
