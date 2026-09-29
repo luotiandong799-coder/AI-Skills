@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.26.0
+version: 1.27.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -278,3 +278,5 @@ sources:
 - 提升层：工具/可复用 Skill。触发词：trust tier、trust record、信任清单、负例人工写、已知限制随包。
 
 ## 本地来源（file:// 与本地路径安装）必须同权入锁并算目录内容哈希，遥测把绝对路径脱敏为 generic 标记，否则本地安装就是审计盲区（来源：vercel-labs/skills bcdcee67，2026-09-30 r320B 实拉）
+
+## 自助撤回的资格由注册表机检（依赖反查/下载窗口/维护者数）+ 整包撤回后同名 24h 禁发冷却窗 + 显式不可逆 + 不合格走 deprecate 降级档（来源：docs.npmjs.com/policies/unpublish，2026-09-30 r321C 独立实拉 508,379B；细则见 references/knowledge-base.md §r321C）
