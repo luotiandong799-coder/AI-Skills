@@ -1,0 +1,19 @@
+# r300B 学习轮（2026-09-29，另十站全量重新实拉→十独点）
+
+判重基线：r284~r300A。查询词与 r296~r300A 全错开（本轮=知识库检索与RAG优化/AI Agent节点与向量库/向量存储与多向量检索/AI生成流程与审批门/数据转换与数组函数/HTTP与Webhook优先级/上下文工程与提示缓存/技能官方规范/编码Agent生态与harness/多模态语音课程主题）。
+
+## 另十站实拉 → 十独点
+| # | 站 | 独点 | 判重 | 提升层 |
+|---|---|---|---|---|
+| 1 | Dify | Parent-Child Retrieval=Child chunks 匹配查询+Parent chunks 提供上下文（两层平衡精度与上下文）；chunk 长度耦合语义单元（段落/标题/列表项）+模型上下文窗口，预留 5% 上下文余量；Adaptive Chunking=代码重内容大 chunk（1.5x）/简单文本小 chunk（0.5x）；参数基线=技术文档 800 tokens+150 overlap/阅读类子 300-500 亲 1000-1500 overlap 50-100 K=6；亲子模式仅 High-Quality 索引+支持混合检索 | 合并保留增量（r299B 混合检索，本点=亲子两层+自适应 chunk+参数基线） | 工作流 |
+| 2 | n8n | AI 节点实现 LangChain JS=每个节点可配置 agent/LLM/memory/组件，可连任何 n8n 节点；向量库原生集成 7 个=Pinecone/Qdrant/Supabase/Weaviate/Milvus/Zep/MongoDB Atlas/PGVector；向量存储节点四操作模式=Get Many/Insert Documents/Retrieve As Vector Store/Retrieve As Tool；标准 RAG 管线=Data Loader→Recursive Character Text Splitter→Embeddings→Vector Store；内存 store 原型→DB 持久化切换 | 合并保留增量（r296A 工具/r300A n8n 观测，本点=向量库清单+四操作模式+标准管线） | 工具 |
+| 3 | Langflow | Retriever subflow=嵌入查询→向量搜索→解析结果进补充上下文→LLM 生成；Knowledge Base=不每次重摄入的向量库（比 flow 内嵌高效），默认 Chroma 可换 Chroma Cloud/OpenSearch/PGVector；Graph RAG 组件=向量库 graph traversal 基于图文档检索；Multi-Vector Retrieval（1.11.0 lfx-nextplaid）=ColBERT late interaction+ColPali 视觉文档检索 | 合并保留增量（r299A 记忆库，本点=KB 不重摄入+Graph RAG+多向量） | 工具 |
+| 4 | Activepieces | Build with AI=Chat 描述结果→Chat 构建 flow（beta）；agent 给任务说人话=自己定步骤/顺序/打开什么，用已连接 apps+任意 MCP server；审批门=涉及钱/客户/生产步骤设门其余自动跑；MCP 客户端=Claude/Copilot/Cursor/Gemini CLI/Windsurf/Zed；635+ 预置集成 | 合并保留增量（r300A 回滚，本点=描述即构建+agent 自选步骤+审批门） | 工具 |
+| 5 | Make | Make Functions App=IML 函数独立成模块（之前只能在映射字段）；空输入行为=值空/null/缺失→模块输出空结果不停止场景；四新函数=arrayDiff（第一数组不在第二）/arrayIntersect（共有）/set（collection 加覆盖键值不重建结构）/escapeJSON（转义引号反斜杠）；map+get 组合=map 过滤数组+get/first/last 取单条；merge() 合并同构数组 | 合并保留增量（r298B 聚合器，本点=四函数+函数模块化+空输入不中断） | 工具 |
+| 6 | Pipedream | HTTP trigger 七属性=body/client_ip/headers/method/path/query/url；webhook_url 优先级=trigger 级覆盖 project 级（project 级=项目内默认）；emitter_id glob 订阅=p_* 监听所有 workflow 事件；HTTP 触发三型=New Requests（含 headers+query）/Payload Only（只 body）/URL 内容变化；respond()=source 内发 HTTP 响应 | 合并保留增量（r299B 触发器机制，本点=webhook 优先级+glob 订阅+respond） | 工具 |
+| 7 | Anthropic | 缓存四断点=静态指令→租户配置→工具 schema→RAG 上下文（最稳到最不稳，断点变化使后面全失效）；缓存时长=5 分钟默认+1 小时（额外成本）；Claude Code 教训=用 messages 而非改 system prompt+不中途换工具/模型（defer loading 不删）+缓存命中率当 uptime 监控；长上下文=长文档放顶部（20k+）+查询放末尾=响应质量提升最多 30%；ROI 判据=前缀 5 分钟内复用>1-2 次就缓存 | 合并保留增量（r299B defer_loading 保缓存，本点=四断点+查询末尾 30%+命中率监控） | 模型 |
+| 8 | 技能规范 | 技能=目录含 SKILL.md（指令/脚本/资源文件夹）；四目录结构=SKILL.md（必需）+scripts/（可执行）+references/（文档+examples）+assets/（模板）；frontmatter 必填两字段=name（≤64 字符小写字母数字连字符禁 XML 禁保留词 anthropic/claude）+description（非空≤1024）；放置=~/.claude/skills 个人/.claude/skills 项目；Progressive Disclosure=SKILL.md<500 行细节拆 references；托管=zip 上传返回 skill_* ID | 合并保留增量（r298A 技能目录/r299A 技能依赖，本点=frontmatter 硬约束+渐进披露上限+四目录） | 可复用 Skill |
+| 9 | GitHub | Coding agent=分配 issue 或 VS Code prompt→GitHub Actions 环境→commit 到 draft PR→agent session logs 追踪；harness 三职责=context assembly（系统消息+workspace 结构+历史+工具结果+记忆）+tool exposure（声明工具）+result processing；Agent HQ=多 provider 编码 agent 在 GitHub 内直接跑（Copilot/Claude/Codex）；开源本地 GitHub MCP server=给任何 LLM 工具加 GitHub 能力；Workspace=plan agent 捕获意图→提计划→实施+brainstorm agent 消歧 | 合并保留增量（r299A Copilot 权限矩阵，本点=harness 三职责+Agent HQ+GitHub MCP 开源） | 工具 |
+| 10 | deeplearning | Building Live Voice Agents with Google's ADK=ADK 模块化（models/tools/memory/orchestration）；Voice for AI Agents（Vocal Bridge）=三种集成模式 embedded voice/voice layered on existing agents/voice as a callable tool；Building AI Voice Agents for Production（LiveKit/RealAvatar）=组件+延迟优化课程 | 合并保留增量（r300A 课程流，本点=语音三集成模式+ADK 模块化） | 工作流 |
+
+判重口径：增量判定。10 独点全为合并保留增量（各有≥40% 独有增量），零纯重复零编造。GitHub Trending 并入第 10 站实拉（本批新增=openrig 双 agent harness 跑 Claude Code+Codex+LibreChat 45K 全特性自托管+last30days 多源综合技能）。

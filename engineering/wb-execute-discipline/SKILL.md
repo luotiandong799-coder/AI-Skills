@@ -12567,3 +12567,84 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **记忆=第一等基础设施**（Agent Memory）：模型外/持久/结构化，跨会话不丢失——"记忆=模型外基础设施"。
 - **2026 课程流**：Evaluating AI Agents（Arize 结构化评估）/Adaptive Agents/Generative UI/A2A 协议——"课程流=评测/自适应/生成式 UI/A2A"。
 - 提升层：工作流。触发词：Agentic 四模式、reflection tool use planning multi-agent、AgentQ MCTS 自批判 DPO、技能指令文件夹、记忆第一等基础设施、Evaluating AI Agents、A2A 协议。
+## r300B 十独点（2026-09-29 实拉）
+
+### 1. Parent-Child 亲子检索与自适应 Chunk：Dify RAG 优化面（来源：dify.ai/blog/introducing-parent-child-retrieval-for-enhanced-knowledge + deepwiki.com/langgenius/dify-docs/8-knowledge-base-and-rag-system + deepwiki.com/langgenius/dify-docs/8.4-retrieval-methods-and-optimization + marketplace.dify.ai/plugin/asukhodko/markdown_chunker + saiteki-ai.com/basics/ai-tool/dify/dify-rag + readoss.com/en/langgenius/dify/rag-pipeline-document-indexing 2024-12-26/2026-03-08/2026-03-16/2026-04-03/2026-07-01/2026-07-22 实拉，与 r299B 混合检索合并增量——那条管检索方法，本条管 chunk 结构与参数基线）
+- **亲子两层**：Child chunks（句子级）匹配查询+Parent chunks（段落级）提供上下文——"亲子检索=子匹配父上下文"。
+- **chunk 语义单元**：长度耦合段落/标题/列表项+模型上下文窗口，预留 5% 上下文余量给指令与生成；避免跨层级标题断裂——"chunk=语义单元+5% 余量"。
+- **自适应 chunk**：代码重内容→大 chunk（1.5x）；简单文本→小 chunk（0.5x）——"自适应=内容复杂度调大小"。
+- **参数基线**：技术文档 800 tokens+150 overlap；阅读类子 300-500/亲 1000-1500 tokens、overlap 50-100、K=6——"参数=分场景基线"。
+- **模式兼容**：亲子模式仅 High-Quality 索引，支持向量/全文/混合检索；chunk 结构发布后不可改——"亲子=仅高质量+结构不可改"。
+- 提升层：工作流。触发词：Parent-Child Retrieval、子匹配父上下文、chunk 语义单元、5% 上下文余量、自适应 chunk 1.5x/0.5x、800 tokens 150 overlap、K=6、结构不可改。
+
+### 2. 向量库原生清单与四操作模式：n8n RAG 集成面（来源：docs.n8n.io/build/integrate-ai/langchain-in-n8n + n8n.io/rag + n8n.spot/n8n-ai-nodes-langchain-openai-vector-store-reference + n8n.io/vs/langgraph + n8n.io/workflows/5085 + n8n.io/workflows/9174 2026-02-20/2026-03-02/2026-07-07/2026-09-05/2026-09-15/2026-09-27 实拉，与 r296A 工具+r300A n8n 观测合并增量——那条管观测，本条管向量库集成面）
+- **AI 节点=LangChain 可视化**：每个节点可配置 agent/LLM/memory/组件，可连任何 n8n 节点——"AI 节点=LangChain JS"。
+- **7 个原生向量库**：Pinecone/Qdrant/Supabase/Weaviate/Milvus/Zep/MongoDB Atlas/Postgres PGVector——"向量库=7 原生+PGVector"。
+- **四操作模式**：Get Many（读）/Insert Documents（写）/Retrieve As Vector Store（供 chain）/Retrieve As Tool（供 agent）——"四模式=读写+两种检索接入"。
+- **标准 RAG 管线**：Data Loader→Recursive Character Text Splitter→Embeddings→Vector Store——"管线=装载/切分/嵌入/入库"。
+- **原型到生产**：内存 vector store 原型→DB 持久化切换——"原型=内存 store 换 DB"。
+- 提升层：工具。触发词：LangChain JS 节点、7 原生向量库、四操作模式 Get Many/Insert/As Store/As Tool、Recursive Character Splitter、内存 store 原型换 DB。
+
+### 3. Knowledge Base 不重摄入与多向量检索：Langflow RAG 面（来源：docs.langflow.org/next/knowledge + /1.10.0/knowledge-base + /components-vector-stores + /1.8.0/bundles-datastax + /vector-store-rag + /next/chat-with-rag + langflow.org/blog/blog-nextplaid 2025-07-06/2025-07-30/2026-06-26/2026-07-23/2026-08-19/2026-09-03/2026-09-21 实拉，与 r299A 记忆库合并增量——那条管记忆自动摄入，本条管知识库与多向量检索）
+- **KB 不重摄入**：知识库=预存嵌入的向量库，不每次 flow 运行重摄入（比 flow 内嵌高效）——"KB=不重摄入"。
+- **Retriever subflow 五步**：嵌入查询→向量搜索→解析结果进补充上下文→LLM 生成响应——"Retriever=嵌入-检索-上下文-生成"。
+- **DB Providers 可换**：默认 Chroma，可配 Chroma Cloud/OpenSearch/PGVector——"KB=默认 Chroma+DB 可换"。
+- **Graph RAG**：向量库 graph traversal 基于图文档检索（AstraDBGraphVectorStore）——"Graph RAG=图遍历检索"。
+- **多向量检索（1.11.0）**：lfx-nextplaid=ColBERT late interaction+ColPali 视觉文档检索，无需自定义胶水代码——"多向量=ColBERT+ColPali"。
+- 提升层：工具。触发词：Knowledge Base 不重摄入、Retriever subflow 五步、DB Providers Chroma/OpenSearch/PGVector、Graph RAG 图遍历、lfx-nextplaid、ColBERT late interaction、ColPali 视觉检索。
+
+### 4. 描述即构建与审批门：Activepieces AI 自动化面（来源：activepieces.com/docs/overview + activepieces.com/product/ai-agent-builder + activepieces.com/product/ai-adoption + activepieces.com/blog/ai-workflow-automation-examples + activepieces.com/blog/sales-automation + activepieces.com/?ref=futureen 2026-01-22/2026-02-18/2026-07-07/2026-09-18/2026-09-24/2026-09-25 实拉，与 r300A 回滚合并增量——那条管版本，本条管 AI 构建与审批）
+- **描述即构建**：Chat 描述结果→Chat 构建 flow（beta）——"AI 建 flow=描述即构建"。
+- **agent 自选步骤**：给 agent 说人话任务，它自己定步骤/顺序/打开什么；用已连接 apps+任意 MCP server——"agent=自选步骤+全工具面"。
+- **审批门**：涉及钱/客户/生产步骤设审批门，其余自动跑——"审批门=钱客户生产"。
+- **MCP 多客户端**：Claude/Copilot/Cursor/Gemini CLI/Windsurf/Zed——"MCP=多客户端"。
+- **模板起步**：635+ 预置集成/430+ 连接器；从模板起步→review 步骤→调输入——"起步=模板+review"。
+- 提升层：工具。触发词：Chat 构建 flow、描述即构建、agent 自选步骤、审批门钱客户生产、MCP 多客户端、635+ 预置集成。
+
+### 5. 数组四函数与空输入不中断：Make 数据转换面（来源：apps.make.com/make-functions + community.make.com/t/111383 + help.make.com/functions-standalone-module-setup-scenario-note-cloning-and-more + academy-content.make.com/courses/make-intermediate-advanced-functions/03 + help.make.com/mapping-arrays + community.make.com/t/112018 2026-04-23/2026-05-21/2026-05-26/2026-06-26/2026-07-29/2026-08-01 实拉，与 r298B 聚合器合并增量——那条管聚合器，本条管数组函数集）
+- **函数模块化**：IML 函数独立成模块（之前只能映射字段内用）——"函数=独立模块"。
+- **空输入不中断**：值空/null/缺失→模块输出空结果不停止场景——"空输入=空结果不中断"。
+- **四新函数**：arrayDiff（第一数组不在第二=找新增/移除）+arrayIntersect（两数组共有=找匹配/重复）+set（collection 加覆盖键值不重建结构）+escapeJSON（转义引号反斜杠再发 webhook）——"四函数=diff/intersect/set/escapeJSON"。
+- **取数组合**：map 过滤数组+get/first/last 取单条——"取数=map 过滤+get 取单"。
+- **merge 合并**：merge() 合并同构数组——"合并=merge 同构数组"。
+- 提升层：工具。触发词：Make Functions 独立模块、空输入不中断、arrayDiff arrayIntersect set escapeJSON、map 过滤+get 取单、merge 合并同构数组。
+
+### 6. Webhook 优先级与 glob 订阅：Pipedream HTTP/触发面（来源：pipedream.com/docs/workflows/building-workflows/triggers + /docs/connect/components/triggers + /docs/connect/webhooks + docs-proxy.pipedream.net/docs/api/rest + /docs/components/api + pipedream.com/apps/regal/integrations/http 2026-04-18/2026-07-14/2026-09-14/2026-09-24/2026-09-27 实拉，与 r299B 触发器机制合并增量——那条管触发机制，本条管 webhook 配置与订阅）
+- **HTTP trigger 七属性**：body/client_ip/headers/method/path/query/url——"HTTP trigger=七属性"。
+- **webhook 优先级**：trigger 级 webhook_url 覆盖 project 级；project 级=项目内所有 trigger 默认——"webhook=trigger 覆盖 project"。
+- **glob 订阅**：emitter_id 支持 glob（p_*=监听所有 workflow 事件）——"订阅=glob 模式"。
+- **HTTP 触发三型**：New Requests（含 headers+query）/New Requests (Payload Only)（只 body）/URL 内容变化——"HTTP 触发=全事件/纯负载/内容变化"。
+- **respond()**：source 内 this.http.respond() 发 HTTP 响应——"响应=source 内 respond"。
+- 提升层：工具。触发词：HTTP trigger 七属性、webhook trigger 覆盖 project、emitter_id glob p_*、Payload Only、URL 内容变化、this.http.respond。
+
+### 7. 缓存四断点与长上下文布局：Claude 上下文工程面（来源：platform.claude.com/docs/en/build-with-claude/prompt-caching + claude.com/blog/lessons-from-building-claude-code-prompt-caching-is-everything + console.anthropic.com/docs/en/resources/prompt-library + teachmeidea.com/anthropic-prompt-caching + developersdigest.tech/blog/prompt-caching-claude-api-production-guide + aiwiki.ai/wiki/context_engineering 2026-03-14/2026-04-29/2026-04-30/2026-05-06/2026-06-27/2026-09-28 实拉，与 r299B defer_loading 保缓存合并增量——那条管缓存布局，本条管断点顺序与长上下文布局）
+- **缓存四断点**：静态指令→租户配置→工具 schema→RAG 上下文（最稳到最不稳）；断点处变化使其后全部失效——"缓存断点=静态/租户/工具/RAG"。
+- **缓存时长**：5 分钟默认+1 小时（额外成本）——"缓存时长=5min/1h"。
+- **Claude Code 三教训**：用 messages 而非改 system prompt（plan mode/日期进 messages）；不中途换工具/模型（用工具模拟状态转换+defer loading 不删）；缓存命中率当 uptime 监控——"缓存纪律=不动 system+不动工具+命中率监控"。
+- **长上下文布局**：长文档放顶部（20k+），查询/指令/示例放末尾=响应质量提升最多 30%——"长上下文=数据顶部+查询末尾+30%"。
+- **ROI 判据**：前缀 5 分钟内复用>1-2 次就缓存（>2k tokens 系统提示/稳定 RAG 上下文/多轮早期轮次）——"缓存判据=5min 复用>1-2 次"。
+- 提升层：模型。触发词：缓存四断点、静态租户工具 RAG、5 分钟 1 小时、messages 不 system、defer loading 不删工具、命中率当 uptime、长文档顶部查询末尾 30%、5min 复用判据。
+
+### 8. frontmatter 硬约束与渐进披露：技能规范面（来源：anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills + platform.claude.com/docs/en/agents-and-tools/agent-skills/overview + /docs/en/managed-agents/skills + console.anthropic.com/docs/en/agents-and-tools/agent-skills/best-practices + resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf + futureagi.com/blog/what-is-agent-skill-2026 + aiwiki.ai/wiki/agent_skills 2025-10-16/2025-12-11/2026-02-25/2026-03-12/2026-06-03/2026-09-29 实拉，与 r298A 技能目录+r299A 技能依赖合并增量——那条管目录判据，本条管规范硬约束）
+- **技能=SKILL.md 目录**：目录含 SKILL.md+指令/脚本/资源文件夹——"技能=SKILL.md 目录"。
+- **四目录结构**：SKILL.md（必需）+scripts/（可执行代码）+references/（文档+examples）+assets/（模板）——"结构=四目录"。
+- **frontmatter 必填两字段**：name（≤64 字符小写字母数字连字符，禁 XML 标签，禁保留词 anthropic/claude）+description（非空≤1024 字符）——"frontmatter=name+description 硬约束"。
+- **放置位置**：~/.claude/skills（个人）/ .claude/skills（项目）——"位置=个人/项目"。
+- **渐进披露**：SKILL.md<500 行，细节拆 references 按需加载——"渐进披露=500 行上限"。
+- **托管技能**：zip 上传返回 skill_* ID 附到 agent——"托管=zip 上传+skill ID"。
+- 提升层：可复用 Skill。触发词：SKILL.md 目录、scripts references assets 四目录、name 64 字符禁保留词、description 1024、~/.claude/skills、渐进披露 500 行、zip 上传 skill ID。
+
+### 9. Harness 三职责与 Agent HQ 多模型：Copilot 编码 Agent 面（来源：github.blog/news-insights/product-news/github-copilot-meet-the-new-coding-agent + code.visualstudio.com/blogs/2026/05/15/agent-harnesses-github-copilot-vscode + github.blog/news-insights/company-news/pick-your-agent-use-claude-and-codex-on-agent-hq + githubnext.com/projects/copilot-workspace + docs.github.com/fr/copilot/concepts/agents/coding-agent/about-coding-agent + github.blog/news-insights/product-news/github-copilot-agent-mode-activated 2025-02-06/2025-05-19/2026-02-04/2026-04-09/2026-05-15/2026-09-20 实拉，与 r299A Copilot 权限矩阵合并增量——那条管权限，本条管编码 agent 工作环与 harness）
+- **Coding agent 工作环**：分配 issue 或 VS Code prompt→GitHub Actions 环境→commit 到 draft PR→agent session logs 追踪——"coding agent=issue 触发+draft PR+日志"。
+- **harness 三职责**：context assembly（系统消息+workspace 结构+历史+工具结果+记忆）+tool exposure（声明工具）+result processing——"harness=上下文组装+工具暴露+结果处理"。
+- **Agent HQ 多模型**：多 provider 编码 agent 在 GitHub 内直接跑（Copilot/Claude/Codex），上下文历史 review 附工作——"Agent HQ=多模型 agent"。
+- **GitHub MCP 开源本地**：开源本地 GitHub MCP server 给任何 LLM 工具加 GitHub 功能——"GitHub MCP=开源本地"。
+- **Workspace 双 agent**：plan agent 捕获意图→提计划→实施；brainstorm agent 消歧——"Workspace=plan+brainstorm"。
+- 提升层：工具。触发词：coding agent issue 触发 draft PR、harness 三职责、context assembly 系统消息、tool exposure、Agent HQ 多模型、GitHub MCP 开源本地、plan agent brainstorm agent。
+
+### 10. 语音三集成模式与 ADK 模块化：deeplearning 多模态语音课程面（来源：community.deeplearning.ai/t/new-course-enroll-in-voice-for-ai-agents-and-applications/892933 + corporate.deeplearning.ai/courses/building-live-voice-agents-with-googles-adk/information + community.deeplearning.ai/t/new-course-enroll-in-building-live-voice-agents-with-google-s-adk/881518 + corporate.deeplearning.ai/courses/building-ai-voice-agents-for-production/information + learn.deeplearning.ai/courses/building-ai-voice-agents-for-production + community.deeplearning.ai/tag/short-course/68 2026-01-13/2026-04-18/2026-04-25/2026-06-14/2026-06-17/2026-09-26 实拉，与 r300A 课程流合并增量——那条管课程地图，本条管语音集成模式）
+- **语音三集成模式**（Vocal Bridge）：embedded voice（内嵌）/voice layered on existing agents（叠加现有 agent）/voice as a callable tool（可调用工具）——"语音集成=内嵌/叠加/可调用工具"。
+- **ADK 模块化**（Google Agent Development Kit）：models/tools/memory/orchestration 模块化组件——"ADK=模块化组件"。
+- **生产语音课程**：Voice Agent Components+Optimizing Latency（LiveKit/RealAvatar）——"生产语音=组件+延迟优化"。
+- **课程流 2026**：Voice for AI Agents/ADK Live Voice/Building Voice Agents for Production+AI Agents for Image and Video Generation——"多模态课程流=语音+图像视频生成"。
+- 提升层：工作流。触发词：语音三集成模式、embedded layered callable tool、ADK 模块化、LiveKit 延迟优化、AI Agents for Image and Video。
