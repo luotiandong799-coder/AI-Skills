@@ -496,6 +496,4 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - **分辨率物理阈值**：patch 覆盖 28px 而需读字母 8px 高→细节被抹掉；小文本在低分辨率下消失——**省 token 有极限，缩到可读性阈值以下就是质量事故**。
 - **自适应预算**：E-AdaPrune 用奇异值谱能量决定 token 预算（信息密集场景多 token、冗余激进压缩）；PromPrune 平衡局部显著性保持与全局覆盖。
 - 判据：**图像按 tile 边界与目标字符大小缩放，不是按"看起来清晰"缩放——token 与可读性在此交汇；视觉 token 单独记账单独预算，混进文本预算会静默超支**。
-- **提升层**：可复用 Skill（多模态成本治理）。
-
-> 「工具 schema 按需注入与缓存成本纪律」「Prompt 压缩技法与成本感知优化」两章原文已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
+- **提升层**：可复用 Skill（多模态成本治理）。 > 注：末两章（工具 schema 按需注入与缓存成本纪律 / Prompt 压缩技法与成本感知优化）原文已下沉至 references/knowledge-base.md，按标题检索。
