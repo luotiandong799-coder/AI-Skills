@@ -2602,3 +2602,6 @@ version: 3.61.0
 - 原文：Anthropic Agent SDK 的 skills 是**纯文件产物，无程序化注册 API**；`settingSources` 四源按优先级加载（用户目录 / 项目目录 / 父目录 / additionalDirectories）；`query(skills=)` 三态（"all" / 名单 / []）；Skill 工具**自动加进 allowedTools**；init 系统消息带 skills 数组，**`user-invocable:false` 不进该数组，但该技能仍可被模型调用**。
 - 判据：① **"能不能被模型用"和"在初始化列表里露脸"是两件事**——user-invocable:false 只是不主动提示用户，不等于模型不能调用；判一个技能"是否生效"要看调用面，不只看入口面；② 加载源有**显式优先级链**：同级多源冲突时按 settingSources 顺序定胜负，写技能别假设"放项目目录就一定覆盖用户目录"——要看链上它在第几位；③ query(skills=) 三态是**检索范围开关**：[] 是关、名单是缩、all 是开，调优召回时先定这个开关再调触发词；④ 无程序化注册 API 意味着技能分发本质是"文件落到对的目录"，签名/校验/版本管理得自己补。
 - 提升层：可复用 Skill / 工具。触发词：调用面≠入口面、user-invocable:false、settingSources、query(skills)三态、无注册 API、自动注入 allowedTools。
+
+## §L502（自 SKILL.md 下沉，2026-09-30 r323C）
+## Agent 评测与基准 2026：评测数据三来源/评测集版本化/judge 校准/双评分/CI 分层/工具五维/成本延迟/harness 层/轨迹六指标/多 agent 协作…（原文已下沉 references/knowledge-base.md §L502）

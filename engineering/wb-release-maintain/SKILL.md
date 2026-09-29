@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.29.0
+version: 1.30.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -297,3 +297,9 @@ sources:
 - 判据：① **把支持窗写成"发布后 N 个月"与"最近 N 个版本"是两种义务载体**——月数制对消费者可预期，相对计数随发布节奏漂移；两者都登记时才回答得了"我这个版本还剩多久"，只写一种会在节奏突变时失真；② **active 与 maintenance 不是同一个"支持"**：维护期只做安全/稳定/合规、明确不发新功能，把维护期当活跃期用等于等一个永不来的功能；写支持状态必须分栏，不能一个布尔了事；③ **跳级是否被支持是支持窗的隐含前提**：不支持跳级（必须逐级升级）时，落后多个 minor 的用户迁移成本不是一次升级而是 N 次，且"数据卷不能跨 12 个 minor 一步到位"这类硬约束要随窗一起声明；④ **同时支持版本数是容量参数**（此处 3），决定消费者升级压力与厂商补丁面，不是宣传数字。
 - 提升层：工作流。触发词：LTS 双轨、active support、maintenance 期、跳级不支持、支持窗计量、同时支持版本数。
 - 待补登记：Weaviate「supports the three most recent minor versions」原文本轮未独立取到（`docs.weaviate.io/weaviate/release-management` 404），仅登记不落地。
+
+
+## 版本号可以承载时间序（0.0.<unix-timestamp>），发布通道也可以与生产面分离——两者都改变“怎么比较新旧”（来源：www.pipedream.com/docs/cli/reference 750,789B + developers.make.com versioning-and-maintenance 5,707B / manage-testing-and-production-app-versions 4,232B，2026-09-30 r323C 独立实拉）
+- 原文：Pipedream「replace the version in the published component with `0.0.<unix-timestamp>`. This lets you iter[ate freely]…」；Make 双通道「the development does not influence the production version of the application」+「pushes the changes to the production application from the local testing app」，而公共面「Any changes to a private or public app **apply immediately**」；存量迁移「users need to upgrade the modules in their scenarios using our **upgrade module tool**」「Updating tens or hundreds of scenarios might be complicated and a time-consuming process」。
+- 判据：① **把时间戳写进版本号 = 用发布时间换掉一整套比较规则**：天然单调、不必解析 semver 就能排序，代价是版本号不再表达“改了多少”，往语义化版本迁移时要另设映射；② **测试与生产通道分离时，必须声明“改动何时到达生产”**：此处自定义 app 走显式 push，公共 app 却即时生效（零 staging）——同一产品内两种发布语义并存，写发布流程时不能假设“有测试版就有缓冲”；③ **弃用/破坏性变更必须配存量迁移工具**：版本弃了存量不会自己升级，官方口径直说“更新几十上百个场景可能复杂且耗时”，因此“发一份迁移指南”不算完成，要给出可执行工具并把它列为弃用前置条件。
+- 提升层：工作流/工具。触发词：时间戳版本号、0.0.unix-timestamp、测试生产双通道、apply immediately、upgrade module tool、存量迁移前置。
