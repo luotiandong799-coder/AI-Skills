@@ -12266,3 +12266,76 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **OpenAPI spec 驱动**：用 OpenAPI 规范构建访问 web 服务的函数调用——"API 文档直接转函数定义"。
 - **开源函数调用模型**：NexusRavenV2 专用开源函数调用模型——"函数调用有专用开源模型可选"。
 - 提升层：工作流。触发词：结构化输出四路径、Retry-based、Outlines、Beyond JSON、保证合法 schema、不能 opt out、嵌套函数调用、OpenAPI spec 转函数、NexusRavenV2。
+## r299A 十独点（2026-09-29 实拉）
+
+### 1. 外部知识库端点契约与自定义模型分层：Dify 扩展面（来源：enterprise-docs.dify.ai/en/3.11.x/develop/plugins/features-and-specs/advanced-development/customizable-model + dify-6c0370d8.mintlify.app/en/cloud/use-dify/knowledge/external-knowledge-api + marketplace.dify.ai/plugin/langgenius/llamacloud + help.aliyun.com AnalyticDB 插件 + dify.ai/blog 2026-05-27/2026-06-06/2026-07-16/2026-09-17 实拉，与 r284B 检索优化+r295A AgenticRAG 合并增量——那条管 Dify 内置检索，本条管外接 RAG 与自定义模型）
+- **External Knowledge API=标准 retrieval 端点契约**：Dify 知识库可连外部 RAG 方案；API Endpoint 填基础 URL，Dify **自动追加 /retrieval** 发请求；API Key 作认证头；错误码约定：1001 无效 Authorization 头/1002 授权失败/2001 知识库不存在——"外接检索=单一端点契约+统一错误码"。
+- **任意 RAG 后端可接入**：adbpg/AWS Bedrock KB/LlamaCloud/InfraNodus GraphRAG 全走 External Knowledge API 模式——"RAG 后端即插即换，不迁移数据"。
+- **自定义模型插件四步**：建 provider 文件→按模型类型建分层代码文件（llm/text_embedding 各成逻辑层）→开发（含参数转换/结果格式化）→打包——"模型接入=类型分层代码结构"。
+- **Metadata as Knowledge Filter**：元数据作知识过滤器提升准确率/安全性/效率——"检索前元数据过滤=精准切片"。
+- 提升层：工具。触发词：External Knowledge API、/retrieval 端点、错误码 1001/1002/2001、自定义模型四步、按类型分层代码、Metadata as Knowledge Filter。
+
+### 2. AI gateway 集中切换与提示钉版：n8n 生产面（来源：portkey.ai/blog/n8n-best-practices + community.n8n.io/t/248645 + blog.csdn.net/l35633/article/details/156954796 + n8n.io/workflows/16330 + /10287 2026-01-12/2026-02-24/2026-03-01/2026-04-21/2026-08-02 实拉，与 r297B 路由三层+r298B 版本控制合并增量——那条管运行时路由，本条管配置集中与版本钉死）
+- **AI gateway 位于 agent 与 provider API 之间**：每个请求都过 gateway，路由/访问控制/可观测性/guardrails **在到达模型前应用**；模型与 provider 切换移出工作流进配置中心，一处改全工作流生效——"gateway=集中切换不逐工作流改"。
+- **提示当业务逻辑非运行时文本**：注入已验证 prompt 版本/远程执行已测已锁版本/pin prompt 版本防工作流行为漂移——"prompt 版本钉死=行为不随文本漂移"。
+- **蓝绿发布/灰度分流**：Router 按随机百分比/用户属性哈希（userId/sessionId）/请求头 X-Canary/业务参数（仅 VIP 开新功能）分流新旧版本——"AI 工作流灰度上线四策略"。
+- **多 AI agent 路由**：按 cost/latency/type 路由、AI agents 并行跑、结果合并带元数据+指标——"按成本延迟路由+并行+元数据合并"。
+- 提升层：工作流。触发词：AI gateway、到达模型前应用 guardrails、模型切换进配置中心、prompt 版本钉死、防行为漂移、蓝绿灰度、X-Canary、按成本延迟路由。
+
+### 3. Memory bases 自动摄入与推理记忆审计：Langflow 记忆面（来源：langflow.org/blog/langflow-1-10 + /scaling-langflow + gist Neo4j Agent Memory 自定义组件 + pyshine.com 2026-03-11/2026-04-20/2026-06-09/2026-06-26 实拉，与 r293C 三类记忆+r296C 记忆合并增量——那条管记忆分类，本条管自动摄入机制与审计形态）
+- **Memory bases=per-flow 向量存储**：自动摄入对话消息、跨会话持久化，agent 连 Memory Base 组件检索；vs 会话级 memory 只管内——"记忆库=自动写入+跨会话读，不手搭摄取管线"。
+- **生产缩放工程**：v1.9-1.10 依赖裁剪+worker 生命周期管理+Linux Copy-on-Write，**~89% 内存消耗下降**——"生产内存治理=裁剪依赖+CoW"。
+- **推理记忆图审计**：Neo4j Agent Memory 自定义组件把每次工具调用存成图节点=完整可查询审计轨迹——"工具调用全留痕=推理可审计"。
+- **生产认证**：LANGFLOW_AUTO_LOGIN=False 多用户环境——"生产关自动登录"。
+- 提升层：工作流。触发词：Memory bases、per-flow 自动摄入、跨会话持久化、89% 内存下降、CoW、推理记忆图审计、LANGFLOW_AUTO_LOGIN=False。
+
+### 4. SSO/SCIM 与组件级 RBAC：Activepieces 企业治理面（来源：activepieces.com/product/governance-and-management + /docs/admin-guide/guides/sso + toreviewed.ai/products/activepieces + tooliverse.ai/tools/activepieces + aherisystems.com/tools/activepieces/features + stackarbiter.com 2026-05-01/2026-06-01/2026-08-04/2026-09-17/2026-09-20/2026-09-27 实拉，与 r297B 凭据生命周期+r293B 认证合并增量——那条管凭据本身，本条管企业身份与审计面）
+- **SSO+SCIM 用户组自动同步**：SAML 2.0 + Google（Okta/Entra sign-in）；SCIM 自动同步用户与组——"身份即租户：SSO 登录+SCIM 组同步"。
+- **结构化审计日志**：actor/action/change/project 字段，记录每个自动化每次变更+访问活动（如 sso.configuration.updated 带 metadata_url）——"全量变更审计=结构化事件非文本日志"。
+- **RBAC 到组件级**：Admin/Editor/Viewer+自定义角色；piece access controls 限制谁能编辑哪些 flows——"角色粒度到组件，不只页面"。
+- **合规证据公开**：SOC 2 Type 2 审计+2026 渗透测试文档化在 trust center——"合规=可审计可查证"。
+- **团队隔离**：每团队独立 project space——"项目空间=隔离边界"。
+- 提升层：工具。触发词：SAML2.0+SCIM、用户组自动同步、结构化审计日志 actor/action/change、RBAC 组件级、piece access controls、SOC2 Type2、项目空间隔离。
+
+### 5. 报表模板四结构与预测六要素：数据分析提示面（来源：sureprompts.com/blog/ai-prompts-for-data-analysis + /prompt-patterns-data-analysis + promplify.ai/blog/prompt-templates-for-data-analysts + mljar.com/ai-prompts/data-analyst + wickedsmartdata.com/articles/automating-repetitive-reporting-workflows-with-ai + academy.techpresso.co 2026-03-04/2026-03-27/2026-04-13/2026-08-18/2026-08-28/2026-08-29 实拉，与 r284A 提示词编排等合并增量——本点=数据报表提示骨架）
+- **报表模板求可靠不求创意**：提示约束输出形状不放开，让模型可靠而非创造——"周报=稳定输出形状，不追求创意"。
+- **周报四块骨架**：executive summary（≤3 句）/关键亮点/关注点/建议行动（带 owner 与 due date 字段）——"四块骨架=可复用周报模板"。
+- **预测提示六要素**：模型选择论证（移动平均/指数平滑/ARIMA/Prophet 说明理由）+置信区间（80%/95%）+分解（趋势/季节/残差）+留出集准确率（MAPE/RMSE）+情景分析（乐观/基线/悲观）+关键假设与不确定性——"预测=选型论证+区间+分解+留出集+情景"。
+- **图表叙事一致性**：多图表同视觉风格+共享总标题+50 词执行说明串起全部图表+300 DPI 导出——"图表讲故事=同风格+总标题+短说明"。
+- **异常检测模式**：数据质量与异常审查，找不符合预期模式（欺诈/录入错误）——"异常=偏离预期模式"。
+- 提升层：工作流。触发词：周报四块骨架、executive summary 3 句、预测六要素、置信区间 80/95、holdout MAPE/RMSE、情景分析、图表叙事 50 词、异常检测模式。
+
+### 6. flow.rerun 与 dedupe 三策略：Pipedream 重试面（来源：pipedream.com/docs/workflows/building-workflows/code/python/rerun + /docs/workflows/triggers + /docs/workflows/settings + zapier.com/compare/zapier-vs-pipedream + docs-proxy.pipedream.com/docs/components/api + listicler.com 2026-06-22/2026-08-16/2026-08-20/2026-09-14/2026-09-16 实拉，与 r297A 队列语义+r295B 异步+r298B 调度元数据合并增量——本点=重试边界与去重策略）
+- **flow.rerun 三参数**：delay（毫秒到下次重跑）+context（JSON 跨跑传）+maxRetries（默认 10）——"代码级重跑=延迟+上下文+上限三参数"。
+- **内置 auto-retry 边界**：失败步骤重跑最多 **8 次/10 小时窗口**指数退避（仅 Advanced 付费）；**明确不覆盖 Out-of-Memory 与 Timeout 两类错误**；$summary 属性报告已重试次数——"自动重试有明确边界，两类错误不兜底"。
+- **错误事件流**：低档位未处理错误直接停止，除非自建错误处理逻辑——"错误处理=自建通道，不默认兜底"。
+- **trace_id 语义**：重试后执行 id 变但 trace_id 不变；suspend 后是新执行——"trace_id=跨重试稳定标识"。
+- **dedupe 三策略**：unique（缓存 100 个 id FIFO 去重，适合 RSS）/greatest（缓存最大数值 id，只发更大的）/last（缓存最后 id，只发匹配 id 之后的事件）——"去重策略按事件流形态选"。
+- 提升层：工具。触发词：flow.rerun、delay+context+maxRetries、auto-retry 8 次 10 小时、不覆盖 OOM/Timeout、$summary 重试次数、错误事件流、trace_id 跨重试稳定、dedupe unique/greatest/last。
+
+### 7. depends_on 依赖图与三级加载：Anthropic Skills 组合面（来源：claude.com/blog/skills-explained + cheesecakelabs.com/blog/skills-and-subagents + blog.csdn.net/gangzhucoll/article/details/158386396 + zylos.ai/research/2026-05-12-agent-skill-composition-modular-capability-architecture + johnoct.com/blog/2026/02/12 2026-02-12/2026-03-05/2026-05-12/2026-08-15 实拉，与 r297A #7 目录结构+r298C #7 字段规则合并增量——那条管单技能结构，本条管技能间组合）
+- **Skills vs Subagents 分工**：skill 注入父 agent 上下文窗口、跨任务复用不需自己上下文；subagent 跑在全新隔离上下文窗口、有自己模型/工具/权限、可并行——"skills=how-to，subagents=who-does-it；同指令多任务复用→skill，需隔离上下文→subagent"。
+- **组合用法**：code-review subagent 用 skills 拿语言特定最佳实践——"subagent 的独立性 + skill 的可移植性结合"。
+- **depends_on 依赖图**：SKILL.md 显式声明依赖上游 skills 输出，调度器自动构建执行图按拓扑顺序激活——"显式依赖→拓扑调度，不靠模型猜顺序"。
+- **Composite Skills 分形委派**：技能可调用技能，复杂任务由简单能力堆叠；统一接口+渠道逻辑隔离（comm-bridge 委派 telegram/lark/web-console）——"复合技能=统一门面+渠道隔离"。
+- **三级加载机制**：Level1 元数据（~100 词 name+description 常驻，agent 判断相关）→Level2 正文（触发时加载）→Level3 资源（指令引用时按需）——"加载分三级：元数据常驻+正文触发+资源按需"。
+- 提升层：可复用 Skill。触发词：skill 注入 vs subagent 隔离上下文、how-to vs who-does-it、depends_on 拓扑执行图、Composite Skills 分形委派、统一接口渠道隔离、三级加载 Level1/2/3。
+
+### 8. 钉 SHA 与恶意技能防御四档：skills.sh 供应链面（来源：maketocreate.com/claude-skills-marketplace-skills-sh-shipping-your-own-skill + news.creeta.com/en/skills-sh-malicious-packages-supply-chain-audit + skillsmp.com skill-creator 自由度 + explainx.ai/blog/top-10-ai-agent-skills-directories-2026 + arxiv.org/html/2607.01456v1 2026-05-08/2026-05-20/2026-07-01/2026-07-10/2026-09-23 实拉，与 r298B #7 供应链+r297A #8 审计+r298C #8 生态合并增量——本点=安装与防御实操面）
+- **安装钉 SHA**：npx skills add owner/repo@sha 装特定 commit；默认装 main 会在你脚下变——"团队配置钉 SHA=与 MCP 同款供应链卫生"。
+- **恶意技能防御四档**：Socket 安装时静态扫描 F1 96.7% advisory（标签不拦）/NVIDIA SkillSpector Regex+AST+YARA+可选 LLM 从不执行（自跑 advisory）/JFrog 人工审核无开放提交（gate 排除）/OWASP AST01 共享恶意技能分类学（指南）——"四档防御=标签/advisory/人工 gate/指南，单靠一档有缝"。
+- **自由度分级**：High 创意开放（分析/写作）/Medium 定义工作流灵活内容（多数技能）/Low 严格输出格式（合规/API/配置）——"技能自由度=窄桥 vs 开放场，部署技能窄桥写作技能开放场"。
+- **大目录噪声过滤**：SkillsMP 120 万技能最大但多早期草稿/弃坑，靠 GitHub signals（stars/最后 commit/forks）过滤；hyper-niche 场景真有用——"大目录=靠 GitHub 信号筛噪声"。
+- 提升层：工具。触发词：skills add 钉 SHA、main 会变、Socket F1 96.7、SkillSpector 不执行、JFrog 人工 gate、OWASP AST01、自由度 High/Medium/Low、GitHub signals 过滤。
+
+### 9. agent 最小权限矩阵与第三方自动三查：GitHub Copilot 安全面（来源：docs.github.com/en/enterprise-cloud@latest/copilot/responsible-use/agents + github.blog/changelog/2026-06-09-security-validation-for-third-party-coding-agents + beyondscale.tech/blog/github-copilot-workspace-security-ciso-guide + learn.microsoft.com agent-framework 2026-05-22/2026-06-09/2026-07-10/2026-09-09/2026-09-28 实拉，与 r294B 权限+r298A #9 分发+r298C #9 模式合并增量——本点=权限矩阵明细与自动验证）
+- **云端 agent 最小权限矩阵**：只响应写权限用户（低权限用户评论永不呈现给 agent）；agent PR 触发的 Actions 需写权限用户批准；过滤隐藏字符防注入；只访问其建 PR 的仓库不能碰其他仓库；只推单个分支；不能标 Ready for review/不能 approve/merge（当 outside collaborator）——"最小权限=单仓库单分支+写权限响应+隐藏字符过滤"。
+- **CISO 权限表**：仓库内容写=仅特性分支（禁直推保护分支）/PR 写=允许开 PR/Issues 读/工作流=None（CI/CD 文件 agent 不可改）/Secrets=None（无合法用例）/Environments 无——"agent 权限=CI 文件与密钥零权限"。
+- **第三方 coding agent 自动三查**：自动 CodeQL 安全分析+新依赖查 GitHub Advisory Database（CVSS）+secret scanning 找 API key/token，发现问题 agent 尝试修复后再定稿 PR——"第三方 agent 代码=生成即三查"。
+- 提升层：工具。触发词：只响应写权限、agent PR 需批准、隐藏字符过滤、单仓库单分支、不能 approve/merge、CISO 权限表、工作流 None、Secrets None、第三方 agent 三查 CodeQL+Advisory+secret。
+
+### 10. 评测三步与输出三法：deeplearning agent 评测面（来源：corporate.deeplearning.ai/courses/evaluating-ai-agents + /courses/agentic-ai + learn.deeplearning.ai/courses/agentic-ai + justbeingresourceful.com Building AI Agents for Video 2026-02-02/2026-04-23/2026-06-06/2026-08-30 实拉，与 r295A AgenticAI+r297B Critic 评分合并增量——本点=评测流程结构与输出判定法）
+- **评测三步**：①加可观测性洞察 agent 步骤（知道每步在干嘛、能 debug）→②按组件设评测（准备测试示例→选 evaluator：code-based 或 LLM-as-a-Judge→选正确指标）→③结构化成实验迭代改进输出质量与路径——"评测=先观测→组件级→实验迭代，不整体一把测"。
+- **错误分析优先排序**：error analysis→prioritize next steps，先修影响最大的错误类别——"排错=先排影响，不平均用力"。
+- **输出评测三法**（视频生成课程）：SigLIP 图像-文本相似度打分（程序化数值可行动）+LLM-based judges（自定义标准定性，抓质量不匹配）+structured rubrics（评分表）——"三法互补：数值+评委+评分表"。
+- 提升层：工作流。触发词：评测三步、先观测再评测、组件级评测、code-based vs LLM-as-a-Judge、错误分析优先排序、SigLIP 相似度、LLM judge、structured rubrics。
