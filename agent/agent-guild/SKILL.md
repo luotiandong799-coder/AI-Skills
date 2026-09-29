@@ -45,14 +45,6 @@ description_en: "Cross-agent shared memory protocol: agents on one machine share
 (stdlib only, no third-party packages). On Windows use `python` instead of
 `python3` if that is what your PATH exposes.
 
-## Quick start (for an agent that has NOT joined yet)
-
-1. Run the onboarding flow: `~/.agent-guild/ONBOARDING.md` (or this skill's
-   `docs/ONBOARDING.md`) — discover your runtime's user-extensible skills dir,
-   install this skill (symlink → copy → readonly), run the closed-loop trigger
-   test, register yourself in `registry.json`.
-2. Then come back here — this file is your everyday capability.
-
 ## Mandatory Session Contract (once per session, MUST)
 
 > ⛔ 这些是**强制动作**，不是建议。每次会话开始（或首次需要用户上下文时）执行，不要等用户点名。
@@ -500,3 +492,5 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - 原文："Secret values **never appear** in human, `--json`, or `--plain` output. `store get` refuses a `secret` entry as **write-only by design** and exits `2`. It exits `3` when the name does not exist. Environment-kind values are readable."；"A `secret` entry **may not be empty**, because an empty credential cannot be diagnosed later."；"Secret egress substitution **fails closed** until each secret has at least one exact allowed host."；"`secrets apply` **intentionally does not write rollback backups containing old plaintext values**."
 - 判据：① **"读不出来"要当成设计确认而不是故障**——秘密类条目从设计上不可回读（读命令显式拒绝并用**不同退出码区分"拒绝读"与"不存在"**）；排障"取不到值"时先分清是这一类设计还是真的没配；② **空凭据必须在写入侧就拒掉**——理由不是"空值没用"而是"空凭据事后无法诊断"：一个空值和"配错了"在现象上一样，却没有任何线索可查；凡凭据类字段，**空值应视为配置错误而非缺省**；③ **出口白名单缺省方向必须是拒绝**：出网替换在"至少一个精确主机"配好之前一律不生效——与 §Cap18（白名单空=拒绝全部）同向，本条给的是**可外发凭据**这一最高风险面的官方写法；④ **回滚备份本身也是泄漏面**：迁移工具"故意不写含旧明文的备份"，靠严格预检 + 原子应用 + 失败时内存态尽力恢复来兜底——**备份策略要连"备份了什么内容"一起设计**，否则为可用性做的备份会成为最大的一份明文副本。
 - 提升层：安全边界/工具。触发词：只写不可读、write-only by design、exit 2 拒绝读、空凭据被拒、egress fail-closed、allowed host、迁移不写明文备份。
+
+> 下沉索引：Quick start (for an agent that has NOT j 等 1 节原文已移至 `references/knowledge-base.md`（按最旧批次下沉，正文只留指针）

@@ -12,21 +12,6 @@ agent_created: true
 
 **核心判断：改不动的 bug，几乎都是"还没复现就先改了"。** 定位是证据工作，不是灵感工作。
 
-## 〇、先分型：模型行为问题 vs 代码问题
-来源：deeplearning.ai short-course《Transformers in Practice》(AMD) 核心主张——**先理解模型实际行为、调试实际问题，再决定怎么修**，而非盲目打补丁。
-基于 LLM 的组件出错时，**第一步不是开 debug，是分型**：
-- **模型行为问题**：同样输入偶尔答错、格式飘、幻觉、拒答、选错工具/路由 → 根因在「怎么用模型」（提示词 / 模型选型 / 温度 / 上下文窗口），**不在你的代码逻辑**
-  - 修法：换提示 / 加 few-shot / 换模型 / 调参数 / 收紧上下文——不是去翻代码
-- **代码问题**：确定性报错、崩溃、接口 500、逻辑分支走错、数据错位 → 走本技能六步循环
-- **混合型**（最常见）：代码把模型输出喂错地方 / 没解析 → 先按代码问题定位喂入与解析，再单独验模型输出质量
-- **判定**：同一输入跑三遍，**结果一致错** = 代码/接口问题；**飘忽不定** = 模型行为问题。分型错了，debug 代码永远修不好模型的问题。
-
-## 一、三条硬规则（违反任一条就是在赌）
-
-1. **没有稳定复现之前不改产品代码**。只能在明确的"探测性改动"下动（且改完必须回退或说明保留理由）。
-2. **一次只改一个变量**。每次动手前先写一句：*我假设 X → 因此改 Y → 预期观察到 Z*。观察不到 Z 就回退，不是继续加补丁。
-3. **修复必须配回归**：留一个能复现该 bug 的自动化检查（测试 / 断言 / 一条命令）；实在没法自动化，就把复现步骤写进交付说明。**没有回归 = 这个 bug 会回来第二次。**
-
 ## 二、六步循环
 
 | 步 | 做什么 | 判据（做到什么算这步结束） |
@@ -502,3 +487,5 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 原文："HTTP and Email-triggered workflows default to **30 seconds** per execution. — Cron-triggered workflows default to **60 seconds** per execution."；上限表：Free 300 秒（5 分钟）/ Paid 750 秒（12.5 分钟）；"Any partial logs and observability associated with code cells that **ran successfully before the timeout** will be attached to the event in the UI, so you can examine the state of your workflow and troubleshoot where it may have failed."；磁盘 /tmp 2GB "This limit cannot be raised."
 - 判据：① **同步入口与定时入口的超时预算本就不同**——HTTP/Email 是有人（或有系统）在等响应，默认 30 秒；Cron 没人等，默认 60 秒；把定时任务的预算套到 webhook 上，或者反过来，都会拿到不该有的超时；排查超时先确认**这个工作流的触发类型决定了它拿的是哪一套默认值**；② **"默认值"与"可调上限"是两个参数**——默认值能改，但天花板由套餐决定；用户说"我已经调到最大了还是超时"，要先问是哪个套餐，因为"最大"对免费档是 5 分钟、对付费档是 12.5 分钟；③ **超时不等于日志全丢，但丢的恰好是最需要的那一块**：已成功 cell 的日志会被附到事件上，而**正在跑的那一步的中间态拿不到**——所以超时类故障能确认"跑到哪一步"，不能确认"那一步内部卡在哪"；需要后者就得自己写中间检查点（与 §每一步都落检查点 同向）。
 - 提升层：工具/工作流。触发词：超时默认值、30s vs 60s、触发类型决定超时、套餐决定超时上限、超时后部分日志、/tmp 2GB 不可提升。
+
+> 下沉索引：〇、先分型：模型行为问题 vs 代码问题 等 2 节原文已移至 `references/knowledge-base.md`（按最旧批次下沉，正文只留指针）

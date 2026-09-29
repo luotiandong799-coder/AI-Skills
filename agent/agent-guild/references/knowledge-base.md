@@ -27,3 +27,12 @@
 - 判据：谈隔离必答三件事——**分界线画在哪**（哪个进程在里、哪个在外）、**次序**（策略 → 沙箱 → 逃生口）、**逃生口谁能开、开多久**；自家文档照抄"不是完美边界"句式写明能力上限。
 - 与 Cap16（凭据与执行体物理分离）、Cap21（agentDir 独占）分工：那两条管凭据与状态目录，本条管**执行体与宿主机的分界与逃生口**。
 - 提升层：工具/工作流。触发词：沙箱、sandbox、elevated、执行隔离、分界线、逃生口、策略先于沙箱、不是完美边界。
+
+<!-- 下沉批次 -->
+## Quick start (for an agent that has NOT joined yet)
+
+1. Run the onboarding flow: `~/.agent-guild/ONBOARDING.md` (or this skill's
+   `docs/ONBOARDING.md`) — discover your runtime's user-extensible skills dir,
+   install this skill (symlink → copy → readonly), run the closed-loop trigger
+   test, register yourself in `registry.json`.
+2. Then come back here — this file is your everyday capability.

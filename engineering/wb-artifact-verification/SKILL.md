@@ -31,24 +31,6 @@ agent_created: true
 - 报告里记录 `caught_by`，用于确认是"真实的取值检查"抓到它，而不是无关路径错误
 
 <!-- 2026-09-29 r290 下沉：生成侧直连端点/完整性三查/验证通道禁副作用 3 节 → references/knowledge-base.md §早期批 -->
-## 评估按阶段换形态：前期轻量人工比对，后期指标化回归
-来源：n8n Docs《Understand why to test》《Use metrics to measure quality》（2026-09-14 实访 Markdown 原文）。
-
-**同一套"评估"，在构建期和生产期是两个东西——用错阶段会两头不讨好**（前期铺指标 = 数据集还没影就先造仪表盘；后期还靠人眼看 = 几百条结果看不过来，等于没评估）。
-
-| | 轻量评估（部署前） | 指标化评估（部署后） |
-|---|---|---|
-| 数据集 | 小，手写 / AI 生成 | 大，来自**真实执行** |
-| 期望输出 | 可选（人眼比对就够） | 必需 |
-| 度量 | 无正式指标，看结果 | 数值指标，跨轮对比 |
-| 每次迭代的收益 | **大**（粗糙但方向性强） | 小（精细但边际递减） |
-
-- **代码可以靠推理判断对错，模型只能靠跑数据测量**——所以"我觉得应该没问题"对模型输出根本不成立。
-- **修一个缺陷时，把触发它的输入加进数据集，然后跑全量数据集做回归**：修好一个、弄坏三个是这类系统的典型失败模式。
-- **指标要分层：结果指标 + 过程指标。** 结果指标（正确性 / 有用性 / 相似度 / 分类精确匹配）看产出；**过程指标看"它有没有走该走的路"**——例如"该用的工具是否真的被调用了（0/1）"。**只测结果的评估会漏掉"答案蒙对了但路径完全错了"，而路径错了的结果不可复现。**
-- 指标可以是确定性函数（编辑距离），也可以用模型打分（1–5 分）——**能量化就别用主观判断**，哪怕是粗的量表。
-
-> 本节（过程可观测要先显式打开：中间步骤不是默认输出…）原文已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 ## 失败路径也必须被真的跑过（否则它等于不存在）
 来源：n8n Docs《Handle errors gracefully》"Stop and Error 节点"（2026-09-14 实访 Markdown 原文）。
 
@@ -505,3 +487,5 @@ Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 - 原文："If you delete a variable in the UI, any deployed workflows that reference it will **return `undefined`**."；"If you share a workflow that references an environment variable, **only the reference is included, and not the actual value**."；"**Private components** do not have direct access to workspace or project variables as public components or code steps. **Add a prop specifically for the variable you need.**"；另："New variables default to **secret**… the value is never exposed in the UI and **cannot be modified**."
 - 判据：① **删除一个被引用的配置是静默降级，不是报错**——已部署工作流不会启动失败，只会拿到 `undefined`，然后带着这个空值继续跑到下游才炸；验收任何"引用型配置"时必须做一次**删除演练**，看它是硬失败还是静默空值，后者要在下游加非空断言；② **"引用"与"值"在分发时是分开的**：分享出去的工作流只有引用没有值，接收方必须自己配一份同名变量——这既是安全设计也是最常见的"复制过来跑不通"的原因；交接工作流时要连同**变量名清单**一起交，而不是只交流程；③ **可见性按组件类型分档**：一等公民（code/公开组件）能直接读，第三方私有组件**读不到**工作区/项目变量，必须逐项声明成 prop；写第三方集成时"为什么拿不到环境变量"的答案不是权限没开，而是**这个面默认不给你，要显式开一个洞**；④ **默认值方向要选安全侧**：新建变量默认就是 secret 且**不可修改**（只能删了重建），这个不可修改的代价换来的是"值永不被改"。
 - 提升层：工具/安全边界。触发词：删除变量返回 undefined、分享只带引用、私有组件拿不到变量、显式 prop 开洞、默认 secret 不可修改。
+
+> 下沉索引：《评估按阶段换形态：前期轻量人工比对，后期指标化回归》原文（18 行）已移至 `references/knowledge-base.md`（最旧批次下沉，正文只留指针）
