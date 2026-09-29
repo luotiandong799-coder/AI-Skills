@@ -2,7 +2,7 @@
 name: wb-ponytail
 description: >-
   写代码 / 实现功能类任务前的决策阶梯（YAGNI）。当用户要求写代码、实现功能、加特性、修 bug 涉及编码时自动应用：先判断是否真需要、是否已有现成方案、能否用标准库 / 平台原生 / 已装依赖解决，最后才写最简可用代码。非代码任务（写作、文档、研究、数据分析）不套用；生成类视觉任务（生图/视频/网页）转 `wb-visual-gen`。触发词：少写代码、别造轮子、有没有现成的、能力基线、环境支持吗、这个能删吗、为什么会有这个、留着没用吧、别乱改别的、改动范围、你怎么理解成这样、顺手改一下、agent 架构、别上复杂编排、单一 agent、要不要拆子agent、内建工具还是 MCP、工具白名单、省了多少、收益数字、没有基线就别给数、装了没调用、下载不等于安装、资产清点、不欠改、半迁移状态、复用托底、工具重叠、选错工具、开关三态、默认值覆盖、只读声明、误拒比弱答案更糟、缺席构成语义、修好就是删掉、不改默认除非测量、no-op、本轮用不上、能力协商、能力清单会过期、一个服务一个专职通道。、先跑切片、子代理用什么模型、后台没工具、编排一层、最小架构优先、框架 boilerplate 技术债、确定性条件优先、语义路由闭域、场景枚举即出口、路由要不要用模型、能描述就别编程、默认声明式、例外清单要穷举、不确定就从声明式开始、标识与文案分离、改文案不丢数据、可见性互斥、跨档比较、选择偏差、同难度对照、不设参数、默认值不是中性、推理强度、换模型重置、模型专属档位、off不可用、默认就是off、推理要花钱
-version: 1.75.0
+version: 1.76.0
 ---
 
 # wb-ponytail（决策阶段：少写代码）
@@ -475,3 +475,7 @@ JSON Schema 只表达**结构合法性**（类型、必填、枚举），表达�
 - 原文："queue up any concurrent production executions over the limit ... processed in FIFO order"；"On instance startup, n8n resumes queued executions up to the concurrency limit and re-enqueues the rest."
 - 三个易漏点：①**计数口径**——只算 webhook/trigger 起的生产执行，手动 / 子工作流 / 错误 / CLI 全不受限（限流看着「没生效」多半是口径错）；②**恢复段**——重启自动续排到上限、其余重新入队（不丢，但也不保序）；③**评测并发是与生产并列的另一套独立限额**（Community/Pro 1、Business 3、Enterprise 5），不是同一预算的分片。
 - 与 §计费单位决定优化方向（1.74.0）互补：那条管「钱按什么算」，本条管「并发按什么算、超了往哪去」。
+## 变量的可见域就是它的定义层级：收窄权限只能靠下移到项目层并配 ACL，同名时窄域覆盖宽域（来源：Pipedream 官方 `docs/llms.txt` + `/docs/projects/secrets.md` 2026-09-29 r294-C 独立 curl 实拉 26,255B + 894B 核验；与 §1.73.0 平台采纳四治理控制点「凭据存哪」互补——那条管选型时问什么，本条管放下去之后谁看得到）
+- 原文："Environment variables defined at the **global workspace level are accessible to all workspace members and workflows** within the workspace. To restrict access to sensitive variables or secrets, define them at the **project-level** and configure access controls for the project."；"**Project variables override workspace variables**. When the same variable is defined at both the workspace and project levels … the **project** variable takes precedence."
+- 判据：① **"我把它设成环境变量了"不等于"它被保护了"**——工作区层变量对该工作区所有成员与所有工作流可见，敏感值放这里等于全员可读；收窄的唯一动作是**下移到项目层 + 配 ACL**，不是改名、不是加前缀、不是靠注释提醒；② **窄域覆盖宽域的优先级是显式规则**，可以当特性用（项目层给少数工作流覆写全局默认），但也意味着排查"值不对"时要从最窄那层往上找；③ 落到一个组织里：先画一条"哪些变量允许放全局"的白名单（区域、日志级别这类非敏感配置），其余一律项目层，别等到审计时才逐个搬。
+- 提升层：工具/工作流。触发词：workspace 变量全员可见、project-level、ACL 收窄、同名窄域覆盖、secrets 层级。

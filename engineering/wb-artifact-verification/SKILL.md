@@ -2,25 +2,13 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.57.0
+version: 2.58.0
 agent_created: true
 ---
 
 # 生成物验证（独立 oracle + 差分 + 变异测试）
 
-## 何时用
-- 用户要"验证生成的代码/结果是否正确""验证能否执行""明确反馈是否成功"。
-- 任何"先产出、再自检"的任务。**不适用**：纯排障找根因（走 `wb-debug-loop`）、需求实现流程（走 `wb-spec-driven`）。
-
-## 铁律
-1. **"跑通了" ≠ "正确"**。只报 exit code 0 不构成验证。
-2. **验证器与被验证物不能同源**。oracle 必须是另一种算法 / 外部常数，不能复用产物里的函数。
-3. **必须证明验证器有检出能力**：注入已知错误（变异体），验证器**必须**报 FAIL。全部变异体被捕获，才允许说"验证成功"。有变异体逃逸 → 结论是"验证器不可信"，不是"产物没问题"。
-4. **失败要在报告里定位到具体检查项**，不许只给一句"有问题"。
-5. 不夸大：同一 agent 写的产物与验证器仍是单上下文，需在结论里显式声明该局限，并说明用什么补偿（独立算法 / 第三方常数 / 变异测试）。
-6. **每个检查必须先证明自己跑到了**（到达标记），**判不出结果时判"不确定"**而不是默认通过——见「验证完整性三查」。
-
-## 三层检查清单
+三层检查清单
 ### A. 生成层（结构/契约）
 - 存在性 + sha256 + 行数（可溯源）
 - `ast.parse` 通过；`python -m py_compile` 真过编译
@@ -71,7 +59,7 @@ agent_created: true
 - 与 §C「变异测试」分工：变异测试证明**检查器能抓到问题**，本条证明**出问题后的处置链路能跑通**——前者管检出，后者管兜底，两条都不跑就都不成立。
 - 与「不确定（INCONCLUSIVE）是一等判定」联动：**失败路径没跑通过 → 整体判"不确定"**，不能因为它"看起来写对了"就算通过。
 
-## 验证要能脚本化跑，不能只在界面里点
+验证要能脚本化跑，不能只在界面里点
 来源：MCP 官方《MCP Inspector》（2026-09-14 实访）：同一个调试内核提供三种界面——**Web（图形，最丰富）/ CLI（可脚本、机器可读，给 CI、管道和编码 agent）/ TUI（无浏览器时的终端界面）**。
 
 - **关键不是有三种界面，是三种共享同一内核**：同样的传输、同样的配置、同样的认证状态、同样的协议协商。**因此在一处得出的结论在另一处同样成立**——如果每个界面各实现一套，调试结果就无法迁移，还会出现"在 GUI 里是好的、在 CI 里挂了"。
@@ -79,14 +67,14 @@ agent_created: true
 - **机器可读优先**：脚本化形态输出结构化结果（JSON / 一行一项），便于比对与归档；人读的报告由它生成，而不是反过来。
 - 与「到达标记落 stdout 单独一行」配套：那是为了证明检查真的跑了，本条是为了让检查能被反复跑。
 
-## 便利入口会静默改数据：保真走原样通道（来源 MCP Inspector CLI 2026-09-15 实访）
+便利入口会静默改数据：保真走原样通道（来源 MCP Inspector CLI 2026-09-15 实访）
 - Inspector 的 `--tool-arg key=value` 会对值做 **JSON 解析强制转换**：`count=1` 变数字、**`"012"` 静默变成 `12`**（前导零丢失、字符串变数值）。要保真必须换 `--tool-args-json`（整体原样传递、零转换）。
 - 迁移：任何"方便手写"的参数入口（shell 拼接、CLI 简写、模板变量替换）都可能**静默改值**；验证/复现类调用一律走**显式原样通道**（整份 JSON、文件、stdin），便利入口只留给探索性调用。
 - 判据：**这个值错了会不会改变结论？** 会 → 不许走会改值的通道。
 - **探针退出码必须区分失败类别**：Inspector 用 0=有 app / 2=无 app / **5=工具名不存在**——"拼错名字"不能被误读成"没有这个东西"，两类失败的处理动作完全不同。验证脚本的退出码同理：`目标不存在` ≠ `目标存在但检查不通过` ≠ `检查器自身故障`，混用一个非零码会让上层做出错误分支。
 - **单项失败不杀死整批**：探针单项出错时把错误放进该项的 `resourceError` 字段继续跑其余项，而不是整体中止——批量验证里一个坏样本不应让其余样本的结果全部丢失。
 
-## 判定口径
+判定口径
 ```
 inconclusive = 对照 harness 失败 / 缺到达标记 / 基线未建立
 ok = (无 FAIL) 且 (全部变异体被捕获) 且 (无 inconclusive)
@@ -95,7 +83,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ```
 不确定**单独成一类**，不许并入 SUCCESS（"没验出来"不等于"没问题"），也不许并入 FAILURE（"验不了"不等于"有问题"）。输出三件套：`REPORT.md`（人读，检查表 + 变异表 + 失败项 + 不确定项）+ `verification_report.json`（机读）+ `console.txt`（一行一项摘要）。
 
-## 结果类别要写明"它不证明什么"（来源：trailofbits/skills·mutation-testing SKILL.md，2026-09-15 实拉）
+结果类别要写明"它不证明什么"（来源：trailofbits/skills·mutation-testing SKILL.md，2026-09-15 实拉）
 
 每一个结果类别都自带一条"它**不**建立的结论"，写判定报告时必须把这条一并呈现：
 - **超时（Timeout）= 不确定，不是覆盖证据**——"跑太久没出结果"既不说明测试能查住它，也不说明查不住它
@@ -103,20 +91,20 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **信号的严重级 ≠ 后果的严重级**：严重级排的是**信号本身**，不是风险——计费逻辑里低严重级的漏检，比日志行里高严重级的漏检更要紧；**按被改代码的后果加权排序**，别按信号自带的等级直接出优先级
 - **同一个"未检出"有两种解释**：测试真有缺口 vs 变异体与原行为语义等价（等价变异）——不区分就归因 = 一半概率在冤枉测试
 
-## 生成-发布权限分离 + 密封统计门（来源 Qoder r265-C 审计落地，arXiv 2609.30219，2026-09-26 实拉）
+生成-发布权限分离 + 密封统计门（来源 Qoder r265-C 审计落地，arXiv 2609.30219，2026-09-26 实拉）
 - 产出者（模型/子代理）只当候选生成器，发布权归确定性外部门（schema 校验 + 统计上界阈值，如按样本量单侧置信上界对照密封红线）。
 - 必须报告分布外漏检实例：基准内零假发布 ≠ 协议无漏，外推失效要被诚实披露。提升层：验证/可复用 Skill。
 
-## 隐性矛盾交叉证据题（来源 Qoder r265-C 审计落地，arXiv 2609.30055，2026-09-26 实拉）
+隐性矛盾交叉证据题（来源 Qoder r265-C 审计落地，arXiv 2609.30055，2026-09-26 实拉）
 - 检索/问答类验收不能只考"文档明说了什么"，须含"答案依赖未被任何文档明说、且显式记录相互矛盾"的题式——最强 agent 84 次仅对 1，正说明本栈"交叉核对/独立证据源"步骤必须覆盖矛盾记录场景。提升层：验证。
 
-## 验证断言要跨平台可移植（来源：william-london/ownframework-loop `keep retry regression portable`，2026-09-15 实拉）
+验证断言要跨平台可移植（来源：william-london/ownframework-loop `keep retry regression portable`，2026-09-15 实拉）
 
 - 断言命令不许赌平台特有 flag：`stat -f` 是 BSD 专有（GNU 是 `stat -c`），一换平台整条回归就假失败
 - **用跨平台运行时 API 替代平台 CLI**：取文件权限用 `python os.stat().st_mode & 0o777`，不调 `stat` 的任何方言
 - 与「验证要能脚本化跑」互补：那条管"能脱离界面跑"，这条管"换个平台还能跑出同一结论"
 
-## 本机（Windows）落地坑 —— 都踩过
+本机（Windows）落地坑 —— 都踩过
 1. **bash 不可用**：PortableGit shim 缺 `head/dirname/ls`，管道全废 → 改用 PowerShell 或 Read/Write/Glob/Grep 专用工具。
 2. **PowerShell 工具不回传 stdout** → 结论必须由脚本自己写 UTF-8 文件，再用 Read 读回。
 3. **重定向编码**：PS 5.1 的 `>` / `*>` 产 UTF-16（Read 会判为二进制拍死）。用 `| Set-Content -Encoding UTF8` 或让 Python 自己 `write_text(..., encoding="utf-8")`。redirect 目标目录**必须先存在**，否则整条 PowerShell 语句失败、子进程根本不执行（现象极具误导性：日志没生成、子进程却"好像跑过"）。
@@ -124,7 +112,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 5. **`python` 可能是 WindowsApps 桩**：固定用 `C:\Users\26719\.workbuddy\binaries\python\versions\3.13.12\python.exe`。
 6. 产物落 `D:\腾讯AI\yt\outputs\<日期>_<主题>\`，不落 C 盘、不落会话工作区。
 
-## 最小骨架
+最小骨架
 ```python
 # 1) 独立 oracle（另一种算法，禁止 import 产物里的实现）
 # 2) 检查表：rep.add(id, group, desc, ok, detail) 逐项记 PASS/FAIL + 证据详情
@@ -133,7 +121,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ```
 参考实现：`D:\腾讯AI\yt\outputs\2026-09-13_dp41flash_medium_verify\verify\verify.py`（34 检查 / 5 变异体 / 全绿通过）。
 
-## 先验证后嵌入 + 位置真源 + 逐项审计
+先验证后嵌入 + 位置真源 + 逐项审计
 
 ### 未过验证的产物不得并入父文档（来源：SpillwaveSolutions/design-doc-mermaid "resilient workflow"）
 图/表格/代码块等子产物**先落盘 → 渲染 → 验证通过**，才允许写进设计文档/交付物——防"坏产物埋进正文"变成静态污染。配套两条：
@@ -262,7 +250,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 
 ---
 
-## 按需阅读（渐进披露，不要常驻加载）
+按需阅读（渐进披露，不要常驻加载）
 
 本正文只保留验证决策级核心。方法论来源、判据推导、反模式、特殊场景全部在
 [references/knowledge-base.md](references/knowledge-base.md)（完整知识库，下沉于 2026-09-26）。
@@ -275,7 +263,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 与 §状态迁移三步验收（独立命令/默认 dry-run/审阅后 --apply/复跑归零）分工：**那条管"迁移动作本身怎么验收"，本条管"迁移之后，之前那些已验收的中间结果还算不算数"**。
 - 提升层：工作流 / 可复用 Skill。
 
-## 审计要抽样"标记为成功"的运行：静默逻辑失败不在失败日志里（来源：Activepieces《Why a workflow can run successfully and still be wrong》2026-09-17，2026-09-27 实拉，原文字段坐实）
+审计要抽样"标记为成功"的运行：静默逻辑失败不在失败日志里（来源：Activepieces《Why a workflow can run successfully and still be wrong》2026-09-17，2026-09-27 实拉，原文字段坐实）
 - **原文要点**：`When an automation completes its entire run without triggering an error code, yet produces an output that is factually wrong or business-damaging, a silent logical failure has occurred.` 引 OpenAdapt 研究：`out of seven transactional fault classes, the system detects only 2. Five out of seven faults silently pass through the workflow.` 给出的审计方法是三步：`1. Identify the 'Golden Record' (the source of truth). 2. Sample 10 successful runs from the last 7 days... 3. Manually compare the workflow output against the source.`
 - 判据：**只审计失败样本，等于把检出率的天花板钉在"系统会报错的那部分"上**。5/7 的故障族不报错，这类故障在失败日志里永远不存在——任何"看失败记录找问题"的流程对它们的结构性盲区是 100%，不是"漏了一些"。
 - 因此审计样本必须**从"成功"那一堆里抽**，且要有对照基准：先确定真源（Golden Record），再把"系统判定成功"的输出与之逐条比。判据：**没有真源做对照，抽样只是多看几遍同样的输出**；没有限定最近窗口（7 天 / 10 条），抽样会退化成"挑几条看得顺眼的"。
@@ -283,7 +271,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 与 §失败注入（变异测试）分工：**那条管"证明验证器有检出能力"，本条管"验证器的输入样本本身偏不偏"**——抽样不覆盖成功样本，变异体做得再多也测不到"成功但错"这一族。
 - 提升层：工作流 / 可复用 Skill。
 
-## 结构校验通过不等于语义校验通过：值要过范围 / 一致性 / 新鲜度三类断言（来源：同一 Activepieces 文章，2026-09-27 实拉）
+结构校验通过不等于语义校验通过：值要过范围 / 一致性 / 新鲜度三类断言（来源：同一 Activepieces 文章，2026-09-27 实拉）
 - **原文要点**：对照表给出同一字段的两级检查——「Order Quantity」`Schema Check (Passes): Is Integer?` / `Semantic Check (Fails): Is within historical range?`；「Customer Email」`Matches Regex?` / `Does domain have a valid MX record?`；「Discount Code」`Is String?` / `Is the current date before expiry?`。并给出三类断言：`Apply range checks to flag values that fall outside of realistic historical parameters. Implement consistency checks that compare the new output against the previous state to detect impossible jumps in data.`
 - 判据：**schema 校验证明"字段长得对"，语义校验才证明"这个值在业务上可能"**。整数、正则、字符串类型全过，仍然可以是"数量超出历史区间""域名没有 MX 记录""折扣码已过期"——这三类错全部通过结构校验，也全部会在下游造成实际损失。
 - **★成功状态码与有效负载是两件事**：原文反例是物流商的 shipping API `returned a 200 OK status while delivering an empty JSON object because the authentication token lacked specific permissions`，工作流只检查连接成功，于是"成功"地把五百条记录更新为 null。判据：**200 只是握手，不是内容**；收到响应必须校验"负载里有没有预期那些键"，否则等于把空白支票当付款收下。
@@ -291,7 +279,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 与 §合法 JSON 不等于合规 分工：**那条管"能不能解析 / 字段合不合规范"，本条管"合规之后，值在业务语义上成不成立"**。
 - 提升层：工具 / 可复用 Skill。
 
-## 验证挂点（seam）按三条判据选：复用已有 > 新建、取最高可用、理想数量 1（来源：skills.sh 技能目录 `mattpocock/skills/to-spec` 正文，2026-09-27 r199-C 实拉）
+验证挂点（seam）按三条判据选：复用已有 > 新建、取最高可用、理想数量 1（来源：skills.sh 技能目录 `mattpocock/skills/to-spec` 正文，2026-09-27 r199-C 实拉）
 - **原文四条就是判据**：「Existing seams should be preferred to new ones. Use the **highest seam possible**. If new seams are needed, propose them at the highest point you can. The fewer seams across the codebase, the better — **the ideal number is one**.」
 - **★能复用就别新开**：先找代码里**已经存在**的接缝（既有测试点、既有钩子、既有入口），只有它确实区分不了目标行为时才提新接缝。判据：**每开一个新接缝，就多一份"只为验证而存在"的长期维护结构**。
 - **★层级取"最高可用"，不取"最近可用"**：在哪一层插桩决定了这条断言的覆盖范围与它对重构的敏感度。判据：**同一行为能在高层验证就不要下沉**——越低的接缝越容易把实现细节钉死，重构时最先碎的就是它们。
@@ -300,7 +288,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 与 dl §探针要能一次撤干净、seam 太浅本身就是结论 的分工：那条管"临时探针的回收"与"接缝太浅给的是虚假信心"；本条管"**还没插之前，该选哪个层级、开几个**"。与 §验证要能脚本化跑 互补：那条管跑得起来，本条管挂点选得对。
 - 提升层：可复用 Skill / 工作流。
 
-## Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
+Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 - **审计置信五档**（ClawHub）：放行/注意/警告/封禁/扫描出错，不做布尔 PASS/FAIL；低于置信门槛的证据只后台参考、不进对外阻断报告。
 - **审计覆盖台账**（cloudflare security-audit-skill）：unit×check 粒度记"谁审了哪些路径"，多轮按 fingerprint 增量合并、每指纹一条终态，下一轮从台账缺口起猎。
 - **验证作用域律**（superpowers #2384）：宣布"通过"必须同时声明回归套件范围＝全项目而非本次改动文件。
@@ -314,14 +302,14 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **Harness 是第三可调层**：同一模型换 Harness 可拿到 +20% 效果、-40% token。判据：**效果不达标时，先问「是模型不够、上下文不够、还是 Harness 不对」，别默认第一答案就是换模型。**
 - 判重：与 wb-skill-authoring §trace→技能挖掘（人批晋升）相邻但不重复——那条管「从轨迹里长出技能」，本条管「评测信号自动回流到优化与验证」。
 
-## 接入类任务的验收是「真实跑通一次」，不是「配置写进去了」；默认值先可用、收紧从最高风险面起步（来源：docs.openclaw.ai 首页与 Quick start 2026-09-28 r208-C 独立实拉）
+接入类任务的验收是「真实跑通一次」，不是「配置写进去了」；默认值先可用、收紧从最高风险面起步（来源：docs.openclaw.ai 首页与 Quick start 2026-09-28 r208-C 独立实拉）
 - **接入/配置的完成判据必须是一次真实完成调用**：Quick start 复用检测到的 AI 访问后，`verifies it with a real completion` 才打开控制台。判据：**配置文件写入成功只证明格式对，不证明链路通；把「写进去了」当验收，故障会推迟到第一次真正使用时才暴露。**
 - **默认策略要「先能跑起来」，锁定配置才按需加**：不做任何配置时私聊共享主 session、每个群聊独立 session，Gateway 直接可用；要收紧则从 `allowFrom` + 群内 mention 规则起步。判据：**默认值决定产品能不能被第一次用起来，锁定项决定它会不会被滥用；两者不是同一层，别把锁定项塞进默认路径。**
 - **收紧要从"风险最高、改动最小"的那一面开始，不是从覆盖面最广的那一面**：官方明示锁定的起点是入站白名单与群内提及规则——即"谁能驱动我"，而不是全面收紧功能。判据：**收紧顺序错了会先损害可用性却没降低主要风险**；先问"最坏情况从哪进来"，再在那里设第一道门。
 - **验证要落在真实出口上**：本条与 §独立证据源 互补——那条管「产出对不对要有独立算法/外部证据」，本条管「接入通不通要有真实一次调用」。判据：**两类"以为好了"的根因相同：把间接信号（写入成功/看起来对）当成了直接证据。**
 - 提升层：工作流 / 工具。触发词：接入验收、配置验收、跑通一次、真实 completion、默认值策略、先可用后收紧、收紧顺序、写了没生效、链路没通。
 
-## 评测要按 agent 的组件分工做，并把「步数效率」当独立指标（来源：deeplearning.ai《Evaluating AI Agents》短课（Arize AI，John Gilhuly / Aman Khan，2h36m，15 节）2026-09-28 r209-A 独立实拉；与 §评测闭环四件套 互补——那条管"评测结果有没有下游消费者"，本条管"评测对象怎么切、切完测什么"）
+评测要按 agent 的组件分工做，并把「步数效率」当独立指标（来源：deeplearning.ai《Evaluating AI Agents》短课（Arize AI，John Gilhuly / Aman Khan，2h36m，15 节）2026-09-28 r209-A 独立实拉；与 §评测闭环四件套 互补——那条管"评测结果有没有下游消费者"，本条管"评测对象怎么切、切完测什么"）
 - **先分解再评测，别拿端到端分数当唯一信号**：agent 拆成三类组件——router（选哪个技能/工具）、skills（单个能力执行）、memory（上下文与记忆），**每个组件各选各的评测器**：code-based（确定性可判）、LLM-as-a-Judge（无法用代码判的语义）、human annotation（争议样本定标）。判据：**端到端分数只能告诉你"坏了"，分组件才知道"坏在哪一层"**；三类评测器混用在一个组件上会互相掩盖误差。
 - **收敛分（convergence score）要单独测：答对但绕远路不算好**：课程把"agent 能否以高效步数响应查询"作为独立指标。判据：**成功率相同、步数差一倍，成本与延迟完全不同**；只看最终答案对的评测会系统性奖励啰嗦的轨迹。
 - **测试例从真实 trace 里造，不要凭空写**：从采集到的轨迹里挑测试例，再为 LLM judge 写详细 prompt。判据：**人造用例分布与真实请求不同，评测会过拟合到作者想象的场景**；trace→用例这条链也让回归集可以随运行自动长大（与 wb-skill-authoring §trace→技能挖掘 相邻，那条产技能、本条产评测集）。
@@ -329,20 +317,20 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **评测与传统软件测试的分工要明说**：LLM 系统的评测对象是概率输出与轨迹，不是断言；把两者混为一谈会让团队用单测的思路要求 agent，或用 agent 的宽容度放过真正的回归。判据：**先声明"我在测什么性质的东西"，再选方法。**
 - 提升层：工作流 / 模型。触发词：agent 评测、组件级评测、router 评测、收敛分、步数效率、LLM-as-a-Judge、code-based 评测、trace 造测试例、结构化实验、评测器选型。
 
-## 报警链路自身也要验收：错误通道的入参契约会随失败位置分叉（来源：docs.n8n.io《Handle errors gracefully》2026-09-28 r209-B 独立实拉；与 §接入类验收 互补——那条管"主链路跑没跑通"，本条管"出错时报警链路拿不拿得到东西"）
+报警链路自身也要验收：错误通道的入参契约会随失败位置分叉（来源：docs.n8n.io《Handle errors gracefully》2026-09-28 r209-B 独立实拉；与 §接入类验收 互补——那条管"主链路跑没跑通"，本条管"出错时报警链路拿不拿得到东西"）
 - **错误工作流拿到的 payload 不是恒定结构**：正常失败给 `execution{id,url,retryOf,error.message,error.stack,lastNodeExecuted,mode}` + `workflow{}`；**若是主流程的 trigger 节点失败，payload 变成 `trigger{error{context,name,cause,timestamp},mode}` + `workflow{}`，且 `execution.id` / `execution.url` 直接缺失**（执行尚未入库）。判据：**写错误处理器/告警模板时若假定字段恒定，它会在最需要它的那一类故障（启动与激活失败）上先崩**。
 - **`retryOf` 只在重跑时出现，是区分"首次失败"与"重试仍失败"的唯一原生字段**：缺字段等于把两类信号混成一堆。判据：**没有重跑标记的告警无法回答"这是新问题还是老问题复发"**。
 - **推论到本仓库：任何"出错时自动记录/自动告警"的机制，都要为"记录机制自身拿不到上下文"准备降级形状**（最少可识别的字段集 + 明确标注哪些字段为空及为什么）。判据：**可观测性组件失效时最危险，因为它让人以为没人报错 = 没出错。**
 - 提升层：工具 / 工作流。触发词：错误工作流、error trigger、告警拿不到字段、payload 变形、retryOf、启动失败没告警、降级字段集。
 
-## 失败证据是一份要预算的资源：隐私开关、容量上限、阈值语义都会悄悄关掉它（来源：Make Help Center《Scenario settings》2026-09-28 r209-B 独立实拉（页面 Updated 08 Sep 2026）；与 §失败也留痕 互补——那条管"失败要留痕"，本条管"留痕会被哪些开关关掉"）
+失败证据是一份要预算的资源：隐私开关、容量上限、阈值语义都会悄悄关掉它（来源：Make Help Center《Scenario settings》2026-09-28 r209-B 独立实拉（页面 Updated 08 Sep 2026）；与 §失败也留痕 互补——那条管"失败要留痕"，本条管"留痕会被哪些开关关掉"）
 - **"保密模式"同时是排障能力开关**：`Keep data confidential` 开启后日志只显示"发生过一次运行"、不保留 payload，官方原文提示"there are very limited options to solve errors"。判据：**隐私与可诊断性是一对显式取舍，不是免费的两个开关**；开启前必须先回答"这类故障还要不要能复盘"。
 - **保留失败数据需要容量，容量满则静默丢弃**：`Store incomplete executions` 存失败运行以便修复后续跑；但 `Discard data if storage is full` 在目录满时**丢弃失败数据且不可恢复**（原文 discarded data can't be recovered）。判据：**失败证据的保留容量属于排障预算；预算为 0 时"失败可重放"只是宣传语**。
 - **同一个"连续错误 N 次后停用"阈值，在即时触发下语义完全不同**：`Errors before deactivation` 定义连续错误容忍次数，但**若场景以 instant trigger 启动，该设置被忽略，首次错误即立即停用**。判据：**引用保护阈值必须连带它的适用前提**；同一数字在不同触发类型下不是同一个承诺。
 - **顺序保证会堵塞恢复**：开启 `Process data in order` 后，存在 incomplete execution 时新运行全部暂停直到其解决。判据：**"严格顺序"与"失败后继续吞吐"不可兼得**，选顺序就要为堵塞准备处理时效。
 - 提升层：工作流 / 工具。触发词：保密模式、keep data confidential、日志不保留、incomplete execution、存储满丢弃、失败数据丢弃、停用阈值、instant trigger 忽略、顺序处理堵塞。
 
-## 隐性配额与扩容的反向效应：验收要专门探「成功路径上的配额」和「加了实例之后」（来源：docs.n8n.io/hosting/scaling/queue-mode/，2026-09-28 r210-B 独立实拉）
+隐性配额与扩容的反向效应：验收要专门探「成功路径上的配额」和「加了实例之后」（来源：docs.n8n.io/hosting/scaling/queue-mode/，2026-09-28 r210-B 独立实拉）
 三类失败都不在报错日志里，而被记成「那个节点/工具不行」：
 - **① 结果回传通道有独立配额**：queue 模式下 worker 执行、客户端却连在 main/webhook 上，Respond to Webhook 的响应要经 Redis 消息回传，上限默认 **64 MiB**；Redis 在途会持有多份副本，官方要求按 **1.5 倍** 预算内存；超限直接判定**该节点失败**；而 MCP 工具结果**无法 offload**，超限以 tool error 形式抛给 MCP 客户端。→ **失败点显示在被调用方，根因在回传通道**。
 - **② 横向扩容会打爆下游连接**：worker 并发默认 10，官方建议 **≥5**，明确理由是「低并发 + 大量 worker 会耗尽数据库连接池」；同时官方**不建议把 main 放进负载均衡池**。→ **加机器可能让整体更差**，单实例验收通过不代表扩容后通过。
@@ -351,107 +339,107 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 与 §错误通道入参契约分叉（r209-B）互补——那条管「失败信息长成什么样」，本条管「成功路径上哪些地方会静默变成失败」。
 - 提升层：工作流 / 可复用 Skill。触发词：容量验收、隐性配额、回传通道、扩容、连接池、at-most-once、leader 选举。
 
-## 值语义判据必须具名：同一系统里可以并存两套「空」，判空不声明口径即假成功（来源：docs.n8n.io`build/work-with-data/transform-data/expression-reference/{string,number}.md` 与 expression-reference.md 2026-09-28 r283-A 独立实拉逐句核验）
+值语义判据必须具名：同一系统里可以并存两套「空」，判空不声明口径即假成功（来源：docs.n8n.io`build/work-with-data/transform-data/expression-reference/{string,number}.md` 与 expression-reference.md 2026-09-28 r283-A 独立实拉逐句核验）
 - **实证**：① `String.toNumber()` 原文「**Throws an error** if the string doesn't start with a valid number」——不是静默 NaN；② `String.toBoolean()` 原文「`0`, `false` and `no` resolve to `false`, everything else to `true`. **Case-insensitive**」；③ **两套空判据并存**：`Number.isEmpty()` 原文「Returns `true` if the number is `0`, `NaN`, `null`, or `undefined`」（**含 0**），而 `$ifEmpty` 的空集是「`undefined`, `null`, an empty string `''`, an array where `value.length` returns `false`, or an object where `Object.keys(value).length` returns `false`」（**不含 0**）。④ 官方自己给了警示 hint：原文「`isEmpty()` **isn't a null check**. On a number it treats `0` as empty, so `$json.count.isEmpty()` returns `true` for **both a missing field and a field set to `0`**」，并指定规避法「compare directly … or use the **exists** operator in the If node」。
 - **判据**：任何"判空 / 判假 / 判是否为数"的断言，必须**先声明用哪一套判据**；两套判据在同一运行时内可共存且对同一输入给出相反答案（`0` 在 Number.isEmpty 下为真、在 $ifEmpty 下为假）。把**「字段缺失」与「字段取值为零」被同一谓词合并**视为明确的假成功源——它让"没有数据"和"数据为零"无法区分。强转也同理：**抛错与静默转换是两种失败面**，必须先确认该系统是哪种。
 - **验收动作**：断言清单里凡出现 `isEmpty` / `ifEmpty` / falsy 判断 / 类型转换，逐条标注所依据的判据集合与"零值归属"，并补一条 `=== null`（或 exists 运算符）的缺失性断言与之并列。
 - 提升层：工具。触发词：判空口径、isEmpty、$ifEmpty、0 算不算空、缺失 vs 为零、静默转换、case-insensitive、falsy 集、throws an error。
 
-## 基线抑制：在他人工件上改动后验收，必须拿原工件跑同一校验器取差集（来源：github.com/anthropics/skills `skills/docx/SKILL.md` 2026-09-28 r283-A 经 `github.com/.../raw/main/...` HTML 通道独立取正文核验；附同族顺序契约）
+基线抑制：在他人工件上改动后验收，必须拿原工件跑同一校验器取差集（来源：github.com/anthropics/skills `skills/docx/SKILL.md` 2026-09-28 r283-A 经 `github.com/.../raw/main/...` HTML 通道独立取正文核验；附同族顺序契约）
 - **实证**：原文命令 `python scripts/office/validate.py out.docx **--original doc.docx**`（注释「XSD checks; `--auto-repair` fixes common issues」），另有 `--author "<the name you redlined under>"` 用于校验每一处改动都被 revision 标记包住——原文说明这是「easy to do by accident and **invisible in the accepted view**」。附条（同族顺序契约）：「Do all structural work — add, delete, reorder — before editing any slide's content」，`clean.py` 须在 `<p:sldIdLst>` 定型后才跑；`add_slide.py` 不传 `-o` 就**原地覆写输入**；zip 必须「从目录内 + 先 `rm -f ../out.docx`」，否则已删部件会存活。
 - **判据**：对"在别人给的工件上改动"的产物做校验时，**继承来的缺陷会污染判定**——第三方模板自带的 XSD 错误会让校验永远红，真缺陷被淹没在噪声里。正确动作是**同一校验器对原工件跑一遍做基线，只取差集**才算自造缺陷。同理，结构未定型就先动内容，会让清理脚本白跑一遍。
 - **验收动作**：凡"改别人给的文件"类任务，验收命令必须带 `--original`（或等价基线参数）；无基线参数的校验器，改为"改动前先跑一次、改动后再跑一次、比对差异"三步。
 - 提升层：工具。触发词：基线抑制、--original、继承缺陷、第三方模板污染、结构先于内容、原地覆写、差集才算自己的。
 
-## 评测规模要写成可复算的乘法式，并显式声明可用记录数（来源：github.com/muratcankoylan/Agent-Skills-for-Context-Engineering `research-evidence.md` 2026-09-28 r283-A 经 Qoder r316-Q-A 实拉取证 + WB 逐条判重复核）
+评测规模要写成可复算的乘法式，并显式声明可用记录数（来源：github.com/muratcankoylan/Agent-Skills-for-Context-Engineering `research-evidence.md` 2026-09-28 r283-A 经 Qoder r316-Q-A 实拉取证 + WB 逐条判重复核）
 - **实证**：原文把基准口径写成 **「50 prompts × 4 models × 3 reps = 600 calls」，并声明「600/600 可用记录、0 格式失败」**；检索器约束 `stdlib-only + 1.5MB 上限 + 30s 超时`；路由 Top-1 0.913 / Top-3 0.973；上下文重写 top-1 0.255→0.489。
 - **判据**：「触发率 ≥0.5」「零失败」这类结论只有在同时给出**样本轴 × 模型轴 × 重复轴 = 总调用数**与**可用记录数 / 格式失败数**时才能被独立复算。只报一个百分比的评测结论等于不可证伪——分母没写，就不知道它跑了多少次、失败有没有被悄悄丢掉。
 - **验收动作**：评测报告头部固定四元组：总调用数（乘积式）+ 可用记录数 + 格式失败数 + 单调用超时/体积上限；四者缺一，该评测结论不得作为落地判据。
 - 提升层：可复用 Skill。触发词：评测规模、可复算、600 calls、可用记录数、格式失败、分母、重复次数、Top-1 触发率。
 
-## 并行前先问有没有判卷器：没有可信判卷器时多路采样不产生收益（来源：arXiv 2602.18998《Benchmark Test-Time Scaling of General LLM Agents》2026-09-28 r283-A 独立拉 abstract 原文核验）
+并行前先问有没有判卷器：没有可信判卷器时多路采样不产生收益（来源：arXiv 2602.18998《Benchmark Test-Time Scaling of General LLM Agents》2026-09-28 r283-A 独立拉 abstract 原文核验）
 - **实证**：原文（General AgentBench，10 个主流 LLM agent × search/coding/reasoning/tool-use）「we find that **neither scaling methodology yields effective performance improvements in practice, due to two fundamental limitations: context ceiling in sequential scaling and verification gap in parallel scaling**」，且从领域基准迁到通用 agent 场景出现 substantial performance degradation。
 - **判据**：**并行扩展被 verification gap 封顶**——多轨迹采样之后如果**没有可靠的判卷器**，多出来的轨迹不会产生收益；此时预算应转向单路的上下文容量（context ceiling）而非继续加路数。反过来，**先有判卷器，再谈多路投票/自一致/重排**，否则只是在制造无法裁决的候选。
 - **验收动作**：设计"多跑几次取最好"的方案前，先写出判卷器（用什么判、判错率多少、谁能复核）；答不出判卷器的多路方案一律退回单路 + 加上下文。
 - 提升层：模型 / 工作流。触发词：verification gap、context ceiling、判卷器、多路采样、自一致投票、并行扩展、测试时扩展、采样几次。
 
-## 阻塞式闸门必须自带「拦截计数」：拦成功的代价是这条尝试在审计面消失（来源：docs.n8n.io 外部钩子章，2026-09-28 由 Qoder r317-Q-B 实拉取证；**WB 本轮复拉时该站文档路径已变更、未能取到当前原文，按引文落地并标注待复核**）
+阻塞式闸门必须自带「拦截计数」：拦成功的代价是这条尝试在审计面消失（来源：docs.n8n.io 外部钩子章，2026-09-28 由 Qoder r317-Q-B 实拉取证；**WB 本轮复拉时该站文档路径已变更、未能取到当前原文，按引文落地并标注待复核**）
 - **实证（据 r317-Q-B 引文）**：后端钩子 18 个事件，`throw` 即禁止该动作（deactivate 被中止后工作流仍保持 active），且 **`preExecute` 里 throw 会导致连执行记录都不产生**——旧配置项 `N8N_PRE_EXECUTE_ERROR_CREATES_EXECUTION` 已在 3.0.0 被删除；钩子可读 `workflowContext`（tags / actor）做条件拦截；前端钩子不可阻塞。
 - **判据**：任何阻塞式闸门都有同一个观测代价——**被拦下来的那次尝试不会留下痕迹**。于是"钩子在保护我"与"钩子从来没触发过"在日志里长得一模一样，验收与安全审计都无法区分。**当平台还提供了"要不要留痕"的开关、后来又把开关删掉时，这个盲区就变成了永久性的。**
 - **落地动作**：验收所有拦截/限流/白名单机制时，除检查拦截是否生效外，必须再问一句「它有没有记录被拦的次数」；没有计数的闸门要补一个旁路计数（哪怕只是日志文件的一行自增）。
 - 提升层：工具 / 工作流。触发词：拦截计数、preExecute 不留痕、被拦即不可见、闸门自证、钩子从不触发、删除留痕开关。
 
-## 审计面要在「写 / 读 / 参数值」三维显式取舍，并点名哪一维是空的（来源：www.activepieces.com/docs 审计章 2026-09-28 经 Qoder r317-Q-B 实拉取证；与 §失败证据要预算 相邻）
+审计面要在「写 / 读 / 参数值」三维显式取舍，并点名哪一维是空的（来源：www.activepieces.com/docs 审计章 2026-09-28 经 Qoder r317-Q-B 实拉取证；与 §失败证据要预算 相邻）
 - **实证**：审计事件目录（含 `agent action executed`、`signing key created`、approval 四态、可 Event Streaming POST 给 SIEM），官方口径原文：**「只记写动作（失败也记）；不记读、不记工具入参值、MCP server 工具完全不记」**。配套一条对照：Make **没有组织级的日志默认关闭开关**，只能逐 scenario 设，`Data is confidential = Yes` 开启后几乎无法调试。
 - **判据**：说"我们有审计"是零信息——必须回答三维上各自覆盖了什么。本例最要紧的空白是**MCP 工具完全不记**，意味着**技能经由 MCP 做出的外部动作不留任何痕迹**。另一条教训是**开关的缺省粒度**：没有组织级默认，合规就取决于每个人是否记得逐条打开，而平台把"关闭日志"与"可调试性"做成了显式互斥。
 - **落地动作**：给任何"可审计"声明画一张 3×N 表（写/读/参数值 × 各子系统），空格必须显式写"不采"而不是留白；缺省粒度（全局默认 vs 逐条开关）也要写进同一张表。
 - 提升层：工作流。触发词：审计三维、不记读、不记入参值、MCP 不记、组织级默认缺失、no-log 与可调试互斥、数据保密。
 
-## 运行时审计有精度上限：要与静态审两级串联，不能只跑运行时（来源：arXiv 2606.11671《Runtime Skill Audit》2026-09-28 经 Qoder r317-Q-B 实拉取证；与 §判卷器先行 同节）
+运行时审计有精度上限：要与静态审两级串联，不能只跑运行时（来源：arXiv 2606.11671《Runtime Skill Audit》2026-09-28 经 Qoder r317-Q-B 实拉取证；与 §判卷器先行 同节）
 - **实证**：定向运行时探测"技能中介的 agent 实际做了什么"，实测 **acc 90.0% / TPR 88.0% / **FPR 8.0%**；在自进化攻击下多轮仍能检出 **19–20/20** 恶意技能。
 - **判据**：运行时能看到静态看不到的东西，但**FPR 8.0% 意味着纯运行时探测会误伤约 8% 的正常技能**。结论应写成**两级流水线**：静态筛出可疑面（便宜、不误伤），再对可疑者做运行时复探（贵、但有行为证据），而不是二选一。
 - **落地动作**：技能体检流程里显式标注每一级的**精度与误伤率**；用运行时结果单独下"结论禁止"的决策前，必须有静态证据或人工复核兜底。
 - 提升层：工具 / 模型。触发词：Runtime Skill Audit、FPR 8%、TPR、静态＋运行时两级、运行时探测、误伤率、自进化攻击。
 
-## 压缩/摘要产物要做「约束留存」回归门：约束失效是二值的，不是渐变（来源：arXiv 2606.22528《Governance Decay: How Context Compaction Silently Erases Safety Constraints in Long-Horizon LLM Agents》2026-09-28 r284-A 独立拉 abstract 原文核验）
+压缩/摘要产物要做「约束留存」回归门：约束失效是二值的，不是渐变（来源：arXiv 2606.22528《Governance Decay: How Context Compaction Silently Erases Safety Constraints in Long-Horizon LLM Agents》2026-09-28 r284-A 独立拉 abstract 原文核验）
 - **实证**：1,323 episodes / 7 模型族，约束完整在位时违规率 **0%** → 压缩后 **30%**（部分模型 59%）；关键在**二值性**——约束被摘要保住 → 违规仍 **0%**；被丢弃 → **38%**，不存在"部分生效"。配套基准 `ConstraintRot`、攻击 `Compaction-Eviction Attack`、防御原语 **`Constraint Pinning`**（约束原文隔离出有损压缩，违规回到 0%）。
 - **判据**：凡经过自动压缩/摘要/裁剪的上下文，把「硬约束条款原文是否仍在场」做成**字符串级可机检**的回归项——在场才算有效，不在场即判"约束已失效"，**不按降级处理、不做概率估计**。防御侧做法：硬约束（禁止动作、权限边界、必须人工确认项）走 **原文透传**，不喂给摘要器。
 - 与 `wb-context-compressor` 的压缩策略（豆包自留地）不重叠：本条是**验证动作**——压缩之后怎么证明约束还在。
 - 提升层：工具（可机检的门）。触发词：压缩后约束失效、Governance Decay、Constraint Pinning、二值失效、约束留存、上下文裁剪回归。
 
-## 被当题库/基线复用的产物必须列入自动清理豁免（来源：docs.n8n.io《Manage execution data》2026-09-28 r284-A 独立实拉 + agentskills.io《Adding skills support》客户端规范独立实拉）
+被当题库/基线复用的产物必须列入自动清理豁免（来源：docs.n8n.io《Manage execution data》2026-09-28 r284-A 独立实拉 + agentskills.io《Adding skills support》客户端规范独立实拉）
 - **实证**：n8n 修剪条件 = 年龄 `EXECUTIONS_DATA_MAX_AGE` 默认 **336h（14 天）** 或条数 `EXECUTIONS_DATA_PRUNE_MAX_COUNT` 默认 **10,000**（从旧到新删），安全缓冲 `EXECUTIONS_DATA_HARD_DELETE_BUFFER` **1h**；原文硬豁免一条——**"Annotated executions (for example, executions with tags or ratings) are never pruned."**；SQLite 下删了也不释放磁盘，需 `DB_SQLITE_VACUUM_ON_STARTUP`。客户端规范同向：**"exempt skill content from pruning"**，理由是技能指令被裁掉后"模型继续运行但没了专业指令，**没有任何可见报错**"。
 - **判据**：任何会被**反复复算**的证据资产——评测集、标注样本、人工基线、黄金用例、回归对比快照——必须显式挂清理豁免，不能跟随默认保留期一起被修剪。**题库蒸发是无声故障**：下一次回归跑在残缺集上，分数照常输出、看起来一切正常。反面同理：技能正文/常驻指令不得进"可回收"区。
 - 提升层：工作流。触发词：清理豁免、题库蒸发、never pruned、exempt from pruning、默认保留期、回归集被删。
 
-## 分页游标必须携带请求参数指纹：换了查询条件还复用旧游标，是数据完整性缺陷不是小 bug（来源：阿里 Skill Portal AgentExplorer OpenAPI `2026-03-17` 版错误码表，2026-09-28 由 Qoder r318-Q-C 实拉取证；**WB 本轮复拉 `help.aliyun.com/zh/skillsportal` 仅得 SPA 壳（38KB 无 API 字段），未能独立复核，按引文落地并标注待复核**）
+分页游标必须携带请求参数指纹：换了查询条件还复用旧游标，是数据完整性缺陷不是小 bug（来源：阿里 Skill Portal AgentExplorer OpenAPI `2026-03-17` 版错误码表，2026-09-28 由 Qoder r318-Q-C 实拉取证；**WB 本轮复拉 `help.aliyun.com/zh/skillsportal` 仅得 SPA 壳（38KB 无 API 字段），未能独立复核，按引文落地并标注待复核**）
 - **实证**：`SearchSkills`（`GET /openapi/skills`，参数 `keyword` / `categoryCode` / `nextToken` / `maxResults` 默认 20 上限 100 / `searchMode=semantic`）除通用 `InvalidParam.NextToken` 外，另设专用错误码 **`NextTokenParameterMismatch`**——同一个 `nextToken` 换了其它请求参数即拒。
 - **判据**：写/评审任何游标分页客户端时多问一句「换了 keyword/category 还复用旧 token 会怎样」。**静默返回错页比报错严重得多**：报错会被立刻发现，错页会一路流进下游统计与验收结论。游标不是"页码"，是**该次查询条件的续读凭据**，条件一变凭据即失效。
 - 提升层：工具。触发词：游标参数指纹、nextToken、分页复用、错页静默、NextTokenParameterMismatch。
 
-## 验证「加了防护」的产物必须同测良性用例集：只报攻击侧下降的改动不可直接采纳（来源：arXiv 2609.02786《SafeEvolve: Harness-Policy Co-Evolution from Agent Experience for Safety Alignment》2026-09-28 r284-C 独立拉 abstract 原文核验）
+验证「加了防护」的产物必须同测良性用例集：只报攻击侧下降的改动不可直接采纳（来源：arXiv 2609.02786《SafeEvolve: Harness-Policy Co-Evolution from Agent Experience for Safety Alignment》2026-09-28 r284-C 独立拉 abstract 原文核验）
 - **实证**：SafeEvolve（`verifier-decomposed rewards` + 两阶段 SFT-RL）在 AgentDojo 上对 Qwen3.5-4B 取得 **ASR 降低 3×** 的同时**良性效用 59.79% → 61.86%**——安全与能力**不必然此消彼长**。对照 DeFuse（r166A）只给攻击侧 34.3%→7.5–8.1%，缺良性侧数据。
 - **判据**：任何以"更安全"为卖点的改动（收紧权限、加拦截、删能力、加免责），验收必须**同跑一套良性用例集**并给出前后对比数字。缺良性集就无法区分「真变强」与「把能力一起砍了」——后者在攻击指标上同样好看。反向同理：报告里出现"安全性大幅提升 + 未说明良性侧"即判**证据不完整**，不因方向正确而放行。
 - 提升层：工具。触发词：同测良性用例、安全效用权衡、ASR 降了但能力呢、防护改动验收、benign utility。
 
-## 判「它没执行」之前先证明「它在当前视图里可见」：默认过滤器会制造假故障（来源：Make Help Center History 页 + 客服口径，2026-09-29 经 Qoder r319-Q-A 实拉取证 + WB 同域独立实拉 200 核验）
+判「它没执行」之前先证明「它在当前视图里可见」：默认过滤器会制造假故障（来源：Make Help Center History 页 + 客服口径，2026-09-29 经 Qoder r319-Q-A 实拉取证 + WB 同域独立实拉 200 核验）
 - History 页默认勾选 "Hide checked runs"，官方客服证实由此产生"漏跑"错觉；同页另一形态：保密执行的 Replay 按钮**要么消失、要么可点但提示 cannot be displayed**，官方未给 exact conditions。
 - 附证：Dify 侧日志按套餐保留 30 天、"Older entries are permanently deleted—upgrading later doesn't recover them"——**历史证据会永久缺席**，排障时不能假设"以后升级就能取回"。
 - 与 §闸门自带拦截计数（2.46.0）是同一坑的两面：那条是拦下不记账，本条是记了账但对当前视图不可见。
 
-## 带标准答案的门禁/评测技能必须做「答案隔离」（来源：rohitg00/ai-engineering-from-scratch `.claude/skills/find-your-level/SKILL.md`，2026-09-29 经 Qoder r322-Q-A 实拉取证；**WB raw 通道未达，按引文落地并标注待复核**）
+带标准答案的门禁/评测技能必须做「答案隔离」（来源：rohitg00/ai-engineering-from-scratch `.claude/skills/find-your-level/SKILL.md`，2026-09-29 经 Qoder r322-Q-A 实拉取证；**WB raw 通道未达，按引文落地并标注待复核**）
 - 三则：① 答案钥匙存 `references/answer-key.md`，与题面**物理分离**；② 按轮次**惰性取 key**、后续轮不预载；③ **示例即泄漏面**（原文 "Never put a real answer letter … in a reply-format example"）。
 - 适用任何带标准答案的评测/门禁技能——防的是 agent 先读答案再"评测"，与 §盲评（r153B/r241C）合起来才是完整的防泄漏面。
 
-## 验证时机按「可逆性与代价」分层：不是所有产物都要前置验证（来源：anthropics/skills `skills/web-artifacts-builder/SKILL.md` 步 5 标 `(Optional)`，原文理由 "avoid testing the artifact upfront as it adds latency…Test later, after presenting"，2026-09-29 经 Qoder r323-Q-B 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
+验证时机按「可逆性与代价」分层：不是所有产物都要前置验证（来源：anthropics/skills `skills/web-artifacts-builder/SKILL.md` 步 5 标 `(Optional)`，原文理由 "avoid testing the artifact upfront as it adds latency…Test later, after presenting"，2026-09-29 经 Qoder r323-Q-B 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
 - 分层措辞：**可逆、本地、用户可即时反馈**的产物允许后置验证以省延迟；**不可逆 / 对外发布 / 破坏性**操作一律前置。
 - 这是对 AGENTS.md 0.7「先独立验证再交付」的**例外档位**而非取消：默认仍前置，主张后置时必须能说出可逆性与延迟代价两条理由。
 
-## 长任务的停止条件要按资源维度枚举，「触发即终态」与「触发后可重放」必须二选一（来源：github.com/uos1231234/agent-shell README 2026-09-29 r285-C 独立实拉原文核验）
+长任务的停止条件要按资源维度枚举，「触发即终态」与「触发后可重放」必须二选一（来源：github.com/uos1231234/agent-shell README 2026-09-29 r285-C 独立实拉原文核验）
 - 五类 guard＝`token / step / tool-call / time / error-rate`；原文 "there is no 'recovering' state…guards are hard terminals"（另一派如豆包 r242C n8n 侧走 dead-letter 夜间重放＝**有恢复态**），同一维度两说。
 - 三问：① 限的是哪类资源（只设"最大轮数"会漏 token 与墙钟时间）② 触发后是终态还是入重放队列 ③ 阈值是 `>` 还是 `≥`（`errorRate` 实测严格 `>`、到第 11 轮才 trip，差一轮＝差一次全量重试成本）。
 - 附：guard 必须在正常路径上也可达（该仓 ADR-014 不变量），否则阈值形同未设。
 
-## 宣称「某技能/流程带来 X% 提升」必须同句声明是否固定了模型（来源：arXiv 2609.29454，2026-09-29 经 Qoder r321-Q-C 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
+宣称「某技能/流程带来 X% 提升」必须同句声明是否固定了模型（来源：arXiv 2609.29454，2026-09-29 经 Qoder r321-Q-C 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
 - 83 个智能合约审计技能实测：**效果主要由模型而非 harness 决定**，同一技能集跨模型收益 +22.8% / +43.2%——与社区口号「模型 20% / harness 80%」方向相反且后者无实测支撑。
 - 与 AV 1.90.0「每次 run 冻结 harness+模型」分工：那条管**怎么做才可比**，本条管**差异该归因给谁**；未固定模型的跨 run 提升一律降级为不可采信。
 
-## 防护要分写侧与读侧：写侧几乎免费，读侧会大面积误伤（来源：arXiv 2609.22818《The Price of Safety》，2026-09-29 经 Qoder r323-Q-B 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
+防护要分写侧与读侧：写侧几乎免费，读侧会大面积误伤（来源：arXiv 2609.22818《The Price of Safety》，2026-09-29 经 Qoder r323-Q-B 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
 - 写侧（净化 / 溯源 / LLM 异常检测）在无害流量下无可测可用性代价（CI ±4.5pp）；读侧重排器 acc −4.4pp、隔离 33.6% 合法记忆、单会话最高 106 次误隔离，而 token 开销仅 2.7%。
 - 判据：**优先在写入侧设闸，读取侧只标注不丢弃**；与 §运行时审计 FPR 8% 须两级串联（2.46.0）同向——那条给误报率，本条给"放哪一侧"的解法。
 
-## 盲评要连「分数型元数据」一起隔离：这是第三个独立泄漏面（来源：arXiv 2608.25869，192,000 次评测 / 185,271 次成功，8 个被评模型中 7 个受污染；2026-09-29 经 Qoder r324-Q-C 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
+盲评要连「分数型元数据」一起隔离：这是第三个独立泄漏面（来源：arXiv 2608.25869，192,000 次评测 / 185,271 次成功，8 个被评模型中 7 个受污染；2026-09-29 经 Qoder r324-Q-C 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
 - 把历史/参考分数传给裁判即系统性带偏 → 盲评不仅要隐去**版本标签**（r153B）与**呈现顺序**（r241C），还要隐去 **pass rate、历史评分、文件名里的分数**。
 - 判据：评测请求体组装完后做一次"分数型字段扫描"，命中的一律剔除再送裁判。
 
 
-## 遮蔽 / 脱敏不是后端访问控制：验收「敏感面已封」必须逐条走豁免清单（来源：docs.n8n.io《Redact execution data》2026-09-29 r286-A 独立实拉原文核验）
+遮蔽 / 脱敏不是后端访问控制：验收「敏感面已封」必须逐条走豁免清单（来源：docs.n8n.io《Redact execution data》2026-09-29 r286-A 独立实拉原文核验）
 - 官方明言 "It's not a backend access control, and some data paths fall outside its scope."，并列出四条豁免：① Code 节点 `console.log` 输出（生产进 stdout 与日志基建）；② 节点间数据流（下游节点仍可把原文外发）；③ Webhook 响应体是原文；④ 库内数据未加密，脱敏只在 API 出口施加，直读数据库可见原文。
 - 判据：**遮蔽只改「人看到什么」，不改「数据能去哪」**——宣称封住了敏感面时，逐条问这四条口子是否仍在。
 - 与 §失败证据可诊断性预算（2.39.0）互补：那条管「日志留不留 payload」，本条管「留了或抹了之后，还有哪些面在裸奔」。
 
 
-## 「可关闭的开关」也可能是单向门：启用即无回滚，关掉 = 数据永久不可读（来源：docs.n8n.io《Rotate encryption keys》2026-09-29 r288-A 独立 curl 实拉原文核验）
+「可关闭的开关」也可能是单向门：启用即无回滚，关掉 = 数据永久不可读（来源：docs.n8n.io《Rotate encryption keys》2026-09-29 r288-A 独立 curl 实拉原文核验）
 - **双层密钥模型**：实例密钥 `N8N_ENCRYPTION_KEY` 是主密钥，"set at deployment time… never changes"，只用来保护数据加密密钥；轮换的是**数据加密密钥**，它以密文形式存在库里。轮换后旧密文仍可读，n8n 在该记录**下次更新时静默重加密**（lazy re-encryption）。
 - 原文硬约束：启用是 "a one-way change. There's no rollback path."；移除 `N8N_ENV_FEAT_ENCRYPTION_KEY_ROTATION` 或降级版本 → "makes all data encrypted after you enabled the feature **permanently inaccessible**"；且 "There's no automated tool to convert data encrypted in the new format back to the legacy format. The only recovery path is restoring from a database backup taken before you enabled the feature."
 - API 面：轮换需 `encryptionKey:manage` 全局 scope，且 "n8n never returns key material in API responses, only metadata such as the ID, algorithm, status, and timestamps."
@@ -460,7 +448,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 提升层：工作流。触发词：密钥轮换、单向迁移、无回滚、one-way、关掉 flag 数据不可读、惰性重加密、元数据不等于密钥。
 
 
-## 评测题本身有契约：独立 / 非破坏且幂等 / 单一可核验 / 稳定 / 题面禁关键词 / 可以有意含糊（来源：anthropics/skills `skills/mcp-builder/reference/evaluation.md` 2026-09-29 r288-B 经 cdn.jsdelivr.net 直取原文核验）
+评测题本身有契约：独立 / 非破坏且幂等 / 单一可核验 / 稳定 / 题面禁关键词 / 可以有意含糊（来源：anthropics/skills `skills/mcp-builder/reference/evaluation.md` 2026-09-29 r288-B 经 cdn.jsdelivr.net 直取原文核验）
 - **验收对象先摆正**：原文 "The measure of quality of an MCP server is NOT how well ... (input/output schemas, docstrings/descriptions, functionality) enable LLMs **with no other context and access ONLY to the MCP servers** to answer realistic and difficult questions."——量的是**零上下文下能不能被用起来**，不是实现写得对不对。
 - 题面六条：① **独立**：题间互不依赖，且不假设前面发生过写操作；② **只读 + 非破坏 + 幂等**：不许为了得答案去改状态；③ **单一可核验值**：答案要能**直接字符串比较**，所以在**题面里写死输出格式**（"Respond True or False."、"Answer A, B, C, or D and nothing else."），禁列表/复杂对象/自然语言长文（除非能直比且顺序格式唯一）；④ **稳定**：不问"当前状态"类（反应数、回复数、成员数），基于**已闭合概念**出题，必要时给固定时间窗；⑤ **题面不含目标内容关键词**，用同义/转述/相关概念，否则退化成关键词检索、测不出工具使用能力；⑥ **允许有意含糊**（逼模型在选工具上出错），但**仍必须唯一可核验答案**——测的是工具选择鲁棒性。另有一条反向要求：**不要让被测对象限制出题**，出得难，允许存在"现有工具解不了"的题，那是能力边界不是出题失误。
 - **评测流程先读后调**：Step1 文档勘察尽量并行、子 agent 只读文件系统/网页文档；Step2 工具勘察只列工具与 schema/docstring，**此阶段不调用工具**。
@@ -468,7 +456,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 提升层：工具/工作流。触发词：评测集、evaluation、题面契约、答案漂移、字符串比较、禁关键词、先读后调、只读幂等。
 
 
-## 「回滚 / 升级 / 保留期」三类动作的覆盖范围要逐项问清：回滚带不带状态、升级能不能找回、到期是禁用还是删除（来源：docs.dify.ai `llms-full.txt` 2026-09-29 r288-C 独立 curl 实拉全文核验）
+「回滚 / 升级 / 保留期」三类动作的覆盖范围要逐项问清：回滚带不带状态、升级能不能找回、到期是禁用还是删除（来源：docs.dify.ai `llms-full.txt` 2026-09-29 r288-C 独立 curl 实拉全文核验）
 - **回滚带状态**："Restoring a version also restores the persistent files in the agent's sandbox to that version."——版本回滚不止回滚配置，连沙箱内的持久文件一起回退；**没写清覆盖范围，就会丢掉以为还在的状态**（或以为丢了其实被回退）。
 - **升级不是恢复手段**：Sandbox 档日志保留 30 天，"Older entries are **permanently deleted**—upgrading later doesn't recover them."——付费升级只改后续能力，不回补已删数据。
 - **静默自动禁用**：文档"未更新或未被检索达一定期限会**自动禁用**以优化性能"（Sandbox 7 天 / Professional & Team 30 天），付费档可一键恢复——系统会在无人操作时自行改状态，**拉验证基线前先确认对象是否已被自动停用**。
@@ -477,18 +465,23 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 与 §容量上限二分「可提升 vs 明示不可提升」（2.41.0）同族：那条问"能不能加"，本条问"加了之后历史数据还在不在"。
 - 提升层：工作流。触发词：回滚覆盖范围、升级不恢复、日志保留 30 天、自动禁用、静默停用、速率限制下一分钟。
 
-## 测试替身必须写明「生产忽略它」：钉数据/mock 的生效域是显式契约，不是环境巧合（来源：docs.n8n.io《Types of executions》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验；与 §2.38.0 测试例从真实 trace 造 互补——那条管"测试例从哪来"，本条管"替身在哪个执行态生效"）
+测试替身必须写明「生产忽略它」：钉数据/mock 的生效域是显式契约，不是环境巧合（来源：docs.n8n.io《Types of executions》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验；与 §2.38.0 测试例从真实 trace 造 互补——那条管"测试例从哪来"，本条管"替身在哪个执行态生效"）
 - 原文："When performing manual executions, you can use data pinning to 'pin' or freeze the output data of a node… On future runs, instead of executing the pinned node, n8n will substitute the pinned data and continue following the flow logic… **Production executions ignore all pinned data.**"
 - 判据：① 任何替身机制（mock / pin / fixture / 缓存回放）都要在文档里**显式写出它在生产态被忽略**——不写这句，使用者只会往两个方向错：以为假数据会进生产（不敢用），或以为生产也走替身（敢上线）；② 反向也成立：**替身在哪个态生效，就要在那个态验证**——只跑手动态等于没验证生产路径；③ 替身是**开发期加速器**不是**生产期保险丝**，上线前要有一次无替身的完整执行。
 - 提升层：工具/工作流。触发词：data pinning、mock 生效域、生产忽略、替身、fixture、手动执行 vs 生产执行。
 
-## 评测指标先分「需要参考答案」与「可直接判定」两类；前者贵、后者可全量跑（来源：docs.n8n.io《Use metrics to measure quality》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验；与 §2.38.0 组件级评测分工 互补——那条管"哪个组件用哪种评测"，本条管"单个指标要不要基准答案"）
+评测指标先分「需要参考答案」与「可直接判定」两类；前者贵、后者可全量跑（来源：docs.n8n.io《Use metrics to measure quality》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验；与 §2.38.0 组件级评测分工 互补——那条管"哪个组件用哪种评测"，本条管"单个指标要不要基准答案"）
 - 原文："Metrics can be deterministic functions (such as the distance between two strings) or you can calculate them using AI. Metrics often involve checking how far away the output is from a **reference output** (also called ground truth). To do so, the dataset must contain that reference output. **Some evaluations don't need this reference output though** (for example, checking text for sentiment or toxicity)."
 - 原文（汇总与下钻）："Metric-based evaluations can assign one or more scores to each test run, which you can compare to previous runs. **Individual scores get rolled up** to measure performance on the whole dataset… track how those metrics change between runs and **drill down into the reasons for those changes**."
 - 判据：① 建指标前先分类——**要 ground truth 的**（距离/相似度/精确匹配，数据集必须带参考答案，构造成本是主要开销）与**可直接判的**（情感、毒性、格式合规、长度，无需参考答案，可全量常态化跑）；把两类混在一个分数里，等于把可全量跑的信号埋进只能抽样跑的成本里；② 指标要**逐条记 + 向上汇总 + 跨运行可比 + 可下钻到原因**四件事同时做——只记总分就失去了"为什么变了"；③ 生产冒出的边界例要**回灌测试集**再评，否则评测集永远是开发期的那份。
 - 提升层：工具/模型。触发词：metric-based evaluation、ground truth、reference output、毒性、情感、汇总下钻、边界例回灌。
 
-## 探测/调用的失败要先分「是否触达外部」：七类具名 reasonCode 把"根本没发出"与"发出后被拒"分开（来源：docs.openclaw.ai《Auth credential semantics》2026-09-29 r294-B 独立 curl 实拉 24,733B 原文核验；与 §2.45.0 具名失败词汇 互补——那条管"空值有几套判据"，本条管"失败发生在链路哪一段"）
+探测/调用的失败要先分「是否触达外部」：七类具名 reasonCode 把"根本没发出"与"发出后被拒"分开（来源：docs.openclaw.ai《Auth credential semantics》2026-09-29 r294-B 独立 curl 实拉 24,733B 原文核验；与 §2.45.0 具名失败词汇 互补——那条管"空值有几套判据"，本条管"失败发生在链路哪一段"）
 - 原文：`status` 桶 = `ok`/`auth`/`rate_limit`/`billing`/`timeout`/`format`/`unknown`/`no_model`；当"**the probe never reached a model call**"时另给稳定 `reasonCode`：`excluded_by_auth_order` / `missing_credential` / `expired` / `invalid_expires` / `unresolved_ref` / `ineligible_profile` / `no_model`。"**Missing-profile errors identify local store absence without reporting a provider HTTP 401; the error records a local lookup failure, not a provider rejection.**"
 - 判据：① 排障第一刀必须是**链路分段**——本地解析（凭据缺失/引用未解析/过期/被显式顺序排除/无可用模型）与远端拒绝（401/429/计费/超时/格式）是两类完全不同的处置：前者改配置，后者改请求或等配额；把"本地没找到凭据"报成"服务端 401"会让排查直接跑偏到对方平台；② **被排除不是被静默跳过**——"A stored profile … omitted from the explicit order is **not silently tried later**. Probe output reports it with `reasonCode: excluded_by_auth_order`"，即任何"不尝试"都必须留下可检索的具名理由，否则用户看到的是"这个凭据没生效"而系统其实根本没考虑它；③ **超时之后的副作用仍会发生，只是不生效**——"When a catalog deadline expires, late provider results are discarded… An already-started hook or OAuth refresh may finish, including **persisting a rotated credential**, but cannot publish to the expired catalog run"；所以"超时"不等于"什么都没发生"，回滚与对账要覆盖这类**已落盘但未发布**的中间态。
 - 提升层：工具/工作流。触发词：reasonCode、探测未触达、本地查缺不等于 401、excluded_by_auth_order、被排除不静默重试、超时后副作用、已落盘未发布。
+
+## 提交粒度是可配的，粒度越细回滚能力越弱：早提交换的是"部分结果不丢"，代价是出错即不可恢复（来源：Make Help Center `scenario-settings.md` 2026-09-29 r294-C 独立 curl 实拉 5,172B 核验；与 §2.51.0 写读侧防御代价不对称 互补——那条管"写与读谁先改"，本条管"一次事务切多细"）
+- 原文（Commit after each module）："By default, Make commits data only when the entire scenario finishes successfully. Enable this setting to commit data after each module runs instead. — If enabled, data **is committed right away and cannot be restored** in the case of an error. — If disabled, **no commit occurs until operations are executed for all modules**."；"Use it when you need to ensure data is saved incrementally - for example, if a later module fails, data processed by earlier modules is still committed **rather than rolled back**."（另有 Commit trigger last 默认开启：提交阶段跳过触发器、最后才处理它。）
+- 判据：① **提交粒度与回滚能力是严格互换的，没有两全**——整场景提交 = 全有或全无（出错干净回滚，但长链路白跑）；逐模块提交 = 进度不丢（前段成果保住），但**已提交的部分无法撤销**，错误发生后系统里留下的是半截状态；选哪个取决于"半截状态能不能被下游容忍"，容忍不了就别开；② **开了细粒度提交就必须配补偿路径**——既然不能回滚，就要有反向操作或幂等重放，否则"部分成功"会变成手工修数据；③ 提交顺序也是可配置的（触发器默认最后提交），**顺序错了会造成"下游已提交而上游未提交"的反向不一致**，改这两个开关时都要跑一次失败注入验证最终状态。
+- 提升层：工作流/工具。触发词：Commit after each module、逐模块提交、不能回滚、提交粒度、部分成功、Commit trigger last、提交顺序。
