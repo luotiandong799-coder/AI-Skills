@@ -11595,3 +11595,69 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Spec-Driven Development with Coding Agents**（JetBrains 合作）：规约驱动开发+编码 agent——r293B 相关已落地，本条=课程面确认。
 - 判据：**课程跟进看"新主题词"**——adaptive/on-device memory/spec-driven 三个词就是 2026 H2 主线。
 - 提升层：可复用 Skill。触发词：Adaptive AI Agents、On-Device Memory、设备端记忆、Spec-Driven Development。
+## r295C 十独点（2026-09-29 实拉）
+
+### 1. Agentic RAG 与多模态检索两段式：Dify 检索面（来源：dify.ai/blog《Agentic RAG》+《Multimodal retrieval》+ hivebook《Dify》2026-01-06/2026-01-07/2026-09-10 实拉，与 r292B Agentic 检索合并增量）
+- **Agentic RAG 迭代流程**：agent 迭代分析意图→改写查询→选工具与来源→评估证据→重试或回退——**检索不再是"一次取回就生成"，而是带推理的循环**；代价是延迟/成本/复杂度更高，按需用。
+- **多模态检索两段式**：Multimodal Embedding 做首轮快速相似度匹配（在巨库中定位相关内容）；Multimodal Reranking 评估 query/text/images 具体相关性（把最关键图文证据排前）——**两段分工：召回求广、重排求精**。
+- **分块策略**：自动（按段落/标题）vs 自定义（密集技术文档用 800-token chunk+150-token 重叠）vs Parent-Child（层级）vs Q&A pairs——**分块不是默认项，按文档类型选**。
+- 提升层：工作流。触发词：Agentic RAG、改写查询、多模态检索、Embedding+Reranking、两段式、Parent-Child、800-token。
+
+### 2. 错误分诊自动化闭环与执行标签：n8n 可观测性面（来源：n8n.io/workflows 15347/16744/16646 + blog.n8n.io《AI Agent Observability》《Debug failures》2026-04-30/2026-06-29/2026-08-14 实拉，与 r294C 日志审计合并增量）
+- **错误分诊闭环**：Error Trigger 捕获 → AI 分类+置信度+修复建议 → 去重 hash 分组相似错误 → Jira 查重 → 重试计数器（≤3 次）决定是否自动重试——**"报错→归类→去重→决定重试"全自动**，人只看真正新的错误。
+- **Execution Data 节点打标签**：给执行附搜索元数据（user ID/entry point/outcome/session identifier），失败时按字段过滤执行列表——**子工作流工具执行单独打标签，分离主 agent 与工具运行**。
+- **可观测性告警**：不只事后调试——高延迟、token 超用、工具调用失败都设告警，Error Workflow 自动触发通知或恢复工作流。
+- 提升层：工作流。触发词：Error Trigger、分诊闭环、去重 hash、重试计数器、Execution Data、打标签、可观测性告警。
+
+### 3. 知识库持久化与多向量检索：LangFlow RAG 面（来源：docs.langflow.org《Knowledge Base》《File Processing》+ langflow.org/blog《1.11.0 NextPlaid》2026-09-21/2026-09-05/2026-07-23 实拉，与 r295B 组件管控合并增量）
+- **知识库不随 flow run 重摄取**：向量库持久化存储 embeddings，默认 Chroma 本地，可外接 Chroma Cloud/OpenSearch/Postgres pgvector——**知识库与 flow 解耦：摄取一次，多次查询**（比每次 run 重摄取高效）。
+- **Docling 文件描述生成**：File Description Generator 用 Docling 管道转文档→缩短 Markdown→LLM 写可检索描述；大文件在**子进程**处理避免内存压力。
+- **NextPlaid 多向量检索**（1.11.0）：lfx-nextplaid 扩展让 flow 直接用 ColBERT 式 late interaction+ColPali 视觉文档检索，零胶水代码——**视觉文档检索进主流框架**。
+- 提升层：工具。触发词：不重摄取、向量库持久化、pgvector、Docling、子进程、NextPlaid、ColBERT、ColPali、多向量检索。
+
+### 4. Agent 构建三要素：Activepieces 构建面（来源：activepieces.com/blog《AI Agent Development》《AI Agents for Sales》2026-04-03/2025-12-16 实拉，与 r295B MCP 生态合并增量）
+- **Self-review 二次检查**：输出前进第二遍检查——**agent 输出也要自查**（与 r295B 确定性校验同向：把关在生成侧）。
+- **记忆三分**：短期记忆=最近步骤（知道刚发生了什么）/ 长期记忆=大量数据文档/ 用户记忆=过往交互偏好——**不是"有没有记忆"，而是"三种记忆各管什么"**。
+- **审批门**：接触钱/客户/生产环境的步骤设人工审批，其余自动跑——**按爆炸半径设门，不全局审批**。
+- **agent 步骤放"思考"处**：agent 步骤放在需要"思考"的位置，后续接确定性动作（更新 CRM/发回复/建任务），清晰排序让输出可预测；上线前用真实样例集测（low-fit/high-intent/"not now"），查语气/路由/边界。
+- 提升层：工作流。触发词：Self-review、记忆三分、短期/长期/用户记忆、审批门、爆炸半径、思考处、测试样例集。
+
+### 5. AI Toolkit 内置模块与 Playbook：Make 产品面（来源：make.com/blog《7 AI automation examples》+ playbook.make.com + make.com/how-to-guides/llm-integration 2026-09-14/2026-09-24/2026-05-27 实拉，与 r295A Maia 合并增量）
+- **AI Toolkit 内置模块免外部 key**：Categorize Text 等模块无需外部 API key、全套餐可用——**平台内置 AI 能力=零配置入口**。
+- **AI Playbook 88 用例**：按 8 个团队×AI 成熟度组织，每用例写清问题/受众/影响/可部署场景——**用例库按"团队×成熟度"组织，不是按工具堆**。
+- **LLM 集成五步**：连接 provider → 分类 → 验证输出 → 按类别路由——**验证输出是显式步骤，不是可选项**。
+- 提升层：工具。触发词：AI Toolkit、Categorize Text、免 API key、Playbook、成熟度、验证输出。
+
+### 6. 无阻塞发送与代码步骤认证：Pipedream 代码面（来源：pipedream.com/docs destinations/http + npm @pipedream/http + docs Python HTTP 2026-06-19/2026-09-08/2026-06-15 实拉，与 r294C REST 合并增量）
+- **$.send.http() destination**：代码步骤里发 HTTP POST 不阻塞后续执行——**发通知类调用用 destination，不等响应**。
+- **connected account 认证**：代码步骤内 `this.slack.$auth.oauth_access_token` 直接取，平台自动轮换 OAuth token——**代码步骤也走托管认证，不手管 token**。
+- **Python 代码步骤**：`def handler(pd)` + requests 发请求——**不只 Node.js，Python 一等公民**。
+- 提升层：工具。触发词：$.send.http、destination、无阻塞、connected account、自动轮换、Python 代码步骤、def handler。
+
+### 7. Frontmatter 硬约束与标准时间线：Agent Skills 规范面（来源：agentskills.io/skill.md + agentskills.zhcn.dev/specification + agentman.ai《SKILL.md Anatomy》2026-08-11/2026-09-04/2026-06-09 实拉，与 r293C 编写面合并增量）
+- **name 硬约束**：≤64 字符、全小写+连字符、不能连字符开头结尾、**必须匹配目录名**、发布后不更改。
+- **description=触发唯一机制**：1-1024 字符非空，须含三层信息——核心功能+触发情境+独特价值；**触发全压在 description 上**（与 r294B 评测"description 是激活计分"同源）。
+- **license SPDX 标识**（MIT/Apache-2.0）；compatibility ≤500 字符（目标产品/系统包/网络需求）；metadata 任意键值（author/version）。
+- **标准时间线**：2025-10 Claude 特性发布 → 2025-12-18 agentskills.io 开放标准 → 2026 年中 ~40 产品读取同一格式——**SKILL.md 已成事实跨产品标准**。
+- 提升层：可复用 Skill。触发词：frontmatter、name 匹配目录、description 触发唯一、三层信息、SPDX、兼容性字段、开放标准。
+
+### 8. 免全局安装与外部技能目录：skills.sh 生态面（来源：cloud.tencent.com《find-skills 装机》+ developer.cloud.tencent.com《Hermes 装技能》+ rywalker《skills.sh》2026-04-01/2026-06-22/2026-06-11 实拉，与 r295B 51 agent 分发合并增量）
+- **npx 免全局安装**：`npx skills add` 不装全局、总是最新版、按项目作用——**对团队安全，无全局污染**。
+- **external_dirs 共享目录**：Hermes 等 agent 在 config.yaml 配 `skills.external_dirs: - ~/.agents/skills` 指向共享技能目录——**一次安装多处引用，目录即接口**。
+- **安装遥测排行榜**：技能自动经安装遥测上榜、按装机量排名——**技能热度=装机量，不是 star 数**。
+- **@skill 精确安装**：`npx skills add vercel-labs/agent-skills@find-skills -g` 装到 `~/<agent>/skills/` 跨项目生效。
+- 提升层：可复用 Skill。触发词：npx 免全局、external_dirs、共享目录、遥测排行榜、装机量、@skill、跨项目。
+
+### 9. 仓库打包喂 LLM 与 agent runtime：GitHub 工具面（来源：yuxiaopeng Github-Ranking + dev.to 周榜 + firecrawl《Best GitHub Repos》2026-09-29/2026-09-02/2026-08-27 实拉，与 r295B 仓库盘点合并增量）
+- **repomix 28.5K**：整仓库打包成单个 AI 友好文件喂 LLM（Claude/ChatGPT/DeepSeek/Gemini…）——**"喂上下文"有专门工具，不必手拼**。
+- **herdr 40.9K**：coding agents 的 runtime（Rust）——**agent 跑在哪层也成为产品**。
+- **Bumblebee（Perplexity）**：扫描依赖与 MCP servers 的供应链威胁——**供应链安全扫描进 agent 生态**（与 r295A Pin SHA 同族）。
+- **nanochat（Karpathy）**：最小可读 LLM 训练栈；archify 41.8K 图表技能周增 25K——**学习型与图示型仓库也在爆发**。
+- 提升层：工具。触发词：repomix、仓库打包、herdr、runtime、Bumblebee、供应链扫描、nanochat、archify。
+
+### 10. AI Code Review 与 Document AI 新课：deeplearning.ai 课程面（来源：community.deeplearning.ai 公告 2026-09-14/2026-09-23 实拉，与 r295B 新课面合并增量）
+- **AI Code Review**（2026-09-14）：AI 代码评审新课。
+- **Document AI: From OCR to Agentic Doc Extraction**：从 OCR 到 agentic 文档抽取——**文档抽取的终态是 agent 化，不是纯 OCR**（与 r295C LangFlow Docling 同向：文档管道成熟）。
+- **AI Coding Workflows**（2026-09-06，r293 已落）；Multi AI Agent Systems with crewAI 在列。
+- 判据：**课程主线=代码评审/文档抽取/设备端记忆/自适应 agent**——H2 学习清单按这四个词排。
+- 提升层：可复用 Skill。触发词：AI Code Review、Document AI、Agentic Doc Extraction、OCR、crewAI。
