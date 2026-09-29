@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕
-version: 1.70.0
+version: 1.71.0
 agent_created: true
 ---
 
@@ -497,3 +497,8 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 原文："For workflows created before n8n 1.0: n8n executes the first node of each branch, then the second node of each branch, and so on. — For workflows created from n8n 1.0: executes each branch in turn, completing one branch before starting another. n8n orders the branches based on their position on the canvas, **from topmost to bottommost. If two branches are at the same height, the leftmost branch executes first.**"
 - 判据：① **行为被"创建时的版本"冻结**——同一份工作流在不同时期创建会有两套执行语义（逐层轮转 vs 逐分支跑完），而这不是工作流里任何一处配置写出来的；排障"分支执行顺序不对"时，第一问是**这份工作流是什么时候建的/用的哪个版本**，第二问才是逻辑本身；② **空间布局即隐式语义**——分支次序按画布**上下位置**排，同高再看左右，意味着**拖动一下节点就改变了执行顺序**而 diff 里看不到任何变化；凡"可视化编排"类系统，都要假设存在这类"布局即配置"的隐式输入，改布局等于改代码；③ 这类隐式决定的顺序应**显式化可查**（官方给了工作流设置项可改 execution order），验收时把它当成和代码同级的配置项列出，而不是当作平台内部细节。
 - 提升层：工作流/工具。触发词：多分支执行顺序、画布位置决定顺序、1.0 前后语义差异、topmost to bottommost、布局即配置、execution order 设置项。
+
+## 超时不是一个数：默认值随触发类型分档、可调上限随套餐分档，且超时后只保留「已成功步骤」的日志（来源：pipedream.com/docs/workflows/limits 2026-09-29 r296-C 独立 curl 取 .md 原文核验；与 §2.41.0 容量上限二分 互补——那条管"能不能提升"，本条管"同一平台里超时有几套默认值"）
+- 原文："HTTP and Email-triggered workflows default to **30 seconds** per execution. — Cron-triggered workflows default to **60 seconds** per execution."；上限表：Free 300 秒（5 分钟）/ Paid 750 秒（12.5 分钟）；"Any partial logs and observability associated with code cells that **ran successfully before the timeout** will be attached to the event in the UI, so you can examine the state of your workflow and troubleshoot where it may have failed."；磁盘 /tmp 2GB "This limit cannot be raised."
+- 判据：① **同步入口与定时入口的超时预算本就不同**——HTTP/Email 是有人（或有系统）在等响应，默认 30 秒；Cron 没人等，默认 60 秒；把定时任务的预算套到 webhook 上，或者反过来，都会拿到不该有的超时；排查超时先确认**这个工作流的触发类型决定了它拿的是哪一套默认值**；② **"默认值"与"可调上限"是两个参数**——默认值能改，但天花板由套餐决定；用户说"我已经调到最大了还是超时"，要先问是哪个套餐，因为"最大"对免费档是 5 分钟、对付费档是 12.5 分钟；③ **超时不等于日志全丢，但丢的恰好是最需要的那一块**：已成功 cell 的日志会被附到事件上，而**正在跑的那一步的中间态拿不到**——所以超时类故障能确认"跑到哪一步"，不能确认"那一步内部卡在哪"；需要后者就得自己写中间检查点（与 §每一步都落检查点 同向）。
+- 提升层：工具/工作流。触发词：超时默认值、30s vs 60s、触发类型决定超时、套餐决定超时上限、超时后部分日志、/tmp 2GB 不可提升。

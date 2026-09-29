@@ -2,7 +2,7 @@
 name: wb-ponytail
 description: >-
   写代码 / 实现功能类任务前的决策阶梯（YAGNI）。当用户要求写代码、实现功能、加特性、修 bug 涉及编码时自动应用：先判断是否真需要、是否已有现成方案、能否用标准库 / 平台原生 / 已装依赖解决，最后才写最简可用代码。非代码任务（写作、文档、研究、数据分析）不套用；生成类视觉任务（生图/视频/网页）转 `wb-visual-gen`。触发词：少写代码、别造轮子、有没有现成的、能力基线、环境支持吗、这个能删吗、为什么会有这个、留着没用吧、别乱改别的、改动范围、你怎么理解成这样、顺手改一下、agent 架构、别上复杂编排、单一 agent、要不要拆子agent、内建工具还是 MCP、工具白名单、省了多少、收益数字、没有基线就别给数、装了没调用、下载不等于安装、资产清点、不欠改、半迁移状态、复用托底、工具重叠、选错工具、开关三态、默认值覆盖、只读声明、误拒比弱答案更糟、缺席构成语义、修好就是删掉、不改默认除非测量、no-op、本轮用不上、能力协商、能力清单会过期、一个服务一个专职通道。、先跑切片、子代理用什么模型、后台没工具、编排一层、最小架构优先、框架 boilerplate 技术债、确定性条件优先、语义路由闭域、场景枚举即出口、路由要不要用模型、能描述就别编程、默认声明式、例外清单要穷举、不确定就从声明式开始、标识与文案分离、改文案不丢数据、可见性互斥、跨档比较、选择偏差、同难度对照、不设参数、默认值不是中性、推理强度、换模型重置、模型专属档位、off不可用、默认就是off、推理要花钱
-version: 1.76.0
+version: 1.77.0
 ---
 
 # wb-ponytail（决策阶段：少写代码）
@@ -479,3 +479,8 @@ JSON Schema 只表达**结构合法性**（类型、必填、枚举），表达�
 - 原文："Environment variables defined at the **global workspace level are accessible to all workspace members and workflows** within the workspace. To restrict access to sensitive variables or secrets, define them at the **project-level** and configure access controls for the project."；"**Project variables override workspace variables**. When the same variable is defined at both the workspace and project levels … the **project** variable takes precedence."
 - 判据：① **"我把它设成环境变量了"不等于"它被保护了"**——工作区层变量对该工作区所有成员与所有工作流可见，敏感值放这里等于全员可读；收窄的唯一动作是**下移到项目层 + 配 ACL**，不是改名、不是加前缀、不是靠注释提醒；② **窄域覆盖宽域的优先级是显式规则**，可以当特性用（项目层给少数工作流覆写全局默认），但也意味着排查"值不对"时要从最窄那层往上找；③ 落到一个组织里：先画一条"哪些变量允许放全局"的白名单（区域、日志级别这类非敏感配置），其余一律项目层，别等到审计时才逐个搬。
 - 提升层：工具/工作流。触发词：workspace 变量全员可见、project-level、ACL 收窄、同名窄域覆盖、secrets 层级。
+
+## 一个旋钮同时落在性能面与成本面上时，两本账必须一起算；「调试不计费」也不等于「调试不受限」（来源：pipedream.com/docs/workflows/limits 2026-09-29 r296-C 独立 curl 取 .md 原文 8,961B 核验；与 §计费单位决定优化方向 互补——那条管"按什么单位收钱"，本条管"同一个配置项既是性能又是价格"）
+- 原文："Increasing your workflow's memory gives you a **proportional increase in CPU**. If your workflow is limited by memory or compute, increasing your workflow's memory can **reduce its overall runtime** and make it more performant."；"**Pipedream charges credits proportional to your memory configuration**."；"You **do not** use credits testing workflows, but workspaces on the **Free** plan are limited to 750 of test runtime per day. If you exceed this limit when testing in the builder, you'll see a **Runtime Quota Exceeded** error."；用量通知："Free tiers | You'll receive an email when you reach 100% of your usage. Paid tiers | You'll receive an email at 80% and 100%."
+- 判据：① **先问"这个旋钮同时在动哪几个面"**——内存配置同时改 CPU（更快）与计费权重（更贵），只算一面会做出反向决策：为了省钱调低内存，结果跑得更久、总账反而更贵；凡"配置即资源"的参数（内存/并发/副本数），优化时必须把**耗时**与**单价**放同一张表上算总分；② **"不计费"的资源仍然受限，只是限制换了名字**：调试运行不走计费额度，但免费档有独立的**每日测试运行时上限**，超限报的是 `Runtime Quota Exceeded` 而不是"额度没了"——排障时看到这个名字要知道自己撞的是调试配额，不是计费配额；③ **告警触发点本身是套餐属性**：付费档在 80% 就提前告警（因为超出要真花钱），免费档只在 100% 才通知（因为超出只是停服）——设计配额提醒时，触发阈值要按"超出后用户损失的性质"分层，而不是所有用户同一个百分比。
+- 提升层：工具/成本。触发词：内存即CPU即计费、一个旋钮两面、Runtime Quota Exceeded、调试不计费但受限、80% vs 100% 告警、套餐决定告警阈。
