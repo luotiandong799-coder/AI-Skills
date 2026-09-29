@@ -13324,3 +13324,40 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - Zep/Graphiti=时间知识图谱，事实带时间戳、有效窗口保留版本历史，能答"上个季度说了什么"式时间问题；LongMemEval 63.8% vs Mem0 49.0%。
 - 可分层：Mem0 活跃会话工作记忆 + Graphiti 长期档案；框架互相承认对方强项。
 - 判据：要不要时间维度——不要用提取事实向量存储，要就上时间知识图谱。触发词：Mem0、Graphiti、时间知识图谱、有效窗口、LongMemEval。
+## r304A 学习章（2026-09-29）：Agent 实体化 / 人审节点 / 服务化检索 / 权限粒度 / 技能风控与评测（12 独点）
+
+### 人审要做成工作流原生节点，不是流程外步骤（来源：Dify v1.13.0 Human Input node，dify.ai/blog，2026-03-03）
+自动化处理大部分工作，但关键决策仍需人 in the loop——把"人审批 / 边缘 case 交接给真人"做成工作流内原生节点，human-AI handoff 不跳出流程。判据：**凡是"机器跑完必须有人点头才能继续"的步骤，优先节点化内嵌，而不是外挂通知再人工重进**。触发词：人审、审批节点、human-in-the-loop、Human Input。
+
+### Agent 实体化是平台共识：define once, use anywhere（来源：n8n Agents 2026-09-25 + Activepieces 2026-09 印证）
+agent 从 workflow 内的设置包升级为平台一等实体：定义一次，四处可用——直接聊天 / 作为节点丢进 workflow / 连 Slack / 跑 schedule。判据：**重复构建同一 agent 两次以上就该升级成独立实体**；多平台同向演进（n8n/Activepieces）说明这是趋势不是孤例。触发词：agent 实体、define once、一等实体。
+
+### ColBERT 多向量检索可以服务化：Rust PLAID 索引 + SQLite 元数据 + REST（来源：Langflow 1.11 NextPlaid，langflow.org/blog，2026-07-23）
+多向量检索（ColBERT）以独立索引服务形态部署：Rust 实现 PLAID(MmapIndex) 内存映射索引、SQLite 存元数据、Axum REST API、Docker 一键起。判据：**检索能力按服务独立部署，比塞在应用进程里更好扩容与复用**；库内 API 层与服务层是两种取舍。触发词：ColBERT、PLAID、NextPlaid、多向量检索服务。
+
+### 权限放行精确到"工具+参数值"组合（来源：Claude Code v2.1.178 Tool(param:value) 语法，clauder-navi 实测）
+allowedTools 从"工具名"扩展到"工具名+参数值"：`Bash(command:git status)` 只放行特定命令。判据：**能写 `工具(参数:值)` 就别只写工具名**——放行粒度越细，注入爆炸半径越小；共享配置做团队权限基线。触发词：allowedTools、参数级权限、Tool(param:value)、Bash(command:。
+
+### 技能里最高信号的内容是 Gotchas 段（来源：Claude 官方 Lessons from building Claude Code，2026-06-03）
+技能最高价值不是描述而是 Gotchas——从该技能反复踩的失败点积累、随时间更新（例："subscriptions 表是 append-only"）。判据：**写/审技能先看有没有 Gotchas 段，没有就补"使用者最容易错的三件事"**；段落后于实际失败经验增长，不一次编全。触发词：Gotchas、常见失败点、技能写作。
+
+### 技能可以链式调用形成验证环（来源：Claude Code verification loops，claude.com/blog，2026-07-22）
+一个技能在末尾调用另一个技能：/code-review 找 bug → /simplify 清 diff → /verify 验端到端 → /design 对照 DESIGN.md。判据：**验证类技能写成"末尾链下一环"的闭环，比单技能自查可靠**；端到端验证要有可运行入口（测试/构建/真实入口）。触发词：验证环、技能链、chained skills、verification loop。
+
+### 持久意图对象挺过压缩：/goal 跨 compaction 存活（来源：OpenClaw v2026.7.1，docs.openclaw.ai，2026-09-28 实拉）
+active /goal 持续引导后续轮次，**挺过 compaction / queues / interruptions**，直到 goal 被暂停、完成、阻塞或受限。判重关系：wb-context-compressor"压缩后规则重声明"靠人工重发，本条是系统持久化意图对象。判据：**长任务里把"当前要达成什么"做成显式持久目标对象，比压缩后人工重建上下文可靠**。触发词：/goal、持久意图、standing intent、跨压缩。
+
+### Agent 框架可全插件化，连核心循环都可替换（来源：DeepSeek Harness，deepseek.com/harness，2026-09-13）
+"Everything is a plugin"：models/tools/skills/sessions/sandboxes/storage/**loops**/scheduling/UI 全部可交换重组合，agent-loop 本身是可替换插件。判据：**评估/改造 agent 框架先问"核心循环能不能换"**——能换的框架扩展空间远大于只换工具的。触发词：DeepSeek Harness、everything is a plugin、可替换循环。
+
+### 装技能前过风控三数据（来源：Vercel State of Agent Skills 2026-09-25 + nxplace + ClawHub 审计）
+skills.sh 7 个月破 100 万 skills；375 个技能拿走 62% 安装量（极端头部集中）；ClawHub 审计 341 个恶意 skill + 1184 个投毒包（约 36% 带危险信号）。判据：**装任何第三方技能前查三样——来源仓库 star/活跃度、安装量排名、是否有安全审计记录**；头部集中意味着小众技能风险不成比例地高。触发词：技能安装、恶意 skill、投毒、skills.sh、ClawHub。
+
+### 标准 benchmark 可跑成 agent 场景评测（来源：ModelScope EvalScope Agent Evaluation Mode，2026-05-22）
+GSM8K / AIME / IFEval / SWE-Bench 不再只跑"问答对"，而以完整 agent 场景方式运行。判据：**测 agent 不要只测"答得对不对"，要测"在场景里会不会正确行动"**；老评测集改场景化跑法是低成本升级评测的手段。触发词：EvalScope、agent evaluation、场景化评测、SWE-Bench。
+
+### 代码审查工具用"确定性工程+LLM"混合架构（来源：阿里 Open Code Review，osrepos.com，2026-09-18）
+AI 代码审查 CLI：确定性规则集（多语言）+ LLM agent 混合，输出行级注释，阿里规模实战验证。判据：**审查类 AI 工具选混合架构——规则兜底确定性、LLM 补语义判断**，比纯 LLM 审查更稳。触发词：代码审查、open-code-review、混合架构、行级注释。
+
+### Agent skills 类型化引用+版本化挂载（来源：Anthropic Managed Agents skills，platform.claude.com，2026-09-27）
+agent 配置里 skills 以 `{type:"anthropic", skill_id:"xlsx", version:"1"}` 引用：官方管理技能带版本，custom 技能用 skill_id。判据：**给 agent 挂技能时写明类型+ID+版本，而不是散装描述**——版本化引用才能复现与回滚。触发词：managed skill、skill_id、技能版本化、类型化引用。
