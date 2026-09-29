@@ -935,3 +935,13 @@ AC-N、AGPL、Architectural、Bounded、LLM 评委不能兜底、Spike、advisor
 - **★引用按名字，不按编号**：原文 "refer to it by that name, **never by a bare id, number, or slug**. A wall of `#42, #43, #44` is illegible"；编号包在名字里面，不替代名字。判据：**给人读的东西，标识符不能当标题用**。
 - **★别回头追问，先把已有上下文合成一版**：to-spec 原文 "**Do NOT interview the user; just synthesize what you already know**"。判据：**追问的成本由用户付，改一版草稿的成本由你付**——上下文已够时先给出可改的草稿，把"澄清"降级成"让人改"；只有缺的是**外部事实**（凭据、意图、环境值）时才真的开口问，二者不冲突。
 - 提升层：工作流 / 可复用 Skill。
+
+
+## §r322B 迁移元数据的三字段 CI 硬闸（2026-09-30 r322B WB 独立实拉）
+
+### 1. 迁移必须自带 breaking / release / down() 三字段，缺一即 CI fail
+- **实证**（独立 curl 实拉 `www.activepieces.com/docs/handbook/engineering/playbooks/database-migration.md`，200/4,932B）：官方迁移手册要求每个迁移类显式填写 ① `breaking = false`（`true` 仅当"drops columns/tables or transforms data irreversibly"）② `release = '<version>'` 且「matching the upcoming release version (check `package.json` in the repo root)」 ③ `down()` 实现可逆查询，**`breaking = true` 是 `down()` 的官方豁免位**（「unless `breaking = true`」）。
+- **判据**：把"这次改动能不能回滚"从**人的判断**变成**机器可校验的声明在场**——闸的是**声明是否填写**（字段在不在），不是**语义是否正确**；`release` 字段把迁移钉到具体版本，使"回滚到哪一版"可机读。
+- **落地动作**：涉及数据/契约迁移的规约里，迁移单必须写成三元组 `(breaking, release, down())`；`breaking=true` 必须显式触发"不可逆"复核而不是静默跳过 down()；CI 只校验字段在场与 release 与 package.json 一致。
+- 与 rm §r322B.1 分工：那条管**能力日落**的登记资格；本条管**数据/契约迁移**的声明资格。
+- 提升层：工具 / 工作流。触发词：迁移三字段、breaking 标记、release 钉版本、down() 豁免、迁移 CI 闸。

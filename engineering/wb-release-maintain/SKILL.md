@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.27.0
+version: 1.28.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -290,3 +290,4 @@ sources:
 - **锁文件供应链基线**：lockfile 必须提交（记录实际解析树）；CI 用 npm ci（package.json 与 lockfile 不同步即失败）→bun --frozen-lockfile/poetry --no-update；每 PR 审 lockfile diff；.npmrc min-release-age=7/ignore-scripts/save-exact；CI 跑 audit+SBOM；Renovate（preferred）/Dependabot auto-merge 限 patch/minor。
 - **零日窗口排除**：exclude-newer 滚动缓冲排除"刚发布未审查"包（XZ backdoor 活跃数月才被发现）；Axios caret range 自动拉入恶意 1.14.1——生产依赖 pin 精确版本+hash。
 - **发布侧信任面**：npm staged publishing=预构建 tarball 上暂存队列→维护者 2FA 放行（发布前人工审核）；trusted publishing 自动 provenance attestations（tarball↔git commit↔workflow 加密链接，npm audit signatures 可验；CircleCI 不支持）；**OIDC 短时凭证替代长期 NPM_TOKEN（泄露=无限发布任意版本；OIDC 分钟级+scoped 单 run）**；PyPI 拒绝对 >14 天旧 release 上传新文件（防旧稳定版投毒）。
+## 日落必须是一条有资格的登记项（无 removeAfter/removalGate 即无删除资格、续期留痕且≤3 个月、过期 CI 判 fail），且时点要落在可枚举的结构化载体上；引用/命名类破坏在存量侧永不自愈——升级与重装都不修（来源：docs.openclaw.ai/plugins/compatibility.md 14,100B + nodejs/Release schedule.json 5,325B + code.visualstudio.com/updates/v1_139 52,978B，2026-09-30 r322B 独立实拉；细则见 references/knowledge-base.md §r322B）
