@@ -11903,3 +11903,70 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **组件级评测先于端到端**：先验证单个组件（工具/检索）再整链——**与 r296B"组件评测 vs LLM-judge 选择"互补：那条管评测器，本条管评测粒度顺序**。
 - **四设计模式**：reflection/tool use/planning/multi-agent（与 r295A AgenticAI 四大模式同源，本点增量在 Module 4 实用链）。
 - 提升层：工作流。触发词：error analysis、按影响排序、优先下一步、component-level evaluations、先组件后端到端、Module 4。
+## r297B 十独点（2026-09-29 实拉）
+
+### 1. Agent 策略插件化与生态分级治理：Dify 策略面（来源：marketplace.dify.ai/plugin/langgenius/agent + dify-6c0370d8.mintlify.app/en/cloud/use-dify/nodes/agent + deepwiki.com/langgenius/dify-official-plugins/3-agent-strategy-plugins + dify.ai/blog/trust-is-a-feature 2026-08-27/2026-09-09/2026-09-25 实拉，与 r297A #1 策略匹配合并增量）
+- **策略三选判据**：ReAct（Reason+Act 交替——LLM 分析状态和目标、选工具、用工具输出继续下一轮 Thought→Action→Observation 循环）vs FunctionCalling（**用模型原生 function calling 直接传 tools 参数**，模型内置机制决定何时调——适合 GPT-4/Claude 3.5 等强函数调用模型）vs CoT——**"策略不是风格偏好，是按模型能力与透明度需求选"**（r297A 管"策略要匹配"，本条管"三种策略何时各用哪个"）。
+- **策略即插件**：Agent Strategy Plugin 给 LLM 推理与决策逻辑（选工具/调用/处理结果）；官方 plugin 结构=Python 类 `_invoke` 生成器返回 AgentInvokeMessage + `BasicParams(**parameters)`——**"策略可插拔=换策略不换流程"**。
+- **插件生态 P0-P2 分级治理**（"Trust Is a Feature"）：P0=Top 20% cohort demand+criticality≥4；P1=Top 40%+criticality≥3；P2=Top 70%+criticality≥3；Watch=其余监控——**"生态越大越要按需求×关键度分级分配维护"**。
+- 提升层：工作流。触发词：ReAct vs FunctionCalling vs CoT、策略插件化、Agent Strategy Plugin、P0/P1/P2 分级、cohort demand、criticality。
+
+### 2. Critic Agent 评分循环：n8n 生产多智能体面（来源：blog.n8n.io/production-ai-playbook-complex-agent-patterns + n8n.io/workflows/7066-create-multi-step-reasoning-ai-agents-with-gpt-4-and-reusable-thinking-tools 2026-06-09/2026-02-26 实拉，与 r296A 模型分工合并增量）
+- **评分-修订循环**：Critic Agent 按 accuracy/clarity/relevance/conciseness 给草稿打分并返回具体问题；低于 minScore 循环回 Writer 带评论者枚举的问题修订——**"写改循环要有客观评分器与具体反馈，不是'再改好点'"**。
+- **迭代上限+人工兜底**：maxIterations 上限退出循环，路由人工审查——**"自动循环必须有上限，超限转人"**（r296A 管分工，本条管循环控制）。
+- **可复用 Thinking Space**：无状态子工作流只收文本当 scratchpad，主流程 Tool(Workflow) 节点多次调用、每次给唯一名字（Initial thoughts 等）——**"多步推理=多个命名工具调用同一草稿子流程"**。
+- 提升层：工作流。触发词：Critic Agent、minScore、maxIterations、评分循环、人工兜底、Thinking Space、Tool(Workflow) 草稿纸。
+
+### 3. 版本特性序列：LangFlow HITL/OTel/bundles 面（来源：langflow.org/blog/langflow-1-10 + langflow-1-11 + langflow-1-8 + langflow-1-12 + pypi.org/project/lfx 2026-03-06/2026-06-09/2026-07-20/2026-09-01 实拉，与 r295B 审批门/r296B 可观测合并增量）
+- **1.11 Human-in-the-Loop**：gated tool calls+reviews、A2A 协议、AG-UI streaming——**"关键工具调用变成门控，等人批准再执行"**（r295B 管审批门存在，本条管门控进入产品主线）。
+- **1.12 OpenTelemetry**：service health+flow runs 可观测——**"流程级可观测性进主版本，不再是外挂"**（r296B 管评测体系，本条管运行时遥测）。
+- **Extension bundles 模型**：组件按 bundle 打包分发（lfx-arxiv/lfx-docling/lfx-duckduckgo/lfx-ibm 四包首发）——**"组件以包为单位分发，按域选包不按单件装"**。
+- **1.8 全局 model provider 设置**：削减 credential sprawl（凭证蔓延）+V2 workflow API 更可预测——**"集中配置=减凭证碎片"**。
+- 提升层：工作流。触发词：Human-in-the-Loop、gated tool calls、A2A、AG-UI、OpenTelemetry、Extension bundles、lfx-、credential sprawl、全局 model provider。
+
+### 4. 凭据生命周期：无读取 API+日志掩码+外部 Secret Manager（来源：activepieces.com/docs/admin-guide/security/practices + admin-guide/guides/secret-managers/overview + install/reference/environment-variables 2026-06-17/2026-07-07/2026-09-29 实拉，与 r296A 入站认证合并增量）
+- **256-bit 加密+无读取 API**：凭据只在处理时发送、之后从引擎撤销访问——**"存储加密是底线，'无法读回'才是设计目标"**（r296A 管入口认证，本条管存储与读取面）。
+- **日志数据掩码**：第三方凭据/敏感信息在日志里系统打码——"敏感信息永不进日志"——**"掩码是日志层默认，不是事后补救"**。
+- **外部 Secret Manager 集成**：1Password/HashiCorp Vault 接全局连接；Secret Manager 自身 auth 配置加密；访问控制走 secret manager 策略+定期轮换——**"密钥进外部保险库，平台内只剩引用"**。
+- 环境变量：AP_ENCRYPTION_KEY=`openssl rand -hex 16`；AP_JWT_SECRET=`openssl rand -hex 32`——**"自托管两把钥匙分开生成、分开保管"**。
+- 提升层：工具。触发词：无读取 API、256-bit 加密、数据掩码、Secret Manager、1Password/Vault、AP_ENCRYPTION_KEY、轮换、撤销访问。
+
+### 5. 错误处理四选项：Make 事务语义面（来源：help.make.com/retry-error-handler + fix-errors-and-warnings + academy-content.make.com/courses/make-intermediate-errors/04-error-handlers + com.make.cab 2026-04-14/2026-05-21/2026-09-25 实拉，与 r296A 节点失败三选项合并增量）
+- **四选项覆盖到事务**：Resume（忽略错误继续下一模块）/Ignore（跳过该 bundle、其他 bundle 继续）/Rollback（取消 scenario 开始以来**所有**变更）/Commit（确认错误前变更）——**"错误处理不只是'跳过还是重试'，还有'回滚还是提交'的事务语义"**（r296A 管三选项选择，本条管四选项含事务对）。
+- **Incomplete Executions 暂存**：不自动重试的错误留在 Incomplete Executions 标签等手动处理；自动重试=次数+间隔（如 3 次/15 分钟）——**"暂存队列=人机分工边界"**。
+- **按错误类型调重试参数**：应用维护几小时（低次数长间隔）vs 过载（高频率短间隔）——**"重试参数按错误画像配，不一套默认打天下"**。
+- **指数退避内建**：connectionerror/moduletimeouterror 自动指数退避重试（间隔递增）——与 r297A #5 存储选型互补（那个管存哪，本条管失败后怎么办）。
+- 提升层：工作流。触发词：Resume/Ignore/Rollback/Commit、四错误选项、Incomplete Executions、重试次数+间隔、按错误画像调重试、指数退避。
+
+### 6. 托管 OAuth 与短命 Connect token：Pipedream 认证面（来源：pipedream.com/connect + docs/connect/api-reference/sdks + docs/connect/managed-auth/quickstart + docs/privacy-and-security 2026-06-06/2026-07-18/2026-09-21/2026-09-26 实拉，与 r296A OAuth 刷新合并增量）
+- **托管 OAuth 全程**：hosted OAuth clients+secure token storage+automatic refresh——"你的用户连账号，你永不碰凭证"——**"认证是平台能力不是自建模块"**（r296A 管 SaaS 侧刷新，本条管平台托管面）。
+- **short-lived Connect tokens（4h）**：浏览器调用用短命 token 认证；**tokenCallback 回调**——SDK 需要新 token 时回调问后端取新鲜的，前端不自己管过期——**"过期管理下沉到回调，调用方无感"**。
+- **Connect Link 托管流**：发一个托管链接 URL，Pipedream 处理 OAuth dance+refresh——**"免构建的接入 = 托管链接"**。
+- **BYO OAuth clients**：支持 OAuth 的 app 可自带 client——**"托管与自带双轨，按合规选"**。
+- 提升层：工具。触发词：托管 OAuth、short-lived token、tokenCallback、Connect Link、automatic refresh、BYO OAuth client、4 小时过期。
+
+### 7. 官方技能分类与发布清单：anthropics/skills 面（来源：resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf + localskills.sh/blog/anthropic-skills-explained + elayachi.dev/blog/how-to-work-with-claude-code-skills-like-a-pro 2026-06-27/2026-07-09 实拉，与 r296A gh skill 合并增量）
+- **官方四类**：Creative & Design（p5.js 算法艺术/canvas/Slack GIFs）/Development（Artifact builder/MCP server creation/Playwright testing）/文档（Word/PDF/PPT/Excel production-ready）+brand-guidelines 类模板——**"官方技能=按场景分类的可定制起点"**。
+- **官方发布要求**：公开 repo+清晰 README 安装说明+示例用法与截图——**"发技能=发产品，README+示例是验收项"**（r296A 管官方命令，本条管发布质量清单）。
+- **生态精选**：awesome-claude-skills（ComposioHQ）26k+★、travisvn/awesome-claude-skills 质量注记、obra/superpowers 行为技能集（TDD 强制/调试工作流/多小时自主）——**"26k★精选集=技能选型入口"**。
+- 提升层：可复用 Skill。触发词：官方四分类、Creative & Design/Development、发布要求清单、awesome-claude-skills、superpowers、README 安装说明。
+
+### 8. 职业分类导航：SkillsMP SOC 税业面（来源：skills.sh/docs/api + skills.sh/vercel-labs/skills/find-skills + skillsmp.com/fr/changelog + developertoolkit.ai/en/shared-workflows/skills-ecosystem 2026-04-16/2026-05-07/2026-07-11/2026-07-20 实拉，与 r296C AI 目录合并增量）
+- **SkillsMP SOC 分类**：按美国劳工部 SOC 税业分类覆盖 800+ 职业找技能——**"按'我是做什么工作的'找技能，比按技术词找更贴近意图"**（r296C 管 AI 目录存在，本条管职业维度导航）。
+- **skills.sh 搜索 API**：/api/v1/skills/search 按名称/描述搜索；find-skills 内置=模糊（keyword）+语义（token）双搜索——**"双检索：无 token 模糊，有 token 语义"**。
+- **类别体系**：Web Dev/Testing/DevOps/Documentation/Code Quality 五类+示例查询——**"找技能先定类，类内再查"**。
+- 规模基准：skills.sh 91k+ 索引/385k+ 安装（2026-04）、46k all-time 榜（2026-06）；SkillsMP 800k+——**"目录规模是数量不是质量，评测过才装"**（与 r297A #8 遥测排行榜互补）。
+- 提升层：工具。触发词：SOC 税业分类、800 职业、/api/v1/skills/search、模糊+语义双搜索、find-skills、类别体系。
+
+### 9. CI/CD 控制面 MCP 与 contract test：GitHub Actions 面（来源：himcp.ai/server/github-actions-mcp-server-ja8 + mcpgee.com/servers/github-actions-mcp-server + kansei-link.com/en/insights/mcp-server-testing-cicd-guide-2026 + aws.amazon.com/blogs/mt 2026-04-05/2026-05-12/2026-07-23/2026-08-04 实拉，与 r295B MCP 安全合并增量）
+- **Actions MCP 填补缺口**：现有 GitHub MCP 能读文件/建 issue/管 PR，**不能碰 CI/CD 管道**；Actions MCP Server 暴露 list/view/trigger/cancel/rerun workflow runs+失败日志分析——**"agent 控制面 = 能触发/取消/重跑管道，不只读仓库"**。
+- **MCP server 测试三件套**：unit+contract+schema drift（cron 每日+push+PR 触发）——**"MCP server 也要契约测试+schema 漂移检测，防生产事故"**（r295B 管接入安全，本条管 server 自身测试）。
+- **只读调查/写操作分工具**（AWS DevOps Agent 模式）：调查阶段 GitHub App 只读访问，推修复才注册 custom tool——**"读调查与写修复分权，权限按阶段升"**。
+- 提升层：工具。触发词：GitHub Actions MCP、CI/CD 控制面、trigger/cancel/rerun、contract test、schema drift、只读调查/写操作分工具。
+
+### 10. MCP Inspector 与四者对比：deeplearning MCP 课程面（来源：corporate.deeplearning.ai/courses/mcp-build-rich-context-ai-apps-with-anthropic + corporate.deeplearning.ai/courses/agent-skills-with-anthropic/information + learn.deeplearning.ai/courses/build-ai-apps-with-mcp-server 2026-04-18/2026-04-23/2026-09-19 实拉，与 r295B MCP 架构合并增量）
+- **MCP Inspector 测试**：FastMCP 建本地 server（暴露 tools/resources/prompt templates）→**MCP Inspector 交互测试**→chatbot 内建 client 动态连接——**"server 先过 Inspector 再进应用"**（r295B 管架构分层，本条管测试工具链）。
+- **参考服务器**：Anthropic MCP 团队 filesystem/fetch 参考实现——**"先跑官方参考 server 摸清抽象，再写自己的"**。
+- **skills vs tools/MCP/subagents 四者对比**（Agent Skills with Anthropic 课程）：skills=按需加载的可复用知识包；tools=函数调用；MCP=外部工具接入协议；subagents=分工执行——**"选型先回答'这是知识、函数、接入还是分工'"**。
+- **组合模式**：skills+MCP+subagents 组 agentic 系统（专门知识+外部数据源+分工）——**"三者是组合件不是替代件"**。
+- 提升层：工作流。触发词：MCP Inspector、FastMCP、参考服务器 filesystem/fetch、skills vs tools/MCP/subagents、按需加载、组合 agentic 系统。
