@@ -12109,3 +12109,76 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **schema description 精度**：描述做什么/何时用/返回什么——"描述质量决定调用质量"。
 - **工具函数 try/except+描述性错误**：包裹每个工具函数，返回描述性错误——"错误可读才可修"。
 - 提升层：工作流。触发词：并行全解析、全部执行完再下一轮、条件工具执行、不盲信 tool_call、schema description 精度、try/except 工具函数。
+## r298B 十独点（2026-09-29 实拉）
+
+### 1. Weighted Score 权重旋钮与 Rerank 显式开关：Dify RAG 调参面（来源：dify-6c0370d8.mintlify.app/en/cloud/use-dify/nodes/knowledge-retrieval + dify.ai/blog/multimodal-retrieval-is-now-available-in-the-knowledge-base + dify.ai/blog/hybrid-search-rerank-rag-improvement 2026-01-07/2026-05-18/2026-07-02 实拉，与 r296C #10 两阶段检索合并增量——那条管 ANN+rerank 流程，本条管 Dify 具体旋钮）
+- **Weighted Score 加权评分**：rerank 时语义相似度与关键词匹配的**相对权重可调**——语义权重高偏向意义相关，关键词权重高偏向精确匹配——"权重是调参旋钮，不是固定公式"。
+- **Rerank 模型默认禁用**：第三方 rerank 模型（Cohere rerank/bge-reranker）重打分重排序；**默认关**，开启前要在 Integrations 配 API key；仅全库 High Quality 索引时可用加权——"重排是显式开关，成本要显式承认"。
+- **多模态两段式**：多模态 Embedding 第一轮粗召回（向量空间快速匹配）+多模态 Reranking 第二轮精排（评估 query/文本/图像具体相关性）——"粗召回+精排两段式，视觉证据靠精排上位"。
+- **Agentic RAG 结构**：Agent 节点=集中决策引擎（意图分析+工具编排+来源选择+重试逻辑）；Qdrant 向量与混合搜索作原生工具——"检索决策交给 agent 节点，不是固定管道"。
+- 提升层：工作流。触发词：Weighted Score、语义权重 vs 关键词权重、rerank 默认禁用、多模态两段式、粗召回精排、Agentic RAG。
+
+### 2. n8n package 与双向同步：n8n 版本控制面（来源：docs.n8n.io/build/manage-workflows/n8n-packages + docs.n8n.io/hosting/cli-commands + n8n.io/workflows/5081 + 15795 2026-03-01/2026-06-01/2026-06-20/2026-09-22 实拉，与 r296A #1 Dify YAML 版本化互补——那条管 YAML 文件化，本条管 n8n 实例级机制）
+- **n8n package 单文件**：一个 .n8np 文件=实例的一部分（workflows+结构+引用），跨实例导出导入——"npm 包思想管 n8n 片段"。
+- **CLI 历史版本导出**：`n8n export:workflow --id=<ID> --version=<VERSION_ID>` 导指定历史版本；`--backup` 全量备份——"版本级导出，不只导最新"。
+- **GitHub 双向同步**：只在 n8n→上传 GitHub；只在 GitHub→在实例创建；两边都有→**时间戳比较同步最新**——"双向保一致，不是单向推送"。
+- **智能去重提交**：GitHub API 取文件 SHA 对比 raw 内容，没变就跳过 commit——"没变化不提交，防污染 Git 历史"。
+- **环境路由**：sanitized JSON 按路径分叉（沙箱/生产），scrub 实例特定元数据保留节点连接核心设置——"换环境前清洗实例特定字段"。
+- 提升层：工具。触发词：n8n package、.n8np、export --version、历史版本导出、双向同步、时间戳比较、去重提交、SHA 对比、环境路由、scrub 元数据。
+
+### 3. RAG 双子流与可配置向量后端：Langflow 检索结构面（来源：docs.langflow.org/vector-store-rag + components-models + langflow.org/blog/langflow-1-10 + langflow.org/blog/blog-nextplaid 2026-06-09/2026-07-23/2026-09-02/2026-09-11 实拉，与 r296C #3 记忆形态互补——那条管记忆，本条管向量库/RAG 检索结构）
+- **RAG 双子流结构**：Load Data 子流（加载嵌入+内容到向量库）与 Retriever 子流（向量搜索取上下文）分离，**共享同一 store**（两子流必须连同一向量库、组件成对替换）——"加载与检索解耦，store 是共享契约"。
+- **DB Providers 可配置后端**（1.10）：知识库向量后端可配 Chroma/Chroma Cloud/OpenSearch——"存储后端不锁死本地，Settings→DB Providers 换"。
+- **Multi-Vector Retrieval**（1.11.0）：lfx-nextplaid 扩展包=ColBERT 式 late interaction+ColPali 式视觉文档检索，零胶水代码——"多向量检索开箱即用，晚交互不用自研"。
+- **Graph RAG 组件**：GraphRetriever 图遍历检索（Astra DB 向量库内）——"图检索是组件不是旁路"。
+- 提升层：工作流。触发词：双子流、Load Data/Retriever 分离、共享 store、DB Providers、Chroma/OpenSearch 后端、multi-vector retrieval、lfx-nextplaid、ColBERT late interaction、ColPali、Graph RAG 组件。
+
+### 4. AI 两步模式与部门模板库：Activepieces 采用面（来源：activepieces.com/blog/ai-agents-for-small-businesses + product/ai-adoption + pieces/ai 2026-04-15/2026-07-07/2026-09-01 实拉，与 r297B #2 Critic 评分循环互补——那条管 AI 自评循环，本条管人审批准流程）
+- **AI 两步+人审批准**：第一步 AI 读输入理解（分析 ticket/收据）→第二步 AI 写回复/提取→草稿发 Slack 审查→批准后发邮件或打回修改——"AI 生成+人审批准，两步之间是决策点"。
+- **AI Adoption Stack 模板路径**：选模板（按部门策展：HR/Finance/Marketing/Sales/Operations）→定制→测试→上线——"从模板开始，按部门给现成自动化"。
+- **agent 共享知识库**：文档被每个 agent 搜索——"知识库=agent 公共层，一次喂多 agent 用"。
+- 提升层：工作流。触发词：AI 两步模式、理解→生成→人审、Slack 审查批准、AI Adoption Stack、部门策展模板、agent 共享知识库。
+
+### 5. webhook 队列与 Data Store 幂等：Make 入站处理面（来源：academy-content.make.com/courses/make-intermediate-webhooks/04-scenarios-and-webhook-queues + apps.make.com/gateway + everestx.com/tutorials/make/set-up-make-data-stores + dredyson.com 2026-05-11/2026-05-26/2026-08-04 实拉，与 r296C #8 webhook 场景合并增量——那条管响应模式，本条管队列与幂等）
+- **webhook 队列三情形**：场景 OFF 时请求进队列；默认并行处理但**超计划限制进队列**；无 webhook response 模块+默认设置→报错——"要返回响应必须显式配 Webhook Response 模块"。
+- **Data Store 幂等去重模式**：trigger→Search Records（key=order_id）→Router 两路：0 条→处理+Add Record；有记录→跳过——"先查重再处理，处理完落库"。
+- **清理例程**：每周删 90 天前记录保持 lean——"Data Store 要定期清理，不然查重变慢"。
+- **webhook 数据结构定义**：定义入站结构让 Make 校验；无定义=接受一切数据不校验、下游模块报错才暴露——"入口校验前置，别让错误迟到下游"。
+- **快速响应前置**：Voice AI 等实时场景把 Webhook Response 放最前防语音延迟——"响应前置，处理后可异步"。
+- 提升层：工作流。触发词：webhook 队列、场景 OFF 进队、超限进队、无响应模块报错、Data Store 幂等、Search by key、查重-处理-记录、清理例程、数据结构定义、响应前置。
+
+### 6. 触发事件元数据与 cron/interval 判据：Pipedream 调度面（来源：pipedream.com/docs/workflows/building-workflows/triggers + connect/components/triggers + components/contributing/sources-quickstart 2026-07-14/2026-07-30/2026-09-27 实拉，与 §cron 日周 OR 语义合并增量——那条管排期写法，本条管触发事件携带什么）
+- **触发事件携带调度元数据**：interval_seconds/cron（自定义表达式）/timestamp（epoch 执行时刻）/timezone_configured（调度时区格式化 datetime）随事件进下游——"下游步骤能读"我这次为什么被触发"，调度信息是事件的一部分"。
+- **cron vs interval 判据**：要控星期几（每周一三五）用 cron 完整表达式；简单固定频率用 intervalSeconds——"interval 便宜，cron 精确，按需选"。
+- **组件 timer prop**：`$.interface.timer` prop 配 intervalSeconds 默认——"组件内定时器声明式"。
+- **cron 按 UTC 存储**：表达式按 UTC 求值，时区要显式调 offset——"cron 不认本地时区，时区显式配"。
+- 提升层：工作流。触发词：调度元数据、timestamp epoch、timezone_configured、cron vs interval、$.interface.timer、cron 按 UTC 存储、时区显式调。
+
+### 7. 缓存 TTL 权衡与断点规则：Anthropic prompt caching 面（来源：platform.claude.com/docs/en/build-with-claude/prompt-caching + agentpatterns.ai/context-engineering/prompt-caching-architectural-discipline + hidekazu-konishi.com + support.claude.com 2026-04-15/2026-06-07/2026-09-18/2026-09-29 实拉，与 wb-context-compressor §token/缓存治理合并增量——那条管 1:5:0.1 比例与改配置失效，本条管 TTL 价格与断点规则）
+- **TTL 双档价格**：5 分钟默认（写 1.25x 基础输入价）；1 小时可选（写 2x 但条目热 1 小时）——"热得快 vs 热得久，价格不同要按场景选"。
+- **缓存按内容寻址**：改 CLAUDE.md 即失效、下个请求付全价；5 分钟未读即淘汰——"改稳定内容=付一次全价，频繁改=缓存无意义"。
+- **断点前块必须逐字节相同**：断点放在请求间保持完全相同的最后一个块；thinking 配置与 output_config.effort 调用间保持一致——"断点前任何差异都命中不了"。
+- **stable first, variable last**：稳定内容放开头（系统指令/背景/大上下文/常用工具定义），变化内容放后面——"稳定前缀最大化缓存命中"。
+- **over-retrieval 是纯浪费**：检索越多每查询付越多；拼装后数 token 抓膨胀；按问题难度选模型（查表用小型、复杂用大型）——"检索是成本项不是多多益善"。
+- 提升层：工具。触发词：TTL 5 分钟 1.25x、1 小时 2x、内容寻址失效、断点逐字节相同、thinking/effort 一致、stable first variable last、over-retrieval 浪费、检索成本项。
+
+### 8. 技能供应链攻击与动态检测：agent skills 安全面（来源：arxiv.org/pdf/2603.00195v1 + labs.cloudsecurityalliance.org + snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub + explainx.ai/blog/nvidia-skillspector + rushis.com/scanning-agent-skills-before-you-trust-them 2026-02-05/2026-06-10/2026-06-15/2026-06-17 实拉，与 r298A #8 审计聚合合并增量——那条管审计来源，本条管攻击事实与检测方法）
+- **真实攻击规模**：ClawHavoc 活动（2026 年 1-2 月）入侵 OpenClaw 市场 1,200+ 恶意技能；MalTool 编目 6,487 个绕过常规检测的恶意工具；Snyk ToxicSkills 扫描：**36.82%（1,467 技能）至少一个缺陷、13.4% 含关键级问题**——"技能供应链已被大规模投毒，是现状不是假设"。
+- **静态扫描器全被绕过**：Trail of Bits 四方法（空白膨胀超扫描上下文限制/预编译 Python 字节码隐藏/文档归档间接引用等），4 例里 3 例 1 小时内——"静态启发式无形式保证，只当第一道网"。
+- **SkillDetonate 动态执行检测**：97% 检出（2% 假阳），比最佳静态扫描器高 31%；恶意样本下静态从 99% 崩到 10%——"动态执行检测大幅优于静态，静态会被规避到失效"。
+- **BIV 行为完整性验证**（Unit 42）：对照"声明做什么" vs "实际做什么"，跨三表面（元数据/可执行代码/自然语言指令）——"声明 vs 行为比对是审计原语"。
+- **SkillSpector 两阶段**：阶段 1 静态（正则+AST 行为分析，无 API key 快）→阶段 2 动态运行观察；五类风险模式：Prompt Injection 5/Data Exfiltration 4/Privilege Escalation 3/Supply Chain 6/Excessive Agency 4——"先静态筛，再动态验"。
+- 提升层：工具。触发词：ClawHavoc、1,200 恶意技能、ToxicSkills 36.82%、静态扫描器绕过、空白膨胀、字节码隐藏、SkillDetonate 97%、动态优于静态、BIV 声明行为比对、SkillSpector 两阶段、五类风险。
+
+### 9. 自改进 agent 与官方 Agentic Workflows：GitHub 生态面（来源：github.blog/ai-and-ml/llms + bitdoze.com/top-ai-github-repos + startupcorners.com/digest + csdn.net/yanceyxin/162208780 2026-07-31/2026-09-01/2026-09-04/2026-09-21 实拉，未落过 Hermes/Agentic Workflows，独立落地）
+- **Hermes Agent 223K★**（Nous Research）：自改进 agent，内置学习循环——"agent 从自己运行中学习=下一趋势方向"。
+- **GitHub Agentic Workflows**（技术预览）：用 coding agents 在仓库内建自动化——"官方把 agent 当工作流执行器，仓库即自动化面"。
+- **趋势主线三**：Claude Skills 风口（技能模块化周增 1万-12万）+ Token 压缩&记忆（headroom/agentmemory/turbovec/LMCache 周增 1万-14万）+ Agent 安全治理（MXC/SkillSpector/agent-governance-toolkit 月增 3千-4千）——"生态三条主线=模块化/上下文治理/安全"。
+- **安全跑 agent 即趋势**：smolvm 可嵌入可分支 VM 本地安全跑 agent——"本地沙箱跑 agent 是基础设施层答案"。
+- 提升层：可复用 Skill。触发词：Hermes Agent、自改进学习循环、GitHub Agentic Workflows、coding agents 自动化、Claude Skills 风口、Token 压缩记忆、Agent 安全治理、smolvm 本地沙箱。
+
+### 10. RAG Triad 三指标：deeplearning RAG 评估面（来源：corporate.deeplearning.ai/courses/building-evaluating-advanced-rag + coursera.org/projects/building-and-evaluating-data-agents 2026-05-08/2026-09-07 实拉，与 r297A #10 evals→error analysis 合并增量——那条管评估闭环流程，本条管 RAG 三指标具体化）
+- **RAG Triad 三指标**：Context Relevance（检索到的上下文与问题相关吗）+ Groundedness（回答是否基于检索上下文，防幻觉）+ Answer Relevance（回答是否回答了问题）——"RAG 评估三元组，三个都得测"。
+- **高级检索两法**：sentence-window retrieval（句子窗口检索：检索句子+带邻居窗口）+ auto-merging retrieval（自动合并：先小块后合并大块）——"基线之上两种成熟高级检索"。
+- **内联评估**（data agents）：agent 运行中自评目标/计划/行动对齐度，运行时调整计划；最终答案质量与计划执行分别测——"评估不只在事后，运行时内联调计划"。
+- 提升层：工作流。触发词：RAG Triad、Context Relevance、Groundedness、Answer Relevance、sentence-window、auto-merging、内联评估、运行时调计划。
