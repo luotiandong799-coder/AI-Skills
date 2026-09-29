@@ -13212,4 +13212,55 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - JSONValidation 只查 schema 合法性（invalid-JSON 率/schema-violation 率）；FunctionCallAccuracy 查语义正确性（name match+argument structure+type compliance+semantic correctness against intent）；tool_choice 三档 auto/required/none 是最确定的调用控制；可靠性三处=JSON schema+plain-English 描述+agent loop 错误处理。
 - 判重：r301-r302 无工具调用评测契约方法论，全新点 → 落地。
 - 提升层：模型 / 工具。触发词：工具调用、四步契约、FunctionCallAccuracy、JSONValidation、tool_choice。
+## r303B 十独点（2026-09-29 实拉，判重基线=r302/r303A 全量）
+
+### 1. Dify RAG 调优顺序与参数带（来源：dify-hosting.com/en/guides/dify-rag/；ai-tool-lab.info/dify-knowledge-accuracy-not-improving-fix/；generativeai.tokyo/media/dify-business-automation-rag-guide-2026/）
+- 调优顺序=先用检索测试判定"拾取了吗"，再从可回退配置（分数阈值/Top-K/检索方式）小步调，最后才动 chunk 与源材料质量；参数带=chunk 300-500 或 500-800/overlap 50-100/Top-k 5-8/分数阈值 0.3-0.4 先松后紧/段落切分优先。
+- Markdown 直接导入碎片化分块、数值无语义标注→检索极差；CSV 结构化字段语义清晰→准确率大幅提升；全文检索适合型号/固有名/代码，混合+rerank 抑制幻觉。
+- 提升层：工作流。触发词：Dify RAG、调优顺序、分数阈值、CSV 优于 Markdown。
+
+### 2. Activepieces agent 实体化 + 一句话建 agent + MCP 每 app 工具化（来源：activepieces.com/docs/about/changelog；activepieces.com/product/ai-agent-builder；activepieces.com/mcp/webhook）
+- agent 从"flow 一步里的设置包"变为可命名/简述/对话/复用的实体；"每天早上总结未读邮件"→草稿 agent 含名字+指令+所需工具；agent 触发 webhooks/schedules/events/manual。
+- MCP server 每 app 动作成工具、认证一次全 app 复用；approval 步骤暂停等人工检查再恢复下游；Webhook MCP 使 760+ app 工具可被 Claude/Cursor 调用。
+- 提升层：工具。触发词：Activepieces、agent 实体、一句话建 agent、approval 步骤、Webhook MCP。
+
+### 3. Langflow 记忆三态区分 + session ID 默认流级 + Memory 数据类型（来源：docs.langflow.org/memory；docs.langflow.org/memory-bases；docs.langflow.org/1.8.0/session-id；docs.langflow.org/next/bundles-valkey）
+- 默认 session ID=flow ID（整个 flow 一个大会话池）；多用户 flow 建议自定义 session ID（user ID）隔离；session ID 可跨 flow 共享。
+- memory base=向量化长程语义检索 vs Message History=时间序最近消息 vs 人工知识库；Agent 组件内置聊天记忆默认启用；Valkey/DataStax Chat Memory 以 Memory 数据类型在组件间传递。
+- 提升层：工具。触发词：session ID、memory base、Message History、Memory 数据类型。
+
+### 4. Anthropic 官方 skills 仓库结构 + skill-creator 迭代闭环（来源：resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf；deepwiki.com/anthropics/skills/1-overview；platform.claude.com/docs/en/managed-agents/skills.md）
+- anthropics/skills 135K+★；document-skills（docx/pdf/pptx/xlsx）source-available、驱动 Claude 生产文档能力；example-skills Apache 2.0。
+- skill-creator 内置 Claude.ai/Claude Code：自然语言生成带 frontmatter 的 SKILL.md、审技能（常见问题/过欠触发/测试用例建议）、迭代改进（edge case 带回）；managed agents=skills 数组挂载或 GitHub repo 会话装载（repo 根 .claude/skills 自动发现）。
+- 提升层：可复用 Skill。触发词：anthropics/skills、document-skills、skill-creator、.claude/skills。
+
+### 5. MCP Server 安全基线四件套 + T/TAF 352—2026 + token delegation（来源：taf.org.cn T/TAF 352—2026 PDF；learn.microsoft.com/en-ca/azure/foundry/mcp/build-your-own-mcp-server）
+- 远程模式必须客户端鉴别（API 密钥或对称共享密钥）；安全基线=强制认证/凭证按 secret 存密钥库（不硬编码不进 git）/下游最小权限/记录监控工具调用。
+- OAuth 2.1/OIDC 强制、每请求校验 iss/aud/exp/签名；token delegation（RFC 8693）限权同时保留独立服务非人身份（NHI）；access/refresh token 服务端强加密存储。
+- 提升层：工具。触发词：T/TAF 352、远程 MCP、token delegation、NHI、密钥库。
+
+### 6. skills.sh 发布模型 + gh skill 内容寻址变更检测 + 不可变 release（来源：docs.localskills.sh/cli/；github.blog/changelog/2026-04-16-manage-agent-skills-with-github-cli/；raw.githubusercontent.com/witanlabs/witan-cli/HEAD/skills/README.md）
+- skills.sh 无注册提交流程——放 git repo+分享+npx skills add 遥测自动 listing；--version 显式 semver 须大于最高已发布版本（build metadata 不支持）、--patch/--minor/--major 递增、--prerelease 发布但非 installs 解析版本。
+- gh skill publish 关联 git tag、可开启不可变 release（发布后不可改）；内容寻址变更检测=记录源目录 git tree SHA、update 比较 SHA 非时间戳；--pin <commit> 锁定可复现、--verify-signature 验发布者签名；锁定版本被 update --all 跳过；witan semver=patch typo/minor 内容/major 重构。
+- 提升层：工具 / 可复用 Skill。触发词：gh skill publish、tree SHA、不可变 release、--pin、--prerelease。
+
+### 7. 多 Agent 编排七模式 + handoff 上下文压缩 + 唯一编排者 + 路由授权双校验（来源：velsof.com/ai-agents/multi-agent-ai-orchestration-patterns/；aiworkflowlab.dev/article/building-multi-agent-ai-systems-2026-architecture-patterns-mcp-production-orchestration；zilionix.com/blog/multi-agent-orchestration-enterprise/）
+- 七模式=Parallel/Supervisor/Handoff/Routing/Pipeline/Hierarchical/Blackboard；handoff 两大生产故障=全量 12K token 上下文传递太贪婪、责任转移语义丢失；supervisor 必须唯一编排者——两个 agent 都认为在协调→重复工作/矛盾指令/竞态。
+- routing vs supervisor=系统先分类送入口 vs 会话内决定调用谁；授权不得仅依赖 router 模型输出——目的地仍需校验身份/租户/操作、低置信度需显式 fallback。
+- 提升层：工作流。触发词：handoff、上下文压缩、唯一编排者、路由授权双校验、七模式。
+
+### 8. n8n Tools Agent 输出解析增强 + LangChain Code 自托管限定（来源：docs.n8n.io tools-agent；community.n8n.io 301746；n8n.io/workflows/3820/3440）
+- Tools Agent 实现 Langchain tool calling 接口（描述工具与 schema）+增强输出解析保证标准输出格式；LangChain 节点已原生并入 AI 套件。
+- LangChain Code 仅自托管可用：自定义 LLM 初始化/动态切换 LLM（不满意回环下一个 LLM）/token 计费/回调接 Langfuse；workflow tool+HTTP request tool 让 agent 节点决定何时用哪个工具。
+- 提升层：工具。触发词：Tools Agent、LangChain Code、自托管、动态切换 LLM、Langfuse。
+
+### 9. Dify Conversation vs Workflow 变量 + Variable Assigner 持久模式 + LLM Memory node-specific（来源：dify mintlify key-concepts/variable-assigner；deepwiki.com/langgenius/dify-docs/4.1-variables-and-data-types；marketplace.dify.ai plugin mem0ai）
+- Conversation Variables（Chatflow 专属）跨轮持久、会话结束 GC；Workflow 变量每次执行重置；Variable Assigner 写持久数据三模式=渐进清单/智能记忆系统/用户偏好存储。
+- LLM 节点 Memory 开关=Chatflow 会话内上下文、node-specific 不跨会话；View cached variables 免重跑整个 workflow 测节点输入；sys.user_id 内置变量；mem0ai async_mode 默认=写非阻塞读总等待。
+- 提升层：工具。触发词：Conversation Variables、Variable Assigner、node-specific、View cached variables、sys.user_id。
+
+### 10. SWE-bench 评测收敛危机 + scaffold 差异 > 模型差异 + Pro/ProMax 替代（来源：arxiv.org/pdf/2609.17394；codersera.com/blog/ai-agent-benchmarks-state-of-leaderboard-may-2026/；arxiv.org/html/2608.09802v1；arxiv.org/pdf/2606.13995）
+- 顶级 coding agents 收敛——同解 285/500、解集嵌套 0.935，榜无法排序；scaffold 差异 29.8pp 超前三十名差距→测的是 harness 非模型。
+- OpenAI 审计 SWE-bench Pro ~30% 任务损坏、2026 初停报 Verified（gold-patch 逐字复现）；SWE-bench Pro 抗污染替代低 25-30 点；ProMax 多语言重构 170 实例 7 语言；Dialogue-SWEBench 对话驱动+用户模拟器。
+- 提升层：模型 / 工作流。触发词：SWE-bench、收敛、scaffold 差异、ProMax、gold-patch。
 
