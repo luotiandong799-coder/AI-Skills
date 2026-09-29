@@ -2366,3 +2366,29 @@ SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一
 - 原生路由不在 → 才用 meta-skill / 常驻路由表兜底
 - 反模式：装了原生渐进披露的宿主，又把 25 个技能的索引塞进 always-on 上下文"图省事"；或同一任务在技能内和规则文件里各写一套分流逻辑
 - 自反检查：本库技能靠 description 原生触发 → 任何新技能**只写 description + 分工表一行**，禁止再造一份"何时用哪个技能"的常驻长清单
+
+## 技能市场信号要分「累计量」与「近期活跃窗口」两层看，选型只信后者（来源：skills.sh 排行榜 2026-09-29 r318A 独立实拉；与 §社区热度榜/官方自研榜双榜分离 互补——那条管"榜怎么分"，本条管"同一个榜里的两个数字各代表什么"）
+- 累计安装量（All Time，实拉 1,487,849）= 历史沉淀，**不能证明现在还能用**；近期活跃列（8W Activity）= 8 周窗口，**才回答"该不该现在学它"**
+- 另有 Trending(24h) / Hot 两种时间视图，判重与选型按"窗口越短越能反映当下"排序取值
+- 同一仓库多技能会被聚合成「+N more from <repo>」，**判定重复时按仓库去重，不要按技能条目数重复计数**
+- 反模式：看到 3.6M 安装就判"已成熟必学"——累计量高但 8W 活跃为空 = 已死技能，学了等于背历史包袱
+
+## 市场只做索引、不做背书：索引起源的声明是选型的必读字段（来源：skillsmp.com 2026-09-29 r318A 独立实拉；与 §安装前安全审查 互补——那条管"怎么审内容"，本条管"平台自己声明了什么/没声明什么"）
+- SkillsMP 明示"Results are indexed from public GitHub SKILL.md files. SkillsMP does not certify their quality or safety"，且明确"排序按目录覆盖度，不按质量/安全/领域价值"
+- 推论：**任何市场的排序分都不等于质量分**，下载量榜 ≠ 可靠度榜；引入第三方技能必须走本地安全审查 + 触发盲测，平台声明不能替代
+- 副产品：该站按 SOC 职业分类（23 组 / 867 细类）浏览，可作为"技能覆盖盲区扫描"的外部参照面（找自己没有的能力域），而非选型依据
+
+## 重复模块的标准处置是「删除 + 互链引导」，不是并列保留（来源：skillhub.cn 头部技能 WPS Office 全家桶 v5.2.5 变更说明 2026-09-29 r318A 实拉；与 §重复技能的去重与合并流程 互补——那条给流程，本条给"合并后残留怎么处理"的实证）
+- 原文实证：删除与 contract-review 重复的轻量合同审查模块，**改为文档互链引导**（保留到达路径，不保留重复实现）
+- 判据：**重复实现必删，可达性靠互链补**——用户/模型仍能走到该能力，但只有一份实现可维护
+- 自反检查：本库合并技能时，若被删技能的触发词仍有流量 → 在新技能里写一行"X 场景见 <路径>"，不要复活被删模块
+
+## 官方给的技能评估面是「跑 evals + 方差分析 + 优化 description 触发准确率」三件套（来源：anthropics/skills 官方仓 skill-creator 描述 2026-09-29 r318A 经 skillsmp 卡片实拉；与 §触发评测盲测/no-skill 对照 互补——那两条管"怎么测触发"，本条补"要测统计显著性"）
+- 官方口径：create / modify / measure skill performance，run evals、benchmark with **variance analysis**、optimize a skill's description for **better triggering accuracy**
+- 独点：**多次运行看方差**——单次触发率差异可能是噪声，判"改好了/改坏了"要跑 n≥3 看分布，与 §3.24 档位实测须 n≥3 同构
+- 描述优化的目标函数被官方明确为"触发准确率"（该触发时触发 + 不该触发时不触发），不是"写得更吸引人"
+
+## 渐进披露的官方三段命名：Discovery → Activation → Execution（来源：agentskills.io《Agent Skills Overview》2026-09-29 r318A 独立实拉；术语校准，用于跨宿主沟通与文档对账）
+- Discovery：启动时只加载 name + description；Activation：命中才读全文 SKILL.md；Execution：按需执行脚本/读引用文件
+- 目录约定：`SKILL.md`（必需）+ `scripts/` `references/` `assets/`（可选，可任意扩展目录）
+- 规范最小面 = name + description；标准由 Anthropic 发起并以开放标准方式演进（GitHub/Discord 公开讨论）
