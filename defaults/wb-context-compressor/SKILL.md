@@ -335,4 +335,7 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Write/Select/Compress 三策略**：Write=主动把信息持久化到上下文窗口外（scratchpad/结构化笔记/todo 文件逐步更新，让目标保持在近期注意力）；Select=动态检索只取当前任务相关（embeddings/RAG 拉片段，不预载全部）；Compress=总结轨迹/剪旧消息。→ 判据：**"先决定 agent 该看到什么再写任务"——上下文选择是系统工程，不是提示技巧；完美 prompt 在臃肿无关上下文里=平庸输出**。
 - **repo map（Aider 模式）**：tree-sitter 解析成 AST map（函数签名/类定义/导入，无实现细节）——模型看每文件结构不花加载每行成本（中等仓库 500-2000 tokens），要细节再请求具体文件。→ 判据：**结构全览放窗口内，实现细节按需取——map 是"索引"，不是"文件"**。
 - **最窄目录启动+命名文件**："在哪里启动 agent 决定它能看到什么"——packages/api/ 启动只加载该目录 CLAUDE.md+全部祖先，无兄弟包指令，文件访问限子树；**每机器上下文（cwd/OS/shell）移出 system prompt 让相同 fleet 配置共享一个 prompt-cache 条目**。→ 判据：**上下文裁剪从"启动位置"开始，不是从"裁剪技巧"开始**。
-- **提升层**：工作流。
+- **提升层**：工作流。## OpenClaw 记忆文件规范与检索增强（来源：docs.openclaw.ai concepts/memory + AGENTS.default.md 2026-09 实拉，r314B 套件迭代）
+- **记忆文件大写区分语义**：USER.md=dated active/superseded 稳定偏好与档案事实；MEMORY.md=长期持久非档案事实与决策；memory/YYYY-MM-DD.md=每日笔记——**lowercase memory.md 是 legacy repair input only，不要故意保留两个 root 文件**；会话开始读今天+昨天+MEMORY.md；写记忆前先读。
+- **记忆检索增强两参数**：mmr（enabled lambda 0.7——0=max diversity 1=max relevance，减少冗余结果）+ temporalDecay（halfLifeDays 30——分数每 30 天减半，提升新记忆权重）——检索不是纯相似度，多样性-相关性平衡+时间衰减。
+- **技能覆盖用 managed overrides**：不修改仓库副本（~/.openclaw/skills/<name>/SKILL.md 或 skills.load.extraDirs 配置）——官方技能升级时本地覆盖不冲突。
