@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.69.0
+version: 3.70.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -439,14 +439,8 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 提升层：模型/工具。触发词：downloads、installs、stars、量级差、漏斗、单数字不可比。
 
 ## 技能的分发形态决定版本绑定语义：library 技能默认跟随最新版，embedded 技能才钉在包里（来源：docs.dify.ai `llms-full.txt`《Skills》2026-09-29 r294-A 独立 curl 实拉 2.99MB 全文核验；与 §r286-A 升级策略三档 互补——那条管"宿主允不允许自动升"，本条管"消费侧拿到的到底是哪一版"）
-- 原文："You can keep up to 500 skills in the library and share them workspace-wide. When you publish an update to a skill, **every agent that uses it picks up the latest version**."；"You can add **up to 20 library skills** to an agent, and it follows the latest published version of each."；embedded skill = "one the agent keeps to itself"，包内需含 `SKILL.md`，默认 ≤50 MB（`UPLOAD_SKILL_FILE_SIZE_LIMIT` 可调）。
-- 判据：① **同一平台内两种打包形态的版本语义是相反的**——共享库技能是"活引用"（上游发布即全网生效，作者改一行，所有引用它的 agent 行为当场变），嵌入技能是"死快照"（行为随包固定，升级要重新打包分发）；做能力治理时先问"这条引用是活引用还是死快照"，活引用必须配变更告知（§3.30.0 向下告知义务），否则上游一次静默改动就是一次全下游事故；② **配额是三个互不相干的维度，别混着说**——库存容量（500）、单 agent 挂载数（20）、单个包体积（50MB），任一项触顶的处置动作完全不同（清库 / 拆 agent / 拆包），报"技能满了"之前先指名是哪一层。
-- 提升层：工具/工作流。触发词：library skill、embedded skill、跟随最新版、活引用、死快照、500 上限、20 上限、50MB 包。
 
 ## 关掉市场是「切断增量」不是「切断存量」：一条开关的四条连锁要逐项列清（来源：同上 `MARKETPLACE_ENABLED` 环境变量说明，2026-09-29 r294-A 独立实拉核验；与 §r285 RM 1.22.0「发布可部分生效非布尔」同向，本条给的是断供面的完整清单）
-- 原文：禁用后 ① 控制台隐藏浏览与安装入口；② API 拒绝 Marketplace 插件的**安装与升级**；③ 周期升级检查（`ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK`）停止；④ "**Already-installed plugins keep working**, and installing from GitHub or a local package stays available when permitted by the installation policy."；另有"Template import itself is unaffected. However, if an imported template requires Marketplace plugins that are not already installed, **those dependencies cannot be installed while Marketplace is disabled**."
-- 判据：① 把"关开关"当**状态转移**写清四条边——入口面（看不见）、安装面（装不了）、**升级面（已装的也升不了，这条最易漏，等于把存量钉在旧版还停止了漏洞修复）**、存量面（继续跑）；② **断供 ≠ 停服**——已装组件继续工作，所以"禁用市场"后不能假设能力立刻消失，也不能假设还能打补丁；③ **模板依赖是断供的隐性受害者**：模板本身能导入，但它依赖的市场插件装不上 → 导入成功≠可运行，验收模板必须跑到依赖解析完成。
-- 提升层：工作流/工具。触发词：MARKETPLACE_ENABLED、市场禁用、断供、已装继续工作、拒升级、模板依赖装不上。
 
 ## 规范的「最小合规面」只有 name + description：官方模板实证，且未替换的占位文案是可机检的低质信号（来源：anthropics/skills 官方仓 `template/SKILL.md` 2026-09-29 r294-B 经 cdn.jsdelivr.net 实拉 140B 全文；同轮 `data.jsdelivr.com` 文件树枚举 17 个技能无新增，附带核验）
 - 原文（全文）：frontmatter 仅 `name: template-skill` + `description: Replace with description of the skill and when Claude should use it.`，正文仅一行 `# Insert instructions below`。
@@ -454,9 +448,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 提升层：工具/工作流。触发词：官方模板、最小合规面、只有 name 和 description、占位文案、template-skill、未完工机检。
 
 ## SecretRef 只承载静态凭据：OAuth 凭据禁止走引用，因为可变状态不能跨存储分裂（来源：docs.openclaw.ai《Auth credential semantics》"OAuth SecretRef Policy Guard" 2026-09-29 r294-B 独立 curl 实拉 24,733B 核验；与 §3.20.0 声明式依赖清单 requires.env/SecretRef 互补——那条管"怎么声明"，本条管"哪些凭据不许声明成引用"）
-- 原文："SecretRef input is for **static credentials only**. OAuth credentials are **runtime-mutable** (refresh flows persist rotated tokens), so SecretRef-backed OAuth material would **split mutable state across stores**."；profile 凭据 `type:"oauth"` 或 `mode:"oauth"` 时，任何凭据字段上的 SecretRef **一律拒绝**，且"Violations are **hard failures (thrown errors)** in startup/reload secret preparation and profile resolution paths."
-- 判据：① 判据不是"这个秘密够不够敏感"，而是**"这份凭据会不会被运行时改写"**——静态密钥（API key / token）适合放外部引用并集中轮换；会自我轮换的凭据（OAuth refresh token、短期会话凭据）必须与能写回它的运行时同处一处，否则两个存储各持一份、轮换后必然分叉，且分叉形态是"一边新一边旧"的静默不一致；② 违规必须**硬失败**（启动/重载期抛错）而不是告警降级——这类错误放行了就等于埋了一个随时生效的双向不一致；③ 推广到技能侧：技能声明"我需要某个凭据"时，要同时声明**该凭据是否可被引擎写回**，可写回的不允许外置引用。
-- 提升层：工具/模型。触发词：SecretRef、OAuth 禁用引用、runtime-mutable、可变状态跨存储分裂、hard failure、凭据轮换分叉。
 
 ## 市场安全审计要给「状态」与「爆炸半径」两个独立轴，且官方必须写明"通过不是担保"（来源：docs.openclaw.ai《Security Audits》ClawHub 2026-09-29 r296-B 独立 curl 取 .md 原文 5,974B 核验；与 §3.22.0 四档可信度、§3.36.1 自评式低质信号 互补——那两条管"内容可信吗/质量如何"，本条管"装了它最多能造成多大破坏"）
 - 原文六状态：`Pass`（"No visible issue above low risk was found"）/ `Review`（"Read the findings before installing. The release may still be legitimate."）/ `Warn`（"high-impact concern or warning signal"）/ `Malicious`（"Do not install."）/ `Pending`（"Audits have not finished yet."）/ `Error`（"The audit could not be completed."）；并明示："Audits are strong safety signals, but they are **not a guarantee** that a release is risk-free. Always use judgment before granting sensitive access."；"**A `Pass` is reassuring, but it does not replace your own judgment.** This matters most for tools that can publish content, edit data, run commands, read files, or access production systems."；风险等级定义："Risk level describes **blast radius**: how much power the release appears to have **if you use it as intended**."
@@ -464,14 +455,8 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 提升层：可复用 Skill / 安全边界。触发词：安全审计状态、blast radius、爆炸半径、按预期使用的权力、Pass 不是担保、Pending vs Error、安装前必查权限。
 
 ## 技能须声明式写清运行依赖，且依赖缺失校验报告必须「绕开消费侧白名单」独立出具（来源：docs.openclaw.ai《skill-format》+ cli/skills `skills check` 2026-09-29 r334-Q-A 实拉核验；与 §声明式依赖清单 requires.env/SecretRef 互补——那条管"怎么声明"，本条管"声明缺失后校验报告能否被消费侧遮蔽"）
-- 原文：技能 frontmatter 用 `requires.env` / `requires.bins` / `requires.config` 写明运行前提；`skills check` 校验依赖缺失时，**报告不被 agent 侧的技能白名单遮蔽**——即使某技能在白名单里被放行，依赖缺失依然独立报出。
-- 判据：① 依赖声明是「机器可读的前提契约」，让装技能的环境在加载前就能算出"我缺什么"；② **校验报告必须独立于消费侧准入**——白名单决定"这个技能能不能用"，依赖检查决定"这个技能在当前环境能不能跑起来"，两者职责不同；若依赖缺失的报错被白名单的"已放行"状态盖掉，技能会在异机静默失败（用户看到的是"已授权"，实际跑不起来）；③ 写技能时把"我需要什么"显式声明，并把缺失校验设计成**不被上层放行逻辑吞掉**的独立信号。
-- 提升层：工具/可复用 Skill。触发词：requires.env/bins/config、依赖缺失不受白名单遮蔽、skills check 独立报缺、异机静默失败、声明式运行依赖。
 
 ## 改变技能解析/安装源的优先级必须显式确认，不得静默把新市场设为优先源（来源：skillhub.cn/install/skillhub.md 首接入问答门槛「是否将 SkillHub 设为优先技能安装源」2026-09-29 r334-Q-A 实拉核验；与 §抓取边界声明 互补——那条管"哪些页不该被索引"，本条管"选谁当默认源要人拍板"）
-- 原文：SkillHub 首次接入时有一个**显式确认门槛**——是否将其设为「优先技能安装源」需要用户确认，而不是安装流程默认就把它顶到最高优先级。
-- 判据：① 安装源的优先级 = 技能的**解析与信任根**——谁优先，谁的技能就被默认加载、谁的签名/审核口径就成了事实标准；把新市场静默设成优先源，等于未经确认就把解析权交出去；② 这是**解析源劫持**的入口：一个被静默提权的市场，可以把自己仓库里的同名/仿冒技能顶掉你原本信任的来源；③ 任何"换默认源/加优先源"的动作都要做成**显式确认门**，确认项里写清"设成优先源后，原本的 X 源降为次选"。
-- 提升层：工作流/安全边界。触发词：优先安装源、解析源劫持、显式确认门、静默提权安装源、首接入确认门槛。
 
 ## 技能信任按「来源 provenance → 分级部署权限」做四层 gate 门控；社区贡献技能有实测漏洞基线（来源：arXiv 2602.12430《Agent Skills for LLMs: Architecture, Acquisition, Security》Xu & Yan，2026-09-29 r337-Q-A 实拉；与 §市场安全审计状态/爆炸半径 互补——那条管"装一个的破坏面"，本条管"谁写的、能部署到哪一级"）
 - 原文：提出 **Skill Trust and Lifecycle Governance Framework**——four-tier, gate-based permission model，将技能 provenance 映射到分级部署能力（来源越可信，允许自动部署的等级越高）；实证「**26.1% of community-contributed skills contain vulnerabilities**」。
@@ -510,3 +495,5 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **skill 供应链信任分级**：SkillSpector provenance 1-5 分=未签名未知发行方→开源可识别无签名→发行方签名无第三方验证→可信发行方签名（NVIDIA/Anthropic/OpenAI/hyperscaler）+公开目录→OpenSSF Model Signing 加密签名可对根证书验证+每日目录同步；marketplace 信任=ratings+security scans+community verification；curated skills 提 agent pass rates 平均 16.2 百分点（SkillsBench 47,150 skills 平均质量 6.2/12——catalog size≠quality）。判据：**装技能先查来源签名链与质检分，目录大小不等于质量**。
 - **skills vs hooks vs 指令文件分工**：Hook=动作必须每次同样发生（lint/拦危险命令/日志）确定性零上下文成本；Skill=agent 决定如何应用或知识性内容按需加载（deploy checklist/style guide/debugging playbook）；AGENTS.md=多 AI IDE 团队单一规范指令文件；Projects/CLAUDE.md=静态参考总是加载；错误=把三者当等价"指令文件"。判据：**确定性动作走 hook，知识性流程走 skill，项目规范走 AGENTS.md**。
 - **skills 组合基元与放行自动化**：compose primitives 别 bundle workflows：一个 skill 一个能力，多个小 skill 运行时组合，一个大 skill 僵硬；subagent 与 skill 同源=frontmatter name/description/tool list 启动加载但 body 不自动调用——显式调用；skill 上线用 evidence bundle+rollout-gate fail-closed 决策库（consume Evidence Bundle+rollout policy 决定 allow/block，GitHub Action 消费）。判据：**技能写成可组合基元，发布走证据包+放行门禁自动化**。
+
+## 扩展点是「观察 + 否决」双职：回调里抛错即可阻止被钩的操作，且钩子无沙箱、回调继承宿主实例全权限——扩展点的权限边界等于宿主权限，选钩前必须先声明（来源：docs.n8n.io/hosting/configuration/external-hooks/ 1,023,234B，2026-09-30 r324B 独立实拉，原文 lowercase「forbid an action by throwing an error」命中；与 §审批门四旋钮 互补——那条管“变更怎么放行”，本条管“放行机制自身有多大权”；细则见 references/knowledge-base.md §r324B）

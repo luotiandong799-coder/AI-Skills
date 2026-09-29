@@ -41,3 +41,9 @@
 - 原文要点：`@human_feedback` 是**非阻塞**的——provider 抛出 `HumanFeedbackPending` 即自动序列化当前状态，`from_pending` / `resume` 成对恢复；**每次人机交互永久追加进索引化 history**；人工给出的纠正准则会**迁入 memory，供后续运行自动预筛**。
 - 判据：① HITL 的价值不只在"这一次拦住"，而在"下一次不用再拦"——把人工纠正**结构化落库**（索引化历史 + 迁入记忆）才能复利，否则同样的问题每轮都要人裁决一次；② 暂停/恢复必须**成对且可序列化**：抛异常即自动存档、恢复接口显式调用，禁止靠内存态撑着；③ 与 §审批门 互补——已落的「HITL 审批门」管"要不要停"，本条管"停完之后留下什么"；④ 自研：每次人工干预写一条 `{触发场景, 人工结论, 生效范围}` 记录进共享记忆，并在下轮同场景**先匹配该记录再决定是否再问人**。
 - 提升层：工作流/记忆。触发词：human_feedback、纠正沉淀、人工预筛、from_pending/resume、HITL 复利。
+
+
+## §r324B（2026-09-30 r324B 独立实拉）
+- 原文：content-rights「submit a ClawHub Content Rights Request」+「supporting evidence, if available」+「affected content may be **hidden, restored, or left unchanged**」+「For **unsafe marketplace content that is not a content rights concern**, use the **normal reporting flow**」；namespace-claims「Use this path for **public, non-sensitive** ownership review.」「**Explain what each link proves.**」「**Do not put secrets or private proof in a public GitHub issue.**」「**Do not use in-product reports or the account appeal form** for namespace claims.」+「Staff weighs **public evidence, existing usage, security risk, and user impact**」。
+- 判据：① **不同性质的争议走不同通道，且文档要写明“哪类不归本通道”**——内容权≠违规举报≠命名空间，混递会被直接退回；设计任何申诉/纠错入口时，除了写「本通道收什么」，必须同时写「哪些情况请走别处」；② **公开通道的证据边界要显式声明**：公开 issue 里不得放私密证明，把「可公开证据」当作受理前提，否则要么泄露要么无效；③ **裁决标准要列全要素且公开**：公开证据/既有使用/安全风险/用户影响四要素齐全，争议方才知道该准备什么；④ **结果集必须包含「维持原状」**并说明**无时限承诺**——只写「通过/驳回」会让人误以为必然有变更、且默认有时限，实际三态含 unchanged 且无 SLA，等待方要自己设定跟进节奏而不是干等。
+- 提升层：工作流/可复用 Skill。触发词：争议分通道、内容权申诉、命名空间申诉、公开证据边界、裁决四要素、维持原状、无时限承诺。

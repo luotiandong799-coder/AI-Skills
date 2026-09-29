@@ -2605,3 +2605,39 @@ version: 3.61.0
 
 ## §L502（自 SKILL.md 下沉，2026-09-30 r323C）
 ## Agent 评测与基准 2026：评测数据三来源/评测集版本化/judge 校准/双评分/CI 分层/工具五维/成本延迟/harness 层/轨迹六指标/多 agent 协作…（原文已下沉 references/knowledge-base.md §L502）
+
+
+## §L441（自 SKILL.md 下沉，2026-09-30 r324B）
+## 技能的分发形态决定版本绑定语义：library 技能默认跟随最新版，embedded 技能才钉在包里（来源：docs.dify.ai `llms-full.txt`《Skills》2026-09-29 r294-A 独立 curl 实拉 2.99MB 全文核验；与 §r286-A 升级策略三档 互补——那条管"宿主允不允许自动升"，本条管"消费侧拿到的到底是哪一版"）
+- 原文："You can keep up to 500 skills in the library and share them workspace-wide. When you publish an update to a skill, **every agent that uses it picks up the latest version**."；"You can add **up to 20 library skills** to an agent, and it follows the latest published version of each."；embedded skill = "one the agent keeps to itself"，包内需含 `SKILL.md`，默认 ≤50 MB（`UPLOAD_SKILL_FILE_SIZE_LIMIT` 可调）。
+- 判据：① **同一平台内两种打包形态的版本语义是相反的**——共享库技能是"活引用"（上游发布即全网生效，作者改一行，所有引用它的 agent 行为当场变），嵌入技能是"死快照"（行为随包固定，升级要重新打包分发）；做能力治理时先问"这条引用是活引用还是死快照"，活引用必须配变更告知（§3.30.0 向下告知义务），否则上游一次静默改动就是一次全下游事故；② **配额是三个互不相干的维度，别混着说**——库存容量（500）、单 agent 挂载数（20）、单个包体积（50MB），任一项触顶的处置动作完全不同（清库 / 拆 agent / 拆包），报"技能满了"之前先指名是哪一层。
+- 提升层：工具/工作流。触发词：library skill、embedded skill、跟随最新版、活引用、死快照、500 上限、20 上限、50MB 包。
+
+## §L446（自 SKILL.md 下沉，2026-09-30 r324B）
+## 关掉市场是「切断增量」不是「切断存量」：一条开关的四条连锁要逐项列清（来源：同上 `MARKETPLACE_ENABLED` 环境变量说明，2026-09-29 r294-A 独立实拉核验；与 §r285 RM 1.22.0「发布可部分生效非布尔」同向，本条给的是断供面的完整清单）
+- 原文：禁用后 ① 控制台隐藏浏览与安装入口；② API 拒绝 Marketplace 插件的**安装与升级**；③ 周期升级检查（`ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK`）停止；④ "**Already-installed plugins keep working**, and installing from GitHub or a local package stays available when permitted by the installation policy."；另有"Template import itself is unaffected. However, if an imported template requires Marketplace plugins that are not already installed, **those dependencies cannot be installed while Marketplace is disabled**."
+- 判据：① 把"关开关"当**状态转移**写清四条边——入口面（看不见）、安装面（装不了）、**升级面（已装的也升不了，这条最易漏，等于把存量钉在旧版还停止了漏洞修复）**、存量面（继续跑）；② **断供 ≠ 停服**——已装组件继续工作，所以"禁用市场"后不能假设能力立刻消失，也不能假设还能打补丁；③ **模板依赖是断供的隐性受害者**：模板本身能导入，但它依赖的市场插件装不上 → 导入成功≠可运行，验收模板必须跑到依赖解析完成。
+- 提升层：工作流/工具。触发词：MARKETPLACE_ENABLED、市场禁用、断供、已装继续工作、拒升级、模板依赖装不上。
+
+## §L456（自 SKILL.md 下沉，2026-09-30 r324B）
+## SecretRef 只承载静态凭据：OAuth 凭据禁止走引用，因为可变状态不能跨存储分裂（来源：docs.openclaw.ai《Auth credential semantics》"OAuth SecretRef Policy Guard" 2026-09-29 r294-B 独立 curl 实拉 24,733B 核验；与 §3.20.0 声明式依赖清单 requires.env/SecretRef 互补——那条管"怎么声明"，本条管"哪些凭据不许声明成引用"）
+- 原文："SecretRef input is for **static credentials only**. OAuth credentials are **runtime-mutable** (refresh flows persist rotated tokens), so SecretRef-backed OAuth material would **split mutable state across stores**."；profile 凭据 `type:"oauth"` 或 `mode:"oauth"` 时，任何凭据字段上的 SecretRef **一律拒绝**，且"Violations are **hard failures (thrown errors)** in startup/reload secret preparation and profile resolution paths."
+- 判据：① 判据不是"这个秘密够不够敏感"，而是**"这份凭据会不会被运行时改写"**——静态密钥（API key / token）适合放外部引用并集中轮换；会自我轮换的凭据（OAuth refresh token、短期会话凭据）必须与能写回它的运行时同处一处，否则两个存储各持一份、轮换后必然分叉，且分叉形态是"一边新一边旧"的静默不一致；② 违规必须**硬失败**（启动/重载期抛错）而不是告警降级——这类错误放行了就等于埋了一个随时生效的双向不一致；③ 推广到技能侧：技能声明"我需要某个凭据"时，要同时声明**该凭据是否可被引擎写回**，可写回的不允许外置引用。
+- 提升层：工具/模型。触发词：SecretRef、OAuth 禁用引用、runtime-mutable、可变状态跨存储分裂、hard failure、凭据轮换分叉。
+
+## §L466（自 SKILL.md 下沉，2026-09-30 r324B）
+## 技能须声明式写清运行依赖，且依赖缺失校验报告必须「绕开消费侧白名单」独立出具（来源：docs.openclaw.ai《skill-format》+ cli/skills `skills check` 2026-09-29 r334-Q-A 实拉核验；与 §声明式依赖清单 requires.env/SecretRef 互补——那条管"怎么声明"，本条管"声明缺失后校验报告能否被消费侧遮蔽"）
+- 原文：技能 frontmatter 用 `requires.env` / `requires.bins` / `requires.config` 写明运行前提；`skills check` 校验依赖缺失时，**报告不被 agent 侧的技能白名单遮蔽**——即使某技能在白名单里被放行，依赖缺失依然独立报出。
+- 判据：① 依赖声明是「机器可读的前提契约」，让装技能的环境在加载前就能算出"我缺什么"；② **校验报告必须独立于消费侧准入**——白名单决定"这个技能能不能用"，依赖检查决定"这个技能在当前环境能不能跑起来"，两者职责不同；若依赖缺失的报错被白名单的"已放行"状态盖掉，技能会在异机静默失败（用户看到的是"已授权"，实际跑不起来）；③ 写技能时把"我需要什么"显式声明，并把缺失校验设计成**不被上层放行逻辑吞掉**的独立信号。
+- 提升层：工具/可复用 Skill。触发词：requires.env/bins/config、依赖缺失不受白名单遮蔽、skills check 独立报缺、异机静默失败、声明式运行依赖。
+
+## §L471（自 SKILL.md 下沉，2026-09-30 r324B）
+## 改变技能解析/安装源的优先级必须显式确认，不得静默把新市场设为优先源（来源：skillhub.cn/install/skillhub.md 首接入问答门槛「是否将 SkillHub 设为优先技能安装源」2026-09-29 r334-Q-A 实拉核验；与 §抓取边界声明 互补——那条管"哪些页不该被索引"，本条管"选谁当默认源要人拍板"）
+- 原文：SkillHub 首次接入时有一个**显式确认门槛**——是否将其设为「优先技能安装源」需要用户确认，而不是安装流程默认就把它顶到最高优先级。
+- 判据：① 安装源的优先级 = 技能的**解析与信任根**——谁优先，谁的技能就被默认加载、谁的签名/审核口径就成了事实标准；把新市场静默设成优先源，等于未经确认就把解析权交出去；② 这是**解析源劫持**的入口：一个被静默提权的市场，可以把自己仓库里的同名/仿冒技能顶掉你原本信任的来源；③ 任何"换默认源/加优先源"的动作都要做成**显式确认门**，确认项里写清"设成优先源后，原本的 X 源降为次选"。
+- 提升层：工作流/安全边界。触发词：优先安装源、解析源劫持、显式确认门、静默提权安装源、首接入确认门槛。
+
+## §r324B（2026-09-30 r324B 独立实拉）
+- 原文：docs.n8n.io《External hooks》——「Use them to log data, change data, or **forbid an action by throwing an error**.」；注册方式「To register a hook, set the environment variable `EXTERNAL_HOOK_FILES`」；前端钩子「Frontend hooks: run in the browser, loaded with a script tag」；事件面含 credential 操作 / OAuth / workflow 激活·保存·归档，**本索引页无 `n8n.start` / login 事件**（旧「登录钩子」记忆失效，按缺位处理）。
+- 判据：① **钩子不止是外发审计，它是准入逻辑的外置**：回调抛错＝否决被钩操作，所以「装一个钩子」等于把一部分放行权交给了钩子库——**否决权必须与观察权分开声明和评审**；② **钩子无沙箱**：回调以宿主进程身份执行，扩展点权限＝宿主权限，引用第三方钩子前必须按「等同给宿主权限」评估，不能按「只是个通知」评估；③ **事件清单以实际索引为准，不以记忆为准**：文档改版后登录类事件可能已不存在，凡「某事件可钩」的假设都要回到事件索引逐条核对，缺位即按不可钩处理。
+- 提升层：工具/可复用 Skill。触发词：external hooks、forbid an action、EXTERNAL_HOOK_FILES、钩子否决、无沙箱、宿主权限、事件索引缺位。
