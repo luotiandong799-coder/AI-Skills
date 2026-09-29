@@ -13915,3 +13915,79 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 
 ### 事件溯源记忆 + 个人共享上下文层
 **事件溯源记忆层：activity.jsonl 连续活动日志=可导航记忆；agent 不吞整日志，按需请求窗口（--last 20 / --topic --last 5 / --around evt_123 --window 10）**；**Moryn 个人多 agent 多设备上下文存储：多 agent 跨多项目共享公共操作上下文——读相关上下文/写会话结果/提议持久记忆/复用技能/跨设备同步**。判据：**多 agent 协作前先定"公共操作上下文放哪、怎么按需取窗口"**。
+
+## 推理增强与测试时计算（来源：r311A 批 2026-09-29 实拉：Google Cloud Gemini thinking + OpenRouter + Vercel AI Gateway + NVIDIA NIM + APIScout + IntuitionLabs + arXiv 2501.11651/2601.06423/2603.22016/2604.07922/2605.08061/2602.00513 + ICLR 2026 + Microsoft Foundry + llmbestpractices + ASOasis + ThinkingCap + InsiderLLM + Qwen docs + 腾讯云 ThinkPRM + CoVe + SelfCheck + PyPI llm-reasoning-quality）
+
+### 思考预算（thinking budget）是显式旋钮，不靠默认
+- **各模型思考预算上限**：gemini-3-pro 100K / gemini-3-flash 50K / gemini-2.5 32K / claude-opus-4-6 100K / claude-sonnet-4-6 100K tokens；**Gemini thinking_budget 不设时默认自动控制上限 8,192 tokens**。
+- **OpenRouter effort 预算公式**：`budget_tokens = max(min(max_tokens × effort_ratio, 128000), 1024)`；**Vercel effort 级别对应输出份额**：none 禁用 / minimal ~10% / low ~20% / medium ~50% / high & xhigh ~80%；**NVIDIA Thinking Budget Control 对 reflect-then-answer 模型（Qwen3）硬 cap 思考 token**。
+- **Claude extended thinking 实用指导**：8,000 起步 → 16,000 不满意升 → **20,000 以上仅真正难的单答案问题**（+30-120s 延迟）。
+- 判据：**思考预算=成本/延迟/准确率三方旋钮，按任务难度显式配，不靠默认**。与 §成本四层的分工：那条管"整体成本结构"，本条管"思考 token 这个具体旋钮怎么拧"。
+
+### 推理 token 成本实证：先用账后选模型
+- **同任务集实测：非推理模型约 379 tokens vs 推理调优模型 6,066 tokens——16 倍差距**。
+- **推理模型 $0.05-0.30/1K tokens + 15-45 秒额外延迟；1 万日请求下推理模型 $150-300/天 vs 标准模型 $30-100/天，且用户放弃 >3 秒的请求**。
+- **推理阶段完成前用户看不到任何有用内容**——推理模型生成 10-100× token，改变延迟预算超过任何其他架构选择；**"更难的问题"≠需要推理模型——区分标准是任务性质（可客观验证/多步依赖/答错代价高）不是难度感**。
+- 判据：**用推理模型前先算清延迟与 token 成本账，别默认更准**。
+
+### 推理缩放并非普遍有益：部署前实测
+- **自一致性（self-consistency）推理缩放不是普遍有益：Claude Opus 4.5 实测净伤害**；**部署自一致性前必须在你特定模型+领域测试**。
+- **对从缩放获益的模型（GPT-5.2/Gemini）：N=5 已获大部分增益，N=20 只边际改进却 4× 成本**。
+- Self-Consistency 核心（Wang et al. 2022）：K 次独立不同角度推导→投票，最多答案最可能正确——复杂推理多有效路径指向同答案时置信度高。
+- 判据：**缩放策略按模型实测决定，不默认"想更久=更好"**。
+
+### 测试时计算范式与预算截断实验
+- **行业从训练时向推理时 compute scaling 转移：权重固定，变的是生成多少 token 想问题；DeepSeek-R1 匹配 o1 便宜 70%（生成 10-100× 更多思考 token）**；o3 用 process-reward models 引导探索+每问题可变 compute（ARC-AGI 92.3%）。
+- **T1：显式分离中间推理步骤生成与最终答案生成→可手动控制推理预算（截断推理过程研究成本-性能曲线）**。
+- 训练哲学四段式：RL 拓荒 + SFT 塑形 + 对齐收口；冷启动+拒绝采样解决可读性与通用性。
+- 判据：**推理预算可实验——把思考生成与答案生成分离才能精确控制成本曲线**。
+
+### 过思考（overthinking）缓解五法
+- **agentic 任务 reasoning-action dilemma：推理模型过度思考；native function-calling 能力+选择性 RL 两种缓解（函数调用模型最有希望）**。
+- **ROM 流式检测**：productive-to-redundant 转变直接反映在 hidden states——FCS（first-correct-solution）边界处 late-layer 表示分离高效 vs 冗余 token；轻量 hidden-state 检测器监控 frozen 模型+在良形推理边界干预（模型无关）。
+- **提示法**：先承诺初始答案再展开（"First, give your direct answer in one sentence. Then, if needed, briefly explain"）减 second-guessing；约束推理空间（给 criteria 框架）。
+- **SAT**：推理作 FSM 四模式（Slow/Normal/Fast/Skip），轻量 PRM 压简单步保困难步深度；Whisper 黑盒说服性提示：简单任务响应长度 3× 减少保性能；ThinkingCap fine-tune 减 46% 推理 token 保准确率。
+- **First Impression Problem**：内部偏差触发过思考——PROBE/FCS/SEAL 只是截断推理链未解决冲突，Attention Early Exit 部分有效（R_Δ 31.5%→9.4%）。
+- 判据：**过思考=生产隐患——检测（hidden-state 流式）/提示（先答后证）/微调（ThinkingCap）三路可解，截断类方法只治标**。
+
+### 推理模型 API 消费纪律
+- **reasoning_content vs content 双字段分离消费**：reasoning_content=中间思考（逻辑步骤/子步骤/自我纠正/中间结论），content=给用户的最终答案——可独立取用（UI 可视化 CoT/调试/审计）。
+- **多轮对话 append 最终答案而不是 reasoning content**；**不要指示推理模型逐步思考——已内置，加"think step by step"把行为复制进可见输出挤占答案**；推理发生在隐藏 budget，可见响应是结论。
+- **私有 scratchpad 模式**：System="你可私有推理，不展示草稿，只返回最终 JSON"，输出 {final_answer: 简洁结果, brief_rationale: ≤2 句高层}——鼓励刻意推理+抑制长链泄露。
+- 判据：**推理模型提示=剥离脚手架+要结构化最终答案，不要求 show work；双字段按用途分离消费**。
+
+### 模型路由分层：快慢两档+分类器
+- **快模型（sub-300ms）赢在机械编辑/语法翻译/高频 lint 修复/分类/摘要/良定义转换；推理模型赢在模糊需求/多文件架构重构/微妙并发 bug/多步规划/答错代价高**。
+- **分层路由实测减端到端延迟 75% + token 花费 60%（vs 单体模型）**；**成本延迟差距 10-50×，但合适任务上质量差距通常 <10%——生产系统应两者都用：快模型处理 90%**。
+- **两档 triage-escalation**：Layer 1 快模型 200ms 分类→容易 80% 直接答或标记"需更深分析"；Layer 2 被标记的升级推理模型。
+- 判据：**快慢两档+路由分类器，90% 走快档，只有该慢才慢；分类器本身用快模型**。
+
+### RLVR+GRPO 训练纪律
+- **RLVR 工作流**：清晰任务+可信验证器+小基线模型→迭代 SFT→GRPO 训练→held-out 评估；数学/代码生成/符号操作最适合可验证奖励。
+- **GRPO 丢 critic**：每提示采样 G 个完成，验证器打分，组内相对优势。
+- **GRPO 监控四信号**：Reward 应上升（平/降=策略收敛或奖励信号噪声）/ KL 应受限（爆炸=策略漂移远，调 kl_coef）——无 held-out loss 可盯，必须看这两路。
+- **Minerva 稀疏奖励缓解**：answer-conditioned generation（给正确标签+canonical reference 增 ground reasoning）→ 蒸馏已验证轨迹回 answer-free prompts（轻量监督步）——有限采样下零 reward 提示也能学。
+- 判据：**验证器可信度决定 RLVR 上限；奖励稀疏时用条件生成+蒸馏兜底；监控看 reward+KL 双信号**。
+
+### Rubric-grounded 奖励分解
+- **把 reward 分解为加权可验证标准+冻结 LLM judge 打分→部分信用优化信号**：不是二元结果或单一整体分，每条响应沿多个任务特定标准评分；judge 条件化于 policy 永远看不到的辅助 grounding。
+- **RAIDEN-R1 双 reward**：format reward + accuracy reward（STV/MTDP 关键词匹配，代码类用 Python 评估）；SciencePRM 三档 reward：outcome / generic / scientific-validity（generic+六个方法学验证器）。
+- 判据：**任务难定对错时把奖励拆成多标准给部分信用，别用二元；验证器可分层叠加**。
+
+### 外部锚定验证：自反思可信度=外部锚定程度
+- **ThinkPRM：验证器本身也具备长思维；高可信验证需把批判步骤锚定到外部工具——事实性声明→搜索引擎检索；代码正确性→编译器+测试用例；算术→计算器；领域特定输出→专业验证器（类型检查器/语法分析器）**。
+- **CRITIC tool-augmented self-correction**：交互式用外部工具批判输出；**CoVe 五步**：草稿答案→生成独立验证问题→分别回答→交叉核对→修正最终答案；**SelfCheck**：零样本逐步检查器独立检查每步条件正确性（基于问题+前序步骤）→整合整体估计。
+- **Reflexion**：口头反思任务反馈→episodic memory buffer→后续 trial 使用（文本 RL；HumanEval 91% pass@1 vs GPT-4 80%）。
+- 判据：**自反思可信度=外部锚定程度；纯模型自检有上限，验证步骤必须能落到可执行检查**。与 §工具结果断言层的分工：那条管"工具返回可疑时打标"，本条管"模型推理结论如何用外部工具验证"。
+
+### 推理质量五维评估
+- **CQ 正确性**（最终答案准确率；多策略匹配管线：精确归一匹配/子串/数值提取/二值提取/多选提取）/ **CS 一致性**（K 次独立运行同答案）/ **RS 鲁棒性**（语义等价改写同答案）/ **LS 局部逻辑连贯**（连续推理步无矛盾）/ **ES 效率**（正确且简洁=CQ 与逆归一 token 数调和平均）。
+- reasoning trace 沿维度评估：faithfulness/coherence/utility/factuality——**超越 outcome-based 区分同准确率模型**。
+- **Verification Rate**（通过完整验证的正确答案比例）=推理质量代理；Self-BLEU 高=mode collapse；Stable Depth=准确率掉到基线-1% 前的轮数。
+- 判据：**评估推理质量五维全查，不只正确率；trace 级维度能区分同准确率模型**。
+
+### 本地推理模型选型与部署
+- **2026 本地默认 Qwen3**：0.6B-235B 最广尺寸/每 VRAM 质量最好/Apache 2.0 许可//think toggle 推理开关；DeepSeek R1 distills 纯推理赢（14B@9GB、32B@20GB 产 CoT）。
+- **llama.cpp b5092+ 支持 Qwen3/Qwen3MoE；GGUF 2/3/4/5/6/8-bit 量化**；llama-server 关键参数：--ctx-size 131072 / -ngl GPU offload / -fa flash attention；本地编译获得 CPU 优化。
+- **Qwen3.8/DeepSeek V4/Glimmer 已训练支持推理 effort 级别（low/medium/high）**。
+- 判据：**本地推理选型三看：尺寸（VRAM）/许可（Apache 2.0）/推理开关（/think、effort 级别）**。
