@@ -12037,3 +12037,75 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **轨迹→技能学习**（Building Adaptive AI Agents）：用 agent 执行留下的 traces 提炼行为技能（trajectory-to-skill learning）——**"执行记录是技能原料，跑过的路沉淀成可复用能力"**。
 - **stateful Memory Aware Agent**：启动时载入先前上下文+组装相关上下文/状态/工具/输出——**"启动即恢复上下文，不冷启动"**。
 - 提升层：工作流。触发词：记忆工程、上下文工程下一层、写回环、轨迹→技能学习、trajectory-to-skill、stateful agent、启动载入上下文。
+## r298A 十独点（2026-09-29 实拉）
+
+### 1. 三层变量作用域与调试面板：Dify 工作流面（来源：promptindexhub.com/dify-workflow-not-saving-variables-between-nodes-fix + deepwiki.com/langgenius/dify-docs/6.1-variable-inspector + blog.csdn.net/qq_44870477/162876445 + dify-6c0370d8.mintlify.app/en/quick-start 2026-03-16/2026-05-22/2026-07-29/2026-09-22 实拉，与 r297C #1 分块参数互补——那条管 RAG 调参，本条管变量作用域与调试）
+- **三层变量作用域**：workflow 级（`{{node_name.variable_name}}` 路径语法）单次执行内流动、每次运行重置；conversation 级经 Variable 面板管理、跨会话——**"变量丢失最常见原因是把会话级当工作流级引用"**。
+- **Node Execution Traces**：每个节点执行自动生成 trace（输入变量/输出变量/执行状态/执行时间/token 用量）——**"节点级可观测是平台默认，排查先看单节点入出"**。
+- **调试四面板**：测试运行=输入/结果/详情/追踪；追踪面板=全链路时序（从左到右真实执行顺序+每节点耗时+成功失败）+单节点三层日志（输入+数据处理+输出）——**"唯一能看完整三层日志的面板"**。
+- **缓存变量编辑**：改某节点输入值不用重跑整个工作流——"View cached variables 改值即测"。
+- 提升层：工作流。触发词：变量作用域、workflow 级 vs conversation 级、Node Execution Traces、调试四面板、追踪面板、缓存变量编辑、变量丢失。
+
+### 2. LLM 路由三层与双 fallback 链：n8n 模型路由面（来源：blog.n8n.io/llm-routing + blog.n8n.io/llm-tool-calling-error-handling + n8n.io/workflows/5160 + 16330 + 14683 2026-02-26/2026-03-27/2026-06-10/2026-07-03 实拉，与 r297C #2 预算熔断器互补——那条管"花钱前查预算"，本条管"模型怎么选、故障怎么转"）
+- **路由三层各管一段**：策略路由（会话级决策、**在处理一个 token 前**按订阅/SLA 层选模型：premium 用户给快模型、free 层给成本优化）→ 失败转移路由（主模型不可用/降级响应时重路由）→ 成本执行（**查询级强制计算成本**，而不是在总账单里发现超支）——"路由决策发生在 token 前，成本控制发生在查询级"。
+- **模型层+工具层双 fallback 链**：主模型故障→换云 provider 或本地开源替代；主工具调用失败→路由到备份工具——"高可用要模型、工具两层都设计回退"。
+- **置信度路由**：小模型先处理，置信度低于阈值→人工邮件审查（GPT-4.1-mini+confidence check）——"不确定就转人，不硬跑"。
+- 提升层：工作流。触发词：LLM 路由三层、策略路由、失败转移、查询级成本、双 fallback 链、模型层工具层回退、置信度路由、转人工。
+
+### 3. A2A 三原语与默认关闭：Langflow agent 间通信面（来源：docs.langflow.org/a2a-server + langflow.org/blog/langflow-1-11 + blog.csdn.net/weixin_52326703/163326436 + a2a-protocol.org/v1.0.0/specification 2026-07-22/2026-08-25/2026-09-17/2026-09-22 实拉，与 r297B #3 合并增量——那条一句带过 1.11 A2A，本条管三原语与开关细节）
+- **A2A 三原语**：Agent Card（智能体名片，`/.well-known/agent.json` 暴露能力）+Task（任务状态机）+Message（消息）；底层=JSON-RPC 2.0 over HTTPS，长任务用 SSE 流式推送——"表面积极小，只要会发 HTTP 就能说 A2A"。
+- **MCP 与 A2A 分工**：**MCP 给 AI 手（工具调用），A2A 给 AI 同事（agent 间通信）**——"两条协议管两个面，不互替"。
+- **默认关与私网防护**：LANGFLOW_A2A_ENABLED=false（A2A 卡+JSON-RPC 端点默认不开）；LANGFLOW_A2A_ALLOW_PRIVATE_WEBHOOKS=false（防推送 webhook 指向私网地址，仅可信内网开）——"暴露面默认关，要开显式开"。
+- **Internal vs External 模式**：A2A Agent 组件 Internal=调同项目已发布的 A2A 流；External=按 URL 调远端——"同项目用内部、跨系统用外部"。
+- **AG-UI streaming**：POST /api/v2/workflows stream 模式支持 `stream_protocol: "agui"`——"流式协议选项化"。
+- 提升层：工作流。触发词：A2A 三原语、Agent Card、Task/Message、JSON-RPC over HTTPS、MCP 给手 A2A 给同事、LANGFLOW_A2A_ENABLED、私网 webhook、Internal/External 模式、AG-UI。
+
+### 4. Worker 规模公式与队列语义：Activepieces 自托管面（来源：activepieces.com/docs/install/architecture/workers + overview + configuration/overview.md + admin-guide/guides/manage-concurrency + about/changelog 2026-07-29/2026-09-03/2026-09-07/2026-09-15/2026-09-18 实拉，与 r296B #4 1:10 比例合并增量——那条管比例结论，本条管为什么与怎么算）
+- **按并发流程数定规模，不按触发率**：concurrency-1 的 worker 在整个流程期间被占用（最长 10 分钟），`workers = peak concurrent flows`，`apps = ceil(workers / 10)`（50 并发=50 workers/25 vCPU/50GB + 5 apps）——**"触发率高≠并发高，并发才是资源占用单位"**。
+- **everything queue-backed**：webhook/调度/轮询全进队列，槽位释放即排空；项目达上限**不丢新 run**，排队+指数退避重试直到有槽——"超限=排队，不是失败"。
+- **基准纪律**：并发默认=执行槽位（Σ AP_WORKER_CONCURRENCY）；比较两个部署要把并发**对齐到各自槽位**、不用固定数字，否则小实例在排队、读到的是 backlog 不是真实服务时间——"基准不可比=数字无意义"。
+- **Redis 小实例即可**：处理数千 job/秒，很少成瓶颈——"别为队列上重数据库"。
+- 提升层：工具。触发词：workers=peak concurrent flows、并发流程数、concurrency-1 全程占用、queue-backed、超限排队不丢、指数退避、基准并发对齐槽位、backlog 非服务时间。
+
+### 5. 自定义 app 三组件与 Blueprint 复用：Make 扩展面（来源：academy-content.make.com/courses/custom-apps/02-testing-your-custom-app + developers.make.com/custom-apps-documentation/app-components/base + help.make.com/blueprints 2026-05-19/2026-06-01/2026-09-28 实拉，与 r296C #6 AI Toolkit 互补——那条管平台内置模块，本条管自建 app）
+- **三组件最小集**：Base（公共设置、所有模块继承）+ Connections（认证配置与测试）+ Modules（单独模块）——"一个可用模块的最小 app 只需要这三件"。
+- **Base 四要素**：baseUrl（主 URL）+ Authorization（认证方式）+ Error handling（错误处理）+ Sanitization（清洗）——"公共行为收在 Base，模块不重复写"。
+- **Blueprint 场景级复用**：保存/复制 blueprint 把模块+设置+映射值整体打包，跨组织分享、备份、换账号迁移——"场景级模板，不从头搭"。
+- 提升层：可复用 Skill。触发词：自定义 app 三组件、Base/Connections/Modules、Base URL、Sanitization、blueprint 场景复用、模块设置映射值打包。
+
+### 6. secret prop 与最小可见范围：Pipedream 密钥管理面（来源：pipedream.com/docs/workflows/environment-variables + components/contributing/api + projects/secrets + privacy-and-security/best-practices + docs/external-auth 2026-06-19/2026-07-10/2026-08-30/2026-09-20/2026-09-27 实拉，与 r297B #4 互补——那条管 Activepieces 凭据，本条管 Pipedream 具体机制）
+- **secret prop 机制**：组件 prop 配 `secret: true`（仅 string prop 允许）= 浏览器隐藏输入+数据库加密存储+执行环境解密——"敏感输入走 secret prop，不走普通变量"。
+- **组件无 env 直接访问权**：private components 不直接访问 workspace/project 变量，必须**显式加 prop** 用 `{{process.env.YOUR_ENV_VAR}}` 引用——"组件要用环境变量必须显式声明，杜绝隐式注入"。
+- **project 覆盖 workspace**：同一变量两级都定义时 project 级生效；敏感变量定义在 project 级+配访问控制——"最小可见范围，工作区级默认对全员可见"。
+- **运行时外部凭据**：Vault/AWS Secrets Manager/Nango 运行时取、传给步骤——"凭据不进 workflow 定义文件"。
+- **Connect MCP 三保证**：凭据加密 at rest+永不暴露给 AI 模型或客户端代码+用户随时可撤销——"集成面凭据=隔离+不可见+可撤销"。
+- 提升层：工作流。触发词：secret prop、加密存储执行解密、组件显式 prop 引用 env、project 覆盖 workspace、最小可见范围、运行时外部凭据、Connect MCP 凭据隔离。
+
+### 7. 技能目录结构与按需加载：Anthropic 技能组织面（来源：vadimall.com/posts/anthropic-agent-skills-typescript-sdk + claude.yourdocs.dev/docs/agents-and-tools/agent-skills/overview + platform.claude.com/docs/en/build-with-claude/skills-guide + blog.brightcoding.dev 2026-04-24/2026-05-20/2026-06-17/2026-09-04/2026-09-24 实拉，与 r297A #7 frontmatter 互补——那条管元数据字段，本条管目录结构与加载机制）
+- **标准目录三件**：SKILL.md（必填：frontmatter+指令）+ REFERENCE.md（可选：详细规则，仅需要时加载）+ scripts/（可选：确定性脚本，Claude 经 bash 跑）——"引用文件按需加载，不是全量进上下文"。
+- **按需文件访问零 token**：技能含几十个参考文件时只加载任务需要的那个；脚本代码**不进上下文窗口**，只把脚本输出（如 "validation failed"）带回来——"token 只花在必要处，脚本执行结果替代代码内容"。
+- **链式组合靠输出格式对接**：PDF 提取技能→分析技能→洞察（前一个输出格式与后一个输入兼容）——"技能间契约=输出格式"。
+- **别包含未用技能**：影响性能——"技能清单是性能项，不是收藏夹"。
+- **官方生产实现可读**：skills/docx、pdf、pptx、xlsx 是 Claude 文档功能的真实生产实现——"官方技能是结构范本"。
+- 提升层：可复用 Skill。触发词：SKILL.md/REFERENCE.md/scripts、按需加载零 token、脚本执行结果替代代码、链式组合输出格式对接、未用技能影响性能、官方生产实现。
+
+### 8. 多源审计聚合与 OIDC 认证：skills.sh API 面（来源：skills.sh/docs/api + vercel.com/changelog/the-skills-sh-api-is-now-available + mr.technology/payloads/agent-skills-marketplace-2026 + skillful.sh/ecosystem-report 2026-05-07/2026-06-05/2026-07-03/2026-09-27 实拉，与 r297A #8 遥测排行榜合并增量——那条管排行机制，本条管审计聚合与认证）
+- **安全审计多源聚合**：一个技能一次拿到全部伙伴审计结果（Gen Agent Trust Hub/Socket/Snyk/Runlayer/ZeroLeaks）——"查一次抵五家，安全信息不分散"。
+- **API 认证=短命 token**：Vercel OIDC token 限定 team/project、自动轮换、无长期密钥可泄漏——"API 密钥设计成短命自动轮换，不设长期 secret"。
+- **类别规模事实**：AI Tool 类 232,115 技能（最丰富）；技能比 MCP 更专精（单类目=具体能力域）——"技能生态=长尾专精，MCP=通用接口"。
+- **四大市场格局**：Skills.sh / Claude Skills Registry / Hugging Face Skills Hub / Microsoft Copilot Studio——"发布技能=决定进哪个市场"。
+- 提升层：工具。触发词：多源安全审计聚合、Gen Agent Trust Hub、OIDC 短命 token、自动轮换、无长期密钥、AI Tool 类、四大市场。
+
+### 9. Agent Plugins 1.0 与跨工具分发：GitHub 插件市场面（来源：github.blog/changelog/2026-08-12-agent-plugins-1-0-in-vs-code-copilot-cli-and-the-copilot-app + developer.microsoft.com/blog/awesome-github-copilot-just-got-a-website-and-a-learning-hub-and-plugins + tech.hub.ms/github-copilot/roundups/weekly-github-copilot-roundup-2026-08-17 2026-03-16/2026-08-12/2026-08-17 实拉，与 r297C #9 Copilot 运行时能力互补——那条管 agent 内部能力，本条管插件分发）
+- **Agent Plugins 1.0**（2026-08-12 GA）：spec 插件从市场安装，兼容客户端（VS Code/Copilot CLI/Copilot app）从**同一个包**发现 skills 和 MCP server 配置——"一个插件包=技能+MCP 配置，跨工具共享"；旧插件免迁移继续支持。
+- **Awesome Copilot 成默认市场**：175+ agents / 208+ skills / 48+ plugins；安装= `copilot plugin install <plugin-name>@awesome-copilot`——"市场命令化，默认预装"。
+- **GitHub agent apps**：Marketplace 安装的 agent 可进 issues 与 workflows——"agent 应用化，进得了 issue 就进得了自动化"。
+- **护栏模式**：allowlists + least privilege + PR-based review——"工具驱动工作流的安全护栏三件套"。
+- 提升层：工具。触发词：Agent Plugins 1.0、跨工具共享包、skills+MCP 配置同包、Awesome Copilot、plugin install 命令、agent apps 进 issue、allowlists、least privilege、PR review。
+
+### 10. 并行全解析与条件工具执行：deeplearning 工具调用纪律面（来源：ailearnings.in/blog/tool-use-and-function-calling + theneuralbase.com/function-calling/learn/intermediate + techjunkgigs.com/tool-calling-in-ai-agents 2026-03-10/2026-05-04/2026-05-14 实拉，与 §工具循环终止条件互补——那条管何时停，本条管怎么执行）
+- **同一响应全部工具调用执行完再进下一轮**：并行 tool calls 必须全部 resolve 后再发起下一次 LLM 调用——"并行调用不逐个回，一次全做完再继续"。
+- **条件工具执行**：基于模型 tool_call 响应**决定是否真的调用**，不盲目执行模型建议的一切——"模型建议≠必须执行，代码层有最终决定权"。
+- **schema description 精度**：描述做什么/何时用/返回什么——"描述质量决定调用质量"。
+- **工具函数 try/except+描述性错误**：包裹每个工具函数，返回描述性错误——"错误可读才可修"。
+- 提升层：工作流。触发词：并行全解析、全部执行完再下一轮、条件工具执行、不盲信 tool_call、schema description 精度、try/except 工具函数。
