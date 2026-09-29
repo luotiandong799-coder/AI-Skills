@@ -13730,3 +13730,40 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 
 ### Agent 数据合规要点
 **法律依据文档化（合法利益三阶平衡测试记录）；同意=肯定动作（预勾选不算），对 agent 脆弱因 scope 中途漂移**；**对话是个人数据：transcript 含可识别元素——保留策略按工作区可配默认应用，transcripts/embeddings/聚合指标不同保留期**；**删除=有效删除非逻辑删除+留文档痕迹**；**记忆四义务：法律依据/透明（告诉记住什么记多久为什么）/擦除（所有存储层含向量索引真删）/最小化（存必需不存全 transcript）**；**function creep：agent 聚合重组多源个人数据超原目的（香港 PDPO 重点）；中国《生成式 AI 办法》第 11 条训练数据来源合法+去标识化**。
+## r309B 函数调用与工具工程（来源：zylos/Cloudflare/Microsoft/OWASP 生态/未来AGI/EvalScope/Claude 官方/神经网络 2026 系列实拉）
+
+### 并行工具调用协议
+**frontier 全支持并行：模型单回合可发多个 tool_use 块——正确模式=抽取全部块→并行执行（asyncio.gather/Promise.all）→所有 tool_result 一次返回同一用户消息；拆分结果到独立消息=隐式教坏模型**；**量化：5-tool agent 串行 5×200ms=1s 纯工具延迟，并行=1 回合**；**"东京纽约天气"应同时两次 get_weather 而非两个回合**。
+
+### 工具税与 token 开销量化
+**常见 5-15 MCP servers=100-300 工具；每轮全量加载 schema=50-140K tokens、启动更慢、超 30-50 可见工具选择精度下降、部分 provider 128 工具硬拒绝**；**工具定义开销：OpenAI function calling ~120-200/请求、Anthropic tool use 313-346/请求、Structured Outputs ~50（仅 schema）**；**Anthropic：加载 3-5 个按需工具常省 85%+**。判据：工具列表是每次请求的固定税——工具数涨一倍税涨一倍。
+
+### 渐进工具披露
+**三种实现：①deferred tools（只发名字不发定义，首轮可能需要的加载，可能整会话用不到的延迟）；②搜索式懒加载（单一 ToolSearch 原语替代 eager 列表，系统提示只列搜索原语+工具名/类别短索引；搜索结果 schema 保留在上下文本会话其余部分重复使用不再搜）；③文件系统发现（模型原生导航目录树，按服务/域分组）；④intent-based bundles**；**实测：77,000→8,700 tokens（85%↓），精度 Opus 4: 49%→74%（更少可见工具=更准选择）**。判据：工具税解法=延迟披露不是删工具。
+
+### Code Mode 编译工作流
+**整个 API 以约 1,000 tokens 固定 footprint 给 agent 无论多少端点；Cloudflare API 2,500+ 端点 Code Mode 降 99.9% tokens（等价 MCP 无 Code Mode=117 万 tokens 超上下文窗口）**；**Bifrost 网关编译工具操作 token 成本降 92.8%**；**模式：让模型写代码链式调用 API 胜过每步来回 tool call**。判据：工具集合大到 flat MCP 不可行时，代码即工具面。
+
+### 工具调用失败四模式与参数幻觉
+**四失败模式：错工具（描述重叠/无何时优先指导）/不调工具（系统提示未要求该类用工具）/畸形参数（schema 不清/描述无示例）/无限循环（无停止条件/工具错误当"再试"）**；**参数幻觉最常见：结构合法但值编造（2025-13-45/不存在的 user ID/枚举外值）——JSON 解析过，API 拒绝或更糟接受返回错数据**；**幻觉工具名（Type 4）：调用未注册工具——正确响应=结构化错误帮模型自纠，非通用异常**。判据：多数失败根因在 schema 与描述层。
+
+### 工具环境不可靠与可靠性复合
+**首次工具调用失败后动作：重试同一工具占 44-76% 轨迹，直接终止 <12%；高重试率与整体准确率弱相关——重试不必然有效，盲重试是默认失败行为**；**可靠性复合：单工具 85-90% 成功，10 步流程降到 35%**；**7 大可靠性威胁：工具错误/模型拒绝/无限循环/上下文溢出/参数幻觉/错误工具/恢复不当**。判据：工具环境不可靠是常态——评估必须含失败注入。
+
+### 工具契约与可靠性清单
+**工具契约：窄工具名（单一职责）、严格 JSON Schema、additionalProperties:false、闭集用 enum**；**服务端验证：执行前参数校验**；**错误与重试：结构化错误类、有界重试策略、显式 retry_after_ms**；**写操作：每个副作用操作配幂等键**；**schema 标记仅真必需字段 required；enum 防幻觉输入**。
+
+### 错误恢复分型
+**瞬时错误退避重试/无效输入错误带上下文路由回模型/致命错误立即 halt——90% 生产事故归四类**；**schema 松紧实测：松散 14% 失败，紧枚举/日期格式/受限字段类型降到 2.1%**；**MCP 错误语义二分：协议级错误（JSON-RPC error：服务端失败）vs 工具级错误（正常结果+isError:true：预期领域失败）——区分对恢复决策重要**；**MCP server：错误返回可操作消息绝不返回 stack trace；stdio 上参数可直通命令执行——验证约束每个输入绝不插值进 shell/SQL/路径**。
+
+### 工具路由
+**Semantic Router：嵌入式 mmBERT（~130MB）分类 prompt 对照 YAML 描述——无关键词无正则真 embeddings；替代"50 工具我该用哪个"的 LLM 自问**；**确定性编排：Conductor（YAML+Jinja2，"first matching condition wins, no tokens spent"）——结构已知分叉用状态条件零 token 可复现；唯一无法从状态知道的分叉做一个约束模型调用返回固定集标签（escape hatch 非 agent loop）**；**Switchcraft 两阶段：预测正确模型集合+成本感知选择（最低档案成本）**。判据：能确定路由就不花 token 让模型选。
+
+### 工具调用评估四层与工具数量衰减
+**四层评估：L1 工具选择（function_name_match/F1+irrelevance 桶）；L2 参数提取（schema 合法+语义正确）；L3 结果利用（Groundedness+ContextAdherence 以工具结果为上下文）**；**四步契约含"调或不调"（irrelevance precision/recall on 10-15% no-call slice——正确安静是能力）**；**指标：tool_call_f1（决策 F1——该调不调/该不调乱调=智能第一阈值）；schema_accuracy（低=幻觉参数致崩溃）**；**工具数量衰减：>50 工具后精度悬崖（BFCL v4：Opus 4.1 70.36%/GPT-5 59.22%）**；**TRAJECT-Bench：轨迹级诊断（工具选对/参数填准/序列依赖满足）**。
+
+### 工具循环终止多层守卫
+**max_iterations=步骤计数器非超时；框架默认：OpenAI max_turns=10、CrewAI max_iter=20**；**多层守卫：硬 max_steps+成本/墙钟预算+重复检测（同工具同参数 2-3 次连续=卡住停止报告）**；**状态机重构：AWAITING_APPROVAL（工具请求需人=停这，可停数天因为状态是行不是栈帧）/DONE/FAILED（与 DONE 区分完成与放弃）**；**每 guard 收尾相同：stop, record why, return partial progress marked incomplete never success**；**每回合最大工具调用数防失控并行；无 tool_calls 即返回**。判据：循环终结是代码硬边界不是提示词叮嘱。
+
+### 工具描述工程
+**好描述回答三问：做什么（动作+资源）/何时用（触发条件）/不做什么（排除混淆 case）**；**命名：verb_noun snake_case；跨服务命名空间前缀（github_list_prs）——工具库增长选择无歧义**；**MCP schema 四组件：name/description/inputSchema（JSON Schema 关键词非文本描述）/annotations（read-only/destructive——几乎总缺失）**；**工具集合设计：描述重叠致模型混淆——合理指南 10-20 工具，更多用命名空间分组**；**描述=AI-facing 接口：含约束+边界声明（"will not provide any other information"）；响应只返回高信号信息语义稳定**。
