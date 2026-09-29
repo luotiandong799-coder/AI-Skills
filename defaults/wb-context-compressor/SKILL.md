@@ -257,3 +257,40 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 
 ### PKM 反固定 512-token 块 + raw/wiki/output 目录法
 **笔记有结构：用 heading-aware chunking（一个 H2/H3 节+列表项=一个块），不要固定 512 token**；Karpathy 方法：**CLAUDE.md=每会话自动读的"大脑"（vault 规则），raw/（不可变源文档）+ wiki/（LLM 生成维护页）+ output/（查询结果）分目录**；未整理笔记造成"上下文污染"。判据：**本地知识库的检索质量先靠分块策略，再靠检索算法**。
+## r307A RAG 检索与生成深度工程（来源：aiworkflowlab 2026-05-03 + nvidia nemo 2026-09-16 + arXiv 2604.01733 + AWS 2026-09-14 + futureagi 2026-05-14 实拉）
+
+### 混合检索三阶段管线
+**并行双路召回（BM25 top-50/100 + dense top-50/100）→ Reciprocal Rank Fusion 纯排名融合（无视分数不可比）→ cross-encoder 联合打分取 top-5/10**；**BM25 靠 IDF/词频饱和/长度归一化补 embedding 精确匹配短板（SKU/法条引用/罕见词/编号）**；纯向量检索在精确词查询上必然漏，混合是生产基线。
+
+### RAG 评估指标族
+**检索质量：Recall@k/MRR（首个相关位置）/nDCG（多级相关排序）**；**RAGAS：context_precision/context_recall/context_relevance/context_entity_recall + 生成侧 faithfulness/answer_relevancy**；配对 bootstrap 显著性检验；两阶段（混合+重排）Recall@5 0.816 大幅领先单阶段；BM25 在 text-and-table 文档上反超 SOTA 神经方法。评估分检索/生成两组，混在一起无法定位。
+
+### 分块策略光谱
+**语义切分：相邻句 embedding 相似度低于阈值=主题边界**；结构化切分按 headers/code fences/tables/lists 保原子单元；**adaptive chunking：shred（按分隔符递归切碎）→greedy merge（按 token 上限合并）消灭小碎片**；MDKeyChunker：LLM 单调用提取 metadata+语义 key+rolling key 跨 chunk 继承；元数据必须保留（否则无法可靠引用来源）。
+
+### 查询改写与 HyDE 家族
+**HyDE：LLM 生成假设文档→embedding→answer-to-answer 检索；事实错误的假设文档也提供信号**；**Reverse HyDE：索引期生成"它能回答的问题"，检索变 question-question 匹配**；**HyPE：索引期预计算假设 prompt 嵌入，零延迟**；Multi-HyDE 多视角不增 token；多轮 RAG 查询重构（改写/分解子查询/拼接最后轮）。
+
+### GraphRAG 双检索
+**摄入期 LLM 逐 chunk 提取实体+关系→Leiden 层级社区检测（比 Louvain 保证社区内连通）→每社区 LLM 生成 community report**；查询时 local（实体邻域）+ global（社区报告）；**索引成本 10-50x 标准 RAG**；适用关系遍历（合规/供应链/组织架构/综述），普通问答仍用 vanilla RAG。
+
+### Agentic RAG 三层
+**CRAG：评估器把 chunk 分 Correct/Ambiguous/Incorrect → 正常生成/知识精炼/重写+web 兜底（成本 +40-80%）**；**Self-RAG：生成期 reflection tokens——Retrieve/IsRel/IsSup/IsUse**；**Adaptive-RAG：难度分类器前置，简单事实直接答/中等单跳/复杂全 agentic；60-70% 生产查询是简单事实=跳过检索省钱**。共同点：把"检索好不好"从假设变显式判断再分支。
+
+### re-retrieval on failure
+**自检标记未支持声明→围绕它重写查询→再检索；2-3 次上限，超限拒答/升级**；无 re-retrieval 的系统首次漏检即输出幻觉；五种模式：单工具检索 agent（默认够用别升级）/分层 agent 分解（最高质量最高成本）。"检索一次猜一次"是生产反模式。
+
+### 引用验证
+**claim-level citation：每个 claim 映射 chunk ID；生成引用只是一半，验证是另一半**；**citation-shaped hallucination：输出 [Source 2] 但 Source 2 不支持——镀了层可信的壳**；VERA：Claude 3.5 68.3%→93.8%（错误率 -73%），数字事实 59%→94%；NLI entailed 检查（FLAN-T5/DeBERTa）只重生成未蕴含部分（cut hallucinated bridges -67%）；provenance metadata（URL/更新日期/作者/置信度）端到端可审计。
+
+### RAG 可观测性
+**embedding/retrieval/generation 三 spans 隔离检索与生成**；**抽样 5-10% 线上查询全 RAG 评测，七日均值 faithfulness<0.75 告警；任何基础设施变更前后跑 RAGAS**；**cohort drift：reranker 更新提升中位却伤长尾，按查询组隔离**；**索引漂移：加事实不删旧陈述，reindex 后过期信息仍浮现（旧新事实共存）**；golden eval set 定时跑检测 HNSW 质量退化。
+
+### 语义缓存
+**prompt caching（基础设施级复用同前缀计算，90% off）vs semantic caching（应用级相似问题直接返回旧答案跳推理，100% 省）**；**Neural LSH：SimHash on 降维 embedding（768D→128D、3 哈希、Hamming≤2）检测语义等价查询，71% 命中率**；40-80% 成本削减+15x 延迟；**guardrail 必须放在 cache 检索层之后（否则被绕过）**；RAGCache prefix-aware GDSF。
+
+### 生产架构
+**异步摄入：MQ（Kafka/RabbitMQ）解耦 embedding 与写入，batching+retry**；**多租户四模式：namespace（~10K 墙）→index per tenant（严格隔离开销大）→shared+filter（多小租户）→federated；起步 namespacing，10K 后迁混合**；webhooks first polling 兜底（cron 轮询必 429+数据旧）；**multi-vector embedding：chunk 直接 embedding + 3-5 个 LLM 生成"该 chunk 能回答的问题"嵌入桥接问答鸿沟**。
+
+### 多跳与可答性
+**92% RAG 系统多跳查询失败**；**answerability calibration（可答性校准）比检索覆盖更关键——检索到但不承认答不出是端到端主瓶颈**；query diversity 胜过异构检索器集成；多跳拆成子查询链每跳独立检索+验证。多跳失败先查拒答再查检索。
