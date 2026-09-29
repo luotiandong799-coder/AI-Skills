@@ -13414,3 +13414,25 @@ Make agent 可直接收发 PDF/图片/CSV（免 OCR）；Maia 能看 scenario �
 
 ### DeepSeek Harness 四模式 + 插件判据
 标准（完整编程 agent）/ PTC（模型写代码编排多次工具调用，十次来回并成一次执行）/ 极简（跑基准看裸实力：持久 bash+文件编辑器）/ 创造（内存试插件、热加载）；**建插件 vs 复制目录判据："会不会持续更新"+"会不会给别人"——两个否就复制目录，任一于是才建插件**。
+## r305B 评测纪律/RAG 管线/编排故障模式（来源：anthropic.com demystifying-evals 2026-01-09 全文 + tensoria 2026-05-15 + learn.microsoft.com magentic 2026-09-22 + businesstechnavigator 2026-05-03 + agentconn 2026-09-01 实拉）
+
+### Agent 评测 grader 纪律：评产物不评路径
+grader 类型：llm_rubric / state_check（环境终态）/ tool_calls / transcript 约束 / tracked_metrics；**outcome 是环境终态不是 agent 的话**（说"已订票"≠数据库有预订）；**别查特定工具调用顺序（太脆，agent 常找到评测设计者没预料的合法路径）——评产物不评路径**；多组件任务给部分学分；LLM judge 每维度独立评、信息不足返回 Unknown 防幻觉；与人类专家校准。
+
+### eval 陷阱清单 + saturation + eval-driven development
+Opus 4.5 CORE-Bench 42%→95%：修复 rigid grading（惩罚 96.12 vs 期望 96.124991）、歧义 spec、不可复现随机任务；METR：任务要求优化到分数阈值但评分要求超过阈值（惩罚照指令做的模型）；**eval saturation：SWE-Bench 30%→80% 接近饱和，大能力提升只显示为小分数增长**；读 transcripts 验证失败是否公平；**eval-driven development：先建 eval 定义计划能力再等 agent 达成，capability evals 低通过率让模型进步可见**；grader 防绕过（通过必须真解决问题）；dedicated 团队管基建+领域专家贡献任务（PM/客服可用 Claude Code 以 PR 形式贡献 eval）；自动化 eval 只是全貌一角（+生产监控/用户反馈/A-B/人工审阅）。
+
+### RAG 生产管线：RRF+精排两阶段
+粗排（dense+BM25，快、管"别漏"）→ RRF（k=60）融合 → 精排（cross-encoder 重排 top 100-150，管"别错"）→ top 5-10 给 LLM；精排 +10-30% 精度、最高 ROI 步骤；pgvector 单库同时向量+全文（免单独向量库）。
+
+### Magentic-One + DAG Plan & Execute + routing 归类 agent
+Magentic-One：manager 按演化上下文/进度/能力选下一个 agent，维护共享上下文；DAG Plan & Execute：Planner 前置生成执行图+Executor 派发+**Replanner 条件变化时调整（计划与执行分离、可并行、可恢复）**；**routing 本身是认知任务应属于 agent 而非编排核心**（分类器返回类型化结果，可测试可版本化）；supervisor+worker 最小清单：单决策所有者、外部调用全走该 agent、每条 job 一个 trace。
+
+### 两故障模式：幻觉循环与工具风暴
+**幻觉循环：agent 出错→观察到错误→用导致错误的同一推理修错→无限循环直到预算或窗口耗尽**，需独立 Sovereign Auditor 打断；工具风暴：不确定时同时调所有工具→自我 DDoS；修法：审计者与执行者分离+调用速率限制+每工具白名单。
+
+### 结构化输出三层防御
+单独 "respond in JSON" 旗舰模型 ~5% 失败率（1 万条/天=500 条坏）；三层：原生 structured-output + schema-in-prompt 带工作示例 + validate-and-retry 兜底；strict mode 编译 schema 成状态机解码时掩码非法 token；嵌套 ≤2-3 层；reasoning 字段放 answer 前；字段描述模型可见。判据：**解析方必须有 validate-and-retry 层**。
+
+### GitHub agent 生态：并行 agents 与技能蒸馏
+Orca ADE（59k stars）：并行 25+ coding agents 跑 worktrees；scientific-agent-skills（41k）：165 个验证技能、190k 科学家用；AREX-Skill：从 1,000+ 仓库蒸馏 5,000+ 可执行技能（仓库知识→coding agent 直接可用的操作知识）。判据：**技能库来源从手工写转向从优秀仓库蒸馏+验证**。

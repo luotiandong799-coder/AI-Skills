@@ -230,3 +230,16 @@ Chat 节点 send a message and wait for response：暂停执行等用户回复�
 
 ### Langflow Memory bases + 多模态检索
 1.10 Memory bases 长期语义记忆+可配置向量库后端；Dify v1.11 知识库统一语义空间（文图同检索同利用，agent 检索上下文不再限于文本）。判据：**跨 flow 共享记忆优先用平台级记忆底座，不自己堆向量库**。
+## r305B context rot/compaction/记忆治理（来源：zylos 2026-04-19 + platform.claude.com 2026-06-24 + data-gate 2026-07-19 + fordelstudios 2026-09-02 实拉）
+
+### context rot：窗口没满性能已降
+2025 跨 18 个前沿模型研究：噪音累积使每个模型性能可测下降（"还能塞下"≠"还该塞"）；上下文工程可把同模型任务完成率从 ~30% 提到 ~90%。判据：**按任务步骤组装窗口，不 append 一切**。
+
+### Claude Compaction 机制
+server-side compaction 是长对话推荐策略：接近上限自动摘要旧上下文（`compact_20260112` 加进 context_management.edits），压缩后回 ~2-3k tokens；**Claude Code 四层压缩固定顺序触发、前一层能解决就不启动后一层**：HISTORY_SNIP→CACHED_MICROCOMPACT→CONTEXT_COLLAPSE→REACTIVE_COMPACT；**tool-result clearing：丢旧的可重新取回的工具结果、保留"调用发生过"记录**；1M 窗口当保险：~120k 重置保持全质量。判据：**工具结果按"能否重新取回"分层，能重取的旧结果只留调用记录**。
+
+### 记忆三存储 + 遗忘治理
+episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤检索不只相似度；value-scored forgetting：按新颖性/相关性/时效打分修剪（优于无限增长与滑窗淘汰）；定期记忆整合（episodes→semantic）；Mem0 报告 90% token 减少 vs 全上下文、Letta ~83.2% LongMemEval；HLTM（LinkedIn）：统计用户问题分布调"下次提取什么"；Anthropic Managed Memory（2026-04-23 beta）：文件存储+per-write 审计+跨会话共享，Rakuten 97% 错误率降——**不再每会话重学教训**。
+
+### task-aware retrieval：按任务类型路由
+事实查询→向量库紧相似度阈值；推理→知识图谱；工具调用→只加载相关工具定义（不是全部工具）；查询改写+元数据过滤；cached input $0.30 vs uncached $3（Manus 报告，10 倍价差）——cache hit rate 是关键成本变量。
