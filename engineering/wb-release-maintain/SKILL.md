@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.23.0
+version: 1.24.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -255,3 +255,13 @@ sources:
 - 原文（升级告警）：自 2026.9.5 起原生 Codex 登录不再供给 runtime-only 的 `openai:default` profile；若该 OAuth profile 仍被声明但不在凭据库内，`openclaw doctor --fix`、Doctor lint、Gateway 启动**都会告警并给出导入命令**，但"**The warning does not copy credentials or block the update.**"；同类：`AUTH_PROFILE_MIGRATION_REQUIRED` "**blocks only those providers**, including their auth aliases; unrelated provider auth remains available."
 - **落地动作**：① 写移除公告时同时写三件事——**移除什么 / 用什么替代 / 存量怎么迁**（"new and migrated setups"两个词一个都不能少）；只说"已移除"不给迁移路径的公告等于把成本转嫁给用户。② 升级期的兼容告警设计成**提示 + 给命令 + 不阻断**：不代为复制/迁移凭据（越权且不可逆），也不卡住更新；③ **迁移阻断要按 provider 收敛**——迁移中只冻结受影响的提供方及其别名，不要让一个 provider 的迁移态株连全部凭据。
 - 提升层：工作流/工具。触发词：移除公告、迁移路径、imsg、升级告警不阻断、doctor --fix、AUTH_PROFILE_MIGRATION_REQUIRED、只阻断受影响提供方。
+
+## 依赖升级有「阶梯硬上限」：bundled 依赖跨多个 minor 跃迁必须走声明的 staged 逐级路径，跳级不受支持（来源：Dify 1.17.1 GitHub release WARNING 2026-09-29 r336-Q-C gh api 实拉；与 §破坏面评估 互补——那条管"升不升"，本条管"跃迁跨度本身有硬上限"）
+- 原文：自托管用 bundled Weaviate 者，升级到 1.17.1 前必须完成**手动分阶段（staged）升级**；Weaviate `1.27.0→1.39.2` **跨 12 个 minor，跳过 minors 不受支持**；「Pulling and restarting can **silently and permanently break** vector search」。
+- 判据：① **跨多个 minor 的跃迁不是自由跳板**——很多 bundled 依赖只声明对相邻 minor 的兼容，跳级意味着中间每一级的 schema 迁移脚本都没跑，存量数据停在旧格式；② **朴素「拉新版 + 重启」是静默且永久损坏存量的路径**——它不报错，只是让某些功能（如向量检索）悄无声息地坏掉，且不可逆；③ 这类无声失败模式必须写成升级说明**顶部显式警告**，不能藏在 changelog 中段；④ 升级前先问"目标版本相对当前版本跨了几个 minor、中间每级有没有必须依次跑的迁移"——跨级多就走 staged 逐级，别押跳级成功。
+- 提升层：工作流/工具。触发词：依赖升级阶梯、staged 逐级、跨 minor 跳级不受支持、静默永久损坏、朴素重启即损坏。
+
+## 破坏面预检可以做成「产品内版本化规则集」：升级时对存量自动检测，检测器自身须容错（来源：n8n@2.40.0「v3 breaking change rule for the storage directory rename」#38423 + n8n@2.41.0「Keep breaking change detection running when a rule throws」#38738 2026-09-29 r336-Q-C gh api 实拉；与 §破坏面评估 互补——那条是人工查，本条是让检测自动化、版本化、可容错）
+- 原文：n8n 把破坏性变更检测做成**版本化规则集**（v3 登记 storage 目录重命名这类破坏面），升级流程中对存量实例执行；且检测器要求**单条规则抛错不中断其余规则扫描**；弃用项就地警告（deprecated node / env var）而非等运行报错。
+- 判据：① 破坏性变更检测**按版本登记**比"一个全局开关"更稳——每个大版本引入的破坏面写成对应版本的规则，升级到哪版就跑哪版的规则，不会漏也不会误伤旧实例；② **检测器必须容错**：一条规则因为边界数据抛错，不该拖垮整个扫描，否则一个坏规则就能让所有破坏面检查失效；③ 弃用要**就地警告**（在声明/加载处提示），而不是等运行时炸了才发现某人还在用被弃用的节点/环境变量；④ 对自研系统：升级脚本里把"破坏性变更"写成**带版本号的规则集 + 逐条独立 try**，比散落在代码里的 if 更可审计、可回退。
+- 提升层：工作流/工具。触发词：破坏面预检、版本化规则集、单规则容错、弃用就地警告、breaking change detection。
