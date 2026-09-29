@@ -1636,3 +1636,25 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - 判据：① **撤销不是二值（有效/失效），而是一个事件时点**：只标"已失陷"会把失陷前合法产生的全部结论一并作废，等于把一次事件放大成全量回滚；正确形态是**带上失陷时点，时点前取证/验证通过的结论持续合法，时点后新消费即失效**；② 因此失效模型至少有两型——**周期型**（扫描器版本 + 重扫周期，见 §静态扫描有效期）与**事件型**（失陷时点切片，本条）；只做周期型会在事件发生时留下一个"还没到重扫日"的窗口，只做事件型则没有日常衰减的兜底；③ **"能不能拿到最新材料"本身是要验证的属性**：攻击者不必破解签名，只要让验证方持续拿到旧密钥/旧索引就能让过期结论一直通过；验证流程必须显式检查材料新鲜度（能否取到更新、取到的是不是最新），而不是只检查签名对不对；④ 与 §采集结论三态（r321B）分工：那条管采集结论的**类型**；本条管已成立结论的**失效边界**。
 - 判非：Qoder r349-Q-C C2 同向，WB 本轮独立实拉取证并补 Freshness 新鲜度攻击面 → 以本条为准；B3「迁移元数据 CI 硬闸」须引 Activepieces 工程手册页（本轮 curl 000 未达）→ 证据未达，不落。
 - 提升层：可观测性 / 安全边界。触发词：失陷时点、compromise time、事件型失效、周期型失效、旧签名继续合法、新鲜度攻击、喂旧材料、密钥更新可达性。
+
+
+## §r322A 扫描覆盖三轴与证据可达性时效（第三个时钟）（2026-09-30 r322A WB 独立实拉）
+
+### 1. 扫描覆盖坐标系：输入格式 × 被 agent 读取的字段 × 结构深度/来源类型
+- **实证**（独立 curl 实拉 `api.github.com/repos/cisco-ai-defense/skill-scanner/issues/229`，200/14,129B）：issue 标题逐字 "Plaintext injection/exfiltration signatures (YARA, PROMPT_INJECTION_*, ACTIVE_*, atr pack) match the SKILL.md body only, not the frontmatter description"；正文："The identical plaintext payload moved into `description`, with an inert body, is never quoted or scored by any of them"（五类签名族只匹配 `---` 之后的 Markdown 正文）。
+- **判据**：库内已确立 `name+description` 是模型决定何时使用技能的**唯二读取字段**（ed/sa 写法条目），而实测**触发面恰是扫描最弱区**。安全结论的覆盖声明必须按三轴逐项标注「查了 / 没查」——① **输入格式**（可检/不可检，见 kb:29 打包字节码先拒收）；② **被 agent 读取的字段**（frontmatter 是否在扫描面内）；③ **结构深度与来源类型**（AST 嵌套层级、内置件 vs 社区/自定义件是否进枚举）。只声明「已扫描」= 零信息。
+- **落地动作**：引用任何扫描/审计结论前先问「它的签名跑在哪些文本上」；触发面文本（description）必须设**专项检测位**，不得默认被正文扫描覆盖。
+- 与 kb:29（格式轴）、kb:274（非布尔结论）、SKILL.md:493（扫描有效期）分工：格式 / 呈现 / 时效各管一面，本条管**扫描面的坐标系本身**。
+- 提升层：工具。触发词：扫描覆盖、触发面不在扫描面、frontmatter 检测位、覆盖坐标系。
+
+### 2. 第三个时钟：证据可达性时效 + 结论字段枚举完备性
+- **实证**（独立 curl 实拉 `api.skillhub.cn/api/v1/skills/dev-expert?namespace=indiv-ebandao`，200/3,094B）：`securityReports.keen` / `.sanbu` 的 `reportUrl` 是**带签名时效的外链**（`...?q-sign-algorithm=sha1&q-sign-time=1790707483;1822243483`），`status` 实测**只有 `benign` 一个取值**，`statusText:"安全，无风险"`。
+- **判据**：SKILL.md:493 管**周期型**失效（扫描器版本+重扫周期）、:497 管**事件型**失效（失陷时点切片），本条补**第三个时钟**——结论本身没过期，但**支撑它的证据先取不到**（签名 URL 过期后 `benign` 变为不可复核）；且**字段枚举不完备时「无风险」与「未覆盖」不可区分**。
+- **落地动作**：引用第三方报告时把报告快照本地留存，或改指内容哈希（SkillHub 签名对象已给 `content_hash(sha256)` / `package_md5` / `key_id:"skillhub-platform-v1"`）；验收第三方结论须同时记录「证据可达截止时点」与「该字段全部可能取值」。
+- 提升层：可观测性 / 安全边界。触发词：证据外链过期、签名时效 URL、字段枚举不完备、第三时钟。
+
+### 本轮判非（不落）
+- openclaw「不可检格式先拒收 `.pyc/.pyo/.pyd`」/「低置信发现从公开汇总隐藏」/「Risk level describes blast radius」：已落 kb:29 / kb:274 / 多处，重叠 >60%（本轮独立实拉 docs.openclaw.ai/clawhub/security-audits.md 200/5,974B 复核，结论同）。
+- Claude 企业版三态 pass/warn/fail 与「扫描不覆盖 Skills API / Console 上传」（Qoder r353-Q-A A1）：curl 取 `platform.claude.com/docs/en/agents-and-tools/agent-skills/enterprise.md` 得 200/447,830B 但为**文档壳**、正文 0 命中 ⇒ **WB 未独立复核，登记为待补证据，不落**。
+- n8n `security/run-security-audits`：实测 404「Page Not Found」⇒ **通道更正**；其「Official risky nodes = 仅内置节点」为 Qoder 转引，本轮不采信。
+- 扫描器基准数值（cisco `F1 32.92→47.73 / recall 19.88→31.43 / precision 99.16`）：原则已落（SKILL.md:493 检出率口径），实例数值不单立，作旁证留档。
