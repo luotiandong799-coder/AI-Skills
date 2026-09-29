@@ -220,3 +220,13 @@ Faithfulness=把答案拆句、LLM judge 逐句能否从检索上下文推断，
 
 ### NVIDIA 沙箱强制三件套 + 加固容器参数
 间接提示注入是执行用户级权限工具的 AI 编码 agent 的首要威胁。OS 级强制：阻断未知网络出口 / 禁止工作区外写 / 禁止写 agent 配置扩展文件；推荐：沙箱整个 IDE+spawned functions、虚拟化分离沙箱内核与宿主内核、禁读工作区外文件。加固容器：`--cap-drop ALL --security-opt no-new-privileges --security-opt seccomp=... --read-only --tmpfs /tmp:rw,noexec`；强隔离选 gVisor 或 Firecracker microVM。
+## r305A Agentic RAG/人机环/多模态检索（来源：dify.ai 2026-01-06+2026-08-27 + docs.n8n.io 2026-05-27+2026-09-24 + langflow.org 1.10 2026-06-09 实拉）
+
+### Agentic RAG：迭代检索而非一次性 retrieve-then-generate
+agent 迭代分析意图、选工具选源、重写查询，内置策略支持重试/细化/回退（Function Calling 或 ReAct）；Dify Agent 节点可配 Allowed tools 列表——列表非空时只允许列表内工具。判据：**Agentic RAG 面向"问题需要多步检索才能答"的场景，单跳查询仍用普通 RAG 更省**；agent 化检索时先锁白名单工具。
+
+### 人机环两形态：wait-for-response Action vs 审批
+Chat 节点 send a message and wait for response：暂停执行等用户回复（自由文本或内联审批按钮），可作确定性步骤或 AI Agent 工具；要小模型"先查再答"用 Force Tool Call on First Iteration（首轮强制调工具）。判据：**确定性审批流程用 wait-for-response 挂起；需要引导型查证用首轮强制工具调用**。
+
+### Langflow Memory bases + 多模态检索
+1.10 Memory bases 长期语义记忆+可配置向量库后端；Dify v1.11 知识库统一语义空间（文图同检索同利用，agent 检索上下文不再限于文本）。判据：**跨 flow 共享记忆优先用平台级记忆底座，不自己堆向量库**。

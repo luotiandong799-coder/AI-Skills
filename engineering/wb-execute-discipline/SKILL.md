@@ -13396,3 +13396,21 @@ assumption propagation：早期误解级联贯穿后续所有工作，产出内�
 
 ### 动态示例检索 + reasoning 模型内化 CoT 判断
 few-shot 示例不写死，从知识库动态检索最相关示例（relation-aware example retrieval）；**reasoning 模型内化 CoT 后，可见 CoT prompt 可能浪费 token 甚至扭曲输出——先 eval 再假设**；few-shot CoT=2-5 个完整"问题+推理链+答案"示例教推理模式+输出格式。
+## r305A 工具契约与平台新能力：场景即工具/托管认证/A2A/技能治理（来源：help.make.com 2026-07-20 + pipedream.com 2026-09-23 + langflow.org 1.11 2026-07-22 + 腾讯云 2026-08-09 + console.anthropic.com 2026-03-12 + clawdocs.org 2026-07-08 实拉）
+
+### 场景即工具：既有自动化当 agent 工具时先定义输出契约
+Make AI Agent 加工具=把现有 scenario 挂为 Call a scenario；**要返回数据给 agent，场景必须以 Return outputs 模块结束**——场景输出结构就是工具 schema。判据：**接"无 Return outputs"的既有自动化当工具，调了也拿不到结果；先定义工具输出再接入**。
+
+### 托管认证型 MCP server：agent 用第三方服务免自建 OAuth
+Pipedream Connect SDK 抽象 OAuth/刷新/用户级权限，10,000+ 工具跨 3,000+ API，agent 可代表终端用户执行；Pipedream 自跑 MCP server 覆盖全部连接 apps，LangChain/CrewAI 可直接指向它。判据：**"agent 用第三方服务"优先托管认证型 MCP；报错排查用 Debug with AI 而不是从头看日志**。
+
+### 平台级新能力速查：多模态 agent 文件直收直出；Maia 类场景内 AI；A2A 协议默认关；Policies guarded tools
+Make agent 可直接收发 PDF/图片/CSV（免 OCR）；Maia 能看 scenario 执行日志解释错误；Langflow 1.11 A2A 协议支持发布 flow 供其他 agent 调用（默认关，环境变量启用）；**Policies 组件把自然语言业务规则变成可执行 guard 包在工具外（guarded tools，调用前检查）——业务限制要"每次必然生效"就用 Policies 包工具，别写进 prompt 指望模型记住**。
+
+### 技能治理三节：生态规模/硬上限/审批回滚
+- **生态数据**：全球 AI Agent 工具 44 万+、AI Skill 近 30 万、日均新增 1300+；SkillHub 月下载 1700 万+累计 6000 万+；SkillPay 让 skills 可定价交易——技能经济已落地。
+- **技能硬上限**：SKILL.md 正文 <500 行（细节放单独文件）；description ≤1024 字符、name ≤64 字符（小写数字连字符、禁 XML 标签、禁保留词 anthropic/claude）；available_skills 块=上下文 2%（fallback 16000 字符），约 34-36 个 skills 截断——**技能库超 35 个要做分层或聚合**；欠触发→description 加细节关键词；过触发→加 negative triggers；避免挂载未使用 skills。
+- **Skill Workshop 治理**：OpenClaw v2026.6.1 起 agents 不能直接写 SKILL.md，技能先过 review queue 人工批准才激活，带审计+安全扫描+hash 绑定+回滚——**技能变更走审批+版本回滚，跟代码变更同权**。
+
+### DeepSeek Harness 四模式 + 插件判据
+标准（完整编程 agent）/ PTC（模型写代码编排多次工具调用，十次来回并成一次执行）/ 极简（跑基准看裸实力：持久 bash+文件编辑器）/ 创造（内存试插件、热加载）；**建插件 vs 复制目录判据："会不会持续更新"+"会不会给别人"——两个否就复制目录，任一于是才建插件**。
