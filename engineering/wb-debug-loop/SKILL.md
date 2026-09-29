@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕
-version: 1.69.0
+version: 1.70.0
 agent_created: true
 ---
 
@@ -492,3 +492,8 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 原文："Partial executions are manual executions that only run a subset of your workflow nodes."；报错一 "**The destination node is not connected to any trigger. Partial executions need a trigger.**"（手动含部分执行会尽量模拟生产，因此仍要求 trigger 节点描述执行时机）；报错二 "Please execute the whole workflow, rather than just the node. (**Existing execution data is too large.**)" —— "Partial executions involve **sending data and workflow logic to the n8n backend** in a way that isn't required for full executions."；官方绕法用 limit 节点压小输出。
 - 判据：① **"只跑一段"不等于"少跑"**——部分执行要把数据与逻辑一起回传后端，数据越大越跑不动，局部调试的成本曲线与整体执行相反；遇到"局部跑不了"先怀疑**载荷**而不是怀疑环境；② 即使只验证中间一个节点，也要满足**入口契约**（有 trigger），本地复现缺入口是最常见的假故障；③ 收缩输出（limit / 取样）是让局部调试可行的标准手段，但**它是调试期装置，验证完要撤**（与 §探针要能一次撤干净 同向）。
 - 提升层：工具/工作流。触发词：partial execution、部分执行、需要 trigger、数据过大只能整跑、limit 节点、局部调试更贵。
+
+## 多分支执行顺序不是逻辑决定的，是「创建时期版本 + 画布空间位置」决定的：结果顺序不对先查这两样（来源：docs.n8n.io《Understand execution order》2026-09-29 r296-A 独立 curl 取 .md 原文 1,835B 核验）
+- 原文："For workflows created before n8n 1.0: n8n executes the first node of each branch, then the second node of each branch, and so on. — For workflows created from n8n 1.0: executes each branch in turn, completing one branch before starting another. n8n orders the branches based on their position on the canvas, **from topmost to bottommost. If two branches are at the same height, the leftmost branch executes first.**"
+- 判据：① **行为被"创建时的版本"冻结**——同一份工作流在不同时期创建会有两套执行语义（逐层轮转 vs 逐分支跑完），而这不是工作流里任何一处配置写出来的；排障"分支执行顺序不对"时，第一问是**这份工作流是什么时候建的/用的哪个版本**，第二问才是逻辑本身；② **空间布局即隐式语义**——分支次序按画布**上下位置**排，同高再看左右，意味着**拖动一下节点就改变了执行顺序**而 diff 里看不到任何变化；凡"可视化编排"类系统，都要假设存在这类"布局即配置"的隐式输入，改布局等于改代码；③ 这类隐式决定的顺序应**显式化可查**（官方给了工作流设置项可改 execution order），验收时把它当成和代码同级的配置项列出，而不是当作平台内部细节。
+- 提升层：工作流/工具。触发词：多分支执行顺序、画布位置决定顺序、1.0 前后语义差异、topmost to bottommost、布局即配置、execution order 设置项。

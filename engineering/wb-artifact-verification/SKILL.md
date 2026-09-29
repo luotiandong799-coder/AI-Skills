@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.58.0
+version: 2.59.0
 agent_created: true
 ---
 
@@ -485,3 +485,18 @@ Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 - 原文（Commit after each module）："By default, Make commits data only when the entire scenario finishes successfully. Enable this setting to commit data after each module runs instead. — If enabled, data **is committed right away and cannot be restored** in the case of an error. — If disabled, **no commit occurs until operations are executed for all modules**."；"Use it when you need to ensure data is saved incrementally - for example, if a later module fails, data processed by earlier modules is still committed **rather than rolled back**."（另有 Commit trigger last 默认开启：提交阶段跳过触发器、最后才处理它。）
 - 判据：① **提交粒度与回滚能力是严格互换的，没有两全**——整场景提交 = 全有或全无（出错干净回滚，但长链路白跑）；逐模块提交 = 进度不丢（前段成果保住），但**已提交的部分无法撤销**，错误发生后系统里留下的是半截状态；选哪个取决于"半截状态能不能被下游容忍"，容忍不了就别开；② **开了细粒度提交就必须配补偿路径**——既然不能回滚，就要有反向操作或幂等重放，否则"部分成功"会变成手工修数据；③ 提交顺序也是可配置的（触发器默认最后提交），**顺序错了会造成"下游已提交而上游未提交"的反向不一致**，改这两个开关时都要跑一次失败注入验证最终状态。
 - 提升层：工作流/工具。触发词：Commit after each module、逐模块提交、不能回滚、提交粒度、部分成功、Commit trigger last、提交顺序。
+
+## 全局覆盖值的存活期与传播面必须显式开启：默认只在内存里、不跨进程、重启即丢（来源：docs.n8n.io《Credential overwrites》2026-09-29 r296-A 独立 curl 取 .md 原文 5,099B 核验；与 §2.54.0 SecretRef 禁 OAuth 互补——那条管"可变状态不跨存储分裂"，本条管"一份覆盖值到底活多久、传到哪"）
+- 原文："When enabled, n8n stores the encrypted overwrites in the `settings` table and broadcasts a `reload-overwrite-credentials` event so workers reload the latest values. **When disabled, overwrites remain in memory on the process that loaded them and n8n doesn't propagate them to workers or preserve them across restarts.**"
+- 判据：① **"配上了"与"在所有执行单元都生效"是两件事**——默认状态下覆盖值只存在于加载它的那个进程，多实例/队列模式下其他 worker 完全看不到；验收任何"全局注入"类配置，必须回答三个问题：存在哪（内存/库）、谁会收到变更通知、重启后还在不在；② **传播靠的是显式广播事件而不是共享存储**——没有广播，即使写进了库，已经跑着的进程也不会重读；所以"改了配置"要连同"通知谁重读"一起验证；③ **父子继承会放大影响面**："Credentials can extend other credentials… You can set parameters on the parent (`googleOAuth2Api`) and all child credentials will use them."——在父级改一个覆盖值，等于静默改掉一整族子凭据，改前先枚举继承树。
+- 提升层：工具/工作流。触发词：CREDENTIALS_OVERWRITE_PERSISTENCE、覆盖值内存态、worker 不传播、重启即丢、reload 广播、父凭据继承。
+
+## 无鉴权的注入端点自带「一次性门」：可被任意人调用一次，所以只允许一次（来源：docs.n8n.io《Credential overwrites》2026-09-29 r296-A 独立 curl 取 .md 原文核验；与 §2.37.0「默认值先可用、收紧从最高风险面起步」同向，本条给的是官方默认设计写法）
+- 原文："Optionally, set `CREDENTIALS_OVERWRITE_ENDPOINT_AUTH_TOKEN` to require a bearer token for accessing the endpoint."；"**Without an auth token, the endpoint can only be called once for security reasons.**"；官方对环境变量注入方式的自陈："This approach isn't recommended. **Environment variables aren't protected in n8n, so the data can leak to users.**"
+- 判据：① **"没配鉴权"不等于"随便用"，好的默认是一次性门**——端点没有身份校验时，把可用次数压到 1，把"无鉴权"的暴露窗口从"永久"压成"一次机会"；设计任何临时注入/引导端点时，鉴权缺失的补偿手段应该是**次数上限**而不是什么都不做；② **注入通道与读取通道的风险不同**——环境变量"不被 n8n 保护，会泄漏给用户"，说明"存在环境里"不等于"只有进程能看到"，凡是运行时可被读回的配置面都不能放密钥；③ 收紧要给出**推荐路径**（自定义 REST 端点 + bearer token）而不是只说"不推荐"，否则用户还是会用那条不安全的路。
+- 提升层：工具/安全边界。触发词：一次性端点、无鉴权只能调一次、CREDENTIALS_OVERWRITE_ENDPOINT、环境变量泄漏凭据、注入端点鉴权。
+
+## 留痕通道本身不能被多个写者共享：多进程追加同一个事件日志会交错损坏，且平台不会自动清理遗留文件（来源：docs.n8n.io《Stream logs to external systems》2026-09-29 r296-A 独立 curl 取 .md 原文 23,919B 核验；与 §Capability 12「留痕通道不能挂在被测对象上」互补——那条管"通道挂谁身上"，本条管"通道被几个写者共用"）
+- 原文："If multiple n8n processes share one writable volume … they **must not** write to the same event log file. Concurrent appends from multiple processes can **interleave or corrupt** the file, leading to **recovery failures and lost events**."；"n8n uses the configured path **verbatim** and doesn't append a process-type suffix, so **your orchestrator owns uniqueness** across processes."；"`N8N_EVENTBUS_LOGWRITER_MAXTOTALMESSAGESPERFILE` bounds how many lines n8n parses from a single event log file during recovery, so a corrupted file can't exhaust process memory."；"If a shared `n8nEventLog-worker.log` file already exists from a previous deployment, **quarantine it manually** before opting in. n8n doesn't auto-delete legacy files."
+- 判据：① **留痕通道的并发写者数是一等配置项**——日志/事件流一旦被多个进程追加，损坏的不是一条记录而是整个恢复链（交错写入 → 恢复失败 → 事件丢失），而丢的恰好是排障最需要的那批数据；水平扩容前先确认"每个执行单元有独立的留痕出口"；② **平台的兜底是"限损"不是"修好"**：设了唯一路径后平台**不再自动加后缀**（唯一性交给编排方），恢复时再给一个行数上限防内存被打爆——两层都是防止坏文件拖垮系统，而不是把事件找回来；所以唯一性必须由部署方保证，平台不会替你兜；③ **历史遗留文件要人工隔离**——平台不删旧文件，迁移到"每进程独立日志"时必须先手动搬走共享文件，否则新配置会读到一个已经被并发写坏的旧文件。
+- 提升层：可观测性/工具。触发词：事件日志并发追加、多进程共享日志、interleave corrupt、LOGWRITER_LOGFULLPATH、编排方保证唯一、遗留日志人工隔离。
