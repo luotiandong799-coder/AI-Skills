@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕
-version: 1.81.0
+version: 1.82.0
 agent_created: true
 ---
 
@@ -456,16 +456,8 @@ agent_created: true
 - 判据：① 故障分两族——**没跑起来**（配置/凭据/选型，有稳定原因码）与**跑了但失败**（服务端结果）；绝大多数被误判成"模型不行"的故障其实在第一族，先取原因码再动手；② 原因码是**对外契约不是日志文案**——要稳定、可枚举、可用完了还准，改动要走版本；③ **选择期与运行期必须共用同一套判定**（探针说可用、真跑却失败 = 两处语义漂移，属设计缺陷不是偶发）；④ `ok` 也要占一个码位，别用空值表示成功——空值无法区分"没检查"与"检查通过"（与 AV 2.44.0「未检查是独立结论值」同向）。
 - 提升层：工具/工作流。触发词：reasonCode、status bucket、稳定原因码、选择期运行期对齐、没发出调用、凭据不可用。
 
-## 局部调试未必比整体便宜：部分执行要满足入口契约，且数据一大反而只能整跑（来源：docs.n8n.io《Types of executions》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验）
-- 原文："Partial executions are manual executions that only run a subset of your workflow nodes."；报错一 "**The destination node is not connected to any trigger. Partial executions need a trigger.**"（手动含部分执行会尽量模拟生产，因此仍要求 trigger 节点描述执行时机）；报错二 "Please execute the whole workflow, rather than just the node. (**Existing execution data is too large.**)" —— "Partial executions involve **sending data and workflow logic to the n8n backend** in a way that isn't required for full executions."；官方绕法用 limit 节点压小输出。
-- 判据：① **"只跑一段"不等于"少跑"**——部分执行要把数据与逻辑一起回传后端，数据越大越跑不动，局部调试的成本曲线与整体执行相反；遇到"局部跑不了"先怀疑**载荷**而不是怀疑环境；② 即使只验证中间一个节点，也要满足**入口契约**（有 trigger），本地复现缺入口是最常见的假故障；③ 收缩输出（limit / 取样）是让局部调试可行的标准手段，但**它是调试期装置，验证完要撤**（与 §探针要能一次撤干净 同向）。
-- 提升层：工具/工作流。触发词：partial execution、部分执行、需要 trigger、数据过大只能整跑、limit 节点、局部调试更贵。
-
-## 多分支执行顺序不是逻辑决定的，是「创建时期版本 + 画布空间位置」决定的：结果顺序不对先查这两样（来源：docs.n8n.io《Understand execution order》2026-09-29 r296-A 独立 curl 取 .md 原文 1,835B 核验）
-- 原文："For workflows created before n8n 1.0: n8n executes the first node of each branch, then the second node of each branch, and so on. — For workflows created from n8n 1.0: executes each branch in turn, completing one branch before starting another. n8n orders the branches based on their position on the canvas, **from topmost to bottommost. If two branches are at the same height, the leftmost branch executes first.**"
-- 判据：① **行为被"创建时的版本"冻结**——同一份工作流在不同时期创建会有两套执行语义（逐层轮转 vs 逐分支跑完），而这不是工作流里任何一处配置写出来的；排障"分支执行顺序不对"时，第一问是**这份工作流是什么时候建的/用的哪个版本**，第二问才是逻辑本身；② **空间布局即隐式语义**——分支次序按画布**上下位置**排，同高再看左右，意味着**拖动一下节点就改变了执行顺序**而 diff 里看不到任何变化；凡"可视化编排"类系统，都要假设存在这类"布局即配置"的隐式输入，改布局等于改代码；③ 这类隐式决定的顺序应**显式化可查**（官方给了工作流设置项可改 execution order），验收时把它当成和代码同级的配置项列出，而不是当作平台内部细节。
-- 提升层：工作流/工具。触发词：多分支执行顺序、画布位置决定顺序、1.0 前后语义差异、topmost to bottommost、布局即配置、execution order 设置项。
-
+## 局部调试未必比整体便宜：部分执行要满足入口契约，且数据一大反而只能整跑（来源：docs.n8n.io《Types of executions》2026-09-29 r290-C 独立 curl（原文已下沉 references/knowledge-base.md §r325A）
+## 多分支执行顺序不是逻辑决定的，是「创建时期版本 + 画布空间位置」决定的：结果顺序不对先查这两样（来源：docs.n8n.io《Understand execution order》2026-0（原文已下沉 references/knowledge-base.md §r325A）
 ## 超时不是一个数：默认值随触发类型分档、可调上限随套餐分档，且超时后只保留「已成功步骤」的日志（来源：pipedream.com/docs/workflows/limits 2026-09-29 r296-C 独立 curl 取 .md 原文核验；与 §2.41.0 容量上限二分 互补——那条管"能不能提升"，本条管"同一平台里超时有几套默认值"）
 - 原文："HTTP and Email-triggered workflows default to **30 seconds** per execution. — Cron-triggered workflows default to **60 seconds** per execution."；上限表：Free 300 秒（5 分钟）/ Paid 750 秒（12.5 分钟）；"Any partial logs and observability associated with code cells that **ran successfully before the timeout** will be attached to the event in the UI, so you can examine the state of your workflow and troubleshoot where it may have failed."；磁盘 /tmp 2GB "This limit cannot be raised."
 - 判据：① **同步入口与定时入口的超时预算本就不同**——HTTP/Email 是有人（或有系统）在等响应，默认 30 秒；Cron 没人等，默认 60 秒；把定时任务的预算套到 webhook 上，或者反过来，都会拿到不该有的超时；排查超时先确认**这个工作流的触发类型决定了它拿的是哪一套默认值**；② **"默认值"与"可调上限"是两个参数**——默认值能改，但天花板由套餐决定；用户说"我已经调到最大了还是超时"，要先问是哪个套餐，因为"最大"对免费档是 5 分钟、对付费档是 12.5 分钟；③ **超时不等于日志全丢，但丢的恰好是最需要的那一块**：已成功 cell 的日志会被附到事件上，而**正在跑的那一步的中间态拿不到**——所以超时类故障能确认"跑到哪一步"，不能确认"那一步内部卡在哪"；需要后者就得自己写中间检查点（与 §每一步都落检查点 同向）。
@@ -496,3 +488,9 @@ agent_created: true
 - 提升层：工具/工作流。触发词：自述成功、幂等证据、重复率、方差解释度、口径纠偏、痕迹计数。
 
 ## 兜底链路可能与故障链路同源：错误工作流默认指向自身、同一兜底可被多条主链路共用，且手动运行不触发——兜底能否工作无法用演练路径验证（来源：docs.n8n.io errortrigger 节点页 822,401B + flow-logic/error-handling 596,446B，2026-09-30 r324C 独立复拉命中「uses itself as the error workflow」×2、「can't test error workflows」×1、「same error workflow for multiple workflows」；与 §超时不是回滚授权 互补——那条管“判死与回滚分两门”，本条管“兜底自己会不会一起死”；细则见 references/knowledge-base.md §r324C）
+
+
+## 异步入口的丢失窗 =「回执与落库之间」那一段：已应答的请求不会有人重试；有重建路径的子系统，陈旧备份严格劣于空库（来源：www.activepieces.com/docs/install/guarantees/disaster-recovery.md，2026-09-30 r325A 独立 curl 实拉 7,611B 逐串命中；经 Qoder r357-Q-A 提名）
+- 原文：①「Activepieces returns `200` with an `x-webhook-id` header after the job is enqueued to Redis, **before** any Postgres record exists. If Redis loses its dataset in that window, those requests vanish without a trace, and the sender — having received a `200` — **will not retry**. Your async-webhook RPO **is** your Redis persistence window」；同步路径「the run is recorded in Postgres **before** execution」不受此窗影响；②「A **stale** Redis backup is **strictly worse** than an empty Redis plus the refill on restart」；③ runbook「Restore or replace Redis (an **empty** Redis is fine) → Restart the app containers. The refill machinery rebuilds schedules, renewals, and paused-run timers from Postgres → filter runs still in `QUEUED`/`RUNNING` … resumes from the last checkpoint and **never re-runs completed steps**」；④ 三 store 分册：Postgres=flows/runs/schedules/waitpoints/connections（System of record）、S3=执行历史（SOR）、Redis=除队列本身外全部可由 Postgres 重建；⑤「Recovery targets are stated as **formulas**…they are properties of *your* Postgres/Redis/S3 setup, not of Activepieces」；⑥ 队列重试「starts at 8 minutes — **longer than a typical failover**」；⑦「Database connection pools are **not guaranteed to re-establish cleanly** through a failover's DNS flip; a restart is cheap and **always correct**」。
+- 判据：① **「已返回 200」不等于「已持久化」**——凡回执时点与落库时点不一致的入口（先入队、后异步落库），其暴露窗等于队列的持久化窗，且这扇窗内的丢失**不可自愈**，因为发送方拿到成功确认后不会重试；设计异步接收链路必须先回答「回执那一刻数据落在哪一层」，并把这个窗**单独**计量成 RPO，不能用整体可用性数字代替；② **RPO/RTO 是推导量不是产品属性**——官方把恢复目标写成公式，理由是自托管下它取决于你自己的存储档位；引用任何一个 RPO 数字前先问「它背后是哪个 store 的哪档持久化」；③ **有权威源 + 自动重建器的子系统不该备份**：陈旧副本会把已完成进度倒退回过去，比空副本更糟——空 + 回填是幂等收敛，旧副本是状态回退；判断「要不要备份」的标准是**有没有回填通道**，不是「数据重不重要」；④ **恢复程序必须自带人工收尾动作**：清空 → 回填 → 按最后检查点批量重试滞留态，且明确不重跑已完成步 ⇒ 恢复脚本自身必须幂等并能按检查点续；⑤ **恢复后重启优于「优雅重连」**——连接池不保证跨 DNS 切换自愈，宁可付一次便宜且永远正确的重启；⑥ **重试首延要大于典型故障切换时长**，否则所有重试都落在故障窗内，白烧预算还放大下游压力。
+- 提升层：工作流/工具。触发词：异步暴露窗、回执先于落库、x-webhook-id、RPO=队列持久化窗、陈旧备份劣于空库、重建优先于备份、批量重试滞留态、DNS flip 后重启。

@@ -1688,3 +1688,19 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - 原文：arXiv 2609.17274「Attention is concentrated: the **top 10% of skills received 46.93%** of all downloads.」「No simple skill features (like size or download counts) **remained a stable predictor of continued listing** once creation c[ohort]…」+「**85.06%** of the readable skills carry privilege evidence」；agentskills.io/clients.md「# Client Showcase > Agent products that support the Agent Skills format.」「export const ClientShowcase = ({clients}) => { const **shuffle** = arr => …」；docs.n8n.io/llms.txt（286,271B 全索引）`certified-partner` **0 命中**（该页已 404 撤除），`external-hooks` 2、`run-security-audits` 1。
 - 判据：① **别用流行度当质量代理**：体积、下载量对「是否继续在架」没有稳定预测力——下载数高只说明曾在某个时点被看见，不说明现在还合规；② 换用**结构指标**：注意力集中度（top10% 拿走 46.93%）与权限声明普遍度（85.06% 带 privilege evidence）这类**分布量**才刻画目录健康度；③ **展示序可能是随机洗牌**，官方 showcase 页面明文 shuffle ⇒ **“排在第一位/靠前”不构成背书或流行度证据**，引用排序前先确认它是否稳定；④ **文档撤除是可机检信号**：平台把某个能力页从索引里拿掉（全索引 0 命中 + 404）＝能力下线或收回承诺，凡依赖该页的结论必须复检；判「平台没有这个能力」要用索引/llms.txt 穷举做缺位证明，而不是靠某个 URL 404 就下结论。
 - 提升层：工具/可复用 Skill。触发词：流行度不可作质量代理、stable predictor、集中度 46.93%、权限证据 85.06%、展示序洗牌、文档撤除、索引穷举缺位。
+
+
+## r325A 下沉（2026-09-30）
+
+## 全局覆盖值的存活期与传播面必须显式开启：默认只在内存里、不跨进程、重启即丢（来源：docs.n8n.io《Credential overwrites》2026-09-29 r296-A 独立 curl 取 .md 原文 5,099B 核验；与 §2.54.0 SecretRef 禁 OAuth 互补——那条管"可变状态不跨存储分裂"，本条管"一份覆盖值到底活多久、传到哪"）
+- 原文："When enabled, n8n stores the encrypted overwrites in the `settings` table and broadcasts a `reload-overwrite-credentials` event so workers reload the latest values. **When disabled, overwrites remain in memory on the process that loaded them and n8n doesn't propagate them to workers or preserve them across restarts.**"
+- 判据：① **"配上了"与"在所有执行单元都生效"是两件事**——默认状态下覆盖值只存在于加载它的那个进程，多实例/队列模式下其他 worker 完全看不到；验收任何"全局注入"类配置，必须回答三个问题：存在哪（内存/库）、谁会收到变更通知、重启后还在不在；② **传播靠的是显式广播事件而不是共享存储**——没有广播，即使写进了库，已经跑着的进程也不会重读；所以"改了配置"要连同"通知谁重读"一起验证；③ **父子继承会放大影响面**："Credentials can extend other credentials… You can set parameters on the parent (`googleOAuth2Api`) and all child credentials will use them."——在父级改一个覆盖值，等于静默改掉一整族子凭据，改前先枚举继承树。
+- 提升层：工具/工作流。触发词：CREDENTIALS_OVERWRITE_PERSISTENCE、覆盖值内存态、worker 不传播、重启即丢、reload 广播、父凭据继承。
+
+
+## r325A 下沉（2026-09-30）
+
+## 无鉴权的注入端点自带「一次性门」：可被任意人调用一次，所以只允许一次（来源：docs.n8n.io《Credential overwrites》2026-09-29 r296-A 独立 curl 取 .md 原文核验；与 §2.37.0「默认值先可用、收紧从最高风险面起步」同向，本条给的是官方默认设计写法）
+- 原文："Optionally, set `CREDENTIALS_OVERWRITE_ENDPOINT_AUTH_TOKEN` to require a bearer token for accessing the endpoint."；"**Without an auth token, the endpoint can only be called once for security reasons.**"；官方对环境变量注入方式的自陈："This approach isn't recommended. **Environment variables aren't protected in n8n, so the data can leak to users.**"
+- 判据：① **"没配鉴权"不等于"随便用"，好的默认是一次性门**——端点没有身份校验时，把可用次数压到 1，把"无鉴权"的暴露窗口从"永久"压成"一次机会"；设计任何临时注入/引导端点时，鉴权缺失的补偿手段应该是**次数上限**而不是什么都不做；② **注入通道与读取通道的风险不同**——环境变量"不被 n8n 保护，会泄漏给用户"，说明"存在环境里"不等于"只有进程能看到"，凡是运行时可被读回的配置面都不能放密钥；③ 收紧要给出**推荐路径**（自定义 REST 端点 + bearer token）而不是只说"不推荐"，否则用户还是会用那条不安全的路。
+- 提升层：工具/安全边界。触发词：一次性端点、无鉴权只能调一次、CREDENTIALS_OVERWRITE_ENDPOINT、环境变量泄漏凭据、注入端点鉴权。

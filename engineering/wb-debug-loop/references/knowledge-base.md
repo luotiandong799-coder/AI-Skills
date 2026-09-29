@@ -448,3 +448,21 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 ## §自 SKILL.md 下沉（2026-09-30 r324C）
 ## 审计/日志写入器禁止全局单向闭锁：坏事件只拒该条并留 rejection 占位，任何 unavailable 态必须可复位/有时限；警惕「只报一行」把持续故障伪装成单次（来源：openclaw#160734 P1，2026-09-30 r320C 实拉）
 ## 故障必须有显式人工恢复入口：自动对账要写清能力边界、不满足即降级给人；超时不授权回滚也不删 retained state（来源：docs.openclaw.ai cli/update/status-and-history，2026-09-30 r320C 实拉）
+
+
+## r325A 下沉（2026-09-30）
+
+
+
+
+## r325A 下沉（2026-09-30）
+
+## 局部调试未必比整体便宜：部分执行要满足入口契约，且数据一大反而只能整跑（来源：docs.n8n.io《Types of executions》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验）
+- 原文："Partial executions are manual executions that only run a subset of your workflow nodes."；报错一 "**The destination node is not connected to any trigger. Partial executions need a trigger.**"（手动含部分执行会尽量模拟生产，因此仍要求 trigger 节点描述执行时机）；报错二 "Please execute the whole workflow, rather than just the node. (**Existing execution data is too large.**)" —— "Partial executions involve **sending data and workflow logic to the n8n backend** in a way that isn't required for full executions."；官方绕法用 limit 节点压小输出。
+- 判据：① **"只跑一段"不等于"少跑"**——部分执行要把数据与逻辑一起回传后端，数据越大越跑不动，局部调试的成本曲线与整体执行相反；遇到"局部跑不了"先怀疑**载荷**而不是怀疑环境；② 即使只验证中间一个节点，也要满足**入口契约**（有 trigger），本地复现缺入口是最常见的假故障；③ 收缩输出（limit / 取样）是让局部调试可行的标准手段，但**它是调试期装置，验证完要撤**（与 §探针要能一次撤干净 同向）。
+- 提升层：工具/工作流。触发词：partial execution、部分执行、需要 trigger、数据过大只能整跑、limit 节点、局部调试更贵。
+
+## 多分支执行顺序不是逻辑决定的，是「创建时期版本 + 画布空间位置」决定的：结果顺序不对先查这两样（来源：docs.n8n.io《Understand execution order》2026-09-29 r296-A 独立 curl 取 .md 原文 1,835B 核验）
+- 原文："For workflows created before n8n 1.0: n8n executes the first node of each branch, then the second node of each branch, and so on. — For workflows created from n8n 1.0: executes each branch in turn, completing one branch before starting another. n8n orders the branches based on their position on the canvas, **from topmost to bottommost. If two branches are at the same height, the leftmost branch executes first.**"
+- 判据：① **行为被"创建时的版本"冻结**——同一份工作流在不同时期创建会有两套执行语义（逐层轮转 vs 逐分支跑完），而这不是工作流里任何一处配置写出来的；排障"分支执行顺序不对"时，第一问是**这份工作流是什么时候建的/用的哪个版本**，第二问才是逻辑本身；② **空间布局即隐式语义**——分支次序按画布**上下位置**排，同高再看左右，意味着**拖动一下节点就改变了执行顺序**而 diff 里看不到任何变化；凡"可视化编排"类系统，都要假设存在这类"布局即配置"的隐式输入，改布局等于改代码；③ 这类隐式决定的顺序应**显式化可查**（官方给了工作流设置项可改 execution order），验收时把它当成和代码同级的配置项列出，而不是当作平台内部细节。
+- 提升层：工作流/工具。触发词：多分支执行顺序、画布位置决定顺序、1.0 前后语义差异、topmost to bottommost、布局即配置、execution order 设置项。
