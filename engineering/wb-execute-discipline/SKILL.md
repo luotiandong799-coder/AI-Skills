@@ -13804,3 +13804,40 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 
 ### 浏览器 agent 与反爬合规
 **Chrome 132+ "new headless"（全 Chrome 非轻量 shell）成默认；默认 headless 被多数生产网站屏蔽（Cloudflare 查几十个指纹信号：navigator.webdriver 标志/缺失插件/canvas 指纹异常/时序模式——stock Playwright 立刻收 challenge 页）**；**简单防御：真 Chrome 实例+显示；移除 webdriver 标志+真实 UA+标准视口+真实 locale；蜜罐实测多层指纹可识别 LLM bot**；**浏览器工具设计：小而意见化的动作集（open URL/click/type/screenshot/拉结构化文本）映射人类行为——agent 是浏览器操作者不是 DOM 黑客**；**合规红线：robots.txt 允许路径、控制频率、反爬绕过只用于自己有权访问的公开页**。判据：headless 检测是技术兼容问题但反爬绕过不是访问控制突破。
+## r310A MCP 与工具协议生态 2026（来源：modelcontextprotocol.io 2026-07-28 规范/roadmap/SEP-2243/SEP-1865/SEP-2663 + arXiv 2605.24248/2609.14119 + IETF MCP-AX draft + top-mcps/getdraft/mcpverdict/canopii 2026 实拉）
+
+### MCP 2026-07-28 规范：Stateless 核心 + 正式弃用政策
+**协议启动以来最大修订：stateless 核心=可扩展在普通 HTTP 基础设施（负载均衡/缓存/CDN）上**；**initialize 废弃（客户端信息移 _meta）；Roots 废弃（移工具参数/资源 URI）**；**正式 deprecation policy：协议可演进不破坏既有构建（旧特性标记可移除，新实现不应采用）**；**版本策略：YYYY-MM-DD 字符串=最后向后不兼容变更日期，兼容更新不递增（当前 2026-07-28）**。判据：**学新协议先看 stateless 化与弃用清单——2025-11-25 前教程大量过时**。
+
+### Streamable HTTP 头路由与传输收敛
+**Mcp-Method + Mcp-Name 头强制：负载均衡/网关/限流器不解体 body 按操作路由；服务器拒绝头与 body 不一致请求**；**旧 HTTP+SSE transport 弃用（新实现 SHOULD NOT 采用，现有 SHOULD 迁移；向后兼容=同端共宿新旧两套端点）**；**2026 实际只有两种传输重要：stdio（本地进程）与 Streamable HTTP（远程）**。判据：**建新 MCP 服务器不再选 SSE 传输；网关层按头路由而非 body 解析**。
+
+### MCP Tasks：长期工作标准生命周期
+**服务器决定调用将长跑时以 task handle 响应（resultType: "task"+taskId+TTL+建议轮询间隔）而非阻塞；客户端 tasks/get/update/cancel 驱动**；**修复"假装 10 分钟渲染或批作业塞进同步工具响应"的尴尬模式**；**stream resumability 管 transport 层（重连/事件重放），tasks 管数据层（结果持久存储+服务端定义保留窗口内可随时取回）**。判据：**>几秒的活不阻塞调用——返回 task handle 让模型继续并行其他工具**。
+
+### MCP Apps（SEP-1865）：服务器渲染 UI
+**服务器发交互 HTML 界面，宿主在沙箱 iframe 渲染；工具提前声明 UI 模板（ui:// URI scheme）让宿主可预取/缓存/安全审查后才运行**；**渲染 UI 通过同一 JSON-RPC 基协议与宿主对话——每个 UI 发起动作走同一审计与同意路径；app 永不碰宿主 DOM 或凭证**。判据：**工具交互面=可审计 UI 而非裸 JSON**。
+
+### OAuth 2.1 + audience 绑定 + DCR 回退链
+**远程服务器强制 OAuth 2.1+PKCE；每 access token 绑服务器 audience 标识（RFC 8707 resource 参数）——下游用此 token 调不同 MCP 验证失败，阻断"token 复用到别处"；服务端必须验证 aud claim 拒绝不匹配**；**token passthrough 明确禁止（不把客户端 token 透传给上游 API）**；**iss 参数验证（RFC 9207）关闭授权服务器混用漏洞（SEP-2468）**；**客户端注册回退链：预注册客户端信息→client_id_metadata_document→DCR（RFC 7591）→提示用户输入**。判据：**MCP token 是单服务器绑定的——接受任何"能用于别处"的 token 都是设计缺陷**。
+
+### MCP 工具面安全：capability attestation 缺失 + 工具定义指纹
+**rug-pull 攻击：服务器注册后更改工具定义；输入验证与认证都不能防（输入是合法的）**；**"capability attestation 缺失"形式化：协议无手段让服务器在执行时证明工具定义与客户端信任的相同**；**三机制：①离线签名 clearance 断言发布 well-known URI，主机对钉死信任根验证后才派发工具 ②deny-by-default 每服务器工具允许列表——允许服务器≠信任其每个工具 ③flavor-gated 强制模式把警告转硬拒绝，每决策写篡改防护日志**；**工具定义指纹（serverId+name+description+inputSchema 规范化 JSON 哈希）随时间跟踪+默认拒绝未知工具**。判据：**装 MCP 服务器=装一批工具——工具清单要逐项允许，不是全信**。
+
+### MCP Registry 是发现不是信任 + 生态健康度
+**官方注册表提供命名空间验证/标准化元数据/包引用/远程端点定义/版本记录/下游 API——不认证代码安全/工具描述诚实/权限适当/运行时不变；注册表发现是起点不是信任**；**安全 census（21,643 服务器 72,606 版本记录）：未认证网络暴露占主导（9.57%）；silent drift="同名不同服务器"代码无声漂移；五分之三部署的 MCP 工具没告诉 agent 它们做什么（safety annotation gap）**；**生态：18 个月 30→9,400+ 服务器、SDK 下载 97M/月；52% 远程端点实际死亡仅 9% 完全健康——选维护者不选星星；Canopii 11,524 服务器 84% 失败某控制**。判据：**注册表收录≠可信——装前查维护活跃度与工具描述完整性**。
+
+### 多服务器工具聚合与冲突解决
+**同名工具无命名空间时胜者不可预测（search：github/brave-search；read_file：filesystem/github；list：filesystem/postgres）**；**方案：前缀唯一 server 标识（Claude Desktop serverKey 自动命名空间/可配置命名空间/随机 token/URI；Dify 复合键 <server-id>::<tool-name>）再呈现聚合列表给 LLM**；**MCP-AX（IETF draft）：层级工具命名空间委托，first-registered-wins，冲突 MUST 以 namespace_conflict 错误拒绝**；**聚合网关（MetaMCP/IBM Composer）：命名空间化+统一认证处理+健康监控+动态挂载卸载；聚合后端多时显式列出后端+选其广告工具**。判据：**多服务器聚合第一件事是命名空间——否则同名工具随机赢**。
+
+### 工具天花板与工具发现机制成本
+**客户端工具上限：Cursor 40-tool 上限超限静默丢弃；Claude Desktop 无硬限制但实际 3-5 最好；Claude Code 无固定上限 tool search 延迟加载；Copilot 嵌入聚类阈值门控或 128 失败；Codex CLI 仅手动允许列表**；**200 工具规模成本差 10 倍：Claude Code tool_search_tool ~3-5K token/轮 vs Codex CLI 急切加载 ~50K/轮 vs Cursor 文件+grep ~2-4K vs Copilot ~5-10K**——**工具发现机制决定规模成本**；**3-6 个服务器匹配真实工作流，加服务器=具体反复缺口而非博客说必备**。判据：**工具多到客户端开始丢/慢 = 该做延迟加载或按子代理作用域切分**。
+
+### 本地 vs 远程 MCP 选型
+**本地 stdio 当：服务器需要用户文件系统/Git/本地进程/本地 DB/硬件；数据不得离开机器；最低延迟/零出口/离线；凭据已在用户环境；避计量远程按调用费；敏感（secrets/源码/DB）一律本地**；**远程 Streamable HTTP 当：多租户服务每用户身份；服务器前端就是自己 API（本地包装器=纯开销）；团队共享需发修复**；**混合=本地管机器访问远程管其他；Claude Desktop 只原生支持 stdio+Streamable HTTP，SSE 旧服务器需 mcp-remote bridge 本地翻译**；**远程空闲唤醒不可靠——agent 工作流内置重试**。判据：**数据在你这台机器就 stdio，服务在别处就远程——本地包装器代理远程调用是双倍维护**。
+
+### MCP 服务器测试三层与注入检查
+**三层：交互 Inspector（浏览器 Postman 等价物：React UI+Node.js 代理客户端，连 stdio/SSE/Streamable HTTP，tab 看 tools/resources/prompts/logs/notifications/request history）→脚本 CLI 检查→程序化客户端跑 CI（契约测试）**；**自动套件断言：初始化握手/声明能力/tools/list 每工具 input schema/每工具有效+无效+恶意输入/每工具结果 schema/错误映射/工具描述不能注入指令进调用模型**；**加入 agent 客户端前先测；Inspector schema 常见问题：参数缺 description（LLM 猜参数）/required 数组不匹配/声明类型与 handler 返回类型不匹配/工具名带空格；诊断日志移 stderr**；**CI 门：refactor 后 tools/list 是否仍返回正确 schema**。判据：**"服务器在 chat 窗口能跑"≠"协议正确"——契约测试是装任何服务器前的验收**。
+
+### MCP 服务器实现最佳实践
+**输入 schema 层校验（Pydantic/字符串长度/枚举白名单/数值钳制/参数化查询永不格式化 SQL/外部调用超时）；FastMCP 两种验证模式：默认 Pydantic 灵活（"10"→10 强制转换）vs strict**；**错误两分类：invalid arguments（handler 运行前 schema 拒绝）vs tool errors（handler 运行但失败）；catch 异常返回 isError: true+平实英文解释——模型能告诉用户哪里错并在 agentic 循环决定恢复，而不是崩溃会话**；**限流：token bucket（允许突发）vs 滑动窗口（精确无突发）；后端 API 限流=自我节流+指数退避**；**并发：asyncio.gather 并行工具调用/request timeout 防挂起客户端阻塞/连接池非每请求连接**；**FastMCP 官方 conformance suite 在 CI 钉版本跑——广告支持的能力失败=回归**。判据：**未处理异常=模型看到工具失败；isError: true+解释=模型可恢复——错误形态决定 agent 能否自救**。
