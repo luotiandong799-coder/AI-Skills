@@ -243,3 +243,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 
 ### task-aware retrieval：按任务类型路由
 事实查询→向量库紧相似度阈值；推理→知识图谱；工具调用→只加载相关工具定义（不是全部工具）；查询改写+元数据过滤；cached input $0.30 vs uncached $3（Manus 报告，10 倍价差）——cache hit rate 是关键成本变量。
+## r305C 缓存断点结构/渐进披露数字（来源：octomind 2026-09-18 + aiworkflowlab 2026-07-15 + claude.com skills-explained 2026-03-05 实拉）
+
+### prompt caching 断点结构 + write 成本溢价
+静态前缀（system+工具+示例+大文档）在前、动态部分（用户查询）最后；Claude 显式 cache markers、5 分钟 TTL；**cache write 比无缓存贵：5min 1.25x / 1h 2.0x，read 仅 0.1x——断点设错反而更贵**；真实 agent 轨迹缓存省 49-80% token 成本（claude-haiku-4-5 -77%、gpt-5.4-mini -80%）；GPT-6 缓存默认更高命中率+30 分钟 TTL+断点确定化。判据：**缓存失败是静默的（响应一样）——必须监控 cache hit rate，断点位置决定 write/read 成本结构**。
+
+### 渐进披露三级数字 + skill 是文件夹
+**三级：YAML frontmatter 常驻 system prompt（~100 tokens，够判断何时用）→ SKILL.md 命中时加载（<5k tokens 全指令）→ 捆绑文件按需读取**；**"skill 是一个文件夹不只是 markdown 文件——整个文件系统是上下文工程的一种形式"**（Claude Code 实践：告诉 Claude skill 里有哪些文件、它按需读）。

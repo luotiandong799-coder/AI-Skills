@@ -13436,3 +13436,31 @@ Magentic-One：manager 按演化上下文/进度/能力选下一个 agent，维�
 
 ### GitHub agent 生态：并行 agents 与技能蒸馏
 Orca ADE（59k stars）：并行 25+ coding agents 跑 worktrees；scientific-agent-skills（41k）：165 个验证技能、190k 科学家用；AREX-Skill：从 1,000+ 仓库蒸馏 5,000+ 可执行技能（仓库知识→coding agent 直接可用的操作知识）。判据：**技能库来源从手工写转向从优秀仓库蒸馏+验证**。
+## r305C 失败恢复/checkpoint/可观测性/自动化规划（来源：arXiv 2606.01416 + agentnative 2026-07-25 + zylos 2026-03-27 + datadog 2026-07-10 + github.blog 2026-06-11 + arXiv 2606.10507 + zylos 2026-05-11 实拉）
+
+### 失败分类驱动恢复 + verify-before-retry
+每类失败不同响应：工具选错→重规划换工具约束候选；上下文过时→刷新检索换源；矛盾证据→独立源交叉验证+verifier；执行错误→上下文感知重试（先记失败原因再决定）；**verify-before-retry：不确定结果先查预期后置条件是否已满足（非原子失败避免不必要重试）**。
+
+### 重试预算两级 + 熔断器 + at-most-once park
+**预算两级：per tool call（如 2 次）+ per run（max_steps 12 / max_cost $1）**；连续失败 3 次+cooldown 熔断停止升级；模型重试硬计数（超 3 次截断+显式告警）；**at-most-once 工具请求已发送后失败永不自动重试——park，人工看 INTENT 记录+provider 证据决定**；每个工具设超时。
+
+### hooks 事件分类与确定性机制
+事件三级：session（SessionStart/End）、turn（UserPromptSubmit/Stop/StopFailure）、tool（PreToolUse/PostToolUse/PostToolUseFailure/PermissionRequest/PermissionDenied/SubagentStart）；**PermissionRequest 可阻塞（exit 2）→ 自动 allow/deny 策略；PermissionDenied 可 retry:true**；BeforeModel 改系统指令/换模型/mock；**deterministic（command/HTTP hooks）与 inferential（prompt/agent hooks 靠模型判断）分开**；Stop 钩子验证完整性可拒绝强制继续。
+
+### checkpoint 每节点粒度 + 幂等前提
+20 步管线第 14 步崩→1-13 全白费；**checkpoint 每节点粒度：至多重做 1 个节点**；三模式：SQLite（单进程）/ 远程 store（分布式）/ 混合（本地快路径+远程持久）；**幂等是 checkpoint 安全前提**；**checkpoints ≠ durable execution**（checkpoint 手动恢复，durable execution 自动重放事件历史）。
+
+### GraphRAG 触发时机
+向量 RAG 按"读起来像不像问题"排序不按"事实如何关联"；**GraphRAG 超 2 倍事实准确率+可追溯源路径**；**触发时机：有文档化证据 agent 对"需连接多源事实"的问题答错——那些案例就是测试集，两种检索对比再决定**；简单文档问答不需要图。
+
+### LLM 可观测性三循环 + 成本尖峰=bug 信号
+**trace→eval→monitor 循环：capture spans→对 traces 跑评分→cron 调度让回归在用户发现前暴露**；**token 成本尖峰常是 bug 信号**（agent 意外循环/检索误触发/窗口设到最大）；**per-agent/per-run/per-user token 治理是生产底线**；session 级评估优于单调用评分（多数工具漏跨会话漂移）；message-bus 级可见性（只 trace LLM 调用漏竞态与无限循环）。
+
+### PromptArmor 注入检测 + OWASP Agent Memory Guard + egress 默认拒绝
+**PromptArmor（ICLR 2026）：现成 LLM 当注入检测器（GPT-4o/4.1/o4-mini），AgentDojo 上 FP/FN 均 <1%，移除注入后攻击成功率 <1%**；**Agent Memory Guard：持久记忆可运行时写入跨会话存续，被篡改导致跨会话恶意行为——记忆要防投毒不只防注入**；**egress allow-list 默认拒绝出站（只允许任务需要的端点）最直接防渗透**；沙箱：agent 生成代码跑 Docker/Wasm/microVM 短生命周期容器、无驻留内网/secret/主机访问权。
+
+### GitHub Agentic Workflows
+**自然语言 Markdown 文件定义自动化（.github/workflows/），编译成标准 Actions YAML**；issue triage/CI 失败分析/文档更新；**GITHUB_TOKEN 免 PAT**，AI credits 账单到组织；gVisor 沙箱 runtime（不可信输入）；**三重控制：Approvals（建议而非应用）/ Confidence（高置信自动应用，中低留建议）/ Rationale（每个动作记录理由）**。
+
+### 层次化反思 + AND/OR 树规划
+**层次化反思：agent 显式评估进度+诊断失败模式再决定下一步，反思成为 subgoal 终止/转换/执行的控制机制**；AND/OR 规划树（Or 节点=备选策略，可回退）；**leaf task 小到 1-2 次工具调用**；顶层 3-5 phases→每 phase 具体行动；**Planner（强模型长窗口）+ Executors（小模型高通量）+ 共享记忆层（防冗余工作）**；规划结构含 ownership metadata+资源预算+交接协议。
