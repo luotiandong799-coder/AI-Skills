@@ -13585,3 +13585,37 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 
 ### 委托契约四要素 + RSTD
 **DeepMind 判据：分解到每个子任务能写测试——无法程序化表达成功标准=粒度不够**；委托契约四要素：是什么/怎么验证（测试/lint/构建/人工审查）/允许哪些工具（scoped）/失败怎么办；**RSTD：>3 文件拆 per-module；每子任务产 schema-validated checkpoint；失败两次升级父线程带结构化错误报告；上游被修改则下游不重试**；不在单 turn 做多文件重构。
+## r308A 多模态 Agent 与视觉/音频理解工作流（来源：madebyagents 2026-07-08 + Orion arXiv + thenerualbase + SynthDocBench 实拉）
+
+### VLM-OCR 文档理解范式
+**2026 的 OCR=文档理解（布局/表格/公式/阅读顺序/结构化输出 Markdown-JSON 单 pass），非像素转文字块**；领先新 OCR 模型=VLM：Qwen3-VL-4B 32 语言+保留布局输出 Markdown/HTML/JSON/LaTeX+抗退化输入；本地选型 MiniCPM-V 4.5（6GB 级最高精度）/Llama 3.2 Vision 11B（混合文档）；**失效场景：手写草书/低 DPI（<150）/重度压缩 JPEG/重叠文本**。选型先看是否输出结构化格式。
+
+### AgenticOCR 定向解析
+**解析只你需要的：image_zoom_and_ocr_tool 裁剪区域+旋转+按元素类型执行 OCR/布局分析**；用户问特定文本/数字/表格/公式时永远先 zoom 再解析；**全页 OCR 是浪费（无关区域耗 token 稀释注意力）——放大镜优先于全景扫描**。
+
+### 文档处理 agent 流水线
+**六步：normalize inputs（PDF→page images/HEIC→JPEG/deskew/resize 模型限制内）→classify document type first（发票 vs 收据 vs ID）→vision extract 只请求该类型 schema 的 JSON→validate with code，失败 retry 带 validator errors+同图（bounded）→交叉核对 totals/dates/IDs→模糊字符占位替换再验证**。成功标准=通过代码校验的 schema 化输出。
+
+### 多模态 RAG 三类路径
+**挑战：文本/图像 embedding 不同向量空间。路径 A：图像 verbalize（LLM 生成描述走文本检索）最省丢视觉细节；路径 B：直接传文本+图给多模态 embedding；路径 C：fusion layer 归一化拼接单 768 维空间单一 ANN 返回混合模态**；生产级 HNSW+GIN 双检索→RRF→Cross-Encoder；VLM 预生成图表摘要入索引。先决定"检索什么"——verbalize 够用就别上统一空间。
+
+### 长视频渐进式理解
+**不做 one-pass 全量编码：ProVCA=Segment Localization（稀疏帧粗定位）→Snippet Selection（caption 相似度分片段+过滤）→refine**；SLICE 按语义能量质量分帧不按均匀间隔（复杂段集中帧/静态背景省略，σ=ln(N) 平滑）；**temporal zoom 工具按查询在空间 zoom-in/时间 zoom-out 间分配 30-150 帧预算**；SpecTemp 轻量 draft 提案+强模型验证。长视频=查询驱动帧预算分配。
+
+### 语音 agent 四阶段管线
+**Receive（录音→webhook）→Transcribe（Whisper→文本）→Reason（LLM 回复）→Respond（TTS 播放）每段可换**；Whisper Large V3 仍是开源参考（WER 7.4%/99+ 语言/自托管）；faster-whisper/WhisperX 15-50ms；whisperpipe 双缓冲+VAD 纯本地；**静音/噪声移除先于转写**。先定实时还是批量——批量 Whisper 自托管就够。
+
+### GUI grounding 与截图优先
+**GUI grounding=把自然语言引用精确映射屏幕坐标/包围盒（UGround/Aria-UI/GUI-Owl），不决策下一步；成功率仍有限**；screenshot-first 对无 API/DOM 软件通用，代价=①隐藏可执行结构②每截图=一次多模态推理成本叠加快；**三路径：Visual grounding（纯截图）/DOM semantics（有 DOM 更可靠）/Computer use（混合）——能拿 DOM 就别纯截图**。
+
+### 图像预处理管线顺序
+**预处理得当比原始扫描好约 40%**；顺序 grayscale→denoise→binarization→deskew（denoise 在前防丢细节）；**5° 倾斜字符级掉 15-20%**；几何校正先做（原灰度图上避免插值伪影）→按目标字符大小缩放→噪声抑制→binarization；**参数按类型：照片→bilateral+adaptive，扫描→Gaussian+Otsu；按 DPI 动态 resize；Hough 检测倾斜**；**置信度门 <0.75 换参重试+记录参数组审计**。
+
+### 视觉工具调用编排
+**Orion 四步：Perceive→Plan（controller 推理需要哪些视觉能力+编排）→Execute（按依赖序/并行）→Reflect（中间+最终输出对 schema 评估）**；非单片 VLM：编排专门 CV 工具（OCR/检测/分割/keypoint）执行多步视觉工作流；**生产瓶颈=可靠编排非感知**；Agentic Vision=视觉推理+代码执行（zoom/inspect/manipulate 计划落地视觉证据）；MM-ToolSandBox 500+ 工具有状态多图多轮评估。
+
+### 多模态评估失败模式
+**SynthDocBench：①文档长度锐退化②位置敏感（中间三分之一最难，Early→Late 最陡降 8.3pp）③长文档图表理解崩溃——模型可能过拟合基准伪影**；KIE-HVQA 首评 OCR 幻觉（退化输入+像素级可靠性标注）；**评测三愿望：faithfulness/discriminability/efficiency——多选格式奖励猜测+饱和+不代表下游**；选型看目标域退化输入表现不看公开总分。
+
+### 多模态 agent 循环契约
+**标准 loop 假设文本观察；多模态扩展：观察=图/音频/视频帧/组合——媒体观察进推理前必须提取成结构化信息**；长程 VQA 视觉上下文退化→专用 Perceive 工具（局部感知）+Global Navigator 高层战略；自修正=模块化 perception+planning+tool use（修正有界计算）；**李飞飞三词：Model 定上限/Context 定读懂业务/Harness 定调起工具做完并一直跑**。
