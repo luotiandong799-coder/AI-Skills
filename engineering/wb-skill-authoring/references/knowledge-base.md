@@ -2411,3 +2411,25 @@ SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一
 ## 选择器歧义必须报错，不允许「按顺序挑一个」（来源：同上 info/update 查找逻辑，2026-09-29 r318C 实拉）
 - 原文：ambiguous selectors **fail instead of choosing discovery order**；精确名优先于 metadata key，key / 大小写 / 分隔符规范化匹配必须唯一命中
 - 判据：凡"按名字找资源"的环节，命中多于一个就报错并列出候选；静默选第一个会造成"改了 A 实际改了 B"
+
+
+## 懒加载只解决"不撑爆"，不解决"来得太晚"：pull 式之上要叠 push 式预算受限 warm tips 池（来源：arXiv 2609.32339《Enabling Timely Guidance before Skill Retrieval: Retaining Helpful Warm Tips in Agent Context》2026-09-26 r319A 实拉）
+- 原文：existing skill mechanisms expose only metadata and load full content on demand, leaving useful guidance unavailable until the agent decides to retrieve it；TipsWarm 维护一个 **budgeted pool of skill-derived keypoints（warm tips）**，在**每一轮消息**选择性注入上下文；核心是把 **event-triggered LLM assessment**（贵、事件驱动）与 **inexpensive per-turn screening**（便宜、每轮执行）**解耦**。三个编码与迭代任务基准上取得最高任务成功率且时间高效。
+- 判据：① 渐进披露的盲区是**时机**：按需拉取意味着"agent 先选错路、再拿到正确指引"；② 补法是**常驻一层极薄摘要**（warm tips），不是把全文常驻——有**预算上限**才可控；③ **评估与筛选必须分层**：贵的语义评估只在事件触发时跑，每轮只跑便宜筛选，否则每轮一次 LLM 评估的成本抵消了懒加载省下的 token；④ 自研：技能系统除 metadata 索引外，再维护一份**有 token 预算、逐轮选择性注入**的关键点池，并把池的更新与注入解耦成两条独立管线。
+- 提升层：可复用 Skill / 工作流。触发词：warm tips、推送式预热、懒加载盲区、每轮筛选、评估筛选解耦、token 预算池。
+
+
+## 修订对象的选择法：把任务需求投影到固定的「能力空间」，改欠完成最多的那一项（来源：arXiv 2609.34397《SkillFocus: Evolving Agent Skills via Capability Decomposition》2026-09-29 r319C arxiv.org 实拉 200）
+- 原文：existing methods base each revision mainly on execution trajectories or feedback, leaving recurring behavioral requirements implicit and tying revision to the behavior of the current skill；SkillFocus 把反复出现的需求**分解成一个随技能演化保持固定的 capability space**，把当前任务结果映射到该空间，**定位"留下最多未解决任务"的那一项能力**，由它决定改什么、用哪些证据。四个异质任务基准上 held-out 准确率全部最优，**平均高出最强对照 5.7 个点，同时少用 24% 的演化 token**；对照实验显示"能力划分"本身是关键（打乱配对消融 −20.2）。
+- 判据：① 迭代改技能时最容易陷入"哪条轨迹失败了就改哪条"——那是**跟当前技能的行为绑死**；正确做法是先建一张**不随技能变化的能力清单**，再按"哪项能力欠的账最多"排优先级；② 修订对象应由**跨任务的欠完成计数**决定，而不是由最近一次失败决定；③ 收益是双向的：准确率 +5.7 的同时**省 24% 演化 token**——改得更准自然改得更少；④ 自研：给技能维护一张静态能力表，每轮跑完统计各能力的未解决任务数，取 Top1 作为本轮唯一修订对象。
+- 提升层：可复用 Skill / 工作流。触发词：能力分解、capability space、修订对象选择、欠完成最多、演化 token 节省。
+
+## 渐进披露不是纯收益：提升检索质量但轻微劣化整体延迟（来源：arXiv 2609.35692《Report: Progressive Disclosure of Agent Skills》2026-09-29 r319C arxiv.org 实拉 200；作者自述来自 Workday 已部署 LLM agent）
+- 原文：we investigate the impact empirically and find that **progressive disclosure improves skill-retrieval quality but marginally degrades overall latency**；摘要**未给出任何量化数字**（配套数字另见 lazy-load 两级：N=50 时 14875→2719 tokens −81.7%、命中率 0.13→0.72、**延迟 +15%**，且自认未做 eviction）。
+- 判据：① 引用渐进披露时必须**连同代价一起写**：省 token、提检索质量，但**延迟变差**（实测 +15%）——只写收益会把它落成一个被夸大的正结论；② 该报告的**摘要层面零数字**，引用数字要落到正文/lazy-load 实验那一层并标明 N 与条件（N=100 全量预载会超窗崩溃）；③ 判据化：对**延迟敏感**的会话型场景不要无脑上懒加载，对**上下文撑爆**风险高的大技能库才上；④ 与 §渐进披露三段命名 互补——那条讲结构，本条讲成本与代价。
+- 提升层：可复用 Skill。触发词：渐进披露代价、延迟劣化、lazy-load、检索质量、上下文与延迟权衡。
+
+## 多源同名定义要有显式优先级链，冲突按「离工作目录最近」裁决（来源：code.claude.com/docs/en/sub-agents.md 2026-09-29 r319C curl 实拉 200）
+- 原文：子代理定义可来自托管策略 / CLI / 项目 / 用户 / 插件多层，其中插件与托管层的同名定义 **take precedence over project and user subagents with the same name**；跨嵌套项目目录时 **the definition closest to the working directory wins**；另有**并发子代理上限 20**，会话中已有 20 个再 spawn 会直接失败。
+- 判据：① 多来源定义冲突时**不能靠"就近覆盖"的直觉**——实测优先级是"托管/插件 > 项目 > 用户"，与"越具体越优先"的直觉相反，落规则前先查官方链；② 同名冲突的裁决维度有两个且互不相同：**来源层级**（决定谁优先）与**目录距离**（同层级内谁优先），两条都要写明；③ 并发上限是**硬失败**而非排队，编排并发子代理时要么自己限流到 20 以下，要么捕获该失败并降级；④ 自研：给同类资源的加载写一张显式优先级表并在冲突时**打印"谁赢了、依据哪一条"**，禁止静默取第一个。
+- 提升层：工具/工作流。触发词：子代理优先级链、同名冲突、closest to working directory、并发上限、precedence。

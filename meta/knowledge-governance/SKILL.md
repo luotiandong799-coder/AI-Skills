@@ -5,7 +5,7 @@ display_name_en: "AI Memory & Skill Governance"
 description: "AI 智能体记忆与技能统一治理：解决记忆无限膨胀、身份/事实/偏好混层、技能内容重叠重复三大问题。分层判据（身份层/记忆层/画像层/技能层/外部记忆）+ 五类处置动作（保留/合并/压缩/外置技能/归档）+ 安全护栏，零信息丢失防膨胀。部署为定时任务后全自动巡检执行，无需人工触发。"
 description_zh: "AI 智能体记忆与技能统一治理：解决记忆无限膨胀、身份/事实/偏好混层、技能内容重叠重复三大问题。分层判据（身份层/记忆层/画像层/技能层/外部记忆）+ 五类处置动作（保留/合并/压缩/外置技能/归档）+ 安全护栏，零信息丢失防膨胀。部署为定时任务后全自动巡检执行，无需人工触发。"
 description_en: "Unified governance for AI agent memory and skills: solves memory bloat, mixed identity/fact/preference layers, and overlapping or duplicated skills. Layered rules (identity/memory/profile/skill/external) + five disposal actions (keep/merge/compress/move-to-skill/archive) + safety guardrails with zero information loss. Runs as a scheduled auto-inspection task; no manual trigger needed."
-version: 1.0.0
+version: 1.1.0
 author: 武汉弈枢科技有限公司
 category: 效率工具
 metadata:
@@ -193,3 +193,9 @@ metadata:
 - 记忆写入只走标准记忆工具/存储接口，脚本禁直改记忆文件（防漂移）
 - 任何文件变更：先备份 → 改 → 验证（可读 + 语法）→ 留档
 - 补丁门控：每次打补丁后跑一次验证；验证不过就回滚，不"没证据就继续前进"
+
+
+## 技能库维护的实证基线：是「人类治理 + AI 辅助」，不是自主演化（来源：arXiv 2609.05677《Who Maintains Agent Skills? A Longitudinal Study of Human-Governed, AI-Assisted Skill Maintenance》2026-09-29 r319C arxiv.org 实拉 200）
+- 原文：挖取 5 个公共 AI 技能仓的完整提交历史（2025-10 至 2026-06），覆盖 **873 commits、143 个技能文件、254 次实质性创建后修订**；三条结论之一：**every substantive edit is authored or merged through a named human account，而 62% 带 AI co-author trailer**，且仓间差异很大；这些修订是真实的策展（genuine curation）而非机械改动。
+- 判据：① 治理设计不要假设"技能库能自己进化"——实证里**每一次实质修订都有具名人类作者或合并者**，AI 是共同署名而非决策者；② 因此自动化治理的正确定位是**把候选变更准备好、把影响面算清楚，把合并权留给人**，而不是自动落盘；③ 用"AI co-author 比例"作健康度指标时先看仓间差异（62% 是均值，个别仓可能近 0 或近 100），别当普适常数；④ 与 §分层判据 互补：分层决定"放哪"，本条决定"谁能改"。
+- 提升层：治理/记忆。触发词：谁维护技能、人类治理 AI 辅助、具名合并者、AI co-author trailer、技能库纵向实证。

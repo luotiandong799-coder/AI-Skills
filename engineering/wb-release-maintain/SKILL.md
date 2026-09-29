@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.24.0
+version: 1.25.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -265,3 +265,14 @@ sources:
 - 原文：n8n 把破坏性变更检测做成**版本化规则集**（v3 登记 storage 目录重命名这类破坏面），升级流程中对存量实例执行；且检测器要求**单条规则抛错不中断其余规则扫描**；弃用项就地警告（deprecated node / env var）而非等运行报错。
 - 判据：① 破坏性变更检测**按版本登记**比"一个全局开关"更稳——每个大版本引入的破坏面写成对应版本的规则，升级到哪版就跑哪版的规则，不会漏也不会误伤旧实例；② **检测器必须容错**：一条规则因为边界数据抛错，不该拖垮整个扫描，否则一个坏规则就能让所有破坏面检查失效；③ 弃用要**就地警告**（在声明/加载处提示），而不是等运行时炸了才发现某人还在用被弃用的节点/环境变量；④ 对自研系统：升级脚本里把"破坏性变更"写成**带版本号的规则集 + 逐条独立 try**，比散落在代码里的 if 更可审计、可回退。
 - 提升层：工作流/工具。触发词：破坏面预检、版本化规则集、单规则容错、弃用就地警告、breaking change detection。
+
+
+## 供给面一致性要能机检：in-tree == lockfile == upstream 三方比对，发布即通知下游重钉（来源：github.com/full-stack-skills/skills-toolchain README 2026-09-29 r319B api.github.com 实拉 200）
+- 原文：L0 vendor tooling 是 lockfile schema / lint gate / vendor 脚本的单一归属；`skill_vendor.py` 提供 `update`（取钉住源、整体替换、重算 digest）与 `check`（**in-tree == lockfile == upstream**）两个动作且 self-tested；`release-tag.yml` 在 push 到 main 后打不可变 tag + 发 Release，并 **dispatch `toolchain-updated` 事件通知下游**；`lint_skills.py` 与 `skill_vendor.py` 自身**经变异测试**（`tests/test_lint_skills.py` / `test_skill_vendor.py`）。
+- 判据：① 三方比对缺任一环都不成立——只比 in-tree 与 lockfile 会漏掉"上游被改而两边都没动"，只比 lockfile 与 upstream 会漏掉"本地被人手改过"；② 版本钉住不能只写锁文件，**发布侧要主动广播**（dispatch 事件）让下游重钉 SHA，否则下游永远停在旧钉；③ 治理脚本本身要有测试，且用**变异测试**验证（故意改坏一处，看测试是否失败），否则 lint 形同虚设；④ 自研：把"校验本地副本 + 锁 + 上游三方一致"做成一条可在 CI 跑的命令，任何一环不等即失败退出，不让"看起来装上了"通过。
+- 提升层：工具/工作流。触发词：lockfile、三方一致、digest、重钉 SHA、dispatch、变异测试、vendor 校验。
+
+## 信任表达两条相反路线：trust tier 分级 gate vs 机器可读 trust record 清单（来源：developer.nvidia.com skill evaluator / verified skills 两文 2026-09-29 r340-Q-A 实拉；对照 arXiv 2602.12430 v4 四级 gate 权限模型）
+- 原文：NVIDIA 明确**不设 trust tier**，改用 **machine-readable trust record 元数据文件**承载 authorship / license / 依赖链 / 已知限制；与"按信任等级分档授予权限（四级 gate）"构成路线对立。配套：manifest = 主 SKILL.md + counterexample 评测文件 + registry JSON，**negative case 默认不自动生成、须人显式写入**。
+- 判据：① 分级 gate 的问题是"等级由谁定、降级怎么通知"；清单式 record 的问题是"消费者得自己读"——选型时先问"我的消费方能读懂清单吗"，能读就用 record（更抗单点裁定），不能读才用 tier；② 无论哪条路线，**已知限制必须随包携带**（tier 写进等级描述、record 写进字段），不写限制的信任表达等于背书；③ 负例必须人工写：自动生成负例会退化成"模型已经会做的事"，测不出真失败。
+- 提升层：工具/可复用 Skill。触发词：trust tier、trust record、信任清单、负例人工写、已知限制随包。

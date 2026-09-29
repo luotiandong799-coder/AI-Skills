@@ -36,3 +36,8 @@
    install this skill (symlink → copy → readonly), run the closed-loop trigger
    test, register yourself in `registry.json`.
 2. Then come back here — this file is your everyday capability.
+
+## 人工介入不该只当闸门：纠正要沉淀成下轮的预筛条件，形成复利闭环（来源：docs.crewai.com human-feedback-in-flows 2026-09-29 r340-Q-A 实拉；本轮 r319C curl/抓取复核为 SPA 壳未达，采用 Qoder 一手留痕）
+- 原文要点：`@human_feedback` 是**非阻塞**的——provider 抛出 `HumanFeedbackPending` 即自动序列化当前状态，`from_pending` / `resume` 成对恢复；**每次人机交互永久追加进索引化 history**；人工给出的纠正准则会**迁入 memory，供后续运行自动预筛**。
+- 判据：① HITL 的价值不只在"这一次拦住"，而在"下一次不用再拦"——把人工纠正**结构化落库**（索引化历史 + 迁入记忆）才能复利，否则同样的问题每轮都要人裁决一次；② 暂停/恢复必须**成对且可序列化**：抛异常即自动存档、恢复接口显式调用，禁止靠内存态撑着；③ 与 §审批门 互补——已落的「HITL 审批门」管"要不要停"，本条管"停完之后留下什么"；④ 自研：每次人工干预写一条 `{触发场景, 人工结论, 生效范围}` 记录进共享记忆，并在下轮同场景**先匹配该记录再决定是否再问人**。
+- 提升层：工作流/记忆。触发词：human_feedback、纠正沉淀、人工预筛、from_pending/resume、HITL 复利。

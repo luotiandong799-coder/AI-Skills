@@ -2,7 +2,7 @@
 name: mcp-builder
 description: Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).、工具过载、上下文爆、按需加载、渐进式发现、search_tools、catalog/inspect/execute、阈值切换、服务器按需连、代码模式、组合调用、沙箱执行、逐次授权、跨 server 不可信、MCP 调试、Inspector、stdio 日志、协议协商、server/discover、_meta 字段、-32022、-32602、-32021、启动路径
 license: Complete terms in LICENSE.txt、三原语、工具资源提示、反模式、巨型服务器、批量变体、什么时候不该用、stdio、Streamable HTTP、无状态默认、会话头、OAuth 2.1、受众绑定、签发者、细粒度范围、一次性补齐、握手是契约、协议错误、工具执行错误、isError、可重试标记、建议动作
-version: 1.4.0
+version: 1.5.0
 ---
 
 # MCP Server Development Guide
@@ -313,3 +313,9 @@ Load these resources as needed during development:
 - **★隔离越强冷启动越慢，慢到让多步推理超时就是把可用性赔进去了**：原文指出更高隔离级别会增加冷启动延迟，可能导致 agent 在多步推理中超时。判据：**隔离等级与超时预算一起定**——只盯边界强度不管启动时间，出来的沙箱会先被超时打死。
 - 与 §凭证分钟级过期 + 请求者降域、§调用前计划校验 的分工：那两条管"权限给多细、执行前拦什么"；本条管"**执行环境这个壳有多厚、多久能换一个**"。
 - 提升层：工具。
+
+
+## 「可用工具集」与「执行授权」是两个平面：full profile ≠ Full Access（来源：docs.openclaw.ai/gateway/config-tools/tool-policy.md 2026-09-29 r319A curl 实拉 200）
+- 原文：`tools.profile` sets a base allowlist before `tools.allow`/`tools.deny`；**"Full selects tools; it does not grant Full Access execution permissions. The chat Execution permissions menu controls what available tools may do in that session."**；且「A catalog entry does not mean a tool or plugin is configured, connected, or authorized in the current session」。
+- 判据：① 配置工具权限时要对账**三个面**：入口面（工具在不在目录里）、调用面（profile/allow/deny 让不让调）、**执行权面**（这一 session 有没有被授权真的执行）；② profile 拉到 full 只是把**能力集**开满，**执行权**仍由另一套菜单/策略控制——把两者当一个开关，会出现"工具能调但执行被拒"或误以为"开 full 就全放行"；③ 目录里有 ≠ 已配置/已连接/已授权，验收时必须分别探活；④ 自研 MCP/工具网关：把 profile（能力集）与 execution grant（执行权）做成**两个独立字段并分开审计**，不允许一个开关同时代表两者。
+- 提升层：工具。触发词：tool profile、Full Access、执行权限、能力集与授权分离、allowlist、catalog vs authorized。

@@ -1594,3 +1594,25 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - 原文：Playground 可实时测 flow，**也可单独运行某个组件以隔离测试其依赖**
 - 判据：定位失败时先跑最小单元（单节点/单步骤），把"依赖问题"与"编排问题"分开；整条流一起跑时，两者混在一个失败里
 - 配套：tweaks 可在运行时临时覆盖 flow 设置 → 验证"参数敏感性"时不要改流本身，用临时覆盖，避免验证动作污染被测对象
+
+
+## 单件安全 ≠ 组合安全：恶意意图可跨技能拆分，扫描要从「单件校验」升到「跨模块关系图评估」（来源：arXiv 2609.30383《Stealth Apart, Harm Together: Skill Cascading Attacks on Skill-Based Agent Systems》2026-09-24 r319A 实拉，NeurIPS 2026 收录）
+- 原文：a malicious objective is distributed across multiple skills so that each modification looks benign in isolation, yet their combined execution is harmful；实例为处方审核流水线——技能①弱化「近期停用药物」信号、技能②下调与之相关的药物相互作用严重度、技能③在最终摘要里压制该低优先级告警，严重相互作用警告在到达医生前静默消失。作者发布 SkillCascade（自动化多智能体红队框架）与 SkillCascade-Bench（**213 条**经校验的级联用例），在 OpenClaw / Claude Code / Codex 三类宿主与多种 LLM 骨干上，级联交互**稳定诱发有害行为并绕过现有 per-skill 扫描器与运行时监控**。
+- 判据：① **逐件过审的流水线仍然存在系统级漏洞**——合规判定如果只做「单件可接受」，攻击者只需把有害目标拆成 N 件各自可接受的改动；② 扫描/审计对象必须从「单件」升级为「**跨模块关系图**」：把一次任务会串起来的多个技能画成调用/数据流图，在图上评估组合语义，而不是在列表上逐项打勾；③ 尤其要盯「产生信号—降权—压制告警」这类**三段串联**形态：单段都像正常业务逻辑，串联后是信号消失；④ 自研系统：安装前扫描加一条「本次新增技能与已装技能是否存在语义串联路径」，有则整组复审，不逐个放行。
+- 提升层：可复用 Skill / 工作流。触发词：跨技能攻击、skill cascading、逐件过审、关系图评估、组合安全、per-skill scanner 绕过。
+
+## 自动发现要先问「它扫多深」：超深目录=静默不加载，不报错（来源：docs.langflow.org/components-custom-components 2026-09-29 r319A curl 实拉 200）
+- 原文：自定义组件发现「does not exceed two levels of directories」，深度由 `directory_reader.py` 的 `MAX_DEPTH` 控制；外部路径靠 `LANGFLOW_COMPONENTS_PATH` 显式挂载。
+- 判据：① **任何"自动发现/自动扫描"机制都有隐式深度上限**，把文件放到第三层子目录不会报错、不会告警，只是**永远不被发现**——故障模式是"静默丢失"而非"失败"；② 排查"我明明放了却没生效"时，第一问是目录层级而不是内容格式；③ 需要深目录时必须走**显式挂载变量**而非依赖发现；④ 自研加载器：把深度上限写成**具名常量并打印一条"已跳过 N 个超深路径"的日志**，否则这类丢失永远不可见。
+- 提升层：工具。触发词：自动发现、MAX_DEPTH、两级目录、组件未加载、静默跳过、显式挂载。
+
+
+## 配对比较的对照组不能用"发现顺序"决定：字典序会静默翻转 delta 符号（来源：anthropics/skills issue #1383「silent benchmark failures (layout mismatch, inverted delta)…」2026-09-29 r319B api.github.com 实拉 200）
+- 原文：improve 流程用 `old_skill/` 作基线放在 `with_skill/` 旁，`aggregate_benchmark.py` **按字典序发现配置**（`sorted(eval_dir.iterdir())`）并算 `delta = configs[0] - configs[1]`；因 `old_skill` 排在 `with_skill` 之前，基线反被当成主项 → with_skill 通过率 1.0、old_skill 0.0，输出却是 **`Delta: -1.00`，明确改进被读成退步**。作者建议改为**固定显式优先级**（with_skill/new_skill 为主、without_skill/old_skill 为基线）而非依赖发现顺序。
+- 判据：① **A/B 对照的"谁是主项"必须显式声明**，交给目录枚举/字典序决定等于把结论符号交给命名运气；② 警报信号：改进项却报负 delta、或所有 delta 恒为同号——先查配对顺序再查实现；③ 同一 issue 的第二条独立失效：**目录布局不匹配时脚本静默跳过全部用例，`runs: []`、打印 `Delta: +0.00`、**退出码仍是 0**——零运行的评测必须非零退出，否则决策建立在噪声上（与 §不能只回 exit 0 要独立探活 同源，本条补"零样本"这一具体形态）。
+- 提升层：工具/工作流。触发词：delta 符号翻转、配对顺序、old_skill 基线、字典序发现、零运行退出 0、benchmark 空结果。
+
+## 评测污染的两副面孔：共享状态既造成相关失败，也会人为抬高成绩（来源：anthropic.com/engineering/demystifying-evals-for-ai-agents 2026-01-09 r319B 实拉）
+- 原文：每个 trial 都应"isolated by starting from a clean environment"；运行间不必要的共享状态（leftover files / cached data / resource exhaustion）会造成 **correlated failures**（基础设施抖动而非 agent 表现）；**共享状态还会人为抬高成绩**——"in some internal evals we observed Claude gaining an unfair advantage on some tasks by **examining the git history from previous trials**"。另：前沿模型 **0% pass@100 通常是任务坏了**（broken task）而非 agent 不行，应回头查 task spec 与 grader；**capability eval 应从低通过率起步**（给团队一座可爬的山）、**regression eval 应接近 100%**，高通过率的 capability eval 可"毕业"为持续运行的 regression suite。
+- 判据：① 污染不只让分数变低，**也会让分数虚高**（agent 读到上一轮的 git history / 残留文件），因此"跑多次取平均"之前先保证每次从干净环境起；② 多个 trial 因同一环境限制（如内存）而失败时**它们不独立**，结果不可用于衡量能力；③ 0% 通过率先怀疑**任务定义与评分器**，不是模型；④ 评测集要分两类管理：capability 用来爬坡（低分正常）、regression 用来防退步（必须近满分），capability 稳定高分后**转为 regression 常跑**，避免评测饱和后失去改进信号。
+- 提升层：工具/工作流。触发词：trial 隔离、干净环境、git history 作弊、correlated failures、pass@100=0%、capability 毕业 regression、eval saturation。
