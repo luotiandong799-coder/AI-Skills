@@ -13150,3 +13150,66 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - 要点：Agent 2.0 将知识库、MCP 统一为工具由智能体自主规划调用顺序（vs 1.0 检索后决策）；外部工具均以 MCP 协议接入纳入调度体系；One Key MCP 首批 14 家云市场伙伴（电商/地理/金融/法律/产业研究/物流）；Skill 三层=广场严选/服务商直供（MCP+Prompt+示例+最佳实践封装）/用户自定义；Connector 统一连接层（一次授权→标准工具经 MCP 暴露）
 - 提升层：工作流 / 工具
 - 触发词：百炼 Agent 2.0 / One Key MCP / Skill 三层
+
+## r303A 十独点（2026-09-29，十批实拉，增量判重通过；每点含来源+提升层+触发词）
+
+### 1. Claude Code 六权限模式全表 + auto 分类器 + dontAsk 拒绝语义（来源：code.claude.com/docs/en/permissions；anthropic.com/engineering/claude-code-auto-mode；claude.com/blog/auto-mode；platform.claude.com/docs/en/agent-sdk/permissions）
+- 六模式=default（首用每工具提示，CLI 标注 Manual）/acceptEdits（自动接受文件编辑与常见文件系统命令）/plan/auto（分类器每次工具调用前审查危险行为：删除、敏感数据外泄、恶意代码执行；安全放行、危险拦截引导换方法；Claude 持续被拦会建议切换）/dontAsk（拒绝而非提示；仅 allowed_tools/rules 批准的才运行；canUseTool 不调用；关键路径删除与需交互工具即使预批也拒绝）/bypassPermissions（跳过全部，hooks 仍可阻断，仅受控环境用）。
+- approval fatigue 批准疲劳：逐工具提示是成本，结构性解法（sandbox 隔离、最小权限面）优先于挨个审批。
+- 判重：与 r301B 权限四语法重叠约 50%，auto 分类器机制+dontAsk 拒绝语义+批准疲劳为 ≥40% 独有增量 → 合并保留增量落地。
+- 提升层：工具。触发词：权限模式、dontAsk、auto mode、批准疲劳、bypassPermissions。
+
+### 2. n8n queue mode 并发调优量化（来源：docs.n8n.io/hosting/scaling/queue-mode/；blog.n8n.io/the-n8n-scalability-benchmark/；community.n8n.io/t/how-to-increase-the-default-limit-10-of-parallel-executions/307124/3）
+- queue mode 下主实例只处理 timers/webhooks 并生成 execution ID 入 Redis 队列，worker 拉取执行；社区 benchmark 23→162 req/s（5 workers，约 7x 吞吐）。
+- worker --concurrency 默认 10（用户实际撞到的限制），2-CPU 服务器建议 5；N8N_CONCURRENCY_PRODUCTION_LIMIT 控制每 worker 并行数；并发机制是每 worker 级而非 regular mode 的整实例级。
+- 判重：r301C queue mode 五段为打包/批处理轴，本点=并发调优量化增量（性能数字+参数建议），重叠约 40% → 落地。
+- 提升层：工具。触发词：queue mode、concurrency、N8N_CONCURRENCY_PRODUCTION_LIMIT、worker、吞吐。
+
+### 3. Langflow 模板注入面 + 双花括号转义 + Structured Output 三件套（来源：docs.langflow.org/components-prompts；docs.langflow.org/1.9.0/parser；docs.langflow.org/1.9.0/structured-output）
+- {VARIABLE_NAME} 花括号变量；{{literal}} 双花括号转义字面量；Parser 模式用 {} 提取 Table/JSON 键；Structured Output=Format Instructions+Output Schema→JSON/Table。
+- 模板是注入面（templates are an injection surface）：变量用 XML 标签分隔是缓解非保证；调试先打印全部变量与类型。
+- 判重：r301A 输出解析为解析侧，本点=注入安全+转义+结构化契约轴，重叠约 45% → 落地。
+- 提升层：工具。触发词：prompt template、注入面、双花括号、Structured Output。
+
+### 4. Make 聚合器反制 Iterator + Chunk Array 分批 + Data Store 作 AI 缓存（来源：till-freitag.com/en/blog/make-performance-operations-optimization；use-apify.com/blog/make-com-data-stores-guide；dredyson.com/how-i-solved-complex-make-com-automation-problems-using-sams-toolbox-of-useful-modules-a-complete-beginners-step-by-step-guide-to-installing-configuring-and-troubleshooting-10-proven/）
+- Iterator 操作数按 bundle 数倍增（Anti-pattern: 100× 单插）；Aggregator 合并多 bundle 减 API 调用；merge() 合并同构数组。
+- Chunk Array 把 500 记录切 10×50，错误隔离到批次（实例场景 12→5 模块）；Array Aggregator 分组要求 rowId 一致否则聚合失效；Data Store 可作 AI 结果缓存避免冗余 API 调用；Sequential processing 应对严格 rate limit；嵌套数组深层路径（suppliers[].offer.variants[].prices）用 flatten/map。
+- 判重：r301A 五指令/r302C 错误细化为不同轴，本点=性能反制+分批+缓存轴，重叠约 35% → 落地。
+- 提升层：工作流。触发词：Iterator、Aggregator、Chunk Array、Data Store、操作数。
+
+### 5. Pipedream Connect 托管认证 + Build from / Replay event 复用路径（来源：pipedream.com/docs/connect；pipedream.com/docs/connect/api-proxy；pipedream.com/docs/connect/mcp/developers；pipedream.com/docs/workflows/event-history）
+- Connect=2400+ API 托管认证：用户授权后平台存储并刷新 token，每次请求注入新鲜 token，应用存 0 个 token；OAuth client credential（client_id/secret）认证 Connect API；Connect MCP server 每工具调用按 end user ID 解析对应账户。
+- Event History 面板：Build from event / Replay event 两条复用路径，Inspector 可回放事件到新版 workflow，错误链接到具体 step。
+- 判重：r301A SDK 双端/r302B source 双消费为不同轴，本点=托管认证+事件复用轴，重叠约 40% → 落地。
+- 提升层：工具。触发词：Connect、托管认证、Replay event、end user、OAuth client。
+
+### 6. OpenClaw 技能来源追踪 + ClawHub publish 流程 + 分块上传（来源：docs.openclaw.ai/tools/skills；docs.openclaw.ai/cli/skills；docs.openclaw.ai/clawhub/quickstart）
+- 技能来源被记录，更新时仍解析回 ClawHub（来源即版本契约）；多来源安装语法：@owner/slug（可 --version）/ skills-sh:owner/repo/slug / git:owner/repo[@main] / 本地路径 --as custom-name / --force 重装。
+- ClawHub publish：CLI 校验 manifest→打包→上传→审核通常 <24h→全网可用；更新=manifest 升版再 publish；非 ClawHub 分发可 stage zip：skills.upload.begin/chunk/commit → skills.install({source:"upload"})。
+- 判重：r301A+r302B 插件四层为架构轴，本点=分发/来源/发布契约轴，重叠约 45% → 落地。
+- 提升层：工具。触发词：ClawHub、publish、skills.upload、来源追踪、manifest。
+
+### 7. 腾讯 SkillHub 26 分制评分卡 + SkillPay 3 标准 2 提醒（来源：skillhub.cloud.tencent.com/skills/skill-quality-rating；skillhub.cn/skills/qinshubao；news.qq.com/rain/a/20260810A09XZX00）
+- 26 分制=Description X/12 + Body X/14；22-26 优秀/15-21 合格/8-14 需改进/0-7 不合格；支持批量审查。秦叔宝 R 模块得分=(满足项数/7)×5（R06 资源限制、R07 状态恢复为 P2 项）。
+- SkillPay 高质量 3 标准=确定性高、通用性强、文档清晰输出格式固定（有标准使用示例、低随机幻觉、一个参数也能生效）；2 提醒=勿搬运、封装前检查敏感 API Key（平台校验原创度）。
+- 判重：r302B TRACE 15 子项为维度框架，本点=量化评分卡+发布标准轴，重叠约 40% → 落地。
+- 提升层：可复用 Skill。触发词：26 分制、评分卡、SkillPay、批量审查、秦叔宝。
+
+### 8. 阿里百炼三种应用模式选型 + 非首次发布展示配置变更差异 + RAM 权限（来源：help.aliyun.com/zh/model-studio/application-introduction；help.aliyun.com/zh/model-studio/new-single-agent-application；help.aliyun.com/zh/model-studio/create-application-from-template）
+- 三种核心应用模式：智能体对话（开放式对话）/工作流可视化编排（固定链路自动化）/高代码 Python 部署 API（专业开发）。
+- 应用模板复制后默认为已发布；发布渠道四配置区=调用方式（应用ID/API/SDK）+发布平台（钉钉/微信公众号）+集成开发（组件/魔笔）+AI 实时互动（语音/视频）；非首次发布弹窗展示自上次发布以来的配置变更差异；RAM 账号发布需 ram:CreateServiceLinkedRole 权限；音视频知识库（上传音视频检索问答+二次创作脚本字幕）。
+- 判重：r302C Agent 2.0+Skill 三层为工具调度轴，本点=模式选型+发布治理轴，重叠约 35% → 落地。
+- 提升层：工作流。触发词：百炼、应用模式、发布差异、ram:CreateServiceLinkedRole、发布渠道。
+
+### 9. Antigravity agents.md + skills.md 自主开发流水线（PM→Engineer→QA→Approved 循环）（来源：codelabs.developers.google.com/autonomous-ai-developer-pipelines-antigravity；agenticskills.io/learn/full-stack-ai-workflow；agskills.dev/sickn33/antigravity-awesome-skills/senior-fullstack）
+- agents.md+skills.md 驱动角色切换循环：PM 角色写 generate_code.md（用户反馈直接写进 Markdown）→ 切 Full-Stack Engineer 执行 → 切 QA 执行 audit_code.md → 用户反馈再回读修订 → 循环直到用户输入 "Approved"。
+- 配套全栈分层：react-best-practices/frontend-design skill 层 + supabase-postgres RLS skill + Supabase MCP server 数据层；多 agent 编排技能含顺序/并行/层级委托/共识决策四模式；antigravity-awesome-skills 1400+ 可安装技能（npx skills add --skill senior-fullstack）。
+- 判重：r301-r302 六章无此流水线，全新点 → 落地。
+- 提升层：工作流 / 可复用 Skill。触发词：agents.md、skills.md、Antigravity、PM→Engineer→QA、Approved。
+
+### 10. LLM 工具调用可靠性四步契约 + JSONValidation vs FunctionCallAccuracy + tool_choice（来源：futureagi.com/blog/evaluating-llm-tool-use-2026/；futureagi.com/glossary/function-calling/；qaskills.sh/blog/tool-calling-accuracy-testing-guide-2026；learn.microsoft.com/fil-ph/Azure/ai-foundry/agents/concepts/tool-best-practice）
+- 评测工具调用=四步契约，每步独立评分：决定调用（是否该调）/选工具（是否选对函数）/构建参数（参数值是否正确）/集成结果（结果如何被消费）。
+- JSONValidation 只查 schema 合法性（invalid-JSON 率/schema-violation 率）；FunctionCallAccuracy 查语义正确性（name match+argument structure+type compliance+semantic correctness against intent）；tool_choice 三档 auto/required/none 是最确定的调用控制；可靠性三处=JSON schema+plain-English 描述+agent loop 错误处理。
+- 判重：r301-r302 无工具调用评测契约方法论，全新点 → 落地。
+- 提升层：模型 / 工具。触发词：工具调用、四步契约、FunctionCallAccuracy、JSONValidation、tool_choice。
+
