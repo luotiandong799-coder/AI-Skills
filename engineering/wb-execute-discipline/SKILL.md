@@ -13077,3 +13077,76 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **T 一票否决红线**：越权访问/数据泄露/远程执行/代码混淆触碰即淘汰。
 - **秦叔宝四质检**：S01 提示词注入 P0 / S02 敏感信息泄露 P0 / S03 危险操作 P0 / S04 权限最小化（allowed-tools 最小化不滥用 Bash）P1。
 - 提升层：可复用 Skill（评测）。触发词：TRACE 15 子项、一票否决红线、秦叔宝 S01-S04。
+
+
+## r302C 十独点（2026-09-29 实拉，30 次查询；双键判重=来源标识+概念词）
+
+### 1. Dify 输入侧三件套：Conversation Variables 跨轮短记忆 + Hidden&Pre-Filled 隐藏预填 + Human Input 人工把关
+- 来源：dify-6c0370d8.mintlify.app/en/learn/key-concepts；dify-6c0370d8.mintlify.app/en/cloud/use-dify/nodes/user-input；dify.ai/blog/the-human-input-node-bringing-human-judgment-into-automated-workflows；dify.ai/blog/dify-conversation-variables-building-a-simplified-openai-memory
+- 判重：r302A 发布 12 检查（发布流程）、r302B 三形态（节点类型分类）；本条聚焦字段级输入控制与人工把关，错开
+- 要点：Conversation Variables 是 Chatflow 专属跨多轮持久变量（Variable Assigner 节点更新，Array[object] 可连续 append 记忆）；User Input 节点 Hidden & Pre-Filled 把已知值（product identifier/tenant ID）预填隐藏；Human Input 节点把人工判断带入自动化（内容区 Markdown+可拉上游变量，⌘/ 插入输入字段、可预填，字段名成为下游可引用输出变量）
+- 提升层：工具
+- 触发词：Dify 会话变量 / 隐藏预填 / 人工输入节点
+
+### 2. n8n Enriched retrieval 元数据增强模式 + Chat Memory Manager 单 memory 约束
+- 来源：n8n.io/rag/；blog.n8n.io/ai-agent-memory/；n8n.io/workflows/8008-smarter-rag-agents-with-enriched-retrieval-and-modular-workflows
+- 判重：r302A 转换决策（数据转换）、r302B 202 异步应答；本条聚焦 RAG 检索质量增强与 memory 约束，错开
+- 要点：Enriched retrieval=异步任务给每个 chunk 加 LLM 元数据（topics/use_case/risks/audience_level/summary）再入向量库供检索过滤；每个 AI Agent 节点只接受一个 memory 子节点（设计约束）；Chat Memory Manager 可检查 memory 大小/清特定条目，记忆编码为 embedding 写向量库；Evaluations 功能分析优化输出减幻觉
+- 提升层：工作流
+- 触发词：n8n 富检索 / 记忆管理器 / RAG 元数据
+
+### 3. Langflow 自定义组件三 API 端点 + Assistant 自然语言生成组件
+- 来源：docs.langflow.org/1.8.0/components-custom-components；docs.langflow.org/1.8.0/api-reference-api-examples；docs.langflow.org/langflow-assistant
+- 判重：r302A 输出解析、r302B 记忆四层；本条聚焦组件开发自动化与 API 端点，错开
+- 要点：POST /v1/custom_component（代码构建组件）、/v1/custom_component/update（更新 build config 与 outputs）、/v1/validate/code（校验组件代码）；Langflow Assistant 自然语言生成组件代码；流程触发 API /api/v1/run/FLOW_ID + 自动生成 Python/JS/curl 片段
+- 提升层：工具
+- 触发词：Langflow 自定义组件 / validate/code / Assistant 生成组件
+
+### 4. Make 五错误指令行为细化 + 子场景 On demand + ifempty 包裹嵌套引用
+- 来源：help.make.com/rollback-error-handler；alltomate.com/blogs/make-com-error-handling/；dredyson.com/the-hidden-truth-about-mapping-nested-json-in-make-com…；till-freitag.com/blog/make-error-handling-retry-strategien
+- 判重：r302A 已落五指令名；本条补行为细节+实践（Rollback=回滚事务模块；Commit=停止保留已做更改；Retry=仅取出失败 bundle 其余继续；Break=移除错误 bundle 存 incomplete execution；Ignore）+ ifempty 包裹防崩 + 子场景 On demand 独立重试，增量 ≥40% 合并落地
+- 要点：嵌套 JSON 每个引用包 ifempty 防崩；子场景 On demand 只在父场景触发时跑、scenario inputs 传数据、错误不阻塞父场景；实践：dedup-check 放 create 前、关键分支拆子场景、断点调试
+- 提升层：工作流
+- 触发词：Make 错误指令细分 / ifempty / 子场景隔离
+
+### 5. Anthropic subagent 编排成本模式表：三档开销 + 实测省钱四法
+- 来源：growthengineer.ai/blog/claude-agent-sdk-subagents；agentropic.ai/blog/parallel-subagent-orchestration/；collabnix.com/claude-code-multi-agent-subagents-run-parallel-ai-tasks-like-a-pro/；saram.io/blog/multi-agent-architecture-when-one-claude-is-not-enough-2026
+- 判重：r302A 长上下文/缓存断点、r302B tool use；本条聚焦 subagent 编排 token 成本量化，错开
+- 要点：Single subagent 总 token +15-30%（研究/探索/大文件读）；Parallel +30-100%（独立检查）；Triage Haiku 净负成本（先过滤无关工作）；单个 agent ≈4× chat token、多 agent ≈15×；token 用量单独解释约 80% 性能方差；省钱：窄任务范围 30-50%、Sonnet workers+Opus orchestrator 60-70%、spawn 前父 summarize 20-40%、并发上限 3-4 而非 8+；并行工具调用硬要求
+- 提升层：工作流
+- 触发词：subagent 成本 / Triage Haiku / 并发上限
+
+### 6. skills.sh find-skills 元技能自检工作流 + 51 agent 自动写入
+- 来源：skills.sh/vercel-labs/skills/find-skills；www.skills.sh/docs；habr.com/en/articles/1078034/
+- 判重：r302A 已落 CLI 命令清单；本条补自检工作流+元技能地位（3.21M 安装量、30.2k 星、榜单第一）+51 agent 自动写入，增量 ≥40% 合并落地
+- 要点：find-skills 是 Vercel 官方内建 skill——agent 自检"任务缺技能"时先跑它找现成技能；add 时自动 detect 本地已装 agent（51 个）并写入各自正确技能目录；命令 find/add(-g -y)/update/check/remove/list/init
+- 提升层：工具
+- 触发词：find-skills / 技能自检 / 多 agent 自动写入
+
+### 7. DeepSeek Harness "Everything is a plugin" 无特权核心架构
+- 来源：www.deepseek.com/harness/en/；deepseekharness.dev/；arxiv.org/pdf/2608.25593；dev.to/worldlinetech/deepseek-harness-how-deepseek-uses-cordis-to-redefine-autonomous-ai-agents-599
+- 判重：全新开源 agent 运行时架构范式（r302A/B 无同类落点），独立
+- 要点：基于 Cordis 微内核，"There is no privileged core"——模型适配器/工具/会话/沙箱/存储/循环/调度/UI 全部是可替换插件；能力三层拆分（Seam/Provider/Tool）；defineTool 声明式工具 + Standard Schema 配置校验；会话为 append-only event log（resume/fork/search/replay/Trajectory 视图）
+- 提升层：可复用 Skill（运行时架构范式）
+- 触发词：DeepSeek Harness / 无特权核心 / 全插件化
+
+### 8. Agent 技能供应链安全：攻击实况 + 四层防线
+- 来源：cyber.netsecops.io/articles/trust-no-skill-integrity-verification-for-ai-agent-supply-chains/；agentconn.com/blog/agent-config-skills-supply-chain-attack-surface-2026/；arxiv.org/pdf/2603.00195v2；www.microsoft.com/en-us/security/blog/2026/02/19/running-openclaw-safely-identity-isolation-runtime-risk/；atlas.latticeflow.ai/framework/owasp_agentic_skills_top10_2026/；labs.cloudsecurityalliance.org/research/csa-research-note-ai-agent-skill-scanner-bypass-20260610-csa/
+- 判重：r302A GitHub 安全加固（runner）、context-compressor 工具面安全（描述注入）；本条聚焦技能/插件供应链新攻击面（量化证据+检测绕过实况），独立
+- 要点：Unit 42 BIV——49,943 个技能中 80% 偏离声明功能、5% 含多阶段攻击链；36% agent skills 有安全缺陷；ClawHavoc 投放数百恶意技能；Trail of Bits 四法绕过检测（whitespace inflation/预编译 bytecode 隐藏/document-archive 间接层）；OWASP AST02:2026 供应链妥协；防线：注册处 provenance（G1-G2）→沙箱 staging 观察（G3）→权限清单比对（G4）→运行时按 tier 限制；Microsoft 建议专用 VM 隔离+凭证轮换+监控记忆篡改
+- 提升层：可复用 Skill（装技能前的安全流程）
+- 触发词：技能供应链 / BIV / 技能沙箱门控
+
+### 9. Dify 检索四件套：Rerank 权重 + Summary Index + 多模态 + metadata 过滤
+- 来源：blog.csdn.net/Instrustar/article/details/159020801；dify-6c0370d8.mintlify.app/en/cloud/use-dify/nodes/knowledge-retrieval；dify.ai/blog/multimodal-retrieval-is-now-available-in-the-knowledge-base；dify.ai/blog/dify-1.12.0-summary-index-from-fragmented-retrieval-to-full-context；dify.ai/blog/agentic-rag-smarter-retrieval-with-autonomous-reasoning
+- 判重：r302A 发布检查、r302B 三形态；本条聚焦知识库检索质量优化，错开
+- 要点：Rerank Weighted Score 语义/关键词权重（仅 High Quality 模式可用）；实测向量+BGE Reranker NDCG@3 0.62→0.84（+42.7%，生产级默认启用）；Summary Index（1.12.0）每 chunk 附 summary 字段轻量替代 GraphRAG；多模态检索=Embedding 快筛+Reranking 精排；metadata 过滤检索
+- 提升层：工具 / 工作流
+- 触发词：Dify Rerank / Summary Index / 多模态检索
+
+### 10. 阿里百炼 Agent 2.0 工具统一调度 + Skill 三层体系 + One Key MCP
+- 来源：help.aliyun.com/zh/model-studio/new-single-agent-application；36kr.com/p/3944611268771200；cj.sina.com.cn/articles/view/1746173800/68147f6801901mbls；docs.agent.bailian.aliyun.com/zh/connector/index
+- 判重：r302A 已落阿里虾小宝（市场入口）；本条补 Agent 2.0 架构+Skill 分层+MCP 生态，增量 ≥40% 合并落地
+- 要点：Agent 2.0 将知识库、MCP 统一为工具由智能体自主规划调用顺序（vs 1.0 检索后决策）；外部工具均以 MCP 协议接入纳入调度体系；One Key MCP 首批 14 家云市场伙伴（电商/地理/金融/法律/产业研究/物流）；Skill 三层=广场严选/服务商直供（MCP+Prompt+示例+最佳实践封装）/用户自定义；Connector 统一连接层（一次授权→标准工具经 MCP 暴露）
+- 提升层：工作流 / 工具
+- 触发词：百炼 Agent 2.0 / One Key MCP / Skill 三层
