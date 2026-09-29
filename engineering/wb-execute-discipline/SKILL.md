@@ -11406,3 +11406,67 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **RAG triad 指标**：上下文相关性/接地性/答案相关性三件套评估管道——**RAG 评估有标准三元组**。
 - **课程退役策略**：模型/库弃用后 Jupyter notebook 退役改 video-only——**代码会过时，架构价值保留**（与 wb-doc-writing 缺口标记法互补：同类"内容过时怎么处理"思路）。
 - 提升层：可复用 Skill。触发词：sentence-window、auto-merging、RAG triad、video-only 退役。
+## r294C 十独点（2026-09-29 实拉）
+
+### 1. 日志审计与节点级错误策略：Dify 可观测性面（来源：CSDN《Dify 2026日志审计权威指南》+ help.aliyun.com《XXL-JOB调度Dify工作流》《Dify x SLS》+ legacy-docs.dify.ai《error-handling》2026-05-05/2026-09-21/2026-08-04/2026-04-23 实拉，与 r292B OTel 栈合并增量）
+- **2026 日志审计体系**：基于 OpenTelemetry，覆盖用户操作/LLM 调用/RAG 检索/工作流执行全生命周期，结构化 JSON+TraceID 关联+实时审计告警联动——**审计=结构化+可追踪+可告警三件套**。
+- **底层存储可切换**：SLS 插件把日志写入外部 LogStore，Dify 控制台查询/监控体验不变——**观测界面与存储解耦**，量大时换存储不换界面。
+- **XXL-JOB 节点级下钻**：执行历史（状态/输入输出/耗时/Tokens）+调度事件（工作流+节点级）+节点追踪（循环/迭代/条件分支深入下钻）——**一次执行可下钻到任意节点**。
+- **节点级错误策略**：每节点可指定继续流程/记录日志/切换替代路径；通用错误处理器减少冗余节点——**错误处理下沉到节点粒度**（与 §r294B reasonCode 互补：那条管失败怎么分类，本条管失败后流程怎么走）。
+- 提升层：工具。触发词：日志审计、OpenTelemetry、SLS 存储切换、XXL-JOB、节点级错误策略、通用错误处理器。
+
+### 2. 模板生态规模与付费市场：n8n 模板面（来源：connectsafely.ai《Best n8n Templates 2026》+ n8nmarkets.com + buildberg.co《n8n Templates》2026-08-26/2026-09-17/2026-04-17 实拉，与 r293A Activepieces 模板库合并增量）
+- **官方库规模增长**：11,741 模板（2026-08，7 月 10,700+、年初 8,300+），75%+ 含 LLM 集成——**模板=平台生态先行指标**，一年涨 40%。
+- **第三方付费市场模式**：n8nmarkets（2,000+ 模板，约 50% 免费）/ n8n Template Store（210+ 模板包）/ 垂直行业包（地产获客/牙科初诊/电商弃购恢复，$9-$200+）——**付费模板的合理场景=卖家做了你本要花一天接的集成**；官方库有免费同款就跳过。
+- 判据：**模板市场繁荣度比"模板数量"更能说明平台健康**——官方库增长曲线+第三方愿意付费做垂直包=生态正循环。
+- 提升层：工作流。触发词：模板生态、11,741 模板、付费市场、垂直行业包、官方库增长。
+
+### 3. HITL 门控与沙箱执行：LangFlow 1.11/1.12 特性面（来源：langflow.org/blog《Langflow 1.12 released》《Langflow 1.11 released》+ docs.langflow.org/release-notes 2026-09-01/2026-07-22/2026-09-05 实拉，与 r292B/r293C LangFlow 合并增量）
+- **1.11 HITL checkpoints**：gated tool calls 需人工评审放行——**高风险工具调用插入人工闸门**（与 §guardian pattern 互补：那条管执行前自动验证，本条管关键步骤人工确认）。
+- **A2A 协议支持 + AG-UI 流式**：agent-to-agent 互操作协议+Workflow API 流式输出（AGUI 兼容）——**flow 可被其他 agent 调用且流式返回**。
+- **1.12 OpenTelemetry**：服务健康+flow runs 遥测——**可观测性进主版本**（与 Dify 1 同向：2026 平台标配 OTel）。
+- **microVM sandbox**：`LANGFLOW_SANDBOX_BACKEND=exec-sandbox` 让 Python Interpreter 组件跑在独立 QEMU microVM——**代码执行与主进程物理隔离**（用户代码=不可信输入）。
+- 提升层：工具。触发词：HITL checkpoint、gated tool calls、A2A 协议、AG-UI 流式、microVM sandbox、exec-sandbox。
+
+### 4. Chat-to-automation 与 MCP 规模：Activepieces 增长面（来源：activepieces.com/blog《AI Workflow Automation Examples》+ blog.brightcoding.dev《Activepieces 400+ MCP Servers》+ activepieces.com/docs/install/options/railway 2026-04-07/2026-06-16/2026-09-28 实拉，与 r293A 模板合并增量）
+- **Chat-to-automation builder**：自然语言描述直接建 flow，无需提示工程——**"描述即工作流"是 2026 建流主入口**（与 n8n $fromAI 同向：参数/流程都可由 AI 生成）。
+- **400+ MCP Servers**（2026-06）：每个 piece 可被 Claude/Cursor/Windsurf 经 MCP 暴露——**平台集成=agent 工具面**。
+- **Railway 一键部署**：模板部署 App+PostgreSQL+Redis（可选）+自动 SSL+自定义域名——**部署模板=平台铺开的杠杆**。
+- 提升层：工作流。触发词：Chat-to-automation、描述即工作流、400 MCP servers、Railway 一键部署。
+
+### 5. 四阶段场景形状与生产纪律：Make 场景设计面（来源：use-apify.com《Make.com Templates 20 Scenarios》+ keerok.tech《Advanced Workflows》+ thinkbot.agency《Scenario Blueprint》2026-03-15/2026-05-14/2026-04-08 实拉，与 r293A/r293C Make 合并增量）
+- **四阶段模板形状**：Trigger（webhook/日程/事件）→ Modules（抓取映射）→ Filter/Router（条件分支）→ Action（写 CRM/Slack/Sheets）——**多数场景是同一形状的变体**，套模板再改连接即可。
+- **生产最佳实践**：命名前缀（API_/DB_/Transform_ 模块清晰）、Notes 模块内联文档（复杂逻辑前加说明）、子场景模块化（大场景拆子场景经 webhook 调用）、data stores 存配置（API keys/端点/特性开关）、**幂等设计**（场景安全处理重复执行）。
+- **Make Grid 依赖映射**：可视化依赖关系图——**场景间依赖可盘点**。
+- 判据：**写场景先套形状再定制**；改场景先看命名/文档/幂等三件事。
+- 提升层：工作流。触发词：四阶段形状、命名前缀、Notes 内联文档、子场景模块化、幂等设计、Make Grid。
+
+### 6. REST 创建工作流与 $send 目的地：Pipedream 编程面（来源：pipedream.com/docs《Example: Create a Workflow》+ cloud.tencent.com MCP server 页 2026-09-16/2026-09-29 实拉，与 r293A ShareLink 合并增量）
+- **REST API create workflow**：从 workflow share link 编程创建+传 connected accounts/step/trigger props 配置——**工作流模板化+程序化实例化**。
+- **$send 目的地**：`$send.s3()`/HTTP/email 一行发送，无需手动建步骤——**发送动作内置为 API**。
+- 判据：**模板分享+REST 创建=工作流的"复制粘贴"**——把模板当函数，props 当参数。
+- 提升层：工具。触发词：create workflow endpoint、share link 创建、$send.s3、目的地 API、程序化实例化。
+
+### 7. Field Guide 三原则与 name 规范：Agent Skills 编写面（来源：rogerstringer.com《Agent Skills: A Field Guide to the Third Pillar》PDF + learn.microsoft.com《Agent Skills》+ docs.langchain.com deepagents《Skills》2026-09-18/2026-07-10 实拉，与 r293B 结构/r294A 分发合并增量）
+- **Field Guide 三原则**：description says when（命名触发情境+最好写明不适用于什么）/ body is the right altitude（精确于对你特有的事，安静于模型已知的事）/ self-contained（脚本/模板/示例随文件夹交付）+ deterministic parts are code（必须精确的都是脚本不是描述）——**技能=描述管触发+正文管高度+脚本管精确**。
+- **name 规范字段级约束**（Microsoft Agent Framework 与多平台一致）：1-64 字符、仅小写字母数字连字符、不得首尾连字符或连续连字符、**必须匹配父目录名**——**目录名=技能身份，可机检**。
+- **技能数量治理**：少而精的技能胜过多个重叠的；技能增多后先合并再新增——**与 §防腐化 同向：数量要治理**。
+- 提升层：可复用 Skill。触发词：description says when、right altitude、self-contained、deterministic parts are code、name 匹配父目录、技能数量治理。
+
+### 8. API 限流与审计端点：skills.sh 编程面（来源：skills.sh/docs/api + skills.sh/docs 2026-05-07/2026-05-12 实拉，与 r293A CLI/r293C 规模合并增量）
+- **API 限流分档**：无 key 60 请求/min/IP、有 key 600/min——**限流=注册激励**（要高频先拿 key）。
+- **audit 端点**：`GET /api/v1/skills/audit/{owner}/{repo}/{skill}` 返回技能元数据——**技能目录也可编程审计**。
+- **CLI 管理三命令**：list（已装清单）/ update（拉最新版）/ remove（移除）——**装完之后的日常管理有标准命令**。
+- 提升层：可复用 Skill。触发词：60/min、600/min、audit 端点、skills list、skills update、skills remove。
+
+### 9. 跨家族评审与自研模型：Copilot 生态面（来源：github.blog《GitHub Copilot CLI combines model families for a second opinion》+ aiempowered.ai《Project Polaris》+ docs.github.com supported-models 2026-04-06/2026-05-28/2026-09-27 实拉，与 r293B Copilot 合并增量）
+- **Rubber Duck 实验**：Copilot CLI 用**另一模型家族**的模型当独立评审者，在反馈最关键的节点评 agent 的计划与工作——**不同家族模型抓不同错误类型**（与 §dual-LLM 隔离互补：那条管安全隔离，本条管质量双检）。
+- **Project Polaris**：2026-08 起替代 GPT-4 Turbo 成 Copilot 默认引擎，MoE 架构带**低资源语言专家**（Rust/Haskell 等通用模型弱项）——**垂直语言专家=自研模型卖点**。
+- **模型退役表**：官方公布各模型退役日期+建议替代（Claude Opus 4.7→5 等 2026-10-02 批量）——**模型有生命周期，使用方按表迁移**。
+- 提升层：工具。触发词：Rubber Duck、跨家族评审、Project Polaris、MoE 语言专家、模型退役表。
+
+### 10. 文档 AI 与多向量检索：deeplearning.ai 多模态面（来源：community.deeplearning.ai《Document AI: From OCR to Agentic Doc Extraction》《Multi-Vector Image Retrieval》+ learn.deeplearning.ai《Building Multimodal Data Pipelines》2026-04-07/2026-03-07/2026-07-15 实拉，与 r293B/r293C 课程合并增量）
+- **Document AI agentic doc extraction**：传统 OCR 丢布局信息（合并单元格表格/图表-标题关系/多栏阅读顺序），agentic 提取保留结构——**"读文档"要保结构，不只是抽文字**（与 wb-artifact-verification 结构检查互补）。
+- **Multi-Vector Image Retrieval**：每图一组 patch 向量（每 patch 一个），文本 query token↔图像 patch 细粒度匹配——**多向量=细粒度图文匹配**（与 r293A 多向量检索互补：那条管文本侧，本条管图像侧）。
+- **Multimodal Data Pipelines**（Snowflake）：图像/音频/视频转 LLM-ready 文本的管线——**多模态进 LLM 前先转文本是现实路径**。
+- 提升层：可复用 Skill。触发词：agentic doc extraction、OCR 丢布局、patch 多向量、Multimodal Data Pipelines、LLM-ready 文本。
