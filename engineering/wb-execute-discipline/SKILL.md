@@ -12413,3 +12413,78 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **MM-RAG 体系**（Building Multimodal Search and RAG）：跨模态检索/多模态 embedding/vision-language 重排/接地引用/多模态推荐系统——"MM-RAG=跨模态检索+重排+接地引用"。
 - **视频聊天 RAG**（Multimodal RAG: Chat with Videos Intel）：视频→多模态 RAG 系统架构支持对视频内容问答——"视频即 RAG 语料=可问答"。
 - 提升层：工作流。触发词：生成 agent 自动评测迭代、多模态数据管线、媒体转 LLM 文本、MM-RAG 跨模态检索、重排接地引用、视频聊天 RAG。
+## r299C 十独点（2026-09-29 实拉）
+
+### 1. fail-branch 错误策略与变量交接契约：Dify 工作流面（来源：legacy-docs.dify.ai/zh-hans/guides/workflow/error-handling + dify-hosting.com/en/guides/dify-workflow + dify.ai/blog/boost-ai-workflow-resilience-with-error-handling + deepwiki.com/langgenius/dify-docs + dev.to/_cbd692d476c5faf3b61bcf + promptindexhub.com/dify-workflow-not-saving-variables-between-nodes-fix 2024-12-16/2026-03-16/2026-05-22/2026-09-03/2026-09-12/2026-09-23 实拉，与 r291B 错误处理+r284A 工作流节点合并增量——那条管错误分类，本条管失败分支机制与变量传递契约）
+- **fail-branch 错误策略**：代码/HTTP 节点推荐，错误时创建替代执行路径，提供 error_message/error_type 变量——"失败分支=替代路径+错误变量"。
+- **重试与异常处理优先序**：同开时优先重试，重试仍失败再启用异常处理；并行分支单分支失败不再中断整流程（分支隔离，其余继续）——"重试优先+并行分支隔离"。
+- **变量交接契约**：变量跨节点边界需源节点声明输出+接收节点完整路径引用，**缺一边数据静默消失不报错**——"变量交接=显式声明+全路径引用"。
+- **广播模式**：单触发器并行激活多 agent，等所有结果返回统一聚合——延迟 O(n)→O(1)——"多 agent 并行聚合=广播不排队"。
+- **LLM 节点窄职责**：分类/生成分开各自一个节点；代码节点重试上限 10 次间隔 5000ms——"单节点单职责+代码重试 10 次"。
+- 提升层：工作流。触发词：fail-branch、error_message/error_type、重试优先异常处理、并行分支隔离、变量交接契约全路径、广播模式 O(1)、LLM 节点窄职责。
+
+### 2. 错误处理三层与子工作流结构化错误响应：n8n 失败面（来源：community.n8n.io/t/252743 + cyberalchimista.it/n8n-avanzato-subflow-error-handling + n8nautomation.cloud/blog/n8n-error-handling-complete-guide-2026 + n8nresources.dev/blog/2026-07-16-n8n-sub-workflows + n8nlogic.com/blog + community.n8n.io/t/304713 2026-04-28/2026-05-07/2026-05-09/2026-07-16/2026-07-26/2026-08-19 实拉，与 r288C 错误+r293A 错误合并增量——那条管错误处理模式，本条管子工作流错误契约与三层设置）
+- **错误处理三层**：节点级 On Error（Stop Workflow 默认/Continue 用前输出/Continue using error output 附错误消息）/工作流级 Error Trigger 专用错误工作流/子工作流级独立设置（**父错误工作流只在子未捕获时触发**）——"错误=节点/工作流/子工作流三层各设"。
+- **子工作流结构化错误响应**：子工作流总是返回 success 布尔+error 字段对象，父 Execute Workflow 节点后立即加检查——"子工作流=success/error 契约"。
+- **子工作流独立测试再连接**：先隔离问题再组合，避免问题叠加难定位——"子工作流=先独立测再连父"。
+- **优雅降级**：IF 节点/表达式检查可选操作失败用默认值兜底；Code 节点 try/catch 返回结构化错误对象而非 throw——"降级=默认值+结构错误对象"。
+- 提升层：工作流。触发词：错误三层设置、Error Trigger 专用工作流、子工作流 success/error 契约、先独立测试再连接、优雅降级默认值、try/catch 结构错误。
+
+### 3. lfx serve flow 即端点与部署四形态：Langflow 生产面（来源：docs.langflow.org/1.8.0/deployment-kubernetes-prod + /1.8.0/api-reference-api-examples + /next/workflow-api + /lfx-serve + /next/deployment-nginx-ssl + /deployment-caddyfile + /next/api-keys-and-authentication 2025-05-12/2026-08-09/2026-09-02/2026-09-03/2026-09-04/2026-09-08/2026-09-16/2026-09-24 实拉，与 r291A API+r295A 部署合并增量——那条管 API 形态，本条管 flow 服务化与部署矩阵）
+- **lfx serve=flow 即端点**：FastAPI 服务器把 flows 暴露为 POST /flows/{flow_id}/run；LANGFLOW_API_KEY 必需（公开可访问服务器）——"flow 暴露 HTTP 端点=lfx serve"。
+- **Workflow API (Beta)**：GET /api/v2/workflows 按 job ID 查执行状态与结果——"异步执行=job ID 查状态"。
+- **部署四形态**：K8s prod（端口转发 7860 访问 API）/Docker（LANGFLOW_AUTO_LOGIN 免登录）/Nginx+SSL（Let's Encrypt+Certbot 自动证书）/Caddy 反代+SSL——"部署矩阵=K8s/Docker/Nginx/Caddy 四选"。
+- **认证安全基线**：LANGFLOW_SUPERUSER_PASSWORD 未设则启动失败（不建默认密码）——"超管密码=必设否则拒启动"。
+- 提升层：工具。触发词：lfx serve、POST /flows/{flow_id}/run、LANGFLOW_API_KEY 必需、/api/v2/workflows job 状态、部署四形态、LANGFLOW_SUPERUSER_PASSWORD 必设。
+
+### 4. Piece CI/CD 流水线与版本钉死：Activepieces 发布面（来源：activepieces.com/docs/build-pieces/misc/pieces-ci-cd + /docs/admin-guide/guides/project-releases + /docs/admin-guide/guides/manage-pieces + /docs/install/architecture/piece-syncing + agenticindex.io/vendors/activepieces + automationatlas.io/tools/activepieces 2026-06-10/2026-07-29/2026-07-30/2026-09-16/2026-09-27 实拉，与 r289A 版本+r292C 版本化合并增量——那条管技能版本管理，本条管集成件发布流水线与钉版规则）
+- **Piece CI/CD 流水线**：离线开发→package.json 升版本→PR 合并→手动 CLI 或 GitHub/GitLab Action 触发同步——"集成件发布=版本化+PR+同步触发"。
+- **Project Releases=环境晋升**：Production 项目从 Staging 创建 release 全部变更即刻应用，三种来源（Git/Project/Rollback）——"发布=环境晋升+来源可回滚"。
+- **版本钉死规则**：每步钉 exact piece 版本，flows 从不自动升级；升级在 builder 点版本选择，跨 minor/major 边界警告——"步骤版本钉死+跨边界警告"。
+- **官方 pieces 自动同步**：每小时从 registry 自动同步，无需升级服务器——"官方集成件=每小时自动同步"。
+- **发布前测试**：Test Flow 用 sample data+run logs 每步输入输出错误+失败步骤自动重试——"发布前=示例数据+日志+自动重试"。
+- 提升层：工具。触发词：Piece CI/CD、package.json 升版本、PR 触发同步、Project Releases 晋升、来源 Git/Project/Rollback、版本钉死 exact、跨 minor/major 警告、官方每小时同步。
+
+### 5. 错误五指令与 Fallback Module：Make 回退面（来源：help.make.com/rollback-error-handler + academy-content.make.com/make-intermediate-errors + everestx.com/tutorials/make + till-freitag.com/en/blog/make-error-handling-retry-strategies + octavehq.com/post + use-apify.com/blog + workflowpick.com/reviews 2026-02-22/2026-03-15/2026-04-16/2026-05-12/2026-05-21/2026-05-26/2026-09-08 实拉，与 r288C 错误+r293A 错误合并增量——那条管错误处理模式，本条管错误指令语义与回退模式）
+- **错误五指令**：Rollback（停止+回滚 ACID 模块事务，默认）/Commit（停止但标记成功保留已做操作）/Resume（忽略错误用空 bundle 继续）/Ignore（跳过此 bundle 继续处理其他）/Rollback error handler——"错误处理=五指令按语义选"。
+- **Rollback 细节**：回滚该 bundle 之前所有 ACID 模块变更，错误 bundle 不继续、其余 bundle 不处理——事务场景（建订单多系统一失败不留半建记录）用 Rollback——"事务流程=整 bundle 回滚"。
+- **Fallback Module 模式**：主 API 失败路由备份服务（SendGrid 失败→Mailgun），并行错误路径第一个成功者胜——"备用模块=并行路径先胜"。
+- **Dead Letter Queue**：高价值场景（订单/支付）失败记录不丢弃，落 Sheet 待人工处理——"死信队列=失败留痕待处理"。
+- **优雅降级默认值**：enrichment API 失败默认 Unknown 而非 null——"降级=有意义的默认值"。
+- 提升层：工作流。触发词：Rollback/Commit/Resume/Ignore 五指令、ACID 回滚、Fallback Module 先胜、Dead Letter Queue、降级默认值 Unknown 非 null。
+
+### 6. 组件二分与 dedupe 策略：Pipedream 组件面（来源：pipedream.com/docs/components + /docs/components/contributing/api + /docs/components/contributing/guidelines + /docs/components/contributing/actions-quickstart + /docs/connect/components/custom-tools + /docs/components/quickstart/nodejs/sources 2026-07-19/2026-07-23/2026-08-31/2026-09-15/2026-09-23/2026-09-25/2026-09-27/2026-09-28 实拉，与 r298B #10 工具+r295A 组件合并增量——那条管工具开发，本条管 source/action 契约与事件去重）
+- **组件二分**：sources（独立资源作 workflow 触发器，this.$emit 发事件，可用 dedupe 策略）/actions（可复用代码步骤，return/$.export 返回数据给后续步骤）——"两类组件=source 触发/action 复用"。
+- **Sources 生命周期钩子**：deploy 时 props 接收用户输入；钩子常需配置 source 监听新事件——"source=生命周期钩子配置监听"。
+- **Actions 规范字段**：type 必须 action；description 须含相关文档链接——"action=必填 type+文档链接"。
+- **Custom tools（Connect）**：Node.js 组件走标准组件工作流+CLI 发布带 Connect flag；custom tools 是 actions 形态——"自定义工具=actions 形态"。
+- **事件去重策略**：unique/greatest 两种 dedupe 策略防同一事件重复处理——"去重=unique/greatest 两策略"。
+- 提升层：工具。触发词：组件二分、this.$emit、dedupe unique/greatest、生命周期钩子、type 必填 action、文档链接规范、Custom tools、Connect flag。
+
+### 7. 幻觉缓解四法与生产四层防御：Anthropic 可靠性面（来源：console.anthropic.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations + catalog.workshops.aws/prompt-eng-claude3 + wasilzafar.com/pages/series/ai-app-dev-sdk-anthropic-part20 + learnixo.io/courses/ai-safety-guardrails + claudelab.net/en/articles/api-sdk + echessa.com/blog + aiunpacker.com 2026-03-17/2026-03-23/2026-04-20/2026-04-27/2026-05-25/2026-06-18/2026-07-11 实拉，与 r295C 输出校验+r296A 评测合并增量——那条管输出验证，本条管幻觉缓解层次与契约化接地）
+- **幻觉缓解四法（官方）**：允许说"我不知道"+CoT 验证（逐步推理暴露错误逻辑）+迭代精炼（输出作为后续输入验证）+外部知识限制——"四法=允许不知/CoT/迭代/知识限制"。
+- **生产四层防御**：输入接地作为硬契约（RAG 强约束非礼貌请求）+显式来源归因（引用哪个文档段落）+温度 0.0 确定性+XML 标签分离上下文与指令——"接地=硬契约+归因+零温+分离"。
+- **置信度评分**：每条主张附校准概率，低于阈值转人工——"主张级置信度=可过滤"。
+- **多输出一致性**：生成多个输出比对，不一致提示可能幻觉；结构化输出 schema 约束减少自由文本幻觉空间——"一致性比对+结构化约束"。
+- 提升层：模型。触发词：允许"我不知道"、CoT 验证、迭代精炼、接地硬契约、来源归因、温度 0.0、XML 分离、置信度评分校准、多输出一致性。
+
+### 8. 技能市场全景与 registry/directory 判据：技能生态选型面（来源：localskills.sh/blog/skills-sh-alternatives + hivebook.wiki/wiki/agent-skills-marketplace-comparison + totalum.app/blog + explainx.ai/blog + navosagent.ai/en/blog + nxplace.com + agensi.io/learn 2026-04-02/2026-04-20/2026-05-08/2026-06-07/2026-06-09/2026-07-08/2026-07-30/2026-09-14 实拉，与 r292A 目录+r297A 技能目录+r298A 市场合并增量——那条管市场功能，本条管量级数据与选型判据）
+- **市场全景量级**：SkillsMP ~1.2M-1.9M（GitHub 爬取 2+ stars 无审查）/skills.sh ~57k-91k（社区/官方混合）/LobeHub 169K（分类浏览）/ClawHub ~3,200（社区+安全审计）/Anthropic 官方 ~20（人工审核）——"市场=量级与审核档位差异大"。
+- **聚合器质控缺口**：SkillsMP=Google for skills 纯索引无质控，重复/废弃/半成品并列——"聚合器=广度换质控"。
+- **选型判据**：团队要私有技能/角色/审查门→registry 而非 directory；个人浏览→directory 够用——"选型=团队需求决定目录或注册表"。
+- **安全审计档位**：ClawHub 社区+安全审计 vs 大部分无审查（36% 危险技能担忧分析）——"装技能先看审核档位"。
+- 提升层：工具。触发词：SkillsMP 1.2M-1.9M、skills.sh 57k-91k、ClawHub 安全审计、Anthropic 官方人工审核、聚合器无质控、registry/directory 判据、36% 危险技能。
+
+### 9. cache-mode 最小权限与自托管阈值判据：GitHub Actions 治理面（来源：github.blog/changelog/2026-09-10-control-github-actions-cache-access-with-cache-mode + docs.github.com/en/actions/reference/dependency-caching + github.github.com/gh-aw/reference/sandbox + docs.github.com enterprise tool-cache + dev.to/pockit_tools + learn.github.com/learning-pathways/ghes-actions 2026-03-12/2026-03-15/2026-03-30/2026-08-19/2026-09-10/2026-09-24/2026-09-28 实拉，与 r286A CI+r290B 缓存合并增量——那条管缓存类型，本条管缓存权限与自托管边界）
+- **cache-mode 最小权限**（2026-09 GA）：workflow/job 级控制缓存访问（read/write/none），防止缓存投毒保护受信工作流——"缓存访问=最小权限三态"。
+- **自托管 runner 阈值判据**：构建>10 分钟标准 runner 才换自托管（32 核预暖缓存）——"自托管=先过 10 分钟阈值"。
+- **自托管供应链风险**：fork+PR 可攻 runner 环境触及 secrets/GITHUB_TOKEN；禁用 repo 级自托管 runner 可中介风险——"自托管=fork 攻击面，禁 repo 级"。
+- **缓存实践三件套**：范围最小化+依赖变化失效+fallback；setup-* actions 自动缓存；无网 runner 工具缓存用 GitHub-hosted artifact 转移——"缓存=作用域/失效/降级+工具缓存转移"。
+- 提升层：工具。触发词：cache-mode 最小权限、缓存投毒防护、自托管 10 分钟阈值、fork 攻击面、禁 repo 级 runner、工具缓存 artifact 转移、Squid 本地缓存。
+
+### 10. AI critique 评审用法与 prompt-to-outcome 评测维度：deeplearning 提示面（来源：learn.deeplearning.ai/courses/ai-prompting-for-everyone/information + /lesson/fwaadejr/web-search + /lesson/eg55aj/ai-critique + community.deeplearning.ai/t/7-day-challenge + /index 2026-04-25/2026-04-27/2026-05-01/2026-07-15/2026-08-26/2026-09-01/2026-09-27 实拉，与 r288A 提示课程+r294A 提示词合并增量——那条管提示基础，本条管评审用法与提示评测维度）
+- **AI 作思想伙伴**（AI Prompting for Everyone，Andrew Ng 新课）：找信息（web search/deep research 拿有来源答案）+头脑风暴写作+诚实反馈——"AI=检索伙伴+评审者双角色"。
+- **AI critique 评审用法**：让 AI 评审自己的输出挑毛病再改进——"评审=第二双眼睛"。
+- **prompt-to-outcome 评测两维**：更深思考（该推 web-search/deep-research 时有没有推）+迭代精炼（有没有多轮改进到输出更好）——"提示质量=深度+迭代两维衡量"。
+- **基础四法传承**：总结/推断/转换/扩展（ChatGPT Prompt Engineering 常青课）——"四法=总结推断转换扩展"。
+- 提升层：工作流。触发词：AI 思想伙伴、AI critique 评审、deep research 找信息、prompt-to-outcome 评测、更深思考维度、迭代精炼维度、四法总结推断转换扩展。
