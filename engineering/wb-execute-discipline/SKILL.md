@@ -13619,3 +13619,40 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 
 ### 多模态 agent 循环契约
 **标准 loop 假设文本观察；多模态扩展：观察=图/音频/视频帧/组合——媒体观察进推理前必须提取成结构化信息**；长程 VQA 视觉上下文退化→专用 Perceive 工具（局部感知）+Global Navigator 高层战略；自修正=模块化 perception+planning+tool use（修正有界计算）；**李飞飞三词：Model 定上限/Context 定读懂业务/Harness 定调起工具做完并一直跑**。
+## r308B AI 编程工作流与代码库理解（来源：augmentcode/github.blog/kilo.ai/arXiv/codex 系列实拉）
+
+### 代码库混合索引双支柱
+**AST/代码图索引（函数签名/调用图/导入链/类型层次/依赖关系——回答"谁调用这函数""哪些模块依赖这接口"，不读文件）+向量搜索（语义"我们怎么处理支付"）都要**；分块：函数级（保上下文）/类级（OOP 方法交互关键）/重叠 10-20% 块大小防切片切断模式；**增量索引（Tree-sitter 原生解析+实时更新）省 70% token——别把可 grep 的代码烧进上下文**；**symbol 精确导航先于 embedding：定义/使用/影响走 symbol（SCIP/Tree-sitter），语义模糊才向量**。
+
+### 上下文工程三策略 + repo map + 最窄目录
+**Write（主动持久化窗口外：scratchpad/结构化笔记/todo 逐步更新保持目标在近期注意力）/Select（动态检索只取相关）/Compress（总结轨迹剪旧消息）**；**repo map（Aider）：tree-sitter AST map——看每文件结构（签名/类定义/导入）不花加载行成本（中等仓库 500-2000 tokens），要细节再请求文件**；**命名文件+从最窄目录启动>任何工具："在哪里启动决定它看到什么"（packages/api/ 启动只加载该目录 CLAUDE.md+祖先，无兄弟包指令，文件访问限子树）**；.claudeignore 排除 dist/build；分层 CLAUDE.md；**每机器上下文移出 system prompt 共享 prompt-cache 条目**。
+
+### 高 AI 采用团队评审失效与机械化
+**PR 评审中位时间 5x/每 PR 事故 3x/评审者略读；人类评审 400 行以上崩溃——修法机械化：编译/类型门+diff 限定 SAST（只扫变更行）+依赖存在性检查（反 slopsquatting）+变异测试+post-merge canaries**；**危险 AI 代码=编译通过+测试全过但错：分页 off-by-one/未测分支缺权限检查/边界短路校验/规模才浮现的竞态——评审要 trace**。
+
+### 独立评审 agent 与审查顺序
+**生成代码的 agent 不评审自己（自我评估自信夸中等结果，Anthropic 验证）——独立评审 agent**；顺序：intent→behavior→security→maintainability；**解释不是证据**；清单问句：只动预期文件和依赖吗/测试挑战实现还是镜像/安全数据钱身份不可逆路径变了吗/人工看高风险路径吗/在生成窄单元外测了吗/日志指标告警开关回滚够吗/出事负责人能不用问 agent 解释吗。
+
+### AI 代码质量审计 rubric
+**0-100 审计：rewrite likelihood（diff 合架构/所有权/低耦合/最小新表面积，"2 分钟能解释清吗"）等维度→ship/refactor/rewrite 三档（85-100 仍要审）**；**finding 分级 Blocking（bug/安全/数据损坏/资源泄漏合并前必修）/Recommended/FYI；模板=severity+标题+路径:行号+何时何地出错+参考**。
+
+### TDD as agent 反馈机制
+**agent 最大问题=不知道何时完成；失败测试套件是跨 loop 外部真相源——没测试 agent 用自己判断验证自己=静默错误配方**；**先写测试→运行→确认因正确理由失败→最小实现→重构保持绿（red 禁止实现）**；**循环测试（期望值由被测函数算出）比同义反复更糟——期望值必须来自 spec 不是代码**；tdd-ai 状态机 CLI（agent 调 CLI 读状态做完 check-in）。
+
+### 行为保持重构验证四层
+**语义完整性=所有可能输入和状态下可观测行为（输出/副作用/API 契约）完全一致；跨文件挑战=隐式耦合（全局状态/DI/Context）+动态行为（多态/反射/装饰器，静态追不全）**；**验证：①等价性测试对旧 seam（绿=公共契约保持）②diff 副作用面（以前写文件的模块不再写=回归）**；验证四层：双跑比对/形式验证/统计验证/差分测试；**BSG 强制业务逻辑显式可检视后再生成代码；残余风险=弱 assert 保留+公共方法删除；前端模型仅 5.4% 整仓迁移不破坏**。等价=逐输入相同，直到确认旧行为正确且故意改。
+
+### 编码基准饱和与多指标选型
+**SWE-bench Verified 饱和（2026-09 单 harness 七模型 95%+）不再能区分；TerminalBench 52-58% 更真实；现实 PR 通过率 35-50% 远低于 SWE-bench（需求模糊/跨文件/评审标准测不到）**；**选型看多文件准确率/首次接受率/成本每实例/速度/可移植性（API vs Cursor-only）**。
+
+### Single-Push 多 agent git 工作流
+**Diverge（PA 不能 push 机械强制）→Signal（.agent-done marker+commit）→Integrate（仅集成者串行 pull 各分支+解决冲突+单 commit）→Ship（仅集成者 build 通过后 push 恰好一次）**；**冲突防御=按文件边界任务分解（每 agent 不同文件集，边界写进 prompt）；worktree 阻止同文件写入但不阻止"两端改同一行为干净合并运行期崩"——可靠修法是任务分解；package.json/tsconfig/共享工具预分配所有权**。
+
+### 编码提示工程
+**Context 最小充分（栈/去哪找/哪些文件相关/项目模式）；Constraints 最被低估（不改 public API/不加依赖除非万不得已/不碰无关模块/遵循现有规则）**；**可移植 system prompt 形状：Identity→Mission→Operating rules→Tool policy→Output contract→Examples→Escalation and abstention（模糊立即停问）**；具体技术+版本/引用项目惯例/质量期望/负面约束；**Anthropic：给"一个它能跑的检查"——测试/构建退出码/linter/脚本 diff 对 fixture/截图对比设计**。
+
+### 自愈恢复栈与监测定位
+**异常处理渐进升级：self-correct→fallback→degrade→escalate 不丢积累工作；恢复 Level1 指数退避→Level2 回滚最后事实收集步骤重跑**；**定位监测实证：告诉 agent"哪错了"恢复率 45% vs 无指导重跑 16% vs 基线 0%（p=0.0005）——先定位再重跑，重跑是最后手段**；scope check 每主要动作前验证范围内。
+
+### 编码 agent 可观测性
+**OpenTelemetry：每 agent 转换/prompt-response/沙箱断言导出 span——每个自动 PR 推理轨迹可审计**；**traces 验证调用正确性不只输出（Monocle 确保做了正确调用）**；**生产证据闭环：捕获全路径（源材料→提取字段出处→提交→专家修正）→结构化问题→发现→定向 eval→工程任务**；AgentDebugX Detect-Attribute-Recover-Rerun 闭环+DeepDebug 多轮根因（全局轨迹+结构化调查+交叉质询）。
