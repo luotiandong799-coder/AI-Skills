@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.25.0
+version: 1.26.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -276,3 +276,5 @@ sources:
 - 原文：NVIDIA 明确**不设 trust tier**，改用 **machine-readable trust record 元数据文件**承载 authorship / license / 依赖链 / 已知限制；与"按信任等级分档授予权限（四级 gate）"构成路线对立。配套：manifest = 主 SKILL.md + counterexample 评测文件 + registry JSON，**negative case 默认不自动生成、须人显式写入**。
 - 判据：① 分级 gate 的问题是"等级由谁定、降级怎么通知"；清单式 record 的问题是"消费者得自己读"——选型时先问"我的消费方能读懂清单吗"，能读就用 record（更抗单点裁定），不能读才用 tier；② 无论哪条路线，**已知限制必须随包携带**（tier 写进等级描述、record 写进字段），不写限制的信任表达等于背书；③ 负例必须人工写：自动生成负例会退化成"模型已经会做的事"，测不出真失败。
 - 提升层：工具/可复用 Skill。触发词：trust tier、trust record、信任清单、负例人工写、已知限制随包。
+
+## 本地来源（file:// 与本地路径安装）必须同权入锁并算目录内容哈希，遥测把绝对路径脱敏为 generic 标记，否则本地安装就是审计盲区（来源：vercel-labs/skills bcdcee67，2026-09-30 r320B 实拉）

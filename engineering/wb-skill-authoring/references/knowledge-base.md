@@ -2523,3 +2523,14 @@ version: 3.61.0
 - **自由度原则**：include only context it doesn't have（只写模型没有的上下文）；set appropriate degrees of freedom——高自由度开环任务（creative）/低自由度脆弱操作（精确格式/财务）；complex tasks 用 workflows（clear sequential steps+checklists）；implement feedback loops。→ 判据：自由度与任务脆弱度匹配。
 - **skill-creator 迭代流程**：decide→draft→test prompts→claude-with-access-to-skill 跑→qualitative+quantitative 评估→后台补 quantitative evals。→ 判据：新技能=草稿→测试 prompt→双维评估迭代，不是一次写成。
 - **目录结构**：SKILL.md（frontmatter+Markdown 指令）+scripts/（可执行）+references/（按需载入）+assets/（输出用模板图标字体）。→ 判据：资源按用途分三目录，不混放。
+
+
+## 撤销必须做成「版本级状态机」，不是删条目（来源：modelcontextprotocol/registry docs/administration/admin-operations.md，2026-09-30 r320B raw.githubusercontent 实拉 200）
+- 原文：`PATCH /v0/servers/{serverName}/versions/{VERSION}/status` `-d '{"status": "deprecated", "statusMessage": "Superseded by v2"}'`；**A status change applies to every version of a server in a single request. The response reports how many versions were updated in `updatedCount`.**；**Server-wide content changes: Have no bulk endpoint and must be applied to each version individually**；**Server name: Cannot be changed in any version (it's the immutable identifier)**；另 `ALL_VERSIONS=true` 的 takedown 脚本**要求显式设置**，`so a forgotten VERSION cannot take down a whole server by accident`。
+- 判据：① 撤销的最小单位应该是**版本**而不是包——单版本 deprecated（带 `statusMessage` 说明替代者）与整包 deleted（moderation）是两种粒度，混成一个"下线"动作会误伤仍在被依赖的旧版本；② 状态变更要有**回报数**（`updatedCount`），否则"批量撤回"无法验证影响面——改了多少个版本必须量化；③ **状态可批量、内容不可批量**：状态是元数据可一次改全量，内容改写必须逐个版本走完整 body，这条区分防止"一次请求偷偷改掉所有版本正文"；④ 标识符（name）与版本号不可变 ⇒ 旧版永远可解析，撤销只改状态不改内容，消费者不会因为上游撤销而解析失败；⑤ 危险操作要**显式开关**：默认 `VERSION` 必填，漏填不会顺手下线整包。
+- 提升层：工作流 / 可复用 Skill。触发词：版本级状态机、updatedCount、单版本 deprecated、整包 deleted、状态可批量内容不可批量、标识符不可变。
+
+## 供应链准入=三重最小证明；不可信元数据默认静默丢弃（来源：MCP registry 命名空间规则 + r320B 实拉核验；与 §优先源显式确认防劫持 互补——那条管"谁优先"，本条管"凭什么证明你是你"）
+- 原文/要点：① 命名空间须证明**域名所有权**才能占用；② 包来源走 **base-url 白名单**，**私有 registry / 镜像一律拒**；③ 发布者元数据**只保留单一白名单键，其余静默丢弃并视为不可信**。
+- 判据：① 准入证明要分三层且**各管一件事**：身份层（命名空间域名归属）防止顶名，来源层（base-url 白名单、拒私有镜像）防止中间人替换，元数据层（白名单键、其余丢弃）防止把攻击者写的字段当成事实；② "**丢弃**"优于"报错"——不可信元数据处理成不存在而不是抛错，避免攻击者用畸形元数据把安装流程打断成不可用；③ 私有/镜像源被拒是**有意的**：镜像不可验证上游一致性，接进来等于给供应链加一个不可审计的环节；④ 与已落「命名空间域名归属防抢注」合并记忆：那条是身份层，本条补齐来源层与元数据层，三层缺一层都可绕过。
+- 提升层：安全边界 / 工作流。触发词：三重最小证明、base-url 白名单、私有镜像拒绝、元数据白名单键、静默丢弃不可信元数据。
