@@ -2574,3 +2574,31 @@ version: 3.61.0
 ### 本轮判非（不落）
 - Kafka 持久身份+单调序号去重 / `FencedInstanceIdException`（Qoder r351-Q-B B2）：本轮独立 curl 取 `kafka.apache.org/43/design` 得 200/57,425B，但两处关键串 0 命中 ⇒ **WB 未独立复核，登记为待补证据**。
 - 重叠触发三域让路与四种处置选型（B5）、`PAUSED` 计入 finished（r353 A5）：本轮未独立实拉，登记为待补。
+
+## §L502（自 SKILL.md 下沉，2026-09-30 r323B）
+## Agent 评测与基准 2026：评测数据三来源/评测集版本化/judge 校准/双评分/CI 分层/工具五维/成本延迟/harness 层/轨迹六指标/多 agent 协作（来源：langchain checklist/aws agentcore+strands/raftlabs anthropic/iwoszapar/ms synthetic+agent-evaluators+ACS/claw-eval+clawtrack+groundeval/aiworkflowlab/evalview/genai.qa/futureagi/agentest/exploreagentic/kunal/getwidget/agentic-ai/claudexia/galileo/zylos/padiso/aaai judge，r323A，与 §技能评测闭合邻域/§分层评测互补——那些条管"技能评测方法"，本条管"agent 系统评测工程"）
+- **评测数据三来源**：任务无歧义+参考解证明可解；正例负例都测；**Anthropic 推荐 20-50 个真实失败任务（从 tickets/escalation logs/user complaints 找，每条=Input+Context+Expected）——不是 synthetic 不是 benchmark**；**生产故障→永久测试用例**；synthetic 填 launch 前缺口+边界 case，production traces 反映真实行为（互补不是替代）。判据：**评测起点=真实失败用例；故障后立刻固化为测试用例**。
+- **评测集版本化**：三分区=train 调 prompts/graders→development 对比→test set 锁定（不 tune）；scenarios=versioned immutable numbered versions（inputs/expected outputs/assertions/tool sequences）；**agent 指令显著变化→重生成并版本化评测数据**（旧 prompt 生成的数据变 stale）。判据：**评测集=版本化不可变夹具；prompt 大改必重生成**。
+- **LLM judge 校准三规则**：人先手评 ~20 trials，judge 跑同 20，Cohen's kappa<0.6 即不可靠→修 rubric 重跑；**"Unknown" escape hatch**（强制二值隐藏判断不确定性）；校准集含 clear pos/neg/borderline/difficult slices+confusion matrix+balanced accuracy+bootstrap CIs+per-slice；**criteria 写可观察证据**（"states the 14-day refund window" 而非 "accurate and helpful"）；模型/prompt/rubric/domain 变化→重校准。判据：**judge 上线前必须过人工校准；rubric 写可定位证据**。
+- **Task+Process 双评分**：Task Score（达到什么）+Process Score（怎么达到：goal alignment/efficiency/information utilization/result verification）；每 run 三独立证据通道（execution traces+audit logs+environment snapshots）；**answer+trajectory 分用 track-specific weights（路径中心任务轨迹权重大）**。判据：**只评结果不评路径漏掉"结果对但走错路"**。
+- **确定性轨迹匹配与 LLM 判断分离跑 CI**：评测结构化为 pytest 用例进 CI；**确定性 trajectory matching tests（快/免费/每次 push）与 LLM-judged evals（慢/贵/PR 或定时）分开**；pytest markers 控制上下文；quality gates 分数低于阈值阻塞部署；golden baseline diffing 回归检测。判据：**快慢评测分离；回归 diff 进 CI；分歧可回放定位**。
+- **工具调用五维评测**：Tool Call Accuracy（正确+参数+无冗余）/Tool Selection（正确且必要）/Tool Input Accuracy/Output Utilization（正确使用结果）/Call Success；四层 stack=选对或**正确不选（irrelevance bucket）**→参数 schema+语义→结果利用（Groundedness+ContextAdherence）；扣分式 evaluator（-0.25 per issue/-0.2 per violation）。判据：**工具评测按"选择-参数-利用"三层；"正确不调用"也是评分项**。
+- **成本与延迟指标**：**Cost per task=最被低估指标（tokens+tool invocations per job）——悄悄毁单位经济学**；**cost-per-success=总花费/成功数（捕获 retries/tool fees/long trajectories）；报分布（median+P90）不只平均值**；**Latency 报 p95 不报 mean（tail latency brutal）**；**gate releases on 少数高信号指标=schema validity/safety canaries/cost-per-success drift**。判据：**成本按成功计费口径+分布报告；发布闸用少数高信号指标**。
+- **评估 harness 层**：模型 benchmark 高分仍可因 harness 弱点灾难失败；harness 级=Task success/Tool selection precision/**Permission correctness（权限检查在正确时机触发）**/**Approval correctness（审批在正确风险级发出）**；ACS 五检查点=input/LLM/state/tool execution/output；**控制规则 policy YAML=portable/versionable/auditable**。判据：**评测含 harness 级类别（权限/审批触发正确性）；控制规则 policy-as-code**。
+- **轨迹六指标与 golden trace 重放**：①Trajectory accuracy vs golden（exact/semantic）②Tool-call precision/recall ③Path efficiency（步数 vs 最短）④Cost efficiency ⑤Safety（拒绝不当+抗注入）⑥**Recovery metrics（注入失败后成功率）**；**golden trace replay=100 真实生产 traces 冻输入重放 diff（exact match→structural diff）做回归主力**。判据：**轨迹评测含恢复类指标；golden trace 重放做回归主力**。
+- **多 agent 评测四类**：performance/coordination quality（handoff success/tool selection accuracy）/cost（token per agent）/reliability（error clustering/drift detection）；**最未解挑战=inter-agent collaboration assessment**；**role adherence 是主指标+crew coherence/manager-worker fidelity**；补充=Agent utilization/delegation depth/review convergence rate/Team throughput（diminishing returns?）/Failure propagation（一 agent 失败影响多少下游）；两 tier judge=agent 级（observation alignment/tool selection/state consistency）+system 级（task completion/role distribution/complexity）。判据：**多 agent 单独量协作质量（handoff/role adherence/失败传播）**。
+
+## §L495（自 SKILL.md 下沉，2026-09-30 r323B）
+## 撤销与审核分层：吊销只阻断后续发布、不推翻既有审核结论；恢复走 successor 重跑检查并保留失败尝试为审计史（来源：docs.openclaw.ai clawhub/publishing，2026-09-30 r320A 实拉）
+
+## §L486（自 SKILL.md 下沉，2026-09-30 r323B）
+## 技能进化不要自由变异，要「分解进固定能力空间 + 定向修订」（来源：arXiv 2609.34397《SkillFocus》2026-09-28，2026-09-29 r337-Q-C 实拉；与 §技能去重/合并 互补——那条管"存量怎么收口"，本条管"进化怎么长才不漂"）
+- 原文：SkillFocus 把技能能力**分解进固定的能力空间**，进化时是「朝目标能力空间定向修订」，而非随机变异；held-out 4 基准全最优 +5.7 点，且**进化本身消耗的 token 少 24%**。
+- 判据：① 技能迭代的"改进"要有**坐标**——先把技能拆成一组可枚举的能力维度，每次改只动其中若干维，而不是整体重写赌变好；② 这样进化的好处是**可验证 + 省 token**：改动有方向，回归测试能针对那个能力维度，且不会为探索付出大代价；③ 对自维护技能：每次优化先写清"这次调的是能力空间里的哪一维、预期指标怎么动"，而不是"感觉不够好就整篇改"。
+- 提升层：模型/工作流。触发词：能力空间、定向修订、进化省 token、固定维度分解、技能自我改进。
+
+## §L481（自 SKILL.md 下沉，2026-09-30 r323B）
+## 技能「调用面 ≠ 入口面」：user-invocable:false 仍可被模型调用，加载源有显式优先级链（来源：platform.claude.com/docs Agent SDK 2026-09-29 r337-Q-C 实拉核验；与 §触发词设计 互补——那条管"怎么被触发"，本条管"加载位与调用权限是两个维度"）
+- 原文：Anthropic Agent SDK 的 skills 是**纯文件产物，无程序化注册 API**；`settingSources` 四源按优先级加载（用户目录 / 项目目录 / 父目录 / additionalDirectories）；`query(skills=)` 三态（"all" / 名单 / []）；Skill 工具**自动加进 allowedTools**；init 系统消息带 skills 数组，**`user-invocable:false` 不进该数组，但该技能仍可被模型调用**。
+- 判据：① **"能不能被模型用"和"在初始化列表里露脸"是两件事**——user-invocable:false 只是不主动提示用户，不等于模型不能调用；判一个技能"是否生效"要看调用面，不只看入口面；② 加载源有**显式优先级链**：同级多源冲突时按 settingSources 顺序定胜负，写技能别假设"放项目目录就一定覆盖用户目录"——要看链上它在第几位；③ query(skills=) 三态是**检索范围开关**：[] 是关、名单是缩、all 是开，调优召回时先定这个开关再调触发词；④ 无程序化注册 API 意味着技能分发本质是"文件落到对的目录"，签名/校验/版本管理得自己补。
+- 提升层：可复用 Skill / 工具。触发词：调用面≠入口面、user-invocable:false、settingSources、query(skills)三态、无注册 API、自动注入 allowedTools。
