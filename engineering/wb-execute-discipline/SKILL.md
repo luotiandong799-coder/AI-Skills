@@ -11470,3 +11470,62 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **Multi-Vector Image Retrieval**：每图一组 patch 向量（每 patch 一个），文本 query token↔图像 patch 细粒度匹配——**多向量=细粒度图文匹配**（与 r293A 多向量检索互补：那条管文本侧，本条管图像侧）。
 - **Multimodal Data Pipelines**（Snowflake）：图像/音频/视频转 LLM-ready 文本的管线——**多模态进 LLM 前先转文本是现实路径**。
 - 提升层：可复用 Skill。触发词：agentic doc extraction、OCR 丢布局、patch 多向量、Multimodal Data Pipelines、LLM-ready 文本。
+## r295A 十独点（2026-09-29 实拉）
+
+### 1. 多智能体异构工具链与 Guardrails：Dify 编排面（来源：CSDN《Dify多智能体协同工作流实战指南》+《Dify多智能体协同配置核心能力》+ help.aliyun.com《AI Guardrails 集成》2026-09-17/2026-09-22/2026-09-18 实拉，与 r292B/r293A Dify 合并增量）
+- **异构工具链融合编排**：LLM Agent → Router（语义路由）→（Code Interpreter | API Gateway | RAG Node 并行候选）→ Aggregator → Response——**路由把任务分给最合适的执行体**，聚合收口。
+- **自动 Fallback 链路 + 状态持久化 + 跨 Agent 上下文同步**：三阶段串行链（researcher→summarizer→validator）YAML 显式声明 edges——**上下文交接=显式传参，不靠隐式共享**。
+- **AI Guardrails 集成**：内容审核 API 扩展进 agent，转发服务把每个 moderation 请求与响应都记日志——**审核动作本身可审计**（与 r294C 日志审计互补：那条管工作流日志，本条管内容审核留痕）。
+- 提升层：工作流。触发词：异构工具链、Router 语义路由、Fallback 链路、跨 Agent 上下文同步、Guardrails 审核留痕。
+
+### 2. 可重试状态码清单与退避公式：n8n 重试面（来源：n8n.io/workflows/15459《Handle API retries with exponential backoff, jitter》+ community.n8n.io《centralized error handling》2026-04-28/2026-09-20 实拉，与 r292A 重试分类/r294C 节点错误合并增量）
+- **默认可重试状态码**：408/409/425/429/500/502/503/504；**默认不重试**：400/401/403/404/422——**先按状态码二分再决定退避**，别无脑全重试。
+- **退避公式**：`waitSeconds = min(maxDelaySeconds, baseDelay × 2^attempt)` + jitter——**指数退避要封顶+加抖动**（防惊群）。
+- **节点级重试语义**：Retry On Fail 只重跑该节点，**同一执行内不重触发已成功节点**；整流程重试=**从头重跑整个工作流**（无内置 checkpoint/resume，100 项失败在第 49 项=100 项全部重跑）。
+- 判据：**"重跑"要说清粒度**——节点级=原地补跑，流程级=整体重来；把流程级当节点级用是常见误解。
+- 提升层：工作流。触发词：可重试状态码、408/429/5xx、退避公式、jitter、节点级重试、从头重跑、无 checkpoint。
+
+### 3. 生产安全基线：LangFlow 攻击面面（来源：CSA《CVE-2026-33017 RCE》PDF + IBM Security Bulletin 2026-07-14 + docs.langflow.org 1.9.0 部署最佳实践 2026-03-30/2026-07-14/2026-07-25 实拉，与 r293C 生产部署合并增量）
+- **CVE-2026-33017**：未认证 RCE（CVSS 9.3），`/api/v1/build_public_tmp/` 端点可达即可注入；默认设置允许代码注入；CISA 已入 KEV 目录。
+- **生产硬约束**：`AUTO_LOGIN=false`；Langflow 放认证反向代理/VPN 网关后；不需要就**禁用 public flows**——**"公开即攻击面"在流程平台上特别致命**。
+- **向量库访问边界**：攻击者创建同名 Chroma `persist_directory`+`collection_name` 就能读他人私有文档并污染共享 collection——**向量集合名=访问边界**（名即权限，弱得可怕）。
+- 判据：**流程平台部署先过三问**——默认登录开没关、public 端点能不能到、向量集合名是不是访问控制。
+- 提升层：工具。触发词：CVE-2026-33017、AUTO_LOGIN=false、public flows、build_public_tmp、向量集合名即权限、Chroma 同名。
+
+### 4. Flow-as-Tool 与数据遮蔽：Activepieces agent 构建面（来源：activepieces.com《AI Agent Builder》《AI Agent Development》2026-09-25/2026-04-03 实拉，与 r294C Chat-to-automation 合并增量）
+- **Flow-as-Tool**："From Flow" 把现有工作流变成 agent 可调用的工具——**已建成的工作流=agent 的工具库**，不是每个 agent 从空白建。
+- **data masking**：凭据加密+敏感细节不出现日志——**agent 跑过的数据要过日志脱敏**（与 wb-max-token-saver 分工：那条省 token，本条防泄漏）。
+- 判据：**工具化=先有 flow 再挂 agent**；agent 调用的数据链路默认脱敏。
+- 提升层：工作流。触发词：From Flow、Flow-as-Tool、工作流即工具、data masking、日志脱敏。
+
+### 5. 自然语言建场景与双角色协作：Make AI Agent 面（来源：help.make.com《Introduction to Make AI Agent (New)》+ thebitmasters.com《Make AI Update July 2026》2026-07-03/2026-07-25 实拉，与 r294C ChatGPT 插件合并增量）
+- **Make AI Agent (New)**：2026-02-02 发布 open beta；所有套餐可用 Make AI provider，付费套餐可自定义 provider——**平台级 agent 能力进主产品**。
+- **Maia 协作流程**：业务人员用自然语言建/改场景原型 → **交给 IT 审查后上线**——**AI 建原型+人来审查=可控的双角色流程**（非技术人员也能产出初稿）。
+- 提升层：工具。触发词：Maia、自然语言建场景、业务人员原型、IT 审查上线、AI Agent New。
+
+### 6. 单端点万工具与 sub-agent 配置：Pipedream MCP 面（来源：pipedream.com/docs/connect/mcp + mcp.pipedream.com/developers 2026-09-27/2026-05-28 实拉，与 r294C REST 创建合并增量）
+- **单 MCP 端点 10,000+ 工具**（3,000+ 应用/API）：`https://mcp.pipedream.net/v2` 一个 URL 全通；工具用**各用户自己的 connected accounts** 认证——**一个端点=全工具面+per-user auth**。
+- **sub-agent 配置模式**：主工具把 `instruction` 传给 LLM 子 agent（窄范围指令+辅助工具）来配置并执行顶层工具——**复杂工具配置委托给子 agent，抽象了参数复杂度**。
+- 提升层：工具。触发词：单端点万工具、per-user auth、sub-agent 配置、instruction 委托、mcp.pipedream.net。
+
+### 7. 技能评测八层与真实场景衰减：Agent Skills 评测面（来源：iwoszapar.com《2026 Manual for Evaluating Agent Skills》PDF + 腾讯朱雀《SkillTrustBench》+ arXiv 2604.04323/2606.17819 2026-06-17/2026-08-25/2026-09-16 实拉，与 r293A caliper/r293B Skill Lift 合并增量）
+- **八层评测架构**：routing（该不该触发）/ deterministic contract（确定性契约）/ trajectory（轨迹）/ final state（终态）/ semantic quality（语义质量）/ repeated-run reliability（重复运行可靠性）/ cost / security——**只用需要的层，但别塌成一个模糊分**（与 caliper 分工：那条管封闭邻域激活测量，本条管评测维度结构）。
+- **SkillTrustBench 安全基准**：从主流技能市场 62,652 个 Skill 提炼 5,520 用例、九大类安全威胁——**技能市场=新供应链，安全要基准化**。
+- **真实场景收益衰减证据**：UCSB/MIT 研究 34,198 技能——Claude Opus 4.6 从强制加载 55.4% 降到自主检索 38.4%；Kimi K2.5/Qwen3.5 甚至被技能拖慢——**强制加载测出的收益≠自主检索的收益**，评测必须在真实检索条件下跑（与 r293A 闭邻域互补：闭邻域测"会不会选"，真实场景测"选了之后值不值"）。
+- 提升层：可复用 Skill。触发词：八层评测、routing 层、SkillTrustBench、技能市场供应链、自主检索衰减、强制加载 vs 自主检索。
+
+### 8. Pin to SHA 与五窄技能：skills.sh 供应链面（来源：maketocreate.com《Shipping Your Own Skill》+ completeaitraining.com Crash Course + mejba.me《Skills.sh》2026-05-20/2026-01-29/2026-01-21 实拉，与 r293A CLI/r294C API 合并增量）
+- **Pin to SHA**：`npx skills add owner/repo@<sha>` 钉住 commit；默认装 main 会变——**团队配置里钉版本，供应链卫生与 MCP 同标准**（与 r294A embedded 死快照同向：引用=漂移，钉=可复现）。
+- **五窄技能 > 一大而全**：窄任务产出优于"什么都做"的技能（与 r294C 技能数量治理同向：数量治理之外，**单个技能的粒度也决定质量**）。
+- **负面示例写法**：技能里包含"don't do this"模式——展示错误方式、解释为什么错、再给正确替代——**模型从反面示例学得一样快**。
+- 提升层：可复用 Skill。触发词：Pin to SHA、@<sha>、供应链卫生、五窄技能、负面示例、don't do this。
+
+### 9. 专用 agents 生态与 profile 文件化：Copilot agent 面（来源：learn.microsoft.com《Built-in and custom agents》+ github.blog《custom agents in GitHub Copilot CLI》2026-09-17/2026-06-09 实拉，与 r293B/r294C Copilot 合并增量）
+- **专用 agents 按能力分工**：@debugger 用调用栈/变量状态/诊断工具系统排错；@git 审本地未提交改动给内联评论；@modernize 感知项目图做框架升级（标志破坏性变更+生成迁移代码）；@profiler 性能剖析；@test 生成贴合项目模式与框架的单测——**排错/审查/升级/测试各自有专家 agent**。
+- **agent profile 文件化**：`.github/agents/*.agent.md` 定义自定义 agent，/agent 斜杠命令调用——**agent=仓库里的文件，可版本化可评审**（与 skills 同构：技能即文件、agent 即文件）。
+- 提升层：工具。触发词：@debugger、@git、@modernize、专用 agent 分工、.github/agents、agent profile 文件化。
+
+### 10. 四大设计模式与记忆基础设施：deeplearning.ai Agentic 面（来源：corporate.deeplearning.ai《Agentic AI》+ community.deeplearning.ai《Agent Memory》2026-05-03/2026-07-15 实拉，与 r293A 记忆/r293C 生成式UI 合并增量）
+- **Agentic AI 课程**：反射/工具使用/规划/多 agent 工作流四大设计模式+外部工具集成（数据库/API/Web 搜索/代码执行）+评估优化（性能指标/错误分析/生产部署）+degrees of autonomy——**自主度是谱系不是开关**。
+- **Agent Memory 新课**（Oracle 合作）：长期记忆=**模型外、持久、结构化的一等基础设施**（Oracle AI Database+LangChain+LLM 管道）——**记忆不是上下文残留，是被构建的基础设施**（与 r293A 记忆课同向，本条=课程面新增）。
+- 提升层：可复用 Skill。触发词：四大设计模式、反射、规划、自主度谱系、记忆=模型外基础设施、Oracle AI Database。
