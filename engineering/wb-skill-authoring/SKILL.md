@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.64.0
+version: 3.65.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -497,3 +497,15 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 
 
 ## 修订整包不可变且发布只对新会话生效、陈旧编辑报冲突不覆盖；「加载位置」与「谁能看见」是两个独立控件且子级列表非空即整体替换；硬平台过滤不可被 always 豁免（来源：docs.openclaw.ai/tools/skills.md，2026-09-30 r321A 独立实拉 39,741B；细则见 references/knowledge-base.md §r321A）
+
+## 技能平台配额与信任面 2026：硬配额对照/技能健康五指标/分层评测/执行隔离/凭证边界（来源：platform.claude.com skills-guide×8/arxiv 2605.10990/agent-skill-bus/lobehub agent-self-improvement/iwoszapar evals-manual/skillscheck/spec-weave/code.claude.com permissions+sub-agents+permission-modes+settings-example+agent-sdk/learn.microsoft sre-agent/docker blog/developers.redhat ring model/google gke/telleroutlook agentkit/redhat+nvidia openshell，r322B，与 §技能评测闭合邻域/§技能库治理互补——那些条管"评测方法/治理流程"，本条管"平台配额/健康指标/执行隔离/凭证信任面"）
+- **平台硬配额与命名规范**：Claude API=每请求 max 20 skills；上传 max 30MB（全文件合计非压缩）；name max 64 字符（小写/数字/连字符 only、无 XML 标签、保留字 anthropic/claude 禁）；description max 1024 字符。**判据：写技能前先查目标平台配额与命名约束（各平台数字体系不同）**。
+- **技能漂移=契约违反（SKILLGUARD）**：技能随环境/模型变化悄悄失效是契约破坏；已知漂移验证 100% precision/76% recall，49 真实技能 86% conservative precision 发现 live drift；**违反契约使修复可操作（one-round success 10%→78%）**；DRIFTBENCH=880-pair 退化 benchmark。**判据：技能带可验证契约（输入/输出/行为声明）；定期跑漂移检测，修复按契约定位**。
+- **技能健康五指标与遥测**：all-time average（基线）/recent average（窗 7d）/trend direction（improving/stable/declining/broken）/consecutive failure count/flagged status；遥测六维=usage freq/exec time/error rate/trigger accuracy/user satisfaction（SQLite/JSON 日志），含 unused-skill detection+cross-skill dependency mapping；Tool choice accuracy 下降（Excellent→Moderate）=指令或 tool description 缺口。**判据：技能健康用"基线+窗口+趋势+连续失败+标记"量化，不只靠感觉**。
+- **分层评测与风险分层**：eval 分层= routing/deterministic contract/trajectory/final state/semantic quality/repeated-run reliability/cost/security——只用需要的层但绝不合成一个模糊分；P1 business critical（trigger precision+recall≥90%、behavior 无超声明边际回归、judge≥85%+分歧人审）vs P2 low risk（≥85%、contract 通过+effect 非负、advisory）；tool-call accuracy=首次即正确调用占比（失败调用加 retry turn 涨推理成本，新部署 67%→30 天技能积累 80%）。**判据：评测分层不合并；按风险等级设触发/行为/裁判门槛**。
+- **技能审计与 policy-as-code**：审计四工具=staleness report/audit（幻觉包+prompt injection+dangerous commands+dead URLs）/lint（metadata 完整性）/policy（.skill-policy.yml policy-as-code）+budget（token 测量）；skill allowlist=预批名单（名单外需安全 sign-off）+扫描进 CI（critical/high 阻断 merge）；**marketplace 优化 discovery+volume，registry 优化 trust boundaries（13% 漏洞率问题）**。**判据：装第三方技能走 allowlist+扫描+审计；信任规则 policy-as-code**。
+- **权限模式谱与分类器**：权限模式=default(manual)/acceptEdits/auto/dontAsk/bypassPermissions/plan；bypassPermissions 跳提示（含 .git/.claude 受保护路径）但 cross-session safeguards 仍生效；Manual=read-only 起步逐项批准；**subagent 分类器三检查点=spawn 前评估任务描述/运行中每动作同主会话规则（frontmatter permissionMode 被忽略）/完成复核——权限由父会话强制，子自声明无效**；maxTurns 达限返回 partial 可续。**判据：子 agent 权限不可自声明**。
+- **Hook 强制与沙箱兜底**：PreToolUse hook 先于每步且 bypassPermissions 也生效（唯一不被 bypass 的拦截层）；sandbox enabled+failIfUnavailable（建不起来拒绝启动）+allowUnsandboxedCommands=false+network.allowedDomains 限定（用户不可加域）；第三方技能能 auto-update 不经 re-review=每次更新都是新未审代码。**判据：hook 是 bypass 也生效的强制层；沙箱失败即拒跑；禁 auto-update 免审**。
+- **执行隔离四模型**：①reasoning 与 tool execution 分离计算边界（推理主 runtime，工具执行 micro VM）②每 agent 独立可销毁环境（能装包/跑服务但不达 host 或他 agent，出错毁掉重开——隔离不是权限）③内核级强制=seccomp/Landlock/netns per-binary/per-path/per-endpoint，策略在进程外（攻破也不能覆盖）→pod 安全标准/SELinux/NetworkPolicy ④gVisor 每容器 guest kernel 拦截 syscall（breach 不升级到节点）。**判据：工具执行与推理分边界；环境可销毁；策略内核级在进程外**。
+- **凭证网络边界注入与 egress**：credentials 永不进沙箱（proxy 在网络边界注入——攻破 agent 也无可窃取）；policy 可表达"agent 可达 api.github.com 但沙箱内其他进程不可"；allowedHosts 空=网络全关（不能 DNS/fetch/WebSocket）；**盲区=经 allowed hosts 外泄（偷的数据上传到允许读的同一 host）→限具体路径+governance egress monitoring**。**判据：凭证在边界注入不入沙箱；egress 白名单空=全关；allowed-host 外泄需监控**。
+- **基础设施监控≠agent 有效性监控**：CloudWatch 显示"系统执行正确"不显示"agent 是否帮用户达成目标"——"requests to the unintended specialist while infrastructure metrics stay green"；技能审计只读不修改，数据不足报 "N/A — insufficient session data"。**判据：绿的基建指标不证明 agent 有效；审计只读出报告**。
