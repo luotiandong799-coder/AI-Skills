@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.53.0
+version: 3.54.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -481,3 +481,13 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 原文：禁用后 ① 控制台隐藏浏览与安装入口；② API 拒绝 Marketplace 插件的**安装与升级**；③ 周期升级检查（`ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK`）停止；④ "**Already-installed plugins keep working**, and installing from GitHub or a local package stays available when permitted by the installation policy."；另有"Template import itself is unaffected. However, if an imported template requires Marketplace plugins that are not already installed, **those dependencies cannot be installed while Marketplace is disabled**."
 - 判据：① 把"关开关"当**状态转移**写清四条边——入口面（看不见）、安装面（装不了）、**升级面（已装的也升不了，这条最易漏，等于把存量钉在旧版还停止了漏洞修复）**、存量面（继续跑）；② **断供 ≠ 停服**——已装组件继续工作，所以"禁用市场"后不能假设能力立刻消失，也不能假设还能打补丁；③ **模板依赖是断供的隐性受害者**：模板本身能导入，但它依赖的市场插件装不上 → 导入成功≠可运行，验收模板必须跑到依赖解析完成。
 - 提升层：工作流/工具。触发词：MARKETPLACE_ENABLED、市场禁用、断供、已装继续工作、拒升级、模板依赖装不上。
+
+## 规范的「最小合规面」只有 name + description：官方模板实证，且未替换的占位文案是可机检的低质信号（来源：anthropics/skills 官方仓 `template/SKILL.md` 2026-09-29 r294-B 经 cdn.jsdelivr.net 实拉 140B 全文；同轮 `data.jsdelivr.com` 文件树枚举 17 个技能无新增，附带核验）
+- 原文（全文）：frontmatter 仅 `name: template-skill` + `description: Replace with description of the skill and when Claude should use it.`，正文仅一行 `# Insert instructions below`。
+- 判据：① **规范强制的字段只有两个**（name / description），其余（许可证、版本、allowed-tools、metadata…）都是**宿主或团队的附加约定**——写门禁时不要把附加约定说成"规范不合规"，更不要把规范之外的必填项塞进"合规检查"；② 官方模板自带**未替换占位文案**（`template-skill`、"Replace with description"），这给出一个零成本机检项：**技能名含 `template`/`example`/`placeholder`，或 description 以 "Replace with"/"TODO" 开头 = 直接判未完工**，不必读正文；③ 反过来自建模板也该保留这种"一看就知道没改"的占位串，让漏改在上架前就被机器抓到，而不是靠人工评审。
+- 提升层：工具/工作流。触发词：官方模板、最小合规面、只有 name 和 description、占位文案、template-skill、未完工机检。
+
+## SecretRef 只承载静态凭据：OAuth 凭据禁止走引用，因为可变状态不能跨存储分裂（来源：docs.openclaw.ai《Auth credential semantics》"OAuth SecretRef Policy Guard" 2026-09-29 r294-B 独立 curl 实拉 24,733B 核验；与 §3.20.0 声明式依赖清单 requires.env/SecretRef 互补——那条管"怎么声明"，本条管"哪些凭据不许声明成引用"）
+- 原文："SecretRef input is for **static credentials only**. OAuth credentials are **runtime-mutable** (refresh flows persist rotated tokens), so SecretRef-backed OAuth material would **split mutable state across stores**."；profile 凭据 `type:"oauth"` 或 `mode:"oauth"` 时，任何凭据字段上的 SecretRef **一律拒绝**，且"Violations are **hard failures (thrown errors)** in startup/reload secret preparation and profile resolution paths."
+- 判据：① 判据不是"这个秘密够不够敏感"，而是**"这份凭据会不会被运行时改写"**——静态密钥（API key / token）适合放外部引用并集中轮换；会自我轮换的凭据（OAuth refresh token、短期会话凭据）必须与能写回它的运行时同处一处，否则两个存储各持一份、轮换后必然分叉，且分叉形态是"一边新一边旧"的静默不一致；② 违规必须**硬失败**（启动/重载期抛错）而不是告警降级——这类错误放行了就等于埋了一个随时生效的双向不一致；③ 推广到技能侧：技能声明"我需要某个凭据"时，要同时声明**该凭据是否可被引擎写回**，可写回的不允许外置引用。
+- 提升层：工具/模型。触发词：SecretRef、OAuth 禁用引用、runtime-mutable、可变状态跨存储分裂、hard failure、凭据轮换分叉。

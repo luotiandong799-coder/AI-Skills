@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.22.0
+version: 1.23.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -249,3 +249,9 @@ sources:
 - 与已落 ponytail 1.74.0「入队不丢事件」互为官方佐证（那条是计费侧，本条是执行侧）。
 - 同族附证：n8n `N8N_SCHEDULER_MISFIRE_GRACE=60` + `N8N_SCHEDULER_RETENTION=86400` 与 `…_FAILED_RETENTION=604800` —— **成功与失败账本分档定窗**，不要共用一个保留期。
 - ⚠ 同一厂商同一问题的官方答复会随时段翻转（旧社区口径相反），判据以**带 createdAt 的文档页**为准。
+
+## 移除公告必须自带迁移路径；升级期的告警只提示、不代劳、不阻断（来源：docs.openclaw.ai《BlueBubbles removal and the imsg iMessage path》与《Auth credential semantics》2026-09-29 r294-B 独立 curl 实拉 4,187B + 24,733B 核验）
+- 原文（移除）："BlueBubbles support was **removed** from OpenClaw. Use the official iMessage plugin with **imsg** for new and **migrated** iMessage setups."——公告本体就给出替代件与"存量怎么迁"两个答案。
+- 原文（升级告警）：自 2026.9.5 起原生 Codex 登录不再供给 runtime-only 的 `openai:default` profile；若该 OAuth profile 仍被声明但不在凭据库内，`openclaw doctor --fix`、Doctor lint、Gateway 启动**都会告警并给出导入命令**，但"**The warning does not copy credentials or block the update.**"；同类：`AUTH_PROFILE_MIGRATION_REQUIRED` "**blocks only those providers**, including their auth aliases; unrelated provider auth remains available."
+- **落地动作**：① 写移除公告时同时写三件事——**移除什么 / 用什么替代 / 存量怎么迁**（"new and migrated setups"两个词一个都不能少）；只说"已移除"不给迁移路径的公告等于把成本转嫁给用户。② 升级期的兼容告警设计成**提示 + 给命令 + 不阻断**：不代为复制/迁移凭据（越权且不可逆），也不卡住更新；③ **迁移阻断要按 provider 收敛**——迁移中只冻结受影响的提供方及其别名，不要让一个 provider 的迁移态株连全部凭据。
+- 提升层：工作流/工具。触发词：移除公告、迁移路径、imsg、升级告警不阻断、doctor --fix、AUTH_PROFILE_MIGRATION_REQUIRED、只阻断受影响提供方。

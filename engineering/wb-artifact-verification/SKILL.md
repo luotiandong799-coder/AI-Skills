@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.56.0
+version: 2.57.0
 agent_created: true
 ---
 
@@ -487,3 +487,8 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 原文（汇总与下钻）："Metric-based evaluations can assign one or more scores to each test run, which you can compare to previous runs. **Individual scores get rolled up** to measure performance on the whole dataset… track how those metrics change between runs and **drill down into the reasons for those changes**."
 - 判据：① 建指标前先分类——**要 ground truth 的**（距离/相似度/精确匹配，数据集必须带参考答案，构造成本是主要开销）与**可直接判的**（情感、毒性、格式合规、长度，无需参考答案，可全量常态化跑）；把两类混在一个分数里，等于把可全量跑的信号埋进只能抽样跑的成本里；② 指标要**逐条记 + 向上汇总 + 跨运行可比 + 可下钻到原因**四件事同时做——只记总分就失去了"为什么变了"；③ 生产冒出的边界例要**回灌测试集**再评，否则评测集永远是开发期的那份。
 - 提升层：工具/模型。触发词：metric-based evaluation、ground truth、reference output、毒性、情感、汇总下钻、边界例回灌。
+
+## 探测/调用的失败要先分「是否触达外部」：七类具名 reasonCode 把"根本没发出"与"发出后被拒"分开（来源：docs.openclaw.ai《Auth credential semantics》2026-09-29 r294-B 独立 curl 实拉 24,733B 原文核验；与 §2.45.0 具名失败词汇 互补——那条管"空值有几套判据"，本条管"失败发生在链路哪一段"）
+- 原文：`status` 桶 = `ok`/`auth`/`rate_limit`/`billing`/`timeout`/`format`/`unknown`/`no_model`；当"**the probe never reached a model call**"时另给稳定 `reasonCode`：`excluded_by_auth_order` / `missing_credential` / `expired` / `invalid_expires` / `unresolved_ref` / `ineligible_profile` / `no_model`。"**Missing-profile errors identify local store absence without reporting a provider HTTP 401; the error records a local lookup failure, not a provider rejection.**"
+- 判据：① 排障第一刀必须是**链路分段**——本地解析（凭据缺失/引用未解析/过期/被显式顺序排除/无可用模型）与远端拒绝（401/429/计费/超时/格式）是两类完全不同的处置：前者改配置，后者改请求或等配额；把"本地没找到凭据"报成"服务端 401"会让排查直接跑偏到对方平台；② **被排除不是被静默跳过**——"A stored profile … omitted from the explicit order is **not silently tried later**. Probe output reports it with `reasonCode: excluded_by_auth_order`"，即任何"不尝试"都必须留下可检索的具名理由，否则用户看到的是"这个凭据没生效"而系统其实根本没考虑它；③ **超时之后的副作用仍会发生，只是不生效**——"When a catalog deadline expires, late provider results are discarded… An already-started hook or OAuth refresh may finish, including **persisting a rotated credential**, but cannot publish to the expired catalog run"；所以"超时"不等于"什么都没发生"，回滚与对账要覆盖这类**已落盘但未发布**的中间态。
+- 提升层：工具/工作流。触发词：reasonCode、探测未触达、本地查缺不等于 401、excluded_by_auth_order、被排除不静默重试、超时后副作用、已落盘未发布。
