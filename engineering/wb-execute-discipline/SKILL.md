@@ -12488,3 +12488,82 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **prompt-to-outcome 评测两维**：更深思考（该推 web-search/deep-research 时有没有推）+迭代精炼（有没有多轮改进到输出更好）——"提示质量=深度+迭代两维衡量"。
 - **基础四法传承**：总结/推断/转换/扩展（ChatGPT Prompt Engineering 常青课）——"四法=总结推断转换扩展"。
 - 提升层：工作流。触发词：AI 思想伙伴、AI critique 评审、deep research 找信息、prompt-to-outcome 评测、更深思考维度、迭代精炼维度、四法总结推断转换扩展。
+## r300A 十独点（2026-09-29 实拉）
+
+### 1. Expert Mode 提示编排与提示工作流化：Dify 编排面（来源：dify.ai/blog/mastering-new-prompt-orchestration-in-dify-ai + dify.ai/blog/prompt-engineering-for-workflow-ready-llm-apps + dify-6c0370d8-release-1-16-0.mintlify.site/en/cloud/use-dify/build/agent + dify-6c0370d8-release-1-16-0.mintlify.site/en/learn/tutorials/workflow-101/lesson-03 + dify-hosting.com/en/guides/dify-workflow + aitoolsatlas.ai/blog/dify-tutorial-build-ai-apps-no-code-2026 2023-10-23/2026-02-10/2026-04-15/2026-07-02/2026-09-03 实拉，与 r299A 提示钉版+r299C 提示工程合并增量——那条管提示版本管理，本条管编排模式差异与系统内提示理念）
+- **Expert Mode 编排差异**：CHAT 模型可写 SYSTEM/USER/ASSISTANT 三种消息类型；COMPLETE 模型可调 Context/Conversation History/Query/Variables 四块——"编排模式=CHAT 三消息/COMPLETE 四块"。
+- **提示工作流化**：提示进可视化工作流迭代，配企业基础设施（安全/扩展/监控）+知识源集成+RAG 管线——"提示=系统内编排非聊天框"。
+- **LLM 节点提示**=订单便签，Start 节点变量直接插入 prompt 让 AI 按输入自适应输出——"变量直接注入 prompt"。
+- **Agent 提示三要素**：定义 persona（扮演谁+专业域）+指定输出格式（结构/长度/风格）+设定约束——"agent 提示=人设/格式/约束"。
+- 提升层：工作流。触发词：Expert Mode、CHAT 三消息 SYSTEM/USER/ASSISTANT、COMPLETE 四块、提示工作流化、变量直接注入、agent 提示人设格式约束。
+
+### 2. 内建执行跟踪与结构化日志流：n8n 可观测性面（来源：blog.n8n.io/ai-agent-observability + blog.n8n.io/llm-observability + n8n.spot/n8n-workflow-execution-logging-debugging-techniques + community.n8n.io/t/313296 + n8n.io/workflows/13198 + blog.n8n.io/how-to-debug-failures-or-missteps-in-ai-agent-behavior + logicworkflow.com/blog/n8n-logging 2026-03-02/2026-06-02/2026-06-08/2026-07-12/2026-08-14/2026-09-14 实拉，与 r296 监控相关合并增量——那条管任务调度，本条管执行可观测与调试技术）
+- **内建执行跟踪**：每节点 input/output 数据+agent 调了哪些工具+工作流如何走完——"内建 trace=节点级输入输出"。
+- **结构化日志流**：实时捕获 prompts/responses/tool outputs/errors 事件，发 Datadog/Grafana Loki/云存储长期分析——"日志流=实时结构化+外部平台"。
+- **自托管 OTel+Tempo**：单执行 trace 看 spans（节点执行/时长/失败 span/输入输出 item 计数）——"OTel trace=spans 粒度"。
+- **调试四技**：_debug_sample 字段（items 抽样看失败前数据）+IF 条件日志+Set 节点可视化调试+Test Step 逐节点测+执行历史保留 7 天——"调试=抽样字段/条件日志/逐节点"。
+- **错误日志模板**：execution_id/workflow_id/name/status/severity/duration + error_hash/dedupe_key 去重——"错误日志=元数据+去重键"。
+- 提升层：工作流。触发词：内建执行跟踪、结构化日志流 Datadog Loki、OTel Tempo spans、_debug_sample、条件日志、Test Step 逐节点、执行历史 7 天、error_hash 去重键。
+
+### 3. 自定义组件五要素与阻断开关：Langflow 组件开发面（来源：docs.langflow.org/components-custom-components + /1.9.0/contributing-components + /components/custom + /langflow-assistant + /deployment-block-custom-components + /1.9.0/concepts-components + /1.9.0/components-bundle-components 2024-07-04/2026-07-23/2026-08-06/2026-09-02/2026-09-04/2026-09-15/2026-09-17 实拉，与 r297A 生成组件合并增量——那条管组件生成，本条管组件结构与安全阻断）
+- **组件五要素**：继承 Component 类+类级属性（显示名/描述/图标）+输入输出列表（决定数据流）+处理方法（行为逻辑）+内部变量（错误处理与日志）——"组件=五要素结构"。
+- **Langflow Assistant 生成组件**：prompt 契约=输入/输出/超时处理/逐 URL 错误处理/类型化方法，生成代码模型驱动需人工审——"AI 生成组件=prompt 契约"。
+- **Bundle=组件组**：同一服务商组件集合，走 lfx components 文件夹，与核心组件同配置方式——"bundle=服务商组件组"。
+- **安全阻断开关**：LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false 阻断自定义组件+代码编辑器，防任意代码执行（RCE）——"自定义组件=可阻断防 RCE"。
+- **组件代码即配置**：决定可视化编辑器选项+校验输入类型+处理数据——"组件代码=配置驱动"。
+- 提升层：工具。触发词：组件五要素、继承 Component 类、Langflow Assistant 生成、prompt 契约超时逐URL、bundle 组件组、LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false、组件代码即配置。
+
+### 4. Canary 回滚 DB 迁移回退与 git 导出审计：Activepieces 版本回滚面（来源：activepieces.com/docs/admin-guide/guides/project-releases + /docs/handbook/engineering/playbooks/releases.md + /docs/handbook/engineering/playbooks/canary-deployment + mintlify.wiki/activepieces/workflows/versioning + community.activepieces.com/t/12109/2 + tecnobits.com/exportar-importar-flujos-activepieces 2026-06-20/2026-06-22/2026-07-13/2026-07-30/2026-09-03/2026-09-27 实拉，与 r299C 版本钉死合并增量——那条管发布流水线，本条管回滚机制与审计）
+- **Release Rollback 四步**：找 release→点 rollback→review 将应用变更→选变更应用——"release 回滚=四步审查式"。
+- **Canary rollback=镜像+DB 迁移回退**：回滚到 image tag→回退目标镜像 manifest 中不存在的 DB migrations→重部署 app/workers——"canary 回滚=DB 迁移随镜像回退"。
+- **导出进 git=免费审计**：flow 导出 commit 到 git repo 得每个变更版本历史，回滚=重新导入上一版本——"导出进 git=版本历史+重导入回滚"。
+- **恢复进草稿**：USE_AS_DRAFT 恢复上一版本到草稿不直接覆盖生产——"恢复=进草稿非覆盖"。
+- **钉版副作用**：接收实例太老无该 piece 版本→先升级或手动选兼容版本再重测（major 升级可能改行为）——"钉版副作用=实例兼容性检查"。
+- 提升层：工具。触发词：Release Rollback 四步、Canary rollback DB 迁移回退、导出进 git 审计轨迹、USE_AS_DRAFT 草稿恢复、钉版兼容性、跨环境重测。
+
+### 5. 场景蓝图八块与子场景复用：Make 场景组织面（来源：thinkbot.agency/blog/make-scenario-blueprint-framework + help.make.com/subscenarios + make.com/en/how-to-guides/llm-integration + keerok.tech/en/blog/make-com-advanced-scenarios + thinkbot.agency/blog/make-com-scenario-playbook + make.com/en/blog/agent-workflow-memory 2026-04-08/2026-05-05/2026-05-18/2026-05-27/2026-07-07/2026-08-21 实拉，与 r299C 五指令+r298B 聚合器合并增量——那条管错误与聚合，本条管场景结构与可复用单元）
+- **场景蓝图八块**：Intake（webhook/poll/call）→Normalize（canonical payload 字段清理默认值）→Enrich（lookups/dedupe/context 获取）→Route（业务分支）→Write（CRM/helpdesk/DB 更新）→Notify（Slack/email/Teams 可选）→Audit（logging/metrics/run notes）——"场景蓝图=八块通用结构"。
+- **LLM 集成四分支**：分类+置信度路由（≥0.85 自动动作/0.7-0.85 人工审查/升级建工单/无匹配 fallback 记 Sheet）——"LLM 路由=置信度门+降级"。
+- **子场景=可复用逻辑单元**：父场景 call a scenario 模块触发；子场景可被 AI agent/MCP client/API 调用；公共步骤（normalize/dedupe/assignment/format）抽成子场景跨场景共享——"子场景=跨场景共享逻辑"。
+- **数据存储即外部记忆**：场景内 data store read→AI 模块→data store write 三明治，无需独立数据库集成——"记忆=场景内 data store 三明治"。
+- 提升层：工作流。触发词：场景蓝图八块、Intake Normalize Enrich Route Write Notify Audit、置信度路由 0.85、子场景 call a scenario、跨场景共享、data store 三明治记忆。
+
+### 6. 依赖版本钉死注释与控制流分阶段测试：Pipedream 开发面（来源：pipedream.com/docs/workflows/quickstart + /docs/workflows/building-workflows/control-flow + /docs/workflows/building-workflows/code/python + /docs/workflows/building-workflows/build-with-ai + /docs/privacy-and-security/best-practices + /docs/connect/workflows 2026-07-10/2026-08-29/2026-09-17/2026-09-23/2026-09-24/2026-09-28 实拉，与 r299C 组件+r298B 工具合并增量——那条管组件契约，本条管工作流开发纪律）
+- **Projects 容器**：工作流必须建在 Projects（组织+协作）——"工作流=项目容器"。
+- **控制流分阶段测试**：先测 start 阶段（分支规则）→执行路径步骤→end 阶段（导出结果）；再生成替代条件事件测另一分支——"控制流=分阶段测+分支事件"。
+- **依赖版本钉死注释**：Python `# pipedream add-package pandas==2.0.0`；不指定版本每次部署拉最新（可更新即风险）——"依赖=版本钉死注释"。
+- **Build with AI 两原则**：明确指令（"HTTP 请求步骤加错误处理重试 3 次指数退避 429"）+迭代开发（高层需求→测试验证→精炼→部署）——"AI 构建=明确指令+迭代"。
+- **第三方包安全**：审查漏洞+版本更新责任自担——"第三方包=自审漏洞"。
+- 提升层：工具。触发词：Projects 容器、控制流分阶段测试、add-package 版本钉死注释、明确指令重试退避、迭代开发、第三方包自审。
+
+### 7. Programmatic tool calling 适用判据与 schema 质量预测器：Claude 工具使用面（来源：platform.claude.com/docs/en/agents-and-tools/tool-use/programmatic-tool-calling + /tool-use/overview + console.anthropic.com/docs/en/agents-and-tools/tool-use/programmatic-tool-calling + anthropic.com/engineering/advanced-tool-use + developersdigest.tech/blog/tool-use-claude-api-production-patterns + cadence.withremote.ai/blog/claude-tool-use-production + claudexia.tech/blog/claude-function-calling-tools 2025-11-24/2026-03-23/2026-04-09/2026-05-14/2026-06-11/2026-09-29 实拉，与 r291B 工具+r296A 工具描述合并增量——那条管工具分类，本条管程序化调用与 schema 质量）
+- **Programmatic tool calling**：Claude 写代码调用多工具、处理输出、控制哪些信息进上下文（减少 API 往返）——"程序化调用=代码编排工具"。
+- **适用判据**：强=并行 fan-out（50 端点/20 记录查）+大工具结果过滤聚合摘要+agentic 检索迭代；弱=严格顺序依赖 Claude 推理前一步结果（脚本无法等推理）——"程序化=强并行弱顺序"。
+- **tool_choice 三态+strict**：any（必须用任一工具）/tool（强制特定工具）/none（禁止）；strict:true 自定义工具定义确保 schema 合规输出——"tool_choice=any/tool/none+strict"。
+- **schema 质量=最大预测器**：模型按名称/描述/参数文档选工具，两工具相似会选错且失败隐形（直到用户抱怨）——"schema 质量=选错隐形"。
+- **2026 并行**：单响应多 tool_use 块，执行后返回多 tool_result 块（一个 user 消息）——"并行=多 tool_use 块"。
+- 提升层：模型。触发词：Programmatic tool calling、fan-out 并行、代码编排工具、tool_choice any/tool/none、strict:true、schema 质量预测器、相似工具选错隐形、多 tool_use 并行块。
+
+### 8. 技能评测双分数与 Skill Lift 量化：技能基准面（来源：arxiv.org/pdf/2606.11435 + arxiv.org/pdf/2603.28815v1 + developer.nvidia.com/blog/evaluating-ai-agent-skill-performance-with-nvidia-skillevaluator + arxiv.org/html/2606.10394 + anthropic.com/engineering/demystifying-evals-for-ai-agents + aws.amazon.com/blogs/machine-learning/evaluate-skill-equipped-agents-with-strands-evals 2026-01-09/2026-08-19/2026-08-30/2026-09-22 实拉，与 r299A 评测三步+r299B 生成评测合并增量——那条管评测流程，本条管技能增益量化与双评测器）
+- **SkillRouter 损失数据**：~80K skills+75 专家查询；只用技能名+描述 vs 全文=路由准确率降 31-44%——"技能名描述不足=路由掉 31-44%"。
+- **SkillTester 三件套**：无技能基线匹配+独立安全探测套件+显式评分管道（utility+security 双分数+安全状态标签）——"评测=基线+安全探测+双分数"。
+- **NVIDIA Skill Lift**：静态检查+有/无技能 live 任务跑；300+ 验证技能 30+ 产品 2 harness；平均 Skill Lift 41 点正确性/39 点有效性；Claude Code 高于 Codex 但产品域差异 +2~+46——"Skill Lift=技能增益可量化"。
+- **Strands 双评测器**：Skill Selection Accuracy（每次调用技能是否合适选择，二元）+Skill Instruction Following（五级评级逐步骤证据）——"技能评测=选择准确+指令遵循"。
+- **STAGE-Claw 状态判对**：最终系统状态正确性而非文本响应——"状态基准=最终状态判对"。
+- 提升层：工具。触发词：SkillRouter 31-44%、只靠名描述不够、SkillTester 基线安全探测双分数、Skill Lift 41 点、Selection Accuracy 二元、Instruction Following 五级、STAGE-Claw 状态判对。
+
+### 9. OIDC subject 不可变 ID 与严格信任：GitHub Actions 安全面（来源：docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect + dev.to/devopsstart/github-actions-security + labs.cosmicbytez.ca/HOWTO-github-actions-oidc-supply-chain-security + npalm.github.io/supply-chain-security-talks/ndcsecurity26 + nerdleveltech.com/github-actions-oidc-aws-terraform-keyless-deploys-tutorial + cmt.de/blog/github-actions-sicher-oidc-sha-pinning 2026-03-09/2026-04-20/2026-04-26/2026-05-27/2026-06-08/2026-07-02 实拉，与 r286A CI+r299C 缓存权限合并增量——那条管缓存权限，本条管 OIDC 信任与密钥替代）
+- **OIDC 三好处**：无云密钥（不长活 secrets）+细粒度 authN/authZ 控制+自动轮换——"OIDC=无长活密钥+细粒度"。
+- **最小权限样板**：id-token: write+contents: read+environment 保护规则门（部署环境门控）——"OIDC 权限=最小+environment 门"。
+- **严格信任禁通配符**：sub 条件 `repo:my-org/project-*` 错→精确 `repo:my-org/my-project` 对——"信任=禁通配符"。
+- **subject 不可变 ID（2026-04 宣布）**：OIDC subject claims 嵌不可变 owner/repo ID 防 name-reuse 攻击（2026-07-15 后建仓库自动）——"subject=不可变 ID 防名复用"。
+- **供应链约束**：OIDC 任务避免第三方 actions（防 token 泄露）；pull_request_target 只用于元数据（labels/comments）不构建/执行 PR 代码——"供应链=OIDC 任务少第三方 action+PR target 仅元数据"。
+- 提升层：工具。触发词：OIDC 无长活密钥、id-token write 最小权限、environment 保护门、sub 禁通配符、不可变 owner/repo ID、name-reuse 攻击、PR target 仅元数据。
+
+### 10. Agentic 四模式与 AgentQ 训练框架：deeplearning agent 课程面（来源：staging.deeplearning.ai/courses/agentic-ai + corporate.deeplearning.ai/courses/agentic-ai/information + /courses/building-ai-browser-agents/information + community.deeplearning.ai/t/new-course-enroll-in-agent-skills-with-anthropic/887920 + /t/new-course-enroll-in-agent-memory-building-memory-aware-agents/890523 + community.deeplearning.ai/tag/short-course/68 2026-01-31/2026-02-02/2026-05-03/2026-07-15/2026-08-26/2026-09-23 实拉，与 r299A 评测+r299C AI critique 合并增量——那条管提示评测，本条管 agent 课程地图与训练框架）
+- **Agentic 四模式**（Andrew Ng）：reflection/tool use/planning/multi-agent workflows——"四模式=反思/工具/规划/多智能体"。
+- **AgentQ 框架**（浏览器 agent）：MCTS+自批判机制+DPO 训练 teach agent 从浏览器反馈学习——"浏览器 agent=AgentQ MCTS+自批判+DPO"。
+- **技能=指令文件夹**（Agent Skills with Anthropic）：重复工作流打包成技能，agent 自动知道做什么，无需反复解释——"技能=打包重复工作流"。
+- **记忆=第一等基础设施**（Agent Memory）：模型外/持久/结构化，跨会话不丢失——"记忆=模型外基础设施"。
+- **2026 课程流**：Evaluating AI Agents（Arize 结构化评估）/Adaptive Agents/Generative UI/A2A 协议——"课程流=评测/自适应/生成式 UI/A2A"。
+- 提升层：工作流。触发词：Agentic 四模式、reflection tool use planning multi-agent、AgentQ MCTS 自批判 DPO、技能指令文件夹、记忆第一等基础设施、Evaluating AI Agents、A2A 协议。
