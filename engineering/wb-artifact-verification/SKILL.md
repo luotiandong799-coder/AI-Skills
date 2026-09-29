@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.69.0
+version: 2.70.0
 agent_created: true
 ---
 
@@ -463,10 +463,7 @@ Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 - 判据：① 排障第一刀必须是**链路分段**——本地解析（凭据缺失/引用未解析/过期/被显式顺序排除/无可用模型）与远端拒绝（401/429/计费/超时/格式）是两类完全不同的处置：前者改配置，后者改请求或等配额；把"本地没找到凭据"报成"服务端 401"会让排查直接跑偏到对方平台；② **被排除不是被静默跳过**——"A stored profile … omitted from the explicit order is **not silently tried later**. Probe output reports it with `reasonCode: excluded_by_auth_order`"，即任何"不尝试"都必须留下可检索的具名理由，否则用户看到的是"这个凭据没生效"而系统其实根本没考虑它；③ **超时之后的副作用仍会发生，只是不生效**——"When a catalog deadline expires, late provider results are discarded… An already-started hook or OAuth refresh may finish, including **persisting a rotated credential**, but cannot publish to the expired catalog run"；所以"超时"不等于"什么都没发生"，回滚与对账要覆盖这类**已落盘但未发布**的中间态。
 - 提升层：工具/工作流。触发词：reasonCode、探测未触达、本地查缺不等于 401、excluded_by_auth_order、被排除不静默重试、超时后副作用、已落盘未发布。
 
-## 提交粒度是可配的，粒度越细回滚能力越弱：早提交换的是"部分结果不丢"，代价是出错即不可恢复（来源：Make Help Center `scenario-settings.md` 2026-09-29 r294-C 独立 curl 实拉 5,172B 核验；与 §2.51.0 写读侧防御代价不对称 互补——那条管"写与读谁先改"，本条管"一次事务切多细"）
-- 原文（Commit after each module）："By default, Make commits data only when the entire scenario finishes successfully. Enable this setting to commit data after each module runs instead. — If enabled, data **is committed right away and cannot be restored** in the case of an error. — If disabled, **no commit occurs until operations are executed for all modules**."；"Use it when you need to ensure data is saved incrementally - for example, if a later module fails, data processed by earlier modules is still committed **rather than rolled back**."（另有 Commit trigger last 默认开启：提交阶段跳过触发器、最后才处理它。）
-- 判据：① **提交粒度与回滚能力是严格互换的，没有两全**——整场景提交 = 全有或全无（出错干净回滚，但长链路白跑）；逐模块提交 = 进度不丢（前段成果保住），但**已提交的部分无法撤销**，错误发生后系统里留下的是半截状态；选哪个取决于"半截状态能不能被下游容忍"，容忍不了就别开；② **开了细粒度提交就必须配补偿路径**——既然不能回滚，就要有反向操作或幂等重放，否则"部分成功"会变成手工修数据；③ 提交顺序也是可配置的（触发器默认最后提交），**顺序错了会造成"下游已提交而上游未提交"的反向不一致**，改这两个开关时都要跑一次失败注入验证最终状态。
-- 提升层：工作流/工具。触发词：Commit after each module、逐模块提交、不能回滚、提交粒度、部分成功、Commit trigger last、提交顺序。
+## 提交粒度是可配的，粒度越细回滚能力越弱：早提交换「部分结果不丢」，代价是出错即不可恢复（原文已下沉 references/knowledge-base.md §r294-C；触发词：逐模块提交、不能回滚、提交粒度、Commit trigger last）
 
 ## 全局覆盖值的存活期与传播面必须显式开启：默认只在内存里、不跨进程、重启即丢（来源：docs.n8n.io《Credential overwrites》2026-09-29 r296-A 独立 curl 取 .md 原文 5,099B 核验；与 §2.54.0 SecretRef 禁 OAuth 互补——那条管"可变状态不跨存储分裂"，本条管"一份覆盖值到底活多久、传到哪"）
 - 原文："When enabled, n8n stores the encrypted overwrites in the `settings` table and broadcasts a `reload-overwrite-credentials` event so workers reload the latest values. **When disabled, overwrites remain in memory on the process that loaded them and n8n doesn't propagate them to workers or preserve them across restarts.**"
@@ -496,3 +493,8 @@ Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 
 ## 失效双模型：周期型（扫描器版本+重扫周期）与事件型（失陷时点切片，时点前结论持续合法）；并把「能否取到最新材料」的新鲜度当作独立验证属性（来源：docs.sigstore.dev/about/threat-model，2026-09-30 r321C 独立实拉 64,710B；细则见 references/knowledge-base.md §r321C）
 ## 扫描覆盖须按三轴声明（输入格式 × 被读取字段 × 结构深度/来源类型），触发面文本要设专项检测位；结论的失效有三个时钟：周期型 / 事件型 / 证据可达性（来源：cisco skill-scanner#229 14,129B + api.skillhub.cn 3,094B，2026-09-30 r322A 独立实拉；细则见 references/knowledge-base.md §r322A）
+
+## 审计可能是惰性生成的（「在库里」≠「已审过」），而扫描器自身的遍历顺序即是静默漏报面——两者都不产生任何警告位（来源：www.skills.sh/docs/api 136,145B + api.github.com/repos/NVIDIA/SkillSpector/issues/610 6,455B + docs.n8n.io/deploy/host-n8n/configure-n8n/security/run-security-audits.md 2,425B，2026-09-30 r323A 独立实拉；细则见 references/knowledge-base.md §r323A）
+- 原文：skills.sh「Audits are generated automatically after a skill is installed **for the first time** — there may be a delay of a few minutes.」＋字段 `auditedAt`（ISO 8601 独立时间戳）与 `installs`（「Total **deduplicated** install count」）＋结论归一「Normalized verdict: "pass" (safe), "warn" (review recommended), "fail"」；SkillSpector #610「the walk **visits the sink \*before\* the assignment**, even though the assignment appears [earlier]…the `tainted` lookup at the sink then finds nothing, and the whole flow is **silently never reported**」→「evades the entire TT3/TT4/TT5/TT6 rule set」，修复方案为 source-order AST traversal（PR #611 未合并）；n8n 审计「The audit generates **five risk reports**」（含 outdated instance 面）。
+- 判据：① **「已收录」与「已审」是两条时间轴**：审计由「首次安装」这一事件惰性触发，零安装条目永久无结论；凡「已审核/已上架」标记必须带独立时间戳字段，**缺时间戳即按未审处理**；② **扫描器的遍历序是一等缺陷面**：数据流分析按 AST 访问序而非读写因果序推进时，常规写法（赋值在使用点之后被访问到）会整条流静默漏报，而产物仍标 COMPLETED——**漏报没有警告位，只能通过"结论是否带遍历序假设说明"间接识别**；引用第三方扫描结论前先问它按什么顺序走、已知缺陷是否已合并（PR open = 缺陷已知未修，须计入结论时效）；③ **通道更正**：`docs.n8n.io` 安全审计页正确路径为 `/deploy/host-n8n/configure-n8n/**security**/run-security-audits.md`，此前 404 判死系缺 `/security/` 段（不是整站不可达）。
+- 提升层：工具/可复用 Skill。触发词：惰性审计、auditedAt、收录不等于已审、遍历序、静默漏报、source-order、已知未修、审计五报告。

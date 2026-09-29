@@ -1658,3 +1658,9 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - Claude 企业版三态 pass/warn/fail 与「扫描不覆盖 Skills API / Console 上传」（Qoder r353-Q-A A1）：curl 取 `platform.claude.com/docs/en/agents-and-tools/agent-skills/enterprise.md` 得 200/447,830B 但为**文档壳**、正文 0 命中 ⇒ **WB 未独立复核，登记为待补证据，不落**。
 - n8n `security/run-security-audits`：实测 404「Page Not Found」⇒ **通道更正**；其「Official risky nodes = 仅内置节点」为 Qoder 转引，本轮不采信。
 - 扫描器基准数值（cisco `F1 32.92→47.73 / recall 19.88→31.43 / precision 99.16`）：原则已落（SKILL.md:493 检出率口径），实例数值不单立，作旁证留档。
+
+## §r294-C 提交粒度与回滚能力互换（自 SKILL.md 下沉，2026-09-30 r323A）
+## 提交粒度是可配的，粒度越细回滚能力越弱：早提交换的是"部分结果不丢"，代价是出错即不可恢复（来源：Make Help Center `scenario-settings.md` 2026-09-29 r294-C 独立 curl 实拉 5,172B 核验；与 §2.51.0 写读侧防御代价不对称 互补——那条管"写与读谁先改"，本条管"一次事务切多细"）
+- 原文（Commit after each module）："By default, Make commits data only when the entire scenario finishes successfully. Enable this setting to commit data after each module runs instead. — If enabled, data **is committed right away and cannot be restored** in the case of an error. — If disabled, **no commit occurs until operations are executed for all modules**."；"Use it when you need to ensure data is saved incrementally - for example, if a later module fails, data processed by earlier modules is still committed **rather than rolled back**."（另有 Commit trigger last 默认开启：提交阶段跳过触发器、最后才处理它。）
+- 判据：① **提交粒度与回滚能力是严格互换的，没有两全**——整场景提交 = 全有或全无（出错干净回滚，但长链路白跑）；逐模块提交 = 进度不丢（前段成果保住），但**已提交的部分无法撤销**，错误发生后系统里留下的是半截状态；选哪个取决于"半截状态能不能被下游容忍"，容忍不了就别开；② **开了细粒度提交就必须配补偿路径**——既然不能回滚，就要有反向操作或幂等重放，否则"部分成功"会变成手工修数据；③ 提交顺序也是可配置的（触发器默认最后提交），**顺序错了会造成"下游已提交而上游未提交"的反向不一致**，改这两个开关时都要跑一次失败注入验证最终状态。
+- 提升层：工作流/工具。触发词：Commit after each module、逐模块提交、不能回滚、提交粒度、部分成功、Commit trigger last、提交顺序。

@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.28.0
+version: 1.29.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -291,3 +291,9 @@ sources:
 - **零日窗口排除**：exclude-newer 滚动缓冲排除"刚发布未审查"包（XZ backdoor 活跃数月才被发现）；Axios caret range 自动拉入恶意 1.14.1——生产依赖 pin 精确版本+hash。
 - **发布侧信任面**：npm staged publishing=预构建 tarball 上暂存队列→维护者 2FA 放行（发布前人工审核）；trusted publishing 自动 provenance attestations（tarball↔git commit↔workflow 加密链接，npm audit signatures 可验；CircleCI 不支持）；**OIDC 短时凭证替代长期 NPM_TOKEN（泄露=无限发布任意版本；OIDC 分钟级+scoped 单 run）**；PyPI 拒绝对 >14 天旧 release 上传新文件（防旧稳定版投毒）。
 ## 日落必须是一条有资格的登记项（无 removeAfter/removalGate 即无删除资格、续期留痕且≤3 个月、过期 CI 判 fail），且时点要落在可枚举的结构化载体上；引用/命名类破坏在存量侧永不自愈——升级与重装都不修（来源：docs.openclaw.ai/plugins/compatibility.md 14,100B + nodejs/Release schedule.json 5,325B + code.visualstudio.com/updates/v1_139 52,978B，2026-09-30 r322B 独立实拉；细则见 references/knowledge-base.md §r322B）
+
+## 支持窗要按「活跃支持 vs 维护期」双轨计量，并显式声明跳级升级是否被支持——「还在支持期内」不等于「还会给你修想要的东西」（来源：ee.dify.ai/lts-policy/，2026-09-30 r323A 独立实拉 27,147B）
+- 原文：「Each LTS has an **18-month lifecycle (12 months active support + 6 months maintenance)**, and three versions [are supported simultaneously]」；「**Skipping major LTS versions is not supported** —you must upgrade sequentially」；维护期只承诺 security/stability/compliance、**no new features**；补丁承诺「≤ 2 weeks」。
+- 判据：① **把支持窗写成"发布后 N 个月"与"最近 N 个版本"是两种义务载体**——月数制对消费者可预期，相对计数随发布节奏漂移；两者都登记时才回答得了"我这个版本还剩多久"，只写一种会在节奏突变时失真；② **active 与 maintenance 不是同一个"支持"**：维护期只做安全/稳定/合规、明确不发新功能，把维护期当活跃期用等于等一个永不来的功能；写支持状态必须分栏，不能一个布尔了事；③ **跳级是否被支持是支持窗的隐含前提**：不支持跳级（必须逐级升级）时，落后多个 minor 的用户迁移成本不是一次升级而是 N 次，且"数据卷不能跨 12 个 minor 一步到位"这类硬约束要随窗一起声明；④ **同时支持版本数是容量参数**（此处 3），决定消费者升级压力与厂商补丁面，不是宣传数字。
+- 提升层：工作流。触发词：LTS 双轨、active support、maintenance 期、跳级不支持、支持窗计量、同时支持版本数。
+- 待补登记：Weaviate「supports the three most recent minor versions」原文本轮未独立取到（`docs.weaviate.io/weaviate/release-management` 404），仅登记不落地。
