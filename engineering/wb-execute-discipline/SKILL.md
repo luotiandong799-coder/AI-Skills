@@ -12339,3 +12339,77 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **错误分析优先排序**：error analysis→prioritize next steps，先修影响最大的错误类别——"排错=先排影响，不平均用力"。
 - **输出评测三法**（视频生成课程）：SigLIP 图像-文本相似度打分（程序化数值可行动）+LLM-based judges（自定义标准定性，抓质量不匹配）+structured rubrics（评分表）——"三法互补：数值+评委+评分表"。
 - 提升层：工作流。触发词：评测三步、先观测再评测、组件级评测、code-based vs LLM-as-a-Judge、错误分析优先排序、SigLIP 相似度、LLM judge、structured rubrics。
+## r299B 十独点（2026-09-29 实拉）
+
+### 1. 成本指标二式与 OTel 七栈导出：Dify 可观测面（来源：blog.csdn.net/PixelWander/article/details/159060060 + agenticindex.io/vendors/dify + help.aliyun.com/en/sls/dify-x-sls + kubernetes.ae/deploy-dify-on-kubernetes-self-hosted + agent-built.com/posts/2026-05-22 + dify.ai/blog/dify-integrates-langsmith-langfuse 2026-03-15/2026-05-22/2026-08-04/2026-09-26 实拉，与 r286A 观测合并增量——那条管可观测性分类，本条管成本指标具体公式与导出栈）
+- **成本指标二式**：token_efficiency_ratio=（输出 token/输入 token）反映 prompt 工程质量；inference_p95_cost_per_1k_tokens=P95 每千 token 推理成本排除长尾异常——"成本看两数：token 效率比+P95 千 token 成本"。
+- **内建可观测四件套**：analytics dashboard（性能/成本/参与度）+conversation/run logs+Run History+**Variable Inspector 查中间变量**+每节点类型化错误元数据——"Dify 全内置：面板/日志/历史/中间值检查"。
+- **OTel 导出七栈**：Langfuse/LangSmith/Opik/W&B Weave/Arize/Phoenix/阿里云 ARMS 走 OpenTelemetry 流式导出；阿里云 SLS=LLM 节点 token 消费超阈实时告警+ETL 清洗脱敏归一化——"七栈可插+超阈告警+清洗脱敏"。
+- **Prometheus :5001/metrics 四指标**：workflow 成功率/sandbox 执行时间与失败率（异常=恶意或坏代码）/celery 队列深度（celery_queue_length 驱 KEDA 扩缩）/LLM 延迟与成本（LiteLLM 已捕获）——"K8s 看板四指标，含沙箱失败率与队列深度"。
+- **成本归因到节点**：workflow trace view 逐节点 token 日志，跑贵了能看到哪个节点花多少——"成本异常=节点级定位"。
+- 提升层：工具。触发词：token_efficiency_ratio、P95 千 token 成本、Variable Inspector、OTel 七栈、SLS 超阈告警、:5001/metrics、celery 队列深度、逐节点 token 日志。
+
+### 2. Wait 四恢复模式与版本历史并发锁：n8n 持久执行面（来源：n8n.io/workflows/6269 + blog.n8n.io/announcing-autosave + /long-running-agents-beyond-prompt-engineering + n8n-docs.teamlab.info wait 节点 + trigger.dev/vs/n8n + community.n8n.io/t/301700 2026-01-13/2026-03-01/2026-05-19/2026-08-04/2026-08-31 实拉，与 r295B 异步+r296B 队列合并增量——那条管模式选择，本条管恢复模式明细与版本治理）
+- **Wait node=数据库持久化暂停**：执行持久化到库等待期零资源消耗；四恢复模式=After Time Interval/At specific time/On webhook call/On form submission；**<65 秒等待不落库**直接续跑；Wait 一律用 n8n server 时间，工作流时区设置不影响——"暂停=持久化+四恢复模式+短等待不落库"。
+- **Async Portal/Teleport 模式**：主工作流在 checkpoint 注册后无限暂停，由外部异步事件恢复——"异步门户=checkpoint 暂停+外部恢复"。
+- **无 durable execution 边界**：失败整体失败从头重试、无自动 checkpoint（trigger.dev 对比确认）——"n8n 无断点续跑=失败整体重试"。
+- **版本历史=控制中心**：track changes/instant rollback/发布任意旧版本；并发保护=同事编辑时画布只读锁防覆盖——"版本历史+并发只读锁"。
+- 提升层：工作流。触发词：Wait 四恢复模式、<65 秒不落库、Async Portal、checkpoint 暂停外部恢复、无 durable execution、版本历史回滚、并发只读锁。
+
+### 3. 混合检索三能力与嵌入模型一致性：Langflow 检索面（来源：docs.langflow.org/components-vector-stores + docs.langflow.org/components-models + docs.langflow.org/1.10.0/knowledge-base + langflow.org/blog/blog-nextplaid + /templates 2026-07-23/2026-08-21/2026-09-11/2026-09-16/2026-09-21 实拉，与 r293A 多向量+r295A AgenticRAG 合并增量——那条管检索策略，本条管前置条件与一致性约束）
+- **Hybrid search=双检比较**：同时做向量相似度+词法检索，比较两结果返回最相关；collection 须以 vector+lexical+rerank 创建才支持；默认 reranker=nvidia/llama-3.2-nv.reranker——"混合检索=向量+词法+重排三能力齐备才可用"。
+- **知识库与记忆库共享 DB Providers**：ChromaCloud/OpenSearch/pgvector 可配，本地默认 Chroma——"知识库记忆库同一存储后端"。
+- **嵌入模型一致性硬约束**：同一向量存储混用两个 embedding 模型=检索结果不准；分块参数须≤embedding 模型 token 上限（512 上限则 chunk 不超 512）——"嵌入同源+分块在模型上限内"。
+- **多向量检索开箱**：1.11.0 lfx-nextplaid=ColBERT 晚期交互+ColPali 视觉文档检索，无自定义胶水代码——"多向量=ColBERT+ColPali 即插"。
+- 提升层：工具。触发词：Hybrid search 双检、vector+lexical+rerank 前置、嵌入模型混用失真、chunk≤token 上限、lfx-nextplaid、ColBERT 晚期交互、ColPali 视觉检索。
+
+### 4. 轮询游标机制与触发三分法：Activepieces 触发器面（来源：activepieces.com/docs/build-pieces/building-pieces/create-trigger + /docs/build-pieces/piece-reference/triggers/polling-trigger + /webhook-trigger + mintlify.wiki/activepieces/activepieces/deployment/workers + /concepts/workflows 2026-05-11/2026-06-19/2026-07-21/2026-08-20/2026-08-28 实拉，与 r284B 触发器+r291B 事件流合并增量——那条管触发类型，本条管轮询游标推进机制）
+- **轮询=游标状态推进**：onEnable 存最后时间戳/最近 item id 到 context store→Run 每 5 分钟执行（fetch 时间戳区间或遍历到 last id）→返回新项数组→test 函数返回最近项——"轮询触发=游标落 store+5 分钟推进"。
+- **触发三分法**：Polling（周期调端点查变更）/Webhooks（单 URL 收用户事件）/App Webhooks 订阅（OAuth2 开发者 app 单 URL 收全部授权用户事件）——"三种触发：轮询/单 URL/订阅"。
+- **Webhook 注册与握手**：onEnable 用 context.webhookUrl 注册第三方+store webhook Id；部分服务需握手请求完成注册——"webhook=注册+store+握手"。
+- **PollingJob 架构**：由 cron 调度（默认 5 分钟）加载 trigger 配置→调 piece onEnable hook→fetch 新数据——"轮询=独立 job 由 cron 驱动"。
+- 提升层：工具。触发词：轮询游标 onEnable+Run、5 分钟推进、触发三分法、App Webhooks 订阅、context.webhookUrl 注册握手、PollingJob cron 驱动。
+
+### 5. 聚合器替代迭代器与路由隔离陷阱：Make 数据面（来源：till-freitag.com/blog/make-performance-operations-optimierung + keerok.tech make-com-advanced-tutorial + thinkbot.agency/blog/make-com-scenario-playbook + community.make.com/t/113679 + /t/100241 2026-01-14/2026-04-16/2026-05-03/2026-07-07/2026-08-21 实拉，与 r293B 聚合器陷阱+r295C 构建三要素合并增量——那条管数据校验，本条管迭代聚合经济学）
+- **聚合器替代迭代器+循环**：迭代器把操作数乘 bundle 数（大列表致命）；聚合器多 bundle 合成一个连带 API calls 合并——反模式 100× 单条 HTTP POST vs 聚合后一次 bulk——"大列表先聚合再写，操作数与调用数同时降"。
+- **路由隔离陷阱**：Router 分路后 path1/2 的 item 在 path3 聚合器不可见（分路隔离）→改 if/else+merge 或 magic formula 聚合前取回——"聚合器看不到并行路径数据"。
+- **fan-out→fan-in 四步**：迭代拆分→**尽早验证**丢弃/隔离无效项→规范化每项（货币/SKU/分类映射）→聚合建一个 payload——"可靠扇出扇入=拆分/早验/规范化/聚合"。
+- **Array Aggregator Group by**：按 rowId 分组，每组输出一个数组（多图下载聚合到 Gemini 一次请求）——"Group by=按组保上下文"。
+- 提升层：工作流。触发词：聚合器替代迭代器、操作数乘 bundle 数、路由隔离聚合不可见、fan-out-fan-in 四步、尽早验证、Group by rowId、bulk 单次写。
+
+### 6. KV 三用途与并发=1 串行：Pipedream 状态面（来源：digitalbydefault.ai/blog/pipedream-developer-automation-review-2026 + pipedream.com/docs/workflows/building-workflows/code/nodejs/using-data-stores + versustool.com/tool/pipedream + pipedream.com/community/t/7152 + whataidoineed.com/tool/pipedream 2026-03-30/2026-07-30/2026-08-06/2026-08-17 实拉，与 r292C 存储+r298B 调度合并增量——那条管存储类型，本条管跨运行状态三用途与并发控制）
+- **内置 KV 三用途**：去重（同一 webhook 不处理两次）/追踪（记住上次处理到哪）/累加（跨事件聚合数据）——"KV data store=去重/追踪/累加三模式"。
+- **并发与队列**：事件风暴（100 次/秒）入队按可配置并发处理；**并发设 1=强制串行按序**（每事件等上一执行完成）——"并发=1 保序，避免乱序副作用"。
+- **计算控制双层**：默认 256MB（最大 10GB）+默认超时 30s HTTP/email、60s cron（最大 300s 免费/750s 付费）——"资源=内存+超时双上限"。
+- **x-pd-nostore 数据治理**：该头可抑制 workflow 日志；默认按账户保留规则存 exports/logs/execution——"日志可关=x-pd-nostore"。
+- **Token vault**：Connect 代理 3000+ API 附用户凭据返回响应，代理统一管理 token/refresh/用户级权限——"凭据托管代理=免自定义认证胶水"。
+- 提升层：工具。触发词：KV 去重/追踪/累加、并发=1 串行保序、事件入队、256MB 10GB、超时 30s/60s/750s、x-pd-nostore、Token vault、Connect 凭据托管。
+
+### 7. defer_loading 保缓存与缓存布局五规则：Anthropic 缓存面（来源：platform.claude.com/docs/it/build-with-claude/prompt-caching + /docs/en/agents-and-tools/tool-use/tool-reference + developersdigest.tech/blog/claude-opus-4-7-developer-guide + devblogs.microsoft.com/foundry/five-new-claude-capabilities + wowhow.cloud cache-warm-subagent-orchestration + toolchew.com/how-to-use-claude-api-2026 2026-04-29/2026-06-04/2026-06-18/2026-08-17/2026-09-26/2026-09-28 实拉，与 r289C 缓存+r298C #7 字段规则合并增量——那条管缓存类型，本条管缓存保持与布局细则）
+- **defer_loading 保持缓存**：延迟加载工具加入请求不使既有缓存失效，缓存跨"发现工具的轮次"与"调用工具的轮次"有效——"工具延迟加载=不 bust 缓存"。
+- **自动缓存=顶层单字段**：不用逐块插 cache_control，加单个顶层字段即可，全 Claude 模型支持——"自动缓存=一层开启"。
+- **缓存布局五规则**：最大稳定内容前置（system prompt/工具定义/检索文档）→最后稳定块标 cache_control: ephemeral→逐请求用户内容放标记后→**请求结构字节级稳定**（连 JSON key 重排都 bust 缓存）→缓存写回本 <2 次复用——"布局=稳定前置+字节稳定+2 次回本"。
+- **Structured Outputs 强制**：运行时强制 JSON schema 保证响应符合，终结 JSON.parse roulette（3 次重试循环）——"结构化输出=运行时强制免重试"。
+- **并行工具单轮 fan out**：Claude 单轮请求多个工具并行执行降端到端延迟——"多工具单轮并行"。
+- 提升层：工具。触发词：defer_loading 保缓存、自动缓存顶层字段、稳定内容前置、cache_control ephemeral、字节稳定 bust 缓存、2 次回本、Structured Outputs 强制 schema、JSON.parse roulette、并行工具。
+
+### 8. 官方一梯队榜单与跨 40 agent：skills.sh 生态面（来源：rywalker.com/research/skills-sh + tekai.dev/catalog/skills-sh + toolworthy.ai/tool/skills-sh + sofindai.com/tools/skills-sh + nxplace.com/weekly-skill-leaderboard + dev.to/shaam_ai 2026-06-11/2026-07-15/2026-07-17/2026-08-09/2026-08-28/2026-09-24 实拉，与 r297A #8 遥测+r298A #8 审计聚合合并增量——那条管遥测合规，本条管榜单格局与安装兼容面）
+- **官方一梯队占榜首**（2026-06）：find-skills 2.0M/frontend-design 531.8K/vercel-react-best-practices 468.8K/agent-browser 440.9K/microsoft-foundry 386.4K=Vercel/Anthropic/Microsoft 第一方分发——"生态信号=官方一梯队主导，装技能先看官方"。
+- **跨 40+ agent 兼容**：Claude Code/Cursor/Copilot/Gemini CLI/VS Code/Windsurf/OpenCode/Goose/Kiro——"一份技能多 agent 可用"。
+- **安装跟踪与排行榜**：匿名遥测聚合安装计数+all-time 与 24h trending 双视图+SKILLS_NO_TELEMETRY=1 可关（只收集技能名/文件名/时间戳，不采个人信息）——"遥测=匿名聚合+环境变量可关"。
+- **分类周榜趋势**：模块化技能（context-compression/memory-systems/data-structure-protocol）居前——"模块化=技能拆细趋势"。
+- 提升层：工具。触发词：find-skills 2.0M、官方一梯队、跨 40+ agent、匿名遥测、SKILLS_NO_TELEMETRY=1、24h trending、分类周榜模块化。
+
+### 9. Dev Container 人与 agent 同起点与 non-root 基线：GitHub 开发环境面（来源：learn.microsoft.com agent developer kit codespaces + github.blog/changelog/2026-02-25-copilot-cli-ga + blog.csdn.net/CompiGap/article/details/160560564 + code.visualstudio.com/updates/v1_138 + github.blog/changelog/2026-02-04-claude-codex-public-preview 2026-02-04/2026-02-25/2026-04-22/2026-04-27/2026-09-16 实拉，与 r291A 沙箱+r295B 本地合并增量——那条管执行隔离，本条管开发容器作为 agent 运行时）
+- **Dev Container=人与 agent 同一起点**：相同 OS 基镜像/工具链版本/项目依赖/终端命令与失败模式——"ready to work 对人与 agent 同义"。
+- **devcontainer.json 定义三要素**：预装工具链（Node/Rust/Docker CLI）+端口转发规则+**non-root 用户权限策略**=环境可复现且符合安全基线；Codespaces 自动拉取启动，首开触发 workspace-aware 初始化——"容器=工具链+端口+非 root 基线"。
+- **Copilot CLI GA 多通道**：npm/Homebrew/WinGet/脚本/独立可执行，Homebrew/WinGet/脚本自动更新；默认含于 Codespaces 镜像+Dev Container Feature——"CLI 容器内建=零安装起步"。
+- **agent sessions in dev containers**：VS Code agent 以项目工具与依赖运行；Claude/Codex 作为 coding agent 可从 issue/PR/Agents 标签/agent sessions 视图启动——"agent 跑在项目环境=工具依赖一致"。
+- 提升层：工具。触发词：Dev Container 人与 agent 同起点、devcontainer.json 工具链端口 non-root、可复现安全基线、Copilot CLI 多通道、Codespaces 镜像内建、agent sessions in dev containers。
+
+### 10. 生成 agent 评测迭代循环与 MM-RAG 管线：deeplearning 多模态面（来源：learn.deeplearning.ai/index + /courses/building-multimodal-search-and-rag + /courses/multimodal-rag-chat-with-videos + /courses/agentic-ai + zero-to-ai.dev/13-multimodal 2026-05-24/2026-07-15/2026-08-28/2026-09-26 实拉，与 r293C RAG 课程+r295B 多模态检索合并增量——那条管文本 RAG 课程，本条管多模态生成与检索管线）
+- **生成 agent 闭环**（AI Agents for Image and Video Generation Google 新课）：生成图/视频→**自动评测输出**→迭代直到结果达标——"生成即评测循环，不人工目检"。
+- **多模态数据管线**（Building Multimodal Data Pipelines Snowflake）：图/音频/视频→LLM-ready 文本→支撑多模态应用——"媒体先转文本再进 LLM 管线"。
+- **MM-RAG 体系**（Building Multimodal Search and RAG）：跨模态检索/多模态 embedding/vision-language 重排/接地引用/多模态推荐系统——"MM-RAG=跨模态检索+重排+接地引用"。
+- **视频聊天 RAG**（Multimodal RAG: Chat with Videos Intel）：视频→多模态 RAG 系统架构支持对视频内容问答——"视频即 RAG 语料=可问答"。
+- 提升层：工作流。触发词：生成 agent 自动评测迭代、多模态数据管线、媒体转 LLM 文本、MM-RAG 跨模态检索、重排接地引用、视频聊天 RAG。
