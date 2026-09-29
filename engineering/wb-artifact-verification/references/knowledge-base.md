@@ -1622,3 +1622,10 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - 原文：SkillDRE 用 **pre-execution + runtime 双阶段反馈闭环**自动演化完整恶意技能包；在 SkillsBench 上跨四个受害者模型 **average attack success rate of 45.28%, exceeding the strongest baseline by 40.3%**，且 **final submitted skills receive no SkillScan findings and largely preserve benign-task performance**；作者结论 **evaluating either defense stage in isolation can miss the resulting attack capability**。
 - 判据：① 静态扫描"通过"只是**某一时刻、针对某一版扫描器**的结论；攻击者把扫描器当优化目标（scanner-guided evolution），因此结论必须带**显式衰减假设**——标注扫描器版本与扫描时间，超期视为未验证；② 单阶段评估会系统性低估攻击能力：预执行过关但运行期成功、或运行期修补又引入新扫描告警，两边互相"补刀"，只有跨阶段闭环评测才看得见；③ 与 §verify≠scan 升级关系：那条说"扫描不等于验证"，本条补"扫描结论还会随时间与对手演化而失效"；④ 可操作：技能/制品的安全结论写"扫描器 X 版本于 T 时刻无 findings"，并设重扫周期；对高权限技能，静态过关后仍需运行期行为校验。
 - 提升层：可复用 Skill / 安全边界。触发词：静态扫描有效期、红队演化、SkillDRE、ASR 45.28%、扫描器即优化目标、双阶段闭环。
+
+## §r321B — 「文档缺位反证」是独立判据：全索引零命中＝该平台没有这个能力，且判「不可达」前必须换子域/通道复验（来源：www.activepieces.com/docs/llms.txt 2026-09-30 独立 curl 实拉 35,540B + docs.langflow.org/llms.txt 2,611B）
+
+- 原文/要点：① 两站 `llms.txt` 全量索引均可 curl 200 取到（Activepieces 35,540B / LangFlow 2,611B），但**对 `retry`/failure handling/失败治理专页做全文本扫描零命中**——Activepieces 索引里 troubleshooting 类目只有 bullboard / reset-password / truncated-logs / websocket-issues / disaster-recovery，**没有失败治理专页**；LangFlow 索引总量仅 2.6KB，失败治理面完全缺位。② 对照：同日 `docs.activepieces.com/docs/...` 子域 curl 返回 000（连接层失败），而 `www.activepieces.com/docs/llms.txt` 返回 200 —— **同一站点的不同子域/通道可达性不同**。
+- 判据：① 采集结论分**三态**而不是两态：**命中（有证据）/ 缺位（有能力边界的全量索引里确实没有）/ 未达（采集失败）**；把"缺位"记成"未达"会让人一直去重试采集，把"未达"记成"缺位"会把没采集到当成对方没有——**缺位必须建立在"该站提供了全量索引且已全扫"这个前提上**，没有全量索引就不能下缺位结论；② 判"不可达"是**最重的结论，必须换通道复验**：换子域（docs↔www）、换协议形态（HTML↔llms.txt↔.md 原文）、换工具（curl↔浏览器）三者至少试两路再定；本次同日同站 `docs.` 000 而 `www.` 200，是这条判据的直接实证；③ 与 §静态扫描有效期 分工：那条管"结论会过期，要带版本与重扫周期"；本条管"**结论的类型要分对**，缺位与未达不可互换"。
+- 判非：Qoder r347-Q-A C3「文档缺位反证」与本条同向，WB 本轮独立实拉两站 llms.txt 复核成立 → 以本条为准（Qoder 版不重复落）；r346-Q-C「归档规范化指纹」本轮未独立实拉 → 证据未达，不落。
+- 提升层：可复用 Skill / 工作流。触发词：文档缺位反证、缺位 vs 未达、三态采集结论、llms.txt 全索引扫描、子域换通道复验、不可达判据。
