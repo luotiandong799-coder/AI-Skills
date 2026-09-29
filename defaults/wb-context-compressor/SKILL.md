@@ -184,3 +184,20 @@ version: 3.84.0
 
 ### 三级 token 预算量化（来源：Anthropic Skills 官方指南 2026-09-27 实拉）
 技能/长文档渐进披露的 token 成本：Level 1 frontmatter 常载约 100 tokens（只够判断何时用）→ Level 2 主体触发时载 <5k tokens（完整指令）→ Level 3 捆绑文件按需近乎无限。SKILL.md 主体保持 <500 行，逼近就拆 references/ 子文件；整个文件系统是 context engineering——文件清单本身就是披露地图。
+
+## r304B 输出校验三层与错误回注 + 压缩不变量（来源：jvoltci.github.io 2026-05-27 + baeseokjae.github.io 2026-05-10 + akjamie.github.io 2026-05-24 + LangChain Deep Agents 2026-01-28 + zylos.ai 2026-06-21 实拉）
+
+### 结构化输出三层层级：JSON 合法 ≠ schema 合规 ≠ 语义正确
+三层：schema 定义（Pydantic/TypeBox/Zod）→ constrained decoding（服务端 XGrammar/Outlines/Structured Outputs）→ client validation+retry（Instructor）。JSON mode 只保证语法合法，幻觉 key 造成静默 KeyError；语义失败（错值/错字段/幻觉数据）必须应用级 Pydantic field_validator 域约束兜底。判据：**语法层靠服务端、语义层靠应用校验，缺语义层=静默错**。
+
+### 错误回注自纠循环：重试必须携带错误上下文
+校验失败时把 ValidationError 转成 follow-up prompt，告诉模型具体错在哪并请求修正（Instructor 机制），自纠率 90%+；盲目重试 JSON 解析异常是浪费。NodeLLM Schema Self-Correction Middleware 自动把错误发回 LLM 重试 maxRetries；repair ladder 用尽报 SCHEMA_NONCOMPLIANCE 不可恢复错误。
+
+### 多 agent 交接：schema 即契约，错误会累积合法性
+一个 agent 的输出是另一个的输入——错误静默传播、经重复引用累积表面合法性、到最终步伪装成确认事实。修法：inter-agent schema 当 handoff 边界强制执行的契约（constrained decoding + schema gates + orchestrator 级 circuit breaker），不是给开发者看的文档。
+
+### Hermes 压缩不变量：压缩是带不变量的转录重写
+① head/middle/tail 分区：system prompt 与首轮完整保留、中段总结、尾部按 token 预算保护；② active task anchoring：**最新用户消息必须留在 summary 外**——被总结的"待办"是参考资料不是活的 user turn；③ tool-aware compaction：旧工具输出优先丢/offload，不动推理链。判据：**压缩要保三个东西——头部系统指令、尾部最近轮、待办用户消息**。
+
+### Deep Agents 三级压缩顺序：先 offload 后 summarize
+① offload 大工具结果（一发生就写文件系统）；② 上下文超阈值后 offload 旧 write/edit 工具参数；③ 无 eligible 内容可 offload 才做 summarize。判据：**能搬出去的不压掉，summarize 是最后手段**。

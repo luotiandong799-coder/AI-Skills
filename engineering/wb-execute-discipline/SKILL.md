@@ -13361,3 +13361,19 @@ AI 代码审查 CLI：确定性规则集（多语言）+ LLM agent 混合，输�
 
 ### Agent skills 类型化引用+版本化挂载（来源：Anthropic Managed Agents skills，platform.claude.com，2026-09-27）
 agent 配置里 skills 以 `{type:"anthropic", skill_id:"xlsx", version:"1"}` 引用：官方管理技能带版本，custom 技能用 skill_id。判据：**给 agent 挂技能时写明类型+ID+版本，而不是散装描述**——版本化引用才能复现与回滚。触发词：managed skill、skill_id、技能版本化、类型化引用。
+## r304B 重试状态码/插件验收/评测多试次/技能写作/记忆成本（来源：n8n 2026-04-28 + agentskills.io 2026-09-11 + firecrawl.dev 2026-05-26 + arXiv 2604.06132 + 腾讯云 2026-08-15 + tryopenclaw.ai 2026-04-22 实拉）
+
+### n8n 默认重试状态码集合 + 指数退避公式
+可重试：408/409/425/429/500/502/503/504；不重试：400/401/403/404/422。退避 waitSeconds=min(maxDelaySeconds, baseDelay*2^n)+jitter；重试至少等 5 秒给外部服务恢复时间；永久错误（401/403/unauthorized）直接告警不做无谓重试。判据：**重试前先分"这错误重试会不会好"——状态码集合+退避公式写死，不靠感觉**。
+
+### 技能写作：适度细节 + 渐进披露 + 先写 eval 再写 skill
+过度全面的技能反而有害：agent 难以提取相关部分、被不适用的指令引到歧路；concise stepwise + working example 优于穷尽文档，edge case 多数交给 agent 自身判断。**先写 eval 再写 skill**：识别真实缺口后先编码评测任务拿基线（当前模型/harness 怎么处理），写完技能再测有没有真提升——没有 eval 就是在猜。
+
+### Claw-Eval 多试次评测：区分平均/最佳/可靠性
+300 个人工验证任务、9 类；full-trajectory 审计、Completion/Safety/Robustness 三积分、2,159 条可独立验证 rubric；**multi-trial 评测区分平均表现、最佳能力与可靠性**——单次跑分把三者混成同一个数。判据：**评测 agent 跑多次，报告平均/最佳/可靠性三个数，不报单次分**。
+
+### DeepSeek Harness 插件验收三证据
+插件可用性三关卡：① 加载证据（终端出现 plugin loaded）；② 能力证据（对话中出现真实 Tool call）；③ 执行记录（Trajectory 输入与结果和聊天答案一致，调用可复核）。判据：**"插件能跑"要三证据齐才算——加载≠注册可用≠可复核**。
+
+### OpenClaw dreaming 成本警示：Deep Sleep 全量重载
+consolidation 每 pass 全量重载记忆语料，默认最多 4 passes；memory 目录长到 50-100k tokens 时单次就 200-400k 输入 token。判据：**启记忆整合前先算"每 pass 重载量 × pass 数"的输入成本**；记忆大时降频或关闭。
