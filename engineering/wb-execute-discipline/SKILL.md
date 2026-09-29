@@ -11840,3 +11840,66 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **agentic RAG vs RAG vs fine-tuning 三态区分**：检索增强是"接外部知识"，agentic 是"自主决定怎么检索"，微调是"改模型本身"——**先定方案形态再投入**。
 - **生产模块三件**：评测策略+日志/监控/可观测性+部署——**RAG 上线≠接完检索，生产还要评测与观测**。
 - 提升层：工作流。触发词：两阶段检索、ANN 粗召回、reranking、cross-encoder、sentence-window、auto-merging、agentic RAG、RAG vs fine-tuning。
+## r297A 十独点（2026-09-29 实拉）
+
+### 1. Agent 节点三形态判据：Dify 工作流载体选择面（来源：dify-hosting.com/en/guides/dify-workflow + dify-6c0370d8.mintlify.app/en/use-dify/nodes/agent + deepwiki.com/langgenius/dify/5.7-workflow-testing-and-mock-system 2026-06-04/2026-07-06/2026-09-03 实拉，与 r296A 工作流 YAML 合并增量）
+- **三形态先定再搭**：Workflow（一次从 start 跑到 end，自动化/批处理）vs Chatflow（多轮对话，支持/引导问答，每消息显式流程）vs Agent node（流程内**模型自主选工具动态执行**）——**先问"交互是一次跑完还是多轮、工具选择是预编排还是模型自主"，再选载体**（与 r296A"工作流 YAML 版本化"互补：那个管已搭好的怎么管，本条管第一步选哪种形态）。
+- **Agent Strategies 按模型能力选**：agent 思考/行动策略匹配模型能力与任务需求——**策略不是默认的，要按模型与任务配对**。
+- **AgentNode 是 runtime bridge**：Workflow Graph Engine 与 Agent System 之间的桥，把执行委托给 agentic strategy——**"agent 节点=桥+策略委托"，不是普通 LLM 节点**。
+- 提升层：工作流。触发词：Workflow vs Chatflow vs Agent node、三形态、动态工具选择、Agent Strategies、runtime bridge。
+
+### 2. 社区节点发布强制 provenance：n8n 供应链面（来源：docs.n8n.io/integrations/community-nodes/build-community-nodes + integrations/creating-nodes/build/n8n-node + n8nlogic.com 2026-04-24/2026-04-30/2026-06-17 实拉，与 r296A Pin SHA 合并增量）
+- **2026-05-01 起验证节点必须 GitHub Actions 发布+provenance statement**：n8n 不接受本地机器直接发布的验证节点——**"谁构建的、从哪个 repo/commit 构建的"必须可密码学验证**（r296A Pin SHA 管安装侧钉版本，本条管发布侧可验证来源）。
+- **provenance 的用途**：任何人能验证"这个 workflow 构建了那个包"（GitHub Actions 签名 provenance）——**供应链审计从"信官网"变"验签名"**。
+- **声明式节点模式**：REST API 用 requestDefaults 描述请求，不写自定义 execute()——**"描述式优先于命令式"降低自定义代码面**。
+- 提升层：工具。触发词：provenance statement、GitHub Actions 发布、验证节点、n8n-node CLI、requestDefaults、声明式节点。
+
+### 3. 自然语言策略→守卫工具与 guard 生成器 RCE：LangFlow 策略面（来源：langflow.org/blog/langflow-policies-guarded-tools + docs.langflow.org/1.10.0/policies + ibm.com/support/pages/node/7278920 2026-05-20/2026-08-10/2026-07-02 实拉，与 r295A Guardrails CVE 族合并增量）
+- **Policies 组件（ToolGuard）**：自然语言业务规则→可执行 guard 代码，**工具调用运行前检查**——"好意图不够，策略要变成守卫"（与 r295A"Guardrails 生产硬约束"互补：那个管 agent 整体护栏，本条管工具调用前置守卫）。
+- **Guardrails 组件三类检测**：Tokens/Passwords（凭证泄露）/Jailbreak（越狱/操纵）/Offensive Content（攻击性内容）——**"输入侧先过三类扫描再进模型"**。
+- **guard 生成器自身是 RCE 面**：IBM 公告——Policies 组件 Dynamic CodeInput 字段绕过自定义组件验证（恶意 Python 持久化在 Flow.data 后随 ToolGuard 执行）；denylist 不完整（漏进程派生原语+注解类体赋值绕过+CodeParser 把返回类型注解直接 eval）——**"能生成 guard 代码的组件，它生成的路径本身要按可执行代码审计"**。
+- 提升层：工作流。触发词：Policies、ToolGuard、guarded tools、自然语言策略、Guardrails 三类检测、guard 生成器 RCE、Dynamic CodeInput。
+
+### 4. 审计日志→自动生成事件流：Activepieces Event Streaming 面（来源：activepieces.com/docs/admin-guide/guides/event-streaming + docs/build-pieces/piece-reference/triggers/overview.md 2026-06-17/2026-09-27 实拉，与 r296C 多触发器合并增量）
+- **三触发器技术**：Polling（周期查变化）/Webhooks（单 URL 监听用户事件）/App Webhooks（OAuth2 dev app 收所有授权用户事件到单 URL）——**先按"主动查还是被动收、单租户还是多租户"选触发策略**。
+- **Generate handler flow 一键生成**：Platform Admin→Security→Audit Logs→Event Streaming→New Destination→选事件→Generate handler flow——自动生成 webhook 触发流（每事件一个 router 分支+flow.run.finished 的失败运行嵌套分支）——**"审计日志事件→自动生成处理流"消灭手搓事件路由**。
+- 提升层：工作流。触发词：Event Streaming、Generate handler flow、审计日志、router 分支、flow.run.finished、Polling/Webhooks/App Webhooks。
+
+### 5. 存储选型表与 Agent 记忆可见：Make 数据面（来源：make.com/en/blog/agent-workflow-memory + use-apify.com/blog/make-com-data-stores-guide + keerok.tech 2026-03-15/2026-04-11/2026-05-05 实拉，与 r296C 三类记忆合并增量）
+- **存储先选型**：去重（单 workspace）/缓存 API 几小时/跟踪执行状态→Data Store；团队共享/非 Make 用户看报表→Google Sheets/Airtable；复杂关系数据（join）→外部数据库——**"先按用例选存储，不默认全上 Data Store"**。
+- **Agent 记忆架构可见**：Scenario Builder 直接显示 context 在哪捕获/传递/写入/丢失；记忆模式=read→AI 模块→write——**"记忆流在画布上可见，不靠猜隐藏字段映射"**（与 r296C LangFlow 三类记忆互补：那个管选哪类组件，本条管记忆流可视化）。
+- **变量跨 Break 需 scope=roundtrip**：延迟/中断场景下变量要跨过去必须显式 roundtrip 作用域——**"跨执行边界的状态传递要显式声明"**。
+- 提升层：工作流。触发词：Data Store 选型表、Agent 工作流记忆、Scenario Builder 可见、roundtrip scope、跨 Break、缓存 TTL。
+
+### 6. 远程 MCP 与用户态透传：Pipedream MCP 面（来源：pipedream.com/docs/connect/mcp + connect/mcp/developers + connect/mcp/users + changelog 2026-09-11/2026-09-22/2026-09-28 实拉，与 r296C 单 URL MCP 合并增量）
+- **远程 MCP 免自托管**：remote.mcp.pipedream.net（v3 开发者）/ mcp.pipedream.net/v2（终端用户），SSE+streamable HTTP 双传输动态支持、零配置——**"想用就指 URL，不部署 server"**（r296C Activepieces 单 URL MCP 同族：平台把 MCP 做成托管服务）。
+- **x-pd-external-user-id 头代理用户态**：`client.connect({url, headers: {"x-pd-external-user-id": "sarah@acme.com"}})`——"你的 agent 挑工具，auth 已按用户处理"——**"多租户代理：身份放请求头，工具面复用同一连接"**。
+- **OpenAI Responses API 原生 MCP 支持**（changelog）——**MCP 从客户端插件变 API 原生协议**。
+- 提升层：工具。触发词：remote.mcp.pipedream.net、x-pd-external-user-id、用户态透传、SSE/streamable HTTP、免自托管、Responses API 原生 MCP。
+
+### 7. frontmatter 保留词禁止与 API 版本钉定：Anthropic skill 规范面（来源：console.anthropic.com/docs/en/agents-and-tools/agent-skills/best-practices + platform.claude.com/docs/en/build-with-claude/skills-guide + support.claude.com 2026-03-12/2026-07-23/2026-09-04 实拉，与 r295C frontmatter 合并增量）
+- **name 硬约束补全**：≤64 字符、仅小写字母数字连字符、不能含 XML 标签、**不能含保留词 "anthropic"/"claude"**——**"保留词名单也是硬约束，撞词即失败"**（r295C 管字段必填，本条管取值规则）。
+- **description ≤1024 字符必填、不能含 XML**——**"描述长度上限 1024 是官方硬值"**。
+- **API 调用 skill 可钉版本**：request 里 type+skill_id+可选 version 钉到特定版本——**"服务端 skill 消费也要钉版本"**（r296A localskills 钉版本的 API 侧版本）。
+- **聚焦原则**：不同工作流建独立 skill，多专注 skill 组合优于一个大 skill——**与 r295A"五窄技能"同族，官方背书**。
+- 提升层：可复用 Skill。触发词：64 字符、保留词 anthropic/claude、description 1024、skill_id+version、聚焦独立 skill。
+
+### 8. 遥测驱动排行榜与量化收益：skills.sh 生态面（来源：skills.sh/docs/faq + skills.sh/docs/api + skillsbench.ai/blogs/skillsbench-1-1 + rywalker.com/research/skills-sh 2026-05-07/2026-06-11/2026-06-16/2026-08-14 实拉，与 r296A 评测/r296B 目录生态合并增量）
+- **排行榜=匿名安装遥测**：skills CLI 安装时聚合计数（无个人/设备信息），**"权威信号=聚合安装数，不是编辑推荐"**。
+- **API 三视图**：/api/v1/skills 分页，all-time（总量）/trending（近期增长）/hot（最近一小时 vs 昨日同时刻）——**"选技能看趋势视图，不只看总量榜"**。
+- **SkillsBench 1.1 量化**：curated Skills 把 mean resolution rate 从 33.9%→50.5%（+16.6 点，87 tasks/8 domains/18 configs）——**"技能包有可测收益，评测是选型依据"**（r296A 先评测后构建的基准数据支撑）。
+- 头部生态（2026-06）：find-skills 2.0M 安装、frontend-design 531.8K、Vercel/Anthropic/Microsoft first-party 分发——**"大厂 first-party 技能上目录=分发主通道"**。
+- 提升层：工具。触发词：匿名遥测、all-time/trending/hot 三视图、SkillsBench、+16.6 点、安装聚合、find-skills。
+
+### 9. 服务退休三件套：GitHub Models 生命周期面（来源：github.blog/changelog/2026-07-30-github-models-is-now-retired + docs.github.com/en/enterprise-cloud@latest/github-models + rohitai.com/blog 2026-07-12/2026-07-17/2026-07-30 实拉，与 r295B 生态盘点合并增量）
+- **2026-07-30 GitHub Models 全面退休**：playground/model catalog/inference API/BYOK 全关，**无 grandfathering、无付费 tier 兜底**——**"免费平台服务没有退休保护，依赖前先评估生命周期"**。
+- **brownout 预告**：7/16 与 7/23 两次短强制停机，"让生产里静默断的调用在硬截止前暴露"——**"供应商退役会先制造两次受控故障来测你的迁移就绪度"**。
+- **迁移不是换端点**：Playground→保存实验配置/结果/成本/可复现性（不只是另一个聊天界面）；Inference→endpoint/auth/model map/retries/tool contract/vector-index 计划；BYOK→provider account/custom model mapping/allowlists/key owner/billing/secret rotation——**"迁移面=依赖清单+契约+密钥，逐项盘点"**。
+- 提升层：工具。触发词：服务退休、brownout、无兜底、迁移面清单、BYOK、model map、secret rotation、生命周期风险。
+
+### 10. 错误分析排序与组件级先行：deeplearning Agentic AI 面（来源：corporate.deeplearning.ai/courses/agentic-ai + staging.deeplearning.ai/courses/agentic-ai + lesson/fwxyds/component-level-evaluations 2026-02-02/2026-05-03/2026-09-22 实拉，与 r296B 评测三步合并增量）
+- **Module 4 实用链**：evals→error analysis→按影响排序优先下一步→component-level evaluations——**"先跑评测→再错误分析→按影响排优先级→组件级先于端到端修"**（r296B 三步管"评测体系怎么建"，本条管"评测之后下一步怎么排"）。
+- **错误分析后按影响排序**：不是修最近一次错误，是修影响最大的错误——**"优先级=影响×频率，不是时序"**。
+- **组件级评测先于端到端**：先验证单个组件（工具/检索）再整链——**与 r296B"组件评测 vs LLM-judge 选择"互补：那条管评测器，本条管评测粒度顺序**。
+- **四设计模式**：reflection/tool use/planning/multi-agent（与 r295A AgenticAI 四大模式同源，本点增量在 Module 4 实用链）。
+- 提升层：工作流。触发词：error analysis、按影响排序、优先下一步、component-level evaluations、先组件后端到端、Module 4。
