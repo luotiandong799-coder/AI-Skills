@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体、状态卡只发一次、原地更新、动作词加对象加约束、置信信号、进度时间线、批准画面、改了什么、能不能撤销、推销结论
-version: 1.54.0
+version: 1.55.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -496,14 +496,6 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - **分辨率物理阈值**：patch 覆盖 28px 而需读字母 8px 高→细节被抹掉；小文本在低分辨率下消失——**省 token 有极限，缩到可读性阈值以下就是质量事故**。
 - **自适应预算**：E-AdaPrune 用奇异值谱能量决定 token 预算（信息密集场景多 token、冗余激进压缩）；PromPrune 平衡局部显著性保持与全局覆盖。
 - 判据：**图像按 tile 边界与目标字符大小缩放，不是按"看起来清晰"缩放——token 与可读性在此交汇；视觉 token 单独记账单独预算，混进文本预算会静默超支**。
-- **提升层**：可复用 Skill（多模态成本治理）。## 工具 schema 按需注入与缓存成本纪律（来源：AWS AGENTPERF03-BP02 2026-08 + anasbarg fable 2026-06 + negiadventures 2026-04 实拉，r314C 套件迭代）
-- **tool schemas 动态组装（JIT）**：AWS=每个 token 都竞争模型注意力/消耗输入成本/加延迟——**不一次性塞所有工具 schema**，按当前任务 just-in-time 注入所需工具定义；对话历史与工具 schema 会挤占推理容量。
-- **缓存只在前缀 byte-identical 时工作**：稳定内容（system prompt/tool defs）放前、会话中不 mutate；**别每轮往 system prompt 注入当前时间戳**；非确定性工具排序是常见缓存杀手（工具定义一致排序）；会话中换模型破坏缓存。
-- **tool-heavy 缓存测试**："如果模型丢了这项，会不会做更差的下一决定？不会就压缩掉"——可复用指令前缀固定+只检索最小任务相关上下文+检索结果注入稳定前缀之后+轮间激进过期替换。
-- 判据：工具 schema 按需注入不预塞；轮间消息数组 byte-identical 保缓存命中；换模型/改配置破坏前缀缓存应重开会话。## Prompt 压缩技法与成本感知优化（来源：dzone token-frugality 2026-05 + terseai 12技法 2026-07 + varunsingla tokenomics 2026-08 + dev anoop 2026-09 + arXiv CROP 2604.14214 + arXiv DiffuMask 2604.06627 + pypi twotrim 2026-09，r316A）
-- **句子移除测试**：删一句跑 eval，质量不变=这句不属于 prompt——每句价值实测，不靠感觉留句。
-- **Bullet 压缩**：400 词散文指令→8-12 条祈使句 bullet（<100 tokens）——prose 连接组织是高冗余，指令改 bullet 高压缩比。
-- **输出长度约束是最高杠杆**："be concise" 减输出 token 57-59%；"one paragraph/two sentences/bullet points only" 减 40-70% 不丢信息——输出约束先于输入压缩。
-- **CROP 成本感知优化**：prompt 发现阶段加 response adaptive textual length penalty，把 reasoning accuracy 与 generation verbosity 解耦——输出 token 减最多 80.6% 保精度（GSM8K/LogiQA/BIG-Bench Hard）。
-- **DiffuMask 扩散式 pruning**：token 级 prompt 剪枝 1 分钟内 80% 长度减（vs 顺序剪枝 10-48h）；TwoTrim 中间件=LongLLMLingua 提取+句子语义评分+lost-in-the-middle 重排，reverse proxy 减 80%。
-- **判据**：压缩=逐句实测（删了不降分才删）→指令 bullet 化→输出加长度约束；与 §成本四层 互补（那条管总预算，本条管 prompt 层具体技法）。
+- **提升层**：可复用 Skill（多模态成本治理）。
+
+> 「工具 schema 按需注入与缓存成本纪律」「Prompt 压缩技法与成本感知优化」两章原文已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。

@@ -317,3 +317,18 @@
 
 
 
+
+
+## 工具 schema 按需注入与缓存成本纪律（来源：AWS AGENTPERF03-BP02 2026-08 + anasbarg fable 2026-06 + negiadventures 2026-04 实拉，r314C 套件迭代）
+- **tool schemas 动态组装（JIT）**：AWS=每个 token 都竞争模型注意力/消耗输入成本/加延迟——**不一次性塞所有工具 schema**，按当前任务 just-in-time 注入所需工具定义；对话历史与工具 schema 会挤占推理容量。
+- **缓存只在前缀 byte-identical 时工作**：稳定内容（system prompt/tool defs）放前、会话中不 mutate；**别每轮往 system prompt 注入当前时间戳**；非确定性工具排序是常见缓存杀手（工具定义一致排序）；会话中换模型破坏缓存。
+- **tool-heavy 缓存测试**："如果模型丢了这项，会不会做更差的下一决定？不会就压缩掉"——可复用指令前缀固定+只检索最小任务相关上下文+检索结果注入稳定前缀之后+轮间激进过期替换。
+- 判据：工具 schema 按需注入不预塞；轮间消息数组 byte-identical 保缓存命中；换模型/改配置破坏前缀缓存应重开会话。
+
+## Prompt 压缩技法与成本感知优化（来源：dzone token-frugality 2026-05 + terseai 12技法 2026-07 + varunsingla tokenomics 2026-08 + dev anoop 2026-09 + arXiv CROP 2604.14214 + arXiv DiffuMask 2604.06627 + pypi twotrim 2026-09，r316A）
+- **句子移除测试**：删一句跑 eval，质量不变=这句不属于 prompt——每句价值实测，不靠感觉留句。
+- **Bullet 压缩**：400 词散文指令→8-12 条祈使句 bullet（<100 tokens）——prose 连接组织是高冗余，指令改 bullet 高压缩比。
+- **输出长度约束是最高杠杆**："be concise" 减输出 token 57-59%；"one paragraph/two sentences/bullet points only" 减 40-70% 不丢信息——输出约束先于输入压缩。
+- **CROP 成本感知优化**：prompt 发现阶段加 response adaptive textual length penalty，把 reasoning accuracy 与 generation verbosity 解耦——输出 token 减最多 80.6% 保精度（GSM8K/LogiQA/BIG-Bench Hard）。
+- **DiffuMask 扩散式 pruning**：token 级 prompt 剪枝 1 分钟内 80% 长度减（vs 顺序剪枝 10-48h）；TwoTrim 中间件=LongLLMLingua 提取+句子语义评分+lost-in-the-middle 重排，reverse proxy 减 80%。
+- **判据**：压缩=逐句实测（删了不降分才删）→指令 bullet 化→输出加长度约束；与 §成本四层 互补（那条管总预算，本条管 prompt 层具体技法）。
