@@ -496,4 +496,8 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - **分辨率物理阈值**：patch 覆盖 28px 而需读字母 8px 高→细节被抹掉；小文本在低分辨率下消失——**省 token 有极限，缩到可读性阈值以下就是质量事故**。
 - **自适应预算**：E-AdaPrune 用奇异值谱能量决定 token 预算（信息密集场景多 token、冗余激进压缩）；PromPrune 平衡局部显著性保持与全局覆盖。
 - 判据：**图像按 tile 边界与目标字符大小缩放，不是按"看起来清晰"缩放——token 与可读性在此交汇；视觉 token 单独记账单独预算，混进文本预算会静默超支**。
-- **提升层**：可复用 Skill（多模态成本治理）。
+- **提升层**：可复用 Skill（多模态成本治理）。## 工具 schema 按需注入与缓存成本纪律（来源：AWS AGENTPERF03-BP02 2026-08 + anasbarg fable 2026-06 + negiadventures 2026-04 实拉，r314C 套件迭代）
+- **tool schemas 动态组装（JIT）**：AWS=每个 token 都竞争模型注意力/消耗输入成本/加延迟——**不一次性塞所有工具 schema**，按当前任务 just-in-time 注入所需工具定义；对话历史与工具 schema 会挤占推理容量。
+- **缓存只在前缀 byte-identical 时工作**：稳定内容（system prompt/tool defs）放前、会话中不 mutate；**别每轮往 system prompt 注入当前时间戳**；非确定性工具排序是常见缓存杀手（工具定义一致排序）；会话中换模型破坏缓存。
+- **tool-heavy 缓存测试**："如果模型丢了这项，会不会做更差的下一决定？不会就压缩掉"——可复用指令前缀固定+只检索最小任务相关上下文+检索结果注入稳定前缀之后+轮间激进过期替换。
+- 判据：工具 schema 按需注入不预塞；轮间消息数组 byte-identical 保缓存命中；换模型/改配置破坏前缀缓存应重开会话。
