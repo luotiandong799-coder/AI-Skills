@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.71.0
+version: 2.72.0
 agent_created: true
 ---
 
@@ -487,14 +487,11 @@ Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 
 > 下沉索引：《评估按阶段换形态：前期轻量人工比对，后期指标化回归》原文（18 行）已移至 `references/knowledge-base.md`（最旧批次下沉，正文只留指针）
 
-## 静态扫描有有效期：对抗会针对扫描器自我演化（SkillDRE 双阶段红队 ASR 45.28%、零 SkillScan findings），安全结论须带扫描器版本与重扫周期（来源：arXiv 2609.32400，2026-09-30 r320A 实拉）
 
-## 采集结论分三态：命中 / 缺位（全量索引全扫零命中＝平台无此能力）/ 未达（采集失败）；判「不可达」前必须换子域与通道复验（来源：www.activepieces.com/docs/llms.txt 35,540B + docs.langflow.org/llms.txt 2,611B，2026-09-30 r321B 独立实拉；细则见 references/knowledge-base.md §r321B）
 
-## 失效双模型：周期型（扫描器版本+重扫周期）与事件型（失陷时点切片，时点前结论持续合法）；并把「能否取到最新材料」的新鲜度当作独立验证属性（来源：docs.sigstore.dev/about/threat-model，2026-09-30 r321C 独立实拉 64,710B；细则见 references/knowledge-base.md §r321C）
-## 扫描覆盖须按三轴声明（输入格式 × 被读取字段 × 结构深度/来源类型），触发面文本要设专项检测位；结论的失效有三个时钟：周期型 / 事件型 / 证据可达性（来源：cisco skill-scanner#229 14,129B + api.skillhub.cn 3,094B，2026-09-30 r322A 独立实拉；细则见 references/knowledge-base.md §r322A）
 
 ## 审计可能是惰性生成的（「在库里」≠「已审过」），而扫描器自身的遍历顺序即是静默漏报面——两者都不产生任何警告位（来源：www.skills.sh/docs/api 136,145B + api.github.com/repos/NVIDIA/SkillSpector/issues/610 6,455B + docs.n8n.io/deploy/host-n8n/configure-n8n/security/run-security-audits.md 2,425B，2026-09-30 r323A 独立实拉；细则见 references/knowledge-base.md §r323A）
 
 ## 审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎 `queued/排队中`+`reportUrl:""` 与 1.0.0/1.0.5–1.0.7 `benign` 并存，每版独立 `versionId`；同源两接口计数须互检（`stats.versions:0` vs `/versions` 实有 8 条），展示计数不可作机检依据；官方文档声明的机器端点必须逐路径实测（skills.sh 搜索面 401、审计端点模板 404），缺陷结论时效随 PR 状态刷新（SkillSpector PR #611 仍 `open`/`merged=false`，2026-09-28 `CHANGES_REQUESTED`）；审计契约要写清「不记什么」（Reads are not recorded / 传入值 never stored / MCP 工具无读写标记⇒整段不可记），事件真源=代码 schema
 （来源：api.skillhub.cn/api/v1/skills/cic/versions 4,104B + /skills/cic 2,473B + skills.sh/api/v1/skills?q=pdf 401 + gh api repos/NVIDIA/SkillSpector/pulls/611 + www.activepieces.com/docs/admin-guide/security/audit-logs/overview.md 4,069B，2026-09-30 r324A 独立实拉；细则见 references/knowledge-base.md §r324A）
+## 流行度与展示序都不是质量/留存的判据：简单特征（体积、下载量）对「是否持续在架」无稳定预测力，注意力高度集中且权限声明普遍；目录展示序可能是随机洗牌，文档撤除本身是可机检的治理信号（来源：arXiv 2609.17274《After the Party v2》42,842B + agentskills.io/clients.md 25,457B + docs.n8n.io/llms.txt 286,271B，2026-09-30 r324C 独立实拉；与 §目录数字失真四形态 互补——那几条管“数字怎么失真”，本条管“该换用什么指标”；细则见 references/knowledge-base.md §r324C）

@@ -437,3 +437,14 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - **判据**：写「恰好一次」验收时，除已落的**结算标记 + 合并前钩子**外，还必须声明**在途时间上界**（多久之后可认定"不会再来了"）；上界未知或重尾时，"等一会儿"不是解法——**给每个写操作发幂等键**才是（键的存在性本身把重复率从 28% 降到 4% 这一 Qoder 转引数值本轮未独立复核，登记为待补）。
 - **配套**：崩溃-恢复场景要查**执行痕迹计数**而非看结果——「恢复跑成功 ≠ 只执行过一次」。
 - 提升层：工具。触发词：恰好一次、在途上界、late commit、重复率、崩溃恢复重复计数。
+
+
+## §r324C（2026-09-30 r324C 独立实拉）
+- 原文：「If a workflow contains the Error Trigger node, by default, the workflow **uses itself as the error workflow**.」「You **can't test error workflows** when running workflows manually.」「You can use the **same error workflow for multiple workflows**.」
+- 判据：① **兜底默认指向自身＝主链路与兜底共享故障域**：主流程因自身逻辑崩掉时，兜底跑的是同一套逻辑，很可能同样崩——设兜底前先确认它**不在故障域内**，否则“有兜底”只是心理安慰；② **一条兜底被多条主链路复用＝故障放大面**：兜底自身的缺陷会同时影响所有引用它的主链路，改兜底要按“影响 N 条链路”评估，不能按单点评估；③ **演练路径不等于线上路径**：手动运行不触发错误处理，所以“我手动跑过没问题”对兜底有效性**零证明力**——验证兜底必须走真实触发路径（live/activated），或显式构造失败注入；④ 判据化：**兜底有效性 = 触发路径可达 × 不在故障域 × 失败注入实测通过**，三者缺一即记为未验证。
+- 提升层：工作流/工具。触发词：兜底自引用、error workflow、failed injection、演练路径≠线上路径、兜底复用面。
+
+
+## §自 SKILL.md 下沉（2026-09-30 r324C）
+## 审计/日志写入器禁止全局单向闭锁：坏事件只拒该条并留 rejection 占位，任何 unavailable 态必须可复位/有时限；警惕「只报一行」把持续故障伪装成单次（来源：openclaw#160734 P1，2026-09-30 r320C 实拉）
+## 故障必须有显式人工恢复入口：自动对账要写清能力边界、不满足即降级给人；超时不授权回滚也不删 retained state（来源：docs.openclaw.ai cli/update/status-and-history，2026-09-30 r320C 实拉）

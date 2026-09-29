@@ -1675,3 +1675,16 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - 原文：api.skillhub.cn `/api/v1/skills/cic/versions` 返回 8 条版本，每条独立 `versionId`（如 372873）且 `securityReports` 下 keen/sanbu 双引擎各自给 `status`/`statusText`——1.0.0/1.0.5–1.0.7 为 `benign`/「安全，无风险」，1.0.1–1.0.4 为 `queued`/「排队中」且 `reportUrl:""`；同实体 `/api/v1/skills/cic` 的 `stats` 却写 `"downloads":70979,"installs":0,"versions":0`。skills.sh `/api/v1/skills?q=pdf` 实拉 **401 Unauthorized**，`/docs/api` 所列审计端点模板逐路径 404。`gh api repos/NVIDIA/SkillSpector/pulls/611` → `open`、`merged=false`，最新 review `CHANGES_REQUESTED`（2026-09-28）。Activepieces 审计页：「**Reads are not recorded**, the values the agent passed to the action are **never stored**, and **an MCP server tool is not recorded at all**, since nothing marks those as reads or writes.」＋「the **source of truth** for every event we emit is the **event schema in the codebase**」。
 - 判据：① **审核是「版本×引擎」二维状态格，不是包级布尔**：同一包内新版已出 benign、旧版仍 queued，`reportUrl` 为空说明结论未终——引用「已过审」时必须指到**版本号+引擎**，且要接受「有版本永远停在未终态」；② **同一实体的两个端点可以互相打脸**（详情 `versions:0` vs 版本列表 8 条），凡用聚合计数做机检（如「有更新吗」「审过吗」）必须换到明细端点交叉验证，**展示字段不是事实源**；③ **文档写的机器端点只是意图声明**：按文档路径直连前逐路径实测，401/404 属于「文档-实现漂移」，此时任一基于该端点的自动化结论都不成立；④ **「已知未修」是有保质期的状态而非永久事实**：缺陷结论要挂 PR/Issue 状态位，PR 仍 open 且有 CHANGES_REQUESTED ⇒ 修复在途、结论生效；合并后须重扫；⑤ **审计范围要说清「不记什么」**，且「因无读写标记而不记 MCP」是分类前提缺失的诚实自陈——**不可观测面必须显式列出**，否则审计覆盖率是自欺；事件真源落在代码 schema，文档只是投影。
 - 提升层：工具/可复用 Skill。触发词：版本级审核态、queued、versionId、跨端点计数矛盾、展示计数不可机检、文档-实现漂移、401 机器面、已知未修 PR 状态、审计裁剪、不记什么、source of truth。
+
+
+## §自 SKILL.md 下沉（2026-09-30 r324C）
+## 静态扫描有有效期：对抗会针对扫描器自我演化（SkillDRE 双阶段红队 ASR 45.28%、零 SkillScan findings），安全结论须带扫描器版本与重扫周期（来源：arXiv 2609.32400，2026-09-30 r320A 实拉）
+## 采集结论分三态：命中 / 缺位（全量索引全扫零命中＝平台无此能力）/ 未达（采集失败）；判「不可达」前必须换子域与通道复验（来源：www.activepieces.com/docs/llms.txt 35,540B + docs.langflow.org/llms.txt 2,611B，2026-09-30 r321B 独立实拉；细则见 references/knowledge-base.md §r321B）
+## 失效双模型：周期型（扫描器版本+重扫周期）与事件型（失陷时点切片，时点前结论持续合法）；并把「能否取到最新材料」的新鲜度当作独立验证属性（来源：docs.sigstore.dev/about/threat-model，2026-09-30 r321C 独立实拉 64,710B；细则见 references/knowledge-base.md §r321C）
+## 扫描覆盖须按三轴声明（输入格式 × 被读取字段 × 结构深度/来源类型），触发面文本要设专项检测位；结论的失效有三个时钟：周期型 / 事件型 / 证据可达性（来源：cisco skill-scanner#229 14,129B + api.skillhub.cn 3,094B，2026-09-30 r322A 独立实拉；细则见 references/knowledge-base.md §r322A）
+
+
+## §r324C（2026-09-30 r324C 独立实拉）
+- 原文：arXiv 2609.17274「Attention is concentrated: the **top 10% of skills received 46.93%** of all downloads.」「No simple skill features (like size or download counts) **remained a stable predictor of continued listing** once creation c[ohort]…」+「**85.06%** of the readable skills carry privilege evidence」；agentskills.io/clients.md「# Client Showcase > Agent products that support the Agent Skills format.」「export const ClientShowcase = ({clients}) => { const **shuffle** = arr => …」；docs.n8n.io/llms.txt（286,271B 全索引）`certified-partner` **0 命中**（该页已 404 撤除），`external-hooks` 2、`run-security-audits` 1。
+- 判据：① **别用流行度当质量代理**：体积、下载量对「是否继续在架」没有稳定预测力——下载数高只说明曾在某个时点被看见，不说明现在还合规；② 换用**结构指标**：注意力集中度（top10% 拿走 46.93%）与权限声明普遍度（85.06% 带 privilege evidence）这类**分布量**才刻画目录健康度；③ **展示序可能是随机洗牌**，官方 showcase 页面明文 shuffle ⇒ **“排在第一位/靠前”不构成背书或流行度证据**，引用排序前先确认它是否稳定；④ **文档撤除是可机检信号**：平台把某个能力页从索引里拿掉（全索引 0 命中 + 404）＝能力下线或收回承诺，凡依赖该页的结论必须复检；判「平台没有这个能力」要用索引/llms.txt 穷举做缺位证明，而不是靠某个 URL 404 就下结论。
+- 提升层：工具/可复用 Skill。触发词：流行度不可作质量代理、stable predictor、集中度 46.93%、权限证据 85.06%、展示序洗牌、文档撤除、索引穷举缺位。
