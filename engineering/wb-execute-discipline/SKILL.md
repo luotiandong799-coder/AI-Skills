@@ -14130,3 +14130,69 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 - **auto-triage 细节：对比近期 issue 抓重复——明确重复直接关+指向原 issue，可能重复在评论标记但保持打开；缺 steps to reproduce→发短评论要信息；"agent 不自行关闭/不自行决定——它建议，人决定"**；**Label-driven CI：每个未 triage issue（每 run 最多 5 个控成本）读 issue→查代码→分类 bug/feature/chore/improvement→估 scope mini/small/medium/large**。
 - **GitHub Agentic Workflows：plain Markdown 写 workflow 替代复杂 YAML，AI 处理 issue triage/PR review/CI 失败分析**。
 - 判据：**个人维护=渐进三工作流（triage→review→patch）+ agent 建议人决定+失败蒸馏成启动规则；成本控制=每 run 限量**。
+
+## RAG 检索工程与知识库质量（来源：r312A 批 2026-09-29 实拉：Unstructured.io + Redis + Ranjan Kumar + AIPromptsHub + AI/TLDR + Future AGI + Boolean + arXiv 多篇 + Microsoft Learn + Datalumina + Markaicode + ACL SemEval + dev.to + 腾讯云 + AWS + Anthropic 官方 + Habr + datarekha + theneuralbase + XBSTACK + Atlan + arpitbhayani + aisrc + arjunjaggi + XYZBytes + zeroentropy + GPTNest + Mannheim）
+
+### 分块六方法对比与语义分块适用域
+- **六方法：Fixed-size（字符数，coherence 低）/ Recursive（分隔符层级 \n\n→\n→.→space，默认）/ Structure-aware（文档标题章节，结构化文档高）/ Semantic（嵌入相似度，与结构无关高）/ Contextual（嵌入+前置上下文，很高）**。
+- **最大对照（Shaukat et al. 36 方法×6 域×5 模型×1080 配置）：content-aware chunking 显著优于 naive fixed-length**；**语义分块 recall@10：技术文档 71%/支持 Q&A 69%/法律合同 62%（各语料最高单策略），但 Redis 实测在 FiQA 金融数据集退化 23-27%——高主题多样文档帮助最大、已结构化文档最没用**。
+- 判据：**按语料类型选分块法，别默认 recursive 也别迷信 semantic**。
+
+### 语义分块实现细节
+- **句子 embed→相邻句子余弦相似度低于文档句间相似度分布 25 分位处切块——变长块对齐主题单元；无结构散文 Context Recall 提升 10-20%**；代价=ingest 时全语料一次 embedding pass（每句一个）；语义分块产生变长块——需要支持变长 chunk 的存储。
+- 判据：**切块边界=语义断点而非 token 数；embedding pass 成本进预算**。
+
+### 结构感知语义分块+标题链前缀（SASCTP）
+- **同主题段落自动聚合、无关段落保持分离（修复过碎片化）；前置 [doc > h1 > h2] 标题链到每个 chunk——zero-LLM-call 实现 Contextual Retrieval（文档自身结构替代 LLM 上下文生成）；标题链消歧同名标题+给检索模型 chunk 的文档层级位置**。
+- 判据：**有良好结构的文档优先用结构自身做上下文，不花钱调 LLM**。
+
+### 两阶段检索实证+RRF 融合
+- **两阶段混合检索+神经重排 Recall@5 0.816 / MRR@3 0.605 远超所有单阶段；BM25 在部分域（文本+表格文档）超过 SOTA embedding**。
+- **RRF(d)=Σ 1/(k+rank_i(d))，k 典型 60——BM25 分数与 cosine 不同尺度不能直接比，用 rank 不用 score（参数无关）**；**混合检索 recall 提升 25-40% over 纯向量；生产推荐：双索引 top-K 50-100→RRF→cross-encoder，延迟 +60-100ms 主权衡**。
+- 判据：**混合检索是 2026 默认起点；RRF 优先于加权融合；top-K 拉宽再重排**。
+
+### 2026 embedding 选型表
+- **Voyage-3-large：MTEB v2 ~74.8 NDCG@10 英文最高；Cohere Embed v4：唯一多模态+128K 上下文双能力；OpenAI text-embedding-3-large：$0.13/1M token、3072 维 Matryoshka 可减到 256——英文企业 RAG 安全默认（64.6 MTEB）；BGE-M3：一模型三信号（dense+sparse+late-interaction）混合检索首选；mxbai-embed-large-v2：自托管/气隙环境、量化友好单 GPU；Stella v5 1.5B：最强小模型、OSS 便宜**。
+- **域选型：法律金融 Voyage domain variants、气隙 Mixedbread、成本约束 Stella、混合检索 BGE-M3**。
+- 判据：**选 embedding 按 检索质量→多模态→自托管→成本 四轴，不是只看 MTEB 排名**。
+
+### RAG 评估黄金集五步流水线
+- **五步：①建黄金集（50 条 QA：question+gold_chunk_id+期望要点）②Hit@K/Recall@K 定位 chunk 切片与索引问题 ③测 Rerank 质量 ④MRR/NDCG 看精排有没有把 gold 顶上来 ⑤评 Context 纯度**。
+- **"检索层在哪一步把 gold chunk 弄丢了"是答不准的第一排查方向，不是先换模型调 prompt**；**Golden Set：覆盖度/多样性/准确性（人工验证）/规模（50-100 样本）/动态更新；构建=人工标注核心+LLM 合成扩展+真实用户问题**；**聚焦 150-300 query 精确标注胜过 5000 条粗糙；query 类型广度>原始数量；hard negatives 难负例**。
+- SeedRG 无泄漏基准：从 seed 提取 reasoning graph→类型约束实体替换→结构相似但参数知识中不存在的新实例（对抗 benchmark aging）。
+- 判据：**评估=检索层与生成层分层看指标；黄金集质量>数量；gold_chunk_id 必须标否则无法定位检索问题**。
+
+### RAG 幻觉三分法+诊断分支
+- **三分法：检索失败（right chunk 从未进上下文→LLM 从预训练权重编造）/ 上下文混乱（多 chunk 矛盾选错）/ 生成问题**；**诊断分支：supporting fact 不在 chunks=检索问题（修 search/chunking/top-k）；fact 在但答案矛盾=生成问题（修 prompt/model/加验证）**。
+- **负干扰：注入 25% 无关内容→准确率 -19%；引用幻觉（给来源但来源不含信息）企业约 33% 部署存在；时间陈旧（检索 2022 版答 2026 问题）**。
+- **检索置信门控：LLM 前查最大 cosine 相似度，低置信路由 fallback 而非硬生成**；**三大防御组合：更好检索+置信门控+忠实度评估（LLM-as-Judge 进 CI/CD，temperature=0）**；**少 chunk+激进重排（20 chunks 塞 prompt→lost in the middle+无关 chunk 成干扰物）**。
+- 判据：**RAG 答错先分检索层/生成层再动手；低置信检索宁可 fallback 不可硬生成**。
+
+### 查询分解三策略+实体消歧+迭代细化
+- **并行分解（独立信息需求拆可并行子查询）/ 串行分解（依赖关系按序，前步结果指导后检索）/ 条件分解（根据中间结果动态决定后续子查询）**；**实体消歧：识别查询歧义实体并明确指向**。
+- **迭代细化：第一轮检索不够→agent 评估结果识别 gap→精炼词/过滤器再跑查询**；**AWS 跨知识库路由：一个检索工具 per KB+system prompt 让推理模型选匹配主题的 KB；AgenticRetrieveStream 在 KB 内分解→迭代检索→合成带引用答案**。
+- 判据：**多跳查询先检测结构再选分解策略；复杂查询=检索循环（有停止条件）而非单次调用**。
+
+### Contextual Retrieval 成本模型
+- **索引前 LLM 给每个 chunk 生成 50-100 token 上下文前缀（说明 chunk 属于哪个文档哪部分）→加到 chunk 开头→再算 embedding 并进 BM25**；**prompt caching 是关键：文档加载进 cache 一次，chunk 循环引用缓存——一次性成本 $1.02/百万文档 token**。
+- **预算：一次性索引 $1-2/百万文档 token；存储 +30%（chunk 长 50-100 token）；查询时零开销（检索同普通 RAG）**；**无缓存时昂贵：50 页 PDF 25k token×100 chunks≈$7.50/文档（Sonnet）**；**频繁变更语料要权衡重索引成本；每 chunk +80-150 token/需要提取章节头或总结前 chunk**。
+- 判据：**上下文前缀用 prompt caching 摊薄索引成本；查询时零开销是最大卖点；变更频繁的语料慎用**。
+
+### 知识库治理：元数据/去重/更新/权限
+- **每个 chunk 强制打 doc_id/owner/version/last_updated_at/访问权限等级；Temporal & Authority Rerank：检索后按新鲜度与权威分物理打压过时文档排序权重**。
+- **两级去重：exact=SHA-256 content hash embedding 前 drop；near-dup 捕语义同文本不同**；**更新=upsert changed/delete obsolete/mark deprecated/重算 summaries 与 metadata/只重索引受影响文档——deletion 与 supersession 尤其重要，否则 stale policies 在搜索中永生；业务意义改变→建新 version lineage 而非静默重写旧 chunk set**。
+- **freshness check job→标记 needs_recertification→暂停检索直到 owner 重审**；**多租户权限：ingestion 打 department metadata→Cedar 策略查询时评估→中间件转 metadata filter→RetrieveAndGenerate 只处理过滤后文档（FM 只见授权数据）**。
+- **生产 schema：doc_id/chunk_vector_id/content_hash/version/indexed_at/status(active|deleted|superseded)，主键 (doc_id, chunk_vector_id)**。
+- 判据：**知识库=数据治理不是索引堆：元数据强制+两级去重+版本状态机+权限过滤在检索前**。
+
+### 检索四阶段契约：去重/压缩/切块/下限
+- **四阶段：①检索去重（similarity threshold，报告 selected/filtered counts）②上下文压缩（PromptCompressor llmlingua2：origin_tokens/compressed_tokens/ratio/saving）③上下文切块（chunk on stop token）④检索下限（top_k+threshold+filter shape）——每阶段报告自己的数字，缺了不可预算**。
+- **语义哈希去重：embedding→短二进制码，相似 chunk hash 相近→识别合并重叠 chunk 不损信息密度（lossless）**；**CORE：RL 优化无标签 lossless 压缩——以下游任务性能为反馈信号迭代，3% 高压缩比不损性能**。
+- **检索即合成：query-aware context merging——top-k 截断有缺陷（截断长尾关键桥接证据+token 浪费在语义冗余高排 chunk）→按查询感知合并而非截断**；AttnComp：按注意力分数排序文档，累积分数超阈值 p 或当前分数低于 ε 停止。
+- 判据：**检索后处理每阶段要可观测（数字报告）；压缩以任务性能为信号而非预定义标签**。
+
+### RAG-as-tool 检索工具化+两阶段重排
+- **检索工具化：检索=agent 大脑自主调度的"物理手臂"，ReAct 路径中不再是 rigid 预处理步骤——LLM 动态决定何时查/查哪个源/是否调写操作 API/对生成答案做严格引用审计；检索成为有停止条件的循环（检索→检查→发现 gap→精炼再搜）**。
+- **两阶段重排：向量 top-20→cross-encoder（如 cross-encoder/ms-marco-MiniLM-L-6-v2）对精确 query 打分→top-5 进 LLM——一致优于单阶段；cross-encoder 联合编码 [CLS] query [SEP] passage 捕获细粒度语义交互，计算贵→只用于 top 20-200**。
+- **Atlan context engineering 四步：源选择（认证定义/血缘/策略/质量信号/使用历史，不只向量索引）→检索控制（governed filters/语义规则/图查找/reranker）→上下文塑形（压缩/排序/去重/标注，stale 或 drift 内容不进）→运行时交付（managed context layer）**。
+- 判据：**agent 场景检索=工具化+循环化；两阶段重排（宽召回+精打分）是标配**。
