@@ -12883,3 +12883,74 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **OpenClaw skills.entries**：JSON5 配置=entries.{skill}={enabled/apiKey/env/config}；apiKey source env+按 agent 可见性（agents.defaults.skills）+单行 frontmatter 解析限制——"配置=entries+apiKey env"。
 - **Trending 补拉**：security-audit-skill 月 19.4k 持续榜首+bilawalsidhu/gods-eye-view 月 37.5k——"trending=安全审计+卫星视角"。
 - 提升层：工作流。触发词：三级评估框架 assertion/trace/online、三大评估范围、skills.entries 配置、apiKey source env、gods-eye-view。
+## r301C 十独点（2026-09-29 实拉）
+
+### 1. Agentic RAG 决策引擎与检索策略：Dify RAG 面（来源：dify.ai/blog/agentic-rag-smarter-retrieval-with-autonomous-reasoning + marketplace.dify.ai/template/scarlettmao/Legal%20Research%20Agent + blog.elest.io/dify-on-elestio + dev.to/_cbd692d476c5faf3b61bcf/dify-agentic-workflow-platform 2025-10-30/2026-01-06/2026-02-21/2026-04-10/2026-06-07/2026-06-19 实拉，与 r300B 多向量检索合并增量——那条管检索面，本条管决策引擎）
+- **Agent Node 决策引擎**：意图分析+工具编排+源选择+重试逻辑，封装全部 agent 行为——"引擎=意图/编排/源选/重试"。
+- **三检索策略**：Vector（语义相似）/Full-Text（精确关键词技术术语）/Hybrid（最高准确率）——"策略=向量/全文/混合"。
+- **自定义分块+阈值**：自定义分块策略+per-dataset score 阈值微调——"微调=分块+阈值"。
+- **RAG 管道**：parse→chunk→embed→index 四段——"管道=四段"。
+- 提升层：工作流。触发词：Agent Node 决策引擎、三检索策略 Vector/Full-Text/Hybrid、per-dataset score 阈值、RAG 四段管道。
+
+### 2. 子工作流打包与队列模式：n8n 生产面（来源：blog.n8n.io/production-ai-playbook-complex-agent-patterns + /ai-agent-architecture-patterns + /best-practices-for-deploying-ai-agents-in-production + logicworkflow.com/blog/n8n-batch-processing + n8nautomation.cloud/blog/scale-n8n-production-queue-mode-workers-concurrency 2025-12-19/2026-01-08/2026-05-07/2026-06-09/2026-06-28 实拉，与 r301A 队列限制合并增量——那条管限制，本条管生产模式）
+- **子工作流打包为工具**：Call n8n Workflow Tool 把任意工作流打包成 agent 可调工具（独立 trigger+逻辑+输出）——"打包=子工作流即工具"。
+- **Queue mode**：Redis 队列+worker 进程并发；触发→job 入队→worker 拉取独立执行，无执行丢失——"队列=Redis+worker"。
+- **批处理五段**：Prepare→Split In Batches→Process per batch→Accumulate→Aggregate——"批处理=五段模式"。
+- **并行 fan-out**：小模型做路由/分类，贵模型专注核心推理——"路由=小模型分流"。
+- 提升层：工作流。触发词：Call n8n Workflow Tool、queue mode Redis 队列、批处理五段、小模型路由。
+
+### 3. 容器化部署：Langflow 部署面（来源：docs.langflow.org/1.10.0/deployment-docker + /next/develop-application + hashicorp.com/ja/resources/secure-ai-agents-with-langflow-vault-prisma-airs-on-aws-eks + explainx.ai/blog/langflow-visual-ai-workflows-rag-agents-guide-2026 2025-10-29/2026-01-27/2026-06-18/2026-06-26/2026-08-09/2026-09-04 实拉，与 r301A scaffold 合并增量——那条管开发，本条管部署）
+- **持久卷升级**：langflowai/langflow 基础镜像+flows 目录+持久卷；升级只换容器镜像不丢数据——"升级=换镜像不丢数据"。
+- **EKS 无状态微服务**：容器化+EKS=Vault 密钥+Prisma AIRS 运行时安全+自动扩展——"生产=EKS 无状态化"。
+- **Redis job queue**：1.10+ Redis-backed 队列跨 worker 共享构建事件+Helm 横向扩展——"队列=Redis job queue"。
+- **观测**：LangSmith/LangFuse 接入——"观测=LangSmith/LangFuse"。
+- 提升层：工具。触发词：持久卷升级、EKS 无状态微服务、Redis-backed job queue、LangSmith/LangFuse 观测。
+
+### 4. 持久化 Waitpoint 与人审审批：Activepieces 恢复面（来源：activepieces.com/docs/install/architecture/waitpoints + /docs/build-pieces/piece-reference/flow-control.md + infobro.ai/reviews/activepieces-review + aiagents.wiki/agents/activepieces + activepieces.com/docs/about/changelog 2026-04-17/2026-05-31/2026-06-29/2026-08-06/2026-08-23/2026-09-03 实拉，与 r301B Waitpoint 合并增量——那条管单点挂起，本条管 durable 模型+审批链）
+- **Waitpoint durable 行**：flow run 只有状态（PAUSED/RUNNING），为什么暂停在 waitpoint 上；跨 worker 重启存活——"挂起=状态与原因分离"。
+- **Barrier 聚合**：暂停直到 N 个事物报告（Process in Batches 派发的批次）——"聚合=Barrier 等 N 个"。
+- **Todos 人审**：原生 human-in-the-loop（agent/flow 暂停请求人工审批或输入，续行或中止）——"人审=Todos 检查点"。
+- **多级审批链**：分支/循环/条件按 spend/risk/department 路由；拒绝循环回编辑重提——"审批=多级路由+拒绝重提"。
+- 提升层：工具。触发词：Waitpoint durable 行、Barrier 聚合等 N 个、Todos human-in-the-loop、多级审批链拒绝重提。
+
+### 5. AI Agent 工具三型与多模型路由：Make Agent 面（来源：help.make.com/make-ai-agent-new-app + make.com/en/how-to-guides/llm-integration + /en/blog/simple-text-prompt-module + academy-content.make.com/pdfs/unit-1-make-ai-agent.pdf + keerok.tech/fr/blog/advanced-make-com-tutorial 2026-01-23/2026-04-11/2026-05-11/2026-05-18/2026-05-27/2026-09-17 实拉，与 r301B Router 合并增量——那条管路由，本条管 agent 工具与分类）
+- **工具三型**：模块（Gmail Send email）/场景（Scenarios>Call a scenario module）/MCP（MCP Client>MCP Tools 模块）——"工具=模块/场景/MCP 三型"。
+- **多模型路由**：便宜模型分类+贵模型起草（Router 后两个 Chat Completion）——"路由=便宜分类+贵起草"。
+- **AI Toolkit**：Analyze sentiment/AI Classifier/AI Text Generator 预制模块——"分类=AI Toolkit"。
+- **Simple Text Prompt**：零设置 AI 模块（总结/改写/生成/个性化）——"零门槛=Simple Text Prompt"。
+- 提升层：工具。触发词：AI Agent 工具三型、Call a scenario module、多模型路由便宜分类、AI Toolkit、Simple Text Prompt。
+
+### 6. 组件两型与 Connect 网关：Pipedream 组件面（来源：pipedream.com/docs/components + /connect + /docs/connect/components/actions + /docs/cli/reference + docs-proxy.pipedream.com/docs/components/api 2026-04-18/2026-07-19/2026-08-31/2026-09-01/2026-09-14/2026-09-21 实拉，与 r301B 重试重放合并增量——那条管恢复，本条管组件与网关）
+- **组件两型**：sources（独立资源/工作流触发器/serverless 函数，props 接受输入，HTTP/定时/cron/手动触发）+actions（输入参数→结果）——"组件=sources/actions"。
+- **Connect 基础设施**：managed auth+10000+ 预建工具触发器+raw proxy——"连接=Connect managed auth"。
+- **Conduit 网关**：员工安全连接 app 到 AI agent（SSO+访问策略+per-user 权限+审计）——"网关=Conduit SSO 审计"。
+- **生命周期 hook**：deactivate() 更新/删除时调用——"生命周期=deactivate hook"。
+- 提升层：工具。触发词：sources/actions 两型、Connect managed auth、Conduit SSO 审计、deactivate hook。
+
+### 7. 评测驱动技能开发：Anthropic 技能开发面（来源：anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills + resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf + claude.com/blog/lessons-from-building-claude-code + platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices + yudesk.dev/es/docs/notes/claude-skills/skill-creator 2025-10-16/2025-11-19/2026-03-07/2026-06-03/2026-08-05/2026-09-02 实拉，与 r301A 技能验证清单合并增量——那条管分享前验证，本条管开发迭代）
+- **评测驱动**：先评测后构建——代表任务跑找 gap 再增量建技能——"开发=评测先行"。
+- **迭代信号**：under-triggering（不加载/手动启用→加描述关键词）+over-triggering（无关加载/禁用→加负面触发词）+execution issues——"信号=欠/过触发双向"。
+- **Gotchas 章节**：技能最高信号内容（常见失败点累积更新）——"最高信号=Gotchas"。
+- **Skill-Creator**：官方 meta-skill（创建/测试/优化其他技能；内置评测框架+盲测对比+描述优化）——"meta=Skill-Creator"。
+- 提升层：可复用 Skill。触发词：评测驱动开发、under/over-triggering 信号、Gotchas 章节、Skill-Creator 盲测对比。
+
+### 8. JSON Schema 约束与 Schema-First：结构化输出面（来源：skills.ws/skills/prompt-engineering + explainx.ai/blog/structured-output-json-mode-prompting-guide-2026 + codefinity.com/blog/Advanced-Prompt-Engineering-for-Agents + loooop.dev/skills/prompt-engineering/v5 + getmaxim.ai/articles/a-practitioners-guide-to-prompt-engineering-in-2025 2026-02-04/2026-03-01/2026-03-10/2026-04-07/2026-05-12/2026-06-27 实拉，与 r300B Strict 语法合并增量——那条管语法，本条管 schema 约束）
+- **JSON Schema 三键**：required（必填字段）/additionalProperties:false（禁模型发明额外字段）/enum（固定值集合比自由文本可靠）——"三键=required/禁额外/enum"。
+- **Schema-First**：任务描述前先定义确切 schema（模型知道输出形状优于生成时推断）——"顺序=先 schema 后任务"。
+- **Structured Outputs 原生**：output_config.format {type:json_schema}+forced tool use（tool_choice 钉住 input_schema）可移植替代——"原生=json_schema 格式"。
+- **null 规则**：未提及字段→null（不是猜测）+键跨版本稳定——"规则=未提及即 null"。
+- 提升层：可复用 Skill。触发词：JSON Schema 三键、additionalProperties false、Schema-First、output_config json_schema、未提及即 null。
+
+### 9. Agentic Workflows 与项目自动化：GitHub 自动化面（来源：github.blog/ai-and-ml/automate-repository-tasks-with-github-agentic-workflows + docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/automating-projects-using-actions + github.github.io/gh-aw/blog/10 + raw.githubusercontent.com/wiki/dyvan/github-project-llm-management/workflows.md 2026-02-13/2026-03-29/2026-06-01/2026-07-14/2026-09-17/2026-09-20 实拉，与 r301A Actions 安全合并增量——那条管安全，本条管 agent 化自动化）
+- **Agentic Workflows**：Markdown 描述期望结果→coding agent 在 Actions 执行；标准 workflow+沙箱/权限/控制/审查 guardrails——"agent化=Markdown 描述→执行"。
+- **项目自动化**：GraphQL API+Actions 自动加 PR 到项目（ready for review→Task+Status Todo+日期字段）——"项目=PR 事件→任务"。
+- **五工作流**：create-branch（Issue labeled）/ci-tests/代码审查 agent/update-project——"五段=分支/测试/审查/同步"。
+- **MCP search_commits**：GitHub MCP Search Toolset 直接搜索提交——"搜索=MCP search_commits"。
+- 提升层：工作流。触发词：Agentic Workflows Markdown 描述、GraphQL 项目自动化、五工作流、MCP search_commits。
+
+### 10. RAG 武器库与技能供应链安全：综合站（来源：corporate.deeplearning.ai/courses/retrieval-augmented-generation + theneuralbase.com/advanced-rag/learn + snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub + beyondscale.tech/blog/llm-agent-skill-marketplace-poisoning + yuxiaopeng.com/Github-Ranking-AI/Top100/AI%20Agents.html 2026-02-05/2026-04-06/2026-04-28/2026-04-26/2026-05-20/2026-09-28 实拉，与 r300A 亲子检索+r300B 自适应 Chunk 合并增量——那条管单点技术，本条管武器库+安全）
+- **RAG 武器库**：混合检索（BM25+语义，40%/60% 权重）+RRF 融合+重排（cross-encoder 逐对打分重排 TopK）+Parent Document 两阶段（小 chunk 精度+父文档上下文）+Graph RAG 兜底（向量 RAG 全局问题失败后跑）——"武器库=混合+重排+两阶段+Graph 兜底"。
+- **ToxicSkills 数据**：13.4% 技能（534 个）含严重安全问题（恶意分发/提示注入/暴露密钥）；36.82%（1467 个）任意级别缺陷——"数据=13.4% 严重/36.82% 任意"。
+- **私有注册表防御**：生产不从公共注册表拉技能；镜像+审查后提升+只从私有源安装；扫描器失效（混淆/归档字节码隐藏 payload 绕过 ClawHub/Cisco/skills.sh）——"防御=私有镜像+审查"。
+- **AI 记忆层生态**：agentmemory 28.9k（#1 持久记忆基于真实基准）/TencentDB Team Memory 20k（团队记忆多 agent）/Letta LoCoMo 74%/vLLM Fast Start（GPU 常驻后量化权重重启免重载）——"生态=记忆层+Fast Start"。
+- 提升层：工作流。触发词：RRF 融合、cross-encoder 重排、Parent Document 两阶段、Graph RAG 兜底、ToxicSkills 13.4%/36.82%、私有注册表、vLLM Fast Start。
