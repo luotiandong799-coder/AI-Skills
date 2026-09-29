@@ -375,4 +375,12 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **GraphRAG**：LLM 实体抽取+Leiden 社区检测→图谱结构上检索；价值在跨文档多跳（"收购 AlphaCorp 的公司 Q3 营收"需连出 BetaHoldings 是 acquirer）；企业 GraphRAG 减幻觉 62%；Graph+Vector 共生；个人图谱可用 PPR 联想回忆（relationship 答案是 path 非 chunk）。
 - **Semantic cache**：embed 查询→ANN 相似→超阈值（cosine ≥0.90 例）返回存储答案；hit rate 决定价值（30% hit≈-30% 成本，实践 40-45%）；子问题级缓存=query 拆子问题 3/4 命中、LLM 调用 8→4-6/task；阈值太严永不 hit 太松给无关答案；分离 embedding（快便宜）与生成（慢贵）。
 - **RAG 任务路由三档**：简单事实→vector RAG（3-5 chunks 短上下文）；复杂多跳→agentic+GraphRAG 选择+长上下文合成；单文档端到端→long-context 不切分。
-- **判据**：双检索流+RRF+rerank 三层缺一不可；先定查询类型再定 chunk；简单查询别塞进重流程；评估按失败模式拆指标。
+- **判据**：双检索流+RRF+rerank 三层缺一不可；先定查询类型再定 chunk；简单查询别塞进重流程；评估按失败模式拆指标。## 多 Agent 上下文管理六模式与预算分配（来源：arxiv 2608.17188 + aiworkflowlab 2026-04 + mslearn compaction 2026-09 + openlegion 2026-07 + mslearn rolling window 2026-09 + arxiv self-gc 2026-07 + zylos ACON 2026-04 + muratcankoylan 2026-06，r317A，增量合 §上下文预算管理点）
+- **六优化模式**：context stratification / fetch-once-process-locally / schema-contracted prompts / token-aware fallback chains / semantic caching / inter-agent communication compression——实测 cold-load 3.5-10.5min→61-116s，token 60-70% 减。
+- **预算分配表**：system+tools 精简；retrieved context 15-25%（30-50K，rerank aggressively）；history 20-30%（40-60K compaction）；generation headroom 35-50%（70-100K——模型需要输出空间，别把窗口塞满）；reserved buffer 5-10%；总利用率 >70% 触发优化、>80% compaction。
+- **composed compaction**：ToolResultCompaction（keep_last_tool_call_groups=1）+Summarization（target_count/threshold）+SlidingWindow（keep_last_groups）组合策略，比单一策略稳。
+- **tool results=主浪费源**：信息需要:信息附加=1:50 到 1:250——append 前先用小型便宜模型提取（Claude 3.5 Haiku $0.80/MTok）。
+- **rolling window+importance filter**：3-turn rolling（6 条消息）+importance-filtered 保留（明示偏好轮/关键决策轮跳出窗口）。
+- **Self-GC 三动作按对象类型选**：Fold（payload 移 sidecar+compact recovery pointer——精确恢复）/Mask（保留结构边界 elide 中段低信号——重复浏览器快照）/Prune（active view 删除无恢复保证——失败命令 log）。
+- **ACON**：history compression（超阈值压交互轨迹）+observation compression（带 prior history 压环境输出）——AppWorld/OfficeBench/Multi-objective QA 26-54% 峰值 token 减。
+- **判据**：预算表先分配再跑；tool 输出 append 前先提取；多 agent 间通信压缩是独立优化维度（inter-agent communication compression）。
