@@ -13517,3 +13517,34 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 
 ### 缓存破坏源 + 终端即一切
 **cached read ~10% 输入价（write 1.25x）；system prompt 跳动的时钟/未排序工具列表悄悄破缓存**；inline state→Playwright CLI+disk-first：20,000→500 token、月 $3,500→$90；**Webwright："terminal is all you need"（accessibility tree 转文本+命令化），GPT-5.4 60.1% vs base 33.5%（+79.4% 相对）；accessibility 基建同时服务残障人士与 LLM agent——双向受益**。判据：**浏览器 agent 命令面越接近文本（tree 非像素）越省越稳；缓存命中率是第一成本指标**。
+## r306C 提示工程与模型交互深度（来源：qaskills.sh 2026-06-15 + dev.to aifrontierpost 2026-09-28 + velsof 2026-06-14 + swfte 2026-05-04 + novakit 2026-04-19 实拉）
+
+### EDD eval-driven development + 提示迭代纪律
+**评测先于提示写：给 LLM 特性先写评测集，迭代 prompt/模型过同一套评测，CI 每次变更按分数门控（TDD 适配非确定性）**；**最小 prompt→跑 5-10 次→诊断失败模式→一次只改一个变量→版本化（存测试集+rubric）**；**一致性检查：同输入 5 次方差大=欠规格化，加约束/示例直到方差收敛**。
+
+### 结构化输出四层栈 + constrained decoding
+**可信 JSON 四层：schema 设计→provider 强制→约束解码→验证循环，四层都要**；**constrained decoding：采样前把非法 token mask 成负无穷——模型物理上无法违反 schema**；XGrammar vocab partitioning+grammar caching 100x 吞吐；**CRANE：约束解码降推理质量，交替约束/无约束窗口恢复最多 10 点**；Claude 用 tool_use+input_schema 等价 strict；JSON Mode 已 legacy。
+
+### parser-feedback retry loop
+**验证失败→把具体错误喂回模型自校正，不盲重试不报错**；8% 首轮失败→带 Pydantic 错误二轮 <1%；**repair 先（json_repair）再 retry（带错误重提示）**；**retry cap 2-3 次（成功概率首轮修正后骤降）**；库默认 max_retries=0 要显式设；错误重写成具体指令。
+
+### prompt 版本化 = 运行时配置一起版本化
+**可复现须同时版本化：模型/参数/工具 schema/注入 system policy**；语义版本 MAJOR（格式/策略）/MINOR（行为）/PATCH（小澄清）+changelog；**回归=同套测试集每迭代跑、与基线对比、超线才部署**；PromptArchive Git-native 本地版本+语义漂移检测。
+
+### 路由四模式 + 自评分级
+**①Single Router（RouteLLM：固定质量省 48-75%）；②Cascade 便宜到强（质量下限省 70-80%，约 80% 查询小模型够）；③Speculative-Race（延迟 -30-60%）；④Escalation router（会话从小模型开始，LLM judge 逐轮监控持续困难/循环/漂移升档）**；**自评分级：无单独分类模型，Flash 自评 difficulty_score（<0.4 接受/<0.8 升 Plus/>升 Max）**；FrugalGPT 三组件：prompt adaptation/approximation（缓存复用）/cascade。
+
+### 动态 few-shot + 上下文注入纪律
+**random vs curated vs dynamic retrieval：输入 embedding→例子库 top-k 相似运行时注入，覆盖无限输入分布**；**3-5 例子最佳、最相似放最后（recency）、MMR 兼顾覆盖**；**Context > cleverness：注入过去相似任务/用户批准的风格输出/决策历史/术语表+负面例子**；RAG 注入：**阈值 0.7 以下不注入/重排序/检索放对话历史前/去重/动态 Top-K 按预算/源标签+分数**；**In-Context RAG：<10 万文档整个数据集放上下文比外置向量库更准更快**；**Retrieve-Compress-Inject：小模型压缩检索段落成蒸馏结论再注入**；dynamic instructions 按状态装配。
+
+### LLM-as-judge 校准
+**四偏差：位置（rubric 列表特定位置被偏好）/自偏好（同模型族，源于困惑度熟悉度）/自增强（生成+判断同模型）/冗长（长=好）**；**校准=gold-set 上测 kappa（launch 时/每月/rubric 变更后）**；**修正：位置交换两次取一致/跨族双 judge 要求一致/rubric 冗长惩罚**；**reference-inflated：无金标准 judge 系统性高估错误答案，加参考翻转达 85% 判定——阈值按有参考的数字校准**；CoT +2-5% 准确率 +30% token。
+
+### prompt 注入硬分隔符
+**硬分隔符第一防线：<user_input> 包裹+明确"该块是数据"**；**neutralize+randomize：剥离/转义闭合标记+每请求随机分隔 token**；spotlighting 编码标记来源；**input classification drift：跟踪 NORMAL vs INJECTION 比率偏移=攻击模式在变**；**注入是架构现实，提示工程不能单独解决——指令层级 System>Developer>User>Tool 降序权威+最小权限工具**；剥离零宽 Unicode/HTML。
+
+### 长上下文位置布局
+**注意力 U 形：开头结尾高中间低（lost in the middle）**；**布局：开头 5% 规则/输出格式→中间参考材料→结尾 5% 当前查询/具体指令**；**Bookend：上下文块开头关键摘要+结尾重复关键点，检索准确率近满**；**V 形重排检索块（相关度最高靠近两端）**；**payload 短到没有中间可丢**；HiCI 5.5% 参数把 4K 扩到 100K。
+
+### 评测工具链分工 + 生产调试清单
+**Promptfoo：CI 秒级回归（90+ 提供商/67+ 攻击插件）；Braintrust：上线前深评（人+LLM judge）；DeepEval：RAG 专项（RAGAS）；LangSmith：tracing 根因**；promptry 断言语义回归；**生产排障：捕获完整上下文→最小复现→失败类型→输入有效性→隔离段落→模型特有性→系统修复**；失败模式分开度量（schema/缺字段/幻觉/错标签/拒答）。
