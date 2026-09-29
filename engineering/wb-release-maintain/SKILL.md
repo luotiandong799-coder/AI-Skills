@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.30.0
+version: 1.31.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -303,3 +303,5 @@ sources:
 - 原文：Pipedream「replace the version in the published component with `0.0.<unix-timestamp>`. This lets you iter[ate freely]…」；Make 双通道「the development does not influence the production version of the application」+「pushes the changes to the production application from the local testing app」，而公共面「Any changes to a private or public app **apply immediately**」；存量迁移「users need to upgrade the modules in their scenarios using our **upgrade module tool**」「Updating tens or hundreds of scenarios might be complicated and a time-consuming process」。
 - 判据：① **把时间戳写进版本号 = 用发布时间换掉一整套比较规则**：天然单调、不必解析 semver 就能排序，代价是版本号不再表达“改了多少”，往语义化版本迁移时要另设映射；② **测试与生产通道分离时，必须声明“改动何时到达生产”**：此处自定义 app 走显式 push，公共 app 却即时生效（零 staging）——同一产品内两种发布语义并存，写发布流程时不能假设“有测试版就有缓冲”；③ **弃用/破坏性变更必须配存量迁移工具**：版本弃了存量不会自己升级，官方口径直说“更新几十上百个场景可能复杂且耗时”，因此“发一份迁移指南”不算完成，要给出可执行工具并把它列为弃用前置条件。
 - 提升层：工作流/工具。触发词：时间戳版本号、0.0.unix-timestamp、测试生产双通道、apply immediately、upgrade module tool、存量迁移前置。
+
+## 跨宿主安装契约三件套：声明清单 → 差分预览 → 带来源的锁（可更新亦可移除）；以及「无制品面=以 commit 为唯一时间轴」（来源：raw.githubusercontent.com/vanillagreencom/kendex/main/README.md 5,707B + gh api repos/anthropics/skills/releases → `[]` + github.com/anthropics/skills/releases HTML 186,636B「There aren’t any releases here」，2026-09-30 r324A 独立实拉；细则见 references/knowledge-base.md §r324A）

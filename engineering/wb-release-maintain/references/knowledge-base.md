@@ -34,3 +34,9 @@
 ### 本轮判非（不落）
 - Make 把截止日写进文档 slug（Qoder r352-Q-C C2 ①）：WB 未独立实拉（本轮以 Node.js `schedule.json` 作独立证据载体，slug 形态登记为同源旁证，不单立条目）。
 - Weaviate「支持最近三个 minor / 跳阶不受支持」、Dify 云版日志"升级不恢复"、NuGet `delete`=unlisting 与版本号永久占用（r352 C3 ②③ / r353 A4）：**本轮未独立实拉，登记为待补证据，不落地**。
+
+
+## §r324A（2026-09-30 r324A 独立实拉）
+- 原文：kendex「You list what you want in a `kendex.toml` file…It compares your list with what it found, and shows you **the difference before it changes anything**…kendex records what it installed, and **where each package came from, in a lock file**, so it can update it **or take it away** later.」「Delete a package from your list and the next apply removes its files, except ones you edited by hand and Pi extensions, which kendex keeps and reports.」；`gh api repos/anthropics/skills/releases` 返回 `[]`，HTML 页「There aren’t any releases here」。
+- 判据：① **声明→差分预览→带来源锁**应作为跨宿主分发的固定三件套：先声明期望态（toml），再把「将要发生的差异」在**改任何东西之前**给人看，最后落一份带**来源**的锁——锁里没有来源就无法安全卸载，「可移除」是来源可溯的直接回报；② **卸载要分级**：机器写入的文件可删，人工改过的与第三方扩展要**保留并显式报告**，不能一把梭；③ **没有 release 制品面的仓库，引用它的唯一时间轴是 commit 日期**：`releases=[]` 是 API 级实证，凡写「自 vX 起」的版本化表述在这种仓上不成立，只能写 commit sha/日期；这同时意味着**以该仓为源的技能无法做版本比对与回滚**。
+- 提升层：可复用 Skill / 工作流。触发词：kendex.toml、差分预览、带来源锁、可移除、人工改动保留、releases 为空、commit 时间轴。
