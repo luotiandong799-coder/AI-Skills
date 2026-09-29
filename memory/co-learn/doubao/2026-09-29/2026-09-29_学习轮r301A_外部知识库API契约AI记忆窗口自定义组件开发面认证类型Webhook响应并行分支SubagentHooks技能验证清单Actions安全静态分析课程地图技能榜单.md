@@ -1,0 +1,19 @@
+# r301A 学习轮（2026-09-29，第 1 组十站全量实拉→十独点）
+
+判重基线：r284~r300C。查询词与 r291~r300 全错开（本轮=外部知识库API契约/AI Agent记忆窗口/自定义组件开发面/Piece认证类型/Webhook响应构建/并行分支控制流/Subagent与Hooks/技能验证清单/Actions安全静态分析/课程主题地图与技能榜单主题）。
+
+## 十站实拉 → 十独点
+| # | 站 | 独点 | 判重 | 提升层 |
+|---|---|---|---|---|
+| 1 | Dify | 外部知识 API 契约=三步连接（建 API 服务→注册端点→连知识源）+POST {endpoint}/retrieval+API Key 作 Bearer（Dify 只传不验证，认证逻辑自定）+端点注册时 URL 必须 REMOVE "/retrieval" 后缀+retrieval_setting（top_k/score_threshold）+工作流 Knowledge Retrieval 节点可选外部库；dify-knowledge-sdk 0.2.0=Python 数据集客户端（create_dataset/create_document_by_text） | 合并保留增量（r299A 外部知识库端点契约，本点=端点注册去后缀+只传不验+SDK） | 工具 |
+| 2 | n8n | Simple Memory（Window Buffer）=存最近 N 条+窗口外完全遗忘+Context Window Length 控成本；Session Key=会话隔离（Teams channelId 作 key 每会话独立记忆）；队列模式限制=queue mode 下 Simple Memory 不工作（无法保证每次调用到同一实例）；记忆子节点在 canvas 可见可改；系统提示"只回最新不总结先前"防重读 | 合并保留增量（r300B 向量库，本点=记忆窗口/会话隔离/队列限制） | 工作流 |
+| 3 | Langflow | 自定义组件开发面=Python 类继承 Component+类级属性+输入输出列表+方法+内部错误日志变量；lfx extension init scaffold=extension.json（v0 manifest）+pyproject.toml+src/ 布局；Python Interpreter=global_imports 白名单（仅列出的模块可用）；安全阻断=LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false 防任意代码执行；LFX_DEV=1 后端自动重启 | 合并保留增量（r300A 自定义组件五要素，本点=extension scaffold+解释器白名单+阻断开关） | 工具 |
+| 4 | Activepieces | PieceAuth 认证类型=SecretText（掩码+validate 异步回调如 sk_ 前缀）/OAuth2（AUTHORIZATION_CODE+authUrl/tokenUrl/scope）；凭据安全=256-bit 加密存储+无 API 可取回+处理完撤销引擎访问+OAuth2 最小 scope+密码只存 hash；OAuth2 凭据可覆盖（Platform Admin 配自有 Client ID/Secret）；Embeddable MCP=generateMcpToken 免 OAuth 快速 token | 合并保留增量（r300C 触发器，本点=认证类型+凭据安全） | 工具 |
+| 5 | Make | Webhook 响应构建=Status（HTTP 状态码 2xx/3xx/4xx）+Body（JSON 映射）+content-type: application/json 头；响应可确认收件/给调用方数据/按场景结果差异化响应；webhook 执行日志四段=request（timestamp/URL/method/headers/query/body）+response（status/headers/body）+Parsed items；webhook 配置=url/method/body/response data 映射 | 合并保留增量（r300C 错误处理，本点=webhook 响应构建面） | 工作流 |
+| 6 | Pipedream | Parallel 运算符=多路径分支+可选过滤规则+执行所有匹配分支（规则顺序不影响路径，与 Switch/If-Else 不同）；分支 exports 聚合回父流；控制流运算符族=If/Else（单路径逻辑）/Delay（1ms-1年）/Filter（规则停止或继续）/End Workflow（提前终止）；Cron Scheduler 触发=interval_seconds/cron/timezone_configured/timezone_utc | 合并保留增量（r300C 组件版本，本点=并行分支+运算符族） | 工作流 |
+| 7 | Anthropic | Claude Code Subagents=.claude/agents/ 下 frontmatter（name/description/可选 model/tool access）+body=系统提示；name/description/tool list 会话开始加载但 body 按需调用（与 skills 同构）；Hooks 五类型=command/HTTP/mcp_tool（确定性触发）+prompt/agent（Claude 判断）；hooks 低上下文成本不常驻；子代理 hooks=frontmatter（仅激活时）或 settings.json（session-wide）；PreToolUse 验证操作（只读 DB 白名单）；SubagentStop 事件+matchers | 合并保留增量（r299A depends_on，本点=subagent 按需加载+hooks 类型二分） | 工具 |
+| 8 | 技能站点 | 技能分享前验证清单=description 具体含关键术语+含"做什么+何时用"+body<500 行+细节分文件+无时效信息（或 old patterns 节）+术语一致+示例具体+引用一层深+渐进披露；description>250 字符被截断→自动触发完全失败；先评测后构建=跑代表任务找 gap 再增量建技能；多聚焦技能组合优于一个大技能 | 合并保留增量（r300B frontmatter 硬约束，本点=250 截断+先评测后构建） | 可复用 Skill |
+| 9 | GitHub | Actions 安全静态分析=zizmor（Homebrew 诞生，38 审计规则覆盖 template injection/credential leakage/cache poisoning/impostor commits+自动修复，uvx zizmor .）；actionlint=catch 误配置+表达式注入；CodeQL 可审查 workflow 实现（公共仓库免费）；StepSecurity Harden-Runner=egress-policy: block+allowlist 防被攻陷步骤外联；危险触发=pull_request_target 避免 | 合并保留增量（r300C 冷却期，本点=zizmor 审计+egress 阻断） | 工具 |
+| 10 | deeplearning | 课程主题地图=Prompt Engineering 60/Agents 43/RAG 32/Evaluation and Monitoring 21/AI Coding 16；新课程族=Building AI Assistants with On-Device Memory/Adaptive AI Agents/Evaluating AI Agents/A2A: Agent2Agent 协议/Generative UI 交互 Agent/Agent Memory（Oracle 合作）；skills.sh=57k+ 技能安装量榜单（find-skills 1.4M/frontend-design/agent-browser）+官方矩阵（anthropics/vercel/microsoft/HashiCorp/Redis/LiveKit）；Trending=cloudflare/security-audit-skill 19.4k 月星+Tencent/BrowserSkill 周 4.5k | 合并保留增量（r300C 提示三块，本点=课程主题地图+A2A 协议+技能榜单） | 工作流 |
+
+判重口径：增量判定。10 独点全为合并保留增量（各有≥40% 独有增量），零纯重复零编造。

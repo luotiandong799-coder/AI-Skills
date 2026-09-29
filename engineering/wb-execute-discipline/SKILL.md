@@ -12728,3 +12728,85 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **编码 agent 课程**：Claude Code: A Highly Agentic Coding Assistant（Anthropic）——"编码 agent 课程"。
 - **课程体系**：30+ 短课程覆盖 LLM 基础→高级 agent 架构（LangChain/LangGraph+Anthropic 提示资源）——"课程体系=30+ 覆盖"。
 - 提升层：工作流。触发词：AI Prompting for Everyone、find information、brainstorm write、create build、Evaluating AI Agents、Claude Code 课程、30+ 短课程。
+## r301A 十独点（2026-09-29 实拉）
+
+### 1. 外部知识 API 契约：Dify 知识集成面（来源：dify-6c0370d8.mintlify.app/en/cloud/use-dify/knowledge/external-knowledge-api + legacy-docs.dify.ai/zh-hans/guides/knowledge-base/external-knowledge-api-documentation + dify-6c0370d8-release-1-16-0.mintlify.site/en/cloud/use-dify/knowledge/connect-external-knowledge-base + marketplace.dify.ai/plugin/langgenius/aws_bedrock_knowledge_base + pypi.org/project/dify-knowledge-sdk 2025-06-27/2026-01-12/2026-03-16/2026-05-27/2026-06-06/2026-09-21 实拉，与 r299A 外部知识库端点契约合并增量——那条管端点契约，本条管注册细节与 SDK）
+- **三步连接**：构建 Dify 可查的 API 服务→注册 API 端点→通过注册 API 连具体知识源——"连接=三步"。
+- **请求契约**：POST {endpoint}/retrieval+Authorization: Bearer {API_KEY}——"请求=POST /retrieval+Bearer"。
+- **认证只传不验**：Dify 只传 API Key 作 Bearer，不验证——认证逻辑在你这边定义——"认证=Dify 只传不验"。
+- **注册去后缀**：端点注册时 URL 必须 REMOVE "/retrieval" 后缀，Dify 自动追加——"注册=去 /retrieval 后缀"。
+- **检索设置**：请求体 retrieval_setting（top_k/score_threshold）——"检索=top_k/score_threshold"。
+- **SDK 自动化**：dify-knowledge-sdk 0.2.0=Python 数据集客户端（create_dataset/create_document_by_text）——"SDK=数据集客户端"。
+- 提升层：工具。触发词：外部知识 API、POST /retrieval、Bearer API_KEY、去 /retrieval 后缀、retrieval_setting、dify-knowledge-sdk。
+
+### 2. 记忆窗口与队列限制：n8n AI Agent 记忆面（来源：blog.n8n.io/ai-agent-memory + blog.n8n.io/production-ai-playbook-complex-agent-patterns + community.n8n.io/t/303085 + npmjs.com/package/n8n-nodes-postgres-advanced-memory + n8n-docs.teamlab.info/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.memorybufferwindow + ssdnodes.com/learn/lang/es/n8n-ai-agent 2025-12-17/2026-02-20/2026-04-15/2026-05-01/2026-06-09/2026-07-07 实拉，与 r300B 向量库合并增量——那条管向量存储，本条管记忆窗口）
+- **Window Buffer**：Simple Memory=存最近 N 条消息，窗口大小可配置，窗口外完全遗忘——"记忆=窗口缓冲"。
+- **Session Key 会话隔离**：不同 Session Key=分离历史；Teams channelId 作 key→每会话独立记忆——"会话=Session Key 隔离"。
+- **队列模式限制**：queue mode 下 Simple Memory 不工作（n8n 无法保证每次调用到同一实例）——"队列=Simple Memory 禁用"。
+- **成本控制**：Context Window Length 控成本防上下文溢出——"成本=窗口长度控"。
+- **防重读**：系统提示"只回最新消息不总结先前轮次"停止重分析——"防重读=只回最新"。
+- 提升层：工作流。触发词：Simple Memory、Window Buffer、Session Key 会话隔离、队列模式禁用、Context Window Length、防重读系统提示。
+
+### 3. 自定义组件开发面：Langflow 扩展与安全（来源：docs.langflow.org/components-custom-components + /extensions-quickstart + /1.9.0/deployment-block-custom-components + /1.8.0/python-interpreter + /contributing-bundles + raw.githubusercontent.com/langflow-ai/langflow/HEAD/DEVELOPMENT.md 2026-08-13/2026-08-18/2026-08-30/2026-09-02/2026-09-03/2026-09-04 实拉，与 r300A 自定义组件五要素合并增量——那条管组件结构，本条管扩展 scaffold 与安全）
+- **组件基础**：Python 类继承 Component+类级属性（识别描述）+输入输出列表+方法+内部错误处理/日志变量——"组件=类继承+IO 列表"。
+- **扩展 scaffold**：lfx extension init my-extension→extension.json（v0 manifest）+pyproject.toml+src/ 布局——"扩展=CLI scaffold+manifest"。
+- **解释器白名单**：Python Interpreter 的 global_imports=逗号分隔模块白名单，仅列出的模块可用——"解释器=模块白名单"。
+- **安全阻断**：LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false 阻断自定义组件防任意代码执行——"阻断=环境变量开关"。
+- **热重载**：LFX_DEV=1 后端文件变更自动重启+浏览器 refresh 可见——"开发=热重载"。
+- 提升层：工具。触发词：lfx extension init、extension.json、global_imports 白名单、LANGFLOW_ALLOW_CUSTOM_COMPONENTS、LFX_DEV 热重载。
+
+### 4. 认证类型与凭据安全：Activepieces PieceAuth 面（来源：activepieces.com/docs/build-pieces/piece-reference/authentication + /docs/build-pieces/building-pieces/piece-authentication.md + /docs/admin-guide/security/practices + /docs/admin-guide/guides/manage-oauth2.md + /docs/embedding/embeddable-mcp 2026-05-07/2026-06-17/2026-07-07/2026-09-16/2026-09-18/2026-09-28 实拉，与 r300C 触发器合并增量——那条管触发，本条管认证）
+- **认证类型**：SecretText（掩码输入+validate 异步回调校验如 sk_ 前缀）/OAuth2（grantType AUTHORIZATION_CODE+authUrl/tokenUrl/scope）——"认证=SecretText/OAuth2"。
+- **凭据安全**：256-bit 加密存储+无 API 可取回+仅处理时发送后立即撤销引擎访问+OAuth2 最小 scope+密码只存 hash——"凭据=加密不可取回"。
+- **OAuth2 覆盖**：Platform Admin→Catalogue→Pieces 配自有 Client ID/Secret（品牌/限额）——"OAuth2=可覆盖自有凭据"。
+- **Embeddable MCP**：generateMcpToken() 免 OAuth 快速 token（无需注册/PKCE/弹窗）——"嵌入=免 OAuth token"。
+- 提升层：工具。触发词：PieceAuth.SecretText、validate 回调、OAuth2 AUTHORIZATION_CODE、256-bit 加密、generateMcpToken、自有 Client ID。
+
+### 5. Webhook 响应构建：Make 交互面（来源：academy-content.make.com/courses/make-intermediate-webhooks/03-exchanging-data-with-webhooks-post-requests + /02-exchanging-data-with-webhooks-get-requests + apps.make.com/gateway + make.com/en/help/tools/webhooks + developers.make.com/custom-apps-documentation/app-components/webhooks/dedicated/attached.md + help.make.com/webhook-triggered-ai-agent 2024-05-05/2024-06-24/2026-05-21/2026-06-21/2026-07-03/2026-08-04 实拉，与 r300C 错误处理合并增量——那条管错误路由，本条管响应构建）
+- **响应两字段**：Status（HTTP 状态码 2xx/3xx/4xx）+Body（JSON 映射）——"响应=Status+Body"。
+- **差异化响应**：可基于场景结果返回不同响应（确认收件/给调用方数据/通知更新）——"差异化=按场景结果"。
+- **响应头**：content-type: application/json 指定返回类型——"响应头=content-type"。
+- **日志四段**：request（timestamp/URL/method/headers/query/body）+response（status/headers/body）+Parsed items（query+body 合成）——"日志=请求/响应/解析项"。
+- **配置结构**：url/method/body/response（data 字段映射外部 ID/token）——"配置=url/method/body/response"。
+- 提升层：工作流。触发词：webhook 响应 Status Body、content-type application/json、差异化响应、Parsed items、response data 映射。
+
+### 6. 并行分支与运算符族：Pipedream 控制流面（来源：pipedream.com/docs/workflows/building-workflows/control-flow/parallel + /workflows/building-workflows/control-flow + /workflows/building-workflows/triggers + automationatlas.io/answers/can-you-run-pipedream-on-schedule + integrationatlas.com/platforms/pipedream 2026-04-20/2026-05-03/2026-05-09/2026-06-06/2026-08-29/2026-09-27 实拉，与 r300C 组件版本合并增量——那条管组件开发，本条管控制流）
+- **Parallel 运算符**：多路径分支+可选过滤规则+执行所有匹配分支——规则定义顺序不影响路径（与 Switch/If-Else 不同）——"并行=多路径+过滤"。
+- **exports 聚合**：每分支最后一步导出合并回父流——"聚合=分支 exports"。
+- **运算符族**：If/Else（单路径逻辑）/Delay（1ms-1年）/Filter（规则停止或继续）/End Workflow（提前终止）——"运算符=四类"。
+- **Cron 触发属性**：interval_seconds/cron/timezone_configured/timezone_utc/timestamp——"调度=五属性"。
+- **免费可用**：Schedule 触发 2026-04 起全计划含免费层——"调度=免费可用"。
+- 提升层：工作流。触发词：Parallel 并行分支、过滤规则、exports 聚合、Delay 1ms-1年、End Workflow、Cron 五属性。
+
+### 7. Subagents 与 Hooks：Claude Code 扩展面（来源：code.claude.com/docs/en/sub-agents + claude.com/blog/steering-claude-code-skills-hooks-rules-subagents-and-more + claude.com/blog/subagents-in-claude-code + code.claude.com/docs/en/best-practices + claude-wiki.com/create-custom-subagents.html 2026-04-07/2026-05-21/2026-06-18/2026-09-22/2026-09-28/2026-09-29 实拉，与 r299A depends_on 合并增量——那条管依赖图，本条管 subagent 与 hooks）
+- **Subagent 结构**：.claude/agents/ 下 YAML frontmatter（name/description/可选 model/tool access）+body=系统提示——"subagent=frontmatter+body"。
+- **按需加载**：name/description/tool list 会话开始加载，body 大上下文不自动调用（与 skills 同构）——"加载=名称/描述/工具列表"。
+- **Hooks 五类型**：command/HTTP/mcp_tool（确定性触发）+prompt/agent（Claude 判断）——"hooks=确定性/判断性二分"。
+- **低上下文成本**：hooks 不常驻上下文，事件触发才执行——"hooks=低成本不常驻"。
+- **PreToolUse 验证**：子代理用 PreToolUse hook 验证操作（只读 DB 白名单：允许部分操作阻断其他）——"验证=PreToolUse 白名单"。
+- **SubagentStop 事件**：子代理完成触发+matchers 匹配 agent 类型——"事件=SubagentStop+matchers"。
+- 提升层：工具。触发词：.claude/agents、frontmatter body、hooks 五类型、PreToolUse 验证、SubagentStop、settings.json hooks。
+
+### 8. 技能分享前验证清单：技能质量面（来源：platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices + eliteai.tools/agent-skills/skill-design-guide + anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills + atlan.com/know/ai-agent/ai-agent-skills/how-to-write-an-agent-skill + support.claude.com/en/articles/12512198-how-to-create-custom-skills + agenticskills.io/skills/skill-creator 2025-10-16/2026-02-01/2026-03-08/2026-04-27/2026-07-16/2026-07-22 实拉，与 r300B frontmatter 硬约束合并增量——那条管 frontmatter，本条管分享前验证）
+- **分享前验证清单**：description 具体含关键术语+含"做什么+何时用"+body<500 行+细节分文件+无时效信息（或 old patterns 节）+术语一致+示例具体+引用一层深+渐进披露——"清单=九项"。
+- **description 250 截断**：>250 字符被截断→自动触发完全失败——"触发=250 截断"。
+- **先评测后构建**：跑代表任务找 gap 再增量建技能（评估驱动构建）——"构建=先评测找 gap"。
+- **多聚焦组合**：多个聚焦技能组合优于一个大技能（专注于一个工作流）——"组合=聚焦优于全能"。
+- **祈使句+精确模板**：指示用祈使句；输出格式用 "## Report structure ALWAYS use this exact template"——"写作=祈使句+模板"。
+- 提升层：可复用 Skill。触发词：分享前验证清单、description 250 截断、先评测后构建、多聚焦组合、祈使句+精确模板。
+
+### 9. Actions 安全静态分析：GitHub CI/CD 安全面（来源：github.blog/security/supply-chain-security/securing-the-open-source-supply-chain-across-github + mattsch.com/blog/2026/03/28/harden-your-github-actions-workflows-with-zizmor-dependency-pinning-and-dependency-cooldowns + blogs.eclipse.org/post/mikaël-barbero/stop-trusting-mutable-references-how-eclipse-foundation-projects-should-harden + rywalker.com/research/zizmor + secure-pipelines.com/ci-cd-security/lab-detecting-malicious-github-actions-static-analysis 2026-02-03/2026-03-16/2026-03-24/2026-03-28/2026-04-01/2026-06-11 实拉，与 r300C 冷却期合并增量——那条管依赖更新节奏，本条管 workflow 安全扫描）
+- **zizmor 审计**：GitHub Actions 专用静态分析（Homebrew 诞生），38 条审计规则覆盖 template injection/credential leakage/cache poisoning/impostor commits+多数自动修复；uvx zizmor .——"审计=38 规则"。
+- **actionlint**：catch 误配置+表达式注入漏洞——"lint=表达式注入"。
+- **CodeQL 审 workflow**：CodeQL 可审查 Actions workflow 实现（公共仓库免费）——"审查=CodeQL workflow"。
+- **egress 阻断**：StepSecurity Harden-Runner=egress-policy: block+allowlist 防被攻陷步骤外联——"出口=egress block"。
+- **危险触发**：避免 pull_request_target 触发工作流；第三方 Actions pin 全长度 SHA——"触发=pull_request_target 避免"。
+- 提升层：工具。触发词：zizmor 38 规则、uvx zizmor、actionlint、CodeQL workflow、Harden-Runner egress block、pull_request_target 避免。
+
+### 10. 课程主题地图与技能榜单：deeplearning+skills.sh 面（来源：learn.deeplearning.ai/?bot=1 + community.deeplearning.ai/tag/short-course/68 + blogs.oracle.com/developers/oracle-and-deeplearning-ai-launch-new-agent-memory-course-for-ai-developers + www.skills.sh + explainx.ai/blog/top-10-ai-agent-skills-directories-2026 + gaojihao.github.io/github-hot/trending-monthly.html 2026-01-22/2026-03-18/2026-05-08/2026-07-21/2026-08-31/2026-09-28 实拉，与 r300C 提示三块合并增量——那条管提示课程，本条管课程地图与技能生态）
+- **课程主题地图**：Prompt Engineering 60/Agents 43/RAG 32/Evaluation and Monitoring 21/AI Coding 16——"课程=60/43/32/21/16"。
+- **新课程族**：On-Device Memory/Adaptive AI Agents/Evaluating AI Agents/A2A: Agent2Agent 协议/Generative UI 交互 Agent/Agent Memory（Oracle 合作）——"新课程=记忆/自适应/A2A/生成UI"。
+- **skills.sh 榜单**：57k+ 公开技能=find-skills 1.4M 安装领跑/frontend-design/agent-browser——"榜单=安装量排行"。
+- **官方技能矩阵**：anthropics/vercel-labs/microsoft/azure-skills/HashiCorp/Redis/LiveKit——"官方=厂商矩阵"。
+- **Trending 技能**：cloudflare/security-audit-skill 19.4k 月星（多阶段安全审计+机器可读发现）+Tencent/BrowserSkill 周 4.5k——"trending=安全审计+浏览器技能"。
+- 提升层：工作流。触发词：课程 60/43/32、A2A 协议、On-Device Memory、Generative UI、skills.sh 安装榜、security-audit-skill。
