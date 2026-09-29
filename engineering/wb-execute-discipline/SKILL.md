@@ -13019,3 +13019,61 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **四阶段（MS）**：Advertise（~100 token 注入系统提示词）→Load（load_skill 检索完整 SKILL.md，<5000 token 推荐）。
 - **类比**：技能="新员工入职指南"（L1 目录/L2 章节/L3 附录）；未使用技能几乎零成本——上下文窗口是共享资源。
 - 提升层：可复用 Skill（架构）。触发词：三级渐进披露、L1 50-100 token、Advertise/Load 四阶段、load_skill 工具。
+
+## r302B 十独点（2026-09-29 实拉：Dify 形态/n8n 异步应答/Langflow 记忆四层/Activepieces 生命周期/Make 幂等/Pipedream 源部署/Copilot 绑定/smolagents 判据/Ultron 再结晶/TRACE 15 子项）
+
+### 1. Dify 工作流三形态选择表与 Agent 节点四最佳实践（来源：dify-hosting.com/en/guides/dify-workflow/ + dify-6c0370d8.mintlify.app/en/cloud/use-dify/nodes/agent 实拉，与 r297A 三形态合并增量——那条管形态区分，本条管执行参数）
+- **Agent 节点四最佳实践**：①清晰工具描述（决定工具选择质量）②适当迭代上限（直接决定 Agent 失控成本上限）③详细指令 ④记忆管理。
+- **三形态选择判据**：Workflow=单次跑完+节点日志调试；Chatflow=多轮对话+会话日志；Agent 节点=流内动态选工具+agent trace。
+- 提升层：工具。触发词：Agent 节点四最佳实践、迭代上限防失控、Chatflow 三选一。
+
+### 2. n8n Webhook 202 异步应答模式与同步超时陷阱（来源：rapidevelopers.com/n8n-tutorial/how-to-fix-webhook-replies-arriving-too-late-for-the-llm-processing-in-n8n + n8nautomation.cloud/blog/fix-n8n-webhook-504-gateway-timeout-errors + community.n8n.io/t/295656 实拉，与 r300A 响应模式合并增量——那条管三模式，本条管长任务异步化）
+- **同步超时陷阱**：webhook 同步模式超过 40 秒会被调用方/反向代理切断（LLM 处理典型超时）。
+- **202 Accepted 异步模式**：Respond to Webhook 节点紧接 Webhook 节点立即返回 202 + processing ID（含预计完成时间），LLM 处理放后台，结果走回调 URL/轮询端点/SSE 交付——"webhook 应答时间与 LLM 处理时间解耦"。
+- **n8n Cloud 超时**：5min free/30min Pro/Enterprise unlimited；self-hosted 设 EXECUTIONS_TIMEOUT；OLLAMA_KEEP_ALIVE=-1 防模型卸载冷启动。
+- 提升层：工作流。触发词：202 Accepted 异步应答、processing ID、webhook 应答与 LLM 解耦、40 秒超时陷阱。
+
+### 3. Langflow 记忆四层谱系与 Memory Base 语义检索（来源：docs.langflow.org/memory-bases + docs.langflow.org/memory + docs.langflow.org/message-history 实拉，与 r296C 三类记忆合并增量——那条管三类，本条管第四层语义检索）
+- **四层谱系**：内置 Agent chat memory（默认启用，按 session_id 分组）→ Message History（按时间序检索 messages 表）→ Memory Base（嵌入向量库按语义相似度检索、跨会话长期记忆，与按序检索互补）→ 外部 Chat Memory/Store Message（AstraDB 等外部 DB 持久化）。
+- **session_id 隔离**：自定义 session_id 隔离不同用户/应用，避免串记忆。
+- 提升层：工具。触发词：Memory Base 语义检索、session_id 隔离、记忆四层谱系。
+
+### 4. Activepieces Webhook 触发器生命周期契约与 Embeddable MCP（来源：activepieces.com/docs/custom-pieces/triggers/webhook-trigger + activepieces.com/docs/embeddable-mcp 实拉，与 r293B 触发器合并增量——那条管创建，本条管生命周期与嵌入）
+- **生命周期四钩子**：onEnable（用 context.webhookUrl 注册第三方 webhook 并存 store）/ onDisable（清理）/ onHandshake（可选握手）/ run(ctx) 返回 payload 数组。
+- **Embeddable MCP**：用户 App 内点一个 Authorize → 后端拿 token 运行该用户自动化（标准 OAuth）；mcp.activepieces.com/v1 单 URL 暴露 760+ apps 给 Claude/Cursor/Windsurf；ap_search_triggers/ap_search_actions 自然语言找工具。
+- 提升层：工具。触发词：onEnable/onHandshake/onDisable 生命周期、Embeddable MCP Authorize、ap_search_triggers。
+
+### 5. Make 幂等去重三件套：Data Store ledger / HMAC 校验 / search-before-create（来源：dredyson.com/advanced-make-com-techniques-that-pros-dont-want-you-to-know + thinkbot.agency/blog/make-com-scenario-playbook-reliable-automations-across-teams + automationcompare.com/make/webhooks 实拉，与 r298C 场景蓝图合并增量——那条管八块框架，本条管幂等防重）
+- **Data Store ledger 幂等**：稳定键=provider event id 或确定性 hash；收到即查 ledger，已处理早退；只在副作用全部成功后标记。
+- **HMAC 签名校验**：webhook 用共享密钥重算签名与 header 比对；只接受 POST 并校验 Content-Type。
+- **search-before-create/upsert**：不假设 CRM/DB 会自动去重，先查再建。
+- 提升层：工作流。触发词：Data Store ledger 幂等、HMAC 签名校验、search-before-create、副作用全成功才标记。
+
+### 6. Pipedream source 部署双消费与 deactivate 生命周期钩子（来源：pipedream.com/docs/sources + docs-proxy.pipedream.net/docs/connect/webhooks + docs-proxy.pipedream.net/docs/components/api 实拉，与 r298C 事件源合并增量——那条管触发源，本条管部署与清理）
+- **部署 payload 二选**：webhook_url（HTTP 端点）/ workflow_id（workflow 直接消费）；trigger 级 webhook_url 优先于 project 级默认。
+- **deactivate() 钩子**：source 更新或删除时自动删除第三方 webhook 订阅，防止孤儿订阅。
+- **REST /subscriptions 多源订阅**：POST /subscriptions?emitter_id={组件id}&event_name={事件}&listener_id={接收source_id}——一个 workflow 可监听 10 个 RSS 源。
+- 提升层：工具。触发词：deactivate 钩子、trigger 级 URL 优先、/subscriptions 多源订阅。
+
+### 7. GitHub Copilot agent skills 与 MCP 工具绑定（来源：docs.github.com/en/copilot/how-towork-with-copilot/additional-examples/enhance-agent-mode + github.blog/2026-09-15 + docs.github.com/zh/copilot/how-towork-with-copilot/copilot-mcp-plugin/use-json-config 实拉，与 r294C Copilot 指令评估合并增量——那条管指令，本条管 skills 与 MCP 绑定）
+- **agent skills=指令文件夹**：name+description 决定 Copilot 是否启用该 skill。
+- **frontmatter tools 数组绑定 MCP 工具**：自定义 agent 可声明 tools: ['codebase','terminal','postgres-mcp']，agent mode 里 MCP 工具自动进入 loop。
+- **MCP 配置**：mcpServers JSON（stdio+http），repo 或 CLI 配置自动可用到 Copilot app。
+- 提升层：工作流。触发词：Copilot agent skills、tools 数组绑定 MCP、agentic loop。
+
+### 8. smolagents CodeAgent vs ToolCallingAgent 选择判据（来源：huggingface.co/docs/smolagents/zh/index + pypi.org/project/smolagents/ v1.26.0 + ai-tldr.dev/learn/agent-frameworks/what-is-smolagents 实拉，与 r291A smolagents 合并增量——那条管框架，本条管双模式选择）
+- **选择判据**：CodeAgent 写 Python 代码执行——能稳定写正确 Python 的强模型才用；ToolCallingAgent 标准 ReAct JSON——弱模型用 JSON 更稳。
+- **三无关**：model-agnostic（100+ 模型）/ tool-agnostic（MCP/LangChain/HF Space）/ modality-agnostic（text/vision/video/audio）；约 1000 行；benchmark 约 30% fewer steps。
+- 提升层：工具。触发词：CodeAgent vs ToolCallingAgent、弱模型 JSON 更稳、约 30% fewer steps。
+
+### 9. ModelScope Ultron 群体技能再结晶门控（来源：modelscope.cn/learn/407610 + 51cto.com/article/841872.html + modelscope.cn/learn/5696 实拉，与 r285B ModelScope 合并增量——那条管框架，本条管技能自进化）
+- **结晶**：高频记忆经语义聚类自动结晶为工作流技能，不手写。
+- **再结晶门控**：新证据积累触发再结晶——大模型合并新证据改写 Skill → 独立评估模型重新打分 → 分数提升才接受，否则回滚上一版本（只升不降）。
+- **评估准入**：内部 5-6 个指标全达标才允许结晶；打通 ModelScope Skill Hub 统一检索 80000+ 外部技能。
+- 提升层：工作流/可复用 Skill。触发词：Ultron 再结晶、评估准入 5-6 指标、分数提升才接受否则回滚。
+
+### 10. TRACE 五维 15 子项与一票否决红线 + 秦叔宝四质检（来源：geekpark.net/news/364566 + news.qq.com/rain/a/20260810A09XZX00 + skillhub.cn/skills/qinshubao 实拉，与 r299C/r300C TRACE 合并增量——那条管框架，本条管子项与质检表）
+- **五维 15 子项**：T 安全可信（越权访问/数据泄露/远程执行/代码混淆/最小权限）· R 运行可靠（稳定性/可复现/交付完整/依赖缺失）· A 场景适用（场景匹配/触发清晰/边界界定/IO 规范）· C 结构规范（渐进披露/文档结构/限制说明/示例充分）· E 效果增益（输出准确/内容完整/创造力增值/开箱即用）。
+- **T 一票否决红线**：越权访问/数据泄露/远程执行/代码混淆触碰即淘汰。
+- **秦叔宝四质检**：S01 提示词注入 P0 / S02 敏感信息泄露 P0 / S03 危险操作 P0 / S04 权限最小化（allowed-tools 最小化不滥用 Bash）P1。
+- 提升层：可复用 Skill（评测）。触发词：TRACE 15 子项、一票否决红线、秦叔宝 S01-S04。
