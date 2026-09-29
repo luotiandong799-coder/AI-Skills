@@ -13377,3 +13377,22 @@ agent 配置里 skills 以 `{type:"anthropic", skill_id:"xlsx", version:"1"}` �
 
 ### OpenClaw dreaming 成本警示：Deep Sleep 全量重载
 consolidation 每 pass 全量重载记忆语料，默认最多 4 passes；memory 目录长到 50-100k tokens 时单次就 200-400k 输入 token。判据：**启记忆整合前先算"每 pass 重载量 × pass 数"的输入成本**；记忆大时降频或关闭。
+## r304C 失败模式目录/分布漂移/反模式/Hooks 纪律/推理优化/动态示例（来源：growthengineer.ai 2026-05-04 + dev.to 2026-09-01 + agentpatterns.ai 2026-05-27 + skillmd.ai 2026-04-06 + Microsoft Learn 2026-06-05 + Google Cloud 2026-03-28 + futureagi.com 2026-05-14 实拉）
+
+### 11 个 agent 失败模式 + 每个有可 grep 的 trace fingerprint
+tool hallucination / infinite reasoning loops / premature termination / context bloat / prompt injection / cost runaway / schema drift / stale memory / parallel tool race conditions / partial-state corruption / eval-prod skew——每个模式有特定 trace 指纹可 grep+已知修法。数据：88% agent 失败归因基础设施缺口而非模型质量（Arize）。判据：**排查 agent 问题时先对照这 11 类，每类有指纹就不用从头猜**。
+
+### 生产输入分布漂移：测试通过≠生产可靠
+测试输入 curated、生产输入 stochastic（幂律分布）；ARC 事后分析：平均生产 agent 每天遇到 47 种测试集零覆盖的输入模式，其中 23% 导致失败。判据：**上线前留生产流量采样做漂移监测，不靠测试集覆盖度自证可靠**。
+
+### 反模式：Assumption Propagation / Boring Technology Bias
+assumption propagation：早期误解级联贯穿后续所有工作，产出内部一致但解决错问题的输出——一致性≠正确性，中途要对齐关键假设；boring technology bias：LLM 推荐工具按训练数据频率而非问题适用性，流行默认打败最优——选型判断要独立于模型推荐。
+
+### Hooks 九事件 + 护栏纪律
+事件全生命周期：UserPromptSubmit / PreToolUse / PostToolUse / PostToolUseFailure / PermissionRequest / SubagentStart / SubagentStop / Stop / SessionStart。纪律：**拒绝必须带理由——无理由的拒绝视同批准**；failMode: allow 除非严格强制；matcher 过宽引发性能问题；hooks 永远拒绝会造成循环；PreToolUse 管护栏（exit code 2 block）/PostToolUse 管清理验证反馈（不能撤销工具调用）；Stop 事件检查测试/build（CI 红不许停）；hook 三能力=deny / require approval / modify input。
+
+### 推理优化三技术 + 量化数据
+量化：FP16→INT4 内存减四分之一，decode 是 memory-bandwidth-bound 所以 4-bit 权重读取快 4 倍；AWQ 保护 1% salient channels；H100 FP8/Blackwell FP4 原生使量化从妥协变无损优化。speculative decoding：小 draft 提 K tokens、大模型批量验证，拒绝采样保分布等价，2-3x 加速、256 tokens 以上最有效。continuous batching：80-90% GPU 利用率 vs 静态 40%；prefix caching 省 15-20%。
+
+### 动态示例检索 + reasoning 模型内化 CoT 判断
+few-shot 示例不写死，从知识库动态检索最相关示例（relation-aware example retrieval）；**reasoning 模型内化 CoT 后，可见 CoT prompt 可能浪费 token 甚至扭曲输出——先 eval 再假设**；few-shot CoT=2-5 个完整"问题+推理链+答案"示例教推理模式+输出格式。

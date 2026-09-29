@@ -201,3 +201,22 @@ version: 3.84.0
 
 ### Deep Agents 三级压缩顺序：先 offload 后 summarize
 ① offload 大工具结果（一发生就写文件系统）；② 上下文超阈值后 offload 旧 write/edit 工具参数；③ 无 eligible 内容可 offload 才做 summarize。判据：**能搬出去的不压掉，summarize 是最后手段**。
+## r304C Contextual Retrieval 管线/缓存两方式/RAG 评测诊断/记忆实证/MCP 跨服务器/沙箱强制（来源：LobeHub 2026-09-23 + datarekha.com 2026-05-10 + platform.claude.com 2026-09-28 + ranjankumar.in 2026-05-11 + arXiv 2601.07978 + modelcontextprotocol.io 2026-07-28 + arXiv 2605.24248 + NVIDIA 2026-01-30 实拉）
+
+### Contextual Retrieval：给每个 chunk 前加 LLM 生成的上下文摘要
+修复"切块丢上下文"这个标准 RAG 静默失败：切块后让 LLM 依据全文为每块生成一句定位摘要再嵌入（"the error rate rose 3%" → "In Acme's Q2 report, revenue-team section: the error rate rose 3%"）。生产管线：chunking → per-chunk context（prompt-cached）→ context+chunk 双索引（向量+BM25）→ RRF fusion top 150 → reranker top 20。成本：文档加载缓存一次，800-token chunks 约 $1.02/百万文档 token 一次性索引成本；50K 文档 100 chunks=首个全价、其余 90% 折扣。判据：**切块后先问"这块离开全文还读得懂吗"，读不懂就加上下文再嵌入**。
+
+### Prompt caching 两方式：automatic vs explicit breakpoints
+automatic：顶层一个 cache_control 字段，系统自动把断点应用到最后一个可缓存块并随对话前移（适合多轮）；explicit：手动放 cache_control 精确控制缓存边界（适合稳定前缀）。cached reads 约 $1.50/百万 tokens（90% 折扣）；1M 窗口+1 小时 TTL 静态前缀让长上下文经济可行。判据：**多轮对话用 automatic，固定 system+语料前缀用 explicit 钉死断点**。
+
+### RAG 评测诊断读法：检索低于 0.7 先查检索
+Faithfulness=把答案拆句、LLM judge 逐句能否从检索上下文推断，支持语句/总语句；Context Precision 无参考=检索到的 chunk 多少真相关（5 取 3=0.6）；Context Recall 需 ground truth=必要 chunk 召回比例。**检索指标低于 0.7 先查检索再测生成——生成指标在差检索之上无意义**；诊断：低 precision=噪声多，低 recall=缺 chunk 致不完整答案。
+
+### 记忆系统成本-精度实证：压缩精度比上下文量更决定准确率
+分布式多 agent 长记忆实测：Mem0/RAG/full-context 达 77-81%，Graphiti/cognee 仅 55-56%，差距来自检索不完整而非推理失败；**full-context 前传反而低于 mem0 的压缩提取**。要时间推理（事实何时为真）用 Graphiti（双时态图、事实自动失效）；要廉价规模化正确上下文检索用 Mem0。判据：**"上下文给得全"不如"压缩提取得准"——记忆层先做提取质量**。
+
+### MCP 跨服务器数据流不受信 + Attested Tool-Server Admission
+一个服务器的工具结果对另一个服务器是不受信输入，broker 必须对 brokered calls 应用与直接调用相同的输入审查；**输出截断不防外泄**；沙箱无直接网络访问。Attested admission 三机制：① 离线签名 clearance 断言（服务器发布在 well-known URI，host 对钉死信任根验证后才放行）；② deny-by-default per-server tool allowlist（接入服务器≠信任它的每个工具）；③ flavor-gated enforcement（检查从警告变硬拒绝，每个决策写防篡改日志）。判据：**MCP 接入按"服务器级信任+工具级白名单"两层审，不因服务器可信就信任它所有工具**。
+
+### NVIDIA 沙箱强制三件套 + 加固容器参数
+间接提示注入是执行用户级权限工具的 AI 编码 agent 的首要威胁。OS 级强制：阻断未知网络出口 / 禁止工作区外写 / 禁止写 agent 配置扩展文件；推荐：沙箱整个 IDE+spawned functions、虚拟化分离沙箱内核与宿主内核、禁读工作区外文件。加固容器：`--cap-drop ALL --security-opt no-new-privileges --security-opt seccomp=... --read-only --tmpfs /tmp:rw,noexec`；强隔离选 gVisor 或 Firecracker microVM。
