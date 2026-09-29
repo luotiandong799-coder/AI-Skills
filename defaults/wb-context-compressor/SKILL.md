@@ -2,7 +2,7 @@
 name: wb-context-compressor
 description: >-
   上下文聚焦（**只管输入侧：源材料 → 我**）。处理长命令输出 / 大日志 / 长文档 / 历史上下文时自动应用：只注入与当前任务相关的信息，不重复搬运无关上下文；摘要不得丢失关键错误、关键数据、关键步骤；用户明确指定要保留 / 参考的内容（偏好、约束、历史产物）不得丢弃；长期指令文件（AGENTS.md / skill）失效时按其被忽略的原因排查而不是重复粘贴；**压缩时机按任务状态定、不按 token 数定（子任务完成才压，半途/卡住禁止压）**；放进来的材料要过准入、暴露面要最小化；**窗口撑满时按四步降级（大输入转检索 → 砍工具/MCP 数量 → 限历史轮数 → 才换大模型）**；**记忆要持续裁剪而非只存**；验证、测试、安全检查等必要步骤一步不省。**输出侧的废话压缩不归本技能，走 `wb-max-token-saver`。** 触发词：上下文太长、撑满了、超限、被截断、摘要、保留哪些、别丢关键信息、记忆膨胀、记忆太长、检索不到、找不到以前说的、只给相关的、工具输出太长、MCP 挂太多、历史轮数、换大模型、降级、忘记前面、信息被挤掉、静默截断、裁了就变义、注入文件、条件注入、前缀缓存、恢复注入、压缩预算、总账、脱敏。、dirty 节点、陈旧产物、缓存失效、失效传播、复用旧结果、底座开关、持久化默认关、缓存不命中、配了不生效、三级默认、全局覆盖父级、存储可达性、跨运行复用、知识保留、记忆生效了吗、最后一轮还带着前面的事实吗、对话退化、重复短语、低熵、滑窗评测、无标注监控、轻量启发式指标、原生压缩、provider 压缩、压缩不生效、压缩要落盘、摘要可携带、compactUIMessages、HTTP 200 不等于读到、登录墙、JS 壳、正文空检测、可见文本词数、大 HTML 落盘要先校验、GPT Store 需登录、命中还跑钩子、工具结果缓存、缓存键盲区、什么能进键、纯读才可缓存、媒体绕过缓存、缓存落临时目录、脱敏按字段名、忽略分隔符、字段清单是替换、默认脱敏在后、保留关联性、首尾字符、脱敏三档、加工是替换、保留系统提示、加工顺序、加工层不能短路、历史没有系统提示、系统提示静默失效、覆写开关、权威归属、命中直返、策展答案、绕过生成、换模型重建、既读又改、自改指令跨轮、读完不改配置
-version: 3.87.0
+version: 3.88.0
 ---
 
 # wb-context-compressor（上下文阶段：聚焦相关）
@@ -469,3 +469,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Agent Resumption 模式**：每步 plan/tool result/intermediate state checkpoint 到 durable storage 按 key；研究 agent 40 分钟慢跑遇部署重启=无状态跑没+用户重发；interruptible=把 pause/resume/cancel 当一等控制面——中途 halt 昂贵/偏离轨迹任务而状态保留。判据：**长跑 agent 每步状态落盘按 key，重启即从精确停处续**。
 - **时序记忆图谱**：bi-temporal 元数据=事实何时为真+何时被摄取（Zep Graphiti 持续摄取会话+业务数据提取实体关系）；"存说了什么+何时为真"胜"存说了什么快照"；LongMemEval Zep 63.8% vs Mem0 49.0%；DMR 94.8%；选型=通用个人化 Mem0/时序追踪 Zep/长跑学习 Letta/自托管图谱 Cognee。判据：**事实会变且要答过去与现在→上时序图谱，否则向量库够用**。
 - **产品化记忆与隐私可控**：Dreaming V3=后台合成替代手动 saved list（无需 prompting）+Memory summary review 面可能窄于全合成+完全删除需清 past chats/archived/files/connected apps/saved memories/summary 多源；Claude 记忆面板可查/改/删单条；用户偏好 TTL 从第一天写；记忆可见性与删除路径是产品要求非可选。判据：**给用户看得到的记忆清单与一键删除路径**。
+
+## 多模态 Agent 与多模态工具 2026：输入层纪律/视觉决策点/组成式视觉工具/执行三规约/VLM 取代 OCR/查询驱动解析/多模态 RAG 三路线/摄取五步流水线/评测真相/语音五阶段 800ms（来源：aikolhub+max-gherman.dev+aiagents.codeguides.io+arxiv 2608.02217+theneuralbase+zylos.ai+niteagent+madebyagents+arxiv 2602.24134+aws bedrock multimodal retrieval+blog.google Gemini Embedding 2+arxiv 2512.20136+arxiv 2604.04969+arxiv 2607.28580+redeepseek.io+benchmarkingagents+Stanford AI Index 2026+arxiv 2608.26317+videommmu+globussoft+irejournals+NVIDIA voice agent+OpenAI Realtime，r326B，与 §知识库工程（文本向 RAG）/§记忆流水线 互补——那些条管"文本检索与记忆"，本条管"多模态感知/多模态检索/语音管道"）
+- **多模态输入层纪律**：输入层决定 agent 能感知什么（text/image/audio/files/screen state）；不要只因为模态可用就全加——每种额外输入类型都增加测试面、成本与幻觉风险；视觉进循环三模式=直接观察（工具返回图像，模型直接看）/显式视觉工具调用/转录（OCR/ASR 先转文本）。判据：**每个模态必须有对应任务才加；视觉进循环的方式三选一**。
+- **视觉只用在决策点 + 二次工具校验**：计划用文本推进，只在决策点用视觉（确认设置与工单一致/部署后断言 error toast 可见/图表类 PDF 表格提取失败时读图）；不可逆动作前必须第二工具交叉验证（schema validate / DOM re-query / human approve）；视觉提取→schema validator 工具是生产文档 intake 的赢家模式。判据：**视觉是决策点的感知器不是每步都开；视觉提取结果必过 schema 校验才可不可逆动作**。
+- **视觉工具组成式调用（VC-Tooler 式）**：组合式视觉子工具集=rotate（纠正方向）/enhance（提对比度亮度）/code（跑 Python 做精确数值计算、几何作图）/multimodal search（文本或图像搜实体与实时知识）——模型学习按任务自适应组装工具而非固定调用。判据：**视觉理解拆成可组合原子工具，数值计算交给 code 工具而非目测**。
+- **多模态工具执行三规约**：每模态独立超时（vision 5s/audio 10s/text 2s）；结果缓存按输入 hash 键控（同一张图不重复分析）；结构化记录模态路由决策（调了哪些工具、为什么）；独立模态并行异步执行。判据：**多模态执行按模态隔离超时、缓存与日志**。
+- **原生视觉模型取代传统 OCR 管道**：GPT-5.4/Claude Opus 4.6 单次模型调用取代 Tesseract+layout detector+table parser+post-processor 组合，标准文档直接 VLM 读；法律合同/医疗记录等 accuracy-critical 仍要二次校验（人审或规则）；开源本地管道=Docling/PaddleOCR/GLM-OCR/Qwen3-VL 提取+LangExtract 结构化+agent 审批，全本地私有。判据：**标准文档直接 VLM 读，关键流程加校验层；隐私场景走开源 VLM 管道**。
+- **AgenticOCR：查询驱动的按需解析**：OCR 从静态全文处理变为 query-driven 按需提取——模型"thinking with images" 分析版面、只识别与查询相关的兴趣区域；按需解压视觉 token；检索粒度从固定页级 chunk 解耦。判据：**文档解析先问"这次检索需要哪部分"，按需提取而非整页全量 OCR**。
+- **多模态 RAG 三条路线**：①多模态 embedding=文本/图像/音频/视频单模型统一编码进同一语义空间（1408 维，可图搜文/文搜图/视频搜图）；②多模态知识图谱多跳=轻量文本解析+实体驱动视觉 grounding，文本实体与视觉区域融合为统一节点保留原子证据，按模态检索；③宏推理/微匹配双图解耦=宏观图做全局拓扑路由、微观图做细粒度证据验证，把全局结构推理与局部证据匹配隔离以抑制检索噪声。判据：**多模态检索先定路线：统一 embedding（简单跨模态搜索）/图增强（多跳推理）/双图解耦（噪声抑制）**。
+- **视觉文档摄取五步流水线**：捕获与归一（EXIF 旋转/deskew/统一 PNG）→预处理→视觉模型读+JSON schema 结构化→校验（必填字段）→写库——每步有明确输入、输出与可测失败模式。判据：**每个摄取步骤有可测失败模式，五步闭环才让截图像数据一样进库**。
+- **多模态评测 2026 真相**：MMMU frontier 高 70s-80% 接近饱和、MMMU-Pro（frontier ~60%）成为活跃基准（双层报告成标准）；Video-MMMU（ACL 2026）无模型达人类基线 74.4%（最佳 Keye-VL-1.5-8B 66%）；MMI=五模态×最多三模态组合 893 题测 omni 模型跨模态整合；provider self-report 是可展示证据不是独立运行。判据：**多模态评测认准未饱和基准（MMMU-Pro/Video-MMMU/MMI），self-report 分数不算数**。
+- **语音 Agent 五阶段管道与 800ms 预算**：生产语音 agent 五阶段顺序执行=Audio Capture+VAD→ASR→LLM 推理→工具执行→TTS，从语音到回复端到端预算 <800ms，每阶段独立优化（流式 ASR 200-300ms）；S2S agent 模型直接消费音频原生特征（韵律/语调/说话人意图），在语音会话内直接触发工具调用/检索/handoff；2026-05 OpenAI 三新音频模型=GPT-Realtime-2（GPT-5 级推理语音）/GPT-Realtime-Translate（70+→13 语言实时翻译）/GPT-Realtime-Whisper（流式 STT）。判据：**语音 agent 按五阶段独立做延迟预算，总预算 800ms；能 S2S 直连就少一次文本转换**。
