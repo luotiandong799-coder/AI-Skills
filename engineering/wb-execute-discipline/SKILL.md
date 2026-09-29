@@ -11718,3 +11718,63 @@ px skills add <collection-url>（通用）/pip install modelscope && modelscope 
 - **工具描述单条 ≤200 字**：简洁精准——**与"工具描述 token 税"（r296A n8n）配套的量纲**。
 - **中文分块口径**：通用文档 512 字符、技术文档 256 字符、重叠 10-20%——**中文按字符不按 token，技术文档减半**（r295C 800-token 是英文文档口径，两套并存）。
 - 提升层：工作流。触发词：自评提示、逐步推理、置信度评分、质量结构化、72.7%、≤200 字、512 字符、256 字符、重叠率。
+## r296B 十独点（2026-09-29 实拉）
+
+### 1. 部署架构三纪律：Dify 生产面（来源：dify-hosting.com《Dify Docker Setup 2026》+ deepwiki.com/langgenius/dify + joshuaopolko.com《Self-Hosted Guide》2026-09-03/2026-09-28/2026-06-13 实拉，与 r295A LangFlow 生产安全基线合并增量）
+- **nginx 是唯一需公网暴露的容器**：Dify 八服务+init_permissions 一次性任务，其余容器只走内网——**"只有入口容器见公网"是可执行的架构检查**。
+- **生产资源按 headroom 规划**：文档最小 2 vCPU/4GB，实际给 8GB+余量（跑 API/worker/DB 多服务）——**文档最小值是"能跑"，生产值是"能扛"**。
+- **非 root 用户跑容器**：多阶段构建末尾建 dify（UID 1001）再进 final image——**镜像里服务不拿 root**。
+- 提升层：工具。触发词：nginx 唯一公网、init_permissions、headroom、非 root、UID 1001、多阶段构建。
+
+### 2. Queue Mode 三进程与上限语义：n8n 扩容面（来源：blog.n8n.io《15 best practices》+ community.n8n.io《DATA_TABLES_MAX_SIZE_BYTES》+ n8nautomation.cloud 2026-01-08/2026-06-03/2026-06-28 实拉，与 r295B 环境隔离合并增量）
+- **三进程职责分离**：`n8n start`（主进程管 UI/API/webhook）+/ `n8n worker --concurrency=10`（拉队列执行）+ 可选独立 `n8n webhook`（高吞吐端点）——**"一个进程干所有事"在扩容时先拆职责，不先加机器**。
+- **上限默认值是安全帽不是能力**：N8N_DATA_TABLES_MAX_SIZE_BYTES 默认 50MB 是防事故帽，Postgres 几 GB 完全可行——合理设为**数据卷 25%**（40GB 卷→10GB）——**默认上限先查"是能力还是保险丝"再决定调不调**。
+- **SaaS 扩展三件套**：拆集群（用户触发 vs 长跑 AI 任务）+ 缓存模型输出 + per-user 限流——**峰值不靠单集群硬扛**。
+- 提升层：工具。触发词：Queue Mode、worker --concurrency、独立 webhook 进程、DATA_TABLES_MAX_SIZE_BYTES、25% 磁盘、拆集群、per-user 限流。
+
+### 3. 无头 runtime 与 IDE 分离：LangFlow 部署面（来源：docs.langflow.org/deployment-prod-best-practices + deployment-multi-worker + deployment-architecture 2026-09-02/2026-08-10/2026-09-05 实拉，与 r295A 安全基线合并增量）
+- **runtime 与 IDE 分离部署**：生产跑无头 runtime（`LANGFLOW_BACKEND_ONLY` headless 只服务 API），可视化编辑器不进生产——**"做流程的机器"和"跑流程的机器"分开**。
+- **多 worker 参数三件套**：`LANGFLOW_WORKERS>1` + `GUNICORN_PRELOAD=true` + `JOB_QUEUE_TYPE=redis`，共享外部 postgres——**worker 要共享 DB 才不重复算，队列要 redis 才不丢任务**。
+- **生产最低 2Gi RAM/1 CPU×3 副本**，外部 PostgreSQL 强推（SQLite 只够开发）——**单机默认是开发配置，生产至少三副本**。
+- 提升层：工具。触发词：BACKEND_ONLY、无头 runtime、IDE 分离、GUNICORN_PRELOAD、JOB_QUEUE_TYPE、三副本、外部 PostgreSQL。
+
+### 4. 1:10 app-to-worker 比例：Activepieces 规模模型（来源：activepieces.com/docs/install/architecture/workers + configuration/overview + benchmark 2026-07-16/2026-09-07/2026-09-23 实拉，与 r295C 构建三要素合并增量）
+- **规模公式**：workers=峰值并发 flows（每 worker 单 flow，concurrency 1，按单一数字定 fleet 大小）；apps=ceil(workers/10)——**50 并发=50 workers（25 vCPU/50GB）+5 apps**。
+- **Redis 溢出队列**：slots 满了排队，空出来再 drain——**队列是吸收峰值的缓冲，不是要消掉的中间层**。
+- **Postgres CPU 跟踪吞吐**：加 worker 时共享层（DB）必须一起涨，worker 数不是唯一旋钮——**扩容时共享层跟着吞吐走，只看 worker 数会撞 DB 墙**。
+- 提升层：工具。触发词：workers=峰值并发、每 worker 单 flow、1:10、ceil、溢出队列、Postgres 吞吐、共享层。
+
+### 5. 平台无 raw body 则 HMAC 走 Worker：Make webhook 安全面（来源：triumphoid.com《Validate Shopify Webhooks in Make》+ beyondscale.tech《AI Workflow Automation Security》+ community.make.com Meta verify 2026-07-24/2026-06-22/2026-07-22 实拉，与 r296A Pipedream 入站认证合并增量）
+- **无认证 webhook 两类事故**：工作流洪水（耗尽执行额度/反复触发下游）+ 数据注入（恶意 payload 影响 AI 或下游）——**"知道 URL 就能触发"不是可接受的默认**（与 r296A Pipedream 同族：公开端点必认证）。
+- **平台不暴露 raw body → 平台内 HMAC 验证不可行**：Make 的 toString 重序列化不还原原始字节，HMAC 验签必须拿原始请求体——**验证端点放外部 Worker，别在平台内"模拟"**（在平台内再调一个验证端点 = 在平台里再造一个 Worker，严格更差）。
+- **Meta 回调验证**：返回 hub.challenge 原始字符串（无引号无 JSON）+ Content-Type text/plain + 3 秒内响应——**验证握手有协议细节，超时是 Make 执行延迟不是 Meta 的问题**。
+- 提升层：工具。触发词：raw body、HMAC 不可行、Worker 模式、hub.challenge、text/plain、3 秒、洪水、数据注入。
+
+### 6. 组件 API 结构与部署形态：Pipedream 组件开发面（来源：pipedream.com/docs/components/contributing/api + components + connect/components/custom-tools 2026-09-27/2026-08-31/2026-09-15 实拉，全新增量）
+- **组件导出对象九件套**：name/key/type/version/description/props/methods/hooks(activate/deactivate/deploy)/dedupe/run——**hook 生命周期（激活/停用/部署）与运行逻辑分离，状态可维护**。
+- **Sources 可本地部署 vs Actions 仅发布**：source 能从本地代码直接部署或发布到账号；action 只能发布——**"触发器能边改边跑，动作必须走发布"是两类产物的权限差**。
+- **dedupe 策略**：unique（同 key 事件全部去重）与 greatest（保最大 id/时间）——**去重策略是组件属性，不是事后过滤**。
+- 提升层：工具。触发词：组件 API、props、hooks、activate/deactivate/deploy、dedupe、unique、greatest、Sources 可部署、Actions 仅发布。
+
+### 7. description 好坏判据与四层结构：SKILL.md 质量面（来源：agentskills.leo-laboratory.com《3分钟学会 SKILL.md 格式》+ skillmd.ai skill-builder 2026-09-04/2026-09-17 实拉，与 r295C frontmatter 硬约束合并增量）
+- **description 好坏对比判据**：烂="Helps with PDF files"；好="Extract text and tables from PDF files. Use when the user provides a PDF...handles page parsing, table detection, and text extraction with proper encoding"——**要具体（动词+对象）+ pushy（Use when 触发词）+ 能力枚举**。
+- **渐进披露四层结构**：L1 Overview（简要清晰）/ L2 Quick Start（常见用例+可运行示例）/ L3 Details（逐步指南）/ L4 Reference（外链高级内容）——**L1-L3 进 SKILL.md，L4 用链接不内联**（与 r296A 渐进披露合并：metadata ~100 token 判断，正文四层递进加载）。
+- 提升层：可复用 Skill。触发词：description 判据、具体+pushy、Use when、四层结构、Overview、Quick Start、Reference 外链。
+
+### 8. 目录安全分级与托管化：技能分发生态面（来源：agentman.ai《Agent Skills Ecosystem Report 2026》+ agentconn.com《OpenAI Killed Its Skills Catalog》+ topaiskills.com ClawHub 2026-06-25/2026-09-08/2026-08-03 实拉，与 r295B 生态盘点合并增量）
+- **目录安全分级**：SkillsMP ~190 万技能（从 GitHub 抓取，**无审查——安装前自行检查**）vs SkillHub 7000+（AI 评估自动评分）vs Agensi（人工审查+8 点安全扫描）vs Anthropic 官方（人工策展 verified）——**"能找到"≠"能放心装"，按目录的审查模型决定信任级别**（与 r295A Pin SHA/r296A gh skill 同族：供应链卫生）。
+- **ClawHub 向量搜索注册表**：按"你想让技能做什么"的语义相似性找技能，不是关键词匹配——**注册表检索也走语义，不止关键词**。
+- **OpenAI 转变**：开放目录→托管 Plugin Directory（185 条目）——**开放标准吸引贡献，托管市场捕获分发，一厂策展控制发现**；第三方目录要注意被平台吸收的路线。
+- 提升层：可复用 Skill。触发词：目录安全分级、SkillsMP 无审查、Agensi 8 点扫描、ClawHub 向量搜索、Plugin Directory、托管化。
+
+### 9. 并行 agent 的 worktree 隔离与技能工具化：GitHub trending 面（来源：CSDN《GitHub开源项目周报2026年第38周》+ yuxiaopeng.com/Github-Ranking 2026-09-28 实拉，与 r295B 输出形态技能霸榜合并增量）
+- **Worktrunk（max-sixty）**：面向并行 AI Agent 的 Git worktree 管理 CLI——**多 agent 并行改同一 repo 时用 worktree 隔离工作区，不互相踩**（与 r295A 多 agent 协作"交接用不可变中间产物"互补：那个管产物，本条管工作区）。
+- **Humanizer（blader）52.5K★**：抹去 AI 写作痕迹的 Agent 技能——**"去 AI 味"已从提示词技巧变成 5 万星的开源技能产品**（r295B 输出形态技能霸榜的延续证据）。
+- **Anthropic 36 个生物学 speedup kits**：为开源生物学软件栈提速——**"为开源项目写加速补丁"是官方级技能产出形态**。
+- 提升层：工具。触发词：Worktrunk、worktree 隔离、并行 agent、Humanizer、去 AI 味技能、speedup kits。
+
+### 10. 评测器选择与实验化评测：deeplearning 评测课程面（来源：corporate.deeplearning.ai《Evaluating AI Agents》+ justbeingresourceful.com 视频 agent 评测 2026-04-23/2026-06-06 实拉，与 r295A 评测八层合并增量）
+- **评测三步走**：observability（给 agent 加可观测性，看步骤、能调试）→ 组件评测（准备测试用例，选评测器——code-based 或 LLM-as-a-Judge——定指标）→ 组织成实验迭代（改输出质量与 agent 路径）——**评测是流水线：先看得见，再分组件测，最后实验化迭代**。
+- **LLM-as-a-Judge vs code-based 选择**：code-based 确定性高，LLM judge 灵活但要看标准定义——**评测器选择本身是决策点**（r295A 评测八层的补充：那个管测什么，本条管用什么测）。
+- **视频生成评测三方法**：SigLIP 图像-文本相似度（程序化数值可行动）+ LLM judge（自定义标准，抓定性错配）+ 结构化 rubric——**生成类产物评测要数值+语义+规则三管齐下**。
+- 提升层：工作流。触发词：observability、组件评测、code-based、LLM-as-a-Judge、实验化迭代、GPA 量纲、SigLIP、结构化 rubric。
