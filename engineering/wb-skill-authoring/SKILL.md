@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.61.0
+version: 3.62.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -488,13 +488,8 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 判据：① 技能迭代的"改进"要有**坐标**——先把技能拆成一组可枚举的能力维度，每次改只动其中若干维，而不是整体重写赌变好；② 这样进化的好处是**可验证 + 省 token**：改动有方向，回归测试能针对那个能力维度，且不会为探索付出大代价；③ 对自维护技能：每次优化先写清"这次调的是能力空间里的哪一维、预期指标怎么动"，而不是"感觉不够好就整篇改"。
 - 提升层：模型/工作流。触发词：能力空间、定向修订、进化省 token、固定维度分解、技能自我改进。
 
-## 技能控制流外置为显式状态机（EFSM），用状态转移替代「让模型猜下一步」（来源：arXiv 2609.30123《HEXIS》2026-09-24，2026-09-29 r337-Q-B 实拉；与 §技能写作结构 互补——那条管"正文怎么写"，本条管"执行骨架确定性"）
-- 原文：HEXIS 将技能**知识与控制流分离**，编译为扩展有限状态机（EFSM），用**显式状态转移**替代"模型自己推断下一步做什么"。
-- 判据：① 复杂技能的执行顺序不该靠模型临场发挥——把"先 A 后 B、B 失败回 A"这类控制流写成**显式状态机**，模型只在每个状态里做该状态的事，不确定"下一步"时查状态表而非猜；② 知识（领域内容）与控制流（流程）分离后，改流程不碰知识、改知识不破流程，利于维护和测试；③ 适用边界：纯线性或单步技能用状态机是过度设计，只有当技能有**分支/回退/多状态**时才值得外置控制流。
-- 提升层：工作流/模型。触发词：EFSM、控制流外置、显式状态转移、知识与控制流分离、确定性执行骨架。
-## Skill 规范硬约束与迭代流程（来源：platform.claude.com agent-skills best-practices 2026-09 + anthropic complete guide + support.claude 2026-07 + skillmd 2026-06/07 + agenticskills skill-creator 2026-04，r315C）
-- **frontmatter 硬规范**：name ≤64 字符（仅小写字母/数字/连字符，禁 XML 标签，禁 reserved words anthropic/claude）；description 非空 ≤1024 字符禁 XML；可配 allowed-tools（无需询问直接用）/model（指定模型）。→ 判据：命名与描述先过长度与保留词检查。
-- **description 三要素**：what it does AND when to use it + trigger phrases（"sprint"/"Linear tasks"/"create tickets"）+ clear value proposition。→ 判据：description 必须能回答"做什么+何时用+触发词"。
-- **自由度原则**：include only context it doesn't have（只写模型没有的上下文）；set appropriate degrees of freedom——高自由度开环任务（creative）/低自由度脆弱操作（精确格式/财务）；complex tasks 用 workflows（clear sequential steps+checklists）；implement feedback loops。→ 判据：自由度与任务脆弱度匹配。
-- **skill-creator 迭代流程**：decide→draft→test prompts→claude-with-access-to-skill 跑→qualitative+quantitative 评估→后台补 quantitative evals。→ 判据：新技能=草稿→测试 prompt→双维评估迭代，不是一次写成。
-- **目录结构**：SKILL.md（frontmatter+Markdown 指令）+scripts/（可执行）+references/（按需载入）+assets/（输出用模板图标字体）。→ 判据：资源按用途分三目录，不混放。
+## 技能控制流外置为显式状态机（EFSM）：知识与控制流分离，用显式状态转移替代模型猜下一步（细则见 KB，2026-09-30 r320A 下沉）
+
+## 卸载必须留「显式卸载」marker（enabled: false tombstone），阻断启动修复静默重装；重装不静默恢复启用（来源：docs.openclaw.ai cli/plugins/uninstall-and-update，2026-09-30 r320A 实拉）
+
+## 撤销与审核分层：吊销只阻断后续发布、不推翻既有审核结论；恢复走 successor 重跑检查并保留失败尝试为审计史（来源：docs.openclaw.ai clawhub/publishing，2026-09-30 r320A 实拉）

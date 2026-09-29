@@ -1616,3 +1616,9 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - 原文：每个 trial 都应"isolated by starting from a clean environment"；运行间不必要的共享状态（leftover files / cached data / resource exhaustion）会造成 **correlated failures**（基础设施抖动而非 agent 表现）；**共享状态还会人为抬高成绩**——"in some internal evals we observed Claude gaining an unfair advantage on some tasks by **examining the git history from previous trials**"。另：前沿模型 **0% pass@100 通常是任务坏了**（broken task）而非 agent 不行，应回头查 task spec 与 grader；**capability eval 应从低通过率起步**（给团队一座可爬的山）、**regression eval 应接近 100%**，高通过率的 capability eval 可"毕业"为持续运行的 regression suite。
 - 判据：① 污染不只让分数变低，**也会让分数虚高**（agent 读到上一轮的 git history / 残留文件），因此"跑多次取平均"之前先保证每次从干净环境起；② 多个 trial 因同一环境限制（如内存）而失败时**它们不独立**，结果不可用于衡量能力；③ 0% 通过率先怀疑**任务定义与评分器**，不是模型；④ 评测集要分两类管理：capability 用来爬坡（低分正常）、regression 用来防退步（必须近满分），capability 稳定高分后**转为 regression 常跑**，避免评测饱和后失去改进信号。
 - 提升层：工具/工作流。触发词：trial 隔离、干净环境、git history 作弊、correlated failures、pass@100=0%、capability 毕业 regression、eval saturation。
+
+
+## 静态扫描结论有有效期：对抗会针对扫描器自我演化，把「这次没扫出」当成长期安全是错的（来源：arXiv 2609.32400《SkillDRE: Dual-Stage Red-Team Evolution of Agent Skills》2026-09-26，2026-09-30 r320A arxiv.org 实拉 200）
+- 原文：SkillDRE 用 **pre-execution + runtime 双阶段反馈闭环**自动演化完整恶意技能包；在 SkillsBench 上跨四个受害者模型 **average attack success rate of 45.28%, exceeding the strongest baseline by 40.3%**，且 **final submitted skills receive no SkillScan findings and largely preserve benign-task performance**；作者结论 **evaluating either defense stage in isolation can miss the resulting attack capability**。
+- 判据：① 静态扫描"通过"只是**某一时刻、针对某一版扫描器**的结论；攻击者把扫描器当优化目标（scanner-guided evolution），因此结论必须带**显式衰减假设**——标注扫描器版本与扫描时间，超期视为未验证；② 单阶段评估会系统性低估攻击能力：预执行过关但运行期成功、或运行期修补又引入新扫描告警，两边互相"补刀"，只有跨阶段闭环评测才看得见；③ 与 §verify≠scan 升级关系：那条说"扫描不等于验证"，本条补"扫描结论还会随时间与对手演化而失效"；④ 可操作：技能/制品的安全结论写"扫描器 X 版本于 T 时刻无 findings"，并设重扫周期；对高权限技能，静态过关后仍需运行期行为校验。
+- 提升层：可复用 Skill / 安全边界。触发词：静态扫描有效期、红队演化、SkillDRE、ASR 45.28%、扫描器即优化目标、双阶段闭环。

@@ -383,3 +383,9 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 形态：交互式终端里，安全策略 warn 会打印原因 + findings 并要求输入技能名确认；但**审查输出一旦超过上限，在提示之前就失败**
 - 判据：**提示本身就是攻击面**——提示前就要确认"我能完整呈现风险"；呈现不完整 → 不提示、直接失败
 - 可复用：任何"要不要继续"的确认框，都要先校验"风险信息是否完整呈现"，不完整就别问，直接终止
+
+
+## 超时不是回滚授权：判死与回滚是两个门（来源：docs.openclaw.ai/cli/update.md repair-and-recovery 段，2026-09-30 r320A 实拉核验）
+- 原文：**Aggregate expiry reports `update-activation-timeout` and retains ownership until writers settle; it does not authorize rollback or restart.** / **A verified rollback does not automatically start triage**: the previous generation is running again, and the report keeps the failing check as the reason. / **A command whose owner exits or loses its lease cannot start another native mutation or commit its pending config changes.**
+- 判据：① 「探测超时 → 判死」只完成"报告 + 保留所有权"，**不自动授权任何修复动作**——把超时当回滚触发条件，会在未确认状态下把流量交回上一代，制造"回滚掩盖故障"；② 回滚是一道**独立门**：需要已验证的回滚（verified rollback）才允许把服务交回前一代并让其继续服务，且**回滚成功不等于进入分诊/修复流程**，两者互不自动触发；③ 所有权/租约是 mutation 的门——失去 owner/lease 的进程不能再启动新的变更，也不能提交挂起配置，这条要写进"谁有权改"的判据；④ 通用化到排障：观察到超时 → 先保留现场与所有权 → 由人或显式策略决定回滚，禁止"超时即回滚"的隐式耦合。
+- 提升层：工作流 / 工具。触发词：回滚授权、超时不是回滚、判死与回滚两门、ownership lease、verified rollback。

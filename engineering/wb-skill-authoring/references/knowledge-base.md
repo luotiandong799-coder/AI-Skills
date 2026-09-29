@@ -2433,3 +2433,93 @@ SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一
 - 原文：子代理定义可来自托管策略 / CLI / 项目 / 用户 / 插件多层，其中插件与托管层的同名定义 **take precedence over project and user subagents with the same name**；跨嵌套项目目录时 **the definition closest to the working directory wins**；另有**并发子代理上限 20**，会话中已有 20 个再 spawn 会直接失败。
 - 判据：① 多来源定义冲突时**不能靠"就近覆盖"的直觉**——实测优先级是"托管/插件 > 项目 > 用户"，与"越具体越优先"的直觉相反，落规则前先查官方链；② 同名冲突的裁决维度有两个且互不相同：**来源层级**（决定谁优先）与**目录距离**（同层级内谁优先），两条都要写明；③ 并发上限是**硬失败**而非排队，编排并发子代理时要么自己限流到 20 以下，要么捕获该失败并降级；④ 自研：给同类资源的加载写一张显式优先级表并在冲突时**打印"谁赢了、依据哪一条"**，禁止静默取第一个。
 - 提升层：工具/工作流。触发词：子代理优先级链、同名冲突、closest to working directory、并发上限、precedence。
+
+
+## 卸载必须在原位留下「显式卸载」标记，否则启动修复会把已卸载的插件静默装回来（来源：docs.openclaw.ai/cli/plugins/uninstall-and-update.md，2026-09-30 r320A 实拉核验）
+- 原文：`uninstall` removes plugin settings from ... **It leaves only an exact `enabled: false` entry for each removed plugin id.** / **This marker records the explicit uninstall choice so remaining model, provider, or channel selections do not automatically reinstall the package during startup repair.** / **Reinstalling does not silently re-enable it; enabling the plugin again replaces the marker.**
+- 判据：① 「卸载」不是「删除记录」，而是**写入一条否定状态的决策记录**——没有这条 marker，"剩下一个引用"就能在启动自检时把包重新拉回来，卸载等于没卸；② 与 §安装来源决定可更新性 配对才构成完整生命周期：来源决定"能不能更新/从哪更新"，marker 决定"不许被自动恢复"；③ 通用化到技能库：删除一个技能后，必须在同一位置留一条 `enabled: false` 的 tombstone，且**重装不静默恢复启用**，需要用户显式再启用才替换 marker；④ 反例自检：若只删目录/只删索引，下次同步会把上游同名技能重新拉起——这是"删了又回来"类 bug 的根因。
+- 提升层：工作流 / 可复用 Skill。触发词：卸载残留态、enabled:false marker、tombstone、自动重装、显式卸载标记。
+
+## 撤销与审核是两层：吊销只阻断后续发布，不能推翻既有审核结论；恢复走 successor 并保留失败尝试为审计史（来源：docs.openclaw.ai/clawhub/publishing.md，2026-09-30 r320A 实拉核验）
+- 原文：**Current token or publisher-access revocation still blocks publication. It cannot override moderation or revive an active attempt.** / 恢复时 **creates a successor with the same retained artifacts and version, runs new security checks, and preserves the failed attempt and original authorization as audit history**，且 **without changing the old workflow or its outcome**；trusted publisher 侧 **Deleting trusted publisher config is the rollback path.**
+- 判据：① 「吊销权限」与「撤销已发生的结论」是两条不同的权力——前者只关门（后续不发），后者要改写历史（已过审的不算数）；把两者混在一个 `revoke` 动作里，等于让一次凭据事件静默改写审核史；② 恢复的正确形态是 **successor（新尝试）+ 重跑检查 + 旧尝试留档**，不是"原地复活"——旧 outcome 不可变，新结论独立成立；③ delete 作为 rollback path 说明**回滚可以是"删掉授权配置"这种窄动作**，不必整体删除制品；④ 通用化：技能/规则的撤销操作要拆成「阻断后续」与「推翻既有」两个门，默认只开前者，后者需独立授权并留审计史。
+- 提升层：工作流 / 安全边界。触发词：撤销与审核分层、revoke 不推翻、successor 恢复、审计史保留、rollback path。
+
+
+<!-- r320A 自 SKILL.md 下沉 -->
+## 追加触发词只准加在末尾；加在开头会挤掉首句（2026-09-20 本仓库实修，来源：WorkBuddy 线 D4 描述层重构）
+
+**实测事故**：本仓库 7 个 `wb-*` 技能长期用「把新一批触发词补到 description 开头」的方式增补。累积若干轮后，两个技能的首句被彻底挤走——`wb-skill-authoring` 的 description 以 `、评估型输出、按能力透视、` 开头（**一个孤立顿号起头**），`wb-ponytail` 以 `、产物存活期、TTL、` 开头，真正的功能句"Skill 的写法与体检（…）""写代码 / 实现功能类任务前的决策阶梯（YAGNI）"被推到**第 200–300 字符之后**。
+
+**为什么这是硬故障，不是排版问题**
+- 路由是按 description 做语义匹配，**开头权重最高**。首句被位移 → 路由器读到的是术语碎片，**该技能"是什么"根本读不出来** → 直接压低触发率，而且因为技能还能被别的词误触发，故障**长期不可见**。
+- 越补越糟：每轮都对，累积起来错。**这是"局部正确、全局腐烂"的典型。**
+
+**纪律（三条，机检可验）**
+1. **追加一律加在末尾**（`触发词：…` 段尾部续写），**永远不插到 description 开头**。
+2. **首句必须在**：description 前 **30 字符内**必须出现功能句（"X 是…" / "当用户要…时使用"）。不得以 `、` `,` `。` 等标点起头。
+3. **长度硬上限 1024 字符**（见上节官方规格）。同一次事故里 6 个技能的 description 悄悄涨到 **1640–2879 字符**，**越界 1.6–2.8 倍且无人报警** —— 因为没有任何检查在看长度。**写法越"勤快"，越容易静默越界。**
+
+**审计项（补进本技能巡检清单）**
+- `首句位置`：功能句起于前 30 字符内 ✅/❌
+- `首字符`：不得是标点
+- `description 长度 ≤ 1024`
+- `触发词段只出现在末尾`；`无重复的 触发词： 标记`（同次事故中 `wb-artifact-verification` 有 **5 个** `触发词：` 段头）
+- `全文无 、。 连排 / 。。 断句残留`
+
+**术语 vs 触发词要分开处置**
+description 里出现的**内部方法论术语**（"假性不收敛""凭据读穿""L0/L1/L2""抑制兜底""只移植结构不移植假设"）**永远匹配不上用户的口语**，却**按字计费地常驻**。处置判据：
+- 用户**真的会说**的 → 留在 description（这是路由的输入）
+- 只有**读技能正文的人**才需要的 → **外置到正文附录**（`## 技能正文的长度本身就是训练信号，指令命名"输出"还是"状态"决定模型的服从方式（来源：topaiskills.com「wait-what-skill-faq」（Matt Pocock `wait-what`，skills.sh #266 / 146,544 installs，三行技能）+ 同族 domain-modeling 参考技能失败模式，2026-09-21 实拉，与 §追加触发词只准加在末尾、§description 三条机检纪律 互补——那两条管"描述写多长、往哪加"，本条管"**正文写多长**"与"**一句话指令里的动词指向谁**"）
+
+- **原文事实**：`wait-what` 正文**只有三行**，设计文档原文 "**Three lines is the design. A longer skill teaches the model that verbosity matters.**"——更长的技能会教会模型"啰嗦是重要的"。它的措辞刻意避开"be concise"：原文明说**"be concise" 命名的是模型的输出，模型于是靠裁词来服从，结果更短也更不清楚**；而 **"wait, you lost me" 命名的是听者的状态，模型于是回退一步并补上你缺的那段前提**。文章点名三个反例 `/tldr` / `/no-fluff` / `/talk-normal`，都会过度校正成"更短但同样不清楚"的电报体。另一条：**重述范围说 "that" 而不是 "that last message"** —— 让你没跟上通常不止一段，把回退距离交给模型决定。
+- **判据**：
+  1. **技能正文按"最小够用"写，多写的每一段都在给模型上课**。判据：**删掉一段后触发与执行不受影响，那一段就是在教坏模型**（与 §渐进披露 分工：那条管按需加载更多文件，本条管**常驻正文的绝对长度**）。
+  2. **写指令前先问：这句话命名的是"产物"还是"状态"**。判据：**命名产物 → 模型在该产物维度上过冲（要简洁 → 裁词丢信息）；命名状态/失败 → 模型去修原因（我没跟上 → 补上下文）**；想同时要"更少字"和"更多上下文"，就命名后者。
+  3. **重述类指令不要把范围钉死在一句上**。判据：**说"重讲那个"而不是"重讲上一句"，把回退距离交给执行方**——它比你知道是哪一段开始断的。
+- 提升层级：可复用 Skill（正文长度与指令措辞）+ 模型（指令如何被服从）。
+- 触发词：三行即设计、技能长度是训练信号、verbosity matters、命名输出还是状态、be concise 陷阱、wait you lost me、重述范围、长技能教坏模型。
+<!-- 2026-09-29 r290 下沉：topaiskills 2026-09-21 批次 4 节（契约声明/参数化知识非真值/frontmatter 空行/被引用静默没加载）→ references/knowledge-base.md §r125 批 -->
+
+---
+name: wb-skill-authoring
+description: >-
+  Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
+version: 3.61.0
+---
+
+# wb-skill-authoring（技能层：写得能被触发、能被执行）
+
+来源：WaytoAGI 精选 2026-09-01《Agent Skill 100 问》（skill 描述写法、触发排查、脚本/参考文件拆分、跨工具迁移、安全审查）。
+核心判断：**skill 的价值 = 能否在该触发时被触发 + 读到的内容是否够执行。** 写得好但没人触发 = 不存在。
+
+**与相邻技能的分工**（防抢触发）
+| 场景 | 走谁 |
+|---|---|
+| 从零新建一个技能 | 平台内置 `skill-creator`（官方结构 / frontmatter / 脚本规范） |
+| 改造 / 体检**已有**技能（触发不准、描述过宽、去重合并、安装后接线、触发评测、安全审查） | **本技能** |
+| 长内容（书 / 长视频 / 播客 / 课程）蒸馏成技能 | `cangjie-skill`（本技能只管蒸馏产物落地后的写法与验收） |
+
+> 本节（设计原则）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
+> 本节（写"什么时候不该跑"：STOP / WAIT / PROCEED 快速路径表）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
+
+## 技能市场的商业化层：付费/分润、插件入口、赛事供给——规模数字要按面拆开读（来源：腾讯 SkillHub 技能广场 `skillhub.cn/skills?sortBy=score` 2026-09-28 r209-A 独立实拉；导航区同时挂出「插件 NEW」`skillhub.cn/plugins`、「SkillPay」、「大赛」`skillhub.cn/contest` 三个入口；页面声明共 17.0 万技能，来源分「全部来源 / 认证企业 / 用户自主发布」，排序面分 score / 近期飙升 / 下载量 / 最近上新，部分技能标「需配置 API Key」）。与 §技能家族与多渠道分发 互补——那条管"一个真身多发布面"，本条管"市场用什么机制把供给拉进来"
+- **市场进入商业化阶段后，"分润/付费"本身成为一个可核验信源**：此前 SkillDepot 分润因缺可信源长期 pending；本轮在 SkillHub 官方导航直挂 SkillPay 入口，说明技能付费/分润已是一等入口而非第三方传闻。判据：**判断"技能能不能卖钱"不要找二手文章，去看官方市场导航有没有独立入口**。
+- **供给端三条腿要分开看：发布、售卖、激励**（发布 Skill / SkillPay / 大赛），一条腿的繁荣不代表另两条——本轮 17.0 万技能是"发布"口径，与下载量、score 不同面。判据：**引用市场规模数字必须写明是哪个面的口径**；"17 万技能"不等于"17 万有人用"。
+- **来源标签先于内容判断**：页面把来源分为公开渠道 / 认证企业 / 用户自主发布，并在页脚声明"使用前请注意识别相关风险"。判据：**市场自己都不背书的来源，使用者更不能默认可信**；采纳第三方技能先看来源标签再看描述。
+- **"需配置 API Key"是准入门槛信号，写在卡片上而非藏在文档里**：头部技能（腾讯文档、ima-skills、钢联 AI）在列表页直接标出。判据：**有前置依赖的技能必须把依赖写在能被看到的地方**，否则用户安装即失败。
+- **付费技能的"验收"验的是支付链路不是技能质量；争议与退款整体让渡给支付渠道，平台声明自己不是交易方**（来源：腾讯 SkillHub SkillPay 官方门槛 + bundle 内付费治理字段，api.skillhub.cn + skillhub.cn，2026-09-28 r314-Q-B 实拉；闭合 WB r210/r211/r212 连续三轮 pending 的验收口径）：原文门槛 **"提交后平台将核验完整的微信 AI 支付下单链路，校验无误才可审核通过"**；价格约束 **最小 0.01 元、最大 100 元、单位「元/次」**，字段面 `paid`/`paidWhitelistOnly`/`amount`/`currency`/`pricing`；入驻需**人脸实名**；退款原文 **"用户可在对应微信/支付宝账单发起咨询或退款，平台依据所选渠道规则协助处理"**；平台免责 **"不作为该笔交易的收款方或服务实际提供方"**。判据（三点可迁移）：① 凡我方交付物涉及外部副作用（推仓/发消息/写库），**验收标准须含端到端链路跑通且状态可回查**，只看产物合格不够；② "协助处理 + 依渠道规则"是把争议责任外置到既有仲裁机制——遇到"我改坏了用户的东西"同理（明确指向 git 历史/回收站这类既有回滚机制，而非自承诺恢复）；③ 若要给技能加付费面，必须同时备齐"实名 + 链路核验 + 免责定位"三件，缺一就不该开。
+- 提升层：可复用 Skill / 工作流。触发词：技能付费、SkillPay、技能分润、技能市场、大赛、插件入口、来源标签、认证企业、需配置 API Key、市场规模口径。
+
+
+<!-- r320A 自 SKILL.md 下沉（正文预算腾挪） -->
+## 技能控制流外置为显式状态机（EFSM），用状态转移替代「让模型猜下一步」（来源：arXiv 2609.30123《HEXIS》2026-09-24，2026-09-29 r337-Q-B 实拉；与 §技能写作结构 互补——那条管"正文怎么写"，本条管"执行骨架确定性"）
+- 原文：HEXIS 将技能**知识与控制流分离**，编译为扩展有限状态机（EFSM），用**显式状态转移**替代"模型自己推断下一步做什么"。
+- 判据：① 复杂技能的执行顺序不该靠模型临场发挥——把"先 A 后 B、B 失败回 A"这类控制流写成**显式状态机**，模型只在每个状态里做该状态的事，不确定"下一步"时查状态表而非猜；② 知识（领域内容）与控制流（流程）分离后，改流程不碰知识、改知识不破流程，利于维护和测试；③ 适用边界：纯线性或单步技能用状态机是过度设计，只有当技能有**分支/回退/多状态**时才值得外置控制流。
+- 提升层：工作流/模型。触发词：EFSM、控制流外置、显式状态转移、知识与控制流分离、确定性执行骨架。
+## Skill 规范硬约束与迭代流程（来源：platform.claude.com agent-skills best-practices 2026-09 + anthropic complete guide + support.claude 2026-07 + skillmd 2026-06/07 + agenticskills skill-creator 2026-04，r315C）
+- **frontmatter 硬规范**：name ≤64 字符（仅小写字母/数字/连字符，禁 XML 标签，禁 reserved words anthropic/claude）；description 非空 ≤1024 字符禁 XML；可配 allowed-tools（无需询问直接用）/model（指定模型）。→ 判据：命名与描述先过长度与保留词检查。
+- **description 三要素**：what it does AND when to use it + trigger phrases（"sprint"/"Linear tasks"/"create tickets"）+ clear value proposition。→ 判据：description 必须能回答"做什么+何时用+触发词"。
+- **自由度原则**：include only context it doesn't have（只写模型没有的上下文）；set appropriate degrees of freedom——高自由度开环任务（creative）/低自由度脆弱操作（精确格式/财务）；complex tasks 用 workflows（clear sequential steps+checklists）；implement feedback loops。→ 判据：自由度与任务脆弱度匹配。
+- **skill-creator 迭代流程**：decide→draft→test prompts→claude-with-access-to-skill 跑→qualitative+quantitative 评估→后台补 quantitative evals。→ 判据：新技能=草稿→测试 prompt→双维评估迭代，不是一次写成。
+- **目录结构**：SKILL.md（frontmatter+Markdown 指令）+scripts/（可执行）+references/（按需载入）+assets/（输出用模板图标字体）。→ 判据：资源按用途分三目录，不混放。
