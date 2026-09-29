@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.55.0
+version: 3.56.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -496,6 +496,16 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 原文六状态：`Pass`（"No visible issue above low risk was found"）/ `Review`（"Read the findings before installing. The release may still be legitimate."）/ `Warn`（"high-impact concern or warning signal"）/ `Malicious`（"Do not install."）/ `Pending`（"Audits have not finished yet."）/ `Error`（"The audit could not be completed."）；并明示："Audits are strong safety signals, but they are **not a guarantee** that a release is risk-free. Always use judgment before granting sensitive access."；"**A `Pass` is reassuring, but it does not replace your own judgment.** This matters most for tools that can publish content, edit data, run commands, read files, or access production systems."；风险等级定义："Risk level describes **blast radius**: how much power the release appears to have **if you use it as intended**."
 - 判据：① **「有没有问题」与「能造成多大破坏」必须分成两个轴**——状态轴回答"扫描发现了什么"，风险/爆炸半径轴回答"按它的设计正常使用时，它手里有多大权力"；一个没有恶意但能发内容、改数据、跑命令、读生产系统的技能，状态可以是 Pass 而爆炸半径极高；只看状态会把"干净但权力很大"误判为"可以放心装"；② **"按预期使用"是风险的定义前提**——风险等级衡量的不是"它有多可能被滥用"，而是"你照着它声明的用途用，它能碰到什么"；评估第三方技能时先读它**声明要哪些凭据/权限/环境变量**（官方列为安装前必查项），再决定这个权力面能不能接受；③ **通过不等于担保，且官方必须自己把这句话写出来**——审计方主动声明"不替代你自己的判断"是可核验的诚实信号（与 §3.36.1 作者自评相反：作者自夸是低质信号，审计方自限是高质信号）；④ **Pending 与 Error 是两种不同状态，不能都当"未知"处理**——Pending 是还没扫完（可以等），Error 是扫不动（需要别的手段），把两者混成一个"未判定"会让人一直等一个永远不会完成的结果。
 - 提升层：可复用 Skill / 安全边界。触发词：安全审计状态、blast radius、爆炸半径、按预期使用的权力、Pass 不是担保、Pending vs Error、安装前必查权限。
+
+## 技能须声明式写清运行依赖，且依赖缺失校验报告必须「绕开消费侧白名单」独立出具（来源：docs.openclaw.ai《skill-format》+ cli/skills `skills check` 2026-09-29 r334-Q-A 实拉核验；与 §声明式依赖清单 requires.env/SecretRef 互补——那条管"怎么声明"，本条管"声明缺失后校验报告能否被消费侧遮蔽"）
+- 原文：技能 frontmatter 用 `requires.env` / `requires.bins` / `requires.config` 写明运行前提；`skills check` 校验依赖缺失时，**报告不被 agent 侧的技能白名单遮蔽**——即使某技能在白名单里被放行，依赖缺失依然独立报出。
+- 判据：① 依赖声明是「机器可读的前提契约」，让装技能的环境在加载前就能算出"我缺什么"；② **校验报告必须独立于消费侧准入**——白名单决定"这个技能能不能用"，依赖检查决定"这个技能在当前环境能不能跑起来"，两者职责不同；若依赖缺失的报错被白名单的"已放行"状态盖掉，技能会在异机静默失败（用户看到的是"已授权"，实际跑不起来）；③ 写技能时把"我需要什么"显式声明，并把缺失校验设计成**不被上层放行逻辑吞掉**的独立信号。
+- 提升层：工具/可复用 Skill。触发词：requires.env/bins/config、依赖缺失不受白名单遮蔽、skills check 独立报缺、异机静默失败、声明式运行依赖。
+
+## 改变技能解析/安装源的优先级必须显式确认，不得静默把新市场设为优先源（来源：skillhub.cn/install/skillhub.md 首接入问答门槛「是否将 SkillHub 设为优先技能安装源」2026-09-29 r334-Q-A 实拉核验；与 §抓取边界声明 互补——那条管"哪些页不该被索引"，本条管"选谁当默认源要人拍板"）
+- 原文：SkillHub 首次接入时有一个**显式确认门槛**——是否将其设为「优先技能安装源」需要用户确认，而不是安装流程默认就把它顶到最高优先级。
+- 判据：① 安装源的优先级 = 技能的**解析与信任根**——谁优先，谁的技能就被默认加载、谁的签名/审核口径就成了事实标准；把新市场静默设成优先源，等于未经确认就把解析权交出去；② 这是**解析源劫持**的入口：一个被静默提权的市场，可以把自己仓库里的同名/仿冒技能顶掉你原本信任的来源；③ 任何"换默认源/加优先源"的动作都要做成**显式确认门**，确认项里写清"设成优先源后，原本的 X 源降为次选"。
+- 提升层：工作流/安全边界。触发词：优先安装源、解析源劫持、显式确认门、静默提权安装源、首接入确认门槛。
 ## Skill 规范硬约束与迭代流程（来源：platform.claude.com agent-skills best-practices 2026-09 + anthropic complete guide + support.claude 2026-07 + skillmd 2026-06/07 + agenticskills skill-creator 2026-04，r315C）
 - **frontmatter 硬规范**：name ≤64 字符（仅小写字母/数字/连字符，禁 XML 标签，禁 reserved words anthropic/claude）；description 非空 ≤1024 字符禁 XML；可配 allowed-tools（无需询问直接用）/model（指定模型）。→ 判据：命名与描述先过长度与保留词检查。
 - **description 三要素**：what it does AND when to use it + trigger phrases（"sprint"/"Linear tasks"/"create tickets"）+ clear value proposition。→ 判据：description 必须能回答"做什么+何时用+触发词"。
