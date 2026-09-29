@@ -294,3 +294,40 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 
 ### 多跳与可答性
 **92% RAG 系统多跳查询失败**；**answerability calibration（可答性校准）比检索覆盖更关键——检索到但不承认答不出是端到端主瓶颈**；query diversity 胜过异构检索器集成；多跳拆成子查询链每跳独立检索+验证。多跳失败先查拒答再查检索。
+## r307B Agent 记忆系统与跨会话架构（来源：arXiv 2603.07670 + zylos 2026-06-08 + arXiv 2605.08442 + mem0 2026-09-03 实拉）
+
+### 记忆四层模型与 write-manage-read 循环
+**working（当前任务上下文，本 turn）/episodic（时间戳事件日志）/semantic（蒸馏去重事实）/procedural（可执行技能+工具契约，存 Git/prompt registry/tool manifests）**；naive 实现把三类全塞一个向量库=错误形态；**记忆是 write–manage–read 循环与感知行动耦合**；五机制族：context-resident compression/retrieval-augmented stores/reflective self-improvement/hierarchical virtual context/policy-learned management；**Pattern A monolithic context（容量封顶易漂移）vs Pattern B context+retrieval store（生产工作马）**。
+
+### 三 store 分离与分层加载
+**加载顺序：procedural 先（定义行为）→semantic 次（用户/域上下文）→episodic 最后（过滤相关性）——比纯 episodic replay 省约 70% token**；AdMem procedural 检索用"有效性评估+上下文相似度"双信号；每轮三类全量注入=上下文膨胀器。
+
+### 记忆系统谱系
+**simple vector stores 缺关系与时间→知识图谱保关系→时序 KG 加 validity periods（时间感知查询）**；MemGPT 操作系统虚拟内存（in-context/external 智能交换）；Titans neural long-term memory；A-MEM Zettelkasten 自进化知识网络；HippoRAG 图记忆；**graph-based extraction：LLM 提 SPO 三元组+创建/失效时间戳（Mem0g/Zep）**。查询复杂度决定记忆形态：简单回忆向量、关系推理 KG、时间敏感 temporal KG。
+
+### 会话压缩三层 HOT/WARM/COLD
+**HOT=当前会话+即时事实（小时-天）/WARM=偏好+项目+近期决策（2K-8K token，天-周）/COLD=历史+完成项目（无限，vector-indexed，月-年）——减少约 60% 活动上下文**；每 10-20 轮跑总结 pass（20 条消息压成 200-token summary 从 hot 移 warm）；**rolling summary=近期逐字+滚动摘要+外部记忆**；memory decay 低重要度事实过期丢弃；LazyMem 延迟到查询时构建记忆。压缩是迁移层级不是丢信息。
+
+### 记忆评测基准
+**LongMemEval 五能力：information extraction/multi-session reasoning/temporal reasoning/knowledge updates/abstention——商用助手持续交互记忆掉 30%**；multi-session synthesis 最难（多分离会话信息合成）；knowledge updates：47 轮偏好变了用新偏好吗；Memora 周/月/季×remembering/reasoning/recommending；**FAMA 指标惩罚依赖过期记忆**。评测必含 knowledge updates+abstention，只测回忆率漏"该忘没忘/该拒答没拒答"。
+
+### 记忆工具选型
+**Mem0：LLM 驱动提取+比较+反射（ADD），存提取事实非原文片段，比 naive RAG 省 80-90% token；分层 user/session/agent**；**Zep/Graphiti：时序图跟踪"事实何时为真"，双时序建模（world-time vs acquisition-time）防静默覆盖**；**Letta（=MemGPT）：agent 主导 read/write/edit，虚拟内存分页，可审计**；选择判据：自动调和→Mem0；时间审计→Zep；自主长期 agent→Letta；**RAG 管文档知识库，记忆系统管用户/会话记忆**。
+
+### 检索时机
+**两时刻分离：LLM 调用前检索注入 + 响应交付后异步提取写入（不阻塞）**；每 turn 检索 50-200ms 开销，亚秒需批量/混合；**session-start scan：首条消息前用环境信号（时间/打开项目/最近文件）预取**；just-in-time vs upfront retrieval 是上下文工程最重要架构决策；**Hot-path（完成时刻即时纠错）vs Dreaming（离线批处理总结高阶规则防 memory bloat）**。
+
+### 写入决策
+**写路径三决策：extract→deduplicate→resolve conflicts；不是每条消息都值得存**；semantic facts 新覆盖旧，episodic events 都保留；**write gate 三分类：allow（默认检索）/hold（存但不默认检索）/discard（丢）**；**四操作：Merge（合成更丰富记录）/Supersede（新覆盖旧留历史）/Deduplicate（语义相似检测——同一事实 4 条不同措辞是常见失败）**；composite score=recency+importance+relevance；significance-gated consolidation 累积重要性超阈值才触发反射。
+
+### 记忆毒化防御
+**injection-execution dissociation：阻塞注入≠阻塞执行——恶意指令存储率 97.5% 但执行率 0-95% 无相关性，防存储与防执行都要**；PMPA 诱导写入持久记忆跨会话触发；Trojan Hippo 休眠载荷按敏感话题触发；**MERIDIAN：召回记忆进模型前筛查——standing directive+provenance untrusted → 隔离**；user-prompt-only writes 把 ASR 降到 0-5% 但失助手输出记忆；transient threats become persistent，XPIA 变连续 XPIA。记忆是持久注入面：写入筛查+召回前筛查+provenance 标记三层都要。
+
+### 文件式记忆
+**CLAUDE.md（用户写指令）+ Auto memory（agent 自写 MEMORY.md，上限 200 行/25KB 启动加载）**；memory tool 文件操作跨会话积累，just-in-time 检索；**focused stores：每用户/域/项目独立小存储，各 10K 上限**；memories.delete 清理陈旧冗余；会话无默认持久记忆是隔离设计。文件式记忆上限即约束，主动剪枝是日常。
+
+### 生命周期治理
+**两写策略：turn-end extraction（小模型每轮提取 typed+dedup）vs session-close reflection（大模型边界总结）**；不主动管理→客服引用 4 个月前已解决纠纷当活跃；**superseded 标 INVALID 不删保审计（AgentCore）**；**namespace 设计错=无关上下文浮现或用户记忆互漏**。
+
+### 生产五阶段管线
+**提取→关系判定（LLM 定记忆间关系）→按类型存储（勿全塞一个向量库）→检索→审计（每条操作审计轨迹）**；实体图连接人/账户/票据/文档/工具；四层记忆全景：in-context/external-vector/episodic-session/parametric（模型权重）——各不同延迟/成本/持久/治理属性。记忆系统是管线不是存储。
