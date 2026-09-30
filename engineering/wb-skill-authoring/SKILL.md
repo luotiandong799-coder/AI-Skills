@@ -156,11 +156,7 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **元数据字段三态语义 + 「改元数据即发新版」的批量副作用（来源：ClawHub publishing 本机实拉，r326C）**：本章已下沉 `references/knowledge-base.md`（r326C）。
 - **能力授予平面独立于「发现/归属」平面：库归属只给管理与发现权，不自动授予其声明的工具/凭证/安装权；共享 Gateway 是单一信任域，密钥不得进入 skill 内容（来源：docs.openclaw.ai/tools/skills.md 39,741B，2026-09-30 r327A 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r327A）。
 - **指令 vs 知识分离：静态参考资料外置到按需检索，不塞进每次全量加载的指令（来源：www.activepieces.com/docs/agents/knowledge.md 2,613B，2026-09-30 r327C 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r327C）。
-## 测试分层分类法：四层各管一种失败模式，选错层=慢/冗余/静默无效（来源：Activepieces《Testing Strategy》handbook 5,560B，2026-09-30 r336C 独立实拉）
-- **原文**：「Activepieces tests live in four distinct layers. Each layer owns a different failure mode — picking the wrong layer produces slow, redundant, or silently ineffective tests.」四层 = Unit（单模块/函数、可 mock 协作者、无真实 I/O）/ Integration（多模块对真实基础设施：真实 DB/队列/文件系统/网络/V8 isolate）/ E2E（Playwright 跨进程）/ Smoke（bash+curl 脚本）。
-- **判据**：① **测试不是「越多越好」，而是要按失败模式选层**——单测管逻辑错、集成管协作错、E2E 管端到端链路错、Smoke 管「还活着吗」；把本该在集成层验的协作写进单测并 mock 掉真实依赖，会产出「绿了但没测到」的静默无效测试；② **「mock 快重实现真实」是气味**：当忍不住 mock 一个数据库/队列/内核原语、且测试仍像在测真实行为时，应把它**上移一层**用真实依赖跑，而不是造一个会过期的假实现；③ 与 §技能写成工作流而非参考文档 互补——那条管「技能里放什么形态的测试指导」，本条管「测试本身怎么分层才不浪费」；落地到 WB：给技能写验收/回归示例时，先定这条该落在哪一层（能单测的不拉集成、必须真依赖的不造假 mock）。
-- 提升层：工作流（测试策略）/ 可复用 Skill（技能验收方法论）。触发词：测试分层、4 层分类法、unit/integration/e2e/smoke、选错层、mock 重实现真实是气味、上移一层。
-
+- **测试分层分类法：四层各管一种失败模式，选错层=慢/冗余/静默无效（来源：Activepieces《Testing Strategy》handbook 5,560B，2026-09-30 r336C 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r336C）。
 ## 技能/工具按任务语义检索 + 诚实无匹配（来源：Activepieces `mcp/tool-search.md` 3,608B，2026-09-30 实拉）
 
 1. **检索=按任务描述语义搜，非按名翻目录**：agent 用自然语言任务描述（「发消息到 Slack 频道」）语义检索技能/工具，而非翻几百个目录；作者须为技能写「给 agent 看的 AI metadata 描述」才能被检索到。判据：技能元数据须带 agent-oriented 描述，否则不可被发现。

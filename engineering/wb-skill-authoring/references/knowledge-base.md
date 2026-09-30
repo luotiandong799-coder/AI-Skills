@@ -3077,3 +3077,8 @@ version: 3.61.0
 ## 指令 vs 知识分离：静态参考资料外置到按需检索，不塞进每次全量加载的指令（来源：www.activepieces.com/docs/agents/knowledge.md 2,613B，2026-09-30 r327C 独立实拉）
 - **原文**：`Everything in an agent's instructions has to fit the model's context window, and all of it is read on every single run... Knowledge works the other way round. A file is split into chunks and indexed, and the agent searches it only when it needs something... A three-hundred-page policy manual costs nothing until a question actually touches it.`
 - **判据**：① 指令/系统提示是**每次运行全量加载**的——把大段静态参考资料塞进去既撑爆上下文又让每次调用更慢更贵（无论当次是否相关）。② 静态、可检索的参考资料应**外置为按需检索的知识库**（分块索引、命中才拉回），而非内联进指令。③ 这是「指令预算」的核心划分：**行为约束/路由逻辑进指令，事实百科/文档手册进检索**——与上下文压缩（豆包自留地）互补但不重叠：压缩管「已进上下文的怎么缩」，本条管「什么根本不该进指令」。提升层：可复用 Skill/工作流。触发词：指令vs知识分离、知识外置检索、指令每次全量加载、静态参考不进prompt、按需检索。
+
+## 测试分层分类法：四层各管一种失败模式，选错层=慢/冗余/静默无效（来源：Activepieces《Testing Strategy》handbook 5,560B，2026-09-30 r336C 独立实拉）
+- **原文**：「Activepieces tests live in four distinct layers. Each layer owns a different failure mode — picking the wrong layer produces slow, redundant, or silently ineffective tests.」四层 = Unit（单模块/函数、可 mock 协作者、无真实 I/O）/ Integration（多模块对真实基础设施：真实 DB/队列/文件系统/网络/V8 isolate）/ E2E（Playwright 跨进程）/ Smoke（bash+curl 脚本）。
+- **判据**：① **测试不是「越多越好」，而是要按失败模式选层**——单测管逻辑错、集成管协作错、E2E 管端到端链路错、Smoke 管「还活着吗」；把本该在集成层验的协作写进单测并 mock 掉真实依赖，会产出「绿了但没测到」的静默无效测试；② **「mock 快重实现真实」是气味**：当忍不住 mock 一个数据库/队列/内核原语、且测试仍像在测真实行为时，应把它**上移一层**用真实依赖跑，而不是造一个会过期的假实现；③ 与 §技能写成工作流而非参考文档 互补——那条管「技能里放什么形态的测试指导」，本条管「测试本身怎么分层才不浪费」；落地到 WB：给技能写验收/回归示例时，先定这条该落在哪一层（能单测的不拉集成、必须真依赖的不造假 mock）。
+- 提升层：工作流（测试策略）/ 可复用 Skill（技能验收方法论）。触发词：测试分层、4 层分类法、unit/integration/e2e/smoke、选错层、mock 重实现真实是气味、上移一层。
