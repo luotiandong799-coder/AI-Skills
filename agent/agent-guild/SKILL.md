@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.30.0
+version: 1.31.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -492,3 +492,8 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **原文**：四文件 = `USER.md`（稳定偏好/画像，**写成指令式**，带 observed-date 与 active/superseded 元数据）/ `MEMORY.md`（**durable non-profile facts** 与长期决策，「It is **not a raw transcript, daily log, or exhaustive archive**」）/ `memory/YYYY-MM-DD.md`（工作层：细节、观察、原始上下文，**不进每次 bootstrap**）/ `DREAMS.md`（后台整合摘要，供人复核）；「When a preference changes, **supersede it in place instead of appending a contradictory active directive**」；「If `MEMORY.md` grows past the bootstrap file budget, OpenClaw **keeps the file on disk intact but truncates the copy injected into context**. **Treat that as a signal** to move detailed material into `memory/*.md`」；「The default heartbeat prompt **performs no memory maintenance on its own**」。
 - **判据**：① **共享记忆必须分层，且各层的加载策略不同**：画像层（少量、每次带）/ 长期层（精选、启动时带）/ 日志层（详尽、按需检索不常驻）/ 整合层（后台产出、供人复核）。把日志层当长期层用，结果是启动时被原始流水淹没；把长期层当日志层用，结果是耐久事实被细节挤掉。② **超限的正确处置是只截注入副本、磁盘保持完整**：文件在盘上不受损，被截断的只是送进上下文的那一份。⇒  truncation 不是数据丢失，是**注入预算的告警**；收到这个信号应做的是分层迁移（把细节挪到日志层、长期层只留耐久摘要），而不是删内容或盲目上调预算。③ **偏好变更就地取代**：偏好变了就在原条目上标记 superseded 并改写，**不追加一条与之矛盾的活跃指令**。⇒ 两条互相矛盾的活跃偏好同时存在时，读取方无从裁决，实际行为取决于谁后加载——这是最难排查的一类漂移。④ **后台整合与主动记录是两条独立通道**：心跳提示本身不做记忆维护，整合由后台 sweep 负责、主动落盘由工作中的 agent 负责。⇒ 不能因为有自动整合就不写，也不能因为会写就指望自动整合来兜底分层。
 - **提升层**：工作流/记忆治理。触发词：记忆四层、USER/MEMORY/日志/DREAMS、不追加矛盾偏好、supersede in place、注入侧截断、磁盘完整、截断即迁移信号、心跳不维护记忆。
+
+## Cap36 客户端凭据在服务端按终端用户签发、短时效并绑定来源白名单；限流必须可被程序读取（来源：pipedream.com/docs `connect/api-reference/create-connect-token` 9,194B，2026-10-01 r344C 独立 curl 实拉；与 §Cap32 只写不可读 / §Cap18 白名单空=拒绝 互补——那两条管"密钥存进来之后怎么被读写""白名单缺省方向"，本条管"发给浏览器的那一枚短令牌长什么样"）
+- **原文**："To securely scope connection to a specific end user, **on your server**, you retrieve a **short-lived token** for that user, and return that token to your frontend."；"When using the Connect API to make requests **from a client environment like a browser**, you **must** specify the **allowed origins** for the token. Otherwise, this field is optional."；429 响应同时给 `Retry-After`、`X-RateLimit-Limit`、`X-RateLimit-Remaining`（"always 0 when throttled"）、`X-RateLimit-Reset`。
+- **判据**：① **"谁在连"必须由服务端决定**——连接/授权类令牌在服务端按终端用户单独签发并短时效，前端只拿凭证；把一枚通用长期令牌放在前端，等于把"以谁的名义"交给浏览器；② **凡会离开服务端的令牌必须带来源白名单**，且这是**必填**（原文用 must），不是"可选加固"——否则任何页面都能拿着它调；③ **限流的四个头要齐着给**（何时可重试 / 上限 / 剩余 / 重置时刻）：只回一个 `Throttled` 等于让调用方靠猜退避，猜错就是把瞬时抖动放大成雪崩。
+- 提升层：安全边界/工具。触发词：短时效令牌、服务端签发、allowed_origins、来源白名单、浏览器侧令牌、限流四头、Retry-After、X-RateLimit。
