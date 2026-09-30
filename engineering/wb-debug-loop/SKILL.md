@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕
-version: 1.82.0
+version: 1.83.0
 agent_created: true
 ---
 
@@ -442,14 +442,7 @@ agent_created: true
 - 提升层：工作流（排障归因顺序）。触发词：规则突然不生效、指令失效、行为漂移、被挤出去、上下文还在不在、先查修剪。
 
 
-## 工具被拒先分三类再归因：在哪跑 / 是否存在 / 有没有逃生口，且必须看「生效值 + 它来自哪一层」（来源：docs.openclaw.ai《Sandbox vs tool policy vs elevated》2026-09-29 r288-B 独立 curl 实拉原文核验）
-- 三类控制各管一件事，报错文案相似但修的地方完全不同：**Sandbox** = 工具**在哪跑**（沙箱后端 vs 宿主机）；**Tool policy** = 哪些工具**存在/可调用**；**Elevated** = exec 专用的沙箱逃生口（不能绕过创建者角色的 required sandbox）。
-- 官方给的排障入口 `openclaw sandbox explain [--session|--agent|--json]` 打印的是：生效 sandbox mode/scope/workspace access、当前会话**是否真的**处于沙箱（main vs non-main）、**生效的 allow/deny 及其来源层级**（agent/global/default）、elevated 门与"该改哪个配置键"的路径。
-- 常见误判：沙箱 `mode: "non-main"` 下**只有非主会话被沙箱化**（群聊/频道最常踩）；operator role `sandbox: "required"` 覆盖 agent 模式且**沙箱供给失败时 fail closed**。
-- 判据：① 看到"工具被拒"先问**这是哪一类控制**——改错层等于白改；② 排查工具一律先取**生效值**而不是配置值，且生效值必须**带来源层级**（否则你改了 global 却被 agent 层盖掉）；③ 工具策略有五层（profile / byProvider profile / global·per-agent allow-deny / byProvider allow-deny / 仅沙箱内生效的 sandbox policy），定位时从最具体层往下数。
-- 与 §规则突然不执行先取证其是否还在上下文（1.66.0）同属归因次序，但对象不同：那条查**指令还在不在**，本条查**控制位在哪一层生效**。
-- 提升层：工具。触发词：工具被拒、sandbox explain、生效值、五层策略、non-main、elevated、归因次序。
-
+## 工具被拒先分三类再归因：在哪跑 / 是否存在 / 有没有逃生口，且必须看「生效值 + 它来自哪一层」（来源：docs.openclaw.ai《Sandbox vs tool policy vs（原文已下沉 references/knowledge-base.md §r325B）
 ## 诊断输出要分「给人看的粗桶」与「给机器读的稳定原因码」两层；先分清「根本没发出调用」还是「发了但失败」（来源：docs.openclaw.ai/auth-credential-semantics 2026-09-29 r290-B 独立 curl 实拉 24,733B 原文核验）
 - 原文："Probe results carry a `status` bucket (`ok`, `auth`, `rate_limit`, `billing`, `timeout`, `format`, `unknown`, `no_model`) plus a **stable `reasonCode` when the probe never reached a model call**"；七个稳定码 = `excluded_by_auth_order` / `missing_credential` / `expired` / `invalid_expires` / `unresolved_ref` / `ineligible_profile` / `no_model`；"Eligibility checks report `ok` as the reason code for usable credentials."
 - 原文（对齐要求）："These semantics keep **selection-time and runtime auth behavior aligned**. They are shared by `resolveAuthProfileOrder` / `resolveApiKeyForProfile` / `openclaw models status --probe` / `openclaw doctor` auth checks."
@@ -494,3 +487,9 @@ agent_created: true
 - 原文：①「Activepieces returns `200` with an `x-webhook-id` header after the job is enqueued to Redis, **before** any Postgres record exists. If Redis loses its dataset in that window, those requests vanish without a trace, and the sender — having received a `200` — **will not retry**. Your async-webhook RPO **is** your Redis persistence window」；同步路径「the run is recorded in Postgres **before** execution」不受此窗影响；②「A **stale** Redis backup is **strictly worse** than an empty Redis plus the refill on restart」；③ runbook「Restore or replace Redis (an **empty** Redis is fine) → Restart the app containers. The refill machinery rebuilds schedules, renewals, and paused-run timers from Postgres → filter runs still in `QUEUED`/`RUNNING` … resumes from the last checkpoint and **never re-runs completed steps**」；④ 三 store 分册：Postgres=flows/runs/schedules/waitpoints/connections（System of record）、S3=执行历史（SOR）、Redis=除队列本身外全部可由 Postgres 重建；⑤「Recovery targets are stated as **formulas**…they are properties of *your* Postgres/Redis/S3 setup, not of Activepieces」；⑥ 队列重试「starts at 8 minutes — **longer than a typical failover**」；⑦「Database connection pools are **not guaranteed to re-establish cleanly** through a failover's DNS flip; a restart is cheap and **always correct**」。
 - 判据：① **「已返回 200」不等于「已持久化」**——凡回执时点与落库时点不一致的入口（先入队、后异步落库），其暴露窗等于队列的持久化窗，且这扇窗内的丢失**不可自愈**，因为发送方拿到成功确认后不会重试；设计异步接收链路必须先回答「回执那一刻数据落在哪一层」，并把这个窗**单独**计量成 RPO，不能用整体可用性数字代替；② **RPO/RTO 是推导量不是产品属性**——官方把恢复目标写成公式，理由是自托管下它取决于你自己的存储档位；引用任何一个 RPO 数字前先问「它背后是哪个 store 的哪档持久化」；③ **有权威源 + 自动重建器的子系统不该备份**：陈旧副本会把已完成进度倒退回过去，比空副本更糟——空 + 回填是幂等收敛，旧副本是状态回退；判断「要不要备份」的标准是**有没有回填通道**，不是「数据重不重要」；④ **恢复程序必须自带人工收尾动作**：清空 → 回填 → 按最后检查点批量重试滞留态，且明确不重跑已完成步 ⇒ 恢复脚本自身必须幂等并能按检查点续；⑤ **恢复后重启优于「优雅重连」**——连接池不保证跨 DNS 切换自愈，宁可付一次便宜且永远正确的重启；⑥ **重试首延要大于典型故障切换时长**，否则所有重试都落在故障窗内，白烧预算还放大下游压力。
 - 提升层：工作流/工具。触发词：异步暴露窗、回执先于落库、x-webhook-id、RPO=队列持久化窗、陈旧备份劣于空库、重建优先于备份、批量重试滞留态、DNS flip 后重启。
+
+
+## 慢的外部依赖不得阻塞冷启动：连接与刷新各给一个独立上界，超时只降级不阻塞；启动期对未就绪依赖 fail-closed，刷新期旧值继续供给（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/basic-configuration/use-environment-variables/external-secrets.md` 4,588B，2026-09-30 r325B 独立 curl 实拉逐串命中，**通道更正**：Qoder 给的 `docs.n8n.io/use-environment-variables/external-secrets.md` 实际返回「Page Not Found」壳，真实前缀须经 `docs.n8n.io/llms.txt`(286,271B) 定位；经 Qoder r358-Q-B 提名）
+- 原文：「`N8N_EXTERNAL_SECRETS_CONNECT_TIMEOUT`…`20`…If the vault doesn't answer in time, n8n **marks it as errored**, retries the connection in the background with **increasing delays**, and **startup continues without its secrets**.」「`N8N_EXTERNAL_SECRETS_REFRESH_TIMEOUT`…`20`…If the fetch takes longer, n8n **stops waiting** and the fetch **keeps running in the background**. When it completes, n8n stores the secrets. **At startup, workflows that use secrets from that vault fail until the first fetch completes. On an update interval, the previously fetched secrets stay available.**」「For HashiCorp Vault and Infisical, n8n also **cancels each single HTTP request after the larger of the two timeouts**.」（均 Available from n8n 2.41.0）
+- 判据：① **冷启动不能被最慢的那个依赖绑架**——对不可达/慢的外部凭据源设**两个独立上界**（connect / refresh），到点即标记 errored 或停止等待，主流程继续；「配了但拉不到」不应等于「系统起不来」；② **降级方向按阶段分叉，不是一刀切**：启动期没有旧值可用 ⇒ **fail-closed 直到首次拉取成功**（依赖它的执行直接失败，不拿空值蒙混）；周期性刷新已有旧值 ⇒ **旧值继续供给不中断**（"取新的别把已有的掐了"）；同一个超时在两个阶段给出相反动作，是设计不是矛盾；③ **后台续跑 + 递增延时重试**是让"慢依赖"与"主流程"解耦的标准形态：等待被截断，但工作不丢弃，成功即入库；④ **单个 HTTP 请求的上界要由两个超时中的较大者兜底**，否则会出现"整体超时已过、单次请求还在挂着"的悬挂连接。
+- 提升层：工具/架构。触发词：冷启动不阻塞、connect/refresh 双超时、启动期 fail-closed、刷新期旧值继续、后台续跑、递增延时重连、单次请求上界。

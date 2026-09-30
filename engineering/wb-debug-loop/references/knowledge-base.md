@@ -466,3 +466,14 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 原文："For workflows created before n8n 1.0: n8n executes the first node of each branch, then the second node of each branch, and so on. — For workflows created from n8n 1.0: executes each branch in turn, completing one branch before starting another. n8n orders the branches based on their position on the canvas, **from topmost to bottommost. If two branches are at the same height, the leftmost branch executes first.**"
 - 判据：① **行为被"创建时的版本"冻结**——同一份工作流在不同时期创建会有两套执行语义（逐层轮转 vs 逐分支跑完），而这不是工作流里任何一处配置写出来的；排障"分支执行顺序不对"时，第一问是**这份工作流是什么时候建的/用的哪个版本**，第二问才是逻辑本身；② **空间布局即隐式语义**——分支次序按画布**上下位置**排，同高再看左右，意味着**拖动一下节点就改变了执行顺序**而 diff 里看不到任何变化；凡"可视化编排"类系统，都要假设存在这类"布局即配置"的隐式输入，改布局等于改代码；③ 这类隐式决定的顺序应**显式化可查**（官方给了工作流设置项可改 execution order），验收时把它当成和代码同级的配置项列出，而不是当作平台内部细节。
 - 提升层：工作流/工具。触发词：多分支执行顺序、画布位置决定顺序、1.0 前后语义差异、topmost to bottommost、布局即配置、execution order 设置项。
+
+
+## r325B 下沉（2026-09-30）
+
+## 工具被拒先分三类再归因：在哪跑 / 是否存在 / 有没有逃生口，且必须看「生效值 + 它来自哪一层」（来源：docs.openclaw.ai《Sandbox vs tool policy vs elevated》2026-09-29 r288-B 独立 curl 实拉原文核验）
+- 三类控制各管一件事，报错文案相似但修的地方完全不同：**Sandbox** = 工具**在哪跑**（沙箱后端 vs 宿主机）；**Tool policy** = 哪些工具**存在/可调用**；**Elevated** = exec 专用的沙箱逃生口（不能绕过创建者角色的 required sandbox）。
+- 官方给的排障入口 `openclaw sandbox explain [--session|--agent|--json]` 打印的是：生效 sandbox mode/scope/workspace access、当前会话**是否真的**处于沙箱（main vs non-main）、**生效的 allow/deny 及其来源层级**（agent/global/default）、elevated 门与"该改哪个配置键"的路径。
+- 常见误判：沙箱 `mode: "non-main"` 下**只有非主会话被沙箱化**（群聊/频道最常踩）；operator role `sandbox: "required"` 覆盖 agent 模式且**沙箱供给失败时 fail closed**。
+- 判据：① 看到"工具被拒"先问**这是哪一类控制**——改错层等于白改；② 排查工具一律先取**生效值**而不是配置值，且生效值必须**带来源层级**（否则你改了 global 却被 agent 层盖掉）；③ 工具策略有五层（profile / byProvider profile / global·per-agent allow-deny / byProvider allow-deny / 仅沙箱内生效的 sandbox policy），定位时从最具体层往下数。
+- 与 §规则突然不执行先取证其是否还在上下文（1.66.0）同属归因次序，但对象不同：那条查**指令还在不在**，本条查**控制位在哪一层生效**。
+- 提升层：工具。触发词：工具被拒、sandbox explain、生效值、五层策略、non-main、elevated、归因次序。

@@ -1704,3 +1704,11 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - 原文："Optionally, set `CREDENTIALS_OVERWRITE_ENDPOINT_AUTH_TOKEN` to require a bearer token for accessing the endpoint."；"**Without an auth token, the endpoint can only be called once for security reasons.**"；官方对环境变量注入方式的自陈："This approach isn't recommended. **Environment variables aren't protected in n8n, so the data can leak to users.**"
 - 判据：① **"没配鉴权"不等于"随便用"，好的默认是一次性门**——端点没有身份校验时，把可用次数压到 1，把"无鉴权"的暴露窗口从"永久"压成"一次机会"；设计任何临时注入/引导端点时，鉴权缺失的补偿手段应该是**次数上限**而不是什么都不做；② **注入通道与读取通道的风险不同**——环境变量"不被 n8n 保护，会泄漏给用户"，说明"存在环境里"不等于"只有进程能看到"，凡是运行时可被读回的配置面都不能放密钥；③ 收紧要给出**推荐路径**（自定义 REST 端点 + bearer token）而不是只说"不推荐"，否则用户还是会用那条不安全的路。
 - 提升层：工具/安全边界。触发词：一次性端点、无鉴权只能调一次、CREDENTIALS_OVERWRITE_ENDPOINT、环境变量泄漏凭据、注入端点鉴权。
+
+
+## r325B 下沉（2026-09-30）
+
+## 留痕通道本身不能被多个写者共享：多进程追加同一个事件日志会交错损坏，且平台不会自动清理遗留文件（来源：docs.n8n.io《Stream logs to external systems》2026-09-29 r296-A 独立 curl 取 .md 原文 23,919B 核验；与 §Capability 12「留痕通道不能挂在被测对象上」互补——那条管"通道挂谁身上"，本条管"通道被几个写者共用"）
+- 原文："If multiple n8n processes share one writable volume … they **must not** write to the same event log file. Concurrent appends from multiple processes can **interleave or corrupt** the file, leading to **recovery failures and lost events**."；"n8n uses the configured path **verbatim** and doesn't append a process-type suffix, so **your orchestrator owns uniqueness** across processes."；"`N8N_EVENTBUS_LOGWRITER_MAXTOTALMESSAGESPERFILE` bounds how many lines n8n parses from a single event log file during recovery, so a corrupted file can't exhaust process memory."；"If a shared `n8nEventLog-worker.log` file already exists from a previous deployment, **quarantine it manually** before opting in. n8n doesn't auto-delete legacy files."
+- 判据：① **留痕通道的并发写者数是一等配置项**——日志/事件流一旦被多个进程追加，损坏的不是一条记录而是整个恢复链（交错写入 → 恢复失败 → 事件丢失），而丢的恰好是排障最需要的那批数据；水平扩容前先确认"每个执行单元有独立的留痕出口"；② **平台的兜底是"限损"不是"修好"**：设了唯一路径后平台**不再自动加后缀**（唯一性交给编排方），恢复时再给一个行数上限防内存被打爆——两层都是防止坏文件拖垮系统，而不是把事件找回来；所以唯一性必须由部署方保证，平台不会替你兜；③ **历史遗留文件要人工隔离**——平台不删旧文件，迁移到"每进程独立日志"时必须先手动搬走共享文件，否则新配置会读到一个已经被并发写坏的旧文件。
+- 提升层：可观测性/工具。触发词：事件日志并发追加、多进程共享日志、interleave corrupt、LOGWRITER_LOGFULLPATH、编排方保证唯一、遗留日志人工隔离。
