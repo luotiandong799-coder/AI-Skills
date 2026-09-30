@@ -2684,4 +2684,18 @@ version: 3.61.0
 - **dot-skill 协议：protocol_version 精确匹配 + skillerr 密封/签名/审计**：协议规格独立版本化（1.0.0 Stable，RFC 流程演进非静默修订）；skill.json 带 protocol_version，`skill validate` 与运行 CLI 精确比较——不 semver 范围、不放宽，不匹配=硬错误；skillerr=skill 包的信任/完整层：seal/sign/记录 provenance/运行前 inspect；`npx skills add owner/repo` 装的是无完整性校验的未验证指令+可执行脚本。判据：**技能包协议版本必须精确匹配；从任意仓库裸装技能=执行未验证脚本**。
 - **Trust Root：技能验证=HTTPS URL 前缀信任边界 + 跨平台可移植开放标准**：技能视为 verified 当且仅当 URL 以声明的 Trust Root 开头（品牌一方域=域源；UGC 平台=平台不担保个人发布者）；Agent Skills 开放标准（Anthropic 首创、25+ agent 产品采用）让同一技能跨 Claude/Codex/Gemini CLI 等平台可移植；跨平台兼容=适配多 agent 产品的技能价值最大化。判据：**技能信任=URL 前缀域绑定；做可移植技能先按开放标准写 SKILL.md，别锁单平台特性**。
 
-## Agent 评测与基准 2026：评测数据三来源/评测集版本化/judge 校准/双评分/CI 分层/工具五维/成本延迟/harness 层/轨迹六指标/多 agent 协作…（原文已下沉 references/knowledge-base.md §L502）…（原文已下沉 references/knowledge-base.md §L502）
+## Agent 评测与基准 2026：评测数据三来源/评测集版本化/judge 校准/双评分/CI 分层/工具五维/成本延迟/harness 层/轨迹六指标/多 agent 协作（见上方同名完整章节；本行为历史索引残迹，2026-09-30 清理）
+
+## 机检口径纠偏：description 必须走 YAML 解析，不能用正则抓折行标量（2026-09-30 WB 实证）
+- **症状**：`wb-execute-discipline` 的 description 连续多批被记为「1027 > 1024、待修」，催生了跨三批的假待办。
+- **根因**：审计脚本用 `re.search(r'description:\s*(.+?)(?=\n[a-zA-Z_-]+:|\Z)', fm, re.S)` 取值。frontmatter 里该字段是**折叠标量**（`description: >-` 换行 + 两格缩进）。正则会连标量头 `>-`、换行与缩进一起吞进去 —— **虚增 3~5 字符**。实测真实长度 **1022**，合格。
+- **正确口径**：`fm = yaml.safe_load(front)` → `len(str(fm["description"]))`。凡按字符数设阈值的字段（description 1024、触发词表长度、路径长度）都必须先解析再计数。
+- **推广判据**：**凡是「按字符数判定合规」的机检，先确认计数对象是「解析后的语义值」而不是「原始文本片段」**；两者的差值不大不小、恰好压在阈值附近时，会让整条流水线长期空转在一个不存在的问题上。提升层：工具。触发词：description 超限、字符数机检、折行标量、frontmatter 计数、假待办。
+
+## 下沉 = 搬迁（源处删、留指针），不是复制（2026-09-30 WB 实证）
+- **症状**：`wb-execute-discipline` 的 `references/knowledge-base.md` 里有 **408 节与 SKILL.md 正文完全同文**。
+- **根因**：历史下沉只做了「复制到 KB」，正文原处**没有删除**。于是每下沉一次就多一份副本，正文照样超预算，KB 也白胖一圈——**两边都变差**。
+- **正确做法**：下沉 = **搬迁**。写 KB → **原位删掉大块、只留一行指针**（`（原文已下沉 references/knowledge-base.md §<锚点>）`）。搬迁前先算 KB 现有标题集合，**同文节直接跳过不重复搬运**。
+- **配套机检**：搬迁必然产生「索引行」，而索引行多由工具按字符数截断生成 → 会造成 `（来源：…（原文已下沉 …）` **括号不闭合 + URL 被切半**的静默断链。所以下沉后必须跑一条「括号闭合 / 书名号闭合 / 结尾非悬空标点」的标题完整性检查。
+- **判据**：**下沉的验收不是「KB 里有」，而是「正文少了 + KB 里有 + 指针指向对」**；三者缺一，等于把预算问题换了个地方存着。提升层：工作流。触发词：下沉、搬运、KB 归档、正文超行数、重复副本、截断索引、断链。
+
