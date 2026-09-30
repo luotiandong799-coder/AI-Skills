@@ -2520,3 +2520,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **记忆写入速率限制：单会话内限制持久记忆更新频率，压制约摸写多矛盾/高显著性条目**：恶意页想写多条矛盾/高显著性观察受同一限额约束；提高门槛但不清零风险。判据：**写入面节流=让大量投毒写入不可行，属于成本抬升而非清除**。
 - **信任加权检索：每条记忆记录 source/creation time/session context/初始信任分，检索按信任加权**：未验证网页来源条目不与人工确认条目同权；信任分级标签在写入时记录；事后可审计与回滚。判据：**检索的权威来自来源信任分级，不是内容措辞**。
 - **记忆生命周期绑定身份状态：密码重置/凭据轮换/会话吊销/设备重注册时，失效或隔离溯源到不可信摘要的条目**：植入的常驻指令不能活过重置；RAG 语料每条带可验证 provenance（作者/时间/权限）。判据：**记忆活不过身份重置：补救动作要能真正终结植入**。
+
+## 输出侧安全与守卫 2026：输出分类前置输出触发下游动作写文件发邮件付款前先过分类器或 schema 检查不是模型说是就执行/PII 处理三策略 tokenize 可逆 token 交换模型响应去匿名化真实值只在最终输出重现 synthetic 假值替换保上下文真实数据不出边界 block 含敏感实体直接拒/secret scanning 作为输出关卡 LLM 输出返回落日志前过秘密扫描 truffleHog detect-secrets 或正则表/LLM05 输出处理不当输出即代码注入面按输出用途映射风险插入 HTML DOM DOMPurify 输出编码当代码执行永不直接执行模型输出进 SQL 参数化验证 schema 当 HTTP 请求 URL 白名单进 shell 永不传 shell/工具输出回流前消毒把类指令文本从工具输出中剥离转义再放回上下文/输出治理三段 format validation JSON parse 错误时 corrective prompt 重试 schema validation content policy filtering 分类器/guardian 式输出看门狗与日志输出含敏感数据记 security_event 含输出文本替换为占位提示/约束解码 constrained decoding 作为输出侧基线把输出限制在合法 token 集合内/system prompt 泄漏检测 LLM07 输出含系统提示词安全规则片段即拦截/确定性无 LLM 成本防御检查纯正则系统提示词防御体检 17 攻击向量 12 OWASP LLM 加 5 agentic 跨 agent 权威金融交易 skill 来源最小代理权编码注入（来源：austa+anoman+kunalganglani+myengineeringpath+kaademos+aibuzz+brainupgrade+mukulpareek+owasp cheat sheet+blog.lo0.es+microsoft agent-governance-toolkit，r340A，补 OWASP LLM05/LLM07 输出侧全景——与 r339C 记忆污染互补：那条管"持久存储防毒"，本条管"每次输出的守卫"）
+- **输出分类前置：输出触发下游动作（写文件/发邮件/付款）前先过分类器或 schema 检查，不是"模型说是就执行"**：PII 后生成扫描，按通道决定 redact 还是 block。判据：**输出要触发动作=先过分类/schema 门**。
+- **PII 处理三策略：tokenize（可逆 token 交换，模型响应去匿名化，真实值只在最终输出重现）/ synthetic（假值替换保上下文，真实数据不出边界）/ block（含敏感实体直接拒）**：按工作负载选，不是一刀切。判据：**PII 进模型前选策略：可逆替换/合成替换/整体拒绝**。
+- **secret scanning 作为输出关卡：LLM 输出返回/落日志前过秘密扫描（truffleHog/detect-secrets 或正则表）**：LLM 会复述上下文里的凭据；输出含 API key/aws AKIA/github PAT 即拦截打标。判据：**输出即凭据泄漏面：返回/落日志前必须过秘密扫描**。
+- **LLM05 输出处理不当=输出即代码注入面：按输出用途映射风险（插入 HTML/DOM→DOMPurify 输出编码；当代码执行→永不直接执行模型输出；进 SQL→参数化+验证 schema；当 HTTP 请求→URL 白名单；进 shell→永不传 shell）**：ISO 42001 要求文档化输出验证程序。判据：**模型输出按去向分类处理，同一种输出不能既当数据又当代码**。
+- **工具输出回流前消毒：把类指令文本从工具输出中剥离/转义再放回上下文**：承认无法可靠识别全部指令模式，但降低注入指令被解释概率；配不可逆动作人工确认门（发邮件/写库/删文件/价值转移 API 必须暂停确认）。判据：**工具输出回流=进上下文前的消毒点，动作确认门挡不可逆副作用**。
+- **输出治理三段：format validation（JSON parse+错误时 corrective prompt 重试）/ schema validation / content policy filtering（分类器）**：结构化输出+schema 强制（Pydantic）+内容分类器三层。判据：**输出校验分三层：格式→schema→内容策略，逐层后置**。
+- **guardian 式输出看门狗与日志：输出含敏感数据→记 security_event（含输出文本）→替换为占位提示**：拦截日志比静默替换更可审计。判据：**输出拦截要留审计事件（含原文），不只替换**。
+- **约束解码（constrained decoding）作为输出侧基线：把输出限制在合法 token 集合内**：LLM05 输出处理的底层加固；配合 origin-scoped 边界（浏览器端 LLM 按 origin 而非 iframe 作用域）。判据：**输出侧基线=约束解码限制合法输出空间**。
+- **system prompt 泄漏检测（LLM07）：输出含系统提示词/安全规则片段即拦截**：与输入侧注入对称，输出侧独立检测"模型把规则吐出来了"。判据：**输出侧要单独查系统提示词/规则泄漏，与输入注入分开测**。
+- **确定性无 LLM 成本防御检查：纯正则系统提示词防御体检（17 攻击向量：12 OWASP LLM + 5 agentic：跨 agent 权威/金融交易/skill 来源/最小代理权/编码注入）**：<5ms 纯 regex 体检系统提示词缺什么防御，零 LLM 成本。判据：**防御缺口体检可以纯确定性做，不必每次付 LLM 成本**。
