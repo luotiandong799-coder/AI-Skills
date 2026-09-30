@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.73.1
+version: 3.74.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -157,6 +157,10 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **原文**：①「A skill first published without `--categories` is stored as **`other`**」；②「On a later publish, **omitting** `--categories` or `--topics` **keeps the values already stored**…Passing an **empty** value **clears** the field」；③「Passing either flag publishes **even when the files have not changed**, so fixing metadata this way creates a new patch version」；④ API 侧 flags 作用于本次运行的**每一个** skill 并**绕过 unchanged-skill 跳过**（「supply `skill_path` to bound that to one skill」）。跨平台对照：Make data-stores PATCH「Any property that is not provided will be **left unchanged**」。
 - **判据**：① 同一字段**三种输入三种结果**：首发缺省→兜底值、后续省略→**保持已存**、传空→**清空**；「省略=清空」是最常见误判，且三态是平台自定义（omit=keep 较通用，缺省与清空不可假定），跨平台迁移须逐平台实测。② **改元数据 ≠ 零风险动作**：它照样出新版本，批量 API 会因「带了 flag」让全部选中项出新 patch ⇒ 元数据修正按发布等级对待（可回滚、可审计），并注意「文件没变却出新版」会污染版本台账。③ 治具：批量修改必须带 `skill_path` 限界，否则一改全库。
 - **提升层**：可复用 Skill。触发词：元数据三态、省略保持/空值清空、首发兜底 other、改元数据发新版、unchanged-skip 被绕过、PATCH 未提供即不变。
+
+## 能力授予平面独立于「发现/归属」平面：库归属只给管理与发现权，不自动授予其声明的工具/凭证/安装权；共享 Gateway 是单一信任域，密钥不得进入 skill 内容（来源：docs.openclaw.ai/tools/skills.md 39,741B，2026-09-30 r327A 独立实拉）
+- **原文**：`Library ownership governs management and discovery; it does not grant new tools, credentials, host installation rights, or isolation from the Gateway operator. Keep credentials out of skill content.`
+- **判据**：① 技能库被「发现/拥有」只解锁**管理与发现**，不自动把该库声明的 tools/credentials/install 能力授予消费方——能力授予是**独立于发现/归属的第三平面**（既有「能力集与执行权两平面分离」只到两平面，本点补出「归属权≠授予权」这一常被误并的平面）。② 共享 Gateway = 单一信任域，附加其上的 skill 是**输入**而非秘密存储，密钥必须留在宿主侧，不进 skill 内容。③ 提升层：可复用 Skill。触发词：归属不等于授予、库所有权不授工具、共享信任域、密钥不出 skill、能力授予第三平面。
 
 ## 涉密配置做成「给人看的指引工具」，而不是让 agent 经手秘密（来源：Activepieces MCP（/docs/mcp.md 通道）本机实拉，r326C）
 - **原文**：`ap_setup_guide`「returns instructions for the user to configure connections in the UI, **rather than handling secrets through MCP**」；「Credentials are **never exposed** — connection secrets, API keys, and OAuth tokens are **never returned by any tool**」；Discovery = read-only tools，「Discovery tools are **always available**. Other categories can be enabled or disabled per-project」。
