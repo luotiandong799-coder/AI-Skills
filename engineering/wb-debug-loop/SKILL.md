@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.94.0
+version: 1.95.0
 agent_created: true
 ---
 
@@ -152,11 +152,7 @@ agent_created: true
 - **判据**：① **设限后必须逐执行形态验证是否真被管住**——守压力的闸门恰恰不管「兜底用的错误工作流」与「被复用的子工作流」这两条最容易失控的路径；「我开了限流」只证明主路径被管。② 排队 ≠ 可重试：入队即失去重试权 ⇒ 队列不是「稍后重试的备份」，重试责任在调用方。③ 重启策略=「按上限恢复 + 其余重新排队」⇒ 重启后的在途量由闸门决定，不是全量洪峰。
 - **提升层**：工作流/工具。触发词：限流作用域、only production executions、manual/子流程/错误流程绕过、队列不可重试、重启按上限恢复。
 
-## 按「调用方身份」计数的闸门必须自证生效：反向代理会让它整体失效（来源：Flowise rate-limit 本机实拉，r326B）
-- **原文**：「The rate limitation is **tracked by IP-address**. If you have deployed Flowise on cloud service, you'll have to set `NUMBER_OF_PROXIES`」；「most likely you are behind a proxy/load balancer. **Therefore, the rate limit might not be able to work.**」；官方校验闭环=逐档 +1 直到 `{{hosted_url}}/api/v1/ip` 回显的 IP 与你的实际 IP 一致。
-- **判据**：① **「按身份计数」的闸门（IP / 租户 / 客户端）上线验收必须做一次身份回显比对**，否则测的是没被限流的那条路径而全绿；失效形态是**完全不工作**（不是变宽），最危险。② 平台应自带「回显我看到的客户端身份」端点——没有自证端点的限流 = 不可验证的限流。③ 修复方向是让平台认识真实拓扑（代理档数），而不是放宽阈值。
-- **提升层**：工具/安全边界。触发词：限流按 IP、NUMBER_OF_PROXIES、代理后限流失效、身份回显自证、闸门可验证性。
-
+- **按「调用方身份」计数的闸门必须自证生效：反向代理会让它整体失效（来源：Flowise rate-limit 本机实拉，r326B）**：本章已下沉 `references/knowledge-base.md`（r326B）。
 ## 诊断技能严格只读、修复须经批准：diagnose 与 repair 是分离的两动作（来源：docs.openclaw.ai/tools/custodian-skills.md 5,298B，2026-09-30 r336A 独立实拉）
 - 原文：「Repair diagnoses with `openclaw doctor --lint`. Only an explicitly approved repair uses `openclaw doctor --fix --non-interactive`. The read-only `diagnose-gateway` skill recommends that separate step but never runs it.」
 - 判据：① **诊断（只读）与修复（写操作）必须是两个被分离的动作**：只读诊断技能只负责发现 + 推荐修复步骤，**永不自己执行修复**；修复动作须单独、显式批准、并以非交互（`--non-interactive`）方式运行。② 让「会改东西」的技能同时拥有诊断与修复，等于把扳手与螺丝刀焊在一起——误触发诊断即触发写，且审计里无法区分「只是看了」与「已经改了」。③ repair 的「批准 + 非交互」双约束 = 可审计点：谁批准、何时、跑的是哪条命令，事后能查；交互式修复把决定权推给运行时的 stdout，无法留痕。④ 与 §超时不是回滚授权 同源——判死/回滚分两门，本条把「看」与「改」也分两门。
@@ -193,3 +189,10 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **原文**：①「OpenClaw uses the legacy context path **for the whole logical turn, including retries**. The configured context-engine slot is **not changed**, and OpenClaw **tries the configured engine again on the next logical turn**.」；②「When queued budget compaction **accepts** background maintenance, it keeps the prepared runtime alive through maintenance, coalesced reruns, and engine disposal. **Acceptance does not mean cleanup has finished.** **Return asynchronous work** from engine methods and `dispose()` so the host can join it before releasing their resources.」；③「A stalled cleanup **logs a warning and lets the completed reply return**; it does not cancel the plugin's pending disposal. Cleanup failures and timeouts ... **do not certify resource closure**.」
 - **判据**：① **降级的作用域要说清三件事：作用于哪一段、改不改配置、会不会自动恢复**：本例是"整个逻辑回合（含该回合内的重试）走降级路径、槽位配置不被改写、下一回合自动再试原实现"。⇒ 排障时看到"走了降级实现"不能直接判定配置被改或能力不可用——它是**回合局部**的临时态；反过来，若降级改写了配置，就会变成需要人工回退的持久态。② **"受理"只代表接下了任务，不代表活干完了**：后台维护被接受后，运行时必须**跨维护、合并重跑与 dispose 全程保活**，且要把异步句柄**交回宿主 join**，宿主才能在释放资源前等到它落地。⇒ 受理方不能一返回就拆资源；返回异步句柄是让"我可以等"这件事成为可能的唯一机制。③ **清理卡住不影响回复返回，但这不是"资源已关闭"的证据**：清理超时只记警告、让已完成回复先走，同时不取消待处理的释放动作；超时与失败都不认证关闭。⇒ 收尾判定要分两条线——"用户拿到回复了"和"资源释放完了"是独立事件，不能拿前者当后者的证据；要证明关闭，得有关闭侧自己的回执。
 - **提升层**：工作流/工具。触发词：turn-local 降级、降级不改配置、下回合自动重试、accepted 不等于 cleanup finished、异步句柄交回宿主、清理超时不认证关闭、回复返回不等于资源释放。
+
+
+## 配置写入分运行时覆盖与持久两档；异步写失败不回滚已生效的会话选择（来源：docs.openclaw.ai/tools/slash-commands.md 38,378B，2026-10-01 r343B 独立 curl 实拉逐串命中）
+
+- **原文**：①（`/debug`）「**Overrides apply immediately to new config reads but do `not` write to disk.**」（`/config`）「`/config` updates **persist across restarts**.」；②「**Asynchronous write errors do not revert the session selection.**」「Immutable configuration stays unchanged.」
+- **判据**：① **"改配置"要分清两档：运行时覆盖（立即生效、不落盘、重启即失）与持久写入（跨重启）**：两者命令不同、可见性不同。⇒ 排障"我明明改了怎么重启就没了"的标准答案是先确认走的是哪一档；反过来"改了没生效"也要确认是不是只写了运行时而读的是落盘值（或反之）。**同一份配置存在两个真源（内存覆盖 / 磁盘）时，必须能自报当前读数来自哪一档**，否则任何"改了没生效"都无从判断。② **内存态已生效、持久态写入失败时，系统保留已生效状态而不自动回滚**：会话选择已经切过去了，配置落盘却是异步失败——结果就是"实际在用的"和"重启后会读到的"不一致，且没有自动纠正。⇒ 遇到"跑着是对的、重启就变了"，不要假设是缓存或时序，先查**上一次持久化有没有真的成功**；设计这类两段写入时必须给出显式对账手段（状态可查 + 失败可见），不能依赖"反正下次会重试"。
+- **提升层**：工具/工作流。触发词：运行时覆盖不落盘、/debug vs /config 两档、持久跨重启、异步写失败不回滚、内存态与持久态不一致、配置两个真源。

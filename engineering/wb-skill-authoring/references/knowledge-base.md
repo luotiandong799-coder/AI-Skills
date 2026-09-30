@@ -3064,3 +3064,8 @@ version: 3.61.0
 
 - **可插拔实现里「不声明拥有」不等于「框架接管」**：本章已下沉 `references/knowledge-base.md`（r342C）。
 - **涉密配置做成「给人看的指引工具」，而不是让 agent 经手秘密**：本章已下沉 `references/knowledge-base.md`（r326C）。
+
+## 元数据字段三态语义 + 「改元数据即发新版」的批量副作用（来源：ClawHub publishing 本机实拉，r326C）
+- **原文**：①「A skill first published without `--categories` is stored as **`other`**」；②「On a later publish, **omitting** `--categories` or `--topics` **keeps the values already stored**…Passing an **empty** value **clears** the field」；③「Passing either flag publishes **even when the files have not changed**, so fixing metadata this way creates a new patch version」；④ API 侧 flags 作用于本次运行的**每一个** skill 并**绕过 unchanged-skill 跳过**（「supply `skill_path` to bound that to one skill」）。跨平台对照：Make data-stores PATCH「Any property that is not provided will be **left unchanged**」。
+- **判据**：① 同一字段**三种输入三种结果**：首发缺省→兜底值、后续省略→**保持已存**、传空→**清空**；「省略=清空」是最常见误判，且三态是平台自定义（omit=keep 较通用，缺省与清空不可假定），跨平台迁移须逐平台实测。② **改元数据 ≠ 零风险动作**：它照样出新版本，批量 API 会因「带了 flag」让全部选中项出新 patch ⇒ 元数据修正按发布等级对待（可回滚、可审计），并注意「文件没变却出新版」会污染版本台账。③ 治具：批量修改必须带 `skill_path` 限界，否则一改全库。
+- **提升层**：可复用 Skill。触发词：元数据三态、省略保持/空值清空、首发兜底 other、改元数据发新版、unchanged-skip 被绕过、PATCH 未提供即不变。
