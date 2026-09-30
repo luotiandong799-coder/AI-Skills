@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。
-version: 1.59.0
+version: 1.60.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -125,3 +125,8 @@ version: 1.59.0
 ## 成本与基础设施簇（细则已下沉）
 - 完整细则见 references/knowledge-base.md「成本与基础设施簇」；正文只保留触发线索与结论：成本四层、Relocation Trick、路由阈值学习、Q4_K_M 量化、KV 亲和性、Batch 50% 折扣、两阶段模型路由。
 
+
+## 配额的粒度决定公平性：共享池式（per-run）配额下单个大户可饿死全部，须下沉到逐单元（per-step）；大载荷外置传引用而不是塞进记录（来源：www.activepieces.com/docs/install/troubleshooting/truncated-logs.md 2,279B，2026-10-01 r340C 独立 curl 实拉逐串命中）
+- **原文**：①「Flow runs have a maximum log size (default **25 MB**) ... truncating large step **inputs** — you'll see `(truncated)` in place of the original value」；②「step input values are replaced with `(truncated)`, **starting from the largest**, until the run fits」；③「A planned enhancement will move this limit **from per-run to per-step**, giving more granular control over how much data each step can retain」；④「prefer passing files between steps using the built-in file storage ... **rather than embedding raw bytes in step outputs**」。
+- **判据**：① **同一份预算，按什么粒度切，决定了谁能抢到**：按整次运行（per-run）设总量，一个肥步骤就能吃光所有人的额度，其余步骤表现为"莫名其妙被截"——而它们本身一点都不大。⇒ 设预算时先问粒度：共享池式配额必然带来大户饿死小户，逐单元配额才可控；看到"某些内容被无故截断"时，先查是不是被同一池子里的其他人挤掉的。② **降级要有可见顺序并且可解释**：从最大的开始截、截到装得下为止，每一步都留 `(truncated)` 占位。⇒ 被压缩方要能一眼看出"这里原本有东西、被截了"，而不是看到空值以为是本来就没有。③ **大体量载荷的正确归宿是外置存储 + 传引用**，不要把原始字节塞进运行记录/上下文。⇒ 凡是"把大文件 base64 之后放进某条记录"的设计，都会在某个阈值上把整条链路撑爆；引用进记录、实体进存储。④ 与 §有损压缩须留省略标记 同源：那一条管"标记与计量"，本条管"配额粒度与依赖侧不可截"。
+- **提升层**：工具/工作流。触发词：per-run 配额、per-step 配额、大户饿死小户、从最大的开始截、truncated 占位、大载荷外置传引用、配额粒度。

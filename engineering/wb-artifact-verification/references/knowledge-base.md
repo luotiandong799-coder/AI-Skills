@@ -1758,3 +1758,23 @@ Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 - **评测态标记内建**（n8n Evaluation）：运行时可查"是否在被评测"，评测分支自动隔离真实副作用（写库/发送/删除），生产与自测共用同一资产。
 - **双通道评分**（arXiv 2606.17819）：同时出「任务完成分」与「指令遵循分」——遵循分低=措辞硬度问题、完成分低=步骤问题，修法分别定位；跨宿主复用技能先测宿主遵循度。
 - **对照分母=激活样本**：增益统计只取"技能确实被激活"的配对样本，剔除选择偏差；aggregate 排名为正但实际激活样本为负＝技能有害信号。
+
+
+## r340C 下沉：清理责任分裂 / 采不到≠不存在 / 自修改隔离（2026-10-01）
+## 清理责任按数据类别分裂，且「超额」有第四态：接收但不处理（来源：n8n use-external-storage / handle-binary-data + Dify knowledge-storage-limit 本机实拉，r326A）
+- **原文**：① n8n「n8n **delegates pruning of binary data to S3**, so setting a lifecycle configuration is **required** unless you want to preserve binary data indefinitely」；② 「execution data **doesn't rely on an S3 lifecycle rule**. Don't add a lifecycle rule for execution data, as **it could delete data that n8n still references**」；③ Dify 超限上传「the document is **kept in the document list but not indexed**」；④ 「If a downgrade or an expired subscription leaves your data above the new plan's limit, **nothing is deleted**: your apps can still retrieve from these knowledge bases, but adding content stays blocked」；⑤ 「a document can use **several times its own file size** in storage once indexed」。
+- **判据**：① **产物清理先问「这条 TTL 归谁执行」**——同一后端上不同数据类别的清理主体可以不同，被引用数据的 TTL 绝不能交给存储层（交给它=无声丢数据，且删的时候不报错）。② 超限不止「显式 413 / 静默丢弃 / 伪装 200」三态，还有**第四态「对象在、效果无」**（文件留在列表但永不索引）⇒ 验证超限行为必须查两件事：对象是否存在 + 是否真的可用，只看状态码必漏。③ **容量治理只封写、不封读**：降级导致的存量超额不删数据、既有检索照常 ⇒ 「读可用性」与「写可用性」是两个独立 SLA，配额告警 ≠ 服务不可用。④ 计量口径是**索引后体积**（可为源文件数倍、随 embedding 维度变），不是输入体积 ⇒ 容量规划与预检须按索引产物估。
+- **提升层**：工具/工作流。触发词：清理主体分裂、TTL 归谁执行、委托存储层生命周期、禁加生命周期规则、超额第四态、留在列表但不索引、降级不删数据、读写解耦、索引后体积。
+
+
+## 采不到 ≠ 内容不存在：历史「未达/0 命中」须先做通道定位，失效分四形态（2026-09-30 通道重定位批，本机 curl 实测）
+- **四形态**：① **路径改版（最常见）**——站点文档重排，旧锚点 404 但站点可学。实证：Dify 旧 `docs.dify.ai/en/develop-agent/agent-node` 连续 2 轮 404 → 真路径 `/en/cloud/use-dify/nodes/agent.md`（10,240B）；同名 `publish-to-marketplace` 三路 404 → 真路径 `/en/cloud/use-dify/publish/publish-to-marketplace.md`（6,633B）；Tessl 旧 `docs.tessl.io/registry/publishing` 404 → `/creating-skills-and-plugins/publish-and-update.md`（8,811B）；Make 旧 `developers.make.com` → `help.make.com`（llms.txt 71,003B）；Kafka 旧 `/documentation` 单页 → Hugo 壳，新锚点 `/43/design/design/`。② **地域封锁**——返回 200 + **恒定体积**的封锁页，`<title>App unavailable in region</title>`（claude.com 全站 `.md` 一律 447,830B，且 `docs.claude.com`/`docs.anthropic.com` 镜像域同 447,830B）。③ **客户端渲染**——HTML 正确、title 正确，正文由 JS 注入故 curl 0 命中（`cursor.com/docs/context/rules` 549,753B，`.md` 404）。④ **连接层误判（假死）**——历史判「连接层死」的站点实际可达：`agenticskills.io` 200/145,590B、`skilldb.dev` 200/78,511B（llms.txt 11,766B）。
+- **判据**：① **跨页/跨子域返回完全相同字节数 = 封锁或壳，不是内容**——这是区分「②地域封锁」与「③客户端渲染」最快的机检指纹（壳=同体积不同页；封锁=同体积且 title 为地区页）；② **判「内容缺位」必须双证**：穷举索引 0 命中 **且** 直取 404（Flowise llms.txt 98,735B 无 `using-flowise/templates` ⇒ 缺位成立）；③ **判「连接层死」必须带日期+探活证据并定期复验**，单次 `ERR_CONNECTION_RESET` 不足以终判（wm 历史终判两例已翻案）；④ **索引可读 ≠ 正文可取**，两件事分开判——Claude `llms.txt` 69,795B 可读（可做目录级情报），正文却全被地域封锁。
+- **方法（索引优先 index-first）**：取正文前先取**索引**：`<host>/llms.txt` → 无则 `sitemap.md` / `sitemap.xml` → 无则主站 `/docs/llms.txt`；拿到索引后**按目标关键词定位真实路径再取 `.md`**，不要猜路径。索引本身也可作**治理信号**（页面从索引消失或索引 0 命中 = 文档撤除，可机检）。
+
+
+## 自修改隔离：agent 不得在同轮「摄入外部内容」后又「改自身指令/配置」——自修改通道须与外部内容摄入分离，同轮混用即注入向量，须拒绝（来源：www.activepieces.com/docs/agents/tools.md 4,061B，2026-09-30 r327A 独立实拉）
+- **原文**：`An agent will not change itself in a reply where it already read something... ask it to check a sheet and update its instructions in one message and it declines the change, because anything it just read could have told it to.`
+- **判据**：① 自指令/自配置的修改通道**不得与外部内容摄入通道混在同一轮**：一旦该轮读过不可信外部输入，再发「改我自己的指令」即视为潜在注入并被拒。② 合法自修改须走**独立通道**（独立消息 / 配置面板），与处理外部内容的对话轮解耦——这把「提示注入→改 agent 自身」的攻击面结构性关闭。③ 与既有「安全边界正面申报」「涉密配置不进 skill 内容」同源但正交：本条管「改自己的权限」而非「读秘密」，是第三类边界。提升层：工作流/工具。触发词：自修改隔离、同轮不自我改指令、注入向量、独立配置通道、只读摄入不改自身。
+- **提升层**：工具/工作流。触发词：未达、0 命中、通道定位、索引优先、llms.txt、sitemap.md、路径改版、地域封锁、App unavailable in region、同体积指纹、客户端渲染、连接层假死、连接层死复验、索引可读正文不可取、缺位双证。
+
