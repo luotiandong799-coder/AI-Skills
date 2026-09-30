@@ -69,3 +69,9 @@ Once per session, update your entry's `last_seen` (prefer `ag last-seen`, fallba
 
 New skill / MCP / plugin / tool / persistent data you install → **MUST** go under `~/.agent-guild/{skills,skills_data,mcp,plugins,tools}/<name>/`, not a private path (唯一豁免见 M3). The user backs up the whole `~/.agent-guild/` with one command.
 
+
+## §r344A 下沉｜Capability 17 — 记忆晋升的三门 + 污点门控 + 压缩前静默 flush + 注入截断可观测（来源：OpenClaw 官方 `docs.openclaw.ai/concepts/memory`，2026-09-27 r205-C 实拉）
+- 后台巩固（dreaming）晋升带三门：候选同时过 score / recall-frequency / query-diversity 才进长期记忆；taint gated——不可信来源与系统派生候选永不进入巩固提示词，也不走持久晋升通道。判据：晋升是带门槛的筛选，不是时间到了搬家。
+- 人工复核面与机器排序面分开：`DREAMS.md` 是人看的复核面（rewrite counts / highlights、可 grounded backfill 回放旧日志并 `--rollback`）；短期 SQLite 是机器排序面；`MEMORY.md` 只由深度晋升写入。
+- 压缩前静默 flush 用对话的私有副本，housekeeping 消息不出现在后续用户轮（即使被中断）；只读/无 workspace 沙箱跳过；可单独指定小模型降本。
+- 超预算只截断注入副本、磁盘原文保留；`/context list` 看 raw vs injected 与截断状态——截断是"该把细料迁去 memory/*.md"的信号，不是"该删内容"。

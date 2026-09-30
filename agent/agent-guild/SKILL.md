@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.29.0
+version: 1.30.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -363,13 +363,12 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - 与 §Capability 12 留痕通道独立于被测对象、§Capability 13 留痕范围由显式输出决定 的分工：那两条管"记录怎么写、写哪些字段"；本条管"**执行体手里有什么、能往外做什么**"——一个定留痕，一个定权限。
 - 提升层：工作流 / 安全边界。
 
-### Capability 17 — 记忆晋升的三门 + 污点门控 + 压缩前静默 flush + 注入截断可观测（来源：OpenClaw 官方 `docs.openclaw.ai/concepts/memory`，2026-09-27 r205-C 实拉）
-- **★后台巩固（dreaming）晋升带三门，不是"够久就升"**：候选必须同时过 **score / recall-frequency / query-diversity** 三道门槛才进长期记忆；**taint gated**——不可信来源与系统派生候选**永不进入巩固提示词，也永不走持久晋升通道**。判据：**晋升是带门槛的筛选，不是时间到了搬家**；自动化产物默认剥夺晋升资格（与 §Qoder 反回音室不变量同向）。
-- **★人工复核面与机器排序面分开**：`DREAMS.md` 是人看的复核面（含 rewrite counts 与 highlights、可 grounded backfill 回放旧日志并可 `--rollback`）；短期 SQLite 存储是机器排序面；`MEMORY.md` **只由深度晋升写入**。判据：**人看的面、机器排的面、最终生效的文件，三者各一份，不要合并**。
-- **★压缩前静默 flush 用私有对话副本**：compaction 前跑一个静默轮提醒 agent 存记忆，该轮用**对话的私有副本**，其 housekeeping 消息不会出现在后续用户轮（即使被中断）；只读/无 workspace 的沙箱跳过 flush；可为该轮单独指定小模型降本。判据：**"保存记忆"这个动作本身不能污染用户可见的对话**。
-- **★超预算只截断注入副本、磁盘原文保留，并把截断当信号**：`MEMORY.md` 超 bootstrap 预算时磁盘文件不动，只截断注入上下文的副本；用 `/context list` 看 raw vs injected 大小与截断状态——**截断是"该把细料迁去 memory/*.md"的信号，不是"该删内容"**。判据：**先让它可观测（raw vs injected 各有数字），再决定搬还是加预算**。
-- 与 §Capability 9 groom、§Qoder 记忆条目「锚+计数+调权」的分工：groom 管过期数据归档（只搬不删）；「锚+计数+调权」管单条信念的置信度更新方式；本条管"**从短期到长期的晋升这道门怎么设、人看什么、机器排什么**"。
-- 提升层：可复用 Skill / 记忆治理。
+#<!-- 2026-10-01 r344A 下沉：Capability 17 记忆晋升三门整段 → references/knowledge-base.md §r344A -->
+
+## Cap35 多人共改同一轮：改向与中止是两个意图、身份可共享而权限不可共享、可见不等于已被消费（来源：docs.openclaw.ai/concepts/queue-steering 12,366B + concepts/retry 10,184B，2026-10-01 r344A 独立 curl 实拉逐串命中；与 §说过≠记着 互补——那条管"消息进没进队列"，本条管"消息有没有被消费、以谁的名义执行"）
+- **原文**："**A visible message or send acknowledgment does not mean the active runtime has consumed it.**"；"**Stopping already-running work is a different intent from redirecting future work.**"；并行批次 "one atomic launch checkpoint… a steer arriving after it does not recall any of them"；被跳过的调用 "receives **paired** tool start/end events and a synthetic result"；turn "**keeps its original owner's authority, tool bindings, and approval destination**"；个人上下文重分配 "takes effect on the **next new turn**; it does not replace the running turn's personal instructions"；权限不同的消息 "**queue the message as a followup**"；撤回 `chat.abort` 仅"before delivery starts"，"once delivery starts, cancellation cannot guarantee withdrawal or undo completed work"。
+- **判据**：① **改向（redirect）与中止（abort）必须做成两个动作**——改向只影响"尚未启动的工作"，已跨过发射检查点的调用不召回；拿中止去表达改向，代价是丢掉已完成的工作；② **被跳过的工作也必须配一条结果**（配对 start/end + 合成结果），留痕保持结构配对，否则下游看到"请求了却没有结果"会误判成执行失败；③ **多人共轮时身份可共享、权限不可共享**——谁能插话是一回事，以谁的名义执行、审批发到谁是另一回事；权限不同的输入降级到下一轮，不在运行中改权限；④ **送达回执不是消费证据**，撤回只在投递开始前可保证，已开始的取消必须明示"不保证撤销已完成工作"。
+- 提升层：工作流/安全边界。触发词：改向、中止、跳过调用的配对结果、发射检查点、多人共轮、身份可共享权限不可共享、送达不等于消费、撤回了但仍执行。
 
 ## Agent 复用生命周期与显式交接契约：邀请 vs 一次性副本 vs 晋升，沙箱不互串（来源：Dify 新版 Agent 节点文档 2026-09-28 r207-B 独立实拉首读；docs.dify.ai/en/use-dify/nodes/agent）
 - **三种复用形态，选错就产生分叉**：① 邀请已发布 agent（集中管理，能力改一处 → 所有引用它的工作流同步生效）；② Make a copy 一次性副本（节点内独立，从此不跟随原版）；③ 从零建。判据：**想让改动全局生效就用邀请，想做局部实验就用副本**；副本若"证明有价值"应**晋升**回共享资产供别处复用，而不是永远当私货。
