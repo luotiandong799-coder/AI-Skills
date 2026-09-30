@@ -2649,3 +2649,10 @@ version: 3.61.0
 - 原文：「group members to provide **persistent entity ids**. Group membership remains unchanged based on those ids, thus **no rebalance will be triggered**」；「a **fencing mechanism on broker side** will inform your duplicate client to shutdown immediately by triggering a `FencedInstanceIdException`」；「the broker assigns each producer an ID and **deduplicates messages using a sequence number**」。【通道根因】旧 `/documentation` 单页已改 Hugo 跳转壳，此前“57KB 内 0 命中”是**载体改版**而非内容不存在；正确锚点 = `/43/design/design/#static-membership`（KIP-345 静态成员）。
 - 判据：① **去重的先决条件是身份，不是序号**——没有稳定身份，“序号从几开始数”没有意义；先给每个写者一个持久 ID，重连才不会被当成新人触发全量重排（rebalance）；② **身份冲突的罚则必须落在仲裁方而不是写者自律**：同身份出现第二实例时由服务端主动踢出并给出具名异常，而不是让两个实例各写各的、靠事后对账才发现；③ **序号只在单一身份内部有效**（producer id + sequence number），跨身份的重复它看不见——声明幂等范围时必须连“键的作用域”一起写。
 - 提升层：工具/工作流。触发词：持久身份、static membership、fencing、FencedInstanceIdException、序号去重、身份先于序号。
+
+
+## r325C 下沉（2026-09-30）
+
+## 审批门要配齐四个旋钮（启用选择器 / 豁免主体 / 在途隔离 / 超时去向）；缺第四个时 pending 可无限挂起（来源：www.activepieces.com/docs/flows/flow-approvals.md，2026-09-30 r323C 独立实拉 2,500B；与 §并发写仲裁 互补——那条管“写冲突”，本条管“变更放行”）
+- 原文：启用选择器「Project Settings → General → toggle **Sensitive Project**」；豁免主体「**Admins publish directly — the gate is skipped for them.**」；在途隔离「The previously published version **keeps running** while the request is being reviewed」；撤回「**Withdraw** the request…while it’s still [pending]」。**缺位反证**：全文无任何 expiration / timeout / TTL 字样。
+- 判据：① 门不是一个开关而是**四个旋钮**——谁来开（启用选择器）、谁能绕过（豁免主体）、等待期间跑哪个版本（在途隔离）、超时后怎么办（去向）；只实现前三个的门，默认行为是“永远挂着”，而这通常不是设计意图而是漏项；② **豁免主体必须显式写出是谁**：此处管理员是完全跳过而非预审放行，把“谁可以不走门”写成显式配置，否则门会被未声明的角色绕过去；③ **在途隔离是门的可用性前提**——审批期间旧版本继续服务，变更才敢进审批流，否则审批等于停机；④ 引用任何“已有审批”前先查它有没有超时兜底，**没有超时兜底的审批门等于可选否决权**。提升层：工作流。触发词：审批门、Sensitive Project、Admins publish directly、在途版本继续跑、pending 无超时、豁免主体。
