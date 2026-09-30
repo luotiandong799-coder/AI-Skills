@@ -2268,3 +2268,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **风险分级确认 + 可见动作回执**：模糊/不可逆/高影响=确认；低风险=轻量反馈（acknowledgment before action："Got it—I'll update your delivery address to 123 Main Street. Should I apply?"）；visible action receipt=一键/一句取消或修改，不重新输入原命令。判据：**确认强度与风险匹配，动作后可一键回滚**。
 - **Scope Validator 三路分流**：意图先过 scope validator：in-scope 交主 LLM（system prompt 强制领域边界）/out-of-scope 模板拒绝+记录（数据供扩界决策）/ambiguous（置信<75%）升级人类带上下文。判据：**边界判定前置为独立组件，越界=模板拒绝+留痕，低置信=转人**。
 - **话题切换暂存/恢复 + 意图复用**：用户频繁切题时识别切换、正确暂存或结束当前任务状态、切回时恢复上下文；confirmation.yes 等通用意图定义一次多页复用避免重复。判据：**切题=状态挂起非丢弃，恢复=回到原上下文**。
+
+## 成本治理与预算工程 2026：四杠杆分工/计量先行 trace 级归因/按 outcome 优化/三层预算硬上限原子授权/会话级 caps+poison pill/预算触发降级三路/静态前缀缓存纪律/成本护栏三件套/路由 60-30-10 分布/重试是复合成本大头（来源：aisuperior+collabnix+pristren+bestaiweb+kunalganglani+softtechover+rockb+finout+sukruyusufkaya+aiexpert+azure blog+callitdev+gettarmac+microsoft365+agentnative+nerdleveltech+commandline microsoft+novapixel+runcycles+openai gpt6 caching+dev.to+sitepoint+builder.aws+digitalocean+arxiv 2607.15516+cnblogs+claude blog，r333A，与 §上下文预算管理 互补——那条管"窗口怎么分预算"，本条管"钱/token 怎么计量、怎么设上限、怎么降"）
+- **成本优化四杠杆分工**：model routing 管单请求层/prompt caching 管重复上下文层/batch API 管工作负载时间层/context discipline 管上下文规模层；先定 spec（哪个杠杆管哪类工作负载）再配 config；各杠杆独立、相乘复合。判据：**先分杠杆归属再调配置，杠杆不是堆在一起**。
+- **metering first：trace 级成本可观测先行**：每 run 记录 input/output tokens、model、tool calls、retrieval chunks、unit-cost 货币值，按 tenant/intent/agent version/time 可查——回报最快的单笔埋点投资；不知道钱花哪就无从优化。判据：**成本可观测先于任何优化动作**。
+- **成本按 outcome 优化，不按 session**：cost per outcome 是唯一值得优化的数；prompt caching 砍输入成本/context engineering 砍重试（复合成本大头）/修剪工具输出保缓存热；per-invocation tagging 把花费变成 per-workload 可行动数字。判据：**优化目标是"每次结果的成本"不是"每次会话成本"**。
+- **预算硬上限三层 + 原子授权**：per-run/monthly/yearly caps 作硬限制（模拟卡网络原子授权，花钱前强制）；provider 级 spend ceiling+邮件告警；tenant/group/user 层 scoped billing policies；超限 429/403 而非放行后算账。判据：**预算=执行前硬强制（原子授权），不是事后账单**。
+- **会话级 caps（run-scoped）+ poison pill**：2026-08 AWS Bedrock AgentCore 发货 spend/behavior ceilings、Anthropic 单会话硬美元上限（首方从月/账号级降到单次运行级）；TokenOps 带 run id 贯穿执行图实时共享预算；poison pill 每 tool call 前评估累计成本、超预算立即终止。判据：**预算绑定 run 而非账号，每次工具调用前查余额**。
+- **预算触发降级三路 ALLOW_WITH_CAPS**：预算紧张时先换更便宜模型/收窄工具集/降重试深度，无路可走才 alert/stop；两路系统直接 allow→deny 会造成可避免的工作流失败。判据：**预算触发先降级再停止，降级序列预定义**。
+- **prompt caching 静态前缀纪律**：缓存只作用于静态前缀（开头、跨请求完全相同）；write 1.25×/read 0.1×（-90%），break-even 1.4 次命中；变化内容（时间戳/随机/顺序敏感）放前缀后；命中率 7%→74% 靠稳定上下文+修剪工具输出。判据：**前缀稳定是缓存前提，变化部分后置**。
+- **成本护栏模式三件套**：per-run guardrail+provider 级 spend ceiling+cost telemetry pipeline（按 tenant/agent/model 归因异常告警）+kill switch（与部署管线无关的独立急停，撤网关 key 或暂停 workspace）。判据：**护栏=上限+归因+急停三件套，急停独立于部署**。
+- **路由成本分布目标 60/30/10**：60% 请求小模型/30% 中档/10% 旗舰=60-80% 降本（配合缓存 90%+）；分类/抽取/格式化/短查询在便宜模型上等价；RouteLLM 2x+ 降本无质量损失；默认全旗舰=为便利付钱。判据：**流量按难度分层分布，便宜模型接走大头**。
+- **重试是复合成本大头**：每次重试=完整输入+输出重跑；context engineering 减重试比压缩单次更省；agent 循环每多一轮=输入重算（缓存命中除外）；cap output length+显式要求简洁；effort 校准到任务（缓存命中率+去反模式+effort 校准三修复）。判据：**省重试>省单次，agent 轮数是成本放大器**。
