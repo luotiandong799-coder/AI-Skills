@@ -2196,3 +2196,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **重试提示必须带具体错误消息**：不带错误的重试=相同提示白费；把具体验证错误追加进下一次（"action 必须是 ['search','navigate','click'] 之一，得到 'go_to'"）——自纠率 >90%。判据：**重试=原输出+具体验证错误+schema 期望三要素**。
 - **内禀自纠不可靠：必须外部接地**：提示"再检查一遍"无外部接地会退化推理性能（2024-2025 研究一致）；自纠只在外部反馈接地时才可靠（单元测试/检索验证/工具输出比对）；验证循环用二元判断门阻止重写破坏已正确回答。判据：**自纠无外部信号=退化；有验证器/测试/检索接地才启用**。
 - **反思循环四终止条件**：无限制反思循环=无限迭代+质量退化；必须设终止=固定迭代次数（2-3 轮）/ 质量阈值判定 / 收敛检测（连续两次修订变化量低于阈值）/ 外部验证（单元测试/API 验证）——3 轮反思=4 次 LLM 调用，质量换成本。判据：**反思循环必配终止条件，四选一至少有一个**。
+
+## Agent 编排与多 Agent 协作工程 2026：编排拓扑主导/五模式坐标表/handoff 六要素/结构化交接+边界蒸馏/共享上下文存储/成本爆炸 15x/何时不用多 agent/循环四控制/写冲突四方案/单写者所有权（来源：explainx+agentpatterns+augmentcode+aigentlab+ilmtec+loooop.dev+aws wellarchitected agentperf05+agentcost01+langchain handoffs+microsoft agent framework+redis+askpatrick+max-gherman+ag2+arxiv 2602.16873+2510.26585+2605.20563+microsoft learn+stanford cs224g+braintrust+cannyforge+jetbrains+niteagent+botonomy+channel.tel+aiintegrator+dev.to 系列+respan+openlegion+hydradb+zylos+rinet+agenthold+agentpatterns，r331A，与 wb-execute-discipline §多Agent协作纪律互补——那条管"拆了之后怎么协作（按技能建/共享层/契约/质检）"，本条管"编排拓扑怎么选、交接载荷带什么、成本与冲突怎么控"）
+- **编排拓扑主导系统性能**：多 agent 编排拓扑（如何协调/并行/综合）现在主导系统级性能、超过单模型能力（性能收敛时代）；四典型拓扑=parallel/sequential/hierarchical/hybrid，按任务依赖图+领域特征动态选择。判据：**先按任务依赖选拓扑，再选框架**。
+- **五模式坐标表：主控制点=防什么失败**：sequential pipeline=阶段间验证门控、防错误复合、限=跨表引用失败；parallel fan-out=聚合器综合、防竞态、限=前置顺序检查；supervisor-worker=中央主管、防单 agent 上下文坍缩、限=模糊委派；hierarchical；critic loops。判据：**按工作形态选模式，每个模式答清"控制点在哪、防什么失败、主要限制"**。
+- **handoff 六要素**：交接载荷必须含 target agent / context（或外部 store 指针/token）/ instructions（接收者聚焦点）/ metadata（路由原因、优先级、约束）/ auth（credential 或类型）/ model_hint。判据：**交接载荷=目标+上下文+指令+元数据+权限+模型提示，六项缺一交接即失真**。
+- **结构化交接消息 + 边界蒸馏**：用 summary 对象替换完整对话历史（任务规格+相关事实+接收者必须遵守的约束）；版本化消息 schema 让接收者能拒绝畸形交接；交接边界加小模型调用提取"最小充分上下文"，输入 token 反映当前任务需求而非累积历史。判据：**交接=结构化摘要+版本化 schema；每个边界蒸馏一次最小上下文**。
+- **共享上下文存储：不在编排层序列化大载荷**：委托 agent 写上下文、接收 agent 读（共享 store），避免大上下文载荷穿过编排层；context transfer schema 定义每种委托的最小上下文（数据验证 agent 只需数据+验证规则，不需完整会话历史）。判据：**跨 agent 大上下文走共享存储按需读，不序列化搬运**。
+- **多 agent 成本爆炸是结构性失败**：五 agent 系统可烧单 agent 10-50 倍 token；多 agent 运行成本约 15x 基线——预算按 15x 估、估少即失败；成本尖峰是突发的（$0.03→$0.47，占 30% 流量月账单翻倍）；orchestrator 重复处理全上下文=放大点。判据：**预算按 ~15x 基线估；成本尖峰突发性，coordinator 即放大点**。
+- **何时不用多 agent**：共享状态推理=单 agent（15x 少 token 且同等或更好准确率）；预算受限=单 agent（$0.15 vs $2.25+）；自动生成 MAS 一致劣于单 agent CoT+Self-Consistency（10x 贵+更差）；SUPERVISORAGENT 用 LLM-free 自适应过滤器介入纠错省 29.45% token 不损成功率。判据：**共享状态推理/预算敏感→单 agent；只有领域隔离或并行独立研究才上多 agent**。
+- **agent 循环无终止=最大生产事故**：orchestrator 完不成→重路由→worker 不达标→再试→循环直到成本告警；ReAct 无 max-step 会永远循环；上线前四控制=最大迭代限制/token 上限/预算层/优雅"无法完成"返回。判据：**多 agent 必配：迭代上限+token 上限+预算层+优雅失败，四件套**。
+- **共享状态四写冲突方案**：LWW（简单但金融/安全关键危险）→ supervisor 裁决（慢但显式可控）→ 版本化（不覆盖、新建版本、引用信任版本）→ CRDT（commutative/associative/idempotent 数学保证无冲突合并）。判据：**写冲突按安全等级选：LWW<裁决<版本化<CRDT**。
+- **单写者所有权 + 写时冲突检测**：最简单防冲突=每片状态一个写 agent（key_prefix+owner_agent_id+readable_by 分区表）；STORM 写时检测冲突立即解决而非事后 merge；乐观并发=写时带版本号、版本变拒写（ConflictError+当前值），重读重算重试。判据：**先单写者分区；需并发就版本化乐观写+冲突时重读重试**。
