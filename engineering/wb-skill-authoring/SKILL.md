@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: 3.82.0
+version: 3.83.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -154,14 +154,8 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **提升层**：可复用 Skill。触发词：背书语义词、自认证词、reserved topics、归一化检查、大小写绕过。
 
 - **元数据字段三态语义 + 「改元数据即发新版」的批量副作用（来源：ClawHub publishing 本机实拉，r326C）**：本章已下沉 `references/knowledge-base.md`（r326C）。
-## 能力授予平面独立于「发现/归属」平面：库归属只给管理与发现权，不自动授予其声明的工具/凭证/安装权；共享 Gateway 是单一信任域，密钥不得进入 skill 内容（来源：docs.openclaw.ai/tools/skills.md 39,741B，2026-09-30 r327A 独立实拉）
-- **原文**：`Library ownership governs management and discovery; it does not grant new tools, credentials, host installation rights, or isolation from the Gateway operator. Keep credentials out of skill content.`
-- **判据**：① 技能库被「发现/拥有」只解锁**管理与发现**，不自动把该库声明的 tools/credentials/install 能力授予消费方——能力授予是**独立于发现/归属的第三平面**（既有「能力集与执行权两平面分离」只到两平面，本点补出「归属权≠授予权」这一常被误并的平面）。② 共享 Gateway = 单一信任域，附加其上的 skill 是**输入**而非秘密存储，密钥必须留在宿主侧，不进 skill 内容。③ 提升层：可复用 Skill。触发词：归属不等于授予、库所有权不授工具、共享信任域、密钥不出 skill、能力授予第三平面。
-
-## 指令 vs 知识分离：静态参考资料外置到按需检索，不塞进每次全量加载的指令（来源：www.activepieces.com/docs/agents/knowledge.md 2,613B，2026-09-30 r327C 独立实拉）
-- **原文**：`Everything in an agent's instructions has to fit the model's context window, and all of it is read on every single run... Knowledge works the other way round. A file is split into chunks and indexed, and the agent searches it only when it needs something... A three-hundred-page policy manual costs nothing until a question actually touches it.`
-- **判据**：① 指令/系统提示是**每次运行全量加载**的——把大段静态参考资料塞进去既撑爆上下文又让每次调用更慢更贵（无论当次是否相关）。② 静态、可检索的参考资料应**外置为按需检索的知识库**（分块索引、命中才拉回），而非内联进指令。③ 这是「指令预算」的核心划分：**行为约束/路由逻辑进指令，事实百科/文档手册进检索**——与上下文压缩（豆包自留地）互补但不重叠：压缩管「已进上下文的怎么缩」，本条管「什么根本不该进指令」。提升层：可复用 Skill/工作流。触发词：指令vs知识分离、知识外置检索、指令每次全量加载、静态参考不进prompt、按需检索。
-
+- **能力授予平面独立于「发现/归属」平面：库归属只给管理与发现权，不自动授予其声明的工具/凭证/安装权；共享 Gateway 是单一信任域，密钥不得进入 skill 内容（来源：docs.openclaw.ai/tools/skills.md 39,741B，2026-09-30 r327A 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r327A）。
+- **指令 vs 知识分离：静态参考资料外置到按需检索，不塞进每次全量加载的指令（来源：www.activepieces.com/docs/agents/knowledge.md 2,613B，2026-09-30 r327C 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r327C）。
 ## 测试分层分类法：四层各管一种失败模式，选错层=慢/冗余/静默无效（来源：Activepieces《Testing Strategy》handbook 5,560B，2026-09-30 r336C 独立实拉）
 - **原文**：「Activepieces tests live in four distinct layers. Each layer owns a different failure mode — picking the wrong layer produces slow, redundant, or silently ineffective tests.」四层 = Unit（单模块/函数、可 mock 协作者、无真实 I/O）/ Integration（多模块对真实基础设施：真实 DB/队列/文件系统/网络/V8 isolate）/ E2E（Playwright 跨进程）/ Smoke（bash+curl 脚本）。
 - **判据**：① **测试不是「越多越好」，而是要按失败模式选层**——单测管逻辑错、集成管协作错、E2E 管端到端链路错、Smoke 管「还活着吗」；把本该在集成层验的协作写进单测并 mock 掉真实依赖，会产出「绿了但没测到」的静默无效测试；② **「mock 快重实现真实」是气味**：当忍不住 mock 一个数据库/队列/内核原语、且测试仍像在测真实行为时，应把它**上移一层**用真实依赖跑，而不是造一个会过期的假实现；③ 与 §技能写成工作流而非参考文档 互补——那条管「技能里放什么形态的测试指导」，本条管「测试本身怎么分层才不浪费」；落地到 WB：给技能写验收/回归示例时，先定这条该落在哪一层（能单测的不拉集成、必须真依赖的不造假 mock）。
@@ -197,3 +191,10 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **原文**：①「`/dashboard` is reserved as a built-in command. If an existing user skill is named `dashboard`, skill discovery exposes its generated slash alias as `/dashboard_2`. **`$dashboard` and `/skill dashboard` continue to select that user skill directly.`**」；②「By default, skill commands **route to the model as a normal request**. Skills can declare `command-dispatch: tool` to **route directly to a tool (deterministic, no model involvement)**.」；③「When configured, it is the **only authorization source** for commands and directives.」「`a denied sender or an explicitly empty list cannot fall back to channel admission.`」
 - **判据**：① **命名空间冲突的处置是"表层别名退让 + 保留显式直达入口"，不是覆盖也不是禁用**：自动生成的别名改名（加数字后缀）只作用于自动派生的那一层，显式调用名（`$name` / `/skill name`）必须原样可用。⇒ 若改名把显式入口一起改掉，用户手写的调用就静默失效；判断一个冲突处置方案好不好，就看"用户已经写出去的调用还能不能用"。② **同一入口的两种执行语义（过模型 vs 直达工具）必须由能力自己显式声明，且默认是"过模型"**：默认走模型意味着结果不确定，想要确定性必须额外声明 `command-dispatch: tool`。⇒ 把"要不要让模型介入"当成能力的一个**声明属性**而不是调用时的隐式行为；默认非确定性这条要写进契约，否则调用方会误以为同名入口每次行为一致。③ **显式授权清单是覆盖式唯一权威，不是叠加项，且"配了空"等于"全拒"**：一旦配置该清单，通道授权等其他来源全部失效；空列表不是"没配置"而是"明确拒绝所有人"，且**不允许回退**到更宽松的通道准入。⇒ 权限面最危险的默认就是"配不上就回退"——它让"收紧"这个动作在配错时反而变宽；授权清单必须语义单一：存在即唯一权威，空即全拒。
 - **提升层**：可复用 Skill / 安全边界。触发词：命令名冲突、保留字冲突、别名退让、显式直达入口、command-dispatch、确定性路由、默认过模型、授权清单覆盖式、空列表全拒、不可回退。
+
+
+## 权限上限在创建时刻快照且不可自增；一次性提权四要素；管理权不转移归属（来源：docs.openclaw.ai/automation/cron-jobs/payloads.md 27,960B + managing-jobs.md 17,374B，2026-10-01 r343C 独立 curl 实拉逐串命中）
+
+- **原文**：①「Jobs created by an agent are **capped to the tools available to that creating turn**, and the agent **cannot widen** the stored list.」「**Management edits cannot restore missing policy metadata as operator authority.** For a legacy job that has lost its policy, an authenticated operator can explicitly reauthorize it, or an authenticated creator can recreate it with a fresh tool cap.」；②「**Changing an account-bound job to a payload that does not run tools and later back to an agent turn preserves its account restriction. A payload conversion does not reauthorize that job as an operator-created job.**」；③「Each operation uses a **one-use grant that expires after 60 seconds** and remains **bound to that exact active run**. Channel owner membership is **rechecked ... immediately before a mutation commits**.」「**Channel allowlists, wildcard entries, display names, account IDs, and session routes do not establish ownership.**」；④「The continuation remains **management-only; it cannot capture new creator execution authority**.」「Management authority **does not transfer creator attribution**」「An incomplete tool capture still prevents inheriting an uncaptured tool surface.」
+- **判据**：① **权限上限是"创建时刻的快照"，创建者本人也不能放宽**：作业的工具上限由创建它的那一次运行当时拥有的权限决定并固化，之后任何编辑都不能超过它；策略元数据一旦丢失，不能靠"编辑一下"偷偷补回来，只能由更高权限者显式重授，或由创建者按新的上限重建。⇒ 这堵死了"先建个受限的、再慢慢改宽"这条最常见的提权路径；设计时要区分**授权（可授予的）**与**归属（不可转移的）**两件事。② **换形态不换身份**：把受限作业改成不需要权限的形态、再改回需要权限的形态，原有账户限制原样保留，不会因为"重新走了一遍创建流程"就被重新授权。⇒ 防止用"形态往返"洗钱式绕过；判据是**授权绑定在主体上，不绑定在当前形态上**。③ **一次性提权必须同时具备四要素：单次使用 / 短时过期 / 绑定到确切的那次运行 / 在真正写入前再核一次成员名单**；并且**表面标识一律不构成所有权证据**——允许列表、通配符、显示名、账号 ID、会话路由，看着像 owner 的都不算。⇒ 提权令牌一旦可复用、可跨运行、或只在开头核一次，就等于把"当时是 owner"变成了"一直是 owner"。④ **管理权 ≠ 创建权**：接管过来的权限只能管理，不能据此变成创建者，也拿不到当初没捕获到的工具面。⇒ 委派管理时要显式声明"本次委派授予的是哪一层"，未捕获的能力不许在委派后自动补全。
+- **提升层**：安全边界/工具。触发词：创建时刻权限快照、创建者不能自增、丢失授权不自动补、形态转换不重新授权、一次性提权四要素、60 秒过期、绑定单次运行、写入前再核、表面标识不构成所有权、管理权不等于创建权。

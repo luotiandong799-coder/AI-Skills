@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.95.0
+version: 1.96.0
 agent_created: true
 ---
 
@@ -158,18 +158,8 @@ agent_created: true
 - 判据：① **诊断（只读）与修复（写操作）必须是两个被分离的动作**：只读诊断技能只负责发现 + 推荐修复步骤，**永不自己执行修复**；修复动作须单独、显式批准、并以非交互（`--non-interactive`）方式运行。② 让「会改东西」的技能同时拥有诊断与修复，等于把扳手与螺丝刀焊在一起——误触发诊断即触发写，且审计里无法区分「只是看了」与「已经改了」。③ repair 的「批准 + 非交互」双约束 = 可审计点：谁批准、何时、跑的是哪条命令，事后能查；交互式修复把决定权推给运行时的 stdout，无法留痕。④ 与 §超时不是回滚授权 同源——判死/回滚分两门，本条把「看」与「改」也分两门。
 - 提升层：工作流/安全边界。触发词：诊断只读、修复须批准、diagnose 不执行 repair、doctor --lint、doctor --fix --non-interactive、读写分离。
 
-## 脱敏的正确形态是「保留可观测骨架、替换载荷」，且错误详情必须在脱敏清单内（来源：docs.n8n.io/deploy/host-n8n/configure-n8n/security/redact-execution-data.md 17,934B，2026-09-30 r338C 独立实拉）
-- **原文**：「Before execution data redaction, the only option was to disable execution history entirely... which removed all visibility into workflow success or failure status. **Execution data redaction preserves execution monitoring while hiding the sensitive data payload.**」保留 = 节点名 / 执行状态 / 耗时 / 工作流结构；替换 = `item.json` → 空对象、`item.binary` 移除。
-- **判据**：① **隐私开关不该以「关掉观测」为代价**——正确形态是**降级观测粒度**：元数据骨架保留、载荷替换。设计任何隐藏数据开关时先问：关掉之后还能不能判断成功/失败/耗时/走到哪个节点？答不出来就是关错了对象。② **错误通道必须在脱敏面内**：原文「it also redacts error details... Only the error type and HTTP status code remain」——只脱敏正常 payload 而保留错误原文，脱敏形同虚设（错误是载荷最大的旁路，一次异常即可把未导出字段带进留痕）；最小可诊断集 = 错误类型 + 状态码。③ **敏感字段的声明权在作者侧且高于查看者权限**：节点作者用 `sensitiveOutputFields` 标记的字段「always redacted... even for users with reveal access」——不能靠有权限就能看覆盖作者声明。
-- 提升层：工具/可观测性。触发词：脱敏保留骨架、降级观测粒度、错误详情脱敏、sensitiveOutputFields、作者声明高于权限、关掉执行历史。
-
-
-## 定时器恢复的默认动作是「重排未来时点」而不是「补跑历史欠账」：合并错过的滴答，且用运行身份而非起始时间认领（来源：docs.openclaw.ai/automation/cron-jobs/how-it-works.md 9,877B，2026-10-01 r339A 独立 curl 实拉逐串命中）
-- **原文**：①「On Gateway startup, overdue agent-turn jobs and jobs that await a heartbeat are **rescheduled instead of replayed immediately**, keeping model/tool execution out of scheduler startup.」②「When a running Gateway wakes after a deadline, the scheduler **coalesces missed timer ticks**. Cron rechecks eligible jobs using its **stored deadlines and run receipts**。」③「Restart recovery matches finalized results to the **run identity**, never just a coincident start time.」④「If a foreign process exists but its **start identity cannot be verified**, its receipt becomes recoverable **after more than two hours** from the queued or running start. Recovery revokes that receipt before admitting another run; it **cannot undo external side effects already in flight**.」⑤「Catch-up limits and delays **pace recovery; they do not expire it**.」⑥「Setup/startup stalls get a **phase-specific timeout** … and are **capped independently of long `timeoutSeconds` values** so cold-start/auth/context failures surface quickly.」
-- **判据**：① **追赶（catch-up）的正确默认动作是 reschedule 而非 replay**——重排把欠下的次数折进未来的下一次判定；补跑则会在整个系统刚起来、最脆弱的那几十秒里把停机期间积压的全部工作一次性倾泻下去，等于用重启给自己做一次压测。② 追赶的计量单位是**合并**（coalesce）而非队列：错过的时钟滴答合成一次判定，且只根据**已落库的 deadline 与 run receipt** 重新检查资格，不按墙上时钟现猜——「我睡了多久」不是可恢复依据，「我存下来的到期记录」才是。③ **恢复/bragging-rights 的匹配键必须是运行身份，不是启动时刻**：同一时间戳启动的进程不等于同一个 run；只有身份能对上才能认领已终态的结果。身份无法自证的孤儿进程，要过保守阈值才可收回其收据——宁可慢，不可错领。④ **恢复算子有边界：能撤销资格，不能撤销已在途的外部副作用**。写「自动接管/自动重试」前必须分清这两个 Domain：内部记账可以回滚，已经发出去的外部调用回不来。⑤ **限速与延迟只调节追赶的节奏，不消灭追赶的义务**（"pace recovery; they do not expire it"）——别把限流当成静默丢弃。⑥ 长任务 timeout 之上还要有**独立的相位看门狗**：把设置/冷启动/鉴权/上下文构建单独计时并封顶，否则这些早期失败会被一个 48 小时的总超时掩盖到几小时后人才发现。
-- **提升层**：工具/工作流。触发词：追赶重排不补跑、reschedule not replay、coalesce missed ticks、按运行身份认领、孤儿进程阈值、副作用不可回滚、pace not expire、相位看门狗、启动停滞快速失败。
-
-
+- **脱敏的正确形态是「保留可观测骨架、替换载荷」，且错误详情必须在脱敏清单内（来源：docs.n8n.io/deploy/host-n8n/configure-n8n/security/redact-execution-data.md 17,934B，2026-09-30 r338C 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r338C）。
+- **定时器恢复的默认动作是「重排未来时点」而不是「补跑历史欠账」：合并错过的滴答，且用运行身份而非起始时间认领（来源：docs.openclaw.ai/automation/cron-jobs/how-it-works.md 9,877B，2026-10-01 r339A 独立 curl 实拉逐串命中）**：本章已下沉 `references/knowledge-base.md`（r339A）。
 ## 并发互斥的锁键必须是「执行身份」而不是调用通道或运行时形态；队列满有三档背压语义；旁路维护失败不得替换已完成的回复（来源：docs.openclaw.ai/concepts/queue.md 17,920B + concepts/compaction.md 17,978B，2026-10-01 r340A 独立 curl 实拉逐串命中）
 - **原文**：①「CLI, embedded, and Codex runs share the same **session-key lane** (`session:<key>`). Each turn waits there before acquiring the session's execution claim, so **changing runtimes cannot start a competing turn**」；②「`drop: \summarize\` ... **drop the oldest queued entries as needed, keep compact summaries, and inject them as a synthetic followup prompt**」/「`drop: \old\` ... drop the oldest ... **without preserving summaries**」/「`drop: 
 ew\`: **reject the newest message when the queue is already full**」；③「**Optional maintenance failures are logged without replacing an already completed reply**」；④「A running stage is **not preempted**」+「asynchronous stage work **can still overlap and does not count toward that time budget**; this **does not lower the run concurrency limit** or change session serialization」。
@@ -196,3 +186,10 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **原文**：①（`/debug`）「**Overrides apply immediately to new config reads but do `not` write to disk.**」（`/config`）「`/config` updates **persist across restarts**.」；②「**Asynchronous write errors do not revert the session selection.**」「Immutable configuration stays unchanged.」
 - **判据**：① **"改配置"要分清两档：运行时覆盖（立即生效、不落盘、重启即失）与持久写入（跨重启）**：两者命令不同、可见性不同。⇒ 排障"我明明改了怎么重启就没了"的标准答案是先确认走的是哪一档；反过来"改了没生效"也要确认是不是只写了运行时而读的是落盘值（或反之）。**同一份配置存在两个真源（内存覆盖 / 磁盘）时，必须能自报当前读数来自哪一档**，否则任何"改了没生效"都无从判断。② **内存态已生效、持久态写入失败时，系统保留已生效状态而不自动回滚**：会话选择已经切过去了，配置落盘却是异步失败——结果就是"实际在用的"和"重启后会读到的"不一致，且没有自动纠正。⇒ 遇到"跑着是对的、重启就变了"，不要假设是缓存或时序，先查**上一次持久化有没有真的成功**；设计这类两段写入时必须给出显式对账手段（状态可查 + 失败可见），不能依赖"反正下次会重试"。
 - **提升层**：工具/工作流。触发词：运行时覆盖不落盘、/debug vs /config 两档、持久跨重启、异步写失败不回滚、内存态与持久态不一致、配置两个真源。
+
+
+## 配置意图要三参数分立：设置值 / 显式置空 / 清除覆盖；吊销不因重新启用而回溯（来源：docs.openclaw.ai/automation/cron-jobs/payloads.md 27,960B，2026-10-01 r343C 独立 curl 实拉逐串命中）
+
+- **原文**：①「Pass `--fallbacks ""` for a **strict run with no fallbacks**.」「Pass `--tools ""` for an **empty allowlist that disables all agent tools**, including tools used by a condition trigger.」「`--clear-fallbacks` ... **removes the per-job fallback override so the job follows configured fallback precedence**. Cannot combine with `--fallbacks`.」「`--clear-model` ... removes the per-job model override so the job follows normal ... precedence.」；②「Disabling or removing a job, withdrawing its `message` capability, or revoking its caller or plugin authority **stops further affected reads**」「**Re-enabling the job does not restore an occurrence's revoked access.**」
+- **判据**：① **"置空"和"清除覆盖"是两种完全不同的意图，不能用同一个空值表达**：`--fallbacks ""` 是**显式声明"我不要任何回退"**（严格模式，失败即失败），`--clear-fallbacks` 是**撤销本次覆盖、回到继承的配置优先级**；同理 `--tools ""` 是"显式禁用全部"，`--clear-tools` 才是"恢复继承"。⇒ 排障"为什么还在回退 / 为什么工具全没了"先分清用户当时下的是哪一种意图；设计配置接口时，这三者（设具体值 / 显式置空 / 清除覆盖）**必须是三个不同的参数且互斥**，否则"传空串"这一个动作会同时承担两种相反语义。② **吊销是单次不可撤销事件，重新启用只恢复未来**：吊销一旦发生，该次调用后续的读取立即停止；之后把作业重新启用，也不会把这次已吊销的访问还回来。⇒ 排查"重新打开了怎么还是读不到"时，答案不在配置里而在事件里——**吊销作用于发生时的那一次，重新启用作用于之后的每一次**，两者不互补。
+- **提升层**：工具/工作流。触发词：配置意图三参数、显式置空 vs 清除覆盖、--fallbacks 空串严格模式、--tools 空串全禁、--clear-* 恢复继承、吊销不回溯、重新启用只恢复未来。

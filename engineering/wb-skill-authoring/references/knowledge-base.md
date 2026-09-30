@@ -3069,3 +3069,11 @@ version: 3.61.0
 - **原文**：①「A skill first published without `--categories` is stored as **`other`**」；②「On a later publish, **omitting** `--categories` or `--topics` **keeps the values already stored**…Passing an **empty** value **clears** the field」；③「Passing either flag publishes **even when the files have not changed**, so fixing metadata this way creates a new patch version」；④ API 侧 flags 作用于本次运行的**每一个** skill 并**绕过 unchanged-skill 跳过**（「supply `skill_path` to bound that to one skill」）。跨平台对照：Make data-stores PATCH「Any property that is not provided will be **left unchanged**」。
 - **判据**：① 同一字段**三种输入三种结果**：首发缺省→兜底值、后续省略→**保持已存**、传空→**清空**；「省略=清空」是最常见误判，且三态是平台自定义（omit=keep 较通用，缺省与清空不可假定），跨平台迁移须逐平台实测。② **改元数据 ≠ 零风险动作**：它照样出新版本，批量 API 会因「带了 flag」让全部选中项出新 patch ⇒ 元数据修正按发布等级对待（可回滚、可审计），并注意「文件没变却出新版」会污染版本台账。③ 治具：批量修改必须带 `skill_path` 限界，否则一改全库。
 - **提升层**：可复用 Skill。触发词：元数据三态、省略保持/空值清空、首发兜底 other、改元数据发新版、unchanged-skip 被绕过、PATCH 未提供即不变。
+
+## 能力授予平面独立于「发现/归属」平面：库归属只给管理与发现权，不自动授予其声明的工具/凭证/安装权；共享 Gateway 是单一信任域，密钥不得进入 skill 内容（来源：docs.openclaw.ai/tools/skills.md 39,741B，2026-09-30 r327A 独立实拉）
+- **原文**：`Library ownership governs management and discovery; it does not grant new tools, credentials, host installation rights, or isolation from the Gateway operator. Keep credentials out of skill content.`
+- **判据**：① 技能库被「发现/拥有」只解锁**管理与发现**，不自动把该库声明的 tools/credentials/install 能力授予消费方——能力授予是**独立于发现/归属的第三平面**（既有「能力集与执行权两平面分离」只到两平面，本点补出「归属权≠授予权」这一常被误并的平面）。② 共享 Gateway = 单一信任域，附加其上的 skill 是**输入**而非秘密存储，密钥必须留在宿主侧，不进 skill 内容。③ 提升层：可复用 Skill。触发词：归属不等于授予、库所有权不授工具、共享信任域、密钥不出 skill、能力授予第三平面。
+
+## 指令 vs 知识分离：静态参考资料外置到按需检索，不塞进每次全量加载的指令（来源：www.activepieces.com/docs/agents/knowledge.md 2,613B，2026-09-30 r327C 独立实拉）
+- **原文**：`Everything in an agent's instructions has to fit the model's context window, and all of it is read on every single run... Knowledge works the other way round. A file is split into chunks and indexed, and the agent searches it only when it needs something... A three-hundred-page policy manual costs nothing until a question actually touches it.`
+- **判据**：① 指令/系统提示是**每次运行全量加载**的——把大段静态参考资料塞进去既撑爆上下文又让每次调用更慢更贵（无论当次是否相关）。② 静态、可检索的参考资料应**外置为按需检索的知识库**（分块索引、命中才拉回），而非内联进指令。③ 这是「指令预算」的核心划分：**行为约束/路由逻辑进指令，事实百科/文档手册进检索**——与上下文压缩（豆包自留地）互补但不重叠：压缩管「已进上下文的怎么缩」，本条管「什么根本不该进指令」。提升层：可复用 Skill/工作流。触发词：指令vs知识分离、知识外置检索、指令每次全量加载、静态参考不进prompt、按需检索。
