@@ -2,7 +2,7 @@
 name: wb-context-compressor
 description: >-
   上下文聚焦（**只管输入侧：源材料 → 我**）。处理长命令输出 / 大日志 / 长文档 / 历史上下文时自动应用：只注入与当前任务相关的信息，不重复搬运无关上下文；摘要不得丢失关键错误、关键数据、关键步骤；用户明确指定要保留 / 参考的内容（偏好、约束、历史产物）不得丢弃；长期指令文件（AGENTS.md / skill）失效时按其被忽略的原因排查而不是重复粘贴；**压缩时机按任务状态定、不按 token 数定（子任务完成才压，半途/卡住禁止压）**；放进来的材料要过准入、暴露面要最小化；**窗口撑满时按四步降级（大输入转检索 → 砍工具/MCP 数量 → 限历史轮数 → 才换大模型）**；**记忆要持续裁剪而非只存**；验证、测试、安全检查等必要步骤一步不省。**输出侧的废话压缩不归本技能，走 `wb-max-token-saver`。** 触发词：上下文太长、撑满了、超限、被截断、摘要、保留哪些、别丢关键信息、记忆膨胀、记忆太长、检索不到、找不到以前说的、只给相关的、工具输出太长、MCP 挂太多、历史轮数、换大模型、降级、忘记前面、信息被挤掉、静默截断、裁了就变义、注入文件、条件注入、前缀缓存、恢复注入、压缩预算、总账、脱敏。、dirty 节点、陈旧产物、缓存失效、失效传播、复用旧结果、底座开关、持久化默认关、缓存不命中、配了不生效、三级默认、全局覆盖父级、存储可达性、跨运行复用、知识保留、记忆生效了吗、最后一轮还带着前面的事实吗、对话退化、重复短语、低熵、滑窗评测、无标注监控、轻量启发式指标、原生压缩、provider 压缩、压缩不生效、压缩要落盘、摘要可携带、compactUIMessages、HTTP 200 不等于读到、登录墙、JS 壳、正文空检测、可见文本词数、大 HTML 落盘要先校验、GPT Store 需登录、命中还跑钩子、工具结果缓存、缓存键盲区、什么能进键、纯读才可缓存、媒体绕过缓存、缓存落临时目录、脱敏按字段名、忽略分隔符、字段清单是替换、默认脱敏在后、保留关联性、首尾字符、脱敏三档、加工是替换、保留系统提示、加工顺序、加工层不能短路、历史没有系统提示、系统提示静默失效、覆写开关、权威归属、命中直返、策展答案、绕过生成、换模型重建、既读又改、自改指令跨轮、读完不改配置
-version: 3.92.0
+version: 3.93.0
 ---
 
 # wb-context-compressor（上下文阶段：聚焦相关）
@@ -205,3 +205,15 @@ Agent 应用安全与对抗评测 2026：注入类型决定防御/防御提示�
 - **压缩必须命名它保留什么**：压缩不是模糊摘要——压缩结果显式声明 session intent+next steps+关键工件指针，防目标漂移。判据：**压缩产物=摘要+意图+下一步+工件指针，缺一目标会漂**。
 - **记忆检索的预算三参数**：score threshold（语义相似度 >0.3 才注入）/ result limit（每请求 5-10 条，>10 与历史竞争注意力）/ 溢出说明（截断时显式告诉模型"上下文不完整"防过度自信）。判据：**记忆注入=阈值+条数上限+截断声明三参数**。
 - **compact vs clear 判据**：同一目标继续→/compact（自然阶段边界：研究→实现之间）；切换完全无关任务→/clear（旧上下文增成本并劣化新任务）；自动紧凑默认 ~95% 触发太晚，手动提前。判据：**下一步继续同一目标→compact，否则→clear**。
+
+## Agent 可观测性与 LLM 追踪 2026：可观测 vs 监控二分/三层 span 层级/token 成本属性/OTel GenAI 语义约定/四维遥测指标/漂移信号清单/trace 落湖仓治理/golden set 三件套/CI eval 门禁阈值/judge 校准阈值（来源：mlflow 系列+futureagi 系列+newrelic+openlegion+middleware+usenix SREcon26+sentry+databricks+codesprintpro+cubeapm+dev.to 系列+autoolize+promptassay+divinci+dailyaiworld+latitude+testquality+llmci+claudelab+openai-agents-js+arxiv 2608.07346+2606.19544+2510.09738+2604.23478+microsoft learn 系列+halla.ai+oracle agentspec+ietf+claude code+google adk，r330B，与 §应用安全"全量记录工具调用可审计"互补——那条管"要留审计记录"，本条管"留什么结构、怎么监控、怎么用 eval 闭环"）
+- **可观测性 vs 监控二分**：LLM 可观测性=完整遥测模型（理解系统：trace/质量/延迟/成本/安全/漂移）；LLM 监控=持续盯信号的操作层（阈值化、告警路由、补救）——先可观测后监控，两层都建。判据：**可观测回答"为什么这样"，监控回答"该不该报警"**。
+- **三层 span 层级：会话→推理→工具**：顶层 span=agent 会话/用户轮；推理 span=每步规划/思考；工具调用 span=触发它的推理 span 的子级、结果落 span 属性；子代理 API/工具 span 嵌套在父 agent span 下。判据：**trace 树=会话→推理→工具三层，工具结果落 span 属性**。
+- **token 与成本属性挂 span**：每个 span 附输入/输出 token 数+计算成本（USD）；成本进程内/span processor 计算，sampler 按成本保留昂贵 trace（成本感知采样）。判据：**每个 LLM span 必带 token+成本，采样器按成本保 trace**。
+- **OpenTelemetry GenAI 语义约定**：标准属性 `gen_ai.system` / `gen_ai.request.model` / `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` 跨厂商一致。判据：**trace 属性用 OTel 标准名，别自造字段**。
+- **四维遥测指标**：Tokens（上下文膨胀/无限循环/缓存效率）· 财务成本（margin/预算）· 延迟（TTFT/inter-token/网关）· 可靠性（429/5xx/fallback/熔断）——每维配对应遥测类型。判据：**监控四维=tokens/成本/延迟/可靠性，缺一维看不见一类故障**。
+- **漂移信号清单**：输入 token/请求突跳、空检索率上升、finish reason 长度增加、质量分下降=漂移回归信号；p95 TTFT 上升、队列时间上升、GPU 内存逼近、工具成功率下降=容量可靠性信号。判据：**输入突跳/空检索/finish 变长=提示漂移；TTFT/队列/工具成功率=容量故障**。
+- **trace 数据治理：落湖仓可审计**：agent 海量 trace 用传统观测工具贵难治理；方案=trace 直接落受治理表（Lakehouse），长期留存、可回灌 eval 与分析。判据：**trace 是数据资产不是日志：落受治理表、长留存、可回灌 eval**。
+- **golden set 三件套：金迹+校准 judge+基线清单**：golden trace=（真实生产输入+人工锁定输出+日期锁定+专家评审）；校准 judge（ρ≥0.7 vs 3 人工、每周重校）；baseline manifest（模型权重+prompt 模板+检索索引+judge 版本）——无 manifest 无法归因"模型变了还是尺子变了"。判据：**回归测试三件套缺一不可，缺 manifest 无法归因**。
+- **CI eval 门禁与阈值**：回归 eval=冻结金集+rubric 评分+对 7 天滚动基线 Welch t-test（per-example delta）；门禁=语义相似度 <95% 或幻觉率超容忍即 block merge；5% delta 规则；金集刷新后重跑基线更新阈值（30-50% 分数变动其实是数据集腐烂）。判据：**CI 门禁=金集+≈5% delta 阈值+幻觉率容忍；刷新金集必须重基线**。
+- **LLM-as-judge 校准阈值**：采样 100-300 生产 trace→2-3 人按 rubric 标注→人-人 Cohen's kappa（>0.6 可接受、>0.8 强）→judge 同 trace 打分算 judge-人一致性（<0.5 重写 rubric）；Spearman ρ≥0.7+p<0.05=已校准、0.4-0.7=仅辅助、<0.4=重写 rubric——校准是循环（金集→盲评→相关性→错误分析→rubric 更新→重测）不是一次性。判据：**judge 上线前过 ρ≥0.7；人-人 kappa 是前提；校准是循环**。
