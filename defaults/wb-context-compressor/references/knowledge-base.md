@@ -2364,3 +2364,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Activepieces=Make 的开源中间地带**：MIT 自托管免费无 usage 计费 200+ 集成、视觉构建器熟悉；n8n 开发者向 UI 与 Make 易用之间的平衡。判据：**要开源自托管+低码体验选 Activepieces，要开发者向选 n8n**。
 - **code-first 工作流：每步即函数+HTTP trigger 为真实价值**：Pipedream 每步 Node/Python/Go/Bash 函数部署 serverless，不用管基础设施；HTTP request trigger 让任何系统触发；GitHub 双向同步 workflow 代码。判据：**事件驱动自动化优先 code-first+HTTP 触发，管理与执行解耦**。
 - **auth 抽象层：agent 跨工具代表用户行动**：抽象 token/refresh/user 级权限——agent 跨 3k+ 工具代表用户行动无需自定义 auth plumbing；专注 agent 行为而非基础设施。判据：**agent 接多工具先配统一 auth 抽象，别为每个 API 写认证**。
+
+## LLM 幻觉检测与归因工程 2026：Semantic entropy 对含义而非字符串算熵/幻觉类型检测层路由三型三检测/SelfCheck 家族零资源采样一致性检测/自适应语义熵方差阈值动态采样/引用三 rubric structural-resolvability-semantic/CiteGuard 检索增强验证扩展检索动作到全文+上下文/Strict citation contract 解码时抓捏造而非评审时/Stable-RAG 检索顺序敏感度估计消幻觉/三层幻觉防御预防检测纠正纵深/温度路由事实任务 0.1 非 0（来源：arxiv 2606.03628+arxiv 2603.22812+preprints survey+acl selfcheckgpt+semanticscholar+xplore SINdex+arxiv 2502.01812+acl factselfcheck+arxiv 2510.06265+abstractalgorithms+arxiv 2607.14400+ai-tldr+baai citeguard-rag+aitoolsguidebook+futureagi×3+papernotes citeguard+arxiv 2601.05866 FACTUM+arxiv 2510.17853+autonainews+arxiv 2601.02993 stable-rag+techaimag+c-sharpcorner langgraph+kminsider+apxml+learnixo+ragaboutit×2，r335C，与 r334B 可观测在线评估互补——那条管"线上告警阈值"，本条管"幻觉检测方法论+引用归因验证"）
+- **Semantic entropy：对含义而非字符串算熵**：同一 prompt 采样多回答→双向蕴含聚类成语义等价类→熵算在簇概率上；同义改写坍缩进一簇不贡献熵，真正分歧答案分开推高分数；高语义熵=模型答案含义多变=高幻觉可能。判据：**黑盒幻觉检测先试语义熵，采样聚类算簇熵不是串熵**。
+- **幻觉类型→检测层路由：三型三检测**：factual（主张反驳世界事实）→检查检索权威文档支持（RAG 层）；faithfulness（答案矛盾给定上下文）→NLI entailment 评分；open-domain（无外部参考的捏造）→consistency sampling；三路汇聚同一二元结局：serve grounded 或 fallback。判据：**幻觉按类型路由检测层：文档支持/NLI/一致性采样各管一型**。
+- **SelfCheck 家族：零资源采样一致性检测**：同一概念被训练过→采样回答应一致；不一致=幻觉信号；FactSelfCheck 事实级分解检测长文；SINdex 语义聚类+簇内不一致指数免外部 prompt。判据：**无参考源的黑盒场景用采样一致性检测，长文先拆事实级**。
+- **自适应语义熵：方差阈值动态采样**：hierarchical Bayesian 建模语义分布、方差阈值终止采样（够了就停）；perturbation-based importance sampling 系统探索语义空间；四 QA 集显著更好+采样量大幅降。判据：**语义熵采样用方差阈值动态控制，不固定采样 N 次**。
+- **引用三 rubric：structural/resolvability/semantic**：structural=引文 token schema 对；resolvability=指向真实可抓取源；semantic=源真含该主张；假引用死在 resolvability 层、对文档错页死在 semantic 层——只做 structural（多数团队现状）两个都抓不到。判据：**引用评测三层全查，只验格式的 structural 层抓不到假引用**。
+- **CiteGuard 检索增强验证：扩展检索动作到全文+上下文**：引用归属对齐（LLM 引用 vs 人类作者会引的）评估；agent 框架扩展检索动作（全文搜索+上下文检索）为科学引用提供忠实基础；CiteME 68.1% vs 人类 69.2%。判据：**引用验证用检索增强 agent，检索动作要扩展到全文搜索**。
+- **Strict citation contract：解码时抓捏造而非评审时**：每个事实主张必须引用检索段落 ID+无支持则 abstain；约束 prompt（只用给定 excerpts+每主张标 [1][2][3]+覆盖不到说 not in sources+永不发明引用）。判据：**RAG 生成用引用契约，主张必带来源 ID、无源即拒答**。
+- **Stable-RAG：检索顺序敏感度估计消幻觉**：同一文档不同检索顺序→不同输出=检索排列诱发幻觉；多顺序跑生成器→聚类隐藏状态→簇中心解码捕获主导推理→对齐幻觉输出向正确答案。判据：**检索顺序敏感的输出先怀疑排列诱导幻觉，聚类中心解码对齐**。
+- **三层幻觉防御：预防/检测/纠正纵深**：预防=grounded retrieval+constrained generation；检测=self-consistency voting+NLI fact-check+citation verification；纠正=feedback-driven regeneration+幻觉模式持久记忆持续改进。判据：**幻觉防御纵深三层：预防管输入、检测管输出、纠正管反馈**。
+- **温度路由：事实任务 0.1 非 0**：temperature 0 重复措辞不自然引用生硬；0.7-1.0 创意任务但事实幻觉×2-3 倍；0.1 平衡确定性与自然度；查表类用更低/生成类用更高——任务型温度路由。判据：**事实检索任务温度 0.1，按任务类型路由温度不是全局设**。
