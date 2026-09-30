@@ -2448,3 +2448,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **运行时行为对比沙箱：lint+毫秒执行捕获系统调用**：文件级 lint 配轻量沙箱执行入口几毫秒捕获 syscall/网络尝试/文件写，对比 known-good 基线；CPU 偏离 5% 或开隐藏目录自动隔离——false-negative 从 90% 降到 <10%。判据：**静态 lint 配运行时行为对比，偏离基线自动隔离**。
 - **Policy Signature+WASM 实时策略校验**：plugin.yaml 声明能力→注册阶段强制可验证策略签名 Policy Signature，Control Plane 用 WASM 模块实时校验。判据：**插件能力声明升级为可验证策略签名，运行时 WASM 实时校验**。
 - **安装侧硬化：symlink 跳过/策略失败拒网/工具名冲突硬错**：插件安装跳过 symlink（关遍历攻击）；requirements 畸形或更新失败=拒绝网络访问（不 fallback 宽松默认）；同名工具注册硬错误（不静默遮蔽）。判据：**安装器硬化三件套：symlink 跳过、策略失败拒网、同名硬错**。
+
+## 可观测性脱敏粒度降级谱系 2026：四层脱敏谱系 T0-T3 verbatim→hash→redact→drop at ingestion/脱敏四道防线位置 client SDK→ingestion server→gateway→事后检测/SDK 层先行 span processor 在 span 离开应用前脱敏/collector 集中式脱敏应用发全 span collector 处理器剥 PII/数据最小化原则只采集有观测目的的数据/四层 schema Run Step Tool call Content blobs 分域脱敏/结构性脱敏剥离全部内容只留结构元数据/粒度降级谱系全档补齐关掉观测→骨架保留→载荷替换→全脱敏/网关级可逆脱敏 format-preserving synthetic mask hash + 内容无关审计日志/tokenize 分离存储 opaque token 替换敏感值真值存 vault（来源：alibabacloud sls+openobserve+systemshardening×2+opentelemetry 官方+openarmature+kunalganglani schema+beyondscale+compel framework+akjamie+langfuse+tdcommons+metacto+ai-tldr+data443+aipromptshub+grepture+codeables+langgraph-lens pypi+microsoft azure foundry+futureagi+arxiv 2607.14309 traccia+maketocreate+alvinslee hashnode，r338A，与 r337B 可观测 SDK/r323C 安全章互补——那条管"观测怎么插桩/信任面理论"，本条管"观测数据按敏感度分档分级降级"）
+- **四层脱敏谱系 T0-T3：verbatim→hash→redact→drop at ingestion**：T0 结构类（城市/品类/意图标签）原样记录；T1 低敏（名字/job title）哈希保留相关性；T2 高敏（全名+地址/出生日期）占位符脱敏保留上下文；T3 受监管标识符（SSN/PHI/支付卡/auth token）摄入即丢永不存储。判据：**脱敏是四档谱系不是二值开关，按敏感度分档选动作**。
+- **脱敏四道防线位置：client SDK→ingestion server→gateway→事后检测**：客户端最先（覆盖最常见需求最少机器）；客户端不可信时加服务端强制；无论如何跑检测 evaluator（每层都有漏）。判据：**防泄漏四道防线，客户端优先、检测兜底**。
+- **SDK 层先行：span processor 在 span 离开应用前脱敏**：最早脱敏点在 SDK 的 SpanProcessor（attribute_value_length_limit 等），数据未离应用即处理。判据：**脱敏点越早越好，SDK 内先于 collector 与应用外**。
+- **collector 集中式脱敏：应用发全 span，collector 处理器剥 PII**：应用发出完整 span、collector processor（regex/NER 分类器/allow-list 属性键）剥 PII 后导出，instrumentation 干净、策略集中。判据：**collector 是策略集中点，instrumentation 保持干净**。
+- **数据最小化原则：只采集有观测目的的数据**：避免采集个人信息除非绝对必要；聚合/匿名能否达到同样目的；定期审查已采集属性必要性。判据：**采集前先问"这条数据有没有观测目的"，没有就不采**。
+- **四层 schema：Run/Step/Tool call/Content blobs 分域脱敏**：Run=整条 agent 调用（一个 trace）；Step=规划/推理/决策（spans）；Tool call=外部副作用（spans）；Content blobs=原始 prompt/response/tool payload（几乎不进 span）。判据：**生产默认 metadata-only，完整 payload 必须 opt-in+短存活+访问控制+激进脱敏**。
+- **结构性脱敏：剥离全部内容只留结构元数据**：token 数/延迟/错误码/模型 ID；牺牲 prompt 级调试能力但彻底消除暴露风险。判据：**不需要内容级调试时直接结构脱敏，暴露面归零**。
+- **粒度降级谱系全档补齐：关掉观测→骨架保留→载荷替换→全脱敏**：与 WB r338C「脱敏保留骨架」互补（WB 落"骨架保留 vs 全关"单档）；本条补全四档全景：关掉观测（不可判断成败）→骨架保留（保结构弃载荷）→载荷替换（占位符保上下文）→全脱敏（错误详情也脱敏）。判据：**设计隐藏开关先走完整谱系选档，别在二值里挑**。
+- **网关级可逆脱敏：format-preserving synthetic/mask/hash + 内容无关审计日志**：inline AI gateway 做可逆 PII 脱敏（synthetic/mask/hash）保留格式、7 因子概率风险评分叠确定性策略、写 content-free SHA-256 hash-chained 审计日志不存原始 prompt。判据：**网关做可逆+格式保留脱敏，审计日志不含原始载荷**。
+- **tokenize 分离存储：opaque token 替换敏感值，真值存 vault**：高级 DLP：敏感值换 opaque token、真值存 vault 按 token 索引、需要时在 LLM 响应中还原。判据：**需还原场景用 tokenize，真值与 token 分离存储**。
