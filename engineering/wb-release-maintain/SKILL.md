@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.31.0
+version: 1.32.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -305,3 +305,9 @@ sources:
 - 提升层：工作流/工具。触发词：时间戳版本号、0.0.unix-timestamp、测试生产双通道、apply immediately、upgrade module tool、存量迁移前置。
 
 ## 跨宿主安装契约三件套：声明清单 → 差分预览 → 带来源的锁（可更新亦可移除）；以及「无制品面=以 commit 为唯一时间轴」（来源：raw.githubusercontent.com/vanillagreencom/kendex/main/README.md 5,707B + gh api repos/anthropics/skills/releases → `[]` + github.com/anthropics/skills/releases HTML 186,636B「There aren’t any releases here」，2026-09-30 r324A 独立实拉；细则见 references/knowledge-base.md §r324A）
+
+
+## 挂载必须锁到具体版本号，`latest` 不被支持；删除的爆炸半径只到「未来挂载」，已挂载者不受影响；拒绝要给文件级可修细节（来源：help.aliyun.com/en/model-studio/skills-api/ 46,102B，last-modified 2026-09-28，2026-09-30 r325C 独立 curl 实拉逐串命中；经 Qoder r357-Q-A 提名）
+- 原文：「Attachment **locks to a specific version number**.」「The attachment **must specify a concrete `version` (`latest` is not supported)**; uploading new versions later **does not affect already-attached** agents.」「Delete the skill…**Delete the skill and all its versions; agents that already attached an older version are unaffected.**」「`rejected` — Hit a security risk and cannot be attached; the version detail provides **per-file issues** under `additional_properties.error_info`.」「Returns an OSS **pre-signed URL (valid for 2 hours)** for downloading the zip package.」
+- 判据：① **绑定端必须写死版本号，禁止 `latest`**——"最新版"是一个移动靶，它把每一次上游发布都变成一次隐式升级；消灭 remote-latest 这一类引用形态，等于一次性关掉最大的非预期变更入口（不同于 naar lockfile：这里是**运行时绑定面**，锁的是"我记得住的版本号"而不是依赖图）；② **升级不追溯、删除不追溯**：已挂载的 agent 继续用旧版本，删除也只切断将来 ⇒ 版本上的破坏性变更可以放心发布，但代价是**旧版本必须继续可用**，因此"要不要删旧版本"是一个单独决策，不能随发布自动发生；③ **拒绝要给到可修粒度**：扫描/准入拒绝时不能只给一个状态码，要给**文件级**问题清单并在结构化字段（而非人类可读文案）里输出，让提交方能自动定位；④ **分发走短时效签名 URL**：包下载用 2 小时有效的预签名地址，把"能下载"变成一个**有时限的授权**而不是永久链接。
+- 提升层：工作流/安全边界。触发词：绑定禁止 latest、版本锁、删除不追溯、已挂载不受影响、per-file issues、error_info、pre-signed URL 2 小时。

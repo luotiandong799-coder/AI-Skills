@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用
-version: 3.70.0
+version: 3.71.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -474,12 +474,7 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 ## 并发写仲裁三件套（陈旧写报冲突 / 相同保存 no-op / 会话钉修订）与幂等契约四元组（键作用域·占用时点·失败是否回放·保留期）；代理不得自动重试非幂等请求（来源：docs.openclaw.ai/tools/skills.md 39,705B + docs.stripe.com 1,336,845B + RFC 9110 §9.2.2 502,941B，2026-09-30 r322C 独立实拉；细则见 references/knowledge-base.md §r322C）
 
 ## Agent 评测与基准 2026：评测数据三来源/评测集版本化/judge 校准/双评分/CI 分层/工具五维/成本延迟/harness 层/轨迹六指标/多 agent 协作…（原文已下沉 references/knowledge-base.md §L502）…（原文已下沉 references/knowledge-base.md §L502）
-## 身份级仲裁三件套：持久身份复用免重排 / 同身份第二实例被罚出 / 身份+序号二元组去重——并发去重要先有身份，再谈序号（来源：kafka.apache.org/43/design/design/ 146,232B，2026-09-30 r323B 独立实拉；与 §并发写仲裁三件套/§幂等契约四元组 互补——那条管“写冲突怎么判”，本条管“谁算同一个写者”）
-- 原文：「group members to provide **persistent entity ids**. Group membership remains unchanged based on those ids, thus **no rebalance will be triggered**」；「a **fencing mechanism on broker side** will inform your duplicate client to shutdown immediately by triggering a `FencedInstanceIdException`」；「the broker assigns each producer an ID and **deduplicates messages using a sequence number**」。【通道根因】旧 `/documentation` 单页已改 Hugo 跳转壳，此前“57KB 内 0 命中”是**载体改版**而非内容不存在；正确锚点 = `/43/design/design/#static-membership`（KIP-345 静态成员）。
-- 判据：① **去重的先决条件是身份，不是序号**——没有稳定身份，“序号从几开始数”没有意义；先给每个写者一个持久 ID，重连才不会被当成新人触发全量重排（rebalance）；② **身份冲突的罚则必须落在仲裁方而不是写者自律**：同身份出现第二实例时由服务端主动踢出并给出具名异常，而不是让两个实例各写各的、靠事后对账才发现；③ **序号只在单一身份内部有效**（producer id + sequence number），跨身份的重复它看不见——声明幂等范围时必须连“键的作用域”一起写。
-- 提升层：工具/工作流。触发词：持久身份、static membership、fencing、FencedInstanceIdException、序号去重、身份先于序号。
-
-
+## 身份级仲裁三件套：持久身份复用免重排 / 同身份第二实例被罚出 / 身份+序号二元组去重——并发去重要先有身份，再谈序号（来源：kafka.apache.org/43/design/design（原文已下沉 references/knowledge-base.md §r325C）
 ## 审批门要配齐四个旋钮（启用选择器 / 豁免主体 / 在途隔离 / 超时去向）；缺第四个时 pending 可无限挂起（来源：www.activepieces.com/docs/flows/flow-approvals.md，2026-09-30 r323C 独立实拉 2,500B；与 §并发写仲裁 互补——那条管“写冲突”，本条管“变更放行”）
 - 原文：启用选择器「Project Settings → General → toggle **Sensitive Project**」；豁免主体「**Admins publish directly — the gate is skipped for them.**」；在途隔离「The previously published version **keeps running** while the request is being reviewed」；撤回「**Withdraw** the request…while it’s still [pending]」。**缺位反证**：全文无任何 expiration / timeout / TTL 字样。
 - 判据：① 门不是一个开关而是**四个旋钮**——谁来开（启用选择器）、谁能绕过（豁免主体）、等待期间跑哪个版本（在途隔离）、超时后怎么办（去向）；只实现前三个的门，默认行为是“永远挂着”，而这通常不是设计意图而是漏项；② **豁免主体必须显式写出是谁**：此处管理员是完全跳过而非预审放行，把“谁可以不走门”写成显式配置，否则门会被未声明的角色绕过去；③ **在途隔离是门的可用性前提**——审批期间旧版本继续服务，变更才敢进审批流，否则审批等于停机；④ 引用任何“已有审批”前先查它有没有超时兜底，**没有超时兜底的审批门等于可选否决权**。提升层：工作流。触发词：审批门、Sensitive Project、Admins publish directly、在途版本继续跑、pending 无超时、豁免主体。
@@ -497,3 +492,9 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **skills 组合基元与放行自动化**：compose primitives 别 bundle workflows：一个 skill 一个能力，多个小 skill 运行时组合，一个大 skill 僵硬；subagent 与 skill 同源=frontmatter name/description/tool list 启动加载但 body 不自动调用——显式调用；skill 上线用 evidence bundle+rollout-gate fail-closed 决策库（consume Evidence Bundle+rollout policy 决定 allow/block，GitHub Action 消费）。判据：**技能写成可组合基元，发布走证据包+放行门禁自动化**。
 
 ## 扩展点是「观察 + 否决」双职：回调里抛错即可阻止被钩的操作，且钩子无沙箱、回调继承宿主实例全权限——扩展点的权限边界等于宿主权限，选钩前必须先声明（来源：docs.n8n.io/hosting/configuration/external-hooks/ 1,023,234B，2026-09-30 r324B 独立实拉，原文 lowercase「forbid an action by throwing an error」命中；与 §审批门四旋钮 互补——那条管“变更怎么放行”，本条管“放行机制自身有多大权”；细则见 references/knowledge-base.md §r324B）
+
+
+## 版本义务沿引用图传递：改动一个被依赖的文件，即使接口没变也要 bump 全部下游引用者（来源：pipedream.com/docs/components/contributing/guidelines.md 43,351B，2026-09-30 r325C 独立 curl 实拉逐串命中「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」；经 Qoder r357-Q-A 提名；与已落「接口形状判破坏」互补——那条管"算不算破坏性变更"，本条管"谁的版本号必须跟着动"）
+- 原文语境：Pipedream 组件注册表的版本号规则——新增 action 起 `0.0.1`；`0.1.0` 上修 bug 提 `0.1.1`；**「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」**
+- 判据：① **版本号是"内容指纹"而不只是"兼容性标签"**：兼容性只决定 major/minor/patch 走哪一位，而"要不要 bump"由**是否被影响**决定——即便对外接口一字未改，只要被依赖文件的行为变了，依赖它的组件版本号就必须动；② **依赖闭包内的传播必须显式执行**：改动公共文件时，负责人要把受影响清单枚举出来（按 import 图，而不是凭印象），逐条提版，否则消费方按旧版本号做缓存/准入判定，会拿到**旧判定 + 新代码**的错配组合；③ 这条与"锁定版本"是一对：一边要求下游写死版本号，另一边就必须保证**上游变动会强制推着下游动**——只锁不传就是死锁，只传不锁就是失控；④ 落地时把它写成 CI 检查而非人工纪律：`git diff` 出改动的公共文件 → 反查 import 闭包 → 断言每个闭包成员的 version 字段都变过。
+- 提升层：可复用 Skill/工作流。触发词：版本义务传递、import 闭包 bump、被影响即须提版、改公共文件连带提版、dependencies for any app component。

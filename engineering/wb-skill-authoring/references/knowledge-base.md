@@ -2641,3 +2641,11 @@ version: 3.61.0
 - 原文：docs.n8n.io《External hooks》——「Use them to log data, change data, or **forbid an action by throwing an error**.」；注册方式「To register a hook, set the environment variable `EXTERNAL_HOOK_FILES`」；前端钩子「Frontend hooks: run in the browser, loaded with a script tag」；事件面含 credential 操作 / OAuth / workflow 激活·保存·归档，**本索引页无 `n8n.start` / login 事件**（旧「登录钩子」记忆失效，按缺位处理）。
 - 判据：① **钩子不止是外发审计，它是准入逻辑的外置**：回调抛错＝否决被钩操作，所以「装一个钩子」等于把一部分放行权交给了钩子库——**否决权必须与观察权分开声明和评审**；② **钩子无沙箱**：回调以宿主进程身份执行，扩展点权限＝宿主权限，引用第三方钩子前必须按「等同给宿主权限」评估，不能按「只是个通知」评估；③ **事件清单以实际索引为准，不以记忆为准**：文档改版后登录类事件可能已不存在，凡「某事件可钩」的假设都要回到事件索引逐条核对，缺位即按不可钩处理。
 - 提升层：工具/可复用 Skill。触发词：external hooks、forbid an action、EXTERNAL_HOOK_FILES、钩子否决、无沙箱、宿主权限、事件索引缺位。
+
+
+## r325C 下沉（2026-09-30）
+
+## 身份级仲裁三件套：持久身份复用免重排 / 同身份第二实例被罚出 / 身份+序号二元组去重——并发去重要先有身份，再谈序号（来源：kafka.apache.org/43/design/design/ 146,232B，2026-09-30 r323B 独立实拉；与 §并发写仲裁三件套/§幂等契约四元组 互补——那条管“写冲突怎么判”，本条管“谁算同一个写者”）
+- 原文：「group members to provide **persistent entity ids**. Group membership remains unchanged based on those ids, thus **no rebalance will be triggered**」；「a **fencing mechanism on broker side** will inform your duplicate client to shutdown immediately by triggering a `FencedInstanceIdException`」；「the broker assigns each producer an ID and **deduplicates messages using a sequence number**」。【通道根因】旧 `/documentation` 单页已改 Hugo 跳转壳，此前“57KB 内 0 命中”是**载体改版**而非内容不存在；正确锚点 = `/43/design/design/#static-membership`（KIP-345 静态成员）。
+- 判据：① **去重的先决条件是身份，不是序号**——没有稳定身份，“序号从几开始数”没有意义；先给每个写者一个持久 ID，重连才不会被当成新人触发全量重排（rebalance）；② **身份冲突的罚则必须落在仲裁方而不是写者自律**：同身份出现第二实例时由服务端主动踢出并给出具名异常，而不是让两个实例各写各的、靠事后对账才发现；③ **序号只在单一身份内部有效**（producer id + sequence number），跨身份的重复它看不见——声明幂等范围时必须连“键的作用域”一起写。
+- 提升层：工具/工作流。触发词：持久身份、static membership、fencing、FencedInstanceIdException、序号去重、身份先于序号。
