@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: 3.79.0
+version: 3.80.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -166,11 +166,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **原文**：`Everything in an agent's instructions has to fit the model's context window, and all of it is read on every single run... Knowledge works the other way round. A file is split into chunks and indexed, and the agent searches it only when it needs something... A three-hundred-page policy manual costs nothing until a question actually touches it.`
 - **判据**：① 指令/系统提示是**每次运行全量加载**的——把大段静态参考资料塞进去既撑爆上下文又让每次调用更慢更贵（无论当次是否相关）。② 静态、可检索的参考资料应**外置为按需检索的知识库**（分块索引、命中才拉回），而非内联进指令。③ 这是「指令预算」的核心划分：**行为约束/路由逻辑进指令，事实百科/文档手册进检索**——与上下文压缩（豆包自留地）互补但不重叠：压缩管「已进上下文的怎么缩」，本条管「什么根本不该进指令」。提升层：可复用 Skill/工作流。触发词：指令vs知识分离、知识外置检索、指令每次全量加载、静态参考不进prompt、按需检索。
 
-## 涉密配置做成「给人看的指引工具」，而不是让 agent 经手秘密（来源：Activepieces MCP（/docs/mcp.md 通道）本机实拉，r326C）
-- **原文**：`ap_setup_guide`「returns instructions for the user to configure connections in the UI, **rather than handling secrets through MCP**」；「Credentials are **never exposed** — connection secrets, API keys, and OAuth tokens are **never returned by any tool**」；Discovery = read-only tools，「Discovery tools are **always available**. Other categories can be enabled or disabled per-project」。
-- **判据**：① 凭证边界的最佳实现是**工具的输出类型选择**（返回指引文本 vs 返回秘密值），而不是一条「禁止泄露密钥」的纪律——agent 侧根本没有拿到秘密的通道，边界由结构保证。② 「涉密步骤交给人、非涉密步骤交给 agent」是可设计的切分：把「在 UI 里配置连接」写成返回给用户的步骤清单。③ 只读能力恒开、写能力按项目开关，是同一思路在权限面的应用（该半条与既落「只读分级」重叠，仅作附条不重复计点）。
-- **提升层**：可复用 Skill/工具。触发词：秘密边界结构化、setup guide 交人、工具输出类型即边界、只读恒开写按项目开。
-
 ## 测试分层分类法：四层各管一种失败模式，选错层=慢/冗余/静默无效（来源：Activepieces《Testing Strategy》handbook 5,560B，2026-09-30 r336C 独立实拉）
 - **原文**：「Activepieces tests live in four distinct layers. Each layer owns a different failure mode — picking the wrong layer produces slow, redundant, or silently ineffective tests.」四层 = Unit（单模块/函数、可 mock 协作者、无真实 I/O）/ Integration（多模块对真实基础设施：真实 DB/队列/文件系统/网络/V8 isolate）/ E2E（Playwright 跨进程）/ Smoke（bash+curl 脚本）。
 - **判据**：① **测试不是「越多越好」，而是要按失败模式选层**——单测管逻辑错、集成管协作错、E2E 管端到端链路错、Smoke 管「还活着吗」；把本该在集成层验的协作写进单测并 mock 掉真实依赖，会产出「绿了但没测到」的静默无效测试；② **「mock 快重实现真实」是气味**：当忍不住 mock 一个数据库/队列/内核原语、且测试仍像在测真实行为时，应把它**上移一层**用真实依赖跑，而不是造一个会过期的假实现；③ 与 §技能写成工作流而非参考文档 互补——那条管「技能里放什么形态的测试指导」，本条管「测试本身怎么分层才不浪费」；落地到 WB：给技能写验收/回归示例时，先定这条该落在哪一层（能单测的不拉集成、必须真依赖的不造假 mock）。
@@ -197,3 +192,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **原文**：①「Omitted `askFallback` **defaults to `deny`**. Set `askFallback: "full"` explicitly when upgrading a no-UI host that should keep never-prompt behavior.」②「For approvals raised by an automation (cron) run, `allow-always` mints a **scoped standing grant** … **By default the grant lives until revoked**; `--expires-in-days <n>` freezes an expiry」；grant 列表展示四态「**until revoked, expires in N days, expired, or revoked**」。③「**Adding an existing pattern or removing a missing one succeeds without writing.**」④ 最小权限客户端：`a restricted third-party client should not request admin merely to emulate this command`（应申请专用 `operator.approvals` scope）。
 - **判据**：① **"问不了"的兜底必须默认 deny**：无 UI / 非交互主机上，提问路径不存在，此时剩余动作的默认方向决定了真实暴露面；把它设成"放行"等于给所有无人值守环境开了静默全权。⇒ 升级这类主机时，**若原本依赖 never-prompt 行为，必须显式写回**，否则一次升级会把行为从"全放行"悄悄改成"全拒绝"（或反之），而变更来自默认值而非配置。② **长期授权（standing grant）必须有生命周期四态且状态可见**：until revoked / 将到期 / 已过期 / 已吊销。默认"直到被吊销"意味着**没有吊销动作就永久有效** ⇒ 授权一旦长期化，配套的必须是**显式期限参数 + 状态可查列表**，否则吊销与过期都不可观测。③ **允许清单的增删要做成幂等写**：加已存在 / 删不存在都返回成功但不写盘。⇒ 这让"确保 X 在清单里"可以无条件重跑；非幂等的增删会把编排脚本逼成先查后写，多一次竞态。④ **权限申请按动作而非按"能不能模拟某个命令"**：受限客户端不应为了复刻一条命令去要 admin，而要申请专用 scope。⇒ **最小权限的粒度是能力（scope），不是角色（admin）**；拿不到细粒度能力就升级角色，是权限膨胀的常规路径。
 - **提升层**：安全边界/工具/工作流。触发词：askFallback 默认 deny、无 UI 兜底拒绝、standing grant 四态、until revoked、--expires-in-days、幂等 allowlist、加已存在不写、scope 优先于 admin、最小权限粒度。
+
+- **可插拔实现里「不声明拥有」不等于「框架接管」**：本章已下沉 `references/knowledge-base.md`（r342C）。
+- **涉密配置做成「给人看的指引工具」，而不是让 agent 经手秘密**：本章已下沉 `references/knowledge-base.md`（r326C）。

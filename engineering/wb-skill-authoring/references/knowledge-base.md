@@ -3045,3 +3045,14 @@ version: 3.61.0
 - **先 dry-run 预演再落盘**：按「标记段贪心选择」的脚本首版把围栏误判当章节边界，三文件塌陷（466→41 / 489→82 / 499→68）——`git checkout --` 回滚后改为「连续标记章节合并成链、整链下沉」才达标。
 - 机检两条硬指标：下沉前后行数差 = KB 新增行数 ±（指针行×链数）（本次 1351/1316 对称=零丢失）；重跑全库审计（FFFD/YAML/desc/行数）确认 0 硬问题。
 - 「沉尽学习轮链仍超 200」= 技能本体操作手册，**不硬沉**——登记例外清单（豁免存量不豁免增量），下沉本体反而破坏常驻可用性。
+
+## 可插拔实现里「不声明拥有」不等于「框架接管」（来源：docs.openclaw.ai/concepts/context.md 10,756B，2026-10-01 r342C 独立 curl 实拉逐串命中）
+
+- **原文**：「If you install a plugin that provides `kind: "context-engine"` and select it with `plugins.slots.contextEngine`, OpenClaw delegates context assembly, `/compact`, and related subagent context lifecycle hooks to that engine instead. `ownsCompaction: false` **does not auto-fallback to the legacy engine**; the active engine **must still implement `compact()` correctly**.」
+- **判据**：① **替换实现后，旧实现不会自动兜底**——一旦选了新引擎它就独占该插槽，声明「我不负责压缩」不会让平台退回内建实现。⇒ 设计插件/扩展点时，把「可选能力」的缺省语义写清楚：不实现就是没有这个能力，而不是退回默认实现；若真要回退必须显式实现回退逻辑。② **插槽是独占不是叠加**：选中一个提供某 kind 的插件，该职责整体移交。⇒ 多扩展点共存时要先确认是插槽（单占）还是钩子（多播），按插槽设计的扩展装第二个不会生效。③ **能力声明与实际实现必须一致**：声明不与实现校验，写 `ownsCompaction: false` 而实际没有正确 compact() 的结果是静默丢功能。⇒ 扩展点的能力标志位要在装载时校验实现是否真的存在，不能只信声明。
+- **提升层**：工具/工作流/可复用 Skill。触发词：可插拔插槽独占、不声明拥有≠框架接管、无自动回退、能力标志须校验实现。
+
+## 涉密配置做成「给人看的指引工具」，而不是让 agent 经手秘密（来源：Activepieces MCP（/docs/mcp.md 通道）本机实拉，r326C）
+- **原文**：`ap_setup_guide`「returns instructions for the user to configure connections in the UI, **rather than handling secrets through MCP**」；「Credentials are **never exposed** — connection secrets, API keys, and OAuth tokens are **never returned by any tool**」；Discovery = read-only tools，「Discovery tools are **always available**. Other categories can be enabled or disabled per-project」。
+- **判据**：① 凭证边界的最佳实现是**工具的输出类型选择**（返回指引文本 vs 返回秘密值），而不是一条「禁止泄露密钥」的纪律——agent 侧根本没有拿到秘密的通道，边界由结构保证。② 「涉密步骤交给人、非涉密步骤交给 agent」是可设计的切分：把「在 UI 里配置连接」写成返回给用户的步骤清单。③ 只读能力恒开、写能力按项目开关，是同一思路在权限面的应用（该半条与既落「只读分级」重叠，仅作附条不重复计点）。
+- **提升层**：可复用 Skill/工具。触发词：秘密边界结构化、setup guide 交人、工具输出类型即边界、只读恒开写按项目开。
