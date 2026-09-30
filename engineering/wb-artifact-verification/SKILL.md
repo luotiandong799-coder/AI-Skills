@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.74.0
+version: 2.75.0
 agent_created: true
 ---
 
@@ -237,48 +237,6 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 本正文只保留验证决策级核心。方法论来源、判据推导、反模式、特殊场景全部在
 [references/knowledge-base.md](references/knowledge-base.md)（完整知识库，下沉于 2026-09-26）。
 **先 Grep 定位关键词，再读对应节**。主题速查：发现要有边界 · 优先级与确定性分开 · 预算先给挑错 · 产物回收防调换 · 扫描器看不透先拒收 · 可疑项沙箱实跑 · 多复核者一致度分级 · mutation-testing · 独立 Oracle · 随机差分模糊测试 · 迁移三步验收与不可逆标注。
-## 已验证结果有有效期：上游变更后下游中间结果必须降级为 stale，且只沿已确认执行路径传播（来源：Pipedream 官方 docs/control-flow 2026-09-27 实拉）
-- **原文要点**：`If prior steps in a workflow are modified or retested, Pipedream marks later steps in the execution path as *stale* to signal that the results may be out of date. In the non-linear model, Pipedream only marks steps that are in the confirmed execution path as stale.` —— 改动前序步骤会**清空已执行路径**；只有**已确认执行路径内**的步骤立即标 stale；**条件块内的状态**要等起始阶段被测、执行路径确定后才更新。另有独立维度：**测试状态 ≠ 是否在执行路径上**——不在执行路径上的步骤也能测，但结果不可靠（"may lead to invalid or misleading results"）。
-- 判据：**"通过"是一个带上游依赖的状态，不是一次性事实**。多步任务里改了前序步骤（换信源/改参数/重跑一次），后序已经产出的中间结论必须显式降级为"可能过期"，而不是继续当作已验证结果往下推。
-- 传播要分两种精度：**已确认路径上的步骤立即失效**（它们真的会被执行到），**未确定路径（条件分支内）的步骤延后判**（路径都没定，先标了也白标）。判据：**无差别全量失效会制造假的重跑成本**——把根本不会被走到的分支也标成 stale，等于用"看起来很严格"换"真正该重跑的被淹没"。
-- 反模式：改了上游却继续引用下游旧结论（最常见）；或反过来——一有改动就把整个任务树标失效、全量重跑（把"严格"误做成"全部作废"）。
-- 与 §状态迁移三步验收（独立命令/默认 dry-run/审阅后 --apply/复跑归零）分工：**那条管"迁移动作本身怎么验收"，本条管"迁移之后，之前那些已验收的中间结果还算不算数"**。
-- 提升层：工作流 / 可复用 Skill。
-
-审计要抽样"标记为成功"的运行：静默逻辑失败不在失败日志里（来源：Activepieces《Why a workflow can run successfully and still be wrong》2026-09-17，2026-09-27 实拉，原文字段坐实）
-- **原文要点**：`When an automation completes its entire run without triggering an error code, yet produces an output that is factually wrong or business-damaging, a silent logical failure has occurred.` 引 OpenAdapt 研究：`out of seven transactional fault classes, the system detects only 2. Five out of seven faults silently pass through the workflow.` 给出的审计方法是三步：`1. Identify the 'Golden Record' (the source of truth). 2. Sample 10 successful runs from the last 7 days... 3. Manually compare the workflow output against the source.`
-- 判据：**只审计失败样本，等于把检出率的天花板钉在"系统会报错的那部分"上**。5/7 的故障族不报错，这类故障在失败日志里永远不存在——任何"看失败记录找问题"的流程对它们的结构性盲区是 100%，不是"漏了一些"。
-- 因此审计样本必须**从"成功"那一堆里抽**，且要有对照基准：先确定真源（Golden Record），再把"系统判定成功"的输出与之逐条比。判据：**没有真源做对照，抽样只是多看几遍同样的输出**；没有限定最近窗口（7 天 / 10 条），抽样会退化成"挑几条看得顺眼的"。
-- 反模式：跑一遍全绿就宣布通过；或只看执行历史里的绿色对勾（原文：`Relying on the green checkmarks in your execution history is insufficient`，因为引擎只能确认"代码没崩"，不知道折扣有没有被重复应用、线索有没有被路由给已停用用户）。
-- 与 §失败注入（变异测试）分工：**那条管"证明验证器有检出能力"，本条管"验证器的输入样本本身偏不偏"**——抽样不覆盖成功样本，变异体做得再多也测不到"成功但错"这一族。
-- 提升层：工作流 / 可复用 Skill。
-
-结构校验通过不等于语义校验通过：值要过范围 / 一致性 / 新鲜度三类断言（来源：同一 Activepieces 文章，2026-09-27 实拉）
-- **原文要点**：对照表给出同一字段的两级检查——「Order Quantity」`Schema Check (Passes): Is Integer?` / `Semantic Check (Fails): Is within historical range?`；「Customer Email」`Matches Regex?` / `Does domain have a valid MX record?`；「Discount Code」`Is String?` / `Is the current date before expiry?`。并给出三类断言：`Apply range checks to flag values that fall outside of realistic historical parameters. Implement consistency checks that compare the new output against the previous state to detect impossible jumps in data.`
-- 判据：**schema 校验证明"字段长得对"，语义校验才证明"这个值在业务上可能"**。整数、正则、字符串类型全过，仍然可以是"数量超出历史区间""域名没有 MX 记录""折扣码已过期"——这三类错全部通过结构校验，也全部会在下游造成实际损失。
-- **★成功状态码与有效负载是两件事**：原文反例是物流商的 shipping API `returned a 200 OK status while delivering an empty JSON object because the authentication token lacked specific permissions`，工作流只检查连接成功，于是"成功"地把五百条记录更新为 null。判据：**200 只是握手，不是内容**；收到响应必须校验"负载里有没有预期那些键"，否则等于把空白支票当付款收下。
-- 第三类断言**新鲜度**容易被忽略：`Fetching data from a stale cache results in a 200 OK status code, but provides a value that no longer reflects reality.` 判据：**缓存命中也是一次"成功"，但它的值可能已经不代表现实**；凡是值会影响决策的读取，都要能回答"这个值是哪一时刻的"。
-- 与 §合法 JSON 不等于合规 分工：**那条管"能不能解析 / 字段合不合规范"，本条管"合规之后，值在业务语义上成不成立"**。
-- 提升层：工具 / 可复用 Skill。
-
-验证挂点（seam）按三条判据选：复用已有 > 新建、取最高可用、理想数量 1（来源：skills.sh 技能目录 `mattpocock/skills/to-spec` 正文，2026-09-27 r199-C 实拉）
-- **原文四条就是判据**：「Existing seams should be preferred to new ones. Use the **highest seam possible**. If new seams are needed, propose them at the highest point you can. The fewer seams across the codebase, the better — **the ideal number is one**.」
-- **★能复用就别新开**：先找代码里**已经存在**的接缝（既有测试点、既有钩子、既有入口），只有它确实区分不了目标行为时才提新接缝。判据：**每开一个新接缝，就多一份"只为验证而存在"的长期维护结构**。
-- **★层级取"最高可用"，不取"最近可用"**：在哪一层插桩决定了这条断言的覆盖范围与它对重构的敏感度。判据：**同一行为能在高层验证就不要下沉**——越低的接缝越容易把实现细节钉死，重构时最先碎的就是它们。
-- **★数量是质量信号，不是越多越好**：理想是 1 个。判据：**为验证同一件事开了 N 个接缝 = 把同一份契约抄了 N 遍**，改动时要同步 N 处，漏掉一处的表现是假绿而不是报错。
-- **★选完要跟人对一次**：原文要求在 sketch 出 seam 之后 "Check with the user that these seams match their expectations"，再动笔写规约。判据：**接缝选在哪一层是设计决策，不是实现细节**，别自己定了就往下走。
-- 与 dl §探针要能一次撤干净、seam 太浅本身就是结论 的分工：那条管"临时探针的回收"与"接缝太浅给的是虚假信心"；本条管"**还没插之前，该选哪个层级、开几个**"。与 §验证要能脚本化跑 互补：那条管跑得起来，本条管挂点选得对。
-- 提升层：可复用 Skill / 工作流。
-
-Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
-- **审计置信五档**（ClawHub）：放行/注意/警告/封禁/扫描出错，不做布尔 PASS/FAIL；低于置信门槛的证据只后台参考、不进对外阻断报告。
-- **审计覆盖台账**（cloudflare security-audit-skill）：unit×check 粒度记"谁审了哪些路径"，多轮按 fingerprint 增量合并、每指纹一条终态，下一轮从台账缺口起猎。
-- **验证作用域律**（superpowers #2384）：宣布"通过"必须同时声明回归套件范围＝全项目而非本次改动文件。
-- **string-presence 禁令**：断言不得写成"输出包含 X 文本"，须绑可观察行为/副作用并可证伪（与「不断言 status 而断言产物」互补——那条防"成功零副作用"，这条防"文本出现≠行为发生"）。
-- **退役 judge 假阳率硬阈值**（Ratchet 2605.22148 + Blind Curator 2607.07436）：judge 假阳率达 (1−τ)/2（实测 0.45 尖锐拐点）即永久关闭退役保护、库静默跌破无技能基线，加评测数据救不回。
-- **评测态标记内建**（n8n Evaluation）：运行时可查"是否在被评测"，评测分支自动隔离真实副作用（写库/发送/删除），生产与自测共用同一资产。
-- **双通道评分**（arXiv 2606.17819）：同时出「任务完成分」与「指令遵循分」——遵循分低=措辞硬度问题、完成分低=步骤问题，修法分别定位；跨宿主复用技能先测宿主遵循度。
-- **对照分母=激活样本**：增益统计只取"技能确实被激活"的配对样本，剔除选择偏差；aggregate 排名为正但实际激活样本为负＝技能有害信号。
 ## 评测要接回优化器才叫闭环：观测 → AI 评测器 → AI 优化器 → 自动验证；Harness 是与模型、上下文并列的第三可调层（来源：2026-09-22 云栖大会千问 AI 平台升级（Agent Studio 自进化引擎：运行观测 + AI 评测器 + AI 优化器 + 自动验证，在上下文交互中持续调优）与 Agentic Cloud 三构建场景 Model/Harness/Context；量化佐证：理财场景专项 Harness 优化后回复效果 +20%，动态调节的 Harness 为每位用户节省 40% Token；经经济网/上证报/网易多源交叉复述，2026-09-27 r206-C 独立实拉；与 §廉价判别模型前置筛查 互补——那条管「用便宜模型筛」，本条管「筛完之后谁把它改回去」）
 - **四件套缺一即记账不是进化**：只有观测 + 评测器 = 出了分数没人改；少了自动验证 = 优化器改完不知道有没有改坏。判据：**评测结果必须有唯一的下游消费者（优化器），否则评测只是成本。**
 - **Harness 是第三可调层**：同一模型换 Harness 可拿到 +20% 效果、-40% token。判据：**效果不达标时，先问「是模型不够、上下文不够、还是 Harness 不对」，别默认第一答案就是换模型。**
@@ -495,3 +453,8 @@ Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 - 原文：①「**Applies to email and password logins only** — 2FA enforcement applies to users authenticating with email and password. Users signing in through **SSO (SAML or OIDC) aren't affected by this setting.**」② 关闭共享：「**Existing shares remain in place. The setting only affects new sharing actions.** The number of currently shared workflows and credentials is displayed below the toggle.」③ 关闭发布：「**Currently published workflows remain published. The setting only affects new publish actions.** The number of currently published personal workflows is displayed below the toggle.」④ 关闭 2FA 强制：「Users who already set up 2FA **keep it enabled** but new users are no longer required to configure it.」
 - 判据：① **策略翻转默认只约束未来动作，已发生的存量不追责也不回滚**——这是"存量豁免律"；核验一个「违规」之前必须先判定该动作发生在开关**之前还是之后**，否则会把合历史法的存量误判成违规；② **只向前生效必须显式写出来**，否则运维会以为"关掉 = 立刻全量失效"，从而给出错误的合规承诺；③ **策略的作用域要逐条点名到认证路径**：2FA 强制只作用于邮箱口令登录，**SSO/SAML/OIDC 完全不受此设置影响**——任何"强制"类策略都要回答"它管得住哪几条入口、管不住哪几条"，剩下那几条就是实际的最大暴露面；④ **存量豁免必须配存量可见性**：开关旁直接显示"当前已共享 N 项 / 已发布 N 项"，否则豁免了什么、豁免了多少是黑的，无法评估残余风险；⑤ 关掉强制不等于回收：已开启 2FA 的用户保留，只是新用户不再被要求——**收紧开关的反向操作同样是"只向前"的**。
 - 提升层：工作流/治理/安全边界。触发词：仅向前生效、存量豁免、existing shares remain、开关只影响新动作、策略作用域点名认证路径、SSO 不受 2FA 强制、存量数量可见。
+
+## 清理责任按数据类别分裂，且「超额」有第四态：接收但不处理（来源：n8n use-external-storage / handle-binary-data + Dify knowledge-storage-limit 本机实拉，r326A）
+- **原文**：① n8n「n8n **delegates pruning of binary data to S3**, so setting a lifecycle configuration is **required** unless you want to preserve binary data indefinitely」；② 「execution data **doesn't rely on an S3 lifecycle rule**. Don't add a lifecycle rule for execution data, as **it could delete data that n8n still references**」；③ Dify 超限上传「the document is **kept in the document list but not indexed**」；④ 「If a downgrade or an expired subscription leaves your data above the new plan's limit, **nothing is deleted**: your apps can still retrieve from these knowledge bases, but adding content stays blocked」；⑤ 「a document can use **several times its own file size** in storage once indexed」。
+- **判据**：① **产物清理先问「这条 TTL 归谁执行」**——同一后端上不同数据类别的清理主体可以不同，被引用数据的 TTL 绝不能交给存储层（交给它=无声丢数据，且删的时候不报错）。② 超限不止「显式 413 / 静默丢弃 / 伪装 200」三态，还有**第四态「对象在、效果无」**（文件留在列表但永不索引）⇒ 验证超限行为必须查两件事：对象是否存在 + 是否真的可用，只看状态码必漏。③ **容量治理只封写、不封读**：降级导致的存量超额不删数据、既有检索照常 ⇒ 「读可用性」与「写可用性」是两个独立 SLA，配额告警 ≠ 服务不可用。④ 计量口径是**索引后体积**（可为源文件数倍、随 embedding 维度变），不是输入体积 ⇒ 容量规划与预检须按索引产物估。
+- **提升层**：工具/工作流。触发词：清理主体分裂、TTL 归谁执行、委托存储层生命周期、禁加生命周期规则、超额第四态、留在列表但不索引、降级不删数据、读写解耦、索引后体积。

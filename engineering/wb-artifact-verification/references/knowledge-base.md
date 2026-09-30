@@ -1712,3 +1712,49 @@ L1 正则/AST/元数据 XGBoost 特征评分——过滤约 86% 良性技能，<
 - 原文："If multiple n8n processes share one writable volume … they **must not** write to the same event log file. Concurrent appends from multiple processes can **interleave or corrupt** the file, leading to **recovery failures and lost events**."；"n8n uses the configured path **verbatim** and doesn't append a process-type suffix, so **your orchestrator owns uniqueness** across processes."；"`N8N_EVENTBUS_LOGWRITER_MAXTOTALMESSAGESPERFILE` bounds how many lines n8n parses from a single event log file during recovery, so a corrupted file can't exhaust process memory."；"If a shared `n8nEventLog-worker.log` file already exists from a previous deployment, **quarantine it manually** before opting in. n8n doesn't auto-delete legacy files."
 - 判据：① **留痕通道的并发写者数是一等配置项**——日志/事件流一旦被多个进程追加，损坏的不是一条记录而是整个恢复链（交错写入 → 恢复失败 → 事件丢失），而丢的恰好是排障最需要的那批数据；水平扩容前先确认"每个执行单元有独立的留痕出口"；② **平台的兜底是"限损"不是"修好"**：设了唯一路径后平台**不再自动加后缀**（唯一性交给编排方），恢复时再给一个行数上限防内存被打爆——两层都是防止坏文件拖垮系统，而不是把事件找回来；所以唯一性必须由部署方保证，平台不会替你兜；③ **历史遗留文件要人工隔离**——平台不删旧文件，迁移到"每进程独立日志"时必须先手动搬走共享文件，否则新配置会读到一个已经被并发写坏的旧文件。
 - 提升层：可观测性/工具。触发词：事件日志并发追加、多进程共享日志、interleave corrupt、LOGWRITER_LOGFULLPATH、编排方保证唯一、遗留日志人工隔离。
+
+
+<!-- 下沉批次 2026-09-30 r326（原 SKILL.md 章节）-->
+
+## 已验证结果有有效期：上游变更后下游中间结果必须降级为 stale，且只沿已确认执行路径传播（来源：Pipedream 官方 docs/control-flow 2026-09-27 实拉）
+- **原文要点**：`If prior steps in a workflow are modified or retested, Pipedream marks later steps in the execution path as *stale* to signal that the results may be out of date. In the non-linear model, Pipedream only marks steps that are in the confirmed execution path as stale.` —— 改动前序步骤会**清空已执行路径**；只有**已确认执行路径内**的步骤立即标 stale；**条件块内的状态**要等起始阶段被测、执行路径确定后才更新。另有独立维度：**测试状态 ≠ 是否在执行路径上**——不在执行路径上的步骤也能测，但结果不可靠（"may lead to invalid or misleading results"）。
+- 判据：**"通过"是一个带上游依赖的状态，不是一次性事实**。多步任务里改了前序步骤（换信源/改参数/重跑一次），后序已经产出的中间结论必须显式降级为"可能过期"，而不是继续当作已验证结果往下推。
+- 传播要分两种精度：**已确认路径上的步骤立即失效**（它们真的会被执行到），**未确定路径（条件分支内）的步骤延后判**（路径都没定，先标了也白标）。判据：**无差别全量失效会制造假的重跑成本**——把根本不会被走到的分支也标成 stale，等于用"看起来很严格"换"真正该重跑的被淹没"。
+- 反模式：改了上游却继续引用下游旧结论（最常见）；或反过来——一有改动就把整个任务树标失效、全量重跑（把"严格"误做成"全部作废"）。
+- 与 §状态迁移三步验收（独立命令/默认 dry-run/审阅后 --apply/复跑归零）分工：**那条管"迁移动作本身怎么验收"，本条管"迁移之后，之前那些已验收的中间结果还算不算数"**。
+- 提升层：工作流 / 可复用 Skill。
+
+审计要抽样"标记为成功"的运行：静默逻辑失败不在失败日志里（来源：Activepieces《Why a workflow can run successfully and still be wrong》2026-09-17，2026-09-27 实拉，原文字段坐实）
+- **原文要点**：`When an automation completes its entire run without triggering an error code, yet produces an output that is factually wrong or business-damaging, a silent logical failure has occurred.` 引 OpenAdapt 研究：`out of seven transactional fault classes, the system detects only 2. Five out of seven faults silently pass through the workflow.` 给出的审计方法是三步：`1. Identify the 'Golden Record' (the source of truth). 2. Sample 10 successful runs from the last 7 days... 3. Manually compare the workflow output against the source.`
+- 判据：**只审计失败样本，等于把检出率的天花板钉在"系统会报错的那部分"上**。5/7 的故障族不报错，这类故障在失败日志里永远不存在——任何"看失败记录找问题"的流程对它们的结构性盲区是 100%，不是"漏了一些"。
+- 因此审计样本必须**从"成功"那一堆里抽**，且要有对照基准：先确定真源（Golden Record），再把"系统判定成功"的输出与之逐条比。判据：**没有真源做对照，抽样只是多看几遍同样的输出**；没有限定最近窗口（7 天 / 10 条），抽样会退化成"挑几条看得顺眼的"。
+- 反模式：跑一遍全绿就宣布通过；或只看执行历史里的绿色对勾（原文：`Relying on the green checkmarks in your execution history is insufficient`，因为引擎只能确认"代码没崩"，不知道折扣有没有被重复应用、线索有没有被路由给已停用用户）。
+- 与 §失败注入（变异测试）分工：**那条管"证明验证器有检出能力"，本条管"验证器的输入样本本身偏不偏"**——抽样不覆盖成功样本，变异体做得再多也测不到"成功但错"这一族。
+- 提升层：工作流 / 可复用 Skill。
+
+结构校验通过不等于语义校验通过：值要过范围 / 一致性 / 新鲜度三类断言（来源：同一 Activepieces 文章，2026-09-27 实拉）
+- **原文要点**：对照表给出同一字段的两级检查——「Order Quantity」`Schema Check (Passes): Is Integer?` / `Semantic Check (Fails): Is within historical range?`；「Customer Email」`Matches Regex?` / `Does domain have a valid MX record?`；「Discount Code」`Is String?` / `Is the current date before expiry?`。并给出三类断言：`Apply range checks to flag values that fall outside of realistic historical parameters. Implement consistency checks that compare the new output against the previous state to detect impossible jumps in data.`
+- 判据：**schema 校验证明"字段长得对"，语义校验才证明"这个值在业务上可能"**。整数、正则、字符串类型全过，仍然可以是"数量超出历史区间""域名没有 MX 记录""折扣码已过期"——这三类错全部通过结构校验，也全部会在下游造成实际损失。
+- **★成功状态码与有效负载是两件事**：原文反例是物流商的 shipping API `returned a 200 OK status while delivering an empty JSON object because the authentication token lacked specific permissions`，工作流只检查连接成功，于是"成功"地把五百条记录更新为 null。判据：**200 只是握手，不是内容**；收到响应必须校验"负载里有没有预期那些键"，否则等于把空白支票当付款收下。
+- 第三类断言**新鲜度**容易被忽略：`Fetching data from a stale cache results in a 200 OK status code, but provides a value that no longer reflects reality.` 判据：**缓存命中也是一次"成功"，但它的值可能已经不代表现实**；凡是值会影响决策的读取，都要能回答"这个值是哪一时刻的"。
+- 与 §合法 JSON 不等于合规 分工：**那条管"能不能解析 / 字段合不合规范"，本条管"合规之后，值在业务语义上成不成立"**。
+- 提升层：工具 / 可复用 Skill。
+
+验证挂点（seam）按三条判据选：复用已有 > 新建、取最高可用、理想数量 1（来源：skills.sh 技能目录 `mattpocock/skills/to-spec` 正文，2026-09-27 r199-C 实拉）
+- **原文四条就是判据**：「Existing seams should be preferred to new ones. Use the **highest seam possible**. If new seams are needed, propose them at the highest point you can. The fewer seams across the codebase, the better — **the ideal number is one**.」
+- **★能复用就别新开**：先找代码里**已经存在**的接缝（既有测试点、既有钩子、既有入口），只有它确实区分不了目标行为时才提新接缝。判据：**每开一个新接缝，就多一份"只为验证而存在"的长期维护结构**。
+- **★层级取"最高可用"，不取"最近可用"**：在哪一层插桩决定了这条断言的覆盖范围与它对重构的敏感度。判据：**同一行为能在高层验证就不要下沉**——越低的接缝越容易把实现细节钉死，重构时最先碎的就是它们。
+- **★数量是质量信号，不是越多越好**：理想是 1 个。判据：**为验证同一件事开了 N 个接缝 = 把同一份契约抄了 N 遍**，改动时要同步 N 处，漏掉一处的表现是假绿而不是报错。
+- **★选完要跟人对一次**：原文要求在 sketch 出 seam 之后 "Check with the user that these seams match their expectations"，再动笔写规约。判据：**接缝选在哪一层是设计决策，不是实现细节**，别自己定了就往下走。
+- 与 dl §探针要能一次撤干净、seam 太浅本身就是结论 的分工：那条管"临时探针的回收"与"接缝太浅给的是虚假信心"；本条管"**还没插之前，该选哪个层级、开几个**"。与 §验证要能脚本化跑 互补：那条管跑得起来，本条管挂点选得对。
+- 提升层：可复用 Skill / 工作流。
+
+Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
+- **审计置信五档**（ClawHub）：放行/注意/警告/封禁/扫描出错，不做布尔 PASS/FAIL；低于置信门槛的证据只后台参考、不进对外阻断报告。
+- **审计覆盖台账**（cloudflare security-audit-skill）：unit×check 粒度记"谁审了哪些路径"，多轮按 fingerprint 增量合并、每指纹一条终态，下一轮从台账缺口起猎。
+- **验证作用域律**（superpowers #2384）：宣布"通过"必须同时声明回归套件范围＝全项目而非本次改动文件。
+- **string-presence 禁令**：断言不得写成"输出包含 X 文本"，须绑可观察行为/副作用并可证伪（与「不断言 status 而断言产物」互补——那条防"成功零副作用"，这条防"文本出现≠行为发生"）。
+- **退役 judge 假阳率硬阈值**（Ratchet 2605.22148 + Blind Curator 2607.07436）：judge 假阳率达 (1−τ)/2（实测 0.45 尖锐拐点）即永久关闭退役保护、库静默跌破无技能基线，加评测数据救不回。
+- **评测态标记内建**（n8n Evaluation）：运行时可查"是否在被评测"，评测分支自动隔离真实副作用（写库/发送/删除），生产与自测共用同一资产。
+- **双通道评分**（arXiv 2606.17819）：同时出「任务完成分」与「指令遵循分」——遵循分低=措辞硬度问题、完成分低=步骤问题，修法分别定位；跨宿主复用技能先测宿主遵循度。
+- **对照分母=激活样本**：增益统计只取"技能确实被激活"的配对样本，剔除选择偏差；aggregate 排名为正但实际激活样本为负＝技能有害信号。

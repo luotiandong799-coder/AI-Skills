@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化
-version: 1.32.0
+version: 1.33.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -311,3 +311,8 @@ sources:
 - 原文：「Attachment **locks to a specific version number**.」「The attachment **must specify a concrete `version` (`latest` is not supported)**; uploading new versions later **does not affect already-attached** agents.」「Delete the skill…**Delete the skill and all its versions; agents that already attached an older version are unaffected.**」「`rejected` — Hit a security risk and cannot be attached; the version detail provides **per-file issues** under `additional_properties.error_info`.」「Returns an OSS **pre-signed URL (valid for 2 hours)** for downloading the zip package.」
 - 判据：① **绑定端必须写死版本号，禁止 `latest`**——"最新版"是一个移动靶，它把每一次上游发布都变成一次隐式升级；消灭 remote-latest 这一类引用形态，等于一次性关掉最大的非预期变更入口（不同于 naar lockfile：这里是**运行时绑定面**，锁的是"我记得住的版本号"而不是依赖图）；② **升级不追溯、删除不追溯**：已挂载的 agent 继续用旧版本，删除也只切断将来 ⇒ 版本上的破坏性变更可以放心发布，但代价是**旧版本必须继续可用**，因此"要不要删旧版本"是一个单独决策，不能随发布自动发生；③ **拒绝要给到可修粒度**：扫描/准入拒绝时不能只给一个状态码，要给**文件级**问题清单并在结构化字段（而非人类可读文案）里输出，让提交方能自动定位；④ **分发走短时效签名 URL**：包下载用 2 小时有效的预签名地址，把"能下载"变成一个**有时限的授权**而不是永久链接。
 - 提升层：工作流/安全边界。触发词：绑定禁止 latest、版本锁、删除不追溯、已挂载不受影响、per-file issues、error_info、pre-signed URL 2 小时。
+
+## 清理器只作用于「当前配置指向的那一个后端」：切换后端即在旧后端留下永不自清的孤儿（来源：n8n handle-binary-data 本机实拉，r326A）
+- **原文**：「n8n executes binary data pruning as part of execution data pruning」；「If you configure multiple binary data modes, binary data pruning operates on **the active binary data mode**. For example, if your instance stored data in S3, and you later switched to filesystem mode, n8n **only prunes binary data in the filesystem**.」
+- **判据**：① **迁移 / 换存储的验收必须含「旧位置残留清点」**——清理器跟随现役配置，旧后端的数据从此无人管；只看新位置健康 = 漏一半。② 清理责任与配置绑定 ⇒ 「存储后端」变更必须触发一次孤儿盘点，写进迁移 runbook，不靠人记得。
+- **提升层**：工作流/工具。触发词：清理器只认活动后端、切换后端留孤儿、旧位置残留清点、迁移验收两看。
