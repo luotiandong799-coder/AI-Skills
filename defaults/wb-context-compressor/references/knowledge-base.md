@@ -2436,3 +2436,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **sensitive data 开关：默认关内容记录**：enable_instrumentation(enable_sensitive_data=False)/enable_content_recording 显式开；内容记录默认关避免 PII 进 trace。判据：**插桩默认关内容记录，需要时显式开**。
 - **四 API 覆盖：agents/LLM/group chat/A2A 四类插桩**：四函数 instrument agents、LLM calls、group chats、A2A servers；共享 trace ID 连接全部。判据：**插桩覆盖 agent/LLM/群聊/协议四类调用，共享 trace ID**。
 - **vendor-neutral 标准替代专有 SDK**：OpenTelemetry 是供应商中立标准，用它替代专有 agent SDK；framework-agnostic instrumentation（不绑单个厂商 orchestrator）；Grafana Tempo+Prometheus 开源栈。判据：**可观测性走 OTel 中立标准，不绑厂商 SDK**。
+
+## 技能市场信任与签名工程 2026：行为完整性验证 BIV 声明 vs 实际功能偏差审计/八阶段验证管道签名是最后一道门/注册表四属性签名清单+声明式能力作用域/SIGIL 四出版类型+审计-运行时间隙/三攻击模式识别 Bait-and-Switch Nested Injection Delayed Weaponization/分级信任 T1-T4+信任分数衰减/沙箱执行受限 syscall+网络出口+文件隔离/运行时行为对比沙箱 lint+毫秒执行捕获系统调用/Policy Signature+WASM 实时策略校验/安装侧硬化 symlink 跳过策略失败拒网工具名冲突硬错（来源：unit42+beri nvidia×2+mech techleads+refft+mr.technology×2+snyk vercel+jfrog+specweave+zenvanriel+betterclaw+arxiv 2605.05274 sigil+thealeister+ietf agent-id+ietf apki+nvidia developer+clawguard+zylos 技能共享+magofoundation+agentlair+securetom+skillcloak+csa plugin4shell+explainx registry+codex plugins 1.0+csdn dify psr+safeguard，r337C，与 r322B 技能平台信任面/r323C Agent 安全章互补——那条管"配额与信任面/对抗评测理论"，本条管"签名/供应链/沙箱/市场准入怎么落地"）
+- **行为完整性验证 BIV：声明 vs 实际功能偏差审计**：分析 OpenClaw 技能注册表 49943 个技能：80% 偏离声明功能、5%（~2490）含多阶段攻击链（凭证窃取/RCE/静默数据渗出）——静态扫描不够要行为级审计。判据：**技能审计看行为完整性（实际功能 vs 声明），别只看静态扫描**。
+- **八阶段验证管道：签名是最后一道门**：source repo ownership→自动+人工审查→安全扫描→质量指标评估→skill card 生成→加密签名→目录入库→公共同步——签名出现在管道末端，前面全是准入。判据：**市场准入按流水线走，加密签名是发布前最后一道门**。
+- **注册表四属性：签名清单+声明式能力作用域**：每技能发布者加密签名、可验证身份、runtime 生产模式拒绝未签名技能；manifest 机器可读声明调用哪些工具。判据：**注册表先有签名清单+能力声明，生产模式拒未签名**。
+- **SIGIL 四出版类型+审计-运行时间隙**：Transparent（明文公开）/Licensed（付费）/Sealed（托管）/Committed（内部工作流）四型；三阶段 Submission→Anchoring→Invocation 全程防篡改+可追溯，提交前 DAO 审查。判据：**技能分发按四型分权级，提交-锚定-调用三阶段全可追踪**。
+- **三攻击模式识别：Bait-and-Switch/Nested Injection/Delayed Weaponization**：良性发布过初扫后注入恶意/编程安装恶意技能+关 telemetry/合法技能后推恶意更新——每种都绕过"提交时审查"。判据：**审技能防三类时序攻击：过扫注入/嵌套安装/延迟武器化**。
+- **分级信任 T1-T4+信任分数衰减**：四层信任治理模型逐级验证门（static analysis→...→）；APKI 替换二元 valid/revoked：证书信任分数 0-100、无正面信号衰减、依赖方强制最低阈值、评分重大变化重签发。判据：**信任是分级+衰减的分数，不是二元有效/吊销**。
+- **沙箱执行：受限 syscall+网络出口+文件隔离**：技能以受限 syscall/network egress/filesystem isolation 运行；Claude Code 文档明说插件以用户完整权限运行无 per-plugin 沙箱——这是 2026 中期的文档化威胁模型。判据：**第三方技能必须沙箱执行，别让它拿到宿主完整权限**。
+- **运行时行为对比沙箱：lint+毫秒执行捕获系统调用**：文件级 lint 配轻量沙箱执行入口几毫秒捕获 syscall/网络尝试/文件写，对比 known-good 基线；CPU 偏离 5% 或开隐藏目录自动隔离——false-negative 从 90% 降到 <10%。判据：**静态 lint 配运行时行为对比，偏离基线自动隔离**。
+- **Policy Signature+WASM 实时策略校验**：plugin.yaml 声明能力→注册阶段强制可验证策略签名 Policy Signature，Control Plane 用 WASM 模块实时校验。判据：**插件能力声明升级为可验证策略签名，运行时 WASM 实时校验**。
+- **安装侧硬化：symlink 跳过/策略失败拒网/工具名冲突硬错**：插件安装跳过 symlink（关遍历攻击）；requirements 畸形或更新失败=拒绝网络访问（不 fallback 宽松默认）；同名工具注册硬错误（不静默遮蔽）。判据：**安装器硬化三件套：symlink 跳过、策略失败拒网、同名硬错**。
