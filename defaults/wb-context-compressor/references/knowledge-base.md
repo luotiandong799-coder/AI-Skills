@@ -2352,3 +2352,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **6 并行评审 agent：按关注面分模型分 agent**：Code Quality（bugs/逻辑/类型）/Accessibility（WCAG 2.1 AA）/Repo Style（AGENTS.md 合规/i18n/feature flags）/Performance（re-render/N+1/bundle size）各配不同模型档位；并行+焦点单一。判据：**评审拆成关注面单一的并行 agent，焦点越窄噪音越少**。
 - **钩子+技能固化工程流程：ECC 模式**：用 hooks 把规划/测试/审查固化成工程流程（不是提示词叮嘱）；Ponytail 懒人阶梯约束少写代码；system-prompts-and-models 收集各工具系统提示词做逆向工程。判据：**工程流程用钩子机制固化，替代提示词叮嘱**。
 - **harness 化生产 agent：端到端控制 agent 执行**：open-source SDK 构建 agent harness 端到端控制（任意模型/任意云）；比 framework 更底层=控制执行不是调用。判据：**生产 agent 优先 harness 端到端控制，不靠 framework 黑盒编排**。
+
+## 低代码 Agent 工作流平台实战 2026：确定性路由优先于 agent 路由/Max Iterations 断路器防 runaway 循环/错误分支+幂等键 week-two 失败头号修复/Trigger-Normalize-Classify-Branch-Generate-Act-Log 七段模式/Return Intermediate Steps 工具调用出岔第一排障反射/护栏三件套审批门+范围限制+单一用途 agent/低代码平台部署 flows 为 MCP servers/Activepieces=Make 的开源中间地带/code-first 工作流每步即函数+HTTP trigger 为真实价值/auth 抽象层 agent 跨工具代表用户行动（来源：n8n blog×2+dify mintlify+aiagentskit+ai-automate+wearetandem+dev.to lars_winstand+automatenexus+renezander+roborhythms+pickmysoft+lowcode.agency+madappgang+make.com×2+bestautomationtools+pokee+3axislabs+pakainfo+listai.cc+pipedream×2+contentforce+affordableai+examples.com+aitoolkitpro+creaitor+bacancy+gmtasoftware+zapier，r335B，与 wb-execute-discipline §轻量自动化三模式+定时记账互补——那条管"自动化用什么形态搭+排期怎么写对"，本条管"低代码平台上的 agent 工作流实战模式：路由/断路器/错误分支/护栏"）
+- **确定性路由优先于 agent 路由**：能 Switch node 按类别字段/工单类型分类决定调哪个专家，就别让 agent 决定——确定性路由更快/更便宜/永不误路由；agent 路由仅输入真歧义且无法规约成显式规则。判据：**先问"能不能用规则分类"——能就 Switch，不能才 agent**。
+- **Max Iterations 断路器：防 runaway 循环的成本闸**：显式 Max Iterations 电路断路器防 API 循环失控，保护预算免受非确定性工具失败；Dify 侧叫迭代上限。判据：**agent 循环必须有迭代上限+断路器，成本失控先查它**。
+- **错误分支+幂等键：week-two 失败的头号修复**：n8n agent 第 2 周最大失败=未处理工具错误崩溃整个 workflow；修复=每个工具调用配错误分支+幂等键；一个 rate-limited Gmail 调用杀全流程。判据：**每个工具调用绑错误分支+幂等键，单点故障不炸全流程**。
+- **Trigger>Normalize>Classify>Branch>Generate>Act>Log 七段模式**：每个生产 AI 工作流同形；Haiku 分类（10x 便宜）Sonnet 生成；路由决策用便宜模型。判据：**AI 工作流默认七段形，分类用便宜模型生成用强模型**。
+- **Return Intermediate Steps：工具调用出岔第一个排障反射**：选项加 agent 决策细节；工具调用走偏第一个打开它；内置 chat 窗口测 agent 不需离开画布。判据：**工具调用异常先开 Intermediate Steps 看 agent 决策，再查节点**。
+- **护栏三件套：审批门+范围限制+单一用途 agent**：无护栏=给 agent 强工具无人审批门/范围限制=做你没想要的事；过范围=一个 agent 做所有事=不可靠 generalist——窄单一用途 agent 效果好；会话类 agent 必须加记忆节点。判据：**agent 上线前过护栏三查：审批门/范围/用途单一**。
+- **低代码平台部署 flows 为 MCP servers**：Langflow 140k+ 星最大社区、可把 flows 部署成 MCP servers——低代码产出变成标准工具面供任何 agent 消费；Make 原生 MCP Server+3k 集成。判据：**低代码 flows 封装成 MCP 端点，让编排产出可被任意 agent 调用**。
+- **Activepieces=Make 的开源中间地带**：MIT 自托管免费无 usage 计费 200+ 集成、视觉构建器熟悉；n8n 开发者向 UI 与 Make 易用之间的平衡。判据：**要开源自托管+低码体验选 Activepieces，要开发者向选 n8n**。
+- **code-first 工作流：每步即函数+HTTP trigger 为真实价值**：Pipedream 每步 Node/Python/Go/Bash 函数部署 serverless，不用管基础设施；HTTP request trigger 让任何系统触发；GitHub 双向同步 workflow 代码。判据：**事件驱动自动化优先 code-first+HTTP 触发，管理与执行解耦**。
+- **auth 抽象层：agent 跨工具代表用户行动**：抽象 token/refresh/user 级权限——agent 跨 3k+ 工具代表用户行动无需自定义 auth plumbing；专注 agent 行为而非基础设施。判据：**agent 接多工具先配统一 auth 抽象，别为每个 API 写认证**。
