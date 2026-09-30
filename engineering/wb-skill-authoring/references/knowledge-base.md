@@ -3056,3 +3056,11 @@ version: 3.61.0
 - **原文**：`ap_setup_guide`「returns instructions for the user to configure connections in the UI, **rather than handling secrets through MCP**」；「Credentials are **never exposed** — connection secrets, API keys, and OAuth tokens are **never returned by any tool**」；Discovery = read-only tools，「Discovery tools are **always available**. Other categories can be enabled or disabled per-project」。
 - **判据**：① 凭证边界的最佳实现是**工具的输出类型选择**（返回指引文本 vs 返回秘密值），而不是一条「禁止泄露密钥」的纪律——agent 侧根本没有拿到秘密的通道，边界由结构保证。② 「涉密步骤交给人、非涉密步骤交给 agent」是可设计的切分：把「在 UI 里配置连接」写成返回给用户的步骤清单。③ 只读能力恒开、写能力按项目开关，是同一思路在权限面的应用（该半条与既落「只读分级」重叠，仅作附条不重复计点）。
 - **提升层**：可复用 Skill/工具。触发词：秘密边界结构化、setup guide 交人、工具输出类型即边界、只读恒开写按项目开。
+
+## 无法交互时的兜底默认落在拒绝侧；长期授权要有四态可见与显式期限；允许清单的增删是幂等写（来源：docs.openclaw.ai/cli/approvals.md 16,110B，2026-10-01 r339C 独立 curl 实拉逐串命中）
+- **原文**：①「Omitted `askFallback` **defaults to `deny`**. Set `askFallback: "full"` explicitly when upgrading a no-UI host that should keep never-prompt behavior.」②「For approvals raised by an automation (cron) run, `allow-always` mints a **scoped standing grant** … **By default the grant lives until revoked**; `--expires-in-days <n>` freezes an expiry」；grant 列表展示四态「**until revoked, expires in N days, expired, or revoked**」。③「**Adding an existing pattern or removing a missing one succeeds without writing.**」④ 最小权限客户端：`a restricted third-party client should not request admin merely to emulate this command`（应申请专用 `operator.approvals` scope）。
+- **判据**：① **"问不了"的兜底必须默认 deny**：无 UI / 非交互主机上，提问路径不存在，此时剩余动作的默认方向决定了真实暴露面；把它设成"放行"等于给所有无人值守环境开了静默全权。⇒ 升级这类主机时，**若原本依赖 never-prompt 行为，必须显式写回**，否则一次升级会把行为从"全放行"悄悄改成"全拒绝"（或反之），而变更来自默认值而非配置。② **长期授权（standing grant）必须有生命周期四态且状态可见**：until revoked / 将到期 / 已过期 / 已吊销。默认"直到被吊销"意味着**没有吊销动作就永久有效** ⇒ 授权一旦长期化，配套的必须是**显式期限参数 + 状态可查列表**，否则吊销与过期都不可观测。③ **允许清单的增删要做成幂等写**：加已存在 / 删不存在都返回成功但不写盘。⇒ 这让"确保 X 在清单里"可以无条件重跑；非幂等的增删会把编排脚本逼成先查后写，多一次竞态。④ **权限申请按动作而非按"能不能模拟某个命令"**：受限客户端不应为了复刻一条命令去要 admin，而要申请专用 scope。⇒ **最小权限的粒度是能力（scope），不是角色（admin）**；拿不到细粒度能力就升级角色，是权限膨胀的常规路径。
+- **提升层**：安全边界/工具/工作流。触发词：askFallback 默认 deny、无 UI 兜底拒绝、standing grant 四态、until revoked、--expires-in-days、幂等 allowlist、加已存在不写、scope 优先于 admin、最小权限粒度。
+
+- **可插拔实现里「不声明拥有」不等于「框架接管」**：本章已下沉 `references/knowledge-base.md`（r342C）。
+- **涉密配置做成「给人看的指引工具」，而不是让 agent 经手秘密**：本章已下沉 `references/knowledge-base.md`（r326C）。

@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。
-version: 1.62.0
+version: 1.63.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -142,3 +142,10 @@ version: 1.62.0
 - **原文**：①「Tools affect context in two ways: 1. **Tool list text** in the system prompt (what you see as "Tooling"). 2. **Tool schemas** (JSON). These are sent to the model so it can call tools. **They count toward context even though you don't see them as plain text.**」+「`/context detail` breaks down the biggest tool schemas so you can see what dominates.」；②「**Directives**: `/think`, `/fast`, `/verbose`, `/trace`, `/reasoning`, `/elevated`, `/exec`, `/model`, `/queue` are **stripped before the model sees the message**. Directive-only messages persist session settings. Inline directives in a normal message act as per-message hints.」
 - **判据**：① **算 token 账时最大头常常是看不见的那部分**——工具 schema 以 JSON 发送、不作为可见文本出现，却同样计入上下文。⇒ 省 token 不能只盯正文长度；先拆「可见文本 / 不可见 schema」两笔账，通常 schema 才是大头（用 `/context detail` 这类按 schema 拆解的手段定位）。② **能放进剥离层的就别写进正文**：指令在模型看到消息之前被剥离，持久设置走 directive-only 消息、一次性偏好走内联提示。⇒ 反复写进正文的「请如何如何」应该升级成设置项或指令层，正文只留真正需要模型理解的内容；这是把稳定偏好从每次输入里搬出去的标准手法。③ **剥离层有两种作用域**：单独一条指令=持久化会话设置，内联指令=只对当前这条消息有效。⇒ 放剥离层时要选对作用域，否则要么污染后续所有轮次，要么每次都重新说一遍。
 - **提升层**：模型/工具。触发词：工具 schema 隐性成本、可见文本 vs 不可见 schema、指令剥离层、directive-only 持久化、内联提示作用域。
+
+
+## 回收有自身成本；稳定窗口按回合推进且非目标也占配额（来源：docs.openclaw.ai/concepts/session-pruning.md 10,717B，2026-10-01 r343A 独立 curl 实拉逐串命中）
+
+- **原文**：①「**Clearing invalidates the prompt cache from the first cleared result**; `clear_at_least` prevents a clearing event that would **remove too few tokens to justify the new cache write**.」；②（图像清理）「It preserves the **3 most recent completed turns** byte-for-byte so prompt cache prefixes for recent follow-ups stay stable. **This count includes all completed turns, not just image-bearing ones, so text-only turns consume the window too.**」「The window **advances only when a new user turn begins, never within a tool loop**.」
+- **判据**：① **回收不是越勤越好——回收本身有成本，必须设"最小收益门槛"**：清掉内容会让缓存从第一个被清处失效，若这次只清下一点点 token，省下的远不够重写缓存的开销。⇒ 任何裁剪/清理/重建动作都要问"这次动作自身的代价是多少、最小要回收多少才划算"；低于门槛宁可不动，让 TTL 时钟继续走。② **稳定窗口按"回合"推进，且被计入的不只是目标对象**：保活窗口以"最近 N 个已完成回合"计，纯文本回合同样消耗窗口配额，且窗口只在新用户回合开始时推进、绝不在工具循环内推进。⇒ 设计保活/缓存窗口时，推进的时钟必须锚在**语义边界**（用户回合）而不是步骤边界，否则同一回合内的多次工具调用会把本该稳定的前缀一路推走；同时必须明确**哪些内容计入窗口**——含不含非目标对象，决定了窗口实际能保住多少。
+- **提升层**：模型/工具。触发词：回收成本、clear_at_least、最小收益门槛、缓存失效、稳定窗口按回合、文本回合也占配额、窗口不在工具循环推进。
