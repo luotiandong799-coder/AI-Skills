@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。
-version: 1.60.0
+version: 1.61.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -130,3 +130,9 @@ version: 1.60.0
 - **原文**：①「Flow runs have a maximum log size (default **25 MB**) ... truncating large step **inputs** — you'll see `(truncated)` in place of the original value」；②「step input values are replaced with `(truncated)`, **starting from the largest**, until the run fits」；③「A planned enhancement will move this limit **from per-run to per-step**, giving more granular control over how much data each step can retain」；④「prefer passing files between steps using the built-in file storage ... **rather than embedding raw bytes in step outputs**」。
 - **判据**：① **同一份预算，按什么粒度切，决定了谁能抢到**：按整次运行（per-run）设总量，一个肥步骤就能吃光所有人的额度，其余步骤表现为"莫名其妙被截"——而它们本身一点都不大。⇒ 设预算时先问粒度：共享池式配额必然带来大户饿死小户，逐单元配额才可控；看到"某些内容被无故截断"时，先查是不是被同一池子里的其他人挤掉的。② **降级要有可见顺序并且可解释**：从最大的开始截、截到装得下为止，每一步都留 `(truncated)` 占位。⇒ 被压缩方要能一眼看出"这里原本有东西、被截了"，而不是看到空值以为是本来就没有。③ **大体量载荷的正确归宿是外置存储 + 传引用**，不要把原始字节塞进运行记录/上下文。⇒ 凡是"把大文件 base64 之后放进某条记录"的设计，都会在某个阈值上把整条链路撑爆；引用进记录、实体进存储。④ 与 §有损压缩须留省略标记 同源：那一条管"标记与计量"，本条管"配额粒度与依赖侧不可截"。
 - **提升层**：工具/工作流。触发词：per-run 配额、per-step 配额、大户饿死小户、从最大的开始截、truncated 占位、大载荷外置传引用、配额粒度。
+
+## 提示面按运行角色分档；技能目录预算与运行时摘录预算是两个池（来源：docs.openclaw.ai/concepts/system-prompt.md 25,568B，2026-10-01 r342A 独立 curl 实拉逐串命中）
+
+- **原文**：①「The runtime sets a `promptMode` per run (**not user-facing config**): `full` (default): all sections above. / `minimal`: used for sub-agents; omits the memory prompt section (bundled as **Memory Recall**), **Model Aliases**, **User Identity**, **Assistant Output Directives**, **Messaging** ... / `none`: returns only the base identity line.」；②「**Sizing is owned by the skills subsystem, separate from generic runtime read/injection sizing**」+ 双列表「Skills prompt budget `skills.limits.maxSkillsPromptChars` | Runtime excerpt budget `agents.defaults.contextLimits.*`」；③「The runtime excerpt budget covers `memory_get`, **live tool results**, and **post-compaction `AGENTS.md` refreshes**.」
+- **判据**：① **省 token 的第一刀是「按运行角色分档」，不是按全局开关**——full/minimal/none 三档由运行时按单次 run 推导（子代理自动落 minimal），不是让用户配的开关。⇒ 同一份提示别无差别塞给所有执行体；给子代理 / 心跳 / 后台轮次单独配档，把「身份、记忆提示、输出指令」这些非必要节整段省掉。② **预算是分域的多个池，不是一个总池**——技能目录提示与运行时摘录各自独立计量，不能拿一个池的余量去补另一个池的超额。⇒ 归账时分开记：「技能列表变长」与「工具结果变大」是两笔账，压一个不会救另一个。③ **运行时摘录池把「检索、实时工具结果、压缩后重载」归到同一池**⇒ 这三者互相挤占，属同一个监控对象；压缩后刷新 AGENTS.md 也算进这个池，不要以为它免费。
+- **提升层**：模型/工具。触发词：promptMode、角色分档、sub-agent minimal、技能提示预算、运行时摘录预算、预算分域、post-compaction refresh。
