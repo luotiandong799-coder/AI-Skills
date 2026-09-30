@@ -2393,12 +2393,12 @@ SOP 是「标准化 markdown 自然语言工作流」，与 SKILL.md 是**同一
 - 目录约定：`SKILL.md`（必需）+ `scripts/` `references/` `assets/`（可选，可任意扩展目录）
 - 规范最小面 = name + description；标准由 Anthropic 发起并以开放标准方式演进（GitHub/Discord 公开讨论）
 
-## 安装来源决定「能不能被更新」：只有被 registry 追踪的安装走 update 通道（来源：docs.openclaw.ai《skills》CLI 2026-09-29 r318C 独立实拉；与 §分发形态决定版本绑定语义 互补——那条管"拿到哪一版"，本条管"以后还能不能升")
+## 安装来源决定「能不能被更新」：只有被 registry 追踪的安装走 update 通道（来源：docs.openclaw.ai《skills》CLI 2026-09-29 r318C 独立实拉；与 §分发形态决定版本绑定语义 互补——那条管"拿到哪一版"，本条管"以后还能不能升"）
 - 原文：`openclaw skills update` **只更新 ClawHub-tracked installs**；`git:` / 本地目录 / `skills-sh:` 安装**不走 update**，要变只能重装
 - 判据：**记录每个技能的安装来源**（registry / git / 本地 / 第三方目录），来源直接决定维护成本；批量升级前先按来源分组，别指望一条 `update --all` 覆盖全部
 - 配套：git 与本地安装要求源根有 `SKILL.md`；slug 优先取 frontmatter 的 `name`，回退目录/仓库名，`--as` 可覆盖
 
-## 信任状态会继承：外部来源的「未扫描」标签跟着更新与验证一起走（来源：同上 security notes，2026-09-29 r318C 实拉；与 §市场安全审计状态/爆炸半径 互补——那条管"一次审计给什么结论"，本条管"这个结论会不会因为升级被洗掉")
+## 信任状态会继承：外部来源的「未扫描」标签跟着更新与验证一起走（来源：同上 security notes，2026-09-29 r318C 实拉；与 §市场安全审计状态/爆炸半径 互补——那条管"一次审计给什么结论"，本条管"这个结论会不会因为升级被洗掉"）
 - 原文：`skills-sh:` 安装的条目显示 **Not scanned by ClawHub**，且该状态**在更新和验证中保留**
 - 推论：**升级不刷新信任**——一个从没被扫过的来源，装十个版本也还是"没被扫过"
 - 反向机制：registry 侧安装会写 `.clawhub/origin.json`，verify 拿**已安装版本**对其来源 registry 比对 → 有 origin 元数据的才谈得上"来源可核验"
