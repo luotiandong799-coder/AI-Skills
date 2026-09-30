@@ -2328,3 +2328,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **反馈捕获=主动循环：隐式信号免费且被低估**：eval 集静态/可观测被动/反馈捕获主动——把真实行为转下一代 eval 集+微调集+prompt 改进，无它系统上线日停止进步；隐式信号（编辑生成文本/重试问题/后续问题）比按钮免费；显式信号=thumb up/down+report 点击。判据：**反馈闭环=显式+隐式双信号，隐式信号要主动采集**。
 - **关键指标集 + 告警阈值模板**：error rates per tool/model/ai.error.type、token 趋势 per run/feature/tenant、cost per run+per successful task、cache hit rate；告警模板：p99>2×7 天基线 10 分钟、成本/分钟>3×24h 基线（runaway loop 或 prompt injection）、fallback>50%（provider 宕机）、cache hit 跌>30%（invalidation bug 或 prompt 模板变更）；TTFT+完整响应（流式靠 TTFT）。判据：**监控=指标集+阈值模板，成本突变先查 runaway loop/注入**。
 - **管线预算分型：按管线类型定延迟/成本目标**：Simple Q&A（RAG 单检索）P50 800ms/P99 2500ms/$0.003；Multi-step agent（2-4 工具调用）P50 3000ms/P99 8000ms/$0.02；每管线类型定义预算并告警突破；P95 尾延迟是用户可见慢所在（不在均值）。判据：**延迟/成本预算按管线类型分型，超预算告警**。
+
+## 多模态 Agent 工程 2026：统一 omni 模型多模态不跨模型接力/GUI 感知两模态结构化树 vs 截图按需/主动视觉感知何时如何调视觉工具/视觉 grounding 模型语言图像元素关联/视觉工具参数原生传递多模态工具闭环/感知抽象+外部视觉记忆图不占对话窗口/全模态评测跨模态事件图合成多跳任务/空间推理动作接口代码优先于固定动作集/计算机使用 agent 三判官/视觉技能库技能工件保留视觉图形（来源：nvidia nemotron×3+alibabacloud qwen3.7-plus×2+buildfastwithai+arxiv 2504.13865 survey+techrxiv survey+arxiv 2601.09770 GUI-Eyes+arxiv 2607.08497+arxiv 2602.22897 OmniGAIA+spatialclaw+arxiv 2609.35904 WebRetriever+arxiv 2602.13559 OpAgent+openai CUA+prophetchrome+UI-Venus-2+google discuss+jin-s13 hub+papernotes M3-Agent+csdn GLM-4.6V+edenai molmo+aliyun gui-automation+llmversus+yennj12+datacamp+dev.to agdex，r334C，与 wb-execute-discipline §视觉提取三纪律互补——那条管"从图里提取文字/数据"，本条管"多模态 agent 整体工程：感知选型/工具闭环/评测/技能库"）
+- **统一 omni 模型：多模态不跨模型接力**：单模型原生支持文本/图像/视频/音频——多模型间传递数据耗时+丢上下文；单 30B 混合 MoE 保持效率；视觉语言统一 agent 底座。判据：**多模态先评估单模型原生支持，跨模型接力是最后手段**。
+- **GUI 感知两模态：结构化树 vs 截图按需**：结构化（HTML/DOM/A11y tree）表单/数据提取/标准导航在速度/成本/准确度全面胜；截图仅在视觉布局依赖（按钮在价格右边）/canvas/WebGL/图内信息/视觉 QA 必需；双流混合融合=2026 生产标准。判据：**默认结构化感知，截图按视觉依赖场景按需调用**。
+- **主动视觉感知：何时与如何调视觉工具**：agent 学会战略性决定是否+如何调用视觉工具（裁剪/缩放）；两阶段推理=粗探索→细 grounding；渐进感知策略两级策略协调；空间连续坐标输出精确指认。判据：**视觉工具调用是决策不是默认，粗探索后再细定位**。
+- **视觉 grounding 模型：语言↔图像元素关联**：点指+grounding 让模型指认图像元素；GUI grounding 原语=截图→点击/表单/导航；移动/桌面/网页多形态。判据：**GUI 任务选 grounding 原生模型，不靠 OCR 事后拼**。
+- **视觉工具参数原生传递：多模态工具闭环**：图像/截图/文档/图表直接作工具参数传入，无需先转文本；工具返回的图/截图/图表被模型二次视觉理解纳入推理链；结构化信息不足时调截图分析工具+VLM+具体视觉问题（哪类对应最高柱）+返回滚动位置定位。判据：**多模态工具=图进图出闭环，结构化不足时截图问答补位**。
+- **感知抽象+外部视觉记忆：图不占对话窗口**：入站图像先过感知抽象引擎→结构化语义抽象（描述/属性标签/缩略图）存外部情节视觉记忆；跨模态推理检索相关视觉片段；实时视觉/音频流转实体中心长期记忆+RL 训练控制模型多轮检索。判据：**视觉内容先抽象入外部记忆，对话窗口只留语义摘要**。
+- **全模态评测：跨模态事件图合成多跳任务**：全模态 agent 评测需视频/音频/图像跨模态推理+多轮工具执行；omni-modal event graph 从真实数据合成复杂多跳查询；单模态评测测不出跨模态推理缺口。判据：**多模态 agent 用跨模态多跳评测，单模态分数是假安全感**。
+- **空间推理动作接口：代码优先于固定动作集**：VLM agent 在持久 kernel 写 Python，组合感知模块/检查中间结果/跨步修正策略；训练免费+11.2 点；固定动作接口限制空间推理表达。判据：**空间/几何任务给 agent 代码接口而非预定义动作**。
+- **计算机使用 agent 三判官**：数据库状态=绝对真值（成功唯一真相）；Trace Judge=逻辑审计执行日志（抓低效路径/意外撞对）；Video Judge=多模态 UX 检查压缩视频帧序列（高效/安全/无误达目标）；四模块：Planner 高层策略/Grounder 语义→精确动作+协调/Reflector 状态转换+进度/Summarizer 汇总。判据：**GUI agent 验收=数据库真值+trace 审计+视频 UX 三重判官**。
+- **视觉技能库：技能工件保留视觉图形**：层次多模态技能库（技能工件保留视觉图形提升表现）；闭环感知-推理-动作统一 scaling（环境/任务/反馈联合）；GUI agent 基准（ScreenSpot Pro 79.0/Terminal-Bench 70.3）。判据：**多模态技能工件保留图，不把图降成文字再存**。
