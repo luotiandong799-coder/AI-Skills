@@ -259,3 +259,19 @@ Command blocked for security: Add-Type compiles and loads .NET code at runtime
 - 纯 MCP 发送流（无 pywinauto）：Click 输入框 → `Clipboard(set)` → `Shortcut("ctrl+v")` → `ctrl+a`+`ctrl+c`+`Clipboard(get)` 读回校验 → `Shortcut("ctrl+enter")`（本机发送键）→ Snapshot 验证「输入框空+绿色气泡」。
 - 瑶瑶会话在列表首位，直接 Click 列表行即可打开，无需 Ctrl+F 搜索。
 
+### 10.2 登录微信：一律复用既有通道，禁止自造轮子（2026-09-30 用户强制）
+
+**用户原话：「以后登录VX就直接点我以前给你的就行了 没这么麻烦」。** 登录微信只走下面两条既有路径，**不要**临时写"枚举窗口→取矩形→窗内找绿色按钮"那类脚本。
+
+| 通道 | 做法 |
+|---|---|
+| **首选（有 python）** | 复用 `D:\腾讯AI\tools\wechat-auto\wx_reply.py` 的登录段：`wechat_send.launch_wechat()` 启动 → `get_win()` 取「微信」窗口 → **窗口宽 <600（登录小窗）则点 `(left+W/2, top+H*0.76)` =「进入微信」按钮** → 轮询到宽 ≥600 即登录完成 |
+| **兜底（纯 windows-mcp）** | `mcp__windows-mcp__PowerShell` 跑 `Start-Process "D:\Weixin\Weixin.exe"` → `Snapshot(use_vision=true)` 看登录窗 → `Click`「进入微信」按钮（2560×1600 屏实测约 **(1280, 919)**） |
+
+**登录成功的判据（三选一即可确认）**：① 登录窗 hwnd 消失、主窗 hwnd 出现；② `MainWindowTitle` 出现「微信」且进程数 **1 → 5**（微信登录后才拉起 WeixinAppEx 等多进程）；③ 截图见会话列表。
+
+**本次踩的坑（别再犯）**：
+- 屏幕有 DPI 缩放时，进程若 DPI-unaware，`GetWindowRect` 返回**虚拟化坐标**，与物理截图（2560×1600）不匹配 → 动态矩形扫描必然找不到按钮。要拿物理坐标须 `SetProcessDPIAware()`（且必须在**新起的 powershell.exe -File** 里调，宿主进程调可能已被固化）。
+- 自造脚本若 `SetForegroundWindow` 没借 `AttachThreadInput`，目标窗没真正置前 → 点击落到 WorkBuddy 上，会误触模型选择菜单。
+- 结论：**这些坑 wx_reply.py 都已处理，直接用它，别再重摸。**
+
