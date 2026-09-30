@@ -2256,3 +2256,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **授权梯度与自治级别选型**：authority gradient assist→coordinate→execute→operate 每级递增负担；五级自治（类比驾驶 0-5）按任务关键性/可预见性/成熟度/恢复成本/法规选；negotiate shared control=混合主动，人机协商任务所有权（Horvitz mixed-initiative）。判据：**自治级别是设计期选型，随成熟度渐进降低监督**。
 - **审批疲劳与橡皮图章防御**：升级量过高→人类变橡皮图章；风险逐动作小到自动护栏就够→不该升级；action map 先把每个动作映射风险评级，只有不可逆/敏感/昂贵才暂停；低风险层用抽样审查（如 5% 审计）。判据：**升级频率与风险匹配，防橡皮图章=不是靠人更认真而是减少低价值升级**。
 - **风险分级矩阵与金额阈值**：四档：低（≤$1k，抽样 5% 审计）/中（$1k-25k，例外审批+每日批量）/高（$25k-250k，每动作审批）/极高（>250k 或不可逆，双人授权+高管签字）；COMPEL=impact×autonomy 矩阵定风险级；AWS 三档 autonomous/notify/approve 编码为 Cedar 策略在网关边界强制（分类执行在网关而非文档）；Green/Yellow/Red 框架（红=预执行审批+双人）。判据：**分级用明文金额阈值+影响×自主矩阵，策略编码到网关而非文档**。
+
+## 意图识别与对话设计工程 2026：对话四层架构/槽位填充四任务一次一问/槽位-意图矫正/澄清三触发约束响应空间/修复重落地三原则/fallback 分类分流/LLM 意图显式确认门/风险分级确认+动作回执/scope validator 三路分流/话题切换暂存恢复（来源：thoughtworks+googlecloudplatform cxas-scrapi+microsoft learn copilot-studio+google dialogflow cx+maxbot+neuralbase slot-filling/task-oriented/llm-native-intent/off-topic-redirection+aliyun+zendesk+conversa+ai-agentsplus+asoasis+dilr+polyai+callsphere+trtc+csdn+intelligentcx+arxiv 2608.30738+chatbotscape+ki-chatbot-beratung+rework+ucafs+tencentcloud adp，r332C，与 §工具结果断言层 互补——那条管"工具调用后校验返回值"，本条管"对话/意图层怎么理解用户、怎么修复、怎么确认"）
+- **任务型对话四层架构**：理解（用户说了什么意图）/状态跟踪（现在知道什么、还缺什么）/策略（下一步：要槽/确认/执行）/响应生成；传统规则系统硬编码策略（"缺 party_size 就问"）。判据：**四层各自独立，策略层决定"问/确认/执行"不是模型随意发挥**。
+- **槽位填充四任务 + 一次一问**：检测缺失槽/合理顺序提问/校验接收数据/畸形输入优雅恢复；progressive disclosure=一次只问一个问题、不预览未来步骤；节点级 skip-question 可关（始终需确认的槽强制提问）。判据：**收集信息按槽逐步、一次一问、数据校验内置**。
+- **槽位-意图矫正**：用户槽位与当前识别意图不匹配时，Tracker 按槽位信息矫正意图：大部分槽值属意图 B 则真实意图大概率是 B；设阈值触发矫正（而非无视冲突）。判据：**槽位是意图的证据，冲突时矫正而非无视**。
+- **澄清三触发 + 约束响应空间**：请求可匹配 2+ 工具/动作、关键参数缺失、置信度低=触发澄清；澄清用带脚手架问题约束响应空间（给 2-3 选项）而非开放式；smart defaults 减少澄清次数。判据：**澄清是设计行为不是兜底，先约束选项再问**。
+- **修复重落地（re-grounding）三原则**：重述已知+只点名缺失/不确定部分+问更窄问题（不用"抱歉没听清"丢掉全部）；correct a value 只更新该值不重收集；pivot 工作流切换干净；undo 优先（不可撤销动作=确认）。判据：**修复损失最小化：保留已知、只补缺失**。
+- **Fallback 分流：分类处理不笼统兜底**：区分 out_of_scope（明确请求但无匹配技能=限制性解释+重定向）vs 欠specified/误转写（=重路由）；re-prompt 限 2 次；两失败后升级人类（不说 bot 失败而说找人帮你）；bucket5 越界流量=处理不修复（scope-aware 回复转人工）。判据：**fallback 先分类再处置，重试有上限、越界转路由**。
+- **LLM-native 意图需显式确认门**：金融等监管域高风险意图强制显式确认（"你请求退款，正确吗？回 YES 继续"）或人工审查，不论系统置信度——不假设 LLM 推理可解释性够当审计轨迹。判据：**高风险意图走显式确认门，信任模型但审计靠交互**。
+- **风险分级确认 + 可见动作回执**：模糊/不可逆/高影响=确认；低风险=轻量反馈（acknowledgment before action："Got it—I'll update your delivery address to 123 Main Street. Should I apply?"）；visible action receipt=一键/一句取消或修改，不重新输入原命令。判据：**确认强度与风险匹配，动作后可一键回滚**。
+- **Scope Validator 三路分流**：意图先过 scope validator：in-scope 交主 LLM（system prompt 强制领域边界）/out-of-scope 模板拒绝+记录（数据供扩界决策）/ambiguous（置信<75%）升级人类带上下文。判据：**边界判定前置为独立组件，越界=模板拒绝+留痕，低置信=转人**。
+- **话题切换暂存/恢复 + 意图复用**：用户频繁切题时识别切换、正确暂存或结束当前任务状态、切回时恢复上下文；confirmation.yes 等通用意图定义一次多页复用避免重复。判据：**切题=状态挂起非丢弃，恢复=回到原上下文**。
