@@ -2280,3 +2280,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **成本护栏模式三件套**：per-run guardrail+provider 级 spend ceiling+cost telemetry pipeline（按 tenant/agent/model 归因异常告警）+kill switch（与部署管线无关的独立急停，撤网关 key 或暂停 workspace）。判据：**护栏=上限+归因+急停三件套，急停独立于部署**。
 - **路由成本分布目标 60/30/10**：60% 请求小模型/30% 中档/10% 旗舰=60-80% 降本（配合缓存 90%+）；分类/抽取/格式化/短查询在便宜模型上等价；RouteLLM 2x+ 降本无质量损失；默认全旗舰=为便利付钱。判据：**流量按难度分层分布，便宜模型接走大头**。
 - **重试是复合成本大头**：每次重试=完整输入+输出重跑；context engineering 减重试比压缩单次更省；agent 循环每多一轮=输入重算（缓存命中除外）；cap output length+显式要求简洁；effort 校准到任务（缓存命中率+去反模式+effort 校准三修复）。判据：**省重试>省单次，agent 轮数是成本放大器**。
+
+## Agent 测试自动化工程 2026：测试金字塔成本-频率分层/mock LLM 强制确定性+test doubles 五形式/行为契约替代精确断言/golden case 回归生产失败转用例/非确定性一等公民 flaky 反转/prompt 测试集分层+分数持久化/程序化检查打底 judge 分级/canary+live eval+persona 生产验证/任务重放测试/评测驱动闭环 MVES（来源：arxiv 2601.18827+lobehub agent-testing+openlegion+ACM SpecOps+futureagi+myengineeringpath+zylos+kanopylabs+testquality+aliyun+mudassirkhan+AgentAssay arxiv 2603.02601+confident-ai+zalt+braintrust+testdino+karatelabs+dzone+aws prescriptive+wasilzafar+arxiv 2601.22025+agdex+ACM DeepTest+shawnmayzes，r333B，与 §评测驱动开发 互补——那条管"评测驱动迭代"，本条管"agent 测试怎么分层、怎么 mock、怎么防回归"）
+- **Agent 测试金字塔：成本-频率分层**：Unit（工具 schema/参数解析/路由逻辑，全 mock 免费，每次 commit）→Integration（完整 agent 循环+真实廉价模型 ~$0.01/test，每次 PR）→E2E（全环境发布前）；扩展七层=+Tool 契约/Agent prompt 路由/Regression 模型变更/Production Eval 持续。判据：**按层定 LLM 调用与成本，越便宜层越频繁**。
+- **Mock LLM 强制确定性 + test doubles 五形式**：LLM 输出可变时 mock LLM 保证可复现：集成测试确认 agent 用正确参数调了正确工具；stub（硬编码串测解析代码）/fake（按输入 hash 返回罐头响应，支持多场景）/spy（包装真或 stub LLM）/mock/dummy；Mock Environment 控制执行上下文。判据：**测 LLM 交互前先 mock 出确定性，再测真实模型层**。
+- **行为契约替代精确断言**：非确定性 agent 用行为契约：eval 检查意图+LLM-judge 评分质量+轨迹检查验证走对步骤（不管措辞）；允许多条成功轨迹；精确匹配对非确定系统失效。判据：**断言意图/轨迹/质量，不断言输出字符串**。
+- **Golden case 回归：生产失败转测试用例**：每个已确认生产失败在修复上线前转 golden case（捕获 trace+分类失败模式+定义期望行为）；必测集每变更跑+全量 golden 集夜间/发布前跑，逐案例对比基线；翻转案例而非聚合通过率。判据：**回归=翻转过的案例集合，不是通过率数字**。
+- **非确定性是一等公民（flaky 反转）**：2-16% 传统 flaky 测试被当缺陷消除；agent 非确定性是系统特性，测试框架必须首等公民地容纳（token 高效回归）。判据：**agent 测试容忍非确定性为特性，不把波动当 bug 消除**。
+- **Prompt 测试集分层 + 分数持久化**：20-50 smoke 每 PR（快 judge 1-2s）/200-500 regression merge（3-5s judge）/1000+ benchmark release；分数持久化数据库查漂移；LLM regression gate=golden dataset+质量指标 vs baseline 超容差阻断；confident regression=改 prompt 悄悄变差，指标判定而非串匹配。判据：**测试集按门槛分层，判定单位=指标判定不是输出串**。
+- **程序化检查打底 + judge 分级**：harness 三层：底部快程序化检查（结构验证 JSON 有效性）/中部 LLM-judge（rubric 打分推理质量）/顶部人工标注（校准 judge 的 ground truth）；judge 用便宜快模型+rubric 返回分数 fail CI。判据：**程序化检查打底、judge 管质量、人工校准 judge**。
+- **生产验证分层：canary + live eval + persona 仿真**：canary=线上流量 1-5% 自动回滚（免费 eval 成本、回滚策略坏则贵）；live eval=5-10% 分层抽样异步跑；persona 仿真=角色定义多轮场景驱动 agent；生产失败转新 eval case 让测试集跟上真实行为。判据：**发布后验证=小流量 canary+抽样异步 eval+场景仿真三层**。
+- **任务重放测试（task replay）**：记录生产 agent 运行的 tool calls，用 stub 重放；完整工作流+受控工具桩，断言中间与最终状态；隔离外部副作用+限定资源预算内终止。判据：**重放真实轨迹验证工作流，中间状态也要断言**。
+- **评测驱动迭代闭环 Define-Test-Diagnose-Fix + MVES**：评测驱动工作流四步（Define 标准/Test 跑集/Diagnose 分失败/Fix 修复）；MVES 最小可用评测套件按应用类型（通用/RAG/Agent）分级推荐；"更好"的 prompt 可能伤害输出——必须评测驱动迭代不靠直觉。判据：**每次 prompt/模型变更都过评测门，不靠"感觉更好"**。
