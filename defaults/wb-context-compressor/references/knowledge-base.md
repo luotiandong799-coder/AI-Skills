@@ -2400,3 +2400,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **执行 trace 转结构化报告+忠实自然语言解释**：post-hoc XAI 把长 agent 执行 trace 转结构化报告+忠实解释（grounded in observable behavior）；微软格式：输入/匹配模式/触发证据代码/证据到结论逻辑步（安全发现带行号）——审计员能说"为何错"不只"错了"。判据：**agent 解释输出固定格式 trace：输入/匹配规则/证据/结论链**。
 - **决策包（Decision Packets）：密封的命题/参数树/证据快照/选定理由**：记录完整推理为结构化可审计产物——与执行日志区分（日志记 what happened，决策 trace 记 why：考虑过的选项/查阅证据/权衡参数/选定理由）；AIACP 要求 consequential 决策不可变审计日志（输入/决策/置信度/受影响方/时间戳）+30 天内人类可读解释权。判据：**重要决策给密封决策包：选项/证据/理由/结果追踪**。
 - **版本化 agent 定义+统一执行 trace：运行时行为链到具体配置**：每个 agent 有文档化版本控制定义链运行时行为到配置；事故时定位"哪个版本 agent 做的决策+如何配置"；多 agent 系统全链一步一记录（LLM 调用/工具）。判据：**agent 定义版本化+全链统一 trace，事故可定位到配置版本**。
+
+## RAG 文档处理管道与数据准备工程 2026：解析先恢复结构结构化元素流而非平坦文本/布局感知提取+OCR 扫描页避免 pdf2text 直 dump/D-RAC 归一化任意格式先转 PDF 再统一处理/chunking 两失败模式太小丢上下文太大嵌不动/策略按数据选型四类数据四种分块/表格分块纪律行级 chunk+每行带表头/多模态三选一 OCR 文本化多模态 embedding hybrid/规范化跨格式标准化下游无需 per-format 逻辑/事件驱动摄取 Claim Check 模式+staged topics/增量重处理段落哈希对比只重处理变更（来源：stochasticsandbox+prem+ailearningguides+azure 非结构化管道+beefed+arxiv 2609.24220+aigentlab+lemon+airbyte pdf+datasciocean+microsoft rag chunking+mixpeek+arxiv 2506.16035+theneuralbase+databricks×2+slothlabs+ucsd+mlmastery+unstructured×4+confluent+aws×2+krunal+dev.to，r336C，与 r324A RAG 检索章互补——那条管"检索/重排"，本条管"文档怎么解析/分块/规范化成可检索形态"）
+- **解析先恢复结构：结构化元素流而非平坦文本**：parse 转 titles/paragraphs/tables/images 元素流，恢复文档形状（阅读顺序/层级/多栏）——只有字符的 parser 丢掉检索系统依赖的结构；每元素带元数据（页码/坐标）保留来源，使能引用与 scoped retrieval。判据：**解析输出结构化元素流+每元素页码坐标，别只出字符流**。
+- **布局感知提取+OCR 扫描页：避免 pdf2text 直 dump**：layout-aware extraction 保阅读顺序；扫描页 OCR 先行；PDF→GROBID→修连字符/换行→组 section→token-aware chunker；页号+图表锚点进元数据。判据：**PDF 走布局感知管道，扫描页先 OCR，直 dump 文本丢结构**。
+- **D-RAC 归一化：任意格式先转 PDF 再统一处理**：DOCX/PPTX/XLSX/扫描图/原生 PDF 统一归一化为 PDF——几乎每格式都有忠实确定性 PDF 渲染；然后单多模态 LLM 转换+分块。判据：**多格式语料统一先转 PDF 中间态，别每格式写一套解析**。
+- **chunking 两失败模式：太小丢上下文、太大嵌不动**：相关事实跨两 chunk 被拆散=明显答案丢失；chunk 太长=嵌入不连贯检索错 chunk；先 PDF→干净 Markdown 再分块（纯文本摊平表格/标题/段落边界结构线索）；拆分超大表格保留表头。判据：**分块先转结构化 Markdown，别在纯文本上盲切**。
+- **策略按数据选型：四类数据四种分块**：结构文本=递归/层级分块尊重标题；非结构长文=语义分块（embedding 相似度；chunk 大小不一致+摄入慢+提升边际小——长非结构文档才值得）；PDF 扫描件=layout-aware；多模态=modality-specific（场景检测/对象裁剪/说话人分离）；Parent-Child=小 chunk 检索+父 chunk 生成上下文。判据：**分块策略按文档类型路由，无全局最优**。
+- **表格分块纪律：行级 chunk+每行带表头**：表格跨 chunk 延续保持同列结构/宽度/格式；每行一个 chunk、每个行 chunk 必含表头（前 chunk 或图片中的）+单行数据；隔离表格/图表/图为独立对象，LLM 生成密集文本摘要向量化+指针回原始表格。判据：**表格按行分块且行块带表头，图表隔离+摘要化+指针回原**。
+- **多模态三选一：OCR 文本化/多模态 embedding/hybrid**：(1) OCR+text-only 图经视觉转文本；(2) 多模态 embedding 图按图嵌；(3) hybrid chunking 表格结构化+图片留元数据——选择取决于文档复杂度/embedding 模型能力/生成时 LLM 能否处理图。判据：**含图 PDF 先定三策略再建管道，按能力选不默认**。
+- **规范化跨格式标准化：下游无需 per-format 逻辑**：提取后规范化统一字段（一致 JSON shape）——下游组件不需要每格式分支；清洗剥离页眉页脚页码 boilerplate（膨胀 token 降检索精度）+修编码/空白/日期格式+折叠 OCR 近重复伪影+PII 检测。判据：**多格式语料统一 JSON shape 输出，清洗页眉页脚**。
+- **事件驱动摄取：Claim Check 模式+staged topics**：每文档上传触发流式工作流（非 batch ETL 或同步 API 链）保持 RAG/agent 新鲜；二进制存对象存储、Kafka 只放 URI/元数据/处理状态；流经 raw→refined→curated_ai 阶段 topic。判据：**文档摄取走事件驱动+Claim Check，别同步 API 链**。
+- **增量重处理：段落哈希对比只重处理变更**：增量更新保持提取内容新鲜不每次全量重处理；静态内容提取一次、频繁更新内容 SHA-256 哈希对比——incoming 段落哈希 vs 已存哈希只重处理变更。判据：**文档更新用哈希增量检测，只重处理变更段落**。
