@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.6.0
+version: 1.7.0
 agent_created: true
 ---
 
@@ -99,3 +99,12 @@ agent_created: true
 - **★高置信非敏感自动路由，敏感或低置信进人工审查**：人工审核位提供三种恢复决策（approved / edited / rerouted），不只是"批/不批"。判据：**凡是"模型吐个标签就直接触发业务动作"的设计，都是把不确定性的代价转嫁给下游；双轨把解释与执行解耦，模型只负责它该负责的**。
 - 与 §拓扑选型（集中路由）、§双模型主-副手 的分工：那些管"派出去之后怎么连""两个模型怎么省"；本条管"**单步里，模型的判断权该到哪为止**"——解释归模型，动作归逻辑。
 - 提升层：工作流。
+
+## 让出（yield）交接：传的是"完成所有权"，不是"执行授权"；已完成义务不可再装填；进度文本不是完成证据（来源：docs.openclaw.ai/concepts/subagent-yield-handoff 11,858B + tools/subagents/thread-bound-sessions 6,691B，2026-10-01 r344B 独立 curl 实拉；与 §同 run 同 trace / §双模型主-副手 互补——那两条管"轨迹在一处""两个模型怎么省"，本条管"委派方让出后，谁拥有完成、以谁的授权继续"）
+- **★让出转移的是完成义务与任务谱系，不转移工具/审批/通道/回调权限**：原文 "Yield transfers ownership before closing the old execution"；"**No revived authority** — Neither a stored run ID nor provenance revives a closed execution. The successor … receives **fresh execution authority**. **Adoption preserves task lineage, not old tool, approval, channel, or worker callbacks.**" 判据：**交接面上跑的是"谱系 + 义务"，不是"权限"**；把 run ID 或出处当授权凭据，等于让一次已结束的执行继续签发新动作。
+- **★完成源托管与执行分离，权限上限在发起时刻快照**：注册处把"活的 operator source"与执行分开保留，个体投递与结算用**当时捕获的权限上限**，而不是后来调度清理的异步调用者；"Retained results do not retain usable authority after that release"；取消专用批次保留**原取消调用者的准入**，不用已吊销的目标去授权新回合；混合结果/取消批次要求每个原始 source 仍存活且兼容。判据：**"谁发起的"决定"能用多大权限"，且这个上限在发起那一刻被冻结**——后来的调用者不继承，被吊销的目标不得反向授权。
+- **★一个完成只能有一个 owner，已履行的义务不可再装填**："An existing visible-final receipt for the exact turn and child batch prevents rearming an already fulfilled obligation"；"a repeated callback cannot finalize it again"；迟到的公告失败 "cannot replace the batch's delivery state; **already committed delivery evidence remains valid**"。判据：**完成是幂等的单 owner 义务**——一次迟到报错若能把"已交付"改写成"未交付"，重试链会被反复重新武装。
+- **★进度文本不是完成证据**："**progress text is not proof that a child finished or that its result was delivered**"；"Yield closes the old execution, not the delegated work"；等待确认只解决"没静默"。判据：**进度 / 等待回执 / 子任务已完成且结果已送达 是三件事**，验收只能认第三条。
+- **★确定性批次 + 三档有界投递**：冻结的 run ID 排序、以创建/完成时间与子会话身份打破平局、被取代的子行排除，批次身份含 requester 身份 + 子 ID + 让出代数；投递上限 **3 次尝试 / 3 次歧义重放 / 10 次陈旧延迟**（活动后代不消耗陈旧延迟预算），findings 4,096 字符、单条结果 512、路由通知 1,024；"ambiguous replay reuses its attempt key; it does **not** assert global exactly-once delivery across Gateway restarts"。判据：**批次要确定性可复现（排序 + 平局规则），投递要三档封顶并显式声明"不承诺跨重启全局恰好一次"**——不写这条声明，下游会把重试键当成恰好一次的证明。
+- 与 §拓扑选型 / §并行度 的分工：那两条管"块怎么连""允许几块同时跑"；本条管"**委派方中途离场后，完成归谁、继任者凭什么继续、什么才算真的完成**"。
+- 提升层：工作流 / 安全边界。
