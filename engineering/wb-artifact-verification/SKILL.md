@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.84.0
+version: 2.85.0
 agent_created: true
 ---
 
@@ -495,3 +495,9 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **原文**：①「The prompt frames **docs as the authority** for OpenClaw self-knowledge before the model understands how OpenClaw works (memory/daily notes, sessions, tools, Gateway, config, commands, project context)」；②「it tells the model to treat `AGENTS.md`, project context, workspace/profile/memory notes, and `memory_search` as **instruction context or user memory rather than ... design/implementation knowledge**」；③「If docs are **silent or stale**, the model should **say so** and **inspect source**.」；④「it points agents to the `gateway` tool action `config.schema.lookup` for **exact field-level docs and constraints**」。
 - **判据**：① **回答「系统自身怎么工作」时权威链是 文档 > 记忆/日志**——记忆里的历史结论与日志里的观察都不构成设计事实。⇒ 我把「我记得它应该是这样」当答案是错层引用；先查文档，记忆只用来定位去哪查。② **指令文件不是实现知识**——AGENTS.md、项目上下文、profile/记忆笔记规定「我要做什么」，不描述「系统怎么实现」。⇒ 审计时不要把 AGENTS.md 里的描述当系统行为的证据，它证明的是「有人这么要求」。③ **文档沉默或过期时的正确动作是「显式声明 + 转查源码」，不是拿相邻知识补全**⇒ 「查不到」是一个可以声明的结论（与采集三态命中/缺位/未达一致），不许被脑补填掉。④ **配置项查字段级 schema，不查散文**⇒ 判「某个配置是否合法」以 schema 为准，文档散文只用于找方向。
 - **提升层**：工作流/工具。触发词：自述权威链、docs 优先于记忆、文档沉默须声明、转查源码、schema lookup、指令≠实现知识。
+
+## 「不记录」不等于「不发生」：隐私作用域隔离的是留痕面，不是执行面（来源：docs.openclaw.ai/concepts/session.md 22,390B，2026-10-01 r342B 独立 curl 实拉逐串命中）
+
+- **原文**：①「Incognito **does not restrict the agent's normal tools**. An explicit request to save information, or any tool-driven file write, can still persist data outside the incognito session store. Your configured model provider still processes the messages you send.」；②「Incognito content is excluded from ordinary Gateway output, **delivery and response diagnostics, WebSocket event previews, raw-stream, cache-trace, and Anthropic payload logs**. Live replies remain available, and OpenClaw still records operational diagnostics and **content-free audit metadata** such as HMAC references.」；③「This protects them from storage and other gateway-mediated users, **not from the gateway owner or process operator**, who can always observe live sessions.」
+- **判据**：① **隐私开关的作用域必须逐面枚举，不能只说「不保存」**——被隔离的是七类留痕面（输出 / 投递与响应诊断 / WebSocket 事件预览 / 原始流 / 缓存轨迹 / payload 日志），而工具写盘、模型提供方处理这两条执行面完全不受限。⇒ 我声称「这条不会留下痕迹」时，必须先分清是**留痕面**还是**执行面**；把「不入日志」说成「不会发生」是范围虚标。② **无内容审计元数据仍会留**——HMAC 引用这类「不含内容但证明发生过」的记录要保持。⇒ 承诺隐私时不承诺零元数据，否则一有运行诊断就算违约。③ **威胁模型要写明「防谁」**——防的是存储与其他网关用户，不防实例属主与进程操作者。⇒ 隐私声明里不写防谁等于没写；对能直接看进程的人，任何会话级隐私都是无效的。
+- **提升层**：工具/可观测性/工作流。触发词：隐私作用域、不记录≠不发生、留痕面枚举、无内容审计元数据、威胁模型防谁、incognito。

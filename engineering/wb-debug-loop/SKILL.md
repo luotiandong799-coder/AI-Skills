@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.92.0
+version: 1.93.0
 agent_created: true
 ---
 
@@ -191,3 +191,9 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **原文**：①「`/queue steer` makes normal inbound messages try to steer the active run ... `/queue collect` or `/queue followup` when future normal messages should **wait for a later turn** instead of steering the active run. `/queue interrupt` when the **newest message should replace the active run** instead of steering it.」；②「`/steer <message>` is an explicit command that tries to inject that command's message into the active run ... **regardless of the stored `/queue` setting**.」；③「When that injection is not available, **the command prefix is stripped** and `<message>` continues as a normal prompt.」
 - **判据**：① **新输入与在途运行的关系是四档显式语义（改向在途 / 本轮后跟随 / 排队等后续轮 / 替换在途），不是一个「要不要中断」的二值开关**⇒ 排障「我新发的指令怎么没生效」先确认当前落在哪一档；把「排队跟随」当「改向」是最常见误读——它本来就设计成不打断本轮。② **一次性显式命令独立于持久设置**⇒ 「设置是什么」与「这次实际走哪条路径」要分开看，显式指令会临时覆盖默认档位。③ **降级会剥离语义标签**：注入不可用时命令前缀被去掉、消息按普通提示继续——内容还在，但「这是一条改向指令」这层语义没了。⇒ 排查「指令被当普通问题回答了」时不是消息丢了，而是它被降级成了另一类输入；设计降级链路时必须回显原语义标签，否则调用方永远无法自证自己发的指令变成了什么。
 - **提升层**：工具/工作流。触发词：入队四态、steer/collect/followup/interrupt、显式命令覆盖持久设置、降级剥离语义标签。
+
+## 续期只认真实执行；环境变量常常只是初值（来源：docs.openclaw.ai/concepts/session.md 22,390B + www.activepieces.com/docs/install/configure-operate/telemetry.md 2,830B，2026-10-01 r342B 独立 curl 实拉逐串命中）
+
+- **原文**：①「Three attempts that fail to start a backend turn exhaust the recovery budget. Once a real backend turn starts, the budget refreshes ... **Accepting, queueing, or preparing a resume request alone does not refresh it.**」；②「CLI backends that do not report turn acceptance refresh the budget **only after observed assistant output or tool activity; silent startup does not refresh it.**」；③（遥测）「`AP_TELEMETRY_ENABLED=false` still works as a **starting value**: each platform's setting is created the first time it is read and takes the variable's value ... **Once the setting exists, the toggle governs it and changing the variable has no further effect.**」；④（遥测）「**Deployment setup** is a separate switch ... Unlike product analytics it **does not read `AP_TELEMETRY_ENABLED`** — switch it off in the UI to stop the daily snapshot.」
+- **判据**：① **意图不算活动**：接受、排队、准备恢复请求都不刷新配额，只有真正启动后端回合才刷新。⇒ 查「预算怎么突然耗尽了」时，别数发起了多少次恢复，要数真正跑起来几次；把排队中的请求当成已消费是常见误算。② **静默启动不算证据**：不上报 turn acceptance 的后端，只有在观测到实际输出或工具活动后才认为它活着。⇒ 判断某个环节是否真的在跑，不能用「没报错」当证据，要找它的可观测产物。③ **环境变量常常只是初值，不是终值**：设置首次被读时落库，之后由 UI 开关掌管，再改环境变量无效。⇒ 排查「我明明改了环境变量怎么没生效」的标准答案是——先查这个设置是不是已经被创建过一次；这是配置类故障的高频根因。④ **一个总开关不等于所有外发都关了**：产品分析与部署快照是两个独立开关，且后者根本不读那个环境变量，只能在 UI 关。⇒ 关外发时要按通道逐个枚举并逐个验证关闭机制，不能假设「关了总闸」。
+- **提升层**：工具/工作流。触发词：续期只认真实执行、排队不刷新预算、静默启动不算证据、环境变量只是初值、设置落库后变量失效、外发逐通道开关。
