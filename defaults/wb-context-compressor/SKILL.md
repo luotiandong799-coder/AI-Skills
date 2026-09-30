@@ -194,38 +194,5 @@ Agent 记忆与上下文工程 2026；提示工程与推理质量 2026；可复�
 Agent 应用安全与对抗评测 2026：注入类型决定防御/防御提示工程结构层/Sandwich Defence/四层威；RAG 与检索增强 2026：检索两段制与RRF/分块策略谱系/四指标评测与两级拒答/Agentic检索循环/查询改写与；Agent 记忆与状态管理 2026：四类记忆/write gate 三信号/consolidation/遗忘即特性/d。
 多模态 Agent 与多模态工具 2026：输入层纪律/视觉决策点/组成式视觉工具/执行三规约/VLM 取代 OCR/查；深度研究 Agent 与信息综合 2026：研究循环/协同规划/三阶段分解/报告非摘要/证据日志/证据门/约束生成防引文；个人知识管理与第二大脑 2026。
 
-## 上下文压缩与长上下文工程 2026：三分定义/五桶预算/70% 触发阈值/keep-verbatim 区域/逐字压缩优先/工具结果占位/三厂家紧凑策略/压缩命名保留/记忆检索三参数/compact vs clear 判据（来源：spheron+zylos 系列+kaman.ai+agentnative.dev+channel.tel+mem0+agentixforce+microsoft learn+coffee.ai+learn.agentpatterns.ai+marktechpost+dreaming.press+anhtu.dev+redis+atlan+dev.to lars_winstand+arxiv 2603.23525+2603.23527+2609.13154+2604.02985+2605.04426+2510.18043+2603.02631+2608.13588+2606.26105+2606.28434+2602.06025，r330A，与 §上下文预算管理互补——那条管"何时开始规划压"，本条管"压缩技术的选型与执行细节"）
-- **上下文工程三分定义**：上下文工程=决定"什么进窗口、什么顺序、如何缓存压缩"（优化**成本与延迟**）；提示工程=指令与示例（优化**质量**）；RAG=检索哪些外部文档（优化**相关性**）——三者分治。判据：**优化对象决定用哪一档**。
-- **五桶预算分配模型**：窗口按桶分配——系统指令 10-15%（固定不压）/ 工具 schema 15-20%（动态剪枝未用工具）/ RAG 检索 30-40%（相关性评分压缩）/ 对话历史（结构化紧凑）/ 输出 headroom（预留模型输出）；会话开始前分配 + 预留 5-10% 缓冲，逐桶监控。判据：**五桶+缓冲，会话前分配，逐桶监控**。
-- **70% 触发阈值与性能拐点**：性能在窗口 60-70% 填满开始**可测退化**、90% 填满结构化工具调用质量恶化；压缩触发阈值 70-80%（80% 触发、90% 警告）——阈值触发而非周期触发。判据：**70% 规划、80% 压缩、90% 已劣化，别等满**。
-- **Keep-verbatim 区域**：压缩永不概括=系统提示+工具 schema（字节稳定保前缀缓存命中）+任务陈述与验收标准+最近 5-7 轮原文；只概括中间历史。判据：**固定区原样保留，只压缩中间**。
-- **逐字压缩 vs 有损概括**：有损概括 70-90% 缩减但有改写风险（行号/精确错误消息/变量名可被污染）；逐字压缩（保留选定 token 精确副本、丢其余）50-70% 缩减且零幻觉风险；生产顺序"先逐字后概括"——精确保真优先。判据：**精确技术内容先逐字，纯叙述历史再考虑概括**。
-- **工具结果占位（观测掩码）：最便宜的杠杆**：把过期、可重新获取的工具输出替换成占位（一行"调用发生过+返回什么"）——比压缩更便宜先做；顺序=先清旧工具结果→再掩码→最后压缩。判据：**省 token 顺序=清可重取结果→掩码→压缩**。
-- **三厂家紧凑策略对比：选择取决于目标**：Claude Code 精度遗忘=三层级联保缓存前缀；Codex CLI 交接备忘=全历史替换；OpenCode 分级治理=先隐藏后概括非破坏——2026 共识：先保缓存前缀、能隐藏就不删、要概括就命名。判据：**先问缓存要保住吗/历史可恢复吗/损失可接受吗**。
-- **压缩必须命名它保留什么**：压缩不是模糊摘要——压缩结果显式声明 session intent+next steps+关键工件指针，防目标漂移。判据：**压缩产物=摘要+意图+下一步+工件指针，缺一目标会漂**。
-- **记忆检索的预算三参数**：score threshold（语义相似度 >0.3 才注入）/ result limit（每请求 5-10 条，>10 与历史竞争注意力）/ 溢出说明（截断时显式告诉模型"上下文不完整"防过度自信）。判据：**记忆注入=阈值+条数上限+截断声明三参数**。
-- **compact vs clear 判据**：同一目标继续→/compact（自然阶段边界：研究→实现之间）；切换完全无关任务→/clear（旧上下文增成本并劣化新任务）；自动紧凑默认 ~95% 触发太晚，手动提前。判据：**下一步继续同一目标→compact，否则→clear**。
-
-## Agent 可观测性与 LLM 追踪 2026：可观测 vs 监控二分/三层 span 层级/token 成本属性/OTel GenAI 语义约定/四维遥测指标/漂移信号清单/trace 落湖仓治理/golden set 三件套/CI eval 门禁阈值/judge 校准阈值（来源：mlflow 系列+futureagi 系列+newrelic+openlegion+middleware+usenix SREcon26+sentry+databricks+codesprintpro+cubeapm+dev.to 系列+autoolize+promptassay+divinci+dailyaiworld+latitude+testquality+llmci+claudelab+openai-agents-js+arxiv 2608.07346+2606.19544+2510.09738+2604.23478+microsoft learn 系列+halla.ai+oracle agentspec+ietf+claude code+google adk，r330B，与 §应用安全"全量记录工具调用可审计"互补——那条管"要留审计记录"，本条管"留什么结构、怎么监控、怎么用 eval 闭环"）
-- **可观测性 vs 监控二分**：LLM 可观测性=完整遥测模型（理解系统：trace/质量/延迟/成本/安全/漂移）；LLM 监控=持续盯信号的操作层（阈值化、告警路由、补救）——先可观测后监控，两层都建。判据：**可观测回答"为什么这样"，监控回答"该不该报警"**。
-- **三层 span 层级：会话→推理→工具**：顶层 span=agent 会话/用户轮；推理 span=每步规划/思考；工具调用 span=触发它的推理 span 的子级、结果落 span 属性；子代理 API/工具 span 嵌套在父 agent span 下。判据：**trace 树=会话→推理→工具三层，工具结果落 span 属性**。
-- **token 与成本属性挂 span**：每个 span 附输入/输出 token 数+计算成本（USD）；成本进程内/span processor 计算，sampler 按成本保留昂贵 trace（成本感知采样）。判据：**每个 LLM span 必带 token+成本，采样器按成本保 trace**。
-- **OpenTelemetry GenAI 语义约定**：标准属性 `gen_ai.system` / `gen_ai.request.model` / `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` 跨厂商一致。判据：**trace 属性用 OTel 标准名，别自造字段**。
-- **四维遥测指标**：Tokens（上下文膨胀/无限循环/缓存效率）· 财务成本（margin/预算）· 延迟（TTFT/inter-token/网关）· 可靠性（429/5xx/fallback/熔断）——每维配对应遥测类型。判据：**监控四维=tokens/成本/延迟/可靠性，缺一维看不见一类故障**。
-- **漂移信号清单**：输入 token/请求突跳、空检索率上升、finish reason 长度增加、质量分下降=漂移回归信号；p95 TTFT 上升、队列时间上升、GPU 内存逼近、工具成功率下降=容量可靠性信号。判据：**输入突跳/空检索/finish 变长=提示漂移；TTFT/队列/工具成功率=容量故障**。
-- **trace 数据治理：落湖仓可审计**：agent 海量 trace 用传统观测工具贵难治理；方案=trace 直接落受治理表（Lakehouse），长期留存、可回灌 eval 与分析。判据：**trace 是数据资产不是日志：落受治理表、长留存、可回灌 eval**。
-- **golden set 三件套：金迹+校准 judge+基线清单**：golden trace=（真实生产输入+人工锁定输出+日期锁定+专家评审）；校准 judge（ρ≥0.7 vs 3 人工、每周重校）；baseline manifest（模型权重+prompt 模板+检索索引+judge 版本）——无 manifest 无法归因"模型变了还是尺子变了"。判据：**回归测试三件套缺一不可，缺 manifest 无法归因**。
-- **CI eval 门禁与阈值**：回归 eval=冻结金集+rubric 评分+对 7 天滚动基线 Welch t-test（per-example delta）；门禁=语义相似度 <95% 或幻觉率超容忍即 block merge；5% delta 规则；金集刷新后重跑基线更新阈值（30-50% 分数变动其实是数据集腐烂）。判据：**CI 门禁=金集+≈5% delta 阈值+幻觉率容忍；刷新金集必须重基线**。
-- **LLM-as-judge 校准阈值**：采样 100-300 生产 trace→2-3 人按 rubric 标注→人-人 Cohen's kappa（>0.6 可接受、>0.8 强）→judge 同 trace 打分算 judge-人一致性（<0.5 重写 rubric）；Spearman ρ≥0.7+p<0.05=已校准、0.4-0.7=仅辅助、<0.4=重写 rubric——校准是循环（金集→盲评→相关性→错误分析→rubric 更新→重测）不是一次性。判据：**judge 上线前过 ρ≥0.7；人-人 kappa 是前提；校准是循环**。
-
-## 结构化输出与输出校验工程 2026：三层架构/约束解码机制/厂商支持现状/应用侧仍校验/修复 vs 重试/失败三选一/语义验证器/重试带具体错误/内禀自纠不可靠/反思循环终止条件（来源：jvoltci+dev.to 系列+effloow+infini-ai+aws+aiworkflowlab+channel.tel+techearl+outputguard+ai-tldr+zalt+belsoftsolutions+openlegion+wickedsmartdata+arxiv 2606.21724+2605.17305+zylos+genai4a11+tencent cloud techpedia+aitutorialmaker+getapipulse+llmtest，r330C，与 §应用安全"输出侧检测"互补——那条管"输出安全（PII/注入）"，本条管"输出正确性（结构/语义/自纠）"）
-- **结构化输出三层架构**：可靠结构化输出=三层——schema 定义层（Pydantic/TypeBox/Zod）→ 服务端约束解码（XGrammar/Outlines）→ 客户端验证+重试（Instructor/structured-outputs API）——现代栈把 100% 结构正确作为默认；"只是让模型返回 JSON"必炸。判据：**定义 schema→服务端约束→客户端验证重试，三层缺一不可**。
-- **约束解码机制：JSON Mode 已成 legacy**：约束解码在采样循环内把产生非法下个字符的 token 概率清零——输出保证匹配 schema（不是"通常"是"每次"）；JSON Mode/提示请求 JSON 视为旧方案。判据：**能上约束解码就别用 JSON mode 提示；本地模型用 grammar 约束采样**。
-- **厂商支持现状与 Claude 路径**：2026 约束解码=OpenAI GPT-5 系、Gemini 2.5；Claude 无 response_format，走 tool use；不支持约束解码的模型=schema 进 system prompt+Zod 验证+带错误重试（可移植）。判据：**先查厂商原生约束解码；没有就用「schema 入提示+验证+带错重试」可移植路径**。
-- **应用侧仍需校验，HTTP 200 ≠ 合格**：即使 strict:true/原生约束解码，应用侧仍校验截断/空结果/服务异常；HTTP 200 只表示请求被接受，要查 finish_reason（stop 才算完整）。判据：**约束解码降失败率不消除失败——照常校验，finish_reason 必须查**。
-- **修复 vs 重试二分：先 repair 后 retry**：schema 失败=修复（json_repair 补缺逗号/引号/截断，免费无模型调用）→ 重试（带验证错误重发）——先 repair（快免费）再 retry（贵有效）。判据：**失败先免费启发式修复，修不了才带错重试**。
-- **失败三选一按序执行**：解析/验证失败=带错误反馈重试 / 安全 fallback 值 / 升级人工队列——按序用；**绝不把解析失败的结果传向下游**。判据：**失败路径=重试→fallback→人工，失败结果不过墙**。
-- **语义验证器：schema 通过 ≠ 业务正确**：schema 解析后加领域规则验证器（日期范围 start ≤ end、概率和=1.0）——捕获"结构合法但语义错"。判据：**结构验证管形态、语义验证管业务，两层都要**。
-- **重试提示必须带具体错误消息**：不带错误的重试=相同提示白费；把具体验证错误追加进下一次（"action 必须是 ['search','navigate','click'] 之一，得到 'go_to'"）——自纠率 >90%。判据：**重试=原输出+具体验证错误+schema 期望三要素**。
-- **内禀自纠不可靠：必须外部接地**：提示"再检查一遍"无外部接地会退化推理性能（2024-2025 研究一致）；自纠只在外部反馈接地时才可靠（单元测试/检索验证/工具输出比对）；验证循环用二元判断门阻止重写破坏已正确回答。判据：**自纠无外部信号=退化；有验证器/测试/检索接地才启用**。
-- **反思循环四终止条件**：无限制反思循环=无限迭代+质量退化；必须设终止=固定迭代次数（2-3 轮）/ 质量阈值判定 / 收敛检测（连续两次修订变化量低于阈值）/ 外部验证（单元测试/API 验证）——3 轮反思=4 次 LLM 调用，质量换成本。判据：**反思循环必配终止条件，四选一至少有一个**。
+## 学习轮沉淀区（本段）
+（r330 起的连续学习轮章节共 36 章已下沉 references/knowledge-base.md §≤200迁移，正文留此指针）
