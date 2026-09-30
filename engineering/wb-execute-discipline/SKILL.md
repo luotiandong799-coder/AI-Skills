@@ -2,7 +2,7 @@
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、崩溃恢复、限流预防、分批、批大小、条件循环、终止条件、无限循环、缺信息要问、把失败当空结果、毒化产物、传输损坏、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、确认词、验证边界、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、注入失败测韧性、hook 担保硬约束、部分完成度连续分、并发上限、槽位释放、暂停占槽、超限行为、队列代价、并发不是限流、可用余量、容量快照、自己记账、跑完不释放、客户端超时不等于取消、等待时释放、挂起即释放、检查点重放、不死锁、占槽还是放手、可重放性、失败传播、部分成功、下游被跳过、跳过传染、旁支是绿的、停了不等于收权、令牌leeway、工具里叫停、工具内重试、停止是完成不是取消、兄弟调用、调用次数上限、上限会重置、批次截断、上限算谁的、工具钩子、改参数再调、钩子顺序、顶替返回值、暂停不是失败、熔断状态、错误回调收不到暂停、步骤级定位、span 过滤、过滤器抛错、保数据不保性能、按类型粗筛、过滤顺序、我不处理、责任链、部分处理、下一个处理器、待处理请求、挂起、拦截被吞、拒答当正常输出、严格模式、默认放过、审批门、执行前一刻阻断、暂停落盘、批准过期、动态阈值、三级分类、置信不是授权、可逆性、能不能撤销、谁授权的、可重试标记、首个响应即终局、广播不等于会签、超时分支、没人回、挂起双出口、取消链接、resume 与 cancel、挂起等回调、字段级自由度、按动作授权
-version: 3.39.0
+version: 3.40.0
 agent_created: true
 ---
 
@@ -14491,3 +14491,14 @@ Gemini 五层：**expectation guard（动作前确认屏幕匹配）/failure cla
 - **在线评测：采样 5-10% 流量异步打分**：离线测试测不出真实用户输入（俚语/多语混码/长提示/截图/连续追问）；在线评测=采样 5-10% 实时流量、异步跑 evaluator（启发式+采样 LLM judge）、低于阈值告警；AWS 推荐采样 1-5%、最多 10 个 evaluator；低分例直接回灌离线评测集=生产→改进闭环；不评估每条 trace。判据：**在线评测采样 5-10% 异步打分；低分例回灌离线集**。
 - **评测四层分离**：离线基准（held-out 集打分）→CI 回归（合并前挡坏改动）→内联护栏（运行时挡响应）→生产可观测（trace+每调用打分）；2026 评测=持续管道不再单次离线（离线发布前/内联高价值路由/异步每条 live trace/连续模拟）；一次数字隐藏根因——format/faithfulness/relevance/safety/ops 指标分离。判据：**评测四层并行，指标分维度不合并成一个数**。
 - **生产失败→评测案例循环（agent quality loop）**：trace→eval→feedback→change→re-eval；生产 trace 显示实际行为（含失败会话）→失败/可疑会话成为评测案例（带完整上下文）→评测给每个改动打分→循环；上线前先跑两周 trace 理解真实失败模式再谈评测；自动生成平台（GEPA/Loop AI）减维护负担。判据：**生产失败自动回灌评测集；先 trace 两周再建评测**。
+## AI 编程助手工作流 2026：工具分工矩阵/Plan Mode 四阶段/TDD 委托/闭合测试环/200 行指令文件/git 纪律/worktree 并行/auto 权限逃生阀/四件套分工/新鲜上下文对抗评审（来源：aipedia+cursor blog+claude best-practices+zero-to-ai+baeseokjae+vscode tdd-guide+kanopylabs+notes.hasanarief+formation-claudecode+ai-tldr+developersdigest+botmonster+claude ai-native-sdlc+claude steering blog+thepromptshelf+futureproofing，r328C，与 §AI 代码收 diff 五连查互补——那条管"AI 交的活收之前怎么查"，本条管"AI 编程助手整体工作流怎么搭"）
+- **工具分工矩阵**：Cursor=IDE 内日常编辑+agent 工作；Claude Code=刻意终端调查；Copilot=GitHub 原生团队；Codex=检查本地项目、跑检查、准备可审计改动；大仓日常编码→Cursor/Copilot Agent Mode；自主功能实现→Windsurf Cascade/Copilot Workspace；CI/CD 维护→Aider 非交互；开源自主编码→OpenHands/OpenCode。判据：**按工作流需求选工具，不押单一工具**。
+- **Plan Mode 四阶段：Explore→Plan→Code→Verify**：Explore（plan mode 只读探索：Shift+Tab 或 --permission-mode plan，读文件不改代码）→Plan（详细实现计划含文件路径和代码引用，等批准）→Code（对着计划写代码、跑测试修失败）→Commit（描述性提交信息）；"explore only"只读子会话隔离探索与执行。判据：**复杂任务必走 plan mode，探索与执行分离**。
+- **TDD-by-Delegation**：显式告诉 agent 你在做 TDD，避免它为不存在的功能写 mock 实现；流程=写失败测试→确认失败→提交测试→让 agent 写通过代码（禁止改测试）→迭代全绿→提交实现；"写代码让这些测试通过"消除 AI 编码错误的大部分歧义——测试即规格；VS Code 自定义 agent 每 TDD 阶段（red/green/refactor）独立 role。判据：**先写测试再让 agent 实现；测试是 agent 可验证的规格**。
+- **闭合测试环**：agent 写代码→生成测试→运行→用结果做反馈，这是迭代环不是"生成测试文件碰运气"；测试失败 agent 两个选项：代码错要修 or 测试错要调——必须判断是哪个；测试先于实现=逼自己思考输入输出与边界。判据：**agent 把测试结果当 ground truth，失败先归因代码 or 测试**。
+- **指令文件 200 行纪律**：目标每文件 <200 行（长了消耗上下文降低遵从度——"臃肿的 CLAUDE.md 让 Claude 忽略你的指令"）；三高 ROI 区块=项目描述（3-5 行）→Setup & 可复制命令（install/build/dev/test/lint/format）→约定与边界（always/never、安全规则）；指令文件当代码对待：与文档化的改动同 PR 更新（build 命令过时=agent 跑错命令浪费轮次调试自己的指令谎言）；手写不要自动生成；monorepo 层级（根共享+子目录覆盖，最近的胜）。判据：**指令文件 <200 行、命令可复制、随改动同步更新**。
+- **git 纪律**："没有 git 纪律不要跑 agentic session"——每个正经 agent 会话=分支+书面任务+只读探索先于改动；同一 repo checkout 跑多个 agent=分支碰撞、stash 破坏、同文件编辑冲突。判据：**agentic 会话必开分支，任务书面化**。
+- **并行 agent=git worktree 隔离**：最大生产力解锁=3-5 个并行会话各自独立 worktree；worktree=每 agent 自己的目录/分支/index/端口，共享同一 git 历史与 remote；claude --worktree feature-x 一条命令=建隔离目录+检出新分支+启动；可扩到 5-10+ 会话无冲突；切换分支不中断运行中 agent。判据：**并行 agent 必须 worktree 隔离，一命令一个会话**。
+- **权限模式分档 + 逃生阀**：auto 模式=批准计划后应用每个改动无需逐次提示，分类器评估动作——安全自动批准、风险仍标记；auto-accept 前提=护栏成熟（调好的 CLAUDE.md、编码政策的 skills、阻断危险动作的 hooks、可跑测试套件）；无人值守硬门禁=目标条件每轮复查或确定性 Stop hook（"轮次结束前必须通过才放行"）——8 次连续阻断后 override，门禁需要逃生阀。判据：**auto 模式护栏成熟才默认；硬门禁要带逃生阀**。
+- **CLAUDE.md vs skills vs hooks vs subagents**：CLAUDE.md=常驻项目指令；skills=按需加载可复用能力包（名称+描述+工具列表会话开始加载）；hooks=必然执行机制（block 不安全动作）；subagents=隔离助手（.claude/agents/ YAML frontmatter，正文成系统提示词）；description 是 agent 条目最重要字段——弱"Reviews code" vs 强"Reviews TypeScript 空指针/缺失错误处理/API 约定违反，提交 packages/api 前使用"决定自主调用。判据：**常驻 CLAUDE.md、能力 skills、强制 hooks、隔离 subagents；description 写触发场景**。
+- **新鲜上下文对抗性 AI 评审**：评审者在全新 subagent 上下文只看到 diff 和标准，不看到实现过程的对话——"不看实现过程的评审"是 2026 评审模式；评审者持对立方立场攻击 diff；消除实现会话里的共识污染。判据：**重要 diff 用新鲜上下文对抗性评审，不沿用实现会话**。
