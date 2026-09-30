@@ -2376,3 +2376,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Stable-RAG：检索顺序敏感度估计消幻觉**：同一文档不同检索顺序→不同输出=检索排列诱发幻觉；多顺序跑生成器→聚类隐藏状态→簇中心解码捕获主导推理→对齐幻觉输出向正确答案。判据：**检索顺序敏感的输出先怀疑排列诱导幻觉，聚类中心解码对齐**。
 - **三层幻觉防御：预防/检测/纠正纵深**：预防=grounded retrieval+constrained generation；检测=self-consistency voting+NLI fact-check+citation verification；纠正=feedback-driven regeneration+幻觉模式持久记忆持续改进。判据：**幻觉防御纵深三层：预防管输入、检测管输出、纠正管反馈**。
 - **温度路由：事实任务 0.1 非 0**：temperature 0 重复措辞不自然引用生硬；0.7-1.0 创意任务但事实幻觉×2-3 倍；0.1 平衡确定性与自然度；查表类用更低/生成类用更高——任务型温度路由。判据：**事实检索任务温度 0.1，按任务类型路由温度不是全局设**。
+
+## LLM 应用数据管道与输入工程 2026：清洗变换进 provenance 链可审计恢复/质量过滤五查启发式规则过滤是第一道门/去重四层全覆盖精确近重语义跨文档各抓一类/Train-test 泄漏检查是硬门 split 间哈希匹配/Unicode 规范化先于去重 NFC 统一字节序列/Schema drift 检测 additive 自动接受 removed 类型变化拦截/Enrichment 元数据补全检索器需要文档里没有的过滤面/Freshness gating 按数据类型定 staleness SLA 超龄排除而非带警告摄入/增量哈希刷新只重嵌变更块不重嵌整个语料/事件字段严格类型+语义清晰命名+事件版本化（来源：arxiv 2606.21631+compendium+aws×4+datascale+genai4a11+infoq+arxiv 2601.17058+microsoft learn+csdn+theneuralbase+secondchair+winaykumar+gneissweb+dotdatalabs+asoasis+airbyte+informatica+bhanuchaddha+atlan+scrapeless+appperformancelab+fowler，r336A，与 r324A RAG 检索章互补——那条管"检索/重排"，本条管"喂给模型的输入数据管道：清洗/去重/质量门/新鲜度"）
+- **清洗变换进 provenance 链：清洗序列可审计恢复**：TextCleaner 五独立变换（HTML 剥离/Unicode NFC/编码修复/空白折叠/控制字符移除），每变换追加记录到样本 provenance chain——任何样本清洗序列可从审计日志恢复。判据：**清洗不是一次性黑箱，每个变换留 provenance 记录**。
+- **质量过滤五查启发式：规则过滤是第一道门**：长度 100K chars/Token 10K/字母表（二进制代码日志）/30% n-gram 重复（垃圾/lorem）/残留 HTML——基于可量化启发式规则快速淘汰低质文档不跑模型，最省钱；语言识别（FastText）是多语言语料清洗起点。判据：**先规则过滤后模型过滤，能规则解决不花推理钱**。
+- **去重四层全覆盖：精确/近重/语义/跨文档各抓一类**：Exact=MD5/SHA256 规范化文本；Near-dedup=MinHash+LSH 95%+（镜像页/机器翻译）；Semantic=embeddings+cosine（同义改写）；Cross-document=Jaccard（文章互相复制）——跳过近重检测留下改写复制，模型仍会记忆只是变体。判据：**去重要四层全查，只做精确去重漏掉改写复制**。
+- **Train/test 泄漏检查是硬门：split 间哈希匹配**：测试样例泄漏进训练=评测虚高不可信；哈希匹配 split 间永远关键；另加 source caps 防单域主导+AST 级代码去重抓改名克隆。判据：**评测有效性靠泄漏门，训练前必查 split 间哈希重叠**。
+- **Unicode 规范化先于去重：NFC 统一字节序列**：同一中文字符 NFC（组合）vs NFD（分解）编码不同字节序列，精确去重会把"看起来一样"的文档当不同文档；推荐 unicodedata.normalize('NFC') 一行统一；换行符/连续空格标准化（保留代码缩进）；零宽空格/软连字符按情况删或换。判据：**去重前先 NFC 规范化，否则同文不同字节漏去重**。
+- **Schema drift 检测：additive 自动接受，removed/类型变化拦截**：SaaS API 可无通知加/改/删字段；每次同步对比当前 schema 与最后已知版本；additive 变化安全自动接受；removed 字段/类型变化静默通过会损坏下游——version-pin API 连接+监控弃用时间线。判据：**每次同步对 schema 版本，破坏性变化显式拦**。
+- **Enrichment 元数据补全：检索器需要文档里没有的过滤面**：标题"Product Update Q3"无隐式元数据，retriever 无过滤面只能扫全量；enrichment=打标产品线/文档类型/日期范围/所属团队/访问层级——多数团队跳过然后检索不精确。判据：**检索不精确先查元数据过滤面，别只调 chunking**。
+- **Freshness gating：按数据类型定 staleness SLA，超龄排除而非带警告摄入**：运维指标 24h/政策文档查生效日期版本号/schema 定义源迁移后重新认证；SLA 外资产排除而不是带 freshness warning 摄入（检索会忽略）。判据：**摄入前先问新鲜度，超龄直接排除不摄入**。
+- **增量哈希刷新：只重嵌变更块不重嵌整个语料**：incremental hash-based refresh 保持知识最新不 re-embedding 全部语料——hash 识别变更块只重嵌增量，省成本+保时效。判据：**知识库刷新用增量哈希，别全量重嵌**。
+- **事件字段严格类型+语义清晰命名+事件版本化**：每字段定义类型（string/integer/boolean/timestamp）并坚持；语义命名（shipment_current_status 而非 status）大幅降低 agent 解析歧义；事件 payload 版本化策略。判据：**喂 agent 的事件字段严格类型+语义命名+版本化**。
