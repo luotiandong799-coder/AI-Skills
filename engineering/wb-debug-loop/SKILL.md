@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕
-version: 1.83.0
+version: 1.84.0
 agent_created: true
 ---
 
@@ -31,22 +31,6 @@ agent_created: true
 <!-- 2026-09-29 r290 下沉：容错装置/失败经验记忆/日志即线索 3 节 → references/knowledge-base.md §r111 批 -->
 ## 二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节（细则已下沉 KB）
 - 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节。
-## 无从观测就发「此处可能不完整」旗标，绝不伪造逐条信号（来源：GitHub `footprintjs/agentfootprint`·`docs/proposals/005-trajectory-assembler.md`「Model-internalized context is UNDETECTABLE … do NOT claim untrackedSources detects it … standing caveat, never a false per-frame stamp」「degrade, never throw」, 2026-09-19 实拉，学习轮 r111）
-- 当某个缺口在原理上无法被观测（例如「模型自己记住但没写进任何记录的事实」），工具必须发一个站级/全局的诚实 caveat 说「这里有检测不到的东西」，而不是给每条记录盖一个「已内部化/未内部化」的假章——因为那个唯一的信号即使什么都没发生也会触发，盖了就是假阳性。
-- 判据＝一个「缺失检测」的标志，如果在其目标根本不存在时也会亮，它就不是一个信号，而是一个误报源。
-- 与 §诊断装置自身的可信度（没查过!=没问题）、§降级还是断链、§证据通道缺失 互补——那些管「检查器有没有遭遇/通道还在不在/通道从哪一刻起存在」，本条管「**当原理上就看不到时，诚实的姿势是发旗标而不是伪造精度**」。
-
-
-
-## 版本归因靠 changelog，不靠版本号（来源：ClawHub `clawhub.com/api/v1/skills` 的 `latestVersion` 字段实测（2026-09-19 实拉，此前该站只探活未读），与 §缺失可能就是机制本身、§幻影字段 互补——那两条管"缺的东西是不是信号 / 读不存在的键"，本条管"**两个版本之间那段黑盒怎么打开**"）
-
-- **版本号之间的那段时间是黑盒，changelog 是唯一的灯**：实测 `latestVersion` 给出 `{version, createdAt, changelog, license}`，其中一条 changelog 是「正文新增「免费网页版」入口；名称取自 SKILL.md」——**一句话就说清了这次升级改了什么、名字是从哪来的**。判据：**只记版本号不记 changelog 的升级，等于给自己制造一段无法归因的时间**；事后要回答"从哪一版开始坏的"，没有 changelog 就只能二分去试。
-- **"名称取自 SKILL.md"这类派生信息要单独记**：它说明这个条目的名字不是手填的、是从内容里抽出来的——**上游抽取规则一变，名字会静默改掉**，而所有依赖名字的东西（slug、触发词、引用）会同时失效且不报错。判据：**凡是"由系统从别处派生出来的"标识，排障时要回到派生源去验，别在派生结果上打转。**
-- **授权条款也是归因的一部分，和"改了什么"是两类信息**：换 license 直接改变"还能不能继续用"，但它只在元数据里。判据：**升级检查清单＝改了什么 + 授权变没变 + 什么时候改的**，三件缺一就不是一次可回溯的升级。
-- **提升层**：工作流（变更归因）。
-
----
-
 ## 复现不了就先把发生率抬高：1% 追不到，50% 就能二分（来源：topaiskills.com「diagnosing-bugs-skill-faq」（Matt Pocock `diagnosing-bugs`，mattpocock/skills 工程族）2026-09-21 实拉，与 §六步循环「没有稳定复现之前不改产品代码」互补——那条管"没有复现不许动手"，本条管"**复现率低到不可用时该往哪个方向使劲**"）
 
 - **原文事实**：技能要求先有一条 **red-capable 命令**（已跑过至少一次、走真实 bug 路径、断言用户确切症状，且确定性 / 秒级 / agent 可无人跑）；原文判词 "*if you catch yourself reading code to build a theory before a red-capable command exists, stop*"。对 flaky 的处理不是追干净复现，而是**抬高发生率**：把触发循环一百次、并行化、加压、压缩时间窗、注入 sleep。原文阈值直白 —— **"a 50%-flake bug is debuggable, a 1% bug is not"**，一直抬到可调试为止。30 秒的 flaky 回路比没有回路好不了多少；2 秒的确定性回路是超能力。
@@ -493,3 +477,13 @@ agent_created: true
 - 原文：「`N8N_EXTERNAL_SECRETS_CONNECT_TIMEOUT`…`20`…If the vault doesn't answer in time, n8n **marks it as errored**, retries the connection in the background with **increasing delays**, and **startup continues without its secrets**.」「`N8N_EXTERNAL_SECRETS_REFRESH_TIMEOUT`…`20`…If the fetch takes longer, n8n **stops waiting** and the fetch **keeps running in the background**. When it completes, n8n stores the secrets. **At startup, workflows that use secrets from that vault fail until the first fetch completes. On an update interval, the previously fetched secrets stay available.**」「For HashiCorp Vault and Infisical, n8n also **cancels each single HTTP request after the larger of the two timeouts**.」（均 Available from n8n 2.41.0）
 - 判据：① **冷启动不能被最慢的那个依赖绑架**——对不可达/慢的外部凭据源设**两个独立上界**（connect / refresh），到点即标记 errored 或停止等待，主流程继续；「配了但拉不到」不应等于「系统起不来」；② **降级方向按阶段分叉，不是一刀切**：启动期没有旧值可用 ⇒ **fail-closed 直到首次拉取成功**（依赖它的执行直接失败，不拿空值蒙混）；周期性刷新已有旧值 ⇒ **旧值继续供给不中断**（"取新的别把已有的掐了"）；同一个超时在两个阶段给出相反动作，是设计不是矛盾；③ **后台续跑 + 递增延时重试**是让"慢依赖"与"主流程"解耦的标准形态：等待被截断，但工作不丢弃，成功即入库；④ **单个 HTTP 请求的上界要由两个超时中的较大者兜底**，否则会出现"整体超时已过、单次请求还在挂着"的悬挂连接。
 - 提升层：工具/架构。触发词：冷启动不阻塞、connect/refresh 双超时、启动期 fail-closed、刷新期旧值继续、后台续跑、递增延时重连、单次请求上界。
+
+## 并发闸门有作用域：「已开限流」≠「全链路受控」，且队列项不可重试（来源：n8n control-concurrency 本机实拉，r326B）
+- **原文**：①「Concurrency control applies **only to production executions**: those started from a webhook or trigger node. It doesn't apply to any other kinds, such as **manual executions, sub-workflow executions, error executions, or started from CLI**」；②「**You can't retry queued executions.** Cancelling or deleting a queued execution also removes it from the queue」；③「On instance startup, n8n **resumes queued executions up to the concurrency limit** and re-enqueues the rest」。
+- **判据**：① **设限后必须逐执行形态验证是否真被管住**——守压力的闸门恰恰不管「兜底用的错误工作流」与「被复用的子工作流」这两条最容易失控的路径；「我开了限流」只证明主路径被管。② 排队 ≠ 可重试：入队即失去重试权 ⇒ 队列不是「稍后重试的备份」，重试责任在调用方。③ 重启策略=「按上限恢复 + 其余重新排队」⇒ 重启后的在途量由闸门决定，不是全量洪峰。
+- **提升层**：工作流/工具。触发词：限流作用域、only production executions、manual/子流程/错误流程绕过、队列不可重试、重启按上限恢复。
+
+## 按「调用方身份」计数的闸门必须自证生效：反向代理会让它整体失效（来源：Flowise rate-limit 本机实拉，r326B）
+- **原文**：「The rate limitation is **tracked by IP-address**. If you have deployed Flowise on cloud service, you'll have to set `NUMBER_OF_PROXIES`」；「most likely you are behind a proxy/load balancer. **Therefore, the rate limit might not be able to work.**」；官方校验闭环=逐档 +1 直到 `{{hosted_url}}/api/v1/ip` 回显的 IP 与你的实际 IP 一致。
+- **判据**：① **「按身份计数」的闸门（IP / 租户 / 客户端）上线验收必须做一次身份回显比对**，否则测的是没被限流的那条路径而全绿；失效形态是**完全不工作**（不是变宽），最危险。② 平台应自带「回显我看到的客户端身份」端点——没有自证端点的限流 = 不可验证的限流。③ 修复方向是让平台认识真实拓扑（代理档数），而不是放宽阈值。
+- **提升层**：工具/安全边界。触发词：限流按 IP、NUMBER_OF_PROXIES、代理后限流失效、身份回显自证、闸门可验证性。

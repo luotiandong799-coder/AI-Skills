@@ -477,3 +477,20 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 判据：① 看到"工具被拒"先问**这是哪一类控制**——改错层等于白改；② 排查工具一律先取**生效值**而不是配置值，且生效值必须**带来源层级**（否则你改了 global 却被 agent 层盖掉）；③ 工具策略有五层（profile / byProvider profile / global·per-agent allow-deny / byProvider allow-deny / 仅沙箱内生效的 sandbox policy），定位时从最具体层往下数。
 - 与 §规则突然不执行先取证其是否还在上下文（1.66.0）同属归因次序，但对象不同：那条查**指令还在不在**，本条查**控制位在哪一层生效**。
 - 提升层：工具。触发词：工具被拒、sandbox explain、生效值、五层策略、non-main、elevated、归因次序。
+
+
+<!-- 下沉批次 2026-09-30 r326（原 SKILL.md 章节）-->
+
+## 无从观测就发「此处可能不完整」旗标，绝不伪造逐条信号（来源：GitHub `footprintjs/agentfootprint`·`docs/proposals/005-trajectory-assembler.md`「Model-internalized context is UNDETECTABLE … do NOT claim untrackedSources detects it … standing caveat, never a false per-frame stamp」「degrade, never throw」, 2026-09-19 实拉，学习轮 r111）
+- 当某个缺口在原理上无法被观测（例如「模型自己记住但没写进任何记录的事实」），工具必须发一个站级/全局的诚实 caveat 说「这里有检测不到的东西」，而不是给每条记录盖一个「已内部化/未内部化」的假章——因为那个唯一的信号即使什么都没发生也会触发，盖了就是假阳性。
+- 判据＝一个「缺失检测」的标志，如果在其目标根本不存在时也会亮，它就不是一个信号，而是一个误报源。
+- 与 §诊断装置自身的可信度（没查过!=没问题）、§降级还是断链、§证据通道缺失 互补——那些管「检查器有没有遭遇/通道还在不在/通道从哪一刻起存在」，本条管「**当原理上就看不到时，诚实的姿势是发旗标而不是伪造精度**」。
+
+## 版本归因靠 changelog，不靠版本号（来源：ClawHub `clawhub.com/api/v1/skills` 的 `latestVersion` 字段实测（2026-09-19 实拉，此前该站只探活未读），与 §缺失可能就是机制本身、§幻影字段 互补——那两条管"缺的东西是不是信号 / 读不存在的键"，本条管"**两个版本之间那段黑盒怎么打开**"）
+
+- **版本号之间的那段时间是黑盒，changelog 是唯一的灯**：实测 `latestVersion` 给出 `{version, createdAt, changelog, license}`，其中一条 changelog 是「正文新增「免费网页版」入口；名称取自 SKILL.md」——**一句话就说清了这次升级改了什么、名字是从哪来的**。判据：**只记版本号不记 changelog 的升级，等于给自己制造一段无法归因的时间**；事后要回答"从哪一版开始坏的"，没有 changelog 就只能二分去试。
+- **"名称取自 SKILL.md"这类派生信息要单独记**：它说明这个条目的名字不是手填的、是从内容里抽出来的——**上游抽取规则一变，名字会静默改掉**，而所有依赖名字的东西（slug、触发词、引用）会同时失效且不报错。判据：**凡是"由系统从别处派生出来的"标识，排障时要回到派生源去验，别在派生结果上打转。**
+- **授权条款也是归因的一部分，和"改了什么"是两类信息**：换 license 直接改变"还能不能继续用"，但它只在元数据里。判据：**升级检查清单＝改了什么 + 授权变没变 + 什么时候改的**，三件缺一就不是一次可回溯的升级。
+- **提升层**：工作流（变更归因）。
+
+---
