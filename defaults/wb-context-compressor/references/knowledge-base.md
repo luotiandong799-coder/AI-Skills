@@ -2508,3 +2508,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **chain tips 锚定 WORM：内部哈希可重算，外部不可重写**：S3 Object Lock（WORM）周期锚定链尖，即使重算全部内部哈希也无法匹配外部摘要；PostgreSQL 两哈希字段实现（row_hash=canonical fields+prev_hash）。判据：**防篡改=哈希链+外部 WORM 锚点双保险，WORM 防"全部重算"**。
 - **证据链与执行引擎绑定：Evidence 只证"记录了什么、记录未被改"，不证"动作正确/合法"**：Evidence Chain=有序 hash-chained AgentInteractionRecord；证明完整性/来源/时序，不是是非判断。判据：**证据链的价值是完整性与时序，正确性判断在验证者**。
 - **双边界捕获：reasoning step 在模型提供方边界捕获、tool invocation 在执行边界捕获，链绑定 metadata**：alteration/omission/reordering 均可被独立验证者检测；content-optional（内容可选，只链元数据 model/provider/subject identity）。判据：**捕获点在边界（模型入口/工具出口），元数据入链、内容可选**。
+
+## Agent 记忆污染防御与隔离 2026：MSMP 认证防御两层 HMAC-SHA256 签名合法写入挡无签名注入加随机过采样消融多数票聚合签名对手也有攻击成功率上界/XSPI 跨会话存储注入安全分析单位从单 prompt 转向持久状态的信息生命周期/写入面防御四动作 reject 绝不记忆凭据 secrets quarantine 高风险保留分析但不可检索 rewrite 剥离祈使形式降信任存为证据 store 低风险存私有记忆/隔离与拒绝分离可疑但未明确恶意写但不可召回直到人工或自动复审释放/Hazard-Signature Tombstones 从删除内容提取离散危险签名模糊集合包含匹配阻挡语义相似重注入/provenanceTrust 两级策略 prefix 结构匹配真实一方来源格式防 look-alike 前缀洗白/五层纵深防御 write-time 输入控制记忆消毒 provenance trust-aware 检索 scope 隔离行为监控/记忆写入速率限制单会话内限制持久记忆更新频率压制约摸写多矛盾高显著性条目/信任加权检索每条记忆记录 source creation time session context 初始信任分检索按信任加权/记忆生命周期绑定身份状态密码重置凭据轮换会话吊销设备重注册时失效或隔离溯源到不可信摘要的条目（来源：arxiv smsr+arxiv xspi+arxiv maple-guard+hazard-signature tombstones+meridian memory-poisoning+vectorize prevention+etamp+datarekha+systemshardening tagged-provenance+riskatlas aml-t0070，r339C，补 OWASP ASI06 记忆投毒威胁的防御全景——与 r339B 证据链互补：那条管"事后证明"，本条管"事前防毒与隔离"）
+- **MSMP 认证防御两层：HMAC-SHA256 签名合法写入（挡无签名注入）+ 随机过采样+消融+多数票聚合（签名对手也有攻击成功率上界）**：第一个有认证鲁棒界的防御；静态语料防御（RobustRAG/ReliabilityRAG）假设固定 KB，启发式过滤被流畅企业文本绕过。判据：**防御要认证上界：先挡无签名注入，再对签名对手给攻击成功率上界**。
+- **XSPI 跨会话存储注入：安全分析单位从单 prompt 转向持久状态的信息生命周期**：注入与激活时间解耦；攻击者无需在激活时在场；类比 stored XSS 而非 reflected XSS。判据：**跨会话威胁的单位是"信息在持久状态的生命周期"，不是单次交互**。
+- **写入面防御四动作：reject（绝不记忆：凭据/secrets）/ quarantine（高风险保留分析但不可检索）/ rewrite（有用但危险措辞→剥离祈使形式→降信任存为证据）/ store（低风险存私有记忆）**：每个写操作按风险分级路由。判据：**记忆写入不是二值（存/不存），是四路分级（拒/隔离/改写/存储）**。
+- **隔离与拒绝分离：可疑但未明确恶意→写但不可召回，直到人工/自动复审释放**：隔离把"我们注意到了"和"我们信任它"分开；是工具调用人工审批门的记忆对偶。判据：**边界条目先进隔离区：可审计、不可召回、复审后释放**。
+- **Hazard-Signature Tombstones：从删除内容提取离散危险签名，模糊集合包含匹配阻挡语义相似重注入**：删除机制本身有 paraphrase re-injection 漏洞（删了再改写写回）；HST 达 PRP@3=0.0 完全消除投毒同时保留 1.0 良性召回、100% 挡改写重注入。判据：**删除记忆要留"危险签名墓碑"，防改写重注入**。
+- **provenanceTrust 两级策略：prefix（结构匹配真实一方来源格式）防 look-alike 前缀洗白**：`operator-imposter`/`meridian:turn-injected` 等伪装前缀不能进入信任；零配置默认但可升级更强策略。判据：**来源信任按结构匹配而非前缀字符串相似，防伪装前缀洗白**。
+- **五层纵深防御：write-time 输入控制→记忆消毒（provenance）→trust-aware 检索→scope 隔离→行为监控**：单层不够，分层让攻击不经济；Agent Security Bench 平均攻击成功率 84.30%。判据：**记忆防毒是五层纵深，任何单层都不足以独扛**。
+- **记忆写入速率限制：单会话内限制持久记忆更新频率，压制约摸写多矛盾/高显著性条目**：恶意页想写多条矛盾/高显著性观察受同一限额约束；提高门槛但不清零风险。判据：**写入面节流=让大量投毒写入不可行，属于成本抬升而非清除**。
+- **信任加权检索：每条记忆记录 source/creation time/session context/初始信任分，检索按信任加权**：未验证网页来源条目不与人工确认条目同权；信任分级标签在写入时记录；事后可审计与回滚。判据：**检索的权威来自来源信任分级，不是内容措辞**。
+- **记忆生命周期绑定身份状态：密码重置/凭据轮换/会话吊销/设备重注册时，失效或隔离溯源到不可信摘要的条目**：植入的常驻指令不能活过重置；RAG 语料每条带可验证 provenance（作者/时间/权限）。判据：**记忆活不过身份重置：补救动作要能真正终结植入**。
