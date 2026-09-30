@@ -2460,3 +2460,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **粒度降级谱系全档补齐：关掉观测→骨架保留→载荷替换→全脱敏**：与 WB r338C「脱敏保留骨架」互补（WB 落"骨架保留 vs 全关"单档）；本条补全四档全景：关掉观测（不可判断成败）→骨架保留（保结构弃载荷）→载荷替换（占位符保上下文）→全脱敏（错误详情也脱敏）。判据：**设计隐藏开关先走完整谱系选档，别在二值里挑**。
 - **网关级可逆脱敏：format-preserving synthetic/mask/hash + 内容无关审计日志**：inline AI gateway 做可逆 PII 脱敏（synthetic/mask/hash）保留格式、7 因子概率风险评分叠确定性策略、写 content-free SHA-256 hash-chained 审计日志不存原始 prompt。判据：**网关做可逆+格式保留脱敏，审计日志不含原始载荷**。
 - **tokenize 分离存储：opaque token 替换敏感值，真值存 vault**：高级 DLP：敏感值换 opaque token、真值存 vault 按 token 索引、需要时在 LLM 响应中还原。判据：**需还原场景用 tokenize，真值与 token 分离存储**。
+
+## 身份面初始化顺序与所有权归属 2026：bootstrap 五模式按部署上下文选一 + 恢复路径写进 runbook/首个注册用户成为 owner 完成 onboarding 后关注册/floor 型 admin 声明不可降级的地板/bootstrap admin 用完即删引导期身份是临时物/恢复顺序先身份凭据面再数据面/恢复重新注册 bundle 携带恢复原因/owner authority 恢复不靠克隆旧设备身份可脱离设备实体重建/默认最小角色即漏洞 min_role=member 导致成员提权到 owner/自服务组织创建带配额与 fence 不复制当前租户数据/birthright access 预激活窗口角色模板自动撤销（来源：stella-ops authority+langfuse cloud run+copilotkit openbot+nexus smart-id+cisco sd-wan+auggy+silo+ietf uzpif+brainmesh+cve-2026-47405+opengeni+c1.ai+corma，r338B，与 WB r338B 备份恢复邻接互补——WB 落"备份不含清单/恢复身份前置/恢复默认停用"单产品写法，本条补其它产品对应写法+顺序判据）
+- **bootstrap 五模式按部署上下文选一 + 恢复路径写进 runbook**：setup wizard（生产/客户安装，UI 驱动首次访问创建 operator 用户）等五种方式；每种适配不同上下文（生产/本地/demo/CI）；选一个主模式并文档化恢复路径。判据：**身份初始化不是一种方式打天下，按部署上下文选模式，恢复路径必须写进 runbook**。
+- **首个注册用户成为 owner：完成 onboarding 后关注册**：`AUTH_DISABLE_SIGNUP=false` 注入、无预置 admin 凭据；首用户 sign up 即 owner；onboarding 完成后必须禁用 signup 关窗口。判据：**首用户即 owner 的模式靠"事后关闭注册窗口"封口**。
+- **floor 型 admin 声明：不可降级的地板**：`INITIAL_ADMIN_EMAILS` 是地板不是一次性：命名的地址在每次登录都保证为 admin、不可从 People 屏降级；其他角色变化写审计行。判据：**身份面要有"不可降级的 floor"，而不是一次性初始化后就消失**。
+- **bootstrap admin 用完即删：引导期身份是临时物**：初始配置完成后删除 bootstrap administrator（admin），只留你创建的 admin 登录；配置上传 Operator 后后门消失。判据：**引导期身份配置完必须回收，不留后门**。
+- **恢复顺序：先身份/凭据面，再数据面**：恢复 config-db 备份前先配置 config-db 凭据（凭据是默认值可跳过，否则必须 update-admin-user）；auggy restore 顺序：镜像/配置→身份→存储→恢复（restore order 逐 plane 校验）；SILO 要求恢复材料含父身份撤销边界。判据：**恢复的顺序=身份在前数据在后；先重建凭据才能谈数据导入**。
+- **恢复/重新注册 bundle 携带恢复原因**：recovery/re-enrolment bundle 必须携带：恢复主体绑定、恢复原因/事件类别（state loss/corruption/compromise/planned rotation）；它比初始 bootstrap 携带更强的连续性语义。判据：**恢复物要声明"为什么恢复"，不只是"恢复了谁"**。
+- **owner authority 恢复不靠克隆旧设备：身份可脱离设备实体重建**：216 字节 recovery kit + 24 词纸短语恢复密钥/作者身份，所有设备丢失也能重建；恢复出的 owner authority 精确匹配原值，无需复制/重建旧设备。判据：**恢复身份（authority）与恢复数据是两个动作，身份可以脱离设备实体重建**。
+- **默认最小角色即漏洞：min_role=member 导致成员提权到 owner**：依赖默认 `min_role="member"` 使管理路由暴露给普通成员：成员可自提升 owner、加任意 owner/admin、改他人角色、删 owner、破坏性操作；broken access control / 垂直提权。判据：**管理路由必须显式要求 admin 角色，不能依赖默认值**。
+- **自服务组织创建带配额与 fence：不复制当前租户数据**：已 onboard 用户可自建组织：独立 owner membership+个人 workspace+首个共享 workspace 显式 admin grant；subject-scoped database fence 限 10 个额外组织；创建不复制当前组织的 tenant 数据。判据：**自服务多组织要有 fence 配额与"不复制数据"的边界**。
+- **birthright access：预激活窗口 + 角色模板 + 自动撤销**：joiner 事件触发 birthright 自动预置（角色+部门，无人工工单）；corma 补充：start date 前 3-5 天创建"pre-active"身份（给系统同步时间又不提前放权）。判据：**身份生命周期自动化=预激活窗口+角色模板+自动撤销三件套**。
