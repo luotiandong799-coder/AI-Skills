@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、两种形状、给模型的和给程序的、改视图不动本体、状态卡只发一次、原地更新、动作词加对象加约束、置信信号、进度时间线、批准画面、改了什么、能不能撤销、推销结论
-version: 1.57.0
+version: 1.58.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -521,3 +521,14 @@ easoning_effort（low/medium/high）或 thinking budget 调，不靠 prompt 文�
 - **JCG：把 LLM judge 移出奖励环**：MaxProof=生成式 verifier 主奖励的长程证明 RL，必须系统处理噪声/假阳/reward hacking；JCG（Judge Code Generator）=用编码 LLM 把评分 rubric 翻译成逐样本 Python 评分函数、沙箱执行，LLM judge 完全移出奖励环——恢复 RLVR 核心优势（确定性/快/不可 hack），主观任务同样适用；1/9 判据/样本即无偏梯度估计；LLM-as-a-Verifier fine-grained 分=稠密奖励（LIBERO 1.8×、MATH 1.1×）。判据：**主观任务把 judge 编译成代码评分器，比 LLM 直接打分的奖励不可 hack**。
 - **跨轮思考成本陷阱**：gemini-3.5-flash 默认内部推理 token 跨多轮保留（长 agent 循环连贯性↑），代价=保留的 thinking tokens 每轮都算输入：10 轮会话原 50K input/turn 可能变 750K+。判据：**长 agent 循环先查"思考 token 是否跨轮计费"再定会话策略**。
 - **iso-compute 比较 + budget forcing**：定价强模型 N=1 对比现模型 sweep（1/2/4/8/16/32）——有时便宜模型多采样胜过贵模型单次；s1-32B=仅 1000 条精选 question-trace 微调+budget forcing（append "Wait" token 强制延长/终止思考）超 o1-preview 竞赛数学 27%——低成本给开源模型加思考；adaptive reasoning depth=provider adaptive controls 默认 medium、按步骤类型覆盖，逐步积累到实例级路由。判据：**选型先做 iso-compute 对比；开源模型可用 budget forcing 低成本获得思考能力**。
+## 本地 LLM 与隐私优先 2026：零遥测工具审计/下载元数据足迹/Q4_K_M 显存公式/硬件三档/全本地 RAG/85-95% 混合路由/决策四问/能力边界/GDPR 哈希日志/OpenAI 兼容切本地（来源：local-llm.net+promptquorum+vucense+insiderllm+pinggy+devtoolreviews+calmops+checkaimodels+awesomeagents+zero-to-ai+aimadetools+morphllm+localaimaster+muthu notes+zylos+gridex+codesota+quelllm+dev.to cursuri+aideck+findaiverse，r328B，与 wb-max-token-saver 成本四层互补——那条管"模型层是主动选择"，本条管"本地部署实操/隐私/成本账"）
+- **本地工具隐私审计**：Ollama=MIT 开源、零遥测（Wireshark 验证：模型下载后可完全断网运行；网络活动仅模型拉取+版本检查；不存会话历史）；LM Studio 默认收集匿名分析，隐私敏感必须立刻关（Settings→Privacy→off）；Jan/GPT4All 零遥测；四工具同用 llama.cpp/GGUF，可切换不重下模型。判据：**隐私敏感场景选零遥测工具并自查网络行为**。
+- **模型下载暴露 IP+模型名**：每次 ollama pull 都暴露你的 IP 和下载的模型名（registry.ollama.ai/Hugging Face 可见）；"数据不出机器"≠"元数据不出机器"；对策=代理/镜像拉取、air-gapped 部署、防火墙阻断 ollama.com。判据：**本地≠零网络足迹，模型下载元数据要单独治理**。
+- **Q4_K_M 甜点+显存公式**：GGUF 量化 Q2_K~Q8_0；显存=Q4_K_M ~5GB(7B)/9GB(13B)/20GB(34B)/42GB(70B)、Q8_0 ~8/14/34/70GB、FP16 翻倍；Q4_K_M 是质量/速度甜点；7B 需 8GB、13B 需 12-16GB、70B 需 35-48GB VRAM；Ollama K/V cache 量化（OLLAMA_KV_CACHE_TYPE 默认 f16）进一步省显存。判据：**先按 Q4_K_M 算显存再选模型档位**。
+- **硬件选型三档**：入门 8-16GB VRAM（RTX 4060/4070，7B-14B INT4，DeepSeek-R1-Distill-Qwen-7B 是甜点）；主力 24GB（RTX 4090，32B INT4 或 14B FP16）；8GB VRAM 首选 Qwen3 8B（5.2GB）、4090 单卡 Qwen3 32B 或 30B-A3B（256K 上下文）；Mac 统一内存跑大模型（M4 Max 128GB 跑 70B Q4）；无 GPU=16GB RAM 笔记本跑 1-8B Q4_K_M。判据：**按 VRAM 三档定硬件预算，8GB 起步、24GB 是实用线**。
+- **本地 RAG 全本地组件**：六步全在机器上=Ingest（512 token 固定块）→Embed（nomic-embed-text 768 维本地嵌入）→Store（ChromaDB 进程内持久化）→Retrieve（question 嵌入→向量匹配→top-k）→Answer（LLM 只用检索上下文）；ChromaDB 进程内零服务端、Qdrant/pgvector 生产级；中文文档用 BAAI/bge-small-zh-v1.5。判据：**本地 RAG=Ollama（嵌入+LLM）+ChromaDB+本地嵌入模型**。
+- **混合路由架构：85-95% 本地+5-15% 云**：路由层把请求分类——简单/分类/提取/格式化/简单推理（70-80% 的 agent 查询）→本地量化 7B-14B；复杂推理/长上下文/创意/多模态→云前沿；结果=云质量输出 80-95% 低成本+本地 <100ms 首 token；网关=聊天 UI 与模型之间的薄层。判据：**先按敏感度+复杂度路由，85% 走本地**。
+- **本地 vs 云决策四问**：①敏感数据？（专有代码/个人信息/内部文档→本地，"永不出机器"比 DPA/SOC2 更好推理）②深度推理/超长上下文？（架构决策/复杂调试/500 页文档→云）③延迟？（<50-100ms、不容忍抖动→本地）④成本形态？（高量常态化、API 成本超 GPU 租金 $2K/月→自托管）；本地还适合 air-gapped、100% 可用性、专有数据微调。判据：**四问定路由：敏感/低延迟/高量→本地，深推理/长上下文→云**。
+- **本地模型能力边界**：70-80% 的 LLM 查询不需要前沿模型（分类/提取/格式化/简单推理，量化 7B-14B 等价质量）；"用 Claude Opus 重排 JSON=请高级架构师刷墙"；分工=云做"思考"（深推理/多步规划/复杂判断）+本地做"执行"（固定任务）；本地模型仍会幻觉——验证事实后再行动。判据：**执行类任务本地化，思考类任务留云端**。
+- **GDPR 合规账**：本地模型把"处理"留在内部、完全掌控——权重下载一次，推理 100% 本地、无跨境传输；标准配置=Ollama+qwen3:14b（12GB VRAM）+阻断推理进程出站+全盘加密+记录 prompt/response 哈希（不记内容）用于 Article 30 处理记录；欧洲驱动力=消除"提供商拿我数据做什么"的合同谈判。判据：**本地合规=出站阻断+全盘加密+哈希日志替代内容日志**。
+- **OpenAI 兼容 API 切本地**：Ollama 暴露 OpenAI 兼容 API，大多数 LLM 应用改 base URL 即切本地；自动 GPU 检测（NVIDIA/AMD/Apple Silicon）回退 CPU；零持续成本——下载后无 API 费/订阅/按 token 计费；Ollama 云=零数据保留（US/EU、不记 prompt、不训练你的数据）。判据：**本地接入=换 base URL；先本地后云是默认梯度**。
