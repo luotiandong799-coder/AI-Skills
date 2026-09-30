@@ -2412,3 +2412,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **规范化跨格式标准化：下游无需 per-format 逻辑**：提取后规范化统一字段（一致 JSON shape）——下游组件不需要每格式分支；清洗剥离页眉页脚页码 boilerplate（膨胀 token 降检索精度）+修编码/空白/日期格式+折叠 OCR 近重复伪影+PII 检测。判据：**多格式语料统一 JSON shape 输出，清洗页眉页脚**。
 - **事件驱动摄取：Claim Check 模式+staged topics**：每文档上传触发流式工作流（非 batch ETL 或同步 API 链）保持 RAG/agent 新鲜；二进制存对象存储、Kafka 只放 URI/元数据/处理状态；流经 raw→refined→curated_ai 阶段 topic。判据：**文档摄取走事件驱动+Claim Check，别同步 API 链**。
 - **增量重处理：段落哈希对比只重处理变更**：增量更新保持提取内容新鲜不每次全量重处理；静态内容提取一次、频繁更新内容 SHA-256 哈希对比——incoming 段落哈希 vs 已存哈希只重处理变更。判据：**文档更新用哈希增量检测，只重处理变更段落**。
+
+## 长上下文预算的运行时实现 2026：成本不对称驱动预算 cache read 0.1× 是长会话主项/五桶预算模型+pre-flight 检查器/生产分配参考 system 10-15% tools 15-20% retrieval 30-40% history 20-30% buffer 10-15%/task budgets 模型可见倒计时的软顶/tiered memory 热态 LRU+重要事实 pin/结构化逐出 CWL 类型化 episode+无 LLM 确定性策略/TTFT 随上下文增长精简直接换响应速度/zone 策略地图 system→缓存历史→压缩检索→路由/masking 截断先行无 LLM 干预先腾空间/编译期打包必需先入可选按分贪心敏感策略（来源：zylos×2+kaman+claude task-budgets+usewire+explainx+agentloop+espressio+futureagi+niteagent+arxiv 2606.17016+agentixforce+microsoft compaction+klementgunndu+arxiv 2606.11213+inductivee+openlegion+bestaiweb+ctxbudgeter+agentnative+marktechpost+zyvop+louisbouchard+llm-ctx-mgr，r337A，与 r324B 上下文缓存治理/r330A 上下文压缩章互补——那条管"缓存治理与压缩策略理论"，本条管"预算在运行时怎么落地执行"）
+- **成本不对称驱动预算：cache read 0.1× 是长会话主项**：input fresh 1×/output 3-6×/cache write 1.25-2×/cache read 0.1×；长会话 cache read 主导——稳定内容（system/tool defs）保共享前缀进缓存、变动内容靠后。判据：**预算按成本不对称设计：稳定前缀进缓存、输出留足、fresh 输入最小化**。
+- **五桶预算模型+pre-flight 检查器**：Cmax=Csys+Cmsg+Ctools+Caux+Creserve；每次 LLM 调用前 pre-flight context checker 评估各桶是否超预算再调用。判据：**每次调用前跑预算检查器，超桶先处理再发请求**。
+- **生产分配参考：system 10-15%/tools 15-20%/retrieval 30-40%/history 20-30%/buffer 10-15%**：起点非规则；32k 分配表 system+tools 4800/retrieved 8000/history 9600/tool outputs 6400。判据：**预算先按参考分配比建基线，再按实测调**。
+- **task budgets：模型可见倒计时的软顶**：task-budgets beta header 给全 agentic loop（thinking/tool calls/tool results/output）目标 token；模型看运行倒计时自主优先级+优雅收尾；软顶+max_tokens 硬顶组合。判据：**长任务给模型可见 task budget 倒计时，软顶+硬顶双保险**。
+- **tiered memory：热态 LRU+重要事实 pin**：tier1 热态 2000-8000 tokens（agent state/active goal/last N 轮/即时工具结果；LRU 默认+重要事实 pin 不驱逐）；tier2 session 摘要 1000-3000 选择性加载。判据：**记忆分层热态保活+pin 关键事实，冷态摘要外置**。
+- **结构化逐出 CWL：类型化 episode+无 LLM 确定性策略**：agent 边工作边注释轨迹为类型化依赖链接 episode；超预算时确定性 LLM-free 策略按优先级逐出（保留用户轮次）；给长水平 agent 近无限工作视界。判据：**上下文逐出走结构化 episode 优先级，别无差别丢最旧**。
+- **TTFT 随上下文增长：精简直接换响应速度**：4K 300-500ms/64K 2-4s/128K 8-15s——TTFT 缩放；预算不是纯省钱是延迟优化。判据：**上下文精简的收益算 TTFT，不只算 token 费**。
+- **zone 策略地图：system→缓存/历史→压缩/检索→路由**：system prompt 固定高重复→prompt caching 90% 节省；对话历史→sliding/summarize/compaction；检索内容→RAG routing 决策（大语料检索、小语料全上下文更便宜）。判据：**每区按内容特征选策略：固定缓存、增长压缩、检索路由**。
+- **masking/截断先行：无 LLM 干预先腾空间**：工具结果清除/masking 常足够（工具输出主导 agent 上下文增长；JetBrains 52% 成本降+2.6% solve-rate 提升无需 LLM 调用）；trivial tier 先无 LLM（observation truncation 切头尾）再花 token 省 token 再 offload。判据：**先做零 LLM 的 masking/截断，不够再压缩外置**。
+- **编译期打包：必需先入+可选按分贪心+敏感策略**：Resolver 只加载估计能装下的 Reference；必需项先入装不下压缩 hook 或截断；可选按 score_item 贪心打包；PriorityQueue 用户赋权 Critical/High/Medium/Low 满时先丢 Low；敏感内容策略 warn/refuse/redact/allow。判据：**预算按编译算法打包：必需先入、可选贪心、敏感内容设策略**。
