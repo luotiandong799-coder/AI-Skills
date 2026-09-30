@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.27.0
+version: 1.28.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -333,10 +333,7 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **调度**：不另建自动化；作为本学习技能的职责，随现有学习循环（agent-guild 上下文）每次运行附带或周期性触发。
 - 参考方法：wb-skill-authoring（评估/去重合并）、meta/knowledge-governance（重叠/归档）、agent-evolution（生命周期治理）。
 
-## r186 审计落地（Qoder r189-Q-C #5 审计，2026-09-25 实拉核验，全库 0 命中净新）
-
-- **共享记忆按发言人身份定权＋in-flight 查重＋why 溯源**：多源记忆按来源身份定权（决策者 > 参与者 > bot 默认剔除）；写共享资产前查 in-flight 防并发重复劳动；结论行带 why 式溯源锚点。判据：共学栈直接同域——多源记忆按来源身份定权，避免无差别信任。来源 r189-Q-C（SkillApt / relore 实证）。
-
+<!-- 2026-09-30 r336B 下沉：r186 审计落地（Qoder r189-Q-C #5 · 0 净新）整段 → references/knowledge-base.md §r336B -->
 
 <!-- 2026-09-29 r290 下沉：Capability 12 诊断日志与审计留痕分仓 → references/knowledge-base.md §r199-B 批 -->
 ## Capability 13 — 留痕的范围由"显式输出"决定，不由"算过什么"决定（来源：Pipedream 官方 docs《Security Best Practices》，2026-09-27 r200-A 实拉 6,456B）
@@ -361,11 +358,7 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - 与 §Capability 12 的分工：那条管"诊断日志与审计留痕是两种东西、且留痕通道不能挂在被测对象上"；本条管"**单次记录里到底装进哪些字段**"——一个定通道，一个定内容。
 - 提升层：可观测性 / 工作流。
 
-## Qoder 净新全量消化（2026-09-27）
-- **删除即登记来源禁令（forgotten 位图）**（openclaw）：显式删除的来源/会话写入阻断位图，后续 ingestion 命中即拒，防同一数据经其他通道复活；边界：不触及原始转写与库外副本、无自动衰减需显式运营。
-- **反回音室不变量**：被注入上下文的内容带来源标记且永不二次抽取入库；cron/自动化会话产物默认剥夺晋升资格，需人工会话复现后方可入精选。
-- **记忆条目「锚+计数+调权」**（hindsight）：每条持久信念带原始出处引用锚与被复核计数；新证据到手**调整置信权重而非覆盖重写**，保留"何时开始相信什么"的审计线（覆盖写入会丢审计线，调权让过时程度可量化）。
-- **共享记忆按发言人定权**：决策者>参与者>bot（默认剔除）；写共享资产前查 in-flight 防并发重复劳动；结论行带 why 式溯源锚点。
+<!-- 2026-09-30 r336B 下沉：Qoder 净新全量消化（2026-09-27）4 条 → references/knowledge-base.md §r336B -->
 
 ## r205-C 净新两点（2026-09-27 独立实拉）
 
@@ -496,3 +489,8 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 > 下沉索引：Quick start (for an agent that has NOT j 等 1 节原文已移至 `references/knowledge-base.md`（按最旧批次下沉，正文只留指针）
 
 ## 争议处置按性质分通道：内容权 / 违规举报 / 命名空间各走独立入口；公开通道只收可公开证据并明确禁放私密证明；裁决按四要素（公开证据·既有使用·安全风险·用户影响）权衡；结果三态含「维持原状」且无时限承诺（来源：docs.openclaw.ai/clawhub/content-rights.md 1,166B + namespace-claims.md 4,167B，2026-09-30 r324B 独立实拉；与 §撤销与审核分层 互补——那条管“结论怎么撤”，本条管“争议往哪递”；细则见 references/knowledge-base.md §r324B）
+
+## Cap33 技能级作用域可见性：技能只对解析出的特定 agent 可见，对其余 agent 完全缺席（来源：docs.openclaw.ai/tools/custodian-skills.md 5,298B，2026-09-30 r336B 独立实拉；与 §入站准入双门与会话隔离粒度 互补——那条管谁能进来，本条管某个技能对谁‘根本不存在’）
+- **原文**：Custodian skills「load at the bundled-skill precedence tier, but only for the agent resolved by `agents.defaults.systemAgent.agentId`... For every other agent, Custodian skills are absent from discovery, snapshots, slash-command catalogs, sandbox sync, and the model-facing skills prompt」；「Normal skill controls still apply... agent skill allowlists can narrow the final set.」
+- **判据**：① **可见性是‘默认不存在、按身份显式出现’的开关，不是‘默认全有、按名单删’**——一个技能可以只对某一个被解析出的系统 agent 加载，对其它所有 agent 从发现/快照/目录/沙箱同步/提示词里彻底消失（不是‘可见但禁用’）；② **作用域锁与 allowlist 是两件事**：作用域决定‘这个技能根本存不存在于你的世界’，allowlist 在‘存在’之上再收窄‘你能用哪几个’；先定作用域再谈收窄；③ 与跨 agent 共享纪律一致——共享记忆管‘谁读得到’，技能可见性管‘谁装得上’，两者都按身份声明而非默认广播；④ 落地到 WB：技能分发时若某技能只服务一个角色 agent，配置为‘仅该 agent 可见’，避免污染其它 agent 的技能提示词与发现面。
+- 提升层：工作流/安全边界。触发词：技能级作用域可见性、role-scoped skill、仅 systemAgent 可见、discovery 缺席、作用域锁、allowlist 收窄。

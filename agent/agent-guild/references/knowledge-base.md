@@ -47,3 +47,14 @@
 - 原文：content-rights「submit a ClawHub Content Rights Request」+「supporting evidence, if available」+「affected content may be **hidden, restored, or left unchanged**」+「For **unsafe marketplace content that is not a content rights concern**, use the **normal reporting flow**」；namespace-claims「Use this path for **public, non-sensitive** ownership review.」「**Explain what each link proves.**」「**Do not put secrets or private proof in a public GitHub issue.**」「**Do not use in-product reports or the account appeal form** for namespace claims.」+「Staff weighs **public evidence, existing usage, security risk, and user impact**」。
 - 判据：① **不同性质的争议走不同通道，且文档要写明“哪类不归本通道”**——内容权≠违规举报≠命名空间，混递会被直接退回；设计任何申诉/纠错入口时，除了写「本通道收什么」，必须同时写「哪些情况请走别处」；② **公开通道的证据边界要显式声明**：公开 issue 里不得放私密证明，把「可公开证据」当作受理前提，否则要么泄露要么无效；③ **裁决标准要列全要素且公开**：公开证据/既有使用/安全风险/用户影响四要素齐全，争议方才知道该准备什么；④ **结果集必须包含「维持原状」**并说明**无时限承诺**——只写「通过/驳回」会让人误以为必然有变更、且默认有时限，实际三态含 unchanged 且无 SLA，等待方要自己设定跟进节奏而不是干等。
 - 提升层：工作流/可复用 Skill。触发词：争议分通道、内容权申诉、命名空间申诉、公开证据边界、裁决四要素、维持原状、无时限承诺。
+
+## §r336B（2026-09-30 r336B 下沉 · 自 SKILL.md 正文迁来）
+
+### r186 审计落地（Qoder r189-Q-C #5 审计，2026-09-25 实拉核验，全库 0 命中净新）
+- **共享记忆按发言人身份定权＋in-flight 查重＋why 溯源**：多源记忆按来源身份定权（决策者 > 参与者 > bot 默认剔除）；写共享资产前查 in-flight 防并发重复劳动；结论行带 why 式溯源锚点。判据：共学栈直接同域——多源记忆按来源身份定权，避免无差别信任。来源 r189-Q-C（SkillApt / relore 实证）。
+
+### Qoder 净新全量消化（2026-09-27）
+- **删除即登记来源禁令（forgotten 位图）**（openclaw）：显式删除的来源/会话写入阻断位图，后续 ingestion 命中即拒，防同一数据经其他通道复活；边界：不触及原始转写与库外副本、无自动衰减需显式运营。
+- **反回音室不变量**：被注入上下文的内容带来源标记且永不二次抽取入库；cron/自动化会话产物默认剥夺晋升资格，需人工会话复现后方可入精选。
+- **记忆条目「锚+计数+调权」**（hindsight）：每条持久信念带原始出处引用锚与被复核计数；新证据到手**调整置信权重而非覆盖重写**，保留"何时开始相信什么"的审计线（覆盖写入会丢审计线，调权让过时程度可量化）。
+- **共享记忆按发言人定权**：决策者>参与者>bot（默认剔除）；写共享资产前查 in-flight 防并发重复劳动；结论行带 why 式溯源锚点。
