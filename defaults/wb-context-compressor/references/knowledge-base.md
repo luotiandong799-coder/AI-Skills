@@ -3074,3 +3074,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Shadow CI**：隔离 production-like 环境（依赖全 mock 且 disposable）、评测用将 promote 的同一镜像、prompts/策略/工具 schema 作可部署产物进 release 控制。
 - **发布四级阶梯**：staging 合成流量→shadow 并行 4h→A/B 5%→全量+在线监控，配每级阈值（完成率 85/90、grounded 95/98、违规 0、回归容差 0.05、成本涨 15% 挡 10% 告警）。
 - **容器与运行时安全评测**：AI-vs-AI 攻防（社交工程/多轮最有效）；运行时安全按生命周期检查点组织证据；可编程评分优先（交易重放/链上验证）；工具级三维=输出利用/输入准确/调用准确。
+
+## r355B Agent 身份认证与权限治理工程 2026（来源：IETF-Kasselman/AAP/AAuth/Microsoft-MCP-auth/AWS-MCP-OAuth/Red-Hat/AWS-agent-IAM/WellArchitected/attenuating-tokens/Guardion/Mike-Hacker/DEV/AgentixForce/Zylos/aegis/authsome/Systems-Hardening/how2/JumpServer/ArchMan/granite/API7/Truto/Google-Agent-Registry，2026-10-01 实拉）
+- **认证四范式**：不发明协议——OAuth 扩展（AAP claims 推理 agent 身份/任务上下文/委派链/人工监督）或托管身份或密码学身份（aauth:local@domain 签名密钥 well-known 发布）；MCP server 认证三方法（托管身份/身份直通/unauth）按用户上下文持久化需求选。
+- **连续对话式授权**：agent 授权=JIT（预授权一次拿全部→任务演化中动态授予）；RAR 细粒度动作授权（只搜 X 文件夹）编码进 token 供下游强制。
+- **每组件每功能一角色**：编排者/专家/MCP server 各一 IAM role、不跨组件不跨环境共享、从零权限加必需；吊销=禁身份即停。
+- **委派交集原则**：agent 有效权限=用户权限 ∩ agent 能力（双方都不能越界）；capability token 只可衰减不可放大。
+- **token 三约束**：细粒度 scope（绑具体工具非 Read All）+短 TTL（分钟到小时）+任务上下文；每 agent 独立凭据，爆炸半径限 service account。
+- **分层权限作用域**：宽能力限身份层（role/boundary）、单操作约束事务层（session policy/tags/conditions）、用户上下文身份层（资源侧求值）；RBAC 粗角色+ABAC 细属性。
+- **动态凭据**：每请求唯一 key+TTL 自动过期（agent 不持长期凭据）；JIT 生成替代静态存储；Vault 默认 32 天 TTL 显式设短。
+- **密钥生命周期**：每团队/每 agent 独立 key（审计可归因）、rotation 策略（什么/何时/如何无停机）、offboarding 枚举轮换 hook IDP、key 不出配置文件。
+- **凭据访问四纪律**：集中 vault+细粒度策略（禁宽 namespace）+审计读+明文仅出站瞬间解析；token 刷新串行化（并发刷新致 429/refresh token 失效）。
+- **服务账号模型**：agent 用服务身份不用用户身份（ADC/托管身份）；scoped 服务账号+自动轮换+全量审计+禁用即停+不见用户凭据；平台 env var 不满足审计（改了什么/谁改的不可见）。
