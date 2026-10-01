@@ -3278,3 +3278,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **共识争议识别**：共识候选（3+ 独立同结论）+争议候选（分歧+性质）；透明标不确定性。
 - **研究编排**：lead 规划→3-5 subagent 并行+独立引文 pass；广度优先 +90% 质量≈15x token；复杂度先分类。
 - **知识 agent 接入**：KB 暴露 MCP endpoint+toolbox 发现 retrieve 工具+grounded+引文+RBAC。
+
+## r361A Agent 工具调用与 MCP 生态工程 2026（来源：nisai.dev/Microsoft-Foundry/ai-tldr/Google-Cloud/loooop/FutureAGI/richards.ai/KunalGanglani/niteagent/zylos/qveris/arXiv-2603.01548/KindaTechnical/DEV-aiwave/ModelContextProtocol/Claude-blog/gingerlabs/Microsoft-Learn/ajing/TheNeuralBase/genai.club，2026-10-01 实拉）
+- **tool_choice 四值**：auto 自决/required 必调/none 禁用/tool 指定特定工具；强制场景用 tool 指定。
+- **工具命名**：verb_noun snake_case <64 字符；名称=模型第一读取物直接影响选择。
+- **输出 schema 一致性**：固定 schema（不一致形态=模型失败源）；长任务返回 artifact 引用非全量。
+- **失败分类矩阵**：瞬态退避/校验回 LLM/权限升人/逻辑返回空/灾难熔断；连续失败冷却。
+- **重试回退链**：工具 A 退避→切 B 回退→全耗尽才放弃；图路由失败边重算不调 LLM。
+- **LLM 错误四类**：选错改描述/畸形严验证/循环强制变/幻觉显式错；结构化输出 API 层硬约束。
+- **工具防火隔离**：按能力类分 agent（全能 agent 最不可靠）；策略写成代码预检查。
+- **MCP 新规范**：无状态核心+UI 扩展+Tasks 长任务+OAuth 对齐+正式弃用策略。
+- **MCP 服务端设计**：按意图分组（非 API 镜像）+5-15 工具+job ID 长任务+读写分离凭证。
+- **混合工具检索**：dense+sparse 加权（词汇错配 cancel vs refund）+top-k 注入控预算。
