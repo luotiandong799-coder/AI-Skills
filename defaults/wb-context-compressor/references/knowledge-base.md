@@ -3134,3 +3134,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **预算五层**：请求顶/会话滚动/密钥月帽/模型分级路由/熔断全在 gateway 执行；耗尽→阻断或降级到便宜模型或人工。
 - **三独立刹车**：账户额度/每虚拟 key 网关预算/循环硬界（max turns+美元上限）；任一可失效故三层齐备；子 agent 扇出显式 cap。
 - **速率熔断**：绝对预算+每分钟 token 阈值速率熔断；runtime 四件套（token 节流/请求节流/熔断/美元上限）；三层配置单点失效不烧预算。
+
+## r357A Agent 可观测性与遥测工程 2026（来源：OpenTelemetry-CNCF/AWS-Bedrock-AgentCore/Tobias-Weiss/OpenObserve/IETF-draft/Greptime/AWS-WellArchitected/MLflow/Microsoft-Agent-Framework/valuestreamai/FutureAGI/AI-TLDR/DevOps/AI-Workflow-Lab/Jamf-Tokenomics/AWS-Tokenomics/New-Relic/Openlayer/Lyzr-OpenController/airuntimesecurity/octopusbuilds/极客公园，2026-10-01 实拉）
+- **OTel GenAI 语义约定**：遥测用 gen_ai.system/operation.name/request.model/usage tokens——vendor-neutral、agent 换运行时遥测仍可比；自建 span 属性也按此命名。
+- **span 树三型**：invoke_agent（每轮顶层）→chat（每 LLM 调用）→execute_tool（每工具调用）；工具参数/结果记录受 sensitive-data 开关控制；停止原因靠 trace 不靠 grep 日志。
+- **span 级成本归因**：带 user_tier/feature/model/prompt_version 维度按特征聚合 ROI；不做整体账单级。
+- **输出 token 变异性**：per-request cost by template（输出 token 变异性是尖峰源）；每 workflow 平均 token 实时告警，不等账单。
+- **eval-as-observability**：评估结果作为遥测附到 span（groundedness/tool-selection 分数）；生产采样 10-20% LLM-as-judge 抓回归。
+- **四类输出监控**：渗漏检测/跨轮有状态合规/内容政策合规/性能；单次合规不够——跨会话累积泄漏要 stateful 检测。
+- **治理日志四件套**：输入+上下文+决策链（每步时间戳/模型版本 hash/触发输出）+输出；检索索引版本标识随请求记录以追 context drift。
+- **行为漂移基线**：guardrail 拦截率（按类/按时窗）+judge 标记率（按判据）；行为/价值/上下文三类漂移各有检测信号。
+- **model version 上 span**：静默换版本时 accuracy 下降可归因；重试循环成本尖峰从 trace 查。
+- **签名审计轨迹**：enforcement 副产品非事后日志+毫秒级时间戳+promotion 审批人身份；版本钉 source commit+镜像；高风险数据操作在可回滚沙箱。
