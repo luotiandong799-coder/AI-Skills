@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: 3.90.0
+version: 3.91.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -232,3 +232,13 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 原文：①「**Favor procedures over declarations** — A skill should teach the agent how to **approach a class of problems**, not what to produce for a specific instance」；②「Every token in your skill **competes for the agent's attention** with everything else in that window」。
 - 判据：① **评审问句换成「教了方法还是给了答案」**：写死某一个具体实例的产出，换个输入就失效；给出处理一整类问题的程序才具备泛化。② **token 是竞争关系**：每写进正文一行都在挤占同一窗口里其它信息的注意力，不是「占了点空间」而已 ⇒ 正文取舍的判据是「这行在抢谁的注意力、值不值」，而不是「还剩多少额度」。③ 与既有「500 行 / 5000 token 体积预算」互补：那是上限，本条是**上限之内怎么排序**。
 - 提升层：可复用 Skill。触发词：程序优先于声明、教方法不给答案、class of problems、token 注意力竞争、正文取舍排序。
+
+## 把一段逻辑提升为可复用单元是「三件事」：跨单元引用转参数、剥离入口型构件、声明执行序不继承父级（来源：docs.n8n.io/build/flow-logic/convert-to-sub-workflows.md 5,126B，2026-10-01 r349B 独立 curl 实拉，`automatically updated and added as parameters` / `Must not include trigger nodes` / `regardless of the parent workflow's settings` 逐串命中；经 Qoder r367-Q-B 提名）
+- 原文：①「Expressions referencing other nodes are **automatically updated and added as parameters** in the Execute Workflow Trigger node」；②「**Must not include trigger nodes**」；③「New workflows use v1 execution ordering **regardless of the parent workflow's settings**」。
+- 判据：① **隐式引用必须改写成显式参数**才能审计：跨单元的引用若仍靠「节点名全局可解析」，重命名一个节点就会在看不见的地方断链。② **入口型构件必须剥离**：子单元里留着 trigger，等于同时保留两个触发源（父调一次、自己触发一次）。③ **执行序语义不继承父级**是最隐蔽的行为差：同一段逻辑在两处跑出不同顺序，不是 bug 而是「谁声明了序」的问题 ⇒ 提升时必须显式写死子单元的序语义，否则复用即换行为。
+- 提升层：可复用 Skill/工作流。触发词：提升为子流程、隐式引用转参数、剥离 trigger、执行序不继承父级、v1 execution ordering。
+
+## 「发现集刷新」必须做成可挂事件，否则新装的技能在本次会话内不可见（来源：code.claude.com/docs/en/hooks.md 248,712B，2026-10-01 r349B 独立 curl 实拉，`reloadSkills` ×5 命中；经 Qoder r367-Q-B 提名）
+- 原文：SessionStart 决策控件 `reloadSkills`；配套说明「use `reloadSkills` when a SessionStart hook **installs or updates skills**」。
+- 判据：① **安装 ≠ 可见**：技能注册发生在会话开始时，中途新增的技能不会自动进入发现集 ⇒ 「装了却搜不到」的默认怀疑方向应是发现集未刷新，而不是安装失败。② **刷新要做成显式事件挂钩**而不是靠重启：把刷新动作暴露成可配置项，才能让「安装后立即生效」成为可组合的一步。③ 与既有「发布只对新会话生效、会话钉死所选修订」同族但不同层：那条讲已加载修订的钉定，本条讲**候选集本身的刷新时机**。
+- 提升层：可复用 Skill。触发词：reloadSkills、发现集刷新、安装后不可见、SessionStart 刷新技能、新技能不生效。

@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.105.0
+version: 1.106.0
 agent_created: true
 ---
 
@@ -236,3 +236,13 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - 原文：①「Make checks its activity **every four minutes**」；②「When in **Not responding** status, **associated scenarios still run**, but the module using the On-prem agent shows a **500 error**」。
 - 判据：① **宿主健康 ≠ 被调组件健康**：组件失联时场景整体照跑，只有用到它的那个模块报错 ⇒ 排障要问「报错落在哪一层」，而不是看整体是否在跑；把「整体在跑」当作依赖健康的证据会漏掉单点降级。② **降级要落到具体执行面**：健康位是每组件独立的，一个组件 Not responding 不应升级为全局停 ⇒ 先定「哪些执行面会因该组件失败」，再定告警粒度。③ 与既有「慢依赖不阻塞冷启动」（启动期）互补：本条是**运行期**。④ 心跳周期（4 分钟）决定失联判定延迟，别把它当实时信号。
 - 提升层：工作流。触发词：组件独立健康位、Not responding、降级只失败该执行面、宿主照跑、心跳 4 分钟、运行期降级。
+
+## 「查不到状态变化」先核默认作用域键是不是资源 ID：同一资源的所有调用共用一个会话/状态桶（来源：docs.langflow.org/memory 56,213B，2026-10-01 r349B 独立 curl 实拉，`default session ID is the flow ID` 逐串命中；经 Qoder r367-Q-B 提名）
+- 原文：「The **default session ID is the flow ID**, which means that all chat messages for a flow are stored under the same session ID as one large chat session」。
+- 判据：① **默认归属键是资源 ID 而不是使用者 ID**，是一个静默的共享面：不同用户在同一流程上的对话会互相污染记忆、串数据、并把审计归因错到「同一个主体」。② **症状 → 成因要分三档**：串数据（记忆污染）/ 审计归因错（主体不可分）/ 状态莫名被重置（作用域比预期宽）⇒ 排障第一步是问「这个状态的默认键是谁」，而不是先改 prompt。③ 与既有「解析基准 ≠ 隔离边界」互补：那条管路径解析，本条管**状态/会话的默认归属键**。
+- 提升层：工作流。触发词：默认 session ID 是 flow ID、作用域键是资源 ID、记忆污染、串数据、审计归因错、共享会话桶。
+
+## 挂起态是双字段：状态位只回答「态」，原因与恢复入口在独立实体；恢复去重的正确原语是存储唯一约束（来源：www.activepieces.com/docs/install/architecture/waitpoints.md 7,102B，2026-10-01 r349B 独立 curl 实拉，`only carries status` / `the *why* lives on the waitpoint` / `never processes a resume twice` / `10 000 is also the ceiling` 逐串命中；经 Qoder r367-Q-B 提名）
+- 原文：①「The flow run row **only carries status** (`PAUSED`, `RUNNING`, …); the ***why*** lives on the waitpoint」；②「Duplicate callbacks are absorbed by the **uniqueness constraint**; the engine never processes a resume twice」；③「**10 000 is also the ceiling**: the env var cannot raise it higher」。
+- 判据：① **状态位不是原因位**：把「为什么等」压进状态枚举，会在复挂/多因等待时信息不够 ⇒ 等待必须有独立持久实体承载原因与恢复入口。② **去重要落在存储的唯一约束上，不是应用层判重**：应用层判重有并发窗口，唯一约束没有；「重复回调被唯一约束吸收」给出的是**键位实现**，比「记得判重」可靠。③ **要区分可调上限与已封死上限**：10 000 是 env 也抬不上去的硬顶 ⇒ 已封死上限应写进容量规划，别把 env 当逃生口。
+- 提升层：工具/工作流。触发词：挂起态双字段、waitpoint 承载原因、唯一约束去重、重复回调吸收、已封死上限、10 000 ceiling。

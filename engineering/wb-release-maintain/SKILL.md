@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: 1.43.0
+version: 1.44.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -101,3 +101,13 @@ sources:
 - 原文：①「The changes to the data store structure **apply only to the new data** you put in the data store. Make doesn't change or validate the original data to fit the updated structure.」②「**You cannot roll back deleted records.**」（恢复只能手工从历史 run 日志提取）。
 - 判据：① **结构变更不回溯＝库内静默双 schema**：改完结构后新旧记录各按自己形态存在，系统不校验也不转换 ⇒ 读侧必须自己知道「这条是旧结构的」，否则字段缺失会被当成数据问题而不是结构问题。② **删除无回滚位必须明写**：有 migration / rollback 的假设在轻量 store 上根本不成立，误以为可回滚就会把「删除」当可逆操作用。③ 与既有「schema 与 row 同步策略分开声明」互补：那条管跨环境搬运，本条管**同库内的时间维演进**。
 - 提升层：工具/工作流。触发词：结构变更只作用新数据、库内双 schema、删除不可回滚、恢复靠历史 run 日志、持久小 store 契约。
+
+## 生命周期钩子要按「触发次数」分档（deploy 型一次 / activate 型每次），撤除是「先停用后删除」两步（来源：pipedream.com/docs/components/contributing/api.md 55,159B + sources-quickstart.md 22,817B，2026-10-01 r349B 独立 curl 实拉，`each time a component is deployed` / `each time a component is deployed or updated` / `Executed each time a component is deactivated` 逐串命中；经 Qoder r367-Q-B 提名）
+- 原文：deploy 钩子「each time a component is **deployed**」；activate 钩子「each time a component is **deployed or updated**」；另有 `deactivate`「Executed each time a component is deactivated」。
+- 判据：① **幂等设计前先问该钩子会不会随更新重跑**：deploy 型只跑一次、activate 型每次更新都跑——把初始化写进 activate 型钩子，等于每次发版重放一遍。② **撤除是两步且补偿要落在第一步**：先 deactivate 再 delete；删除前的停用才是可逆的那一步，直接删没有补偿位。③ 与既有「卸载残留态 tombstone」互补：那条讲卸载后的可见性，本条讲**钩子触发次数语义**。「调度是运行期状态、不随代码回滚」本轮未独立取到原文，登记待复核。
+- 提升层：工作流。触发词：deploy 型钩子、activate 型每次更新、钩子触发次数分档、先停用后删除、补偿落第一步。
+
+## 换鉴权机制的传播半径包含存量会话；身份主语的字符集约束是防碰撞设计，不是风格（来源：help.make.com/single-sign-on.md 14,821B + manage-connection-and-key-usage-notifications.md 2,598B，2026-10-01 r349B 独立 curl 实拉，`logged out immediately` / `lowercase characters and dashes` / `adds one of your keys or connections to a scenario` / `enabled by default` 逐串命中；经 Qoder r367-Q-B 提名）
+- 原文：①切换 SSO「You will be **logged out immediately**」；②「Namespace must include only **lowercase characters and dashes**」；③他人「**adds one of your keys or connections to a scenario**」触发通知，且该通知 `enabled by default`。
+- 判据：① **鉴权面切换会让所有在场会话立刻失效** ⇒ 发布计划必须计入「在场重登成本」，否则一次配置变更表现为大面积掉线事故。② **身份主语（namespace/域名）做字符集规范化是防碰撞**：大小写与分隔符自由会把同一实体拆成两个账号，且合并成本远高于当初约束。③ **「别人用了我的凭据」默认开通知**：凭据归属者天然是第一告警受众 ⇒ 这类事件默认关闭才需要显式申报（与「默认公开无鉴权」的判据方向相反，别混用）。
+- 提升层：工作流。触发词：切换 SSO 立即登出、存量会话失效、namespace 字符集、身份防碰撞、凭据被他人使用默认开通知。
