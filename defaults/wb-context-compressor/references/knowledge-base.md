@@ -3302,3 +3302,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **延迟掩蔽信任**：并行上下文填充响应防静默；信任随对话增量升级权限。
 - **生命周期四级**：Dev 沙箱/Staging 合成数据+红队/Canary 减流量/Prod；promote 需 evals 通过。
 - **版本审批门**：自动门（单测/契约/基准/安全扫描）+eval-gated 部署（LLM-judge+失败阻塞 CI）；行为套件 50-200 用例≥95%。
+
+## r361C Agent 多模态与视觉语言工程 2026（来源：niteagent/zylos/Laxaar/oxlo/36kr-智谱/DEV-UI-TARS/FutureAGI/NVIDIA-VSS/jobsbyculture/LinhTruong/AwesomeAgents/arXiv-AgenticOCR/ai-tldr/Alibaba-Qwen-OCR/arXiv-TeleOCR/ofox/anhtu/ailearningguides/keerok/arXiv-VisBrowse/智源-AgentVista/arXiv-EMBODIEDBENCH/arXiv-VTC-Bench/arXiv-Vision2Web/AynVQA/M-VQA/VideoGAIA/NVIDIA-Nemotron，2026-10-01 实拉）
+- **多模态架构**：全模态单体（简单便宜）vs 专家路由（规模化控制强）；企业主流=路由。
+- **视觉接地三技术**：坐标 JSON/编号标记引用/空间监督嵌入权重。
+- **图像 token 预算**：注意 token 预算；细节敏感自平铺+位置上下文（不靠模型自动平铺）。
+- **视频帧采样**：均匀 1-2fps 简单/关键帧 16-64 帧需镜头检测/原生 token 内部压缩；长视频 Video-RAG。
+- **GUI agent 防坑**：读截图决定动作；每动作 guardrail+URL 白名单+逐步 trace+发布前模拟。
+- **动态 OCR**：查询驱动按需提取（thinking with images 分析布局）；解耦检索粒度与页级分块。
+- **OCR/VLM 分工**：高量标准用 OCR（吞吐确定），乱/语义用 VLM；多模型按基准测试选择。
+- **文档提取流水线**：转图+JSON schema 提示→结构化输出；每字段置信度评分。
+- **多模态评测**：逼真场景+混合工具链基准（AgentVista/VTC-Bench/VisBrowse）；视觉原生任务仍难（~30-48%）。
+- **omni 统一模型**：单模型四模态+统一上下文跨 agent 循环（省独立模型）；工具栈=PyTorch+HF Transformers。
