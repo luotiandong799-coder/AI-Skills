@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: 1.44.0
+version: 1.45.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -111,3 +111,13 @@ sources:
 - 原文：①切换 SSO「You will be **logged out immediately**」；②「Namespace must include only **lowercase characters and dashes**」；③他人「**adds one of your keys or connections to a scenario**」触发通知，且该通知 `enabled by default`。
 - 判据：① **鉴权面切换会让所有在场会话立刻失效** ⇒ 发布计划必须计入「在场重登成本」，否则一次配置变更表现为大面积掉线事故。② **身份主语（namespace/域名）做字符集规范化是防碰撞**：大小写与分隔符自由会把同一实体拆成两个账号，且合并成本远高于当初约束。③ **「别人用了我的凭据」默认开通知**：凭据归属者天然是第一告警受众 ⇒ 这类事件默认关闭才需要显式申报（与「默认公开无鉴权」的判据方向相反，别混用）。
 - 提升层：工作流。触发词：切换 SSO 立即登出、存量会话失效、namespace 字符集、身份防碰撞、凭据被他人使用默认开通知。
+
+## 热重载能力必须声明边界：读者用「最后成功快照」、语法错误整份拒收、debounce 不可调、不可热更字段成清单（来源：docs.openclaw.ai/gateway/configuration/hot-reload.md 33,314B，2026-10-01 r349C 独立 curl 实拉，`last successfully applied` / `debounce window` / `rejected` 逐串命中；经 Qoder r368-Q-C 提名）
+- 原文：①替换事务提交前读者持续读「**last successfully applied**」快照；②语法错误「**rejected** before persistence」，整份拒收且不覆盖在役配置；③`debounce window` 不可配（防调成竞态窗口）。
+- 判据：① **热重载的可见性边界要先声明**：读者在事务提交前一直读旧快照 ⇒ 「改了没立刻生效」不必然是故障，可能是尚未提交；不声明这一点，排障会把正常延迟当 bug。② **语法错误整份拒收而非部分应用**：保证在役配置不被半份覆盖，代价是「一处错、全份不生效」——这个代价必须写进文档，否则会被当成「改了很多只有一处生效」。③ **不可配的项要显式点名**（debounce、port/bind/auth/TLS 类不可热更字段）：把「不是所有字段都能热更」说成默认全部可热更，是最常见的越界来源。
+- 提升层：工作流。触发词：热重载边界、最后成功快照、语法错误整份拒收、debounce 不可配、不可热更字段清单。
+
+## 破坏性变更注记要固定两段式并标注迁移类别：只写「改了什么」等于没写（来源：www.activepieces.com/docs/install/reference/breaking-changes.md 82,191B，2026-10-01 r349C 独立 curl 实拉，`What you need to do` ×N / `migration only adds columns and leaves the existing ones in place` 逐串命中；经 Qoder r368-Q-C 提名）
+- 原文：条目固定两段「What changed / **What you need to do**」（全页逐条重复）；迁移说明「migration only adds columns and **leaves the existing ones in place**」。
+- 判据：① **两段式是硬要求**：「改了什么」是事实陈述，「你要做什么」才是可执行动作；只有前者的变更日志，读者仍需自己推断是否需要动作 ⇒ 升级事故多出在这一段缺失。② **迁移要写明是加列还是改列**：只加列并保留旧列，意味着旧代码短期仍能读；改列则不是。不区分就无法判断「能不能先升级代码再升级数据」。③ 与既有「迁移三字段 CI 闸 breaking/release/down()」互补：那条闸**声明在场**，本条闸**注记内容形态**。
+- 提升层：工作流。触发词：What changed / What you need to do、破坏性变更两段式、迁移只加列不改列、升级注记形态。

@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.106.0
+version: 1.107.0
 agent_created: true
 ---
 
@@ -246,3 +246,13 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - 原文：①「The flow run row **only carries status** (`PAUSED`, `RUNNING`, …); the ***why*** lives on the waitpoint」；②「Duplicate callbacks are absorbed by the **uniqueness constraint**; the engine never processes a resume twice」；③「**10 000 is also the ceiling**: the env var cannot raise it higher」。
 - 判据：① **状态位不是原因位**：把「为什么等」压进状态枚举，会在复挂/多因等待时信息不够 ⇒ 等待必须有独立持久实体承载原因与恢复入口。② **去重要落在存储的唯一约束上，不是应用层判重**：应用层判重有并发窗口，唯一约束没有；「重复回调被唯一约束吸收」给出的是**键位实现**，比「记得判重」可靠。③ **要区分可调上限与已封死上限**：10 000 是 env 也抬不上去的硬顶 ⇒ 已封死上限应写进容量规划，别把 env 当逃生口。
 - 提升层：工具/工作流。触发词：挂起态双字段、waitpoint 承载原因、唯一约束去重、重复回调吸收、已封死上限、10 000 ceiling。
+
+## 重放默认跑在「最新代码」上：可复现取证必须显式钉住原运行版本（来源：pipedream.com/docs/workflows/building-workflows/inspect.md 2,607B，2026-10-01 r349C 独立 curl 实拉，`replays** the event against the newest version of your workflow` 逐串命中；经 Qoder r368-Q-C 提名）
+- 原文：replay「**replays the event against the newest version of your workflow**」（保序）。
+- 判据：① **默认把事件与代码版本解耦**：重放通过只能证明「用现在这份代码能跑通这个事件」，**不能证明当时那次执行是正确的** ⇒ 取证/复盘类重放必须显式钉原运行版本，否则「重放通过」会被误当成历史结论。② 与既有「观测可损、重放必精」同族：那条讲**数据完整性**，本条讲**代码版本绑定**。③ 自愈/续跑也有预算（openclaw `concepts/session.md` 22,390B，`budget` 命中，耗尽后换新会话身份而非无限救旧）⇒ 「救回来」不是无成本的默认选项。
+- 提升层：工作流。触发词：重放跑最新代码、事件与代码版本解耦、钉原运行版本、取证重放、自愈预算耗尽换新会话。
+
+## 调度面「防惊群」与「漏扫记账」是两件相反极性的事：默认抖峰，漏扫按已完成记账不补跑（来源：docs.openclaw.ai/automation/cron-jobs/schedules.md 15,917B，2026-10-01 r349C 独立 curl 实拉，`stagger` ×5 / `catch-up` / `fire: true` ×3 逐串命中；经 Qoder r371-Q-C 提名）
+- 原文：①密集周期默认 **stagger**（随机抖动）防惊群、可显式关闭；②漏扫走 **catch-up** 路径，补录计数为已完成、异常不自滚而交退避队列；③gate 脚本仅当输出 `fire: true` 才触发执行。
+- 判据：① **防惊群是默认开启的性能保护**（stagger），但它同时意味着「周期不再精确」——需要精确时刻时必须显式关闭抖动，而不是假设周期严格。② **漏扫不补跑、只记账为已完成**：与既有「misfire 重放」是**相反极性**的两条（一个重放、一个记账），引用时必须点名当前系统的选择，否则「漏了会不会补」两种预期都会错。③ **评估默认静默、触发须显式放行**（`fire: true`）：gate 脚本输出非 true 一律不触发 ⇒ 「脚本跑了但没执行」的正确怀疑方向是 gate 输出，不是调度未触发。
+- 提升层：工作流。触发词：stagger 防惊群、漏扫 catch-up 记账、fire:true 才触发、gate 默认静默、周期不精确。

@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: 3.91.0
+version: 3.92.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -242,3 +242,23 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 原文：SessionStart 决策控件 `reloadSkills`；配套说明「use `reloadSkills` when a SessionStart hook **installs or updates skills**」。
 - 判据：① **安装 ≠ 可见**：技能注册发生在会话开始时，中途新增的技能不会自动进入发现集 ⇒ 「装了却搜不到」的默认怀疑方向应是发现集未刷新，而不是安装失败。② **刷新要做成显式事件挂钩**而不是靠重启：把刷新动作暴露成可配置项，才能让「安装后立即生效」成为可组合的一步。③ 与既有「发布只对新会话生效、会话钉死所选修订」同族但不同层：那条讲已加载修订的钉定，本条讲**候选集本身的刷新时机**。
 - 提升层：可复用 Skill。触发词：reloadSkills、发现集刷新、安装后不可见、SessionStart 刷新技能、新技能不生效。
+
+## 描述可发现性可以量化调优：多次运行取阈值、必须含 near-miss 负例（来源：agentskills.io/skill-creation/optimizing-descriptions.md 13,307B，2026-10-01 r349C 独立 curl 实拉，`3 runs` / `threshold` / `near-miss` 逐串命中；经 Qoder r368-Q-C 提名）
+- 原文：每条评测 prompt 跑 **3 runs**、以 `threshold` 判触发成功率；评测集须含 **near-miss**（术语重叠但目标不符）负例。
+- 判据：① **触发是概率事件，单次运行不可作结论**：同一条 prompt 多次运行取成功率，才能把「这次没触发」与「这个描述不触发」分开。② **near-miss 负例是描述调优的关键样本**：只有明显不相关的负例，会得到一个「什么都能触发」的过度宽泛描述；近义负例才逼出边界。③ 与既有「触发评测」互补：那条讲要做触发评测，本条给**样本构成与重复次数**。
+- 提升层：可复用 Skill。触发词：描述调优协议、3 runs、触发阈值、near-miss 负例、dev/泛化集划分。
+
+## 技能脚本的 headless 契约：输入只走 flags/env/stdin，交互式输入会永久挂起（来源：agentskills.io/skill-creation/using-scripts.md 12,743B，2026-10-01 r349C 独立 curl 实拉，`interactive prompts` / `cannot respond to TTY prompts, password dialogs, or confirmation menus` / `interactive input will hang indefinitely` 逐串命中；经 Qoder r368-Q-C 提名）
+- 原文：脚本「**cannot respond to TTY prompts, password dialogs, or confirmation menus**」；「interactive input will **hang indefinitely**」。
+- 判据：① **执行环境是 headless，任何等待人输入的路径都是挂起而不是报错** ⇒ 脚本里出现 `read`、密码框、确认菜单，表现是任务卡住无输出，而不是失败提示。② **输入只能走 flags / env / stdin 三条显式通道**：参数化要在这三条里选，不要依赖运行时询问。③ 与既有「技能正文命令要可复制执行」同向：那条讲**指令形态**，本条讲**被调用脚本的输入面**。
+- 提升层：工具。触发词：headless 脚本契约、禁交互式输入、TTY prompts 挂起、flags/env/stdin 三通道。
+
+## 注册表加载器要「宽容分级」：只有缺必填字段才判失败，其余偏差 warning 放行；重名必打 shadow 告警（来源：agentskills.io/client-implementation/adding-skills-support.md 20,357B，2026-10-01 r349C 独立 curl 实拉，`warning when a collision occurs so the user knows a skill was shadowed` / `untrusted repositories from silently injecting instructions` 逐串命中；经 Qoder r368-Q-C / r370-Q-B 提名）
+- 原文：①同域重名按序取胜但「**warning when a collision occurs so the user knows a skill was shadowed**」；②「prevent **untrusted repositories** from silently injecting instructions into the agent's context」。
+- 判据：① **严拒会把生态碎片全挡在门外**：id 不匹配、长度超限这类偏差一律 warning 放行，只有缺必填字段才判失败 ⇒ 加载器的严格度要按「能不能推断出意图」分档，不是按「是否完全合规」。② **遮蔽必须可见**：重名取胜是确定性规则，但胜出的同时要告诉用户「有另一个被遮蔽了」，否则「我装的怎么没生效」无解。③ **不受信来源要挂起待人工放行**：目标是阻断「静默注入」，而不是阻断「来自第三方」。
+- 提升层：可复用 Skill。触发词：加载器宽容分级、仅缺必填判失败、shadow 告警、不受信仓库挂起、静默注入阻断。
+
+## 长期授权的「已撤销」要按三条边界判：版本边界 / 进程边界 / 时间边界互不蕴含（来源：docs.openclaw.ai/cli/approvals.md 16,110B，2026-10-01 r349C 独立 curl 实拉，`--expires-in-days` ×2 / `tools.exec.grantExpiryDays` 逐串命中；增量于既有 r339C standing grant 生命周期；经 Qoder r372-Q-A 提名）
+- 原文：cron 所铸 grant 默认永久，须 `--expires-in-days`（配置项 `tools.exec.grantExpiryDays`）显式收敛。
+- 判据：① **版本边界**：编辑自动化定义即失效 —— 授权绑定的是载荷指纹，改了载荷等于重新申请，不是「同一个授权继续有效」。② **进程边界**：revoke 只在下次 spawn 生效，**已运行实例继续持有** ⇒ 「已撤销」在进程存续期内不成立。③ **时间边界**：过期天数。三者互不蕴含 ⇒ 审计「这个授权现在还有效吗」必须逐边界判，不能以「执行过撤销动作」为准。④ 默认永久意味着**不显式收敛就是无限期**，与「最小权限」相反，必须主动设期限。
+- 提升层：可复用 Skill。触发词：grantExpiryDays、授权失效三边界、版本边界改载荷即撤销、进程边界 revoke 下次 spawn、默认永久须显式收敛。

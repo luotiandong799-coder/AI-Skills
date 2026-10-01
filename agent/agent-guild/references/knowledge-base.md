@@ -81,3 +81,79 @@ New skill / MCP / plugin / tool / persistent data you install → **MUST** go un
 
 ## 学习轮沉淀 r347B（来源 Qoder r361-Q-B · 2026-10-01 · 派发身份伪造）
 - **派发身份可被伪造劫持授权（跨编排器实证）**：TrustFork（arXiv 2609.32635，1890 任务/27,826 轨迹/16 系统/8 orchestrator 含 OpenCode/Opus 等）实证跨编排器派发身份可伪造。判据：跨编排器派发须验真身份，身份声明≠授权。来源：arXiv 2609.32635。
+
+
+# §r349C 下沉
+
+## Mandatory Session Contract (once per session, MUST)
+
+> ⛔ 这些是**强制动作**，不是建议。每次会话开始（或首次需要用户上下文时）执行，不要等用户点名。
+> 全部通过 `ag` 一条命令完成，别手工开五个文件。
+>
+> **No shell / no Python?** Every step below has a plain-file equivalent — read
+> the listed files directly and Edit them in place. The contract still applies;
+> only the mechanism changes. On Windows, use `python` if `python3` is not on PATH.
+
+### M0 — Ensure the guild exists (first use / every session start)
+
+```bash
+python3 <SKILL_DIR>/scripts/ag.py init <your-agent-name>
+```
+
+幂等：目录不存在则建全套骨架 + 落地本 skill；已存在则只补缺失项，**绝不覆盖已有数据**。
+输出 `initialized` = 首次自举，`verified` = 已存在。
+
+### M1 — Bootstrap: read shared context BEFORE real work
+
+```bash
+python3 <SKILL_DIR>/scripts/ag.py bootstrap <your-agent-name>
+```
+
+**轻量优先（默认不全量读）**：Session 开始只加载**最小必要上下文**——
+`identity/profile.md`（用户是谁）+ `rules/universal.md`（戒律）+ 与当前任务直接相关的那一份。
+其余（`ROUTINE.md` 日程 / `projects/active.md` 项目 / `current-focus.md` 各 agent 焦点 / 未读收件箱）
+**按需读取**：任务提到才读，不预判全读。
+
+**只有以下场景才执行完整 bootstrap**（一次读全）：
+跨 Agent 协作任务 · 长任务 · 需要长期记忆/上下文连续 · 任务交接 · 用户明确要求读取完整上下文。
+
+读到什么就按什么做。之后按需再读 `toolchain/*.md`、其他 `rules/*.md`。
+
+### M2 — Write memory after substantive work
+
+完成**实质工作**后 MUST 追加 daily log（见 Capability 4）。满足任一即"实质工作"：
+产出交付物（代码/文档/报告/网站/脚本）・改了代码或配置・做了技术决策・修复错误并定位根因・学到可复用的长期事实（用户偏好/项目约定/坑）。
+
+**跳过**：寒暄、简单查询、短问答、纯检索。
+
+跨 agent 有价值的事实 → 也写 `memory/shared/`；只对你自己有意义的 → 留在 `memory/<你的名字>/`。
+
+**踩坑/被纠正/发现更好做法 → 同时记学习台账**（Capability 8，`ag learn`）。
+用户纠正了你・命令非预期失败・用户想要不存在的能力・发现某任务更优解 ——
+这些是全 guild 的免疫素材，别只留在当天日志里。**绝不记录 secrets/原始报文**，摘录要脱敏。
+
+### M3 — Route skills & data into the guild (default-on)
+
+- **装新 skill**：MUST 装到 `~/.agent-guild/skills/<name>/`，再从那里软链回自己 runtime（symlink → copy → readonly 降级，见 ONBOARDING.md Step 3）。
+- **写持久化数据**：MUST 写 `~/.agent-guild/skills_data/<skill>/`（敏感数据拆 `private/`）。
+- **MCP / 插件 / CLI 工具**：分别进 `mcp/`、`plugins/`、`tools/`。
+- **唯一豁免**：你的 runtime 强制私有路径（如 platform-managed）——在 registry 里记录原因即可，不算违反。
+
+### M4 — Self-audit: adopt what's still scattered (first join + monthly)
+
+```bash
+python3 <SKILL_DIR>/scripts/ag.py adopt <your-agent-name>            # DRY-RUN, 只报告
+python3 <SKILL_DIR>/scripts/ag.py adopt <your-agent-name> --apply    # 真的搬 + 软链回来
+```
+
+扫五类资产：`skills` / `skills_data` / `mcp` / `tools` / `memory`。
+**默认 dry-run**，先把清单给用户看；`--apply` 才动手（搬完自动验证软链，失败自动回滚，删除走废纸篓）。
+
+自动排除：可重建缓存（`.venv`/`node_modules`/`__pycache__`）、凭证、runtime 内部元数据、平台托管包（`__skillhub`/`connector-*`）、connector 型 skill。
+
+健康检查（发现悬空软链 / 旧路径残留 / registry 漂移）：
+
+```bash
+python3 <SKILL_DIR>/scripts/ag.py doctor
+```
+
