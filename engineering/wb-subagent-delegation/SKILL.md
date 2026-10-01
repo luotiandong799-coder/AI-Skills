@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.13.0
+version: 1.14.0
 agent_created: true
 ---
 
@@ -135,3 +135,11 @@ agent_created: true
 - **★默认参数是一组而不是一个**：未设置时所有入站通道面统一为 `mode: "steer"` + 内置 500ms debounce（steer/followup/collect 批处理）+ `cap: 20` + `drop: "summarize"`。判据：**队列满时的丢弃策略是"摘要"而不是"拒绝"**——消息不会原样保留，审计时看不到原文。
 - **★可观测性有阈值与"假即时"两处坑**：等待超过约 2 秒才打 notice（短等待完全静默）；typing indicator 在**入队时立即触发**，用户侧看起来已经在跑，实际还在排队。判据：**用户感知的"开始"早于真实开始**，用交互信号推断执行状态会误判。
 - 提升层：工具 / 工作流。
+
+
+## r353A · 转向可注入性随 turn 类别分裂，批处理保内序不保原子（来源：docs.openclaw.ai `plugins/codex-harness-runtime/queue-and-feedback`，2026-10-02 r353A 实拉）
+
+- **★同一个 steer 在不同 turn 类别下结论相反**："Codex review and manual compaction turns can **reject same-turn steering**" → 此时等当前 run 结束再启动该 prompt；而"Automatic compaction inside a regular turn **keeps steering available**"——输入被缓冲到下一个 model boundary。判据：**能不能插话由当前 turn 的性质决定，不是由队列配置决定**；报"转向没生效"先问这是哪一类 turn。
+- **★批处理合成一次请求但保留内部次序**：安静窗口内 steer-mode 消息按**到达顺序**合成单个 `turn/steer`；内联图与存储附件**保留原图序**、沿用新 turn 的 hydration/大小/文件系统限制。判据：**合并发送不等于合并语义**——顺序被保留，所以顺序依赖型指令仍是安全的。
+- **★失败粒度是"整条"而非"部分"**：附件无法准备、或转向被拒 → "the **complete message** remains queued for a follow-up turn"。判据：**不存在半送达**，要么整条下一轮再来，要么没进；据此不要设计"部分内容先生效"的假设。
+- 提升层：工具 / 工作流。触发词：转向被拒、compaction turn、批处理保序、整条留队。

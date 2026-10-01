@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.112.0
+version: 1.113.0
 agent_created: true
 ---
 
@@ -326,3 +326,11 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **★重放能力要附「不可重放清单」与分场景入口**：原文 "**Run cannot be replayed**" 因两类 run 不入库——**Check run**（轮询触发器无新数据的检查运行）与 **Single module run**。入口分两个：Builder 内 *Run with existing data* 用于边建边测，History / Run details 里 *Replay run* 用于错误恢复与数据回填（不需要进 Builder）。判据：**声明"哪些运行没有存"与"从哪进"是重放功能的一部分**；排查"为什么这条不能重放"时，第一件事是核它是不是那两类不入库的运行，而不是查权限。
 - 排障顺序（重放相关）：① 这次重放跑的是当前版本还是当时版本 → ② 变量取的是当下值还是当时值 → ③ 全模块重跑的副作用是否已清点 → ④ 该运行是否属于不入库类型。
 - 提升层：工具 / 工作流。触发词：重放、replay、旧输入新版本、回填、变量取最新值、不可重放清单、Check run、Run with existing data、Replay run。
+
+
+## r353A · 确认不是一个动作：ack ≠ transcript commit ≠ 被模型读到（来源：docs.openclaw.ai `plugins/codex-harness-runtime/queue-and-feedback` 4,065B，2026-10-02 r353A 实拉）
+
+- **★三段确认语义互不蕴含**：`turn/steer` 的 acknowledgment **不代表 transcript commitment**；"A message sent to Codex without a confirmed transcript commit is **not replayed automatically**"；而 commit 只证明输入**进入了历史**，"does not prove that a subsequent model request has read it"。判据：**收到 ack 只能说"送达了"，说不了"存下了"，更说不了"生效了"**——排查"我明明发了但没执行"要按这三段分别取证，不能停在 ack。
+- **★观测面降级只投运维通道，不回落给用户**：Codex 保存诊断日志失败时，只在 **Gateway logs 记 warning**；每条 native notice **收到即记一次**，不按共享该 app-server 的每个会话重复广播；operator-only，**不回落 chat**；"a logging failure never interrupts the native connection"，且该告警**既不修复原生日志故障，也不代表会话状态丢失**。判据：**日志系统自身的故障是"静默降级"而非"抛错"**——看不到日志 ≠ 没有故障；同时它保证不影响主链路，所以不能靠"业务还在跑"反推日志健康。
+- 排障顺序（确认相关）：① 有没有 ack → ② 有没有 transcript commit（无 commit 则不会自动 replay）→ ③ 是否有后续模型请求真的读了它 → ④ 若怀疑日志缺失，先去运维通道查 warning，不要以 chat 无提示为证据。
+- 提升层：工具 / 工作流。触发词：确认语义、ack、transcript commit、自动重放、诊断日志失败、operator-only。
