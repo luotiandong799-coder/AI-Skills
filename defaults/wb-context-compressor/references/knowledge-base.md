@@ -3398,3 +3398,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **输出验证三守卫**：字节上限（32KB）+嵌套深度（8 层）+类型范围；三层递进=schema→语义→业务逻辑；schema 合法≠正确；guardrail 三时机=最终输出/工具输入/工具输出分开定义。
 - **工具数量衰减**：50 工具 84-95%→200 工具 41-83%→740 近零；企业目录 110-agent/584-tool F1 降 16-23pp；oracle 分解=retrieval/rank/decision gap；超 ~50 上检索式路由（分解+描述增强），动态注册只缓解不解决。
 - **沙箱六维**：CPU（0.5c）/内存（256MB）/网络默认 deny+allowlist/系统调用过滤/PID 隔离（--pids-limit 128）/墙上时钟 30s/输出 1MB；工具级 allow/deny 策略引擎；host-executor 分离护 API key。
+
+## r364B Agent 工作流自动化与生产部署 2026（来源：baeseokjae-platform/1337skills/n8n-vs-dify/CSDN-ByteChat-GitOps/futureagi-promptver/futureagi-cicd/truefoundry/mlflow-workflow/logic-canary/alicedeploy/futureagi-rollout/agentpatterns-canary/anhtu-hitl/perform-digital/superkind/braintrust-cost/zylos-observability/avghumans-span/futureagi-virtualkey/mlflow-deploy/agentpatterns-dumbzone/runtype-loca/agentnative-compact/arXiv-2608.22963/arXiv-2605.08580/evalvista-golden/ADK-codelab，2026-10-02 实拉）
+- **平台选型三问+双平台模式**：多控制/多审计/多快上线三问定选型；Dify=完整生产环境（API+向量库+prompt 版本+RBAC）；n8n=事件触发跨系统自动化；成熟团队常 n8n 做自动化 + Dify 做对话/RAG 双跑。
+- **LLMOps GitOps 锚定**：prompt 路径即版本号（prompts/v1.2.0/x.yaml）；router 配置显式钉 git commit hash 不可变锚定，禁引用"最新"；拓扑快照表=commit|router|weight|prompt ref。
+- **Eval gate 三触发**：floor（per-route mean<钉死地板）/paired CI（候选 vs 前版 delta 95%CI 全负）/safety flip（安全 rubric 变坏）；候选对 pinned dataset 与现网对赌，低则构建失败标签不动；质量测量属 promotion step 非事后 dashboard。
+- **四阶段门禁**：shadow→canary（1-5% 真实流量+correlation ID）→percentage（10-50%+A/B eval）→full；跳过=生产事故；AI canary soak 按小时计（web 10min→agent 2h）；split 在 router 层做。
+- **HITL 五级自主度**：L1 建议→L2 步批→L3 高险暂停→L4 边界内自治→L5 事后审计；画线=可逆性（起草/检索可跑，退款/外发/删数据必批）；L4 要 earned，approval loop=propose+review+非过期 sign-off。
+- **三层成本追踪**：调用级 token+span 级调用链+tag 级分组；per-agent identity 归因；日环比 >50% 报警；virtual key 五级层级取最低天花板。
+- **Dumb zone 绝对阈值**：退化 onset 在 32K-100K 绝对 token 非百分比（"50% 窗口"启发式不成立）；RULER 17 模型更大窗口不更晚退化；LOCA=Claude 4.5 Opus 96%@8K→15%@256K；目标利用 60-80%。
+- **Golden set 构建**：money paths（驱动结果 20-50 任务）+risk paths（合规/安全）；每条=query+精确轨迹+完美答案；回归分 RAG/policy/workflow 三类。
+- **Harness 占 98% 可靠性**：validation 与 permissions 放 harness 不放 prompt；窄工具类型化 schema 减静默失败；质量 25% 填充已退化。
+- **Observation masking 优于纯摘要**：SWE-bench ~52% 成本降+~2.6% solve rate 提升，摘要同成本但轨迹长 15%；长轨迹掩蔽观察保证据；context rot 报 14-85% 准确率降。
