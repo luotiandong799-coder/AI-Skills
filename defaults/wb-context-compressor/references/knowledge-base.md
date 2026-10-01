@@ -3542,3 +3542,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **图记忆**：SAGE writer+GFM reader 自演化闭环；演化三阶段=连接形成→反馈精修（补缺边/剪干扰）→长期巩固（轨迹聚类成 procedural circuits）；SUPERSEDES 关系保留历史；Cognee ECL 管线。
 - **睡眠巩固**：Knowledge Seeding 上行蒸馏+Dreaming RL 合成排练；Hebbian Distillation 超阈值触发；跨 agent=多 agent 收敛工作流晋升共享记忆+重构（剪过期/解矛盾/强化高信号）；MEMIT 快权→LoRA 慢权。
 - **编码 agent 记忆**：CLAUDE.md 是 context 非配置（阻断必须 PreToolUse hook）；200 行内+记录常错；auto memory 前 200 行/25KB；CHANGELOG.md 进度文件=可移植长期记忆（失败方法必记）；Karpathy 四规则。
+
+## r368B RAG 深度工程与检索质量 2026（来源：futureagi-chunking/parent-child-genai/stochastic-sandbox/neuralbase-chunking/query-survey-2412.17558/google-codelabs/microsoft-decomposition/self-rag-crag/marsdevs-agentic-rag-cost/the-neural-base-failure/ginno-failure/evidence-gaps-2609.37469/graphrag-leiden-core-2603.05207/aws-graphrag-lightrag/ragu-2607.11683/omd-graphrag/contextual-retrieval-anthropic/datarekha-contextual/voyage-context-4/late-chunking-jina/redis-late-chunking/futureagi-rag-eval/openlayer-rag-metrics/respan-rag-eval/ephizen-drift-five/digitalocean-mrr，2026-10-02 实拉）
+- **Parent-Child 分块**：child 128-256 token 嵌入检索（语义边界清晰）+parent 1024-2048 token 上下文（命中返回 parent）；LangChain ParentDocumentRetriever/LlamaIndex AutoMergingRetriever；语义分块对转录好但 NAACL 2025 实证固定 200 词打平或更优。
+- **查询转换四原子**：Expansion/Decomposition（子查询独立检索聚合再跑原查询）/Disambiguation/Abstraction（step-back）；HyDE=先幻觉完美答案再嵌入检索（数值精确域有害）；dual-view rewriting 关键词+语义短语双通道；multi-turn 重写为自包含问题。
+- **Agentic RAG**：Self-RAG 反思 token（Retrieve/IsRel/IsSup）；CRAG=生成器不动+轻量 T5 评估器+web 搜索回退（可挂任何 RAG）；成本表 CRAG 2-3x 延迟 3-5x token、Adaptive 1.2-2x/1.5-2x、ReAct 3-5x/4-8x；反思=有界重试，只重跑牵连组件+置信度停止。
+- **RAG 评测两失败面**：检索层 precision@k/recall@k/MRR/nDCG；生成层 faithfulness/answer relevance/groundedness/citation accuracy（错引比不引伤害大）；RAGVue 单遍分解 claim 分类 supported/partial/full hallucinated。
+- **生产失败分类**：retrieval silence/noise、generation failure；citation hallucination 企业约 33%；temporal staleness 时间穿越幻觉（金融最大幻觉源）；证据缺口=实体对事实不对，12 生成器对 40-99.3% 证据不足题仍作答；weak grounding=RLHF 助人优先。
+- **GraphRAG**：索引时一次性昂贵推理+Leiden 社区检测+自底向上多层社区摘要；稀疏图 Leiden 不可复现（模块度指数多近优划分）→ k-core 确定性密度层级；RAGU 提取-整合分离+DBSCAN 去重；OMD 提 3.17-3.43%。
+- **上下文检索**：每 chunk 前置 50-100 token 文档感知前缀再嵌入；降 top-20 失败 35%（+BM25 49%、+reranker 67%）；prompt caching 成本 ~.02/M 文档 token；2026=上下文化内建进模型（voyage-context-4 MoE/ColPali 文档当图像）。
+- **Late chunking**：整篇先过 long-context 嵌入拿 token 矩阵→按块 mean-pooling（块向量带全文语境）；Redis 2026.4 基准 +3%；offset_mapping 错位=入库前验证每块至少映射一个非特殊 token+随机抽样解码对照。
+- **RAG 五类漂移+监控**：数据（语料变了旧块残留）/嵌入/查询分布/提示/模型漂移；DataStax 1200 万查询=未维护系统检索质量月降 3.8%；MRR 基线-当前对比超阈告警；golden set 每日/每周连续评测+按 slice 分组+失败回流测试集。
+- **RAG golden set 实践**：六指标=context recall/precision/relevance+faithfulness+answer relevance+citation accuracy；100-300 题从生产日志建（合成是 backstop），季度刷新；目标 faithfulness 0.9+/answer relevancy 0.85+；检索与生成两个失败面分开测分开修。
