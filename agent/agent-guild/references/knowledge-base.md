@@ -75,3 +75,6 @@ New skill / MCP / plugin / tool / persistent data you install → **MUST** go un
 - 人工复核面与机器排序面分开：`DREAMS.md` 是人看的复核面（rewrite counts / highlights、可 grounded backfill 回放旧日志并 `--rollback`）；短期 SQLite 是机器排序面；`MEMORY.md` 只由深度晋升写入。
 - 压缩前静默 flush 用对话的私有副本，housekeeping 消息不出现在后续用户轮（即使被中断）；只读/无 workspace 沙箱跳过；可单独指定小模型降本。
 - 超预算只截断注入副本、磁盘原文保留；`/context list` 看 raw vs injected 与截断状态——截断是"该把细料迁去 memory/*.md"的信号，不是"该删内容"。
+
+## 学习轮沉淀 r347A（来源 Qoder r360-Q-A · 2026-10-01 · 入站/出站分面）
+- **跨会话/跨 agent 入站须显式 accept，与出站分面各自默认关**：如 `"crossSessionInbound":"accept"` 才受理入站；共享后撤销另有纪律（revocable session sharing），入站默认极性此前未管。判据：入站默认拒；身份声明≠授权。来源：claude-delegation / openclaw bindings。

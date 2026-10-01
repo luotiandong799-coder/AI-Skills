@@ -871,3 +871,6 @@ ercel-labs/skills/find-skills，2026-04 实拉；与 WB ctx 工具面安全分�
 - **GDPR 合规账**：本地模型把"处理"留在内部、完全掌控——权重下载一次，推理 100% 本地、无跨境传输；标准配置=Ollama+qwen3:14b（12GB VRAM）+阻断推理进程出站+全盘加密+记录 prompt/response 哈希（不记内容）用于 Article 30 处理记录；欧洲驱动力=消除"提供商拿我数据做什么"的合同谈判。判据：**本地合规=出站阻断+全盘加密+哈希日志替代内容日志**。
 - **OpenAI 兼容 API 切本地**：Ollama 暴露 OpenAI 兼容 API，大多数 LLM 应用改 base URL 即切本地；自动 GPU 检测（NVIDIA/AMD/Apple Silicon）回退 CPU；零持续成本——下载后无 API 费/订阅/按 token 计费；Ollama 云=零数据保留（US/EU、不记 prompt、不训练你的数据）。判据：**本地接入=换 base URL；先本地后云是默认梯度**。
 
+
+## 学习轮沉淀 r347A（来源 Qoder r360-Q-A · 2026-10-01 · 预算计数口径）
+- **步数/递归/轮次类预算计数口径须含框架内部节点**：LangFlow #15362 把 `recursion_limit` 改为计入 middleware graph 节点，声明上限只数用户可见步会静默超预算不报。判据：任何步数预算须声明是否含内部节点。来源：LangFlow releases v1.12.4 #15362。

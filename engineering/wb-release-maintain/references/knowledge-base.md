@@ -305,3 +305,6 @@
 - **原文**：「n8n executes binary data pruning as part of execution data pruning」；「If you configure multiple binary data modes, binary data pruning operates on **the active binary data mode**. For example, if your instance stored data in S3, and you later switched to filesystem mode, n8n **only prunes binary data in the filesystem**.」
 - **判据**：① **迁移 / 换存储的验收必须含「旧位置残留清点」**——清理器跟随现役配置，旧后端的数据从此无人管；只看新位置健康 = 漏一半。② 清理责任与配置绑定 ⇒ 「存储后端」变更必须触发一次孤儿盘点，写进迁移 runbook，不靠人记得。
 - **提升层**：工作流/工具。触发词：清理器只认活动后端、切换后端留孤儿、旧位置残留清点、迁移验收两看。
+
+## 学习轮沉淀 r347A（来源 Qoder r360-Q-A · 2026-10-01 · Registry latest 裁决）
+- **MCP Registry 同 name 多版本恰一版 isLatest=true，客户端不得自推 latest**：生命周期字段统一挂带前缀 `_meta["io.modelcontextprotocol.registry/official"]`（status/statusChangedAt/publishedAt/updatedAt/isLatest）；分页 cursor=`name:version`。判据：latest 是服务端裁决非客户端推导。来源：registry.modelcontextprotocol.io 活 API。
