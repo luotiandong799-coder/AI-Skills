@@ -3326,3 +3326,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **检索多信号**：相关/权威/新鲜/置信-冲突-冗余惩罚；混合 RRF+reranker；recency 指数衰减不清零。
 - **记忆评测**：五策略同条件对比（AgentMemBench）+老化四机制（AgingBench）+纵向任期翻盘（图/hybrid 长期胜 vector）。
 - **会话三温层**：热（窗口）/温（vector 摘要偏好检索注入）/冷（不可变审计）。
+
+## r362B AI 应用安全与护栏工程 2026（来源：OWASP-community/iesdouyin/OWASP-AST10/anomity/NIST/zalt-guardrails/openlegion-guardrails/ai-zero-to-hero/futureagi-guardrails/actionai/brainupgrade/toolbrain/theneuralbase-structured/beyondscale/IETF-CB4A/youcanbuildthings/zylos-credential/curity/OWASP-MCP-CheatSheet/akto/systemshardening-mcp/dev-kunal-mcp/Microsoft-AGT/ADVERSA/STING/LITMUS/openhands/decasoft/zylos-governance，2026-10-02 实拉）
+- **六类威胁**：语义操纵六类（注入/泄露/工具/越狱/有害输出）；防御=输入清洗+隔离+输出过滤+人环。
+- **技能层风险**：AST10=外部指令源钉扎/弱隔离容器化/更新漂移哈希验证。
+- **护栏五执行点**：输入过滤/schema 验证/PII/权限作用域/动作门控；输入四查=长度/短语/格式/注入语法，覆盖每个信任边界。
+- **输入/输出 rail**：模型前抓越狱注入 PII；网关前抓有害幻觉密钥离题。
+- **输出安全**：工具输出消毒+结构化输出约束（枚举+regex 限自由文本防说明字段外泄）。
+- **凭证代理**：agent 无长活凭证；每跳独立 scoped token；策略求值类型化禁字符串插值。
+- **MCP 基线**：OAuth2.1+PKCE 强制/每请求验证/默认拒绝/禁 passthrough 令牌/per-client 工具白名单。
+- **治理工具箱**：确定性纯正则扫描（<5ms 零 LLM 成本）+Merkle 链审计+决策 BOM+监管映射。
+- **红队评测**：多轮退化轨迹（ADVERSA 连续合规）+时间到首次越狱（STING 发现曲线）+隔离环境行为越狱（LITMUS）。
+- **可观测留存**：超越 API 边界全动作追踪；防篡改日志；EU6月/FINRA7年/HIPAA6年留存地板。
