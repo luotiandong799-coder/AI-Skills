@@ -3290,3 +3290,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **MCP 新规范**：无状态核心+UI 扩展+Tasks 长任务+OAuth 对齐+正式弃用策略。
 - **MCP 服务端设计**：按意图分组（非 API 镜像）+5-15 工具+job ID 长任务+读写分离凭证。
 - **混合工具检索**：dense+sparse 加权（词汇错配 cancel vs refund）+top-k 注入控预算。
+
+## r361B Agent 工作流自动化平台 2026（来源：Dify/n8n-blog/n8nlogic/腾讯云/n8n-reducing-latency/ChrisAlarcon/GeekChamp/BigAI/Synta/Microsoft-LogicApps/AWS-Bedrock-AgentCore/Nango/DEV/Microsoft-Foundry-Routines/Microsoft-Copilot/AWS-IoT/Microsoft-SRE/COMPEL/Prefactor/Microsoft-Learn-versioning/Alicelabs/gorka/OpenLegion/Google-Discuss，2026-10-01 实拉）
+- **Agent 节点最佳实践**：工具描述清晰+迭代限制+详细指令+记忆平衡。
+- **多 agent 协调**：并行执行（快需聚合）或层级 gatekeeper 路由（简单自办复杂委托）。
+- **AgentTool 委托**：agent 作工具被调；单 agent+工具=顺序依赖输入，orchestrator+子 agent=分离技能域。
+- **守卫节点延迟**：守卫捕坏输入消毒防长无用路径；慢操作隔离子工作流防阻塞。
+- **漂移修复环**：收紧 prompt+示例+窄工具；每 run 日志；角色特定 prompt+JSON 输出+回退分支。
+- **三阶段拆分**：收集/推理/动作验证；pin 数据防调试烧信用；错误触发通知。
+- **Routines 触发**：timer 单次/recurring 排程/event 事件；排队+记录可查。
+- **延迟掩蔽信任**：并行上下文填充响应防静默；信任随对话增量升级权限。
+- **生命周期四级**：Dev 沙箱/Staging 合成数据+红队/Canary 减流量/Prod；promote 需 evals 通过。
+- **版本审批门**：自动门（单测/契约/基准/安全扫描）+eval-gated 部署（LLM-judge+失败阻塞 CI）；行为套件 50-200 用例≥95%。
