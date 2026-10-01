@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.96.0
+version: 1.97.0
 agent_created: true
 ---
 
@@ -193,3 +193,5 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **原文**：①「Pass `--fallbacks ""` for a **strict run with no fallbacks**.」「Pass `--tools ""` for an **empty allowlist that disables all agent tools**, including tools used by a condition trigger.」「`--clear-fallbacks` ... **removes the per-job fallback override so the job follows configured fallback precedence**. Cannot combine with `--fallbacks`.」「`--clear-model` ... removes the per-job model override so the job follows normal ... precedence.」；②「Disabling or removing a job, withdrawing its `message` capability, or revoking its caller or plugin authority **stops further affected reads**」「**Re-enabling the job does not restore an occurrence's revoked access.**」
 - **判据**：① **"置空"和"清除覆盖"是两种完全不同的意图，不能用同一个空值表达**：`--fallbacks ""` 是**显式声明"我不要任何回退"**（严格模式，失败即失败），`--clear-fallbacks` 是**撤销本次覆盖、回到继承的配置优先级**；同理 `--tools ""` 是"显式禁用全部"，`--clear-tools` 才是"恢复继承"。⇒ 排障"为什么还在回退 / 为什么工具全没了"先分清用户当时下的是哪一种意图；设计配置接口时，这三者（设具体值 / 显式置空 / 清除覆盖）**必须是三个不同的参数且互斥**，否则"传空串"这一个动作会同时承担两种相反语义。② **吊销是单次不可撤销事件，重新启用只恢复未来**：吊销一旦发生，该次调用后续的读取立即停止；之后把作业重新启用，也不会把这次已吊销的访问还回来。⇒ 排查"重新打开了怎么还是读不到"时，答案不在配置里而在事件里——**吊销作用于发生时的那一次，重新启用作用于之后的每一次**，两者不互补。
 - **提升层**：工具/工作流。触发词：配置意图三参数、显式置空 vs 清除覆盖、--fallbacks 空串严格模式、--tools 空串全禁、--clear-* 恢复继承、吊销不回溯、重新启用只恢复未来。
+
+- **远端执行的 canonical 唯一且随模式改变 + 自动修复不得顺带放宽安全面 + break-glass 显式命名 + attested 工作区消失拒绝重播种**：本章已下沉 references/knowledge-base.md §r346B。
