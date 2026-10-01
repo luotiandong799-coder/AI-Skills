@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.12.0
+version: 1.13.0
 agent_created: true
 ---
 
@@ -128,3 +128,10 @@ agent_created: true
 - **★注入边界对内部更新同样适用**（子 agent 完成报告走同一边界）。判据：**外部指令与内部事件共用同一注入通道 → 二者会互相排队**，内部报告堆积会延迟外部转向被看到。
 - **★模式决定是否进入该路径**：steer 模式下正常入站消息走转向路径；followup / collect 模式下正常消息**跳过此路径、等到当前运行结束**；显式 `/steer <message>` 命令另行处理。判据：**同一条消息在不同模式下语义不同**——排查"指令没被理会"先确认当前模式。
 - 提升层：工作流 / 模型。
+
+## r350C · 队列是 lane-aware FIFO：每条 lane 独立并发上限，全局再封一层顶（来源：docs.openclaw.ai/concepts/queue，2026-10-02 r350C 实拉 256,946B）
+
+- **★并发上限分 lane 配置，默认值各不相同**：未配置 lane 默认 1；`main` = `max(8, 可用 CPU 并行度 × 4)`；普通子 agent 队列每个发起会话默认 8；Swarm collector 队列每个 group 默认 32；入站会话再进全局 main lane，由 `agents.defaults.maxConcurrent` 封顶；Swarm collector 子项另有 group 预算 `tools.swarm.maxConcurrent`。判据：**"并发不够"要先定位是哪条 lane 的哪一层顶住了**——子 agent 队列打满和全局顶满是两种处置。
+- **★默认参数是一组而不是一个**：未设置时所有入站通道面统一为 `mode: "steer"` + 内置 500ms debounce（steer/followup/collect 批处理）+ `cap: 20` + `drop: "summarize"`。判据：**队列满时的丢弃策略是"摘要"而不是"拒绝"**——消息不会原样保留，审计时看不到原文。
+- **★可观测性有阈值与"假即时"两处坑**：等待超过约 2 秒才打 notice（短等待完全静默）；typing indicator 在**入队时立即触发**，用户侧看起来已经在跑，实际还在排队。判据：**用户感知的"开始"早于真实开始**，用交互信号推断执行状态会误判。
+- 提升层：工具 / 工作流。
