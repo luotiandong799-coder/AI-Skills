@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: 1.41.0
+version: 1.42.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -86,3 +86,13 @@ sources:
 - 原文：①「Pin local skill installs so updates and force reinstalls cannot overwrite frozen copies.」②「Rename an owned skill without breaking old links or installs.」③「Merge duplicate owned skills into one canonical slug.」④第二证：AP「Each step is pinned to an exact version」/「Flows never auto-upgrade」/「The pin stays until a human changes it」。⑤第三证：Pipedream「If you fail to update the version, the CLI will throw an error」+ account 级 `key` 全局唯一。
 - 判据：① **「冻结」要落在安装态而不是版本号**：钉住本地副本，使 update 与 force reinstall 都覆盖不了它。⇒ 只靠记住版本号来复现是不够的 —— 真正的冻结位必须能挡住强制重装这条最宽的通道。② **重命名与合并必须保旧链**：合并到 canonical slug 后旧链接仍可用，否则每次治理都在制造一批死链（表现为用户报 404，而不是合并成功）。③ **版本未 bump 要在构建期拦下**：CLI 直接抛错而不是放行后靠人巡检。⇒ 发布面三件套 = 冻结位、断链防护、构建期版本闸，缺一件就只能靠约定。
 - 提升层：工作流。触发词：pin 冻结本地安装、force reinstall 不可覆盖、rename 不断旧链、merge canonical slug、版本未 bump 构建期抛错。
+
+## 增量扫描的哈希键必须含规则集版本；豁免到期必须显式「回到扫描面」（来源：github.com/tech-leads-club/agent-skills SECURITY.md 16,248B，2026-10-01 r348B 独立 curl 实拉取 base64 解码）
+- 原文：①「Each installed skill records a SHA-256 content hash computed from all its files」+ 缓存 `.security-scan-cache.json`；「hash unchanged → load from cache (fast, no re-scan)」「hash changed → re-scan」。②「`expiresAt: '2027-01-01'` # Optional but strongly recommended」。
+- 判据：① **只按文件内容哈希做增量扫描有一个隐含缺口：规则升级但文件未变 ⇒ 老结论永久有效**。⇒ 哈希键必须同时含「扫描器版本/规则集版本」，否则规则更新后存量包永远不会被重扫——这是增量扫描最常见的静默漏报。② **到期不等于恢复可见**：豁免条目必须有到期日（原文强推荐），且到期后要显式把该文件重新纳入扫描面。⇒ 「豁免表必须有到期」只写了一半；缺了后半句，到期与永久豁免在行为上没有区别。
+- 提升层：工作流。触发词：内容哈希增量扫描、哈希键含规则集版本、规则升级不重扫、expiresAt 到期、回到扫描面。
+
+## 市场侧准入是四级闸：命名空间内可见 ≠ 全局可见，晋升为显式一级动作（来源：github.com/iflytek/skillhub README 38,482B，2026-10-01 r348B 独立 curl 实拉取 base64 解码）
+- 原文：「Namespaces — Organize skills under team or global scopes」「namespace has its own members, roles (Owner / Admin / …)」「promotions to the global scope. Governance」。
+- 判据：① **域内可用与全局可见是两个状态，中间那一步（晋升）必须是显式动作并留痕**。⇒ 把「通过审核」直接等同于「所有人可搜到」，等于把治理决定隐式化；发布面要给晋升单独一个闸，而不是在域内验证的同一格里打勾。② **准入按格式封闭枚举**（扩展名/包型白名单）而不是事后过滤。⇒ 白名单的作用是「不接受未知形态」，与「扫描是不是干净」是两个不同的门。③ **初始凭据强度不足即拒绝**：弱 bootstrap 凭据应阻断而非告警——告警会被批量忽略，而初始凭据正是最容易被长期沿用的那一批。
+- 提升层：工具/工作流。触发词：namespace 作用域、全局晋升闸、扩展名白名单、弱 bootstrap 凭据拒绝、域内可见不等于全局可见。

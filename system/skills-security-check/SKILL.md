@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.6.0
+version: 1.7.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -458,3 +458,7 @@ Step C: 是否包含恶意意图？
 - 原文：①MCP `archive` ZIP 可全文下发，digest 须 `sha256:`+64 hex，但**包内脚本永不执行**。②双向同步排除 `.git`、`hooks`、`git-hooks`；symlink/FIFO/socket 永不复制。③反例：`autoProviders: true` 时沙箱 provider 会由宿主进程已有凭据**自动补建**。
 - 判据：① **「能读」不等于「会跑」**：技能包作为内容可以全文可读、可 grep、可校验完整性，但作为代码是否执行是另一条独立开关。⇒ 审一个远端技能包时，判危险不危险要先问这里的脚本到底会不会被执行；两者同为真才是执行面风险。② **同步排除清单是信任边界声明**：把 `.git`/`hooks`/`git-hooks` 排除在双向同步外，是因为钩子代码是可信侧的执行逻辑，不该随工作区进入不可信沙箱；符号链接等非普通文件永不跨界，防止「看起来是个文件、实际指向别处」。③ **体检要查自动补建路径**：`autoProviders` 会让沙箱凭据由宿主已有凭据自动补齐 —— 安装/接线检查须显式扫这一条，否则「没配凭据」的表面下已经有一条活的凭据通道。
 - 提升层：工具/安全边界。触发词：archive 脚本永不执行、sha256 digest、内容可读不等于代码可执行、同步排除 git-hooks、symlink 不跨界、autoProviders 自动补建凭据。
+
+## 风险分层按「是否含可执行资产」，不按文本扫描结论；技能文件本身就是注入载荷（来源：arXiv 2601.10338 43,558B + arXiv 2602.20156 42,554B「Skill File Attacks」，2026-10-01 r348B 独立 curl 实拉，`31,132` / `26.1%` / `executable scripts are 2` 逐串命中）
+- 判据：① **检查表第一道分叉应是「包里有没有脚本/二进制」，而不是「文本扫描有没有命中」**：实测 31,132 个技能中 26.1% 含至少一处缺陷，**含可执行资产的技能缺陷率 >2 倍于纯文本技能**。⇒ 对含可执行物的技能，纯文本扫描通过 ≠ 合格；把两类混在一个队列里审，等于用纯文本的标准放过执行面风险。② **技能文件本身是注入载荷，不是普通文档**：Skill-Inject 用 202 组对抗对把「技能文件注入」单独成类，作者自述既有评测基准未覆盖这一类。⇒ 审一个技能包时，要把它当成**会进入模型上下文的不可信输入**，而不只是一份待合规检查的说明文档。③ 与 §内容可读 ≠ 代码可执行 配对使用：那条判「会不会跑」，本条判「该按哪一档强度审」。
+- 提升层：工具/安全边界。触发词：按可执行资产分层、技能文件即注入载荷、26.1% 缺陷率、可执行资产缺陷率 2 倍、Skill File Attacks。

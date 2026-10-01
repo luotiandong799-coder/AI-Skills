@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.10.0
+version: 1.11.0
 agent_created: true
 ---
 
@@ -115,3 +115,8 @@ agent_created: true
 - 原文：①「`delegationMode:"prefer"` — prompt guidance, not a scheduler」；`subagents.allowAgents` 才是硬 spawn 边界。②跨 agent 记忆 builtin 只搜自身语料，共享须显式 `memory.search.extraPaths`；vault 按 `scope:"agent"` 追子目录。③次级 agent OAuth 过期时 read-through 借 main 同 profile 的 **freshest** token，但**不回拷 refresh token**；静态 `api_key/token` 才可按 `copyToAgents` 移植。
 - 判据：① **「建议性路由」不能当硬闸用**：`prefer` 只是给模型的提示，真正可派发的集合由硬边界名单决定；两者混用会出现「配了却没生效」或「以为限制了其实没限制」。② **默认作用域是各搜各的**：跨 agent 记忆与凭据默认不共享，共享必须写成显式路径/显式许可。⇒ 判两个 agent 有没有共享知识，看的是有没有那条显式声明，不是看它们是不是同一个系统。③ **凭据借道是有方向的**：借到的是当前最新访问令牌，refresh material 不回拷 —— 次级 agent 到期后仍须回主 profile 续期，不会自立门户；而静态密钥一旦 `copyToAgents` 就是真复制，传播面与吊销半径差一个数量级。
 - 提升层：工作流/安全边界。触发词：delegationMode prefer 软路由、allowAgents 硬边界、extraPaths 显式共享、凭据 read-through 不回拷 refresh、copyToAgents 静态密钥。
+
+## 子代理的三个预算不可互换；「等不到」不等于「已终止」，取消的作用域还要再分一档（来源：docs.openclaw.ai/tools/subagents/nesting.md 5,380B + operations.md 11,501B，2026-10-01 r348B 独立 curl 实拉；经 llms.txt 210,587B 定位真实路径）
+- 原文：①嵌套深度 `maxSpawnDepth: 2`、`range 1-5`；每 agent 子代数与全局并发各自独立计数；②`Cascade stop` 分「`cascades through its descendant`」与「`cancels children only if the captured`」两档；③`cancellation does not cancel`；`completion is delivered does not move its execution`。
+- 判据：① **深度、每节点子代数、全局并发是三个独立预算，任一耗尽即停止扩张，其余两维仍有余额**。⇒ 排障时不能用「并发还有余量」推断「还能继续下钻」，也不能用「深度够了」推断「并发不会打满」；三个计数器要分别断言。② **取消的作用域本身就是一档配置**：级联停分「只停本支」与「连后代一起停」。⇒ 写停止逻辑时先声明作用域，否则一次取消会越过预期边界（或反过来，以为停了整链其实只停了一支）。③ **等待超时不取消**：`agent.wait` 超时只是观察者放弃等待，被等的子代理仍在运行；同样「完成已投递」不等于「执行已推进」。⇒ 「我以为它死了」是独立于「成功/失败/超时」的第四种解释分支；重启后补完更意味着**不能把「没等到结果」当成「没有副作用」**。
+- 提升层：工作流。触发词：三重预算不可互换、maxSpawnDepth、级联停分档、wait 不取消、完成投递不等于执行推进、重启补完 interrupted-run。
