@@ -3254,3 +3254,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **验证迭代闭环**：验证模块结构化反馈→改查询/换策略→不收敛 HITL；guardrail 拦截工具调用；检索后三问自评。
 - **双路召回引用**：reasoning effort 可配+子查询并行多路+语义重排+引用保留；ReAct 反思三拍。
 - **上下文治理门禁**：批准/时效/归因/完整性元数据门禁（哈希链版本）；层级索引=小块检索+父块上下文。
+
+## r360B Agent 安全红队与对抗评测工程 2026（来源：arXiv-RIFT-Bench/arXiv-2609.09647/alphaXiv-DTap/OWASP-GenAI/GPT-Red/DeepTeam/CSA-Agentic-RedTeaming/SIRAJ/swarmsignal/Straiker/arXiv-LITMUS/FutureAGI-jailbreak/qiyanjun-2026SP/arXiv-2606.18193/GuardrailAgent/AwesomeAgents/techrxiv/arXiv-2510.15476/FutureAGI-redteam/GuardionAI/arXiv-AgentRedBench/QASkills/arXiv-JANUS/mfm-copilot，2026-10-01 实拉）
+- **动态红队基准**：Discovery 结构提取+Scanning 自适应攻击；105 探针跨向量统一评估。
+- **黑盒分类框架**：分类驱动全自动（不依赖内部 trace/hooks）；跨系统 apples-to-apples 可比。
+- **攻击 agent 闭环**：恶意目标→选注入向量（prompt/工具描述/环境）→闭环迭代。
+- **红蓝紫三队**：红（主动探测）/蓝（运行时监控）/紫（闭环调规则）；持续安全非时点。
+- **对抗训练自改进**：自动化红队模型缩放发现→对抗训练加固→分层护栏。
+- **四阶段红队**：准备（隔离环境）→执行（逐步+日志）→分析→报告；目标=推理/工具/委托/动作全链。
+- **轨迹级测试**：完整动作序列评估（每步安全但结果有害）；持续测试因模型/工具/记忆演化。
+- **四层威胁架构**：应用/模型/工具/数据四层；攻击跨层链式；基准=819 用例三范式+语义物理双验证+状态回滚。
+- **jailbreak 六类五族**：角色扮演/编码绕过/多轮漂移/间接注入/系统提示词提取/对抗后缀；启发式 ASR 70-85% 最高；说服族=权威框架欺骗。
+- **三层防线 CI 门**：eval 离线+guardrail 运行时+observability 事后；CI 门=版本化对抗集+judge+回归阻断。
