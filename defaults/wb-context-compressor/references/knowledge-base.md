@@ -3002,3 +3002,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **遗忘即衰减非删除**：decay-driven accessibility 降低；read 按不确定性决定何时查、write 强化有用记忆；差异衰减率（语义相关/访问频率/时间）；half-life≈29 天；干扰式遗忘。
 - **记忆写入管线三阶段**：Extract→Deduplicate→Persist（一等公民+崩溃安全）；会话结束全轨迹提取（含 tool usage patterns）；会话开始加载 Briefing（人格/活跃项目/近期决策）。
 - **记忆方案四型选型**：Mem0 通用层（LoCoMo 92.5%/LongMemEval 94.4%）/Letta OS 分页自管理/Zep 时序图/Cognee 本地图原生；先看基准再选。
+
+## r353B Agent 可观测性与追踪工程 2026（来源：Langfuse/LangSmith/OTel GenAI/OpenInference/Bedrock AgentCore/Alibaba LoongSuite/Braintrust/Latitude/CallSphere/Greptime/Maxim/BeyondScale/BenchJack/acingai/RelayPlane，2026-10-01 实拉）
+- **trace-to-dataset 闭环**：生产 trace 是回归评测事实来源——失败 trace 标故障模式→晋升版本化数据集→写 scorer→CI+在线双跑；Locate（user/session/timestamp）→Reproduce（同模型+工具重放）→Label→Promote→Scorer；每事故留永久数据集行。
+- **trace-eval gap**：production 移动则 rubric 老化——"过了评测"≠"能上线"；六阶段 instrument→trace→dataset→evaluator→score→CI gate 跳一步就发回归。
+- **OTel GenAI 语义约定**：gen_ai.request.model/usage.input_tokens/response.finish_reasons；插桩一次后端可换（instrument once switch backend）；六层=LLM/agent orchestration/MCP/content capture/quality evaluation（score 挂 span+histogram 双记）；core 仍未 stable；OTel CNCF 2026-05 毕业。
+- **MCP 可观测性**：mcp.method.name/session/transport；gen_ai.operation.name=execute_tool；W3C Trace Context 经 _meta 传播（SEP-414）——跨 server 调用链不断。
+- **Gateway 观测+审计**：10-100 calls/task 无 gateway=无法调试归因；可逆脱敏（[EMAIL_001]）pre-call+响应再脱敏；审计记决策不记原始值（NIST SP 800-92）；structural redaction 零暴露选项。
+- **Agent trace 四支柱**：tool calls（args/returns/retries）/reasoning steps（CoT/plan-act-observe/branches）/state transitions（working memory before-after）/memory operations（reads/writes/retrieval scores/freshness）；嵌套 span=执行图。
+- **多 agent 归因**：per-agent identity+root_run_id 跨边界传播（X-Run-Id）；CAL 五维（Phase/Role/Tool-Call Type/Context Carry/Retry Tax）省 60-65%；agentic 25:1 input:output 比——input 才是大头。
+- **eval theater 防游戏化**：Goodhart+vibe check=默认失败；BenchJack 10 行 conftest 打爆 SWE-bench/{} 打爆 FieldWorkArena；独立复跑差 5-20 点；扰动测试防污染最可靠最贵。
+- **LLM-as-judge 去偏**：position（slot A +10-15 点，双序平局）/verbosity（+15-30 点）/self-preference；未校准 judge=放大器（90% 假通过率）；Formalism Trap 混淆程序主义与语义真值。
+- **决策级遥测第三层**：Layer1 infra LLM stable/Layer2 MCP merged 2025/Layer3 cognitive（deviation/baseline/scope/risk）缺失——"Layer2 说调了哪个工具，Layer3 说该不该调"；行为遥测测不出流畅幻觉（effort-outcome imbalance 无偏差）。
