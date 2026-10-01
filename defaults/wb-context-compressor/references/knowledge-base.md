@@ -3230,3 +3230,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **混合回退矩阵**：视觉 100% 通用/树 60% 高效/混合 98% 平衡；树在 legacy+现代 web 失效→视觉兜底。
 - **DOM 合成训练数据**：GUI 定位训练数据=headless 渲染+DOM 直读 bbox（免 OCR/人工标注）；同族蒸馏教师-学生。
 - **UIA 工具面**：桌面工具面=树查询（深度可配）+按语义找元素+稳定 ref 重试安全，免 CV 模型。
+
+## r359C Agent 生产反馈闭环与漂移治理工程 2026（来源：极客公园/Microsoft-Foundry-Build2026/FutureAGI/Chanl/AWS-AgentCore/Zylos/theairuntime/interpretai/AWS-DevOps/cordum/niteagent/Microsoft-Learn/ai-crescent/Nexuscale/Brightlume/Agentmelt/AugmentCode/Claude-Lab/Zylos-flywheels/Arize/arXiv-AITL/Agentimise/aitechmonk/personalized-ai/WickedSmartData/Microsoft-Databricks，2026-10-01 实拉）
+- **生产-评估闭环**：offline eval→CI 门→生产 trace eval→Error Feed→优化→回 CI；静态端点漂移、闭环复利。
+- **纵向评估漂移**：质量=时间信号非固定属性；漂移=滚动分 vs 基线统计距离超阈告警。
+- **五类生产漂移**：eval 集会漂移（分布漂移→judge 低 15 分）；人工抽查生产 trace 校准 judge。
+- **四阶段门禁发布**：Shadow（镜像弃输出）→Canary（1-5%）→百分比（t 检验门）→Stable；写操作配策略模拟+幂等。
+- **无标注偏好表示**：用户编辑成对（原弱拒/改弱喜）+内容寻址存储+质量过滤；客服反馈四类实时标注。
+- **隐式信号集成**：反馈=显式（评分/修正界面）+隐式（改写=败/复制=成/弃=恼）；hooks 持续采集结构化信号。
+- **漂移检测管道**：40-60 场景覆盖失败模式+滚动窗口统计距离告警；回答"是否随时间变差"。
+- **在线 eval 金丝雀**：采样 judge+用户反馈+KPI+guardrail+成本异常多维；成本随规模真金白银→采样策略。
+- **反馈附 trace**：反馈作为 assessments 附到原始 trace 一起分析；改进过 eval 门才部署（对比算子防回归）。
+- **偏好记忆个人化**：澄清→偏好记忆 grounding→反馈更新三环；垂直闭环=失败转 harness 更新权重冻结提 47 点。
