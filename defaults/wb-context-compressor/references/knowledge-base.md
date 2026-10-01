@@ -3338,3 +3338,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **治理工具箱**：确定性纯正则扫描（<5ms 零 LLM 成本）+Merkle 链审计+决策 BOM+监管映射。
 - **红队评测**：多轮退化轨迹（ADVERSA 连续合规）+时间到首次越狱（STING 发现曲线）+隔离环境行为越狱（LITMUS）。
 - **可观测留存**：超越 API 边界全动作追踪；防篡改日志；EU6月/FINRA7年/HIPAA6年留存地板。
+
+## r362C Agent 评测与可观测性工程 2026（来源：arXiv-2605.27898/AWS-AgentCore/ClawEval/ClawTrack/CoinFlipJudge/FaithfulFabricated/WhenJudgeChanges/futureagi-evals/langfuse-regression/latitude-regression/rockB-golden/futureagi-shadow-canary/dailyaiworld-gate，2026-10-02 实拉）
+- **统一评测框架**：标准化指令-工具-环境格式+固定架构+离线快照（框架/环境效应分离分析）。
+- **三层评测栈**：工具选择确定性 grader 先于推理阈值先于结果——先可机检后主观。
+- **三证据通道**：执行轨迹+审计日志+环境快照交叉验证动作，不单信最终响应。
+- **双评估**：Task Score 与 Process Score 并行——"做对了但过程错"是可单独归因的失败。
+- **judge 四层不确定性**：随机/系统偏差/协议依赖/judge 身份——结论先归因再当测量。
+- **judge 防合理化**：Criterion-guided SCoT（按显式维度先推理）+Proof-Before-Preference（先记逐维证据再下偏好）。
+- **judge 升级歧义**：judge 版本纳入评测元数据——升级视同换测量工具，旧分不可直接对比。
+- **prompt 版本化 CI 门**：Git 版本化+CI 评测门（smoke/full/deep 三级）+模型漂移监控（无代码变更质量下降先查上游）。
+- **shadow+canary 双层**：shadow 离线验证真实分布无异常；canary 在线验证用户体验不劣化——互补不可替代。
+- **golden 建设纪律**：先手工标注轨迹（50-200 例）+分层覆盖（常规50/边界30/安全20）+工具调用 ground truth+季度审计——多样性优于体量。
