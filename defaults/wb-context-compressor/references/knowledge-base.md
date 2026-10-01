@@ -3218,3 +3218,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Trace ID 贯穿**：错误信息带 Trace ID→一条命令捞全程；生产 trace 转 dataset+eval 防复发。
 - **Reviewer/Fixer 不对称**：审查者只读/修复者有写，修复=捕获→复现→隔离→最小修→验证（修根因非症状）。
 - **VCR/ghost replay**：任意步时间旅行+状态快照+编辑恢复+成功回放省成本；fork-改-级联重执行验证假修复。
+
+## r359B Agent 桌面与操作系统自动化工程 2026（来源：LobeHub/Microsoft-Learn-CopilotStudio/aisuitehq/Microsoft-Azure-Foundry/DEV-devandrew/LapuAI/PyPI-windows-use/Awesome-Repos/Simular/WinAgentGPT/LangChain-DeepAgents/AwesomeAgents/OpenAI-Agents-sandbox/dreaming.press-MXC/QwenPaw/npm-n8n-computer-use/Bright-Coding/DEV-agdex/fazm.ai/npm-agent-desktop/arXiv-WinDOM/TechRounder/Devpost-Orbit/frankx.ai-OmniParser/Microsoft-Windows365-Agents，2026-10-01 实拉）
+- **可访问性树优先**：桌面定位=可访问性树优先（元素身份+稳定 ref），纯像素猜测坐标在布局移位时漂移。
+- **双流混合融合**：树快照+像素双轨，VLM 预测坐标吸附到树 bbox（99%+）；归一化坐标映射亚像素。
+- **桌面 MCP 白名单**：必须显式工具白名单（禁 registry/文件写危险操作）+运行时配置可审计。
+- **本地权限规则**：按路径 glob 白名单（read/write），无限制 shell 仅限可信本地环境。
+- **分级隔离**：路径守卫（工作区白名单+防遍历）+VM 路由（WSL2/Lima）；sandbox-exec 只限文件不限网络。
+- **OS 级沙箱原语**：内核强制（Landlock/Seatbelt/ACL）+进程命名空间+超时终止，用户态不可绕过。
+- **无 API 自动化路径**：无 API 应用=虚拟鼠标键盘路径；桌面 agent 扩展可达本地文件与无 API 内部工具。
+- **混合回退矩阵**：视觉 100% 通用/树 60% 高效/混合 98% 平衡；树在 legacy+现代 web 失效→视觉兜底。
+- **DOM 合成训练数据**：GUI 定位训练数据=headless 渲染+DOM 直读 bbox（免 OCR/人工标注）；同族蒸馏教师-学生。
+- **UIA 工具面**：桌面工具面=树查询（深度可配）+按语义找元素+稳定 ref 重试安全，免 CV 模型。
