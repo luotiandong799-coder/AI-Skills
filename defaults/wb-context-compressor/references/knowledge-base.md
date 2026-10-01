@@ -3206,3 +3206,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **心跳与看门狗**：签名心跳+缺失分层告警+决策异常评分+看门狗（超时自动重置）；健康检查包熔断防自伤。
 - **恢复有效性度量**：五指标（恢复率/附带损害/MTTR/回滚成功/人介入）+PRR 条件概率；成本按成功完成计。
 - **沉默退化最危险**：无异常无重试；防幻觉级联=轨迹级审计+下游输入验证。
+
+## r359A Agent 调试与交互式修复工程 2026（来源：BestAIWeb/Anthropic-HelpCenter/JetBrains-CLion/Replay/cadence/Claude-Blog/LobeHub-mcp-debugger/OCDevel/agentoptics/Zylos/Geek-Salad/befailproof/slavadubrov/sapirex/OpenLegion/ProductCool/Antigravity/DEV/CallSphere/wearecleon/FutureAGI/addyosmani-agent-skills/腾讯云/Codeables/Microsoft-sean-weldon，2026-10-01 实拉）
+- **Agent 化调试器**：调试器暴露为 MCP 工具（断点/单步/变量/表达式），agent 自主驱动运行时证据收集，不靠人逐步代跑。
+- **Rewind 时间旅行**：自动检查点+滚回对话与沿途文件改动；fork+replay 在同一时间线验证补丁（broken→proven 一步到位）。
+- **Replay 运行时上下文**：失败瞬间全量 DOM/变量/网络状态可查询，免复现；调试基准自动生成+难度自适应。
+- **事件日志化执行**：调试=事件日志化（倒带/fork/中间点重执行）；状态层快照前向验证、决策层成对保存输入输出。
+- **Trace-first 调试环**：先定位 trace→重放复现→修复→留永久数据集工件；无 trace=迷信调试。
+- **最小复现自发散点**：发散点+重建前步上下文开始；错误传播视图标继承失败态的父 span。
+- **确定性鸿沟**：温度0≠可复现（GPU/MoE 非确定）→重放性观测；静默错误仅对比期望输出可测。
+- **Trace ID 贯穿**：错误信息带 Trace ID→一条命令捞全程；生产 trace 转 dataset+eval 防复发。
+- **Reviewer/Fixer 不对称**：审查者只读/修复者有写，修复=捕获→复现→隔离→最小修→验证（修根因非症状）。
+- **VCR/ghost replay**：任意步时间旅行+状态快照+编辑恢复+成功回放省成本；fork-改-级联重执行验证假修复。
