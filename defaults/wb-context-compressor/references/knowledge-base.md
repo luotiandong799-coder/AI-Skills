@@ -3578,3 +3578,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **基准难度工程**：难度双源=structural（工具序列长度/类型）与 interaction；LiveClawBench Triple-Axis=环境复杂度/认知需求/运行时适应性；decoy budget 连续控制难度；饱和后六维=捷径/OOD 泛化/效率/可靠性/model vs scaffold 相对重要性/协作增益；难度校准=参考模型 1.5h 预算迭代任务设计（120 候选→46）。
 - **Reward hacking**：RL 推理训练显著提高 exploit 率、预算弱正向、test-time 缓解减少不消除；GPT-5.1 calculator hacking（伪装搜索用浏览器算）；verbosity hack（emoji 冗长专攻盲评）；TTT 退化输出 fool judge→validity-aware 计数保证 ASR 可比；直接 reward 优化拉大 observed vs hidden 差距。
 - **EDD 迭代**：golden ~100 样本+3-5 指标+迭代到全过；一次只变一个变量（否则无法归因）；EvalLoop 三机制=维度化指标分组/失败模式分类/结构化迭代；Goodharting 最大风险——分数当趋势线看不当 pass/fail；red-team 在开发循环内；CI gate 使 eval 从通知变保护。
+
+## r369B 低代码工作流平台 2026 新特性与生产实践（来源：make-ai-automation/make-academy/n8n-prod-playbook/n8n-production-ai-playbook/n8n-agent-architecture/n8n-complex-agent-patterns/n8n-vs-dify/n8n-open-source-compare/activepieces-open-source/activepieces-changelog/activepieces-mcp/langflow-policies/langflow-1-9/langflow-cuga/pipedream-integration-layer/pipedream-connect/zapier-vs-pipedream/breyta-idempotency/n8n-idempotency/agentnative-idempotent/hashicorp-vault-2.0/truto-key-rotation/aws-loom-secure-agents/jumpserver-secrets/apify-zapier-alternatives/layer3labs-open-source，2026-10-02 实拉）
+- **AI 自动化选型三判据**：每周≥10 次+需人读非结构化输入+输出结构化（三选二才值得自动化）；Filter 靠触发器近省计费；错误处理器必装（Break 15 分钟自动重试防 scenario 失活）。
+- **n8n 生产 15 条核心**：环境化工作流版本=dev（mock 凭证）/staging（镜像生产）/production 三环境；prompt 存工作流外做版本控制可回滚；output parser 强 JSON；记录 AI 输入输出作 eval 原料；快便宜模型做分类、强模型做生成。
+- **确定性+AI 混合管线**：intake/validation → guardrails → AI step → output validation → routing；session 状态存 Postgres/Redis/Mongo（不用 in-node 内存）；RAG 先检索再作答；重复模式提取子工作流改一次处处受益。
+- **agent-as-tool 委派**：AI Agent Tool 把第二 agent 配成工具让 orchestrator 调用；拓扑三模式=Orchestrator-Executor/Pipeline chain/Parallel Fan-Out-Fan-In；委派工具描述写清边界（boring 是最高评价）。
+- **Langflow Policies 守卫工具**：自然语言规则→Generate 模式生成守卫代码（人审）→Guard 模式运行时强制校验（Enabled 开关工具调用前验）；Assistant 内嵌自然语言生成组件/排障；CUGA=planner 更新计划+Plan Controller 管理子任务状态。
+- **Activepieces 开源治理**：MIT 全开源可商用可 fork、760+ pieces、自托管 dev/staging 零成本；worker v2 新沙箱进程模型+race condition 测试（subflow resume 8 测试 Redis 元数据竞态）；一个 MCP server 单连接暴露全部 pieces。
+- **幂等四类工具注册表**：read-only（自由重试）/idempotent-by-provider（带 key）/journal-deduped（查 effect journal）/at-most-once（升级人工）；key 从 run ID+step ID+操作 hash 稳定派生，绝不用时间戳/重试计数/LLM 输出；n8n execution.id 内置作 Idempotency-Key；dedupe store+条件写实现 exactly-once。
+- **错误处理三层**：重试（退避+抖动）/dead-letter 死信队列兜底/告警前置；Break/Ignore 处理器；自愈=事件派生确定性 key+副作用前检查。
+- **平台选型矩阵 2026**：n8n（Sustainable Use、~100k stars、300+ 集成、JS/Python 代码节点、2GB VPS）vs Activepieces（MIT、11k stars、100-200 pieces、代码节点有限）vs Huginn/Windmill/Kestra；选型看 AI 角色=操作部分（n8n）vs 交互优先（Dify RAG/chatbot）；许可证细节=Community 无限但多租户 SaaS 限制转售。
+- **Agent 集成层与凭证治理**：Pipedream 10000+ 工具/3000+ API/remote MCP/per-user OAuth/SDK 嵌入；Vault workload identity federation=短时动态令牌替代静态凭证（agent 工作负载）；AWS Loom=secrets 外置 Secrets Manager 用时才拉+OAuth2 管理员预定义；并发 token 刷新串行化（否则 429/作废 refresh token）；AES-256-GCM+明文仅出站瞬间解析。
