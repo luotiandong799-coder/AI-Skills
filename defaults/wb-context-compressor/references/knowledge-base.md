@@ -3242,3 +3242,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **在线 eval 金丝雀**：采样 judge+用户反馈+KPI+guardrail+成本异常多维；成本随规模真金白银→采样策略。
 - **反馈附 trace**：反馈作为 assessments 附到原始 trace 一起分析；改进过 eval 门才部署（对比算子防回归）。
 - **偏好记忆个人化**：澄清→偏好记忆 grounding→反馈更新三环；垂直闭环=失败转 harness 更新权重冻结提 47 点。
+
+## r360A Agent 上下文工程与知识路由 2026（来源：arXiv-2601.01857/Microsoft-Azure-AgenticRetrieval/Stanford-CS224G/AWS-Bedrock-KB/arXiv-2606.26105/arXiv-2603.09619/arXiv-2606.00822/agentic-ai-readthedocs/wittmannf/腾讯云/arXiv-CriticR/Redis/arXiv-SoK/DEV-saaro/Alok/WickedSmartData/GenAI-Protos/usewire/BestHub/arXiv-2608.22708/gkoreli-backlog-mcp/arXiv-ReCache/arXiv-ContextNest/PyPI-contextweaver/ACM-A2C-RAG/CSDN-Gemini/arXiv-ADORE/arXiv-Sutradhara/arXiv-2605.05287，2026-10-01 实拉）
+- **上下文工程学科**：CE=信息供给架构 vs PE=查询措辞；全栈=system+历史+工具+参数，应用层杠杆=memory/RAG/upload/tools。
+- **自适应路由**：复杂度分类器（简单跳过/中等单跳/复杂多跳）；agentic 路径延迟 2-8s+成本 4-12x→不是默认路径。
+- **动态工具截断**：工具上下文=N=min(jump, kneedle) 动态截断；最大偏离点作截止阈值。
+- **双通道请求架构**：核心工具固定进请求头（前缀缓存稳定）+全量工具走独立路由通道。
+- **KV 缓存语义标记**：缓存驱逐=语义标记 KV 块（瞬态低值/首迭代高值）优先；资源独立编码→KV 可独立复用。
+- **分层内存分支**：知识树分支<50ms 换入窗口；3-bit KV 量化 16GB 容 768K token；只活动层随查询变。
+- **投机反思循环**：检索恢复=投机轨迹不提交+独立 critic 评证据充分性（refine 循环）。
+- **验证迭代闭环**：验证模块结构化反馈→改查询/换策略→不收敛 HITL；guardrail 拦截工具调用；检索后三问自评。
+- **双路召回引用**：reasoning effort 可配+子查询并行多路+语义重排+引用保留；ReAct 反思三拍。
+- **上下文治理门禁**：批准/时效/归因/完整性元数据门禁（哈希链版本）；层级索引=小块检索+父块上下文。
