@@ -3314,3 +3314,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **文档提取流水线**：转图+JSON schema 提示→结构化输出；每字段置信度评分。
 - **多模态评测**：逼真场景+混合工具链基准（AgentVista/VTC-Bench/VisBrowse）；视觉原生任务仍难（~30-48%）。
 - **omni 统一模型**：单模型四模态+统一上下文跨 agent 循环（省独立模型）；工具栈=PyTorch+HF Transformers。
+
+## r362A Agent 记忆与状态管理工程 2026（来源：arXiv-MAGE/zylos-memory/augmentable/programming-helper/roborhythms/zalt/dev-imversion/OpenLegion/AWS-S3-Vectors/dataaihub/ailearningguides-langgraph/callsphere/agentpatternscatalog/getreadyforagents/clawrxiv/Auto-Dreamer/usewire/zylos-consolidation/mnemos/SWC/elastic/theneuralbase-recency/mem0-decay/xbstack/AgentIR/agingbench/RECON/AgentMemBench/EngramaBench/Ground-Truth-First/zylos-temp，2026-10-02 实拉）
+- **记忆状态树**：MAGE 层次树（Grow/Compress/Maintain/Revise 四操作）；状态=根到当前路径。
+- **记忆三层**：episodic 时间戳事件/semantic 蒸馏事实偏好/procedural 技能计划；上下文窗口是缓冲非记忆。
+- **时间边存储**：事实带 validate/invalidate 时间戳不覆盖；tri-store=vector+episodic+graph+分类器路由。
+- **状态四层**：窗口/外部存储/K-V/程序性；各层成本延迟陈旧不同，边界错=行为不一致。
+- **持久执行**：外部化状态+副作用幂等+每步 checkpoint；thread_id 锚点可 fork/replay/rewind。
+- **恢复状态机**：Running→Checkpointed→Suspended→Replaying 跳过已记录效果；回滚=快照+版本化存储+确定性重放判断。
+- **记忆整合**：会话间去重重写（sleep-replay+只读证据合成替换）；破坏性不可逆场合不做。
+- **检索多信号**：相关/权威/新鲜/置信-冲突-冗余惩罚；混合 RRF+reranker；recency 指数衰减不清零。
+- **记忆评测**：五策略同条件对比（AgentMemBench）+老化四机制（AgingBench）+纵向任期翻盘（图/hybrid 长期胜 vector）。
+- **会话三温层**：热（窗口）/温（vector 摘要偏好检索注入）/冷（不可变审计）。
