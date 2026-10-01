@@ -3434,3 +3434,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Abstention-aware 注入**：记忆注入是不对称损失控制决策（错注入跨轮复合放大），证据可疑主动不注入。
 - **Pre-flight 双预算**：工具 schema 预算与消息预算分离管理，各自独立触发逐出不互相挤压。
 - **缓存意识架构**：一次 cache-busting 改动抹掉后续所有节省；成本优化先缓存（90%）再 routing（60-80%）再截断摘要（40-70%）。
+
+## r365B Agent 安全与提示注入纵深防御 2026（来源：arXiv-2609.22949/IETF-intent-security/arXiv-2607.25255-SafeFlow/arXiv-2603.28013-killchain-canary/arXiv-2601.09625-promptware/CSA-promptware/arXiv-2604.23374-NeuroTaint/arXiv-2605.02812-worms/arXiv-2604.11839-AgentWarden/agentnative-HITL/veto/agentixforce/cdovey-sandbox/NVIDIA-secure/Anthropic-contain/OpenShell，2026-10-02 实拉）
+- **多 Agent 注入**：inter-agent 信道是独立攻击面（perimeter 看不见）；四防线=消息签名+边界消毒+按角色最小权限+通信异常检测（31.2%→4.2%）。
+- **SafeFlow 语义信息流**：恶意传播=语义信息流问题非单轮分类；语义污点+协作图传播+不可逆动作前工作流级验证；七标签=保护源/硬 sink/控制面输入。
+- **Kill-chain canaries**：四阶段定位（EXPOSED→PERSISTED→RELAYED→EXECUTED）；安全由"是否跨阶段传播"决定非"是否看到"；memory-write 是高杠杆拦截位。
+- **Promptware 七阶段**：注入→越狱→侦察→persistence（记忆/RAG 投毒）→C2→横向→行动；21 起真实攻击；五族=记忆投毒/trust laundering/技能投毒/自复制/C2 relay。
+- **NeuroTaint**：三类传播=显式内容/隐式控制影响/异步溯源复用；DCPG 跨会话持久化 taint 标签。
+- **能力衰减**：Contaminated(L)∧AH⇒deny——读过不可信内容后高风险动作自动拒绝；AgentAudit 四阶段 taint pipeline。
+- **AgentWarden 动态治理**：会话级动态工具可见性（不可见=不可调用）+Safety Router 前置拦截+PPO 审计日志学最小权限。
+- **HITL 审批流**：低置信（85% 阈值）或受保护类即入审批队列；durable 存 payload+推理轨迹+不确定性；批准后加密签名防篡改。
+- **冷读 canary**：检测≠防御——高熵串植入+输出监测，把开放识别问题变封闭字符串匹配；消毒后重扫双保险。
+- **沙箱硬边界**：容器 flag 比容器重要（--user/--network none/--read-only/--tmpfs）；secret per-task 注入（运行时下发、完成吊销）；Landlock/seccomp 零默认权限。
