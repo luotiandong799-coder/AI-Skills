@@ -2966,3 +2966,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **实体解析多信号**：normalize 名称→domain 最可靠→fuzzy（Levenshtein/TF-IDF）→LLM 只做最后仲裁。
 - **摄取免独立状态存储**：n8n+Dify 不用 Redis/Postgres 追踪已摄取文档，状态跟着源走；Dify 4 数据源（file/online drive/online docs/web crawler）；LlamaIndex transformations 数组+IngestionCache+persist_dir。
 - **2026 反爬评估面与 stealth 分层**：IP 信誉+TLS 签名+请求序列+HTTP/2 优先级+header 稳定+cookie 管理；magic/simulate_user/override_navigator 三分；headless 易检测；托管自动排队 vs 自托管礼貌策略取舍。
+
+## r352B Agent UI 与界面生成工程 2026（来源：v0/Lovable/A2UI/MCP Apps SEP-1865/AG-UI/AI Elements/shadcn/OmniParser/ScreenParse/GUI-Lens/UI-Zoomer/AutoFocus/BrowserVLM/OSWorld/ENVS/Midscene/Applitools，2026-10-01 实拉）
+- **生成式 UI 协议定位三分**：MCP 连 agent 与工具/数据；A2A 连 agent 与 agent；AG-UI 连 agent 与用户；generative UI specs（MCP-UI/Open JSON UI/A2UI）让 agent 返回 UI；两类协议不混用（agent 生成 vs server 预建）。
+- **MCP Apps：ui:// 声明式 UI 资源 + 双向 JSON-RPC**：SEP-1865 server 用 ui:// URI 声明 UI、工具 metadata 关联、host sandboxed iframe 渲染；工具预声明 UI 模板供 prefetch/cache/security-review；UI 发起的动作走与工具调用同一审计与同意路径。
+- **A2UI 协议：流式 JSON UI 契约**：Apache 2.0 开放协议；MCP tool outputs/resource subscriptions、SSE+JSON RPC、WebSockets、REST 多载体；跨平台；LLM 输出 conversational prose + 校验过的 A2UI message block。
+- **坐标归一化 [0,1000] 契约**：grounding 模型输出归一化坐标（原点左上），client 按原始截图换算 px=round(x/1000*width)；duvo-eye 0.0% malformed；sub-pixel 精度。
+- **屏幕解析三源融合**：a11y 树原生见 shadow DOM 优先于 DOM；vision 只补 gap（慢且不准）；功能标签>类型标签（submit_button 非 button）；关系提取使能推理（input 属 form）；OmniParser 组合 icon detection+description+OCR 输出 DOM-like 结构。
+- **GUI grounding 不确定性驱动缩放**：GUI-Lens coarse-to-fine cropping；UI-Zoomer 把 zoom 触发与尺度当 uncertainty quantification（confidence gate+law of total variance）；AutoFocus density field+Shape-Aware Zooming 纯 test time；先全屏粗定位、不确定才放大。
+- **坐标脚手架提示**：Dots / Dots+Indices / Dots+Coords（显式数值坐标）——显式坐标标注精度最高；让 VLM 定位时图上叠加显式坐标锚点。
+- **AI 视觉回归 ≠ pixel-diff**：VLM 理解 layout/typography/contrast/semantic 像人审；agent 自主 baseline 维护（accept/reject/masking，维护开销降 ~95%）；Playwright maxDiffPixelRatio+mask 收敛动态数据噪声。
+- **生成式 UI 运行时工程**：Harness4GenUI（ASE 2026）把动态界面当运行时系统——稳定上下文模型/UI schemas/渲染契约/测试/可观测/安全/治理；生成质量只是及格线。
+- **OSWorld 长程桌面评估与噪声鲁棒性**：OSWorld 暴露长期漂移/坐标失真/状态识别失败；ENVS 30.3 vs UI-TARS-1.5 22.7（pass@8）、Noisy 29.0 vs 20.3；实在 Agent 90.2% 登顶（2026-07）；人类基线 ~75%；pass@8 多 rollout 标配。
