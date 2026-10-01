@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: 1.47.0
+version: 1.48.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -137,3 +137,11 @@ sources:
 - **★同步方向的权限是非对称的**："Instance owners and instance admins can **push** changes to and **pull** changes from the connected repository. **Project admins can push changes... They can't pull**." 判据：授予"可写"不等于授予"可读回"；把双向同步权限当成一个开关配置，会让只能推的一方以为自己也能拉。
 - 发布检查项：① 同步脚本末尾是否显式发布（别假设 push 会带发布）；② 冲突检测能力按资源类型逐类声明，别写笼统的"自动合并"；③ 自动化 pull 一律视为 force 路径，先列将被删除的对象再执行；④ 同步凭据只有 push 权时，方案里不能出现 pull 步骤。
 - 提升层：工作流 / 可复用 Skill。触发词：saved 而非 published、同步通道发布态、自动解冲突覆盖面、删除不级联、force pull、按名匹配身份合流、只能推不能拉。
+
+## r352C · 验证并发的两条纪律：取消还是排队看消费者对 HEAD 的绑定；并发是预算不是能力（来源：docs.openclaw.ai `ci/pipeline` 79,609B + `ci/capacity` 95,474B，2026-10-02 r352C 独立 curl 实拉逐串命中；与 §r350A 订阅面 互补——那条管事件覆盖面，本条管验证资源的调度与配额）
+
+- **★取消 vs 排队由"消费者认不认 HEAD"决定，不是一刀切**：原文 canonical main 用 **run-number 奇偶两槽**，"Each slot is **non-canceling** and keeps one **coalesced pending tip**: a new merge **replaces** that slot's older pending run instead of canceling work that already registered"；两槽可乱序完成，而 "exact-head consumers remain **bound to their requested SHA** and are unaffected"；反过来 "Pull requests still **cancel superseded heads**"、manual dispatch 用隔离组；草稿事件在门禁前用**逐 run 隔离组**，"a delayed draft event cannot displace pending or running ready-for-review CI"。判据：**只认最新结果的作业可以取消旧运行（PR），绑定具体提交/产物的作业必须排队不取消（exact-head）**；给两者套同一套取消策略，前者浪费资源、后者丢证据。延迟到达的低优先事件要单独隔离，否则会顶掉高优先的在途验证。
+- **★省资源的智能裁剪必须能被显式关掉，且降级 fallback 不许扩张范围**：原文 `preflight` "classifies the diff and **turns expensive lanes off** when only unrelated areas changed"；而 "Ordinary manual `workflow_dispatch` runs **intentionally bypass smart scoping and fan out the full graph** for release candidates and broad validation"；"Exact-head `release_gate` fallbacks **retain the pull request's** macOS, iOS smoke, and native generated-locale scope **instead of forcing unrelated** Apple lanes or locale parity"。判据：**发布候选走全量，日常变更走裁剪**——把裁剪设成不可绕过，等于让最需要全量验证的那次跑得最少；而自动降级（fallback）只许保持原范围，不许顺手扩张到无关车道。
+- **★并发额度按"最坏情况占用"申请，稀缺资源留给真需要的作业，且别人的余量不算你的容量**：原文把 Blacksmith 标签当稀缺资源，"Jobs that only **route, notify, summarize, select shards**, or run short CodeQL scans should stay on GitHub-hosted runners unless they have measured Blacksmith-specific needs"；新增矩阵/并发/高频工作流 "must **show its worst-case registration count** and keep the org-level target below about **60% of the live bucket**"（10,000 桶 → 6,000 目标）；并点明 "This is **planned admission, not proof** that the provider supplies 130 runners simultaneously"、"its pooled reader's unused quota **does not establish organization-wide free capacity**"。判据：**扩容的论证材料是最坏情况数，不是平均值**；余量要留给重试/突发/邻近仓库；观测到别人没用满不构成自己可以加量的理由。
+- 发布检查项：① 这条验证的消费者是 exact-head 还是 latest-wins（决定是否允许取消）；② 发布候选路径能否绕过裁剪跑全图；③ 新增加密/并发是否已报最坏情况注册数且组织级占用 <60%；④ 低优先延迟事件是否有独立隔离组。
+- 提升层：工作流 / 工具。触发词：两槽流水线、non-canceling、coalesced pending tip、exact-head 绑定、草稿隔离组、智能裁剪、发布候选全量、fallback 不扩张、最坏情况注册数、60% 余量、别人余量不算容量。
