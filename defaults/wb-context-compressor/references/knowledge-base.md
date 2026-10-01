@@ -3122,3 +3122,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **部署四证据门**：签名（来源）/SLSA≥L2（构建）/SBOM 无禁用包（策略）/无 critical 漏洞（扫描）。
 - **PR 依赖审查**：依赖变更走 PR 依赖审查（脆弱依赖即阻断）；分支保护=所有者评审+严格状态检查+签名提交+管理员强制。
 - **三入口攻击面**：模型/数据集/推理依赖三入口；provenance=可验证证据链（父模型/数据集/版本/许可证）不信任 publisher 元数据。
+
+## r356C Agent 速率限制与流量治理工程 2026（来源：tokenpapa/Microsoft-Azure/AI-Workflow-Lab/AI-TLDR/DEV-promptra/AI-Learning-Hub/LLMAPI/arXiv-HiveMind/moai/Zylos/negiadventures/A2A-backpressure/arXiv-AiFlow/Tamir/AI-Tools-Guidebook/DZone/AgentBudget/aisecuritygateway/dreaming.press/Daily-AI-World/Get-Ready/kissapi/rapidclaw/RockB/niteagent，2026-10-01 实拉）
+- **429 重试三纪律**：Retry-After 头优先→指数退避+随机抖动→限次数（5-10）限总时长；防 thundering herd 锁步重试。
+- **退避参数模板**：指数基 2^attempt+随机抖动（full jitter 或 ±25%）+封顶（60-120s）+限尝试次数；首次失败后短暂随机延迟再加倍。
+- **OS 调度五原语**：准入控制+provider 感知限流跟踪+AIMD 背压熔断+每 agent token 预算+依赖 DAG 优先级队列；透明代理零改动集成。
+- **有界队列背压**：有界队列+消费者拉动（pull 非 push）+并发上限；队列容量是刻意决策；满时向上游传播（|Q|=q_n 触发）。
+- **内部 DDoS 防线**：一个依赖慢→所有 worker 堆积=内部 DDoS（无声劣化）；agent 间用 credit 信号流控（consumer 宣告容量）。
+- **提前节流**：读响应头提前节流（traffic light）不是 429 后反应；共享限流器前置；阶段间队列解耦+timeout 宽于最坏 retry-after 链。
+- **静态限流失败**：静态限流对工具调用失效（调用不可比）；多信号准入+优先级+并发管理（Agent QoS）替代。
+- **预算五层**：请求顶/会话滚动/密钥月帽/模型分级路由/熔断全在 gateway 执行；耗尽→阻断或降级到便宜模型或人工。
+- **三独立刹车**：账户额度/每虚拟 key 网关预算/循环硬界（max turns+美元上限）；任一可失效故三层齐备；子 agent 扇出显式 cap。
+- **速率熔断**：绝对预算+每分钟 token 阈值速率熔断；runtime 四件套（token 节流/请求节流/熔断/美元上限）；三层配置单点失效不烧预算。
