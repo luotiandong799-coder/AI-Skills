@@ -2954,3 +2954,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **安装即信任边界：装后验证与来源审查**：手动安装流程 mkdir 技能目录加 git clone depth 1 加 cp R 到目标；批量安装 npx skills add repo 双横线 g 双横线 skill 星号 双横线 y；安装是信任动作，装后检查 SKILL md 的 name description 与实际行为一致脚本逐行读。判据：**装技能等于扩权限，装后核对声明的能力与实际脚本是否一致，不一致即弃装**。
 - **技能自发现与自安装：agent 内建技能获取回路**：vercel labs 自带 find skills 技能让 agent 在对话里搜索安装更新技能，npx skills find query 双横线 owner；letta skills install 装进 agent 记忆文件系统 memfs memory dir skills；shskills install self 把 agent 指令装到每个支持的项目目录。判据：**agent 应知道自己缺什么技能并能调 CLI 补装，把技能获取做成 agent 可执行动作而非用户手工步骤**。
 - **全局安装与多 agent 目标选择**：npx skills add repo 双横线 g 双横线 agent claude code codex 一次装到多个 agent 目标，双横线 g 进用户 home 跨项目；mcp toolbox 用 npx skills 免全局安装仅需 Node js symlink 进每个检测到的 agent 目录；桌面端 JSON 配置与 NPM 一键双通道。判据：**一次安装多 agent 复用等于全局加 symlink，目标单 agent 用项目级，先想清作用域再装**。
+
+## r352A Agent 数据管线与结构化提取工程 2026（来源：Firecrawl/browser-use/Trafilatura/Unstructured/LlamaIndex/n8n+Dify/crawl4ai/context.dev/spider/kanopy/lobehub，2026-10-01 实拉）
+- **抓取 API 统一 Markdown-first + JSON schema（context API 模式）**：/scrape 一次调用 formats 数组同时返回 markdown+html+screenshot+JSON；PDF/Word 走 /parse 同管线；传 JSON schema 即 typed JSON；/agent 免 URL 描述即自找自提；P95 3.4s。
+- **抓取管线反模式五连**：raw HTML 直接当 RAG 块→先 trafilatura/readability；无去重→hash+MinHash-LSH；无界并发→DOWNLOAD_DELAY+AutoThrottle；重复爬→持久化 {url: last_modified, hash}+If-Modified-Since；盲目信 sitemap→验证 status 200+Content-Type。
+- **增量同步三态协议**：fingerprint 匹配跳过 chunking+embedding（该文档成本归零）；不同则按 canonical ID 删旧向量→重处理→upsert；sitemap 缺失标记 deleted。
+- **浏览器代理双通道**：vision+DOM 结合提可靠；可编辑 Python harness 优于固定动作菜单（Bitter Lesson of Agent Harnesses）；复用真实 Chrome profile 继承登录态；WebVoyager 89.1%。
+- **正文提取四函数权衡**：Trafilatura extract 平衡/bare_extraction 裸变量/baseline 快速+JSON 元数据/html2txt 最大召回；Unstructured 语义元素（Title/NarrativeText/Table/ListItem）供 chunking，Cloud 100-500ms vs Local 10-100ms。
+- **结构化输出三层**：JSON mode 合法但语义不可预测；strict schema 生产标准；跨 provider（OpenAI response_format/Claude output_config.format/Gemini response_mime_type+response_json_schema/Ollama format）；schema 三原则 enum 钉死合法值/一任务一 schema/默认必填。
+- **schema 版本化与验证-重试**：schema 当 API 契约版本化可回滚；strict 不返回 malformed 但 API 会失败→retry+指数退避；Instructor max_retries；Repair Tool Arguments 验证前修畸形 JSON 工具参数。
+- **实体解析多信号**：normalize 名称→domain 最可靠→fuzzy（Levenshtein/TF-IDF）→LLM 只做最后仲裁。
+- **摄取免独立状态存储**：n8n+Dify 不用 Redis/Postgres 追踪已摄取文档，状态跟着源走；Dify 4 数据源（file/online drive/online docs/web crawler）；LlamaIndex transformations 数组+IngestionCache+persist_dir。
+- **2026 反爬评估面与 stealth 分层**：IP 信誉+TLS 签名+请求序列+HTTP/2 优先级+header 稳定+cookie 管理；magic/simulate_user/override_navigator 三分；headless 易检测；托管自动排队 vs 自托管礼貌策略取舍。
