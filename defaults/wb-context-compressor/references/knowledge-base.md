@@ -3386,3 +3386,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **死锁防护**：agent 互等输出（都 active 无错误零产出）；inter-agent 消息 30s 超时+orchestrator 重指派；ReAct 循环用归一化参数签名检测；审阅方不能与被审方互相确认。
 - **Debate 共识幻觉**：agreement 是协议内生不能当正确性信号；同质 debate 谄媚顺从 85.5%/上下文脆弱 70%/共识崩塌 32.3pp；隔离自纠胜过无引导同质 debate；SELENE 选择性触发+证据加权。
 - **会话回放观测**：span-per-tick 全量 trace（LLM/工具/记忆/交接嵌套 span）；存每请求响应全文+工具参数+上下文状态→离线回放不重跑 LLM；trace 重放对新模型/prompt=受控实验。
+
+## r364A Agent 工具调用与多步执行可靠性 2026（来源：agentlist/openlegion/zylos-tool/arXiv-2606.01416/aiworkflowlab-fts/kunalganglani/aipromptshub-oh/explainx/axiomstudio/claudearchitectcertification/dreaming.press/swarmsignal/72technologies/arXiv-2608.02645/omnitechnicus/velsof/supergood/sixdegree/arXiv-2606.17519/MDPI/agentixforce/cdovey/callsphere-sandbox，2026-10-02 实拉）
+- **工具故障分级**：BLOCKING（订单/支付）慷慨超时+重试+备份回退；ENHANCING（推荐）中等超时+回退默认数据；OPTIONAL（遥测）极短超时+吞失败；partial failure（HTTP 200 但截断/畸形）最难检测——按 schema 验响应形状再认成功。
+- **验证/语义失败专门路径**：验证失败=参数 schema 不过→验证错误回喂模型附解释（非通用重试）；语义失败=返回成功但语义错→升级/替代/人工；自愈编排按失败类映射恢复动作。
+- **结构化输出选型**：确定性提取→structured outputs（生成级约束解码）；选工具执行→function calling（路由决策+schema）；三层谱=prompting→JSON mode→schema 级保证；function calling 不必真调函数。
+- **工具定义 token 开销**：schema 每调用重发计费（~200 token/工具，50 工具=10k+）；优化=描述最小化/删复述参数名/默认值硬编码/杀 <1% 调用率工具（一轮降 65% 输入 token）；manifest <25% 窗口+渐进披露。
+- **Schema 质量=最大杠杆**：Composio 基准未优化 33%→优化 74% 准确率；模糊参数描述直接增幻觉调用；参数命名去歧义（q→search_query/id→customer_id）。
+- **幂等三源**：agent 比后端多一层重复=模型自己重发相同调用；键=hash(agent_id+task_id+tool+call_number) 语义派生调用前生成；run/step/tool 三级幂等全建，跳一级漏重复。
+- **Verify-before-retry**：不确定工具结果先查后置条件——已成功不重试/未成功带证据重试；纯系统层改变提升可靠性不需改 LLM；验证层=执行前置门槛。
+- **输出验证三守卫**：字节上限（32KB）+嵌套深度（8 层）+类型范围；三层递进=schema→语义→业务逻辑；schema 合法≠正确；guardrail 三时机=最终输出/工具输入/工具输出分开定义。
+- **工具数量衰减**：50 工具 84-95%→200 工具 41-83%→740 近零；企业目录 110-agent/584-tool F1 降 16-23pp；oracle 分解=retrieval/rank/decision gap；超 ~50 上检索式路由（分解+描述增强），动态注册只缓解不解决。
+- **沙箱六维**：CPU（0.5c）/内存（256MB）/网络默认 deny+allowlist/系统调用过滤/PID 隔离（--pids-limit 128）/墙上时钟 30s/输出 1MB；工具级 allow/deny 策略引擎；host-executor 分离护 API key。
