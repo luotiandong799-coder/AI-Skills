@@ -3470,3 +3470,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **路由漂移检测**：供应商静默更新→CUSUM 检分布位移；escalation rate 漂移升高=评分函数需重训；silent cache hit-rate decay 按 template 切片；三 ratio=cache hit/旗舰占比/tokens per task。
 - **评分函数**：小 judge/log-probs/schema 验证器；precision>recall（拒 30% 好答案=白花钱）；UCCI isotonic 校准；SLM 内建 defer 替代外部 router。
 - **Agent 场景退化**：单轮 router 误路由依赖轨迹上下文的步骤（RouteLLM 仅省 31.4%）；按角色分配模型 profile；shadow-first bandit 复用 metering 行组奖励。
+
+## r366B Agent 文件处理与文档工程 2026（来源：ai-engine-hybrid-table/mixpeek-structured-extraction/Ten-2508.09324/prem-chunking-benchmark/arXiv-2603.06976/pavlo-parent-child/kanopy-parser-comparison/docling-2501.17887/bem-document-intelligence/aclanthology-2026.acl-industry.133/ofox-ocr-2026/ai-tldr-clean-data/NVIDIA-NeMo-Curator/PUFFER-2608.28622/ExtractBench-2607.29677/VAREX-2603.15118/MPDocBench-2605.22100，2026-10-02 实拉）
+- **表格混合管线**：OCR 出无幻觉文本→LLM 收文本（非图像）重构 HTML（输入从 51k token 砍半）；HTML 保留 rowspan/colspan 优于 Markdown。
+- **表格两遍验证**：结构确定性查（列数/孤儿 cell）→critique LLM 转可操作反馈→定向修正；错误系统性，抽查三行即暴露；验收=row/col 匹配+header+cell≥0.95。
+- **块质量五维**：semantic coherence/context preservation/coverage/redundancy/balance；512 递归=默认基准 69% 零模型调用；overlap 无 measurable 收益；sentence-level 5000 token 内匹敌 semantic。
+- **Parent-Child 双层块**：小 child 检索+大 parent 生成，绕过 precision-vs-context；semantic chunking 块大小不稳/索引慢，只值长无结构文档。
+- **解析器选型**：LlamaParse 89%>Docling 83%>Unstructured hi_res 71%>fast 42%（跳 layout 掉链）；Docling 自托管开源首选+document_key 缓存转换一次查询多次；MinerU 公式最强。
+- **双路径决策**：Schema 固定→Parse；开放问答→Agent；用工具决策 +40 点 Word/+35 Excel/+28 PPT；openpyxl 保留计算值；表格绝不 mid-row 拆。
+- **OCR 选型**：专用小模型（GLM-OCR/PaddleOCR-VL）赢原始 OCR 基准；frontier 赢吞吐/复杂提取；200-300 DPI+明确 prompt 防幻觉；跨页表逐页处理。
+- **清洗三档**：规范化→丢弃低价值→去重（exact MD5/fuzzy MinHash+LSH/semantic）；PUFFER 增量模糊去重不按语料大小吃 RAM；小计对账+per-supplier row-count 基线。
+- **解析评测**：分元素指标（文本 Levenshtein/表格 TEDS）；per-question 全 keys 正确才计分；<4B 主瓶颈=输出合规（schema echo 压 45-65pp）非提取能力；Direct VLM 便宜但截断长记录。
+- **Tier 编排**：简单页便宜解析器/复杂页高级模型；架构分元素各有所长（pipeline 文本强/E2E 表格强/VLM 公式强）。
