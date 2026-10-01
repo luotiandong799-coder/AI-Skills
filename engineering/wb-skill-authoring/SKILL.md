@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: 3.89.0
+version: 3.90.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -222,3 +222,13 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 ## 技能复用失败的主因是打包缺陷而非攻击，且缺陷分布按「是否 spec-aware / 是否 AI 批量生成」分档（来源：arXiv 2608.08453 42,317B，2026-10-01 r348C 独立 curl 实拉，`138,133` / `91.8%` / `88.8–94.6%` / `specification-aware` 逐串命中）
 - 判据：① **质量的默认怀疑方向应是「元数据 / 正文体积 / 目录结构」这类可机检项**，而不是恶意内容：138,133 份公开 SKILL.md 中 **91.8%** 至少一处缺陷（宽松/严格阈值下稳定在 88.8–94.6%），主因是「weak routing metadata, bloated or non-actionable bodies, and poor resource organization」。⇒ 审技能先过这三项，收益远高于先做安全扫描。② **lint 至少三项**：路由元数据是否含匹配条件 / 正文是否含可执行动词 / 重资源是否已外置为按需读文件。③ **分层结论要写进验收**：spec-aware 技能缺陷更少，而 **AI 批量生成的技能在安全与可移植维度是更差而非更好的批次**。⇒ 批量生成只解决「有没有」，不解决「能不能用」，且会带来新的一类可移植问题。
 - 提升层：可复用 Skill。触发词：138133 SKILL.md、91.8% 缺陷率、打包缺陷非攻击、路由元数据 lint、正文可执行动词、资源外置、AI 生成批次安全更差。
+
+## 截断要按「入参 / 上下文 / 产出」三处分别设防：入口载荷在消费前定长截断是独立防御位（来源：docs.dify.ai/en/cloud/use-dify/nodes/agent.md 10,240B，2026-10-01 r349A 独立 curl 实拉，`truncated at 2,000 characters` / `50 MB` 逐串命中；经 Qoder r366-Q-A 提名）
+- 原文：「Variables you pull in reach the agent as text and are **truncated at 2,000 characters**」；同页导出产物上限 `50 MB`。
+- 判据：① **既有截断先例全在上下文 / 输出 / 历史窗口侧，入参侧长期裸奔** ⇒ 预算三处各设一处，缺一处就有一处无上界。② **入参截断的价值是「在消费前定长」**：变量进入 agent 前被砍到 2000 字符，下游再怎么展开也不会把入口撑爆；只做输出侧截断，入口一个巨型字段就足以占满预算。③ **导出 / 落盘类产物要单列上限**（50 MB），与文本截断不是一个量纲，混用会互相掩盖。
+- 提升层：工具。触发词：入参截断、2000 字符、入口载荷定长、三处预算位、导出上限 50 MB。
+
+## 技能正文要「教方法」而不是「给答案」，且 token 是竞争关系而非占用关系（来源：agentskills.io/skill-creation/best-practices.md 14,864B，2026-10-01 r349A 独立 curl 实拉，`Favor procedures over declarations` / `class of problems` / `competes for the agent's attention` 逐串命中；经 Qoder r366-Q-A 提名）
+- 原文：①「**Favor procedures over declarations** — A skill should teach the agent how to **approach a class of problems**, not what to produce for a specific instance」；②「Every token in your skill **competes for the agent's attention** with everything else in that window」。
+- 判据：① **评审问句换成「教了方法还是给了答案」**：写死某一个具体实例的产出，换个输入就失效；给出处理一整类问题的程序才具备泛化。② **token 是竞争关系**：每写进正文一行都在挤占同一窗口里其它信息的注意力，不是「占了点空间」而已 ⇒ 正文取舍的判据是「这行在抢谁的注意力、值不值」，而不是「还剩多少额度」。③ 与既有「500 行 / 5000 token 体积预算」互补：那是上限，本条是**上限之内怎么排序**。
+- 提升层：可复用 Skill。触发词：程序优先于声明、教方法不给答案、class of problems、token 注意力竞争、正文取舍排序。
