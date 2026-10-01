@@ -3158,3 +3158,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **前缀缓存锚定**：静态段（system/tools/示例）放最前锚定；cached 读≈1 折；第二次 read 内回本（窗口 5min-1h）；语义缓存互补。
 - **缓存监控三指标**：命中率/写入量/推理成本；发布判据=省且质量不降；回滚=路由切旧版本接受一次冷写；多区域分别预热。
 - **升级清反模式+effort 校准**：缓存命中最大化+升级前沿模型前清 prompt 反模式+effort 按任务校准。
+
+## r357C Agent 检索增强与上下文注入工程 2026（来源：腾讯云/Databricks/Microsoft-Learn/arXiv-2606.28352/ACL-SemEval/metafiedlab/LobeHub-RAG/thesimplifiedtech/webscraft/DEV-jasminshukla/professionaldeveloper/Oracle/Stanford-CS224G/Logic/agentic-ai.readthedocs/MasterPrompting/Codex-DanielVaughan/explainx/effloow/nexios/arpitbhayani/futureagi/hrushikedar/heeya/Stochastic-Sandbox/LobeHub-rag-production/next-gen/atlan/arXiv-MDKeyChunker，2026-10-01 实拉）
+- **RAG 三板斧**：混合检索（RRF 融合）→重排（30-50 候选选 top 3-5）→查询改写；各管一类检索失败。
+- **查询改写五要求**：自然语言语义+领域术语+宽窄兼顾+去歧义+连贯单段；按领域调温度。
+- **查询变换谱**：改写 +10-15%/HyDE +5-15%/multi-query +10-20%/step-back +5-10%/分解 +15-25%；候选池并非越大越好。
+- **检索后置控件**：元数据过滤前置→reranker（按质量/保密/开源选型）→候选池按延迟预算 10-20 或 30-50 选 3-5。
+- **注入结构**：检索内容与系统指令清晰分隔+声明不可信证据+工具白名单；chunks 包裹元结构（来源/用途）非裸塞。
+- **上下文工程四操作**：写窗/按需选/压缩保信号/隔离防干扰；prompt 工程写指令、context 工程决定其余一切。
+- **chunk 语义单元**：分块按语义边界（句/节）非固定字符数；400-600 token+父块回引用；元数据先于分块提取。
+- **索引版本化**：content hash+version+superseded 状态；embedding 链全记录；重建索引蓝绿+recall@5 门控可回滚。
+- **增量索引**：CDC/事件驱动+chunk 级 hash 定向删；预处理清空白/PDF 粘连字符合并。
+- **源数据先行**：知识库源数据需日期+签核（检索无法修复坏源）；分块可做语义 enrich（标题/摘要/关键词/假设问题）。
