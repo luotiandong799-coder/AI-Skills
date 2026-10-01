@@ -3266,3 +3266,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **四层威胁架构**：应用/模型/工具/数据四层；攻击跨层链式；基准=819 用例三范式+语义物理双验证+状态回滚。
 - **jailbreak 六类五族**：角色扮演/编码绕过/多轮漂移/间接注入/系统提示词提取/对抗后缀；启发式 ASR 70-85% 最高；说服族=权威框架欺骗。
 - **三层防线 CI 门**：eval 离线+guardrail 运行时+observability 事后；CI 门=版本化对抗集+judge+回归阻断。
+
+## r360C Agent 文档与知识工作流自动化 2026（来源：effloow/cybercm-Bedrock-AgentCore/Superkind/Microsoft-Foundry-IQ/specswriter/IBM-watsonx/Mintlify/ChatGPT-workspace-agents/Appetals/Taskade/SuperML/LobeHub-research/Saudijournals/TechieHub/albanna/Swfte/CSDN-GPT-Researcher/SkillMD/Dewstack/Slite/TheNeuralBase/TechTarget/thisandthat/Kipwise/happysupport/XBSTACK/Fini，2026-10-01 实拉）
+- **文档生成流水线**：代码合并→agent 生成文档→平台检测+PR→人类评审合并。
+- **生成验证阶段**：草稿→沙箱验证（跑码比较真实输出）→发布；防幻觉关键步。
+- **Agent 原生文档**：先转规范 10% 页面（80% 问答）+XHTML→markdown 无损导出。
+- **知识漂移检测**：对照源渠道交叉引用（矛盾=漂移）；持续监控优于日期过期；检测+起草自动、批准人工。
+- **生产安全模式**：KB 自动更新=AI 检测+强制人工批准（唯一生产安全模式）；30 天过时率 64%。
+- **反馈闭环**：用户反馈→文档所有者改→增量索引更新→答案纠正；文章有用寿命≈6 个月。
+- **研究三阶段**：Research 并行→Synthesis 合并→Formatter 结构化；单职责可独立测。
+- **共识争议识别**：共识候选（3+ 独立同结论）+争议候选（分歧+性质）；透明标不确定性。
+- **研究编排**：lead 规划→3-5 subagent 并行+独立引文 pass；广度优先 +90% 质量≈15x token；复杂度先分类。
+- **知识 agent 接入**：KB 暴露 MCP endpoint+toolbox 发现 retrieve 工具+grounded+引文+RBAC。
