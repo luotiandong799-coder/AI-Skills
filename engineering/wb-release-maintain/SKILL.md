@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: 1.46.0
+version: 1.47.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -128,3 +128,12 @@ sources:
 - **★未知订阅（如拼错的 `command:nwe`）仍会被注册成功**，只是 loader 告警、`hooks info` 会报出来。判据：**注册成功 ≠ 语义有效**；事件系统必须提供"已注册但无对应事件"的查询面，否则拼写错误是静默失效。
 - 发布检查项：新增/改名事件键时，同步核对订阅清单里是否出现旧键与新键并存（双注册会重复触发），并跑一遍"已注册但零命中"清单。
 - 提升层：工作流 / 工具。
+
+## r351A · 同步通道：传输的是"保存态"不是"发布态"，且冲突自动解的覆盖面≠你以为的覆盖面（来源：docs.n8n.io `administer/use-source-control-and-environments/push-and-pull-changes.md` 12,333B + `understand-source-control.md` 1,929B，2026-10-02 r351A 独立 curl 实拉逐串命中）
+
+- **★同步通道搬运哪一态必须先说清**：原文 "n8n pushes the **current saved version, not the published version**, of the workflow. You need to then separately publish versions on the remote server."；反向同理——拉取一个已发布的工作流时 "n8n **unpublishes** the workflow while pulling, then **republishes** it. This may result in a **few seconds of downtime**"。判据：**发布态是独立于工作态的一层**，同步通道默认只搬工作态；误以为"同步=同步发布"会导致远端停在旧版本，或拉取动作造成生产短中断。
+- **★"能自动解冲突"是有适用对象的，不是全局能力**：原文 "n8n's implementation of source control is opinionated. It **resolves merge conflicts for credentials and variables automatically**. n8n **can't detect conflicts on workflows**."（另处 "Credentials and variables can't have merge issues, as n8n chooses the version to keep"）。判据：把"系统帮我解冲突"当成系统级承诺是错的——**自动解只覆盖无结构歧义的资源（凭据/变量），有结构的工作流恰恰完全不检测**。写同步方案时必须逐类列明哪类自动、哪类不管。
+- **★删除默认不级联，但"按名匹配"会把身份悄悄合流**：仓库侧删掉的资源 "aren't deleted automatically"，只在 pull 时提示确认；然而数据表是例外——"If a data table exists locally but not in Git, **pulling deletes it, including all its row data**"，且 force pull（API/自动化）"delete the table **without asking**"；同名重建则 "n8n treats it as the same table: it **reconciles the local table's ID to the incoming one**"。判据：**"不级联删除"的默认只保护交互式路径，自动路径绕过确认**；且**匹配键是名字不是 ID** 时，删除-重建会被识别为同一对象，本地 ID 被改写。
+- **★同步方向的权限是非对称的**："Instance owners and instance admins can **push** changes to and **pull** changes from the connected repository. **Project admins can push changes... They can't pull**." 判据：授予"可写"不等于授予"可读回"；把双向同步权限当成一个开关配置，会让只能推的一方以为自己也能拉。
+- 发布检查项：① 同步脚本末尾是否显式发布（别假设 push 会带发布）；② 冲突检测能力按资源类型逐类声明，别写笼统的"自动合并"；③ 自动化 pull 一律视为 force 路径，先列将被删除的对象再执行；④ 同步凭据只有 push 权时，方案里不能出现 pull 步骤。
+- 提升层：工作流 / 可复用 Skill。触发词：saved 而非 published、同步通道发布态、自动解冲突覆盖面、删除不级联、force pull、按名匹配身份合流、只能推不能拉。
