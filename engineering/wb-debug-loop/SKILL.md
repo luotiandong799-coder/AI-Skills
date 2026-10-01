@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.113.0
+version: "1.114.0"
 agent_created: true
 ---
 
@@ -334,3 +334,12 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **★观测面降级只投运维通道，不回落给用户**：Codex 保存诊断日志失败时，只在 **Gateway logs 记 warning**；每条 native notice **收到即记一次**，不按共享该 app-server 的每个会话重复广播；operator-only，**不回落 chat**；"a logging failure never interrupts the native connection"，且该告警**既不修复原生日志故障，也不代表会话状态丢失**。判据：**日志系统自身的故障是"静默降级"而非"抛错"**——看不到日志 ≠ 没有故障；同时它保证不影响主链路，所以不能靠"业务还在跑"反推日志健康。
 - 排障顺序（确认相关）：① 有没有 ack → ② 有没有 transcript commit（无 commit 则不会自动 replay）→ ③ 是否有后续模型请求真的读了它 → ④ 若怀疑日志缺失，先去运维通道查 warning，不要以 chat 无提示为证据。
 - 提升层：工具 / 工作流。触发词：确认语义、ack、transcript commit、自动重放、诊断日志失败、operator-only。
+
+
+## r353B · 日志落点会回退、低级别日志结构性降质、"跳过"不等于有人在等（来源：docs.openclaw.ai `gateway/logging` 23,470B + `concepts/queue-steering` 12,731B，2026-10-02 r353B 实拉）
+
+- **★日志路径不保证稳定**：默认滚动日志在 `/tmp/openclaw/`（每天一个、按网关主机本地时区命名，命名 profile 另加前缀）；**若该目录不安全或不可写（属主错误 / world-writable / 是 symlink）则回退到用户级 `os.tmpdir()` 路径**，且"On Windows it **always** uses that OS-tmpdir fallback"。判据：**取证不能硬编码日志路径**——先解析实际落点；Windows 上默认就在 tmpdir，清理临时目录会直接清掉日志。
+- **★低级别日志为省开销主动降质**：`trace` / `debug` / `info` / `warn` 记录**省略调用点元数据 `_meta.path`**（避免每条常规消息都抓取并解析栈），只有 `error` / `fatal` 保留；开启 diagnostics 且有内部消费者订阅时**所有级别都保留**。判据：**warn 级记录天然缺少定位信息，这是设计而非缺陷**——要靠 warn 定位必须临时开 diagnostics，不能指望常规日志自带调用点。
+- **★"工具被跳过"不等于"有用户消息在等"**：被跳过的调用仍会收到配对的 start/end 事件与合成结果（`Skipped to process an incoming message.`），但**内部更新（如子 agent 完成报告）走同一个转向边界**，它们"can be hidden from the chat transcript and do not appear in the user message queue"。判据：**看到 Skipped 只能推出"有内部更新进来"，推不出"用户在催"**；把它当作用户行为信号会误判排队原因。
+- 排障顺序（日志/信号相关）：① 日志实际落点（是否回退到 tmpdir）→ ② 该条记录的级别是否自带调用点（warn 以下没有）→ ③ Skipped 事件先按内部更新解释，再按用户消息解释。
+- 提升层：工具 / 工作流。触发词：日志回退、tmpdir、_meta.path、warn 降质、Skipped 合成结果、内部更新走同一边界。

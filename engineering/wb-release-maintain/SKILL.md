@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: 1.48.0
+version: "1.49.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -145,3 +145,11 @@ sources:
 - **★并发额度按"最坏情况占用"申请，稀缺资源留给真需要的作业，且别人的余量不算你的容量**：原文把 Blacksmith 标签当稀缺资源，"Jobs that only **route, notify, summarize, select shards**, or run short CodeQL scans should stay on GitHub-hosted runners unless they have measured Blacksmith-specific needs"；新增矩阵/并发/高频工作流 "must **show its worst-case registration count** and keep the org-level target below about **60% of the live bucket**"（10,000 桶 → 6,000 目标）；并点明 "This is **planned admission, not proof** that the provider supplies 130 runners simultaneously"、"its pooled reader's unused quota **does not establish organization-wide free capacity**"。判据：**扩容的论证材料是最坏情况数，不是平均值**；余量要留给重试/突发/邻近仓库；观测到别人没用满不构成自己可以加量的理由。
 - 发布检查项：① 这条验证的消费者是 exact-head 还是 latest-wins（决定是否允许取消）；② 发布候选路径能否绕过裁剪跑全图；③ 新增加密/并发是否已报最坏情况注册数且组织级占用 <60%；④ 低优先延迟事件是否有独立隔离组。
 - 提升层：工作流 / 工具。触发词：两槽流水线、non-canceling、coalesced pending tip、exact-head 绑定、草稿隔离组、智能裁剪、发布候选全量、fallback 不扩张、最坏情况注册数、60% 余量、别人余量不算容量。
+
+
+## r353B · 日志配置热更存在 half-applied 窗口，轮转归档数是硬编码的（来源：docs.openclaw.ai `gateway/logging` 23,470B，2026-10-02 r353B 实拉）
+
+- **★日志类配置热更对"下一条记录"生效，但已排队记录写回原文件**：`logging.level` / `logging.file` / `logging.maxFileBytes` 在开启配置热重载后 "apply to the **next log record**, including records from long-lived channel loggers"，同时 "**Queued records finish writing to their original file.**"。判据：**改日志路径后存在一个窗口期：新记录进新文件、旧记录还在写旧文件**——做日志归档/切割时要按"两个文件都可能被写"来处理，不能以为切换是原子的。
+- **★轮转参数与保留份数是固定的**：活跃日志按 `logging.maxFileBytes`（默认 100 MB）轮转，"keeps up to **five** numbered archives (`.1` through `.5`)，and continues to write a fresh active file"。判据：**保留份数不可配 ⇒ 日志的历史深度有硬上限**，依赖长周期回溯的审计必须外送到独立存储，不能指望本地滚动文件。
+- **★启动日志会声明解析后的默认值**：网关启动时打印 resolved default agent model 与影响新会话的模式默认值（`thinking` / `fast`），未设置时 `thinking` 显示 `medium`；若插件重载覆盖了启动加载，则"model line, loaded-plugin summary, and channel warnings **use the replacement configuration**"。判据：**启动日志是"最终生效配置"的取证点，不是配置文件的回显**——排查"配置没生效"先看这一行，且要意识到插件重载会改写它。
+- 提升层：工具 / 工作流。触发词：日志热更、排队记录、轮转 5 份、启动日志解析默认值。

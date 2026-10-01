@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.101.0
+version: "2.102.0"
 agent_created: true
 ---
 
@@ -357,3 +357,11 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **★隐私开关会削掉排障能力**：`Keep data confidential` 开启后日志只显示"发生过一次运行"、**不含 payload**，官方同步警告 "there are very limited options to solve errors"；不完整执行的数据**计入订阅存储配额**，超限报错。判据：**可观测性与隐私在这里是同一个旋钮的两端**——开隐私即降取证，排查"为什么失败"要先把这条列为已知盲区。
 - 落地口径：写验证/回滚方案时先声明三个开关（保留不完整执行 / 保序 / 保密）与配额余量，再声明失败时走的是回滚还是留存。
 - 提升层：工作流 / 可复用 Skill。触发词：不完整执行、incomplete executions、回滚阶段、保序阻塞、丢弃数据、保密日志。
+
+
+## r353B · 错误契约随失败位置分叉，取证通道可用 `.md` 后缀直取（来源：docs.n8n.io `build/flow-logic/handle-errors-gracefully.md` 5,136B，2026-10-02 r353B 实拉）
+
+- **★错误负载不是单一 schema**：常规节点失败给出 `execution{}`（`id` / `url` / `retryOf` / `error.message` / `error.stack` / `lastNodeExecuted` / `mode`）；**触发器节点失败时形状完全不同**——主体变成 `trigger{}`（`error.context` / `name` / `cause` / `timestamp` / `message` / `node`）、`mode: "trigger"`，且 `execution{}` 里信息更少。判据：**同一套错误处理代码必须按"失败发生在触发器还是后续阶段"分支解析**，用一套 schema 解析所有错误会在触发失败时整片取空。
+- **★字段存在性依赖"执行是否入库"**：`execution.id` 与 `execution.url` 都要求该执行已存库——"Not present if the error is in the trigger node of the main workflow, **as the workflow doesn't execute**"；`execution.retryOf` 仅当这是一次重试时才出现。判据：**缺失字段不是解析 bug 而是语义**——先问"这次失败有没有形成一次执行"，再决定能不能按 id 串联日志。
+- **★机器可读取证通道：文档站追加 `.md`**：原文 "Markdown versions of documentation pages are available by **appending `.md` to page URLs**"（同 URL 的 HTML 页 596,419B 是 SPA 壳、`.md` 页 5,136B 是真正文）。判据：**对外取证优先找机器可读入口（llms.txt / llms-full.txt / `.md` 后缀），HTML 页常常是空壳**——本轮 dify `llms-full.txt` 2,990,942B、flowise 618,913B、langflow 6,782B 同样一次取全。
+- 提升层：工具 / 工作流 / 可复用 Skill。触发词：错误工作流、Error Trigger、execution 与 trigger 两种错误体、retryOf、.md 取证通道。

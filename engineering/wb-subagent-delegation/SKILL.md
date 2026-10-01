@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.14.0
+version: "1.15.0"
 agent_created: true
 ---
 
@@ -143,3 +143,11 @@ agent_created: true
 - **★批处理合成一次请求但保留内部次序**：安静窗口内 steer-mode 消息按**到达顺序**合成单个 `turn/steer`；内联图与存储附件**保留原图序**、沿用新 turn 的 hydration/大小/文件系统限制。判据：**合并发送不等于合并语义**——顺序被保留，所以顺序依赖型指令仍是安全的。
 - **★失败粒度是"整条"而非"部分"**：附件无法准备、或转向被拒 → "the **complete message** remains queued for a follow-up turn"。判据：**不存在半送达**，要么整条下一轮再来，要么没进；据此不要设计"部分内容先生效"的假设。
 - 提升层：工具 / 工作流。触发词：转向被拒、compaction turn、批处理保序、整条留队。
+
+
+## r353B · 多输入各自成答不覆盖；同名 steering 在两种 runtime 下能力不同（来源：docs.openclaw.ai `concepts/queue-steering` 12,731B，2026-10-02 r353B 实拉）
+
+- **★每条被转向的输入都有自己的一条应答，按顺序投递**："each steered user input gets its own delivered answer **in order**"，"A later answer does **not** replace a completed answer to an earlier input, even when steering skipped its pending tools."。判据：**转向是"追加一轮"，不是"改写上一轮"**——已完成的答复不会被后来的答复覆盖；据此设计"最后一条为准"的收敛逻辑是错的，必须显式做合并。
+- **★同名 steering 在两种 runtime 下不是一回事**：内置 runtime 在 **tool-launch 边界**与 model boundary 都检查（顺序模式下每次调用启动前查，含异步解析、校验、pre-execution hooks 之后；并行模式下先准备后一次性检查）；native Codex app-server "**does not add per-tool preemption**"——由上游 turn scheduler 在 model boundary 排空待处理输入。判据：**"能不能中途插话"取决于底层 runtime，不是配置项**；换 runtime 后同名能力会静默降级。
+- **★较老的 followup 不会关闭后续输入的转向**："An older followup does not disable steering for later input"，被 runtime 拒绝的消息按原序留队。判据：**拒绝是逐条判定的，不是会话级熔断**——一次被拒不代表后续都被拒。
+- 提升层：工具 / 工作流。触发词：逐条应答、不覆盖、per-tool 抢占、tool-launch 边界、拒绝不熔断。
