@@ -2990,3 +2990,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **综合三问+显式矛盾标记**：Themes（共识）/Tensions（分歧根因 data/method/values）/Gaps（缺失+共享假设）；输出对 certainty/uncertainty/ignorance 诚实；禁止平滑矛盾造叙事——显式 flag 矛盾+区分置信度+呈现少数观点。
 - **合成数据驱动研究 agent 训练**：QUEST 统一评分树全自动合成可验证奖励任务（8K 任务 8 基准）；S1 closed+open 统一轨迹（graph-grounded formulation→rollout→multi-dim verification）；WebSeer SRRL 单轮多次 answer_submit 回灌。
 - **深度搜索基准反记忆捷径**：LiveBrowseComp 只用最近 90 天事实+排除显著事件（移除 memory-backed verification shortcut）；BrowseComp-V³ 跨模态关键证据；HLE 固定模型变 search engine/format/budget；BrowseComp 1266 题 GPT-5.6 90.4%。
+
+## r353A Agent 记忆系统工程 2026（来源：Mem0/Letta/Zep Graphiti/AtomMem/Cloudflare Agent Memory/AMD/DuoMo/MemoryCPT/MemoryAgentBench/Memora/STALE/Sleeper Poisoning/Trojan Hippo/MemGhost/Oblivion/FadeMem/FSFM，2026-10-01 实拉）
+- **记忆分层四件套+Hybrid Memory**：conversation/session/user/organizational 四层；混合存储=Vector（非结构化）+Graph（结构化事实）+Episodic（时间序列）；加长窗口不是记忆。
+- **ADD-only 提取+时间戳语义**：新事实追加不覆盖（历史不静默丢失）；valid_at/invalid_at 失效不删除；point-in-time 查询按时间解析；supersedes 保留演化链。
+- **原子事实提取+验证器八项**：atomic fact=脱离上下文可理解；Fact Executor=SFT 微调轻量 LLM（denoising+coreference）；验证器八项门禁（entity/object/location/temporal/organizational/completeness/relational/推断支持）。
+- **记忆蒸馏三层+双注入**：Workflow（任务级策略）/Subtask（行为示例）/Function（函数约定+坑）；策略示例任务开始主动注入、函数用法工具报错时反应式检索；Qwen3-4B +34.52p。
+- **记忆评测四能力+FAMA**：检索/学习/理解/遗忘统一评测；HippoRAG-v2 冲突解决仅 54%；FAMA 惩罚过期记忆复用；implicit conflict=未显式否定但已失效需常识推断。
+- **记忆投毒持久攻击面**：sleeper poisoning 操纵外部上下文存伪造记忆跨会话潜伏；Trojan Hippo 一个不可信工具调用种 payload；MemGhost 87.5%；eTAMP 跨站持久+压力下更易中招；OWASP ASI06。
+- **冲突确定性裁决**：冲突解决是独立能力；valid_at+来源权威确定性裁决，LLM 只做矛盾检测并请求显式确认；TEPA keyed precedents 撤销保审计。
+- **遗忘即衰减非删除**：decay-driven accessibility 降低；read 按不确定性决定何时查、write 强化有用记忆；差异衰减率（语义相关/访问频率/时间）；half-life≈29 天；干扰式遗忘。
+- **记忆写入管线三阶段**：Extract→Deduplicate→Persist（一等公民+崩溃安全）；会话结束全轨迹提取（含 tool usage patterns）；会话开始加载 Briefing（人格/活跃项目/近期决策）。
+- **记忆方案四型选型**：Mem0 通用层（LoCoMo 92.5%/LongMemEval 94.4%）/Letta OS 分页自管理/Zep 时序图/Cognee 本地图原生；先看基准再选。
