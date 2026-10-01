@@ -3194,3 +3194,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **DAG 分层调度**：拓扑分层（层内并行层间串行）+dependsOn 就绪判据+Planner/Executor/Replanner 分离+每波并发上限。
 - **共享状态工作板**：全局可读+槽位限写+锁保护；多 agent 编程按分布式系统三约束设计（隔离是硬约束）。
 - **OS 式并发调度**：条件变量计数信号量/MLFQ/僵尸回收；并发上限动态调时唤醒等待者重查谓词。
+
+## r358C Agent 失败恢复与自愈工程 2026（来源：Zylos/CallSphere/Taskade/Will-Spurlock/AWS-WellArchitected-AgentLens/AgentPatterns.ai/MyEngineeringPath/DeepWiki/danielcanfly/The-Neural-Base/agentnative.dev/DataAIHub/TutorialsLogic/EgoistAI/moai.team/Vadim/CSDN/aegissecurity.dev/application-architect/agent-guard-mcp/Antigravity/arXiv-AgentRx/Trajel/TrajDebug/Galileo/AI-Agents-Plus/Agentic-Academy/neelmishra/Clarion/genai.club/arXiv-GuardedAct/arXiv-PRR/FutureAGI/NeuralWired/AITutorialMaker/arXiv-Safe-to-Resume/HarrisonAIX/BARC，2026-10-01 实拉）
+- **错误分类先行**：瞬时→重试退避/永久→回退/关键→保存+升级；重试预算防风暴。
+- **自愈根因表**：OOM/429/死循环各配响应；逻辑停滞用动作元组计数器检测+强制转向。
+- **渐进升级恢复**：自纠→回退→降级→升级人；降级=降低自主度保价值（模型降档/功能剥离/部分结果+缺口标注）。
+- **五类错误各配响应**：执行→熔断重试/语义→验证回退/状态→验证检查点/超时→自适应+部分提取/依赖→熔断降级；结构校验≠语义验证。
+- **可恢复性三保证**：进度跨失败存活/外部效果恰好一次/可审计重放；等待期间崩溃从记录状态恢复。
+- **部分成功恢复**：步边界快照+待写账本（只重跑失败分支）+副作用包装（幂等键/outbox）；节点重放安全。
+- **恢复公式**：已提交状态+只执行未提交工作；副作用幂等键/outbox（fingerprint/哈希+原子改名）。
+- **心跳与看门狗**：签名心跳+缺失分层告警+决策异常评分+看门狗（超时自动重置）；健康检查包熔断防自伤。
+- **恢复有效性度量**：五指标（恢复率/附带损害/MTTR/回滚成功/人介入）+PRR 条件概率；成本按成功完成计。
+- **沉默退化最危险**：无异常无重试；防幻觉级联=轨迹级审计+下游输入验证。
