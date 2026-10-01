@@ -3530,3 +3530,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Drift 检测**：PSI（<0.1 稳/0.2+ 显著）+KS+eval-score（drift+drop 双条件才警）+输出分布（供应商变更领先指标）；LLM 4-signal=token 长度 KL/embedding 余弦/judge 评分/拒答指纹；judge drift=固定 dated snapshot+月度校准。
 - **事故响应**：RCA 六步=定义→映射→重建 trace→隔离→确定性重放→验证；五类静默失败（链式幻觉=LLM 特有最危险）；ResolveIQ 事后复盘进 agent 记忆。
 - **Trace span 必含字段**：model name/prompt hash/tool name/full args/full result/token counts/latency/error mode；五 bug 形状=死循环/幻觉参数/丢上下文/错路径/静默退化；症状→trace 信号→根因映射表。
+
+## r368A Agent 记忆系统与长期记忆工程 2026（来源：zylos-memory-architecture/survey-2602.06052/callsphere-episodic/multi-factor-value-2606.12945/forgetting-2604.02280/mem0-eviction/adaptive-decay-feather/memtier-2605.03675/memreranker-2605.06132/smsr-2606.12703/asi06-llm-hacking/memghost/agentmembench-2608.00009/automem-2606.04315/sage-2605.12061/mage-2605.10064/mnemis-dual-route/memrefine-2606.13177/language-models-need-sleep-2606.03979/claude-code-memory/karpathy-claude-md，2026-10-02 实拉）
+- **记忆分层**：working（活跃上下文窗口）/episodic（tuple=(timestamp,agent_id,user_id,event_type,content,embedding)，Postgres+向量）/semantic（知识图谱+向量）/procedural（工具定义/系统提示/技能文件）；Letta recall=消息日志 SQLite、archival=向量库。
+- **记忆价值函数**：V(m)=Σwᵢfᵢ(m) 七因子（情绪强度/目标相关/价值对齐/自我用户相关/任务效用/可靠性/使用历史）；生产 Score=w₁Recency+w₂Importance+w₃Relevance（decay≈0.995/h；写时赋分：thumbs up/记住这个/pinning）。
+- **遗忘四杠杆**：importance/merge/decay/eviction（策略层非存储特性）；exponential decay 贴 Ebbinghaus 曲线；自适应衰减=半衰期+重要性+召回次数；stale memories cause hallucinations。
+- **两阶段记忆检索**：BM25 粗检 top-5 session→仅该范围内 episodic 精评分；通用 reranker 缺推理（召回相关但缺核心信息）；Mnemis 双路由 System-1 相似+System-2 全局选择→rerank；cross-encoder 联合注意力。
+- **压缩四策略**：provider-native 摘要/锚定迭代/外部卸载（MemGPT/Letta）/检索增强 episodic；prompt caching 与压缩冲突；MemRefine=相似度只提候选、LLM judge 判 delete/merge/preserve；Amp 不压缩 /handoff 换线程。
+- **记忆投毒防御（OWASP ASI06）**：延时注入向量（读入→写存→静默操纵跨会话）；MemGhost 单封邮件 87.5%；SMSR=写时 HMAC-SHA256 标签+查询随机消融+多数聚合；信任决策在读取时非写入时；Claude Code v2.1.50 把用户记忆剥离系统提示；审计→SIEM+HMAC webhook+快照回滚。
+- **记忆评测**：LoCoMo 1986 QA（hindsight 92 vs cognee 80.3）；LongMemEval 四维历史变长掉 30-60%；AgentMemBench 比较策略非模型；AutoMEM 67.3 vs DCI-Lite 45.0；ingest 成本 graphify .40 vs supermemory .67。
+- **图记忆**：SAGE writer+GFM reader 自演化闭环；演化三阶段=连接形成→反馈精修（补缺边/剪干扰）→长期巩固（轨迹聚类成 procedural circuits）；SUPERSEDES 关系保留历史；Cognee ECL 管线。
+- **睡眠巩固**：Knowledge Seeding 上行蒸馏+Dreaming RL 合成排练；Hebbian Distillation 超阈值触发；跨 agent=多 agent 收敛工作流晋升共享记忆+重构（剪过期/解矛盾/强化高信号）；MEMIT 快权→LoRA 慢权。
+- **编码 agent 记忆**：CLAUDE.md 是 context 非配置（阻断必须 PreToolUse hook）；200 行内+记录常错；auto memory 前 200 行/25KB；CHANGELOG.md 进度文件=可移植长期记忆（失败方法必记）；Karpathy 四规则。
