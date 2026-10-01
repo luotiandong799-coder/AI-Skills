@@ -3170,3 +3170,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **索引版本化**：content hash+version+superseded 状态；embedding 链全记录；重建索引蓝绿+recall@5 门控可回滚。
 - **增量索引**：CDC/事件驱动+chunk 级 hash 定向删；预处理清空白/PDF 粘连字符合并。
 - **源数据先行**：知识库源数据需日期+签核（检索无法修复坏源）；分块可做语义 enrich（标题/摘要/关键词/假设问题）。
+
+## r358A Agent 人机协作与交互接口工程 2026（来源：OpenAI-Agents-SDK/LangChain/LangGraph/AgentPatternsCatalog/AgentPatterns.ai/OpenLegion/James-Phoenix-12Factor/Truto/anhtu.dev/Agentmelt/LiveKit/IETF-HEM/omnithium/aiuxdesign.guide/Smashing-Magazine/Mrs-Internet/aydesign.ai/FRPROTECH/Ranjan-Kumar/paulgoins/CamaraUX/99francs/ParallelHQ/supik/HighPeak/woshipm/uxatlas.io/Horizon-Labs/backfield.net/AI-UX-Playground/Claude-Agent-View/Cursor/Kanopy/blink.new/vibe-coding，2026-10-01 实拉）
+- **审批中断模式**：工具声明 require_confirmation→中断挂起→完整状态检查点→批准后从精确断点恢复；审批面覆盖整条运行链。
+- **预执行审批门**：不可逆动作=结构级审批门（编码在工作流）非 prompt 提示；agent 无法绕过。
+- **确认门 UX 五则**：动作具名+对象可见+完整范围+diff 预览+拒绝成本低；确认与拒绝双侧入审计。
+- **三态交互模型**：环内审批（不可逆高风险）/环上监控（可回滚快流）/环外审计（可逆高频）；按风险选。
+- **人类交互结构化**：approval/input/escalation 三型；升级=已试替代+失败上下文+无超时等待。
+- **超时≠批准**：审批超时=拒绝或升级绝不=批准；审批通知必带动作+理由上下文。
+- **自主度拨盘**：自主度按任务风险配置（渐进授权）非全局二值；确认频率=做错成本校准线。
+- **四时刻披露**：自主 agent 披露（前/中/控制/后）各配 UI surface，非一次性同意。
+- **步骤卡片栈**：进度 UI=步骤卡片（状态+输入输出+时序）+渐进披露（摘要→钻取）+稳定状态区；多会话一行摘要+状态色标。
+- **撤销架构**：可逆优先（草稿/软删/预览）→不可逆补偿事务→动作审计+每动作 Undo→跨墙见证幂等键+人工通知延迟；失败按层级降级阻断转兜底。
