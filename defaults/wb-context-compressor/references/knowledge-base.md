@@ -3362,3 +3362,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **agentic 检索三层**：自查询（语义+元数据过滤）→低置信自适应重查→无关文档驱动重写。
 - **查询变换矩阵**：step-back +5-10%/RAG-fusion +15-25%/子查询分解多跳 +20-30%/路由分类器/同义词扩展近免费——按问题类型选。
 - **压缩与缓存**：prompt caching 读零头（Gemini 90% off）+LLMLingua 式 token 级压缩（20x 压 1.5% 损）——先查缓存再谈降模型。
+
+## r363B Agent 提示工程与结构化输出 2026（来源：novakit/thepromptbench/kanopy/tensoria/zylos/futureagi-prompting/foojay/agentixforce/agentpatternscatalog/aitoolsguidebook/dspy.ai/dev-to-correctover/multigrid，2026-10-02 实拉）
+- **输出契约四问**：字段/顺序/类型、省略vs包含、畸形失败响应、最大长度——机器消费必用 schema。
+- **结构化输出四级**：prompt 要 JSON→JSON mode→约束解码→function calling；语法保证≠语义正确（错值/拒绝伪装仍存在）。
+- **约束解码降推理**：grammar 强制偏离高概率 token 可降质量；CRANE 交替窗口缓解——非免费午餐。
+- **六层 prompt 结构**：system/工具定义/检索上下文/历史等六层职责分离，独立注入不混写。
+- **few-shot 纪律**：2-5 个 sharp examples（含边界与格式陷阱）胜过 8 个 happy-path——代表性/一致/最小/多样。
+- **上下文预算五桶**：system 5-15% 一次优化/tool 10-40% lazy 注册/retrieved 20-60% 最大杠杆/history 线性压/output 5-20% 显式预留防截断。
+- **窗口打包**：packing policy 预留 N token 给 system+tools+response，其余按压缩/rerank 后 top-k/状态分配；eviction/summarisation/selection 三回收+调用前审计。
+- **模板漂移检测**：模板 hash 夜间比对+eval 集钉模板 hash+每次调用记 version/sha——漂移是静默的。
+- **DSPy 自动优化**：MIPROv2（bootstrap+贝叶斯）/GEPA（反射进化+Pareto 采样）——给训练集+metric 自动调 prompt 到收敛。
+- **重试分级五层降级**：transient 指数退避+全抖动；429 不快速重试；quota 不重试；context 超限永不原样重试；五层链=retry→provider rotation→model downgrade→verified failover→cache-on-failure。
