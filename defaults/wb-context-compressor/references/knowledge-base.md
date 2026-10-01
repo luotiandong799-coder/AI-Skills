@@ -3482,3 +3482,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **清洗三档**：规范化→丢弃低价值→去重（exact MD5/fuzzy MinHash+LSH/semantic）；PUFFER 增量模糊去重不按语料大小吃 RAM；小计对账+per-supplier row-count 基线。
 - **解析评测**：分元素指标（文本 Levenshtein/表格 TEDS）；per-question 全 keys 正确才计分；<4B 主瓶颈=输出合规（schema echo 压 45-65pp）非提取能力；Direct VLM 便宜但截断长记录。
 - **Tier 编排**：简单页便宜解析器/复杂页高级模型；架构分元素各有所长（pipeline 文本强/E2E 表格强/VLM 公式强）。
+
+## r366C Agent 代码生成与软件工程智能体 2026（来源：SWE-rebench/DeepSWE-2607.07946/Microsoft-sandbox-eval/Claw-Eval-2604.06132/cursor-reward-hacking/Scaffold-Effect-2607.22585/aiden-spec-driven/env.dev-dark-factory/OpenDev-2603.05344/Metis-2606.24151/MemCoder-2603.13258/DevBench-2601.11895/CodeBench-2608.14711/greptile-review/openhands-verification/woliveiras-harness/agentpatterns-eval-blind-spots，2026-10-02 实拉）
+- **SWE 去污评测**：SWE-bench 题已进预训练语料（直接探测证实复现 gold 解远超 off-benchmark）；SWE-rebench 持续挖掘新任务+逐题追踪创建日期 vs 模型发布；DeepSWE 每日新任务暴露真实差距（GPT-5.5 70%>GPT-5.4 56%>Claude Opus 4.7 54%）。
+- **评测沙箱=测量有效性**：干净 workspace 只含 fixtures+中立路径不泄漏评测词+文件系统边界+所有工具等价限制；历史隔离（删 .git 重建）+egress 代理 allow-list；评分脚本运行期不在容器内。
+- **Scaffold effect**：同模型同指令同沙箱三 harness 结果显著不同——harness 是隐藏变量；评测必报 budget（turns/tokens/retries/cost）+elicitation+validity checks（reward hacking/contamination/sandbagging）。
+- **Spec 门禁治理**：spec 未批准禁写码（hook 强制）；三档授权 Always Do/Ask First/Never Do；Dark Factory=独立 evaluator 跑 holdout≥90% 自动 merge，agent 永不看场景源。
+- **五步工作流**：plan→build→review→test→ship；review 专找 agent 新问题（命名/边界/耦合）；三短循环>一次长无监督；结构化 spec=输入质量杠杆。
+- **Terminal 双 agent**：规划/执行分离+lazy tool discovery+渐进压缩旧观察+自动化记忆积累项目知识+event-driven reminders 对抗指令衰减。
+- **代码记忆三层+选择性晋升**：episodic/semantic/procedural；Metis=文本记忆（facts/pitfalls）+代码记忆（recurring plans 才升 callable tools）；MemCoder=历史 commit 提炼 intent-to-code+人验证结晶。
+- **指标扩展**：pass@k 之外加 regression_rate（修复引入回归=agent 高频失败）与 repair@k（k 轮修复内验证通过）；SWE-rebench 报 cost per problem。
+- **PR 审查门禁**：全库索引（文件/函数/依赖图）抓跨文件 seam bug；风险分级=低风险可无人过，auth/payments/secrets/infra 必人工；机械验证三级=pre-commit→CI→merge gate。
+- **harness 指标轴**：Correctness/Navigation/Oracle strength/Exercise/Efficiency+运行时轴（success rate/steps/tool error/recovery/latency/cost/unsafe actions）；coverage-delta gates+termination 与 all-tests-pass 解耦。
