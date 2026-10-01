@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.4.0
+version: 1.5.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -449,3 +449,7 @@ Step C: 是否包含恶意意图？
 - **★持久下来的每一字节都是攻击面**：原文 "Every byte of persistent data is a target"。→ 审查 Skill 时把**它写进了哪些持久位置**单独列一项：持久化不是中性实现细节，能无状态就不要落盘，落了盘就要说清留存多久、谁删。
 - 与 §Skill 安全风险九类分层（T01–T09）、§审计三类缺陷 的分工：那两条管"有哪些攻击面""记录能不能举证"；本条管"**加上去的防护会不会因为太慢或太贵而被绕开、被关掉**"。
 - 提升层：工作流 / 可复用 Skill。
+
+## 审阅/验证第三方技能这一步本身不得引入运行期副作用：Staging 不跑 install/build/postinstall，按对象类型选扫描器（来源：github.com/disableRDP/security-triage README、docs.openclaw.ai/automation/hooks，2026-10-01 r362-Q-C 实拉；第三方仓，作契约范式非数字源）
+- 判据：① Staging（本地/git/zip/registry）一律**不跑 install/build/postinstall**；按对象类型选扫描器：agent 面文件→SkillSpector；有 manifest 的包→GuardDog 逐 npm/PyPI/Go；通用码→Semgrep `--config p`。② 同源第二例：openclaw 钩子原文 "Internal hooks are trusted code, not sandboxed scripts"（钩子在 Gateway 进程内执行，审阅面与沙箱面不同）。⇒ "验证技能"不得变成"运行技能"，审阅环境与运行环境必须分离。
+- 提升层：可复用 Skill/安全边界。触发词：审阅期不执行、Staging 不跑 install、按类型选扫描器、钩子非沙箱脚本。

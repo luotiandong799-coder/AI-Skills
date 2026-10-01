@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: 1.39.0
+version: 1.40.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -68,6 +68,10 @@ sources:
 - **破坏性变更永远放最前并加 ⚠️**：用户最怕升级后悄悄坏掉。
 - **依赖升级是待验证假设**：升级完成 ≠ 升级成功，必须回归测试通过才算。
 - **不越权**：本技能负责"提炼/评估/建议"，实际升级动作与改动以用户指令为准。
+
+## 孤儿回收是独立阶段，不是 cleanup 的副产品：调度器须单列 orphan 回收且各计时面彼此独立（来源：docs.n8n.io/configure-n8n/durable-scheduler.md、.../environment-variables/scheduler.md、docs.openclaw.ai/automation/cron-jobs/how-it-works，2026-10-01 r362-Q-C 实拉；落在 WB r326B 指定可继续挖方向①「谁负责删、谁负责留」）
+- 判据：① n8n durable-scheduler 五阶段 `plan / dispatch / crash-recovery / cleanup / orphan`（orphan 单列），多 main 靠 claim 无 leader，保证等级 at-least-once："not that it runs only once"；整套 `N8N_SCHEDULER_ENABLED` 默认关闭、`TRIGGER_NODE_MODE=legacy`。② 计时面彼此独立：executor 5s / materialization 10s / reaper 30s / retention 3600s / owner-reconcile 900s，保留期 failed 604800 / quarantine 86400 / grace 上限 30 天。③ openclaw cron 重启时 coalesces missed ticks、按存量 deadline + run receipts 重查、**逾期延期而非立即补跑**，去重靠"同 ID 运行中则拒绝并发"。⇒ "孤儿回收"是专职阶段而非 cleanup 的副产品。
+- 提升层：工作流。触发词：orphan 独立回收阶段、at-least-once 非 exactly-once、计时面独立、逾期延期非补跑、N8N_SCHEDULER_ENABLED 默认关。
 
 ## 学习轮沉淀区（本段）
 （r历史 起的连续学习轮章节共 262 章已下沉 references/knowledge-base.md §≤200迁移，正文留此指针）

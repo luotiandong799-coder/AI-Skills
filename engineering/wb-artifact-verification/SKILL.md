@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.92.0
+version: 2.93.0
 agent_created: true
 ---
 
@@ -427,14 +427,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 无鉴权的注入端点自带「一次性门」：可被任意人调用一次，所以只允许一次无鉴权的注入端点自带「一次性门」：可被任意人调用一次，所以只允许一次（来源：docs.n8n.io《Credential overwrites》2026-09-29 r296-A 独立 curl 取 .md 原文核验；与 §2.37.0「默认值先可用、收紧从最高风险面起步」同向，本条给的是官方默认设计写法）（原文已下沉 references/knowledge-base.md §r325A）
 留痕通道本身不能被多个写者共享：多进程追加同一个事件日志会交错损坏，且平台不会自动清理遗留文件留痕通道本身不能被多个写者共享：多进程追加同一个事件日志会交错损坏，且平台不会自动清理遗留文件（来源：docs.n8n.io《Stream logs to external systems》2026-09-29 r296-A 独立 curl 取 .md 原文 23,919B 核验；与 §Capability 12「留痕通道不能挂在被测对象上」互补——那条管"通道挂谁身上"，本条管"通道被几个写者共用"）（原文已下沉 references/knowledge-base.md §r325B）
 ## 环境变量的可见性有三个独立面：删掉不报错只返 undefined、分享只带引用不带值、第三方组件默认拿不到（来源：pipedream.com/docs/workflows/environment-variables 2026-09-29 r296-C 独立 curl 取 .md 原文 8,151B 核验；与 §Cap32 凭据只写不可读 互补——那条管"能不能读回值"，本条管"谁看得到引用、删了之后发生什么"）
-- 原文："If you delete a variable in the UI, any deployed workflows that reference it will **return `undefined`**."；"If you share a workflow that references an environment variable, **only the reference is included, and not the actual value**."；"**Private components** do not have direct access to workspace or project variables as public components or code steps. **Add a prop specifically for the variable you need.**"；另："New variables default to **secret**… the value is never exposed in the UI and **cannot be modified**."
-- 判据：① **删除一个被引用的配置是静默降级，不是报错**——已部署工作流不会启动失败，只会拿到 `undefined`，然后带着这个空值继续跑到下游才炸；验收任何"引用型配置"时必须做一次**删除演练**，看它是硬失败还是静默空值，后者要在下游加非空断言；② **"引用"与"值"在分发时是分开的**：分享出去的工作流只有引用没有值，接收方必须自己配一份同名变量——这既是安全设计也是最常见的"复制过来跑不通"的原因；交接工作流时要连同**变量名清单**一起交，而不是只交流程；③ **可见性按组件类型分档**：一等公民（code/公开组件）能直接读，第三方私有组件**读不到**工作区/项目变量，必须逐项声明成 prop；写第三方集成时"为什么拿不到环境变量"的答案不是权限没开，而是**这个面默认不给你，要显式开一个洞**；④ **默认值方向要选安全侧**：新建变量默认就是 secret 且**不可修改**（只能删了重建），这个不可修改的代价换来的是"值永不被改"。
-- 提升层：工具/安全边界。触发词：删除变量返回 undefined、分享只带引用、私有组件拿不到变量、显式 prop 开洞、默认 secret 不可修改。
-
-> 下沉索引：《评估按阶段换形态：前期轻量人工比对，后期指标化回归》原文（18 行）已移至 `references/knowledge-base.md`（最旧批次下沉，正文只留指针）
-
-
-
+- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
 
 ## 审计可能是惰性生成的（「在库里」≠「已审过」），而扫描器自身的遍历顺序即是静默漏报面——两者都不产生任何警告位（来源：www.skills.sh/docs/api 136,145B + api.github.com/repos/NVIDIA/SkillSpector/issues/610 6,455B + docs.n8n.io/deploy/host-n8n/configure-n8n/security/run-security-audits.md 2,425B，2026-09-30 r323A 独立实拉；细则见 references/knowledge-base.md §r323A）
 
@@ -444,29 +437,16 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 
 
 ## 扫描预算耗尽只允许「降档验证」，不允许判为通过；应用层不隔离要作正面申报，不能让集成方靠缺位反证推断（来源：docs.openclaw.ai/cli/update/how-updates-run.md 84,130B + docs.langflow.org/next/security 34,323B，2026-09-30 r325A 独立 curl 实拉逐串命中；经 Qoder r357-Q-A 提名）
-- 原文：①「The baseline package fingerprint is **best effort**. If its bounded scan times out or reaches its byte or entry limit, the update **records a warning and continues** with the retained package directory. Rollback then verifies the restored directory identity, package version, and affected launchers, and **records that full fingerprint verification was unavailable**. A scan budget alone **does not fail** the update or rollback; unavailable or changed directory identity, invalid package metadata, and affected-launcher failures **still refuse** restoration. Once a complete baseline fingerprint is available, recovery checks must match it.」② Langflow：「Langflow **neither enforces isolation between users** within a single Langflow process, nor restricts access to the local disk or network resources.」「Flow visibility and user access controls are **designed for usability, not security enforcement**.」「For multi-tenant deployments, Langflow relies on infrastructure-level security rather than application-level isolation…it is **your responsibility to enforce tenant isolation**.」「Authentication and authorization **must be provided and enforced outside of the Langflow container**.」附 process/disk/network/database 四级隔离清单 + ReDoS 输入侧要求。
-- 判据：① **「没跑完」与「跑完了没发现问题」必须落成两个不同结论**——预算/超时耗尽时，正确动作是把验证**降档**（明写「整档校验不可用」并继续），而不是把「未覆盖」当「通过」；与之配套的是**拒绝事由与验证强度分档**：身份/元数据/受影响启动器这类硬条件仍然一律拒绝，只有指纹这类可降档项允许带 warning 放行；② **降档必须留可检索的痕迹**，否则事后无法区分「校验通过」与「根本没校验」——这正是审计里最贵的一种假成功；③ **安全边界要用正面申报体裁写，不要靠缺位反证**：官方明写「我们不做什么」（不隔离用户 / 不限制磁盘网络 / 可见性控件不是安全控件 / 认证必须在容器外），比让集成方从文档里「没提到」去推测可靠得多；凡自家文档涉及能力边界，都要单列一节「本产品不担保的边界」，并给出**部署方该补哪几层**（进程/磁盘/网络/库级）；④ 「**为可用性设计，不是为强制设计**」是一句必须显式说出的免责——可见性/共享这类看起来像权限的控件，若未声明为安全控件，就会被当成安全控件使用。
-- 提升层：工具/可复用 Skill。触发词：best effort 指纹、扫描预算降档、unavailable 记录、不得判为通过、权限控件非安全控件、正面申报边界、租户隔离是部署方义务。
-
+- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
 
 ## 治理开关默认只向前生效（存量豁免），且必须点名作用域与存量规模：关掉共享/发布后「已存在的仍然有效」，2FA 强制只覆盖邮箱口令不覆盖 SSO（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/security/manage-security-policies.md` 8,773B，2026-09-30 r325B 独立 curl 实拉逐串命中，**通道更正**：Qoder 给的 `docs.n8n.io/configure-n8n/security/manage-security-policies.md` 返回「Page Not Found」壳；经 Qoder r358-Q-B 提名）
-- 原文：①「**Applies to email and password logins only** — 2FA enforcement applies to users authenticating with email and password. Users signing in through **SSO (SAML or OIDC) aren't affected by this setting.**」② 关闭共享：「**Existing shares remain in place. The setting only affects new sharing actions.** The number of currently shared workflows and credentials is displayed below the toggle.」③ 关闭发布：「**Currently published workflows remain published. The setting only affects new publish actions.** The number of currently published personal workflows is displayed below the toggle.」④ 关闭 2FA 强制：「Users who already set up 2FA **keep it enabled** but new users are no longer required to configure it.」
-- 判据：① **策略翻转默认只约束未来动作，已发生的存量不追责也不回滚**——这是"存量豁免律"；核验一个「违规」之前必须先判定该动作发生在开关**之前还是之后**，否则会把合历史法的存量误判成违规；② **只向前生效必须显式写出来**，否则运维会以为"关掉 = 立刻全量失效"，从而给出错误的合规承诺；③ **策略的作用域要逐条点名到认证路径**：2FA 强制只作用于邮箱口令登录，**SSO/SAML/OIDC 完全不受此设置影响**——任何"强制"类策略都要回答"它管得住哪几条入口、管不住哪几条"，剩下那几条就是实际的最大暴露面；④ **存量豁免必须配存量可见性**：开关旁直接显示"当前已共享 N 项 / 已发布 N 项"，否则豁免了什么、豁免了多少是黑的，无法评估残余风险；⑤ 关掉强制不等于回收：已开启 2FA 的用户保留，只是新用户不再被要求——**收紧开关的反向操作同样是"只向前"的**。
-- 提升层：工作流/治理/安全边界。触发词：仅向前生效、存量豁免、existing shares remain、开关只影响新动作、策略作用域点名认证路径、SSO 不受 2FA 强制、存量数量可见。
+- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
 
-> 下沉索引：清理责任按数据类别分裂 / 采不到 ≠ 内容不存在（失效四形态）/ 自修改隔离 三章原文已移至 `references/knowledge-base.md` §r340C
 ## 存在「权限无关的永不可见类」；特权查看须一次性按单次记录，且被拒尝试同留痕（来源：docs.n8n.io/.../redact-execution-data.md 17,934B，2026-09-30 r338C 独立实拉）
-- **原文**：「n8n **denies reveal requests for executions that used dynamic credentials, regardless of the user's permissions or the redaction policy in effect**. This prevents exposing credentials that the execution resolved at runtime.」
-- **判据**：① 有一类数据其不可见性**与权限、与策略都无关**——运行期才解析出的凭据所在的执行记录，任何权限都不能 reveal。设计证据/留痕系统要预留**硬否决类**：它不是谁能看的问题，而是谁都不能看，且**优先于**任何 reveal 权限与策略放宽；把这类收进普通权限矩阵，等于给了提权即可看的错觉。② **特权查看的动作契约**：reveal 一次性、按单条执行、仅当前会话有效——不是解锁一次永久可见。判据：查看敏感留痕的授权必须**绑定到具体那一条记录 + 有限时长**，不做全局解锁。③ **被拒绝的查看尝试与成功的查看同等留痕并带拒绝原因**：审计事件同时有 `revealed` 与 `reveal_failure`（后者多一个 rejection reason），字段含 user / executionId / timestamp / IP / **当时生效的脱敏策略**。判据：**只审计成功的 reveal 会漏掉真正的探测行为**；且必须记录**当时生效的策略**而不是当前策略，否则事后无法判断这次访问合不合规（策略已变 → 结论被改写）。
-- 提升层：可观测性/治理。触发词：永不可见类、动态凭据拒绝 reveal、reveal_failure、被拒尝试留痕、当时生效策略、一次性 reveal、硬否决优先于权限。
+- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
 
-
-- **「没人报警」不等于健康：监控须锚定可行动状态，失败/超时而静默是伪健康；「执行被拒」必须靠结构化元数据判红不能靠读文本（来源：docs.openclaw.ai/automation/cron-jobs/schedules.md 15,917B + how-it-works.md 9,877B，2026-10-01 r339A 独立 curl 实拉逐串命中）**：本章已下沉 `references/knowledge-base.md`（r339A）。
 ## 「能自动仲裁」被当成「没有冲突」：冲突检测器的能力边界必须逐类声明，未覆盖的那类会被静默覆盖（来源：docs.n8n.io `/administer/use-source-control-and-environments/push-and-pull-changes.md` 12,333B，2026-10-01 r339B 独立 curl 实拉逐串命中）
-- **原文**：①「n8n's implementation of source control is **opinionated**. It **resolves merge conflicts for credentials and variables automatically**. n8n **can't detect conflicts on workflows**.」②「Credentials and variables **can't have merge issues, as n8n chooses the version to keep**.」③ 已存在资源的更新条件极其具体：「If the tag, variable or credential **already exists**, n8n **doesn't update it**, unless: you set the value of a variable using the API or externally（新值覆盖）／the credential name has changed（用 Git 版）／the name of a tag has changed」；④「If a credential already exists, n8n **overwrites it with the changes, but doesn't apply these changes to existing credentials on pull**.」⑤ 按名匹配：「n8n matches data tables **by their name** within a project. If you delete and recreate a data table with the same name …, n8n **treats it as the same table**: it **reconciles the local table's ID to the incoming one**, updates the schema, and **keeps the local rows**.」
-- **判据**：① **「自动合并成功」不等于「不存在冲突」，只等于「这一类有仲裁器」**。系统对凭据/变量有仲裁器 ⇒ 表现为「永无冲突」；对工作流的冲突**根本检测不到** ⇒ 表现为「静默覆盖」。⇒ 验收一个同步/合并通道时，不能问「有没有报冲突」，要问「**这一类型有没有冲突检测器**」——没有检测器的类型，无告警就是无保护。② **仲裁规则必须细到「什么条件下才更新」**：已存在默认不更新，只有外部改值 / 改名才覆盖。⇒ 合并语义不写清条件，用户会把「改了没生效」当成 bug，或把「某次改了生效」当成通例。③ **写入结果与生效结果要分开判**：「overwrites it with the changes, but doesn't apply these changes to existing credentials on pull」——仓库里的记录被改了，运行中的实例没变。⇒ 验证「配置是否同步成功」必须查**运行态**，不能只查配置库。④ **按名匹配的合并会静默改写本地标识**：同名即同物，本地 ID 被改成 incoming，本地数据保留。⇒ 名称不是稳定键，删除重建会被判为同一对象；凡是「按名合并」的通道，都要假设存在「ID 被改写而用户不知」的情况。
-- **提升层**：工具/工作流/发布治理。触发词：能仲裁≠无冲突、冲突检测器边界、can't detect conflicts、静默覆盖、按名合并、ID 被改写、写入≠生效、合并不更新已存在。
-
+- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
 
 ## 给人看的紧凑视图不构成操作依据：截断必须配完整无损块，且「理由」落不落库要显式声明（来源：docs.openclaw.ai/cli/approvals.md 16,110B，2026-10-01 r339C 独立 curl 实拉逐串命中）
 - **原文**：①「Human output shows the approval kind, agent/session attribution, request age, time until expiry, a **shortened** command or summary, and a shell-neutral `id64_<base64url>` id token. A **`Full request text` block always follows** the compact table with **every complete token and a losslessly escaped request**, so **terminal-width shortening cannot hide a suffix or the token needed for resolution**.」②「`--reason` adds a local note to the CLI confirmation. The current Gateway approval record **has no free-text resolution-reason field**, so this note is **not persisted or sent to other approval surfaces**.」③「A first successful decision exits `0`. **Repeating the recorded decision also exits `0`** and reports `already resolved (same decision)`. A **conflicting decision, missing approval, expired approval, or decision unavailable for that approval kind** prints a clear error and exits **non-zero**.」
@@ -498,3 +478,19 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **「解析基准」≠「隔离边界」（默认 cwd 非硬沙箱 / 沙箱接管后同名不同体 / 越界别名静默忽略 / 不可读源不可删）**：本章已下沉 references/knowledge-base.md §r346A。
 
 - **涉密分发分「模型可见面/人类可见面」+ 隔离粒度是显式旋钮（默认不隔离会话间）+ 内层沙箱缺失须正面申报**：本章已下沉 references/knowledge-base.md §r346B。
+
+## 降档/资格判定按成因分档，且只有一类会告警：配置意图 / 角色封顶 / 后端能力矩阵缺项（来源：docs.openclaw.ai/gateway/sandboxing/{workspace-access,what-gets-sandboxed,supported-capability-matrix,images-and-setup}，2026-10-01 r362-Q-C 实拉）
+- 判据：① 三类成因完全不同：**配置意图**（用户显式设 `workspaceAccess=none`）、**角色封顶**（role 要求沙箱时配置里的 `rw` 被静默降级为 `ro` 并告警）、**后端能力矩阵缺项**（网络限制仅 Docker 有 `docker.network`，SSH/OpenShell 交宿主；沙箱浏览器仅 Docker；插件/MCP 三家都是 "Gateway 侧执行 + sandbox tool policy 再门控"）。② 资格/降级报告须按成因分档，不能统一写"配置未生效"——只有"角色封顶"这一类会告警，其余静默。③ 空转例外：沙箱关闭时 `tools.elevated` 例外通道无意义。
+- 提升层：工具/可复用 Skill。触发词：降档三成因、角色封顶告警、能力矩阵缺项、elevated 空转。
+
+## 投递验收必须双字段分列，且二者可同时矛盾：外发成功 ≠ 回合完成，超时=Unknown 且不重试（来源：docs.openclaw.ai/automation/cron-jobs/delivery，2026-10-01 r362-Q-C 实拉；呼应 r340C 投递回执）
+- 判据：① `status:"ok"` 可与 `completionStatus:"failed"` 并存——"账面成功"与"回合完成"是两个独立判据。② webhook 只以 2xx 判送达，超时记为 `Unknown` 且不重试 ⇒ 存在第三态"未知"，且只有"疑似从未送达"才自动重试。③ 幂等条款："同一结果不能 append 两次 / 每周期至多一次外发"。⇒ 任何投递验收不得只看单一 status 字段，须同时断言完成字段与"未知"态。
+- 提升层：工作流。触发词：status ok 与 completionStatus failed 矛盾、Unknown 第三态、2xx 才送达、双字段验收。
+
+## "verified" 必须携带可定位的证据指针且由校验器机械强制：空指针行直接拒（来源：github.com/dshworks/awesome-dsh-plugins `data/plugins.json` + `scripts/validate.mjs`、skills.sh/、arXiv 2609.14079，2026-10-01 r362-Q-C 实拉）
+- 判据：① `evidence` 格式 `path#key`（例 `skills/reviewer/SKILL.md#frontmatter`），校验器 `scripts/validate.mjs` 直接拒绝没有 `evidence` 的 `verified` 行。量化代价：npm 校验 298/582 包不存在、26 对条目互争同名包、2,357 条因无安装路径被拒（17,323 条 / 10,008 作者）。② 对照：`skills.sh` 榜单条目只有 `name/installs/source repo` 三元组，榜面不含任何质量或权限字段（与 arXiv SkillSecurer "流行技能 >17% 潜伏漏洞" 正交）。⇒ "已核验"最低成本实现不是加一列布尔，而是加一列可 grep 的指针 + 一个拒空指针的校验脚本。
+- 提升层：可复用 Skill/工具。触发词：evidence path#key、校验器拒空指针、榜面无质量字段。
+
+## "索引层无数值" 是可交付结论，不是抓取失败：Flowise/LangFlow 索引层零字段须逐页且如实记"不可判"（来源：docs.flowiseai.com/llms.txt、docs.langflow.org/llms.txt、docs.dify.ai/.../knowledge-request-rate-limit、list-workflow-logs，2026-10-01 r362-Q-C 实拉；承接 r326 失效四形态）
+- 判据：① Flowise/LangFlow `llms.txt` 仅导航目录（Flowise 只版本号；LangFlow 只 Python 版本+端口），**零字段/零默认值/零超时分页** ⇒ 该站该面在文档层不可判，须记为"索引层无数值"而非"内容缺失"。② Dify 有数字但**无状态码**：限流 10/100/1,000 per min 三档，`limit>100` 语义是"capped at 100"=**静默截断不报错**（无旁路参数）；`page` 硬 `max 99999`。⇒ 这三家的"超限"在文档层是"截断/降档"而非"报错"，不能假设 4xx。③ 通道副产物：n8n 404 页自曝问询端点 `learning-paths.md?ask=&goal=`；但 `hosting/scaling/*` 五路径仍 404 ⇒ 该子树无直觉路径入口。
+- 提升层：工具/通道。触发词：索引层无数值可判、Dify 静默截断无状态码、Flowise/LangFlow 零字段。
