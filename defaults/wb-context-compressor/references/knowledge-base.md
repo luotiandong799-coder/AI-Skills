@@ -3410,3 +3410,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Golden set 构建**：money paths（驱动结果 20-50 任务）+risk paths（合规/安全）；每条=query+精确轨迹+完美答案；回归分 RAG/policy/workflow 三类。
 - **Harness 占 98% 可靠性**：validation 与 permissions 放 harness 不放 prompt；窄工具类型化 schema 减静默失败；质量 25% 填充已退化。
 - **Observation masking 优于纯摘要**：SWE-bench ~52% 成本降+~2.6% solve rate 提升，摘要同成本但轨迹长 15%；长轨迹掩蔽观察保证据；context rot 报 14-85% 准确率降。
+
+## r364C Agent 测试工程与质量保障 2026（来源：arXiv-2608.06790-AgentChaos/floritange/zylos-chaos/mudassirkhan-testing/futureagi-layered/futureagi-deterministic/sciencx/arXiv-2601.08654-RULERS/playbooks.aip.gov.sg/mini-claude-legal/qaskills-contract/NxCode-MCPEvol/zylos-cuj/zylos-replay/zylos-time-travel/Microsoft-replay/agrepl/sincllm/ybuild/zylos-isolation/agentixforce-unit/syrin-ASI/agentstatus-drift/baeseokjae-cicd/confident-ai/futureagi-synth/evidently，2026-10-02 实拉）
+- **混沌工程故障注入**：共享 LLM HTTP 层注入（非侵入不改源码）；crash/omission/value 三类；注入后验证触发过滤未触发任务；omission 静默吞掉最危险（Δpass@1 高达 50pp）；六失败模式=tool timeout/malformed/refusal/overflow/retry storm/schema drift。
+- **三层评估金字塔**：L1 确定性免费拦截→L2 分类器护栏→L3 judge 只处理模糊余量（0.4-0.7）；100/10/1 采样；capability（低通过率驱动改进）与 regression（近 100% 防退化）分开建。
+- **Judge bias 七类**：style/verbosity/authority/inconsistency/overconfidence/sycophancy/self-preference；缓解=非同族 judge 权重 60%+rubric 每档 worked example 锚定+固定人工校准集+详细 rubric 定义每档（G-Eval）+few-shot。
+- **工具契约 8 要素**：name/description/input/output schema/errors/side effects/auth/latency/behavioral invariants——JSON Schema 只是部分；semantic drift 不可机械检测；breaking change 判据=CUJ 场景行为回归非 schema 兼容性。
+- **确定性重放调试**：record 全交互→replay stub 引擎阻止 live 调用；记录含采样参数+模型版本+token 分项；发散点截断最小复现（20 步第 14 步错→从 13 步重建）；三支柱=确定性输入+有序日志+可复现状态转换。
+- **隔离双边界**：authority（身份/凭证/权限/钱/仓库/渠道）与 reality（离开模拟进入真实世界）——test token 有真实 org 访问权即越权；staging-production 检索索引必须隔离防 eval 污染；先 isolation（mock 他人）再 ensemble；mock at boundaries only。
+- **Prompt section 隔离测试**：system prompt 每节独立测（工具使用/拒绝策略/输出格式），先定位再集成；防涌现性失败。
+- **ASI drift 量化**：88% 生产 agent 30 天行为变化；behavioral（长度/拒绝率/语气聚合统计）/factual/retrieval（语料库变证据变没用）/verifier（最危险）四类；群体窗口信号；先确定性信号再 fenced judge。
+- **CI 门禁分层**：hard=通过率降>5pt（smoke）/2pt（full）+p95 超 SLO+安全违规>0+单测失败；soft=成本>10%/rubric 降 0.1+；closed loop=生产失败提升为新用例。
+- **合成数据三族四步**：happy/edge/adversarial 三族；persona/taxonomy/evolution 三生成模式；过滤=embedding 去重+跨族 judge+塌缩检测（HDBSCAN）+5% 人工抽检。
