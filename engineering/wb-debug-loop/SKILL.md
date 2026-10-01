@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.110.0
+version: 1.111.0
 agent_created: true
 ---
 
@@ -308,3 +308,13 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **★不进瞬时重试预算的类别**：billing 失败、认证错误、供应商拒绝（refusal）都不使用这套预算；**空错误体不会让一个确定性 HTTP 客户端错误变成可重试**。判据：**4xx 是终态分类，不能因为响应体为空就升级成重试**。
 - **★已恢复的尝试不留持久错误，只有终态失败保留一条错误**。判据：**日志里看不到错误 ≠ 没发生过重试**；排障要单独看重试计数与等待指示，不能只看错误条数。
 - 提升层：工具 / 工作流。
+
+## r351B · 扩展点是"观察者"不是"拦截器"：写入成功 ≠ 投递成功（来源：docs.openclaw.ai `automation/hooks/writing-hooks.md` 10,721B，2026-10-02 r351B 独立 curl 实拉逐串命中）
+
+- **★返回值三不：不阻塞、不取消、不改写**：原文 "Returned values **do not block, cancel, or rewrite** the operation."。判据：排障时别把事件钩子当成熔断/拦截点——想在钩子里"返回 false 掐掉这次操作"是无效设计；真要拦截必须走宿主提供的专用否决通道。**这条决定了"为什么我的钩子没生效"的第一类答案：生效了，但它本来就没有阻断权。**
+- **★context 是观测快照，唯一可写例外要显式点名**：原文 "Treat context as an **observation, not a live state-editing API**... **patch events carry cloned snapshots**. The **explicit mutable exception** is `agent:bootstrap`'s `context.bootstrapFiles`."。判据：**往 context 里改字段默认不产生任何效果**（且 patch 类事件给的是克隆副本），只有被点名的那一个例外可写。排查"改了没反应"时，先确认写的是不是那个唯一例外。
+- **★同一个写入点，投递语义按生产者分档**：`event.messages` 原文 "is **not a general send-message API**"——表列四档：chat 命令会 await 并尝试回复；Gateway 会话 reset/create 的 RPC "messages are **not routed as chat replies**"；压缩事件交给调用方的回调投递；**其余核心事件（含 `/stop`、自动 reset、bootstrap、patch、Gateway 生命周期）"Ignored as replies"**。判据：**推送成功不等于送达**；且"缺失收件人/不支持的路由/发送策略/投递失败"任一都能让回复静默消失。
+- **★时序早于 settle 才算数**：原文 "Append messages **before the handler's promise settles**; detached work that pushes later can **miss the producer's delivery step**."。判据：异步尾巴里补写的消息会静默丢失——这类丢失无任何报错，是典型的"偶发不发"根因。
+- **★禁用 ≠ 移除，放置 ≠ 生效**：原文 "**Disabling leaves the files in place**"；放 workspace 目录的钩子须显式启用，且 "Workspace placement is **not an agent sandbox or a guarantee that the Gateway will load** that workspace's hooks"。判据：排查残留行为时，被禁用的钩子文件仍在磁盘上（可能被别的机制重新发现）；排查"没加载"时，先查放置位置是否被宿主承认，而不是查代码逻辑。
+- 排障顺序：① 该扩展点是否有阻断权 → ② 写的是否为唯一可写例外 → ③ 该生产者是否把这次写入计入投递 → ④ 写入发生在 settle 前还是后 → ⑤ 文件是否被宿主发现（放置位）与被启用（禁用留文件）。
+- 提升层：工具 / 工作流。触发词：返回值不阻塞、观察式契约、唯一可写例外、克隆快照、写入不等于投递、settle 前写入、禁用留文件、放置不保证加载。
