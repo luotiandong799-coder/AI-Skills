@@ -2820,3 +2820,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **tail sampling 保留策略：100% 错误+100% 低于评估阈值+100% 高成本（P95 以上）+1-10% 随机基线**：尾部采样。判据：**保留调试信号，存储成本可控**。
 - **行为失败类型学：AgentCore 11 类（幻觉/错误动作/指令违反/编排错误等），分析行为正确性而非错误信号，产出 trace 位置+类别+描述**：失败类型学。判据：**失败检测按行为类别，才能抓静默失败**。
 - **trace 聚类错误分析：失败 trace 汇总→embed 聚类成命名 issue→根因到 span 与字段；会话摘要聚类读真实使用分布**：聚类分析。判据：**未知失败模式靠聚类发现，不靠预设 taxonomy 盲搜**。
+
+## RAG 检索质量评估与度量 2026：RAG 四核心指标正交分工 faithfulness 答案声明可被上下文推导 与 answer relevance 答案回应提问 正交 忠实但跑题 切题但编造 都可通过单指标 context precision 相关块排序靠前 与 context recall 检索覆盖 ground truth 分测检索 四个都跑 单指标不能代表 RAG 质量/golden set 必须标注应检索文档而非只有答案 查询加期望答案加期望检索文档三元组 才能分开测 retriever recall 与 answer quality 只有答案的 golden set 无法归因检索失败/synthetic 测试集四质量门 faithfulness gate 答案必须 grounded 加 diversity gate 按主题长度复杂度意图覆盖语料 加 difficulty gate 易中难按比例 加 human spot-check 人工抽检 5 到 10 百分 四门全过才锁集 否则与生产行为不相关/synthetic 生成反跑 RAG 知识库 LLM 提取关键事实 生成真实用户查询 生成后 30 到 50 百分 用真实查询替换 纯合成集偏中心分布 真实查询补边缘/judge 四偏差定量 positional 首选项 15 到 30 百分 偏移 verbosity 长答案约 15 百分 膨胀 self-preference 同族 3 到 10 百分 sycophancy 附和题干前提 缓解 换序 加 长度归一 rubric 加 跨族 judge 加 前提中立 prompt 四条缓解有研究背书 人工抽查校准 参考引导评分 meta-judge 单模型 不同供应商 judge/RAG judge 复合问题 只评最终答案会混淆 query understanding retrieval generation 三环节 fluency 与 faithfulness 正交 judge 常把流畅当忠实 逐环节打分 不让一个 judge 包办全链/faithfulness 可被模糊答案游戏 hedged 无断言答案 0 声明 得分 1.0 必须配对 completeness coverage 指标 单跑 faithfulness 有病理边 case/属性度量海市蜃楼 在 off-query distractor 池 无关主题检索块 上相似度度量 AUC 接近 1.000 换同查询 hard negatives 主题密集但无答案 崩溃到随机 评估集必须含 hard negatives 用难负例评估 不用易负例自欺/NAG Acc 噪声注入鲁棒性 向检索集注入受控比例无关文档测生成器鲁棒性 20 百分 噪声注入平均降准确率 35 百分 可设容忍阈值 好系统应优雅降级忽略噪声/时间漂移盲区 语料过期 Q2 报告 vs Q3 可用 产生忠实但过时答案 无标准 RAG 指标检查 temporal validity 置信度无覆盖率 自信答案只用了部分上下文 补时间有效性检查与覆盖率检查 标准四指标不够（来源：respan+confident-ai+arXiv 2601.22025+theneuralbase+futureagi+evidentlyai+webscraft+aiworkflowlab+qaskills+adaline+ai-tldr+arXiv 2608.23252+ragaboutit+layerlens，r348B，补 RAG 评估度量层——与 r340B/r343A 分工：那两条管检索决策与建库，本条补评估度量体系；与 r345C 分工：那条管合成数据生成，本条补 golden set 文档标注与四质量门/30-50% 真实替换；与 r340C 分工：那条管评测方法论，本条补 judge 四偏差定量与缓解）
+- **RAG 四核心指标正交分工：faithfulness 与 answer relevance 正交、context precision 与 context recall 分测检索**：四指标正交。判据：**四个都跑，单指标不能代表 RAG 质量**。
+- **golden set 必须标注应检索文档而非只有答案：查询+期望答案+期望检索文档三元组**：文档标注。判据：**只有答案的 golden set 无法归因检索失败**。
+- **synthetic 测试集四质量门：faithfulness gate+diversity gate+difficulty gate+human spot-check 5-10%**：四质量门。判据：**四门全过才锁集，否则与生产行为不相关**。
+- **synthetic 生成反跑 RAG：知识库→提取关键事实→生成真实用户查询；30-50% 用真实查询替换**：反跑生成。判据：**纯合成集偏中心分布，真实查询补边缘**。
+- **judge 四偏差定量：positional 15-30% 偏移/verbosity 约 15% 膨胀/self-preference 3-10%/sycophancy 附和题干；缓解=换序+长度归一+跨族+前提中立**：四偏差。判据：**缓解有研究背书：人工抽查校准/参考引导/meta-judge/跨供应商**。
+- **RAG judge 复合问题：只评最终答案混淆三环节；fluency 与 faithfulness 正交，judge 常把流畅当忠实**：复合问题。判据：**逐环节打分，不让一个 judge 包办全链**。
+- **faithfulness 可被模糊答案游戏：无断言答案 0 声明→1.0；必须配对 completeness/coverage**：游戏化。判据：**单跑 faithfulness 有病理边 case**。
+- **属性度量海市蜃楼：off-query distractor 池 AUC 接近 1.000，同查询 hard negatives 崩溃到随机；评估集必须含 hard negatives**：难负例。判据：**用难负例评估，不用易负例自欺**。
+- **NAG Acc 噪声注入：20% 无关文档注入平均降准确率 35%；可设容忍阈值**：噪声注入。判据：**好系统应优雅降级忽略噪声**。
+- **时间漂移盲区：语料过期产生忠实但过时答案；置信度无覆盖率=只用了部分上下文**：时间漂移。判据：**补时间有效性检查与覆盖率检查，标准四指标不够**。
