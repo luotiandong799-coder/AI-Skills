@@ -3350,3 +3350,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **prompt 版本化 CI 门**：Git 版本化+CI 评测门（smoke/full/deep 三级）+模型漂移监控（无代码变更质量下降先查上游）。
 - **shadow+canary 双层**：shadow 离线验证真实分布无异常；canary 在线验证用户体验不劣化——互补不可替代。
 - **golden 建设纪律**：先手工标注轨迹（50-200 例）+分层覆盖（常规50/边界30/安全20）+工具调用 ground truth+季度审计——多样性优于体量。
+
+## r363A Agent 检索增强与知识工程 2026（来源：arXiv-2602.16974/arXiv-2605.00318/aiworkflowlab/lobehub/markaicode/channel.tel/metafiedlab/ailearningguides/polystreak/10decoders/futureagi-rag/ragaboutit/louisbouchard/redis，2026-10-02 实拉）
+- **混合检索管线定形**：BM25+稠密并行→RRF 融合→交叉编码器重排→LLM；纯向量不再是默认（高 10-25%）。
+- **RRF 无长度偏差**：1/(k+rank) 排名驱动融合免归一化，天然免疫大块恒定胜过小块。
+- **contextual+late chunking**：embedding 前 LLM 上下文前置+长文档 embed 后池化——检索失败率降 35-67%。
+- **结构感知分块**：段落法最优（nDCG 最高）；表格行级 key-value 块、表头随片段保留。
+- **RAG 双族四指标**：检索族（precision/recall）+生成族（faithfulness/relevancy）分开测；生产阈值 0.85/0.8/0.75/0.8。
+- **RAG 三 SLO+观测三支柱**：延迟 p95<3s/可用性 99.9%/质量>0.75；tracing+metrics+evaluation 三支柱。
+- **检索覆盖率**：测试集含分布尾部、先判可答性再测命中——happy path 偏差是最大失效模式。
+- **agentic 检索三层**：自查询（语义+元数据过滤）→低置信自适应重查→无关文档驱动重写。
+- **查询变换矩阵**：step-back +5-10%/RAG-fusion +15-25%/子查询分解多跳 +20-30%/路由分类器/同义词扩展近免费——按问题类型选。
+- **压缩与缓存**：prompt caching 读零头（Gemini 90% off）+LLMLingua 式 token 级压缩（20x 压 1.5% 损）——先查缓存再谈降模型。
