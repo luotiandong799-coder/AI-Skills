@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: "1.15.0"
+version: "1.16.0"
 agent_created: true
 ---
 
@@ -151,3 +151,12 @@ agent_created: true
 - **★同名 steering 在两种 runtime 下不是一回事**：内置 runtime 在 **tool-launch 边界**与 model boundary 都检查（顺序模式下每次调用启动前查，含异步解析、校验、pre-execution hooks 之后；并行模式下先准备后一次性检查）；native Codex app-server "**does not add per-tool preemption**"——由上游 turn scheduler 在 model boundary 排空待处理输入。判据：**"能不能中途插话"取决于底层 runtime，不是配置项**；换 runtime 后同名能力会静默降级。
 - **★较老的 followup 不会关闭后续输入的转向**："An older followup does not disable steering for later input"，被 runtime 拒绝的消息按原序留队。判据：**拒绝是逐条判定的，不是会话级熔断**——一次被拒不代表后续都被拒。
 - 提升层：工具 / 工作流。触发词：逐条应答、不覆盖、per-tool 抢占、tool-launch 边界、拒绝不熔断。
+
+
+## r353C · 显式转向失败会降级而不是丢弃；interrupt 是替换语义不是转向（来源：docs.openclaw.ai `tools/steer.md` 3,228B，2026-10-02 r353C 实拉）
+
+- **★注入失败 = 降级为普通提示，不是丢弃**："If the current runtime cannot accept steering, OpenClaw sends the message **as a normal prompt instead of dropping it**"；命令前缀被剥离、内容继续作为普通提示执行。判据：**"转向没生效"有两种结果——排队等下一轮，或已作为新提示起了一轮**；不看清是哪种，就会把一次真实执行误当成"没送达"。
+- **★显式命令与队列模式互不影响**：`/steer`（别名 `/tell`，全站等价）"Works **independently of the session's `/queue` mode**"，总是尝试在当前 run 的下一个支持边界注入；而 `/queue steer` 才是"之后进来的普通消息默认走转向"。判据：**改队列模式不会改变显式命令的行为，反之亦然**——排查"为什么这条被当新提示"要分别看两个开关。
+- **★第四种队列语义是"替换"**：`/queue interrupt` 让**最新消息替换当前 run**，而不是转向它。判据：**interrupt 与 steer 是相反极性**——steer 是追加引导、interrupt 是作废重来；把两者混用会让"当前进度"时有时无。
+- 落地口径：设计引导/打断能力时至少要区分四态 —— steer（追加引导）/ followup·collect（排队等下轮）/ interrupt（替换当前）/ 注入失败降级（起新提示）。
+- 提升层：工具 / 工作流。触发词：/steer、/tell、注入失败降级、独立于队列模式、/queue interrupt。
