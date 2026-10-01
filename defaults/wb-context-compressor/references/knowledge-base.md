@@ -2832,3 +2832,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **属性度量海市蜃楼：off-query distractor 池 AUC 接近 1.000，同查询 hard negatives 崩溃到随机；评估集必须含 hard negatives**：难负例。判据：**用难负例评估，不用易负例自欺**。
 - **NAG Acc 噪声注入：20% 无关文档注入平均降准确率 35%；可设容忍阈值**：噪声注入。判据：**好系统应优雅降级忽略噪声**。
 - **时间漂移盲区：语料过期产生忠实但过时答案；置信度无覆盖率=只用了部分上下文**：时间漂移。判据：**补时间有效性检查与覆盖率检查，标准四指标不够**。
+
+## 本地化与边缘 LLM 部署工程 2026：量化层级决策 文本任务 Q4_K_M 最高 quality-per-GB 消费硬件 6 到 16GB VRAM 默认 复杂逻辑代码升级 Q5_K_M 或 Q6_K Q3 及以下仅批处理加验证层兜底 按任务类型选量化档 不一律最激进/内存需求三要素 模型权重 加 KV cache 加 运行时头空间 运行内存常远超下载文件大小 按文件大小预算必爆 预算头空间 KV cache 是长上下文内存大头/KV cache 四项优化 短上下文优先 加 前缀 prompt 缓存复用 加 sliding window 注意 加 KV 量化 llama.cpp 用 ctk 长上下文内存大头是 KV cache 先量化它/llama.cpp server 侧 prompt cache 重复 system prompt agent 编码助手 命中缓存跳过 prefill cache_ram 存槽位 KV 状态到主机 RAM 命中时重载 系统提示固定时缓存命中即免 prefill/本地不等于私密五泄漏点 未认证 localhost 端口 任意进程可访问 加 pickle 权重 执行任意代码 加 swap 文件 PII 落盘 加 遥测 默认外连 加 共享 GPU 内存 部署后逐项封堵 本地运行不等于数据安全/恶意 GGUF 权重 Bleeding Llama CVE-2026-7482 Ollama 0.17 之前 恶意模型文件内存耗尽 任意代码执行 校验和验证 加 sandbox 运行 加 签名权重 从不可信源拉模型等于执行不可信代码/边缘度量换轴 joules per token 而非 tok/s Hailo-10H 1.5B 9.45 tok/s 在 2.1W 热包络是强结果 桌面 VRAM 指标对嵌入式产品无意义 先定热功耗设计点 再选模型/4GB VRAM 甜点 3B 模型是甜点 Qwen 2.5 1.5B Q4_K_M 167 tok/s 加 95.7 百分 JSON parse rate 约 1.2GB 7B 需 Q3_K_M 或部分 CPU offload 小模型量化后结构化输出质量可追大模型 按任务选/Docker sandbox 隔离三件套 内部 bridge 无默认网关 仅连主机 API 端口 加 只读挂载源文档 加 tmpfs 易失临时区 文档摄取与提取全在临时沙箱跑 数据不出隔离区/benchmark 三透镜 速度 内存 保真 分开测 speed-only 排名忽略质量回归 SiliconBench 用分类任务对照 NVIDIA 参考查退化 运行时内存 热节流 加载慢被基准漏掉 三透镜同跑 速度第一不验收（来源：ainexislab+promptquorum+frontierwisdom+cognity+orderstack+ailearningguides+localai+bitbytecore+privacyscrubber+kahma+dev.to jfisher+sapirex+arXiv 2609.19169，r348C，补本地/边缘部署工程层——与 r344C 分工：那条管 API 侧成本与延迟，本条补本地部署量化档位与缓存工程；与 r338A/r347B 分工：那两条管云侧脱敏与注入守卫，本条补本地侧五泄漏点与恶意 GGUF 权重攻击面）
+- **量化层级决策：文本任务 Q4_K_M 最高 quality-per-GB；复杂逻辑/代码升级 Q5_K_M/Q6_K；Q3 及以下仅批处理+验证层兜底**：量化档决策。判据：**按任务类型选量化档，不一律最激进**。
+- **内存需求三要素：模型权重+KV cache+运行时头空间——运行内存常远超下载文件大小**：内存三要素。判据：**预算头空间，KV cache 是长上下文内存大头**。
+- **KV cache 四项优化：短上下文优先+前缀 prompt 缓存复用+sliding window 注意+KV 量化（llama.cpp -ctk）**：KV 优化。判据：**长上下文内存大头是 KV cache，先量化它**。
+- **llama.cpp server 侧 prompt cache：重复 system prompt 命中缓存跳过 prefill——cache_ram 存槽位 KV 状态到主机 RAM**：服务端提示缓存。判据：**系统提示固定时缓存命中即免 prefill**。
+- **本地不等于私密五泄漏点：未认证 localhost 端口/pickle 权重/swap 文件/遥测/共享 GPU 内存**：五泄漏点。判据：**部署后逐项封堵，本地运行不等于数据安全**。
+- **恶意 GGUF 权重：Bleeding Llama CVE-2026-7482（Ollama 0.17 之前）→ 校验和验证+sandbox 运行+签名权重**：恶意权重。判据：**从不可信源拉模型等于执行不可信代码**。
+- **边缘度量换轴：joules per token 而非 tok/s——Hailo-10H 1.5B 9.45 tok/s 在 2.1W 热包络是强结果**：度量换轴。判据：**先定热/功耗设计点，再选模型**。
+- **4GB VRAM 甜点：3B 是甜点；Qwen 2.5 1.5B Q4_K_M 167 tok/s + 95.7% JSON parse rate 约 1.2GB；7B 需 Q3_K_M 或部分 CPU offload**：4GB 甜点。判据：**小模型量化后结构化输出质量可追大模型，按任务选**。
+- **Docker sandbox 隔离三件套：内部 bridge 无默认网关（仅连主机 API 端口）+只读挂载源文档+tmpfs 易失临时区**：沙箱三件套。判据：**文档摄取与提取全在临时沙箱跑，数据不出隔离区**。
+- **benchmark 三透镜：速度/内存/保真分开测——speed-only 排名忽略质量回归（SiliconBench 对照 NVIDIA 参考查退化）**：三透镜。判据：**三透镜同跑，速度第一不验收**。
