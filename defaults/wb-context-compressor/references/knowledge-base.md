@@ -3506,3 +3506,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **规划评测**：APB 4209 例 5 设置（整体/反馈逐步/多余工具/坏工具/不可解）；OrchestrationBench DAG 图编辑距离打分解决"端到端说不清错在哪"；DeepPlanning 离线沙箱+规则 checker。
 - **Checkpoint-resume**：superstep 级持久化+thread_id 光标；pending-writes ledger 只补失败输出；Safe-to-Resume 定义无效恢复两类（漏内部状态/无效转换）。
 - **规划成本护栏**：per-run token 硬顶/每工作流最大步数/周期成本告警；重复工具调用 3 次升 HITL；progressive disclosure 四级（L0 名称→L1 摘要→L2 schema→L3 示例）按需加载。
+
+## r367B 视觉 UI Agent 与界面自动化 2026（来源：LUMOS-2606.30697/agdex-desktop-gui/molmoweb-2604.08516/agenttrek/webfactory-2603.05044/anchor/learning-from-failure-2606.31270/gemini-self-healing/autogui-v2-2604.24441/windeskground-2605.16402/gui-ceval-2603.15039/systemshardening-sandbox/mech-app-seccomp/os-symphony/intentcua-2602.17049/gui-owl-1.5/browsergym/agentpatternscatalog-browser-agent，2026-10-02 实拉）
+- **双流混合融合**：纯视觉 100% 普适但单像素 miss-click 高频；纯 a11y 树 60% 覆盖（自定义 UI/canvas 失效）；双流 98%+优雅回退——VLM 预测坐标吸附到最近合法 bounding box。
+- **感知三架构**：Vision-based（截图+坐标，通用但贵）/Structured extraction（DOM/a11y 文本喂模型，省 token 精度高但限浏览器）/混合；DOM 快省但盲视觉布局；a11y 树=用户所见语义、跨站免 selector。
+- **OS 语义层（LUMOS）**：原生 a11y 元数据转语义蓝图（stable identifiers/role/name/value/bounds/affordances）；实时指针语义定位；比 OCR 像素提取稳定且隐私友好。
+- **GUI grounding 指标**：Element/Click Accuracy=预测点∈目标 bbox；WinDeskGround 用有效可点击区域；GUI-CEval 分层=Perception/Grounding 82-90% vs Reflection/Evaluation 21-49%（修正能力远落后）；NID 量化视觉杂波。
+- **合成轨迹数据管线**：结构化代理（AxTree）执行→动作映射回像素坐标→Planner/Operator/Verifier 多 agent 验证；Anchor=分支点轨迹扩展；OpenMobile=learner/expert 策略切换捕获错误恢复数据。
+- **失败四分类+自愈五层**：grounding errors/competency gaps/knowledge deficiencies/redundant loops→visual search/terminal/knowledge support/重复警告；五层=触发→分类器→playbook→视觉漂移监控→人工升级阈值。
+- **视觉错误恢复**：动作后无预期变化→等待再截图对比；处理 unexpected dialogs（cookie 横幅/超时弹窗/重定向）；harness 层 per-tool watchdog 合成失败+中断后 TTFT 竞态+priorContext replay。
+- **GUI agent 安全**：沙箱 profile 无持久凭据；高风险动作（URL 输入/secret 表单/删文件/发邮件）走授权层 HITL；seccomp-bpf 隔离禁凭据 syscall；"人能绕过的控制 agent 也能绕过"；broker 注入一次性短命会话。
+- **长时程桌面 CUA**：OS-Symphony=Orchestrator+Reflection-Memory Agent+Tool Agents（统一 Reflection Message Protocol）；IntentCUA=轨迹抽象成 intent 表示+可复用技能减少重规划；GUI-Owl-1.5=device-conditioned 动作空间+滑动窗口历史。
+- **元素引用动作（bid）**：BrowserGym 原语 click(bid)/fill(bid,value)——结构化状态动作走元素引用而非坐标，DOM 变化引用仍稳；Playwright MCP=a11y 树快照暴露语义元素引用。
