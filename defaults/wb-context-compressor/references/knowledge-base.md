@@ -2978,3 +2978,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **AI 视觉回归 ≠ pixel-diff**：VLM 理解 layout/typography/contrast/semantic 像人审；agent 自主 baseline 维护（accept/reject/masking，维护开销降 ~95%）；Playwright maxDiffPixelRatio+mask 收敛动态数据噪声。
 - **生成式 UI 运行时工程**：Harness4GenUI（ASE 2026）把动态界面当运行时系统——稳定上下文模型/UI schemas/渲染契约/测试/可观测/安全/治理；生成质量只是及格线。
 - **OSWorld 长程桌面评估与噪声鲁棒性**：OSWorld 暴露长期漂移/坐标失真/状态识别失败；ENVS 30.3 vs UI-TARS-1.5 22.7（pass@8）、Noisy 29.0 vs 20.3；实在 Agent 90.2% 登顶（2026-07）；人类基线 ~75%；pass@8 多 rollout 标配。
+
+## r352C 深度研究 Agent 与信息综合工程 2026（来源：MindDR/WebResearcher/QUEST/S1-DeepResearch/ContextRender/Lemon Agent/MemoBrain/InfiAgent/ACM/CAT/MAGE/ReCite/OpenScholar/BrowseComp/LiveBrowseComp/WebSeer，2026-10-01 实拉）
+- **深度研究三 agent 分工+分阶段训练**：Planning/DeepSearch/Report 三职责；四阶段 SFT cold-start→Search-RL→Report-RL→preference alignment；~30B 模型达 frontier；产品流程 Plan>Search>Iterate>Output。
+- **报告即状态**：state=(question, evolving Report_{i-1}, recent action+response) 保 Markov；每轮基于演进报告继续；Deep Research Max 用 extended test-time compute 迭代，适合异步后台。
+- **证据接地五段管线**：Ingest→Extract（claim 分解）→Resolve（claim→候选源）→Verify（源真支持 claim）→Gate（未验证 blocked/flagged/回炉）；source ledger 含 excerpt/cross-validation/bias/gaps。
+- **引用三维评价**：Link Works/Relevant Content/Fact Check（事实数字日期须源显式支持）；AST parser 规模评估；表面引用质量掩盖事实失败（CJR 2026：Perplexity 37% vs ChatGPT 67% vs Gemini 76% 错误率）；memory-only 编造引用 78-90%。
+- **主动推理式引用**：ReCite 从相似度搜索转向 claim 级推理——location perception+intent-aware query planning+reflective verification；候选缺逻辑支撑触发自纠。
+- **上下文管理 agent 化（ACM）**：manage_context（压缩+offload 磁盘）/retrieve_context（按需检索）两工具；agent 自主决定何时压缩；"token 阈值不知道 agent 在干什么，agent 知道"；CAT 把上下文维护当可调用工具。
+- **推理可遗忘判据**：task relevant derived state 可靠外部化（code/files/tool outputs/env feedback）后历史推理可替换；压缩聚焦已落盘结论；MAGE 两层级状态树（step trace + boundary-aware summaries）。
+- **综合三问+显式矛盾标记**：Themes（共识）/Tensions（分歧根因 data/method/values）/Gaps（缺失+共享假设）；输出对 certainty/uncertainty/ignorance 诚实；禁止平滑矛盾造叙事——显式 flag 矛盾+区分置信度+呈现少数观点。
+- **合成数据驱动研究 agent 训练**：QUEST 统一评分树全自动合成可验证奖励任务（8K 任务 8 基准）；S1 closed+open 统一轨迹（graph-grounded formulation→rollout→multi-dim verification）；WebSeer SRRL 单轮多次 answer_submit 回灌。
+- **深度搜索基准反记忆捷径**：LiveBrowseComp 只用最近 90 天事实+排除显著事件（移除 memory-backed verification shortcut）；BrowseComp-V³ 跨模态关键证据；HLE 固定模型变 search engine/format/budget；BrowseComp 1266 题 GPT-5.6 90.4%。
