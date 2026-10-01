@@ -3374,3 +3374,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **模板漂移检测**：模板 hash 夜间比对+eval 集钉模板 hash+每次调用记 version/sha——漂移是静默的。
 - **DSPy 自动优化**：MIPROv2（bootstrap+贝叶斯）/GEPA（反射进化+Pareto 采样）——给训练集+metric 自动调 prompt 到收敛。
 - **重试分级五层降级**：transient 指数退避+全抖动；429 不快速重试；quota 不重试；context 超限永不原样重试；五层链=retry→provider rotation→model downgrade→verified failover→cache-on-failure。
+
+## r363C Agent 多智能体协作与编排 2026（来源：aipromptshub/qubittool/dreaming.press/velsof/usewire/agentpatterns.ai/harness-engineering/openlegion/callsphere/agentpatternscatalog/yennj12/aiworkflowlab-multiagent/mintmcp/howaiworks/futureagi-mas/nasscom/dev-to-826/rizz.dev/runguard/caisconf/arXiv-2603.28488/aclanthology-SELENE/mlflow/zylos-obs，2026-10-02 实拉）
+- **编排模式选型**：agent 数×任务动态×容错需求——3-8 确定性→supervisor/15+→hierarchical/开放探索→swarm；选错模式=贵 3-5 倍最常见原因。
+- **谁持有 state**：supervisor 中心持计划每跳重读 transcript（可读但贵）；swarm 控制+历史随活动 agent 转移；交接传结构化状态+摘要，不传完整 transcript。
+- **Handoff 五类退化**：因果推理/隐式约束/不确定性/时间顺序/负空间跨跳复合；结构化交接契约只带会话独有内容（intent/决定/未决/next action/引用），缺字段 loud 失败，prose 静默退化。
+- **黑板模式**：共享持久 key-value 空间（HEARSAY-II 起源），读-贡献-写回+control 选下个 agent；message pool 与 blackboard+订阅两形态——有状态部分=有趣 bug 的家，防记忆中毒需来源校验。
+- **唯一 orchestrator**：必须精确指定一个协调者防冲突（两个都认为在协调→重复/矛盾/竞态）；编排逻辑与 agent 行为分离；LangGraph 显式图+PostgresSaver 生产持久化。
+- **A2A vs MCP**：MCP=agent 到工具（tool call 核心单位，垂直）；A2A=agent 到 agent（task 有状态生命周期核心单位，水平跨组织，Agent Card 发现）；ACP 已并入 A2A；跨框架互操作用 A2A。
+- **成本熔断**：编排深度无界=指数乘 token；max_steps 硬上限+每任务/agent/fleet 硬支出（/会话）编排层强制+双端 token 对账——826 线程爆炸  实例的教训。
+- **死锁防护**：agent 互等输出（都 active 无错误零产出）；inter-agent 消息 30s 超时+orchestrator 重指派；ReAct 循环用归一化参数签名检测；审阅方不能与被审方互相确认。
+- **Debate 共识幻觉**：agreement 是协议内生不能当正确性信号；同质 debate 谄媚顺从 85.5%/上下文脆弱 70%/共识崩塌 32.3pp；隔离自纠胜过无引导同质 debate；SELENE 选择性触发+证据加权。
+- **会话回放观测**：span-per-tick 全量 trace（LLM/工具/记忆/交接嵌套 span）；存每请求响应全文+工具参数+上下文状态→离线回放不重跑 LLM；trace 重放对新模型/prompt=受控实验。
