@@ -3026,3 +3026,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **trajectory vs completion 框架**：>3 tool calls 用 trajectory-first（EM/Inclusion/Tool Usage/序列依赖）；公开基准只答模型选型。
 - **step-level 二分定位**：评分挂具体 span/tool call 让回归 bisect 到步骤；40 步 outcome-only=红标+无头绪；Mastra 双 scorer（code exact/LLM semantic）。
 - **分级阈值**：task success 阈值按幻觉预算定（草稿 60%/对外 98%）；Specific+Measurable+Achievable；outcome 自动配 grader 循环反馈。
+
+## r354A 多智能体编排与协作工程 2026（来源：AIPromptsHub/QubitTool/augmentcode/dev.to/anhtu/agor.me/clawdbytes/AgentSlimming/LangGraph/usewire/loooop/IETF/Zylos/scrambleid/agenthold/omegamax/UBC/BRACE/XBSTACK/A2A，2026-10-01 实拉）
+- **编排四模式选型**：supervisor（≤5 agents 最易懂）/swarm（独立负载，路由内嵌任务）/hierarchical（15+ 企业级）/network（全去中心）；选型三轴=agent 数×动态性×容错；生产主流 hybrid（supervisor 规划+并行执行）。
+- **hierarchical 隔离复杂性**：顶级只管业务逻辑不知内部并行细节；一个 supervisor 上下文不够就拆层级；CEO(强模型)→Manager(中模型)→workers 分层顺带降成本。
+- **协调税量化**：peer 约 58%、centralized 约 285% 开销；对 defined workflows 用确定性状态机替代 supervisor LLM（实测 -70%）；轻量 supervisor GAIA 减 29.68% token；按 importance score 裁剪冗余 agent。
+- **checkpoint 持久化**：每 super-step 存 checkpoint+pending writes（mid-step 崩溃不丢）；同 thread_id 从断点续；time-travel 重放任意历史状态；生产用 PostgresSaver（并发写/崩溃恢复）。
+- **handoff 契约**：handoff 是有损压缩事件——五类上下文逐跳退化（因果/隐式约束/不确定信号/时序/负空间），第 5 跳不可靠；携带目标/上下文指针/指令/元数据/权限/模型提示六件；正式化控制转移。
+- **委派血统链**：多跳委派每跳换新 scoped token、actchain 记加密委派路径、资源见完整链；子 agent 永不行使父 agent 全部权限；RFC 8693 token exchange。
+- **共享状态冲突治理**：OCC 版本号写冲突即拒（ConflictError）；矛盾值标 CONFLICTED 保留 ACTIVE 不 halt 再人工升级；破坏性操作走原子 action gate（单持有者）+死锁检测；Manager 裁决按可靠性/时间/来源优先级。
+- **brittle planning 是主失败模式**：规划三指标（成功率/重规划次数/步骤效率）；工具失败重规划保留已完成步骤、带失败 ID+原因+剩余目标；replan 也要预算（BRACE 减 62-92%）。
+- **恢复动作三型**：rollback（须可验证边界，别假装撤销副作用）/delegate（权限边界清楚，别失控复制凭据写权限）/refuse（不可解/风险高/预算尽，不编造完成不超支不绕过审批）。
+- **A2A Agent Card**：JSON 声明 identity/capabilities/skills/endpoint/auth（securitySchemes）；未声明 capability 必须报错；发现走 well-known/mDNS；traceparent 骑每条消息跨公司保持同 trace id。
