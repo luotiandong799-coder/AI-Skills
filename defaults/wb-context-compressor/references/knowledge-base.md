@@ -3458,3 +3458,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Golden set 三层隔离**：dev/release-gate/sealed audit；200 分层胜过 5000 不分层；routine 50/edge 30/safety 20；测量 label agreement。
 - **成本评测轴**：task success/tool accuracy/trajectory/cost 四轴；延迟成本变发布标准；judge 成本超生产 5% 调采样率。
 - **确定性优先**：确定性 gate 每 commit 跑零 LLM 成本；阈值表 task≥0.90/tool≥0.95/action≥0.95/injection 1.00；judge 只补语义层。
+
+## r366A 模型路由与多模型编排工程 2026（来源：FrugalGPT-TMLR/agentnative-cascade/vibeengines-handbook/HyDRA-2605.17106/Switchcraft-2605.07112/NVIDIA-NeMo-Switchyard/alivedise-BEE-30037/genai4a11-llm-router/Azure-Foundry-model-router/RouteLLM/futureagi-routing-policies/ctiber-QoS-CUSUM/generalcompute-cascade/UCCI-2605.18796/arXiv-2609.22951-AgentRouter，2026-10-02 实拉）
+- **Cascade 成本模型**：盈亏平衡升级率 r*=1−c_cheap/c_big；阈值从价格阶梯推（20x 价差→升级只当质量值 20x）；FrugalGPT 最多省 98% 且同成本提精度。
+- **混合路由 cascade**：rule→embedding→LLM classifier 逐层，便宜先上、不置信才升级；路由决策层本身也分层。
+- **多维能力路由**：多头 sigmoid 预测 reasoning/code/debug/tool 需求，选最便宜够用模型；目录变更零重训；成本用实际 token 计费×单价。
+- **Session affinity**：路由后保持会话亲和不重分类；升级时 sticky-context 定义携带哪些状态（重发完整上下文是升级成本隐藏处）；换模型后 re-assert。
+- **三模式拨盘**：Balanced/Cost/Quality + 单一 alpha 阈值=成本-质量拨盘；tier floor/ceiling 只降级不升级，quality 加置信门。
+- **Per-step 路由评测**：rubric 按 step 不按 trajectory；换便宜模型质量带预先承诺（0.03 内）；监控 hard tail recall/流量占比/误路由代价。
+- **Shadow/canary 路由评估**：shadow=镜像无用户影响，canary=百分比可回滚；质量路由=生产流量得分选模型，分数绑同一 request ID。
+- **路由漂移检测**：供应商静默更新→CUSUM 检分布位移；escalation rate 漂移升高=评分函数需重训；silent cache hit-rate decay 按 template 切片；三 ratio=cache hit/旗舰占比/tokens per task。
+- **评分函数**：小 judge/log-probs/schema 验证器；precision>recall（拒 30% 好答案=白花钱）；UCCI isotonic 校准；SLM 内建 defer 替代外部 router。
+- **Agent 场景退化**：单轮 router 误路由依赖轨迹上下文的步骤（RouteLLM 仅省 31.4%）；按角色分配模型 profile；shadow-first bandit 复用 metering 行组奖励。
