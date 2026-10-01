@@ -3050,3 +3050,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **上下文外置三术**：技能渐进披露（先暴露存在再按需加载细节）、工具结果写文件按需读回（避免有损摘要）、长任务干净重置胜过继续压缩；git 作恢复机制。
 - **summary collapse**：handoff 摘要系统性丢边界元数据（事实怎么用的规则）——压缩 artifact 必须显式保留 use-policy 元数据；交接用带版本 ID+时间戳的 bundle。
 - **agentic retrieval 循环**：LLM 控检索（when/what/which tools/够不够）——规划子查询/评分/循环到 grounding 足够；hybrid 四件（dense+sparse BM25+metadata+Cross-Encoder 重排，精确实体 dense 丢）。
+
+## r354C Agent 安全与提示注入防御工程 2026（来源：OpenClaw-AuthGraph/agent-works/IETF-CCS/IETF-DAS/Microsoft-AGT/Asimov/AWS/navi-sanitize/prompt-canon/rapidclaw/BeyondScale/SMSR/Trojan-Hippo/Vectorize/Prism/Future-AGI/General-Analysis/CSA/SHIELDMCP/ShieldNet/OWASP-MCP/AgentDojo/AutoDojo/GPT-Red/CaMeL/AgentPatterns，2026-10-01 实拉）
+- **Dual-LLM 结构隔离**：读不可信内容的模型无工具权限（物理断裂）——隔离侧只回 schema 校验的结构化结果，特权侧持权决策；AuthGraph 双图对齐（执行轨迹图 vs 隔离干净上下文授权图，检测工具级+参数源级偏差）。
+- **工具调用运行时验证**：七维（结构/模式/延迟/成本/身份/完整性/安全）+Ed25519 签名 receipt；高危行为走 candidate act 状态机（验证→留证据→发 scoped 终局权→核验消费）。
+- **pre-action 授权 hook**：安全门在框架层不在模型层——工具调用前阻塞 hook 等策略决定；确定性 denylist 先行 LLM judge 兜底；能成规则不用 LLM（linter/SAST/secrets 先行）。
+- **输入预处理**：先净化再守卫——剥离零宽/Unicode Tags（U+E0000-E+E007F）/Bidi/同形字、统一 Unicode 归一化、3+ scripts 混用额外验证；不可信内容一律 typed envelope 标注"数据非指令"。
+- **记忆投毒四防**：写时打来源/信任标签、写走 staging 验证、procedural/skill 写入必须内容检查+审批、快照可回滚 known-good；行为异常（捍卫不该学到的信念）作投毒信号。
+- **Trojan Hippo 权衡**：记忆投毒无免费午餐——最强防御（IFC）杀合法功能；按任务分布选：不可信会话禁写记忆、记忆条目短标题化降 payload 空间。
+- **输出侧泄漏检测**：差分 PII（输出中不在输入/检索的实体=模型产出要拦）、生成时逐 token 风险分（entropy collapse 预警凭据外泄）、原始 vs 净化 diff 审计（raw 留档 sanitized 交付）。
+- **MCP 工具面四防**：工具描述/schema 装前扫描、出站参数净化（防 SQL/命令/注入链）、破坏性动作必须审批流、网络层观测交互防 typosquat；clients 不无条件继承 server 信任。
+- **AgentDojo 指标**：BU/UuA/ASR/Safety 四件——只测静态注入高估防御，必须自适应攻击红队；防得住靠带外确定性监控（reference monitor/信息流标签）不是拒答训练。
+- **guardrail 五层拓扑**：输入/上下文/工具前/工具响应/输出五层缺一不可；便宜确定性检查先跑（JSON 解析器/PII 正则/长度）；结构性护栏在模型上下文外执行；限制模型能力比过滤更根本。
