@@ -3146,3 +3146,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **行为漂移基线**：guardrail 拦截率（按类/按时窗）+judge 标记率（按判据）；行为/价值/上下文三类漂移各有检测信号。
 - **model version 上 span**：静默换版本时 accuracy 下降可归因；重试循环成本尖峰从 trace 查。
 - **签名审计轨迹**：enforcement 副产品非事后日志+毫秒级时间戳+promotion 审批人身份；版本钉 source commit+镜像；高风险数据操作在可回滚沙箱。
+
+## r357B Agent 提示词版本管理与提示优化工程 2026（来源：digitalinsight/DEV-nainikmehta/exploreagentic/Ascheriit-BEE/AIPromptsHub/Databricks/FutureAGI/datawizard/theneuralbase/omnithium/DSPy-MIPROv2/arXiv-2507.03620/arXiv-2406.15708/arXiv-2506.19773/ACM-SAPO/OpenAI-GPT6/CSDN/Respan/Claude/naivigate/alicelabs/askantech/TechPulse，2026-10-01 实拉）
+- **Prompt Registry**：prompt 存 registry 不存代码字符串——不可变版本+作者+变更日志+golden 集指针；运行时拉 labeled 版本；变更周期与应用发布解耦。
+- **prompt 语义版本**：MAJOR 破坏输出格式/MINOR 新能力兼容/PATCH 措辞修复+元数据（owner/模型族/评测日/schema）；部署记录运行版本以回滚。
+- **CI eval gate**：prompt 变更走 golden 集自动评估+shadow rollout 对比；回滚=移动 label 无重新部署；git-native 复用评审流。
+- **prompt 依赖管理**：跨 prompt 引用+外部系统版本组合检查防不兼容；git-native 存 prompt——diff 可读与代码评审一致。
+- **DSPy 联合优化**：instructions+few-shot 联合（MIPROv2 贝叶斯搜索）；按情境选 optimizer（起步/大集/指令错/都可/失败可命名/模型可调）。
+- **APO 双轨**：自动提示优化=指令轨+示例轨分别处理（IO/EO）；编程式声明（signature+module）而非手写字符串。
+- **SAPO 安全优化**：提示优化是约束多目标（性能 max 受安全约束）；四 agent 分工（生成/安全检/性能评/批评重平衡）每迭代保安全。
+- **前缀缓存锚定**：静态段（system/tools/示例）放最前锚定；cached 读≈1 折；第二次 read 内回本（窗口 5min-1h）；语义缓存互补。
+- **缓存监控三指标**：命中率/写入量/推理成本；发布判据=省且质量不降；回滚=路由切旧版本接受一次冷写；多区域分别预热。
+- **升级清反模式+effort 校准**：缓存命中最大化+升级前沿模型前清 prompt 反模式+effort 按任务校准。
