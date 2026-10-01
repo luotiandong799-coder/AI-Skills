@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: 3.93.0
+version: 3.96.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -268,3 +268,32 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 判据：① **成本必须按区间公示与选型**——单点 token 估算（"这个技能约 2 万 token"）在跨度 2–8 倍的东西上是误导；装前预算按 **上界** 算，否则上下文挤爆发生在最坏路径上。② **跨度本身就是质量信号**：上下界差得越大，说明该技能的加载量越依赖输入/分支，越需要说明"什么情况下走到上界"。③ 与已落的三级披露 token 预算互补——那条管**加载机制内的预算数值**，本条管**分发侧对外承诺的成本区间**，两者不在同一层。④ `hosted` 必须一并公示：**托管与否决定别人能否独立验证内容**；未托管条目的真实内容以 `githubPath` 为准，市场页只是索引。
 - 落地动作：技能/插件的元数据表增加 `minToken`+`maxToken` 双字段与 `hosted` 布尔；写"成本"时一律写区间并标注上界触发条件，禁止只给均值或单点值。
 - 提升层：可复用 Skill / 工具。触发词：minToken、maxToken、成本区间、上界预算、hosted 托管标记、技能元数据。
+
+
+## r354A · 新能力默认关闭 + 行为不变承诺 + 逐能力生效，不是全局开关（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/durable-scheduler.md`、`configure-n8n/system-tasks.md` 独立 curl 取 `.md` 原文，2026-10-02 r354A 实拉）
+
+- **★默认关 + 老实例行为不变**：原文 "It's **off by default**: existing instances keep using the in-memory scheduler and **behave as before until you opt in**"。判据：**引入会改变既有行为的实现时，缺省必须是"不变"**——让升级者先得到与旧版一致的行为，再显式选择新语义；把新语义做成默认，等于让所有存量在不知情的那一刻同时改变行为。
+- **★Preview → GA 是版本台阶**："available from n8n **2.36.0**. Earlier versions back to n8n **2.32.0** include it as a **Preview** feature"。判据：**能力成熟度要落到版本号上**——"某版本起可用"与"某版本起是预览"是两个不同的兼容承诺，混写会让依赖方按错的稳定性预期做设计。
+- **★开关是逐能力生效的，开了主开关不等于全量迁移**：system-tasks 原文 "**As of n8n 2.41.0, no system task supports durable mode**, so every task runs from an in-memory timer"，且 "Only tasks that **support** durable mode move over; the rest stay on their in-memory timers"。判据：**"我开了 X" 与 "我的工作负载现在跑在 X 上" 之间隔着一层的——每个子能力各自声明是否支持**；审计时必须逐个核，不能拿主开关状态当结论。
+- **★同一"错过"在两种模式下语义相反**：in-memory 下 "A run whose time passes while the instance is down **doesn't happen**"；且进程睡眠时 "the timer **fires once for all the occurrences it slept through** instead of replaying them one by one"（补跑被折叠成一次）；durable 下 "A run whose time passed while the instance was down **still fires late** when the instance comes back, as long as it's within its **grace period**; beyond that, the trigger's **misfire policy** decides"。判据：**"补不补跑"必须显式定义为三段（宽限期内补跑 / 超期按 misfire policy（丢弃 or catch-up）/ 根本不补），不能留成实现细节**——同一个缺失在两种模式下的处置不同，迁移时按旧心智模型推断会直接算错。
+- **★跨实例"只执行一次"靠共享队列认领，不靠 leader 选举**："Every main instance shares the same queue and **claims runs** from it. Only one instance picks up each run"；而 in-memory 模式 "Only the **leader** fires schedules. If leadership changes at the wrong moment, **timing can slip**"。判据：**去重的正确落点是"对同一条待办的唯一认领"，不是"选出一个负责人"**——前者任一实例都能干活且天然不重复，后者把可用性绑在选举正确性上。
+- 提升层：可复用 Skill / 工作流。触发词：默认关闭、行为不变承诺、Preview 到 GA、逐能力生效、misfire policy、grace period、claim 去重、leader 选举。
+
+
+## r354B · 「允许用户覆盖」= 默认值 + 上限两个变量；同类参数在不同子系统是不同币种（来源：docs.n8n.io `use-environment-variables/executions.md` + `use-environment-variables/credentials.md` 独立 curl 取 `.md` 原文，2026-10-02 r354B 实拉）
+
+- **★可覆盖参数必须由两个变量共同治理**：`EXECUTIONS_TIMEOUT`（默认 `-1`，`-1` 表示禁用）是实例级默认，"Users can **override this for individual workflows up to the duration set in `EXECUTIONS_TIMEOUT_MAX`**"（默认 3600）。判据：**"可自定义"如果只给默认值不给上限，等价于无约束**；而当默认值本身是"禁用/无限"时，上限就是唯一的实际约束——此时"我没改默认"意味着"我没设限"。
+- **★同类"超时"在不同子系统单位与量级都不同**：执行超时 `EXECUTIONS_TIMEOUT` 是**秒**（默认 -1 / 上限 3600），AI/LLM 节点超时 `N8N_AI_TIMEOUT_MAX` 是**毫秒**（默认 3,600,000）。判据：**参数名相似不代表同币种**；跨子系统搬数值前必须确认单位与"禁用值"的表示（此处 `-1`），差 1000 倍是最典型的静默错误。
+- **★敏感配置支持逐变量切换注入形态（内联 / 文件）**："You can add **`_FILE` to individual variables** to provide their configuration in a separate file"。判据：**"把秘密放到文件里"应做成逐变量的后缀约定，而不是全局改配置格式**——粒度在单变量，才能让"这一个走文件、那一个走内联"同时成立。
+- **★分布式形态会让单实例下的默认值静默失效**：`CREDENTIALS_OVERWRITE_PERSISTENCE` 默认 `false`，原文 "**Required for multi-instance or queue mode** to propagate overwrites to workers through a publish/subscribe approach"。判据：**审视每一个默认值为"它在多实例/队列模式下还成立吗"**——单实例下无害的 false，在 worker 模式下表现为"主节点改了、工作节点没变"，且不报错。
+- **★有默认值的显示名会静默产生同质垃圾**：`CREDENTIALS_DEFAULT_NAME` 默认 `My credentials`。判据：**给可命名实体设默认名，等于批量制造无法区分的同名对象**；要么默认值带上下文（环境/用途），要么强制命名。
+- 提升层：可复用 Skill / 工具。触发词：可覆盖上限、EXECUTIONS_TIMEOUT_MAX、参数单位、毫秒秒混用、_FILE 后缀、多实例下默认值失效、默认名同质化。
+
+
+## r354C · 能力可用性按部署形态逐项核对：云与自托管不是包含关系；许可缺失是 fail-fast 而非降级（来源：docs.n8n.io `scaling/use-external-storage.md` 独立 curl 取 `.md` 原文，2026-10-02 r354C 实拉）
+
+- **★"自托管高配 / 云端没有"这种反向分布真实存在**：external storage 原文 "**Self-hosted:** Business, Enterprise. **It isn't available on n8n Cloud.**"（S3 二进制存储同样如此）。判据：**不要用"云版本总是功能更全"或"自托管总是更自由"来推断可用性**——两者是两条独立的产品线，同一能力在一侧有、另一侧可能完全没有；选型时逐能力查表，不做外推。
+- **★许可门槛的失败模式是拒绝启动，不是功能降级**："Activate your license key **before** you enable external storage. n8n **won't start** in `s3` binary data mode without a valid license: set `N8N_DEFAULT_BINARY_DATA_MODE` to another mode or upgrade your plan"。判据：**硬依赖许可的能力在缺失时是 fail-fast（起不来），不是 graceful degradation（退回本地存储）**——这决定了配置顺序：先有许可、再开关能力；反过来配会让实例直接无法启动，而排查者往往先怀疑配置写错。
+- **★清理责任随数据一起外包，默认结果是"永久保留"**："n8n **delegates pruning of binary data to S3**, so setting a lifecycle configuration is **required** unless you want to preserve binary data indefinitely"。判据：**把数据迁到外部存储时，生命周期策略不是附带获得的，而是必须另行配置的**——未配置的状态是"无限期保留"而不是"跟随主系统策略"；这与 r354A「清理停了也不报错」叠加，会形成长期静默增长。
+- **★"支持"与"官方支持"是两档**："You can use other S3-compatible services like Cloudflare R2 and Backblaze B2, but n8n **doesn't officially support these**"。判据：**能跑通 ≠ 被支持**；承诺面由"官方支持"界定，排障与兼容性保障只覆盖那一档，选型时要把"兼容但未支持"单独列为风险项。
+- 提升层：可复用 Skill / 工具。触发词：云与自托管反向分布、isn't available on Cloud、license 拒绝启动、fail-fast 许可、S3 lifecycle 必配、官方支持 vs 兼容。

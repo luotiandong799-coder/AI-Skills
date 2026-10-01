@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.35.0
+version: 1.37.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -436,3 +436,14 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **原文**：「There are 2 ways human in the loop can be used: Using **Human Input** node to halt the execution / Enable **Require Human Input** for Agent's tools」；「When Require Human Input is enabled, we place an additional checkpoint **after tool calls are detected**」；回环节点「**Max Loop Count**: 5 (prevents infinite loops)」，驳回分支「Send feedback and loop back to the agent for improvements」；轨迹分享「The execution trace is now available as a **public link**… **Users outside of Flowise can reject or approve**」；监控「`/api/v1/metrics` endpoint … **requires API key authentication**」且「only **high-level metrics** such as API requests, counts of flows/predictions are tracked. For details node by node observability, we recommend using Analytic」。
 - **判据**：① **审批有两个挂载点，粒度不同效果差一个量级**——流程级检查点只拦你画好的那一条路径，agent 自主改道就可能整体绕过；工具级（`Require Human Input`）挂在工具本身，**无论 agent 怎么编排、什么时候决定调用都被拦**。⇒ 凡要求「这个动作一定经过人」的，挂工具级；只挂流程级等于把保证寄托在 agent 会走那条路上。② **驳回不是布尔值，是「拒绝 + 可执行的修改意见 + 有界回环」**（反馈回灌 agent + `Max Loop Count` 封顶）：只有布尔驳回，人只能反复手动重来；没有上限的回环则打转成死循环。与 §Cap14 迭代上限 互补——那条说自修循环要设上限，本条补上：上限之外还必须有反馈回路，否则上限只是把死循环变成「放弃」。③ **把执行轨迹做成公开链接外发审批，等于在账号体系之外开了第二条授权路径**——链接本身就是凭证（与 §Cap28「评审权=写权」正好相反：那条里能评审就必须能写，这里不能写的人也能批准）。⇒ 凡用分享链接/快照实现外部评审，必须带时效与范围，并把链接产生的批准与账号内的批准进同一本审计账，不能因「人不在系统里」就漏记。④ **观测面自身是被保护面，且内建指标只到聚合层**：指标端点要 API key（观测通道不是免费旁路），默认只有 API 请求数 / 流程数这类高层计数，逐节点可观测要显式开关或外接。⇒ 说「有监控」时必须分清聚合层与节点层，把聚合指标当成「出了问题能查到」是自欺。
 - 提升层：工作流/安全边界。触发词：HITL 粒度、流程级 vs 工具级、Require Human Input、驳回带反馈、有界回环、外发审批链接、链接即凭证、评审权脱离账号、观测端点鉴权、聚合指标 vs 节点级可观测。
+
+## Cap38 待办先落盘再到期执行；维护类任务「停了也不报错」，必须自己长出可观测（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/durable-scheduler.md` + `configure-n8n/system-tasks.md` 独立 curl 取 `.md` 原文，2026-10-02 r354A 实拉；与 §Capability 9 数据卫生 `ag groom` 互补——那条管清理动作本身，本条管"清理这类维护任务什么时候其实已经死了"）
+- **原文**：「The scheduler **records each upcoming run in the database before it's due**. A restart doesn't drop it.」「By default, n8n schedules time-based workflows **in memory**… **Restarts lose pending runs.** When an instance stops, its in-memory timers go with it. n8n **skips any run whose time passed during the downtime** rather than catching it up.」「They aren't workflows, they don't belong to a project, and they don't show up anywhere in the editor. **When one of them stops running, nothing fails**: your database just keeps growing, or your insights data goes stale.」
+- **判据**：① **计划先持久化再执行**——"下一次要做什么"必须在到期前就写进持久存储；把待办只放在进程内存里，等于把"重启"和"漏做"绑成同一件事。对 guild 的落点：跨会话待办 / 交接消息 / 定时维护动作在产生那一刻落盘，不依赖当前会话存活。② **静默失败是维护类任务的默认失效模式**——它没有调用方、没有报错、不在编辑器里出现，唯一症状是"该变小的一直在变大 / 该变新的越来越旧"。⇒ 凡"没它也不会立刻出事"的任务，都必须配**独立的存活信号**（是否跑过 / 上次跑的时刻 / 跑得多好），而不是靠副作用推断。③ **观测面覆盖两种模式，且指标名要能区分模式**：system task metrics 用 `mode` 标签区分 `in_memory` 与 `durable`，原文指出调度器指标看不到 in-memory 运行。⇒ 只给一套指标会把"这个模式下从没跑过"显示成"没有数据"。④ **配套现成看板 + 每面板一条建议动作**：「n8n publishes a **ready-made … dashboard** with a **suggested action for each panel**」——观测交付物不是图表而是"看到这个数该做什么"，否则只是在展示失败。
+- 提升层：工具 / 工作流 / 可复用 Skill。触发词：待办先落盘、durable scheduler、system task 静默失败、维护任务存活信号、mode 标签、看板建议动作、groom 可观测。
+
+
+## Cap39 数据外迁时清理责任一并外迁：不做配置 = 默认永久保留（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/scaling/use-external-storage.md` 独立 curl 取 `.md` 原文，2026-10-02 r354C 实拉；与 §Cap38 维护任务静默失败 互补——那条管"清理任务死了没信号"，本条管"清理责任被转交给外部系统后没人认领"）
+- **原文**：「n8n **delegates pruning of binary data to S3**, so setting a lifecycle configuration is **required** unless you want to preserve binary data indefinitely.」
+- **判据**：① **存储位置变更会连带改变清理责任的归属**——数据搬到外部存储后，主系统的剪枝逻辑不再覆盖它；"我配了保留 14 天"这句话对新位置不成立。② **未配置的默认态是"无限期保留"而非"继承原策略"**——所以外迁动作必须配一条"谁负责删、多久删、按什么条件删"，否则只是把增长从本地磁盘挪到了别人的账单上。③ 对 guild 的落点：日志 / 交接消息 / 学习轮留痕若采用外部或归档存储，groom 规则必须显式覆盖该位置并声明周期；`ag groom` 的清理清单里要把"外迁出去的部分"作为独立条目列出，不能只清本地可见的那部分。
+- 提升层：工作流 / 可复用 Skill。触发词：清理责任外迁、lifecycle 必配、默认永久保留、groom 覆盖外部存储、外迁即失管。

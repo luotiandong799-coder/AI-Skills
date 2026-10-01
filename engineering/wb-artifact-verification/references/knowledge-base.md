@@ -2087,3 +2087,18 @@ Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 - 判据：① 排障第一刀必须是**链路分段**——本地解析（凭据缺失/引用未解析/过期/被显式顺序排除/无可用模型）与远端拒绝（401/429/计费/超时/格式）是两类完全不同的处置：前者改配置，后者改请求或等配额；把"本地没找到凭据"报成"服务端 401"会让排查直接跑偏到对方平台；② **被排除不是被静默跳过**——"A stored profile … omitted from the explicit order is **not silently tried later**. Probe output reports it with `reasonCode: excluded_by_auth_order`"，即任何"不尝试"都必须留下可检索的具名理由，否则用户看到的是"这个凭据没生效"而系统其实根本没考虑它；③ **超时之后的副作用仍会发生，只是不生效**——"When a catalog deadline expires, late provider results are discarded… An already-started hook or OAuth refresh may finish, including **persisting a rotated credential**, but cannot publish to the expired catalog run"；所以"超时"不等于"什么都没发生"，回滚与对账要覆盖这类**已落盘但未发布**的中间态。
 - 提升层：工具/工作流。触发词：reasonCode、探测未触达、本地查缺不等于 401、excluded_by_auth_order、被排除不静默重试、超时后副作用、已落盘未发布。
 
+
+r354A 清理与留痕的四条可机检约束（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/scaling/manage-execution-data.md`，2026-10-02 r354A 独立 curl 取 `.md` 原文）
+- 原文：「Executions with the `new`, `running`, or `waiting` status **aren't eligible for pruning**.」「**Annotated executions (for example, executions with tags or ratings) are never pruned.**」「pruning first **marks targets for deletion**, and then later permanently removes them」「honors a **safety buffer period** of `EXECUTIONS_DATA_HARD_DELETE_BUFFER` hours (default: 1h)」「prunes executions when **either** of the following condition occur: **Age** … **Count** … deletes executions from oldest to newest」
+- 判据：① 清理器入口先做**状态过滤**，未终态直接豁免；② **人工标注（tag/rating）是清理器的硬拦截条件**，不是权重；③ **标记→缓冲→真删**三段式，缓冲期即撤销窗口；④ **age OR count 双阈值**同时配置，count 方向从旧到新。
+- 提升层：工具/工作流。触发词：pruning、状态过滤、标注免删、buffer、age OR count。
+
+r354B 限额的作用域与「不设置」的真实含义（来源：docs.n8n.io `use-environment-variables/executions.md` + `credential-overwrites.md`，2026-10-02 r354B 独立 curl 取 `.md` 原文）
+- 原文：「For larger executions, n8n **omits the data (shown as "too large to display")** to avoid running low-resource instances out of memory. **Doesn't affect retrying or resuming executions, which always load the full data.**」「**Without an auth token, the endpoint can only be called once for security reasons.**」「This approach **isn't recommended**. Environment variables **aren't protected in n8n**, so the data can leak to users.」「When unset, the limit **follows the license tier**: self-hosted Community: 1 … Setting this **overrides the tier default**.」
+- 判据：① 限额三要素必须同时写：**作用于哪一面 / 超出后表现 / 不覆盖什么**；② 无鉴权通道用「一次性」收敛暴露窗口；③ 「未设置」要查档位默认，不能当「不限」。
+- 提升层：工具/工作流。触发词：限额作用域、too large to display、一次性端点、tier default。
+
+r354C 取证通道阶梯与资源故障的三层观测（来源：docs.n8n.io `scaling/memory-errors.md` + `scaling/fix-memory-issues.md`，2026-10-02 r354C 独立 curl 实拉，404 页 2,188B 逐串命中）
+- 原文：「You may also use **`Accept: text/markdown` header for content negotiation**.」「Prefer `.md` URLs for structured content, append `.md` to URLs」「GET … `?ask=<question>&goal=<end_goal>`」「**Option 2** — Browse the documentation index: https://docs.n8n.io/sitemap.md」「**Option 3** — Retrieve the full documentation corpus: https://docs.n8n.io/llms-full.txt」「messages such as **Execution stopped at this node (n8n may have run out of memory while executing it)**」「**Problem running workflow**, **Connection Lost**, or **503 Service Temporarily Unavailable** suggest that an n8n instance has become unavailable」「**Allocation failed - JavaScript heap out of memory** in your server logs」「On n8n Cloud, or when using n8n's **Docker image**, n8n **restarts automatically** … running n8n with **npm you might need to restart it manually**」
+- 判据：① 通道阶梯 `.md` 后缀 → `Accept` 头 → ask/goal → sitemap.md → llms-full.txt；② 资源故障按 应用层(may) / 可用性层(症状) / 宿主层(确证) 三层分别取证，任一层都不能单独定案；③ 自愈能力绑定运行方式写。
+- 提升层：工具/工作流。触发词：内容协商、取证阶梯、三层观测、npm 不自愈。
