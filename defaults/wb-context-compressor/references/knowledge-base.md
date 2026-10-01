@@ -3446,3 +3446,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **HITL 审批流**：低置信（85% 阈值）或受保护类即入审批队列；durable 存 payload+推理轨迹+不确定性；批准后加密签名防篡改。
 - **冷读 canary**：检测≠防御——高熵串植入+输出监测，把开放识别问题变封闭字符串匹配；消毒后重扫双保险。
 - **沙箱硬边界**：容器 flag 比容器重要（--user/--network none/--read-only/--tmpfs）；secret per-task 注入（运行时下发、完成吊销）；Landlock/seccomp 零默认权限。
+
+## r365C Agent 评测自动化与质量门禁工程 2026（来源：agentevals-cli/Azure-Foundry-cloud-eval/AWS-Bedrock-AgentCore/arXiv-2608.07346/menuagentic-evals-as-ci/futureagi-five-layer/qaskills-quality-gates/dailyaiworld-trace-loop/multigrid-non-inferiority/EvalGate/futureagi-tool-use-4step/callsphere-tool-accuracy/arXiv-2602.07150-randomness/grepture-judge-bias/galileo-calibrate/egoistai-contamination/koji-golden-set/mlflow-metric-categories/NVIDIA-four-axes/assevra-thresholds，2026-10-02 实拉）
+- **离线 trace 评测**：评估已存 OTel 轨迹不重放请求；只要 telemetry 走 OTel，评估服务可评分任何 SDK（框架解耦）；metric 按执行阶段注册。
+- **Cadence 分层**：code-grader（ms）pre-commit/LLM judge（s）preview/校准月度 gold set；PR 快样本分钟阻塞，全量夜间 main alert 不 block。
+- **相对基线门禁**：对比 last known-good 非绝对阈值；非劣效检验看配对差置信区间；30-example 的 95% CI±0.07；三态 PASS/BLOCK/INCONCLUSIVE。
+- **工具四步契约**：调不调/选哪个/构造参数/整合结果分步评分；no-call slice 测该安静时不调；标签三元组 expected_tool+args+rationale。
+- **评测随机性**：pass@1 波动 2.2-6.0pp，temp=0 仍 SD>1.5pp；报 μ/σ/Δ；四类 metric=outcome/process/reliability/cost。
+- **Judge 校准**：月度 kappa<0.6 告警；dataset metadata 钉 prompt hash+embedder+语料快照；换 judge/rubric 即失效重校；gold set 增量旋转。
+- **Trace-to-Dataset 闭环**：失败 trace→回归 case、安全事件→red-team、延迟成本→release criterion；5-10 同类失败建命名数据集；每周 promote。
+- **Golden set 三层隔离**：dev/release-gate/sealed audit；200 分层胜过 5000 不分层；routine 50/edge 30/safety 20；测量 label agreement。
+- **成本评测轴**：task success/tool accuracy/trajectory/cost 四轴；延迟成本变发布标准；judge 成本超生产 5% 调采样率。
+- **确定性优先**：确定性 gate 每 commit 跑零 LLM 成本；阈值表 task≥0.90/tool≥0.95/action≥0.95/injection 1.00；judge 只补语义层。
