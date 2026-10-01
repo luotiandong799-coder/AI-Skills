@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.95.0
+version: 2.96.0
 agent_created: true
 ---
 
@@ -449,14 +449,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
 
 - **给人看的紧凑视图不构成操作依据**：本章已下沉 `references/knowledge-base.md` §r348A-sink1（r348A）。
-## 终态必须由显式信号声明而不是从「内容看着完整」推断；该信号要落成含「缺席」档的独立字段；投递证据取自投递侧回执而非展示历史（来源：docs.openclaw.ai/concepts/agent-loop.md 32,727B + www.activepieces.com/docs/install/troubleshooting/truncated-logs.md 2,279B，2026-10-01 r340C 独立 curl 实拉逐串命中）
-- **原文**：①「If the provider sends `end_turn: false`, the loop **requests another response even when the completed response contains only text**」；②「records the provider's `endTurn` signal as `true`, `false`, `"absent"`, or `"invalid"`, **without retaining malformed values** ... **Older messages without this diagnostic cannot establish whether the provider omitted the signal**」；③「A receipt with `sourceReplyDelivered: true` **confirms a final reply reached the external source conversation**. A2A announcements **consume that fact instead of using display-history mirrors as delivery evidence**」；④「`agent` RPC ... **returns `{ runId, acceptedAt }` immediately** ... `agent.wait` waits for the terminal outcome on a `runId` and returns `{ status: ok|error|timeout, startedAt, endedAt, error? }`」；⑤「Truncation applies to **step inputs only**. Step **outputs are never truncated**, because downstream steps, subflows, and paused/resumed runs need the original output」；⑥「If the run **still** exceeds the limit after all inputs are truncated ... the run **fails with `LOG_SIZE_EXCEEDED`**」。
-- **判据**：① **"看起来说完了"不等于"被声明为终态"**：响应里已经有完整文本、但显式信号是 `end_turn: false` 时，正确动作是**再要一次**，不是收工。⇒ 任何"判断这一轮是否结束"的逻辑都必须读**显式终止信号**；用启发式（有没有句号 / 长度够不够 / 像不像结尾）判定终态，会在模型还想继续时被提前掐断。② **终态信号要落成独立、可枚举的字段，且必须有"缺席"这一档**：原文四态 = true / false / **absent** / invalid——"没这个字段"和"字段是 false"是两件事，混在一起会让"对方压根没表态"被当成"对方说不要"。⇒ 同时要**承认不可回溯**：没有留痕的历史，事后无法判定对方当时是否省略了信号——所以留痕要从第一天起就记，事后补不出来。③ **投递证据必须来自投递侧的回执**：`sourceReplyDelivered` 是"确实送到了外部会话"的确认；拿"展示历史里有一条"当投递证据是本末倒置——展示面是**镜像**，镜像里有可能是自己写的，不代表对面收到了。⇒ 验收"消息发出去了没"，问的是回执字段，不是界面。④ **受理与完成是两个时点，必须分别可查**：提交立刻拿到 `runId + acceptedAt`，终态由独立的 wait 返回 `status/startedAt/endedAt/error`。⇒ 把"已受理"当成"已完成"是异步接口上最典型的验收错误；受理凭证与结果凭证要分开持有。⑤ **截断/降采样要挑"不被下游依赖的那一侧"**：这里只截 step 输入、**绝不截输出**，因为输出是下游步骤、子流、暂停-恢复运行的输入源。⇒ 选压缩对象时判据不是"谁最大"，而是"谁被依赖"；砍掉被依赖的一侧会制造不可预测的后续失败。⑥ **压缩手段用尽仍超限，必须显式失败而不是继续静默丢**：全部输入都截完还超限时系统报 `LOG_SIZE_EXCEEDED` 让运行失败。⇒ 容量治理要有明确的"兜不住就报"出口；一路静默降级到最后，用户拿到的是一份残缺数据而不是一条错误，反而不知该扩容。
-- **提升层**：可观测性/工具/工作流。触发词：终态显式信号、end_turn false、不推断终态、absent 档、不可回溯、sourceReplyDelivered、投递回执而非镜像、acceptedAt 与终态分离、只截输入不截输出、LOG_SIZE_EXCEEDED、压缩用尽显式失败。
-- **观测读数要标注来源与可信度；给归因不给全量；按可行动性切分**：本章已下沉 `references/knowledge-base.md`（r342C）。
-
-
-- **敏感输出重路由的三条铁律**：本章已下沉 `references/knowledge-base.md` §r348A-sink2（r348A）。
+- **终态必须由显式信号声明**：本章已下沉 `references/knowledge-base.md` §r348C-sink（r348C）。
 ## 资格判定三态（不确定不禁用、禁用带可见且可撤销的理由）；自动修复严守证据自证门槛（来源：docs.openclaw.ai/automation/cron-jobs/payloads.md 27,960B + managing-jobs.md 17,374B，2026-10-01 r343C 独立 curl 实拉逐串命中）
 
 - **原文**：①「In `auto` mode, a review **stays disabled when every statically resolvable model candidate is known to lack** rooted execution support. Its display name includes `no-rooted-runtime` ... **unknown eligibility also keep it enabled, with final checks at execution time**.」「**Convergence clears the reason and restores auto-mode enablement** when the configured chain becomes eligible or unknown.」；②「Doctor **reconciles the account only when the stored creator identity proves it**, and reports the repair.」「**Doctor does not infer ownership from delivery settings or the current caller.**」「Jobs whose stored identity cannot prove an account need **authenticated administrator recovery**.」
@@ -496,3 +489,11 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ## 路由器/选择器本身是一等被测对象：指标一经发布即锁定，且报告必须带可复跑的调用预算与双跑差值（来源：github.com/muratcankoylan/Agent-Skills-for-Context-Engineering README 34,923B（18,053★），2026-10-01 r348B 独立 curl 实拉，`600` / `0.920` / `0.913` / `locked metrics` / `results-published/2026-05-15` 逐串命中）
 - 判据：① **被评测的不只是最终产物，还有「选谁来做」的那一层**：技能路由/选择器本身要单独端到端跑基准，否则「技能写得很好但从没被选中」不会被任何指标反映。⇒ 评测面清单里要显式列出路由器这一项，并给它自己的用例集。② **指标一经发布即锁定**：原文把 `locked metrics, durable logs, novelty gates, rollback, and human approval boundaries` 并列，且结果落在带日期的 `results-published/2026-05-15` 目录里。⇒ 不锁指标就会变成「追着指标改实现」，历史分数不可比；锁定的最小实现是**结果带日期落目录 + 指标定义随结果一起冻结**。③ **报告必须同时给调用预算与双跑差值**：600 次调用（50 skills × 4 × 3）与 top-1 `0.920` / `0.913` 两次基线同时公布。⇒ 只报一个准确率数字无法复跑、也无法判断波动——**没有预算的分数是不可复现的分数，没有双跑的分数是不知道方差的分数**。
 - 提升层：工作流/可复用 Skill。触发词：路由器一等被测、锁定指标、results-published、调用预算、双跑差值、top-1 双基线。
+
+## 「没有分数」与「零分」是两件事；通过=多智能体取最大 × 全维度合取，增益不得越过闸门（来源：api.github.com/repos/NVIDIA/SkillEvaluator/contents/docs/reports.mdx 20,014B（evaluator 0.8.2），2026-10-01 r348C 独立 curl 实拉取 base64 解码，`INCOMPLETE`×5 / `NEUTRAL`×6 / `Skill Lift`×5 / `pass-threshold` 逐串命中）
+- 判据：① **报表里「缺一个分数格」与「0.0」必须视觉与语义都可分**：原文区分「failed/incomplete trial publishes none of its scores」与「a genuine model score of `0.0` is still a valid, published score」。⇒ 把基础设施故障产生的缺失读成「能力为零」，是评测面最典型的一次误判；**缺失必须单独成档**。② **证据不足要有独立 verdict**：`INCOMPLETE`（必需扫描器没给出可信证据）与 `NEUTRAL`（证据完整但至少一个必需维度低于通过带）都不是通过。⇒ 验收表如果没有「无证据」这一格，缺省行为就是把失败合并进通过。③ **通过判据是 max-over-agents × all-dimensions**（每个配置维度都过、且至少对某个受支持 agent 成立），不是平均、也不是加权综合分；提升幅度（Skill Lift）只是诊断证据，**本身不能推翻闸门**。⇒ 用「平均提升了多少」叙述通过与否，等于用诊断量替换判据。
+- 提升层：可复用 Skill。触发词：缺失不等于零分、INCOMPLETE 独立 verdict、NEUTRAL 不通过、max-over-agents、全维度合取、Skill Lift 不推翻闸门。
+
+## 任务成功不是安全信号；技能自带的非文本资产是扫描器看不到的指令载体（来源：arXiv 2609.35912 MMSkillRisk 44,757B，2026-10-01 r348C 独立 curl 实拉，`43.1%` / `16.4 percentage points` / `36.5%` / `72.2%` 逐串命中）
+- 判据：① **验收必须同时断言「任务做对了」与「没越权」，两件事分开计量**：实测攻击成功与合法任务完成在 **36.5%** 的用例中同现（GPT-5.6-sol + Codex 达 **72.2%**），作者明写「task success alone does not establish safe skill use」。⇒ 只看成功率的安全评测会在高同现率下给出绿灯——**成功率是能力指标，不是安全指标**。② **扫描面必须覆盖技能目录里的非文本资产**（图片 / PDF / 示例数据）：把恶意指令做成教学图片的原生成分（标注、界面文字），pooled ASR 43.1%，**比同等文本载体基线高 16.4 个百分点**。⇒ 只扫文本等于留一条免费绕过通道；审一个技能包时，非文本资产要单独列进扫描清单。
+- 提升层：可复用 Skill/工具。触发词：任务成功不等于安全、攻击与成功同现 36.5%、非文本资产载体、图片注入、ASR 43.1%、比文本载体高 16.4pp。

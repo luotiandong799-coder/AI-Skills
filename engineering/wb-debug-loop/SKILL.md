@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.103.0
+version: 1.104.0
 agent_created: true
 ---
 
@@ -226,3 +226,8 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - 原文：①「modules connected to a router run **sequentially, not in parallel**」；②同页对照表：`can be merged back together with a Merge module` vs `Routes can't be merged back together`。
 - 判据：① **看到扇出就假设并行，是「跑得挺快但结果对不上」类 bug 的误判源头**：同一种图形，在一种节点类型下是顺序执行。⇒ 排障前先确认分叉节点类型，再谈并行；性能预期与正确性预期都要按节点语义而非连线形状来定。② **两种分叉的合并能力不对称是结构事实**：router 分支不可在下游合并，if-else 分支可以。⇒ 不能把一种分叉的收束手法迁移到另一种；「聚合」这个词在同一系统里至少三种语义（顺序聚合 / 按到达顺序收带上限 / 任一分支为空即不产出），引用时必须点名是哪一种。
 - 提升层：工作流。触发词：router 顺序非并行、扇出不等于并行、Routes 不可 merge、if-else 可 merge、聚合三种语义。
+
+## 观测面可损、重放面必精：「看不见」不等于「没存」（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/basic-configuration/use-environment-variables/executions.md` 13,422B，2026-10-01 r348C 独立 curl 实拉）
+- 原文：「For larger executions, n8n omits the data (shown as **too large to display**)」+「**Doesn't affect retrying or resuming executions, which always load the full data**」；`EXECUTION_DATA_MAX_DISPLAY_SIZE` 默认 104857600。
+- 判据：① **展示截断与存储完整是两个不同的面**：观测面为了不把低资源实例拖垮而省略大数据，但重试/恢复永远加载全量。⇒ 「界面上看不到数据」不能推出「数据没存」；排障时把「取不到数据」至少分成三支 —— **没存 / 没到（写入未成功）/ 该面故意不可访问**，逐支验证而不是直接判丢。② **阈值是配置项而非固定行为**：`MAX_DISPLAY_SIZE` 可调，同一个现象在不同实例上成因不同。⇒ 报「这里显示 too large」时先读当前配置值，再判是不是容量问题。
+- 提升层：工作流/可观测性。触发词：观测可损重放必精、too large to display、看不见不等于没存、取不到数据三分支、MAX_DISPLAY_SIZE。

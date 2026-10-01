@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。
-version: 1.64.0
+version: 1.65.0
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -149,3 +149,7 @@ version: 1.64.0
 - **原文**：①「**Clearing invalidates the prompt cache from the first cleared result**; `clear_at_least` prevents a clearing event that would **remove too few tokens to justify the new cache write**.」；②（图像清理）「It preserves the **3 most recent completed turns** byte-for-byte so prompt cache prefixes for recent follow-ups stay stable. **This count includes all completed turns, not just image-bearing ones, so text-only turns consume the window too.**」「The window **advances only when a new user turn begins, never within a tool loop**.」
 - **判据**：① **回收不是越勤越好——回收本身有成本，必须设"最小收益门槛"**：清掉内容会让缓存从第一个被清处失效，若这次只清下一点点 token，省下的远不够重写缓存的开销。⇒ 任何裁剪/清理/重建动作都要问"这次动作自身的代价是多少、最小要回收多少才划算"；低于门槛宁可不动，让 TTL 时钟继续走。② **稳定窗口按"回合"推进，且被计入的不只是目标对象**：保活窗口以"最近 N 个已完成回合"计，纯文本回合同样消耗窗口配额，且窗口只在新用户回合开始时推进、绝不在工具循环内推进。⇒ 设计保活/缓存窗口时，推进的时钟必须锚在**语义边界**（用户回合）而不是步骤边界，否则同一回合内的多次工具调用会把本该稳定的前缀一路推走；同时必须明确**哪些内容计入窗口**——含不含非目标对象，决定了窗口实际能保住多少。
 - **提升层**：模型/工具。触发词：回收成本、clear_at_least、最小收益门槛、缓存失效、稳定窗口按回合、文本回合也占配额、窗口不在工具循环推进。
+
+## 安装其实是三件可分离的事，只有「自动触发」才付常驻 token（来源：arXiv 2608.12610 43,603B，2026-10-01 r348C 独立 curl 实拉，`three separable functions` / `100 reliable trigger slots` / `Install less, use more` 逐串命中）
+- 判据：① **记账要按三件事分档**：安装把「内容 / 持久化 / 自动触发」捆在一起，但**只有自动触发需要提示词常驻**，且常驻槽位少于 100 个、描述一旦装上就持续占位竞争。⇒ 需要一次性的内容就用「读一次」，需要目录级复用就做菜单化目录（不必 all-or-nothing），**只有真正要被自动唤起的东西才付常驻成本**。② **路径寻址可以替代安装**：任给一个路径即可读取并使用技能，不入清单、不占常驻；把副本 vendor 进 Git 跟踪树时，唯一付出常驻成本的是那一行 .gitignore 式条目。③ 与既有「按需加载零常驻」分工：那条讲预算比例，本条讲**成本可以被拆成三件可分离的事** —— 判「这个技能贵不贵」先问它要的是哪一件。
+- 提升层：工作流/可复用 Skill。触发词：安装三件事可分离、只有自动触发付常驻、100 槽位、路径寻址替代安装、Install less use more、菜单化目录。
