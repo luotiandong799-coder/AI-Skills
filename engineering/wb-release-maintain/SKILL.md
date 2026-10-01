@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: 1.45.0
+version: 1.46.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -121,3 +121,10 @@ sources:
 - 原文：条目固定两段「What changed / **What you need to do**」（全页逐条重复）；迁移说明「migration only adds columns and **leaves the existing ones in place**」。
 - 判据：① **两段式是硬要求**：「改了什么」是事实陈述，「你要做什么」才是可执行动作；只有前者的变更日志，读者仍需自己推断是否需要动作 ⇒ 升级事故多出在这一段缺失。② **迁移要写明是加列还是改列**：只加列并保留旧列，意味着旧代码短期仍能读；改列则不是。不区分就无法判断「能不能先升级代码再升级数据」。③ 与既有「迁移三字段 CI 闸 breaking/release/down()」互补：那条闸**声明在场**，本条闸**注记内容形态**。
 - 提升层：工作流。触发词：What changed / What you need to do、破坏性变更两段式、迁移只加列不改列、升级注记形态。
+
+## r350A · 订阅面：族订阅不是通配，未知键仍注册成功 → 必须有告警面（来源：docs.openclaw.ai/automation/hooks/event-types，2026-10-02 r350A 实拉 224,709B）
+
+- **★订阅有"精确键"和"族"两档，族不等于通配**：可订阅精确键（如 `command:*` 下的具体动作）或裸族（`command`/`session`/`agent`/`gateway`/`message`），族订阅收到该族全部动作；但 **`session:compact` 既不是族也不是通配**——要拿到压缩事件必须显式订阅两个精确 compaction 键。判据：**形如 `a:b` 的中间节点默认不是通配**，别假设订阅了父级就能收到子事件。
+- **★未知订阅（如拼错的 `command:nwe`）仍会被注册成功**，只是 loader 告警、`hooks info` 会报出来。判据：**注册成功 ≠ 语义有效**；事件系统必须提供"已注册但无对应事件"的查询面，否则拼写错误是静默失效。
+- 发布检查项：新增/改名事件键时，同步核对订阅清单里是否出现旧键与新键并存（双注册会重复触发），并跑一遍"已注册但零命中"清单。
+- 提升层：工作流 / 工具。
