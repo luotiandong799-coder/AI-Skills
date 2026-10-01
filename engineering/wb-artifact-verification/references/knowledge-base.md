@@ -1824,3 +1824,9 @@ Qoder 净新全量消化（2026-09-27 · r189–r310 共 8 点）
 
 ## 学习轮沉淀 r347A（来源 Qoder r360-Q-A · 2026-10-01 · 签名粒度与 verified 指针）
 - **签名粒度=目录内每个文件与子目录 detached signature**：NVIDIA Verified Agent Skills 用 OpenSSF Model Signing 对 skill 包逐文件/子目录签名（产物 `skill.oms.sig`，本地根证书 `nv-agent-root-cert.pem`）；校验须指向可定位证据。判据：签名粒度到文件级；verified 须机器可校验。来源：NVIDIA dev blog（本批重拉核验）。
+
+## 学习轮沉淀 r347B（来源 Qoder r361-Q-B · 2026-10-01 · 触发碰撞/执行器绑定/部分合格/备份排除）
+- **多技能共存须测触发碰撞，"不该触发"门限比"该触发"更严**：skillcaller `evals/triggers.yaml` 用 `runs:5`、`gates.trigger:0.9` 量化误触发。判据：评测须含负例触发门限。来源：iVamsi/skillcaller。
+- **评测结论绑定执行器，换 executor 即失效**：EASE（arXiv 2609.36746）实测 skill curation 是 executor-dependent，跨 executor 配对性能系统性下降。判据：评测须标注 executor，结论不跨 executor 移植。来源：arXiv 2609.36746。
+- **判定档位显式设"部分合格"并规定计入方式**：SkillsMP windows-mcp-tool-tester 五态 `PASS/SOFT PASS/FAIL/WARN/ERROR`。判据：评测须有 SOFT PASS 档并定义计入。来源：skillsmp.com/skills/page/95。
+- **导出/备份报告逐项说明"为什么不在里面"**：Pipedream `export-workflows` manifest 标注 `exported/skipped/error`+原因。判据：备份清单须逐条给排除原因。来源：Pipedream docs。

@@ -3092,3 +3092,7 @@ version: 3.61.0
 ## 学习轮沉淀 r347A（来源 Qoder r360-Q-A · 2026-10-01 · 钩子写位与分发绑定）
 - **钩子 payload context 整体只读，唯一可写字段按事件白名单枚举**：openclaw 仅 `agent:bootstrap.context.bootstrapFiles` 可写；handler 返回值不 block/cancel/rewrite 操作；生命周期钩子带硬时限（gateway:shutdown 5s、pre-restart +10s），超时忽略 pending promise。判据：钩子写权=事件白名单枚举非全开放；时限是设计契约。来源：docs.openclaw.ai/automation/hooks/writing-hooks（本批重拉核验）。
 - **symlink 绑定上游静默穿透**：Vercel Skill Packs 多运行时经 pack 绑定时默认用 symlink，上游一次改动即时现于 75+ 绑定运行时，pack 无版本协议/依赖清单/零完整性校验。判据：分发绑定须显式版本+完整性校验；symlink 穿透须申报（与 r346A「解析基准≠隔离边界」对称）。来源：digitalapplied.com Skill Packs 供应链分析。
+
+## 学习轮沉淀 r347B（来源 Qoder r361-Q-B · 2026-10-01 · 声明式约束跨客户端与装配校验）
+- **声明式能力约束不可跨客户端移植**：`allowed-tools` 在 Claude Code 是 grant（预批准非限制），Codex/OpenCode 仅模型说明文字，TOML subagent 配置渲染时失效。判据：约束效力按客户端分三态，跨面不继承。来源：r361 实拉（Anthropic/Codex/OpenCode 三态）。
+- **装配面须把"缺失"与"为空"记成两件事**：openclaw agent bootstrap 注入清单 AGENTS.md/SOUL.md/IDENTITY.md/USER.md 缺失 vs 空值不同处置。判据：装配校验区分缺失与空。来源：docs.openclaw.ai/concepts/agent。

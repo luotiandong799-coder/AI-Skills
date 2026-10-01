@@ -308,3 +308,8 @@
 
 ## 学习轮沉淀 r347A（来源 Qoder r360-Q-A · 2026-10-01 · Registry latest 裁决）
 - **MCP Registry 同 name 多版本恰一版 isLatest=true，客户端不得自推 latest**：生命周期字段统一挂带前缀 `_meta["io.modelcontextprotocol.registry/official"]`（status/statusChangedAt/publishedAt/updatedAt/isLatest）；分页 cursor=`name:version`。判据：latest 是服务端裁决非客户端推导。来源：registry.modelcontextprotocol.io 活 API。
+
+## 学习轮沉淀 r347B（来源 Qoder r361-Q-B · 2026-10-01 · 评测 executor/自动删除豁免/备份排除）
+- **评测须标注 executor（与 av 同轮同点）**：跨 executor 结论失效，发布评测报告须锁 executor 基线与版本。判据：结论不跨 executor 移植。来源：arXiv 2609.36746。
+- **自动删除须显式豁免集+两阶段缓冲窗**：n8n `EXECUTIONS_DATA_PRUNE`+`EXECUTIONS_DATA_MAX_AGE`（默认 336h），删除前 grace 窗。判据：清理须有豁免集+缓冲，禁即时硬删。来源：n8n scaling/manage-execution-data。
+- **备份清单逐条排除原因（与 av 同轮同点）**：导出 manifest 须标 skipped/error+原因。判据：备份完整性=逐条可解释排除。来源：Pipedream export-workflows。

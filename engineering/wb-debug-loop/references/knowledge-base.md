@@ -890,3 +890,6 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 
 ## 学习轮沉淀 r347A（来源 Qoder r360-Q-A · 2026-10-01 · 重连≠恢复订阅）
 - **重连≠恢复订阅**：n8n #39174 Redis 重连后须显式恢复 pubsub 订阅并检测 half-open subscriber 连接；连接对象看似存活（无错误/无断开）但订阅通道静默失效。判据：重连须分「传输层」与「订阅面」两件事，后者须显式重建+检测。来源：n8n releases #39174（Qoder 实拉）。
+
+## 学习轮沉淀 r347B（来源 Qoder r361-Q-B · 2026-10-01 · 队列态成因分档）
+- **队列态按成因分档，"存在某态"非异常**：AP BullBoard 单主队列 `workerJobs` 分三优先级——低（RENEW_WEBHOOK/EXECUTE_POLLING）、中（EXECUTE_FLOW/EXECUTE_WEBHOOK/DELAYED_FLOW）、高（EXECUTE_PROPERTY/VALIDATION/TRIGGER_HOOK）。判据：态须按成因分档非二元异常。来源：AP install/troubleshooting/bullboard（本批重拉核验）。
