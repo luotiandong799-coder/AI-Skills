@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.7.0
+version: 1.8.0
 agent_created: true
 ---
 
@@ -108,3 +108,5 @@ agent_created: true
 - **★确定性批次 + 三档有界投递**：冻结的 run ID 排序、以创建/完成时间与子会话身份打破平局、被取代的子行排除，批次身份含 requester 身份 + 子 ID + 让出代数；投递上限 **3 次尝试 / 3 次歧义重放 / 10 次陈旧延迟**（活动后代不消耗陈旧延迟预算），findings 4,096 字符、单条结果 512、路由通知 1,024；"ambiguous replay reuses its attempt key; it does **not** assert global exactly-once delivery across Gateway restarts"。判据：**批次要确定性可复现（排序 + 平局规则），投递要三档封顶并显式声明"不承诺跨重启全局恰好一次"**——不写这条声明，下游会把重试键当成恰好一次的证明。
 - 与 §拓扑选型 / §并行度 的分工：那两条管"块怎么连""允许几块同时跑"；本条管"**委派方中途离场后，完成归谁、继任者凭什么继续、什么才算真的完成**"。
 - 提升层：工作流 / 安全边界。
+
+- **并发去重：leader 选举 vs 共享队列 claim（失效形态不同）+ 内层超时须短于外层租约 + 状态对分开落盘即失步窗口 + 放弃=状态不推进 + 预检失败整体降级并点名**：本章已下沉 references/knowledge-base.md §r346C。
