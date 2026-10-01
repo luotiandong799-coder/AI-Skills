@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: 2.93.0
+version: 2.94.0
 agent_created: true
 ---
 
@@ -448,13 +448,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ## 「能自动仲裁」被当成「没有冲突」：冲突检测器的能力边界必须逐类声明，未覆盖的那类会被静默覆盖（来源：docs.n8n.io `/administer/use-source-control-and-environments/push-and-pull-changes.md` 12,333B，2026-10-01 r339B 独立 curl 实拉逐串命中）
 - 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
 
-## 给人看的紧凑视图不构成操作依据：截断必须配完整无损块，且「理由」落不落库要显式声明（来源：docs.openclaw.ai/cli/approvals.md 16,110B，2026-10-01 r339C 独立 curl 实拉逐串命中）
-- **原文**：①「Human output shows the approval kind, agent/session attribution, request age, time until expiry, a **shortened** command or summary, and a shell-neutral `id64_<base64url>` id token. A **`Full request text` block always follows** the compact table with **every complete token and a losslessly escaped request**, so **terminal-width shortening cannot hide a suffix or the token needed for resolution**.」②「`--reason` adds a local note to the CLI confirmation. The current Gateway approval record **has no free-text resolution-reason field**, so this note is **not persisted or sent to other approval surfaces**.」③「A first successful decision exits `0`. **Repeating the recorded decision also exits `0`** and reports `already resolved (same decision)`. A **conflicting decision, missing approval, expired approval, or decision unavailable for that approval kind** prints a clear error and exits **non-zero**.」
-- **判据**：① **展示层的截断不得影响可操作性**：紧凑表格为了排版会缩短命令与摘要，但凡是被缩短的东西里含**操作所需的标识**（命令后缀、token），就必须同时提供一个**完整、无损、可直接复制**的块。⇒ 设计任何"给人看的清单"时，先问：用户照这个视图去执行下一步，会不会因为省略而拿不到必要的那一段？会 ⇒ 必须补全文出口。**"看起来一样"的短 id 不能作为决议输入。**② **理由字段的存在位置必须逐面声明**：`--reason` 只是本地便签，不进审批记录、不同步到其他审批面。⇒ 审计时不能默认"填了理由 = 留了痕"；**凡是让用户填理由的界面，必须明示这个理由会被存在哪里、谁能看到、会不会跨面同步**，否则是假留痕。③ **决议的退出码要区分「已经做过了」与「做不了」**：同决议重复 = 幂等成功（0，且明确报 already resolved）；冲突/缺失/过期/该类型不支持 = 非零。⇒ 把"重复"判成错误会让重试脚本假失败，把"冲突"判成成功会让相反的决议静默通过；**退出码是审批语义的一部分，不是装饰**。④ 承接 §静默伪健康：一批审批"没有报错"可能只是没人提交冲突决议 —— 健康信号必须来自**已记录的决议状态**，不是"没有错误输出"。
-- **提升层**：工具/安全边界/可观测性。触发词：紧凑视图截断、Full request text、短 id 不可作决议输入、reason 不落库、假留痕、already resolved、冲突决议非零、审批退出码语义。
-
-
-- **有损压缩必须显式留省略标记并计入预算；摘要校验不过就不落盘；权限随请求携带不因排队而借；合批不得跨路由（来源：docs.openclaw.ai/concepts/compaction.md 17,978B + concepts/queue.md 17,920B，2026-10-01 r340A 独立 curl 实拉逐串命中）**：本章已下沉 `references/knowledge-base.md`（r340A）。
+- **给人看的紧凑视图不构成操作依据**：本章已下沉 `references/knowledge-base.md` §r348A-sink1（r348A）。
 ## 终态必须由显式信号声明而不是从「内容看着完整」推断；该信号要落成含「缺席」档的独立字段；投递证据取自投递侧回执而非展示历史（来源：docs.openclaw.ai/concepts/agent-loop.md 32,727B + www.activepieces.com/docs/install/troubleshooting/truncated-logs.md 2,279B，2026-10-01 r340C 独立 curl 实拉逐串命中）
 - **原文**：①「If the provider sends `end_turn: false`, the loop **requests another response even when the completed response contains only text**」；②「records the provider's `endTurn` signal as `true`, `false`, `"absent"`, or `"invalid"`, **without retaining malformed values** ... **Older messages without this diagnostic cannot establish whether the provider omitted the signal**」；③「A receipt with `sourceReplyDelivered: true` **confirms a final reply reached the external source conversation**. A2A announcements **consume that fact instead of using display-history mirrors as delivery evidence**」；④「`agent` RPC ... **returns `{ runId, acceptedAt }` immediately** ... `agent.wait` waits for the terminal outcome on a `runId` and returns `{ status: ok|error|timeout, startedAt, endedAt, error? }`」；⑤「Truncation applies to **step inputs only**. Step **outputs are never truncated**, because downstream steps, subflows, and paused/resumed runs need the original output」；⑥「If the run **still** exceeds the limit after all inputs are truncated ... the run **fails with `LOG_SIZE_EXCEEDED`**」。
 - **判据**：① **"看起来说完了"不等于"被声明为终态"**：响应里已经有完整文本、但显式信号是 `end_turn: false` 时，正确动作是**再要一次**，不是收工。⇒ 任何"判断这一轮是否结束"的逻辑都必须读**显式终止信号**；用启发式（有没有句号 / 长度够不够 / 像不像结尾）判定终态，会在模型还想继续时被提前掐断。② **终态信号要落成独立、可枚举的字段，且必须有"缺席"这一档**：原文四态 = true / false / **absent** / invalid——"没这个字段"和"字段是 false"是两件事，混在一起会让"对方压根没表态"被当成"对方说不要"。⇒ 同时要**承认不可回溯**：没有留痕的历史，事后无法判定对方当时是否省略了信号——所以留痕要从第一天起就记，事后补不出来。③ **投递证据必须来自投递侧的回执**：`sourceReplyDelivered` 是"确实送到了外部会话"的确认；拿"展示历史里有一条"当投递证据是本末倒置——展示面是**镜像**，镜像里有可能是自己写的，不代表对面收到了。⇒ 验收"消息发出去了没"，问的是回执字段，不是界面。④ **受理与完成是两个时点，必须分别可查**：提交立刻拿到 `runId + acceptedAt`，终态由独立的 wait 返回 `status/startedAt/endedAt/error`。⇒ 把"已受理"当成"已完成"是异步接口上最典型的验收错误；受理凭证与结果凭证要分开持有。⑤ **截断/降采样要挑"不被下游依赖的那一侧"**：这里只截 step 输入、**绝不截输出**，因为输出是下游步骤、子流、暂停-恢复运行的输入源。⇒ 选压缩对象时判据不是"谁最大"，而是"谁被依赖"；砍掉被依赖的一侧会制造不可预测的后续失败。⑥ **压缩手段用尽仍超限，必须显式失败而不是继续静默丢**：全部输入都截完还超限时系统报 `LOG_SIZE_EXCEEDED` 让运行失败。⇒ 容量治理要有明确的"兜不住就报"出口；一路静默降级到最后，用户拿到的是一份残缺数据而不是一条错误，反而不知该扩容。
@@ -462,13 +456,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **观测读数要标注来源与可信度；给归因不给全量；按可行动性切分**：本章已下沉 `references/knowledge-base.md`（r342C）。
 
 
-## 敏感输出重路由的三条铁律；同一操作多入口须收敛单一执行器且各入口独立鉴权（来源：docs.openclaw.ai/tools/slash-commands.md 38,378B，2026-10-01 r343B 独立 curl 实拉逐串命中）
-
-- **原文**：①「When run from a group, the configuration is **routed privately to the owner**. The group notice distinguishes **confirmed, pending, and suppressed delivery**. An **unconfirmed send stays pending without trying another private recipient**. If no private owner route is available, the command asks the owner to retry from a direct chat.」；②「Natural-language update requests use the `gateway` tool's `update.run` action. `/update` provides the same update operation **without requiring a functioning model or access to that tool**. **Both use the Gateway update handler**, also used by the Control UI. **Chat access alone does not grant permission to update.**」
-- **判据**：① **把敏感内容从公开面重路由到私域时有三条不可省**：一是**目标必须私密**（群里的配置只发给 owner）；二是**投递结果必须三态可见**（已确认 / 待定 / 被抑制），不能只报"已发送"；三是**绝不因第一个收件人不可达而改投他人**——没确认就保持待定，宁可让用户自己到直聊里重试。⇒ 重路由最大的风险不是"发不出去"，而是"自作主张换个地方发出去"；可观测性（三态）+ 不换收件人，是重路由区别于普通投递的两条硬边界。② **同一操作开放多条入口时，执行必须收敛到同一个处理器，但鉴权必须在每个入口各自做**：自然语言、斜杠命令、控制台 UI 都走同一个 handler（防各入口语义漂移成三种行为），而"能聊天"不等于"能更新"——聊天通道的访问权不授予更新权。⇒ 多入口改造的正确姿势是**收敛执行、分散鉴权**：共享实现保证行为一致，各入口独立判权防止最弱的那个入口成为权限渗透面。
-- **提升层**：安全边界/工作流。触发词：敏感输出重路由、私信 owner、投递三态 confirmed/pending/suppressed、不换收件人、多入口收敛单一执行器、各入口独立鉴权、聊天权不等于更新权。
-
-
+- **敏感输出重路由的三条铁律**：本章已下沉 `references/knowledge-base.md` §r348A-sink2（r348A）。
 ## 资格判定三态（不确定不禁用、禁用带可见且可撤销的理由）；自动修复严守证据自证门槛（来源：docs.openclaw.ai/automation/cron-jobs/payloads.md 27,960B + managing-jobs.md 17,374B，2026-10-01 r343C 独立 curl 实拉逐串命中）
 
 - **原文**：①「In `auto` mode, a review **stays disabled when every statically resolvable model candidate is known to lack** rooted execution support. Its display name includes `no-rooted-runtime` ... **unknown eligibility also keep it enabled, with final checks at execution time**.」「**Convergence clears the reason and restores auto-mode enablement** when the configured chain becomes eligible or unknown.」；②「Doctor **reconciles the account only when the stored creator identity proves it**, and reports the repair.」「**Doctor does not infer ownership from delivery settings or the current caller.**」「Jobs whose stored identity cannot prove an account need **authenticated administrator recovery**.」
@@ -494,3 +482,13 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ## "索引层无数值" 是可交付结论，不是抓取失败：Flowise/LangFlow 索引层零字段须逐页且如实记"不可判"（来源：docs.flowiseai.com/llms.txt、docs.langflow.org/llms.txt、docs.dify.ai/.../knowledge-request-rate-limit、list-workflow-logs，2026-10-01 r362-Q-C 实拉；承接 r326 失效四形态）
 - 判据：① Flowise/LangFlow `llms.txt` 仅导航目录（Flowise 只版本号；LangFlow 只 Python 版本+端口），**零字段/零默认值/零超时分页** ⇒ 该站该面在文档层不可判，须记为"索引层无数值"而非"内容缺失"。② Dify 有数字但**无状态码**：限流 10/100/1,000 per min 三档，`limit>100` 语义是"capped at 100"=**静默截断不报错**（无旁路参数）；`page` 硬 `max 99999`。⇒ 这三家的"超限"在文档层是"截断/降档"而非"报错"，不能假设 4xx。③ 通道副产物：n8n 404 页自曝问询端点 `learning-paths.md?ask=&goal=`；但 `hosting/scaling/*` 五路径仍 404 ⇒ 该子树无直觉路径入口。
 - 提升层：工具/通道。触发词：索引层无数值可判、Dify 静默截断无状态码、Flowise/LangFlow 零字段。
+
+## 迁移开关要分「可逆」与「不可逆点」；配置存在 ≠ 配置生效，验收须查该旋钮当前版本是否仍被消费（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/durable-scheduler.md`，2026-10-01 r348A 独立 curl 实拉；经 Qoder r363-Q-A 提名）
+- 原文：①`N8N_POLLER_DURABLE_CURSORS_ENABLED`：「Turning it back off doesn't undo it. Cursors stay in their table.」②`QUEUE_WORKER_MAX_STALLED_COUNT`：「Removed in n8n 2.0. Setting this has no effect.」
+- 判据：① **开关要标「关回去是否回滚」**：有些迁移开关一旦打开就留下持久产物（游标表），关掉只是停止使用、不删除已产生的东西 —— 这是**不可逆点**，必须在打开前告知。⇒ 把可逆开关与不可逆点混为一类，会让「回退」变成半回退：行为退回来了，数据没退回来。② **旋钮变哑是一类静默失效**：配置项还在文档里、还被接受、甚至还被回显，但当前版本已不消费它。⇒ 验收「这个配置生效了吗」不能只看有没有这个字段，要查当前版本是否仍消费它 ——「配置存在」与「配置生效」必须分列。
+- 提升层：工作流。触发词：不可逆点、关掉不回滚、游标留存、旧旋钮变哑、配置存在不等于生效、Removed 无效果。
+
+## 单轮评测会系统性低估：只看首轮会把「多轮后能做成」误判为「做不成」；攻击轨迹库是比又一份 benchmark 更新的证据层（来源：arXiv 2609.13353 SkillAtlas，2026-10-01 r348A 独立 curl 实拉，`42.5%` / `0.770` 逐串命中）
+- 原文：「42.5% of successful cases first become successful after a non-success initial round, and trajectory-grounded labels improve pre-execution guard accuracy to 0.770」（3,014 cases / 6,589 traces / 151,131 steps / 233 skills / 8 风险类）。
+- 判据：① **「首轮通过率」不是能力的上界**：近半数最终成功的用例第一轮是失败的，只看首轮会把多轮修正后能做成的能力判成做不成。⇒ 评测设计要显式声明**轮次口径**（单轮 / 有界多轮 / 直到收敛），并同时报首轮与最终两个数；只报一个等于隐藏了一半事实。② **轨迹级标注能把前置守卫精度推到 0.770** —— 判「该不该拦」所需的证据在轨迹里、不在单步输出里；这也是「攻击轨迹库（公开、reviewed/redacted/searchable）比新增 benchmark 更有价值」的原因。③ 与 §评测要接回优化器 互补：那条管「评测之后谁把它改回去」，本条管「评测本身是不是测全了」。
+- 提升层：可复用 Skill。触发词：单轮评测低估、42.5% 首轮失败后成功、轮次口径、首轮 vs 最终、轨迹级标注、攻击轨迹库。

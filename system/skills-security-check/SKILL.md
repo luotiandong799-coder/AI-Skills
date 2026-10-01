@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.5.0
+version: 1.6.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -453,3 +453,8 @@ Step C: 是否包含恶意意图？
 ## 审阅/验证第三方技能这一步本身不得引入运行期副作用：Staging 不跑 install/build/postinstall，按对象类型选扫描器（来源：github.com/disableRDP/security-triage README、docs.openclaw.ai/automation/hooks，2026-10-01 r362-Q-C 实拉；第三方仓，作契约范式非数字源）
 - 判据：① Staging（本地/git/zip/registry）一律**不跑 install/build/postinstall**；按对象类型选扫描器：agent 面文件→SkillSpector；有 manifest 的包→GuardDog 逐 npm/PyPI/Go；通用码→Semgrep `--config p`。② 同源第二例：openclaw 钩子原文 "Internal hooks are trusted code, not sandboxed scripts"（钩子在 Gateway 进程内执行，审阅面与沙箱面不同）。⇒ "验证技能"不得变成"运行技能"，审阅环境与运行环境必须分离。
 - 提升层：可复用 Skill/安全边界。触发词：审阅期不执行、Staging 不跑 install、按类型选扫描器、钩子非沙箱脚本。
+
+## 内容可读与代码可执行必须分两档：远端技能包可全文下发、强校验，但包内脚本永不执行；同步排除清单把可信钩子挡在不可信沙箱外（来源：learn.microsoft.com/agent-framework/agents/skills（ms.date 2026-09-18）+ docs.openclaw.ai/gateway/openshell.md 25,346B，2026-10-01 r348A 独立实拉）
+- 原文：①MCP `archive` ZIP 可全文下发，digest 须 `sha256:`+64 hex，但**包内脚本永不执行**。②双向同步排除 `.git`、`hooks`、`git-hooks`；symlink/FIFO/socket 永不复制。③反例：`autoProviders: true` 时沙箱 provider 会由宿主进程已有凭据**自动补建**。
+- 判据：① **「能读」不等于「会跑」**：技能包作为内容可以全文可读、可 grep、可校验完整性，但作为代码是否执行是另一条独立开关。⇒ 审一个远端技能包时，判危险不危险要先问这里的脚本到底会不会被执行；两者同为真才是执行面风险。② **同步排除清单是信任边界声明**：把 `.git`/`hooks`/`git-hooks` 排除在双向同步外，是因为钩子代码是可信侧的执行逻辑，不该随工作区进入不可信沙箱；符号链接等非普通文件永不跨界，防止「看起来是个文件、实际指向别处」。③ **体检要查自动补建路径**：`autoProviders` 会让沙箱凭据由宿主已有凭据自动补齐 —— 安装/接线检查须显式扫这一条，否则「没配凭据」的表面下已经有一条活的凭据通道。
+- 提升层：工具/安全边界。触发词：archive 脚本永不执行、sha256 digest、内容可读不等于代码可执行、同步排除 git-hooks、symlink 不跨界、autoProviders 自动补建凭据。

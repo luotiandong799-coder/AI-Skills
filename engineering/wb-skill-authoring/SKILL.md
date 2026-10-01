@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: 3.87.0
+version: 3.88.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -204,3 +204,13 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **提升层**：安全边界/工具。触发词：创建时刻权限快照、创建者不能自增、丢失授权不自动补、形态转换不重新授权、一次性提权四要素、60 秒过期、绑定单次运行、写入前再核、表面标识不构成所有权、管理权不等于创建权。
 
 - **同一寻址语法「读可模糊、写必须确定」+ 写入前拒模式化路径 + validate 不触文件系统 + 字节往返自证**：本章已下沉 references/knowledge-base.md §r346A。
+
+## 技能修订要有「预算 + 被拒缓冲 + 离线巩固位」三旋钮，且候选修订只在留出集严格变好时才被接受（来源：github.com/microsoft/SkillOpt README 8,573B（17,912★）+ agentman.ai 报告引 SkillsBench，2026-10-01 r348A 独立 curl 实拉）
+- 原文：①「A candidate edit is accepted only when it strictly improves a held-out validation score.」②「A textual learning-rate budget, a rejected-edit buffer, and an epoch-wise slow / meta update.」③「SkillOpt-Sleep, a nightly offline self-evolution engine (harvest → mine → replay → consolidate behind a held-out validation gate).」④产物体积 300–2,000 tokens、部署期零模型调用。⑤粒度证据：2–3 个聚焦技能 +18.6pp，单体技能 −2.9pp（SkillsBench 47,150 技能）。
+- 判据：① **修订速率本身要设预算**：「学习率」在文本空间同样存在 —— 一次改太多会把已验证行为一起改坏，改太少则永不收敛；预算 + 被拒样本缓冲（记住改了什么被拒，防止重复试错）+ 慢速/元更新分层，是三件独立旋钮，不能只用「跑几轮」代替。② **接受门必须是留出集上的严格改进**（不是不变差、也不是平均变好）：留出集要与修订用的集分离，否则就是自证。③ **离线巩固位必须在门后**：harvest→mine→replay→consolidate 整条链都跑在留出集门后面；「先合并、后验证」会让坏修订进入基线。④ **技能粒度有方向性证据**：2–3 个聚焦技能显著优于一个大而全的技能（+18.6pp vs −2.9pp），收益来自「每次装载时不相干内容不进上下文」。
+- 提升层：可复用 Skill。触发词：文本学习率预算、被拒编辑缓冲、留出集严格改进门、离线巩固、SkillOpt-Sleep、技能粒度 2-3 个聚焦。
+
+## 钩子分「观察面 / 干预面」两级：handler 返回值不参与控制流，且效果位按命令路径分档（来源：docs.openclaw.ai/automation/hooks/writing-hooks.md 10,721B + event-types，2026-10-01 r348A 独立 curl 实拉）
+- 原文：①「Returned values do not block, cancel, or rewrite the operation.」②「`/new` and `/reset` — Awaits handlers, joins strings with blank lines」；`/stop`、automatic reset、message events、bootstrap、patch 与 Gateway lifecycle 事件一律忽略回复。
+- 判据：① **返回值不阻断、不取消、不改写操作** —— 要干预必须走 typed plugin hook（干预面），观察型 handler 只能看不能改。⇒ 把「能不能拦下来」寄托在返回值上会静默失效：钩子跑了、日志有了，操作照旧。② **效果位按命令路径分档**：同一 handler 产出的 messages 只在 `/new`、`/reset` 两条路径被消费，其余路径全部忽略。⇒ 验收钩子「有没有生效」必须先确认当前路径在不在消费白名单内；在 `/stop` 路径上等回复，等不到不是 bug 是设计。
+- 提升层：工作流。触发词：钩子观察面干预面、返回值不阻断、typed plugin hooks、效果位按路径分档、/new /reset 才消费。

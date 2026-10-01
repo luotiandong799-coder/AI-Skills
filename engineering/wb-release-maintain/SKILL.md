@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: 1.40.0
+version: 1.41.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -81,3 +81,8 @@ sources:
 - **原文**：①「work goes in one direction: **either to Git, or from Git, but not both**」（同一实例又推又拉官方明确不推荐）；②「When workflows, credentials, variables, tags, and data tables are **deleted from the repository**, your local versions of these resources **aren't deleted automatically**. … n8n notifies you about any **outdated resources** and asks if you'd like to delete them」；③「**Credential stubs** - name and type. Any other fields are included only if they are expressions.」「When the changes include new variable or credential stubs, n8n notifies you that you need to **populate the values for the items before using them**」；④「n8n **syncs data table schemas** … **Row data isn't synced.**」；⑤「**Workflow and credential owner may change on pull**」——按项目名匹配，无匹配则新建项目并把当前用户设为 owner；⑥「If you have more than one Git branch, you need to **merge the branches in your Git provider** to copy work between environments. **You can't copy work directly between environments in n8n.**」
 - **判据**：① **提升（promotion）链路要设计成单向**：源环境只推、目标环境只拉。同一节点双向同步会把「谁是最新的」变成运行时问题，官方宁可劝退也不做合并策略。⇒ 设计环境同步前先回答方向，方向不定就不该上线同步。② **删除是唯一不自动传播的动作**：仓库里删了，本地仍在，只会被标为 outdated 并等你确认。⇒ 「删了怎么还没生效」是预期行为；反过来说，**任何声称「同步」的通道都必须逐类声明删除是否传播**——不声明就是埋雷。③ **跨环境只同步形状，不同步秘密值**：凭据只走 name+type 的 stub，真实值由目标环境自备。⇒ 这既是安全边界（秘密不跨环境漂移）也是可用性约束（新 stub 未填值即不可用，必须在**使用前**阻塞而不是运行时才炸）。④ **schema 与 row 的同步策略必须分开声明**：结构同步、数据不同步，是默认且合理的——把两者绑成「全量同步」会让一次结构变更带走/覆盖生产数据。⑤ **跨环境迁移会改写归属**：owner 可能在新实例上被重指派。⇒ 迁移验收清单里必须有「权限/归属是否被改」这一项，否则迁移完成但责任人对不上。⑥ **环境间的"复制"要借道 Git 的合并能力，不要在应用内复制**：应用提供 push/pull 两端，合并语义交给真正的版本系统。
 - **提升层**：工作流/发布治理。触发词：单向提升、one direction、删除不传播、outdated resources、credential stub、值缺失阻塞使用、schema 同步 row 不同步、owner 在 pull 时变更、跨环境不直接复制。
+
+## 冻结位、改名断链防护、去重合并都必须是发布面的显式动作：本地安装态可被钉死，且重命名/合并不破旧链（来源：github.com/openclaw/clawhub README 8,522B（9,474★）+ Activepieces piece-syncing + Pipedream CLI 版本闸，2026-10-01 r348A 独立 curl 实拉）
+- 原文：①「Pin local skill installs so updates and force reinstalls cannot overwrite frozen copies.」②「Rename an owned skill without breaking old links or installs.」③「Merge duplicate owned skills into one canonical slug.」④第二证：AP「Each step is pinned to an exact version」/「Flows never auto-upgrade」/「The pin stays until a human changes it」。⑤第三证：Pipedream「If you fail to update the version, the CLI will throw an error」+ account 级 `key` 全局唯一。
+- 判据：① **「冻结」要落在安装态而不是版本号**：钉住本地副本，使 update 与 force reinstall 都覆盖不了它。⇒ 只靠记住版本号来复现是不够的 —— 真正的冻结位必须能挡住强制重装这条最宽的通道。② **重命名与合并必须保旧链**：合并到 canonical slug 后旧链接仍可用，否则每次治理都在制造一批死链（表现为用户报 404，而不是合并成功）。③ **版本未 bump 要在构建期拦下**：CLI 直接抛错而不是放行后靠人巡检。⇒ 发布面三件套 = 冻结位、断链防护、构建期版本闸，缺一件就只能靠约定。
+- 提升层：工作流。触发词：pin 冻结本地安装、force reinstall 不可覆盖、rename 不断旧链、merge canonical slug、版本未 bump 构建期抛错。

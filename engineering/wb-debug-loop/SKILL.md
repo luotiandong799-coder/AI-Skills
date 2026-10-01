@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: 1.101.0
+version: 1.102.0
 agent_created: true
 ---
 
@@ -201,3 +201,23 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **远端执行的 canonical 唯一且随模式改变 + 自动修复不得顺带放宽安全面 + break-glass 显式命名 + attested 工作区消失拒绝重播种**：本章已下沉 references/knowledge-base.md §r346B。
 
 - **「没生效」三分支（未发现/不合格/未执行）+ 静态资格报告只覆盖它检查过的项 + 发现不递归且拒绝后不放宽**：本章已下沉 references/knowledge-base.md §r346C。
+
+## 失败恢复有两条硬边界：回滚资格按「是否事务模块」封闭枚举，且重试耗尽可级联改变自动化生命周期（来源：help.make.com/rollback-error-handler.md 8,865B + exponential-backoff.md 2,779B + docs.n8n.io/.../executions.md，2026-10-01 r348A 独立 curl 实拉）
+- 原文：①「Modules that support transactions are labeled with the 'ACID' label.」②「Auto-commit enabled — Only the module that produced the error can revert its changes.」③「Auto-commit disabled — All changes made during the bundle's execution across every transaction-supported module can be reverted.」④「If the 8th attempt fails, Make disables scheduling of the scenario.」⑤第二证 `N8N_WORKFLOW_AUTODEACTIVATION_MAX_LAST_EXECUTIONS=3`。
+- 判据：① **回滚范围不是「尽量回滚」，而是按模块是否事务（ACID 标签）封闭枚举** —— 非事务模块的改动失败后仍然留着。⇒ 任何「出错就回滚」的承诺都必须先回答哪些改动真的可回滚；把不可回滚的算进去，验收时会得到「回滚成功了但状态还是脏的」。② **提交模式反转回滚粒度**：Auto-commit 开=只有出错模块回滚；关=整个 bundle 跨全部事务模块回滚。粒度更粗的那一档不是更好，而是失败时影响面更大，要与业务的原子性需求对表。③ **重试耗尽不止是这次失败**：它可以直接改自动化本身（停用调度）。⇒ 排障「这条自动化怎么不跑了」时，先看是不是先前的重试耗尽把它关掉了，而不是查触发器与权限。
+- 提升层：工作流。触发词：ACID 标签回滚资格、Auto-commit 反转回滚粒度、只有出错模块可回滚、重试耗尽停用调度、AUTODEACTIVATION。
+
+## 同一个错误的默认处置会随调度形态分岔；重试资格要按错误类别封闭列举，不靠「看起来可重试」（来源：help.make.com/fix-rate-limit-errors.md 9,275B + docs.dify.ai/en/api-reference/guides/errors.md 3,157B，2026-10-01 r348A 独立 curl 实拉）
+- 原文：①同一 `RateLimitError`（429）无 handler 时：定时触发=「pauses the next scenario run for 20 minutes」；即时触发=「reruns the incomplete execution from its start with exponential backoff」。②Dify：「Retry with backoff: `too_many_requests`, `500`, and network failures」vs「Don't retry as-is: validation errors (fix the request first), authorization failures, or quota errors (they won't clear until the quota does)」；`code` 是稳定分支键，`status` 只镜像 HTTP。
+- 判据：① **跨调度形态的默认值不可假设一致**：同一个 429 在定时/即时两条路径上的默认动作完全不同（暂停 20 分钟 vs 从头指数退避）。⇒ 写重试/兜底策略时先问这条路径的调度形态是什么，否则同一种错误会得到两种完全不同的用户体验。② **重试资格要写成两张封闭清单**（可重试 vs 不可原样重试），而不是一个「是否重试」布尔：配额类错误在配额刷新前重试纯属浪费，鉴权/校验类不改请求重试必然重复失败。③ **分支键取稳定字段**：用业务 `code` 分支，不要用镜像 HTTP 的 `status` —— 后者会随传输层重映射漂移。
+- 提升层：工具/工作流。触发词：429 定时暂停 20 分钟、即时指数退避、同错误分岔、重试白名单黑名单、配额错误不重试、code 稳定分支键、status 只镜像 HTTP。
+
+## 背压要先分「丢弃式 / 阻塞式」两档并显式写出；限流的作用面按触发类型分轨（来源：pipedream.com/docs/concurrency-and-throttling.md + docs.n8n.io `/scaling/control-concurrency.md`，2026-10-01 r348A 独立实拉）
+- 原文：①「fixed window throttling」、`limit=0` 即关队列、「exceeds the queue size, events will be lost」。②队列仅对 event-driven 生效，「excluding native HTTP or cron types」。③第二证：n8n 并发上限「applies only to production executions」，显式不含 manual / sub-workflow / error / CLI。
+- 判据：① **背压有两档且代价相反**：丢弃式（队列满即丢事件，吞吐让位于内存）与阻塞式（反压上游，延迟换不丢）。⇒ 选型时先声明是哪一档；混着用会出现「既延迟又丢事件」的最坏组合，而日志上两者都只是「慢」。② **`limit=0` 这种取值要显式识别** —— 它不是队列无限，而是队列不存在，溢出直接丢。③ **限流/并发上限必须点名覆盖哪些触发类型**：只覆盖事件驱动、不覆盖 HTTP/cron/子工作流/手动/错误工作流是默认形态。⇒ 排「限流没生效」时先核对触发类型在不在作用域内；恰好漏掉兜底错误工作流与被复用子工作流，是最常见的失效面。
+- 提升层：工作流。触发词：丢弃式背压、阻塞式背压、events will be lost、limit=0 关队列、限流按触发类型分轨、生产执行才限流、子工作流不在并发上限内。
+
+## 「我在改的东西会不会被在途同步覆盖」要按锁的覆盖范围判，不按我的操作意图判（来源：docs.openclaw.ai/gateway/openshell.md 25,346B，2026-10-01 r348A 独立 curl 实拉）
+- 原文：①「External editors and other Gateway processes do not participate in that lock」—— mirror 模式的锁只覆盖同一 Gateway 进程内的 upload→command→download。②「symlinks, FIFOs, or Unix sockets, into either workspace」永不复制。③清理失败须保留 runtime registry 条目供 recreate/prune 重试，明令勿靠删 registry 或切 workspace 隐藏失败。④`timeoutSeconds:120` 但 sandbox 创建保底 ≥300s。
+- 判据：① **锁的作用域不等于「所有会碰这个文件的人」**：进程外的编辑器与宿主进程不参与锁，因此运行中的镜像命令在 download 阶段可以覆盖外部编辑。⇒ 「我刚改的怎么没了」这类问题的判据是谁参与这把锁，不是我改的时候有没有人看着。② **清理失败要留下可重试的把柄**：删沙箱失败时保留 registry 条目，是为了让 recreate/prune 还能找到它；靠删记录或切工作区让错误消失，等于把可重试故障变成不可见孤儿。③ **超时分档要按阶段看**：执行超时与创建保底是两个数值，用执行超时去估创建等待会误判卡死。
+- 提升层：工作流。触发词：锁不覆盖外部编辑器、download 覆盖外部编辑、清理失败保留 registry、勿隐藏失败、symlink 不跨同步、创建保底超时。

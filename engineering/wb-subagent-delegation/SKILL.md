@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.9.0
+version: 1.10.0
 agent_created: true
 ---
 
@@ -110,3 +110,8 @@ agent_created: true
 - 提升层：工作流 / 安全边界。
 
 - **并发去重：leader 选举 vs 共享队列 claim（失效形态不同）+ 内层超时须短于外层租约 + 状态对分开落盘即失步窗口 + 放弃=状态不推进 + 预检失败整体降级并点名**：本章已下沉 references/knowledge-base.md §r346C。
+
+## 多 agent 的软/硬边界：路由建议不是调度器；默认作用域不共享，共享必须是显式动作（来源：docs.openclaw.ai/concepts/multi-agent.md 30,442B，2026-10-01 r348A 独立 curl 实拉）
+- 原文：①「`delegationMode:"prefer"` — prompt guidance, not a scheduler」；`subagents.allowAgents` 才是硬 spawn 边界。②跨 agent 记忆 builtin 只搜自身语料，共享须显式 `memory.search.extraPaths`；vault 按 `scope:"agent"` 追子目录。③次级 agent OAuth 过期时 read-through 借 main 同 profile 的 **freshest** token，但**不回拷 refresh token**；静态 `api_key/token` 才可按 `copyToAgents` 移植。
+- 判据：① **「建议性路由」不能当硬闸用**：`prefer` 只是给模型的提示，真正可派发的集合由硬边界名单决定；两者混用会出现「配了却没生效」或「以为限制了其实没限制」。② **默认作用域是各搜各的**：跨 agent 记忆与凭据默认不共享，共享必须写成显式路径/显式许可。⇒ 判两个 agent 有没有共享知识，看的是有没有那条显式声明，不是看它们是不是同一个系统。③ **凭据借道是有方向的**：借到的是当前最新访问令牌，refresh material 不回拷 —— 次级 agent 到期后仍须回主 profile 续期，不会自立门户；而静态密钥一旦 `copyToAgents` 就是真复制，传播面与吊销半径差一个数量级。
+- 提升层：工作流/安全边界。触发词：delegationMode prefer 软路由、allowAgents 硬边界、extraPaths 显式共享、凭据 read-through 不回拷 refresh、copyToAgents 静态密钥。
