@@ -3494,3 +3494,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **指标扩展**：pass@k 之外加 regression_rate（修复引入回归=agent 高频失败）与 repair@k（k 轮修复内验证通过）；SWE-rebench 报 cost per problem。
 - **PR 审查门禁**：全库索引（文件/函数/依赖图）抓跨文件 seam bug；风险分级=低风险可无人过，auth/payments/secrets/infra 必人工；机械验证三级=pre-commit→CI→merge gate。
 - **harness 指标轴**：Correctness/Navigation/Oracle strength/Exercise/Efficiency+运行时轴（success rate/steps/tool error/recovery/latency/cost/unsafe actions）；coverage-delta gates+termination 与 all-tests-pass 解耦。
+
+## r367A Agent 规划与反思执行 2026（来源：Task-Decoupled-2601.07577/PseudoAct-2602.23668/zylos-self-correction/FCPAgent-2607.24167/agentpatterns-LivePlan/algomox-verify/Goal2Skill-2604.13942/APB-2606.04874/langchain-runtime/agentnative-checkpoint/Safe-to-Resume-2608.29381/coffee-guardrails/clawhub-progressive-disclosure，2026-10-02 实拉）
+- **任务解耦规划**：Supervisor 分解成语义一致子任务+推断 prerequisite 关系+有向依赖图+拓扑调度（重复选 prerequisite 已满足的 ready 节点）；计划=图不是列表。
+- **PseudoAct**：ReAct 是反应式（依 h<t 选 a_t）；先把决策写成伪代码计划（分支/循环）再引导执行——决策=编程过程。
+- **反思循环**：generate→critique→improve 是围绕模型搭的循环；LangGraph critic-in-the-loop=agent→critic→[accept|revise] 条件循环+可配置最大重试防死循环；2-3 迭代内通过。
+- **可证伪承诺计划（FCU）**：每步=subgoal+确认证据+反证证据+置信分；混合承诺测试=行动前查候选、执行后查观察；plan-test-repair。
+- **计划漂移监控**：action graph+phase-sequence 两视图；阻塞 drift（plan violation/跳验证/振荡）停执行，非阻塞（停滞/重复 back-edge）附建议继续——judge/advisor 分流。
+- **执行后验证**：用独立证据源，不信工具自称成功（HTTP 200≠问题修复）；agent 自评假成功率 45-78%；scope drift>20%（文件/函数相对 spec）block 重规划。
+- **失败恢复分层**：失败且次数<N→re-execute；超时或超限→replan；监控五触发（工具失败/新信息/预算/目标漂移/质量门）→本地重规划/升级/继续三分支。
+- **规划评测**：APB 4209 例 5 设置（整体/反馈逐步/多余工具/坏工具/不可解）；OrchestrationBench DAG 图编辑距离打分解决"端到端说不清错在哪"；DeepPlanning 离线沙箱+规则 checker。
+- **Checkpoint-resume**：superstep 级持久化+thread_id 光标；pending-writes ledger 只补失败输出；Safe-to-Resume 定义无效恢复两类（漏内部状态/无效转换）。
+- **规划成本护栏**：per-run token 硬顶/每工作流最大步数/周期成本告警；重复工具调用 3 次升 HITL；progressive disclosure 四级（L0 名称→L1 摘要→L2 schema→L3 示例）按需加载。
