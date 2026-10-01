@@ -3086,3 +3086,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **密钥生命周期**：每团队/每 agent 独立 key（审计可归因）、rotation 策略（什么/何时/如何无停机）、offboarding 枚举轮换 hook IDP、key 不出配置文件。
 - **凭据访问四纪律**：集中 vault+细粒度策略（禁宽 namespace）+审计读+明文仅出站瞬间解析；token 刷新串行化（并发刷新致 429/refresh token 失效）。
 - **服务账号模型**：agent 用服务身份不用用户身份（ADC/托管身份）；scoped 服务账号+自动轮换+全量审计+禁用即停+不见用户凭据；平台 env var 不满足审计（改了什么/谁改的不可见）。
+
+## r355C Agent 工作流版本管理与可复现性工程 2026（来源：Future-AGI/PromptOT/Microsoft-dev-lifecycle/CallSphere/omnithium/praesidia/Respan/NexBench/ResearchGym/AgentRecall-X/leantoken/NVIDIA/Binding-Drift/Zylos/agentswarms/AWS/DEV，2026-10-01 实拉）
+- **Prompt 即策略**：prompt=agent 策略（产生推理+工具轨迹），版本管理=策略版本（每版绑评测器+每 run 链接版本）；没绑评测的版本管理只是 diff 追踪。
+- **SemVer for Prompts**：MAJOR 破坏行为/输出、MINOR 兼容新能力、PATCH 措辞修复；版本不可变（未保存变更只能在 playground 试，评测/监控必须用保存版本）。
+- **配置 bundle**：部署单位=bundle 不是组件——manifest 钉住 prompt/模型/工具/策略版本，promote 整包；回滚=原子切回 bundle v42；prompt 更新独立于代码分钟级回滚。
+- **prompt 变更=deploy**：prompt/模型/知识库变更都按 deploy 流程（版本化+评测门+canary+成本预算+回滚）；prompt 进 git 带 frontmatter（版本/模型/温度/作者/需评审），变更走分支+评测+评审+CI 部署。
+- **配对 delta 评测门**：候选 vs 生产同用例配对 delta（非独立跑分）——groundedness 掉 3% 挡合并；paired bootstrap CI 完全低于 0 触发回滚。
+- **Champion-Challenger 发布**：challenger 5% 流量→主 KPI 测 24-72h→promote 或 KPI 掉阈值自动回滚；promote=重指 Production label 不重建。
+- **可复现世界**：钉死世界（固定链高度/环境）+canonical JSON 哈希（sorted keys/NFC/LF，双实现一致性 pin 测）+盲跑拒未提交变更；rejected 记录排除哈希但计入捕获率。
+- **评测可比性**：任务复杂度×环境状态性×验证方法；可执行检查优先于参考/LLM 评审；指标固定层级汇总且精度/冗长/成本配对报告；基准防污染=保留 harness 扣方法。
+- **Binding Drift 锁**：多步工具绑定=依赖链错误级联放大（错误绑定→末步发错人），关键绑定需锁；工具结果引用传递省上下文（半 token 不需压缩）。
+- **模板变量注入**：prompt 用模板变量注入（消除硬编码+参数化评测：上下文窗口/实体替换）；跨 prompt 依赖校验防不兼容组合；guardrail/工具/prompt 版本同 bundle 齐步升。
