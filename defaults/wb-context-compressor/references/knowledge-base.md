@@ -3518,3 +3518,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **GUI agent 安全**：沙箱 profile 无持久凭据；高风险动作（URL 输入/secret 表单/删文件/发邮件）走授权层 HITL；seccomp-bpf 隔离禁凭据 syscall；"人能绕过的控制 agent 也能绕过"；broker 注入一次性短命会话。
 - **长时程桌面 CUA**：OS-Symphony=Orchestrator+Reflection-Memory Agent+Tool Agents（统一 Reflection Message Protocol）；IntentCUA=轨迹抽象成 intent 表示+可复用技能减少重规划；GUI-Owl-1.5=device-conditioned 动作空间+滑动窗口历史。
 - **元素引用动作（bid）**：BrowserGym 原语 click(bid)/fill(bid,value)——结构化状态动作走元素引用而非坐标，DOM 变化引用仍稳；Playwright MCP=a11y 树快照暴露语义元素引用。
+
+## r367C Agent 生产可观测性与遥测 2026（来源：otel-genai/openinference/futureagi-otel/belsoft-genai-schema/redhat-w3c/ag2-otel/openlegion-metrics/maxim-gateway/nvidia-agent-eval/futureagi-tool-selection/aws-strands/langchain-offline-online/confident-ai-qa/latitude/menuagentic-judge-drift/futureagi-drift/niteagent-zscore/insightfinder-4signal/nautilus-compass/silent-failures-2606.14589/langfuse-golden/divinci-200/techearl-mix/respan-5bug，2026-10-02 实拉）
+- **OTel GenAI 语义约定**：gen_ai.client.chat/gen_ai.agent.invoke/gen_ai.tool.execute 三类 span+标准属性词表；eval-as-span-attribute（评测分数挂 span）；传统 APM 盲区=静默语义失败/上下文耗尽/失控成本。
+- **跨 agent trace 传播**：W3C Trace Context（trace ID 恒定+parent span ID 传递），无传播=断开 trace；span 层级=root/agent/LLM/tool/retriever/embedding；OpenLLMetry 已支持跨 MCP server 传播。
+- **流式指标**：TTFT=交互 UX 主指标（P99 交互<2s/批量<10s）；TPOT；inter-token latency=节流/换模型/供应商降级信号；per-request 成本按模板归因（系统消息 200→2000 token=10 倍）。
+- **生产质量指标**：Task success rate=release gate；tool-call precision 抓幻觉工具名（成功率看不出）；consistency=3-5 trials 区间（90/74 分裂要报 82-88 非点估计）；AWS 三层闸 tool>95/reasoning>85/output>90。
+- **离线/在线双轨**：离线=curated+参考（CI/回归），在线=生产 trace 无参考（监控/drift）；四层（benchmark→CI→guardrails→生产）跑同一 evaluator 模板。
+- **失败→用例闭环**：capture→filter→lock 三环；trace 流入标注队列双审 promote（每周 30-80 行）；HDBSCAN 聚类失败→判官写修复→trace 晋升回归测试。
+- **Golden set 纪律**：200 例分层>5000 例未分层；happy 60/edge 20/adversarial 10/regression 10；污染=用例进微调数据（泄漏 1-45%）；月/季/年刷新（promote/退役、加 jailbreak、全量重标）。
+- **Drift 检测**：PSI（<0.1 稳/0.2+ 显著）+KS+eval-score（drift+drop 双条件才警）+输出分布（供应商变更领先指标）；LLM 4-signal=token 长度 KL/embedding 余弦/judge 评分/拒答指纹；judge drift=固定 dated snapshot+月度校准。
+- **事故响应**：RCA 六步=定义→映射→重建 trace→隔离→确定性重放→验证；五类静默失败（链式幻觉=LLM 特有最危险）；ResolveIQ 事后复盘进 agent 记忆。
+- **Trace span 必含字段**：model name/prompt hash/tool name/full args/full result/token counts/latency/error mode；五 bug 形状=死循环/幻觉参数/丢上下文/错路径/静默退化；症状→trace 信号→根因映射表。
