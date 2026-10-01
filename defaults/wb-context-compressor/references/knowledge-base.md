@@ -3422,3 +3422,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **ASI drift 量化**：88% 生产 agent 30 天行为变化；behavioral（长度/拒绝率/语气聚合统计）/factual/retrieval（语料库变证据变没用）/verifier（最危险）四类；群体窗口信号；先确定性信号再 fenced judge。
 - **CI 门禁分层**：hard=通过率降>5pt（smoke）/2pt（full）+p95 超 SLO+安全违规>0+单测失败；soft=成本>10%/rubric 降 0.1+；closed loop=生产失败提升为新用例。
 - **合成数据三族四步**：happy/edge/adversarial 三族；persona/taxonomy/evolution 三生成模式；过滤=embedding 去重+跨族 judge+塌缩检测（HDBSCAN）+5% 人工抽检。
+
+## r365A Agent 上下文工程与 Token 经济 2026（来源：arXiv-2609.26121-DTOC/agentnative-compaction/maxtokens/zylos-context-econ/arXiv-2607.19214-keepalive/yage/dailyaiworld-caching/Microsoft-LLMLingua/arXiv-2602.15843/morph-llm/agentixforce-budget/clawhub/niteagent-context/agentpatternscatalog/arXiv-2606.11213/arXiv-2604.17091-GenericAgent/PaperNotes-STITCH/agentpatterns-abstention/arXiv-2604.27283-Iscan/kaman-adaptive/hermes-agent/varunsingla-tokenomics，2026-10-02 实拉）
+- **DTOC 可逆压缩**：完整工具输出留外部内存+活动上下文插占位符+按需重建——可逆优于截断。
+- **keep-verbatim 区**：系统提示/工具 schema/任务陈述/最近 5-7 轮绝不总结（byte-stable 保前缀缓存命中）；快照块确定性组装保证字节一致。
+- **KV 缓存经济学**：cache read 0.1x/cache write 1.25-2x/output 3-6x；agentic 间隔摧毁缓存→keepalive 保热；命中率=推理成本第一杠杆（0%→90% 账单 →）。
+- **SLM 评分压缩**：LLMLingua 用小模型 perplexity 逐 token 删低信息 token（20x 压缩 1.5 点降）；Perplexity Paradox=数学数值低 perplexity 被优先剪（需保护）。
+- **三区预算制**：green 0-70%/yellow 70-85% 轻压缩/red 85-95% 激进；预算分配表=system 5%/history 20-30%/tool 15-20%/retrieval 15-20%/output 15-25%/headroom 10%；总 token≤window−输出预算。
+- **结构化逐出**：先删 CoT（结论已反映在工具调用）→整删 bulk 枚举输出→中间产物；working-memory anchor 固定关键任务信息。
+- **STITCH contextual intent**：长程记忆用（主题域+事件类型+实体类型）三元组 cue+标签密度排序（先结构匹配再语义打分），超长轨迹不掉点。
+- **Abstention-aware 注入**：记忆注入是不对称损失控制决策（错注入跨轮复合放大），证据可疑主动不注入。
+- **Pre-flight 双预算**：工具 schema 预算与消息预算分离管理，各自独立触发逐出不互相挤压。
+- **缓存意识架构**：一次 cache-busting 改动抹掉后续所有节省；成本优化先缓存（90%）再 routing（60-80%）再截断摘要（40-70%）。
