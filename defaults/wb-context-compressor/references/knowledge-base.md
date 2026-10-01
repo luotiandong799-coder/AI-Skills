@@ -3182,3 +3182,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **四时刻披露**：自主 agent 披露（前/中/控制/后）各配 UI surface，非一次性同意。
 - **步骤卡片栈**：进度 UI=步骤卡片（状态+输入输出+时序）+渐进披露（摘要→钻取）+稳定状态区；多会话一行摘要+状态色标。
 - **撤销架构**：可逆优先（草稿/软删/预览）→不可逆补偿事务→动作审计+每动作 Undo→跨墙见证幂等键+人工通知延迟；失败按层级降级阻断转兜底。
+
+## r358B Agent 并行执行与并发编排工程 2026（来源：AgentPatternsCatalog/OpenLegion/Zylos/AI-TLDR/GenAI-Mindmap/Microsoft-Durable-Task/mcp-agent/Developers-Digest/arXiv-CoAgent/arXiv-Position-MAS/arXiv-Atomix/腾讯云分布式/Microsoft-Agent-Hypervisor/ultracodex/arXiv-HIVEMIND/moai.team/arXiv-AgentRM/negiadventures/CrewAI-Markaicode/AgentixForce/arXiv-AdaptOrch/entuit/hivemind/arXiv-2604.27221/arXiv-Parallel-Synthesis/macleodlabs/ROMA/Network-AI/arXiv-Second-Thought/Zylos-speculative/NVIDIA，2026-10-01 实拉）
+- **并行工具调用五件套**：多调用回合/有界并发扇出/调用 ID 键控结果/结果合并器/限速守卫；依赖判据=参数可在前序返回前写出。
+- **并行化四判据**：独立→并行/扇出并行聚合串行/投机按算力-延迟权衡/依赖链串行。
+- **fan-in 合并三策略**：拼接/黑板键结构化合并/归约；合并幂等；map-reduce 按块数与输出型选 reduce 策略+部分失败单块重试。
+- **并发隔离级按域选**：快照/读已提交/可串行化；改共享状态需可串行化，不相交资源用弱隔离换吞吐。
+- **事务化工具调用**：工具调用当事务效果+控制永久化时机+Saga 补偿；落选分支副作用可回滚。
+- **投机执行分支**：并行候选分支+提交匹配分支；分支输出原子化（任意点中断仍有效）后合并。
+- **每工具并发预算**：每工具队列深度+并发非单一全局；有界队列防停滞累积；FIFO+显式优先级+可见性超时。
+- **DAG 分层调度**：拓扑分层（层内并行层间串行）+dependsOn 就绪判据+Planner/Executor/Replanner 分离+每波并发上限。
+- **共享状态工作板**：全局可读+槽位限写+锁保护；多 agent 编程按分布式系统三约束设计（隔离是硬约束）。
+- **OS 式并发调度**：条件变量计数信号量/MLFQ/僵尸回收；并发上限动态调时唤醒等待者重查谓词。
