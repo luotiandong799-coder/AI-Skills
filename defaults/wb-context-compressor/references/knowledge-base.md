@@ -3038,3 +3038,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **brittle planning 是主失败模式**：规划三指标（成功率/重规划次数/步骤效率）；工具失败重规划保留已完成步骤、带失败 ID+原因+剩余目标；replan 也要预算（BRACE 减 62-92%）。
 - **恢复动作三型**：rollback（须可验证边界，别假装撤销副作用）/delegate（权限边界清楚，别失控复制凭据写权限）/refuse（不可解/风险高/预算尽，不编造完成不超支不绕过审批）。
 - **A2A Agent Card**：JSON 声明 identity/capabilities/skills/endpoint/auth（securitySchemes）；未声明 capability 必须报错；发现走 well-known/mDNS；traceparent 骑每条消息跨公司保持同 trace id。
+
+## r354B 上下文窗口与检索优化工程 2026（来源：Atlan/lobehub/ZenML-Mastra/ContextCurator/TokenPilot/Redis/syncsoft/LongAttnComp/COMI/ai-tldr/zeroentropy/LongHorizon-Harness/HALT/A2RAG/LangChain/KVEraser/Leyline/vLLM-K3/UIUC/AgentPatterns/omkarray/Genta，2026-10-01 实拉）
+- **context 是注意力预算**：不是储物箱——四杠杆（选择性注入/主动剪枝/压缩/分层记忆）；实际有效容量只有广告窗口 60-70%；context quality 决定推理正确与否。
+- **lost-in-the-middle U 形**：start ~80% 召回、1/4 处 60%、middle ~50%、end 最高；上下文越长中段越废（context rot）；修复=指令置顶/问题置底/检索块排 'V'（最重要放两端）/payload 短到没有 middle。
+- **curator 解耦**：轻量 policy 模型为冻结主模型主动 curate working memory（RL 降熵——剪噪声留推理锚点），上下文管理与任务执行解耦。
+- **双粒度治理**：入口 ingestion-aware compaction（稳定前缀+消环境噪声）+运行期 lifecycle-aware eviction（按残余效用批量卸载过期段）；连续早期压缩 5-40x 优于最后一刻整体压缩。
+- **goal drift 靠 harness 治**：task state 外置在 execution 之外、只用环境独立验证的事实更新（Manage-Execute-Audit，auditor 只读）；瓶颈在 harness 不在模型权重。
+- **检索停止=证据覆盖**：给定必需 claims 每个有支撑才停；失败改写 query 而非同 query 重跑（有界重试预算）；弱首次检索重试不硬答。
+- **KV 缓存友好**：静态在前波动在后/工具确定性排序/去时间戳/不中途换模型/避免压缩 churn（压缩=缓存失效）；编辑走 span 级 KV 复用（成本与 suffix 无关）。
+- **上下文外置三术**：技能渐进披露（先暴露存在再按需加载细节）、工具结果写文件按需读回（避免有损摘要）、长任务干净重置胜过继续压缩；git 作恢复机制。
+- **summary collapse**：handoff 摘要系统性丢边界元数据（事实怎么用的规则）——压缩 artifact 必须显式保留 use-policy 元数据；交接用带版本 ID+时间戳的 bundle。
+- **agentic retrieval 循环**：LLM 控检索（when/what/which tools/够不够）——规划子查询/评分/循环到 grounding 足够；hybrid 四件（dense+sparse BM25+metadata+Cross-Encoder 重排，精确实体 dense 丢）。
