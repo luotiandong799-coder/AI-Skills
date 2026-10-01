@@ -3110,3 +3110,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **DPIA 触发线 + Art 22**：画像/自动化决定有法律效力→先 DPIA（版本化）；纯自动化决定→人工复核通道；自动决策须告知逻辑+后果（含 SAR 时）。
 - **模型层 GDPR 状态**：训练数据个人数据可提取→适用（匿名模型不适用）；训练数据处理合法+涉 PI 同意（AIGC 措施 Art 7）；PIPL Art 24 限制自动化决策。
 - **跨境三查**：推理调用出境先识别→转移机制→无充分性认定辖区做转移影响评估；重要数据出境走网信安全评估（中国条例 37/38）。
+
+## r356B Agent 供应链安全与依赖治理工程 2026（来源：Development-Curated/runtimeai/arXiv-2603.00195/DZone/CloudSEK/CSA-ShaiHulud/AI-Buzz/BSI/agent-bom/Systems-Hardening/IoT-DTL-PLM/asleekgeek/Glacis/SDLC-Corp/KodeKloud/Preprints/breachline/Docker/MatterAI/AquilaX/HelpMeTest/OWASP-A03/GitLab，2026-10-01 实拉）
+- **ASBOM**：agent 依赖闭包内每个 skill（名/版本/格式）结构化清单（CycloneDX 1.6）；AST 可自动提取 prompt/guardrail/工具签名。
+- **Slopsquatting 防御**：新包名先查"是否幻觉产物+低流量却进生产路径"；抢注窗口 24-48h；provenance 证明本身可被劫持（合规证明≠安全）。
+- **AI-BOM 五类**：模型/训练数据/微调数据/框架/评测（CycloneDX ML-BOM 或 SPDX 3.0 AI profile）；微调集钉快照 digest 非 live 引用；训练代码记 commit SHA。
+- **模型签名门控**：L1 记录 provenance→L2 平台身份签名；未签名模型不可 promote；训练后签名、serving 前验证。
+- **Sigstore keyless**：Fulcio 短期证书绑定 OIDC 身份+Rekor 透明日志——无长期密钥可泄漏；SBOM 作为 Cosign attestation 随工件。
+- **依赖钉哈希**：lockfile+CI 强制 verify（npm ci/pip --require-hashes/go mod verify）；Actions 按 commit SHA 钉不用可变 tag；hash 不匹配即 fail。
+- **镜像 digest pin**：按 digest 钉不用 tag；构建验证依赖 hash 与提交一致，不符即 fail（防上游静默污染）。
+- **部署四证据门**：签名（来源）/SLSA≥L2（构建）/SBOM 无禁用包（策略）/无 critical 漏洞（扫描）。
+- **PR 依赖审查**：依赖变更走 PR 依赖审查（脆弱依赖即阻断）；分支保护=所有者评审+严格状态检查+签名提交+管理员强制。
+- **三入口攻击面**：模型/数据集/推理依赖三入口；provenance=可验证证据链（父模型/数据集/版本/许可证）不信任 publisher 元数据。
