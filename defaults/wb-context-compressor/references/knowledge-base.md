@@ -3062,3 +3062,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **MCP 工具面四防**：工具描述/schema 装前扫描、出站参数净化（防 SQL/命令/注入链）、破坏性动作必须审批流、网络层观测交互防 typosquat；clients 不无条件继承 server 信任。
 - **AgentDojo 指标**：BU/UuA/ASR/Safety 四件——只测静态注入高估防御，必须自适应攻击红队；防得住靠带外确定性监控（reference monitor/信息流标签）不是拒答训练。
 - **guardrail 五层拓扑**：输入/上下文/工具前/工具响应/输出五层缺一不可；便宜确定性检查先跑（JSON 解析器/PII 正则/长度）；结构性护栏在模型上下文外执行；限制模型能力比过滤更根本。
+
+## r355A Agent 测试与质量保证工程 2026（来源：Zalt/CallSphere/genai.qa/Google-ADK/DeepEval/slavadubrov/eCorpIT/AWS-AgentCore/ClawsBench/ComplexMCP/SandboxBench/AutoControl-Arena/AgentS4D/EVMbench/Microsoft-sandbox/DevOps-shadow/HKU-SPACE/RockB/rapidclaw/Future-AGI/Azure-Foundry，2026-10-01 实拉）
+- **行为契约代替精确输出断言**：非确定性输出的断言层=行为契约（意图/步骤/不变量），不是精确文本——输出变是常态，行为不该变。
+- **Golden trajectories 五件**：黄金轨迹=输入+预期工具序列（名+参数）+状态迁移+审批门+终输出；改 prompt 后轨迹不匹配即回归。
+- **评测三层指标闭环**：结果/轨迹/组件三层缺一单独漏；闭环 trace→标注→聚类→去重→版本化集→CI 门→在线监控；确定性检查覆盖工具顺序/参数/循环，LLM judge 只在解释性判断处用。
+- **失败即测试**：生产故障转永久测试用例；测试集 immutable 版本化（run 中不移位），draft 迭代 checkpoint 锁定；golden 集随新失败形态持续刷新。
+- **CI 四门**：确定性断言→黄金集→LLM 评审（仅边界挡合并）→基线对比（对上次 good run 逐评分器）；发布门=pass rate 阈值机器自动挡。
+- **评测沙箱九条**：干净工作区+中立路径（不泄漏评测词）+边界强制+工具同等限制+为发现的每条新路由加回归探针；surprise pass 必须审完整轨迹。
+- **仿真三架构**：mock 服务+快照恢复（保真）、seed 驱动模拟动态失败（多样性）、逻辑-叙事解耦（状态代码化+动力学 LLM，减幻觉保灵活）。
+- **Shadow CI**：隔离 production-like 环境（依赖全 mock 且 disposable）、评测用将 promote 的同一镜像、prompts/策略/工具 schema 作可部署产物进 release 控制。
+- **发布四级阶梯**：staging 合成流量→shadow 并行 4h→A/B 5%→全量+在线监控，配每级阈值（完成率 85/90、grounded 95/98、违规 0、回归容差 0.05、成本涨 15% 挡 10% 告警）。
+- **容器与运行时安全评测**：AI-vs-AI 攻防（社交工程/多轮最有效）；运行时安全按生命周期检查点组织证据；可编程评分优先（交易重放/链上验证）；工具级三维=输出利用/输入准确/调用准确。
