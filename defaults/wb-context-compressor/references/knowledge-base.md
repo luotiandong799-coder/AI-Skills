@@ -3014,3 +3014,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **eval theater 防游戏化**：Goodhart+vibe check=默认失败；BenchJack 10 行 conftest 打爆 SWE-bench/{} 打爆 FieldWorkArena；独立复跑差 5-20 点；扰动测试防污染最可靠最贵。
 - **LLM-as-judge 去偏**：position（slot A +10-15 点，双序平局）/verbosity（+15-30 点）/self-preference；未校准 judge=放大器（90% 假通过率）；Formalism Trap 混淆程序主义与语义真值。
 - **决策级遥测第三层**：Layer1 infra LLM stable/Layer2 MCP merged 2025/Layer3 cognitive（deviation/baseline/scope/risk）缺失——"Layer2 说调了哪个工具，Layer3 说该不该调"；行为遥测测不出流畅幻觉（effort-outcome imbalance 无偏差）。
+
+## r353C Agent 评测与生产就绪工程 2026（来源：AgentFlow/Brightlume/Pickaxe/eCorpIT/RockB/Openlayer/Future AGI/Anthropic/SF AI Labs/IceYao/CheckAgent/LobeHub/AWS AgentCore/Alibaba AgentLoop/TRAJECT-Bench/agentnative，2026-10-01 实拉）
+- **发布五关 checklist**：Eval 绿/Safety 无泄漏/Cost 告警/Monitoring 齐/Docs 齐；成功指标可测化（92% first attempt/P95<2s/cost<£0.15）；先定 normal 基线再设告警；渐进上线（沙盒→内部→生产）。
+- **CI 门禁四关**：deterministic assertions（schema/工具调用/预算/禁词）→golden set（核心功能/历史 bug/边界）→LLM-judge（semantic borderline）→baseline compare（vs last marked-good）；阈值双层 CI gate 严于 SLO；任何 rubric 掉点挡 merge。
+- **canary 渐进发布**：5%→24h→25%→50%→100%，每步 soak≥1h（高风险 4h）；四触发器发布前写好（guardrail 率/滚动均值 p<0.05 Welch/p99）；kill switch 单 flag；五件套（prompts/tools/model pin/memory schema/config）immutable 一起滚；禁用 latest 模型 ID。
+- **两型 evals 分离**：capability（低通过率起点 target 难点给 hill）vs regression（近 100% 锁防 backslide）；pass@1 首试/pass^k 每次可靠。
+- **三类证据**：结果（最终环境状态）+过程（工具调用合理/绕流程/危险行为/异常轮次）+体验（语言/风险解释/tone/合规）——防"以错误方式达成结果"。
+- **测试成本金字塔**：unit mock free commit→regression cents PR→integration cents-dollars nightly→red-team dollars pre-canary→canary eval cost；judge 三档 heuristic /100K 管 99%、frontier 只打失败 1%。
+- **golden dataset 治理**：失败 curate draft→发布版本化 gate（immutable）；ScenarioGenerator 补 gap（synthetic 标记+审计）；季度剪枝失去区分度行（留归档）；BadCase Set 单独跟踪。
+- **trajectory vs completion 框架**：>3 tool calls 用 trajectory-first（EM/Inclusion/Tool Usage/序列依赖）；公开基准只答模型选型。
+- **step-level 二分定位**：评分挂具体 span/tool call 让回归 bisect 到步骤；40 步 outcome-only=红标+无头绪；Mastra 双 scorer（code exact/LLM semantic）。
+- **分级阈值**：task success 阈值按幻觉预算定（草稿 60%/对外 98%）；Specific+Measurable+Achievable；outcome 自动配 grader 循环反馈。
