@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.34.0
+version: 1.35.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -431,3 +431,8 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - 原文：「`deny: ["write"]` **does not deny `apply_patch`**」。
 - 判据：① **按名字写的 deny 只覆盖同名工具，名字不同的等价能力工具整个逃逸** ⇒ 「已经禁了写操作」这类断言，只要没枚举等价能力集就站不住；审计拒绝名单要问「还有哪些工具能达成同一效果」。② 与既有「授权清单覆盖语义」不同维：那条管 **allow 的覆盖与追加**（谁的授权盖过谁），本条管 **deny 的逃逸面**（哪种写法根本没被拦住）。③ 正向表述必须可机检：给出等价能力清单并逐项验证被拒，而不是给出一条正则或名字。
 - 提升层：工作流/安全边界。触发词：deny 不覆盖 apply_patch、按能力等价集枚举、拒绝名单逃逸面、按名点杀失效、同名工具才被拦。
+
+## Cap37 审批挂在哪一级决定它拦不拦得住：流程级检查点 vs 工具级拦截；驳回是「反馈 + 有界回环」不是布尔值；外发审批链接把审批权移出账号体系（来源：docs.flowiseai.com `tutorials/human-in-the-loop.md` 15,347B + `using-flowise/monitoring.md` 7,765B，2026-10-02 r352A 独立 curl 实拉逐串命中；与 §HITL 执行通道层 互补——那条管拦截点在哪一层，本条管挂在哪一级对象上）
+- **原文**：「There are 2 ways human in the loop can be used: Using **Human Input** node to halt the execution / Enable **Require Human Input** for Agent's tools」；「When Require Human Input is enabled, we place an additional checkpoint **after tool calls are detected**」；回环节点「**Max Loop Count**: 5 (prevents infinite loops)」，驳回分支「Send feedback and loop back to the agent for improvements」；轨迹分享「The execution trace is now available as a **public link**… **Users outside of Flowise can reject or approve**」；监控「`/api/v1/metrics` endpoint … **requires API key authentication**」且「only **high-level metrics** such as API requests, counts of flows/predictions are tracked. For details node by node observability, we recommend using Analytic」。
+- **判据**：① **审批有两个挂载点，粒度不同效果差一个量级**——流程级检查点只拦你画好的那一条路径，agent 自主改道就可能整体绕过；工具级（`Require Human Input`）挂在工具本身，**无论 agent 怎么编排、什么时候决定调用都被拦**。⇒ 凡要求「这个动作一定经过人」的，挂工具级；只挂流程级等于把保证寄托在 agent 会走那条路上。② **驳回不是布尔值，是「拒绝 + 可执行的修改意见 + 有界回环」**（反馈回灌 agent + `Max Loop Count` 封顶）：只有布尔驳回，人只能反复手动重来；没有上限的回环则打转成死循环。与 §Cap14 迭代上限 互补——那条说自修循环要设上限，本条补上：上限之外还必须有反馈回路，否则上限只是把死循环变成「放弃」。③ **把执行轨迹做成公开链接外发审批，等于在账号体系之外开了第二条授权路径**——链接本身就是凭证（与 §Cap28「评审权=写权」正好相反：那条里能评审就必须能写，这里不能写的人也能批准）。⇒ 凡用分享链接/快照实现外部评审，必须带时效与范围，并把链接产生的批准与账号内的批准进同一本审计账，不能因「人不在系统里」就漏记。④ **观测面自身是被保护面，且内建指标只到聚合层**：指标端点要 API key（观测通道不是免费旁路），默认只有 API 请求数 / 流程数这类高层计数，逐节点可观测要显式开关或外接。⇒ 说「有监控」时必须分清聚合层与节点层，把聚合指标当成「出了问题能查到」是自欺。
+- 提升层：工作流/安全边界。触发词：HITL 粒度、流程级 vs 工具级、Require Human Input、驳回带反馈、有界回环、外发审批链接、链接即凭证、评审权脱离账号、观测端点鉴权、聚合指标 vs 节点级可观测。
