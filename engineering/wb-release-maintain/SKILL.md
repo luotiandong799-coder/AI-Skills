@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.51.0"
+version: "1.52.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -169,3 +169,8 @@ sources:
 - **★数据库只向前迁移 ⇒ 换镜像等于拿到空实例，旧数据不会跟过来**："Data from earlier versions **doesn't carry over**. Each `--n8n-image` gets its own volume, because n8n **only migrates a database forward**: switching images gives you an **empty instance** rather than a database an older n8n can't read"，并要求 "Export any test workflows you want to keep before you upgrade or change images"。判据：**迁移的单向性要写进升级单**——回滚到旧版本时库可能已不可读；换载体/换镜像前必须先导出，不能指望"数据跟着走"。
 - **★被移除的配置项是"静默忽略"，所以必须配存量自查工具**：`N8N_PRE_EXECUTE_ERROR_CREATES_EXECUTION` 移除后 "After you upgrade, n8n **ignores the variable**"，官方给的应对是 "Check the n8n 3.0 **migration report** in Settings to see if **this instance** sets it"。判据：**删除一个配置不等于使用者会发现**——移除必须同时提供"我这台有没有中招"的自查入口；没有自查工具，静默忽略会把一次变更变成长期的行为谜题。
 - 提升层：工作流 / 工具。触发词：破坏性变更公告、迁移动作、不受影响面、部署形态兼容面、数据库只向前迁移、换镜像空实例、静默忽略、迁移报告存量自查。
+
+## r383A · 迁移工具的能力边界、兼容闸门极性、迁移收敛性、存量搁浅（来源：developers.make.com Module Migrator + difyctl + docs.langflow.org migration，2026-10-02 r373-Q-A / r374-Q-B 实拉；经 Qoder 提名）
+- 迁移工具的「能力边界」= 引用可达性而非资产全集：只搬被引用的资源、未引用资源静默跳过；验收必须二次「全量清点 vs 已搬清单」对账，并把「工具自述边界」当需实测的声明。
+- 兼容闸门按「谁更可能是错的一方」分向：低于下界硬停（exit 6 从不读缓存）、高于上界放行并告警、unknown 与 incompatible 同档处理；两个方向都要跑。
+- 迁移不收敛条件：库里是否有别人的表（非 Langflow 表共库时 `--fix` 反复降级重放可能失败），须单实例启动 + 命名空间锁；回滚镜像与回滚数据是两个动作，预案必须成对写。
