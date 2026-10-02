@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: "2.124.0"
+version: "2.125.0"
 agent_created: true
 ---
 
@@ -267,24 +267,15 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 
 - **给人看的紧凑视图不构成操作依据**：本章已下沉 `references/knowledge-base.md` §r348A-sink1（r348A）。
 - **终态必须由显式信号声明**：本章已下沉 `references/knowledge-base.md` §r348C-sink（r348C）。
-## 资格判定三态（不确定不禁用、禁用带可见且可撤销的理由）；自动修复严守证据自证门槛（来源：docs.openclaw.ai/automation/cron-jobs/payloads.md 27,960B + managing-jobs.md 17,374B，2026-10-01 r343C 独立 curl 实拉逐串命中）
+## 资格判定三态
 
-- **原文**：①「In `auto` mode, a review **stays disabled when every statically resolvable model candidate is known to lack** rooted execution support. Its display name includes `no-rooted-runtime` ... **unknown eligibility also keep it enabled, with final checks at execution time**.」「**Convergence clears the reason and restores auto-mode enablement** when the configured chain becomes eligible or unknown.」；②「Doctor **reconciles the account only when the stored creator identity proves it**, and reports the repair.」「**Doctor does not infer ownership from delivery settings or the current caller.**」「Jobs whose stored identity cannot prove an account need **authenticated administrator recovery**.」
-- **判据**：① **资格判定是三态而不是二态：确定不合格 → 禁用并带**可见理由**（把理由写进可枚举的载体，如显示名带 `no-rooted-runtime`）；确定合格 → 启用；**未知 → 保持启用，把终判推迟到执行时**。且**收敛过程会清除理由并自动恢复启用**。⇒ 两条硬纪律：一是**"不确定"不等于"不合格"**——把未知当不合格会让环境一变就大面积静默停摆；二是**任何自动禁用都必须带可机读的理由，且理由要能被自动撤销**，否则禁用会变成需要人工考古的持久态。② **自动修复的边界是"证据自证"，不是"看起来说得通"**：修复器只在存储身份本身能证明归属时才动手，绝不从旁证（投递设置、当前调用者）反推归属；证据不足时走显式的管理员恢复通道，而不是猜一个最可能的。⇒ 写自愈/迁移工具时，先定义"什么算充分证据"，达不到就**明确转人工并报出去**；用旁证推断归属是数据污染的高发源——它会把"谁在用"悄悄改成"谁的所有物"。
-- **提升层**：工作流/安全边界。触发词：资格三态、不确定不禁用、禁用带可见理由、no-rooted-runtime、收敛自动清除理由、自动修复证据自证、不从旁证推断归属、证据不足转人工。
+> 原文已下沉 `references/knowledge-base.md §r395-av2`（保持原文零删减）。
+## 降档/资格判定按成因分档，且只有一类会告警：配置意图 / 角色封顶 / 后端能力矩阵缺项
 
-- **「解析基准」≠「隔离边界」（默认 cwd 非硬沙箱 / 沙箱接管后同名不同体 / 越界别名静默忽略 / 不可读源不可删）**：本章已下沉 references/knowledge-base.md §r346A。
+> 原文已下沉 `references/knowledge-base.md §r395-av2`（保持原文零删减）。
+## 投递验收必须双字段分列，且二者可同时矛盾：外发成功 ≠ 回合完成，超时=Unknown 且不重试
 
-- **涉密分发分「模型可见面/人类可见面」+ 隔离粒度是显式旋钮（默认不隔离会话间）+ 内层沙箱缺失须正面申报**：本章已下沉 references/knowledge-base.md §r346B。
-
-## 降档/资格判定按成因分档，且只有一类会告警：配置意图 / 角色封顶 / 后端能力矩阵缺项（来源：docs.openclaw.ai/gateway/sandboxing/{workspace-access,what-gets-sandboxed,supported-capability-matrix,images-and-setup}，2026-10-01 r362-Q-C 实拉）
-- 判据：① 三类成因完全不同：**配置意图**（用户显式设 `workspaceAccess=none`）、**角色封顶**（role 要求沙箱时配置里的 `rw` 被静默降级为 `ro` 并告警）、**后端能力矩阵缺项**（网络限制仅 Docker 有 `docker.network`，SSH/OpenShell 交宿主；沙箱浏览器仅 Docker；插件/MCP 三家都是 "Gateway 侧执行 + sandbox tool policy 再门控"）。② 资格/降级报告须按成因分档，不能统一写"配置未生效"——只有"角色封顶"这一类会告警，其余静默。③ 空转例外：沙箱关闭时 `tools.elevated` 例外通道无意义。
-- 提升层：工具/可复用 Skill。触发词：降档三成因、角色封顶告警、能力矩阵缺项、elevated 空转。
-
-## 投递验收必须双字段分列，且二者可同时矛盾：外发成功 ≠ 回合完成，超时=Unknown 且不重试（来源：docs.openclaw.ai/automation/cron-jobs/delivery，2026-10-01 r362-Q-C 实拉；呼应 r340C 投递回执）
-- 判据：① `status:"ok"` 可与 `completionStatus:"failed"` 并存——"账面成功"与"回合完成"是两个独立判据。② webhook 只以 2xx 判送达，超时记为 `Unknown` 且不重试 ⇒ 存在第三态"未知"，且只有"疑似从未送达"才自动重试。③ 幂等条款："同一结果不能 append 两次 / 每周期至多一次外发"。⇒ 任何投递验收不得只看单一 status 字段，须同时断言完成字段与"未知"态。
-- 提升层：工作流。触发词：status ok 与 completionStatus failed 矛盾、Unknown 第三态、2xx 才送达、双字段验收。
-
+> 原文已下沉 `references/knowledge-base.md §r395-av2`（保持原文零删减）。
 ## "verified" 必须携带可定位的证据指针且由校验器机械强制：空指针行直接拒（来源：github.com/dshworks/awesome-dsh-plugins `data/plugins.json` + `scripts/validate.mjs`、skills.sh/、arXiv 2609.14079，2026-10-01 r362-Q-C 实拉）
 - 判据：① `evidence` 格式 `path#key`（例 `skills/reviewer/SKILL.md#frontmatter`），校验器 `scripts/validate.mjs` 直接拒绝没有 `evidence` 的 `verified` 行。量化代价：npm 校验 298/582 包不存在、26 对条目互争同名包、2,357 条因无安装路径被拒（17,323 条 / 10,008 作者）。② 对照：`skills.sh` 榜单条目只有 `name/installs/source repo` 三元组，榜面不含任何质量或权限字段（与 arXiv SkillSecurer "流行技能 >17% 潜伏漏洞" 正交）。⇒ "已核验"最低成本实现不是加一列布尔，而是加一列可 grep 的指针 + 一个拒空指针的校验脚本。
 - 提升层：可复用 Skill/工具。触发词：evidence path#key、校验器拒空指针、榜面无质量字段。
@@ -490,3 +481,10 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **附件的暂存位置是硬约束**：子 agent 附件一律暂存在网关自有状态里并带 `.manifest.json`，**永不穿过子工作区**；沙箱子进程只在 `/openclaw/attachments/<uuid>/` 拿到**只读投影**；共享作用域沙箱与不支持只读资源投影的后端会在 staging **之前**就拒绝这次 spawn ⇒ 能力前置检查发生在落盘之前，不是先落盘再判。
 - **正文脱敏与路径存续是两件事**：附件内容会自动从 transcript 持久化中脱敏，但文件本身仍以 `0700`/`0600` 权限存在；`cleanup=delete` 总是删除附件，`cleanup=keep` **只有在 `retainOnSessionKeep=true` 时**才保留 ⇒ 「已脱敏」不等于「已删除」，验收要分别确认两条路径。
 - **退役的遗留路径不删也不遍历**：升级前暂存在子工作区 `.openclaw/attachments/<uuid>/` 的遗留附件，其 registry 记录退役时**既不删除也不遍历**那些文件；回执里的 `relDir` 是**保留下来的标识符，不是可用路径，不得解析** ⇒ 迁移类产物里那些看起来像路径的字段，要显式标注「不可解析」，否则下游会拿着它去读一个已经不存在的位置。
+
+
+## 一次性链接「重发即吊销旧的」且带递增退避与双重限额；验收必须跑到重定向之后（来源：docs.n8n.io `security/enable-ssrf-protection.md` 3,822B + `security/block-specific-nodes.md` 2,425B + `basic-configuration/use-environment-variables/ssrf-protection.md` 7,039B + pipedream.com/docs `conduit/configure/access-control.md` 13,330B + `conduit/configure/scim.md` 9,789B，2026-10-03 r395C 独立 curl 取 `.md` 原文实拉；n8n 与 Pipedream 均经各自 `llms.txt`（287,049B / 34,240B）定位）
+
+- **重发即吊销**：邀请链接只进受邀者的邮件（持有链接即证明其控制该地址），7 天有效；**重发会生成新链接并使旧链接立即失效**，管理员也可取消 ⇒ 这类链接的生命周期不是「到期」而是「被后继者作废」，验收时不能只看有没有过期。
+- **重发退避递增 + 双重限额**：同一邀请的重发间隔依次为 1 分钟 → 5 分钟 → 30 分钟 → 2 小时 → 之后每天一次；工作区最多 200 个邀请，发送按管理员与工作区双重封顶 ⇒ 重发不是免费动作，退避表与限额要写进声明。
+- **验收要跑到重定向之后**：SSRF 类防护把重定向目标与 DNS 解析一并纳入校验 ⇒ 「首跳被拦住」不等于「整条链被拦住」，只测第一跳的验收会漏掉 DNS rebinding 这条绕过路径。

@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.110.0"
+version: "3.111.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -396,3 +396,12 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **跨端点 schema 兼容层是有损转换，必须声明丢什么**：`toolSchemaProfile` 的 `llamacpp` profile 会移除 `pattern` 以及值 ≥2000 的 `maxLength`；`unsupportedToolSchemaKeywords` 按名移除端点不接受的 JSON Schema 关键字；`maxTokensField` 决定发 `max_tokens` 还是 `max_completion_tokens` ⇒ 兼容层不是「翻译」而是「裁剪」，声明里要写清被裁掉的关键字。
 - **合并优先级要按字段分条写，且带前提**：agent 级 `baseUrl` 非空值赢；agent 级 `apiKey` 非空值**只有在该 provider 未被 SecretRef 管理时**才赢；`contextWindow`/`maxTokens`/`contextTokens` 是「显式值存在且有效（正有限数）才赢，否则回落到隐式/生成的 catalog 值」⇒ 一句「agent 级覆盖全局」既说不清前提也说不清无效值怎么办。
 - **显式目录不限制发现**：merge 模式下手写的 catalog 行**不会**收窄该 provider 的自动发现范围，要限制得用策略白名单或 `models.mode: "replace"` ⇒ 「我配了清单」不等于「只有这些能用」。
+
+
+## 放行与拒绝谁赢必须显式排序，且跨厂方向相反；默认封禁项的启用方式是清空列表；只校验首跳会被重定向与 DNS 重绑定绕过；能力要有版本门槛（来源：docs.n8n.io `security/enable-ssrf-protection.md` 3,822B + `security/block-specific-nodes.md` 2,425B + `basic-configuration/use-environment-variables/ssrf-protection.md` 7,039B + pipedream.com/docs `conduit/configure/access-control.md` 13,330B + `conduit/configure/scim.md` 9,789B，2026-10-03 r395C 独立 curl 取 `.md` 原文实拉；n8n 与 Pipedream 均经各自 `llms.txt`（287,049B / 34,240B）定位）
+
+- **白/黑名单的优先级必须写出顺序，因为各系统方向相反**：n8n SSRF 的优先级是 **hostname 允许 > IP 允许 > IP 拒绝**——即「更具体的放行赢过更粗的拒绝」，且官方警告 hostname 允许会**绕过 IP 拒绝检查**，所以只允许放行你可控的内部 DNS 区；而 openclaw 的工具策略是 **deny 恒赢**（`deny` 压过 `allow`）⇒ 同一句「配了白名单」在两个系统里含义相反，声明里不写谁赢就等于没写。
+- **校验要覆盖整条请求链，不是首跳**：n8n 在启用 SSRF 保护后会校验「重定向目标」与「DNS 解析」，目的明确写着防 DNS rebinding 这类绕过 ⇒ 只校验用户提交的第一个 URL 等于敞开门，验收要跑到重定向之后。
+- **默认封禁项的启用方式是「清空列表」，与允许类列表的空态相反**：部分节点（如 Execute Command、Read/Write Files from Disk）默认就在排除列表里，要启用得显式写成 `NODES_EXCLUDE: "[]"` ⇒ 「空数组」在排除类列表里是**全部启用**，在允许类列表里常常是**全部拒绝**（见 §白名单三种空态），同一个字面值语义相反，必须按列表类型分别声明。
+- **被封禁的能力是「消失」不是「报错」**：被排除的节点用户**既搜不到也用不了**，不产生可诊断的错误 ⇒ 凡「能力不可用」，先分清是权限拒绝（有错误）还是能力摘除（无痕迹），两者的排查路径完全不同。
+- **能力要标版本门槛**：SSRF 保护「自 n8n 2.12.0 起可用」⇒ 前置面除了套餐与作用域，还要含**最低版本**；把版本门槛写进能力声明，能避免「按文档配了却不生效」这类排查。

@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.62.0"
+version: "1.63.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -240,3 +240,13 @@ sources:
 - **预算的作用域与账本随运行时变**：`maxConcurrent` 是按「直接派生的那个控制会话」计数，**独立会话之间不共享这笔预算**；swarm collector 子进程走独立的 `tools.swarm.maxConcurrent`，不占用父级的普通子 agent 车道；Codex-native 子 agent 用自己的调度器与限额 ⇒ 「并发是多少」这个问题必须先回答「在哪个运行时、按哪一级计」。
 - **陈旧引用会被拒绝执行，且需要显式清理**：`allowAgents` 里指向已删除 agent 的条目，`sessions_spawn` 会**直接拒绝**，并从 `agents_list` 中省略；需要跑 `doctor --fix` 才能清掉 ⇒ 引用完整性不是文档问题，是运行时拒绝面，删除主体后必须有一道清理动作。
 - **写配置的默认值是「拒绝破坏性替换」**：安全编辑走 `--strict-json --merge`（追加式），`config set` 默认拒绝会覆盖整块的替换，只有显式 `--replace` 才放行 ⇒ 自动化写配置时把「破坏性」做成需要额外开关的动作，能挡掉一整类误覆盖。
+
+
+## 安全机制必须声明自己是第几层防御；凭据轮换要「先并存后摘旧」且依赖停用会级联；离职撤销的作用域是三层差集（来源：docs.n8n.io `security/enable-ssrf-protection.md` 3,822B + `security/block-specific-nodes.md` 2,425B + `basic-configuration/use-environment-variables/ssrf-protection.md` 7,039B + pipedream.com/docs `conduit/configure/access-control.md` 13,330B + `conduit/configure/scim.md` 9,789B，2026-10-03 r395C 独立 curl 取 `.md` 原文实拉；n8n 与 Pipedream 均经各自 `llms.txt`（287,049B / 34,240B）定位）
+
+- **安全机制要写明自己是第几层**：n8n 官方对 SSRF 保护明确写「这是**附加的应用层防御**，你应当始终以网络层防护（防火墙、安全组、网络策略）作为主防线，本机制只在此基础上加一层纵深」 ⇒ 交付安全能力时必须带「不替代什么」，只写「已启用 SSRF 防护」会让人误以为主防线有了。
+- **轮换的正确顺序是先并存后摘旧**：生成新 token → 更新 IdP → **再**禁用或删除旧的（一个工作区可同时持有多个 token）⇒ 反过来先删旧的必然产生中断窗口；把「允许并存」写进轮换流程是无中断轮换的前提。
+- **依赖被停用会级联到凭据**：禁用 token 立即停止其 IdP；**禁用或删除该 token 所绑定的 SSO provider 也会连带停掉这个 token**——一个被关掉的身份提供方既不能供给，也不能再让任何人登录 ⇒ 停用某个上游能力前，先清点挂在它下面的凭据。
+- **部署形态变化会让既有令牌失效**：绑定到实例登录 provider 的 token 只在「单工作区模式 **且** 该工作区是实例原始工作区」时有效，切到多工作区模式即失效，曾是多种配置的历史部署同样失效 ⇒ 令牌的有效性依赖部署形态，形态变更要进发布检查表。
+- **离职/撤销是三层不同半径**：在 IdP 停用或移除用户，会①从该工作区移除、②**实例级**撤销其活动会话（会话跨工作区）、③结束该工作区内的组成员与策略授予；但**其他工作区的成员身份不受影响**，他们重新登录即可继续用 ⇒ 撤销声明必须把「本工作区成员身份 / 实例级会话 / 其他工作区」三层分开写，否则要么高估要么低估影响面。
+- **最后一位 owner 的处置要预先声明**：若离职者是工作区最后一位 owner，由**任职最久的 admin 自动晋升为 owner** ⇒ 所有权不能出现真空，自动晋升规则要写进文档，否则事后无法解释权限从哪来。

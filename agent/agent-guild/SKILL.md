@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.46.0
+version: 1.47.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -241,30 +241,15 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 <!-- 2026-09-30 r336B 下沉：r186 审计落地（Qoder r189-Q-C #5 · 0 净新）整段 → references/knowledge-base.md §r336B -->
 
 <!-- 2026-09-29 r290 下沉：Capability 12 诊断日志与审计留痕分仓 → references/knowledge-base.md §r199-B 批 -->
-## Capability 13 — 留痕的范围由"显式输出"决定，不由"算过什么"决定（来源：Pipedream 官方 docs《Security Best Practices》，2026-09-27 r200-A 实拉 6,456B）
+## Capability 13 — 留痕的范围由"显式输出"决定，不由"算过什么"决定
 
-## Capability 14 — 多 Agent 编排：文件化 handoff + 评估器闭环 + 迭代上限（来源：GitHub Copilot agent mode / custom agents 实战文，2026-09-27 r252-C 实拉）
+> 原文已下沉 `references/knowledge-base.md §r395-ag2`（保持原文零删减）。
+## Capability 14 — 多 Agent 编排：文件化 handoff + 评估器闭环 + 迭代上限
 
-- **★文件化 handoff 替代共享上下文**：多 agent 协作时各 agent 不共享上下文，只通过**共享文件**传递（plan 写进 `docs/plans/*.md` 作为后续 agent 的共享记忆；subagent 的 5 万 token 探索随其消亡，只回传一份 synthesis 报告）。判据：协调靠"写盘的文件"不靠"都在同一上下文"——文件是跨 agent 的契约。
-- **★evaluator-optimizer 闭环**：生成器产出解 → 评估器（编译器 / 测试套件）给客观真值反馈 → 反复修正直到通过所有判据。判据：LLM 会犯错，但工具（编译/测试）给客观真值，让 agent 基于工具输出自修比靠自评更准。
-- **★迭代上限 5–10 次**：agent mode 循环设上限，防测试失败时陷入死循环。判据：任何自循环必须带退出上限，否则不可控。
-- **★最小工具权限 + Plan Mode 质量门**：设计类 agent 不给 terminal；>3 文件 / 改 schema / 改公开接口 → 强制先出计划（计划 = definition of done），批准后再写码。判据：权限按角色最小化；计划文件是验收契约。
+> 原文已下沉 `references/knowledge-base.md §r395-ag2`（保持原文零删减）。
+## Capability 15 — 群组式多 Agent：角色分工 + 人工打断特权 + 共享工作区
 
-## Capability 15 — 群组式多 Agent：角色分工 + 人工打断特权 + 共享工作区（来源：智谱 AgentMore，2026-09-27 r252-C 实拉）
-
-- **★群组协作两模式**：头脑风暴（多角色并行发散）vs 任务分配（各 agent 认领子任务）；单群上限 5 个 agent，超额需分群。判据：复杂任务用"多角色并行 + 任务分配"提速，但群规模有上限。
-- **★人工打断特权**：群主可一键打断 agent 间无限对话。判据：自主多 agent 必须保留人类中断开关，防 runaway。
-- **★共享工作区协调**：公共/私密文件空间作为 agent 间协同介质；Agent 持续自学习"日记"（越陪伴越懂你）。判据：共享工作区 = 群组内的协调层。
-- **★企业短板**：AgentMore 缺 RBAC / 审计日志 / SSO、不可私有化——企业级多 agent 须补权限与审计（见 §Capability 12/13 留痕纪律）。
-
-- **★★平台只持久化"从步骤返回或打印出来的数据"，内存里的中间变量一份都不进日志**：原文列出的保留范围 = 事件源发出的事件数据 + `console` 日志/错误 + 步骤导出（step exports）+ 错误栈里带的数据。判据：**想知道一份记录会不会留下，别看"这个东西有没有被算出来"，看"它有没有被 return / 打印 / 导出"**——同一份客户名单，在变量里过一遍不留痕，`console.log` 一行就永久留下。
-- **★要收缩留痕面，动的是"输出"不是"计算"**：原文给的做法是改代码，**移除日志与步骤导出**，而不是不去做那个计算。判据：**留痕面与计算面是两层，脱敏要在出口做**；把"不敏感"寄托于"我只是临时用一下"，迟早被一次 `console.log` 或一次报错捅出去。
-- **★错误栈是留痕的旁路**：平台保留一段有限的事件历史，而**错误栈会自动把字段带进留痕**——一次异常就能把本来没导出的内容永久化。判据：**设计输出时必须连异常路径一起想**：这条路径会带出什么，决定了失败时留痕面有多大。
-- 与 §Capability 12 的分工：那条管"诊断日志与审计留痕是两种东西、且留痕通道不能挂在被测对象上"；本条管"**单次记录里到底装进哪些字段**"——一个定通道，一个定内容。
-- 提升层：可观测性 / 工作流。
-
-<!-- 2026-09-30 r336B 下沉：Qoder 净新全量消化（2026-09-27）4 条 → references/knowledge-base.md §r336B -->
-
+> 原文已下沉 `references/knowledge-base.md §r395-ag2`（保持原文零删减）。
 ## r205-C 净新两点（2026-09-27 独立实拉）
 
 ### Capability 16 — 凭据与执行体容器级物理分离 + 输出四级管线（来源：GitHub Agentic Workflows 官方安全架构，经 agentpatterns.ai / aidevme 2026-09-27 r205-C 实拉）
@@ -493,3 +478,12 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **回写的是来源指针，不是解析结果**：被 SecretRef 管理的 provider 凭据在回写时**从 source marker 刷新**（env 引用写 `ENV_VAR_NAME`，file/exec/store 引用写 `secretref-managed`），而**不持久化解析后的密钥** ⇒ 配置里出现的是「去哪取值」，不是「值是什么」。
 - **标记必须在解析前的快照上生成**：marker 持久化的来源是**生效中的 source config 快照（解析前）**，不是解析后的运行时值 ⇒ 这一顺序是关键：一旦拿解析后的值去生成标记，就等于把明文固化回了配置，脱敏在最接近落盘的那一步被破坏。
 - **判重提示**：与 §Cap32「凭据只写不可读 / 空凭据必须被拒」互补——那条管能不能读回值，本条管回写时写的是值还是取值的路。
+
+
+## Cap50 身份供给必须与登录同源且按提供方分隔；地址回收需要人工闸门，「看起来 404」不等于已释放；跨层身份要先从上位层撤（来源：docs.n8n.io `security/enable-ssrf-protection.md` 3,822B + `security/block-specific-nodes.md` 2,425B + `basic-configuration/use-environment-variables/ssrf-protection.md` 7,039B + pipedream.com/docs `conduit/configure/access-control.md` 13,330B + `conduit/configure/scim.md` 9,789B，2026-10-03 r395C 独立 curl 取 `.md` 原文实拉；n8n 与 Pipedream 均经各自 `llms.txt`（287,049B / 34,240B）定位）
+
+- **供给与登录必须同源**：每个 SCIM 连接绑定**某一个** SSO provider，它推送的每个用户按该 provider 的身份 keying——这正是「供给与登录解析到同一个人」的原因，也**防止一个 provider 认领属于另一个 provider 的用户** ⇒ 打通身份同步时，先确认「这次同步用哪个登录通道」，混通道等于制造重复身份与抢号面。
+- **邮箱回收是硬拒绝，且自动同步解除不了**：IdP 把某个邮箱给了另一个人时平台**拒绝**把这个账号交出去（否则等于把前任的历史与访问权交给继任）；**在 IdP 里移除前任、甚至删除其 SCIM 资源都不能解除**——记录仍占着这个地址，而 IdP 侧读起来已经是 `404` ⇒ 「看起来不存在」不等于「已被释放」，这是必须留人工闸门的场景。
+- **身份标识的迁移也被拒**：试图把已供给用户的 `externalId` 移到另一个身份会被拒绝，正确做法是 remove 后重新 provision ⇒ 身份主键不可就地改，迁移路径是「删除+重建」而不是「改字段」。
+- **撤销/降权要先从上位层动手**：instance admin **不能在工作区内被改名或移除**——owner 不行，SCIM 推送也不行；要下线一个运维实例的人，必须**先撤掉他的 instance 角色** ⇒ 权限是分层的，下层再高的权限也动不了上层的身份，执行顺序错了会表现为「明明执行成功却没生效」。
+- **判重提示**：与 §Cap42 管理权不含使用权 / §Cap48 改配置不是即时吊销 互补——那两条管「管理权不蕴含使用权」「改配置到撤销之间有时延」，本条管「跨层身份的撤销顺序」与「自动同步解决不了的回收场景」。

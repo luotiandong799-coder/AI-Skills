@@ -2137,4 +2137,28 @@ r354C 取证通道阶梯与资源故障的三层观测（来源：docs.n8n.io `s
 - **★文档站有问答式检索接口（取证通道再升一级）**：n8n 404 页明示——对任意 `.md` URL 追加 `?ask=<自然语言问题>&goal=<更宽目标>` 可由 GitBook **直接给答案并附摘录与来源**；另有 `sitemap.md` 全索引、`llms-full.txt` 全量导出；"Prefer `.md` URLs for structured content"。判据：**拿不到精确页名时不要放弃——先用 ask 接口问，再用 sitemap 定位**，比逐个猜 URL 高一个数量级。
 - 提升层：工具 / 工作流 / 可复用 Skill。触发词：ACID 标签、cycle 不可分割、commit 失败回滚、测试额度、Debug in editor、pin 在首节点、ask 检索接口、sitemap.md。
 
+## §r395-av2 下沉（原文零删减，自 SKILL.md 移入）
+
+<!-- src: SKILL.md L270-L279 -->
+## 资格判定三态（不确定不禁用、禁用带可见且可撤销的理由）；自动修复严守证据自证门槛（来源：docs.openclaw.ai/automation/cron-jobs/payloads.md 27,960B + managing-jobs.md 17,374B，2026-10-01 r343C 独立 curl 实拉逐串命中）
+
+- **原文**：①「In `auto` mode, a review **stays disabled when every statically resolvable model candidate is known to lack** rooted execution support. Its display name includes `no-rooted-runtime` ... **unknown eligibility also keep it enabled, with final checks at execution time**.」「**Convergence clears the reason and restores auto-mode enablement** when the configured chain becomes eligible or unknown.」；②「Doctor **reconciles the account only when the stored creator identity proves it**, and reports the repair.」「**Doctor does not infer ownership from delivery settings or the current caller.**」「Jobs whose stored identity cannot prove an account need **authenticated administrator recovery**.」
+- **判据**：① **资格判定是三态而不是二态：确定不合格 → 禁用并带**可见理由**（把理由写进可枚举的载体，如显示名带 `no-rooted-runtime`）；确定合格 → 启用；**未知 → 保持启用，把终判推迟到执行时**。且**收敛过程会清除理由并自动恢复启用**。⇒ 两条硬纪律：一是**"不确定"不等于"不合格"**——把未知当不合格会让环境一变就大面积静默停摆；二是**任何自动禁用都必须带可机读的理由，且理由要能被自动撤销**，否则禁用会变成需要人工考古的持久态。② **自动修复的边界是"证据自证"，不是"看起来说得通"**：修复器只在存储身份本身能证明归属时才动手，绝不从旁证（投递设置、当前调用者）反推归属；证据不足时走显式的管理员恢复通道，而不是猜一个最可能的。⇒ 写自愈/迁移工具时，先定义"什么算充分证据"，达不到就**明确转人工并报出去**；用旁证推断归属是数据污染的高发源——它会把"谁在用"悄悄改成"谁的所有物"。
+- **提升层**：工作流/安全边界。触发词：资格三态、不确定不禁用、禁用带可见理由、no-rooted-runtime、收敛自动清除理由、自动修复证据自证、不从旁证推断归属、证据不足转人工。
+
+- **「解析基准」≠「隔离边界」（默认 cwd 非硬沙箱 / 沙箱接管后同名不同体 / 越界别名静默忽略 / 不可读源不可删）**：本章已下沉 references/knowledge-base.md §r346A。
+
+- **涉密分发分「模型可见面/人类可见面」+ 隔离粒度是显式旋钮（默认不隔离会话间）+ 内层沙箱缺失须正面申报**：本章已下沉 references/knowledge-base.md §r346B。
+
+
+<!-- src: SKILL.md L280-L283 -->
+## 降档/资格判定按成因分档，且只有一类会告警：配置意图 / 角色封顶 / 后端能力矩阵缺项（来源：docs.openclaw.ai/gateway/sandboxing/{workspace-access,what-gets-sandboxed,supported-capability-matrix,images-and-setup}，2026-10-01 r362-Q-C 实拉）
+- 判据：① 三类成因完全不同：**配置意图**（用户显式设 `workspaceAccess=none`）、**角色封顶**（role 要求沙箱时配置里的 `rw` 被静默降级为 `ro` 并告警）、**后端能力矩阵缺项**（网络限制仅 Docker 有 `docker.network`，SSH/OpenShell 交宿主；沙箱浏览器仅 Docker；插件/MCP 三家都是 "Gateway 侧执行 + sandbox tool policy 再门控"）。② 资格/降级报告须按成因分档，不能统一写"配置未生效"——只有"角色封顶"这一类会告警，其余静默。③ 空转例外：沙箱关闭时 `tools.elevated` 例外通道无意义。
+- 提升层：工具/可复用 Skill。触发词：降档三成因、角色封顶告警、能力矩阵缺项、elevated 空转。
+
+
+<!-- src: SKILL.md L284-L287 -->
+## 投递验收必须双字段分列，且二者可同时矛盾：外发成功 ≠ 回合完成，超时=Unknown 且不重试（来源：docs.openclaw.ai/automation/cron-jobs/delivery，2026-10-01 r362-Q-C 实拉；呼应 r340C 投递回执）
+- 判据：① `status:"ok"` 可与 `completionStatus:"failed"` 并存——"账面成功"与"回合完成"是两个独立判据。② webhook 只以 2xx 判送达，超时记为 `Unknown` 且不重试 ⇒ 存在第三态"未知"，且只有"疑似从未送达"才自动重试。③ 幂等条款："同一结果不能 append 两次 / 每周期至多一次外发"。⇒ 任何投递验收不得只看单一 status 字段，须同时断言完成字段与"未知"态。
+- 提升层：工作流。触发词：status ok 与 completionStatus failed 矛盾、Unknown 第三态、2xx 才送达、双字段验收。
 
