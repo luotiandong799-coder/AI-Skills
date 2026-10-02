@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: "2.111.0"
+version: "2.112.0"
 agent_created: true
 ---
 
@@ -432,3 +432,10 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ## r383C · 翻页终止谓词与截断响应不入均分（来源：skillsmp.com openapi.json、api.github.com anthropics/claude-code CHANGELOG.md #70763，2026-10-02 r380-Q-B / r381-Q-C 实拉；经 Qoder 提名）
 - 翻页终止须 `hasNext` × `totalPages` 合取；越界请求被 canonicalize 成重复末页，`totalIsExact=false` 时 total 只是下界不得当完整度分母。
 - 评测样本三分类（对/错/不可评）：截断在 `max_tokens` 的响应标记 truncated 并单独计数，否则分差被输出长度分布污染；与既有 Skipped 合成结果须区分（跳过 vs 物理截断）。
+
+## r385A · 导出/迁移产物必须自带机读验收面：清单要含「没导出什么」，截断要自证，跳过的要给原因（来源：pipedream.com/docs/workflows/export-workflows.md 6,591B 独立 curl 取 .md 原文，2026-10-02 实拉；经 Qoder r388-Q-C 提名）
+- **★验收清单的价值在「未导出项」而不是「已导出项」**：原文「`manifest.json` lists **every workflow in the project, including workflows that were not exported**, so **nothing is left out without a record**」。判据：**只列成功项的清单无法回答"漏了什么"**——迁移/导出/批量操作的产物必须把失败与跳过项一并登记，且逐项带 `status` 枚举（`exported` / `skipped_never_deployed` / `skipped_export_limit`），让"跳过"本身成为可判状态而不是沉默。
+- **★产物要自带截断与限额自证**：manifest 同时给出 `schema: "project-export/2026.01"`、`truncated: false`、`truncated_reason: null`、`limits: {workflows: 500, bytes: 268435456}`。判据：**完整性不是"看起来齐"，而是产物自己声明自己是否被截断、按什么限额截的**——验收方不读这套自证字段，就无法区分"确实只有 3 项"与"到第 4 项被限额掐断"。
+- **★需人工重填的部分必须逐条点名到 step 与 prop**：`warnings[]` 给出「step send_message: secret prop api_key was omitted from the export and **must be re-entered after import**」。判据：**"导入后需要重新配置"这种话没有验收价值**——点名到具体步骤与字段才能机检；warnings 为空才是真的无需人工介入。
+- **★迁移/导出只搬结构不搬凭证，这条边界要写进验收而不是使用说明**：secret props 一律 `<redacted>`、App props 只保留 `authProvisionId` 且「Tokens and other credentials are removed」、私有组件「includes the component key, **but not its code**」。判据：**导入后"能装上"不等于"能跑"**——凭证与私有代码是结构化缺口，验收必须把它们列为显式待补项，与 §r383A「迁移工具只搬被引用资源」分工：那条管**资源覆盖面**，本条管**产物自带的验收面字段**。
+- 提升层：验证 / 工作流。触发词：机读验收面、manifest 含未导出项、status 枚举、truncated_reason、warnings 点名、只搬结构不搬凭证、导入后需重填。

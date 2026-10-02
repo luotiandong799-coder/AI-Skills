@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.52.0"
+version: "1.53.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -174,3 +174,9 @@ sources:
 - 迁移工具的「能力边界」= 引用可达性而非资产全集：只搬被引用的资源、未引用资源静默跳过；验收必须二次「全量清点 vs 已搬清单」对账，并把「工具自述边界」当需实测的声明。
 - 兼容闸门按「谁更可能是错的一方」分向：低于下界硬停（exit 6 从不读缓存）、高于上界放行并告警、unknown 与 incompatible 同档处理；两个方向都要跑。
 - 迁移不收敛条件：库里是否有别人的表（非 Langflow 表共库时 `--fix` 反复降级重放可能失败），须单实例启动 + 命名空间锁；回滚镜像与回滚数据是两个动作，预案必须成对写。
+
+## r385A · 恢复契约必须切分责任边界并把重复面定位到唯一一处（来源：www.activepieces.com/docs/install/guarantees/crash-recovery.md 3,487B 独立 curl 取 .md 原文，2026-10-02 实拉；经 Qoder r385-Q-A 提名）
+- **★容灾声明里的每个底座依赖都要标 owner，否则等于全保背书**：官方原文「**Redis durability is yours.** Queued runs live in Redis. A Redis that loses its dataset loses queued jobs — including async webhooks already acknowledged with a `200` — so use a managed Redis or enable persistence」。判据：**平台管的（已完成步不重跑、run log 检查点落 Postgres/S3、worker 无状态自动重排队）与用户自备的（Redis 持久性）必须在同一份声明里分列**；只写"我们保证不丢"而不写"哪部分不归我管"，是把底座故障悄悄算进自己的 SLA。
+- **★at-least-once 的重复窗口要精确到"哪一步"，不能整包声明**：原文「**At-least-once, not exactly-once.** That in-flight step is the one place a replay can repeat work」，且「the interrupted step is **guaranteed not to repeat**」。判据：**重复可能性不是均匀铺在整条链路上**——已完成步复用记录输出、在飞那一步才可能重放。写幂等要求时只标这一处，别让下游为整条链路做去重而抬高成本；与 §r325A「异步暴露窗=已应答者不重试」分工：那条管**是否重试的判据**，本条管**重复可能性的空间定位**。
+- **★"从不静默丢弃"是继承来的属性，不是自证的**：「Work is never silently dropped by Activepieces — the queue itself **inherits the durability of your Redis**」。判据：凡"绝不丢"类承诺，都要追到它的**继承源**；继承源的持久性一变，承诺等级随之变，声明里必须写上这个依赖名。
+- 提升层：工作流 / 安全边界。触发词：恢复契约责任边界、Redis durability is yours、at-least-once 重复窗口、在飞那一步、承诺继承源、底座依赖标 owner。
