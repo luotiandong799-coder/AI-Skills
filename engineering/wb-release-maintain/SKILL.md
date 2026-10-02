@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.49.0"
+version: "1.50.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -153,3 +153,9 @@ sources:
 - **★轮转参数与保留份数是固定的**：活跃日志按 `logging.maxFileBytes`（默认 100 MB）轮转，"keeps up to **five** numbered archives (`.1` through `.5`)，and continues to write a fresh active file"。判据：**保留份数不可配 ⇒ 日志的历史深度有硬上限**，依赖长周期回溯的审计必须外送到独立存储，不能指望本地滚动文件。
 - **★启动日志会声明解析后的默认值**：网关启动时打印 resolved default agent model 与影响新会话的模式默认值（`thinking` / `fast`），未设置时 `thinking` 显示 `medium`；若插件重载覆盖了启动加载，则"model line, loaded-plugin summary, and channel warnings **use the replacement configuration**"。判据：**启动日志是"最终生效配置"的取证点，不是配置文件的回显**——排查"配置没生效"先看这一行，且要意识到插件重载会改写它。
 - 提升层：工具 / 工作流。触发词：日志热更、排队记录、轮转 5 份、启动日志解析默认值。
+
+
+## r355A · 同一配置键在不同运行模式下语义不同：值不变而作用域漂移，回退条件必须显式写出（来源：docs.n8n.io `scaling/control-concurrency.md` 4,111B + `use-n8n-cloud/understand-concurrency.md` 3,828B 独立 curl 取 `.md` 原文，2026-10-02 r355A 实拉）
+
+- **★同一个环境变量在两种模式下管的不是同一个东西**：`N8N_CONCURRENCY_PRODUCTION_LIMIT` 在 regular mode 下限制**整个实例**的生产并发；在 queue mode 下它决定**单个 worker** 能并行处理多少 job，原文 "Concurrency control in queue mode is a **separate mechanism** from concurrency control in regular mode, but the environment variable … controls **both** of them. In queue mode, n8n takes the limit from this variable **if set to a value other than `-1`**, falling back to the `--concurrency` flag or its default"。判据：**换运行模式时配置值不变、语义已变**——上队列模式 / 扩容 / 迁移的变更单里必须重算这个数的含义，不能直接沿用旧值；且**回退条件要显式写出**（-1 才回退到另一参数），否则"设了没生效"与"生效过头"都无法定位。
+- 提升层：工作流 / 工具。触发词：配置语义漂移、运行模式、实例级与 worker 级、回退条件、并发上限迁移。
