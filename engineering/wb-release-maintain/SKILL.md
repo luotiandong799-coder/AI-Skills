@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.53.0"
+version: "1.54.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -180,3 +180,9 @@ sources:
 - **★at-least-once 的重复窗口要精确到"哪一步"，不能整包声明**：原文「**At-least-once, not exactly-once.** That in-flight step is the one place a replay can repeat work」，且「the interrupted step is **guaranteed not to repeat**」。判据：**重复可能性不是均匀铺在整条链路上**——已完成步复用记录输出、在飞那一步才可能重放。写幂等要求时只标这一处，别让下游为整条链路做去重而抬高成本；与 §r325A「异步暴露窗=已应答者不重试」分工：那条管**是否重试的判据**，本条管**重复可能性的空间定位**。
 - **★"从不静默丢弃"是继承来的属性，不是自证的**：「Work is never silently dropped by Activepieces — the queue itself **inherits the durability of your Redis**」。判据：凡"绝不丢"类承诺，都要追到它的**继承源**；继承源的持久性一变，承诺等级随之变，声明里必须写上这个依赖名。
 - 提升层：工作流 / 安全边界。触发词：恢复契约责任边界、Redis durability is yours、at-least-once 重复窗口、在飞那一步、承诺继承源、底座依赖标 owner。
+
+## r385B · 审批门禁的覆盖面要做差集机检：差集里的对象不是「不受影响」，而是「改了立即生效」（来源：docs.n8n.io `build/manage-workflows/workflow-reviews.md` 10,012B 独立 curl 取 .md 原文，经 llms.txt 287,049B 定位，2026-10-02 实拉；经 Qoder r386-Q-A 提名）
+- **★门禁只覆盖它能 diff 的东西，覆盖面必须显式做差集**：原文「A review covers the contents of one workflow: its **nodes and connections**, as captured in the pinned saved version. The visual diff and the approval **only apply to those contents**」，随后「A review **doesn't cover the resources the workflow depends on**. These **aren't part of the diff**, **aren't gated by approval**, and **apply to the published workflow as soon as you change them, even while a review is open**」——点名五类：Workflow settings（timezone / error workflow / execution order）、Credentials、Variables、Data tables、Sub-workflows。判据：**可变更对象集合 − 门禁实际 diff 的对象集合 ≠ 空 即为漏口**，而差集里的对象不是"不受影响"，恰恰相反——它们**绕过审批直接进生产**，比门内的对象更危险。设审批门禁时必须同时出「门内清单」与「门外清单」两张表。
+- **★差集沿调用图传递，子对象各审各的不等于整体被审**：「Each sub-workflow is **its own workflow with its own review**, if any」。判据：**子资源的独立门禁不能替代主资源的覆盖声明**——"子工作流有自己的评审"是分散的覆盖，不是传递的覆盖；主流程批准时若子流程评审缺失或已过期，主流程的批准并不覆盖它。
+- **★门禁的状态机要写清"挡什么"**：`Waiting for review` →「n8n **blocks publishing**」；`Changes requested` → 要求改后再提；且「A workflow can have **only one open review at a time**」，重提不会开新评审，须向既有评审提交新版本。判据：**"有审批"不等于"挡住了发布"**——只有明确写出被阻断的动作名（publish），门禁才是可验收的；与 §r385A「恢复契约责任边界」同族：那条管**承诺的负声明**，本条管**门禁的负声明**。
+- 提升层：工作流 / 安全边界。触发词：门禁覆盖面差集、aren't gated by approval、门外清单、差集沿调用图传递、子工作流各有评审、Waiting for review 阻断 publish。

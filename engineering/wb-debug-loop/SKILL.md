@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.118.0"
+version: "1.119.0"
 agent_created: true
 ---
 
@@ -362,3 +362,11 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 
 ## r383C · 采样的异常保留例外（来源：activepieces setup-opentelemetry.md + docs.openclaw.ai diagnostics/flags.md，2026-10-02 r381-Q-C 实拉；经 Qoder 提名）
 - 按比例丢弃的通道必须显式声明保留谓词：`AP_LOG_SAMPLE_RATE_INFO` + `AP_LOG_KEEP_SLOW_MS`（慢必留、error 免采样）；对偶 = OpenClaw diagnostics flags「单子系统开额外日志而不全局抬 level」。
+
+## r385B · 诊断/修复工具要分清「检查面」与「修复面」，并把「跳过」做成一等结果（来源：docs.openclaw.ai `gateway/doctor/running` 242,314B 独立 curl 实拉，2026-10-02；经 Qoder r388-Q-C 提名并纠错）
+- **★检查项出现 ≠ 修复项存在，两个面是不同集合**：原文「Some lint findings are **intentionally diagnostic only**, so **a check appearing in `--lint --all` does not mean `--fix` will mutate that area**. The contract separates `detect()` (reports findings) from `repair()` (reports changes/diffs/side effects), which keeps a path open for a future `doctor --fix --dry-run` **without turning lint checks into mutation planners**」。判据：**把检查器顺手升级成修复器，会让"报出来"隐含"能修好"**——自愈类工具必须分别声明检查面与修复面，且允许只报不修；与 §r336A「诊断只读 / 修复须批准」分工：那条管**读写权限分离**，本条管**两个面的集合关系**。
+- **★"跳过"是一等结果，必须与"运行"分列计数，否则 0 结论不可信**：机读信封给出 `checksRun` / `checksSkipped`：「counts (**skipped by profile, `--only`, or `--skip`**)」，且 `ok` 只表示「whether any finding met the selected severity threshold」。判据：**`findings` 为空有两种完全不同的含义——真的干净 / 全被跳过**；不报 `checksSkipped`，"0 问题"就是不可判的。与 §r354C「采集结论三态 命中/缺位/未达」同族：那条管**采集面**，本条管**执行面**。
+- **★无人值守档只做 safe 动作，需人确认的动作是"显式跳过"而不是"静默降级为已修"**：`--non-interactive`「applying only **safe migrations** (config normalization + on-disk state moves). **Skips restart/service/sandbox actions that need human confirmation**. Legacy state migrations still run automatically when detected」；`--fix` 才含「workspace setup, session stores, exec approvals, and audit schema migrations」，`--fix --force` 才是激进档。判据：**非交互执行必须列出"这一档不做什么"**，否则运维会以为跑过一遍就修全了——被跳过的动作要留在报告里，不要从结果中消失。
+- **★取消不能留下半截修复**：「Once started, Doctor finishes and releases its resources **before a cancelled caller settles**, so **cancellation cannot abandon an in-progress repair**」。判据：**可中断的修复工具必须先声明中断语义**——要么跑完再响应取消，要么整体回滚；把取消当成"尽力而为"会在修复类操作上留下半写状态。
+- 判非（纠正 Qoder 转述）：本页**未检索到** `repaired/skipped/failed` 三态枚举与 `HealthFinding[]` 类型名（grep 0 命中），故该表述不作为判据引入；仅落上列可实证的四点。
+- 提升层：工具 / 工作流 / 可观测性。触发词：检查面与修复面、检查项不等于可修复项、checksSkipped、0 findings 不可判、non-interactive 只做 safe migrations、显式跳过、取消不半截修复。
