@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.50.0"
+version: "1.51.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -159,3 +159,13 @@ sources:
 
 - **★同一个环境变量在两种模式下管的不是同一个东西**：`N8N_CONCURRENCY_PRODUCTION_LIMIT` 在 regular mode 下限制**整个实例**的生产并发；在 queue mode 下它决定**单个 worker** 能并行处理多少 job，原文 "Concurrency control in queue mode is a **separate mechanism** from concurrency control in regular mode, but the environment variable … controls **both** of them. In queue mode, n8n takes the limit from this variable **if set to a value other than `-1`**, falling back to the `--concurrency` flag or its default"。判据：**换运行模式时配置值不变、语义已变**——上队列模式 / 扩容 / 迁移的变更单里必须重算这个数的含义，不能直接沿用旧值；且**回退条件要显式写出**（-1 才回退到另一参数），否则"设了没生效"与"生效过头"都无法定位。
 - 提升层：工作流 / 工具。触发词：配置语义漂移、运行模式、实例级与 worker 级、回退条件、并发上限迁移。
+
+
+## r355C · 破坏性变更公告要带「迁移动作 + 时间点 + 不受影响面」；数据库只向前迁移 ⇒ 换载体等于空实例；被移除的配置是静默忽略，必须配存量自查（来源：docs.n8n.io `changelog/v30-breaking-changes.md` 21,374B 独立 curl 取 `.md` 原文，2026-10-02 r355C 实拉）
+
+- **★破坏性变更公告的三件套缺一不可**：文档对每条都给「变更是什么 + **What to do** + 计划时点（scheduled for October 2026）」。判据：**只列变更不给迁移动作的公告不可执行**；没有时点的变更无法排期。⇒ 写升级说明时按「变更 / 动作 / 时点」三栏出，任一栏为空即视为未完成。
+- **★要显式声明「不受影响面」，否则使用者会整体停用**：原文 "The remaining changes affect the `n8n-node dev` test loop **only**. `n8n-node build`, `n8n-node lint`, `n8n-node release`, and `npm create @n8n/node` are **unchanged**"。判据：**破坏性变更的影响面是双向声明**——说清哪些变了，也要说清哪些没变；只写变更面会让用户在没受影响的地方做无谓迁移。
+- **★运行/部署形态本身是可被删除的兼容面**："Self-hosted n8n will require a **Docker-based deployment**. n8n 3.0 will no longer support installations run using `npm` or `npx n8n`"，且因 "n8n 3.0 doesn't publish a runnable `n8n` package to npm"，连开发用的 `n8n-node dev` 也改为跑容器。判据：**依赖登记不能只登记 API 与字段名**，安装/运行方式是同等重要的兼容面——它的移除会让一整类存量一次性失效，且迁移动作是"换部署"而非"改代码"。
+- **★数据库只向前迁移 ⇒ 换镜像等于拿到空实例，旧数据不会跟过来**："Data from earlier versions **doesn't carry over**. Each `--n8n-image` gets its own volume, because n8n **only migrates a database forward**: switching images gives you an **empty instance** rather than a database an older n8n can't read"，并要求 "Export any test workflows you want to keep before you upgrade or change images"。判据：**迁移的单向性要写进升级单**——回滚到旧版本时库可能已不可读；换载体/换镜像前必须先导出，不能指望"数据跟着走"。
+- **★被移除的配置项是"静默忽略"，所以必须配存量自查工具**：`N8N_PRE_EXECUTE_ERROR_CREATES_EXECUTION` 移除后 "After you upgrade, n8n **ignores the variable**"，官方给的应对是 "Check the n8n 3.0 **migration report** in Settings to see if **this instance** sets it"。判据：**删除一个配置不等于使用者会发现**——移除必须同时提供"我这台有没有中招"的自查入口；没有自查工具，静默忽略会把一次变更变成长期的行为谜题。
+- 提升层：工作流 / 工具。触发词：破坏性变更公告、迁移动作、不受影响面、部署形态兼容面、数据库只向前迁移、换镜像空实例、静默忽略、迁移报告存量自查。
