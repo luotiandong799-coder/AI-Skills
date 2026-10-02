@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: "1.16.0"
+version: "1.17.0"
 agent_created: true
 ---
 
@@ -160,3 +160,13 @@ agent_created: true
 - **★第四种队列语义是"替换"**：`/queue interrupt` 让**最新消息替换当前 run**，而不是转向它。判据：**interrupt 与 steer 是相反极性**——steer 是追加引导、interrupt 是作废重来；把两者混用会让"当前进度"时有时无。
 - 落地口径：设计引导/打断能力时至少要区分四态 —— steer（追加引导）/ followup·collect（排队等下轮）/ interrupt（替换当前）/ 注入失败降级（起新提示）。
 - 提升层：工具 / 工作流。触发词：/steer、/tell、注入失败降级、独立于队列模式、/queue interrupt。
+
+
+## r355B · 子代理的工具白名单是「限制」不是「授予」，且为它开的工具会外溢给父；召回失败必须静默降级（来源：docs.openclaw.ai `concepts/active-memory.md` 7,276B + `concepts/active-memory/tuning.md` 4,601B + `concepts/active-memory/memory-tools.md` 5,491B 独立 curl 取 `.md` 原文，2026-10-02 r355B 实拉）
+
+- **★`toolsAllow` 是上限不是授权**：原文 "`toolsAllow` is a **limit, not a permission grant**. Before starting recall, Active Memory filters these names through the **parent agent's finalized tool policy**"；插件注册的工具可能落在父所选 profile 排除的范围内。判据：**子代理能力 = min(自身声明, 父最终策略)**，两处都要过；只在一处声明"我允许"不产生任何权限。
+- **★给子代理开的工具会同时给父 agent**："Use explicit `tools.alsoAllow` entries to extend a restrictive profile… These grants **also give the parent agent access** to the named tools; they are **not recall-only permissions**"。判据：**不存在"仅子代理可见"的工具授予**——凡是"为了让它能干活而开的口子"，父一起拿到；想要收窄父，就不能靠给子开白名单来实现。
+- **★父一轮的工具权限到期后，子代理的召回不得继续**："recall cannot continue after the parent turn's **tool authority expires**"。判据：**子代理的权限有继承来的时限**，不是"发起即永久"；长任务要显式声明权限窗口，不能假设活还没干完权限就还在。
+- **★部分可用就降级继续，全不可用则跳过且不报错**："If only some configured tools are allowed, recall can still run with that **smaller set**"；"If none of the configured tools are available, or the sub-agent run fails, active memory **skips recall for that turn and the main reply continues without memory context**"。判据：**检索/记忆类子代理必须设计成可降级依赖**——它失败时主流程要继续，而不是把主回复拖挂。
+- **★"有没有召回"要按结构化字段判，不能按输出是否为空判**："non-empty model-visible tool output counts as recall evidence **unless structured result fields explicitly report an empty result or failure**"。判据：**判定"没找到"的权威源是结构化结果字段，不是文本长度**——模型侧看到非空就当证据，会系统性地把"没找到"误判成"找到了"。
+- 提升层：工具 / 工作流。触发词：toolsAllow 是限制、子代理工具外溢、父轮权限到期、召回降级、结构化字段判空、跳过召回。

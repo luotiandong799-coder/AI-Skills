@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: 3.96.0
+version: 3.97.0
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -297,3 +297,13 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **★清理责任随数据一起外包，默认结果是"永久保留"**："n8n **delegates pruning of binary data to S3**, so setting a lifecycle configuration is **required** unless you want to preserve binary data indefinitely"。判据：**把数据迁到外部存储时，生命周期策略不是附带获得的，而是必须另行配置的**——未配置的状态是"无限期保留"而不是"跟随主系统策略"；这与 r354A「清理停了也不报错」叠加，会形成长期静默增长。
 - **★"支持"与"官方支持"是两档**："You can use other S3-compatible services like Cloudflare R2 and Backblaze B2, but n8n **doesn't officially support these**"。判据：**能跑通 ≠ 被支持**；承诺面由"官方支持"界定，排障与兼容性保障只覆盖那一档，选型时要把"兼容但未支持"单独列为风险项。
 - 提升层：可复用 Skill / 工具。触发词：云与自托管反向分布、isn't available on Cloud、license 拒绝启动、fail-fast 许可、S3 lifecycle 必配、官方支持 vs 兼容。
+
+
+## r355B · 召回要分两条通道：廉价的确定性通道在前，贵的深度通道只在「问过去 + 无强可信触发匹配」时才升级；检索形态按问题形状选，上下文量与超时是联动旋钮（来源：docs.openclaw.ai `concepts/active-memory.md` 7,276B + `concepts/active-memory/tuning.md` 4,601B，2026-10-02 r355B 独立 curl 实拉）
+
+- **★默认 escalate：深度召回是条件触发的第二通道，不是默认路径**："The default `escalate` mode runs its blocking recall sub-agent **only when the message asks about the past and the deterministic memory lane found no strong trusted trigger match**. This keeps ordinary replies fast while preserving a deeper search path"。判据：**分层召回必须写成"先廉价后昂贵"，且要为"不升级"设明确门槛**（此处 = 确定性通道命中强可信触发）—没有门槛的分层等于每次都走贵的那条。
+- **★检索形态要按问题形状选，一种检索打不了所有问题**："Flat retrieval is strongest for **direct fact matches** and **weaker on temporal and multi-session questions**"（文档并以 LongMemEval / PrefEval 作为该差距的证据）。判据：**先给问题分类（直接事实 / 时序 / 跨会话多跳），再选通道**；把扁平检索用于时序与多跳问题是结构性错配，不是调参能救的。
+- **★上下文量是显式三档旋钮，且必须同步调超时**：`queryMode` = `message`（仅最新一条消息，`timeoutMs` 建议 3000–5000）/ `recent`（+ 少量近期尾巴，约 15000）/ `full`（整段对话，15000+，随线程增大）；原文要求 "Pick the **smallest mode** that still answers follow-ups well; grow `timeoutMs` **as context size grows**"。判据：**扩大上下文而不上调超时预算 = 静默截断**；上下文量与超时是一对，不能只动一个。
+- **★"渴望度"是与上下文量正交的第二个旋钮**：`promptStyle` 六档（`strict` / `balanced` / `contextual` / `recall-heavy` / `precision-heavy` / `preference-only`）控制子代理"多想返回记忆"，与它看到多少上下文无关。判据：**"能不能找到"与"多想找"是两个变量**，必须分开配置；与 §诚实无匹配 分工：那条管"空结果要直说"，本条管"渴望度本身要可配"。
+- 判非：白名单只收具体工具名、通配与核心工具被静默过滤（与「静默忽略」类条目同向）；Cerebras 等速度推荐与 LanceDB / Lossless Claw 接线细节（平台登记项，不迁移）。
+- 提升层：模型 / 工作流。触发词：分层召回、escalate 模式、扁平检索弱于时序、queryMode、timeoutMs 联动、promptStyle 渴望度。
