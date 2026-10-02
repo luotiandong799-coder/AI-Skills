@@ -3961,3 +3961,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **监控黄金信号**：TTFT p95（chat 2s/completion 500ms）/端到端 p95（10s）/硬错误率（1% 5min）/按模板成本每请求（2x 7日均）；限流错误单独告警（阈值 1%）；六指标=token/成本/TTFT/fallback 率/工具执行成功；eval pass-rate 领先质量指标、guardrail block-rate、幻觉率按主题；p95 不报 mean。
 - **Agent 红队自动化**（r377B 增量）：持续红队=每个 release candidate 跑对抗场景；产出漏洞清单/每类成功率/回归测试；GPT-Red 自动化红队模型对抗训练加固；DTAP-RED=自主攻击 agent 三阶段闭环（可挑用户 prompt/工具描述/环境数据）；MUZZLE=轨迹识别高显著性注入面+自适应生成恶意指令；AdversaBench=三评委失败确认（单评委宽容）；CI/CD 对抗扫描阻断门（EU AI Act Art.9）；最致命=链式注入（在 agent 会读的数据里放指令）。
 - **个人知识管理 2026**：CODE 演化=本地 AI 自动摘要/标签/连接（本地优先 Obsidian/Anytype，隐私换语义搜索）；capture 摩擦测试=超几秒一周内停；双层=随记（brain-dump+agent 结构化+[goal]/[decision] 标签+wiki-link）+定期 reflect（整合近期笔记→提升为项目/目标→跨周模式）；autopilot=链接/路由/摘要自动；AI 层=自然语言问自己的笔记、答案 grounded 在自己的笔记；闭环=Memory→Intelligence→Execution→新 Memory。
+
+## r380A 本地模型与微调工程 2026（来源：insiderllm-lora/egoistai-qlora/sumguy-qlora/localaimaster-qlora/local-ai-hub-guide/markaicode-ollama/kunalganglani-finetune/nvidia-synthetic/ertas-synthetic/ertas-workflow/ceur-slms/futureagi-pipeline-eval/futureagi-finetuned-eval/theneuralbase-regression/theneuralbase-capability/aws-sft-part1/latitude-eval/mlflow-eval/posttrainbench/chiraghasija-embedding/digitalocean-embedding/fireworks-embedding/arxiv-customir/unsloth-hyperparams/codersera-cheatsheet/yobitel-axolotl/promptquorum-hyperparams/cyberax-decide/optivulnix-decide/anhtu-decide/sfailabs-decide/qiita-decide，2026-10-02 实拉）
+- **QLoRA 消费级配方**：12GB GPU 训 7B 2-4 小时；rank 16/lr 2e-4/batch 2+grad-acc 8/200-500 质量样本；Unsloth 2x 快 60% 少 VRAM；基座 4-bit 加载+adapter bf16 训练（7B fp16 14GB→4bit 3.5-4GB）；70B 单 4090 可训（质量≈LoRA 全微调 30% 内存）；训练后 merge 再 serve。
+- **VRAM/规模对照**：3B=6/8GB（500 例~10min）/7-8B=8/16GB（~30min）/14B=16/24GB（~1h）/32B=32/48GB（~3h）；几百例私有样本 QLoRA→merge→GGUF→ollama run 私有模型，正确用内部 API 名/输出格式（基座猜或幻觉处=微调收益点）。
+- **微调 ROI 门**：few-shot 85% vs FT 87%——2% 增益不值运营复杂度；部署 Q4_K_M 就在 Q4_K_M 评估（低 bit-width 性能会掉）。
+- **合成数据蒸馏管线**：教师生成→规则验证器级联→学生微调；丢 bottom 20%、MinHash/SimHash 0.85 去重（LLM 合成数据比人类重复）、格式与生产一致；sub-1B 参数=输出 512 token 上限/temp 0.3-0.5/推理 2-3 步；10-50 标注例+NL 任务→SLM 专家；LLM-as-judge 入库前评完整性。
+- **数据质量多信号过滤**：相似性（embed 离群）+LLM-judge 1-10+统计（token 长度/低困惑度/语义不一致）+人工抽查 100 例；过滤=去重/长度/语言/毒性/格式；SFT 坏例教成永久坏习惯；最小 500 例 1000-5000 甜区。
+- **微调后四集合评估**：任务 holdout+能力漂移集+拒绝集+与 base 配对 arena（只赢集合一=剧场）；遗忘检测=同一通用基准 base vs candidate 前后分（full FT 5-15% 退化，LoRA 低）；>10% 输出退化触发回滚；eval gate=真 holdout+对比 base+回归阻断。
+- **泄漏与标签噪声**：MinHash-LSH 0.85+embedding 余弦 0.95 split 前 dedup（微调赢 holdout 靠记忆不是学习）；标签噪声抽样 200-500 行人工核；>3 个逐字/近似重合=污染；eval 集 6 个月过期重做。
+- **嵌入微调 ROI**：recall@10<80%+几千真实对→自训赢 API；<500 对不值/2000-10000 10-20% recall/10000+ 20-40%；实测 +39% nDCG@100；无标注=LLM 合成 query-doc 对+验证 hard negatives（CustomIR）；hard negative+改写+connector 级 holdout（109M 微调超 8B）。
+- **LoRA 超参速查**：rank 16 起步（val loss 平台才升）；alpha=rank 或 2×rank；dropout 0（小数据集 0.05）；lr 2e-4（1e-4-5e-4，全 FT 5e-5-1e-4，遗忘降 1e-5-5e-5）；target=q/k/v/o/gate/up/down；有效 batch 8-32；不稳定→升 dropout/降 rank/降 lr。
+- **决策阶梯**：Prompt（基座已懂塑形）→RAG（缺事实：私有/更新/大容量——检索问题不是训练问题）→微调（prompt+RAG 证明失败+有数据：一致语调/稀有格式/窄域）→蒸馏（成本最低终局）；FT 触发=两基线都评估过+有已知 FT 能修的失败+几百-几千对；个人尺度 LoRA 训练 €500-5K；行为一致性 FT 最高；生产多组合 2-3 种。
