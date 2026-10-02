@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.43.0
+version: 1.44.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -486,3 +486,10 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **原文**：「This is **not a perfect security boundary**, but it materially limits filesystem and process access when the model does something dumb.」；三层分工「1. **Sandbox** … decides **where tools run** (sandbox backend vs host). 2. **Tool policy** … decides **which tools are available/allowed**. 3. **Elevated** … is an **exec-only escape hatch**」；「Tool allow/deny policies still apply **before** sandbox rules. If a tool is denied globally or per-agent, sandboxing doesn't bring it back.」；规则「`deny` **always wins**. If `allow` is non-empty, everything else is treated as blocked. … Tool policy is the hard stop: `/exec` cannot override a denied `exec` tool. … Tool policy filters tool availability **by name**; it does not inspect side effects inside `exec`. If `exec` is allowed, denying `write`, `edit`, or `apply_patch` **does not make shell commands read-only**.」；MCP「For sandboxed MCP servers, the sandbox tool policy is a **second allow gate** … add `bundle-mcp`, `group:plugins`, or a server-prefixed MCP tool name/glob … then **restart/reload the gateway and recapture the tool list**」；强制策略「An operator role with `sandbox: "required"` **overrides agent mode**, **cannot be escaped through elevated execution or host overrides**, and **fails closed** when its sandbox cannot be provisioned.」；「For a role-required sandbox, OpenClaw **caps configured `rw` workspace access at `ro`** and logs an `agent/sandbox` warning.」；绑定校验「OpenClaw validates bind sources **twice**: first on the normalized source path, then again after resolving through the deepest existing ancestor. Symlink-parent escapes do not bypass blocked-path or allowed-root checks.」；「Binding `/var/run/docker.sock` **effectively hands host control to the sandbox**」；「`scope: "shared"` ignores per-agent binds (only global binds apply).」
 - **判据**：① **"进了沙箱"与"没有这个能力"是两件必须分开声明的事**：沙箱只决定执行位置（容器内 vs 宿主），它**不是完整安全边界**，官方原文直接说"只是模型犯傻时限制文件与进程访问"。把沙箱当成授权面，等于把一个减爆炸半径的措施当成访问控制。② **三道门的否决顺序要写明**：工具策略先于沙箱生效——全局被 deny 的工具，沙箱不会把它带回来；`deny` 恒赢且 `allow` 非空即默认全封。⇒ 排查"为什么这个工具不可用"时，先看策略再看沙箱，顺序反了会得到错误结论。③ **按名过滤意味着 exec 是策略的盲区**：允许 `exec` 时再 deny `write`/`edit`/`apply_patch` **不构成只读**，因为策略不检查 shell 命令内部干了什么。想做只读 agent 必须 deny `group:runtime`，而不是 deny 几个文件工具。④ **更强的策略会把弱配置向下压，且降级必须留痕**：creator role 的 required sandbox 覆盖 agent 自己的 mode、提权逃不出去、**供应不出来时 fail-closed**（不是退回宿主继续跑）；同时把配置里写的 `rw` 压成 `ro` 并记一条 `agent/sandbox` 警告。⇒ 任何"配置被更强的策略覆盖"的场景，沉默覆盖都是缺陷，必须留下可查的降级记录。⑤ **挂载是绕过沙箱文件面的正门，要按"交出什么"来审**：bind 会穿透沙箱文件系统（默认 rw，源码/密钥应显式 `:ro`）；路径校验做两遍（归一化后 + 解析最深存在祖先后再一次）以挡住符号链接父目录逃逸；挂 `/var/run/docker.sock` 等于把宿主机控制权交出去；`scope: shared` 会忽略 per-agent 挂载——这几条都是"看起来只是加了个目录"的操作。
 - 提升层：安全边界 / 工作流。触发词：沙箱不是安全边界、where vs which、deny 恒赢、allow 非空全封、exec 是策略盲区、group:runtime、沙箱第二道门、MCP 工具消失、fail-closed、rw 压成 ro、bind 穿透、docker.sock、scope shared。
+
+## Cap47 · 默认「自动批准」本身就是提权面；要真正关掉往往得同时动两个开关（来源：docs.openclaw.ai `gateway/config-gateway.md` 36,884B，2026-10-03 r393B 独立 curl 取 `.md` 原文实拉；与 Cap40 授权评审对象是权限组合 互补——那条管怎么审一个角色，本条管"这个门默认是开的还是关的"）
+
+- 节点配对默认开启同主机自动批准（`autoApproveLocal` 默认 true）：同主机设备**静默配对并静默升级访问**，不需要人点确认 ⇒ 默认值就是"同主机可信"，部署前先确认这个前提成不成立。
+- 关掉自动批准要**两个开关同时动**：`sshVerify=false` **并且** unset `autoApproveCidr` 列表；只关一个是无效配置——`sshVerify` 仅关闭 SSH 验证这条路，不影响 CIDR 自动批准。
+- CIDR 自动批准是"可选、默认不开"的白名单，一旦配上等于把整个网段变成可信配对源；它与 SSH 验证是两条独立通道，互不影响 ⇒ 收紧一条不等于收紧了全部。
+- 通则：凡是"自动批准 / 静默升级"类开关，默认态、关闭条件、以及各通道是否独立，必须在声明里写全；只写"支持手动审批"而不写"默认是自动"等于误导。

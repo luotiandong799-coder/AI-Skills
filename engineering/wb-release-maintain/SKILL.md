@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.59.0"
+version: "1.60.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -216,3 +216,9 @@ sources:
 - 项目级 override 的合法区间由实例级变量界定：下界 = paused timeout，上界 = instance retention；`null` 表示**回退到实例值**，不是"不限制"。
 - 实例变量变化后，已保存的 override 不会失效也不静默越界，而是在 cleanup 时被 **clamp 回新边界** ⇒ 收紧上层限额会连带改写下层已存值，属于**无 diff 的隐式变更**，发布前必须清点。
 - 想让某个项目取到更宽的值，必须先把实例上界抬高（原文：raise the instance value if you need a wider range）⇒ 局部放宽的前提是全局先放宽，反过来推不动。
+
+## reload 不是单一动作，要先问断开半径：哪些热应用、哪些会重连、在跑的活会不会丢（来源：docs.openclaw.ai `gateway/config-gateway.md` 36,884B，2026-10-03 r393B 独立 curl 取 `.md` 原文实拉；与 §写入成功 ≠ 生效：发布是独立一步 互补——那条管 reload 这一步存不存在与失败怎么降级，本条管 reload 落下去了会波及谁）
+
+- 变更分三类，处置各不同：①角色定义、代理信任、identity scopes、Tailscale 认证、trusted-proxy 策略 **热应用且不掉线**；②超出模型策略的变更会**重连现有客户端**（以当前权限重新建立）；③已验证的 WebSocket 登录**保留连接**，且**已接受的运行继续执行**。
+- 因此发布前必须回答三问：这次改动属于哪一类？会不会断现有连接？在跑的任务会不会丢？——只看"配置保存成功"回答不了任何一个。
+- 热应用让"改配置"变成一种无版本、无 diff 的发布 ⇒ 与 §覆盖值区间变更后自动 clamp 同族：凡是热生效的配置，都要在发布清单里点名，否则复盘时没有变更点可查。
