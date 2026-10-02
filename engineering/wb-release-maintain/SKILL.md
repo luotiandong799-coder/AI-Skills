@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.55.0"
+version: "1.56.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -191,3 +191,9 @@ sources:
 - **原文**：「A successful write reminds you to run `openclaw secrets reload` before a config-referenced value can take effect.」「re-resolves refs and atomically publishes the owner-aware runtime snapshot (no config writes)」「Eligible failed owners become **stale** only when their ref identities, provider definitions, and complete non-secret owner contract are unchanged. New or changed failures become **cold**. This degraded activation succeeds and reports `warningCount`. Strict or unmapped failures return an error and preserve the previously active snapshot.」
 - **判据**：① **改值与生效是两次独立动作**——写库成功只代表"存下来了"，引用它的运行期仍是旧快照；发布（reload）才是原子切换点，且不改配置本身。发布流程里必须把"写完还剩一步"写进定义完成，否则出现"我改了但没生效"的伪故障。② **部分失败的降级不是一档而是两档**——失败方的引用标识、提供方定义、非密契约**全部未变**才算 stale（可带警告上线）；只要契约变了就是 cold（语义已经不是原来那个），两者处置完全不同，不能都用"降级上线"概括。③ **不可归类的失败必须保住旧快照**——strict / unmapped 失败直接报错并保留上一个可用快照，而不是带着未知状态上线；"先上再说"在这里等于把旧快照也弄丢。
 - 提升层：工作流 / 可复用 Skill。触发词：写入≠生效、reload 是发布、stale vs cold、非密契约未变、保住旧快照、降级两档。
+
+
+## 存储满时的取舍只有两档：停服或丢记录，没有第三选项；保留期与运行时长都是套餐属性（来源：help.make.com `errors-that-dont-create-incomplete-executions.md` 1,401B + `audit-logs.md` 8,460B，2026-10-03 r390C 独立 curl 取 `.md` 原文实拉；与 §破坏性变更公告三件套 互补）
+- **原文**：「When your incomplete executions storage is full, Make checks the **enable data loss** setting: If the data loss is **disabled**, Make **disables the scenario**. If the data loss is **enabled**, Make keeps scheduling scenario runs and **discards the incomplete execution** if it cannot be stored」；「When the scenario runs longer than the **scenario run duration limit**. You can check the limit for your **plan**」；「Audit logs are stored for **12 months**.」
+- **判据**：① **容量耗尽是一次显式的二选一，不是可以两全的配置**：要么停掉服务保住记录，要么继续服务丢掉记录。**"允许数据丢失"是一个业务开关不是技术细节**——它的默认值决定了这个系统在压力下的行为是"宁可停"还是"宁可丢"，必须在上线前明确选过。② **运行上限与保留期都是套餐属性**：时长上限按套餐定，审计日志只留 12 个月 ⇒ 做容量/合规承诺时不能按理想值写，要按当前套餐的实际值写，并在续费/换档时复核。③ **"记录被丢弃"要有可观测出口**：既然选了继续服务，就必须让用户能知道丢了多少、什么时候丢的，否则"丢了"和"没发生"在现象上一致。
+- 提升层：工作流 / 工具。触发词：存储满二选一、enable data loss、停服 vs 丢记录、运行时长按套餐、审计保留 12 个月。

@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.41.0
+version: 1.42.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -474,3 +474,9 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **原文**：`drop` 三档——「`summarize`（默认）：drop the oldest queued entries as needed, **keep compact summaries, and inject them as a synthetic followup prompt**」；「`old`：drop the oldest… without preserving summaries」；「`new`：reject the newest message when the queue is already full」；`cap` 默认 20，「Values below `1` are ignored.」；权限面「Gateway input **retains its authenticated operator and original scope ceiling** while queued or delegated to a child… other input waits in FIFO order **instead of borrowing the active or newest sender's permissions**」；「An accepted turn can continue after its request returns or its client disconnects. **That does not extend revoked device authority or permissions removed by a current operator role.** Subsequent actions still check the original source, including work held by an accepted child.」；并发「A lane-aware FIFO queue drains each lane with a configurable concurrency cap… CLI, embedded, and Codex runs **share the same session-key lane** (`session:<key>`). Each turn waits there before acquiring the session's execution claim, **so changing runtimes cannot start a competing turn**.」
 - **判据**：① **队列溢出必须先选语义再谈容量**：三档分别是"丢旧的但留下摘要并注入合成追问"（默认，等于**内容被改写后再送达**）·"丢旧的无补偿"·"拒绝最新的"。默认档会改变消息内容，所以"收到过"与"原样收到过"不是一回事；验收队列行为时必须确认用了哪一档。② **排队与合并都不借权限**：输入在排队或被委派到子执行体期间始终携带自己的 operator 与 scope ceiling，不合资格的只能在 FIFO 里等，不会"搭便车"借到当前运行者或最新发送者的权限。③ **权限检查不只在准入时做一次**：已接受的运行在请求返回或客户端断连后仍可继续，但**被撤销的设备权限与被移除的角色当场生效**，后续动作仍回查原始来源——包括已经被子执行体接走的工作。⇒ 撤销必须作用于"在飞的"，只拦新请求等于没撤。④ **并发是两级预算而非一个数**：先抢**会话 claim**（同 session key 的 lane，换运行时也绕不过），再抢**全局/父级预算**（main lane 受 `maxConcurrent`，子 agent 用其 spawning session 的预算，swarm 用 group 预算）。⇒ 调"并发"前要先分清是卡在会话串行还是卡在全局预算，改错一层永远看不到效果。
 - 提升层：工作流 / 安全边界。触发词：队列溢出策略、drop summarize/old/new、合成补偿、cap 20、排队不借权限、撤销作用于在飞、会话 lane、两级并发预算、换运行时绕不过。
+
+
+## Cap45 策略变更事件本身要入账；凭据过期应能原地重授权而不是重建（来源：help.make.com `credential-requests-reauthorization-2fa-enforcement-logs.md` 1,630B + `audit-logs.md` 8,460B，2026-10-03 r390C 独立 curl 取 `.md` 原文实拉；与 §Cap31 审计边界 / §Cap42 凭据归属 互补——那两条管账本证明不了什么、执行身份归谁，本条管"谁改了规则"与"凭据过期后怎么续"）
+- **原文**：「Audit logs now record changes to **2FA enforcement** settings. Organization admins and owners can see: **Who enabled or disabled 2FA enforcement** / When they did it」；「Previously, expired OAuth connections required **creating and authorizing a new credential request each time**. Requesters can now ask recipients to **reauthorize OAuth connections directly from an existing credential request**」；可用性标注「Both features are available on the Enterprise plan」。
+- **判据**：① **审计要记两类事件：违规事件与策略变更事件**——只记"谁没开 2FA"会漏掉更关键的一条：**谁把强制 2FA 关掉了**。改变规则比违反规则影响面更大，且通常只有极少数人有这个权限；凡是能被开关的安全策略，其开关动作必须进审计日志（谁 + 何时 + 从什么改成什么）。② **凭据过期应提供原地重授权通道**：过期即重建会不断产生新的凭据请求与连接，旧的连接面不会自动消失 ⇒ 累积出来的是一批无人清理的平行授权。续期（reauthorize）与新建（create）是两个动作，默认应走续期。③ **这类能力通常带套餐门槛**（Enterprise），写进共享规则时要连同前置面一起声明，避免"我们平台应该有"的误判。
+- 提升层：治理 / 安全边界。触发词：策略变更入审计、谁关掉了 2FA 强制、reauthorize vs 重建、凭据续期、平行授权累积。
