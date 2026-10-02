@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.61.0"
+version: "1.62.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -232,3 +232,11 @@ sources:
 - **发布幂等要四件套齐备**：durable request ID + 精确 commit marker + 远端分支观测 + 按 head branch 查 PR，四者共同保证网关重启或响应丢失也不会产生重复 commit / push / PR；push 是**条件推送**（条件于观测到的远端 head 或分支不存在），并发改分支即被拒 ⇒ 只靠「请求 ID」一个键撑不起幂等。
 - **结算完成不授权下一次**：连接断开或权限结束后，已接受的 PR 响应仍会完成它自己那份回执，本地分支更新也会完成匹配的 index 事务，但这次收尾**不授权再一次 push 或建 PR**；未确认的结果保留其原有的人工确认/恢复要求 ⇒ 「系统善后成功」不等于「下一次可以自动来」。
 - **发布保留已提交文件字节**：发布按普通 Git 属性转换暂存，显式保留未变更文件的原有字节，**包括已存在的 CRLF 行尾**，不做无关文件的行尾重整 ⇒ 发布管线默认不 renormalize，否则会制造大量与本次改动无关的 diff（呼应本机 CRLF 机检教训）。
+
+
+## 并发预算是多轴且互不联动；换运行时就换账本；陈旧引用会被拒绝执行而不是无害忽略；写配置默认拒绝破坏性替换（来源：docs.openclaw.ai `gateway/config-tools/sessions-and-subagents.md` 9,632B + `gateway/config-tools/custom-providers.md` 13,129B，2026-10-03 r395B 独立 curl 取 `.md` 原文实拉）
+
+- **并发不是一个数，是三条互不联动的轴**：`maxConcurrent`（并发运行数，默认 8）、`maxChildrenPerAgent`（每会话准入子代数，默认 5，**提高并发上限并不会提高这个**）、以及生命周期总额度（swarm 的 `maxTotalPerGroup`，默认 200）⇒ 调一条不动另一条，扩容时三条要分别核对，否则会被最紧的那条静默卡住。
+- **预算的作用域与账本随运行时变**：`maxConcurrent` 是按「直接派生的那个控制会话」计数，**独立会话之间不共享这笔预算**；swarm collector 子进程走独立的 `tools.swarm.maxConcurrent`，不占用父级的普通子 agent 车道；Codex-native 子 agent 用自己的调度器与限额 ⇒ 「并发是多少」这个问题必须先回答「在哪个运行时、按哪一级计」。
+- **陈旧引用会被拒绝执行，且需要显式清理**：`allowAgents` 里指向已删除 agent 的条目，`sessions_spawn` 会**直接拒绝**，并从 `agents_list` 中省略；需要跑 `doctor --fix` 才能清掉 ⇒ 引用完整性不是文档问题，是运行时拒绝面，删除主体后必须有一道清理动作。
+- **写配置的默认值是「拒绝破坏性替换」**：安全编辑走 `--strict-json --merge`（追加式），`config set` 默认拒绝会覆盖整块的替换，只有显式 `--replace` 才放行 ⇒ 自动化写配置时把「破坏性」做成需要额外开关的动作，能挡掉一整类误覆盖。
