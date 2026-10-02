@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.56.0"
+version: "1.57.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -197,3 +197,9 @@ sources:
 - **原文**：「When your incomplete executions storage is full, Make checks the **enable data loss** setting: If the data loss is **disabled**, Make **disables the scenario**. If the data loss is **enabled**, Make keeps scheduling scenario runs and **discards the incomplete execution** if it cannot be stored」；「When the scenario runs longer than the **scenario run duration limit**. You can check the limit for your **plan**」；「Audit logs are stored for **12 months**.」
 - **判据**：① **容量耗尽是一次显式的二选一，不是可以两全的配置**：要么停掉服务保住记录，要么继续服务丢掉记录。**"允许数据丢失"是一个业务开关不是技术细节**——它的默认值决定了这个系统在压力下的行为是"宁可停"还是"宁可丢"，必须在上线前明确选过。② **运行上限与保留期都是套餐属性**：时长上限按套餐定，审计日志只留 12 个月 ⇒ 做容量/合规承诺时不能按理想值写，要按当前套餐的实际值写，并在续费/换档时复核。③ **"记录被丢弃"要有可观测出口**：既然选了继续服务，就必须让用户能知道丢了多少、什么时候丢的，否则"丢了"和"没发生"在现象上一致。
 - 提升层：工作流 / 工具。触发词：存储满二选一、enable data loss、停服 vs 丢记录、运行时长按套餐、审计保留 12 个月。
+
+
+## 已发布版本是不可变对象；配额告警阈值随套餐分档；依赖的生命周期终止日期必须写进前置面（来源：www.activepieces.com/docs `flows/versioning.md` 1,323B + pipedream.com/docs `workflows/limits.md` 9,083B + `workflows/building-workflows/errors.md` 9,150B 顶部公告，2026-10-03 r391B 独立 curl 取 `.md` 原文实拉；与 §破坏性变更公告三件套 / §门禁覆盖面差集 互补——那两条管变更怎么宣布与门禁漏口，本条管版本不可变性、告警分档与 EOL 前置面）
+- **原文**：版本模型「You can edit a flow as many times as you want in **draft** mode … Once you're done with your changes, you can publish it. **The published version will be locked and uneditable.** If you try to edit a published flow, Activepieces will **create a new draft** … and **copy the published version** to the new version.」；告警分档「| Free tiers | You'll receive an email when you reach **100%** of your usage. | | Paid tiers | You'll receive an email at **80% and 100%** …」；EOL 公告「> **Workflows and String are shutting down on March 31, 2027.**」置于文档顶部 Warning；「**These limits are subject to change at any time**」。
+- **判据**：① **发布即冻结：published 版本锁定且不可编辑，再次编辑走的是"新建 draft + 复制已发布内容"** ⇒ 任何"改线上"的动作在实现上都是"复制一份新的再改"，回滚因此天然可用（旧版本还在）。设计发布流程时不要把"已发布"当成可写对象，否则就失去了可回滚性这一前提。② **告警阈值要按套餐写成表，不能写一个数**：免费档只在 100% 报警一次，付费档在 80% 与 100% 各报一次 ⇒ 同一套代码在不同套餐上"有没有提前预警"是两种体验；把阈值写死成单个百分比，等于默认所有人都有提前量。③ **生命周期终止（EOL）属于前置面，位置要在文档最顶部**：平台自己把"Workflows 与 String 将于 2027-03-31 关停"放在文档开头当 Warning ⇒ 选型与验收清单里必须有"依赖项的 EOL 日期"一栏，写在附录里等于没有写。④ **限额声明要带"可随时变更"的保留条款**：官方明说限额随时可能调整 ⇒ 把具体数值硬编码进自己的校验逻辑，会在对方调整的那天产生假失败；数值应可配置，且失败信息要能指出"撞的是哪条限额"。
+- 提升层：工作流 / 治理。触发词：published 锁定不可编辑、编辑即新建 draft、回滚天然可用、告警阈值分档、80% 与 100%、EOL 日期前置面、限额可随时变更。
