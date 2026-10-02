@@ -3722,3 +3722,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **记忆整合失效**：LLM 连续更新记忆随经验累积变无用（cleanest case 自伤）；病根=LLM 不可靠判断归组/压缩存活/保持 episodic；修复=快慢解耦（Auto-Dreamer）离线整合：工作区只读证据+有界工具检查 provenance+合成紧凑替换集。
 - **上下文组装五规则**：①<0.7 分不注入（噪声增幻觉）②同文档去重 ③元数据保留 source/time/version ④最相关在前（Lost in the Middle）⑤Dynamic Top-K 按预算调；三层注入=短期 verbatim/工作台重写不追加/长期按需检索；记忆只在 prompt 生成时取，上下文变化必须重取。
 - **记忆生命周期选型**：按生命周期覆盖度不按标签；EverMind=MemCells/MemScenes+profile 编辑删除治理；loki-mode 时间索引=episodic 存日期目录（时间导航）+index.json 与存储层分离。
+
+## r373B MCP 与工具生态工程 2026（来源：mcp-2026-07-28-rc/blog-modelcontextprotocol/cloudflare-mcp-v2/semanticscholar-serverless-layers/microsoft-build-mcp-server/openai-mcp-layers/mcp-client-best-practices/richards-sandbox-profile/microsoft-agt/aaai-infrastructuresentinel/arxiv-mtguard/arxiv-mcp-tool-smells/aws-mcp-tool-design/dailyaiworld-mcp-10000/devto-mcp-ecosystem/agentgateway/ietf-mcp-ax/ietf-agent-gw/mcp-inspector/aident-inspector-testing/mcpjam/mcp-oauth-extensions/iesdouyin-mcp-supplychain/microsoft-mcp-whitelist，2026-10-02 实拉）
+- **MCP 2026-07-28 stateless 核心**：每请求自描述（_meta 内联版本+能力），capabilities 来自 server/discover，任意实例处理任意请求，普通 HTTP 基建（LB 免 DPI）；扩展=MCP Apps（SEP-1865 server 渲染 UI 沙箱 iframe+工具提前声明 UI 模板供预取/缓存/审查，UI 动作同 JSON-RPC 审计路径）+Tasks（task handle+tasks/get/update/cancel 轮询，server 主导）；授权贴近 OAuth/OpenID Connect+正式弃用策略；server 可跑单个 Worker 无状态。
+- **MCP 服务端三层**：protocol adapter（协议翻译/校验/错误编码）→application logic（协议无关操作泛型请求对象，可复用可测）→runtime（平台管）；认证默认要求/凭据当秘密/下游最小权限/记录监控工具调用。
+- **MCP 客户端 host-broker**：host 注入函数 stub→stdio 通道拦截（网络权限全程拒绝）→tools/call 分发；沙箱无直接网络、唯一接口=stub 路由回 host；凭据只进 host 不进生成代码；安全 profile=只读项目挂载/独立 scratch/无 home/无 SSH-Docker socket/无云凭据/网络按需/进程超时内存限制/工具级 seccomp/哈希固定包。
+- **工具治理控制面**：管 agent 动作不管模型输出（Microsoft AGT=定义扫描→策略评估→响应检查）；guardian LLM 解读自然语言策略四控制点=输入过滤/工具选择验证/执行时验证/事后审计；MTGUARD 三阶段=执行前参数审计/执行中行为监视/执行后结果验证。
+- **工具描述质量**：首个评分 rubric+FM-based smell scanner；改进描述=澄清值含义/自然语言映射/用途，过头=bloat；返回形状影响行为（50 字段填满 context，返回瘦身）。
+- **生态规模**：registry 2026-09-01 超 10000 server（9 个月 5 倍），SDK 月下载 9700 万；官方参考 server=filesystem/git/github/gitlab/postgres/sqlite/brave/slack/sentry；五大厂商全支持成事实标准。
+- **网关联邦**：agentgateway（Linux Foundation）=聚合多 server 单端点+OpenAPI 转 MCP+OAuth 合规+A2A 路由；MCP-AX=层级命名空间委托（点分前缀）；agent-gw 四能力=A2A/MCP/Model Routing/Network。
+- **测试纪律**：Inspector Connect→List→Run 三步，连接成功≠测试完成；故意测无效输入（缺字段/非法枚举/错类型/不存在记录），期望=清晰拒绝+不执行+足够修复上下文且不泄露秘密；一次只测一个失败；MCPJam 16 client×170 模型+CLI E2E 回归门禁。
+- **OAuth 机器身份**：Client Credentials 扩展=client ID+secret 或 JWT 断言直接证明身份，无需浏览器/用户交互——无人在场的 agent 工作负载通道；Enterprise-Managed Authorization=企业集中访问控制。
+- **供应链治理**：威胁=恶意/被劫持服务器/同名遮蔽/凭证泄露；工具描述投毒最阴（随定义进模型上下文且每会话生效）；缓解=审描述当不可信输入/锁版本拒静默更新/最小权限凭证+有效期/租户白名单/关"允许所有连接"/只启用所需工具。
