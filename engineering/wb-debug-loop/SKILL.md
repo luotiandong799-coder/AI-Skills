@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.127.0"
+version: "1.128.0"
 agent_created: true
 ---
 
@@ -427,3 +427,10 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **原文**：限流表三列「Name | Endpoint | Request Limit | **Scope**」，如 `POST /token` 100/min **Per external user**、`GET|DELETE /accounts/*` 2,000/5min **Per project**、`GET /components/*` 3,000/5min **Per project**；自定义限额「Create a rate limit by specifying a time window and maximum requests allowed within that window. The API returns a **`rate_limit_token`** that you include in subsequent Connect API requests」→ 用法「Include the `rate_limit_token` in the **`x-pd-rate-limit` header**」；QPS「You can send an **average of 10 requests per second** … We'll also accept **short bursts** of traffic, as long as you remain close to an average of 10 QPS (e.g. sending a batch of 50 requests every 30 seconds should not trigger rate limiting) … you should retry the request with **exponential backoff**」；去重双语义「Pipedream only sends at most **one email, per error, per workflow, per 24 hour period** … If a different workflow throws a `TypeError`, you **will** receive an email about that.」但「Unlike the default system emails, **duplicate errors are sent to any workflow listeners**」；测试态「When you're editing and testing your workflow, any unhandled errors will **not** raise errors as emails, nor are they forwarded to error listeners. Error notifications are only sent when a **deployed workflow** encounters an error on a live event.」
 - **判据**：① **限流描述必须带作用域，否则不可用于排查**：同一平台里 100/min 是 per external user、2,000/5min 是 per project——**同一个"被限"现象，在 per-user 作用域下是某个用户打爆，在 per-project 作用域下是全局配额耗尽**，处置完全不同。⇒ 记限流信息时固定三列：数值、端点、作用域；只抄数值等于没记。② **限额可以是"随令牌走"的运行时参数**：自定义限额返回一个 token，调用方把它放进 header 才生效 ⇒ **同一身份的两次调用可能适用不同限额**。排查"为什么这次被限、上次没有"时，除了看调用者，还要看这次带没带限额令牌、带的是哪一个。③ **限流是"平均值 + 突发容忍"，不是瞬时硬顶**：10 QPS 是平均值，50 条/30 秒的突发不算超限。⇒ 用瞬时峰值判断"有没有被限"会误判；压测与告警阈值要按窗口均值设计，被限后客户端承担指数退避责任。④ **告警静默不等于事件没有发生**：默认邮件按 (错误 × 工作流 × 24h) 去重，而自定义错误流**完全不去重**——同一次故障在两条通道上的可见性天差地别。⇒ 建告警体系时必须为每条通道单独声明去重语义；用"我没收到邮件"推断"没有新错误"是典型的错误推理。⑤ **测试态与生产态的错误通道是分开的**：编辑测试中的错误既不发邮件也不进错误流。⇒ 排查"为什么这个错误没人管"时，先确认错误发生在部署版本还是调试版本。
 - 提升层：工作流 / 可观测性。触发词：限流三要素、per user vs per project、rate_limit_token、限额随令牌走、QPS 均值与突发、429 指数退避、每错误每工作流 24h、错误流不去重、测试态不告警。
+
+## 限流要补问「副本语义」与「成功计不计入」；超时时钟只走活跃段；同步调用要分清「答错了」与「没回答」（来源：pipedream.com/docs/conduit/deploy/hardening.md 7,011B + www.activepieces.com/docs/install/reference/limits.md 6,779B，2026-10-03 r393A 独立 curl 取 `.md` 原文实拉；与 §限流排查先看作用域再看数值 互补——那条管"限的是谁"，本条管"多副本会不会放大"与"什么才写进计数器"）
+
+- 限流器要问第四件事：计数器是共享还是 per-replica。认证失败类（登录、OAuth、MCP、SCIM）在 PostgreSQL tier **跨副本共享** ⇒ 跑 N 副本不会让凭据猜测者拿到 N 倍速率；其余限流器**故意 per-replica**（集群总速率≈N×单实例）⇒ 扩容前必须确认目标限流器属于哪一类，否则横向扩容等于放大攻击面。
+- 只有失败写计数器，成功登录不写 ⇒ 护栏不该给正常行为制造状态，也不该让攻击者用成功请求探测计数；被限的认证失败会以 `rate_limited` 出现在指标里，是观测信号不是普通错误。
+- 超时只计活跃执行时间：被 Wait for Approval / Delay 暂停的时段**不计入** run timeout ⇒ 人类审批挂在流程里不会烧掉执行预算；但"暂停生命周期"另有独立上限，是另一条时钟，两条都要声明。
+- 同步 webhook 的状态码语义：流程跑失败**立刻** 500；只有超时窗口内从未产生任何响应才 408（仍在运行，或流程没有 Return Response 步骤）⇒ 500 是"答了但错了"，408 是"根本没答"，排障方向不同。

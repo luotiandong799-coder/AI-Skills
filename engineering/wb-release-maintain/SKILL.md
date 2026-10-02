@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.58.0"
+version: "1.59.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -209,3 +209,10 @@ sources:
 - **原文**：双层模型「**Instance encryption key** (`N8N_ENCRYPTION_KEY`): your master key, set at deployment time. **This key never changes.** n8n uses it only to protect the data encryption keys. / **Data encryption key**: the key that directly encrypts your credential data. **This is the key you rotate.**」；惰性重加密「n8n generates a new data encryption key and **uses it for all future writes**. Existing data encrypted with the previous key **remains readable**. n8n **silently re-encrypts each record to the new key the next time you update it**.」；单向「**Enabling encryption key rotation is a one-way change. There's no rollback path.**」；「Once you enable … n8n begins writing … in a new format that includes a key identifier. **Older versions of n8n, and instances running without the feature flag, can't read this format.**」；「**Don't disable the feature flag** after any data has been written in the new format. … makes all data encrypted after you enabled the feature **permanently inaccessible**. **Don't downgrade your n8n version** after enabling.」；「The only recovery path is **restoring from a database backup taken before you enabled the feature**.」；前置「All n8n instances, main and all workers, **share the same `N8N_ENCRYPTION_KEY` value** … You need to be the **instance owner**」；版本历史保留「Versions from the last **24 hours** are available for all users. Versions from the last **five days** are available on n8n Cloud Pro. Full workflow history … **Enterprise**」；「n8n **never prunes named versions automatically**」；「n8n creates a new version when you: **Save** your workflow. **Restore an old version** (n8n saves the latest version before restoring). **Pull from a Git repository** (n8n saves versions to the **instance database, not to Git**)」；「**Changes to workflow settings do not create a new version.**」
 - **判据**：① **轮换的对象要能说清是哪一层**：主密钥部署时设定、永不变更、只用来保护数据密钥；真正轮换的是数据密钥（本身加密存在库里）。⇒ 说"我们定期轮换密钥"而不分层，等于没说轮换的是什么、丢了会怎样。② **轮换完成后系统是混合态，不是"全部换新"**：新密钥只作用于之后的写入，旧数据保持可读，**每条记录要等下一次更新才被静默重加密**。⇒ 验收"轮换是否完成"不能只看新写入，必须能查出还有多少记录仍是旧密钥；声称"已全量重加密"而没给出存量统计的，基本是没查。③ **功能开关一旦改变了数据格式，关掉开关就是销毁数据**：新格式带 key id，旧版本与未开 flag 的实例读不了；撤掉 flag 或降级会让启用之后写入的数据永久不可读，且**没有自动回退工具**，唯一路径是启用前的数据库备份。⇒ 带格式变更的开关必须同时具备：前置备份要求（原文用 danger 提示）、staging 先验证、**禁止关闭与降级**的显式条款。这不是"谨慎建议"，是数据可用性的硬约束。④ **回滚能力本身有保留期，且默认窗口极短**：版本历史 24 小时（全用户）/ 5 天（Pro）/ 完整（Enterprise），**命名版本永不自动清理**。⇒ 把"能回滚"当能力声明时，必须给出默认窗口；需要长期保留的版本必须显式命名钉住。⑤ **什么算一次版本要写明，含"不算"的部分**：保存、恢复旧版本、从 Git 拉取都会产生版本（且版本存在实例库不是 Git 里），**改工作流设置不产生版本**。⇒ 用户以为"配置改了会有历史"的期待会落空；而"恢复"本身也会先存一份当前版本，回滚不是让历史消失。
 - 提升层：治理 / 工作流。触发词：双层密钥、轮换的是数据密钥、惰性重加密、混合密钥态、单向迁移、关 flag 即永久丢失、禁止降级、启用前全量备份、24h 版本历史、命名版本不清理、改设置不产生版本。
+
+## 覆盖值的合法区间由别的配置项动态界定：上下界都是活的，上界变更后会自动 clamp（来源：www.activepieces.com/docs/install/reference/limits.md 6,779B，2026-10-03 r393A 独立 curl 取 `.md` 原文实拉；与 §已发布版本是不可变对象 / §存储满只有两档 互补——那两条管版本与取舍，本条管配置覆盖面的区间约束）
+
+- 两个保留期不是独立旋钮：`AP_PAUSED_FLOW_TIMEOUT_DAYS` **不能大于** `AP_EXECUTION_DATA_RETENTION_DAYS`——暂停的流程不能比它恢复所需的数据活得更久。
+- 项目级 override 的合法区间由实例级变量界定：下界 = paused timeout，上界 = instance retention；`null` 表示**回退到实例值**，不是"不限制"。
+- 实例变量变化后，已保存的 override 不会失效也不静默越界，而是在 cleanup 时被 **clamp 回新边界** ⇒ 收紧上层限额会连带改写下层已存值，属于**无 diff 的隐式变更**，发布前必须清点。
+- 想让某个项目取到更宽的值，必须先把实例上界抬高（原文：raise the instance value if you need a wider range）⇒ 局部放宽的前提是全局先放宽，反过来推不动。
