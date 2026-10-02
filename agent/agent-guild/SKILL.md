@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.44.0
+version: 1.45.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -186,20 +186,9 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **策略可调**：所有阈值在 `~/.agent-guild/RETENTION.md`（用户文件，升级不覆盖）。
 - **可审计**：每次 groom 写 `log/audit.jsonl` + `.groom.json` 状态。
 
-## Capability 10 — 记忆分仓与路标式索引：私有仓 vs 组织共享仓（来源：Letta 官方 `docs.letta.com/concepts/memfs` + `/concepts/shared-memory` + `/configuration/memory` + LangChain 官方 `docs.langchain.com/oss/deepagents/code/memory-and-skills`，2026-09-23 r145-A 独立实拉首读，此前未读）
+## Capability 10 — 记忆分仓与路标式索引：私有仓 vs 组织共享仓
 
-- **两个仓，别混成一个**：**私有记忆仓**（单 agent 所有，存身份/人格/自有技能/长期记忆，git 版控，随 agent 迁移）vs **组织共享仓**（多 agent 共享，存团队约定/产品知识/研究/计划/文档）。判据：**这份知识换一个 agent 还成不成立**——成立才进共享仓，只对本 agent 成立的留私有仓。官方把"给多个 agent 挂同一块 in-context 记忆块"判为 legacy，明令迁到共享仓。与 §Capability 7 分工：那条管"目录在哪"，本条管"**分几个仓、按什么判据分**"。
-- **共享仓也能发技能**：共享仓根下 `skills/<name>/SKILL.md` 会被所有挂载它的 agent 读到；摘掉挂载即刻失效。判据：**想让全协会都用上的能力 → 放共享仓的技能目录**，不要给每个 agent 各拷一份（与 §M3 装新 skill 分工：那条管"装到哪个目录"，本条管"**一份供多个 agent 时放哪**"）。
-- **同步是 agent 自己的事**：共享仓要 agent 自己 commit + push，其他 agent 才 pull 得到；首次挂载才 clone，之后只 fast-forward。判据：**写了不 push 等于没共享**。
-- **记忆整理走 git worktree 并发**：后台记忆子代理在独立 worktree 里改记忆，不占主 agent 的检出、不阻塞主线。判据：**整理记忆这种后台活，别在主工作树上做**（与 §Capability 9 groom 分工：那条管"数据过期怎么归档"，本条管"**归档动作本身在哪个工作树里跑**"）。
-
-## Capability 11 — 记忆库的固定文件分工：按"是不是基础事实 + 变多快"分文件，不是按时间堆（来源：Cline 官方 `docs.cline.bot/best-practices/memory-bank`，2026-09-23 r145-C 独立重拉首读，新信源首读，此前未读）
-
-- **六文件固定分工，各管一类**：`projectbrief`（基础盘：核心需求与目标，是范围的事实源）· `productContext`（为什么存在、解决什么问题）· `activeContext`（当前焦点/最近改动/下一步，**改动最频繁**）· `systemPatterns`（架构与技术决策）· `techContext`（技术栈、约束、依赖）· `progress`（什么能用了、还剩什么、已知问题）。判据：**新事实进来先问"它属于哪一类、会不会经常变"**——高频的单独成文件，别和长期事实混在一起天天重写。与 §Capability 4 daily log 分工：日志**按时间追加**，记忆库**按类别重写**，两者不是一回事，别互相替代。
-- **更新频率按文件定，不是统一**：官方写明 `activeContext` 每次会话后更新、`progress` 在里程碑时更新。判据：**给每个记忆文件定一个"什么时候必须改"的触发条件**，没有触发条件的文件会悄悄过期。
-- **"全量复审"是一次独立动作**：官方要求收到"update memory bank"时 **MUST review ALL files**，不是只补新增的那条。判据：**增量补写会留下前后矛盾**——记忆库要定期整读一遍做一致性校准（与 §Capability 9 groom 分工：那条管"过期数据归档"，本条管"**还活着的文件之间是否自相矛盾**"）。
-- **放在项目里才能跟着项目走**：官方建议把这套 instructions 存进项目级规则文件（`.clinerules/memory-bank.md`）而不是只放全局——**跨 agent / 跨机器共享的是这份文件，不是某次会话**。
-
+> 原文已下沉 `references/knowledge-base.md §r395-ag`（保持原文零删减）。
 ## Failure modes
 
 - Some files missing → read what exists, note the rest, don't block.
@@ -215,15 +204,9 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - Repository: https://github.com/dqsjqian/agent-guild
 - License: MIT
 
-## Agent 自主权分三档：只读免审，gated 需审，Auto≠沙箱（来源：LangChain Deep Agents Code approval-modes，2026-09-23 r150-B 独立实拉首读，清单外新信源）
+## Agent 自主权分三档：只读免审，gated 需审，Auto≠沙箱
 
-- **把动作分成"只读"和"gated"两类**：`ls/read/glob/grep` 等只读工具永远免审直接跑；写/删文件、跑 shell、发 web 请求、委派子代理属 gated，需审批。判据：给 agent 自主权先分清楚"看"和"改/外发"，不要一锅烩。
-- **三档模式**：Manual（每次 gated 都问）、Auto（常规动作自动过、不确定的交给模型审、反复拒绝/分类失败再退回人）、YOLO（完全不审，需一次性风险确认）。
-- **Auto 是授权启发式，不是沙箱**：文档明说 Auto 不提供 OS 边界、不保证生成动作安全。把"自动批准"当成"安全"是误区。
-- **Auto 的判定流**：常规动作直过 → 不确定的由活动模型按用户请求审效果 → 高风险的（如把本地内容发往未配置目的地）仍要显式授权；反复拒绝/分类失败就停、转回人审。
-- **越权前先复核状态**：决策绑定线程/模式/批次/具体调用；切到 Manual 或状态竞态/重放时，回退到人审，不让旧 Auto 决定静默执行。
-- 与 §记忆与技能分层 / §目标驱动 的分工：那条管身份与上下文；本条管"agent 能自己做到哪一步、何时必须问人"。
-
+> 原文已下沉 `references/knowledge-base.md §r395-ag`（保持原文零删减）。
 ## HITL 安全锁插在「执行通道层」而非「对话层」（来源：阿里云 Agent Skills 门户 skills.aliyun.com HITL 插件，2026-09-28 r213-A 独立实拉）
 - **实证**：阿里云 Skills 门户内置 HITL 插件，在 **Agent 与 Aliyun CLI 之间**插入检查点——高风险命令（删除/计费/对外暴露）在执行前被识别并**暂停等待人工确认**；风险评级由**云端风险评级服务**做（非本地规则库）。
 - **判据**：① 安全锁的**拦截点应落在工具调用执行通道（CLI wrapper / 工具层），不是对话层**——对话层的"请确认"可被模型自说自话绕过，通道层拦截才是物理阻断；② 风险分级可**外包给独立远端服务**（云端评级）而非写死在 agent 规则里，分级随服务演进、不污染本地规则面。与 §三档审批 分工：三档是"agent 自身审批模式"，本条是"在 agent 之外的执行通道上架一道物理检查点 + 评级外包"。
@@ -493,3 +476,13 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - 关掉自动批准要**两个开关同时动**：`sshVerify=false` **并且** unset `autoApproveCidr` 列表；只关一个是无效配置——`sshVerify` 仅关闭 SSH 验证这条路，不影响 CIDR 自动批准。
 - CIDR 自动批准是"可选、默认不开"的白名单，一旦配上等于把整个网段变成可信配对源；它与 SSH 验证是两条独立通道，互不影响 ⇒ 收紧一条不等于收紧了全部。
 - 通则：凡是"自动批准 / 静默升级"类开关，默认态、关闭条件、以及各通道是否独立，必须在声明里写全；只写"支持手动审批"而不写"默认是自动"等于误导。
+
+
+## Cap48 凭据绑定点是「进程启动」，撤销半径是「下一次启动」；profile 不可用必须 fail-closed 拒绝执行而不是回落宽路径；一次性交接用后硬删；出口白名单空数组 ≠ 放行全部（来源：docs.openclaw.ai `gateway/config-secrets-env.md` 10,309B + `gateway/config-tools.md` 7,517B 索引页 + `gateway/config-tools/github-identity.md` 17,020B，2026-10-03 r395A 独立 curl 取 `.md` 原文实拉）
+
+- **绑定点决定撤销半径**：本地 exec 在**每次进程启动前**读取并校验所选 profile，把 access token 只放进私有子进程环境并清除同义环境变量；已启动的进程**保留启动时的 token 直到退出**，retired profile 文件要到下一次 Gateway 重启才清理 ⇒ **「改了配置」不是即时吊销**，声明里必须写清「什么时候生效、什么还在用旧凭据」。
+- **profile 缺失/无 token/不安全 → 在命令开始前拒绝执行**，而不是允许回落到 native keyring（明确写 refuses the local execution before the command starts）；对**可能间接调用**该工具的命令同样适用 ⇒ 凭据不可用时的正确方向是 fail-closed，不是「先跑起来再说」。
+- **状态要报「配置不可用」而不是回落到正常账号**：配置的托管 profile 缺失/无 token/损坏时状态报 `configured_unavailable`，**不**改报原生账号 ⇒ 错误码不得把「配置坏了」降级显示为「一切正常，只是换了个身份」。
+- **一次性交接用后硬删**：PAT 设置路径下浏览器把粘贴的 token 放进 secret store 作为 one-use handoff，网关在拿它校验之前**硬删除该交接**；两条设置路径都只写 account-owned 私有 profile，**不改主机全局 CLI 登录与 OS keyring** ⇒ 导入凭据的第一原则是「不污染宿主已有凭据面」。
+- **白名单空数组是「最小放行」不是「全部放行」**：出口代理 `allowedHosts` 存在时只放行列出的主机 + 绑定了 secret 的主机 + `bypassHosts`；**空数组表示只允许绑定或绕过的主机** ⇒ 空值语义必须逐项写清，读代码式地假设「空=不限制」会直接把策略读反。
+- **盲隧道是有意的取舍**：`bypassHosts` 走认证过的 blind CONNECT，哨兵**不做替换**，因此证书固定客户端会认证失败，代价是明文不暴露 ⇒ 这类「宁可失败也不解密」的通道要在声明里点名是设计选择，而不是写成缺陷。

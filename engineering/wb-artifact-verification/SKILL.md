@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: "2.122.0"
+version: "2.123.0"
 agent_created: true
 ---
 
@@ -349,34 +349,15 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 提升层：工作流 / 可复用 Skill。
 
 
-## r353A · 失败现场的处置由开关决定，取证能力会被隐私开关直接削掉（来源：help.make.com `scenario-settings.md` 5,172B + `incomplete-executions.md` 1,632B，2026-10-02 r353A 实拉）
+## r353A · 失败现场的处置由开关决定，取证能力会被隐私开关直接削掉
 
-- **★"保留现场"默认是关的**：`Store incomplete executions` 默认 disabled；关闭时失败的运行**直接停止并进入 rollback phase**；只有开启后，未完成运行才被存进 *Incomplete executions* 并把场景暂停。判据：**默认假设是"失败即回滚"，不是"失败即留证"**——按"能事后翻现场"设计的验证方案，必须先确认这个开关是开的。
-- **★顺序执行与未完成执行互相阻塞**：`Process data in order` 开启后，**只要存在未解决的不完整执行，新运行一律不处理**；webhook 默认并行，开启该选项才改为等上一次跑完。判据：**"保序"的代价是把一次失败升级成整条链路停摆**，验证时要显式声明是否允许这种停摆。
-- **★存储满时优先保可用性**：`Discard data if storage is full` —— 失败数据被**丢弃并让场景继续运行**，原文 "Discarded data can't be recovered"。判据：**这是显式的可用性 > 完整性取舍**，且不可恢复；落此配置的场景不能承诺零丢失。
-- **★隐私开关会削掉排障能力**：`Keep data confidential` 开启后日志只显示"发生过一次运行"、**不含 payload**，官方同步警告 "there are very limited options to solve errors"；不完整执行的数据**计入订阅存储配额**，超限报错。判据：**可观测性与隐私在这里是同一个旋钮的两端**——开隐私即降取证，排查"为什么失败"要先把这条列为已知盲区。
-- 落地口径：写验证/回滚方案时先声明三个开关（保留不完整执行 / 保序 / 保密）与配额余量，再声明失败时走的是回滚还是留存。
-- 提升层：工作流 / 可复用 Skill。触发词：不完整执行、incomplete executions、回滚阶段、保序阻塞、丢弃数据、保密日志。
+> 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
+## r353B · 错误契约随失败位置分叉，取证通道可用 `.md` 后缀直取
 
+> 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
+## r353C · 事务边界由模块能力标注决定；验证有自己的预算币种；文档站提供问答式检索接口
 
-## r353B · 错误契约随失败位置分叉，取证通道可用 `.md` 后缀直取（来源：docs.n8n.io `build/flow-logic/handle-errors-gracefully.md` 5,136B，2026-10-02 r353B 实拉）
-
-- **★错误负载不是单一 schema**：常规节点失败给出 `execution{}`（`id` / `url` / `retryOf` / `error.message` / `error.stack` / `lastNodeExecuted` / `mode`）；**触发器节点失败时形状完全不同**——主体变成 `trigger{}`（`error.context` / `name` / `cause` / `timestamp` / `message` / `node`）、`mode: "trigger"`，且 `execution{}` 里信息更少。判据：**同一套错误处理代码必须按"失败发生在触发器还是后续阶段"分支解析**，用一套 schema 解析所有错误会在触发失败时整片取空。
-- **★字段存在性依赖"执行是否入库"**：`execution.id` 与 `execution.url` 都要求该执行已存库——"Not present if the error is in the trigger node of the main workflow, **as the workflow doesn't execute**"；`execution.retryOf` 仅当这是一次重试时才出现。判据：**缺失字段不是解析 bug 而是语义**——先问"这次失败有没有形成一次执行"，再决定能不能按 id 串联日志。
-- **★机器可读取证通道：文档站追加 `.md`**：原文 "Markdown versions of documentation pages are available by **appending `.md` to page URLs**"（同 URL 的 HTML 页 596,419B 是 SPA 壳、`.md` 页 5,136B 是真正文）。判据：**对外取证优先找机器可读入口（llms.txt / llms-full.txt / `.md` 后缀），HTML 页常常是空壳**——本轮 dify `llms-full.txt` 2,990,942B、flowise 618,913B、langflow 6,782B 同样一次取全。
-- 提升层：工具 / 工作流 / 可复用 Skill。触发词：错误工作流、Error Trigger、execution 与 trigger 两种错误体、retryOf、.md 取证通道。
-
-
-## r353C · 事务边界由模块能力标注决定；验证有自己的预算币种；文档站提供问答式检索接口（来源：help.make.com `scenario-execution-cycles-and-phases.md` 6,351B、pipedream `docs/workflows/limits.md` 9,086B、docs.n8n.io `debug-executions.md` 2,467B 与 404 页，2026-10-02 r353C 实拉）
-
-- **★事务是三阶段，且回滚能力不是普遍的**：执行分 Initialization（建连接并校验、检查每个模块能否执行）→ 至少一个 cycle（operation phase + commit/rollback phase）→ Finalization；"Each cycle represents an **indivisible unit of work**"，默认最大 cycle = 1。关键约束：原文 "**Not all modules allow for rollback.** Modules that support rollback are marked with the `ACID` tag. Modules without this tag **cannot be reverted**"。判据：**"会回滚"这句话的成立范围由链路上每个模块的 ACID 标注决定**——只要含一个无标签模块，该 cycle 的原子性承诺就整体失效；验证前必须逐个核标签，不能拿"它是事务系统"当结论。
-- **★commit 阶段失败照样回滚**："If an error occurs during the operation **or commit phase** for any module, the phase is aborted and the rollback phase is started"。判据：**提交不是终点**——"已经提交成功"只有在整个 cycle 结束时才成立，中途提交失败会让本 cycle 全部作废。
-- **★验证运行有自己的预算，且币种与生产不同**：pipedream 免费档每天 **750** 次测试执行 / 30 分钟 testing runtime，且 "You **do not** use credits testing workflows"。判据：**测试额度是独立配额，不消耗生产 credits** —— 按"测试跑得多会吃掉生产额度"做的节流假设是错的，反过来"生产额度充足"也不代表测试额度够用。
-- **★重放能力按部署形态门控，入口按成败分叉**：n8n 的 "Debugging and re-running past executions" 在 Cloud 全计划可用，自托管**仅 Registered Community / Business / Enterprise**；失败执行入口是 **Debug in editor**，成功执行是 **Copy to editor**，数据被 **pin 在第一个节点**。判据：**"能不能重放"先问部署形态，再问执行成败**；而数据被钉在首节点意味着**重放的输入面是整个工作流的第一节点**，不是出错的那个节点。
-- **★文档站有问答式检索接口（取证通道再升一级）**：n8n 404 页明示——对任意 `.md` URL 追加 `?ask=<自然语言问题>&goal=<更宽目标>` 可由 GitBook **直接给答案并附摘录与来源**；另有 `sitemap.md` 全索引、`llms-full.txt` 全量导出；"Prefer `.md` URLs for structured content"。判据：**拿不到精确页名时不要放弃——先用 ask 接口问，再用 sitemap 定位**，比逐个猜 URL 高一个数量级。
-- 提升层：工具 / 工作流 / 可复用 Skill。触发词：ACID 标签、cycle 不可分割、commit 失败回滚、测试额度、Debug in editor、pin 在首节点、ask 检索接口、sitemap.md。
-
-
+> 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
 ## r354A · 留痕按「失败优先」分级保存；删除是两阶段，且活跃态与人工标注豁免（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/scaling/manage-execution-data.md` 独立 curl 取 `.md` 原文，2026-10-02 r354A 实拉）
 
 - **★保存是四个独立开关，不是一档总闸**：`EXECUTIONS_DATA_SAVE_ON_ERROR=all` / `SAVE_ON_SUCCESS=none` / `SAVE_ON_PROGRESS=false` / `SAVE_MANUAL_EXECUTIONS=false` 可分别取值。判据：**取证留痕按"哪类执行值得留"分级**——失败全留、成功不留、过程态可选、手工触发默认不留；把四档合成一个"开/关日志"，要么在故障时什么都没留下，要么在平时把存储吃光。
@@ -492,3 +473,11 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 未鉴权的报告端点是一块公开写入面，必须做信息量过滤而不是照单全收：Conduit 丢弃两类 CSP 报告——浏览器扩展注入的内容（任何策略都管不了）、页面不在 `CONDUIT_BASE_URL` 内的报告（否则任何人可提交）⇒ **噪声与伪造是同一道门**，不记录比记录错误的东西更安全。
 - 安全头作用域要克制：HSTS 是 host-only，不替无关子域 opt-in，也不申请 preload；纯 HTTP 开发地址不发 HSTS ⇒ 作用域越宽，误伤与不可回退性越大（preload 基本不可撤）。
 - 同为"存储"，有没有卸载通道是两回事：KV store 的键值直接进 Postgres `jsonb`，**没有对象存储卸载通道、每次访问全量读写、计入数据库大小**；只有文件与运行日志才有卸载 ⇒ 容量验收要按存储面分开算，不能拿"日志 25MB 上限"推出 KV 也有同等余量。
+
+
+## 验证结论必须声明「证明了什么的上界」，失败要分三类不可合并；同一份托管身份在不同执行面保证不同，验收须按执行面分别写（来源：docs.openclaw.ai `gateway/config-secrets-env.md` 10,309B + `gateway/config-tools.md` 7,517B 索引页 + `gateway/config-tools/github-identity.md` 17,020B，2026-10-03 r395A 独立 curl 取 `.md` 原文实拉）
+
+- **验证证明的是上界不是全体**：官方明确「验证证明的是哪个账号应答了 GitHub API 请求」，而 `/user` 端点**不证明写权限**；仓库级授权要等一次精确仓库操作成功才算已知 ⇒ 验收报告要写「这次验证证明了 A，不证明 B」，只写「校验通过」会让人以为写权限也验过了。
+- **失败三分类不可合并**：状态区分区分 missing credentials（缺凭据）/ unverified transport failure（未验证的传输失败）/ rate limiting（限流）三类，且不返回底层 `gh` 诊断 ⇒ 「拿不到结果」至少要分成「没凭据」「网络不可信」「被限流」，三者改的地方完全不同，合成一个「验证失败」就没法处置。
+- **同一托管身份在不同执行面保证不同**：本地 gateway-owned exec 每次启动前读取并校验 profile，把 token 只放进私有子进程环境并清掉 `GITHUB_TOKEN`；Codex-native shell 只拿到非密 overlay（`GH_CONFIG_DIR`），**不隔离 OS keyring**，profile 消失时 gh 可回落到原生 keyring；沙箱、node-host exec、remote-exec **根本收不到**托管凭据，只有 `github_publish` 记录一个不含凭据与仓库权限的有界发布请求 ⇒ 验收必须先问「这次跑在哪个执行面」，再说「用了托管身份」保证了什么。
+- **要强保证必须换执行面而不是加配置**：官方写明「需要启动绑定的托管身份保证时，用 `gateway_exec`」；native shell 的那套保证明确不覆盖 ⇒ 当能力声明与实际需求差一档时，正确处置是换通道，不是在同一通道里加参数。

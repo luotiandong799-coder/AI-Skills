@@ -2102,3 +2102,39 @@ r354C 取证通道阶梯与资源故障的三层观测（来源：docs.n8n.io `s
 - 原文：「You may also use **`Accept: text/markdown` header for content negotiation**.」「Prefer `.md` URLs for structured content, append `.md` to URLs」「GET … `?ask=<question>&goal=<end_goal>`」「**Option 2** — Browse the documentation index: https://docs.n8n.io/sitemap.md」「**Option 3** — Retrieve the full documentation corpus: https://docs.n8n.io/llms-full.txt」「messages such as **Execution stopped at this node (n8n may have run out of memory while executing it)**」「**Problem running workflow**, **Connection Lost**, or **503 Service Temporarily Unavailable** suggest that an n8n instance has become unavailable」「**Allocation failed - JavaScript heap out of memory** in your server logs」「On n8n Cloud, or when using n8n's **Docker image**, n8n **restarts automatically** … running n8n with **npm you might need to restart it manually**」
 - 判据：① 通道阶梯 `.md` 后缀 → `Accept` 头 → ask/goal → sitemap.md → llms-full.txt；② 资源故障按 应用层(may) / 可用性层(症状) / 宿主层(确证) 三层分别取证，任一层都不能单独定案；③ 自愈能力绑定运行方式写。
 - 提升层：工具/工作流。触发词：内容协商、取证阶梯、三层观测、npm 不自愈。
+
+## §r395-av 下沉（原文零删减，自 SKILL.md 移入）
+
+<!-- src: SKILL.md L352-L361 -->
+## r353A · 失败现场的处置由开关决定，取证能力会被隐私开关直接削掉（来源：help.make.com `scenario-settings.md` 5,172B + `incomplete-executions.md` 1,632B，2026-10-02 r353A 实拉）
+
+- **★"保留现场"默认是关的**：`Store incomplete executions` 默认 disabled；关闭时失败的运行**直接停止并进入 rollback phase**；只有开启后，未完成运行才被存进 *Incomplete executions* 并把场景暂停。判据：**默认假设是"失败即回滚"，不是"失败即留证"**——按"能事后翻现场"设计的验证方案，必须先确认这个开关是开的。
+- **★顺序执行与未完成执行互相阻塞**：`Process data in order` 开启后，**只要存在未解决的不完整执行，新运行一律不处理**；webhook 默认并行，开启该选项才改为等上一次跑完。判据：**"保序"的代价是把一次失败升级成整条链路停摆**，验证时要显式声明是否允许这种停摆。
+- **★存储满时优先保可用性**：`Discard data if storage is full` —— 失败数据被**丢弃并让场景继续运行**，原文 "Discarded data can't be recovered"。判据：**这是显式的可用性 > 完整性取舍**，且不可恢复；落此配置的场景不能承诺零丢失。
+- **★隐私开关会削掉排障能力**：`Keep data confidential` 开启后日志只显示"发生过一次运行"、**不含 payload**，官方同步警告 "there are very limited options to solve errors"；不完整执行的数据**计入订阅存储配额**，超限报错。判据：**可观测性与隐私在这里是同一个旋钮的两端**——开隐私即降取证，排查"为什么失败"要先把这条列为已知盲区。
+- 落地口径：写验证/回滚方案时先声明三个开关（保留不完整执行 / 保序 / 保密）与配额余量，再声明失败时走的是回滚还是留存。
+- 提升层：工作流 / 可复用 Skill。触发词：不完整执行、incomplete executions、回滚阶段、保序阻塞、丢弃数据、保密日志。
+
+
+
+<!-- src: SKILL.md L362-L369 -->
+## r353B · 错误契约随失败位置分叉，取证通道可用 `.md` 后缀直取（来源：docs.n8n.io `build/flow-logic/handle-errors-gracefully.md` 5,136B，2026-10-02 r353B 实拉）
+
+- **★错误负载不是单一 schema**：常规节点失败给出 `execution{}`（`id` / `url` / `retryOf` / `error.message` / `error.stack` / `lastNodeExecuted` / `mode`）；**触发器节点失败时形状完全不同**——主体变成 `trigger{}`（`error.context` / `name` / `cause` / `timestamp` / `message` / `node`）、`mode: "trigger"`，且 `execution{}` 里信息更少。判据：**同一套错误处理代码必须按"失败发生在触发器还是后续阶段"分支解析**，用一套 schema 解析所有错误会在触发失败时整片取空。
+- **★字段存在性依赖"执行是否入库"**：`execution.id` 与 `execution.url` 都要求该执行已存库——"Not present if the error is in the trigger node of the main workflow, **as the workflow doesn't execute**"；`execution.retryOf` 仅当这是一次重试时才出现。判据：**缺失字段不是解析 bug 而是语义**——先问"这次失败有没有形成一次执行"，再决定能不能按 id 串联日志。
+- **★机器可读取证通道：文档站追加 `.md`**：原文 "Markdown versions of documentation pages are available by **appending `.md` to page URLs**"（同 URL 的 HTML 页 596,419B 是 SPA 壳、`.md` 页 5,136B 是真正文）。判据：**对外取证优先找机器可读入口（llms.txt / llms-full.txt / `.md` 后缀），HTML 页常常是空壳**——本轮 dify `llms-full.txt` 2,990,942B、flowise 618,913B、langflow 6,782B 同样一次取全。
+- 提升层：工具 / 工作流 / 可复用 Skill。触发词：错误工作流、Error Trigger、execution 与 trigger 两种错误体、retryOf、.md 取证通道。
+
+
+
+<!-- src: SKILL.md L370-L379 -->
+## r353C · 事务边界由模块能力标注决定；验证有自己的预算币种；文档站提供问答式检索接口（来源：help.make.com `scenario-execution-cycles-and-phases.md` 6,351B、pipedream `docs/workflows/limits.md` 9,086B、docs.n8n.io `debug-executions.md` 2,467B 与 404 页，2026-10-02 r353C 实拉）
+
+- **★事务是三阶段，且回滚能力不是普遍的**：执行分 Initialization（建连接并校验、检查每个模块能否执行）→ 至少一个 cycle（operation phase + commit/rollback phase）→ Finalization；"Each cycle represents an **indivisible unit of work**"，默认最大 cycle = 1。关键约束：原文 "**Not all modules allow for rollback.** Modules that support rollback are marked with the `ACID` tag. Modules without this tag **cannot be reverted**"。判据：**"会回滚"这句话的成立范围由链路上每个模块的 ACID 标注决定**——只要含一个无标签模块，该 cycle 的原子性承诺就整体失效；验证前必须逐个核标签，不能拿"它是事务系统"当结论。
+- **★commit 阶段失败照样回滚**："If an error occurs during the operation **or commit phase** for any module, the phase is aborted and the rollback phase is started"。判据：**提交不是终点**——"已经提交成功"只有在整个 cycle 结束时才成立，中途提交失败会让本 cycle 全部作废。
+- **★验证运行有自己的预算，且币种与生产不同**：pipedream 免费档每天 **750** 次测试执行 / 30 分钟 testing runtime，且 "You **do not** use credits testing workflows"。判据：**测试额度是独立配额，不消耗生产 credits** —— 按"测试跑得多会吃掉生产额度"做的节流假设是错的，反过来"生产额度充足"也不代表测试额度够用。
+- **★重放能力按部署形态门控，入口按成败分叉**：n8n 的 "Debugging and re-running past executions" 在 Cloud 全计划可用，自托管**仅 Registered Community / Business / Enterprise**；失败执行入口是 **Debug in editor**，成功执行是 **Copy to editor**，数据被 **pin 在第一个节点**。判据：**"能不能重放"先问部署形态，再问执行成败**；而数据被钉在首节点意味着**重放的输入面是整个工作流的第一节点**，不是出错的那个节点。
+- **★文档站有问答式检索接口（取证通道再升一级）**：n8n 404 页明示——对任意 `.md` URL 追加 `?ask=<自然语言问题>&goal=<更宽目标>` 可由 GitBook **直接给答案并附摘录与来源**；另有 `sitemap.md` 全索引、`llms-full.txt` 全量导出；"Prefer `.md` URLs for structured content"。判据：**拿不到精确页名时不要放弃——先用 ask 接口问，再用 sitemap 定位**，比逐个猜 URL 高一个数量级。
+- 提升层：工具 / 工作流 / 可复用 Skill。触发词：ACID 标签、cycle 不可分割、commit 失败回滚、测试额度、Debug in editor、pin 在首节点、ask 检索接口、sitemap.md。
+
+
