@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: "2.116.0"
+version: "2.117.0"
 agent_created: true
 ---
 
@@ -461,3 +461,9 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **原文**：「When a workflow execution uses an end-user credential, **the execution metadata is visible to anyone with access to that workflow's executions**: the status, when it ran, and that it used an end-user credential. **What changes is who can see the data inside.**」；「Only the user who triggered the workflow with their connected account can see the input and output data for those nodes... **For everyone else, including instance admins, those nodes show redacted output.**」
 - **判据**：① 验收"谁能看到什么"要拆成三层分别声明——**元数据层**（状态/时间/用了哪类凭据，全员可见）· **正文层**（输入输出，仅归属者可见）· **管理视图层**（存在性与计数，管理员可见但正文被 redacted）。② **"管理员能看见"不等于"管理员能看见全部"**——管理视图返回脱敏结果是设计就该如此；把管理员可见当成全量可见，会得出"反正 admin 能看到，脱敏没意义"的错误结论。③ 验收动作固定为：**对同一条记录，分别以归属者、同级他人、管理员三种身份各取一次**，比较三次返回差的正是声明里的三层；只验一种身份的可见性等于没验。
 - 提升层：可观测性 / 安全边界。触发词：可见性分层、元数据可见正文不可见、admin redacted、三种身份各取一次、脱敏不是摆设。
+
+
+## 影响边界声明：一个配置项改了什么不重要，重要的是它「不影响什么」；隐私类验收必问「防谁」（来源：docs.openclaw.ai/concepts/session 22,767B，2026-10-03 r390B 独立 curl 取 `.md` 原文实拉；与 §可见性三层 互补——那条管"谁看得到"，本条管"改了 A 会不会连带改了 B"）
+- **原文**：路由绑定覆盖「**This setting changes session-key selection only**: DM routing, mention gating, delivery context, and replies to the source room remain unchanged.」；incognito「protects them from storage and other gateway-mediated users, **not from the gateway owner or process operator**, who can always observe live sessions」；「Incognito **does not restrict the agent's normal tools**」。
+- **判据**：① **配置项/改动说明必须带"不影响面"清单**——原文给出的是标准写法：改了 key 选择，但路由、mention 门控、投递上下文、回复目标一律不变。⇒ 验收时若只验证"改生效了"，会把相邻面被无意改动的情况全部放过。② **隐私/隔离类能力的验收第一问是"防谁"**：防存储与其他用户，不防宿主与运维——写成"已启用隐私保护"而不写防护对象，等于给出一个无法证伪的断言。③ **隔离不得与能力混为一谈**：隐私模式不改工具写盘能力，"没落进会话存储"不等于"没落到磁盘"。⇒ 验证隐私必须到会话存储之外去找（文件、模型提供方、运维侧日志）。
+- 提升层：安全边界 / 可观测性。触发词：不影响面、配置影响边界、隐私防谁、隔离不等于不落盘、改动相邻面。
