@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.54.0"
+version: "1.55.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -186,3 +186,8 @@ sources:
 - **★差集沿调用图传递，子对象各审各的不等于整体被审**：「Each sub-workflow is **its own workflow with its own review**, if any」。判据：**子资源的独立门禁不能替代主资源的覆盖声明**——"子工作流有自己的评审"是分散的覆盖，不是传递的覆盖；主流程批准时若子流程评审缺失或已过期，主流程的批准并不覆盖它。
 - **★门禁的状态机要写清"挡什么"**：`Waiting for review` →「n8n **blocks publishing**」；`Changes requested` → 要求改后再提；且「A workflow can have **only one open review at a time**」，重提不会开新评审，须向既有评审提交新版本。判据：**"有审批"不等于"挡住了发布"**——只有明确写出被阻断的动作名（publish），门禁才是可验收的；与 §r385A「恢复契约责任边界」同族：那条管**承诺的负声明**，本条管**门禁的负声明**。
 - 提升层：工作流 / 安全边界。触发词：门禁覆盖面差集、aren't gated by approval、门外清单、差集沿调用图传递、子工作流各有评审、Waiting for review 阻断 publish。
+
+## 写入成功 ≠ 生效：发布是独立一步；降级发布分 stale / cold 两档，判据是「非密契约有没有变」（来源：docs.openclaw.ai/cli/secrets.md 16,115B，2026-10-03 r388C 独立实拉）
+- **原文**：「A successful write reminds you to run `openclaw secrets reload` before a config-referenced value can take effect.」「re-resolves refs and atomically publishes the owner-aware runtime snapshot (no config writes)」「Eligible failed owners become **stale** only when their ref identities, provider definitions, and complete non-secret owner contract are unchanged. New or changed failures become **cold**. This degraded activation succeeds and reports `warningCount`. Strict or unmapped failures return an error and preserve the previously active snapshot.」
+- **判据**：① **改值与生效是两次独立动作**——写库成功只代表"存下来了"，引用它的运行期仍是旧快照；发布（reload）才是原子切换点，且不改配置本身。发布流程里必须把"写完还剩一步"写进定义完成，否则出现"我改了但没生效"的伪故障。② **部分失败的降级不是一档而是两档**——失败方的引用标识、提供方定义、非密契约**全部未变**才算 stale（可带警告上线）；只要契约变了就是 cold（语义已经不是原来那个），两者处置完全不同，不能都用"降级上线"概括。③ **不可归类的失败必须保住旧快照**——strict / unmapped 失败直接报错并保留上一个可用快照，而不是带着未知状态上线；"先上再说"在这里等于把旧快照也弄丢。
+- 提升层：工作流 / 可复用 Skill。触发词：写入≠生效、reload 是发布、stale vs cold、非密契约未变、保住旧快照、降级两档。

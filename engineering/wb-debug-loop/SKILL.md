@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.120.0"
+version: "1.122.0"
 agent_created: true
 ---
 
@@ -377,3 +377,13 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **★丢弃不是丢数据，是让可重建物回到重建路径**：被丢弃的顶点进入 `opaque-dropped: ['chat_input']`、`resume layer: ['chat_output']`，恢复后由重建重新派生。判据：**对"可由重建重新得到"的状态，丢弃严格优于带着坏值继续**——与 §r325A「有重建器的子系统不该备份，陈旧副本严格劣于空库」同族：那条管**备份**，本条管**检查点里的单个状态项**。
 - **★回归测试要能对"所有上游版本"都失败，才算覆盖了这一类 bug**：三个回归测试中关键的一条「**Fails on the CI-pinned 1.5.1 without the fix**, so CI now covers this class of bug **regardless of which langchain-core resolves**」；并注明该 bug 之所以没被 CI 抓到，是因为「This repo and CI are **pinned to 1.5.1** ... a clean install today resolves 1.6.3」。判据：**CI 绿可能只是因为锁到了旧版本**——验证一个与上游解析相关的修复时，要证明测试在旧版本与新版本上都能复现失败。
 - 提升层：工作流 / 工具。触发词：序列化成功不等于可恢复、往返校验、写侧丢弃与读侧降级对称、checkpoint_opaque_dropped_ids、存量毒化不自愈、CI 绿只是锁了旧版本。
+
+## 相关量不能替代身份：证据缺失时返回 unknown，禁止从元数据反推绑定（来源：docs.openclaw.ai/gateway/audit.md 37,793B，2026-10-03 r388B 独立实拉）
+- **原文**：「Because `runId` is correlation rather than execution identity, it never substitutes for the owner-local binding.」「The inspector never infers a binding from session metadata, timestamps, or retained context counts.」「An unreadable row is `unknown`, never reconstructed.」「the retry never manufactures replacement evidence.」
+- **判据**：① **区分「相关量」与「身份量」**——runId / 会话 key / 时间戳 / 上下文条数 都是路由与恢复用的相关量，可以缩小候选但**不能证明归属**；排障时把它们当身份证据会得出「就是这个执行」的假结论。② **不可用 ≠ 反面结论**：读不出来的行（corrupt / missing / malformed / mismatched）一律判 `unknown` 并给出补救动作，不许从相邻记录补齐、不许用「只保留了一条上下文所以必然是它」这种计数推理。③ **重试不制造替代证据**——恢复路径若原证据丢失，就明确「精确核查不可用」，而不是拿新进程的身份补上；补上的那一刻证据就变成了伪造。
+- 提升层：工作流 / 可复用 Skill。触发词：相关量≠身份、runId 不是执行身份、不推断绑定、unknown 不重建、重试不补证据、证据补救动作。
+
+## 「能解析」不等于「干净」：优先级漂移与残留是两类独立故障；门禁退出码要分「有发现」与「不可用」（来源：docs.openclaw.ai/cli/secrets.md 16,115B，2026-10-03 r388C 独立实拉）
+- **原文**：审计发现码 `PLAINTEXT_FOUND` / `REF_UNRESOLVED` / `REF_SHADOWED` / `STORE_PLAINTEXT_RESIDUE` / `LEGACY_RESIDUE`；「precedence drift (auth profile store credentials shadowing `openclaw.json` refs)」「store residue (a team store value duplicated by plaintext in `openclaw.json`)」；「`audit --check` returns `1` on findings. Unresolved refs return `2` (regardless of `--check`). Store validation and disclosure-policy failures return `2`.」
+- **判据**：① **配置「能取到值」不代表取的是你以为的那份**——同名值存在于多个存储时，命中哪个由优先级决定而不是由你刚改了哪个决定（auth profile 会遮蔽配置里的 ref）；排查"改了没生效"必须把"该名字在几个地方存在、谁优先"当成第一问。② **残留与遮蔽是不同的故障，处置动作不同**——残留是"同一份值既在安全存储又在明文里"（要删明文），遮蔽是"高优先级处有一份旧值"（要清理或对齐）；混为一谈会只清一半。③ **门禁退出码必须把"有发现"与"不可用"分开**——`1`=有发现（可处置）、`2`=未解决/校验失败（结论不可用）、目标不存在另给码；CI 里把所有非零当同一种失败，会让"这次审计本身没跑成"被当成"这次审计没发现问题"。
+- 提升层：工作流 / 可复用 Skill。触发词：能解析≠干净、优先级漂移、REF_SHADOWED、残留 vs 遮蔽、退出码 1 vs 2、审计没跑成≠没发现问题。
