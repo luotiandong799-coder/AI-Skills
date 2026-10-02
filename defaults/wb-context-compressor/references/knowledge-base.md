@@ -3866,3 +3866,15 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **多 agent 评测**：AgentWorld=长周期协作（100 任务/50+ 轮/3-20 agent 测协作非聚合）；DUMA-Bench=双控安全 8 域 35 可执行任务；任务中心指标=总完成/平均完成时间/完成价值；outcome=completeness/executability/人视角评分。
 - **工作流平台实证**：n8n 触发路由+Dify 推理 RAG=最强生产组合；n8n agent=窄工具一工具一职责+boring reliability；三环境=dev/staging/prod（staging 镜像 prod+真实负载测试后 promote）；Dify 最佳实践=清晰工具描述/迭代限制/详细指令/记忆管理；edge case=空集/缺字段/意外类型/超大。
 - **Durable orchestration**：Durable Extension=跨请求持久化状态/失败恢复不重做/暂停等人工输入不耗算力；checkpoint 按 thread；分层 supervisor=worker 窄工具窄 prompt+协调规则显式写（谁写共享内存/哪些工具/停止条件/升级触发）而非 prompt 涌现。
+
+## r377B LLM 评估与评测工程 2026（来源：qaskills-edd-guide/futureagi-llm-eval-glossary/deepeval-edd/ai-tldr-edd/futureagi-golden-set-design/langfuse-golden-dataset/datavlab-human-eval/compel-judge-calibration/futureagi-human-vs-llm/arxiv-2604.23178-judging-judges/arxiv-2608.25869-anchoring/arxiv-2605.09227-debias/google-adk-evals/microsoft-foundry-agent-evaluators/qaskills-ragas/brightlume-cicd-ai/zylos-agent-native-cicd/promptfoo-cicd/futureagi-data-drift/insightfinder-4-signals/valuestreamai-monitoring/aiworkflowlab-eval-frameworks/benchmarkingagents-eval-tools/agentnative-promptfoo-deepeval/techearl-regressions/respan-test-ai-models/braintrust-failures-regressions，2026-10-02 实拉）
+- **EDD 三件套**：写 prompt 前先写评估；eval 合同=黄金集+评分法+通过率阈值；golden 分数（系统变才变）与 live 分数（系统或数据变都变）分开展示；采用团队 prompt 变更周期 -40-60%。
+- **黄金集四桶**：生产样本 60%+对抗 15%+专家 edge 15%+失败回放 10%；200 条分层 > 5000 条不分层；三性质=分层代表性+版本身份+从生产失败生长不冻结；staleness>14 天无提升即过期。
+- **三层评估栈**：自动指标每 commit+LLM-judge 大样本+人类小样本精选；校准=100-500 样本 kappa>0.7；pilot 200 双标 kappa>0.6 后 scale+5-10% 人工验证+月度重采样；人类评测五件套=锚点 rubric+冻结样本+≥2 独立评分+inter-rater 度量+盲随机呈现。
+- **judge 偏差**：风格偏差 dominant（0.76-0.92）远超位置偏差；锚定偏差=prior scores 作上下文也锚定（评估独立性破坏）；去偏=后验校准（配对锚点拟合转换）vs 提示指令；J/ΔJ 前置诊断；推理模型更强但受浅层质量偏差。
+- **Agent 双轨评估**：工具轨迹（对工具+对参数，确定性精确匹配）+响应质量（LLM judge）；只 rubric 放行幻觉答案，只轨迹不知用户是否有用回复；Foundry 五件=Tool Call Accuracy/Selection/Input Accuracy/Output Utilization/Success；process vs system eval 分开。
+- **RAG 四指标**：faithfulness（原子声明可从上下文推断）+answer relevance+context precision+context recall；faithfulness 1.0+低 recall=准确总结不完整信息同样危险；relevance 罚过度 hedging。
+- **CI/CD 门**：prompt as code（Git 存 prompt 版本化）；Gate1 机械门秒级+Gate2 离线 eval 每 PR；三层 CI=smoke 每 PR/全套 merge/周生产回放；judge 模型升级先更新基线再当阈值门。
+- **漂移四信号**：token 长度 KL+嵌入余弦漂移+LLM-judge 评分+拒绝率指纹；embedding=golden 质心+7 日滚动质心+2 标准差告警；output drift=宿主静默换 checkpoint（测响应长度/情绪）；响应三级=observe/investigate/act。
+- **工具选型**：CI/CD 集成（DeepEval pytest 原生/promptfoo CLI）/多轮支持/许可证与自托管/栈语言（promptfoo 非 Python 零摩擦）；LangSmith=LangChain 默认；promptfoo=安全门优先 40+ 红队插件；Langfuse=MIT 自托管。
+- **回归闭环**：回归=变更后重跑固定集对比基线；离线降>5% 阻止部署+在线周环比降>5pp 告警；失败回放=生产迹当源真相（抓失败迹→标模式→提升 span→写 scorer→CI 与 live 都跑）；每版本可回滚。
