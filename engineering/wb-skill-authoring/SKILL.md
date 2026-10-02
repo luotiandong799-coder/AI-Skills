@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.101.0"
+version: "3.102.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -324,3 +324,9 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **原文**：「For `secret` values, `--value` is refused with exit code `2` because command-line arguments can leak through shell history and process listings.」「Pipe stdin when stdin is not a TTY. Pass `--value-file <path>`... Run interactively and enter the value in the no-echo prompt.」「`set` and `import` preserve the entry's current kind when saving, including protection changes made while input or confirmation is pending. Only new names use automatic detection.」「Known redaction placeholders such as `__OPENCLAW_REDACTED__` cannot be stored as values.」「`store list` shows allowed hosts because they are **policy metadata, not secret material**.」
 - **判据**：① **传密的通道决定泄漏面，不只是存密的介质**——命令行参数会落进 shell 历史与进程列表，所以 secret 类只认 stdin 管道 / 值文件 / 交互式掩码三种通道；写文档与示例时"顺手写个 --value"就是把凭据送进历史文件。② **分类是写入即固定的属性，不随后续推断漂移**——已有条目保持原 kind（哪怕名称后缀看起来像 env），自动推断只对**新名**生效；否则一次批量导入会把已经收紧的条目重新降级成 env。③ **脱敏占位符不得回写成值**——占位符被当成真实值存进去，事后无法与"真的配了这个字符串"区分；无可用旧值时直接拒绝。④ **白名单是策略元数据，可以公开列出**——允许外发的主机不是秘密，列出来才能审；把策略面当秘密藏起来，等于放弃对出口面的审计。
 - 提升层：工具 / 安全边界。触发词：--value 泄漏面、shell history、stdin 管道、值文件、分类持久属性、自动推断只对新名、占位符不得回写、白名单是策略元数据。
+
+
+## 能力声明必须自带前置面与受限面：能用 ≠ 被允许在生产用（来源：docs.n8n.io `administer/manage-credentials/end-user-credentials.md` 9,720B，2026-10-03 r390A 独立 curl 取 `.md` 原文实拉；与 §SecretRef 禁 OAuth 等规范条款互补——那几条管规范合规面，本条管能力可用性的声明面）
+- **原文**：特性可用性「**n8n Cloud:** Enterprise / **Self-hosted:** Enterprise」；「End-user credentials are in **Preview** and may change in future releases. **Don't rely on them in production workflows.**」；「**OAuth credentials only**」；「You can only create end-user credentials in **team projects**, not in personal projects」；「**One connection per user**: Each user can connect a single account per end-user credential template.」；「By default, only project admins can create end-user credentials.」
+- **判据**：① 技能/能力描述里除了"做什么"，必须写**前置面四件套**：套餐或版本门槛 · 支持的凭据/协议类型 · 可创建的作用域 · 每主体配额（一人一条）。缺任何一项，"配了不生效"的排障成本都会转嫁给使用者。② **预览态必须在声明里写死"不得依赖其跑生产"**——"能用"与"被允许在生产用"是两个结论，官方自己就分开写。③ **能力默认只对高权限角色开放，收窄靠显式授权而不是默认放开**：默认只有 project admin 能建，其他角色通过自定义角色授予。凡"谁能创建"这类元能力，默认方向应是收窄。
+- 提升层：可复用 Skill / 工具。触发词：前置面、套餐门槛、预览态禁生产、OAuth only、配额一人一条、元能力默认收窄。

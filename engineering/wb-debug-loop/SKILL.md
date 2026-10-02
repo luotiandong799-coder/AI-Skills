@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.122.0"
+version: "1.123.0"
 agent_created: true
 ---
 
@@ -387,3 +387,9 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **原文**：审计发现码 `PLAINTEXT_FOUND` / `REF_UNRESOLVED` / `REF_SHADOWED` / `STORE_PLAINTEXT_RESIDUE` / `LEGACY_RESIDUE`；「precedence drift (auth profile store credentials shadowing `openclaw.json` refs)」「store residue (a team store value duplicated by plaintext in `openclaw.json`)」；「`audit --check` returns `1` on findings. Unresolved refs return `2` (regardless of `--check`). Store validation and disclosure-policy failures return `2`.」
 - **判据**：① **配置「能取到值」不代表取的是你以为的那份**——同名值存在于多个存储时，命中哪个由优先级决定而不是由你刚改了哪个决定（auth profile 会遮蔽配置里的 ref）；排查"改了没生效"必须把"该名字在几个地方存在、谁优先"当成第一问。② **残留与遮蔽是不同的故障，处置动作不同**——残留是"同一份值既在安全存储又在明文里"（要删明文），遮蔽是"高优先级处有一份旧值"（要清理或对齐）；混为一谈会只清一半。③ **门禁退出码必须把"有发现"与"不可用"分开**——`1`=有发现（可处置）、`2`=未解决/校验失败（结论不可用）、目标不存在另给码；CI 里把所有非零当同一种失败，会让"这次审计本身没跑成"被当成"这次审计没发现问题"。
 - 提升层：工作流 / 可复用 Skill。触发词：能解析≠干净、优先级漂移、REF_SHADOWED、残留 vs 遮蔽、退出码 1 vs 2、审计没跑成≠没发现问题。
+
+
+## 联邦身份撤销不同步 + 全局命名空间先到先得 + 迁移通道的丢失面（来源：docs.n8n.io `verify-user-identity/use-saml/manage-users-with-saml.md` 1,830B + `follow-best-practices.md` 2,455B，2026-10-03 r390A 独立 curl 取 `.md` 原文实拉）
+- **原文**：「If you **remove a user from your IdP, they remain logged in to n8n**. You need to manually remove them from n8n as well.」；「Webhook paths must be unique across the entire instance... **The path works for the first workflow that's run or published. Other workflows will error** if they try to run with the same path.」；「To move workflows between accounts, export the workflow as JSON, then import it to the new account. **Note that this action loses the workflow history.**」；另：「n8n recommends that owners create a member-level account for themselves. Owners can see all workflows, but **there is no way to see who created a particular workflow**」。
+- **判据**：① **身份联邦的撤销不会级联到本地会话**——上游（IdP）删人，本地已登录会话照旧；撤销动作必须在两端各执行一次，只做上游等于没撤。排障"人已离职却还能操作"先查本地会话与本地账号，不要只看 IdP。② **全局命名空间的冲突表现是"先到先得 + 后来者报错"**，不是"后者覆盖前者"：第一个跑/发布的占住路径，其余同路径工作流报错 ⇒ 遇到"路径莫名不可用"先查是否已被别处占用，而不是查本条配置。③ **迁移通道必须显式声明丢失面**：导出 JSON 再导入会丢掉工作流历史；凡"导出—导入"式迁移，输出里要写明丢了什么，否则使用者会把"迁移完成"当成"完整搬过去了"。④ **高权限账号做日常编辑会切断归因链**：owner 能看全部工作流但无法追溯创建者，也就无法判断正在改的是谁的成果 ⇒ 排障与评审都要回退到"用成员级账号改、用高权限账号管"。
+- 提升层：工具 / 工作流。触发词：IdP 删人本地仍在、联邦撤销不同步、webhook path 全局唯一、先到先得、导出丢历史、owner 归因链断裂。

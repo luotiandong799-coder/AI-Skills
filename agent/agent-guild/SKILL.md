@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.39.0
+version: 1.40.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -457,3 +457,9 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **原文**：审批结果映射稳定 reason code：`operator_approval_allowed_once/always`、`_denied_by_reviewer`、`operator_approval_expired`、`_cancelled_run_aborted`、`_cancelled_gateway_restart`、`_denied_no_route`、`_denied_malformed_verdict`、`_denied_storage_corrupt`、`operator_approval_record_corrupt`、`_execution_link_missing/_malformed/_mismatch`；「An unreadable row is `unknown`, never reconstructed.」「Enabling collection does not backfill earlier activity or add identity to an already admitted run.」「Its outcome is `not-applicable` ... This is an explanation of admission evidence, not an enforcement claim.」
 - **判据**：① **审批终态是一张码表不是布尔值**——除了允许/驳回，还必须有 过期 / 被中止（运行 abort、网关重启）/ 无投递路由 / 判定畸形 / 存储损坏 / 记录损坏 / 绑定缺失·畸形·不匹配；把后几类归并成「驳回」会把**基础设施故障误记成人的决定**，问责时会追错对象。② **「不可用」类是独立一类，不是拒绝**——读不出来的回执判 unknown 并给出补救，绝不重建一条。③ **留痕/审计开关只向前生效**——开启不回溯历史活动，也不给已准入的运行补身份；「我们开了审计」不能作为追溯既往的证据。④ **回执存在 ≠ 判定发生过**——`not-applicable` 是显式终态，含义是「没有任何身份相关策略被证明执行过」；guild 的审批留痕要能表达这一态，否则空回执会被读成「已审批通过」。
 - 提升层：工作流 / 可复用 Skill。触发词：审批终态码表、expired、no-route、malformed_verdict、storage_corrupt、link_mismatch、不可用≠拒绝、留痕不回溯、not-applicable 回执。
+
+
+## Cap42 执行身份绑定：共享的是凭据模板不是授权；管理权不含使用权；删模板级联删掉别人的连接（来源：docs.n8n.io `administer/manage-credentials/end-user-credentials.md` 9,720B + `verify-user-identity/use-saml/manage-users-with-saml.md` 1,830B + `follow-best-practices.md` 2,455B，2026-10-03 r390A 独立 curl 取 `.md` 原文实拉；与 §Cap32 只写不可读 / §Cap40 权限组合 互补——那两条管"密钥怎么读写""权限怎么组合"，本条管"这次执行是以谁的身份跑的、跑出来的数据归谁看"）
+- **原文**：「End-user credentials let workflows run with the credentials of the person who **triggers** them, rather than a fixed credential.」；「Each connection belongs to the user who made it: **only they can use it, and only they can see the data it returns**.」；「**Sharing shares the template, not a connection.**」；admin 侧「An admin can see that an end-user credential template exists and that it has connections attached... **That count is all they see.** They can't: View anything about individual connections / View a connection's secrets / Use anyone's connected account in their own workflows / See the redacted output of executions that ran on another user's connection」；「**Deleting the credential template deletes the whole credential, including every user's connection**, not just your own.」；触发器「let you require that the triggering user has permission to execute the trigger... A user without that role **can't connect their account**.」
+- **判据**：① **执行身份决定数据归属，不是权限表决定**——同一条工作流、同一份凭据定义，触发者不同则读到的数据与可见面完全不同；设计共享能力时必须先回答"这次以谁的身份执行"。② **"共享能力"与"共享授权"必须拆开**：跨项目/跨人传递的是模板（能力定义），接收方必须自己完成连接；拿到模板不等于拿到别人已建立的授权。③ **管理权不含使用权**——管理员能看到"有这个模板、挂了几条连接"，且仅此一个计数；不能查看连接、不能读密钥、不能拿别人的连接跑自己的流程、也看不到别人执行里的原文（只看到 redacted）。写治理规则时把"看得见存在"与"用得了实体"列为两个权限位。④ **删除模板是级联动作且毁的是别人建立的授权**：删模板连带删除全部用户连接，依赖它的工作流在重建前停止解析 ⇒ 凡"父对象被删会带走子对象已建立的授权"的操作，删前必须给连接计数 + 显式告警 + 影响面清单。⑤ **连接动作本身也要过权限门**——没有执行角色的用户连账号都连不上，不是"能连上就能用"。
+- 提升层：安全边界 / 工作流。触发词：终端用户凭据、执行身份、模板 vs 连接、管理权不含使用权、admin 只见 redacted、删模板级联删连接、触发权限第二道门。
