@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.119.0"
+version: "1.120.0"
 agent_created: true
 ---
 
@@ -370,3 +370,10 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **★取消不能留下半截修复**：「Once started, Doctor finishes and releases its resources **before a cancelled caller settles**, so **cancellation cannot abandon an in-progress repair**」。判据：**可中断的修复工具必须先声明中断语义**——要么跑完再响应取消，要么整体回滚；把取消当成"尽力而为"会在修复类操作上留下半写状态。
 - 判非（纠正 Qoder 转述）：本页**未检索到** `repaired/skipped/failed` 三态枚举与 `HealthFinding[]` 类型名（grep 0 命中），故该表述不作为判据引入；仅落上列可实证的四点。
 - 提升层：工具 / 工作流 / 可观测性。触发词：检查面与修复面、检查项不等于可修复项、checksSkipped、0 findings 不可判、non-interactive 只做 safe migrations、显式跳过、取消不半截修复。
+
+## r385C · 断点恢复必须写读双侧对称：存不存的判据是「能不能回校验」，且只修写侧救不了存量病灶（来源：api.github.com/repos/langflow-ai/langflow/pulls/15241 26,494B JSON 独立 curl 实拉，merged=true，标题「fix(checkpoint): drop model state that cannot be validated back on resume」，2026-10-02 实拉；经 Qoder r389-Q-A 提名）
+- **★「序列化没报错」不是「能恢复」的证明**：原文根因段「`serialize_value` treats "`model_dump(mode="json")` did not raise" as **proof that a model round-trips**」——上游 langchain-core 1.6.1 让 `BaseTool` 的 dump 从抛异常变成成功，但 pydantic 把 `func` 与 `coroutine` 两个字段**静默降级成 `repr`**，于是「**the dump *succeeds* — and pydantic **silently degrades** the two fields it still cannot represent ... **with no warning**」；落库后 `_restore_model` 在恢复时 `model_validate` 永久抛 `callable_type`，「The pause is durable, so **the run is stuck for good**」。判据：**写盘的通过判据必须是往返校验（dump → re-validate → 同一 model），不是"没抛异常"**；上游一个版本升级就能把"抛"变成"静默降级"，让原本正确的判据失效。
+- **★写侧丢弃与读侧恢复要对称，且读侧必须能降级**：修复是双侧——写侧「only encode a model when its dump **validates back into the same model**. This makes the drop **symmetric with `_restore_model`** — anything that would raise on resume is **dropped at write time** instead, and the rebuilt component re-derives it」；读侧「a stored payload that no longer restores **degrades to `None` instead of raising**, and its vertex joins `checkpoint_opaque_dropped_ids` so the existing fixpoint re-runs it」。判据：**只改写侧，库里已经毒化的数据不会自愈**——原文点明「Without this, **runs already paused on an affected install stay stuck after upgrading**, because the poisoned checkpoint is already in the database」。恢复路径的改造必须**新数据（写侧）+ 存量（读侧）**成对出场，否则升级本身成为新的失败源。
+- **★丢弃不是丢数据，是让可重建物回到重建路径**：被丢弃的顶点进入 `opaque-dropped: ['chat_input']`、`resume layer: ['chat_output']`，恢复后由重建重新派生。判据：**对"可由重建重新得到"的状态，丢弃严格优于带着坏值继续**——与 §r325A「有重建器的子系统不该备份，陈旧副本严格劣于空库」同族：那条管**备份**，本条管**检查点里的单个状态项**。
+- **★回归测试要能对"所有上游版本"都失败，才算覆盖了这一类 bug**：三个回归测试中关键的一条「**Fails on the CI-pinned 1.5.1 without the fix**, so CI now covers this class of bug **regardless of which langchain-core resolves**」；并注明该 bug 之所以没被 CI 抓到，是因为「This repo and CI are **pinned to 1.5.1** ... a clean install today resolves 1.6.3」。判据：**CI 绿可能只是因为锁到了旧版本**——验证一个与上游解析相关的修复时，要证明测试在旧版本与新版本上都能复现失败。
+- 提升层：工作流 / 工具。触发词：序列化成功不等于可恢复、往返校验、写侧丢弃与读侧降级对称、checkpoint_opaque_dropped_ids、存量毒化不自愈、CI 绿只是锁了旧版本。
