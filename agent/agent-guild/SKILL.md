@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.59.0"
+version: "1.60.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -489,3 +489,8 @@ the CLI only adds atomicity and an audit trail.
 - **原文**："a block on one holds only until it registers again under another"；"To keep self-registering clients out for good, use *Verified clients only* or *Only allowed clients*, which refuse anything unproven that you have not allowed"；"A revocation makes a member re-approve a client; **to keep a client out, block it**"；"a grey question mark when it only registered itself and presented signals any client could imitate"；"A client you add is decided about on its own, even when its document sits under a vendor Conduit recognizes"；"Registration happens before anyone signs in and names no workspace, so it is the authorization server's own switch."
 - **判据**：① **先问被控对象能不能自己造一个身份**：能自造（自注册、换个名字重来）⇒ 按身份逐条封禁只是把对手逼去换一个身份，投入随封禁条数线性增长而收效为零；此时控制必须上提到**准入姿态**（只许已验证身份 / 只许白名单），把默认从"允许除非被抓到"改成"拒绝除非被证明"。② **撤销与禁止是两种控制，别混用**：撤销（revoke）只强制重新授权，作用域限于本工作区，且当事人在别处重新同意即全域解除 ⇒ 它治"这次授权要不要复核"，不治"这个对象该不该进来"；要"不让进"必须用 block/准入。把撤销当禁止用，会得到一个看起来在生效、实际可自愈的假控制。③ **身份按可出示的凭证判定，不按声称的名字**：同名的未验证安装是**独立实体**，单独成行、单独决策；"它说它是 X"不构成它是 X，名牌之下的每一行各自承担自己的结论。④ **发生在归属确立之前的动作，其控制点不可下放**：注册发生在登录之前且不指明工作区 ⇒ 它只能有一个实例级开关；凡是"在身份/归属确定之前发生的动作"，控制必然是全局的，想按租户下放在结构上就做不到。
 - 提升层：安全边界 / 治理。触发词：封禁无效、身份可自造、准入姿态、verified only、白名单准入、撤销不等于禁止、revoke 与 block、未验证安装单独成行、归属确立前的全局开关。
+
+## Cap66 昂贵召回路径必须由「意图匹配 + 廉价通道无强命中」双条件共同放行；检索方式的能力边界要写死（来源：docs.openclaw.ai `concepts/active-memory.md` 7,276B + `concepts/active-memory/how-it-works.md` 6,173B，2026-10-04 r412B 独立 curl 取 `.md` 原文实拉；与 §Cap64 会重置的通道 / §Cap32 只写不可读 互补——那两条管"数放哪条通道"与"存储形态"，本条管"什么时候值得为一次召回付出阻塞代价"）
+- **原文**："The default `escalate` mode runs its blocking recall sub-agent **only when the message asks about the past and the deterministic memory lane found no strong trusted trigger match**"；表格 `escalate` | "Default. Run only for recall intent when lane 1 has no strong hit." / `always` | "Preserve the previous behavior and run on every eligible targeted turn."；"Flat retrieval is strongest for **direct fact matches** and **weaker on temporal and multi-session questions**."
+- **判据**：① **升级条件要两条同时成立**：意图匹配（这轮确实在问过去）**且**廉价确定性通道没有强命中 ⇒ 只拿"廉价失败"当条件，会把冷启动、无关问题、以及本来就不该深挖的轮次全部拖进阻塞式子调用，成本由所有轮次平摊而收益只落在少数轮次上。② **检索层必须声明自己的能力边界**：扁平/向量检索强于直接事实匹配、弱于时序与跨会话问题（有 LongMemEval / PrefEval 这类基准量化该差距）⇒ 不写边界的检索层，用户感知到的"想不起来"会被误判成"根本没存过"，于是重复沉淀已有信息。③ **改默认不许删掉旧行为**：`escalate` 作默认、`always` 保留旧路径 ⇒ 分层优化要给一条显式逃生口，否则"优化"对依赖旧行为的场景就是静默破坏。
+- 提升层：工作流 / 记忆检索。触发词：深召回升级、阻塞式召回、廉价通道先跑、意图匹配才升级、检索能力边界、时序与跨会话弱项、escalate 与 always、保留旧行为。

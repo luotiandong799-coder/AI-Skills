@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.68.0"
+version: "1.69.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -278,3 +278,8 @@ sources:
 - **原文**：冻结窗 "merges to `main` after 5 PM UTC are **accepted but not deployed** to staging. The content team uses the frozen staging environment overnight"；热修 "Blocked automatically if the next scheduled Sunday promotion is within 1 hour"；版本真源 "Because `package.json` is the single runtime source of truth … a mistyped tag would publish an image whose real version disagrees with its tag — **invisible until it's mixed with a correctly-built peer and the worker↔app version gate silently withholds jobs**"，故有 `Verify tag matches package.json` 步骤；回填 "merge that PR **before the next release-candidate cut (Thursday 5 PM UTC)** … merging after the cut is too late"（0.85.4/0.85.5 因错过而报成 0.85.2）；回滚 "Reverses DB migrations not present in the target image's manifest … `force`: Force rollback even if breaking migrations exist. Default: `false`"；迁移 "CI will fail if `breaking`, `release`, or `down()` are missing on new migrations"，且 `breaking = true` 时可不实现 down()。
 - **判据**：① **环境冻结不等于代码冻结，闸门应卡"部署"而不是卡"合并"**——需要一个"稳定但仍被使用"的环境时（内容团队夜间要用 staging），正确做法是继续接受合并、只推迟制品上线；反过来卡合并会把人力堵在门口，而环境并没有因此更稳定。② **版本号只能有一个可写真源，凡手填入入口必须在发布时与真源对齐**：能被烤进制品的那个（package.json）才是真源，手填 tag 只因要带 `-hotfix.N` 后缀而存在 ⇒ 多一个手填入口就必须多一道等值校验，否则产出"真实版本与 tag 不一致"的制品。③ **版本门失配的失败模式是静默扣住任务，不是报错**——worker↔app 版本门在版本不一致时"什么都不做"，症状是任务凭空消失而不是错误日志 ⇒ 排查"任务没有被处理"时要把版本一致性列为候选，只在日志里找错误会一无所获。④ **发布后回填真源是流水线的一环且有截止时点**：热修分支上的版本变更不会自己回到主干，靠自动 PR 回填；而一旦错过 RC 切分点，"已存在的 tag 不会被覆盖"会让错误以"版本回退/重复"的形态跨多个版本留存。⇒ 凡"分支上改了版本、主干不知道"的流程，必须给回填设死线。⑤ **回滚 = 换镜像 + 反向迁移，不是只换镜像**：回滚会反转目标镜像清单里不存在的迁移；而声明为破坏性的迁移没有 down()（CI 允许不实现），一旦合入，**这段历史就再也回不去了**，需要时用 `force` 硬回滚等于承认数据面已不匹配 ⇒ 破坏性迁移的真正代价不在当下，而在它永久缩短了可回滚窗口。因此可逆性与破坏性必须写成机器可检字段（`breaking` / `release` / `down()` 缺一即 CI 失败），不能只写在说明里。
 - 提升层：工作流 / 可复用 Skill。触发词：冻结窗只卡部署、合并≠部署、版本真源唯一、tag 与 package.json 校验、版本门静默扣任务、回填真源有死线、回滚反转迁移、breaking 迁移无 down、可回滚窗口、迁移三字段机检。
+
+## 重构不破链：拆分、改名、迁移必须保留旧锚点并给出「旧→新」逐条映射（来源：docs.openclaw.ai `concepts/active-memory.md` 7,276B，2026-10-04 r412B 独立 curl 取 `.md` 原文实拉；与 §版本真源唯一 / §回滚须反转迁移 互补——那两条管"版本从哪来"与"回滚怎么走"，本条管"结构重排后别人的引用还成不成立"）
+- **原文**："Every section heading from the previous single-page version keeps its anchor here, so an existing link such as `/concepts/active-memory#lossless-claw` **still resolves**. Each entry points at the page that now holds the content."
+- **判据**：① **已发布的链接是对外契约**：重排（拆页 / 改名 / 迁移）时可以改的是自己的组织方式，不能顺手打断别人的引用 ⇒ 旧锚点必须保留并指向新落点，"移动了而已"不是断链的理由。② **迁移留映射表，不留一句"已移动"**：逐条「旧标题 → 新页面#锚点」才可机检核验无遗漏（尤其拆分后一节可能对应多处）⇒ 只有一句"已移动"的迁移，等于把完整性检查推给每一个读者。③ **断链的代价由引用方承担、收益由重构方获得**：这是典型的外溢成本，所以验收标准要写在重构这一侧（旧链接全量探活 200 / 锚点可解析），而不是等下游报错。
+- 提升层：工作流 / 交付维护。触发词：重构不破链、保留旧锚点、拆分页面、链接重定向、旧→新映射表、断链验收、外溢成本。
