@@ -951,3 +951,18 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 原文："HTTP and Email-triggered workflows default to **30 seconds** per execution. — Cron-triggered workflows default to **60 seconds** per execution."；上限表：Free 300 秒（5 分钟）/ Paid 750 秒（12.5 分钟）；"Any partial logs and observability associated with code cells that **ran successfully before the timeout** will be attached to the event in the UI, so you can examine the state of your workflow and troubleshoot where it may have failed."；磁盘 /tmp 2GB "This limit cannot be raised."
 - 判据：① **同步入口与定时入口的超时预算本就不同**——HTTP/Email 是有人（或有系统）在等响应，默认 30 秒；Cron 没人等，默认 60 秒；把定时任务的预算套到 webhook 上，或者反过来，都会拿到不该有的超时；排查超时先确认**这个工作流的触发类型决定了它拿的是哪一套默认值**；② **"默认值"与"可调上限"是两个参数**——默认值能改，但天花板由套餐决定；用户说"我已经调到最大了还是超时"，要先问是哪个套餐，因为"最大"对免费档是 5 分钟、对付费档是 12.5 分钟；③ **超时不等于日志全丢，但丢的恰好是最需要的那一块**：已成功 cell 的日志会被附到事件上，而**正在跑的那一步的中间态拿不到**——所以超时类故障能确认"跑到哪一步"，不能确认"那一步内部卡在哪"；需要后者就得自己写中间检查点（与 §每一步都落检查点 同向）。
 - 提升层：工具/工作流。触发词：超时默认值、30s vs 60s、触发类型决定超时、套餐决定超时上限、超时后部分日志、/tmp 2GB 不可提升。
+
+
+## 学习轮下沉 r413B（dl SKILL.md 行数治理）
+## 长命周期任务须有"故障计数分型 + 达阈自动停用 + 停用原因写回状态对象"：运行失败与计算错误阈值不同，运维面才能区分"没人用"与"用坏了"（来源：docs.openclaw.ai/automation/cron-jobs/delivery、help.make.com/llms.txt、docs.n8n.io/.../durable-scheduler.md，2026-10-01 r362-Q-C 实拉；回答 WB r288 ③）
+- 判据：① openclaw cron 在 **10 次执行故障** 或 **3 次调度计算错误** 后**自动禁用**，原因写入 `state.autoDisabled.reason`（两类故障阈值不同）；告警是"连续 2 次崩溃 + 60 分钟冷却"，与停用阈值分离。② 跨平台口径（回答 r288 ③）：Make=无内容性自动停用，只有 credit 触顶后管理员暂停场景；n8n durable-scheduler=用 `quarantine 86400` 隔离态代替停用，failed 保留 604800；Activepieces=本轮路径 404 未取到。⇒ 停用要有原因字段与阈值分型，否则运维面无法区分"没人用"和"用坏了"。
+- 提升层：工作流。触发词：故障计数分型、达阈自动停用、autoDisabled.reason、运行失败10次/计算错误3次、quarantine 代替停用。
+
+## 学习轮沉淀区（本段）
+（r历史 起的连续学习轮章节共 115 章已下沉 references/knowledge-base.md §≤200迁移，正文留此指针）
+
+## 学习轮沉淀区（本段）
+（r历史 起的连续学习轮章节共 236 章已下沉 references/knowledge-base.md §≤200迁移，正文留此指针）
+
+## Qoder 净新（2026-09-27 · 全量消化）
+- **偏差点重启-替代生成法**（arXiv 2609.29154 SkillPivot）：修技能/排查失败 run 用三信号（执行有效性/目标进度/动作多样性）定位**首个偏差点**，从偏差前缀重放生成"同一历史下的成功替代段"，只把替代段与偏差前缀的差异反哺进修订——不把整条失败轨迹当废样本（与受控扰动审计互补：那管事前找缝隙，这管事后从真实失败挖最小修订）。

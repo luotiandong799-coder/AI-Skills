@@ -304,3 +304,32 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 ## Capability 10 — 记忆分仓与路标式索引：私有仓 vs 组织共享仓
 
 > 原文已下沉 `references/knowledge-base.md §r395-ag`（保持原文零删减）。
+
+
+## 学习轮下沉 r413A（ag SKILL.md 行数治理 · 原 Cap38 / Cap39 整节下沉）
+### Cap38 待办先落盘再到期执行；维护类任务停了也不报错（来源：docs.n8n.io durable-scheduler.md + system-tasks.md，r354A 实拉）
+- 计划先持久化再执行：in-memory 定时器随进程停止而丢，且停机期间过期的运行被跳过而非补跑。
+- 静默失败是维护类任务的默认失效模式：无调用方、无报错、不在编辑器出现，唯一症状是"该变小的一直变大 / 该变新的越来越旧" ⇒ 必须配独立存活信号。
+- 观测面须覆盖两种模式且指标名能区分（in_memory vs durable），否则"该模式下从没跑过"被显示成"没有数据"。
+- 配套看板每面板给一条建议动作，交付物是"看到这个数该做什么"而非图表。
+- 提升层：工具 / 工作流 / 可复用 Skill。
+
+### Cap39 数据外迁时清理责任一并外迁；不做配置 = 默认永久保留（来源：docs.n8n.io use-external-storage.md，r354C 实拉）
+- 存储位置变更连带改变清理责任归属：搬到外部存储后主系统剪枝逻辑不再覆盖它。
+- 未配置的默认态是"无限期保留"而非"继承原策略" ⇒ 外迁动作必须配"谁负责删 / 多久删 / 按什么条件删"。
+- groom 规则必须显式覆盖外迁位置并声明周期，清理清单把"外迁出去的部分"列为独立条目。
+- 提升层：工作流 / 可复用 Skill。
+
+
+## 学习轮下沉 r413C（ag SKILL.md 行数治理 · 原 Cap40 / Cap41 整节下沉）
+## Cap40 授权评审的对象是「权限组合」而非单项；授予的是可事后改写的角色定义，不是权限快照（来源：docs.n8n.io `administer/.../create-custom-instance-roles.md` 8,015B + `create-custom-project-roles.md` 11,109B + `see-available-roles.md` 4,301B，2026-10-03 r388A 独立 curl 取 .md 原文实拉）
+- **原文**：「A user with **Roles: Manage all roles** can edit their own custom role to add permissions they weren't originally granted.」「A user with **Members: Manage** can invite a user they control, then grant that user Admin-level access.」「Changes to a custom instance role take effect for **all users with that role** across the entire instance.」「If users have this role, reassign them to a different role before deleting it.」
+- **判据**：① **单项权限都合法，组合起来才是提权路径**——「能改角色」+「自己持有该角色」= 自提权；「能邀请人」+「能给人授权」= 借壳提权。逐项审批看不到这两条，只有把已授出的权限当**一个集合**做组合评审才能发现。② **授予动作指向的是角色定义（活引用），不是权限快照**——改一次角色定义，所有持有者的权限面当场漂移；因此「当初批了什么」不能作为当前权限的证据，撤销/复核必须回查角色定义的当前内容。③ **角色不可留空指向即删**——删除前必须先改派；guild 的交接与授权回收同理：先把成员/agent 迁到新角色，再回收旧角色，顺序颠倒会产生无归属窗口。
+- 提升层：工作流 / 可复用 Skill。触发词：权限组合提权、自提权、角色活引用、改角色即批量改权限、删除前改派、授权回收顺序。
+
+## Cap41 审批回执要落稳定终态码，「不可用」类不等于「拒绝」类；留痕开关只向前生效（来源：docs.openclaw.ai/gateway/audit.md 37,793B，2026-10-03 r388B 独立实拉）
+- **原文**：审批结果映射稳定 reason code：`operator_approval_allowed_once/always`、`_denied_by_reviewer`、`operator_approval_expired`、`_cancelled_run_aborted`、`_cancelled_gateway_restart`、`_denied_no_route`、`_denied_malformed_verdict`、`_denied_storage_corrupt`、`operator_approval_record_corrupt`、`_execution_link_missing/_malformed/_mismatch`；「An unreadable row is `unknown`, never reconstructed.」「Enabling collection does not backfill earlier activity or add identity to an already admitted run.」「Its outcome is `not-applicable` ... This is an explanation of admission evidence, not an enforcement claim.」
+- **判据**：① **审批终态是一张码表不是布尔值**——除了允许/驳回，还必须有 过期 / 被中止（运行 abort、网关重启）/ 无投递路由 / 判定畸形 / 存储损坏 / 记录损坏 / 绑定缺失·畸形·不匹配；把后几类归并成「驳回」会把**基础设施故障误记成人的决定**，问责时会追错对象。② **「不可用」类是独立一类，不是拒绝**——读不出来的回执判 unknown 并给出补救，绝不重建一条。③ **留痕/审计开关只向前生效**——开启不回溯历史活动，也不给已准入的运行补身份；「我们开了审计」不能作为追溯既往的证据。④ **回执存在 ≠ 判定发生过**——`not-applicable` 是显式终态，含义是「没有任何身份相关策略被证明执行过」；guild 的审批留痕要能表达这一态，否则空回执会被读成「已审批通过」。
+- 提升层：工作流 / 可复用 Skill。触发词：审批终态码表、expired、no-route、malformed_verdict、storage_corrupt、link_mismatch、不可用≠拒绝、留痕不回溯、not-applicable 回执。
+
+

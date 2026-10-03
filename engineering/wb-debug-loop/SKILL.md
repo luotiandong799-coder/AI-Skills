@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.144.0"
+version: "1.145.0"
 agent_created: true
 ---
 
@@ -34,20 +34,11 @@ agent_created: true
 ---
 
 ## 等待/轮询/卡住运行处置（来源：OpenClaw `ci/watching-runs.md`，2026-09-30 实拉）；原文已下沉 references/knowledge-base.md §等待轮询下沉，2026-10-04 r411A
-## 长命周期任务须有"故障计数分型 + 达阈自动停用 + 停用原因写回状态对象"：运行失败与计算错误阈值不同，运维面才能区分"没人用"与"用坏了"（来源：docs.openclaw.ai/automation/cron-jobs/delivery、help.make.com/llms.txt、docs.n8n.io/.../durable-scheduler.md，2026-10-01 r362-Q-C 实拉；回答 WB r288 ③）
-- 判据：① openclaw cron 在 **10 次执行故障** 或 **3 次调度计算错误** 后**自动禁用**，原因写入 `state.autoDisabled.reason`（两类故障阈值不同）；告警是"连续 2 次崩溃 + 60 分钟冷却"，与停用阈值分离。② 跨平台口径（回答 r288 ③）：Make=无内容性自动停用，只有 credit 触顶后管理员暂停场景；n8n durable-scheduler=用 `quarantine 86400` 隔离态代替停用，failed 保留 604800；Activepieces=本轮路径 404 未取到。⇒ 停用要有原因字段与阈值分型，否则运维面无法区分"没人用"和"用坏了"。
-- 提升层：工作流。触发词：故障计数分型、达阈自动停用、autoDisabled.reason、运行失败10次/计算错误3次、quarantine 代替停用。
 
-## 学习轮沉淀区（本段）
-（r历史 起的连续学习轮章节共 115 章已下沉 references/knowledge-base.md §≤200迁移，正文留此指针）
 
 ## Harness 自改进与 trace 复用簇（细则已下沉 KB）
 - 技能级记忆、Harness 工程与三阶段自改进、后台 review fork、视觉双扩展、trace 失败模式清单、trace→evaluator、harness 演进三问——**七条同源，完整论证见** [references/knowledge-base.md](references/knowledge-base.md) §Harness 与 trace 自改进簇。
-## 学习轮沉淀区（本段）
-（r历史 起的连续学习轮章节共 236 章已下沉 references/knowledge-base.md §≤200迁移，正文留此指针）
 
-## Qoder 净新（2026-09-27 · 全量消化）
-- **偏差点重启-替代生成法**（arXiv 2609.29154 SkillPivot）：修技能/排查失败 run 用三信号（执行有效性/目标进度/动作多样性）定位**首个偏差点**，从偏差前缀重放生成"同一历史下的成功替代段"，只把替代段与偏差前缀的差异反哺进修订——不把整条失败轨迹当废样本（与受控扰动审计互补：那管事前找缝隙，这管事后从真实失败挖最小修订）。
 
 ## 数据钉定（input pinning）与局部执行（partial execution）：钉输入 + 只跑待测节点 = 最小可复现调试闭包（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）；原文已下沉 references/knowledge-base.md §数据钉定与局部执行下沉，2026-10-04 r409A
 - **滑窗规避反模式**（arXiv 2609.30217 EvasionBench）：重试循环会把"相关上下文"推出监控/评审窗口，让同一操作在第 N 次重试"看不见地"通过——监控须锚定**操作序列**而非近期窗口，跨轮拆分动作计入同一意图链。
@@ -490,3 +481,9 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **原文**："`config.modelFallbackPolicy` is a compatibility field kept for older configs, **deprecated in v2026.4.12; it no longer changes runtime behavior** — `modelFallback` is strictly the last resort in the chain above, **not a runtime failover that swaps in another model when the resolved one errors**"；解析链 "explicit plugin model -> current session model -> agent primary model -> optional configured fallback model"；默认联动 "message -> strict / recent -> balanced / full -> contextual"，"An explicit `config.promptStyle` always overrides the mapping."
 - **判据**：① **同名不同义的配置先分语义再谈生效**：`fallback` 在解析链里是"候选顺序的最后一环"（在选定之前起作用），在故障转移里是"选定之后出错才换"（在选定之后起作用）——触发时机相反；把前者当后者配，会得到"明明配了备用却没顶上"的假故障，而且排查方向从第一步就是错的。② **废弃字段要写清"还认不认 / 还做不做"**：为了兼容老配置而继续解析（读了不报错）与仍然改变行为是两件事；只写 deprecated 不写"不再改变运行时行为"，用户就会把它当成仍有效的控制——与 §Cap65 撤销≠禁止 同族：看起来在生效、实际在空转的假控制。③ **默认值随另一个参数联动时，必须把映射表写出来**：只写"默认值是 balanced"是错的，用户改了 queryMode 就静默换了召回风格 ⇒ 联动默认不列表，任一参数的副作用就不可见、也不可预期。④ **显式覆盖必须无条件胜出**：用户明确写下的值压过一切推断，别让"更懂你"的推断盖掉显式配置。
 - 提升层：工具 / 诊断。触发词：fallback 语义、解析链与故障转移、废弃字段不再生效、假控制、默认值联动映射、显式覆盖优先、配了没生效。
+
+
+## 故障分类按「文本像不像」而不是状态码：跨厂商没有统一协议语义，周期用量窗口与瞬时限流同桶会让冷却时长失去意义（来源：docs.openclaw.ai `concepts/model-failover.md` 39,408B，2026-10-04 r413B 独立 curl 取 `.md` 原文实拉；与 §fallback 两种相反语义 / §循环上限计量 互补——那两条管"备用在哪个阶段顶上""上限以什么为单位"，本条管"什么叫一次限流、冷却到什么时候为止"）
+- **原文**：「That rate-limit bucket is **broader than plain 429**: it also includes provider messages such as `Too many concurrent requests`, `ThrottlingException`, `concurrency limit reached`, `workers_ai ... quota limit exceeded`, `throttled`, `resource exhausted`, and **periodic usage-window limits** such as `weekly limit reached` or `monthly limit exhausted`.」「A timeout that **looks like** rate limiting counts as such a failure.」「Thrown exhaustion summaries include structured per-attempt details and the **soonest cooldown expiry** when one is known.」「A terminal credential failure cools down **the exact selected profile** before model fallback.」「Transcript, format, context, pre-provider timeout, and ambient CLI failures **without a selected profile do not change shared profile health**.」
+- **判据**：① **分类规则必须写成文本枚举而非状态码匹配**——同一类处置（冷却 + 换下一个）由"消息像不像"触发；跨厂商没有统一状态语义，只认 429 会把大半真实限流漏成普通错误。⇒ 排障时"为什么它没走降级"的第一查点是**匹配表是否覆盖该厂商的措辞**，不是网络/凭据。② **瞬时与周期窗口不能共用同一个冷却值**——`429` 的恢复单位是秒，`weekly limit reached` 的恢复单位是天；两者进同一个桶 ⇒ 冷却值无论取哪个都是错的。⇒ 分类桶必须携带**恢复量级**，或者干脆把周期窗口单列；否则重试风暴（短冷却打在周限额上）与假死（长冷却打在瞬时抖动上）二选一。③ **耗尽报告的价值在"最早可重试时刻"而不是"失败原因列表"**——终态失败要给出 soonest cooldown expiry；只列每次失败原因，运维拿到的是"为什么不行"而拿不到"什么时候再试"。④ **归因必须有门槛：没有选定目标的失败不该记到任何目标头上**——发生在选定之前的失败（pre-provider timeout / 环境级 / 无 profile 的 CLI 失败）不改变共享健康度；把所有失败都用来惩罚候选，会让一次环境问题把全部凭据依次冷却掉。⑤ **归因粒度要精确到"被选中的那一个"**——终端凭据失败只冷却那个具体 profile，不是整个 provider；粗粒度惩罚会把"一个 key 坏了"放大成"一家厂商不可用"。
+- 提升层：工具 / 工作流 / 可复用 Skill。触发词：限流桶文本枚举、周期用量窗口、soonest cooldown expiry、冷却量级、归因门槛、精确到被选中的凭据。

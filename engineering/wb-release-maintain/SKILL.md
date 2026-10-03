@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.69.0"
+version: "1.70.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -283,3 +283,9 @@ sources:
 - **原文**："Every section heading from the previous single-page version keeps its anchor here, so an existing link such as `/concepts/active-memory#lossless-claw` **still resolves**. Each entry points at the page that now holds the content."
 - **判据**：① **已发布的链接是对外契约**：重排（拆页 / 改名 / 迁移）时可以改的是自己的组织方式，不能顺手打断别人的引用 ⇒ 旧锚点必须保留并指向新落点，"移动了而已"不是断链的理由。② **迁移留映射表，不留一句"已移动"**：逐条「旧标题 → 新页面#锚点」才可机检核验无遗漏（尤其拆分后一节可能对应多处）⇒ 只有一句"已移动"的迁移，等于把完整性检查推给每一个读者。③ **断链的代价由引用方承担、收益由重构方获得**：这是典型的外溢成本，所以验收标准要写在重构这一侧（旧链接全量探活 200 / 锚点可解析），而不是等下游报错。
 - 提升层：工作流 / 交付维护。触发词：重构不破链、保留旧锚点、拆分页面、链接重定向、旧→新映射表、断链验收、外溢成本。
+
+
+## 把「曾经自动生效的额度」改成「必须显式开启的选项」是一次语义迁移：必须给等价换算式与最坏上界式，否则老配置在新版本表现为间歇性失败（来源：docs.openclaw.ai `concepts/active-memory/recommended-setup.md` 2,673B，2026-10-04 r413A 独立 curl 取 `.md` 原文实拉；与 §重构不破链 / §回滚须反转迁移 互补——那两条管"结构重排后引用还成不成立""回滚怎么走"，本条管"同一个配置项在新版本里换了含义但值没变"）
+- **原文**：「Before v2026.5.2 the plugin **silently extended** `timeoutMs` by an extra 30000 ms during cold start… v2026.5.2 moved that grace behind an **explicit** `setupGraceTimeoutMs` config: `timeoutMs` is now the recall-work budget by default unless you opt in.」「If you upgraded from v2026.4.x and tuned `timeoutMs` for the old implicit-grace world … set `setupGraceTimeoutMs: 30000` to restore the pre-v2026.5.2 **effective** budget.」「Worst-case blocking time is `timeoutMs + setupGraceTimeoutMs + 3000` ms」
+- **判据**：① **隐式→显式是兼容性最差的一类变更**——值没动、语义变了，配置校验全部通过，失败只在特定条件（冷启动 / 首次调用 / 资源竞争）下出现，于是被当成随机 flaky 而不是升级回归。⇒ 迁移说明里必须给出**等价换算式**（旧有效值 = 新值 + 需补的显式项）而不是一句"新增了 X 配置"。② **最坏上界要写成公式而不是描述**——上界 = 主预算 + 显式宽限 + 固定前后置开销，且内外两层看门狗共享同一有效预算；只写"可能更慢"无法验收。③ **宽限被分离出来之后，默认值的选择就带了取舍**：低值（5000–15000ms）换来的是"重启后第一次调用可能空返回"，这是**被接受的成本**而不是 bug ⇒ 新默认值要连带说明它牺牲了什么。④ **前后置固定开销不延长业务执行**——preflight 与结算各有独立固定额度，不能算进业务预算；把固定开销写进可调预算会让"加机器"看起来像"加超时"。⑤ 对发布/依赖守卫的落点：升级评审清单里单列一类「**语义迁移项**」——字段没增删、类型没变、但有效行为变了，这类项只做 diff 是扫不出来的，必须逐个给换算式与上界式。
+- 提升层：工作流 / 可复用 Skill。触发词：隐式宽限变显式、语义迁移项、等价换算式、最坏上界公式、升级后间歇超时、冷启动预算。
