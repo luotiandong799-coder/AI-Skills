@@ -920,3 +920,13 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - 提升层级：工作流（排障循环的执行顺序）+ 工具（回路与探针的构造）。
 - 触发词：复现率、抬高发生率、flaky 阈值、red-capable、red-capable 命令、无回路不假设、假设带预测、3–5 条假设、锚定。
 
+
+
+## 数据钉定与局部执行下沉（2026-10-04 r409A）
+## 数据钉定（input pinning）隔离待测单元：dev-only 钉子、生产忽略（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）
+- **原文**：`On future runs, instead of executing the pinned node, n8n will substitute the pinned data and continue following the flow logic... Production executions ignore all pinned data.`
+- **判据**：① 迭代调试时把上游节点输出**钉死为固定样本**，下游只在这一固定输入上反复试错 → 把「单元待测」与「上游可变性/外部调用成本」解耦，避免每次改一行都要重打整条链路或重复打外部服务。② 钉子是**开发态构造物**，生产执行必须全部忽略（否则测试夹具污染真实数据 + 跳过本应执行的真实逻辑）。③ 与「局部执行」配合：钉输入 + 只跑待测节点 = 最小可复现调试闭包。提升层：工具/工作流。触发词：数据钉定、input pinning、确定性迭代、dev-only 夹具、生产忽略 pin。
+
+## 局部执行（partial execution）：重跑范围可靶向，不整流产跑（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）
+- **原文**：`Partial executions are manual executions that only run a subset of your workflow nodes... executes the specific node and any preceding nodes required to fill in its input data.`
+- **判据**：① 重跑/复现应**只跑待测节点 + 喂它所需的最小前驱**，而非把整条工作流从头跑一遍——降低复现成本、避免重触发副作用节点。② 局部执行仍需触发拓扑（须有一条 trigger 描述「何时执行」），不是任意节点都能起跑 ⇒ 靶向重跑要在「最小前驱」与「拓扑合法性」之间取平衡。③ 与「数据钉定」是同一调试哲学的两面：一个控输入、一个控范围。提升层：工具/工作流。触发词：局部执行、partial execution、靶向重跑、只跑待测节点、最小前驱。

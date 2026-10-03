@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.52.0"
+version: "1.53.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -439,3 +439,8 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：① 移动端提交决定后若**回执丢失**，应用**禁用控件并重新读取记录**；若另一个界面已先胜出，应用显示**那条已记录的决定**；**待处理提示绑定在签发它的 Gateway 上，切换活动 Gateway 不能重定向旧 approval ID**。② owner-only 的敏感组命令（`/diagnostics`、`/export-trajectory`）用**私密 owner 路由**发送审批提示**与最终结果**：先试同一 surface 的私密路由，没有则退到 `commands.ownerAllowFrom` 中第一个可用路由（因此 Discord 群命令的审批与结果可能发到 owner 的 Telegram DM），**群聊只收到一句简短确认**。③ 请求者本人不必是审批者。
 - **判据**：① **「我点了批准」不等于「批准生效」**——并发界面下权威是服务端那条记录，提交方拿到的是待确认的意图；**回执丢失时正确动作是重读而非假定自己的选择成立**，否则会出现两个界面各自认为已生效。② **ID 绑定签发者**：审批 ID 只对签发它的实例有效，切换 Gateway 不能改投旧 ID——多实例/多 Gateway 环境下「换个地方批」不是可用手段，反而说明该请求已随签发者失效。③ **高风险操作的输出与输入同等敏感**：审批提示走私密路由而结果发在群聊，等于把「谁批准」保护了、把「批准换来了什么」公开了；验收要**同时确认提示与结果两条投递路径**。④ **路由降级会改投递面**：私密路由不可用时退到 ownerAllowFrom 第一个可用项，意味着结果可能出现在完全不同的通道上——「没收到结果」先查路由降级链，而不是判定执行失败。⑤ **请求者≠审批者是默认形态**，不要默认发起人具备批准权，也不要因发起人不能批就认为流程挂死。
 - **提升层**：安全边界 / 工作流。触发词：回执丢失重读、决定以服务端记录为准、审批 ID 绑定签发 Gateway、敏感命令私密路由、结果跟随路由降级、请求者不必是审批者。
+
+## Cap56 凭据三约束：只写不读、注入的是代理值不是原文、身份键不可变（换目标=新建）（来源：docs.bigmodel.cn `cn/managed-agents/{vaults,mcp,cloud-environment}.md` 7,423B / 6,511B / 6,579B，2026-10-04 r409A 独立 curl 取 `.md` 原文实拉；与 §Cap49 凭据回写只存来源标记 / §Cap32 fail-closed 同族——前两条管"不把明文固化回配置"与"空凭据拒绝"，本条管"值根本不进进程"与"改址不等于改字段"）
+- **原文**：`密钥只写不读——所有 token、secret 在任何响应中都不会回显，Agent 与沙箱也拿不到原始值`；`environment_variable 类型：以环境变量名提供给沙箱；进程中看到的是 omasec_ 代理值，真实密钥只在访问允许的目标主机时由平台代入请求`；`environment_variable 类型必须声明 networking 策略（unrestricted，或 limited + allowed_hosts，至多 16 项）`；`身份字段（mcp_server_url / host / secret_name，以及 refresh 的 token_endpoint / client_id / resource）不可变，更新时必须省略——要换目标就新建一条凭据`；`POST /v1/vaults/:vaultId/credentials/:credentialId 做部分更新：提供的 secret 被替换，省略的 secret 保留`。
+- **判据**：① **进程内可见 ≠ 密钥可用**：注入的是代理值，真实值只在出站且目标主机命中凭据的 networking 规则时由平台代入 ⇒ 凭据的**作用域由网络策略界定，不是由"谁拿到了环境变量"界定**；评判暴露面要同时看值面与出网面。② **轮换是部分更新，但身份键必须省略**：省略=保留这条规则对 secret 成立、对身份键不成立（身份键要求省略是因为它不可改）⇒ **同一个"省略"字段在不同类型上语义相反**，写轮换脚本时不能一律"缺省即保留"。③ **换目标 = 新建凭据，不是改字段**：地址/宿主/名字是身份，改身份等于换对象；沿用旧凭据改 URL 的做法在该模型下不可行。④ **只写不读 ⇒ 凭据没有"回读校验"这一手段**：正确性只能靠外部探测（如 `mcp_oauth_validate` 的 valid/invalid/unknown）证明，不能靠读回来看对不对。⑤ 读取接口只回非敏感字段（`expires_at`、不含秘密值的 refresh 配置）⇒ **可见的元数据面与不可见的值面是两条清单**，不要把"能看到过期时间"当"能看到凭据"。
+- 提升层：安全边界。触发词：只写不读、代理值、omasec_、出站代入、身份键不可变、换目标新建、部分更新省略即保留、凭据作用域由网络策略界定。

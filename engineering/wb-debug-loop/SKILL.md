@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.139.0"
+version: "1.140.0"
 agent_created: true
 ---
 
@@ -54,13 +54,7 @@ agent_created: true
 ## Qoder 净新（2026-09-27 · 全量消化）
 - **偏差点重启-替代生成法**（arXiv 2609.29154 SkillPivot）：修技能/排查失败 run 用三信号（执行有效性/目标进度/动作多样性）定位**首个偏差点**，从偏差前缀重放生成"同一历史下的成功替代段"，只把替代段与偏差前缀的差异反哺进修订——不把整条失败轨迹当废样本（与受控扰动审计互补：那管事前找缝隙，这管事后从真实失败挖最小修订）。
 
-## 数据钉定（input pinning）隔离待测单元：dev-only 钉子、生产忽略（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）
-- **原文**：`On future runs, instead of executing the pinned node, n8n will substitute the pinned data and continue following the flow logic... Production executions ignore all pinned data.`
-- **判据**：① 迭代调试时把上游节点输出**钉死为固定样本**，下游只在这一固定输入上反复试错 → 把「单元待测」与「上游可变性/外部调用成本」解耦，避免每次改一行都要重打整条链路或重复打外部服务。② 钉子是**开发态构造物**，生产执行必须全部忽略（否则测试夹具污染真实数据 + 跳过本应执行的真实逻辑）。③ 与「局部执行」配合：钉输入 + 只跑待测节点 = 最小可复现调试闭包。提升层：工具/工作流。触发词：数据钉定、input pinning、确定性迭代、dev-only 夹具、生产忽略 pin。
-
-## 局部执行（partial execution）：重跑范围可靶向，不整流产跑（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）
-- **原文**：`Partial executions are manual executions that only run a subset of your workflow nodes... executes the specific node and any preceding nodes required to fill in its input data.`
-- **判据**：① 重跑/复现应**只跑待测节点 + 喂它所需的最小前驱**，而非把整条工作流从头跑一遍——降低复现成本、避免重触发副作用节点。② 局部执行仍需触发拓扑（须有一条 trigger 描述「何时执行」），不是任意节点都能起跑 ⇒ 靶向重跑要在「最小前驱」与「拓扑合法性」之间取平衡。③ 与「数据钉定」是同一调试哲学的两面：一个控输入、一个控范围。提升层：工具/工作流。触发词：局部执行、partial execution、靶向重跑、只跑待测节点、最小前驱。
+## 数据钉定（input pinning）与局部执行（partial execution）：钉输入 + 只跑待测节点 = 最小可复现调试闭包（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）；原文已下沉 references/knowledge-base.md §数据钉定与局部执行下沉，2026-10-04 r409A
 - **滑窗规避反模式**（arXiv 2609.30217 EvasionBench）：重试循环会把"相关上下文"推出监控/评审窗口，让同一操作在第 N 次重试"看不见地"通过——监控须锚定**操作序列**而非近期窗口，跨轮拆分动作计入同一意图链。
 - **执行回放一等位**（Activepieces）：每次执行的完整动作序列留独立可读回放记录，排障不依赖 trace 后端。
 
@@ -486,3 +480,8 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **原文**：① 权限策略两档 `always_allow` / `always_ask`，**默认两档都是 `always_allow`**，且**平台不提供「记住本次决定」「只询问一次」这类中间形态**。② 调用 `always_ask` 工具时会话发 `agent.tool_use` 事件 → 暂停 → 发 `session.status_idle`，`stop_reason.type = requires_action`，**待审批的事件 ID 列在 `stop_reason.event_ids` 数组里**；**会话无限期等待响应**。③ 要为每个待审批事件发一条 `user.tool_confirmation`（`tool_use_id` + `result` = allow/deny，拒绝可带 `deny_message`），**一次 events 请求可携带多条确认**；**所有待审批事件都被处理后会话才回到 running**。④ 官方提示：**定时部署可以绑定带 `always_ask` 的 Agent，但触发后会停在 `requires_action`**，**无人值守的 cron 请用 `always_allow`**。⑤ 另有：权限策略管的是「已启用工具何时执行」，**要把工具彻底移除得用 `enabled: false`** —— 两个旋钮正交。
 - **判据**：① **「需要人点头」的能力与「没有人」的通道是组合禁忌，不是配置建议**——同一个 Agent 定义挂到交互式会话没问题、挂到定时/队列触发就会永久停在 `requires_action`；上线前要按**触发方式**逐个检查被挂载的能力里是否有 `always_ask`，而不是按 Agent 定义看起来对不对。② **暂停原因是被显式列出来的**（`stop_reason.event_ids`），不是"整会话暂停"——读状态要先读这个数组，逐个消解；只回一部分的话会话**继续挂起**，表现为「我批了啊怎么还没动」。③ **批量回执要按组而非按条看待**：多条确认可一次发送，但恢复条件是「该批全部处理完」，这是个**全或无**语义，不是逐条放行。④ **没有中间形态是有意的**：平台不提供「本次允许/仅一次」，说明凡是「一会变 mature 长期有效」的便利形态都会把一次性批准演变成事实上的长期授权；缺这个选项不应被当成功能缺口去绕过。⑤ **审批开关不能充当撤销**：想让工具彻底消失要改启用位，只把策略调严，工具仍在能力面里（随时能被改回）；两者要分开声明。
 - **提升层**：工作流 / 安全边界。触发词：always_ask 与 cron 冲突、requires_action、event_ids 待审批列表、tool_confirmation 批量回执、全或无恢复、策略不等于启用。
+
+## 依赖失败不阻断会话启动，只降级为带三态重试标的事件；会话外可主动探测且探测结论含「不可判定」一态（来源：docs.bigmodel.cn `cn/managed-agents/{mcp,vaults}.md` 6,511B / 7,423B，2026-10-04 r409A 独立 curl 取 `.md` 原文实拉；与 §长命周期任务故障计数分型 / §判死前先回查真实执行状态 互补——那两条管"怎么判死"与"计数怎么分型"，本条管"依赖不可用时平台选择继续跑"与"探测结论本身可能不可判定"）
+- **原文**：`创建会话时不校验 MCP 的连通性或凭据。如果某个 MCP 服务器不可达或拒绝了凭据，会话仍会正常启动、正常交互。平台会发出 session.error 事件，其中包含出错服务器的 mcp_server_name 和重试状态 retry_status（取值 retrying / exhausted / terminal）`；`没有匹配凭据时，连接将以未认证方式尝试`；`mcp_oauth_validate 会对目标服务器发起 MCP initialize 探测，返回 valid / invalid / unknown 结论`；响应含 `refresh（刷新尝试结果：succeeded / failed / connect_error / no_refresh_token）`；`mcp_probe（initialize 探测的 HTTP 摘要，敏感值已脱敏）`。
+- **判据**：① **启动成功不等于依赖可用**——依赖失败被降级成一条事件而非启动失败码，验收/监控必须去读事件流，不能只看"创建会话返回 200"。② **失败不是二值而是三态机**：`retrying` 还有机会、`exhausted` 已耗尽、`terminal` 已判定不可恢复——同一条错误事件在不同态下处置相反（继续等 vs 换凭据 vs 摘除该依赖）。③ 主动探测的结论**保留 unknown 一态**，`unknown` 既不是成功也不是失败，把 unknown 当"已通过"或"已失败"都会给出错误结论。④ 刷新结果四态里 `no_refresh_token` 是**配置缺失不是故障**，`connect_error` 是**网络面问题不是凭据失效**——四态分属三个责任面，排障先归面再动手。⑤ 探测摘要已脱敏，**拿探测输出当凭据校验依据会读到假值**。⑥ 无匹配凭据时以未认证方式尝试 = 显式 fail-open，"连上了"不等于"以预期身份连上了"。
+- 提升层：工具/工作流。触发词：依赖失败不阻断启动、retry_status 三态、exhausted/terminal、探测结论 unknown、no_refresh_token、脱敏探测摘要、fail-open 未认证连接。
