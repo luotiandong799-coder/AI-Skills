@@ -20,3 +20,11 @@
 - 技能仓 `verify_skill_index.py` 六项全过（exit 0），零漂移 → 未触发 --fix/commit/push。
 - 产出：合规报告 `D:\腾讯AI\skills\.workbuddy\memory\巡检_2026-10-01_合规报告.md`；Claw 记忆追加 `D:\腾讯AI\Claw\.workbuddy\memory\2026-10-01.md`。
 - 待用户：确认 MEMORY.md 微信技能指针补 `system/`。
+
+## 2026-10-03 18:00 巡检（自动化）
+- MEMORY 用户级 3841（≤4000，余量159）/ workspace 794；无重复冲突，指针零断链（10 关键指针全有效）。
+- 规则本体断链数 0；00_总目录 §7 verifier 仍硬工具、三表一致；00_做前预读 §二·6/7 链接有效。
+- 技能仓 verify：初检 2 项版本不符→--fix；复检并发新增 2 项→二次 --fix；两轮 commit（632b0c54+7ff291ce）push 成功，本地复检六项正确（零漂移）。
+- 漂移自动修：agent-guild/wb-skill-authoring/wb-artifact-verification/wb-release-maintain 版本号按磁盘真相重写三表。
+- 未代劳：4 个 SKILL.md 含并发学习轮实质内容（r406A/Qoder r400-Q/r401-Q）已改未提交，仅对齐索引表未误收；远程一致性待作者提交 SKILL.md 闭合。
+- 报告：`D:\腾讯AI\skills\.workbuddy\memory\巡检_2026-10-03_合规报告.md`；Claw 记忆已追加 `D:\腾讯AI\Claw\.workbuddy\memory\2026-10-03.md`。
