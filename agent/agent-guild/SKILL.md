@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.49.0"
+version: "1.50.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -476,3 +476,10 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 
 - **投递位置只决定提示出现在哪，不决定谁有权批准**：官方明确 session 投递**不授权该会话里的每个参与者批准**；通用同会话 `/approve` 仍要求发送者本身已获该频道会话的命令授权 ⇒ 「他看见了」与「他能批」是两个集合，把审批投到群里不等于把决定权交给群里。
 - **批准权有三条可能的来源，且各通道取哪条不同**：① 发送者本身具备命令授权；② 通道若暴露**显式 approvers**，这些人即使在该会话内没有命令授权，也能授权 `/approve`；③ 更严格的通道（Discord / Telegram / Matrix / Slack 原生审批 DM 等）**只按自己解析出的 approver 名单**判定——例如 Telegram 话题里的审批提示**所有人可见**，但只有 `channels.telegram.execApprovals.approvers` 或 `commands.ownerAllowFrom` 解析出的数字用户 ID 能批准或拒绝 ⇒ 声明审批能力时必须写清「本通道按哪条来源判定批准权」，否则可见面会被误当成授权面。
+
+## Cap53 IM/工单类审批：响应权与可见权是两条独立的门，空列表=全放行反模式（来源：docs.n8n.io `integrations/builtin/app-nodes/n8n-nodes-base.slack/approvals.md` 8,545B，2026-10-03 r405A 独立 curl 取 `.md` 实拉；与 §Cap52 看得见审批卡≠能批准 互补——Cap52 管通道显式 approvers 的权限源分叉，本条管 IM/工单系统里"谁能看见请求"与"谁能响应"被同一列表错误耦合的反模式）
+
+- **审批列表控制的是响应权不是可见权**：n8n Slack Approvals 的 `Restrict Who Can Approve` 决定谁能批准，列表为空时频道所有成员都能批准 ⇒ 「看得见请求」被错误等同于「能批准」，是危险反模式；审批可见性必须显式收敛到私信道/DM，不能靠"列表非空"顺带隐藏。
+- **未授权者点击→私密 ephemeral 提示 + workflow 继续等待**：不推进、不泄露决策，是「识别不了就拒绝而非假装覆盖」（Cap32 同源）在 IM 的具体实现。
+- **空列表语义必须显式声明**：n8n 是「空=全放行」，与授权类白名单「空=全拒」（sa 3.82.0）字面相反，混用会制造「以为要批其实谁都能批」的漏洞；配置审批面时把两种空态都写清。
+- 提升层：安全边界/工作流。触发词：审批响应权≠可见权、空列表全放行反模式、IM 审批私密提示、Restrict Who Can Approve。
