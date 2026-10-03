@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.50.0"
+version: "1.51.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -483,3 +483,10 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **未授权者点击→私密 ephemeral 提示 + workflow 继续等待**：不推进、不泄露决策，是「识别不了就拒绝而非假装覆盖」（Cap32 同源）在 IM 的具体实现。
 - **空列表语义必须显式声明**：n8n 是「空=全放行」，与授权类白名单「空=全拒」（sa 3.82.0）字面相反，混用会制造「以为要批其实谁都能批」的漏洞；配置审批面时把两种空态都写清。
 - 提升层：安全边界/工作流。触发词：审批响应权≠可见权、空列表全放行反模式、IM 审批私密提示、Restrict Who Can Approve。
+
+## Cap54 能「管理授权」的权限自身是提权面：自改角色/自邀请=提权通道，且角色编辑即时全局生效（来源：docs.n8n.io `administer/manage-users-and-access/set-permissions-and-roles-rbac/create-custom-roles/create-custom-instance-roles.md` 8,015B + `see-available-roles.md` 4,301B，2026-10-03 r406A 独立 curl 取 `.md` 实拉；与 §Cap51 批准绑定二进制 / §Cap52 可见≠授权 / §Cap53 响应权≠可见权 同族——前几条管单次授权的源与门，本条管「授权管理权」本身的提权风险）
+
+- **拥有「管理角色/管理成员」权限 = 能给自己提权**：n8n 自定义实例角色中，`Roles: Manage all roles` 持有者可编辑自己角色、追加原本未授予的权限；`Members: Manage` 持有者可邀请自己控制的账号再赋 Admin；`Roles: Manage project roles` 持有者可改自己所在项目的角色自授权限 ⇒ 「授权管理权」与「被管理的授权」不能由同一主体掌控，否则授权管理变成自服务提权通道，须把「能改授权」与「被授权者」分离。
+- **角色编辑即时全局生效，无过渡窗**：n8n 改自定义角色「对所有被分配用户在整个实例立即生效」，无 dry-run/暂存；撤销/变更边界落在「角色定义修改点」而非「下次登录/重载」——与 Cap51「撤销在 spawn 边界生效」同源，但此处是配置侧即时生效，没有进程边界兜底。
+- **删除角色前须先迁移成员**：n8n 要求删角色前把用户改派其他角色，否则成员悬空 ⇒ 撤销授权有级联依赖，不能只删角色不处理成员（与 r399-B「PATCH 语义按类型分叉」的删除前置条件同源）。
+- 提升层：安全边界/授权模型。触发词：授权管理权提权、自改角色、自邀请提权、角色编辑即时全局生效、删角色前迁移成员。
