@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: 1.47.0
+version: "1.48.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -104,34 +104,8 @@ the CLI only adds atomicity and an audit trail.
 - 更新前必须能说明：改了什么、是否影响现有配置/数据、如何回滚。
 - 更新后必须验证（doctor / 冒烟），失败则回滚到上一版本。
 
-## Capability 1 — Read shared user context
-
-| File | Purpose |
-|---|---|
-| `~/.agent-guild/identity/profile.md` | Who the user is |
-| `~/.agent-guild/identity/ROUTINE.md` | Daily schedule / routines |
-| `~/.agent-guild/rules/universal.md` | **Mandatory commandments** — highest priority |
-| `~/.agent-guild/rules/public-repo.md` | Public-repo hard rules |
-| `~/.agent-guild/rules/file-cleanup.md` | File deletion preferences |
-| `~/.agent-guild/rules/safety.md` | Safety guardrails |
-| `~/.agent-guild/projects/active.md` | What the user is working on |
-| `~/.agent-guild/handoff/shared-state/current-focus.md` | What any agent is focused on now |
-| `~/.agent-guild/toolchain/*.md` | Tool-specific config — read on demand |
-
-Read on demand; don't slurp everything every turn.
-
-## Capability 2 — Update current-focus
-
-`current-focus.md` is the "what's hot right now" board. When you start or
-finish a major task, prepend your block (`ag focus` or manual Edit in place).
-Never rewrite history other agents wrote.
-
-## Capability 3 — Check inbox / send messages
-
-Inbox: `~/.agent-guild/handoff/inbox/`.
-- Receive: `ls ~/.agent-guild/handoff/inbox/ | grep "to-<your-agent-name>-"`, read, act, then `mv` to `handoff/archive/`.
-- Send: `from-<src>-to-<dst>-<topic>.md` — write for a recipient with no context (what you did, what's left, where artifacts are).
-
+<!-- 2026-10-03 r396B 下沉：Capability 1–4（读共享上下文/更新焦点/收件箱/每日日志）→ references/knowledge-base.md §Capability 1-4 -->
+## Capability 1–4 — 读共享用户上下文 / 更新当前焦点 / 检查收件箱与发消息 / 每日日志（原文已下沉 references/knowledge-base.md §Capability 1-4，2026-10-03 r396B；触发词：共享用户上下文、USER.md、current-focus、inbox、handoff、daily log、跨 agent 交接）
 ## Capability 4 — Daily log
 
 After **substantive work** (built/fixed/decided/learned a lasting fact), append to `~/.agent-guild/log/daily/YYYY-MM-DD-<your-agent-name>.md` — per-agent file, append-only. **Skip** greetings / lookups / short Q&A.
@@ -487,3 +461,12 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **身份标识的迁移也被拒**：试图把已供给用户的 `externalId` 移到另一个身份会被拒绝，正确做法是 remove 后重新 provision ⇒ 身份主键不可就地改，迁移路径是「删除+重建」而不是「改字段」。
 - **撤销/降权要先从上位层动手**：instance admin **不能在工作区内被改名或移除**——owner 不行，SCIM 推送也不行；要下线一个运维实例的人，必须**先撤掉他的 instance 角色** ⇒ 权限是分层的，下层再高的权限也动不了上层的身份，执行顺序错了会表现为「明明执行成功却没生效」。
 - **判重提示**：与 §Cap42 管理权不含使用权 / §Cap48 改配置不是即时吊销 互补——那两条管「管理权不蕴含使用权」「改配置到撤销之间有时延」，本条管「跨层身份的撤销顺序」与「自动同步解决不了的回收场景」。
+
+
+## Cap51 批准绑定的是「那一刻的二进制」而非命令文本；授权是每次使用时重算的衍生关联；覆盖不全时拒绝而非假装全覆盖（来源：docs.openclaw.ai `tools/exec-approvals.md` 39,387B，2026-10-03 r396B 独立 curl 取 `.md` 原文实拉）
+
+- **批准不是身份边界，也不是只读策略**：官方明确审批只降低误执行风险，**既不是 per-user 鉴权边界，也不是文件系统只读策略**；一旦批准，命令按所选宿主/沙箱权限改写文件 ⇒ 「走完审批」不等于「这次执行被限制了」，审批面与权限面是两个面。
+- **批准绑的是可执行身份，不是命令文本**：网关侧在评审前绑定每个已解析的可执行段，**启动前再校验一次**；绑定窗口内解析结果发生变化——包括 `PATH` 上出现新的同名可执行文件——即拒绝这次运行；可写可执行文件还额外用内容 hash；受保护可执行文件只用 real-path 身份 ⇒ 被批准的是「那一刻的那个二进制」，同名的另一个文件不算数。
+- **识别不了就拒绝，不假装全覆盖**：文件绑定是 best-effort，**不是对所有解释器/运行时加载路径的完整建模**；当无法唯一确定一个本地文件操作数时，官方选择**拒绝铸造这次批准运行**，而不是放行并假装覆盖 ⇒ 安全类绑定遇到「模型外」的情况，正确方向是 fail-closed 拒跑，而不是降级放行。
+- **撤销在 spawn 边界生效，迟到的批准不复活**：校验在进程 spawn 前立刻执行，所以落在在飞窗口里的撤销或作业编辑**仍然赢**；而关闭或取消那一轮后，**迟到的批准无法重启它**；`SYSTEM_RUN_DENIED` 表示节点**拒绝了执行**，不是「可能已经跑过」 ⇒ 撤销的生效点是启动边界，批准的有效期到 turn 结束为止。
+- **长期授权是衍生关联，每次使用都重算**：standing grant 只是「衍生相关」，每次使用都要拿**原始的批准行、自动化行、撤销态重新校验**；授权失效条件包括作业被删或**实质性定义变更**（即使后来改回原定义也不恢复）、命令/cwd/env 差一个字节、撤销、过期、原始批准记录消失 ⇒ 「改回原样」不恢复授权，而「暂停再启用」保留 ⇒ 定义变更与运行状态变更是两类事件。

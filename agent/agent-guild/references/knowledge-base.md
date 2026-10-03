@@ -216,3 +216,32 @@ python3 <SKILL_DIR>/scripts/ag.py doctor
 
 <!-- 2026-09-30 r336B 下沉：Qoder 净新全量消化（2026-09-27）4 条 → references/knowledge-base.md §r336B -->
 
+## Capability 1-4（2026-10-03 r396B 自 SKILL.md 下沉）
+
+## Capability 1 — Read shared user context
+
+| File | Purpose |
+|---|---|
+| `~/.agent-guild/identity/profile.md` | Who the user is |
+| `~/.agent-guild/identity/ROUTINE.md` | Daily schedule / routines |
+| `~/.agent-guild/rules/universal.md` | **Mandatory commandments** — highest priority |
+| `~/.agent-guild/rules/public-repo.md` | Public-repo hard rules |
+| `~/.agent-guild/rules/file-cleanup.md` | File deletion preferences |
+| `~/.agent-guild/rules/safety.md` | Safety guardrails |
+| `~/.agent-guild/projects/active.md` | What the user is working on |
+| `~/.agent-guild/handoff/shared-state/current-focus.md` | What any agent is focused on now |
+| `~/.agent-guild/toolchain/*.md` | Tool-specific config — read on demand |
+
+Read on demand; don't slurp everything every turn.
+
+## Capability 2 — Update current-focus
+
+`current-focus.md` is the "what's hot right now" board. When you start or
+finish a major task, prepend your block (`ag focus` or manual Edit in place).
+Never rewrite history other agents wrote.
+
+## Capability 3 — Check inbox / send messages
+
+Inbox: `~/.agent-guild/handoff/inbox/`.
+- Receive: `ls ~/.agent-guild/handoff/inbox/ | grep "to-<your-agent-name>-"`, read, act, then `mv` to `handoff/archive/`.
+- Send: `from-<src>-to-<dst>-<topic>.md` — write for a recipient with no context (what you did, what's left, where artifacts are).
