@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.58.0"
+version: "1.59.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -484,3 +484,8 @@ the CLI only adds atomicity and an audit trail.
 - **原文**："Metrics are aggregated **in memory and reset to zero when the process restarts** … anything Conduit must **count exactly** (usage dashboards, the audit log) is stored in its database **independently of these metrics**"；"Unset (the default), no listener starts and nothing is exposed"；"The port is deliberately **not** part of the chart's Service or Ingress: … the endpoint can **never be exposed through the public entry point by accident**"；"unauthenticated by design … It reveals operational shape (connector names, request rates, session counts) but **never payloads, secrets, or per-user data**"；指标里 `outcome` 三值 `ok` / `error`（"the call ran and failed"）/ `denied`（"blocked by access policy before running"），且 "Denied calls never run, so they record no duration"。
 - **判据**：① **会重置的通道只能放可容忍丢失的量**：内存指标重启归零、`rate()` 跨重置拼接是预期行为 ⇒ 凡必须精确的数（用量、计费、审计）必须落在独立持久存储上，把它挂在会重置的通道上，会让"少算了"变成静默且不可恢复的偏差（用户看到的是"这个月好像用得少"，而不是"我们丢了数据"）。判一个数字可不可信，先看它走的是哪条通道。② **默认不监听 + 结构上不可达，优于"默认开但记得关"**：端口刻意不放进 Service/Ingress、抓取走 pod IP ⇒ 公网暴露不是靠人记得配，而是在拓扑上做不到；把"不该被公网访问"交给配置纪律，等于把它交给下一次改动。③ **不认证的观测端点必须写清它暴露的是什么**：只有操作形状（名字、速率、计数），且从不带 payload/密钥/每用户数据 ⇒ "免鉴权"能成立的前提是"内容本身不敏感"，不写这条边界的免鉴权端点只是没想清楚的端点。④ **被拒绝必须单独计一档，且不进耗时分布**：`denied` 是策略在跑之前拦下的，与 `error`（跑了并失败）混在一起会让"策略生效"显示成"故障率上升"；它也不该产生耗时样本，否则 P99 里混进一批根本没执行的调用。
 - 提升层：可观测性 / 安全边界。触发词：指标会重置、必须精确计数走数据库、默认不监听、端口不进 Service、结构上不可公网、观测端点暴露面声明、denied 与 error 分档、拒绝不计耗时。
+
+## Cap65 控制的粒度必须匹配被控对象的可伪造性：身份可自造时逐身份封禁无效，须上提到准入姿态；撤销不等于禁止（来源：pipedream.com/docs `conduit/use/mcp-authorization.md` 15,363B，2026-10-04 r412A 独立 curl 取 `.md` 原文实拉；与 §Cap63 信任不跨层传递 / §Cap64 会重置的通道 互补——那两条管"谁签发、谁能被摸到"，本条管"封禁一个可自造身份的对象到底有没有用"）
+- **原文**："a block on one holds only until it registers again under another"；"To keep self-registering clients out for good, use *Verified clients only* or *Only allowed clients*, which refuse anything unproven that you have not allowed"；"A revocation makes a member re-approve a client; **to keep a client out, block it**"；"a grey question mark when it only registered itself and presented signals any client could imitate"；"A client you add is decided about on its own, even when its document sits under a vendor Conduit recognizes"；"Registration happens before anyone signs in and names no workspace, so it is the authorization server's own switch."
+- **判据**：① **先问被控对象能不能自己造一个身份**：能自造（自注册、换个名字重来）⇒ 按身份逐条封禁只是把对手逼去换一个身份，投入随封禁条数线性增长而收效为零；此时控制必须上提到**准入姿态**（只许已验证身份 / 只许白名单），把默认从"允许除非被抓到"改成"拒绝除非被证明"。② **撤销与禁止是两种控制，别混用**：撤销（revoke）只强制重新授权，作用域限于本工作区，且当事人在别处重新同意即全域解除 ⇒ 它治"这次授权要不要复核"，不治"这个对象该不该进来"；要"不让进"必须用 block/准入。把撤销当禁止用，会得到一个看起来在生效、实际可自愈的假控制。③ **身份按可出示的凭证判定，不按声称的名字**：同名的未验证安装是**独立实体**，单独成行、单独决策；"它说它是 X"不构成它是 X，名牌之下的每一行各自承担自己的结论。④ **发生在归属确立之前的动作，其控制点不可下放**：注册发生在登录之前且不指明工作区 ⇒ 它只能有一个实例级开关；凡是"在身份/归属确定之前发生的动作"，控制必然是全局的，想按租户下放在结构上就做不到。
+- 提升层：安全边界 / 治理。触发词：封禁无效、身份可自造、准入姿态、verified only、白名单准入、撤销不等于禁止、revoke 与 block、未验证安装单独成行、归属确立前的全局开关。
