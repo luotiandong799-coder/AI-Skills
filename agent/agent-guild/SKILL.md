@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.51.0"
+version: "1.52.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -106,63 +106,7 @@ the CLI only adds atomicity and an audit trail.
 
 <!-- 2026-10-03 r396B 下沉：Capability 1–4（读共享上下文/更新焦点/收件箱/每日日志）→ references/knowledge-base.md §Capability 1-4 -->
 ## Capability 1–4 — 读共享用户上下文 / 更新当前焦点 / 检查收件箱与发消息 / 每日日志（原文已下沉 references/knowledge-base.md §Capability 1-4，2026-10-03 r396B；触发词：共享用户上下文、USER.md、current-focus、inbox、handoff、daily log、跨 agent 交接）
-## Capability 4 — Daily log
-
-After **substantive work** (built/fixed/decided/learned a lasting fact), append to `~/.agent-guild/log/daily/YYYY-MM-DD-<your-agent-name>.md` — per-agent file, append-only. **Skip** greetings / lookups / short Q&A.
-
-Good entry: `## <title>` + What / Why / Result / Cross-agent note (if others need to know).
-
-> 下沉索引：Capability 5（Refresh last_seen）与 Capability 6（Where to persist shared data）原文已移至 `references/knowledge-base.md` §r340B
-## Capability 7 — Cross-agent memory
-
-| Path | What goes there |
-|---|---|
-| `~/.agent-guild/memory/<agent>/` | 该 agent 的私有记忆文件（`ag adopt` 搬进来后软链回原位，runtime 照常读写） |
-| `~/.agent-guild/memory/shared/` | 跨 agent 都该知道的事实（用户偏好、项目约定、踩过的坑） |
-
-写之前先读：别把别人已经记过的东西重复记一遍。
-
-## Capability 8 — Learning ledger (self-improvement loop)
-
-三本跨 agent 台账在 `~/.agent-guild/learnings/`：`LEARNINGS.md`（纠正/知识盲区/最佳实践）·
-`ERRORS.md`（命令/集成失败）· `FEATURE_REQUESTS.md`（用户想要但不存在的能力）。
-完整规范（schema/触发词/晋升阈值/萃取流程）：`docs/LEARNINGS.md`（权威）。
-
-**触发速查**：
-
-| 情况 | 动作 |
-|---|---|
-| 命令失败/异常/超时 | `ag learn <agent> error "<summary>"` |
-| 用户纠正你（"不对"/"其实是"/"you're wrong"） | `ag learn <agent> learning "<summary>"`（category correction） |
-| 你的知识过时 / API 行为和认知不符 | 同上（knowledge_gap） |
-| 发现更好做法 | 同上（best_practice） |
-| 用户想要不存在的能力 | `ag learn <agent> featreq "<summary>"` |
-
-**复发追踪**：相同 `Pattern-Key` 的条目跨 agent 计数；`ag review` 报告达到阈值的组。
-
-**晋升**（达到阈值后 MUST，详见 docs/LEARNINGS.md）：
-行为/偏好 → `rules/<topic>.md`；工具坑 → `toolchain/<tool>.md` 或 `memory/shared/`；
-通用可复用解法 → 萃取为 skill 放 `skills/<name>/`（共享 skill bus，全 agent 即刻可用），
-条目状态改 `promoted` / `promoted_to_skill`。
-
-**红线**：不记 secrets/token/原始报文；条目只增不改，仅 `Status`/`Resolution` 可由任何 agent 更新。
-
-## Capability 9 — Data hygiene (`ag groom`, protocol 3.2+)
-
-协会用得越久，数据越容易劣化：current-focus 只增不减、daily log 无限堆积、
-audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom 是自动防线：
-
-- **自动触发**：`ag bootstrap` 尾部挂钩（速率限制默认 24h 一次），skill 正常
-  触发即自动维护，无需用户点名。
-- **保真原则**：只搬不删 —— 过期数据进 `log/archive/`、
-  `handoff/shared-state/archive/`、`learnings/archive/` 或可恢复的 `.trash/`；
-  手写的、无时间戳的 focus 块永远不动；未读收件箱永远只报告不搬。
-- **策略可调**：所有阈值在 `~/.agent-guild/RETENTION.md`（用户文件，升级不覆盖）。
-- **可审计**：每次 groom 写 `log/audit.jsonl` + `.groom.json` 状态。
-
-## Capability 10 — 记忆分仓与路标式索引：私有仓 vs 组织共享仓
-
-> 原文已下沉 `references/knowledge-base.md §r395-ag`（保持原文零删减）。
+## Capability 4 — Daily log（原文已下沉 references/knowledge-base.md §Capability 4-10 下沉，2026-10-03 r408A）
 ## Failure modes
 
 - Some files missing → read what exists, note the rest, don't block.
@@ -490,3 +434,8 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **角色编辑即时全局生效，无过渡窗**：n8n 改自定义角色「对所有被分配用户在整个实例立即生效」，无 dry-run/暂存；撤销/变更边界落在「角色定义修改点」而非「下次登录/重载」——与 Cap51「撤销在 spawn 边界生效」同源，但此处是配置侧即时生效，没有进程边界兜底。
 - **删除角色前须先迁移成员**：n8n 要求删角色前把用户改派其他角色，否则成员悬空 ⇒ 撤销授权有级联依赖，不能只删角色不处理成员（与 r399-B「PATCH 语义按类型分叉」的删除前置条件同源）。
 - 提升层：安全边界/授权模型。触发词：授权管理权提权、自改角色、自邀请提权、角色编辑即时全局生效、删角色前迁移成员。
+
+## Cap55 决定的权威源是服务端记录而非提交动作；敏感命令的审批提示与结果同走私密路由（来源：docs.openclaw.ai `tools/exec-approvals-advanced.md` 27,837B（Approval forwarding / Native approval delivery / Official mobile operator apps 三段），2026-10-03 r408A 独立 curl 取 `.md` 原文实拉；与 §Cap51 批准绑定二进制 / §Cap52 可见≠授权 同族——前两条管「批准什么」与「谁能批」，本条管「批了之后以谁的记录为准」与「结果发到哪」）
+- **原文**：① 移动端提交决定后若**回执丢失**，应用**禁用控件并重新读取记录**；若另一个界面已先胜出，应用显示**那条已记录的决定**；**待处理提示绑定在签发它的 Gateway 上，切换活动 Gateway 不能重定向旧 approval ID**。② owner-only 的敏感组命令（`/diagnostics`、`/export-trajectory`）用**私密 owner 路由**发送审批提示**与最终结果**：先试同一 surface 的私密路由，没有则退到 `commands.ownerAllowFrom` 中第一个可用路由（因此 Discord 群命令的审批与结果可能发到 owner 的 Telegram DM），**群聊只收到一句简短确认**。③ 请求者本人不必是审批者。
+- **判据**：① **「我点了批准」不等于「批准生效」**——并发界面下权威是服务端那条记录，提交方拿到的是待确认的意图；**回执丢失时正确动作是重读而非假定自己的选择成立**，否则会出现两个界面各自认为已生效。② **ID 绑定签发者**：审批 ID 只对签发它的实例有效，切换 Gateway 不能改投旧 ID——多实例/多 Gateway 环境下「换个地方批」不是可用手段，反而说明该请求已随签发者失效。③ **高风险操作的输出与输入同等敏感**：审批提示走私密路由而结果发在群聊，等于把「谁批准」保护了、把「批准换来了什么」公开了；验收要**同时确认提示与结果两条投递路径**。④ **路由降级会改投递面**：私密路由不可用时退到 ownerAllowFrom 第一个可用项，意味着结果可能出现在完全不同的通道上——「没收到结果」先查路由降级链，而不是判定执行失败。⑤ **请求者≠审批者是默认形态**，不要默认发起人具备批准权，也不要因发起人不能批就认为流程挂死。
+- **提升层**：安全边界 / 工作流。触发词：回执丢失重读、决定以服务端记录为准、审批 ID 绑定签发 Gateway、敏感命令私密路由、结果跟随路由降级、请求者不必是审批者。
