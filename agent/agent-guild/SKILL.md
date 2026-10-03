@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.48.0"
+version: "1.49.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -470,3 +470,9 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **识别不了就拒绝，不假装全覆盖**：文件绑定是 best-effort，**不是对所有解释器/运行时加载路径的完整建模**；当无法唯一确定一个本地文件操作数时，官方选择**拒绝铸造这次批准运行**，而不是放行并假装覆盖 ⇒ 安全类绑定遇到「模型外」的情况，正确方向是 fail-closed 拒跑，而不是降级放行。
 - **撤销在 spawn 边界生效，迟到的批准不复活**：校验在进程 spawn 前立刻执行，所以落在在飞窗口里的撤销或作业编辑**仍然赢**；而关闭或取消那一轮后，**迟到的批准无法重启它**；`SYSTEM_RUN_DENIED` 表示节点**拒绝了执行**，不是「可能已经跑过」 ⇒ 撤销的生效点是启动边界，批准的有效期到 turn 结束为止。
 - **长期授权是衍生关联，每次使用都重算**：standing grant 只是「衍生相关」，每次使用都要拿**原始的批准行、自动化行、撤销态重新校验**；授权失效条件包括作业被删或**实质性定义变更**（即使后来改回原定义也不恢复）、命令/cwd/env 差一个字节、撤销、过期、原始批准记录消失 ⇒ 「改回原样」不恢复授权，而「暂停再启用」保留 ⇒ 定义变更与运行状态变更是两类事件。
+
+
+## Cap52 看得见审批卡 ≠ 能批准它；批准权的来源按通道分叉，且严格通道只认显式名单（来源：docs.openclaw.ai `tools/exec-approvals-advanced.md` 27,837B，2026-10-03 r396C 独立 curl 取 `.md` 原文实拉）
+
+- **投递位置只决定提示出现在哪，不决定谁有权批准**：官方明确 session 投递**不授权该会话里的每个参与者批准**；通用同会话 `/approve` 仍要求发送者本身已获该频道会话的命令授权 ⇒ 「他看见了」与「他能批」是两个集合，把审批投到群里不等于把决定权交给群里。
+- **批准权有三条可能的来源，且各通道取哪条不同**：① 发送者本身具备命令授权；② 通道若暴露**显式 approvers**，这些人即使在该会话内没有命令授权，也能授权 `/approve`；③ 更严格的通道（Discord / Telegram / Matrix / Slack 原生审批 DM 等）**只按自己解析出的 approver 名单**判定——例如 Telegram 话题里的审批提示**所有人可见**，但只有 `channels.telegram.execApprovals.approvers` 或 `commands.ownerAllowFrom` 解析出的数字用户 ID 能批准或拒绝 ⇒ 声明审批能力时必须写清「本通道按哪条来源判定批准权」，否则可见面会被误当成授权面。
