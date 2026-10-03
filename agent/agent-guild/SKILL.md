@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.56.0"
+version: "1.57.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -469,3 +469,8 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：`权限策略不作用于自定义工具。收到 agent.custom_tool_use 后，由你的应用决定是否执行，需要时先在 UI 里让用户确认`；`自定义工具：由你的客户端执行的工具，Agent 发起调用、你的应用返回结果`；`工具边界：启用哪些内置工具、连接哪些 MCP、是否要求 always_ask 人工审批`；`Managed Agents 将这些能力纳入平台……短问答、低延迟对话，或不依赖沙箱与长任务状态时，直接调用模型 API 更合适`。
 - **判据**：① **托管平台的权限策略只覆盖它自己执行那一半**——内置工具在沙箱内由平台执行故受 `permission_policy` 管辖；**custom 工具的执行体是调用方自己的应用**，平台只发出调用事件，策略面到此为止 ⇒ 把"我配了权限策略"当成"这个 Agent 的所有工具调用都受控"，等于把客户端侧那一半漏在外面。② **"工具边界"这条配置面的作用域要显式写清它不覆盖什么**：文档把工具边界列为调用方自决项，同时明说策略不作用于自定义工具 ⇒ 声明能力边界时，光列"管什么"会让人默认"剩下的也管了"。③ **客户端执行的工具，人工确认必须在客户端实现**——平台给的落点是"收到事件后由你的应用决定、需要时在 UI 里确认" ⇒ 这是 HITL 落点的分派：平台侧执行 → 平台侧批；客户端侧执行 → 客户端侧批，两端都要有，不能互相替代。④ **能力托管的边界同时是选型边界**：平台明确"不依赖沙箱与长任务状态时应直接调模型 API" ⇒ 托管带来的是循环/上下文/沙箱/密钥/落库/跨会话状态/用量七项，代价是把执行位置交给平台；只有托管方与自管方的**责任分界线**清楚了，这七项才是收益而不是黑箱。
 - 提升层：安全边界 / 工作流。触发词：权限策略不作用于自定义工具、custom_tool_use、客户端执行、工具边界作用域、平台侧批 vs 客户端侧批、能力托管七项。
+
+## Cap62 安全加固先画责任分界表：平台只限「未认证可猜」的面，业务突发与滥用由部署方判；代理之后必须显式声明否则审计全记成代理（来源：pipedream.com/docs `conduit/deploy/hardening.md` 6,976B，2026-10-04 r410C 独立 curl 取 `.md` 原文实拉；与 §Cap36 限流四头可机读 互补——那条管"被限了怎么知道何时重试"，本条管"谁该限哪些面、限流计数放在哪一层"）
+- **原文**：`Nothing in Conduit requires public reachability … so a deployment on a private network or behind a VPN is fully supported, and for an internal tool it is the right default`；`Every surface where an unauthenticated caller could guess, flood, or probe is throttled per client IP, with no configuration`；`On the PostgreSQL tier these two counters are shared across replicas, so running N replicas does not multiply the rate a credential-guesser gets`；`The other limiters are per-replica by design (≈N× the single-instance rate cluster-wide)`；`Conduit does not impose sustained throughput quotas on authenticated tool calls — a burst of legitimate agent traffic is business, not abuse, and distinguishing the two is a policy decision`；`set CONDUIT_TRUSTED_PROXIES so audit records and per-IP limits attribute requests to real clients rather than the proxy`；`A body over its cap is an error, never a truncation — a short read cannot pass for a complete one anywhere in the gateway`；`Reports that say nothing about the deployment are dropped rather than recorded: content a browser extension injected into the page … and reports naming a page outside CONDUIT_BASE_URL, which the endpoint being unauthenticated otherwise lets anyone submit`；checklist 表把每个关注点映射到 `Conduit` 或 `Your edge`。
+- **判据**：① **加固方案的第一产物是一张责任分界表，不是一组配置**：官方把每个关注点（入站认证/授权/暴力破解/体量滥用/TLS/超大载荷/出站 SSRF/静态密钥/审计）逐行标注"平台内置"还是"你的边缘" ⇒ 说"我们做了安全加固"却拿不出这张表，等于说不清哪一格是空的。② **限流的适用范围按"未认证能不能猜"划界**：平台只限登录、OAuth 各端点、失败的 MCP/SCIM 认证、CSP 报告、CLI 下载；**已认证的工具调用不做持续吞吐配额**——业务突发与滥用的区分是策略判断，不该由平台替部署方拍板 ⇒ 把已认证流量也一律限流，等于把正常业务当攻击；完全不限未认证面，等于放任猜测。③ **计数器的共享范围是安全属性，不是实现细节**：会被穷举的那几个面（密码失败、MCP/SCIM 认证失败）计数跨副本共享，**否则跑 N 副本就让猜测者拿到 N 倍速率**；其余限流器故意按副本 ⇒ 判断一个限流器对不对，要问"这个计数跨实例后还成立吗"。④ **有代理时必须显式声明可信代理**：否则审计记录与 per-IP 限流全部归因到代理那一台 ⇒ 这会同时污染取证与限流，且症状是"所有请求来自同一个 IP"，排查时极易误判为单客户端攻击。⑤ **无认证的可观测端点是投毒面**：CSP 违规报告端点不认证 ⇒ 任何人可提交；官方丢弃"与本次部署无关"的两类报告（浏览器扩展注入的、指向 BASE_URL 之外页面的）⇒ 凡开放收集的可观测数据必须带"与本次部署相关"的过滤，否则观测面被噪声淹没。⑥ **超限是错误不是截断**：超上限的 body 一律报错，短读绝不能冒充完整读 ⇒ 与 §上传超限 part 静默丢弃 正好是一对正反写法。
+- 提升层：安全边界 / 工具。触发词：加固责任分界表、平台限流 vs 边缘限流、只限未认证可猜面、跨副本共享计数、N 副本不等于 N 倍速率、业务突发不是滥用、CONDUIT_TRUSTED_PROXIES、审计归因到代理、CSP 报告投毒、超限是错误不是截断。
