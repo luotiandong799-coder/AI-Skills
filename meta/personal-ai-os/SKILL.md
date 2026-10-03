@@ -2,7 +2,7 @@
 name: personal-ai-os
 description: >-
   Personal AI OS（个人 AI 操作系统）总控规则与模块路由。定义九大模块（Computer Agent / AI Learning / PC Maintenance / AI Radar / Personal Knowledge / Skill Management / MCP Management / Agent Harness / Evaluation）与全套自主执行纪律：统一任务生命周期、执行前置检查 Preflight、三级权限 L0/L1/L2、执行预算（工具调用次数/重试/并行度硬上限，§九·五）、停止条件、重试、幂等与防重复、并发控制、结果验证、证据优先、异常恢复与回滚、任务后清理（临时/缓存/垃圾）、资源边界、敏感数据、审计与持续进化。**凡涉及操作电脑与普通软件、安装/更新/删除 Skill 或 MCP、GitHub 项目选型、电脑维护与清理、任务自主执行与收尾的动作，一律先加载本技能并服从其规则。** 当用户提出「电脑助手 / 帮我操作电脑 / 打开软件 / 输入内容 / 截图 / 桌面自动化 / Personal AI OS / 个人 AI 环境 / 电脑维护 / 系统体检 / 磁盘空间 / 清理缓存 / 清理垃圾 / AI 学习 / AI 信息雷达 / AI 简报 / 知识管理 / 资料整理 / 装技能 / 装 MCP / 这个技能值不值得装 / 帮我评估这个项目 / 帮我清理电脑 / 帮我操作微信或 Office」这类需求时应用。触发词：Personal AI OS、个人AI操作系统、电脑助手、桌面自动化、帮我操作电脑、打开应用、截图、电脑维护、系统体检、磁盘清理、缓存清理、垃圾清理、开机启动项、AI学习、AI信息雷达、每日AI简报、知识管理、第二大脑、装技能、装MCP、Skill管理、MCP管理、评估新能力、执行前置检查、三级权限、执行预算、工具调用上限、最多调用几次、少调工具、最短路径、并行执行、缓存复用、已获取不重复查、自动停止、停止条件、幂等、回滚、防重复执行、资源边界、任务收尾、审计、personal ai os、desktop assistant、ai radar、个人向准入、四滤、企业级滤除、多Agent炫技、开发者专用、趣味化、复杂度净下降、能力复用四档、专用大于通用、方案设计、学习路线、AI配置、Skill架构审查、架构审查、系统优化、主动发现、举一反三、WB增强、AI架构师大脑。
-version: 2.7.1
+version: 2.7.2
 agent_created: true
 ---
 
@@ -425,13 +425,28 @@ agent_created: true
 
 ## 四十八、AI 架构师大脑（主动思考与系统优化增强）
 
-> 来源：用户 2026-10-03「WB Agent Intelligence Enhancement」提案（Meta Planner / System Thinking / Solution Architect / Capability Budget / Discovery / Tool Selection / Context Snapshot / State Tracking / Action Trace / Environment Check / Permission Boundary / Reflection Loop / Knowledge Distillation / Plan Cache / Cost Awareness 共 15 节）。经逐节比对既有技能库，**14 节已由现有技能覆盖**，仅「主动发现遗漏 / 举一反三」的默认触发为新增。故不新建技能、不拆 15 个文件，仅把唯一新增点并入本总控层，并附 15 节→现有技能路由表（避免重复建设，符合 §三十四 / §四十七 / 入库 §7）。
+> 来源：用户 2026-10-03「WB Agent Intelligence Enhancement」提案（Meta Planner / System Thinking / Solution Architect / Capability Budget / Discovery / Tool Selection / Context Snapshot / State Tracking / Action Trace / Environment Check / Permission Boundary / Reflection Loop / Knowledge Distillation / Plan Cache / Cost Awareness 共 15 节）。经逐节比对既有技能库，**14 节已由现有技能覆盖**，仅「主动发现遗漏 / 举一反三」默认触发 + Meta Planner 输出模板 + 两条红线为新增（取自提案 Meta Planner / Capability Discovery / Capability Budget 三节）。故不新建技能、不拆 15 个文件，仅把唯一新增点并入本总控层，并附 15 节→现有技能路由表（避免重复建设，符合 §三十四 / §四十七 / 入库 §7）。
 
 ### 1. 唯一新增：主动发现 + 举一反三（默认开启）
 收到需求、理解目标后，**主动**做三件事，不限于字面指令：
 - 找隐藏需求 / 遗漏风险 / 更优整体方案；
 - 检查是否破坏现有系统（能力 / 依赖 / 维护成本）；
 - 优先复用已有能力，避免重复建设。
+
+**主动发现的输出格式（Meta Planner 模板）**——复杂 / 多步需求给出这 7 字段，而非只口头带过：
+| 字段 | 内容 |
+|---|---|
+| 需求 | 用户表面要什么 |
+| 用户想解决 | 真实目标 / 根因 |
+| 当前方案 | 现有做法或初步设想 |
+| 潜在影响 | 改动会波及哪些模块 / 依赖 / 维护成本 |
+| 建议补充 | 主动发现的遗漏点 / 更优路径 |
+| 不建议 | 明确排除的多余动作（机械执行 / 堆功能 / 重复建设） |
+| 最终执行方案 | 收敛后的最小化可执行方案 |
+
+**红线（禁止）**：
+- 不知道有没有现成能力就新增（先过 §三十四 重复能力检测 / §四十七 能力复用四档）；
+- 小任务启动大流程、为「展示能力」增加步骤（见 §九·五 执行预算）。
 
 触发：任何 WB / Skill / Workflow / AI 工具配置 / 学习路线 / 方案设计类需求，默认进入「执行需求 + 架构审查 + 举一反三优化」模式。
 
