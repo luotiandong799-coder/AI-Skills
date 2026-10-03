@@ -19,7 +19,7 @@ agent_created: true
 <!-- 2026-09-29 r290 下沉：容错装置/失败经验记忆/日志即线索 3 节 → references/knowledge-base.md §r111 批 -->
 ## 二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节（细则已下沉 KB）
 - 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节。
-## 复现不了就先把发生率抬高：1% 追不到，50% 就能二分（来源：topaiskills.com「diagnosing-bugs-skill-faq」（Matt Pocock `diagnosing-bugs`，mattpocock/skills 工程族）2026-09-21 实拉，与 §六步循环「没有稳定复现之前不改产品代码」互补——那条管"没有复现不许动手"，本条管"**复现率低到不可用时该往哪个方向使劲**"）（原文已下沉 references/knowledge-base.md §复现率低时的发力方向下沉，2026-10-03 r408C）
+## 复现不了就先把发生率抬高：1% 追不到，50% 就能二分（来源：topaiskills.com「diagnosing-bugs-skill-faq」（Matt Pocock `diagnosing-bugs`，mattpocock/skills 工程族）2026-09-21 实拉，与 §六步循环「没有稳定复现之前不改产品代码」互补——那条管"没有复现不许动手"，本条管"**复现率低到不可用时该往哪个方向使劲**"）；原文已下沉 references/knowledge-base.md §复现率低时的发力方向下沉，2026-10-03 r408C
 ## 探针要能一次撤干净，seam 太浅本身就是结论（同来源 `diagnosing-bugs` 技能正文，与 §诊断装置自身的可信度、§接线腐烂 互补——那两条管"检查器有没有遭遇"与"装了为什不生效"，本条管"**临时探针的回收**"与"**回归测试挂点选错时该怎么报告**"）
 
 - **原文事实**：调试日志只允许打在**能区分假设的边界**上，绝不"log everything and grep"；每条调试日志带**唯一前缀**（如 `[DEBUG-a4f2]`），收尾一条 grep 全清；原文判词 "**one breakpoint beats ten log statements**"。性能回归不用日志查——**先建基线测量，再二分**。回归测试**在修复之前写，但前提是存在正确的 seam**（该测试在真实调用点上复现该 bug 形态）；**seam 太浅的测试给的是虚假信心**；**若根本不存在正确 seam，那本身就是发现**——代码库架构在阻止这个 bug 被锁定，要作为结论报出来。收尾六条清单：原 repro 不再复现（重跑第一轮循环）、回归测试通过、按前缀 grep 清掉全部 `[DEBUG-...]`、一次性原型删除或移到标记位置、**把被证实正确的那条假设写进 commit / PR 说明**。
