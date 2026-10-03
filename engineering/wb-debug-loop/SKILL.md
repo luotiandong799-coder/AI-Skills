@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.142.0"
+version: "1.143.0"
 agent_created: true
 ---
 
@@ -33,12 +33,7 @@ agent_created: true
 
 ---
 
-## 等待/轮询/卡住运行处置（来源：OpenClaw `ci/watching-runs.md`，2026-09-30 实拉）
-
-1. **终态用不同退出码区分，超时携带诊断载荷**：GREEN=0 / FAILING=15 / TIMEOUT=16 —— 成功、失败、超时是可区分信号而非笼统「未完成」；TIMEOUT 须附带最后聚合 + 待处理计数诊断载荷。判据：有等待/轮询的环节，失败与超时必须分码返回、超时码带诊断上下文。
-2. **失败/不确定状态绝不自动触发二次变更（幂等护栏）**：不确定态禁止自动重试/二次写入，否则放大副作用；恢复须是显式人工/批准动作。判据：不确定态默认不自愈，恢复动作显式且可审计。
-3. **轮询分批拉取 + 超额缓存续拉**：每轮最多读 32 条缺失记录，超额保持 pending 从缓存 resume，不一次性拉全量压垮下游。判据：长列表轮询设每轮上限，超出走增量续拉。
-
+## 等待/轮询/卡住运行处置（来源：OpenClaw `ci/watching-runs.md`，2026-09-30 实拉）；原文已下沉 references/knowledge-base.md §等待轮询下沉，2026-10-04 r411A
 ## 长命周期任务须有"故障计数分型 + 达阈自动停用 + 停用原因写回状态对象"：运行失败与计算错误阈值不同，运维面才能区分"没人用"与"用坏了"（来源：docs.openclaw.ai/automation/cron-jobs/delivery、help.make.com/llms.txt、docs.n8n.io/.../durable-scheduler.md，2026-10-01 r362-Q-C 实拉；回答 WB r288 ③）
 - 判据：① openclaw cron 在 **10 次执行故障** 或 **3 次调度计算错误** 后**自动禁用**，原因写入 `state.autoDisabled.reason`（两类故障阈值不同）；告警是"连续 2 次崩溃 + 60 分钟冷却"，与停用阈值分离。② 跨平台口径（回答 r288 ③）：Make=无内容性自动停用，只有 credit 触顶后管理员暂停场景；n8n durable-scheduler=用 `quarantine 86400` 隔离态代替停用，failed 保留 604800；Activepieces=本轮路径 404 未取到。⇒ 停用要有原因字段与阈值分型，否则运维面无法区分"没人用"和"用坏了"。
 - 提升层：工作流。触发词：故障计数分型、达阈自动停用、autoDisabled.reason、运行失败10次/计算错误3次、quarantine 代替停用。
@@ -58,13 +53,7 @@ agent_created: true
 - **滑窗规避反模式**（arXiv 2609.30217 EvasionBench）：重试循环会把"相关上下文"推出监控/评审窗口，让同一操作在第 N 次重试"看不见地"通过——监控须锚定**操作序列**而非近期窗口，跨轮拆分动作计入同一意图链。
 - **执行回放一等位**（Activepieces）：每次执行的完整动作序列留独立可读回放记录，排障不依赖 trace 后端。
 
-## 读侧先行的灰度升级律：旧版读侧会把引用当正文返给客户端，且不报错（来源：docs.n8n.io/hosting/scaling/queue-mode/，2026-09-28 r210-B 独立实拉）
-- **实证**：n8n 2.34.0 起支持把超大的 webhook 响应体 offload 到存储、只回传引用；官方明写「只有 2.34.0 及以上版本的 main 实例才读得懂 offloaded body，旧版会把 storage reference 当响应体直接返给客户端」；给出的升级顺序是「先升全部 main 与 webhook 实例，再给 worker 打开 offload 开关」；worker 若未设该变量则全部 inline 发送，超出上限即失败。
-- **判据（两种错配的代价不对称）**：**读侧旧 + 写侧新 = 静默坏数据**（客户端收到引用串当正文，没人报错，最贵）；**写侧旧 + 读侧新 = 明确报错**（便宜、易定位）。所以灰度升级固定 **读侧先行**。
-- **排障动作**：遇到「升级后数据变了但没有任何报错」，**先列一张实例版本 × 开关状态的一维表**，再问「谁在读、谁在写」——不要先去 diff 业务逻辑。
-- 与 §回退到已知好点 互补——那条管「回退时被回退的那段不能从日志里消失」，本条管「灰度推进时先升级哪一侧」。
-- 提升层：工作流 / 可复用 Skill。触发词：灰度升级、滚动升级、读侧、功能开关、坏数据不报错、版本错配。
-
+## 读侧先行的灰度升级律（来源：docs.n8n.io/hosting/scaling/queue-mode/，2026-09-28 r210-B 独立实拉）；原文已下沉 references/knowledge-base.md §读侧先行下沉，2026-10-04 r411A
 ## 「之前照做的规则现在不照做了」先查修剪，再怀疑模型（来源：agentskills.io《How to add skills support to your agent》客户端规范 2026-09-28 r284-A 独立实拉 + arXiv 2606.22528《Governance Decay》独立核验；与 §上下文随循环增长要修剪 互补——那条是主动写减法，本条是被动排障归因）
 - **实证**：客户端规范明文要求 **exempt skill content from pruning**，理由是技能指令中途被裁掉后"模型继续运行但没有专业指令，**没有任何可见报错**"；Governance Decay 给出量化——约束被摘要保住时违规 **0%**、被丢弃时 **38%**，失效呈**二值**（不是渐渐变差）。
 - **判据**：长会话 / 多轮任务里出现"某条规则/约束/格式要求突然不被遵守"时，排障第一步是**取证该条指令此刻是否还在上下文窗口内**（检索原文字符串是否存在），再决定是否改写规则或换模型。**顺序不能反**：先改规则 = 在指令已经不在场的前提下做无效功；先怀疑模型 = 把上下文管理问题错记成能力问题。
@@ -81,11 +70,7 @@ agent_created: true
 
 局部调试未必比整体便宜：部分执行要满足入口契约，且数据一大反而只能整跑局部调试未必比整体便宜：部分执行要满足入口契约，且数据一大反而只能整跑（来源：docs.n8n.io《Types of executions》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验）（原文已下沉 references/knowledge-base.md §r325A）
 多分支执行顺序不是逻辑决定的，是「创建时期版本 + 画布空间位置」决定的：结果顺序不对先查这两样多分支执行顺序不是逻辑决定的，是「创建时期版本 + 画布空间位置」决定的：结果顺序不对先查这两样（来源：docs.n8n.io《Understand execution order》2026-09-29 r296-A 独立 curl 取 .md 原文 1,835B 核验）（原文已下沉 references/knowledge-base.md §r325A）
-## 超时不是一个数：默认值随触发类型分档、可调上限随套餐分档，且超时后只保留「已成功步骤」的日志（来源：pipedream.com/docs/workflows/limits 2026-09-29 r296-C 独立 curl 取 .md 原文核验；与 §2.41.0 容量上限二分 互补——那条管"能不能提升"，本条管"同一平台里超时有几套默认值"）
-- 原文："HTTP and Email-triggered workflows default to **30 seconds** per execution. — Cron-triggered workflows default to **60 seconds** per execution."；上限表：Free 300 秒（5 分钟）/ Paid 750 秒（12.5 分钟）；"Any partial logs and observability associated with code cells that **ran successfully before the timeout** will be attached to the event in the UI, so you can examine the state of your workflow and troubleshoot where it may have failed."；磁盘 /tmp 2GB "This limit cannot be raised."
-- 判据：① **同步入口与定时入口的超时预算本就不同**——HTTP/Email 是有人（或有系统）在等响应，默认 30 秒；Cron 没人等，默认 60 秒；把定时任务的预算套到 webhook 上，或者反过来，都会拿到不该有的超时；排查超时先确认**这个工作流的触发类型决定了它拿的是哪一套默认值**；② **"默认值"与"可调上限"是两个参数**——默认值能改，但天花板由套餐决定；用户说"我已经调到最大了还是超时"，要先问是哪个套餐，因为"最大"对免费档是 5 分钟、对付费档是 12.5 分钟；③ **超时不等于日志全丢，但丢的恰好是最需要的那一块**：已成功 cell 的日志会被附到事件上，而**正在跑的那一步的中间态拿不到**——所以超时类故障能确认"跑到哪一步"，不能确认"那一步内部卡在哪"；需要后者就得自己写中间检查点（与 §每一步都落检查点 同向）。
-- 提升层：工具/工作流。触发词：超时默认值、30s vs 60s、触发类型决定超时、套餐决定超时上限、超时后部分日志、/tmp 2GB 不可提升。
-
+## 超时不是一个数：默认值随触发类型分档、可调上限随套餐分档（来源：pipedream.com/docs/workflows/limits 2026-09-29 r296-C 实拉）；原文已下沉 references/knowledge-base.md §超时分档下沉，2026-10-04 r411A
 > 下沉索引：〇、先分型：模型行为问题 vs 代码问题 等 2 节原文已移至 `references/knowledge-base.md`（按最旧批次下沉，正文只留指针）
 
 ## 已处理的失败是「独立可见状态」（Warning 态），不是消失了；重试有固定序列且超限会熔断关停调度（来源：help.make.com《Introduction to errors and warnings》+《Exponential backoff》2026-09-29 r337-Q-A 实拉核验；与 §重试掩盖 互补——那条管"别用重试糊过去"，本条管"重试本身有几条纪律"）
@@ -495,3 +480,8 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **原文**：`/mnt/session/outputs 始终跨轮保留……并编目为可下载的 Session File`；`/workspace、/tmp、运行期安装的软件包 默认不保留。加 x-checkpoint: true 后随系统盘快照跨轮保留`；`x-checkpoint：仅创建会话时可用。精确小写 true / false，缺省 false`；`平台会在成功执行结束时尝试保存快照，下一轮优先从最近一次成功快照恢复；失败轮不更新快照`；`快照的创建或恢复受账号配额和底层服务可用性影响，失败时会回退到新的沙箱，因此不应作为唯一的持久存储`；`Checkpoint 只保留磁盘，不保留正在运行的进程和内存状态`；`响应中的 budget 字段当前恒为 null：平台暂不支持会话级消费上限`；`创建时加 x-events-encrypted: true……开关创建后不能改`；`覆盖语义：可覆盖 model、system、tools、mcp_servers、skills；每个字段都是整体替换（非深合并）`；`只要 initial_events 非空，会话创建成功后会自动开始执行……重复发送同一任务会执行两次`。
 - **判据**：① **持久性分三层，各层默认值不同**：产物目录恒久保留（设计上就是交付面）、工作区/临时目录默认丢（要保留得开 checkpoint）、进程与内存永不保 ⇒ "上一轮还在"这个问题必须先问它在哪一层，把中间产物写进工作区却指望跨轮可见是最常见的错。② **快照只在成功轮更新**：失败轮不推进快照 ⇒ 连续失败后恢复点可能停在很久以前，"从快照恢复"得到的环境比你以为的旧；评估恢复成本要按"最后一次成功的时刻"算。③ **快照失败会静默回退新沙箱**：配额/可用性导致快照不可用时不会报错而是起一个新沙箱 ⇒ 快照是**尽力而为**，不能当唯一持久存储，可靠交付仍要落产物目录。④ **一次性开关必须创建时决定**：`x-checkpoint` 与 `x-events-encrypted` 都只在创建会话时可用、之后不可改 ⇒ 加密与保留策略属于"设计期决策"，运行中发现没开会无法补救，只能重建。⑤ **布尔头是严格字面量**：`x-checkpoint` 只接受精确小写 `true`/`false`，写 `True`/`1` 等于没开 ⇒ 静默失效型配置，验收要读实际生效值。⑥ **"字段存在"不等于"能力存在"**：`budget` 恒为 null 意味着平台根本没有会话级预算能力，把"配置里有个 budget 字段"当成"可以设预算"会得到永远不生效的策略——与 §文档示例值≠内建默认 同族（那条是值不同，这条是能力缺失）。⑦ **整体替换非深合并**：会话级覆盖是整块替换，只传一个子字段会抹掉其余配置。⑧ initial_events 非空即自动开跑且**不会去重** ⇒ 重试创建 + 重发同一任务会造成双跑。
 - 提升层：工具 / 工作流。触发词：持久性分层、产物目录恒久、checkpoint 仅创建时、快照只在成功轮更新、失败轮不推进快照、快照回退新沙箱、一次性开关、布尔头严格字面量、budget 恒 null、整体替换非深合并、initial_events 双跑。
+
+## 循环上限的计数单位被「自我复制」重置就等于没有上限；修完 bug 要把它的状态签名固化成断言；监控缺「增长率 / 同类重复」两个维度就只能等客户上报（来源：www.activepieces.com/docs `handbook/engineering/postmortems/2026-03-19-redis-and-delay-overload.md` 3,797B，2026-10-04 r411A 独立 curl 实拉；与 §长命周期任务故障计数分型 / §熔断按滑动窗口计数 互补——那两条管"达到阈值后怎么停用"，本条管"阈值挂错计量对象时根本达不到"）
+- **原文**：Delay 步骤的 job 带着 `executionType: BEGIN` 而非 `RESUME` 被 `moveToDelayed()` 挂起，到期后 worker 从第一步重跑、再遇 Delay 再挂起，无限循环淹没 Redis。官方明确："The platform does enforce per-execution time limits, but because the job was marked as `BEGIN` instead of `RESUME`, each loop iteration was treated as a brand-new execution rather than a continuation."；检测面："**Detected by customers, not automated alerting.** There was no monitoring on repeated execution patterns or runaway job creation for a single flow."；纵深修复两条："Worker validates that RESUME operations have non-empty execution state. An empty state with RESUME is the exact signature of the original bug and is rejected with a `VALIDATION` error" / "Engine asserts that BEGIN operations have empty execution state."
+- **判据**：① **上限的计数单位必须与失控的放大单位一致**——自我复制 / 重入型循环的每一轮都会开一个新的"配额桶"（新执行、新会话、新请求），于是"每次执行最多多久"这类预算**每轮重置、永远不触发**；要拦住它必须按**同一 run / 同一对象**累计（同一 run 的重复执行次数、同一 flow 短窗内的重触次数）。⇒ 看到一个循环"明明有上限却跑飞了"，先问这个上限是按"每次"算还是按"累计"算。② **修完 bug 要把 bug 的状态签名固化成断言，而不只是改掉触发路径**：RESUME 带空状态 = 原 bug 的签名、BEGIN 带非空状态 = 回归签名，两者都做成了显式校验 ⇒ 回归时现象从"又出错了（要重新定位）"变成"被断言挡住且指名原因"。③ **监控维度的缺口不是灵敏度而是维度本身**：只测"在不在 / 有多少"测不出"在自我放大"，必须补**增长率**（队列深度增速、调度量突增）与**同类重复模式**（同一对象短窗 N 次重触）——本次事故由客户上报发现，两个"To do"恰好都是这两类告警。⇒ 评估可观测面时按"绝对量 / 变化率 / 同类重复"三类分别清点，缺哪类就是哪类事故只能靠用户发现。
+- 提升层：工作流 / 可观测性。触发词：自我复制循环、每次预算被重置、上限计数单位、resume 空态签名、状态签名断言、增长率告警、同类重复模式、客户先于告警发现。

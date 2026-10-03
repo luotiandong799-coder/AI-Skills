@@ -930,3 +930,24 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 ## 局部执行（partial execution）：重跑范围可靶向，不整流产跑（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）
 - **原文**：`Partial executions are manual executions that only run a subset of your workflow nodes... executes the specific node and any preceding nodes required to fill in its input data.`
 - **判据**：① 重跑/复现应**只跑待测节点 + 喂它所需的最小前驱**，而非把整条工作流从头跑一遍——降低复现成本、避免重触发副作用节点。② 局部执行仍需触发拓扑（须有一条 trigger 描述「何时执行」），不是任意节点都能起跑 ⇒ 靶向重跑要在「最小前驱」与「拓扑合法性」之间取平衡。③ 与「数据钉定」是同一调试哲学的两面：一个控输入、一个控范围。提升层：工具/工作流。触发词：局部执行、partial execution、靶向重跑、只跑待测节点、最小前驱。
+
+<!-- §等待轮询下沉 2026-10-04 r411A -->
+## 等待/轮询/卡住运行处置（来源：OpenClaw `ci/watching-runs.md`，2026-09-30 实拉）
+
+1. **终态用不同退出码区分，超时携带诊断载荷**：GREEN=0 / FAILING=15 / TIMEOUT=16 —— 成功、失败、超时是可区分信号而非笼统「未完成」；TIMEOUT 须附带最后聚合 + 待处理计数诊断载荷。判据：有等待/轮询的环节，失败与超时必须分码返回、超时码带诊断上下文。
+2. **失败/不确定状态绝不自动触发二次变更（幂等护栏）**：不确定态禁止自动重试/二次写入，否则放大副作用；恢复须是显式人工/批准动作。判据：不确定态默认不自愈，恢复动作显式且可审计。
+3. **轮询分批拉取 + 超额缓存续拉**：每轮最多读 32 条缺失记录，超额保持 pending 从缓存 resume，不一次性拉全量压垮下游。判据：长列表轮询设每轮上限，超出走增量续拉。
+
+<!-- §读侧先行下沉 2026-10-04 r411A -->
+## 读侧先行的灰度升级律：旧版读侧会把引用当正文返给客户端，且不报错（来源：docs.n8n.io/hosting/scaling/queue-mode/，2026-09-28 r210-B 独立实拉）
+- **实证**：n8n 2.34.0 起支持把超大的 webhook 响应体 offload 到存储、只回传引用；官方明写「只有 2.34.0 及以上版本的 main 实例才读得懂 offloaded body，旧版会把 storage reference 当响应体直接返给客户端」；给出的升级顺序是「先升全部 main 与 webhook 实例，再给 worker 打开 offload 开关」；worker 若未设该变量则全部 inline 发送，超出上限即失败。
+- **判据（两种错配的代价不对称）**：**读侧旧 + 写侧新 = 静默坏数据**（客户端收到引用串当正文，没人报错，最贵）；**写侧旧 + 读侧新 = 明确报错**（便宜、易定位）。所以灰度升级固定 **读侧先行**。
+- **排障动作**：遇到「升级后数据变了但没有任何报错」，**先列一张实例版本 × 开关状态的一维表**，再问「谁在读、谁在写」——不要先去 diff 业务逻辑。
+- 与 §回退到已知好点 互补——那条管「回退时被回退的那段不能从日志里消失」，本条管「灰度推进时先升级哪一侧」。
+- 提升层：工作流 / 可复用 Skill。触发词：灰度升级、滚动升级、读侧、功能开关、坏数据不报错、版本错配。
+
+<!-- §超时分档下沉 2026-10-04 r411A -->
+## 超时不是一个数：默认值随触发类型分档、可调上限随套餐分档，且超时后只保留「已成功步骤」的日志（来源：pipedream.com/docs/workflows/limits 2026-09-29 r296-C 独立 curl 取 .md 原文核验；与 §2.41.0 容量上限二分 互补——那条管"能不能提升"，本条管"同一平台里超时有几套默认值"）
+- 原文："HTTP and Email-triggered workflows default to **30 seconds** per execution. — Cron-triggered workflows default to **60 seconds** per execution."；上限表：Free 300 秒（5 分钟）/ Paid 750 秒（12.5 分钟）；"Any partial logs and observability associated with code cells that **ran successfully before the timeout** will be attached to the event in the UI, so you can examine the state of your workflow and troubleshoot where it may have failed."；磁盘 /tmp 2GB "This limit cannot be raised."
+- 判据：① **同步入口与定时入口的超时预算本就不同**——HTTP/Email 是有人（或有系统）在等响应，默认 30 秒；Cron 没人等，默认 60 秒；把定时任务的预算套到 webhook 上，或者反过来，都会拿到不该有的超时；排查超时先确认**这个工作流的触发类型决定了它拿的是哪一套默认值**；② **"默认值"与"可调上限"是两个参数**——默认值能改，但天花板由套餐决定；用户说"我已经调到最大了还是超时"，要先问是哪个套餐，因为"最大"对免费档是 5 分钟、对付费档是 12.5 分钟；③ **超时不等于日志全丢，但丢的恰好是最需要的那一块**：已成功 cell 的日志会被附到事件上，而**正在跑的那一步的中间态拿不到**——所以超时类故障能确认"跑到哪一步"，不能确认"那一步内部卡在哪"；需要后者就得自己写中间检查点（与 §每一步都落检查点 同向）。
+- 提升层：工具/工作流。触发词：超时默认值、30s vs 60s、触发类型决定超时、套餐决定超时上限、超时后部分日志、/tmp 2GB 不可提升。
