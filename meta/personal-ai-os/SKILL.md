@@ -428,6 +428,72 @@ agent_created: true
 
 **未吸纳**：其余 10 层均为既有能力重述，遵守 §0.7 去重 / §0.11 不膨胀 / §三十四 重复检测 / §四十七 复杂度净下降，不新增模块。
 
+## 四十九、系统层补强（Context Intelligence + Runtime Safety，2026-10-04 第二吸收包）
+
+> 来源：用户贴「WB 新增系统能力吸收包」（① Context Mode 类上下文优化 ② OpenShell 类 Agent Runtime 安全）。
+> 合并原则（用户强制）：保留两模块概念；不新增 Skill / Workflow / 重复 Memory / 重复 Guardian。
+> 四态判定：**优 + 合（非「增」）**。两模块能力 ~85% 已被既有覆盖，仅补显式规则、不建文件。
+
+### 1. 四态判定（优删增合）
+
+| 模块 | 判定 | 理由 |
+|---|---|---|
+| Context Intelligence | 合 + 优 | 工具输出过滤→wb-context-compressor 工具输出沙箱；动态预算→其压缩时机 + §九·五；状态恢复→其长任务持久化；健康检查→其压缩时机 + §四十七。补显式过滤/状态规则 |
+| Runtime Safety | 合 + 优 | 权限分级→§六；风险拦截→§六+§八+§0.13；沙箱思想→§十五；自检→wb-execute-discipline+§十三。补 L3 分级、自检前中后 |
+| （Guardian） | 不建 | 非独立技能，由 §六+§八+§十三+wb-execute-discipline+wb-artifact-verification 覆盖；建即重复 |
+
+净新增文件 = 0。以下为两模块在既有体系上的「合 + 优」落点。
+
+### 2. WB Context Intelligence（上下文智能层）
+
+吸收原因：补强 Context Budget Router / wb-context-compressor / Memory System（增强非替代）。
+解决问题：工具输出爆上下文、长任务丢关键状态、多轮不可持续。
+
+| 子能力 | 既有落点 | 本次补强 |
+|---|---|---|
+| 工具输出过滤 | wb-context-compressor 工具输出沙箱（L31-45） | 补显式「保留/删除」规则 |
+| 动态上下文预算 | wb-context-compressor 压缩时机（L145-176）+ §九·五 | 已覆盖 |
+| 状态恢复机制 | wb-context-compressor 长任务持久化（L24-29） | 补 4 字段结构化 |
+| 上下文健康检查 | wb-context-compressor 压缩时机 + §四十七 | 已覆盖，补执行前 3 问 |
+
+**补强 A — 工具输出过滤（显式）**：保留 结果/状态/错误/下一步（含错误全文、堆栈首行、失败断言名，呼应「不丢关键信息」）；删除 重复日志（同内容连续多轮命中→收窄筛选而非重读）；删除 无关中间过程（「每行接下来都会用到吗？不会→只留结论」）；脱敏 API key/token/PEM/连接串/PII 进上下文前脱敏，含注入 payload 的响应 fail-closed 阻断。
+
+**补强 B — 状态恢复 4 字段**（长任务必维护，落 DECISIONS.md/PROGRESS.md）：目标 / 当前阶段 / 已完成 / 未完成 / 下一步。判据：跨会话能答「进行到哪/做过什么/为何走这路/下一步/未决风险」五问。
+
+**补强 C — 上下文健康检查（执行前 3 问）**：当前 Context 是否过载？→ 是则先落盘再压缩；是否存在重复信息？→ 是则收窄筛选规则；是否需要压缩？→ 半途/卡住禁止压（§四十七 + 压缩时机边界）。
+
+### 3. WB Agent Runtime Safety（运行安全层）
+
+吸收原因：补强 Guardian / 高风险授权 / Execution Verification（增强非替代）。新增视角 = 运行环境隔离。
+
+| 子能力 | 既有落点 | 本次补强 |
+|---|---|---|
+| 执行权限分级 L0-L2 | §六 三级权限 | 补 **L3 外部影响操作** |
+| 风险动作拦截 | §六 + §八 禁止绕过 + §0.13 L2 例外 | 已覆盖，补显式清单 |
+| 执行沙箱思想 | §十五 异常恢复与回滚（测试→验证→正式） | 已覆盖 |
+| Agent 自检 | wb-execute-discipline + §十三 验证 | 补 前/中/后 三检 |
+| Guardian | 非独立技能（见 §1） | 不建，避免重复 |
+
+**补强 D — 执行权限分级（扩展至 L3）**：L0 读取 / L1 普通操作 / L2 修改文件·配置 / **L3 外部影响操作（发消息·付款·对外·不可逆）**；L3 必走 §六 高风险确认 + §0.13 L2 例外（L3 等同并严于 L2）。
+
+**补强 E — 风险动作拦截（显式清单）**：删除→确认；付款→确认；发送重要消息→确认；修改系统→确认。其余触发项见 §六 + §八。
+
+**补强 F — Agent 自检（前/中/后 三检）**：执行前 目标是否明确（否→先澄清/拆解）；执行中 是否偏离目标（是→停/回滚/换方案，接 §十五）；执行后 结果是否符合要求（接 §十三 验证路由 + wb-artifact-verification）。
+
+### 4. 最终 WB 架构（含两新层）
+
+```
+用户 → Task Planner → Model Router → Context Intelligence ⭐ → Skill Router
+    → Tool/MCP Router → Agent Runtime Safety ⭐ → Execution → Verification → Memory
+```
+（⭐ = 本包吸收的两系统层，已合入既有路由/权限/验证体系，非独立文件）
+
+### 5. 不新增声明（入库纪律）
+- 不新增 Skill / Workflow（两模块以本段系统层条目存在，非文件）
+- 不重复 Memory（Memory System 由 knowledge-governance 统管）
+- 不重复 Guardian（非独立技能，已映射至 §六+§八+§十三+wb-execute-discipline+wb-artifact-verification）
+- 总目录 §3 家族判定无需新增条目（personal-ai-os 为总控，本段为其内文）
+
 # 附录 A：能力总表（先查这张表，再决定路由）
 
 | 需求类型 | 首选能力 | 落点 |
