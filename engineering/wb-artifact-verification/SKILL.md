@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: "2.147.0"
+version: "2.148.0"
 agent_created: true
 ---
 
@@ -423,3 +423,10 @@ agent_created: true
 - **实证**：官方原文「Flowise has native support for Prometheus with Grafana and OpenTelemetry. **However, only high-level metrics such as API requests, counts of flows/predictions are tracked.** Refer … for the lists of counter metrics. **For details node by node observability, we recommend using Analytic.**」；同页「`/api/v1/metrics` endpoint requires API key authentication」。
 - **判据**：① **"有监控"必须同时声明监控的分辨率**——只有请求数/流程数这类高层计数器，逐节点可观测要换另一套工具 ⇒ 不写覆盖边界时，"指标全绿"会被读成"系统没问题"，而实际它只证明了"入口还活着"。② **验收观测系统要问一个是否题**：这个信号能不能证明"细粒度失败不存在"？能证明才算该层的证据，不能证明的必须注明它缺哪一层 ⇒ 把高层指标当低层证据，是"监控很全但故障发现不了"的头号成因。③ **观测缺口要给出替代通道而不是留白**——官方直接指明逐节点用 Analytic ⇒ 凡"我这层看不到"的能力，应有一条指到能看到的通道；只说"暂不支持"等于让使用者自己猜。④ **观测端点本身就是暴露面**——指标端点需 API key ⇒ 加观测不能顺手加一个未鉴权的入口。⑤ 与既有「监视器信号可验证 / 采集结论三态」分工：那两条管**单次信号靠不靠谱**，本条管**整套观测面覆盖到哪一层**——前者是信号质量，后者是覆盖面声明。
 - 提升层：工作流 / 校验纪律。触发词：only high-level metrics、观测分辨率声明、粗指标健康不等于整体健康、该信号能否证明细粒度失败、观测缺口指替代通道、指标端点需鉴权。
+
+## 信任工件要「随行、机器可读、逐文件、会过期」：验证所需的元数据不写在工件正文里，而是另一份随行的独立记录（来源：developer.nvidia.com/blog/nvidia-verified-agent-skills-provide-capability-governance-for-ai-agents/ 271,314B，2026-10-05 r422-B 独立 curl 实拉后去标签逐串命中；消化 Qoder r420-Q-B B-2 积压点，并更正其表述）
+- **实证**：官方原文「Each verified skill is cataloged **daily** from the owning product team, scanned for software and agent-native risks with SkillSpector, **signed with a detached skill.oms.sig**, and documented with a **skill card describing ownership, dependencies, limitations, and verification status**.」；「The skill card provides a **machine-readable trust record** that developers and enterprise teams can review to understand capabilities, risks, and validation status **before deployment**.」；「a publishing flow that can include both human review and automated policy checks, followed by **scanning, evaluation, generation of the skill card, signing, cataloging**, and synchronization into the public catalog」；「Cryptographic signing covers **every file in the skill directory** so developers can verify authenticity and integrity **after download**.」
+- **判据**：① **信任记录必须是与工件并行的独立文件（detached），不是写进正文的段落**——正文可被工件自身改写，独立签名记录不可 ⇒ 让被验对象自己声明"我已通过验证"，等于没有验证；验证结论要放在它改不到的地方。② **记录要包含「不能证明什么」**——四要素里 `limitations` 与 `ownership` 并列：谁负责、依赖什么、**已知限制是什么**、验证到什么状态 ⇒ 只写"已通过"不写"限制"的信任卡，是把结论当成属性，不能支撑使用方的判断。③ **签名覆盖目录内每个文件，不是只签清单或摘要**——「every file in the skill directory」⇒ 只签清单会留下"新增文件未入清单也未签名"的注入口；验收完整性时要问"新增一个文件是否会被发现"，而不是"清单对不对得上"。④ **信任状态是每日重算的快照，会过期**——「cataloged daily」⇒ 一次验证结论不是永久属性；复用旧结论前必须核对它的刷新周期与生成时刻，过期结论与未验证同价。⑤ **产物面向"部署前的人"，不是"运行时的机器"**——卡片给开发者/企业团队在部署前审阅 ⇒ 机器可读不等于自动放行；机器可读解决的是"人能不能快速看懂"，不是"能不能跳过人"。⑥ **生产分工**：扫描→评估→生成卡片→签名→编目，卡片是**机器产出、人审阅** ⇒ 把逐次人工审计降级为"人核验机器产出"，人留在核验位而非产出位。
+- **与既有能力分工**：上一版（观测面自述覆盖边界）管"监控能证明什么"；本条管"第三方工件自带的可信证据该长什么样、怎么验它没过期"。
+- 提升层：可复用 Skill / 校验纪律。触发词：随行信任记录、detached 签名卡、machine-readable trust record、逐文件签名、每日重编目、限制字段、结论会过期、机器产出人核验、部署前审阅。
+

@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.73.0"
+version: "1.74.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -477,4 +477,10 @@ the CLI only adds atomicity and an audit trail.
 - **判据**：① **守卫失败要分两种，默认极性相反**——失败原因是「被检对象无法解析/匹配不上」（输入不可序列化、载荷读不懂）⇒ 必须**阻塞**，因为"跳过"在效果上等于默认放行，守卫不存在与守卫放行是同一结果，这是安全默认极性的错置；失败原因是「守卫自身配置缺失或前置开关未开」（Cap81 那条）⇒ 可以只 warning 并让旧行为继续，因为被检对象没变、风险敞口没有扩大。**判据一句话：读不懂的是"东西"就拦，读不懂的是"规则"就降级。** ② **兼容窗口必须有"不被窗口覆盖"的显式清单**——N-1 版本协商只放宽协议版本，设备认证、配对、作用域、命令策略、exec 审批五面不随之放宽 ⇒ 任何"向后兼容/灰度共存"的设计都要同时声明窗口边界：哪些面进窗口、哪些面绝不进；只写"支持旧版本"而不写"安全面不降"的兼容承诺，等于把安全面默认划进窗口。③ **插件/第三方自有面不在兼容契约内**——托管面属于宿主协议契约，插件自有 hosted surface 不享受 N-1 ⇒ 依赖插件面的调用方不能假定它与平台同寿命，升级判定要按各自的契约分别算。④ **降级状态不触发本地兜底与自动重放**——旧版本态走显式处理，不本地兜底、不自动重放 ⇒ "兼容"不等于"自动替它跑一遍"，隐式重放会把一次失败放大成两次副作用。⑤ **协商结果回执独立于凭据发放**——即使未签发设备令牌，也要回报协商出的角色与生效作用域 ⇒ 生效权限的可见性不能绑定在"有没有拿到凭据"上，否则无凭据连接会成为观测盲区。
 - **与既有能力分工**：Cap81 管「收紧型 flag 默认关、前置缺失时只 warning 旧行为继续」（守卫没准备好）；Cap76 管「控制声明要自带误读澄清」（声明怎么写）；Cap72 管「分层作用域只收窄不放大」（作用域叠加）；本条管**失败与兼容这两类"边界时刻"的默认取哪一侧**，并给出 Cap81 与本条的适用分界。
 - 提升层：工具 / 治理。触发词：守卫读不懂就阻塞、跳过等于放行、兼容窗口不覆盖安全面、N-1 契约边界、插件面不在契约内、协商回执独立于令牌、不自动重放。
+
+## Capability 84 — 循环上限要按「循环的种类」分别设置，且按对端分别计数：自递归 ≠ 跨实体往返（来源：docs.flowiseai.com/llms-full.txt 618,913B「Understanding Max Iteration parameter in Workers」段，2026-10-05 r422-B 独立 curl 实拉逐串命中；与 Cap74「预算计尝试非产出」互补——那条管计数口径，本条管上限该按什么维度切分）
+- **实证**：官方原文「`Max Iterations Cap` … serves as a guardrail against excessive, potentially infinite, interactions between the Supervisor and Worker. **Unlike the Supervisor node's `Recursion Limit`, which restricts how many times the Supervisor can call itself**, the Worker node's `Max Iteration` parameter limits **how many times a Supervisor can iterate or query a specific Worker**. By capping or limiting the Max Iteration, we ensure that costs remain under control, even in cases of unexpected system behavior.」
+- **判据**：① **"自己调自己"与"来回调别人"是两个正交的循环，必须两个计数器**——Recursion Limit 只约束主管自调用，Max Iteration 约束主管对某个工人的查询次数 ⇒ 只设前者时，A↔B 无限往返完全不受约束，而"我设了递归上限"会给人一种已被兜住的错觉；排查失控循环时先问"失控的是哪一种循环"。② **上限要挂在"对端"上，不是全局一个值**——限制的是"查询某个特定 worker 的次数"，每个工人各有一份 ⇒ 全局上限会被"轮流调用多个工人"摊薄绕过（每轮都换一个对端，全局计数永远不满）。③ **上限的验收问题是"成本是否可控"而不是"有没有死循环"**——原文把收益写成 costs remain under control ⇒ 失控的形式不只是卡死，也可以是长时间合法运行导致的成本失控；只看 CPU/挂起会漏掉这一类。④ **两个上限的默认值要分别核对**——不同层级、不同种类的限制常有各自默认值，改了一个不等于另一个也收紧 ⇒ 变更验收要逐个上限验证，不能因为"限制了循环"就认为所有循环都被限制。
+- **与既有能力分工**：Cap74 管「预算计的是尝试次数不是产出数量」（计数口径）；Cap71 管「队列有界、超限停源留错」（积压封顶）；本条管**多实体编排中上限该按哪些维度切分**（种类 × 对端）。
+- 提升层：工具 / 治理。触发词：递归上限与迭代上限是两个计数器、按对端计数、自递归不等于跨实体往返、上限挂在对端、成本失控也是失控、逐个上限验证。
 
