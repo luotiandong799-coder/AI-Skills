@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.72.0"
+version: "1.73.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -302,3 +302,8 @@ sources:
 - 轮换的热生效面是有限的：**改值可以热应用，改模式或改进程环境里的凭据必须重启**。有效认证模式保持不变时才允许热应用；换 SecretRef 必须显式给出 `mode`。把「轮换」当成一个原子动作会得到「改了但没生效」的假象。
 - 事后审计要专门回看「最近有没有把访问面改宽的配置变更」：绑定地址、认证方式、会话/群组策略、提权工具位、插件变更。入侵路径常常藏在一次 widening 变更里，只看日志会漏。
 - 取证清单要固定成模板，否则每次现想都会缺项：时间戳、宿主系统与版本号、相关会话转录、脱敏后的日志尾段、**攻击者发了什么与 agent 做了什么**（两侧都要）、以及执行体是否越出 loopback 暴露过。
+
+## 已上架物的「更新」不原地替换：发新条目 + 手动撤回旧版，而不是覆盖原条目（来源：docs.dify.ai/en/cloud/use-dify/publish/publish-to-marketplace.md 6,746B，2026-10-05 r421-C 独立 curl 取 `.md` 原文实拉逐串命中；消化 Qoder r420-Q-A A-1 积压点）
+- **原文**：「**To change anything inside the app** (its prompts, tools, model settings, and so on) — **Submit the updated app as a new template. This creates a separate listing rather than replacing the original**, so you can manually unpublish the old version once the new one is published.」；对照「**To change only the listing** (such as the Overview or Setup steps)」走另一条路径（仅改陈列信息可原位）。
+- **判据**：① **"改内容"与"改陈列"是两种更新，路径必须分开**——改应用内部（提示词/工具/模型）发新条目，改概览/安装步骤才原位改 ⇒ 把两者合并成一种"更新"，会让使用者以为原地替换是常规动作，从而失去"旧版还在、可回滚"这一层保护。② **新条目先上线、旧版手动下架**——顺序是先有替代者再撤旧，且撤回是**显式人工动作** ⇒ 自动下架会在新条目还没被验证前制造空窗；"更新"这个词默认隐含替换，实现上必须拆成"新增 + 撤回"两个可分别审计的动作。③ **已发布物具有不可覆盖性**——对外可见的东西一旦被人引用（安装/收藏/依赖），原地改写就等于静默改变他人已获得的东西 ⇒ 凡"已出街"的条目，变更一律走新版本标识。④ 与既有「日落资格登记 / 发布态不可变快照」分工：那两条管**能不能退场**与**快照不被后续编辑污染**，本条管**内容变更时的替换语义**——不是能不能改，而是改的时候是"替换"还是"另立"。
+- 提升层：工作流 / 发布治理。触发词：更新不原地替换、发新条目再撤旧版、改内容与改陈列分路径、已发布物不可覆盖、撤回是显式人工动作、新增加撤回两动作。
