@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.147.0"
+version: "1.148.0"
 agent_created: true
 ---
 
@@ -472,3 +472,10 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - 两个超时必须有偏序：放弃阈值（poll timeout）须严格小于接管租约（lease duration），否则被放弃的工作仍在跑而另一实例已接管同一 run，放弃形同虚设；平台在 timeout 达到 lease 时启动告警。
 - 积压补跑是形状选择且没有任何策略逐条重放：丢弃全部 / 坍缩为最新一次 / 每条触发规则各一次，三种策略下时钟一律跨过积压；一次性触发没有「下一次」可恢复，故 catch-up 策略下仍会晚跑，skip 则永久丢弃。与部分失败三形状互补——那条管同批内失败条目的形状，本条管跨批积压的形状。
 - 调度实体有所有者：owner reconciliation 周期回收所有者已消失的 schedule，否则留下无人认领的孤儿定时任务。
+
+
+## 同一根因在四层症状上暴露；调试行为本身会改变资源画像（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/scaling/fix-memory-issues.md` 5,626B，2026-10-05 r420-B 经 llms.txt 定位真路径后 .md 实拉）
+- **实证**：官方列出 OOM 的四类表现——节点级 `Execution stopped at this node (n8n may have run out of memory)`、工作流级 `Problem running workflow`、连接级 `Connection Lost`、协议级 `503 Service Temporarily Unavailable`，另有引擎日志级 `Allocation failed - JavaScript heap out of memory`；「Manual or automatic workflow executions: manual executions increase memory consumption as n8n makes a copy of the data for the frontend」；拆分为子工作流「might seem counter-intuitive at first as it usually requires adding at least two more nodes」但「the sub-workflow only holds the data for the current batch in memory, after which the memory is free again」，前提是「returns only a small result set to its parent workflow」。
+- **判据**：① **症状层与根因层要分开建表**——同一根因（资源耗尽）在节点提示 / 工作流状态 / 连接断开 / HTTP 状态码 / 引擎日志五个面各有说法；按症状分诊会把一次 OOM 记成四种不同故障，复发率永远统计不出来。② **"人看着跑"会改变资源画像**——手动执行为前端额外复制数据，因此调试态比生产态更容易触顶； reproduced-under-debug 与 reproduced-in-prod 必须分别标注。③ **降峰值靠缩短数据存活期，不靠减少步骤数**——拆成子流程反而省内存，因为每批数据用完即释放；"看起来更绕的解法更省"是可判据化的，不是玄学。④ **边界数据量决定拆分是否生效**——子流程必须只回传小结果集，回传大对象时拆分零收益；优化要看**跨界传输量**，不是内部计算量。⑤ 验收增一项：**资源类故障的症状覆盖面**（是否把连接级与协议级也归到同一根因）。
+- **与既有能力分工**：1.145.0 管限流类故障的文本枚举与冷却量级；本条管**资源耗尽类故障的跨层症状映射**，以及"观测行为改变被测对象"这一自举偏差。
+- 提升层：工作流 / 工具。触发词：OOM 四层症状、手动执行更耗内存、拆分降峰值、存活期决定峰值、边界数据量、调试改变资源画像。
