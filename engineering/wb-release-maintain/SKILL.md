@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.71.0"
+version: "1.72.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -295,3 +295,10 @@ sources:
 - **原文**：「ClawHub stores what you pass and displays the normalized form」「These topic names are reserved by ClawHub and are rejected: `approved`, … `verified`. The check runs on the normalized form, so `Official` and `staff pick` are rejected too.」「Use `dry_run: true` to preview new and changed skills without publishing.」「Automatic changelog generation and preview use a ten-second provider deadline … If the provider is unavailable or times out, ClawHub returns local fallback notes so publishing and preview can continue.」「Run the default dry run for each of … `cursor` until `isDone`. Apply from the initial cursor with `dryRun: false`, then repeat the dry run to verify no remaining matches.」「Deleting trusted publisher config is the rollback path.」「That workflow route does not accept cancelled parents.」「It defaults to a dry run; add `"dryRun":false` to discard each pending release」「Transfers to another user normally require recipient acceptance.」
 - **判据**：① **批准凭证只绑不可变事实，不绑当前状态**：批准的哈希绑「发布物 + 源哈希 + 分类 + 分配」而**刻意排除状态字段** ⇒ 同一凭证跨 preview→accepted→applied 存活，但每次 apply 仍重校验绑定。把可变状态写进凭证会两头错：状态一变凭证就失效（逼人重签），或状态被改而凭证仍"看起来有效"（假批准）。② **批量迁移的两类游标不可互换**：报告游标（读到哪）与预览/apply 游标（处理到哪）是两张表，回退行不可 accept、须用新 run ID 重分类 ⇒ 拿错了游标会把"已读"当成"已处理"，于是漏掉的行永远是漏掉的。③ **apply 前必须做事务内演练并核对已处理条数**：先跑 dry run 直到 `isDone`、apply 后**再跑一次 dry run 验证无剩余匹配**；响应丢失不能绕过这道闸 ⇒ 没有"改完再验一遍"的闭环，批量迁移的完整性只能靠信任。④ **并发迁移互斥是硬闸**：存在未审的 accepted 行或另一个迁移 worker 活跃时直接拒绝 ⇒ 批量状态变更不是可重入操作。⑤ **比对必须先归一化**：保留词表作用于规范化形式，故 `Official`、`staff pick` 与全小写形式同拒 ⇒ 先比对后归一化（或不归一化）等于把过滤做成换个大小写就能绕过。⑥ **三类物种分三类处置，不要合并成一种**：重复项**丢弃且不报错**（无害冗余）、未知分类项**拒发**（不可判定）、保留词命中**拒**（明令禁止） ⇒ 一律报错会把无害重复变成噪音，一律忽略会让不可判定项悄悄过关；正确性是"分类"换来的，不是"严格"换来的。⑦ **被取消的父级不接受**：cancelled parents 不进入该流程 ⇒ 上游已放弃的变更不能继续向下推进，否则会产生没有来源的孤儿状态。⑧ **增强件超时不得阻断主流程**：预览/变更日志有独立的 10 秒 provider 期限，超时就退回本地 fallback notes 让发布继续 ⇒ 辅助能力缺失应降级为"少一点信息"，不能升级为"整批做不了"。⑨ **所有权转移须接受方确认**：转移给另一用户需要对方接受 ⇒ 单向写入他人名下变更是默认禁止，不是默认允许。
 - 提升层：发布治理 / 工作流。触发词：批量状态迁移三闸、批准凭证排除状态、报告游标与 apply 游标分表、回退行须新 run ID、apply 后复跑 dry run、迁移 worker 互斥、归一化后比对、保留词表、重复丢弃不报错、未知分类拒发、cancelled parents 不接受、增强件超时降级。
+
+## 己方失陷的止血有固定次序：先停执行体、再收网络暴露面、再收授权面，且轮换默认按「已失陷」处置（来源：docs.openclaw.ai gateway/security/operator-incident-response.md 2,280B，2026-10-04 r417B 独立 curl 取 .md 原文实拉；与 rm 1.67.0「外部报告的补丁与披露流水线」互补——那条管收到报告后怎么发补丁，本条管自己已经出事后先按什么顺序摁住）
+- 次序不可换：① 停执行体（终止网关进程，含监管它的宿主应用）；② 收网络暴露（绑定改回 loopback、关掉外网隧道面）；③ 收授权面（高危会话改禁用、移除 `*` 全放行条目）。**先停跑的再关可达性再关许可**，反过来做会在执行体仍在跑的窗口里继续产生副作用。
+- 轮换的前提是「假定已经失陷」：网关自身凭据、远程客户端凭据、以及所有 provider / API 凭据（含 SQLite auth store 里的 model key 与加密 secrets 载荷值）一并轮，不先等确证。
+- 轮换的热生效面是有限的：**改值可以热应用，改模式或改进程环境里的凭据必须重启**。有效认证模式保持不变时才允许热应用；换 SecretRef 必须显式给出 `mode`。把「轮换」当成一个原子动作会得到「改了但没生效」的假象。
+- 事后审计要专门回看「最近有没有把访问面改宽的配置变更」：绑定地址、认证方式、会话/群组策略、提权工具位、插件变更。入侵路径常常藏在一次 widening 变更里，只看日志会漏。
+- 取证清单要固定成模板，否则每次现想都会缺项：时间戳、宿主系统与版本号、相关会话转录、脱敏后的日志尾段、**攻击者发了什么与 agent 做了什么**（两侧都要）、以及执行体是否越出 loopback 暴露过。
