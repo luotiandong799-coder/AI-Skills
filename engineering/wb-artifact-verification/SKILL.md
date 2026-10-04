@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: "2.140.0"
+version: "2.141.0"
 agent_created: true
 ---
 
@@ -381,3 +381,9 @@ agent_created: true
 - **原文**："`maxTurns` counts **agent runs started by the coordinator**, including runs that pass or fail."；"Slots are reserved synchronously before parallel launch… If the budget is smaller than the eligible participant count, configured order determines which turns start."；"A turn can produce **multiple platform messages** through chunks, previews, or message-tool sends… **`maxTurns` does not count, buffer, or cap physical messages.**"；"Agents fail independently. One agent's error is logged… and **does not block the others**."
 - **判据**：① **验收限流前先问「数的是哪一个」**——把「启动次数」当「投递条数」验收，会在一次运行拆成多条投递时误判超额，反过来会把被 chunk 撑大的真实投递量整段放过；两个数字必须分列，不得互相替代。② **额度对尝试计数，不对成功计数**：失败与弃权同样吃掉额度 ⇒ 「还剩多少次」永远是尝试次数，不是「还能成几次」，把剩余额度当产能估算是错的。③ **并行前的槽位预留使取舍是确定性的**（按配置顺序取前 N），验收要能复现「谁没被启动」，随机丢弃说明预留环节没生效。④ **多执行体的失败相互独立** ⇒ 编排类验收必须有「部分失败」这一独立终态，且它是**完成态的一种**，不是「整体失败」也不是「整体成功」；只报总数会把它抹平。⑤ **与既有「四态」口径一致**：留痕四态（enforced / attribution-only / unknown / unsupported）解决「判出来是什么」，本条解决「判之前先确认在数什么」——这是验收的前后两道关，缺一不可。
 - 提升层：工具 / 工作流 / 可复用 Skill。触发词：限流验收、计数面、物理投递、chunk 拆分、槽位预留确定性、部分失败独立终态、尝试计数非成功计数。
+
+## 扩展/钩子点只观察不突变：返回值惰性、副作用只能走 producer 拥有的投递通道且有结算窗口（来源：docs.openclaw.ai/automation/hooks/writing-hooks.md 11,109B，2026-10-05 r418B 独立 curl 取 `.md` 原文实拉逐串命中；与 §监视器信号也须可验证 互补——那条管「无人值守监视器」的只读与动作留载荷，本条管「插件/钩子扩展点」的返回惰性、投递归属与结算时序，两者是同一「观察者不改状态」原理在两个不同表面的落地）
+
+- **原文**："A handler exports a function returning `void` or `Promise<void>`… **Returned values do not block, cancel, or rewrite the operation.**"；"Treat context as an **observation, not a live state-editing API**… patch events carry **cloned snapshots**."；"Pushing to `event.messages` is **not a general send-message API**… **Append messages before the handler's promise settles**; detached work that pushes later can miss the producer's delivery step."
+- **判据**：① **扩展点返回值惰性**：钩子/handler 的返回值永远不阻断、不取消、不改写被装饰的操作 ⇒ 扩展点是旁路观察，不是控制流的一部分；把它当「返回 false 就中止」来设计会静默失效。② **上下文是观测快照不是活状态 API**：事件 `context` 是克隆快照（patch 事件带 cloned snapshots），扩展点拿不到也不该拿到可变活状态 ⇒ 想「在钩子里改状态」必须走 producer 自己拥有的通道，不能借观测通道偷改。③ **副作用只能走 producer 拥有的投递通道且有结算窗口**：推到 `event.messages` 不是通用发信 API，只有特定 producer 消费它，且必须在 handler 的 promise settle 之前追加，detached 后推的会错过投递 ⇒ 扩展点副作用有确定归属与时序窗口，乱发即丢。④ **与监视器只读同根不同面**：核心都是「观察者不改状态」，但监视器是无人值守检测（只读 + 动作留载荷），扩展点是装饰器/钩子（返回惰性 + 投递归属 + 结算窗口）；验收扩展机制时分别检查「返回值是否惰性」「副作用是否走对通道且在窗口内」，不能只问「它读不读」。
+- 提升层：可复用 Skill / 工作流。触发词：扩展点返回惰性、钩子不阻断、context 是观测快照、副作用走 producer 投递通道、结算窗口、detached 错过投递、观察者不改状态。
