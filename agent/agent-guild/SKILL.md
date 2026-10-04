@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.65.0"
+version: "1.66.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -159,17 +159,7 @@ the CLI only adds atomicity and an audit trail.
 <!-- 2026-09-30 r336B 下沉：r186 审计落地（Qoder r189-Q-C #5 · 0 净新）整段 → references/knowledge-base.md §r336B -->
 
 <!-- 2026-09-29 r290 下沉：Capability 12 诊断日志与审计留痕分仓 → references/knowledge-base.md §r199-B 批 -->
-## Capability 13 — 留痕的范围由"显式输出"决定，不由"算过什么"决定
-
-> 原文已下沉 `references/knowledge-base.md §r395-ag2`（保持原文零删减）。
-## Capability 14 — 多 Agent 编排：文件化 handoff + 评估器闭环 + 迭代上限
-
-> 原文已下沉 `references/knowledge-base.md §r395-ag2`（保持原文零删减）。
-## Capability 15 — 群组式多 Agent：角色分工 + 人工打断特权 + 共享工作区
-
-> 原文已下沉 `references/knowledge-base.md §r395-ag2`（保持原文零删减）。
-## r205-C 净新两点（2026-09-27 独立实拉）
-
+> 早期两节（Capability 13 留痕范围 / Capability 14 多 Agent 编排 / Capability 15 群组式多 Agent）已零删减下沉至 references/knowledge-base.md 的 r417-ag 存档节。
 ### Capability 16 — 凭据与执行体容器级物理分离 + 输出四级管线（来源：GitHub Agentic Workflows 官方安全架构，经 agentpatterns.ai / aidevme 2026-09-27 r205-C 实拉）
 - **★三种凭据分装三个容器，agent 容器零密钥**：LLM 凭据在 **API proxy 容器**（agent 经代理调用，看不到 key）；MCP 凭据在 **MCP gateway 容器**（按仓库策略路由，HTTP 转发）；**agent 容器**只带防火墙出网白名单 + 只读 /host 挂载 + tmpfs 覆盖 + chroot jail。判据：**密钥不该和会读不可信输入的那个进程共处一个故障域**——agent 被提示注入打穿时，手上是没有任何凭据的。
 - **★四个信任边界分层，token 绑在配置层不在 agent 内**：Substrate（VM 隔离 + 内核强制通信边界）/ Configuration（声明式权限分派 + token 绑定）/ Planning（分阶段工作流 + 显式数据交换）。判据：**权限是声明出来的，不是运行时协商出来的**。
@@ -181,12 +171,7 @@ the CLI only adds atomicity and an audit trail.
 #<!-- 2026-10-01 r344A 下沉：Capability 17 记忆晋升三门整段 → references/knowledge-base.md §r344A -->
 
 #<!-- 2026-10-04 r415 下沉：Cap35 + Cap36 → references/knowledge-base.md §r415-ag -->
-## 入站准入双门与会话隔离粒度（来源：docs.openclaw.ai 首页与配置段 2026-09-28 r207-B 独立实拉；与 §r205-C Cap16 凭据分离互补——那条管凭据不落执行体，本条管会话边界与谁能进来）
-- **会话隔离有三条轴可选**：per-agent / per-workspace / per-sender，按部署形态选，不要默认全共享。默认策略是**私聊共享 agent 主 session，每个群聊各自独立 session**。判据：**隔离粒度是配置项不是默认值**，先想清楚"谁的历史该被谁看见"。
-- **入站准入是两道门，缺一道就会被外部消息驱动**：`allowFrom` 白名单（谁能发）+ `requireMention`（群里是否必须 @）。判据：**能发消息进来 = 能驱动 agent 干活**；只配白名单不配 mention 规则，等于把 agent 交给群里所有人。
-- **架构上把"受信任网关"与"不可信执行"分开，策略用确定性规则表达**：网关是会话/路由/连接的唯一真身，执行侧当不可信；`~/.openclaw/openclaw.json` 是唯一配置面。判据：**信任边界画在网关上，不要画在 prompt 里**。
-- 提升层：工作流 / 工具。触发词：邀请 agent、一次性副本、晋升共享、沙箱不互串、具名输出、声明式输出、变量截断、走文件传、会话隔离、per-sender、allowFrom、requireMention、入站准入。
-
+> 入站准入双门与会话隔离粒度一节已零删减下沉至 references/knowledge-base.md 的 r417-ag 存档节。
 ## 评审类协作的质量由「给评审者什么上下文」决定，且评审必须尽早（来源：deeplearning.ai《AI Code Review》（Qodo，1h4m，Intermediate）2026-09-28 r208-C 独立实拉）
 - **评审无效的常见根因不是评审规则写得不好，是评审者拿到的上下文不对**：课程核心断言 `context is what makes a review reliable`，做法是把 `giving the reviewer the right context` 当作设计评审流程的第一件事。判据：**改评审提示词前先改评审输入；上下文错了，规则越细越自信地错。**
 - **评审要尽早运行，而不是等产物完整后一次评审**：课程明确"尽早运行评审"。判据：**评审推迟的代价是返工面变大，不是评审变准**；早评审发现的是方向问题，晚评审只能发现细节问题。
@@ -494,3 +479,11 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：「As a platform administrator, you have **full control** over which pieces are available to your users.」；层级表 `**Platform Level** | Platform Admin | Install and remove across the entire platform` / `**Project Level** | Project Admin | **Show/hide** specific pieces for specfic project`；「Project administrators can **further restrict** which pieces are available within their specific project. This is useful when different teams or projects need access to access to…」
 - **判据**：① **两级作用域的动词不同决定了能力方向**：平台级是 install/remove（**改变全集**），项目级是 show/hide（**只在本项目内增减可见性**）⇒ 下级作用域的操作对象不是"能力本身"而是"上级已授予集合在自己范围内的投影"。② **继承律是 deny-only**：项目管理员只能 further restrict，**不能启用平台层未安装/未批准的东西** ⇒ 若下级能自行放大，权限的实际边界就不再由上级决定，"平台级批准"会退化成一种建议。③ **"能管理"不等于"能扩张"**：两级都叫 manage，但一个是增删全集、一个是隐藏子集 ⇒ 设计多级作用域时必须把动词写清楚，否则同一词在两层含义相反，审计时无法判定越权。④ **收窄是免费且可逆的，放大不是**：隐藏可以随时取消且不影响他人；新增能力会影响所有使用者且常常不可逆 ⇒ 不对称性本身就是该选 deny-only 的理由。⑤ **落点**：任何"平台级 vs 项目级 / 租户级"的技能注册表、工具集、凭据池，能力组合语义必须写成 deny-only 继承，并在实现上让下级的 enable 操作只能作用于上级已授予的集合内。
 - 提升层：可复用 Skill / 治理。触发词：deny-only 继承、分层作用域、只收窄不放大、平台级 vs 项目级、能管理不等于能扩张、收窄免费放大不可逆、下级不得自授能力。
+
+### Capability 73 — 能力生效要过三道各自独立的门；平台默认表是「天花板」不是「清单」（来源：docs.openclaw.ai nodes/command-policy.md 9,909B，2026-10-04 r417C 独立 curl 取 .md 原文实拉；与 Cap67「工具清单是限流不是授权、生效的是交集」互补——那条管工具清单与父策略的交集，本条管连接端自声明与配对批准的分离）
+- 三道门分属三个声明方，缺任一都不生效：① 连接端在**认证后的连接元数据**里自声明（`connect.commands`）；② 该命令在该连接的**已批准命令面**上；③ 平台的「默认值 + 审批」派生允许表包含它。**平台文档里那张按操作系统列的表描述的是策略天花板，不是每个节点都实现了的清单**——命令最终可用还要求对端真的声明了它。
+- **单一否决位永远压过一切允许来源**：显式拒绝清单优先于平台默认值与任何额外加入的允许条目。设计允许面时必须同步回答「有没有一个位置能否决全部」，否则每次新增默认值都在无声地扩大历史配置的权限。
+- **待批扩展期间系统收缩，不是冻结也不是放开**：初次未批准的命令面没有任何有效命令；提交扩展后、批准之前，只有「先前已批准 ∧ 当前仍声明 ∧ 当前仍允许」的旧命令继续有效。三者任一变化都会让它在此期间失效——把它做成「保持旧集合不变」会放行已失效的能力。
+- **配对成功不得连带授予命令**：自动批准 CIDR 只批准**设备**，命令面仍须单独批准，理由是配对本身不构成对能力的同意。**能连带批准初始命令面的通道必须记录了明确的所有权或管理员同意证据**（SSH 回读到的精确设备密钥、带管理员同意的 setup code）；仅「来自可信网络段」不是这类证据。⇒ 自动授权的资格由**证据类型**决定，不由网络位置决定。
+- 危险与隐私类命令即使对端已声明也须平台侧显式一次性 opt-in ⇒ **对端自称支持不构成授权**。
+- 落地口径：任何「连接端 + 中枢 + 能力清单」三层结构（设备配对、MCP 服务器注册、插件工具发布、子 agent 能力上报）都适用——先分清「谁在声明」「谁在批准」「谁在设天花板」，再决定否定项该放在哪一层。
