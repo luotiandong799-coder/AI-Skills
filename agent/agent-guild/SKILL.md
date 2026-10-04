@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.64.0"
+version: "1.65.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -488,3 +488,9 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：「Recurring top-of-hour expressions (minute `0` with a wildcard hour field) are … by up to 5 minutes to reduce load spikes. Use `--exact` to force precise timing」；「An `on-exit` job disables itself when its payload is queued to run. Re-enable the job to watch again」；「If the new command exits before that payload finishes, its exit waits for the previous run to settle … This includes cleanup still running after a timeout response. Disabling or changing the watch cancels its pending exit.」；「Only one payload fire and one bounded pending batch are retained per job … coalesce into that pending batch rather than building an unbounded queue.」；「Failed payloads are not retried because they may not be idempotent.」；「Combining a script payload with a condition gate is rejected because both would own the persisted `trigger.state` slot.」；「Five consecutive runs shorter than 60 seconds leave the job in an error state … manually re-enable the job to clear the restart cap.」；「If either limit is exceeded, the source stops with a recorded error … then manually re-enable the job.」
 - **判据**：① **默认形状要取能扛住最坏情况的那一侧**：整点周期作业默认自动错开至多 5 分钟削峰，**精准是显式声明换来的**（`--exact`）；把"准点"设成默认，等于让所有使用者的默认值在同一秒撞在一起。⇒ 凡"大家都想要同一个时刻"的能力，默认值必须带打散，且打散窗口只对周期类有意义（间隔型/事件型不适用）。② **一次性触发用完即停用，且重启是显式动作**：`on-exit` 作业在载荷排队时就自我停用，要看须重新启用 ⇒ 事件型触发不排队，"监视到一次"之后不能假设它还在监视。③ **"上一个还没 settle"要显式等待，且 settle 包含超时之后的清理**：新命令若先退出，退出动作会等前一个载荷 settle（含超时响应后仍在跑的清理）才停用作业并起下一个 ⇒ 只看"响应已返回"会漏掉仍在跑的收尾。④ **积压必须有界，超限停源并留错**：只保留一个在跑的载荷 + 一个有界待批，其余合流；匹配预算或队列超限则**源直接停止并记录错误**，须手动重启 ⇒ 无限队列把"处理不过来"伪装成"稍后会处理"，有界 + 停源才让背压可见。⑤ **不幂等的失败不重试**：失败载荷刻意不重试（"may not be idempotent"）⇒ 重试资格由副作用性质决定，不是由"失败了该不该再试"决定。⑥ **两个特性争用同一状态槽时在准入期就拒**：script payload 与 condition gate 都要独占 `trigger.state`，组合直接被拒 ⇒ 冲突不要在运行时表现为"互相覆盖"，要在装配时拒绝。⑦ **快速失败循环要有封顶并转为人工**：连续 5 次短于 60 秒进入错误态、须手动重新启用 ⇒ 自动重启 + 无上限 = 把崩溃变成高频噪声。
 - 提升层：工作流 / 工具。触发词：默认打散、削峰默认开、精准须显式、on-exit 自我停用、有界队列、超限停源、不幂等不重试、状态槽争用准入期拒绝、快速失败封顶须手动清、settle 含超时后清理。
+
+
+## Cap72 分层作用域只允许「收窄」不允许「放大」：下级的权限是上级授予集合的子集，把"能管理"与"能扩张"分开（来源：www.activepieces.com/docs `admin-guide/guides/manage-pieces.md` 4,552B，2026-10-04 r416C 独立 curl 取 `.md` 原文实拉；与 Cap67「工具清单是限流不是授权」/ Cap65「撤销≠禁止」互补——那两条管"清单与授权是两件事""撤销与禁止是两件事"，本条管"多级作用域叠加时，下级能不能给自己加东西"）
+- **原文**：「As a platform administrator, you have **full control** over which pieces are available to your users.」；层级表 `**Platform Level** | Platform Admin | Install and remove across the entire platform` / `**Project Level** | Project Admin | **Show/hide** specific pieces for specfic project`；「Project administrators can **further restrict** which pieces are available within their specific project. This is useful when different teams or projects need access to access to…」
+- **判据**：① **两级作用域的动词不同决定了能力方向**：平台级是 install/remove（**改变全集**），项目级是 show/hide（**只在本项目内增减可见性**）⇒ 下级作用域的操作对象不是"能力本身"而是"上级已授予集合在自己范围内的投影"。② **继承律是 deny-only**：项目管理员只能 further restrict，**不能启用平台层未安装/未批准的东西** ⇒ 若下级能自行放大，权限的实际边界就不再由上级决定，"平台级批准"会退化成一种建议。③ **"能管理"不等于"能扩张"**：两级都叫 manage，但一个是增删全集、一个是隐藏子集 ⇒ 设计多级作用域时必须把动词写清楚，否则同一词在两层含义相反，审计时无法判定越权。④ **收窄是免费且可逆的，放大不是**：隐藏可以随时取消且不影响他人；新增能力会影响所有使用者且常常不可逆 ⇒ 不对称性本身就是该选 deny-only 的理由。⑤ **落点**：任何"平台级 vs 项目级 / 租户级"的技能注册表、工具集、凭据池，能力组合语义必须写成 deny-only 继承，并在实现上让下级的 enable 操作只能作用于上级已授予的集合内。
+- 提升层：可复用 Skill / 治理。触发词：deny-only 继承、分层作用域、只收窄不放大、平台级 vs 项目级、能管理不等于能扩张、收窄免费放大不可逆、下级不得自授能力。
