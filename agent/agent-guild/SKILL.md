@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.66.0"
+version: "1.67.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -212,26 +212,7 @@ the CLI only adds atomicity and an audit trail.
 - 与 §记忆晋升三门（r205-C）、晋升收益门（r283-B）不同对象：那两条管条目去留，本条管可见面与权限。
 
 
-## Cap23 可选能力缺失时把入口藏掉，不回退到更宽的路径（fail-closed 而不是 fail-open）（来源：docs.openclaw.ai《What gets sandboxed》2026-09-29 r288-A 独立 curl 实拉原文核验）
-- 原文：目录发现 "uses `ls` without granting shell execution"；自定义后端可选实现 `SandboxFsBridge.readDirectory({ filePath, cwd, signal })`，而 "`ls` is hidden when it is absent, and OpenClaw does **not** fall back to reading the host filesystem."
-- 判据：**降级默认 fail-closed**——可选能力缺失时隐藏入口，而不是用次优实现顶上；因为"回退"多数时候等于放宽边界（此处回退就是拿宿主机文件系统给模型看）。对照 AV 已有的"静默降级是失败模式"，本条给的是正向设计写法：**没有就是不提供**。
-- 提升层：工具。触发词：不回退、能力缺失、隐藏工具、fail-closed、SandboxFsBridge、ls 隐藏。
-
-
-## Cap24 挂载是把沙箱戳穿的口子：默认读写、双层路径校验、shared 作用域忽略单 agent 配置（来源：docs.openclaw.ai《Sandbox vs tool policy vs elevated》2026-09-29 r288-B 独立 curl 实拉原文核验）
-- 原文："`docker.binds` **pierces** the sandbox filesystem: whatever you mount is visible inside the container with the mode you set (`:ro` or `:rw`). **Default is read-write if you omit the mode**"——漏写模式即最宽权限，源码/密钥类必须显式 `:ro`。
-- 校验做两遍：先对**归一化源路径**校验，再**沿最深存在祖先解析后校验一次**；原文 "Symlink-parent escapes do not bypass blocked-path or allowed-root checks"，且不存在的叶子路径同样安全校验（`/workspace/alias-out/new-file` 经符号链接父目录解析到被封路径则拒绝挂载）。
-- 两个易漏点：`scope: "shared"` **忽略 per-agent binds，只认全局 binds**；挂 `/var/run/docker.sock` "effectively hands host control to the sandbox"，只能刻意为之。工作区访问（`workspaceAccess`）与 bind 模式互相独立。
-- 判据：凡"把宿主机目录给执行体看"的配置，默认给只读、明确作用域优先级（共享作用域会吃掉个体配置）、并对路径做**解析后复检**而不是只查字面。与 Cap22（分界线与逃生口）互补：那条管进程边界，本条管**边界上被主动开的洞**。
-- 提升层：工具。触发词：bind mounts、默认读写、:ro、符号链接逃逸、shared 忽略单 agent、docker.sock、挂载穿透。
-
-
-## Cap25 沙箱的网络边界要单独声明：跑在云上 = 私网不可达（来源：docs.dify.ai `llms-full.txt`《New Agent》2026-09-29 r288-C 独立 curl 实拉原文核验；与 Cap22/24 构成跨厂沙箱边界三角）
-- 原文："The agent's sandbox runs in the cloud, so **hosts on your private network aren't reachable**. Public URLs work; for internal material, add it to the agent's Files instead."
-- 判据：沙箱边界不止文件系统与进程，**网络可达域**同样被切——把执行体搬进沙箱或云端，等于同时切断它对内网资源的访问；需要内网材料时走"上传进工作区"，不要去打通网络。
-- **跨厂对照（闭合 r212 遗留「沙箱边界声明是否跨平台通则」）**：三家都显式且保守地写下能力上限——openclaw 明说 "not a perfect security boundary"、Dify 明说"私有网络不可达"，两家都把隔离默认态与逃生口分开管理。**通则成立**：凡提供隔离执行的产品，官方文档都会写明"能挡什么"；照抄这种句式写自家边界，**写不出"能挡什么"的隔离就是没想清楚的隔离**。
-- 提升层：工具。触发词：沙箱网络边界、私网不可达、云上沙箱、边界声明、跨厂对照。
-
+## Cap23 / Cap24 / Cap25 沙箱边界三角（原文已下沉 references/knowledge-base.md §r418A 下沉；触发词：fail-closed 缺能力藏入口、挂载戳穿沙箱、shared 作用域、沙箱网络边界、私网不可达）
 
 ## Cap26 机器人入站是独立于人、独立于 API 的第三条通道："看得见"与"会触发"是两个开关，互聊护栏是滑动窗口不是硬阻断（来源：docs.openclaw.ai/channels/bot-loop-protection 2026-09-29 r290-B 独立 curl 实拉 5,889B；与 Cap18 入站准入双门 allowFrom+requireMention 互补——那条管人类入站，本条管 bot 入站）
 - 原文：Discord/Slack 在支持 `allowBots` 的频道默认接受 bot 消息（走正常 mention 与访问规则），显式 `allowBots: false` 才关；"**Bot messages can remain visible as conversation context independently of turn admission.**"；"Pair loop protection bounds rapid exchanges between two bot identities. It is a **sliding-window rate guard**, so **slower exchanges below the budget can continue**."
@@ -487,3 +468,8 @@ the CLI only adds atomicity and an audit trail.
 - **配对成功不得连带授予命令**：自动批准 CIDR 只批准**设备**，命令面仍须单独批准，理由是配对本身不构成对能力的同意。**能连带批准初始命令面的通道必须记录了明确的所有权或管理员同意证据**（SSH 回读到的精确设备密钥、带管理员同意的 setup code）；仅「来自可信网络段」不是这类证据。⇒ 自动授权的资格由**证据类型**决定，不由网络位置决定。
 - 危险与隐私类命令即使对端已声明也须平台侧显式一次性 opt-in ⇒ **对端自称支持不构成授权**。
 - 落地口径：任何「连接端 + 中枢 + 能力清单」三层结构（设备配对、MCP 服务器注册、插件工具发布、子 agent 能力上报）都适用——先分清「谁在声明」「谁在批准」「谁在设天花板」，再决定否定项该放在哪一层。
+
+## Cap74 多 agent 编播编排：预算计的是「尝试」不是「产出」，续轮的输入是合成摘要不是原始事件（来源：docs.openclaw.ai/channels/broadcast-groups.md 20,936B + channels/channel-routing.md 9,997B + channels/access-groups.md 7,329B + channels/ambient-room-events.md 9,078B + channels/bot-loop-protection.md 5,889B，2026-10-05 r418A 独立 curl 取 `.md` 原文实拉逐串命中；与 Cap71 有界队列 / Cap26 互聊滑动窗口 互补——那两条管单通道积压与双 bot 互激，本条管一次入站扇出给多个 agent 时的预算、续轮与隔离面）
+- 原文："`maxTurns` counts **agent runs started by the coordinator**, including runs that pass or fail. **Slots are reserved synchronously before parallel launch**… If the budget is smaller than the eligible participant count, configured order determines which turns start."；"Each receives an **attributed, size-bounded digest of sibling finals**… **it is not a replay of the physical inbound message**"；"All participants passing ends the thread."；"Budget state is in memory… **It is not restart-resumable**: a Gateway restart loses the active round and budget state."；"`maxTurns` does not count, buffer, or cap physical messages."；"Agents fail independently… does not block the others."；隔离清单 "Session keys / Conversation history / Workspace / Tool access / Memory/context" 五面全隔，而 WhatsApp "group context buffer… is shared on purpose… **cleared once after the fan-out completes**"；路由侧 "Even when direct-message conversation history is shared with main, **sandbox and tool policy use a derived per-account direct-chat runtime key**"；访问组 "**A group grants nothing by itself.** It only matters where an allowlist field references it."
+- 判据：① **预算的计数对象必须先声明**——计「启动过的运行」（含失败与弃权）还是「成功产出」，两者在部分失败时会给出完全不同的剩余额度，混用会让「还剩多少次」变成一个不可信的数字；② **槽位同步预留 + 配置顺序决定取舍**：额度小于合格参与者数时不是随机丢弃，而是按声明顺序取前 N，取舍必须是确定性的、可复现的；③ **续轮拿到的不是原事件**：后续轮的输入是「带归属、有长度上限的兄弟结论摘要」，它有自己的内部身份，**不是物理入站消息的重放** ⇒ 凡「让下一步重看原始输入」的设计，必须显式把原始输入单独传下去，不能指望继承；④ **收敛靠显式弃权信号**：全员弃权才结束线程，「没说话」不能等同于「同意结束」；⑤ **编排中间态是易失的**——轮次与预算状态在内存、范围到根消息、宿主重启即丢且不续 ⇒ 需要跨重启续跑的编排必须自己持久化进度，不能指望调度器；⑥ **隔离要逐面列清单，并把「刻意没隔的那一个」单独点名**（本例是共享群上下文缓冲）且说明它的生命周期（扇出完成后清一次）——只写「已隔离」的声明无法验收；⑦ **上下文可以合并而策略不可以**：私信历史并入主会话时，沙箱与工具策略仍走派生运行时键 ⇒ 「共享了上下文」不得被解读为「拿到了同等执行面」；⑧ **命名集合本身不授权**：访问组定义了也不生效，只有在白名单字段引用它的那个点上才生效 ⇒ 判断「某主体有没有权限」要找引用点，不是找定义点。
+- 提升层：工作流 / 可复用 Skill。触发词：多 agent 编播、扇出预算、maxTurns、槽位预留、续轮摘要、派生输入不是重放、全员弃权结束、编排状态易失、隔离面清单、共享上下文不共享策略、命名组不授权。
