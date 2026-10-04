@@ -331,5 +331,17 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **原文**：审批结果映射稳定 reason code：`operator_approval_allowed_once/always`、`_denied_by_reviewer`、`operator_approval_expired`、`_cancelled_run_aborted`、`_cancelled_gateway_restart`、`_denied_no_route`、`_denied_malformed_verdict`、`_denied_storage_corrupt`、`operator_approval_record_corrupt`、`_execution_link_missing/_malformed/_mismatch`；「An unreadable row is `unknown`, never reconstructed.」「Enabling collection does not backfill earlier activity or add identity to an already admitted run.」「Its outcome is `not-applicable` ... This is an explanation of admission evidence, not an enforcement claim.」
 - **判据**：① **审批终态是一张码表不是布尔值**——除了允许/驳回，还必须有 过期 / 被中止（运行 abort、网关重启）/ 无投递路由 / 判定畸形 / 存储损坏 / 记录损坏 / 绑定缺失·畸形·不匹配；把后几类归并成「驳回」会把**基础设施故障误记成人的决定**，问责时会追错对象。② **「不可用」类是独立一类，不是拒绝**——读不出来的回执判 unknown 并给出补救，绝不重建一条。③ **留痕/审计开关只向前生效**——开启不回溯历史活动，也不给已准入的运行补身份；「我们开了审计」不能作为追溯既往的证据。④ **回执存在 ≠ 判定发生过**——`not-applicable` 是显式终态，含义是「没有任何身份相关策略被证明执行过」；guild 的审批留痕要能表达这一态，否则空回执会被读成「已审批通过」。
 - 提升层：工作流 / 可复用 Skill。触发词：审批终态码表、expired、no-route、malformed_verdict、storage_corrupt、link_mismatch、不可用≠拒绝、留痕不回溯、not-applicable 回执。
+<!-- sunk from SKILL.md 2026-10-04 r415 原文零删减 -->
 
+## §r415-ag（2026-10-04 r415 下沉，原文零删减）
+## Cap35 多人共改同一轮：改向与中止是两个意图、身份可共享而权限不可共享、可见不等于已被消费（来源：docs.openclaw.ai/concepts/queue-steering 12,366B + concepts/retry 10,184B，2026-10-01 r344A 独立 curl 实拉逐串命中；与 §说过≠记着 互补——那条管"消息进没进队列"，本条管"消息有没有被消费、以谁的名义执行"）
+- **原文**："**A visible message or send acknowledgment does not mean the active runtime has consumed it.**"；"**Stopping already-running work is a different intent from redirecting future work.**"；并行批次 "one atomic launch checkpoint… a steer arriving after it does not recall any of them"；被跳过的调用 "receives **paired** tool start/end events and a synthetic result"；turn "**keeps its original owner's authority, tool bindings, and approval destination**"；个人上下文重分配 "takes effect on the **next new turn**; it does not replace the running turn's personal instructions"；权限不同的消息 "**queue the message as a followup**"；撤回 `chat.abort` 仅"before delivery starts"，"once delivery starts, cancellation cannot guarantee withdrawal or undo completed work"。
+- **判据**：① **改向（redirect）与中止（abort）必须做成两个动作**——改向只影响"尚未启动的工作"，已跨过发射检查点的调用不召回；拿中止去表达改向，代价是丢掉已完成的工作；② **被跳过的工作也必须配一条结果**（配对 start/end + 合成结果），留痕保持结构配对，否则下游看到"请求了却没有结果"会误判成执行失败；③ **多人共轮时身份可共享、权限不可共享**——谁能插话是一回事，以谁的名义执行、审批发到谁是另一回事；权限不同的输入降级到下一轮，不在运行中改权限；④ **送达回执不是消费证据**，撤回只在投递开始前可保证，已开始的取消必须明示"不保证撤销已完成工作"。
+- 提升层：工作流/安全边界。触发词：改向、中止、跳过调用的配对结果、发射检查点、多人共轮、身份可共享权限不可共享、送达不等于消费、撤回了但仍执行。
 
+## Agent 复用生命周期与显式交接契约：邀请 vs 一次性副本 vs 晋升，沙箱不互串（来源：Dify 新版 Agent 节点文档 2026-09-28 r207-B 独立实拉首读；docs.dify.ai/en/use-dify/nodes/agent）
+- **三种复用形态，选错就产生分叉**：① 邀请已发布 agent（集中管理，能力改一处 → 所有引用它的工作流同步生效）；② Make a copy 一次性副本（节点内独立，从此不跟随原版）；③ 从零建。判据：**想让改动全局生效就用邀请，想做局部实验就用副本**；副本若"证明有价值"应**晋升**回共享资产供别处复用，而不是永远当私货。
+- **同一 agent 被多处引用 ≠ 共享运行状态**：两个节点邀请同一个 agent 仍各自起独立沙箱，一个节点写的文件/装的工具不会带到另一个。判据：**能力可共享，状态不可共享**——跨节点传结果必须显式声明为 output 并由下游引用，不能指望"它刚才已经写过了"。
+- **交接用声明式具名类型化输出，不是一大块 text**：默认只返回一个 `text`；下游若需要某个具体值或某个文件，要在任务文本里**声明具名 output 并指定类型**（如 `{{vendor_name}}`、`{{quote_file}}`），下游按名引用。判据：**交接边界上的东西必须有名字和类型**，否则下游只能靠解析自然语言。
+- **任务变量按文本传会被截断（Dify 实测 2000 字符），长内容必须走文件**：单文件上限 50 MB。判据：**"传文本"和"传内容"是两件事**——超过阈值的正文、大表格、长日志一律走文件句柄，不要拼进提示词变量。
+- 与 §Agent 自主权三档 / §记忆与技能频谱 的分工：那两条管"能自己做到哪一步""知识常驻还是按需"；本条管"**agent 被复用时，能力/状态/产物这三样各怎么过边界**"。

@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.62.0"
+version: "1.63.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -180,18 +180,7 @@ the CLI only adds atomicity and an audit trail.
 
 #<!-- 2026-10-01 r344A 下沉：Capability 17 记忆晋升三门整段 → references/knowledge-base.md §r344A -->
 
-## Cap35 多人共改同一轮：改向与中止是两个意图、身份可共享而权限不可共享、可见不等于已被消费（来源：docs.openclaw.ai/concepts/queue-steering 12,366B + concepts/retry 10,184B，2026-10-01 r344A 独立 curl 实拉逐串命中；与 §说过≠记着 互补——那条管"消息进没进队列"，本条管"消息有没有被消费、以谁的名义执行"）
-- **原文**："**A visible message or send acknowledgment does not mean the active runtime has consumed it.**"；"**Stopping already-running work is a different intent from redirecting future work.**"；并行批次 "one atomic launch checkpoint… a steer arriving after it does not recall any of them"；被跳过的调用 "receives **paired** tool start/end events and a synthetic result"；turn "**keeps its original owner's authority, tool bindings, and approval destination**"；个人上下文重分配 "takes effect on the **next new turn**; it does not replace the running turn's personal instructions"；权限不同的消息 "**queue the message as a followup**"；撤回 `chat.abort` 仅"before delivery starts"，"once delivery starts, cancellation cannot guarantee withdrawal or undo completed work"。
-- **判据**：① **改向（redirect）与中止（abort）必须做成两个动作**——改向只影响"尚未启动的工作"，已跨过发射检查点的调用不召回；拿中止去表达改向，代价是丢掉已完成的工作；② **被跳过的工作也必须配一条结果**（配对 start/end + 合成结果），留痕保持结构配对，否则下游看到"请求了却没有结果"会误判成执行失败；③ **多人共轮时身份可共享、权限不可共享**——谁能插话是一回事，以谁的名义执行、审批发到谁是另一回事；权限不同的输入降级到下一轮，不在运行中改权限；④ **送达回执不是消费证据**，撤回只在投递开始前可保证，已开始的取消必须明示"不保证撤销已完成工作"。
-- 提升层：工作流/安全边界。触发词：改向、中止、跳过调用的配对结果、发射检查点、多人共轮、身份可共享权限不可共享、送达不等于消费、撤回了但仍执行。
-
-## Agent 复用生命周期与显式交接契约：邀请 vs 一次性副本 vs 晋升，沙箱不互串（来源：Dify 新版 Agent 节点文档 2026-09-28 r207-B 独立实拉首读；docs.dify.ai/en/use-dify/nodes/agent）
-- **三种复用形态，选错就产生分叉**：① 邀请已发布 agent（集中管理，能力改一处 → 所有引用它的工作流同步生效）；② Make a copy 一次性副本（节点内独立，从此不跟随原版）；③ 从零建。判据：**想让改动全局生效就用邀请，想做局部实验就用副本**；副本若"证明有价值"应**晋升**回共享资产供别处复用，而不是永远当私货。
-- **同一 agent 被多处引用 ≠ 共享运行状态**：两个节点邀请同一个 agent 仍各自起独立沙箱，一个节点写的文件/装的工具不会带到另一个。判据：**能力可共享，状态不可共享**——跨节点传结果必须显式声明为 output 并由下游引用，不能指望"它刚才已经写过了"。
-- **交接用声明式具名类型化输出，不是一大块 text**：默认只返回一个 `text`；下游若需要某个具体值或某个文件，要在任务文本里**声明具名 output 并指定类型**（如 `{{vendor_name}}`、`{{quote_file}}`），下游按名引用。判据：**交接边界上的东西必须有名字和类型**，否则下游只能靠解析自然语言。
-- **任务变量按文本传会被截断（Dify 实测 2000 字符），长内容必须走文件**：单文件上限 50 MB。判据：**"传文本"和"传内容"是两件事**——超过阈值的正文、大表格、长日志一律走文件句柄，不要拼进提示词变量。
-- 与 §Agent 自主权三档 / §记忆与技能频谱 的分工：那两条管"能自己做到哪一步""知识常驻还是按需"；本条管"**agent 被复用时，能力/状态/产物这三样各怎么过边界**"。
-
+#<!-- 2026-10-04 r415 下沉：Cap35 + Cap36 → references/knowledge-base.md §r415-ag -->
 ## 入站准入双门与会话隔离粒度（来源：docs.openclaw.ai 首页与配置段 2026-09-28 r207-B 独立实拉；与 §r205-C Cap16 凭据分离互补——那条管凭据不落执行体，本条管会话边界与谁能进来）
 - **会话隔离有三条轴可选**：per-agent / per-workspace / per-sender，按部署形态选，不要默认全共享。默认策略是**私聊共享 agent 主 session，每个群聊各自独立 session**。判据：**隔离粒度是配置项不是默认值**，先想清楚"谁的历史该被谁看见"。
 - **入站准入是两道门，缺一道就会被外部消息驱动**：`allowFrom` 白名单（谁能发）+ `requireMention`（群里是否必须 @）。判据：**能发消息进来 = 能驱动 agent 干活**；只配白名单不配 mention 规则，等于把 agent 交给群里所有人。
@@ -484,3 +473,12 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：「Daily and idle reset freshness is **not based on `updatedAt`**」「Automation wakeups, heartbeat runs, exec notifications, and gateway bookkeeping **may update the session row for routing/status, but they do not extend `sessionStartedAt` or `lastInteractionAt`**」「For legacy rows created before those fields existed, OpenClaw can recover `sessionStartedAt` from the transcript JSONL session header when the file is still available. Legacy idle rows without `lastInteractionAt` use that recovered start time as their idle baseline.」
 - **判据**：① **"行被写过"与"生命周期被推进"是两件事**——心跳、唤醒、通知、系统记账都会改同一行（路由/状态），但刻意不延长新鲜度字段；若把新鲜度定义成 `updatedAt`，一个后台心跳就能让会话永不过期。⇒ 任何"多久没动就归档/重置"的规则，必须显式列出**哪些写入算交互、哪些不算**；用"最后修改时间"当新鲜度等于把续命权交给噪音。② **同一个对象上要有两套时间语义并各自命名**：路由态的时间（什么时候被系统碰过）与交互态的时间（什么时候人/主体真的说了话）。混用后排查"为什么没过期"只能靠猜。③ **字段缺失时的回退基准要写清楚且优先从原始记录恢复**——旧行没有这两个字段时从 transcript 头恢复 `sessionStartedAt`，无 `lastInteractionAt` 的旧行用它当 idle 基线；⇒ 补字段的迁移不能默认"缺失 = 现在"或"缺失 = 永不过期"，两者都会成批改变既有对象的命运，必须给出可核验的恢复来源。④ 对 guild 的落点：共享记忆/交接/收件箱的 groom 与归档规则同理——后台 groom 自己写的时间戳不能算"这条还有人在用"；存活判定要挂在明确的交互字段上。
 - 提升层：工具 / 工作流 / 可复用 Skill。触发词：写入不推进生命周期、updatedAt 不是新鲜度、sessionStartedAt、lastInteractionAt、心跳不算交互、groom 存活判定字段。
+## Cap69 自动化任务默认「启用+监督」，禁用等审批是更糟的失败（来源：docs.openclaw.ai/automation/cron-jobs/how-it-works.md，2026-10-04 r415 独立 curl 实拉）
+- **原文**：job created **enabled, not disabled-pending-approval**；scheduler supervises enabled jobs: a failing one raises a failure notification and is **auto-disabled after repeated errors**, with the reason recorded and the owner notified；nothing supervises a disabled job；a job left disabled waiting for a confirmation that never arrives is **invisible to every guard, hidden from the default list, and will never fire or explain itself** — a silent non-outcome, which is a worse failure than a job that runs and visibly complains.
+- **判据**：① 自动化任务默认**启用+受监督**（失败即告警 + 重复失败自动禁用）优于**禁用等审批**——被禁用的任务对守卫不可见、不在默认列表、永不触发、永不解释自己，是「静默非结果」，比「运行并可见地抱怨」更糟；② 调度器必须拥有失败记账与可见性，任务「是否健康」应由监督信号决定，而非由「有没有被人工批准启用」决定；③ 落地动作：新任务走「启用+监督+自动禁用」而非「禁用等确认」，把「会不会响」交给重复失败计数而非人工点击。
+- 提升层：工作流 / 可靠性。触发词：默认启用、受监督、自动禁用、禁用等审批、静默非结果、可见失败优于静默。
+
+## Cap70 不可信外部内容走受限 reader agent：独立沙箱 + 工具钳制 + 禁跨 agent 移交（来源：docs.openclaw.ai/automation/cron-jobs/gmail.md，2026-10-04 r415 独立 curl 实拉）
+- **原文**（gmail restricted reader）：explicit `ownership: "explicit"` roster；reader agent `workspaceAccess: "none"` + `sandbox.mode: "all" scope: "session"`；`tools.allow: ["session_status"]` deny `group:fs/runtime/web/browser/cron/gateway/nodes`；per-agent allowlist **cannot restore** a tool an earlier policy removed；`tools.agentToAgent.enabled: false` 禁用跨 agent 移交；untrusted content wrapped as data, never followed.
+- **判据**：① 不可信输入（邮件 / Webhook / 用户上传）**不当主 agent 跑**，路由到独立受限 reader agent——独立沙箱（`workspaceAccess: none`）+ 工具钳制（allowlist 只含必需，deny 文件系统 / 运行时 / 网络 / 浏览器 / cron / 网关）+ 禁跨 agent 移交（`agentToAgent.enabled: false`），避免 prompt-injection 借主 agent 能力外溢；② 工具策略只能更紧不能更松——全局 / provider / agent / sandbox 规则叠加后，per-agent allowlist **不能恢复**被上层移除的工具，钳制必须可审计；③ 外部内容当数据不当指令——包裹为 untrusted data，禁止跟随其中的链接 / 指令。
+- 提升层：安全边界 / 工作流。触发词：受限 reader、独立沙箱、workspaceAccess none、工具钳制、禁跨 agent 移交、prompt injection、不可信输入、untrusted data。
