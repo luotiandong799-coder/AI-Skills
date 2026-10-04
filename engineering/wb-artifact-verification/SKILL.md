@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: "2.143.0"
+version: "2.144.0"
 agent_created: true
 ---
 
@@ -397,3 +397,10 @@ agent_created: true
 - **原文**："A handler exports a function returning `void` or `Promise<void>`… **Returned values do not block, cancel, or rewrite the operation.**"；"Treat context as an **observation, not a live state-editing API**… patch events carry **cloned snapshots**."；"Pushing to `event.messages` is **not a general send-message API**… **Append messages before the handler's promise settles**; detached work that pushes later can miss the producer's delivery step."
 - **判据**：① **扩展点返回值惰性**：钩子/handler 的返回值永远不阻断、不取消、不改写被装饰的操作 ⇒ 扩展点是旁路观察，不是控制流的一部分；把它当「返回 false 就中止」来设计会静默失效。② **上下文是观测快照不是活状态 API**：事件 `context` 是克隆快照（patch 事件带 cloned snapshots），扩展点拿不到也不该拿到可变活状态 ⇒ 想「在钩子里改状态」必须走 producer 自己拥有的通道，不能借观测通道偷改。③ **副作用只能走 producer 拥有的投递通道且有结算窗口**：推到 `event.messages` 不是通用发信 API，只有特定 producer 消费它，且必须在 handler 的 promise settle 之前追加，detached 后推的会错过投递 ⇒ 扩展点副作用有确定归属与时序窗口，乱发即丢。④ **与监视器只读同根不同面**：核心都是「观察者不改状态」，但监视器是无人值守检测（只读 + 动作留载荷），扩展点是装饰器/钩子（返回惰性 + 投递归属 + 结算窗口）；验收扩展机制时分别检查「返回值是否惰性」「副作用是否走对通道且在窗口内」，不能只问「它读不读」。
 - 提升层：可复用 Skill / 工作流。触发词：扩展点返回惰性、钩子不阻断、context 是观测快照、副作用走 producer 投递通道、结算窗口、detached 错过投递、观察者不改状态。
+
+
+## 验收「请求值」不算数：只有回执里的生效值才是真相（来源：docs.openclaw.ai `tools/acp-agents/controls.md` 9,158B + `tools/acp-agents/sessions.md` 7,281B，2026-10-05 r420-A 独立 curl 取 .md 原文实拉）
+- **实证**：官方原文「When a backend returns its accepted controls, OpenClaw keeps an already-selected thinking level in sync with that response. A model switch may lower the level or remove thinking support; subsequent turns and reconnects use the accepted selection instead of replaying the old level.」「Backend defaults do not become new session overrides, and unsupported inherited defaults dropped during new session initialization are not saved as overrides.」；`sessions_spawn` 明确「does not accept per-call timeout overrides (`runTimeoutSeconds`/`timeoutSeconds` are rejected with a config-the-default error)」；harness 未 advertise model controls 时「an explicit selection fails; an inherited default may be omitted so the harness can use its own default」。
+- **判据**：① **意图与真相必须分成两个字段，验收只认后者**——写下"我请求了 X"不等于"X 生效了"；任何可调旋钮都要回读后端接受的生效值，模型/档位/超时这类被静默降级的参数尤其如此。② **显式与隐式走不同失败语义**——显式指定失败是**错误**，继承默认可省略是**沉默**；验收时不能把两者都写成"没设上"，前者必须报错可见，后者必须明确声明是省略而非失败。③ **被丢弃的默认不得写成 override**——不支持的继承值被丢掉后不保存为显式覆盖，否则"我从未要求过"会变成"我要求过但被拒"。④ **有些旋钮只在配置层存在**——调用层传同一个参数是**被拒绝**而非被忽略；验收须先确认该旋钮在哪个层可调，再判断"没生效"属于哪一类。⑤ 验收表增一列：**生效值来源**（回执 / 继承默认 / 显式覆盖 / 被降级）。
+- **与既有能力分工**：§状态位覆盖范围（2.134.0）管"ok 覆盖到哪一层"；§拒绝须有反证探针（2.139.0）管"阻断与不可达如何区分"；本条管**"配了"与"生效了"之间那段被静默改写的过程**。
+- 提升层：工作流。触发词：回执才是真相、请求值 vs 生效值、静默降级、显式失败 vs 继承省略、被丢弃的默认、旋钮层级、生效值来源。

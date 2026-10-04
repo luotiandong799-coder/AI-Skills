@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.69.0"
+version: "1.70.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -160,24 +160,13 @@ the CLI only adds atomicity and an audit trail.
 
 <!-- 2026-09-29 r290 下沉：Capability 12 诊断日志与审计留痕分仓 → references/knowledge-base.md §r199-B 批 -->
 > 早期两节（Capability 13 留痕范围 / Capability 14 多 Agent 编排 / Capability 15 群组式多 Agent）已零删减下沉至 references/knowledge-base.md 的 r417-ag 存档节。
-### Capability 16 — 凭据与执行体容器级物理分离 + 输出四级管线（来源：GitHub Agentic Workflows 官方安全架构，经 agentpatterns.ai / aidevme 2026-09-27 r205-C 实拉）
-- **★三种凭据分装三个容器，agent 容器零密钥**：LLM 凭据在 **API proxy 容器**（agent 经代理调用，看不到 key）；MCP 凭据在 **MCP gateway 容器**（按仓库策略路由，HTTP 转发）；**agent 容器**只带防火墙出网白名单 + 只读 /host 挂载 + tmpfs 覆盖 + chroot jail。判据：**密钥不该和会读不可信输入的那个进程共处一个故障域**——agent 被提示注入打穿时，手上是没有任何凭据的。
-- **★四个信任边界分层，token 绑在配置层不在 agent 内**：Substrate（VM 隔离 + 内核强制通信边界）/ Configuration（声明式权限分派 + token 绑定）/ Planning（分阶段工作流 + 显式数据交换）。判据：**权限是声明出来的，不是运行时协商出来的**。
-- **★写操作走 safe-outputs 四级管线，没有临时写权限**：Operation filtering（限可调 API）→ **Volume limiting**（封顶次数，如"最多 3 个 PR"）→ Content sanitization（剥掉 URL 与 secrets）→ Moderation（确定性分析后才允许下游投递）。判据：**"能不能写"之外必须还有"写多少 / 写什么内容 / 谁复核"三道闸**——只管能不能写，一次失控就是无限 blast radius。
-- **★默认只读 + agent 产的 PR 永不自动合并**：先把流程跑成只读/只评论、证明低噪音后再开放 label / 建 PR。判据：**放权按观测到的行为渐进，不按预期行为一次性给**。
-- 与 §Capability 12 留痕通道独立于被测对象、§Capability 13 留痕范围由显式输出决定 的分工：那两条管"记录怎么写、写哪些字段"；本条管"**执行体手里有什么、能往外做什么**"——一个定留痕，一个定权限。
-- 提升层：工作流 / 安全边界。
+<!-- 2026-10-05 r420A 下沉：Capability 16 凭据与执行体容器级物理分离 → references/knowledge-base.md §r420-ag -->
 
 #<!-- 2026-10-01 r344A 下沉：Capability 17 记忆晋升三门整段 → references/knowledge-base.md §r344A -->
 
 #<!-- 2026-10-04 r415 下沉：Cap35 + Cap36 → references/knowledge-base.md §r415-ag -->
 > 入站准入双门与会话隔离粒度一节已零删减下沉至 references/knowledge-base.md 的 r417-ag 存档节。
-## 评审类协作的质量由「给评审者什么上下文」决定，且评审必须尽早（来源：deeplearning.ai《AI Code Review》（Qodo，1h4m，Intermediate）2026-09-28 r208-C 独立实拉）
-- **评审无效的常见根因不是评审规则写得不好，是评审者拿到的上下文不对**：课程核心断言 `context is what makes a review reliable`，做法是把 `giving the reviewer the right context` 当作设计评审流程的第一件事。判据：**改评审提示词前先改评审输入；上下文错了，规则越细越自信地错。**
-- **评审要尽早运行，而不是等产物完整后一次评审**：课程明确"尽早运行评审"。判据：**评审推迟的代价是返工面变大，不是评审变准**；早评审发现的是方向问题，晚评审只能发现细节问题。
-- **做评审 agent 时，先定义"它需要看见什么"，再定义"它该说什么"**：课程路径是先给对上下文 → 再构建自己的 review agent。判据：**顺序反了会得到一台语气很好但看不见关键面的评审机器。**
-- 判重：与 wb-artifact-verification §独立证据源（验证要看独立证据）相邻——那条管「验证的独立性」，本条管「评审输入的完整性」。
-- 提升层：工作流 / 可复用 Skill。触发词：评审上下文、评审不可靠、评审 agent、尽早评审、评审质量、review context、给评审者什么。
+<!-- 2026-10-05 r420A 下沉：评审类协作上下文一节 → references/knowledge-base.md §r420-ag -->
 
 ## 治理处置增「申诉期冻结态」：被质疑不下架，转只读冻结（来源：help.openai.com/en/articles/8798878-sharing-and-publishing-gpts 2026-09-28 r313-Q-C 浏览器实拉 + r279-C 复核）
 - **实证**：OpenAI GPT 发布申诉期政策——"While an appeal is under review: You can continue using the GPT privately; You cannot edit or update it; You cannot share it with others until the appeal is resolved or you cancel it." 即**私人可用、禁编辑/更新/对外分享**的冻结态。
@@ -484,3 +473,15 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：Trust boundary matrix 三列 `Boundary or control | What it means | **Common misread**`；"`sessionKey` (session IDs, labels) is a **routing selector, not an authorization token**."；"[Named operator roles](/gateway/operator-scopes#named-operator-roles) bound what each teammate's connections can do; they are **collaboration guardrails, not tenant isolation**."；"Prompt/content guardrails - Reduce model abuse risk | misread: *prompt injection alone proves auth bypass*"；"Browser evaluate - Intentional operator capability when enabled | misread: *any JS eval primitive is automatically a vuln*"；"Local TUI shell - Explicit operator-triggered local execution | misread: *local shell convenience command is remote injection*"；「Everyone who can message a tool-enabled agent shares that agent's delegated tool authority」。
 - **判据**：① **控制项的价值有一半在「它不是什么」**——只写「我提供了 X」，消费方会把 X 当成它没承诺的东西（把选择器当令牌、把护栏当租户隔离、把运营商能力当漏洞）⇒ 每项能力/控制声明必须与「常见误读」成对出现，不能把澄清丢进 FAQ 或等出事再解释。② **澄清要与声明同表同级**：误读是同一张表的第三列，不是脚注也不是附录——同表同级才能让评审在看到能力的同一眼看到它的边界。③ **区分「未承诺」与「被攻破」**：prompt injection 得手 ≠ 认证被绕过；存在 eval 原语 ≠ 存在漏洞；本地 shell 便利命令 ≠ 远程注入 ⇒ 复盘/上报时先判「这个控制是否曾承诺挡住它」，没承诺过的归入设计范围问题，不与安全事件混账。④ **同名的两个词必须并列分家**：routing selector vs authorization token、collaboration guardrail vs tenant isolation ⇒ 名字相近而语义不同的两件事要在同一处并列定义，否则下游按其中一种语义使用时无人会发现。⑤ **共享能力 = 共享授权**：能给工具型 agent 发消息的每个人，都共享该 agent 被委托的工具权限 ⇒ 「谁能跟它说话」与「它能做什么」是一条边界的两端，只收紧一端等于没收紧。⑥ 对 guild 的落点：共享身份/规则/交接的能力声明（Cap 清单、gated actions、分层授权）一律补一列「它不是什么」；新增 Cap 时同步写明该项**不防什么**，其他 agent 判重时才不会把「未覆盖」误读成「已失效」。
 - 提升层：可复用 Skill / 治理。触发词：误读澄清、它不是什么、未承诺不等于被绕过、路由选择器不是授权令牌、协作护栏不是租户隔离、同表同级、控制声明带负向列、共享发信即共享授权。
+
+
+## Capability 77 — 提问是「不续命、不授权、有终态」的暂停原语；提问权不可随委派下放（来源：docs.openclaw.ai `tools/ask-user.md` 9,167B + `tools/acp-agents/controls.md` 9,158B，2026-10-05 r420-A 独立 curl 取 .md 原文实拉）
+- **实证**：官方原文「Answering a question does not grant the agent additional permissions.」「A pending question does not extend an explicit run budget.」「An aborted agent run cancels its pending Gateway question.」；超时返回 `status: "no_answer"` 后「the agent then continues with its best judgment」；`ask_user` 仅主会话可用，「Subagents and other non-primary runs do not receive it」；需要凭据时走 `secrets` 工具而非提问（masked prompt，不入 chat / transcript / 模型上下文）；多问题在消息通道「degrade to readable text」。
+- **判据**：① **暂停不换时间**——等待人类不延长任何显式预算，run 被中止则其待答提问一并取消；把「在等人」当成「还在跑」会让预算与超时全部失真。② **回答 ≠ 授权**——人类回应的唯一产物是答案本身，不附带任何能力授予；凡"答了就算同意了方案/放开了权限"的设计都是把确认与授权混为一谈。③ **无答必须有既定去向**——`no_answer` 是合法终态且明确要求 agent 以最佳判断继续；"等人等到卡住"不是合法状态。④ **提问权不可委派**——子 agent 拿不到提问工具，委派任务不等于把"回头问人"的能力一起转交；需要子 agent 请示时，必须由主会话代问或预置决策规则。⑤ **提问通道不是安全输入面**——凭据走独立 masked 通道，绝不进对话与上下文；在提问里收密钥等于把秘密写进转录。⑥ **同一提问跨通道形状会降级**——结构化控件在消息通道降为可读文本，语义保持但可机读性丢失；依赖结构化回执的下游必须在降级通道上改用文本解析或显式回退。⑦ 人类等待须有上下界（超时钳制 30–3600s），无界等待等价于把控制权交出去且收不回。
+- **与既有能力分工**：Cap67 管「工具清单是限流不是授权、生效的是交集」（清单与父策略）；Cap73 管「配对成功不得连带授予命令」（设备/通道配对）；Cap71 管「一次性触发用完即停用」（调度形状）。本条管**人机交接这一条回路本身的语义**——等待、回应、无答各是什么。
+- 提升层：工作流 / 安全边界。触发词：ask_user、提问不授权、no_answer、暂停不续命、提问权不可委派、凭据不走提问、通道降级。
+
+## Capability 78 — 双身份分离：拥有会话的 agent 与外部执行体是两个独立身份，冲突必须可见失败（来源：docs.openclaw.ai `tools/acp-agents/controls.md` 9,158B + `tools/acp-agents/sessions.md` 7,281B，2026-10-05 r420-A 独立 curl 取 .md 原文实拉）
+- **实证**：官方原文「The OpenClaw agent that owns a session is separate from the external harness selected by ACP.」——owner 携带 `agentId`，`agent` 只是 harness 名；「Bare keys such as `global` require an explicit owner when ownership is explicit.」「Conflicting owner/key pairs fail visibly.」；运行时控制须 owner identity 或 `operator.admin`，非 owner 只能用 `sessions`/`doctor`/`install`/`help`，且「For non-owner senders, `/acp sessions` lists only the current bound or requester session」；「`/acp steer` queues a follow-up; it cannot add input to the running ACP turn.」「To redirect work in progress, run `/acp cancel` first」；「`/acp cwd` … closes the previous handle before replacing it」。
+- **判据**：① **归属与执行是两个身份，必须各自命名**——"谁的会话"与"哪个引擎在跑"分开记账，混成一个字段后既无法审计也无法回收。② **裸名必须有显式归属，冲突要可见失败而不是静默择优**——两个身份撞在一起时报错，比悄悄选一个更能防止越权。③ **只读也分可见面**——非 owner 的"列表"只列自己；把"能读"当成"能读全部"会在审计时漏掉别人的领地。④ **转向 ≠ 改道**——排队指令只能在当前回合结束后跑，没有插队能力；想改正在做的事必须先取消，"我发了新指令所以它应该改方向"是不成立的假设。⑤ **换上下文会销毁旧句柄**——切换工作目录先关闭上一个 handle，热替换不成立；凡是"改了就立刻生效且不中断"的预期都要显式验证。
+- 提升层：工作流 / 安全边界。触发词：双身份、owner 与 harness、裸键显式归属、冲突可见失败、只读可见面、steer 不插队、换目录销毁句柄。
