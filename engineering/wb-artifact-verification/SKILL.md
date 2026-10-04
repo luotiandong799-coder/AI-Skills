@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: "2.136.0"
+version: "2.137.0"
 agent_created: true
 ---
 
@@ -354,3 +354,9 @@ agent_created: true
 - **原文**：「Author watchers around **actionable state**, not only success: a watcher that goes quiet when its check fails or times out looks healthy while broken.」「Compare the observation with `trigger.state` and return fresh state to deduplicate; do not rely on model or process memory.」「write scripts as read-only checks and keep actions in the payload. ... If a fired payload run fails, the returned `state` is **not** persisted — the next evaluation sees the previous state and can fire again.」
 - **判据**：① **监视器围绕"可行动状态"设计，而非只看成功**——检查在失败/超时时若静默，看起来健康实则已坏；验收无人值守监视器时，先问"它失败时还报不报"，不报的就是假健康。② **去重靠持久态比对，不靠模型/进程记忆**：每次把本次观测与上次持久化的 `trigger.state` 比对，变化才触发；不要让模型"记住"是否已报过——跨重启/跨进程记忆不可信。⇒ 判重原语是"存储里的上一状态"，不是"模型觉得"。③ **检测只读、动作留载荷**：检查失败 → 状态不持久化 → 下次还能再触发，所以检查本身不得做变更（变更放 payload）；把副作用写进检测器，会丢失"失败后自愈重试"的能力。⇒ watcher 的 fire 信号本身是可验证产物：它必须基于持久态比对、且检测与动作分离，信号才可信。
 - 提升层：工具 / 工作流 / 可复用 Skill。触发词：监视器看可行动状态、静默失败假健康、去重靠持久态不靠记忆、检测只读动作留载荷、fire 信号须可验证。
+
+
+## 空结果只在「陈旧标记缺席」时才构成结论；功能禁用要返回成功态而非错误；检测器扫不出来的东西要在准入期直接拒（来源：docs.openclaw.ai `cli/memory.md` 35,246B + `clawhub/security-audits.md` 5,974B，2026-10-04 r416B 独立 curl 取 `.md` 原文实拉；与 §状态位覆盖范围 / §输出形状契约 互补——那两条管"状态位覆盖到哪一层""降级后集合是什么形状"，本条管"空结果凭什么算数""扫不出来该表现为通过还是拒绝"）
+- **原文**：「…`stale: true`, plus `warning` and `action` fields. Treat an empty `results` array as authoritative **only when `stale` is absent**.」；「Disabled memory returns `{"agentId":"main","status":"disabled"}` with a successful exit.」；「A.I.G 0.2.1 cannot inspect packaged Python bytecode. Until Tencent ships its [CVE-2026-84809] fix, ClawHub **rejects skills containing `.pyc`, `.pyo`, or `.pyd` files before A.I.G runs.** ClawScan also detects packaged Python bytecode independently.」
+- **判据**：① **空结果的权威位来自"数据是否新鲜"，不是来自"返回了空数组"**：召回为空只在 `stale` 缺席时才是"确实没有"的结论；陈旧时空数组必须并带 `warning` 与 `action`（下一步动作） ⇒ 把空数组一律当结论，会把"索引还没建好"读成"确认不存在"，且不会有人去修。② **"没启用"与"出错了"必须是两种返回**：mem（功能禁用）返回 `status:"disabled"` 且**退出码成功** ⇒ 禁用是合法状态不是故障；把它当错误会让健康检查永远红，也会淹没真实的取数失败。③ **检测器的盲区要反向写进准入规则**：扫描器读不了打包字节码，正确做法不是"扫不出就放过"，而是注册表**在扫描之前**直接拒该文件类型，并钉 CVE 编号、明说是**过渡规则**（等上游修好可撤） ⇒ 扫不出来的东西如果表现为"通过"，检测覆盖面就成了一个随扫描器版本漂移的隐性变量。④ **独立第二检测面是过渡期的配套**：ClawScan 独立检测同类文件 ⇒ 单一检测器的缺口期必须有旁路，否则"先拒"会连带拒绝所有依赖该形态的正常内容。⑤ 对验收的落点：验收表要能回答三件事——「这个空结果依据的数据是否新鲜」「这个状态是禁用还是失败」「这个'通过'是检测过还是根本没检测」。
+- 提升层：可复用 Skill 治理 / 验收。触发词：空结果权威位、stale 标记、禁用返回成功态、禁用≠失败、检测器盲区反向准入、扫不出即拒、过渡规则钉 CVE、独立第二检测面。
