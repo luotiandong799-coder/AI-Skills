@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛
-version: "2.145.0"
+version: "2.146.0"
 agent_created: true
 ---
 
@@ -411,3 +411,10 @@ agent_created: true
 - **判据**：① **删除必须拆成"标记 / 缓冲 / 永久"三态并分别可验**——把标记当成已删会在缓冲窗口内丢数据；把已删当成空间已回收则磁盘告警永远解释不通。② **回收资格由生命周期状态决定，不是由年龄决定**——未终态对象（`new`/`running`/`waiting`）一律不可回收，否则清掉的正是还在跑的东西。③ **用户的轻量标注是隐式保留声明**——打 tag / 评分这类低门槛动作能压过全局保留策略；保留策略必须显式列出"豁免面"，否则会出现"我明明标了重要却被清了"。④ **两个独立触发条件要各自可观测**——age 与 count 任一触发即行动，只盯一个条件会漏掉另一条路径上的删除。⑤ **上限是不等式不是等式**——文档自陈"可能不会精确回落到上限"，验收不得断言"条数 == 上限"。⑥ **删除 ≠ 回收空间**，回收是另一个动作（vacuum / 重建），两者必须分别在验收表里占一行。⑦ **剪枝面等于当前配置面**——换了存储介质后，旧介质上的历史数据不在剪枝范围内，表现为"清了但残留还在"。
 - **与既有能力分工**：ctx 3.311.0 管上下文层的修剪/压缩双杠杆；ag Cap32 管备份是泄漏面；本条管**产物与记录层的保留/回收生命周期**——"清掉了没有""清的是不是该清的""空间回来没有"三问。
 - 提升层：工作流 / 可复用 Skill。触发词：删除三态、缓冲窗口、标注即豁免、未终态不可回收、删除不等于回收、剪枝面等于配置面、保留策略验收。
+
+
+## 公开面必须是「显式列举的窄面」，且关键命名空间由平台在所有方法上先行占用（来源：docs.openclaw.ai `web/control-ui/security-model.md` 12,843B，2026-10-05 r420-C 经 llms.txt 定位真路径后 .md 实拉）
+- **实证**：官方原文公开渲染器「reads only user messages and assistant final-answer text. It omits tools, reasoning, files, images, widgets, hidden messages, and internal metadata, and applies credential-pattern redaction」；令牌「is the read capability and does not reveal the agent, session key, session ID, or publication ID」；「Treat the complete URL as public: anyone who receives it can read existing and future published text until the creator or a Gateway admin disables access」；登录代理「bypass authentication only for the Control UI's `/share/*` namespace. Keep the WebSocket, bootstrap, API, dashboard, and all other routes protected」；审批链接「identifies the approval, never authorizes it」，且「The approval namespace is reserved by the Gateway ahead of plugin HTTP routes for **all** HTTP methods, so a plugin route can never shadow or intercept an approval document」；「Signing in on an approval document is ephemeral … it does not overwrite the gateway selection or settings saved by the full Control UI」。
+- **判据**：① **公开面用白名单枚举，不用"脱敏后的全集"**——允许哪几类字段要逐条写出来（只含用户消息与最终答案），凡没列举的一律不可见；"我们把敏感字段都脱敏了"是黑名单思路，漏一项就是一次泄漏。② **能力令牌本身不得携带元数据**——token 只证明"能读"，不暴露它指向哪个 agent / 会话 / 发布 ID；把标识编进令牌等于把内部拓扑公开。③ **分享是持续授权不是一次性快照**——拿到链接的人能读到**未来新增**的已发布内容，直到显式关闭；验收必须测"发布后追加的内容是否也可见"，只测当下内容是假通过。④ **旁路认证必须精确到命名空间**——只放行 `/share/*`，WebSocket / bootstrap / API / dashboard 全部保持受保护；按"路径前缀"放行会把同前缀的管理接口一起放开。⑤ **关键命名空间要由平台在所有 HTTP 方法上先行占用**——只占 GET 会让插件用 POST/DELETE 遮蔽或劫持同一路径；预留声明必须写明"全部方法"。⑥ **临时认证不得污染持久配置**——在审批页登录是临时态，不能覆盖完整界面保存的网关选择与设置。⑦ 验收表增三列：**公开面是否白名单枚举** / **令牌是否携带元数据** / **旁路是否精确到命名空间且覆盖全部方法**。
+- **与既有能力分工**：Cap32 管「备份是泄漏面」；av 2.138.0 管「脱敏清单须同时给排除面与残留敏感面」；本条管**对外暴露面的形状与边界**——不是"脱敏干不干净"，而是"根本有没有把不该进的面挡在外面"。
+- 提升层：安全边界 / 工作流。触发词：公开面白名单、令牌不携带元数据、分享是持续授权、旁路精确到命名空间、命名空间全方法预留、临时认证不污染持久配置。

@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.70.0"
+version: "1.71.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -168,16 +168,9 @@ the CLI only adds atomicity and an audit trail.
 > 入站准入双门与会话隔离粒度一节已零删减下沉至 references/knowledge-base.md 的 r417-ag 存档节。
 <!-- 2026-10-05 r420A 下沉：评审类协作上下文一节 → references/knowledge-base.md §r420-ag -->
 
-## 治理处置增「申诉期冻结态」：被质疑不下架，转只读冻结（来源：help.openai.com/en/articles/8798878-sharing-and-publishing-gpts 2026-09-28 r313-Q-C 浏览器实拉 + r279-C 复核）
-- **实证**：OpenAI GPT 发布申诉期政策——"While an appeal is under review: You can continue using the GPT privately; You cannot edit or update it; You cannot share it with others until the appeal is resolved or you cancel it." 即**私人可用、禁编辑/更新/对外分享**的冻结态。
-- **判据**：治理处置增一档「只读冻结」——被质疑/审核中的技能不下架、不删，转成"可私有使用、禁编辑/更新/对外分享"，申诉解决后自动解冻；另一硬前置：任何对外暴露动作/工具**必须自带隐私与出处声明字段**。
-- 提升层：工作流。触发词：申诉期冻结、只读冻结、隐私出处声明、治理处置档、appeal under review。
+<!-- 2026-10-05 r420C 下沉：治理处置申诉期冻结态一节 → references/knowledge-base.md §r420-ag-C -->
 
-## 说过 ≠ 记着：发消息本身不入队，任务必须由具名 owner 显式登记（来源：github.com/mvschwarz/openrig README 2026-09-28 r283-B 独立 WebFetch 取正文核验）
-- **实证**：官方原文「**Sending a message does not itself create a queue item; the owner records the task.**」；配套命令 `rig send dev-owner@first-project '... Track the task in the queue and return its ID ...'` + `rig queue list --destination dev-owner@first-project`。拓扑另以 **YAML RigSpec 声明**（pods / members / edges / continuity policies / culture file）。同文佐证：YOLO **off by default**，`rig down --snapshot` / `rig up <name>` 快照恢复并逐节点报告 resumed/fresh/failed。
-- **判据**：**通信内容与任务队列是两个东西**——消息被收到不等于任务被接下。跨 agent 交接时，必须由具名 owner 显式登记任务并给出 ID，否则「我们讨论过」会被当成「有人在做」，形成无人认领的假成功。
-- **落地动作**：交接消息里凡含请求，结尾必须要求对方回一个**任务 ID**；收到请求的一方，登记动作先于回复动作。无 ID 的交接，发起方不得标记为"已派发"。
-- 提升层：工作流。触发词：发消息不入队、said vs recorded、任务 ID、具名 owner、交接登记、假成功、RigSpec。
+<!-- 2026-10-05 r420C 下沉：说过 ≠ 记着（发消息不入队）一节 → references/knowledge-base.md §r420-ag-C -->
 
 ## 晋升收益门：只把「期望收益为正」的经验结晶成技能（来源：arXiv 2607.16621 MSCE 2026-09-28 r283-B 经 Qoder r316-Q-A 实拉取证；续 r205 §记忆晋升三门）
 - **实证**：原文机制是**只把"正期望收益的 L2 策略"结晶为可调用技能**，并用 **reflection-weighted value backfilling** 把稀疏的终局反馈回传给中间步骤（基准 EvoAgentBench + LoCoMo）。
@@ -485,3 +478,10 @@ the CLI only adds atomicity and an audit trail.
 - **实证**：官方原文「The OpenClaw agent that owns a session is separate from the external harness selected by ACP.」——owner 携带 `agentId`，`agent` 只是 harness 名；「Bare keys such as `global` require an explicit owner when ownership is explicit.」「Conflicting owner/key pairs fail visibly.」；运行时控制须 owner identity 或 `operator.admin`，非 owner 只能用 `sessions`/`doctor`/`install`/`help`，且「For non-owner senders, `/acp sessions` lists only the current bound or requester session」；「`/acp steer` queues a follow-up; it cannot add input to the running ACP turn.」「To redirect work in progress, run `/acp cancel` first」；「`/acp cwd` … closes the previous handle before replacing it」。
 - **判据**：① **归属与执行是两个身份，必须各自命名**——"谁的会话"与"哪个引擎在跑"分开记账，混成一个字段后既无法审计也无法回收。② **裸名必须有显式归属，冲突要可见失败而不是静默择优**——两个身份撞在一起时报错，比悄悄选一个更能防止越权。③ **只读也分可见面**——非 owner 的"列表"只列自己；把"能读"当成"能读全部"会在审计时漏掉别人的领地。④ **转向 ≠ 改道**——排队指令只能在当前回合结束后跑，没有插队能力；想改正在做的事必须先取消，"我发了新指令所以它应该改方向"是不成立的假设。⑤ **换上下文会销毁旧句柄**——切换工作目录先关闭上一个 handle，热替换不成立；凡是"改了就立刻生效且不中断"的预期都要显式验证。
 - 提升层：工作流 / 安全边界。触发词：双身份、owner 与 harness、裸键显式归属、冲突可见失败、只读可见面、steer 不插队、换目录销毁句柄。
+
+
+## Capability 79 — 短时能力凭证：撤销先于过期、URL 不放可复用凭据、缓存命中不绕过鉴权（来源：docs.openclaw.ai `web/control-ui/security-model.md` 12,843B，2026-10-05 r420-C 经 llms.txt 211,319B 定位真路径后 .md 实拉）
+- **实证**：官方原文「Browser-rendered image, audio, video, and document URLs use `mediaTicket=<ticket>` instead of the active gateway token or password. The ticket expires quickly and cannot authorize a different source.」「Losing session visibility or role permissions stops new reads through existing tickets, even before they expire.」；「The revision is a cache key, not an access token; unversioned image requests retain the original image.」；「Conditional requests still require authentication before returning `304 Not Modified`.」；「keeps media rendering compatible with browser-native media elements without putting reusable gateway credentials in visible media URLs」；已加载图像在连接或元数据续期失败时仍可见但「it does not extend its media ticket or authorize fresh reads」；显式 missing / access-denied / 源、凭据或访问范围变化即清除保留图像；管理员 **Allow image**「without changing the session's permissions or allowing its parent folder」；过载时返回 `503` + `Retry-After: 1`「instead of a permanent lookup failure」。
+- **判据**：① **撤销先于过期**——授权状态一变，票据立刻失效，不等 TTL；把过期当作唯一的失效机制等于给撤销留了一个 TTL 长的窗口。② **可见 URL 里只能放不可复用、不可换源的一次性凭证**——把长期凭据放进资源 URL 等于把凭据写进日志、referrer 与浏览器历史。③ **缓存命中不得绕过鉴权**——条件请求返回 304 之前仍要过认证；"命中了就不查权限"是最常见的越权捷径。④ **展示存活 ≠ 授权存活**——已渲染内容可以在凭证失效后继续显示（体验需要），但这既不延长票据也不授权新读取；缓存是展示层概念，绝不能升格成权限层概念。⑤ **失效信号必须逐条枚举**——missing / access-denied / 源变化 / 凭据变化 / 访问范围变化，任一即清缓存；靠"感觉该清了"必然留下一条没清的路径。⑥ **一次性例外不得扩面**——放行单个文件不等于放行其父目录，也不改变会话权限；例外的粒度要写到被放行的最窄对象。⑦ **过载降级要带重试语义**——503 + Retry-After 把临时状态表达为"稍后再来"，压成永久失败会让调用方误判为终态。⑧ **修订号是缓存键不是令牌**——无版本的请求仍应返回原对象，不得因为版本号不对就当成未授权。
+- **与既有能力分工**：Cap56 管「令牌轮换不能借以升级角色」；Cap73 管「能力生效要过三道门」；本条管**凭证在签发之后的整段生命周期**——何时失效、失效如何传播、缓存与展示会不会让它"假活"。
+- 提升层：安全边界 / 工具。触发词：短时凭证、撤销先于过期、URL 不放凭据、缓存不绕过鉴权、展示存活不等于授权存活、一次性例外不扩面、Retry-After、修订号是缓存键。
