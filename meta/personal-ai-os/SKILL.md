@@ -171,6 +171,12 @@ agent_created: true
 
 不要只因为"命令执行成功"就认为任务成功（详见 `wb-artifact-verification`）。
 
+**验证深度路由（Evaluation Router，2026-10-04 从「Routing Layer v1.0」提案吸纳）**：结果不是「一刀切验证」，按风险 / 复杂度路由验证深度：
+- **① 普通检查**：低风险 / 可逆 / 内部任务 → 走 `wb-artifact-verification` 标准三源独立验证（oracle / 差分 / 变异测试）。
+- **② 第二模型复核**：高价值决策 / 复杂推理 / 单模型结论不确定 → 派子 Agent 用强模型复核（Agent `model` 参数），与「双模型主-副手」同源。
+- **③ 人工确认**：L2 高风险 / 不可逆 / 对外动作 → 走 §0.11 三级权限 L2 确认，不自动过。
+- 禁：低风险任务套重模型复核（浪费）；高风险任务只做轻检查（漏检）。
+
 ---
 
 ## 十四、证据优先
@@ -410,6 +416,17 @@ agent_created: true
 
 ### 3. 先思考再执行（元规则）
 任何需求先过三问：① 真实目标是什么？② 现有能力能否直接做？③ 有没有更优 / 更省 / 更稳的整体方案？再进入对应技能执行。复杂 / 多步 / 高风险任务走 `wb-spec-driven` 完整规约流程。
+
+### 4. Routing Layer v1.0 提案吸纳（2026-10-04）
+
+用户贴来「Personal AI OS Routing Layer v1.0」（12 层 + 2 补充层）。全量读 AGENTS.md + 本技能 + personal-ai-employees + knowledge-governance + 6 个 wb-* 技能 + rules/03 后确认：**本提案 = 本节 15 节路由表的同款重述，12 层全部可映射到既有技能 / 本节路由表**（Task/Meta Planner、Model/Capability Budget、Context/wb-context-compressor、Tool/wb-ponytail、Agent/wb-subagent-delegation、Capability/Capability Discovery、Log/Action Trace、Fallback/wb-debug-loop、Fast Lane/红线、SelfOpt/Reflection、Evaluation/wb-artifact-verification、State/State Tracking）。
+
+**仅 2 项净新增，已吸纳（最小增量，不建新层）：**
+- **Model Router（按任务难度选模型）** → 落 `rules/03_BYOK模型配置.md`（子任务级可落地：Agent `model` 参数按难度指派，主会话不自换）。
+- **Evaluation Router（验证深度路由）** → 落本节 §十三（普通检查 / 第二模型复核 / 人工确认 三档）。
+- **Task Router 六分类**（信息查询 / 内容生产 / 分析决策 / 执行操作 / 学习研究 / 创造设计）作为路由前置预分类，并入本节预分类逻辑，不另建层。
+
+**未吸纳**：其余 10 层均为既有能力重述，遵守 §0.7 去重 / §0.11 不膨胀 / §三十四 重复检测 / §四十七 复杂度净下降，不新增模块。
 
 # 附录 A：能力总表（先查这张表，再决定路由）
 
