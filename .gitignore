@@ -44,3 +44,6 @@ wb_*.jsonl
 
 # 根目录误建 NUL 设备名 junk 文件（早前 cd 报错重定向产物；Windows 保留名不可删，git add -A 会卡死「failed to insert into database」）；根排除以免 hourly 自动化失败
 /NUL
+
+# WorkBuddy 自动化运行时内存（本地状态，不入公开仓库；与上方 /memory/ 同类处理）
+.workbuddy/memory/
