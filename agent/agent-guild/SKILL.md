@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.67.0"
+version: "1.68.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -473,3 +473,9 @@ the CLI only adds atomicity and an audit trail.
 - 原文："`maxTurns` counts **agent runs started by the coordinator**, including runs that pass or fail. **Slots are reserved synchronously before parallel launch**… If the budget is smaller than the eligible participant count, configured order determines which turns start."；"Each receives an **attributed, size-bounded digest of sibling finals**… **it is not a replay of the physical inbound message**"；"All participants passing ends the thread."；"Budget state is in memory… **It is not restart-resumable**: a Gateway restart loses the active round and budget state."；"`maxTurns` does not count, buffer, or cap physical messages."；"Agents fail independently… does not block the others."；隔离清单 "Session keys / Conversation history / Workspace / Tool access / Memory/context" 五面全隔，而 WhatsApp "group context buffer… is shared on purpose… **cleared once after the fan-out completes**"；路由侧 "Even when direct-message conversation history is shared with main, **sandbox and tool policy use a derived per-account direct-chat runtime key**"；访问组 "**A group grants nothing by itself.** It only matters where an allowlist field references it."
 - 判据：① **预算的计数对象必须先声明**——计「启动过的运行」（含失败与弃权）还是「成功产出」，两者在部分失败时会给出完全不同的剩余额度，混用会让「还剩多少次」变成一个不可信的数字；② **槽位同步预留 + 配置顺序决定取舍**：额度小于合格参与者数时不是随机丢弃，而是按声明顺序取前 N，取舍必须是确定性的、可复现的；③ **续轮拿到的不是原事件**：后续轮的输入是「带归属、有长度上限的兄弟结论摘要」，它有自己的内部身份，**不是物理入站消息的重放** ⇒ 凡「让下一步重看原始输入」的设计，必须显式把原始输入单独传下去，不能指望继承；④ **收敛靠显式弃权信号**：全员弃权才结束线程，「没说话」不能等同于「同意结束」；⑤ **编排中间态是易失的**——轮次与预算状态在内存、范围到根消息、宿主重启即丢且不续 ⇒ 需要跨重启续跑的编排必须自己持久化进度，不能指望调度器；⑥ **隔离要逐面列清单，并把「刻意没隔的那一个」单独点名**（本例是共享群上下文缓冲）且说明它的生命周期（扇出完成后清一次）——只写「已隔离」的声明无法验收；⑦ **上下文可以合并而策略不可以**：私信历史并入主会话时，沙箱与工具策略仍走派生运行时键 ⇒ 「共享了上下文」不得被解读为「拿到了同等执行面」；⑧ **命名集合本身不授权**：访问组定义了也不生效，只有在白名单字段引用它的那个点上才生效 ⇒ 判断「某主体有没有权限」要找引用点，不是找定义点。
 - 提升层：工作流 / 可复用 Skill。触发词：多 agent 编播、扇出预算、maxTurns、槽位预留、续轮摘要、派生输入不是重放、全员弃权结束、编排状态易失、隔离面清单、共享上下文不共享策略、命名组不授权。
+
+## Cap75 持久自主程序 = 四字段定义（Scope/Triggers/Approval gates/Escalation）+ 显式「不该做」护栏；Standing Order 定「什么」、Automation 定「何时」（来源：docs.openclaw.ai/automation/standing-orders.md 9,726B，2026-10-05 r418C 独立 curl 取 `.md` 原文实拉逐串命中；与 Cap26 互聊护栏 / Cap73 三道门 / §三档审批 互补——那几条管单条入站与授权面，本条管「常驻自主程序」这一整类对象的定义结构与护栏沉淀）
+
+- **原文**："Each program specifies: 1. **Scope** - what the agent is authorized to do; 2. **Triggers** - when to execute (schedule, event, or condition); 3. **Approval gates** - what requires human sign-off before acting; 4. **Escalation rules** - when to stop and ask for help."；"### What NOT to do: Do not send reports to external parties / Do not modify source data / Do not skip delivery if metrics look bad - report accurately."；"Standing orders define **what** the agent is authorized to do. Automations define **when** it happens."
+- **判据**：① **常驻自主程序必须四字段齐备**：Scope（授权边界）/ Triggers（触发：定时·事件·条件）/ Approval gates（哪些动作前须人审）/ Escalation（何时停手求助）——缺任一字段=该程序定义不完整，验收时无法判断「它到底被允许到哪」。② **正向 Scope 不够，必须显式写「不该做」**：只列「能做什么」会漏掉「绝不能做」的负向约束；负向护栏（不发外域、不改源数据、指标异常也要如实报）要作为程序定义的一节 bake in，不能靠运行时临场判断。③ **What 与 When 分离**：Standing Order 定「授权与护栏」（what），Automation/cron 定「何时执行」（when），两者引用而非复制——把触发逻辑写进程序定义会让「改频率」变成「改程序」，把程序逻辑写进 cron 会让「改行为」变成「改调度」。④ **自主程序是边界对象不是一次性提示**：它常驻于 `AGENTS.md`/`standing-orders.md` 每会话自动注入，与 one-shot 脚本入口（跳过 workspace bootstrap）是两回事 ⇒ 凡「长期自主运行」的需求，先问「它的四字段定义与负向护栏写好了吗」，没写就是裸奔。
+- 提升层：工作流 / 可复用 Skill。触发词：持久自主程序、四字段定义、Scope/Triggers/Approval/Escalation、显式不该做护栏、What 与 When 分离、常驻注入非一次性。
