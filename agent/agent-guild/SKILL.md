@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.68.0"
+version: "1.69.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -479,3 +479,8 @@ the CLI only adds atomicity and an audit trail.
 - **原文**："Each program specifies: 1. **Scope** - what the agent is authorized to do; 2. **Triggers** - when to execute (schedule, event, or condition); 3. **Approval gates** - what requires human sign-off before acting; 4. **Escalation rules** - when to stop and ask for help."；"### What NOT to do: Do not send reports to external parties / Do not modify source data / Do not skip delivery if metrics look bad - report accurately."；"Standing orders define **what** the agent is authorized to do. Automations define **when** it happens."
 - **判据**：① **常驻自主程序必须四字段齐备**：Scope（授权边界）/ Triggers（触发：定时·事件·条件）/ Approval gates（哪些动作前须人审）/ Escalation（何时停手求助）——缺任一字段=该程序定义不完整，验收时无法判断「它到底被允许到哪」。② **正向 Scope 不够，必须显式写「不该做」**：只列「能做什么」会漏掉「绝不能做」的负向约束；负向护栏（不发外域、不改源数据、指标异常也要如实报）要作为程序定义的一节 bake in，不能靠运行时临场判断。③ **What 与 When 分离**：Standing Order 定「授权与护栏」（what），Automation/cron 定「何时执行」（when），两者引用而非复制——把触发逻辑写进程序定义会让「改频率」变成「改程序」，把程序逻辑写进 cron 会让「改行为」变成「改调度」。④ **自主程序是边界对象不是一次性提示**：它常驻于 `AGENTS.md`/`standing-orders.md` 每会话自动注入，与 one-shot 脚本入口（跳过 workspace bootstrap）是两回事 ⇒ 凡「长期自主运行」的需求，先问「它的四字段定义与负向护栏写好了吗」，没写就是裸奔。
 - 提升层：工作流 / 可复用 Skill。触发词：持久自主程序、四字段定义、Scope/Triggers/Approval/Escalation、显式不该做护栏、What 与 When 分离、常驻注入非一次性。
+
+## Cap76 控制的「误读澄清」必须与能力声明同表同级：先写清它防什么，再写清什么情况不算它失效，「未承诺」不等于「被绕过」（来源：docs.openclaw.ai/gateway/security/trust-model.md 9,980B + gateway/security.md 14,456B，2026-10-05 r419A 独立 curl 取 `.md` 原文实拉逐串命中；与 Cap67「工具清单是限流不是授权」/ Cap75「显式不该做护栏」互补——那两条管"清单不产生授权"与"程序定义要带负向约束"，本条管"每项控制声明必须自带误读澄清，且与正向声明同级存放"）
+- **原文**：Trust boundary matrix 三列 `Boundary or control | What it means | **Common misread**`；"`sessionKey` (session IDs, labels) is a **routing selector, not an authorization token**."；"[Named operator roles](/gateway/operator-scopes#named-operator-roles) bound what each teammate's connections can do; they are **collaboration guardrails, not tenant isolation**."；"Prompt/content guardrails - Reduce model abuse risk | misread: *prompt injection alone proves auth bypass*"；"Browser evaluate - Intentional operator capability when enabled | misread: *any JS eval primitive is automatically a vuln*"；"Local TUI shell - Explicit operator-triggered local execution | misread: *local shell convenience command is remote injection*"；「Everyone who can message a tool-enabled agent shares that agent's delegated tool authority」。
+- **判据**：① **控制项的价值有一半在「它不是什么」**——只写「我提供了 X」，消费方会把 X 当成它没承诺的东西（把选择器当令牌、把护栏当租户隔离、把运营商能力当漏洞）⇒ 每项能力/控制声明必须与「常见误读」成对出现，不能把澄清丢进 FAQ 或等出事再解释。② **澄清要与声明同表同级**：误读是同一张表的第三列，不是脚注也不是附录——同表同级才能让评审在看到能力的同一眼看到它的边界。③ **区分「未承诺」与「被攻破」**：prompt injection 得手 ≠ 认证被绕过；存在 eval 原语 ≠ 存在漏洞；本地 shell 便利命令 ≠ 远程注入 ⇒ 复盘/上报时先判「这个控制是否曾承诺挡住它」，没承诺过的归入设计范围问题，不与安全事件混账。④ **同名的两个词必须并列分家**：routing selector vs authorization token、collaboration guardrail vs tenant isolation ⇒ 名字相近而语义不同的两件事要在同一处并列定义，否则下游按其中一种语义使用时无人会发现。⑤ **共享能力 = 共享授权**：能给工具型 agent 发消息的每个人，都共享该 agent 被委托的工具权限 ⇒ 「谁能跟它说话」与「它能做什么」是一条边界的两端，只收紧一端等于没收紧。⑥ 对 guild 的落点：共享身份/规则/交接的能力声明（Cap 清单、gated actions、分层授权）一律补一列「它不是什么」；新增 Cap 时同步写明该项**不防什么**，其他 agent 判重时才不会把「未覆盖」误读成「已失效」。
+- 提升层：可复用 Skill / 治理。触发词：误读澄清、它不是什么、未承诺不等于被绕过、路由选择器不是授权令牌、协作护栏不是租户隔离、同表同级、控制声明带负向列、共享发信即共享授权。
