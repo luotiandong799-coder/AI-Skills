@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.148.0"
+version: "1.149.0"
 agent_created: true
 ---
 
@@ -479,3 +479,9 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **判据**：① **症状层与根因层要分开建表**——同一根因（资源耗尽）在节点提示 / 工作流状态 / 连接断开 / HTTP 状态码 / 引擎日志五个面各有说法；按症状分诊会把一次 OOM 记成四种不同故障，复发率永远统计不出来。② **"人看着跑"会改变资源画像**——手动执行为前端额外复制数据，因此调试态比生产态更容易触顶； reproduced-under-debug 与 reproduced-in-prod 必须分别标注。③ **降峰值靠缩短数据存活期，不靠减少步骤数**——拆成子流程反而省内存，因为每批数据用完即释放；"看起来更绕的解法更省"是可判据化的，不是玄学。④ **边界数据量决定拆分是否生效**——子流程必须只回传小结果集，回传大对象时拆分零收益；优化要看**跨界传输量**，不是内部计算量。⑤ 验收增一项：**资源类故障的症状覆盖面**（是否把连接级与协议级也归到同一根因）。
 - **与既有能力分工**：1.145.0 管限流类故障的文本枚举与冷却量级；本条管**资源耗尽类故障的跨层症状映射**，以及"观测行为改变被测对象"这一自举偏差。
 - 提升层：工作流 / 工具。触发词：OOM 四层症状、手动执行更耗内存、拆分降峰值、存活期决定峰值、边界数据量、调试改变资源画像。
+
+## 修复由「再检测」证明，不由返回值证明；耗时与退出码本身不能证明原因（来源：docs.openclaw.ai `cli/doctor/health-contract.md` 3,303B + `ci/checkout.md` 21,314B，2026-10-05 r421-A 独立 curl 取 `.md` 原文实拉逐串命中；消化 Qoder r407-Q-A N3/N12 积压点，并回源钉定 r385B 曾判「转述未证实」的真页）
+- **实证**：「`repair()` reports `status: "repaired" | "skipped" | "failed"` (**omitted status means `repaired`**).」；「**After a successful repair, doctor re-runs `detect()` scoped to the repaired findings; if the finding is still present, doctor reports a repair warning instead of treating the change as complete.**」；「Repair contexts can carry `dryRun`/`diff` requests; repair results can return structured `diffs` … and `effects` (service, process, package, state, or other side effects), so converted checks can grow toward `doctor --fix --dry-run` **without moving mutation planning into `detect()`**.」；归因侧「`FetchTimeout` is reported **only when present in the chain**. Earlier failures without this evidence retain an unknown cause; **elapsed time or exit 125 alone cannot establish a timeout or a particular failing API**.」；「The diagnostic reports **up to four exceptions**, following explicit causes before implicit contexts.」
+- **判据**：① **修复的完成度由复检给出，不由返回值给出**——repair 成功后以被修项为范围重跑 detect，仍检出即降级为 warning ⇒ 一个函数返回 "repaired" 只说明它"做过了"，把自证当验收是修复类失败的主要来源；凡"自动修复"必须有紧随其后的复检，且复检范围等于被修范围。② **省略状态不是中性，而是取了最宽的那种解释**——omitted status 视为 repaired ⇒ 静默默认一律要挑明：默认取"修好了"会让所有没实现状态上报的修复假成功；设计契约时把"不说话"映射到最严档而不是最宽档。③ **`skipped` 与 `failed` 要跳过验收**——这两档明确不跑复检 ⇒ 把三者合并成一个布尔会把"没修"和"修了但失败"混成一类，无法区分能力缺失与执行失败。④ **计划面与检测面必须分离**——`dryRun`/`diffs`/`effects` 由 repair 上下文承载，刻意不挪进 `detect()` ⇒ detect 一旦知道"这次只是预演"，它的语义就被污染了；预演能力要靠参数传递，不能靠让检测器自己猜。⑤ **耗时不能证明时间类故障**——超时只有异常链在位才算超时，耗时或 exit 125 本身不构成证据 ⇒ 把"跑得久"直接记成 timeout 会让之后所有的重试预算与退避都建立在错误根因上；证据不足时保留 unknown cause，比编造一个更像的原因更有价值。⑥ **诊断记录的封顶是设计不是限制**——异常数、帧数、遍历深度三重上限且省略路径/env/凭据 ⇒ 诊断输出既要够用又要不能成为泄漏面；写诊断时先定"最多报几条、每条多深、哪些字段永不进日志"。
+- **与既有能力分工**：1.148.0 管「失败类别决定重试资格 + 进程普查 fail closed」（什么配重试）；本条管**修复本身的验收语义**与**根因的证据资格**——修没修好要复检，因什么坏要有链。
+- 提升层：工作流 / 诊断。触发词：修复由再检测证明、repair 后重跑 detect、省略状态视为已修、skipped 与 failed 不计验收、dryRun 不侵入 detect、耗时不能证明超时、异常链在位才算、unknown cause 优于编造、诊断三重封顶。
