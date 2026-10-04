@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.146.0"
+version: "1.147.0"
 agent_created: true
 ---
 
@@ -234,30 +234,7 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - 排查顺序：出现"偶发时序错乱" → 先确认运行时版本与执行序模式 → 再看画布几何 → 最后才看业务代码。
 - 提升层：工具 / 工作流。
 
-## r350B · 保序的唯一手段是并发=1；限速窗口与并发是两个独立旋钮（来源：pipedream.com/docs/workflows/building-workflows/settings/concurrency-and-throttling，2026-10-02 r350B 实拉 441,983B）
-
-- **★不限并发 = 不保证按接收顺序处理**；要保序必须把并发限到单个 worker，未处理事件进队列按序执行。判据：**"顺序正确"是并发控制的结果，不是队列的赠品**——进了队列不等于保序。
-- **★限速是固定窗口（fixed window）不是滑动窗口**：设为 5 秒 1 次，意思是每个固定 5 秒时间盒内最多触发一次。判据：**固定窗口在边界会突发（盒尾+盒头连发 2 次）**，压测与容量估算要按最坏突发算，不是按平均速率。
-- **★并发与限速解决不同问题**：并发防竞态与保序，限速防上游 API 限流。判据：**被上游 429 时应调限速，被竞态咬到时应调并发**，调错旋钮问题不消失。
-- 提升层：工具 / 工作流。
-
-## r350C · 限流是"多组独立预算"，不是单一 RPM：先定位是哪一类预算、被拒发生在哪一层（来源：docs.openclaw.ai/gateway/security/rate-limiting，2026-10-02 r350C 实拉 248,732B）
-
-- **★Gateway 同时执行多组互相独立的限流**：握手并发预算（concurrent handshake budget）**既不是每分钟请求数上限，也不是已认证客户端上限**；握手超时、pre-auth 帧大小与队列上限、origin 校验、失败认证限制各自独立生效。判据：**"被限流了"必须先翻译成"哪一类预算被打满"**，否则调错旋钮（加大 QPS 配额救不了握手并发）。
-- **★超预算返 503 + `Too many unauthenticated sockets`，且不带 Retry-After**。判据：**没有 Retry-After 时客户端不能依赖标准退避协议**，必须自带抖动重连策略（文档建议错开重连突发，让在途握手先完成）。
-- **★代理形态且无有效归属的请求在"获取槽位之前"就被拒**，不会回落到共享代理 IP 预算。判据：**被拒发生的位置（取槽前 / 取槽后）决定它算哪一类失败**，也会影响日志里看不看得见。
-- **★限流键的选择本身是安全属性**：计数按凭据类别分域（共享 token / 设备 token / 节点配对 / 重审批 / bootstrap token / watchOS challenge 各自独立），一个面被打洪不影响另一个；来自 loopback 的失败按**规范化页面 origin**（如 `browser-origin:https://evil.example`）分桶而非共享 IP，非 loopback 才按客户端 IP。判据：**loopback 不能当单一信任主体**，否则一个页面能打满所有本地来源的额度。
-- 提升层：工具 / 工作流。
-
-## r350C · 重试的粒度是"每个 HTTP 请求"，不是"每个多步流程"；且不同失败类别各有独立预算（来源：docs.openclaw.ai/concepts/retry，2026-10-02 r350C 实拉 233,233B）
-
-- **★Per-request 而非 per-flow**：按 HTTP 请求重试，且**只重试当前步以保序**。判据：**重试粒度选错会同时破坏顺序与幂等**——整流重试会重跑已成功的副作用，逐步重试不会。
-- **★预算按失败类别分域**：限流最多 10 次总尝试；其他瞬时失败是 90 秒窗口内 8 次重试；整个 run 的重试总数有上界。判据：**"重试 8 次"不是全局常量**，先给失败分类才知道它有多少次机会。
-- **★provider pacing 可以压过本地退避上限**：`retry-after` / `retry-after-ms` / "Please try again in …" 提示设的是**最小等待**，即使超过本地 30 秒退避上限也以它为准；退避从约 1 秒起指数增长并加抖动。判据：**服务端给的时间是下限不是建议**。
-- **★不进瞬时重试预算的类别**：billing 失败、认证错误、供应商拒绝（refusal）都不使用这套预算；**空错误体不会让一个确定性 HTTP 客户端错误变成可重试**。判据：**4xx 是终态分类，不能因为响应体为空就升级成重试**。
-- **★已恢复的尝试不留持久错误，只有终态失败保留一条错误**。判据：**日志里看不到错误 ≠ 没发生过重试**；排障要单独看重试计数与等待指示，不能只看错误条数。
-- 提升层：工具 / 工作流。
-
+> 早期三节（r350B 保序与并发 / r350C 限流多组预算 / r350C 重试粒度与失败类别预算）已零删减下沉至 references/knowledge-base.md 的 r417-dl 存档节。
 ## r351B · 扩展点是"观察者"不是"拦截器"：写入成功 ≠ 投递成功（来源：docs.openclaw.ai `automation/hooks/writing-hooks.md` 10,721B，2026-10-02 r351B 独立 curl 实拉逐串命中）
 
 - **★返回值三不：不阻塞、不取消、不改写**：原文 "Returned values **do not block, cancel, or rewrite** the operation."。判据：排障时别把事件钩子当成熔断/拦截点——想在钩子里"返回 false 掐掉这次操作"是无效设计；真要拦截必须走宿主提供的专用否决通道。**这条决定了"为什么我的钩子没生效"的第一类答案：生效了，但它本来就没有阻断权。**
@@ -488,3 +465,10 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **原文**：「Cancellation is not rollback: a compaction that already completed remains in the transcript and is still counted, without sending a late reply.」「The built-in OpenClaw runtime does not start further recovery hooks, maintenance, transcript truncation, or retries after cancellation.」「OpenClaw commits that compaction without a summary instead of ending the turn … A timed-out summary does not move to the model fallback chain, because each extra model could add another full timeout window to the wait.」「Such a replacement must strictly reduce history; unchanged or larger results are rejected.」「Cleanup has a ten-second allowance, separate from the operation deadline.」「A denied group signal can be accepted only when that census proves there are no live members; live or unknown state still fails closed.」「Only ordinary Git failure or `FetchTimeout` permits retry after verified cleanup.」「After a failed or terminated fetch and verified process-tree extinction, the owner removes newly created locks in physical Git metadata; pre-existing locks and linked metadata remain untouched.」「Once cleanup succeeds, cancellation takes precedence over timeout or ordinary Git failure.」
 - **判据**：① **取消只保证"不再向前"，不保证"回到之前"**：已完成的副作用（已写入的压缩条目）留在转录里并参与计数，只是不补发迟到的回复；取消后不再启动任何后续 recovery / 维护 / 截断 / 重试 ⇒ 把取消当回滚，会在"看起来干净"的现场上继续跑，而实际已经留下了一半的变更。② **超时降级不得串联更多超时**：摘要超时就提交一个"无摘要"的压缩让回合继续，刻意**不**转模型 fallback 链——每多一个候选模型就多一个完整超时窗口 ⇒ 用"换一个更慢的东西再试一次"来救超时，本质是把 N 倍等待塞给用户；降级路径必须显式声明它不再引入新的等待源。③ **优化类操作要有单调性校验**：压缩结果必须严格小于原历史，等于或更大则拒绝 ⇒ 没有单调性校验的"优化"可能只是复制甚至放大，而且不会报错。④ **失败类别决定重试资格，不是所有失败都该重试**：只有「普通失败 / 取数超时」在**进程树抽干经验证之后**才放行重试，取消与所有权失败是终态 ⇒ 不分类的重试会把终态失败也拖进重试风暴，还会掩盖真正的终态原因。⑤ **清理预算与操作预算必须分离**：清理有独立的固定额度（10 秒），不吃操作 deadline ⇒ 共用一份预算时，要么收尾没时间做完留下脏状态，要么主操作被清理挤掉。⑥ **"发了终止信号"不等于"它停了"**：信号被拒时须做进程普查证明无存活成员才接受，live 或 unknown 一律 fail closed ⇒ 这是清理假象的头号来源；同理"等 leader 退出"不够，要观察整个进程组消失。⑦ **清理只动自己新建的东西**：锁回收只移除本次新创建的锁，既有锁与链接元数据保持不动 ⇒ 清理必须区分所有权，否则会顺手破坏别人的状态。⑧ **取消优先于超时与普通失败**：清理成功后若同时存在取消，归类为取消 ⇒ 终态归类要有优先级，否则同一现场会被记成三种不同的失败。
 - 提升层：工作流 / 诊断 / 可复用 Skill。触发词：取消不是回滚、超时降级不串联超时、单调性校验、失败类别决定重试资格、清理预算独立、进程普查 fail closed、只清理自己新建的、取消优先于超时。
+
+## 进度标记与产出分两次落库就是失步窗口；超时放弃的语义是「当没发生过」，且放弃阈值必须小于接管租约（来源：docs.n8n.io deploy/host-n8n/configure-n8n/durable-scheduler.md 30,546B，2026-10-04 r417A 独立 curl 取 .md 原文实拉；真页经 llms.txt 287,049B 重新定位，此前 Qoder 引用的 hosting/scaling/durable-scheduler 系 1,930B 404 壳）
+- 进度与产出是两个写入就存在失步窗口：轮询光标默认存 workflow static data 并与执行分开保存，崩溃落在两次保存之间时二者错位，症状是「跳过条目」或「重复处理」。修法是把光标与执行放进同一张表的同一事务，使一轮轮询要么完全发生要么完全没发生。判据：写入次数即窗口数。
+- 超时放弃必须让标记原地不动：poll 超过阈值被放弃时平台什么都不记、光标不动，下一次覆盖同一段，因此不丢数据。「放弃」的正确语义是「当作没发生过」，若写成「推进到下一处」就会静默丢数据。
+- 两个超时必须有偏序：放弃阈值（poll timeout）须严格小于接管租约（lease duration），否则被放弃的工作仍在跑而另一实例已接管同一 run，放弃形同虚设；平台在 timeout 达到 lease 时启动告警。
+- 积压补跑是形状选择且没有任何策略逐条重放：丢弃全部 / 坍缩为最新一次 / 每条触发规则各一次，三种策略下时钟一律跨过积压；一次性触发没有「下一次」可恢复，故 catch-up 策略下仍会晚跑，skip 则永久丢弃。与部分失败三形状互补——那条管同批内失败条目的形状，本条管跨批积压的形状。
+- 调度实体有所有者：owner reconciliation 周期回收所有者已消失的 schedule，否则留下无人认领的孤儿定时任务。
