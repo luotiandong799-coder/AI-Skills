@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.127.0"
+version: "3.128.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -480,3 +480,9 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **与既有能力分工**：安装量三判据（mts，r147A）管"用安装量当筛子时怎么防错"；本条管"**能替换安装量的信号是什么、以及为什么必须限定路径**"；与随行信任记录（av 2.148.0）互补——那条管结论怎么存，本条管候选怎么选。
 - 提升层：工作流 / 选型纪律。触发词：反虚荣指标、路径限定的活跃度、安装量可刷、看不到本体不选型、单指标排序、聚合指标要有替代项。
 
+
+## 指令正文的可信时效来自「随版本供给」而非「写进文件」；版本不是顶层字段、写在 metadata 字符串，SKILL.md 只留发现桩与取文指令（来源：agentskills.io/specification 全文实拉逐串命中，2026-10-05 r424-C 复拉核验；消化 Qoder r418-Q-A「stub 型 SKILL.md + CLI 供文」候选）
+- **实证**：Agent Skills 规范 frontmatter 字段集仅 `name`/`description`/`license`/`compatibility`/`metadata`/`allowed-tools`，**无独立 `version` 字段**——版本须写在 `metadata` 字符串里（官方示例 `metadata: { author: example-org, version: "1.0" }`）；规范明文「**Keep your main SKILL.md under 500 lines. Move detailed reference material to separate files**」并定义 progressive disclosure：metadata(~100 token)→SKILL.md 正文(<5000 token，激活时载入)→references/scripts/assets(按需)。配套事实（Qoder r418-Q-A 浏览器实拉）：skills.sh 的 agent-browser SKILL.md 自述 discovery stub，**真文档经 `skills get --full` 从 CLI 取「与已装版本永远匹配」的正文**。
+- **判据**：① **写进文件的指令会过期，可信时效来自"随版本供给"**——静态 SKILL.md 一旦写出就与真实能力脱钩，而 CLI 按已装版本供文能保证"读到的就是跑的那版" ⇒ 任何"指令正文"的信任前提应是"它由同一版本通道供给"，而不是"它写在文件里"。② **版本契约与文档供给必须同通道**——既然版本只存在于 `metadata` 字符串、无独立字段，那么"这一版对应哪份正文"只能由供给方（CLI/注册表）绑定，不能靠作者手填两份 ⇒ 发布门禁要查"版本字符串与正文供给是否同源"，否则版本号形同虚设。③ **SKILL.md 是发现桩而非百科全书**——规范把正文上限(<5000 token)与"超长移 references"定为硬建议，与本规约 ≤500 行纪律同源 ⇒ 技能正文只承载"发现 + 激活即用的核心指令"，详尽机制下沉 references 按需装载，既保活体时效又控上下文成本。④ **对 guild 的落点**：共学落点（skill 落盘）执行"版本字符串须与供给同源"校验；长 SKILL.md 的详细判据按本规约下沉 `references/knowledge-base.md`，与 agentskills 的 progressive disclosure 一致。
+- **与既有能力分工**：sa 3.118.0「挂载数量要有上限与盘点」管数量；sa 3.127.0「反虚荣指标/选型的维护信号」管候选筛选；本条管**指令本体的时效契约与版本-文档同通道**——前两条管"装多少/选哪个"，本条管"装进来那份正文到底是不是这一版的"。
+- **提升层**：可复用 Skill / 文档纪律。触发词：版本在 metadata 字符串、无独立 version 字段、SKILL.md 发现桩、CLI 随版本供文、skills get --full、progressive disclosure、≤500 行硬建议、版本与文档同通道。
