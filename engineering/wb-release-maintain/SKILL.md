@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.75.0"
+version: "1.76.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -325,3 +325,7 @@ sources:
 - **判据**：① **游标只回答"上次看到哪"，不回答"该看的都看了吗"**：按上一次回移游标推进，隐含假设是"当年被判定不回移的那些现在仍然不该回移"——但分支从主线变成 LTS/稳定线的那一刻语境已变（容忍的参数变了：主线上可接受的行为风险，稳定线不可接受）⇒ 长寿命分支必须按周期把整个发现区间重判一遍，"曾经正确地拒绝"会在新语境里变成当下的遗漏。② **巡查清单要显式包含"大型混合目的改动"**：官方把 large mixed-purpose pull requests 单列 ⇒ 混合改动当年整体不合而被拒，其中某一部分在稳定线上恰恰是必要修复；按单个 PR 粒度做是非判断的系统会永久丢掉这些"混在被拒外壳里的正确片段"。③ **跨血缘巡查要覆盖多条 lineage 而非只看上一代**（同时纳入 2026.7.35 lineage）⇒ 血缘断层处的修复最容易永久丢失，因为它既不在当前范围、也不在上一次的回移记录里。④ **这条的本质是"否定的收益率随时间衰减"**：判断题型的输出是布尔值，但决定那个布尔值的前提会漂移 ⇒ 任何"曾经审计过并排除掉"的台账都要有到期重审机制，不能靠记忆或增量维护；对 guild 的落点：把"历史排除清单"当作有时效的台账（附当时的判据快照），每次 LTS 组装/大版本收口时重扫，并显式写明本次用的是"全量重扫"还是"游标推进"。
 - 提升层：工作流 / 发布治理。触发词：全量重扫、complete rescan、回移游标、backport cursor、LTS 等价线、混合目的 PR 重判、跨血缘巡查、历史排除台账要到期重审。
 
+## 密钥轮转的破坏面由「旧版本是否保留」决定，不是由「是否轮转」决定：同一系统内两种轮转后果可以完全相反（来源：docs.dify.ai `self-host/deploy/configuration/environments.md` 135,852B，2026-10-06 r431A 独立 curl 取 `.md` 原文实拉逐串命中；与 rm「日志轮转保留份数是硬编码的」互补——那条管"日志滚动的历史深度上限"，本条管"密钥轮换的连带作废面"）
+- **原文**：①「Changing this key after deployment will immediately **log out all users, invalidate all file URLs, and break any plugin integrations that use OAuth**—their encrypted credentials become unrecoverable.」（主密钥 `SECRET_KEY` 变更）②「Old key versions stay usable, so credentials encrypted before a rotation keep decrypting without re-encryption.」（`AZURE_KEYVAULT_ROTATION_INTERVAL_DAYS`，每 N 天自动轮换）。
+- **判据**：① **同一个词「轮转」在本文件里有两种互斥语义，后果差一个数量级**：主密钥轮换 = 会话全登出 + 已签发 URL 全失效 + OAuth 回联全断 + 历史密文永久不可恢复；Key Vault 轮换（旧版本保留）= 无需重加密、无连带失效。⇒ 排障/发版时听到"我们按规范做了密钥轮换"不能直接推断影响面，**必须先问旧密钥版本是否保留可用**；把两种轮转当成同一件事来写预案，会把"零影响"误判成"全量作废"（过度恐慌）或反过来（漏掉四连带）。② **连带失效面必须执行前枚举、不能事后补**：主密钥变更的三条连带（谁被登出 / 哪些已签发 URL 作废 / 哪些外部回联 OAuth 断链）在原文里是并列而非递进，任何一条漏算都会在轮转完成的瞬间从"配置改动"变成"线上事故" ⇒ 固定为轮转前三问，缺一答则不得执行。③ **已加密的历史密文要按"永久损失"入账，而不是"待恢复"**：原文 `become unrecoverable` 是终态不是暂态 ⇒ 变更主密钥前必须确认密文可重录来源（凭据可重新录入 / 可重签），没有重录路径的密文在轮转那一刻就是数据丢失事件；把"回头再解密"写进预案等于把不可逆当可逆。④ **加密提供方与轮换策略的绑定要在第一个工作区创建前定**：原文「Choose the provider before the first workspace is created. Credentials encrypted by one provider cannot be decrypted by the other」⇒ 换 provider 是所有存量凭据整体失效级操作，不能当成"配置调优"在日常维护窗口里做。⑤ **这条的本质是"同一个动作名下的两个相反世界"**：运维术语（轮换/升级/迁移）在文档里常被复用，但破坏面由具体实现参数决定 ⇒ 任何写进发布流程的动作，都要在流程里写明该动作的参数取值（旧版本保留否），而不只写动作名。
+- 提升层：发布治理 / 工作流。触发词：主密钥轮转连带失效、log out all users、已签发 URL 作废、OAuth 断链、旧密文不可恢复 unrecoverable、旧密钥版本保留可用、轮转前三问、provider 先于首个 workspace 选定。
