@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.81.0"
+version: "1.82.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -445,11 +445,7 @@ the CLI only adds atomicity and an audit trail.
 - **与既有能力分工**：Cap79 管「短时凭证撤销先于过期」（临时访问的失效）；Cap59 管「删除不抹历史版本」（版本保留）；本条管**被删除对象的"永不复活"**——删除决定本身要成为一条比重建更持久的政策。
 - 提升层：工具 / 记忆治理。触发词：删除即准入政策、先记账后清产物、跨重建存续、forget 账本、排除粒度是 ID、连带清空嵌入缓存、删除防复活。
 
-## Capability 83 — 守卫失败要按「谁不可判定」分极性：被检对象读不懂 ⇒ 阻塞；守卫自己没准备好 ⇒ 只警告继续；兼容窗口永不覆盖安全面（来源：api.github.com/repos/anthropics/claude-code/releases 96,622B，v2.1.289 changelog 一手命中，2026-10-05 r422-A 独立 curl 实拉；docs.openclaw.ai `gateway/protocol/versioning.md` 14,899B + `gateway/protocol/handshake.md` 18,434B，同轮独立 curl 取 `.md` 原文实拉逐串命中；消化 Qoder r418-Q-A 积压点）
-- **实证**：Claude Code v2.1.289 原文「Fixed PreToolUse and PermissionRequest hooks **being skipped when matching them failed or the tool's input could not be serialized to JSON; the call is now blocked**.」；OpenClaw 原文「Device auth, pairing, scopes, command policy, and exec approvals are **unchanged by this compatibility window**.」；「Plugin-owned node ... because their hosted surfaces are **not part of the N-1 contract**.」；「None of these states triggers local fallback or automatic replay.」；handshake 侧「reports the negotiated role and the current socket's effective authorization scopes **even when no device token is issued**」。
-- **判据**：① **守卫失败要分两种，默认极性相反**——失败原因是「被检对象无法解析/匹配不上」（输入不可序列化、载荷读不懂）⇒ 必须**阻塞**，因为"跳过"在效果上等于默认放行，守卫不存在与守卫放行是同一结果，这是安全默认极性的错置；失败原因是「守卫自身配置缺失或前置开关未开」（Cap81 那条）⇒ 可以只 warning 并让旧行为继续，因为被检对象没变、风险敞口没有扩大。**判据一句话：读不懂的是"东西"就拦，读不懂的是"规则"就降级。** ② **兼容窗口必须有"不被窗口覆盖"的显式清单**——N-1 版本协商只放宽协议版本，设备认证、配对、作用域、命令策略、exec 审批五面不随之放宽 ⇒ 任何"向后兼容/灰度共存"的设计都要同时声明窗口边界：哪些面进窗口、哪些面绝不进；只写"支持旧版本"而不写"安全面不降"的兼容承诺，等于把安全面默认划进窗口。③ **插件/第三方自有面不在兼容契约内**——托管面属于宿主协议契约，插件自有 hosted surface 不享受 N-1 ⇒ 依赖插件面的调用方不能假定它与平台同寿命，升级判定要按各自的契约分别算。④ **降级状态不触发本地兜底与自动重放**——旧版本态走显式处理，不本地兜底、不自动重放 ⇒ "兼容"不等于"自动替它跑一遍"，隐式重放会把一次失败放大成两次副作用。⑤ **协商结果回执独立于凭据发放**——即使未签发设备令牌，也要回报协商出的角色与生效作用域 ⇒ 生效权限的可见性不能绑定在"有没有拿到凭据"上，否则无凭据连接会成为观测盲区。
-- **与既有能力分工**：Cap81 管「收紧型 flag 默认关、前置缺失时只 warning 旧行为继续」（守卫没准备好）；Cap76 管「控制声明要自带误读澄清」（声明怎么写）；Cap72 管「分层作用域只收窄不放大」（作用域叠加）；本条管**失败与兼容这两类"边界时刻"的默认取哪一侧**，并给出 Cap81 与本条的适用分界。
-- 提升层：工具 / 治理。触发词：守卫读不懂就阻塞、跳过等于放行、兼容窗口不覆盖安全面、N-1 契约边界、插件面不在契约内、协商回执独立于令牌、不自动重放。
+## Capability 83 — 守卫失败要按「谁不可判定」分极性：被检对象读不懂 ⇒ 阻塞；守卫自己没准备好 ⇒ 只警告继续；兼容窗口永不覆盖安全面（原文+判据已下沉 references/knowledge-base.md §r427A-ag；触发词：守卫读不懂就阻塞、跳过等于放行、兼容窗口不覆盖安全面、N-1 契约边界、插件面不在契约内）
 
 ## Capability 84 — 循环上限要按「循环的种类」分别设置，且按对端分别计数：自递归 ≠ 跨实体往返（来源：docs.flowiseai.com/llms-full.txt 618,913B「Understanding Max Iteration parameter in Workers」段，2026-10-05 r422-B 独立 curl 实拉逐串命中；与 Cap74「预算计尝试非产出」互补——那条管计数口径，本条管上限该按什么维度切分）
 - **实证**：官方原文「`Max Iterations Cap` … serves as a guardrail against excessive, potentially infinite, interactions between the Supervisor and Worker. **Unlike the Supervisor node's `Recursion Limit`, which restricts how many times the Supervisor can call itself**, the Worker node's `Max Iteration` parameter limits **how many times a Supervisor can iterate or query a specific Worker**. By capping or limiting the Max Iteration, we ensure that costs remain under control, even in cases of unexpected system behavior.」
@@ -457,10 +453,7 @@ the CLI only adds atomicity and an audit trail.
 - **与既有能力分工**：Cap74 管「预算计的是尝试次数不是产出数量」（计数口径）；Cap71 管「队列有界、超限停源留错」（积压封顶）；本条管**多实体编排中上限该按哪些维度切分**（种类 × 对端）。
 - 提升层：工具 / 治理。触发词：递归上限与迭代上限是两个计数器、按对端计数、自递归不等于跨实体往返、上限挂在对端、成本失控也是失控、逐个上限验证。
 
-## Capability 85 — 认证只定「角色」，授权在每次调用上另判；应用内权限不是隔离边界，强隔离要在 OS 用户/主机层；等待式读取在返回前重检五要素（来源：docs.openclaw.ai/gateway/operator-scopes.md 39,492B，2026-10-05 r423-A 独立 curl 取 `.md` 原文实拉逐串命中；与 Cap72 分层作用域 / Cap83 守卫极性互补——那两条管"作用域怎么叠加"与"守卫失败站哪一侧"，本条管"认证之后还有一层授权"以及"这套东西的隔离边界在哪一层"）
-- **实证**：官方原文「Operator scopes gate what a Gateway client can do **after it authenticates**.」「They are a control-plane guardrail inside one trusted Gateway operator domain, **not hostile multi-tenant isolation**. For strong separation between people, teams, or machines, **run separate Gateways under separate OS users or hosts**.」；「Operator RPC methods require the `operator` role. Node-originated methods require the `node` role.」；作用域表「`operator.admin` … **Satisfies every `operator.*` scope**」「`operator.write` … Also satisfies `operator.read`」；自作用域例外段「These methods **do not expose team secrets, mutate shared configuration, or grant write/admin scopes**.」；收尾「Identity, role, access grant, connection, and session visibility are **rechecked before returning awaited reads**.」
-- **判据**：① **通过认证不等于获得授权**：连接进来只确定"我是哪一类客户端（角色）"，每个方法再按 scope 单独判 ⇒ 把"已认证"当"已授权"，等于把一次身份检查当成全会话通行证。**判据一句话：认证回答"你是谁"，scope 才回答"这一下能不能做"。** ② **应用内权限模型不能冒充隔离边界**：官方明说这套 scope 只是**同一信任域内**的控制面护栏、**不是对抗性多租户隔离**，要强隔离就在 OS 用户/主机层分开 ⇒ 设计权限前先声明威胁模型是"防误操作"还是"防恶意邻居"；声称防恶意而执行边界仍在同一进程/同一账号内，就是伪隔离（纸面边界在被攻破的第一刻一起失效）。③ **角色要互斥且在入口强制**：控制面方法与能力宿主方法分属两个角色，各自只能由对应角色发起 ⇒ 角色不互斥等于默认全能，"都是可信内部调用"是最常见的越权通道。④ **判定一个"只读"令牌是否真只读，要看高阶蕴含**：`write` 满足 `read`、`admin` 满足全部 ⇒ 宣称只读的凭据如果和更高阶凭据同源或可被同一调用方替换，它的"只读"只是标签。⑤ **自作用域例外必须自带四条不越权断言**：只操作自己的账号 + 不暴露团队密钥 + 不改共享配置 + 不授予更高 scope，缺一条它就不是"例外"而是提权后门。⑥ **异步/等待式读取要在返回前重检**：身份、角色、授权授予、连接状态、会话可见性五项在 await 之后重新校验 ⇒ 入口验一次 ≠ 出口仍成立，等待窗口里权限可能已被撤销或会话已不可见。
-- 提升层：工具 / 治理 + 安全边界。触发词：认证不等于授权、连接角色、认证后的第二层授权、应用内权限不是隔离、OS 用户或主机层隔离、高阶蕴含低阶、自作用域例外、等待读前重检、await 后重校验。
+## Capability 85 — 认证只定「角色」，授权在每次调用上另判；应用内权限不是隔离边界，强隔离要在 OS 用户/主机层（原文+判据已下沉 references/knowledge-base.md §r427A-ag；触发词：认证定角色授权另判、应用内权限不是隔离、等待式读取返回前重检五要素）
 
 ## Capability 86 — 凭证作用域必须下沉到「资源」这个最小单元，租户/工作区级默认值是漏洞（来源：api.github.com/repos/langgenius/dify/releases 244,162B，v1.17.1 一手命中，2026-10-05 r424-A 独立 curl 实拉 JSON 逐串命中；消化 Qoder r418-Q-A 积压点，更正其"Dify v1.17.1"为带 issue 上下文的实词）
 - **实证**：官方原文「**Knowledge base service-API keys were scoped to the whole workspace**: one key could read and write **every** knowledge base in the tenant, so giving an integrator a key gave them a key to the whole tenant.」；v1.17.1 新增「**Dataset-Scoped** Knowledge Base API Keys」将作用域收敛到单个知识库。
@@ -494,3 +487,10 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：「Letting users set their own scopes **can break verified OAuth apps**. Many providers, such as Google, require you to define and justify every scope your app requests during app verification. If a user adds a scope you didn't declare, the provider may **suspend or ban your app**. Only enable this setting for credential types where users adding scopes won't put your app's verification at risk.」；「This setting applies **only to the credential types you list**. It **doesn't apply to credential types that extend** a listed type.」
 - **判据**：① **下放的代价不在"用户多拿到多少权限"，而在"后果记在谁的账上"**——用户加一个未声明的 scope，被暂停/封禁的是平台方已验证的应用身份 ⇒ 凡后果外溢到主体**合规资格**（应用验证、封禁、牌照、信誉分）的配置，一律不可下放；判据问句是"它坏了谁遭殃"，不是"它能给谁方便"。② **每个可下放开关必须自带风险归属声明**——官方要求只在"用户加 scope 不会危及 app 验证"的类型上开启 ⇒ 开关的文档里要写明它失控时的受损害方，写不出受损害方的开关默认关闭。③ **下放的适用范围不沿继承链传递**——该设置只作用于显式列出的类型，不作用于继承它的派生类型 ⇒ 派生方会带着"看起来继承了、实际没有"的错觉运行；凡"只匹配显式列出项"的白名单/开关，必须显式声明对派生项的语义（继承 / 不继承 / 须单独列出），否则继承体系里会出现静默的配置缺口。④ 对 guild 的落点：给终端用户或子 agent 开"可自选权限范围"的口子之前，先登记这条口子失控时哪个主体的资格受损；若存在类型继承/派生关系，再核一遍派生项是否被静默排除在外。
 - 提升层：治理 / 工具。触发词：下放权限配置、后果归属决定下放边界、verified app 被封、scope 不可下放、风险归属声明、显式列出项不作用于派生类型、继承链不传递配置。
+
+
+## Capability 92 — 子代理/子任务的移交与汇报载荷要按「语义通道」分档设上限，不能只设一个总上限；完成投递归属必须先定归属；重放复用尝试键 ≠ 全局 exactly-once（来源：docs.openclaw.ai `concepts/subagent-yield-handoff.md` 13,896B，2026-10-06 r427-A 独立 curl 取 `.md` 原文实拉、逐串命中 L161-163 / L19 / L31；消化 Qoder r426-Q-A 净新候选 A-1——WB 已亲自复拉核验三句原文，未采信转述；与 Cap84「循环/尝试计数按种类与对端分设」/ Cap71「队列有界、超限停源留错」互补——那两条管计数与积压，本条管同一份载荷内的分档截断与投递归属）
+- **原文**：「Findings are capped at **4,096 characters**, individual results at **512**, and route notices at **1,024**. Ambiguous replay reuses its attempt key; it does **not** assert global exactly-once delivery across Gateway restarts.」；归属切分原文「Deliver the orchestrator's result to its original requester. **Cron's existing continuation and delivery policy own the scheduled output.**」
+- **判据**：① **移交/汇报载荷要按通道的读者与用途分档，不是一个总上限**——长发现 4,096、单条结果 512、路由提示 1,024 三档各不相同；设一个总上限时，最长的一类（发现）会先吃满额度，把最短也最值钱的结论（结果/路由提示）挤掉 ⇒ 凡"把子任务结果回传给上层"的接口，先问：这一包里有几种语义的东西？它们各自的上限分别是多少？只给一个总数等于让噪声决定保留什么。② **幂等声明必须写清"复用尝试键"与"全局 exactly-once"的差距**——模糊重放只复用 attempt key，官方明确不断言跨 Gateway 重启的全局精确一次 ⇒ 重启后语义会变；写"我们做了幂等"却说不出作用范围（对谁、跨不跨重启、覆盖哪次尝试），等于承诺过度，下游会按更强的假设去设计。③ **定时任务与编排器同时想"续跑"同一个会话时，必须先定投递归属**——本例切分：编排器结果由 registry 交付给原始请求方，定时输出由 cron 既有的续跑与投递策略拥有 ⇒ 两条回路都能续同一个会话而不先定归属，就会出现争抢与重复投递；归属是要在设计阶段写死的事实，不是运行时协商出来的。
+- **与既有能力分工**：Cap84 管「上限按循环种类分设、按对端计数」（计数维度）；Cap71 管「队列有界、超限停源留错」（积压封顶）；Cap79 管「短时凭证撤销先于过期」（时效）；本条管**同一份移交载荷内部按语义通道分档**＋**完成投递归属的切分**＋**幂等声明的作用域边界**，三者不同层、不可互相替代。
+- 提升层：工作流（多实体编排运行时的交接契约）。触发词：移交载荷分档截断、findings 4096、route notices 1024、投递归属、cron 与 registry 争抢、重放键不等于 exactly-once、幂等承诺过度、总上限挤掉结论。
