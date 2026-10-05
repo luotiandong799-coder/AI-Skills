@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.80.0"
+version: "1.81.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -489,3 +489,8 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：「n8n doesn't take any credentials input for that vault; it resolves whatever identity is available in its runtime environment. That means **every vault you configure with Auto Detect on the same n8n instance shares one IAM identity and one set of permissions**. You can't assign different IAM scopes … to separate Auto Detect vaults.」；「If you need to scope secret access per vault, per project, or per team, **use IAM User instead**: create a separate IAM user and access key per vault, and attach an ARN-scoped policy to each one.」；「Auto Detect is best suited to a single global vault, or to setups where every project sharing that vault should have the same access.」
 - **判据**：① **自动发现＝把作用域的决定权交给运行时环境，代价是分维收窄能力被吃掉**——同一宿主上所有自动发现通道共用同一身份与同一套权限，"这一路只给它该碰的几个资源"在机制内做不到 ⇒ 引入自动发现型凭据（SDK 默认链 / 环境变量 / 实例角色 / 宿主 ambient 身份）前先问"这几路是否需要不同作用域"，需要就必须放弃自动发现。② **要分维就必须显式化：一路一身份、一身份一策略**——官方给的对照解是每 vault 独立身份 + 独立密钥 + ARN 级策略 ⇒ 最小权限与自动便利是**互斥选项**而非可调参数；凡是"按资源 / 按项目 / 按团队"分维的需求，显式身份是唯一出路。③ **自动发现的适用面只有"单一全局通道"**——官方明说它最适合单个 global vault 或所有共享方权限相同的场景 ⇒ 把自动发现用在多方共享宿主上，等于默认把所有方拉齐到同一权限面（多方里权限最小的那家被静默抬高）。④ **审计口径**：清点凭据来源时"自动发现"要单列一类并标注"作用域不可分维"，不能与显式身份混在同一张清单里按同一标准评估；把 ambient 身份当"已配置的凭据"记账，会得出"每路都已收窄"的假结论。
 - 提升层：工具 / 治理。触发词：自动发现凭据、Auto Detect、默认凭据链、ambient 身份、便利换最小权限、作用域不可分维、一路一身份、ARN 级策略、全局 vault。
+
+## Capability 91 — 权限/范围类配置能否下放给终端用户，判定基准是「违规后果落在谁的合规身份上」；且下放范围不沿类型继承链传递（来源：docs.n8n.io `administer/manage-credentials/credential-overwrites.md` 5,099B，2026-10-05 r426-C 独立 curl 取 `.md` 原文实拉逐串命中；与 Cap86「默认作用域过大」/ Cap77「提问权不可随委派下放」互补——那两条管"默认给多大""哪个原语不可下放"，本条管"下放的判定基准是后果归属"）
+- **原文**：「Letting users set their own scopes **can break verified OAuth apps**. Many providers, such as Google, require you to define and justify every scope your app requests during app verification. If a user adds a scope you didn't declare, the provider may **suspend or ban your app**. Only enable this setting for credential types where users adding scopes won't put your app's verification at risk.」；「This setting applies **only to the credential types you list**. It **doesn't apply to credential types that extend** a listed type.」
+- **判据**：① **下放的代价不在"用户多拿到多少权限"，而在"后果记在谁的账上"**——用户加一个未声明的 scope，被暂停/封禁的是平台方已验证的应用身份 ⇒ 凡后果外溢到主体**合规资格**（应用验证、封禁、牌照、信誉分）的配置，一律不可下放；判据问句是"它坏了谁遭殃"，不是"它能给谁方便"。② **每个可下放开关必须自带风险归属声明**——官方要求只在"用户加 scope 不会危及 app 验证"的类型上开启 ⇒ 开关的文档里要写明它失控时的受损害方，写不出受损害方的开关默认关闭。③ **下放的适用范围不沿继承链传递**——该设置只作用于显式列出的类型，不作用于继承它的派生类型 ⇒ 派生方会带着"看起来继承了、实际没有"的错觉运行；凡"只匹配显式列出项"的白名单/开关，必须显式声明对派生项的语义（继承 / 不继承 / 须单独列出），否则继承体系里会出现静默的配置缺口。④ 对 guild 的落点：给终端用户或子 agent 开"可自选权限范围"的口子之前，先登记这条口子失控时哪个主体的资格受损；若存在类型继承/派生关系，再核一遍派生项是否被静默排除在外。
+- 提升层：治理 / 工具。触发词：下放权限配置、后果归属决定下放边界、verified app 被封、scope 不可下放、风险归属声明、显式列出项不作用于派生类型、继承链不传递配置。
