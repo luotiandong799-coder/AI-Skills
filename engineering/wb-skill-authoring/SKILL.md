@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.129.0"
+version: "3.130.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -102,15 +102,7 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **实拉证据**：SkillHub 分数排序面头部技能（编程专家.Skill / dev-expert 等）在描述里明写「支持 @标识 显式调用跳过路由」——这是技能级的可选路由优化，不是宿主强制机制。
 - **判据**：当某技能**高频被错配/漏配**、且用户有明确调用意图时，在 description 里声明"支持 @技能名 直接调用"是降低路由 misfire 的低成本手段；它与 §双路由防呆 分工——那条管"别叠两层路由器"，本条管"给确定意图一条绕过模糊路由的直通车"。
 - 提升层：可复用 Skill / 工作流（路由可靠性）。
-## 技能供应链内容完整性：摘要钉死批准 + 逐文件 size/SHA256 校验（来源：MCP skills 扩展 io.modelcontextprotocol/skills，SEP 2640，2026-09-27 实拉）
-- **内容寻址的技能完整性**：MCP skills 扩展规定 Host 激活技能前必须逐文件校验 `size` + `SHA-256 digest`，且**持久化批准绑定到完整文件 URI + digest 集合**——任一文件变更/增删都撤销批准、需重新获取。技能条目带 `resources[].digest/size` manifest，Host 不得提前取文件、批准只绑 manifest；上限 **16 MiB / 512 文件每技能**，资源可标 `dynamic`（生成内容、无稳定 digest）。
-- **判据**：把"这个技能可信"从"读一遍文档"升级为"字节级摘要钉死 + 批准绑 digest"——内容被篡改或任何文件变动立即失效重批。与 §安装前安全审查（可溯源/无旁路/单一职责）互补：那条管"进门三判据"，本条管"进门后内容完整性如何不被静默破坏"。
-- 提升层：可复用 Skill / 工具（供应链完整性）。
-## 声明式依赖清单 + 元数据失配扫描（来源：OpenClaw skill-format / ClawHub 安全分析，2026-09-27 实拉）
-- **声明式运行依赖**：frontmatter 用 `requires.env`（必填环境变量）/ `requires.bins`（必装 CLI）/ `requires.anyBins`（至少一个）/ `requires.config`（配置文件）+ `install`（brew/node/go/uv 声明式安装）——把"技能跑起来需要什么"写成机器可读清单。
-- **元数据失配扫描**：ClawHub 安全分析**交叉比对"代码实际引用的密钥/二进制"与"frontmatter 声明"**——代码用了某 key 但 frontmatter 没声明 → 判元数据失配并标记。声明即契约，未声明即 flagged。
-- **判据**：第三方技能进门审查从"人读代码找依赖"变成"声明清单 + 自动失配扫描"；与 §无旁路（禁读环境变量与文件系统）分工——那条管"运行时不越权读"，本条管"安装前声明与代码是否一致、自动发现瞒报"。
-- 提升层：可复用 Skill / 工具（安装审查自动化）。
+## 技能供应链内容完整性与声明式依赖清单+元数据失配扫描（原文已下沉 references/knowledge-base.md §r428B 下沉；触发词：逐文件 SHA256、批准绑 digest、requires.env/bins、元数据失配扫描）
 ## 技能设计「流程优于文档」：带证据检查点的工作流，而非会被略读的散文（来源：Addy Osmani agent-skills 框架 / theagenttimes 2026-09-27 实拉，26K★，六阶段 SDLC 技能 Define/Plan/Build/Verify/Review/Ship）
 - **把技能写成工作流而非参考文档**：Osmani 的判据——"把 2000 字测试最佳实践散文塞进上下文，agent 读完生成像模像样的文字然后跳过真测试；把工作流（先写失败测试→跑→看失败→写最小代码过→看通过→重构）放进去，agent 才有事可做、你才有可验证物"。技能本质是**带检查点、产出证据、有明确定义退出标准的工作流**，不是漂亮 markdown。
 - **判据**：写技能时每个阶段要有"做完了能拿什么证据证明"的出口，而非"读完了就懂了"的散文；与 §Gotchas（失败经验沉淀位置）、§持久声明纪律（声明绑会失效的机制）互补——那些管"坑写哪、声明怎么不腐烂"，本条管"正文该是工作流还是参考文档"。
@@ -492,3 +484,9 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **实证**：官方原文「Configure `security.installPolicy` to run a trusted local policy command before skill installs continue. The policy receives metadata and the staged source path, **applies to ClawHub, uploaded, Git, local, update, and dependency-installer paths**, and **fails closed when the command cannot return a valid decision**.」
 - **判据**：① **安装门禁的覆盖面是"通道清单"不是"来源类型"**——官方显式枚举六条路径（市场 / 上传 / Git / 本地 / 更新 / 依赖安装器）⇒ 只给"从市场装"挂门禁而放过本地与 Git，等于给最宽松的那条路留敞口；评价一道安装门时先要它列出通道清单，列不出就等于只管了一部分。② **外部裁决器自身故障时极性必须是阻塞**——"fails closed when the command cannot return a valid decision" ⇒ 策略命令超时、崩溃或返回不可解析，都不能等同于"通过"；凡把裁决权外包给外部命令/服务的设计，其故障态极性要显式声明，且在集成时实测一次（不是读文档就算数）。③ **门禁要挂在落盘前的暂存路径上**——policy 收到的是 metadata 与 staged source path ⇒ 检的是待装内容而不是装完的结果；装完再扫意味着可疑内容已经落地并可能执行过一次，"先装后检"在这类门禁里不成立。④ 对技能体系的落点：引入任何"安装前策略检查"，验收单上并列三条——通道清单是否穷举、裁决器故障是否阻塞、检查点是暂存态还是安装后。
 - 提升层：可复用 Skill / 工具。触发词：安装策略门、installPolicy、六通道穷举、裁决器故障 fail-closed、暂存源路径、先检后装、本地与 Git 也要过门禁。
+
+## 派生 / 重写类制品必须附「与源的残留相似度读数」：把"我已重写"这句自陈降格为别人可复测的程度声明（来源：github.com/partme-ai/full-stack-skills 仓根 `PROVENANCE.md` 21,892B，2026-10-06 r428-B 经 `cdn.jsdelivr.net/gh/...` 实拉一手（raw.githubusercontent 本轮 SSL 直连不可达，已换通道并登记）；消化 Qoder r426-Q-C C-3，**并经 WB 亲自复拉更正其数值**）
+- **实证**：官方原文「Because the *content* originates with `github/spec-kit` (MIT), those skills were **regenerated directly from** the MIT-licensed source rather than the same prompts that is published under AGPL-3.0 … The current text **matches the MIT source at 0.96–0.99 similarity** and carries the MIT notice.」；同文件另有许可证解决规则「**most specific layer wins**」（越靠近条目的层越优先）与 §7 Known gaps 显式区分 `Fixed` / `Open`。
+- **判据**：① **"已重写"是不可证伪的自陈，必须换成一个可复测的数值**——只写"我们重写过了"，读者无从判断残留多少、也无从复核；附一个相似度读数把它降格成**程度声明**，任何人都能重算一遍 ⇒ 凡声称"已改写/已原创/已脱钩"的制品，产出方有义务附一个别人能复算的残留量，否则该声明在验收上不存在。② **派生制品的合规结论依赖"残留程度"，而程度只有数值能表达**——本例的风险是上游 AGPL 传染，判断依据是"与 MIT 源的相似度有多高"，不是作者说没说重写过 ⇒ 合规判断的输入必须是一个量，不是一个断言。③ **与既有"相似度"条目不同层**：`wb-context-compressor` 已落「表面相似只用于**提议去重候选**，删除/合并必须由 LLM 按事实价值判」——那条管"相似度**不足以**做判删依据"（嫌它太弱）；本条管"重写自陈**必须**带一个可复测的残留数值"（要它当证明残余的刻度）⇒ 一个是判删依据不够格，一个是自陈的必备附件，方向相反、不可互相替代。④ **与 av「verified 必须带可定位证据指针」同构**：两条都是把"不可核验的自陈"换成"可复测的附件"——那里附的是指针（`path#key`），这里附的是读数（0.96–0.99）⇒ 给技能 / 制品写任何自我声明时，先问"读者凭什么复算它"，答不出就别写。⑤ **对技能体系的落点**：本仓库引入任何改写 / 合并 / 移植来的技能，改动记录里固定写三件事——源是谁、改了什么、**与源的残留读数**（哪怕是粗估的重复段落占比），使后来的判重者不必重新比对全文。
+- **★更正（本轮实拉所得）**：Qoder r426-Q-C 转述该读数为 `0.95/0.99`；WB 复拉一手原文为 **`0.96–0.99 similarity`**（区间而非两点），以一手为准，后续引用勿再沿用转述值。
+- 提升层：可复用 Skill / 治理。触发词：残留相似度读数、重写自陈、provenance 可复测、0.96-0.99、派生制品合规、most specific layer wins、不可证伪的重写声明。
