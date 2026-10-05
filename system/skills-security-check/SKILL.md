@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.10.0
+version: 1.11.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -482,3 +482,9 @@ Step C: 是否包含恶意意图？
 - 原文逐字：`Enabling every community rule pack raises recall to 73.8% on an 80/80 sample of the same split, and raises the benign flag rate from 7.5% to 92.5%. That configuration is a **triage setting, not a gating one**.`
 - 判据：① **召回与噪声在同一旋钮上同向移动**——规则包全开把召回从 7.7% 提到 73.8% 的同一个动作，也把良性标记率从 7.5% 推到 92.5%；"提高检出"与"提高噪声"是同一次移动，不能只引用前半句；② 因此**资格从噪声侧读，不从召回侧读**：一个配置能不能当门（gating），只看它对良性样本的标记率，标记率畸高 ⇒ 它只有分诊（triage）资格；③ **"分诊"的准确含义是产出待办队列而不是产出结论**——分诊档的输出默认全部是"可疑"，必须由人或更严的下一级再判；直接把它接进准入/阻断，等于把 92.5% 的良性样本挡在门外，且这种误伤不会报错、只会表现为"很多东西装不上"；④ 与 §选型看两轴 的分工是硬性的：那条回答"我愿不愿意付误报代价"（偏好声明），本条回答"这个配置在读数上有没有门控资格"（资格判定）——**偏好不能授予资格**；⑤ 接线检查：凡引入第三方扫描/检测配置，先要它公开的良性样本标记率读数；**拿不出这个读数 ⇒ 该配置默认按分诊档使用，禁止接门禁**；已接门禁的，回查其标记率并降级。
 - 提升层：工具 / 工作流（安全检测装置的配置分级与准入接线）。触发词：门控资格、分诊档、良性标记率、triage not gating、误报率读数、扫描配置能不能当门、检测装置接线。
+
+
+## 允许集与校验集是两个集合：字段被接受不等于字段被检查，名字像安全承诺的字段尤其危险（来源：agentskills/agentskills `skills-ref/src/skills_ref/validator.py` 5,154B，经 api.github.com contents 端点 base64 解码取一手源码，2026-10-06 r432-A 独立 curl 实拉逐串命中；与 §信任信号要逐维度报覆盖率 互补——那条管"报告要拆维报覆盖"，本条管"校验器本身只覆盖了字段集的一半"）
+- 原文事实：`ALLOWED_FIELDS = {"name", "description", "license", "allowed-tools", "metadata", "compatibility"}`（6 项）；而 `validate_metadata` 只对 `name` / `description` / `compatibility` 调取值校验函数，且 `compatibility` 走 `if "compatibility" in metadata`；`_validate_metadata_fields` 只做 `set(metadata.keys()) - ALLOWED_FIELDS` 的键名集合差，命中即报 `Unexpected fields in frontmatter ... Only [...] are allowed.`
+- 判据：① **允许集 6 项、校验集 3 项——`license` / `allowed-tools` / `metadata` 允许存在但零取值校验** ⇒ "字段被规范接受"与"字段被校验器检查"是两个必须分别公布的集合；只公布前者，等于让作者把未受检字段当成受检字段，把声明当成保证。② **`allowed-tools` 是这类里最危险的一种**：命名上就是工具白名单（安全承诺），而参考实现里没有 `_validate_allowed_tools`，连形态检查都没有 ⇒ 凡规范中带安全语义的字段（工具/权限/网络/凭据声明），必须显式声明"谁在校验、校验什么、不校验什么"；没有校验器就不该让它以安全承诺的形态出现在允许集里。③ **可选字段是 present 才校验**：`compatibility` 缺席时 `validate` 不产生任何一行 ⇒ "没报错"同时覆盖"没写"与"写对了"，两者在输出里同形，不能把静默当成通过。④ **键名合法 ≠ 内容合规**：`Unexpected fields` 只做集合差，键名合法即放行任意取值 ⇒ 一个通过参考校验器的 frontmatter 仍可以完全不合规。⑤ 接线：审计任一技能包时，把它声明的每个 frontmatter 字段逐项问"本仓/本平台有没有对应的检查"，答不出的按**未受检**处理，不得因为"规范里写着"而视为已审；带安全语义的字段未受检时，报告里要单独列为"声明了但没有执行者"。
+- 提升层：工具 / 安全边界。触发词：允许集与校验集、allowed-tools 无校验、字段被接受不等于被检查、安全语义字段须声明校验者、可选字段缺席无结论、键名合法即放行内容。
