@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.82.0"
+version: "1.83.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -221,14 +221,7 @@ the CLI only adds atomicity and an audit trail.
 
 ## 争议处置按性质分通道：内容权 / 违规举报 / 命名空间各走独立入口；公开通道只收可公开证据并明确禁放私密证明；裁决按四要素（公开证据·既有使用·安全风险·用户影响）权衡；结果三态含「维持原状」且无时限承诺（来源：docs.openclaw.ai/clawhub/content-rights.md 1,166B + namespace-claims.md 4,167B，2026-09-30 r324B 独立实拉；与 §撤销与审核分层 互补——那条管“结论怎么撤”，本条管“争议往哪递”；细则见 references/knowledge-base.md §r324B）
 
-## Cap33 技能级作用域可见性：技能只对解析出的特定 agent 可见，对其余 agent 完全缺席（来源：docs.openclaw.ai/tools/custodian-skills.md 5,298B，2026-09-30 r336B 独立实拉；与 §入站准入双门与会话隔离粒度 互补——那条管谁能进来，本条管某个技能对谁‘根本不存在’）
-- **原文**：Custodian skills「load at the bundled-skill precedence tier, but only for the agent resolved by `agents.defaults.systemAgent.agentId`... For every other agent, Custodian skills are absent from discovery, snapshots, slash-command catalogs, sandbox sync, and the model-facing skills prompt」；「Normal skill controls still apply... agent skill allowlists can narrow the final set.」
-- **判据**：① **可见性是‘默认不存在、按身份显式出现’的开关，不是‘默认全有、按名单删’**——一个技能可以只对某一个被解析出的系统 agent 加载，对其它所有 agent 从发现/快照/目录/沙箱同步/提示词里彻底消失（不是‘可见但禁用’）；② **作用域锁与 allowlist 是两件事**：作用域决定‘这个技能根本存不存在于你的世界’，allowlist 在‘存在’之上再收窄‘你能用哪几个’；先定作用域再谈收窄；③ 与跨 agent 共享纪律一致——共享记忆管‘谁读得到’，技能可见性管‘谁装得上’，两者都按身份声明而非默认广播；④ 落地到 WB：技能分发时若某技能只服务一个角色 agent，配置为‘仅该 agent 可见’，避免污染其它 agent 的技能提示词与发现面。
-- 提升层：工作流/安全边界。触发词：技能级作用域可见性、role-scoped skill、仅 systemAgent 可见、discovery 缺席、作用域锁、allowlist 收窄。
-
-## Cap34 记忆分四层各司其职；超限只在「注入侧」截断且磁盘完整，截断本身是分层迁移信号；偏好变更就地取代而非追加矛盾条目（来源：docs.openclaw.ai/concepts/memory.md 15,623B，2026-10-01 r340B 独立 curl 实拉逐串命中；与 §争议按性质分通道 互补——那条管争议往哪递，本条管记忆往哪写）
-- **原文**：四文件 = `USER.md`（稳定偏好/画像，**写成指令式**，带 observed-date 与 active/superseded 元数据）/ `MEMORY.md`（**durable non-profile facts** 与长期决策，「It is **not a raw transcript, daily log, or exhaustive archive**」）/ `memory/YYYY-MM-DD.md`（工作层：细节、观察、原始上下文，**不进每次 bootstrap**）/ `DREAMS.md`（后台整合摘要，供人复核）；「When a preference changes, **supersede it in place instead of appending a contradictory active directive**」；「If `MEMORY.md` grows past the bootstrap file budget, OpenClaw **keeps the file on disk intact but truncates the copy injected into context**. **Treat that as a signal** to move detailed material into `memory/*.md`」；「The default heartbeat prompt **performs no memory maintenance on its own**」。
-- **判据**：① **共享记忆必须分层，且各层的加载策略不同**：画像层（少量、每次带）/ 长期层（精选、启动时带）/ 日志层（详尽、按需检索不常驻）/ 整合层（后台产出、供人复核）。把日志层当长期层用，结果是启动时被原始流水淹没；把长期层当日志层用，结果是耐久事实被细节挤掉。② **超限的正确处置是只截注入副本、磁盘保持完整**：文件在盘上不受损，被截断的只是送进上下文的那一份。⇒  truncation 不是数据丢失，是**注入预算的告警**；收到这个信号应做的是分层迁移（把细节挪到日志层、长期层只留耐久摘要），而不是删内容或盲目上调预算。③ **偏好变更就地取代**：偏好变了就在原条目上标记 superseded 并改写，**不追加一条与之矛盾的活跃指令**。⇒ 两条互相矛盾的活跃偏好同时存在时，读取方无从裁决，实际行为取决于谁后加载——这是最难排查的一类漂移。④ **后台整合与主动记录是两条独立通道**：心跳提示本身不做记忆维护，整合由后台 sweep 负责、主动落盘由工作中的 agent 负责。⇒ 不能因为有自动整合就不写，也不能因为会写就指望自动整合来兜底分层。
+## Cap33 技能级作用域可见性 / Cap34 记忆分四层（原文已下沉 references/knowledge-base.md §r428C 下沉；触发词：role-scoped skill、discovery 缺席、记忆四层、注入侧截断、supersede in place）
 - **提升层**：工作流/记忆治理。触发词：记忆四层、USER/MEMORY/日志/DREAMS、不追加矛盾偏好、supersede in place、注入侧截断、磁盘完整、截断即迁移信号、心跳不维护记忆。
 
 ## Cap36 客户端凭据在服务端按终端用户签发、短时效并绑定来源白名单；限流必须可被程序读取（来源：pipedream.com/docs `connect/api-reference/create-connect-token` 9,194B，2026-10-01 r344C 独立 curl 实拉；与 §Cap32 只写不可读 / §Cap18 白名单空=拒绝 互补——那两条管"密钥存进来之后怎么被读写""白名单缺省方向"，本条管"发给浏览器的那一枚短令牌长什么样"）
@@ -494,3 +487,8 @@ the CLI only adds atomicity and an audit trail.
 - **判据**：① **移交/汇报载荷要按通道的读者与用途分档，不是一个总上限**——长发现 4,096、单条结果 512、路由提示 1,024 三档各不相同；设一个总上限时，最长的一类（发现）会先吃满额度，把最短也最值钱的结论（结果/路由提示）挤掉 ⇒ 凡"把子任务结果回传给上层"的接口，先问：这一包里有几种语义的东西？它们各自的上限分别是多少？只给一个总数等于让噪声决定保留什么。② **幂等声明必须写清"复用尝试键"与"全局 exactly-once"的差距**——模糊重放只复用 attempt key，官方明确不断言跨 Gateway 重启的全局精确一次 ⇒ 重启后语义会变；写"我们做了幂等"却说不出作用范围（对谁、跨不跨重启、覆盖哪次尝试），等于承诺过度，下游会按更强的假设去设计。③ **定时任务与编排器同时想"续跑"同一个会话时，必须先定投递归属**——本例切分：编排器结果由 registry 交付给原始请求方，定时输出由 cron 既有的续跑与投递策略拥有 ⇒ 两条回路都能续同一个会话而不先定归属，就会出现争抢与重复投递；归属是要在设计阶段写死的事实，不是运行时协商出来的。
 - **与既有能力分工**：Cap84 管「上限按循环种类分设、按对端计数」（计数维度）；Cap71 管「队列有界、超限停源留错」（积压封顶）；Cap79 管「短时凭证撤销先于过期」（时效）；本条管**同一份移交载荷内部按语义通道分档**＋**完成投递归属的切分**＋**幂等声明的作用域边界**，三者不同层、不可互相替代。
 - 提升层：工作流（多实体编排运行时的交接契约）。触发词：移交载荷分档截断、findings 4096、route notices 1024、投递归属、cron 与 registry 争抢、重放键不等于 exactly-once、幂等承诺过度、总上限挤掉结论。
+
+## Cap93 扩展体的可达面锚定在「安装位」，不随调用者身份放大；它自带的状态存储继承同一边界（来源：docs.dify.ai `en/develop-plugin/features-and-specs/advanced-development/reverse-invocation-app.md` 4,256B + `features-and-specs/plugin-types/persistent-storage-kv.md` 4,246B，2026-10-06 r428-C 独立 curl 取 `.md` 原文实拉；经 `docs.dify.ai/llms.txt` 2,639B → `_llms/en/cloud/developer-resources.md` 30,974B/152 页定位真路径）
+- **原文**：反向调用页明写「**Plugins can only access Apps within the Workspace where the plugin resides.**」——插件可反向调用宿主 App，但可达集被钉在插件所在的那个 workspace；持久存储页「Persistent storage lets plugins keep data **within the same workspace** across interactions」——扩展自带的 KV 状态沿用同一个边界。
+- **判据**：① **反向调用是"被调方反向伸手拿宿主能力"的通道，它的边界必须由被调方装在哪决定，不由谁在调用它决定** ⇒ 若边界跟随调用者，同一份扩展在不同人手里就变成不同权限面，权限会沿调用链被抬升（普通成员调它只看到自己 workspace，管理员调它不应因此看见别人的）⇒ 判断一道反向通道的收窄是否可信，先问"这个半径是绑在被调方身上还是绑在调用方身上"。② **"装在哪"从部署细节升级为安全属性** ⇒ 安装位置不再是运维便利问题，而是作用域声明；迁移/复制一个扩展体到别处，等于给它换了一整个可达集，必须按权限变更来评审而不是按文件移动来处理。③ **状态面与调用面是同一个半径的两半**——扩展自带的持久化沿用同一 workspace 边界 ⇒ 只收窄调用面而放任状态面（或反之），收窄只是表面：真正的一致性要求是"读得到什么"与"存得下什么"落在同一个边界上。④ **与 Cap33 分工**：Cap33 管"这个技能对哪个 agent 根本不存在"（谁能看见/装得上这个能力，按身份判）；本条管"它装好之后能碰到哪些宿主对象"（它伸出手的半径，按安装位判）⇒ 同一道边界的两端，两端要分别声明，只写一端时另一端的默认可能完全不同。⑤ **与 Cap86 分工**：Cap86 管长期凭据的默认作用域粒度（默认过大即漏洞）；本条管扩展体运行期的可达面与状态面（边界锚定在安装位、不随调用者移动）⇒ 前者是"拿到钥匙能开多大的门"，后者是"装在这间屋子里能碰到哪些东西"。
+- 提升层：治理 / 安全边界。触发词：插件可达面、安装位决定作用域、workspace where the plugin resides、反向调用边界、扩展体状态存储同边界、调用者不抬高被调方权限、状态面与调用面同半径。
