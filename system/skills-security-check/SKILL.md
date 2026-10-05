@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.9.0
+version: 1.10.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -476,3 +476,9 @@ Step C: 是否包含恶意意图？
 - **信任信号是多维的，报告要拆开列**：校验和/签名/来源可信/作者身份/权限声明各是一维，单给一个聚合"安全"结论会掩盖短板维度；审计输出强制逐维报覆盖率。
 - 提升层：工具/安全边界。触发词：信任信号逐维覆盖率、校验和100%≠整体可信、创建者身份已验证、多维信任信号、聚合结论掩盖短板。
 - 提升层：工作流 / 可复用 Skill。
+
+
+## 门控资格与分诊资格是两档：一个检测配置有没有「门控资格」由它对良性样本的标记率单独判定，召回提升换不来门控权（来源：api.github.com/repos/cisco-ai-defense/skill-scanner/contents/docs/reference/measured-results.md 一手 66,364B JSON→base64 解码正文，2026-10-06 r430-B 独立 curl 实拉逐串命中；与 §选型看两轴（漏判与误报代价不对等）互补——那条管"选型时声明偏好"，本条管"读数本身决定资格档位"）
+- 原文逐字：`Enabling every community rule pack raises recall to 73.8% on an 80/80 sample of the same split, and raises the benign flag rate from 7.5% to 92.5%. That configuration is a **triage setting, not a gating one**.`
+- 判据：① **召回与噪声在同一旋钮上同向移动**——规则包全开把召回从 7.7% 提到 73.8% 的同一个动作，也把良性标记率从 7.5% 推到 92.5%；"提高检出"与"提高噪声"是同一次移动，不能只引用前半句；② 因此**资格从噪声侧读，不从召回侧读**：一个配置能不能当门（gating），只看它对良性样本的标记率，标记率畸高 ⇒ 它只有分诊（triage）资格；③ **"分诊"的准确含义是产出待办队列而不是产出结论**——分诊档的输出默认全部是"可疑"，必须由人或更严的下一级再判；直接把它接进准入/阻断，等于把 92.5% 的良性样本挡在门外，且这种误伤不会报错、只会表现为"很多东西装不上"；④ 与 §选型看两轴 的分工是硬性的：那条回答"我愿不愿意付误报代价"（偏好声明），本条回答"这个配置在读数上有没有门控资格"（资格判定）——**偏好不能授予资格**；⑤ 接线检查：凡引入第三方扫描/检测配置，先要它公开的良性样本标记率读数；**拿不出这个读数 ⇒ 该配置默认按分诊档使用，禁止接门禁**；已接门禁的，回查其标记率并降级。
+- 提升层：工具 / 工作流（安全检测装置的配置分级与准入接线）。触发词：门控资格、分诊档、良性标记率、triage not gating、误报率读数、扫描配置能不能当门、检测装置接线。
