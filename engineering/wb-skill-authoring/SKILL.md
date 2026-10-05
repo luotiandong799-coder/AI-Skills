@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.126.0"
+version: "3.127.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -86,14 +86,14 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **角色 / 技能之间不能笼统重叠**：官方反例同样是 "General Assistant" / "Helper"。判据：**两个角色各自能干什么，去掉交集还剩什么**——交集大于各自独有部分就该合并，而不是靠 description 里多写几个词把它们分开。与 §同类技能合并判据 分工：那条管"怎么合并"，本条管"**什么时候其实早该合了**"。
 > 本节（附录 Z：description 术语索引）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 ## 该触发却没触发：按序排查
-0. **这个任务是否本来就不需要技能？**（超出模型自身能力的任务才会去查技能库——单步简单请求没触发不等于描述有问题，见上节末条）
+ 0. **这个任务是否本来就不需要技能？**（超出模型自身能力的任务才会去查技能库——单步简单请求没触发不等于描述有问题，见上节末条）
 1. 描述里有没有用户实际会说的那几个词？
 2. 触发条件是否写得太抽象（"处理复杂任务" 这类）？
 3. 文件位置对不对（用户级 `~/.workbuddy/skills/` vs 工作区 `.workbuddy/skills/`）？
 4. frontmatter 语法是否合法（`name` / `description` 必填，YAML 缩进别错）？
-5. 改完 skill 后会话没重开 → 读的仍是旧版本
+ 5. 改完 skill 后会话没重开 → 读的仍是旧版本
 ## 不该触发却触发
-- description 过宽（写成了"所有 AI 相关任务"）
+ - description 过宽（写成了"所有 AI 相关任务"）
 - 多技能触发词打架 → 显式写出优先级，或收窄其中一条
 - 名字太泛（`helper` / `utils`）→ 改成能被语义区分的名字
 > 本节（双路由防呆）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
@@ -150,7 +150,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 审批门要配齐四个旋钮（启用选择器 / 豁免主体 / 在途隔离 / 超时去向）；缺第四个时 pending 可无限挂起审批门要配齐四个旋钮（启用选择器 / 豁免主体 / 在途隔离 / 超时去向）；缺第四个时 pending 可无限挂起（来源：www.activepieces.com/docs/flows/flow-approvals.md，2026-09-30 r323C 独立实拉 2,500B；与 §并发写仲裁 互补——那条管“写冲突”，本条管“变更放行”）（原文已下沉 references/knowledge-base.md §r325C）
 ## 扩展点是「观察 + 否决」双职：回调里抛错即可阻止被钩的操作，且钩子无沙箱、回调继承宿主实例全权限——扩展点的权限边界等于宿主权限，选钩前必须先声明（来源：docs.n8n.io/hosting/configuration/external-hooks/ 1,023,234B，2026-09-30 r324B 独立实拉，原文 lowercase「forbid an action by throwing an error」命中；与 §审批门四旋钮 互补——那条管“变更怎么放行”，本条管“放行机制自身有多大权”；细则见 references/knowledge-base.md §r324B）
 
-
 ## 版本义务沿引用图传递：改动一个被依赖的文件，即使接口没变也要 bump 全部下游引用者（来源：pipedream.com/docs/components/contributing/guidelines.md 43,351B，2026-09-30 r325C 独立 curl 实拉逐串命中「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」；经 Qoder r357-Q-A 提名；与已落「接口形状判破坏」互补——那条管"算不算破坏性变更"，本条管"谁的版本号必须跟着动"）
 - 原文语境：Pipedream 组件注册表的版本号规则——新增 action 起 `0.0.1`；`0.1.0` 上修 bug 提 `0.1.1`；**「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」**
 - 判据：① **版本号是"内容指纹"而不只是"兼容性标签"**：兼容性只决定 major/minor/patch 走哪一位，而"要不要 bump"由**是否被影响**决定——即便对外接口一字未改，只要被依赖文件的行为变了，依赖它的组件版本号就必须动；② **依赖闭包内的传播必须显式执行**：改动公共文件时，负责人要把受影响清单枚举出来（按 import 图，而不是凭印象），逐条提版，否则消费方按旧版本号做缓存/准入判定，会拿到**旧判定 + 新代码**的错配组合；③ 这条与"锁定版本"是一对：一边要求下游写死版本号，另一边就必须保证**上游变动会强制推着下游动**——只锁不传就是死锁，只传不锁就是失控；④ 落地时把它写成 CI 检查而非人工纪律：`git diff` 出改动的公共文件 → 反查 import 闭包 → 断言每个闭包成员的 version 字段都变过。
@@ -181,7 +180,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 
 - 提升层：可复用 Skill / 安全边界。触发词：修补授权令牌、prepare_patch、usage receipt、目录所有权、no clobber、critical 才阻断、关键词不等于违规。
 
-
 - **无法交互时的兜底默认落在拒绝侧；长期授权要有四态可见与显式期限；允许清单的增删是幂等写（来源：docs.openclaw.ai/cli/approvals.md 16,110B，2026-10-01 r339C 独立 curl 实拉逐串命中）**：本章已下沉 `references/knowledge-base.md`（r339C）。
 ## 宿主能力须前置声明并 fail-closed；同一插件的三类失败走三条不同处置路径（来源：docs.openclaw.ai/concepts/context-engine.md 26,167B，2026-10-01 r343A 独立 curl 实拉逐串命中）
 
@@ -189,13 +187,11 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **判据**：① **能力需求必须在启动前声明并被前置校验，不满足就硬失败而不是"带着缺陷跑"**：兼容性与不兼容是二值事实，用降级来"兼容"只会把崩溃推迟到状态被写坏之后；失败消息必须给出可执行替代（`unsupportedMessage` 指明换哪个运行时/回退实现）。⇒ 写可插拔能力时，先声明"我要求宿主具备什么"，再让宿主在启动前裁决；不要靠 try/catch 在运行中试探。② **同一个组件的失败不是一种处置，而是按失败位置分三条路径**：生命周期内抛错/契约校验失败/工厂创建失败 → **隔离 + 降级保活**（目标是"别让 agent 沉默"）；宿主能力不满足 → **运行前 fail-closed 预拒**（目标是"别在不兼容环境上写坏状态"）；准入与资源归属失败（工厂入口之前）→ **直接向上传播，不降级不隔离**（目标是"别把宿主自身的问题伪装成插件问题"）。⇒ 判据是**这条失败会不会污染状态**：会污染 → 预拒；不污染但会中断服务 → 降级保活；根本不是本组件的错 → 原样抛。③ **参数面的默认极性是"全给"，最小权限必须显式声明空列表**：不声明 `acceptedHostParams` 的引擎会收到宿主拥有的全部字段，声明后才与可用字段求交、未知键永不注入。⇒ 接口默认开放意味着"最小权限"是一个要写出来才存在的东西（写 `[]` 才算零字段）；同理，声明与可用集合求交意味着**新增宿主字段不会自动灌进已声明的窄接口**，这是防漂移的边界。
 - **提升层**：可复用 Skill / 安全边界。触发词：hostRequirements、requiredCapabilities、unsupportedMessage、fail-closed 预拒、隔离降级保活、准入失败不降级、acceptedHostParams、默认全给、显式空列表、接口默认极性。
 
-
 ## 命名冲突只改自动别名并保留直达入口；确定性路由要显式声明；授权清单是覆盖式唯一权威（来源：docs.openclaw.ai/tools/slash-commands.md 38,378B，2026-10-01 r343B 独立 curl 实拉逐串命中）
 
 - **原文**：①「`/dashboard` is reserved as a built-in command. If an existing user skill is named `dashboard`, skill discovery exposes its generated slash alias as `/dashboard_2`. **`$dashboard` and `/skill dashboard` continue to select that user skill directly.`**」；②「By default, skill commands **route to the model as a normal request**. Skills can declare `command-dispatch: tool` to **route directly to a tool (deterministic, no model involvement)**.」；③「When configured, it is the **only authorization source** for commands and directives.」「`a denied sender or an explicitly empty list cannot fall back to channel admission.`」
 - **判据**：① **命名空间冲突的处置是"表层别名退让 + 保留显式直达入口"，不是覆盖也不是禁用**：自动生成的别名改名（加数字后缀）只作用于自动派生的那一层，显式调用名（`$name` / `/skill name`）必须原样可用。⇒ 若改名把显式入口一起改掉，用户手写的调用就静默失效；判断一个冲突处置方案好不好，就看"用户已经写出去的调用还能不能用"。② **同一入口的两种执行语义（过模型 vs 直达工具）必须由能力自己显式声明，且默认是"过模型"**：默认走模型意味着结果不确定，想要确定性必须额外声明 `command-dispatch: tool`。⇒ 把"要不要让模型介入"当成能力的一个**声明属性**而不是调用时的隐式行为；默认非确定性这条要写进契约，否则调用方会误以为同名入口每次行为一致。③ **显式授权清单是覆盖式唯一权威，不是叠加项，且"配了空"等于"全拒"**：一旦配置该清单，通道授权等其他来源全部失效；空列表不是"没配置"而是"明确拒绝所有人"，且**不允许回退**到更宽松的通道准入。⇒ 权限面最危险的默认就是"配不上就回退"——它让"收紧"这个动作在配错时反而变宽；授权清单必须语义单一：存在即唯一权威，空即全拒。
 - **提升层**：可复用 Skill / 安全边界。触发词：命令名冲突、保留字冲突、别名退让、显式直达入口、command-dispatch、确定性路由、默认过模型、授权清单覆盖式、空列表全拒、不可回退。
-
 
 ## 权限上限在创建时刻快照且不可自增；一次性提权四要素；管理权不转移归属（来源：docs.openclaw.ai/automation/cron-jobs/payloads.md 27,960B + managing-jobs.md 17,374B，2026-10-01 r343C 独立 curl 实拉逐串命中）
 
@@ -269,7 +265,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 落地动作：技能/插件的元数据表增加 `minToken`+`maxToken` 双字段与 `hosted` 布尔；写"成本"时一律写区间并标注上界触发条件，禁止只给均值或单点值。
 - 提升层：可复用 Skill / 工具。触发词：minToken、maxToken、成本区间、上界预算、hosted 托管标记、技能元数据。
 
-
 ## r354A · 新能力默认关闭 + 行为不变承诺 + 逐能力生效，不是全局开关（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/durable-scheduler.md`、`configure-n8n/system-tasks.md` 独立 curl 取 `.md` 原文，2026-10-02 r354A 实拉）
 
 - **★默认关 + 老实例行为不变**：原文 "It's **off by default**: existing instances keep using the in-memory scheduler and **behave as before until you opt in**"。判据：**引入会改变既有行为的实现时，缺省必须是"不变"**——让升级者先得到与旧版一致的行为，再显式选择新语义；把新语义做成默认，等于让所有存量在不知情的那一刻同时改变行为。
@@ -278,7 +273,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **★同一"错过"在两种模式下语义相反**：in-memory 下 "A run whose time passes while the instance is down **doesn't happen**"；且进程睡眠时 "the timer **fires once for all the occurrences it slept through** instead of replaying them one by one"（补跑被折叠成一次）；durable 下 "A run whose time passed while the instance was down **still fires late** when the instance comes back, as long as it's within its **grace period**; beyond that, the trigger's **misfire policy** decides"。判据：**"补不补跑"必须显式定义为三段（宽限期内补跑 / 超期按 misfire policy（丢弃 or catch-up）/ 根本不补），不能留成实现细节**——同一个缺失在两种模式下的处置不同，迁移时按旧心智模型推断会直接算错。
 - **★跨实例"只执行一次"靠共享队列认领，不靠 leader 选举**："Every main instance shares the same queue and **claims runs** from it. Only one instance picks up each run"；而 in-memory 模式 "Only the **leader** fires schedules. If leadership changes at the wrong moment, **timing can slip**"。判据：**去重的正确落点是"对同一条待办的唯一认领"，不是"选出一个负责人"**——前者任一实例都能干活且天然不重复，后者把可用性绑在选举正确性上。
 - 提升层：可复用 Skill / 工作流。触发词：默认关闭、行为不变承诺、Preview 到 GA、逐能力生效、misfire policy、grace period、claim 去重、leader 选举。
-
 
 ## r354B · 「允许用户覆盖」= 默认值 + 上限两个变量；同类参数在不同子系统是不同币种（来源：docs.n8n.io `use-environment-variables/executions.md` + `use-environment-variables/credentials.md` 独立 curl 取 `.md` 原文，2026-10-02 r354B 实拉）
 
@@ -289,7 +283,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **★有默认值的显示名会静默产生同质垃圾**：`CREDENTIALS_DEFAULT_NAME` 默认 `My credentials`。判据：**给可命名实体设默认名，等于批量制造无法区分的同名对象**；要么默认值带上下文（环境/用途），要么强制命名。
 - 提升层：可复用 Skill / 工具。触发词：可覆盖上限、EXECUTIONS_TIMEOUT_MAX、参数单位、毫秒秒混用、_FILE 后缀、多实例下默认值失效、默认名同质化。
 
-
 ## r354C · 能力可用性按部署形态逐项核对：云与自托管不是包含关系；许可缺失是 fail-fast 而非降级（来源：docs.n8n.io `scaling/use-external-storage.md` 独立 curl 取 `.md` 原文，2026-10-02 r354C 实拉）
 
 - **★"自托管高配 / 云端没有"这种反向分布真实存在**：external storage 原文 "**Self-hosted:** Business, Enterprise. **It isn't available on n8n Cloud.**"（S3 二进制存储同样如此）。判据：**不要用"云版本总是功能更全"或"自托管总是更自由"来推断可用性**——两者是两条独立的产品线，同一能力在一侧有、另一侧可能完全没有；选型时逐能力查表，不做外推。
@@ -297,7 +290,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **★清理责任随数据一起外包，默认结果是"永久保留"**："n8n **delegates pruning of binary data to S3**, so setting a lifecycle configuration is **required** unless you want to preserve binary data indefinitely"。判据：**把数据迁到外部存储时，生命周期策略不是附带获得的，而是必须另行配置的**——未配置的状态是"无限期保留"而不是"跟随主系统策略"；这与 r354A「清理停了也不报错」叠加，会形成长期静默增长。
 - **★"支持"与"官方支持"是两档**："You can use other S3-compatible services like Cloudflare R2 and Backblaze B2, but n8n **doesn't officially support these**"。判据：**能跑通 ≠ 被支持**；承诺面由"官方支持"界定，排障与兼容性保障只覆盖那一档，选型时要把"兼容但未支持"单独列为风险项。
 - 提升层：可复用 Skill / 工具。触发词：云与自托管反向分布、isn't available on Cloud、license 拒绝启动、fail-fast 许可、S3 lifecycle 必配、官方支持 vs 兼容。
-
 
 ## r355B · 召回要分两条通道：廉价的确定性通道在前，贵的深度通道只在「问过去 + 无强可信触发匹配」时才升级；检索形态按问题形状选，上下文量与超时是联动旋钮（来源：docs.openclaw.ai `concepts/active-memory.md` 7,276B + `concepts/active-memory/tuning.md` 4,601B，2026-10-02 r355B 独立 curl 实拉）
 
@@ -325,24 +317,20 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **判据**：① **传密的通道决定泄漏面，不只是存密的介质**——命令行参数会落进 shell 历史与进程列表，所以 secret 类只认 stdin 管道 / 值文件 / 交互式掩码三种通道；写文档与示例时"顺手写个 --value"就是把凭据送进历史文件。② **分类是写入即固定的属性，不随后续推断漂移**——已有条目保持原 kind（哪怕名称后缀看起来像 env），自动推断只对**新名**生效；否则一次批量导入会把已经收紧的条目重新降级成 env。③ **脱敏占位符不得回写成值**——占位符被当成真实值存进去，事后无法与"真的配了这个字符串"区分；无可用旧值时直接拒绝。④ **白名单是策略元数据，可以公开列出**——允许外发的主机不是秘密，列出来才能审；把策略面当秘密藏起来，等于放弃对出口面的审计。
 - 提升层：工具 / 安全边界。触发词：--value 泄漏面、shell history、stdin 管道、值文件、分类持久属性、自动推断只对新名、占位符不得回写、白名单是策略元数据。
 
-
 ## 能力声明必须自带前置面与受限面：能用 ≠ 被允许在生产用（来源：docs.n8n.io `administer/manage-credentials/end-user-credentials.md` 9,720B，2026-10-03 r390A 独立 curl 取 `.md` 原文实拉；与 §SecretRef 禁 OAuth 等规范条款互补——那几条管规范合规面，本条管能力可用性的声明面）
 - **原文**：特性可用性「**n8n Cloud:** Enterprise / **Self-hosted:** Enterprise」；「End-user credentials are in **Preview** and may change in future releases. **Don't rely on them in production workflows.**」；「**OAuth credentials only**」；「You can only create end-user credentials in **team projects**, not in personal projects」；「**One connection per user**: Each user can connect a single account per end-user credential template.」；「By default, only project admins can create end-user credentials.」
 - **判据**：① 技能/能力描述里除了"做什么"，必须写**前置面四件套**：套餐或版本门槛 · 支持的凭据/协议类型 · 可创建的作用域 · 每主体配额（一人一条）。缺任何一项，"配了不生效"的排障成本都会转嫁给使用者。② **预览态必须在声明里写死"不得依赖其跑生产"**——"能用"与"被允许在生产用"是两个结论，官方自己就分开写。③ **能力默认只对高权限角色开放，收窄靠显式授权而不是默认放开**：默认只有 project admin 能建，其他角色通过自定义角色授予。凡"谁能创建"这类元能力，默认方向应是收窄。
 - 提升层：可复用 Skill / 工具。触发词：前置面、套餐门槛、预览态禁生产、OAuth only、配额一人一条、元能力默认收窄。
-
 
 ## 能力面按组声明时，组名是展开式简写且自带排除清单；能力缺失应当是「隐藏」而不是「回落到更宽的面」；沙箱里的技能是投影不是本体（来源：docs.openclaw.ai `gateway/sandbox-vs-tool-policy-vs-elevated.md` 9,792B + `gateway/sandboxing/what-gets-sandboxed.md` 1,573B + `gateway/sandboxing/workspace-access.md` 7,119B，2026-10-03 r391A 独立 curl 取 `.md` 原文实拉；与 §能力面是 resource:action 二维矩阵 / §能力前置面四件套 互补——那两条管声明维度与门槛，本条管简写展开、缺失降级与运行期投影）
 - **原文**：工具组「Tool policies (global, agent, sandbox) support `group:*` entries that **expand to multiple tools**」，`group:fs` = `read`/`write`/`edit`/`apply_patch`，`group:runtime` = `exec`/`process`/`code_execution`；「`group:openclaw`: most built-in OpenClaw tools (**excludes** the `read`/`write`/`edit`/`apply_patch`/`exec`/`process` fs and runtime primitives, `canvas`, and provider plugins)」；只读要求「For **read-only agents, deny `group:runtime`** as well as mutating filesystem tools unless sandbox filesystem policy or a separate host boundary enforces the read-only constraint.」；缺失即隐藏「Directory discovery uses `ls` **without granting shell execution** … Custom backends can provide `SandboxFsBridge.readDirectory(...)`. The method is **optional** for older plugins: **`ls` is hidden when it is absent, and OpenClaw does not fall back to reading the host filesystem.**」；技能投影「With `workspaceAccess: "none"`, OpenClaw **mirrors eligible skills into the sandbox workspace** (`.../skills`) as **read-only instruction roots** … The **runtime-owned `.openclaw/sandbox-skills` subtree is excluded from workspace reconciliation and publication**; other project content under `.openclaw` is retained … The **Gateway refreshes its own mirrored copies** even when an earlier copy inherited read-only directory permissions.」
 - **判据**：① **组名必须当作"展开式宏"写进文档，且要写出排除项**：`group:*` 会展开成一串具体工具（fs 组四个、runtime 组三个），而 `group:openclaw` 这种"大多数"式命名**显式排除** fs/runtime 原语、canvas 与 provider 插件。⇒ 描述能力面时只写组名不写展开结果，使用者无法判断某个具体工具在不在里面；写"组 X 覆盖全部"这种话基本都是错的。② **"只读"必须落到运行时组**：只 deny 文件类工具而留着 `exec`，只读是假的。官方给的是"deny `group:runtime` **以及** 变更类文件工具"，除非另有沙箱文件策略或宿主边界兜底。⇒ 只读类技能的验收动作是：试着用 shell 写一次文件，不是检查有没有 write 工具。③ **能力缺失应表现为隐藏，绝不回落到更宽的面**：自定义后端没有 `readDirectory` 就把 `ls` 藏起来，**不回落到读宿主文件系统**。⇒ 这是降级方向的标准答案——能力不足时收敛，而不是为了功能可用去开一个更大的口子（与 fail-closed 同源）。④ **运行期拿到的技能是投影，改动不回流到本体**：沙箱里技能以只读指令根镜像存在，`.openclaw/sandbox-skills` 子树被排除在工作区对账与发布之外，镜像由 Gateway 自行刷新（连之前继承的只读权限都不用手工修）。⇒ 在受控环境里"改了技能"默认是改的副本；声明时必须说清这是投影、哪些路径不会回流。
 - 提升层：工具 / 可复用 Skill。触发词：group 展开、group:openclaw 排除项、只读要 deny runtime、能力缺失隐藏不回落、sandbox-skills 排除对账、技能镜像只读、投影不回流。
 
-
 ## 声明能力必须分「可提升」与「不可提升」两类限额；把内容交给第三方模型时，外发清单必须同时写「发什么」与「不发什么」（来源：pipedream.com/docs `workflows/limits.md` 9,083B + `workflows/building-workflows/errors.md` 9,150B，2026-10-03 r391B 独立 curl 取 `.md` 原文实拉；与 §能力前置面四件套 / §能力面是 resource:action 矩阵 互补——那两条管门槛与维度，本条管资源上限的可协商性与外发数据的负声明）
 - **原文**：可提升项「By default, workflows run with **256MB** of memory. You can modify a workflow's memory … up to **10GB**. **Increasing your workflow's memory gives you a proportional increase in CPU.** … Pipedream **charges credits proportional to your memory configuration**.」；超时按触发类型分档「HTTP and Email-triggered workflows default to **30 seconds** … Cron-triggered workflows default to **60 seconds** … | Free tiers | 300 seconds | | Paid tiers | 750 seconds |」；不可提升项「You have access to **2GB** of disk in the `/tmp` directory. **This limit cannot be raised.**」；「logs … step exports … and the original event data … cannot exceed a combined size of **6MB** … **This limit cannot be raised.**」；外发清单「When you debug an error with AI, Pipedream sends the following information to OpenAI: The **error code, message, and stack trace** · The **step's code** · The **input added to the step configuration**. This **does not** contain the event data that triggered your workflow … We explicitly **do not** send the event data that triggered the error, or any other information about your account or workflow.」
 - **判据**：① **资源上限必须拆成"能靠配置/加钱解决"与"不能解决"两类**：内存 256MB→10GB 可调（且 CPU 同比例提升、按内存计费）属于前者；`/tmp` 2GB 与"日志 + step exports + 原始事件合计 6MB"**明确不可提升**属于后者。⇒ 架构决策的分水岭就在这里：撞到可提升项可以调参，撞到不可提升项必须改设计；把两类混在一张"限制"表里，读的人会以为都能调。② **同一能力的不同触发方式限额不同**：HTTP/邮件触发默认 30 秒、Cron 触发默认 60 秒，套餐再决定上限（300s / 750s）。⇒ 写"超时 30 秒"不说触发类型，与写"超时上限"不说套餐，都是不完整的声明。③ **内存这类"性能旋钮"同时是计费旋钮**：调内存等价于调 CPU 与费用 ⇒ 资源声明要连成本一起写，否则使用者会把"加大内存"当成免费的提速手段。④ **把数据交给第三方模型（哪怕只是"AI 帮我看这个报错"）是外发通道，声明必须双侧**：官方写法是逐项列出发送内容（错误码/消息/栈、步骤代码、步骤静态输入），并**显式列出不发送的内容**（触发事件数据、账号与工作流信息）。⇒ 只有"发什么"没有"不发什么"的声明无法证伪，也无法作为验收依据；负声明与正声明同等重要。
 - 提升层：可复用 Skill / 工具。触发词：可提升 vs 不可提升限额、内存调 CPU 与计费、2GB tmp 不可提升、6MB 日志合计、超时按触发类型、Debug with AI 外发清单、不发触发事件数据、负声明。
-
 
 ## 托管额度是「按节点」的凭据选择，便利性换的是覆盖面；能力切换时隐藏与警告两种处理取决于当前状态（来源：docs.n8n.io `build/understand-workflows/use-gateway-credits.md` 6,208B，2026-10-03 r391C 独立 curl 取 `.md` 原文实拉；与 §能力前置面四件套 / §可提升与不可提升限额 互补——那两条管门槛与资源上限，本条管凭据粒度、覆盖面差集与切换行为）
 - **原文**：「n8n routes the requests through its own gateway and bills the usage from your instance's **prepaid credit balance**」；「**You choose per node**, so one workflow can mix Gateway credits on one node with your own credentials on another.」；「Some nodes support Gateway credits for **part of what they do**. When you use Gateway credits on such a node, n8n **hides the unsupported operations**. If a node **already has an unsupported operation selected** when you switch it to Gateway credits, n8n **keeps the operation and shows a warning** instead.」；「Nodes using Gateway credits **fail when your instance's balance reaches zero**.」；「Instance owners can turn Gateway credits **off for everyone on the instance** … When it's off, the Gateway credits option **doesn't appear on nodes for anyone**.」；对比表「| Coverage | **Supported services and models only** | Any service or model n8n integrates with, **including your own plan's rate limits and features** |」；「| Spend visibility | One spend view by model and workflow in n8n | **Each provider's own dashboard** |」；可用面「**They aren't available on n8n Cloud Enterprise or self-hosted n8n.** Gateway credits are available from n8n **2.36.0**. Free trials include Gateway credits, but **you can't top up until you upgrade to a paid plan**.」
@@ -370,7 +358,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 配置键的归属要写在键上：`internal` 属于另一个子系统，**不启用 HTTP 入口** ⇒ 出现在同一页文档里的键不一定由这一页的机制管，写声明时要标归谁管，否则读者会以为配了就生效。
 - `idempotencyKey` 是可选重放键且**请求头优先于载荷**；`waitForCompletion` 只对直接 `/agent` 调用生效，经 mapping 与 fan-out 提交永远只做准入 ⇒ 同一字段的生效入口要列全，别让调用方以为处处可用。
 
-
 ## 外部解析器/命令的准入校验是一条有先后顺序的链；`${VAR:-fallback}` 是配置文本不是密钥库且带 fallback 永不告警；`$include` 合并语义与写回边界要逐条声明；拆分文档必须保留旧锚点（来源：docs.openclaw.ai `gateway/config-secrets-env.md` 10,309B + `gateway/config-tools.md` 7,517B 索引页 + `gateway/config-tools/github-identity.md` 17,020B，2026-10-03 r395A 独立 curl 取 `.md` 原文实拉）
 
 - **外部命令/解析器准入链有先后顺序**：exec 型 secret provider 必须绝对路径；**符号链接命令路径直接拒**（先于目录白名单检查）；必须非 group/world 可写、POSIX 下属主为当前用户；若配了 `trustedDirs`，约束的是「配置里写的那个路径本身」，因为符号链接在这一步之前已被拒 ⇒ 声明准入规则时必须把顺序写出来，否则「配了白名单目录」会被误当成能穿透软链。
@@ -382,7 +369,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **`$include` 合并语义四条**：单文件 include **替换**所在对象；数组按序**深合并**（后者覆盖前者）；**兄弟键在 include 之后合并**（覆盖 include 里的值）；嵌套最深 10 层。路径必须留在顶级配置目录内，越界要靠 `OPENCLAW_INCLUDE_ROOTS` 显式扩根 ⇒ 「哪种 include 覆盖哪种」要逐条写，一句「支持 include」完全不够。
 - **写回边界：所有权不单一就 fail-closed，绝不扁平化**：只有「全部变更键都归某一个单文件 include 所有」时才写穿到最深的那个拥有者；根级 include、数组项 include、include 数组、跨所有权边界的改动等一律**只读**，写入 fail-closed 而不是把配置拍平。`doctor --fix` 一次运行中若混合了根拥有与 include 拥有的修复，则**整批拒绝**，且被拒的那次写入保持所有文件不变（同批次更早的写入保留）⇒ 批量修复要么全改要么全不改，粒度必须写清。
 - **拆分/迁移文档要保留旧锚点**：索引页明确「本页曾经发布的每个标题都保留锚点，旧链接仍然可解析」，并给出「每个章节搬到哪去了」的映射表 ⇒ 文档重构时保留锚点与迁移映射是硬要求，只留一个新目录等于把所有外部引用打断。
-
 
 ## 白名单的三种「空态」语义可能两两相反且删条目会回落默认；沙箱态是独立于用户配置的一层 clamp；写一个 URL 等于放行一个 origin；能力声明默认从严且不得从别处复制；跨端点 schema 兼容层必须声明丢什么（来源：docs.openclaw.ai `gateway/config-tools/sessions-and-subagents.md` 9,632B + `gateway/config-tools/custom-providers.md` 13,129B，2026-10-03 r395B 独立 curl 取 `.md` 原文实拉）
 
@@ -397,7 +383,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **合并优先级要按字段分条写，且带前提**：agent 级 `baseUrl` 非空值赢；agent 级 `apiKey` 非空值**只有在该 provider 未被 SecretRef 管理时**才赢；`contextWindow`/`maxTokens`/`contextTokens` 是「显式值存在且有效（正有限数）才赢，否则回落到隐式/生成的 catalog 值」⇒ 一句「agent 级覆盖全局」既说不清前提也说不清无效值怎么办。
 - **显式目录不限制发现**：merge 模式下手写的 catalog 行**不会**收窄该 provider 的自动发现范围，要限制得用策略白名单或 `models.mode: "replace"` ⇒ 「我配了清单」不等于「只有这些能用」。
 
-
 ## 放行与拒绝谁赢必须显式排序，且跨厂方向相反；默认封禁项的启用方式是清空列表；只校验首跳会被重定向与 DNS 重绑定绕过；能力要有版本门槛（来源：docs.n8n.io `security/enable-ssrf-protection.md` 3,822B + `security/block-specific-nodes.md` 2,425B + `basic-configuration/use-environment-variables/ssrf-protection.md` 7,039B + pipedream.com/docs `conduit/configure/access-control.md` 13,330B + `conduit/configure/scim.md` 9,789B，2026-10-03 r395C 独立 curl 取 `.md` 原文实拉；n8n 与 Pipedream 均经各自 `llms.txt`（287,049B / 34,240B）定位）
 
 - **白/黑名单的优先级必须写出顺序，因为各系统方向相反**：n8n SSRF 的优先级是 **hostname 允许 > IP 允许 > IP 拒绝**——即「更具体的放行赢过更粗的拒绝」，且官方警告 hostname 允许会**绕过 IP 拒绝检查**，所以只允许放行你可控的内部 DNS 区；而 openclaw 的工具策略是 **deny 恒赢**（`deny` 压过 `allow`）⇒ 同一句「配了白名单」在两个系统里含义相反，声明里不写谁赢就等于没写。
@@ -405,7 +390,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **默认封禁项的启用方式是「清空列表」，与允许类列表的空态相反**：部分节点（如 Execute Command、Read/Write Files from Disk）默认就在排除列表里，要启用得显式写成 `NODES_EXCLUDE: "[]"` ⇒ 「空数组」在排除类列表里是**全部启用**，在允许类列表里常常是**全部拒绝**（见 §白名单三种空态），同一个字面值语义相反，必须按列表类型分别声明。
 - **被封禁的能力是「消失」不是「报错」**：被排除的节点用户**既搜不到也用不了**，不产生可诊断的错误 ⇒ 凡「能力不可用」，先分清是权限拒绝（有错误）还是能力摘除（无痕迹），两者的排查路径完全不同。
 - **能力要标版本门槛**：SSRF 保护「自 n8n 2.12.0 起可用」⇒ 前置面除了套餐与作用域，还要含**最低版本**；把版本门槛写进能力声明，能避免「按文档配了却不生效」这类排查。
-
 
 ## 能力重命名必须保留旧标识符在策略清单中的映射；截断上限存在主从；同族配置的作用域粒度逐键不同；回退链让单点失败静默（来源：docs.openclaw.ai `gateway/config-tools/built-in-tools.md` 6,725B（经 `llms.txt` 210,790B 定位真路径，旧猜路径 `config-tools/built-in-tools` 与 `tools/built-in-tools` 均 404），2026-10-03 r396A 独立 curl 取 `.md` 原文实拉）
 
@@ -415,14 +399,12 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **默认回退链让单点失败静默**：媒体理解按 `capabilities` 匹配候选模型，**失败即回退到下一条目** ⇒ 「任务成功」不能证明是预期那个候选在服务，验收必须读出**实际生效的条目**；同理 `provider` 省略时的 auto-detect 意味着「用的是谁」本身就是运行期决定的，声明里要写明解析顺序。
 - **判不落**：`applyPatch.allowModels` 空/unset = 任何兼容模型可用（与 §白名单三种空态语义 同族，重叠 >60%，仅作跨厂印证）；loopDetection 默认关闭（与 §能力声明默认从严 同族）；文档标注「除某几项外展示值即默认值」（与 wb-debug-loop §文档示例值≠内建默认 同族）。
 
-
 ## 隐式便利清单与显式清单是两套且信任不可跨源迁移；能力面与授权面是两道门；会话级覆盖不在全局查看通道里（来源：docs.openclaw.ai `tools/exec-approvals.md` 39,387B + www.activepieces.com/docs `admin-guide/guides/event-streaming.md` 4,911B，2026-10-03 r396B 独立 curl 取 `.md` 原文实拉）
 
 - **隐式便利清单必须能被显式关掉，且信任不跨源**：`autoAllowSkills` 会把已知技能引用的可执行文件当作已允许，官方标注它是**独立的隐式便利清单，与手写的路径允许清单分开**；信任归属于**提供它的那个 Gateway**——切换 Gateway 会作废缓存（含仍在途的批准检查），刷新失败可保留**同一 Gateway** 的上次信任，但**不能导入另一个 Gateway 的信任** ⇒ 便利项与严格项是两套机制，要严格就必须能显式关掉便利项；信任有来源归属，换源即失效且不可迁移。
 - **能力面与授权面是两道独立的门**：`messaging` 工具档可以在批准允许命令的情况下仍然排除 `exec`/`process`；官方给出判词——**包含不保证能执行，缺失也不证明被禁用**，要确认得真的跑一次 ⇒ 「工具在清单里」与「这次能不能调用」是两条门，验收不能拿清单替代执行。
 - **同一策略的查看通道是分层的**：`approvals get` / `exec-policy show` 给出的是请求策略、宿主策略来源与生效结果，**不含会话级 `/exec` 覆盖**，要看会话态必须进到那个会话里查 ⇒ 「我查过了」可能只查了其中一层；声明生效面时要写明查看通道覆盖到哪一层。
 - **审计转发的成败由消费方决定，且内外两条路径的网络前提相反**：事件流目的地要求外部端点为 HTTPS、从 Activepieces 服务器可达、并**返回 2xx 否则事件不被接收**；而**同实例上的 handler flow 走内部投递，即使实例不出公网也能送达** ⇒ 「配好了目的地」不等于「收到了事件」，投递类能力的验收必须真的收一条；同一能力的网络前提会按部署位置分叉，声明要分内外写。
-
 
 ## 安全判定面必须排除可被探测的副作用；排除项要给「为什么」；判定形状必须等于执行形状；最终能力面来自四条独立来源；自动脚手架产的是最宽松形态（来源：docs.openclaw.ai `tools/exec-approvals-advanced.md` 27,837B + `gateway/config-tools/tool-policy.md` 18,865B，2026-10-03 r396C 独立 curl 取 `.md` 原文实拉）
 
@@ -477,7 +459,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **判据**：① **例外按声明者分档，不按用途分档**：同样是遥测导出端点，实例管理员配的（通常在集群内私有地址）豁免，租户配的一律不豁免、走同一条硬化通道 ⇒ 判"该不该走硬化"看的是**这个值由谁提供**，不是"它属于哪类功能"；把租户可控的值放进豁免清单，等于把加固的开关交给了被加固的对象。② **豁免清单只收精确主机名，且非法条目拒绝启动**：不接受 URL / 端口 / IP / CIDR / 通配符；写错不是静默放宽而是起不来 ⇒ 例外面的语法严格程度就是它的可审计性，能填 `10.0.0.0/8` 的白名单本质上已经不是白名单。③ **校验必须在解析之后**：只看字面主机名挡不住解析到内网的域名（含 NAT64 / 6to4 内嵌的 IPv4）⇒ 校验点放在"拿到什么"之前是形式校验，放在"解析成什么"之后才是实质校验；同理不跟随重定向，因为重定向是把出网决定权交给被叫方的通用跳板。
 - 提升层：安全边界 / 可复用 Skill（配置纪律）。触发词：出网豁免、租户提供不豁免、白名单只收主机名、非法条目拒绝启动、解析后再查、NAT64、不跟随重定向、SSRF。
 
-
 ## 技能注入是「边际收益递减且会转负」的量，不是越多越好：聚焦 ≤3 模块优于穷尽捆绑，收益主要由配置决定而非"装了技能"；装载成本应成为目录的一等可筛选字段（来源：arXiv `abs/2602.12670` SkillsBench 52,788B + `skills.aliyun.com/api/public/skills` 329,845B 公开 JSON，2026-10-04 r416C 独立 curl 实拉；与 §挂载每个 Skill 都占会话上下文 ⇒ 数量需有上限 互补——那条给出"要有上限"的方向，本条给出档位、代价曲线与"把它做成可筛选字段"的落地形态）
 - **原文**：「Curated Skills raise the average pass rate from 33.9% to 50.5% (**+16.6 percentage points**; 25.5% normalized gain), with **configuration-level gains ranging from +4.1 to +25.7 pp**」「**Focused Skills with at most three modules outperform larger or exhaustive bundles**, and **smaller models with Skills can match larger models without them**」（87 tasks / 8 domains / 18 model-harness configurations）；阿里技能市场公开 JSON 中每条条目直接发布 `minToken` / `maxToken`（各 262 条）与 `hosted`（310 条）字段。
 - **判据**：① **"有技能"带来的平均增益掩盖了配置级差异**：同一个 87 任务基准上，配置级增益从 +4.1 到 +25.7 pp 差了 6 倍 ⇒ 报一个数（+16.6pp）会让人以为装了就有，实际收益主要由"哪个模型×哪个 harness"决定；评估技能价值必须按配置分层报，不能只报均值。② **数量存在拐点且方向是"少而聚焦"**：至多三个模块的聚焦型技能**胜过**更大或穷尽的捆绑 ⇒ 这与"多挂几个总能覆盖到"的直觉相反；挂载预算应优先给"与该任务强相关"的少数几个，而不是全部候选。③ **技能是"能力替代"而非"能力叠加"**：小模型配技能能追平不配技能的大模型 ⇒ 技能在成本-能力曲线上是一个**替代手段**，评估时应同时看"用了它能不能降档"，只看绝对通过率会漏掉这部分价值。④ **装载成本要成为可检索、可排序的一等元数据**：技能市场把 `minToken`/`maxToken` 区间与 `hosted` 布尔直接发布在条目上 ⇒ "装载这个要花多少上下文"从文档建议变成了可筛选字段；只写在 README 里的成本等于没有成本，选型时永远不会被算进去。⑤ **与既有数量上限规则的合并方式**：原规则（3.118.0）只有"要有上限与盘点"的方向，本条补上**档位（≤3 模块）**、**代价曲线（收益随配置与数量双重波动）**与**元数据形态（成本可筛选）**三个可操作要素 ⇒ 落地时并入原节、不另开新节。
@@ -492,3 +473,10 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **原文**：「four sequential verification gates G1 through G4, and resulting in **four graduated trust tiers T1 through T4 with escalating deployment permissions**」；「An unvetted community skill (T1) receives **instructions-only access with full tool isolation**. A vendor-certified skill (T4) receives full capabilities.」；「**T1 and T2 skills are never granted script execution.**」；「bundling executable scripts increases vulnerability risk by **2.12×**」；「Anomalous behavior (unexpected tool calls, permission boundary probes) triggers **demotion or revocation**.」
 - **判据**：① **审核未完成 ≠ 不能用，而是"能用的面更小"**——T1 给"仅指令 + 完全工具隔离"而不是一拒了之 ⇒ 二值化（过/不过）会把大量低危技能挡在门外，逼使用者绕过审核；正确的形状是把审核进度映射成**可执行面的档位**。② **脚本能力要单独设门槛**——含脚本使漏洞风险 ×2.12 是可复拉的量化依据，故 T1/T2 永不获得脚本执行 ⇒ "能不能跑代码"不能跟"能不能读指令"同一档放行。③ **信任必须可逆**——异常工具调用与权限边界探测触发降级或撤销 ⇒ 只升不降的信任档位是单向棘轮，运行期证据永远用不上；晋升与降级要共用同一套信号。④ **门的分工要按"判的是什么"区分**——G1 静态 / G2 语义判"声明用途 vs 实际指令" / G3 行为沙箱 / G4 声明能力清单的形式化校验 ⇒ 四门不是四道重复检查，任何一门缺失都会留下一种特定形态的漏网（如缺 G2 则"说一套做一套"永不触发）。⑤ 与既有「审计判连贯性（risk × status 正交）」分工：那条管**给结果定级与怎么呈现**，本条管**定级之后实际授予多少运行能力**，两者是同一链条的上下游。
 - 提升层：可复用 Skill / 治理。触发词：四道验证门、G1-G4、信任级 T1-T4、未核者降面不拒、仅指令加工具隔离、脚本单独门槛、2.12 倍风险、信任可逆、降级与撤销、权限边界探测。
+
+## 选型看「资产自身路径的维护信号」，不看聚合人气；条目必须能出示本体而不只是描述（来源：agenticskills.io/skills 319,185B，2026-10-05 r422-C 独立 curl 实拉后去标签逐串命中；消化 Qoder r420-Q-B B-3 积压点）
+- **实证**：官方原文「Each listing **links to the upstream repository**, **shows the real SKILL.md where one is published**, and reports **commit and contributor activity scoped to that skill's own path — never a vanity install count**.」；目录规模「indexes 193 of them across 16 categories, covering 8 platform targets」。
+- **判据**：① **安装量是"被下载过多少次"，不是"现在还能不能用"**——它单调只增、可由一次性传播或刷量抬高、口径不可复核 ⇒ 把安装量当唯一排序货币，等于按历史热度选当下依赖；选型至少要有一条**会随维护状况下降**的信号。② **信号必须限定在资产自身路径内**——「scoped to that skill's own path」⇒ 用整个仓库的 commit 数会误把同仓其它部分的活跃算进来（一个大仓里的僵尸子目录会被父仓的活跃度洗白）；"这个仓库很活跃"不能推出"这个资产很活跃"。③ **能出示本体是选型的前置条件**——条目链接上游仓库并展示真实 SKILL.md ⇒ 只给描述、给截图、给二次包装的条目，无法核对它到底做了什么；**看不到本体的资产不进选型范围**。④ **聚合指标要有替代项并列，而不是删掉**——安装量可作粗筛（已知可刷），但排序与最终决定必须叠加维护信号；单指标排序 = 把可刷项变成唯一胜负手。⑤ 对 guild 的落点：引入任何第三方技能/工具前，取三件东西——上游真实本体、**该路径内**近期 commit 与贡献者活动、发布/更新时间；三者缺一即降级为"待核"，不直接采信。
+- **与既有能力分工**：安装量三判据（mts，r147A）管"用安装量当筛子时怎么防错"；本条管"**能替换安装量的信号是什么、以及为什么必须限定路径**"；与随行信任记录（av 2.148.0）互补——那条管结论怎么存，本条管候选怎么选。
+- 提升层：工作流 / 选型纪律。触发词：反虚荣指标、路径限定的活跃度、安装量可刷、看不到本体不选型、单指标排序、聚合指标要有替代项。
+
