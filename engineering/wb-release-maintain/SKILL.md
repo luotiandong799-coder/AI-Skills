@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用
-version: "1.74.0"
+version: "1.75.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -313,4 +313,15 @@ sources:
 - **判据**：① **门的位置决定门的语义**——接收侧扫描只能「拒」（发现问题时工件已成事实、供方无上下文、退回成本最高），供给侧评测可以「修」（供方持有源码与场景上下文、改完再提）⇒ 设计准入流程时先判门该设在哪一侧：只做接收侧检测的系统，本质上把质量成本全部押在最后一步。② **"把工具链下发给供方"是供给侧门能成立的前置条件**——平台不只出要求还出工具（SDK/沙箱/评测链/压测基线），供方才可能在自己环境里跑出可复核结论 ⇒ 只发标准不发工具链的"供方自测"，等价于把门又推回接收侧。③ **人工环节要给时限与位置**——5 个工作日审核落在"场景匹配"（准入前）而非"评审放行"（准入后），2–6 周是共建期 ⇒ 人工不在关键路径上堵着，而在入口做匹配；把人工放在最后一步放行位，吞吐会被单点评审锁死。④ **"通过评审即自动上架"让门变成流水线而非闸门**——门禁结论直接驱动发布动作，不经过第二次人工搬运 ⇒ 自动化的前提是被测物已过双门（自动化策略检查 + 人工/共建期验证），缺一则该自动化只放大错误。⑤ 对 guild 的落点：任何"技能/工具入库"流程，先回答「我们的门在供给侧还是接收侧」，再决定要买/建的是评测工具链还是扫描器；两者不可互相替代。
 - **与既有能力分工**：上一条（已上架物更新不原地替换）管**发布之后的变更语义**；接收侧三线扫描（SkillHub，r266B/r417-Q-C 已落）管**到达后的检测**；本条管**到达之前门该放哪**——同一个"质量门"因位置不同变成两种机制。
 - 提升层：工作流 / 发布治理。触发词：发布门前移、供给侧评测、平台下发工具链、供方自测门禁、通过评审自动上架、接收侧只能拒、共建周期、人工在入口不在放行位。
+
+## 同一份变更事实要出两份产物：Release notes 给人读（可折叠分区），Changelog 给 agent 读（纯 Markdown），两者同源同量、只有呈现不同（来源：api.github.com/repos/openclaw/openclaw/releases?per_page=5 142,182B，v2026.9.8 release body 一手命中，2026-10-05 r423-B 独立 curl 实拉逐串命中；与 rm「Changelog Miner / Release Notes」分工互补——那两条管"从哪里挖变更"与"写成什么语气"，本条管"同一事实要不要出两份、两份之间是什么关系"）
+- **原文**：「The release notes and changelog contain **the same content, presented in two formats**: - [Release notes] — **formatted for people**, with expandable sections. - [Changelog] — **plain Markdown for AI agents and tools**.」同批 v2026.8.34/8.35 为 `extended-stable`（官方自述「our current equivalent to LTS」）的实际发布形态佐证：稳定线同样按同一 content 出双形态。
+- **判据**：① **内容与呈现要拆成两件事管**：官方写的是 "same content, two formats"，不是"人版摘要 + 机版日志" ⇒ 若两边各自撰写，两个版本必然漂移（描述口径、条目集合、严重度标签都对不上），而这种漂移无人负责、也无法自动察觉，最终消费方不知道该信哪份。② **判断一份产物是否合格，看它的主要读者能否"不经转换直接取用"**：给人看的要保证可导航（折叠分区、按贡献分组、致谢与背景），给机器看的要保证可机读（稳定锚点、纯 Markdown、可 grep/diff）⇒ 排版装饰对机器是噪声，纯文本堆砌对人也是负担，二者不能用同一份文件同时照顾。③ **当消费方里有 agent（自动生成升级清单/影响面分析/依赖守卫）时，纯 Markdown 通道是硬需求而不是恩赐**——让 agent 去解析带折叠容器的 HTML 展开器，等于把"能不能自动化"寄托在一个无障碍交互能否被脚本触发上 ⇒ 给机器留一条无需 UI 状态即可读完的路径。④ **两份必须在同一次发布动作里同步产出并提交校验**（"— is Current Release"式交叉引用或直接并列链接）⇒ 双通道的价值建立在"它们必然同步"这一前提上；若第二份由后续流程补写，它就退化为摘要的第二版本。
+- **与既有能力分工**：上一条管发布门设在供给侧还是接收侧；本条管**发布物自身的读者双通道**。
+- 提升层：工作流 / 发布治理。触发词：发布说明双形态、same content two formats、changelog for agents、纯 Markdown 通道、发布物人机双读者、折叠分区对机器是噪声。
+
+## 回溯式巡查必须周期性「全量重扫」，而不是只从上一次回移游标往前推进：游标会固化当年"判定为不回移"的旧结论（来源：api.github.com/repos/openclaw/openclaw/releases?per_page=5 142,182B，v2026.8.34 release body 一手命中，2026-10-05 r423-B 独立 curl 实拉逐串命中；与 rm「批量状态迁移要过三闸」互补——那条管"一次性改动大批记录时怎么证明改对了"，本条管"长期维护分支怎么保证没漏")
+- **原文**：「**Complete rescan:** re-evaluate the full 2026.8.33 discovery range, large mixed-purpose pull requests, and the 2026.7.35 lineage **instead of advancing only from the previous backport cursor**.」上下文为该 `extended-stable`（LTS 等价）线由 113 个审计挑出的修复单元回移组成（「backport 113 audit-selected fix units across upgrades, Doctor, authentication, sessions, channels, plugins, sandboxing, filesystem safety, model runtimes, and release packaging」）。
+- **判据**：① **游标只回答"上次看到哪"，不回答"该看的都看了吗"**：按上一次回移游标推进，隐含假设是"当年被判定不回移的那些现在仍然不该回移"——但分支从主线变成 LTS/稳定线的那一刻语境已变（容忍的参数变了：主线上可接受的行为风险，稳定线不可接受）⇒ 长寿命分支必须按周期把整个发现区间重判一遍，"曾经正确地拒绝"会在新语境里变成当下的遗漏。② **巡查清单要显式包含"大型混合目的改动"**：官方把 large mixed-purpose pull requests 单列 ⇒ 混合改动当年整体不合而被拒，其中某一部分在稳定线上恰恰是必要修复；按单个 PR 粒度做是非判断的系统会永久丢掉这些"混在被拒外壳里的正确片段"。③ **跨血缘巡查要覆盖多条 lineage 而非只看上一代**（同时纳入 2026.7.35 lineage）⇒ 血缘断层处的修复最容易永久丢失，因为它既不在当前范围、也不在上一次的回移记录里。④ **这条的本质是"否定的收益率随时间衰减"**：判断题型的输出是布尔值，但决定那个布尔值的前提会漂移 ⇒ 任何"曾经审计过并排除掉"的台账都要有到期重审机制，不能靠记忆或增量维护；对 guild 的落点：把"历史排除清单"当作有时效的台账（附当时的判据快照），每次 LTS 组装/大版本收口时重扫，并显式写明本次用的是"全量重扫"还是"游标推进"。
+- 提升层：工作流 / 发布治理。触发词：全量重扫、complete rescan、回移游标、backport cursor、LTS 等价线、混合目的 PR 重判、跨血缘巡查、历史排除台账要到期重审。
 
