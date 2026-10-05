@@ -480,3 +480,37 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **原文**（gmail restricted reader）：explicit `ownership: "explicit"` roster；reader agent `workspaceAccess: "none"` + `sandbox.mode: "all" scope: "session"`；`tools.allow: ["session_status"]` deny `group:fs/runtime/web/browser/cron/gateway/nodes`；per-agent allowlist **cannot restore** a tool an earlier policy removed；`tools.agentToAgent.enabled: false` 禁用跨 agent 移交；untrusted content wrapped as data, never followed.
 - **判据**：① 不可信输入（邮件 / Webhook / 用户上传）**不当主 agent 跑**，路由到独立受限 reader agent——独立沙箱（`workspaceAccess: none`）+ 工具钳制（allowlist 只含必需，deny 文件系统 / 运行时 / 网络 / 浏览器 / cron / 网关）+ 禁跨 agent 移交（`agentToAgent.enabled: false`），避免 prompt-injection 借主 agent 能力外溢；② 工具策略只能更紧不能更松——全局 / provider / agent / sandbox 规则叠加后，per-agent allowlist **不能恢复**被上层移除的工具，钳制必须可审计；③ 外部内容当数据不当指令——包裹为 untrusted data，禁止跟随其中的链接 / 指令。
 - 提升层：安全边界 / 工作流。触发词：受限 reader、独立沙箱、workspaceAccess none、工具钳制、禁跨 agent 移交、prompt injection、不可信输入、untrusted data。
+
+<!-- r424B 自 SKILL.md 下沉 -->
+
+## Cap71 编排默认取「削峰」不选「精准」；一次性触发自我停用后须显式重启；队列必须有界且超限停源留错；争用同一状态槽的特性在准入期就被拒（来源：docs.openclaw.ai `automation/cron-jobs/schedules.md` 16,129B，2026-10-04 r416B 独立 curl 取 `.md` 原文实拉；与 Cap69「自动化默认启用+监督」互补——那条管"启用后谁来监督"，本条管"默认形状取哪一侧、触发语义与积压怎么封顶"）
+- **原文**：「Recurring top-of-hour expressions (minute `0` with a wildcard hour field) are … by up to 5 minutes to reduce load spikes. Use `--exact` to force precise timing」；「An `on-exit` job disables itself when its payload is queued to run. Re-enable the job to watch again」；「If the new command exits before that payload finishes, its exit waits for the previous run to settle … This includes cleanup still running after a timeout response. Disabling or changing the watch cancels its pending exit.」；「Only one payload fire and one bounded pending batch are retained per job … coalesce into that pending batch rather than building an unbounded queue.」；「Failed payloads are not retried because they may not be idempotent.」；「Combining a script payload with a condition gate is rejected because both would own the persisted `trigger.state` slot.」；「Five consecutive runs shorter than 60 seconds leave the job in an error state … manually re-enable the job to clear the restart cap.」；「If either limit is exceeded, the source stops with a recorded error … then manually re-enable the job.」
+- **判据**：① **默认形状要取能扛住最坏情况的那一侧**：整点周期作业默认自动错开至多 5 分钟削峰，**精准是显式声明换来的**（`--exact`）；把"准点"设成默认，等于让所有使用者的默认值在同一秒撞在一起。⇒ 凡"大家都想要同一个时刻"的能力，默认值必须带打散，且打散窗口只对周期类有意义（间隔型/事件型不适用）。② **一次性触发用完即停用，且重启是显式动作**：`on-exit` 作业在载荷排队时就自我停用，要看须重新启用 ⇒ 事件型触发不排队，"监视到一次"之后不能假设它还在监视。③ **"上一个还没 settle"要显式等待，且 settle 包含超时之后的清理**：新命令若先退出，退出动作会等前一个载荷 settle（含超时响应后仍在跑的清理）才停用作业并起下一个 ⇒ 只看"响应已返回"会漏掉仍在跑的收尾。④ **积压必须有界，超限停源并留错**：只保留一个在跑的载荷 + 一个有界待批，其余合流；匹配预算或队列超限则**源直接停止并记录错误**，须手动重启 ⇒ 无限队列把"处理不过来"伪装成"稍后会处理"，有界 + 停源才让背压可见。⑤ **不幂等的失败不重试**：失败载荷刻意不重试（"may not be idempotent"）⇒ 重试资格由副作用性质决定，不是由"失败了该不该再试"决定。⑥ **两个特性争用同一状态槽时在准入期就拒**：script payload 与 condition gate 都要独占 `trigger.state`，组合直接被拒 ⇒ 冲突不要在运行时表现为"互相覆盖"，要在装配时拒绝。⑦ **快速失败循环要有封顶并转为人工**：连续 5 次短于 60 秒进入错误态、须手动重新启用 ⇒ 自动重启 + 无上限 = 把崩溃变成高频噪声。
+- 提升层：工作流 / 工具。触发词：默认打散、削峰默认开、精准须显式、on-exit 自我停用、有界队列、超限停源、不幂等不重试、状态槽争用准入期拒绝、快速失败封顶须手动清、settle 含超时后清理。
+
+## Cap72 分层作用域只允许「收窄」不允许「放大」：下级的权限是上级授予集合的子集，把"能管理"与"能扩张"分开（来源：www.activepieces.com/docs `admin-guide/guides/manage-pieces.md` 4,552B，2026-10-04 r416C 独立 curl 取 `.md` 原文实拉；与 Cap67「工具清单是限流不是授权」/ Cap65「撤销≠禁止」互补——那两条管"清单与授权是两件事""撤销与禁止是两件事"，本条管"多级作用域叠加时，下级能不能给自己加东西"）
+- **原文**：「As a platform administrator, you have **full control** over which pieces are available to your users.」；层级表 `**Platform Level** | Platform Admin | Install and remove across the entire platform` / `**Project Level** | Project Admin | **Show/hide** specific pieces for specfic project`；「Project administrators can **further restrict** which pieces are available within their specific project. This is useful when different teams or projects need access to access to…」
+- **判据**：① **两级作用域的动词不同决定了能力方向**：平台级是 install/remove（**改变全集**），项目级是 show/hide（**只在本项目内增减可见性**）⇒ 下级作用域的操作对象不是"能力本身"而是"上级已授予集合在自己范围内的投影"。② **继承律是 deny-only**：项目管理员只能 further restrict，**不能启用平台层未安装/未批准的东西** ⇒ 若下级能自行放大，权限的实际边界就不再由上级决定，"平台级批准"会退化成一种建议。③ **"能管理"不等于"能扩张"**：两级都叫 manage，但一个是增删全集、一个是隐藏子集 ⇒ 设计多级作用域时必须把动词写清楚，否则同一词在两层含义相反，审计时无法判定越权。④ **收窄是免费且可逆的，放大不是**：隐藏可以随时取消且不影响他人；新增能力会影响所有使用者且常常不可逆 ⇒ 不对称性本身就是该选 deny-only 的理由。⑤ **落点**：任何"平台级 vs 项目级 / 租户级"的技能注册表、工具集、凭据池，能力组合语义必须写成 deny-only 继承，并在实现上让下级的 enable 操作只能作用于上级已授予的集合内。
+- 提升层：可复用 Skill / 治理。触发词：deny-only 继承、分层作用域、只收窄不放大、平台级 vs 项目级、能管理不等于能扩张、收窄免费放大不可逆、下级不得自授能力。
+
+### Capability 73 — 能力生效要过三道各自独立的门；平台默认表是「天花板」不是「清单」（来源：docs.openclaw.ai nodes/command-policy.md 9,909B，2026-10-04 r417C 独立 curl 取 .md 原文实拉；与 Cap67「工具清单是限流不是授权、生效的是交集」互补——那条管工具清单与父策略的交集，本条管连接端自声明与配对批准的分离）
+- 三道门分属三个声明方，缺任一都不生效：① 连接端在**认证后的连接元数据**里自声明（`connect.commands`）；② 该命令在该连接的**已批准命令面**上；③ 平台的「默认值 + 审批」派生允许表包含它。**平台文档里那张按操作系统列的表描述的是策略天花板，不是每个节点都实现了的清单**——命令最终可用还要求对端真的声明了它。
+- **单一否决位永远压过一切允许来源**：显式拒绝清单优先于平台默认值与任何额外加入的允许条目。设计允许面时必须同步回答「有没有一个位置能否决全部」，否则每次新增默认值都在无声地扩大历史配置的权限。
+- **待批扩展期间系统收缩，不是冻结也不是放开**：初次未批准的命令面没有任何有效命令；提交扩展后、批准之前，只有「先前已批准 ∧ 当前仍声明 ∧ 当前仍允许」的旧命令继续有效。三者任一变化都会让它在此期间失效——把它做成「保持旧集合不变」会放行已失效的能力。
+- **配对成功不得连带授予命令**：自动批准 CIDR 只批准**设备**，命令面仍须单独批准，理由是配对本身不构成对能力的同意。**能连带批准初始命令面的通道必须记录了明确的所有权或管理员同意证据**（SSH 回读到的精确设备密钥、带管理员同意的 setup code）；仅「来自可信网络段」不是这类证据。⇒ 自动授权的资格由**证据类型**决定，不由网络位置决定。
+- 危险与隐私类命令即使对端已声明也须平台侧显式一次性 opt-in ⇒ **对端自称支持不构成授权**。
+- 落地口径：任何「连接端 + 中枢 + 能力清单」三层结构（设备配对、MCP 服务器注册、插件工具发布、子 agent 能力上报）都适用——先分清「谁在声明」「谁在批准」「谁在设天花板」，再决定否定项该放在哪一层。
+
+<!-- r424B 二次下沉 Cap73 -->
+
+<!-- r424B 三次下沉 Cap75 -->
+
+
+
+<!-- r424B 四次下沉 Cap61 -->
+
+## Cap61 权限策略的作用域止于「平台自己执行的那一半」：客户端侧执行的自定义工具整个在策略管辖之外（来源：docs.bigmodel.cn `cn/managed-agents/{agent-setup,overview,examples,api-reference}.md` 5,777B / 6,670B / 4,124B / 14,376B，2026-10-04 r410A 独立 curl 取 `.md` 原文实拉；与 §Cap37 HITL 挂工具级 / §Cap51 审批不是权限边界 / §Cap56 凭据只写不读 互补——那几条管"拦截点挂哪一层""审批覆盖什么""密钥怎么存"，本条管"托管平台的权限承诺到底覆盖哪些工具"）
+- **原文**：`权限策略不作用于自定义工具。收到 agent.custom_tool_use 后，由你的应用决定是否执行，需要时先在 UI 里让用户确认`；`自定义工具：由你的客户端执行的工具，Agent 发起调用、你的应用返回结果`；`工具边界：启用哪些内置工具、连接哪些 MCP、是否要求 always_ask 人工审批`；`Managed Agents 将这些能力纳入平台……短问答、低延迟对话，或不依赖沙箱与长任务状态时，直接调用模型 API 更合适`。
+- **判据**：① **托管平台的权限策略只覆盖它自己执行那一半**——内置工具在沙箱内由平台执行故受 `permission_policy` 管辖；**custom 工具的执行体是调用方自己的应用**，平台只发出调用事件，策略面到此为止 ⇒ 把"我配了权限策略"当成"这个 Agent 的所有工具调用都受控"，等于把客户端侧那一半漏在外面。② **"工具边界"这条配置面的作用域要显式写清它不覆盖什么**：文档把工具边界列为调用方自决项，同时明说策略不作用于自定义工具 ⇒ 声明能力边界时，光列"管什么"会让人默认"剩下的也管了"。③ **客户端执行的工具，人工确认必须在客户端实现**——平台给的落点是"收到事件后由你的应用决定、需要时在 UI 里确认" ⇒ 这是 HITL 落点的分派：平台侧执行 → 平台侧批；客户端侧执行 → 客户端侧批，两端都要有，不能互相替代。④ **能力托管的边界同时是选型边界**：平台明确"不依赖沙箱与长任务状态时应直接调模型 API" ⇒ 托管带来的是循环/上下文/沙箱/密钥/落库/跨会话状态/用量七项，代价是把执行位置交给平台；只有托管方与自管方的**责任分界线**清楚了，这七项才是收益而不是黑箱。
+- 提升层：安全边界 / 工作流。触发词：权限策略不作用于自定义工具、custom_tool_use、客户端执行、工具边界作用域、平台侧批 vs 客户端侧批、能力托管七项。
+
