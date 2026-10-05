@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.74.0"
+version: "1.75.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -483,4 +483,9 @@ the CLI only adds atomicity and an audit trail.
 - **判据**：① **"自己调自己"与"来回调别人"是两个正交的循环，必须两个计数器**——Recursion Limit 只约束主管自调用，Max Iteration 约束主管对某个工人的查询次数 ⇒ 只设前者时，A↔B 无限往返完全不受约束，而"我设了递归上限"会给人一种已被兜住的错觉；排查失控循环时先问"失控的是哪一种循环"。② **上限要挂在"对端"上，不是全局一个值**——限制的是"查询某个特定 worker 的次数"，每个工人各有一份 ⇒ 全局上限会被"轮流调用多个工人"摊薄绕过（每轮都换一个对端，全局计数永远不满）。③ **上限的验收问题是"成本是否可控"而不是"有没有死循环"**——原文把收益写成 costs remain under control ⇒ 失控的形式不只是卡死，也可以是长时间合法运行导致的成本失控；只看 CPU/挂起会漏掉这一类。④ **两个上限的默认值要分别核对**——不同层级、不同种类的限制常有各自默认值，改了一个不等于另一个也收紧 ⇒ 变更验收要逐个上限验证，不能因为"限制了循环"就认为所有循环都被限制。
 - **与既有能力分工**：Cap74 管「预算计的是尝试次数不是产出数量」（计数口径）；Cap71 管「队列有界、超限停源留错」（积压封顶）；本条管**多实体编排中上限该按哪些维度切分**（种类 × 对端）。
 - 提升层：工具 / 治理。触发词：递归上限与迭代上限是两个计数器、按对端计数、自递归不等于跨实体往返、上限挂在对端、成本失控也是失控、逐个上限验证。
+
+## Capability 85 — 认证只定「角色」，授权在每次调用上另判；应用内权限不是隔离边界，强隔离要在 OS 用户/主机层；等待式读取在返回前重检五要素（来源：docs.openclaw.ai/gateway/operator-scopes.md 39,492B，2026-10-05 r423-A 独立 curl 取 `.md` 原文实拉逐串命中；与 Cap72 分层作用域 / Cap83 守卫极性互补——那两条管"作用域怎么叠加"与"守卫失败站哪一侧"，本条管"认证之后还有一层授权"以及"这套东西的隔离边界在哪一层"）
+- **实证**：官方原文「Operator scopes gate what a Gateway client can do **after it authenticates**.」「They are a control-plane guardrail inside one trusted Gateway operator domain, **not hostile multi-tenant isolation**. For strong separation between people, teams, or machines, **run separate Gateways under separate OS users or hosts**.」；「Operator RPC methods require the `operator` role. Node-originated methods require the `node` role.」；作用域表「`operator.admin` … **Satisfies every `operator.*` scope**」「`operator.write` … Also satisfies `operator.read`」；自作用域例外段「These methods **do not expose team secrets, mutate shared configuration, or grant write/admin scopes**.」；收尾「Identity, role, access grant, connection, and session visibility are **rechecked before returning awaited reads**.」
+- **判据**：① **通过认证不等于获得授权**：连接进来只确定"我是哪一类客户端（角色）"，每个方法再按 scope 单独判 ⇒ 把"已认证"当"已授权"，等于把一次身份检查当成全会话通行证。**判据一句话：认证回答"你是谁"，scope 才回答"这一下能不能做"。** ② **应用内权限模型不能冒充隔离边界**：官方明说这套 scope 只是**同一信任域内**的控制面护栏、**不是对抗性多租户隔离**，要强隔离就在 OS 用户/主机层分开 ⇒ 设计权限前先声明威胁模型是"防误操作"还是"防恶意邻居"；声称防恶意而执行边界仍在同一进程/同一账号内，就是伪隔离（纸面边界在被攻破的第一刻一起失效）。③ **角色要互斥且在入口强制**：控制面方法与能力宿主方法分属两个角色，各自只能由对应角色发起 ⇒ 角色不互斥等于默认全能，"都是可信内部调用"是最常见的越权通道。④ **判定一个"只读"令牌是否真只读，要看高阶蕴含**：`write` 满足 `read`、`admin` 满足全部 ⇒ 宣称只读的凭据如果和更高阶凭据同源或可被同一调用方替换，它的"只读"只是标签。⑤ **自作用域例外必须自带四条不越权断言**：只操作自己的账号 + 不暴露团队密钥 + 不改共享配置 + 不授予更高 scope，缺一条它就不是"例外"而是提权后门。⑥ **异步/等待式读取要在返回前重检**：身份、角色、授权授予、连接状态、会话可见性五项在 await 之后重新校验 ⇒ 入口验一次 ≠ 出口仍成立，等待窗口里权限可能已被撤销或会话已不可见。
+- 提升层：工具 / 治理 + 安全边界。触发词：认证不等于授权、连接角色、认证后的第二层授权、应用内权限不是隔离、OS 用户或主机层隔离、高阶蕴含低阶、自作用域例外、等待读前重检、await 后重校验。
 
