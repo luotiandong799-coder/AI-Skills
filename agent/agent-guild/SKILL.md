@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.85.0"
+version: "1.86.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -478,3 +478,9 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：「`gateway.nodes.commands.deny` entries that **look effective but only match exact command IDs** (for example `system.run`), **not shell text inside the payload**」；同页把这类与「sandbox Docker 配了但 sandbox 模式没开」「全局 `tools.profile="minimal"` 被单 agent 覆盖」并列在 **Policy drift** 名下。另附扫描预算事实：深层扫描「check up to **500 source files** per plugin or skill … **skip files larger than 1 MiB**。Traversal also stops after **100,000 directory entries**」；工作区技能扫描另有限额「**2,000 skill files** and **40,000 directory visits**」；且「A `*.code_safety.scan_truncated` warning means **some files were not checked; it does not identify dangerous code**」。`--fix` 被明文限定为窄集：「it flips open group policies to allowlists, tightens state/config/include-file permissions (`600` files, `700` dirs), and on Windows uses ACL resets instead of POSIX `chmod`」。
 - **判据**：① **写 deny 之前先问"它比对的字段是什么"**——本例 deny 只比对命令 ID 这一层，payload 里的 shell 文本完全不参与匹配 ⇒ 一条"禁止 system.run"的规则，在"换个入口、payload 里写 shell"面前等于没写；验收拒绝类规则的动作固定为**拿一条同义但不同标识符的动作去撞**，撞得过就是漏。② **"看起来生效"是Policy drift 的识别特征，不是配置成功的证据**——官方把三种形态归在同一类：配置写了但模式没开、全局基线被局部覆盖、拒绝规则只匹配 ID ⇒ 共同点是**每一条单独看都"已配置"，组合起来不产生约束**；审计这类系统要逐条问"这条约束在运行时由谁真正执行"，找不到执行者即判无约束。③ **扫描器的截断是覆盖声明，不是风险声明**——`scan_truncated` 只说"有文件没被检查"，官方明确它不是危险代码指标 ⇒ 把截断警告读成"发现可疑"会误报，读成"扫完了没问题"会漏报；正确读法是把它与预算一起登记：本次扫到哪、跳过什么（>1 MiB 文件 / 第 100,000 个目录项之后）。④ **不同扫描面有不同预算，结论不可跨面比较**——单插件/单技能 500 文件 vs 工作区技能 2,000 文件 ⇒ 同一个"扫过"在两个面上的覆盖强度差 4 倍，混在同一张"已扫描"清单里会让覆盖率失真。⑤ **自动化修复的门必须是可枚举的窄清单**——`--fix` 只做群策略改 allowlist、权限收紧、Windows ACL 三类，官方用 "intentionally narrow" 自陈 ⇒ 自动修复的边界要写在文档里让人能背下来；凡是超出这个清单的修复都由人来做，否则"一键修"会顺手改掉用户的显式选择（与 av「自动修复严守证据自证门槛」分工：那条管**证据够不够**，本条管**动作范围窄不窄**）。
 - 提升层：治理 / 安全边界。触发词：deny 只匹配命令 ID、payload 内 shell 文本、Policy drift、看起来生效、全局基线被局部覆盖、scan_truncated、扫描预算 500 文件、跳过大文件、自动修复窄清单、intentionally narrow。
+
+
+## Cap96 带抑制机制的审计器必须把「本次输出被过滤过」自报出来；白名单条目本身要反向机检是否存在（来源：docs.openclaw.ai/gateway/security/audit-checks.md 40,660B，2026-10-06 r432-C 独立 curl 取 `.md` 原文实拉逐串命中；与 §Cap31 审计账本要声明证明不了什么 / §Cap95 拒绝规则的匹配面 互补——那两条管"不存什么、不证明什么""deny 比对哪个字段"，本条管"输出被谁过滤过"与"允许列表里有没有幽灵"）
+- **原文**：检查项 `security.audit.suppressions.active` | 级别 **info** | 描述 `Audit output has configured suppressions and may be filtered` | 关联配置 `security.audit.suppressions`；同页 `plugins.allow_phantom_entries` | **warn** | `plugins.allow lists an ID with no matching installed plugin` | `plugins.allow`。
+- **判据**：① **有抑制/豁免机制的检查装置，必须每次输出都自报"本次结果经过 N 条抑制"**——原文把这件事做成一条独立 checkId，且刻意只给 **info**：抑制可能正当（已评审的豁免），系统不替人判对错，只负责**让"这份输出不完整"这件事可见**。⇒ 抑制机制一旦存在，"没发现"就分裂成两种可能（真的没有 / 被过滤掉了），不报这一条，读报告的人一律按前者理解，抑制表会静默长成系统的默认失效通道。② **info 不是"不重要"，是"无法判定对错的事实"**——这类事实的正确分级是强制可见但不逼人处理：升成 warn 会让正当抑制变成噪声，降到 debug 等于没报 ⇒ 分级标准应是"我能不能判它对错"，不是"它可不可疑"。③ **白名单不是免检区，条目要反向机检**：`plugins.allow` 里列了一个没有对应已安装插件的 ID 就要报 ⇒ 拼写错、插件已卸载、名字改过，三种情况在"列表"这一面看都完全正常；凡"在某处列出能力名"的机制（allow/白名单/豁免表），必须周期性验证**每一项当前仍指向一个真实存在的对象**。④ **"声明"与"实体"的一致性是独立检查面，且要持续对账**：同页另有 `plugins.installs_version_drift`（索引记录与已安装包漂移）⇒ 一次性的准入校验在下一次实体变更后即失效；允许项与实体之间的差必须单独成类、周期重算。⑤ 与 Cap95 的分工：Cap95 判据②把"配置写了但模式没开/全局被局部覆盖/deny 只匹配 ID"归为 Policy drift，识别特征是"每条单独看都已配置、组合起来不产生约束"；本条补的是**输出侧**——即使所有配置都正确生效，抑制与幽灵条目仍会让结论不完整，这一面不在"配置是否生效"的检查范围里。
+- 提升层：可观测性 / 治理。触发词：抑制项自报、suppressions active、info 级强制可见、输出被过滤、幽灵白名单条目、allow_phantom_entries、白名单反向机检、声明与实体一致性、豁免表只增不减。
