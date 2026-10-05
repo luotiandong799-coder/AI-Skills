@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.79.0"
+version: "1.80.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -178,21 +178,9 @@ the CLI only adds atomicity and an audit trail.
 - **落地动作**：晋升候选同时过四门（频次三门 + 收益一门）；收益无法估计时**默认不晋升**，只留在日志里继续观察。
 - 提升层：可复用 Skill / 工作流。触发词：晋升收益门、期望收益为正、结晶为技能、value backfilling、频次口径 vs 收益口径、不确定即不晋升。
 
-## Capability 18 — 白名单字段的「空值语义」必须显式声明，且配置要能锁死为只读（来源：docs.langflow.org `mcp-client` 与 Lock 机制，2026-09-29 经 Qoder r320-Q-B 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
-- LangFlow `mcp-client` 的 `tool` 字段**留空即放行该 server 全部工具**——"可选白名单"的缺省方向若是 allow-all，漏配＝全开。
-- 判据：本文库凡 allowlist 字段统一约定**空＝拒绝全部**；且配置面应可"锁死为只读"（LangFlow Lock 可锁住 MCP server management 防运行时被改）。
-- 与 AV §审计三维（2.46.0）不同面：那条讲证据留存，本条讲缺省权限方向与运行时可改性；与 §空数组语义（SA 3.45.0）同族。
-
-## Capability 19 — 共享记忆里「多条条目」不等于「多份独立证据」：采纳判定要按来源族门控（来源：arXiv 2609.30813 CPB，2026-09-29 经 Qoder r321-Q-C 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
-- 实测：相互相关的记忆条目被下游当作彼此佐证；**按来源门控后误采纳 0.06–0.09，未门控 0.22–0.47（约 4–5 倍）**；错误信念一旦未被质疑，下游 **0.97–0.99 直接复述**（一次污染、全程背书）。
-- 判据：写入共享记忆时带**来源族 ID**，读取时把同族条目**折叠为一条证据**再参与判定——这正是 AV「三条独立证据源」里"独立"的定义。
-- 与豆包 r172C（外部内容信任标签，ctx 自留地）、WB r155B（跳过沿依赖链传染，ed 自留地）分工：那两条管入口与传染，本条管记忆库内部的统计独立性。
-
-## Capability 20 — 记忆检索范围就是权限范围，且扩大范围不保证更准（来源：arXiv 2609.29144，2026-09-29 经 Qoder r321-Q-C 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
-- 实测反例：**接入全局记忆准确率 0.713，反而低于只用静态记忆的 0.775**；按来源族取回 0.816（增益 +0.063，95% CI [0.037, 0.094]）。
-- 判据：扩记忆可见面后必须跑同一套题回归（与 AV「先固定模型」并成一条验收动作）；**可见面本身按权限对待**，跨用户/跨项目记忆不并入默认检索集。
-- 与 §记忆晋升三门（r205-C）、晋升收益门（r283-B）不同对象：那两条管条目去留，本条管可见面与权限。
-
+## Capability 18 — 白名单字段的「空值语义」必须显式声明，且配置要能锁死为只读（原文已下沉 references/knowledge-base.md §r426A-ag 下沉 Cap18–Cap20；触发词：allowlist 空值语义、空等于拒绝全部、配置锁死只读）
+## Capability 19 — 共享记忆里「多条条目」不等于「多份独立证据」：采纳判定要按来源族门控（原文已下沉 references/knowledge-base.md §r426A-ag 下沉 Cap18–Cap20；触发词：来源族门控、相关条目折叠为一条证据、误采纳率、错误信念复述）
+## Capability 20 — 记忆检索范围就是权限范围，且扩大范围不保证更准（原文已下沉 references/knowledge-base.md §r426A-ag 下沉 Cap18–Cap20；触发词：可见面即权限、扩记忆回归、全局记忆反降）
 ## Cap23 / Cap24 / Cap25 沙箱边界三角（原文已下沉 references/knowledge-base.md §r418A 下沉；触发词：fail-closed 缺能力藏入口、挂载戳穿沙箱、shared 作用域、沙箱网络边界、私网不可达）
 
 ## Cap26 机器人入站是独立于人、独立于 API 的第三条通道："看得见"与"会触发"是两个开关，互聊护栏是滑动窗口不是硬阻断（来源：docs.openclaw.ai/channels/bot-loop-protection 2026-09-29 r290-B 独立 curl 实拉 5,889B；与 Cap18 入站准入双门 allowFrom+requireMention 互补——那条管人类入站，本条管 bot 入站）
@@ -496,3 +484,8 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：「Both lists, including every inference-profile page, must succeed before OpenClaw caches the result. A failed refresh reports unavailable or rejected catalog access… failures and retain successful empty provider results, as the bundled catalog…」；「Discovery is shared with the CLI backend and cached until process restart」；「failed CLI probe uses OpenClaw's maintained version floor」；「A failed refresh reports unavailable or rejected catalog access」；「retain successful empty provider results」。
 - **判据**：① **部分刷新必须逐条目定状态**：成功但无内容的条目保留为 empty（不是"有内容"），取数失败的条目标记为 unavailable（不是"用旧缓存"也不是"假装成功"）；把 empty 当 present、把 unavailable 当可用，都会让后续调用产出错误结论。② **缓存新鲜度必须有界**：发现结果缓存到进程重启或显式 TTL，过期必须重取，不得无限复用陈旧目录——与 Cap80 ③「缓存默认永不过期是显式选择」同向，本条补上：有界 freshness 必须由调用方显式设置且可被观测，不能依赖"进程什么时候重启"。③ **部分失败不降级整体**：catalog 刷新中部分条目取数失败，成功的保留、失败的标记不可用，整体可用状态必须反映最弱条目，绝不因"大部分成功"就整体标绿。④ **三态可观测**：empty / unavailable / stale 必须能被诊断接口区分报告，不能只报"成功/失败"两态——否则排障时无法分清"没配"与"取不到"与"过期"。
 - 提升层：治理 / 可复用 Skill。触发词：发现缓存、部分刷新、empty≠unavailable≠stale、缓存新鲜度有界、进程重启失效、部分失败不降级整体、三态可观测、陈旧目录不复用。
+
+## Capability 90 — 「自动发现」型凭据解析是用便利换掉作用域的分维能力：同一宿主上所有自动发现通道共享一个身份与一套权限，逐路收窄在机制内做不到（来源：docs.n8n.io `administer/manage-credentials/use-external-secret-stores.md` 21,594B，2026-10-05 r426-B 独立 curl 取 `.md` 原文实拉逐串命中；与 Cap86「凭证作用域下沉到资源」互补——那条管默认作用域的粒度大小，本条管自动发现机制本身让粒度收窄在结构上不可达）
+- **原文**：「n8n doesn't take any credentials input for that vault; it resolves whatever identity is available in its runtime environment. That means **every vault you configure with Auto Detect on the same n8n instance shares one IAM identity and one set of permissions**. You can't assign different IAM scopes … to separate Auto Detect vaults.」；「If you need to scope secret access per vault, per project, or per team, **use IAM User instead**: create a separate IAM user and access key per vault, and attach an ARN-scoped policy to each one.」；「Auto Detect is best suited to a single global vault, or to setups where every project sharing that vault should have the same access.」
+- **判据**：① **自动发现＝把作用域的决定权交给运行时环境，代价是分维收窄能力被吃掉**——同一宿主上所有自动发现通道共用同一身份与同一套权限，"这一路只给它该碰的几个资源"在机制内做不到 ⇒ 引入自动发现型凭据（SDK 默认链 / 环境变量 / 实例角色 / 宿主 ambient 身份）前先问"这几路是否需要不同作用域"，需要就必须放弃自动发现。② **要分维就必须显式化：一路一身份、一身份一策略**——官方给的对照解是每 vault 独立身份 + 独立密钥 + ARN 级策略 ⇒ 最小权限与自动便利是**互斥选项**而非可调参数；凡是"按资源 / 按项目 / 按团队"分维的需求，显式身份是唯一出路。③ **自动发现的适用面只有"单一全局通道"**——官方明说它最适合单个 global vault 或所有共享方权限相同的场景 ⇒ 把自动发现用在多方共享宿主上，等于默认把所有方拉齐到同一权限面（多方里权限最小的那家被静默抬高）。④ **审计口径**：清点凭据来源时"自动发现"要单列一类并标注"作用域不可分维"，不能与显式身份混在同一张清单里按同一标准评估；把 ambient 身份当"已配置的凭据"记账，会得出"每路都已收窄"的假结论。
+- 提升层：工具 / 治理。触发词：自动发现凭据、Auto Detect、默认凭据链、ambient 身份、便利换最小权限、作用域不可分维、一路一身份、ARN 级策略、全局 vault。

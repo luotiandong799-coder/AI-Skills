@@ -532,3 +532,18 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **原文**：「Audit logs now record changes to **2FA enforcement** settings. Organization admins and owners can see: **Who enabled or disabled 2FA enforcement** / When they did it」；「Previously, expired OAuth connections required **creating and authorizing a new credential request each time**. Requesters can now ask recipients to **reauthorize OAuth connections directly from an existing credential request**」；可用性标注「Both features are available on the Enterprise plan」。
 - **判据**：① **审计要记两类事件：违规事件与策略变更事件**——只记"谁没开 2FA"会漏掉更关键的一条：**谁把强制 2FA 关掉了**。改变规则比违反规则影响面更大，且通常只有极少数人有这个权限；凡是能被开关的安全策略，其开关动作必须进审计日志（谁 + 何时 + 从什么改成什么）。② **凭据过期应提供原地重授权通道**：过期即重建会不断产生新的凭据请求与连接，旧的连接面不会自动消失 ⇒ 累积出来的是一批无人清理的平行授权。续期（reauthorize）与新建（create）是两个动作，默认应走续期。③ **这类能力通常带套餐门槛**（Enterprise），写进共享规则时要连同前置面一起声明，避免"我们平台应该有"的误判。
 
+
+## §r426A-ag 下沉 Cap18–Cap20（2026-10-05 r426-A 行数治理，原文+判据移至 KB，SKILL.md 留指针）
+
+## Capability 18 — 白名单字段的「空值语义」必须显式声明，且配置要能锁死为只读（来源：docs.langflow.org `mcp-client` 与 Lock 机制，2026-09-29 经 Qoder r320-Q-B 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
+- LangFlow `mcp-client` 的 `tool` 字段**留空即放行该 server 全部工具**——"可选白名单"的缺省方向若是 allow-all，漏配＝全开。
+- 判据：本文库凡 allowlist 字段统一约定**空＝拒绝全部**；且配置面应可"锁死为只读"（LangFlow Lock 可锁住 MCP server management 防运行时被改）。
+- 与 AV §审计三维（2.46.0）不同面：那条讲证据留存，本条讲缺省权限方向与运行时可改性；与 §空数组语义（SA 3.45.0）同族。
+## Capability 19 — 共享记忆里「多条条目」不等于「多份独立证据」：采纳判定要按来源族门控（来源：arXiv 2609.30813 CPB，2026-09-29 经 Qoder r321-Q-C 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
+- 实测：相互相关的记忆条目被下游当作彼此佐证；**按来源门控后误采纳 0.06–0.09，未门控 0.22–0.47（约 4–5 倍）**；错误信念一旦未被质疑，下游 **0.97–0.99 直接复述**（一次污染、全程背书）。
+- 判据：写入共享记忆时带**来源族 ID**，读取时把同族条目**折叠为一条证据**再参与判定——这正是 AV「三条独立证据源」里"独立"的定义。
+- 与豆包 r172C（外部内容信任标签，ctx 自留地）、WB r155B（跳过沿依赖链传染，ed 自留地）分工：那两条管入口与传染，本条管记忆库内部的统计独立性。
+## Capability 20 — 记忆检索范围就是权限范围，且扩大范围不保证更准（来源：arXiv 2609.29144，2026-09-29 经 Qoder r321-Q-C 实拉取证；**WB 未独立复核，按引文落地并标注待复核**）
+- 实测反例：**接入全局记忆准确率 0.713，反而低于只用静态记忆的 0.775**；按来源族取回 0.816（增益 +0.063，95% CI [0.037, 0.094]）。
+- 判据：扩记忆可见面后必须跑同一套题回归（与 AV「先固定模型」并成一条验收动作）；**可见面本身按权限对待**，跨用户/跨项目记忆不并入默认检索集。
+- 与 §记忆晋升三门（r205-C）、晋升收益门（r283-B）不同对象：那两条管条目去留，本条管可见面与权限。
