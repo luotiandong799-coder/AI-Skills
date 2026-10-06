@@ -223,7 +223,18 @@ Command blocked for security: Add-Type compiles and loads .NET code at runtime
 4. 名字被截断或需判定群/私聊时，再 `_crop.ps1` 局部放大（`X=125 Y=badge_y-60 W=460 H=170 Scale=1.7`）
 5. 多张局部图用 `_stack.ps1` 竖拼成一张，省读取次数
 
-脚本位置：`D:\腾讯AI\tools\wechat-auto\`（`_sweep2/_unreadcrop/_crop/_grid/_stack/_ensure/_probe`）。
+脚本位置：`D:\腾讯AI\tools\wechat-auto\`。**本机实际存在的脚本（2026-10-06 核对，旧文档里的 `_sweep2/_unreadcrop/_stack/_grid/_ensure/_probe` 均已不在）**：
+
+| 脚本 | 用途 |
+|---|---|
+| `_enum.ps1 -Out <txt>` | 枚举全部顶层窗口 + 微信子窗（找 `Qt51514QWindowIcon` 主窗 / `MMUIRenderSubWindowHW` 子窗） |
+| `_wxshot.ps1 -Out <png> [-InfoFile <txt>]` | 按类名找主窗 → `ShowWindow(9)`+`TOPMOST`+`AttachThreadInput` 置前 → 截整窗图（托盘隐藏态也能拉出来） |
+| `_crop.ps1 -In -Out -X -Y -W -H -Scale` | 裁剪 + 最近邻放大（看角标/文字用，Scale 2~4） |
+| `_badge.py <png> [xmin] [xmax]` | numpy 连通域扫 `#FA5151` 角标，输出 `BADGE/blob` + bbox + fill（走托管 venv：`C:\Users\26719\.workbuddy\binaries\python\envs\default\Scripts\python.exe`） |
+| `_sweep.ps1 -OutDir -Prefix -Steps -Notches -ResetNotches` | `MMUIRenderSubWindowHW` 滚轮逐屏截图（`-ResetNotches 120` 先回顶，`-Notches -8` 每屏下行） |
+| `wx_reply.py` | 登录 + 读 + 发（发送键 `Ctrl+Enter`） |
+
+> 微信窗口**常驻托盘态**（`MainWindowHandle=0` / `IsWindowVisible=False`）是常态，先 `_enum.ps1` 按类名找句柄，句柄随进程重启变化，**不要硬编码**。
 
 **底部判定**：`-ResetNotches 200` 后再截图，连续两屏内容相同即到底（本机列表最老到 2025/06）。
 
@@ -253,7 +264,8 @@ Command blocked for security: Add-Type compiles and loads .NET code at runtime
 
 ### 10.1 纯 windows-mcp 通道（2026-09-25 二次实测，读+发全程无需 Bash python）
 
-- **读屏正解**：`Read` 工具读 PNG 一律被模型侧过滤（"does not support images"），OCR 也没装。**唯一可用视觉通道 = `mcp__windows-mcp__Snapshot(use_vision=true, use_ui_tree=false, use_annotation=false)`**，截图以多模态块直进模型，中文聊天内容肉眼可读。别再走"python 截图→Read"死路。
+- **读屏正解（2026-10-06 更正，旧结论已作废）**：`Read` 工具**可以直接读 PNG 截图**（中文会话文本清晰可读），无需 windows-mcp。此前"Read 读 PNG 被模型侧过滤 / 只能靠 `mcp__windows-mcp__Snapshot`"的结论**在本环境已不成立**，别再为读屏去接 MCP。正确链路：**PowerShell 截图落盘 → `_crop.ps1` 裁剪放大 → `Read` 读图**（截图前仍须 `SetWindowPos` 将目标窗移入屏幕内并置前，否则抓到遮挡图）。
+- **windows-mcp 不在场时**：`ToolSearch(tool_names=["mcp__windows-mcp__..."])` 返回空即本会话未接线，直接切内置 PowerShell + `.ps1`（脚本内 `Add-Type` 不被拦），不要卡在 MCP 上。
 - **跨调用保活正解**：Bash/python 起的 GUI 子进程跨调用被沙箱回收（§6）；**改用 `mcp__windows-mcp__PowerShell` 执行 `Start-Process "D:\Weixin\Weixin.exe"`**，进程挂在持久的 MCP server 下，跨调用存活（实测 pid 跨 5+ 次调用存活）。
 - 登录：启动后 Snapshot 看到一键登录窗（头像+"进入微信"按钮）→ 直接 Click 按钮坐标（2560×1600 屏实测 (1278,919)；图像坐标 × 1.4815 = 屏幕坐标）。
 - 纯 MCP 发送流（无 pywinauto）：Click 输入框 → `Clipboard(set)` → `Shortcut("ctrl+v")` → `ctrl+a`+`ctrl+c`+`Clipboard(get)` 读回校验 → `Shortcut("ctrl+enter")`（本机发送键）→ Snapshot 验证「输入框空+绿色气泡」。
