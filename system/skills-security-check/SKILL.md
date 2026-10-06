@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.11.0
+version: 1.12.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -488,3 +488,8 @@ Step C: 是否包含恶意意图？
 - 原文事实：`ALLOWED_FIELDS = {"name", "description", "license", "allowed-tools", "metadata", "compatibility"}`（6 项）；而 `validate_metadata` 只对 `name` / `description` / `compatibility` 调取值校验函数，且 `compatibility` 走 `if "compatibility" in metadata`；`_validate_metadata_fields` 只做 `set(metadata.keys()) - ALLOWED_FIELDS` 的键名集合差，命中即报 `Unexpected fields in frontmatter ... Only [...] are allowed.`
 - 判据：① **允许集 6 项、校验集 3 项——`license` / `allowed-tools` / `metadata` 允许存在但零取值校验** ⇒ "字段被规范接受"与"字段被校验器检查"是两个必须分别公布的集合；只公布前者，等于让作者把未受检字段当成受检字段，把声明当成保证。② **`allowed-tools` 是这类里最危险的一种**：命名上就是工具白名单（安全承诺），而参考实现里没有 `_validate_allowed_tools`，连形态检查都没有 ⇒ 凡规范中带安全语义的字段（工具/权限/网络/凭据声明），必须显式声明"谁在校验、校验什么、不校验什么"；没有校验器就不该让它以安全承诺的形态出现在允许集里。③ **可选字段是 present 才校验**：`compatibility` 缺席时 `validate` 不产生任何一行 ⇒ "没报错"同时覆盖"没写"与"写对了"，两者在输出里同形，不能把静默当成通过。④ **键名合法 ≠ 内容合规**：`Unexpected fields` 只做集合差，键名合法即放行任意取值 ⇒ 一个通过参考校验器的 frontmatter 仍可以完全不合规。⑤ 接线：审计任一技能包时，把它声明的每个 frontmatter 字段逐项问"本仓/本平台有没有对应的检查"，答不出的按**未受检**处理，不得因为"规范里写着"而视为已审；带安全语义的字段未受检时，报告里要单独列为"声明了但没有执行者"。
 - 提升层：工具 / 安全边界。触发词：允许集与校验集、allowed-tools 无校验、字段被接受不等于被检查、安全语义字段须声明校验者、可选字段缺席无结论、键名合法即放行内容。
+
+## 审查结论要有一个显式的「不处置」档位，且误报形态可枚举：不是每条读数都要整改，关闭必须带理由（来源：docs.openclaw.ai `gateway/security/trust-model.md` 10,646B，2026-10-06 r433B 独立 curl 取 `.md` 原文逐串命中；与 ag Cap96「审计器须自报本次输出被过滤」互补——那条管"输出被 suppression 遮住的部分要可见"，本条管"露出来的发现里哪些本就属于不处置、以及它们的共同形状"）
+- **原文**：官方以 **Common findings closed as no-action** 明文列出——① 无 policy / 鉴权 / 沙箱绕过的纯提示注入链；② 把**默认开启**当漏洞（`sshVerify` 默认启用但「approves only on an exact device-key match」；`autoApproveCidrs`「disabled by default, requires explicit CIDR/IP entries」）；③ 把**标识符当凭证**（「treating `sessionKey` as an auth token」）；④ 把**运维读路径当越权**（`sessions.list` / `sessions.preview` / `chat.history`「classified as IDOR in a shared-gateway setup」）；⑤ **本机部署按公网标准**（「missing HSTS on a loopback-only gateway」）；⑥ **路径根本不存在**（「webhook signature findings for inbound paths that do not exist in this repo」）；以及把默认的 Gateway 级会话可见性当漏洞——实际是「reports plain multi-agent defaults as `info` … escalates to `warn` only with trust-boundary signals」。
+- **判据**：① **审查输出至少四态，缺了"不处置"这一态就会逼出假整改**：通过 / 待修 / 待观察 / **已判读但不处置**——第四态必须带一句理由，否则下游看到一条读数就去改，改完反而带来新的破坏面；报告里没有 no-action 栏，等价于默认所有发现都要改。② **误报有固定的六种形状，可以提前背下来：默认即漏洞 / 标识符当凭证 / 运维读路径当越权 / 本机按公网标准 / 不存在的路径 / 无绕过的纯注入链** ⇒ 收到扫描结果先套这六种形状，命中即按 no-action 处理并写明命中哪一条，比逐条讨论快一个量级。③ **"默认开启"不等于"不安全"，判据是它能否单独构成授权**：`sshVerify` 需精确设备密钥匹配、且密钥对已位于操作者名下主机；`autoApproveCidrs` 默认关闭、且仅对首次无 scope 的节点配对生效 ⇒ 默认值的安危取决于"它单独能不能放行"，不看"是否默认开着"；把"默认开着"直接定高危，是把产品默认值当成攻击者能力。④ **严重度是「配置 × 部署语境」的函数，不是配置自带属性**：同一条 Gateway 级会话可见性，单操作者多 persona = `info`，出现信任边界信号才升 `warn` ⇒ 脱离部署语境照抄 CVE 式定级必然失真，定级前先答"这套东西跑在谁的信任边界里"。⑤ **对技能审查 / 共学判重的落点：判非清单必须写成带理由的 no-action 台账并随报告一起出，不静默丢弃** ⇒ "这条不落"只有附上"命中第几种误报形状 / 与哪条已落地内容重叠多少"才可复核；没有理由的静默跳过，下次会被当成新发现再学一遍。
+- 提升层：工作流 / 安全边界。触发词：Common findings closed as no-action、已判读不处置档位、六类误报形状、默认即漏洞、标识符当凭证、运维读路径当 IDOR、本机部署缺 HSTS、严重度随信任边界信号升级、判非清单要带理由。
