@@ -4622,3 +4622,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Agent 节点：workflow 当工具调用**：**内置 AI 节点（直接 API 访问 Claude/GPT-4o/Gemini）+ Agent 可把工作流其他节点作为工具绑定（thinking+action 闭环）**；**支持多 Agent 协作编排与 RAG；节点级可调试、按设计可解释、需求变化可维护**。
 - **平台选型象限**：**Zapier=托管 no-code、目录最广、非技术学习曲线最低（跨 SaaS 快赢）；n8n=开源自托管、全代码块+原生 AI 节点、高吞吐定价划算（代码逃生舱/大流量）；Pipedream=代码级控制不管理服务器（托管服务里的代码步骤）；Activepieces=自托管社区版无软件许可费（MIT）**——个人用户=自托管+代码控制+无锁死优先。
 - **n8n 计费与运维真相**：**按工作流执行计费（一次 run=一次 execution，不看内部）→用"每次执行成本×执行量"做容量预估**；**自托管 fair-code 无供应商锁死，SOC2 合规可过审**。
+
+## r430C Agent 规划与自我修正机制 2026（来源：microsoft-agent-reflection-planning/openlegion-ai-agent-planning/atlassignal-self-correcting/growthengineer-reflection-vs-react/datarekha-planning-patterns/preprints-self-correcting-multimodal/docs-reactiveagents-reasoning/theneuronbase-reflection-on-plans/cissychen-agent-architectures/taskade-self-improving-agents，2026-10-07 实拉）
+- **ReAct 的弱点=近视（myopia）**：一次只想一步，10+ 步任务易游走/做无用功/反复调同一工具；**Plan-and-Execute=先分解全局任务成有序子任务集再逐条执行、边执行边更新计划**——一步探索型用 ReAct、稳定多阶段用 Plan-Execute。
+- **Plan-then-act 模式**：**分解与执行分离，先生成结构化计划再逐步执行（适合多步数据管线/跨源研究/依赖管理）**；**用 json_schema 响应格式做结构化规划（计划可解析可审计）**；**Plan→Execute→Reflect→Refine 循环=生成步骤→逐步执行→对照原计划评估→缺口则修订重执行**。
+- **Reflexion（Shinn 2023）**：**给任何规划模式加自评循环——失败后生成反思（自然语言诊断"哪里错了+下次如何避免"），反思存进记忆并 prepend 到下次尝试上下文**；**代码域最友好（测试运行器=免费确定性评估器），HumanEval pass@1 91%**——有可靠检查器才用。
+- **组合模式**：**Plan-and-Execute 外层+ReAct 内层（不确定证据收集步骤）+最终副作用前 reflection**——只有实测失败证明需要才加机制；**昂贵/不可逆操作=有界计划+自适应证据收集+提交前验证**；**ReAct 增强反思=每轮 Action→Observation 后加 Reflection（方向错则回溯换路）**。
+- **反思性能陷阱**：**Reflection 可能变 performance theater（自证偏见——批判时已知原始答案倾向自圆其说）**；**实现选择=独立 LLM 调用（慢但彻底）vs 集成进规划 prompt（快但不够显式）**；**把"产出答案"与"评判答案"分离是抓到错误的前提，用具体判据非"感觉"，设迭代上限防死循环**。
