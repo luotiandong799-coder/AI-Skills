@@ -4608,3 +4608,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **确定性轨迹重放（Trace Replay）**：**网络延迟/限流/模型退化会污染测试——首次运行记录 LLM 响应+工具载荷，CI 重放隔离编排逻辑与基础设施波动、失败可归因代码变更**；**任务重放=录制生产 run 的工具调用+参数+返回值，CI 以录制响应当 stub 重放（抓纯合成 fixture 抓不到的回归）**；**回放调试=diff 轨迹（工具选择/参数/中间摘要/重试）→分类根因（模型漂移/提示变更/工具契约/检索漂移/策略）→找第一个分歧步而非最终错误答案**。
 - **安全重放四步**：**冻结输入→恢复有效检查点→注入录制响应→写操作重定向到沙箱/mock（重放不产生真实副作用）**；**回放保留决策路径（检索证据/模型输出/工具调用/策略/重试/状态全记录，非只留最终响应）**；**append-only 事件日志供检查+快照供快速恢复，长工作流用混合设计**。
 - **编排测试脊柱：持久 run ID + pass@k**：**一个 canonical run ID 挂所有日志/轨迹/状态迁移/外发请求/webhook/重试/补偿/人工介入（跨供应商从单一持久身份派生稳定标识符）**；**pass@k=k 候选至少一个通过的占比（评估多次尝试成功率）**。
+
+## r430A RAG 检索质量工程 2026（来源：aipromptshub-rag-pipeline/premai-production-rag/rsis-enhanced-rag-framework/ailearningguides-rag-in-production/promtable-rag-production/thetoolstack-rag-pipeline-benchmark/dev-production-rag-hybrid/agencyscript-embeddings-vector-search/fanyamin-rag-optimization/tensoria-optimize-rag-5-levers，2026-10-07 实拉）
+- **分块策略**：**语义分块=小 embedding 算相邻句相似度，主题相似持续扩块、骤降封块（每块=完整连贯单一想法，提升检索精确率）**；**late-chunking=长上下文 embedder 嵌整篇再切片取块级嵌入（块"知道"周边上下文，适合法律/科学语料）**；**Parent Document Retrieval（高 ROI）=解耦"搜什么"与"给 LLM 什么"，索引小块检索、命中给完整父文档**。
+- **混合检索是 2026 默认**：**纯向量漏精确匹配（SKU/错误码）、纯关键词漏语义意图→稠密向量+BM25 双路**；**RRF（Reciprocal Rank Fusion）=score=1/(k+rank_bm25)+1/(k+rank_embedding)，k=60，零参数融合提升召回，可加权（0.6/0.4）**；**两阶段=广召回（两路各 top50-100）→RRF 融合**。
+- **重排（Rerank）**：**检索=召回导向、重排=精确导向**；**cross-encoder 只应用于候选 20-50 对（比向量检索贵 3-5 倍但答案质量稳定提升）**；**只把 top 3-5 重排结果给 LLM；典型 precision@3 增益 15-30%**。
+- **MMR 去冗余 + 上下文缓存**：**MMR（Maximal Marginal Relevance）在相关性与多样性间平衡，防 top-5 全是同一主题**；**生产 RAG 2026 组合=hybrid search（pgvector）+RRF+context caching（重复系统提示/常驻前缀缓存，省 token 省延迟）**。
+- **embedding 选型四维**：**OpenAI text-embedding-3-large（.13/1M，3072 维可 Matryoshka 降到 256 维）英文企业 RAG 安全默认；3-small 更便宜**；**开源模型部分领域超 OpenAI（高 9.74%）且支持 32K token 上下文（vs 8K）适合长文档块**——看成本/维度（可压缩性）/上下文窗口/领域 MTEB 基准四维权衡。
