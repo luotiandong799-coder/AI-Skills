@@ -4601,3 +4601,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **LLM-as-judge：放大主观评分但偏置是已知弱点**：**原理=更强 LLM 按明确判据打分（输入+输出+判据+可选参考答案→结构化分数+推理）**；**已知失败模式=位置/长度/自恋/格式偏置、判据定义模糊相关性崩——判据必须 well-defined**；**技法=GEval（自定义判据）/JevEval（有界问题+固定数学）/DAGMetric（严格多步逻辑）**；**评分器按失败模式组合=exact match/schema→task validators→LLM-as-judge（pointwise/pairwise）→人工校准**。
 - **回归测试三层标准栈**：**规则型（exact match/JSON schema）→静态参考（BLEU/ROUGE/BERTScore）→LLM-as-judge（G-Eval/pairwise）**；**每次 prompt/model/管线变更跑 golden set（50-200 真实案例）当回归，从生产失败扩充测试集**；**工具分工=DeepEval（pytest 集成）/Promptfoo（YAML-first CLI）/RAGAS（RAG 管线）**。
 - **"更好"的提示也会伤害**：**评估驱动迭代框架+可复现本地实验——"更好的"提示实际可能更差，无评估的提示工程是盲目优化**；**改动前建基线、改动后 diff 分数，不靠"感觉更好"上生产**。
+
+## r429C AI 智能体测试与沙箱环境 2026（来源：aiflowreview-ai-agent-replay/zylos-ai-agent-testing-strategies/testquality-how-to-test-ai-agents/kunalganglani-agent-eval-harness/openlegion-ai-agent-testing/kanopylabs-ai-agent-testing/moai-ai-agent-replay/codex-agent-testing-frameworks/saipien-toolsimulator/volanea-testing-ai-agent-workflows，2026-10-07 实拉）
+- **测试四层模型**：**单元=验证单个工具；集成=验证工具调用顺序/参数正确（Mock MCP Server 模式=canned responses+断言调用序列，把模型移出测试循环）；模拟=合成逼真场景；端到端=全管线+真实模型（最贵最有价值）**；**e2e 场景套件建立在 golden dataset 上（精选真实请求+期望结果），按价值排序跑**。
+- **模拟环境两难**：**fidelity（模拟够像真实、结论才可迁移）×coverage（生成压力失败模式的场景）同时满足**；**成熟 harness= synthetic tool backends（每工具真实数据假实现+可注入边界：空结果/异常/限流）**；**ToolSimulator=LLM 驱动外部工具模拟（有状态/尊重契约/保护隐私，不碰真实 API 规模化测）**。
+- **确定性轨迹重放（Trace Replay）**：**网络延迟/限流/模型退化会污染测试——首次运行记录 LLM 响应+工具载荷，CI 重放隔离编排逻辑与基础设施波动、失败可归因代码变更**；**任务重放=录制生产 run 的工具调用+参数+返回值，CI 以录制响应当 stub 重放（抓纯合成 fixture 抓不到的回归）**；**回放调试=diff 轨迹（工具选择/参数/中间摘要/重试）→分类根因（模型漂移/提示变更/工具契约/检索漂移/策略）→找第一个分歧步而非最终错误答案**。
+- **安全重放四步**：**冻结输入→恢复有效检查点→注入录制响应→写操作重定向到沙箱/mock（重放不产生真实副作用）**；**回放保留决策路径（检索证据/模型输出/工具调用/策略/重试/状态全记录，非只留最终响应）**；**append-only 事件日志供检查+快照供快速恢复，长工作流用混合设计**。
+- **编排测试脊柱：持久 run ID + pass@k**：**一个 canonical run ID 挂所有日志/轨迹/状态迁移/外发请求/webhook/重试/补偿/人工介入（跨供应商从单一持久身份派生稳定标识符）**；**pass@k=k 候选至少一个通过的占比（评估多次尝试成功率）**。
