@@ -4650,3 +4650,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **成本归因到 agent**：**没有 per-agent 归因无法定位成本尖峰/检测模型更新后行为漂移**；**OTel GenAI SIG 提案 agentic 六族约定=Tasks/Agents/Teams/Artifacts/Memory（issue #2664 设计中）**；**指标集=错误率（per tool/model/error type）+token 趋势+ai.cost_usd（token×价格表）+缓存命中率**；**LangSmith 把异常 trace 转回归测试集，Arize Phoenix=OTel 原生 tracing+自托管 LLM-as-judge**。
 - **采样与隐私：正文默认不采集**：**全量 trace 太贵→按需/按尾采样；prompt/response 正文是敏感数据**；**编码 Agent 探针（阿里云 LoongSuite）=OTel GenAI 标准构建调用树还原推理链路/token/重试轨迹，零代码侵入、正文默认不采集、导出失败隔离不影响主循环**。
 - **LLM 生产可观测性定义**：**=端到端遥测（trace/log/metric）解释系统做了什么/为什么/成本多少/行为是否可接受（区别于监控=实时定量+看板/告警/根因）**；**通用工具（Honeycomb 类）擅长对比异常与基线分布但缺 prompt 版本管理/agent 评估库→LLM 原生后端（Langfuse/LangSmith/Phoenix）互补**。
+
+## r432A LLM 上下文工程 2026（来源：sureprompts-context-engineering-best-practices/zylos-system-level-context-design/uni-mannheim-context-engineering/agentpatterns-context-engineering/anhtu-context-engineering-2026/devto-mayairesearcher-context-engineering/aiexpert-context-engineering/cissychen-context-engineering/github-muratcankoylan-agent-skills-context-engineering/lobehub-neolabhq-context-engineering-kit，2026-10-07 实拉）
+- **上下文窗口按预算管理**：**"模型支持 200K"是天花板不是邀请**；**按路由定工作预算（system/检索上下文/历史各占多少），显式保留 10-20% 缓冲**避免生成中途撞硬顶、保住首部空间；latency 与 dollar 预算随输入 token 线性、注意力成本过窗口非线性。
+- **注意力偏好位置**：**关键信息放开头与结尾；用清晰章节边界组织 system prompt；监控上下文用量**；**为退化设计而非希望避免（接近满时质量先于硬限退化——规划"满了怎么办"）**。
+- **渐进披露=按需加载**：**启动只加载技能名与描述，完整内容在技能激活时才加载**（适用于技能选择/文档加载/工具结果检索多层）；**上下文质量>数量——冗余与噪声稀释注意力**。
+- **工具输出 offload：入窗前先摘要省最多 99% token**：**工具响应进入上下文前先摘要，全文存外部（文件/对象存储）只留轻量引用**；**压缩=摘要对话并初始化新窗口（长时任务最重要）；摘要五要素=当前目标/关键工件/决策与理由/下一步（只记"发生了什么"不记"下一步"=目标漂移）**。
+- **压缩触发点=70-80% 利用率（非撑满）+递归摘要**：**递归摘要=分块摘要反复再摘要（128K-1M 窗口也被反复工具调用填满）**；**分级压缩=先 offload 工具输出→再摘要历史→最细才截断（LangChain Deep Agents 第一压缩级）**；防 objective drift 靠把"下一步"写进摘要。
