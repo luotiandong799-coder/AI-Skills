@@ -4664,3 +4664,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **CLIP 类联合 embedding：图-文同一空间**：**联合训练文本+图像编码器，使图与文本描述向量靠近（可文本搜图/图搜图）**；**统一多模态 embedding（Cohere Embed 4/voyage-multimodal-3/llama-nemotron-embed-vl）把文本/表格/图表图编码进同一向量空间做相似度检索——免"图先转文字"**。
 - **混合检索+交叉编码重排照搬多模态**：**HNSW 语义 + GIN 词法 → RRF 融合 → cross-encoder 重排（与文本混合检索同构）**；**开源 SLM 实践=Qwen2-VL-2B 生成图表/表格摘要→多模态 ingestion，小模型可支撑科研文档理解**。
 - **文档处理流水线=GPU 微服务拆解**：**NeMo Retriever=提取→嵌入→重排分阶段 GPU 加速微服务，解析复杂 PDF/抽嵌套表格/解读图表**；**VLM 生成的图/表摘要索引为文本 + 保留原图供查询时视觉 grounding——双轨并存**。
+
+## r432C 自托管 AI 网关与本地推理部署 2026（来源：devto-devrudals-self-hosted-llm-gateway/phosailabs-self-host-ai-stack/promptquorum-qwen-local-deployment/cloudhostreview-ollama-vllm-localai/everylocalai-litellm-ollama-gateway/vercel-self-host-openai-api/litellm-ai-gateway/stackpractices-local-llm-deployment/shengyayun-vllm-ollama-deployment/devto-lingdas1-running-llms-locally，2026-10-07 实拉）
+- **推理引擎四选型**：**快速本地实验=Ollama（自动多 GPU 拆分，个人服务器/<20 并发）；生产高吞吐=vLLM（tensor parallelism+continuous batching，并发 2-4× 更高效，100+ req/h）；纯 CPU/混合=llama.cpp；桌面 GUI=LM Studio**；**VRAM 速查=7-8B Q4 需 6-8GB/14B 需 10-12GB/23B Q4≈14GB**。
+- **自托管盈亏平衡：吞吐足够时比 API 便宜 5-10×**：**自托管=固定算力 vs 计量消耗；饱和单 H100 vLLM 跑 Llama-3.3-70B FP8 GPU 租金 .17-0.81/百万输出 token（低于托管 API、12-60× 低于 GPT 类）**；**个人档=二手 RTX 3090 24GB+32GB RAM ≈,200 一次性全质量跑 7-32B，对比 /月云 API**。
+- **量化四档速查**：**FP16≈14GB 基准质量；Q8_0≈9GB 质量损失可忽略 +10% 速度；Q4_K_M≈4.9GB +30%；AWQ≈5.2GB +35%**——先按显存定模型再选最接近原质量的档。
+- **LiteLLM 网关**：**开源 AI 网关/LLM 代理=一套 OpenAI 兼容端点背后负载均衡/追踪成本/速率限制/路由到该处理的模型；自托管分钟级无需信用卡**；**实测高级 AI 任务成本降 56%**；**LiteLLM+Ollama=约 20 分钟搭建、约  硬件 + /月 vs 云，单机多模型统一入口**。
+- **本地部署决策模型**：**Ollama 多 GPU 自动拆分；vLLM tensor parallelism 多卡摊大模型**；**月租档位=RTX 4090 24GB VPS 承诺 -280/月、按需 .30-0.50/h（8B FP16/13B INT4 舒适）；工作站 16GB+ GPU=免费自用；CPU-only 只适合 7B 且太慢不生产**——先量化并发/延迟/质量再选引擎+量化+硬件。
