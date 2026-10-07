@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.137.0"
+version: "3.138.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -471,3 +471,15 @@ version: "3.137.0"
 - **判据**：① **维护动作以 additions and corrections 为主、删除率无人汇报 ⇒ 库只会膨胀**，自检须输出 `deprecation rate`（本轮删除/合并条目数 ÷ 存活条目数）与「AI 协作占比」两个数，缺了这两个数就无法区分「在治理」与「在堆积」；② **AI 协作不等于无人负责**：62% 带 AI co-author 但每次修改都挂在具名人类账号上 ⇒ 自动化产出要能追到签收人；③ **不要发明无法稳定编码的维度**：rule-likeness 轴没过信度闸就应弃用，指标本身也要过可靠性检验，否则只是在量化噪声。
 - **与既有能力分工**：r436C「技能库成本两笔账」管**装载成本**；本条管**库存结构的变化率**——一个看当期开销，一个看长期是否衰减。
 - 提升层：工作流（库治理计量）/ 可复用 Skill（指标口径）。触发词：退化计量、deprecation rate、只增不减不是治理、62% AI co-author、删除率无人汇报、指标也要过信度闸。
+
+## 中心策略设的是「地板」不是默认值：局部只能更严不能更松；策略所有权归声明源（env/IaC），UI 只是只读视图（来源：docs.n8n.io/deploy/host-n8n/configure-n8n/security/manage-security-policies.md 8,773B + security/block-specific-nodes.md 2,425B，经 llms.txt 287,049B 定位真路径后 2026-10-08 一手 curl 取 `.md` 原文逐串命中 `instance-wide minimum redaction policy that individual workflow settings can't weaken` / `the **Enforce two-factor authentication** and **Personal Space** toggles on this page become read-only` / `NODES_EXCLUDE`；与 §deny-only 继承 互补——那条管分层作用域谁能放大，本条管中心策略与局部配置之间的方向性）
+- **实证**：官方原文「Enforcement sets an **instance-wide minimum** redaction policy that **individual workflow settings can't weaken**」；「When `N8N_SECURITY_POLICY_MANAGED_BY_ENV` is `true`, the **Enforce two-factor authentication** and **Personal Space** toggles on this page become **read-only**」；节点下架「Use the `NODES_EXCLUDE` environment variable to prevent your users from accessing specific nodes」，被排除节点「**do not appear in search**」。
+- **判据**：① **中心策略声明的是下界，不是建议值**：局部配置只能更严，不能削弱 ⇒ 把中心策略当默认值下发，等于允许每个局部把它调松，"我们有统一策略"就退化成一句口号。② **策略的所有权在声明源，不在界面**：一旦由环境变量/IaC 托管，界面开关转只读 ⇒ UI 只是视图；允许界面回写会让"页面上看起来的状态"成为第二个真相源，漂移从这一刻开始。③ **从搜索面下架比禁用更前置**：被排除节点不出现在搜索里 ⇒ "不可见"是比"禁止调用"更早的一层控制；只在调用层拦截时，用户仍能看到、仍会尝试、仍会来申诉。④ **顺序：先声明所有权，再谈可调项**：没有所有权声明的开关，谁都能改，改了也不知道是谁改的。
+- **与既有能力分工**：r439C「可选项 vs 可写值（配置更新走审核后新 config_id）」管**谁能改配置内容**；本条管**中心与局部之间的方向、以及界面是不是真相源**。
+- 提升层：工作流（策略治理）/ 工具（配置所有权）。触发词：instance-wide minimum、局部不可削弱、MANAGED_BY_ENV、UI toggles 只读、策略所有权归声明源、NODES_EXCLUDE、搜索面下架、不可见早于禁用。
+
+## 供给源消失即本地自动清除：技能库要有「请求方溯源」字段，删依赖=删技能的判据来源（来源：api.github.com/repos/vercel-labs/skills/commits 141,723B 一手 JSON，2026-10-08 实拉逐 commit message 命中 `cf07a49` remove skills that dependencies no longer ship / `15c88cc` remove skills by source / `a1f58a2` add --include and --exclude filters / `b381064` read npm: entries from package.json skills fields / `42f3441` read skills from direct dependencies only；与 §deprecation rate 互补——那条计删除率，本条给删除的正当事由与执行机制）
+- **实证**：官方提交序列——`cf07a49 feat(sync): remove skills **that dependencies no longer ship**`；`15c88cc feat: remove skills **by source**`；`a1f58a2 feat(sync): add `--include` and `--exclude` filters`；`b381064 feat(sync): read `npm:` entries **from package.json skills fields**`；`42f3441 feat(sync): read skills **from direct dependencies only**`。
+- **判据**：① **供给面要闭环**：技能来自依赖 → 依赖停发 → 本地自动清除 ⇒ 只做"安装"不做"供给消失的回收"，技能库会无限累积孤儿件，且没人知道它们为什么还在。② **每个本地技能必须有"请求方溯源"字段**：删依赖之所以能成为删技能的判据，是因为系统记得"是谁把它带进来的" ⇒ 没有 via 字段的技能库，清理只能靠人工猜，猜错就是误删。③ **清理动作默认开，但要可预览、可豁免**：`--dry-run` 预览 + `--no-cleanup` 显式豁免 ⇒ 默认开保证不积累、可豁免保证不误伤，两头缺一都会走向极端（要么全是孤儿、要么不敢删）。④ **只扫直接依赖，不走传递链**：`42f3441` 明确只取直接依赖 ⇒ 传递依赖会带来隐式供给面膨胀，"我只是装了个包"结果多出几十个技能；声明的依赖层级本身就是供给面边界。
+- **与既有能力分工**：r439C「只增不减不是治理库（须输出 deprecation rate）」管**要不要报删除率**；本条管**凭什么删、删之前能不能看、删的动作默认开不开**。
+- 提升层：工作流（供给闭环）/ 工具（技能库维护）。触发词：供给源消失自动清除、remove skills by source、请求方溯源 via、dry-run 预览、--no-cleanup 豁免、只扫直接依赖、传递链不供给技能。

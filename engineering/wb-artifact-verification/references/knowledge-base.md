@@ -2499,3 +2499,25 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 原文：①`N8N_POLLER_DURABLE_CURSORS_ENABLED`：「Turning it back off doesn't undo it. Cursors stay in their table.」②`QUEUE_WORKER_MAX_STALLED_COUNT`：「Removed in n8n 2.0. Setting this has no effect.」
 - 判据：① **开关要标「关回去是否回滚」**：有些迁移开关一旦打开就留下持久产物（游标表），关掉只是停止使用、不删除已产生的东西 —— 这是**不可逆点**，必须在打开前告知。⇒ 把可逆开关与不可逆点混为一类，会让「回退」变成半回退：行为退回来了，数据没退回来。② **旋钮变哑是一类静默失效**：配置项还在文档里、还被接受、甚至还被回显，但当前版本已不消费它。⇒ 验收「这个配置生效了吗」不能只看有没有这个字段，要查当前版本是否仍消费它 ——「配置存在」与「配置生效」必须分列。
 - 提升层：工作流。触发词：不可逆点、关掉不回滚、游标留存、旧旋钮变哑、配置存在不等于生效、Removed 无效果。
+
+
+## 下沉·wb-artifact-verification·r440A·审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎 `queued/排队中`+`reportUrl:""` 与 1.0.0/1.0
+## 审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎 `queued/排队中`+`reportUrl:""` 与 1.0.0/1.0.5–1.0.7 `benign` 并存，每版独立 `versionId`；同源两接口计数须互检（`stats.versions:0` vs `/versions` 实有 8 条），展示计数不可作机检依据；官方文档声明的机器端点必须逐路径实测（skills.sh 搜索面 401、审计端点模板 404），缺陷结论时效随 PR 状态刷新（SkillSpector PR #611 仍 `open`/`merged=false`，2026-09-28 `CHANGES_REQUESTED`）；审计契约要写清「不记什么」（Reads are not recorded / 传入值 never stored / MCP 工具无读写标记⇒整段不可记），事件真源=代码 schema
+（来源：api.skillhub.cn/api/v1/skills/cic/versions 4,104B + /skills/cic 2,473B + skills.sh/api/v1/skills?q=pdf 401 + gh api repos/NVIDIA/SkillSpector/pulls/611 + www.activepieces.com/docs/admin-guide/security/audit-logs/overview.md 4,069B，2026-09-30 r324A 独立实拉；细则见 references/knowledge-base.md §r324A）
+
+
+## 下沉·wb-artifact-verification·r440B·审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎
+## 审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎 `queued/排队中`+`repor...（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r440A·审核结论按版本独立成态）
+
+
+## 下沉·wb-artifact-verification·r440B·r354A · 留痕按「失败优先」分级保存；删除是两阶段，且活跃态与人工标
+## r354A · 留痕按「失败优先」分级保存；删除是两阶段，且活跃态与人工标注豁免（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/scaling/manage-execution-data.md` 独立 curl 取 `.md` 原文，2026-10-02 r354A 实拉）
+
+- **★保存是四个独立开关，不是一档总闸**：`EXECUTIONS_DATA_SAVE_ON_ERROR=all` / `SAVE_ON_SUCCESS=none` / `SAVE_ON_PROGRESS=false` / `SAVE_MANUAL_EXECUTIONS=false` 可分别取值。判据：**取证留痕按"哪类执行值得留"分级**——失败全留、成功不留、过程态可选、手工触发默认不留；把四档合成一个"开/关日志"，要么在故障时什么都没留下，要么在平时把存储吃光。
+- **★删除先标记后真删，并保留安全缓冲**：原文 "pruning first **marks targets for deletion**, and then later permanently removes them"，且 "honors a **safety buffer period** of `EXECUTIONS_DATA_HARD_DELETE_BUFFER` hours (default: 1h)"。判据：**清理必须可反悔**——标记与真删之间留一个可撤销窗口，等价于技能侧"先移入待删区、缓冲期后清"。
+- **★活跃态不可被清理**："Executions with the `new`, `running`, or `waiting` status **aren't eligible for pruning**"。判据：**任何清理器必须先按状态过滤**——未终态的对象被回收，会把"还在跑"变成"消失了且无日志"。
+- **★人工标注即永久豁免**："**Annotated executions (for example, executions with tags or ratings) are never pruned.**" 判据：**人做过标记的证据 = 不可被自动策略删除**；自动化清理规则永远不能覆盖人工显式保留，否则人会失去对"什么值得留下"的最后决定权。
+- **★保留策略是双阈值，任一满足即触发**：age（默认 336h/14 天）**OR** count（默认 10,000，从旧到新删）。判据：**只按时间或只按条数设保留策略都会在另一侧失控**——低流量时靠 age 兜住"永远不会自动清"，高流量时靠 count 兜住"存储先爆"。
+- 提升层：工具 / 工作流 / 可复用 Skill。触发词：留痕分级、save on error、删除两阶段、hard delete buffer、活跃态豁免、标注永不清理、双阈值保留。
+
+

@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合
-version: "2.163.0"
+version: "2.165.0"
 agent_created: true
 ---
 
@@ -40,8 +40,7 @@ agent_created: true
 
 ## 审计可能是惰性生成的（「在库里」≠「已审过」），而扫描器自身的遍历顺序即是静默漏报面——两者都不产生任何警告位（来源：www.skills.sh/docs/api 136,145B + api.github.com/repos/NVIDIA/SkillSpector/issues/610 6,455B + docs.n8n.io/deploy/host-n8n/configure-n8n/security/run-security-audits.md 2,425B，2026-09-30 r323A 独立实拉；细则见 references/knowledge-base.md §r323A）
 
-## 审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎 `queued/排队中`+`reportUrl:""` 与 1.0.0/1.0.5–1.0.7 `benign` 并存，每版独立 `versionId`；同源两接口计数须互检（`stats.versions:0` vs `/versions` 实有 8 条），展示计数不可作机检依据；官方文档声明的机器端点必须逐路径实测（skills.sh 搜索面 401、审计端点模板 404），缺陷结论时效随 PR 状态刷新（SkillSpector PR #611 仍 `open`/`merged=false`，2026-09-28 `CHANGES_REQUESTED`）；审计契约要写清「不记什么」（Reads are not recorded / 传入值 never stored / MCP 工具无读写标记⇒整段不可记），事件真源=代码 schema
-（来源：api.skillhub.cn/api/v1/skills/cic/versions 4,104B + /skills/cic 2,473B + skills.sh/api/v1/skills?q=pdf 401 + gh api repos/NVIDIA/SkillSpector/pulls/611 + www.activepieces.com/docs/admin-guide/security/audit-logs/overview.md 4,069B，2026-09-30 r324A 独立实拉；细则见 references/knowledge-base.md §r324A）
+## 审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎 `queued/排队中`+`...（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r440B·审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎）
 ## 流行度与展示序都不是质量/留存的判据：简单特征（体积、下载量）对「是否持续在架」无稳定预测力，注意力高度集中且权限声明普遍；目录展示序可能是随机洗牌，文档撤除本身是可机检的治理信号（来源：arXiv 2609.17274《After the Party v2》42,842B + agentskills.io/clients.md 25,457B + docs.n8n.io/llms.txt 286,271B，2026-09-30 r324C 独立实拉；与 §目录数字失真四形态 互补——那几条管“数字怎么失真”，本条管“该换用什么指标”；细则见 references/knowledge-base.md §r324C）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·流行度与展示序都不是质量留存的判据简单特征体积下载量）
 
 ## 扫描预算耗尽只允许「降档验证」，不允许判为通过；应用层不隔离要作正面申报，不能让集成方靠缺位反证推断（来源：docs.openclaw.ai/cli/update/how-updates-run.md 84,130B + docs.langflow.org/next/security 34,323B，2026-09-30 r325A 独立 curl 实拉逐串命中；经 Qoder r357-Q-A 提名）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·扫描预算耗尽只允许降档验证不允许判为通过应用层不隔离）
@@ -124,16 +123,7 @@ agent_created: true
 ## r353C · 事务边界由模块能力标注决定；验证有自己的预算币种；文档站提供问答式检索接口
 
 > 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
-## r354A · 留痕按「失败优先」分级保存；删除是两阶段，且活跃态与人工标注豁免（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/scaling/manage-execution-data.md` 独立 curl 取 `.md` 原文，2026-10-02 r354A 实拉）
-
-- **★保存是四个独立开关，不是一档总闸**：`EXECUTIONS_DATA_SAVE_ON_ERROR=all` / `SAVE_ON_SUCCESS=none` / `SAVE_ON_PROGRESS=false` / `SAVE_MANUAL_EXECUTIONS=false` 可分别取值。判据：**取证留痕按"哪类执行值得留"分级**——失败全留、成功不留、过程态可选、手工触发默认不留；把四档合成一个"开/关日志"，要么在故障时什么都没留下，要么在平时把存储吃光。
-- **★删除先标记后真删，并保留安全缓冲**：原文 "pruning first **marks targets for deletion**, and then later permanently removes them"，且 "honors a **safety buffer period** of `EXECUTIONS_DATA_HARD_DELETE_BUFFER` hours (default: 1h)"。判据：**清理必须可反悔**——标记与真删之间留一个可撤销窗口，等价于技能侧"先移入待删区、缓冲期后清"。
-- **★活跃态不可被清理**："Executions with the `new`, `running`, or `waiting` status **aren't eligible for pruning**"。判据：**任何清理器必须先按状态过滤**——未终态的对象被回收，会把"还在跑"变成"消失了且无日志"。
-- **★人工标注即永久豁免**："**Annotated executions (for example, executions with tags or ratings) are never pruned.**" 判据：**人做过标记的证据 = 不可被自动策略删除**；自动化清理规则永远不能覆盖人工显式保留，否则人会失去对"什么值得留下"的最后决定权。
-- **★保留策略是双阈值，任一满足即触发**：age（默认 336h/14 天）**OR** count（默认 10,000，从旧到新删）。判据：**只按时间或只按条数设保留策略都会在另一侧失控**——低流量时靠 age 兜住"永远不会自动清"，高流量时靠 count 兜住"存储先爆"。
-- 提升层：工具 / 工作流 / 可复用 Skill。触发词：留痕分级、save on error、删除两阶段、hard delete buffer、活跃态豁免、标注永不清理、双阈值保留。
-
-
+## r354A · 留痕按「失败优先」分级保存；删除是两阶段，且活跃态与人工标注豁免（来源：docs.n8n...（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r440B·r354A · 留痕按「失败优先」分级保存；删除是两阶段，且活跃态与人工标）
 ## r354B · 截断/限额必须声明作用域（展示面 vs 执行面）；无鉴权通道靠「一次性」兜底；评测并发按档位给默认（来源：docs.n8n.io `use-environment-variables/executions.md`、`use-environment-variables/credentials.md`、`administer/manage-credentials/credential-overwrites.md` 独立 curl 取 `.md` 原文，2026-10-02 r354B 实拉）
 
 - **★截断只作用于展示面，绝不能连带执行面**：`EXECUTIONS_DATA_MAX_DISPLAY_SIZE` 默认 104857600 字节，超出在编辑器/详情/公开 API 显示 "too large to display"（原文目的："to avoid running **low-resource instances** out of memory"），但 "**Doesn't affect retrying or resuming executions, which always load the full data**"。判据：**任何"太大就不给你看"的限额都必须显式声明它不覆盖重试与续跑**——否则用户会把"展示被截"读成"数据没了"，进而放弃本可恢复的执行。
@@ -492,3 +482,15 @@ agent_created: true
 - **判据**：① **先看它把什么算作「命中」**：只计攻击类高/严重告警的恶意判定，与「含风险提示就算」不是同一个量；引用前必须确认分母；② **被作者撤回的横向分禁止用于选型**——撤回声明本身就是不可用证据，拿它做排名等于引用一个已作废的数字；③ **任何召回率/检出率必须绑定口径**：82.6% 与 47.3% 差 35 个点，不写口径的数字无法跨报告比较。
 - **与既有能力分工**：r436C「静态闸不可代理 judge（ρ=0.14）+ 均值须配 CI」管**自己怎么做评测**；本条管**怎么采信别人的评测**——一内一外。
 - 提升层：可复用 Skill（证据采信）/ 工具（基准报告口径）。触发词：三查口径、flagged malicious、withdrawn 横向分、82.6 vs 47.3、口径切换敏感度、3.8%–41.9%。
+
+## 记分表里「没测到」必须记 N/A 不能记 FAIL：跨不同覆盖面比较 pass 数是错误选型依据（来源：oasb.ai/docs 29,646B + /controls 76,804B + /eval 37,230B，2026-10-08 一手实拉逐串命中 `reported N/A, not FAIL, so scorecards stay comparable across tools with different surfaces` / `comparing pass counts across different capability sets`；与 §采信评测前三查 互补——那条管怎么读别人的结论，本条管自己这张记分表怎么打分）
+- **实证**：官方原文「Undeclared capability is **reported N/A, not FAIL**, so scorecards stay comparable across tools with different surfaces」；「use the verdict-based corpus benchmark rather than **comparing pass counts** across different capability sets」；控制项分三层 **L1 Essential（baseline security for development and prototypes）/ L2 Standard / L3 Hardened**，逐项带 rationale + audit procedures + remediation。
+- **判据**：① **覆盖缺口与不合格是两栏，禁止合并**：「没测到」记 N/A 而不是 FAIL，否则覆盖面小的工具被系统性压低、覆盖面大的工具靠多测的项刷高；反过来说，把 N/A 当通过也是同样的错——它是一栏独立的"未覆盖"，既不是通过也不是失败。② **横向选型禁止直接比 pass 数**：两套能力集不同时，pass 数多只说明声明得多；可比的只有同一覆盖面下的 verdict 判定，跨集比较必须换成"同一控制项上的通过率"。③ **控制项必须分层且每项自带三件套**（理由/审计步骤/修复动作）：只有名字没有 rationale+audit+remediation 的控制项，评审者无法复现判定，只能凭感觉打勾。④ **分层要写明每层的适用场景**（L1 是开发与原型的基线，不是生产基线）⇒ 报"过了 L1"时不写层号等于把最低档说成合格。
+- **与既有能力分工**：r439C「三查」管**采信外部基准**（口径/撤回/敏感度）；本条管**内部记分表的取值与横向可比性**（N/A 语义、禁跨集比 pass、分层三件套）——一外一内。
+- 提升层：可复用 Skill（记分规约）/ 工具（评审表设计）。触发词：N/A 不是 FAIL、覆盖缺口单独成栏、禁止跨能力集比 pass 数、verdict-based benchmark、L1/L2/L3 控制分层、rationale+audit+remediation。
+
+## 门禁退出码是稳定契约，且「覆盖缺口」必须并入阻断态；基线抑制只改风险分的口径、不改风险本身（来源：api.github.com/repos/NVIDIA/SkillSpector/readme 74,672B → base64 解码 53,566B 全文，2026-10-08 一手实拉逐串命中 `its exit code and JSON output are a stable contract` / `--fail-on-incomplete` found partial/incomplete analysis / `re-scans surface only *new* findings` / `It never executes the scanned skill`；与 §记分表 N/A 语义 互补——那条管表里怎么记，本条管门禁怎么判与怎么不误放行）
+- **实证**：官方原文「Its **exit code and JSON output are a stable contract**」；`0` = 扫完且 `risk_score ≤ 50`（SAFE/CAUTION）且无 strict gate 触发；`1` = 扫完且「`risk_score > 50`、**`--fail-on-findings` 命中 active finding**、**`--fail-on-incomplete` 发现 partial/incomplete analysis**、或 **`--min-coverage` 覆盖低于阈值」四者之一；`2` = 错误。「默认退出码把 SAFE 与 CAUTION 折叠进 `0`」，要区分须显式开关。基线「Suppress known/accepted findings so the **risk score reflects only un-triaged issues** and re-scans surface only *new* findings」。信任模型原文「SkillSpector is **defense-in-depth, not a sandbox** … **It never executes the scanned skill.**」
+- **判据**：① **「没扫全」必须算阻断，不能算通过**：`1` 同时覆盖"发现高风险"与"分析不完整/覆盖不足" ⇒ 门禁脚本若只看"有没有 finding"，覆盖缺口会静默通过；把覆盖缺口并入阻断态，才不会出现"扫了 30% 报绿灯"。② **默认档位要显式声明它折叠了什么**：默认把 SAFE 与 CAUTION 都折叠成 `0` ⇒ 说"退出码 0"时必须同时说"这一档把 CAUTION 也算通过"，否则使用者会把"有提示但没阻断"读成"没问题"。③ **基线抑制改的是口径不是风险**：基线让风险分只反映未分诊项、重扫只报新增 ⇒ 换基线等于换量纲；把基线当"把误报删掉了"会低估存量风险。④ **静态扫描器的边界必须写进文档**：从不执行被扫对象，且明说"是纵深防御不是沙箱" ⇒ 拿静态扫描结果当"这个技能跑起来安全"的证据是范畴错误。⑤ **不同开关是不同语义的准入面**：`--fail-on-findings` / `--fail-on-incomplete` / `--min-coverage` 分别对应三条独立的准入线，只开一条就说"有门禁"等于只堵了一个口。
+- **与既有能力分工**：r439B「复审记分对象是新增 + llm-unconfirmed」管**跨轮怎么记分**；本条管**单次门禁怎么退出、覆盖缺口算不算过、基线会不会让风险假降**。
+- 提升层：工具（门禁契约）/ 工作流（准入线）。触发词：exit code stable contract、--fail-on-incomplete、--min-coverage、覆盖缺口并入阻断、CAUTION 折叠进 0、基线只改口径、defense-in-depth not a sandbox、never executes the scanned skill。
