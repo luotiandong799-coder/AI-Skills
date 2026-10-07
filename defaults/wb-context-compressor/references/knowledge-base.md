@@ -4643,3 +4643,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **温度校准：RAG 上下文低温更安全**：**有参考文档时温度 0.0-0.2（贴住来源而非探索概率空间），RAG 里高温反而增幻觉**；**grounding=事实任务最大单项改进（幻觉率砍半以上）；CoT 提升多步推理；"According-to"提示=每主张注明来源，逼模型无来源时浮出水面；提示组合最多降幻觉 36%**。
 - **置信路由：样本分歧最可靠实用**：**多次解码不一致→低置信→路由到更强模型/拒答/人工复核（self-consistency）**；**校准=softmax 温度缩放/isotonic 回归对齐概率与真实正确率；模型自评置信定性可用但不比校准可靠**；**证据强度多维（来源权威度/影响因子/引用数/时间相关性）+多源交叉验证**。
 - **证据充分性驱动的迭代检索**：**AR-Verify=检索与验证当迭代证据决策（复杂查询分解子主张→按证据充分度选检索策略→定稿前对照检索段验证→证据不足/矛盾/低质时重写查询扩大检索）**；**领域锚定分层检索+早退验证（域检测器路由专题档案+自验证 early-exit 省算力）**。
+
+## r431C AI Agent 可观测性与追踪 2026（来源：mlflow-measuring-ai-call-latency/sentry-ai-agent-observability/isx4-llm-observability/zylos-agent-observability-cost-attribution/avghumans-agent-span-observability/devto-top-10-llm-observability-tools/infoq-session-traces-cost-controls/devto-llm-observability-trace-cost-sampling/aliyun-ai-observability-coding-agent/signoz-llm-observability，2026-10-07 实拉）
+- **OTel GenAI 语义约定=标准化 span 而非自定义日志**：**gen_ai.request=单次模型调用（模型名/prompt/response/token 数）；gen_ai.invoke_agent=完整 agent 生命周期；tool span 带 gen_ai.tool.type/description；agent span 带 gen_ai.agent.name/id/description；失败统一按 ai.error.type（rate limit/timeout/parse failure）归类**。
+- **trace ID 是全程的"游戏"**：**每个 LLM 调用/工具调用/检索各插桩为独立 span，经 OTLP 导出到 LLM 原生后端（Langfuse 推荐；Datadog LLM Observability 备）**；**每个生成 span 挂 token 数与成本；trace ID 从 API 响应一路传播到值班工程师**；**根 span 包裹用户操作、其余做子 span**。
+- **成本归因到 agent**：**没有 per-agent 归因无法定位成本尖峰/检测模型更新后行为漂移**；**OTel GenAI SIG 提案 agentic 六族约定=Tasks/Agents/Teams/Artifacts/Memory（issue #2664 设计中）**；**指标集=错误率（per tool/model/error type）+token 趋势+ai.cost_usd（token×价格表）+缓存命中率**；**LangSmith 把异常 trace 转回归测试集，Arize Phoenix=OTel 原生 tracing+自托管 LLM-as-judge**。
+- **采样与隐私：正文默认不采集**：**全量 trace 太贵→按需/按尾采样；prompt/response 正文是敏感数据**；**编码 Agent 探针（阿里云 LoongSuite）=OTel GenAI 标准构建调用树还原推理链路/token/重试轨迹，零代码侵入、正文默认不采集、导出失败隔离不影响主循环**。
+- **LLM 生产可观测性定义**：**=端到端遥测（trace/log/metric）解释系统做了什么/为什么/成本多少/行为是否可接受（区别于监控=实时定量+看板/告警/根因）**；**通用工具（Honeycomb 类）擅长对比异常与基线分布但缺 prompt 版本管理/agent 评估库→LLM 原生后端（Langfuse/LangSmith/Phoenix）互补**。
