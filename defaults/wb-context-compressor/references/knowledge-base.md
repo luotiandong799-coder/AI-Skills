@@ -4636,3 +4636,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Pydantic=Python 生态主导 schema 定义**：**类+类型化字段，处理校验/序列化/JSON Schema 生成**；**字段描述会作为上下文传给 LLM（写清含义）；Literal 类型锁闭枚举（集合外值即 ValidationError）；conint 锁有界整数；可选字段用 anyOf**；**instructor=模型当 schema+patch client 强制+失败自动重试**。
 - **重试时把校验错误回喂 prompt**：**retry-with-error=校验失败带错误信息重试（模型大概率自纠，至多 3 次）**；**"Missing required property 'price'"比泛泛"try again"修正效果好**——重试必须携带上次失败原因。
 - **constrained decoding=token 采样层面锁 schema**：**strict mode 原理=后台把 token 采样限制在符合 schema 的空间（生成时就只能走合法路径，非生成后校验）**；**本地/开源模型用 constrained decoding（outlines/guidance 类）补上 provider 原生 strict 的位**。
+
+## r431B AI 幻觉治理与事实核查工程 2026（来源：aiunpacker-9-prompt-methods/arxiv-domain-grounded-tiered-retrieval/ayinedjimi-hallucinations-llm-fiabilisation/arxiv-theoretical-foundations-hallucination/arxiv-multi-modal-fact-verification/futureagi-taming-hallucination/aiunpacking-avoid-hallucinations/aiunpacking-how-to-avoid-checklist/futureagi-hallucination-deep-dive/preprints-adaptive-rag-verification，2026-10-07 实拉）
+- **幻觉四类失败模式（不当一个指标）**：**Factual=违背世界事实→原子分解+外部事实核查→检索/工具调用上游；Grounding=违背给定上下文→声明级 entailment 对照检索集→更严 prompt+Groundedness 检查；Citation=来源不存在/不支撑→结构+可解析性+语义 rubric→schema 强制引用+注册表核查；Reasoning=答案像对但推理链断→逐步 trace 评分→低置信链拒答**——先报"哪一类"再配检测器。
+- **两遍自验证：产出者与质疑者分框架**：**刚写完自信答案的模型会为自身输出辩护**；**Pass 1=正常作答，Pass 2=审阅找幻觉（列出可能错误/过时/无支撑/未验证的主张→重写）**——换怀疑框架再审才有增量。
+- **温度校准：RAG 上下文低温更安全**：**有参考文档时温度 0.0-0.2（贴住来源而非探索概率空间），RAG 里高温反而增幻觉**；**grounding=事实任务最大单项改进（幻觉率砍半以上）；CoT 提升多步推理；"According-to"提示=每主张注明来源，逼模型无来源时浮出水面；提示组合最多降幻觉 36%**。
+- **置信路由：样本分歧最可靠实用**：**多次解码不一致→低置信→路由到更强模型/拒答/人工复核（self-consistency）**；**校准=softmax 温度缩放/isotonic 回归对齐概率与真实正确率；模型自评置信定性可用但不比校准可靠**；**证据强度多维（来源权威度/影响因子/引用数/时间相关性）+多源交叉验证**。
+- **证据充分性驱动的迭代检索**：**AR-Verify=检索与验证当迭代证据决策（复杂查询分解子主张→按证据充分度选检索策略→定稿前对照检索段验证→证据不足/矛盾/低质时重写查询扩大检索）**；**领域锚定分层检索+早退验证（域检测器路由专题档案+自验证 early-exit 省算力）**。
