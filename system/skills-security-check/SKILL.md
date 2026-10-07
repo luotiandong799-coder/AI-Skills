@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.18.0
+version: 1.19.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -475,3 +475,8 @@ Step C: 是否包含恶意意图？
 ## 运行期可执行面的允许清单，声明权归「部署运营方」而非技能作者：作者侧管字段可见性，运营方管命令可执行性——两个声明者要分别检查（来源：github.com/FlowiseAI/Flowise/releases/tag/flowise@3.1.4 213,716B，2026-10-08 独立 curl 实拉逐串命中 `Fix Flowise 709 Make Custom MCP stdio command allowlist operator-controlled by @yau-wd in #6578`；与 §出站副作用声明成契约 互补——那条管作者声明外发面，本条管谁有权定义可执行命令面）
 - **判据**：① 审计允许清单时先问「这份清单是谁写的」：作者随包提交的允许清单是**自证**，运营方在部署期注入的才是外部约束；二者同名但约束方向相反（作者想放宽以便运行 vs 运营方要收紧以便管控）。② 同一技能可以两面都有，审计报告须分列两个声明者，不许合并成「已配置允许清单」。③ 运行期命令面（stdio 命令、可执行路径）属运营方所有权，作者无权自授。（细则见 references/knowledge-base.md §r437C-5）
 - 提升层：可复用 Skill。触发词：允许清单声明权、operator-controlled allowlist、作者自证 vs 运营方约束、运行期命令面所有权、两个声明者分列。
+
+## 批准不是权限本身，而是「派生关联」：每次使用都要对活的授权行再验证，且批准绑定的是规范化执行上下文（cwd + 精确 argv + env 绑定 + 固定可执行路径），启动前重解析重检查（来源：docs.openclaw.ai/tools/exec-approvals 一手 363,977B，2026-10-08 r438B 独立 curl 实拉逐串命中 `a grant is derivative correlation, revalidated against the live approval row, automation row, and revocation state on every use` / `bind canonical execution context: cwd, exact argv, env binding when present, and pinned executable path` / `re-check it before launch` / `not a per-user auth boundary or filesystem read-only policy`；全库 grep `revalidated` / `exact argv` 均 0 命中）
+- **① 授权状态不能缓存**：批准记录是**对另一行授权状态的派生关联**，不是一份自足的权限；每次使用都要拿活授权行 + 自动化行 + 吊销状态三者重新对一遍。判据：**审计"有没有权限"时，看的是再验证的动作，不是批准记录的存在**；只查"批过没有"等于把可撤销的引用当成了既得权限。
+- **② 批准要钉到可执行身份，不能钉到命令名**：批准的粒度是规范执行上下文——cwd、精确 argv、env 绑定、固定可执行文件路径；网关侧在评审前绑定每个解析出的命令段可执行文件，**启动前再检查一次**。原文同时给出边界声明：这只降低误执行风险，**不构成按用户的认证边界，也不构成文件系统只读策略**。判据：审查批准/白名单机制时问三件事——绑的是名字还是 argv+路径？启动时重不重查？文档有没有把"批准过"说成"有权"？三者任一答错即判缺陷。
+- 提升层：可复用 Skill（权限模型）/ 工作流（运行期授权复核）。触发词：批准不是授权边界、derivative correlation、revalidated on every use、exact argv、pinned executable path、re-check before launch、授权不能缓存、批准粒度、per-user auth boundary

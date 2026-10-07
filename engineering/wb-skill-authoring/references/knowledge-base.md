@@ -3201,3 +3201,27 @@ version: 3.61.0
 ## 技能正文的「呈现格式」本身是自变量：同一技能的「完整指南」与「最小提示」两种交付格式，对任务成功率与渲染上下文成本均有显著影响——"怎么写"与"写什么"同等重要（来源：arXiv 2609.07255《SkillAlign: Aligning Skill Interfaces》Ren/Kang/Zhang，2026-09-07；2026-10-07 经 Qoder 实拉转引 + 独立核验 arXiv 锚点存在；与 sa「description 标定」互补——那条管触发词，本条管正文格式作为独立实验轴）
 - **判据**：① **技能改版时，格式变换应作为独立实验轴登记，不能与内容变更混在一次 diff 里**：否则无法区分"成功率变化来自内容更优"还是"来自格式更合适"。② **呈现格式影响渲染上下文成本**：完整指南占用更多上下文、最小提示更省但可能漏触发信息 ⇒ 格式选择是成本/效果的权衡，不是纯风格。③ 与 description 标定（触发率）构成"接口两头"：description 管"会不会被调起"，正文格式管"调起后活干得好不好/贵不贵"。
 - 提升层：模型 / 可复用 Skill。触发词：呈现格式本身是自变量、完整指南 vs 最小提示、格式作为独立实验轴、格式影响渲染成本、SkillAlign。
+
+
+## 下沉·r438A-sink1 · 评测装置本身要先过参照解，题目坏与被测坏必须在机制上分开（来源（自 SKILL.md 正文下沉，2026-10-08 r438）
+
+## 评测装置本身要先过参照解，题目坏与被测坏必须在机制上分开（来源：api.github.com/repos/benchflow-ai/skillsbench/readme 6,780B JSON → base64 6,780B 正文，2026-10-05 r421-B 独立 curl 实拉逐串命中；消化 Qoder r408-Q-B B1 积压点）
+- **原文**：快速开始两行命令即构成门禁——「`bench tasks check tasks/offer-letter-generator`」「**Oracle must pass before agent runs.**」「`bench eval run --tasks-dir tasks/offer-letter-generator --agent oracle --sandbox modal`」。
+- **判据**：① **参照解未通过时，该任务不得用于跑任何 agent**——先把题跑一遍 oracle 再放行被测 ⇒ 否则"agent 失败"里混着"题本身无解/判据写错"，两者的修复动作完全不同（改技能 vs 改题），混在一起会把无效迭代当成能力不足。② **任务自检与被测评测是两个独立门禁**——`tasks check` 校验任务结构，`--agent oracle` 校验参照解 ⇒ 只做其中一个，仍会放进"结构合法但不可解"的题。③ **评测结果的可信度依赖装置的可信度**——装置自己不过关时，所有分数只反映装置的缺陷 ⇒ 报技能/模型收益之前，先能回答"这套题的参照解跑通了吗"。④ 与既有「judge 0.45 拐点 / 审计五档 / 静态检查与专家判断相关性差」分工：那几条管**怎么判产物**，本条管**题目与装置本身有没有资格进入评测**。
+- 提升层：可复用 Skill / 评测方法。触发词：oracle 先过、参照解门禁、bench tasks check、题目自检、题坏与被测坏分开、评测装置可信度、不可解任务污染成绩。
+
+
+## 下沉·r438A-sink2 · 审核进度映射为「运行能力上限」而不是「能否安装」（自 SKILL.md 正文下沉，2026-10-08 r438）
+
+## 审核进度映射为「运行能力上限」而不是「能否安装」：四道验证门 → 四档信任级，未核者降面不拒（来源：arxiv.org/html/2602.12430v4 169,999B，2026-10-05 r421-B 独立 curl 实拉逐串命中；消化 Qoder r408-Q-B B2 / r415-Q-C C1 积压点）
+- **原文**：「four sequential verification gates G1 through G4, and resulting in **four graduated trust tiers T1 through T4 with escalating deployment permissions**」；「An unvetted community skill (T1) receives **instructions-only access with full tool isolation**. A vendor-certified skill (T4) receives full capabilities.」；「**T1 and T2 skills are never granted script execution.**」；「bundling executable scripts increases vulnerability risk by **2.12×**」；「Anomalous behavior (unexpected tool calls, permission boundary probes) triggers **demotion or revocation**.」
+- **判据**：① **审核未完成 ≠ 不能用，而是"能用的面更小"**——T1 给"仅指令 + 完全工具隔离"而不是一拒了之 ⇒ 二值化（过/不过）会把大量低危技能挡在门外，逼使用者绕过审核；正确的形状是把审核进度映射成**可执行面的档位**。② **脚本能力要单独设门槛**——含脚本使漏洞风险 ×2.12 是可复拉的量化依据，故 T1/T2 永不获得脚本执行 ⇒ "能不能跑代码"不能跟"能不能读指令"同一档放行。③ **信任必须可逆**——异常工具调用与权限边界探测触发降级或撤销 ⇒ 只升不降的信任档位是单向棘轮，运行期证据永远用不上；晋升与降级要共用同一套信号。④ **门的分工要按"判的是什么"区分**——G1 静态 / G2 语义判"声明用途 vs 实际指令" / G3 行为沙箱 / G4 声明能力清单的形式化校验 ⇒ 四门不是四道重复检查，任何一门缺失都会留下一种特定形态的漏网（如缺 G2 则"说一套做一套"永不触发）。⑤ 与既有「审计判连贯性（risk × status 正交）」分工：那条管**给结果定级与怎么呈现**，本条管**定级之后实际授予多少运行能力**，两者是同一链条的上下游。
+- 提升层：可复用 Skill / 治理。触发词：四道验证门、G1-G4、信任级 T1-T4、未核者降面不拒、仅指令加工具隔离、脚本单独门槛、2.12 倍风险、信任可逆、降级与撤销、权限边界探测。
+
+
+## 下沉·r438A-sink3 · 安装策略门必须穷举「全部获取通道」、在裁决器自身故障时 fail-closed，（自 SKILL.md 正文下沉，2026-10-08 r438）
+
+## 安装策略门必须穷举「全部获取通道」、在裁决器自身故障时 fail-closed，且检的是落盘前的暂存源路径（来源：docs.openclaw.ai `tools/skills.md` 48,337B，2026-10-06 r427-C 独立 curl 取 `.md` 原文实拉逐串命中「Security → Operator install policy」段；与 Cap23 / Cap32 / Cap46 的 fail-closed 同向但形态不同——那几条是平台内置开关的故障极性，本条是外部裁决器型门禁的通道覆盖与检测时点）
+- **实证**：官方原文「Configure `security.installPolicy` to run a trusted local policy command before skill installs continue. The policy receives metadata and the staged source path, **applies to ClawHub, uploaded, Git, local, update, and dependency-installer paths**, and **fails closed when the command cannot return a valid decision**.」
+- **判据**：① **安装门禁的覆盖面是"通道清单"不是"来源类型"**——官方显式枚举六条路径（市场 / 上传 / Git / 本地 / 更新 / 依赖安装器）⇒ 只给"从市场装"挂门禁而放过本地与 Git，等于给最宽松的那条路留敞口；评价一道安装门时先要它列出通道清单，列不出就等于只管了一部分。② **外部裁决器自身故障时极性必须是阻塞**——"fails closed when the command cannot return a valid decision" ⇒ 策略命令超时、崩溃或返回不可解析，都不能等同于"通过"；凡把裁决权外包给外部命令/服务的设计，其故障态极性要显式声明，且在集成时实测一次（不是读文档就算数）。③ **门禁要挂在落盘前的暂存路径上**——policy 收到的是 metadata 与 staged source path ⇒ 检的是待装内容而不是装完的结果；装完再扫意味着可疑内容已经落地并可能执行过一次，"先装后检"在这类门禁里不成立。④ 对技能体系的落点：引入任何"安装前策略检查"，验收单上并列三条——通道清单是否穷举、裁决器故障是否阻塞、检查点是暂存态还是安装后。
+- 提升层：可复用 Skill / 工具。触发词：安装策略门、installPolicy、六通道穷举、裁决器故障 fail-closed、暂存源路径、先检后装、本地与 Git 也要过门禁。

@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合
-version: "2.160.0"
+version: "2.161.0"
 agent_created: true
 ---
 
@@ -441,24 +441,14 @@ agent_created: true
 - **配套判非（同步登记）**：A-1 另两点经全库 grep 判非 —— ①「三态门（通过 / 违规 / 无从判定）」⇒ `wb-debug-loop` 已落「门禁退出码必须把『有发现』与『不可用』分开」（`1` 有发现 / `2` 结论不可用 / 目标不存在另给码），重叠 >60%；②「不对称审批（收缩不触发审批、放大才触发）」⇒ `agent-guild` Cap72「deny-only 继承 / 收窄免费且可逆、放大不可逆」已落同一判据，重叠 >60%。⇒ 只落"撤回不可机检声明"这一条，不为配套点重复占版本位。
 - 提升层：可复用 Skill / 校验纪律。触发词：不可机检的安全声明、security-manifest-schema-unavailable、unrecognized security manifest、撤回声明、假安心、无从判定不等于通过、advisory-only schema URL、契约缺席。
 
-## r429A · 判定必须与执行可分离重算；聚合须显式声明「部分覆盖」行为，禁止用扣留整臂把 N 次成功执行变成无结论（来源：api.github.com/repos/NVIDIA/SkillEvaluator/issues/70 12,019B JSON，2026-10-06 r429A 独立 curl 一手取正文；消化 Qoder r427-Q-C「换道回赠」提名并亲自复拉核验，未采信转述金句）
-- **实证**：官方 issue 自陈「Any coverage shortfall marks the arm's execution failed and the collector withholds the arm aggregate entirely（`with_scores = {}`）」；一次 4 用例 / 8 次试验的运行因 2 次试验的评委输出非 JSON（unscoreable），使**整条 with-skill 列塌成 `NO SCORE`**，而对照组基线完整得分——原文结论「Eight successful agent executions produced no comparison. **There is no supported rescore path — the only recourse is a full re-run, agents included.**」。失败侧现场同样缺失：`_judge_error` 只留截断原因串，不可解析原文在失败点被丢弃，「this class of failure cannot be diagnosed after the fact」。
-- **判据**：① **判定与执行成本差几个数量级，流水线必须为「只重算判定」留通道**——本例 8 次 agent 执行（昂贵、有副作用、不可精确复现）全部成功，只因评分器读不出一次输出就全部作废，唯一补救是连同执行一起重跑 ⇒ 没有 rescore 通道的评测/验收流水线，把"评分器一次格式抖动"定价成"整批执行成本"，复跑还会因随机性换一种失败方式。② **聚合口径必须显式声明「部分覆盖时怎么办」，"扣留整臂"是默认值不是结论**——`with_scores = {}` 让 2/4 的干净得分连同一个 `NO SCORE` 一起消失；可接受的两选一是**给出部分聚合 + 明示覆盖率**（如 `2/4 scored, coverage=50%`），或**显式声明扣留并说明为何覆盖不足使该批不可比**；禁止的是让扣留静默发生——读者看到 `NO SCORE` 无法区分"没算出来"与"算了但全败"。③ **不可评（unscoreable）绝不得折算为 0 分进入任何均值或对比**——本例 `write_reward_outputs(result, 0.0)` 是刻意的不完整哨兵，靠 `SystemExit(1)` 让下游拒绝评分，方向正确；但同一机制在聚合侧会被读成"该臂 0 分" ⇒ 哨兵值必须与真实 0 分在数据结构上可区分。④ **失败侧的原始输出必须在失败点落盘**——不可解析文本被丢弃后，该类失败事后既不可诊断也不可复现；与 av 既有「闸过了要贴出实际输出」（**通过侧**留痕）分工：那条防"凭记忆声称过了"，本条防"失败后连自己错在哪都查不出来"，两者合起来才是完整留痕。⑤ **同一装置内两个评分器默认 token 上限不一致（1024 vs 4096）是配置漂移源**——`judge_behavior_check` 已因"1024 上限把输出截成空"提到 4096 并写入注释，而 `judge_accuracy` 仍在 1024 且提示词同时要求"先写理由再输出纯 JSON" ⇒ 验收自己的评分器时要查**同类参数是否已被局部修正而未全局同步**，已修过的那一处注释就是最好的线索。
-- **配套判非（同步登记）**：①「可恢复的格式失败才重试、终态重试耗尽才判不可评」⇒ `wb-debug-loop` 已落「失败类别决定重试资格」「不该重试的错误不进重试预算」，av KB 已落「五类失败分开处理、截断的修法是给输出预算而不是重试」，重叠 >60%；②「不可评样本单独计数不混入均分」⇒ av r383C「评测样本三分类（对/错/不可评）、截断单独计数」已落，重叠 >60%；③「失败现场要自动留、可检查、可续跑」⇒ `wb-debug-loop`「快照含输入与失败前中间产物」已落，重叠 >60%。⇒ 只落"判定/执行可分离重算 + 部分覆盖聚合口径"这一条。
-- 提升层：验证 / 工作流 / 可复用 Skill。触发词：rescore、只重算判定、整臂聚合扣留、with_scores、部分覆盖聚合、覆盖率显式声明、unscoreable 不等于 0 分、哨兵值与真 0 区分、失败侧留痕、评分器 token 上限漂移。
+## r429A · 判定必须与执行可分离重算；聚合须显式声明「部分覆盖」行为，禁止用（全文见 references/knowledge-base.md §r438C-sink1）
+- **判据**：见下沉全文。（触发词保留在原 KB 条目）
 
+## 聚合目录的剔除逻辑是「全否才剔」，因此「在架 / 已过审」不携带任何正向安全信息（全文见 references/knowledge-base.md §r438C-sink2）
+- **判据**：见下沉全文。（触发词保留在原 KB 条目）
 
-
-## 聚合目录的剔除逻辑是「全否才剔」，因此「在架 / 已过审」不携带任何正向安全信息，只有「缺席」才有信息量（来源：skills.sh/about 一手 38,053B 直连实拉逐串命中，2026-10-06 r430-C 独立 curl `-L` 跟随 308 后取正文；与 §流行度与展示序都不是质量/留存的判据 互补——那条管"人气类数字不是质量代理"，本条管"审查位与在架状态不是安全代理"）
-- 原文逐字：`Every indexed skill goes through routine security audits performed by partner providers. ... Skills that fail **every** partner audit are excluded from the directory entirely.`
-- 判据：① **剔除条件是各源结论的逻辑与（AND of negatives），不是或**——只有**每一家**审计方都判失败才下架；其逆否命题是：**只要有一家没否（含"未覆盖/待定/Pending"），条目就继续在架**；② 所以在架是一个**极弱信号**，它只证明"不是全体一致判死"，不证明任何一方给出过正向结论；把在架读成"通过了安全审计"，是把 AND-of-negative 误读成 OR-of-positive；③ **目录状态是单向可读的**：唯一能反推的强结论来自**缺席**（被移除/查不到 = 所有审计方一致判失败）；在架侧推不出任何东西；④ 与 §流行度与展示序都不是质量代理 合起来覆盖目录给你的两种默认背书——那条回答"别用下载量/排序当事后质量证据"，本条回答"别用收录状态/审计位当事前安全证据"；⑤ 引用纪律：引用聚合目录（市场 / 索引站 / 榜单 / 多维审计页）作证据时，**只可引用其缺席，不可引用其在架**；例外仅当目录方公开了**逐源结论**而非只给一个聚合标记——有逐源结论时按其最差一源读，不按"通过"读。
-- 提升层：工作流 / 可复用 Skill（证据采信与目录类信源的正确读法）。
-
-## 评测/报告产物分「可发布持久化面」与「仅诊断瞬态面」两层，分层的判据是「是否携带宿主私有信息」；被剥离的那一层在写入制品时结构性消失，只存在于 stderr 通道的那一次（来源：api.github.com/repos/anthropics/skills `skills/claude-api/shared/evals/report/SCHEMA.md` 一手 base64 解码 16,118B，2026-10-06 r431B 独立实拉逐串命中；与 av「判定须与执行可分离重算」互补——那条管"评分能不能事后重算"，本条管"重算不出来的那些信息会不会在落成制品的那一刻被静默丢掉"）
-- **原文**：①「The next three are stderr/`--check` only: `load()` returns them in memory for `build-report.mjs` to print, but they are **NOT written to `state.json` or `report.html`** (they can carry **absolute paths and fs error text**).」（字段为 `warnings` / `errors` / `trace_stats`）②「`strtab` … **report.html embed only (never `state.json`)** … Tool payloads >24 KB are also **clipped in the embed with a pointer to the trace file**.」
-- **判据**：① **同一个产物有两个写入面，而且不是"详略不同"而是"有无"**：诊断三件套（warnings / errors / trace_stats）在内存里有、在最终制品里**没有** ⇒ 评测跑完只看 `report.html` 的人，永远看不到这次运行到底报了什么警告、踩了什么 fs 错误；"报告里没写"被误读成"没有警告"。验收时必须显式问：**这一层信息有没有独立的落盘通道**，没有就等于这次运行的诊断面从未存在。② **分层的判据是可机检的属性，不是作者口味**：原文把剥离理由直接写在括号里——"它们可能携带绝对路径与文件系统错误文本" ⇒ 是否该剥离由"是否含宿主私有/环境相关信息"决定，与信息价值无关；**高价值但含宿主信息的诊断同样会被剥离**，所以"这条很重要"不构成它会留下来的理由。③ **剥离发生在写入制品这一步，不在采集那一步**：`load()` 仍把它们返回到内存供打印 ⇒ 信息不是没采集，是在序列化边界被丢掉 ⇒ 想保住它就必须在**渲染/序列化之前**挂采集点，事后从制品里反推一定失败。④ **embed 面还叠了体积裁剪 + 指针外链**：>24KB 的工具载荷在 report.html 里被裁剪、只留指向 trace file 的指针 ⇒ 制品自足性是分级的——**"报告里有"不等于"报告里完整"**，看到指针必须去追原文件，把报告当全量证据会系统性低估被裁掉的那部分。⑤ **这条的本质是"制品的可见面小于运行的事实面"**：任何生成报告/摘要/台账的流程，都要先声明哪些字段属于瞬态面、它们是否有独立落盘通道；**默认假设应是"没写进制品的都丢了"**，而不是"回头还能补采"。
-- 提升层：可观测 / 工具 / 工作流。触发词：诊断瞬态面、stderr-only 字段、结构性剥离、report.html embed only、never state.json、绝对路径与 fs error 作剥离判据、>24KB 裁剪留指针、制品可见面小于事实面。
-
+## 评测/报告产物分「可发布持久化面」与「仅诊断瞬态面」两层，分层的判据是「是否携带（全文见 references/knowledge-base.md §r438C-sink3）
+- **判据**：见下沉全文。（触发词保留在原 KB 条目）
 
 ## 跨审计方对账的主键是内容哈希不是名称版本，且「没发现恶意」要拆成四档计数才可读（来源：skills.sh/audits 333,759B 一手 curl 实拉，2026-10-06 r432-B 逐串命中 `skillFolderHash` 75 处 / `purl` 25 处 / `summary` 四计数；与 §聚合目录剔除是逻辑与 互补——那条管聚合结论的方向，本条管聚合的对账键与计数口径）
 - 原文事实：多家审计结果（含 `partner":"Socket"`）统一挂在 `skillFolderHash` 上（`"skillFolderHash":"0ca4cfe5…96e6"`）；第三方坐标写成 `"purl":"pkg:socket/skills-sh/<owner>%2F<repo>%2F<skillpath>%2F@<hash>"`——**`@` 后面是哈希不是版本号**；每份审计带 `summary:{"total_urls_checked":2,"malicious":0,"clean":0,"unknown":2,"errors":0}` 四计数分列。
@@ -496,3 +486,11 @@ agent_created: true
 ## 审计台账要有一条「刻意不记什么」的负向清单：只留 provenance 与 result codes，明确排除 prompts / messages / tool arguments / tool results / raw errors（来源：docs.openclaw.ai/concepts/agent-loop 299,791B，2026-10-08 独立 curl 实拉逐串命中 `projects lifecycle and tool start/terminal events into the bounded, metadata-only audit ledger` / `records provenance and result codes without copying prompts, messages, tool arguments, tool results, or raw errors`；与 §主张级可审计四维 互补——那条管证据要充分，本条管留存要最小化）
 - **判据**：只写「记什么」的台账会因默认全记而失控；须显式列出排除项并可机检。（细则见 references/knowledge-base.md §r437C-3）
 - 提升层：工具（指标口径）/ 可复用 Skill（可观测性）。触发词：结论绑定 harness、+34 vs +29、24 model-harness、SGC 场景级完成度、审计台账负向清单、metadata-only ledger。
+
+## 外部声明值必须「先对硬限额核对、再据此分配或放行」：把声明当不可信输入，核对通过才允许消费（来源：api.github.com/repos/langgenius/dify/issues/42021 一手 5,739B JSON，2026-10-08 r438C 独立 curl 实拉逐串命中 `pre-allocates a bytearray of the plugin-declared total_length` / `before validating it against max_file_size` / `the 30MB PLUGIN_MAX_FILE_SIZE limit is never consulted first` / `MemoryError`/`OverflowError` instead of the documented ValueError`；与 av §未声明就是未声明 互补——那条管"没声明"不能当默认，本条管"声明了"也不能当可信）
+- **判据**：凡「声明一个数量 → 据此分配资源 / 放行」的代码路径，核对必须在分配之前：声明值由外部可控 ⇒ 据未核对声明分配＝资源型 DoS（原文声明 `2**62` 直接 MemoryError），据未核对声明放行＝审计缺口（本该报超限 ValueError 却被绕过）。自检问一句：**这条路径是先信后查，还是先查后信？**
+- 提升层：可复用 Skill（输入校验序）/ 工具（资源分配）。触发词：声明大小、declared total_length、先分配后校验、PLUGIN_MAX_FILE_SIZE、MemoryError 而非 ValueError、声明值不可信
+
+## 治理闭环的第一环是「连接存在性枚举面」：没有枚举就没有后续权限与审计——自助接入会形成不可见的影子集成层（来源：mcpmanager.ai/blog/mcp-statistics/ 一手 188,382B，2026-10-08 r438C 独立 curl 实拉逐串命中 `This creates a shadow AI and shadow MCP scenario` / `When you fail to provide a clear, safe path, workers will create an unmonitored one` / `83%` / `26% Have Comprehensive AI Security Governance` / `Under 1%`；全库 grep「影子集成 / 连接存在性 / 枚举面」0 命中，既有「影子副本」指产物副本属另一轴）
+- **判据**：审查接入治理时先看有没有「当前已连客户端 / 来源清单 + 上限展示 + 一键吊销」这一层枚举面；**没有枚举面，后面所有权限、留痕、审计条款都无从落地**——不是做得不够严，是根本不知道要管谁。原文因果也给出治理方向：没有安全的正路，就一定长出不受监控的野路。
+- 提升层：工作流（接入治理）/ 可复用 Skill（可观测面）。触发词：影子 MCP、shadow AI、连接存在性、枚举面、一键吊销、未登记接入、83% 24%、26% 治理政策

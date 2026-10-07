@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.135.0"
+version: "3.136.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -448,20 +448,14 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **判据**：① **"有技能"带来的平均增益掩盖了配置级差异**：同一个 87 任务基准上，配置级增益从 +4.1 到 +25.7 pp 差了 6 倍 ⇒ 报一个数（+16.6pp）会让人以为装了就有，实际收益主要由"哪个模型×哪个 harness"决定；评估技能价值必须按配置分层报，不能只报均值。② **数量存在拐点且方向是"少而聚焦"**：至多三个模块的聚焦型技能**胜过**更大或穷尽的捆绑 ⇒ 这与"多挂几个总能覆盖到"的直觉相反；挂载预算应优先给"与该任务强相关"的少数几个，而不是全部候选。③ **技能是"能力替代"而非"能力叠加"**：小模型配技能能追平不配技能的大模型 ⇒ 技能在成本-能力曲线上是一个**替代手段**，评估时应同时看"用了它能不能降档"，只看绝对通过率会漏掉这部分价值。④ **装载成本要成为可检索、可排序的一等元数据**：技能市场把 `minToken`/`maxToken` 区间与 `hosted` 布尔直接发布在条目上 ⇒ "装载这个要花多少上下文"从文档建议变成了可筛选字段；只写在 README 里的成本等于没有成本，选型时永远不会被算进去。⑤ **与既有数量上限规则的合并方式**：原规则（3.118.0）只有"要有上限与盘点"的方向，本条补上**档位（≤3 模块）**、**代价曲线（收益随配置与数量双重波动）**与**元数据形态（成本可筛选）**三个可操作要素 ⇒ 落地时并入原节、不另开新节。
 - 提升层：可复用 Skill / 工具。触发词：技能注入收益坍缩、聚焦 ≤3 模块、穷尽捆绑反劣、配置级增益分层报、小模型配技能追平大模型、能力替代、minToken/maxToken 一等元数据、装载成本可筛选、技能数量档位。
 
-## 评测装置本身要先过参照解，题目坏与被测坏必须在机制上分开（来源：api.github.com/repos/benchflow-ai/skillsbench/readme 6,780B JSON → base64 6,780B 正文，2026-10-05 r421-B 独立 curl 实拉逐串命中；消化 Qoder r408-Q-B B1 积压点）
-- **原文**：快速开始两行命令即构成门禁——「`bench tasks check tasks/offer-letter-generator`」「**Oracle must pass before agent runs.**」「`bench eval run --tasks-dir tasks/offer-letter-generator --agent oracle --sandbox modal`」。
-- **判据**：① **参照解未通过时，该任务不得用于跑任何 agent**——先把题跑一遍 oracle 再放行被测 ⇒ 否则"agent 失败"里混着"题本身无解/判据写错"，两者的修复动作完全不同（改技能 vs 改题），混在一起会把无效迭代当成能力不足。② **任务自检与被测评测是两个独立门禁**——`tasks check` 校验任务结构，`--agent oracle` 校验参照解 ⇒ 只做其中一个，仍会放进"结构合法但不可解"的题。③ **评测结果的可信度依赖装置的可信度**——装置自己不过关时，所有分数只反映装置的缺陷 ⇒ 报技能/模型收益之前，先能回答"这套题的参照解跑通了吗"。④ 与既有「judge 0.45 拐点 / 审计五档 / 静态检查与专家判断相关性差」分工：那几条管**怎么判产物**，本条管**题目与装置本身有没有资格进入评测**。
-- 提升层：可复用 Skill / 评测方法。触发词：oracle 先过、参照解门禁、bench tasks check、题目自检、题坏与被测坏分开、评测装置可信度、不可解任务污染成绩。
+## 评测装置本身要先过参照解，题目坏与被测坏必须在机制上分开（来源（全文见 references/knowledge-base.md §r438A-sink1）
+- **判据**：见下沉全文。（触发词保留在原 KB 条目）
 
-## 审核进度映射为「运行能力上限」而不是「能否安装」：四道验证门 → 四档信任级，未核者降面不拒（来源：arxiv.org/html/2602.12430v4 169,999B，2026-10-05 r421-B 独立 curl 实拉逐串命中；消化 Qoder r408-Q-B B2 / r415-Q-C C1 积压点）
-- **原文**：「four sequential verification gates G1 through G4, and resulting in **four graduated trust tiers T1 through T4 with escalating deployment permissions**」；「An unvetted community skill (T1) receives **instructions-only access with full tool isolation**. A vendor-certified skill (T4) receives full capabilities.」；「**T1 and T2 skills are never granted script execution.**」；「bundling executable scripts increases vulnerability risk by **2.12×**」；「Anomalous behavior (unexpected tool calls, permission boundary probes) triggers **demotion or revocation**.」
-- **判据**：① **审核未完成 ≠ 不能用，而是"能用的面更小"**——T1 给"仅指令 + 完全工具隔离"而不是一拒了之 ⇒ 二值化（过/不过）会把大量低危技能挡在门外，逼使用者绕过审核；正确的形状是把审核进度映射成**可执行面的档位**。② **脚本能力要单独设门槛**——含脚本使漏洞风险 ×2.12 是可复拉的量化依据，故 T1/T2 永不获得脚本执行 ⇒ "能不能跑代码"不能跟"能不能读指令"同一档放行。③ **信任必须可逆**——异常工具调用与权限边界探测触发降级或撤销 ⇒ 只升不降的信任档位是单向棘轮，运行期证据永远用不上；晋升与降级要共用同一套信号。④ **门的分工要按"判的是什么"区分**——G1 静态 / G2 语义判"声明用途 vs 实际指令" / G3 行为沙箱 / G4 声明能力清单的形式化校验 ⇒ 四门不是四道重复检查，任何一门缺失都会留下一种特定形态的漏网（如缺 G2 则"说一套做一套"永不触发）。⑤ 与既有「审计判连贯性（risk × status 正交）」分工：那条管**给结果定级与怎么呈现**，本条管**定级之后实际授予多少运行能力**，两者是同一链条的上下游。
-- 提升层：可复用 Skill / 治理。触发词：四道验证门、G1-G4、信任级 T1-T4、未核者降面不拒、仅指令加工具隔离、脚本单独门槛、2.12 倍风险、信任可逆、降级与撤销、权限边界探测。
+## 审核进度映射为「运行能力上限」而不是「能否安装」（全文见 references/knowledge-base.md §r438A-sink2）
+- **判据**：见下沉全文。（触发词保留在原 KB 条目）
 
-## 安装策略门必须穷举「全部获取通道」、在裁决器自身故障时 fail-closed，且检的是落盘前的暂存源路径（来源：docs.openclaw.ai `tools/skills.md` 48,337B，2026-10-06 r427-C 独立 curl 取 `.md` 原文实拉逐串命中「Security → Operator install policy」段；与 Cap23 / Cap32 / Cap46 的 fail-closed 同向但形态不同——那几条是平台内置开关的故障极性，本条是外部裁决器型门禁的通道覆盖与检测时点）
-- **实证**：官方原文「Configure `security.installPolicy` to run a trusted local policy command before skill installs continue. The policy receives metadata and the staged source path, **applies to ClawHub, uploaded, Git, local, update, and dependency-installer paths**, and **fails closed when the command cannot return a valid decision**.」
-- **判据**：① **安装门禁的覆盖面是"通道清单"不是"来源类型"**——官方显式枚举六条路径（市场 / 上传 / Git / 本地 / 更新 / 依赖安装器）⇒ 只给"从市场装"挂门禁而放过本地与 Git，等于给最宽松的那条路留敞口；评价一道安装门时先要它列出通道清单，列不出就等于只管了一部分。② **外部裁决器自身故障时极性必须是阻塞**——"fails closed when the command cannot return a valid decision" ⇒ 策略命令超时、崩溃或返回不可解析，都不能等同于"通过"；凡把裁决权外包给外部命令/服务的设计，其故障态极性要显式声明，且在集成时实测一次（不是读文档就算数）。③ **门禁要挂在落盘前的暂存路径上**——policy 收到的是 metadata 与 staged source path ⇒ 检的是待装内容而不是装完的结果；装完再扫意味着可疑内容已经落地并可能执行过一次，"先装后检"在这类门禁里不成立。④ 对技能体系的落点：引入任何"安装前策略检查"，验收单上并列三条——通道清单是否穷举、裁决器故障是否阻塞、检查点是暂存态还是安装后。
-- 提升层：可复用 Skill / 工具。触发词：安装策略门、installPolicy、六通道穷举、裁决器故障 fail-closed、暂存源路径、先检后装、本地与 Git 也要过门禁。
+## 安装策略门必须穷举「全部获取通道」、在裁决器自身故障时 fail-closed，（全文见 references/knowledge-base.md §r438A-sink3）
+- **判据**：见下沉全文。（触发词保留在原 KB 条目）
 
 ## 派生 / 重写类制品必须附「与源的残留相似度读数」：把"我已重写"这句自陈降格为别人可复测的程度声明（来源：github.com/partme-ai/full-stack-skills 仓根 `PROVENANCE.md` 21,892B，2026-10-06 r428-B 经 `cdn.jsdelivr.net/gh/...` 实拉一手（raw.githubusercontent 本轮 SSL 直连不可达，已换通道并登记）；消化 Qoder r426-Q-C C-3，**并经 WB 亲自复拉更正其数值**）
 - **实证**：官方原文「Because the *content* originates with `github/spec-kit` (MIT), those skills were **regenerated directly from** the MIT-licensed source rather than the same prompts that is published under AGPL-3.0 … The current text **matches the MIT source at 0.96–0.99 similarity** and carries the MIT notice.」；同文件另有许可证解决规则「**most specific layer wins**」（越靠近条目的层越优先）与 §7 Known gaps 显式区分 `Fixed` / `Open`。
@@ -498,3 +492,8 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 ## 热度/排序信号须在「单技能层」计算再按来源去重：榜单若以来源仓库为聚合单位，单一厂商可垄断整张热榜（skills.sh RSC payload 组件名 `SkillsLeaderboardBySource`，`totalSkills=9964`、`view=trending` 为 24h 窗口）（来源：www.skills.sh/trending 371,118B，2026-10-08 独立 curl 实拉逐串命中 `SkillsLeaderboardBySource` / `"totalSkills":9964` / `"view":"trending"`；与 §技能家族模式 互补——那条记榜单存在与家族形态，本条记聚合粒度本身会扭曲信号）
 - **判据**：生成「常用/热门技能」视图前先确认聚合单位；来源是包家族时须折叠，否则一个家族占满视图等于信号失效。（细则见 references/knowledge-base.md §r437C-8）
 - 提升层：可复用 Skill（分发/传播语义、引用资格）/ 工具（目录排序口径）。触发词：共享发布 vs 钉版、publish 全部引用方生效、exact version 不再解析、子目录粒度核许可、source-available、SkillsLeaderboardBySource、按来源去重。
+
+## description 只写「何时触发」，绝不总结正文流程；且指导形式必须按「失败类型」选（来源：api.github.com/repos/obra/superpowers/contents/skills/writing-skills/SKILL.md 一手 37,635B JSON → base64 正文 26,523B，2026-10-08 r438A 独立 curl 实拉逐串命中 `NEVER summarize the skill's process or workflow` / `Match the Form to the Failure` / `trended worse than even the no-guidance control` / `NO SKILL WITHOUT A FAILING TEST FIRST`；全库 grep 两个金句均 0 命中）
+- **① description 是触发面不是内容摘要**：原文实证——某技能正文流程图写的是两阶段评审（spec 合规 → 代码质量），description 里写了「code review between tasks」，模型就只做了一次评审；把 description 改成纯触发条件「Use when executing implementation plans with independent tasks」后，模型才去读正文并跑完两阶段。判据：**description 里出现任何流程动词，正文就降级成"可跳过的文档"**；写 description 时逐个词问「这是触发条件还是步骤」，是步骤就删。
+- **② 禁令不是默认形式——按 baseline 失败类型三选一**：纪律型失败（明知故犯、压力下绕规则）→ 禁令 + 合理化表 + 红旗清单；输出形状错（该简洁却冗长、结论被埋）→ 正向 recipe / 契约，写清输出"是什么、有哪几段、什么顺序"；漏必需元素 → 结构化必填槽位。原文实测反证：**在"输出形状"类失败上用禁令式，结果比正向 recipe 更差，甚至差于"完全不给指导"的对照组**。判据：写约束前先跑一次 baseline 记录它到底怎么坏；**坏法不同，写法必须不同**，不许一律加"禁止/必须"。
+- 提升层：可复用 Skill（技能写法）/ 工作流（先测 baseline 再写约束）。触发词：description 总结流程、只做了一次评审、照 description 执行、跳过正文、Match the Form、trended worse、禁令式反而更差、正向契约、recipe、red flags、rationalization table、NO SKILL WITHOUT A FAILING TEST
