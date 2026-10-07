@@ -4615,3 +4615,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **重排（Rerank）**：**检索=召回导向、重排=精确导向**；**cross-encoder 只应用于候选 20-50 对（比向量检索贵 3-5 倍但答案质量稳定提升）**；**只把 top 3-5 重排结果给 LLM；典型 precision@3 增益 15-30%**。
 - **MMR 去冗余 + 上下文缓存**：**MMR（Maximal Marginal Relevance）在相关性与多样性间平衡，防 top-5 全是同一主题**；**生产 RAG 2026 组合=hybrid search（pgvector）+RRF+context caching（重复系统提示/常驻前缀缓存，省 token 省延迟）**。
 - **embedding 选型四维**：**OpenAI text-embedding-3-large（.13/1M，3072 维可 Matryoshka 降到 256 维）英文企业 RAG 安全默认；3-small 更便宜**；**开源模型部分领域超 OpenAI（高 9.74%）且支持 32K token 上下文（vs 8K）适合长文档块**——看成本/维度（可压缩性）/上下文窗口/领域 MTEB 基准四维权衡。
+
+## r430B AI 工作流编排平台实操方法论 2026（来源：n8n-ai/dify-ai/csdn-n8n入门/simstudio-n8n-alternatives/aistarmap-n8n/ayautomate-workflow-tools/n8n-15-practices/noxus-dify-alternatives/techzeeno-n8n-review/kalyna-n8n-ai-automation，2026-10-07 实拉）
+- **平台定位选型**：**连多个 SaaS、数据系统间流转→n8n（通用自动化集成核心）；AI 对话核心应用（客服机器人/RAG 知识库）→Dify（AI 应用开发核心）**；**n8n=开源 AI Agent+工作流平台（500+ 服务、MCP、自托管、fair-code、200k+ stars、SOC2）**；**Dify=生产级 Agentic Workflow（托管/自托管/企业 VPC、SSO/RBAC/审计日志，可发 web app 或 API）**——先问"核心是系统集成还是 AI 应用"。
+- **生产部署 15 实践：错误工作流+优雅降级**：**错误必然发生（API 失败/限流/网络超时）→工作流优雅失败不崩不丢数据**；**内置 error workflow=节点失败时触发并带失败上下文；可配置重试+指数退避（第三方 API 凌晨抖动自动退避重试而非静默失败）**。
+- **Agent 节点：workflow 当工具调用**：**内置 AI 节点（直接 API 访问 Claude/GPT-4o/Gemini）+ Agent 可把工作流其他节点作为工具绑定（thinking+action 闭环）**；**支持多 Agent 协作编排与 RAG；节点级可调试、按设计可解释、需求变化可维护**。
+- **平台选型象限**：**Zapier=托管 no-code、目录最广、非技术学习曲线最低（跨 SaaS 快赢）；n8n=开源自托管、全代码块+原生 AI 节点、高吞吐定价划算（代码逃生舱/大流量）；Pipedream=代码级控制不管理服务器（托管服务里的代码步骤）；Activepieces=自托管社区版无软件许可费（MIT）**——个人用户=自托管+代码控制+无锁死优先。
+- **n8n 计费与运维真相**：**按工作流执行计费（一次 run=一次 execution，不看内部）→用"每次执行成本×执行量"做容量预估**；**自托管 fair-code 无供应商锁死，SOC2 合规可过审**。
