@@ -4678,3 +4678,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **示例选择与示例库**：**选与目标输入相似+覆盖边界/反面案例的示例（示例库=prompt 内参考库区）**；**带批判的示例（Architecture of Intent）=每示例附 Critiques 块（"太僵/太随意/恰如其分"+原因），让模型学会判断而非只模仿——风格锁定比纯正例更强**。
 - **结构化输出靠格式示例+边角案例**：**示例带复杂案例与歧义案例（如 "Lunch" → time:null），模型学会对模糊输入输出明确空值而非硬造**；**工具描述带示例/边界/返回值语义（"returns null when…"）是 schema 上下文的一部分**。
 - **自动优化与评测驱动迭代**：**改 prompt=改代码，必须配测试集（pass@k/分类准确率/格式符合率）跑回归——无评测的 prompt 迭代是盲目调参**；**自动 prompt 优化器把评测指标当目标函数自动搜索（示例选择/指令改写/温度），先有人类基线再自动化**。
+
+## r433B Agent 工具调用工程 2026（来源：loooop-tool-use-patterns-v31/arxiv-harness-engineering-reusable-tool-primitives/loooop-tool-use-patterns-v17/futureagi-function-calling-2026/aiworkflowlab-function-calling/ai-tldr-tool-calling-best-practices/openlegion-agent-tool-use/aigentlab-parallel-tool-use/machinelearningmastery-tool-calling-roadmap/zylos-tool-augmented-llm-agents，2026-10-07 实拉）
+- **工具 schema 设计：显式双 schema + 窄工具**：**声明显式 input/output schema（Zod/JSON Schema）减少参数强制转换、简化校验、让 harness 渲染表单并在执行前校验**；**窄工具优于宽工具（query/update 拆开=降歧义+缩 schema 表面积）；描述必须带示例/边界/返回值语义（"returns null when…"）**。
+- **并行 vs 串行判据与冲突消解**：**并行=输出独立/I-O bound/顺序无关；串行=A 输出是 B 输入/改共享状态/需确定性顺序**；**并行结果冲突须预定义消解策略（谁优先/取平均/上报）写在调用前**；**依赖无关工具用 asyncio.gather/Promise.all 并发削延迟**。
+- **tool_choice 四值**：**auto/required（强制至少调一个）/none（禁调）/specific tool（锁定某工具）——确定性动作用 required/specific；流程关键步锁死、别全交 auto**；**并行工具调用=一个响应多个 tool request；tool result=输出回灌新 turn 形成多轮 agent 循环**。
+- **工具调用评估五指标 + step-level traces**：**正确工具选择率/首次参数有效率/错误传播进最终输出率/恢复质量/效率（不必要调用与 token 浪费）——完成但工具选错/反复纠错也算缺陷**；**function-call eval=实际 vs 期望工具名与参数打分（跨模型快照回归）；数据集 100-500 例按工具类别/歧义度/可选参数分桶；无调用级 trace 无法评估**。
+- **Harness 工程与可复用工具原语**：**工具输出质量四问=语义对齐/参数一致/执行有效性（返回符合输出 schema）/约束满足**；**可复用原语=高频调用序列固化为带 schema 原语（如"检索→重排→引用"），减少逐次编排失败面**；重复 3+ 次的调用序列固化为原语。
