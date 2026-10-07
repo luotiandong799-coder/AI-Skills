@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.158.0"
+version: "1.159.0"
 agent_created: true
 ---
 
@@ -488,3 +488,10 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **实证**：人审节点命中的工作流「exits `0` and reports the pause on stdout」，`"status": "paused"`；官方定性「**A Pause Is Success, Not An Error**」——「An agent that only checks exit codes will mistake the pause for a completed run」。恢复动作分组原句：「Group your branches by **recovery action** rather than enumerating every code」：重认证后重试（`not_logged_in`/`auth_expired`，exit 4）／退避重试（`network_connection`/`server_5xx`）／不重试先查（`server_4xx_other`）／修调用本身（exit 2）。exit 4 明确「**Don't retry the same command as-is, which just burns calls**」。
 - **判据**：① **完成判据要读 payload 不能只读 exit code**——退出码为 0 的「暂停」与「跑完」在码上同形，只看码会把待人工输入的运行当成已完成；② 分支表按「该做什么」分四组（重认证／退避／先查／修调用），**不按错误码铺开**，否则每加一个码就要改一处逻辑；③ **认证失败重放原命令是纯浪费**：exit 4 的处置是先重建会话，不是重试同一条。
 - 提升层：工作流（失败分类）/ 工具（退出码契约）。触发词：暂停是成功、status paused、只看退出码会误判、按恢复动作分组、exit 4 不重试原命令。
+
+
+## 凭据校验的返回值必须是「结构化结果」而不是布尔或异常：失败要带人类可读原因，后台刷新是可选项且未定义者不受影响（来源：www.activepieces.com/docs/build-pieces/piece-reference/authentication.md 7,569B，2026-10-08 一手 curl 逐串命中 `{ valid: false, error: 'Invalid Api Key' }` / `refresh` is opt-in. Pieces that don't define it are unaffected；与 §错误负载缺省字段 / §只报原因不报对策 互补——那两条管错误对象装哪些字段，本条管"校验"这个动作本身的返回契约）
+- **实证**：官方原文「validate credentials here and return `{ valid: true }` or `{ valid: false, error: '...' }`」（三种认证形态 Custom / Basic / OAuth2 的示例一致返回 `{ valid: false, error: 'Invalid Api Key' }`）；「`refresh` is opt-in. Pieces that don't define it are unaffected. The `generate` callback receives the same flat `auth` object as `validate` (i.e. `auth.baseUrl`, `auth.username`), not the connection value wrapper」；另注「Some APIs require a login call to exchange credentials for a short-lived token. Without caching, this login happens before every action and can trigger **429 rate limit errors**」。
+- **判据**：① **校验失败必须携带可诊断的原因串**：`{valid:false, error:'Invalid Api Key'}` 而不是 `false` 或抛异常 ⇒ "连不上"与"钥匙不对"在布尔面上完全同形，排障时只能靠二次试探；任何"检查凭据/检查连通性/自检"类函数，返回值里必须有 reason 字段。② **成功与失败是同一结构体的两种取值**：成功返回 `{valid:true}` 而不是返回数据本身 ⇒ 调用方无需靠异常类型分叉，失败也能走正常返回通道被记录，避免"异常被上层吞掉后表现为没结果"。③ **刷新器是可选项，且"未定义"是受支持的正常形态**：`refresh` opt-in、未定义的 piece 行为不变 ⇒ 引入任何周期性的凭据续期/预热机制，都必须保证存量对象在没接入时**保持原行为**，而不是"没配就报错"。④ **续期机制的收益要写成避免了什么**：原文把收益写成"避免每次 action 都登录从而触发 429" ⇒ 缓存/刷新的正当性来自它压掉了哪一类失败，不是"有了缓存更好"；没有这条对照，就无法判断缓存过期时间该设多长。⑤ **回调拿到的是扁平 auth 对象而不是连接包装体**：`generate`/`refresh` 与 `validate` 收到同一形态 ⇒ 同一凭据在不同回调里被以不同形状传递，是"同一把钥匙在 A 处能用、B 处失效"这类幽灵 bug 的常见来源，接入时须显式核对形状。
+- **与既有能力分工**：§失败声明 / §错误负载缺省字段 管**错误对象怎么装**；本条管**校验函数的返回契约与可选续期机制的安全接入方式**。
+- 提升层：工具（校验契约）/ 工作流（凭据排障）。触发词：valid error 结构化返回、{ valid: false, error }、校验失败带原因、布尔失败不可诊断、refresh opt-in、未定义不受影响、回调 auth 形状一致、短时效令牌换发触发 429。

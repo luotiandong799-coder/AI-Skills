@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.22.0
+version: 1.23.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -469,3 +469,10 @@ Step C: 是否包含恶意意图？
 - **判据**：① **把「`--force` 能过」当默认是治理漏洞**：拦截项必须逐条标注属"带确认可强推"还是"policy failure，force/ack 皆无效"；不标注时，使用者会把所有拦截都当成可翻墙，真正的硬拦截在一次误操作后失去意义。② **下架 ≠ 撤权**：从公域搜索/安装流消失、同时保留属主可见用于诊断，是**两个可分档位**——复审期工件仍需可被属主使用与取证；一步到封杀会同时毁掉取证面。③ **举报是独立一道关卡**：自动化扫描与人工审核之外必须有独立举报入口；只有机扫+人审的体系，其漏网面永远等于"没人点开看过的那些"。④ **覆盖语义只作用于直呼名**：技能能替换同名内置命令但不替换其别名 ⇒ 冒名面不是"改个名字就绕过了"那么简单，消歧规则要按调用形态（直呼 vs 别名）分别判定。
 - **与既有能力分工**：r439B「技能根=容纳边界」管**装载时能不能被带进来**；本条管**已经被拦下之后还能不能被绕过、以及拦下的处置档位**——准入在前，处置在后。
 - 提升层：工作流（处置分档）/ 工具（拦截语义）。触发词：--force 不可翻墙、policy failure、下架不等于撤权、owner 可见诊断、用户举报独立关卡、覆盖不替换别名、拦截项分档标注。
+
+
+## 漏洞情报源要带「自动离线回退」，且模式库规模必须给出「类别数 × 模式数」双层粒度作为覆盖基准的分母（来源：api.github.com/repos/NVIDIA/SkillSpector/readme 53,566B 解码全文，2026-10-08 一手 curl 逐串命中 `71 vulnerability patterns` across `17 categories` / `SC4 | Known Vulnerable Dependencies | HIGH | Dependencies with known CVEs (live OSV.dev lookup)` / `real-time CVE data with automatic offline fallback`；与 §r435C 17 类漏洞清单 + Triage 五档处置 + SARIF 入 CI 互补——那条落"检出来怎么处置与怎么进 CI"，本条落"情报从哪来、断网时朝哪个方向失败、覆盖够不够怎么量"）
+- **实证**：原文「**71 vulnerability patterns** across **17 categories**: prompt injection, data exfiltration, privilege escalation, supply chain, excessive agency, output handling, system prompt leakage, memory poisoning, tool misuse, rogue agent, anti-refusal, trigger abuse, dangerous code (AST), taint tracking, YARA signatures, MCP least privilege, and MCP tool poisoning」；「**Live vulnerability lookups**: SC4 queries [OSV.dev](https://osv.dev) for real-time CVE data with **automatic offline fallback**」；「**Multiple output formats**: Terminal, JSON, Markdown, and **SARIF** reports」；阶段与基线「Two-stage analysis: Fast static analysis + optional LLM semantic evaluation」「Baseline / false-positive suppression … so re-scans surface only *new* issues」。
+- **判据**：① **依赖实时情报的检查必须显式声明离线时的方向**：SC4 命中 CVE 靠在线查询，官方明写"自动离线回退" ⇒ 联网检查的默认失败方向如果是"查不到=没有漏洞"，断网期间的扫描会静默降级成"全部安全"；正确写法是把"情报源不可用"作为可观测状态（与"扫过且无 CVE"区分）。② **模式库规模要分两层报（类别数 × 模式数）**：17 个类别是目录、71 个模式是条目 ⇒ 只报"覆盖 17 类"会让人以为只有 17 项检查；覆盖率的分母是模式数，归类方式由类别数决定，两者缺一都无法判断"这个扫描器是否够用"。③ **类别清单本身就是威胁面清单**：17 类里既有注入/外传/提权这类经典面，也有 memory poisoning、rogue agent、anti-refusal、trigger abuse、MCP tool poisoning 这类 agent 特有的面 ⇒ 审自己的技能库时，先拿这份清单对一遍"哪些面我根本没有检查项"。④ **两阶段（快速静态 + 可选语义）意味着第二阶段可缺席**：LLM 语义评估是 optional ⇒ 报告里必须标注本次是否跑了语义阶段，否则同一份结果可能是两种强度的产出。⑤ **与处置链串成完整闭环**：模式库（覆盖什么）→ 情报源（依赖是否已知有洞，含离线回退）→ 基线（只报新增）→ SARIF（进 CI）⇒ 任何一环缺席，扫描结论都只能当线索不能当裁决。
+- **与既有能力分工**：r435C「17 类清单 + Triage 五档 + SARIF 入 CI」管**检出之后的处置与集成**；本条管**情报来源的失败方向与覆盖度的计量基准**。
+- 提升层：工具（扫描器接入三要素）/ 治理（覆盖度分母）。触发词：71 模式 17 类别、模式库规模双层粒度、OSV.dev 实时 CVE、automatic offline fallback、离线回退方向、两阶段可选语义、类别清单即威胁面、覆盖度分母。

@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。
-version: 1.3.0
+version: 1.4.0
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -63,3 +63,10 @@ version: 1.3.0
 - **判据**：① **「每件都过审」不是装配安全的前提**：失效不在单个技能里，而在它们的交互上 ⇒ 引入多技能装配时，评测单元必须从「单件」扩到「组合」（技能对、三元组），只做单件审等于没审装配。② **绕过面同时覆盖静态扫描与运行时监控**：原文并列 per-skill scanners 与 runtime monitors ⇒ 加一道运行时监控不能替代组合级审查，两者是同一盲区下的两道同向失效。③ **级联的破坏形态是"静默降级"不是"报错"**：实例里没有任何环节失败——每件都按自己写的方式工作，结果是关键告警在汇总阶段消失 ⇒ 评测指标若只看"有没有报错/有没有拒绝"，抓不到这一类；要看**末端产物里关键信息是否还在**。④ **与既有条目串成链**：完整性（哈希/签名）→ 单件扫描（已知噪声率高）→ 上下文复核（裁决）→ **组合级联回归（本条）**，四道各自独立，任何一道通过都不代表下一道通过。
 - **与既有能力分工**：wb-artifact-verification §恶意第二档零恶意件组合（r436A）管**验证侧要开组合档**；本条给**评测侧的基准与量级**（213 例、三实例链条、运行时监控一并失效）。
 - 提升层：工作流（评测设计）/ 可复用 Skill（装配审查）。触发词：SkillCascade、213 cascading test cases、逐件全绿组合发作、evading per-skill scanners and runtime monitors、组合级回归、静默降级。
+
+
+## 评测必须声明「检索口径」：只用 name+description 路由相对全正文路由准确率下降 31–44%；技能增强要按检索/并入/应用三段分别计量（来源：arxiv.org/html/2606.11435v1 360,565B，2026-10-08 一手 curl 逐串命中 `only skill names and descriptions could result in a 31-44% drop in routing accuracy compared to using the full skill body` / `SkillRouter ... roughly 80K skills and 75 expert-verified queries` / `SRA-Bench ... 636 manually written gold skills into a 26,262-skill ... corpus` / `three separate stages: retrieval, incorporation, and application`；与 §评测设计三事（SkillsBench 87 tasks / +16.6pp / 13 of 87 负增益）互补——那条给配对评测的基准量级，本条给"用哪部分内容做检索"这一口径变量的一手代价）
+- **实证**：原文「SkillRouter Zheng et al. (2026) contains roughly **80K skills** and **75** expert-verified queries. SkillRouter demonstrates that **only skill names and descriptions could result in a 31-44% drop in routing accuracy** compared to using the full skill body」；「SRA-Bench Su et al. (2026a) decomposes skill augmentation into **three separate stages: retrieval, incorporation, and application**. It mixes **636 manually written gold skills into a 26,262-skill web-collected corpus**」；对比表把 SkillRouter 的口径记为 "compares metadata-only vs. full-body retrieval and reranking"。
+- **判据**：① **"用元数据路由"是一个会让结论差三到四成的口径变量，必须在报数时声明**：31–44% 的下降不是噪声，而是同一批任务、同一批模型下换检索输入造成的 ⇒ 任何技能路由/选择准确率的评测，不写"用的是 name+description 还是全正文"，数字就不可比，也无法复现。② **元数据门不能当质量门用**：31–44% 的下降直接反驳"把 description 写好就能选对技能"这一假设 ⇒ description 的作用是**触发**（该不该被召到候选集），不是**裁决**（该不该被选中）；把质量改进全押在 description 上，天花板由这条曲线决定。③ **收益分解必须落到三段**：检索（找没找到）／并入（读不读得进上下文）／应用（用不用得好）⇒ 只报端到端准确率时，"检索错了"与"检索对了但正文太长没读进去"表现相同，改进方向完全相反。④ **语料要给出 gold 与噪声的比例**：636 条人工 gold 混进 26,262 条网络采集（约 1:41）⇒ 候选集规模与信噪比是评测难度的组成部分，只报任务数不报语料构成的基准无法判断难度。⑤ **对照必须是同批任务换单一变量**：SkillRouter 的 31–44% 来自"同 75 条查询、换检索输入" ⇒ 收益声明要有固定其他所有条件的配对对照，跨基准比较两个数字不属于对照。
+- **与既有能力分工**：r441A「PCR 与 Task Outcome 分列计量」管**指标该拆成哪两栏**；本条管**检索输入的口径与三段分解**。
+- 提升层：可复用 Skill（评测规约）/ 模型（路由口径）。触发词：31-44% 下降、metadata-only vs full-body、检索口径声明、SkillRouter 80K 75 查询、SRA-Bench 636 gold 26262、检索/并入/应用三段、description 只管触发不管裁决、gold 与噪声比例。

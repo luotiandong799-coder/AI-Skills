@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合
-version: "2.166.0"
+version: "2.167.0"
 agent_created: true
 ---
 
@@ -74,14 +74,7 @@ agent_created: true
 - 判据：① **报表里「缺一个分数格」与「0.0」必须视觉与语义都可分**：原文区分「failed/incomplete trial publishes none of its scores」与「a genuine model score of `0.0` is still a valid, published score」。⇒ 把基础设施故障产生的缺失读成「能力为零」，是评测面最典型的一次误判；**缺失必须单独成档**。② **证据不足要有独立 verdict**：`INCOMPLETE`（必需扫描器没给出可信证据）与 `NEUTRAL`（证据完整但至少一个必需维度低于通过带）都不是通过。⇒ 验收表如果没有「无证据」这一格，缺省行为就是把失败合并进通过。③ **通过判据是 max-over-agents × all-dimensions**（每个配置维度都过、且至少对某个受支持 agent 成立），不是平均、也不是加权综合分；提升幅度（Skill Lift）只是诊断证据，**本身不能推翻闸门**。⇒ 用「平均提升了多少」叙述通过与否，等于用诊断量替换判据。
 - 提升层：可复用 Skill。触发词：缺失不等于零分、INCOMPLETE 独立 verdict、NEUTRAL 不通过、max-over-agents、全维度合取、Skill Lift 不推翻闸门。
 
-## 任务成功不是安全信号；技能自带的非文本资产是扫描器看不到的指令载体（来源：arXiv 2609.35912 MMSkillRisk 44,757B，2026-10-01 r348C 独立 curl 实拉，`43.1%` / `16.4 percentage points` / `36.5%` / `72.2%` 逐串命中）
-- 判据：① **验收必须同时断言「任务做对了」与「没越权」，两件事分开计量**：实测攻击成功与合法任务完成在 **36.5%** 的用例中同现（GPT-5.6-sol + Codex 达 **72.2%**），作者明写「task success alone does not establish safe skill use」。⇒ 只看成功率的安全评测会在高同现率下给出绿灯——**成功率是能力指标，不是安全指标**。② **扫描面必须覆盖技能目录里的非文本资产**（图片 / PDF / 示例数据）：把恶意指令做成教学图片的原生成分（标注、界面文字），pooled ASR 43.1%，**比同等文本载体基线高 16.4 个百分点**。⇒ 只扫文本等于留一条免费绕过通道；审一个技能包时，非文本资产要单独列进扫描清单。
-- 提升层：可复用 Skill/工具。触发词：任务成功不等于安全、攻击与成功同现 36.5%、非文本资产载体、图片注入、ASR 43.1%、比文本载体高 16.4pp。
-
-## 评测 harness 是「多件」不是「一件」：构建评测 / 成本爬升 / 审计各是独立流程件，且交付包与被引文件集必须核差集（来源：api.github.com/repos/anthropics/skills/commits 58,317B，2026-10-01 r349A 独立 curl 实拉，`build-eval` ×12 / `eval-hillclimb` ×4 / `cost-hillclimb` ×2 / `eval-audit` ×2 / `not shipped` ×2 逐串命中；经 Qoder r366-Q-A 提名）
-- 原文：① 2026-09-29 一次性补入 `shared/evals/` 下 `build-eval`、`eval-hillclimb`、`cost-hillclimb`、`eval-audit` 四套流程 + report schema + runner scaffold；② commit 明写「drop references to files **not shipped** with the skill」。
-- 判据：① **「跑个评测」不是一个动作而是四件**：构建评测集、按指标爬坡、按成本爬坡、审计评测本身各自独立成流程件 ⇒ 只有一个「评测脚本」的仓库无法回答「指标涨了但成本涨了多少」「评测本身有没有被审」。② **成本爬升与质量爬升必须分开跑**：合并成一个优化目标，成本会被质量掩盖（或反之）。③ **交付包内容集 ⊇ 被引文件集是发布前硬门**：被引但没随包发出的文件等于发布了一个必然断链的产物；与既有「删后查悬空引用」互补——那条是事后补救，本条是**发布前产物一致性门**。④ 状态码承载存在性语义（model access=404、beta gating=400 而非 403）属同一「选择即申报」族，本轮未独立取到原文，登记待复核。
-- 提升层：可复用 Skill/工具。触发词：build-eval、eval-hillclimb、cost-hillclimb、eval-audit、评测四件、交付包与被引文件差集、not shipped。
+> 本节原文已零删减下沉 `references/knowledge-base.md §r442C 下沉：任务成功不是安全信号；技能自带的非文本资产是扫描器看不到的指令载体（来源：arXiv 2609.35912 MMSkillRisk 44,757B，2026-10-01 r348C 独立 curl 实拉，`43.1%` / `16.4 percentage points` / `36.5%` / `72.2%` 逐串命中）`（正文预算 ≤500 行）
 
 ## 外部判定器按「块」返回时，结论的作用域是块不是制品：分段粒度是设计参数，不是实现细节（来源：docs.dify.ai/en/cloud/use-dify/workspace/api-extension/moderation-api-extension.md 7,593B，2026-10-01 r349B 独立 curl 实拉，`segmented into 100-character chunks` / `direct_output` / `overridden` 逐串命中；经 Qoder r367-Q-B 提名）
 - 原文：输出内容「will be **segmented into 100-character chunks** for API requests to avoid delayed reviews when output content is lengthy」；审核响应契约 `flagged` / `action`（仅 `direct_output` | `overridden`）/ `preset_response`。
@@ -498,3 +491,10 @@ agent_created: true
 - **判据**：① **原始标记率禁止当风险规模上报**：46.8% 与 0.52% 相差约 90 倍——前者是"扫描器打了标"，后者才是"结合仓库上下文后仍可疑"；报前者等于把九成以上的噪声当成风险清单交出去。② **复核必须带上下文，且上下文是仓库级/依赖级的**：单文件静态判恶意在大规模语料下几乎不可用，判据是"该文件在所属仓库里扮演什么角色、与依赖是否自洽"；脱离仓库上下文的扫描结论只能当线索，不能当裁决。③ **报告格式固定为双列**（标记数 / 复核后可疑数）：单列数字无法区分"扫出来的"与"审过的"，双列才能让读者判断还有多少待复核。④ **与既有条目串成完整链**：完整性（哈希/签名）→ 扫描（已知噪声率）→ 上下文复核（裁决）——任何一环单独拿出来的结论都不可作放行证据；本条补的是最后一环的量级校准。
 - **与既有能力分工**：r440A「记分表 N/A 不是 FAIL」管**表里怎么记**；r439C「三查」管**外部基准怎么采信**；本条管**自己这份扫描产出怎么报规模、以及为什么不能只报标记率**。
 - 提升层：工作流（扫描报告口径）/ 工具（上下文复核）。触发词：46.8% 到 0.52%、标记率不是风险率、repository-aware、238,180、双列报告、上下文复核、扫描噪声九成。
+
+
+## 依赖图审计只看「集中度和冲突率」不够：含环率、隐形继承率、放大倍数是三个独立的图结构风险轴（来源：arxiv.org/html/2607.01136v1 209,169B，2026-10-08 一手 curl 逐串命中 `SDA achieves an overall F1 score of 0.95` / `30.41% of root skills with dependencies contain at least one skill in a cycle` / `22.42% gain packages only through reused skills` / `maxima of 347× for skills, 1,754× for packages` / `71.87% and 73.33% of packages, respectively, are inherited through skill reuse`；与 §r439A 依赖图指标（名称冲突率 58.73% / Gini 0.925-0.944 / 传递到达率 98.01%）互补——那条取集中度与冲突面，本条取图结构三件套）
+- **实证**：官方原文「The skill dependency graph is **not a tree**: **30.41%** of root skills with dependencies contain at least one skill in a cycle, and 30.03% have convergent downstream nodes」；「Among dependency-bearing skills, **22.42%** gain packages only through reused skills, making those packages invisible at the root layer」（实例 `npm/rimraf`：1,495 个 root 直接声明，另有 **5,160** 个 root 通过技能复用继承）；放大表 TABLE V：「Total p50 0.5 / p90 23.0 / p99 130.5 / Max 979.0；Package p99 **350×**、Max **1,754×**」，极端例 `windows-95-web-designer` 只声明 3 个技能依赖却拉入 1,754 个包、1,938 个组件（645×）；「Among npm package exposures, **71.87%** are inherited through skill reuse rather than directly declared; for PyPI, the share reaches **73.33%**」；抽取器 SkillDepAnalyzer（SDA）「overall F1 score of **0.95** on the single-layer benchmark … perfect accuracy (1.00) on metadata fields」。
+- **判据**：① **「含环」必须单列成轴**——30.41% 的有依赖 root 落在环里，环意味着**不存在拓扑序**：任何"先更新上游再更新下游""按依赖顺序扫描/退役"的单遍算法在环上不成立，必须先做 SCC 坍缩再排程；把依赖图默认当树，是这类审计最常见的隐藏假设。② **「隐形继承」决定声明面审计的上限**：22.42% 的技能只在被复用时才获得包依赖，根层声明里根本看不见 ⇒ 只在根层做依赖清点会系统性漏掉这批；审计对象必须是**递归展开后的闭包**，不是声明集。③ **放大倍数要看尾部分位不看中位数**：放大 p50 只有 0.5，p99 到 130.5（包维度 350×，最大 1,754×）⇒ 用均值/中位数描述依赖规模会得出"依赖很轻"的结论，而真正的风险与成本全部落在长尾；报数必须给 p99/Max。④ **传递依赖占比说明技能库不是孤立的供应链**：npm/PyPI 侧 71.87%/73.33% 的包是经技能复用继承而来 ⇒ 技能层的治理与包层的治理必须打通审计，只扫技能、不扫它带进来的包，等于只审了入口。⑤ **抽取器自身先要过基准再采信它的统计**：SDA 的 F1=0.95、元数据 1.00 是数字可采信的前提 ⇒ 凡用工具产出的供应链度量，先问该工具在标注集上的分数，否则整套治理结论建立在未校准的抽取上。
+- **与既有能力分工**：r439A「依赖图指标（冲突率/Gini/到达率）+ SkillBOM 五步」管**这条链有多集中、名字撞得多严重**；本条管**图长什么样、声明看不看得全、代价落在哪一端**。
+- 提升层：可复用 Skill（供应链审计指标集）/ 工具（依赖图分析）。触发词：依赖图不是树、含环率 30.41%、SCC 坍缩、隐形继承 22.42%、递归展开闭包、放大倍数 p99、1,754×、传递依赖占比 71.87% 73.33%、声明面审计上限、抽取器 F1 校准。

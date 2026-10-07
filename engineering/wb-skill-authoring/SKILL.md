@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.140.0"
+version: "3.141.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -19,21 +19,14 @@ version: "3.140.0"
 
 > 本节（设计原则）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 > 本节（写"什么时候不该跑"：STOP / WAIT / PROCEED 快速路径表）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
-## 技能是"指令 + 所需工具"的打包，不是一段文字（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·技能是指令所需工具的打包不是一段文字）
+> 本节原文已零删减下沉 `references/knowledge-base.md §r442B 下沉：技能是"指令 + 所需工具"的打包，不是一段文字（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·技能是指令所需工具的打包不是一段文字）`（正文预算 ≤500 行）
 
 ## description 怎么写（决定触发的唯一因素）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r439·description怎么写决定触发的唯一因素）
 
 ## 追加触发词只准加在末尾；加在开头会挤掉首句（2026-09-20 本仓库实修，来源：WorkBuddy 线 D4 描述层重构）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r439·追加触发词只准加在末尾加在开头会挤掉首句202609）
 
-## 常驻规则只做路由表，实体内容下沉到技能；「自动批准」不是「只允许」——同一个字段名在两处语义相反（来源：Devin 官方 `docs.devin.ai/cli/extensibility/rules` + `/cli/extensibility/skills/creating-skills` + `/product-guides/knowledge`，2026-09-22 r132-A 独立重拉首读，新信源首读）
+> 本节原文已零删减下沉 `references/knowledge-base.md §r442C 下沉：常驻规则只做路由表，实体内容下沉到技能；「自动批准」不是「只允许」——同一个字段名在两处语义相反（来源：Devin 官方 `docs.devin.ai/cli/extensibility/rules` + `/cli/extensibility/skills/creating-skills` + `/product-guides/knowledge`，2026-09-22 r132-A 独立重拉首读，新信源首读）`（正文预算 ≤500 行）
 
-- **官方推荐模式：用 rule 引用具体场景该用哪个 skill，而不是把内容写进 rule**。官方原话：为提高编码能力、加快完成、降低成本，**尽可能用 Skills 代替 Rules，Rules 与 AGENTS 要保持尽可能小**。与 §机制选型表 分工——那条管"按加载时机与付费点，四类机制怎么挑"，本条管"**已经决定内容不常驻之后，规则文件里还剩下什么**"：只剩指向，不留正文。
-- 判据：**这段内容是不是每次会话都要用**？不是 → 不该常驻。常驻层只留"遇到 X 就用 Y 技能"这种一行指向；把 Y 的正文抄进来＝用常驻价格买按需内容。
-- **`allowed-tools` 是"免弹窗"不是"白名单"**：未列出的工具依然可用，只是走正常审批流程。真要禁掉一个工具，内联技能用 `permissions.deny`，子代理技能用配了 `allowed-tools` 的自定义 profile。
-- **同名不同义的坑**：`allowed-tools` 这个字段名，**在 skill 上只是自动批准（不限制），在 subagent profile 上是真限制（未列出的不可用）**。跨工具迁移或抄配置时，这是最容易静默失效的一处——照抄字段名不代表语义跟着走。
-- **技能权限是叠加不是替换**：技能不能授予上层（项目/组织）已经 deny 的权限，所以**不能靠写一个技能给自己提权**。判据：想让技能多用一点，先查上层有没有禁用；上层禁用了，改技能无效。
-- **停用 ≠ 删除**：临时无关但队友或将来可能还会用的条目，用 disable 保留而不是删。判据：**"以后还有没有可能用"由谁判断**——如果别人也可能用，就 disable 不删。
-- 演进佐证：Devin 自己的 Knowledge（带触发描述的检索式知识条目）已标记 deprecated，正在自动迁移到 Skills。**"按需加载的技能"正在吃掉"检索式知识库"这个位置**——新写的长期上下文优先做成技能，别再建一套要靠检索召回的条目库。
 ## 一个子代理一个独立入口，别用一个入口靠参数分发；防递归要两道（来源：Inngest 官方 `inngest.com/docs-markdown/ai-patterns/sub-agent-delegation`，2026-09-22 r132-B 独立重拉首读，此前未读）
 
 - **官方推荐：给不同的子代理各自一个独立工具，而不是一个工具加"选哪个子代理"的参数**——原话 "LLMs often do better with separate tools for separate sub-agents rather than a single tool with different parameters for selection"。判据：**这个选择是"做哪件不同的事"还是"同一件事的不同参数"**——前者拆成不同入口，后者才留作参数。与本技能 §一个工具只做一件事 分工：那条管"单个工具的动作面要窄"，本条管"**多个同类能力之间的分发方式**"。
@@ -495,3 +488,10 @@ version: "3.140.0"
 - **判据**：① **宽容错不是一律放行，而是「降级 vs 跳过」两档分级**：外观类问题（命名不匹配目录、名字超 64）警告后照常加载；**失去可发现性或失去结构（description 缺失、YAML 完全不可解析）必须跳过并记诊断** ⇒ 判据是"这个缺陷会不会让技能变得不可见或不可控"，不是"是不是格式错"。② **规范与实现可以相反，装载器必须显式声明站哪一侧**：本规范写"不可解析→跳过并记日志"，而 Claude Code 文档写"不可解析→照常加载、无字段"（见 §frontmatter fail-open）⇒ 审核一个技能库时，先问"你的装载器坏了怎么反应"，再谈字段填什么；两侧行为不一致时，"我按规范写的"不构成安全证据。③ **上下文压缩必须豁免已激活技能正文**：技能正文是持续性行为约束，被压缩掉不会报错、只会静默退化 ⇒ 压缩策略里要有一个显式的"活跃指引保留位"，否则 Agent 后半程的行为漂移无法归因。④ **同名冲突必须留诊断日志**：冲突本身按"项目级覆盖用户级"解决，但不打日志就等于静默遮蔽——用户以为在跑 A，实际在跑 B。⑤ **发现面必须有上界与信任门**：目录遍历要设深度/数量上限防失控扫描；项目级技能来自可能被克隆的不可信仓库，须过信任门 ⇒ 否则 clone 一个仓库就等于让别人往你的上下文里写指令。
 - **与既有能力分工**：§frontmatter fail-open 管**某一实现遇到坏 frontmatter 的实际行为**；本条管**规范侧该不该放行、以及宿主面其余三项（压缩豁免/冲突诊断/发现面上界与信任门）**。
 - 提升层：工作流（宿主实现）/ 工具（装载器）。触发词：Lenient validation、warn load anyway、skip the skill log the error、exempt skill content from pruning、project-level overrides user-level、log a warning when a collision occurs、max 2000 directories、trust check for project skills。
+
+
+## 技能可见性有三态而不是两态：未设=继承默认、空数组=全断、非空=完全替换（不 merge）；装载优先级七档同名最高源胜出，发现面有五个各自独立的限额（来源：docs.openclaw.ai/tools/skills.md 48,338B + gateway/config-extensions.md 21,481B，2026-10-08 一手 curl 逐串命中 `agents.entries.*.skills: []` to expose no skills / `A non-empty ... list is the **final** set — it does not merge with defaults` / `highest precedence first` / `limits.maxSkillsPromptChars` / `An empty result with partial coverage does not prove that no applicable skill exists`；与 §r441C 宿主四事（宽容错分级/压缩豁免/同名诊断/发现面上界）互补——那条给出上界数值，本条给授权三态与优先级表）
+- **实证**：授权三态原文「Omit `agents.defaults.skills` to leave all skills **unrestricted by default**；Omit `agents.entries.*.skills` to **inherit** `agents.defaults.skills`；Set `agents.entries.*.skills: []` to **expose no skills** for that agent；A non-empty `agents.entries.*.skills` list is the **final** set — it does **not merge** with defaults」；生效面「The effective allowlist applies across **prompt building, slash-command discovery, sandbox sync, and skill snapshots**」。装载优先级表（highest precedence first）：1 Workspace `<workspace>/skills` → 2 Project agent `.agents/skills` → 3 Personal `~/.agents/skills` → 4 Managed `<state-dir>/skills` → 5 Workshop → 6 Bundled（与 Custodian 同级）→ 7 Extra dirs + plugin skills；「the highest source wins」。个体级开关「`entries.<skillKey>.enabled: false` disables a skill **even if bundled/installed**」。选择上界「A new session selects up to **64** enabled library skills … **Enablement does not bypass** agent allowlists, required binaries, operating-system restrictions」。发现面限额五个：`limits.maxCandidatesPerRoot` / `maxSkillsLoadedPerSource` / `maxSkillsInPrompt` / `maxSkillsPromptChars` / `maxSkillFileBytes`。检索诚实性原文「`coverage` reports `bodyIndexed`, `metadataOnly`, and `truncatedBodies`。**An empty result with partial coverage does not prove that no applicable skill exists.**」
+- **判据**：① **"未设"与"设为空"是相反的两种授权，必须分开成两个键状态**：未设=继承上游默认（开放），显式空数组=该 agent 一个技能都看不到 ⇒ 把空数组当成"没配所以走默认"会让本该被完全隔离的 agent 反而拿到全集；凡用"数组"表达策略的配置，都要显式声明空数组的语义。② **非空列表是终局不是增量**：写了两个就不与默认合并，写两个就是全部 ⇒ "我加了两个怎么原来的都没了"是这一款的正常行为；想做增量必须另给 merge 语义，不能靠"看起来像追加"的直觉。③ **授权面要覆盖四个派生通道**（提示构建 / 斜杠命令发现 / 沙箱同步 / 快照）：只在其中一个通道生效的 allowlist 会被其余通道绕过 ⇒ 报"已对该 agent 禁用"时，要逐通道验，不是验主通道。④ **装载优先级解决的是"同名谁赢"，不是"谁能看见"**：七档顺序只在重名时裁决 ⇒ 与授权 allowlist 是两个正交旋钮（位置决定胜者、allowlist 决定可见），混用会导致"把技能挪到高优先级目录就能绕过禁用"这类误判。⑤ **个体禁用开关必须能压过自带/已安装**：`enabled:false` 对 bundled/installed 同样有效 ⇒ 若自带技能不可禁用，禁用机制就只是"第三方技能管理"。⑥ **"启用"不豁免前置条件**：64 个选择上界之后仍要过 allowlist/二进制/操作系统门槛 ⇒ 计数型上界（选了多少个）与资格型门槛（够不够格）不能互相顶替。⑦ **检索空结果必须伴随覆盖声明**：coverage 三值（正文已索引 / 仅元数据 / 正文被截断）⇒ 在部分覆盖下返回空，只能得出"没找到"不能得出"不存在"；把空结果当"确实没有这个技能"是检索层最典型的误判，且它不会报错。
+- **与既有能力分工**：r441C「宿主四事」管**坏 frontmatter 的容错与发现面上界**；本条管**授权三态、优先级裁决与限额的分项性**。
+- 提升层：可复用 Skill / 工具（宿主装载与授权模型）。触发词：三态授权、空数组全断、非空即终局、不 merge 默认、装载优先级七档、最高源胜出、enabled false 压过 bundled、64 选择上界、五个发现限额、maxSkillsPromptChars、coverage metadataOnly、空结果不等于不存在。

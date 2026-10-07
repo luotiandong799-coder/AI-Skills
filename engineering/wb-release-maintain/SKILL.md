@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.83.0"
+version: "1.84.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -368,3 +368,10 @@ sources:
 - **判据**：① **删除动作必须有速率上界，超界默认"不删、转人工"**：一次同步要删的数量超过阈值就整批取消并落 overflow 文件 ⇒ 批量删除的异常放大本身就是事故信号，宁可漏删一轮也不能让"配置读错"变成"删掉半个库"。② **任一配置解析失败=整轮停止删除，不是跳过该项**：解析失败会让正常技能看起来"未登记"，此时继续删就是无差别删除 ⇒ 清理脚本的容错方向必须是 fail-safe（失败即停），与执行纪律里"失败即停"同构但作用面是批量破坏性操作。③ **只写期望集不够，必须配反向豁免清单**：未登记的目录不会自动消失而是变成孤儿 ⇒ 入库准入应同时维护「注册清单」与「豁免清单（含豁免人+理由+日期）」，禁止"没登记=默认放行"的静默漏挂。④ **删除要发生在可见的地方**：原文把删除并入同步 commit，「where the deletion is visible in the sync PR diff」⇒ 退役必须是可审阅的 diff，不是脚本里的静默 rm。⑤ **退役率无人汇报=治理缺口**：公开市场与规范一律不公布 delete/merge rate，只能靠 commit-log 关键字抽样自测自报，否则"只增不减"会把库做成垃圾场。
 - **与既有能力分工**：§审核处置权按危险度双轨 管**审核态怎么流转**；本条管**已入库技能被清理时的速率上限、失败语义与名册完整性**。
 - 提升层：工作流（退役治理）/ 工具（清理脚本）。触发词：PRUNE_CAP、删除速率上界、解析失败整轮停删、overflow 转人工、期望集与豁免清单、孤儿目录、退役率自测、删除可见于 diff。
+
+
+## 自动更新的放行粒度是「类别 × 子集」，不是全局开关：三档策略（关闭 / 仅 patch / 始终最新）按类别各自设定（来源：docs.dify.ai/llms-full.txt 2,990,942B，2026-10-08 一手 curl 逐串命中 `update strategy (off, patch versions only, or always the latest)` / `applied to every integration in the category or a chosen subset`；与 §存量自动升级 / §版本区间声明 互补——那两条管"要不要升、区间怎么声明"，本条管"自动更新这个动作按什么维度被授权"）
+- **实证**：官方原文「Integrations can also be set to update automatically. **Each category** (tools, models, data sources, and so on) has its own **update strategy (off, patch versions only, or always the latest)**, applied to **every integration in the category or a chosen subset**」。
+- **判据**：① **"自动更新"不是一个布尔开关，是一张三档 × 类别 × 子集的授权表**——`off` / `patch only` / `always latest` 三档的风险差一个量级，而同一档在不同类别（工具 vs 模型 vs 数据源）上的后果也不同 ⇒ 说"我们开了自动更新"而不说"哪一类、哪一档、作用在哪一个子集"等于没说；审计自动更新要看这张表，不是看总开关。② **"仅 patch"是唯一可作为默认档的放行粒度**：它把自动放行的范围钉在语义化版本的修Fix区间内，minor/major 仍需显式决策 ⇒ 凡要做无人值守更新，默认档应取最小可放行区间，把"最小区间"留给人而不是留给规则猜。③ **策略的作用域是可收窄的子集，不是只能全类目生效**：可以只作用于"选中的一部分" ⇒ 高风险类目（数据源/模型）设 `off`、低风险类目设 `patch only` 是同一张表内的正常配置；按子集授权让"试点再铺开"成为配置能力，不需要另建机制。④ **权限面与更新策略要分列**：同批文档把"谁能安装/升级/移除"默认为 Everyone，而更新策略是另一处设置 ⇒ 能点升级的人和升级自动发生的范围是两个旋钮，改一个不等于改另一个。
+- **与既有能力分工**：§批量退役三闸（PRUNE_CAP / 期望集+豁免名册）管**清理动作的破坏面上界**；本条管**更新动作的放行粒度**——一个是减，一个是增，两者都要"可枚举的最小作用集"。
+- 提升层：工作流（依赖治理）/ 工具（升级策略配置面）。触发词：update strategy off、patch versions only、always the latest、按类别设更新策略、作用在子集、自动更新不是布尔开关、仅 patch 作默认档、权限与策略分列。

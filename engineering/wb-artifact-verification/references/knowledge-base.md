@@ -2523,3 +2523,16 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ## 下沉·wb-artifact-verification·r441·治理开关默认只向前生效（存量豁免），且必须点名作用域与存量规模
 ## 治理开关默认只向前生效（存量豁免），且必须点名作用域与存量规模：关掉共享/发布后「已存在的仍然有效」，2FA 强制只覆盖邮箱口令不覆盖 SSO（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/security/manage-security-policies.md` 8,773B，2026-09-30 r325B 独立 curl 实拉逐串命中，**通道更正**：Qoder 给的 `docs.n8n.io/configure-n8n/security/manage-security-policies.md` 返回「Page Not Found」壳；经 Qoder r358-Q-B 提名）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·治理开关默认只向前生效存量豁免且必须点名作用域与存量）
 
+
+
+## r442C 下沉：评测 harness 是「多件」不是「一件」：构建评测 / 成本爬升 / 审计各是独立流程件，且交付包与被引文件集必须核差集（来源：api.github.com/repos/anthropics/skills/commits 58,317B，2026-10-01 r349A 独立 curl 实拉，`build-eval` ×12 / `eval-hillclimb` ×4 / `cost-hillclimb` ×2 / `eval-audit` ×2 / `not shipped` ×2 逐串命中；经 Qoder r366-Q-A 提名）
+- 原文：① 2026-09-29 一次性补入 `shared/evals/` 下 `build-eval`、`eval-hillclimb`、`cost-hillclimb`、`eval-audit` 四套流程 + report schema + runner scaffold；② commit 明写「drop references to files **not shipped** with the skill」。
+- 判据：① **「跑个评测」不是一个动作而是四件**：构建评测集、按指标爬坡、按成本爬坡、审计评测本身各自独立成流程件 ⇒ 只有一个「评测脚本」的仓库无法回答「指标涨了但成本涨了多少」「评测本身有没有被审」。② **成本爬升与质量爬升必须分开跑**：合并成一个优化目标，成本会被质量掩盖（或反之）。③ **交付包内容集 ⊇ 被引文件集是发布前硬门**：被引但没随包发出的文件等于发布了一个必然断链的产物；与既有「删后查悬空引用」互补——那条是事后补救，本条是**发布前产物一致性门**。④ 状态码承载存在性语义（model access=404、beta gating=400 而非 403）属同一「选择即申报」族，本轮未独立取到原文，登记待复核。
+- 提升层：可复用 Skill/工具。触发词：build-eval、eval-hillclimb、cost-hillclimb、eval-audit、评测四件、交付包与被引文件差集、not shipped。
+
+
+## r442C 下沉：任务成功不是安全信号；技能自带的非文本资产是扫描器看不到的指令载体（来源：arXiv 2609.35912 MMSkillRisk 44,757B，2026-10-01 r348C 独立 curl 实拉，`43.1%` / `16.4 percentage points` / `36.5%` / `72.2%` 逐串命中）
+- 判据：① **验收必须同时断言「任务做对了」与「没越权」，两件事分开计量**：实测攻击成功与合法任务完成在 **36.5%** 的用例中同现（GPT-5.6-sol + Codex 达 **72.2%**），作者明写「task success alone does not establish safe skill use」。⇒ 只看成功率的安全评测会在高同现率下给出绿灯——**成功率是能力指标，不是安全指标**。② **扫描面必须覆盖技能目录里的非文本资产**（图片 / PDF / 示例数据）：把恶意指令做成教学图片的原生成分（标注、界面文字），pooled ASR 43.1%，**比同等文本载体基线高 16.4 个百分点**。⇒ 只扫文本等于留一条免费绕过通道；审一个技能包时，非文本资产要单独列进扫描清单。
+- 提升层：可复用 Skill/工具。触发词：任务成功不等于安全、攻击与成功同现 36.5%、非文本资产载体、图片注入、ASR 43.1%、比文本载体高 16.4pp。
+
+> 本节原文已零删减下沉 `references/knowledge-base.md §r442C 下沉：评测 harness 是「多件」不是「一件」：构建评测 / 成本爬升 / 审计各是独立流程件，且交付包与被引文件集必须核差集（来源：api.github.com/repos/anthropics/skills/commits 58,317B，2026-10-01 r349A 独立 curl 实拉，`build-eval` ×12 / `eval-hillclimb` ×4 / `cost-hillclimb` ×2 / `eval-audit` ×2 / `not shipped` ×2 逐串命中；经 Qoder r366-Q-A 提名）`（正文预算 ≤500 行）
