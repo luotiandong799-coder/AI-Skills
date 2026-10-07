@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.134.0"
+version: "3.135.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -480,14 +480,21 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **判据**：① **`--ignore-unsigned-files` 改变的不是严格程度，是结论的外延**：默认形态下"验签通过"= 目录下每个文件都已验；加上该开关后同一句话只剩"已签的那部分已验"⇒ **把后者简写成"签名验证通过"是在同一句话里偷换主语**，读者会以为整个目录被覆盖。任何带此类开关的验证流程，输出必须写成两域（已判定+已通过 / 未判定），不许合并成一句结论。② **宽松是例外且带举证义务，不是可调偏好**：原文把 `prefer strict` 写成生产检查的默认、`documented reason` 写成放行前提 ⇒ 例外的最低门槛是"有书面理由"，没有理由的宽松等于把验收标准调低到不可解释；**默认极性应显式写进流程**（默认严格、例外登记），而不是留给执行人临场选择。③ **签名覆盖的是"签名那一刻的那个目录"**：原文 ④ 要求对 exact directory 签名、且签名发生在扫描与复核**之后** ⇒ 验签证明的是"这个目录自签名后未被改动"，**不证明内容安全**（扫描是前置的独立环节）；把"签名有效"当"内容可信"用，等于跳过签名前那道扫描。④ **顺序本身是契约**：scan → review → sign，倒置（先签后扫）会让签名把扫描前的状态固化成"已认证"，发现问题时已签产物仍在外流 ⇒ 流水线的环节次序要写成可校验的门禁，而不只是文档里的建议顺序。⑤ **与覆盖声明族的关系**：既有条目已确立"扫描截断是覆盖声明不是风险声明""引用聚合目录只可引其缺席"，本条把同一个原理搬到**签名面**——凡是可被参数收窄范围的验证，其结论都必须自带作用域说明；新增的是**例外的举证义务**（documented reason）这一轴，而非重复覆盖声明本身。
 - 提升层：可复用 Skill / 工具契约 / 供应链准入。触发词：ignore-unsigned-files、已签通过不等于全部通过、结论两域、生产默认严格、例外须文档化理由、sign the exact directory、scan→review→sign 顺序、签名证明未改动不证明安全。
 
-## 技能正文的「呈现格式」本身是自变量：同一技能的「完整指南」与「最小提示」两种交付格式，对任务成功率与渲染上下文成本均有显著影响——"怎么写"与"写什么"同等重要（来源：arXiv 2609.07255《SkillAlign: Aligning Skill Interfaces》Ren/Kang/Zhang，2026-09-07；2026-10-07 经 Qoder 实拉转引 + 独立核验 arXiv 锚点存在；与 sa「description 标定」互补——那条管触发词，本条管正文格式作为独立实验轴）
-- **判据**：① **技能改版时，格式变换应作为独立实验轴登记，不能与内容变更混在一次 diff 里**：否则无法区分"成功率变化来自内容更优"还是"来自格式更合适"。② **呈现格式影响渲染上下文成本**：完整指南占用更多上下文、最小提示更省但可能漏触发信息 ⇒ 格式选择是成本/效果的权衡，不是纯风格。③ 与 description 标定（触发率）构成"接口两头"：description 管"会不会被调起"，正文格式管"调起后活干得好不好/贵不贵"。
-- 提升层：模型 / 可复用 Skill。触发词：呈现格式本身是自变量、完整指南 vs 最小提示、格式作为独立实验轴、格式影响渲染成本、SkillAlign。
+## 技能正文的「呈现格式」本身是自变量：「完整指南」与「最小提示」两种交付格式对成功率与成本均有影响（全文见 references/knowledge-base.md §下沉·呈现格式自变量；触发词：SkillAlign、完整指南 vs 最小提示、呈现格式自变量）
 
-## 技能库成本要分两笔账：常驻目录占比（线性可算）与「引用文件全载」的最坏溢出——后者才是一层深引用约束的真实理由（来源：arxiv.org/html/2609.00065v1 259,006B，2026-10-07 独立 curl 取 HTML 全文逐串命中 `7.1% of a 200,000-token reference window` / `0.48% of the 2,963,180-token corpus` / `83.7% of the library's documentation remains unread` / `0 of the 46 workflows exceed the window` / `112.7%` / `29 of the 46`；与 §渐进披露 / §常驻规则只做路由表 互补——那两条管"该不该常驻"的方向，本条给出两笔可算的成本账与溢出测试项）
-- **判据**：① **常驻账**：163 个技能的描述全量常驻 = 20 万 token 窗口的 7.1%（语料总量 2,963,180 token 的 0.48%）——这笔线性可算、不是瓶颈。② **全载账**：一个中等工作流只占 23.9%（47,706 token）、46 个工作流 0 个超窗；但一旦"把所引技能的全部引用文件都加载"，中位数升到 112.7%、46 个里有 29 个超窗 ⇒ **溢出不是常驻造成的，是引用文件全载造成的**。③ 因此准入/回归要加一项坏情况测试：**假定所有引用文件被同时加载是否超窗**，并对超窗者强制"一层深引用 + 显式不加载"。④ 附带取舍示范：该文自报 `we report no task-level evaluation and no host selection rate`——自己做成本/覆盖率报告时也要把"没测的那一面"写在明处。
-- 提升层：可复用 Skill / 工作流。触发词：常驻账与全载账分算、引用文件全载溢出、一层深引用、83.7% 未被读、29 of 46、报告未测项声明。
+## 技能库成本要分两笔账：常驻目录占比（线性可算）与「引用文件全载」的最坏溢出（全文见 references/knowledge-base.md §下沉·技能库成本两笔账；触发词：7.1% of a 200,000-token reference window、112.7%、29 of the 46、一层深引用）
 
 ## 按「谁能调起」把技能二分，并用拓扑禁止同型级联：编排职责只给 user-invoked，纪律职责给 model-invoked（来源：api.github.com/repos/mattpocock/skills/readme 16,912B（`Accept: application/vnd.github.raw+json`），2026-10-07 独立 curl 实拉逐串命中 `User-invoked` / `Model-invoked` / `A user-invoked skill may invoke model-invoked skills, but never another user-invoked one.`；与 §防递归 / §角色重叠 互补——那两条靠纪律约束递归与角色，本条把它变成结构约束）
 - **判据**：① **二分的轴是"谁能调起"**：`User-invoked` 只能由人显式输入（如 `/名字`）触发、承担编排职责；`Model-invoked` 可被模型按任务自动命中、承载可复用纪律。② **硬规则放在拓扑上而不是提示词里**：user-invoked 可以调 model-invoked，但**永远不能调另一个 user-invoked** ⇒ 把"组合爆炸 + 人机意图漂移"从"记得别写"改成"结构上连不上"。③ 配套入口治理：同一路线只装一份（只读订阅 pin 或可编辑副本二选一），同装两份会重复加载，且更新不得背着用户发生。
 - 提升层：可复用 Skill（结构约定）。触发词：user-invoked 与 model-invoked 二分、禁止 user→user 级联、编排技能与纪律技能分层、拓扑禁止而非纪律禁止。
+
+
+## 技能升级传播模型必须显式二选一：共享发布（publish 即全部引用方原子生效、不留 per-agent 副本）vs 精确钉版（step 锁 exact version、发布时不再解析）；两者对「谁能在什么时候被牵连」的答案完全相反（来源：docs.dify.ai/en/self-host/use-dify/build/skills.md 4,325B 逐串命中 `When you publish an update to a skill, every agent that uses it picks up the latest version.` + activepieces.com/docs/install/reference/breaking-changes.md 85,989B 逐串命中 `Piece versions are no longer stored with wildcards (~1.2.0, ^1.2.0). All piece steps now use exact versions (e.g. 1.2.0).` / `The LOCK_AND_PUBLISH operation no longer resolves piece versions at publish time`；2026-10-08 独立 curl 实拉。与 §成本两笔账 互补——那条管常驻/激活的 token 账，本条管更新的传播语义）
+- **判据**：① 共享发布下「改一个技能 = 同时改所有引用它的 agent」，没有隔离副本可回滚 ⇒ 必须先有发布闸门与回滚快照；② 钉版下「改了不生效」是默认行为，升级是显式动作 ⇒ 必须有升级提示与过期版本清单，否则技能永久停在旧版；③ 元数据要写明本技能采用哪一种，混合模型（部分引用最新、部分钉版）须显式列出例外。（细则见 references/knowledge-base.md §r437C-6）
+
+## 再分发资格要按「子目录粒度」核许可，不得以仓库标称许可推定：同一仓库可并存多层许可（anthropics/skills 多数 Apache-2.0，但 `docx/pdf/pptx/xlsx` 子目录为 source-available 且限定演示与教学用途，根目录无 LICENSE）（来源：github.com/anthropics/skills/ 284,255B，2026-10-08 独立 curl 实拉逐串命中 `These are source-available, not open source` / `These skills are provided for demonstration and educational purposes only.`；与 §技能发现目录优先级 互补——那条管从哪找，本条管找到之后能不能带走）
+- **判据**：引用/再分发前逐个技能目录查其自身 LICENSE；仓库顶部许可只覆盖未单独声明的部分。（细则见 references/knowledge-base.md §r437C-7）
+
+## 热度/排序信号须在「单技能层」计算再按来源去重：榜单若以来源仓库为聚合单位，单一厂商可垄断整张热榜（skills.sh RSC payload 组件名 `SkillsLeaderboardBySource`，`totalSkills=9964`、`view=trending` 为 24h 窗口）（来源：www.skills.sh/trending 371,118B，2026-10-08 独立 curl 实拉逐串命中 `SkillsLeaderboardBySource` / `"totalSkills":9964` / `"view":"trending"`；与 §技能家族模式 互补——那条记榜单存在与家族形态，本条记聚合粒度本身会扭曲信号）
+- **判据**：生成「常用/热门技能」视图前先确认聚合单位；来源是包家族时须折叠，否则一个家族占满视图等于信号失效。（细则见 references/knowledge-base.md §r437C-8）
+- 提升层：可复用 Skill（分发/传播语义、引用资格）/ 工具（目录排序口径）。触发词：共享发布 vs 钉版、publish 全部引用方生效、exact version 不再解析、子目录粒度核许可、source-available、SkillsLeaderboardBySource、按来源去重。

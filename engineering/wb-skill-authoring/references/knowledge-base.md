@@ -3175,3 +3175,29 @@ version: 3.61.0
 - 原文：`These split on one axis: who can invoke them. User-invoked skills are reachable only when you type them (e.g. /grill-me); their job is to orchestrate. Model-invoked skills can be invoked by you or reached for automatically by the agent when the task fits; they hold the reusable discipline. A user-invoked skill may invoke model-invoked skills, but never another user-invoked one.`
 - 配套：同装两条路线（只读订阅 pin / 可编辑副本）会重复加载；GLOSSARY.md + ADR 内联的词汇治理。
 - ⇒ 结构约束优先于纪律约束：禁级联写成"类型不允许"而不是"请避免"。
+
+
+## §r437C-6 升级传播两极（Dify vs Activepieces，2026-10-08 实拉）
+- Dify：`When you publish an update to a skill, every agent that uses it picks up the latest version.`（共享发布、原子生效、不留隔离副本）
+- Activepieces 0.82.0：`Piece versions are no longer stored with wildcards (~1.2.0, ^1.2.0). All piece steps now use exact versions (e.g. 1.2.0).`；`The LOCK_AND_PUBLISH operation no longer resolves piece versions at publish time — steps run with the exact version stored in the flow.`（钉版）
+- 落地形态：技能元数据写明传播模型；共享发布须配发布闸门+回滚快照，钉版须配升级提示+过期版本清单。
+
+## §r437C-7 子目录粒度核许可（anthropics/skills，2026-10-08 实拉）
+- 原文：`...skills/xlsx subfolders. These are source-available, not open source, but we wanted to share these with developers as a reference...`；`These skills are provided for demonstration and educational purposes only.`
+- 用法：再分发/二次打包前逐个技能目录查自身 LICENSE，不得以仓库顶部标称许可推定全部可再用。
+
+## §r437C-8 榜单聚合粒度（skills.sh，2026-10-08 实拉）
+- RSC payload 命中：`"SkillsLeaderboardBySource"` 组件名；`{"totalSkills":9964,"allTimeTotal":1209119,"view":"trending"}`。
+- 用法：生成热门视图时先确认聚合单位是单技能还是来源仓库；按来源聚合须折叠去重，避免一个包家族垄断视图。
+
+
+## §下沉 2026-10-08 · 技能库成本两笔账（原 wb-skill-authoring 正文，因 500 行预算下沉）
+## 技能库成本要分两笔账：常驻目录占比（线性可算）与「引用文件全载」的最坏溢出——后者才是一层深引用约束的真实理由（来源：arxiv.org/html/2609.00065v1 259,006B，2026-10-07 独立 curl 取 HTML 全文逐串命中 `7.1% of a 200,000-token reference window` / `0.48% of the 2,963,180-token corpus` / `83.7% of the library's documentation remains unread` / `0 of the 46 workflows exceed the window` / `112.7%` / `29 of the 46`；与 §渐进披露 / §常驻规则只做路由表 互补——那两条管"该不该常驻"的方向，本条给出两笔可算的成本账与溢出测试项）
+- **判据**：① **常驻账**：163 个技能的描述全量常驻 = 20 万 token 窗口的 7.1%（语料总量 2,963,180 token 的 0.48%）——这笔线性可算、不是瓶颈。② **全载账**：一个中等工作流只占 23.9%（47,706 token）、46 个工作流 0 个超窗；但一旦"把所引技能的全部引用文件都加载"，中位数升到 112.7%、46 个里有 29 个超窗 ⇒ **溢出不是常驻造成的，是引用文件全载造成的**。③ 因此准入/回归要加一项坏情况测试：**假定所有引用文件被同时加载是否超窗**，并对超窗者强制"一层深引用 + 显式不加载"。④ 附带取舍示范：该文自报 `we report no task-level evaluation and no host selection rate`——自己做成本/覆盖率报告时也要把"没测的那一面"写在明处。
+- 提升层：可复用 Skill / 工作流。触发词：常驻账与全载账分算、引用文件全载溢出、一层深引用、83.7% 未被读、29 of 46、报告未测项声明。
+
+
+## §下沉 2026-10-08 · 技能正文呈现格式是自变量（原 wb-skill-authoring 正文，因 500 行预算下沉）
+## 技能正文的「呈现格式」本身是自变量：同一技能的「完整指南」与「最小提示」两种交付格式，对任务成功率与渲染上下文成本均有显著影响——"怎么写"与"写什么"同等重要（来源：arXiv 2609.07255《SkillAlign: Aligning Skill Interfaces》Ren/Kang/Zhang，2026-09-07；2026-10-07 经 Qoder 实拉转引 + 独立核验 arXiv 锚点存在；与 sa「description 标定」互补——那条管触发词，本条管正文格式作为独立实验轴）
+- **判据**：① **技能改版时，格式变换应作为独立实验轴登记，不能与内容变更混在一次 diff 里**：否则无法区分"成功率变化来自内容更优"还是"来自格式更合适"。② **呈现格式影响渲染上下文成本**：完整指南占用更多上下文、最小提示更省但可能漏触发信息 ⇒ 格式选择是成本/效果的权衡，不是纯风格。③ 与 description 标定（触发率）构成"接口两头"：description 管"会不会被调起"，正文格式管"调起后活干得好不好/贵不贵"。
+- 提升层：模型 / 可复用 Skill。触发词：呈现格式本身是自变量、完整指南 vs 最小提示、格式作为独立实验轴、格式影响渲染成本、SkillAlign。

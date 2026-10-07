@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.80.0"
+version: "1.81.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -351,3 +351,8 @@ sources:
 ## 同名即冲突、不得静默覆盖：安装/更新的失败模式要写在"谁的键是唯一主键"上（来源：api.github.com/repos/langflow-ai/langflow/releases/tags/v1.12.5 8,093B，2026-10-07 独立 curl 实拉逐串命中 `fix(tools): disambiguate duplicate tool names`（PR#15556）；与 §破坏性变更清单逐条对照 互补——那条管"升级前先找出 breaking changes"，本条给"命名主键冲突"这一类具体变更的验收写法）
 - **判据**：① **同名工具/技能的出现是缺陷而非覆盖策略**：成熟系统为此单独出修复版 `disambiguate duplicate tool names`，说明"后写覆盖"在实现侧不被接受 ⇒ 发布说明遇到"命名冲突"类修复，要按**破坏性变更**申报（已装用户的旧行为会变），不能按 bugfix 轻描淡写。② 一条mapping约束：新增/更新条目时先断言名字（可寻址主键）唯一，冲突即拒，不要落到"最后写入胜出"。③ 诚实边界：本条证据只覆盖"实现侧主动消歧"这一半，"批量更新须可逐技能选择"那一半来自尚未可复核的信源（本轮实拉未达），暂不落地。
 - 提升层：工具 / 工作流。触发词：同名消歧、duplicate tool names、主键唯一优先于覆盖便利、命名冲突按破坏性变更申报。
+
+
+## 「verified」是带再验证时钟的状态而非一次性终点；验签凭证用独立 detached 文件，使有效性可离线判定（来源：developer.nvidia.com/blog/nvidia-verified-agent-skills-provide-capability-governance-for-ai-agents/ 271,316B，2026-10-08 独立 curl 实拉逐串命中 `Cataloged and synced daily from the NVIDIA product team that owns it` / `Signed with a detached skill.oms.sig` / `nv-agent-root-cert.pem` / `model_signing verify ... --certificate-chain`；与 §11 强制段落最小发布模板 互补——那条管发布记录写什么，本条管认证态如何保鲜与如何离线验）
+- **判据**：① **认证标记自带失效机制**：流水线末两段是 `cataloging → synchronization` 且入目录后走每日同步循环 ⇒ 「已验证」是需要被周期性重新证明的状态，发布记录须写明再验证周期与触发条件，否则徽标随时间失真却仍对外展示。② **验签凭证要与制品分离**：detached `skill.oms.sig` + 公开根证书，使任何人在离线环境对证书链本地校验 ⇒ 在线不可用时不至于把「查不到」读成「无效」或反过来读成「有效」。③ 与 §安全型破坏性变更 分属两轴：那条管规则翻转（默认关+白名单豁免+迁移步骤），本条管认证态保鲜与凭证形态。
+- 提升层：可复用 Skill。触发词：verified 带再验证时钟、cataloged and synced daily、detached skill.oms.sig、根证书链离线验签、认证态保鲜。

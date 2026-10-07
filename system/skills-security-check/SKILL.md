@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.16.0
+version: 1.18.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -461,3 +461,17 @@ Step C: 是否包含恶意意图？
 ## 判定器必须与其判定对象同面受审：四类针对评审器的规避手法 + 把「恶意变体被判 clean 的比例」作成判定器自测指标（来源：arxiv.org/html/2605.11418v1 580,120B，2026-10-07 独立 curl 实拉逐串命中 `Registry Governance Evasion` / `avoid a blocking verdict in 36.5%-100% of cases` / `Definition-of-Done` / `jailbreaking` / `77.6% of paired trials`；与 §扫描判级三原则 互补——那条管"能力≠滥用"的判级原则，本条管"判定器自身会被针对性规避"）
 - **判据**：① **攻击的起手式是"起点都干净"**——从已通过既有上线审查的技能出发，插入/改写后恶意变体在治理面有 36.5%–100% 概率躲过阻断裁决 ⇒ 「已过审」是**会过期的状态**而非永久凭证，复审触发条件不能只依赖"这个技能有没有更新"。② 四类手法要逐项进扫描用例库：LLM Judge Jailbreaking（63.5% 变体仍被判恶意，直接诱导相对无效）、Paraphrasing Malicious Instructions（改写绕关键词，削弱最明显）、Definition-of-Done Instructions（给评审器下"完成"定义使其停止追责）、Overflowing the LLM Context Window（撑爆评审上下文）。③ **判定器报告必须附自测指标**：结论句「SKILL.md is not passive documentation but operational text」⇒ 只报"检出几个"等于把判定器当成不受攻击的常量，须同时报"恶意变体被判 clean 的比例"。
 - 提升层：可复用 Skill。触发词：registry governance evasion、Definition-of-Done、改写绕关键词、上下文撑爆、判定器自测指标、clean 变体比例、36.5%-100%。
+
+
+## 技能「形态」应在内容审查之前先定权限档：是否捆绑可执行脚本是可静态判定的事实，直接决定权限下限——实测 bundling executable scripts 使漏洞风险 2.12×（来源：arxiv.org/html/2602.12430v4 169,999B，2026-10-08 独立 curl 实拉逐串命中 `Skills bundling executable scripts are 2.12` / `An unvetted community skill (T1) receives instructions-only access with full tool isolation` / `T1 and T2 skills are never granted script execution` / `Level 3 executable scripts require T3 or T4 trust`；与 §恶意产能按发布者聚合熔断 互补——那条管封禁的作用域单位，本条管单个技能安装前的权限先验档）
+- **判据**：① **形态先于内容**：有无 `scripts/`、frontmatter 是否声明可执行资源，是零成本可判的事实；把它作为权限档输入，可在读第一行代码前就把默认权限压到 instructions-only（T1/T2 永不授予脚本执行），审查资源优先投给含脚本者。② **2.12× 是分诊权重不是罪名**：倍数是排队依据（含脚本优先深审、加行为回归），不是「含脚本即恶意」。③ **与行为定档串联而非替换**：既有按沙箱观察后定档是事后校验，本条是事前先验，串成「先验给下限、行为校验再升降档」。④ 数字须连原文位置引：2.12× 出 Sec 6.2 实测、T1–T4 出 Sec 6.4 权限映射，混引会造出不存在的因果。（细则见 references/knowledge-base.md §r437A）
+- 提升层：可复用 Skill（准入策略 / 权限先验）。触发词：形态先验权限档、2.12×、T1/T2 不授予脚本执行、Level 3 脚本需 T3/T4、含脚本优先深审、先验档与行为定档串联。
+
+
+## 风险档位只由「可能性 × 影响」决定，不得按「偏离清单的条目数」打分；判定三态中未确认项被显式剥夺 severity，且检查者不得是发现者（来源：github.com/cloudflare/security-audit-skill 295,484B，2026-10-08 独立 curl 实拉逐串命中 `Severity requires impact.` / `Likelihood x impact, not deviation from a checklist.` / `confirmed, needs_validation, and rejected` / `The agent that checks a finding is never the agent that found it.`；与 §扫描判级三原则 互补——那条管能力≠滥用，本条管定级的算术与判定者分离）
+- **判据**：① **符合度不是风险**：偏离清单条目多不等于风险高，只有 likelihood×impact 才是定级输入；把「不符合项计数」当风险分会让清单越长风险越高。② **三态各带约束**：`confirmed` 需 complete source trace + bounded observed result；`needs_validation` 只记未决事实、**禁带 severity**（未证实的候选不得预先打分）；`rejected` **显式记录被证伪的候选**（不静默丢弃）。③ **检查者≠发现者**：验最终源主张要用 fresh agent，不复用原 detector。（细则见 references/knowledge-base.md §r437C-4）
+- 提升层：可复用 Skill。触发词：Likelihood x impact、not deviation from a checklist、needs_validation 禁 severity、rejected 记录被证伪候选、检查者不等于发现者。
+
+## 运行期可执行面的允许清单，声明权归「部署运营方」而非技能作者：作者侧管字段可见性，运营方管命令可执行性——两个声明者要分别检查（来源：github.com/FlowiseAI/Flowise/releases/tag/flowise@3.1.4 213,716B，2026-10-08 独立 curl 实拉逐串命中 `Fix Flowise 709 Make Custom MCP stdio command allowlist operator-controlled by @yau-wd in #6578`；与 §出站副作用声明成契约 互补——那条管作者声明外发面，本条管谁有权定义可执行命令面）
+- **判据**：① 审计允许清单时先问「这份清单是谁写的」：作者随包提交的允许清单是**自证**，运营方在部署期注入的才是外部约束；二者同名但约束方向相反（作者想放宽以便运行 vs 运营方要收紧以便管控）。② 同一技能可以两面都有，审计报告须分列两个声明者，不许合并成「已配置允许清单」。③ 运行期命令面（stdio 命令、可执行路径）属运营方所有权，作者无权自授。（细则见 references/knowledge-base.md §r437C-5）
+- 提升层：可复用 Skill。触发词：允许清单声明权、operator-controlled allowlist、作者自证 vs 运营方约束、运行期命令面所有权、两个声明者分列。

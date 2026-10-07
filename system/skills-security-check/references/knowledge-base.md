@@ -124,3 +124,18 @@
 - 「来源双锚（registry owner ≠ 密码学身份）」只否定了 owner 的可信性，没有给处置单位 ⇒ 本条提供"按 owner 聚合做产能级熔断"，重叠 <60%。
 - 「17 类漏洞清单 + Triage 五档处置动词」管单条发现的动词，不管封禁作用域 ⇒ 互补不重叠。
 - 「恶意意图分布在多技能」（SkillCascade 系列）的前提是存在恶意意图；本条瞄准的是「已经通过 registry vetting 的干净技能被改写后仍能躲过裁决」，两者样本池不同 ⇒ 判据不互换。
+
+
+## §r437A 形态先验权限档（arXiv 2602.12430v4，2026-10-08 实拉）
+- 原文命中串：`, spanning 14 distinct patterns across four categories: prompt injection, data exfiltration (13.3%), privilege escalation (11.8%), and supply chain risks. Skills bundling executable scripts are 2.12`；`An unvetted community skill (T1) receives instructions-only access with full tool isolation. A vendor-certified skill (T4) receives full capabilities.`；`T1 and T2 skills are never granted script execution.`；`Level 1 metadata accessible at T1; Level 2 instructions are accessible at T2 and above; Level 3 executable scripts require T3 or T4 trust.`；`T1 through T4 with escalating deployment permissions, with a lifecycle feedback loop at the bottom.`
+- 落地形态：安装前按「有无脚本目录 / 是否声明可执行资源」预置权限档下限；含脚本者优先进深审队列并强制行为回归；不含脚本者默认 instructions-only。
+- 判非边界：与 §17 类漏洞清单（单条发现处置动词）、§恶意产能按发布者聚合熔断（封禁作用域）、§扫描判级三原则（能力≠滥用）三条互补，不互换。
+
+
+## §r437C-4 反 checklist 定级与三态（cloudflare/security-audit-skill，2026-10-08 实拉）
+- 原文：`<li><strong>Severity requires impact.</strong> Likelihood x impact, not deviation from a checklist.</li>`；`confirmed, needs_validation, and rejected`；`confirmed has a complete source trace and bounded observed result, needs_validation ...`；`rejected records a disproved candidate.`；`The agent that checks a finding is never the agent that found it.`
+- 与 r433A「准入清单每条须标明打分项还是否决项」互指：那条管条目性质，本条管定级算术与判定者分离。
+
+## §r437C-5 允许清单声明权归运营方（Flowise 3.1.4，2026-10-08 实拉）
+- 原文：`Fix Flowise 709 Make Custom MCP stdio command allowlist operator-controlled by @yau-wd in #6578`。
+- 与 r338C「敏感字段声明权在作者侧且高于查看者权限」成两轴：作者侧管字段可见性，运营方管命令可执行性。审计报告须分列两个声明者，禁止合并计为「已配置允许清单」。

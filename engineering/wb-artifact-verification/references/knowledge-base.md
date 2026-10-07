@@ -2383,3 +2383,17 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 原文：`The largest process-metric gains appear in skill execution, behavior check, and skill efficiency—signals about discovery, routing, workflow following, and tool use that document scans cannot observe.`
 - ⇒ 三条口径：① 便宜静态闸与 LLM judge 并列而非互相折算；② 均值必须配 CI 与正例占比；③ 过程分（轨迹）与结果分分列。
 - 判重：既有"评分器/判定"条目管单件判定的证真，"五千好过五万/四桶评测集"管评测集怎么造；本条管"结论怎么报"这一层，重叠 <60%。
+
+
+## §r437C-1 结论绑定 harness（NVIDIA SkillEvaluator + SkillBench，2026-10-08 实拉）
+- 原文：`<td>All dimensions</td><td>+34</td><td>+29</td>`（表头 `<td>Claude Code</td><td>OpenAI Codex</td>`）；`Claude Code showed higher average Skill Lift than Codex, but per-product variation ranged from +2 to +46 points`。
+- SkillBench：`87 tasks across 8 domains and 24 model-harness configurations. 3 trials per task`；榜行字段 `baseline success / enhanced success / absolute delta / normalized efficiency lift`。
+- 用法：验收报告的结论行格式 = 「模型 × harness × 技能集 → delta」，禁止只报一个合并均值。
+
+## §r437C-2 场景级完成度 SGC（arXiv 2602.12430v4，2026-10-08 实拉）
+- 原文：`Scenario Goal Completion—an 8.9% absolute improvement over baseline GRPO without skill libraries—while requiring 26% fewer interaction steps`。
+- 用法：与任务级 SR 并列报；SR 高而 SGC 低 = 单步成功但整条场景目标未达成（典型：中途偏离、状态未收尾、产物未被消费）。
+
+## §r437C-3 审计台账最小留存面（openclaw agent-loop，2026-10-08 实拉）
+- 原文：`The Gateway projects lifecycle and tool start/terminal events into the bounded, metadata-only [audit ledger]. This projection records provenance and result codes without copying prompts, messages, tool arguments, tool results, or raw errors out`。
+- 用法：台账定义须含正负两份清单——正向「记 provenance + result codes」，负向「不记 prompt / 消息 / 工具入参 / 工具结果 / 原始错误栈」；负向清单要可机检（抽查台账文件是否出现被排除内容）。
