@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.157.0"
+version: "1.158.0"
 agent_created: true
 ---
 
@@ -13,42 +13,22 @@ agent_created: true
 **核心判断：改不动的 bug，几乎都是"还没复现就先改了"。** 定位是证据工作，不是灵感工作。
 
 ## 二、六步循环（原文已下沉 references/knowledge-base.md §六步循环下沉，2026-10-03 r408A）
-## 二·五、修复验证：补丁是待验证假设（细则已下沉 KB）
-- 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·五、修复验证：补丁是待验证假设。
-> 本节（二·五·五、修在调用方收敛处：只修被报告的路径 = 修…）原文已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
-<!-- 2026-09-29 r290 下沉：容错装置/失败经验记忆/日志即线索 3 节 → references/knowledge-base.md §r111 批 -->
+## 二·五、修复验证：补丁是待验证假设（细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·二五修复验证补丁是待验证假设细则已下沉KB）
+
 ## 二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节（细则已下沉 KB）
 - 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节。
 ## 复现不了就先把发生率抬高：1% 追不到，50% 就能二分（来源：topaiskills.com「diagnosing-bugs-skill-faq」（Matt Pocock `diagnosing-bugs`，mattpocock/skills 工程族）2026-09-21 实拉，与 §六步循环「没有稳定复现之前不改产品代码」互补——那条管"没有复现不许动手"，本条管"**复现率低到不可用时该往哪个方向使劲**"）；原文已下沉 references/knowledge-base.md §复现率低时的发力方向下沉，2026-10-03 r408C
-## 探针要能一次撤干净，seam 太浅本身就是结论（同来源 `diagnosing-bugs` 技能正文，与 §诊断装置自身的可信度、§接线腐烂 互补——那两条管"检查器有没有遭遇"与"装了为什不生效"，本条管"**临时探针的回收**"与"**回归测试挂点选错时该怎么报告**"）
-
-- **原文事实**：调试日志只允许打在**能区分假设的边界**上，绝不"log everything and grep"；每条调试日志带**唯一前缀**（如 `[DEBUG-a4f2]`），收尾一条 grep 全清；原文判词 "**one breakpoint beats ten log statements**"。性能回归不用日志查——**先建基线测量，再二分**。回归测试**在修复之前写，但前提是存在正确的 seam**（该测试在真实调用点上复现该 bug 形态）；**seam 太浅的测试给的是虚假信心**；**若根本不存在正确 seam，那本身就是发现**——代码库架构在阻止这个 bug 被锁定，要作为结论报出来。收尾六条清单：原 repro 不再复现（重跑第一轮循环）、回归测试通过、按前缀 grep 清掉全部 `[DEBUG-...]`、一次性原型删除或移到标记位置、**把被证实正确的那条假设写进 commit / PR 说明**。
-- **判据**：
-  1. **每条临时探针都要有可回收的标识**。判据：**写第一行调试代码前先定前缀，收尾时用同一个前缀 grep 并确认命中 0**；没有回收手段的探针不该落地（与 §观测是被动旁路 分工：那条管测量挂在哪条时间线，本条管临时测量怎么撤）。
-  2. **"测不到"要分两种并分别报告**：seam 太浅 → **给的是假信心，必须标注**；没有 seam → **是架构结论，不是失败**。判据：**写回归测试前先回答"这个测试能不能在真实调用链上复现该形态"，答不出就别写，把答案当发现报**。
-  3. **把"哪条假设是对的"写进提交信息**。判据：**下一次排障的人应该能从 commit 里读到这次的因果，而不是从代码里反推**。
-- 提升层级：工作流（探针生命周期）+ 可复用 Skill（结论的写法）。
-- 触发词：唯一前缀、[DEBUG-a4f2]、一次 grep 清理、一个断点胜十行日志、基线再二分、seam 太浅、没有 seam 是发现、假设写进 commit。
-
----
+## 探针要能一次撤干净，seam 太浅本身就是结论（同来源 `diagnosing-bugs` 技能正文，与 §诊断装置自身的可信度、§接线腐烂 互补——那两条管"检查器有没有遭遇"与"装了为什不生效"，本条管"**临时探针的回收**"与"**回归测试挂点选错时该怎么报告**"）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·探针要能一次撤干净seam太浅本身就是结论同来源di）
 
 ## 等待/轮询/卡住运行处置（来源：OpenClaw `ci/watching-runs.md`，2026-09-30 实拉）；原文已下沉 references/knowledge-base.md §等待轮询下沉，2026-10-04 r411A
 
-## Harness 自改进与 trace 复用簇（细则已下沉 KB）
-- 技能级记忆、Harness 工程与三阶段自改进、后台 review fork、视觉双扩展、trace 失败模式清单、trace→evaluator、harness 演进三问——**七条同源，完整论证见** [references/knowledge-base.md](references/knowledge-base.md) §Harness 与 trace 自改进簇。
+## Harness 自改进与 trace 复用簇（细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·Harness自改进与trace复用簇细则已下沉KB）
 
-## 数据钉定（input pinning）与局部执行（partial execution）：钉输入 + 只跑待测节点 = 最小可复现调试闭包（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）；原文已下沉 references/knowledge-base.md §数据钉定与局部执行下沉，2026-10-04 r409A
-- **滑窗规避反模式**（arXiv 2609.30217 EvasionBench）：重试循环会把"相关上下文"推出监控/评审窗口，让同一操作在第 N 次重试"看不见地"通过——监控须锚定**操作序列**而非近期窗口，跨轮拆分动作计入同一意图链。
-- **执行回放一等位**（Activepieces）：每次执行的完整动作序列留独立可读回放记录，排障不依赖 trace 后端。
+## 数据钉定（input pinning）与局部执行（partial execution）：钉输入 + 只跑待测节点 = 最小可复现调试闭包（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）；原文已下沉 references/knowledge-base.md §数据钉定与局部执行下沉，2026-10-04 r409A（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·数据钉定inputpinning与局部执行parti）
 
 ## 读侧先行的灰度升级律（来源：docs.n8n.io/hosting/scaling/queue-mode/，2026-09-28 r210-B 独立实拉）；原文已下沉 references/knowledge-base.md §读侧先行下沉，2026-10-04 r411A
-## 「之前照做的规则现在不照做了」先查修剪，再怀疑模型（来源：agentskills.io《How to add skills support to your agent》客户端规范 2026-09-28 r284-A 独立实拉 + arXiv 2606.22528《Governance Decay》独立核验；与 §上下文随循环增长要修剪 互补——那条是主动写减法，本条是被动排障归因）
-- **实证**：客户端规范明文要求 **exempt skill content from pruning**，理由是技能指令中途被裁掉后"模型继续运行但没有专业指令，**没有任何可见报错**"；Governance Decay 给出量化——约束被摘要保住时违规 **0%**、被丢弃时 **38%**，失效呈**二值**（不是渐渐变差）。
-- **判据**：长会话 / 多轮任务里出现"某条规则/约束/格式要求突然不被遵守"时，排障第一步是**取证该条指令此刻是否还在上下文窗口内**（检索原文字符串是否存在），再决定是否改写规则或换模型。**顺序不能反**：先改规则 = 在指令已经不在场的前提下做无效功；先怀疑模型 = 把上下文管理问题错记成能力问题。
-- **判据延伸**：这也解释了为什么"规则写了但没生效"的高频根因是**被挤出去**而不是**没写清**——修法是把硬约束做原文透传（Constraint Pinning）而不是把规则写得更长。
-- 提升层：工作流（排障归因顺序）。触发词：规则突然不生效、指令失效、行为漂移、被挤出去、上下文还在不在、先查修剪。
+## 「之前照做的规则现在不照做了」先查修剪，再怀疑模型（来源：agentskills.io《How to add skills support to your agent》客户端规范 2026-09-28 r284-A 独立实拉 + arXiv 2606.22528《Governance Decay》独立核验；与 §上下文随循环增长要修剪 互补——那条是主动写减法，本条是被动排障归因）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·之前照做的规则现在不照做了先查修剪再怀疑模型来源ag）
 
-工具被拒先分三类再归因：在哪跑 / 是否存在 / 有没有逃生口，且必须看「生效值 + 它来自哪一层」工具被拒先分三类再归因：在哪跑 / 是否存在 / 有没有逃生口，且必须看「生效值 + 它来自哪一层」（来源：docs.openclaw.ai《Sandbox vs tool policy vs elevated》2026-09-29 r288-B 独立 curl 实拉原文核验）（原文已下沉 references/knowledge-base.md §r325B）
 ## 诊断输出要分「给人看的粗桶」与「给机器读的稳定原因码」两层；先分清「根本没发出调用」还是「发了但失败」（来源：docs.openclaw.ai/auth-credential-semantics 2026-09-29 r290-B 独立 curl 实拉 24,733B 原文核验）
 - 原文："Probe results carry a `status` bucket (`ok`, `auth`, `rate_limit`, `billing`, `timeout`, `format`, `unknown`, `no_model`) plus a **stable `reasonCode` when the probe never reached a model call**"；七个稳定码 = `excluded_by_auth_order` / `missing_credential` / `expired` / `invalid_expires` / `unresolved_ref` / `ineligible_profile` / `no_model`；"Eligibility checks report `ok` as the reason code for usable credentials."
 - 原文（对齐要求）："These semantics keep **selection-time and runtime auth behavior aligned**. They are shared by `resolveAuthProfileOrder` / `resolveApiKeyForProfile` / `openclaw models status --probe` / `openclaw doctor` auth checks."
@@ -496,3 +476,15 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 ## 失败终态要按「责任主体」着色，且子任务重试期间父任务不得进入终态：终态名是派工单，分类错一位就把修的人派错（来源：github.com/activepieces/activepieces/releases 574,402B，2026-10-08 独立 curl 实拉逐串命中 `fix(sandbox): surface missing piece bundles as FAILED runs, not INTERNAL_ERROR` / `fix(subflows): keep the calling flow waiting when a subflow crashes and is retried`；与 §通知抑制键三元组 互补——那条管通知怎么被压掉，本条管失败归到哪一类、父任务何时进终态）
 - **判据**：① **终态名是派工单不是日志标签**：外部依赖缺失（缺 piece bundle）原本报 INTERNAL_ERROR 会让人去找平台方，改 FAILED 才指向「配置方可自助修复的业务失败」⇒ 判定顺序是先问「谁能修」再定终态名，内部异常才归运营方。② **子任务崩溃且正在重试时，父任务必须保持 waiting，不得传播终态**：父流程一旦先落失败终态，即使子任务重试成功整条链已被判失败且不回滚 ⇒ 父任务的时钟要跟着子任务走，传播终态等于在重试开始前宣判。③ **可写成断言**：出现 `child.status=retrying` 且 `parent.status∈{FAILED,SUCCEEDED}` 即为终态传播缺陷。
 - 提升层：工作流。触发词：失败终态按责任主体着色、missing bundle FAILED not INTERNAL_ERROR、子流程重试父流程 waiting、终态名决定谁被叫来修、重试期间不传播终态。
+
+
+## 自动重放的资格来自「命令动词类型的静态声明」，不来自运行时"看起来安全"：重放白名单按 read/write/destructive 打标签时点判定（来源：docs.dify.ai `/en/cli/integrate-agents/error-handling-and-retries-for-agents.md` 6,093B 全文，2026-10-08 一手实拉）
+- **实证**：官方原文「**Every command carries the tag `read`, `write`, or `destructive`**, in the compact command map and in its own descriptor alike, so your loop can gate auto-retry on the tag and never re-send a `write` blindly」；POST 侧「by default it **won't re-send**」（`run app` 非幂等），429 仅在显式 `--retry-on-limit` 时才入有界退避。落地纪律原句：「An agent that silently re-runs writes is the failure mode the `effect` labels exist to prevent」。
+- **判据**：① **重放资格是声明期属性，不是运行时判断**——命令在定义处就带 `read/write/destructive` 标签，只有 read 进自动重放白名单；运行时再"看参数像不像只读"是把安全判据押在字符串猜测上；② **写类失败默认不补发**：重跑一个失败的 `run app` 是**一次新执行**而不是旧执行的续跑，对有副作用的流程必须显式 gate；③ 限流重试是与重放**分开的开关**（`--retry-on-limit` 且仅 429），不得用限流退避顺带把写类也重放了。
+- **与既有能力分工**：r436B「通知去重键三元组」管**告警侧的重复压制**；本条管**执行侧的补发资格**——压通知不等于可以补发写操作，两个开关必须独立。
+- 提升层：工作流（重试策略）/ 工具（命令声明面）。触发词：重放资格、read write destructive、won't re-send、retry-on-limit、静默重跑写操作、声明期打标签。
+
+## 「暂停」必须判为成功而非错误；错误分支要按「恢复动作」分组，不按错误码逐个枚举（来源：同上，docs.dify.ai 6,093B）
+- **实证**：人审节点命中的工作流「exits `0` and reports the pause on stdout」，`"status": "paused"`；官方定性「**A Pause Is Success, Not An Error**」——「An agent that only checks exit codes will mistake the pause for a completed run」。恢复动作分组原句：「Group your branches by **recovery action** rather than enumerating every code」：重认证后重试（`not_logged_in`/`auth_expired`，exit 4）／退避重试（`network_connection`/`server_5xx`）／不重试先查（`server_4xx_other`）／修调用本身（exit 2）。exit 4 明确「**Don't retry the same command as-is, which just burns calls**」。
+- **判据**：① **完成判据要读 payload 不能只读 exit code**——退出码为 0 的「暂停」与「跑完」在码上同形，只看码会把待人工输入的运行当成已完成；② 分支表按「该做什么」分四组（重认证／退避／先查／修调用），**不按错误码铺开**，否则每加一个码就要改一处逻辑；③ **认证失败重放原命令是纯浪费**：exit 4 的处置是先重建会话，不是重试同一条。
+- 提升层：工作流（失败分类）/ 工具（退出码契约）。触发词：暂停是成功、status paused、只看退出码会误判、按恢复动作分组、exit 4 不重试原命令。

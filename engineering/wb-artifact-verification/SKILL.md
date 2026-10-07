@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合
-version: "2.161.0"
+version: "2.163.0"
 agent_created: true
 ---
 
@@ -34,56 +34,35 @@ agent_created: true
 <!-- 2026-10-03 r396A 下沉：失败路径必须被真的跑过 全节（约 206 行）→ references/knowledge-base.md §早期批（失败路径/三界面同一内核/便利入口改值/退出码三分类/结果类别自陈不证明什么） -->
 ## 失败路径也必须被真的跑过（否则它等于不存在）（原文已下沉 references/knowledge-base.md §失败路径与验证通道，2026-10-03 r396A；触发词：受控失败、失败路径上次执行时间、三种界面同一内核、可脚本化验证、--tool-args-json 保真、退出码三分类、INCONCLUSIVE 单独成类、结果类别自陈「不证明什么」）
 ## 评测要接回优化器才叫闭环：观测 → AI 评测器 → AI 优化器 → 自动验证，Harness 是与模型、上下文并列的第三可调层（原文已下沉 references/knowledge-base.md §r349A；触发词：评测闭环、AI 评测器、AI 优化器、Harness 第三可调层、自进化引擎）
-## 提交粒度是可配的，粒度越细回滚能力越弱：早提交换「部分结果不丢」，代价是出错即不可恢复（原文已下沉 references/knowledge-base.md §r294-C；触发词：逐模块提交、不能回滚、提交粒度、Commit trigger last）
+## 提交粒度是可配的，粒度越细回滚能力越弱：早提交换「部分结果不丢」，代价是出错即不可恢复（原文已下沉 references/knowledge-base.md §r294-C；触发词：逐模块提交、不能回滚、提交粒度、Commit trigger last）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·提交粒度是可配的粒度越细回滚能力越弱早提交换部分结果）
 
-全局覆盖值的存活期与传播面必须显式开启：默认只在内存里、不跨进程、重启即丢全局覆盖值的存活期与传播面必须显式开启：默认只在内存里、不跨进程、重启即丢（来源：docs.n8n.io《Credential overwrites》2026-09-29 r296-A 独立 curl 取 .md 原文 5,099B 核验；与 §2.54.0 SecretRef 禁 OAuth 互补——那条管"可变状态不跨存储分裂"，本条管"一份覆盖值到底活多久、传到哪"）（原文已下沉 references/knowledge-base.md §r325A）
-无鉴权的注入端点自带「一次性门」：可被任意人调用一次，所以只允许一次无鉴权的注入端点自带「一次性门」：可被任意人调用一次，所以只允许一次（来源：docs.n8n.io《Credential overwrites》2026-09-29 r296-A 独立 curl 取 .md 原文核验；与 §2.37.0「默认值先可用、收紧从最高风险面起步」同向，本条给的是官方默认设计写法）（原文已下沉 references/knowledge-base.md §r325A）
-留痕通道本身不能被多个写者共享：多进程追加同一个事件日志会交错损坏，且平台不会自动清理遗留文件留痕通道本身不能被多个写者共享：多进程追加同一个事件日志会交错损坏，且平台不会自动清理遗留文件（来源：docs.n8n.io《Stream logs to external systems》2026-09-29 r296-A 独立 curl 取 .md 原文 23,919B 核验；与 §Capability 12「留痕通道不能挂在被测对象上」互补——那条管"通道挂谁身上"，本条管"通道被几个写者共用"）（原文已下沉 references/knowledge-base.md §r325B）
-## 环境变量的可见性有三个独立面：删掉不报错只返 undefined、分享只带引用不带值、第三方组件默认拿不到（来源：pipedream.com/docs/workflows/environment-variables 2026-09-29 r296-C 独立 curl 取 .md 原文 8,151B 核验；与 §Cap32 凭据只写不可读 互补——那条管"能不能读回值"，本条管"谁看得到引用、删了之后发生什么"）
-- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
+## 环境变量的可见性有三个独立面：删掉不报错只返 undefined、分享只带引用不带值、第三方组件默认拿不到（来源：pipedream.com/docs/workflows/environment-variables 2026-09-29 r296-C 独立 curl 取 .md 原文 8,151B 核验；与 §Cap32 凭据只写不可读 互补——那条管"能不能读回值"，本条管"谁看得到引用、删了之后发生什么"）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·环境变量的可见性有三个独立面删掉不报错只返undef）
 
 ## 审计可能是惰性生成的（「在库里」≠「已审过」），而扫描器自身的遍历顺序即是静默漏报面——两者都不产生任何警告位（来源：www.skills.sh/docs/api 136,145B + api.github.com/repos/NVIDIA/SkillSpector/issues/610 6,455B + docs.n8n.io/deploy/host-n8n/configure-n8n/security/run-security-audits.md 2,425B，2026-09-30 r323A 独立实拉；细则见 references/knowledge-base.md §r323A）
 
 ## 审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎 `queued/排队中`+`reportUrl:""` 与 1.0.0/1.0.5–1.0.7 `benign` 并存，每版独立 `versionId`；同源两接口计数须互检（`stats.versions:0` vs `/versions` 实有 8 条），展示计数不可作机检依据；官方文档声明的机器端点必须逐路径实测（skills.sh 搜索面 401、审计端点模板 404），缺陷结论时效随 PR 状态刷新（SkillSpector PR #611 仍 `open`/`merged=false`，2026-09-28 `CHANGES_REQUESTED`）；审计契约要写清「不记什么」（Reads are not recorded / 传入值 never stored / MCP 工具无读写标记⇒整段不可记），事件真源=代码 schema
 （来源：api.skillhub.cn/api/v1/skills/cic/versions 4,104B + /skills/cic 2,473B + skills.sh/api/v1/skills?q=pdf 401 + gh api repos/NVIDIA/SkillSpector/pulls/611 + www.activepieces.com/docs/admin-guide/security/audit-logs/overview.md 4,069B，2026-09-30 r324A 独立实拉；细则见 references/knowledge-base.md §r324A）
-## 流行度与展示序都不是质量/留存的判据：简单特征（体积、下载量）对「是否持续在架」无稳定预测力，注意力高度集中且权限声明普遍；目录展示序可能是随机洗牌，文档撤除本身是可机检的治理信号（来源：arXiv 2609.17274《After the Party v2》42,842B + agentskills.io/clients.md 25,457B + docs.n8n.io/llms.txt 286,271B，2026-09-30 r324C 独立实拉；与 §目录数字失真四形态 互补——那几条管“数字怎么失真”，本条管“该换用什么指标”；细则见 references/knowledge-base.md §r324C）
+## 流行度与展示序都不是质量/留存的判据：简单特征（体积、下载量）对「是否持续在架」无稳定预测力，注意力高度集中且权限声明普遍；目录展示序可能是随机洗牌，文档撤除本身是可机检的治理信号（来源：arXiv 2609.17274《After the Party v2》42,842B + agentskills.io/clients.md 25,457B + docs.n8n.io/llms.txt 286,271B，2026-09-30 r324C 独立实拉；与 §目录数字失真四形态 互补——那几条管“数字怎么失真”，本条管“该换用什么指标”；细则见 references/knowledge-base.md §r324C）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·流行度与展示序都不是质量留存的判据简单特征体积下载量）
 
+## 扫描预算耗尽只允许「降档验证」，不允许判为通过；应用层不隔离要作正面申报，不能让集成方靠缺位反证推断（来源：docs.openclaw.ai/cli/update/how-updates-run.md 84,130B + docs.langflow.org/next/security 34,323B，2026-09-30 r325A 独立 curl 实拉逐串命中；经 Qoder r357-Q-A 提名）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·扫描预算耗尽只允许降档验证不允许判为通过应用层不隔离）
 
-## 扫描预算耗尽只允许「降档验证」，不允许判为通过；应用层不隔离要作正面申报，不能让集成方靠缺位反证推断（来源：docs.openclaw.ai/cli/update/how-updates-run.md 84,130B + docs.langflow.org/next/security 34,323B，2026-09-30 r325A 独立 curl 实拉逐串命中；经 Qoder r357-Q-A 提名）
-- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
+## 治理开关默认只向前生效（存量豁免），且必须点名作用域与存量规模：关掉共享/发布后「已存在的仍然有效」，2FA 强制只覆盖邮箱口令不覆盖 SSO（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/security/manage-security-policies.md` 8,773B，2026-09-30 r325B 独立 curl 实拉逐串命中，**通道更正**：Qoder 给的 `docs.n8n.io/configure-n8n/security/manage-security-policies.md` 返回「Page Not Found」壳；经 Qoder r358-Q-B 提名）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·治理开关默认只向前生效存量豁免且必须点名作用域与存量）
 
-## 治理开关默认只向前生效（存量豁免），且必须点名作用域与存量规模：关掉共享/发布后「已存在的仍然有效」，2FA 强制只覆盖邮箱口令不覆盖 SSO（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/security/manage-security-policies.md` 8,773B，2026-09-30 r325B 独立 curl 实拉逐串命中，**通道更正**：Qoder 给的 `docs.n8n.io/configure-n8n/security/manage-security-policies.md` 返回「Page Not Found」壳；经 Qoder r358-Q-B 提名）
-- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
+## 存在「权限无关的永不可见类」；特权查看须一次性按单次记录，且被拒尝试同留痕（来源：docs.n8n.io/.../redact-execution-data.md 17,934B，2026-09-30 r338C 独立实拉）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·存在权限无关的永不可见类特权查看须一次性按单次记录且）
 
-## 存在「权限无关的永不可见类」；特权查看须一次性按单次记录，且被拒尝试同留痕（来源：docs.n8n.io/.../redact-execution-data.md 17,934B，2026-09-30 r338C 独立实拉）
-- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
+## 「能自动仲裁」被当成「没有冲突」：冲突检测器的能力边界必须逐类声明，未覆盖的那类会被静默覆盖（来源：docs.n8n.io `/administer/use-source-control-and-environments/push-and-pull-changes.md` 12,333B，2026-10-01 r339B 独立 curl 实拉逐串命中）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·能自动仲裁被当成没有冲突冲突检测器的能力边界必须逐类）
 
-## 「能自动仲裁」被当成「没有冲突」：冲突检测器的能力边界必须逐类声明，未覆盖的那类会被静默覆盖（来源：docs.n8n.io `/administer/use-source-control-and-environments/push-and-pull-changes.md` 12,333B，2026-10-01 r339B 独立 curl 实拉逐串命中）
-- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
+## 资格判定三态（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·资格判定三态）
 
-- **给人看的紧凑视图不构成操作依据**：本章已下沉 `references/knowledge-base.md` §r348A-sink1（r348A）。
-- **终态必须由显式信号声明**：本章已下沉 `references/knowledge-base.md` §r348C-sink（r348C）。
-## 资格判定三态
+## 降档/资格判定按成因分档，且只有一类会告警：配置意图 / 角色封顶 / 后端能力矩阵缺项（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·降档资格判定按成因分档且只有一类会告警配置意图角色封）
 
-> 原文已下沉 `references/knowledge-base.md §r395-av2`（保持原文零删减）。
-## 降档/资格判定按成因分档，且只有一类会告警：配置意图 / 角色封顶 / 后端能力矩阵缺项
+## 投递验收必须双字段分列，且二者可同时矛盾：外发成功 ≠ 回合完成，超时=Unknown 且不重试（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·投递验收必须双字段分列且二者可同时矛盾外发成功回合完）
 
-> 原文已下沉 `references/knowledge-base.md §r395-av2`（保持原文零删减）。
-## 投递验收必须双字段分列，且二者可同时矛盾：外发成功 ≠ 回合完成，超时=Unknown 且不重试
+## "verified" 必须携带可定位的证据指针且由校验器机械强制：空指针行直接拒（来源：github.com/dshworks/awesome-dsh-plugins `data/plugins.json` + `scripts/validate.mjs`、skills.sh/、arXiv 2609.14079，2026-10-01 r362-Q-C 实拉）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·verified必须携带可定位的证据指针且由校验器机）
 
-> 原文已下沉 `references/knowledge-base.md §r395-av2`（保持原文零删减）。
-## "verified" 必须携带可定位的证据指针且由校验器机械强制：空指针行直接拒（来源：github.com/dshworks/awesome-dsh-plugins `data/plugins.json` + `scripts/validate.mjs`、skills.sh/、arXiv 2609.14079，2026-10-01 r362-Q-C 实拉）
-- 判据：① `evidence` 格式 `path#key`（例 `skills/reviewer/SKILL.md#frontmatter`），校验器 `scripts/validate.mjs` 直接拒绝没有 `evidence` 的 `verified` 行。量化代价：npm 校验 298/582 包不存在、26 对条目互争同名包、2,357 条因无安装路径被拒（17,323 条 / 10,008 作者）。② 对照：`skills.sh` 榜单条目只有 `name/installs/source repo` 三元组，榜面不含任何质量或权限字段（与 arXiv SkillSecurer "流行技能 >17% 潜伏漏洞" 正交）。⇒ "已核验"最低成本实现不是加一列布尔，而是加一列可 grep 的指针 + 一个拒空指针的校验脚本。
-- 提升层：可复用 Skill/工具。触发词：evidence path#key、校验器拒空指针、榜面无质量字段。
+## "索引层无数值" 是可交付结论，不是抓取失败：Flowise/LangFlow 索引层零字段须逐页且如实记"不可判"（来源：docs.flowiseai.com/llms.txt、docs.langflow.org/llms.txt、docs.dify.ai/.../knowledge-request-rate-limit、list-workflow-logs，2026-10-01 r362-Q-C 实拉；承接 r326 失效四形态）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·索引层无数值是可交付结论不是抓取失败FlowiseL）
 
-## "索引层无数值" 是可交付结论，不是抓取失败：Flowise/LangFlow 索引层零字段须逐页且如实记"不可判"（来源：docs.flowiseai.com/llms.txt、docs.langflow.org/llms.txt、docs.dify.ai/.../knowledge-request-rate-limit、list-workflow-logs，2026-10-01 r362-Q-C 实拉；承接 r326 失效四形态）
-- 判据：① Flowise/LangFlow `llms.txt` 仅导航目录（Flowise 只版本号；LangFlow 只 Python 版本+端口），**零字段/零默认值/零超时分页** ⇒ 该站该面在文档层不可判，须记为"索引层无数值"而非"内容缺失"。② Dify 有数字但**无状态码**：限流 10/100/1,000 per min 三档，`limit>100` 语义是"capped at 100"=**静默截断不报错**（无旁路参数）；`page` 硬 `max 99999`。⇒ 这三家的"超限"在文档层是"截断/降档"而非"报错"，不能假设 4xx。③ 通道副产物：n8n 404 页自曝问询端点 `learning-paths.md?ask=&goal=`；但 `hosting/scaling/*` 五路径仍 404 ⇒ 该子树无直觉路径入口。
-- 提升层：工具/通道。触发词：索引层无数值可判、Dify 静默截断无状态码、Flowise/LangFlow 零字段。
-
-## 迁移开关要分「可逆」与「不可逆点」；配置存在 ≠ 配置生效，验收须查该旋钮当前版本是否仍被消费（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/durable-scheduler.md`，2026-10-01 r348A 独立 curl 实拉；经 Qoder r363-Q-A 提名）
-- 原文：①`N8N_POLLER_DURABLE_CURSORS_ENABLED`：「Turning it back off doesn't undo it. Cursors stay in their table.」②`QUEUE_WORKER_MAX_STALLED_COUNT`：「Removed in n8n 2.0. Setting this has no effect.」
-- 判据：① **开关要标「关回去是否回滚」**：有些迁移开关一旦打开就留下持久产物（游标表），关掉只是停止使用、不删除已产生的东西 —— 这是**不可逆点**，必须在打开前告知。⇒ 把可逆开关与不可逆点混为一类，会让「回退」变成半回退：行为退回来了，数据没退回来。② **旋钮变哑是一类静默失效**：配置项还在文档里、还被接受、甚至还被回显，但当前版本已不消费它。⇒ 验收「这个配置生效了吗」不能只看有没有这个字段，要查当前版本是否仍消费它 ——「配置存在」与「配置生效」必须分列。
-- 提升层：工作流。触发词：不可逆点、关掉不回滚、游标留存、旧旋钮变哑、配置存在不等于生效、Removed 无效果。
+## 迁移开关要分「可逆」与「不可逆点」；配置存在 ≠ 配置生效，验收须查该旋钮当前版本是否仍被消费（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/durable-scheduler.md`，2026-10-01 r348A 独立 curl 实拉；经 Qoder r363-Q-A 提名）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·迁移开关要分可逆与不可逆点配置存在配置生效验收须查该）
 
 ## 单轮评测会系统性低估：只看首轮会把「多轮后能做成」误判为「做不成」；攻击轨迹库是比又一份 benchmark 更新的证据层（来源：arXiv 2609.13353 SkillAtlas，2026-10-01 r348A 独立 curl 实拉，`42.5%` / `0.770` 逐串命中）
 - 原文：「42.5% of successful cases first become successful after a non-success initial round, and trajectory-grounded labels improve pre-execution guard accuracy to 0.770」（3,014 cases / 6,589 traces / 151,131 steps / 233 skills / 8 风险类）。
@@ -494,3 +473,22 @@ agent_created: true
 ## 治理闭环的第一环是「连接存在性枚举面」：没有枚举就没有后续权限与审计——自助接入会形成不可见的影子集成层（来源：mcpmanager.ai/blog/mcp-statistics/ 一手 188,382B，2026-10-08 r438C 独立 curl 实拉逐串命中 `This creates a shadow AI and shadow MCP scenario` / `When you fail to provide a clear, safe path, workers will create an unmonitored one` / `83%` / `26% Have Comprehensive AI Security Governance` / `Under 1%`；全库 grep「影子集成 / 连接存在性 / 枚举面」0 命中，既有「影子副本」指产物副本属另一轴）
 - **判据**：审查接入治理时先看有没有「当前已连客户端 / 来源清单 + 上限展示 + 一键吊销」这一层枚举面；**没有枚举面，后面所有权限、留痕、审计条款都无从落地**——不是做得不够严，是根本不知道要管谁。原文因果也给出治理方向：没有安全的正路，就一定长出不受监控的野路。
 - 提升层：工作流（接入治理）/ 可复用 Skill（可观测面）。触发词：影子 MCP、shadow AI、连接存在性、枚举面、一键吊销、未登记接入、83% 24%、26% 治理政策
+
+
+## 技能审计要从「逐个看 SKILL.md」升级为「依赖图指标」：单包审查看不到的风险多数在传递依赖里（来源：arxiv.org/html/2607.01136v1 209,169B，语料 1,434,046 条，2026-10-08 一手实拉）
+- **实证**：① **依赖放大系数 = 传递依赖数 / 直接依赖数**，实测 p99 = **130.5×**（npm/PyPI 侧最大 1,754×）；② 集中度 normalized Gini：skills **0.925**、packages **0.944**；③ **「只能经传递才到达」的危险面占比** 98.01%（axios）、含漏洞 MCP 服务 93.10%；④ name 冲突率 **58.73%**、front-matter 存在率 **99.55%**（⇒ 元数据齐 ≠ 可治理）；⑤ 解析管线五步：front-matter/正文分离 → 证据置信打分（滤模板噪声）→ 类型化通道分类 → 递归 registry 解析 → canonicalize + schema 校验成 **SkillBOM**。
+- **判据**：① 审计报告**必须给出「放大系数」与「传递到达率」这两个数**——只报「扫了 N 个技能、发现 M 个问题」会把 130× 的传递面完全漏掉；② **元数据齐备率不能当治理完成度**（99.55% 与 58.73% 冲突率并存），须把「有 front-matter」与「可比对、可溯源」分开计；③ 冲突率 ≥ 半数意味着**按 name 做主键的对账会静默错配**，主键须换内容哈希或 (source, name, revision) 复合键。
+- **与既有能力分工**：r438C「治理第一环是连接存在性枚举面」管**有没有清单**；本条管**清单建好之后按什么指标看出来风险**——枚举是输入，图指标是判据。
+- 提升层：工作流（审计度量）/ 工具（SBOM 化）。触发词：依赖放大系数、130.5x、Gini 0.925、传递到达率 98.01、name 冲突率 58.73、SkillBOM、元数据齐不等于可治理。
+
+
+## 引用外部风险条目时「编号」与「当页定义」必须双写：同一编号在不同文档里指的不是同一件事（来源：owasp.github.io/www-project-agentic-skills-top-10/risk-assessment.html 100,225B 对照主页，2026-10-08 一手实拉）
+- **实证**：同一 OWASP 项目内，`risk-assessment.html` 把 AST05 定为 **Insufficient Input Validation**、AST06 **Improper Error Handling**、AST07 **Insecure Storage**、AST09 **Lack of Monitoring**，而项目主页的 Top10 把同编号写成 Untrusted External Instructions / Weak Isolation / Update Drift / No Governance。
+- **判据**：① **编号不是稳定主键**：跨文档合并时只写编号会静默错配，引用格式必须是「编号 + 该文档当页的定义原文」；② 审计台账里出现编号时，要能指出**它出自哪一份文档的哪一版**——否则两个来源的 AST05 会被当成同一条而合并计分。
+- 提升层：工作流（引用规约）。触发词：编号与定义双写、AST05 不同定义、跨文档静默错配、引用要带出处版本。
+
+## 采信任何评测/扫描结论前先做「三查」：判定口径、横向排名可用性、口径切换敏感度（来源：oasb.ai/benchmark 60,443B，2026-10-08 一手实拉；解除 r438A 搁置）
+- **实证**：① 判定口径原文「A sample is **flagged malicious on a high/critical attack finding**」——权限类、治理类提示与边缘案例不计入；② 横向排名原文「The comparative accuracy figures on this page **have been withdrawn**」，第三方拦截区间 **3.8%–41.9%** 且**无精确度验证**；③ 同一基准下「计入自标记」与「剔除」两口径的召回率可达 **82.6% vs 47.3%**。
+- **判据**：① **先看它把什么算作「命中」**：只计攻击类高/严重告警的恶意判定，与「含风险提示就算」不是同一个量；引用前必须确认分母；② **被作者撤回的横向分禁止用于选型**——撤回声明本身就是不可用证据，拿它做排名等于引用一个已作废的数字；③ **任何召回率/检出率必须绑定口径**：82.6% 与 47.3% 差 35 个点，不写口径的数字无法跨报告比较。
+- **与既有能力分工**：r436C「静态闸不可代理 judge（ρ=0.14）+ 均值须配 CI」管**自己怎么做评测**；本条管**怎么采信别人的评测**——一内一外。
+- 提升层：可复用 Skill（证据采信）/ 工具（基准报告口径）。触发词：三查口径、flagged malicious、withdrawn 横向分、82.6 vs 47.3、口径切换敏感度、3.8%–41.9%。

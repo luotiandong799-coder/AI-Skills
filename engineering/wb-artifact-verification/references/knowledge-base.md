@@ -2422,3 +2422,80 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **原文**：①「The next three are stderr/`--check` only: `load()` returns them in memory for `build-report.mjs` to print, but they are **NOT written to `state.json` or `report.html`** (they can carry **absolute paths and fs error text**).」（字段为 `warnings` / `errors` / `trace_stats`）②「`strtab` … **report.html embed only (never `state.json`)** … Tool payloads >24 KB are also **clipped in the embed with a pointer to the trace file**.」
 - **判据**：① **同一个产物有两个写入面，而且不是"详略不同"而是"有无"**：诊断三件套（warnings / errors / trace_stats）在内存里有、在最终制品里**没有** ⇒ 评测跑完只看 `report.html` 的人，永远看不到这次运行到底报了什么警告、踩了什么 fs 错误；"报告里没写"被误读成"没有警告"。验收时必须显式问：**这一层信息有没有独立的落盘通道**，没有就等于这次运行的诊断面从未存在。② **分层的判据是可机检的属性，不是作者口味**：原文把剥离理由直接写在括号里——"它们可能携带绝对路径与文件系统错误文本" ⇒ 是否该剥离由"是否含宿主私有/环境相关信息"决定，与信息价值无关；**高价值但含宿主信息的诊断同样会被剥离**，所以"这条很重要"不构成它会留下来的理由。③ **剥离发生在写入制品这一步，不在采集那一步**：`load()` 仍把它们返回到内存供打印 ⇒ 信息不是没采集，是在序列化边界被丢掉 ⇒ 想保住它就必须在**渲染/序列化之前**挂采集点，事后从制品里反推一定失败。④ **embed 面还叠了体积裁剪 + 指针外链**：>24KB 的工具载荷在 report.html 里被裁剪、只留指向 trace file 的指针 ⇒ 制品自足性是分级的——**"报告里有"不等于"报告里完整"**，看到指针必须去追原文件，把报告当全量证据会系统性低估被裁掉的那部分。⑤ **这条的本质是"制品的可见面小于运行的事实面"**：任何生成报告/摘要/台账的流程，都要先声明哪些字段属于瞬态面、它们是否有独立落盘通道；**默认假设应是"没写进制品的都丢了"**，而不是"回头还能补采"。
 - 提升层：可观测 / 工具 / 工作流。触发词：诊断瞬态面、stderr-only 字段、结构性剥离、report.html embed only、never state.json、绝对路径与 fs error 作剥离判据、>24KB 裁剪留指针、制品可见面小于事实面。
+
+
+### §下沉·wb-artifact-verification·r439·提交粒度是可配的粒度越细回滚能力越弱早提交换部分结果
+## 提交粒度是可配的，粒度越细回滚能力越弱：早提交换「部分结果不丢」，代价是出错即不可恢复（原文已下沉 references/knowledge-base.md §r294-C；触发词：逐模块提交、不能回滚、提交粒度、Commit trigger last）
+
+全局覆盖值的存活期与传播面必须显式开启：默认只在内存里、不跨进程、重启即丢全局覆盖值的存活期与传播面必须显式开启：默认只在内存里、不跨进程、重启即丢（来源：docs.n8n.io《Credential overwrites》2026-09-29 r296-A 独立 curl 取 .md 原文 5,099B 核验；与 §2.54.0 SecretRef 禁 OAuth 互补——那条管"可变状态不跨存储分裂"，本条管"一份覆盖值到底活多久、传到哪"）（原文已下沉 references/knowledge-base.md §r325A）
+无鉴权的注入端点自带「一次性门」：可被任意人调用一次，所以只允许一次无鉴权的注入端点自带「一次性门」：可被任意人调用一次，所以只允许一次（来源：docs.n8n.io《Credential overwrites》2026-09-29 r296-A 独立 curl 取 .md 原文核验；与 §2.37.0「默认值先可用、收紧从最高风险面起步」同向，本条给的是官方默认设计写法）（原文已下沉 references/knowledge-base.md §r325A）
+留痕通道本身不能被多个写者共享：多进程追加同一个事件日志会交错损坏，且平台不会自动清理遗留文件留痕通道本身不能被多个写者共享：多进程追加同一个事件日志会交错损坏，且平台不会自动清理遗留文件（来源：docs.n8n.io《Stream logs to external systems》2026-09-29 r296-A 独立 curl 取 .md 原文 23,919B 核验；与 §Capability 12「留痕通道不能挂在被测对象上」互补——那条管"通道挂谁身上"，本条管"通道被几个写者共用"）（原文已下沉 references/knowledge-base.md §r325B）
+
+
+### §下沉·wb-artifact-verification·r439·环境变量的可见性有三个独立面删掉不报错只返undef
+## 环境变量的可见性有三个独立面：删掉不报错只返 undefined、分享只带引用不带值、第三方组件默认拿不到（来源：pipedream.com/docs/workflows/environment-variables 2026-09-29 r296-C 独立 curl 取 .md 原文 8,151B 核验；与 §Cap32 凭据只写不可读 互补——那条管"能不能读回值"，本条管"谁看得到引用、删了之后发生什么"）
+- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
+
+
+### §下沉·wb-artifact-verification·r439·流行度与展示序都不是质量留存的判据简单特征体积下载量
+## 流行度与展示序都不是质量/留存的判据：简单特征（体积、下载量）对「是否持续在架」无稳定预测力，注意力高度集中且权限声明普遍；目录展示序可能是随机洗牌，文档撤除本身是可机检的治理信号（来源：arXiv 2609.17274《After the Party v2》42,842B + agentskills.io/clients.md 25,457B + docs.n8n.io/llms.txt 286,271B，2026-09-30 r324C 独立实拉；与 §目录数字失真四形态 互补——那几条管“数字怎么失真”，本条管“该换用什么指标”；细则见 references/knowledge-base.md §r324C）
+
+
+### §下沉·wb-artifact-verification·r439·扫描预算耗尽只允许降档验证不允许判为通过应用层不隔离
+## 扫描预算耗尽只允许「降档验证」，不允许判为通过；应用层不隔离要作正面申报，不能让集成方靠缺位反证推断（来源：docs.openclaw.ai/cli/update/how-updates-run.md 84,130B + docs.langflow.org/next/security 34,323B，2026-09-30 r325A 独立 curl 实拉逐串命中；经 Qoder r357-Q-A 提名）
+- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
+
+
+### §下沉·wb-artifact-verification·r439·治理开关默认只向前生效存量豁免且必须点名作用域与存量
+## 治理开关默认只向前生效（存量豁免），且必须点名作用域与存量规模：关掉共享/发布后「已存在的仍然有效」，2FA 强制只覆盖邮箱口令不覆盖 SSO（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/security/manage-security-policies.md` 8,773B，2026-09-30 r325B 独立 curl 实拉逐串命中，**通道更正**：Qoder 给的 `docs.n8n.io/configure-n8n/security/manage-security-policies.md` 返回「Page Not Found」壳；经 Qoder r358-Q-B 提名）
+- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
+
+
+### §下沉·wb-artifact-verification·r439·存在权限无关的永不可见类特权查看须一次性按单次记录且
+## 存在「权限无关的永不可见类」；特权查看须一次性按单次记录，且被拒尝试同留痕（来源：docs.n8n.io/.../redact-execution-data.md 17,934B，2026-09-30 r338C 独立实拉）
+- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
+
+
+### §下沉·wb-artifact-verification·r439·能自动仲裁被当成没有冲突冲突检测器的能力边界必须逐类
+## 「能自动仲裁」被当成「没有冲突」：冲突检测器的能力边界必须逐类声明，未覆盖的那类会被静默覆盖（来源：docs.n8n.io `/administer/use-source-control-and-environments/push-and-pull-changes.md` 12,333B，2026-10-01 r339B 独立 curl 实拉逐串命中）
+- 本章已下沉 `references/knowledge-base.md` §r347C-sink（r296/r325/r338/r339 合并腾预算）。
+
+- **给人看的紧凑视图不构成操作依据**：本章已下沉 `references/knowledge-base.md` §r348A-sink1（r348A）。
+- **终态必须由显式信号声明**：本章已下沉 `references/knowledge-base.md` §r348C-sink（r348C）。
+
+
+### §下沉·wb-artifact-verification·r439·资格判定三态
+## 资格判定三态
+
+> 原文已下沉 `references/knowledge-base.md §r395-av2`（保持原文零删减）。
+
+
+### §下沉·wb-artifact-verification·r439·降档资格判定按成因分档且只有一类会告警配置意图角色封
+## 降档/资格判定按成因分档，且只有一类会告警：配置意图 / 角色封顶 / 后端能力矩阵缺项
+
+> 原文已下沉 `references/knowledge-base.md §r395-av2`（保持原文零删减）。
+
+
+### §下沉·wb-artifact-verification·r439·投递验收必须双字段分列且二者可同时矛盾外发成功回合完
+## 投递验收必须双字段分列，且二者可同时矛盾：外发成功 ≠ 回合完成，超时=Unknown 且不重试
+
+> 原文已下沉 `references/knowledge-base.md §r395-av2`（保持原文零删减）。
+
+
+### §下沉·wb-artifact-verification·r439·verified必须携带可定位的证据指针且由校验器机
+## "verified" 必须携带可定位的证据指针且由校验器机械强制：空指针行直接拒（来源：github.com/dshworks/awesome-dsh-plugins `data/plugins.json` + `scripts/validate.mjs`、skills.sh/、arXiv 2609.14079，2026-10-01 r362-Q-C 实拉）
+- 判据：① `evidence` 格式 `path#key`（例 `skills/reviewer/SKILL.md#frontmatter`），校验器 `scripts/validate.mjs` 直接拒绝没有 `evidence` 的 `verified` 行。量化代价：npm 校验 298/582 包不存在、26 对条目互争同名包、2,357 条因无安装路径被拒（17,323 条 / 10,008 作者）。② 对照：`skills.sh` 榜单条目只有 `name/installs/source repo` 三元组，榜面不含任何质量或权限字段（与 arXiv SkillSecurer "流行技能 >17% 潜伏漏洞" 正交）。⇒ "已核验"最低成本实现不是加一列布尔，而是加一列可 grep 的指针 + 一个拒空指针的校验脚本。
+- 提升层：可复用 Skill/工具。触发词：evidence path#key、校验器拒空指针、榜面无质量字段。
+
+
+### §下沉·wb-artifact-verification·r439·索引层无数值是可交付结论不是抓取失败FlowiseL
+## "索引层无数值" 是可交付结论，不是抓取失败：Flowise/LangFlow 索引层零字段须逐页且如实记"不可判"（来源：docs.flowiseai.com/llms.txt、docs.langflow.org/llms.txt、docs.dify.ai/.../knowledge-request-rate-limit、list-workflow-logs，2026-10-01 r362-Q-C 实拉；承接 r326 失效四形态）
+- 判据：① Flowise/LangFlow `llms.txt` 仅导航目录（Flowise 只版本号；LangFlow 只 Python 版本+端口），**零字段/零默认值/零超时分页** ⇒ 该站该面在文档层不可判，须记为"索引层无数值"而非"内容缺失"。② Dify 有数字但**无状态码**：限流 10/100/1,000 per min 三档，`limit>100` 语义是"capped at 100"=**静默截断不报错**（无旁路参数）；`page` 硬 `max 99999`。⇒ 这三家的"超限"在文档层是"截断/降档"而非"报错"，不能假设 4xx。③ 通道副产物：n8n 404 页自曝问询端点 `learning-paths.md?ask=&goal=`；但 `hosting/scaling/*` 五路径仍 404 ⇒ 该子树无直觉路径入口。
+- 提升层：工具/通道。触发词：索引层无数值可判、Dify 静默截断无状态码、Flowise/LangFlow 零字段。
+
+
+### §下沉·wb-artifact-verification·r439·迁移开关要分可逆与不可逆点配置存在配置生效验收须查该
+## 迁移开关要分「可逆」与「不可逆点」；配置存在 ≠ 配置生效，验收须查该旋钮当前版本是否仍被消费（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/durable-scheduler.md`，2026-10-01 r348A 独立 curl 实拉；经 Qoder r363-Q-A 提名）
+- 原文：①`N8N_POLLER_DURABLE_CURSORS_ENABLED`：「Turning it back off doesn't undo it. Cursors stay in their table.」②`QUEUE_WORKER_MAX_STALLED_COUNT`：「Removed in n8n 2.0. Setting this has no effect.」
+- 判据：① **开关要标「关回去是否回滚」**：有些迁移开关一旦打开就留下持久产物（游标表），关掉只是停止使用、不删除已产生的东西 —— 这是**不可逆点**，必须在打开前告知。⇒ 把可逆开关与不可逆点混为一类，会让「回退」变成半回退：行为退回来了，数据没退回来。② **旋钮变哑是一类静默失效**：配置项还在文档里、还被接受、甚至还被回显，但当前版本已不消费它。⇒ 验收「这个配置生效了吗」不能只看有没有这个字段，要查当前版本是否仍消费它 ——「配置存在」与「配置生效」必须分列。
+- 提升层：工作流。触发词：不可逆点、关掉不回滚、游标留存、旧旋钮变哑、配置存在不等于生效、Removed 无效果。
