@@ -4594,3 +4594,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **keepAlive 防驱逐≠可恢复**：心跳只保活，代码更新/超时/资源限制仍丢进行中的工作；**runFiber 内部调 keepAlive 且持久化到 SQLite 可恢复**——分钟级活跃用 keepAlive，需恢复用 runFiber。
 - **追加式事件日志是长任务底线**：**"不能从持久存储重建过去 24h 行为=只是碰巧调 LLM 的长跑脚本，不是长跑 agent"**；**压缩与上下文重置当一等公民（summarization-as-compaction 对超长任务不够，须真正 context reset）**；**Agent Resumption=每步 plan/tool result/中间状态检查点按 run 键控，部署重启后精确续跑不丢不重**。
 - **thread_id 持久游标**：**LangChain 生产 deep agents=托管任务队列+自动检查点，任何 run 可重试/重放/续跑**；**每超步写检查点（默认 PostgreSQL），thread_id 作持久游标，worker 崩溃后从 thread_id 位置继续**。
+
+## r429B LLM 应用评估与回归测试 2026（来源：arxiv-MVES-when-better-prompts-hurt/myengineeringpath-llm-eval-guide/aiworkflowlab-eval-ru/latitude-automated-regression/chiraghasija-eval-driven/blog-codercops-llm-evals/aiworkflowlab-evals-tr/dataaihub-llm-evaluation/aitestingguide-ragas/deepeval-llm-as-judge，2026-10-07 实拉）
+- **评估驱动开发（EDD）四级台阶**：**Level 1=Golden Dataset（固定输入集+标注期望输出/质量判据，分数=可追踪可门禁部署的数字）**；**逐级递进=回归基线→按失败模式扩充→CI 门禁**；**MVES=分层最小可行评估套件（通用 LLM 应用/RAG/agentic tool-use 各配最低评估件）**——先有数字再谈改进。
+- **RAGAS 五指标**：**faithfulness/answer relevancy/context precision/context recall/answer semantic similarity，跨检索层与生成层**；**多数指标无需人工 ground truth→适合自动 CI/CD**；覆盖典型 bug（忠实度/相关性/上下文精确召回/实体召回）。
+- **LLM-as-judge：放大主观评分但偏置是已知弱点**：**原理=更强 LLM 按明确判据打分（输入+输出+判据+可选参考答案→结构化分数+推理）**；**已知失败模式=位置/长度/自恋/格式偏置、判据定义模糊相关性崩——判据必须 well-defined**；**技法=GEval（自定义判据）/JevEval（有界问题+固定数学）/DAGMetric（严格多步逻辑）**；**评分器按失败模式组合=exact match/schema→task validators→LLM-as-judge（pointwise/pairwise）→人工校准**。
+- **回归测试三层标准栈**：**规则型（exact match/JSON schema）→静态参考（BLEU/ROUGE/BERTScore）→LLM-as-judge（G-Eval/pairwise）**；**每次 prompt/model/管线变更跑 golden set（50-200 真实案例）当回归，从生产失败扩充测试集**；**工具分工=DeepEval（pytest 集成）/Promptfoo（YAML-first CLI）/RAGAS（RAG 管线）**。
+- **"更好"的提示也会伤害**：**评估驱动迭代框架+可复现本地实验——"更好的"提示实际可能更差，无评估的提示工程是盲目优化**；**改动前建基线、改动后 diff 分数，不靠"感觉更好"上生产**。
