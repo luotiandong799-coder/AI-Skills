@@ -4671,3 +4671,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **量化四档速查**：**FP16≈14GB 基准质量；Q8_0≈9GB 质量损失可忽略 +10% 速度；Q4_K_M≈4.9GB +30%；AWQ≈5.2GB +35%**——先按显存定模型再选最接近原质量的档。
 - **LiteLLM 网关**：**开源 AI 网关/LLM 代理=一套 OpenAI 兼容端点背后负载均衡/追踪成本/速率限制/路由到该处理的模型；自托管分钟级无需信用卡**；**实测高级 AI 任务成本降 56%**；**LiteLLM+Ollama=约 20 分钟搭建、约  硬件 + /月 vs 云，单机多模型统一入口**。
 - **本地部署决策模型**：**Ollama 多 GPU 自动拆分；vLLM tensor parallelism 多卡摊大模型**；**月租档位=RTX 4090 24GB VPS 承诺 -280/月、按需 .30-0.50/h（8B FP16/13B INT4 舒适）；工作站 16GB+ GPU=免费自用；CPU-only 只适合 7B 且太慢不生产**——先量化并发/延迟/质量再选引擎+量化+硬件。
+
+## r433A 提示工程高级技法与自动优化 2026（来源：aipromptshub-advanced-prompt-engineering/promptagent-chain-of-thought-few-shot/techrxiv-prompt-engineering-survey/humai-architecture-of-intent/exemplar-prompting-techniques/aiunpacker-12-best-practices/aiwikiproject-advanced-prompt-engineering/vibeengines-prompt-engineering/innovativeais-mastering-prompt-engineering/hakia-prompt-engineering-advanced，2026-10-07 实拉）
+- **few-shot 用法与"何时跳过"**：**few-shot 适用=风格匹配/格式锁定/分类；即使随机标签示例也优于 zero-shot（Min et al. 2022）**；**跳过=简单 zero-shot 任务/推理型模型（o 系/Extended Thinking 内部已推理）；CoT=数学/逻辑/多步推理，标准模型 MMLU-Pro +19 分；role prompting=语气/创意/领域框架，分类与事实问答几乎无效（cargo-cult）**；**few-shot=给 2-5 个输入-输出对展示成功长什么样，比描述要求可靠**。
+- **CoT 变体谱系**：**zero-shot CoT=追加"Let's think step by step"（GSM 18%→79%）；few-shot CoT=示例答案含推理路径，模型模仿推理+输出格式**；**2026 新变体 Chain-of-Draft=极简逐步草稿，约 30 token vs 传统 CoT 1,500 token，防跳过步骤+消除多余叙事**——需 show-the-work 且预算紧用 CoD。
+- **示例选择与示例库**：**选与目标输入相似+覆盖边界/反面案例的示例（示例库=prompt 内参考库区）**；**带批判的示例（Architecture of Intent）=每示例附 Critiques 块（"太僵/太随意/恰如其分"+原因），让模型学会判断而非只模仿——风格锁定比纯正例更强**。
+- **结构化输出靠格式示例+边角案例**：**示例带复杂案例与歧义案例（如 "Lunch" → time:null），模型学会对模糊输入输出明确空值而非硬造**；**工具描述带示例/边界/返回值语义（"returns null when…"）是 schema 上下文的一部分**。
+- **自动优化与评测驱动迭代**：**改 prompt=改代码，必须配测试集（pass@k/分类准确率/格式符合率）跑回归——无评测的 prompt 迭代是盲目调参**；**自动 prompt 优化器把评测指标当目标函数自动搜索（示例选择/指令改写/温度），先有人类基线再自动化**。
