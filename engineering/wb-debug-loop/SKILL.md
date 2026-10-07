@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.155.0"
+version: "1.156.0"
 agent_created: true
 ---
 
@@ -490,3 +490,11 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 ## 步预算会被框架"自身环节"消耗，而消耗方从不在文档里披露：LangFlow v1.12.4 修复原文 "compute recursion_limit accounting for middleware graph nodes"（#15362，2026-09-29）——中间件包装出的节点此前不计入 `recursion_limit`，修复后计入（来源：api.github.com/repos/langflow-ai/langflow/releases，2026-10-07 独立 curl 实拉；与 dl「recursion_limit 默认值去哪确认」互补——r309B/r368C 管"默认值多大、按引擎版本确认"，本条管"预算的计量口径是否被框架改动"）
 - **判据**：① **凡给用户步预算的框架，验收时要单独问"除我显式写的步骤外，还有谁在吃这笔预算"**：包装层、钩子、重试、自动注入的工具节点都可能是隐藏消费者。② **同一 flow 在版本升级后会在更短的真实步数上撞顶**：框架悄悄把"自身环节"计入预算，文档不披露 ⇒ 排障"为什么又超步数"要先查该框架此版本是否改了预算计量口径。③ 与"默认值多大"互补：那两条管数值，本条管计量口径是否被框架改动——两者都是"预算被吃掉"的不同根因。
 - 提升层：工具 / 工作流。触发词：步预算被框架自身环节消耗、recursion_limit accounting for middleware、中间件节点计入步数、隐藏消费者、版本升级后更短撞顶。
+
+## 通知抑制键必须含「错误身份」三元组，且去重只作用在通知侧——「没收到告警」不等于「没在坏」（来源：pipedream.com/docs/workflows/building-workflows/errors.md 9,150B，2026-10-07 独立 curl 实拉逐串命中 `at most one email` / `per error` / `per workflow` / `per 24 hour period`；与 §失败留痕纪律 互补——那条管"失败要留痕"，本条管"同一失败的通知会被怎么压掉"）
+- **判据**：① 去重键 = per error × per workflow × 24h 三个维度，缺 `per error` 会互相吞兢（第二个新故障静默无通知）；② 窗口作用在**通知侧**，执行侧重试/失败照常发生 ⇒ 排障顺序是先查执行账本再查通知；③ 可写成健康度断言：同一 error×workflow 在 24h 内出现 ≥2 封 = 去重失效。（细则见 references/knowledge-base.md §r436B）
+- 提升层：工具 / 工作流。触发词：通知去重键、per error per workflow 24h、没收到邮件不等于正常、先查执行账本。
+
+## 批准绑定具体计划、计划变更即失效；漂移检查只读且不作门——观测面与拦截面必须分离，读不到的 provider 报 unverifiable（既不是 clean 也不是 failure）（来源：api.github.com/repos/mikehasa/golive-skill/readme 44,717B（`Accept: application/vnd.github.raw+json`），2026-10-07 独立 curl 实拉逐串命中 `plan ID` / `not a gate` / `confirm-destroy` / `state.json` / `unverifiable`；与 §诊断只读、修复须批准 互补——那条管 diagnose/repair 分人，本条管"批准绑在哪个对象上"与"漂移该不该拦住"）
+- **判据**：① 批准要**绑到具体计划对象**（apply 须携带已批准 plan id + `--yes`、步骤 id 显式），计划一改旧批准自动失效 ⇒ "批准过"不是一次性授权令牌；② 不可逆操作按`--confirm-dns`/`--confirm-destroy`/`--confirm-live`分级，首次生产部署也进需确认集；③ **漂移检查是观测不是拦截**：`Drift is deliberately not a gate`，只读、考察不一致时 exit code 2 提示人来决策，`plan`/`apply`/`verify` 永不查询它；④ 读不到的 provider 报 unverifiable——**既不报 clean 也不报 failure**，避免把"取不到"混成"没问题"。
+- 提升层：工作流 / 工具。触发词：批准绑定计划、计划变更即失效、drift 不作门、exit code 2、unverifiable 三态。

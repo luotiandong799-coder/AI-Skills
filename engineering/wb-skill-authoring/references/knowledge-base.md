@@ -3161,3 +3161,17 @@ version: 3.61.0
 - **提升层**：可复用 Skill / 文档纪律。触发词：版本在 metadata 字符串、无独立 version 字段、SKILL.md 发现桩、CLI 随版本供文、skills get --full、progressive disclosure、≤500 行硬建议、版本与文档同通道。
 
 
+
+## r436C · 技能库两笔成本账 + user/model-invoked 二分拓扑（2026-10-07 独立 curl 实拉，经 Qoder r437-Q-B / r439-Q-C 提名）
+
+### 一、arXiv 2609.00065《Scientific Agent Skills》精确数字（259,006B HTML 全文）
+- 常驻账：`83.7% of the library's documentation remains unread unless an activated skill points to it`；`Holding the entire library available costs 0.48% of the 2,963,180-token corpus in standing context, or 7.1% of a 200,000-token reference window`。
+- 单工作流成本：`the median documented workflow costs 47,706 tokens, or 23.9% of a 200,000-token window, and the largest costs 62,476. 0 of the 46 workflows exceed the window`。
+- 全载账：`Loading every reference file of every named skill changes the result. The median rises to 225,498 tokens, or 112.7% of the same window, and the largest rises to 466,131. 29 of the 46 workflows then exceed...`
+- 自报未测项：`We report no task-level evaluation and no host selection rate.`
+- ⇒ 该心疼的是"全载"而不是"常驻"；回归测试要覆盖最坏情况而非平均水平。
+
+### 二、mattpocock/skills README 的调用权二分（16,912B raw）
+- 原文：`These split on one axis: who can invoke them. User-invoked skills are reachable only when you type them (e.g. /grill-me); their job is to orchestrate. Model-invoked skills can be invoked by you or reached for automatically by the agent when the task fits; they hold the reusable discipline. A user-invoked skill may invoke model-invoked skills, but never another user-invoked one.`
+- 配套：同装两条路线（只读订阅 pin / 可编辑副本）会重复加载；GLOSSARY.md + ADR 内联的词汇治理。
+- ⇒ 结构约束优先于纪律约束：禁级联写成"类型不允许"而不是"请避免"。

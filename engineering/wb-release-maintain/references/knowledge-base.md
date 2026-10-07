@@ -313,3 +313,15 @@
 - **评测须标注 executor（与 av 同轮同点）**：跨 executor 结论失效，发布评测报告须锁 executor 基线与版本。判据：结论不跨 executor 移植。来源：arXiv 2609.36746。
 - **自动删除须显式豁免集+两阶段缓冲窗**：n8n `EXECUTIONS_DATA_PRUNE`+`EXECUTIONS_DATA_MAX_AGE`（默认 336h），删除前 grace 窗。判据：清理须有豁免集+缓冲，禁即时硬删。来源：n8n scaling/manage-execution-data。
 - **备份清单逐条排除原因（与 av 同轮同点）**：导出 manifest 须标 skipped/error+原因。判据：备份完整性=逐条可解释排除。来源：Pipedream export-workflows。
+
+## r436B · 破坏性变更的"白名单豁免形状"与"同名冲突申报"（2026-10-07 独立 curl 实拉，经 Qoder r436-Q-A / r439-Q-B 提名）
+
+### 一、Flowise v2.1.4 迁移指南（1,784B）
+- 逐串命中：`Due to security concerns, it is now disabled by default.`、`Users must explicitly specify which config can be overriden from the UI.`
+- 迁移四步（原页 step 结构）：Configuration → Enable Override Configuration → 逐字段打开开关并保存 → 之后才能被覆盖。
+- 可复用结论：安全型收紧 = 「翻转默认值」+「逐字段豁免白名单」+「可执行迁移脚本」三件套，缺第三件即"功能性回退"。
+
+### 二、LangFlow v1.12.5 同名工具消歧（release notes 8,093B）
+- 逐串命中：`fix(tools): disambiguate duplicate tool names by @Cristhianzl in .../pull/15556`
+- 可复用结论：命名主键冲突在实现侧被视为缺陷并单独发版修复 ⇒ 发布说明侧应同步按破坏性变更申报。
+- 未达证据（诚实标注）：Qoder r439-Q-B 提到的"同名安装会静默覆盖 / 批量更新会一次刷新全部"来自 orca.security 博客，本轮对该 URL 实拉返回 000（未达），故那一半不落地；该站计入探活计数 1 次。

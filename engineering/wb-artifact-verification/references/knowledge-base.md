@@ -2370,3 +2370,16 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 本正文只保留验证决策级核心。方法论来源、判据推导、反模式、特殊场景全部在
 [references/knowledge-base.md](references/knowledge-base.md)（完整知识库，下沉于 2026-09-26）。
 **先 Grep 定位关键词，再读对应节**。主题速查：发现要有边界 · 优先级与确定性分开 · 预算先给挑错 · 产物回收防调换 · 扫描器看不透先拒收 · 可疑项沙箱实跑 · 多复核者一致度分级 · mutation-testing · 独立 Oracle · 随机差分模糊测试 · 迁移三步验收与不可逆标注。
+
+## r436A · 组合级涌现恶意（零恶意件组合）判据（来源：arXiv 2610.05943v1《Runaway Reaction》210,175B，2026-10-07 独立 curl 取 HTML 全文，经 Qoder r438-Q-C 提名）
+- 原文（摘要）：`Agent skills package task-specific knowledge and procedures that can be composed to support complex agent tasks, while public marketplaces provide a growing pool of reusable skills. Existing security vetting, however, largely evaluates skills in isolation, leaving composition-induced risks underexplored. Such risks arise because composing benign skills expands the agent's capability space, enabling behaviors unavailable to any skill alone.`（四川大学）
+- 与 SkillCascade（已有，KB r319A）的差异：SkillCascade 的实例是"一个恶意目标被拆到多件技能、单件看起来 benign"，是有意图的分布；本面的实例是**没有任何单件携带恶意、组合后能力空间扩张出恶意行为**，两档用例不通用。
+- 验证面：评测/回归时除逐件扫描外，需按"新增技能与已装集合的能力并集"做行为枚举；该论文 4,000 个公开技能 × 八类网络安全行为的规模可作规模参照。
+- 判重：av 既有"留痕/扫描/审判级"条目均针对单件或单通道；本条把"组合"本身变成被测对象，重叠 <60%。
+
+## r436C · 评测报告口径：静态闸不可代理 judge、均值须附正例占比与 CI（来源：arXiv 2608.20614v1《Evaluating Skills, Not Just Agents》420,604B，2026-10-07 独立 curl 取 HTML 全文，经 Qoder r439-Q-C 提名）
+- 原文：`On 145 real skills from internal enterprise repositories and public catalogs, scan-only gates surface useful authoring issues but measure complementary facets (structural versus LLM-judge Spearman ρ=0.14).`
+- 原文：`Across 947 scored paired cases from 58 of 64 production skills and four primary harnesses, mean composite Skill Lift is 0.2134 (95% paired-case CI [0.1967, 0.2301]); mean outcome-only lift, the average of accuracy and goal accuracy, is 0.1799. Composite lift is positive in 72.8% of paired cases.`
+- 原文：`The largest process-metric gains appear in skill execution, behavior check, and skill efficiency—signals about discovery, routing, workflow following, and tool use that document scans cannot observe.`
+- ⇒ 三条口径：① 便宜静态闸与 LLM judge 并列而非互相折算；② 均值必须配 CI 与正例占比；③ 过程分（轨迹）与结果分分列。
+- 判重：既有"评分器/判定"条目管单件判定的证真，"五千好过五万/四桶评测集"管评测集怎么造；本条管"结论怎么报"这一层，重叠 <60%。

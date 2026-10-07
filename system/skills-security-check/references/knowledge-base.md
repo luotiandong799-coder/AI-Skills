@@ -105,3 +105,22 @@
 - **原文逐字**：`registry_metadata_caveat: Skill registries may list a different "owner" or uploader string than author/publisher in this file. That label reflects the distribution channel, not cryptographic proof of origin. Verify this package against official_repo releases, commit history, or signed artifacts before trusting cloud results.`；检查表第 1 条即 **Publisher vs registry**。
 - **判据**：① **"来源可信"不是一个判断，是两个判断的合取**：锚 A = 登记元数据（集市 owner / uploader 字段），锚 B = 密码学证明（签名链 / official_repo 发布件 / 提交历史）。任一为假则来源不可信；只报 A 而把它叫"已验证来源"，是**用渠道标签冒充发布者证明**。② **两锚由不同主体控制，才会出现不一致**：owner 字段由集市/上传者写入（可同名、可易手、可被冒用），签名由发布者私钥产生 ⇒ 两者冲突时以 B 为准，并把冲突本身记为一条发现，而不是取其一了事。③ **云端结论的输入是被判对象，结论不替它背书**：原文明确"before trusting cloud results"——即威胁情报/扫描的云端判定结果，其可信度上界受制于"送入查询的那个包名是不是真的来自官方" ⇒ **先用双锚确认身份，再采用针对它的云端结论**；顺序颠倒时，一次身份冒用就能让"查了云库显示干净"变成假阴性。④ 落地口径：审计输出里"来源"栏写两段——`登记来源`（集市/路径/owner）与`验证来源`（签名验过 / 仓库 commit / 发布件 hash），两者都填或显式填"未验证"；只有前者时不得写"来源可信"。
 - 提升层：工具 / 工作流。触发词：registry_metadata_caveat、Publisher vs registry、登记来源与验证来源双锚、owner 不等于发布者证明、先证身份再采信云端结论、来源只填一半不得写可信。
+
+## r436A · 恶意产能的发布者聚合 + 判定器自面受审（来源：arXiv 2602.12430 §6.3 + 2605.11418 §7，2026-10-07 独立 curl 取 HTML 全文，经 Qoder r439-Q-A / r439-Q-C 提名）
+
+### 一、98,380 → 157 → 54.1%（三个不同分母，禁止混引）
+- 原文：`constructed the first ground-truth dataset of confirmed malicious skills by behaviorally verifying 98,380 skills from two community registries. Among 157 confirmed malicious skills with 632 vulnerabilities`。
+- 归因：`Data Thieves`（供应链手法外泄凭据）/ `Agent Hijackers`（指令操纵劫持 agent 决策）两类原型。
+- 分布：`A single industrialized actor accounted for 54.1% of confirmed cases through templated brand impersonation.` ⇒ 模板化品牌冒充 ⇒ **可折叠到发布者处置**。
+- 同节另一数字（不同口径，附以备查）：高风险模式线索占 5.2%（`5.2% of skills exhibit high-severity patterns`），属"静态模式命中"，与"行为化确认恶意"不是一回事。
+
+### 二、治理面规避（Governance Evasion）的四类手法与实测削弱次序
+- 定义：`governance evasion aims to preserve malicious or policy-violating intent in SKILL.md while causing the registry pipeline to return a verdict that does not prevent publication or use`；起点是 `clean skills that already pass registry vetting`。
+- 实测：选择操纵（Selection Manipulation，语言框架包装）77.6% paired trials；治理规避 `avoid a blocking verdict in 36.5%-100% of cases`；直接恶意变体即使不带规避策略也有约 32% 仍可访问（`≈32% of directly malicious variants would still remain accessible`）。
+- 四类手法削弱次序（强→弱）：Paraphrasing > （Overflowing Context / Definition-of-Done） > LLM Judge Jailbreaking（仅把 clean 率推到 36.5%，`63.5% of variants are still labeled malicious`）。
+- 落地结论：判定报告必须带"变体被判 clean 的比例"，否则"检出数上升"无法与"判定器被绕过"区分。
+
+### 三、判重理由
+- 「来源双锚（registry owner ≠ 密码学身份）」只否定了 owner 的可信性，没有给处置单位 ⇒ 本条提供"按 owner 聚合做产能级熔断"，重叠 <60%。
+- 「17 类漏洞清单 + Triage 五档处置动词」管单条发现的动词，不管封禁作用域 ⇒ 互补不重叠。
+- 「恶意意图分布在多技能」（SkillCascade 系列）的前提是存在恶意意图；本条瞄准的是「已经通过 registry vetting 的干净技能被改写后仍能躲过裁决」，两者样本池不同 ⇒ 判据不互换。

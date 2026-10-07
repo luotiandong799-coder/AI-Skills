@@ -1012,3 +1012,21 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - **原文**：「Cancellation is not rollback: a compaction that already completed remains in the transcript and is still counted, without sending a late reply.」「The built-in OpenClaw runtime does not start further recovery hooks, maintenance, transcript truncation, or retries after cancellation.」「OpenClaw commits that compaction without a summary instead of ending the turn … A timed-out summary does not move to the model fallback chain, because each extra model could add another full timeout window to the wait.」「Such a replacement must strictly reduce history; unchanged or larger results are rejected.」「Cleanup has a ten-second allowance, separate from the operation deadline.」「A denied group signal can be accepted only when that census proves there are no live members; live or unknown state still fails closed.」「Only ordinary Git failure or `FetchTimeout` permits retry after verified cleanup.」「After a failed or terminated fetch and verified process-tree extinction, the owner removes newly created locks in physical Git metadata; pre-existing locks and linked metadata remain untouched.」「Once cleanup succeeds, cancellation takes precedence over timeout or ordinary Git failure.」
 - **判据**：① **取消只保证"不再向前"，不保证"回到之前"**：已完成的副作用（已写入的压缩条目）留在转录里并参与计数，只是不补发迟到的回复；取消后不再启动任何后续 recovery / 维护 / 截断 / 重试 ⇒ 把取消当回滚，会在"看起来干净"的现场上继续跑，而实际已经留下了一半的变更。② **超时降级不得串联更多超时**：摘要超时就提交一个"无摘要"的压缩让回合继续，刻意**不**转模型 fallback 链——每多一个候选模型就多一个完整超时窗口 ⇒ 用"换一个更慢的东西再试一次"来救超时，本质是把 N 倍等待塞给用户；降级路径必须显式声明它不再引入新的等待源。③ **优化类操作要有单调性校验**：压缩结果必须严格小于原历史，等于或更大则拒绝 ⇒ 没有单调性校验的"优化"可能只是复制甚至放大，而且不会报错。④ **失败类别决定重试资格，不是所有失败都该重试**：只有「普通失败 / 取数超时」在**进程树抽干经验证之后**才放行重试，取消与所有权失败是终态 ⇒ 不分类的重试会把终态失败也拖进重试风暴，还会掩盖真正的终态原因。⑤ **清理预算与操作预算必须分离**：清理有独立的固定额度（10 秒），不吃操作 deadline ⇒ 共用一份预算时，要么收尾没时间做完留下脏状态，要么主操作被清理挤掉。⑥ **"发了终止信号"不等于"它停了"**：信号被拒时须做进程普查证明无存活成员才接受，live 或 unknown 一律 fail closed ⇒ 这是清理假象的头号来源；同理"等 leader 退出"不够，要观察整个进程组消失。⑦ **清理只动自己新建的东西**：锁回收只移除本次新创建的锁，既有锁与链接元数据保持不动 ⇒ 清理必须区分所有权，否则会顺手破坏别人的状态。⑧ **取消优先于超时与普通失败**：清理成功后若同时存在取消，归类为取消 ⇒ 终态归类要有优先级，否则同一现场会被记成三种不同的失败。
 - 提升层：工作流 / 诊断 / 可复用 Skill。触发词：取消不是回滚、超时降级不串联超时、单调性校验、失败类别决定重试资格、清理预算独立、进程普查 fail closed、只清理自己新建的、取消优先于超时。
+
+## r436B · 通知去重键三元组 + 批准绑定计划/漂移不作门（2026-10-07 独立 curl 实拉，经 Qoder r438-Q-C / r439-Q-C 提名）
+
+### 一、Pipedream 错误通知去重（9,150B）
+- 原文：`Pipedream only sends at most one email, per error, per workflow, per 24 hour period.`（逐串命中 `at most one email` / `per 24 hour period`）
+- 三个 failure 维度：error（错误身份）/ workflow（作用域）/ 24h（窗口）。缺任意一维的行为差异：
+  - 缺 error → 不同错误互相吞（新故障被旧故障的窗口吃掉，静默无通知）；
+  - 缺 workflow → 全局级节流，单个工作流的新错误被别处的错误抢走配额；
+  - 窗口过长 → 长期故障只在第一天报一次，之后"习惯了"。
+- 关键分离：**通知侧去重 ≠ 执行侧停摆**。重试/失败仍照常发生 ⇒ 排障先看执行账本（executions），再看通知。
+- 健康度断言：同一 (error, workflow) 在 24h 内出现 ≥2 封 → 去重键失效。
+
+### 二、golive-skill：批准绑定 + drift 不作门（44,717B raw）
+- 批准：`apply` 必须携带**已批准的 plan id** + `--yes`；步骤 id 显式（`preview:deploy` / `release:check` / `promote:production`）；计划变更 → 旧批准自动失效。
+- 不可逆分级：`--confirm-dns` / `--confirm-destroy` / `--confirm-live`；首次生产部署同样需确认。
+- 回滚：只回指本工具自己记录过的 deployment（`state.json` 内 `deployed:<target>:id`），永不自动触发。
+- 漂移（drift）：只读命令，比较 expected（自记时间戳）vs observed（现读），需处理时 exit 2，原文明写 `Drift is deliberately not a gate: plan, apply and verify never consult it`。取不到的 provider 报 `unverifiable — never as clean, and never as a failure`。
+- 落点判断：WB 只取其中两条结构性判据（批准绑计划 / 观测面与拦截面分离），不移植其具体 CLI 形态。
