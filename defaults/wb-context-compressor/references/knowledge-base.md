@@ -4692,3 +4692,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **通信协议四类**：**直接（点对点）/共享（黑板/共享状态）/广播/协议驱动（拍卖/讨价还价/辩论/共识——消息编码 bids/proposals/proofs+显式终止条件，MCP 与 agent-ready API 背书）；协议驱动主要收益=可审计性与协议规则正式分析**。
 - **失败模式四类与恢复**：**Agent 失败=另一实例接管/优雅降级；通信失败=退避重试/换路径；级联失败=熔断器防一个失败 agent 淹没其他；状态损坏=检查点恢复到最后已知良好状态**；**成本管理=按需扩缩容（demand-based auto-scaling），不恒定全开**。
 - **何时不用多 agent**：**决策树三问=①能否拆成真正独立子任务（不能→单 agent/pipeline）②质量提升值不值多倍成本（不值→单 agent）③协调复杂度是否超过单体（超过→别拆）**；**pipeline 代价=总延迟为各 agent 延迟之和，但每阶段输出独立可检查、天然人工复核点**；**大多数系统不需要多 agent，默认单 agent**。
+
+## r434A AI Agent 安全与 Guardrails 2026（来源：futureagi/rapidclaw/getmaxim/agent-works/openlegion/brightlume/arxiv-2511.18933/arxiv-2505.09602/microsoft-learn/claude-platform/spinnable/taskade/billdx/arnav/dailyaiworld/aideck/nitinksingh/agentswarms/alicelabs，2026-10-08 实拉）
+- **分层防御框架五层**：**输入守卫（注入/PII/jailbreak 过滤）→工具/动作闸（最小权限/白名单/scoped creds）→输出守卫（grounding/schema/内容安全）→人工审批（高风险动作等人）→evals 反馈（离线测量调前四层）**——**单层都不够，至少 3 层协同闭环**；七层增强版=输入处理（可信/不可信分离）+输出过滤（先验结构再行动）+能力沙箱+特权分离+canary tokens+策略引擎（高影响动作前确定性检查）+持续红队。
+- **结构性 guardrail 运行在 LLM 上下文窗口外**：**执行机制在模型上下文之外，LLM 收到的任何内容都影响不了它——正则过滤器在 Python 剥离注入模式后再 append 上下文，不问 LLM 自查**；**工具响应 JSON 包装（{"tool":…,"result":"[sanitized content]","status":"success"}）比原始字符串难武器化；工具响应截断=每条 append 前 2,000 token 上限，防对抗内容靠体量淹没稳定 system prompt**。
+- **PromptArmor 检测器模式**：**单独小型快速模型语义分类输入是否含注入意图（适配攻击演化、不依赖脆弱关键词匹配——同义词/改写可绕过关键词过滤）；GPT-4o/4.1/o4-mini 当检测器 AgentDojo 假阳假阴均 <1%（ICLR 2026），移除注入后下游攻击成功率显著下降**。
+- **Harmlessness screens 预筛 + 输入硬化**：**轻量小模型（Claude Haiku 4.5 类）在输入进主对话前 pre-screen，结构化输出把响应约束成简单分类（通过/拒绝）**；**所有外部内容当不可信（含组织自有数据源——上游可能被操纵），strip/escape HTML-markdown 中和 script/隐形文本，allowlisting 只放行预期数据格式**。
+- **可信上下文最小化 + 输出侧白名单**：**处理不可信内容的子代理运行降权工具、可信父代理处理后结果再决策——越小的可信上下文越小的攻击面；Email/文档标 "untrusted" 区段**；**高风险动作输出侧 allowlist；阶段间结构化 schema 校验交接（不把原始文本当指令）；canary tokens=外泄绊线**；**输出到用户/下游工具前先 screen 输出——封堵 system prompt 泄露/base64 payload/攻击者域链接/类外泄工具调用参数**。
