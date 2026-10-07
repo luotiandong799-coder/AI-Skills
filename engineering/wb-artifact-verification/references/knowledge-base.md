@@ -2520,4 +2520,6 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **★保留策略是双阈值，任一满足即触发**：age（默认 336h/14 天）**OR** count（默认 10,000，从旧到新删）。判据：**只按时间或只按条数设保留策略都会在另一侧失控**——低流量时靠 age 兜住"永远不会自动清"，高流量时靠 count 兜住"存储先爆"。
 - 提升层：工具 / 工作流 / 可复用 Skill。触发词：留痕分级、save on error、删除两阶段、hard delete buffer、活跃态豁免、标注永不清理、双阈值保留。
 
+## 下沉·wb-artifact-verification·r441·治理开关默认只向前生效（存量豁免），且必须点名作用域与存量规模
+## 治理开关默认只向前生效（存量豁免），且必须点名作用域与存量规模：关掉共享/发布后「已存在的仍然有效」，2FA 强制只覆盖邮箱口令不覆盖 SSO（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/security/manage-security-policies.md` 8,773B，2026-09-30 r325B 独立 curl 实拉逐串命中，**通道更正**：Qoder 给的 `docs.n8n.io/configure-n8n/security/manage-security-policies.md` 返回「Page Not Found」壳；经 Qoder r358-Q-B 提名）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·治理开关默认只向前生效存量豁免且必须点名作用域与存量）
 

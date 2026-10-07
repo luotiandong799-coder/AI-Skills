@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.82.0"
+version: "1.83.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -362,3 +362,9 @@ sources:
 - **判据**：① **申诉面要按危险度切成两轨**：可疑档允许创作者"带风险继续"、危险档不给这个按钮 ⇒ 把申诉权一律开放，人审负载被灰区淹没；一律关闭，则低危提示也要重走全链路。**双轨的边界就是危险度分档**。② **"待处置"必须是显式的隔离态而不是卡住**：所有异常（安全检测、人工驳回）统一落入同一状态并置顶展示 ⇒ 否则"没动静"与"在排队"不可区分，创作者不知道是自己该动还是系统在动。③ **异常要留可回溯的证据档**：安全报告逐版本存档 ⇒ 后续版本复现同一问题时能对照上一版的结论，而不是重新检测一遍再猜。④ **生命周期必须有一个显式的拒绝出口**：`rejected` 是终态而非挂起 ⇒ 没有拒绝终态的体系，未过审件会永远停在 `checking`，既占配额又无法被清理，也谈不上"被拒了要改什么"。
 - **与既有能力分工**：r434C「发布记录完成判据写在读者侧（五问）」管**评审者怎么判够不够**；本条管**判完之后谁能继续推进、异常落在哪个态**。注：百炼"上传新版不影响已挂载实例"的版本隔离面 WB 已于 r438 以一手反证确认并落现行锁版本规，本条不重复。
 - 提升层：工作流（审核分档）/ 治理（终态设计）。触发词：处置权按危险度分配、可疑可带风险继续、危险无申诉、待处置隔离态、逐版本安全报告、checking→active/rejected、拒绝终态。
+
+## 批量退役要设「速率上界 + 解析失败整轮停删」，并同时维护「期望集」与「豁免清单」两条名册（来源：api.github.com/repos/NVIDIA/skills/contents/.github/scripts/prune-orphans.sh 6,129B → 解码 3,734B + catalog-exceptions.yml 1,974B → 778B，2026-10-08 一手实拉逐串命中 `it never deletes a dir whose registration disappeared` / `If any components.d file fails to parse, pruning is skipped for the whole run` / `PRUNE_CAP=5` / `nothing deleted`；与 §发布记录完成判据 互补——那条管读者能不能读懂，本条管清理动作会不会误杀）
+- **实证**：脚本头注原文「The sync only writes to dirs declared in `components.d/*.yml` — **it never deletes a dir whose registration disappeared**, so deregistered skills linger in the catalog (and downstream surfaces) indefinitely. Teams consistently assume deregistration removes the catalog copy (Dynamo, TAO/tao-run-on-lepton, and cuOpt all hit this)」；安全栏原文「If any components.d file **fails to parse, pruning is skipped for the whole run** — a parse error would make that component's skills look unregistered and **mass-delete them**」；「If more than **PRUNE_CAP** dirs would be pruned in one run, **nothing is deleted**; the list is written to `pruned-orphans-overflow.txt` and surfaced as a workflow warning for **human triage**」；默认 `PRUNE_CAP="${PRUNE_CAP:-5}"`；名册两侧=期望集（`components.d/*.yml` 的 `catalog_dir` 并集 + `manual-components.yml`）与豁免清单（`catalog-exceptions.yml` 的 `exceptions[].dir`）。
+- **判据**：① **删除动作必须有速率上界，超界默认"不删、转人工"**：一次同步要删的数量超过阈值就整批取消并落 overflow 文件 ⇒ 批量删除的异常放大本身就是事故信号，宁可漏删一轮也不能让"配置读错"变成"删掉半个库"。② **任一配置解析失败=整轮停止删除，不是跳过该项**：解析失败会让正常技能看起来"未登记"，此时继续删就是无差别删除 ⇒ 清理脚本的容错方向必须是 fail-safe（失败即停），与执行纪律里"失败即停"同构但作用面是批量破坏性操作。③ **只写期望集不够，必须配反向豁免清单**：未登记的目录不会自动消失而是变成孤儿 ⇒ 入库准入应同时维护「注册清单」与「豁免清单（含豁免人+理由+日期）」，禁止"没登记=默认放行"的静默漏挂。④ **删除要发生在可见的地方**：原文把删除并入同步 commit，「where the deletion is visible in the sync PR diff」⇒ 退役必须是可审阅的 diff，不是脚本里的静默 rm。⑤ **退役率无人汇报=治理缺口**：公开市场与规范一律不公布 delete/merge rate，只能靠 commit-log 关键字抽样自测自报，否则"只增不减"会把库做成垃圾场。
+- **与既有能力分工**：§审核处置权按危险度双轨 管**审核态怎么流转**；本条管**已入库技能被清理时的速率上限、失败语义与名册完整性**。
+- 提升层：工作流（退役治理）/ 工具（清理脚本）。触发词：PRUNE_CAP、删除速率上界、解析失败整轮停删、overflow 转人工、期望集与豁免清单、孤儿目录、退役率自测、删除可见于 diff。

@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合
-version: "2.165.0"
+version: "2.166.0"
 agent_created: true
 ---
 
@@ -44,8 +44,6 @@ agent_created: true
 ## 流行度与展示序都不是质量/留存的判据：简单特征（体积、下载量）对「是否持续在架」无稳定预测力，注意力高度集中且权限声明普遍；目录展示序可能是随机洗牌，文档撤除本身是可机检的治理信号（来源：arXiv 2609.17274《After the Party v2》42,842B + agentskills.io/clients.md 25,457B + docs.n8n.io/llms.txt 286,271B，2026-09-30 r324C 独立实拉；与 §目录数字失真四形态 互补——那几条管“数字怎么失真”，本条管“该换用什么指标”；细则见 references/knowledge-base.md §r324C）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·流行度与展示序都不是质量留存的判据简单特征体积下载量）
 
 ## 扫描预算耗尽只允许「降档验证」，不允许判为通过；应用层不隔离要作正面申报，不能让集成方靠缺位反证推断（来源：docs.openclaw.ai/cli/update/how-updates-run.md 84,130B + docs.langflow.org/next/security 34,323B，2026-09-30 r325A 独立 curl 实拉逐串命中；经 Qoder r357-Q-A 提名）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·扫描预算耗尽只允许降档验证不允许判为通过应用层不隔离）
-
-## 治理开关默认只向前生效（存量豁免），且必须点名作用域与存量规模：关掉共享/发布后「已存在的仍然有效」，2FA 强制只覆盖邮箱口令不覆盖 SSO（来源：docs.n8n.io `/deploy/host-n8n/configure-n8n/security/manage-security-policies.md` 8,773B，2026-09-30 r325B 独立 curl 实拉逐串命中，**通道更正**：Qoder 给的 `docs.n8n.io/configure-n8n/security/manage-security-policies.md` 返回「Page Not Found」壳；经 Qoder r358-Q-B 提名）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·治理开关默认只向前生效存量豁免且必须点名作用域与存量）
 
 ## 存在「权限无关的永不可见类」；特权查看须一次性按单次记录，且被拒尝试同留痕（来源：docs.n8n.io/.../redact-execution-data.md 17,934B，2026-09-30 r338C 独立实拉）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·存在权限无关的永不可见类特权查看须一次性按单次记录且）
 
@@ -494,3 +492,9 @@ agent_created: true
 - **判据**：① **「没扫全」必须算阻断，不能算通过**：`1` 同时覆盖"发现高风险"与"分析不完整/覆盖不足" ⇒ 门禁脚本若只看"有没有 finding"，覆盖缺口会静默通过；把覆盖缺口并入阻断态，才不会出现"扫了 30% 报绿灯"。② **默认档位要显式声明它折叠了什么**：默认把 SAFE 与 CAUTION 都折叠成 `0` ⇒ 说"退出码 0"时必须同时说"这一档把 CAUTION 也算通过"，否则使用者会把"有提示但没阻断"读成"没问题"。③ **基线抑制改的是口径不是风险**：基线让风险分只反映未分诊项、重扫只报新增 ⇒ 换基线等于换量纲；把基线当"把误报删掉了"会低估存量风险。④ **静态扫描器的边界必须写进文档**：从不执行被扫对象，且明说"是纵深防御不是沙箱" ⇒ 拿静态扫描结果当"这个技能跑起来安全"的证据是范畴错误。⑤ **不同开关是不同语义的准入面**：`--fail-on-findings` / `--fail-on-incomplete` / `--min-coverage` 分别对应三条独立的准入线，只开一条就说"有门禁"等于只堵了一个口。
 - **与既有能力分工**：r439B「复审记分对象是新增 + llm-unconfirmed」管**跨轮怎么记分**；本条管**单次门禁怎么退出、覆盖缺口算不算过、基线会不会让风险假降**。
 - 提升层：工具（门禁契约）/ 工作流（准入线）。触发词：exit code stable contract、--fail-on-incomplete、--min-coverage、覆盖缺口并入阻断、CAUTION 折叠进 0、基线只改口径、defense-in-depth not a sandbox、never executes the scanned skill。
+
+## 扫描「标记率」不等于风险规模：报告必须固定为「标记数 / 带上下文复核后可疑数」双列，一手漏斗在 238,180 个技能上是 46.8% → 0.52%（来源：arxiv.org/abs/2603.16572 42,685B，2026-10-08 一手 curl 逐串命中 `classify up to 46.8% of skills as malicious` / `only 0.52% remain suspicious after repository-aware analysis` / `238,180 unique skills`；与 §采信评测前三查 互补——那条管别人的结论能不能用，本条管自己这份扫描产出怎么报）
+- **实证**：官方摘要原文「scanner reports from individual marketplaces **classify up to 46.8% of skills as malicious**, raising concerns about false positives」；「we collect **238,180 unique skills** from three major distribution platforms and GitHub」；「Unlike existing scanner-based assessments, which evaluate skills largely in isolation, our **repository-aware** analysis checks whether a flagged skill is consistent with its surrounding GitHub project. This context substantially reduces the number of suspicious skills: **only 0.52% remain suspicious after repository-aware analysis**. Our results show that existing scanners can **substantially overestimate maliciousness when repository context is ignored**.」
+- **判据**：① **原始标记率禁止当风险规模上报**：46.8% 与 0.52% 相差约 90 倍——前者是"扫描器打了标"，后者才是"结合仓库上下文后仍可疑"；报前者等于把九成以上的噪声当成风险清单交出去。② **复核必须带上下文，且上下文是仓库级/依赖级的**：单文件静态判恶意在大规模语料下几乎不可用，判据是"该文件在所属仓库里扮演什么角色、与依赖是否自洽"；脱离仓库上下文的扫描结论只能当线索，不能当裁决。③ **报告格式固定为双列**（标记数 / 复核后可疑数）：单列数字无法区分"扫出来的"与"审过的"，双列才能让读者判断还有多少待复核。④ **与既有条目串成完整链**：完整性（哈希/签名）→ 扫描（已知噪声率）→ 上下文复核（裁决）——任何一环单独拿出来的结论都不可作放行证据；本条补的是最后一环的量级校准。
+- **与既有能力分工**：r440A「记分表 N/A 不是 FAIL」管**表里怎么记**；r439C「三查」管**外部基准怎么采信**；本条管**自己这份扫描产出怎么报规模、以及为什么不能只报标记率**。
+- 提升层：工作流（扫描报告口径）/ 工具（上下文复核）。触发词：46.8% 到 0.52%、标记率不是风险率、repository-aware、238,180、双列报告、上下文复核、扫描噪声九成。
