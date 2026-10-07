@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.13.0
+version: 1.15.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -441,3 +441,15 @@ Step C: 是否包含恶意意图？
 - 出站副作用要在 frontmatter 里声明成契约，审计器不执行也能判：外发字段与失败姿势必须可静态读 → 
 
 - 来源要分两个锚：registry 上的 owner 只是分发渠道标签，不等于发布者密码学证明 →
+
+- 扫描判级三原则（能力≠滥用、云端判定缓冲、Safe 模板禁无证据默认✅）：扫描器判定要区分「能力存在」与「能力被滥用」——敏感原语（bash/子进程/读密钥/env）若属声明功能所需且有文档，只报能力不判恶意；云端 risky 不默认高危，按实际影响二次映射，unknown/请求失败必须降级本地审计并记「云情报不可用」；Safe 输出模板禁止无证据默认✅，须附「静态分析不覆盖后续更新风险」免责（来源：matrix.tencent.com/clawscan/skill.md 46,622B，2026-10-07 独立 curl 实拉逐串命中 `ability vs Abuse`/`can do dangerous`/`base64`/`zero-width`/`ROT13`；与 §审查结论要有「不处置」档位 互补——那条管误报形态枚举，本条管扫描判级的总原则）
+- **判据**：① **「能做事」与「在做坏事」是两层判定**：扫描器若一见危险原语就标 Medium+，会把"声明功能需要的敏感能力"误判为恶意 ⇒ 判定逻辑要先问"这个能力是否为该技能声明功能所必需且已文档化"，是则不升恶意、只作能力登记。② **云端分级结论要带缓冲**：risky 类结果默认不映射到高危，必须按本地实际影响二次判定；云端情报不可用（unknown/请求失败）时降级到本地审计并留痕，不许假装云端结论存在。③ **Safe 模板的✅必须基于证据**：无证据不得默认给通过章，且强制附"静态分析不覆盖后续更新"免责，防止"扫过=安全"的错误暗示。④ 与既有「审查结论要有显式不处置档 + 误报形态可枚举」构成"判级原则 + 误报枚举"双层，本条是原则层。
+- 提升层：可复用 Skill / 工具。触发词：能力-滥用二分、声明功能所需才报能力、risky 不默认高危、云端降级本地审计、Safe 模板禁无证据默认✅、静态分析不覆盖后续更新。
+
+- 漏洞类别全清单（17 类 / 68 模式）作扫描规则覆盖度对照表，Triage 处置动词表五档（阻断至修或正式接受 / 发布前移除 / 欠声明→改权限或删行为 / 有漏洞依赖→升级-pin-文档化豁免 / 描述-行为失配→改描述或改代码），报告格式含 SARIF 入 CI（来源：docs.nvidia.com/skills/scanning-agent-skills.md 4,822B，2026-10-07 独立 curl 实拉逐串命中 `Memory poisoning`/`Trigger abuse`/`Taint tracking`/`YARA`/`MCP least privilege`/`MCP tool poisoning`；与 §审查九类 T01–T09 互补——九类是自家分层，本条是 NVIDIA 公开 17 类全清单，可作覆盖度对照）
+- **判据**：① 自家九类分层要对照公开 17 类找覆盖盲区（如 memory poisoning / trigger abuse / taint tracking / YARA / MCP least privilege / MCP tool poisoning 等是否已在自家判级里）。② **处置动词要可机检**：每条发现对应一个明确动作（修 / 删行为 / 文档化豁免 / 改描述），含糊的"建议注意"不算处置。③ **SARIF 入 CI** 使扫描结果可进流水线条件，不只是给人看的报告。
+- 提升层：工具。触发词：17 类漏洞清单、68 模式、Triage 五档处置动词、SARIF 入 CI、覆盖度对照。
+
+- 信任徽标必须自带「负向适用范围」声明：徽标/扫描结论若只报"已覆盖的项"，要同时写明它**不裁定**的那一面（如 AIPM Registry 明示 "metadata checks, not a malware verdict"——元数据校验≠恶意裁决）（来源：aipm-registry.com/research/state-of-agent-skills-2026 43,058B，2026-10-07 独立 curl+UA 实拉逐串命中 `metadata checks`/`not a malware verdict`/`1%`/`Organization`；与 §信任信号要逐维度报覆盖率 互补——那条管"维度覆盖率要分别报"，本条管"结论要明示不裁定面"）
+- **判据**：① 任何对外展示的信任信号（徽标/扫描通过章/评分）都要写清它**不证明**什么，否则读者会把"部分覆盖"读成"整体安全"。② 与覆盖率倒挂同族但机制不同：覆盖率倒挂管"各类信号实际占比要公开"（1% 组织审查伪装成 100% 安全感），本条管"每个信号本身要声明否定式适用范围"。
+- 提升层：可复用 Skill。触发词：信任徽标负向适用范围、metadata checks not a malware verdict、声明不裁定面。

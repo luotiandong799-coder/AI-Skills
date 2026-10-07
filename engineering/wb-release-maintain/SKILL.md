@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.78.0"
+version: "1.79.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -339,3 +339,7 @@ sources:
 - **原文**：`A scan report tells reviewers what automated checks found. A signature tells users whether the artifact changed. A skill card tells humans what they are accepting.`；卡片须答 描述/负责人/许可或使用条款/用例/部署地域/依赖与凭据/风险与缓解/参考来源/输出形态/版本或签名标识/伦理考量 共 11 项；\**A skill card is complete when a reviewer can understand the skill's purpose, owner, output, risks, and release evidence without opening the source code first.\*；风险陈述给出弱→强三例（`could make mistakes` → `may generate incorrect remediation steps; users must review proposed code changes before execution`；`uses APIs` → `sends package names to OSV.dev; no source code or secrets should be transmitted`；`writes files` → `may overwrite generated reports in the configured output directory; it must not write outside that directory`）；并要求卡片指回 **同一批** 评审证据：扫描报告或 CI job / 源仓库 release tag / 签名标识或 `skill.oms.sig` 位置 / 模型卡与依赖文档 / **已知限制与已接受风险**。
 - **判据**：① **完成判据写在读者侧，不写在作者侧**：不是"该填的字段都填了"，而是"评审者不看源码就能答完 用途/负责人/输出/风险/发布证据 五问" ⇒ 发布说明写完没写完，用读者能否独立复述来验收；字段填满是形式合规，五问答得出才是内容完成。② **风险陈述的可操作性有对照表：把"它可能会出错"换成"它在什么动作上会出什么错、因此要求人做什么"** ⇒ 三例的共同结构是「具体错法 + 触发面 + 要求人的动作/禁止越过的边界」；写不出这个结构的风险条目等于没写，评审时应退回。③ **卡片与评审证据必须同源**：卡片指回的扫描报告/CI/tag/签名须与评审实际用的那批一致 ⇒ 卡片另附一份"更好看的报告"会让发布记录与评审事实脱钩，比没有卡片更危险。④ **已知限制与已接受风险是卡片的正式条目，不是缺陷**：把它写进发布记录，才使"发布"与"无保留保证"分开 ⇒ 省略这一条，等于把已接受风险伪装成不存在。⑤ **凭据栏要落到类型与最小权限**：`Requires API Key or External Credential` + `Credential Type(s)` 并附最低权限与轮换提示 ⇒ 发布记录里说不清需不需要凭据/要哪类凭据的制品，评审无法判其运行期暴露面。
 - 提升层：工作流 / 发布治理。触发词：Skill Card 完成判据、不打开源码答五问、风险陈述弱转强三例、卡片与评审证据同源、已知限制与已接受风险入卡片、凭据类型与最小权限栏、skill-cards.md。
+
+## 技能的「最小发布模板」= 固定强制段落清单：NVIDIA skill-card 规定 11 个强制段落、无可选段（功能摘要/责任方/许可/目标受众/地理范围/前置软件/危害控制/引用/交付物规格/修订标签/治理指引）；与「发布完成判据写在读者侧（五问）」互补——五问管"读者能不能答出来"，本条管"模板缺一段即不合规"的机械可机检形态（来源：docs.nvidia.com/skills/skill-cards.md 5,423B，2026-10-07 独立 curl 实拉逐串命中 `Credential`/`side effects`/`retention`/`governance`；与 rm r434C 五问完成判据 互补——r434C 管"答得出五问"，本条管"段落清单缺一段即违规"）
+- **判据**：① **发布完成判据要落成不可缺段的段落清单**：r434C 把完成判据写成"读者侧五问能答"，本条补"模板层"——11 段任一缺失即不合规，可机检（段落存在性检查）比"五问答得出"更易自动化。② **段落要含"危害控制/治理指引/已知限制"等否定式条目**：风险与治理是正式段落不是缺陷，省略等于把已接受风险伪装不存在。③ 两判据叠加：五问答得出（内容完成）+ 段落全在（形式合规）= 发布记录真正写完。
+- 提升层：工作流 / 发布治理。触发词：最小发布模板、11 强制段落、无可选段、段落缺失即不合规、可机检、与五问判据叠加。

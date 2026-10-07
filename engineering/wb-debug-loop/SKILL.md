@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.154.0"
+version: "1.155.0"
 agent_created: true
 ---
 
@@ -486,3 +486,7 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **实证**：官方原文「n8n persists each emitted event to a local log file before forwarding it to streaming destinations. The file survives restarts and lets n8n re-emit events that weren't yet delivered.」；警告块原文「If multiple n8n processes share one writable volume … they must not write to the same event log file. **Concurrent appends from multiple processes can interleave or corrupt the file, leading to recovery failures and lost events.**」；责任转移原文「n8n uses the configured path verbatim and **doesn't append a process-type suffix**, so **your orchestrator owns uniqueness across processes**.」
 - **判据**：① **兜底层要单独过一遍"N 个实例并发"这一问**——先落盘再转发本是为了重启后能重发未投递事件，但多进程共享同一可写卷时并发追加会交错甚至损坏文件，结果是恢复失败与事件丢失 ⇒ 遇到"明明加了可靠层却仍在丢数据"，优先查这个可靠层自身在并发下的行为；单实例下成立的可靠性设计不是多实例下成立的证据。② **显式配置会取消平台的自动保护，且责任被显式转移**——默认路径按进程类型自动加 `-worker` / `-webhook-processor` 后缀，一旦显式配置 `N8N_EVENTBUS_LOGWRITER_LOGFULLPATH`，后缀不再自动加，唯一性归编排方 ⇒ 看到"平台不再自动做 X"要立刻追问"那现在谁做"；文档里明写 "your orchestrator owns uniqueness" 就是在声明责任转移，接管默认值等于接管它背后那件事。③ **兜底层的失败模式要有独立预算，且历史遗留不自动清理**——`N8N_EVENTBUS_LOGWRITER_MAXTOTALMESSAGESPERFILE` 限制恢复时从单个文件解析的行数（"so a corrupted file can't exhaust process memory"）；已存在的旧共享文件需人工隔离，平台不自动删 ⇒ 给兜底层设恢复/解析上界，并把迁移期遗留文件列为显式人工动作，别指望升级顺带清掉。
 - 提升层：工作流 / 可观测性。触发词：多进程共享日志、并发追加损坏、兜底层自伤、唯一性归编排方、显式配置取消自动后缀、恢复解析行数上界、先落盘再转发。
+
+## 步预算会被框架"自身环节"消耗，而消耗方从不在文档里披露：LangFlow v1.12.4 修复原文 "compute recursion_limit accounting for middleware graph nodes"（#15362，2026-09-29）——中间件包装出的节点此前不计入 `recursion_limit`，修复后计入（来源：api.github.com/repos/langflow-ai/langflow/releases，2026-10-07 独立 curl 实拉；与 dl「recursion_limit 默认值去哪确认」互补——r309B/r368C 管"默认值多大、按引擎版本确认"，本条管"预算的计量口径是否被框架改动"）
+- **判据**：① **凡给用户步预算的框架，验收时要单独问"除我显式写的步骤外，还有谁在吃这笔预算"**：包装层、钩子、重试、自动注入的工具节点都可能是隐藏消费者。② **同一 flow 在版本升级后会在更短的真实步数上撞顶**：框架悄悄把"自身环节"计入预算，文档不披露 ⇒ 排障"为什么又超步数"要先查该框架此版本是否改了预算计量口径。③ 与"默认值多大"互补：那两条管数值，本条管计量口径是否被框架改动——两者都是"预算被吃掉"的不同根因。
+- 提升层：工具 / 工作流。触发词：步预算被框架自身环节消耗、recursion_limit accounting for middleware、中间件节点计入步数、隐藏消费者、版本升级后更短撞顶。
