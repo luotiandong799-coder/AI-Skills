@@ -4629,3 +4629,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **Reflexion（Shinn 2023）**：**给任何规划模式加自评循环——失败后生成反思（自然语言诊断"哪里错了+下次如何避免"），反思存进记忆并 prepend 到下次尝试上下文**；**代码域最友好（测试运行器=免费确定性评估器），HumanEval pass@1 91%**——有可靠检查器才用。
 - **组合模式**：**Plan-and-Execute 外层+ReAct 内层（不确定证据收集步骤）+最终副作用前 reflection**——只有实测失败证明需要才加机制；**昂贵/不可逆操作=有界计划+自适应证据收集+提交前验证**；**ReAct 增强反思=每轮 Action→Observation 后加 Reflection（方向错则回溯换路）**。
 - **反思性能陷阱**：**Reflection 可能变 performance theater（自证偏见——批判时已知原始答案倾向自圆其说）**；**实现选择=独立 LLM 调用（慢但彻底）vs 集成进规划 prompt（快但不够显式）**；**把"产出答案"与"评判答案"分离是抓到错误的前提，用具体判据非"感觉"，设迭代上限防死循环**。
+
+## r431A LLM 结构化输出与类型化接口 2026（来源：devto-structured-outputs-json/techearl-reliable-json/tutorials-structured-output-pydantic-instructor/aiworkflowlab-structured-outputs-json-mode-pydantic/devto-function-calling-structured-outputs/openlegion-llm-structured-output/blog-codercops-reliable-json-2026/infini-structured-output/kanopylabs-structured-output-patterns，2026-10-07 实拉）
+- **三条结构化输出通道**：**json_object=只保证合法 JSON 对象（字段结构靠 prompt 约束，轻量分类/状态返回够用）；strict json_schema=生成级约束匹配 schema（无效 JSON 变不可能，硬保证）；function calling=工具参数也需 JSON 解析校验（结果驱动函数/任务/工作流）**——**生产只推荐 strict json_schema**。
+- **生成级约束≠可信：客户端必验**：**铁律=即使有原生 provider 强制也永远不信任裸解析（长度截断与拒答可打断约束）**；**循环=generate→validate→repair**；**重试超 2+ 次说明 prompt 或 schema 本身有错（每次 retry 烧 token）——修 prompt/schema 而非加预算**。
+- **Pydantic=Python 生态主导 schema 定义**：**类+类型化字段，处理校验/序列化/JSON Schema 生成**；**字段描述会作为上下文传给 LLM（写清含义）；Literal 类型锁闭枚举（集合外值即 ValidationError）；conint 锁有界整数；可选字段用 anyOf**；**instructor=模型当 schema+patch client 强制+失败自动重试**。
+- **重试时把校验错误回喂 prompt**：**retry-with-error=校验失败带错误信息重试（模型大概率自纠，至多 3 次）**；**"Missing required property 'price'"比泛泛"try again"修正效果好**——重试必须携带上次失败原因。
+- **constrained decoding=token 采样层面锁 schema**：**strict mode 原理=后台把 token 采样限制在符合 schema 的空间（生成时就只能走合法路径，非生成后校验）**；**本地/开源模型用 constrained decoding（outlines/guidance 类）补上 provider 原生 strict 的位**。
