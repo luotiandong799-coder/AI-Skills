@@ -4685,3 +4685,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **tool_choice 四值**：**auto/required（强制至少调一个）/none（禁调）/specific tool（锁定某工具）——确定性动作用 required/specific；流程关键步锁死、别全交 auto**；**并行工具调用=一个响应多个 tool request；tool result=输出回灌新 turn 形成多轮 agent 循环**。
 - **工具调用评估五指标 + step-level traces**：**正确工具选择率/首次参数有效率/错误传播进最终输出率/恢复质量/效率（不必要调用与 token 浪费）——完成但工具选错/反复纠错也算缺陷**；**function-call eval=实际 vs 期望工具名与参数打分（跨模型快照回归）；数据集 100-500 例按工具类别/歧义度/可选参数分桶；无调用级 trace 无法评估**。
 - **Harness 工程与可复用工具原语**：**工具输出质量四问=语义对齐/参数一致/执行有效性（返回符合输出 schema）/约束满足**；**可复用原语=高频调用序列固化为带 schema 原语（如"检索→重排→引用"），减少逐次编排失败面**；重复 3+ 次的调用序列固化为原语。
+
+## r433C 多智能体系统设计 2026（来源：metacto-multi-agent-systems/thinking-multi-agent-design/techrxiv-architecting-multi-agent/sudoall-coordination-playbook/nisai-multi-agent-guide/agdex-build-multi-agent/empirium-multi-agent-architecture/agentica-orchestration-patterns/technolynx-multiagent-architecture/velsof-orchestration-patterns，2026-10-07 实拉）
+- **Supervisor vs Orchestrator 细节与默认选型**：**orchestrator=默认（一个 agent 拥有计划与最终答案，worker 只对 orchestrator 说话——状态与错误只有一个明确主人）**；**supervisor=编排 agent 分解→委派→综合，维护执行计划并据中间结果调整（工具访问仅 agent 调用，不给直接外部工具）**；**分层=manager 委派+综合、workers 无全貌执行，最常用但 manager 成瓶颈与单点、misjudge 则下游全继承错误**。
+- **Router with Confidence Gating**：**naive router 只选 N 类之一交接；生产级 router=类别+置信度，派发层按阈值放行（低置信度转人工/默认路由）——confident-but-wrong 是生产事故**；**任务分解判据=子任务是否真正独立（共享代码库/数据库行/活文档=不独立再像也不行），真独立才并行否则 pipeline**；成本判据=多 agent 质量提升值不值额外 token/延迟。
+- **通信协议四类**：**直接（点对点）/共享（黑板/共享状态）/广播/协议驱动（拍卖/讨价还价/辩论/共识——消息编码 bids/proposals/proofs+显式终止条件，MCP 与 agent-ready API 背书）；协议驱动主要收益=可审计性与协议规则正式分析**。
+- **失败模式四类与恢复**：**Agent 失败=另一实例接管/优雅降级；通信失败=退避重试/换路径；级联失败=熔断器防一个失败 agent 淹没其他；状态损坏=检查点恢复到最后已知良好状态**；**成本管理=按需扩缩容（demand-based auto-scaling），不恒定全开**。
+- **何时不用多 agent**：**决策树三问=①能否拆成真正独立子任务（不能→单 agent/pipeline）②质量提升值不值多倍成本（不值→单 agent）③协调复杂度是否超过单体（超过→别拆）**；**pipeline 代价=总延迟为各 agent 延迟之和，但每阶段输出独立可检查、天然人工复核点**；**大多数系统不需要多 agent，默认单 agent**。
