@@ -4657,3 +4657,10 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **渐进披露=按需加载**：**启动只加载技能名与描述，完整内容在技能激活时才加载**（适用于技能选择/文档加载/工具结果检索多层）；**上下文质量>数量——冗余与噪声稀释注意力**。
 - **工具输出 offload：入窗前先摘要省最多 99% token**：**工具响应进入上下文前先摘要，全文存外部（文件/对象存储）只留轻量引用**；**压缩=摘要对话并初始化新窗口（长时任务最重要）；摘要五要素=当前目标/关键工件/决策与理由/下一步（只记"发生了什么"不记"下一步"=目标漂移）**。
 - **压缩触发点=70-80% 利用率（非撑满）+递归摘要**：**递归摘要=分块摘要反复再摘要（128K-1M 窗口也被反复工具调用填满）**；**分级压缩=先 offload 工具输出→再摘要历史→最细才截断（LangChain Deep Agents 第一压缩级）**；防 objective drift 靠把"下一步"写进摘要。
+
+## r432B 多模态 RAG 与文档智能 2026（来源：llmversus-multimodal-rag-guide/blckalpaca-multimodales-rag/ayinedjimi-multimodal-rag-2026/nvidia-nemotron-document-pipeline/arxiv-multimodal-hybrid-slm/novelvista-multi-modal-rag/besthub-multimodal-rag-complete-guide/bigdataboutique-multimodal-rag/tensoria-multimodal-rag/ai-tldr-parse-pdfs-for-rag，2026-10-07 实拉）
+- **纯文本 RAG 丢 30% 信息；多模态三大路线**：**VLM 提取**（页渲染成图→vision LLM 抽结构化文本→正常索引，查询时送图做视觉 grounding，保留表结构/图形/空间关系）；**caption-and-index**（VLM 生成详细描述→索引 caption→按图检索原图，精度≈90%）；**page-as-image 视觉检索**（ColPali/ColQwen2=整页渲染成图+late-interaction 视觉 transformer 直接索引，免 OCR、复杂版式最高精度）。
+- **布局感知解析=嵌入前先分离结构**：识别表格/列表/标题/列并保留；**2026 工具=Docling（IBM 开源）/Unstructured.io/LlamaParse/Marker/PyMuPDF + OCR（Tesseract/Azure DI/AWS Textract）**；**表格可选"多模态直通"=不序列化、把表格当图在查询时送多模态 LLM（绕开序列化错误，推理成本更高）**。
+- **CLIP 类联合 embedding：图-文同一空间**：**联合训练文本+图像编码器，使图与文本描述向量靠近（可文本搜图/图搜图）**；**统一多模态 embedding（Cohere Embed 4/voyage-multimodal-3/llama-nemotron-embed-vl）把文本/表格/图表图编码进同一向量空间做相似度检索——免"图先转文字"**。
+- **混合检索+交叉编码重排照搬多模态**：**HNSW 语义 + GIN 词法 → RRF 融合 → cross-encoder 重排（与文本混合检索同构）**；**开源 SLM 实践=Qwen2-VL-2B 生成图表/表格摘要→多模态 ingestion，小模型可支撑科研文档理解**。
+- **文档处理流水线=GPU 微服务拆解**：**NeMo Retriever=提取→嵌入→重排分阶段 GPU 加速微服务，解析复杂 PDF/抽嵌套表格/解读图表**；**VLM 生成的图/表摘要索引为文本 + 保留原图供查询时视觉 grounding——双轨并存**。
