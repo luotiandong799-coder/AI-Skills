@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.143.0"
+version: "3.145.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -485,3 +485,13 @@ version: "3.143.0"
 - 提升层：工具（依赖与版本治理）/ 工作流（供应链同步面）。触发词：Flows never auto-upgrade、pinned to an exact version、version bumps are explicit、OFFICIAL_AUTO 每小时 reconcile、同步不触碰私有件、同步不等于升级、破坏性含移除与新增必填。
 
 > r443 正文预算管理：以下 5 节原文已零删减下沉本技能 `references/knowledge-base.md`，正文只留指针：description 怎么写（决定触发的唯一因素）（全文见 reference；追加触发词只准加在末尾；加在开头会挤掉首句（2026-09-20 本仓库实修，来；一个子代理一个独立入口，别用一个入口靠参数分发；防递归要两道（来源：Innges；要给别人（别的 agent）用的能力，契约必须显式声明，不靠实现推断；消费方不同；该触发却没触发：按序排查。
+
+## 写技能前先做「能力缺口评测」：先跑代表任务定位缺口、再为命名的缺口写技能（来源：anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills 138,441B，2026-10-08 一手 curl 实拉逐串命中 `Start with evaluation: Identify specific gaps in your agents' capabilities by running them on representative tasks`；与 §触发评测盲测 / §描述定量调优协议 互补——那些管"写完后怎么验触发/调 description"，本条管"动笔前先确认该不该写、写给哪个缺口"）
+- **实证**：官方原文「**Start with evaluation: Identify specific gaps … by running them on representative tasks** BEFORE writing the skill.」⇒ 写技能从"代表任务上已暴露的具体失败"出发，不是从"我想做个技能"出发。
+- **判据**：① **动笔顺序是"评测→缺口→技能"而非"灵感→技能→找场景"**：前者保证每个技能对应一个已观测到的真实失败，避免凭空造技能堆数量。② **description 职责是"赢下触发决策"不是"总结正文"**：同原文 `Claude will use these [name+description] when deciding whether to trigger` ⇒ 把正文摘要写进 description 稀释触发信号（与 r438A「description 只写触发条件、绝不总结正文流程」同构）。③ **接缝**：r443A 触发词定量调优、r443C 评测产物落盘，都是写中/写后动作；本条是写前动作——三件合起来才是"该不该写、写给谁、写完怎么验"闭环。
+- 提升层：工作流（技能创作方法论）/ 可复用 Skill（description 触发语义）。触发词：gap-driven authoring、先评测再写、identify gaps、evaluation-first、动笔前定位缺口、description 不总结正文。
+
+## 技能库治理应建模为「fitness-driven 生命周期」：trial→active→stable→retired，stable 后回落即 obsolescence，borderline 走 LLM 突变重写而非直接删（来源：arxiv.org/html/2610.09832v1（SkillForge）567,160B→去标签全文 98,121B，2026-10-08 一手 curl 逐串命中 `fitness-driven skill lifecycle of trial , active , stable , and retired states` / `a skill whose fitness once reached the stable state but later drops below the retirement threshold` / `borderline-fitness skills rewritten by an LLM-guided mutation operator`；与 r439C「只增不减不是治理库」/ r441B 批量退役三闸 互补——那些管"删不删/怎么批量删"，本条管"每个技能在库里处在哪个态、怎么流转"）
+- **实证**：四态机——trial（低置信受控 rollout）/ active（fitness 达标）/ stable（长期高 fitness 默认成员）/ retired（跌破退役阈值退场）。关键机制：**obsolescence**（曾达 stable 但后续 fitness 跌破阈值必须回流 retired，不能因"曾经好过"留着）；**mutation 而非 deletion**（borderline-fitness 由 LLM 引导改写算子重写，不删掉重来）。
+- **判据**：① **"只增不减"的正解不是"定期删"而是"给每个技能一个生命周期态"**：删是二值，生命周期是连续治理，能在"还行/临界/该退"间差异化处置。② **退役阈值要"会回落"**：stable 非终身制，分布变了旧技能可能变坏，库必须能表达"曾经好、现在坏"。③ **临界技能优先改写不优先删**：删除丢累积适配，mutation 保留适配前提下调优、代价更低且可逆。④ **接缝**：r439C「治理库须输出 deprecation rate」是本条度量出口；r441B NVIDIA prune-orphans 是"无引用孤儿"子集上的实现。
+- 提升层：工具（技能库治理/生命周期）/ 工作流（临界技能改写优先于删除）。触发词：skill lifecycle、trial active stable retired、fitness-driven、obsolescence、stable 回落退役、borderline 突变重写、技能库生命周期治理。

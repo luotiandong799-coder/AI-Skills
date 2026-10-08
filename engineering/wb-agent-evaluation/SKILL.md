@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。
-version: 1.5.0
+version: 1.6.0
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -76,3 +76,8 @@ version: 1.5.0
 - **判据**：① **没有对照组的"评测"只是演示**：同一宿主同题跑两遍（带/不带）是最小可信设计 ⇒ 只报"带技能时得分 87"无法归因，因为不知道不带时是多少；外部横比（换模型/换宿主）替代不了这条纵向对照。② **产物结构本身就是可复现性**：`iteration-N/` 递增 + `with_skill/` `without_skill/` 并列 ⇒ 没有固定结构，多轮结果会混在一起，事后无法回答"第 3 轮的增益是多少"；评测能不能被复核，取决于目录约定而不取决于结论写得多详细。③ **"改旧版"和"证明有用"是两种不同的基线，不能混用**：改造既有技能时基线是**改动前的快照**（`skill-snapshot/` → `old_skill/outputs/`），不是"不带技能" ⇒ 用错基线会把"相对上一版的改进"报成"相对无技能的改进"，数字看着更大但答的不是同一个问题。④ **改之前必须快照**：`Snapshot it before editing` ⇒ 边改边跑会让基线被自己覆盖，最后一版与"改动前"无法同环境对照。⑤ **收益必须配成本，且成本要量化到 token 与时间**：原文明确"质量大幅提升但 token 三倍"是另一种权衡 ⇒ 只报质量增益的评测会系统性地选出最贵的方案；`timing.json` 与 token 计数是评测产物的一部分，不是可选附加。⑥ **手写的只有用例文件，其余全由流程产出**：`evals.json` 人工撰写，`grading.json`/`timing.json`/`benchmark.json` 由流程生成 ⇒ 约定清楚"哪些是人写的、哪些是机器出的"，才能判断一份产物是不是被人手动改过。
 - **与既有能力分工**：r440C「Skill Lift 配对差归因（Correctness +41 / Effectiveness +39）」管**增益数值怎么算**；本条管**跑之前产物放哪、对照组怎么建、成本要不要一起记**。
 - 提升层：工作流（评测协议）/ 工具（产物落盘契约）。触发词：evals/evals.json、iteration-N、with_skill 与 without_skill、benchmark.json、grading.json、timing.json、旧版快照基线、skill-snapshot、old_skill/outputs、质量与成本并列、手写与机器产出分离。
+
+## 技能的「fitness」必须是可经验测度的量：在适用条件 ω 下用 agent 自身 rollout 的成功率，晋升门与退役门都以此为准，且退役须带人类标注的失败类别而非只看低分（来源：arxiv.org/html/2610.09832v1（SkillForge）567,160B→去标签全文 98,121B，2026-10-08 一手 curl 逐串命中 `applicability condition ω` / `pre-retire low-fitness skills … under the base model's own rollouts` / `retirement events with human-annotated failure categories`；与 §Skill Lift 配对差归因 / §评测产物落盘契约 互补——那些管"增益怎么算/产物怎么放"，本条管"技能该不该进库、该不该退场"的判定量本身）
+- **实证**：fitness = 技能在**适用条件 ω（任务类型谓词）**下的经验成功率，用**基础模型自身 rollout** 在代表任务上测；进库前 pre-RL 阶段就先按 fitness 预退役低分技能；stable 技能若 fitness 跌破退役阈值即 obsolescence 退役，且**退役事件带人类标注的失败类别**（不是单纯"分数低就删"）。
+- **判据**：① **fitness 必须有显式适用条件 ω，否则"成功率"无法归因到该技能**：同一技能在不同任务类型上成功率差异极大，没有 ω 的成功率是 averaging over 不该平均的东西。② **晋升/退役是同一把尺的两个方向**：进库用 fitness 门、退场也用 fitness 门 ⇒ 不能"进来严、出去宽"，否则库只增不减（与 r439C「只增不减不是治理库」同构）。③ **退役要带失败类别，低分本身不是充分理由**：纯低分可能是任务分布偏移或评测噪声；人类标注的失败类别（为何失败）才能区分"该修"与"该退"。④ **接缝**：r440C 配对差给的是"装了 vs 没装"的增量；本条给的是"技能自身在适用面上的绝对成功率"——两条合并才能同时回答"它现在多好"和"它比没有好多少"。
+- 提升层：工具（技能库治理/生命周期度量）/ 工作流（晋升门与退役门同尺）。触发词：skill fitness、applicability condition ω、own rollouts、pre-retire、retirement events、human-annotated failure categories、obsolescence 门槛、晋升门退役门同尺。
