@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.145.0"
+version: "3.147.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -495,3 +495,15 @@ version: "3.145.0"
 - **实证**：四态机——trial（低置信受控 rollout）/ active（fitness 达标）/ stable（长期高 fitness 默认成员）/ retired（跌破退役阈值退场）。关键机制：**obsolescence**（曾达 stable 但后续 fitness 跌破阈值必须回流 retired，不能因"曾经好过"留着）；**mutation 而非 deletion**（borderline-fitness 由 LLM 引导改写算子重写，不删掉重来）。
 - **判据**：① **"只增不减"的正解不是"定期删"而是"给每个技能一个生命周期态"**：删是二值，生命周期是连续治理，能在"还行/临界/该退"间差异化处置。② **退役阈值要"会回落"**：stable 非终身制，分布变了旧技能可能变坏，库必须能表达"曾经好、现在坏"。③ **临界技能优先改写不优先删**：删除丢累积适配，mutation 保留适配前提下调优、代价更低且可逆。④ **接缝**：r439C「治理库须输出 deprecation rate」是本条度量出口；r441B NVIDIA prune-orphans 是"无引用孤儿"子集上的实现。
 - 提升层：工具（技能库治理/生命周期）/ 工作流（临界技能改写优先于删除）。触发词：skill lifecycle、trial active stable retired、fitness-driven、obsolescence、stable 回落退役、borderline 突变重写、技能库生命周期治理。
+
+## 组件/技能发现面用「显式映射表 + 模块代理 + 前缀 finder」三件套实现；第三方 bundle 没有公开 hook 可挂，准入必须改在解析层（来源：cdn.jsdelivr.net/gh/langflow-ai/langflow@main/src/backend/base/langflow/__init__.py，2026-10-08 一手 curl 逐串命中 `module_mappings`/`LangflowCompatibilityModule`/`_PACKAGE_OVERRIDES`/`MetaPathFinder`；纠正 r442A 猜的 `_dynamic_imports` 串 curl 实测 0 命中；r445A 落地）
+- **实证**：LangFlow 真实机制三件套——① 手写映射表 `module_mappings = {"langflow.base":"lfx.base", "langflow.inputs":"lfx.inputs", "langflow.schema":"lfx.schema", "langflow.template":"lfx.template", "langflow.base.agents/tools/vectorstores":"lfx.…"}`；② `class LangflowCompatibilityModule(ModuleType)` 内 `__getattr__` 惰性 `importlib.import_module(self._lfx_module_name)` + `setattr` 缓存 + `__dir__` 代理，未命中报 `AttributeError(f"module '{self.__name__}' has no attribute '{name}'")`；③ `_LangflowComponentsAliasFinder(MetaPathFinder)` 把任意 `langflow.components.<rest>` 桥到 `lfx.components.<rest>`，含改名表 `_PACKAGE_OVERRIDES={"knowledge_bases":"files_and_knowledge"}`，注册由 `_setup_compatibility_modules()` 以 `find_spec(lfx_name)` 守卫；第三方 bundle 发现由 finder 隐式承担（**无公开 hook**）。curl 实测 `_dynamic_imports` 串在正文 **0 命中**，`src/lfx/lfx/__init__.py` 为空文件。
+- **判据**：① 包/组件改名兼容的正确形态是"声明式映射 + 惰性代理 + 前缀 finder"三段，不是散落 import；② 第三方扩展发现若只靠隐式 finder，则**准入控制没有公开挂载点**——要审计/拦截第三方 bundle，必须改在解析层（import 解析处）而非等加载后；③ 前人猜的字段名经一手源码实测 0 命中即属错误假设，落地须以一手源码为准，不沿用转述猜测名。
+- **与既有能力分工**：r442A「依赖图隐形继承 22.42%」管声明面看不全；本条管"改名/兼容桥"这类解析层机制本身怎么实现、以及准入该插在哪一层。
+- 提升层：可复用 Skill（技能/组件发现面）/ 工具（解析层准入）。触发词：module_mappings、LangflowCompatibilityModule、MetaPathFinder、_PACKAGE_OVERRIDES、改名兼容三件套、第三方 bundle 无公开 hook、准入改在解析层、_dynamic_imports 不存在。
+
+## 不可信发现清单的解析器要「逐项丢弃 + 空集合」而非「尽力解析 + 报错」：skill://index.json 只收 ZIP、digest 抽取前校验、整份损坏返回空列表（来源：learn.microsoft.com/en-us/agent-framework/agents/skills，ms.date 2026-10-02，2026-10-08 一手 curl 逐串命中 `skill://index.json`/`application/zip`/`digest`/`sha256`/`Archive`/`skip`；r445B 落地）
+- **实证**：MS Agent Framework 发现文档真名 `skill://index.json`，条目两型——`skill-md`（经 `resources/read` 按需取正文）与 `archive`（**仅 ZIP**；`application/zip` 或 .zip 后缀；TAR/tgz 跳过）；`digest = "sha256:" + 64 位小写十六进制`，**抽取前校验、不符即 skip、整份 index 坏 → 返回空列表而非报错**；archive 内脚本**永不置为可执行**。
+- **判据**：① 解析不可信清单时，半损坏的清单绝不能被当作"有效能力面"——正确语义是逐项丢弃 + 整体降级为空集合；② digest 校验必须在抽取/执行之前，不是之后；③ 归档内的脚本默认不可执行，杜绝"下载即获得可执行权"；④ 与 r441C「宿主宽容校验 fail-closed」互补——那条管单技能坏 frontmatter，本条管**清单级**的降级安全默认。
+- **与既有能力分工**：r441C 管单技能坏 frontmatter 的 fail-closed；本条管发现清单（多技能聚合）整体的降级默认。
+- 提升层：工具（清单解析安全默认）/ 工作流（发现面治理）。触发词：skill://index.json、只收 ZIP、TAR/tgz 跳过、digest 抽取前校验、index 坏返回空列表、archive 脚本不可执行、降级安全默认。

@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.23.0
+version: 1.25.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -476,3 +476,15 @@ Step C: 是否包含恶意意图？
 - **判据**：① **依赖实时情报的检查必须显式声明离线时的方向**：SC4 命中 CVE 靠在线查询，官方明写"自动离线回退" ⇒ 联网检查的默认失败方向如果是"查不到=没有漏洞"，断网期间的扫描会静默降级成"全部安全"；正确写法是把"情报源不可用"作为可观测状态（与"扫过且无 CVE"区分）。② **模式库规模要分两层报（类别数 × 模式数）**：17 个类别是目录、71 个模式是条目 ⇒ 只报"覆盖 17 类"会让人以为只有 17 项检查；覆盖率的分母是模式数，归类方式由类别数决定，两者缺一都无法判断"这个扫描器是否够用"。③ **类别清单本身就是威胁面清单**：17 类里既有注入/外传/提权这类经典面，也有 memory poisoning、rogue agent、anti-refusal、trigger abuse、MCP tool poisoning 这类 agent 特有的面 ⇒ 审自己的技能库时，先拿这份清单对一遍"哪些面我根本没有检查项"。④ **两阶段（快速静态 + 可选语义）意味着第二阶段可缺席**：LLM 语义评估是 optional ⇒ 报告里必须标注本次是否跑了语义阶段，否则同一份结果可能是两种强度的产出。⑤ **与处置链串成完整闭环**：模式库（覆盖什么）→ 情报源（依赖是否已知有洞，含离线回退）→ 基线（只报新增）→ SARIF（进 CI）⇒ 任何一环缺席，扫描结论都只能当线索不能当裁决。
 - **与既有能力分工**：r435C「17 类清单 + Triage 五档 + SARIF 入 CI」管**检出之后的处置与集成**；本条管**情报来源的失败方向与覆盖度的计量基准**。
 - 提升层：工具（扫描器接入三要素）/ 治理（覆盖度分母）。触发词：71 模式 17 类别、模式库规模双层粒度、OSV.dev 实时 CVE、automatic offline fallback、离线回退方向、两阶段可选语义、类别清单即威胁面、覆盖度分母。
+
+## 审查对象应是「带证据的发布物 + 可重跑的体检通道」而非源树：发布附带 release-manifest / postpublish-evidence / dependency-evidence（json+sha256）三资产 + Doctor 只读托管配置修复（来源：api.github.com/repos/openclaw/openclaw/releases，2026-10-08 一手 curl 逐串命中 `release-manifest`×12/`postpublish-evidence`×12/`dependency-evidence`×6/`sha256`×26；与 r423C「交付物验收而非源树」同轴，补证据文件命名集；r445A 落地）
+- **实证**：openclaw v2026.10.1-beta.1 随发布附带 **release-manifest / postpublish-evidence / dependency-evidence（json+sha256 三件套资产）** + "Updates and Doctor"（serving-verdict 恢复、只读托管配置修复）；v2026.9.8 稳定版 "58 commits · 43 PRs · 21 contributors"。
+- **判据**：① 验收一个技能/包，看的应是"它发布时带了哪些可验证证据"而不是"源码长什么样"；② 证据文件要有命名约定（manifest/evidence 分三类：发布清单、发布后证据、依赖证据）且带 sha256 可重算；③ 配套一个只读的"体检"通道（Doctor）能在不破坏托管配置前提下修复/恢复 verdict ⇒ 审查与自愈是两个伴生能力，缺一不可。
+- **与既有能力分工**：r423C 管"验收对象是交付物不是源树"这一原则；本条补"交付物该带哪几类证据文件"的具体形态。
+- 提升层：工具（发布证据链）/ 治理（验收口径）。触发词：release-manifest、postpublish-evidence、dependency-evidence、json+sha256 三件套、Doctor 只读托管修复、带证据的发布物、交付物验收。
+
+## 软 404 识别法（等大小 200 = SPA 壳，真枚举走 robots→llms→sitemap→*.md）+ 安全审查可落地为「三档判定 + with/without A/B + evals.json 导入」的评测而非人审徽章（来源：skillhub.cn/install/skillhub.md（7,429B 壳对照）+ github.com/alibaba/skill-up README，2026-10-08 一手 curl 逐串命中 `rule_based`/`script`/`agent_judge`/`evals.json`/`Qoder`；r445B 落地）
+- **实证**：① 软 404：skillhub.cn `/api/*` `/docs` `/version.json` 全为 ~7,429B 同形 SPA 壳（无 `__NEXT_DATA__`），真内容走 robots→llms.txt→sitemap→`*.md` 链；判定法：**等大小 200 = 壳信号**。② alibaba/skill-up：`eval.yaml` + `cases/*.yaml`、`schema_version: v1alpha1`、判定三档 `rule_based`/`script`/`agent_judge`、with/without-Skill A/B、Docker/OpenSandbox 供给、引擎含 **Qoder CLI**/Claude Code/Codex、可导入 `evals.json`、提供 GitHub Action。
+- **判据**：① 抓取技能市场/文档时，必须区分"真 404"与"软 404（同形壳）"——后者会骗过"200 即有内容"的假设，curl 拿到的 7KB 壳不是真内容；② 安全审查不该只是贴"已审"徽章，而应是一套可跑的评测（三档判定 + A/B + 可导入既有 evals）；③ 与 r443C「评测产物落盘契约」互补——那条管 WB 自己怎么评测技能，本条管"上游平台把审查做成评测"的形态。
+- **与既有能力分工**：r443C 管 WB 评测产物落盘契约；本条管"上游平台审查即评测"的可复用形态与站点抓取判活法。
+- 提升层：工具（站点抓取判活）/ 工作流（审查即评测）。触发词：软404 等大小200、robots→llms→sitemap→md、rule_based script agent_judge、with/without A/B、evals.json 导入、审查可跑评测、skill-up。
