@@ -4916,3 +4916,9 @@ episodic 存带结构化元数据（任务类型/成败/满意度）支持过滤
 - **微调 vs RAG 决策框架**：**知识每周变→RAG（微调冻结快照=陈旧）；行为提示压不住（语气/格式/schema/决策策略）→微调（RAG 只加上下文不加风格）；<500ms 硬延迟→微调；RAG 72-89% vs 微调 91-97%（依赖检索质量/维护算力）；两者组合=生产客服标准；私有数据合规→自托管**。
 - **蒸馏=2026 微调最强用例**：**前沿模型生成窄任务高质量输出→微调小开源模型=近前沿质量×更低成本延迟；500-1000 金标指令对>1万条脏数据；LSH 近重复去除防污染；MCQ 排除（25% 基线概率掩盖错误推理链）；种子集 2,000-5,000 prompt 覆盖域内子任务+多样风格/复杂度/边界**。
 - **蒸馏数据管线：联合标注→规则过滤→难度感知选择→多样性采样**：**联合标注（推理难度/答案质量/语义标签）→规则过滤→难度感知选择→标签多样性采样；显式格式约束下蒸馏结构化 CoT；指令增广（扩写相似指令）+指令优化（改写措辞）；规则法清洗异常数据（少量脏数据即降质量）**。
+## r445B 长上下文与提示缓存工程 2026（来源：aiworkflowlab-caching/baeseokjae-caching/botmonster-caching/openai-gpt6/devtoollab-caching/aipromptshub-caching/dev-alexcloudstar/aiworkflowlab-hu/genta-caching/dev-ayinedjimi/arxiv-2607-jetlong/arxiv-2409-landmark/arxiv-pose/arxiv-2402-survey/habr-csa/iclr-memagent/arxiv-endprompt/pietkonijn-longctx/learnixo-extend/github-prompt-caching/sureprompts-context/aipatternbook-caching/agentpatterns-static/braindrip-caching/niteagent-hitrate/datarekha-caching/dev-fresh_interest-kvcache，2026-10-08 实拉）
+- **缓存友好 prompt 排序+byte-exact 匹配**：**静态优先动态置后（角色人格→核心指令→工具 schema→少样本→RAG 文档→对话历史→当前用户消息→时间戳/请求ID/会话数据）；byte-exact：改一个字符→该前缀起全部缓存失效；确定性序列化（工具按名排序/JSON key 稳定/去时间戳/去随机示例）；<4096 token 阈值补结构化文档越过门槛**。
+- **命中率监控与诊断**：**生产目标 70-90% 命中率；<50% 提示结构问题信号（动态内容泄漏进前缀）；命中率入 Prometheus/可观测栈；RAG 会话级内容注入前缀=缓存杀手**。
+- **多租户缓存 key 分离**：**缓存含用户特定内容（用户名/工作区 ID/租户配置）→按用户 key→每人首请求冷缓存+TTL 内不回来永不暖；租户特定上下文与稳定系统上下文分离，只缓存稳定部分**。
+- **provider 缓存机制差异**：**Anthropic 显式 breakpoint+最小 4096 token；OpenAI 自动前缀缓存（GPT-6 起 30 分钟复用共享前缀享折扣+监控/诊断/选择缓存范围工具）；Gemini 显式缓存 ID+TTL（最小 4096+存储费）；折扣 Anthropic ~90%/OpenAI ~50%/Google ~75%**。
+- **KV cache 机制+长上下文扩展技术**：**KV cache 只算新 token 的 KV、前缀靠复用，attention 硬约束=每个 token KV 只依赖其前 token（前缀改一字符其后全失效重算）**；**长上下文扩展=位置插值 PI（映射进训练范围非外推）/PoSE 位置跳过训练（固定窗口模拟长输入）/Jet-Long 动态双焦 RoPE（免调零样本）/Landmark 分块+地标 token 两级注意；超训练长后微调模型退化（32K 后）**。
