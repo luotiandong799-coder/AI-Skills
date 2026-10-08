@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.141.0"
+version: "3.143.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -21,31 +21,6 @@ version: "3.141.0"
 > 本节（写"什么时候不该跑"：STOP / WAIT / PROCEED 快速路径表）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 > 本节原文已零删减下沉 `references/knowledge-base.md §r442B 下沉：技能是"指令 + 所需工具"的打包，不是一段文字（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·技能是指令所需工具的打包不是一段文字）`（正文预算 ≤500 行）
 
-## description 怎么写（决定触发的唯一因素）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r439·description怎么写决定触发的唯一因素）
-
-## 追加触发词只准加在末尾；加在开头会挤掉首句（2026-09-20 本仓库实修，来源：WorkBuddy 线 D4 描述层重构）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r439·追加触发词只准加在末尾加在开头会挤掉首句202609）
-
-> 本节原文已零删减下沉 `references/knowledge-base.md §r442C 下沉：常驻规则只做路由表，实体内容下沉到技能；「自动批准」不是「只允许」——同一个字段名在两处语义相反（来源：Devin 官方 `docs.devin.ai/cli/extensibility/rules` + `/cli/extensibility/skills/creating-skills` + `/product-guides/knowledge`，2026-09-22 r132-A 独立重拉首读，新信源首读）`（正文预算 ≤500 行）
-
-## 一个子代理一个独立入口，别用一个入口靠参数分发；防递归要两道（来源：Inngest 官方 `inngest.com/docs-markdown/ai-patterns/sub-agent-delegation`，2026-09-22 r132-B 独立重拉首读，此前未读）
-
-- **官方推荐：给不同的子代理各自一个独立工具，而不是一个工具加"选哪个子代理"的参数**——原话 "LLMs often do better with separate tools for separate sub-agents rather than a single tool with different parameters for selection"。判据：**这个选择是"做哪件不同的事"还是"同一件事的不同参数"**——前者拆成不同入口，后者才留作参数。与本技能 §一个工具只做一件事 分工：那条管"单个工具的动作面要窄"，本条管"**多个同类能力之间的分发方式**"。
-- 落到技能系统上就是：**不要写一个"万能技能 + 类型参数"**。写成两个技能、两个触发词，让路由在入口就分完；靠参数在技能内部分支，等于把路由成本从宿主身上搬到技能正文里，还得靠模型读完全文才知道该走哪支。
-- **专用化不需要新机制**：通用子代理起步即可， specialization 靠**任务描述 + 可用工具集**两件事就够了（"The task description and available tools are enough to specialize behavior."）。判据：**想加一个专职角色之前，先问是不是改任务描述与工具集就能做到**——能就不新增实体。
-- **防递归是两道，缺一不可**：①**工具集层面**——子代理的工具集里不放委派工具（它根本没有派活的能力）；②**硬上限层面**——子代理单独设较低的迭代/重试上限。判据：**只靠一层会不会被绕过**——工具集会改、上限会调，两层同时失效才会失控。
-## 要给别人（别的 agent）用的能力，契约必须显式声明，不靠实现推断；消费方不同形状就不同（来源：CrewAI 官方 `docs.crewai.com/v1.15.22/en/guides/tools/publish-custom-tools` + `/en/concepts/collaboration`（Best Practices → Clear Role Definition），2026-09-22 r132-C 独立重拉首读，此前未读）
-
-- **输入契约显式声明，别让框架从签名推断**：官方推荐对"要发布出去"的工具显式给 `args_schema`——理由不是校验，是**显式契约带来更好的 agent 行为与更清晰的文档**；推断出来的只够作者自己用。判据：**这个能力会不会被不是作者的人或 agent 用**——会就把输入形状、默认值、每个字段的含义全写出来；只自己用一次的可以省略。
-- **输出同理**：返回结构化数据时显式给输出模型，"用户和 agent 都能靠字段名取用"。判据：**拿结果的一方是照字段名取值，还是在字符串里找数字**——后者说明缺了一层声明。
-- **角色 / 技能之间不能笼统重叠**：官方反例同样是 "General Assistant" / "Helper"。判据：**两个角色各自能干什么，去掉交集还剩什么**——交集大于各自独有部分就该合并，而不是靠 description 里多写几个词把它们分开。与 §同类技能合并判据 分工：那条管"怎么合并"，本条管"**什么时候其实早该合了**"。
-> 本节（附录 Z：description 术语索引）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
-## 该触发却没触发：按序排查
- 0. **这个任务是否本来就不需要技能？**（超出模型自身能力的任务才会去查技能库——单步简单请求没触发不等于描述有问题，见上节末条）
-1. 描述里有没有用户实际会说的那几个词？
-2. 触发条件是否写得太抽象（"处理复杂任务" 这类）？
-3. 文件位置对不对（用户级 `~/.workbuddy/skills/` vs 工作区 `.workbuddy/skills/`）？
-4. frontmatter 语法是否合法（`name` / `description` 必填，YAML 缩进别错）？
- 5. 改完 skill 后会话没重开 → 读的仍是旧版本
 ## 不该触发却触发
  - description 过宽（写成了"所有 AI 相关任务"）
 - 多技能触发词打架 → 显式写出优先级，或收窄其中一条
@@ -495,3 +470,18 @@ version: "3.141.0"
 - **判据**：① **"未设"与"设为空"是相反的两种授权，必须分开成两个键状态**：未设=继承上游默认（开放），显式空数组=该 agent 一个技能都看不到 ⇒ 把空数组当成"没配所以走默认"会让本该被完全隔离的 agent 反而拿到全集；凡用"数组"表达策略的配置，都要显式声明空数组的语义。② **非空列表是终局不是增量**：写了两个就不与默认合并，写两个就是全部 ⇒ "我加了两个怎么原来的都没了"是这一款的正常行为；想做增量必须另给 merge 语义，不能靠"看起来像追加"的直觉。③ **授权面要覆盖四个派生通道**（提示构建 / 斜杠命令发现 / 沙箱同步 / 快照）：只在其中一个通道生效的 allowlist 会被其余通道绕过 ⇒ 报"已对该 agent 禁用"时，要逐通道验，不是验主通道。④ **装载优先级解决的是"同名谁赢"，不是"谁能看见"**：七档顺序只在重名时裁决 ⇒ 与授权 allowlist 是两个正交旋钮（位置决定胜者、allowlist 决定可见），混用会导致"把技能挪到高优先级目录就能绕过禁用"这类误判。⑤ **个体禁用开关必须能压过自带/已安装**：`enabled:false` 对 bundled/installed 同样有效 ⇒ 若自带技能不可禁用，禁用机制就只是"第三方技能管理"。⑥ **"启用"不豁免前置条件**：64 个选择上界之后仍要过 allowlist/二进制/操作系统门槛 ⇒ 计数型上界（选了多少个）与资格型门槛（够不够格）不能互相顶替。⑦ **检索空结果必须伴随覆盖声明**：coverage 三值（正文已索引 / 仅元数据 / 正文被截断）⇒ 在部分覆盖下返回空，只能得出"没找到"不能得出"不存在"；把空结果当"确实没有这个技能"是检索层最典型的误判，且它不会报错。
 - **与既有能力分工**：r441C「宿主四事」管**坏 frontmatter 的容错与发现面上界**；本条管**授权三态、优先级裁决与限额的分项性**。
 - 提升层：可复用 Skill / 工具（宿主装载与授权模型）。触发词：三态授权、空数组全断、非空即终局、不 merge 默认、装载优先级七档、最高源胜出、enabled false 压过 bundled、64 选择上界、五个发现限额、maxSkillsPromptChars、coverage metadataOnly、空结果不等于不存在。
+
+## description 的调优不是「改写得更好」，而是一套带负例、带重复、带切分、带封顶的定量协议（来源：agentskills.io/skill-creation/optimizing-descriptions.md 13,307B，2026-10-08 一手 curl 逐串命中 `Aim for about 20 queries: 8-10 that should trigger and 8-10 that shouldn't` / `3 runs each, that's 60 invocations` / `above a threshold (0.5 is a reasonable default)` / `Train set (~60%)` / `Validation set (~40%)` / `Five iterations is usually enough`；兑现 r442A 挂起项——当时缺一手文本，本轮原文全数值到账）
+- **实证**：官方原文六点——① 语料「Aim for **about 20 queries: 8-10 that should trigger and 8-10 that shouldn't**」（正负例**等量**）；② 重复「With 20 queries at **3 runs each, that's 60 invocations**. You'll want to script this」——触发本身是随机量，单次跑出来的命中不算数；③ 阈值「A should-trigger query passes if its trigger rate is **above a threshold (0.5 is a reasonable default)**. A should-not-trigger query passes if its trigger rate is **below that threshold**」；④ 切分「**Train set (~60%)**: the queries you use to identify failures and guide improvements. **Validation set (~40%)**: queries you set aside and only use to check whether improvements generalize」并要求「keep the split **fixed** across iterations」；⑤ 防过拟合纪律「**Only use train set failures to guide your changes** … keep validation set results out of the process」，且「**Select the best iteration by its validation pass rate** — the best description may not be the last one you produced; an earlier iteration might have a higher validation pass rate than later ones that **overfit to the train set**」；⑥ 封顶「**Five iterations is usually enough.** If performance isn't improving, the issue may be with the **queries** (too easy, too hard, or poorly labeled) rather than the description.」
+- **判据**：① **没有负例的触发评测等于没评测**——正例只证明"该触发时能触发"，唯一能证明"不该触发时不乱触发"的是那 8–10 条负例；只堆正例会一路把 description 写宽，触发率 100% 而误触不可控。② **触发是概率事件，必须重复取率**：每条 query 跑 3 次、以 >0.5 记通过 ⇒ 单次结果应作废；不重复就分不清"改好了"与"这次恰好命中"。③ **判据是"不该触发的有没有误触"，不是"命中率多高"**：把目标设成命中率会直接导向放宽描述；正确目标函数必须是**正负两侧同时达标**。④ **训练/验证切分是防过拟合的最低装置**：只在 train 上迭代、用 validation 判定是否泛化，且切分跨轮固定 ⇒ 允许用全量数据调参等于允许对评测集过拟合，最终拿到一个只在这 20 条 query 上好看的 description。⑤ **最优迭代不等于最后一次迭代**：按 validation 通过率选，且明确提示"更早的一版可能更好" ⇒ 报告里必须逐轮留档并能回溯选中间轮，不能只留终稿。⑥ **迭代要封顶且封顶后归因转向语料**：五轮无改善时原文指向"query 太易/太难/标错了"而不是继续改 description ⇒ 无限迭代是把评测集缺陷误判成描述缺陷，成本全花在错误的自变量上。⑦ **必须脚本化**：60 次调用（20×3）人工不可执行 ⇒ 这套协议的前提是有一条可重复的 `check_triggered` 检测逻辑，没有它整套定量方法落不了地。
+- **与既有能力分工**：r438A「description 只写触发条件、绝不总结正文流程」管**写什么**；本条管**写完怎么证明它真的按预期触发**（量、重复、切分、封顶）。
+- 提升层：可复用 Skill（description 工程）/ 工作流（评测协议）。触发词：20 queries、8-10 should trigger、3 runs each、threshold 0.5、train 60% validation 40%、split fixed、只以 train 失败指导修改、按 validation 选最优轮、Five iterations、query 标错而非描述错。
+
+
+## 供给端「自动同步」与消费端「自动升级」是两个必须分离的开关：目录可以每小时 reconcile，但已装配的每一步钉死精确版本、永不自动升版（来源：www.activepieces.com/docs/install/architecture/piece-syncing 310,613B，2026-10-08 一手 curl 逐串命中 `Each step is pinned to an exact version.` / `Flows never auto-upgrade. Version bumps are explicit, through the builder.` / `OFFICIAL_AUTO` = `Hourly reconcile against the cloud registry. Default for all deployments.` / `never touched by the sync job.`；与 §供给源消失即本地自动清除 互补——那条管"上游没了怎么回收"，本条管"上游一直有、而且很勤快地更新时，下游该不该跟着动"）
+- **实证**：官方原文四点——① 消费端钉版「**Each step is pinned to an exact version.** **Flows never auto-upgrade.** Version bumps are explicit, through the builder.」；② 供给端自动同步「`OFFICIAL_AUTO`：**Hourly reconcile against the cloud registry. Default for all deployments.**」；③ 同步面边界「[private pieces are] **never touched by the sync job.**」；④ 版本语义为 npm 包语义化版本，且「任何移除 = 破坏性、任何必填新增 = 破坏性」。
+- **判据**：① **"上游每小时刷新"绝不蕴含"下游每小时升级"**：官方把这两个动作放在完全不同的机制里（同步任务 vs 构建器内显式 bump）⇒ 把"自动同步"当成"自动保持最新"是供应链治理里最常见的误读，它让所有下游在同一时刻被拉到同一个尚未验证的版本上。② **钉版的对象是"每一步"不是"每个流程"**：`Each step is pinned to an exact version` ⇒ 钉到流程级会让流程内部的多个组件各自漂移，出事后无法回答"当时跑的是哪个组合"；可复原的最小单元必须细到装配项。③ **升级动作必须是显式、可归因的人/流程动作**：`Version bumps are explicit, through the builder` ⇒ 自动升级会消灭"谁在什么时候把它升上去的"这条审计链，事后再无从追责。④ **同步面要显式排除私有件**：私有 piece「永不被同步任务触碰」⇒ 若同步任务无差别接管全部来源，本地自建件会被上游同名件覆盖或反向污染；同步范围本身就是一个需要声明的边界。⑤ **破坏性判定要让位给语义化版本契约**："移除"与"新增必填"都判破坏性，不只是改签名 ⇒ 只按 API 签名判断破坏性会漏掉"字段消失了""多了一个必须填的项"这两类同样会打断下游的变更。⑥ **与既有条目的接缝**：r440C「供给源消失即本地自动清除」处理上游**消失**；本条处理上游**持续变更**——两个方向合起来才是完整的供给面治理（消失要回收、变更不自动跟随）。
+- **与既有能力分工**：r442A「自动更新放行粒度 = 类别 × 子集 × 三档（off / patch only / always latest）」给的是**允许自动更新时的档位**；本条给的是**默认不该自动更新**这一前提，以及同步面自身的边界。
+- 提升层：工具（依赖与版本治理）/ 工作流（供应链同步面）。触发词：Flows never auto-upgrade、pinned to an exact version、version bumps are explicit、OFFICIAL_AUTO 每小时 reconcile、同步不触碰私有件、同步不等于升级、破坏性含移除与新增必填。
+
+> r443 正文预算管理：以下 5 节原文已零删减下沉本技能 `references/knowledge-base.md`，正文只留指针：description 怎么写（决定触发的唯一因素）（全文见 reference；追加触发词只准加在末尾；加在开头会挤掉首句（2026-09-20 本仓库实修，来；一个子代理一个独立入口，别用一个入口靠参数分发；防递归要两道（来源：Innges；要给别人（别的 agent）用的能力，契约必须显式声明，不靠实现推断；消费方不同；该触发却没触发：按序排查。

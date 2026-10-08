@@ -2536,3 +2536,33 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 提升层：可复用 Skill/工具。触发词：任务成功不等于安全、攻击与成功同现 36.5%、非文本资产载体、图片注入、ASR 43.1%、比文本载体高 16.4pp。
 
 > 本节原文已零删减下沉 `references/knowledge-base.md §r442C 下沉：评测 harness 是「多件」不是「一件」：构建评测 / 成本爬升 / 审计各是独立流程件，且交付包与被引文件集必须核差集（来源：api.github.com/repos/anthropics/skills/commits 58,317B，2026-10-01 r349A 独立 curl 实拉，`build-eval` ×12 / `eval-hillclimb` ×4 / `cost-hillclimb` ×2 / `eval-audit` ×2 / `not shipped` ×2 逐串命中；经 Qoder r366-Q-A 提名）`（正文预算 ≤500 行）
+
+
+<!-- r443 下沉 -->
+
+## 失败路径也必须被真的跑过（否则它等于不存在）（原文已下沉 references/knowledge-base.md §失败路径与验证通道，2026-10-03 r396A；触发词：受控失败、失败路径上次执行时间、三种界面同一内核、可脚本化验证、--tool-args-json 保真、退出码三分类、INCONCLUSIVE 单独成类、结果类别自陈「不证明什么」）
+
+
+<!-- r443 下沉 -->
+
+## 评测要接回优化器才叫闭环：观测 → AI 评测器 → AI 优化器 → 自动验证，Harness 是与模型、上下文并列的第三可调层（原文已下沉 references/knowledge-base.md §r349A；触发词：评测闭环、AI 评测器、AI 优化器、Harness 第三可调层、自进化引擎）
+
+
+<!-- r443 下沉 -->
+
+## 提交粒度是可配的，粒度越细回滚能力越弱：早提交换「部分结果不丢」，代价是出错即不可恢复（原文已下沉 references/knowledge-base.md §r294-C；触发词：逐模块提交、不能回滚、提交粒度、Commit trigger last）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·提交粒度是可配的粒度越细回滚能力越弱早提交换部分结果）
+
+
+<!-- r443 下沉 -->
+
+## 环境变量的可见性有三个独立面：删掉不报错只返 undefined、分享只带引用不带值、第三方组件默认拿不到（来源：pipedream.com/docs/workflows/environment-variables 2026-09-29 r296-C 独立 curl 取 .md 原文 8,151B 核验；与 §Cap32 凭据只写不可读 互补——那条管"能不能读回值"，本条管"谁看得到引用、删了之后发生什么"）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·环境变量的可见性有三个独立面删掉不报错只返undef）
+
+
+<!-- r443 下沉 -->
+
+## 审计可能是惰性生成的（「在库里」≠「已审过」），而扫描器自身的遍历顺序即是静默漏报面——两者都不产生任何警告位（来源：www.skills.sh/docs/api 136,145B + api.github.com/repos/NVIDIA/SkillSpector/issues/610 6,455B + docs.n8n.io/deploy/host-n8n/configure-n8n/security/run-security-audits.md 2,425B，2026-09-30 r323A 独立实拉；细则见 references/knowledge-base.md §r323A）
+
+
+<!-- r443 下沉 -->
+
+## 审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎 `queued/排队中`+`...（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r440B·审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎）

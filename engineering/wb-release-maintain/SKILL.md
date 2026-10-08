@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.84.0"
+version: "1.85.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -375,3 +375,9 @@ sources:
 - **判据**：① **"自动更新"不是一个布尔开关，是一张三档 × 类别 × 子集的授权表**——`off` / `patch only` / `always latest` 三档的风险差一个量级，而同一档在不同类别（工具 vs 模型 vs 数据源）上的后果也不同 ⇒ 说"我们开了自动更新"而不说"哪一类、哪一档、作用在哪一个子集"等于没说；审计自动更新要看这张表，不是看总开关。② **"仅 patch"是唯一可作为默认档的放行粒度**：它把自动放行的范围钉在语义化版本的修Fix区间内，minor/major 仍需显式决策 ⇒ 凡要做无人值守更新，默认档应取最小可放行区间，把"最小区间"留给人而不是留给规则猜。③ **策略的作用域是可收窄的子集，不是只能全类目生效**：可以只作用于"选中的一部分" ⇒ 高风险类目（数据源/模型）设 `off`、低风险类目设 `patch only` 是同一张表内的正常配置；按子集授权让"试点再铺开"成为配置能力，不需要另建机制。④ **权限面与更新策略要分列**：同批文档把"谁能安装/升级/移除"默认为 Everyone，而更新策略是另一处设置 ⇒ 能点升级的人和升级自动发生的范围是两个旋钮，改一个不等于改另一个。
 - **与既有能力分工**：§批量退役三闸（PRUNE_CAP / 期望集+豁免名册）管**清理动作的破坏面上界**；本条管**更新动作的放行粒度**——一个是减，一个是增，两者都要"可枚举的最小作用集"。
 - 提升层：工作流（依赖治理）/ 工具（升级策略配置面）。触发词：update strategy off、patch versions only、always the latest、按类别设更新策略、作用在子集、自动更新不是布尔开关、仅 patch 作默认档、权限与策略分列。
+
+## 废弃一个枚举值要分两步走：先改文案/标签并告警，隔一个主版本再真删；「已声明废弃」期间行为与枚举必须原样不变（来源：docs.n8n.io/release-notes/ 2,853,324B，2026-10-08 一手 curl 逐串命中 PR #36350 `Deprecate the "Any workflow" caller policy`：`is now deprecated ahead of removal in n8n v3, since it lets any project on the instance call a sub-workflow, bypassing project permissions` + `The workflow settings dropdown now labels it deprecated and shows a warning when selected` + `No behavior or enum values change yet.`；与 §破坏性变更形状（默认关 + 白名单豁免 + 可执行迁移）互补——那条管变更怎么放行，本条管「先声明、后移除」这两步之间必须隔多久、期间状态如何）
+- **实证**：原文三连——① 动机「the workflow setting "This workflow can be called by → **Any workflow**" is now deprecated **ahead of removal in n8n v3**, since it lets any project on the instance call a sub-workflow, **bypassing project permissions**」；② 第一步只动表现层「The workflow settings dropdown now **labels it deprecated and shows a warning when selected**, prompting a switch t[o a safer option]」；③ 明确保留旧语义「**No behavior or enum values change yet.**」（该串在页面中出现两次）。
+- **判据**：① **废弃声明与移除必须分属两个版本**：声明期只改标签与提示，明确"到 v3 才移除" ⇒ 同一版本里既标废弃又改行为，使用者没有迁移窗口，等于用声明替代了过渡期。② **声明期内「枚举值不变」要写成显式承诺**：原文特意写 "No behavior or enum values change yet" ⇒ 否则下游按"已废弃=已不可用"自行改配置，会在声明期制造一批本不必发生的变更；凡发布废弃声明，必须同时声明"哪些东西暂时没变"。③ **废弃理由要具体到绕过路径**：原文给的是"任何项目都能调这个子工作流、绕过项目权限" ⇒ 只写"不推荐使用"的废弃通知无法让使用者判断自己是否受影响，也无法在评审时判断能否申请豁免。④ **告警要出现在选择现场而不是文档里**：下拉框内就标 deprecated + 选中即弹警告 ⇒ 写在变更日志里的废弃对正在配置的人不可见，等于没通知。⑤ **默认安全侧的迁移要给出替代项**：提示的是"切换到更安全的选项"而非单纯禁用 ⇒ 只禁用不给替代，使用者会选次宽的那个值，风险不降反转移。⑥ **与破坏性变更形状的接缝**：r436B「默认关 + 逐字段豁免 + 可执行迁移」是**移除那一版**的做法；本条是**移除之前那一版**的做法——两段合起来才是完整的"声明 → 过渡 → 移除"。
+- **与既有能力分工**：r436B 管移除时的开关与豁免；r441B 管批量退役的速率上界与名册；本条管**声明期这一段时间窗内该做什么、不该做什么**。
+- 提升层：工作流（废弃治理）/ 工具（配置项生命周期）。触发词：ahead of removal in v3、labels it deprecated、shows a warning when selected、No behavior or enum values change yet、废弃与移除分两版、声明期行为不变、废弃理由须给绕过路径、选择现场告警。
