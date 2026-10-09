@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.86.0"
+version: "1.87.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -387,3 +387,7 @@ sources:
 - **判据**：① 市场准入的"同意流"与"目录表"是两个常被分开实现的机制，但应合并进同一份安装策略载体，安装动作即策略落地；② 优先源同意解决"装哪个源的版本"的信任起点；③ 每客户端目录映射让同一技能在不同宿主落到确定路径，是可审计的；④ 失败回退 clawhub 保证安装链不断，且 fallback 必须显式声明而非静默。
 - **与既有能力分工**：r440C「中心策略是地板不是默认值、策略所有权归声明源」管策略语义；本条管"策略在安装入口怎么被具体化成可机读载体"。
 - 提升层：工作流（市场准入策略）/ 工具（安装载体）。触发词：优先源同意、每客户端 skill 目录映射、安装即策略、回退 clawhub、SkillHub 安装文档、同意流与目录表合并。
+## 审计优先级应按「出处扩散度」而非热度排序：副本几乎不随源头更新，源头修复很少传导到副本（来源：arxiv.org/abs/2610.11169（Skill Constellations）42,401B，2026-10-09 一手 curl 逐串命中 `a software supply chain without a registry, versions or provenance` / `covering 2,193,119 skill adoptions across GitHub` / `A few repositories are the source of almost all copies, and GitHub stars do not identify them` / `Skill copies almost never change with their source, and a fix at the source therefore rarely reaches them` / `Reviewing the 100 repositories it ranks highest prevents 14.9% of later adoptions of high-risk skills, against 0.5% for the 100 most starred` / `distribute versioned references rather than copies`；r472C 落地）
+- **实证**：① 供应链定性「Developers share skills by copying them between repositories, which makes them **a software supply chain without a registry, versions or provenance**」；② 首个带日期的复制网络「built from the git history of every SKILL.md in GitSkills and covering **2,193,119** skill adoptions across GitHub」；③ 关键反直觉「**A few repositories are the source of almost all copies, and GitHub stars do not identify them**」；④ 修复传导「**Skill copies almost never change with their source, and a fix at the source therefore rarely reaches them**」；⑤ 排序收益「Reviewing the 100 repositories it ranks highest prevents **14.9%** of later adoptions of high-risk skills, against **0.5%** for the 100 most starred」（≈30 倍差）；⑥ 主张「Platforms should therefore **distribute versioned references rather than copies**」。
+- **判据**：① **单点快照无法回答「谁从谁复制」**：只记录「某一时刻哪些仓有这个技能」看不出传播方向 ⇒ 供应链取证必须走 git 历史建**带日期**的复制网络，否则审计与通告都没有投递路径。② **热度不是风险的代理指标**：按复制模型排序的前 100 仓阻断 14.9%，按 star 前 100 仅 0.5% ⇒ 用热度排审计序是把有限预算花在错误对象上；本库落地：加固/退役优先级按「被多少下游引用」排，不按「被多少人看过」排。③ **「源头已修」不等于「副本已修」**：副本几乎不随源头变 ⇒ 安全通告必须按复制网络下发到下游仓，只发源头等于没发；对外部引用技能要做「来源是否已修 + 我这份是否跟上」的双点核查。④ **分发形态决定修复能否传导**：应分发**带版本的引用**而非副本 ⇒ 副本天然丢失溯源与修复传导；本库落地：引用外部技能优先钉来源 + 版本引用，避免整包复制入库（与 r443B「供给端自动同步 ≠ 消费端自动升级」互补——那条管跟随节奏，本条管引用 vs 复制的形态选择）。⑤ **度量出口**：库内应能输出「本库技能被多少个外部副本采纳」这类扩散度指标，作为加固与退役的优先级输入。
+- 提升层：工具（供应链取证与审计排序）/ 工作流（退役与加固优先级）。触发词：复制网络、2,193,119 采纳、14.9% vs 0.5%、star 认不出源头、副本不随源头更新、版本引用而非副本、审计按扩散度排序。

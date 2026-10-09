@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.147.0"
+version: "3.148.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -279,31 +279,8 @@ version: "3.147.0"
 - 配置键的归属要写在键上：`internal` 属于另一个子系统，**不启用 HTTP 入口** ⇒ 出现在同一页文档里的键不一定由这一页的机制管，写声明时要标归谁管，否则读者会以为配了就生效。
 - `idempotencyKey` 是可选重放键且**请求头优先于载荷**；`waitForCompletion` 只对直接 `/agent` 调用生效，经 mapping 与 fan-out 提交永远只做准入 ⇒ 同一字段的生效入口要列全，别让调用方以为处处可用。
 
-## 外部解析器/命令的准入校验是一条有先后顺序的链；`${VAR:-fallback}` 是配置文本不是密钥库且带 fallback 永不告警；`$include` 合并语义与写回边界要逐条声明；拆分文档必须保留旧锚点（来源：docs.openclaw.ai `gateway/config-secrets-env.md` 10,309B + `gateway/config-tools.md` 7,517B 索引页 + `gateway/config-tools/github-identity.md` 17,020B，2026-10-03 r395A 独立 curl 取 `.md` 原文实拉）
-
-- **外部命令/解析器准入链有先后顺序**：exec 型 secret provider 必须绝对路径；**符号链接命令路径直接拒**（先于目录白名单检查）；必须非 group/world 可写、POSIX 下属主为当前用户；若配了 `trustedDirs`，约束的是「配置里写的那个路径本身」，因为符号链接在这一步之前已被拒 ⇒ 声明准入规则时必须把顺序写出来，否则「配了白名单目录」会被误当成能穿透软链。
-- **最小环境是默认，变量须显式传递**：exec 子进程环境默认最小，需要的变量要用 `passEnv` 逐项列出 ⇒ 「为什么子进程里拿不到这个变量」的默认答案是「没传」，不是「环境有问题」。
-- **校验不可用时 fail-closed 且不提供旁路**：file 与 exec provider 在 Windows ACL 校验不可用时直接失败关闭，官方明确**没有 provider 级 bypass** ⇒ 凡是「检查不了就放行」的降级口，都要当成设计缺陷处理。
-- **ID 校验按 source 分族且自带遍历防护**：`env` 要求 `^[A-Z][A-Z0-9_]{0,127}$`；`file` 的 id 是绝对 JSON pointer；`exec` 支持 `secret#json_key` 选择器但**禁止 `.` / `..` 路径段**（`a/../b` 被拒）⇒ 每种来源的 id 是不同语法族，统一用一个正则既会误拒也会漏防。
-- **`${VAR:-fallback}` 是配置文本，不是密钥库**：官方明确 fallback 是 config text，凭据必须放 `env.vars` 或 SecretRef 并裸引用；**带 fallback 的引用总能解析，因此永不发出缺失告警** ⇒ 这既是便利也是静默降级面：写声明时要说清「哪些情况不再告警」。其余 shell 操作符（`:=` `:?` `:+` 等）一律按字面量处理，只有 `:-` 被支持；`$${VAR}` 是转义。
-- **回写要保留书写形态而不是内联解析值**：配置回写时恢复 `${VAR:-fallback}` 原文，而不是把它解析出的值固化进文件；未解析的变量保持「可见地未解析」并发告警，对需要取值的消费者不可用 ⇒ 「配置里看到什么」与「运行时拿到什么」的差异必须可辨识。
-- **`$include` 合并语义四条**：单文件 include **替换**所在对象；数组按序**深合并**（后者覆盖前者）；**兄弟键在 include 之后合并**（覆盖 include 里的值）；嵌套最深 10 层。路径必须留在顶级配置目录内，越界要靠 `OPENCLAW_INCLUDE_ROOTS` 显式扩根 ⇒ 「哪种 include 覆盖哪种」要逐条写，一句「支持 include」完全不够。
-- **写回边界：所有权不单一就 fail-closed，绝不扁平化**：只有「全部变更键都归某一个单文件 include 所有」时才写穿到最深的那个拥有者；根级 include、数组项 include、include 数组、跨所有权边界的改动等一律**只读**，写入 fail-closed 而不是把配置拍平。`doctor --fix` 一次运行中若混合了根拥有与 include 拥有的修复，则**整批拒绝**，且被拒的那次写入保持所有文件不变（同批次更早的写入保留）⇒ 批量修复要么全改要么全不改，粒度必须写清。
-- **拆分/迁移文档要保留旧锚点**：索引页明确「本页曾经发布的每个标题都保留锚点，旧链接仍然可解析」，并给出「每个章节搬到哪去了」的映射表 ⇒ 文档重构时保留锚点与迁移映射是硬要求，只留一个新目录等于把所有外部引用打断。
-
-## 白名单的三种「空态」语义可能两两相反且删条目会回落默认；沙箱态是独立于用户配置的一层 clamp；写一个 URL 等于放行一个 origin；能力声明默认从严且不得从别处复制；跨端点 schema 兼容层必须声明丢什么（来源：docs.openclaw.ai `gateway/config-tools/sessions-and-subagents.md` 9,632B + `gateway/config-tools/custom-providers.md` 13,129B，2026-10-03 r395B 独立 curl 取 `.md` 原文实拉）
-
-- **白名单要区分三种空态**：`allow` 字段**省略**或**空数组**都被当作 unset ⇒ 在默认开启的跨 agent 访问下等于**所有主体互访**；而**只含空白条目的列表**则**拒绝全部跨主体调用** ⇒ 「空」在这里不是一种状态而是两种相反状态，声明里必须逐态写，含糊一句「支持白名单」会把收紧写成放开。
-- **删除主体会改写策略，甚至回落默认**：删除某个 agent 会把它的 id 从 allow 里剪掉，**剪空之后策略回落 allow-all** ⇒ 凡「按 id 列举」的策略，都要在删除操作后复查列表是否被剪空；这是个不需要改动配置就发生的策略变更。
-- **沙箱态是配置之上的独立 clamp**：当前会话处于沙箱且 `sessionToolsVisibility="spawned"`（默认值）时，可见范围被限制在 spawned 会话，**即使调用方是主会话、即使显式配置为 `all`** ⇒ 声明能力天花板时要写出「哪些环境态会覆盖用户配置」，否则用户以为自己配宽了其实没生效。
-- **收窄作用域要写清例外**：收窄到 `agent`/`tree`/`self` 会阻断普通跨主体访问，但 `tree` **仍允许**请求者自己派生的原生/ACP 子会话跨主体边界，而 `agent` **不含**这个例外 ⇒ 同一类「收窄」里两个档位的例外不同，按名字望文生义会选错。
-- **写一个字段等于开一个信任口**：配置自定义 provider 的 `baseUrl` 本身就是网络信任决策——该精确 `scheme://host:port` origin 会被放入受管 fetch 白名单，**没有第二个开关**；而 metadata / link-local / NAT64（`64:ff9b:1::/48`）三类 origin **始终拦截**，需显式 opt-in ⇒ 声明里必须点名「配这个字段顺带授予了什么」，以及固定拒绝的例外清单。
-- **能力声明默认从严，且只认有契约证据的路由**：`supportsInstructions` 仅对 native OpenAI 与 xAI 主路由这两条「有确认契约证据」的路由默认 `true`，**其余所有路由（含内置）默认 `false`**，需针对该端点验证后显式置位 ⇒ 默认值的正确方向是「没有证据就当不支持」，不是「先当支持」。
-- **能力声明不得从别处复制**：catalog 自带的 `compat` 不要抄进配置（路由匹配时以 catalog 行为准）；`doctor --fix` 会识别并移除这类 legacy override 并报告分歧值 ⇒ 工具要能区分「用户验证过的声明」与「抄来的声明」，前者保留、后者清理。
-- **跨端点 schema 兼容层是有损转换，必须声明丢什么**：`toolSchemaProfile` 的 `llamacpp` profile 会移除 `pattern` 以及值 ≥2000 的 `maxLength`；`unsupportedToolSchemaKeywords` 按名移除端点不接受的 JSON Schema 关键字；`maxTokensField` 决定发 `max_tokens` 还是 `max_completion_tokens` ⇒ 兼容层不是「翻译」而是「裁剪」，声明里要写清被裁掉的关键字。
-- **合并优先级要按字段分条写，且带前提**：agent 级 `baseUrl` 非空值赢；agent 级 `apiKey` 非空值**只有在该 provider 未被 SecretRef 管理时**才赢；`contextWindow`/`maxTokens`/`contextTokens` 是「显式值存在且有效（正有限数）才赢，否则回落到隐式/生成的 catalog 值」⇒ 一句「agent 级覆盖全局」既说不清前提也说不清无效值怎么办。
-- **显式目录不限制发现**：merge 模式下手写的 catalog 行**不会**收窄该 provider 的自动发现范围，要限制得用策略白名单或 `models.mode: "replace"` ⇒ 「我配了清单」不等于「只有这些能用」。
-
+> 正文预算下沉：本节原文已零删减移入 `references/knowledge-base.md`（外部解析器/命令的准入校验是一条有先后顺序的链；`${VAR:-fallback}` 是配置文本…）。
+> 正文预算下沉：本节原文已零删减移入 `references/knowledge-base.md`（白名单的三种「空态」语义可能两两相反且删条目会回落默认；沙箱态是独立于用户配置的一层 clamp…）。
 ## 放行与拒绝谁赢必须显式排序，且跨厂方向相反；默认封禁项的启用方式是清空列表；只校验首跳会被重定向与 DNS 重绑定绕过；能力要有版本门槛（来源：docs.n8n.io `security/enable-ssrf-protection.md` 3,822B + `security/block-specific-nodes.md` 2,425B + `basic-configuration/use-environment-variables/ssrf-protection.md` 7,039B + pipedream.com/docs `conduit/configure/access-control.md` 13,330B + `conduit/configure/scim.md` 9,789B，2026-10-03 r395C 独立 curl 取 `.md` 原文实拉；n8n 与 Pipedream 均经各自 `llms.txt`（287,049B / 34,240B）定位）
 
 - **白/黑名单的优先级必须写出顺序，因为各系统方向相反**：n8n SSRF 的优先级是 **hostname 允许 > IP 允许 > IP 拒绝**——即「更具体的放行赢过更粗的拒绝」，且官方警告 hostname 允许会**绕过 IP 拒绝检查**，所以只允许放行你可控的内部 DNS 区；而 openclaw 的工具策略是 **deny 恒赢**（`deny` 压过 `allow`）⇒ 同一句「配了白名单」在两个系统里含义相反，声明里不写谁赢就等于没写。
@@ -507,3 +484,14 @@ version: "3.147.0"
 - **判据**：① 解析不可信清单时，半损坏的清单绝不能被当作"有效能力面"——正确语义是逐项丢弃 + 整体降级为空集合；② digest 校验必须在抽取/执行之前，不是之后；③ 归档内的脚本默认不可执行，杜绝"下载即获得可执行权"；④ 与 r441C「宿主宽容校验 fail-closed」互补——那条管单技能坏 frontmatter，本条管**清单级**的降级安全默认。
 - **与既有能力分工**：r441C 管单技能坏 frontmatter 的 fail-closed；本条管发现清单（多技能聚合）整体的降级默认。
 - 提升层：工具（清单解析安全默认）/ 工作流（发现面治理）。触发词：skill://index.json、只收 ZIP、TAR/tgz 跳过、digest 抽取前校验、index 坏返回空列表、archive 脚本不可执行、降级安全默认。
+## 技能库「同职共存」冲突必须独立计量：任务完成度指标对此完全盲，被顶替的技能会静默丢失独占约束（来源：arxiv.org/abs/2610.11647（One Skill Too Many）44,009B，2026-10-09 一手 curl 逐串命中 `skills come from independent sources` / `picks between them by name and description alone` / `20,947` / `822,109` / `3,754` / `312` / `6,368 runs, 169,294 tool calls, 542 agent-hours` / `nearly one in four` / `37%` / `one in five runs` / `over a third` / `a ban on touching git` / `0.9%`；r472A 落地）
+- **实证**：官方摘要五点——① 冲突成因「Because skills come from independent sources (teams, developers, plugins, copied collections), an installed skill can be co-installed with a similar skill doing the same job, and the model **picks between them by name and description alone**」；② 规模链「From snapshots of **20,947** repositories, we mine **822,109** candidate similar-skill pairs, have an LLM judge a stratified sample of **3,754**, and run **312** confirmed pairs on three models (**6,368** runs, **169,294** tool calls, **542** agent-hours)」；③ 普及度「nearly **one in four** installed skills is co-installed with one that does the same job, and **37%** of judged skills sit inside copied collections」；④ 后果「**Without lowering task completion**, a similar skill takes **one in five runs** from the installed skill, and runs that open the similar skill first lose **over a third** of the exclusive core functions that only the installed skill fulfills」（原文举例：一条 **a ban on touching git** 的约束失效）；⑤ 可观测性「Install location decides which skill runs, listing order barely matters, and the final reply names the skill used in only **0.9%** of substituted runs」，且「Conflicts are decided at the first ski[ll]」。另有「Most such pairs involve **normative skills**, then capability skills」。
+- **判据**：① **「任务仍然通过」不等于「本该起作用的技能起了作用」**：原文「The task still passes, so benchmarks that check only task completion miss such cases」⇒ 只报 pass rate 的评测对共存冲突 100% 盲；库内评测必须把「该技能的**独占约束在共存下是否仍生效**」列为独立断言项，不得并入完成度。② **共存是常态不是异常**（近 1/4 有同职邻居、37% 属复制合集）⇒ 库治理要先算「同职对」，不能只看描述相似度。③ **后果须三件事分列计量**：共存普及率 / 抢占率（每 5 次运行被抢 1 次且完成度不降）/ 独占核心功能丢失率（>1/3）⇒ 三个数字回答三个不同问题，合成单一「冲突率」会互相掩盖。④ **规范性技能（normative，禁令/硬约束）优先冲突**：其失效是「约束丢失」而非「能力降级」，且从结果端看不出来 ⇒ 禁令类技能必须优先做同职冲突体检。⑤ **归因信号极弱**：被顶替的运行里最终回复只有 0.9% 提到实际用的是哪个技能 ⇒ 不能靠读输出判断谁跑了，必须在运行期留技能身份留痕。⑥ **裁决变量是安装位置不是列举顺序** ⇒ 靠调顺序/排序修冲突是无效动作，要改的是安装面（谁被装进来）。⑦ **冲突在第一个技能被打开时就已决定** ⇒ 事后「多跑几次看看」不会改结果，拦截点必须在装载阶段。
+- **与既有能力分工**：r442B / r444-Q-B「触发碰撞 · 描述二义」管**召回层选谁**；本条管**两个都在时的行为后果计量与评测盲区**。
+- 提升层：可复用 Skill（库内共存治理）/ 工作流（评测断言设计）。触发词：同职共存、co-installed similar skill、独占核心功能丢失、one in five runs、0.9%、任务完成度盲区、normative skills、安装位置决定谁跑、listing order barely matters。
+
+## 发布通道可以是「仓库即注册表」：CI 监听 SKILL.md 变更自动发布，slug 按 owner/name 钉死、改分类不改 slug，目录自带 eval 即装即测（来源：api.github.com/repos/hayka-pacha/skills/readme 3,142B，2026-10-09 一手 curl 逐串命中 `Open registry of reusable SKILL.md packages` / `published to [Smithery] automatically on every push to main` / `hayka-pacha/<skill-name>` / `Moving a skill to another domain re-publishes it with the new URL; the slug does not change` / `do not use generic buckets` / `evals/evals.json`；`hayka` 在 co-learn 全库 0 命中；r472A 落地）
+- **实证**：README 原文四点——① 结构「Each skill lives in `<domain>/<skill-name>/`」，Layout 五件套 = `SKILL.md`（必需，frontmatter name/description + instructions）/ `README.md` / `scripts/` / `references/` / **`evals/evals.json`**（注意在 `evals/` 子目录，不在包根，既往转述写作根目录 `evals.json`，本轮以原文为准）；② 发布「`.github/workflows/publish-smithery.yml` runs on every push to `main` that touches a `SKILL.md`」，以 slug `hayka-pacha/<skill-name>`（文件夹名）+ 技能 GitHub URL 发布；③ 标识与分类解耦「**Moving a skill to another domain re-publishes it with the new URL; the slug does not change.**」；④ 分类命名「Domains are **plain words describing the problem area** … **do not use generic buckets**」。安装两路：clone 后 symlink 进 `~/.claude/skills/`，或走 Smithery 链接。
+- **判据**：① **集中注册表是可选实现不是前提**：把发布做成 CI 对 `main` 上 SKILL.md diff 的监听即可产生稳定分发面 ⇒ 没有中心注册表也能有可发现、可安装的分发。② **标识（slug）与分类（domain）必须解耦**：分类重构是家常便饭，若分类进 slug，每次重构都打断既有安装链接 ⇒ 检验标准就一句「改分类是否改变既有可达性」，是则设计错。③ **slug 取文件夹名并与 owner 前缀钉死** ⇒ 重命名技能即换标识，须按破坏性变更申报（与 r436B「安全型破坏性变更」同构）。④ **目录自带 `evals/evals.json` ⇒ 即装即测是目录结构层的约定，不是外部流程**：缺 eval 的技能包在准入时降级为「未自证」（与 r443C 评测产物落盘契约互补——那条给落盘格式，本条给「随包携带」的位置约定）。⑤ **分类禁通用桶**：通用分类等于没有分类，检索面退化为人肉翻页；新增分类的条件是「没有既有分类装得下」，不是想加就加。
+- **与既有能力分工**：r443B「供给端自动同步 ≠ 消费端自动升级」管**版本跟随**；本条管**发布管道形态与标识/分类的解耦**。
+- 提升层：可复用 Skill（技能包目录与发布管道）/ 工具（注册表形态）。触发词：Git 即注册表、CI 监听 SKILL.md、publish-smithery.yml、slug 不改、domain 与 slug 解耦、evals/evals.json、禁通用桶、去中心化注册表。

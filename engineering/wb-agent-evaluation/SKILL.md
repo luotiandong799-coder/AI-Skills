@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。
-version: 1.6.0
+version: "1.7.0"
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -81,3 +81,7 @@ version: 1.6.0
 - **实证**：fitness = 技能在**适用条件 ω（任务类型谓词）**下的经验成功率，用**基础模型自身 rollout** 在代表任务上测；进库前 pre-RL 阶段就先按 fitness 预退役低分技能；stable 技能若 fitness 跌破退役阈值即 obsolescence 退役，且**退役事件带人类标注的失败类别**（不是单纯"分数低就删"）。
 - **判据**：① **fitness 必须有显式适用条件 ω，否则"成功率"无法归因到该技能**：同一技能在不同任务类型上成功率差异极大，没有 ω 的成功率是 averaging over 不该平均的东西。② **晋升/退役是同一把尺的两个方向**：进库用 fitness 门、退场也用 fitness 门 ⇒ 不能"进来严、出去宽"，否则库只增不减（与 r439C「只增不减不是治理库」同构）。③ **退役要带失败类别，低分本身不是充分理由**：纯低分可能是任务分布偏移或评测噪声；人类标注的失败类别（为何失败）才能区分"该修"与"该退"。④ **接缝**：r440C 配对差给的是"装了 vs 没装"的增量；本条给的是"技能自身在适用面上的绝对成功率"——两条合并才能同时回答"它现在多好"和"它比没有好多少"。
 - 提升层：工具（技能库治理/生命周期度量）/ 工作流（晋升门与退役门同尺）。触发词：skill fitness、applicability condition ω、own rollouts、pre-retire、retirement events、human-annotated failure categories、obsolescence 门槛、晋升门退役门同尺。
+## 技能增益必须按配置分列报告：同一批技能在 36.78% 的任务上「对某些配置有益、对另一些有害」，候选排序目标应从相关性换成「对所需操作的支持度」（来源：arxiv.org/abs/2610.08875 43,604B，2026-10-09 一手 curl 逐串命中 `87 SkillsBench tasks` / `nine configurations` / `37,596 Skills` / `The same Skills help some configurations and hurt others on 36.78% of tasks` / `Relevance rankings overlook more useful candidates` / `reranking by support for required operations raises first-choice pass rates by 4.35--5.80 percentage points across the three configurations`；r472C 落地）
+- **实证**：① 口径「downstream utility = 同任务、同 model–harness 配置下相对 No-Skill 的通过率差」；② 规模「**87** SkillsBench tasks × **9** configurations，市场候选取自 **37,596** 个技能的语料」；③ 翻转「The same Skills **help some configurations and hurt others on 36.78% of tasks**，with trajectories showing that **recommended procedures can become an execution burden**」；④ 排序「**Relevance rankings overlook more useful candidates**」，改按「对所需操作的支持度」重排，在三个配置上把首选通过率提高 **4.35–5.80 个百分点**；⑤ 组织形态「**Stage Plan and Dependency DAG outperform use order alone**, with DAG's additional benefits concentrated in tasks supplied wit[h dependencies]」；⑥ 产出 17 条创作实践。
+- **判据**：① **单值平均增益是无效指标**：36.78% 的任务上增益符号随配置翻转 ⇒ 报「平均 +Xpp」会同时掩盖受益侧与受害侧；增益表必须按 model-harness 配置分列（与 r441A / r442C「按配置分列」同轴，本条补的是**翻转比例这一可复核数值**，让「必须分列」从主张变成有量级的判据）。② **流程指令是成本项不是纯收益**：轨迹实证显示「推荐流程本身可成为执行负担」⇒ 写技能时每一步都要折算执行预算，步骤越多越可能净负。③ **检索目标从「相关性」换成「操作支持度」**：重排把首选通过率提 4.35–5.80pp ⇒ 排序问的是「能否支撑所需操作」，不是「语义像不像」（与 r442C「description 只管触发不管裁决」互补：触发靠描述，候选取舍靠操作支持度）。④ **多技能组织要显式声明依赖**：Stage Plan 与 Dependency DAG 优于仅给使用顺序，且 DAG 的额外收益集中在「提供了依赖供给的任务」⇒ 只给 use order 会丢掉这一档收益。⑤ **结论适用范围须随报告声明**：87 任务 / 9 配置 / 37,596 语料，不得外推为「所有任务、所有配置」。
+- 提升层：工作流（评测设计与报告口径）/ 可复用 Skill（技能创作与组织）。触发词：36.78%、增益按配置分列、下游效用、downstream utility、相关性排序漏候选、操作支持度重排、4.35–5.80pp、Stage Plan、Dependency DAG、流程成为执行负担。

@@ -3336,3 +3336,28 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 3. 文件位置对不对（用户级 `~/.workbuddy/skills/` vs 工作区 `.workbuddy/skills/`）？
 4. frontmatter 语法是否合法（`name` / `description` 必填，YAML 缩进别错）？
  5. 改完 skill 后会话没重开 → 读的仍是旧版本
+
+## 白名单的三种「空态」语义可能两两相反且删条目会回落默认；沙箱态是独立于用户配置的一层 clamp；写一个 URL 等于放行一个 origin；能力声明默认从严且不得从别处复制；跨端点 schema 兼容层必须声明丢什么（来源：docs.openclaw.ai `gateway/config-tools/sessions-and-subagents.md` 9,632B + `gateway/config-tools/custom-providers.md` 13,129B，2026-10-03 r395B 独立 curl 取 `.md` 原文实拉）
+
+- **白名单要区分三种空态**：`allow` 字段**省略**或**空数组**都被当作 unset ⇒ 在默认开启的跨 agent 访问下等于**所有主体互访**；而**只含空白条目的列表**则**拒绝全部跨主体调用** ⇒ 「空」在这里不是一种状态而是两种相反状态，声明里必须逐态写，含糊一句「支持白名单」会把收紧写成放开。
+- **删除主体会改写策略，甚至回落默认**：删除某个 agent 会把它的 id 从 allow 里剪掉，**剪空之后策略回落 allow-all** ⇒ 凡「按 id 列举」的策略，都要在删除操作后复查列表是否被剪空；这是个不需要改动配置就发生的策略变更。
+- **沙箱态是配置之上的独立 clamp**：当前会话处于沙箱且 `sessionToolsVisibility="spawned"`（默认值）时，可见范围被限制在 spawned 会话，**即使调用方是主会话、即使显式配置为 `all`** ⇒ 声明能力天花板时要写出「哪些环境态会覆盖用户配置」，否则用户以为自己配宽了其实没生效。
+- **收窄作用域要写清例外**：收窄到 `agent`/`tree`/`self` 会阻断普通跨主体访问，但 `tree` **仍允许**请求者自己派生的原生/ACP 子会话跨主体边界，而 `agent` **不含**这个例外 ⇒ 同一类「收窄」里两个档位的例外不同，按名字望文生义会选错。
+- **写一个字段等于开一个信任口**：配置自定义 provider 的 `baseUrl` 本身就是网络信任决策——该精确 `scheme://host:port` origin 会被放入受管 fetch 白名单，**没有第二个开关**；而 metadata / link-local / NAT64（`64:ff9b:1::/48`）三类 origin **始终拦截**，需显式 opt-in ⇒ 声明里必须点名「配这个字段顺带授予了什么」，以及固定拒绝的例外清单。
+- **能力声明默认从严，且只认有契约证据的路由**：`supportsInstructions` 仅对 native OpenAI 与 xAI 主路由这两条「有确认契约证据」的路由默认 `true`，**其余所有路由（含内置）默认 `false`**，需针对该端点验证后显式置位 ⇒ 默认值的正确方向是「没有证据就当不支持」，不是「先当支持」。
+- **能力声明不得从别处复制**：catalog 自带的 `compat` 不要抄进配置（路由匹配时以 catalog 行为准）；`doctor --fix` 会识别并移除这类 legacy override 并报告分歧值 ⇒ 工具要能区分「用户验证过的声明」与「抄来的声明」，前者保留、后者清理。
+- **跨端点 schema 兼容层是有损转换，必须声明丢什么**：`toolSchemaProfile` 的 `llamacpp` profile 会移除 `pattern` 以及值 ≥2000 的 `maxLength`；`unsupportedToolSchemaKeywords` 按名移除端点不接受的 JSON Schema 关键字；`maxTokensField` 决定发 `max_tokens` 还是 `max_completion_tokens` ⇒ 兼容层不是「翻译」而是「裁剪」，声明里要写清被裁掉的关键字。
+- **合并优先级要按字段分条写，且带前提**：agent 级 `baseUrl` 非空值赢；agent 级 `apiKey` 非空值**只有在该 provider 未被 SecretRef 管理时**才赢；`contextWindow`/`maxTokens`/`contextTokens` 是「显式值存在且有效（正有限数）才赢，否则回落到隐式/生成的 catalog 值」⇒ 一句「agent 级覆盖全局」既说不清前提也说不清无效值怎么办。
+- **显式目录不限制发现**：merge 模式下手写的 catalog 行**不会**收窄该 provider 的自动发现范围，要限制得用策略白名单或 `models.mode: "replace"` ⇒ 「我配了清单」不等于「只有这些能用」。
+
+## 外部解析器/命令的准入校验是一条有先后顺序的链；`${VAR:-fallback}` 是配置文本不是密钥库且带 fallback 永不告警；`$include` 合并语义与写回边界要逐条声明；拆分文档必须保留旧锚点（来源：docs.openclaw.ai `gateway/config-secrets-env.md` 10,309B + `gateway/config-tools.md` 7,517B 索引页 + `gateway/config-tools/github-identity.md` 17,020B，2026-10-03 r395A 独立 curl 取 `.md` 原文实拉）
+
+- **外部命令/解析器准入链有先后顺序**：exec 型 secret provider 必须绝对路径；**符号链接命令路径直接拒**（先于目录白名单检查）；必须非 group/world 可写、POSIX 下属主为当前用户；若配了 `trustedDirs`，约束的是「配置里写的那个路径本身」，因为符号链接在这一步之前已被拒 ⇒ 声明准入规则时必须把顺序写出来，否则「配了白名单目录」会被误当成能穿透软链。
+- **最小环境是默认，变量须显式传递**：exec 子进程环境默认最小，需要的变量要用 `passEnv` 逐项列出 ⇒ 「为什么子进程里拿不到这个变量」的默认答案是「没传」，不是「环境有问题」。
+- **校验不可用时 fail-closed 且不提供旁路**：file 与 exec provider 在 Windows ACL 校验不可用时直接失败关闭，官方明确**没有 provider 级 bypass** ⇒ 凡是「检查不了就放行」的降级口，都要当成设计缺陷处理。
+- **ID 校验按 source 分族且自带遍历防护**：`env` 要求 `^[A-Z][A-Z0-9_]{0,127}$`；`file` 的 id 是绝对 JSON pointer；`exec` 支持 `secret#json_key` 选择器但**禁止 `.` / `..` 路径段**（`a/../b` 被拒）⇒ 每种来源的 id 是不同语法族，统一用一个正则既会误拒也会漏防。
+- **`${VAR:-fallback}` 是配置文本，不是密钥库**：官方明确 fallback 是 config text，凭据必须放 `env.vars` 或 SecretRef 并裸引用；**带 fallback 的引用总能解析，因此永不发出缺失告警** ⇒ 这既是便利也是静默降级面：写声明时要说清「哪些情况不再告警」。其余 shell 操作符（`:=` `:?` `:+` 等）一律按字面量处理，只有 `:-` 被支持；`$${VAR}` 是转义。
+- **回写要保留书写形态而不是内联解析值**：配置回写时恢复 `${VAR:-fallback}` 原文，而不是把它解析出的值固化进文件；未解析的变量保持「可见地未解析」并发告警，对需要取值的消费者不可用 ⇒ 「配置里看到什么」与「运行时拿到什么」的差异必须可辨识。
+- **`$include` 合并语义四条**：单文件 include **替换**所在对象；数组按序**深合并**（后者覆盖前者）；**兄弟键在 include 之后合并**（覆盖 include 里的值）；嵌套最深 10 层。路径必须留在顶级配置目录内，越界要靠 `OPENCLAW_INCLUDE_ROOTS` 显式扩根 ⇒ 「哪种 include 覆盖哪种」要逐条写，一句「支持 include」完全不够。
+- **写回边界：所有权不单一就 fail-closed，绝不扁平化**：只有「全部变更键都归某一个单文件 include 所有」时才写穿到最深的那个拥有者；根级 include、数组项 include、include 数组、跨所有权边界的改动等一律**只读**，写入 fail-closed 而不是把配置拍平。`doctor --fix` 一次运行中若混合了根拥有与 include 拥有的修复，则**整批拒绝**，且被拒的那次写入保持所有文件不变（同批次更早的写入保留）⇒ 批量修复要么全改要么全不改，粒度必须写清。
+- **拆分/迁移文档要保留旧锚点**：索引页明确「本页曾经发布的每个标题都保留锚点，旧链接仍然可解析」，并给出「每个章节搬到哪去了」的映射表 ⇒ 文档重构时保留锚点与迁移映射是硬要求，只留一个新目录等于把所有外部引用打断。
