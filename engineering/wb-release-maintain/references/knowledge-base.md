@@ -325,3 +325,9 @@
 - 逐串命中：`fix(tools): disambiguate duplicate tool names by @Cristhianzl in .../pull/15556`
 - 可复用结论：命名主键冲突在实现侧被视为缺陷并单独发版修复 ⇒ 发布说明侧应同步按破坏性变更申报。
 - 未达证据（诚实标注）：Qoder r439-Q-B 提到的"同名安装会静默覆盖 / 批量更新会一次刷新全部"来自 orca.security 博客，本轮对该 URL 实拉返回 000（未达），故那一半不落地；该站计入探活计数 1 次。
+
+## r479B · 注册表默认是「剪除」而非「不收录」，例外须带责任四字段（2026-10-09 独立 curl 实拉，经 Qoder r473-Q-C 提名）
+- 来源：NVIDIA/skills 仓库 `catalog-exceptions.yml` + `components.d/` + `versions.json`（api.github.com 一手逐串命中，三文件实测存在）。
+- 实证（`catalog-exceptions.yml` 逐串命中）："Everything else in skills/ must be declared by a components.d/<slug>.yml entry, listed in .github/scripts/manual-components.yml, or listed here — otherwise the hourly sync prunes it (see .github/scripts/prune-orphans.sh)." ⇒ 默认动作是 **prune（剪除）**，不是 skip（不收录）。
+- 例外四字段（责任三元组 + 目录）：每个 exceptions 条目必须含 `dir` / `reason`（documented reason）/ `owner` / `component`，文件头注释明确 "Add an entry only with a documented reason and an owner"。
+- 可复用落点：wb-release-maintain 的「退役 / 批量淘汰」——默认剪除 + 例外带责任字段（谁 / 为何 / 归属组件）+ 速率上界三件套；与 r441B 批量退役三闸（PRUNE_CAP / 解析失败停删 / 期望集 + 豁免清单）同族，但本点更强调「默认即删」的取向，合并时取交集。
