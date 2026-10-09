@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.149.0"
+version: "3.150.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -26,11 +26,7 @@ version: "3.149.0"
 - 多技能触发词打架 → 显式写出优先级，或收窄其中一条
 - 名字太泛（`helper` / `utils`）→ 改成能被语义区分的名字
 > 本节（双路由防呆）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
-## 显式 @调用跳过路由：用 @标识 直接点名绕过模糊路由器（来源：腾讯 SkillHub 技能广场分数面 skillhub.cn/skills?sortBy=score，2026-09-27 实拉，17万技能规模头部「编程专家.Skill」声明「支持 @标识 显式调用跳过路由」）
-- **模糊路由会误配/漏配**：靠 description 关键词做自动激活，长尾意图容易错配或漏配；允许用户在对话里用 `@技能名` 显式点名，可让该技能**绕过模糊路由器直接激活**，把"猜你要哪个"变成"你点名哪个"。
-- **实拉证据**：SkillHub 分数排序面头部技能（编程专家.Skill / dev-expert 等）在描述里明写「支持 @标识 显式调用跳过路由」——这是技能级的可选路由优化，不是宿主强制机制。
-- **判据**：当某技能**高频被错配/漏配**、且用户有明确调用意图时，在 description 里声明"支持 @技能名 直接调用"是降低路由 misfire 的低成本手段；它与 §双路由防呆 分工——那条管"别叠两层路由器"，本条管"给确定意图一条绕过模糊路由的直通车"。
-- 提升层：可复用 Skill / 工作流（路由可靠性）。
+## r162-SkillHub@调用（全文已下沉 references/knowledge-base.md §r162-SkillHub@调用；2026-10-09 r484 正文预算下沉）
 ## 技能供应链内容完整性与声明式依赖清单+元数据失配扫描（原文已下沉 references/knowledge-base.md §r428B 下沉；触发词：逐文件 SHA256、批准绑 digest、requires.env/bins、元数据失配扫描）
 ## 技能设计「流程优于文档」：带证据检查点的工作流，而非会被略读的散文（来源：Addy Osmani agent-skills 框架 / theagenttimes 2026-09-27 实拉，26K★，六阶段 SDLC 技能 Define/Plan/Build/Verify/Review/Ship）
 - **把技能写成工作流而非参考文档**：Osmani 的判据——"把 2000 字测试最佳实践散文塞进上下文，agent 读完生成像模像样的文字然后跳过真测试；把工作流（先写失败测试→跑→看失败→写最小代码过→看通过→重构）放进去，agent 才有事可做、你才有可验证物"。技能本质是**带检查点、产出证据、有明确定义退出标准的工作流**，不是漂亮 markdown。
@@ -495,3 +491,9 @@ version: "3.149.0"
 - **判据**：① **集中注册表是可选实现不是前提**：把发布做成 CI 对 `main` 上 SKILL.md diff 的监听即可产生稳定分发面 ⇒ 没有中心注册表也能有可发现、可安装的分发。② **标识（slug）与分类（domain）必须解耦**：分类重构是家常便饭，若分类进 slug，每次重构都打断既有安装链接 ⇒ 检验标准就一句「改分类是否改变既有可达性」，是则设计错。③ **slug 取文件夹名并与 owner 前缀钉死** ⇒ 重命名技能即换标识，须按破坏性变更申报（与 r436B「安全型破坏性变更」同构）。④ **目录自带 `evals/evals.json` ⇒ 即装即测是目录结构层的约定，不是外部流程**：缺 eval 的技能包在准入时降级为「未自证」（与 r443C 评测产物落盘契约互补——那条给落盘格式，本条给「随包携带」的位置约定）。⑤ **分类禁通用桶**：通用分类等于没有分类，检索面退化为人肉翻页；新增分类的条件是「没有既有分类装得下」，不是想加就加。
 - **与既有能力分工**：r443B「供给端自动同步 ≠ 消费端自动升级」管**版本跟随**；本条管**发布管道形态与标识/分类的解耦**。
 - 提升层：可复用 Skill（技能包目录与发布管道）/ 工具（注册表形态）。触发词：Git 即注册表、CI 监听 SKILL.md、publish-smithery.yml、slug 不改、domain 与 slug 解耦、evals/evals.json、禁通用桶、去中心化注册表。
+
+## 语义相关 ≠ 执行可用：检索到的技能是「可调草稿」不是既定指令，瓶颈已从「技能够不够多」转向「有没有结构化编排机制」（来源：arxiv.org/abs/2608.06880（SkillAligner）42,920B + arxiv.org/abs/2604.17870（GraSP）42,046B，2026-10-09 一手 curl HTTP 200 逐串命中 `semantic relevance does not guarantee execution utility` / `skill--execution misfit` / `training-free execution-time skill adaptation` / `resolving dependencies, conflicts, and redundancy across skills` / `skill ecosystems ... providing agents with more skills does not monotonically improve performance` / `focused sets of 2-3 skills outperform comprehensive documentation` / `the first executable skill graph architecture that introduces a compilation layer between skill retrieval and execution` / `typed directed acyclic graphs (DAGs) with precondition-effect edges` / `locality-bounded repair through five typed operators -- reducing replanning from O(N) to O(d^h)`）
+- **实证**：① 问题定义「a retrieved skill may encode assumptions that **conflict with the current task, execution environment, or other retrieved skills**」，形式化为 **skill–execution misfit**；② SkillAligner「treats retrieved skills as **adaptable drafts** rather than fixed instructions」，执行前做**一次性**联合适配并把结果「consolidated into a compact execution guide and **reused throughout the subsequent trajectory**」，training-free；③ GraSP 起点「providing agents with more skills **does not monotonically improve performance** — **focused sets of 2-3 skills** outperform comprehensive documentation, and **excessive skills actually hurt**」；④ GraSP 结构「a **compilation layer** between skill retrieval and execution」，把扁平技能集转成带 **precondition-effect 边的类型化 DAG**，节点级校验，并用**五类算子**做 locality-bounded repair，把重规划复杂度从 **O(N) 降到 O(d^h)**；⑤ 效果跨 ALFWorld/ScienceWorld/WebShop/InterCode × 8 个 LLM 全面超过 ReAct/Reflexion/ExpeL 与扁平技能基线，最高 **+19 分**、环境步数最多降 **41%**。
+- **判据**：① **"相似度"不能作为入选判据，因为冲突发生在假设层不在语义层**：技能自带的执行环境假设、与其他技能的步骤假设，都无法从描述相似度读出 ⇒ 装配前必须显式检查"它的假设与当前运行环境是否相容"，检索阶段的评分不覆盖这一层。② **适配做一次并全程复用，不要每步重来**：一次性联合适配 → 压成紧凑执行指南 → 后续轨迹复用 ⇒ 每步重读原始技能正文既浪费预算又会引入同一步的不同解释。③ **多技能装配的三类消解是各自独立的动作**：dependencies（谁依赖谁）/ conflicts（假设互斥）/ redundancy（重复步骤）⇒ 只处理其中一类仍会在另外两类上失败；三者需在**执行之前**一次性完成，而不是等执行中报错再补救。④ **技能数量不是单调收益，存在最优规模区间**：2–3 个聚焦技能胜过全量文档，过多反而有害 ⇒ 给 agent 装技能是"配一个最小充分集"的问题，不是"尽可能多地提供"。⑤ **局部有界修复是结构带来的红利，不是提示工程技巧**：把重规划从 O(N) 降到 O(d^h)、修一处不动全局，前提是技能之间有显式的 precondition-effect 图 ⇒ 没有图结构就只能整条重规划；写多技能方案时应产出依赖关系而不是平铺清单。⑥ **与既有条目的接缝**：r441A SkillsBench 给的是"装几个"的经验增益曲线（1 个 +18.0 / 2–3 个 +19.0 / ≥4 个仅 +10.1pp）；本条给的是同一现象背后的**结构性原因与解决办法**（misfit + DAG 图），两条互补，不得互相替代。
+- **与既有能力分工**：r443A「description 定量调优协议」管**能不能被召到**；r472A「同职共存冲突计量」管**共存时谁跑**；本条管**召到之后为什么仍然执行不好，以及装配前要做什么**。
+- 提升层：可复用 Skill（技能装配与编排）/ 工作流（多技能执行前一次性适配）。触发词：skill–execution misfit、语义相关不等于执行可用、adaptable drafts、SkillAligner、GraSP、precondition-effect DAG、compilation layer、O(N) 到 O(d^h)、locality-bounded repair、五类算子、2-3 skills、技能数量非单调。

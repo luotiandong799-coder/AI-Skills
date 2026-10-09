@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.26.0"
+version: "1.27.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -417,15 +417,7 @@ Step C: 是否包含恶意意图？
 - **判据**：① 任何对外展示的信任信号（徽标/扫描通过章/评分）都要写清它**不证明**什么，否则读者会把"部分覆盖"读成"整体安全"。② 与覆盖率倒挂同族但机制不同：覆盖率倒挂管"各类信号实际占比要公开"（1% 组织审查伪装成 100% 安全感），本条管"每个信号本身要声明否定式适用范围"。
 - 提升层：可复用 Skill。触发词：信任徽标负向适用范围、metadata checks not a malware verdict、声明不裁定面。
 
-## 恶意产能按「发布者/命名空间」聚合熔断，而非逐技能封禁：行为化验证 98,380 个技能得 157 个确认恶意（632 漏洞），其中单一工业化生产者占 54.1%（来源：arxiv.org/html/2602.12430v1 161,942B，2026-10-07 独立 curl 实拉逐串命中 `behaviorally verifying 98,380 skills` / `157 confirmed malicious` / `632 vulnerabilities` / `A single industrialized actor accounted for 54.1%`；与 §17 类漏洞清单 Triage 五档处置动词 互补——那条管单条发现的处置动词，本条管封禁的作用域单位）
-- **判据**：① **先看清恶意产出的分布形态，再定处置单位**：模板化品牌冒充来自同一个工业化生产者，占确认案例的 54.1% ⇒ 逐技能封禁是追着现象跑（封一个、他再生成一批），正确单位是发布者/命名空间折叠后的整体熔断 + 对该命名空间新增产出的重点复核。② 与「来源双锚」分工：那条防止把 registry 的 owner 标签当身份背书，本条要求按 owner 做**产能级**处置——同源但动作层不同，不得互相替代。③ 数字要连分母一起引：「157 恶意 / 98,380 技能」与「54.1% of confirmed cases」（分母是 157 不是 98,380）是两个不同量，混引会造出不存在的事实。
-- 提升层：可复用 Skill（准入策略）。触发词：发布者聚合熔断、54.1%、工业化生产者、157/98380、按命名空间折叠处置、产能级而非单例级。
-
-## 判定器必须与其判定对象同面受审：四类针对评审器的规避手法 + 把「恶意变体被判 clean 的比例」作成判定器自测指标（来源：arxiv.org/html/2605.11418v1 580,120B，2026-10-07 独立 curl 实拉逐串命中 `Registry Governance Evasion` / `avoid a blocking verdict in 36.5%-100% of cases` / `Definition-of-Done` / `jailbreaking` / `77.6% of paired trials`；与 §扫描判级三原则 互补——那条管"能力≠滥用"的判级原则，本条管"判定器自身会被针对性规避"）
-- **判据**：① **攻击的起手式是"起点都干净"**——从已通过既有上线审查的技能出发，插入/改写后恶意变体在治理面有 36.5%–100% 概率躲过阻断裁决 ⇒ 「已过审」是**会过期的状态**而非永久凭证，复审触发条件不能只依赖"这个技能有没有更新"。② 四类手法要逐项进扫描用例库：LLM Judge Jailbreaking（63.5% 变体仍被判恶意，直接诱导相对无效）、Paraphrasing Malicious Instructions（改写绕关键词，削弱最明显）、Definition-of-Done Instructions（给评审器下"完成"定义使其停止追责）、Overflowing the LLM Context Window（撑爆评审上下文）。③ **判定器报告必须附自测指标**：结论句「SKILL.md is not passive documentation but operational text」⇒ 只报"检出几个"等于把判定器当成不受攻击的常量，须同时报"恶意变体被判 clean 的比例"。
-- 提升层：可复用 Skill。触发词：registry governance evasion、Definition-of-Done、改写绕关键词、上下文撑爆、判定器自测指标、clean 变体比例、36.5%-100%。
-
-
+## r436A-r436A2（全文已下沉 references/knowledge-base.md §r436A-r436A2；2026-10-09 r484 正文预算下沉）
 ## 技能「形态」应在内容审查之前先定权限档：是否捆绑可执行脚本是可静态判定的事实，直接决定权限下限——实测 bundling executable scripts 使漏洞风险 2.12×（来源：arxiv.org/html/2602.12430v4 169,999B，2026-10-08 独立 curl 实拉逐串命中 `Skills bundling executable scripts are 2.12` / `An unvetted community skill (T1) receives instructions-only access with full tool isolation` / `T1 and T2 skills are never granted script execution` / `Level 3 executable scripts require T3 or T4 trust`；与 §恶意产能按发布者聚合熔断 互补——那条管封禁的作用域单位，本条管单个技能安装前的权限先验档）
 - **判据**：① **形态先于内容**：有无 `scripts/`、frontmatter 是否声明可执行资源，是零成本可判的事实；把它作为权限档输入，可在读第一行代码前就把默认权限压到 instructions-only（T1/T2 永不授予脚本执行），审查资源优先投给含脚本者。② **2.12× 是分诊权重不是罪名**：倍数是排队依据（含脚本优先深审、加行为回归），不是「含脚本即恶意」。③ **与行为定档串联而非替换**：既有按沙箱观察后定档是事后校验，本条是事前先验，串成「先验给下限、行为校验再升降档」。④ 数字须连原文位置引：2.12× 出 Sec 6.2 实测、T1–T4 出 Sec 6.4 权限映射，混引会造出不存在的因果。（细则见 references/knowledge-base.md §r437A）
 - 提升层：可复用 Skill（准入策略 / 权限先验）。触发词：形态先验权限档、2.12×、T1/T2 不授予脚本执行、Level 3 脚本需 T3/T4、含脚本优先深审、先验档与行为定档串联。
@@ -497,3 +489,9 @@ Step C: 是否包含恶意意图？
 - **实证**：① 缝隙定义「Existing skill scanners inspect documentation and visible source, but **Python may execute a bundled bytecode cache with different behavior**」；② 攻击构造 = 良性源码 + 被替换且被 loader 接受的缓存 + 任务相关调用，并用 **scanner-guided rewriting** 改调用措辞而保留缓存本体，把「包准入」与「对隐藏行为的识别」脱钩；③ 规模「Across **100 skills and seven scanners**, PyCache Trap achieves **94-100%** attack success, with **no semantic recognition** of the cache-resident behavior」；④ 防御 EAV（execution-aware validation）把被检查的指令 / 脚本 / import / 运行期工件连成 **typed execution graph**，「detects **all 100** evaluated source-present cache substitutions and reaches **92.8% Recall at 10.0% FPR** across five attack families and 200 benign skills」。
 - **判据**：① **检查面 ≠ 执行面**：静态扫描默认只覆盖可见源码，运行时却可能加载随包字节码缓存 ⇒ 准入只看源码等于放行执行面（与 r445B / r448-Q-C 已落的「预编译字节码绕过」同机制；本条补的是**一手规模数值**与**防御侧代价**）。② **不是个别扫描器失手，是全行业面失效**：100 技能 × 7 扫描器 94–100% ASR、对缓存内行为零语义识别 ⇒ 单换扫描器不构成缓解。③ **防御的误报率必须与检出率并列报告**：EAV 100/100 检出的代价是 **92.8% Recall @ 10.0% FPR**（200 个良性里约 20 个误报）⇒ 只报 100/100 的防御方案不可采信（沿用 ssc 既有「防御代价须与攻击成功率并列报告」纪律）。④ **可操作增量**：扫描对象清单必须显式包含 `__pycache__/` 与 `*.pyc`，并与源码做**行为一致性比对**（而非仅存在性检查 / 仅源码扫描）。⑤ **措辞层面的相似性比对无效**：攻击靠 scanner-guided rewriting 改措辞保留工件本体 ⇒ 检测必须落到工件级（字节码/代码对象归一化后比对），不能落在文本级。
 - 提升层：可复用 Skill（技能扫描与准入）/ 工具（执行面校验）。触发词：PyCache Trap、字节码缓存替换、检查面不等于执行面、__pycache__ 扫描、行为一致性比对、92.8% Recall 10.0% FPR、EAV typed execution graph。
+
+## 技能「选择阶段」存在不需要任何注入痕迹的攻击面：用户提示与技能描述单看都良性，靠语义关系塑形即可把选择率从 15.2% 推到 63.5%，而人工评审只拦住 2.9%、五个 LLM 检查器平均放行 82.9%（来源：arxiv.org/abs/2609.02035（ISM）42,386B，2026-10-09 一手 curl HTTP 200 逐串命中 `increases the average target-selection rate (TSR) from 15.2% to 63.5%` / `73.5% TSR, only 9.8 percentage points below Explicit Steering` / `Human reviewers block ISM in only 2.9% of judgments, versus 91.4% for Explicit Steering` / `five LLM-based inspectors pass ISM at an average rate of 82.9%, versus 37.4%`）
+- **实证**：① 攻击定义「even when the user prompt and skill description appear benign **in isolation**, their **semantic relationship** can still be strategically shaped to favor an attacker-chosen skill」；② 三阶段策略「broaden semantic coverage, strengthen target distinctiveness, and preserve natural prompt wording」；③ 跨度「Across four task domains and eight selector models, ISM increases the average TSR from **15.2%** to **63.5%**」；④ 与显式操纵的对照「In a matched comparison, ISM achieves a **73.5%** TSR, **only 9.8 percentage points below** Explicit Steering」；⑤ **人审几乎无效**「Human reviewers block ISM in only **2.9%** of judgments, versus **91.4%** for Explicit Steering」；⑥ **机审同样失效且方向相反**「five LLM-based inspectors **pass ISM at an average rate of 82.9%**, versus **37.4%** for Explicit Steering」。
+- **判据**：① **"内容干净"不构成安全证据，因为被操纵的是关系不是内容**：提示与描述各自过审、组合起来仍能定向 ⇒ 检查必须落到"这个技能为什么会被选中"，逐件审查对这类攻击结构性盲。② **显式与隐式的拦截率差 31 倍（91.4% vs 2.9%），说明我们现有的"看一眼内容"式人审只对显式攻击有效**：把人审写进控制项时，必须声明它只对哪一类攻击起效，否则等于在控制矩阵里记了一个 2.9% 的措施却按 91.4% 上报。③ **LLM 检查器不是人审的替代品，是同一种盲的另一种形态**：对显式操纵放行 37.4%、对隐式放行 82.9% ⇒ 隐式攻击对机器评审比对人更宽松；加 LLM 检查器不能补人审的洞，两者在 ISM 上同向失效。④ **隐式攻击的代价只有 9.8pp，防御方却要付出"看起来正常"的全部伪装成本**：有效性损失这么小 ⇒ 不能假设攻击者会为了绕过而留下异常措辞；"读起来自然"不是良性信号。⑤ **选择阶段必须引入与描述无关的第二路判据**：既然描述可被塑形，那么最终选谁就不能只由描述与请求的语义匹配度决定 ⇒ 需要不可由描述单独影响的锚（安装位置 / 显式白名单 / 来源信任档），这与 r472A「安装位置决定谁跑」互补——那条是实测事实，本条给了"为什么必须这样"的攻击面证据。⑥ **报告口径**：任何"已通过人工审核"的声明，只在其针对显式攻击时成立；对隐式选择操纵，现行人工流程的实际拦截率是 2.9%。
+- **与既有能力分工**：r439A「审批校验验签发者是否有权为本动作签发」管**授权链**；r437A「形态先验权限档」管**形态决定权限下限**；本条管**选择阶段这一前置入口**（授权与形态都还没生效之前，技能就已经可能被选中了）。
+- 提升层：可复用 Skill（准入审查）/ 工具（选择面控制项）。触发词：ISM、Implicit Skill-Selection Manipulation、Semantic Matching、15.2% 到 63.5%、2.9% 人工拦截、82.9% LLM 放行、语义关系塑形、选择阶段攻击面、skill selection poisoning。
