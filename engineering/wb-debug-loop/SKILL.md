@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.167.0"
+version: "1.169.0"
 agent_created: true
 ---
 
@@ -132,13 +132,7 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - 判据：① **防惊群是默认开启的性能保护**（stagger），但它同时意味着「周期不再精确」——需要精确时刻时必须显式关闭抖动，而不是假设周期严格。② **漏扫不补跑、只记账为已完成**：与既有「misfire 重放」是**相反极性**的两条（一个重放、一个记账），引用时必须点名当前系统的选择，否则「漏了会不会补」两种预期都会错。③ **评估默认静默、触发须显式放行**（`fire: true`）：gate 脚本输出非 true 一律不触发 ⇒ 「脚本跑了但没执行」的正确怀疑方向是 gate 输出，不是调度未触发。
 - 提升层：工作流。触发词：stagger 防惊群、漏扫 catch-up 记账、fire:true 才触发、gate 默认静默、周期不精确。
 
-## r350A · 关闭序钩子的超时语义：限时的是调用方等待，不会取消 handler（来源：docs.openclaw.ai/automation/hooks/event-types，2026-10-02 r350A 实拉 224,709B）
-
-- **★关闭类钩子的等待是有界的，超时不取消 handler**：`gateway:shutdown` 默认等 5 秒、`gateway:pre-restart` 另加 10 秒预算；文档原话 **"These bound the caller's wait, not the handler's work: timeout does not cancel promises"**。判据：**超时 ≠ 取消**，一个永不 settle 的 handler 会让进程内关闭永远完不成；排查"关不掉/关得很慢"时查的是 handler 是否 settle，不是把超时调大。
-- **★关闭前 Gateway 会 join 真实钩子完成情况**：关闭共享状态前要等 handler；期间通道还没拆，但**排队的 agent 工作与消息投递都不保证在关闭前跑完**。判据：**"通道还活着"不等于"任务会跑完"**，收尾不能把未决工作算作已完成。
-- **★持久化出站队列的结算可以推迟观测，但不让钩子本身变持久**。判据：**投递结算 ≠ 钩子持久化**，别因为"队列会补发"就认为关闭钩子里做的事是可靠的。
-- 排查顺序：进程退不出 → 先看是否有未 settle 的关闭钩子 → 再看 handler 内部是否在等一个永远不会返回的 promise → 最后才看超时配置。
-
+> 正文预算管理：「r350A · 关闭序钩子的超时语义：限时的是调用方等待，不会取消 handle」（全文已零删减下沉 references/knowledge-base.md §下沉·r350A关闭序钩子的超时语义限时的是调用方等待不会取消handler来源docsopenclawaiautomatio）
 ## r350A · 并发容量要选一个"货币"并按占用时长计量，耗尽按触发类型三路分叉（来源：help.make.com/parallel-capacity.md，2026-10-02 r350A 实拉 9,462B）
 
 - **★并发上限必须用统一货币计量，且按"运行期间持续占用"计**：Make 用 PU（Processing Units），每次运行期间占住、结束即释放；处理大数据的运行全程占多个 PU。判据：**并发配额是"占用时长 × 单份重量"的积分，不是"次数"**——同样跑 N 次的两个场景，占的容量可以差很多。
@@ -492,3 +486,14 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **不落（第一手不复现）**：Qoder r491-Q-A①提名的 LangFlow 时间参数组（TTL 3600 / stale 90s / watchdog 15s / 启动宽限 30s / cancel-marker 60s），本轮在 docs.langflow.org/environment-variables（200 / 116,839B）与 llms-full.txt（200 / 6,782B）内对 STALE/WATCHDOG/CANCEL/TTL 关键词 **0 命中**，raw.githubusercontent.com 通道 000 ⇒ 不复现即不落，转候选池下轮优先。
 - **与既有能力分工**：r489C「挂载/装载快照保留」管陈旧物怎么留证；本条管**陈旧是怎么被判定出来的**（时间 vs 因果）。
 - 提升层：工作流（陈旧判定与重算范围）/ 工具（排障归因顺序）。触发词：dirty node、partial execution 起点、插入到后面节点标脏、loop 首节点、向 root 传播、陈旧两模型。
+
+## r495A · 背压不一定以「队列长度」表达：可折算成执行单元数量，且扩容与缩容用的是两种不同量纲的判据（来源：docs.dify.ai/llms-full.txt 2,695,981B，2026-10-10 r495A 一手 curl 实拉；逐串命中 `GRAPH_ENGINE_SCALE_UP_THRESHOLD` \| `0` \| How many tasks may wait for a free worker before the pool adds another，up to `GRAPH_ENGINE_MAX_WORKERS`. At the default `0`，a worker is added as soon as any task waits / `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` \| `5.0` \| Seconds of idle time before excess workers are removed / `GRAPH_ENGINE_MIN_WORKERS` `3` / `GRAPH_ENGINE_MAX_WORKERS` `10` / `MAX_SUBMIT_COUNT` `100` / `TENANT_ISOLATED_TASK_CONCURRENCY` `1`）
+- **判据**：① **背压的载体可以是「并发度」而非「积压量」**：扩容阈值默认 `0`，含义是「只要有任何任务在等就加一个 worker」⇒ 观察背压时若只盯队列长度，会完全看不到压力已经触发扩容。② **扩容判据是「等待中的任务数」，缩容判据是「空闲时长」**：两者量纲不同（计数 vs 时间）⇒ 用同一组阈值推理上下两个方向必然出错，扩缩容必须分别建账。③ **零等待余量即扩容是默认值而非配置错误**：默认 `0` 意味着常态是「一有排队就扩容」，排查资源类故障时不能假设存在缓冲区间。④ **并发上限与提交上限是两道独立闸**（`GRAPH_ENGINE_MAX_WORKERS` 10 vs `MAX_SUBMIT_COUNT` 100 vs 租户隔离并发 `1`）⇒ 报"跑不动"时先分清卡在"能提交几个"还是"能同时跑几个"还是"本租户被隔离到多少"。
+- **不落（第一手不复现）**：Qoder r492-Q-B③ 引用的 Activepieces `project replace` 非事务原文（`Recovery is by re-run` / `not wrapped in a single database transaction`），本轮 `docs.activepieces.com` 全路径 000、`www.activepieces.com/llms.txt`（170,889B）与 `/docs/` 内无该页、三条 `project-replace-cli` 候选路径全 404 ⇒ 不复现即不落，转候选池。
+- **与既有能力分工**：r486A「观测窗口须长于被观测对象寿命」管**窗口长度**；r340A「队列满」管**积压上限**；本条管**压力以什么形态被表达、扩与缩是否同判据**。
+- 提升层：工作流（并发与背压建模）/ 工具（资源类故障归因顺序）。触发词：背压折算、SCALE_UP_THRESHOLD、零等待余量即扩容、扩容量纲≠缩容量纲、MAX_SUBMIT_COUNT、TENANT_ISOLATED_TASK_CONCURRENCY。
+
+## r495A · 同一个超时数值被放在多层时，生效值取最严者；改一层不动另一层等于没改，且「配置项存在」不等于「配置项有效」（来源：docs.dify.ai/llms-full.txt 2,695,981B + docs.n8n.io/llms-full.txt 811,527B，2026-10-10 r495A 一手 curl 实拉；逐串命中 `DIFY_AGENT_RUN_TIMEOUT_SECONDS` \| `3600` \| Wall-clock deadline for one agent run's model and tool work. A run that exceeds it fails with `agent_run_limit_exceeded` / The API-side `APP_MAX_EXECUTION_TIME` and `WORKFLOW_MAX_EXECUTION_TIME` (default `3600`) cap runs earlier if set below this / On the `e2b` backend the sandbox's `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` (ceiling 3600) still applies / `QUEUE_WORKER_MAX_STALLED_COUNT` (**deprecated**) \| `1` \| **Deprecated** Removed in n8n 2.0. Setting this has no effect）
+- **判据**：① **先枚举同一时限在几层各有一份再动手调**：本例 agent 运行层 `DIFY_AGENT_RUN_TIMEOUT_SECONDS`、API 层 `APP_MAX_EXECUTION_TIME`、引擎层 `WORKFLOW_MAX_EXECUTION_TIME` 三处默认值同为 3600，官方明写「cap runs earlier if set below this」⇒ 生效值是**最小值**，只抬一层会被另两层截断，表现为"改了没效果"。② **后端实现可以再叠一层天花板**：e2b 后端另受 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（ceiling 3600）约束，官方明写超过一小时的值「only take effect on the `local` backend」⇒ 配置项在配置里改成功了，但在该后端上不生效。③ **超时超限必须有专属错误码**：`agent_run_limit_exceeded` 与"被杀掉/被取消"是不同终态 ⇒ 只报"超时"会把截断层信息丢掉。④ **「配置项存在」不等于「配置项有效」**：n8n `QUEUE_WORKER_MAX_STALLED_COUNT` 仍列在文档表里、仍有默认值 `1`，原文却写「Removed in n8n 2.0. Setting this has no effect」⇒ 文档留着废弃项会反向误导，排查时必须先确认该键在当前版本是否被读取，而不是看它有没有默认值。⑤ **死活判定要凑齐四个窗而不是一个**：租约 `QUEUE_WORKER_LOCK_DURATION` 60000、续订 `QUEUE_WORKER_LOCK_RENEW_TIME` 10000、停滞扫描 `QUEUE_WORKER_STALLED_INTERVAL` 30000（注释明写「use 0 for never」= 关掉检测是可配置项）⇒ 少查一个窗就无法解释"为什么它既没被判死也没继续跑"。
+- **与既有能力分工**：r486A 管**窗口长度要长于对象寿命**；本条管**同值多层取最严**与**废弃参数仍占位**。
+- 提升层：工具（多层超时配置）/ 工作流（故障归因）。触发词：超时多层叠加、cap runs earlier、ceiling 3600、Setting this has no effect、废弃配置项、LOCK_DURATION / RENEW_TIME / STALLED_INTERVAL 四窗、agent_run_limit_exceeded。

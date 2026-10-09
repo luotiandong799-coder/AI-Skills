@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.31.0"
+version: "1.32.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -257,3 +257,9 @@ visibility: "public"
 - **判据（门禁侧两段）**：⑤ **clawsec 把供应链门禁拆成先验/后验两段**：装载前校验签名与 checksum manifest（`Verifies the advisory feed and checksum manifest before matching published risk against installed skills`），装载后做 configuration drift 基线比对（`audit agent environments`、`Gives platform-specific skills baselines for critical files, configuration, attestations, and release artifacts`），破坏性动作另过 approval-gate（`approval-gate risky installs`）⇒ **「装时干净」不豁免「装后漂移」**，二者是时间轴的两半，只做一半等于只堵一头。⑥ **覆盖范围要显式声明**：clawsec 明示覆盖 OpenClaw / NanoClaw / Hermes / Picoclaw 四个 runtime ⇒ 门禁的适用范围必须写明目标面，避免「装了就有保护」的错觉。
 - **与既有能力分工**：r490C「自报分级须外部机检闭环」管**元数据真不真**；本条管**安装动作本身的成败信号真不真**。
 - 提升层：可复用 Skill（安装器与装载审计）/ 工作流（供应链门禁时间轴）。触发词：假成功、pipe-into-while、fail_count 丢失、return 0 吞失败、wc -l 当成功数、checksum manifest 先验、configuration drift 后验、approval-gate。
+
+## r495C · 引用他方「校验结论」前必须实证三件事：取值域是否含「无法判断」、位点是前置还是终身、失败分支是 fail-open 还是 fail-closed（来源：cloudcache.tencent-cloud.com/qcloud/tea/app/skillhub/assets/skill-hub.oq3neru1.js 3,748,192B，2026-10-10 r495C 一手 curl 实拉逐串命中 `Ew={fail:"Pay Skill 改造检查未通过",partial:"Pay Skill 改造部分通过",unknown:"Pay Skill 改造无法判断",pass:"Pay Skill 改造检查通过"}` / `Ij={fail:"支付宝付费改造检查未通过",…unknown:"支付宝付费改造无法判断",…}` / `if("pass"===s.compliance)return void(await xe());re(s),J(!1)}catch(q4){console.warn("[X402 precheck] 检查失败，跳过并直接提交：",q4),await xe()}` / `"pass"!==s.compliance?ne(s):doSubmit()` / `precheck-alipay` / `此密钥明文仅展示一次,关闭后将无法再次查看完整密钥` / `RSA 2048 私钥（PEM 格式）…**仅展示一次，SkillHub 不存储**`）
+- **判据**：① **取值域要数到第四态**：本例 `compliance` 是 `fail/partial/unknown/pass` 四值，`unknown` 的文案是「无法判断」——它既不是待定（Pending）也不是错误（Error），而是**判定能力缺失**；把四值当二值（通过/不通过）用，会把 unknown 吞成 pass 或 fail 中的一边。② **位点是「提交前置」不代表终身保证**：校验挂在 `POST /api/v1/community/skills/precheck-alipay`（multipart 直传 `file` 而非按 slug 引用）⇒ 校验对象是**当时上传的那个包**，包内容此后变更不在其覆盖范围；引用该结论时要写明「对哪一次提交有效」。③ **接口自身失败时是 fail-open**：三个调用点的 catch 分支原文都是「检查失败，跳过并直接提交」并直接执行提交 ⇒ **「有校验」不等于「不通过就拦下」**，只有当次返回非 pass 才弹窗拦截；审计必须单独看失败分支，不能只看有没有校验接口。④ **非 pass 与接口异常是两条完全不同的路径**：`"pass"!==s.compliance` 走提示弹窗，`catch` 走静默放行 ⇒ 同一个"没通过"在两种成因下结果相反。
+- **验真责任外迁的识别法（同轮第二证）**：`content_hash` 有可复算的规范化算法，签名态分 `{kind:"signed"}` 与 `{kind:"unsigned",contentHash}`，但 RSA 2048 私钥官方明写「**仅展示一次，SkillHub 不存储**」，验签说明只存在于 `/docs/verify-signature` 文档层 ⇒ **提供方自签 + 平台不托管私钥 = 没有第三方验证器，验真责任 100% 落在消费侧**；判据：**看到签名先问"谁能验"——平台不持私钥即无人代验，消费方须自行实现规范化重算**，不能因为"有签名字段"就当成已验证。
+- **与既有能力分工**：r488C「字段存在是假信号（缺失/空值/有值无实现三态）」管**校验声明本身**；r490C「自报分级是闭域单选」管**分级怎么填**；本条管**引用外部校验结论前要验什么**。
+- 提升层：工具（第三方结论引用前校验）/ 工作流（上架门禁）。触发词：compliance 四态、unknown 是无法判断、precheck-alipay、跳过并直接提交、fail-open 门禁、前置校验非终身、私钥不存储即无第三方验证器、content_hash 规范化重算。

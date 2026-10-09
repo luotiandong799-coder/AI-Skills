@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合
-version: "2.175.0"
+version: "2.177.0"
 agent_created: true
 ---
 
@@ -41,26 +41,11 @@ agent_created: true
 
 ## 验证环节要「定向且完整」，否则只能换来高误封：单条边被篡改即把误放率推到 15.3–48.9%（来源：arXiv 2609.40027《Who Verifies the Graph?》abs 页 43,234B，2026-10-01 r349C 独立 curl 实拉，`15.3` / `48.9` 逐串命中；经 Qoder r368-Q-C 提名）（全文见 references/knowledge-base.md §下沉·验证环节要定向且完整否则只能换来高误封单条边被篡改即把误放率推到153489来源arXiv260）
 
-## r353A · 失败现场的处置由开关决定，取证能力会被隐私开关直接削掉
-
-> 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
-## r353B · 错误契约随失败位置分叉，取证通道可用 `.md` 后缀直取
-
-> 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
-## r353C · 事务边界由模块能力标注决定；验证有自己的预算币种；文档站提供问答式检索接口
-
-> 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
+> 正文预算管理：「r353A · 失败现场的处置由开关决定，取证能力会被隐私开关直接削掉」（全文已零删减下沉 references/knowledge-base.md §下沉·r353A失败现场的处置由开关决定取证能力会被隐私开关直接削掉）
+> 正文预算管理：「r353B · 错误契约随失败位置分叉，取证通道可用 `.md` 后缀直取」（全文已零删减下沉 references/knowledge-base.md §下沉·r353B错误契约随失败位置分叉取证通道可用md后缀直取）
+> 正文预算管理：「r353C · 事务边界由模块能力标注决定；验证有自己的预算币种；文档站提供问答」（全文已零删减下沉 references/knowledge-base.md §下沉·r353C事务边界由模块能力标注决定验证有自己的预算币种文档站提供问答式检索接口）
 ## r354A · 留痕按「失败优先」分级保存；删除是两阶段，且活跃态与人工标注豁免（来源：docs.n8n...（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r440B·r354A · 留痕按「失败优先」分级保存；删除是两阶段，且活跃态与人工标）
-## r354B · 截断/限额必须声明作用域（展示面 vs 执行面）；无鉴权通道靠「一次性」兜底；评测并发按档位给默认（来源：docs.n8n.io `use-environment-variables/executions.md`、`use-environment-variables/credentials.md`、`administer/manage-credentials/credential-overwrites.md` 独立 curl 取 `.md` 原文，2026-10-02 r354B 实拉）
-
-- **★截断只作用于展示面，绝不能连带执行面**：`EXECUTIONS_DATA_MAX_DISPLAY_SIZE` 默认 104857600 字节，超出在编辑器/详情/公开 API 显示 "too large to display"（原文目的："to avoid running **low-resource instances** out of memory"），但 "**Doesn't affect retrying or resuming executions, which always load the full data**"。判据：**任何"太大就不给你看"的限额都必须显式声明它不覆盖重试与续跑**——否则用户会把"展示被截"读成"数据没了"，进而放弃本可恢复的执行。
-- **★无鉴权通道的安全性靠"只能调用一次"兜底**："**Without an auth token, the endpoint can only be called once for security reasons**"（凭据覆盖端点）。判据：**当一条通道必须存在但无法前置鉴权时，可用"一次性/单发"替代鉴权**——把无限次暴露压成单次窗口；这是"要么鉴权要么裸奔"之外的第三条路。
-- **★注入的凭据是"可用不可读"，且平台会主动隐藏**："This data **isn't visible to users**, but n8n uses it automatically in the background"；"In the Editor UI, n8n **hides all overwritten fields** by default"。判据：**平台级注入的凭据面向用户只暴露"连接"动作，不暴露字段**——凡"我配好了你直接用"的能力，界面上必须消字段，否则注入等于没注入。
-- **★同一能力有推荐/不推荐两套实现，文档会显式标注**：关于用环境变量写凭据覆盖，原文 "**This approach isn't recommended. Environment variables aren't protected in n8n, so the data can leak to users**"；推荐做法是走自定义 REST endpoint + bearer token。判据：**选型时先找"是否被标注不推荐"，而不是先找"能不能跑通"**——能跑通但不被推荐的实现，通常是在某个维度（此处为泄露面）有已知缺陷。
-- **★评测并发与生产并发是两个独立变量，且评测默认被压到最低档**：`N8N_CONCURRENCY_PRODUCTION_LIMIT` 默认 `-1`（禁用、不限）；`N8N_CONCURRENCY_EVALUATION_LIMIT` 默认 **跟随 license 档位**（self-hosted Community 1 / Cloud Pro 1 / Business 3 / Enterprise 5），"Setting this overrides the tier default"。判据：**"未设置"不等于"不限制"，而是"跟随某个你看不见的档位默认值"**；做容量估算时必须先确认该档位是多少，否则按"不限"规划会实际跑在 1 上。
-- 提升层：工具 / 工作流 / 可复用 Skill。触发词：展示截断、执行面全量、too large to display、无鉴权一次性、凭据覆盖、不推荐实现、评测并发、档位默认。
-
-
+> 正文预算管理：「r354B · 截断/限额必须声明作用域（展示面 vs 执行面）；无鉴权通道靠「」（全文已零删减下沉 references/knowledge-base.md §下沉·r354B截断限额必须声明作用域展示面vs执行面无鉴权通道靠一次性兜底评测并发按档位给默认来源docsn8niousee）
 ## r354C · 机器可读取证有第四条通道：`Accept` 头内容协商；OOM 有三层异构信号且自愈能力取决于运行方式（来源：docs.n8n.io `scaling/memory-errors.md` 404 页 2,188B + `scaling/fix-memory-issues.md` + `scaling/use-external-storage.md` 独立 curl 取 `.md` 原文，2026-10-02 r354C 实拉）
 
 - **★第四种机器可读通道：请求头内容协商**：404 页原文 "You may also use **`Accept: text/markdown` header for content negotiation**"。判据：**取证枚举顺序应为：`.md` 后缀 → `Accept: text/markdown` 头 → `?ask=` + `?goal=` 问答接口 → `sitemap.md` 全索引 → `llms-full.txt` 全量导出**；前两条是"同 URL 换形态"（零猜测），后三条是"不知道确切页名时"的检索手段。与 r353C 已落的 `.md` / ask / sitemap 相邻但不同层——那条把「加后缀」当技巧，本条把它编成**有序的通道阶梯**。
@@ -493,3 +478,15 @@ agent_created: true
 - **更正/边界**：本条不推翻 r490B「同一端点内参数效力须逐参数实测」，而是给它加**前置步骤**——先证穿透，再逐参数对照；顺序颠倒会产出假的"被忽略"结论。**更正 continuation 边界**：Qoder r491-Q-C⑧称 skills.sh 主页本机直连可达，本轮未独立复拉该站，不作结论。
 - **与既有能力分工**：r490B 管「逐参数对照法」，r488A 管「文档 vs openapi 差集」；本条管「机读面是唯一权威 + 缓存穿透前置」。
 - 提升层：工具（取证方法）/ 可复用 Skill（外部能力判定的取证顺序）。触发词：四阶保证阶梯、rebuild-verified、schema 枚举才有、s-maxage=600、stale-while-revalidate、先证穿透再判忽略、decision 与 reasons 分离。
+
+## r495B · 列表接口能不能当采集源，要过三道独立判据：页内是否自含重复、判级字段类型是否可信、取样间隔是否跨过缓存窗口（来源：api.skillhub.cn/api/skills 2026-10-10 r495B 一手 curl 四次实拉，`data.skills` 20 条 / `total` 188,351；同页连采三次 md5 全等 `9a7d93be…`；`page=1` 唯一 slug 19、`page=2` 唯一 slug 17、两页交集 **0**；首条 `labels` = `{"requires_api_key": "false"}`，另有条目为 `"true"`；`claim_state` = `unclaimed`、`claimed_user_handle` = null）
+- **判据**：① **页内就可能自含重复**：`page=1` 返回 20 条但唯一 slug 只有 19 ⇒ 重复不只在页间，**页内也要去重**；增量采集只能以稳定业务键（本例 `slug`）作幂等键，不能用页号+序号作身份。② **判级字段的类型不可信**：`requires_api_key` 以**字符串** `"true"/"false"` 下发，按布尔解析会把 `"false"` 判为真 ⇒ 消费前必须先做类型归一并回读一次真值样本，不能按字段名字面推断类型。③ **判级/认领字段存在不等于有数据**：本轮 `claim_state` 全为 `unclaimed`、`claimed_user_handle` 全 null ⇒ 「认领态过滤」在本站实际是空集，任何基于该字段的分流都要先统计空置率再设计。④ **判「非幂等/随机喂料」前必须先跨过缓存窗口**：同一 `page=1` 在秒级间隔内连采三次**字节完全相同**（md5 一致），而 `page=1` 与 `page=2` 的 slug 交集为 0 ⇒ 短间隔取样会被缓存同化，据三次快速采样得出"随机喂料"或"稳定"两种结论都不可靠；取样间隔须大于缓存有效期，并保留每次取数时刻。
+- **一手更正（Qoder 转述 vs 原文）**：Qoder r492-Q-C① 据三次 `page=1` 采样 slug 交集为 0 判「page 游标非幂等随机喂料、逐页爬取必重必漏」。本轮一手复现得到**相反结论**——同页三次采样**完全一致**（md5 全等），差异只出现在**不同页**之间 ⇒ 交集为 0 是分页本身的行为，不能推出"同页不稳定"。原判据方向错误，本轮**不落**该条，改落上述第 ④ 条（先证跨过缓存窗口再判稳定性）。
+- **与既有能力分工**：r490B「参数效力须逐参数实测」管**参数有没有被读**；r492B「判静默忽略前先证穿透 CDN」管**响应是否被缓存**；本条管**列表能不能当可靠采集源**（页内重复 / 类型错位 / 取样窗口）。
+- 提升层：工具（采集与取证）/ 工作流（增量同步）。触发词：页内重复、slug 幂等键、requires_api_key 字符串、claim_state 空置、同页 md5 一致、取样间隔大于缓存窗口。
+
+## r495B · 幂等键绑定的是「意图 + 参数指纹」而不是「意图」：改参数不换键是冲突，且未提交与已提交两类失败的语义相反（来源：skillsmp.com/openapi.json 13,344B，2026-10-10 r495B 一手 curl 实拉逐串命中 `Generate one UUID per logical search; keep it for retries and pagination` / `changing query, filters or limit requires a new searchId` / `Failures release pending allowance, while an already committed response can be recovered with the same searchId` / `SEARCH_ID_CONFLICT: the UUID belongs to different search parameters; use a new UUID for the new search` / `SEARCH_PENDING: retry with the same searchId after Retry-After` / `Requests beyond the queryable result window are canonicalized to its final page` / `Keyword attempts, including invalid parameters and minute rejections, consume legacy daily quota`）
+- **判据**：① **幂等键的身份 = 意图 + 参数指纹**：官方明写改 query/filters/limit 必须换新 UUID，否则 409 `SEARCH_ID_CONFLICT` ⇒ 只按"我要做这件事"发键，会在参数变化时被服务端判定为冲突，设计幂等时必须声明键覆盖哪些字段。② **两类失败的语义相反，处置也必须相反**：未提交失败**释放**预留额度（`Failures release pending allowance`），已提交响应在网络错误后可用同一键**恢复**（`can be recovered with the same searchId`）⇒ 前者可以直接重试，后者必须先用同一键取回结果，笼统地"失败了就重发"会双倍计费或丢结果。③ **限流与冲突都走同一个回读字段**：429/409 一律读 `Retry-After` 且该头在 409 上有 `minimum: 1` 的 schema 约束 ⇒ 退避时长要从响应头取，不要自己拍。④ **失败也有成本**：无效参数与分钟级拒绝**照扣日配额** ⇒ 重试预算必须把失败调用计入，不能只统计成功请求。⑤ **越界不报错而是静默归一**：超出可查窗口的页号被 `canonicalized to its final page` ⇒ 靠"没报错"判断页码有效会拿到末页数据却以为是目标页。
+- **候选池结案**：r486 待办「SkillsMP 分页用 numeric offsets 而非 pointer tokens、page 上限 50」——本轮 openapi 全文 `numeric` 与 `offset` 各 **0 命中**，仅有 `limit` `default 20 / maximum 50` ⇒ 该待办结案为**不成立**，不再追。
+- **与既有能力分工**：dl r322C「给每个写发幂等键」管**要不要发键**；本条管**键覆盖什么、失败后是重试还是恢复**。
+- 提升层：工具（接口调用与重试）/ 工作流（配额与退避）。触发词：searchId 参数指纹、SEARCH_ID_CONFLICT、Failures release pending allowance、已提交可恢复、Retry-After 统一回读、无效参数也扣配额、canonicalized to its final page。

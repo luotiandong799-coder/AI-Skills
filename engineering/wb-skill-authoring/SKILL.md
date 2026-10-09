@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.154.0"
+version: "3.155.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -146,13 +146,7 @@ version: "3.154.0"
 - 原文：cron 所铸 grant 默认永久，须 `--expires-in-days`（配置项 `tools.exec.grantExpiryDays`）显式收敛。
 - 判据：① **版本边界**：编辑自动化定义即失效 —— 授权绑定的是载荷指纹，改了载荷等于重新申请，不是「同一个授权继续有效」。② **进程边界**：revoke 只在下次 spawn 生效，**已运行实例继续持有** ⇒ 「已撤销」在进程存续期内不成立。③ **时间边界**：过期天数。三者互不蕴含 ⇒ 审计「这个授权现在还有效吗」必须逐边界判，不能以「执行过撤销动作」为准。④ 默认永久意味着**不显式收敛就是无限期**，与「最小权限」相反，必须主动设期限。
 - 提升层：可复用 Skill。触发词：grantExpiryDays、授权失效三边界、版本边界改载荷即撤销、进程边界 revoke 下次 spawn、默认永久须显式收敛。
-## r351C · 技能成本是"区间"不是标量：分发侧须公示上下界（来源：skills.aliyun.com `/api/public/skills?categoryCode=aiml&pageSize=3`，200 / 25,150B JSON，2026-10-02 r351C 独立 curl 实拉）
-
-- **实证**：条目字段含 `minToken` 与 `maxToken` 成对出现——实测 `alibabacloud-agentbay-aio-skills` = **minToken 21205 / maxToken 167456**（**上下界相差约 7.9 倍**）；同批另两条 21216/47349（2.2×）与 26641/124152（4.7×）。另有 `hosted`（实测 false，即不托管、内容源在 `githubPath`）、`totalInstallCount`、`likeCount`、`updatedAt`。
-- 判据：① **成本必须按区间公示与选型**——单点 token 估算（"这个技能约 2 万 token"）在跨度 2–8 倍的东西上是误导；装前预算按 **上界** 算，否则上下文挤爆发生在最坏路径上。② **跨度本身就是质量信号**：上下界差得越大，说明该技能的加载量越依赖输入/分支，越需要说明"什么情况下走到上界"。③ 与已落的三级披露 token 预算互补——那条管**加载机制内的预算数值**，本条管**分发侧对外承诺的成本区间**，两者不在同一层。④ `hosted` 必须一并公示：**托管与否决定别人能否独立验证内容**；未托管条目的真实内容以 `githubPath` 为准，市场页只是索引。
-- 落地动作：技能/插件的元数据表增加 `minToken`+`maxToken` 双字段与 `hosted` 布尔；写"成本"时一律写区间并标注上界触发条件，禁止只给均值或单点值。
-- 提升层：可复用 Skill / 工具。触发词：minToken、maxToken、成本区间、上界预算、hosted 托管标记、技能元数据。
-
+> 正文预算管理：「r351C · 技能成本是"区间"不是标量：分发侧须公示上下界（来源：skill」（全文已零删减下沉 references/knowledge-base.md §下沉·r351C技能成本是区间不是标量分发侧须公示上下界来源skillsaliyuncomapipublicskillscat）
 ## r354A · 新能力默认关闭 + 行为不变承诺 + 逐能力生效，不是全局开关（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/durable-scheduler.md`、`configure-n8n/system-tasks.md` 独立 curl 取 `.md` 原文，2026-10-02 r354A 实拉）
 
 - **★默认关 + 老实例行为不变**：原文 "It's **off by default**: existing instances keep using the in-memory scheduler and **behave as before until you opt in**"。判据：**引入会改变既有行为的实现时，缺省必须是"不变"**——让升级者先得到与旧版一致的行为，再显式选择新语义；把新语义做成默认，等于让所有存量在不知情的那一刻同时改变行为。
@@ -495,3 +489,9 @@ version: "3.154.0"
 - **边界与不落**：本条只采「前移机检」这一方法论 + 五项可核验的配置形态；不强推具体工具，也不把规则总数（455）当成质量指标。与既有条例重复率低的原因是对象不同——既有条例讲「怎么写才被识别」，本条讲「怎么让写错被打出来」。
 - **与既有能力分工**：r486C「参数被静默忽略」与 r490B「逐参数对照」都是**事后取证**；本条管**事前拦截**。
 - 提升层：工具（静默失败防线）/ 可复用 Skill（技能配置可机检化）。触发词：silently ignore、455 rules、[fixable]、行列级报错、自动修复率、静态检查器前移。
+
+## r495C · 「覆盖」的单位是命令而不是技能，且命名空间与链接形态各自独立决定共存与否；装载栈必须同时声明覆盖单位与共存条件（来源：code.claude.com/docs/en/skills 1,200,668B，2026-10-10 r495C 一手 curl 实拉逐串命中 `Your skill replaces the bundled command, but not its aliases` / `In a local terminal session, your skill replaces the built-in command, but not its aliases` / `Both load, because plugin skills are namespaced as /plugin-name:skill-name` / `Claude Code reads SKILL.md from the target and loads the skill once even if several locations point at the same target` / `Enterprise over personal, and personal over project`）
+- **判据**：① **覆盖的最小单位是「命令」而非「技能」**：同名技能替换的是同名斜杠命令，**别名不被替换**（项目级 `code-review` 换掉 `/code-review`，但内置命令的别名仍然指向内置实现）⇒ 判"我的技能是否生效"必须逐个调用名验证，不能因同名就认为整体接管；别名残留是最典型的"改名后行为不一致"来源。② **命名空间可以取消覆盖使同名共存**：插件技能以 `/plugin-name:skill-name` 命名空间装载，与同名宿主技能**两者都加载** ⇒ 路径相同不等于冲突，是否冲突取决于有没有命名空间前缀；设计技能名空间时要显式声明"是否允许同名共存"。③ **多位置指向同一目标只算一次**：符号链接即使有多处指向同一目标，也只从目标读一次 SKILL.md ⇒ 靠"放多个位置"来制造多份副本是无效的，副本数不等于装载数。④ **优先级链要按级写全且方向固定**：本例 Enterprise > personal > project ⇒ 同名冲突的胜出方由**位置层级**决定，排查"改了不生效"时先查是否存在更高层同名件，而不是先查文件内容。
+- **不落（第一手不复现）**：Qoder r492-Q-B① 引用的跨端上传硬失败回显（`Unexpected key(s) in SKILL.md frontmatter … Allowed properties are: allowed-tools, compatibility, description, license, metadata, name`）与「未知字段静默忽略」，本轮在 code.claude.com/docs/en/skills（1,200,668B）内 `unknown field` 与 `silently ignored` 各 **0 命中** ⇒ 不复现即不落，转候选池；本条只落可由同一页面一手证实的覆盖/命名空间/链接三语义。
+- **与既有能力分工**：r490B-2「清单字段严格性按对象位置分档」管**字段装不装得进**；r486B「兼容门槛双断点」管**版本够不够**；本条管**装进来之后谁覆盖谁、谁和谁共存**。
+- 提升层：可复用 Skill（命名与装载契约）/ 工作流（技能分发与排障）。触发词：覆盖单位是命令不是技能、别名不被替换、plugin 命名空间共存、symlink 只加载一次、Enterprise over personal over project、同名冲突查更高层。

@@ -2666,3 +2666,32 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 原文：因果动作验证图中**单条边被篡改**即把工具执行误放率推至 **15.3–48.9%**；改随机抽检能拦截篡改但会误封大量合法动作（误封率数值本轮 abs 页未命中，登记待复核）。
 - 判据：① **验证的两难是误放率 × 误封率的乘积**：定向且完整的验证能压低误放，随机抽检能拦篡改但把合法动作一起拦掉 ⇒ 「随手核一核」两头不落，比不做更糟（因为它会产生「已验证」的错觉）。② **给验证环节选型前先量化这对指标**：不量化就无法判断该投入多少；「加一道校验」本身不是收益。③ 与既有「静态扫描覆盖三轴」互补：那条讲**覆盖面的坐标系**，本条讲**覆盖率与误报的取舍曲线**。
 - 提升层：工具/工作流。触发词：误放率 15.3–48.9%、验证器两种失效端、定向完整 vs 随机抽检、误放误封取舍、因果动作验证图。
+
+
+## 下沉·r353A失败现场的处置由开关决定取证能力会被隐私开关直接削掉
+## r353A · 失败现场的处置由开关决定，取证能力会被隐私开关直接削掉
+
+> 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
+
+
+## 下沉·r353B错误契约随失败位置分叉取证通道可用md后缀直取
+## r353B · 错误契约随失败位置分叉，取证通道可用 `.md` 后缀直取
+
+> 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
+
+
+## 下沉·r353C事务边界由模块能力标注决定验证有自己的预算币种文档站提供问答式检索接口
+## r353C · 事务边界由模块能力标注决定；验证有自己的预算币种；文档站提供问答式检索接口
+
+> 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
+
+
+## 下沉·r354B截断限额必须声明作用域展示面vs执行面无鉴权通道靠一次性兜底评测并发按档位给默认来源docsn8niousee
+## r354B · 截断/限额必须声明作用域（展示面 vs 执行面）；无鉴权通道靠「一次性」兜底；评测并发按档位给默认（来源：docs.n8n.io `use-environment-variables/executions.md`、`use-environment-variables/credentials.md`、`administer/manage-credentials/credential-overwrites.md` 独立 curl 取 `.md` 原文，2026-10-02 r354B 实拉）
+
+- **★截断只作用于展示面，绝不能连带执行面**：`EXECUTIONS_DATA_MAX_DISPLAY_SIZE` 默认 104857600 字节，超出在编辑器/详情/公开 API 显示 "too large to display"（原文目的："to avoid running **low-resource instances** out of memory"），但 "**Doesn't affect retrying or resuming executions, which always load the full data**"。判据：**任何"太大就不给你看"的限额都必须显式声明它不覆盖重试与续跑**——否则用户会把"展示被截"读成"数据没了"，进而放弃本可恢复的执行。
+- **★无鉴权通道的安全性靠"只能调用一次"兜底**："**Without an auth token, the endpoint can only be called once for security reasons**"（凭据覆盖端点）。判据：**当一条通道必须存在但无法前置鉴权时，可用"一次性/单发"替代鉴权**——把无限次暴露压成单次窗口；这是"要么鉴权要么裸奔"之外的第三条路。
+- **★注入的凭据是"可用不可读"，且平台会主动隐藏**："This data **isn't visible to users**, but n8n uses it automatically in the background"；"In the Editor UI, n8n **hides all overwritten fields** by default"。判据：**平台级注入的凭据面向用户只暴露"连接"动作，不暴露字段**——凡"我配好了你直接用"的能力，界面上必须消字段，否则注入等于没注入。
+- **★同一能力有推荐/不推荐两套实现，文档会显式标注**：关于用环境变量写凭据覆盖，原文 "**This approach isn't recommended. Environment variables aren't protected in n8n, so the data can leak to users**"；推荐做法是走自定义 REST endpoint + bearer token。判据：**选型时先找"是否被标注不推荐"，而不是先找"能不能跑通"**——能跑通但不被推荐的实现，通常是在某个维度（此处为泄露面）有已知缺陷。
+- **★评测并发与生产并发是两个独立变量，且评测默认被压到最低档**：`N8N_CONCURRENCY_PRODUCTION_LIMIT` 默认 `-1`（禁用、不限）；`N8N_CONCURRENCY_EVALUATION_LIMIT` 默认 **跟随 license 档位**（self-hosted Community 1 / Cloud Pro 1 / Business 3 / Enterprise 5），"Setting this overrides the tier default"。判据：**"未设置"不等于"不限制"，而是"跟随某个你看不见的档位默认值"**；做容量估算时必须先确认该档位是多少，否则按"不限"规划会实际跑在 1 上。
+- 提升层：工具 / 工作流 / 可复用 Skill。触发词：展示截断、执行面全量、too large to display、无鉴权一次性、凭据覆盖、不推荐实现、评测并发、档位默认。

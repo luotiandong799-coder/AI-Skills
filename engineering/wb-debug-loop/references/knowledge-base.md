@@ -1196,3 +1196,12 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - **提升层**：工作流/工具。触发词：限流作用域、only production executions、manual/子流程/错误流程绕过、队列不可重试、重启按上限恢复。
 
 - **按「调用方身份」计数的闸门必须自证生效：反向代理会让它整体失效（来源：Flowise rate-limit 本机实拉，r326B）**：本章已下沉 `references/knowledge-base.md`（r326B）。
+
+
+## 下沉·r350A关闭序钩子的超时语义限时的是调用方等待不会取消handler来源docsopenclawaiautomatio
+## r350A · 关闭序钩子的超时语义：限时的是调用方等待，不会取消 handler（来源：docs.openclaw.ai/automation/hooks/event-types，2026-10-02 r350A 实拉 224,709B）
+
+- **★关闭类钩子的等待是有界的，超时不取消 handler**：`gateway:shutdown` 默认等 5 秒、`gateway:pre-restart` 另加 10 秒预算；文档原话 **"These bound the caller's wait, not the handler's work: timeout does not cancel promises"**。判据：**超时 ≠ 取消**，一个永不 settle 的 handler 会让进程内关闭永远完不成；排查"关不掉/关得很慢"时查的是 handler 是否 settle，不是把超时调大。
+- **★关闭前 Gateway 会 join 真实钩子完成情况**：关闭共享状态前要等 handler；期间通道还没拆，但**排队的 agent 工作与消息投递都不保证在关闭前跑完**。判据：**"通道还活着"不等于"任务会跑完"**，收尾不能把未决工作算作已完成。
+- **★持久化出站队列的结算可以推迟观测，但不让钩子本身变持久**。判据：**投递结算 ≠ 钩子持久化**，别因为"队列会补发"就认为关闭钩子里做的事是可靠的。
+- 排查顺序：进程退不出 → 先看是否有未 settle 的关闭钩子 → 再看 handler 内部是否在等一个永远不会返回的 promise → 最后才看超时配置。

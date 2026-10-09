@@ -3452,3 +3452,12 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 原文语境：Pipedream 组件注册表的版本号规则——新增 action 起 `0.0.1`；`0.1.0` 上修 bug 提 `0.1.1`；**「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」**
 - 判据：① **版本号是"内容指纹"而不只是"兼容性标签"**：兼容性只决定 major/minor/patch 走哪一位，而"要不要 bump"由**是否被影响**决定——即便对外接口一字未改，只要被依赖文件的行为变了，依赖它的组件版本号就必须动；② **依赖闭包内的传播必须显式执行**：改动公共文件时，负责人要把受影响清单枚举出来（按 import 图，而不是凭印象），逐条提版，否则消费方按旧版本号做缓存/准入判定，会拿到**旧判定 + 新代码**的错配组合；③ 这条与"锁定版本"是一对：一边要求下游写死版本号，另一边就必须保证**上游变动会强制推着下游动**——只锁不传就是死锁，只传不锁就是失控；④ 落地时把它写成 CI 检查而非人工纪律：`git diff` 出改动的公共文件 → 反查 import 闭包 → 断言每个闭包成员的 version 字段都变过。
 - 提升层：可复用 Skill/工作流。触发词：版本义务传递、import 闭包 bump、被影响即须提版、改公共文件连带提版、dependencies for any app component。
+
+
+## 下沉·r351C技能成本是区间不是标量分发侧须公示上下界来源skillsaliyuncomapipublicskillscat
+## r351C · 技能成本是"区间"不是标量：分发侧须公示上下界（来源：skills.aliyun.com `/api/public/skills?categoryCode=aiml&pageSize=3`，200 / 25,150B JSON，2026-10-02 r351C 独立 curl 实拉）
+
+- **实证**：条目字段含 `minToken` 与 `maxToken` 成对出现——实测 `alibabacloud-agentbay-aio-skills` = **minToken 21205 / maxToken 167456**（**上下界相差约 7.9 倍**）；同批另两条 21216/47349（2.2×）与 26641/124152（4.7×）。另有 `hosted`（实测 false，即不托管、内容源在 `githubPath`）、`totalInstallCount`、`likeCount`、`updatedAt`。
+- 判据：① **成本必须按区间公示与选型**——单点 token 估算（"这个技能约 2 万 token"）在跨度 2–8 倍的东西上是误导；装前预算按 **上界** 算，否则上下文挤爆发生在最坏路径上。② **跨度本身就是质量信号**：上下界差得越大，说明该技能的加载量越依赖输入/分支，越需要说明"什么情况下走到上界"。③ 与已落的三级披露 token 预算互补——那条管**加载机制内的预算数值**，本条管**分发侧对外承诺的成本区间**，两者不在同一层。④ `hosted` 必须一并公示：**托管与否决定别人能否独立验证内容**；未托管条目的真实内容以 `githubPath` 为准，市场页只是索引。
+- 落地动作：技能/插件的元数据表增加 `minToken`+`maxToken` 双字段与 `hosted` 布尔；写"成本"时一律写区间并标注上界触发条件，禁止只给均值或单点值。
+- 提升层：可复用 Skill / 工具。触发词：minToken、maxToken、成本区间、上界预算、hosted 托管标记、技能元数据。
