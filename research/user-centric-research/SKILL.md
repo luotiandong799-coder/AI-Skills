@@ -41,7 +41,7 @@ triggers:
 
 ### Step 2 — 市面搜索（本技能命中时执行，强度与决策代价成正比：选个库 → WebSearch + 1–2 个来源即可；要做长期技术选型 → 才上多源交叉）
 - **WebSearch**：搜索相关工具、库、服务、开源项目、教程。
-- **社交/社区平台**：微信公众号、知乎、小红书、微博、B站、Twitter/X、Reddit、GitHub Discussions、Discord、Telegram、V2EX、掘金、CSDN 等——搜真实用户经验、踩坑记录、最新动态。
+- **社交/社区平台**：微信公众号、知乎、小红书、微博、B站、Twitter/X、Reddit、GitHub Discussions（深度中文舆情 / 近 30 天趋势 → 路由 `research/last30days-cn` 执行器，本技能不重复造抓取）、Discord、Telegram、V2EX、掘金、CSDN 等——搜真实用户经验、踩坑记录、最新动态。
 - **电商/生活应用**：
   - 小红书：搜产品测评、使用体验、教程（优先用网页版/分享链接，或 WebSearch 间接获取）。
   - 淘宝/天猫：搜商品规格、价格区间、用户评价（网页版/搜索快照）。
