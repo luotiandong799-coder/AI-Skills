@@ -3,37 +3,16 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.28.0"
+version: "1.29.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
 visibility: "public"
 ---
-## 功能描述（全文见 references/knowledge-base.md §下沉·skills-security-check·功能描述）
-
+> 正文预算管理：「功能描述（全文见 references/knowledge-base.md §下沉·sk」（全文已零删减下沉 references/knowledge-base.md §下沉·功能描述（全文见 references/knowledge-base.md §下沉·sk）
 ## 约束（全文见 references/knowledge-base.md §下沉·skills-security-check·r439·约束）
 
-## 🎯 审计核心原则：关注供应链投毒风险
-
-**⚠️ 重要：审计的核心目标是防止skills本身成为攻击载体，而非评估教学代码质量！**
-
-### 审计边界
-
-**核心判断**：skill 会不会自动执行该操作？
-
-- **skill 自动执行**（命令、脚本、安装）→ ✅ 是投毒风险，按步骤6的 Malicious/Suspicious 标准定级
-- **仅作为示例**，需用户手动复制使用 → ❌ 不是投毒风险，不报告
-- **教学代码质量问题**（SQL 注入示例、异常处理缺失、命名规范、算法效率、架构设计等）→ ❌ 开发者自行负责，不报告
-
-**示例对比**：
-
-| 情况                                        | 是否报告           | 理由                                                                                                                |
-| ------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| skill.md中Python示例有SQL注入               | ❌**不报告** | 仅是教学代码，skill不自动执行                                                                                       |
-| skill自动执行 `curl \| bash`               | ✅**需报告** | skill自动执行远程脚本，触发步骤4深度分析后根据远程内容定级（Malicious或Suspicious）                                 |
-| 配套脚本 `init.sh`包含 `npm install -g typescript@5.0.0` | ❌**不报告** | skill自动执行全局安装但**版本已固定**，无投毒风险                                                                   |
-| 配套脚本 `init.sh`包含 `npm install -g some-tool` | ✅**需报告** | skill自动执行全局安装**未固定版本**，可能拉取被投毒的最新版本 → Suspicious                                           |
-
+> 正文预算管理：「🎯 审计核心原则：关注供应链投毒风险」（全文已零删减下沉 references/knowledge-base.md §下沉·🎯 审计核心原则：关注供应链投毒风险）
 ## 执行逻辑
 
 **## 约束：请严格按照流程执行所有步骤！**
@@ -497,3 +476,15 @@ Step C: 是否包含恶意意图？
 - **★同一技能可并列多家扫描源，且允许结论冲突**：skills.sh 明细页同时列出三个独立扫描源（`Gen Agent Trust Hub` / `Socket` / `Snyk`）。判据：**"有徽章"不等于"全绿"**——装机判据应写成**逐源列结论**，而不是"有无 Security Verified"这一个布尔量；把多源结论折叠成单值会直接抹掉源间分歧。本轮**判级值（PASS/WARN）在 HTML 中 0 命中**（JS 渲染），故具体判级不入账，只入"多源并列"这一形态。
 - **★第三方目录 API 的限流窗口可能是「日」不是「分」**：SkillsMP 返回 `X-RateLimit-Daily-Limit` / `X-RateLimit-Daily-Remaining`，错误码含 `DAILY_QUOTA_EXCEEDED`（429，与 `INVALID_OCCUPATION` / `INVALID_LANGUAGE` 同族机检枚举）。判据：**日配额耗尽后原地重试零收益**——退避策略须先判窗口类型（日/时/分），日配额须改调度到次日或换用缓存，不能套用分钟级指数退避；批量核验脚本要把剩余配额当输入，而不是把 429 当瞬时抖动。
 - 提升层：工作流 / 工具。触发词：目录不扫描、无标记两种成因、not a live ranking、多源并列、逐源列结论、徽章不等于全绿、日配额、DAILY_QUOTA_EXCEEDED、X-RateLimit-Daily、限流窗口类型。
+
+## r488C · 多源审计「可并列但不可归并」：三家词表不同构，折叠成单一 verdict 必然失真；同时更正 r485C 的通道结论——不入账的是「统一判级」而非「判级值」（来源：www.skills.sh/audits 387,367B，2026-10-10 一手 curl 逐串命中 `Combined security audit results from Gen Agent Trust Hub, Socket, and Snyk.` 与 `Safe`×23 / `Low Risk`×17 / `Med Risk`×12 / `alerts`×52 / `Pending`×72 / `Socket`×29 / `Snyk`×29；r488C 落地）
+- **实证**：skills.sh `/audits` 页自述聚合三家来源（Gen Agent Trust Hub / Socket / Snyk），但三家的输出**形态互不相同**：Gen 给形容词级（`Safe` / `Low Risk` / `Med Risk`），Socket 给计数级（`N alerts`），Snyk 给分级级；另有独立的 `Pending` 未扫描态（72 次）。**字面串 `PASS` / `WARN` 在该站确实不存在。**
+- **判据**：① **不同词表不可比，聚合只能并列不能归并**：形容词级与计数级之间没有映射函数 ⇒ 把三源折成一个"是否通过"会丢掉"Snyk 说中风险但 Socket 说零告警"这类最关键的分歧；报告须**逐源保留原形态**，并允许并列冲突。② **`Pending` 是第三态，既非通过也非失败**：把它填成"通过"（默认）会虚增覆盖率，填成"失败"会污染阳性率 ⇒ 未扫描必须单独成态并在覆盖率分母中显式扣除。③ **更正 r485C**：r485C 因「`PASS/WARN` 0 命中（JS 渲染）」判「判级值不入账」——本轮一手核验表明 raw HTML **机读可得**（387KB 全文含三源异构词表），**真正的结论应是"统一判级不可入账，各源原值可入账"**；把"没有统一词表"误记成"取不到判级"，属于把取证失败与对象性质混为一谈。④ **"多源并列"的实现前提是有源可列**：r485C 只立了"允许冲突"的形态，本条补齐"各源值怎么取、Pending 怎么算" ⇒ 二者合起来才是可用的多源聚合判据。
+- **与既有能力分工**：r485C「目录扫不扫是二值属性」管**该不该采信这个目录**；r486C「阳性率最高的扫描器在确证恶意上最低」管**多源之间怎么比强弱**；本条管**多源结论以什么形态同时呈现**。
+- 提升层：可复用 Skill（安全校验）/ 工具（多源聚合）。触发词：Combined security audit results、Safe / Low Risk / Med Risk、alerts 计数、Pending 第三态、词表不同构不可归并、逐源列原形态、判级值可入账但统一判级不可。
+
+## r488C-2 · 校验「字段存在」是假信号：有声明字段但值为空、或有值但实现里没有比对，都必须判为未校验；三种失效形态要分态报告（来源：skillhub.cn/install/install.sh 483B（真 bash，非 SPA 壳），2026-10-10 一手 curl 全文核验：`KIT_URL="https://skillhub-1388575217.cos.ap-guangzhou.myqcloud.com/install/latest.tar.gz"` 后直接 `curl -fsSL "$KIT_URL"` + `tar -xzf` + `bash "$INSTALLER" "$@"`，全文 `sha256sum|shasum|openssl dgst` **0 命中**；r488C 落地）
+- **实证**：SkillHub 安装脚本从对象存储直拉 `latest.tar.gz`，解包后立即 `bash` 执行，**整段脚本不含任何摘要校验**。即"从网络取可执行包并运行"这条链路上没有任何完整性闸门。
+- **判据**：① **声明 ≠ 实现，校验判据必须是「有值 且 有比对发生」**：把"响应里有 sha256 字段"当成"已校验"，是把接口契约误当成运行时行为 ⇒ 校验结论只能下在**实际比对动作**上。② **三种失效形态必须分态，不能合并成"未校验"**：`字段缺失`（契约面就没有）/ `字段存在但为空`（契约面有、供给侧没填）/ `有值但实现无比对`（声称校验、代码里没做）⇒ 三者的修复责任方分别是 契约设计者 / 供给方 / 实现方，合并记账会找错人。③ **"文档化了校验"本身就是风险线索**：文档与实现不一致时，文档会给人虚假安全感 ⇒ 审计时要专门做"文档声明 vs 代码行为"的一致性核对，而不是只读文档。④ **安装链路上拉远端包直接执行是最高危形态**：无校验 + 无签名 + 直接 `bash` ⇒ 安装类脚本的审查优先级应高于普通技能包，因为它执行在用户机器上且绕过技能扫描面。⑤ **诚实边界**：本轮另探 `skillhub.cn/install/version.json` 与 `/version.json`、`/api/version.json` 三路径**均返回 7,429B SPA 壳**，未复现上游所述 `{"sha256":""}` 空串原文 ⇒ **空串那一条不入账**，只落本条可由 install.sh 一手证实的"有声明无实现"形态。
+- **与既有能力分工**：r487/r485C「缺签名文件时回退保留旧版」管**签名文件缺失时的处置**；本条管**签名/摘要字段存在但没被真正使用**。
+- 提升层：可复用 Skill（安全校验）/ 工具（安装链路审查）。触发词：sha256 字段存在但未比对、声明与实现一致性核对、latest.tar.gz 无校验、安装脚本直拉远端包执行、三种校验失效形态、空串不入账。

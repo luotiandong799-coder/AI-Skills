@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: "1.19.0"
+version: "1.20.0"
 agent_created: true
 ---
 
@@ -184,3 +184,9 @@ agent_created: true
 - **判据**：① **上限管"最多用多少"，预留管"至少有多少"**：两者是守恒律的两半——只给上限，共享池拥塞时后来的任务会饥饿（能跑但抢不到资源，表现为超时而不是报错）；只给预留，总量会被 N×配额撑爆。委派子代理时只写 `max_concurrency` 等于只声明了一半契约。② **饥饿的故障形态是超时不是拒绝**：资源共享导致的性能下降不会被判为错误 ⇒ 排障"子任务莫名变慢/超时"时，先问"它是被限流了还是被饿着了"，两者处置相反（限流要退避，饥饿要加预留）。③ **预留的价值是故障隔离而非性能**：原文把收益写成"No flow can starve or crash another" ⇒ 预留的正当性是**防止一个流拖垮另一个**，不是"跑得更快"；用性能理由申请预留会在评审时被否。④ **分组（Worker Groups）是第三类手段**：当预留粒度太细、上限粒度太粗时，用分组把争用面切小 ⇒ 隔离手段的顺序应是 分组 → 预留 → 上限，而不是一上来就调并发数。⑤ **恢复面要独立于配额面**：Durable Execution/Waitpoints/Crash Recovery 与配额并列 ⇒ 有恢复机制不等于可以不设配额，反之亦然。
 - **与既有能力分工**：r442A「自动更新放行粒度=类别×子集×三档」管**升级放行**；本条管**并发与资源的两类约束**；与 wb-ponytail r286「并发限额状态机（FIFO/重启续排/1-3-5 分档）」互补——那条讲上限面被突破后怎么排队，本条讲为什么还必须有预留面。
 - 提升层：工作流（资源契约）/ 工具（委派参数）。触发词：Reserved Resources、Every flow gets its own guaranteed slice、No flow can starve、上限与预留两类对象、饥饿表现为超时、Worker Groups 分组隔离、AP_WORKER_CONCURRENCY、AP_DEFAULT_CONCURRENT_JOBS_LIMIT。
+
+## 「外部响应者是竞态不是队列」：一条审批请求只有一个合法赢家，首个响应即关闭，迟到者被丢弃且必须留痕；寿命到期走超时分支而不是报错（来源：docs.dify.ai/en/cloud/use-dify/nodes/human-input.md 9,288B，2026-10-10 一手 curl 逐串命中 `The request closes after the first response regardless of delivery method` / `The default is 3 days` / `the timeout branch from the node`×2；r488B 落地）
+- **实证**：Dify Human Input 节点原文——「**The request closes after the first response regardless of delivery method**」（无论从哪个投递渠道回来，第一个响应就关闭请求）、过期默认「**The default is 3 days**」、过期后走「**the timeout branch from the node**」而非抛错。
+- **判据**：① **先到先得是默认语义，必须显式声明而不是隐含**：同一请求发给 N 个响应者时，平台语义是"第一个赢、其余作废" ⇒ 委派审批/外部确认时必须写明关闭语义，否则发起方会以为还要等齐所有人，响应者会以为自己的提交仍然有效。② **迟到响应被丢弃 ≠ 无事件发生**：关闭后的响应不会报错、也不会生效 ⇒ 处置上必须**留痕**（记录"已收到但已关闭"），静默丢弃会让响应者以为操作成功、让审计看不到争议。③ **寿命到期是一条正常分支不是异常**：过期走 `timeout branch` ⇒ 委派任务的到期处置要设计成一条可走的路径（降级/升级/取消），不能让超时变成无人接管的悬空态。④ **与"暂停不续命""重试期间不进终态"分工**：那两条管**单个任务的续命与终态时机**，本条管**多个响应者之间的竞争与请求寿命终点的形态** —— 竞态下"谁算数"要先于"什么时候结束"定义。⑤ **默认 3 天是可配置项而非平台常量**：寿命窗口必须按任务性质重设 ⇒ 沿用默认值等于把业务 SLA 交给平台默认值决定。
+- **与既有能力分工**：r486B sd 1.19.0「预留与上限两类对象」管**资源怎么分**；本条管**多个外部参与者之间谁的答案算数**。
+- 提升层：工作流（委派协议）/ 工具（外部确认接口）。触发词：closes after the first response、先到先得关闭语义、迟到响应丢弃须留痕、default is 3 days、timeout branch、寿命到期是分支不是异常、多响应者竞态。

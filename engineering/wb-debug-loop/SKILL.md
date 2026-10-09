@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.163.0"
+version: "1.164.0"
 agent_created: true
 ---
 
@@ -12,19 +12,11 @@ agent_created: true
 
 **核心判断：改不动的 bug，几乎都是"还没复现就先改了"。** 定位是证据工作，不是灵感工作。
 
-## 数据钉定（input pinning）与局部执行（partial execution）：钉输入 + 只跑待测节点 = 最小可复现调试闭包（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）；原文已下沉 references/knowledge-base.md §数据钉定与局部执行下沉，2026-10-04 r409A（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·数据钉定inputpinning与局部执行parti）
-
-## 读侧先行的灰度升级律（来源：docs.n8n.io/hosting/scaling/queue-mode/，2026-09-28 r210-B 独立实拉）；原文已下沉 references/knowledge-base.md §读侧先行下沉，2026-10-04 r411A
+> 正文预算管理：「数据钉定（input pinning）与局部执行（partial execution）：」（全文已零删减下沉 references/knowledge-base.md §下沉·数据钉定（input pinning）与局部执行（partial execution）：）
+> 正文预算管理：「读侧先行的灰度升级律；原文已下沉 references/knowledge-base.m」（全文已零删减下沉 references/knowledge-base.md §下沉·读侧先行的灰度升级律；原文已下沉 references/knowledge-base.m）
 ## 「之前照做的规则现在不照做了」先查修剪，再怀疑模型（来源：agentskills.io《How to add skills support to your agent》客户端规范 2026-09-28 r284-A 独立实拉 + arXiv 2606.22528《Governance Decay》独立核验；与 §上下文随循环增长要修剪 互补——那条是主动写减法，本条是被动排障归因）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·之前照做的规则现在不照做了先查修剪再怀疑模型来源ag）
 
-## 诊断输出要分「给人看的粗桶」与「给机器读的稳定原因码」两层；先分清「根本没发出调用」还是「发了但失败」（来源：docs.openclaw.ai/auth-credential-semantics 2026-09-29 r290-B 独立 curl 实拉 24,733B 原文核验）
-- 原文："Probe results carry a `status` bucket (`ok`, `auth`, `rate_limit`, `billing`, `timeout`, `format`, `unknown`, `no_model`) plus a **stable `reasonCode` when the probe never reached a model call**"；七个稳定码 = `excluded_by_auth_order` / `missing_credential` / `expired` / `invalid_expires` / `unresolved_ref` / `ineligible_profile` / `no_model`；"Eligibility checks report `ok` as the reason code for usable credentials."
-- 原文（对齐要求）："These semantics keep **selection-time and runtime auth behavior aligned**. They are shared by `resolveAuthProfileOrder` / `resolveApiKeyForProfile` / `openclaw models status --probe` / `openclaw doctor` auth checks."
-- 判据：① 故障分两族——**没跑起来**（配置/凭据/选型，有稳定原因码）与**跑了但失败**（服务端结果）；绝大多数被误判成"模型不行"的故障其实在第一族，先取原因码再动手；② 原因码是**对外契约不是日志文案**——要稳定、可枚举、可用完了还准，改动要走版本；③ **选择期与运行期必须共用同一套判定**（探针说可用、真跑却失败 = 两处语义漂移，属设计缺陷不是偶发）；④ `ok` 也要占一个码位，别用空值表示成功——空值无法区分"没检查"与"检查通过"（与 AV 2.44.0「未检查是独立结论值」同向）。
-- 提升层：工具/工作流。触发词：reasonCode、status bucket、稳定原因码、选择期运行期对齐、没发出调用、凭据不可用。
-
-局部调试未必比整体便宜：部分执行要满足入口契约，且数据一大反而只能整跑局部调试未必比整体便宜：部分执行要满足入口契约，且数据一大反而只能整跑（来源：docs.n8n.io《Types of executions》2026-09-29 r290-C 独立 curl 实拉 .md 原文核验）（原文已下沉 references/knowledge-base.md §r325A）
-多分支执行顺序不是逻辑决定的，是「创建时期版本 + 画布空间位置」决定的：结果顺序不对先查这两样多分支执行顺序不是逻辑决定的，是「创建时期版本 + 画布空间位置」决定的：结果顺序不对先查这两样（来源：docs.n8n.io《Understand execution order》2026-09-29 r296-A 独立 curl 取 .md 原文 1,835B 核验）（原文已下沉 references/knowledge-base.md §r325A）
+> 正文预算管理：「诊断输出要分「给人看的粗桶」与「给机器读的稳定原因码」两层；先分清「根本没发出调用」还是」（全文已零删减下沉 references/knowledge-base.md §下沉·诊断输出要分「给人看的粗桶」与「给机器读的稳定原因码」两层；先分清「根本没发出调用」还是）
 ## 超时不是一个数：默认值随触发类型分档、可调上限随套餐分档（来源：pipedream.com/docs/workflows/limits 2026-09-29 r296-C 实拉）；原文已下沉 references/knowledge-base.md §超时分档下沉，2026-10-04 r411A
 > 下沉索引：〇、先分型：模型行为问题 vs 代码问题 等 2 节原文已移至 `references/knowledge-base.md`（按最旧批次下沉，正文只留指针）
 
@@ -496,5 +488,12 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **判据**：① **403 / 404 / DNS 三态必须分列，合并成"未达"会锁死复通路径**：403 = 出口被拒（换 UA/换通道可救）；404 = 路径已变（换路径可救）；DNS = 域名情报本身有误（须先核实真实域，如 agentmore.cn 实为 agentmore.chatglm.cn）⇒ 记成同一个"不可达"，等于同时放弃两类补救。② **"某站不可学"的结论必须说明是哪一层不可学**：通道层不可学不代表内容层不存在 ⇒ 结论要写成"通道 X 不可达"而不是"该站无内容"。③ **取数前先试两个免认证变体**：`<url>.md` 与 `/.well-known/openapi.json`（或 mcp.json）⇒ 后者常常**字段比页面更全且无需鉴权**，是最省成本的一手面；跳过这一步直接判不可达，属于取证顺序错误。④ **引用地址要用 canonical 而不是取数地址**：官方明令引用 `.md` 文件内 `Source:` 行的地址、不要引用 `.md` 本身或带 query 的地址 ⇒ 用取数 URL 当出处会让引用在改版后失效，也让读者无法复核。⑤ **"不要拼接或猜测文件直链"是硬约束**：官方禁止拼直链 ⇒ 通过变体省事与猜 URL 是两件事，前者有文档背书，后者会拿到 200 但内容错（软 404）。
 - **与既有能力分工**：r445B「软 404 识别法（等大小 200 = 壳）」管**拿到了但内容是壳**；本条管**根本没拿到时怎么给原因分类**——二者合起来覆盖"取到了假的"与"没取到"两类取证失败。
 - 提升层：工具（取证通道治理）/ 工作流（信源台账）。触发词：403 与 404 分开记账、DNS 域名情报有误、`<url>.md` 变体、well-known openapi.json 免认证、canonical Source 行引用、不要拼接直链、通道失效 vs 路径失效、make.com whats-new。
+
+
+## 「排障窗」与「挂起窗」是两个必须分别声明的时钟：观测数据保留期 ≠ 状态机可恢复寿命，混设会导致「还能续跑但日志没了」或「租约到期后哑火」（来源：api.github.com/repos/langgenius/dify/releases 303,233B（v1.17.1），2026-10-10 一手 curl 逐串命中 `event streams now expire after **2 hours** instead of 3 days` / `3 days) → 7200 (2 hours)` / `Agent runs no longer fill up Redis` / `Lease-based triggers stopped working after about a week` / `unresumable`；r488B 落地）
+- **实证**：Dify v1.17.1 把 Agent 运行记录与事件流的保留期从 3 天压到 **2 小时**（环境变量值 `259200` → `7200`），动因原文「event streams were appended without any cap: production held 3 …」+「Agent runs no longer fill up Redis」。同一批修复里还有两条静默失效：「**Lease-based triggers stopped working after about a week**」（租约型触发器约一周后哑火）与同一运行中第二次 Human Input 暂停可能「**unresumable**」。
+- **判据**：① **两类对象的寿命量级不同，必须分开设**：观测数据（日志/事件流）是**排障窗**，状态机/租约是**挂起窗**；本例前者从 3 天降到 2 小时，而挂起语义仍以天计 ⇒ 用同一个 TTL 配置两类对象，必然有一个方向错位。② **"还能续跑但证据没了"是配置错配的典型症状**：任务在挂起窗内可以恢复，但排障窗已过期 ⇒ 复现现场时只剩结论没有过程，根因定位退化为猜测。③ **保留期是容量决策，不是可靠性决策**：原文动因是 unbounded growth 撑爆 Redis ⇒ 缩保留期是容量手段，会**顺带**削掉可观测性；评估此类变更要看它顺带牺牲了什么，不能只当成性能优化通过。④ **租约型触发器的一周量级失效不报错**：约一周后停止工作而没有任何异常 ⇒ 长周期任务凡依赖租约/续订型触发，必须有独立的活性探针，不能等它不触发了才发现。⑤ **同一次运行内第二次暂停可能不可恢复**：暂停次数也是寿命维度 ⇒ 允许多次暂停的流程，要按"最大暂停次数"而不仅是"总时长"来设上界。
+- **与既有能力分工**：r439B「暂停判成功（exit 0 + status:paused）」管**暂停态怎么表达**；r437B「重试期间父流程保持 waiting 不传播终态」管**终态时机**；本条管**这两类状态各自能活多久**。
+- 提升层：工具（长任务配置）/ 工作流（可观测性与恢复窗口）。触发词：2 hours instead of 3 days、259200 到 7200、排障窗与挂起窗、观测保留期 vs 状态机寿命、Lease-based triggers stopped working after about a week、第二次暂停 unresumable、保留期是容量决策。
 
 > 正文预算管理：「二、六步循环（原文已下沉 references/knowledge-base.md §六步循环下沉，2026-10-03」、「二·五、修复验证：补丁是待验证假设（细则已下沉 KB）（全文见 references/knowledge-base.md」、「二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节（细则已下沉 KB）」、「复现不了就先把发生率抬高：1% 追不到，50% 就能二分（来源：topaiskills.com「diagnosing-b」、「探针要能一次撤干净，seam 太浅本身就是结论（同来源 `diagnosing-bugs` 技能正文，与 §诊断装置自身」、「等待/轮询/卡住运行处置（来源：OpenClaw `ci/watching-runs.md`，2026-09-30 实拉」、「Harness 自改进与 trace 复用簇（细则已下沉 KB）（全文见 references/knowledge-ba」 等 7 节原文已零删减下沉本技能 `references/knowledge-base.md`，正文只留指针。
