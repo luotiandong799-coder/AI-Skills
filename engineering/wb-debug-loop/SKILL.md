@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.164.0"
+version: "1.166.0"
 agent_created: true
 ---
 
@@ -20,26 +20,14 @@ agent_created: true
 ## 超时不是一个数：默认值随触发类型分档、可调上限随套餐分档（来源：pipedream.com/docs/workflows/limits 2026-09-29 r296-C 实拉）；原文已下沉 references/knowledge-base.md §超时分档下沉，2026-10-04 r411A
 > 下沉索引：〇、先分型：模型行为问题 vs 代码问题 等 2 节原文已移至 `references/knowledge-base.md`（按最旧批次下沉，正文只留指针）
 
-## 已处理的失败是「独立可见状态」（Warning 态），不是消失了；重试有固定序列且超限会熔断关停调度（来源：help.make.com《Introduction to errors and warnings》+《Exponential backoff》2026-09-29 r337-Q-A 实拉核验；与 §重试掩盖 互补——那条管"别用重试糊过去"，本条管"重试本身有几条纪律"）
-- 原文：Make 把错误与警告分开——错误=未被处理的意外事件，警告=「错误被成功处理后场景呈 Warning 态」；**12 种具名错误类型**（Bundle Validation/Data/Duplicate Data/Incomplete Data/Max File Size/Operations Limit/Data Size/Account Validation/Module Timeout/Connection/Rate Limit/Runtime）；handler 语义 Skip/Retry/Resume/Commit/Rollback，可挂 module/route/scenario 三级；**场景级内置指数退避自动重试 8 次（1、2、5、10、30 分钟、1、3、12、24 小时），第 8 次失败则 disables scheduling of the scenario（熔断关停调度）**。
-- 判据：① **「已处理」≠「已消失」**——一个被 handler 兜住的失败要留下 Warning 痕迹，让它能被事后审计，而不是在日志里无影无踪（和 §静默降级 同源：凡静默掉的失败都要有可查的记录）；② **重试是有序列的、有上限的**——指数退避的时点固定（不是无限退避），到第 8 次仍失败就**主动熔断关停调度**，而不是一直重试把资源耗死或把下游打爆；③ handler 分三级挂载（模块/路由/场景）意味着**兜底粒度要选对层**——局部可恢复的挂模块级，要整体放弃的挂场景级；④ 把"重试多少次、超限怎么办"写成明确策略，而不是"失败就重试"的模糊指令。
-- 提升层：工作流/诊断。触发词：警告态、12 类错误、重试 8 次序列、第 8 次熔断关停、handler 三级挂载、已处理失败留痕。
-
-## 判死前先回查真实执行状态，别把「无信号」直接当「已失败」（来源：n8n 2.41.0 release note「Recheck the execution status before failing a stalled queue job」github.com/n8n-io/n8n/releases 2026-09-29 r334-Q-A 实拉核验；与 §心跳误杀 分工——那条管"心跳为什么发不出去"，本条管"判死这个结论本身要先验证"）
-- 原文：n8n 在把「卡住的队列任务」标记为失败之前，先**回查该执行的真实运行状态**（数据库/执行引擎里的实际状态），确认它真的死了、不是「还在跑但信号没传回来」才下失败语义。
-- 判据：① 「判死」是一个**结论**，不是「超时/无响应」这个信号的同义词——信号只是疑点，真实状态才是判决依据；看到 stalled/timeout/无心跳，先去查权威状态源（执行表/运行时），不要直接等价于"任务已失败"；② 误判的代价是**重复执行**：把一个还在跑的任务判死并触发重试/补偿，会和原执行并发抢同一份状态，制造更难查的竞态；③ 这条是「先验证再下结论」在排障里的具体实例化——和 §修复验证 同源：补丁是待验证假设，判死也是待验证假设。
-- 提升层：工作流/诊断。触发词：判死前回查、stalled 先查真实状态、误判导致重复执行、队列任务判活、先验证再判失败。
-
+## 已处理的失败是「独立可见状态」（Warning 态），不是消失了；重试有固定序列且超限会熔断关停调度（来源：help.make.com《Introduction to errors and warnings》+《Exponential backoff》2026-09-29 r337-Q-A 实拉核验；与 §重试掩盖 互补——那条管"别用重试糊过去"，本条管"重试本身有几条纪律"）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·已处理的失败是独立可见状态Warning态不是消失了重试有固定序列且超限会熔断关）
+## 判死前先回查真实执行状态，别把「无信号」直接当「已失败」（来源：n8n 2.41.0 release note「Recheck the execution status before failing a stalled queue job」github.com/n8n-io/n8n/releases 2026-09-29 r334-Q-A 实拉核验；与 §心跳误杀 分工——那条管"心跳为什么发不出去"，本条管"判死这个结论本身要先验证"）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·判死前先回查真实执行状态别把无信号直接当已失败来源n8n2410releasen）
 ## 超时不是回滚授权：判死与回滚是两个门；只有「已验证回滚」才交回前一代，且与分诊互不自动触发（来源：docs.openclaw.ai cli/update repair-and-recovery，2026-09-30 r320A 实拉）（细则见 KB，2026-09-30 r320C 下沉）
 
 ## 重试钉在单请求而非复合流、已完成步不重放；「已发出无应答」是歧义态须先对账；内层重试独立计数且外层可掐断；鉴权/计费/拒答不进重试预算直接走降级（来源：docs.openclaw.ai/concepts/retry，2026-09-30 r321B 独立实拉 9,854B；细则见 references/knowledge-base.md §r321B）
 ## 「恰好一次」的成立前提是在途时间有上界：只靠验证/对账在 late commit 下永远达不到，重尾时等待无效、须给每个写发幂等键；崩溃-恢复要查执行痕迹计数而非看结果（来源：arXiv 2609.29095，2026-09-30 r322C 独立实拉 44,254B，重复率 56%/74%、契约解释 81%；细则见 references/knowledge-base.md §r322C）
 
-## 自述成功不构成幂等证据：重复执行中九成 agent 仍自报成功；引量化结论前先确认分子分母（来源：arxiv.org/abs/2609.29095，2026-09-30 r323B 独立实拉 44,254B）
-- 原文：「the same frontier models duplicate in **56% and 74%** of episodes」（在途未返回 / 传输重复两种情形）；「lowers the duplicate rate from **28% to 4%**」（契约化后）；「agents **reported success in 90% of the episodes in which they had duplicated an effect**」；「the contract explains **81%**」= 契约能解释的**方差占比**，不是重复率（**口径纠偏**：不得把 81% 引成“81% 的请求会重复”）。
-- 判据：① **“恢复后重跑成功”与“只执行过一次”是两件事**：重复执行里九成自带成功自述，因此验收幂等只能靠外部痕迹（执行痕迹计数、副作用唯一键、服务端去重日志），**不能靠 agent 汇报**——自述成功是“我觉得成了”，不是“只发生了一次”；② **引量化结论前先确认分子分母**：同一篇里 56/74%（重复率）、28%→4%（干预前后）、81%（方差解释度）属于三个不同量，混引会造出不存在的事实；③ 把“待补”复核成“已核”时，条目里要**写下核到的原句**（不是只写“已复核”），否则下一个人仍无法判断。
-- 提升层：工具/工作流。触发词：自述成功、幂等证据、重复率、方差解释度、口径纠偏、痕迹计数。
-
+## 自述成功不构成幂等证据：重复执行中九成 agent 仍自报成功；引量化结论前先确认分子分母（来源：arxiv.org/abs/2609.29095，2026-09-30 r323B 独立实拉 44,254B）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·自述成功不构成幂等证据重复执行中九成agent仍自报成功引量化结论前先确认分子分）
 ## 兜底链路可能与故障链路同源：错误工作流默认指向自身、同一兜底可被多条主链路共用，且手动运行不触发——兜底能否工作无法用演练路径验证（来源：docs.n8n.io errortrigger 节点页 822,401B + flow-logic/error-handling 596,446B，2026-09-30 r324C 独立复拉命中「uses itself as the error workflow」×2、「can't test error workflows」×1、「same error workflow for multiple workflows」；与 §超时不是回滚授权 互补——那条管“判死与回滚分两门”，本条管“兜底自己会不会一起死”；细则见 references/knowledge-base.md §r324C）
 
 ## 异步入口的丢失窗 =「回执与落库之间」那一段：已应答的请求不会有人重试；有重建路径的子系统，陈旧备份严格劣于空库（来源：www.activepieces.com/docs/install/guarantees/disaster-recovery.md，2026-09-30 r325A 独立 curl 实拉 7,611B 逐串命中；经 Qoder r357-Q-A 提名）
@@ -497,3 +485,14 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - 提升层：工具（长任务配置）/ 工作流（可观测性与恢复窗口）。触发词：2 hours instead of 3 days、259200 到 7200、排障窗与挂起窗、观测保留期 vs 状态机寿命、Lease-based triggers stopped working after about a week、第二次暂停 unresumable、保留期是容量决策。
 
 > 正文预算管理：「二、六步循环（原文已下沉 references/knowledge-base.md §六步循环下沉，2026-10-03」、「二·五、修复验证：补丁是待验证假设（细则已下沉 KB）（全文见 references/knowledge-base.md」、「二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节（细则已下沉 KB）」、「复现不了就先把发生率抬高：1% 追不到，50% 就能二分（来源：topaiskills.com「diagnosing-b」、「探针要能一次撤干净，seam 太浅本身就是结论（同来源 `diagnosing-bugs` 技能正文，与 §诊断装置自身」、「等待/轮询/卡住运行处置（来源：OpenClaw `ci/watching-runs.md`，2026-09-30 实拉」、「Harness 自改进与 trace 复用簇（细则已下沉 KB）（全文见 references/knowledge-ba」 等 7 节原文已零删减下沉本技能 `references/knowledge-base.md`，正文只留指针。
+
+
+## r490A · 取消是「协作式」而非「抢占式」：生效粒度是执行单元间隙，且陈旧取消位是跨轮污染源（来源：api.github.com/repos/langgenius/dify/releases/tags/1.17.0 一手 JSON（body 117,802B），2026-10-10 r490A 独立 curl 实拉逐串命中 `stop` is now honored between non-streaming nodes and paused workflows clear stale cancellation signals correctly (#41090, #40905, #40972) / `fix(api): clear stale cancellation signals when resuming a paused workflow` #40905 / `fix(dify-agent): isolate cancellation intent observer` #40896 / `fix(dify-agent): make run cancellation route-independent` #39942 / `preserve snapshots for failed and cancelled runs` #40876）
+- **判据**：① **取消的生效位置是「两个执行单元之间」而不是「信号发出的瞬间」** ⇒ 单元内部的长任务对取消表现为无响应，超时预算与取消预期必须按间隙声明，不能按"发了 stop 就算停了"记账。② **陈旧取消位是跨轮污染源**：挂起/恢复路径必须显式清理，否则续跑即被上一次的取消信号杀掉（表现为"莫名立即失败"）⇒ 恢复前清状态是取消语义的一部分，不是可选优化。③ **取消意图必须隔离成独立观察对象**（`isolate cancellation intent observer` / `route-independent`）⇒ 取消状态不能从"调用点"或"路由"反推，要有独立可读的取消位。④ **取消与被中断与失败并列都要保留快照** ⇒ 三类结束态都要进留痕面，只给失败留痕会让"被取消"这一类永远查不到现场。
+- **与既有能力分工**：r488B「排障窗 vs 挂起窗双时钟」管**两类对象各活多久**；r439B「暂停判成功」管**暂停态怎么表达**；本条管**取消信号在哪生效、会不会残留**。
+- 提升层：工具（长任务与取消配置）/ 工作流（挂起恢复前清状态）。触发词：取消是协作式的、between non-streaming nodes、clear stale cancellation signals、取消生效粒度、陈旧取消位、route-independent、取消快照。
+
+## r490C · 通道失效记账增第五态「厂商域分离」：同一厂商的可达域 ≠ 被拦域；据此更正 make.com 终结论（来源：www.make.com/en/whats-new → 403 / 5,610B，正文首串 `<title>Just a moment...`、`challenge` 计数 8；同厂商 help.make.com/llms.txt → 200 / 72,873B 且文章 `.md` 全可达；2026-10-10 r490C 一手 curl 对照）
+- **判据**：① **下「某站不可达」结论前先分辨 403 的成因**：WAF 挑战页（体量数千字节、含 `Just a moment` / `challenge` 串）是**通道**问题，业务 404 是**路径**问题，两者处置完全不同 ⇒ 只看状态码会把挑战页误记成"站点判死"。② **须枚举兄弟子域再判死**：同一厂商常把机读面放在另一个子域（本例 www 被挑战、help 域 llms.txt 全程 200）⇒ 单域失败不等于厂商不可达。③ **更正 r486C「make.com 持续 403」终结论**：403 属通道拦截而非路径失效，`help.make.com/llms.txt` 是可用的机读替代通道 ⇒ 该站从"仅探活计数"恢复为"可取数"。
+- **与既有能力分工**：r486C「通道失效 vs 路径失效三态（403/404/DNS）」管**怎么分类**；本条补**第五态（厂商域分离）**并给挑战页的识别串。
+- 提升层：工具（探活与取证通道）。触发词：厂商域分离、Just a moment、Cloudflare 挑战页、兄弟子域枚举、help 域 llms.txt、make.com 终结论更正。

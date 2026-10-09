@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.29.0"
+version: "1.30.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -488,3 +488,9 @@ Step C: 是否包含恶意意图？
 - **判据**：① **声明 ≠ 实现，校验判据必须是「有值 且 有比对发生」**：把"响应里有 sha256 字段"当成"已校验"，是把接口契约误当成运行时行为 ⇒ 校验结论只能下在**实际比对动作**上。② **三种失效形态必须分态，不能合并成"未校验"**：`字段缺失`（契约面就没有）/ `字段存在但为空`（契约面有、供给侧没填）/ `有值但实现无比对`（声称校验、代码里没做）⇒ 三者的修复责任方分别是 契约设计者 / 供给方 / 实现方，合并记账会找错人。③ **"文档化了校验"本身就是风险线索**：文档与实现不一致时，文档会给人虚假安全感 ⇒ 审计时要专门做"文档声明 vs 代码行为"的一致性核对，而不是只读文档。④ **安装链路上拉远端包直接执行是最高危形态**：无校验 + 无签名 + 直接 `bash` ⇒ 安装类脚本的审查优先级应高于普通技能包，因为它执行在用户机器上且绕过技能扫描面。⑤ **诚实边界**：本轮另探 `skillhub.cn/install/version.json` 与 `/version.json`、`/api/version.json` 三路径**均返回 7,429B SPA 壳**，未复现上游所述 `{"sha256":""}` 空串原文 ⇒ **空串那一条不入账**，只落本条可由 install.sh 一手证实的"有声明无实现"形态。
 - **与既有能力分工**：r487/r485C「缺签名文件时回退保留旧版」管**签名文件缺失时的处置**；本条管**签名/摘要字段存在但没被真正使用**。
 - 提升层：可复用 Skill（安全校验）/ 工具（安装链路审查）。触发词：sha256 字段存在但未比对、声明与实现一致性核对、latest.tar.gz 无校验、安装脚本直拉远端包执行、三种校验失效形态、空串不入账。
+
+
+## r490C · 自报风险分级是「闭域单选」：没选与多选必须落成机检失败态，不能当缺失字段宽容处理（来源：docs.dify.ai/llms-full.txt 2,695,981B，2026-10-10 r490C 一手 curl 实拉逐串命中 `Select exactly one of **Low risk**, **Medium risk**, or **High risk**. The repository applies a matching \`risk:*\` label. Selecting none or multiple levels produces \`risk: missing\` and a bot comment.`）
+- **判据**：① **分级是「恰好一个」的闭域约束，不是可选字段** ⇒ 安全分级一旦设成可选项，就等价于允许无分级发布。② **「没选」与「多选」落到同一个失败标签 `risk: missing`** ⇒ 失败态不区分方向，排障时必须回查原始选择而不是只看结果标签。③ **判据由外部机检闭环**：作者自报不能自证，须有独立的机器人/校验器回写结论 ⇒ 自报分级只有配上机检才有意义。④ **与既有「风险档位由可能性 × 影响决定」互补**：那条管**怎么定级**，本条管**定级这个动作本身的合规形态**（必须选、只能选一个、没选即失败）。
+- **与既有能力分工**：r405「风险档位算术与判定者分离」管定级方法；本条管分级的存在性与唯一性校验。
+- 提升层：可复用 Skill（安全审查清单）/ 工作流（发布门禁）。触发词：风险分级闭域单选、Selecting none or multiple、risk: missing、自报分级机检闭环、分级是必填不是可选。

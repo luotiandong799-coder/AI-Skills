@@ -2634,3 +2634,21 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 提升层：可复用 Skill。触发词：单轮评测低估、42.5% 首轮失败后成功、轮次口径、首轮 vs 最终、轨迹级标注、攻击轨迹库。
 
 > 正文预算管理：「路由器/选择器本身是一等被测对象：指标一经发布即锁定，且报告必须带可复跑的调用预算与双跑」（全文已零删减下沉 references/knowledge-base.md §下沉·路由器/选择器本身是一等被测对象：指标一经发布即锁定，且报告必须带可复跑的调用预算与双跑）
+
+
+### 下沉·wb-artifact-verification·没有分数与零分是两件事通过多智能体取最大全维度合取增益不得越过闸门来源apigi
+## 「没有分数」与「零分」是两件事；通过=多智能体取最大 × 全维度合取，增益不得越过闸门（来源：api.github.com/repos/NVIDIA/SkillEvaluator/contents/docs/reports.mdx 20,014B（evaluator 0.8.2），2026-10-01 r348C 独立 curl 实拉取 base64 解码，`INCOMPLETE`×5 / `NEUTRAL`×6 / `Skill Lift`×5 / `pass-threshold` 逐串命中）
+- 判据：① **报表里「缺一个分数格」与「0.0」必须视觉与语义都可分**：原文区分「failed/incomplete trial publishes none of its scores」与「a genuine model score of `0.0` is still a valid, published score」。⇒ 把基础设施故障产生的缺失读成「能力为零」，是评测面最典型的一次误判；**缺失必须单独成档**。② **证据不足要有独立 verdict**：`INCOMPLETE`（必需扫描器没给出可信证据）与 `NEUTRAL`（证据完整但至少一个必需维度低于通过带）都不是通过。⇒ 验收表如果没有「无证据」这一格，缺省行为就是把失败合并进通过。③ **通过判据是 max-over-agents × all-dimensions**（每个配置维度都过、且至少对某个受支持 agent 成立），不是平均、也不是加权综合分；提升幅度（Skill Lift）只是诊断证据，**本身不能推翻闸门**。⇒ 用「平均提升了多少」叙述通过与否，等于用诊断量替换判据。
+- 提升层：可复用 Skill。触发词：缺失不等于零分、INCOMPLETE 独立 verdict、NEUTRAL 不通过、max-over-agents、全维度合取、Skill Lift 不推翻闸门。
+
+> 本节原文已零删减下沉 `references/knowledge-base.md §r442C 下沉：任务成功不是安全信号；技能自带的非文本资产是扫描器看不到的指令载体（来源：arXiv 2609.35912 MMSkillRisk 44,757B，2026-10-01 r348C 独立 curl 实拉，`43.1%` / `16.4 percentage points` / `36.5%` / `72.2%` 逐串命中）`（正文预算 ≤500 行）
+
+> 正文预算管理：「外部判定器按「块」返回时，结论的作用域是块不是制品：分段粒度是设计参数，不是实现细节」（全文已零删减下沉 references/knowledge-base.md §下沉·外部判定器按「块」返回时，结论的作用域是块不是制品：分段粒度是设计参数，不是实现细节）
+
+
+### 下沉·wb-artifact-verification·引用清单要带机器可判的新鲜度字段有staleAfter就照它判没有就退回gene
+## 引用清单要带机器可判的新鲜度字段：有 staleAfter 就照它判，没有就退回 generatedAt 距今天数（来源：api.github.com/repos/anthropics/skills/contents/skills/academy-guide/SKILL.md 7,715B base64 解码，2026-10-01 r349B 独立 curl 实拉，`staleAfter` / `generatedAt` 逐串命中；经 Qoder r367-Q-B 提名）
+- 原文：URL「taken verbatim from the catalog」（数据源 `catalog.json`）；「`staleAfter` 未到即信任；无该字段时 `generatedAt` 距今 **about 30 天**视为 stale」。
+- 判据：① **新鲜度要落成字段而不是靠人判断**：给了 `staleAfter` 就用它，没给就用 `generatedAt` + 默认窗口——**两级兜底**使得「这条推荐还新不新」成为可机检命题，而不是读者凭印象。② **失效时的默认动作是「不推」**：推荐位失效宁可静默不推，也不要把过期清单降级成「仅供参考」继续用。③ 与既有「证据先过期的第三时钟（引用可复核性）」分工：那条判**能不能复核**，本条判**机器怎么判新鲜**。
+- 提升层：可复用 Skill。触发词：staleAfter、generatedAt、引用新鲜度字段、30 天窗口、失效即不推、catalog 引用清单。
+

@@ -3395,3 +3395,18 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 ## 发布即冻结运行环境 + 升级静默丢失禁令（来源 Qoder r263-A 审计落地，Dify 1.17 Home Snapshot / LangFlow PR14926·PR14913，2026-09-26 实拉）
 - **发布即冻结运行环境**：技能"发布"除冻结文本版本外，须声明其运行环境前置（依赖/文件状态清单）；运行异常先比对环境清单而非重读正文——"升级后为什么坏了"常是环境飘移不是正文错。提升层：可复用 Skill。
 - **升级静默丢失禁令**：契约变更（改名、字段可见性、依赖边）迁移时——①判定逻辑收敛为单一共享函数供多路径复用（两路径各写一份必漂移）；②任何被丢弃的连接/字段必须登记为 brokenEdges 类告警显式报出，禁止"更新成功但拓扑悄悄变了"。提升层：可复用 Skill。
+
+
+### 下沉·wb-skill-authoring·按需阅读渐进披露不要常驻加载
+## 按需阅读（渐进披露，不要常驻加载）
+
+本正文只保留写法与评测决策级核心。方法论来源、判据推导、反模式、特殊场景全部在
+[references/knowledge-base.md](references/knowledge-base.md)（完整知识库，下沉于 2026-09-26）。
+**先 Grep 定位关键词，再读对应节**。主题速查：内容从哪来（真实专长）· 调指令是缓解不是修复 · 控制度按脆弱性 · 四个高价值实操模式 · RubricForge 评分标准 · 上线后度量 · 双集 train/validation · 引擎与规格解耦 · 改版钉到最低分项。
+
+
+### 下沉·wb-skill-authoring·声明式白名单只约束工具调用面不约束数据面判据按被约束的是哪类调用而非有没有该字段
+## 声明式白名单只约束"工具调用面"，不约束"数据面"：判据按"被约束的是哪类调用"而非"有没有该字段"（来源：learn.microsoft.com/en-us/agent-framework/agents/skills、docs.github.com/.../add-skills、geminicli.com/docs/cli/skills、code.visualstudio.com/.../agent-skills、cursor.com/docs/context/rules，2026-10-01 r362-Q-C 实拉；与 r361-Q-B B1 跨客户端效力漂移 相邻）
+- 判据：① 技能工具的白名单/审批只约束 `load_skill`/`run script` 这类**工具入口**（可自动批准），而文件读取、包安装等旁路属**另一面**（数据面/运行期副作用面）。② MS Agent Framework 原文 "support may vary between implementations"；Copilot 的例外标志是"排除者强制手动同意"（准入例外≠能力授予）；Gemini CLI / VS Code / Cursor 干脆无该字段。⇒ 白名单声明必须核"被约束的是哪一类调用"，而非"有没有这个字段"。
+- 提升层：可复用 Skill + 工具。触发词：白名单只管工具调用面、数据面旁路、support may vary、准入例外≠能力授予。
+
