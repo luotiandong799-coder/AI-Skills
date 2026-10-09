@@ -1101,3 +1101,18 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - **原文**：「Cancellation is not rollback: a compaction that already completed remains in the transcript and is still counted, without sending a late reply.」「The built-in OpenClaw runtime does not start further recovery hooks, maintenance, transcript truncation, or retries after cancellation.」「OpenClaw commits that compaction without a summary instead of ending the turn … A timed-out summary does not move to the model fallback chain, because each extra model could add another full timeout window to the wait.」「Such a replacement must strictly reduce history; unchanged or larger results are rejected.」「Cleanup has a ten-second allowance, separate from the operation deadline.」「A denied group signal can be accepted only when that census proves there are no live members; live or unknown state still fails closed.」「Only ordinary Git failure or `FetchTimeout` permits retry after verified cleanup.」「After a failed or terminated fetch and verified process-tree extinction, the owner removes newly created locks in physical Git metadata; pre-existing locks and linked metadata remain untouched.」「Once cleanup succeeds, cancellation takes precedence over timeout or ordinary Git failure.」
 - **判据**：① **取消只保证"不再向前"，不保证"回到之前"**：已完成的副作用（已写入的压缩条目）留在转录里并参与计数，只是不补发迟到的回复；取消后不再启动任何后续 recovery / 维护 / 截断 / 重试 ⇒ 把取消当回滚，会在"看起来干净"的现场上继续跑，而实际已经留下了一半的变更。② **超时降级不得串联更多超时**：摘要超时就提交一个"无摘要"的压缩让回合继续，刻意**不**转模型 fallback 链——每多一个候选模型就多一个完整超时窗口 ⇒ 用"换一个更慢的东西再试一次"来救超时，本质是把 N 倍等待塞给用户；降级路径必须显式声明它不再引入新的等待源。③ **优化类操作要有单调性校验**：压缩结果必须严格小于原历史，等于或更大则拒绝 ⇒ 没有单调性校验的"优化"可能只是复制甚至放大，而且不会报错。④ **失败类别决定重试资格，不是所有失败都该重试**：只有「普通失败 / 取数超时」在**进程树抽干经验证之后**才放行重试，取消与所有权失败是终态 ⇒ 不分类的重试会把终态失败也拖进重试风暴，还会掩盖真正的终态原因。⑤ **清理预算与操作预算必须分离**：清理有独立的固定额度（10 秒），不吃操作 deadline ⇒ 共用一份预算时，要么收尾没时间做完留下脏状态，要么主操作被清理挤掉。⑥ **"发了终止信号"不等于"它停了"**：信号被拒时须做进程普查证明无存活成员才接受，live 或 unknown 一律 fail closed ⇒ 这是清理假象的头号来源；同理"等 leader 退出"不够，要观察整个进程组消失。⑦ **清理只动自己新建的东西**：锁回收只移除本次新创建的锁，既有锁与链接元数据保持不动 ⇒ 清理必须区分所有权，否则会顺手破坏别人的状态。⑧ **取消优先于超时与普通失败**：清理成功后若同时存在取消，归类为取消 ⇒ 终态归类要有优先级，否则同一现场会被记成三种不同的失败。
 - 提升层：工作流 / 诊断 / 可复用 Skill。触发词：取消不是回滚、超时降级不串联超时、单调性校验、失败类别决定重试资格、清理预算独立、进程普查 fail closed、只清理自己新建的、取消优先于超时。
+
+## 二、六步循环（原文已下沉 references/knowledge-base.md §六步循环下沉，2026-10-03 r408A）
+
+## 二·五、修复验证：补丁是待验证假设（细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·二五修复验证补丁是待验证假设细则已下沉KB）
+
+## 二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节（细则已下沉 KB）
+- 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节。
+
+## 复现不了就先把发生率抬高：1% 追不到，50% 就能二分（来源：topaiskills.com「diagnosing-bugs-skill-faq」（Matt Pocock `diagnosing-bugs`，mattpocock/skills 工程族）2026-09-21 实拉，与 §六步循环「没有稳定复现之前不改产品代码」互补——那条管"没有复现不许动手"，本条管"**复现率低到不可用时该往哪个方向使劲**"）；原文已下沉 references/knowledge-base.md §复现率低时的发力方向下沉，2026-10-03 r408C
+
+## 探针要能一次撤干净，seam 太浅本身就是结论（同来源 `diagnosing-bugs` 技能正文，与 §诊断装置自身的可信度、§接线腐烂 互补——那两条管"检查器有没有遭遇"与"装了为什不生效"，本条管"**临时探针的回收**"与"**回归测试挂点选错时该怎么报告**"）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·探针要能一次撤干净seam太浅本身就是结论同来源di）
+
+## 等待/轮询/卡住运行处置（来源：OpenClaw `ci/watching-runs.md`，2026-09-30 实拉）；原文已下沉 references/knowledge-base.md §等待轮询下沉，2026-10-04 r411A
+
+## Harness 自改进与 trace 复用簇（细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·Harness自改进与trace复用簇细则已下沉KB）

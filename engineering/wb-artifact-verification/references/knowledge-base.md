@@ -2590,3 +2590,17 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **原文**：「It never stores prompts, message bodies, tool arguments, tool results...」「Coverage is `enforced` only when every contributing ingress decision was participant-aware and outcome-affecting. Wildcard/open policy ... remain `attribution-only`; mixed or missing evidence is `unknown`.」「Persistence remains best-effort. Queue saturation, storage failure, shutdown timeout, and process crashes can lose evidence; they log only a bounded operational warning and never abort the run.」
 - **判据**：① **留痕必须自带覆盖等级，不能只看有没有**——`enforced`（该判定真实改变结果）/ `attribution-only`（只记录谁观察到，不证明授权）/ `unknown`（证据缺失或混杂，不重建）/ `unsupported`（该通道根本不产生此类证据）四态是互斥的验收结论；把 attribution-only 当 enforced 是验收里最常见的高估。② **留痕通道本身允许丢**：队列饱和、存储故障、关机超时、进程崩溃都会丢证据且只打一条有界警告、**不中止运行**；所以「日志里没有」既可能是「没发生」也可能是「发生了但没记下来」，验收报告必须显式声明丢失面，不能默认留痕完备。③ **只留结构不留内容是设计选择而非缺陷**——元数据账本永不存正文/参数/结果/文件名/URL/命令输出，验收「看到一条记录」不等于拿到可复现内容。
 - 提升层：可复用 Skill / 工作流。触发词：coverage 四态、attribution-only、enforced、unknown、unsupported、留痕丢失面、有日志不等于完整、元数据账本。
+
+## 流行度与展示序都不是质量/留存的判据：简单特征（体积、下载量）对「是否持续在架」无稳定预测力，注意力高度集中且权限声明普遍；目录展示序可能是随机洗牌，文档撤除本身是可机检的治理信号（来源：arXiv 2609.17274《After the Party v2》42,842B + agentskills.io/clients.md 25,457B + docs.n8n.io/llms.txt 286,271B，2026-09-30 r324C 独立实拉；与 §目录数字失真四形态 互补——那几条管“数字怎么失真”，本条管“该换用什么指标”；细则见 references/knowledge-base.md §r324C）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·流行度与展示序都不是质量留存的判据简单特征体积下载量）
+
+## 扫描预算耗尽只允许「降档验证」，不允许判为通过；应用层不隔离要作正面申报，不能让集成方靠缺位反证推断（来源：docs.openclaw.ai/cli/update/how-updates-run.md 84,130B + docs.langflow.org/next/security 34,323B，2026-09-30 r325A 独立 curl 实拉逐串命中；经 Qoder r357-Q-A 提名）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·扫描预算耗尽只允许降档验证不允许判为通过应用层不隔离）
+
+## 存在「权限无关的永不可见类」；特权查看须一次性按单次记录，且被拒尝试同留痕（来源：docs.n8n.io/.../redact-execution-data.md 17,934B，2026-09-30 r338C 独立实拉）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·存在权限无关的永不可见类特权查看须一次性按单次记录且）
+
+## 「能自动仲裁」被当成「没有冲突」：冲突检测器的能力边界必须逐类声明，未覆盖的那类会被静默覆盖（来源：docs.n8n.io `/administer/use-source-control-and-environments/push-and-pull-changes.md` 12,333B，2026-10-01 r339B 独立 curl 实拉逐串命中）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·能自动仲裁被当成没有冲突冲突检测器的能力边界必须逐类）
+
+## 资格判定三态（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·资格判定三态）
+
+## 降档/资格判定按成因分档，且只有一类会告警：配置意图 / 角色封顶 / 后端能力矩阵缺项（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·降档资格判定按成因分档且只有一类会告警配置意图角色封）
+
+## 投递验收必须双字段分列，且二者可同时矛盾：外发成功 ≠ 回合完成，超时=Unknown 且不重试（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·投递验收必须双字段分列且二者可同时矛盾外发成功回合完）

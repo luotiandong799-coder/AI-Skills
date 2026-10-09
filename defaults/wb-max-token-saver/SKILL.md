@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。
-version: 1.66.0
+version: "1.67.0"
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -159,3 +159,9 @@ version: 1.66.0
 - **检索/注入这类子系统的成本要配「零检索」对照基线**：优化后费用从 $51.30 降到 $27.54 看似省了，但距"零技能控制"基线只差 $0.50 ⇒ 只报"省了多少"会掩盖"离最优还差很远"；每个开销子系统都报「带它 / 不带它」两条线，差额才是该子系统真实净成本。
 - **对照基线要并排呈现，不能只给优化后绝对值**：读账的人需要同时看到"用了子系统的成本"和"完全不用的成本"，才能判断该子系统值不值；单给一个绝对数，省 token 的成效无法被独立核验。
 - 提升层：模型/成本。触发词：子系统净成本、零检索基线、并排对照、优化后绝对值≠净收益。
+
+## 「检索不到」不能当「不存在」：任何索引型信源的否定结论都必须先核覆盖度字段，否则是把截断当成了空集（来源：docs.openclaw.ai/tools/skills.md 48,311B，2026-10-10 一手 curl 逐串命中 `Body indexing reads at most 1,024 skills in name order, four at a time` / `Each body contributes at most 16 KiB` / `keep their total at most 4 MiB` / `coverage` reports `bodyIndexed`, `metadataOnly`, and `truncatedBodies` / `An empty result with partial coverage does not prove that no applicable skill exists`；r486B 落地）
+- **实证**：官方索引有**硬预算**——正文索引至多 **1,024** 个技能（按名字序）、每次并发 4 个、每个正文至多 **16 KiB**、总量压到 **4 MiB** 以内；名字与描述权重是正文的 2×；`coverage` 字段显式枚举 `bodyIndexed` / `metadataOnly` / `truncatedBodies`；官方警告原句「**An empty result with partial coverage does not prove that no applicable skill exists.**」，并说明索引限制不截断 `skills_read`（>256 KiB 的指令是拒绝而非截断）。
+- **判据**：① **空结果有两种成因，必须先看 coverage 再下结论**："确实没有"与"有但没被索引/被截断"在返回面上同形 ⇒ 报"库里没有相关技能"之前必须先读覆盖度，否则等于把索引预算不足误报成能力缺失。② **索引预算是本库自身的规模税**：1,024 个 / 4 MiB 意味着技能库增长到一定规模后**超出部分天然不可检索** ⇒ 库规模不只是 token 成本问题，它直接决定可发现性；超限时要有"哪些技能没进索引"的可见面，而不是静默。③ **截断（truncated）与未索引（metadataOnly）要分开报**：前者是"看到了一半"，后者是"只知道名字" ⇒ 两者对结论的削弱程度不同，合并成一个"可能不全"等于放弃诊断。④ **拒绝优于静默截断**：`skills_read` 对过大指令是**拒绝**而非截断 ⇒ 取不到就说取不到，比返回半份内容让下游误判安全得多；本库落地：任何预算受限的读取，超限即显式失败并说明上限值。⑤ **"权重 2×"说明检索面本身是可调的**：名字/描述权重高于正文 ⇒ 想让超预算的技能仍可被找到，正确做法是提高名字与描述的可判别性，而不是加长正文。
+- **与既有能力分工**：§r485B「目录计数是时变量须带取数日期」管**计数口径**；本条管**否定结论的成立条件**——那条防"拿两个总体比"，本条防"拿截断当空集"。
+- 提升层：工具（检索与索引预算）/ 可复用 Skill（结论成立条件）。触发词：1,024 skills、16 KiB、4 MiB、partial coverage、empty result does not prove、coverage bodyIndexed metadataOnly truncatedBodies、截断不等于空集、索引规模税、超限显式拒绝。

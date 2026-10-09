@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.89.0"
+version: "1.90.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -399,3 +399,9 @@ sources:
 - **★外部 CI 状态要按三重身份核验，只验"状态存在"会被伪造**：`require-nvskills-status.yml` 要求状态上下文（`NVSkills CI`）+ 提交标题（`Attach NVSkills validation signatures`）+ 推送者（`nv-skills-ci[bot]` 或服务账号 `svc-nvskills-signing`）**同时匹配**，轮询 30s / 缺状态宽限 120s / 上限 14400s。判据：**"有一个绿勾"不构成证据**——提交者可自造同名状态上下文；必须同时核「谁推的 + 标题是什么 + 上下文叫什么」，三者缺一即按未达计。
 - **与既有能力分工**：§「verified 是带再验证时钟的状态」（r437B）管**认证态如何保鲜与凭证形态**；本条管**当证据缺失、名单来源、外部状态三者各自出问题时的处置动作**——回退/只读/三重核验，属发布流水线的执行侧，互补不重复。
 - 提升层：工作流 / 可复用 Skill。触发词：缺签回退保留旧版、未签更新挂起、allowlist 从 BASE 读、PR 不能自我加白、邮箱×PR号、外部状态三重身份、状态存在不等于有效、同步链挂起。
+
+## 弃用治理的真正落点是「写入路径」：已标 deprecated 的件必须在新建/修改引用它时被拒，而不是留给运行期告警（来源：api.github.com search/issues?q=repo:n8n-io/n8n 40707，2026-10-10 一手 JSON 逐串命中 PR #40707 `feat(core): Block create/update of workflows with deprecated nodes (backport to release-candidate/2.42.x)`（state=closed，同批 Release 2.42.6 `:rocket: Release 2.42.6`）；r486A 落地）
+- **实证**：n8n 2.42.6 起把弃用件的处置从"运行时提示"前移到**保存动作**——PR 标题直述 "Block **create/update** of workflows with deprecated nodes"。即新建或改动一个引用了弃用节点的编排，在**写入时**即被拒，而不是等它跑到一半才降级或告警。
+- **判据**：① **弃用有两个可拦截点，价值差很大**：运行时告警的对象是"已经在生产里跑的东西"，改它要停机；写入时拦截的对象是"还没进生产的新引用"，拦下的成本为零 ⇒ 只做运行期告警等于把治理成本全推给存量，新债务照旧产生。② **"改"与"新建"要一起拦**：PR 标题同时含 create 与 update ⇒ 只拦新建不拦修改，使用者会把旧编排改一改继续用弃用件，弃用期被无限续命。③ **与"声明期行为不变"是同一条链的两段**：r443B 讲声明废弃的那一版要保持 `No behavior or enum values change yet`；本条讲声明之后的**新增引用**必须被切断 ⇒ 先给存量留窗口、同时给增量设闸，两者同时做才是完整弃用治理，只做前者等于"只通知不禁新增"。④ **拦截点要能被机检到**：既然判定发生在保存动作上，就必须能在 authoring 校验器里复现同一判据 ⇒ 本库落地：标 deprecated 的技能/字段应被入库校验在新引用处拒绝，而不是靠评审者记住一份弃用清单。⑤ **失败信息要指向替代项**：拦截不是终点，被拒时必须同时给出替代路径，否则使用者会去找"最接近的次宽值"，风险只是换了个位置。
+- **与既有能力分工**：r443B「废弃枚举值两段式」管**声明到移除的时间窗**；r441B「批量退役三闸」管**存量怎么删**；本条管**增量怎么写不进来**——时间窗 / 存量 / 增量三段互补。
+- 提升层：工作流（弃用治理）/ 可复用 Skill（入库校验）。触发词：Block create/update of workflows with deprecated nodes、写入即拒、弃用件保存时拦截、弃用前移到写入路径、拦截增量而非告警存量、PR 40707。

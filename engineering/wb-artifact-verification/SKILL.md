@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合
-version: "2.170.0"
+version: "2.172.0"
 agent_created: true
 ---
 
@@ -32,20 +32,6 @@ agent_created: true
 
 <!-- 2026-09-29 r290 下沉：生成侧直连端点/完整性三查/验证通道禁副作用 3 节 → references/knowledge-base.md §早期批 -->
 <!-- 2026-10-03 r396A 下沉：失败路径必须被真的跑过 全节（约 206 行）→ references/knowledge-base.md §早期批（失败路径/三界面同一内核/便利入口改值/退出码三分类/结果类别自陈不证明什么） -->
-## 流行度与展示序都不是质量/留存的判据：简单特征（体积、下载量）对「是否持续在架」无稳定预测力，注意力高度集中且权限声明普遍；目录展示序可能是随机洗牌，文档撤除本身是可机检的治理信号（来源：arXiv 2609.17274《After the Party v2》42,842B + agentskills.io/clients.md 25,457B + docs.n8n.io/llms.txt 286,271B，2026-09-30 r324C 独立实拉；与 §目录数字失真四形态 互补——那几条管“数字怎么失真”，本条管“该换用什么指标”；细则见 references/knowledge-base.md §r324C）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·流行度与展示序都不是质量留存的判据简单特征体积下载量）
-
-## 扫描预算耗尽只允许「降档验证」，不允许判为通过；应用层不隔离要作正面申报，不能让集成方靠缺位反证推断（来源：docs.openclaw.ai/cli/update/how-updates-run.md 84,130B + docs.langflow.org/next/security 34,323B，2026-09-30 r325A 独立 curl 实拉逐串命中；经 Qoder r357-Q-A 提名）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·扫描预算耗尽只允许降档验证不允许判为通过应用层不隔离）
-
-## 存在「权限无关的永不可见类」；特权查看须一次性按单次记录，且被拒尝试同留痕（来源：docs.n8n.io/.../redact-execution-data.md 17,934B，2026-09-30 r338C 独立实拉）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·存在权限无关的永不可见类特权查看须一次性按单次记录且）
-
-## 「能自动仲裁」被当成「没有冲突」：冲突检测器的能力边界必须逐类声明，未覆盖的那类会被静默覆盖（来源：docs.n8n.io `/administer/use-source-control-and-environments/push-and-pull-changes.md` 12,333B，2026-10-01 r339B 独立 curl 实拉逐串命中）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·能自动仲裁被当成没有冲突冲突检测器的能力边界必须逐类）
-
-## 资格判定三态（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·资格判定三态）
-
-## 降档/资格判定按成因分档，且只有一类会告警：配置意图 / 角色封顶 / 后端能力矩阵缺项（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·降档资格判定按成因分档且只有一类会告警配置意图角色封）
-
-## 投递验收必须双字段分列，且二者可同时矛盾：外发成功 ≠ 回合完成，超时=Unknown 且不重试（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·投递验收必须双字段分列且二者可同时矛盾外发成功回合完）
-
 ## "verified" 必须携带可定位的证据指针且由校验器机械强制：空指针行直接拒（来源：github.com/dshworks/awesome-dsh-plugins `data/plugins.json` + `scripts/validate.mjs`、skills.sh/、arXiv 2609.14079，2026-10-01 r362-Q-C 实拉）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·verified必须携带可定位的证据指针且由校验器机）
 
 ## "索引层无数值" 是可交付结论，不是抓取失败：Flowise/LangFlow 索引层零字段须逐页且如实记"不可判"（来源：docs.flowiseai.com/llms.txt、docs.langflow.org/llms.txt、docs.dify.ai/.../knowledge-request-rate-limit、list-workflow-logs，2026-10-01 r362-Q-C 实拉；承接 r326 失效四形态）（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r439·索引层无数值是可交付结论不是抓取失败FlowiseL）
@@ -498,3 +484,17 @@ agent_created: true
 - **★目录计数是时变量，必须带取数日期**：本轮实测 `skill_count 405 / result_row_count 3795`，而 Qoder r483-Q-C 于 2026-10-09 记为 `401 / 3755`。判据：**同一上游一天内净增 4 个技能、40 行结果**，用目录规模做基线或做趋势时须写「取数日期 + 上游版本」，跨日引用等于拿两个不同的总体做比较。
 - **与既有能力分工**：§「增益不得越过闸门」（r348C，来自 reports.mdx）管**通过判据的形状**（max-over-agents × 全维度合取、lift 只作诊断）；本条管**这些判据的数值从哪来、数字要带哪些上下文才可复现**——两者互补，不重复立点（`does not override this gate` 源码串本轮新增，仅作 r348C 的一手补证）。
 - 提升层：工作流 / 可复用 Skill。触发词：可复现四元组、dataset_digest、evaluator_version、attempts_per_task、单次尝试无方差、skills_without_results、覆盖率缺口机读、阈值常量化、目录计数取数日期。
+
+## 入口守卫的失败方向必须写明，且「拦下」可以是不留痕的：不匹配回什么码、表达式本身报错时放行还是拦、这次判定留不留痕，三问缺一就查不到自己被拦过（来源：docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook.md 12,270B，2026-10-10 一手 curl 逐串命中 `Requests that don't match receive a 200 response without creating an execution` / `If the expression fails to evaluate, n8n logs a warning and lets the request through rather than blocking it`；r486C 落地）
+- **实证**：n8n Webhook 的 `Only Run If` 过滤门原文两条——①「Requests that don't match receive a **200 response without creating an execution**」；②「**If the expression fails to evaluate, n8n logs a warning and lets the request through rather than blocking it**」；且该门位于 IP allowlist 与鉴权**之后**。
+- **判据**：① **"不匹配返回什么码"必须显式声明**：本例回 200 且不建执行 ⇒ 调用方看到 200 会认为处理成功，实际什么都没发生；守卫的契约里"不匹配时回什么"比"匹配时做什么"更容易被漏写，而前者才是排障入口。② **守卫自身出错时的默认方向要挑明并挑对**：表达式求值失败时**放行**并只写一条 warning ⇒ 这是"安全侧 vs 可用侧"的显式取舍（fail-open）；挑它必须有理由，且必须留 warning，否则守卫失效与守卫通过不可区分。③ **不留痕的拦截比报错更难查**：不建执行意味着排障时表现为"请求根本没来过" ⇒ 任何"没触发"类问题，排查顺序应是 守卫是否拦下 → 是否到达 → 是否被处理，不能从第三段开始。④ **守卫位置决定它保护什么**：该门在鉴权之后 ⇒ 它不防未授权访问，只做条件分流；把一个后置于鉴权的门当成安全边界写进文档，等于声明了一个不存在的防线。⑤ **"只写 warning"要能被检索到**：fail-open 的可观测性全靠那一条日志 ⇒ 启用 fail-open 守卫时必须同时确认日志会被采集，否则失败模式是"既不拦也不记"。
+- **与既有能力分工**：r485C「装错目录静默失效」管**产物落错位置被无视**；本条管**请求在入口被静默丢弃**——一个是出口面，一个是入口面。
+- 提升层：工具（入口守卫契约）/ 工作流（可观测性）。触发词：200 response without creating an execution、lets the request through rather than blocking it、守卫失败方向、fail-open 守卫、只写 warning、不留痕拦截、守卫在鉴权之后、不匹配回什么码。
+
+## 「阳性率最高」的扫描器在「确证恶意」上可能最低：覆盖率/准确率必须带分母口径，且 advisory-only 的信号不能反过来当准入证据（来源：openclaw.ai/blog/openclaw-nvidia-skill-security 45,746B，2026-10-10 一手 curl 逐串命中 `48.71` / `72.8` / `6.8` / `advis`；r486C 落地）
+- **实证**：67,453 个最新公开技能版本上——SkillSpector 阳性 **48.71%**（32,856）、VirusTotal **7.75%**（5,225）、静态 **6.57%**（4,434）；三家两两 Jaccard 仅 0.065–0.104，三家全中只有 468 条（0.69%），**81.9% 的阳性只来自单一扫描器**；关键反转出现在 **206 条真恶意**子集里：VirusTotal 命中 150（**72.8%**）而 SkillSpector 只命中 14（**6.8%**）；治理口径原句「SkillSpector findings are shown as **advisories; they do not automatically block a skill**」。
+- **判据**：① **同一个"准确率"在不同分母下结论完全相反**：48.71% 是全量 67,453 上的阳性率，6.8% 是真恶意 206 上的命中率——**高阳性率的通用扫描器在确证恶意上反而最低** ⇒ 任何扫描器评估必须同时给"在谁上面"的三档分母（全量 / 可疑子集 / 确证恶意），只给一个数等于选了一个立场。② **多扫描器结论不一致时默认升人工审，不投票**：81.9% 的阳性只来自单一扫描器、两两 Jaccard 不足 0.11 ⇒ 三家几乎不看同一批东西，多数表决会把"只有一家看到"的真信号投掉；不一致本身就是最强的升级信号。③ **"不阻断只建议"的扫描器不能反过来当准入证据**：advisory 定位意味着它追求召回而非精确 ⇒ 用它做硬阻断会拦掉近一半技能（48.71%）；反过来说，它给出"未报"也不能当作"已通过安全审查"。④ **报告要并列"宽松信号的量"与"严格信号的量"**：把 32,856 与 206 并排写，读者才会问"二者什么关系" ⇒ 只报阳性数会让人误以为风险规模就是这个数。⑤ **跨扫描器引用结论须重新对齐口径**：不同厂商的"阳性"定义不同 ⇒ 引用第二家数字时不能沿用第一家的解释句。
+- **与既有能力分工**：r441A「标记率 ≠ 风险规模、报告固定双列（标记数/复核后可疑数）」管**同一扫描器内的两级口径**；r443C「采信评测前三查（判定口径/排名可用性/口径切换敏感度）」管**采信流程**；本条管**多扫描器并列时的分母反转与 advisory 信号的证据等级**。
+- 提升层：工具（扫描评估口径）/ 可复用 Skill（证据分级）。触发词：48.71% 阳性、206 条真恶意、72.8% vs 6.8%、Jaccard 0.065、81.9% 单一扫描器、advisories do not automatically block、分母口径反转、advisory-only 不作准入证据。
+
+> 正文预算管理：「流行度与展示序都不是质量/留存的判据：简单特征（体积、下载量）对「是否持续在架」无稳定预测力，注意力高度集中且权限声明普」、「扫描预算耗尽只允许「降档验证」，不允许判为通过；应用层不隔离要作正面申报，不能让集成方靠缺位反证推断（来源：docs.o」、「存在「权限无关的永不可见类」；特权查看须一次性按单次记录，且被拒尝试同留痕（来源：docs.n8n.io/.../red」、「「能自动仲裁」被当成「没有冲突」：冲突检测器的能力边界必须逐类声明，未覆盖的那类会被静默覆盖（来源：docs.n8n.i」、「资格判定三态（全文见 references/knowledge-base.md §下沉·wb-artifact-veri」、「降档/资格判定按成因分档，且只有一类会告警：配置意图 / 角色封顶 / 后端能力矩阵缺项（全文见 references/」、「投递验收必须双字段分列，且二者可同时矛盾：外发成功 ≠ 回合完成，超时=Unknown 且不重试（全文见 referen」 等 7 节原文已零删减下沉本技能 `references/knowledge-base.md`，正文只留指针。

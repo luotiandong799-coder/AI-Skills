@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.161.0"
+version: "1.163.0"
 agent_created: true
 ---
 
@@ -11,18 +11,6 @@ agent_created: true
 来源：mattpocock/skills 的 `diagnose` 技能（重现 → 最小化 → 假设 → 工具 → 修复 → 回归测试）+ 通用调试纪律。提纯为本地循环。
 
 **核心判断：改不动的 bug，几乎都是"还没复现就先改了"。** 定位是证据工作，不是灵感工作。
-
-## 二、六步循环（原文已下沉 references/knowledge-base.md §六步循环下沉，2026-10-03 r408A）
-## 二·五、修复验证：补丁是待验证假设（细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·二五修复验证补丁是待验证假设细则已下沉KB）
-
-## 二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节（细则已下沉 KB）
-- 完整论证见 [references/knowledge-base.md](references/knowledge-base.md) §二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节。
-## 复现不了就先把发生率抬高：1% 追不到，50% 就能二分（来源：topaiskills.com「diagnosing-bugs-skill-faq」（Matt Pocock `diagnosing-bugs`，mattpocock/skills 工程族）2026-09-21 实拉，与 §六步循环「没有稳定复现之前不改产品代码」互补——那条管"没有复现不许动手"，本条管"**复现率低到不可用时该往哪个方向使劲**"）；原文已下沉 references/knowledge-base.md §复现率低时的发力方向下沉，2026-10-03 r408C
-## 探针要能一次撤干净，seam 太浅本身就是结论（同来源 `diagnosing-bugs` 技能正文，与 §诊断装置自身的可信度、§接线腐烂 互补——那两条管"检查器有没有遭遇"与"装了为什不生效"，本条管"**临时探针的回收**"与"**回归测试挂点选错时该怎么报告**"）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·探针要能一次撤干净seam太浅本身就是结论同来源di）
-
-## 等待/轮询/卡住运行处置（来源：OpenClaw `ci/watching-runs.md`，2026-09-30 实拉）；原文已下沉 references/knowledge-base.md §等待轮询下沉，2026-10-04 r411A
-
-## Harness 自改进与 trace 复用簇（细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·Harness自改进与trace复用簇细则已下沉KB）
 
 ## 数据钉定（input pinning）与局部执行（partial execution）：钉输入 + 只跑待测节点 = 最小可复现调试闭包（来源：docs.n8n.io types-of-executions 6,643B，2026-09-30 r327B 独立实拉）；原文已下沉 references/knowledge-base.md §数据钉定与局部执行下沉，2026-10-04 r409A（全文见 references/knowledge-base.md §下沉·wb-debug-loop·r439·数据钉定inputpinning与局部执行parti）
 
@@ -496,3 +484,17 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - 提升层：工具（MCP 身份隔离）/ 工作流（连接预算）。触发词：oauth.identity shared per-requester、默认共享即泄漏、列工具 10s 短预算、256 runtime 硬上限、sessionIdleTtlMs、跨请求者身份复用。
 
 > r443 正文预算管理：「「fallback」有两种相反语义（解析期候选链 vs 运行期故障转移）；废弃兼容字段必须明说「不再改变运行时行为」；默」整节原文已零删减下沉本技能 `references/knowledge-base.md`，正文只留指针。
+
+## 观测/重试/保留窗口的长度必须显式大于被观测对象的寿命：问一句「这个窗是按谁的生命周期定的？」，大不过对象就等于没有（来源：docs.dify.ai/llms-full.txt 2,690,424B，2026-10-10 一手 curl 逐串命中 `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` `780` / `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`×2 / `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` / `DIFY_AGENT_RUN_RETENTION_SECONDS` / `sized to outlast the one-hour workflow limit plus the export grace period`；r486A 落地）
+- **实证**：① 官方对重试次数的解释不是"给个值"而是"给个依据"——「`OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | How many times a trace delivery is retried after a transient failure before the trace is dropped. **The default retry window (retries × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`) is sized to outlast the one-hour workflow limit plus the export grace period.**」；② 同族三处同形：`OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS`=3900 > 工作流 3600 上限；`DIFY_AGENT_RUN_RETENTION_SECONDS`=7200 = 2 × `DIFY_AGENT_RUN_TIMEOUT_SECONDS`=3600；`SANDBOX_EXPIRED_RECORDS_CLEAN_TASK_LOCK_RETENTION_SECONDS`=90000（25h）> 24h 清理周期。
+- **判据**：① **窗口尺寸的正当性来自它要覆盖的对象的寿命**：官方把 780 次解释成"撑过 1 小时工作流上限 + 导出宽限" ⇒ 排障时见到任何 retry/TTL/retention 数值，先问"它是按谁定的"，答不出对象就说明这个值是抄来的，不是一个判据。② **"重试窗口"的真实单位是时间不是次数**：次数 × 间隔才是窗长，只调次数不改间隔等于没调 ⇒ 报告重试能力必须同时给两个数，或干脆给乘积后的时长。③ **父上下文 TTL 必须大于子对象上限**：3900 > 3600 ⇒ 父子同寿命会在边界上产生"父已过期、子还在跑"的孤儿观测，表现为追踪链尾巴缺失；任何"包住别人的那个"都要留出余量。④ **保留期取超时值的整数倍而不是同值**：retention 2× timeout ⇒ 同值意味着"刚跑完就被清"，排障者永远取不到刚失败那次的现场。⑤ **周期性任务的锁保留期必须大于一个周期**：25h > 24h ⇒ 锁短于周期会出现上一轮未释放、下一轮已开跑的重叠执行，且这类重叠通常不报错只产生重复副作用。
+- **与既有能力分工**：§凭据校验结构化返回管**校验动作返回什么**；§暂停须判成功管**退出码语义**；本条管**时间类参数该按什么定尺**——三者合起来覆盖"返回值/退出码/时长"三类易被随手填的契约字段。
+- 提升层：工作流（时间预算定尺）/ 工具（可观测窗口）。触发词：sized to outlast、重试窗口按对象寿命定尺、retries × delay、TTL 要大于子对象上限、retention 2× timeout、锁保留期大于周期、780 次重试、3900 大于 3600。
+
+## 探活要把「通道失效」与「路径失效」分开记账：403/404/DNS 是三态，且国内站常自带免认证全文变体（`<url>.md` 与 `/.well-known/*`）（来源：www.modelscope.cn/llms.txt 4,267B，2026-10-10 一手 curl 逐串命中 `Source:` / `well-known`×2 / `openapi.json`；辅以 r486-Q-C 浏览器实测 make.com `/en/changelog` 站内 404 而 `/en/whats-new` 正常渲染；r486C 落地）
+- **实证**：① 魔搭 llms.txt 明文给出取数通道——「模型、数据集、创空间、论文的详情页都提供**纯 Markdown 版本，在原地址后加 `.md` 即可获取**」，并给出引用纪律「**引用页面时使用 canonical 地址（`.md` 文件中的 `Source:` 行），不要引用 `.md` 地址本身或带 query 的地址**」；另有免认证增强面「`/.well-known/mcp.json`、`/.well-known/openapi.json` **无需认证即可读取模型元信息，返回字段比页面更全**」。② 同类失效混记的反例：Make 的 `developers.make.com`/WebFetch 出口长期 403（bot 拦截），而真实浏览器访问 `/en/changelog` 返回的是**站内 404（路径已迁移至 `/en/whats-new`）** ⇒ 既往"make.com 持续 403"这一条结论里同时压着 通道不可达 与 路径已变 两种原因。
+- **判据**：① **403 / 404 / DNS 三态必须分列，合并成"未达"会锁死复通路径**：403 = 出口被拒（换 UA/换通道可救）；404 = 路径已变（换路径可救）；DNS = 域名情报本身有误（须先核实真实域，如 agentmore.cn 实为 agentmore.chatglm.cn）⇒ 记成同一个"不可达"，等于同时放弃两类补救。② **"某站不可学"的结论必须说明是哪一层不可学**：通道层不可学不代表内容层不存在 ⇒ 结论要写成"通道 X 不可达"而不是"该站无内容"。③ **取数前先试两个免认证变体**：`<url>.md` 与 `/.well-known/openapi.json`（或 mcp.json）⇒ 后者常常**字段比页面更全且无需鉴权**，是最省成本的一手面；跳过这一步直接判不可达，属于取证顺序错误。④ **引用地址要用 canonical 而不是取数地址**：官方明令引用 `.md` 文件内 `Source:` 行的地址、不要引用 `.md` 本身或带 query 的地址 ⇒ 用取数 URL 当出处会让引用在改版后失效，也让读者无法复核。⑤ **"不要拼接或猜测文件直链"是硬约束**：官方禁止拼直链 ⇒ 通过变体省事与猜 URL 是两件事，前者有文档背书，后者会拿到 200 但内容错（软 404）。
+- **与既有能力分工**：r445B「软 404 识别法（等大小 200 = 壳）」管**拿到了但内容是壳**；本条管**根本没拿到时怎么给原因分类**——二者合起来覆盖"取到了假的"与"没取到"两类取证失败。
+- 提升层：工具（取证通道治理）/ 工作流（信源台账）。触发词：403 与 404 分开记账、DNS 域名情报有误、`<url>.md` 变体、well-known openapi.json 免认证、canonical Source 行引用、不要拼接直链、通道失效 vs 路径失效、make.com whats-new。
+
+> 正文预算管理：「二、六步循环（原文已下沉 references/knowledge-base.md §六步循环下沉，2026-10-03」、「二·五、修复验证：补丁是待验证假设（细则已下沉 KB）（全文见 references/knowledge-base.md」、「二·七、失败永不阻塞主回复：回复路径上每一步都要 等 6 节（细则已下沉 KB）」、「复现不了就先把发生率抬高：1% 追不到，50% 就能二分（来源：topaiskills.com「diagnosing-b」、「探针要能一次撤干净，seam 太浅本身就是结论（同来源 `diagnosing-bugs` 技能正文，与 §诊断装置自身」、「等待/轮询/卡住运行处置（来源：OpenClaw `ci/watching-runs.md`，2026-09-30 实拉」、「Harness 自改进与 trace 复用簇（细则已下沉 KB）（全文见 references/knowledge-ba」 等 7 节原文已零删减下沉本技能 `references/knowledge-base.md`，正文只留指针。
