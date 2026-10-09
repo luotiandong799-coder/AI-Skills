@@ -3410,3 +3410,45 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 判据：① 技能工具的白名单/审批只约束 `load_skill`/`run script` 这类**工具入口**（可自动批准），而文件读取、包安装等旁路属**另一面**（数据面/运行期副作用面）。② MS Agent Framework 原文 "support may vary between implementations"；Copilot 的例外标志是"排除者强制手动同意"（准入例外≠能力授予）；Gemini CLI / VS Code / Cursor 干脆无该字段。⇒ 白名单声明必须核"被约束的是哪一类调用"，而非"有没有这个字段"。
 - 提升层：可复用 Skill + 工具。触发词：白名单只管工具调用面、数据面旁路、support may vary、准入例外≠能力授予。
 
+
+
+### 下沉·触发评测发布前盲测新技能改过description必做细则已下沉KB
+## 触发评测：发布前盲测（新技能 / 改过 description 必做，细则已下沉 KB）
+- 完整盲测流程、对照表与判据见 [references/knowledge-base.md](references/knowledge-base.md) §触发评测：发布前盲测。
+
+
+### 下沉·校验失败的处理半径由错误严重度决定且静默跳过是显式设计不是缺陷整技能拒仅告警跳过未知顶层字段为前
+## 校验失败的处理半径由错误严重度决定，且"静默跳过"是显式设计不是缺陷：整技能拒 / 仅告警跳过 / 未知顶层字段为前向兼容而忽略（来源：learn.microsoft.com/en-us/agent-framework/agents/skills、docs.dify.ai/.../plugin-info-by-manifest、docs.n8n.io/.../n8n-nodes-base.executeworkflow.md，2026-10-01 r362-Q-C 实拉）
+- 判据：① 非法 YAML / 重复键 / 大小写错 ⇒ **整技能拒绝加载**；`metadata` 内错误 ⇒ **仅告警跳过**；**未知顶层字段 ⇒ 为向前兼容而刻意忽略**；MCP 归档 **只接受 ZIP，TAR 类静默跳过**。② 校验器要输出"哪些被拒、哪些被忽略、哪些被静默跳过"三本账，只有一本可以省略。③ 反例：`n8n-nodes-base.executeworkflow` 错误传播全文只有一句"parent workflow can't trigger it"（无 error output / 无上限）——**文档层丢弃半径不可判时，须记为文档缺口而不是能力缺口**。
+- 提升层：可复用 Skill + 工具。触发词：错误严重度决定丢弃半径、整技能拒/告警跳过/静默忽略、TAR 静默跳过、文档缺口≠能力缺口。
+
+
+### 下沉·学习轮沉淀区本段
+## 学习轮沉淀区（本段）
+（r历史 起的连续学习轮章节共 338 章已下沉 references/knowledge-base.md §≤200迁移，正文留此指针）
+
+
+### 下沉·技能控制流外置为显式状态机EFSM知识与控制流分离用显式状态转移替代模型猜下一步细则见KB202
+## 技能控制流外置为显式状态机（EFSM）：知识与控制流分离，用显式状态转移替代模型猜下一步（细则见 KB，2026-09-30 r320A 下沉）
+
+
+### 下沉·卸载必须留显式卸载markerenabledfalsetombstone阻断启动修复静默重装重装
+## 卸载必须留「显式卸载」marker（enabled: false tombstone），阻断启动修复静默重装；重装不静默恢复启用（来源：docs.openclaw.ai cli/plugins/uninstall-and-update，2026-09-30 r320A 实拉）
+
+
+### 下沉·并发写仲裁三件套陈旧写报冲突相同保存no-op会话钉修订与幂等契约四元组键作用域占用时点失败是否
+## 并发写仲裁三件套（陈旧写报冲突 / 相同保存 no-op / 会话钉修订）与幂等契约四元组（键作用域·占用时点·失败是否回放·保留期）；代理不得自动重试非幂等请求（来源：docs.openclaw.ai/tools/skills.md 39,705B + docs.stripe.com 1,336,845B + RFC 9110 §9.2.2 502,941B，2026-09-30 r322C 独立实拉；细则见 references/knowledge-base.md §r322C）
+
+身份级仲裁三件套：持久身份复用免重排 / 同身份第二实例被罚出 / 身份+序号二元组去重——并发去重要先有身份，再谈序号身份级仲裁三件套：持久身份复用免重排 / 同身份第二实例被罚出 / 身份+序号二元组去重——并发去重要先有身份，再谈序号（来源：kafka.apache.org/43/design/design/ 146,232B，2026-09-30 r323B 独立实拉；与 §并发写仲裁三件套/§幂等契约四元组 互补——那条管“写冲突怎么判”，本条管“谁算同一个写者”）（原文已下沉 references/knowledge-base.md §r325C）
+审批门要配齐四个旋钮（启用选择器 / 豁免主体 / 在途隔离 / 超时去向）；缺第四个时 pending 可无限挂起审批门要配齐四个旋钮（启用选择器 / 豁免主体 / 在途隔离 / 超时去向）；缺第四个时 pending 可无限挂起（来源：www.activepieces.com/docs/flows/flow-approvals.md，2026-09-30 r323C 独立实拉 2,500B；与 §并发写仲裁 互补——那条管“写冲突”，本条管“变更放行”）（原文已下沉 references/knowledge-base.md §r325C）
+
+
+### 下沉·扩展点是观察否决双职回调里抛错即可阻止被钩的操作且钩子无沙箱回调继承宿主实例全权限扩展点的权限边
+## 扩展点是「观察 + 否决」双职：回调里抛错即可阻止被钩的操作，且钩子无沙箱、回调继承宿主实例全权限——扩展点的权限边界等于宿主权限，选钩前必须先声明（来源：docs.n8n.io/hosting/configuration/external-hooks/ 1,023,234B，2026-09-30 r324B 独立实拉，原文 lowercase「forbid an action by throwing an error」命中；与 §审批门四旋钮 互补——那条管“变更怎么放行”，本条管“放行机制自身有多大权”；细则见 references/knowledge-base.md §r324B）
+
+
+### 下沉·版本义务沿引用图传递改动一个被依赖的文件即使接口没变也要bump全部下游引用者来源pipedre
+## 版本义务沿引用图传递：改动一个被依赖的文件，即使接口没变也要 bump 全部下游引用者（来源：pipedream.com/docs/components/contributing/guidelines.md 43,351B，2026-09-30 r325C 独立 curl 实拉逐串命中「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」；经 Qoder r357-Q-A 提名；与已落「接口形状判破坏」互补——那条管"算不算破坏性变更"，本条管"谁的版本号必须跟着动"）
+- 原文语境：Pipedream 组件注册表的版本号规则——新增 action 起 `0.0.1`；`0.1.0` 上修 bug 提 `0.1.1`；**「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」**
+- 判据：① **版本号是"内容指纹"而不只是"兼容性标签"**：兼容性只决定 major/minor/patch 走哪一位，而"要不要 bump"由**是否被影响**决定——即便对外接口一字未改，只要被依赖文件的行为变了，依赖它的组件版本号就必须动；② **依赖闭包内的传播必须显式执行**：改动公共文件时，负责人要把受影响清单枚举出来（按 import 图，而不是凭印象），逐条提版，否则消费方按旧版本号做缓存/准入判定，会拿到**旧判定 + 新代码**的错配组合；③ 这条与"锁定版本"是一对：一边要求下游写死版本号，另一边就必须保证**上游变动会强制推着下游动**——只锁不传就是死锁，只传不锁就是失控；④ 落地时把它写成 CI 检查而非人工纪律：`git diff` 出改动的公共文件 → 反查 import 闭包 → 断言每个闭包成员的 version 字段都变过。
+- 提升层：可复用 Skill/工作流。触发词：版本义务传递、import 闭包 bump、被影响即须提版、改公共文件连带提版、dependencies for any app component。

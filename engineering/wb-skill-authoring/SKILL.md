@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.153.0"
+version: "3.154.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -21,35 +21,27 @@ version: "3.153.0"
 > 本节（写"什么时候不该跑"：STOP / WAIT / PROCEED 快速路径表）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 > 本节原文已零删减下沉 `references/knowledge-base.md §r442B 下沉：技能是"指令 + 所需工具"的打包，不是一段文字（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·技能是指令所需工具的打包不是一段文字）`（正文预算 ≤500 行）
 
-## 触发评测：发布前盲测（新技能 / 改过 description 必做，细则已下沉 KB）
-- 完整盲测流程、对照表与判据见 [references/knowledge-base.md](references/knowledge-base.md) §触发评测：发布前盲测。
+## 触发评测：发布前盲测（新技能 / 改过 description 必做，细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·触发评测发布前盲测新技能改过description必做细则已下沉KB）
+
 ## 按需阅读（渐进披露，不要常驻加载）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·按需阅读渐进披露不要常驻加载）
 ## 声明式白名单只约束"工具调用面"，不约束"数据面"：判据按"被约束的是哪类调用"而非"有没有该字段"（来源：learn.microsoft.com/en-us/agent-framework/agents/skills、docs.github.com/.../add-skills、geminicli.com/docs/cli/skills、code.visualstudio.com/.../agent-skills、cursor.com/docs/context/rules，2026-10-01 r362-Q-C 实拉；与 r361-Q-B B1 跨客户端效力漂移 相邻）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·声明式白名单只约束工具调用面不约束数据面判据按被约束的是哪类调用而非有没有该字段）
-## 校验失败的处理半径由错误严重度决定，且"静默跳过"是显式设计不是缺陷：整技能拒 / 仅告警跳过 / 未知顶层字段为前向兼容而忽略（来源：learn.microsoft.com/en-us/agent-framework/agents/skills、docs.dify.ai/.../plugin-info-by-manifest、docs.n8n.io/.../n8n-nodes-base.executeworkflow.md，2026-10-01 r362-Q-C 实拉）
-- 判据：① 非法 YAML / 重复键 / 大小写错 ⇒ **整技能拒绝加载**；`metadata` 内错误 ⇒ **仅告警跳过**；**未知顶层字段 ⇒ 为向前兼容而刻意忽略**；MCP 归档 **只接受 ZIP，TAR 类静默跳过**。② 校验器要输出"哪些被拒、哪些被忽略、哪些被静默跳过"三本账，只有一本可以省略。③ 反例：`n8n-nodes-base.executeworkflow` 错误传播全文只有一句"parent workflow can't trigger it"（无 error output / 无上限）——**文档层丢弃半径不可判时，须记为文档缺口而不是能力缺口**。
-- 提升层：可复用 Skill + 工具。触发词：错误严重度决定丢弃半径、整技能拒/告警跳过/静默忽略、TAR 静默跳过、文档缺口≠能力缺口。
+## 校验失败的处理半径由错误严重度决定，且"静默跳过"是显式设计不是缺陷：整技能拒 / 仅告警跳过 / 未知顶层字段为前向兼容而忽略（来源：learn.microsoft.com/en-us/agent-framework/agents/skills、docs.dify.ai/.../plugin-info-by-manifest、docs.n8n.io/.../n8n-nodes-base.executeworkflow.md，2026-10-01 r362-Q-C 实拉）（全文见 references/knowledge-base.md §下沉·校验失败的处理半径由错误严重度决定且静默跳过是显式设计不是缺陷整技能拒仅告警跳过未知顶层字段为前）
 
-## 学习轮沉淀区（本段）
-（r历史 起的连续学习轮章节共 338 章已下沉 references/knowledge-base.md §≤200迁移，正文留此指针）
+## 学习轮沉淀区（本段）（全文见 references/knowledge-base.md §下沉·学习轮沉淀区本段）
 
 ## 技能「调用面 ≠ 入口面」：user-invocable:false 仍可被模型调用，加载源有显式优先级链…（原文已下沉 references/knowledge-base.md §L481）
 ## 技能进化不要自由变异，要「分解进固定能力空间 + 定向修订」…（原文已下沉 references/knowledge-base.md §L486）
-## 技能控制流外置为显式状态机（EFSM）：知识与控制流分离，用显式状态转移替代模型猜下一步（细则见 KB，2026-09-30 r320A 下沉）
+## 技能控制流外置为显式状态机（EFSM）：知识与控制流分离，用显式状态转移替代模型猜下一步（细则见 KB，2026-09-30 r320A 下沉）（全文见 references/knowledge-base.md §下沉·技能控制流外置为显式状态机EFSM知识与控制流分离用显式状态转移替代模型猜下一步细则见KB202）
 
-## 卸载必须留「显式卸载」marker（enabled: false tombstone），阻断启动修复静默重装；重装不静默恢复启用（来源：docs.openclaw.ai cli/plugins/uninstall-and-update，2026-09-30 r320A 实拉）
+## 卸载必须留「显式卸载」marker（enabled: false tombstone），阻断启动修复静默重装；重装不静默恢复启用（来源：docs.openclaw.ai cli/plugins/uninstall-and-update，2026-09-30 r320A 实拉）（全文见 references/knowledge-base.md §下沉·卸载必须留显式卸载markerenabledfalsetombstone阻断启动修复静默重装重装）
 
 ## 撤销与审核分层：吊销只阻断后续发布、不推翻既有审核结论；恢复走 successor 重跑检查并保留失败尝试为审计史…（原文已下沉 references/knowledge-base.md §L495）
 ## 修订整包不可变且发布只对新会话生效、陈旧编辑报冲突不覆盖；「加载位置」与「谁能看见」是两个独立控件且子级列表非空即整体替换；硬平台过滤不可被 always 豁免（来源：docs.openclaw.ai/tools/skills.md，2026-09-30 r321A 独立实拉 39,741B；细则见 references/knowledge-base.md §r321A）
-## 并发写仲裁三件套（陈旧写报冲突 / 相同保存 no-op / 会话钉修订）与幂等契约四元组（键作用域·占用时点·失败是否回放·保留期）；代理不得自动重试非幂等请求（来源：docs.openclaw.ai/tools/skills.md 39,705B + docs.stripe.com 1,336,845B + RFC 9110 §9.2.2 502,941B，2026-09-30 r322C 独立实拉；细则见 references/knowledge-base.md §r322C）
+## 并发写仲裁三件套（陈旧写报冲突 / 相同保存 no-op / 会话钉修订）与幂等契约四元组（键作用域·占用时点·失败是否回放·保留期）；代理不得自动重试非幂等请求（来源：docs.openclaw.ai/tools/skills.md 39,705B + docs.stripe.com 1,336,845B + RFC 9110 §9.2.2 502,941B，2026-09-30 r322C 独立实拉；细则见 references/knowledge-base.md §r322C）（全文见 references/knowledge-base.md §下沉·并发写仲裁三件套陈旧写报冲突相同保存no-op会话钉修订与幂等契约四元组键作用域占用时点失败是否）
 
-身份级仲裁三件套：持久身份复用免重排 / 同身份第二实例被罚出 / 身份+序号二元组去重——并发去重要先有身份，再谈序号身份级仲裁三件套：持久身份复用免重排 / 同身份第二实例被罚出 / 身份+序号二元组去重——并发去重要先有身份，再谈序号（来源：kafka.apache.org/43/design/design/ 146,232B，2026-09-30 r323B 独立实拉；与 §并发写仲裁三件套/§幂等契约四元组 互补——那条管“写冲突怎么判”，本条管“谁算同一个写者”）（原文已下沉 references/knowledge-base.md §r325C）
-审批门要配齐四个旋钮（启用选择器 / 豁免主体 / 在途隔离 / 超时去向）；缺第四个时 pending 可无限挂起审批门要配齐四个旋钮（启用选择器 / 豁免主体 / 在途隔离 / 超时去向）；缺第四个时 pending 可无限挂起（来源：www.activepieces.com/docs/flows/flow-approvals.md，2026-09-30 r323C 独立实拉 2,500B；与 §并发写仲裁 互补——那条管“写冲突”，本条管“变更放行”）（原文已下沉 references/knowledge-base.md §r325C）
-## 扩展点是「观察 + 否决」双职：回调里抛错即可阻止被钩的操作，且钩子无沙箱、回调继承宿主实例全权限——扩展点的权限边界等于宿主权限，选钩前必须先声明（来源：docs.n8n.io/hosting/configuration/external-hooks/ 1,023,234B，2026-09-30 r324B 独立实拉，原文 lowercase「forbid an action by throwing an error」命中；与 §审批门四旋钮 互补——那条管“变更怎么放行”，本条管“放行机制自身有多大权”；细则见 references/knowledge-base.md §r324B）
+## 扩展点是「观察 + 否决」双职：回调里抛错即可阻止被钩的操作，且钩子无沙箱、回调继承宿主实例全权限——扩展点的权限边界等于宿主权限，选钩前必须先声明（来源：docs.n8n.io/hosting/configuration/external-hooks/ 1,023,234B，2026-09-30 r324B 独立实拉，原文 lowercase「forbid an action by throwing an error」命中；与 §审批门四旋钮 互补——那条管“变更怎么放行”，本条管“放行机制自身有多大权”；细则见 references/knowledge-base.md §r324B）（全文见 references/knowledge-base.md §下沉·扩展点是观察否决双职回调里抛错即可阻止被钩的操作且钩子无沙箱回调继承宿主实例全权限扩展点的权限边）
 
-## 版本义务沿引用图传递：改动一个被依赖的文件，即使接口没变也要 bump 全部下游引用者（来源：pipedream.com/docs/components/contributing/guidelines.md 43,351B，2026-09-30 r325C 独立 curl 实拉逐串命中「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」；经 Qoder r357-Q-A 提名；与已落「接口形状判破坏」互补——那条管"算不算破坏性变更"，本条管"谁的版本号必须跟着动"）
-- 原文语境：Pipedream 组件注册表的版本号规则——新增 action 起 `0.0.1`；`0.1.0` 上修 bug 提 `0.1.1`；**「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」**
-- 判据：① **版本号是"内容指纹"而不只是"兼容性标签"**：兼容性只决定 major/minor/patch 走哪一位，而"要不要 bump"由**是否被影响**决定——即便对外接口一字未改，只要被依赖文件的行为变了，依赖它的组件版本号就必须动；② **依赖闭包内的传播必须显式执行**：改动公共文件时，负责人要把受影响清单枚举出来（按 import 图，而不是凭印象），逐条提版，否则消费方按旧版本号做缓存/准入判定，会拿到**旧判定 + 新代码**的错配组合；③ 这条与"锁定版本"是一对：一边要求下游写死版本号，另一边就必须保证**上游变动会强制推着下游动**——只锁不传就是死锁，只传不锁就是失控；④ 落地时把它写成 CI 检查而非人工纪律：`git diff` 出改动的公共文件 → 反查 import 闭包 → 断言每个闭包成员的 version 字段都变过。
-- 提升层：可复用 Skill/工作流。触发词：版本义务传递、import 闭包 bump、被影响即须提版、改公共文件连带提版、dependencies for any app component。
+## 版本义务沿引用图传递：改动一个被依赖的文件，即使接口没变也要 bump 全部下游引用者（来源：pipedream.com/docs/components/contributing/guidelines.md 43,351B，2026-09-30 r325C 独立 curl 实拉逐串命中「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」；经 Qoder r357-Q-A 提名；与已落「接口形状判破坏」互补——那条管"算不算破坏性变更"，本条管"谁的版本号必须跟着动"）（全文见 references/knowledge-base.md §下沉·版本义务沿引用图传递改动一个被依赖的文件即使接口没变也要bump全部下游引用者来源pipedre）
 
 ## 打包门禁的保留词表应含「背书语义词」，且检查必须跑在归一化形式上（来源：ClawHub publishing 本机实拉，r326C）
 - **原文**：硬拒 16 个 topic——`approved / audited / certified / clawhub / community / curated / endorsed / featured / official / officials / openclaw / recommended / staff-pick / trusted / trusted-publisher / verified`；「The check runs on the **normalized form**, so `Official` and `staff pick` are rejected too」；topic ≤48 字符、禁不可见格式字符；归一后重复**丢弃而不报错**（`git,Git` 算一个）。
@@ -496,3 +488,10 @@ version: "3.153.0"
 - **判据**：① **严格性不是全局属性而是位置属性**：顶层未知字段被剥离并仅告警、插件照样加载；但 `userConfig` / `channels` / `lspServers` / `monitors` 这类**嵌套严格对象**里出现未知键就是错误且不加载 ⇒ 写清单前先问「这个字段落在哪一层」，同一份清单里两种后果并存。② **失败后果至少三档且必须分开记账**：剥离 / 告警 / 拒绝加载 ⇒ "能加载"不等于"字段被采纳"，以加载成功反推字段有效会把约束悄悄丢掉。③ **路径守卫两态分报**：越出技能根（`path escapes plugin directory`，含 `..` 穿越）与路径不存在，都要有可机读的错误位，不能只回一句失败。④ **版本字段不校验 semver 却承担钉版语义**：`version` 是"A version string, not checked against semver"，但设了就钉版 ⇒ 版本身份是**字符串契约**不是语义版本，靠它做兼容性推断不可靠。
 - **与既有能力分工**：r486B「兼容门槛双断点（规范侧 vs 宿主侧）」管**怎么声明兼容性**；本条管**清单被装载时各位置的成败语义**。
 - 提升层：可复用 Skill（清单写法与校验）/ 工具（装载器行为）。触发词：字段严格性分档、Strict objects、unknown key 不加载、path escapes plugin directory、version not checked against semver、顶层剥离与嵌套严格。
+
+
+## r492C-2 · 「被静默忽略」不该只靠运行后对照去发现，它可以前移成静态可机检错误：把写时 illegal 变成加载前报错（来源：github.com/agent-sh/agnix README 10,555B，2026-10-10 r492C 一手经 api.github.com/repos/agent-sh/agnix/readme 取原文）
+- **判据**：① **失败模式要按发现时机分层**："不加载且不报错"是所有失败里最贵的一类，因为它既无信号也无后果提示；凡是能在静态期捕获的，**不许留到运行期靠对照发现**。② **「Catch broken agent configs before your AI tools silently ignore them」是产品级定位句** ⇒ 技能生态正在把「宿主静默忽略」当作一等故障源对待，给技能配套一个静态检查器是可落地的常规动作而非锦上添花。③ **规则要带宿主面与粒度**：455 条规则跨 Claude Code / Codex CLI / OpenCode / Cursor / Copilot 等多宿主，报错带行列位置（`CLAUDE.md:15:1`、`.claude/skills/review/SKILL.md:3:1`）与 `[fixable]` 标记 ⇒ 静态规则的可用性取决于三件：定位到行列、可自动修、区分 warning 与 error。④ **同类错误在不同文件要落同一规则族**：`Invalid name 'Review-Code'` 落在 SKILL.md 第 3 行 ⇒ frontmatter 类错误必须报到「文件:行:列」粒度并带可修标记，否则作者只能靠试。⑤ **验收要带自动修复率**：示例输出含 `2 issues are automatically fixable` ⇒ 静态检查器的有效性指标是"能自动修多少"，不是"能报多少"。
+- **边界与不落**：本条只采「前移机检」这一方法论 + 五项可核验的配置形态；不强推具体工具，也不把规则总数（455）当成质量指标。与既有条例重复率低的原因是对象不同——既有条例讲「怎么写才被识别」，本条讲「怎么让写错被打出来」。
+- **与既有能力分工**：r486C「参数被静默忽略」与 r490B「逐参数对照」都是**事后取证**；本条管**事前拦截**。
+- 提升层：工具（静默失败防线）/ 可复用 Skill（技能配置可机检化）。触发词：silently ignore、455 rules、[fixable]、行列级报错、自动修复率、静态检查器前移。
