@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.88.0"
+version: "1.89.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -391,3 +391,11 @@ sources:
 - **实证**：① 供应链定性「Developers share skills by copying them between repositories, which makes them **a software supply chain without a registry, versions or provenance**」；② 首个带日期的复制网络「built from the git history of every SKILL.md in GitSkills and covering **2,193,119** skill adoptions across GitHub」；③ 关键反直觉「**A few repositories are the source of almost all copies, and GitHub stars do not identify them**」；④ 修复传导「**Skill copies almost never change with their source, and a fix at the source therefore rarely reaches them**」；⑤ 排序收益「Reviewing the 100 repositories it ranks highest prevents **14.9%** of later adoptions of high-risk skills, against **0.5%** for the 100 most starred」（≈30 倍差）；⑥ 主张「Platforms should therefore **distribute versioned references rather than copies**」。
 - **判据**：① **单点快照无法回答「谁从谁复制」**：只记录「某一时刻哪些仓有这个技能」看不出传播方向 ⇒ 供应链取证必须走 git 历史建**带日期**的复制网络，否则审计与通告都没有投递路径。② **热度不是风险的代理指标**：按复制模型排序的前 100 仓阻断 14.9%，按 star 前 100 仅 0.5% ⇒ 用热度排审计序是把有限预算花在错误对象上；本库落地：加固/退役优先级按「被多少下游引用」排，不按「被多少人看过」排。③ **「源头已修」不等于「副本已修」**：副本几乎不随源头变 ⇒ 安全通告必须按复制网络下发到下游仓，只发源头等于没发；对外部引用技能要做「来源是否已修 + 我这份是否跟上」的双点核查。④ **分发形态决定修复能否传导**：应分发**带版本的引用**而非副本 ⇒ 副本天然丢失溯源与修复传导；本库落地：引用外部技能优先钉来源 + 版本引用，避免整包复制入库（与 r443B「供给端自动同步 ≠ 消费端自动升级」互补——那条管跟随节奏，本条管引用 vs 复制的形态选择）。⑤ **度量出口**：库内应能输出「本库技能被多少个外部副本采纳」这类扩散度指标，作为加固与退役的优先级输入。
 - 提升层：工具（供应链取证与审计排序）/ 工作流（退役与加固优先级）。触发词：复制网络、2,193,119 采纳、14.9% vs 0.5%、star 认不出源头、副本不随源头更新、版本引用而非副本、审计按扩散度排序。
+
+## r485C · 同步链上「缺证据」时的正确动作是回退保留旧版；准入名单的权威副本只存在于受保护分支；外部状态按「来源身份」而非「状态存在」核验（来源：api.github.com/repos/NVIDIA/skills/contents/.github/workflows/sync-skills.yml 57,573B + verify-authors.yml 6,636B + require-nvskills-status.yml 17,560B，2026-10-10 r485C 一手 curl 实拉逐串命中 `skill.oms.sig`×30 / `0 * * * *` / `revert the catalog dir to its pre-rsync (signed) state` / `The allowlist is read from the tip of the BASE branch, never the PR head` / `NVSkills CI`×12 / `Attach NVSkills validation signatures` / `nv-skills-ci` / `svc-nvskills-signing`）
+
+- **★镜像源端丢签名时，回退保留上一个已签版本，未签更新挂起而不是照同步**：原文「Skill existed on main → **revert the catalog dir to its pre-rsync (signed) state**. The signed version stays live; the unsigned update is held until the source team runs /nvskills-ci and the next sync picks up the fresh sig.」。判据：**分发链的默认值应为「缺证据 → 保留旧版」，不是「缺证据 → 用新版」**——把"源端更新了"当成放行理由，等于让一次签名服务故障把未验签产物推到线上；持有 `0 * * * *` 的同步节奏下，挂起一小时的代价远小于发布未签产物。
+- **★准入白名单必须从受保护分支读取，使 PR 无法自我加白**：原文「The allowlist is read from the **tip of the BASE branch, never the PR head**, so a pull request cannot allowlist itself — and a re-run picks up entries merged after the PR was opened.」；外部贡献者靠 `.github/external-contributors.yml` 由维护人登记邮箱并**限定到具体 PR 号**。判据：**白名单的权威性来自它的读取位置，不来自它的内容**——放在可被 PR 修改的位置，就等于把准入权交给被审查方；登记粒度必须到「邮箱 × PR 号」，只登记邮箱等于永久放行。
+- **★外部 CI 状态要按三重身份核验，只验"状态存在"会被伪造**：`require-nvskills-status.yml` 要求状态上下文（`NVSkills CI`）+ 提交标题（`Attach NVSkills validation signatures`）+ 推送者（`nv-skills-ci[bot]` 或服务账号 `svc-nvskills-signing`）**同时匹配**，轮询 30s / 缺状态宽限 120s / 上限 14400s。判据：**"有一个绿勾"不构成证据**——提交者可自造同名状态上下文；必须同时核「谁推的 + 标题是什么 + 上下文叫什么」，三者缺一即按未达计。
+- **与既有能力分工**：§「verified 是带再验证时钟的状态」（r437B）管**认证态如何保鲜与凭证形态**；本条管**当证据缺失、名单来源、外部状态三者各自出问题时的处置动作**——回退/只读/三重核验，属发布流水线的执行侧，互补不重复。
+- 提升层：工作流 / 可复用 Skill。触发词：缺签回退保留旧版、未签更新挂起、allowlist 从 BASE 读、PR 不能自我加白、邮箱×PR号、外部状态三重身份、状态存在不等于有效、同步链挂起。

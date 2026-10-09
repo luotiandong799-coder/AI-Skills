@@ -197,3 +197,10 @@
 - **判据**：① **攻击的起手式是"起点都干净"**——从已通过既有上线审查的技能出发，插入/改写后恶意变体在治理面有 36.5%–100% 概率躲过阻断裁决 ⇒ 「已过审」是**会过期的状态**而非永久凭证，复审触发条件不能只依赖"这个技能有没有更新"。② 四类手法要逐项进扫描用例库：LLM Judge Jailbreaking（63.5% 变体仍被判恶意，直接诱导相对无效）、Paraphrasing Malicious Instructions（改写绕关键词，削弱最明显）、Definition-of-Done Instructions（给评审器下"完成"定义使其停止追责）、Overflowing the LLM Context Window（撑爆评审上下文）。③ **判定器报告必须附自测指标**：结论句「SKILL.md is not passive documentation but operational text」⇒ 只报"检出几个"等于把判定器当成不受攻击的常量，须同时报"恶意变体被判 clean 的比例"。
 - 提升层：可复用 Skill。触发词：registry governance evasion、Definition-of-Done、改写绕关键词、上下文撑爆、判定器自测指标、clean 变体比例、36.5%-100%。
 
+§下沉·skills-security-check·拦截分档
+
+## 拦截项要分「可翻墙」与「不可翻墙」两档并显式标注；下架与撤权是两个可分档位（来源：docs.openclaw.ai/cli/skills 25,891B + clawhub/how-it-works.md 3,662B，2026-10-08 一手 curl 取 `.md` 原文逐串命中 `Neither --force nor the acknowledgement overrides block or a policy failure` / `upload gates, automated checks, user reports, and moderator action` / `may disappear from public search and install flows while remaining visible to the owner for diagnostics`；与 §复审记分对象是新增 互补——那条管跨轮记分，本条管拦截的绕过面与处置分档）
+- **实证**：官方原文「Neither `--force` nor the acknowledgement overrides `block` or a policy failure」；ClawHub 四道关卡「releases are still subject to **upload gates, automated checks, user reports, and moderator action**」（举报是独立一道，机扫与人审之外）；被处置内容「may **disappear from public search and install flows** while **remaining visible to the owner for diagnostics**」；宿主消歧：技能可替换同名 bundled command，但**不替换其别名**（覆盖只作用于直呼名）。
+- **判据**：① **把「`--force` 能过」当默认是治理漏洞**：拦截项必须逐条标注属"带确认可强推"还是"policy failure，force/ack 皆无效"；不标注时，使用者会把所有拦截都当成可翻墙，真正的硬拦截在一次误操作后失去意义。② **下架 ≠ 撤权**：从公域搜索/安装流消失、同时保留属主可见用于诊断，是**两个可分档位**——复审期工件仍需可被属主使用与取证；一步到封杀会同时毁掉取证面。③ **举报是独立一道关卡**：自动化扫描与人工审核之外必须有独立举报入口；只有机扫+人审的体系，其漏网面永远等于"没人点开看过的那些"。④ **覆盖语义只作用于直呼名**：技能能替换同名内置命令但不替换其别名 ⇒ 冒名面不是"改个名字就绕过了"那么简单，消歧规则要按调用形态（直呼 vs 别名）分别判定。
+- **与既有能力分工**：r439B「技能根=容纳边界」管**装载时能不能被带进来**；本条管**已经被拦下之后还能不能被绕过、以及拦下的处置档位**——准入在前，处置在后。
+- 提升层：工作流（处置分档）/ 工具（拦截语义）。触发词：--force 不可翻墙、policy failure、下架不等于撤权、owner 可见诊断、用户举报独立关卡、覆盖不替换别名、拦截项分档标注。

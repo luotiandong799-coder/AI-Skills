@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合
-version: "2.169.0"
+version: "2.170.0"
 agent_created: true
 ---
 
@@ -87,15 +87,6 @@ agent_created: true
 - 判据：① **验证的两难是误放率 × 误封率的乘积**：定向且完整的验证能压低误放，随机抽检能拦篡改但把合法动作一起拦掉 ⇒ 「随手核一核」两头不落，比不做更糟（因为它会产生「已验证」的错觉）。② **给验证环节选型前先量化这对指标**：不量化就无法判断该投入多少；「加一道校验」本身不是收益。③ 与既有「静态扫描覆盖三轴」互补：那条讲**覆盖面的坐标系**，本条讲**覆盖率与误报的取舍曲线**。
 - 提升层：工具/工作流。触发词：误放率 15.3–48.9%、验证器两种失效端、定向完整 vs 随机抽检、误放误封取舍、因果动作验证图。
 
-## r350C · 验证执行面 ≠ 生产执行面：某些配置只在特定触发/执行方式下生效（来源：help.make.com/scenario-settings.md，2026-10-02 r350C 实拉 5,172B）
-
-- **★同一份配置，手动"Run once"执行会绕过它**：cycles per run 设定在手动点 Run once 时被忽略、**只跑 1 个周期**。判据：**手动复现跑出来的结论不能外推到生产**——你验的是一个被裁剪过的执行面。
-- **★失败停用策略按触发类型分叉**："达到最大失败次数后停用场景"对**即时触发（instant trigger）场景被忽略**——第一个错误发生即立即停用。判据：**即时触发场景没有"重试 N 次再停"的缓冲**，验证时的容错假设在即时触发下不成立。
-- **★提交时机默认在最外层**：默认只在整场成功结束时 commit，可改为"每个模块运行后 commit"。判据：**默认提交点是全成功，不是逐步**——中途失败即全部未提交，据此设计的"部分完成"假设需要显式改配置并写进验证条件。
-- 落地口径：写验证方案时先声明执行方式（手动/定时/即时）与触发类型，再声明该方式下哪些配置会被忽略；否则验证结论不可复现。
-- 提升层：工作流 / 可复用 Skill。
-
-
 ## r353A · 失败现场的处置由开关决定，取证能力会被隐私开关直接削掉
 
 > 原文已下沉 `references/knowledge-base.md §r395-av`（保持原文零删减）。
@@ -164,17 +155,6 @@ agent_created: true
 - **★验收要区分「新写入」与「已入库」两条路径**：修复后验证给出双侧对照——`=== lc 1.6.3 WITH fix === built_object stored: None / opaque-dropped: ['chat_input'] / RESUME OK`，而**已入库的毒化 payload 仍要靠读侧降级**才能恢复。判据：**只验证新写入路径的修复，会把存量病灶判成"已解决"**；验收清单必须显式包含"拿老数据跑一遍"。
 - **★"文档说覆盖了"不等于"真的覆盖"**：原文自曝「`test_serialize_value_degrades_model_with_unserializable_field` is **documented as covering this case but passes either way**; its docstring now says which failure mode it actually covers」。判据：**测试名与文档声明不构成覆盖证据**——要证明覆盖，必须让该测试在缺陷存在时失败。
 - 提升层：验证 / 工具。触发词：往返校验、静默降级、未抛异常不算通过、存量数据验收、测试名不等于覆盖证据。
-
-## 验收权限面：声明集合 ≠ 生效集合，须展开自动授予闭包与单向包含关系（来源：docs.n8n.io `.../create-custom-project-roles.md` 11,109B + `create-custom-instance-roles.md` 8,015B，2026-10-03 r388A 独立实拉）
-- **原文**：「Granting `<resource>:read` also grants the matching list scope for that resource」「Granting `workflow:publish` also grants `workflow:unpublish`」「**Manage all roles** ... Automatically includes **Manage project roles**」「**Manage others** ... Automatically includes **Manage own**.」
-- **判据**：① **验收权限声明时不能只读字面清单**——系统存在隐式自动授予（read→list、publish→unpublish），「批了这两项」实际生效四项；漏掉闭包会得出「最小权限已满足」的错误结论。② **层级包含是单向的**——实例级 Manage all roles 蕴含项目级，项目级反过来不蕴含实例级；按清单逐条比对会漏掉「被上层顺带带下来的」那部分。③ 落点：验收报告对授权面必须给**展开后的闭包**与**包含方向**，只列「授予了 A、B」不算完成验收。
-- 提升层：可复用 Skill / 工作流。触发词：权限闭包、自动授予、read 隐含 list、包含方向、声明≠生效、授权面验收。
-
-## 留痕的四态覆盖等级与「有留痕 ≠ 完整留痕」：验收必须带 coverage 字段（来源：docs.openclaw.ai/gateway/audit.md 37,793B，2026-10-03 r388B 独立实拉）
-- **原文**：「It never stores prompts, message bodies, tool arguments, tool results...」「Coverage is `enforced` only when every contributing ingress decision was participant-aware and outcome-affecting. Wildcard/open policy ... remain `attribution-only`; mixed or missing evidence is `unknown`.」「Persistence remains best-effort. Queue saturation, storage failure, shutdown timeout, and process crashes can lose evidence; they log only a bounded operational warning and never abort the run.」
-- **判据**：① **留痕必须自带覆盖等级，不能只看有没有**——`enforced`（该判定真实改变结果）/ `attribution-only`（只记录谁观察到，不证明授权）/ `unknown`（证据缺失或混杂，不重建）/ `unsupported`（该通道根本不产生此类证据）四态是互斥的验收结论；把 attribution-only 当 enforced 是验收里最常见的高估。② **留痕通道本身允许丢**：队列饱和、存储故障、关机超时、进程崩溃都会丢证据且只打一条有界警告、**不中止运行**；所以「日志里没有」既可能是「没发生」也可能是「发生了但没记下来」，验收报告必须显式声明丢失面，不能默认留痕完备。③ **只留结构不留内容是设计选择而非缺陷**——元数据账本永不存正文/参数/结果/文件名/URL/命令输出，验收「看到一条记录」不等于拿到可复现内容。
-- 提升层：可复用 Skill / 工作流。触发词：coverage 四态、attribution-only、enforced、unknown、unsupported、留痕丢失面、有日志不等于完整、元数据账本。
-
 
 ## 可见性必须分层声明：元数据人人可见、正文按归属可见、管理视图只给 redacted（来源：docs.n8n.io `administer/manage-credentials/end-user-credentials.md` 9,720B，2026-10-03 r390A 独立 curl 取 `.md` 原文实拉；与 §留痕四态 coverage 互补——那条管留痕是否完整，本条管同一份留痕对不同人的可见面）
 - **原文**：「When a workflow execution uses an end-user credential, **the execution metadata is visible to anyone with access to that workflow's executions**: the status, when it ran, and that it used an end-user credential. **What changes is who can see the data inside.**」；「Only the user who triggered the workflow with their connected account can see the input and output data for those nodes... **For everyone else, including instance admins, those nodes show redacted output.**」
@@ -503,3 +483,18 @@ agent_created: true
 - 提升层：工作流（引用审计）/ 工具（数值断言核验）。触发词：回原文核语义、100% vs 91%、1,467 是缺陷非恶意、引用失真、口径差、字符串存在≠证据、数值断言防护。
 
 > r443 正文预算管理：以下 6 节原文已零删减下沉本技能 `references/knowledge-base.md`，正文只留指针：失败路径也必须被真的跑过（否则它等于不存在）（原文已下沉 references/；评测要接回优化器才叫闭环：观测 → AI 评测器 → AI 优化器 → 自动验证；提交粒度是可配的，粒度越细回滚能力越弱：早提交换「部分结果不丢」，代价是出错即不；环境变量的可见性有三个独立面：删掉不报错只返 undefined、分享只带引用不；审计可能是惰性生成的（「在库里」≠「已审过」），而扫描器自身的遍历顺序即是静默漏；审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎 `q。
+
+## r350C · 验证执行面 ≠ 生产执行面（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r350C）
+
+## 验收权限面：声明集合 ≠ 生效集合（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·验收权限面）
+
+## 留痕的四态覆盖等级与「有留痕 ≠ 完整留痕」（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·留痕四态）
+
+## r485B · 评测台账必须带「可复现四元组」；通过阈值是代码常量不是叙述；目录计数要带取数日期（来源：api.github.com/repos/NVIDIA/skills/contents/benchmarks.json 1,083,377B + api.github.com/repos/NVIDIA/SkillEvaluator/contents/src/skillevaluator/constants.py 21,302B + .../reporting/benchmark.py 51,774B，2026-10-10 r485B 一手 curl 实拉逐串命中 `environment` / `evaluator_version` / `dataset_digest` / `attempts_per_task` / `DIMENSION_VERDICT_PASS_THRESHOLD = 0.5` / `DIMENSION_VERDICT_NEUTRAL_THRESHOLD = 0.4` / `TIER3_LIFT_PASS_THRESHOLD = 0.05` / `TIER3_LIFT_FAIL_THRESHOLD = -0.10` / `QUALITY_DEFAULT_MIN_SCORE = 70` / `does not override this gate`）
+
+- **★引用任何增益数字必须同带四元组**：`benchmarks.json` 每行固定含 `environment`（`k8s-sandbox`）、`evaluator_version`（`1.5.6`）、`dataset_digest`（`sha256:307ff8...`）、`attempts_per_task`（`1`）。判据：**没有这四项的 uplift 数字不可复现、不可比对**——`attempts_per_task=1` 意味着「单次尝试、无方差」，把它当稳定结论会系统性高估；换 evaluator 版本或换环境后同一技能的数字不可直接相减。
+- **★覆盖率缺口是机读字段，不是报告里的形容词**：同文件 `skills_without_results` 明列 19 个「有卡无结果」的技能（`rag-eval`、`rag-perf`、`rag-blueprint` 等）。判据：**"评测了 405 个"与"405 个都有结果"是两句不同的话**——引用 `skill_count` 时必须同时报 `result_row_count` 与缺口名单长度，否则把未测项算进分母。
+- **★通过阈值写成常量而非散文**：`DIMENSION_VERDICT_PASS_THRESHOLD = 0.5` / `NEUTRAL = 0.4` / `TIER3_LIFT_PASS = 0.05` / `TIER3_LIFT_FAIL = -0.10` / `QUALITY_DEFAULT_MIN_SCORE = 70` / `RUBRIC_MIN_SCORE = 60`。判据：**阈值必须能被 grep 到、能被 diff、能被 policy 覆写**（`benchmark.py` 允许覆写 `dimension_pass_threshold`）——只写在叙述里则无法机检，也无法证明两次判定同口径。
+- **★目录计数是时变量，必须带取数日期**：本轮实测 `skill_count 405 / result_row_count 3795`，而 Qoder r483-Q-C 于 2026-10-09 记为 `401 / 3755`。判据：**同一上游一天内净增 4 个技能、40 行结果**，用目录规模做基线或做趋势时须写「取数日期 + 上游版本」，跨日引用等于拿两个不同的总体做比较。
+- **与既有能力分工**：§「增益不得越过闸门」（r348C，来自 reports.mdx）管**通过判据的形状**（max-over-agents × 全维度合取、lift 只作诊断）；本条管**这些判据的数值从哪来、数字要带哪些上下文才可复现**——两者互补，不重复立点（`does not override this gate` 源码串本轮新增，仅作 r348C 的一手补证）。
+- 提升层：工作流 / 可复用 Skill。触发词：可复现四元组、dataset_digest、evaluator_version、attempts_per_task、单次尝试无方差、skills_without_results、覆盖率缺口机读、阈值常量化、目录计数取数日期。

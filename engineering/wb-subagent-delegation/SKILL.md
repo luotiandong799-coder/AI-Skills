@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: "1.17.0"
+version: "1.18.0"
 agent_created: true
 ---
 
@@ -170,3 +170,11 @@ agent_created: true
 - **★部分可用就降级继续，全不可用则跳过且不报错**："If only some configured tools are allowed, recall can still run with that **smaller set**"；"If none of the configured tools are available, or the sub-agent run fails, active memory **skips recall for that turn and the main reply continues without memory context**"。判据：**检索/记忆类子代理必须设计成可降级依赖**——它失败时主流程要继续，而不是把主回复拖挂。
 - **★"有没有召回"要按结构化字段判，不能按输出是否为空判**："non-empty model-visible tool output counts as recall evidence **unless structured result fields explicitly report an empty result or failure**"。判据：**判定"没找到"的权威源是结构化结果字段，不是文本长度**——模型侧看到非空就当证据，会系统性地把"没找到"误判成"找到了"。
 - 提升层：工具 / 工作流。触发词：toolsAllow 是限制、子代理工具外溢、父轮权限到期、召回降级、结构化字段判空、跳过召回。
+
+
+## r485A · 技能可见性的隔离粒度是「步」不是「代理」；身份比对用 URI 不用字符串；推理前必需环境技能是硬门（来源：api.github.com/repos/openai/codex/releases 2,676,719B，2026-10-10 r485A 一手 curl 实拉逐串命中 `scoped to each step` / `PathUri` / `Enforce required environment skills` / `#50050` / `#51482` / `#51157`）
+
+- **★技能清单快照要分步，分步不足会让前一步装载的技能泄漏进后续步**：#50050「Keep plugin and skill snapshots **scoped to each step**」。判据：**委派的最小隔离单位是「步」不是「代理」**——同一子代理连续跑多步时，若技能清单只在代理级快照一次，第一步装载的技能会持续可见到后续步；与 r481-Q-C「每子代理一套装载器」互补：那条防**跨代理**串味，本条防**跨步**串味。委派任务若分多步，必须为每步显式声明技能面。
+- **★技能身份用 URI 类型比对，不用字符串路径**：#51482「Use `PathUri` for skill identity and path matching」。判据：**跨挂载点 / junction / 符号链接环境下，字符串路径比对会误命中**——同一技能经不同挂载路径出现时字符串不等、不同技能经软链收敛时字符串相等；身份判定必须走规范化 URI，路径只作展示。
+- **★「必需环境技能是否就位」是推理前的硬前置门，缺失即不发推理**：#51157「Enforce required environment skills **before model inference**」。判据：**环境类技能不是"装了更好"，而是"没装不许发请求"**——把它放在推理后校验等于把门禁降级成事后告警；委派前须先枚举必需环境技能并逐项确认，缺失即终止而非降级继续。
+- 提升层：工具 / 工作流。触发词：步级快照、每步技能面、跨步泄漏、PathUri、技能身份 URI、路径比对误命中、必需环境技能、推理前硬门、委派隔离粒度。

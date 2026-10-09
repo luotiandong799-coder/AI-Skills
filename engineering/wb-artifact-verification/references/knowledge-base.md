@@ -2566,3 +2566,27 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 <!-- r443 下沉 -->
 
 ## 审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎 `queued/排队中`+`...（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r440B·审核结论按版本独立成态并可滞留未终：同包内 1.0.1–1.0.4 双引擎）
+
+§下沉·wb-artifact-verification·r350C · 验证执行面 ≠ 生产执行面：某些配置只在特定触发/执行方式下生效
+
+## r350C · 验证执行面 ≠ 生产执行面：某些配置只在特定触发/执行方式下生效（来源：help.make.com/scenario-settings.md，2026-10-02 r350C 实拉 5,172B）
+
+- **★同一份配置，手动"Run once"执行会绕过它**：cycles per run 设定在手动点 Run once 时被忽略、**只跑 1 个周期**。判据：**手动复现跑出来的结论不能外推到生产**——你验的是一个被裁剪过的执行面。
+- **★失败停用策略按触发类型分叉**："达到最大失败次数后停用场景"对**即时触发（instant trigger）场景被忽略**——第一个错误发生即立即停用。判据：**即时触发场景没有"重试 N 次再停"的缓冲**，验证时的容错假设在即时触发下不成立。
+- **★提交时机默认在最外层**：默认只在整场成功结束时 commit，可改为"每个模块运行后 commit"。判据：**默认提交点是全成功，不是逐步**——中途失败即全部未提交，据此设计的"部分完成"假设需要显式改配置并写进验证条件。
+- 落地口径：写验证方案时先声明执行方式（手动/定时/即时）与触发类型，再声明该方式下哪些配置会被忽略；否则验证结论不可复现。
+- 提升层：工作流 / 可复用 Skill。
+
+§下沉·wb-artifact-verification·验收权限面：声明集合 ≠ 生效集合，须展开自动授予闭包与单向包含关系
+
+## 验收权限面：声明集合 ≠ 生效集合，须展开自动授予闭包与单向包含关系（来源：docs.n8n.io `.../create-custom-project-roles.md` 11,109B + `create-custom-instance-roles.md` 8,015B，2026-10-03 r388A 独立实拉）
+- **原文**：「Granting `<resource>:read` also grants the matching list scope for that resource」「Granting `workflow:publish` also grants `workflow:unpublish`」「**Manage all roles** ... Automatically includes **Manage project roles**」「**Manage others** ... Automatically includes **Manage own**.」
+- **判据**：① **验收权限声明时不能只读字面清单**——系统存在隐式自动授予（read→list、publish→unpublish），「批了这两项」实际生效四项；漏掉闭包会得出「最小权限已满足」的错误结论。② **层级包含是单向的**——实例级 Manage all roles 蕴含项目级，项目级反过来不蕴含实例级；按清单逐条比对会漏掉「被上层顺带带下来的」那部分。③ 落点：验收报告对授权面必须给**展开后的闭包**与**包含方向**，只列「授予了 A、B」不算完成验收。
+- 提升层：可复用 Skill / 工作流。触发词：权限闭包、自动授予、read 隐含 list、包含方向、声明≠生效、授权面验收。
+
+§下沉·wb-artifact-verification·留痕的四态覆盖等级与「有留痕 ≠ 完整留痕」：验收必须带 coverage 字段
+
+## 留痕的四态覆盖等级与「有留痕 ≠ 完整留痕」：验收必须带 coverage 字段（来源：docs.openclaw.ai/gateway/audit.md 37,793B，2026-10-03 r388B 独立实拉）
+- **原文**：「It never stores prompts, message bodies, tool arguments, tool results...」「Coverage is `enforced` only when every contributing ingress decision was participant-aware and outcome-affecting. Wildcard/open policy ... remain `attribution-only`; mixed or missing evidence is `unknown`.」「Persistence remains best-effort. Queue saturation, storage failure, shutdown timeout, and process crashes can lose evidence; they log only a bounded operational warning and never abort the run.」
+- **判据**：① **留痕必须自带覆盖等级，不能只看有没有**——`enforced`（该判定真实改变结果）/ `attribution-only`（只记录谁观察到，不证明授权）/ `unknown`（证据缺失或混杂，不重建）/ `unsupported`（该通道根本不产生此类证据）四态是互斥的验收结论；把 attribution-only 当 enforced 是验收里最常见的高估。② **留痕通道本身允许丢**：队列饱和、存储故障、关机超时、进程崩溃都会丢证据且只打一条有界警告、**不中止运行**；所以「日志里没有」既可能是「没发生」也可能是「发生了但没记下来」，验收报告必须显式声明丢失面，不能默认留痕完备。③ **只留结构不留内容是设计选择而非缺陷**——元数据账本永不存正文/参数/结果/文件名/URL/命令输出，验收「看到一条记录」不等于拿到可复现内容。
+- 提升层：可复用 Skill / 工作流。触发词：coverage 四态、attribution-only、enforced、unknown、unsupported、留痕丢失面、有日志不等于完整、元数据账本。

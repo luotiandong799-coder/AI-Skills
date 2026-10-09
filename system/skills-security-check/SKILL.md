@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.27.0"
+version: "1.28.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -456,13 +456,6 @@ Step C: 是否包含恶意意图？
 - **与既有能力分工**：r437C「风险档位 = likelihood×impact，needs_validation 禁 severity」管**单条 finding 怎么定级**；本条管**跨轮之间怎么记分与去重**——定级在前，记分在后。
 - 提升层：工作流（扫描口径）/ 工具（报告契约）。触发词：only NEW findings、llm-unconfirmed、基线记分、重复计分、跨轮三态、换基线换量纲。
 
-## 拦截项要分「可翻墙」与「不可翻墙」两档并显式标注；下架与撤权是两个可分档位（来源：docs.openclaw.ai/cli/skills 25,891B + clawhub/how-it-works.md 3,662B，2026-10-08 一手 curl 取 `.md` 原文逐串命中 `Neither --force nor the acknowledgement overrides block or a policy failure` / `upload gates, automated checks, user reports, and moderator action` / `may disappear from public search and install flows while remaining visible to the owner for diagnostics`；与 §复审记分对象是新增 互补——那条管跨轮记分，本条管拦截的绕过面与处置分档）
-- **实证**：官方原文「Neither `--force` nor the acknowledgement overrides `block` or a policy failure」；ClawHub 四道关卡「releases are still subject to **upload gates, automated checks, user reports, and moderator action**」（举报是独立一道，机扫与人审之外）；被处置内容「may **disappear from public search and install flows** while **remaining visible to the owner for diagnostics**」；宿主消歧：技能可替换同名 bundled command，但**不替换其别名**（覆盖只作用于直呼名）。
-- **判据**：① **把「`--force` 能过」当默认是治理漏洞**：拦截项必须逐条标注属"带确认可强推"还是"policy failure，force/ack 皆无效"；不标注时，使用者会把所有拦截都当成可翻墙，真正的硬拦截在一次误操作后失去意义。② **下架 ≠ 撤权**：从公域搜索/安装流消失、同时保留属主可见用于诊断，是**两个可分档位**——复审期工件仍需可被属主使用与取证；一步到封杀会同时毁掉取证面。③ **举报是独立一道关卡**：自动化扫描与人工审核之外必须有独立举报入口；只有机扫+人审的体系，其漏网面永远等于"没人点开看过的那些"。④ **覆盖语义只作用于直呼名**：技能能替换同名内置命令但不替换其别名 ⇒ 冒名面不是"改个名字就绕过了"那么简单，消歧规则要按调用形态（直呼 vs 别名）分别判定。
-- **与既有能力分工**：r439B「技能根=容纳边界」管**装载时能不能被带进来**；本条管**已经被拦下之后还能不能被绕过、以及拦下的处置档位**——准入在前，处置在后。
-- 提升层：工作流（处置分档）/ 工具（拦截语义）。触发词：--force 不可翻墙、policy failure、下架不等于撤权、owner 可见诊断、用户举报独立关卡、覆盖不替换别名、拦截项分档标注。
-
-
 ## 漏洞情报源要带「自动离线回退」，且模式库规模必须给出「类别数 × 模式数」双层粒度作为覆盖基准的分母（来源：api.github.com/repos/NVIDIA/SkillSpector/readme 53,566B 解码全文，2026-10-08 一手 curl 逐串命中 `71 vulnerability patterns` across `17 categories` / `SC4 | Known Vulnerable Dependencies | HIGH | Dependencies with known CVEs (live OSV.dev lookup)` / `real-time CVE data with automatic offline fallback`；与 §r435C 17 类漏洞清单 + Triage 五档处置 + SARIF 入 CI 互补——那条落"检出来怎么处置与怎么进 CI"，本条落"情报从哪来、断网时朝哪个方向失败、覆盖够不够怎么量"）
 - **实证**：原文「**71 vulnerability patterns** across **17 categories**: prompt injection, data exfiltration, privilege escalation, supply chain, excessive agency, output handling, system prompt leakage, memory poisoning, tool misuse, rogue agent, anti-refusal, trigger abuse, dangerous code (AST), taint tracking, YARA signatures, MCP least privilege, and MCP tool poisoning」；「**Live vulnerability lookups**: SC4 queries [OSV.dev](https://osv.dev) for real-time CVE data with **automatic offline fallback**」；「**Multiple output formats**: Terminal, JSON, Markdown, and **SARIF** reports」；阶段与基线「Two-stage analysis: Fast static analysis + optional LLM semantic evaluation」「Baseline / false-positive suppression … so re-scans surface only *new* issues」。
 - **判据**：① **依赖实时情报的检查必须显式声明离线时的方向**：SC4 命中 CVE 靠在线查询，官方明写"自动离线回退" ⇒ 联网检查的默认失败方向如果是"查不到=没有漏洞"，断网期间的扫描会静默降级成"全部安全"；正确写法是把"情报源不可用"作为可观测状态（与"扫过且无 CVE"区分）。② **模式库规模要分两层报（类别数 × 模式数）**：17 个类别是目录、71 个模式是条目 ⇒ 只报"覆盖 17 类"会让人以为只有 17 项检查；覆盖率的分母是模式数，归类方式由类别数决定，两者缺一都无法判断"这个扫描器是否够用"。③ **类别清单本身就是威胁面清单**：17 类里既有注入/外传/提权这类经典面，也有 memory poisoning、rogue agent、anti-refusal、trigger abuse、MCP tool poisoning 这类 agent 特有的面 ⇒ 审自己的技能库时，先拿这份清单对一遍"哪些面我根本没有检查项"。④ **两阶段（快速静态 + 可选语义）意味着第二阶段可缺席**：LLM 语义评估是 optional ⇒ 报告里必须标注本次是否跑了语义阶段，否则同一份结果可能是两种强度的产出。⑤ **与处置链串成完整闭环**：模式库（覆盖什么）→ 情报源（依赖是否已知有洞，含离线回退）→ 基线（只报新增）→ SARIF（进 CI）⇒ 任何一环缺席，扫描结论都只能当线索不能当裁决。
@@ -495,3 +488,12 @@ Step C: 是否包含恶意意图？
 - **判据**：① **"内容干净"不构成安全证据，因为被操纵的是关系不是内容**：提示与描述各自过审、组合起来仍能定向 ⇒ 检查必须落到"这个技能为什么会被选中"，逐件审查对这类攻击结构性盲。② **显式与隐式的拦截率差 31 倍（91.4% vs 2.9%），说明我们现有的"看一眼内容"式人审只对显式攻击有效**：把人审写进控制项时，必须声明它只对哪一类攻击起效，否则等于在控制矩阵里记了一个 2.9% 的措施却按 91.4% 上报。③ **LLM 检查器不是人审的替代品，是同一种盲的另一种形态**：对显式操纵放行 37.4%、对隐式放行 82.9% ⇒ 隐式攻击对机器评审比对人更宽松；加 LLM 检查器不能补人审的洞，两者在 ISM 上同向失效。④ **隐式攻击的代价只有 9.8pp，防御方却要付出"看起来正常"的全部伪装成本**：有效性损失这么小 ⇒ 不能假设攻击者会为了绕过而留下异常措辞；"读起来自然"不是良性信号。⑤ **选择阶段必须引入与描述无关的第二路判据**：既然描述可被塑形，那么最终选谁就不能只由描述与请求的语义匹配度决定 ⇒ 需要不可由描述单独影响的锚（安装位置 / 显式白名单 / 来源信任档），这与 r472A「安装位置决定谁跑」互补——那条是实测事实，本条给了"为什么必须这样"的攻击面证据。⑥ **报告口径**：任何"已通过人工审核"的声明，只在其针对显式攻击时成立；对隐式选择操纵，现行人工流程的实际拦截率是 2.9%。
 - **与既有能力分工**：r439A「审批校验验签发者是否有权为本动作签发」管**授权链**；r437A「形态先验权限档」管**形态决定权限下限**；本条管**选择阶段这一前置入口**（授权与形态都还没生效之前，技能就已经可能被选中了）。
 - 提升层：可复用 Skill（准入审查）/ 工具（选择面控制项）。触发词：ISM、Implicit Skill-Selection Manipulation、Semantic Matching、15.2% 到 63.5%、2.9% 人工拦截、82.9% LLM 放行、语义关系塑形、选择阶段攻击面、skill selection poisoning。
+
+## 拦截项要分「可翻墙」与「不可翻墙」两档并显式标注；下架 ≠ 撤权（全文见 references/knowledge-base.md §下沉·skills-security-check·拦截分档）
+
+## r485C · 目录「有无安全标记」要先问「扫不扫」：无标记有两种成因；多家扫描源可并列且允许结论冲突；第三方目录的限流窗口可能是「日」（来源：skillsmp.com/docs/api 503,097B + skillsmp.com 302,679B + www.skills.sh/anthropics/skills/pdf 122,581B，2026-10-10 r485C 一手 curl 实拉逐串命中 `We don't scan for malware (yet)` / `not a live ranking, quality certification, or safety review` / `DAILY_QUOTA_EXCEEDED`×3 / `X-RateLimit-Daily-Limit`×6 / `Gen Agent Trust Hub`×2 / `Socket`×2 / `Snyk`×2）
+
+- **★「没有安全标记」有两种成因，须先分离**：SkillsMP FAQ 原文「**We don't scan for malware (yet).** This is community-driven content」+ 目录页自述「A maintained selection of public examples, **not a live ranking, quality certification, or safety review**」。判据：**在"目录不扫描"的前提下，无标记 = 未测评，不等于"通过了测评"**；采信一个目录的结论前，第一问必须是「该目录究竟扫不扫」，这是二值属性而非程度问题。与 §「已审核是结论不是证据」（r472B）互补：那条给的是**方法学页缺失**这一机检负证据，本条给的是**目录明示不扫描**的一手原文，二者互为佐证但证据形态不同。
+- **★同一技能可并列多家扫描源，且允许结论冲突**：skills.sh 明细页同时列出三个独立扫描源（`Gen Agent Trust Hub` / `Socket` / `Snyk`）。判据：**"有徽章"不等于"全绿"**——装机判据应写成**逐源列结论**，而不是"有无 Security Verified"这一个布尔量；把多源结论折叠成单值会直接抹掉源间分歧。本轮**判级值（PASS/WARN）在 HTML 中 0 命中**（JS 渲染），故具体判级不入账，只入"多源并列"这一形态。
+- **★第三方目录 API 的限流窗口可能是「日」不是「分」**：SkillsMP 返回 `X-RateLimit-Daily-Limit` / `X-RateLimit-Daily-Remaining`，错误码含 `DAILY_QUOTA_EXCEEDED`（429，与 `INVALID_OCCUPATION` / `INVALID_LANGUAGE` 同族机检枚举）。判据：**日配额耗尽后原地重试零收益**——退避策略须先判窗口类型（日/时/分），日配额须改调度到次日或换用缓存，不能套用分钟级指数退避；批量核验脚本要把剩余配额当输入，而不是把 429 当瞬时抖动。
+- 提升层：工作流 / 工具。触发词：目录不扫描、无标记两种成因、not a live ranking、多源并列、逐源列结论、徽章不等于全绿、日配额、DAILY_QUOTA_EXCEEDED、X-RateLimit-Daily、限流窗口类型。
