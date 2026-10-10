@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.43.0"
+version: "1.46.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -317,3 +317,7 @@ visibility: "public"
 - **实证（逐串）**：`A stdio connector launches a command on each workspace member's own machine (through the conduit CLI), not on the server`（`stdio` 连接器在**每个成员自己的机器**上启动命令，不在服务器）；`granting it is effectively granting the ability to run code on your members' machines`；`grant connectors:read alone where a client only needs to inspect connectors`；`This is the same trust boundary that makes connector management a workspace-admin operation`。
 - **判据**：① **名字只差一个动词的两个作用域，可能是两个完全不同的信任域**——判断危险度要追到"副作用落在哪台机器、哪个进程"，不要靠 `read`/`write` 字眼分级；本例 `connectors:write` 的实质不是"能改配置"，而是"能在成员本机执行代码"。② **"只读"是唯一能显著降权的那一档**：只要需求是查看/盘点，就应显式只授予 read，而不能用"反正都要接 API 就一起给 write"。③ **权限面要给出"为什么这一档这么高"的落点说明**，否则使用者会把命名相近的作用域当成梯度。④ 与 ssc「运行期可执行面的声明权归运营方」互补：那条管**谁有权声明清单**，本条管**被授予的能力最终落在谁的机器上**。
 - 提升层：工具 / 安全边界（授权面审查）。触发词：read 与 write 不是梯度、作用域落点机器、stdio 在成员本机、connectors:write 等于执行代码、只授予只读。
+
+- **凭据变量化不消除构建期锚点（dynamic connection / build-time value）（来源：2026-10-11 r517A 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r517A）。
+- **强制机制失去强制能力时的三档姿态；限流 active/inactive 两态（来源：2026-10-11 r517B 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r517B）。
+- **换密钥是替换非并存；密钥+盐两个独立配置共同决定可解密性（来源：2026-10-11 r517C 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r517C）。

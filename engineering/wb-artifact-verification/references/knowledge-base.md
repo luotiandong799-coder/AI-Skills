@@ -2751,3 +2751,15 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **实证（逐串）**：`These are not the conduit:* permissions an interactive MCP client requests when a person authorizes it -- those attenuate a signed-in user's own access, while an API client's scopes *are* access`；`client secrets and DNS domain-verification challenges are never returned`、`bearer secrets are never returned`（读取面**主动脱敏**，返回值不等于服务端持有的值）；`no API-client scope can create or modify identity providers, SCIM tokens, or provisioning rules`。
 - **判据**：① **看到"scope"先问它是授权还是限权**：衰减型作用域只能在一个已登录用户的自有权限内做减法（越授越小），授权型作用域是白手起家的增量（越授越大）——两者方向相反，用同一套"最小权限"话术描述会得出相反结论。② **脱敏是返回面的承诺，不是存储面的承诺**：`never returned` 只保证接口不吐，不保证服务端没有；验收脱敏要验**返回体**，推断存储等于越界取证。③ **"没有任何作用域能授予"是一种显式设计结论，要写进覆盖面声明**：能枚举的授权清单必须同时声明它**不覆盖什么**，否则"清单里没有"会被读成"还没来得及加"。
 - 提升层：可复用 Skill（授权模型与覆盖面判定）。触发词：授权型 vs 衰减型 scope、attenuate、never returned 是返回面、清单要声明不覆盖什么。
+
+## r517B · 多标签限流取交集；同一数值 0 在不同系统语义完全相反（来源：docs.prefect.io/v3/concepts/tag-based-concurrency-limits.md 2,584B，2026-10-11 r517B 一手 curl 取 `.md` 原文实拉、逐串命中；与 dl 死活四窗 `use 0 for never` 对照）
+- **实证（逐串）**：`If a task has multiple tags, it will run only if ***all*** tags have available concurrency. `；`Tags without specified concurrency limits are treated as unlimited. `；`Setting a tag's concurrency limit to 0 causes immediate abortion of any task runs with that tag, rather than delaying them. `；对照 n8n `QUEUE_WORKER_MAX_STALLED_COUNT` 注释 `use 0 for never`。
+- **判据**：① **叠加维度决定组合方式**：多标签是**交集**，不是取最松也不是取最严 ⇒ 引入第二个标签等于新增一条独立阻塞来源；「加了标签反而更慢」通常不是限流值太小，而是叠加方式没算进去。② **「没配」不是「不生效」，而是等于无限**：未指定上限的标签被视为 unlimited ⇒ 想靠留空来关闭限制会得到相反结果；关闭要显式设 0 或改状态。③ **跨系统迁移时 0 的语义必须重新确认**：本系统 `0 = immediate abortion`（最严），n8n 停滞扫描 `0 = never`（最松，等于关掉检测）⇒ 把「设成 0 就关掉」当常识迁移，会直接把任务全杀掉或把检测全关掉。
+- **与既有能力分工**：§「已设限不等于已限住：先问计数域是全局还是 per-process」管**计数域**；本条管**多维度叠加方式**与**特殊值的方向**。
+- 提升层：工具 / 工作流。触发词：多标签取交集、all tags、未设限=unlimited、limit 0 = immediate abortion、0=never 相反语义、跨系统 0 值不可迁移。
+
+## r517C · 去抖会静默失效：键里混入逐次变化字段就一次也不合并；合并窗口必须配最大时长（来源：www.windmill.dev/docs/core_concepts/job_debouncing.md 9,268B，2026-10-11 r517C 一手 curl 取 `.md` 原文实拉、逐串命中）
+- **实证（逐串）**：`If your preprocessor injects per-call-varying fields like a timestamp, a Kafka offset, a request ID, or the raw event object, each call will land on a different key and no debouncing will happen. `；默认键由 `Workspace ID` + `Runnable path` + `All argument values` 组成；`The maximum duration (in seconds) that a job can remain in debounced state. After this time, the pending job executes regardless of new arrivals. `；`This prevents indefinite postponement in high-frequency scenarios.`
+- **判据**：① **合并类优化的失败是静默的**：键若包含任何逐次变化字段，每条落到不同 key，结果是一次也不合并**且不报错**，表现为「启用了去抖但任务数一点没降」⇒ 验收要看**实际合并率**，不看开关状态。② **默认键等于「全部参数」，等于默认不合并不同类**：参数不同即视为不同 ⇒ 想合并必须先设计键（`$args[user_id]` / `sync-$args[source]` / 字面量 `global-key`），键的设计是去抖的主体工作而非配置项。③ **合并窗口必须有上界**：没有 Max debouncing time 时，事件以高于窗口的频率持续到达会造成 `indefinite postponement` 永不上车 ⇒ 任何「等待合并」的机制都要配「最长等待」，否则吞吐越高越不出车。
+- **与既有能力分工**：§「没结果四态分诊」管**失败态分类**；本条管**成功启用但不生效**这一类静默失效。
+- 提升层：工作流 / 工具。触发词：no debouncing will happen、去抖静默失效、默认键含全部参数、per-call-varying、Max debouncing time、indefinite postponement。

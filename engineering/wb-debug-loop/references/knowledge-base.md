@@ -1237,3 +1237,15 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 
 - **入队四态语义；显式命令覆盖持久设置；降级会剥离语义标签（来源：docs.openclaw.ai/tools/steer.md 3,228B，2026-10-01 r342A 独立 curl 实拉逐串命中）**：本章已下沉 `references/knowledge-base.md`（r342A）。
 - **续期只认真实执行；环境变量常常只是初值（来源：docs.openclaw.ai/concepts/session.md 22,390B + www.activepieces.com/docs/install/configure-operate/telemetry.md 2,830B，2026-10-01 r342B 独立 curl 实拉逐串命中）**：本章已下沉 `references/knowledge-base.md`（r342B）。
+
+## r517A · 配置项是否生效由「触发型 / 运行方式」决定，不是只看值；可靠性开关自带第二失效模式（来源：help.make.com `scenario-settings.md` 5,172B + `incomplete-executions.md` 1,434B，2026-10-11 r517A 一手 curl 取 `.md` 原文实拉、逐串命中）
+- **实证（逐串）**：`If a scenario starts with an instant trigger, the setting is ignored and the scenario is deactivated immediately once the first error has occurred`（Errors before deactivation）；`If you execute the scenario manually by clicking the **Run once** button, the setting is ignored and **only one cycle** will be performed.`（Cycles per run）；`When enabled, Make completes each execution before starting the next. New runs are paused until all incomplete executions are resolved.`（Process data in order）；`By default, Make processes webhooks in parallel. When you enable process data in order, Make waits until the previous execution is complete before starting the next one.`
+- **判据**：① **数值配好不等于生效**，先问「这个键在当前触发型 / 运行方式下会不会被读取」：同一页里两个键各自在特定条件下被整条忽略（即时触发 / 手动 Run once），表现为「改了没反应」。② **串行化换来的是队头阻塞且无超时**：只要存在未解决的不完整执行，后续运行一律挂起，原文未给最长等待 ⇒ 把「提高可靠性」的开关当成无代价选项，会在一条坏数据上堵死整条流；启用前必须同时确认未完成项的清理 / 超时机制。③ **一致性开关的作用域会外溢到入口**：默认 webhook 并行，开启后连 webhook 一起串行 ⇒ 改一个「数据处理顺序」的开关会改变入口并发模型，排障时别把入口吞吐下降归给入口本身。
+- **与既有能力分工**：§「架构上不成立的组合要在启动期拒」管**启动期**的配置契约；本条管**运行期按触发型 / 运行方式失效**与串行化的第二失效模式。
+- 提升层：工作流 / 配置契约。触发词：setting is ignored、instant trigger、Run once only one cycle、队头阻塞、New runs are paused、串行化外溢到 webhook。
+
+## r517C · 同一去抖开关的判定时点与判定对象随流水线结构变化；预处理器本身从不被去抖（来源：www.windmill.dev/docs/core_concepts/job_debouncing.md 9,268B，2026-10-11 r517C 一手 curl 取 `.md` 原文实拉、逐串命中）
+- **实证（逐串）**：`For scripts and flows **without** a preprocessor, debouncing is evaluated at push time — before the job runs, against the arguments the caller supplied. `；`For flows **with** a preprocessor step, debouncing is evaluated **after** the preprocessor runs, against the preprocessor's output. `；`The preprocessor itself is never debounced: every incoming call executes it, and the resulting flow steps are what collapse into the debounced batch. `；`The argument named in **Debounce args to accumulate** must exist in the **preprocessor's output**, not in the raw trigger event.`
+- **判据**：① **判定对象是「当前结构下的上一环输出」而不是「输入」**：无预处理器按调用方原始参数判定，有预处理器按其输出判定 ⇒ 同一个开关的语义随结构改变，写规范时必须声明「以哪一环的输出为准」，否则两套环境下的同名配置行为不同。② **上游归一化环节永远全量执行**：预处理器从不被去抖，每次调用都跑 ⇒ 去抖省下的是下游成本，上游成本一分不省；把预处理器也算进合并会高估优化幅度。③ **累积字段的命名空间随判定对象移动**：要累积的字段必须存在于预处理器输出里，累积出的元素反映预处理后形态而非原始事件 ⇒ 排障「累积列表里怎么没有我传的字段」，答案是它在归一化阶段被改名或丢弃。
+- **与既有能力分工**：§「背压可折算成 worker 数」管**扩容触发**；本条管**合并类优化的判定时点随结构漂移**。
+- 提升层：工作流 / 工具。触发词：evaluated at push time、预处理器之后判定、preprocessor is never debounced、累积字段须在预处理器输出中。

@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.101.0"
+version: "1.104.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -437,3 +437,7 @@ sources:
 ## 变更计划的硬契约：体积上限在任何解析之前前置拒绝，且计划内「步骤顺序」是契约不是实现细节（来源：docs.openclaw.ai/gateway/secrets-plan-contract.md 7,356B，2026-10-11 r513B 一手 curl 200 实拉逐串命中 `16,777,216` / `including whitespace` / `rejected before JSON parsing or target validation` / `Directories, FIFOs, device files` / `runs before `targets``）
 - **判据**：① 计划文件上限按**完整序列化后的字节**（含空白）算，超限在 JSON 解析与目标校验**之前**就被拒 ⇒ 这是前置门禁，不能指望"先解析再判断"。② 只接普通文件，目录 / FIFO / 设备文件直接拒 ⇒ 生成计划的一侧与消费计划的一侧必须各自复核文件类型。③ **计划内步骤顺序写进契约**：`providerUpserts` 先于 `targets` 执行，所以同一份计划可以自引用它自己新引入的 provider 别名；把顺序当成实现细节随意调换，会让"文档说可以"的配置在实操里报 `provider "<alias>" is not configured`。④ 顺序约束必须显式写进计划 schema 与校验器，而不是留在文档里。
 - 提升层：工作流 / 工具（变更计划与发布）。触发词：plan 上限、including whitespace、前置拒绝、providerUpserts 先于 targets、顺序即契约。
+
+- **可移植制品只搬逻辑不搬连接；保留期三套独立时钟（来源：2026-10-11 r517A 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r517A）。
+- **密钥体积上限随后端且单位不统一；备份密钥库须不同位置（来源：2026-10-11 r517B 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r517B）。
+- **归档不等于下线（旧 HEAD 仍永久部署）；版本非增量且线性无分支（来源：2026-10-11 r517C 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r517C）。
