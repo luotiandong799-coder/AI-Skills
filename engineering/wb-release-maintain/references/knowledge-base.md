@@ -343,3 +343,19 @@
 - **实证（逐串）**：`CREDENTIALS_OVERWRITE_PERSISTENCE=true` 时 n8n 把加密后的覆盖值存进 `settings` 表并广播 `reload-overwrite-credentials` 事件让 worker 重载；关闭时「overwrites remain in memory on the process that loaded them and n8n doesn't propagate them to workers or preserve them across restarts」。
 - **判据**：① **"配置已生效"要拆成三个可独立为假的命题**：当前进程认得它 / 重启后还在 / 其他 worker 也认得它——三件事由不同开关控制，默认档只满足第一个；② 发布说明里新增"全局覆盖/默认值注入"类能力时，**必须写明默认档是哪一档**，因为默认最弱档的表现是"在单点上看起来完全正常、在集群里一半节点没生效"，这类故障不会报错；③ 与 av 2.179.0「计数域是全局还是 per-process」分工：那条管**上限数值的计数域**，本条管**配置值的持久性与传播域**，对象不同、不可互相替代。
 - 提升层：工作流（配置/发布变更的生效面评估）。触发词：生效范围三开关、默认最弱档、跨 worker 广播、重启后是否还在、覆盖值持久化。
+
+
+## r516A · 两把 hash 锁锁的是两样东西：`expectedHash` 锁策略制品，`expectedAttestationHash` 锁「上一次通过的检查结果」；修复权另由 `workspaceRepairs` 单独开关（来源：docs.openclaw.ai `cli/policy/running-checks.md` 4,521B，2026-10-11 独立 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`Optional hash-lock for the approved policy artifact.`（锁**已批准的策略制品**）；`Optional hash-lock for the last accepted clean policy check.`（锁**上一次通过的检查结果**）；`Allow doctor --fix to edit policy-managed workspace settings.`（是否允许自动修复改策略托管配置，**默认关闭**）；`In a multi-agent fleet with explicit ownership, pass --agent <id> ... OpenClaw never selects an arbitrary first agent`；`checksRun` / `checksSkipped` 与 `findingsHash` 一并进 attestation。
+- **判据**：① **"锁配置"与"锁检查结果"是两种保鲜期完全不同的约束**：制品 hash 只在文件被改时失效，而 attestation hash 会因**环境/后端/检查集**变化而失效——混用会让一次无害的环境变更表现为"基线被篡改"，或反过来让真正的改写在"上次通过"的掩护下溜过去。② **自动修复权要单独成开关且与检查权分离**：`workspaceRepairs=false` 意味着"能检查出问题"不等于"允许机器改它"，把两者绑在一个开关上会让 `--fix` 顺手改掉策略托管面。③ **attestation 要带 `checksSkipped`**：只报 `checksRun` 的话，"跑了 5 条全绿"与"该跑 50 条只跑了 5 条"长得一样——跳过数必须和通过数同栏出具。④ 发布/合规制品的最小可信集：**制品 hash + 检查集指纹 + 跳过数 + 结论 hash**，缺一项则该证明可被合法绕过。
+- 提升层：工作流（发布与合规制品的锁定面）。触发词：expectedHash 与 attestation hash 分工、锁制品不锁结论、workspaceRepairs 默认关闭、checksSkipped 必须同栏。
+
+## r516B · 弃用入口在迁移期仍是所有权根：升级到新认证前**必须先用旧凭据认证一次**，旧入口不能先关（来源：docs.flowiseai.com `configuration/authorization/app-level.md` 7,734B，2026-10-11 独立 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`To prevent unauthorized ownership claims, you must first authenticate using the existing username and password configured as FLOWISE_USERNAME and FLOWISE_PASSWORD`（建新 admin 前**必须**用旧凭据认证，官方理由是防未授权的所有权主张）；`a short-lived access token (default 60 minutes) and a long-lived refresh token (default 90 days)`；`Set to 'true' to invalidate all tokens on server restart`（`EXPIRE_AUTH_TOKENS_ON_RESTART`，把"重启"做成显式失效触发器）。
+- **判据**：① **标记为 deprecated 的入口在迁移完成前是权限根，不是可先关的垃圾路径**——关掉它等于同时关掉"证明我是原主"的唯一通道；迁移计划里旧的入口必须保留到新所有权建立之后。② **所有权转移要有"先证明旧所有权"这一步**，只靠"新账号第一个注册"会把抢注变成合法流程。③ **长短令牌是两套失效时钟**（60 分钟 / 90 天），轮换策略必须分别给：访问令牌泄露的窗口是分钟级，刷新令牌泄露的窗口是季度级，按同一个周期处理必然有一边过度或不足。④ **把"重启"做成失效触发器时，要同时声明它对在场会话的影响**——这是"以可用性换安全"的开关，不是无副作用的配置项。
+- 提升层：工作流（认证迁移与发布变更）。触发词：弃用入口是所有权根、先证明旧所有权、长短令牌双时钟、重启即失效。
+
+## r516C · 准入面被刻意排除在 API 授权面之外：没有任何 API-client scope 能改身份提供者 / SCIM / provisioning；机器令牌绑定 audience，在 `/mcp` 被拒（来源：pipedream.com/docs/conduit/use/api/scopes.md 3,110B，2026-10-11 独立 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`Identity inventory is read-only: sso:read and provisioning:read can inspect sanitized settings and mappings, but no API-client scope can create or modify identity providers, SCIM tokens, or provisioning rules`；`Those writes govern who can sign in or be provisioned as a human`（官方给的理由：这些写操作决定**谁能作为人登录或被供给**）；`Invites, API-client management itself, changing member roles, and workspace telemetry configuration are likewise not on the API-client surface in this release`；`a machine token is bound to the API audience and is rejected at /mcp`。
+- **判据**：① **能列举的授权清单必须同时声明它的排除面**：本例明确"邀请 / API 客户端自身管理 / 改成员角色 / 遥测配置"不在本版 API 面内 ⇒ "清单里找不到"要能被读成"这一版刻意不提供"，而不是"以后会加"。② **"谁能进来"这一类写操作被排除在机器面之外，是边界设计而非功能缺口**：决定人类准入的写操作不应由机器凭据完成，评审"为什么 API 不能做这件事"时先按边界判定，不按排期判定。③ **同一身份跨入口不是同一个身份**：机器令牌绑定 audience，在 `/mcp` 端点被拒 ⇒ 拿到令牌不等于拿到全部入口，"已授权"必须带上"对哪个入口授权"。④ 发布说明里新增 API 面时，**排除清单与能力清单同等重要**，只写能力会让集成方按"迟早会有"做设计。
+- 提升层：工作流（授权面与发布说明的覆盖面）。触发词：准入面排除在 API 外、排除清单与能力清单同重、令牌绑定 audience、跨入口不是同一身份。

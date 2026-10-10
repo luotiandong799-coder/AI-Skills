@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.40.0"
+version: "1.43.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -285,3 +285,35 @@ visibility: "public"
 ## 技能装载的校验必须分「警告放行」与「跳过」两档，且诊断要可呈现：description 缺失是硬失败，外观问题是软失败（来源：agentskills.io/client-implementation/adding-skills-support.md 20,357B，2026-10-11 r513C 一手 curl 200 实拉逐串命中 `Lenient validation` / `warn, load anyway`×2 / `skip the skill`×2 / `64 characters` / `don't block skill loading on cosmetic issues` / `Record diagnostics`）
 - **判据**：① 四类问题的处置**不是同一档**：name 与父目录名不匹配 → 警告但加载；name 超 64 字符 → 警告但加载；**description 缺失或为空 → 跳过该技能并记错**（description 是渐进式披露的必要条件，没有它等于该技能不可发现）；YAML 完全不可解析 → 跳过并记错。② 安全审查里要把「软失败」与「硬失败」分开报：**外观问题不得阻断加载**，否则一次格式整改会连锁下线一批技能；但**不可发现 = 不存在**，description 缺失不能降级成警告。③ 诊断必须落到可呈现面（debug 命令 / 日志 / UI），「静默跳过」会让技能莫名消失且无人察觉。
 - 提升层：工具 / 工作流（技能校验与审查）。触发词：Lenient validation、warn load anyway、skip the skill、description 缺失即跳过、诊断可呈现。
+
+
+## 作用域覆盖是**加法**且重复声明必须单调收紧：更弱的重复声明被显式拒绝，能否下放由「证据可归因性」决定（来源：docs.openclaw.ai `cli/policy/scopes.md` 4,160B，2026-10-11 r516A 一手 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`Overlays are additive: the global rule still runs, and the scoped rule can add its own finding against the same evidence`（作用域规则**不替换**全局规则，可对同一证据再加一条 finding）；`A repeated scoped field for the same agent must be equally or more restrictive; a weaker duplicate claim is rejected (allow-lists are subsets, deny-lists are supersets, required booleans are fixed)`（同一字段的重复声明**必须等严或更严**，更弱者被拒——allow 列表必须子集、deny 列表必须超集、required 布尔固定）；`is not channel-attributable evidence, so it cannot be scoped by`（`session.dmScope` 不是渠道可归因证据 ⇒ 该项**只能保持全局**）；`evaluates the scoped rule against inherited global/default posture for that runtime agent id instead of skipping it`（作用域引用了不存在的 agent id 时**不跳过**，改用继承的全局/默认姿态评估）；`Every scope present in policy.jsonc must be valid and enforceable`。
+- **判据**：① **叠加是加法不是替换**——给某一类对象"加严"不会抵消全局规则，审计时两条 finding 可能同时落在同一份证据上，不能当成重复项去重。② **"更严"必须是可判定方向**：同一字段被两个作用域各自声明时，系统不是取并集或取最后一条，而是要求单调收紧并把更弱的那条**拒掉**——配置里有冲突不是"谁在后面谁赢"，而是直接失败。③ **能否下放到某一级，取决于证据能不能归因到该级**：证据不可归因（这是会话级还是渠道级说不清）时强制保持全局，不得为了配置好看而下放。④ **引用了不存在的对象不算空配置**——按继承默认姿态评估而不是跳过，否则"写错一个 id"会静默变成"这条规则没生效"。
+- 提升层：工具 / 工作流（安全策略与配置审计）。触发词：作用域叠加、加法不替换、更弱重复被拒、单调收紧、证据可归因性、不可下放的维度、不存在的 id 不跳过。
+
+## 密钥「未配置」不是「没有密钥」，而是落到一个可猜的或另一个信任域的值上：回落会把两个本该独立的信任域合成一个（来源：docs.flowiseai.com `configuration/authorization/app-level.md` 7,734B，2026-10-11 r516B 一手 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`Secret for refresh tokens (defaults to auth token secret if not set)`（刷新令牌密钥未设时**复用**访问令牌密钥）；`Session encryption secret (default: 'flowise')`、`Token validation audience claim (default: 'AUDIENCE')`、`Token validation issuer claim (default: 'ISSUER')`（未设时落到**写在文档里的常量**）；`otherwise, default values will be used, which could increase the chances of attackers to forge valid tokens and impersonate users`（官方明示：不配即用默认值，攻击者可**伪造有效令牌并冒充用户**）。
+- **判据**：① 审计"这一项没配"时，结论**不能停在"未设置"**，必须继续追"运行时落到了什么值"——落到文档公开的常量，等于签名密钥已经公开。② **回落复用另一个密钥比常量默认更隐蔽**：`refresh` 未设则复用 `auth` 的密钥，于是"短期访问令牌域"与"长期刷新令牌域"合并成一个域，攻破短令牌即可续出长会话——两个信任域退化成一个，而配置面看起来"只少设了一项"。③ **"没配"要按有效密钥计入资产清单**，不能按"无密钥"从清单里剔除；默认值的安危判据仍是"它单独能不能构成授权"，但它构成的授权要**按默认值的可预测性**升级。
+- 提升层：工具 / 工作流（凭据与密钥面审计）。触发词：默认值可伪造、回落复用另一密钥、信任域合并、未配置不等于没有、JWT 默认密钥、刷新令牌复用。
+
+## 「读 / 写」不是同一能力的两档：作用域的危险度由**副作用落在谁的机器上**决定，不看动词（来源：pipedream.com/docs/conduit/use/api/scopes.md 3,110B，2026-10-11 r516C 一手 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`A stdio connector launches a command on each workspace member's own machine (through the conduit CLI), not on the server`（`stdio` 连接器在**每个成员自己的机器**上启动命令，不在服务器）；`granting it is effectively granting the ability to run code on your members' machines`；`grant connectors:read alone where a client only needs to inspect connectors`；`This is the same trust boundary that makes connector management a workspace-admin operation`。
+- **判据**：① **名字只差一个动词的两个作用域，可能是两个完全不同的信任域**——判断危险度要追到"副作用落在哪台机器、哪个进程"，不要靠 `read`/`write` 字眼分级；本例 `connectors:write` 的实质不是"能改配置"，而是"能在成员本机执行代码"。② **"只读"是唯一能显著降权的那一档**：只要需求是查看/盘点，就应显式只授予 read，而不能用"反正都要接 API 就一起给 write"。③ **权限面要给出"为什么这一档这么高"的落点说明**，否则使用者会把命名相近的作用域当成梯度。④ 与 ssc「运行期可执行面的声明权归运营方」互补：那条管**谁有权声明清单**，本条管**被授予的能力最终落在谁的机器上**。
+- 提升层：工具 / 安全边界（授权面审查）。触发词：read 与 write 不是梯度、作用域落点机器、stdio 在成员本机、connectors:write 等于执行代码、只授予只读。
+
+
+## 作用域覆盖是**加法**且重复声明必须单调收紧：更弱的重复声明被显式拒绝，能否下放由「证据可归因性」决定（来源：docs.openclaw.ai `cli/policy/scopes.md` 4,160B，2026-10-11 r516A 一手 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`Overlays are additive: the global rule still runs, and the scoped rule can add its own finding against the same evidence`（作用域规则**不替换**全局规则，可对同一证据再加一条 finding）；`A repeated scoped field for the same agent must be equally or more restrictive; a weaker duplicate claim is rejected (allow-lists are subsets, deny-lists are supersets, required booleans are fixed)`（同一字段的重复声明**必须等严或更严**，更弱者被拒——allow 列表必须子集、deny 列表必须超集、required 布尔固定）；`is not channel-attributable evidence, so it cannot be scoped by`（`session.dmScope` 不是渠道可归因证据 ⇒ 该项**只能保持全局**）；`evaluates the scoped rule against inherited global/default posture for that runtime agent id instead of skipping it`（作用域引用了不存在的 agent id 时**不跳过**，改用继承的全局/默认姿态评估）；`Every scope present in policy.jsonc must be valid and enforceable`。
+- **判据**：① **叠加是加法不是替换**——给某一类对象"加严"不会抵消全局规则，审计时两条 finding 可能同时落在同一份证据上，不能当成重复项去重。② **"更严"必须是可判定方向**：同一字段被两个作用域各自声明时，系统不是取并集或取最后一条，而是要求单调收紧并把更弱的那条**拒掉**——配置里有冲突不是"谁在后面谁赢"，而是直接失败。③ **能否下放到某一级，取决于证据能不能归因到该级**：证据不可归因（这是会话级还是渠道级说不清）时强制保持全局，不得为了配置好看而下放。④ **引用了不存在的对象不算空配置**——按继承默认姿态评估而不是跳过，否则"写错一个 id"会静默变成"这条规则没生效"。
+- 提升层：工具 / 工作流（安全策略与配置审计）。触发词：作用域叠加、加法不替换、更弱重复被拒、单调收紧、证据可归因性、不可下放的维度、不存在的 id 不跳过。
+
+## 密钥「未配置」不是「没有密钥」，而是落到一个可猜的或另一个信任域的值上：回落会把两个本该独立的信任域合成一个（来源：docs.flowiseai.com `configuration/authorization/app-level.md` 7,734B，2026-10-11 r516B 一手 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`Secret for refresh tokens (defaults to auth token secret if not set)`（刷新令牌密钥未设时**复用**访问令牌密钥）；`Session encryption secret (default: 'flowise')`、`Token validation audience claim (default: 'AUDIENCE')`、`Token validation issuer claim (default: 'ISSUER')`（未设时落到**写在文档里的常量**）；`otherwise, default values will be used, which could increase the chances of attackers to forge valid tokens and impersonate users`（官方明示：不配即用默认值，攻击者可**伪造有效令牌并冒充用户**）。
+- **判据**：① 审计"这一项没配"时，结论**不能停在"未设置"**，必须继续追"运行时落到了什么值"——落到文档公开的常量，等于签名密钥已经公开。② **回落复用另一个密钥比常量默认更隐蔽**：`refresh` 未设则复用 `auth` 的密钥，于是"短期访问令牌域"与"长期刷新令牌域"合并成一个域，攻破短令牌即可续出长会话——两个信任域退化成一个，而配置面看起来"只少设了一项"。③ **"没配"要按有效密钥计入资产清单**，不能按"无密钥"从清单里剔除；默认值的安危判据仍是"它单独能不能构成授权"，但它构成的授权要**按默认值的可预测性**升级。
+- 提升层：工具 / 工作流（凭据与密钥面审计）。触发词：默认值可伪造、回落复用另一密钥、信任域合并、未配置不等于没有、JWT 默认密钥、刷新令牌复用。
+
+## 「读 / 写」不是同一能力的两档：作用域的危险度由**副作用落在谁的机器上**决定，不看动词（来源：pipedream.com/docs/conduit/use/api/scopes.md 3,110B，2026-10-11 r516C 一手 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`A stdio connector launches a command on each workspace member's own machine (through the conduit CLI), not on the server`（`stdio` 连接器在**每个成员自己的机器**上启动命令，不在服务器）；`granting it is effectively granting the ability to run code on your members' machines`；`grant connectors:read alone where a client only needs to inspect connectors`；`This is the same trust boundary that makes connector management a workspace-admin operation`。
+- **判据**：① **名字只差一个动词的两个作用域，可能是两个完全不同的信任域**——判断危险度要追到"副作用落在哪台机器、哪个进程"，不要靠 `read`/`write` 字眼分级；本例 `connectors:write` 的实质不是"能改配置"，而是"能在成员本机执行代码"。② **"只读"是唯一能显著降权的那一档**：只要需求是查看/盘点，就应显式只授予 read，而不能用"反正都要接 API 就一起给 write"。③ **权限面要给出"为什么这一档这么高"的落点说明**，否则使用者会把命名相近的作用域当成梯度。④ 与 ssc「运行期可执行面的声明权归运营方」互补：那条管**谁有权声明清单**，本条管**被授予的能力最终落在谁的机器上**。
+- 提升层：工具 / 安全边界（授权面审查）。触发词：read 与 write 不是梯度、作用域落点机器、stdio 在成员本机、connectors:write 等于执行代码、只授予只读。
