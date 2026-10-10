@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "3.155.0"
+version: "1.113.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -21,16 +21,19 @@ version: "3.155.0"
 > 本节（写"什么时候不该跑"：STOP / WAIT / PROCEED 快速路径表）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 > 本节原文已零删减下沉 `references/knowledge-base.md §r442B 下沉：技能是"指令 + 所需工具"的打包，不是一段文字（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·技能是指令所需工具的打包不是一段文字）`（正文预算 ≤500 行）
 
-## 触发评测：发布前盲测（新技能 / 改过 description 必做，细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·触发评测发布前盲测新技能改过description必做细则已下沉KB）
+## 触发评测：发布前盲测（新技能 / 改过 description 必做，细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·触发评测发布前盲测新技能改过description必做细则已下沉KB）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r513C · 触发评测：发布前盲测（新技能 / 改过 desc）
 
-## 按需阅读（渐进披露，不要常驻加载）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·按需阅读渐进披露不要常驻加载）
+## 按需阅读（渐进披露，不要常驻加载）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·按需阅读渐进披露不要常驻加载）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r513C · 按需阅读（渐进披露，不要常驻加载）（全文见 re）
+
 ## 声明式白名单只约束"工具调用面"，不约束"数据面"：判据按"被约束的是哪类调用"而非"有没有该字段"（来源：learn.microsoft.com/en-us/agent-framework/agents/skills、docs.github.com/.../add-skills、geminicli.com/docs/cli/skills、code.visualstudio.com/.../agent-skills、cursor.com/docs/context/rules，2026-10-01 r362-Q-C 实拉；与 r361-Q-B B1 跨客户端效力漂移 相邻）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·声明式白名单只约束工具调用面不约束数据面判据按被约束的是哪类调用而非有没有该字段）
 ## 校验失败的处理半径由错误严重度决定，且"静默跳过"是显式设计不是缺陷：整技能拒 / 仅告警跳过 / 未知顶层字段为前向兼容而忽略（来源：learn.microsoft.com/en-us/agent-framework/agents/skills、docs.dify.ai/.../plugin-info-by-manifest、docs.n8n.io/.../n8n-nodes-base.executeworkflow.md，2026-10-01 r362-Q-C 实拉）（全文见 references/knowledge-base.md §下沉·校验失败的处理半径由错误严重度决定且静默跳过是显式设计不是缺陷整技能拒仅告警跳过未知顶层字段为前）
 
 ## 学习轮沉淀区（本段）（全文见 references/knowledge-base.md §下沉·学习轮沉淀区本段）
 
-## 技能「调用面 ≠ 入口面」：user-invocable:false 仍可被模型调用，加载源有显式优先级链…（原文已下沉 references/knowledge-base.md §L481）
-## 技能进化不要自由变异，要「分解进固定能力空间 + 定向修订」…（原文已下沉 references/knowledge-base.md §L486）
+## 技能「调用面 ≠ 入口面」：user-invocable:false 仍可被模型调用，加载源有显式优先级链…（原文已下沉 references/knowledge-base.md §L481）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r513C-2 · 技能「调用面 ≠ 入口面」：user-invoc）
+
+## 技能进化不要自由变异，要「分解进固定能力空间 + 定向修订」…（原文已下沉 references/knowledge-base.md §L486）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r513C-2 · 技能进化不要自由变异，要「分解进固定能力空间 +）
+
 ## 技能控制流外置为显式状态机（EFSM）：知识与控制流分离，用显式状态转移替代模型猜下一步（细则见 KB，2026-09-30 r320A 下沉）（全文见 references/knowledge-base.md §下沉·技能控制流外置为显式状态机EFSM知识与控制流分离用显式状态转移替代模型猜下一步细则见KB202）
 
 ## 卸载必须留「显式卸载」marker（enabled: false tombstone），阻断启动修复静默重装；重装不静默恢复启用（来源：docs.openclaw.ai cli/plugins/uninstall-and-update，2026-09-30 r320A 实拉）（全文见 references/knowledge-base.md §下沉·卸载必须留显式卸载markerenabledfalsetombstone阻断启动修复静默重装重装）
@@ -43,21 +46,9 @@ version: "3.155.0"
 
 ## 版本义务沿引用图传递：改动一个被依赖的文件，即使接口没变也要 bump 全部下游引用者（来源：pipedream.com/docs/components/contributing/guidelines.md 43,351B，2026-09-30 r325C 独立 curl 实拉逐串命中「If you update a file, you must increment the versions of all components that import or are affected by the updated file.」；经 Qoder r357-Q-A 提名；与已落「接口形状判破坏」互补——那条管"算不算破坏性变更"，本条管"谁的版本号必须跟着动"）（全文见 references/knowledge-base.md §下沉·版本义务沿引用图传递改动一个被依赖的文件即使接口没变也要bump全部下游引用者来源pipedre）
 
-## 打包门禁的保留词表应含「背书语义词」，且检查必须跑在归一化形式上（来源：ClawHub publishing 本机实拉，r326C）
-- **原文**：硬拒 16 个 topic——`approved / audited / certified / clawhub / community / curated / endorsed / featured / official / officials / openclaw / recommended / staff-pick / trusted / trusted-publisher / verified`；「The check runs on the **normalized form**, so `Official` and `staff pick` are rejected too」；topic ≤48 字符、禁不可见格式字符；归一后重复**丢弃而不报错**（`git,Git` 算一个）。
-- **判据**：① 保留词分两维：**防借厂商名义**（已落 3.29.0 claude/anthropic）+ **防作者自我认证**（本轮，拦的是「信任/认证形容词」）；② 门禁必须**跑在归一化形式**上（大小写/分隔符/复数），否则 `Official`、`staff pick` 直接绕过 ⇒ 任何字面量黑名单都要先声明归一化规则；③ 「归一后重复丢弃不报错」是**容忍策略**，与硬拒词表是两条不同处置线，别混。
-- **提升层**：可复用 Skill。触发词：背书语义词、自认证词、reserved topics、归一化检查、大小写绕过。
+## 打包门禁的保留词表应含「背书语义词」，且检查必须跑在归一化形式上（来源：ClawHub publishing 本机实拉，r326C）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r513C-3 · 打包门禁的保留词表应含「背书语义词」，且检查必须）
 
-- **元数据字段三态语义 + 「改元数据即发新版」的批量副作用（来源：ClawHub publishing 本机实拉，r326C）**：本章已下沉 `references/knowledge-base.md`（r326C）。
-- **能力授予平面独立于「发现/归属」平面：库归属只给管理与发现权，不自动授予其声明的工具/凭证/安装权；共享 Gateway 是单一信任域，密钥不得进入 skill 内容（来源：docs.openclaw.ai/tools/skills.md 39,741B，2026-09-30 r327A 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r327A）。
-- **指令 vs 知识分离：静态参考资料外置到按需检索，不塞进每次全量加载的指令（来源：www.activepieces.com/docs/agents/knowledge.md 2,613B，2026-09-30 r327C 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r327C）。
-- **测试分层分类法：四层各管一种失败模式，选错层=慢/冗余/静默无效（来源：Activepieces《Testing Strategy》handbook 5,560B，2026-09-30 r336C 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r336C）。
-## 技能/工具按任务语义检索 + 诚实无匹配（来源：Activepieces `mcp/tool-search.md` 3,608B，2026-09-30 实拉）
-
-1. **检索=按任务描述语义搜，非按名翻目录**：agent 用自然语言任务描述（「发消息到 Slack 频道」）语义检索技能/工具，而非翻几百个目录；作者须为技能写「给 agent 看的 AI metadata 描述」才能被检索到。判据：技能元数据须带 agent-oriented 描述，否则不可被发现。
-2. **低于相关性阈值的匹配丢弃而非填充，空结果=真无匹配**：检索结果低于阈值直接 drop，不拿弱相关凑数——空结果意味着目录里真没有，agent 应直说而非跑错工具。判据：选择逻辑须有阈值截断 + 诚实无匹配路径，禁止「凑一个最可能错的」。
-
-- 提升层：可复用 Skill。触发词：语义检索、诚实无匹配。
+## 技能/工具按任务语义检索 + 诚实无匹配（来源：Activepieces `mcp/tool-search.md` 3,608B，2026-09-30 实拉）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r513C-3 · 技能/工具按任务语义检索 + 诚实无匹配（来源：）
 
 ## 技能自动修补的授权令牌三件套 + 所有权按目录判定 + 扫描分级只 critical 阻断（来源：docs.openclaw.ai/tools/self-learning 16,747B + /tools/skill-workshop/how-it-works 4,288B，2026-09-30 r338A 独立实拉）
 
@@ -495,3 +486,11 @@ version: "3.155.0"
 - **不落（第一手不复现）**：Qoder r492-Q-B① 引用的跨端上传硬失败回显（`Unexpected key(s) in SKILL.md frontmatter … Allowed properties are: allowed-tools, compatibility, description, license, metadata, name`）与「未知字段静默忽略」，本轮在 code.claude.com/docs/en/skills（1,200,668B）内 `unknown field` 与 `silently ignored` 各 **0 命中** ⇒ 不复现即不落，转候选池；本条只落可由同一页面一手证实的覆盖/命名空间/链接三语义。
 - **与既有能力分工**：r490B-2「清单字段严格性按对象位置分档」管**字段装不装得进**；r486B「兼容门槛双断点」管**版本够不够**；本条管**装进来之后谁覆盖谁、谁和谁共存**。
 - 提升层：可复用 Skill（命名与装载契约）/ 工作流（技能分发与排障）。触发词：覆盖单位是命令不是技能、别名不被替换、plugin 命名空间共存、symlink 只加载一次、Enterprise over personal over project、同名冲突查更高层。
+
+## r513C · 技能评测必须是「有技能 / 无技能」双跑对照 + 每轮干净上下文；断言先看第一轮产出再补（来源：agentskills.io/skill-creation/evaluating-skills.md 16,957B，2026-10-11 r513C 一手 curl 200 实拉逐串命中 `once **with the skill** and once **without it**` / `clean context` / `Start with 2-3 test cases` / `first round of results` / `iteration-1` / `benchmark.json`）
+- **判据**：① **没有对照组就没有"这个技能有没有用"的结论**——每个用例跑两遍（带技能 / 不带技能或带旧版本），只跑带技能那一遍得到的是"能跑通"，不是"有增益"。② **每次跑必须干净上下文**：不带上一轮残留、不带开发过程状态；有子 agent 隔离就用子 agent，没有就单开会话——否则 agent 可能靠残留状态通过，而 `SKILL.md` 本身并没说清楚。③ **断言后置**：先只写 2–3 个用例（prompt + 期望输出），跑完第一轮看过真实产出后再补断言；开局就把断言写死，等于把自己没验证过的期望值当成标准。④ 用例要在措辞 / 正式度 / 详略 / 复杂度四轴上变化，并**至少含一个边界或歧义用例**；结果按 `iteration-N/` 分目录归档并出 `benchmark.json` 汇总，便于跨轮比较。
+- 提升层：工作流 / 可复用 Skill（技能质量评测）。触发词：with_skill/without_skill 双跑、干净上下文、断言后置、iteration-N、benchmark.json、边界用例。
+
+## r513C-2 · description 触发评测要有「近似未命中」负例；且触发率低先分诊是不是 agent 自认为能处理（来源：agentskills.io/skill-creation/optimizing-descriptions.md 13,307B，2026-10-11 r513C 一手 curl 200 实拉逐串命中 `Aim for about 20 queries` / `8-10 that should trigger` / `near-misses` / `beyond what they can handle alone` / `Err on the side of being pushy` / `1024`）
+- **判据**：① 触发评测集约 20 条，**应触发与不应触发各 8–10 条**；只测正例永远只能把描述越写越宽。② **负例的价值在"近似未命中"**——与目标技能共享关键词但真实需求不同（"更新 Excel 预算表里的公式"对 CSV 分析技能）；"写个斐波那契"这类无关例测不出精度，等于占位。③ 正例要覆盖**措辞 / 显式度 / 详略 / 复杂度**四轴，最有价值的是**表面看不出与技能有关**的那几条。④ **反直觉分诊**：agent 通常只对"自己搞不定"的任务去查技能，简单一步请求即使描述完美匹配也可能不触发 ⇒ 触发率低先判"这是否属于 agent 自认为能处理的任务"，再改描述，别把平台行为误判成描述缺陷。⑤ 描述用**祈使句**、写**用户意图**而非实现、倾向"写得强一点"（显式列出即使用户不点名该领域也适用的场景），硬上限 1024 字符。
+- 提升层：可复用 Skill / 工作流（触发面工程）。触发词：20 条触发集、near-miss 负例、四轴变化、简单任务不触发、祈使句描述、1024。

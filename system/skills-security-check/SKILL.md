@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.34.0"
+version: "1.37.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -273,3 +273,15 @@ visibility: "public"
 - **实证**：官方原文四点——①自述口径「**71 vulnerability patterns** across **17 categories**: prompt injection, data exfiltration, privilege escalation, supply chain, excessive agency, output handling, system prompt override …」；②摄取上限「A breach of either ingest cap **fails closed** with an `IngestLimitExceededError`」，且「the per-file 1 MB analysis cap (`MAX_FILE_BYTES`) is a **separate, downstream limit**: it bounds what individual analyzers will read out of an **already-ingested** directory」；③基线可漂移「A baseline can also use **drift-tolerant glob rules** (by rule id, file path, or message)」；④基线的失效条件「**Exact fingerprint baselines are evidence-bound**: changing the scanned source or **SkillSpector version** keeps the finding **active until it is reviewed again**」，复核开关 `--show-suppressed`。
 - **判据**：① **门禁阈值不能按扫描器自述的规则/类别数设**——自述是文档口径、实现是代码口径，两者会漂移（本例自述同时给「71 patterns」与「17 categories」两套计数）；阈值要按自己实测的命中分布定并周期重算。② **摄取超限必须 fail-closed**：直接抛错而不是截断；且「摄取上限」与「单文件分析上限」是**下游两道不同的闸**（`MAX_FILE_BYTES` 只约束已摄取目录内单个分析器读多少），超限事件必须可见——截断式降级等于静默少检。③ **基线抑制不能变成永久豁免**：抑制项可按 rule id / 路径 / 消息做漂移容忍，但源内容或扫描器版本一变，抑制自动失效并回到待复核；且必须能用 `--show-suppressed` 复核被抑制项，否则「抑制即消失」会形成无人察觉的覆盖盲区。
 - 提升层：工具 / 可复用 Skill（扫描治理）。触发词：fails closed、IngestLimitExceededError、MAX_FILE_BYTES 下游限、drift-tolerant baseline、evidence-bound、--show-suppressed。
+
+## 挂载/路径类配置必须过「二次校验」，且「省略访问模式」不等于只读（来源：docs.openclaw.ai/gateway/sandbox-vs-tool-policy-vs-elevated.md 9,792B，2026-10-11 r513A 一手 curl 200 实拉逐串命中 `pierces` / `validates bind sources twice` / `Symlink-parent escapes do not bypass blocked-path or allowed-root checks` / `Default is read-write if you omit the mode` / `effectively hands host control to the sandbox`）
+- **判据**：① 路径类校验只做一次不够——先对**归一化源路径**校验，再解析到**最深存在祖先**后**再校验一次**，符号链接父目录逃逸因此无法绕过；不存在的叶子路径也要安全判定（`alias-out/new-file` 经符号链接父目录解析到阻断路径时整条挂载被拒）。② 挂载模式省略时默认是**读写**，安全审查里「未声明」一律按 rw 判，只有显式 `:ro` 才算只读。③ 任何把宿主控制面挂进沙箱的条目（`/var/run/docker.sock`）要单独点名——它等于把宿主控制权交出去。④ `workspaceAccess` 与 bind 模式是两套独立开关，不能互相代偿。
+- 提升层：工具 / 工作流（沙箱与挂载审查）。触发词：binds、:ro、二次校验、最深存在祖先、符号链接逃逸、docker.sock、workspaceAccess。
+
+## 策略一致性检查要分「无效 / 缺项 / 更弱」三态，另加「不可观测」第四态：只报"不一致"会掩盖失败方向（来源：docs.openclaw.ai/cli/policy/findings.md 18,932B，2026-10-11 r513B 一手 curl 200 实拉逐串命中 `policy/policy-conformance-invalid` / `policy/policy-conformance-missing` / `policy/policy-conformance-weaker` / `policy/sandbox-container-posture-unobservable` / `cannot observe it`）
+- **判据**：① 比对基线与被检配置至少要三态：**语法无效**（invalid，比不了）、**缺项**（missing，规则不在）、**值更弱**（weaker，在但放宽了）——三者修复动作完全不同，压成"不一致"会造成误修。② 还要有第四态 **unobservable**：规则已启用但当前后端**无法观测**该姿态 ⇒ 「规则生效」不等于「规则可被验证」，验收时要问"这条规则在我这个后端上有没有观测点"。③ 发现项用 `域/条件` 命名空间编码（`policy/mcp-unapproved-server`、`policy/tools-required-deny-missing`…），让"缺 deny"与"有 deny 但被绕过"成为两个可区分的 ID，而不是同一条泛化结论。
+- 提升层：工具 / 工作流（合规与配置审计）。触发词：invalid/missing/weaker 三态、unobservable、发现项命名空间、策略一致性。
+
+## 技能装载的校验必须分「警告放行」与「跳过」两档，且诊断要可呈现：description 缺失是硬失败，外观问题是软失败（来源：agentskills.io/client-implementation/adding-skills-support.md 20,357B，2026-10-11 r513C 一手 curl 200 实拉逐串命中 `Lenient validation` / `warn, load anyway`×2 / `skip the skill`×2 / `64 characters` / `don't block skill loading on cosmetic issues` / `Record diagnostics`）
+- **判据**：① 四类问题的处置**不是同一档**：name 与父目录名不匹配 → 警告但加载；name 超 64 字符 → 警告但加载；**description 缺失或为空 → 跳过该技能并记错**（description 是渐进式披露的必要条件，没有它等于该技能不可发现）；YAML 完全不可解析 → 跳过并记错。② 安全审查里要把「软失败」与「硬失败」分开报：**外观问题不得阻断加载**，否则一次格式整改会连锁下线一批技能；但**不可发现 = 不存在**，description 缺失不能降级成警告。③ 诊断必须落到可呈现面（debug 命令 / 日志 / UI），「静默跳过」会让技能莫名消失且无人察觉。
+- 提升层：工具 / 工作流（技能校验与审查）。触发词：Lenient validation、warn load anyway、skip the skill、description 缺失即跳过、诊断可呈现。

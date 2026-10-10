@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.94.0"
+version: "1.96.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -429,3 +429,11 @@ sources:
 - **判据**：① **「同步是否成功」与「内容多久没更新」是两问，很多下发面两问都答不了**：`sync_status` 为布尔时，`false` 同时吞掉「未开启」与「开启但失败」两种状态，不能据此推断同步失败。② **纪元零值时间戳（1970-01-01）不等于「很旧」，通常表示「从未采集」** ⇒ 拿哨兵当真实时间会算出荒谬的陈旧度；凡时间戳字段出现第二个同义字段，必须逐字段验证取值范围。③ **没有版本/文件树端点就没有交叉核对手段**，此时「新鲜度」只能靠自建快照哈希判定（与 §content_hash 规范化重算闭环），不能信下发方自报。
 - **与既有能力分工**：§「三无一钉」管**载荷本身**有没有版本可钉（钉 master）；本条管**元数据面**能不能判断新鲜度（时间戳哨兵 + 布尔状态 + 无版本端点）。
 - 提升层：工作流（依赖与下发治理）。触发词：file_last_modified、1970-01-01 哨兵、sync_status 布尔、无版本端点、新鲜度不可判定、自建快照哈希。
+
+## 凭据引用契约三件事：字段集固定、每个源各有 id 语法、**换默认不回填存量引用**（来源：docs.openclaw.ai/gateway/secrets/secretref-contract.md 9,895B，2026-10-11 r513A 一手 curl 200 实拉逐串命中 `exactly those three fields` / `RFC 6901 escaping in segments` / `~` becomes `~0` / `Changing a source's default does not rewrite explicit refs` / `must match a registered same-source provider, or resolution fails`）
+- **判据**：① 引用对象**只有 source / provider / id 三个字段**，多出来的字段要显式 `coerceSecretRef` 收敛后才能存，不能直接落库。② 每个 source 是**独立 id 语法**：`env`/`store` 走环境名语法 `^[A-Z][A-Z0-9_]{0,127}$`；`file` 走绝对路径 JSON Pointer 并按 RFC 6901 转义（`~`→`~0`、`/`→`~1`）；`exec` 支持 `secret#json_key` 选择器但拒绝 `.` / `..` 路径段。③ **升级默认 provider 是非回填操作**：改 `secrets.defaults.*` 不会重写已有显式引用，仍写 `default` 的旧引用必须能匹配到已注册的同源 provider，否则**在解析期失败**——迁移清单要逐条核对存量引用，不能假设"改了默认就全跟着变"。④ 修复类命令（doctor --fix）必须**先备份配置与凭据库再重写**。
+- 提升层：工作流（配置与凭据迁移）。触发词：SecretRef、三字段、RFC 6901、~0、默认不回填、provider 正则、coerce。
+
+## 变更计划的硬契约：体积上限在任何解析之前前置拒绝，且计划内「步骤顺序」是契约不是实现细节（来源：docs.openclaw.ai/gateway/secrets-plan-contract.md 7,356B，2026-10-11 r513B 一手 curl 200 实拉逐串命中 `16,777,216` / `including whitespace` / `rejected before JSON parsing or target validation` / `Directories, FIFOs, device files` / `runs before `targets``）
+- **判据**：① 计划文件上限按**完整序列化后的字节**（含空白）算，超限在 JSON 解析与目标校验**之前**就被拒 ⇒ 这是前置门禁，不能指望"先解析再判断"。② 只接普通文件，目录 / FIFO / 设备文件直接拒 ⇒ 生成计划的一侧与消费计划的一侧必须各自复核文件类型。③ **计划内步骤顺序写进契约**：`providerUpserts` 先于 `targets` 执行，所以同一份计划可以自引用它自己新引入的 provider 别名；把顺序当成实现细节随意调换，会让"文档说可以"的配置在实操里报 `provider "<alias>" is not configured`。④ 顺序约束必须显式写进计划 schema 与校验器，而不是留在文档里。
+- 提升层：工作流 / 工具（变更计划与发布）。触发词：plan 上限、including whitespace、前置拒绝、providerUpserts 先于 targets、顺序即契约。

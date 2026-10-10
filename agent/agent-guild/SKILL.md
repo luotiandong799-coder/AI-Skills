@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.87.0"
+version: "1.88.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -489,3 +489,7 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：①「**Widen one control at a time**: add a specific channel allowlist before enabling write-capable tools, or enable a reverse proxy before accepting remote Control UI traffic.」②「**Pairing approves the sender to trigger the bot. It does not make that sender a separate host security boundary.**」③「If more than one person can message the bot, treat this as **shared delegated tool authority, not per-user host isolation**.」④「**Do not combine `"*"` allowlists with broad tool access.**」⑤「Set `session.dmScope: "per-channel-peer"` … when multiple people can DM the bot, so DM sessions don't share context.」⑥「Route shared channels to agents with **minimal tools and no personal credentials**.」⑦「Do not assume local config credentials apply to an explicit remote URL.」⑧ 五种暴露模式各有对应的 Required controls 列（loopback+隧道 / loopback+Tailscale Serve / 内网 bind / 可信反代 / 公网），反代模式要求「The proxy must strip or overwrite client-supplied identity and forwarding headers」。
 - **判据**：① **放宽必须一次一项，且顺序是硬的**——原文用 before 把"加入 allowlist"钉在"开放写能力"之前、把"起反代"钉在"接受远程控制面流量"之前 ⇒ 同时在两个维度放松时，出问题无法归因到哪一项；一次一项的副产物是回滚也只需要回一项。② **"谁能触发"与"触发后能用什么"是两个旋钮，禁止一次性拨到底**——`"*"` 白名单 × 宽工具 access 被原文单列为禁配组合 ⇒ 接收面放宽到全集时，能力面必须同时收到最小集；两个维度都给全集就等于把大门敞开并把钥匙挂门上。③ **准入/配对批准的是触发权，不是隔离边界**——拿到配对的人只是可以叫 bot 干活，他并没有因此获得独立的主机/凭据边界 ⇒ 用"已经配对过了"来推"可以给他更多工具"是范畴错误；多一个人能发消息，系统的性质就从"个人工具"变成"共享委托的工具权限"。④ **多人可达 ⇒ 会话必须按说话对象切**：`dmScope` 设成 per-channel-peer 就是为了让不同人的会话不共享上下文 ⇒ 共享助手场景里最常被漏的不是权限，是上下文串味——A 说过的信息出现在 B 的回答里，且没有任何报错。⑤ **通道信任度要向下传导到 agent 的能力与凭据配置**：共享通道只能路由到最小工具面、且**不带个人凭据**的 agent ⇒ 凭据不能挂在能被公共输入触达的执行体上；这条的实用判据是"这条输入路径上最不可信的那个人，能够碰到哪些凭据"。⑥ **选暴露模式就是认领一份控制项清单**：每一档都有 Required controls，升档的代价是配齐该档全部控制项，不是"网络能通就行"；其中代理档还要显式剥离客户端自带的身份/转发头，否则外部可以直接伪造身份头绕过代理侧的鉴权。⑦ **显式远程地址不继承本地凭据假设**：用显式 URL 调远程端点时必须显式传凭据，本地配置里的凭据不会自动跟随 ⇒ 把本地调试跑通的调用直接改 URL 指向远端，会卡在鉴权上或更糟地落到匿名可达。
 - 提升层：安全边界 / 治理 / 工作流。触发词：放宽单步有序、Widen one control at a time、先白名单后写能力、触发权不等于隔离边界、星号白名单禁配宽工具、dmScope per-channel-peer、共享通道最小工具且无个人凭据、反代必须剥离身份头、显式远程 URL 不继承本地凭据。
+
+## 共享记忆的「删除」必须声明边界：准入与遗忘是两件事，预览不是计划，失败会留半截（来源：docs.openclaw.ai/concepts/memory-provenance.md 15,637B，2026-10-11 r513B 一手 curl 200 实拉逐串命中 `Neither is a general erasure` / `identifiable artifacts` / `does not delete original session transcripts` / `computed from current state` / `mutation lock`）
+- **判据**：① **准入策略（admission policy）与遗忘（forget）是两个正交控制**——前者只挡将来的摄取与回填，后者才移除已落地的条目；二者都不是「把 agent 见过/写过的东西全部擦除」。做数据卫生时必须先分清自己要的是哪一种，不能拿"以后不再摄取"当"已删除"。② **执行删除的命令默认立即生效**，只有显式 `--dry-run` 才出预览；预览是**按当前状态实时算出来的、不是存下来的删除计划**，并发写者不共享 mutation lock ⇒ 清理期间必须暂停直接编辑与外部写入，事后再跑一次预览核对残留。③ **删除有明确不覆盖的清单**：原始会话转录、自由编辑的记忆条目、存储之外的副本都不在范围内——凡是声称"删干净了"的结论，都要逐项对照这张不覆盖清单。④ 溯源记录分三档粒度（chunk 级 / 条目级 / 文件级 curated-write），删除与审计各自用不同档，**不能互相替代**。
+- 提升层：治理 / 工作流（共享记忆卫生）。触发词：admission policy、forget、删除边界、预览非计划、mutation lock、原始转录不删、三档溯源。

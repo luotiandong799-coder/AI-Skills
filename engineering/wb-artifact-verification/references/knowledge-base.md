@@ -2717,3 +2717,15 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **★能力按载体版本分档，缺档时是「能用但少一档」，必须写明哪一档没有**："Hot reload **only works on images that serve `POST /rest/dev/reload`**, so older tags **load your node but need a restart** to pick up changes"。判据：**同一能力在不同载体上是分档的**——把"加载成功"当成"能力完整"会漏掉缺失的那一档；文档/报告里要显写「哪些版本/镜像缺这一档」。与 §检索类能力降级要机器可读自证 分工：那条管**响应体要自带 mode 声明**，本条管**验收清单要按档位逐项核**。
 - 判非：具体被删节点名（Function / Function Item）与字段名（`defaults.color`）、Docker Compose 推荐路径、v3.0 的时间点（均属平台登记项，不迁移为判据）。
 - 提升层：验证 / 工具。触发词：静默降级三态、移除后仍可用、兼容性验收、能力按镜像分档、缺一档。
+
+## 下沉·wb-artifact-verification·r513A · 技能审计要从「逐个看 SKILL.md」升级为「依赖图指标」：单包审查看不到的风险多数在传递依赖里（来源：arxiv.org/html/2607.01136v1 209,169B，语料 1,434,046 条，2026-10-08 一手实拉）
+- **实证**：① **依赖放大系数 = 传递依赖数 / 直接依赖数**，实测 p99 = **130.5×**（npm/PyPI 侧最大 1,754×）；② 集中度 normalized Gini：skills **0.925**、packages **0.944**；③ **「只能经传递才到达」的危险面占比** 98.01%（axios）、含漏洞 MCP 服务 93.10%；④ name 冲突率 **58.73%**、front-matter 存在率 **99.55%**（⇒ 元数据齐 ≠ 可治理）；⑤ 解析管线五步：front-matter/正文分离 → 证据置信打分（滤模板噪声）→ 类型化通道分类 → 递归 registry 解析 → canonicalize + schema 校验成 **SkillBOM**。
+- **判据**：① 审计报告**必须给出「放大系数」与「传递到达率」这两个数**——只报「扫了 N 个技能、发现 M 个问题」会把 130× 的传递面完全漏掉；② **元数据齐备率不能当治理完成度**（99.55% 与 58.73% 冲突率并存），须把「有 front-matter」与「可比对、可溯源」分开计；③ 冲突率 ≥ 半数意味着**按 name 做主键的对账会静默错配**，主键须换内容哈希或 (source, name, revision) 复合键。
+- **与既有能力分工**：r438C「治理第一环是连接存在性枚举面」管**有没有清单**；本条管**清单建好之后按什么指标看出来风险**——枚举是输入，图指标是判据。
+- 提升层：工作流（审计度量）/ 工具（SBOM 化）。触发词：依赖放大系数、130.5x、Gini 0.925、传递到达率 98.01、name 冲突率 58.73、SkillBOM、元数据齐不等于可治理。
+
+
+## 下沉·wb-artifact-verification·r513A · 引用外部风险条目时「编号」与「当页定义」必须双写：同一编号在不同文档里指的不是同一件事（来源：owasp.github.io/www-project-agentic-skills-top-10/risk-assessment.html 100,225B 对照主页，2026-10-08 一手实拉）
+- **实证**：同一 OWASP 项目内，`risk-assessment.html` 把 AST05 定为 **Insufficient Input Validation**、AST06 **Improper Error Handling**、AST07 **Insecure Storage**、AST09 **Lack of Monitoring**，而项目主页的 Top10 把同编号写成 Untrusted External Instructions / Weak Isolation / Update Drift / No Governance。
+- **判据**：① **编号不是稳定主键**：跨文档合并时只写编号会静默错配，引用格式必须是「编号 + 该文档当页的定义原文」；② 审计台账里出现编号时，要能指出**它出自哪一份文档的哪一版**——否则两个来源的 AST05 会被当成同一条而合并计分。
+- 提升层：工作流（引用规约）。触发词：编号与定义双写、AST05 不同定义、跨文档静默错配、引用要带出处版本。

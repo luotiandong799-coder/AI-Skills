@@ -3461,3 +3461,32 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 判据：① **成本必须按区间公示与选型**——单点 token 估算（"这个技能约 2 万 token"）在跨度 2–8 倍的东西上是误导；装前预算按 **上界** 算，否则上下文挤爆发生在最坏路径上。② **跨度本身就是质量信号**：上下界差得越大，说明该技能的加载量越依赖输入/分支，越需要说明"什么情况下走到上界"。③ 与已落的三级披露 token 预算互补——那条管**加载机制内的预算数值**，本条管**分发侧对外承诺的成本区间**，两者不在同一层。④ `hosted` 必须一并公示：**托管与否决定别人能否独立验证内容**；未托管条目的真实内容以 `githubPath` 为准，市场页只是索引。
 - 落地动作：技能/插件的元数据表增加 `minToken`+`maxToken` 双字段与 `hosted` 布尔；写"成本"时一律写区间并标注上界触发条件，禁止只给均值或单点值。
 - 提升层：可复用 Skill / 工具。触发词：minToken、maxToken、成本区间、上界预算、hosted 托管标记、技能元数据。
+
+## 下沉·wb-skill-authoring·r513C · 触发评测：发布前盲测（新技能 / 改过 description 必做，细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·触发评测发布前盲测新技能改过description必做细则已下沉KB）
+
+
+
+## 下沉·wb-skill-authoring·r513C · 按需阅读（渐进披露，不要常驻加载）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·按需阅读渐进披露不要常驻加载）
+
+## 下沉·wb-skill-authoring·r513C-2 · 技能「调用面 ≠ 入口面」：user-invocable:false 仍可被模型调用，加载源有显式优先级链…（原文已下沉 references/knowledge-base.md §L481）
+
+
+
+## 下沉·wb-skill-authoring·r513C-2 · 技能进化不要自由变异，要「分解进固定能力空间 + 定向修订」…（原文已下沉 references/knowledge-base.md §L486）
+
+## 下沉·wb-skill-authoring·r513C-3 · 打包门禁的保留词表应含「背书语义词」，且检查必须跑在归一化形式上（来源：ClawHub publishing 本机实拉，r326C）
+- **原文**：硬拒 16 个 topic——`approved / audited / certified / clawhub / community / curated / endorsed / featured / official / officials / openclaw / recommended / staff-pick / trusted / trusted-publisher / verified`；「The check runs on the **normalized form**, so `Official` and `staff pick` are rejected too」；topic ≤48 字符、禁不可见格式字符；归一后重复**丢弃而不报错**（`git,Git` 算一个）。
+- **判据**：① 保留词分两维：**防借厂商名义**（已落 3.29.0 claude/anthropic）+ **防作者自我认证**（本轮，拦的是「信任/认证形容词」）；② 门禁必须**跑在归一化形式**上（大小写/分隔符/复数），否则 `Official`、`staff pick` 直接绕过 ⇒ 任何字面量黑名单都要先声明归一化规则；③ 「归一后重复丢弃不报错」是**容忍策略**，与硬拒词表是两条不同处置线，别混。
+- **提升层**：可复用 Skill。触发词：背书语义词、自认证词、reserved topics、归一化检查、大小写绕过。
+
+- **元数据字段三态语义 + 「改元数据即发新版」的批量副作用（来源：ClawHub publishing 本机实拉，r326C）**：本章已下沉 `references/knowledge-base.md`（r326C）。
+- **能力授予平面独立于「发现/归属」平面：库归属只给管理与发现权，不自动授予其声明的工具/凭证/安装权；共享 Gateway 是单一信任域，密钥不得进入 skill 内容（来源：docs.openclaw.ai/tools/skills.md 39,741B，2026-09-30 r327A 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r327A）。
+- **指令 vs 知识分离：静态参考资料外置到按需检索，不塞进每次全量加载的指令（来源：www.activepieces.com/docs/agents/knowledge.md 2,613B，2026-09-30 r327C 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r327C）。
+- **测试分层分类法：四层各管一种失败模式，选错层=慢/冗余/静默无效（来源：Activepieces《Testing Strategy》handbook 5,560B，2026-09-30 r336C 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r336C）。
+
+
+## 下沉·wb-skill-authoring·r513C-3 · 技能/工具按任务语义检索 + 诚实无匹配（来源：Activepieces `mcp/tool-search.md` 3,608B，2026-09-30 实拉）
+1. **检索=按任务描述语义搜，非按名翻目录**：agent 用自然语言任务描述（「发消息到 Slack 频道」）语义检索技能/工具，而非翻几百个目录；作者须为技能写「给 agent 看的 AI metadata 描述」才能被检索到。判据：技能元数据须带 agent-oriented 描述，否则不可被发现。
+2. **低于相关性阈值的匹配丢弃而非填充，空结果=真无匹配**：检索结果低于阈值直接 drop，不拿弱相关凑数——空结果意味着目录里真没有，agent 应直说而非跑错工具。判据：选择逻辑须有阈值截断 + 诚实无匹配路径，禁止「凑一个最可能错的」。
+
+- 提升层：可复用 Skill。触发词：语义检索、诚实无匹配。
