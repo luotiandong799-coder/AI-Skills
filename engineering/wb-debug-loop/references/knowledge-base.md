@@ -1249,3 +1249,26 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **判据**：① **判定对象是「当前结构下的上一环输出」而不是「输入」**：无预处理器按调用方原始参数判定，有预处理器按其输出判定 ⇒ 同一个开关的语义随结构改变，写规范时必须声明「以哪一环的输出为准」，否则两套环境下的同名配置行为不同。② **上游归一化环节永远全量执行**：预处理器从不被去抖，每次调用都跑 ⇒ 去抖省下的是下游成本，上游成本一分不省；把预处理器也算进合并会高估优化幅度。③ **累积字段的命名空间随判定对象移动**：要累积的字段必须存在于预处理器输出里，累积出的元素反映预处理后形态而非原始事件 ⇒ 排障「累积列表里怎么没有我传的字段」，答案是它在归一化阶段被改名或丢弃。
 - **与既有能力分工**：§「背压可折算成 worker 数」管**扩容触发**；本条管**合并类优化的判定时点随结构漂移**。
 - 提升层：工作流 / 工具。触发词：evaluated at push time、预处理器之后判定、preprocessor is never debounced、累积字段须在预处理器输出中。
+
+## r519A · 补偿的挂靠点与触发点是两个不同对象；回滚只覆盖「已暂存集合」，提交即永久失格，且框架只保证补偿钩子被触发、不保证副作用被消除（来源：docs.prefect.io/v3/advanced/transactions.md 16,367B，2026-10-11 r519A 一手 curl 取 `.md` 原文实拉、逐串命中）
+- **实证（逐串）**：`Note that the `on_rollback` hook is executed when the `quality_test` task fails, not the `write_file` task that it is associated with it, which succeeded.`；`This is because rollbacks occur whenever the transaction a task is participating in fails, even if that failure is outside the task's local scope.`；`It is important to note that rollbacks only occur *after* the transaction has been staged.`；`Once a task's transaction commits, it cannot be rolled back.`；`Concurrent task calls can both start before either commits, so `EAGER` alone does not guarantee that a task body executes only once.`；`In either mode, rollback hooks must implement cleanup of external side effects, such as file writes or API calls; Prefect does not automatically undo those operations.`
+- **判据**：1. **补偿动作的挂靠点 ≠ 触发点**：`on_rollback` 挂在**成功的** `write_file` 上，却在 `quality_test` 失败时执行 ⇒ 定位"该由谁清理"不能看哪个任务失败，要看失败落在**哪个事务边界内**；按失败点找补偿会找错对象，甚至会认为"出错的那个自己会收拾"。 2. **回滚覆盖面 = 已暂存集合，不是已执行集合**：`rollbacks only occur *after* the transaction has been staged` ⇒ 执行过但未走到暂存的那一段既不提交也不回滚，处于**悬空态**；报"已回滚"时必须回答回滚掉了哪一段，否则"回滚成功"与"状态干净"是两件事。 3. **提交是回滚资格的截止点，不是失败点**：`Once a task's transaction commits, it cannot be rolled back`，且已提交结果仍可被后续复用 ⇒ 任何"出错就回滚"的承诺都要标出**截止时间点**；晚于该点的失败只能靠补偿路径，不能靠回滚（此点与 §提交粒度与回滚能力互换 互补：那条管粒度选择，本条管资格何时终止）。 4. **提交模式不提供互斥**：`EAGER` 下并发调用可同时开始，任务体可执行多次 ⇒ "只跑一次"不能由提交模式兑现，必须靠幂等键或锁；把"已提交"当去重依据会把重复执行漏掉。 5. **框架保证的是补偿时机，不是补偿结果**：文件写入 / API 调用等外部副作用的撤销必须由钩子自己实现，`Prefect does not automatically undo those operations` ⇒ 把"有回滚钩子"当成"能恢复原状"是验收事故的主要来源；审计回滚能力要审钩子**实现**，不是审钩子**存在**。
+- **与既有能力分工**：与 §失败恢复有两条硬边界（回滚资格按事务模块封闭枚举 + 提交模式反转回滚粒度）互补——那条管**谁能被回滚、粒度多粗**；本条管**补偿由谁执行、覆盖到哪一段、资格何时终止、以及撤销责任归谁**。
+- 提升层：工作流 / 工具。触发词：on_rollback 挂在成功任务上、rollbacks only occur after staged、commits cannot be rolled back、EAGER 不保证只跑一次、does not automatically undo。
+
+## r519B · 兜底存在按路径作用域的整片豁免，且触发位置在重试预算耗尽之后（来源：www.windmill.dev/docs/core_concepts/error_handling.md 11,925B，2026-10-11 r519B 一手 curl 取 `.md` 原文实拉、逐串命中）
+- **实证（逐串）**：`A workspace setting allows disabling the error handler for scripts and flows under `u/` (user) paths.`；`When enabled, errors in user-scoped runnables will not trigger the workspace error handler. This is useful to avoid noise from personal development scripts.`；`Retry configuration`: Number of retries and retry strategy **before invoking the error handler**
+- **判据**：1. **兜底覆盖率有作用域豁免面，且豁免是工作区级总开关**：`u/` 用户路径下的错误**整片**不触发工作区错误处理器 ⇒ "配了兜底"不等于"全量覆盖"；查覆盖率要先问**哪些作用域被豁免**。豁免动机（给个人开发脚本降噪）合理，但它把"个人脚本 / 生产路径"的目录边界变成了安全边界——边界写错就整片失明。 2. **兜底的触发位置在重试之后**：先耗尽重试次数与退避策略，才调用错误处理器 ⇒ 兜底是**末位手段**不是并行手段；估算故障恢复时延必须把重试预算算进去，按"失败即兜底"估算会严重低估 MTTD/MTTR。 3. **豁免与降噪是同一枚硬币**：同一个开关既是"少报警"也是"不兜底" ⇒ 评审降噪类开关时不能只算噪音减少量，要同时列出由此失去覆盖的对象清单。
+- **与既有能力分工**：与 §兜底链路可能与故障链路同源 互补——那条管**兜底自己会不会一起死**；本条管**兜底根本不会被叫到（作用域豁免）**与**什么时候才被叫（重试之后）**。
+- 提升层：工作流 / 工具。触发词：disabling the error handler、u/ (user) paths、will not trigger the workspace error handler、before invoking the error handler。
+
+## 指标与审计是两条通道：会重置的那条不能承载必须精确的数；拒绝不产生耗时样本；认证失败要按 reason 分族（来源：pipedream.com/docs `conduit/deploy/monitoring.md` 9,842B + docs.openclaw.ai `gateway/config-gateway.md` 36,884B，2026-10-03 r393B 独立 curl 取 `.md` 原文实拉；与 §限流要补问副本语义 互补——那条管"限的是谁、会不会被扩容放大"，本条管"看到异常后该改哪里"）
+
+- 指标在内存聚合、进程重启归零，是**设计如此不是缺陷**：原文明确"必须精确计量的东西（用量看板、审计日志）另行存在数据库里，与这些指标无关" ⇒ 验收计量类能力要先问"这个数会不会因为重启而丢"，答案是会就必须另有持久通道。
+- 每个副本报自己的计数，聚合在查询侧做；histogram 跨副本必须 `sum by (le)` 才正确，直接取分位数会错。
+- outcome 三态 `ok` / `error` / `denied`：**被策略拒绝的调用根本没跑，所以不产生任何耗时样本** ⇒ 延迟分布里看不到拒绝，算错误率时分母是"已执行的"而不是"被请求的"。
+- 认证失败的 reason 要分三族，族不同改的地方完全不同：①凭据类（`missing_token`/`invalid_token`/`session_expired`/`org_ambiguous`）= 客户端凭据坏了或有人在猜；②客户端被拒类（`client_revoked`/`client_not_allowed`）= 工作区拒绝**有效令牌**的客户端（撤销了，或禁止动态注册客户端）；③登录策略类（`sign_in_*`）= 工作区的登录策略拒绝（provider 被禁用/删除、密码登录被关）。
+- 拒绝率有正常基线："少量持续拒绝是正常的（客户端会探测看不见的工具）"，**策略编辑之后出现阶跃才是信号** ⇒ 与变更时间对齐看趋势，不要对绝对值告警。
+- 限流器热更新时**已有状态延续**：失败记录、已赚到的锁定截止期都保留；同一 `{scope, clientIp}` 的失败尝试会先串行化再写，所以并发错误尝试的第二个就会触发限流 ⇒ 不要以为"并发能冲过去"。
+- 本地回环豁免（`exemptLoopback`）必须显式声明：不声明时调试请求会进同一套失败计数，把调试噪声和攻击面混在一起。
+
