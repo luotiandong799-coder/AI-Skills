@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合
-version: "2.177.0"
+version: "2.181.0"
 agent_created: true
 ---
 
@@ -46,29 +46,13 @@ agent_created: true
 > 正文预算管理：「r353C · 事务边界由模块能力标注决定；验证有自己的预算币种；文档站提供问答」（全文已零删减下沉 references/knowledge-base.md §下沉·r353C事务边界由模块能力标注决定验证有自己的预算币种文档站提供问答式检索接口）
 ## r354A · 留痕按「失败优先」分级保存；删除是两阶段，且活跃态与人工标注豁免（来源：docs.n8n...（全文见 references/knowledge-base.md §下沉·wb-artifact-verification·r440B·r354A · 留痕按「失败优先」分级保存；删除是两阶段，且活跃态与人工标）
 > 正文预算管理：「r354B · 截断/限额必须声明作用域（展示面 vs 执行面）；无鉴权通道靠「」（全文已零删减下沉 references/knowledge-base.md §下沉·r354B截断限额必须声明作用域展示面vs执行面无鉴权通道靠一次性兜底评测并发按档位给默认来源docsn8niousee）
-## r354C · 机器可读取证有第四条通道：`Accept` 头内容协商；OOM 有三层异构信号且自愈能力取决于运行方式（来源：docs.n8n.io `scaling/memory-errors.md` 404 页 2,188B + `scaling/fix-memory-issues.md` + `scaling/use-external-storage.md` 独立 curl 取 `.md` 原文，2026-10-02 r354C 实拉）
-
-- **★第四种机器可读通道：请求头内容协商**：404 页原文 "You may also use **`Accept: text/markdown` header for content negotiation**"。判据：**取证枚举顺序应为：`.md` 后缀 → `Accept: text/markdown` 头 → `?ask=` + `?goal=` 问答接口 → `sitemap.md` 全索引 → `llms-full.txt` 全量导出**；前两条是"同 URL 换形态"（零猜测），后三条是"不知道确切页名时"的检索手段。与 r353C 已落的 `.md` / ask / sitemap 相邻但不同层——那条把「加后缀」当技巧，本条把它编成**有序的通道阶梯**。
-- **★OOM 有三个观测入口，且它们不在同一层**：① 应用层提示 "Execution stopped at this node (n8n **may have** run out of memory while executing it)"（注意措辞是 **may**——应用层只能给可疑，不能确认）；② 可用性层症状 "Problem running workflow"、"Connection Lost"、"503 Service Temporarily Unavailable"（"suggest that an n8n instance has become unavailable"）；③ 宿主层日志 "Allocation failed - JavaScript heap out of memory"（**only when self-hosting**）。判据：**资源类故障不能只盯一个入口**——应用层给怀疑、可用性层给影响面、宿主层给确证；把应用层的 "may" 当成确证会误判根因，只看宿主日志又会漏掉没打日志的场景。
-- **★自愈能力由运行方式决定，不由产品决定**："On n8n Cloud, or when using n8n's **Docker image**, n8n **restarts automatically** when encountering such an issue. However, when running n8n with **npm you might need to restart it manually**"。判据：**"崩溃后能不能自己起来"是部署形态的属性**；同一份代码在 Cloud/Docker 下有自动重启、在 npm 下没有——写可用性方案时必须绑定运行方式，不能写"系统会自愈"。
-- **★"不设限"是显式取舍，代价被转移给用户**："n8n **doesn't restrict** the amount of data each node can fetch and process. While this gives you freedom, **it can lead to errors** when workflow executions require more memory than available"。判据：**评估一个系统时要区分"它没有这个能力"与"它有意不施加这个约束"**——后者把资源风险转嫁给使用者，用户侧的应对是自建预算与分批处理，而不是等平台加限制。
-- 提升层：工具 / 工作流 / 可复用 Skill。触发词：Accept text/markdown、内容协商、取证通道阶梯、OOM 三层信号、may have run out of memory、heap out of memory、Docker 自动重启、npm 手动、不设限的取舍。
+## r354C · 机器可读取证有第四条通道：`Accept` 头内容协商；OOM 有三层异构信号且自愈能力取决于运行方式（来源：docs.n8n.io `scaling/memory-errors.md` 404 页 2,188B + `scaling/fix-memory-issues.md` + `scaling/use-external-storage.md` 独立 curl 取 `.md` 原文，2026-10-02 r354C 实拉）（全文见 references/knowledge-base.md §下沉·r354C机器可读取证有第四条通道Accept头内容协商OOM有三层异构信号且自愈能力取决于运行方式来源docsn8ni）
 
 
-## r355A · 「仍在正确处理」≠「在服务窗内可用」：吞吐与延迟必须分开判；厂商性能数字是配置的函数而非常量（来源：docs.n8n.io `scaling/control-concurrency.md` 4,111B + `use-n8n-cloud/understand-concurrency.md` 3,828B + `scaling/measure-performance.md` 3,955B 独立 curl 取 `.md` 原文，2026-10-02 r355A 实拉）
-
-- **★高负载下的失效形态是"延迟越界"，不是"失败"**：原文 "Under higher loads n8n **usually still processes the data**, but takes **over 100s** to respond"。判据：**验证结论必须同时给"是否正确完成"与"是否在服务延迟窗内完成"两个数**——只判前者会在系统已经不可用时给出全绿结论；**延迟越界是一种独立失败态，不能并进"慢"里当表演化**。⇒ 验收前先声明延迟上界，再判成功。
-- **★吞吐数字必须连同它的成立条件一起引用**：原文 "n8n can handle up to **220 workflow executions per second** on a single instance"，紧随其后 "The performance of n8n **depends on** factors including: the workflow type / the resources available to n8n / how you configure n8n's scaling options"，并给出两套基准的完整配置（ECS c5a.large 4GB 单实例 + Postgres；七台 c5a.4xlarge 含 2 webhook + 4 worker + MySQL + Redis），且明确要求 "To get an **accurate estimate for your use case**, run n8n's **benchmarking framework**"。判据：**性能基准是配置的函数**——引用时必须连硬件、拓扑、工作流形态一起记，缺任一项即不可迁移；与 §「没有预算的分数不可复现」分工：那条管评测分数的可比性，本条管性能基准的可迁移性。
-- 判非（本轮实拉到但已覆盖，不重复落）：并发闸门只覆盖生产执行 / 排队项不可重试 / 重启按上限恢复（已落 dl §并发闸门有作用域，重叠 >60%）；评测并发是独立额度且默认跟随档位（已落 av §r354B，重叠 100%）；新能力默认关闭 + 行为不变承诺（已落 sa §r354A）。
-- 提升层：验证 / 工作流。触发词：吞吐与延迟分离、延迟窗、服务窗内完成、still processes the data、220 执行每秒、性能基准可迁移、自测基准框架。
+## r355A · 「仍在正确处理」≠「在服务窗内可用」：吞吐与延迟必须分开判；厂商性能数字是配置的函数而非常量（来源：docs.n8n.io `scaling/control-concurrency.md` 4,111B + `use-n8n-cloud/understand-concurrency.md` 3,828B + `scaling/measure-performance.md` 3,955B 独立 curl 取 `.md` 原文，2026-10-02 r355A 实拉）（全文见 references/knowledge-base.md §下沉·r355A仍在正确处理在服务窗内可用吞吐与延迟必须分开判厂商性能数字是配置的函数而非常量来源docsn8nioscali）
 
 
-## r355C · 兼容性验证不能只判「崩没崩」：字段移除后的真实表现是「继续运行但降级」；能力按载体版本分档，缺档是「能用但少一档」（来源：docs.n8n.io `changelog/v30-breaking-changes.md` 21,374B 独立 curl 取 `.md` 原文，2026-10-02 r355C 实拉）
-
-- **★「已移除」不等于「会报错」**：`defaults.color` 被移除后原文是 "Community nodes that still set it **keep working**, but the editor shows a Font Awesome icon in a **neutral color**"，并注明使用文件图标的节点 "aren't affected, because n8n never tints file icons"。判据：**兼容性验证的判据必须包含"效果有没有变"，而不只是"有没有崩"**——只跑「能不能起来」的烟测会系统性漏掉这类静默降级；验收项要按「报错 / 静默降级 / 无影响」三态分别列出。
-- **★能力按载体版本分档，缺档时是「能用但少一档」，必须写明哪一档没有**："Hot reload **only works on images that serve `POST /rest/dev/reload`**, so older tags **load your node but need a restart** to pick up changes"。判据：**同一能力在不同载体上是分档的**——把"加载成功"当成"能力完整"会漏掉缺失的那一档；文档/报告里要显写「哪些版本/镜像缺这一档」。与 §检索类能力降级要机器可读自证 分工：那条管**响应体要自带 mode 声明**，本条管**验收清单要按档位逐项核**。
-- 判非：具体被删节点名（Function / Function Item）与字段名（`defaults.color`）、Docker Compose 推荐路径、v3.0 的时间点（均属平台登记项，不迁移为判据）。
-- 提升层：验证 / 工具。触发词：静默降级三态、移除后仍可用、兼容性验收、能力按镜像分档、缺一档。
+## r355C · 兼容性验证不能只判「崩没崩」：字段移除后的真实表现是「继续运行但降级」；能力按载体版本分档，缺档是「能用但少一档」（来源：docs.n8n.io `changelog/v30-breaking-changes.md` 21,374B 独立 curl 取 `.md` 原文，2026-10-02 r355C 实拉）（全文见 references/knowledge-base.md §下沉·r355C兼容性验证不能只判崩没崩字段移除后的真实表现是继续运行但降级能力按载体版本分档缺档是能用但少一档来源docsn）
 
 ## r383A · 升级回归机检与验收探针必须打数据面（来源：docs.langflow.org/deployment-multi-worker + docs.n8n.io + docs.dify.ai Weaviate 迁移页，2026-10-02 r373-Q-A 实拉；经 Qoder 提名）
 - 升级后回归面的机检入口 = 为每个观测位写明「非零是否异常」的白名单：`polling_watchdog_kills` 非零正常、`dispatcher_internal_errors` 非零才是 bug、跨 worker 取消证据须显式标记；一次性日志提醒须入机器可读自查清单。
@@ -490,3 +474,26 @@ agent_created: true
 - **候选池结案**：r486 待办「SkillsMP 分页用 numeric offsets 而非 pointer tokens、page 上限 50」——本轮 openapi 全文 `numeric` 与 `offset` 各 **0 命中**，仅有 `limit` `default 20 / maximum 50` ⇒ 该待办结案为**不成立**，不再追。
 - **与既有能力分工**：dl r322C「给每个写发幂等键」管**要不要发键**；本条管**键覆盖什么、失败后是重试还是恢复**。
 - 提升层：工具（接口调用与重试）/ 工作流（配额与退避）。触发词：searchId 参数指纹、SEARCH_ID_CONFLICT、Failures release pending allowance、已提交可恢复、Retry-After 统一回读、无效参数也扣配额、canonicalized to its final page。
+
+## r510A · 「可恢复」与「回调地址稳定」是两件事：运行时生成的恢复 URL 在部分重跑下会静默换掉，引用它作长期凭据前必须先证它在三种路径下不变（来源：docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.wait.md 11,403B，2026-10-10 r510A 一手 curl 200 实拉；逐串命中 `$resumeWebhookUrl`×3 / `Partial executions`×1 / `generated at runtime`×1 / `offloads the execution data`×1）
+- **实证**：生成时机「The webhook URL that resumes the execution when called is **generated at runtime**. The Wait node provides the `$execution.resumeUrl` variable so that you can reference and send the yet-to-be-generated URL wherever needed, for example to a third-party service or in an email」；落库行为「When the workflow pauses it **offloads the execution data to the database**. When the resume condition is met, the workflow reloads the data」；官方限制「**Partial executions of your workflow changes the `$resumeWebhookUrl`**, so be sure that the node sending this URL to your desired third-party runs in the same execution as the Wait node」。
+- **判据**：① **运行时生成的标识默认没有稳定性承诺**：恢复 URL 是执行期产物，官方不作跨执行一致的保证 ⇒ 凡"生成后交给外部系统保存起来、以后拿它回来"的用法，都要先证稳定性，不能因为"它是 URL、看起来是地址"就当长期凭据。② **失效是静默的**：部分重跑换掉 URL 后，外部系统握着的旧地址不会得到任何提示，调用方只会看到"回调没生效"⇒ 这类故障不会出现在错误日志里，验收要主动构造"从中间节点重跑一次"的用例。③ **稳定性与持久化是两条独立的轴**：本例执行数据落库了（可恢复），但回调地址照样会变 ⇒ "系统保证可恢复"只回答"流程能不能续"，不回答"外部握着的那个标识还认不认"。④ **验证清单要覆盖三条路径**：部分重跑 / 实例重启 / 队列恢复——本例只证了部分重跑这一条会变，另两条未被官方文档覆盖，属待验而非已验 ⇒ 写验收标准时把"未声明"和"已声明不变"分开记。⑤ **引用方与生成方必须同一次执行**：官方给的规避法是让发送 URL 的节点与 Wait 节点落在同一次执行里 ⇒ 跨域传递运行时标识时，先确认生成点与消费点的执行归属。
+- **与既有能力分工**：av §r490B 管**端点否证粒度与参数逐项效力**（服务端接口面）；本条管**客户端握有的运行时标识在重跑下的存活**（对外集成面）。
+- 提升层：工具（对外集成）/ 取证（验收清单）。触发词：resumeWebhookUrl、Partial executions、generated at runtime、回调地址失效、运行时标识稳定性、offloads the execution data。
+
+## 「已设限」不等于「已限住」：配额/幂等/监听类配置的计数域要先问是全局还是 per-process（来源：docs.langflow.org/deployment-multi-worker 114,789B，2026-10-11 r511A 一手 curl 200 实拉；逐串命中 `LANGFLOW_RATE_LIMIT_STORAGE_URI` / `memory://` / `multiplied by the worker count` / `Must differ from the cache database index` / `any worker`）
+- **实证**：官方原文四点——①限流「Rate limits are counted **per worker** while `LANGFLOW_RATE_LIMIT_STORAGE_URI` is in-memory (`memory://`), so the **effective limit is multiplied by the worker count**. Point it at Redis for a shared counter.」；②共享后端自带失效面「`LANGFLOW_REDIS_QUEUE_DB`=`1` … **Must differ from the cache database index (default `0`) to avoid key collisions.**」；③监听类同形「`LANGFLOW_REDIS_QUEUE_CANCEL_CHANNEL_ENABLED`=`True` … so that `POST /build/{id}/cancel` cancels a build on **any worker**, not just the one that received the request.」；④竞态兜底「`LANGFLOW_REDIS_QUEUE_CANCEL_MARKER_TTL`=`60` … The marker closes a race where a cancel signal is published **before the target worker's dispatcher has subscribed**.」。
+- **判据**：① **「已配置即已生效」对计数型配置（限流/配额/并发/幂等去重/事件监听）一律不成立**——必须先确认计数域：per-process 时实际额度 = 配置值 × 进程数，并随扩缩容漂移；压测结论要带 worker 数。② **验证方法是换后端再测**（in-memory → Redis 对照），不能只读参数表。③ **换共享计数会引入新的失效面，须再验一次**：队列库与缓存库同 index 会撞 key；跨进程信号要防「订阅尚未建立」的竞态，靠带 TTL 的标记兜底 ⇒ 修好一个静默失效不等于该配置面已安全。
+- 提升层：工具（配置生效验证）/ 工作流。触发词：per worker、multiplied by the worker count、memory://、共享计数器、key collisions、cancel channel、marker TTL。
+
+## 否证结论必须自带覆盖声明：词形、页面、分母三件事任一未声明，「0 命中」不构成否证（来源：code.claude.com/docs/en/skills.md 106,661B + docs.langflow.org/environment-variables 116,839B + docs.langflow.org/deployment-multi-worker 114,789B，2026-10-11 r511A 一手 curl 200 实拉）
+- **实证**：两例一手反证——①**词形**：权威原文「Claude Code **ignores a field it doesn't recognize without reporting an error**」与「A field name must **match the table exactly, hyphens included**」各 1 命中；而本机 r495C 以 `unknown field` / `silently ignored` 检索得 0 命中并据此判非转候选池 ⇒ 同一事实，换词形结论完全相反。②**页面**：LangFlow 参数组 `LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S`=`90.0`、`_WATCHDOG_INTERVAL_S`=`15.0`、`_CANCEL_MARKER_TTL`=`60` 在 `environment-variables`（116,839B）**0 命中**，在 `deployment-multi-worker`（114,789B）**一手命中** ⇒ 同一站点换页面结论相反（第三方据此出的「否证出池」结论已被推翻）。
+- **判据**：① **一次否证须并列测三类词形**——文档原措辞 / 我方转述措辞 / 键名原文（含连字符与大小写），缺一不出否证结论。② **否证必须声明检索面**：站点内具体哪几页、各自字节数、`llms-full.txt` 类聚合页是否只取到 part 1/N。③ **「全站 grep 0 命中」必须带分母**（拉了几页、多少字节、是否含续页），否则既不能判非也不能判净新；对拿不出分母的否证一律按「未验证」而非「已否证」记账。
+- **与既有能力分工**：§r490B 管**端点路径粒度**的否证（405 只否证完整路径）；§「观测面必须自述覆盖边界」管**运行时指标分辨率**能否证明细粒度失败不存在；本条管**文本与页面检索面**能否证明某个事实不存在。
+- 提升层：工作流（取证方法论）/ 可复用 Skill。触发词：否证覆盖声明、词形三测、页面口径、分页分母、0 命中不等于不存在。
+
+## 评测要先验评分器本身：参考解验真、试次档以统计意图命名、阈值进 CI 退出码、评分对象是终态而非 stdout（来源：api.github.com/repos/mgechev/skillgrade/contents/README.md 19,220B，2026-10-11 r511C 一手 curl 200 实拉 + `Accept: application/vnd.github.raw+json`；逐串命中 `| --validate | Verify graders using reference solutions |`、`--smoke | 5`、`--reliable | 15`、`--regression | 30`、`--threshold=0.8 | Pass rate threshold for CI mode`、`exits with code 1 if pass rate falls below --threshold`、`graders score the resulting workspace state ... not your command's stdout`）
+- **实证**：官方原文五点——①验真「`--validate` … **Verify graders using reference solutions**」+「Validate graders first. Use `--validate` with a reference solution before running real evals.」；②档位以统计意图命名「`--smoke` = **5** | Quick capability check」「`--reliable` = **15** | Reliable pass rate estimate」「`--regression` = **30** | High-confidence regression detection」，可用 `--trials=N` 覆写；③阈值「`--threshold=0.8` | Pass rate threshold for CI mode」+「exits with **code 1** if pass rate falls below `--threshold`」；④评分对象「graders score the **resulting workspace state** (and any live checks), **not your command's stdout**, so any agent slots in cleanly」。
+- **判据**：① **评分器本身必须先被验证**——用参考解把「评分器坏了」与「被评物失败」分离；没有这一步，全绿可能是量具失灵，全红可能是量具写错。② **试次数是统计意图不是调参**：写档位名（smoke/reliable/regression）而不是写数字，`--trials=N` 只作例外覆写 ⇒ 别人能看出这次跑的置信度目标是什么。③ **阈值要能决定过不过**：CI 模式下低于阈值直接 exit 1，评测结论是门禁而不是"可解释的软结论"。④ **评分对象必须是 workspace 终态而非 stdout** ⇒ 换 agent / 换 CLI 都不影响评分，结果才可横向比较。
+- **与既有能力分工**：sa §「评测数据三来源」用参考解证明**任务可解**（测试集构造）；本条用参考解验证**评分器可判**（量具校准），并补上档位语义、CI 阈值与终态评分对象三件。
+- 提升层：可复用 Skill / 工作流（评测工程）。触发词：--validate 参考解、smoke/reliable/regression 档位、--threshold=0.8、--ci exit 1、workspace 终态评分。

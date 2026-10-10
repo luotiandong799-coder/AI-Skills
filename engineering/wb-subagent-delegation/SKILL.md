@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: "1.20.0"
+version: "1.21.0"
 agent_created: true
 ---
 
@@ -190,3 +190,8 @@ agent_created: true
 - **判据**：① **先到先得是默认语义，必须显式声明而不是隐含**：同一请求发给 N 个响应者时，平台语义是"第一个赢、其余作废" ⇒ 委派审批/外部确认时必须写明关闭语义，否则发起方会以为还要等齐所有人，响应者会以为自己的提交仍然有效。② **迟到响应被丢弃 ≠ 无事件发生**：关闭后的响应不会报错、也不会生效 ⇒ 处置上必须**留痕**（记录"已收到但已关闭"），静默丢弃会让响应者以为操作成功、让审计看不到争议。③ **寿命到期是一条正常分支不是异常**：过期走 `timeout branch` ⇒ 委派任务的到期处置要设计成一条可走的路径（降级/升级/取消），不能让超时变成无人接管的悬空态。④ **与"暂停不续命""重试期间不进终态"分工**：那两条管**单个任务的续命与终态时机**，本条管**多个响应者之间的竞争与请求寿命终点的形态** —— 竞态下"谁算数"要先于"什么时候结束"定义。⑤ **默认 3 天是可配置项而非平台常量**：寿命窗口必须按任务性质重设 ⇒ 沿用默认值等于把业务 SLA 交给平台默认值决定。
 - **与既有能力分工**：r486B sd 1.19.0「预留与上限两类对象」管**资源怎么分**；本条管**多个外部参与者之间谁的答案算数**。
 - 提升层：工作流（委派协议）/ 工具（外部确认接口）。触发词：closes after the first response、先到先得关闭语义、迟到响应丢弃须留痕、default is 3 days、timeout branch、寿命到期是分支不是异常、多响应者竞态。
+
+## 上限与节流数字必须带宿主版本号；超限行为分 reject / ignore / 静默降级三态，排查路径完全不同（来源：api.github.com/repos/anthropics/claude-code/contents/CHANGELOG.md 987,162B，2026-10-11 r511B 一手 curl 200 实拉 + `Accept: application/vnd.github.raw+json`；逐串命中并定位到版本头）
+- **实证**：同一份 CHANGELOG 五条逐串命中——①`2.1.295`「Changed subagents to **preload at most 32 skills** from the `skills` field, each once; a subagent with the Skill tool can still invoke the rest」；②`2.1.292`「Changed agent names to allow at most **256 characters**: a longer one is **rejected**, and a skill's or a plugin file's `name` longer than that is **ignored**」；③`2.1.293`「Changed claude.ai skill syncing to check for changes **about every 40 minutes, instead of every 10**, while no session is in use」；④`2.1.295`「Fixed a skill's `allowed-tools` and `effort` being **dropped** when the Skill tool finished before the response stream ended」；⑤`2.1.295`「Fixed **forked skills** invoked from Workflow subagents delivering their results to the **main conversation** instead of the invoking agent」。
+- **判据**：① **引用任何技能/代理数量上限或同步窗口的数字，必须连同宿主版本号一起记**——同一条同步链的节流窗口在两个相邻版本间从 10 分钟改到 40 分钟（4 倍），旧数字会静默失效；CHANGELOG 是这类数字的唯一权威源，文档正文常滞后。② **超限不是一种行为，要分三态**：`rejected`（显式报错）/ `ignored`（静默丢身份，表现为"名字不生效"却无错误）/ **静默降级**（权限位丢失，表现为"工具被拒"而非"配置不对"）；三态的根因查找路径完全不同，按"超限=报错"的直觉查会漏掉后两种。③ **委派前要独立验证结果归属**：fork 出来的上下文，其结果可能回到主会话而不是调用方 ⇒ 不能假定"谁调用谁收结果"。
+- 提升层：工具 / 工作流（委派与宿主约束）。触发词：preload at most 32 skills、256 characters ignored、every 40 minutes instead of every 10、allowed-tools dropped、forked skills 结果回主会话。

@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.32.0"
+version: "1.34.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -263,3 +263,13 @@ visibility: "public"
 - **验真责任外迁的识别法（同轮第二证）**：`content_hash` 有可复算的规范化算法，签名态分 `{kind:"signed"}` 与 `{kind:"unsigned",contentHash}`，但 RSA 2048 私钥官方明写「**仅展示一次，SkillHub 不存储**」，验签说明只存在于 `/docs/verify-signature` 文档层 ⇒ **提供方自签 + 平台不托管私钥 = 没有第三方验证器，验真责任 100% 落在消费侧**；判据：**看到签名先问"谁能验"——平台不持私钥即无人代验，消费方须自行实现规范化重算**，不能因为"有签名字段"就当成已验证。
 - **与既有能力分工**：r488C「字段存在是假信号（缺失/空值/有值无实现三态）」管**校验声明本身**；r490C「自报分级是闭域单选」管**分级怎么填**；本条管**引用外部校验结论前要验什么**。
 - 提升层：工具（第三方结论引用前校验）/ 工作流（上架门禁）。触发词：compliance 四态、unknown 是无法判断、precheck-alipay、跳过并直接提交、fail-open 门禁、前置校验非终身、私钥不存储即无第三方验证器、content_hash 规范化重算。
+
+## 「未列出」不是访问控制；且打包结果与源目录不是同一集合，审计要以包内实际内容为准（来源：skills.sh/docs/packs 45,129B，2026-10-11 r511B 一手 curl 200 实拉；逐串命中 `Packs are unlisted, not access-controlled` / `larger than 2 MB` / `Only skills that changed are re-downloaded`）
+- **实证**：官方原文三点——①可见性「**Packs are unlisted, not access-controlled**: anyone with the pack URL can view and install it.」；②构建侧静默跳过「skips invalid skill files and omits binary files or individual files **larger than 2 MB**」；③更新侧增量「**Only skills that changed are re-downloaded**」。
+- **判据**：① **把"不进搜索/未列目录"当私密性是错的**——未列出只减少发现路径、不减少可达性，拿到 URL 即可安装 ⇒ 任何「我没公开所以安全」的自证都不成立，含密钥的分发物必须假设已公开。② **打包结果是源目录的真子集且是静默裁剪的**：非法文件与超限文件被略过而不报错 ⇒ 审计对象必须是包内实际内容（解包后清点），不能拿源目录清单当交付清单。③ **增量更新使"本地没变"不等于"远端没变"**：只有变化项被重下 ⇒ 校验覆盖面要包含"本轮未重下的部分"，否则陈旧的本地副本会长期冒充最新。
+- 提升层：可复用 Skill（分发与可见性语义）/ 工作流（交付审计）。触发词：unlisted not access-controlled、larger than 2 MB omitted、only skills that changed re-downloaded。
+
+## 扫描器自述的规则数不能当门禁阈值；摄取上限须 fail-closed；基线抑制不能退化成永久豁免（来源：api.github.com/repos/NVIDIA/SkillSpector/contents/README.md 54,171B，2026-10-11 r511C 一手 curl 200 实拉 + `Accept: application/vnd.github.raw+json`；逐串命中 `71 vulnerability patterns across 17 categories` / `fails closed with an IngestLimitExceededError` / `MAX_FILE_BYTES` / `drift-tolerant glob rules` / `evidence-bound` / `--show-suppressed`）
+- **实证**：官方原文四点——①自述口径「**71 vulnerability patterns** across **17 categories**: prompt injection, data exfiltration, privilege escalation, supply chain, excessive agency, output handling, system prompt override …」；②摄取上限「A breach of either ingest cap **fails closed** with an `IngestLimitExceededError`」，且「the per-file 1 MB analysis cap (`MAX_FILE_BYTES`) is a **separate, downstream limit**: it bounds what individual analyzers will read out of an **already-ingested** directory」；③基线可漂移「A baseline can also use **drift-tolerant glob rules** (by rule id, file path, or message)」；④基线的失效条件「**Exact fingerprint baselines are evidence-bound**: changing the scanned source or **SkillSpector version** keeps the finding **active until it is reviewed again**」，复核开关 `--show-suppressed`。
+- **判据**：① **门禁阈值不能按扫描器自述的规则/类别数设**——自述是文档口径、实现是代码口径，两者会漂移（本例自述同时给「71 patterns」与「17 categories」两套计数）；阈值要按自己实测的命中分布定并周期重算。② **摄取超限必须 fail-closed**：直接抛错而不是截断；且「摄取上限」与「单文件分析上限」是**下游两道不同的闸**（`MAX_FILE_BYTES` 只约束已摄取目录内单个分析器读多少），超限事件必须可见——截断式降级等于静默少检。③ **基线抑制不能变成永久豁免**：抑制项可按 rule id / 路径 / 消息做漂移容忍，但源内容或扫描器版本一变，抑制自动失效并回到待复核；且必须能用 `--show-suppressed` 复核被抑制项，否则「抑制即消失」会形成无人察觉的覆盖盲区。
+- 提升层：工具 / 可复用 Skill（扫描治理）。触发词：fails closed、IngestLimitExceededError、MAX_FILE_BYTES 下游限、drift-tolerant baseline、evidence-bound、--show-suppressed。

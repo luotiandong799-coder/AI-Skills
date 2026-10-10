@@ -2695,3 +2695,25 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **★同一能力有推荐/不推荐两套实现，文档会显式标注**：关于用环境变量写凭据覆盖，原文 "**This approach isn't recommended. Environment variables aren't protected in n8n, so the data can leak to users**"；推荐做法是走自定义 REST endpoint + bearer token。判据：**选型时先找"是否被标注不推荐"，而不是先找"能不能跑通"**——能跑通但不被推荐的实现，通常是在某个维度（此处为泄露面）有已知缺陷。
 - **★评测并发与生产并发是两个独立变量，且评测默认被压到最低档**：`N8N_CONCURRENCY_PRODUCTION_LIMIT` 默认 `-1`（禁用、不限）；`N8N_CONCURRENCY_EVALUATION_LIMIT` 默认 **跟随 license 档位**（self-hosted Community 1 / Cloud Pro 1 / Business 3 / Enterprise 5），"Setting this overrides the tier default"。判据：**"未设置"不等于"不限制"，而是"跟随某个你看不见的档位默认值"**；做容量估算时必须先确认该档位是多少，否则按"不限"规划会实际跑在 1 上。
 - 提升层：工具 / 工作流 / 可复用 Skill。触发词：展示截断、执行面全量、too large to display、无鉴权一次性、凭据覆盖、不推荐实现、评测并发、档位默认。
+
+## [下沉] ## r354C · 机器可读取证有第四条通道：`Accept` 头内容协商；OOM 有三层异构信号且自愈能力取决于运行方式（来源：docs.n8n.io `scaling/memory-errors.md` 404 页 2,188B + `scaling/fix-memory-issues.md` + `scaling/use-external-storage.md` 独立 curl 取 `.md` 原文，2026-10-02 r354C 实拉）
+
+- **★第四种机器可读通道：请求头内容协商**：404 页原文 "You may also use **`Accept: text/markdown` header for content negotiation**"。判据：**取证枚举顺序应为：`.md` 后缀 → `Accept: text/markdown` 头 → `?ask=` + `?goal=` 问答接口 → `sitemap.md` 全索引 → `llms-full.txt` 全量导出**；前两条是"同 URL 换形态"（零猜测），后三条是"不知道确切页名时"的检索手段。与 r353C 已落的 `.md` / ask / sitemap 相邻但不同层——那条把「加后缀」当技巧，本条把它编成**有序的通道阶梯**。
+- **★OOM 有三个观测入口，且它们不在同一层**：① 应用层提示 "Execution stopped at this node (n8n **may have** run out of memory while executing it)"（注意措辞是 **may**——应用层只能给可疑，不能确认）；② 可用性层症状 "Problem running workflow"、"Connection Lost"、"503 Service Temporarily Unavailable"（"suggest that an n8n instance has become unavailable"）；③ 宿主层日志 "Allocation failed - JavaScript heap out of memory"（**only when self-hosting**）。判据：**资源类故障不能只盯一个入口**——应用层给怀疑、可用性层给影响面、宿主层给确证；把应用层的 "may" 当成确证会误判根因，只看宿主日志又会漏掉没打日志的场景。
+- **★自愈能力由运行方式决定，不由产品决定**："On n8n Cloud, or when using n8n's **Docker image**, n8n **restarts automatically** when encountering such an issue. However, when running n8n with **npm you might need to restart it manually**"。判据：**"崩溃后能不能自己起来"是部署形态的属性**；同一份代码在 Cloud/Docker 下有自动重启、在 npm 下没有——写可用性方案时必须绑定运行方式，不能写"系统会自愈"。
+- **★"不设限"是显式取舍，代价被转移给用户**："n8n **doesn't restrict** the amount of data each node can fetch and process. While this gives you freedom, **it can lead to errors** when workflow executions require more memory than available"。判据：**评估一个系统时要区分"它没有这个能力"与"它有意不施加这个约束"**——后者把资源风险转嫁给使用者，用户侧的应对是自建预算与分批处理，而不是等平台加限制。
+- 提升层：工具 / 工作流 / 可复用 Skill。触发词：Accept text/markdown、内容协商、取证通道阶梯、OOM 三层信号、may have run out of memory、heap out of memory、Docker 自动重启、npm 手动、不设限的取舍。
+
+## [下沉] ## r355A · 「仍在正确处理」≠「在服务窗内可用」：吞吐与延迟必须分开判；厂商性能数字是配置的函数而非常量（来源：docs.n8n.io `scaling/control-concurrency.md` 4,111B + `use-n8n-cloud/understand-concurrency.md` 3,828B + `scaling/measure-performance.md` 3,955B 独立 curl 取 `.md` 原文，2026-10-02 r355A 实拉）
+
+- **★高负载下的失效形态是"延迟越界"，不是"失败"**：原文 "Under higher loads n8n **usually still processes the data**, but takes **over 100s** to respond"。判据：**验证结论必须同时给"是否正确完成"与"是否在服务延迟窗内完成"两个数**——只判前者会在系统已经不可用时给出全绿结论；**延迟越界是一种独立失败态，不能并进"慢"里当表演化**。⇒ 验收前先声明延迟上界，再判成功。
+- **★吞吐数字必须连同它的成立条件一起引用**：原文 "n8n can handle up to **220 workflow executions per second** on a single instance"，紧随其后 "The performance of n8n **depends on** factors including: the workflow type / the resources available to n8n / how you configure n8n's scaling options"，并给出两套基准的完整配置（ECS c5a.large 4GB 单实例 + Postgres；七台 c5a.4xlarge 含 2 webhook + 4 worker + MySQL + Redis），且明确要求 "To get an **accurate estimate for your use case**, run n8n's **benchmarking framework**"。判据：**性能基准是配置的函数**——引用时必须连硬件、拓扑、工作流形态一起记，缺任一项即不可迁移；与 §「没有预算的分数不可复现」分工：那条管评测分数的可比性，本条管性能基准的可迁移性。
+- 判非（本轮实拉到但已覆盖，不重复落）：并发闸门只覆盖生产执行 / 排队项不可重试 / 重启按上限恢复（已落 dl §并发闸门有作用域，重叠 >60%）；评测并发是独立额度且默认跟随档位（已落 av §r354B，重叠 100%）；新能力默认关闭 + 行为不变承诺（已落 sa §r354A）。
+- 提升层：验证 / 工作流。触发词：吞吐与延迟分离、延迟窗、服务窗内完成、still processes the data、220 执行每秒、性能基准可迁移、自测基准框架。
+
+## [下沉] ## r355C · 兼容性验证不能只判「崩没崩」：字段移除后的真实表现是「继续运行但降级」；能力按载体版本分档，缺档是「能用但少一档」（来源：docs.n8n.io `changelog/v30-breaking-changes.md` 21,374B 独立 curl 取 `.md` 原文，2026-10-02 r355C 实拉）
+
+- **★「已移除」不等于「会报错」**：`defaults.color` 被移除后原文是 "Community nodes that still set it **keep working**, but the editor shows a Font Awesome icon in a **neutral color**"，并注明使用文件图标的节点 "aren't affected, because n8n never tints file icons"。判据：**兼容性验证的判据必须包含"效果有没有变"，而不只是"有没有崩"**——只跑「能不能起来」的烟测会系统性漏掉这类静默降级；验收项要按「报错 / 静默降级 / 无影响」三态分别列出。
+- **★能力按载体版本分档，缺档时是「能用但少一档」，必须写明哪一档没有**："Hot reload **only works on images that serve `POST /rest/dev/reload`**, so older tags **load your node but need a restart** to pick up changes"。判据：**同一能力在不同载体上是分档的**——把"加载成功"当成"能力完整"会漏掉缺失的那一档；文档/报告里要显写「哪些版本/镜像缺这一档」。与 §检索类能力降级要机器可读自证 分工：那条管**响应体要自带 mode 声明**，本条管**验收清单要按档位逐项核**。
+- 判非：具体被删节点名（Function / Function Item）与字段名（`defaults.color`）、Docker Compose 推荐路径、v3.0 的时间点（均属平台登记项，不迁移为判据）。
+- 提升层：验证 / 工具。触发词：静默降级三态、移除后仍可用、兼容性验收、能力按镜像分档、缺一档。

@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.92.0"
+version: "1.94.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -417,3 +417,15 @@ sources:
 - **判据**：① **钉 `master` 等于把制品身份交给一条移动指针**：同一条安装命令今天与明天拿到的是不同比特，回滚与复现都无从谈起 ⇒ 发行面必须提供钉 `tag`/`commit`/`digest` 的取法，移动分支只能作开发通道。② **无版本可选 ⇒ 无法表达"我要哪一版"**：连 Pin 的入口都没有时，使用者唯一能做的本地补偿是**把取到的内容连同取数时刻落盘归档**（自己钉），不能指望上游。③ **无 checksum/签名 ⇒ 篡改不可检测**：安装脚本先把 zip 落到临时文件再解压**，链路里任何一环（CDN、中间人、镜像）改写产物都无法察觉 ⇒ 安全审查要把「有没有摘要、摘要在什么位置校验、校验失败是否中断」三件列为必检，缺一件即判该通道不可信。④ **这三件缺一不可且互相独立**：给了版本号但 URL 仍钉分支 = 仍不可复现；给了 checksum 但脚本内禁失败 = 仍不可验真 ⇒ 逐件分别判，不许用"有一点就够"放行。
 - **与既有能力分工**：r324A「无 release 制品面」讲**时间轴缺发布概念**；本条讲**完整性与复现性双双不成立**，并给出三条必检项。
 - 提升层：可复用 Skill（发行与分发契约）/ 工作流（装载链路可信）。触发词：三无一钉、archive/zip/master、无 checksum、无签名、制品不可复现、安装器无摘要校验。
+
+## 准入/治理名单自己必须是可回滚制品：打包下发、可查历史、可按 revision 回滚，且收紧前先反查「谁还在用」（来源：docs.langflow.org/api/openapi.json 1,364,171B（实返 HTML 渲染页，非 JSON），2026-10-11 r511B 一手 curl 200 实拉；逐串命中 `get_component_policy_api_v1_catalog_policy_components_get` / `..._put`、`get_template_policy_api_v1_catalog_policy_templates_get` / `..._put`、`get_component_usage_api_v1_catalog_policy_usage_get`、`get_component_usage_flows_api_v1_catalog_policy_usage_flows_get`、`/api/v1/policy-bundle`、`/api/v1/policy-bundle/history`、`rollback_policy_bundle_api_v1_policy_bundle_rollback_...`、响应字段 `"rollback_of_revision"`）
+- **实证**：官方把「名单治理」拆成两组配对端点——①策略面：组件与模板各自 get/put（`..._catalog_policy_components_get/_put`、`..._catalog_policy_templates_get/_put`）；②反查面：`..._catalog_policy_usage_get`、`..._catalog_policy_usage_flows_get`（谁仍在用被禁项）；③制品面：`/api/v1/policy-bundle` 整体打包、`/api/v1/policy-bundle/history` 修订历史、`rollback_policy_bundle_api_v1_policy_bundle_rollback_{revision}` 按代回滚，响应体带 `"rollback_of_revision"` 字段标明回滚来源代次。
+- **判据**：① **名单治理三件套缺一不可**——可整体打包下发（bundle）、可查修订历史（history）、可按 revision 回滚（rollback + `rollback_of_revision` 溯源）；只有名单内容没有名单版本，等于撤销无法归因、也无法回答"现在生效的是哪一代"。② **名单与反查必须成对**：有 policy 就必须有 usage，否则收紧动作既无法预评估影响面、出故障也无法快速定位被波及对象。③ **把名单当制品而不是当配置**：收紧是可逆操作，且回滚后能说出回滚到哪一代，才谈得上治理留痕。
+- **与既有能力分工**：§「发布即冻结：published 锁定不可编辑、回滚天然可用」管**发布物本身**的版本与回滚；本条管**治理名单**这一特殊发布物的版本化与影响面反查。
+- 提升层：可复用 Skill（治理与准入）/ 工作流。触发词：policy-bundle、policy-bundle/history、rollback_of_revision、catalog_policy usage、名单可回滚、收紧前反查影响面。
+
+## 下发面的「新鲜度」往往不可判定：先验三件事——时间戳是否有第二个字段且值为纪元零、状态字段是枚举还是布尔、有无版本/文件树端点可交叉核对（来源：modelscope.cn/openapi/v1/skills 16,424B 一手 curl 200 实拉；逐串命中 `"last_modified"` 与 `"file_last_modified":"1970-01-01T00:00:00Z"` 并存、`"auto_sync_enabled":false,"sync_status":false`；并复核 `/openapi/v1/skills/{ns}/{name}/` 下 `revisions`/`files`/`tags`/`archive`/`master` 五端点全 404/18B）
+- **实证**：同一对象两个时间戳并存——`"last_modified":"2026-09-11T02:09:56Z","file_last_modified":"1970-01-01T00:00:00Z"`（后者为纪元零值），也有取到真实值的条目（`"file_last_modified":"2026-06-23T17:59:54Z"`）；同步态用布尔而非枚举——`"auto_sync_enabled":false,"sync_status":false`；版本与文件树面缺失——`revisions`/`files`/`tags`/`archive`/`master` 五个子端点全部 404 且响应体仅 18B。
+- **判据**：① **「同步是否成功」与「内容多久没更新」是两问，很多下发面两问都答不了**：`sync_status` 为布尔时，`false` 同时吞掉「未开启」与「开启但失败」两种状态，不能据此推断同步失败。② **纪元零值时间戳（1970-01-01）不等于「很旧」，通常表示「从未采集」** ⇒ 拿哨兵当真实时间会算出荒谬的陈旧度；凡时间戳字段出现第二个同义字段，必须逐字段验证取值范围。③ **没有版本/文件树端点就没有交叉核对手段**，此时「新鲜度」只能靠自建快照哈希判定（与 §content_hash 规范化重算闭环），不能信下发方自报。
+- **与既有能力分工**：§「三无一钉」管**载荷本身**有没有版本可钉（钉 master）；本条管**元数据面**能不能判断新鲜度（时间戳哨兵 + 布尔状态 + 无版本端点）。
+- 提升层：工作流（依赖与下发治理）。触发词：file_last_modified、1970-01-01 哨兵、sync_status 布尔、无版本端点、新鲜度不可判定、自建快照哈希。

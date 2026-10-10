@@ -1205,3 +1205,35 @@ BARE 形式、declare-then-use、degrade never throw、flattened bag、id命名�
 - **★关闭前 Gateway 会 join 真实钩子完成情况**：关闭共享状态前要等 handler；期间通道还没拆，但**排队的 agent 工作与消息投递都不保证在关闭前跑完**。判据：**"通道还活着"不等于"任务会跑完"**，收尾不能把未决工作算作已完成。
 - **★持久化出站队列的结算可以推迟观测，但不让钩子本身变持久**。判据：**投递结算 ≠ 钩子持久化**，别因为"队列会补发"就认为关闭钩子里做的事是可靠的。
 - 排查顺序：进程退不出 → 先看是否有未 settle 的关闭钩子 → 再看 handler 内部是否在等一个永远不会返回的 promise → 最后才看超时配置。
+
+
+---
+
+## §下沉·重试钉在单请求而非复合流已完成步不重放已发出无应答是歧义态须先对账内层
+## 重试钉在单请求而非复合流、已完成步不重放；「已发出无应答」是歧义态须先对账；内层重试独立计数且外层可掐断；鉴权/计费/拒答不进重试预算直接走降级（来源：docs.openclaw.ai/concepts/retry，2026-09-30 r321B 独立实拉 9,854B；细则见 references/knowledge-base.md §r321B）
+
+
+---
+
+## §下沉·诊断技能严格只读修复须经批准diagnose与repair是分离的两动
+## 诊断技能严格只读、修复须经批准：diagnose 与 repair 是分离的两动作（来源：docs.openclaw.ai/tools/custodian-skills.md 5,298B，2026-09-30 r336A 独立实拉）
+- 原文：「Repair diagnoses with `openclaw doctor --lint`. Only an explicitly approved repair uses `openclaw doctor --fix --non-interactive`. The read-only `diagnose-gateway` skill recommends that separate step but never runs it.」
+- 判据：① **诊断（只读）与修复（写操作）必须是两个被分离的动作**：只读诊断技能只负责发现 + 推荐修复步骤，**永不自己执行修复**；修复动作须单独、显式批准、并以非交互（`--non-interactive`）方式运行。② 让「会改东西」的技能同时拥有诊断与修复，等于把扳手与螺丝刀焊在一起——误触发诊断即触发写，且审计里无法区分「只是看了」与「已经改了」。③ repair 的「批准 + 非交互」双约束 = 可审计点：谁批准、何时、跑的是哪条命令，事后能查；交互式修复把决定权推给运行时的 stdout，无法留痕。④ 与 §超时不是回滚授权 同源——判死/回滚分两门，本条把「看」与「改」也分两门。
+- 提升层：工作流/安全边界。触发词：诊断只读、修复须批准、diagnose 不执行 repair、doctor --lint、doctor --fix --non-interactive、读写分离。
+
+- **脱敏的正确形态是「保留可观测骨架、替换载荷」，且错误详情必须在脱敏清单内（来源：docs.n8n.io/deploy/host-n8n/configure-n8n/security/redact-execution-data.md 17,934B，2026-09-30 r338C 独立实拉）**：本章已下沉 `references/knowledge-base.md`（r338C）。
+- **定时器恢复的默认动作是「重排未来时点」而不是「补跑历史欠账」：合并错过的滴答，且用运行身份而非起始时间认领（来源：docs.openclaw.ai/automation/cron-jobs/how-it-works.md 9,877B，2026-10-01 r339A 独立 curl 实拉逐串命中）**：本章已下沉 `references/knowledge-base.md`（r339A）。
+
+## [下沉] ## 并发互斥的锁键必须是「执行身份」而不是调用通道或运行时形态；队列满有三档背压语义；旁路维护失败不得替换已完成的回复（来源：docs.openclaw.ai/concepts/queue.md 17,920B + concepts/compaction.md 17,978B，2026-10-01 r340A 独立 curl 实拉逐串命中）
+- **原文**：①「CLI, embedded, and Codex runs share the same **session-key lane** (`session:<key>`). Each turn waits there before acquiring the session's execution claim, so **changing runtimes cannot start a competing turn**」；②「`drop: \summarize\` ... **drop the oldest queued entries as needed, keep compact summaries, and inject them as a synthetic followup prompt**」/「`drop: \old\` ... drop the oldest ... **without preserving summaries**」/「`drop: 
+ew\`: **reject the newest message when the queue is already full**」；③「**Optional maintenance failures are logged without replacing an already completed reply**」；④「A running stage is **not preempted**」+「asynchronous stage work **can still overlap and does not count toward that time budget**; this **does not lower the run concurrency limit** or change session serialization」。
+- **判据**：① **互斥的键要绑在谁在执行上，不是从哪条路进来**：CLI / 嵌入式 / 别的运行时共享同一把会话锁，于是**换一个入口并不能绕过互斥**。⇒ 排查为什么两个回合打起来了时，先问锁的键是什么——按进程名、按调用方式、按客户端类型加锁，都会在换一种入口时被绕过；只有按会话身份加锁才成立。② **队列满不是一种行为，是三档语义，选错档就是选错丢谁的信息**：`summarize` 丢最旧但把摘要合成一条后续提示（信息降级保留）/ `old` 丢最旧且不保摘要（信息丢失）/ `new` 拒最新（保护历史、让新调用显式失败）。⇒ 设计背压时必须显式选档并写清满了之后谁被丢；默认档往往最温柔也最容易被误当成没丢。③ **旁路维护的失败只能进日志，不能回写主结果**：压缩、落盘、刷新这类顺手做的工作失败时，已完成的回复仍然是已完成的——不得用一个后来的失败把已交付的成功改成失败态。⇒ 判成败要分清主链路与旁路：旁路的健康度单独计量，不并进主结果的状态机。④ **让出 CPU 的预算与并发上限是两个旋钮**：切片让出（16 个阶段或 8ms）只保证入口不被饿死，既不抢占运行中的阶段，也不改变并发上限与会话串行化。⇒ 调响应变慢时不要把让出阈值当成并发限制去改。
+- **提升层**：工具/工作流/可观测性。触发词：锁键=执行身份、session-key lane、换运行时不绕过互斥、队列满三档、drop summarize/old/new、背压语义、旁路维护失败不降级、让出预算≠并发上限。
+
+## [下沉] ## 改向/取消的生效边界是「原子发射检查点」；落盘不等于已被消费；「调用被跳过」不能反推「有用户输入在等」；能力缺失应降级为等待而非失败（来源：docs.openclaw.ai/concepts/queue-steering.md 12,366B + concepts/memory.md 15,623B，2026-10-01 r340B 独立 curl 实拉逐串命中）
+- **原文**：①「OpenClaw **distinguishes started work from requested work**」+「A parallel batch has **one atomic launch checkpoint**. A steer present before it suppresses all prepared calls; a steer arriving after it **does not recall any of them**」+「Validation or policy outcomes finalized before the parallel checkpoint **remain truthful**. Only executable calls that did not start receive the steering skip result」；②「A **later answer does not replace a completed answer to an earlier input**, even when steering skipped its pending tools」；③「A transcript commit **confirms persistence, not that a later model request has read the input**」；④「Internal updates, including subagent completion reports, also use this steering boundary ... A skipped tool **does not necessarily mean a user message is waiting**」；⑤「When a runtime **cannot accept steering** in `steer` mode, OpenClaw **waits for the active run to finish** before starting the prompt」。
+- **判据**：① **已启动与已请求是两类工作，取消只能作用于后者**：并行批有一个原子发射检查点——检查点之前到达的改向抑制全部已准备的调用，之后到达的**一个也召不回**。⇒ 排查我明明取消了怎么还跑了时，别去看取消信号送达没有，去看它相对发射检查点的先后；另外**检查点前已定稿的校验/策略结论不因后续改向而失效**，别把已定稿的前置判断一起回滚掉。② **后到的回复不覆盖先到的已完成回复**：多输入场景下每个输入各有其答案，即使后来的转向跳过了前一个输入的待办工具，前一个的答案仍是已交付事实。⇒ 判这次到底答了没要按输入逐条对账，不能只看最后一条输出。③ **持久化与消费是两件事**：transcript 提交只证明写进去了，不证明后面的请求读到了。⇒ 排障数据链路时，把落盘成功当成下游已见是最常见的一类误判；要查消费侧（谁读了、读到哪一条）。④ **同一个边界可能承载多种来源，因此现象不能反推原因**：内部更新（子 agent 完成报告）走的是同一条转向边界，却可以隐藏于 transcript 且不进用户队列。⇒ 看到某次调用被跳过不能直接推出有用户消息在等——先枚举这个通道上还有哪些非用户来源。⑤ **能力不支持时的正确行为是显式降级而不是报错**：运行时不接受同回合转向时，系统选择等当前回合跑完再起新回合。⇒ 设计可选能力时，把不支持的路径写成一条可预期的降级链路（等待/排队/换通道），不要让它变成一次莫名失败。
+- **提升层**：工具/工作流/可观测性。触发词：原子发射检查点、started vs requested work、改向不召回、后答不覆盖先答、落盘不等于已消费、transcript commit、跳过不反推用户输入、能力缺失降级等待。
+
+- **入队四态语义；显式命令覆盖持久设置；降级会剥离语义标签（来源：docs.openclaw.ai/tools/steer.md 3,228B，2026-10-01 r342A 独立 curl 实拉逐串命中）**：本章已下沉 `references/knowledge-base.md`（r342A）。
+- **续期只认真实执行；环境变量常常只是初值（来源：docs.openclaw.ai/concepts/session.md 22,390B + www.activepieces.com/docs/install/configure-operate/telemetry.md 2,830B，2026-10-01 r342B 独立 curl 实拉逐串命中）**：本章已下沉 `references/knowledge-base.md`（r342B）。
