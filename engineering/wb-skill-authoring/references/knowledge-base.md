@@ -3490,3 +3490,9 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 2. **低于相关性阈值的匹配丢弃而非填充，空结果=真无匹配**：检索结果低于阈值直接 drop，不拿弱相关凑数——空结果意味着目录里真没有，agent 应直说而非跑错工具。判据：选择逻辑须有阈值截断 + 诚实无匹配路径，禁止「凑一个最可能错的」。
 
 - 提升层：可复用 Skill。触发词：语义检索、诚实无匹配。
+
+
+## 下沉·wb-skill-authoring·r515C · 路径基准与复杂度阈值：相对路径一律以「技能目录根」为基准（含支持文件里的代码块）；命令复杂度过阈值必须落成受测脚本（来源：agentskills.io `skill-creation/using-scripts.md` 12,743B，2026-10-11 独立 curl 取 `.md` 原文实拉、逐串命中）
+- **实证（逐串）**：`When a command grows complex enough that it's hard to get right on the first try, a tested script in` `scripts/` `is more reliable`；`Pin versions` `so the command behaves the same over time`；`State prerequisites in your` `SKILL.md` `rather than assuming the agent's environment has them`；支持文件同基准原文「The same relative-path convention works in support files like `references/*.md` — script execution paths (in code blocks) are relative to the **skill directory root**, because the agent runs commands from there.」
+- **判据**：① **"以什么为基准解析相对路径"必须写死在技能里**：本规范以**技能目录根**为基准，因为执行时的工作目录就是那里；`references/*.md` 这类支持文件里代码块中的路径**沿用同一基准**——不写清就会出现"在主文件里能跑、从支持文件复制出来就跑不了"；② **一次性命令与受测脚本之间要有明确阈值**：命令复杂到"第一次写对没把握"就该落成 `scripts/` 里经过测试的脚本；把长命令留在正文里，等于让每次执行都承担一次重新拼对的风险；③ 一次性命令也要**钉版本 + 显式声明前置条件**（如"需要 Node.js 18+"），不能假设宿主环境已具备——技能在被别的 agent / 别的机器装载时，唯一可信的信息就是写在技能里的那句话。
+- 提升层：可复用 Skill（技能编写规约）。触发词：路径基准以技能根为准、支持文件同基准、命令复杂度阈值、落成受测脚本、钉版本、声明前置条件。

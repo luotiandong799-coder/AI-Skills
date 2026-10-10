@@ -2729,3 +2729,9 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **实证**：同一 OWASP 项目内，`risk-assessment.html` 把 AST05 定为 **Insufficient Input Validation**、AST06 **Improper Error Handling**、AST07 **Insecure Storage**、AST09 **Lack of Monitoring**，而项目主页的 Top10 把同编号写成 Untrusted External Instructions / Weak Isolation / Update Drift / No Governance。
 - **判据**：① **编号不是稳定主键**：跨文档合并时只写编号会静默错配，引用格式必须是「编号 + 该文档当页的定义原文」；② 审计台账里出现编号时，要能指出**它出自哪一份文档的哪一版**——否则两个来源的 AST05 会被当成同一条而合并计分。
 - 提升层：工作流（引用规约）。触发词：编号与定义双写、AST05 不同定义、跨文档静默错配、引用要带出处版本。
+
+
+## 下沉·wb-artifact-verification·r515A · 「没结果」的四态分诊：未到达执行 / 被阻断 / 静默抑制 / 真失败（来源：docs.openclaw.ai `auth-credential-semantics.md` 27,952B + `automation/cron-jobs/how-it-works.md` 11,059B + `automation/cron-jobs/troubleshooting.md` 5,250B + `cli/plugins/inspect-and-diagnose.md` 8,880B，2026-10-11 独立 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`a stable reasonCode when the check never reached a model call`（数值/格式/凭据类原因码只在**根本没走到模型调用**时才给出）；`so a blocked command is not reported as a green run` + `ordinary assistant prose is not mistaken for a denial`（阻断与否靠**结构化执行拒绝元数据**判定，不读自然语言）；`Run-level agent failures count as job errors even with no reply payload`（**没有回复 ≠ 成功**）；`an empty client process is not evidence that a Gateway run has stopped`（**客户端进程消失不是服务端已停的证据**）；`Cleanup failures produce a command error instead of a successful report`（清理失败要落成显式错误，不许产出成功报告）。
+- **判据**：① **先分「跑没跑到」再分「跑得对不对」**——没到达执行的失败没有执行语义，只能给静态原因码（`missing_credential` / `unresolved_ref` / `ineligible_profile`），把它和执行失败混在一个桶里会让"配置错"伪装成"结果错"；② **空输出/无回复必须显式计为失败**，除非存在独立的"主动抑制"状态字段（本例 `deliverySuppressionReason` 与 `lastDeliveryError` 是两个字段——抑制 ≠ 失败）；③ **阻断判定要读结构化元数据，不读散文**：靠文本里有没有"失败/拒绝"字样来判，既会把散文误判为拒绝，也会漏掉带 `SYSTEM_RUN_DENIED` 嵌套码的阻断；④ **进程生死 ≠ 任务终态**：客户端进程没了不能推出服务端任务已停，回收/核对必须以服务端记录为准；⑤ **收尾清理失败不许被"结果已出"吞掉**——清理失败要改成显式错误，否则下一次运行带着脏状态却显示上轮绿。
+- 提升层：可复用 Skill（验证判定分诊）。触发词：没到达执行、空回复不算成功、静默抑制、投递失败与抑制分列、进程消失不是已停、清理失败不是成功、阻断读结构化元数据、绿跑误判。

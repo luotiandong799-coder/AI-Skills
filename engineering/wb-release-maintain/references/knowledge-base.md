@@ -331,3 +331,15 @@
 - 实证（`catalog-exceptions.yml` 逐串命中）："Everything else in skills/ must be declared by a components.d/<slug>.yml entry, listed in .github/scripts/manual-components.yml, or listed here — otherwise the hourly sync prunes it (see .github/scripts/prune-orphans.sh)." ⇒ 默认动作是 **prune（剪除）**，不是 skip（不收录）。
 - 例外四字段（责任三元组 + 目录）：每个 exceptions 条目必须含 `dir` / `reason`（documented reason）/ `owner` / `component`，文件头注释明确 "Add an entry only with a documented reason and an owner"。
 - 可复用落点：wb-release-maintain 的「退役 / 批量淘汰」——默认剪除 + 例外带责任字段（谁 / 为何 / 归属组件）+ 速率上界三件套；与 r441B 批量退役三闸（PRUNE_CAP / 解析失败停删 / 期望集 + 豁免清单）同族，但本点更强调「默认即删」的取向，合并时取交集。
+
+
+## r515A · 新增安全/隔离态具有「运行时版本边界」：旧运行时不强制执行新态，降级前必须显式处置新态对象（来源：docs.openclaw.ai `auth-credential-semantics.md` 27,952B，2026-10-11 独立 curl `.md` 原文实拉、逐串命中）
+- **实证（逐串）**：setup 替换凭据「存独立 profile ID + 内部 `setup` descriptor，**不能**进入正常轮换、不能被显式 pin 解析、不能被复制到另一个 agent；测试失败或拒绝 → 保持 inactive 并保留当前连接」；关键句 `older runtimes do not enforce the inactive state` + `Before downgrading, remove saved inactive replacements or restore the state from before setup` + `This adds no database schema or migration`。
+- **判据**：① **新引入的约束态不是"写进配置就全局生效"，它只在认得它的运行时上被强制执行**——旧版看不见该状态，于是同一份配置在新旧版本上语义不同；② 因此**降级是破坏性操作**：降级前必须显式处置只被新版认识的对象（移除，或把状态恢复到引入前），否则降级后旧版会以"没有这个约束"的方式去用它们；③ **加状态不等于加 schema**：本例明确不改数据库 schema、不做迁移，代价是"旧运行时不强制"——这是有意选择的取舍，写发布说明时必须把它当破坏面写出来，而不是当作无变更；④ 与 r511B「换默认不回填存量引用」互补：那条管**默认值变更对存量引用的影响**，本条管**约束态在不同运行时版本上的强制力差异**。
+- 提升层：工作流（发布/降级破坏面评估）。触发词：新态旧版不强制、降级前处置、约束的版本边界、不加 schema 的取舍、inactive 状态、替换凭据隔离。
+
+
+## r515B · 配置生效范围是三个独立开关：进程内内存 / 跨重启持久 / 跨 worker 广播，且默认是**最弱档**（来源：docs.n8n.io `administer/manage-credentials/credential-overwrites.md` 5,099B，2026-10-11 独立 curl `.md` 原文实拉、逐串命中）
+- **实证（逐串）**：`CREDENTIALS_OVERWRITE_PERSISTENCE=true` 时 n8n 把加密后的覆盖值存进 `settings` 表并广播 `reload-overwrite-credentials` 事件让 worker 重载；关闭时「overwrites remain in memory on the process that loaded them and n8n doesn't propagate them to workers or preserve them across restarts」。
+- **判据**：① **"配置已生效"要拆成三个可独立为假的命题**：当前进程认得它 / 重启后还在 / 其他 worker 也认得它——三件事由不同开关控制，默认档只满足第一个；② 发布说明里新增"全局覆盖/默认值注入"类能力时，**必须写明默认档是哪一档**，因为默认最弱档的表现是"在单点上看起来完全正常、在集群里一半节点没生效"，这类故障不会报错；③ 与 av 2.179.0「计数域是全局还是 per-process」分工：那条管**上限数值的计数域**，本条管**配置值的持久性与传播域**，对象不同、不可互相替代。
+- 提升层：工作流（配置/发布变更的生效面评估）。触发词：生效范围三开关、默认最弱档、跨 worker 广播、重启后是否还在、覆盖值持久化。

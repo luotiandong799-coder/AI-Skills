@@ -477,3 +477,21 @@ Step C: 是否包含恶意意图？
 
 ```markdown
 # 🔍 安全审计报告
+
+
+## 下沉·system/skills-security-check·r515A · 换引用不换约束：间接引用不豁免准入校验；被阻断项保留并标注而不删配置（来源：docs.openclaw.ai `auth-credential-semantics.md` 27,952B + `cli/plugins/inspect-and-diagnose.md` 8,880B，2026-10-11 独立 curl `.md` 原文实拉、逐串命中）
+- **实证（逐串）**：`tokenRef` does not bypass `expires` validation（把凭据从内联改成 SecretRef 引用，**不**豁免有效期校验；引用解析不出时另有独立原因码 `unresolved_ref`，与"缺失" `missing_credential` 分开）；`config validation keeps the plugin entry and reports it as` `present but blocked`——被路径安全检查阻断的插件**保留配置条目**并标注状态，正确处置是 `Fix the preceding blocked-plugin diagnostic, such as path ownership or world-writable permissions, instead of removing the` `plugins.entries.<id>` or `plugins.allow` config。
+- **判据**：① **审计第三方 skill 时，"把敏感值改成引用"只能换存储位置，不能减校验**——有效期/作用域/格式校验必须在引用解出之后仍然跑；引用未解出要单独报（引用失效 ≠ 值缺失），不能并入"没配"；② **发现被安全策略阻断的组件，不要靠删配置条目让告警消失**——删条目等于把"存在但被拦"变成"根本不知道它存在"，下一次重装/换路径会绕过同一道检查；正确动作是修根因（属主/权限/路径）并保留「存在但被阻断」的可审计状态；③ 与 r513A「挂载/路径二次校验（归一化 + 最深存在祖先）」互补：那条管**怎么判路径合法**，本条管**判为不合法之后记什么状态、怎么修**。
+- 提升层：可复用 Skill（安全审计判据）。触发词：引用不豁免校验、unresolved_ref、存在但被阻断、别删配置掩盖告警、修根因、凭据有效期、引用失效。
+
+
+## 下沉·system/skills-security-check·r515B · 凭据下发通道的可见性与补偿控制；放开类设置不沿继承传播，且可能搭进外部合规资产（来源：docs.n8n.io `administer/manage-credentials/credential-overwrites.md` 5,099B + `administer/manage-credentials/share-credentials-securely.md` 3,448B，2026-10-11 独立 curl 取 `.md` 原文通道实拉、逐串命中）
+- **实证（逐串）**：`This approach isn't recommended. Environment variables aren't protected in n8n, so the data can leak to users`（环境变量**不是**受保护通道，官方点明会泄给终端用户；推荐走 REST 端点 + bearer token）；`Without an auth token, the endpoint can only be called once for security reasons`（**无鉴权面用"只能调用一次"做补偿控制**）；`This setting applies only to the credential types you list. It doesn't apply to credential types that extend a listed type`（放开类白名单**不沿继承链传播**）；`Letting users set their own scopes can break verified OAuth apps ... the provider may suspend or ban your app`。
+- **判据**：① **审计"密钥怎么传进来"时，先问这个通道对谁可见**——环境变量/命令行/日志这类面通常对本应看不到它的用户也是可见的，"配在环境变量里"不等于"没暴露"；② **无鉴权入口必须有等价补偿控制**，且补偿方式要写明（本例：只允许调用一次）——没鉴权又没次数/窗口限制的端点应直接判高危；③ **白名单/放开类设置要确认作用域是否沿类型继承传播**：只作用于显式列出的类型，不等于作用于继承它的子类型；把"列了父类型"当成"子类型也放开"（或反之）都会造成权限边界错位；④ **把权限边界交给终端用户，会把外部合规资产一起搭进去**——OAuth scope 由用户自填会破坏应用验证，后果是供应商暂停或封禁应用；审计第三方 skill 时，凡"让用户自己填权限范围"的设计，要连带评估它是否会让宿主应用失去外部合规资格。
+- 提升层：可复用 Skill（安全审计判据）。触发词：环境变量不是受保护通道、无鉴权一次性窗口、白名单不沿继承传播、用户自填 scope、OAuth 应用验证封禁、凭据下发通道可见性。
+
+
+## 下沉·system/skills-security-check·r515C · 装载之前的发现阶段要有两道闸：扫描半径有界 + 来源信任门（来源：agentskills.io `client-implementation/adding-skills-support.md` 20,357B，2026-10-11 独立 curl 取 `.md` 原文实拉、逐串命中）
+- **实证（逐串）**：`Set reasonable bounds (e.g., max depth of 4-6 levels, max 2000 directories) to prevent runaway scanning in large directory trees`；`Consider gating project-level skill loading on a trust check — only load them if the user has marked the project folder as trusted. This prevents untrusted repositories from silently injecting instructions into the agent's context.`
+- **判据**：① **"发现"本身是可被利用的攻击面**：递归扫描没有硬上界时，深目录树既是性能失控点，也是把任意位置的 `SKILL.md` 拉进上下文的通道；边界必须是**两个维度同时设**（层级深度 + 目录总数），只设一个挡不住另一种失控；② **来自被操作对象（仓库）的技能，其来源可信度与被操作对象同级**——新克隆的开源项目里的项目级技能属于不可信输入，默认加载等于允许外部仓库静默注入指令；信任门必须在**装载之前**，而不是装载之后再去限制它读什么；③ 与 Cap70「不可信内容受限 reader」分工：Cap70 管**已装载的不可信内容怎么用**（受限读取），本条管**要不要发现并装载它**（扫描边界 + 信任门），二者前后不同阶段、不可互相替代。
+- 提升层：可复用 Skill（安全审计判据）。触发词：扫描半径有界、max depth 4-6、2000 目录、项目级技能信任门、克隆仓库注入指令、发现阶段攻击面。
