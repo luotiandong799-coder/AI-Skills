@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.47.0"
+version: "1.49.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -322,3 +322,5 @@ visibility: "public"
 - **强制机制失去强制能力时的三档姿态；限流 active/inactive 两态（来源：2026-10-11 r517B 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r517B）。
 - **换密钥是替换非并存；密钥+盐两个独立配置共同决定可解密性（来源：2026-10-11 r517C 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r517C）。
 ## 禁自审批必须在 UI 与 API 两个面各自强制；审批链接的作用域默认最小（step 级），放大到 flow 级是显式动作，且「可关闭」本身是可配置项（细则见 KB，2026-10-11 r519 下沉）（全文见 references/knowledge-base.md §下沉·skills-security-check·禁自审批必须在UI与API两个面各自强制审批链接的作用域默认最小step级放大到flow级是显式动作且可关闭本身是可配置）
+## 执行时限类默认值会随版本整倍漂移升级后既有超时标定作废长任务须重测阈值（细则见 KB，2026-10-11 r524A 下沉）（全文见 references/knowledge-base.md §下沉·skills-security-check·执行时限类默认值会随版本整倍漂移）
+## 探活判定用失败状态码白名单而非非200即失败鉴权与限流类4xx5xx恰是端点健在的证据（细则见 KB，2026-10-11 r524C 下沉）（全文见 references/knowledge-base.md §下沉·skills-security-check·探活判定用失败状态码白名单）
