@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复
-version: "1.182.0"
+version: "1.184.0"
 agent_created: true
 ---
 
@@ -300,3 +300,13 @@ agent_created: true
 ## 大版本升级翻转默认安全态env与overrideConfig默认不可读不可覆盖须列入升级前自查并逐项探测（细则见 KB，2026-10-12 r526C 下沉）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·大版本升级会翻转默认安全态）
 
 ## 错误码语义是上游可改契约须把码到类映射表版本化并在上游breaking记录反查（细则见 KB，2026-10-12 r526C 下沉）（全文见 references/knowledge-base.md §下沉·wb-debug-loop·错误码的语义是上游可改的契约）
+
+## 隔离强度是可以被性能问题悄悄降级的安全属性：强隔离方案（每 token 一个独立子进程）会因内存/时延被回退成共享沙箱，且共享会话会跟着一起退（来源：api.github.com/repos/activepieces/activepieces/releases?per_page=3 22,912B，2026-10-12 r527A 一手 curl 200 逐串命中 `0.92.2` / `chore(engine): evaluate template-expression scripts with the legacy sandbox (#16189)` / `chore(engine): use the legacy sandbox for the shared script session too (#16190)` / `This routes {{ }} template-expression evaluation through the legacy sandbox instead of spawning a Deno process per token`；r527A 落地）
+- **实证**：Activepieces 0.92.2 把 `{{ }}` 模板表达式求值从「每个 token 起一个 Deno 进程」改回 legacy sandbox，理由是「relieving the memory pressure and slowdowns on flows that map many expressions over large step outputs」；**第二个 commit 把 shared script session 也一并改回 legacy**。
+- **判据**：① **隔离方案是一个可运维回退的档位，不是平台的固有属性**——既然能被一次 chore 提交整体改回去，就不能在任何审计结论里把"跑在沙箱里"当作常量；要问的是"当前这一版跑在哪一档隔离上"。② **性能回退与安全降级是同一个动作的两面**：把 per-token 独占进程换成共享沙箱，换来的是内存与时延，付出的是**不同 token 之间的执行上下文不再互相隔离** ⇒ 评审这类变更时不能只算性能账。③ **会话面会随引擎面同步退**：#16190 说明共享脚本会话也走 legacy ⇒ 只盯着"引擎改了"会漏掉"会话复用面也一起退了"，两个面要各自确认。④ **回退要能被机检发现**：这类变更出现在 `chore`/`Maintenance` 段而非 `Breaking Changes` 段，读 breaking-changes 页看不到 ⇒ 排障"为什么隔离行为变了"要直接读发布说明的维护段，而不是只看破坏性变更清单。⑤ **回退是可逆的设计选择，不是 bug**：原实现存在过说明强隔离可行，选型时要记录"曾因什么指标退回去"，否则下一次评估会重复踩同一个性能点。
+- 提升层：工具（隔离档位）/ 工作流（变更评审）。触发词：legacy sandbox、per-token Deno process、隔离降级、共享沙箱、shared script session、chore 段安全回退。
+
+## 「重启」不是免费的排障动作：重启频率本身是一档限流面，且该档通常不可配（来源：docs.openclaw.ai/gateway/security/rate-limiting.md 13,490B，2026-10-12 r527C 一手 curl 200 逐串命中 `Gateway restart cycles` / `30s cooldown between restarts` / `Keyed by: process` / `Configurable: no`；同页 `They protect different boundaries, key on different identities, and fail with different error shapes`；r527C 落地）
+- **实证**：网关把限流做成七张独立表，除常见的认证失败（10 次/60s + 5 分钟 lockout）与 webhook（20 次/60s）外，**`Gateway restart cycles` 也占一行：30 秒冷却、按进程计、不可配**；同表还有未认证 WebSocket 握手 128 并发槽（按解析后的客户端 IP，NAT 后同源共享、loopback 不豁免）、控制面写 RPC 30 次/60s per method+device+IP（不可配）、ACP 会话 120/10s（internal）。
+- **判据**：① **"重启一下试试"有物理下限**：冷却是进程级的硬间隔，连续快速重启会被挡在冷却里，表现为"重启命令没报错但服务没起来" ⇒ 排障手册里的重启步骤必须写明最小间隔，否则自愈循环会自己把自己限死。② **限流要按"面"记账而不是按"有没有限流"记账**：七个面的键（IP / IP+凭据域 / method+device+IP / 进程 / translator 实例）、失败形态（503 且无 Retry-After、lockout、内部）、可配性（仅前两面可配）全不同 ⇒ 报"被限流了"而不说是哪个面，等于没报。③ **不可配的面要单列**：webhook、控制面写、ACP、重启冷却四档明确 `Configurable: no` ⇒ 出现"我改了 `gateway.auth.rateLimit` 却没生效"是设计如此，不是配置没落盘；排查前先分清目标面在不在可配集合里。④ **NAT 与 loopback 都要按共享主体算**：同一 NAT 出口共享 preauth 预算，浏览器源 WS 认证失败明确「loopback **not** exempt」⇒ 本地调试环境和多租户出口都会被同一份预算打到，压测结论不能直接外推到单客户端场景。
+- 提升层：工具（限流面清单）/ 工作流（排障步骤）。触发词：restart cooldown、重启冷却、限流七面、不可配限流、loopback 不豁免、NAT 共享预算、preauth socket budget。

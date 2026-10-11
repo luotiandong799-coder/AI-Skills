@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.110.0"
+version: "1.111.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -450,3 +450,8 @@ sources:
 ## 恢复能力由状态面与排队面两个独立持久面合成只配一个等于半恢复已回200的异步webhook也可能整批丢（细则见 KB，2026-10-12 r526A 下沉）（全文见 references/knowledge-base.md §下沉·wb-release-maintain·恢复能力由两个彼此独立的持久面合成）
 
 ## 发布到达语义是按变更集切分的触发器级增量激活未变更触发器保持运行须逐单元验收（细则见 KB，2026-10-12 r526C 下沉）（全文见 references/knowledge-base.md §下沉·wb-release-maintain·发布的到达语义不是整体原子切换）
+
+## 权限面收紧只对新签发的凭证生效：存量凭证保持旧作用域，且「不带资源标识的端点」必须给出自己的放行/拒绝答案（来源：api.github.com/repos/langgenius/dify/releases?per_page=3 295,038B，2026-10-12 r527A 一手 curl 200 逐串命中 `1.17.1` / `Dataset-Scoped Knowledge Base API Keys` / `Keys can now be bound to specific knowledge bases ... with a workspace / this-knowledge-base scope selector at creation time` / `A bound key returns 403 for any other dataset — both documents and retrieval — and for endpoints that carry no dataset ID, such as list-all` / `Existing keys are unbound and keep their workspace-wide behavior, so nothing changes when you upgrade.`；r527A 落地）
+- **实证**：Dify 1.17.1 之前，知识库服务 API key 的作用域是**整个 workspace**——「giving an integration access to a single knowledge base meant giving it access to all of them」。1.17.1 起可在创建时选择作用域；**已存在的 key 仍是 unbound，升级后行为完全不变**；绑定后的 key 对其它数据集（文档与检索都算）返回 403，**对不带 dataset ID 的端点（如 list-all）同样 403**。
+- **判据**：① **收紧是"新凭证"的属性，不是"所有凭证"的属性**：原文明写 `nothing changes when you upgrade` ⇒ 任何"我们上了细粒度权限"的陈述都必须补一句"存量凭证是否已重新签发"，否则收窄的只是新建那一批，攻击面原样保留。② **迁移路径必须显式给出"重签"这一步**：既然旧 key 不会自动收紧，收紧在时间上的实际生效点取决于管理员何时轮换 ⇒ 发布说明里要写"如何把存量 key 迁到新作用域"，不能只写新能力。③ **作用域下沉后，无标识端点会成为漏点**：list-all 这类不携带 dataset ID 的端点不属于任何一个数据集 ⇒ 它要么显式拒绝（本例 403），要么需要一个独立的顶层判定；默认放行等于给所有绑定 key 留了一条越权列举的通道。④ **"读"与"检索"要同权**：原文把 documents 与 retrieval 并列表述 ⇒ 只收窄写入或只收窄检索都会留下另一条读通路；权限模型的粒度要在每个访问动词上分别验证。⑤ **收紧前先量当前暴露面**：本例的问题是"一把 key 能读写租户内全部知识库" ⇒ 凡是"一把凭证覆盖所有同类资源"的现状，都应在收紧前先统计被这把 key 影响的下游集成数量，否则收紧当天就是大面积 403。
+- 提升层：工具（凭证作用域）/ 工作流（权限迁移）。触发词：dataset-scoped API key、存量凭证不追溯、无 ID 端点 403、细粒度权限收紧、list-all 越权、凭证重签迁移。

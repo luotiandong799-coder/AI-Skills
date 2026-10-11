@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "1.120.0"
+version: "1.121.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -306,3 +306,8 @@ version: "1.120.0"
 ## 包元数据每条声明须分强制校验静默忽略继承三类被忽略项不得写进契约身份键参与标识符（细则见 KB，2026-10-12 r526C 下沉）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·包元数据里的每一条声明都要先分三类）
 
 ## 多宿主适配是独立manifest矩阵不是一份声明加兼容层须逐宿主枚举并独立验收（细则见 KB，2026-10-12 r526C 下沉）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·一份技能资产的多宿主适配是独立manifest矩阵）
+
+## 命名冲突要有独立的「所有权评审」通道，且与举报、账号申诉三路分流；能自管的先自管，走评审只解决你管不了的对象（来源：docs.openclaw.ai/clawhub/namespace-claims.md 4,167B，2026-10-12 r527B 一手 curl 200 逐串命中 `Org and Namespace Claims` / `reserved, transferred, renamed, hidden, quarantined, aliased, or otherwise changed` / `Use this path for public, non-sensitive ownership review. Do not use in-product reports or the account appeal form for namespace claims.` / `Use a claim when you cannot manage the current owner or when staff needs to resolve a dispute.`；r527B 落地）
+- **实证**：ClawHub 把 owner handle / org handle / skill slug / 插件包名 / package scope 都当公共命名空间；出现归属争议时用专门的 issue 表单申请 staff review，处置动作枚举为 `reserved, transferred, renamed, hidden, quarantined, aliased`。页面明确**不要用产品内举报或账号申诉表单**提命名空间主张，且**评审只管所有权、不管漏洞披露**（「The namespace claim form is for ownership review, not emergency vulnerability disclosure」）；证据要求「public, non-sensitive」，逐条说明「what each link proves」，明确禁止放 token / 签名密钥 / DNS 挑战 token / 身份文件。
+- **判据**：① **"被占用"有六种不同处置，价值差别很大**：保留/转移/重命名/隐藏/隔离/别名 ⇒ 提主张时必须指明要哪一种，否则评审方只能自己挑，结果与诉求错配。② **三条上报通道必须分流**：所有权评审 vs 安全举报 vs 账号申诉，用错通道等于排队到错的队列且可能把敏感证据公开 ⇒ 提交前先判"这件事的争点是不是归属"。③ **证据的可公开性本身就是约束**：既然评审在公开 issue 里进行，证据就必须是不依赖密钥也能成立的（仓库/发布/文档/域名/三方包 registry 控制权/商标）⇒ 凡是"只能靠出示私钥证明"的归属，在这个通道里无法成立，需要另找路径。④ **自助优先，评审兜底**：`Before You File` 要求先确认为自己就是命名空间匹配的 owner，能改名/转移/隐藏/删除就自己做 ⇒ 把能自管的争议提交评审，是把治理成本转嫁给平台。⑤ **与"认领态字段"是互补两面**：市场上 `claim_state: unclaimed` 这类字段只描述当前状态，而评审通道描述**状态可以被推翻** ⇒ 只有字段没有通道时，"被抢注"没有救济；审计一个技能市场要同时看这两样。
+- 提升层：可复用 Skill（发布治理）/ 工作流（争议处理）。触发词：namespace claim、命名空间归属评审、skill slug 抢注、report/appeal/claim 三路分流、公开非敏感证据、quarantined/aliased 处置。
