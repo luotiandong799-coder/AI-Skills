@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.107.0"
+version: "1.110.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -444,3 +444,9 @@ sources:
 ## 升级只换服务端不换制品：不可变快照内嵌旧运行时须全部重建，调度须删旧建新；演练环境镜像漂移则绿灯无效，且「升级成功」判据须双方预先约定（细则见 KB，2026-10-11 r519 下沉）（全文见 references/knowledge-base.md §下沉·wb-release-maintain·升级只换服务端不换制品不可变快照内嵌旧运行时须全部重建调度须删旧建新演练环境镜像漂移则绿灯无效且升级成功判据须双方预先约）
 ## 组件降级故障信号是revision名对不上官方正解清理重建而非回滚迁移升级前须留库快照（细则见 KB，2026-10-11 r524A 下沉）（全文见 references/knowledge-base.md §下沉·wb-release-maintain·组件降级故障信号是revision名对不上）
 ## 锁清单文件遇不可识别版本时正确姿态是清空重取而非猜测迁移且目录treeSHA作指纹粒度到目录不到文件（细则见 KB，2026-10-11 r524C 下沉）（全文见 references/knowledge-base.md §下沉·wb-release-maintain·锁清单文件遇不可识别版本时清空重取）
+
+## 发布治理撤销闭环三态promote可更新revoke双路径可再promote且能力依赖持久层迁移升级前须备份库（细则见 KB，2026-10-12 r526A 下沉）（全文见 references/knowledge-base.md §下沉·wb-release-maintain·发布治理的撤销闭环是三态）
+
+## 恢复能力由状态面与排队面两个独立持久面合成只配一个等于半恢复已回200的异步webhook也可能整批丢（细则见 KB，2026-10-12 r526A 下沉）（全文见 references/knowledge-base.md §下沉·wb-release-maintain·恢复能力由两个彼此独立的持久面合成）
+
+## 发布到达语义是按变更集切分的触发器级增量激活未变更触发器保持运行须逐单元验收（细则见 KB，2026-10-12 r526C 下沉）（全文见 references/knowledge-base.md §下沉·wb-release-maintain·发布的到达语义不是整体原子切换）

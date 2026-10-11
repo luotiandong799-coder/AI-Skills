@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.50.0"
+version: "1.52.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -331,3 +331,7 @@ visibility: "public"
 - **判据**：① **准入清单的价值不在条数，而在「哪几条是 mandatory 且可机检」**——本页把 sanitization / error handling / limit / pagination / universal module / interface 逐条列出后单句声明 mandatory；不带 mandatory 声明的「最佳实践」到使用者手里就被当成可裁剪建议 ⇒ 任何上架或发布门禁都要显式标注强制项与其机检方式（能 grep / 能跑用例），只有描述性文字的清单一律视为未设门禁。② **凭据索取量本身就是准入项**：只索取连接服务所必需的凭据、不得多要；包装类不得在名称里带第三方服务名 ⇒ 准入要问「它要的凭据是否超过完成功能所需」，超过即退回，因为这一条决定了泄露面而不是便利性。③ **测试证据是受审面不是免责面**：每个模块至少一个测试场景（覆盖率是硬要求），且测试场景与执行日志不得含个人或敏感数据 ⇒ 「我有测试」不等于通过审查，测试产物要过同一道敏感数据检查；把测试当免责证据会顺带把日志里的真实密钥提交上去。④ **重复实现平台已有能力（iterator / aggregator 等）本身是退回事由** ⇒ 准入判的是「是否新增能力」而不是「能否跑通」。
 - **更正（对 Qoder r527-Q-B 建议 B2）**：本页**无**「必须处理限流」条款（对 `rate limit` / `retry` / `throttl` 三键 grep 均 0 命中）——限流属 best-practices 面、不在该前置页；上架强制清单以本页实测条款为准，不采信转述中的限流项。
 - 提升层：可复用 Skill / 工作流（上架与准入门禁）。触发词：mandatory 强制项清单、上架前置、sanitization 强制、pagination / limit 强制、凭据最小化准入、测试日志含敏感数据、重复平台能力退回。
+
+## 公钥信任方向须按文档用途判入站保密与出站认证两类不可互推且反向取证零命中同权重（细则见 KB，2026-10-12 r526B 下沉）（全文见 references/knowledge-base.md §下沉·skills-security-check·公钥的信任方向必须按文档写明的用途判）
+
+## 人工豁免是带制品指纹可轮询复查的终态须绑SHA256与任务号且计费只在成功侧（细则见 KB，2026-10-12 r526B 下沉）（全文见 references/knowledge-base.md §下沉·skills-security-check·人工豁免不是关掉告警而是带制品指纹可轮询复查的终态）
