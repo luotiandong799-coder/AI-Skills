@@ -1272,3 +1272,7 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - 限流器热更新时**已有状态延续**：失败记录、已赚到的锁定截止期都保留；同一 `{scope, clientIp}` 的失败尝试会先串行化再写，所以并发错误尝试的第二个就会触发限流 ⇒ 不要以为"并发能冲过去"。
 - 本地回环豁免（`exemptLoopback`）必须显式声明：不声明时调试请求会进同一套失败计数，把调试噪声和攻击面混在一起。
 
+
+## r520B · 抽取子工作流是「重构边界」，会静默改变 item 排序语义与类型契约（来源：docs.n8n.io/build/flow-logic/convert-to-sub-workflows.md 5,126B，2026-10-11 一手 curl 200 实拉逐串命中 `You must set type constraints for input and output manually: By default, sub-workflow input and output allow all types` / `Accessor functions like first(), last(), and all() require extra care... item ordering may be different in the sub-workflow context` / `n8n adds suffixes like _firstItem, _lastItem, and _allItems` / `The itemMatching function requires a fixed index` / `Uses v1 execution ordering regardless of the parent workflow's settings`）
+- **判据**：① **抽取子工作流会静默改变 item 排序语义与类型契约**：子工作流输入/输出默认 allow-all 类型，类型安全缺口须手动补；② **访问器 first()/last()/all() 在新上下文里排序可能不同**，框架加 `_firstItem/_lastItem/_allItems` 后缀只是"尽量保留"，必须回新上下文验证实际排序；③ itemMatching 必须传固定索引，不能传表达式（动态索引在抽取后失效）；④ 子工作流强制用 v1 执行顺序，与父工作流设置可能不同 ⇒ 抽取后顺序语义也变了。⑤ 推论：**任何"把一段逻辑抽成子 agent / 子技能 / 子函数"的动作，都要把"item 顺序"和"类型约束"列为显式回归项**，不能假设抽取前后语义等价。
+- 提升层：可复用 Skill（抽取/重构边界回归）/ 工作流（顺序与类型契约）。触发词：convert to sub-workflow、allow all types、item ordering may differ、_firstItem suffix、itemMatching fixed index、v1 ordering、抽取改变语义。

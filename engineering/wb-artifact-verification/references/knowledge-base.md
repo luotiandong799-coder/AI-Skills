@@ -2792,3 +2792,7 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 提升层：可复用 Skill / 工作流。触发词：扩展点返回惰性、钩子不阻断、context 是观测快照、副作用走 producer 投递通道、结算窗口、detached 错过投递、观察者不改状态。
 
 
+
+## r520A · 多分支执行顺序是「确定性位置契约」而非随机调度（来源：docs.n8n.io/build/flow-logic/understand-execution-order.md 1,835B，2026-10-11 一手 curl 200 实拉逐串命中 `executes each branch in turn, completing one branch before starting another` / `orders the branches based on their position on the canvas, from topmost to bottommost` / `If two branches are at the same height, the leftmost branch executes first` / `For workflows created before n8n 1.0: n8n executes the first node of each branch, then the second node of each branch, and so on`）
+- **判据**：① 多分支工作流的节点执行顺序是**可观察的确定性契约**，不是随机调度：n8n 1.0+ 是一条分支跑完再跑下一条（按画布位置从上到下、同高取最左），1.0 之前是跨分支轮询（每分支各跑一个节点再进下一轮）。② **顺序相关的不确定性 bug 必须用"固定分支输入顺序 / pin 分支输入"来复现**，不能归因于随机——顺序本身就是被测变量；假设随机会让你在错误的维度上加锁。③ 顺序契约可被工作流设置改写，复现前先确认该工作流用的是哪套顺序模型（v0 轮询 vs v1 分支序），否则不同模型下行为不一致会被误判为偶发。
+- 提升层：工作流（执行顺序契约）/ 可复用 Skill（确定性复现）。触发词：execution order、branch in turn、topmost to bottommost、leftmost first、v1 ordering、顺序相关非确定、pin 分支输入。
