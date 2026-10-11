@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.52.0"
+version: "1.53.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -335,3 +335,8 @@ visibility: "public"
 ## 公钥信任方向须按文档用途判入站保密与出站认证两类不可互推且反向取证零命中同权重（细则见 KB，2026-10-12 r526B 下沉）（全文见 references/knowledge-base.md §下沉·skills-security-check·公钥的信任方向必须按文档写明的用途判）
 
 ## 人工豁免是带制品指纹可轮询复查的终态须绑SHA256与任务号且计费只在成功侧（细则见 KB，2026-10-12 r526B 下沉）（全文见 references/knowledge-base.md §下沉·skills-security-check·人工豁免不是关掉告警而是带制品指纹可轮询复查的终态）
+
+## 技能自带的展示文本是不可信输入：宿主须做「去控制字符＋转义尖括号防仿冒内部格式」两级消毒，且该消毒绑定客户端版本下限（来源：code.claude.com/docs/en/skills.md 107,130B，2026-10-12 r528C 一手 curl 200 逐串命中 `Claude Code sanitizes the display text the skill supplies, such as its description. It removes control characters, and in text that reaches Claude, such as the description, it also escapes angle brackets so the text can't imitate Claude Code's internal formatting. This sanitization requires Claude Code v2.1.228 or later.` / 同页 `A skill can grant itself broad tool access, so review the allowed-tools of skills checked into a repository before you run Claude Code there.`；r528C 落地）
+- **实证**：宿主对技能自带的显示文本（例举 `description`）做两级处理——**一律移除控制字符**；**对会进入模型上下文的文本再做尖括号转义**，官方给的理由是 `so the text can't imitate Claude Code's internal formatting`。该消毒**要求客户端 v2.1.228 或更高**。
+- **判据**：① **技能包里的文本字段要按"陌生人的上传"对待，不是按"作者自己的说明"对待**：description / 名称 / 展示文案都能被作者任意填写 ⇒ 审查清单里"文本字段"是与"代码/脚本"并列的受审面，不能因为"只是描述"就跳过。② **两级消毒防的是两类不同攻击**：控制字符防的是**显示层欺骗**（不可见字符、覆盖、伪造排版），尖括号转义防的是**拟人层欺骗**（让技能文本长得像宿主的格式化输出/系统提示）。只做前者，技能仍可用伪标签冒充系统消息 ⇒ 审查时要分别问"控制字符清了没有"与"会不会被读成内部格式"。③ **"进不进模型上下文"是分级依据**：官方只转义**会到达模型的那部分文本**，说明分级维度是**读者**而不是字段类型 ⇒ 建立分级规则时先标"这段给谁看（人/模型/两者）"，再决定处置强度；按字段类型分级会漏。④ **消毒能力有版本下限**：`requires Claude Code v2.1.228 or later` ⇒ "宿主会消毒"这个前提在旧客户端上不成立；审查结论若依赖宿主侧消毒，必须写明"仅当宿主 ≥ 该版本"，否则等于给未打补丁的环境发了通过。⑤ **与"技能可自我授予宽权限"同页并列**：同一份文档既警告技能能给自己批工具、又说明宿主在消毒它的文本 ⇒ 审查一个技能包时，**代码/权限声明/展示文本三面要一起过**，只审代码会把"用描述骗模型"这一路整条漏掉。⑥ 与 §公钥信任方向按用途判、§豁免带指纹可复查 互补：那两条管**凭据与处置**，本条管**包内自带文本的注入面**。
+- 提升层：工具（包内文本消毒）/ 工作流（上架审查三面）。触发词：技能描述消毒、控制字符移除、尖括号转义防仿冒、消毒版本下限、展示文本不可信、包名/描述注入面。

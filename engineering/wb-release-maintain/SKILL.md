@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.111.0"
+version: "1.112.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -455,3 +455,8 @@ sources:
 - **实证**：Dify 1.17.1 之前，知识库服务 API key 的作用域是**整个 workspace**——「giving an integration access to a single knowledge base meant giving it access to all of them」。1.17.1 起可在创建时选择作用域；**已存在的 key 仍是 unbound，升级后行为完全不变**；绑定后的 key 对其它数据集（文档与检索都算）返回 403，**对不带 dataset ID 的端点（如 list-all）同样 403**。
 - **判据**：① **收紧是"新凭证"的属性，不是"所有凭证"的属性**：原文明写 `nothing changes when you upgrade` ⇒ 任何"我们上了细粒度权限"的陈述都必须补一句"存量凭证是否已重新签发"，否则收窄的只是新建那一批，攻击面原样保留。② **迁移路径必须显式给出"重签"这一步**：既然旧 key 不会自动收紧，收紧在时间上的实际生效点取决于管理员何时轮换 ⇒ 发布说明里要写"如何把存量 key 迁到新作用域"，不能只写新能力。③ **作用域下沉后，无标识端点会成为漏点**：list-all 这类不携带 dataset ID 的端点不属于任何一个数据集 ⇒ 它要么显式拒绝（本例 403），要么需要一个独立的顶层判定；默认放行等于给所有绑定 key 留了一条越权列举的通道。④ **"读"与"检索"要同权**：原文把 documents 与 retrieval 并列表述 ⇒ 只收窄写入或只收窄检索都会留下另一条读通路；权限模型的粒度要在每个访问动词上分别验证。⑤ **收紧前先量当前暴露面**：本例的问题是"一把 key 能读写租户内全部知识库" ⇒ 凡是"一把凭证覆盖所有同类资源"的现状，都应在收紧前先统计被这把 key 影响的下游集成数量，否则收紧当天就是大面积 403。
 - 提升层：工具（凭证作用域）/ 工作流（权限迁移）。触发词：dataset-scoped API key、存量凭证不追溯、无 ID 端点 403、细粒度权限收紧、list-all 越权、凭证重签迁移。
+
+## 运行时可得性由制品档位决定而不是配置项：同一版本号下不同镜像档位能力集不同，停供只作用于新增内容，升级验收要按「版本×档位」而非只比版本号（来源：api.github.com/repos/windmill-labs/windmill/releases?per_page=6 89,697B，2026-10-12 r528A 一手 curl 200 逐串命中 `v1.830.0` / `stop offering deno for new scripts, ship it only on full images (#11648)` / 同批 `add a jobs:run:dependencies token scope for lock generation (#11643)`；r528A 落地）
+- **实证**：Windmill v1.830.0 把 deno 运行时从"默认可选"改成**只在 full image 里随镜像分发**——原文 `stop offering deno for new scripts, ship it only on full images (#11648)`；注意限定语是 `for new scripts`（只影响新建脚本）。同一版本内另有一条权限粒度事实：`add a jobs:run:dependencies token scope for lock generation (#11643)`——令牌作用域可以切到**单个动作**（生成依赖锁），而不是一类资源。
+- **判据**：① **"还能不能用"要先问"用的是哪个档位的制品"**：deno 不是被开关关掉的，是 `ship it only on full images` ⇒ **同一个版本号，不同镜像档位的能力集不同**，版本对齐不等于能力对齐。② **收窄只作用于新增内容**：`for new scripts` ⇒ 存量脚本可能仍在用该运行时，形成"新旧两档能力并存"的过渡态；发布说明必须分开写"对新内容的默认"与"对存量内容的影响"。③ **升级验收清单的粒度要从「版本号」改成「版本 × 档位」**：只比对版本会得出"环境一致"的错误结论，正确做法是把所需能力逐项映射到档位再核对。④ **依赖方要显式申报所需档位**：脚本/技能若需要该运行时，应在依赖声明里写明"需 full image"，否则在精简档位上是"版本满足但能力缺失"的静默失败。⑤ **能力描述里出现 `only on` / `for new` 这类限定语时，必须把限定语一起搬进验收项**：省略限定语等于把"部分停供"记成"全面停供"或"完全没变"，两个方向都会导致误判。⑥ 与 §大版本翻转默认安全态（dl 1.181.0）／§隔离强度可被性能回退（dl 1.183.0）互补：那两条的成因是默认值翻转与性能压力，改配置能救；本条的成因是**分发档位**，改配置无效，换镜像才行。⑦ 权限侧同批事实：**作用域可以细到"一个动作"**（`jobs:run:dependencies ... for lock generation`）⇒ 设计最小权限时先问"能不能只批这一个动作"，而不是默认按资源或按模块授予。
+- 提升层：工具（制品档位）/ 工作流（升级验收）。触发词：full image only、ship it only on、镜像档位、运行时可得性、对新脚本停供、版本×档位验收、动作级 token scope。
