@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "1.137.0"
+version: "1.138.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -467,3 +467,17 @@ version: "1.137.0"
 - **与渐进式披露的分工**：披露管"正文怎么分层放"，本条管"层里优先写什么"——Gotchas 应放进最容易被触达的部分（正文靠前或 reference 显眼处），而不是埋在细则末尾。
 - **反模式**：技能只有"怎么做"没有"别踩什么"；Gotchas 写一次性问题（不更新不累积）；把已知失败点藏在折叠线以下让模型看不到。
 - **提升层**：可复用 Skill（技能长期养护 / 失败知识沉淀）。触发词：Gotchas、常见失败点、技能养护、栽过跟头、最高信号内容、随时间更新、失败知识、Inter 字体紫色渐变反模式。
+
+## 技能开发走评估驱动五步：先量缺口，再写最小指令（来源：Anthropic 官方《Skill authoring best practices》2026-10 + claude.dev《Automating eval design and hillclimbing》2026-09-28 实拉，r545C 落地，与 §Agent 多轮评测分工——那条管"评测设计测什么"，本条管"开发按什么顺序写技能"）
+
+- **五步顺序（gap-first）**：① **Identify gaps**——无 skill 时跑代表性任务，记录具体失败或缺失上下文；② **Create evaluations**——建三个场景测这些缺口；③ **Establish baseline**——量无 skill 时的表现；④ **Write minimal instructions**——**只写刚好够补缺口、能过评测的内容**；⑤ **Iterate**——跑评测对比基线精化。判据：**先有缺口再写指令**——从失败倒推内容，不预判"可能永远不会发生的需求"。
+- **指令是"补缺口的最小集合"不是"完整教程"**：skill 是修行为偏差点，不是文档搬运；够过评测就停，多了反稀释。判据：**每段指令都要能指回某个已记录缺口或评测失败**——指不回的段落是猜测性内容。
+- **让 Agent 起草、人做删减纠偏**：人写初稿往往过度设计；Agent 先起草 SKILL.md，人只删减和纠偏。判据：**起草归模型、定稿归人**——模型写全、人删到最小，比人从零写更省更准。
+- **提升层**：可复用 Skill（开发流程 / 评测驱动）。触发词：评估驱动、gap-first、Identify gaps、minimal instructions、基线对比、先量缺口、三个场景评测、无 skill 跑任务、Agent 起草人纠偏、迭代精化。
+
+## 技能安装与版本治理：来源验证/版本钉死/安装前审查/审计日志；行为退化不抛异常须谱系追踪（来源：GitHub agents-best-practices《skills-and-connectors.md》2026-09-14 + CSDN《Skills 别再造 Agent 去造 Skills》2026-10-08 实拉，r545C 落地，与 §技能安全审查分工——那条管"技能内容里藏注入怎么审"，本条管"技能当软件一样安装与版本治理"）
+
+- **安装前治理清单**：source verification（来源验证）+ publisher identity（发布者身份）+ **version pinning（版本钉死）** + review before installation + permission manifest（权限清单）+ static scan + runtime sandboxing + inventory/audit logs（清点与审计）+ removal/incident response（移除与应急）。判据：**装技能=装软件**——第三方技能按装权限的流程走，不因"只是个 Markdown"豁免。
+- **Markdown-only 技能同样有风险**：纯指令技能也要审 prompt-injection risk、overbroad instructions（指令过宽）、hidden policy conflicts（隐藏策略冲突）、excessive tool permissions（工具权限过大）。判据：**注入不止藏在脚本里**——纯 Markdown 技能可以被设计成"什么都接"的过宽指令，同样要过审查。
+- **技能版本治理：行为退化不抛异常**：技能演进直接改变 Agent 行为，失效方式比普通软件更隐蔽——**行为退化不会抛异常**。判据：**技能要版本+谱系追踪**——这次改了什么、影响哪些行为、出问题能不能回滚，都该可查；改技能按改代码的纪律（diff/回滚/测试）。
+- **提升层**：可复用 Skill（技能治理 / 供应链安全）。触发词：技能安装治理、source verification、version pinning、版本钉死、安装前审查、permission manifest、审计日志、inventory、Markdown 技能风险、overbroad instructions、行为退化不抛异常、谱系追踪、装技能按装权限。
