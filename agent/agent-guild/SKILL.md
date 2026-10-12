@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "3.2"
-version: "1.90.0"
+version: "1.91.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -493,3 +493,8 @@ the CLI only adds atomicity and an audit trail.
 ## 共享记忆的「删除」必须声明边界：准入与遗忘是两件事，预览不是计划，失败会留半截（来源：docs.openclaw.ai/concepts/memory-provenance.md 15,637B，2026-10-11 r513B 一手 curl 200 实拉逐串命中 `Neither is a general erasure` / `identifiable artifacts` / `does not delete original session transcripts` / `computed from current state` / `mutation lock`）
 - **判据**：① **准入策略（admission policy）与遗忘（forget）是两个正交控制**——前者只挡将来的摄取与回填，后者才移除已落地的条目；二者都不是「把 agent 见过/写过的东西全部擦除」。做数据卫生时必须先分清自己要的是哪一种，不能拿"以后不再摄取"当"已删除"。② **执行删除的命令默认立即生效**，只有显式 `--dry-run` 才出预览；预览是**按当前状态实时算出来的、不是存下来的删除计划**，并发写者不共享 mutation lock ⇒ 清理期间必须暂停直接编辑与外部写入，事后再跑一次预览核对残留。③ **删除有明确不覆盖的清单**：原始会话转录、自由编辑的记忆条目、存储之外的副本都不在范围内——凡是声称"删干净了"的结论，都要逐项对照这张不覆盖清单。④ 溯源记录分三档粒度（chunk 级 / 条目级 / 文件级 curated-write），删除与审计各自用不同档，**不能互相替代**。
 - 提升层：治理 / 工作流（共享记忆卫生）。触发词：admission policy、forget、删除边界、预览非计划、mutation lock、原始转录不删、三档溯源。
+
+## 扩展（插件）治理两面：信任位下沉到「能力 × 单元」粒度 + 生命周期三非对称语义（卸载留 disabled 标记 / 更新沿用首次安装源 / 生效需宿主动作）（来源：docs.openclaw.ai/gateway/config-extensions.md 21,413B + docs.openclaw.ai/cli/plugins/uninstall-and-update.md 20,071B，2026-10-12 r541C 一手 curl 200 逐串命中 `allowPromptInjection: false` / `when false, core blocks prompt-mutating hooks such as before_prompt_build` / `Entry config changes replace the affected instance` / `active plugins can still declare restart-triggering config prefixes` / `the plugin stays disabled and tracked so you can retry uninstall` / `OpenClaw starts from its recorded install source` / `restartRequired, and the applied runtime receipt with its generation and source digests`；提名 Qoder r539-Q-B ③ + r539-Q-C ④）
+- **实证**：① OpenClaw 插件配置里每个 entry 的 hooks 段带 `allowPromptInjection` 开关——置 false 时核心**阻止 `before_prompt_build` 一类改提示的钩子**，即「这个单元能不能向模型注入提示」是逐插件可配的；② 热加载的作用域是**被改的那个实例**：默认 hybrid reload 下策略/entry/发现路径变更热重载插件运行时，**entry 配置变更只替换受影响的实例**，源码或 manifest 改动才需 `plugins reload <id>`，且插件可**自行声明会触发重启的配置前缀**；③ 卸载失败时插件**保持 disabled 且被跟踪**（可重试卸载），若排空期又有加载路径引用则保留文件并要求先移除引用；④ 更新时**从记录的安装源出发**（多 entry 包的子 id 解析到包属主、同级一起更新），JSON 输出带 `restartRequired` 与**带 generation 和 source digests 的运行时回执**；⑤ 卸载排空先于移除安装记录，配置写入要等文件清理落定，`--keep-files` 与链接安装同样走排空。
+- **判据**：① **授权粒度要落到「能力 × 单元」**：不只「装/不装」，还要有逐单元的「该单元可否向模型注入提示」一类开关 ⇒ 评估一个扩展的信任面时，最小单位是它声明的每条能力（hook/tool/通道），不是整个包。② **热变更的失效半径=被改对象的作用域**：改 entry 配置只退役受影响实例、不做全局重启 ⇒「改了 A 会不会让 B 的准入结论失效」的答案由作用域决定；插件能自声明重启触发前缀意味着**失效半径有一部分是扩展自己说了算**，审计时要读这份声明。③ **「已卸载」不等于状态消失**：卸载保留 disabled 标记供重试与审计 ⇒ 残留态必须可检测，重装/审计要能识别「曾经装过」；④ **更新必须沿用首次安装源**：不得静默换源 ⇒ 更新链的可信度锚在首次安装记录上，换源=换信任锚。⑤ **生效需宿主动作且回执带 digests**：`restartRequired` + 运行时回执（generation + source digests）⇒ 「配置写了」不等于「运行态换了」，验收要读回执不读配置文件；`reload` 不跑构建，改源码后要显式重建。⑥ 与 Cap68（写入不推进生命周期）分工：那条管**哪些写入算交互**，本条管**扩展的信任位与生命周期语义**——同属生命周期治理，一个在记忆条目、一个在插件面。
+- 提升层：治理（跨 agent 扩展信任）/ 工作流（插件安装更新验收）。触发词：allowPromptInjection、能力×单元授权、热变更失效半径、restart-triggering config prefixes、disabled and tracked、install source、restartRequired、runtime receipt source digests、reload 不跑构建。
