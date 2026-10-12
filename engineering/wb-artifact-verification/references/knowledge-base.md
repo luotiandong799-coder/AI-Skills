@@ -3133,3 +3133,15 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ## r542A · 票据寿命须匹配消费方会话寿命：外部 15 分钟票被内部 2 小时回合复用，人审等待超 15 分钟致全套工具中途失授权、构建半路停（来源：api.github.com/repos/activepieces/activepieces/pulls/16393，2026-10-12 r542A 一手 curl 200 逐串命中 `lost every ap_* tool. Each call failed with "authentication failed" and the build stopped half done` / `used the 15-minute lifetime meant for outside MCP clients. A turn can run up to 2 hours` / `issues that one token for the turn's lifetime` / `it would stay valid for up to 2 hours instead of 15 minutes` / `a chat-turn token still works 45 minutes in, and a /token route token stops working by then`）- **判据**：① 长会话（人审/等待）先算时长上界再签票据，否则故障在会话中段爆发且是半完成态。② 延长单票寿命与最短寿命是显式取舍，风险（泄漏窗口 15min→2h）须配缓解声明逐条写。③ 备选方案（中途刷新）成本进记录，取舍可审计。④ 寿命测试双向+互换验证：长命票能用、短命票失效、互换后都失败。⑤ 与 dl 1.187.0（令牌过期排障）分工：本条管寿命匹配与取舍记录。- 提升层：工具（票据签发策略）/ 工作流（长回合授权设计）。触发词：token lifetime vs turn lifetime、15 分钟票 2 小时回合、authentication failed mid-turn、泄漏窗口取舍、寿命互换测试。
 
 ## r542B · 有效期校验的形状：无效形态枚举到上界（错类型/NaN/0/负/非有限/超 JS Date max），间接引用不绕过被引字段校验，引用名永不作为凭据发送（来源：docs.openclaw.ai/auth-credential-semantics.md 29,070B，2026-10-12 r542B 一手 curl 200 逐串命中 `no larger than the maximum JavaScript Date timestamp (8640000000000000)` / `wrong type, NaN, 0, negative, non-finite, or beyond that maximum` / `tokenRef does not bypass expires validation` / `Reference names are never sent as credentials or replaced with another profile's credential`）- **判据**：① 范围校验要有上界，只查正数会放行 year-275760 后的未来时间戳；无效形态逐枚举并命名。② 间接引用（tokenRef）不绕过被引字段自身校验，引用不成校验豁免通道。③ 引用名不是值，断言「凭据已发送」前证明发的是解析后的值；顶替=静默换身份。④ 资格语义与解析语义同一套。⑤ 与 av KB:1043（绕过整条读取通道）分工：本条管同通道内引用不豁免+上界枚举。- 提升层：工具（凭据校验形状）/ 工作流（资格规则设计）。触发词：invalid_expires、8640000000000000 上界、tokenRef 不绕过、引用名不发送、资格=解析语义。
+
+## r543A · 实例配置值须对部署上限校验：用户可配值对照实例实际上限（共享 helper、API+UI 双路径同点、0/-1 显式无限制语义、保存前校验）（来源：api.github.com/repos/n8n-io/n8n/pulls/40769，2026-10-12 merged）
+
+## r543A · 外部服务换名不能靠 301 保语义：跨域重定向丢 Authorization 头并把 POST 降为 GET，端点须显式更新 + 连通性验证（来源：api.github.com/repos/activepieces/activepieces/pulls/16413，2026-10-12 merged）
+
+## r543A · 打包产物按消费方视角验证 import 卫生：别名越出包根/无 index 目录说明符致消费方构建失败，且 bundle 成功不等于运行时非空白（来源：api.github.com/repos/windmill-labs/windmill/pulls/11682，2026-10-12 merged）
+
+## r543B · 可重试性按责任来源分四档而非状态码（来源 Qoder）：component_code 不重试 / upstream_api 仅 5xx / network_io 最可重试 / response_parsing 2xx 重试无益；归因申报 best-effort 并附 last_call 证据槽（来源：pipedream.com/docs/connect/components/actions，2026-10-12 一手复核）
+
+## r543B · 人审决策记录端点：who/when/针对 codes 一等记录，撤回对称且留痕，回答范围限定不泛化，角色+旗标双门（来源：api.github.com/repos/langflow-ai/langflow/pulls/15612，2026-10-11 merged）
+
+## r543C · 多步变更最后一公里：完成判据+启用动作+前置就绪须明示，数据就绪不等于服务就绪，「Coming soon」占位是可观测性漏洞（来源：api.github.com/repos/langflow-ai/langflow/pulls/15679，2026-10-11 merged）

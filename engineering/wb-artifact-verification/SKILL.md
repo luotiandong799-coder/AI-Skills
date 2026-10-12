@@ -1,8 +1,8 @@
 ---
 name: wb-artifact-verification
 description: >-
-  对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合、提示前缀键序稳定、prompt prefix cache 键序、HashMap 迭代序随机、remove 换位重排、byte-identical request bodies、Bedrock Document::Object 漂移、破坏性守卫查载荷语义、tables.length 守卫、clear 前校验、no undo 半毁态、信封+载荷两层守卫、对照服务端 schema 校验、零次调用断言、票据寿命匹配会话时长、token lifetime vs turn lifetime、15 分钟票 2 小时回合、authentication failed mid-turn、泄漏窗口取舍、寿命互换测试、有效期无效形态枚举到上界、8640000000000000、tokenRef 不绕过 expires 校验、引用名永不作为凭据发送、资格语义=解析语义
-version: "2.216.0"
+  对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、验证结果、验证一下、能不能跑、跑通了吗、对不对、check 一下、测一下、自检、回归、真的修好了吗、看起来没问题、绿灯、都过了、测试全绿、失败注入、变异测试、假阳性、伪成功、静默测错、不确定、证不出来、证据不足、评分器、评测、基准、对照实验、抽样、覆盖率、未测、跳过、flaky、可复现、脚本化验证、退出码、超时、只读验证、别在验证里发布。、失败分类法、置信度阈值过滤误报、批量失败、单条失败、占位保配对、条数对齐、失败归属到条、来源自证端点、代理后静默失效、我看你是谁、限流失效、真实来源核验、评测续跑、只重放未完成、改了实现要全量重跑、续跑可比性、自描述元数据、写入方版本、序列化器不可用、解码失败不等于值错、绕过读取通道、过期检查在读取路径、合法 JSON 不等于合规、结构检查三态、解析失败vs字段不合规、轨迹同构三元组、完成度不能从最终答复推断、逐子任务报告、工具三判、误读返回值、恰好一次、exactly once、副作用重复、审计重复、重放重复、结算标记、合并前钩子、占用分解、扫描根、观测面盲区、分解为空、不是我的证据、盘满但分解小、换证据源、告警缺席、钩子被吞、缓存命中不触发、钩子计数翻倍、per-attempt钩子、静默失效、告警不算证据、数据飞轮、过闸才上线、来源优先级、合成数据垫底、轨迹优先、分层切分、五千好过五万、反馈版本化、跨家族互评、模式坍缩、四桶评测集、失败重放、回归还是漂移、定期重跑、置信门槛、rescore 重算判定、整臂聚合扣留、部分覆盖聚合、提示前缀键序稳定、prompt prefix cache 键序、HashMap 迭代序随机、remove 换位重排、byte-identical request bodies、Bedrock Document::Object 漂移、破坏性守卫查载荷语义、tables.length 守卫、clear 前校验、no undo 半毁态、信封+载荷两层守卫、对照服务端 schema 校验、零次调用断言、票据寿命匹配会话时长、token lifetime vs turn lifetime、15 分钟票 2 小时回合、authentication failed mid-turn、泄漏窗口取舍、寿命互换测试、有效期无效形态枚举到上界、8640000000000000、tokenRef 不绕过 expires 校验、引用名永不作为凭据发送、资格语义=解析语义、配置值对部署上限校验、configured maximum、实例级上限、API 与 UI 双路径同一校验点、共享 helper、显式无限制语义、0/-1 各有语义、保存前校验、跨域重定向不保语义、301 丢 Authorization 头、POST 降 GET、外部服务 rebrand、base URL 显式更新、端点变更连通性验证、打包产物消费方可解析、package root、别名越出包根、无 index 目录说明符、bundle 成功不等于运行非空、运行时空白验收
+version: "2.222.0"
 agent_created: true
 ---
 
@@ -341,3 +341,33 @@ agent_created: true
 - **实证**：OpenClaw auth profile 的 token 凭据资格规则：`expires` 可选，存在时必须是「有限、Unix  epoch 毫秒、>0、≤8640000000000000（JS Date 最大值）」；无效形态逐枚——错类型、NaN、0、负数、非有限、超上界——一律 `invalid_expires` 判不合格。两条关联规则：① `tokenRef`（间接引用秘密）**不绕过** `expires` 校验——用了引用的 profile 照样验有效期；② 「Reference names are never sent as credentials or replaced with another profile's credential」——引用名（如 SecretRef 名）永不作为凭据发送，也不用别的 profile 的凭据顶替。解析语义与资格语义对齐（resolver semantics match eligibility semantics for expires）。
 - **判据**：① **范围校验要有上界，不只查下界/正数**：只验「是正数」的时间戳会把 year-275760 之后的「未来」值当合法 ⇒ 有效期/时间戳校验的无效形态枚举须含超上界（本例 JS Date max 8640000000000000），并逐形态命名（invalid_expires）而不是一个泛泛的「invalid」。② **间接引用不绕过被引字段自身的校验**：tokenRef 提供的是「值从哪来」，不改变「这个字段要验什么」⇒ 任何间接配置路径（引用/环境变量/继承）都要重新过一遍直接字段的全部资格规则，否则引用成了校验豁免通道。③ **引用名不是值**：引用名/SecretRef 名永不作为凭据发送、也不用别的 profile 的凭据替换 ⇒ 断言「凭据已发送」前要证明发送的是解析后的值；顶替（fallback to another profile's credential）会静默改变身份面。④ **资格语义与解析语义必须同一套**：官方明写 resolver semantics match eligibility semantics ⇒ 两处各写一套验谎规则时，先验过的可能在解析时放过。⑤ 与 §手工反序列化绕过官方读取通道会同时绕过过期检查（av KB:1043）分工：那条管**绕过整条读取通道**，本条管**同通道内间接引用不豁免字段校验+无效形态枚举到上界**。
 - 提升层：工具（凭据校验形状）/ 工作流（资格规则设计）。触发词：invalid_expires、finite positive Unix ms、8640000000000000 上界、tokenRef does not bypass expires validation、Reference names are never sent as credentials、资格语义=解析语义。
+
+## 实例配置值须对部署上限校验：同一上限在 API 与 UI 双路径共用同一校验点（来源：api.github.com/repos/n8n-io/n8n/pulls/40769，2026-10-12 merged，一手 curl + 逐串命中）
+- **实证**：n8n Instance AI 工作流保存把 `settings.executionTimeout` 对 `EXECUTIONS_TIMEOUT_MAX` 校验——共享 helper `packages/cli/src/workflows/execution-timeout-validation.ts` 超上限抛 `UserError`；编辑器设置模态应用同一上限；最大值为 0 或更小=无限制，-1=无限且总是接受；校验在 `createFromWorkflowJSON` 保存前运行。
+- **判据**：① 用户可配值必须对照部署实例的实际上限校验，不能只验类型/范围——实例级上限是部署事实，配置面不知道就会存进一个永远跑不完的值；② 同一上限的校验点必须收叙到单一 helper 并被所有写入路径调用（API 创建路径 + UI 保存路径），漏一条路径=该路径可绕过；③「无限制」须显式表达（0 与 -1 各有语义），配置缺失不等于无限。
+- 提升层：工具（配置校验）/ 工作流（实例级上限治理）。触发词：configured maximum、EXECUTIONS_TIMEOUT_MAX、配置值对部署上限、双路径同一校验点、共享 helper、显式无限制语义、保存前校验。
+
+## 外部服务换名/迁域名不能靠 301 重定向保语义：跨域重定向丢 Authorization 头并把 POST 降为 GET（来源：api.github.com/repos/activepieces/activepieces/pulls/16413，2026-10-12 merged，一手 curl + 逐串命中）
+- **实证**：Chaindesk rebrand 为 Askli，`app.chaindesk.ai/api` 301 重定向到 `app.askli.co/api`；pieces-common httpClient 是 Node fetch，跨域重定向丢弃 Authorization 头且把 POST 降级为 GET，导致每个 dropdown 与 auth 验证 403 Forbidden、Query Agent 404；把 BASE_URL 显式指向新主机才修复全部，API key 不变。
+- **判据**：① 跨域 30x 重定向不保请求语义——凭据头不跟随、HTTP 方法可降级，依赖方把「服务还活着」当「集成还正常」就会在重定向后静默失败；② 外部端点变更须显式更新 base URL 并跑连通性验证（test connection），不能等用户面 403/404 才暴露；③ 凭据不变不代表调用不变——换域名后旧集成全部静默失效而密钥明明还有效。
+- 提升层：工具（外部依赖端点治理）/ 工作流（第三方服务迁移应对）。触发词：rebrand 301、跨域重定向丢 Authorization、POST 降 GET、base URL 显式更新、端点变更连通性验证、凭据不变调用变。
+
+## 打包产物的消费方可解析性：别名越出包根与无 index 目录说明符让消费方构建失败，「能 bundle」不等于「能运行」（来源：api.github.com/repos/windmill-labs/windmill/pulls/11682，2026-10-12 merged，一手 curl + 逐串命中）
+- **实证**：`@windmill-labs/components` 的 svelte-package 产物无法被消费方打包——React SDK 对 1.830.0 构建失败于三个 import；绕过之后每个 SDK 组件运行时渲染空白。修复：把 `chat-sdk` 编进 `package/chat-sdk`、改写指向 `../../chat-sdk/src/index.ts`（包根外）的 `windmill-chat` 别名 import、把无 index 的目录说明符（`$lib/utils`）改写为兄弟模块。
+- **判据**：① 发布物的 import 卫生、可重试性按责任来源分档、origin 四分类、component_code、upstream_api、network_io、response_parsing、best-effort 归因申报、last_call 证据槽、2xx 解析失败不重试、人审决策记录端点、who/when/针对 codes、撤回对称、每决策一审计行、superuser+flag 双门、回答范围限定、迁移最后一公里、完成判据明示、启用动作在流程内、就绪清单 upfront、Coming soon 占位、已就绪但未启用必须按消费方视角在发布前验证——别名指向包根外源码、目录说明符无 index，本地开发不报但消费方构建即失败；② 验收要过两阶段：消费方能 bundle + 运行时非空白——「构建通过」只证明解析成功，不证明组件真的渲染；③ 包边界内的路径重写是打包步骤的一部分，不是消费方的负担。
+- 提升层：工具（发布物验证）。触发词：消费方可解析、package root、别名越出包根、无 index 目录说明符、bundle 成功不等于运行非空、运行时空白验收、import 卫生。
+
+## 可重试性按责任来源分四档而非按状态码；归因本身须申报为尽力推断并附可复核证据（来源：Qoder r542-Q-A 提名，WB 审计一手复核 pipedream.com/docs/connect/components/actions，2026-10-12 逐串命中）
+- **实证**：Pipedream Connect 行动失败按 `origin` 四分类：`component_code`（自有码缺陷→不可重试）/ `upstream_api`（上游 API 4xx/5xx，仅 5xx 可重试）/ `network_io`（网络 I/O→最可重试）/ `response_parsing`（2xx 但解析失败→重试无益）；文档明言归因是 best-effort（靠观测到的 HTTP 调用与抛出点关联），并附 `last_call{client,method,host,status,duration_ms}` 可复核证据。
+- **判据**：① 重试决策问「责任在谁」不问「什么码」——同一 500 来自上游抖动可重试、来自自家代码缺陷重试纯浪费；2xx 解析失败是第四态（不是成功也不是失败），重试无益；② 归因是推断不是事实——未声明 best-effort 的归因会被下游当确定事实用，须附证据槽（最后一次调用的客户端/方法/主机/状态/耗时），取不到证据的归因降级为未知；③ 分类表与重试矩阵同源维护，分档变了矩阵必须跟着变。
+- 提升层：工具（失败归因契约）/ 工作流（重试策略设计）。触发词：origin 四分类、component_code、upstream_api、network_io、response_parsing、best-effort 归因、last_call 证据槽、按责任来源定重试。（来源 Qoder）
+
+## 人审决策记录端点：记录谁/何时/针对哪些码，撤回对称，每决策一审计行，双门准入（来源：api.github.com/repos/langflow-ai/langflow/pulls/15612，2026-10-11 merged，一手 curl + 逐串命中）
+- **实证**：`POST /api/v1/migration/decisions` 收 `{step, kind, subject?, run_id?}`，记录决策+谁做的+何时并返回状态；`DELETE` 同参数集撤回；两者都要 superuser + 特性旗标，各写一行审计；决策分两类，每类只回答它被创建时针对的 codes（如 `copy_database`/`drop_orphans` → `orphans_droppable`，对每个后续 run 生效）。
+- **判据**：① 人审决策是一等记录——谁、何时、针对哪一步/哪类问题，缺一项事后无法复判；② 记录与撤回须对称端点（同参数集），撤回也是决策也要留痕；③ 每个决策的「回答范围」要限定——它只对创建时针对的 codes 生效，不许一个决策被泛化成全量授权；④ 写操作双门（角色+特性旗标）各查各的，缺一门=绕轨。
+- 提升层：工具（决策留痕契约）/ 工作流（人审治理）。触发词：决策记录端点、who/when/针对 codes、撤回对称、每决策一审计行、superuser+flag 双门、回答范围限定。
+
+## 多步变更的最后一公里：完成判据、启用动作、前置就绪必须明示，否则操作员被锁在「已就绪但未启用」状态外（来源：api.github.com/repos/langflow-ai/langflow/pulls/15679，2026-10-11 merged，一手 curl + 逐串命中）
+- **实证**：LangFlow 迁移页走完 checks 与 copies 后停在最后两步「Coming soon」——数据已复制、人还被锁在外面；页面既不说怎么判断全部到达、也不说怎么启动新实例，顶部更不说需要什么就绪；操作员一次只能发现一步，最后一步在暂停之后才发现。修复：页面带上「What you'll need」就绪清单 + 全部到达判据 + 启动新实例的动作。
+- **判据**：① 数据就绪≠服务就绪——复制完成但启用未做，用户侧仍是锁死态，界面必须明示「怎么知道全部到达」；② 启用动作是流程的一部分，不能停留在「数据到了你自行想办法」——最后一步（启动新实例）要在流程内给出；③ 前置就绪清单放开头，别让操作员一次发现一步、最后一步在暂停之后才暴露；④ 「Coming soon」占位是可观测性漏洞——进行中的流程不许有语义空白步骤。
+- 提升层：工具（变更流程设计）/ 工作流（迁移与发布治理）。触发词：迁移最后一公里、完成判据明示、启用动作在流程内、就绪清单 upfront、Coming soon 占位、已就绪但未启用。

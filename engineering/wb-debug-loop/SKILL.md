@@ -1,8 +1,8 @@
 ---
 name: wb-debug-loop
 description: >-
-  有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local
-version: "1.194.0"
+  有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）。、一直在重复、转圈、卡死检测、迭代上限定多少、并行单元重名、工具结果用错、喂给判定的字段要人话、验证证据要让外行能下结论、先找仓库既有规程、失败声明、failure cause、只报原因不报对策、分类不出就原样抛、等待提示、错误负载缺省字段、OOM 恢复、中断恢复、取消不等于丢弃、半成品保留、完成标记游标、重试准入、重试不生效、参数冲突、单次超时与总时长、重试留痕、兜底范围、提前终止原因、结束原因可见、主动退出留痕、诊断只读、修复须批准、diagnose不执行repair、读写分离、终态退出码、超时携带诊断、失败不二次变更、幂等护栏、轮询分批、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由
+version: "1.198.0"
 agent_created: true
 ---
 
@@ -360,3 +360,23 @@ agent_created: true
 - **实证**：部署流水线的栈用远程 orchestrator（如 Kubernetes）时，step runner 在每次 /invoke 都重跑 init 与 cleanup 钩子；cleanup 钩子清掉的是部署服务在 startup 时初始化一次的进程级 RunContext ⇒ 并发调用互删，大多数以 `RuntimeError: Run context not initialized` 失败。16 线程负载测试：修复前 36/96 成功，修复后 96/96。修复不是给清理加锁，而是「部署服务已拥有 run context 生命周期，step runner 在部署调用内跳过步骤级 init/cleanup 钩子」。回归测试用两个重叠调用驱动真实 StepRunner。PR 还顺手修正了 run_init_hook 里把 run context 描述成 thread-local 的过期注释——实际是 process-wide。
 - **判据**：① **进程级共享态的清理由唯一归属方执行**：startup 初始化的进程级状态，清理必须放在归属方（部署服务）生命周期末尾；按调用重入的 cleanup hook 会在每次调用后清掉它 ⇒ 并发下先完成的调用把后到的调用全毙掉（36/96）。② **重入路径要显式跳过非本职的 init/cleanup，先判「该不该跑」再谈同步**：修复路径是跳过而非加锁 ⇒ 看到「共享态被周期性清掉」先问清理代码在这条执行路径里该不该运行，再考虑锁。③ **过期注释是同类故障的放大器**：注释说 thread-local、实际 process-wide，排障者按错误心智模型推理 ⇒ 修共享态 bug 时同步修描述它的注释（与 av 2.207.0 自述与实际同源同族，此处是代码注释面）。④ **并发类 bug 的回归测试须驱动真实组件跑重叠调用**：两个重叠 invocation 驱动真实 StepRunner，mock 钩子的单线程测试会全绿 ⇒ 并发修复的验收条件里必须有「修复前红」的重叠调用用例。⑤ 与 dl KB:259（进程级全局单例被先注册者永久占用）分工：那条管占用不放，本条管清理越界（非归属方清理）。
 - 提升层：工具（生命周期归属设计）/ 工作流（并发调用排障）。触发词：process-wide RunContext、cleanup hook clears startup state、concurrent invocations race、Run context not initialized、skip step-level hooks inside deployment、36/96 to 96/96、overlapping invocations regression test、stale thread-local comment。
+
+## 失败汇总要逐项带原因，且理由必须与打标同一检查器产出（来源：api.github.com/repos/activepieces/activepieces/pulls/16388，2026-10-12 merged，一手 curl + 逐串命中）
+- **实证**：`ap_build_flow` 过去只报「1 invalid: step_2」，chat 每个无效步骤要花 2-3 步才发现为什么；现在逐项列出理由（如 `step_1 (subject is missing)` / `trigger (authType is missing)`）。理由来自同一个 `validateProps`——它现在同时返回哪些输入未过 schema，覆盖缺连接与坏数组，且从不怪 `{{reference}}`（schema 接受它）；`ap_build_flow` 只问返回无效的步骤。
+- **判据**：① 汇总报「哪几条失败」不够，须逐项带原因，否则每个失败项都要下游花一整轮试错去问为什么；② 理由必须与打标同一检查器产出——两套逻辑必然漂移，会出现「标了无效但理由说不清」或反过来；③ 检查器不得把它本来就接受的东西列为失败原因（schema 接受的引用不该被报）。
+- 提升层：工作流（错误信息质量）/ 工具（校验器设计）。触发词：失败汇总带原因、逐项理由、理由与标记同源、validateProps 同检查器、不怪 schema 接受的引用、无效步骤带 reason、验证误报推离路径、公式函数误报缺失步骤、双花括号公式、放弃正确方案、领域语法感知检查、rewriteAllReferences、未应答请求只问一次、超时卡片不重显、notShown 契约、过期缓存上的模型步、按询问内容识别。
+
+## 验证误报会把自主执行者推离正确路径：检查器不懂领域语法时，「不存在的一步」是假故障（来源：api.github.com/repos/activepieces/activepieces/pulls/16387，2026-10-12 merged，一手 curl + 逐串命中）
+- **实证**：chat 写双花括号公式 `ap-formula-v1::{{formatDate(...)}}::ap-formula-v1`，流检查把 `formatDate` 读成步骤名并报「does not exist in the flow」；chat 判断不了问题在哪，放弃公式、把步骤改写为代码——一次 benchmark 构建因此多花 7 步。修复：写步骤/触发器时把双花括号公式改写为单花括号（`rewriteAllReferences`，由 build/add/update 共享）；检查永不把公式函数报成缺失步骤。
+- **判据**：① 验证误报的代价不是噪音是行为漂移——自主执行者遇到解释不了的失败会放弃正确方案改用次优方案（公式改代码），成本以步数计；② 检查器必须懂它检查的领域语法（公式函数名与步骤名是两个字位），把合法构造报成缺失=制造假故障；③ 归一化要在写入时做（共享 rewriteAllReferences），而不是等检查阶段才分辨两种括号。
+- 提升层：工作流（验证器设计）/ 工具（自主执行排障）。触发词：验证误报推离路径、公式函数误报缺失步骤、双花括号公式、放弃正确方案、领域语法感知检查、rewriteAllReferences、假故障成本。
+
+## 同一未应答请求只问一次：超时重显是过期缓存上的重复模型步（来源：api.github.com/repos/activepieces/activepieces/pulls/16394，2026-10-12 merged，一手 curl + 逐串命中）
+- **实证**：用户离开时，Gmail picker 一类卡片 5 分钟超时后 chat 每 5 分钟再显示一次；每次重问都是过期缓存上的一个模型步（约 $0.19），一次运行持续 20+ 分钟。修复：同一 turn 内超时过一次的卡片不再重显，第二次调用立即返回 `notShown: true` 并指示模型用一行说明它需要什么；chat 页跳过 `notShown` 结果不出死卡；卡片按「询问内容」（piece / connector / 主题）识别。
+- **判据**：① 对同一未应答请求的重复提示是纯浪费——每次重问都花一个模型步且缓存已过期，等待方不应答时重复问不会改变结果；② 重显须按请求身份去重（问的是什么），不是按组件实例；③ 不再重显时要有收尾契约：告诉模型「说明需要什么即可」，别让死卡占位。
+- 提升层：工作流（交互重试经济）。触发词：未应答请求只问一次、超时卡片不重显、notShown 契约、过期缓存上的模型步、按询问内容识别卡片、重复提示纯浪费、拒绝态带等待对象、what/whom、盲目重试、长时占用可见、暂停被拒说明、再说一次等等。
+
+## 拒绝态必须带等待对象与责任人：只说「再等等」的拒绝让等待方只能盲目重试（来源：api.github.com/repos/langflow-ai/langflow/pulls/15629，2026-10-11 merged，一手 curl + 逐串命中）
+- **实证**：迁移暂停被拒时页面原只有一行「Changes that were already under way haven't finished yet. Try again in a moment.」——不说什么在进行、该问谁；一个开着的 voice session 就能 hold 住暂停。修复后暂停端点说明被拒的暂停还在等待什么，页面把它展示出来。
+- **判据**：① 拒绝/等待态三要素：缺什么、谁持有、预计多久——缺任一，等待方只能按固定间隔盲目重试（把竞态等待变成轮询轰炸）；② 「再试一次」不能替代「等什么」——可自愈的等待要给可观测的等待对象，不可自愈的要指向责任人；③ 长时占用（voice session 一类）要在拒绝信息里可见，否则排障时根本不知道是谁卡住。
+- 提升层：工作流（等待与拒绝信息设计）。触发词：拒绝态带等待对象、what/whom、盲目重试、长时占用可见、暂停被拒说明、等待三要素。

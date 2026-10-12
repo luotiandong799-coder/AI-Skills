@@ -1069,3 +1069,5 @@ spec 的步骤约束不要落在两个极端：**代码写死流程**（控制�
 - 模型保留推理空间，约束把它锁在可靠区间——Amazon 内部数千 SOP 实测：既消除「同 agent 不同结果」的不一致，又免去改 prompt 前的长周期人工评测。
 - **落法**：spec 的「验收标准/步骤」里，不可协商的动作写 `MUST`、推荐做法写 `SHOULD`、可选增强写 `MAY`；**`SHOULD` 若被跳过，执行体必须在进度里写明理由**，否则约束退化成装饰。这补了 §2 的「验收标准尽量可命令化」——`MUST/SHOULD/MAY` 是给命令化语义加的软硬分层。
 
+
+## r543B · 并发汇聚释放下界（来源 Qoder）：屏障无 PENDING 即释放、策略只许提前不许推后；未派发/仍在跑/超时与成功分账，截断时 signalsTruncated 明示（来源：activepieces.com/docs/install/architecture/waitpoints + install/reference/limits，2026-10-12 一手复核）
