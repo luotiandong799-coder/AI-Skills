@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "1.127.0"
+version: "1.128.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -346,3 +346,12 @@ version: "1.127.0"
 - **分层信源 + eval 采纳门禁（skill-finder）**：信源分四层——Tier 1 anthropics 官方 → Tier 2 知名团队 → Tier 3 高星验证仓库 → Tier 4 GitHub topic 搜索；采纳前先过 eval（waxa-eval：连续 2 轮零 unclear 收敛、分歧 reject、fork-and-fix 修复上游）。判据：**信源层级决定信任起点，eval 决定是否采纳**——Tier 1-2 降低审查成本但不过 eval 不装；Tier 4 的高星不等于已验证。
 - **市场侧事实（mr.technology）**：180k+ 公共注册技能、4,200/周新增；Claude Skills Registry 审核 **5-12 天、拒稿率 31%**，主因注入模式 + 未声明网络调用。判据：**审核是供应链的最后一道闸**——装技能前过一遍"它声明了网络调用吗 / 描述里有注入模式吗"，这两条占拒稿主因，个人装技能时同样适用（与既有 §Agent 工具面安全"工具描述可注入"互证）。
 - **提升层**：可复用 Skill（技能供应链）/ 工作流（更新决策纪律）。触发词：gh skill、immutable release、tree SHA 变更检测、provenance frontmatter、pin commit、floating ref 禁止、mdr outdated、先读变更再更新、62.7% 钉旧版、shskills --dry-run/--clean/--strict、Tier 分层信源、eval 采纳门禁、Skills Registry 拒稿 31%。
+
+## Agent Skills 生态安全实证：stdout 捕获泄露 + 脚本捆绑 2.12x + 安装前审查纪律（来源：arXiv 2604.03070 + arXiv 2601.10338 + matrix.tencent.com（腾讯朱雀 2026-04-24）+ Snyk ToxicSkills 2026-10-12 实拉，r541A 落地，与 §技能供应链治理互补——那条管"安装/更新/发布流程"，本条管"生态级威胁实证与装前审查点"）
+
+- **调试日志成为最大泄漏面**：17,022 skills 抽样 520 个（3.1%）含 1,708 处凭据泄漏，84% 开发者疏忽；76.3% 只能靠 NL 描述+编程逻辑联合分析检测；3.1% 纯 NL prompt injection 无任何代码。**print/console.log 占漏洞 73.5%——agent 框架把 stdout 捕获进 LLM 上下文窗口，记在日志里的凭据可被自然语言查询取回**；72% 硬编码凭据带 AI 辅助编程签名。
+- **恶意 skills 组合攻击**：83 个中 37.3% 组合 Base64 混淆+反向 shell 等多模式；89.6% 可利用性经动态沙箱证实。Snyk ToxicSkills：3,984 个公开 skills 中 1,467（36.82%）含缺陷、76 个确认恶意 payload、5 个具名威胁组织跨平台；36% prompt injection。
+- **风险统计特征**：>500 行 skills 漏洞概率 2.14x；含脚本技能 40.6% vs 仅指令 24.2%（OR=2.12）；依赖≥5 个 47.9%。OWASP Agentic Skills Top 10（AST10）2026-04 发布，覆盖 OpenClaw/Claude Code/Cursor-Codex/VS Code 并点明跨平台复用风险；腾讯朱雀 ClawHub 5 万+ skills 扫描，ClawHavoc 2026-01：1,184 恶意 skills、12 个被入侵发布者账号、24.7 万次安装、230 万美元被盗；AMOS macOS Stealer 变体经 skills 分发。
+- **安装前审查纪律**：① 技能含 print/console.log 调试残留 → 查是否硬编码凭据（stdout 会被框架捕获进上下文）；② 脚本型技能（非纯指令）→ 漏洞率近 2 倍，重点审；③ >500 行技能 → 更易藏注入，逐段过；④ 依赖≥5 个 → 供应链面大，逐依赖核来源；⑤ 描述含 Base64/反向 shell/混淆模式 → 拒装；⑥ 装前看发布者信誉与更新时间，装后审计一次工具面。
+- **判据**：① 凭据泄露的第一现场是日志不是代码——审查先扫 print/log 残留，再扫硬编码串；agent 的 stdout 捕获让"调试残留"升级为"可被自然语言检索的泄密通道"。② 脚本型/超长型/多依赖型是风险特征组合——三项命中任意两项按高风险审。③ 生态级数字（36.82% 缺陷率）说明"默认信任"不可维持——安装第三方技能按装权限流程审，不是按下载流程审。
+- **提升层**：工作流（安全治理）/ 可复用 Skill（安装审查清单）。触发词：stdout 捕获泄露、print console.log 占 73.5%、凭据泄漏 3.1%、NL 联合分析检测、脚本捆绑 OR 2.12、>500 行 2.14x、ToxicSkills 36.82%、AST10、ClawHavoc、恶意技能组合攻击、Base64 混淆、安装前审查纪律、装前扫调试残留。
