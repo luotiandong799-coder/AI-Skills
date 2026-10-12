@@ -1561,3 +1561,5 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 ## r543A · 同一未应答请求只问一次：超时卡片重显=过期缓存上的重复模型步（约 $0.19/次、20+ 分钟），按询问内容去重 + notShown 收尾契约（来源：api.github.com/repos/activepieces/activepieces/pulls/16394，2026-10-12 merged）
 
 ## r543B · 拒绝态三要素（缺什么/谁持有/多久）：只说 try again 的拒绝让等待方盲目重试，长时占用须在拒绝信息可见（来源：api.github.com/repos/langflow-ai/langflow/pulls/15629，2026-10-11 merged）
+
+## r545A · 错误信息列出的原因必须逐条可达：把读者引向没坏的东西比不给原因更贵；原因按目标形态裁剪（可按 title 给的目标才报 title 类原因）；文案是契约，每个原因的存废与形态条件要词面级回归测试（来源：api.github.com/repos/n8n-io/n8n/pulls/40400，2026-10-12 merged，一手 curl + 逐串命中）

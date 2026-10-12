@@ -3145,3 +3145,9 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ## r543B · 人审决策记录端点：who/when/针对 codes 一等记录，撤回对称且留痕，回答范围限定不泛化，角色+旗标双门（来源：api.github.com/repos/langflow-ai/langflow/pulls/15612，2026-10-11 merged）
 
 ## r543C · 多步变更最后一公里：完成判据+启用动作+前置就绪须明示，数据就绪不等于服务就绪，「Coming soon」占位是可观测性漏洞（来源：api.github.com/repos/langflow-ai/langflow/pulls/15679，2026-10-11 merged）
+
+## r545A · 检索与选择面排序须纳入执行期可靠性：语义相关性与执行可用性是两个轴，静态语义排序把失效工具排在前面；轻量 contextual bandit 按实时执行反馈重排；验收=故障场景错选率（outage 86.2%→2.9%）+ MRR 双指标，重排开销亚毫秒级（来源：arxiv.org/abs/2610.13889 RATED，2026-10-09 一手实拉摘要逐串命中）
+
+## r545C · 恢复类凭据按状态绑定而非时间绑定：适用性边界有两个坐标系（时间/状态），恢复等待类按状态绑定（step 终态即失效）；绑定粒度必须匹配消费方等待粒度（execution-bound/step-bound/approval callback 三型，wait 只收同粒度）；派生令牌不存储——凭据可得性路径要与运行时密钥可达性匹配（来源：api.github.com/repos/n8n-io/n8n/pulls/39089 ADR-20260904，2026-10-12 merged，一手 curl + 逐串命中）
+
+## r545C · flaky 测试修复面=把隐式时间假设换成显式就绪信号（等目标元素出现再交互，不加重试不加 sleep）；验收用 repeat-each 量化通过率（修前 4/12、修后 25/25），单跑绿色证明不了 flake 已除（来源：api.github.com/repos/n8n-io/n8n/pulls/40864，2026-10-12 merged，一手 curl + 逐串命中）

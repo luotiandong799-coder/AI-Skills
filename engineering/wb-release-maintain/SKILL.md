@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑
-version: "1.119.0"
+version: "1.121.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -492,4 +492,7 @@ sources:
 ## 依赖退场要记两个日期（服务停止日 ≠ 数据删除日），保留期是「可调但有硬顶」的项：未选定时用硬顶——时间边界必须显式记账且带上界（来源：pipedream.com/docs/workflows.md 2,474B + www.activepieces.com/docs/admin-guide/security/audit-logs/overview 385,091B，2026-10-12 r541B 一手 curl 200 逐串命中 `Workflows and String will shut down on March 31, 2027` / `All Workflows data will be permanently deleted by April 30, 2027, including the credentials and OAuth tokens` / `AP_AUDIT_LOG_RETENTION_DAYS to cap the period for every platform, from 30 to 3650 days. The cap is a hard limit: a platform can only choose a shorter period. A platform that has not chosen a period uses the cap`；提名 Qoder r539-Q-A ②）
 - **实证**：① Pipedream 公告把 Workflows/String 的退场拆成两个日期：**服务停止 2027-03-31**（「keep running normally through March 31, 2027」，进入维护模式、不再接受新注册）与**数据永久删除 2027-04-30**（「permanently deleted ... including the credentials and OAuth tokens for your connected accounts」），中间即迁移窗口；② Activepieces 审计日志保留期由 `AP_AUDIT_LOG_RETENTION_DAYS` 调整，区间 **30–3650 天**，且明文「cap is a hard limit: a platform can only choose a shorter period. A platform that has not chosen a period uses the cap」——硬顶兼作未选定时的默认值。
 - **判据**：① **「服务停了」与「数据没了」是两个日期，迁移窗口=两日期之差**：只记停止日会让迁移计划按错误的截止时间排期；只记删除日则提前断供 ⇒ 依赖台账必须同时记录两个日期并算出可用窗口，公告原文给几个月就按几个月排，不自己拍。② **凭据随数据删除是退场公告的高危项**：Pipedream 明说 OAuth tokens 一并删 ⇒ 评估退场影响时要把「连接凭证失效」单列，它比工作流本身停更早波及下游。③ **保留期必须同时记「可调范围」与「硬顶」**：只记「可调」会让容量规划无上界；只记默认值会在自托管超大租户下爆库 ⇒ 硬顶（3650 天）是容量表的上界来源，未选定时按硬顶计。④ **「未选定即用硬顶」意味着默认值不可推断**：看不到显式配置不等于用某个小默认值 ⇒ 审计保留策略时要先查「是否显式设过」，不能假设。⑤ 与 §迁移/回填准入前置四门（rm 后续轮）分工：那条管**迁移作业开跑前**的门禁，本条管**退场与保留的时间边界记账**——一个在过程、一个在台账。
-- 提升层：工作流（依赖退场与容量规划）/ 工具（保留期配置审计）。触发词：shut down vs permanently deleted、两个日期、迁移窗口、credentials and OAuth tokens deleted、AP_AUDIT_LOG_RETENTION_DAYS、30 to 3650 hard cap、未选定用硬顶。
+- 提升层：工作流（依赖退场与容量规划）/ 工具（保留期配置审计）。触发词：shut down vs permanently deleted、两个日期、迁移窗口、credentials and OAuth tokens deleted、AP_AUDIT_LOG_RETENTION_DAYS、30 to 3650 hard cap、未选定用硬顶。、单向流动纪律、同一实例不双向 push-pull、实例分支拓扑、多实例多分支 PR 过闸、一分支多环境、同分支新实例灰度版本、分支切换不清空残留混合态、共享文件改动 bump 全部受影响组件、本地迭代号不等于注册表版本、提交前版本复位、semver 三档
+
+- **实例-分支拓扑与单向流动纪律（2026-10-12 r545B 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r545B·分支拓扑）。
+- **共享文件改动的版本传播 + 提交前版本复位（2026-10-12 r545B 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r545B·版本传播）。
