@@ -3764,3 +3764,6 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 ## r532C · 声明即契约：声明了的参数必须真的传到下游；文档承诺「省略则用默认」必须有空值路径；用「另一侧样本」与「完全省略」用例来测（来源：api.github.com/repos/PrefectHQ/prefect/pulls/23300 + /pulls/23334，2026-10-12 r532C 一手 curl 200 逐串命中 `accepted --hours (default 1) but never passed it to the API` / `didn't use it in the work-pool branch` / `The CLI help text already describes the intended behavior` / `raising a TypeError when its optional contents argument is omitted or explicitly None` / `Normalize only None to a fresh dictionary`）
 - **判据**：① **「参数存在」≠「参数生效」**：有默认值、有帮助文本、不报错，只是从不使用 ⇒ 自测要断言「改参数则输出改变」。② **分支各自验参数贯通**：非 pool 分支对、pool 分支漏 ⇒ 加分支要按分支逐一测。③ **默认值掩盖静默忽略** ⇒ 断言要造窗口内 + 窗口外两侧样本。④ **文档 / 帮助文本是契约的一部分**：实现与文档冲突时修的可能是实现。⑤ **「可选」的准入条件是有空值路径**：回归用例必须有「完全省略」与「显式 None」两格。⑥ **归一化边界要窄**：只归一 `None`，不要把空值与空容器混为一谈。⑦ **顺手补的回退逻辑必须配独立用例**（撤掉即复红）。⑧ **自证给前后对比数字**：改前失败 → 改后通过 → 反向撤除复红。
 - 提升层：工具（接口自测）/ 工作流（回归用例设计）。触发词：参数静默忽略、分支漏传、帮助文本与实现不符、可选参数空值路径、assigns into None、窗口内外双样本、撤除复红。
+
+- **判据**：① **flaky 几乎都是外部依赖没隔离**：先查测试是否偷依赖真实 CDN/API/网络/时钟。② **隔离用"立刻失败"而非"加长超时"**：指到 `.invalid` host 让 fetch 立即失败走 fallback，确定性来自依赖缺失时行为可预测。③ **.invalid 是标准隔离技法**：RFC 2606 保留 TLD，比 mock 更轻更真实（走生产 fallback）。④ **复用已有 setup 保持一致**：隔离策略全仓库统一，否则排障无法判断失败归属。⑤ **复现先于修复、用同一坏输入**：稳定触发坏输入证明修前必红修后必绿，不靠多跑碰巧绿。
+- 提升层：工具（测试隔离）/ 工作流（flaky 治理）。触发词：flaky test、外部依赖未隔离、.invalid host 注入、立刻失败走 fallback、复现先于修复。
