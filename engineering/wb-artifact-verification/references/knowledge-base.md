@@ -3115,3 +3115,5 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 
 - **多标签限流取交集；0 值跨系统语义相反（来源：2026-10-11 r517B 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r517B）。
 - **去抖静默失效（键混入逐次变化字段）；合并窗口须有上界（来源：2026-10-11 r517C 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r517C）。
+
+- **部署态产物与预览态构造是两条路径；物化漏字段不会在运行时补齐，修复生效面是重新物化（来源：api.github.com/repos/windmill-labs/windmill/pulls/11660 27,088B，2026-10-12 r532A 一手 curl 200 逐串命中 `Previews were unaffected because they build the nested value at runtime` / `keep their nodes without the flag until they are redeployed` / `the flag is part of the node hash` / `No runtime fallback is added`）**：本章已下沉 `references/knowledge-base.md`（r532A）。
