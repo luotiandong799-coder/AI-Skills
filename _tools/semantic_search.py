@@ -7,11 +7,11 @@ semantic_search.py — 本地语义检索引擎
 
 后端：chromadb（已装）。Embedding 两档：
   - 真语义：sentence-transformers 多语言模型（paraphrase-multilingual-MiniLM-L12-v2）
-            → 设环境变量 USE_ST=1 启用；模型需先从 HuggingFace 下载（国内用
-              HF_ENDPOINT=https://hf-mirror.com 加速）。
+            → 已通过 modelscope 国内镜像落地于 _tools/models/ 目录，自动检测启用；
+              亦支持设 --st 强制真语义。无需联网即可使用真语义检索。
   - 本地降级：零依赖字符 n-gram 哈希向量（LocalCharNGramEF）
-            → 默认启用，无需下载任何模型，立即可用；语义为词重叠近似，
-              弱于真语义但能跑通索引/检索全流程。
+            → 模型缺失时兜底，立即可用；语义为词重叠近似，弱于真语义
+              但能跑通索引/检索全流程。
 
 功能：增量索引、语义+关键词互补、过期/重复/冲突提示。
 
@@ -79,13 +79,68 @@ class LocalCharNGramEF:
         return "local_char_ngram"
 
 
+def _local_model_dir() -> str:
+    """解析本仓内置真语义模型目录（modelscope / HF 缓存均可）。
+    命中即返回含 config.json 的具体快照目录，供 SentenceTransformer 直接加载。"""
+    base = os.path.dirname(os.path.abspath(__file__))
+    # 1) modelscope 布局：models/models/sentence-transformers--<name>/snapshots/master
+    ms = os.path.join(base, "models", "models", "sentence-transformers--" + ST_MODEL)
+    if os.path.isdir(ms):
+        snap = os.path.join(ms, "snapshots")
+        if os.path.isdir(snap):
+            subs = [d for d in os.listdir(snap)
+                    if os.path.isfile(os.path.join(snap, d, "config.json"))]
+            if subs:
+                return os.path.join(snap, subs[0])
+        if os.path.isfile(os.path.join(ms, "config.json")):
+            return ms
+    # 2) 简易布局：models/sentence-transformers/<name>
+    simple = os.path.join(base, "models", "sentence-transformers", ST_MODEL)
+    if os.path.isfile(os.path.join(simple, "config.json")):
+        return simple
+    # 3) HF 缓存布局
+    hub = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
+    d = os.path.join(hub, "models--sentence-transformers--" + ST_MODEL)
+    snap = os.path.join(d, "snapshots")
+    if os.path.isdir(snap):
+        for sub in os.listdir(snap):
+            if os.path.isfile(os.path.join(snap, sub, "config.json")):
+                return os.path.join(snap, sub)
+    return simple
+
+
+def _st_ready() -> bool:
+    """检测真语义模型是否就位（本仓内置目录优先，其次 HF 缓存）。"""
+    try:
+        import sentence_transformers  # noqa: F401
+    except Exception:
+        return False
+    if os.path.isfile(os.path.join(_local_model_dir(), "config.json")):
+        return True
+    hub = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
+    d = os.path.join(hub, "models--sentence-transformers--" + ST_MODEL)
+    if os.path.isdir(os.path.join(d, "snapshots")):
+        return True
+    for base in (os.environ.get("HF_HOME", ""), os.environ.get("SENTENCE_TRANSFORMERS_HOME", "")):
+        if base and os.path.isdir(os.path.join(base, "hub", "models--sentence-transformers--" + ST_MODEL)):
+            return True
+    return False
+
+
 def _ef(use_st: bool):
-    if use_st:
+    """use_st=True 强制真语义；否则 auto：模型就位就用真语义，无则降级向量。"""
+    local = _local_model_dir()
+    have_local = os.path.isfile(os.path.join(local, "config.json"))
+    want_st = use_st or _st_ready()
+    if want_st:
         try:
             from chromadb.utils import embedding_functions
-            return embedding_functions.SentenceTransformerEmbeddingFunction(model_name=ST_MODEL)
+            ref = local if have_local else ST_MODEL
+            print(f"[info] embedding = sentence-transformers 真语义 ({ref})", file=sys.stderr)
+            return embedding_functions.SentenceTransformerEmbeddingFunction(model_name=ref)
         except Exception as e:
             print(f"[warn] sentence-transformers 不可用，降级本地向量: {e}", file=sys.stderr)
+    print("[info] embedding = local_char_ngram (降级向量)", file=sys.stderr)
     return LocalCharNGramEF()
 
 
