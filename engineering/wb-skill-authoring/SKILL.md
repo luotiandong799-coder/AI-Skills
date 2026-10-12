@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测盲测、no-skill 对照、效果归因、重复技能的去重与合并流程。当新增 skill、改写已有 skill 的 description、排查"技能该触发却没触发 / 不该触发却触发"、拆分过长 SKILL.md、把 skill 迁移到不同 AI 工具（Claude Code / Codex / Gemini 等）、安装第三方 skill 前做安全检查、或装了技能却总用不上（没接线）时应用。只写与自身工作流相关的约束和步骤，不写通用方法论套话。触发词：技能没触发、装了没用、接线、skill 不生效、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配
-version: "1.132.0"
+version: "1.133.0"
 ---
 
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
@@ -413,3 +413,25 @@ version: "1.132.0"
 - **触发测试与内容测试分开列**：checklist 同时测"triggers on expected queries"（该触发时触发）与"content is helpful"（内容有用）——触发与内容两个计分板。判据：**触发对≠内容对**——两套测试分开跑，缺一个就有一个盲区。
 - **判据**：① 任何新文件落地前问"这个事实在别的文件有没有副本"——有就引用，不复制。② 主文件 500 行内，重内容进 references/ 并确保"需要时加载"。③ 与 §description 双向剪裁分工：那条管"入口触发"，本条管"文件间组织卫生"。
 - **提升层**：可复用 Skill（文件组织）。触发词：跨文件无重复信息、No duplicated information、References load when needed、500 行体脂线、触发与内容分测、一个事实一个家、文件组织 checklist。
+
+## 渐进式披露 Progressive Disclosure：只有名称+描述常驻，细节按需加载（来源：lowtouch.ai《Context engineering after Claude 5》2026-08-04 + dreaming.press《Context Engineering the Anthropic Way》2026-08-18 + CSDN《别再堆 Prompt 了!Agent Skill「渐进式披露」才是 2026 年最该懂的上下文工程》2026-10-11 实拉，r543C 落地，与 §References load when needed 分工——那条管"文件级按需加载"，本条管"元数据级：什么该常驻"）
+
+- **只有 name+description 常驻上下文**：技能/工具的细节指令、代码评审流程、验证程序全部下沉到按需加载——"Anthropic 把详细 code review/verification procedure 从 prompt 移进 skills，agent 选择性调用"。判据：**常驻的只有"它是什么"，怎么干按需才读**——把整份 procedure 常驻，就是让每个 turn 都为"偶尔才用的细节"付费。
+- **Anthropic 实证：Claude Code 系统 prompt 削减 80% 无评测损失**（Claude 5 代，2026-07-24 官方 guide）：高表现 agent 从"巨型指令块"转向 lean prompt + 更好工具 + 渐进式披露。判据：**指令块大小与质量不是正比**——削减到必要+按需，评测不掉，成本大降。
+- **过载工具同样处理**：部分工具定义延迟化，agent 使用时先搜定义再调——"ship more tools without paying for them every turn"。判据：**工具也按渐进披露**——定义不常驻，用时拉取；工具面可更大而每轮成本不变。
+- **判据**：① 每个技能问"哪些必须在常驻（name/description/骨架），哪些按需（细节/例子/脚本）"。② 大 procedure 进 references/ 由技能按需引用，不塞主文件。③ 与 §References 分工：那条管"文件怎么组织"，本条管"披露的粒度与节奏"。④ 反模式：把完整评审流程写进主 prompt；每轮都加载全套工具定义。
+- **提升层**：可复用 Skill（上下文工程 / 技能设计）。触发词：渐进式披露、Progressive Disclosure、只有名称描述常驻、细节按需加载、系统 prompt 削减 80%、工具定义延迟化、lean prompt、高信号 token。
+
+## 编译器式格式符合度评分：发布质量门不看人气看规范（来源：arXiv 2604.16911《Skilldex: A Package Manager and Registry for Agent Skill Packages》2026-08-15 实拉，r543C 落地，与 §TRACE 规范符合度分工——那条管"评测维度之一"，本条管"发布前的自动格式门禁"）
+
+- **compiler-style format conformance scoring**：Skilldex 对技能包做编译器式格式符合度评分，给 publisher **line-level 可操作反馈**（哪一行不合 Anthropic 技能规范）——grounded in 规范而非社交代理（star/安装量）。判据：**格式质量用规范裁决，不用人气裁决**——star 数可刷、符合度不可辩；发布前跑一遍自动扫描，收到"哪行不合规"而不是"评分低"。
+- **skillset 抽象：相关技能共享公共资产**（vocabulary 文件 / templates / persona 定义）——"their outputs remain mutually coherent in a way independent installation cannot guarantee"。判据：**同组技能共享资产保证输出互洽**——独立安装的技能各说各话，共享词汇/模板/人设的输出才一致；把"经常一起用的技能"做成一个 skillset。
+- **判据**：① 发布前跑格式符合度扫描，按 line-level 反馈修。② 一组技能输出要互洽时，共享资产（词汇/模板/人设）而不是各自复制。③ 与 §TRACE 分工：TRACE 管"整个技能好不好"，本条管"发布瞬间的格式门禁与同组一致性"。④ 反模式：拿安装量/star 当质量；同组技能各写一份重复模板。
+- **提升层**：可复用 Skill（发布质量门 / 技能分组）。触发词：编译器式格式评分、Skilldex、line-level 反馈、规范裁决、skillset 共享资产、输出互洽、发布质量门、格式符合度扫描。
+
+## Agent 多轮评测：评的是中间状态与工具使用，不只最终输出（来源：Anthropic《Demystifying evals for AI agents》2026-01-09 实拉，r543C 落地，与 §触发测试/内容测试分工——那条管"技能层面两计分板"，本条管"agent 系统层面的评测设计"）
+
+- **agent 评测难点来自多轮性**：agent 多轮调用工具、修改状态、根据中间结果调整——"autonomy, intelligence, and flexibility"让评测比单轮难。判据：**多轮系统不能按单轮评测**——只看最终输出会漏掉"中途状态错但结果对"的路径。
+- **覆盖中间状态与工具使用**：设计 eval 时包含 agent 在中间轮次的状态变化与工具调用序列（用了哪些工具、顺序对不对、状态改对没）——不只是 final answer。判据：**过程正确性与结果正确性分开测**——工具序列错而结果碰对，是脆弱的正确。
+- **判据**：① 给 agent 系统写 eval 时列出"可观测点"：每轮工具调用、状态变更、中间产出。② 评分项覆盖过程与结果两栏。③ 与 §技能评测分工：技能评测测"该不该触发+内容对不对"，agent 评测测"多轮里走得好不好"。④ 反模式：多轮 agent 只按最终输出打通过率；把工具调用错误混在"结果正确"里放过。
+- **提升层**：可复用 Skill（评测方法 / Agent 系统）。触发词：多轮评测、Agent evals、中间状态评测、工具使用序列、Demystifying evals、过程正确性、脆弱正确、多轮可观测点。
