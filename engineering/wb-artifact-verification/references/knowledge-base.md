@@ -3151,3 +3151,15 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ## r545C · 恢复类凭据按状态绑定而非时间绑定：适用性边界有两个坐标系（时间/状态），恢复等待类按状态绑定（step 终态即失效）；绑定粒度必须匹配消费方等待粒度（execution-bound/step-bound/approval callback 三型，wait 只收同粒度）；派生令牌不存储——凭据可得性路径要与运行时密钥可达性匹配（来源：api.github.com/repos/n8n-io/n8n/pulls/39089 ADR-20260904，2026-10-12 merged，一手 curl + 逐串命中）
 
 ## r545C · flaky 测试修复面=把隐式时间假设换成显式就绪信号（等目标元素出现再交互，不加重试不加 sleep）；验收用 repeat-each 量化通过率（修前 4/12、修后 25/25），单跑绿色证明不了 flake 已除（来源：api.github.com/repos/n8n-io/n8n/pulls/40864，2026-10-12 merged，一手 curl + 逐串命中）
+
+## r546A · 审计覆盖面按写入入口强制：每个 apply 入口必须传观察者，漏审只能靠类型系统防；多写入路径审计对等且带 source 归属；未变更键不产记录；值记录规则按类型（名恒记、值仅布尔/数字）；stdout subscriber 不等于送到 collector 且 OTel 导出须 flush；明知缺口（license plan 未加载→Pro 脱敏不生效）诚实记账（来源：api.github.com/repos/windmill-labs/windmill/pulls/11684，2026-10-12 merged）
+
+## r546A · 实现替换的验收按原实现的逐模式资源语义对等：功能对等≠资源对等；静默收紧上限=行为回退不抛错，只在长稳负载首次触顶时暴露（每天 12 次稳跑一周的任务迁后首跑即死）；修复形状=per-mode 显式上限 + null=不设限、外层 cgroup 保持硬顶、默认值只保既有调用方；验收按模式双测（capped 被杀/uncapped 完成）（来源：api.github.com/repos/activepieces/activepieces/pulls/16400，2026-10-12 merged）
+
+## r546A · 取消/断开的清理必须挂在必然事件（响应结束）上，不挂在取消信号恰好到达的等待点上——流的两类等待（source 内等 vs 等发送）对取消到达行为不同，漏清理表现为状态账恒 running→409 挡死后续→GC 迟来 cancel 覆盖已完成记录；逐路由判来源是否持需清理资源；验收=手工扮演客户端命中坏窗口（修前 5/5 失败、旧测试单独 30/30 证明不了问题）（来源：api.github.com/repos/langflow-ai/langflow/pulls/15618，2026-10-11 merged）
+
+## r546A · 完成态绑定目标身份：为旧目标做过不算为新目标完成；目标变更后按写触面分级作废（另一 database→三步全打回，另一 bucket→只打回文件步）；地址相同性按落地身份整体比对（另一主机/另一 schema 算另一目的地）；接受态绑定单报告，目标变了重新问（来源：api.github.com/repos/langflow-ai/langflow/pulls/15613，2026-10-11 merged）
+
+## r546B · harness 塑形信念：任务/环境/基础 LLM 固定仅换 harness 仍产生跨 harness 信念分叉，且常不可见于终端成功、会传播成不同下游动作；诊断用 belief-rollout（预期世界状态+未来决策演化）且立即分歧与长程分歧分离；harness 会隐藏/压缩证据，跨 harness 比对前先对齐证据面（BIWM）（来源：arxiv.org/abs/2607.04528v2，2026-10-12 一手实拉）
+
+## r546B · 稳定证明哈希排除时间戳：attestationHash 只含 policy/evidence/findings hash 与干净/脏状态，deliberately excludes checkedAt——同状态重复检查必须同 hash，否则时间差把没漂移判成漂移；证据面随功能启用而增长（开新规则域=新证据进哈希），启用后须复审并刷新接受值；轮询间隔截顶防计时器溢出（来源：docs.openclaw.ai/cli/policy/attestation.md，2026-10-12 一手 curl）

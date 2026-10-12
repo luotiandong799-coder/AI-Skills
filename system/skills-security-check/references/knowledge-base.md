@@ -560,3 +560,19 @@ Step C: 是否包含恶意意图？
 ## r543B · 角色映射三模式：off 显式不求值 / on-provision 事务前解析后同事务建 JIT / continuous 每次重评无结果即 no-role；角色写入走独立事务，claim-match 只评不写，项目规则只到团队项目（来源：api.github.com/repos/n8n-io/n8n/pulls/40809，2026-10-12 merged）
 
 ## r543C · 技能产物跨会话传播是攻击面（来源：arxiv.org/abs/2610.13227）：IP/DBV/EP 三机制经持久工件传播，SkillRelayBench 实测 ASR 46.7-77.4%；SkillRelayGuard（来源上下文恢复+执行前 advisory、决策留 agent）ASR 69.5%→10.9%
+
+## r546A · 滥用门覆盖按 denylist：只豁免平台自管 provider（JWT/SAML），未来公共 provider 默认受检；验证信号有证明范围（email_verified 只证明控制账户不证明域名可收信）；判定宽容度按副作用分面（domain 级 invalid 拒绝、mailbox 级允许免 oracle）；拒绝响应防泄漏（伪装成与 token 交换失败同形）；缓存按信号稳定性（dead-domain 不缓存、disposable 跨路径复用）；诚实声明防线层级（来源：api.github.com/repos/activepieces/activepieces/pulls/15591，2026-10-12 merged）
+
+## r546A · 资格退场按操作分面：创建/编辑关闭、删除保留开放（防用户资产锁死且继续服务）；门禁必须服务端路由强制（UI 蒙层不是门禁）；删除出口不得被下游资格卡住；删除级联语义显式（模型从各 tier 移除、空 tier 删除、用户/旗标迁第一剩余 tier、一条 SQL）；自托管误伤验证（来源：api.github.com/repos/activepieces/activepieces/pulls/15948，2026-10-12 merged）
+
+## r546A · 维护/暂停态放行面不能按 HTTP 方法推断：GET 也会写（OAuth 浏览器路由暂停期写 token、审计读路由写行）；枚举测试把新路由未分类变成构建失败；放行清单带"读仍写什么"注释台账；覆盖边界诚实声明（来源：api.github.com/repos/langflow-ai/langflow/pulls/15633，2026-10-11 merged）
+
+## r546B · 策略引擎的形状：合成策略按评估序展开（未配置=defaultAction allow+version 0）；写入时报告遮蔽（warnings[{ruleId, shadowedByRuleId}]）；版本乐观并发（stale→409）；自有与合成分离（项目读自己不是与实例合成）；(isFloor, priority) 附件唯一+last write wins；共享文档改规则 bump 全部挂载作用域；先解绑再删（挂载中删除 409）；delegate 仅实例域（来源：docs.n8n.io/connect/n8n-api/credential-type-policy.md + node-type-policy.md，2026-10-12 一手 curl）
+
+## r546B · 强制面的形状：脱敏 floor 是跨实例下限（off/production/all）不是每域可选值；只读计数为收紧决策而存在（收紧前展示影响面）；整对象替换忽略只读字段（GET 可回填 PUT、API 与 UI 同一校验）；强制按认证通道分界（2FA 只对密码登录、SSO 由 IdP 管）；放松不追溯（关闭只影响新用户）（来源：docs.n8n.io/connect/n8n-api/security-policy.md + manage-security-policies.md，2026-10-12 一手 curl）
+
+## r546B · harness 塑形信念：任务/环境/基础 LLM 固定仅换 harness 仍产生跨 harness 信念分叉，且常不可见于终端成功、会传播成不同下游动作；诊断用 belief-rollout（预期世界状态+未来决策演化）且立即分歧与长程分歧分离；harness 会隐藏/压缩证据，跨 harness 比对前先对齐证据面（BIWM）（来源：arxiv.org/abs/2607.04528v2，2026-10-12 一手实拉）
+
+## r546B · 稳定证明哈希排除时间戳：attestationHash 只含 policy/evidence/findings hash 与干净/脏状态，deliberately excludes checkedAt——同状态重复检查必须同 hash，否则时间差把没漂移判成漂移；证据面随功能启用而增长（开新规则域=新证据进哈希），启用后须复审并刷新接受值；轮询间隔截顶防计时器溢出（来源：docs.openclaw.ai/cli/policy/attestation.md，2026-10-12 一手 curl）
+
+## r546B · 组合风险经工具效果-前置依赖图发现：一个工具的效果满足另一个工具的执行前置才是可达有害路径；让 LLM"想哪里有害"偏训练分布（熟悉组合高估、新颖跨服务交互低估）；执行反馈自改进扩样路径；recipe 采自图后实例化成真实场景（来源：arxiv.org/abs/2610.13886v1 X-AgentRed，2026-10-12 一手实拉摘要逐串命中）

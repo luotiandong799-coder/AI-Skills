@@ -1,7 +1,7 @@
 ---
 name: distill-cat
 description: 蒸馏总控（萃猫）：把任意可蒸馏材料加工成 agent 可调用资产，分两子模式——A·经典/书籍→决策与问题解决框架（单一经典深蒸馏如毛选矛盾分析/调查研究/实践论/集中优势兵力/持久战/弹钢琴/群众路线，或多经典交叉研判如资治通鉴/孙子兵法/穷查理宝典/反脆弱/刻意练习/原则等十部经典五层框架，输出八段式研判）；B·工作/经验/论文/会议→带 description 的可安装技能包+成长闭环。当用户要拆书/蒸馏经典方法论/做人生或重要决策研判/把工作经验或会议记录变成 skill/萃取方法论/给 skill 加成长功能时使用。书/视频/播客/课程的重流水线原子技能提取→cangjie-skill（RIA-TV++）。
-version: 2.0.0
+version: 2.1.0
 display_name: 萃猫
 display_name_en: Distill Cat
 agent_created: true
@@ -109,3 +109,8 @@ agent_created: true
 | grill-me | 对方案先拷问对齐（本技能偏建设性研判，不偏对抗） |
 | prompt-library-40 | 现成分析模板/话术（SWOT/决策矩阵/根因/复盘等） |
 | wb-skill-authoring | 技能写法、触发质量与体检（蒸馏产物落地后验收） |
+
+## 人类 GUI 演示→可复用技能：录制多模态对齐（屏幕+键鼠+可访问性树）→ 证据按需检视 → 技能三要素（工作流规则/步骤依赖/完成检查）；复用核心=分离工作流规则与任务特定细节；验收在下游扰动任务+加权评分+No Skill baseline 分差（来源：arxiv.org/abs/2610.12984 + github.com/china-qijizhifeng/Work2Skill，2026-10-12 r546C 一手实拉逐串命中）
+- **实证**：Work2Skill——computer-use agent 在不熟悉软件与需要人类领域知识的工作流上仍困难；人类演示在同一 GUI 交互空间传递程序性知识，但**复用要求「在上下文中解释动作」并「把工作流规则与任务特定细节分离」**。WorkRecorder 对齐屏幕录制、键鼠事件与可访问性树信息（aligning screen recordings, mouse and keyboard events, and available accessibility-tree information）；构建 WorkDemo-350（首个同步多模态人类桌面演示数据集，350 个演示经完整性与任务成功筛选）；agentic skill-induction 方法**按需检视证据**（inspects evidence on demand）产出 capturing workflow rules, step dependencies, and completion checks 的可复用技能。验收：同一四个执行模型在共享执行设置下装配各方法归纳的技能，Work2Skill 最高分；相对 No Skill baseline 均分提升 MyPCBench Bounded Action 4.67–10.54 分、286 任务 OSWorld-Verified 子集 3.11–7.50 分。下游任务含 64 个 MyPCBench 扰动变体（f 原始→j 扰动，366 条加权评分标准）与 286 个 OSWorld 任务 ID。仓库诚实标注：评测集成未随本版发布、模型相关抽取质量与跨平台录制待端到端验证。
+- **判据**：① **演示→技能的复用难题是「规则/细节分离」**：录下来的动作序列混着工作流规则与这一次任务的特定细节（这个文件名叫什么、这次数据长什么样），归纳出的技能只保留前者——判据：把技能文本里的任务特定值替换掉，流程仍成立。② **技能三要素**：工作流规则 + 步骤依赖 + 完成检查——缺完成检查的技能无法验收「做完了没」，缺步骤依赖的技能在界面顺序变化时静默走错。③ **证据按需检视而非全量倒入**：归纳器按需回看录制/事件/可访问性树，不是把 350 个演示灌进上下文——与渐进式披露同构（技能内容按需取证据）。④ **多模态对齐是证据底座**：屏幕+键鼠+可访问性树三路对齐，「他点了哪」与「界面上发生了什么」才能互相解释；单轨迹录像解释不了动作意图。⑤ **验收在下游扰动任务上**：原始任务变体（扰动）+ 加权评分标准 + 同一执行模型共享设置 + No Skill baseline 分差区间——归纳质量的证据是下游提升，不是技能文本看起来完整。⑥ **演示先进筛选**（完整性+任务成功）再进数据集——脏演示归纳出脏技能。
+- 提升层：可复用 Skill（经验→技能归纳）/ 工作流（演示录制与归纳流水线）。触发词：Work2Skill、人类演示归纳技能、WorkRecorder、屏幕+键鼠+可访问性树对齐、WorkDemo-350、证据按需检视、工作流规则/步骤依赖/完成检查、规则与任务细节分离、扰动任务验收、加权评分标准、No Skill baseline 分差、MyPCBench、OSWorld-Verified。
