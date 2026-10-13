@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全、秘密引用解析三覆盖、$var: 头部引用字面外泄、variables:read:<path> scope、日志不回显解密值、名称解析宽容度按读写分面、只读面模糊纠错、写面错名即失败、歧义给候选名单、never configure an action the model didn't ask for、待激活凭据隔离态、setup replacement、不进轮换不可 pin、tool-free turn 激活、失败保持非激活、个人账户存储隔离、会话级单选、故障转移不拿他人个人账户兜底、OAuth 验证钩子时机枚举、validateOAuthCredential、terminally fenced、计划后执行前重验、TOCTOU 面、隐式选择精确匹配、prefix alone never selects a harness、明文 HTTP 端点硬拒、legacy alias 归一、roleMapping 三模式、applyResolvedRoles 独立事务、claim-match 只评不写、跨会话组合攻击、Instruction Propagation、Data Boundary Violation、Evidence Poisoning、SkillRelayBench、SkillRelayGuard、工件来源上下文恢复、执行前 advisory、恶意产能按发布者聚合熔断、判定器与判定对象同面受审、扫描判级三原则、门控资格与分诊资格两档、滥用门 denylist、未来公共 provider 默认受检、PLATFORM_CONTROLLED_PROVIDERS、email_verified 证明范围、domain 级 invalid 拒绝 mailbox 级允许、mailbox 存在性 oracle、拒绝响应防泄漏、缓存按信号稳定性、资格退场按操作分面创建编辑关删除保留、门禁服务端路由强制 UI 锁不是门禁、删除级联语义显式、空 tier 删除旗标迁移第一剩余 tier、社区版误伤验证、维护态放行按副作用判、GET 也会写 token、路由分类枚举测试未分类即构建失败、读仍写什么台账、信任源自举未检查、sandbox 缺省沿用"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.86.0"
+version: "1.87.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -170,13 +170,11 @@ visibility: "public"
 - **② 批准要钉到可执行身份，不能钉到命令名**：批准的粒度是规范执行上下文——cwd、精确 argv、env 绑定、固定可执行文件路径；网关侧在评审前绑定每个解析出的命令段可执行文件，**启动前再检查一次**。原文同时给出边界声明：这只降低误执行风险，**不构成按用户的认证边界，也不构成文件系统只读策略**。判据：审查批准/白名单机制时问三件事——绑的是名字还是 argv+路径？启动时重不重查？文档有没有把"批准过"说成"有权"？三者任一答错即判缺陷。
 - 提升层：可复用 Skill（权限模型）/ 工作流（运行期授权复核）。触发词：批准不是授权边界、derivative correlation、revalidated on every use、exact argv、pinned executable path、re-check before launch、授权不能缓存、批准粒度、per-user auth boundary
 
-
 ## 审批校验要验「记录的签发者是否有权为本动作签发」，不能只验记录存在：跨技能链把伪造审批藏在单技能扫描的盲区（来源：arxiv.org/abs/2610.01564 + /html/2610.01564v1 293,934B，2026-10-08 一手实拉）
 - **实证**：APEX 全链攻击成功率 **84.3%**，而把同样的两步合并进**单个技能**只有 **17.4%**；512/690 attempts＝**74.2%**；提示层防御把良性 verifier 通过率从 **86.7%** 压到 **56.3%**。原文机制：「an agent-written record of genuine task progress can carry a false claim of user approval across skills」「an upstream skill induces the agent to create the record, and a downstream skill ...」。
 - **判据**：① **风险藏在链上，不在件上**——单技能静态扫描对本类攻击天然高漏（84.3% vs 17.4% 的差值就是链带来的增量），审计必须按**调用序列**而非单包取证；② 消费侧见「已批准」记录时，要回溯**该记录的签发者是否被授权签这一类动作**，只验存在性等于把上游诱导当授权；③ **防御代价必须与攻击成功率并列报告**（86.7%→56.3% 的可用性损失不是免费的），只报拦截率的防御方案不可验收。
 - **与既有能力分工**：r437C「允许清单声明权归运营方」管**谁有权写清单**；本条管**跨技能传递的审批声明由谁签发**——两处都是「声明者身份」，但一在授权面一在传递面，须分别检查。
 - 提升层：工具（取证面）/ 工作流（审计序列）。触发词：链式审批伪造、84.3 vs 17.4、agent-written record、跨技能链、签发者权限、防御代价并列报告。
-
 
 ## 技能根目录是「容纳边界」：装载时对越根软链一律跳过并留原因位，共享靠显式白名单目录而非隐式跟随（来源：docs.openclaw.ai `/gateway/troubleshooting/skills-and-model-providers` 247,412B，2026-10-08 一手实拉）
 - **实证**：官方日志形态「Skipping escaped skill path outside its configured root: ... **reason=symlink-escape**」；定性原句「**Every skill root is a containment boundary**」——`~/.agents/skills`、`<workspace>/.agents/skills`、`<workspace>/skills`、`~/.openclaw/skills` 下的越根软链一律 skip；放行须同时具备显式 `extraDirs` + `allowSymlinkTargets`，且 `~`、`/` 这类宽目标被禁。
@@ -498,3 +496,5 @@ visibility: "public"
 ## 排除规则要钉住「具体保留名」而不是「形状特征」：两个扫描器须共享同一条判定规则，否则数据主体擦除会留残（全文见 references/knowledge-base.md，2026-10-13 r551C，来源 langflow #15684）。触发词：排除规则形状误伤、is_owner_folder、点开头用户名、擦除后 chunk 留在盘上、保留字撞用户名。
 
 ## r552A/B 安全两条（全文已沉 references/knowledge-base.md）：出站 URL 共享守卫（来源 langflow #14421）/ ctx 输入由 viewer 会话填充而非请求体（来源 windmill #11698）。
+
+## r557B 下沉条目：**技能名可获得平台流程挂钩权**——会话起点在场一个名为 `verify`/`simplify` 的技能，宿主 commit 指令即改为「每次提交前运行它」（无需被调用）；挂钩生效取决于三道前提（位置在企业/个人/项目/附加目录或同名 `.claude/commands/`、未被 `disable-model-invocation` 关掉、`includeGitInstructions` 未关），且内置同名技能被用户技能遮蔽而非报错 ⇒ 装载审查须新增「惯用行为名碰撞」检查项（全文见 references/knowledge-base.md，2026-10-13 r557B，来源 code.claude.com/docs/en/skills.md）。触发词：技能名即权限、保留行为名碰撞、before each commit、disable-model-invocation 取消挂钩、内置技能被遮蔽。

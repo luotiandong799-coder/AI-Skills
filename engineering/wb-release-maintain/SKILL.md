@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、增量价值定价、API 套壳一票否决、评分项与否决项分列、证据可复跑、配对按稳定 id 优先于名称、改名因此降为非破坏性、rename-column、破坏性判定只留丢数据操作、拒绝集显式枚举且拒写、swap cycle 拒绝、id 跨表冲突、包内重复 id 拒绝、旧包按名配对静默采纳包 id、竞态限制诚实声明、diff 面板锚点、top panel 将被更新的一方、推拉面板互换、节点级 JSON diff
-version: "1.130.0"
+version: "1.133.0"
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -76,7 +76,6 @@ sources:
 ## 学习轮沉淀区（本段）
 （r历史 起的连续学习轮章节共 262 章已下沉 references/knowledge-base.md §≤200迁移，正文留此指针）
 
-
 ## 环境间提升必须单向；删除不随拉取传播；跨环境只搬「形状」不搬「秘密」（来源：docs.n8n.io `/administer/use-source-control-and-environments/push-and-pull-changes.md` 12,333B + move-work-between-environments 4,207B + understand-source-control 1,929B，2026-10-01 r339B 独立 curl 实拉逐串命中）
 - **原文**：①「work goes in one direction: **either to Git, or from Git, but not both**」（同一实例又推又拉官方明确不推荐）；②「When workflows, credentials, variables, tags, and data tables are **deleted from the repository**, your local versions of these resources **aren't deleted automatically**. … n8n notifies you about any **outdated resources** and asks if you'd like to delete them」；③「**Credential stubs** - name and type. Any other fields are included only if they are expressions.」「When the changes include new variable or credential stubs, n8n notifies you that you need to **populate the values for the items before using them**」；④「n8n **syncs data table schemas** … **Row data isn't synced.**」；⑤「**Workflow and credential owner may change on pull**」——按项目名匹配，无匹配则新建项目并把当前用户设为 owner；⑥「If you have more than one Git branch, you need to **merge the branches in your Git provider** to copy work between environments. **You can't copy work directly between environments in n8n.**」
 - **判据**：① **提升（promotion）链路要设计成单向**：源环境只推、目标环境只拉。同一节点双向同步会把「谁是最新的」变成运行时问题，官方宁可劝退也不做合并策略。⇒ 设计环境同步前先回答方向，方向不定就不该上线同步。② **删除是唯一不自动传播的动作**：仓库里删了，本地仍在，只会被标为 outdated 并等你确认。⇒ 「删了怎么还没生效」是预期行为；反过来说，**任何声称「同步」的通道都必须逐类声明删除是否传播**——不声明就是埋雷。③ **跨环境只同步形状，不同步秘密值**：凭据只走 name+type 的 stub，真实值由目标环境自备。⇒ 这既是安全边界（秘密不跨环境漂移）也是可用性约束（新 stub 未填值即不可用，必须在**使用前**阻塞而不是运行时才炸）。④ **schema 与 row 的同步策略必须分开声明**：结构同步、数据不同步，是默认且合理的——把两者绑成「全量同步」会让一次结构变更带走/覆盖生产数据。⑤ **跨环境迁移会改写归属**：owner 可能在新实例上被重指派。⇒ 迁移验收清单里必须有「权限/归属是否被改」这一项，否则迁移完成但责任人对不上。⑥ **环境间的"复制"要借道 Git 的合并能力，不要在应用内复制**：应用提供 push/pull 两端，合并语义交给真正的版本系统。
@@ -146,7 +145,6 @@ sources:
 - 发布检查项：① 这条验证的消费者是 exact-head 还是 latest-wins（决定是否允许取消）；② 发布候选路径能否绕过裁剪跑全图；③ 新增加密/并发是否已报最坏情况注册数且组织级占用 <60%；④ 低优先延迟事件是否有独立隔离组。
 - 提升层：工作流 / 工具。触发词：两槽流水线、non-canceling、coalesced pending tip、exact-head 绑定、草稿隔离组、智能裁剪、发布候选全量、fallback 不扩张、最坏情况注册数、60% 余量、别人余量不算容量。
 
-
 ## r353B · 日志配置热更存在 half-applied 窗口，轮转归档数是硬编码的（来源：docs.openclaw.ai `gateway/logging` 23,470B，2026-10-02 r353B 实拉）
 
 - **★日志类配置热更对"下一条记录"生效，但已排队记录写回原文件**：`logging.level` / `logging.file` / `logging.maxFileBytes` 在开启配置热重载后 "apply to the **next log record**, including records from long-lived channel loggers"，同时 "**Queued records finish writing to their original file.**"。判据：**改日志路径后存在一个窗口期：新记录进新文件、旧记录还在写旧文件**——做日志归档/切割时要按"两个文件都可能被写"来处理，不能以为切换是原子的。
@@ -154,12 +152,10 @@ sources:
 - **★启动日志会声明解析后的默认值**：网关启动时打印 resolved default agent model 与影响新会话的模式默认值（`thinking` / `fast`），未设置时 `thinking` 显示 `medium`；若插件重载覆盖了启动加载，则"model line, loaded-plugin summary, and channel warnings **use the replacement configuration**"。判据：**启动日志是"最终生效配置"的取证点，不是配置文件的回显**——排查"配置没生效"先看这一行，且要意识到插件重载会改写它。
 - 提升层：工具 / 工作流。触发词：日志热更、排队记录、轮转 5 份、启动日志解析默认值。
 
-
 ## r355A · 同一配置键在不同运行模式下语义不同：值不变而作用域漂移，回退条件必须显式写出（来源：docs.n8n.io `scaling/control-concurrency.md` 4,111B + `use-n8n-cloud/understand-concurrency.md` 3,828B 独立 curl 取 `.md` 原文，2026-10-02 r355A 实拉）
 
 - **★同一个环境变量在两种模式下管的不是同一个东西**：`N8N_CONCURRENCY_PRODUCTION_LIMIT` 在 regular mode 下限制**整个实例**的生产并发；在 queue mode 下它决定**单个 worker** 能并行处理多少 job，原文 "Concurrency control in queue mode is a **separate mechanism** from concurrency control in regular mode, but the environment variable … controls **both** of them. In queue mode, n8n takes the limit from this variable **if set to a value other than `-1`**, falling back to the `--concurrency` flag or its default"。判据：**换运行模式时配置值不变、语义已变**——上队列模式 / 扩容 / 迁移的变更单里必须重算这个数的含义，不能直接沿用旧值；且**回退条件要显式写出**（-1 才回退到另一参数），否则"设了没生效"与"生效过头"都无法定位。
 - 提升层：工作流 / 工具。触发词：配置语义漂移、运行模式、实例级与 worker 级、回退条件、并发上限迁移。
-
 
 ## r355C · 破坏性变更公告要带「迁移动作 + 时间点 + 不受影响面」；数据库只向前迁移 ⇒ 换载体等于空实例；被移除的配置是静默忽略，必须配存量自查（来源：docs.n8n.io `changelog/v30-breaking-changes.md` 21,374B 独立 curl 取 `.md` 原文，2026-10-02 r355C 实拉）
 
@@ -498,3 +494,7 @@ sources:
 - **共享文件改动的版本传播 + 提交前版本复位（2026-10-12 r545B 一手 curl 取 `.md` 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r545B·版本传播）。
 
 - **导入/合并配对按稳定 id 优先于名称（2026-10-12 r546A 一手 gh api 取 PR 原文实拉、逐串命中）**：本章已下沉 `references/knowledge-base.md`（r546A·id 优先配对）。
+
+## r557A/B 两条下沉条目：① **编辑态字段会顺着部署路径泄进持久层与 git**——编辑器内部字段挂在同一对象上时，每次部署都把它写进已部署实体并被 sync pull 带进受跟踪文件，产生 phantom diff 触发幽灵重部署，还会被误当根因；修法要覆盖部署请求体 / 草稿部署 / CLI pull / push / **比较两侧**，脏文件靠读取路径自动消解（全文见 references/knowledge-base.md，2026-10-13 r557A，来源 windmill #11719）。② **签名 feed 验签通过 ≠ 可安装**：payload identity 必须匹配 profile 声明的 feedId（防跨 feed 重放）、公钥只信带外发布/运维渠道而**不得取自 feed host 的 key endpoint**（否则自签闭环）、旧 profile 省略 feedId 只验签无绑定须登记为风险、可叠加 `--expected-sha256` 钉校验和（全文见 references/knowledge-base.md，2026-10-13 r557B，来源 docs.openclaw.ai/cli/plugins/marketplace.md）。触发词：编辑态字段泄部署、parent_version、phantom diff、比较两侧都 strip、feedId、跨 feed 重放、公钥来源分离、expected-sha256。
+
+## r557C 下沉条目：**依赖冲突的修法是「取最小放宽量 + 在约束旁记录理由 + 上界不触破坏性变更」**——下界取第一个解除冲突的版本、上界取下一个已知破坏面（如 LangChain 1.0 移除 materializers 依赖的导入路径），理由写在约束旁边的注释里；验收落在**解析器干跑**（`uv pip compile`）跑 fast-CI 的确切合并清单，并同时断言「旧约束下解析失败」；跨大版本的重写另立项（全文见 references/knowledge-base.md，2026-10-13 r557C，来源 zenml #5341）。触发词：pin 冲突、最小放宽量、上界由已知破坏面定、理由写在约束旁、解析器干跑、合并集成清单。

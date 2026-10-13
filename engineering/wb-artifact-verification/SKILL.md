@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、能不能跑、跑通了吗、check 一下、自检、回归、真的修好了吗、绿灯、失败注入、变异测试、假阳性、静默测错、不确定、证据不足、评分器、评测、基准、对照实验、覆盖率、flaky、可复现、退出码、失败分类法、批量失败、占位保配对、条数对齐、失败归属到条、来源自证端点、限流失效、评测续跑、只重放未完成、续跑可比性、解码失败不等于值错、绕过读取通道、合法 JSON 不等于合规、结构检查三态、提示前缀键序稳定、破坏性守卫查载荷语义、信封+载荷两层守卫、零次调用断言、票据寿命匹配会话时长、有效期无效形态枚举到上界、tokenRef 不绕过、引用名不发送、执行期可靠性重排、故障场景错选率、contextual bandit、配置值对部署上限校验、跨域重定向不保语义、301 丢 Authorization、打包产物消费方可解析、审计入口强制观察者、多写入路径审计对等、stdout 不等于 collector、迁移对等含资源上限、静默收紧上限、取消清理挂必然事件、_ClosingStream、完成态绑定目标身份、destination_changed、按写触面分级作废、接受态绑定单报告、harness 塑形信念、belief-rollout 诊断、终端成功看不见分叉、BIWM、证据被 harness 压缩、attestationHash 排除 checkedAt、同状态同哈希、审计四元组、启用新规则域须复审刷新、间隔截顶防计时器溢出、缺席折叠成空集合、校验两端同源自证恒真、压缩切点避开 tool 对、缺口标注禁止猜测
-version: "2.264.0"
+version: "2.266.0"
 agent_created: true
 ---
 
@@ -48,9 +48,7 @@ agent_created: true
 > 正文预算管理：「r354B · 截断/限额必须声明作用域（展示面 vs 执行面）；无鉴权通道靠「」（全文已零删减下沉 references/knowledge-base.md §下沉·r354B截断限额必须声明作用域展示面vs执行面无鉴权通道靠一次性兜底评测并发按档位给默认来源docsn8niousee）
 ## r354C · 机器可读取证有第四条通道：`Accept` 头内容协商；OOM 有三层异构信号且自愈能力取决于运行方式（来源：docs.n8n.io `scaling/memory-errors.md` 404 页 2,188B + `scaling/fix-memory-issues.md` + `scaling/use-external-storage.md` 独立 curl 取 `.md` 原文，2026-10-02 r354C 实拉）（全文见 references/knowledge-base.md §下沉·r354C机器可读取证有第四条通道Accept头内容协商OOM有三层异构信号且自愈能力取决于运行方式来源docsn8ni）
 
-
 ## r355A · 「仍在正确处理」≠「在服务窗内可用」：吞吐与延迟必须分开判；厂商性能数字是配置的函数而非常量（来源：docs.n8n.io `scaling/control-concurrency.md` 4,111B + `use-n8n-cloud/understand-concurrency.md` 3,828B + `scaling/measure-performance.md` 3,955B 独立 curl 取 `.md` 原文，2026-10-02 r355A 实拉）（全文见 references/knowledge-base.md §下沉·r355A仍在正确处理在服务窗内可用吞吐与延迟必须分开判厂商性能数字是配置的函数而非常量来源docsn8nioscali）
-
 
 ## r355C · 兼容性验证不能只判「崩没崩」：字段移除后的真实表现是「继续运行但降级」；能力按载体版本分档，缺档是「能用但少一档」（来源：docs.n8n.io `changelog/v30-breaking-changes.md` 21,374B 独立 curl 取 `.md` 原文，2026-10-02 r355C 实拉）（全文见 references/knowledge-base.md §下沉·r355C兼容性验证不能只判崩没崩字段移除后的真实表现是继续运行但降级能力按载体版本分档缺档是能用但少一档来源docsn）
 
@@ -91,14 +89,12 @@ agent_created: true
 - 安全头作用域要克制：HSTS 是 host-only，不替无关子域 opt-in，也不申请 preload；纯 HTTP 开发地址不发 HSTS ⇒ 作用域越宽，误伤与不可回退性越大（preload 基本不可撤）。
 - 同为"存储"，有没有卸载通道是两回事：KV store 的键值直接进 Postgres `jsonb`，**没有对象存储卸载通道、每次访问全量读写、计入数据库大小**；只有文件与运行日志才有卸载 ⇒ 容量验收要按存储面分开算，不能拿"日志 25MB 上限"推出 KV 也有同等余量。
 
-
 ## 验证结论必须声明「证明了什么的上界」，失败要分三类不可合并；同一份托管身份在不同执行面保证不同，验收须按执行面分别写（来源：docs.openclaw.ai `gateway/config-secrets-env.md` 10,309B + `gateway/config-tools.md` 7,517B 索引页 + `gateway/config-tools/github-identity.md` 17,020B，2026-10-03 r395A 独立 curl 取 `.md` 原文实拉）
 
 - **验证证明的是上界不是全体**：官方明确「验证证明的是哪个账号应答了 GitHub API 请求」，而 `/user` 端点**不证明写权限**；仓库级授权要等一次精确仓库操作成功才算已知 ⇒ 验收报告要写「这次验证证明了 A，不证明 B」，只写「校验通过」会让人以为写权限也验过了。
 - **失败三分类不可合并**：状态区分区分 missing credentials（缺凭据）/ unverified transport failure（未验证的传输失败）/ rate limiting（限流）三类，且不返回底层 `gh` 诊断 ⇒ 「拿不到结果」至少要分成「没凭据」「网络不可信」「被限流」，三者改的地方完全不同，合成一个「验证失败」就没法处置。
 - **同一托管身份在不同执行面保证不同**：本地 gateway-owned exec 每次启动前读取并校验 profile，把 token 只放进私有子进程环境并清掉 `GITHUB_TOKEN`；Codex-native shell 只拿到非密 overlay（`GH_CONFIG_DIR`），**不隔离 OS keyring**，profile 消失时 gh 可回落到原生 keyring；沙箱、node-host exec、remote-exec **根本收不到**托管凭据，只有 `github_publish` 记录一个不含凭据与仓库权限的有界发布请求 ⇒ 验收必须先问「这次跑在哪个执行面」，再说「用了托管身份」保证了什么。
 - **要强保证必须换执行面而不是加配置**：官方写明「需要启动绑定的托管身份保证时，用 `gateway_exec`」；native shell 的那套保证明确不覆盖 ⇒ 当能力声明与实际需求差一档时，正确处置是换通道，不是在同一通道里加参数。
-
 
 ## 查询接口收窄后必须自证「生效作用域 + 可能有省略」；被通知不等于可访问；附件的暂存位置、只读投影、脱敏与清理是四条独立约束（来源：docs.openclaw.ai `gateway/config-tools/sessions-and-subagents.md` 9,632B + `gateway/config-tools/custom-providers.md` 13,129B，2026-10-03 r395B 独立 curl 取 `.md` 原文实拉）
 
@@ -498,3 +494,7 @@ agent_created: true
 
 ## 产物形态与准入时点两条下沉条目（2026-10-13）：① 产物的「副本」必须归一到自包含的最通用形态——逐字节复制会带走源的模式标记却不带伴生文件，失败只在更严格的新版本才显形；修要让产物自包含而非给消费者一个特殊打开方式，全文见 references/knowledge-base.md（r553A，来源 langflow #15725）。触发词：字节级复制带走模式标记、sidecar 未复制、immutable=1 逃生舱、头部字节断言、旧版本也要抓到回归、打分不等于定位、代理信号缺位不报错、score-only teacher。 策略违规在「保存 / 发布 / 执行」三个动作上逐一前置阻断并逐条带 scope 渲染——闸门时点前移让违规对象根本进不了可执行态；三个时点是三道独立闸，缺一道就有旁路；阻断信息不回答「哪条 scope 违规」等于一道没有诊断信息的墙；前置闸不覆盖「规则后变」的存量制品，与执行期闸互补不替代，全文见 references/knowledge-base.md（来源 n8n #39263）。触发词：save/publish/execution 三动作阻断、编辑期闸 vs 执行期闸、getPolicyViolations、workflow.meta.violations、按 scope 渲染。
 ## r555A 三条下沉（全文见 references/knowledge-base.md）：① 自造的「原子替换」先删后改名 = 失败态丢数据（dify #43974：删已生效改名才生效，rename 失败旧文件已消失，原生 renameSync 本就支持覆盖）；② 派生 scope 清单只在夜间刷新 ⇒ 新覆盖的 source→spec 耦合不可见、变更被判 uncovered 而其 specs 被静默跳过（n8n #40942 impact map，nightly 独立 PR 刷新）；③ 「可见性开关」与「生效性前置」是两个独立开关——PostHog 放开了模块却因环境设置未加载而 404，修法是消灭平行 flag 而不是再加一个（n8n #40915）。触发词：atomicReplace 先删后改名、ENOENT leaves no destination、替换失败旧内容存活、真实 fs 回归、impact map、source→spec couplings、specs silently skipped、nightly refresh、uncovered 假信号、enabled in PostHog but endpoints 404、no separate preview flag、load module by default、force flag 不 bypass 主闸、flag 状态 × 模块加载二维表。 · r555B：引出式能力审计有密码学上限——加密电路藏进宿主权重，仅密钥触发才解密执行，digital locker 使隐藏电路在密码学假设下即使完整权重访问也难以引出（arxiv 2610.13928）。触发词：elicitation-based capability audits 的极限、digital locker、provably hard to elicit、权重可读≠能力可见、审计是对抗关系。
+
+## r557A 下沉条目：授权判定缓存的键必须覆盖「决定答案的全部输入」（权限来源字段最易漏），且**拒绝方向不得缓存**、放行方向给短 TTL；同一实体两个面结论相反（get 404 / 执行 200）即缓存不一致的首要信号（全文见 references/knowledge-base.md，2026-10-13 r557A，来源 windmill #11726）。触发词：授权判定缓存、键缺决策输入、只缓存放行、stale grant、撤权不生效、长度前缀哈希。
+
+## r557C 下沉条目：**未识别的东西不得给出任何描述，连形态都不许猜**——「不臆造」须按「存在性未知」与「名称已知但功能未知」分两档，后一档连推测都不允许；规约只覆盖某一维度（存在性/名称）时模型会在其余维度确定性发挥，故禁止语句要枚举被禁止产物的全部形态（名称/描述/域名/参数/示例），给不出时合法动作是**降级为最小复述**；验收用例须用虚构服务名而非形状校验（全文见 references/knowledge-base.md，2026-10-13 r557C，来源 n8n #40974）。触发词：未识别外部依赖不得描述、臆造域名、功能未知档、降级为最小复述、规约空白审计。

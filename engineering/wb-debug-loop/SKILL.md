@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支
-version: "1.205.0"
+version: "1.206.0"
 agent_created: true
 ---
 
@@ -403,3 +403,5 @@ agent_created: true
 - **实证**：节点执行 DB 查询违反约束（如 PostgreSQL duplicate key）时，驱动抛出的错误对象常携带**原始查询 buffer（可能极大）**；JS Task Runner 捕获后经 IPC 用 `JSON.stringify` 序列化，直接 fatal `JavaScript heap out of memory` 崩溃，**真实 DB 错误被掩盖**。修法：`makeSerializable` 改为严格的**原始类型白名单**（`string`/`number`/`boolean`），不再原地改错误对象；用 `Object.create(Object.getPrototypeOf(error))` 动态克隆原型以保留类身份（`UnsupportedFunctionError` 等）且不触发 non-configurable 描述符陷阱；对 `name`/`message`/`stack` 显式 `Object.defineProperties` 设 `enumerable/configurable/writable = true` 使其存活于 IPC 序列化边界。测试注入 50MB Buffer + non-configurable 属性，并用 `JSON.parse(JSON.stringify(safeErr))` 显式模拟 IPC 边界。
 - **判据**：① **错误处理路径自己是故障高发区，且失败形态最坏**：它一崩，用户拿到的是崩溃而不是根因 ⇒ 设计错误通道时要问「处理错误的代码本身会不会因为这份错误而崩」。② **错误对象的载荷大小是外部可控量**：原始查询 buffer、结果集、附件都可能被故障或对手放大 ⇒ 把不可控载荷带进序列化边界等于自埋 OOM，跨边界前必须先裁剪。③ **裁剪方式是白名单抽取，不是原地删除字段**：白名单默认丢弃未知（新加的大字段自动被挡），黑名单默认放行未知（下一次新增字段又炸）。④ **保类身份要靠克隆原型，不要复制属性**：直接赋值属性会碰到 non-configurable 描述符抛错，而 `Object.create(getPrototypeOf(e))` 绕开了这个陷阱。⑤ **可枚举性是跨 `JSON.stringify` 的生死线**：`message`/`stack` 若不可枚举，过边界后静默变空壳，`error.message` 变成 `undefined` ⇒ 「错误有值」与「错误能被传过去」是两件事，验收要在边界后断言。⑥ **测试必须模拟边界本身**：`JSON.parse(JSON.stringify(safeErr))` 而不是断言对象结构，同时注入极端载荷与描述符陷阱 ⇒ 序列化契约的回归测试要跑真实编解码。
 - 提升层：工具（错误通道与跨进程序列化）/ 工作流（故障可观测性）。触发词：错误处理路径崩溃、掩盖真实错误、50MB buffer、JSON.stringify OOM、原始类型白名单、Object.create 克隆原型、不可枚举字段过边界消失、JSON.parse(JSON.stringify()) 模拟 IPC。
+
+## r557A 下沉条目：告警分流先判责任归属——自家已向用户解释过的拒绝（VALIDATION / 配额上限）不该计为系统失败并持续 page on-call；「仍需人工介入」的那类（如会话卡死）保留 internal 但须给独立码避免与被降级类混淆；并发竞态伪装成业务错误时根因在写入路径（先读后插 → `ON CONFLICT DO NOTHING` + 再读）；分流表必须显式写出「未覆盖什么」（全文见 references/knowledge-base.md，2026-10-13 r557A，来源 activepieces #16452）。触发词：自家拒绝被计系统失败、user failure vs internal、告警分流按责任归属、独立错误码、值班噪音掩盖真信号。
