@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、超时、测试失败、行为与预期不符、构建/部署跑不起来、性能变慢、内存泄漏、复现不了的怪问题时应用：重现 → 最小化 → 假设 → 验证 → 修复 → 回归测试。禁止"先改再猜"、禁止一次改多处、禁止靠重启/清缓存糊过去。另含「修复验证」：补丁是待验证假设，不从 diff 大小/作者/上游一致/原 PoC 失效推成功，须测同根因变体与兄弟路径。触发词：报错、错误、异常、崩溃、闪退、白屏、跑不起来、不生效、没反应、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支
-version: "1.210.0"
+version: "1.211.0"
 agent_created: true
 ---
 
@@ -417,3 +417,5 @@ agent_created: true
 - 提升层：工作流（错误处置与后果量级）/ 工具（信源分面记账）。触发词：BundleValidationError、缺数据被当错误、缺字段停用整条、Skip 与 Resume 错误处理器、ifempty 前置过滤、四选一处置、后果量级匹配、Make llms.txt 可达。
 
 ## r561B 两条下沉：① **终态必须单调**——提前 `break`+`aclose()` 退出 async generator flow 时运行先 Completed 再 Failed（`async_generator has no attribute 'throw'`），completion 与 failure 两个 hook 都触发，而生成器 `finally` 不跑；提前退出是合法终止语义而非错误，清理必须绑在终止路径上，「同一实例触发两个互斥 hook」是状态机把一次终止算两遍的自检信号（全文见 references/knowledge-base.md，来源 prefect #23373）。② **终止面要枚举「已出发但未完成」的全部表示**——强制停止只查 `RUNNING`，而节点是同步置 `STARTING`、异步完成后才翻 `RUNNING`，窗口内被整个漏掉并在 `run()` 返回后才翻成 RUNNING，在 K8s 上表现为孤儿 Job 继续跑在已停掉的 pipeline 上（全文见 references/knowledge-base.md，来源 zenml #5179）。触发词：Completed 后转 Failed、completion 与 failure 双触发、generator finally 不跑、终态单调、force stop 漏 STARTING、同步置位异步完成、孤儿 Job。
+
+## r562A 下沉条目：乘性参数的默认值要取该运算的单位元——`backoff` 默认 0 使 `delay *= backoff` 归零，退避机制被静默关闭而非"保守默认"；表现为"重试了但没退避"，排障会误判为策略没配；单测要断言"第二次重试 sleep > 0"这类机制生效条件（全文见 references/knowledge-base.md，2026-10-14 r562A，来源 zenml #5346）。触发词：backoff 默认 0、退避被归零、默认值让机制失效、重试了但没退避。
