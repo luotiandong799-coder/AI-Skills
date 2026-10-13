@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全、秘密引用解析三覆盖、$var: 头部引用字面外泄、variables:read:<path> scope、日志不回显解密值、名称解析宽容度按读写分面、只读面模糊纠错、写面错名即失败、歧义给候选名单、never configure an action the model didn't ask for、待激活凭据隔离态、setup replacement、不进轮换不可 pin、tool-free turn 激活、失败保持非激活、个人账户存储隔离、会话级单选、故障转移不拿他人个人账户兜底、OAuth 验证钩子时机枚举、validateOAuthCredential、terminally fenced、计划后执行前重验、TOCTOU 面、隐式选择精确匹配、prefix alone never selects a harness、明文 HTTP 端点硬拒、legacy alias 归一、roleMapping 三模式、applyResolvedRoles 独立事务、claim-match 只评不写、跨会话组合攻击、Instruction Propagation、Data Boundary Violation、Evidence Poisoning、SkillRelayBench、SkillRelayGuard、工件来源上下文恢复、执行前 advisory、恶意产能按发布者聚合熔断、判定器与判定对象同面受审、扫描判级三原则、门控资格与分诊资格两档、滥用门 denylist、未来公共 provider 默认受检、PLATFORM_CONTROLLED_PROVIDERS、email_verified 证明范围、domain 级 invalid 拒绝 mailbox 级允许、mailbox 存在性 oracle、拒绝响应防泄漏、缓存按信号稳定性、资格退场按操作分面创建编辑关删除保留、门禁服务端路由强制 UI 锁不是门禁、删除级联语义显式、空 tier 删除旗标迁移第一剩余 tier、社区版误伤验证、维护态放行按副作用判、GET 也会写 token、路由分类枚举测试未分类即构建失败、读仍写什么台账、信任源自举未检查、sandbox 缺省沿用"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.83.0"
+version: "1.85.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -156,7 +156,6 @@ visibility: "public"
 ## 技能「形态」应在内容审查之前先定权限档：是否捆绑可执行脚本是可静态判定的事实，直接决定权限下限——实测 bundling executable scripts 使漏洞风险 2.12×（来源：arxiv.org/html/2602.12430v4 169,999B，2026-10-08 独立 curl 实拉逐串命中 `Skills bundling executable scripts are 2.12` / `An unvetted community skill (T1) receives instructions-only access with full tool isolation` / `T1 and T2 skills are never granted script execution` / `Level 3 executable scripts require T3 or T4 trust`；与 §恶意产能按发布者聚合熔断 互补——那条管封禁的作用域单位，本条管单个技能安装前的权限先验档）
 - **判据**：① **形态先于内容**：有无 `scripts/`、frontmatter 是否声明可执行资源，是零成本可判的事实；把它作为权限档输入，可在读第一行代码前就把默认权限压到 instructions-only（T1/T2 永不授予脚本执行），审查资源优先投给含脚本者。② **2.12× 是分诊权重不是罪名**：倍数是排队依据（含脚本优先深审、加行为回归），不是「含脚本即恶意」。③ **与行为定档串联而非替换**：既有按沙箱观察后定档是事后校验，本条是事前先验，串成「先验给下限、行为校验再升降档」。④ 数字须连原文位置引：2.12× 出 Sec 6.2 实测、T1–T4 出 Sec 6.4 权限映射，混引会造出不存在的因果。（细则见 references/knowledge-base.md §r437A）
 - 提升层：可复用 Skill（准入策略 / 权限先验）。触发词：形态先验权限档、2.12×、T1/T2 不授予脚本执行、Level 3 脚本需 T3/T4、含脚本优先深审、先验档与行为定档串联。
-
 
 ## 风险档位只由「可能性 × 影响」决定，不得按「偏离清单的条目数」打分；判定三态中未确认项被显式剥夺 severity，且检查者不得是发现者（来源：github.com/cloudflare/security-audit-skill 295,484B，2026-10-08 独立 curl 实拉逐串命中 `Severity requires impact.` / `Likelihood x impact, not deviation from a checklist.` / `confirmed, needs_validation, and rejected` / `The agent that checks a finding is never the agent that found it.`；与 §扫描判级三原则 互补——那条管能力≠滥用，本条管定级的算术与判定者分离）
 - **判据**：① **符合度不是风险**：偏离清单条目多不等于风险高，只有 likelihood×impact 才是定级输入；把「不符合项计数」当风险分会让清单越长风险越高。② **三态各带约束**：`confirmed` 需 complete source trace + bounded observed result；`needs_validation` 只记未决事实、**禁带 severity**（未证实的候选不得预先打分）；`rejected` **显式记录被证伪的候选**（不静默丢弃）。③ **检查者≠发现者**：验最终源主张要用 fresh agent，不复用原 detector。（细则见 references/knowledge-base.md §r437C-4）
@@ -497,3 +496,5 @@ visibility: "public"
 
 
 ## 排除规则要钉住「具体保留名」而不是「形状特征」：两个扫描器须共享同一条判定规则，否则数据主体擦除会留残（全文见 references/knowledge-base.md，2026-10-13 r551C，来源 langflow #15684）。触发词：排除规则形状误伤、is_owner_folder、点开头用户名、擦除后 chunk 留在盘上、保留字撞用户名。
+
+## r552A/B 安全两条（全文已沉 references/knowledge-base.md）：出站 URL 共享守卫（来源 langflow #14421）/ ctx 输入由 viewer 会话填充而非请求体（来源 windmill #11698）。
