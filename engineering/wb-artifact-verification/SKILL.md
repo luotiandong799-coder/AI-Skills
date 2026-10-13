@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、能不能跑、跑通了吗、check 一下、自检、回归、真的修好了吗、绿灯、失败注入、变异测试、假阳性、静默测错、不确定、证据不足、评分器、评测、基准、对照实验、覆盖率、flaky、可复现、退出码、失败分类法、批量失败、占位保配对、条数对齐、失败归属到条、来源自证端点、限流失效、评测续跑、只重放未完成、续跑可比性、解码失败不等于值错、绕过读取通道、合法 JSON 不等于合规、结构检查三态、提示前缀键序稳定、破坏性守卫查载荷语义、信封+载荷两层守卫、零次调用断言、票据寿命匹配会话时长、有效期无效形态枚举到上界、tokenRef 不绕过、引用名不发送、执行期可靠性重排、故障场景错选率、contextual bandit、配置值对部署上限校验、跨域重定向不保语义、301 丢 Authorization、打包产物消费方可解析、审计入口强制观察者、多写入路径审计对等、stdout 不等于 collector、迁移对等含资源上限、静默收紧上限、取消清理挂必然事件、_ClosingStream、完成态绑定目标身份、destination_changed、按写触面分级作废、接受态绑定单报告、harness 塑形信念、belief-rollout 诊断、终端成功看不见分叉、BIWM、证据被 harness 压缩、attestationHash 排除 checkedAt、同状态同哈希、审计四元组、启用新规则域须复审刷新、间隔截顶防计时器溢出、缺席折叠成空集合、校验两端同源自证恒真、压缩切点避开 tool 对、缺口标注禁止猜测
-version: "2.249.0"
+version: "2.251.0"
 agent_created: true
 ---
 
@@ -488,3 +488,6 @@ agent_created: true
 - **判据**：① **一个退避策略同时服务两类故障，必须分档**：前 5 次瞬时（应对 DB 瞬时抖动），6–10 次指数（应对真故障）⇒ 只用指数档会把一次抖动拖成分钟级等待，只用瞬时档会在真故障上打爆下游；分档的位置与每档次数要写出来，让总窗口可算。② **未知类型必须抛错而不是静默退化**：`The strategy throws on unknown backoff types so a typo on a future job isn't silent` ⇒ 配置型错误的默认处置是响亮失败，退回默认策略会把拼写错误变成"看起来在重试"。③ **混合版本滚动期，老 pod 不能消耗重试预算**：没有处理器的 pod 把作业延后一分钟并抛 `DelayedError`，**不消耗 attempt** ⇒ 否则过渡期的每一次投递都会吃掉一次预算，作业在真正能处理它的版本上线前就被判死。④ **让位必须封顶**：按作业年龄 15 分钟封顶（对缺失 `job.timestamp` 亦防御性处理），过期走正常失败路径 ⇒ 不封顶会让已退役的作业名在集群里永远弹跳。⑤ **拿到锁之后要二次确认工作是否已被做完**：`Lock holder re-checks background_migrations.executed_at on acquire so a waiter sees the finished work and skips` ⇒ boot catchup 与 BullMQ handler 可能分处两个 pod，加锁不等于独占一次执行权，重查才是跳过重复执行的依据。⑥ **新增观测面不得接管既有状态码**：`backgroundMigrations` 块是 informational，`never changes the 200 status`，整体 DB 健康仍由既有的 `database: false` 表达 ⇒ 否则"后台回填失败"会被升级成"实例不健康"，一层次要信号劫持了发布与告警门控。⑦ **观测接口自身的失败要降级成数据而不是异常**：`getStatus` 整包 `tryCatch`，DB 出错时返回零值 + `error` 字段而不是抛 ⇒ 观测层的故障不应让健康检查整体失效。
 - 提升层：工具（后台作业调度与退避策略）/ 工作流（滚动升级期间的作业归属与发布门控）。触发词：instant burst then exponential、unknown backoff type throws、moveToDelayed no attempt consumed、bounded by job age 15 min、re-check executed_at after lock、informational never changes 200 status、getStatus degrades not throws。
 - 与 rm r533A（同一 PR 的第一面：双轨迁移拓扑、跨版本 boot lockout catchup、健康信号做发布门控）分工：那条管「迁移怎么拆轨、升级怎么不锁死」，本条管「后台作业自身的退避形态、混合版本让位与观测面的降级边界」，两点取自同一 PR 的两个面，不重复计数。
+
+
+## 守卫与缓存两条下沉条目：① 配置了但从未接线的守卫比没有守卫更危险（闸门失效有三类独立契约错：输入源 / 载荷路径 / 退出码语义），全文见 references/knowledge-base.md（2026-10-13 r551A，来源 zenml #5339）；② 缓存要存「可重放的输入」而非「派生态」，并把用途与精度分离，全文见 references/knowledge-base.md（2026-10-13 r551C，来源 arxiv 2610.13778 ReplaySSM）。触发词：守卫从未生效、hook never ran、exit 2 才阻断、缓存输入非状态、checkpoint 加输入缓冲、用途与精度分离。
