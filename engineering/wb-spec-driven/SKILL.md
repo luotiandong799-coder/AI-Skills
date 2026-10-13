@@ -2,7 +2,7 @@
 name: wb-spec-driven
 description: >-
   规约驱动的多步实现（Spec-Driven Development）。当用户要求做 3 步以上的实现任务、跨会话长任务、或需要自主跑到交付的编码/改造任务时自动应用：先立规约（constitution + 本次变更 spec，含验收标准与范围外）→ 信息不足先澄清、禁止脑补 → 计划-实现-验证循环 → 独立验证 → 交付。含陌生代码先上浮抽象层取全局地图、跨会话交接文档写法、以及「执行前评审」（动手前用三镜头：完整性/一致性/风险）。单次小改动不套用（走 wb-ponytail 决策后直接改）。触发词：多步任务、长任务、按计划执行、自己跑完、交付给我、实现方案、重构、改造、批量修改、跨会话任务、交接、handoff、接手、新会话继续、陌生代码、先看全局、spec、验收标准、需求不明确、先澄清、防静默跳过、设计防呆、防错、执行前评审、评审计划、失败封闭、执行简报、失败处置、回滚还是提交、跳过还是重试、任务准入、交给 AI 多少自主权、实习生判据、错误代价、敏感数据、预算校验、中途提权、无人值守、人工关卡、HITL、不可逆操作、人在环中、可以拒绝、范围治理、静默缩水、分解不缩水、架构不变量、约束漂移、规划包络不等于 SLA、路线图别说成已交付、任务要自包含、委派失败、响应对不上号、并发等待、派活还是提问、谁能派活、委派死循环、问太多、角色重叠、验收写 golden 还是 rubric、一次通过算改进吗、评审带宽、diff 按逻辑分组、发现要分置信度、状态先声明后使用、运行期不许新建键、状态 schema、单次执行状态、随机键、默认不可复用、键的确定性、模板键、键函数被静默忽略、多来源谁生效、模糊度闸门、欠规格请求、提问的锅还是模型的锅、进生产前 triage、分流澄清还是升级模型、只打分不分流、状态容器、执行上下文、1MB 上限、序列化开销、大产物留引用、子执行隔离、可独立重跑、上层配置语义、继承还是触发、静态动态语义不同、管线级不跑、被忽略的参数、声明位置决定语义、该不该问、重要假设、多解并存、静默假设、问的成本、轮数平方、澄清策略、平均轮数、累计惩罚、先查再问、并发汇聚释放下界、barrier 无 PENDING 即释放、策略只许提前不许推后、stillRunning/timedOut/notDispatched 分账、signalsTruncated 明示、恢复形状八字段
-version: "1.113.0"
+version: "1.114.0"
 agent_created: true
 ---
 # wb-spec-driven（多步实现：先立规约，再动手）
@@ -424,3 +424,8 @@ spec 里写了成本上限 / 时间上限 / 重试上限 / 文件范围就必须
 - **实证**：Activepieces barrier 配置 `policy = { requiredSuccesses?, releaseOnFirstFailure?, reasonRequiredOn? }`；信号态 PENDING/SUCCEEDED/FAILED/REJECTED/CANCELED/NOT_DISPATCHED；释放规则=屏障一旦无 PENDING 即释放，策略只允许更早释放（`requiredSuccesses` 覆盖 2-of-3 认可、`releaseOnFirstFailure` 覆盖一票否决），不许推后；提前释放时留下的 pending 信号如实报 `stillRunning`；`AP_MAX_BARRIER_SIGNALS=10000` 硬顶钳制，`signals` 数组仅 `total<=100` 才给否则给 `signalsTruncated`；恢复形状一次给全 `{total,succeeded,failed,rejected,canceled,notDispatched,stillRunning,timedOut}`，表达式不因 fan-out 宽度变形。
 - **判据**：① 汇聚释放条件取下界「无待决」——策略只能把释放提前（更少必要成功/一失败即放），任何配置不得把释放推后，否则屏障会在该收尾时挂住；② 回执计数必须三态分账——未派发/仍在跑/已超时不许折算进成功数，提前释放留下的 pending 报 stillRunning，超上界时 signalsTruncated 明示而非静默裁；③ 恢复形状一次性给全八字段，消费方不因宽度差异走不同表达式。
 - 提升层：工作流（并发汇聚规格）。触发词：barrier 释放下界、无 PENDING 即释放、策略只许提前、stillRunning/timedOut/notDispatched 分账、signalsTruncated 明示、恢复形状八字段。（来源 Qoder）
+
+## r560B · 需求澄清本身要进评测面：澄清有效性 ≠ 需求文档质量，用户 persona 是一等变量，编码 harness 不会自动改善需求侧（来源：arXiv 2610.13022《Don't Guess, Just Ask: Evaluating Interactive Requirement Clarification for Repository-Level Software Development》，2026-10-14 r560B 一手 arXiv API 200 命中摘要）
+- **实证**：现有基准要么给完整规格、要么给欠规格请求，**跳过了编码前的需求澄清环节**；既有澄清研究集中在函数级任务。论文构造 ReqClarifyBench：341 个仓库级任务（游戏 / 小程序 / Web 开发），每个含一条模糊用户意图 + 人工校验过的需求文档 + 代码评测件；用户侧用从真实对话派生出不同 **persona** 的 LLM 模拟器。测 6 个 LLM 的三点结论：**澄清交互更有效并不意味着产出的需求文档质量更高**；跨用户 persona 表现差异很大；**编码 agent 的 harness 并不能进一步改善需求文档质量**。
+- **判据**：① **「问清楚了」与「写出来了」是两个能力，要分开测**：澄清有效性高不等于需求文档质量高，验收时不能用交互流畅度代替文档质量。② **需求澄清必须进评测/验收面**——否则「实现能力强」会掩盖「一开始理解错了」，返工成本被记在实现阶段头上。③ **用户 persona 是需求澄清的一等变量**：不同表述风格的用户会显著改变结果，评测与验收都要覆盖 persona 多样性，不能只用单一模拟用户跑通就算过。④ **把编码 harness 加进来不会自动改善需求侧**：需求阶段需要独立机制（澄清协议 / 模板 / 人工闸门），不能指望代码能力外溢到理解能力。
+- 提升层：工作流（需求阶段验收）/ 可复用 Skill（澄清协议）。触发词：ReqClarifyBench、需求澄清评测、澄清有效性≠文档质量、persona 多样性、coding harness 不改善需求文档、先问再猜。
