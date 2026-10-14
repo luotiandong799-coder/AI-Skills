@@ -3598,3 +3598,24 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 2. **删除与匹配用存储形态标识原样比对**（langflow PR #15632）：DB2VS 的 `delete` 在比对前对 id 重新做大小写规范化（re-casing）⇒ 与库中实际存储形态不符，删除静默命中 0 行、数据留下且无报错。判据：① 删除/查找的比对键必须是「存储时写下的那个字符串」，禁止在比对路径上重新格式化、规范化、trim 或重排；② 删除类操作的验收是「目标确实消失 + 命中行数显式上报」，命中 0 行须报警而非当成功；③ 与 §身份归一（sa 内联技能按稳定标识归一）分工：归一发生在**写入时**（统一写形态），本条禁止的是**比对时**再变换。
 - 提升层：工具（请求构造校验/删除正确性验收）。
 - 触发词：FormData 复用、跨调用残留、upload 累积字段、re-casing、原样比对、命中 0 行、删除无报错。
+
+
+
+## r572A 下沉条目：① 缺失的限定参数不得静默退化为全局作用域，② 客户端/服务端孪生类的属性必须对称核验（来源：activepieces PR #16491 + PrefectHQ/prefect PR #23181，2026-10-15 r572A 一手 gh api 200 逐串命中）
+
+1. **必填限定参数缺失 → 退化为全局作用域且报成功**（activepieces #16491）：Tables 类步骤缺 `table_id` 时，触发器以 ENABLED 发布、不注册 webhook、从不触发且**无任何错误**；更严重的是 action：`qs.stringify` 丢掉 `externalIds: [undefined]` ⇒ 列表调用**无过滤返回** ⇒ 代码取 `data[0]` ⇒ 「Clear Table」清空了*另一张表*，而该步骤报 **SUCCESS**。根因是引擎 props 校验器**不对下拉框强制 `required`**。
+   - 判据：① 限定作用域的参数（表/项目/命名空间/租户 ID）一旦缺失，唯一合法结果是**显式失败**，禁止回退到「不限定」语义；② 序列化层「丢掉 undefined 导致查询条件整体消失」必须在出口侧断言——返回未过滤全量 != 参数缺省的合法结果；③ 禁止在无过滤结果上取首元素充当目标，取 `data[0]` 前必须断言结果集恰为 1；④ 校验器对「必填」的覆盖要按控件类型逐一核验，下拉/异步加载控件历史上最常被漏掉 `required`。
+   - 与 §命名空集授权（av 2.290.0 windmill #11767）分工：那条管**授权侧**指向不存在的主体，本条管**数据侧**作用域参数缺失后退化成全量。
+2. **孪生类属性对称缺口**（prefect #23181）：`ReceivedEvent.url` 只存在于服务端类，客户端孪生类没有 ⇒ `client_event.url` 抛 AttributeError，而 `url_for(client_event)` 因做了 duck-type 依旧正常。既有测试恰好只覆盖了 helper 路径，缺口长期无人发现。
+   - 判据：① 同一概念存在 client/server 两份类型时，属性集合必须成对核验，差异需显式成文说明；② 用 duck-type / 兼容 helper 兜底会**掩盖**孪生类缺口，不得把它当作对称性已验证的证据；③ 回归用例须直接访问属性，不能只测 helper 函数；④ 与 §保形（av 2.290.0 langflow #15751 非 dict 保形）分工：那条管运行时数据形状，本条管编译期可见的类型定义对称。
+- 提升层：工具（参数校验/作用域正确性/类型对称验收）。
+- 触发词：table_id 缺失、externalIds undefined、无过滤返回、data[0]、Clear Table 清空别的表、props 校验器不强制 required、孪生类、client-side ReceivedEvent、url_for duck-type、helper 掩盖属性缺口。
+
+
+
+## r572C 下沉条目：脱敏开关必须逐字段声明覆盖范围，异常/状态/模板/指令不在默认脱敏内（来源：pydantic/pydantic-ai GHSA-4x9p-g9wm-8q7f + GHSA-3gh4-cghq-f8v4，2026-10-15 r572C 一手 gh api security-advisories 200 逐串命中）
+
+1. **`include_content=False` 的覆盖缺口**（两条同源公告）：OpenTelemetry 插桩在 `include_content=False` 时**不脱敏**异常（`Exceptions`）、错误状态（`error statuses`）、指令（`instructions`）与**输出模板**（`output template`）；另一条同类：重试 prompt 内容（`retry prompt content`）在 `include_content=False` 时同样不被脱敏。
+   - 判据：① 把「内容脱敏」做成一个总开关时，必须**逐字段列举**哪些载体属于「内容」并给出清单——异常消息、错误状态码、系统/用户指令、输出模板、重试时重放的 prompt 全都是内容载体，默认实现普遍漏掉它们；② 验收「已脱敏」不能只看正常成功路径的 span，必须专门构造失败路径（抛异常 / 重试 / 模板渲染）并逐一核对导出物；③ 模板与指令是**静态内容**，往往被当作配置而非数据而逃过脱敏，需显式纳入；④ 与 §永不可见类/被拒尝试留痕（av 既有面）分工：那条管什么**必须**记，本条管记的时候什么**必须**被抹掉。
+- 提升层：工具（可观测性脱敏/导出物安全）。
+- 触发词：include_content=False、不脱敏异常、错误状态未脱敏、输出模板泄漏、retry prompt 未脱敏、OTel 插桩脱敏缺口、逐字段声明覆盖范围。

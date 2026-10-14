@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、TTL seconds*1000、absolute deletion date、valid date in the future、7-day minimum、alreadyDeleted、audience human、AI 孪生动作、消费者退出生产者仍跑、关闭要传播到下层流、shield 异步关闭、后台清理任务只跑在 leader 内存定时器、durable system task
-version: "1.222.0"
+version: "1.223.0"
 agent_created: true
 ---
 
@@ -448,3 +448,14 @@ agent_created: true
 
 - **提升层**：工具（更新契约与采集循环排障）/ 工作流（检查点治理）。
 - 触发词：全量替换丢字段、read-modify-write、RRULE 被抹、只改一字段回归、游标永不前进、毒态循环、lastPoll 重置、审批路径漏 isRepublish、检查点丢失。
+
+
+
+## r572A 下沉条目：① 返回值里的错误对异常式重试不可见；② 可观测性必须建在「静默丢弃」路径上，且严重级按失败因分类（来源：langgenius/dify PR #44061 + activepieces PR #15450，2026-10-15 r572A 一手 gh api 200 逐串命中）
+
+- **实证**：① 归档删除的 Celery 任务忽略 deleter 返回状态，`FAILED` 时直接 `return None` ⇒ 声明好的 `autoretry_for` / `retry_backoff` / `max_retries` **永不触发**，失败的删除被记为任务成功、零重试（dify #44061）。② 异步 webhook 被接受（200）、`EXECUTE_WEBHOOK` 任务完成 OK，却**没建 run、没日志**：非 OK 引擎状态把 `execResult.error` 丢弃未读、空 trigger 输出静默跳过、沙箱超时仅 warn 且无请求上下文；实测 9 次请求丢 1 次，而日志行与成功任务**完全相同**（ap #15450）。修复为每条 no-run 路径按实体分组记日志，且**严重级按失败因分类**：INTERNAL_ERROR/TIMEOUT/MEMORY_ISSUE=error，USER_FAILURE=warn（原文理由：免得客户代码失败按每次投递污染 error-rate 告警），合法空输出=info。
+
+- **判据**：① 错误只能走异常通道上报，禁止用「返回值里的状态字段」表达失败——调用方若只读返回值而框架只认异常，`autoretry_for` 这类声明式重试就是死代码；② 补这类缺陷的回归用例必须是「返回 FAILED 时任务状态=失败且发生了重试」，而不是「函数返回了 FAILED」；③ 可观测性优先建在**什么都没发生的路径**上（接受了请求却没建 run、跳过了空输出、超时只 warn），这些路径的日志与成功路径越像，故障越难发现；④ 严重级按**失败因**分类而非按「有没有异常」：外部用户代码的失败降为 warn，避免把他人故障计进自身 error-rate 让告警失灵；⑤ 与 §失败可见队列续跑（dl 1.222.0 activepieces #16494/#16495）分工：那条管失败后用户可见与后续请求能续跑，本条管失败根本没被记录/被记为成功。
+
+- **提升层**：工具（重试语义正确性/静默路径可观测）/ 工作流（告警分级）。
+- 触发词：返回值里的 FAILED、autoretry_for 永不触发、任务成功但没重试、no-run 路径、execResult.error 未读、日志与成功完全相同、USER_FAILURE 降 warn、error-rate 污染、严重级按因分类。

@@ -3846,3 +3846,12 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 3. **AI 生成节点的未完成配置须跨构建保留**（n8n PR #41070）：Assistant 在较早构建里添加的节点带 pending setup（待用户补全的配置），节点在后续构建被重建 ⇒ pending 状态丢失、节点表现为已配好实则缺参。判据：① AI/助手生成物件的「未完成」是**一等状态**，须按稳定身份持久化，不随重建、刷新或版本切换蒸发；② 生成侧必须显式输出「已生成 + 待补字段清单」，消费侧按清单验收；③ 与 §批量装配部分提交（dl 1.221.0 openclaw enable 首败即停）分工：那条管启用态三态，本条管配置补全态的跨构建存续。
 - 提升层：工具（检索与过滤正确性）/ 可复用 Skill（技能选型与生成物验收）。
 - 触发词：客户端过滤只搜当前页、过滤下推、空结果歧义、coalition pollution、边际贡献、跨域效用反转、pending setup 跨构建、待补字段清单。
+
+
+
+## r572C 下沉条目：技能级 hook 的作用域是「从被调用到会话结束」，不是单次调用（来源：code.claude.com/docs/en/skills，2026-10-15 r572C 一手 curl 200 / 1,216,564B 逐串命中）
+
+1. **技能级 hook 的生命周期**：官方文档字段表写明 `hooks` = "Hooks that Claude Code registers **when the skill is invoked** and **keeps running for the rest of the session**"；另处补充 "That hook applies from the time the skill is invoked **until the session ends**"。即 hook 不是「本次调用内有效」，而是**注册一次、余下会话全程有效**。
+   - 判据：① 写进技能 frontmatter 的 hook 必须按「会话级常驻」来设计——它会在后续与该技能无关的操作上继续触发，副作用与成本都是会话级的，不是调用级的；② hook 内禁止写入只在「技能刚被调用」这一刻成立的假设（当前文件、当前工具集、当前意图），因为会话后期这些都不再成立；③ 需要单次生效的行为不要放进技能 hook，改用调用内的显式步骤；④ 与 §硬规则 hook 化（既有面）分工：那条管「什么内容该做成 hook」，本条管「hook 一旦注册就活到会话结束」这一作用域事实，错把它当调用级会产生跨任务的意外副作用。
+- 提升层：可复用 Skill（技能结构）/ 工具（hook 生命周期）。
+- 触发词：hooks frontmatter、技能级 hook、keeps running for the rest of the session、until the session ends、hook 作用域、会话级常驻 hook。
