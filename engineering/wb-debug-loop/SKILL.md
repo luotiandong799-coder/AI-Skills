@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、TTL seconds*1000、absolute deletion date、valid date in the future、7-day minimum、alreadyDeleted、audience human、AI 孪生动作、消费者退出生产者仍跑、关闭要传播到下层流、shield 异步关闭、后台清理任务只跑在 leader 内存定时器、durable system task
-version: "1.219.0"
+version: "1.221.0"
 agent_created: true
 ---
 
@@ -424,3 +424,17 @@ agent_created: true
 ## r566A 下沉条目：① **半解压依赖永不重装**——共享 bun store 里半解压的 piece 依赖（jsdom 缺 living/generated/utils.js）永不重装，须显式重装而非原样重试；依赖加载失败先分「重装型/等待型/损坏型」三类再决定动作（来源：github.com/activepieces/activepieces issue #16026，2026-10-14 实拉）；② **重放警告的比对基准必须同源**——step 以 code_hash=None 落库时，重放的「代码已变更」警告仍在拿它比值＝比错对象，比对基准与存储基准不同源即判据失效（zenml issue #5324 + PR #5350）
 ## r566B 下沉条目：① **「同一个任务」要有可执行契约，不能靠提示相似度**——工具型 agent 鲁棒性评测须用可执行契约界定任务同一性，否则跨变体比较的是提示相似度而非能力（来源：arXiv 2610.14477《What Counts as the Same Task?》，2026-10-14 实拉）
 ## r566C 下沉条目：① **自愈动作须独立成可追踪条目**——后台自愈调查（self-healing candidate verification / background investigation tracking）与其执行结果分离留痕；自愈不得复用原失败条目充当证据（来源：github.com/n8n-io/n8n PR #41020 / #41004，2026-10-14 实拉） · r567A 下沉条目：① **单条毒记录不得升级为整批丢失，确定性失败的重试耗尽即丢数据**——一个含 null byte 的事件让 PostgreSQL 拒收整批 → persister 原批 requeue → 重试 `max_flush_retries`(5) 次（对同一毒批是确定性失败）→ 丢 N 条且日志只记数量不记内容；批写路径须逐条隔离/先净化毒记录，重试前先判「是否确定性失败」（来源：prefect #23197，2026-10-14 r567A 一手 gh issue 实拉）。② **重建/修复循环必须有进展判据与退出条件，零进展=无声挂起而非继续转**——旧索引行 `workflowVersionId>versionCounter` 致依赖索引 rebuild 空转 14+ 小时、主进程与 PG 各 ~50% CPU 无输出，结束日志谎报 processed 12,921,816 条（实际卡住 15 条）；循环验收断言「处理数随轮推进」，零进展即退出并报警（来源：n8n #40246，2026-10-14 r567A 一手 gh issue 实拉）。触发词：毒记录丢整批、null byte 拒批、确定性失败不重试、重建无进展、rebuild 空转、处理数推进判据、零进展退出。
+
+
+## r568A · 批量装配操作不是原子事务：首败即停且不回滚先前成功项，调用方须自带补偿与重入设计（来源：docs.openclaw.ai/cli/plugins/install.md 28,066B，2026-10-14 r568A 一手 curl 200 逐串命中 `Each plugin keeps its own policy and capability-consent checks. The command stops at the first failure; earlier successful enables remain committed, and later IDs are not processed.`；经 Qoder r610-Q-C 提名；与 r326A Make Commit-after-each-module 合成跨厂通则）
+- **实证**：`openclaw plugins enable codex cua-computer` 一次启用多个插件——每个插件各自过策略与能力同意检查，命令在**第一个失败处停止**，**先前已成功的 enable 保持已提交状态不回滚**，后续 id 不再处理。另一形态：安装时宿主配置有效但新插件自身配置缺失，OpenClaw 记录为 disabled 而非写入无效 enabled 条目（先装后配，`plugins enable` 是独立激活步）。
+- **判据**：① **批量装配的失败形状是「部分提交」不是「全或无」**：技能/plugin/工具集的批量启用、迁移、恢复遇首败即停，先前成功项已生效 ⇒ 调用方不得按原子事务假设，须自带补偿（记录断点、可重入、失败续跑）与显式回滚路径；② **安装≠启用≠可运行是三态**：install 落盘、enable 激活、config 就绣——验收要分态断言，把「已安装」当「已启用」会漏掉整类「装了没生效」；③ **通则成文依据**：Make Commit-after-each-module（rm r326A 已落）+ openclaw enable-loop 首败即停（本条）两家一手 ⇒ 「批量操作部分提交不回滚」达 2 厂实证，后续厂（n8n/Pipedream/Dify）证据只作增量登记；④ 与 dl「异步写失败不回滚已生效的会话选择」（r343B）分工：那条是异步单写的两档（运行时/持久），本条是同步批量装配的事务形状。
+- 提升层：工作流（事务语义/批量装配验收）。触发词：plugins enable 首败即停、先前成功保持已提交、部分提交不回滚、批量装配非原子、安装≠启用、disabled 记录、补偿与重入、Commit-after-each-module 通则。
+
+## 并发写防丢更新靠条件写与锁父行，失败必须可见且队列续跑（来源：activepieces PR #16494 4,482B + #16495 4,752B，2026-10-14 r568C 一手 gh api 200 逐串命中；Qoder r614-Q-A 提名）
+
+- **实证**：四 PR 栈修「一次保存永不擦掉另一次保存」：① schema 迁移在读路径里回写，原先 `it wrote back with WHERE id only and a new updated` ⇒ 并发读-改-写互相丢更新；改为仅当 schema 版本未变时回写（`WHERE id = :id AND "schemaVersion" = :old`）并保留 `updated`。② 两个并发 Draft Write 各建一个 DRAFT（事务外无锁读）⇒ 事务锁 `flow` 行、复读最新版本、仅当其仍 `LOCKED` 时插入；锁模式 `The lock mode is FOR NO KEY UPDATE, not FOR UPDATE: two draft creations still wait for each other, but flow_run inserts (whose foreign key takes FOR KEY SHARE on the flow row) do not wait`。③ `flowService.update` 先读草稿→等副作用与校验→存整个版本，两保存同时即互擦、保存撞发布会把 published 版本打回 `DRAFT` ⇒ 每 flow 一次一保存。④ 失败保存原先 `PromiseQueue called halt() on a failure, and every later save was dropped with no message` ⇒ 失败显示「Your change was not saved」+重取草稿+队列续跑，`saving` 回 false 使 beforeunload 守卫不卡住。⑤ 长打字 burst 原先单 debounce timer 每键重启、burst 不停不出队 ⇒ `A long typing burst saves at least every 5 s`。
+
+- **判据**：① 读-改-写回必须带条件版本列，无条件 WHERE id 回写=丢更新制造机；②「确保唯一副本」类操作先锁父行再复读，锁模式要放行外键共享锁（FOR NO KEY UPDATE vs FOR KEY SHARE）；③ 失败停摆的队列必须让失败可见+后续请求续跑（halt 丢后续且无消息=双重故障）；④ 长 burst 类输入要有出队频率下限；⑤ 与 §进程级共享态互毁（dl r542A zenml #5159）分工：那条管进程内共享态生命周期，本条管并发写冲突与失败续跑。
+
+- **提升层**：工作流（并发写排障/失败可见性）。触发词：条件写防丢更新、WHERE schemaVersion、FOR NO KEY UPDATE、FOR KEY SHARE、每 flow 一次一保存、halt 丢后续、失败可见队列续跑、burst 出队下限。

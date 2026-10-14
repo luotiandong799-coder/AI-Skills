@@ -634,3 +634,9 @@
 - 提升层：工作流（发布验收/告警治理）。
 - 触发词：声明输入不发送、发布产物版本不一致、镜像内工具链、告警不得早关、关闭条件绑定部署。
 
+
+## r568C 下沉细则（wb-release-maintain）
+1. **版本复用核对兼容 range**（langflow #15657）：reuse-stable 只看 PyPI 版本存在 ⇒ RC pin 另一发布线的 bundle（lfx range 不符装不上）；每条 minor 线拥有自己的 bundle minor；range 未知 fail closed；错误命名冲突 range+bump 指引；同 commit 开两条发布线。
+2. **预校验先于所有写动作**（activepieces #16514）：LOCK_AND_PUBLISH 先锁草稿+设 publishedVersionId 才 404 ⇒ 半发布；live flow 被切 trigger-less 版本变 DISABLED；三入口（直接/审批/CHANGE_STATUS）同漏；400 FLOW_OPERATION_INVALID 替代 404 undefined@undefined。
+- 提升层：工作流（发布前校验/版本复用判定）。
+- 触发词：reuse-stable、lfx range、range 未知 fail closed、预校验先于写、半发布状态、三入口同漏、FLOW_OPERATION_INVALID。

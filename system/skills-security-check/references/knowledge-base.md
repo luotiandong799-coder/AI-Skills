@@ -714,3 +714,25 @@ Step C: 是否包含恶意意图？
 - 提升层：可复用 Skill（治理面）/ 工具（安全验收）。
 - 触发词：暴露收紧配对、新增暴露面未配对收紧、操作方白名单、对外 MCP server、暴露与权限分离计数。
 
+
+
+## r568A 下沉条目：标识解析形状启发式截断导致策略永不命中（n8n #41041）
+- **实证**：Community node 包 npm scope 含点（`@seven.io/n8n-nodes-seven`、`@explorium.ai/n8n-nodes-explorium`）时，安装成功、节点面板可见，但执行报 `Unrecognized node type: @seven.io/n8n-nodes-seven`。根因：`fullNodeType.split(".")` 把 `@seven.io/n8n-nodes-seven.seven` 切成 package `@seven` 与 node `io/n8n-nodes-seven`。受影响位点：`packages/cli/src/load-nodes-and-credentials.ts`（`recognizesNode`/`getNode`/`resolveNodeSourcePath`）、`packages/cli/src/modules/type-availability-policies/policy-evaluator.ts`（`nodeTypePackageResolver` = `split(".")[0]`，故该包的 policy 规则 never matches）、`packages/core/src/nodes-loader/directory-loader.ts`（`NODES_INCLUDE`/`NODES_EXCLUDE` 同缺陷）。
+- **判据**：① 按分隔符切分的形状启发式不能用于含点/含作用域标识；② 策略匹配面须按解析后规范标识验收；③ 「规则存在但零命中」需告警面（静默失效比报错更危险）。
+- 提升层：工具（策略引擎完整性）/安全验收。触发词：启发式截断、含点 scope、nodeTypePackageResolver、零命中告警。
+
+## r568B 下沉条目（四条）
+1. **白名单判定须作用于解析后具体路由**（Flowise #6195）：`:type` 通配吞并 `resolve`，白名单跳过 JWT ⇒ `req.user` undefined ⇒ 500。参见正文判据①②③。
+2. **脱敏集合按调用图闭包聚合**（n8n #41085）：只查本节点凭证 ⇒ 子工作流输出在父执行可读；修复后闭包内全脱敏（flag 门控）。
+3. **隔离分轴计数**（activepieces execution-isolation）：执行隔离与租户数据查询作用域隔离 two different guarantees，验证不得互替；docs 000 经 gh contents 取仓内 mdx。
+4. **动作面越界三层枚举**（SWE-MISBEHAVIOR 2610.18206）：Code Gen / File Mgmt / System Interaction；依赖误解读 98.5% / 误改用户输入 50.5% / 环境静默妥协 53%。
+- 提升层：工具（安全验收）/工作流（审计清单）。
+
+## r568C 下沉细则（skills-security-check）
+1. **白名单双信任级**（Flowise #6701）：`/api/v1/feedback` 在 WHITELIST_URLS ⇒ GET 无 authenticateToken 无 workspace scoping；POST 是公开 widget 合法匿名面不能移白名单；修法=GET handler 内 activeWorkspaceId+所有权 fail closed；相邻 `/api/v1/leads` 已正确（同文件一脆弱一安全）。
+2. **策略入口清单**（n8n 2.44.0 + #41131）：四漏面=agent node tools / credential tests probes / package import stub / revert 无权凭据版本；create-with-values 导入须 credential:create scope、403 先于首次写、从 import plan 推导；scope 检查须在功能 release 前落地否则 breaking。
+3. **元数据面零执行**（langflow #15660）：tools/list 与 A2A agent card 共用 json_schema_from_flow，实例化开着⇒存储 code 全被求值；call 路径有门 listing 跳过 ⇒ 匿名以 owner 身份执行；修=instantiate_components=False 一处覆盖三 caller；默认宽松配置下复现。
+4. **manifest 化加载**（n8n #41117）：依赖与入口同后缀（*.node.js/*.credentials.js）⇒ 递归扫描把依赖当 n8n 类、停实例+排队 worker；修=经 n8n.nodes/n8n.credentials 清单加载、排 node_modules、保留 symlinked dev 包与 hot reload。
+5. **capability 声明未兑现**（claude-code #98256）：声明 elicitation 但自动拒绝无 UI；check_client_capability true 而 elicit 静默非 accept ⇒ 与人类拒绝不可区分、两阶段破坏性操作死局；自动拒绝须与人类拒绝可区分。
+- 提升层：工具（白名单/策略门/加载器审计）。
+- 触发词：白名单双信任级、策略入口清单、import plan 推导、元数据零执行、manifest 加载、capability 幽灵、两阶段死局。

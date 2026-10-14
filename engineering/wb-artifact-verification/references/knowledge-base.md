@@ -3574,3 +3574,19 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - 提升层：工作流（审批/重放/排序判据归属）/ 工具（转换链保真验收）。
 - 触发词：授权集完整性、被批准文件未变、复校授权、同源比对基准、code_hash None、时区静默降级、并列时间戳漏行、整数 ID 四舍五入。
 
+
+
+## r568B 下沉条目（两条）
+1. **kwargs 展开的反序列化入口须查保留名冲突**（langflow #15693）：`Data(**data_filtered)` 把业务键绑到模型构造字段；复现：`{"before":1}` + `{"data":"hello"}` 抛 TypeError；null 消失、字典展开进外层载荷、`text_key`/`default_value` 配置了结果。判据：冲突即失败；反序列化后断言键集合；与信封键隔离（r567C）同族不同轴。
+2. **验收门有效性按联合判据计量**（SWEPatchTest 2610.18004）：JVR=复现+接受正确+拒绝错误；最佳 9.21% vs 复现参考 59.29%；单参考评测隐藏失败。与 fault-enforcing（av 2.277.0）分工。
+- 提升层：工具（反序列化/测试验收）。
+
+## r568C 下沉细则（wb-artifact-verification）
+1. **模型响应身份绑定**（n8n #41116）：配置模型 ID vs 响应 modelVersion，不一致即 NodeOperationError（初始+工具跟进都查）；忽略 models/ 前缀、无 modelVersion 仍接受；记账先于校验（拒收保留 token 总量）；Simplify Output 省略 modelVersion 藏失配；mock 不证 live 路由。
+2. **非 dict 值保形选取**（langflow #15751）：Select Keys 单 data 分支 unwrap ⇒ str/list ValidationError、int TypeError、null 静默 {}；只 unwrap dict；缺 key 走正规 ValueError。
+3. **协议空白保真**（dify #44083）：SDK strip SSE leading whitespace+trim 事件名；规则只准剥冒号后一个 U+0020；8 回归（重复空格/tab/NBSP/多行）。
+4. **0 值语义**（prefect #23408）：deadline 检查把 timeout=0 当「首结果后即失败」；单 future 路径对聚合路径错；显式 is None 而非真值。
+5. **命名空集授权+一次报全错**（windmill #11767）：tenant 指向不存在主体被存为匹配不到人的授权；只查本次授予 tenant；全部错误一次列出、nothing was applied。
+6. **同任务判定禁 embedding 阈值**（arXiv 2610.14477）：executable task contracts；14,336 run 对比——阈值放过 75-100% 换任务编辑、拒 24-45% 合法扰动；MiniLM 下 64 任务显 vulnerable 实际仅 26 有有效攻击。
+- 提升层：工具（响应验收/选取保真/配置校验/评测有效性）。
+- 触发词：modelVersion 身份绑定、非 dict 解包、SSE 一个 U+0020、timeout=0、命名空集授权、executable task contracts。

@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算
-version: "1.19.0"
+version: "1.22.0"
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -161,3 +161,22 @@ version: "1.19.0"
 ## r565B 下沉条目：① **评测失效必须区分「oracle 失效」与「被测能力不足」**——同一基准里 oracle 自身失败与配置依赖的测量偏差会让分数随配置漂移；配置依赖测量须与能力分数分开记账，且配置本身要版本化，否则跨次分数不可比。② **「允许重试」与「重试后的恢复结果」是两个指标**——RetryBench 把 retry permission 与 recovery outcome 分离：多给重试许可会拉高成功率但不改善单次恢复质量；只报合并成功率等于用机会数冒充可靠性。触发词：oracle 失效、配置依赖测量、分数随配置漂移、跨次不可比、重试许可与恢复结果分离、多给机会冒充更可靠。
 ## r566B 下沉条目：③ **授权集完整性：被批准文件未变时仍须校验授权集**——审批通过后若被批准文件内容未变、而授权集合已漂移，按文件判定的「批准」即失效，须复校授权集（来源：arXiv 2610.15137《When the Approved File Is Unchanged》，2026-10-14 实拉）
 ## r566B 下沉条目：④ **缓存感知的循环成本：轮次成本 ≠ 观测次数**——缓存未命中才产生真实 token 成本，按观测次数估算会把预算系统性高估（TurnCost 缓存感知循环工程，arXiv 2610.15093）；预算对照一律以 cache-aware 口径报，缓存命中不计入轮次成本 · r567B 下沉条目：① **多候选增益归因须配非多样性对照，否则增益数字随基线选择而变**——LLM aggregator 四匹配条件（Direct/Single-slot/Duplicate/Multi-candidate）下总候选增益 CIV 代数拆分为附加候选对比 DSV 与候选上下文对比 CCV，拆分（而非 CIV 本身）依赖所选对照；重复候选 vs 单槽的 repetition gap 达 -8.33pp[-13.25,-3.75]，即「多给一个候选」的增益里有整块上下文效应混入（来源：arXiv 2610.18786，2026-10-14 r567B abs 一手实拉）。触发词：多候选增益归因、Duplicate/Single-slot 对照、CIV 拆分 DSV CCV、repetition gap、上下文效应混入增益。
+
+
+## r568A · 自进化能力必须在「演化的流式环境」上评测，固定 held-out 集会高估学习能力（来源：arxiv.org/abs/2610.07792 44,710B，2026-10-14 r568A 一手 https 200 逐串命中 `evolving-environment streaming dataset (EESD)` / `hidden policies evolve` / `ServeLearnBench, spanning retail support, banking, and sales-pitch generation with 53 environment windows and 7,718 tasks` / `five learning harnesses (RAG, Mem0, SkillOpt, Continual Harness, and Prime) across six models` / `28 model-harness pairs and 252 learning runs`；经 Qoder r610-Q-B 提名）
+- **实证**：ServeLearnBench 形式化 EESD——agent 必须在交互与结果反馈中推断、应用、修订 **latent 环境知识**，而隐藏策略持续演化；覆盖零售支持、银行、销售话术生成三域，53 个环境窗口、 7,718 个任务；五个学习 harness（RAG/Mem0/SkillOpt/Continual Harness/Prime）× 六个模型（GPT-5.6 Terra/Opus 5/Kimi K3/GLM-5.3/DeepSeek V4.1 Flash/GLM-5.3 Flash），28 个模型-harness 对、 252 个学习 run。既有基准或显式给目标知识、或假设静态环境、或规模与知识多样性不足 ⇒ 固定集上量「从经验学到」会把「记住了静态集答案」算成学习能力。
+- **判据**：① **评测环境必须是演化面**：评自改进/记忆/技能优化时，任务分布与环境知识须随窗口漂移（hidden policies evolve），否则测的是静态集记忆而非持续学习；② **同一 harness 家族同场对测**：RAG/Mem0/SkillOpt 等在同流上对比才能区分「真从经验学到」与「记住答案」；③ 与 §oracle 失效与配置依赖（ae r565B）分工：那条管评测自身失效，本条管评测构造的环境假设；与 §抗饱和基准（ae r562B）互补——那条让成功抬高门樠，本条让环境本身演化。
+- 提升层：可复用 Skill（评估纪律）/工作流（自进化验收）。B 级证据（单篇论文，规模 7,718 tasks / 252 runs 足够大；数字挂可复拉 abs 页）。触发词：ServeLearnBench、EESD、evolving-environment streaming、hidden policies evolve、53 environment windows、7,718 tasks、252 learning runs、固定 held-out 高估、流式自进化基准。
+
+## r568B · 自进化系统的不安全行为源归因须递归上溯匹配候选，单层穷举匹配会漏掉引入点（来源：arxiv.org/abs/2610.17488 42,928B，2026-10-14 r568B 一手 https 200 逐串命中 `combines behavioral fingerprint matching with historical localization and recursive tracing` / `96.8% exact attribution accuracy, compared with 77.2% for exhaustive fingerprint matching without recursion` / `158 queries across 85 controlled scenarios`；经 Qoder r612-Q-B 提名）
+- **实证**：origin attribution in self-evolving multi-agent coding systems——恢复「把观测到的不安全行为引入目标代码谱系的 agent 与程序版本」或判定其本地产生；难点：改写模糊文本相似度、独立发生混淆时序、中间接收方酷似源。方法=行为指纹匹配+历史定位+递归追踪（比较候选实现不限于不安全结果、保留多历史版本证据、沿匹配候选上溯）。158 query / 85 受控场景：96.8% 精确归因 vs 非递归穷举指纹匹配 77.2%。
+- **判据**：① 归因链须递归上溯——不安全变更可能经中间接收方传播并在后续修订中存活，单层指纹匹配把「引入」与「继承」混同；② 比较面不限于不安全结果本身（还要比实现的其他行为）；③ 与 §评测归因（ae r563）分工：那条管评测面归因，本条管安全失效的版本谱系归因。
+- 提升层：工作流（审计/归因）。触发词：Origin Attribution、行为指纹、递归上溯、96.8% vs 77.2%、引入 vs 继承、版本谱系。
+
+## r568C 下沉条目：① 技能库规模化后隐式路由崩塌，显式预选是实用缓解；② 归因前先跑本地只读检查，不可验证原因必须标注（来源：arXiv 2610.18522 + n8n #41097，2026-10-14 r568C 一手实拉）
+
+- **实证**：① Lost in Implicit Routing（arXiv 2610.18522，41,793B 一手 https 200 逐串命中）：固定 SkillsBench 任务与 golden skills 不变、只加无关技能 ⇒ 路由崩塌——`With 1,000 irrelevant skills, loaded-skill recall falls from 73.6% to 27.4% and the zero-load rate rises from 9.3% to 51.6%, whereas explicit selection from the same library retains 73.9% recall`；加载「看似 golden 替代品」的技能太少解释不了 decline；`Masking only the descriptions of irrelevant skills largely restores skill loading`，但元数据完好时显式要求 agent 规划技能使用 recall 仍低于预选 ⇒ `semantic interference from descriptions and instruction interference when skill choice competes with task execution`；显式预选（preselection）为实用缓解，须记 coverage 与 latency 权衡。② n8n #41097（gh api 一手 200 逐串命中）：debugging-executions 技能原只覆盖用户上报的失败——agent 自己发起的 live run 返 401 时技能不加载（eval case 573 每轮只加载 workflow-builder，未查任何东西就猜凭据 header 格式，用户反问后才跑检查）；修复放宽技能描述到「agent 发起的 live run 失败」也触发，并加「Before you name a cause」段：`run the read-only checks on the n8n side first and to tell the user what it checked` / `A cause that the agent cannot verify, such as the format of a stored secret, must be labelled as unconfirmed` / `Before the agent says that a workflow is correct, it must read the expressions of every node on the failing path, not only the node that failed`（case 716 据此报出两个潜在表达式 bug）；被拒方案登记：在 workflow-builder 里加指向 debugging 技能的指针——`the pointer could load the debugging skill in the middle of the build and verification loop, which has its own repair rules`。
+
+- **判据**：① 技能库增长的评测指标是 loaded-skill recall / zero-load 率而不是「平均是否还能加载」；诊断干扰源先 mask 描述再下结论；缓解选型显式预选并量 coverage/latency。② 排障技能的触发面覆盖「自己造成的失败」；归因输出=已跑检查清单+原因+确认状态三件套；「无问题」结论的证据集=失败路径全节点而非单点；技能交叉引用防「中途加载打断循环」。③ 与 §递归上溯归因（ae 1.21.0 arXiv 2610.17488）分工：那条管归因的递归深度，本条管归因的前置纪律（先自查/标注未确认/全路径取证）。
+
+- **提升层**：工作流（技能库评测/排障归因纪律）/ 可复用 Skill（技能路由设计）。触发词：技能路由崩塌、loaded-skill recall、zero-load 率、mask 描述、显式预选、语义干扰、指令干扰、Before you name a cause、unconfirmed 标注、失败路径全节点表达式、live run 失败触发、技能指针中途加载。
