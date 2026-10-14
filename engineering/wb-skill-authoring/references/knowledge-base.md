@@ -3809,3 +3809,17 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 ## r564A · 预烘物料的分发面与可见面要分开哈希；能力有无只能问运行期注册表，不能问配置变量（来源：api.github.com/repos/n8n-io/n8n/issues/41027 与 /41026，2026-10-14 r564A 一手 gh api 200 逐串命中 `The two skills manifest hashes never matched, so every new sandbox wrote all runtime skill files again, also on cloud. Through the proxy, this was 18 to 24 file writes and about 2.3 s for each new sandbox.` / `A sandbox from an image or a snapshot now reuses the baked skills bundle and writes no skill files.` / `Hidden skills stay on disk but `load_skill` does not serve them.` / `That function returned true only when `N8N_ENABLED_MODULES` contained `agents`. Since #39312, `agents` is a default module, so it is active when the variable is not set.` / `Deletes `isAgentFeatureEnabled()`. ... Adds one check, `isAgentsAccessEnabled()`）
 - **判据**：① **预烘与运行期过滤是两件事，不要合并成一个哈希**：镜像与快照已烘好全量技能集，运行期再按 prompt profile / prompt fragments / skill flags / 模块设置过滤，于是"写入清单的哈希"与"期望清单的哈希"永远不相等 ⇒ 每个新沙箱都把全部技能文件重写一遍（18–24 次写、约 2.3s/沙箱），连带产生 `Failed to write runtime skill file` 一类的假故障。**分发面（写什么）与可见面（服务什么）必须分开取哈希、分开校验**；塞进同一个哈希的结果是必然永不命中。② **过滤应发生在"取用时"而不是"物料里"**：修法让沙箱直接复用烘好的包、一个文件都不写，隐藏技能仍在盘上但 `load_skill` 不提供服务 ⇒ 可见性是取用时的裁决，不是物料是否存在的属性；把可见性做进物料，会让每次策略调整都变成一次全量重分发。③ **能力有无要问运行期注册表，不能问配置变量的自述**：`isAgentFeatureEnabled()` 只在 `N8N_ENABLED_MODULES` 含 `agents` 时为真，而该模块已成为默认模块（不设也开）⇒ 未显式设置的实例上，Assistant 认为 Agents 关闭而模块实际在跑，`agent-builder` / `intent-recognition` 加载不了。**能力判定只能有一个真身（模块注册表 / 运行期状态）；配置变量只做开关，不做探测器**。④ **判定换了，每个入口都要逐个核**：Settings > Agents 关闭时只移除了"新建 Agent"，而 Agents 模块技能、`agent-context` 工具、预览交接、`get-session`、已准入的 Agent 构建全部仍可用 ⇒ 开关贯通不到位的典型形状是"主入口关了、其余入口照旧"。⑤ 与 r562C「装载接口钉住唯一标识形态」分工：那条管**标识形态**，本条管**能力判定真身**与**物料复用**。
 - 提升层：可复用 Skill（技能分发与装载）/ 工具（沙箱物料复用与哈希校验）。触发词：预烘技能包、baked skills bundle、manifest hash 不命中、分发面与可见面分开、隐藏技能仍在盘、load_skill 不服务、isAgentFeatureEnabled、默认模块不设也开、能力判定单一真身、配置变量不是探测器、每个入口逐个核。
+
+
+## r565A · 技能契约三条（来源：GitHub issue 面，2026-10-14 一手实拉）
+- **实证**：① windmill #10237 `wmill script generate-metadata` 输出的 summary/description 未加引号，值中出现 ` #` 时 push 后被静默截断；② zenml #5066 技能在 GitHub Copilot CLI ≥1.0.65 因 `argument-hint` 改为数组形态而装载失败；③ n8n #40885 create-pr skill 建议以包名作为 PR 标题 scope，而 check-pr-title 校验拒绝该格式。
+- **判据**：① **元数据一律走带引号序列化**，并做「解析回来的值 == 原值」的往返断言；裸值序列化在含空格/井号/引号时静默截断，不报错。② **技能装载契约会随宿主版本漂移**：frontmatter 字段形态须按目标宿主版本矩阵验收（每个支持的宿主一行），装载失败要有可观测信号（宿主版本 + 字段形态）而不是「技能找不到」。③ **技能产出的文本要过目标仓的校验契约**：技能生成的标题/分支/提交信息须与目标仓 linter/harness 规则对齐，验收里跑一次目标仓校验而不是自己断言格式。
+- 提升层：可复用 Skill（技能契约形态）。
+- 触发词：元数据未转义、井号静默截断、往返断言、argument-hint 数组形态、宿主版本漂移、装载契约矩阵、技能产出过目标仓 linter。
+
+
+## r565B · 自演化与可重放两条（来源：arXiv 2610.15964 / 2610.16145，2026-10-14 实拉）
+- **实证**：① 「Small but Mighty: Test Suites as Improvement Signals for Self-Evolving Agents」——小测试集可作为自演化 agent 的改进信号；② 「Pollard: Governed Semantic Execution Trees for Framework-Independent AI Agent Control and Replay」——受治理的语义执行树使 agent 控制与重放与框架无关。
+- **判据**：① **测试捕获的失败面是修订触发器**：只统计通过率看不到「哪类失败被捕获」，自演化必须以捕获面驱动修订；② **执行记录要可重放且框架无关**：语义执行记录须齐备决策/工具/边界三要素，缺任一项复盘只能靠日志文本反推。
+- 提升层：可复用 Skill（自演化触发器与执行记录）。
+- 触发词：测试套件作改进信号、语义执行树、框架无关重放、决策-工具-边界三要素。

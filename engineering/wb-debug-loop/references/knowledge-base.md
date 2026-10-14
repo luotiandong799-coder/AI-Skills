@@ -1640,3 +1640,17 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 ## r564C · 流的生命周期要双向绑定（消费者退出必须关掉生产者）；周期性清理任务不能只挂在 leader 的内存定时器上（来源：api.github.com/repos/langflow-ai/langflow/pulls/15720 与 repos/n8n-io/n8n/pulls/41009，2026-10-14 r564C 一手 gh api 200 逐串命中 `When an Agent's token/message callback raises, or the consuming task is cancelled during message publication, `process_agent_events()` exits without closing its event iterator.` / `a running model/tool producer can outlive the failed consumer.` / `The graph adapter also does not propagate closure to its underlying `agent.astream_events()` iterator.` / `Explicitly closing the original stream then stops the producer and runs its cleanup.` / `Shield asynchronous closure from an already-cancelled AnyIO scope. A control without shielding fails both asynchronous-cleanup regressions.`；`Every hour, `IdempotencyKeyCleanupTask` deletes the keys that are older than 12 hours.` / `Before this PR, the task ran only on the leader's in-memory timer. This PR moves it to `clusterTarget`.`）
 - **判据**：① **流是双向的：消费者退出不等于生产者停了**：消费侧回调抛错或任务在发布消息时被取消，`process_agent_events()` 直接退出而不关事件迭代器；而 SDK 的 v2 事件流背后有一个后台 run task ⇒ **生产者可以继续跑，工具的清理永不执行**。判据：**凡"迭代器 + 后台任务"的流，关闭必须写进消费者的 `finally`，而且要一路传播到最下层的 SDK 迭代器**；只关自己这一层等于没关。② **在已取消的作用域里做异步清理要 shield**：不加 shield 时两个异步清理回归都红 ⇒ **清理路径本身要能在"已经被取消"的上下文里跑完**，这是最容易被漏掉的一类。③ **回归用例要覆盖"失败发生在中途"而不是只测正常结束**：本 PR 加了 17 个用例覆盖 token/消息回调失败、任务取消、图适配器等路径 ⇒ 只测正常收尾的测试集对资源泄漏零覆盖。④ **周期任务挂在进程内存定时器上，等于它只在某个实例上活着**：幂等键清理任务只跑在 leader 的内存定时器里 ⇒ leader 切换、多实例、重启都会让清理停摆，过期数据静默堆积。**周期性维护任务要走持久化/集群化的调度面（本例改到 `clusterTarget`），不能依赖单个进程的内存态**。⑤ **清理任务的失效是静默的**：没有报错、没有告警，只是 12 小时后该删的没删 ⇒ 凡"靠定时任务维持不变量"的机制，都要有一个可观测的"上次成功执行时间"，否则违反不变量时无人知晓。
 - 提升层：工具（流与资源生命周期）/ 工作流（周期任务的调度面与可观测性）。触发词：消费者退出生产者仍跑、关闭传播到下层流、shield 异步清理、失败中途的回归用例、清理任务在 leader 内存定时器、clusterTarget、静默停摆、上次成功执行时间。
+
+
+## r565A · 生命周期与无界等待五条（来源：GitHub issue 面八仓，2026-10-14 一手实拉）
+- **实证**：① activepieces #16122 Send Sample Data to Webhook 永不失败，触发器拒绝样本时自旋约 33 分钟且不报错；② activepieces #16347 HTTP 请求超时止于响应头，不限制响应体读取；③ n8n #40822 队列模式下 per-execution Agent 从不关闭，MCP SSE 会话在主实例上泄漏直至 OOM（2.42.5）；④ zenml #4846 K8s deployer 的 `RunContext` 单例被 stack orchestrator 每请求拆除，并发下 `RuntimeError: Run context not initialized`；⑤ activepieces #15743 worker 的设置确认信号丢失后可保持连接但不再轮询。
+- **判据**：① **「永不失败」比失败更危险**：失败至少有信号，永不失败是静默挂起；等待/重试路径要么超时要么显式上限，且上限内要有进度信号可查。② **超时的覆盖面要写清**：只在响应头设超时等于没设，验收必须含「大 body + 慢流」用例。③ **每个执行单元的资源必须有终态关闭点**，且关闭写在终止分支而非正常路径；断言「N 次执行后活动会话数不增长」这类不变量，不靠日志。④ **全局单例与请求作用域必须显式匹配**：单例要么真全局（带并发安全）要么明确请求作用域，并发执行不得因上下文重建失败。⑤ **「已连接」不等于「在轮询」**：认握手要能被观测面查证（记录最后轮询时间），并对长时间无轮询设超时，否则静默停摆无痕。
+- 提升层：工作流（执行期不变量）/ 可观测性（静默挂起）。
+- 触发词：永不失败、自旋无报错、超时只到响应头、body 读取无界、执行单元资源泄漏、per-execution 未关闭、单例与请求作用域错配、已连接不等于在轮询、最后轮询时间。
+
+
+## r565C · 生命周期四条（来源：GitHub PR 面八仓 349 条，2026-10-14 一手 gh pr list 实拉）
+- **实证**：① prefect #23399 阻塞式 pause 被 reschedule 时不重置 pause keys，重排后命中旧键的等待者永远等不到释放；② zenml #5280 五处日志调用丢掉实参（只打格式串）；③ activepieces #16479 健康检查在数据库停止响应时挂起而非报 unhealthy；④ Flowise #6703 MySQL Record Manager DataSource 跨操作不复用，每操作新建连接池（issue #6567 性能/DoS 同族）。
+- **判据**：① **等待凭据在重排/取消路径必须显式重置**，否则重排后的新到达者命中作废凭据永久挂起。② **关键日志要断言参数可解析**，只断言「有输出」会把丢实参的日志判为通过。③ **探活必须有独立于被检依赖的超时上限**：探活挂在被检对象上是同源故障，编排层会把挂起当健康。④ **长驻资源按宿主复用**，并断言 N 次操作后连接池/句柄数不增长。
+- 提升层：工作流（执行期不变量）/ 可观测性（探活语义）。
+- 触发词：重排不重置 pause key、日志丢实参、探活挂起、按操作新建连接池。

@@ -3546,3 +3546,24 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ## r564C · 序列化要能往返（配了什么就写什么）；测试夹具必须封闭，外部可达性不能成为测试前提（来源：api.github.com/repos/langflow-ai/langflow/pulls/15732 与 /15724，2026-10-14 r564C 一手 gh api 200 逐串命中 `Stringify mode joins list items with a hardcoded newline, so setting Separator to ` | ` still produces `First\nSecond`. Use the configured separator, including an empty string, while preserving each item's serialization.` / `before the fix, the new cases reproduced 5 expected failures.` / `all nine starters plus the index match live Parser source/hash, and 60 embedded-source behavior checks passed`；`the `WebhookTest.json` flow fixture contains a "Custom Component" whose `build_output` made a live `httpx.AsyncClient().get("https://www.google.com")` and called `raise_for_status()`` / `Google answered `502 Bad Gateway`, the run endpoint returned 500, and the dependent "Backend performance" job also failed because the shard was incomplete.` / `The request is now served in-process by `httpx.MockTransport`, against the reserved `https://example.invalid` host.`）
 - **判据**：① **可配置的序列化参数必须在序列化路径上真的被读取**：stringify 模式把列表项用硬编码换行连接，于是用户把 Separator 设成 ` | ` 仍然得到 `First\nSecond` ⇒ **"界面上有这个配置"与"这个配置进了产物"是两件事**；验收要断言产物字符串而不是只断言不报错，且要覆盖**空字符串**这类边界值（原文明确要求包含空串）。② **往返对称性要成对验**：解析按分隔符切、序列化却按写死的换行拼 ⇒ 同一份配置在"读"与"写"两侧语义不同；凡有 parse/stringify 双向能力的组件，回归用例要做 A→字符串→A′ 的对照，且保留每一项的自身序列化。③ **改了序列化就要同步所有派生产物**：本 PR 连带同步组件索引与全部九个内置 starter（含可选 YouTube 包）、协调 LFX 包的补丁版本与依赖下限、并跑 80 个 release-plan 测试 ⇒ **序列化格式是跨包的兼容面**，改动清单要包含"哪些已发布制品需要重新生成"。④ **测试夹具必须封闭**：一个 webhook 流夹具里的自定义组件真去 `https://www.google.com` 发请求并 `raise_for_status()`，Google 返 502 时被测的 run 端点就返 500，连依赖的性能任务也因分片不全而失败 ⇒ **外部可达性不得作为测试前提**；正确做法是保留原来要验的行为（异步组件在流中发 HTTP 调用），只把传输换成进程内 `MockTransport` 并对保留域名 `example.invalid` 发请求。⑤ **改夹具不能改掉它原本要覆盖的东西**：原文刻意保留 `AsyncClient` 与 `raise_for_status()`（那正是 commit `46b7911110` 加它的目的）⇒ 修 flaky 的常见错法是把被测能力一起删掉。⑥ **同一夹具的两份字节相同副本要一起改**，否则一处封闭、另一处仍是活的。
 - 提升层：工具（序列化往返与派生产物同步）/ 可复用 Skill（测试夹具设计）。触发词：分隔符被硬编码、序列化往返不对称、空串边界、派生产物同步、夹具封闭、MockTransport、example.invalid、外部可达性不是测试前提、两份副本一起改。
+
+
+## r565A · 送达点与契约完整性六条（来源：GitHub issue 面八仓 360 条，2026-10-14 一手 gh issue list 实拉）
+- **实证**：① dify #43830 snippet 插入节点得到带连字符的 ID，变量模板正则解析不了，`{{#nodeId.var#}}` 未经替换即发给 LLM；② Flowise #6497 自定义 MCP（Streamable HTTP）的 tool description 与 parameter inputSchema 在交给 LLM 前被剥掉；③ langflow #15358 多个同类型组件分别接为 Agent 工具时全部拿到同一个工具名；④ langflow #15380 并行 agent 工具调用丢失错误或把结果挂到错误的 call 上；⑤ dify #43841 `MCPClient.list_tools()` 忽略 `nextCursor`，第一页之后的工具被丢弃；⑥ langflow #15228 numpy float32/16 与 pandas Series 的 NaN/Infinity 穿过 JSON 合规守卫；⑦ dify #43983 结构化输出错误地从 reasoning 内容里挑 JSON 而非最终响应；⑧ n8n #40824 `settings.errorWorkflow=DEFAULT` 被当作 workflow id 使用，自身 Error Trigger 永不触发；⑨ n8n #40022 SQL 绑定参数值内的逗号被拆成多个绑定值；⑩ langflow #15555 Phoenix tracing 在并发 workflow 间不隔离。
+- **判据**：① **模型是终端消费者，不是中间人**——进入模型的字符串必须先断言「无未替换模板」，ID 形态变更同步配解析器边界用例；② **契约在交接层最容易被裁剪**：适配层→模型这一跳前后各断言一次契约字段集，缺字段即失败，不等模型自己发现；③ **工具名是模型的唯一寻址键**，必须由类型+实例派生且全局唯一，重名即阻断发布；④ **配对键用 call id 而非完成顺序**，断言 N 个并发调用的结果各归其主；⑤ **枚举接口必须断言读到 cursor 为空为止**，并断言总数与已知清单一致，只看第一页等于静默裁剪能力面；⑥ **合规守卫用「序列化→再解析」往返断言**，类型黑名单挡不住等价数值类型；⑦ **字段来源层显式钉定**（reasoning / final / tool 三层不可互换）；⑧ **哨兵值不得进入标识位**，凡 DEFAULT/EMPTY/none 之类占位都要在使用点显式判别；⑨ **参数值内的分隔符必须按值整体传递**，验收含「值内含分隔符」用例；⑩ **可观测上下文按执行单元隔离**，断言并发下 trace 不跨调用。
+- 提升层：工作流（送达点验收）/ 工具（契约交接完整性）。
+- 触发词：占位符未替换进模型、工具契约交接裁剪、同类工具同名、并发结果错配、nextCursor 分页、能力集静默缺失、序列化往返断言、reasoning 与 final 分层、哨兵值当 ID、参数分隔符拆分、tracing 上下文串扰。
+
+
+## r565B · 验证与裁判三条（来源：arXiv cs.AI 轨 2026-10-14 实拉 178,228B/70 条目，2610.15897 / 2610.15938 / 2610.16191）
+- **实证**：① 「Review Rarely Beats the Stronger Model: Separating Verification from Capability Transfer in LLM Pipelines」——把较弱模型放在验证/评审位对最终质量几乎无增益，须把 verification 与 capability transfer 两类效应分开测；② 「The Anatomy of a Blind Spot: What an LLM Judge Must Be Shown, and How Much」——判官失效有结构化盲区，须明确它必须被展示的证据类别与展示量；③ 「Correct Choices, Failed Sequences: Choice2Seq Benchmarks Correctness Retention Across Output Interfaces」——正确性在不同输出接口间的保持率是独立被测对象。
+- **判据**：① **验证位与能力位不可互推**：报结论时分别给出「验证增量」与「能力增量」，只报合并数字等于把「加了个 reviewer」误报成能力提升。② **裁判的输入面是验收对象**：先断言展示面，再断言判断。③ **输出接口换形即新契约**：序列/结构化/工具调用各自独立回归，接口形态变更按契约变更处理。
+- 提升层：工作流（验证与评测设计）。
+- 触发词：验证≠能力迁移、裁判须展示什么与多少、裁判盲区、输出接口正确性保持。
+
+
+## r565C · 并发与边界两条（来源：GitHub PR 面，2026-10-14 一手实拉）
+- **实证**：① langflow #15614 缓存已验证的 pgvector 表并只锁正在创建的那张表（原实现锁全局，多个并发摄取互相等待；issue #15641 事件循环阻塞同族）；② Flowise #6725 新增 MCP 工具调用边界的覆盖测试。
+- **判据**：① **锁粒度对齐实际被创建的对象**：已验证存在的对象走缓存不回锁，只锁「正在创建的那一个」；并发用例断言无全局互斥。② **协议/模型职责分界属边界行为**，须有专门用例，不能指望端到端路径顺带经过。
+- 提升层：工作流（并发验收）/ 工具（测试覆盖设计）。
+- 触发词：锁粒度过粗、只锁正在创建的表、MCP 工具调用边界、边界行为专门用例。

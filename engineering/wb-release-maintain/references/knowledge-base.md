@@ -613,3 +613,17 @@
 ## r564C · 发布动作不得隐式重解析依赖锁；清理要按「先叶子后父」且失败要留下可重试的锚点（来源：api.github.com/repos/windmill-labs/windmill/pulls/11739 与 repos/n8n-io/n8n/pulls/40995，2026-10-14 r564C 一手 gh api 200 逐串命中 `change-versions.yml` ran `cargo generate-lockfile` after bumping the version, which re-resolves the whole lockfile. Each release therefore also shipped about 100 semver-compatible dependency upgrades that nobody reviewed.` / `Release 1.831.0, for example, moved `cc` from 1.6 to 1.8 and `aws-lc-rs` from 1.18.1 to 1.18.2.` / `the restored rust-cache was useless. The run compiled 745 crates instead of the usual ~95, the compile took 23 min, and the step timed out`；`Pruning an execution now deletes its binary files before it deletes the database row.` / `After an instance moves to Azure, prune removed the execution row and the Azure execution payload, but left the binary files. Azure had no directory delete, and the disk store was not called while the mode was Azure. A failed file delete now keeps the row so the next prune can retry it.`）
 - **判据**：① **"改版本号"这种最无害的发布动作，可能夹带一百个没人审过的依赖升级**：release 工作流在 bump 之后跑 `cargo generate-lockfile`，等于全量重解析 ⇒ 每次发版顺带发布约 100 个 semver 兼容升级。判据：**发布提交必须在既有锁上工作，禁止重新解析**；把"升级依赖"与"发版本"合成一个提交，会让依赖变更既无评审也无回滚粒度。② **重解析的代价不止是安全/正确性，还有缓存与时间的确定性**：`cc` 从 1.6 到 1.8 就足以让 rust-cache 失效，编译从约 95 crate 涨到 745、耗时 23 分钟并撞上 30 分钟超时 ⇒ CI 起超时前先问"这轮是不是重解析了锁"，**超时的根因常常在依赖层不在测试层**。③ **时间预算要按最慢的 runner 留余量**：正常热缓存 22–28 分钟、而部分 runner 链接慢一倍 ⇒ 把超时贴着均值设，等于让机器差异变成随机红灯。④ **清理必须按「先叶子后父、先外部后记录」**：prune 先删执行行与 Azure payload，却留下二进制文件（Azure 无目录删除、且 mode=Azure 时不再调 disk store）⇒ 孤儿文件。**凡跨存储后端的删除，要为每个后端各写一条删除路径，并在模式切换时覆盖"旧模式的残留"**。⑤ **删除失败要留下可重试的锚点**：文件删除失败则保留数据库行，让下一轮 prune 可以再试 ⇒ 把"行已删"当成清理完成，会让残留永远无法被再次发现。**清理的可重入性比清理的原子性更实用**。
 - 提升层：工作流（发布流水线与依赖治理）/ 工具（存储清理）。触发词：发布提交重解析锁、release 夹带依赖升级、generate-lockfile、rust-cache 失效、745 crates、先删叶子再删父、Azure 无目录删除、删除失败保留行、清理可重入。
+
+
+## r565A · 发版完整性与产物身份五条（来源：GitHub issue 面八仓，2026-10-14 一手实拉）
+- **实证**：① windmill #11669 两个 workspace 部署同一脚本共享一个 hash，workers 对两者跑同一个 workspace 的锁；② Flowise #6623 镜像 flowiseai/flowise:3.1.3 内含的 CLI 版本是 3.1.2；③ windmill #11309 官方 Docker 镜像内嵌 Go 工具链在应用版本之间不更新，累计 14 个以上 HIGH CVE（含符号链接穿越）；④ zenml #5174 数据库备份在写失败后可复用不完整制品；⑤ zenml #5215 请求 webhook 事件的幂等支持、activepieces #16422 Google Drive 触发器在重新发布时重置轮询 checkpoint（丢失 isRepublish 标志）。
+- **判据**：① **身份键必须含作用域维度**：内容哈希相同不等于同一对象，租户/命名空间维度缺一就跨租户共用锁；发版与运行时一致性都要用带维度的身份键。② **发版完整性要断言每个自带版本的内嵌组件**：只断言主程序版本等于镜像 tag 是典型假通过。③ **运行时/工具链是发版检查单的一等条目**，跨版本不更新的运行时是静默的累积风险面。④ **产物可见性必须由提交标记控制**：先写临时位置 + 成功后才可见，失败件留可诊断但不参与复用；「复用先例存在」≠「先例完整」。⑤ **外部进度状态有两个丢失口**——入站事件重投递与流程复发布/重建；前者要幂等键，后者要保留游标标志位，两者同源于「进度不可被重建路径重置」。
+- 提升层：工作流（发版与身份键）/ 工具（产物可见性）。
+- 触发词：内容哈希缺租户维度、跨租户共用锁、发版内嵌组件不一致、镜像内工具链 CVE、写失败产物被复用、提交标记才可见、入站幂等键、复发布丢 checkpoint。
+
+
+## r565B · 撤销的结果契约（来源：arXiv 2610.15991，2026-10-14 实拉）
+- **实证**：「Revocation Is Not Complete at Receipt: An Executable Outcome Contract for Distributed Agent-Tool Gateways」——在分布式工具网关里，收到撤销请求并不构成撤销完成。
+- **判据**：① **撤销要定义为可执行的结果契约**（可验证终态 + 传播完成判据），而非消息投递完成；② 传播窗口内被缓存的授权仍可放行，验收必须断言「窗口内调用被拒」；③ 窗口期内调用单独记档。
+- 提升层：工具（授权网关）/ 工作流（撤销语义）。
+- 触发词：撤销不完整、收讫不等于生效、传播窗口、可执行结果契约。

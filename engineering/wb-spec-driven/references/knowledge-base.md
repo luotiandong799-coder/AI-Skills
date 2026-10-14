@@ -1090,3 +1090,24 @@ spec 的步骤约束不要落在两个极端：**代码写死流程**（控制�
 ## r564B · 改进机制不能只看搜索前沿的失败：元反思 = 检索整个进化史 + 先探活系统再验证并提出变异（来源：export.arxiv.org/api/query 2026-10-14 r564B 一手 https 实拉，逐串命中 arXiv 2610.12794《Meta-Reflective Evolution Effectively Improves Production AI Systems》`Most optimization methods select a candidate from the search frontier, then mutate it in one LLM pass based only on its failures.` / `This focus on the frontier can stall on production AI systems, where isolated failures reveal little about complex, hidden interactions.` / `meta-reflection, wherein an agentic mutator ... selectively retrieves evidence from the entire evolutionary history and probes the live system before verifying and proposing mutations` / `reaching 92.8% held-out hard accuracy compared to 78.4% for Meta-Harness and 30.4% for GEPA under matched conditions` / `Matched ablations confirm that each component of CoCoEvolve contributes to these gains`）
 - **判据**：① **"选前沿候选 → 只看它的失败 → 一次 LLM pass 变异"这套形状会在生产系统上停滞**：因为孤立失败不揭示复杂、隐藏的交互 ⇒ **失败样本的信息量取决于系统耦合度**，耦合越高，单点失败越不能定位缺口（与 sa 1.145.0「失败要留可机读归因」互补：那条管留什么，本条管从哪取）。② **改进要检索整个进化史，而不只是当前前沿**：历史上已经试过什么、哪些变异被回退、哪次改动伴随哪个指标变化，都是定位隐藏交互的证据 ⇒ **只保留"当前最优 + 它的失败"的进化框架，等于每轮都丢掉历史**。③ **提出变异之前先探活系统（probe the live system），再验证、再提出** ⇒ 顺序是「取证 → 验证 → 提案」，不是「提案 → 试跑」；对运行中的系统，静态材料（代码/文档）不足以判断一个变异会不会命中隐藏交互。④ **消融要在 matched conditions 下做**：原文明确"匹配消融确认每个组件都有贡献" ⇒ 只报总分提升无法区分"哪个组件有用"，也挡不住"多堆组件看起来更好"。
 - 提升层：工作流（自我改进循环）/ 可复用 Skill（演进式设计）。触发词：元反思进化、搜索前沿停滞、检索整个进化史、先探活系统再提变异、孤立失败不揭示隐藏交互、matched ablations、取证→验证→提案。
+
+
+## r565A · 终止路径三态规格（来源：windmill #11498，2026-10-14 一手实拉）
+- **实证**：worker 把每次 UpdateFlow 的收尾都用硬编码 `unrecoverable=true` 处理——良性收尾（benign wrap-up）被记成错误日志；而 `success=false` 的收尾因该标志反而跳过重试并继续走 `continue_on_error`。
+- **判据**：① **终止路径的判定标志必须来自真实结果**，不得硬编码；硬编码会把三类语义（成功 / 良性包装 / 真失败）压成一类。② **规格里要把收尾显式分三类**，并逐类规定：是否计入错误计数、是否可重试、是否继续后续步骤；「三类共用一个标志」是规格缺陷而非实现细节。③ 验收断言「良性收尾不进错误计数」与「真失败仍可重试」两条，而不是只看整体成功率。
+- 提升层：工作流（终止路径规格）。
+- 触发词：收尾硬编码不可恢复、良性收尾被记错误、success=false 跳过重试、continue_on_error、收尾三态分类。
+
+
+## r565B · 责任感知信用分配（来源：arXiv 2610.16027，2026-10-14 实拉）
+- **实证**：「Of Errors and Echoes: Responsibility-Aware Credit Assignment for Tool-Use Agents」——工具使用 agent 的失败回声需要按贡献做责任分配。
+- **判据**：① **每条错误回执必须携带「谁引入了这个状态」**（模型选参 / 工具返回 / 环境变更三类来源分账）；② 验收断言「修掉上游引入者后同类失败消失」，只修下游等于把责任搬走而非消除。
+- 提升层：工作流（工具链错误规格）。
+- 触发词：责任感知信用分配、错误回执携带引入者、修复命中引入点。
+
+
+## r565C · 副作用规格两条（来源：activepieces #16468 / #16464，2026-10-14 一手实拉）
+- **实证**：① #16468 Table 的 Record Updated 在更新没有改变任何内容时仍触发 flow；② #16464 Create Record(s) 在网络抖动后把同一批行保存两次。
+- **判据**：① **「变更判定」与「副作用触发」是两个动作**：判定为 false 不得派发下游；上游任何一次噪声写都会被放大成整条链路执行。② **重试幂等要写成副作用契约**：同一幂等键的重复请求合并为一次写入，验收断言重试后行数不变。
+- 提升层：工作流（副作用与触发规格）。
+- 触发词：无变化更新不触发副作用、重试重复写入、重试幂等契约。
