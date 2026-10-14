@@ -3858,3 +3858,9 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 
 ## r573C 下沉条目（2026-10-15，来源见文末，一手实拉）
 ① **错误码是接口契约的一部分，消费方不得与字符串字面量比较**——三个 API spec 里的错误响应原本没有 schema，生成的客户端把每个错误都 typed 成 `unknown`，且没有任何检查确认前端分支用的 code 后端还在发。修后：每个业务错误进 OpenAPI 文档，前端用 `safe()` / `isDefinedError` 窄化，`error.code` 收窄为该操作文档化的码集，**与文档外的码比较直接类型检查不过**；通用错误（认证、校验、限流、Werkzeug 自身 404/401/500、意外失败）不逐个声明，由每个操作的 `default` 错误统一处理，客户端集中兜。声明须手写，语义是「客户端可以针对本操作分支的码」——只列该 handler 调用链真会抛的，**不是共享 translator 认识的所有码**。判据：① 错误码进契约文档，契约外分支在类型层被拒；② 「能映射的所有码」≠「本操作会抛的码」，宁少勿全；③ 通用错误集中处理，避免每个操作重复声明。来源：github.com/langgenius/dify#44001（gh api 200，逐字 `the web app narrows backend errors against that document instead of comparing error.code to string literals` / `comparing it to anything else fails to type-check` / `List what the handler's own call chain can answer with, not everything a shared translator knows how to map`）。触发词：documented error codes、oRPC defined errors、isDefinedError、error.code 窄化、default 错误集中处理、契约外分支类型层拒绝。
+
+## r574B 下沉条目（2026-10-15 gh api 一手）
+① **发布通道必须能在制品标签上辨识**：稳定版与 beta/pre-release 用同一套 Docker/容器标签，下游无法在拉取侧区分 ⇒ 无法制定「只吃稳定版」的策略。判据：发布物标签须编码通道语义（stable / beta / rc），且该编码要在消费侧（部署清单、升级脚本、准入规则）可读；仅靠版本号后缀或文档说明不可判（来源：github.com/n8n-io/n8n#41000，gh api 200，逐字 `Docker/container tags lack a way to distinguish semver stable vs semver beta/pre-release`）。触发词：通道可辨识、stable vs prerelease、容器标签无通道、只吃稳定版策略、升级脚本无法判通道。
+
+## r574C 下沉条目（2026-10-15，gh api releases 一手实拉）
+① **跨 CLI 技能目录互通让目录格式成为事实标准，兼容扫描面即治理面**——Cline 发布说明逐字：`Skills in .claude/skills are now discovered` / `SkillsConfigSearchPaths` scans `.claude/skills`, so skills authored for Claude Code are visible to Cline。判据：① 一旦第三方 CLI 主动扫描他方目录，该目录格式就从事实约定升级为互操作标准，改动它等于改动对外协议（要按破坏性变更处理）；② 兼容扫描扩大了攻击与治理面——同一份技能会被多个不同信任模型的执行器读取，权限/路径/内容约束须按「最严格的那个执行器」设定，不能按编写时的宿主假设；③ 技能发布方的验收要含「在兼容执行器下加载」的用例（来源：github.com/cline/cline releases v4.1.24 等，2026-10-15 gh api 200 逐串命中；经 Qoder r629-Q-C③ 提名）。触发词：.claude/skills 互通、SkillsConfigSearchPaths、目录格式事实标准、兼容执行器、最严格执行器约束、跨 CLI 加载用例。

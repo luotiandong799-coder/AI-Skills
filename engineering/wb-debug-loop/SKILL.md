@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、TTL seconds*1000、absolute deletion date、valid date in the future、7-day minimum、alreadyDeleted、audience human、AI 孪生动作、消费者退出生产者仍跑、关闭要传播到下层流、shield 异步关闭、后台清理任务只跑在 leader 内存定时器、durable system task
-version: "1.224.0"
+version: "1.227.0"
 agent_created: true
 ---
 
@@ -459,3 +459,15 @@ agent_created: true
 
 - **提升层**：工具（重试语义正确性/静默路径可观测）/ 工作流（告警分级）。
 - 触发词：返回值里的 FAILED、autoretry_for 永不触发、任务成功但没重试、no-run 路径、execResult.error 未读、日志与成功完全相同、USER_FAILURE 降 warn、error-rate 污染、严重级按因分类。
+
+## r574A 下沉条目：**草稿态编辑不得改变已发布运行态**——Integration Trigger 上改草稿会让已发布的工作流停止接收事件：草稿与发布态共用同一份触发注册，编辑动作连带把线上订阅摘掉，且没有任何提示。判据：① 草稿/发布是两套状态，编辑草稿的副作用必须限定在草稿作用域，不得触碰已发布的注册/订阅/路由；② 验收用例 = 改草稿前后对已发布端点各发一次事件，断言接收行为不变；③ 与「版本线绑定」类缺陷同族但轴不同——那条管制品跨版本线错配，本条管编辑动作跨界影响运行态（全文见 references/knowledge-base.md，2026-10-15 r574A，来源 dify #44063）。
+- **提升层**：工作流（发布/草稿隔离）/ 工具（触发注册面）。
+- 触发词：草稿改了线上、trigger 草稿影响发布、发布态被摘订阅、draft changes stop published workflow、两套状态共用注册。
+
+## r574B 下沉条目：**恢复能力不是「失败后重试」的副产品，必须显式训练并带独立恢复样本**——ReTerm（arXiv 2610.18484，2026-10-15 abs 一手 https 200 逐串命中）指出终端 agent 在长程执行中难以从命令错误/错误实现中恢复，最终任务失败；做法是从 agent 自身失败态分叉出多条独立自我恢复轨迹做在线 RL（ReTerm-GRPO），并构造 10K 恢复示范做冷启动。判据：① 恢复是独立能力面，验收要单列「从失败态继续并最终完成」的用例，不能只用「首次就成功」的通过率代表；② 恢复样本必须从真实失败态分叉，用合成错误注入替代会漏掉真实失败分布；③ 与「失败分诊/自愈条目」分工：那条管失败被记录成可追踪条目，本条管恢复行为本身要被训练与验收（全文见 references/knowledge-base.md）。
+- **提升层**：模型（恢复能力）/ 工作流（失败态利用）。
+- 触发词：恢复训练、从失败态分叉、ReTerm-GRPO、恢复示范冷启动、长程恢复失败、恢复不是重试副产品。
+
+## r574C 下沉条目：**错误处理开关必须覆盖连接/设置阶段，不只覆盖运行阶段**——`Continue On Fail` 在连接建立（connection setup）阶段被忽略：握手失败直接抛出，节点级容错声明在这里不生效，同一个开关在两个阶段语义不一致。判据：① 容错声明是横切契约，必须枚举它应当生效的全部阶段（连接/认证/运行/收尾），逐阶段断言；② 阶段间语义分叉本身就是缺陷信号（同一配置在 A 阶段生效、B 阶段不生效）；③ 与「错误处理分支不得改变数据路径语义」分工：那条管启用后输出形态变化，本条管开关根本没覆盖到该阶段（全文见 references/knowledge-base.md，2026-10-15 r574C，来源 n8n #41118）。
+- **提升层**：工具（容错语义一致性）/ 工作流（阶段枚举）。
+- 触发词：Continue On Fail 覆盖阶段、连接设置阶段、容错阶段分叉、横切契约逐阶段断言、握手失败不容错。

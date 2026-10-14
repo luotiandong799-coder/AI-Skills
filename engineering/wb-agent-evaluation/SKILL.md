@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算
-version: "1.24.0"
+version: "1.25.0"
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -190,3 +190,7 @@ version: "1.24.0"
 
 - **提升层**：工作流（评测与归因方法论）/ 模型（自改进信号治理）。
 - 触发词：验证延迟、失稳阈值、黄金分割倒数、校正器放置、格式修复伪装、calibration floor、最后一步基线、无表面信号失败、empirical Bayes 收缩、外置评分信任校准。
+
+## r574B 下沉条目：① **harness 自演化必须把「更新目标」与「提议/准入机制」分离，并按解释态与工具代码分别设定保留边界**——Self-Evolving Agent Harness（arXiv 2610.18813，2026-10-15 abs 一手 https 200 逐串命中）把 harness 自演化形式化为反馈驱动过程，修订跨 run 持久；框架明确区分解释态（prompts/memory/workflow）与可执行成分（tools/code）、仓库级控制逻辑、插件组合，并给出期望泛化界与保留界（retention bound）。判据：改「脚手架」与改「被测能力」是两种干预，评测报告必须声明更新目标属于哪一层；保留界要显式写（什么条件下修订被撤回），否则自演化等于无回滚的在线改配置（全文见 references/knowledge-base.md）。② **评测的加载语义必须与运行语义一致，否则效应量被系统性高估**——Agent Skill Evolution（arXiv 2610.04832）：加规则在「单次回答」口径下测得合规增益 +0.41，而真实按需加载设定下四个 agent 平均只保留约 51% 的行动增益、三个开源模型约 38%；修订给单次回答加 18-19% 输入 token 却对整段 episode 无可测成本，而加载一次技能正文让 episode token 涨 50%。判据：技能/规则类评测必须声明正文是否真的被加载，效应量只在与运行一致的加载语义下成立；「每答都算」的评测口径是过滤器不是环境（经 Qoder r628-Q-C③ 提名，本轮 arXiv abs 一手复核标题与数字属实）。
+- **提升层**：工作流（自演化治理）/ 评测口径（加载语义）。
+- 触发词：harness 自演化、更新目标与准入分离、解释态 vs 工具代码、retention bound、按需加载评测语义、51%/38%、每答评测高估。
