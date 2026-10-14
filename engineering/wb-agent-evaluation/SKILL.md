@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算
-version: "1.17.0"
+version: "1.18.0"
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -159,3 +159,5 @@ version: "1.17.0"
 - 判据：① 错误程序的 token 级置信度与正确程序相当 ⇒ 置信度/熵只是部分且随模型而异的证据，不能当执行正确性代理。② 基于不确定性的筛选不总能提升 accepted-set 准确率 ⇒ 先把「低置信度即拒答」当待验假设，不要当省钱提质的默认手段。③ 指令微调可能加剧过度自信 ⇒ 凡以主观观感验收的环节都要有执行级对照。④ **架构结论必须写在可比预算下**：同一预算变化对两种架构方向相反（增任务变体只帮 TRM，VARC 变体更少更好）⇒ 报「架构 A 优于 B」不写预算等于没报。⑤ **样本呈现数与任务变体数是两个旋钮**，合并成「训练量」会掩盖方向相反的效应。
 - 提升层：评测（可靠性信号有效性）/ 工作流（对照实验设计）。触发词：过度自信失败、置信度相当、uncertainty 非代理、accepted-set accuracy、预算对照、可比预算下报告。
 ## r565B 下沉条目：① **评测失效必须区分「oracle 失效」与「被测能力不足」**——同一基准里 oracle 自身失败与配置依赖的测量偏差会让分数随配置漂移；配置依赖测量须与能力分数分开记账，且配置本身要版本化，否则跨次分数不可比。② **「允许重试」与「重试后的恢复结果」是两个指标**——RetryBench 把 retry permission 与 recovery outcome 分离：多给重试许可会拉高成功率但不改善单次恢复质量；只报合并成功率等于用机会数冒充可靠性。触发词：oracle 失效、配置依赖测量、分数随配置漂移、跨次不可比、重试许可与恢复结果分离、多给机会冒充更可靠。
+## r566B 下沉条目：③ **授权集完整性：被批准文件未变时仍须校验授权集**——审批通过后若被批准文件内容未变、而授权集合已漂移，按文件判定的「批准」即失效，须复校授权集（来源：arXiv 2610.15137《When the Approved File Is Unchanged》，2026-10-14 实拉）
+## r566B 下沉条目：④ **缓存感知的循环成本：轮次成本 ≠ 观测次数**——缓存未命中才产生真实 token 成本，按观测次数估算会把预算系统性高估（TurnCost 缓存感知循环工程，arXiv 2610.15093）；预算对照一律以 cache-aware 口径报，缓存命中不计入轮次成本
