@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算
-version: "1.18.0"
+version: "1.19.0"
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -160,4 +160,4 @@ version: "1.18.0"
 - 提升层：评测（可靠性信号有效性）/ 工作流（对照实验设计）。触发词：过度自信失败、置信度相当、uncertainty 非代理、accepted-set accuracy、预算对照、可比预算下报告。
 ## r565B 下沉条目：① **评测失效必须区分「oracle 失效」与「被测能力不足」**——同一基准里 oracle 自身失败与配置依赖的测量偏差会让分数随配置漂移；配置依赖测量须与能力分数分开记账，且配置本身要版本化，否则跨次分数不可比。② **「允许重试」与「重试后的恢复结果」是两个指标**——RetryBench 把 retry permission 与 recovery outcome 分离：多给重试许可会拉高成功率但不改善单次恢复质量；只报合并成功率等于用机会数冒充可靠性。触发词：oracle 失效、配置依赖测量、分数随配置漂移、跨次不可比、重试许可与恢复结果分离、多给机会冒充更可靠。
 ## r566B 下沉条目：③ **授权集完整性：被批准文件未变时仍须校验授权集**——审批通过后若被批准文件内容未变、而授权集合已漂移，按文件判定的「批准」即失效，须复校授权集（来源：arXiv 2610.15137《When the Approved File Is Unchanged》，2026-10-14 实拉）
-## r566B 下沉条目：④ **缓存感知的循环成本：轮次成本 ≠ 观测次数**——缓存未命中才产生真实 token 成本，按观测次数估算会把预算系统性高估（TurnCost 缓存感知循环工程，arXiv 2610.15093）；预算对照一律以 cache-aware 口径报，缓存命中不计入轮次成本
+## r566B 下沉条目：④ **缓存感知的循环成本：轮次成本 ≠ 观测次数**——缓存未命中才产生真实 token 成本，按观测次数估算会把预算系统性高估（TurnCost 缓存感知循环工程，arXiv 2610.15093）；预算对照一律以 cache-aware 口径报，缓存命中不计入轮次成本 · r567B 下沉条目：① **多候选增益归因须配非多样性对照，否则增益数字随基线选择而变**——LLM aggregator 四匹配条件（Direct/Single-slot/Duplicate/Multi-candidate）下总候选增益 CIV 代数拆分为附加候选对比 DSV 与候选上下文对比 CCV，拆分（而非 CIV 本身）依赖所选对照；重复候选 vs 单槽的 repetition gap 达 -8.33pp[-13.25,-3.75]，即「多给一个候选」的增益里有整块上下文效应混入（来源：arXiv 2610.18786，2026-10-14 r567B abs 一手实拉）。触发词：多候选增益归因、Duplicate/Single-slot 对照、CIV 拆分 DSV CCV、repetition gap、上下文效应混入增益。
