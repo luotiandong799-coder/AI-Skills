@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、TTL seconds*1000、absolute deletion date、valid date in the future、7-day minimum、alreadyDeleted、audience human、AI 孪生动作、消费者退出生产者仍跑、关闭要传播到下层流、shield 异步关闭、后台清理任务只跑在 leader 内存定时器、durable system task
-version: "1.221.0"
+version: "1.222.0"
 agent_created: true
 ---
 
@@ -438,3 +438,13 @@ agent_created: true
 - **判据**：① 读-改-写回必须带条件版本列，无条件 WHERE id 回写=丢更新制造机；②「确保唯一副本」类操作先锁父行再复读，锁模式要放行外键共享锁（FOR NO KEY UPDATE vs FOR KEY SHARE）；③ 失败停摆的队列必须让失败可见+后续请求续跑（halt 丢后续且无消息=双重故障）；④ 长 burst 类输入要有出队频率下限；⑤ 与 §进程级共享态互毁（dl r542A zenml #5159）分工：那条管进程内共享态生命周期，本条管并发写冲突与失败续跑。
 
 - **提升层**：工作流（并发写排障/失败可见性）。触发词：条件写防丢更新、WHERE schemaVersion、FOR NO KEY UPDATE、FOR KEY SHARE、每 flow 一次一保存、halt 丢后续、失败可见队列续跑、burst 出队下限。
+
+
+## r571C 下沉条目：① 部分更新须显式三态语义或 read-modify-write，禁止隐式全量替换；② 致命一轮不得丢弃进度游标，重启用路径不得重置检查点（来源：PipedreamHQ/pipedream PR #22204 + issue #22024 + PR #22191 + activepieces PR #16512，2026-10-15 r571C 一手 gh api 200 逐串命中）
+
+- **实证**：① `events.update` 是**全量替换**语义但调用方只发手挑的 body ⇒ 未提供的字段被清空：只更新 title 就把重复事件的 RRULE 抹掉、整个序列塌成单事件，还一并清掉 colorId/visibility/transparency（issue #22024 同族）；修复走 read-modify-write，先读回完整对象再合并后写。② Drive source 单次跑遍历整个 changes feed ⇒ 大 backlog 触发 OOM / 128MiB 上限；失败时**丢弃所有 db 写与 emit，page token 永不前进** ⇒ 之后每轮以同样方式失败，形成毒态循环（#22191）。③ activepieces #16512：审批路径重新启用 trigger 时未带 `isRepublish`（直接 republish 路由带）⇒ 轮询的 `onEnable` 把 `lastPoll/lastItem` 重置为审批时刻 ⇒ 自上次轮询以来的新条目**永不再投**。
+
+- **判据**：① 更新接口的语义必须在契约层显式成文三态——省略=不动 / 显式空=清空 / 显式数组=替换；调用方若拿到的是「全量替换」接口，必须 read-modify-write，禁止只发手挑字段。② 变更类操作的回归用例必须包含「只改一个字段时其余字段不变」，否则全量替换缺陷永远测不出来。③ 采集/轮询类循环把「游标前进」与「本轮业务成功」解耦：致命失败也必须持久化安全可前进的游标位置，并区分「可安全前进」与「须重试」两类错误；失败即丢游标 = 把一次故障变成永久毒态。④ 任何「重新启用/重新发布/迁移」路径必须与首次发布路径共享同一套检查点语义，审批态的启用路径尤其容易漏掉标志位而把进度重置到当下时刻。
+
+- **提升层**：工具（更新契约与采集循环排障）/ 工作流（检查点治理）。
+- 触发词：全量替换丢字段、read-modify-write、RRULE 被抹、只改一字段回归、游标永不前进、毒态循环、lastPoll 重置、审批路径漏 isRepublish、检查点丢失。

@@ -640,3 +640,11 @@
 2. **预校验先于所有写动作**（activepieces #16514）：LOCK_AND_PUBLISH 先锁草稿+设 publishedVersionId 才 404 ⇒ 半发布；live flow 被切 trigger-less 版本变 DISABLED；三入口（直接/审批/CHANGE_STATUS）同漏；400 FLOW_OPERATION_INVALID 替代 404 undefined@undefined。
 - 提升层：工作流（发布前校验/版本复用判定）。
 - 触发词：reuse-stable、lfx range、range 未知 fail closed、预校验先于写、半发布状态、三入口同漏、FLOW_OPERATION_INVALID。
+
+
+## r571C 下沉条目：权限与权益必须在使用点校验，不能只在配置点校验（来源：activepieces PR #16158，2026-10-15 r571C 一手 gh api 200 逐串命中）
+
+1. **使用点校验**（activepieces #16158）：Team/Enterprise 特性过去**只在 admin 配置时校验** ⇒ 计划期/试用期内配好的能力在过期后继续生效；修复把校验下沉到使用点——SAML 登录/ACS、embedded 登录、交给 run 的全局连接、secret-manager 读取，全部在使用时判定 entitlement。
+- 判据：① 权限/配额/套餐权益的判定点是**使用点**不是配置点，配置点校验只做「当时允许」的快照，过期后必须失效；② 每个使用该权益的新入口都要单独接校验，新增入口遗漏是此类缺陷的主要来源（本条四入口同漏）；③ 权益失效的默认动作必须是拒绝并给出可操作的续期路径，不得静默降级为「继续可用」；④ 与 §暴露-收紧配对律（ssc 1.96.0 Flowise #5930/#6578）分工：那条管能力面暴露与收紧成对出现，本条管权益时效的判定位置。
+- 提升层：工作流（权限治理）/ 工具（准入校验）。
+- 触发词：entitlement 使用点校验、配置点快照失效、试用期后继续生效、四入口同漏、静默降级为可用。

@@ -736,3 +736,11 @@ Step C: 是否包含恶意意图？
 5. **capability 声明未兑现**（claude-code #98256）：声明 elicitation 但自动拒绝无 UI；check_client_capability true 而 elicit 静默非 accept ⇒ 与人类拒绝不可区分、两阶段破坏性操作死局；自动拒绝须与人类拒绝可区分。
 - 提升层：工具（白名单/策略门/加载器审计）。
 - 触发词：白名单双信任级、策略入口清单、import plan 推导、元数据零执行、manifest 加载、capability 幽灵、两阶段死局。
+
+
+## r571C 下沉条目：审计身份须由签名头显式声明，并由精确凭据 ID 白名单把关（来源：langflow PR #15755，2026-10-15 r571C 一手 gh api 200 逐串命中）
+
+1. **represented 审计身份**（langflow #15755）：让认证用的 service credential（Control Plane API key）经**签名头**声明它代表的那个具体人；把关用**精确 credential record ID 白名单**（`LANGFLOW_AUDIT_TRUSTED_API_KEY_IDS`）而非 scope 或通配。
+- 判据：① 机器凭据代人行事的场景，被代表身份必须由调用方在签名覆盖范围内显式声明，服务端不得从凭据反推或默认取服务身份；② 授权白名单的粒度是**具体凭据 ID**，scope/角色/通配不足以充当「可代表他人」的判据；③ 被代表身份与凭据 ID 一并进审计字段，审计记录要能回答「这条变更实际代表谁做的」；④ 与 §执行身份默认取 job 身份（ssc 既有面）分工：那条管默认身份的取值，本条管显式声明身份的可信门。
+- 提升层：工具（审计与身份治理）。
+- 触发词：represented 身份、签名头声明身份、凭据 ID 白名单、LANGFLOW_AUDIT_TRUSTED_API_KEY_IDS、代人行事的机器凭据。

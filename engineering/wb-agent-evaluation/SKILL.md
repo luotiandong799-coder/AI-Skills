@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算
-version: "1.22.0"
+version: "1.23.0"
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -180,3 +180,13 @@ version: "1.22.0"
 - **判据**：① 技能库增长的评测指标是 loaded-skill recall / zero-load 率而不是「平均是否还能加载」；诊断干扰源先 mask 描述再下结论；缓解选型显式预选并量 coverage/latency。② 排障技能的触发面覆盖「自己造成的失败」；归因输出=已跑检查清单+原因+确认状态三件套；「无问题」结论的证据集=失败路径全节点而非单点；技能交叉引用防「中途加载打断循环」。③ 与 §递归上溯归因（ae 1.21.0 arXiv 2610.17488）分工：那条管归因的递归深度，本条管归因的前置纪律（先自查/标注未确认/全路径取证）。
 
 - **提升层**：工作流（技能库评测/排障归因纪律）/ 可复用 Skill（技能路由设计）。触发词：技能路由崩塌、loaded-skill recall、zero-load 率、mask 描述、显式预选、语义干扰、指令干扰、Before you name a cause、unconfirmed 标注、失败路径全节点表达式、live run 失败触发、技能指针中途加载。
+
+
+## r571B 下沉条目：① 验证延迟本身改变稳定性；② 自修订增益须先扣除格式修复；③ 归因方法须先胜平凡「最后一步」基线；④ 外置评分须做信任校准（来源：arXiv 2606.27409 / 2608.04355 / 2610.16661 / 2610.15772，2026-10-15 r571B 一手 https abs 页 200 逐串命中）
+
+- **实证**：① Delayed Verification Destabilizes Multi-Agent LLM Belief（2606.27409，42,534B）：多 agent 靠 verifier/critic 抑制幻觉，但验证是**延迟**的，延迟窗口内错误断言已在 agent 网络扩散；给出失稳阈值与校正器最优放置——「验证延迟 =2 即失稳」，稳定阈值为黄金分割倒数，5 个开源模型上验证。② The Calibration Floor: Format Repair Can Masquerade as Self-Correction（2608.04355，43,499B）：自修订后的准确率变化通常被当成推理变化，实则在**答案抽取边界**就可能失败；修订增益中约 71% 可归因于格式修复，5 个前沿模型的内容 margin ≈ 0。③ Structural Baselines Matter for Agent Failure Detection and Attribution（2610.16661，41,071B）：工具 agent 会静默失败（未完成、无报错、回答流畅）；平凡规则「指认最后一步」的失败定位正确率高达 67%–96%，且存在**完全无表面信号**的失败子类。④ RSIPO（2610.15772，43,872B）：递归自改进用技能-策略协同演化，教师分数作为外置信号需经验贝叶斯（empirical Bayes）收缩校准后才可作为信任权重。
+
+- **判据**：① 评测与治理设计要把**验证延迟**当独立变量——延迟本身改变系统稳定性，不能只问「有没有验证」；校正器放置位置是设计参数而非实现细节。② 任何「自修订有效」的结论必须先扣除**格式修复**增益：报告修订收益时并列「内容增益」与「格式增益」，只剩格式增益不得称能力提升。③ 失败归因方法上线前必须先跑平凡基线（最后一步 / 固定规则），胜不过基线的方法不具增量；并把「无表面信号」的失败单独成类，不可用同一套检测器蒙混。④ 外置评分（教师模型/judge/oracle）用于训练或选择前须做**信任校准与收缩**，原始分数不能直接当权重。
+
+- **提升层**：工作流（评测与归因方法论）/ 模型（自改进信号治理）。
+- 触发词：验证延迟、失稳阈值、黄金分割倒数、校正器放置、格式修复伪装、calibration floor、最后一步基线、无表面信号失败、empirical Bayes 收缩、外置评分信任校准。
