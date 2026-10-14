@@ -3638,3 +3638,16 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ② **回落路径必须验证其运行时形态真的可行，恒失败的回落等于没有回落**——MCP Custom Tool 的 SSE 回落每一次都失败：node-fetch v2 的 body 不是 web `ReadableStream`，判定直接抛 `Invalid response body, expected a web ReadableStream`，于是「主路径失败→回落」的兜底从未生效过一次。判据：回落分支要有独立的成功用例（不只测主路径），并断言回落所依赖的运行时形态（流类型/协议版本/编码）在目标环境成立；「写了 fallback」不等于「fallback 可用」。来源：github.com/FlowiseAI/Flowise#6715（gh api 200，逐字 `SSE fallback always fails with 'Invalid response body, expected a web ReadableStream'`）。触发词：回落恒失败、fallback never works、ReadableStream 形态、兜底未生效、回落独立用例。
 ③ **签名校验须覆盖二进制与文件载荷，不得以文本形态假设**——HMAC 验签实现只能验文本 body，带二进制或文件的 webhook 一律验不过，结果是要么拒真要么必须关验签。判据：签名计算面必须覆盖 multipart / 二进制 / 流式三种载荷形态，「只支持文本」应显式失败而非静默跳过校验；关闭验签不是处置方案。来源：github.com/activepieces/activepieces#14816（gh api 200，逐字 `HMAC signature auth cannot verify binary or file-carrying webhook bodies`）。触发词：HMAC 二进制、文件载荷验签、multipart 签名、文本形态假设、验签覆盖面。
 ④ **可观测通道不得丢弃已经拿到的响应细节**——Observer 把响应体细节行丢掉只留汇总，排障时可用的证据在采集点就被截断了。判据：观测/日志的输出项要按「已获取即保留」设计，裁剪只允许发生在采集之前（不采集），不允许在已取到后丢弃；诊断面缺失项的验收方式是「能否只凭日志复现故障」。来源：github.com/n8n-io/n8n#41134（gh api 200，逐字 `Keep Observer detail lines instead of discarding the response`）。触发词：丢弃响应细节、观测裁剪点、已获取即保留、日志可复现故障、Observer detail lines。
+
+## r575A · 预演/检查路径不得产生真实副作用：验证性预览须走模拟执行，真实执行只发生在显式运行路径（来源：api.github.com/repos/n8n-io/n8n/pulls/41144 `Use mocked execution for agent check previews`，2026-10-15 r575A 一手 gh api 200）
+——检查态与运行态必须分离。预览用 mocked execution，否则「先看看会不会成功」本身就产生外部副作用（发消息/写库/扣费），且这些副作用归属不到任何一次真实运行，事后无法追溯也无法回滚。判据=任何以「预览/检查/试跑」为名的路径，其外部写面必须为空。
+## r575A · 凭据运行时过期是事件不是重置：过期后连接健康态须持久可见（来源：api.github.com/repos/langflow-ai/langflow/pulls/15763 `persist connection health after runtime credential expiry`，2026-10-15 r575A 一手 gh api 200）
+——过期处理路径若清空上次健康检查结论，每次过期都把连接当成「全新未知」，历史健康信息丢尽，重试与告警失去依据。判据=过期处理不得重置健康态字段，只标记为「待重新验证」并保留上次结论与时间戳。
+## r575B · 只审产物无法验证「执行前批准了什么」：须用契约把声明的实验选择/运行义务/结论范围绑定到执行证据（来源：arxiv.org/abs/2610.11754《What Output-Only Review Cannot Verify: Study Contracts for Research Agents》，2026-10-15 r575B 一手 curl 摘要 200）
+——缺陷分两类：能从产物判出的，与必须知道执行前批准了什么才能判的。契约把声明的实验选择、运行义务、声明范围绑到记录下来的执行证据上，从而区分二者。产出审计清单时必须分列，不能把后者当成交付过的保证。
+## r575C · 凭据比较须走结构化比对，不能比序列化字符串（来源：api.github.com/repos/langgenius/dify/pulls/44039 `compare datasource credentials as JSON on MySQL`，2026-10-15 r575C 一手 gh api 200）
+——同一份凭据在不同后端序列化顺序/类型不同即被判为不等，触发无意义轮换与重复写。判据=比较前先归一到结构域（键值集合），再比结构等价。
+## r575C · 覆盖默认值须沿用被覆盖字段自己的等价规则：HTTP 头名大小写不敏感（来源：api.github.com/repos/langgenius/dify/pulls/44090 `override default headers case-insensitively`，2026-10-15 r575C 一手 gh api 200）
+——大小写敏感匹配会让「已覆盖」静默失效、默认值继续生效，表现为改了没效果。合并默认值与显式值时，等价判定必须按该字段的协议语义做，不能一律用字符串相等。
+## r575C · 嵌套调用的活动须归因到真实来源，不能挂到最外层调用者（来源：api.github.com/repos/langgenius/dify/pulls/42824 `attribute nested tool activity to its source`，2026-10-15 r575C 一手 gh api 200）
+——归因挂错会让限流、审计、配额全部算到错误主体上；嵌套越深越容易把子工具行为记成宿主行为。判据=活动记录必须带来源标识链，而非只有最外层调用者。

@@ -1676,3 +1676,10 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 ## r574B 下沉条目：恢复能力须显式训练（arXiv 2610.18484 ReTerm，2026-10-15 abs 一手 https 200）。判据：恢复能力单列用例；恢复样本从自身失败态分叉，合成注入不能替代真实失败分布。
 
 ## r574C 下沉条目：错误处理开关须覆盖连接/设置阶段（n8n #41118，2026-10-15 gh api 一手 200，逐字 `Honor Continue On Fail during connection setup`）。判据：容错声明逐阶段枚举并断言，阶段间语义分叉即缺陷信号。
+
+## r575A · 依赖容器缺失是硬失败，不是「再等等」：缺失即报错，不得挂起（来源：api.github.com/repos/activepieces/activepieces/pulls/16545 `embedding now fails with an error instead of hanging when its page container is missing`，2026-10-15 r575A 一手 gh api 200）
+——挂起把「缺依赖」伪装成「慢」：既没有超时可收敛，也没有错误可告警，只能靠外部观察发现。判据=凡前置容器/上下文未就绪，一律立即失败并在错误里指明缺什么。
+## r575A · 模型名单里的默认值必须验证仍然可用：退役模型与其默认替代都会 404/拒答（来源：api.github.com/repos/activepieces/activepieces/pulls/16536，2026-10-15 r575A 一手 gh api 200）
+——「默认模型」是配置读取的结果，不是可用性保证。换默认、退役旧模型后，原本能跑的工作流会以模型侧错误失败。排查顺序：先确认默认项是否仍在服务方名单内，再查调用参数。
+## r575C · 批量动作的前置是「完成态」而非「已提交」：构建/索引未完成的条目不得进入批量启用（来源：api.github.com/repos/langgenius/dify/pulls/44017 `only batch-enable segments whose indexing completed`，2026-10-15 r575C 一手 gh api 200）
+——批量把「已创建」当「已就绪」，会把半成品一次性推到可服务面，故障面等于批量规模。判据=批量前逐条校验完成态，不达标的显式排除并列出，不得静默跳过也不得整体失败。

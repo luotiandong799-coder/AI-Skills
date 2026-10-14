@@ -672,3 +672,10 @@
 ## r574C 下沉条目（2026-10-15，GitHub PR 面 gh api 一手实拉）
 ① **删除容器必须级联清理其内部产物，重跑必须清理或复用前次样本，否则留孤儿**——删 loop/router 时只删容器，里面的步骤测试数据仍留在存储里；重新测试一个 trigger 会把旧样本文件留在存储中。判据：容器与内容是同一生命周期，删除动作要沿包含关系级联；「重跑/重测」要么复用前次产物（同一标识）要么先清理，禁止叠加留下多份无主数据；验收断言删除后按内容标识查为空。来源：github.com/activepieces/activepieces#16530 / #16542（gh api 200，逐字 `deleting a loop or router now also deletes the test data of the steps inside it` / `re-testing a trigger no longer leaves old sample files in storage`）。触发词：级联清理、容器与内容同生命周期、孤儿测试数据、重跑留旧样本、删除后按内容查空。
 ② **技能传播是供应链：修复不随源传播，审计位须按传播影响力排而非按流行度排**——Skill Constellations（arXiv 2610.11169，2026-10-15 arxiv.org/abs 一手 200 标题命中 `Tracing the Supply Chain of Agent Skills on GitHub`）：跨仓拷贝网络里技能副本几乎不随源变更（`Skill copies almost never change with their source`，源上的修复很少到达副本），星数不指源（`GitHub stars do not identify`），按其排名最高的 100 个仓库做审查可阻止 14.9% 的高风险技能后续被采用，而按星数最高的 100 个只有 0.5%（29.8 倍差）。判据：① 修安全问题时不得假设「上游修了=下游好了」，要发版本化引用而非拷贝；② 审计/准入优先级按传播网络位置排，流行度是无效代理（经 Qoder r628-Q-C① 提名，本轮一手复核标题与数字属实）。触发词：拷贝供应链、修复不随源、星数不指源、14.9% vs 0.5%、版本化引用代替拷贝、审计位按传播排。
+
+## r575A · 被宿主流程调用的 agent 运行结束必须关闭：调用方生命周期不等于被调用 agent 的生命周期（来源：api.github.com/repos/n8n-io/n8n/pulls/41128 `Close agent after run when invoked from workflow`，2026-10-15 r575A 一手 gh api 200）
+——从工作流内调用的 agent 若不显式收口，会话/连接/内存会跨运行残留，表现为越跑越慢与连接泄漏，且泄漏量随调用次数线性累积。判据=谁发起调用谁负责收口，收口动作须在成功与失败两条分支都存在。
+## r575C · 旁路写入不得提交调用方事务：日志/暂存用独立 flush，禁止绑定调用方会话提交（来源：api.github.com/repos/langgenius/dify/pulls/44084 `stage hit-testing query log with flush instead of committing caller session`，2026-10-15 r575C 一手 gh api 200）
+——旁路写入若提交调用方事务，就把「记录一下」变成「改变业务状态」，故障时还会连带回滚或污染调用方一致性。判据=旁路写入的提交边界独立，且失败不得影响主流程。
+## r575C · 替换类写操作必须入审计：覆盖/替换/整体重写要留可追溯记录（来源：api.github.com/repos/langflow-ai/langflow/pulls/15754 `audit project replacement operations`，2026-10-15 r575C 一手 gh api 200）
+——替换是「删除+新建」的复合动作，只审新建会漏掉被替掉的那份，事后无法回答「原来是什么」。判据=审计同时记录被替换对象标识与新对象标识。

@@ -23,3 +23,20 @@
 ## r574B 下沉条目（2026-10-15 arXiv abs 一手 https 200）
 ① harness 自演化：更新目标 / 提议机制 / 准入机制三者分离，解释态与工具代码分开设定保留界（retention bound），accepted revisions persist across runs（arXiv 2610.18813 Self-Evolving Agent Harness）。
 ② 评测加载语义须与运行语义一致：单次回答口径 +0.41 合规增益，真实懒加载下四 agent 平均仅保留约 51%、三开源模型约 38%；加载一次技能正文使 episode token +50%（arXiv 2610.04832 Agent Skill Evolution，经 Qoder r628-Q-C③ 提名）。
+
+## r575B · 评测的 oracle 自身也要审计：用状态完整性不变量查「分数表看不出」的可靠性缺陷（来源：arxiv.org/abs/2610.16067《When Agent Evaluation Becomes Unreliable: An Empirical Study of Oracle Failures and Configuration-Dependent Measurements》，2026-10-15 r575B 一手 curl 摘要 200）
+——评测 harness 本身是软件系统，会有状态残留、夹具污染、判定泄漏。公布分数前先过不变量，否则结论没有地基：分数可复现不等于评分逻辑可信。
+## r575B · 分数变化先归因评测变更，再谈能力变化（来源：arxiv.org/abs/2610.11678《TRACE: Diagnosing Verifier Brittleness in Agentic Evaluation》，2026-10-15 r575B 一手 curl 摘要 200）
+——分数变化通常被直接读成能力变化，但它也可能只反映评测变了。判据=发布「能力变化」结论前，先跑归因协议把「能力变」与「评测变」分开，两者可同时为真。
+## r575B · 重执行判定不变不等于策略风险消解（来源：arxiv.org/abs/2610.14460《Re-executing Coding-Agent Evaluations: Unchanged Decisions and Unresolved Policy Risk》，2026-10-15 r575B 一手 curl 摘要 200）
+——重跑得到同样判定只说明结论稳定，不说明评分配置与准入策略没有风险。复现性与策略合规是两条独立结论，必须分别报告，不得用前者替代后者。
+## r575B · 证据方法与声明强度必须匹配，残余要显式声明（来源：arxiv.org/abs/2610.04710《Organising Trajectory Evidence for Language-Model Agent Assurance: Fragments, Methods, and the Residual》，2026-10-15 r575B 一手 curl 摘要 200）
+——规则检查、技能覆盖分析、支持检查、前缀监控、执行门、稀有事件估计各只看一段运行，能给出的声明强度不同。混用而不标注会把弱声明读成强保证。判据=结论须写明所用方法、覆盖哪一段、残余是什么。
+## r575B · 用户模拟器普遍过度配合会高估鲁棒性（来源：arxiv.org/abs/2610.16155《Uncovering Robustness Weaknesses in LLM Agents via Persona Evolution with Task-Integrity Constraints》，2026-10-15 r575B 一手 curl 摘要 200）
+——标准化 LLM 用户模拟器行为过于合作，漏掉真实交互下的失败，分数系统性偏乐观。判据=交互类评测须注入多样且带任务完整性约束的用户人格，并单独报告「对抗人格下」的分数。
+## r575C · 评测用例须在真实操作者身份下运行（来源：api.github.com/repos/windmill-labs/windmill/pulls/11768 `run global ai eval cases under builder operator profiles`，2026-10-15 r575C 一手 gh api 200）
+——以特权/服务账号跑评测会绕过权限校验，通过的用例在真实用户身份下可能全败。判据=评测环境复用生产授权路径，禁止为「跑得通」而放宽身份。
+## r575C · 恢复/容错评测三判据（来源：arxiv.org/abs/2606.05806《When Tools Fail: Benchmarking Dynamic Replanning and Anomaly Recovery in LLM Agents》，2026-10-15 r575C 一手 curl abs 200 逐串命中 `2 x 2 taxonomy`；候选来源 Qoder r631-Q-C）
+——① 按扰动类型分档（显式/隐式 × 瞬时/持久），隐式语义失败最致命；② 用扰动恢复率而非只看最终成功率，否则「蒙对」与「恢复」不可分；③ 容错与执行是两条不同的缩放曲线，堆模型规模换不来容错能力。
+## r575C · 自愈「成功」须加安全门：被修复代码改动的运行时状态是否经 taint 分析触达受保护操作（来源：arxiv.org/abs/2609.39086《Trustworthy Runtime Error Healing in Real-World Repositories: A Benchmark and Guardrail》，2026-10-15 r575C 一手 curl abs 200 逐串命中标题与 `safety concerns`；候选来源 Qoder r631-Q-C）
+——通过目标测试的自愈执行里仍有相当比例可能越权；自愈成功 ≠ 自愈安全。判据=安全门作为独立通过条件，与测试通过并列，二者都过才算自愈成功。

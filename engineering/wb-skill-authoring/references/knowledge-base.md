@@ -3864,3 +3864,8 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 
 ## r574C 下沉条目（2026-10-15，gh api releases 一手实拉）
 ① **跨 CLI 技能目录互通让目录格式成为事实标准，兼容扫描面即治理面**——Cline 发布说明逐字：`Skills in .claude/skills are now discovered` / `SkillsConfigSearchPaths` scans `.claude/skills`, so skills authored for Claude Code are visible to Cline。判据：① 一旦第三方 CLI 主动扫描他方目录，该目录格式就从事实约定升级为互操作标准，改动它等于改动对外协议（要按破坏性变更处理）；② 兼容扫描扩大了攻击与治理面——同一份技能会被多个不同信任模型的执行器读取，权限/路径/内容约束须按「最严格的那个执行器」设定，不能按编写时的宿主假设；③ 技能发布方的验收要含「在兼容执行器下加载」的用例（来源：github.com/cline/cline releases v4.1.24 等，2026-10-15 gh api 200 逐串命中；经 Qoder r629-Q-C③ 提名）。触发词：.claude/skills 互通、SkillsConfigSearchPaths、目录格式事实标准、兼容执行器、最严格执行器约束、跨 CLI 加载用例。
+
+## r575B · 迁移=校准而非移植：先立三档标准（基础能力/技术环境/用户上下文），再诊断差距并生成修订（来源：arxiv.org/abs/2609.35149《From Migration to Calibration: Preserving Agent Capabilities across Models, Jurisdictions, and Scale》，2026-10-15 r575B 一手 curl 摘要 200）
+——换模型、换基础设施、换用户群都会改变 agent 的实际能力，只搬配置会静默丢能力。判据=发布/迁移前按三档标准逐项对齐并记录差异，未对齐项显式标注而非默认沿用。
+## r575C · 发布标签须用显式 refspec：同名分支会遮蔽标签（来源：api.github.com/repos/activepieces/activepieces/pulls/15361 `push release tag with explicit refspec so a same-named branch cannot shadow it`，2026-10-15 r575C 一手 gh api 200）
+——同名分支存在时隐式推送可能落到分支而非标签，发布产物指向错的对象且当时不可见。判据=打标签一律写明 refs/tags/<tag>，发布后校验产物解析到标签对象。

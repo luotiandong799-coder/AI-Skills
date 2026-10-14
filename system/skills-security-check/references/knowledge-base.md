@@ -782,3 +782,14 @@ Step C: 是否包含恶意意图？
 
 ## r574C 下沉条目（2026-10-15，规范/市场面 curl 一手实拉）
 ① **采信外部扫描结论前必须先证该扫描已启用（查开关/配置态，而非查结果字段）**——JFrog Skills Registry 明写：AI Addendum 未签署时 `skills are registered but not scanned, and scan status shows as Unscanned`，签名也是 "if configured" ⇒ 目录照常收录、安全动作静默未执行；下游看到一个「已收录」的条目无法判断它到底扫没扫。判据：① 收录面 ≠ 审计面，把「在册」当「已审」是默认错误；② 准入判据要先读治理开关的状态（签署/配置/启用），再读结论字段；③ 与「扫描通过 ≠ 安全」类条目分工：那条管结论强度，本条管结论是否存在（来源：docs.jfrog.com/ai-ml/docs/skills-registry，2026-10-15 curl 200/2,440,146B 逐串命中；经 Qoder r628-Q-B① 提名）。触发词：registered but not scanned、Unscanned、收录面≠审计面、Addendum 未签、if configured、采信前先证启用。
+
+## r575A · 默认关闭的安全中间件必须显式记为「未启用」，不得计入既有防护（来源：api.github.com/repos/PrefectHQ/prefect/pulls/23379 `Add optional fastapi-guard security middleware (default off)`，2026-10-15 r575A 一手 gh api 200）
+——「装了但默认关」极易被当成既有防护，实际攻击面完全敞开。判据=盘点防护能力按实际启用状态计，默认关闭项单列并写明启用条件与启用后的验证方法。
+## r575B · 元数据与声明通道本身就是注入面：「不执行正文」不构成安全前提（来源：arxiv.org/abs/2610.14836《MetaCascade: End-to-End Attacks on Agent Skills via Metadata-Only Poisoning》，2026-10-15 r575B 一手 curl abs 200 逐串命中标题与 `metadata-only`；候选来源 Qoder r630-Q-B）
+——agent 先按文档检索、再靠元数据做最终选择，因此仅投毒元数据即可端到端影响「选中哪一个」以及随后的执行。判据=审查面必须覆盖 name/description/标签/依赖声明等元数据字段，只扫正文与脚本等于放行。
+## r575B · 市场级技能选择不能整段外包给 agent 自身的检索循环：检索与决策要分两阶段（来源：arxiv.org/abs/2609.38822《SkillSeek: Revisiting Agent Skill Retrieval at Marketplace Scale》，2026-10-15 r575B 一手 curl abs 200）
+——开源聚合已过 23 万技能，瓶颈从「会不会写」变成「选哪个」。把选择放进 agent 决策回路，等于每个任务都付一次 LLM token 且结果不可复现。判据=候选检索固化为可缓存的独立阶段（常量成本），决策阶段才用模型。
+## r575C · 授权请求必须按会话独立键控：一个授权请求只能服务发起它的那个会话（来源：api.github.com/repos/n8n-io/n8n/pulls/39930 `Key each OAuth authorization request to its own session`，2026-10-15 r575C 一手 gh api 200）
+——授权请求若可被别的会话消费，等于把授权码的发放与消费解绑，构成跨会话冒用通道。判据=授权请求带会话键，消费时校验发起会话一致，不一致即拒。
+## r575C · 防御组件自身是攻击目标：护栏/审校可被引诱进无界推理而 DoS，共享护栏还会跨租户饿死（来源：arxiv.org/abs/2606.14517《From Shield to Target: Denial-of-Service Attacks on LLM-Based Agent Guardrails》，2026-10-15 r575C 一手 curl abs 200 逐串命中标题；候选来源 Qoder r631-Q-B）
+——既有预算护栏都设在 agent 执行层，防御层自身没有上界：注入数据可让护栏进入长推理循环，单个毒输入即可打满**共享**的护栏基础设施，影响同驻的其他 agent。判据=防御层须自带独立成本上界与 reasoning-robust，并按租户隔离护栏资源。
