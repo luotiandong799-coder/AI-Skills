@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: "1.24.0"
+version: "1.25.0"
 agent_created: true
 ---
 
@@ -202,6 +202,20 @@ agent_created: true
 - **判据**：① **升级依据是执行期浮现的需求，不是开工时的静态分档**：`The need for stronger reasoning emerges during execution and varies across workflow phases`，只在派工那一刻打难度标签，会漏掉中途才显形的难点。② **不能把升级开关挂在执行者自评上**：当前语言模型难以检测自己推理在哪里失败，让 executor 自己喊「我不会」恰恰会在最该升级的地方沉默；改由元控制器读**执行证据**裁决，它是自评的替代品而不是回音。③ **决策粒度是 workflow contact points 而不是每次调用**：在每个裁决点把执行证据映射到紧凑状态抽象，输出 SILENT / CONSULT 二值，策略形态是一张可检视的策略表，而不是散落在提示里的几句「搞不定就问」。④ **成本要进目标函数，不能事后加限流器**：动作值由 Monte Carlo control 从「成功 − 咨询成本」的结果学出，只优化成功率的策略会把预算花光再被人为限流砍掉。⑤ **权衡的可调性靠单一价格参数**：`a single consultation-price parameter governing the success-cost trade-off without retraining either underlying model`，换模型或改预算只需改这一个数；把权衡硬编码进策略的做法没有这个性质。⑥ **效果是「弥补差距」不是「追平天花板」**：汇报这类收益必须带上「在匹配的咨询预算下」这一前提，否则是拿不同成本在比较；同理要声明收的是 success gap 的百分比，不是强模型的绝对分。
 - 提升层：工作流（多模型编排的升级策略）/ 工具（成本-质量权衡参数化）。触发词：when to consult stronger model、executor-advisor、workflow contact points、SILENT or CONSULT、cost-penalized Monte Carlo control、consultation price、recover success gap。
 - 与 §双模型主-副手（静态分工 + compaction 边界换模型才省钱）互补：那条管「两个模型怎么分工、在哪换才不丢缓存」，本条管「分工边界内何时真的值得问一次，以及这个『何时』如何可调」。与 rules/03 难度静态分档亦互补：静态档位是零成本先验，接触点策略是在先验之上的运行时修正，二者不是替代关系。
+
+## 可执行状态机：`skills/_tools/dag_scheduler.py`（规则层的执行器补齐，2026-10-13）
+
+上面所有条目都是**规则层**（判据、禁忌、语义）；要真正跑多任务 DAG，靠它们不够，需要一个可执行的状态机底座。`skills/_tools/dag_scheduler.py`（零第三方依赖）是唯一的落地实现，纯状态机、**不自己起 Agent**，只产出「谁该跑、谁可并行、跑完能不能解锁」，执行仍交给 Agent 工具。
+
+- **不变式**：同状态 + 同事件 → 同下一状态。LLM 的不确定放提示层，状态机的不确定放文件层。
+- **门禁**：`done` 必须带非空 evidence，空证据直接拒收（落地「未取得执行证据不得标成功」）。
+- **并行**：`plan` 输出就绪分层，同层任务标 `run_in_background: true`；模型档位建议复用 `model_router.py`，不另造路由。
+- **失败语义**：`fail` 必记原因；超过 `max_attempts` → `needs_human` 转人工，不静默重试。
+- **放弃语义**：`reset-running` 退回 ready 且**不消耗重试次数**（放弃 ≠ 失败，否则重跑链被污染）。
+- **恢复**：`verify <task> <外部命令>` 在重启后核对真实执行状态，防重复执行有副作用的操作。
+- **原子性**：状态 + 证据同一次 `os.replace` 提交（落地 r346C「必须一致的状态对分开落盘即失步窗口」）。
+
+用法：`init` 建 DAG → `plan` 取就绪队列 → `claim` 领取 → `done/fail` 回报 → `status` 全局视图 → `verify` 恢复核对。
 
 ## 委派契约要给「非终态」留位置：把子任务当成同步调用等待终态，会让「正在等人审批」表现为永久挂起而非报错；中间态的识别与它的出口（SSE 转发/UI）必须一起接线（来源：FlowiseAI/Flowise#6659，2026-10-13 r553B，全文见 references/knowledge-base.md）。触发词：子任务返回 action、等待终态不放中间态、SSE 未转发父 UI、挂起不是报错、委派契约非终态。
 
