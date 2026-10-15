@@ -725,3 +725,11 @@
 3. **接入新模型/新后端必须自带默认参数族，缺失即显式失败而非降级**（openai/openai-agents-python#5336）：GPT-6 系列没有默认 reasoning 设置，带 function tools 请求 `/v1/chat/completions` 直接 400。规则：新增模型/供应商不是「加个名字」，必须同时声明其必需参数与默认值；缺默认值的路径应快速失败并给出「该后端需显式指定 X」，而不是静默用一个不合适的默认继续跑。
 
 判非（本轮核实）：vercel#2484（符号链接计入技能目录哈希）与 r594C symlink 族同族；vercel#2487（安装摘要显示真实落点）与 rules/07 §10.4「写入后验证落位正确」重叠 >60%；claude-code#102546（归档留下本地分支）与 rm「清理被拒替代路径」同族；vercel#2509（在已注册 agent 目录发现技能）与 sa 1.170.0 单一真源同族。
+
+## r597C（2026-10-16 · 新达站点 help.make.com llms.txt（73,201B，前轮超时） + docs.openclaw.ai CI 面 · wb-release-maintain 1.164.0）
+
+1. **回滚能力边界必须按组件能力标注；开了自动提交就等于放弃跨环节回滚**（make/rollback-error-handler）：Rollback handler 只能回滚支持事务的模块（界面上以 ACID 标签标注），不能撤销诸如"发邮件""删文件"这类已发生的外溢动作；且当 Auto-commit 打开时，只有**出错的那个模块**能回滚，此前模块的改动已经提交、不可回滚；关掉 Auto-commit 才能把整个 bundle 内所有支持事务的改动一起回退。规则：交付前先画出这条链路上哪些环节可回滚、哪些不可回滚；把提交模式（自动/显式）写进回滚预案——默认开启的自动提交会把回滚窗口缩到单个环节。
+2. **修复逻辑错误后的标准动作是"用旧输入跑新代码"，且调试重放与生产回填要用两个入口**（make/scenario-run-replay）：用上一次运行的触发数据执行**当前版本**的场景。文档给了三类用途：① 测试与调试（Builder 内 "Run with existing data"，边改边重放同一份数据）；② 错误恢复（例如 100 条因逻辑错误失败的运行，先在 Builder 里修好，再重放那 99 条）；③ 数据回填（从 history / Run details 直接重放，不必进 Builder）。规则：别为了复现问题去造新数据——保留触发载荷就能重放；同时要区分"在编辑器里重放调试"与"在生产历史里重放回填"，后者会被当成真实副作用。
+3. **按变更作用域选择验证范围，并给作业显式预算；手动派发不得绕过门禁**（openclaw CI 面：ci/scope-and-routing、job-budgets、manual-dispatches）：changed-scope detection 决定哪些 lane 该跑；作业带 UI 分片、并发与作业预算、lint 内存策略、sticky-disk 键；手动派发有 release-gate 回退与 Windows Testbox 检查。规则：① 不要每次都全量验证，按改动的影响面选验证 lane，并定期用全量检查漂移；② 并发数 / 内存 / 磁盘键要写成显式预算，不是"跑起来再说"；③ 手动触发只能改变选择，不能绕过门禁。
+
+判非（本轮核实）：make/exponential-backoff 与 automatic-retry 同一方法 family，并入 wb-debug-loop r597 第 10 点（错误类型白名单 + 退避序列表）；make/incomplete-executions（失败现场默认关闭且有配额）落 wb-debug-loop 第 9 点；openclaw automation delivery 三模式 + 失败告警与 r594C「告警自身失败三态」重叠 >60%。
