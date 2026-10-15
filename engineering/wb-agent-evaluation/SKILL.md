@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算
-version: "1.30.0"
+version: "1.31.0"
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -204,3 +204,5 @@ version: "1.30.0"
 - **r576C · 技能增益按「同配置下相对无技能」的通过率差计量，且结论绑定该配置与执行器**（arXiv 2610.08875 下游效用实证：87 个 SkillsBench 任务 ×9 种配置，2026-10-15 r576C 一手 curl abs 200；arXiv 2609.36746 EASE：策展器与执行器耦合，换执行器即退化，abs 200 一手）：效用定义为 **pass-rate difference from No-Skill，同任务、同模型—harness 配置**；同一批技能换个配置结论就变，用不同执行器训练的 curator 只在自己那个执行器上最优。判据=① 报绝对通过率不算技能增益，必须报相对 No-Skill 的差；② 评测报表必须写明配置与执行器，跨配置/跨执行器的增益结论不可迁移。
 - **提升层**：模型（增益归因）/ 工作流（评测口径）。
 - 触发词：downstream utility、pass-rate difference、No-Skill 基线、executor-dependent、curator 与执行器耦合、跨配置不可迁移。
+
+## r586C 下沉条目：**评测 oracle 自身要被审计；裁决器缺参照会低估正确值；有状态 agent 路由须带会话历史**——① oracle-integrity 审计（arXiv 2610.16067）给五条状态完整性不变量 + 三个 known-answer 控制；注入七类 oracle 缺陷全被检出；真实 benchmark 上发现 reward function 在 post-run 打分**之前改变环境状态**，4,320 episode 回放重算把 database-pass 标签 4,194→2,883、成功率 94.3%→65.5%；组件消融显示工具描述影响最大。② 工具参数裁决的「推导缺口」（arXiv 2610.18497）：输入无参照文本时 judge 接受正确值的概率显著下降，7 个 judge 全含，默认 schema 值与被裁掉的来源文本最严重；受控实验显示 judge 宁选可见的错误值也不选来源不可见的正确值。③ 有状态路由（arXiv 2610.19292）：同等 offloading 率下给路由器会话历史对每个模型对都有增益，且与始终用最贵模型差在一个百分点内；换模型破坏 prompt 前缀缓存，缓存复用须计入路由成本口径，路由点选在用户轮边界。判据=分数表看不见 oracle 缺陷，评测器要与被测对象同被审计；oracle 改过环境状态的分数不可迁移，必须回放重算；评测口径须声明 prompt/工具描述/错误字符串已固定；裁决参数正确性必须提供参照文本，评测输入要声明裁剪面（全文见 references/knowledge-base.md，2026-10-15 r586C）。触发词：oracle 完整性、known-answer 控制、reward function 改环境、94.3% 降到 65.5%、回放重算、derivation gap、推导缺口、DeRef、无参照的参数裁决、有状态路由、会话历史路由、用户轮边界、prompt 缓存复用代价。

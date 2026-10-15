@@ -3748,3 +3748,18 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **实证**：PrefectHQ/prefect #23403（gh api 一手 200，main 3.8.9.dev2）——含 secret 字段的 pydantic model 列表 `block.save()` 后，20 条 credentials 中 18 条是第 0/1 条的整份拷贝（用户名密码成对、其余丢失），读回时**无任何报错**。根因：`visit_collection` 为处理共享引用按 `id()` 缓存结果（#18434 引入，3.4.8 起受影响），而 `handle_secret_render` 每次返回新的 `model_dump()` dict，前一个 dict 无引用被回收后，下一个 dict 常落在同一地址、拿到同一 `id()`，于是命中旧缓存。报告给出仅用 `visit_collection` 的最小复现（5 元素中 3 个错）。修法：在 `_seen` 中连同被访问对象一起持有引用。
 - **判据**：① **缓存键必须是「值的身份」而非「内存地址」**：用 `id()` 做键要求对象在遍历期间保持存活，否则地址复用会静默串值。② **静默错配是最贵的一类缺陷**：串值不抛错、类型正确、结构完整，只有逐条比对内容才能发现，因此凭据 / 配置类批量对象必须在写入后做**逐条内容校验**，不能只核数量与 schema。③ **回归要跨平台跑**：同一缺陷在 3.13/Linux 与 3.12/Windows 表现不同（内存复用模式差异），单平台验证可能误判为偶发。
 - 提升层：工具（序列化与缓存键契约）/ 工作流（批量对象落盘后校验）。触发词：id() 缓存、地址复用、visit_collection、凭据静默错配、批量对象校验、secret 列表保存。
+
+## r586A · 结构化解析、schema 保真、流式收尾与硬编码模型：四类「静默成功」（来源：langgenius/dify #44080 / #44141、langflow-ai/langflow #15744、activepieces/activepieces #16536，2026-10-15 r586A 一手 gh api 逐条 JSON 200）
+
+- **实证**：① DeepSeek + Structured Output 下 parser 从 reasoning block（`<think>`）里抽 JSON，模板默认值（`"string"` / `"..."` / 整份 Schema）作为实值下行，而 run 报 succeeded（dify #44080）。② `create_input_schema_from_json_schema` 处理 `anyOf:[{type:array,items:{...}},{type:null}]` 走 nullable 捷径，把 `"array"` 映成裸 `list`，item 类型被丢，Pydantic 发出 `"items": {}`，Gemini 对**整个请求**报 `...items: missing field`（langflow #15744）。③ 工具 `create_variable_message` 产出的非流式自定义变量在流式收尾时丢失，流式与保存后的 Chatflow 答案里都没有，**不报错**（dify #44141，1.17.1 / graphon 0.7.0）。④ `claude/src/lib/actions/send-prompt.ts:177` 无论 Model 选什么都发 `claude-3-7-sonnet-20250219`，该模型 2026-02-19 退役后线上返 404 `not_found_error`；官方替代 `claude-sonnet-5-5` 又拒该 thinking 请求（400 `"thinking.type.enabled" is not supported for this model`）；OpenAI 侧 `extract-structure-data.action.ts:25` 默认 `gpt-3.5-turbo` 于 10-23 关停，替代模型同样拒绝（ap #16536）。
+- **判据**：① **抽取器必须在推理段与最终段之间做显式选择，且选错段要可观测**；schema 校验要额外判「值是否等于 schema 自身或其模板默认值」——类型合法不等于值合法，「占位值下行 + 报成功」是最贵的组合。② **简化映射不得丢子 schema**：nullable 是外层包装而非类型替换，`type→python type` 一刀映射会把 `items` 抹掉；校验面按**最严消费方**取——生成侧 Pydantic 通过而严格消费方整请求被拒时，报错须指向具体参数路径而非泛化。③ **流式与非流式是两条产出路径，验收必须成对**；变量、元数据这类非流式载荷走独立通道并在合并点做必填字段断言，「运行成功 + 字段缺失」须 fail-loud。④ **用户可选模型与实际发出的模型 ID 必须同源**——选择器改了但代码写死 ID 属契约断裂；替代模型只保证名字替换，能力集（thinking / 结构化输出 / 工具调用）须逐项复验；模型退役是按日历发生的失败，须有退役清单与替换面验收。
+- **提升层**：工具（schema 与解析正确性 / 模型契约）/ 工作流（流式与非流式双路径验收 / 模型退役治理）。
+- **触发词**：reasoning block 抽 JSON、模板占位值下行、整份 Schema 进下游、报成功实为占位、nullable anyOf、items missing field、裸 list、子 schema 丢失、最严消费方、非流式变量消失、流式收尾丢字段、双路径成对验收、硬编码模型 ID、模型退役 404、替代模型能力集不兼容、thinking.type not supported。
+- 与 av KB「reasoning 与 final 分层」分工：那条管分层字段存在，本条管**抽错段 + 假成功**。
+
+## r586C · 静态技能不一致不等于运行时风险；参数裁决存在「推导缺口」（来源：arXiv 2610.18927 / 2610.18497，2026-10-15 r586C 一手 abs 200）
+
+- **实证**：① 575 个社区与基准技能审计出 1,182 处人工验证的**契约不一致**（文档 / 脚本 / 配置互相矛盾）；49 个可执行 agent 任务 × 3 个 LLM × NoSkill / OriginalSkill / FixedSkill 三设置的行为分析结论是：静态缺陷量**不能可靠反映**真实性能退化（2610.18927）。② 裁决工具调用参数的 judge 在输入**没有该值的参照文本**时接受正确值的概率显著下降——默认 schema 值、需推断的值、或来源文本被裁掉的值；7 个 judge 全含该现象（含 CLM、Jev）；受控 source-relocation 实验显示 judge 跟随输入里的参照：宁可选可见的错误值，也不选「正确但来源不可见」的值；DeRef（另一模型读全量历史写参照）在三基准上全面提升参数 AUROC（2610.18497）。
+- **判据**：① **静态审计的产物是「契约不一致」，不是「运行时风险」**，报告不得直接换算成风险分；修复收益要用 NoSkill / Original / Fixed 三臂对照实测，并给静态证据等级标签。② **裁决参数正确性必须提供「该值应是什么」的参照文本**，否则测的是裁决者的记忆而非被测对象；输入裁剪会系统性制造推导缺口，评测输入须声明裁剪面；无参照时正确值被判错 ≠ 被测系统错，两类必须分开报。
+- **提升层**：工作流（技能审计口径与评测输入声明）/ 工具（LLM 裁决器输入契约）。
+- **触发词**：静态不一致、契约冲突、静态缺陷量不等于运行时风险、三臂对照、derivation gap、推导缺口、无参照的参数裁决、默认 schema 值、输入裁剪偏置、DeRef。
