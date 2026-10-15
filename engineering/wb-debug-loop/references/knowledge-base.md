@@ -1837,3 +1837,11 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 12. **跨进程/跨服务调用必须透传链路上下文**（MCP SEP-414 "Document OpenTelemetry Trace Context Propagation Conventions"，状态 Final / Standards Track）：把 trace context 的传播方式写成规范。规则：任何跨进程边界的请求都要带上 trace/span 上下文（含 LLM 网关、工具、子 agent），否则日志没有可关联的键，"我查过日志了"不构成取证。
 
 判非（本轮核实）：openai-agents#5351（guardrail 模式验证记录）是使用报告无新判据；claude-code#100269（特定工具通道固定延迟）、#94687 的权限侧落 ssc；skills#1260（wizard 反斜杠）为平台字符细节；n8n#41224/#41225/#41226（503 用户报障）无方法增量。
+
+## r598A（2026-10-16 · GitHub 20 仓 issues · wb-debug-loop 1.245.0）
+
+1. **机制自身失败时，必须撤掉它给出的建议——陈旧建议比没有建议更有害**（openclaw/openclaw#173310）：compaction 失败后界面仍照旧显示"上下文溢出的处理建议"，用户按过时建议操作。规则：建议/提示类输出要绑定其生成机制的状态；机制本次失败，就把它的输出标失效并换成"该建议未生成（原因）"，禁止沿用上一次或默认文案。
+2. **清理失败的路径也要释放已完成的资源**（openclaw/openclaw#173547）：子 agent 完成后若 cleanup 抛错，就不再被释放，最终堆积。规则：释放动作要放在 finally 或与清理成功与否无关的独立分支；"清理失败"可以记日志，但不能顺带把已完成的资源留在占用态。
+3. **必需依赖缺失要在装配期失败，不能注入空值拖到使用点炸**（langchain-ai/langgraph#9077）：编译时没传 store，BaseStore 被注入 None，直到某次 put 才 AttributeError。规则：依赖是必需的就声明为必需并在装配/构造时校验；注入空占位等于把错误从"装配点"搬到"使用点"，定位成本大幅上升。
+
+判非（本轮核实）：openclaw#173495（恢复与完成交接卡死）描述过泛无判据；#171791/#157806（请求方身份在执行准入处丢失）与 rm「审计主体=真实执行者」重叠 >60%；#173544（强制顺序解析 allowlist）为测试实现细节；crewAI#8210/#8209（事件循环内同步 kickoff）为运行时实现；browser-use#6044/#6045/#6073/#5619/#5618 为 DOM/路径实现细节。
