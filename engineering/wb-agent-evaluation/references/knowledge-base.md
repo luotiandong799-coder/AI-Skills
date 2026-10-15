@@ -40,3 +40,9 @@
 ——① 按扰动类型分档（显式/隐式 × 瞬时/持久），隐式语义失败最致命；② 用扰动恢复率而非只看最终成功率，否则「蒙对」与「恢复」不可分；③ 容错与执行是两条不同的缩放曲线，堆模型规模换不来容错能力。
 ## r575C · 自愈「成功」须加安全门：被修复代码改动的运行时状态是否经 taint 分析触达受保护操作（来源：arxiv.org/abs/2609.39086《Trustworthy Runtime Error Healing in Real-World Repositories: A Benchmark and Guardrail》，2026-10-15 r575C 一手 curl abs 200 逐串命中标题与 `safety concerns`；候选来源 Qoder r631-Q-C）
 ——通过目标测试的自愈执行里仍有相当比例可能越权；自愈成功 ≠ 自愈安全。判据=安全门作为独立通过条件，与测试通过并列，二者都过才算自愈成功。
+
+## r577C · **等价 schema 表述是被测混淆变量：评测与跨方案对比前须做表述敏感性测试**
+- **实证**：arXiv 2609.34971《Action-Space Shaping for LLM Agents: Measuring and Mitigating Tool-Schema Bias》（abs 200 一手逐串命中）——工具 schema 不是 agent 的动作空间，**只是它的一种接口表示**；同一个可执行动作可以通过多种功能等价的工具定义暴露，真正学会了任务的 agent 应当在它们之间表现一致。作者指出当前 agent 常常做不到，称为 **schema bias**；并给出可执行变换框架，用 **nine operators**（含合并与拆分工具等）重写原生 schema，在 **eleven LLMs、最多 32 种 schema 变体**上测：`success rates range from complete failure to 97% depending solely on the schema`。
+- **判据**：① **不归一化等价表述，测的是 schema 措辞而不是能力/兼容性**——同一动作换个写法成功率可从"完全失败"到 97%，此时任何跨模型/跨方案的对比结论都不可信。② **评测控制变量清单要显式包含"接口表述"**：现有评测通常控模型、数据、harness，未控"等价 schema 表述"这一变量（本库此前 0 命中）。③ 技能/工具作者视角的反面：工具的 schema 写法本身是性能因素，改 schema 等于改被测对象，因此**改 schema 后必须重测而不能沿用旧结论**。
+- 提升层：可复用 Skill（评测有效性）/ 工作流（跨方案对比口径）。触发词：schema bias、等价表述、Action-Space Shaping、nine operators、32 schema variants、表述敏感性测试、混淆变量。（经 Qoder r632-Q-B 提名，WB 一手复核属实。）
+

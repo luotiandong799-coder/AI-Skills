@@ -3672,3 +3672,44 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ——预览曾复用 builder 测试结果、保存后走 mocked evaluation service，前后执行模式不同 ⇒ "预览通过"不能证明"保存后通过"；达到迭代上限仍须返回失败态。判据=检查/预览与正式执行共用同一执行器；与 §验证通道禁止副作用分工：那条管预演不得外溢副作用，本条管预演与实跑的执行保真。
 - 提升层：可复用 Skill（预演保真）/ 工作流（评测预览）。
 - 触发词：预览执行模式、mocked execution、检查预览、预览与保存后不一致、预演保真。
+
+## r577A · **并发保护必须落在写路径的服务端：客户端侧锁不构成并发保护**
+- **实证**：Activepieces #14795「Concurrent flow edits silently lost: canvas lock is client-side only, write path has no enforcement」——两个会话并发编辑同一 draft flow，**每次写都返回 HTTP 200**，编辑静默丢失（curl 复现 5 轮丢 3 次；客户 QA 28 步只活 26 步）。锁只由协作 websocket 模块引用，`applyOperation`（POST /v1/flows/:id）**既无锁检查也无版本冲突检测**，draft flowVersion 上 last write wins；PR #12500（0.82.0）加横幅锁时把此前的服务端护栏 `assertThatFlowIsNotBeingUsed` / `FLOW_IN_USE` 一起删了。修复方向两条并列：被他人持锁 → 409；乐观并发（客户端带上期望的 draft flowVersion，不匹配 → 409），因为锁是 per-user，同一用户多会话只有版本检查能覆盖。
+- **判据**：① **"有锁"与"写路径会拒绝"是两件事**——只在渲染层/UI 层施加的锁，对 REST / MCP / agent 调用方完全不可见（本例 MCP 工具直接调 `flowService`，根本不碰 `lockService`，连 `RESOURCE_LOCKED` 事件都不发）。② **把阻塞式护栏换成提示式横幅，等于撤掉护栏**：改造时若只新增提示、未保留服务端拒绝路径，并发写就从"报错"降级为"静默覆盖"。③ 并发安全判据必须按**调用方清单**逐条验（UI / REST / MCP / agent / CLI），不能用"UI 看起来锁住了"代表全部。
+- 提升层：工具（并发写路径）/ 工作流（协作编辑契约）。触发词：canvas lock、客户端锁、并发编辑静默丢失、200 但没生效、last write wins、乐观并发、flowVersion 不匹配、锁对 MCP 调用方不可见、把阻塞换成提示。
+
+## r577A · **解析器必须能解析本系统自己产出的默认模板与内置示例（自举校验）**
+- **实证**：dify #44045——`extractFunctionParams`（`web/app/components/workflow/nodes/code/code-parser.ts`）是**唯一**从用户代码推导 Code 节点输入变量表的东西，而 JavaScript Code 节点自己的默认模板（api/core/helper/code_executor/javascript/javascript_code_provider.py `get_default_code`）就是**解构参数**形态，该函数解析不了；多行签名同样误解析。触发路径是用户"应用 AI 生成/改写代码"（`onGenerated` → `handleGeneratedCode`）。
+- **判据**：① **默认模板是最低自举用例**：连自己出厂模板里的语法都解析不了的解析器，其输出只能当提示、不能当契约；回归用例必须包含"产品自带的默认模板原文"。② 生成链路与解析链路耦合时（AI 产出 → 参数解析 → 重建输入列表），**解析能力决定生成功能的可用上限**，缺陷表现为"生成后变量凭空消失"这类用户归因错误的现象。③ 语言特性支持面要显式成文（支持哪些签名形态），否则用户写的合法代码被静默降级。
+- 提升层：工具（解析契约）/ 可复用 Skill（生成—解析闭环）。触发词：destructured params、默认模板解析失败、多行签名、extractFunctionParams、生成后变量消失、解析器自举用例。
+
+## r577A · **校验规则必须覆盖容器内部元素，不能只校验标量/顶层**
+- **实证**：dify #43782「JSON example import skips depth validation for array objects」——导入 JSON 示例时深度校验对数组元素（array objects）不生效，只覆盖顶层结构 ⇒ 嵌套数组 payload 可绕过深度限制进入系统。
+- **判据**：① **"校验了"要按被校验对象的全部可达节点计，不是按顶层字段数计**：容器（数组/对象）内部每一层都要进同一套校验，跳过即等于该层级无校验。② 深度/大小/条数类限制必须用**嵌套结构**的用例回归，扁平用例永远测不出"数组里跳过"这类缺陷。③ 校验漏层的后果是资源与注入面双开（越深的 payload 越晚被发现）。
+- 提升层：工具（输入校验）/ 可复用 Skill（准入检查）。触发词：depth validation、数组元素跳过校验、嵌套 payload 绕过、校验只覆盖顶层、导入示例深度。
+
+## r577A · **解码/转义处理必须覆盖合法字符集全集，未匹配不得静默原样返回**
+- **实证**：dify #43646「unicodeToChar does not decode uppercase \uXXXX escapes in streamed chat answers」——流式回答里的 unicode 转义只匹配小写形态，大写 `\uXXXX` 不被解码，原样出现在用户可见文本中（不是报错，是错误内容被当正常内容交付）。
+- **判据**：① **转义/解码规则的匹配集必须按规范全集声明**（大小写、四位/变长、代理对），只实现"常见形态"等于把其余形态变成**静默的错误输出**，比报错更危险——报错会被拦下，错误输出会直接送达。② 未命中分支必须显式留痕或降级为可辨识标记，**禁止原样透传**（原样透传在用户侧不可与"本来就该这样"区分）。③ 与 r560A「回退链末端永不失败」同族但不同层：那条管"解码失败被兜底吞掉"，这条管"匹配集不全导致根本没进解码"。
+- 提升层：工具（编解码契约）/ 工作流（内容交付前自检）。触发词：unicodeToChar、大写转义未解码、转义匹配集不全、静默原样返回、流式回答乱码。
+
+## r577A · **用户提供的键名/变量名必须与宿主内置原型属性隔离**
+- **实证**：dify #43644——变量取名为 `constructor` 等 `Object.prototype` 成员时，`hasDuplicateStr`/`getVars` 用普通对象字面量做查表，`strObj['constructor']` 拿到的是继承来的原型成员；给该访问器赋原始值被**静默丢弃**；`checkKey()` 只校验 `\w+` 且不以数字开头，因此 `constructor` 这类名字能通过命名校验却在运行期失效。
+- **判据**：① **"用户命名空间"与"宿主内置属性空间"必须物理隔离**：查表容器用无原型对象（`Object.create(null)` / Map），判存在用 `hasOwnProperty`/`hasOwn`，禁用裸 `[key]` 真值判断。② 命名校验（正则层面）与运行期语义（原型层面）是两套判据，**通过命名校验 ≠ 可以安全用作键**；回归用例须包含一组原型名（constructor / toString / valueOf / __proto__）。③ 这类缺陷的表现是"赋值不生效且无报错"，属静默失败，须在设计评审期排除而非靠日志发现。
+- 提升层：工具（数据容器契约）/ 可复用 Skill（命名与键空间规范）。触发词：Object.prototype、原型名冲突、constructor 变量、静默丢弃赋值、无原型对象、hasOwn 查表。
+
+## r577A · **局部自动生成/改写不得重置用户已配置字段：生成结果只能做差量合并**
+- **实证**：dify #44074——Code 节点应用 AI 生成/改写代码时，`handleGeneratedCode` 从新签名**整体重建**输入变量表，每个参数都发成 `value_selector: []`（未绑定变量）；后端 modify 分支（`LLM_MODIFY_CODE_SYSTEM`）只改请求的那处、参数名原样返回，因此**已经绑定好的上游引用被平白清空**。用户侧现象是"我只让它改一行，结果所有输入都断开了"。
+- **判据**：① **生成物与既有配置的合并必须是差量**：按稳定标识（参数名）保留已有绑定，新增项才用空值；整体重建 = 把用户的配置工作当可丢弃物。② 生成链路的回归用例必须含"已绑定状态下再生成一次，绑定不变"，只测"首次生成"永远测不出来。③ 与"生成失败要能回退"并列：**生成成功但副作用越界**比生成失败更难发现，因为没有任何错误信号。
+- 提升层：工具（生成器与编辑器契约）/ 工作流（AI 辅助改动的审阅点）。触发词：value_selector 被清空、生成后绑定丢失、整体重建输入表、差量合并、生成副作用越界。
+
+## r577A · **缓存键/锁键必须包含命名空间（workspace/tenant）维度**
+- **实证**：windmill #11669——同一实例两个 workspace 部署同一脚本得到**同一个 hash**（`impl Hash for NewScript` 哈希 path/parent hash/summary/description/content/deployment message，**不含 workspace_id**），而锁由各自 workspace 的依赖作业分别计算（相对导入不同 ⇒ 锁不同）；worker 的脚本缓存**只按 hash 取**，`SELECT … FROM script WHERE hash = $1 LIMIT 1` 无 workspace 过滤，`get_script_content_by_hash` 收了 `_w_id` 却不用 ⇒ **一个 workspace 的作业拿着另一个 workspace 的锁在跑**。
+- **判据**：① **键的维度必须等于隔离边界的维度**：只要隔离单位是 workspace，任何跨请求的复用键（hash / 缓存 key / 锁名）都必须带上它，否则"同内容不同归属"必然串用。② 函数签名里收了隔离参数却不使用（`_w_id` 下划线前缀）是**可机检的隔离缺陷信号**，应列为评审必查项。③ 上游"fork/clone 共用锁"的假设不能外推到"两个命名空间各自独立部署"，#11456 的 "Any live copy holds the same code" 注释正因此失效。
+- 提升层：工具（隔离与键空间）/ 可复用 Skill（多租户复用契约）。触发词：hash 不含 workspace、跨工作区锁串用、_w_id 未使用、缓存键隔离维度、同名资产不同归属。
+
+## r577C · **运行时监控必须区分「被拒绝的尝试」与「已完成的效应」，观测边界与监控形式化分离**
+- **实证**：arXiv 2610.19818《One Monitor Does Not Fit All: Formalism-Agnostic Runtime Verification for Agentic AI》（AgenticRV，abs 200 一手）——agentic 系统混合了模型决策、可变状态、工具调用与对外委托，监控需要来自**不同执行边界**的观测，而预防要求在操作产生效应**之前**施加控制。做法是：适配器发出规范事件；每个监控器只拿自己的投影与抽象；决策策略用归一化判定选择由**对应适配器**执行的反应。论文显式形式化了三件事——观测何时充分、替换监控器何时保持判定不变、阻断何时真的防止了不安全效应；并明确**区分被拒绝的尝试与已完成的效应**，不做"被阻断的请求必然让每个监控器永久处于违规态"的假设。实现支持 LangGraph / MCP / A2A。
+- **判据**：① **"拦下了"不等于"没发生"**：尝试与效应是两个可观测对象，只记其一会把"被拦下的高危尝试"与"从未发生"混为一谈，也会把"已部分生效"漏记。② **监控形式化与执行边界要解耦**：换监控器（换形式化）不应改变判定，判定变化必须能归因到投影/抽象的变化而不是换了个监控器。③ 违规态不应被假定为吸收态（一旦进入永不退出），否则监控器本身不可复用。
+- 提升层：工具（运行时验证架构）/ 工作流（监控与阻断策略）。触发词：runtime verification、观测边界、被拒绝的尝试 vs 已完成的效应、监控器替换不改变判定、AgenticRV、违规态非吸收态。
+

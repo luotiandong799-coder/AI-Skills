@@ -3902,3 +3902,24 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 ——SSL 交替进行专家教学与学员实操：Educator 只引导，**Student 始终是唯一的环境操作者与技能作者**（可质疑、可测试、可改写建议）；迁移性用**全新 solver 会话**下的 held-out 评测检验（SkillTransferBench 35 任务族 / 408 可执行用例）。判据=不能把"这次跑通了"当成使用条件已被验证；条件必须另设反例去撞，且复用评测要在新会话里做。与 av §选择依据是候选间的差异文本（SkillContrast 2610.11650，r547B 已落）分工：那条管**检索时保留条件差异**，本条管**学习时生成条件证据**。
 - 提升层：可复用 Skill（技能沉淀）/ 工作流（教学式技能生成）。
 - 触发词：conditions of use、Socratic skill learning、学生是唯一作者、迁移评测新会话、成功不等于条件已验。
+
+## r577B · **同名技能按「来源位置」解析，不是按内容或按修改时间**
+- **实证**：code.claude.com/docs/en/skills.md（2026-10-15 实拉 200/109,126B 逐串命中）——"When two skills share a directory or file name, **where each one came from decides which one `/name` runs**"：表格覆盖 enterprise / personal / project / nested / plugin / claude.ai 位置、bundled skills、built-in commands、command files。两个位置同名时：**enterprise 高于 personal，personal 高于 project**（`~/.claude/skills/` 与项目 `.claude/skills/` 都有 `deploy` ⇒ 跑 personal 那个）。
+- **判据**：① **"改了没生效"的第一问是"这个名字在几个位置存在、谁优先"**，不是"我是不是改错了文件"——优先级由来源决定，与修改时间、内容新旧无关。② 技能发布/部署要显式声明目标位置：同名技能落到低优先级位置等于不生效（静默）。③ 排查顺序必须先把全部技能位置枚举出来（企业/个人/项目/嵌套/插件/托管/内置），再对同名项按优先级消解。
+- 提升层：可复用 Skill（技能装载与命名）/ 工具（技能解析顺序）。触发词：两个技能同名、enterprise over personal、personal over project、改了没生效、技能位置优先级、bundled 最低。
+
+## r577B · **技能渲染内容跨轮持久，但授权不持久：不要把权限假设写进持久指令**
+- **实证**：同上 code.claude.com/docs/en/skills.md「Skill content lifecycle」——技能被调用时渲染出的 `SKILL.md` 内容**作为一条消息进入会话并在后续轮次保留**；**持久的是指令，不是权限**：`allowed-tools` 授予在用户发下一条消息时**清空**。同一份内容再次被调用时，Claude Code 只加一句"已加载"的提示而**不注入第二份副本**。
+- **判据**：① **指令与授权是两个生命周期**：写技能时不能假定"这条指令还在 ⇒ 当时授予的工具权限还在"，需要工具的操作要么在许可面显式配置，要么在指令里自带重新申请/降级路径。② 依赖"内容已在上下文"做幂等（不重复注入）是平台行为，不是技能可依赖的契约；技能自身要对重复调用保持幂等。③ 需要长期生效的约束要写成"常驻指令"（standing instructions）而不是"一次性步骤"，因为不会被重读。
+- 提升层：可复用 Skill（技能生命周期）/ 工具（权限与内容生命周期分离）。触发词：rendered content 持久、allowed-tools 下一条消息清空、指令持久权限不持久、重复调用不重复注入、standing instructions。
+
+## r577B · **调用方控制是两个正交开关：有副作用的工作流禁模型自调，纯背景知识禁用户调用**
+- **实证**：同上 code.claude.com/docs/en/skills.md「Control who invokes a skill」——默认用户与模型都可调用；两个 frontmatter 字段分别收窄：**`disable-model-invocation: true`** ⇒ 模型不能自行调用，用于有副作用或要控时机的动作（`/commit`、`/deploy`、`/send-slack-message`），"你不会想让 Claude 因为代码看起来就绪就决定部署"；**`user-invocable: false`** ⇒ 只有模型能调用，用于不可当命令执行的背景知识（如 `legacy-system-context`）。
+- **判据**：① **判断依据是"这次调用被误触发的代价"**，不是"谁更可能用"：不可逆/有对外副作用 ⇒ 收回模型自发权；无动作语义的背景知识 ⇒ 收回用户入口（免得被当命令打出无效调用）。② 两个开关可同时生效形成"只能被显式编排调用"的技能，是分层的默认拒绝手段。③ 反面：默认双开意味着**每个新技能在写之前就要回答"模型自发的后果是什么"**，答不出就先设 `disable-model-invocation`。
+- 提升层：可复用 Skill（技能可见性与触发面）/ 工作流（副作用动作的门控）。触发词：disable-model-invocation、user-invocable: false、模型擅自部署、背景知识不当命令、调用方白名单。
+
+## r577C · **harness 的不变量与实现同语言，状态轨迹入版本库而非留在会话里**
+- **实证**：arXiv 2610.19591《L3M: A Verifiable Harness and Runtime for Self-Extending and Self-Improving Agents》（abs 200 一手）——前提：有用工作发生在**调用之间**（数小时到数天、跨工具与外部系统、跨多个 agent），能否复利取决于 harness；而 harness 面对一个模型没有的约束——参与者（人 / 模型 / 代码）三者中**只有人的注意力不随规模增长**，因此计算要能增长就必须**不让人出现在每个循环里**。L3M 用 Lean 4 写成，**同一门语言既实现 harness、又陈述其不变量、又是 agent 用来扩展它的语言**；一次计算的全部状态存在 Git 里——**丰富的状态轨迹（state trajectory）才是那个对象，而不是一段聊天记录**。
+- **判据**：① **长周期工作的一等产物是"可回放的状态轨迹"，不是会话文本**：会话会丢、不可 diff、不可分叉；轨迹可 diff / 可回滚 / 可并行接手。② **不变量与实现同语言**消除了"规约与代码各说各话"的漂移；在技能/工作流体系里对应"验收标准必须与实现同源、可机读"。③ 人的注意力是唯一不随规模伸缩的资源，因此自动化设计要按"人不在回路里也能推进"来算，而不是按"人审一遍更快"。
+- 提升层：工作流（长周期状态管理）/ 可复用 Skill（自扩展边界）。触发词：state trajectory、状态入 Git、不变量与实现同语言、人不进每个循环、harness 可验证、自扩展运行时。
+
