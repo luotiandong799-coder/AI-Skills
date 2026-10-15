@@ -793,3 +793,9 @@ Step C: 是否包含恶意意图？
 ——授权请求若可被别的会话消费，等于把授权码的发放与消费解绑，构成跨会话冒用通道。判据=授权请求带会话键，消费时校验发起会话一致，不一致即拒。
 ## r575C · 防御组件自身是攻击目标：护栏/审校可被引诱进无界推理而 DoS，共享护栏还会跨租户饿死（来源：arxiv.org/abs/2606.14517《From Shield to Target: Denial-of-Service Attacks on LLM-Based Agent Guardrails》，2026-10-15 r575C 一手 curl abs 200 逐串命中标题；候选来源 Qoder r631-Q-B）
 ——既有预算护栏都设在 agent 执行层，防御层自身没有上界：注入数据可让护栏进入长推理循环，单个毒输入即可打满**共享**的护栏基础设施，影响同驻的其他 agent。判据=防御层须自带独立成本上界与 reasoning-robust，并按租户隔离护栏资源。
+
+
+## r576C · 恶意技能筛选器的工作点必须按「召回 × 复核负载」双指标声明，分布外来源须单独声明（来源：arXiv 2610.17727《SkillScreen》，2026-10-15 r576C 一手 curl abs 200/41,809B，逐串命中 `flags 20-25% of benign skills at 99% recall on unseen attack families` 与 `unfamiliar benign sources sharply increase false positives`）
+——SkillScreen 是紧凑决策模型、单次前向直接打分：在未见攻击族上做到 99% 召回时，只把 20-25% 的良性技能标上来（复核负载显著低于词级分类器与 prompted LLM judge，且比全量微调编码器更能泛化到未见来源）；但**陌生良性来源会显著抬高误报**。判据=不许只报一个召回数：工作点 = 召回 + 复核负载；并显式声明"分布外来源不套用同一工作点承诺"。与 av §组合级涌现恶意（Runaway Reaction 2610.05943，av 2.158.0 已落）分工：那条管**组合面**，本条管**单技能筛选面的工作点口径与泛化边界**。
+- 提升层：可复用 Skill（扫描与准入门）/ 工作流（复核队列容量规划）。
+- 触发词：SkillScreen、99% recall、复核负载、unfamiliar benign sources、筛选器工作点、泛化边界声明。

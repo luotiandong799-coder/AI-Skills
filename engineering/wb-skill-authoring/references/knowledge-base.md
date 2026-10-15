@@ -3869,3 +3869,36 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 ——换模型、换基础设施、换用户群都会改变 agent 的实际能力，只搬配置会静默丢能力。判据=发布/迁移前按三档标准逐项对齐并记录差异，未对齐项显式标注而非默认沿用。
 ## r575C · 发布标签须用显式 refspec：同名分支会遮蔽标签（来源：api.github.com/repos/activepieces/activepieces/pulls/15361 `push release tag with explicit refspec so a same-named branch cannot shadow it`，2026-10-15 r575C 一手 gh api 200）
 ——同名分支存在时隐式推送可能落到分支而非标签，发布产物指向错的对象且当时不可见。判据=打标签一律写明 refs/tags/<tag>，发布后校验产物解析到标签对象。
+
+
+## r576A · 被调 agent 的身份借用须划清边界：执行身份可借、会话与私有数据不借（来源：api.github.com/repos/windmill-labs/windmill/pulls/11430 `agents run on behalf of their deployer`，2026-10-15 r576A 一手 gh api 200）
+——agent 以部署者身份运行（value.on_behalf_of），读者不必持有 agent 自身的 AI 资源与其工具所用资源的权限；但每次写入都把 on_behalf_of 置为写者（仅 admin 可用 preserve 保留且须留审计条目），而对话只延续调用者本人的会话。判据=借用范围按「权限」与「私有数据」两轴分开定义，后者永不借；请求里带的值只是请求，不是授权。
+- 提升层：可复用 Skill（权限与身份设计）/ 工作流（agent 部署）。
+- 触发词：on_behalf_of、agent 以部署者身份运行、身份借用边界、会话不借、preserve_on_behalf_of。
+
+
+## r576B · 技能内注入命令的权限判定发生在渲染之前，且永不弹提示（来源：code.claude.com/docs/en/skills.md，2026-10-15 r576B 一手 curl 200/109,126B，逐串命中 `Injected commands never prompt for permission while the skill renders`）
+——技能渲染时注入的 shell 命令不会再向用户要一次权限，只与既有 permission rules 静态匹配；被 deny 规则命中则直接中止调用并报 `Shell command permission check failed for pattern "..."`.判据=注入面是不可交互的，安全只能靠渲染前规则匹配兜底，不能假设"到时候会弹窗问一次"。
+- 提升层：可复用 Skill（注入面安全）/ 工具（权限规则设计）。
+- 触发词：injected commands、渲染期不弹权限、permission check failed、注入命令静态匹配。
+
+## r576B · 覆盖是逐名的：你的技能替换内置命令/捆绑技能，但不替换它的别名（来源：code.claude.com/docs/en/skills.md，2026-10-15 r576B 一手 curl 200，逐串命中 `Your skill replaces the bundled command, but not its aliases`）
+——项目里的 `code-review` 技能顶掉 `/code-review`，但捆绑别名 `/review` 依旧跑内置；`usage` 顶掉 `/usage` 而内置别名 `/cost` 仍跑内置。判据=路由表按名字逐条算，别名是独立入口，不继承同名技能的覆盖；评测"我的技能生效了吗"必须逐名测而非只测主名。
+- 提升层：可复用 Skill（触发面完整性）/ 工作流（覆盖评测）。
+- 触发词：bundled alias、替换不覆盖别名、/review 仍跑内置、逐名覆盖、别名独立入口。
+
+## r576B · 别名入口的覆盖只能收窄不能放宽，且本名条目优先于别名条目（来源：code.claude.com/docs/en/skills.md，2026-10-15 r576B 一手 curl 200，逐串命中 `You can only restrict a skill further through an alias, never make it more visible`）
+——在 managed settings / `--settings` 里给别名写 `skillOverrides` 会作用到别名背后的技能，但方向只有收窄一条；若同时存在该技能本名的条目，本名条目优先（v2.1.260 之前别名条目在任何设置源都不生效）。判据=覆盖入口的授权是单向的，且优先级按"本名 > 别名"，不是按设置源先后。
+- 提升层：可复用 Skill（覆盖与优先级语义）/ 工作流（托管配置）。
+- 触发词：alias override、只能收窄、never make it more visible、本名条目优先、skillOverrides 别名。
+
+## r576B · 注入命令的超时分两态，契约必须分别写（来源：code.claude.com/docs/en/skills.md，2026-10-15 r576B 一手 curl 200，逐串命中 `When the command is one the Bash tool never auto-backgrounds, Claude Code kills it at the timeout`）
+——会超时转后台的命令：技能继续渲染，注入文本说明已转后台并给出后台任务名与输出文件；**从不自动转后台**的命令：超时即被杀并中止整个调用；超出内联上限的输出以"文件路径 + 短预览"返回，不给截断文本。判据=注入命令的失败语义按"能否转后台"分叉，两种结果完全不同（继续 vs 中止）；超限输出返回引用而不是截断，与 §大产物留引用同源但这里是工具契约而非上下文策略。
+- 提升层：可复用 Skill（技能内命令契约）/ 工具（超时语义）。
+- 触发词：auto-backgrounds、超时即杀、中止调用、输出转文件引用、注入命令两态。
+
+
+## r576C · 沉淀一个技能需要「程序 + 使用条件」两类证据，一次成功的尝试可能根本没碰到条件（来源：arXiv 2610.17860《Socratic Skill Learning》，2026-10-15 r576C 一手 curl abs 200/43,883B，逐串命中 `evidence about a procedure and its conditions of use, which a successful task attempt can leave untested`）
+——SSL 交替进行专家教学与学员实操：Educator 只引导，**Student 始终是唯一的环境操作者与技能作者**（可质疑、可测试、可改写建议）；迁移性用**全新 solver 会话**下的 held-out 评测检验（SkillTransferBench 35 任务族 / 408 可执行用例）。判据=不能把"这次跑通了"当成使用条件已被验证；条件必须另设反例去撞，且复用评测要在新会话里做。与 av §选择依据是候选间的差异文本（SkillContrast 2610.11650，r547B 已落）分工：那条管**检索时保留条件差异**，本条管**学习时生成条件证据**。
+- 提升层：可复用 Skill（技能沉淀）/ 工作流（教学式技能生成）。
+- 触发词：conditions of use、Socratic skill learning、学生是唯一作者、迁移评测新会话、成功不等于条件已验。

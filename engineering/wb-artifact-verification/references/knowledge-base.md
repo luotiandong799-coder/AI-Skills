@@ -3651,3 +3651,24 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ——大小写敏感匹配会让「已覆盖」静默失效、默认值继续生效，表现为改了没效果。合并默认值与显式值时，等价判定必须按该字段的协议语义做，不能一律用字符串相等。
 ## r575C · 嵌套调用的活动须归因到真实来源，不能挂到最外层调用者（来源：api.github.com/repos/langgenius/dify/pulls/42824 `attribute nested tool activity to its source`，2026-10-15 r575C 一手 gh api 200）
 ——归因挂错会让限流、审计、配额全部算到错误主体上；嵌套越深越容易把子工具行为记成宿主行为。判据=活动记录必须带来源标识链，而非只有最外层调用者。
+
+
+## r576A · schema 校验须覆盖未被调用的声明项，并按最严消费方判定兼容（来源：api.github.com/repos/langflow-ai/langflow/pulls/15745 `preserve item type for nullable array params in MCP tool schemas`，2026-10-15 r576A 一手 gh api 200；Qoder r632-Q-A 提名，WB 复核 abs/body 逐串命中）
+——可空数组被渲染成 `"items": {}`，Claude 与 OpenAI 容忍而 Gemini 直接拒掉整个请求：一个从未被使用的工具也能让全部 Agent 调用失败。判据=声明项做全量静态校验（含未触发路径），兼容判定取最严消费方，而不是取"已通过的那一家"。与 §校验两端同源分工：那条管校验输入同源，本条管校验覆盖面与兼容口径。
+- 提升层：可复用 Skill（产物兼容性校验）/ 工具（schema 生成）。
+- 触发词：items 空对象、未使用也校验、最严消费方、全量声明项、Gemini 拒整个请求、nullable array。
+
+## r576A · 接口协议新增方法而实现方未实现时，失败形态是静默丢弃而非报错（来源：api.github.com/repos/langgenius/dify/pulls/44018 `implement save_execution_data on the Celery node-execution repository`，2026-10-15 r576A 一手 gh api 200）
+——Protocol 声明四个方法、Celery 仓库只实现三个，于是每个节点的执行数据被静默丢弃而不是落库报错。判据=协议（Protocol/接口）的每个方法都要有实现侧核查；"方法缺失"的典型外显是数据没落库但没有任何错误。
+- 提升层：可复用 Skill（产物完整性）/ 工作流（落库校验）。
+- 触发词：协议方法缺失、静默丢弃、save_execution_data、实现方未实现、数据没落库没报错。
+
+## r576A · 审计须分列「执行者」与「被代表者」两条身份轴，代表信任精确到凭据记录（来源：api.github.com/repos/langflow-ai/langflow/pulls/15755 `record trusted represented audit identity`，2026-10-15 r576A 一手 gh api 200）
+——represented_* 与 acting_* 独立成列、互不互为别名；是否允许被代表由显式配置的受信任 API key **记录 ID** 决定，并在写入前校验被代表身份。判据=信任来自凭据记录白名单，不接受请求自述；两轴分开存，任一轴都不可由另一轴推导。
+- 提升层：可复用 Skill（审计面）/ 工作流（权限边界）。
+- 触发词：represented identity、审计双身份轴、被代表者、trusted api key ids、代表信任白名单。
+
+## r576A · 预览/试运行必须与保存后的执行走同一执行路径，否则预览结论不可迁移（来源：api.github.com/repos/n8n-io/n8n/pulls/41144 `Use mocked execution for agent check previews`，2026-10-15 r576A 一手 gh api 200）
+——预览曾复用 builder 测试结果、保存后走 mocked evaluation service，前后执行模式不同 ⇒ "预览通过"不能证明"保存后通过"；达到迭代上限仍须返回失败态。判据=检查/预览与正式执行共用同一执行器；与 §验证通道禁止副作用分工：那条管预演不得外溢副作用，本条管预演与实跑的执行保真。
+- 提升层：可复用 Skill（预演保真）/ 工作流（评测预览）。
+- 触发词：预览执行模式、mocked execution、检查预览、预览与保存后不一致、预演保真。

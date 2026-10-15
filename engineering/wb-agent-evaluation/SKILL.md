@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算
-version: "1.26.0"
+version: "1.28.0"
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -194,3 +194,13 @@ version: "1.26.0"
 ## r574B 下沉条目：① **harness 自演化必须把「更新目标」与「提议/准入机制」分离，并按解释态与工具代码分别设定保留边界**——Self-Evolving Agent Harness（arXiv 2610.18813，2026-10-15 abs 一手 https 200 逐串命中）把 harness 自演化形式化为反馈驱动过程，修订跨 run 持久；框架明确区分解释态（prompts/memory/workflow）与可执行成分（tools/code）、仓库级控制逻辑、插件组合，并给出期望泛化界与保留界（retention bound）。判据：改「脚手架」与改「被测能力」是两种干预，评测报告必须声明更新目标属于哪一层；保留界要显式写（什么条件下修订被撤回），否则自演化等于无回滚的在线改配置（全文见 references/knowledge-base.md）。② **评测的加载语义必须与运行语义一致，否则效应量被系统性高估**——Agent Skill Evolution（arXiv 2610.04832）：加规则在「单次回答」口径下测得合规增益 +0.41，而真实按需加载设定下四个 agent 平均只保留约 51% 的行动增益、三个开源模型约 38%；修订给单次回答加 18-19% 输入 token 却对整段 episode 无可测成本，而加载一次技能正文让 episode token 涨 50%。判据：技能/规则类评测必须声明正文是否真的被加载，效应量只在与运行一致的加载语义下成立；「每答都算」的评测口径是过滤器不是环境（经 Qoder r628-Q-C③ 提名，本轮 arXiv abs 一手复核标题与数字属实）。
 - **提升层**：工作流（自演化治理）/ 评测口径（加载语义）。
 - 触发词：harness 自演化、更新目标与准入分离、解释态 vs 工具代码、retention bound、按需加载评测语义、51%/38%、每答评测高估。
+
+
+- **r576A · 评测批次须冻结起始配置快照，完成判定要原子校验最终计数**（n8n #41147，一手 gh api 200）：批跑中允许新增检查与应用建议，但每个批次捕获起始的 agent 配置、工具与已解析技能，使建议不会改变排队用例的输入（新增项只作用于下一批）；批量完成等待进行中的定点重跑，并在写摘要前原子核对最终计数。判据=运行中变更不得回溯影响在跑批次；完成态以原子计数为准，不用"看起来跑完了"。
+- **提升层**：工作流（评测编排）/ 模型（评测可信度）。
+- 触发词：评测批次配置快照、运行中加检查、定点重跑、完成计数原子校验。
+
+
+- **r576C · 技能增益按「同配置下相对无技能」的通过率差计量，且结论绑定该配置与执行器**（arXiv 2610.08875 下游效用实证：87 个 SkillsBench 任务 ×9 种配置，2026-10-15 r576C 一手 curl abs 200；arXiv 2609.36746 EASE：策展器与执行器耦合，换执行器即退化，abs 200 一手）：效用定义为 **pass-rate difference from No-Skill，同任务、同模型—harness 配置**；同一批技能换个配置结论就变，用不同执行器训练的 curator 只在自己那个执行器上最优。判据=① 报绝对通过率不算技能增益，必须报相对 No-Skill 的差；② 评测报表必须写明配置与执行器，跨配置/跨执行器的增益结论不可迁移。
+- **提升层**：模型（增益归因）/ 工作流（评测口径）。
+- 触发词：downstream utility、pass-rate difference、No-Skill 基线、executor-dependent、curator 与执行器耦合、跨配置不可迁移。

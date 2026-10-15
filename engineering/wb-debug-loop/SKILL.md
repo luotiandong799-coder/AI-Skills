@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、TTL seconds*1000、absolute deletion date、valid date in the future、7-day minimum、alreadyDeleted、audience human、AI 孪生动作、消费者退出生产者仍跑、关闭要传播到下层流、shield 异步关闭、后台清理任务只跑在 leader 内存定时器、durable system task
-version: "1.228.0"
+version: "1.229.0"
 agent_created: true
 ---
 
@@ -471,3 +471,12 @@ agent_created: true
 ## r574C 下沉条目：**错误处理开关必须覆盖连接/设置阶段，不只覆盖运行阶段**——`Continue On Fail` 在连接建立（connection setup）阶段被忽略：握手失败直接抛出，节点级容错声明在这里不生效，同一个开关在两个阶段语义不一致。判据：① 容错声明是横切契约，必须枚举它应当生效的全部阶段（连接/认证/运行/收尾），逐阶段断言；② 阶段间语义分叉本身就是缺陷信号（同一配置在 A 阶段生效、B 阶段不生效）；③ 与「错误处理分支不得改变数据路径语义」分工：那条管启用后输出形态变化，本条管开关根本没覆盖到该阶段（全文见 references/knowledge-base.md，2026-10-15 r574C，来源 n8n #41118）。
 - **提升层**：工具（容错语义一致性）/ 工作流（阶段枚举）。
 - 触发词：Continue On Fail 覆盖阶段、连接设置阶段、容错阶段分叉、横切契约逐阶段断言、握手失败不容错。
+
+
+- **r576A · 连接池在事务池化模式下，会话级 SET 会粘滞并污染后续借用者**（activepieces #16531，一手 gh api 200）：`SET statement_timeout = 0` 落在随机 backend 上并随连接归还而保留，`CREATE INDEX CONCURRENTLY` 落到另一个 backend 仍受 60s 默认限制，`RESET` 又落到第三个 ⇒ 保护既不生效，还留下一条被污染的空闲连接服务普通查询（实测 0/5 传到下条语句）。判据=需要会话级状态时用专用连接串，不在共享事务池里做 SET/RESET。
+- **提升层**：工具（连接与迁移配置）/ 工作流（长迁移执行）。
+- 触发词：transaction pooling、会话级 SET 粘滞、PgBouncer、statement_timeout、专用迁移连接串。
+
+- **r576A · 关闭/取消异常继承自 BaseException，`except Exception` 抓不到**（prefect #23016，一手 gh api 200）：worker 收到 SIGTERM 时 anyio 的取消异常直接穿过 `except Exception`，没有任何代码提议终态，flow run 永久停在 Running 并占死并发槽（limit=1 的池此后永不调度）；`finally` 只释放了 worker 本地槽，服务端仍认为在跑。判据=终态提议与资源释放必须挂在 `except BaseException` / `finally`，取消路径单独测（与 §退出码取更坏的那个分工：那条管退出码契约，本条管异常层级漏抓）。
+- **提升层**：工具（生命周期与并发）/ 工作流（滚动发布下的优雅停机）。
+- 触发词：BaseException、取消异常漏抓、SIGTERM、stayed in Running、并发槽不释放、worker shutdown。
