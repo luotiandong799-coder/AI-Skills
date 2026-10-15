@@ -1716,3 +1716,37 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **实证**：n8n #40847——Publication trigger 节点 id 超 36 字符触发「value too long for type character varying(36)」无限重试。机制：写库前未校验 id 长度，超界进入重试循环。方法：写库前校验 id 长度/格式，超界给清晰错误而非重试循环；提升层：工具（输入校验前置）。触发词：id 超长无限重试、写库前未校验、长度边界。
 - **实证**：n8n #40813——SQLite3 迁移 CreateFolderTable 复数字段 parentFolderId 重复列名失败。机制：迁移非幂等，重复执行加已存在列。方法：DB 迁移须幂等——加列前检查是否存在，重复执行不报错；提升层：工具（迁移健壮性）。触发词：迁移重复列名、非幂等迁移、加列前查存在。
 - **实证**：n8n #40806——team-project 工作流带凭据每次执行报 `ERR wrong number of arguments for 'hset'`。机制：凭据作用域路径改变了命令参数个数。方法：凭据作用域操作须绑定正确参数个数，team-project 路径不得改变命令签名；提升层：工具（凭据作用域隔离）。触发词：凭据作用域改命令签名、hset 参数错、team-project 路径副作用。
+
+## r590B 实证（GitHub 八仓 issue 面，gh api 一手逐串命中）
+
+- **实证**：n8n #41135（Cloud 2.41.4 生产 webhook 返回 HTTP 500，Executions 无任何记录，手动运行正常）——生产触发路径静默失败，且失败发生在「执行被记录之前」。机制：生产 webhook 触发链在创建 execution 记录前就抛 500，手动运行走不同入口故正常；错误执行「已配置保存」却无记录 → 失败点在上游 intake 而非节点内。方法：排障须先拆「prod 触发入口」vs「manual 入口」两条路径；静默失败（无 execution/无日志）须作为独立故障类——监控与日志必须在触发最前沿落点，不能依赖「执行已创建」才记；代理层 502 是映射值（N8N_INTAKE_FAILED）非真值，真值是上游 500。提升层：可复用 Skill（静默失败诊断）/ 工作流（触发入口日志前置）。触发词：生产 webhook 500、无 execution 记录、manual 正常、静默失败、intake 失败、代理 502 映射、2.41.4。
+
+## r590A · 反思技能可从「工具反馈扰动 × 成败配对」中挖出来，而非只靠人写
+
+- **实证**：arXiv 2610.17953《Agent-Reflex: Teaching Language Agents to Act Reflectively》（abs 200 一手）——MCP 工具服务返回噪声反馈、用户中途纠偏时，现有方法对反思学习与失败恢复的监督很有限。Agent-Reflex 三阶段：① Environment Reflection Skill Discovery（RSD）在环境规模化时**注入基于工具反馈的扰动**，采样能力多样的 LLM 池，**挖掘配对的成功-失败样本**，总结可复用的反思元技能；② Reflective SFT（ReSFT）把每个技能转成自我反思的监督信号；③ 在线反思推理阶段按需调用技能库。
+- **判据**：① 反思能力不必手写规则——用「同一任务的成功/失败配对 + 扰动过的工具反馈」可挖出可复用的反思元技能，失败恢复库可以半自动生成。② 挖技能的前提是**扰动要贴近真实工具噪声**（MCP 返回的脏反馈形态），不贴近则挖出的反思用不上。③ 排障时「同类失败反复出现」本身就是可沉淀信号：把同一失败模式的多次出现收集成对，即是候选技能来源。
+- 提升层：可复用 Skill（失败恢复库生成）/ 工作流（反思技能挖掘）。触发词：Agent-Reflex、RSD 反思技能发现、成败配对挖掘、工具反馈扰动、ReSFT、失败恢复技能库。
+
+## r590B · 排序方言不通用：`NULLS LAST` 在 MySQL 兼容引擎上直接 500
+
+- **实证**：dify #44154（一手 gh api 200）——1.17.1 回归：`/console/api/installed-apps` 在 MySQL 兼容引擎（OceanBase）上 500，根因是 SQL 用了 `ORDER BY ... NULLS LAST`，该引擎不支持此语法。
+- **判据**：① 排序方言不能假设「MySQL 语法全集通用」——`NULLS LAST` 这类标准 SQL 特性在兼容引擎上可能直接不被解析，且表现为**接口 500 而非清晰错误**。② 兼容性回归常由「新版本换了 ORM 输出」引入，升级矩阵里必须含一种 MySQL 兼容异构引擎。③ 验收断言要按目标方言逐条写，不能只在一种引擎上跑过。
+- 提升层：工具（SQL 方言兼容）/ 工作流（多引擎验收）。触发词：NULLS LAST 不支持、MySQL 兼容引擎、OceanBase、ORDER BY 方言、接口 500、ORM 输出回归。
+
+## r590B · 升级登记器可能把流程挪到「预修复」版本，须可暂缓 + 待审清单
+
+- **实证**：activepieces #16568（一手 200）——v23 piece-upgrade register 把流程迁到**修复前版本**（google-drive 0.7.9、jira-cloud 0.3.7 等 46 个目标）；配套 feature #16569 要求自动 piece 版本升级**可暂缓（deferrable）+ 给平台管理员 pending-upgrades 待审清单**。
+- **判据**：① 自动升级登记表若只记「最新版」而不校验「该版本是否含所需修复」，会把用户流程批量挪到修复前版本——升级动作必须带**最低修复版本**判据。② 批量升级必须可暂缓、可审：管理员需要一个 pending-upgrades 清单决定哪些先升哪些压后，不能静默全量迁移。③ 修复版本与目标版本是两个字段，登记表缺一个就会把「升级」做成「降级」。
+- 提升层：工具（版本登记判据）/ 工作流（批量升级治理）。触发词：预修复版本迁移、piece-upgrade register、可暂缓升级、pending-upgrades 待审、最低修复版本。
+
+## r590B · 模型能力矩阵要在调用前查：reasoning_effort 与 function tools 在同模型上不兼容
+
+- **实证**：windmill #11785（一手 200）——`gpt-6.1-sol` 经 Azure Foundry 调用报 Error 400：**Function tools with reasoning_effort are not supported for gpt-6.1-sol**，即该模型/通道组合下「函数工具 + reasoning_effort」参数组合不被接受。
+- **判据**：① 参数组合兼容性是**模型 × 通道 × 参数**三维矩阵，「文档说支持」不等于「这个部署通道支持这个组合」。② 400 错误信息本身就是能力矩阵的一手数据源——报错文案精确指出了不兼容的参数对，应把这类错误回收成配置门禁。③ 调用前用能力矩阵预检（模型/通道/参数组合），比运行时撞 400 再降级更省 token；同族参数组合（如 effort 档位 + 工具调用）在换模型时必须重验。
+- 提升层：工具（调用前能力预检）/ 工作流（模型矩阵门禁）。触发词：reasoning_effort 与 function tools 不兼容、gpt-6.1-sol Azure Foundry、Error 400、能力矩阵三维、参数组合预检。
+
+## r590B · SDK 契约双向漂移：解析器吞有意义空白，客户端比服务端更严
+
+- **实证**：dify #44082（一手 gh api 200）——Node.js SDK 的 SSE 解析器把字段值**有意义的行首空白**删掉（removes meaningful leading whitespace from field values）；dify #44093——SDK **拒绝空 keyword 过滤**，而服务端 list API 本身接受空过滤。
+- **判据**：① 透传型解析器对字符必须保真——行首空白在 SSE 字段值里可能是数据的一部分，吞掉它等于静默改数据，且只在特定payload形态下暴露。② 漂移有两个方向：解析器丢数据（该留的不留）和客户端过度严格（服务端肯收的拒掉），两类都要用「服务端接受 / 客户端接受」矩阵对测。③ 客户端收紧常以「防御性校验」之名引入，验收须含「合法但空 / 边缘形态」输入不被误拒。
+- 提升层：工具（解析保真）/ 工作流（双向契约对测）。触发词：SSE 行首空白被吞、解析器保真、空 keyword 被拒、客户端比服务端严、契约双向漂移、边缘形态误拒。
