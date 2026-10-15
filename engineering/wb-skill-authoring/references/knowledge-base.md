@@ -3995,3 +3995,21 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **实证**：n8n #41191——Webhook lint 规则**跳过经同文件声明引用的值**（same-file declarations），即被检查对象通过文件内声明间接引用时规则不触发。n8n #41190——社区节点 lint 规则**漏掉 child_process 调用**，且**误读被遮蔽的绑定**（shadowed binding），把内层同名变量判成外层安全值。
 - **判据**：① 静态规则的作用域模型必须含「同文件声明引用」这条路径，否则凡是经声明间接引用的值都是盲区——写规则时要问「这个值有没有不经字面量出现的路径」。② 遮蔽绑定（同名变量内外层）会让基于名字的判定失效，按名字匹配的规则（child_process 白/黑名单）必须先解遮蔽。③ 规则漏报与误读都会给虚假安全感：漏报让危险值过关，误读把危险值判成安全——两类都要构造对抗用例（声明引用 / 遮蔽同名）回归。
 - 提升层：可复用 Skill（静态规则覆盖度）/ 工作流（对抗用例构造）。触发词：同文件声明引用盲区、shadowed binding 遮蔽绑定、child_process 漏检、lint 规则作用域、按名匹配失效、规则对抗用例。
+
+## r591A · **多 agent 协调协议可成为一等分发资产：技能标准扩展多 agent 语义（角色/工作流/执行边界），自演化按效果/利用率/新鲜度三维修分**（来源：arXiv 2605.10052v2《Swarm Skills: A Portable, Self-Evolving Multi-Agent System Specification for Coordination Engineering》，2026-05-11）
+- **实证**：单 agent 技能已可分发，多 agent 协调协议仍锁在框架内部代码或静态配置中、无法跨系统共享或自主改进；Swarm Skills 扩展 Anthropic Skills 标准加多 agent 语义，把多 agent 工作流转为一等可分发资产=**角色+工作流+执行边界+内置自演化语义结构**；配套自演化算法把成功执行轨迹蒸馏为新 Swarm Skill、按**效果/利用率/新鲜度**三维修分持续修补现有技能，细化无需 human-in-the-loop；架构兼容性分析+开源 JiuwenSwarm 参考实现定性案例：**渐进披露实现零适配器跨 agent 可移植**。
+- **判据**：① 技能规范可扩展多 agent 语义（角色/工作流/执行边界）——协调协议不该锁死在框架代码里。② 自演化打分必须三维（效果/利用率/新鲜度）：只按效果会堆积，加利用率防膨胀、新鲜度防过时。③ 零适配器跨 agent 移植的机制=渐进披露。
+- **提升层**：可复用 Skill（技能规范扩展）。
+- **触发词**：Swarm Skills、多 agent 语义、协调工程、自演化三维修分、JiuwenSwarm、零适配器移植。
+
+## r591A · **技能价值随基座能力上移而变：弱基座补缺口（11%→63%）强基座反受损（92%→61%）；ADR=保留原生控制+逐技能决定调用/修改/忽略**（来源：arXiv 2610.16238v1《Embodied Skill Bench: Benchmarking How Well Agents with Embodied Skills Perform on Physical Tasks》，2026-10-12）
+- **实证**：embodied skills=agent skills 加显式 embodiment 假设与使用条件，从 1,052 资源构建 250 个动作/感知/经验技能；三模式=原生控制/skill-only 执行/ADR（agent 保留原生控制、逐技能决定调用/修改/忽略）；4 agent × 100 个受扰 LIBERO-Pro 任务：skill-only 把 GPT-5.6-Sol 从 11% 抬到 63%、Kimi-K3/Claude-Opus-5 +约 20 分、token 省 58-85%，但 **GPT-6-Astra 从 92% 跌到 61%**；ADR 下恢复到 85%（距原生 -7 分）且 token 少 14.1%、时间少 11.9%；Jev 作为技能选运动方向与夹爪动作：81%、token -50%、时间 -57%。
+- **判据**：① 上技能前先测「无技能基线」：技能正增益边界=只超过基座已有能力；强基座上 skill-only 是净损失。② 技能角色随基座能力从「补能力」变「降成本」——版本说明按此重新定位。③ 强基座正确装配形态=ADR（保留原生控制+逐技能调用/修改/忽略）。
+- **提升层**：可复用 Skill（技能装配策略）。
+- **触发词**：Embodied Skill Bench、ADR、技能仅执行、原生控制基线、token 节省、embodiment 假设。
+
+## r591A · **人类演示→可复用 SOP 技能四模块（观察/推理/配置/执行）：低层 GUI 事件必须抽象成语义步骤再叠加领域规则；执行时逐步 grounding 与录制解耦**（来源：arXiv 2609.02149v3《OmegaUse-SOP: SOP Engineering for Professional Computer Use from Human Demonstrations》，2026-09-02）
+- **实证**：human-in-the-loop SOP Engineering 把专业计算机使用的人类演示转为 GUI agent 可复用 SOP 技能（类比 prompt engineering）；四模块 Observe/Reason/Configure/Execute：把专家操作录成多模态 GUI 轨迹→**低层事件抽象为语义步骤级指令**→并入领域规则与任务特定参数→经逐步 grounding/动作生成/验证在现场 GUI 环境执行；电力行业客户、PVsyst 7.2 光伏仿真工作流实证：提升专业 SOP 任务上 GUI agent 可靠性。
+- **判据**：① 原始操作轨迹不可复用：必须先抽象成语义步骤指令，再叠加领域规则+任务参数。② 专业软件工作流的隐性知识（软件惯例/领域知识/任务级验证要求）须显式进技能，不能只录操作序列。③ 执行期逐步 grounding+生成+验证与录制约程解耦。
+- **提升层**：可复用 Skill（演示萃取）/ 工作流（SOP 工程）。
+- **触发词**：OmegaUse-SOP、SOP 工程、GUI 演示萃取、语义步骤抽象、领域规则、PVsyst。

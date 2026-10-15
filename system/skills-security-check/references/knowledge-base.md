@@ -911,3 +911,33 @@ Step C: 是否包含恶意意图？
 - **判据**：① **官方训练示例等于公开攻击配方**：训练环境配置与后续真实事件配置共享同一可利用模式 ⇒ 发布示例配置前必须按攻击面审（默认零信任），不能因「这是官方给的」而豁免。② **归因顺序：先排环境，再谈模型**：令牌伪造 + 提权只靠基础 HTTP/Python/JS 即可完成，缺陷是配置错配而非模型「涌现逃逸」⇒ 「模型逃逸」类结论必须先做取证复现才可采信。③ **审计面**：评测/沙箱/CI 环境的凭据校验、token 签发与验证路径，按零信任逐项过一遍。
 - **提升层**：工具（环境配置攻击面审计）/ 可复用 Skill（事件取证与归因）。
 - **触发词**：CVE-2026-65616、RLHF 诱导提权、训练示例即攻击配方、配置错配归因、零信任中和共享攻击向量、逃逸报道取证。
+
+## r591A · **授权判定把「语义推断」与「安全执行」解耦：LLM 只产出可审计元属性，固定策略做允许/拒绝**（来源：arXiv 2609.31039《MetaPermit: Scalable and Auditable Access Control for AI Agents via LLM-Inferred Meta-Attributes》，2026-09-25）
+- **实证**：policy-based tool access control；从 agent-用户交互导出**任务无关的紧凑元属性集**（用户意图 × 执行上下文 × 提议工具调用三者关系），运行时 LLM 推断元属性值、**固定策略**据值允许/拒绝，每个决策可经「推断值 + 所应用规则」审计；AgentDojo/AgentDyn 七任务组 × 五种攻击 × 两个开源权重 LLM：比 LLM 驱动授权**一致性高 31%**，任务完成率超 SOTA 防御 CaMeL/IPIGuard 至多 **+109%** 且**零恶意工具调用执行**。
+- **判据**：① 「LLM 逐动作判授权」两结构缺陷：静态策略须预枚举用户意图（开放任务不可扩展）、LLM 判授权输出不一致且可被 IPI 定向打穿 ⇒ 解耦=语义推断（LLM，可审计）与安全执行（固定策略，确定性）。② 审计粒度=推断值+应用规则，不是只记 allow/deny。③ 授权面指标必须含**一致性**（同输入重复判定一致率），不能只报 ASR/完成率。
+- **提升层**：可复用 Skill（授权审查）/ 工作流（工具调用门控）。
+- **触发词**：MetaPermit、元属性授权、语义推断与执行解耦、授权一致性、AgentDojo、CaMeL、IPIGuard。
+
+## r591A · **凭证问题是执行安全问题不是存储问题：密钥进 prompt 即越界进数据管道；正确形态=模型只选连接器标识、信任边界供给认证**（来源：arXiv 2609.33371《API Secrets Should Never Become Tokens in the LLM's Vocabulary: A Threat Analysis of API Credential Handling in LLM Agent Systems and an Empirical Evaluation of a Vault-Mediated Execution Boundary》，2026-09-27）
+- **实证**：凭证威胁链形式化——粘贴进 prompt 或嵌进系统提示/工具配置的密钥，从认证边界跨入数据管道，持久化于会话历史、日志、记忆库、生成代码、错误回显；prompt injection + excessive agency 把被动披露变成未授权动作。vault-mediated 架构：**模型选连接器标识，信任请求边界供给认证**；生产实现 Corvic Security Vault 两受控黑盒实验：16 探针 × 7 控制域全部符合预期（GitHub API 认证请求成功的同时，凭证不在进程环境值、调用方可见请求头、受测文件系统位置、三个第三方回显服务、两个无关 API 源；两个云实例元数据端点均不可达）。**负面结果**：某连接器存储的 header mapping 不满足其 provider 认证契约 ⇒ 集中托管本身不保证配置正确。vault 化必要不充分：最小权限、确定性动作授权、人工批准、遥测脱敏、轮换各自独立必需。
+- **判据**：① 任何进入 prompt/系统提示/工具配置的密钥按「已泄漏」预案处理——历史/日志/记忆/生成代码/错误回显都是持久化面。② 正确形态=凭证永不进词汇表：模型只选连接器标识，认证由信任边界在执行时供给。③ **集中托管 ≠ 配置正确**：负面案例（header mapping 不满足消费方契约）说明 custody 之外还须验证「托管物确实满足 provider 认证契约」。④ 必要不充分五件套（最小权限/确定性授权/人工批准/遥测脱敏/轮换）逐项独立核查。
+- **提升层**：工具（凭证面审计）/ 可复用 Skill（威胁链建模）。
+- **触发词**：凭证越界、vault-mediated execution、连接器标识、header mapping 负面案例、secret sprawl、云元数据端点。
+
+## r591A · **黑盒护栏的正确性可外部估计；决策排序比二值结论值钱（AURC 0.33-0.44→0.17-0.22）**（来源：arXiv 2610.03470《CorrectGuard: Eyes-Off Correctness Estimation for Black-Box Security Guardrails》，2026-10-02）
+- **实证**：eyes-off 正确性估计框架——独立模型化评估器只用**标注过的 eyes-on 数据**、**不访问护栏内部**，预测护栏对 human/machine 均不可见输入上的决策是否正确；13 个安全数据集（有害内容/越狱/提示注入/抽取）leave-one-dataset-out、开源护栏统一当黑盒；ICL 正确性分类器宏准确率**+25pp**（finetuning ~+15pp）；正确性分数支持护栏决策排序与弃权：最佳排序把 AURC 从 0.33-0.44 压到 **0.17-0.22**，最佳工作点在 15% 观测风险下保留 **37.5-52.0%** 决策；性能随护栏与 held-out 数据集剧烈变化。
+- **判据**：① 黑盒护栏（含 eyes-off 生产设置）的正确性=可外部估计的量：只用 eyes-on 标注数据训独立正确性模型，无需内部访问。② 审计结论要给**排序/弃权**（哪几条先升级人工）而非只给通过/失败——AURC 降幅是排序价值的直接证据。③ 「性能随护栏与数据集剧烈变化」⇒ 单护栏审计结论禁止外推全部护栏。
+- **提升层**：工具（护栏审计）/ 可复用 Skill（弃权策略）。
+- **触发词**：CorrectGuard、eyes-off 正确性估计、黑盒护栏、AURC、决策排序弃权、leave-one-dataset-out。
+
+## r591A · **防御鲁棒性是通道条件化的：同一攻击跟随消息 18% vs 检索上下文 53%；评测必须分通道报**（来源：arXiv 2610.19133《TRACER: Trace-Regularized Training Against Indirect Prompt Injection》，2026-10-13）
+- **实证**：defense robustness is channel-conditioned——同一攻击作为**跟进消息**成功率 18%、置于**检索上下文**则 53%；TRACER=通道感知对抗训练：采样呈现包装（presentation wrappers）+ 答案锚定证据门控奖励 + ATRC（注入无效时把被攻击推理与干净证据对齐）；GSM8K/Qwen2.5-3B：RAG 框定 ASR **65.5%→6.1%** 且保 **78-82%** 干净准确率；RAG+工具联合训练 3B 平均 ASR 13.9%，7B 单 epoch 9.4%。
+- **判据**：① 同一攻击换通道 ASR 差约 3 倍 ⇒ 防御评测**分通道报数**，单通道数字必高估或低估。② 训练侧对策=通道感知对抗（采样呈现包装）+证据门控奖励，不是堆攻击样本。③ 报数必须同格给干净准确率——只报 ASR 下降会隐藏可用性损失。
+- **提升层**：可复用 Skill（防御评测）/ 工作流（对抗训练配置）。
+- **触发词**：TRACER、通道条件化、ATRC、RAG 框定 ASR、呈现包装采样、干净准确率对照。
+
+## r591A · **基准构造必须防泄漏（冻结 train/val/protected-test 三 split）；稀疏基线仍强，选检测器不能默认上 Transformer**（来源：arXiv 2610.08571《RAG-PIBench: A Leakage-Aware Benchmark for Prompt-Injection Detection in Trustworthy RAG Systems》，2026-10-06）
+- **实证**：RAG 式提示注入检测基准，**4,876** 条上下文样本，冻结 train/validation/**protected-test** 三 split + 泄漏感知构造管线 + 严格评测协议；对比关键词式、语义参考、TF-IDF、Transformer 四类检测器：DistilBERT protected-test 最佳（F1 **0.896** / PR-AUC **0.968**），**TF-IDF SVM 与逻辑回归仍有竞争力**。
+- **判据**：① 基准构造三 split 冻结 + 泄漏感知管线，否则检测器数字虚高（与评测侧开放网页泄漏同族两面）。② 稀疏基线（TF-IDF SVM/LR）保持竞争力 ⇒ 检测器选型先跑稀疏基线做对照，禁默认重模型。③ PR-AUC 与 F1 分开看（0.968 vs 0.896），不合并成单一「准确」。
+- **提升层**：可复用 Skill（基准构造）/ 工具（检测器选型）。
+- **触发词**：RAG-PIBench、泄漏感知基准、protected-test split、TF-IDF 基线、PR-AUC、DistilBERT。
