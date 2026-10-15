@@ -147,3 +147,15 @@
 
 - 2026-10-06：微信进程会在自动化运行中途整体退出，巡检需对「目标应用中途消失」做容错（发现即停、别重试、如实上报）。
 - 2026-10-06：`Read` 看图能力恢复 → 后续巡检优先用「截图 + Read」，无需 windows-mcp。
+- **2026-10-06 12:06：巡检第 0 关应为「聊天软件是否在跑」**（`Get-Process -Name Weixin,QQ` 一次判定）。不在跑 ⇒ 结构性无未读 ⇒ 直接 0 处理收尾，**别进入截图/滚动链路白烧轮次**。微信 4.x 关窗默认缩托盘，**进程整体消失 = 用户显式退出**，据此判「不自行拉起」有了客观依据（无须再猜用户意图）。
+- 2026-10-06：进程名正则筛选聊天软件时，`tim` 会**假匹配 `RuntimeBroker`**（Run**tim**eBroker）→ 枚举结果须人工过一眼，别直接当命中。
+- **2026-10-06 13:08（第 3 次执行）**：连续第 2 轮「聊天软件未运行」→ 0 处理 / 0 发送 / 0 待确认。**第 0 关（`Get-Process -Name Weixin,QQ,TIM` 一次判定）已固化为巡检起手式**，比截图+角标枚举省 4~6 轮；第 0 关不通过时**不再加载视觉链路**。可见窗口仅 Steam/Civ VI/TextInputHost 等，佐证微信为显式退出。
+- **2026-10-06：广域进程正则 `qq|tencent|tim|...` 也会假匹配**（`tencent` 命中腾讯系常驻、`tim` 命中 RuntimeBroker）→ 结论一律以**精确进程名** `Weixin`/`QQ` 为准，广域扫只作交叉验证；PowerShell 输出须落盘再读（stdout 可能为空，空 ≠ 无进程，两者要区分：空 stdout + 落盘后只有 RuntimeBroker ⇒ 真无）。
+- **2026-10-06 14:10（第 4 次执行）**：连续第 3 轮「聊天软件未运行」→ 0 处理 / 0 发送 / 0 待确认。第 0 关判定可**再收紧为一条锚定正则** `^(Weixin|WeChat|QQ|Tim|DingTalk|WXWork|Telegram|Slack)$`（锚定后既不误报 RuntimeBroker，又能一次覆盖多软件），比多轮 `Get-Process -Name X,Y` 更省；**空结果须用「可见窗口列表」交叉验证**（本轮可见窗仅 Civ VI / cua-driver / NVIDIA Overlay / Steam / TextInputHost，佐证无聊天软件）。
+- **2026-10-06：从 Bash 内联调 PowerShell 被安全策略直接拒**（"Invoking PowerShell from Bash bypasses PowerShell security checks"）→ 本机巡检**一律用 PowerShell 工具**，不要从 Bash 调 PowerShell（连新经验正文里出现该命令串也会触发拦截，写经验时避开原样拼接）。
+- **2026-10-06：PowerShell `Format-Table` 输出经 Bash 回显会带 `X` 尾标记** → 解析时忽略行尾单字符 `X`，勿当数据。
+- **★ 2026-10-06 15:12（第 5 次执行）：第 0 关的交叉验证手段须更正 —— 不能只看「可见窗口列表」。** 理由：微信 4.x 托盘态 `MainWindowHandle=0`（见 §十），**进程在跑但无可见窗口** → 用可见窗口列表交叉验证会**漏判**「微信托盘态仍活着」这一关键情形（上一轮 r4 用的就是该手段，属方法缺陷）。正确做法：锚定正则空时，改用**全进程名清单**兜底 —— `Get-Process | Select-Object -ExpandProperty ProcessName | Sort-Object -Unique`（本机约 110 项），该清单**不依赖窗口句柄**，能覆盖托盘态 / 无窗态进程。可见窗口列表仅作辅助旁证，不作判据。
+- **2026-10-06 15:12（第 5 次执行）**：连续第 4 轮「聊天软件未运行」→ 0 处理 / 0 发送 / 0 待确认。全进程清单里无 Weixin/QQ/TIM/DingTalk/WXWork/Telegram/Slack/Lark/Feishu；同期 `Qoder`/`WorkBuddy`/`codex-windows-sandbox-service`/`msedgewebview2` 在跑，旁证本机活跃但聊天软件为用户显式退出。按长期规则**未拉起**。
+- **2026-10-06：`%TEMP%` 下存量 `wb_*.txt` 多为同日其它会话产物（8:xx–9:xx 时段）→ 按「只删自己本次创建的」不动**，仅清本轮新建的 `wb_chatprobe*.txt`。别把「清垃圾」误做成批量删同名前缀文件。
+- **2026-10-07 20:28（第 6 次执行）**：仍为第 0 关不通过（无聊天软件在跑）→ 0 处理 / 0 发送 / 0 待确认。距上轮约 29 小时，全进程清单 129 项仍无 Weixin/QQ/TIM/DingTalk/WXWork/Telegram/Slack/Lark/Feishu。
+- **经验精简决定**：自 10-06 起「第 0 关不通过」已连续多轮，**后续不再逐轮单列条目**（避免经验膨胀，SKILL §十五），统一记为「第 0 关不通过（无聊天软件在跑）」，仅在与前不同的情形（如进程在跑但窗口异常）时才单独沉淀。

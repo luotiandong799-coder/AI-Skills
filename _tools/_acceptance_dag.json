@@ -1,0 +1,34 @@
+{
+  "team": "acceptance-4task-2branch-1join",
+  "goal": "验收：依赖约束 / 并行分支 / 失败不解锁下游 / 重试上限 / 证据门禁",
+  "tasks": {
+    "t1_research": {
+      "deps": [],
+      "brief": "抓 2 个独立来源",
+      "difficulty": "L0",
+      "gate": ["两个来源 URL 可打开"],
+      "max_attempts": 2
+    },
+    "t2_analysis": {
+      "deps": [],
+      "brief": "独立分析同一数据集",
+      "difficulty": "L1",
+      "gate": ["结论含数据引用"],
+      "max_attempts": 2
+    },
+    "t3_fragile": {
+      "deps": ["t1_research"],
+      "brief": "下游任务，依赖上游",
+      "difficulty": "L1",
+      "gate": ["文件已落盘"],
+      "max_attempts": 2
+    },
+    "t4_join": {
+      "deps": ["t2_analysis", "t3_fragile"],
+      "brief": "汇总任务，需两条分支都过",
+      "difficulty": "L2",
+      "gate": ["去重无冲突", "事实核验"],
+      "max_attempts": 1
+    }
+  }
+}

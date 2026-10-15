@@ -880,3 +880,11 @@ ercel-labs/skills/find-skills，2026-04 实拉；与 WB ctx 工具面安全分�
 - **实证**：Nelson–Narens 元认知理论把监控与控制分离：模型先报 pre-solve feeling-of-knowing（FOK），每次 attempt 后报 post-solve judgment-of-learning（JOL）；harness 把两个信号变成控制接口——决定何时信任当前解、何时带压缩元认知反馈重试、何时把多个 attempt 交最终聚合器。固定 Claude Sonnet-4.6 无参数更新：1,859 样本 pooled accuracy 48.3→56.9（+8.6），LiveCodeBench Hard +19.6，超三个主榜最强条目。**但 9 个受评模型只有 1 个（Sonnet-4.6）的信号 AUROC / ECE 全过诊断卡**；且置信度对「跨题决定是否重试」有用，对「同题多个 attempt 选哪个」无用。
 - **判据**：① **被动报告的置信度只是诊断，接上控制才是元认知**：把「我很有信心」当结论，与把「信心低→触发复核 / 重试 / 升档」当控制接口，是两回事。② **先诊断后使用**：信号质量因模型而异（9 过 1），部署任何「靠自信心的控制」前先跑诊断卡（FOK / JOL × AUROC / ECE 六行评级），不过就退化成固定策略。③ **置信度的作用域**：跨题（这题要不要多投入）可用；同题内多候选选优不可用——选优要靠外部验证器。④ 与 §推理预算治理分工：那条管预算量与任务难度匹配（防过思考），本条管用信号驱动「何时停 / 何时重试 / 何时升级」的控制决策。⑤ 触发词：FOK、JOL、元认知 harness、监控控制分离、先诊断后使用、信心低触发复核。
 - 提升层：模型（推理控制）/ 工作流（重试与升级决策）。触发词：元认知信号、FOK JOL、监控控制分离、先诊断后使用、跨题重试不同题选优、Nelson-Narens、48.3→56.9。
+
+## r596A（2026-10-16 · 来源 GitHub 生态仓实拉 · wb-max-token-saver 1.70.0）
+
+1. **裁剪/预算计量有四类口径错误，任一都会让「省了 token」变成假象**（langchain-ai/langchain）：① **不保序**（PR#41261「respect token order when trimming messages」）——裁剪后消息顺序被打乱，语义被破坏但 token 数达标；② **部分保留时反超预算**（#41259，`strategy="last", allow_partial=True` 返回的消息集仍超 `max_tokens`）——「允许部分」被实现成「允许超出」；③ **请求级开销被重复计入**（#41250，`trim_messages` 对 request-level token 成本双计，把装得下的消息丢掉）；④ **复合内容形态被漏计**（#41166，`count_tokens_approximately` 在 `AIMessage.content` 是 list 时完全不计 tool calls）。既有 §工具返回字段裁剪 管「裁什么」，本条管「预算函数本身准不准」。规则：预算函数必须覆盖全部内容形态（含 list-content 里的 tool call），请求级开销只计一次；`allow_partial` 的语义约束是「可截断单条」而非「可超总额」，保留顺序必须与原始顺序一致。上线前用「输入 N 条 → 输出 M 条且 token 实测 ≤ 预算」做双向断言。
+2. **超大工具结果要延迟/摘要注入，而不是直接塞进上下文**（crewAIInc/crewAI PR#8191「proactively summarize oversized LLM context」+ PR#8110「defer oversized native tool results」）：与 mts §大体量载荷外置存储 + 传引用 同源，本条补**框架侧原生形态**：对超限的原生工具结果先外置并给引用/摘要，模型需要时再取回。规则：工具结果注入前先过尺寸闸门，超限走「外置 + 指针 + 摘要」，不得默认整块入窗。
+3. **工具延迟加载必须按命名空间封装，否则零收益**（langchain-ai/langchain#38544 + crewAIInc/crewAI PR#8040）：`ProviderToolSearchMiddleware` 把延迟工具摊平成顶层函数，官方实测**没有任何 token 节省**——延迟加载的收益来自「平时连定义都不注入」，摊平暴露等于把定义又写回提示。既有 §工具定义的上下文预算（defer 必须留非延迟锚点）给了结论，本条给机制证据。规则：defer 的实现必须是「命名空间/检索入口」而非「平铺」，并保留一个常驻锚点供模型知道去哪里找。
+
+判非（本轮核实）：crewAI#8199/#8200（更新缓存驱逐无关条目）为 r595C 已落同族；crewAI#8202/#8203/#8205/#8206（百分号编码凭据）为 r595C 已落同族；crewAI#8197/#8198（bedrock/gemini token 计量缺失）与既有计量口径条同族；browser-use#6074（外部文件按 UTF-8 读）与 r593 编码族同族。

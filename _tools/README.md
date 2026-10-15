@@ -11,6 +11,7 @@
 | `context_budget.py` | 上下文动态预算裁剪（优先级序） | ✅ 已验证 | 标准库 |
 | `guardian_precheck.py` | 运行时安全前置检查（No-Go 路径 / L2 确认门） | ✅ 已验证 | 标准库 |
 | `ocr_tool.py` | 独立 OCR 引擎壳 | ⏳ 代码就绪，依赖未装 | 系统 Tesseract 或 `pip install paddleocr` |
+| `dag_scheduler.py` | 多 Agent DAG 状态机底座：依赖/就绪队列/并行分层/循环依赖检测/质量门禁/重试上限/检查点恢复 | ✅ 已验证 | 标准库 |
 
 ## 诚实边界（不得宣称已解决）
 

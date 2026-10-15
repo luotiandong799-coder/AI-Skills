@@ -1811,3 +1811,12 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 
 1. **脱敏不得就地销毁调用方对象**（openai/openai-agents-python#5337）：sandbox 失败后 `redact_mount_error_data` 想用通用 RuntimeError 替换原异常，但替换前 `_discard_exception_graph` **就地清空**原异常及其 `__cause__`/`__context__`/`args`/实例属性链上的每一个异常 —— 调用方自己持有的异常对象被改写，诊断信息连带消失。**规则**：脱敏/清洗必须先复制再改写，绝不就地变更入参；副作用外溢到调用方对象等于二次故障。
 2. **行边界必须显式**（openai/openai-agents-python#5349）：`SandboxApplyPatchTool` 用 `raw_input.splitlines()` 解析 patch，而 `str.splitlines()` 会在换页符（\f）等 Unicode 行边界上切分，导致 Add/Update File 被拆坏。**规则**：结构化文本解析要显式声明行边界（通常只有 `\n`），不得依赖语言的"通用换行"语义。
+
+## r596A（2026-10-16 · 来源 GitHub 生态仓实拉 · wb-debug-loop 1.243.0）
+
+1. **重试必须带退避下限；零等待重试＝空转忙等，不产生字节也算失败**（anthropics/claude-code#102531）：空闲会话把一颗 CPU 核心打满，根因是 OTEL socket 卡在**零等待**的 `send()` 重试循环里——约 80 万次 syscall/秒、**0 字节发送**。既有 §重试有固定序列且超限会熔断 只管「重试几次、何时停」，本条补的是**每一次重试之间的最小间隔**：间隔为 0 时，重试从「容错手段」退化为「拒绝服务」；且判定不能只看是否报错——**发送 0 字节且未推进状态**本身就是失败证据。规则：重试循环必须显式声明退避下限与「无进展」计次，无进展累到阈值即熔断，不允许以「还在跑」为健康信号。
+2. **退出前必须排空事件循环并刷写尾部数据**（vercel-labs/skills PR#2462「exit by draining the event loop after telemetry flush」）：直接退出会让最后一批遥测/日志静默丢失，表现为「这次运行什么都没上报」而不是「上报失败」。规则：凡带异步队列（遥测、日志、埋点）的进程，退出路径 = 停止接收 → 排空队列 → 刷写 → 退出；禁止把 `process.exit` 放在刷写之前。验收：退出后队列长度必须为 0，且刷写耗时要有上界（防卡死）。
+3. **命令已以 `exit N` 结束却仍等到超时**（langchain-ai/langchain#41243 / #41228）：shell 会话未能识别命令自带退出，表现为「明明跑完了却 TimeOut」。规则：判定执行结束要看**进程退出与退出码**，不能只看通道是否还有字节；「流未关闭」与「命令已结束」必须分开判定。
+4. **重复发起同一个工具调用＝循环信号，应停机而不是重试**（crewAIInc/crewAI PR#8164「stop an agent that repeats the same tool call」）：同一参数重复调用说明前一次结果未被消费或状态未推进，继续重试只会放大成本。规则：对相同（工具名+参数指纹）的连续调用设独立计数，达阈值即判循环并停机上报，不计入普通重试预算。
+
+判非（本轮核实）：vercel#2505/#2506（git 本地化错误文本导致 SHA 回退不触发）与 dl 1.240.0「不用本地化错误文本做分支」重叠 >60%；vercel#2511/#2500（下架/隐藏退役条目）与 r595A 已落「上游撤销后缓存副本下架」重叠 >60%；vercel#2503/#2514/#2507（YAML 未引号化）与 r593 已落同族；vercel#2504/#2508（slug 归一化）与 r595A 同族；vercel#2378（测试夹具分类）与 r595A 同族；openai#5339/#5366（stop_at_tool_names 下静默丢输入）与 av 既有「静默丢弃」族重叠 >60%。
