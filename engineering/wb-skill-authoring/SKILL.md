@@ -2,9 +2,8 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配、skillContentHash、baseSkillHash、保存缺基准 400、基准过期 409、publish pins refs、delete refused names agents、scope inheritance、flag off 全路由 404、reviewability debt、accountable contribution、预烘技能包、baked bundle、manifest hash 不命中、分发面与可见面、load_skill 不服务、能力判定单一真身、默认模块不设也开
-version: "1.163.0"
+version: "1.164.0"
 ---
-
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
 
 来源：WaytoAGI 精选 2026-09-01《Agent Skill 100 问》（skill 描述写法、触发排查、脚本/参考文件拆分、跨工具迁移、安全审查）。
@@ -20,7 +19,6 @@ version: "1.163.0"
 > 本节（设计原则）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 > 本节（写"什么时候不该跑"：STOP / WAIT / PROCEED 快速路径表）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 > 本节原文已零删减下沉 `references/knowledge-base.md §r442B 下沉：技能是"指令 + 所需工具"的打包，不是一段文字（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·技能是指令所需工具的打包不是一段文字）`（正文预算 ≤500 行）
-
 ## 触发评测：发布前盲测（新技能 / 改过 description 必做，细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·触发评测发布前盲测新技能改过description必做细则已下沉KB）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r513C · 触发评测：发布前盲测（新技能 / 改过 desc）
 
 ## 按需阅读（渐进披露，不要常驻加载）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·按需阅读渐进披露不要常驻加载）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r513C · 按需阅读（渐进披露，不要常驻加载）（全文见 re）
@@ -498,3 +496,5 @@ version: "1.163.0"
 ## r565B 下沉条目：① **测试套件本身是自演化 agent 的改进信号来源**——Small but Mighty 指出小而精的测试集比「多跑几步」更能驱动自我改进；落地形态是把「哪些失败被测试捕获」作为修订触发器，而非只统计通过率。② **agent 控制要跨框架可重放**——Pollard 的 Governed Semantic Execution Trees 把执行表达为受治理的语义树，使控制与重放与框架解耦；技能层对应要求是产出可重放语义执行记录（决策/工具/边界三要素齐备），否则复盘只能靠日志文本反推。触发词：测试套件作改进信号、修订触发器、语义执行树、框架无关、控制与重放解耦、决策-工具-边界三要素。
 ## r566A 下沉条目：③ **技能产出物必须保留目标格式的结构顺序**——以附件形式落地的技能产物（PPTX 等）若装配时忽略 slide/条目顺序，目标格式的结构语义即丢失；装配后须断言顺序与来源一致（来源：github.com/langgenius/dify issue #43892，2026-10-14 实拉）
 ## r566C 下沉条目：④ **安装期须校验宿主最低版本 + 内联技能入库须归一身份**——插件/技能安装时按声明校验宿主最低版本并拒绝不兼容安装（dify PR #44021）；把宿主内联技能复制进技能库时按稳定标识归一身份，避免同一技能多份身份并存（n8n PR #41030 / #41023） · r568B 下沉条目：**技能发现面有两个新确定性门：①description 与 when_to_use 拼接后共享 1536 字符截断预算；②嵌套技能首次编辑该子目录文件才进入上下文**——code.claude.com/docs/en/skills.md：`description` 与 `when_to_use` 合并文本在技能列表里**截断到 1536 字符**（两字段共享一个预算，长 when_to_use 会挤掉 description 本体）⇒ 编写判据=合并长度自查，关键触发词放截断安全带内；`paths`（glob，逗号串或 YAML 列表）把激活条件从模型语义判断降为**文件路径谓词**（机制面；措辝面 r541C 已落）；`.claude/skills/` 子目录里的嵌套技能**启动时不加载，首次读或编辑该子目录文件才加载**且此后本会话可用，此前不在 `/` 菜单也不能按名调用 ⇒ monorepo 里依赖它的检查/守卫须显式预载（`/add-dir` v2.1.257+）。判据：① 两字段预算共享，编写时按合并长度验收；② 激活确定性分两门：路径谓词（paths glob）+ 嵌套目录首次编辑才入上下文；③ 「编辑前对模型不可见」的技能，其守护职责须由常驻面承担。来源：code.claude.com/docs/en/skills.md 106,978B（2026-10-14 r568B 一手 curl 200 逐串命中 `the combined description and when_to_use text is truncated at 1,536 characters in the skill listing` / `Glob patterns that limit when this skill is activated` / `They load the first time Claude reads or edits a file in that subdirectory and stay available for the rest of the session`；Qoder r613-Q-C 提名）。触发词：1536 合并截断、when_to_use 挤占 description、paths glob 激活谓词、嵌套技能首次编辑才加载、monorepo 不可见、/add-dir 预载。
+
+## r588C 下沉条目：**技能迁移性靠「穿插教学」而非事后补教，复核范围按未决问题选**——一次成功任务会留下「程序及其使用条件」未测的白区；SSL 穿插式指导效用 0.801（无技能 0.723 / Trace2Skill 0.761 / SKILL-KD 0.751，35 族 408 用例），Issue-Guided SSL 达 0.805 且教嬈 token 少 61.7%（arXiv 2610.17860）；另：技能水印可在 1,536 连续 token 窗口识别整段复制，混入 1–3 个背景技能后检测率仍 72.2%（arXiv 2610.15725）。全文见 references/knowledge-base.md。触发词：穿插教学、使用条件沉淀、Issue-Guided 复核、教嬈 token 少 61.7%、技能水印、1536 token。
