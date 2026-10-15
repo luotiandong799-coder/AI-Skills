@@ -3837,3 +3837,37 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **判据**：① 把「有没有验证器」与「是否强制使用验证器」拆开——前者是可用性，后者是策略，两者独立（承 ae「工具必要性」判据族：这里是可执行反馈的可信度）。② 高 stakes 的确定性步骤（计算/查询）默认**强制**验证，不能交给模型自选。③ 评测验证器时要**固定调用率**做配对比较，否则比较的是「模型愿不愿意查」而不是「验证器好不好」。④ 恢复策略：检测到工具反馈损坏后，**全量重启优于局部修补**（实测 100% vs 未受控修补）。
 - **提升层**：工作流（验证策略设计）/ 可复用 Skill（工具反馈可信度验收）。
 - **触发词**：工具说谎、损坏工具反馈、强制反思、可选验证、检查频率、整题重启、受控注入。
+
+## r593A（GitHub 八仓 issue 面 · 直连 repos/issues 换面实拉 · 2026-10-16 一手 api 取证）
+
+- **① 截断标志必须累积，不能逐元素覆写**（来源 `langgenius/dify` #44167，`fix(api): accumulate truncated flag in _truncate_array instead of overwriting it`）。
+  - **原文**：`the truncated flag was overwritten on every iteration (truncated = part_result.truncated) instead of accumulated. If element 0 was truncated but element 1 was not, the final result incorrectly reported truncated=False`；修复为 `truncated = truncated or part_result.truncated`，与同文件 `_truncate_object`/`_truncate_segment` 既有写法对齐。
+  - **判据**：**「循环里的布尔状态」默认是聚合语义（or / and），写成赋值就是静默丢信号**；数组第一个元素被截断、第二个没被截断 → 整体报「未截断」，下游据此认为内容完整 ⇒ 断言「有截断标志才告警」会整条漏报。落地自检：凡 `for` 内出现 `flag = <item>.flag` 形态，一律改成 `flag = flag or <item>.flag` 并配单元素截断用例。
+
+- **② 边界值判定：恰好等于预算不应被截断**（来源 `langgenius/dify` #43479，`VariableTruncator unnecessarily truncates strings that exactly fit the estimated budget`）。
+  - **原文**：复现 `VariableTruncator(string_length_limit=10, max_size_bytes=10)` 对 `"abcdefgh"`（8 字符）仍报截断；历史 r203 曾标「1.16.1 VariableTruncator 字节预算、未证实」，本轮由 issue 正文可复核代码路径取证 ⇒ 由「未证实」升为**已证实**。
+  - **判据**：**估算预算与硬限的比较方向（`>` vs `>=`）必须单测钉死**，估算本身带余量时对「刚好等于」动刀 = 把安全边际当成超限；验收用例必须包含「恰好等于上限」这一档，只测「明显超限/明显不超」两档测不出 off-by-one。
+
+- **③ 并行工具调用的展示条目须按执行生命周期收敛**（来源 `langgenius/dify` #43823，`Agent app: parallel tool calls leave permanently spinning, empty tool entries in the thought panel`；Dify 1.17.1 自托管复现）。
+  - **原文**：`With N parallel tool calls, the panel ends up with about 2N entries during streaming`；期望 `Each tool entry completes with its own observation once the tool returns`，实际留下**永久 spinning 的空条目**。
+  - **判据**：**「并行」不只是执行面问题，也是状态机收敛问题**——N 次并发调用产生约 2N 个条目，说明创建条目与结算条目走的是两条未配对的路径；与 r588A n8n#41152（thinking block 跨并行调用重复致下一轮 400）不同面：那条管「内容被复制进协议」，本条管「条目不随执行结束而收敛」。验收：并发 N 工具后，展示条目数必须回到 N 且无处于 spinning 的终态条目。
+
+- **④ 解码字符集必须覆盖 BOM 形态**（来源 `langflow-ai/langflow` #15776，`fix(lfx): strip the UTF-8 byte order mark in Load CSV`）。
+  - **原文**：Excel 「CSV UTF-8 (Comma delimited)」导出以 `ï»¿` 开头，按 `utf-8` 解码后首列名变成 `﻿name`，`text_key="name"` 取到 `['', '']`；修复是两处输入（上传文件与文件路径，含 S3 路径）改 `utf-8-sig`。
+  - **判据**：**「解码成功」不等于「键名正确」**——BOM 不报错、不抛异常，只在下游按键取值时静默返回空；与 r577A dify#43646（解码字符集全集、禁静默原样返回）同族但补的是**具体形态**（`utf-8-sig` 兼带有无 BOM 两种输入）。落地自检：凡读取外部文本文件的入口，解码字符集一律 `utf-8-sig`，并加一个「带 BOM 的小样本」键名断言。
+
+- **⑤ 依赖锁必须与内容同版本，改动代码即失效**（来源 `windmill-labs/windmill` #11794，`fix: relock scripts and flow steps whose code changed on deploy`）。
+  - **原文**：`Deploys kept stale lockfiles when the code had changed, so the new code ran against the old dependencies`；`the backend treats a non-empty lock as "no relock needed"`，而 AI 渠道的 `write_script`/`set_flow_module_code`/`patch_flow_json`/`write_flow` 保留了除 `content` 外的全部字段 ⇒ 旧 lock 被一并带过去。**Apps 不受影响**，因为 `buildPersistedRunnable` 只从 `content` 与 `language` 重建。
+  - **判据**：**「字段非空」被当作「无需重算」的判据，是缓存失效最常见的错法**——非空只证明「曾经算过」，不证明「对当前内容有效」；内容变了必须让派生锁显式失效，而不是指望调用方清空。落地自检：任何「非空即跳过重算」的分支，都要改成「内容哈希匹配才复用」。
+  - 提升层：工具（依赖与产物一致性）/ 工作流（部署）。
+
+## r593B（arXiv 五轨 · 195 唯一编号 / 140 新 · 10 篇 abs 全 200 逐串命中 · 2026-10-16）
+
+- **① 声明—证据—执行三者必须联合绑定，各自合法不等于组合合法**（来源 arXiv 2610.00327 *Actions with Receipts: Jointly Binding Claims, Evidence, and Execution for Replayable Tool-Agent Auditing*，abs 200 逐串命中）。
+  - **原文**：`A valid citation and a valid trace can therefore remain individually well formed while being transplanted across claims, actions, runs, or source versions`；方案是 claim-anchored execution contract，`jointly binds the emitted claim, its exact source span, the ordered execution prefix that produced it, and the source version and access state observed by that execution`，收据含 `emission anchor`、`source identifiers, offsets, hashes, quotes`、`domain-separated execution commitment`，配确定性完整性校验器重建。
+  - **判据**：**引用有效 + 轨迹有效 ≠ 结论属于这次执行**——四要素（声明 / 精确源片段 / 有序执行前缀 / 源版本与访问态）缺一条，就可以把别次执行的证据「移植」过来而不被单侧校验发现。落地自检：验收「带引用的结论」时，不只要验引用存在，还要验**该引用对应的源版本与本次执行观测到的版本一致**。
+
+- **② 分歧常常暴露正确答案，共识反而掩盖错误**（来源 arXiv 2610.00972 *VeriHarness: Scaling Agentic Verification for Long-Horizon Tasks*，abs 200）。
+  - **原文**：`we find that disagreement often exposes correct alternatives, while consensus can conceal errors`；做法是 `a disagreement resolver checks competing claims against environmental evidence, while a consensus challenger tests shared claims and searches for omissions`，前提为固定基座模型、测试时无参考答案与评分 rubric。
+  - **判据**：**多次采样后「少数派」不能默认丢弃、「一致同意」不能默认通过**——多数投票在无 rubric 场景会把共同错误固化。落地自检：多 rollout 裁决时，对一致项主动做一次「遗漏搜索」（找没被提到的证据/步骤），对分歧项用环境证据裁决而非频次裁决。
+  - 提升层：工作流（验证调度）/ 模型。

@@ -959,3 +959,25 @@ Step C: 是否包含恶意意图？
 - **判据**：① 安全约束不能只靠「声明过一次」——长程任务必须**周期性恢复**适用的约束，否则其效力随轮次衰减（与记忆面「上下文压缩后约束丢失」同族，但这里是治理面）。② 最后一道防线要是**确定性审计**，放在执行前；概率性的提示词约束不足以拦住残余违规。③ 用「非可和残差风险」判据评估长程任务：只要每步残余风险不可和，长任务几乎必然出事 ⇒ **任务越长越不能只靠逐步合规**。④ 验收要按「安全前缀上的条件违规率」测，而不是只测单轮拒绝率。
 - **提升层**：工作流（长程治理）/ 可复用 Skill（约束恢复与执行前审计）。
 - **触发词**：GHOST、跨轮失忆、安全约束恢复、非可和残差、执行前确定性审计、STAR-Guard。
+
+## r593A（GitHub 八仓 issue 面 · 2026-10-16 一手 api 取证）
+
+- **① 重连路径必须保住已授予权限，且按注册侧原始拼写发送**（来源 `langflow-ai/langflow` #15774，`fix: retain Google identity scopes when reconnecting`）。
+  - **原文**：`Reconnecting Google could silently drop email and profile access because the provider returns userinfo.email/userinfo.profile aliases while the registration lists email/profile`；修复在前端与共享后端 scope 匹配器同时识别两种拼写，`Existing identity scopes stay checked and are sent using the registration's exact spelling, while users can still remove an unrelated scope explicitly`。
+  - **判据**：**「重连」不是「重新授权」**——用户再走一遍连接流程，语义上只是续期/修复通道，不应静默改变已授予的权限集合；别名不匹配导致的静默丢失等于**在用户无感知下缩小权限**（进而功能失效），反向的静默扩大则是越权。落地自检：重连前后各做一次 scope 集合比对，差异必须显式呈现而不自动生效。
+
+- **② 撤销凭据必须真正触达提供方，并区分三种结果**（来源 `langflow-ai/langflow` #15766，`fix(connections): revoke pasted Slack tokens and report provider outcomes`）。
+  - **原文**：`Revoking a Slack connection created with "Paste a token" removed the local credential without contacting Slack. The UI then showed the same success message as a confirmed provider revocation`；修复为 `sends pasted Slack tokens to auth.revoke ... and reports success only when Slack returns both ok: true and revoked: true`，`Local credentials are still removed when Slack rejects the request or times out`，且连接页现在 `distinguishes confirmed provider revocation, failure, and local-only removal`。
+  - **判据**：**「本地删掉记录」不等于「远端失效」**——把两者显示成同一个「已撤销」，会让用户以为令牌已废而实际仍有效；正确形态是三态显式：已确认远端撤销 / 撤销失败 / 仅本地移除（远端可能仍有效）。落地自检：撤销类操作必须返回远端回执并原样呈现，失败或超时时明确标注「仅本地移除」。
+  - 提升层：工具（凭据生命周期）/ 可复用 Skill。
+
+## r593B（arXiv · 2026-10-16 abs 200 逐串命中）
+
+- **① 输出正确不能证明执行安全：功能仿冒是可测量的失效面**（来源 arXiv 2609.35889 *SINGED: Correct Outputs Do Not Certify Safe Execution in LLM Agents*）。
+  - **原文**：`We study functional counterfeits: implementations that match benign alternatives on the requested output but add an effect forbidden by the task contract`；SINGED 覆盖 `five primary and two held-out task families`，`Across 7,549 audited trials, the randomized-rank study finds counterfeit execution in 45% (27/60) of rank-one trials and none at later ranks`。
+  - **判据**：**只验「返回值是否符合预期」会把仿冒实现整条放过**——它在被请求的字段上与良性实现一致，额外效应落在契约禁止但未被断言的区域；且风险集中在**排名第一**的选项（45% vs 后续排名 0）。落地自检：对第三方产物/候选实现的验收要显式列「禁止发生的效应」并做副作用断言，不能只做输出等价断言；对 top-1 候选加严。
+
+- **② 验证预算本身是防御面：假设廉价、验证昂贵**（来源 arXiv 2609.35909 *Cheap to Hypothesize, Costly to Verify: The Defense Surface of Agentic Vulnerability Discovery*）。
+  - **原文**：`autonomous vulnerability discovery exhibits a hypothesis-verification asymmetry, where verifying a candidate hypothesis through reachability analysis, execution, and proof-of-concept construction is substantially more expensive than forming it`；在有限预算下 `makes autonomous discovery a resource-bounded selective-verification process, further exposing verification effort as a unique defense surface`；并给出 RedHerring——`inserts certifiably safe decoys that divert verification effort from real vulnerabilities`，诱饵由 CVE 链吸引验证 + `a false bridge that keeps its dangerous sink unreachable`。
+  - **判据**：**攻防两侧的瓶颈不对称 ⇒ 施加在「验证」上的成本就是防御资源**；反之，己方 agent 若把预算全花在生成假设上，会产出大量永不验证的结论。落地自检：为验证环节单列预算与优先级，未验证假设必须标注「未验证」而非混入结论。
+  - 提升层：工具（验收断言）/ 工作流（验证调度）。

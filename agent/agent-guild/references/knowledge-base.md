@@ -669,3 +669,10 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 - **实证**：arXiv 2610.19386《STRATA: Self-Maintaining Structured Experience Graphs for Self-Evolving Language Agents》（abs 200 一手）——多数自进化 agent 的记忆是单层池：轨迹、蒸馏工作流、推理条目全落进同一个无差别池子、按 embedding 相似度索引，**没有类型化抽象层级**，从不遗忘或去重，易发生**负迁移**：表面相似但方向相反的经验被召回后，其具体步骤被逐字照抄，主动损害 agent。STRATA 把经验组织成**三层图**（原子技能与代码片段 / 任务工作流与泛化元框架 / 类型化边连接），通过**共享同一相似度几何的五项机制自维护**。
 - **判据**：① **检索相似 ≠ 可复用**：负迁移的根因是「方向相反的经验表面相似」——共学判重要看**结论方向**（这条经验支持还是反对当前做法），不能只看主题相近。② 经验库必须分层（原子 / 工作流 / 元框架）且有类型化边，单层池必然把不同粒度的东西混在一起检索。③ 「从不遗忘」是缺陷不是特性：经验库要带显式去重与淘汰机制，否则噪声随轮次复利。④ 与 r577C「调和异构贡献」分工：那条管跨 agent 合并，本条管**单库内部的结构与负迁移**。
 - 提升层：可复用 Skill（经验库结构）/ 工作流（共学判重维度）。触发词：STRATA、三层经验图、负迁移、方向相反的经验、单层池缺陷、经验去重淘汰、类型化边、相似度几何。
+
+## r593B（arXiv · 2026-10-16 abs 200 逐串命中）
+
+- **记忆是推导结果，须经三重要件才准入**（来源 arXiv 2609.36130 *Memory Is a Derivation: The Distributed-Evidence Paradox in Long-Term Agents*）。
+  - **原文**：`whether the memory actually follows from what the interaction history supports`；`A valid memory may therefore appear unsupported because its citations omit relevant evidence, while individually supported facts may be composed into a stronger statement the history never established`；三要求 `Evidence scope; Compositional validity; Admission reliability`，并给出 DerivAudit。
+  - **判据**：**「每条都成立」不等于「合起来成立」，「引用不全」也不等于「记忆不成立」**——压缩写入时既可能把分散证据漏掉（误判为无支撑），也可能把多个各自成立的事实合成出历史从未确立的更强论断（误判为成立）。落地自检：写入长期记忆前分别过三关（证据范围是否覆盖相关片段 / 组合后语义是否被历史支持 / 准入是否可复现），只做「单条有出处」检查不够。
+  - 提升层：模型 / 可复用 Skill。

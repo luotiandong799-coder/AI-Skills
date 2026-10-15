@@ -122,3 +122,10 @@
 - **判据**：① 工具使用评测不能只看最终成功率 / 调用正确性，须加「**必要性**」判据（去掉该工具是否仍被需要）。② **反事实对照组**（线索在 / 工具不必需）是识别捷径行为的标准手段。③ 能力成熟度会改变失效形态——**越熟练越易走捷径**，评测结论须标注模型能力档与训练阶段。④ 与 oracle 完整性审计同族：都是「结果对但过程不可信」，须把过程判据与结果判据分开报（承 r586C oracle 五条不变量）。
 - **提升层**：工作流（评测设计）/ 可复用 Skill（工具必要性判据）。
 - **触发词**：伪工具使用、捷径、必要性、反事实评测、决策级奖励、语义对齐放大、过程不可信。
+
+## r593B（arXiv · 2026-10-16 abs 200 逐串命中）
+
+- **不确定性要先路由来源，再决定动作**（来源 arXiv 2609.32255 *Clarify the User or Verify the World? Uncertainty Routing for Proactive Agents*）。
+  - **原文**：`Existing proactive approaches often specialize in either user clarification or environment verification, without explicitly determining the appropriate information source for each decision`；把动作不确定性拆为 `disagreement across plausible user-goal interpretations, which signals user-side ambiguity` 与 `the entropy remaining within each interpretation, which signals missing world-side evidence`，在 ACT / CLARIFY / VERIFY 三者间路由，查询生成器用 `a mode-conditioned information-gain reward` 训练。
+  - **判据**：**「不确定」不是一个动作，而是要先判不确定来自用户意图分歧还是世界证据缺失**——前者该问人，后者该查环境；选错方向会把澄清当验证（反复问用户客观事实）或把验证当澄清（去环境里猜用户意图）。落地自检：触发澄清前先做一次「多个用户意图解释之间是否存在分歧」的判断，无分歧则走环境验证。
+  - 提升层：模型 / 工作流。

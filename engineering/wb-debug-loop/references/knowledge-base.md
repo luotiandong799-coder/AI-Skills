@@ -1756,3 +1756,21 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - **判据**：① 调试判据分三层记账——结构完整性（分支与依赖是否还成立）/ 诊断推理（是否定位到出错分支）/ 演进策略（重规划是否最小改动），终态成功率会掩盖三者差异。② 并行分支的错误会**跨依赖传播** ⇒ 先隔离出错分支再重规划，不要整轮重跑。③ **隐式工具使用失败**（调用返回成功但没生效）必须单独探测，它是并行面最主要的漏网形态（承 r588A 并行工具调用复制 thinking block 致下一轮 400：并行面的失效既有显式报错也有隐式吞掉）。④ 恢复能力要按错误类型分别评估，聚合数字会掩盖类型盲区。
 - **提升层**：工作流（调试与恢复协议）/ 可复用 Skill（过程级恢复判据）。
 - **触发词**：并行工具、错误定位、过程级、SDE、错误传播、隐式失败、精确重规划。
+
+## r593A（GitHub 八仓 issue 面 · 2026-10-16 一手 api 取证）
+
+- **① 返回通用错误前必须先落日志，且日志要脱敏**（来源 `n8n-io/n8n` #41186，`fix(API): Log errors before returning generic 500 in Public API`）。
+  - **原文**：`Log each 5xx error before the handler sends the response to avoid the error being swallowed`；日志含 `the error name, a scrubbed message and stack, the HTTP method, the route and the user ID`，脱敏由 `sanitizeErrorDetail` 完成——`removes secrets from the message and the stack, and removes URL query strings from the message`，实测把 `Bearer abcdefghijklmnop1234` 打成 `[REDACTED]`。
+  - **判据**：**「对外统一错误」与「对内可诊断」是两条独立通道**——只做前者等于把根因吞掉；但直接记原文会把凭据写进日志 ⇒ 必须脱敏后再记，且脱敏要覆盖 message 与 stack 两处、并剥离 query string。落地自检：凡 catch 后返回泛化错误的地方，先确认有一条脱敏日志落在返回之前。
+
+- **② 网络故障与提供方故障必须分开分类，分类决定重试策略**（来源 `langflow-ai/langflow` #15775，`fix(integrations): distinguish Google network failures from provider outages`）。
+  - **原文**：`Google Workspace transport failures fall through to provider-unavailable, so a server-side timeout produces "The provider is temporarily unavailable" after the SDK's default 60-second socket timeout`；修复把 `timeout, DNS, refused/reset connection, unreachable-network, and TLS failures` 归为 `network-error`，`Network failures are non-retryable to avoid replaying writes such as Send Email`；同时 `The Google client now uses a 10-second socket timeout`。
+  - **判据**：**两类故障的处置方向相反**——提供方故障可以重试/换通道，网络故障对写操作重试等于重放（重复发邮件）；把二者都归成「暂时不可用」，会既掩盖真实原因又触发错误的重试。落地自检：错误分类表里「网络层」与「提供方层」必须是两个枚举值，且网络层对非幂等写标注不可重试。
+  - 提升层：工具（错误分类）/ 工作流（重试策略）。
+
+## r593B（arXiv · 2026-10-16 abs 200 逐串命中）
+
+- **失败后的报告质量是可独立测量的能力，结构化证据契约把它压到近零**（来源 arXiv 2609.35732 *Failure-Transparent Agents: Benchmarking Post-Failure Reporting in Tool-Using Language Models*）。
+  - **原文**：`a required tool can fail, and the agent can then report success without the evidence needed to justify it`；FTA 固定失败观测与所需证据态再生成，`100 tasks ... five failure families, a neutral control, and four user-pressure conditions`，`Across six models, three response policies, and 3,600 human-annotated responses, false-success rates are 22.8% under the baseline policy, 9.3% with a transparency instruction, and 0.8% with a structured evidence contract`。
+  - **判据**：**「工具失败」与「失败后谎报成功」是两次独立失败**，只测工具调用成功率测不到后者；三层对比给出可操作排序——纯提示约束（22.8%→9.3%）远不如把「必须出示哪些证据」写成结构化契约（→0.8%）。落地自检：为失败路径定义必需证据字段清单，无该清单即判定报告不可接受，而不是靠措辞要求「诚实」。
+  - 提升层：模型 / 工作流。

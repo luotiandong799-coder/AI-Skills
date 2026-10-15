@@ -4031,3 +4031,21 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **判据**：① 项目级指令文件不能假设「社区已有良好默认」——实测安全内容稀薄 ⇒ 写/审指令文件时须**显式补安全段**，而不是指望继承。② 文件格式迁移（`.cursorrules` → `.mdc`）**不改变内容主题分布** ⇒ 换格式不等于改进内容，版本化时须重审条目而非只做语法转换。③ 指令文件的价值与其仓库活跃度/维护者数相关 ⇒ 引入外部项目指令文件前先看项目健康度。④ 编码本式定性分析（65 码）是可复用方法：把「开发者如何表达意图」结构化，作为评审清单。
 - **提升层**：可复用 Skill（指令文件编写与评审基线）/ 工作流（格式迁移与版本化）。
 - **触发词**：cursorrules、项目级指令文件、安全内容稀薄、mdc 迁移、编码本、仓库健康度。
+
+## r593A（GitHub 八仓 issue 面 · 2026-10-16 一手 api 取证）
+
+- **能力必须与容器适配，不适配的组合要在写入时拒绝而非留到运行期变空白**（来源 `activepieces/activepieces` #16572，`fix(flows): chat-only actions can no longer end up as flow steps`）。
+  - **原文**：`Some piece actions are only meant for chat and MCP to run once (their audience is ai, shown as "(Agent)" actions). Chat and MCP could still save them as flow steps. The builder doesn't load those actions, so the step opened as a blank panel the user couldn't fix`；修复为新增/切换时 `fails with a clear error`，且 `MCP and chat show the error to the model, so it picks the normal action instead`；已存在的此类步骤 `still save ... They stay invalid, so the flow can't be published with them`，构建器显示 `Action not available` 与修复指引。
+  - **判据**：**「能存下来」不等于「能运行」**——不适配的组合若只在运行期表现为空白/不可用，用户（与模型）无法定位；正确形态是写入即校验 + 错误回传给调用方（这里是给模型，让它换一个正常动作），同时对历史数据保持可存但标记不可发布。落地自检：为能力标注适用容器（audience），写入路径做容器校验，并把校验失败原因回传给调用者而不是静默接受。
+  - 提升层：可复用 Skill / 工具。
+
+## r593B（arXiv · 2026-10-16 abs 200 逐串命中）
+
+- **① 技能是否带来增益要按任务条件预测，而非默认启用**（来源 arXiv 2609.32274 *When Does a Skill Add Value? Task-Conditional Gain Prediction for Selective Skill Use*）。
+  - **原文**：`we find that they often provide no benefit, and can even hurt performance while incurring additional token costs`；SkillDelta 由同一 agent 带/不带技能的成对执行学增益，`Across five benchmarks and three target agents, paired history improves observed-gain ranking over skill-assisted outcomes alone in 12 of 15 settings. At matched expected skill-use rates, SkillDelta improves success over random activation in all 15`。
+  - **判据**：**技能成本的默认值应为「不启用」，需要预测增益才启用**——无差别挂载既付 token 又可能降分；判据要可核验：`support coverage / representation mismatch / execution noise` 三项决定预测误差与决策遗憾。落地自检：为高频技能维护「成对增益」样本（同题带/不带），新增任务先预测再用，不要靠「看起来相关」激活。
+
+- **② 技能演化本身会过拟合，需要正则化**（来源 arXiv 2609.30861 *SkillEvoReg: Regularizing Agent Skill Evolution Against Overfitting*）。
+  - **原文**：`repeated skill updates form a learning process of their own: locally useful edits can accumulate into redundant or task-specific instructions, while new updates can disrupt behavior that previously worked`；框架含 `training-time skill dropout, which perturbs update generation`、`complexity-aware local regularization, which controls unnecessary structural growth`、`causal counterexample validation (CCV), which provides targeted behavioral validation of candidate-specific regressions`。
+  - **判据**：**每次「从经验改技能」都是一次局部最优更新，连做 N 次就会堆出只对最近任务有效的冗余条款**；必须同时上三道：生成更新时扰动（防过拟合到单次轨迹）、按复杂度惩罚结构增长（防膨胀）、改动前跑反例因果校验（防回退）。落地自检：技能更新 PR 必须回答「这次改动会让哪条既有行为失效」，并给出反例用例。
+  - 提升层：可复用 Skill / 工作流。
