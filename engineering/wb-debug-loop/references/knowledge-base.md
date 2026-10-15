@@ -1793,3 +1793,21 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
   - **实证**：定时任务失败告警在 Gateway **于通道/webhook 投递开始前**拒绝时会整体消失——传输层只在"已受理回调"内部上报结果，**回调之前的拒绝直接跳过结算**。修复：仅当回调从未开始才上报"未投递"并传播原始失败；**已受理的投递保持 `Unknown` 结果**，避免重复通知。
   - **判据**：**告警链路自身也是会故障的系统**；"未受理"这一段没有结算 ⇒ 故障以"没有告警"的形式呈现，比误报更危险。落地自检：告警/通知链路要有三态结果（已送达 / 未投递 / 未知），并明确"未投递"才允许回退到备用通道，"未知"不得重发以免重复骚扰。
   - 提升层：工作流（告警可靠性）/ 工具（投递结算）。触发词：告警被提前拒绝、未投递 vs 未知、回调前跳过结算、失败告警消失。
+
+## r595A（2026-10-16 · 来源 GitHub 技能生态仓 · wb-debug-loop 1.240.0）
+
+1. **不得拿本地化的人类可读错误文本做程序分支**（vercel-labs/skills#2505）：`cloneRepo` 只在 `isMissingRefError` 匹配到英文文案时才回落 `cloneAtSha`，git 在 `ko_KR`/`de_DE` locale 下输出译文 → SHA 回退分支永不执行。git 2.52 实测：`ko_KR.UTF-8`、`de_DE.UTF-8` 译，而 `ja_JP.UTF-8` 不译。**规则**：分支判据用退出码 / 结构化输出 / `GIT_*` 环境变量强制 locale，禁止字符串匹配人类可读错误。
+2. **状态感知须事件驱动，模型驱动的轮询会把已到达事件判成"无变化"**（mattpocock/skills#1263）：协调器事件已在到达，chief-of-staff 仍持续轮询并回报无变化，同时自动目标续跑让循环停不下来。**规则**：后台任务的状态获取优先订阅/回调；必须轮询时，须先排除"事件已到达但未被读取"这一类假阴性。
+3. **恢复动作失败不得连带销毁可恢复状态**（openclaw/openclaw#173412）：网关重启后主会话恢复失败（`delegated recovery sender authority is unavailable`），恢复流程随即归档 `agent:main:main` 及其 rollover，导致 `/reset`、`sessions.reset`、控制台"Resume in new session"**全部失效**。**规则**：恢复路径先验证再动作；恢复失败时禁止归档/清理被恢复对象与其备份，否则把"未恢复"升级成"不可恢复"。
+4. **瞬时生命周期事件须从失败计数中排除**（openclaw/openclaw#173417）：计划中的 Codex 插件替换产生"model runtime replacement in progress"这种预期内的瞬时准入拒绝，session observer 把它计入连续失败后直接 self-disable；替换随后成功、会话继续。**规则**：失败计数器须区分 transient（生命周期/准入/限流）与 fatal，前者不得触发组件自禁用。
+
+判非：mattpocock#1260（bash 3.2 回填保留反斜杠）、#1256（mermaid 标签含点号致解析失败）为具体工具/版本语法缺陷，无跨场景方法论增量。
+
+## r595B（2026-10-16 · 来源 arXiv · wb-debug-loop 1.241.0）
+
+1. **错误的重要性按任务角色分层，不是所有错误等价**（2610.17619）：语音 agent 中 ASR 错误是否致命，取决于该内容在当前任务角色中的位置。**判据**：错误处置分级须以"它在任务中扮演什么角色"为输入，而非按错误类型统一处理；同一类错误在不同角色下可以是噪声也可以是致命。
+
+## r595C（2026-10-16 · 来源 GitHub 第二生态面 + 18 站逐站实拉 · wb-debug-loop 1.242.0）
+
+1. **脱敏不得就地销毁调用方对象**（openai/openai-agents-python#5337）：sandbox 失败后 `redact_mount_error_data` 想用通用 RuntimeError 替换原异常，但替换前 `_discard_exception_graph` **就地清空**原异常及其 `__cause__`/`__context__`/`args`/实例属性链上的每一个异常 —— 调用方自己持有的异常对象被改写，诊断信息连带消失。**规则**：脱敏/清洗必须先复制再改写，绝不就地变更入参；副作用外溢到调用方对象等于二次故障。
+2. **行边界必须显式**（openai/openai-agents-python#5349）：`SandboxApplyPatchTool` 用 `raw_input.splitlines()` 解析 patch，而 `str.splitlines()` 会在换页符（\f）等 Unicode 行边界上切分，导致 Add/Update File 被拆坏。**规则**：结构化文本解析要显式声明行边界（通常只有 `\n`），不得依赖语言的"通用换行"语义。

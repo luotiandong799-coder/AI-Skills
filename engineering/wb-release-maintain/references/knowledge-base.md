@@ -711,3 +711,9 @@
   - **实证**：把代码步骤执行器默认从 legacy（Node/v8-isolate）翻到 Deno 沙箱的做法是——只翻转 `useDeno` 的**默认值**（engine `code-executor`、worker `execute-action`、sandbox `flow-provisioning`、api `pre-warm-workers` **四个读取点统一**），于是**全部既有 flow 自动迁移**：不重写数据、不需要管理员逐 flow 清扫；同时保留 per-flow 逃生阀 `useDeno:false`（行为与迁移前完全一致），且既有 admin `revert-from-deno` 端点写入的正是这个标志 ⇒ **老回滚工具自动变成 opt-out 通道**，不新增第二套语义。
   - **判据**：执行器/运行时替换的迁移成本主要在"存量"与"逃生"两头：删旧路径会把存量一次性推到新路径上，失败时没有退路；翻默认值则把存量平滑带过去，逃生阀复用既有回滚通道可避免"两套回滚语义"。落地自检：凡是"默认值翻转"类迁移，必须枚举**所有读取该默认值的代码点**并一次改齐（本例四个），漏一个就等于同一配置有两种解释。
   - 提升层：工作流（迁移策略）/ 工具（执行器治理）。触发词：useDeno 默认翻转、per-flow opt-out、revert-from-deno、默认值读取点枚举、沙箱迁移。
+
+## r595A（2026-10-16 · 来源 GitHub 技能生态仓 · wb-release-maintain 1.162.0）
+
+1. **破坏性版本必须带机检升级步骤**（mattpocock/skills#1176）：1.2.x 用 `/setup` 建的仓库在插件升到 1.3.x 后保留旧配置（根 `CONTEXT.md` + 指向它的 `domain.md`），唯一迁移说明躺在 changelog 的 1.3.0 条目里 —— 没有任何东西告诉用户"你的仓库需要改"。**规则**：破坏性变更 = 检测脚本/命令 + 提示 + 迁移动作，仅有 changelog 条目等于没有迁移路径。
+2. **清理指令须给出"被拒绝时"的替代路径**（mattpocock/skills#1251）：清理步骤只写"清掉所有实现者 worktree"，实现者于是敲 `git worktree remove … && git branch -D …`；而该仓库自身推荐的 `git-guardrails` 正好拦 `branch -D`，复合命令整体失败。**规则**：涉及删除/回收的指令必须写清被护栏拒绝时的替代处置与人工出口，不得假定删除总能成功。
+3. **审计记录的主体必须是真实执行者，不是承载容器**（activepieces/activepieces#15192）：项目发布一律被记成 platform owner 所为，"Imported By" 列对每次发布都显示平台属主 —— 多租户嵌入场景下发布历史**无法回答它存在的唯一问题：谁把这次变更推上去的**。**规则**：变更审计要记执行主体（人/身份）而非宿主/容器；共享载体下缺失主体即等于审计失效。

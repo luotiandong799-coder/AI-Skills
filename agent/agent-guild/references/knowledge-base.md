@@ -688,3 +688,19 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
   - **原文**：`can retrieve relevant information that is inadmissible for the current request because it belongs to another principal, violates policy, or reflects an incompatible lifecycle state`；`Recall and final-answer accuracy do not reveal this: a route can appear safe by missing required evidence, while a correct answer may follow inadmissible prompt exposure`；框架给每个 memory-query 对三态 `admissible, inadmissible, or unresolved`，在**匹配必需证据召回率**下比较路由，并 `tracks memory IDs through prompt exposure while linking exposure to target-level disclosure`；RHELM/MemOps 两条公开基准 top-20 重分析覆盖 3,767 queries。
   - **判据**：**召回率与最终答案准确率都不揭示「用错了谁的记忆」**——漏证据的路由看起来更安全，而正确答案可能来自不可采的暴露。落地自检：记忆准入除相关性外单独判三态（可采 / 不可采 / 未决），不可采原因至少覆盖三项（归属主体错 / 违反策略 / 生命周期状态不兼容）；验收口径是"在同样的必需证据召回率下比较"，否则会用漏召回冒充安全。
   - 提升层：模型 / 可复用 Skill（记忆准入）。触发词：retrieval admissibility、可采性三态、记忆放错上下文、prompt exposure 追踪。
+
+## r595A（2026-10-16 · 来源 GitHub 技能生态仓 · agent-guild 1.100.0）
+
+1. **跨会话可读 ≠ 可机读**（mattpocock/skills#1282）：Wayfinder 地图的 "Decisions so far" 段是给人扫的摘要 + 子 issue 链接，新 session 没有前序会话上下文，不会顺着 issue 层级去点开，于是取不到与当前任务相关的决策。**规则**：写入共享记忆/交接件的决策必须**自包含可机读**（结论 + 判据 + 适用范围同处一份），不得只留指向子结构的摘要链接。
+2. **并发认领须原子**（mattpocock/skills#476）：多 session 并行跑同一 wayfinder 地图时出现双重解析（两个 session 领到同一 ticket）与映射 lost-update（后写覆盖前写）。**规则**：共享任务映射的认领必须是 compare-and-set，且写入须携带读取时的版本号；"先读再写"在无并发保护时等于丢更新。
+
+## r595B（2026-10-16 · 来源 arXiv · agent-guild 1.101.0）
+
+1. **个人记忆（who）与程序性记忆（how）是两类能力，须分开评**（2610.20022）：持久化助手的基准把"记住这个人"与"知道怎么做"拆成两个维度评测。**规则**：共享记忆库须区分事实型（关于对象）与程序型（关于做法），二者失效模式与更新策略不同，混存混评会互相掩盖。
+2. **记忆被纠正之后，多 agent 的执行一致性才是真问题**（2610.08101）：纠正一条记忆并不保证依赖它的各 agent 行为一致。**规则**：记忆修订须触发下游一致性检查（谁引用了它、执行是否仍一致），修订成功 ≠ 系统一致。
+3. **证据变更后的记忆修复与重读**（2610.03902）：底层证据变化时，agent 是否修复/重读既有记忆，是可评的能力项。**规则**：记忆条目须带证据来源与版本，证据变更时触发复检；无来源的记忆无法修复，只能盲信。
+4. **记住 vs 弃权：保留决策应按类别条件化**（2610.07100）：可靠 agent 记忆需要"这条该不该记"的类别化判据，"不记/弃答"是与"记"并列的有效输出。**规则**：写入门控须显式，且弃权要作为一等结果被记录（便于事后区分"没有"与"不该有"）。
+5. **推理时对记忆的过度依赖可被测量与缓解**（2610.07311）：agent 在推理期过度倚重取回的记忆而压过当前证据。**规则**：记忆取回物须与当前证据并列呈现并标注来源权重，禁止让检索内容在提示结构上优于现场证据。
+6. **多 agent 记忆须可机械审计**（2610.12793 Gamma）：以 grounded 表示 + 机械审计构造多 agent 记忆。**规则**：共享记忆的每条声明要能机器核对到来源，审计不依赖人读；不能机审的记忆不适合进多 agent 共享层。
+
+判非：2610.05176 AECG（非对称经验整合治理）与 ag 1.97.0「STRATA 经验库三层图 + 自维护」重叠 >60%；2610.02897（写入时解释策略）与本轮第 4 点同族；2610.06830 MemPilot / 2610.00872 MemFit / 2610.08586 MINDSET / 2610.08102 DSV-Mem / 2610.11920 / 2610.10071 等记忆压缩与策展类落点属豆包自留地（compressor），按 §9 落点纪律 WB 不落。
