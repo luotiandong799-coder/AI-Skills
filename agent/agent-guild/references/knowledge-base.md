@@ -676,3 +676,15 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
   - **原文**：`whether the memory actually follows from what the interaction history supports`；`A valid memory may therefore appear unsupported because its citations omit relevant evidence, while individually supported facts may be composed into a stronger statement the history never established`；三要求 `Evidence scope; Compositional validity; Admission reliability`，并给出 DerivAudit。
   - **判据**：**「每条都成立」不等于「合起来成立」，「引用不全」也不等于「记忆不成立」**——压缩写入时既可能把分散证据漏掉（误判为无支撑），也可能把多个各自成立的事实合成出历史从未确立的更强论断（误判为成立）。落地自检：写入长期记忆前分别过三关（证据范围是否覆盖相关片段 / 组合后语义是否被历史支持 / 准入是否可复现），只做「单条有出处」检查不够。
   - 提升层：模型 / 可复用 Skill。
+
+## r594B（arXiv 五轨 200 唯一编号 · abs 逐串命中 · 2026-10-16）
+
+- **① 每条记忆都相关 ≠ 记忆集合充分：召回的目标从「排序」改为「构造充分集」**（来源 arXiv 2610.09348 *Relevance Is Not Sufficiency: What Actually Closes the Evidence Gap in Long-Term Memory QA*，abs 200 逐串命中）。
+  - **原文**：`the top-ranked memories can each be relevant while jointly omitting a complementary fact that the answer requires, especially for multi-session and temporal questions`；借法律证据学中 relevance 与 sufficiency 的区分，`we recast memory retrieval as constructing a sufficient memory set`；度量用 `Gold Hit and Turn Hit as evidence-coverage proxies`，方法 `Budgeted Flat Reconstruction (BFR)` 先用 `Formal Concept Analysis for Memory Selection (FCA-MS)` 把问题分解成信息需求再选紧凑候选子集。
+  - **判据**：**记忆条目的质量指标（相关/有出处/新鲜）都测不出「集合缺一条互补事实」**——这是多会话与时序问题的主要失败形态。落地自检：写/读长期记忆时，除单条准入外增加一条集合级检查——"回答这个问题还需要哪一条当前集合里没有的事实"；覆盖率用 Gold Hit/Turn Hit 这类**证据覆盖代理**衡量，而不是用 top-k 相似度。
+  - 提升层：模型 / 可复用 Skill（记忆检索与写入）。触发词：相关不等于充分、证据缺口、充分记忆集、Gold Hit、FCA-MS。
+
+- **② 正确记忆放错上下文仍是错：可采性是与相关性并列的独立维度**（来源 arXiv 2610.07309 *The Right Memory in the Wrong Context: Verifying Retrieval Admissibility in Long-Term Agent Memory*，abs 200 逐串命中）。
+  - **原文**：`can retrieve relevant information that is inadmissible for the current request because it belongs to another principal, violates policy, or reflects an incompatible lifecycle state`；`Recall and final-answer accuracy do not reveal this: a route can appear safe by missing required evidence, while a correct answer may follow inadmissible prompt exposure`；框架给每个 memory-query 对三态 `admissible, inadmissible, or unresolved`，在**匹配必需证据召回率**下比较路由，并 `tracks memory IDs through prompt exposure while linking exposure to target-level disclosure`；RHELM/MemOps 两条公开基准 top-20 重分析覆盖 3,767 queries。
+  - **判据**：**召回率与最终答案准确率都不揭示「用错了谁的记忆」**——漏证据的路由看起来更安全，而正确答案可能来自不可采的暴露。落地自检：记忆准入除相关性外单独判三态（可采 / 不可采 / 未决），不可采原因至少覆盖三项（归属主体错 / 违反策略 / 生命周期状态不兼容）；验收口径是"在同样的必需证据召回率下比较"，否则会用漏召回冒充安全。
+  - 提升层：模型 / 可复用 Skill（记忆准入）。触发词：retrieval admissibility、可采性三态、记忆放错上下文、prompt exposure 追踪。

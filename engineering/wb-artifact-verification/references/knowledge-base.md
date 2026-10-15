@@ -3871,3 +3871,27 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
   - **原文**：`we find that disagreement often exposes correct alternatives, while consensus can conceal errors`；做法是 `a disagreement resolver checks competing claims against environmental evidence, while a consensus challenger tests shared claims and searches for omissions`，前提为固定基座模型、测试时无参考答案与评分 rubric。
   - **判据**：**多次采样后「少数派」不能默认丢弃、「一致同意」不能默认通过**——多数投票在无 rubric 场景会把共同错误固化。落地自检：多 rollout 裁决时，对一致项主动做一次「遗漏搜索」（找没被提到的证据/步骤），对分歧项用环境证据裁决而非频次裁决。
   - 提升层：工作流（验证调度）/ 模型。
+
+## r594A（GitHub 八仓活跃 issue 面 · 直连 repos/issues 一手命中 · 2026-10-16）
+
+- **① 循环体的验收只跑一轮＝只验了首轮**（来源 langgenius/dify #44173 一手命中）。
+  - **实证**：`Live tracing panel shows only one round of an Iteration or Loop during a test run`——测试运行的实时追踪面板只渲染 Iteration/Loop 的**一轮**。
+  - **判据**：循环/迭代类节点的失败大量出现在"第 N 轮"（状态累积、上下文增长、配额耗尽），只观测首轮的通过不能代表循环正确。验收循环体必须至少覆盖**首轮 + 末轮 + 一个稳态轮**，并把"轮次"作为可观测维度暴露出来；只显示一轮的可观测性等价于把稳态故障设为不可见。
+  - 提升层：工作流（验证覆盖）/ 工具（可观测性）。触发词：只显示一轮、Iteration 追踪、Loop 测试运行、稳态故障不可见。
+
+- **② 自证式一致性检查恒真：判据不能被自身满足**（来源 PrefectHQ/prefect #23382 一手命中）。
+  - **实证**：`is_current_commit` 用 `git rev-parse <commit_sha>` 再把输出与 `commit_sha` 比较；对完整 40 字符 SHA，`rev-parse` **回显输入** ⇒ 比较恒为真 ⇒ `pull_code` 在拉取前返回。结果：部署更新到新 `commit_sha` 后，持久化工作目录里**仍然跑旧代码**，且无任何报错。修复改为解析 `HEAD` 再与目标 SHA 比较。
+  - **判据**：**"检查目标 X 是否等于 X"这类判据恒真，等于没检查**——一致性检查必须比较"实际状态"（HEAD/磁盘真相）与"期望标识"，不能比较"期望标识的解析结果"与"期望标识"。落地自检：所有"复用已有产物/跳过拉取"的短路判断，都要问一句"这个判据在什么情况下不可能为假"。
+  - 提升层：工具（复用前身份校验）/ 工作流（部署保真）。触发词：rev-parse 恒真、复用旧检出、跳过了 fetch、部署后跑旧代码。
+
+- **③ 清单类缓存的失效域必须覆盖全部写入方**（来源 zenml-io/zenml #5196 一手命中）。
+  - **实证**：GCP stack 上 step 日志永远冻结在**第一次有人查看时**的内容——运行中刷新返回同样的行，跑完再刷新也恢复不了剩余部分。缓存来自 fsspec 的**目录清单缓存**（不是日志存储）；服务端 LRU（`artifact_store_cache.py`）让单个 `gcsfs.GCSFileSystem` 实例服务全部请求，而 fsspec 只在该实例自身发生写入时才失效清单，step 日志却由 orchestrator 在**另一个实例**写入 ⇒ 清单永久陈旧。
+  - **判据**：**目录/清单类缓存的失效作用域 = 写入方集合**；只要存在旁路写入方，缓存就永不失效，且"用户刷新"这个动作本身也走同一缓存，所以表现为不可恢复。落地自检：进程级复用的文件系统/索引客户端，凡有跨进程写入者，必须显式禁用清单缓存或把 TTL 压到低于写入周期。
+  - 提升层：工具（缓存失效域）/ 工作流（跨进程一致性）。触发词：清单缓存陈旧、fsspec listing cache、跨进程写入看不到、刷新不恢复。
+
+## r594C（技能生态仓 issue 面 · 一手命中 · 2026-10-16）
+
+- **① 转发即背书：子 agent 报告「逐字呈现」会把未核实的断言变成结论**（来源 mattpocock/skills #1279 一手命中）。
+  - **实证**：`/code-review` 的 step 5 要求把子 agent 报告"逐字或轻度清理"后呈现；Spec 子 agent 断言某个链接因"2026-09-08 的注释使行号位移"而失效，父级据此作为 finding 转达，并在用户追问时再次复述。核查发现**该断言是错的**：ticket 创建于 2026-09-21（在那次提交之后），第 114 行在被引用时本就是空行。
+  - **判据**：**规范里写"verbatim"= 把核实责任从子 agent 转嫁给父 agent，而父 agent 只做格式清理 ⇒ 最终无人核实**。落地自检：汇总子 agent 产物的步骤必须包含一条"可独立复核的断言要复算"（链接是否真断、行号是否真存在、数值是否对得上），不能只做去重与润色；对无法复算的断言显式标注"未复核"。
+  - 提升层：工作流（多 agent 汇总）/ 可复用 Skill（报告转述纪律）。触发词：verbatim 转发、子 agent 断言未核实、转发即背书、未复核标注。

@@ -129,3 +129,29 @@
   - **原文**：`Existing proactive approaches often specialize in either user clarification or environment verification, without explicitly determining the appropriate information source for each decision`；把动作不确定性拆为 `disagreement across plausible user-goal interpretations, which signals user-side ambiguity` 与 `the entropy remaining within each interpretation, which signals missing world-side evidence`，在 ACT / CLARIFY / VERIFY 三者间路由，查询生成器用 `a mode-conditioned information-gain reward` 训练。
   - **判据**：**「不确定」不是一个动作，而是要先判不确定来自用户意图分歧还是世界证据缺失**——前者该问人，后者该查环境；选错方向会把澄清当验证（反复问用户客观事实）或把验证当澄清（去环境里猜用户意图）。落地自检：触发澄清前先做一次「多个用户意图解释之间是否存在分歧」的判断，无分歧则走环境验证。
   - 提升层：模型 / 工作流。
+
+## r594A（GitHub 八仓活跃 issue 面 · 一手命中 · 2026-10-16）
+
+- **① 成本计量按「已完成步骤」而非「尝试」，子 agent 成本须单独归集且不污染主模型上下文**（来源 activepieces/activepieces #16576 一手命中）。
+  - **实证**：此前一轮对话的 token 日志**只覆盖主聊天**，无法知道 task agent / deep research 花了多少。修复：① `ap_run_task` 与 `ap_deep_research` 结果携带 `tokens:{input,output}`，与 `billedToolCalls` 一样**排除在主模型可读内容之外**；② 任务在被截断后继续时 token **跨轮累计**（此前只保留最后一轮）；③ `runAgentTurn` 改为**按已完成步骤**计数而非按尝试（此前一条流在某步失败后，已跑步骤的 token 被整体丢弃）。
+  - **判据**：**按"尝试"计量会在失败流上系统性低估成本**——失败恰好是最需要成本可见性的场景；按"已完成步骤"计量才能让失败也有账单。子 agent/深度检索的成本必须单独归集，且**归集内容不能回灌进主模型上下文**（否则既污染又放大）。落地自检：成本日志要能回答"这一轮里每个子任务各花了多少"，并单独验证"失败轮的成本不为 0"。
+  - 提升层：工具（计量口径）/ 工作流（成本归因）。触发词：token 只记主聊天、失败轮成本为 0、子 agent 成本归集、按步骤计量。
+
+## r594B（arXiv 五轨 · abs 200 逐串命中 · 2026-10-16）
+
+- **① 基准的「真实」必须绑定到具体用例的 Task Flow，否则「更真实」无意义**（来源 arXiv 2610.09633 *Coding-Agent Benchmarks Should Match Their Users' Task Flows*）。
+  - **原文**：采集 `4,782 agent sessions of real software engineers in JetBrains IDEs`；长会话（≥3 条用户消息，占 33%）与 issue 派生基准有两点不同：`(i) user requests span a far wider mix of task types` 与 `(ii) users switch between types throughout a session`；`Long-session samples from three public interaction corpora exhibit markedly different Task Flows (the distributions of session lengths, task types, and type-to-type transitions), so no single interaction distribution is universally realistic: benchmarks should name a target use case and calibrate to measurements from it`；SWE-TaskFlow 在 `preserves the verified tasks and tests` 前提下把交互导向目标 Task Flow。
+  - **判据**：**"Task Flow = 会话长度分布 + 任务类型分布 + 类型间转移分布"三者共同定义真实性**；不同交互语料的这三个分布差异显著，所以不存在通用真实分布。落地自检：选用/自建基准时先写出目标用例并给出这三个分布的实测值；改造既有基准时保留已验证任务与测试，只改交互结构。
+  - 提升层：工作流（基准选型）/ 可复用 Skill（评测设计）。触发词：Task Flow、type-to-type transition、基准校准到用例、SWE-TaskFlow。
+
+- **② 多 agent 协议风险必须成对测 + 归因到后果：局部成功 ≠ 端到端影响**（来源 arXiv 2610.15529 *Agent-Canary-Mas: End-to-End Evaluation of Protocol Risk in Long-Horizon Multi-Agent Systems*）。
+  - **原文**：`A locally successful protocol attack, however, may be rejected by a later agent or propagated into a consequential task decision. Measuring local exploitability alone leaves this difference unresolved and provides limited evidence about which participant caused the final outcome`；覆盖 `five risk classes and 13 subclasses across A2A, ANP, and BCS`，`975 matched malicious--benign task pairs in five business domains`；`Matched runs separate local protocol success from downstream consequences`；证据链 `participant selection, message consumption, tool activity, and task-state changes`；另有 protocol-context Guard `checks an object's authority at consequential handoffs`。
+  - **判据**：**只测"某一步能不能被利用"既低估传播（后续 agent 采纳）也高估影响（后续 agent 拒绝），且无法归因到具体参与者**；必须用恶意-良性配对运行分离局部成功与下游后果，并保留完整证据链。落地自检：多 agent 评测至少报告三个数——局部协议成功率、下游后果发生率、可归因的参与者；在后果性交接点校验对象权限。
+  - 提升层：工作流（多 agent 评测）/ 工具（权限校验点）。触发词：matched malicious-benign pairs、局部成功 vs 下游后果、协议风险归因、后果性交接。
+
+## r594C（技能生态仓 issue 面 · 一手命中 · 2026-10-16）
+
+- **① 并行评测必须隔离工作目录：并行度直接进入测量值**，判据是"换成无关变量测量值不应改变"（来源 anthropics/skills #1706 一手命中）。
+  - **实证**：`skill-creator` 的 trigger-eval 把**所有 worker 的临时命令文件写进同一个目录**（`project_root/.claude/commands/{clean_name}.md`），并行 worker 互相看到彼此的文件；每个 `claude -p` 面对 N 个**仅 UUID 不同**的同名技能，只有选中自己那个才计为"触发"。于是**实测触发率塌缩到 ~1/num_workers，与被测 description 无关**；`--num-workers` 默认 10 ⇒ `run_loop.py` 实际是在对约 10% 缩放的噪声做优化。
+  - **判据**：**并行评测的共享目录＝污染通道**；更一般地，任何"多 worker 共享可变工作区"的评测，其测得的量里混入了并行度。落地自检：并行 worker 一律给独立工作目录/命名空间；并用**无关变量替换试验**验证测量有效性——把被测项换成只影响身份不影响质量的变量（本例 UUID），若测量值随之改变，说明测的不是质量而是并行度。
+  - 提升层：工作流（评测并行）/ 工具（评测隔离）。触发词：并行 worker 共享目录、触发率塌缩 1/N、num_workers 污染、无关变量替换试验。

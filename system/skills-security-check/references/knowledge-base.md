@@ -981,3 +981,49 @@ Step C: 是否包含恶意意图？
   - **原文**：`autonomous vulnerability discovery exhibits a hypothesis-verification asymmetry, where verifying a candidate hypothesis through reachability analysis, execution, and proof-of-concept construction is substantially more expensive than forming it`；在有限预算下 `makes autonomous discovery a resource-bounded selective-verification process, further exposing verification effort as a unique defense surface`；并给出 RedHerring——`inserts certifiably safe decoys that divert verification effort from real vulnerabilities`，诱饵由 CVE 链吸引验证 + `a false bridge that keeps its dangerous sink unreachable`。
   - **判据**：**攻防两侧的瓶颈不对称 ⇒ 施加在「验证」上的成本就是防御资源**；反之，己方 agent 若把预算全花在生成假设上，会产出大量永不验证的结论。落地自检：为验证环节单列预算与优先级，未验证假设必须标注「未验证」而非混入结论。
   - 提升层：工具（验收断言）/ 工作流（验证调度）。
+
+## r594A（GitHub 八仓活跃 issue 面 · 一手命中 · 2026-10-16）
+
+- **① 权限判据要从「执行计划将做什么」推导，而不是从「动作叫什么」推导**（来源 n8n-io/n8n #41131 一手命中）。
+  - **实证**：包导入支持 `credentialMissingMode=create-with-values`（#36767）——导入时可用包内表达式数据**创建缺失凭据**；此前调用方**不需要任何 credential scope**就能完成这条写入路径。修复：按**导入计划**推导所需 scope（与 data table / variable 的 scope 检查同构），若计划会创建凭据则在**首次写入之前**要求 `credential:create`，无则 403；不创建凭据的导入不需要该 scope。
+  - **判据**：**写凭据的路径藏在"导入"这个名字后面** ⇒ 以动作名授权必然漏；正确做法是先算计划（plan）、再按计划将要触碰的资源种类求 scope 并集，且拦截点必须早于第一次写。落地自检：任何"批量/导入/同步"类入口，都要先产出可枚举的副作用清单，权限检查对该清单求值。
+  - 提升层：工具（权限推导）/ 工作流（导入面门禁）。触发词：create-with-values、导入创建凭据、credential:create scope、按计划推导 scope、写入前 403。
+
+- **② 无差别确认＝无差别授权：批准控件必须具名到具体动作**（来源 windmill-labs/windmill #11795 一手命中）。
+  - **实证**：聊天工具卡上的确认按钮对**所有工具**都显示 "Run"——包括部署草稿、删除条目、丢弃草稿。修复：工具定义新增可选 `confirmAction`（紧邻 `confirmationMessage`），可为固定值或**调用参数的函数**，在卡片进入等待确认时解析并复制到工具消息上；`toolConfirmAction.ts` 给出动作标签与图标（Run / Deploy / Create / Apply / Delete / Discard / Roll back / Confirm），未标注动作的退化为 "Confirm"。
+  - **判据**：**同一个"确认"承载不同副作用等级时，批准者的肌肉记忆会被最高频的低危动作训练，从而顺带批准高危动作**；确认必须把"被授权的具体动作"显式呈现，且动作名应由**调用参数**推导（同一工具不同参数可能是不同危险等级）。落地自检：审批 UI 上若出现通用动词（Run/Confirm/继续）覆盖多个动作，视为授权缺陷。
+  - 提升层：工具（授权 UI 语义）/ 工作流（人工批准面）。触发词：确认按钮具名、confirmAction、无差别确认、Run 覆盖删除、批准习惯被训练。
+
+- **③ 语法级净化必须理解表达式结构：看不懂条件作用域的校验会给出虚假保证**（来源 langflow-ai/langflow #15782 一手命中）。
+  - **实证**：jq 守卫把**条件表达式内部的逗号**误判为对象条目分隔符，于是放过了被隐藏的可执行 builtin 名；修复通过 `end` 跟踪条件作用域，让这些名字重新处于校验之下，同时保留字面对象键与常规数据查询。验证：修复前 **24 条新建绕过用例失败**，修复后 98 条守卫测试 + 149 条组件测试通过（含真实 libjq 一致性检查、统一与遗留两条组件路径）。
+  - **判据**：**"过了校验"是强断言，语法理解不完整时它比不校验更危险**——它同时消除了人工警惕。表达式类净化器必须以真实解析器的一致性测试为验收基线，并显式覆盖"条件/嵌套作用域内的分隔符歧义"。落地自检：自建表达式白名单/黑名单时，用目标引擎的真实 conformance 套件做反向绕过测试，而不是只跑正向样例。
+  - 提升层：工具（输入净化）/ 可复用 Skill（表达式校验）。触发词：jq guard 绕过、条件作用域、逗号歧义、净化器虚假保证、conformance 反向测试。
+
+## r594B（arXiv 五轨 · abs 200 逐串命中 · 2026-10-16）
+
+- **① 多租户共享向量记忆的跨用户泄漏不需要攻击：语义相邻即泄漏**（来源 arXiv 2610.04195 *MemLeak: Cross-User Semantic Leakage in Multi-Tenant AI Agent Memory*）。
+  - **原文**：`a user's query can retrieve semantically adjacent memories belonging to another user through ordinary cosine-similarity retrieval, without any exploit`；非对抗 incidental leakage 在同队池化检索下达 `70--100%`；对抗构造记忆达 `90--100% top-k placement`，生产级稠密检索下 score lift `+0.416 to +0.511`；端到端 `response contamination reaches 5.00/5`，且 `contaminated responses often scoring as helpful or more helpful than clean ones`（该差距经人类判断验证）。
+  - **判据**：**共享嵌入空间里"隔离"不能靠语义距离**——邻域就是泄漏通道，且检索的"合理性"会让泄漏看起来像正常召回。落地自检：多租户记忆必须在检索层做主体（principal）过滤，且**不能用"回答质量评分"当泄漏指标**（污染回答反而更受好评）。
+  - 提升层：工具（检索隔离）/ 可复用 Skill（多租户记忆）。触发词：跨用户语义泄漏、共享向量库、pooled retrieval、污染回答更受好评。
+
+- **② 主动式 agent 的注入面从用户侧扩展到提供方侧：无需私有上下文、无需攻陷、无需权限**（来源 arXiv 2610.05266 *Who Is Your Agent Serving? Provider-Side Indirect Prompt Injection in Proactive Agents*）。
+  - **原文**：`an external provider need not access private user context, compromise the agent, or gain additional permissions: by controlling only content associated with its own target, it can redirect an otherwise benign agent to advance that target`；失效模式拆解为 `Target Control, Private Binding, and Prospective Support`（分别操控推进什么 / 如何把目标与用户绑定 / 下一步提供什么目标专属协助）；三个主动式 agent 环境 × 六种模拟用户模型下 `the full attack increases target authorization in all tested environment-user-model combinations, with a macro gain of up to 77.4 percentage points`；`Controlled replay shows that correct user-target binding` 也不足以阻止。
+  - **判据**：**"内容只来自可信提供方"不再是安全判据**——提供方可以只控制与自己目标相关的内容就完成劫持；防御要覆盖"目标控制/私有绑定/前瞻协助"三个环节，而不是只查"有没有恶意指令"。落地自检：主动推荐类能力上线前，用受控重放验证"用户-目标绑定正确时目标授权是否仍被抬高"。
+  - 提升层：工具（注入面建模）/ 工作流（主动式能力审查）。触发词：provider-side injection、Target Control、Private Binding、Prospective Support、目标授权被抬高。
+
+- **③ 妥协不等于后果：授权约束的验收要用「配对重放」，且遏制与预防必须分开报**（来源 arXiv 2610.05840 *Compromise Is Not Consequence: Evaluating Task-Scoped Authorization in LLM Agents with Paired Replay*）。
+  - **原文**：`A tool-using model can follow a malicious instruction even when its credentials are valid`；配对重放测试床 `samples a model request once and submits the same action, resource, and arguments to broad bearer, scoped JWT, sender-constrained, and Open Policy Agent conditions`；128 场景 × 4 工具域 × 5 本地模型配置下 `broad-bearer harmful execution ranges from 8.9% to 37.8% across models; all three scoped conditions record zero`；`The policy changes execution, not the frozen model decision`；AgentDojo 六任务扩展下 `11/24 injected broad-policy attack flags versus 0/24 scoped flags`。
+  - **判据**：**同一条恶意决策在 broad 与 scoped 条件下后果不同 ⇒ 只测"注入成功率"测不出授权机制的价值**；评估必须冻结模型决策、只变授权条件（配对重放），并把结论严格写成"遏制了跨动作/跨资源后果"而非"防住了注入"。落地自检：任何凭据/授权加固的验收，都要有一组"同请求不同授权条件"的配对实验；结论里"预防"与"遏制"不得混用。
+  - 提升层：工具（授权评估方法）/ 工作流（安全验收口径）。触发词：paired replay、broad bearer vs scoped、妥协不等于后果、遏制而非预防。
+
+## r594C（技能生态仓 issue 面 · openai/skills · anthropics/skills · openclaw · mattpocock/skills 直连一手命中 · 2026-10-16）
+
+- **① 校验器自身是攻击面：「验证工具」读不可信文档时也要用安全解析默认**（来源 anthropics/skills #2033 一手命中）。
+  - **实证**：Office 校验器（`skills/{docx,pptx,xlsx}/scripts/office/validators/base.py` 与 `pptx.py`）用 `lxml.etree.parse(str(xml_file))` 解析被校验文档的 XML 部件；**lxml < 5.0 的默认解析器会解析外部实体**，特制 `.docx/.pptx/.xlsx` 可让校验器把本地文件读进解析树。lxml 5.0 改了默认，但技能没 pin 版本，而两个在维护的 LTS 系统包仍是 4.x（Debian 12 `python3-lxml` 4.9.2、Ubuntu 22.04 4.8.0）。此前已有 5 处 XXE 修复（#58/#657/#1780/#1784/#1837）覆盖的是 `xml.etree`，**这一处不在其列**。
+  - **判据**：**"我是在做安全检查"不构成免检理由**——安全/校验工具处理的是最不可信的输入，且其解析默认往往沿用库默认。落地自检：① 列出全部"解析外部文档"的入口逐个确认解析配置（禁外部实体、禁网络取 DTD）；② 依赖的**安全相关默认**要 pin 版本而不是"相信新版已修"；③ 同族缺陷修复后按"入口清单"清扫，不要按"已修 5 处"计数结案。
+  - 提升层：工具（校验器自身安全）/ 可复用 Skill（审查清单）。触发词：lxml 默认解析器、XXE、校验器读本地文件、LTS 仍是 4.x、同族缺陷漏网。
+
+- **② 评审/反馈文件是 agent 的输入通道：本地服务的 CSRF 写 = 间接提示注入**（来源 anthropics/skills #2025 一手命中）。
+  - **实证**：`skill-creator/eval-viewer/generate_review.py` 在 localhost 提供评审页并接受任意 `POST /api/feedback`：① **CSRF 覆写 `feedback.json`**——`text/plain` 的 `fetch(..., {mode:"no-cors"})` 或普通 HTML 表单 POST 属于"简单请求"，**不触发 CORS 预检**，服务端照写 body，默认端口 3117 易猜；② **DNS rebinding 读取**——服务端不校验 `Host`，重绑定页面可读 `/` 与 `/api/feedback`。关键点：`skill-creator` 会把 `feedback.json` **当作人类评审读回来修订技能**，所以伪造写入同时是一条间接注入通道。
+  - **判据**：**凡是会被 agent 读回并影响后续行为的本地产物，其写入端点就是注入面**；localhost / 无预检 / 默认端口三者叠加不等于安全。落地自检：本地服务也要校验 `Origin` 与 `Host`、禁用 no-cors 可写的简单请求路径；把"评审数据"当不可信输入做来源与完整性校验。
+  - 提升层：工具（本地服务安全）/ 工作流（评审回流通道）。触发词：eval viewer CSRF、DNS rebinding、feedback.json 被伪造、评审即注入通道。

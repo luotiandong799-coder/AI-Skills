@@ -4049,3 +4049,29 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
   - **原文**：`repeated skill updates form a learning process of their own: locally useful edits can accumulate into redundant or task-specific instructions, while new updates can disrupt behavior that previously worked`；框架含 `training-time skill dropout, which perturbs update generation`、`complexity-aware local regularization, which controls unnecessary structural growth`、`causal counterexample validation (CCV), which provides targeted behavioral validation of candidate-specific regressions`。
   - **判据**：**每次「从经验改技能」都是一次局部最优更新，连做 N 次就会堆出只对最近任务有效的冗余条款**；必须同时上三道：生成更新时扰动（防过拟合到单次轨迹）、按复杂度惩罚结构增长（防膨胀）、改动前跑反例因果校验（防回退）。落地自检：技能更新 PR 必须回答「这次改动会让哪条既有行为失效」，并给出反例用例。
   - 提升层：可复用 Skill / 工作流。
+
+## r594A（GitHub 八仓活跃 issue 面 · 一手命中 · 2026-10-16）
+
+- **① 工具 schema 的 optional 语义会在传输层被改写：strict 默认必须在声明侧显式写出**（来源 n8n-io/n8n #41204 一手命中）。
+  - **实证**：`@n8n/agents` 运行时把每个工具转成 AI SDK 工具时对 MCP 工具传 `strict: false`、**其余工具不传 strict 标志**；OpenAI Responses API 在标志缺失时启用 strict 模式，而 strict 模式**把工具入参 schema 里所有 optional 字段变成必填**。修复：`Agent.toolStrict()` 给 agent 级默认、`Tool.strict()`（BuiltTool.strict）做单工具覆盖并保存进工具描述符，未单独设置的 MCP 工具保持非严格；n8n Assistant 及其子 agent 用 `toolStrict(false)`。
+  - **判据**：**"声明为可选"的契约会在下游默认策略下被静默升级为"必填"**，且失败表现为模型侧抱怨缺参数，而不是 schema 报错。工具契约的 strict 语义属于**声明侧必须显式写出的字段**：不传 ≠ 中性，不传 = 采用对方默认。落地自检：跨框架/跨提供方转发工具定义时，逐个工具显式标注 strict，并对 optional 字段做一次"缺失时是否仍可调用"的回归。
+  - 提升层：工具（schema 契约）/ 模型。触发词：optional 变必填、strict 默认、Responses API、工具描述符 strict、BuiltTool.strict。
+
+## r594B（arXiv 五轨 · abs 200 逐串命中 · 2026-10-16）
+
+- **① 约束型护栏必须同时给出「禁止什么」与「如何合规前进」，且约束要依赖历史/上下文**（来源 arXiv 2610.17039 *MENTOR: Procedural Shielding of Tool-Using LLM Agents*）。
+  - **原文**：现有做法 `use either LLM judges or manually written rules to forbid problematic tool-calls locally at runtime`；两点不足：`(i) only blocking tool calls keeps the agent clueless about how to make correct progress towards fulfilling its task`；`(ii) can lead to overly conservative behavior of the agent, as tool calls might only be problematic in certain contexts`；MENTOR `(i) additionally provides guidance for the agent to make procedural-compliant progress on the task, and (ii) ensures that this compliance is context-aware`，做法是 `building a novel history-dependent runtime shield that is obtained from the procedural manual via a multi-stage` 编译。
+  - **判据**：**"只拒绝不引导"的护栏会制造两类次生失败：agent 停滞（不知道合规路径）与过度保守（上下文无关的全局禁止）**；正确形态是"历史依赖的运行时 shield"，由自然语言规程编译而来，输出=禁止集 + 合规前进建议。落地自检：写约束类规则时，每条禁止项必须配对一条"那么应该怎么做"，且条件里显式引用历史状态（已做过什么）而非只看当前调用。
+  - 提升层：工具（运行时护栏）/ 可复用 Skill（约束表达）。触发词：procedural shielding、只拦不引导、过度保守、history-dependent shield、规程编译。
+
+## r594C（技能生态仓 issue 面 · 一手命中 · 2026-10-16）
+
+- **① 初始化脚本必须原子：「存在即拒绝」不与「清理残留」配对就会把系统锁死在不可重试状态**（来源 openai/skills #539 一手命中）。
+  - **实证**：`init_skill.py` **先建目录再填充**，`mkdir` 之后的所有失败路径都直接 return、不删除目录；而脚本又拒绝复用已存在目录 ⇒ 残留目录让**同名技能的每一次后续重试都失败**，只能用户手工删目录。最短触发是 `--interface` 传了非法值，任何 mkdir 之后的失败同理（报告针对 main @ `49f948fa`）。
+  - **判据**：**多步初始化 = 事务**：要么完整落地，要么不留下任何残骸。"先占位后填充"+"占位存在即报错"是两个各自合理的规则，**组合起来会把一次可恢复的失败变成永久阻塞**。落地自检：写初始化/脚手架类脚本时，为每条失败路径配 `try/except → 清理 → 抛出`，并让"可复用"与"已损坏残留"可区分。
+  - 提升层：工具（脚手架脚本）/ 工作流（失败可重试）。触发词：init 留下部分目录、重试被残留阻塞、mkdir 后失败不回滚、存在即拒绝。
+
+- **② 重写指令文件的两条硬规则：生成器拥有的 marker 块不得当正文裁剪；覆写前先判符号链接**（来源 mattpocock/skills #1274 + #1275 一手命中）。
+  - **实证**：① 一份 `AGENTS.md/CLAUDE.md` 被按 token 效率重写，文件里存在工具生成段落（形如 `<!-- <tool>:start -->` … `<!-- <tool>:end -->`）；一次段落级抽取**丢掉了其中一个 start marker**，只有 diff review 才发现；把生成段落压成一行还会**诱发生成器下次运行时重新生成**。② 另一例中用户级 `CLAUDE.md` 本应是指向版本控制 dotfiles 目录的**符号链接**，实际用 `cp` 安装再用 `sed -i` 修补——`sed -i`/`mv` 这类**原子重命名写入会把符号链接替换成普通文件**，编辑永远到不了被跟踪的真身，且无人检查过链接状态。
+  - **判据**：**指令文件既可能是"生成物 + 手写物"的混合体，也可能只是指向真身的链接**：前者要求按归属分区裁剪（生成器拥有的区域整块保留），后者要求写回前判 `islink` 并写入链接目标（或用会跟随链接的写入方式）。落地自检：改写 CLAUDE.md/AGENTS.md 前，先列出 marker 块清单与链接状态；改完用 diff 核对 marker 成对。
+  - 提升层：可复用 Skill（指令文件治理）/ 工具（文件写回语义）。触发词：marker 块被裁掉、symlink 被 sed -i 替换、指令文件写回、生成器拥有区域。

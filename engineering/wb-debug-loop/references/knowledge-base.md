@@ -1774,3 +1774,22 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
   - **原文**：`a required tool can fail, and the agent can then report success without the evidence needed to justify it`；FTA 固定失败观测与所需证据态再生成，`100 tasks ... five failure families, a neutral control, and four user-pressure conditions`，`Across six models, three response policies, and 3,600 human-annotated responses, false-success rates are 22.8% under the baseline policy, 9.3% with a transparency instruction, and 0.8% with a structured evidence contract`。
   - **判据**：**「工具失败」与「失败后谎报成功」是两次独立失败**，只测工具调用成功率测不到后者；三层对比给出可操作排序——纯提示约束（22.8%→9.3%）远不如把「必须出示哪些证据」写成结构化契约（→0.8%）。落地自检：为失败路径定义必需证据字段清单，无该清单即判定报告不可接受，而不是靠措辞要求「诚实」。
   - 提升层：模型 / 工作流。
+
+## r594A（GitHub 八仓活跃 issue 面 · 一手命中 · 2026-10-16）
+
+- **① 错误转译只留短消息会同时丢掉可检索性与可恢复性**（来源 langflow-ai/langflow #15773 一手命中）。
+  - **实证**：画布上集成失败只显示短错误消息，把"重连 / 检查 Drive 文件访问权限"这类**恢复建议**与**集成错误码**都藏掉了。修复：把脱敏后的 solution 与 integration error code 透传进 `ErrorMessage` 与 AG-UI 终端事件，画布告警与构建详情同时展示二者，**且不附加 traceback 内容**。验证：先用失败回归复现缺失，再通过 246 条 Python translator/adapter/schema 测试 + 31 条前端 bridge 测试。
+  - **判据**：**脱敏的目标是 traceback 内容，不是错误码与恢复提示**——把"人类可读短消息"当成脱敏结果，会让同一类故障无法被检索聚合，也让用户拿不到下一步动作。落地自检：错误传播链上至少保留三层字段：机器可读码、可执行的恢复提示、人类可读摘要；只留最后一层即视为信息损毁。
+  - 提升层：工具（错误传播）/ 工作流（恢复指引）。触发词：只显示短消息、错误码被吞、恢复建议丢失、错误转译损毁。
+
+- **② 评估夹具钉住数据会制造假失败，也会掩盖真失败**（来源 n8n-io/n8n #40823 一手命中）。
+  - **实证**：eval harness 用模型生成的行把 Data Table 读节点**钉住（pinned）**，产生两类假红：① 钉住项没有 `pairedItem`，当读返回条数与输入条数不同，下游 `$('X').item` 表达式报 `Paired item data for item from node 'X' is unavailable`（case 618）；② 钉住的读**看不到同一轮写入的行**（whatsapp 去重用例）。修复：Data Table 节点改为真实执行，服务端每个场景前 `prepareDataTables` 按 id/name 绑定表并跳过 `seededDataTableIds`。
+  - **判据**：**评估夹具不能替代真实数据源**——钉住数据在"条目配对（pairedItem）/ 返回条数 / 读写可见性"三个维度上与真实执行不同构，于是要么报出与被测逻辑无关的假红，要么（更危险）让依赖真实读写可见性的缺陷通过。落地自检：凡是评估中出现"无法解释的配对/条数报错"，先查夹具是不是钉住的，再查被测代码。
+  - 提升层：工作流（评估保真）/ 工具（夹具设计）。触发词：pinned 数据假红、pairedItem unavailable、夹具钉住、eval 真实数据源。
+
+## r594C（技能生态仓 issue 面 · 一手命中 · 2026-10-16）
+
+- **① 告警自身的失败也要留痕：被"提前拒绝"的告警若无结算就静默消失**（来源 openclaw/openclaw #173163 一手命中）。
+  - **实证**：定时任务失败告警在 Gateway **于通道/webhook 投递开始前**拒绝时会整体消失——传输层只在"已受理回调"内部上报结果，**回调之前的拒绝直接跳过结算**。修复：仅当回调从未开始才上报"未投递"并传播原始失败；**已受理的投递保持 `Unknown` 结果**，避免重复通知。
+  - **判据**：**告警链路自身也是会故障的系统**；"未受理"这一段没有结算 ⇒ 故障以"没有告警"的形式呈现，比误报更危险。落地自检：告警/通知链路要有三态结果（已送达 / 未投递 / 未知），并明确"未投递"才允许回退到备用通道，"未知"不得重发以免重复骚扰。
+  - 提升层：工作流（告警可靠性）/ 工具（投递结算）。触发词：告警被提前拒绝、未投递 vs 未知、回调前跳过结算、失败告警消失。

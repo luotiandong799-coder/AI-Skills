@@ -704,3 +704,10 @@
 ## r590B 实证（GitHub 八仓 issue 面，gh api 一手逐串命中）
 
 - **实证**：ap #16568（v23 piece-upgrade 注册表把 ~80 条流重写到「修复前版本」）——自动升级注册表选了带已知 multipart 上传 bug 的版本。机制：注册表目标版本 = 通过 metadata 兼容阶梯的「最新版」，从不比对同 piece 后续 `fix(...)` bump；google-drive 0.7.9 / jira-cloud 0.3.7 等修复在生成前数周已发布却被锁为「目标」（空文件/附件 500）。方法：自动升级注册表须对每条目标版本做「fix 版本反向校验」——目标版本须 ≥ 该 piece 已知修复版本；门控不仅看 unsafeSteps，须列出具体受影响的 attachment/表单能力；升级前审计全量目标（CSV 81 行：43 生成前已修复、5 生成后修复、33 无修复）。提升层：可复用 Skill（升级目标版本审计）/ 工作流（fix 版本反向校验门）。触发词：piece-upgrade 注册表、修复前版本、自动升级重写、fix 版本反向校验、unsafeSteps 门控、metadata 兼容阶梯、0.88.4→0.92.2。
+
+## r594A（GitHub 八仓活跃 issue 面 · 一手命中 · 2026-10-16）
+
+- **① 换执行引擎的迁移：翻默认值 + 保留逃生阀，而不是删旧路径强制迁移**（来源 activepieces/activepieces #16573 一手命中）。
+  - **实证**：把代码步骤执行器默认从 legacy（Node/v8-isolate）翻到 Deno 沙箱的做法是——只翻转 `useDeno` 的**默认值**（engine `code-executor`、worker `execute-action`、sandbox `flow-provisioning`、api `pre-warm-workers` **四个读取点统一**），于是**全部既有 flow 自动迁移**：不重写数据、不需要管理员逐 flow 清扫；同时保留 per-flow 逃生阀 `useDeno:false`（行为与迁移前完全一致），且既有 admin `revert-from-deno` 端点写入的正是这个标志 ⇒ **老回滚工具自动变成 opt-out 通道**，不新增第二套语义。
+  - **判据**：执行器/运行时替换的迁移成本主要在"存量"与"逃生"两头：删旧路径会把存量一次性推到新路径上，失败时没有退路；翻默认值则把存量平滑带过去，逃生阀复用既有回滚通道可避免"两套回滚语义"。落地自检：凡是"默认值翻转"类迁移，必须枚举**所有读取该默认值的代码点**并一次改齐（本例四个），漏一个就等于同一配置有两种解释。
+  - 提升层：工作流（迁移策略）/ 工具（执行器治理）。触发词：useDeno 默认翻转、per-flow opt-out、revert-from-deno、默认值读取点枚举、沙箱迁移。
