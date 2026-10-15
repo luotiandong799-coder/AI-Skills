@@ -863,3 +863,38 @@ Step C: 是否包含恶意意图？
 ## r589B 实证（文档/规范面：claude skills.md + openclaw，200 一手实拉）
 
 - **实证**：openclaw llms.txt §Provider hook order table——provider hook 执行有确定顺序表（auth exchange/headers/transport identity/usage 各阶段），顺序影响安全网关生效相位。方法：hook 执行顺序须确定且文档化；安全网关须置于正确 hook 相位；顺序表是审计项；提升层：工具（hook 生命周期）。触发词：hook 执行顺序表、hook 相位、安全网关置于正确相位、确定性 hook 顺序。
+
+## r582C · **检查批准的是「名字」而非「解析后的对象」：名字不等于对象**
+- **实证**：arXiv 2610.14488《Names Are Not Objects: Object-Bound Confinement for Compromised AI Coding Agents》（abs 200 一手）——coding agent 读任何人可写的仓库与网页并以用户权限行动；注入防御只降低被操纵概率、不能阻止，故模型周围的系统必须**收容已沦陷的 agent**。多数针对已部署 coding agent 的漏洞共享同一成因：「a check approves a name, such as a path, an argument vector, or a directory, and a later step maps that name to a different object」——symlink 后的文件、option 选中的行为、git 自行发现的 repo。ZTAC（Zero-Trust Agent Cells）让 agent 跑在内核沙箱里，唯一出口是到 broker 的 socket；**broker resolves each request to the object it will act on, decides on that object, and checks at use that it is acting on the object it authorized**；broker 启动的程序跑在同源策略编译出的沙箱里，**approvals are bound to the resolved object and can be used once**。评测 74 个带 ground-truth 的攻击：tool allowlist 漏 66 个、allowlist+命令沙箱漏 56 个、ZTAC 漏 2 个（均为把密钥编码进允许端点的流量）并留 14 个待审；无代理 brokering 请求中位延迟 4.0ms。
+- **判据**：① **校验的与执行的不是同一对象**：检查批准的是"名字"（路径 / 参数向量 / 目录），后续步骤把它映射到不同对象 ⇒ 授权必须钉到"解析后的对象"而非"提交的名字"，且每次使用重新解析。② broker 每请求解析到将作用对象、使用时再校验、批准绑定已解析对象且**一次性使用**——这是把"批准"从名字引用降级为对象引用。③ 与 ssc r437A（形态先验权限档）/ r542C（精确官方路由才隐式选、前缀永不单独触发）分工：那条管先验形态与路由选择，本条管"名字→对象"的解析期绑定，是授权粒度的最底层。
+- 提升层：工具（执行前对象重解析）/ 可复用 Skill（授权对象绑定）。触发词：ZTAC、名字不等于对象、broker 每请求解析、批准绑定解析后对象、一次性使用、allowlist loses 66/56、symlink 越权、4.0ms 中位延迟。
+
+## r582C · **类型化决策模型作护栏须分开报 fail-open 与 fail-closed 两向错误**
+- **实证**：arXiv 2610.12292《One Word Opens the Gate: The Option-Channel Attack on Typed Decision Models as Agent Guardrails》（abs 200 一手）——类型化决策模型读一段文本、返回 caller 定义选项的概率分布、不生成文本；近期被放进 agent 系统作 guardrail（读待决工具调用或入站消息、决定 allow/block）。评测 7 个开放权重模型，**分两向错误报**：fail-open（放行了禁止动作=漏洞）vs fail-closed（拦了允许动作=仅成本）。在 PI / 越狱 / 有毒内容筛查上，allow-or-block 决策准确率 **36%–72%** 对基准 **50%**；「six lines of server log text that say nothing about the policy raise a gate's fail-open rate from 0% to 63%」；「Giving the permissive option a misleading name ... raises that rate to between 93% and 100%」；所有被测防御均被击穿；把策略字段解析成 typed value 能消除一类攻击，但那样模型就多余了——确定性规则 over those values 达 100%。
+- **判据**：① **两向错误必须独立报**：allow/block 准确率 36–72% 近随机 50%，单数字不能代表安全；fail-open 是漏洞、fail-closed 只是成本，二者是独立指标，少报一向好看但无意义。② **给允许选项起误导名**即可把 fail-open 率拉到 93–100% ⇒ 护栏判定不得依赖选项标签 / 措辞，要看解析后的语义值；低错误率只反映模型默认放行还是默认拦截。③ 这类模型可**降低送审量**但不能作决策组件；与 r577C「护栏双向评估（Same Operation Different Permission：误拦≠正确拒绝）」分工：那条管"授权一致性"，本条管"类型化决策模型作护栏本身的可靠性失效"。
+- 提升层：工具（护栏决策组件评估）/ 可复用 Skill（守卫可靠性）。触发词：Option-Channel、类型化决策模型护栏、fail-open/fail-closed 两向、36-72% 近随机、误导选项名 93-100%、server log 提 fail-open 0→63%、确定性规则 100%。
+
+## r582C · **IPI 事后溯源要把注入当任务意图漂移，恢复工具调用间隐式决策依赖**
+- **实证**：arXiv 2610.09935《AgentTracer: Tracing Indirect Prompt Injection Attack through Fine-Grained Intention-Execution Alignment》（abs 200 一手）——LLM agent 交互外部资源完成复杂任务，暴露于 IPI（恶意指令把 agent 重定向到攻击者意图任务）。现有溯源主要捕显式控制流 / 数据流依赖，**忽略工具调用间由恶意指令驱动的隐式关系**（这些调用可能无显式依赖、与合法操作交错）。AgentTracer 把 IPI 当**任务意图漂移**：恢复工具调用间隐式决策依赖 → 建 Intent-Driven Execution Graph（按任务意图连接分散的工具调用）；结合用户请求 + 操作知识库 → 用户意图授权空间，识别意图漂移调用；从受审异常工具调用出发，做 target-based pruning + 反向追踪，重建攻击链并定位注入源点与注入点。端到端实测注入点精度 **94.17%**、路径精度 **93.56%**，较既有方法提升 **18–54%**。
+- **判据**：① **事后溯源要把注入当意图漂移**，恢复工具调用间**隐式决策依赖**——只捕显式控制 / 数据流的既有方法会漏掉无显式依赖、与合法操作交错的调用。② 从异常工具调用反向回溯 + 按用户意图授权空间判"意图漂移调用"，定位注入源点与注入点。③ 与 ssc 既有「注入检测 / 拦截」（运行时拦截）分工：那条管事前 / 事中拦截，本条管**事后溯源取证**（已发生攻击链重建），二者互补。
+- 提升层：工具（IPI 事后溯源）/ 可复用 Skill（攻击链重建）。触发词：AgentTracer、意图漂移、隐式决策依赖、Intent-Driven Execution Graph、94.17% 注入点精度、反向回溯、意图授权空间。
+
+## r582C · **规则文件（AGENTS.md / .cursorrules）注入可诱导依赖替换：包幻觉攻击**
+- **实证**：arXiv 2610.09264《Package Hallucination Attacks on Coding Agents through Prompt Injection in Rule Files》（abs 200 一手）——现代 agentic coding 框架越来越依赖社区共享规则文件（如 AGENTS.md / .cursorrules）引导自主代码生成，但其安全风崄未被充分探索。本文提出**包幻觉攻击**：攻击者在良性规则文件里注入恶意提示，诱导 coding agent 把合法依赖替换成攻击者控制的包。**PackHallu** 是进化优化框架，用 trajectory-level 反馈 + LLM 引导变异迭代重写注入提示；在多基准 / 多 LLM / 多 agent 框架上取得高攻击成功率与强跨模型 / 跨框架迁移性。
+- **判据**：① **规则文件本身是注入载荷面**：社区共享规则文件被 agent 当作指令遵循，投毒规则文件即可诱导"把合法依赖换成攻击者控制的包"。② 防御不能只扫代码依赖，必须审**规则文件内容**（含被 agent 读取的指令文本）。③ 与 ssc r348B「技能文件本身就是注入载荷」+ r575B「元数据投毒端到端影响选中」+ r572B「规则/元数据是注入面」分工：那条管技能文件与元数据，本条管"规则文件诱导依赖替换"这一具体机制——都是"非代码文本即攻击面"的实例。
+- 提升层：工具（规则文件投毒检测）/ 可复用 Skill（依赖供应链护栏）。触发词：PackHallu、包幻觉攻击、规则文件注入、AGENTS.md 投毒、依赖替换、进化优化框架、跨框架迁移。
+
+## r582C · **红队须开放域探索行为空间，而非只优化预置场景的 payload**
+- **实证**：arXiv 2610.08951《ASPIRE: Agentic Safety & Prompt Injection Red-teaming Engine》（abs 200 一手）——LLM agent 取不可信内容并经工具行动，产生 IPI 风险（未授权动作 / 持久状态变更）。现有自动红队多为预置场景优化 payload，遗留 agent 行为空间里大量潜在漏洞未被探索。ASPIRE 维护一个演进的 **Agent Security Behavior Graph**，用互补的 **Explore 与 Exploit 专家**发现 / 验证 / 泛化**后果导向（consequence-centric）**的测试；轨迹证据更新图并诊断部分 / 失败尝试，跨轮记忆迁移有用的红队策略。在多基准上显著扩覆盖（后果 / 注入方法 / 环境 / 行为路径）同时保持强攻击成功率。
+- **判据**：① **红队不能只优化预置场景的 payload**——要让 agent 自主探索行为空间里未被覆盖的漏洞（consequence-centric，后果导向）。② 用"行为图 + 探索/利用双专家 + 跨轮记忆"做开放域发现，比固定场景扫描覆盖更全。③ 与 ssc 既有「扫描器覆盖度」（71 模式 17 类、benchmark 覆盖至多 25%）分工：那条管"已知模式覆盖度分母"，本条管"开放域行为空间探索"，二者是"已知清单 vs 未知探索"互补。
+- 提升层：工具（红队引擎）/ 可复用 Skill（行为空间覆盖）。触发词：ASPIRE、开放域红队、Agent Security Behavior Graph、Explore/Exploit 双专家、后果导向测试、跨轮记忆、行为空间覆盖。
+
+## r582C · **技能注入评估须分检索期与执行期，现有基准高估 ASR 87–97%**
+- **实证**：arXiv 2610.08098《Surviving the Router: Optimizing Skill Injections for Retrieval and Execution》（abs 200 一手）——AI agent 越来越依赖模块化第三方 skill，由 skill router 动态选择执行。现有技能注入评估常假设恶意 skill 已被选中执行，本文显示这**严重高估攻击成功率**：真实多技能环境里注入 skill 须先**竞争检索**，使现有注入的有效 ASR 降低 **87–97%**。CORSA（Cluster Optimization for Router-Aware Skill Attacks）同时优化**检索与执行**两端（跨相关任务簇）；扩展 SkillRouter 基准加入 8 类恶意 payload；在保持用户效用与注入自然度的同时显著提升检索与端到端 ASR，且攻击跨不同 router 架构与 LLM 主干迁移。
+- **判据**：① **技能注入评估必须分检索期与执行期两阶段**：现有评估假设恶意 skill 已被选中，会高估 ASR 87–97%；真实多技能环境里注入 skill 先竞争检索。② 攻击侧 CORSA 同时优化检索与执行 ⇒ 防御侧（ssc 准入 / 扫描）也必须在**检索期**加一道判据，不能只在执行期拦。③ 与 ssc r572B③「检索期把关」+ r575B「市场级选择检索与决策分两阶段」分工：那些管"市场 / 检索期安全门"，本条管"注入攻击在检索期的竞争机制与评估口径纠偏"，直接补"现有基准高估 ASR"的方法论漏洞。
+- 提升层：工具（检索期注入检测）/ 可复用 Skill（多技能路由安全）。触发词：Surviving the Router、CORSA、检索期竞争、ASR 被高估 87-97%、router-aware 攻击、SkillRouter 8 类载荷、跨架构迁移。
+
+## r582C · **PI 检测基准须覆盖多网页上下文 / 语言 / 浏览器视图，且配同页干净副本**
+- **实证**：arXiv 2610.17457《BrowseSafe++: Benchmarking Prompt Injection Detection Across Web Contexts, Languages, and Browser Views》（abs 200 一手）——浏览器 agent 须消费不可信网页并代用户决策执行，网页内恶意指令可重定向合法任务。BrowseSafe++ 把 BrowseSafe 从 14,719 页扩到 **38,675 页对**（多数注入在真实生产网站观察到）；每攻击页保留**同页干净副本作控制组**，二者均提供 HTML / Markdown / 可达性树 / 截图四形态；含 12 类网站、24 类攻击出现在页面 18 个位置。训练 BrowseSafe-Guard（文本 + 截图两个 0.8B 检测器）F1 高于前沿模型检测器，且误报率与推理成本低；BrowseSafe-Adapt 用浏览器 agent 反馈修订基准注入，原本重放仅 few% 成功的攻击 adapted 后达 **95.41%** 成功率。
+- **判据**：① **PI 检测基准必须覆盖多网页上下文 / 多语言 / 多浏览器视图（HTML/MD/可达性树/截图）**，且每攻击页配同页干净副本作控制组——单形态基准会漏掉跨视图注入。② 浏览器 agent 消费不可信网页，检测须同时看**文本与截图两模态**（0.8B 小模型 F1 超前沿模型且成本低）。③ 与 ssc 既有「PI 检测 / 注入拦截」分工：那条管注入拦截机制，本条管"检测基准的覆盖形态与被 adapted 后成功率跳变（few%→95.41%）"的评估口径，提醒"静态基准成功率 ≠ 真实对抗成功率"。
+- 提升层：工具（PI 检测基准）/ 可复用 Skill（浏览器 agent 安全）。触发词：BrowseSafe++、38,675 页对、同页干净副本控制、四形态（HTML/MD/树/截图）、12 站 24 攻击 18 位置、BrowseSafe-Guard 0.8B、adapted 95.41%。
