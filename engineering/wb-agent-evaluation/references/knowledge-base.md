@@ -68,3 +68,33 @@
 - **判据**：① **分数表看不见 oracle 缺陷，评测器本身要与被测对象一样被审计**：五条状态不变量 + known-answer 控制是校准锚点，缺它则所有分数无参照。② **oracle 若在打分前改环境状态，历史分数全部不可迁移**（94.3%→65.5%），修正后必须走回放重算；组件消融显示工具描述是最大影响面 ⇒ 评测口径必须声明 prompt / 工具描述 / 错误字符串等非代码变量已固定。③ **有状态场景的路由输入必须含会话历史**（跨轮依赖决定难度），无历史路由会把跨轮依赖算到单个请求头上；**换模型破坏 prompt 前缀缓存** ⇒ 缓存复用必须计入路由成本口径；路由点选在用户轮边界，避免把一个逻辑任务切成两半。
 - **提升层**：工作流（评测可信度与路由设计）/ 工具（oracle 审计与成本口径）。
 - **触发词**：oracle 完整性、五条状态不变量、known-answer 控制、reward function 改环境、94.3% 降到 65.5%、回放重算、组件消融、工具描述影响最大、有状态路由、会话历史路由、用户轮边界、prompt 缓存复用代价、offloading 率、跨轮依赖。
+
+## r590A · **裁决层不能只有 LLM judge：机械数值检查 + 空真（vacuity）检查补盲区，指标用 accepted-error rate**（来源：arXiv 2610.20573《Beyond LLM Judge: Mechanical Verification for Agentic Autoformalization》，2026-10-15 r590A 一手 arXiv API 200 逐串命中）
+- **实证**：方法 `combines LLM-based semantic review with mechanical numerical and vacuity checks, providing checkable feedback and detecting errors missed by LLM judges`；指标口径为 `the lowest accepted-error rate among the evaluated methods, measured as the fraction of incorrect statements accepted by the verification method`；此外 `Expert review of the results also identifies translation and source defects in existing datasets`（金标集本身有缺陷）。
+- **判据**：① **语义评审不得作唯一裁决面**：可机械判定的项（数值关系、空真）走确定性检查，零成本零噪声且能发现 judge 漏项，语义层留给开放判断。② **指标用 accepted-error rate（错误陈述被接受的比例）而非通过率**——通过率可被「全拒」刷高，与 r577C「误拦不是正确拒绝」同源。③ **金标集本身是受审对象**：基线数据集的翻译/来源缺陷会被所有对比结论继承，报分前先做专家复核。
+- **提升层**：工具（验证层）/ 可复用 Skill（评测裁决）。
+- **触发词**：mechanical verification、vacuity check、accepted-error rate、错误被接受率、LLM judge 盲区、基线数据集缺陷。
+
+## r590A · **rubric 聚合不得等权：改用两两重要性比较 + 校正不一致 + 主特征向量导权**（来源：arXiv 2610.19915《Not All Criteria Matter: Importance-Aware Criteria Weighting for Rubric-Based LLM Evaluation》，2026-10-15 r590A 一手 arXiv API 200 逐串命中）
+- **实证**：`existing methods commonly aggregate the verification results with uniform weighting, which assigns minor and overlapping criteria the same weight as essential ones and thus produces misleading evaluation scores`；`direct weighting requires a holistic judgment over all criteria that LLMs struggle to make reliably`；做法是 `transforms the holistic judgment over all criteria into a series of pairwise importance comparisons, checks and revises inconsistent comparisons, and derives the weights from the principal eigenvector of the comparison matrix`。
+- **判据**：① **次要/重叠准则与核心准则同权 = 分数失真**：rubric 越写越长，等权聚合越偏。② **别让模型直接给权重**：全准则整体判断不可靠，改成两两比较 + 不一致校正 + 主特征向量导权。③ 与 r588A「要求全部约束满足率须与单项 rubric 通过率分开报」分工：那条管报两个口径，本条管**聚合时的权重本身要算出来**。
+- **提升层**：工具（rubric 聚合）。
+- **触发词**：ICW、criteria weighting、等权聚合失真、两两重要性比较、主特征向量权重、整体判断不可靠、rubric 加权。
+
+## r590A · **单一聚合准确率会掩盖干预类评测的两类反向效应：恢复了失败 / 破坏了成功**（来源：arXiv 2610.19827《MAPLE: A Multi-Axis Parametric Knowledge Extraction Lens for LLM Evaluation》，2026-10-15 r590A 一手 arXiv API 200 逐串命中）
+- **实证**：`their evaluations centered on aggregate accuracy, which obscures diverse effects by collapsing recovered failures and disrupted successes into a single score`；诊断指标在 `surface, probability, and beyond-sampling levels` 三层拆开，测 `answer recovery and disruption`、`gold-token rank shifts on unrecovered failures`、`recovery of answers missed by fixed-budget sampling`。
+- **判据**：① **一个总分说明不了干预有没有用**：恢复与破坏是两种权衡，合成为一个数后无法比较 ⇒ 干预/引导类评测必须双向分开报。② **分三层测**：表层（答对没）/ 概率层（gold token 排名）/ 超采样层（固定预算下漏掉的答案能否捞回）。③ 结论句写「该干预有效」前必须给出恢复与破坏两个数。
+- **提升层**：工具（评测指标口径）。
+- **触发词**：MAPLE、aggregate accuracy 掩盖、recovery vs disruption、表层/概率/超采样三层、gold-token rank shift、KEE 双向报告。
+
+## r590A · **整体合理性打分要拆成场景级可验证二元 QA：定向问题换成泛问，评测精度直接掉到随机水平**（来源：arXiv 2610.19823《PhyMetric: Diagnosing Physical Plausibility in Text-to-Video Generation via Scene-Level QA》，2026-10-15 r590A 一手 arXiv API 200 逐串命中）
+- **实证**：`recasts physical plausibility evaluation as verifiable, scene-grounded question answering`，含 1,115 场景 / 50 类 / 8,920 答案平衡二元问题 / 12 个评测维度；关键消融——`when each targeted question is replaced by a single generic plausibility query, evaluator accuracy drops to the chance level`；`Structured physical priors offer a complementary signal that improves human alignment of the resulting scores`。
+- **判据**：① **泛问式整体评分不可信**：一条「整体是否合理」的泛问会把评测精度打到随机水平 —— 与「没有证据不给通过章」同源。② **每条判据要可逐条核对**（是/否 + 可观测签名），再按场景→维度→类别→模型分层聚合。③ **结构化先验（支配定律 / 期望时序 / 可观测签名 / 常见失效模式）本身是独立信号**，不能只当题干背景。
+- **提升层**：可复用 Skill（评测协议设计）。
+- **触发词**：PhyMetric、场景级二元 QA、泛问掉到随机水平、结构化先验、可观测签名、常见失效模式、整体评分不可信。
+
+## r590A · **基于内部信号的检测器必须配负控制并归一化：读轨迹演化而非静态快照**（来源：arXiv 2610.20319《Beyond Static Cues: Unified Dynamic Detection of MLLM Backdoors via Dual-Flow Trajectory Analysis》，2026-10-15 r590A 一手 arXiv API 200 逐串命中）
+- **实证**：批评既有防御 `fundamentally constrained by a reliance on static snapshots and attack-specific heuristics`；方法 `shifting the diagnostic paradigm from static observations to dynamic output evolution`，双通道为 Attention Flow 与 Logits Flow，并 `normalize them against negative-control signatures so that natural perturbations are less likely to be mistaken for backdoor evidence`；优于 BYE / TCAP 等基线。
+- **判据**：① **没有负控制的内部信号读数不可用**：自然扰动会被当成攻击证据 ⇒ 任何「读注意力/概率/内部状态」的检测器，评估时必须问归一化基准是什么。② **攻击类型未知时，静态快照 + 攻击特定启发式会被绕过** ⇒ 检测须覆盖多形态触发（文本注入 / 亚感知噪声 / 跨模态协同）。③ 审计面：扫描器自述「基于内部统计」不等于有效，须追问负控制与形态覆盖。
+- **提升层**：工具（检测器评估）。
+- **触发词**：EVO-Detect、负控制签名、轨迹演化 vs 静态快照、自然扰动误判、Attention Flow / Logits Flow、攻击类型未知。

@@ -3964,3 +3964,28 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **实证**：claude skills.md §Pass arguments——skill 通过 `$ARGUMENTS`/`$N`/`$ARGUMENTS[N]` 声明显式参数契约；无占位符时 Claude 把输入追加为 `ARGUMENTS:`；多个 skill 可栈式叠加共享尾部文本。方法：skill 应声明显式参数契约而非依赖隐式尾部上下文；显式参数提升触发精度与可组合性（可栈叠）；提升层：可复用 Skill（参数契约）。触发词：显式参数契约、$ARGUMENTS 占位符、栈式叠加技能、触发精度。
 - **实证**：claude skills.md §Find unused——`/skill-doctor` 报告每个 skill 的上下文成本与调用频率，标记从未被调用的 skill，建议先关掉上下文成本最高的。机制：listing 中每个 skill 每轮都占上下文。方法：定期跑未用技能检测做剪枝；从未调用的 skill 是禁用候选，按上下文成本降序清理；提升层：可复用 Skill（剪枝）/工作流（上下文预算）。触发词：未用技能检测、skill-doctor、上下文成本剪枝、每轮占上下文。
 - **实证**：claude skills.md §Remove a skill——移除方式因来源而异（个人/项目删目录、企业管理员删、插件卸载、同步技能在源头关而非本地删、内置 disableBundledSkills）；同步技能手动删本地目录会在下次同步重新下载。方法：skill 移除须走来源特定路径；同步类技能在源头禁用而非只删本地；移除须清理索引/引用；提升层：可复用 Skill（生命周期）。触发词：skill 移除生命周期、同步技能源头禁用、来源特定移除。
+
+## r590A 实证（arXiv 五轨，export.arxiv.org API 一手 200 实拉）
+
+- **实证**：2610.01506《MCRI: A Four-Dimensional Framework for Analyzing and Evaluating Agent Skills》——智能体从单工具走向模块化组合架构，技能成核心能力分发机制，但学界缺结构化评估框架。机制：单聚合分掩盖维度缺陷。方法：技能评估须用四维度框架（信息增益 + 行为约束）MCRI——Measuring/Composition/Reliability/Interaction，而非单一聚合分；已在 OpenClaw Hub 63,812 个公开技能、58,275 次技能条件执行上实证，四维度分解能定位「哪一维失效」。提升层：可复用 Skill（技能评估）/ 工作流（技能选型）。触发词：技能四維评估、MCRI、info gain、behavioral constraint、聚合分掩盖维度缺陷、技能条件执行。
+- **实证**：2610.08875《An Empirical Study of Agent Skills' Downstream Utility》——相关技能不必然提升任务表现。机制：效用取决于内容/执行配置/多技能组织，部分技能反而有害。方法：技能效用须定义为「同任务同模型同 harness 下 pass-rate 相对 No-Skill 的差值」并跨多配置报告；技能工程不能只看内容质量，要测下游效用。提升层：可复用 Skill（效用度量）/ 工作流（技能取舍）。触发词：下游效用、pass-rate diff、skill 不必然提升、No-Skill 基线、配置敏感、87 SkillsBench。
+- **实证**：2610.05777《Mining Agent Skills from Production Traces》——技能从执行轨迹挖掘而非手工策展，但生产环境常无可靠成败标签。机制：挖掘证据等级（成功/失败/无）× 技能形态 组合显著影响下游。方法：轨迹挖掘流水线须显式声明「证据等级 + 技能形态」两变量，不能默认有成功标签；形态选择本身就是效用杠杆。提升层：可复用 Skill（技能挖掘）/ 工作流（轨迹挖掘）。触发词：生产轨迹挖掘、mining evidence、skill form、成功标签缺失、下游性能敏感、六组合。
+- **实证**：2608.05263《OrchestraBench: Evaluating Multi-Agent Orchestration Failure Modes, Recovery, and Decomposition Quality》——多代理编排基准只报任务准确率，不诊断为何失败/级联起于何处/哪个路由决策致崩。机制：准确率掩盖失败模式与恢复差异。方法：编排评估须用受控失败注入工具（模板化企业工作流），以 cascade radius（级联半径）与 per-failure-mode recovery 为主指标，路由策略对比用 bootstrap 置信区间 + 配对检验；26 例金标诊断集。提升层：可复用 Skill（编排评估）/ 工作流（编排排障）。触发词：编排失败注入、cascade radius、per-failure-mode recovery、路由策略对比、bootstrap CI、级联诊断。
+
+## r590A · **技能自演化的鲁棒性要用非对抗噪声测：噪声学习只保留干净增益的 25.5%–42.1%**（来源：arXiv 2610.19910《When Non-Adversarial Noise Hurts Learning: Benchmarking Skill Self-Evolution in Agents》，2026-10-15 r590A 一手 arXiv API 200 逐串命中）
+- **实证**：`errors in that experience can persist in learned rules and affect later tasks`；RSE-Bench 是 `the first benchmark for evaluating skill self-evolution under ordinary, non-adversarial noise`，四领域六基准，受控扰动指令 / 环境证据 / 执行记录 / 结果-记录配对；结果 `noisy learning retains only 25.5%--42.1% of the aggregate gain achieved by clean self-evolution`；`Perturbations confined to execution records and outcome--record pairings cause average losses comparable to input-side noise, despite leaving the original executions and evaluations intact`；`Diagnostics further identify differences in candidate skill text that coexist with small changes in mean held-out performance`。
+- **判据**：① **只测干净学习 + 冻结后扰动不够**：演化鲁棒性要在演化过程中测，且用**普通**噪声而非对抗噪声（对抗噪声测的是红队，不是稳定性）。② **执行记录 / 结果-记录配对是独立污染面**：原始执行与评分不动也会让技能学错 ⇒ 复核「经验从哪来、配对怎么配」，不只查输入。③ **文本变化与行为变化会脱钩**：技能文本差异大而留出性能差异小 ⇒ 技能改动验收看行为指标，不看文本 diff。
+- **提升层**：可复用 Skill（技能演化验收）。
+- **触发词**：RSE-Bench、非对抗噪声、25.5%–42.1% 增益保留、执行记录与配对噪声、文本变化与性能脱钩、演化验收看行为。
+
+## r590A · **harness/技能工程本身是可评测能力：四通道取证 + 正控制排除空过，失败集中在跨切面功能拆分**（来源：arXiv 2610.20344《Doc2Harness: Benchmarking LLMs on Long-Horizon Harness Engineering of Coding Agents》，2026-10-15 r590A 一手 arXiv API 200 逐串命中）
+- **实证**：`Existing benchmarks measure downstream task success under a fixed harness, leaving harness engineering itself unexplored`；打分走四个可观测通道 `the requests sent to the model, the files on disk, the process exit code, and the command output; positive controls rule out vacuous passes`；跨 19 个前沿模型 × 3 次独立构建 × 328 用例，`GPT-6 Astra achieves the highest pass rate at 53.05%, while the weakest model reaches 27.44%`；`failures cluster around how cross-cutting functionality is split across modules`。
+- **判据**：① **「给定 harness 下的任务成功率」不能代表 harness 工程能力**，后者要单独评测；最强模型也近半失败（53.05%），差距约 26 个百分点。② **验收形态 = 四通道取证 + 正控制**：请求/落盘文件/退出码/命令输出四路可核，正控制排除「什么都没跑也算过」的假通过。③ **技能库拆分按跨切面能力归并**：失败簇集中在「跨切面功能拆到哪些模块」，按主题平铺的技能库必然在这里出问题。
+- **提升层**：可复用 Skill（技能/工具工程验收）。
+- **触发词**：Doc2Harness、harness 工程可评测、四通道打分、正控制排除空过、跨切面功能拆分、53.05% vs 27.44%、验收靠通道取证。
+
+## r590A · **运行时契约三要素须显式：哪些动作可执行 / 状态如何推进 / 循环何时终止；合规率与任务成功率分开报**（来源：arXiv 2610.20261《Harness Policy Distillation: Aligning Agent Policies with Runtime Semantics》，2026-10-15 r590A 一手 arXiv API 200 逐串命中）
+- **实证**：`running it inside a product-specific runtime harness that decides which actions are executable, how state advances, and when the loop may terminate. Ordinary trajectory supervision shows which action was taken but leaves the runtime semantics behind that action implicit`；表示为每个模型调用边界的 `control documents`，且 `harness verification ensures that the resulting targets are executable under the runtime contract`；TRAJECT-Bench/Pi 上 `reaches 22.98% autonomous task success and 49.23% runtime compliance, against 3.09% and 19.90% for the unadapted model`。
+- **判据**：① **轨迹记录只说「做了什么」，不说「凭什么能做」**：可执行动作集 / 状态推进规则 / 终止条件是三层显式契约，须在技能或工作流里写出来，不留在隐式假设里。② **目标要过运行时校验**：声称可执行的动作，先在契约下验证再采纳。③ **合规率与成功率是两个口径**：49.23% 合规对 22.98% 成功（未适配 19.90% 对 3.09%）——只报成功率会掩盖「动作合法但循环不停」。
+- **提升层**：可复用 Skill（运行时契约）/ 工具（合规率校验）。
+- **触发词**：runtime semantics 隐式、运行时契约三要素、control document、harness verification、runtime compliance 分开报、22.98%/49.23%。

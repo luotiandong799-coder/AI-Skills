@@ -3778,3 +3778,20 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 - **实证**：activepieces #16345——Google Sheets「Add Multiple Rows」忽略 Header Row 配置、overwrite 模式清空已配置表头。机制：追加写未尊重表头行、覆盖写破坏 schema。方法：追加写须尊重表头行配置；覆盖写不得破坏既有 schema/列定义；验收：追加后首行仍为表头、覆盖写保留列定义。提升层：工具（数据写正确性）。触发词：追加写忽略表头、覆盖写清 schema、表头丢失。
 - **实证**：n8n #40851——SharePoint 节点 Return All 静默丢弃 `$filter` 与 `$expand=fields`。机制：翻页为拉全量而重置查询参数。方法：「返回全部」翻页必须原样透传所有查询参数，不得为翻页丢弃 filter/expand；提升层：工具（分页正确性）。触发词：Return All 丢查询参数、翻页吞 filter、分页透传。
 - **实证**：langflow #15729——Filter Values 节点对普通文本输入抛 AttributeError。机制：变换节点未做输入类型守卫，对非字典/文本输入直接属性访问。方法：过滤/变换节点在属性访问前必须做输入类型守卫，非预期类型走受控分支；提升层：工具（类型守卫）。触发词：变换节点未类型守卫、文本输入 AttributeError、属性访问前判型。
+
+## r590A 实证（arXiv 五轨，export.arxiv.org API 一手 200 实拉）
+
+- **实证**：2610.10265《Stale, Misattributed, or Late: Where Personal Memory Fails Before Generation》——个人记忆常只按最终答案对错判，掩盖了生成前就发生的失败：记忆块含过期值、错人事实、或服务截止前无有用事实。机制：时间有效性主要是记忆构建属性；不解析更新则 70.3% prompt 暴露被取代值；更难的是把修订分到正确槽位（漏合并留陈旧值、误合并静默删当前值）。方法：记忆验证须先查「构建期」而非只看答案——同一 active store+参与者信息下 participant-aware BM25 与参考排序误差≤0.02；实体后验能降同名暴露但分不清同名说话人；open-domain 合并 recall 在 LongMemEval 不超 0.062。提升层：可复用 Skill（记忆工件校验）/ 工作流（更新解析与槽位合并）。触发词：个人记忆失效、stale exposure、misattribution、更新解析、槽位合并、PFM、LongMemEval。
+- **实证**：2610.06366《Correct Verdicts, Flawed Reasoning: Structured Auditing of LLM-based Vulnerability Reasoning》——LLM 用于自动漏洞分析，但仅靠二分类不够，实践要解释来分诊。机制：free-form CoT 让模型用看似合理散文掩盖逻辑跳变、幻觉执行步骤、内部不一致；手审约 60% 正确漏洞判定伴编造/不可验证声明，且 free-form 解释让推理错误逃过 LLM-as-judge。方法：VERA 框架要求模型输出 Structured Reasoning Record（SRR，机器可读字段编码指针/内存操作/状态转移），多阶段判定器用确定性检查按 8 类推理失败模式审计每 SRR，LLM 仅做语义解释；标准化 SRR 还支持自动化变异测试大规模 benchmark 判定器。提升层：可复用 Skill（漏洞推理审计）/ 工作流（结构化推理记录）。触发词：漏洞推理审计、VERA、SRR、CoT 幻觉、free-form 掩盖、8 类失败模式、变异测试。
+
+## r590A · **选工具的「语义相关」不等于「迁移后有效」：须补端点接地的功能兼容 + 任务条件上下文证据**（来源：arXiv 2610.20388《From Relevance to Validity: Zero-Shot Tool Selection via Functional and Contextual Validation》，2026-10-15 r590A 一手 arXiv API 200 逐串命中）
+- **实证**：`existing dominant methods mainly rely on relevance ranking, but semantic matching alone cannot ensure that a tool is functionally compatible or remains applicable in a new context`；命名 `transfer-validity gap`；做法是 `endpoint-grounded functional compatibility and task-conditioned contextual evidence` 的渐进式校验，`consistently improves capability ranking, with larger gains under functional or contextual ambiguity`。
+- **判据**：① **相关性排序只是候选生成，不是准入**：语义最像的工具可能功能不兼容（参数/端点/返回形态）或在新环境不适用 ⇒ 选型结论要补一层功能兼容验证。② **歧义区就是必检区**：功能或上下文有歧义时这两层增益最大，评测/验收覆盖要向歧义样本倾斜。③ 与既有「四步合同第②步 tool selection（函数名匹配、AST 比较）」分工：那条管「有没有选对工具」，本条管「选得对但换个宿主就跑不起来」的第二类失败。
+- **提升层**：工具（选型校验）。
+- **触发词**：transfer-validity gap、相关性≠有效性、端点接地功能兼容、任务条件上下文证据、歧义区增益最大、迁移后失效。
+
+## r590A · **「够不够」的停止准则要写成可判定证书；且证书是模型相对的，语义质量必须另测**（来源：arXiv 2610.20532《ActiveEvidence: Decision-Focused Evidence Graphs with Verifiable Acquisition Gaps》，2026-10-15 r590A 一手 arXiv API 200 逐串命中）
+- **实证**：停止条件 `stops once an ε-decision certificate shows that unresolved terms cannot change the selected action beyond a declared tolerance`；并显式限定 `The certificate is model-relative: it verifies policy-consistent optimality under the pinned learned score, and semantic quality is measured separately through post-freeze labels`；证书绑定冻结轨迹，重放一致性 `0.992 action agreement` / `0.988 certificate rate`，未决交互项从 191.4 降到 19.6。
+- **判据**：① **停止条件要可判定**：写「未决项无法把动作选择改变超过声明容差 ε」，而不是「再多看看」；声明了 ε 就要能复核。② **证书只证明锁定打分下的策略一致最优，不证明质量**：语义质量另测（冻结后标签），两句话不能合成一句。③ **证书必须绑定冻结轨迹且可重放**，否则无法区分「结论变了」与「打分变了」。
+- **提升层**：工具（取证与停止准则）。
+- **触发词**：ε-decision certificate、模型相对证书、语义质量另测、绑定冻结轨迹、证书可重放、gap-directed refinement、动作一致率。
