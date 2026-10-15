@@ -4013,3 +4013,21 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - **判据**：① 原始操作轨迹不可复用：必须先抽象成语义步骤指令，再叠加领域规则+任务参数。② 专业软件工作流的隐性知识（软件惯例/领域知识/任务级验证要求）须显式进技能，不能只录操作序列。③ 执行期逐步 grounding+生成+验证与录制约程解耦。
 - **提升层**：可复用 Skill（演示萃取）/ 工作流（SOP 工程）。
 - **触发词**：OmegaUse-SOP、SOP 工程、GUI 演示萃取、语义步骤抽象、领域规则、PVsyst。
+
+## r592A · **资源身份必须单一来源：多输入拼装出的 URL 与缓存键，会允许互不相关的 ID 与模式标志被组合进同一个请求**（来源：github.com/langgenius/dify#44172）
+- **实证**：dify 共享编辑器同时托管 Workflow/Chatflow App、知识管道与片段，其资源身份被路由参数、workflow-store ID、`configsMap.flowId`/`flowType`、chat-mode hook **各自独立表示**；变量操作再从这些分离输入重建 URL 与缓存键，于是互不相关的 ID 与模式标志可以被组合进同一请求与同一缓存键（gh api 一手 HTTP 200 逐串命中 `The shared editor hosts Workflow/Chatflow Apps, knowledge pipelines, and snippets. Its identity is currently represented independently by route parameters, workflow-store IDs, configsMap.flowId/flowType, and chat-mode hooks. This permits unrelated IDs and mode flags to be combined, and variable operations reconstruct URLs and cache keys from those separate inputs`）。
+- **判据**：① 资源身份用**判别联合（kind + ID）**单一来源表示，禁止由多个独立字段拼装。② URL 与缓存键由身份**派生**，不由分离输入拼接。③ 缓存按资源隔离：**ID 相同但资源种类不同仍须隔离**。④ 切换资源时会话重置；仅 Query 侧改名不得触发状态变更。⑤ 删除失败保留本地已检视值；重置返回 204 与后端删除语义一致。⑥ 目标契约要求「不引入通用编辑器配置层或额外镜像存储」——用类型系统而不是新中间层来消除多源标识。
+- **提升层**：可复用 Skill（资源身份契约）/ 工作流（缓存键派生与失效）。
+- **触发词**：资源身份、判别联合、缓存键拼接、无关 ID 组合、跨资源缓存隔离、会话重置。
+
+## r592B · **工具选择发生在调用之前：参数 schema 是选择面的最强因子，模型偏好独立顶层参数而非分组/复合结构**（来源：arXiv 2610.14334《Which Metadata Matters for LLM Tool Selection in MCP? Evidence from Controlled Factor-Level Interventions》）
+- **实证**：对 **367,174** 个 MCP 工具的元数据做分析，再用「因子级受控干预」实验（五个 LLM × 五个任务，每次**只改一个**因子：server name / tool name / description / parameter schema，其余固定；平衡工具位置并用**条件逻辑回归**估计位置校正后的效应）。结论：① 参数 schema 变化带来的选择迁移**最大且最一致**；② 会**解释参数**的描述也能提升选择率，名称效应更弱更不稳定；③ 当只有一个 schema 满足请求中的显式要求时，**五个模型全部**选择兼容工具，位置偏好被覆盖（arxiv.org/abs/2610.14334 HTTP 200 逐串命中）。
+- **判据**：① schema 是**选择面**而非仅调用面——写技能时先定参数结构，再润色描述。② **顶层独立参数优于分组/复合结构**（与「最严消费方按最全 schema 校验」同族但方向相反：这里是选择偏好，不是兼容性）。③ 描述要**解释参数**，不要只复述名称。④ 工具选择类评测必须**跨位置平衡 + 位置校正**，否则位置偏好污染结论。⑤ 功能不变时，schema 设计与工具排序本身就能改变被调用的实现 ⇒ 这是可观测的选型偏差来源。
+- **提升层**：可复用 Skill（工具/技能元数据写法）/ 工作流（工具选择评测设计）。
+- **触发词**：工具选择、参数 schema、因子级干预、位置校正、顶层参数、描述解释参数、选型偏差。
+
+## r592C · **项目级指令文件（.cursorrules/.mdc）的实证基线：集中在小规模低活跃单维护者仓库，内容偏代码质量与结构，安全内容稀薄**（来源：arXiv 2608.10622《A Study of Cursorrules Files in GitHub Open Source Projects》）
+- **实证**：收集并分析来自 **11,427** 个 GitHub 仓库的 **12,110** 份 `.cursorrules` 文件，刻画其分布、演化与维护；另对随机抽样的 **65** 份做定性分析并建立 **65 码**编码本（开发者如何表达编程意图、项目上下文、工程实践、安全考量）。结果：`.cursorrules` 自 2024 年中快速兴起；采用**集中在小规模、低活跃、单维护者**仓库 ⇒ 更像玩具项目而非专业开发；内容以**代码质量与工程实践、项目结构与配置、可维护性**为主，**安全相关内容出现频率明显更低**；legacy `.cursorrules` 与现行 `.mdc` 之间**主题与话题保持连续**（arxiv.org/abs/2608.10622 HTTP 200 逐串命中）。
+- **判据**：① 项目级指令文件不能假设「社区已有良好默认」——实测安全内容稀薄 ⇒ 写/审指令文件时须**显式补安全段**，而不是指望继承。② 文件格式迁移（`.cursorrules` → `.mdc`）**不改变内容主题分布** ⇒ 换格式不等于改进内容，版本化时须重审条目而非只做语法转换。③ 指令文件的价值与其仓库活跃度/维护者数相关 ⇒ 引入外部项目指令文件前先看项目健康度。④ 编码本式定性分析（65 码）是可复用方法：把「开发者如何表达意图」结构化，作为评审清单。
+- **提升层**：可复用 Skill（指令文件编写与评审基线）/ 工作流（格式迁移与版本化）。
+- **触发词**：cursorrules、项目级指令文件、安全内容稀薄、mdc 迁移、编码本、仓库健康度。
