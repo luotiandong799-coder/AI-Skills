@@ -217,3 +217,21 @@
 
 ## r601A · 评分标准本身要过对抗验收：同模型写 gaming 答案骗不过 rubric 才算修好（来源：arxiv.org/abs/2610.21040《Recursive Reward Improvement via Adversarial Meta-Prompt Evolution》abs 一手，2026-10-16 实拉逐串命中 `reward-hacking adversary` / `two answers` / `HealthBench +10.9/+12.4` / `no external model +10.3` / `unseen tasks +6.6/+8.0`；B 级——修复步数少、adversary 与 scoring 同模型有共谋风险，先登记后验证）
 - **判据**：① evaluator 外置红线的补件=rubric 自己也要被攻一遍——用同模型生成「该得高分但不实质」的答案撞评分标准，撞得过就修；② 「solver 点名预期话题而无实质内容」是典型 exploit 形态，固定 rubric 会被它刷分；③ 可无外部模型自跑（同模型既当 adversary 又当 solver）降低采用门槛，但同源共谋风险要在报告里声明。提升层：工作流（评测攻防）。触发词：rubric 对抗验收、reward-hacking adversary、评分标准攻防闭环、点名话题无实质、RRI。
+
+## r602A · 触发评测 harness 的平台假设与探针隔离：静默损坏比报错更坏（来源：github.com/anthropics/skills#1692（2026-10-06）「Trigger-eval harness silently broken on Windows: select() on pipes, probe files leak into glob」一手）
+
+- **判据**：① 评测 harness 的平台可移植性是一等验收项——同一 harness 在另一 OS 静默降级（select() 对管道在 Windows 语义不同）比直接报错更坏，因为它产出看似有效的数字；② 探针/夹具文件不得进被测 glob——泄漏进 glob 会污染触发率的分子分母；③ 与 r594C（并行评测共享目录使并行度进入测量值）分工：那条管并行污染，本条管平台假设+文件泄漏；④ 验收：harness 至少两个 OS 各跑一次冒烟，断言探针文件不出现在被测集合。提升层：可复用 Skill（评测卫生）。触发词：harness 平台假设、select() on pipes、探针文件泄漏 glob、Windows 静默损坏、触发率污染。
+
+## r602B · 交互应用评审以交互为判据：代码分析+单测的 judge 看不到用户一眼可见的失败（来源：arXiv 2610.17895《Interaction-as-a-Judge》一手 abstract：current automated LLM evaluations primarily focus on code analysis and unit tests；this mismatch can cause LLM judges to miss failures that are immediately apparent to human users；computer-use agents directly interact with an application；6,858 preference pairs + 222 human-verified requirement labels；2026-10-16 实拉）
+
+- **判据**：① 网站/桌面应用/游戏类交互产物的验收，人类靠交互判断，而代码分析+单测型 judge 与这个判断方式错位——用户一眼可见的失败（布局塌了/按钮没反应/流程走不通）在静态评审里全不可见；② 交互即裁判（Interaction-as-a-Judge）：用 computer-use agent 直接操作应用，把「用户会做什么」变成评测动作序列；③ 数据形态：人类偏好对 + 人工核验的需求标签两套互补——前者训/评偏好，后者验收需求满足；④ 与 §HTML 报告离线自包含 分工：那条管产物静态属性，本条管动态交互属性的评审通道。提升层：可复用 Skill（评测范式）。触发词：Interaction-as-a-Judge、交互应用评审、CUA 评测、用户一眼可见失败、偏好对+需求标签。
+
+## r602B · 基准的用户中心审计：贡献者≠被代表者，七维扫「谁的规定」（来源：arXiv 2610.19268《Whose Data, Whose Benchmark? A User-Centric Framework for Auditing Evaluation Resources》一手 abstract：distinguishes users who contribute benchmark content from those whose needs evaluation results are intended to represent；seven dimensions across benchmark content, metadata, documentation, and scoring procedures；American-centered conventions 62.4-94.x% across 16 resources；2026-10-16 实拉）
+
+- **判据**：① 基准分数会掩盖「谁的规定定义了成功」——贡献基准内容的用户与结果要代表的用户是两类人，错位时分数对后者不可解释；② 七维审计面：基准内容 / 元数据 / 文档 / 评分程序——每一维都问「这里体现的是谁的习惯与判断」；③ 实证锚：16 个资源里美国中心惯例占 62.4-94.x%——拿跨域基准分数直接外推到自己用户群是系统性误读；④ 与 §基准须绑定 Task Flow 三分布 分工：那条管任务分布绑定，本条管「分布里谁的规定」。提升层：可复用 Skill（基准审计）。触发词：基准用户中心审计、贡献者vs被代表者、七维、谁的规定、美国中心惯例。
+
+## r602C · 委派危险带：中能力子 agent 过度信任继承的陈旧状态（来源：arxiv.org/abs/2610.00041《The Delegation Danger Band》一手 abstract 逐字，2026-10-16 实拉）
+- **判据**：① 框架默认让子 agent 继承父级完整工作上下文时，净继承损害非单调——中能力模型（同族 ladder 中间档）是统计显著的局部最差（危险带），弱模型近中性、强模型稳健；② 三种继承策略：Reset（fork 全新）/ Selective（精选交接：基础证据+有用结论）/ Full（隐式 fork：+被推翻的结论副本），Selective 平均优于 Full；③ 固定阈值能力路由器在多数数据集失效——可迁移路由器须预测「复用收益 vs 陈旧上下文惩罚」的平衡；④ 验收：委派子 agent 时按能力分层选择继承策略，不全量 fork。提升层：模型/工作流（委派上下文）。触发词：委派危险带、继承陈旧状态、Selective handoff、能力路由器、fork-fresh baseline。
+
+## r602C · 验证真空是默认态：无协议强制互检则系统继承最不可靠参与者的可靠性（来源：A² multi-agent verification study（via Qoder r641-Q-C 提名），2026-10-16 实拉）
+- **判据**：① 多 agent 系统中没有任何 agent 自发核验同伴的事实声明——除非协议外置地强制执行交叉检查，否则系统整体可靠性退化为最不可靠参与者的可靠性；② 「验证缺失」不能假设为已处理——须由协议层（而非个体自觉）承担验证责任；③ 与 §交互应用评审以交互为判据 分工：那条管评测通道，本条管跨 agent 事实声明的验证真空；④ 验收：多 agent 产物断言存在协议层的同伴声明核验步骤，而非依赖个体自觉。提升层：工作流（多 agent 验证）。触发词：验证真空、最不可靠参与者、同伴事实声明、协议强制互检、可靠性退化。

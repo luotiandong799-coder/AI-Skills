@@ -3979,3 +3979,34 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 
 ## r601A · 制品验收按「证据视图」比对而非只校内容哈希：同一底层数据在不同绑定/引用视图下可独立失败（来源：arxiv.org/abs/2610.21177《AgentEval: Evidence-Bounded Assessment of Stateful Agents》abs 一手，2026-10-16 实拉逐串命中 `a recorded judgment does not guarantee that its supporting evidence remains valid` / `32 tool-world administrations` / `agree on all 30 complete episodes` / `distinguishing satisfied, violated, and unresolved obligations`；与 §多处表示同步 互补——那条管表示之间同步，本条管每个消费视图各立断言）
 - **判据**：① 只校「字节没变」会漏掉「变的是引用关系/绑定」——为每个关键消费视图各立一条断言；② 评估记录要携带「证据是否仍支撑结论」的状态：判定当时有效不代表证据过期后仍有效；③ 义务三态（satisfied/violated/unresolved）与证据边界绑定——未解析的义务不能算违反也不能算满足。提升层：可复用 Skill（制品验收）。触发词：证据视图验收、binding faults、hash-only 盲区、证据时效、义务三态、AgentEval。
+
+## r602A · 审计触发时机两态：发布前置门禁 vs 首次安装后按需生成（来源：docs.openclaw.ai/clawhub/publishing（pending 过前不进公共面）+ www.skills.sh/docs api audit 节（未装则无审计，404）一手；Qoder r640-Q-B 提名）
+
+- **判据**：① 审计的触发时机本身是一维判据——发布前置门禁（过前不进公共面）与首次安装后按需生成（未装则无审计）是两种可辩护设计，混用会出现「以为审了其实没有」；② 与既有「已收录与已审是两条时间轴+首次安装惰性触发」分工：那条立了时间轴与时间戳纪律，本条补第二态（前置门禁 pending）与按时机定豁免/兜底策略；③ 验收：对同一技能分别问「发布前审没审」「安装后审没审」，两个答案都要有据。提升层：工作流（审计时机）。触发词：审计触发时机、发布前置门禁、pending、安装后按需审计、两态时机。
+
+## r602A · 记忆组装门控准入判据：learned 组装策略须报对照拼接基线的增益与回归双数（来源：arXiv 2610.21091（MemComposer）一手 abstract「ExPO −16.9% token」；Qoder r642-Q-A 提名，摘要级 B）
+
+- **判据**：① 多条记忆组装为上下文是独立工序（≠读取预算≠巩固时机）——组装策略的引入本身要过准入；② 准入判据=对照拼接基线的增益与回归双数（token 降幅 + 任务分变化），单报增益不放行；③ 与 §读取四级预算 分工：那条管读多少，本条管多个片段怎么组装成可执行上下文。提升层：可复用 Skill（验收判据）。触发词：记忆组装门控、MemComposer、拼接基线、增益回归双数、组装策略准入。
+
+## r602A · 验证器双指标配对验收：注入检出率与干净对照误报率必须同时报（来源：arXiv 2610.17724（Sauron）一手 abstract 逐字 97%/2%（2026-10-13）；Qoder r642-Q-C 提名，abstract 级）
+
+- **判据**：① 采纳/上线任何自动验证器（judge、审计 agent、护栏分类器）须跑配对故障注入套件并同时报两指标——注入检出率与干净对照误报率；② 单报检出率不放行——误报型验证器把干净轨迹判脏，等价于「空结果歧义」的镜像故障；③ 与 §故障注入（变异测试）分工：那条证明验证器有检出能力，本条要求检出×误报配对且干净对照与注入用例同源同规模。提升层：可复用 Skill（验证器验收）。触发词：验证器双指标、Sauron、配对故障注入、干净对照误报率、单报检出率不放行。
+
+## r602A · HTML 报告产物须离线自包含：CDN 资源断裂是静默降级（来源：github.com/mattpocock/skills#651（2026-10-08）「CDN-loaded Tailwind/Mermaid silently breaks the HTML report（SRI hooks, offline）」一手）
+
+- **判据**：① 交付产物（HTML 报告/看板/演示页）的外链资源是一等依赖——CDN 断裂时报告静默降级为无样式/无图，不是报错；② 验收=离线打开全功能 + 外链资源带 SRI 完整性校验；③ 与 §自包含性（只 import 标准库）分工：那条管脚本依赖，本条管渲染产物的外链面；④ 必须外链时（字体/CDN 库）要显式登记并在交付说明里给离线替代。提升层：可复用 Skill（产物验收）。触发词：HTML 报告离线自包含、CDN 静默断裂、SRI、渲染产物外链、报告降级。
+
+## r602B · 补丁验证不得只用构建时的同一证据：挡住那一件≠补丁有效（来源：arXiv 2610.20245《P2Patch: Exploit-Guided Vulnerability Repair》一手 abstract 逐字「validate a patch against the same evidence used to construct it -- a static alert, sanitizer trace, published exploit, or test suite. A patch that blocks that one piece of evidence can therefore look successful while remaining vulnerable to the same vulnerability with some variation」；2026-10-16 实拉）
+
+- **判据**：① 用构建补丁时的同一证据（静态告警/消毒器 trace/公开 exploit/测试套件）验收补丁，是自证式验收——挡住那一件证据的补丁看起来成功，对同一漏洞的变体仍然脆弱；② 验收要用「构建证据之外的对抗变体」：生成式对抗修复的形态是造变异攻击再验补丁；③ 与 §验证器双指标配对验收 分工：那条管验证器自身检出×误报，本条管「验证补丁的证据集必须与构建证据集不同源」；④ 通用化：任何「修复→用同一用例验→绿」的流程都要补一条异源证据。提升层：可复用 Skill（验收判据）。触发词：同一证据自证、P2Patch、对抗变体验证补丁、异源证据、修复假成功。
+
+## r602B · 测试套件三判据联合验收：复现参考转换的套件仍可能接受错补丁/拒掉对补丁（来源：arXiv 2610.18004《SWEPatchTest: Evaluating Software Tests Beyond Reproduction》一手 abstract：A suite that fails on the buggy program and passes after applying the reference patch can still accept an incorrect patch or reject a correct patch；JVR 要求同一任务上三判据全过，最佳配置仅 9.21% JVR 而 59.29% 复现参考转换；2026-10-16 实拉）
+
+- **判据**：① 「在 buggy 程序上失败 + 打参考补丁后通过」只是复现判据，同一套件仍可能接受错误补丁或拒绝正确补丁——测试质量是三判据联合：问题复现 × 接受正确补丁 × 拒绝错误补丁；② JVR（联合验证率）把三判据钉在同一任务上，单判据达标率（59.29%）与联合率（9.21%）的落差就是被单判据掩盖的失败面；③ 验收任何「生成的测试决定补丁是否满足需求」的流程时，必须同时测接受正确与拒绝错误两侧，只测复现侧等于没测；④ 与 §评估夹具钉住数据制造假红 分工：那条管夹具固定数据，本条管套件判据不完整。提升层：可复用 Skill（测试验收）。触发词：SWEPatchTest、JVR、三判据联合、接受错误补丁、复现≠验证。
+
+## r602B · 任务状态治理：任务=可编辑契约（期望结果+须保持事实+观测状态），漂移时按契约判定三问（来源：arXiv 2610.20100《Task-State Governance: A Virtual Machine for Verifiable and Recoverable GUI Agent Execution》一手 abstract：when execution drifts, users must determine what changed, what should have remained untouched, and what can still be recovered；plan-centric interfaces leave users supervising procedure, but users live with changes to application state；2026-10-16 实拉）
+
+- **判据**：① 执行漂移时用户要回答三问——改了什么、什么本不该动、什么还能恢复；计划中心界面让人监督「过程」，人承受的是「状态变化」，两者错位；② 任务表示为可编辑契约：期望结果 + 必须保持的事实 + 观测到的应用状态三方链接，漂移判定按契约逐项对而不是靠回忆流程；③ 验收：漂移用例断言三问都有契约可查（尤其是「什么不该动」这条常在计划里没有对应物）；④ 与 §回滚两个维度 分工：那条管回滚机制，本条管「拿什么判定该滚什么」。提升层：可复用 Skill（执行治理）。触发词：任务状态治理、可编辑契约、须保持事实、漂移三问、GUI agent 状态恢复。
+
+## r602C · 校验器/解析器不得因一个非法单元丢弃整份产物：隔离坏单元（来源：api.github.com/repos/n8n-io/n8n/issues/41157（2026-10-15）一手 gh api 200）
+- **判据**：① 解析半结构化 agent 输出（如观测笔记 marker 行）时，单行无 marker/格式偏离不应导致整份响应被丢弃——只拒绝对抗性的真非法单元（代码围栏、未知 marker、未缩进游离文本），保留合规段；② 丢弃整份=把一次格式偏差放大成零产出，且静默丢失已得信息；③ 与 §验证器双指标配对验收 分工：那条管验证器验收口径，本条管解析容错粒度；④ 验收：注入一行无 marker 文本，断言其余合规笔记保留而非全丢。提升层：可复用 Skill（解析容错）。触发词：解析容错、丢弃整份、隔离坏单元、保留合规段、半结构化输出。

@@ -1115,3 +1115,47 @@ Step C: 是否包含恶意意图？
 
 ## r601A · 审计第四门=发布者主体有效性：内容未变但发布者停更/转手，信任已失效；扫描判制品，判不了主体是否还在（来源：api.github.com/repos/openclaw/clawhub/pulls/3963 一手逐串命中 `Public discovery now checks the publisher's current activity and package scope ownership, alongside the existing visibility, publication, and scan gates`，2026-10-16 gh api 核验）
 - **判据**：① 「有害吗」「还活吗」之外还有「归属还成立吗」——弃管/转手账号下的旧技能带着历史信誉展示，内容没变但维护承诺已失效；② 信任评估从静态指纹变持续对账（衔接 r432C：一次性准入校验在下一次实体变更后即失效）；③ scope 归属一致=发布者仍控制该命名空间——转手后原发布者的包应重新过发现门。提升层：工作流/可复用 Skill（信任对账）。触发词：发布者主体有效性、停更账号信任失效、scope 归属、命名空间控制权、信任持续对账。
+
+## r602A · 启动链解释器解析优先级：不采信仓库目录内的同名可执行（来源：github.com/superpowers/skills v7.0.0 #2393「Windows run-hook.cmd 改为忽略当前目录的 bash/where——clone 下来的仓库可放置同名可执行劫持会话启动」一手 PR；Qoder r639-Q-A 提名，B 级单平台实证）
+
+- **判据**：① 源优先级从安装期扩到启动期——钩子脚本调解释器时「先搜哪条路径」是独立于「装哪个源」的攻击面，clone 即植入无需凭据；② 规则：会话启动链调 bash/node/where 等必须走绝对路径或显式 PATH 前置，禁止从当前工作目录解析；③ 跨平台等价物（`.` 入 PATH、`node_modules/.bin` 优先）未验证须显式标注；④ 与 safeBins profile 族分工：那条管「哪个二进制可无批准运行」，本条管「解析时先找到哪个二进制」。提升层：安全边界（启动期解析）。触发词：同名可执行劫持、run-hook.cmd、启动期 PATH、clone 植入、解释器解析优先级。
+
+## r602A · 可复现性缺陷转审计信号：未钉不可变版本是独立可扫描 warn 项（来源：docs.openclaw.ai/gateway/security/audit-checks checkId `plugins.installs_unpinned_npm_specs` 一手；Qoder r640-Q-B 提名）
+
+- **判据**：① 来源审计是两维合取——签名（身份）× 钉版（可复现），只审来源签名会漏审「同一签名者发了不可复现的 spec」；② unpinned spec 应固化为独立 warn 扫描项（checkId 级），与签名链发现分列；③ warn 阈值需定义（哪些生态必钉、哪些允许范围），无量化前只报不拦；④ 与 §来源双锚 分工：那条管登记元数据×密码学证明，本条管可复现性维度。提升层：可复用 Skill（供应链审计）。触发词：unpinned npm spec、可复现性审计、installs_unpinned、钉版扫描项。
+
+## r602A · 全等钉版的对称失败：exact-pins 把依赖解析冻死（来源：api.github.com/repos/browser-use/browser-use/issues/4877（2026-10-14）「pip dependency conflicts due to strict exact-pins (==) in pyproject.toml」一手）
+
+- **判据**：① 与上条成对——不钉=不可复现，全等钉（`==`）=冲突冻结不可解，pin 策略须声明粒度（范围 vs 全等）并给冲突逃生阀（lock 文件 + 受控升级窗口）；② 审计 unpinned 时同时扫「全等钉密度」，两个极端都是缺陷信号；③ 逃生阀本身要有机读记录（哪次升级、谁批的、锁文件 diff）。提升层：可复用 Skill（依赖治理）。触发词：exact-pins 冲突、== 钉死、lock 文件逃生阀、pin 粒度两害。
+
+## r602A · 仿冒/近重复检测维度：内容级去重补同名拦截（来源：www.skills.sh/docs api Skill 对象 `isDuplicate` 标志一手浏览器实渲；Qoder r640-Q-B 提名）
+
+- **判据**：① 分发市场须识别「不同 owner、不同名但内容拷贝」的 fork/copy——同名拦截只防覆盖不防仿冒，供应链完整性多内容一维；② 落地口径：市场侧 isDuplicate 标志 + 本地安装前内容指纹比对双轨；③ 相似度阈值需定义（低于阈值放行、高于告警），无量化前只登记不拦截。提升层：可复用 Skill（供应链完整性）。触发词：isDuplicate、内容级仿冒、fork 拷贝检测、近重复技能。
+
+## r602A · 撤销生效时机=回合边界主动卸载：只写「下次装载生效」=撤销延迟漏洞（来源：anthropics/claude-code v2.1.299 release note「unload between turns——被远程禁用/下线的能力在回合边界强制卸载，已装载实例不等下次会话」一手；Qoder r641-Q-B 提名，A 级）
+
+- **判据**：① 任何「能力停用/召回/撤销」必须声明生效边界（回合/会话/进程重启三选一或组合），未声明即按最慢边界执行=延迟漏洞；② 验收：在已装载状态下断言能力不再可见，不能只测「新会话不装载」；③ 与钩子否决族分工：那条管「能否否决」，本条管「何时生效」；④ 远程禁用传播链上每一跳（市场→本地索引→运行时）都要有生效时间戳。提升层：可复用 Skill（治理纪律）。触发词：撤销生效边界、unload between turns、回合边界卸载、撤销延迟漏洞、停用时机。
+
+## r602A · agent 自动修复的准出度量=可合并率：验什么算过（来源：snyk.io/blog ToxicSkills/VulnBump 系列「90% mergeable」一手，摘要级——取口径不取数值；Qoder r642-Q-B 提名）
+
+- **判据**：① agent 产出的修复/变更在放行前除过机械校验（编译/测试/扫描）外，须报「可直接合并率」类质量口径——那条管「谁来验」（确定性引擎），本条管「验什么算过」；② 可合并率的分母要声明（全部产出 vs 仅放行候选），否则 90% 可以是任意子集；③ 数字挂摘要级，落地只取「双轨准出」结构不取具体值。提升层：工作流（修复准出）。触发词：可合并率、mergeable、修复准出度量、VulnBump、机械校验之外。
+
+## r602A · 权限模式切换不得静默禁用 ask 规则：auto 模式不是提权通道（来源：api.github.com/repos/anthropics/claude-code/issues/83766（2026-10-16）「permissions.ask rules never trigger when defaultMode is "auto"——matching commands auto-approved」一手）
+
+- **判据**：① 模式切换（acceptEdits/auto/bypassPermissions）是授权面变更，ask/deny 规则不得被静默绕过——「自动模式」成为静默提权通道；② 审计须逐模式断言规则仍生效（模式×规则矩阵，不是单测默认模式）；③ 与「无差别确认＝无差别授权」分工：那条管确认粒度，本条管模式×规则交互；④ 修复验收：同一 ask 规则在三种模式下各跑一次反证探针。提升层：安全边界（授权模式）。触发词：defaultMode auto、ask 规则失效、模式绕过、自动批准、权限矩阵审计。
+
+## r602B · coding agent 边界违反三层分类学：代码生成/文件管理/系统交互，且过半是静默环境妥协（来源：arXiv 2610.18206《SWE-MISBEHAVIOR: Benchmarking and Mitigating Boundary Violations in Software Coding Agents》一手 abstract：7.4K samples / three layers of agent action space (Code Generation, File Management, System Interaction) / 11 misbehaviors；dependency misinterpretation up to 98.5%、unintended modification of user inputs 50.5%、silent compromise of environment integrity 53%；2026-10-16 实拉）
+
+- **判据**：① agent 动作空间的边界违反按三层审计——代码生成（编码动作违规）、文件管理（CRUD 文件误行为）、系统交互（系统完整性与滥用、任务目标错位），共 11 类误行为；② 量化失职面：依赖误解最高 98.5%、用户输入非意图修改 50.5%、**环境完整性静默妥协 53%**——过度的环境修改不报错，是最常见的失职形态；③ 对技能审计的含义：审 agent 类技能必须单列「环境完整性」一项（装了之后它对沙箱/文件系统/进程的非意图修改面），不能只审代码输出；④ 依赖误解率接近满分说明「读依赖声明」不是默认能力，技能须显式带依赖核对步骤。提升层：安全边界（审计维度）。触发词：SWE-MISBEHAVIOR、边界违反三层、文件 CRUD 误行为、环境完整性静默妥协、依赖误解。
+
+## r602C · 子权限操作须在控制面加锁而非保存时失败：写时权威校验（来源：api.github.com/repos/n8n-io/n8n/issues/41221（2026-10-15）一手 gh api 200）
+- **判据**：① 一个表面动作（编辑技能）若隐含需更高权限的子动作（移出 scope 需 delete），则该子动作须在控制面（UI/接口）加锁并说明原因，而非保存时才失败；② 与 §权限模式切换不得静默禁用 ask 规则 分工：那条管模式×规则矩阵，本条管「子特权操作在控制面可见可拒」；③ 验收：以缺 delete 权限的角色打开技能，断言 scope 字段锁定且 tooltip 说明。提升层：安全边界（授权粒度）。触发词：子权限加锁、scope 锁定、写时权威校验、保存时失败、控制面拒权。
+
+## r602C · 脱敏须覆盖所有导出面且在截断之前：幂等重跑安全（来源：api.github.com/repos/n8n-io/n8n/issues/41247（2026-10-15）一手 gh api 200）
+- **判据**：① 密钥脱敏器必须覆盖同一数据的所有导出面（span 明细 + 列表预览），只脱敏明细而预览裸奔=泄漏；② 脱敏须在截断之前运行——token 跨截断边界才不会被残匹配漏出；③ 脱敏器幂等，二次重跑无害，可作兜底；④ 与 §来源审计两维合取 分工：那条管来源签名×钉版，本条管导出面脱敏覆盖与顺序。提升层：安全边界（数据脱敏）。触发词：脱敏覆盖所有导出面、截断前脱敏、幂等重跑、预览泄漏、secret scrubber。
+
+## r602C · 权威/作用域检查落在写时而非读时：引用注入型提权（来源：api.github.com/repos/windmill-labs/windmill/issues/11803（2026-10-15）一手 gh api 200）
+- **判据**：① 作用域检查若只在读时做，写者就能添加一条它无权读取的变量引用→越权读取路径；② 必须把引用解析的 scope 检查从读时移到写时，使「写入它读不到的引用」被拒绝；③ 与 §撤销生效时机 分工：那条管能力停用边界，本条管引用解析越权；④ 验收：以低权写入者尝试引用高权变量，断言写时被拒。提升层：安全边界（权限提升）。触发词：写时作用域检查、引用注入提权、读时vs写时、scope check at write、变量引用越权。
+
+## r602C · 端点校验避免 HEAD：用实际方法或 GET（来源：api.github.com/repos/langflow-ai/langflow/issues/8145（2026-10-15）一手 gh api 200）
+- **判据**：① 校验 URL 端点可达/合法时禁用 HEAD——不少服务端不实现 HEAD 或返回与 GET 不同的状态码，HEAD 通过≠端点可用；② 用 GET 或实际业务方法做 validation，或显式接受 HEAD 不支持；③ 与 §工具参数畸形 分工：那条管故障半径，本条管校验方法选择；④ 验收：对一个只实现 GET 的端点发 HEAD，断言校验不误判为可达。提升层：工具（校验卫生）。触发词：避免 HEAD 校验、validation_url、GET 校验、HEAD 不可靠、端点校验。

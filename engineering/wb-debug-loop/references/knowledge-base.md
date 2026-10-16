@@ -1861,3 +1861,36 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 
 ## r601A · 跨请求复用的有状态解析/缓存对象是隐性串扰源：修复形态=per-call 无状态化而非加锁（来源：api.github.com/repos/n8n-io/n8n/releases 一手逐串命中 `**core:** Create an XML parser for each webhook request body (#41112)`（n8n@2.44.2，2026-10-15），2026-10-16 gh api 核验）
 - **判据**：① webhook/请求级处理器内共享 parser/缓存实例=把上个请求的状态漏给下个请求，现象是「偶发、难复现、取决于请求顺序」；② 正确修法是每请求新建无状态实例——加锁只是把串扰从「数据竞争」变成「持锁等锁」，归因难度不降；③ 每请求实例化有成本，热路径须权衡（池化+reset 是中间态，但 reset 清单必须完整）。提升层：工具（并发卫生）。触发词：per-call 无状态化、共享 parser 串扰、每请求新建、webhook 隔离、加锁不是修法。
+
+## r602A · 错误格式化器自身不得成为新失败源：全局默认 + per-tool 覆盖 + 兜底三态（来源：api.github.com/repos/openai/openai-agents-python/issues/5326（v0.24.0，2026-10-15）一手；Qoder r639-Q-A 提名）
+
+- **判据**：① run 级一次性配置会覆盖所有隐式默认 `tool_exception` handler，显式 per-tool policy 优先于全局——处置器配置必须分层，不能只有一档；② formatter 返回 `None`／返回非法值／自身抛异常，三种情况一律回落通用 fallback，原始异常仅在 trace 中保留且保持脱敏 ⇒「记得兜底」升级为「兜底是默认路径」；③ 与 r551B（错误处理路径自身崩溃抹掉真错）分工：那条只给了崩溃成因（buffer OOM/原型链），本条给回落规则；④ 平台 SDK 形态落到技能层须抽象为「per-item 覆盖全局 + 兜底三态」检查单，不照搬 API 名。提升层：工作流（错误面契约）。触发词：错误格式化器、tool_exception、per-tool policy 覆盖全局、formatter 兜底三态、处置器自身失败。
+
+## r602A · 终态观测路径不得依赖被管理侧反向回连：控制面自身回执是唯一凭据（来源：api.github.com/repos/activepieces/activepieces/releases/tags/0.92.3（2026-10-12）「安装 pieces 与 worker 回连公共 URL 解耦」一手；Qoder r641-Q-A 提名）
+
+- **判据**：① 判定安装/装载类动作的终态时，控制面自身回执为唯一凭据，被管理侧的回连、心跳、回调只作旁证——回连失败原会被误判为安装失败终态，解耦后回连失败不得改写终态；② 排障「装了没生效」时先分清是控制面没装还是被管理侧没回连，两者处置完全不同；③ 与 r600（重连身份保持）不同轴：那条管重连时身份延续，本条管终态判定证据源。提升层：工具/工作流（终态归因）。触发词：反向回连、worker 回连、安装终态、控制面回执、旁证不改写终态。
+
+## r602A · 工具参数畸形是工具级错误不是 run 级故障：故障半径按最细可恢复单元定（来源：api.github.com/repos/openai/openai-agents-python/issues/5304（2026-10-06）「Sandbox exec_command/view_image abort the whole run on bad model arguments instead of returning a tool error」一手）
+
+- **判据**：① 参数级畸形应落工具错误通道由模型修正重发，中止整个 run 把可恢复故障放大成任务级失败——排障先问「这个失败的最小合理边界是哪层」；② 与 §失败分类 分工：那条管错误归类，本条管错误的爆炸半径；③ 验收：坏参数的用例断言「返回工具错误 + run 继续」，不是断言 run 中止。提升层：工作流（故障隔离）。触发词：坏参数中止整个 run、工具级错误、故障半径、最细可恢复单元、blast radius。
+
+## r602A · 上限/限额类系统消息须与模型输出可区分：否则限额事件被当答案吞掉（来源：api.github.com/repos/langchain-ai/langchain/issues/40866（2026-10-12）「ModelCallLimitMiddleware: the limit-exceeded message can't be told apart from a model answer」一手）
+
+- **判据**：① 系统 injected 消息（限额/上限/拦截/护栏）必须带可判定的结构标记或独立通道标识，与模型输出在同一文本流里不可区分时会被读入后续推理；② 与 §限流三要素 分工：那条管「限的是谁」，本条管「限额事件本身不被误当输出」；③ 验收：注入一条限额消息，断言下游能把它与模型答案分开处置。提升层：工作流（信号完整性）。触发词：限额消息不可区分、limit-exceeded 当答案、系统消息与模型输出、上限事件误吞。
+
+## r602B · 失败恢复的可训练形态：从失败状态分叉多路独立自恢复尝试，按完成信号学习（来源：arXiv 2610.18484《ReTerm: Recovery Training for Self-Improving Terminal Agents》一手 abstract：terminal agents struggle to recover from errors during long-running execution；ReTerm-GRPO forks from the agent's own failure states to generate multiple independent self-recovery attempts；learning from whether these attempts successfully complete the task；2026-10-16 实拉）
+
+- **判据**：① 长程执行的失败恢复是独立能力——终端 agent 强在复杂编码任务，但卡在从错误中恢复（命令错误/错误实现累积成任务失败）；② 恢复的组织形态：从自身失败状态分叉出多个独立恢复尝试（不是在同一状态上重试同一路径），用「尝试是否完成任务」作学习信号；③ 对运行时的含义：恢复策略要允许多路分叉+独立评估，单路重试把恢复问题变成重复失败问题；④ 与 §恢复动作失败不得连带销毁可恢复状态 分工：那条管状态保全，本条管恢复 Attempt 的组织与评估。提升层：工作流（失败恢复）。触发词：ReTerm、失败状态分叉、多路自恢复尝试、恢复即能力、长程执行恢复。
+
+## r602B · 过载期重试的两难：保不住价值交易又放大损害，且是攻击面（来源：arXiv 2610.20567《Prioritizing Microservice Requests via Retries》一手 abstract：during overload periods retries a) fail protecting valuable transactions from rejections, and b) trigger large-scale performance and cost damages；attackers exploit this weakness to launch overload attacks；2026-10-16 实拉）
+
+- **判据**：① 重试机制在过载期双向失效——该保的价值交易没保住（被拒），同时触发大规模性能与成本损害；② 这个弱点可被攻击者利用来放大过载攻击——重试策略本身是攻击面，审计重试配置要问「过载时它帮谁」；③ 处置方向：按交易价值分级重试（价值交易优先）+ 过载信号下的重试预算收缩，不是统一退避；④ 与 §自动重试是白名单 分工：那条管「哪些错值得重试」，本条管「过载期重试帮倒忙的两种形态」。提升层：工作流（重试策略）。触发词：过载期重试、价值交易保护、重试放大损害、重试攻击面、分级重试。
+
+## r602C · 重放/复现须保真消息拓扑：签名块+工具调用同属一条 assistant 消息且保留原参（来源：api.github.com/repos/n8n-io/n8n/issues/41241（2026-10-15）一手 gh api 200）
+- **判据**：① 重建对话历史用于重放/重试时，必须保留精确消息结构——Anthropic 把签名绑在 thinking block 与「该精确消息」上，把它复制粘贴到每个 tool call 并拆成独立 assistant 消息会破坏下次请求；② 并行 tool call 须重放为「一个 thinking block + 该轮各 tool call」单条 assistant 消息，每个 tool call 保留模型原参；③ 与 §per-call 无状态化 分工：那条管实例隔离，本条管消息拓扑保真；④ 验收：重放后历史含单条含签名块+双 tool call 的 assistant 消息。提升层：工作流（重放保真）。触发词：重放保真、消息拓扑、签名块、并行 tool call、原参保留。
+
+## r602C · 超时被阻塞时仍须在截止点告警：区分强制中断与检测型看门狗（来源：api.github.com/repos/PrefectHQ/prefect/issues/23044（2026-10-15）一手 gh api 200）
+- **判据**：① 超时若无法强制中断被 syscall 阻塞的线程，至少须在截止点发出超时告警（detect-don't-enforce 路径），让用户在第 4 小时而非第 9 小时发现；② 明确区分「强制中断型超时」与「仅检测型看门狗」——后者只能报不能停，需配可中断执行器（ProcessPool/async）才真能停；③ 与 §失败恢复 分工：那条管恢复组织，本条管超时可观测性；④ 验收：构造被阻塞的超时被调，断言截止点有告警而非静默到结束。提升层：工作流（超时可观测）。触发词：超时告警、detect-don't-enforce、看门狗、截止点告警、强制中断vs检测。
+
+## r602C · yield 出的子运行须幂等且终态受围栏：防重放覆盖终态（来源：api.github.com/repos/openclaw/openclaw/issues/164445（2026-10-16）一手 gh api 200）
+- **判据**：① yield 出的子 agent 运行若无续跑可达会永久 pending——必须把不可达的 yield 回复从原始执行区间用真实转录读取器找回，后续无关轮次不得覆盖；② 立即与重启重试都须完成幂等 post-commit 效果，同时围栏精确终态与 owner——resumed/yield-again/killed/replaced 的运行不得被覆盖；③ 与 §终端态观测路径不依赖回连 分工：那条管终态证据源，本条管 yield 终态幂等；④ 验收：yield 出的运行在重启后不丢回复、终态不被新运行覆盖。提升层：工作流（编排重试安全）。触发词：yield 子运行、幂等 post-commit、终端态围栏、pending forever、重放覆盖终态。
