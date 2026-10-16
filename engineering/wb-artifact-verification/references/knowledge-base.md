@@ -4021,3 +4021,23 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 
 ## r603B · 验证前先冻结验证者对主张的解释：单字段冻结的翻转率是隐藏解释方差的探针（来源：https://export.arxiv.org/api/query cat:cs.CL 2610.20457《Same Claim, Different Interpretations》2026-10-16 一手 abstract：Claim Cards record the verifying agent's interpretation in 9 fields marked stated/inferred/default before evidence collection；>40% of fields were non-stated across 900 runs；freezing one field flipped the verdict on ~1/3 of claims versus ~1/7 expected by chance, p<0.001）
 - **判据**：① 同一句主张，不同验证者会给出不同解释（哪些是 stated、哪些是 inferred、哪些是 default）——>40% 字段非 stated 意味着解释偏差是常态不是边角；② 取证前先把解释显式冻结成 claim card（9 字段 + stated/inferred/default 标注），否则「证据相同结论相反」无法归因；③ **冻结单字段看翻转率**是隐藏解释方差的诊断探针——翻转率显著高于随机（1/3 vs 1/7）即证明该字段是结论的隐藏变量；④ 与 §预先登记预期 分工：那条管登记期望输出，本条管登记对被测主张的解释；与 §评分口径 分工：那条管分数怎么算，本条管判据判的是什么；⑤ 验收：对同一主张让两个验证者独立填卡，比对非 stated 字段集，冲突字段进复核。提升层：可复用 Skill（验证纪律）。触发词：claim card、解释冻结、stated/inferred/default、翻转率探针、隐藏解释方差、验证前登记。
+
+## r604A · 同一对象的输入/输出键名口径必须一致：入口按别名接受、出口按字段名吐出会造成混合大小写（来源：api.github.com/repos/langchain-ai/langgraph/issues/7556，2026-10-16 gh api 一手正文 `Every output boundary ... returns dicts keyed by channel name — i.e. field name ... serialize_by_alias=True ... The result is mixed-casing output`）
+- **实证**：langgraph 的 Pydantic 状态：通道按字段名键控，所有输出边界（invoke / stream_mode=values / get_state / 检查点快照）都返回字段名键的 dict；但用户若开 `serialize_by_alias=True`，嵌套 Pydantic 值会用别名序列化自己的字段，于是顶层字段名、嵌套别名名混在同一份输出里。PR #6634 只修了输入侧别名，输出侧仍未解。
+- **判据**：① **序列化口径是契约的一部分，须在两侧同时声明并断言**：只修入口不修出口等于把转换成本转嫁给每个消费方；② 混合口径的输出特别危险——**看起来能解析、解析出来语义漂移**，不会报错只会错；③ 与 §多处表示同步且校验全覆盖 分工：那条管同一事实的多处表示同步，本条管同一对象在边界两侧的键名口径；④ 验收：对带别名的状态对象，断言 invoke 输入键与输出键集合一致（或明确声明映射并双向测试）。提升层：工具（序列化契约）/ 工作流（边界一致性）。触发词：别名口径不对称、serialize_by_alias、混合大小写输出、输入输出键名不一致。
+
+## r604A · 缓存反序列化必须走严格校验：畸形缓存应判为 cache miss 而非抛异常崩溃（来源：api.github.com/repos/langgenius/dify/issues/43713，2026-10-16 gh api 一手正文 `An OAuth token cache value such as [] currently raises TypeError instead of being treated as a cache miss`）
+- **实证**：dify 的 OAuth bearer 令牌缓存读路径直接 `json.loads`，值形如 `[]` 时抛 TypeError 而不是当作未命中；身份字段类型错误也能不经校验进入 `ResolvedRow`。修复改用可复用的 Pydantic `TypeAdapter` 严格校验字典形状与字段类型，非法即拒绝构造，让解析器回落到数据库行并修复缓存；保留既有 UUID/datetime 转换、负缓存哨兵与缺 `client_id` 的旧条目兼容。
+- **判据**：① **缓存不是可信边界**：任何反序列化都要走与首次构造同级的校验，畸形条目应判为 miss 并触发重建，而不是让调用方崩；② **「能修」比「报错」好**：校验失败若能回源重建，应把修复路径写成默认分支；③ 兼容旧格式要显式声明（哪些字段可缺），不能靠宽松解析兜住一切；④ 与 §清单类缓存失效域须覆盖全部写入方 分工：那条管失效触发面，本条管读取侧的校验与重建；⑤ 验收：注入 `[]`、类型错误、坏 UTF-8 三种畸形值，断言均判 miss 并回源。提升层：工具（缓存正确性）/ 工作流（降级回源）。触发词：缓存畸形、TypeAdapter 严格校验、miss 而非崩溃、回源修复、负缓存哨兵。
+
+## r604A · 门控须按「消费路径」全覆盖枚举：只读接口的命名不构成安全属性（来源：Qoder r644-Q-A 转来：github.com/langflow-ai/langflow/pull/15660（v1.12.6 一手正文，2026-10-16 实拉）`The listing paths skipped those gates` / `executing as the project owner`）
+- **实证**：langflow 同一份内容在公共调用路径上有安全门，但 `tools/list` 与 A2A agent card 的 **schema 推导路径**没有门——推导时开启了组件实例化，每个节点存储的 `code` 都被求值，且对 `auth_type="none"` 的共享项目以项目属主身份执行，匿名 MCP 客户端即可触发；公共调用路径上另有 `validate_public_flow_no_code_execution`。
+- **判据**：① 验收清单按**读取路径**枚举：执行 / 列举 / 派生元数据 / 预览 / 导出，任一路径能触发写时门（代码执行、凭据解析、外呼）即为门控缺口；② **「只读接口」是命名不是安全属性**：它是否实例化被执行对象、是否解析凭据，必须逐路径核；③ 与已落「入参契约零执行静态推导」（sa）分工：那条要求推导不跑代码，本条要求**所有**能跑代码的路径都有门，二者互补；④ 验收：以匿名客户端调用 tools/list 与 agent card，断言不触发任何节点代码执行。提升层：工作流（验收面）/ 安全边界（门控覆盖）。触发词：消费路径门控、只读接口非安全属性、schema 推导路径、匿名触发属主执行。
+
+## r604B · 「看似合理」不等于可信：AI 产出的评审/结论须带证据锚点（来源：https://export.arxiv.org/abs/2610.21144《Plausible Is Not Enough: Trust and Evidence in AI-Authored Pull Request Review》2026-10-15，2026-10-16 arXiv API 一手摘要；**摘要级 B**）
+- **实证**：论文研究 AI 撰写的代码评审中的信任与证据问题。
+- **判据**：① AI 产出的**评审性结论**（review / 审计意见 / 合规判断）必须逐条给出可核验证据锚点（文件:行 / 命令输出 / 引用出处），无锚点的条目视为未评价；② 与已落「转发即背书」分工：那条管子 agent 报告不得逐字呈现，本条管报告本身的**证据密度**；③ 与已落「抽取丢结构=假通过」分工：那条管抽取保真，本条管结论可核；④ 验收：任一 AI 评审意见中，无锚点条目占比可统计且设上限。提升层：工作流（结论可信度）/ 工具（证据锚点门禁）。触发词：看似合理不足、AI 评审证据锚点、无锚点即未评价、审查意见可核验。
+
+## r604C · 修复类产物的验收用「双门·首尝试·隐藏测试」：漏洞门与原功能门必须在同一次通过（来源：Qoder r644-Q-B 转来 https://snyk.io/blog/snyk-agent-fix-remediation-benchmark/ 2026-10-16 curl 一手 149,603B：`two human-verified unit tests: A test that fails because the vulnerability is present, and A test that passes when the code's original functionality is preserved`；`passes a sample only if its fix makes both tests pass on the first attempt, with the tests withheld from the model`）
+- **实证**：Snyk 的 Agent Fix 修复基准：每个样本配两个人工核验的单测——一个因漏洞存在而失败、一个在原功能保留时通过；只有模型的修复让**两个测试在首次尝试都通过**才算通过样本，且测试对模型**保密**；头部口径是「既安全又可用」的占比（模型约 72–75% 平台期）。
+- **判据**：① 修复/补丁类产物（技能修补、规则修订）的验收式须含四件：**反向门（问题不再复现）+ 正向门（原行为保持）+ 首尝试口径 + 判据对被修方隐藏**；② 只看反向门会奖励「把功能删掉」的修复，只看正向门会保留漏洞；③ 这是已落「TestJack 固定测试集可被奖励黑客」的**处置侧补齐**——那条只证问题、未给验收构造；④ 验收：修复类产物跑双门且记录首次尝试结果，重试后通过不得记为通过。提升层：工作流（修复验收）/ 工具（双门禁）。触发词：双门验收、首尝试口径、隐藏测试、既安全又可用、修复不删功能。

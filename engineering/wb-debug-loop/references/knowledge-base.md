@@ -1898,3 +1898,35 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 ## r603A · 超时只产生「未知终态」：连接健康态不得被顺带改写，且去掉自动重试须用错误文案告知调用方（来源：api.github.com/repos/langflow-ai/langflow/pulls/15460（v1.12.6，2026-10-13 发布条目一手 atom 实拉）逐串命中 `Tool '<name>' timed out after <n>s. It was not retried...` / 超时不再把客户端标记为已断开）
 - **实证**：Langflow 修复 MCP 会话引用计数泄漏时连带改了超时语义——此前 stdio 与 Streamable-HTTP 客户端在 `call_tool` 超时后会自动重试一次，造成重复副作用；修复去掉自动重试，同时新增错误串明示「未重试」。同 PR 另一处关键语义：**超时不再把客户端标记为 disconnected**——一次超时只说明结果未知，不应顺带改写连接健康态。
 - **判据**：① **超时事件与连接健康态解耦**：一次超时同时触发「重试」与「会话判死」两个副作用时，第二个副作用会级联放大成重建会话/重连与凭据重取；超时须只产生「未知终态」，连接健康态只能由显式握手/心跳证据改写。② **去掉自动重试是行为契约变更，必须告知调用方**：错误文案要明说「未重试」，否则调用方按旧契约假设已重试而过早放弃或重复提交。③ 与 §超时不是回滚授权（判死与回滚分两门）分工：那条管判死后的回滚门，本条管超时这一事件本身允许产生哪些副作用。④ 验收：注入一次工具超时，断言（a）无自动重试记录（b）错误串含「未重试」（c）连接/会话状态未被标记为断开。提升层：工具（连接/会话生命周期）。触发词：超时未知终态、连接健康态解耦、不自动重试、错误文案告知未重试、会话判死级联。
+
+## r604A · 取消/暂停观察者断连后必须自动恢复并与服务端状态对账：永久停在轮询降级态等于取消能力静默失效（来源：api.github.com/repos/PrefectHQ/prefect/issues/23421，2026-10-16 gh api 一手正文 `recover from temporary websocket outages ... Previously they stayed in polling mode until shutdown`）
+- **实证**：Prefect 的 `FlowRunCancellingObserver` / `FlowRunSuspendingObserver` 在事件流中断后一直停在轮询模式直到进程关闭，既不重连也不回到流式。修复把轮询/流式的交接、重试节奏、任务生命周期收归单一所有者 `ObservationDelivery`：设置失败、异常流失败、消费者正常结束三种情况都启动轮询并排程重连，重连成功且**与当前服务端状态对账完成**后停止轮询；每次重连尝试带 10s 截止（覆盖 open/ping/auth/filter），空闲流不设截止。
+- **判据**：① **降级态必须有回归条件与对账动作**，否则降级就是永久失效；回到正常态前须重放/对账服务端真实状态，不能只恢复通道；② 控制通道（取消/暂停）与数据通道分开看：数据断了可以缓，控制断了等于失控；③ 重连尝试须有**独立截止**，而长连接空闲期不该有截止（两者混淆会让健康连接被误杀）；④ 与 §告警自身失败须留痕三态 分工：那条管告警送达态，本条管控制观察者的降级与回归；⑤ 验收：切断 websocket 后断言观察者回到流式且对账完成。提升层：工作流（控制通道韧性）/ 工具（观察者生命周期）。触发词：观察者降级、轮询不回归、重连对账、取消失效、控制通道韧性。
+
+## r604A · 长步骤在超时重派前必须有「仍在运行」归属标记：原调用与重派双双成功会造成 2–3 倍冗余与成本（来源：api.github.com/repos/langchain-ai/langgraph/issues/7417，2026-10-16 gh api 一手正文 `silently re-dispatched from the last checkpoint while the original is still running ... 2-3x redundant work and cost`）
+- **实证**：LangGraph Cloud 上工具调用超过约 180 秒会被从最近检查点静默重派，而原调用仍在跑；两者最终都成功，产生 2–3 倍重复工作与花费。轨迹上副本的特征是：参数内容哈希相同、有自己的 `tools` 节点但**前面没有 `model` 节点**（非 LLM 决策触发）。
+- **判据**：① **超时重派的前置条件是确认原执行已死**，不是「太久没回音」；须有可查询的运行归属/心跳，否则重复的是副作用而非只是算力；② 重派与原始必须可区分：日志/轨迹上要能看出「这是重派的」，否则归因与对账全错；③ **没有上游 model 节点的执行是强信号**——凡执行不是由决策产生的，都要能解释是谁发起的；④ 与 §恢复失败不销毁可恢复状态 分工：那条管失败后保状态，本条管超时判定前先证原执行状态；⑤ 验收：长任务在 2 倍超时窗口内断言只存在一个执行主体，且重派事件在轨迹中可见。提升层：工具（执行归属）/ 工作流（重派判据）。触发词：静默重派、长任务重复执行、仍在运行标记、checkpoint 重放、2-3x 冗余。
+
+## r604A · 被服务端明确拒绝的流不得按网络错误重试，且流结束必须带原因（来源：api.github.com/repos/langchain-ai/langgraph/issues/9317，2026-10-16 gh api 一手正文 `a stream the server rejects with a 4xx ends at once instead of being retried`）
+- **实证**：langgraph SDK 之前：服务端在关闭流前发 `{"type":"error","id":null,...}` 被丢弃，导致 `thread.output` 抛泛化的「lifecycle stream ended before terminal event」（异步）或永久阻塞（同步）；403/404 的流请求被当网络错误重试，最后报成不带状态码的 `RuntimeError`；共享流把每次这样的重连**计为成功**。
+- **判据**：① **4xx 是判决不是故障**：语义性拒绝重试既不改变结果也放大副作用，还把失败伪装成运输问题；② **终态必须携带原因**，泛化的「流已结束」抹掉了可诊断性，同步侧更不能以永久阻塞收场；③ **重连成功计数不得把被拒的重连也算进去**——计量口径错误会让健康度虚高；④ 与 §网络故障 vs 提供方故障分开分类 分工：那条是通用分类原则，本条给出流通道上的具体判据；⑤ 验收：模拟 403 流，断言一次即终、错误带状态码、成功计数不增加。提升层：工具（流客户端）/ 工作流（失败分类）。触发词：4xx 不重试、流结束原因、id:null 错误帧、重连计数虚高、同步永久阻塞。
+
+## r604A · 暂停/等待态的耗时必须从超时预算中剔除：等待人工输入不应被判成超时（来源：api.github.com/repos/browser-use/browser-use/issues/6104，2026-10-16 gh api 一手正文 `time spent inside agent.pause() consumes the step budget and cancels a tool that is waiting for human input`）
+- **实证**：browser-use `_execute_step()` 用一次墙钟超时包住整步，暂停期间的时间照常计入，导致等待人类输入的工具被取消。修复用单调时钟累计暂停时长并从活动预算中扣除，暂停/恢复转换用事件唤醒而非轮询，并用 generation 检查防止快速转换在 clear 与 await 之间丢失；回归覆盖两侧：暂停可超过 step_timeout 后成功恢复，未暂停的慢步骤仍会超时取消。
+- **判据**：① **超时预算计量的是「活动时间」不是「墙上时间」**：凡外部等待（人工确认、限流、依赖方响应）都必须显式排除；② 计时用**单调时钟**，暂停/恢复的转换用事件而非轮询，并用 generation 计数防止快速抖动丢转换（与 openclaw#174184 的 TTL 单调化同轴）；③ 回归须覆盖两侧——等得起的一侧与仍会超时的一侧，只测一侧等于没测；④ 与 §等待类止损须有显式上界（mts）分工：那条给等待设上界，本条给超时设「不计等待」的口径；⑤ 验收：暂停超过 step_timeout 后步骤能恢复完成。提升层：工具（超时语义）/ 工作流（人机交互）。触发词：暂停剔除超时、单调计时、generation 防丢转换、等待人工被取消。
+
+## r604A · TTL 到期重排必须用单调时钟：墙钟回拨会让授权/中继超期存活，权限延续超出预期寿命（来源：api.github.com/repos/openclaw/openclaw/issues/174184，2026-10-16 gh api 一手正文 `a backward system clock jump (NTP sync, manual clock set) inflates remainingMs ... lingers long past its TTL without unregistering`）
+- **实证**：openclaw 的 native hook relay 进程内重排定时器用 `expiresAtMs - Date.now()` 计算剩余时间，两端都在墙钟上；系统时钟向后跳（NTP 同步/手动改表）会让 remainingMs 膨胀到数十万毫秒，relay 反复重睡、超过 TTL 仍不注销，从而把已保留的宿主策略/授权延续到预期寿命之外。修复保留跨进程的墙钟 `expiresAtMs`，另加**进程内单调截止** `expiresAtMonotonicMs = performance.now() + ttl` 仅供重排定时器消费。
+- **判据**：① **凡涉及授权/权限/租约的到期计算一律用单调时钟**；墙钟只用于跨进程对齐，不能用于进程内倒计时；② **两种时钟混用是缺陷模式**（墙钟播种 + 墙钟消费可被外部事件操纵），须显式分离并注明各自用途；③ 与 §取消/停止信号沿派生链下传 分工：那条管控制通路纵深，本条管控制/授权的到期通路不受时钟操纵；④ 验收：模拟时钟回拨，断言 relay 仍在 TTL 到期时注销。提升层：工具（时间语义）/ 安全边界（授权寿命）。触发词：TTL 单调时钟、墙钟回拨、租约超期存活、到期重排、授权延续。
+
+## r604A · 有状态解析器必须按请求实例化：跨请求复用同一实例是状态串扰源（来源：Qoder r644-Q-A 转来：api.github.com/repos/n8n-io/n8n/releases 2.43.6 条目 `Create an XML parser for each webhook request body` PR #41113，2026-10-16 一手）
+- **实证**：n8n 2.43.6（2026-10-15）把 webhook 请求体的 XML 解析器改为**每个请求新建一个**；此前并发 webhook 共享解析实例，A 请求的解析状态会渗进 B。
+- **判据**：① 凡内部持累积状态（解析上下文、缓冲、游标、计数器）的对象，其**生命周期必须绑定到单次输入**而非 worker/进程；② 与 §解析容错隔离坏单元 分工：那条管**坏输入不拖垮整份**，本条管**好输入之间不互相污染**；③ 判据可机检：列出所有跨请求复用的有状态组件，逐个断言其状态在请求边界被重置或对象被重建；④ 验收：并发两个不同结构的请求，断言解析结果互不渗透。提升层：工具（运行时实例作用域）。触发词：按请求实例化、解析状态串扰、并发共享解析器、实例生命周期绑定。
+
+## r604A · 「被打断」不得记成「被拒绝」：中断归因须独立成类（来源：Qoder r644-Q-C 转来：github.com/anthropics/claude-code/releases/tag/v2.1.301 一手 `a tool call cut off by a message sent mid-turn during its permission check being reported to the model as rejected by the user`；同向 openai-agents v0.24.0 #5366、langgraph prebuilt 1.1.1 #9232、codex #51556，2026-10-16）
+- **实证**：claude-code v2.1.301 修掉一个缺陷：工具调用在其权限检查期间被同回合新消息打断，却被作为「用户拒绝」报给模型。同期同向修复还有 openai-agents 在完成型 stop 工具结束 resume 时拒绝挂起输入、langgraph 的 ToolNode 不再吞掉非法 resume 值、codex 在取消时完成动态工具生命周期。
+- **判据**：① 一个动作的终态至少四类不可混记：**用户拒绝 / 被新消息打断 / 恢复值非法 / 取消时生命周期未收敛**；② 混记会让系统把「用户其实想要」错学成「该动作被禁」，产生错误的自我审查与放弃；③ 与 §abstention 三态 分工：那条分**模型自述**的弃权，本条分**外部干预**的原因；④ 验收：权限检查期间插入新消息，断言终态记为 interrupted 而非 rejected。提升层：工作流（中断归因）/ 工具（终态分类）。触发词：打断≠拒绝、中断归因、resume 非法值、取消生命周期收敛。
+
+## r604B · 修复失败常是路径依赖的：诊断要看整条修复路径而非当前这一步（来源：https://export.arxiv.org/abs/2610.21514《Poison Valleys: Diagnosing Path-Dependent Failure in LLM Code Repair》2026-10-15，2026-10-16 arXiv API 一手摘要；**摘要级 B**）
+- **实证**：论文诊断 LLM 代码修复中的路径依赖失败（poison valleys）。
+- **判据**：① 修复类任务在**早期选择**上就可能进入后续不可达的区域——单点失败信息（当前报错）不足以定位根因，须回放已走过的修复路径；② 遇到连续失败时，回退到**分叉点**比在当前点继续尝试更省；③ 与 §失败后假成功 分工：那条防把失败当成功，本条防把「当前点失败」误判为「当前点错误」；④ 验收：修复流程记录分叉点与已尝试路径，连续 N 次失败后强制回退到最近分叉点。提升层：工作流（修复诊断）/ 工具（路径回放）。触发词：路径依赖失败、poison valleys、分叉点回退、修复路径回放、连续失败处理。

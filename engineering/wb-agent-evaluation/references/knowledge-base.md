@@ -236,3 +236,39 @@
 
 ## r603B · 长程发现的停滞来自历史累积锚定：周期性全量丢弃搜索状态、从当前最优重启（来源：https://export.arxiv.org/api/query cat:cs.CL 2610.20563《Scaling Discovery Requires Forgetting》2026-10-16 一手 abstract：single-agent long iteration, parallel multi-agent, and inter-agent communication all stall as history accumulates—agents anchor on past attempts and edits shrink；periodically discarding all search state and restarting from the current best candidate improves over parallel agents by up to 15% and over single agents by up to 39% across heuristic programming, kernel optimization, and model training）
 - **判据**：① 长程搜索/迭代的失效模式不是随机退化而是**锚定+编辑收缩**——历史累积让后续尝试围绕过去打转、改动越来越小，加算力（并行/通信）只放大同一失效；② 解法是周期性「全量丢弃搜索状态 + 从当前最优候选重启」——保留最优解、丢掉路径依赖；③ 对自改进循环的含义：迭代上限（Cap14）之外还须有状态重置位，只设上限会把死循环变成「放弃」的同族失效；④ 验收：长程任务记录「每轮编辑幅度」曲线，收缩到阈值以下即触发重置；重置后断言从中断前最优继续而非从零。提升层：工作流（自改进循环设计）。触发词：历史锚定、编辑收缩、遗忘重启、搜索停滞、discard and restart、当前最优重启。
+
+## r604A · 用量计量必须消费尾随 metadata 事件：在结束事件处提前退出会把真实用量记成 0（来源：api.github.com/repos/crewAIInc/crewAI/issues/8225，2026-10-16 gh api 一手正文 `usage arrives in a metadata event after messageStop ... reports 0 tokens`）
+- **实证**：Bedrock Converse 流把 token 用量放在 `messageStop` **之后**的 `metadata` 事件里；crewAI 的 `BedrockCompletion` 有两个出口在该事件之前就离开流循环（异步侧在每个 `messageStop` 就 break，同步侧只在 `content_filtered` 时 break；带 `response_model` 时两侧都在结构化输出工具块的 `contentBlockStop` 处发完成事件并返回），于是 `get_token_usage_summary()` 报 0、`LLMCallCompletedEvent.usage` 为 None。
+- **判据**：① **计量的终点是「用量事件到达」，不是「生成结束事件到达」**——两者顺序由提供方决定，不能假设同时；② 每个提前返回路径都要问「它跳过了哪些计量/留痕」，尤其带结构化输出时的专用出口；③ 与 §成本按已完成步骤计量 分工：那条管计量的粒度口径，本条管计量信号的读取时机；④ 验收：对流式调用断言用量非 0，且与同请求非流式调用一致。提升层：工具（计量正确性）/ 工作流（评测数据可信）。触发词：尾随 metadata、messageStop 后用量、用量记 0、提前 break、结构化输出专用出口。
+
+## r604B · 有状态 agent 的评估须「证据有界」：结论只能由可引用的证据支撑（来源：https://export.arxiv.org/abs/2610.21177《AgentEval: Evidence-Bounded Assessment of Stateful Agents》2026-10-15，2026-10-16 arXiv API 一手摘要；**摘要级 B**）
+- **实证**：AgentEval 针对有状态 agent 提出证据有界的评估方法。
+- **判据**：① 对有状态对象的评估，每条结论须绑定**可引用的证据片段**（哪次状态转移、哪个观测），无证据的结论不得进入评分；② 与已落「证据视图」「abstention 三态」分工：那两条给了证据呈现与弃权，本条要求**评分项本身**有证据下界；③ 验收：评估报告每个扣分项都能点回具体证据，点不回的自动降为未评价。提升层：工作流（评测证据）/ 工具（评分可追溯）。触发词：证据有界评估、有状态 agent 评测、结论绑定证据、AgentEval。
+
+## r604B · 记忆评估不能只用下游 QA：答对问题不等于记忆机制正确（来源：https://export.arxiv.org/abs/2610.22209《Beyond Downstream QA: Rethinking How We Evaluate Agent Memory》2026-10-15，2026-10-16 arXiv API 一手摘要；**摘要级 B**）
+- **实证**：论文主张重新思考 agent 记忆的评估方式，超越下游问答这一单一口径。
+- **判据**：① 下游指标是**间接指标**：它同时被检索、推理、生成能力影响，不能反推记忆机制好坏；② 记忆能力须分层测：写入正确性 / 保留与更新 / 检索命中 / 冲突消解 / 遗忘合规，各层单独给分；③ 与已落「记住 vs 弃权」「证据变更后记忆修复」分工：那两条给了具体记忆行为，本条给**评测分层**；④ 验收：一次记忆能力评测至少输出写入/检索/更新/冲突四层分，而非单一 QA 准确率。提升层：工作流（评测分层）/ 可复用 Skill（记忆评估）。触发词：记忆评估分层、下游 QA 不足、记忆机制评测、写入检索更新冲突。
+
+## r604B · 一致性须定位到动作级差异：任务级总分看不出哪里不一致（来源：https://export.arxiv.org/abs/2610.22031《GraphACM: Graph-based Action Consistency Measurement》2026-10-15，2026-10-16 arXiv API 一手摘要；**摘要级 B**）
+- **实证**：重复执行的行为一致性是评估 LLM agent 可靠性的有效信号；但现有方法通常给出单一任务级分数，不指出行为差异发生在哪、动作是否在同一口径下比较。
+- **判据**：① 可靠性评测要输出**动作级差异图**（哪一步分叉、分叉后是否再合流），任务级一致率无法指导修复；② 比较动作前须先**对齐比较口径**（参数归一、顺序无关、副作用等价），否则不一致是测量误差；③ 与已落「失败模式分解+置信信号」分工：那条管失败分类，本条管一致性差异的定位与口径对齐；④ 验收：一致性报告给出首个分叉步骤与分叉类型。提升层：工作流（可靠性测量）/ 工具（差异定位）。触发词：动作级一致性、GraphACM、分叉定位、比较口径对齐、任务级总分不足。
+
+## r604B · 基准任务须含歧义澄清与未声明约束：规格完备下的执行不等于真实交付能力（来源：https://export.arxiv.org/abs/2610.22350《FDE-Gym: The Last Mile of AI Delivery》2026-10-15，2026-10-16 arXiv API 一手摘要；**摘要级 B**）
+- **实证**：现有 agent 基准通常用 issue 报告、规格或工单把任务定义得很清楚；真实客户交付不同：前置部署工程师必须澄清歧义需求、在活系统里工作、并挖出未声明的约束。
+- **判据**：① 基准若把需求写完备，测的是**执行**而非**交付**；评测设计要显式包含「需求含歧义」「存在未声明约束」两类任务；② 澄清行为（提问时机、提问质量、假设记录）应进入评分，而不是被当成多余轮次扣分；③ 与已落「基准须绑定 Task Flow 三分布」分工：那条管分布绑定，本条管任务定义的完备度维度；④ 验收：评测集中至少一类任务在初始描述里故意缺失关键约束。提升层：工作流（评测任务设计）/ 可复用 Skill（交付能力）。触发词：FDE-Gym、歧义需求、未声明约束、交付 vs 执行、澄清行为计分。
+
+## r604B · 输入质量决定 agent 成本：预算须按输入健康度预估而非按任务名义规模（来源：https://export.arxiv.org/abs/2610.21914《CodeHealth Predicts the Token Cost of Agentic Code Review: A Pre-Registered Study of 465 Agent-Authored Pull Requests》2026-10-15，2026-10-16 arXiv API 一手摘要；预注册研究，**摘要级 B**）
+- **实证**：组织日益把代码评审委托给按 token 计费的多 agent LLM 流水线；低代码质量抬高人工维护成本，但其对 agent 评审成本的影响此前未被测量。研究检验基线 CodeHealth 是否能预测 agent 评审的 token 成本。
+- **判据**：① **成本模型的自变量要含输入质量**：同样「审一个 PR」，输入健康度不同，实际 token 成本可成倍变化；② 预算制定要先测输入指标再做估算，且估算须可回算（预注册口径）；③ 与已落「成本按已完成步骤计量」分工：那条管计量粒度，本条管**预估自变量**；④ 验收：给出成本估算时同时给出所依据的输入质量指标值。提升层：工作流（成本治理）/ 工具（预算预估）。触发词：CodeHealth 预测成本、输入质量自变量、评审 token 成本、预注册口径、预算回算。
+
+## r604C · 分数须由判据计数推导，分母随「适用判据集合」变化；模型自报总分只能作无判据时的 fallback（来源：Qoder r644-Q-B 转来 NVIDIA/SkillEvaluator 今日 main 合入 PR #190/#196，`docs/tier3-live-evaluation.mdx` 一手 44,585B：`Accuracy is calculated from the judge's criterion verdicts, not its numeric total: passing applicable criteria divided by applicable criteria`）
+- **实证**：SkillEvaluator 规定准确率按**判据裁决**计算而非模型给的数值总分：通过的适用判据 ÷ 适用判据；负例或无 `expected_skill` 时把 `SKILL_IDENTIFIED` 从分子分母**同时剔除**（分母变 4 而非 5），并落盘 `excluded_criteria` 与 `applicable-accuracy-criteria/v1` 策略串；宿主机与校验器共用完全相同的计分代码。
+- **判据**：① 任何 LLM-judge 打分链路应以**判据布尔/计数**为唯一分数来源；② 显式记录「本案例适用判据集合」与剔除项，否则不同案例的分数不可比；③ 模型给的数值总分只允许在无判据时作 fallback，且**可被校验器拒收**；④ 与已落「importance-weighted mean」不同轴（那是加权均值，仍取模型分）；⑤ 验收：评分代码不引用模型返回的数值总分，且每次评分输出适用判据清单。提升层：工作流（评测计分构造）/ 工具（可复算分数）。触发词：判据计数推导分数、适用判据集合、excluded_criteria、模型自报总分 fallback、host 与 verifier 同码。
+
+## r604C · 成对比较两侧若由不同判者打分，该案例须剔除并单独计数（来源：同上 tier3-live-evaluation.mdx 一手：`When the two conditions of a case were judged by different models, the case is left out of that judge's skill lift and counted in judge_mixed_cases in lift.json`）
+- **实证**：SkillEvaluator 对「有/无技能」成对试验规定：两侧由不同模型评审时，该案例从该判者的技能增益中剔除，并计入 `judge_mixed_cases`；逐判记录 `judge_model_used` / `judge_reasoning_effort` / `judge_fallback_used`；并规定「判者仍然失败是评测基建失败，不是 0.0 分，受影响的一侧不发布分数」。
+- **判据**：① 成对试验的**同判者性**是增益有效性的前提，判者降级/重试不得静默继续计分；② 必须落「混判」计数与「评测基建失败」终态——**不是 0 分、也不是跳过不提**；③ 与已落「P2Patch 异源证据」方向相反（那条要异源，本条禁配对两侧异源），勿混用；④ 验收：lift.json 中 judge_mixed_cases 可统计，且失败判者对应侧无分数发布。提升层：工作流（评测有效性）/ 工具（判者一致性）。触发词：同判者性、judge_mixed_cases、判者降级不得静默计分、评测基建失败非 0 分。
+
+## r604C · 指定资源不可用时默认方向是「降级执行」而非「放行」，且降级事件本身可观测（来源：Qoder r644-Q-C 转来 api.github.com/repos/anthropics/claude-code/releases/tag/v2.1.300 一手：`an unavailable model falls back to the caller's instead of allowing the action`；v2.1.301 另有「compacted over and over, on a model you didn't pick, behind an LLM gateway whose responses name a different model than the one requested」）
+- **实证**：claude-code v2.1.300 修掉 agent hook 忽略其 `model` 声明的问题，并规定**模型不可用时不放行该动作**，而是回退到调用方的模型；v2.1.301 暴露另一类：网关返回里自报的模型名与请求的不同，压缩被反复执行到用户未选的模型上。
+- **判据**：① 凡「指定资源（模型/判者/评测器/容器）不可用」的分支，安全默认=换成**低权限但仍在授权内**的替代并记录，而不是因为拿不到判决就放行；② **执行者身份的自报不可信**（网关自报模型名），须以外部 revision/标识核；③ 与 r604C「评测器 digest 钉住」互补：那条钉身份，本条钉不可用时怎么退；④ 验收：模拟判者/模型不可用，断言动作被降级执行并留下降级事件，而非放行。提升层：工作流（安全默认）/ 工具（身份核验）。触发词：不可用即降级不放行、fail-degrade、网关自报模型不可信、hook model 被忽略。

@@ -1167,3 +1167,39 @@ Step C: 是否包含恶意意图？
 ## r603B · 准入门禁用「零区分度元数据」：字段全表恒等即无信息，缺字段与恒等要分报（来源：https://aipm-registry.com/v1/skills?limit=100（2026-10-16 一手全量统计，125,043B/100 行）：`scannerVersion` 全表恒为 "2026-09-12.1"、`checksPerformed` 恒为固定 4 串、`version` 全 1.0.0、`targets` 全 ["*"]、`installCount` 全 0、`usage` 100/100 为 null、`publisher.verified` 1:99）
 - **实证**：aipm-registry 100 行实测——多个字段存在但全表恒等或全空：scannerVersion 同一值、checksPerformed 固定 4 条、usage 100/100 null。据此写「有 publisher 字段=已核身份」「有 usage 字段=有使用遥测」都会得出错误结论。
 - **判据**：① 接入任何外部元数据作准入信号前，先跑**全表分布普查**——去重计数=1 即无信息，该维度不得进判定式；② **缺字段与字段恒等是两回事**：前者=未提供（可要求补），后者=提供了但无区分度（信号本身失效，换维度）；③ 与 §零方差可能是尺子太硬 分工：那条防「把测量退化当稳定」，本条防「把零方差字段当准入依据」；④ 验收：准入规则引用的每个外部字段附分布普查结果（去重计数/空值率），恒等字段标注「不提供信息」。提升层：工具（准入元数据）。触发词：零区分度、全表恒等、分布普查、去重计数、usage 全 null、缺字段vs恒等、准入信号失效。
+
+## r604A · 撤销必须在校验侧生效：JWT 未过期不等于未被撤销，缺少在线撤销查询即存在撤销窗口（来源：api.github.com/repos/n8n-io/n8n/issues/41266，2026-10-16 gh api 一手正文 `the JWT itself stays valid until exp, so a revoked token keeps working on every pipeline surface for up to an hour`）
+- **实证**：n8n 的入站鉴权管线只验签名与 claims；OAuth 服务端撤销时删行但 JWT 在 exp 前仍有效，已撤销令牌可继续通行最长一小时。修复新增 `isAccessTokenActive`，本地密钥源的 bearer driver 在每次校验时问授权服务器是否仍认可该令牌，拒绝时给新 reason `revoked`；过程中还暴露注入顺序缺口（鉴权模块先于 OAuth 服务端绑定真实实例，注入拿到占位符），改用代理绑定。
+- **判据**：① **凭据判活 = 签名有效 ∧ 未被撤销**，二者缺一不可；只在颁发侧删行而校验侧不回查，等于把撤销延迟到令牌自然过期；② 撤销查询失败时的默认方向须显式声明（fail-closed 还是 fail-degraded），不能默认放行；③ **依赖注入顺序本身是安全面**：模块先于提供者绑定会拿到占位实现且静默失效，须用代理/惰性解析并在验收中断言拿到的是真实例；④ 与 §重连不得静默丢已授予 scope 分工：那条管重连不降级授权，本条管撤销在校验侧生效；⑤ 验收：撤销后立刻用原令牌请求，断言被拒且 reason=revoked。提升层：工具（鉴权运行时）/ 安全边界（撤销时效）。触发词：撤销不生效、JWT 到 exp、isAccessTokenActive、注入顺序占位、fail-closed 撤销。
+
+## r604A · 同意前先判动作可用性：不可用/被阻断的提供方不得进入 consent 流程（来源：api.github.com/repos/langflow-ai/langflow/issues/15809，2026-10-16 gh api 一手正文 `An approved provider could still expose OAuth registrations and accept new connections when every action was blocked`）
+- **实证**：langflow 中一个已批准提供方在所有动作都被阻断时，仍可列出 OAuth 注册、接受新连接，重连既有连接也能启动同意流程。修复在列注册/建连接/起授权之前**先检查清单中可用动作**，缺失、非法或冲突的元数据不能建立可用性。
+- **判据**：① **「可用」与「已注册」是两态**：已注册只说明存在登记，可用性须按当前策略推导；② 授权同意是副作用动作，其前置门必须在**流程入口**而非界面层，否则绕过 UI 的调用路径照样能发起 consent；③ 与 §权限按执行计划推导 分工：那条按计划推导出所需权限，本条要求在同意前先判这些权限是否真能用；④ 验收：把提供方全部动作阻断后，断言列注册/建连接/重连 consent 三条路径全部拒绝。提升层：安全边界（授权前置门）/ 工作流（连接生命周期）。触发词：同意前可用性门、blocked provider、consent 入口校验、动作清单推导可用。
+
+## r604A · 同意界面须给出 scope→动作+风险等级的映射：只列 scope ID 不构成知情同意（来源：api.github.com/repos/langflow-ai/langflow/issues/15810，2026-10-16 gh api 一手正文 `Connection consent showed only scope IDs, leaving users to guess which actions needed them`）
+- **实证**：langflow 的同意页只显示 scope ID，用户无法判断哪个动作需要它、风险多高。修复显示每个动作名及其读/写/破坏性风险、标注条件性使用、scope ID 降为次要文本；集成目录从清单返回每个动作的必需与条件 scope（含归一化的厂商 scope 别名），旧服务端回退到组件模板。
+- **判据**：① **知情同意的最小单位是人能读懂的动作+风险，不是技术标识符**；② scope 与动作的映射须**由清单声明**而非前端猜，并覆盖条件性（何时才用）；③ **厂商 scope 别名须归一化**后再展示，否则同一权限以多种字符串出现，用户与策略都判不准；④ 与 §功能仿冒 rank-one 分工：那条防名称仿冒，本条防同一权限多命名导致的判不准；⑤ 验收：同意页每个 scope 都能指出它服务于哪个动作与风险等级。提升层：安全边界（知情同意）/ 工具（权限展示）。触发词：scope 风险映射、条件性 scope、别名归一化、知情同意可读性。
+
+## r604A · 审计跳检必须在结论头显式标 UNMEASURED：未测量≠健康，摘要与完整跑同形会掩盖真实缺口（来源：api.github.com/repos/openclaw/openclaw/issues/147466，2026-10-16 gh api 一手正文 `the human summary line is identical to a complete run ... kept a daily audit green for 19h with 22 unresolvable exec refs`）
+- **实证**：openclaw `secrets audit` 不带 `--allow-exec` 时跳过 exec SecretRef 可解析性检查，但人类摘要行与完整跑逐字相同（`unresolved=0`、退出 0），只有结尾小注可区分；真实事故中该路径让每日审计连绿 19 小时、掩盖 22 个不可解析 exec 引用，直到重启才以崩溃循环暴露。修复在摘要头直接打 `UNMEASURED — N exec resolvability check(s) skipped`，完整跑输出保持逐字节不变。
+- **判据**：① **覆盖范围不足必须在结论的主可视位置标注**，脚注/尾注级别的信息等于没有——运维读首行；② **退出码与机器契约不变、但人类语义必须改变**：否则自动化门控把未测量当通过；③ 与 §审计能力边界显式 分工：那条要求声明能测什么，本条要求当次实际跳过了什么；④ 验收：跳检运行的摘要首行必须含 UNMEASURED 与被跳计数，且完整跑不含。提升层：工作流（审计可信度）/ 工具（结论语义）。触发词：UNMEASURED、审计跳检、未测量≠健康、摘要行同形、绿而实坏。
+
+## r604A · 隔离的「存在性」与「生效性」是两条独立检查：每次操作前跑完整性探针并记录 outcome+timing（来源：Qoder r644-Q-C 转来：api.github.com/repos/openai/codex/releases/tag/rust-v0.163.0 一手正文 `Run sandbox integrity checks before commands and filesystem operations` PR #51843，配套 #51842 outcome+timing metrics；2026-10-16）
+- **实证**：codex rust-v0.163.0 在命令与文件操作**之前**执行沙箱完整性检查（Linux bubblewrap #51840 / macOS Seatbelt #51841），并输出每次检查的结果与耗时指标；同版本另一轴要求网络代理在 DNS 查询**之前**查权限、拒绝重复 Host 头、防止凭据别名绕过检查钩子。
+- **判据**：① 沙箱/隔离不能停在「配置已启用」——须有**逐次前置探针**证明本操作确实落在隔离内，并记录结果与时延（时延异常本身就是退化信号）；② **别名与派生标识是一类逃逸面**：`--dir` 默认目录、`x-` 前缀字段、符号链接等能让检查钩子匹配不到的等价路径绕过；③ 与 §沙箱不可用=fail-closed 分工：那条管隔离**不存在**时该怎么退，本条管隔离**声称存在但已退化**时怎么证；④ 验收：每次敏感操作前断言完整性探针通过并留 outcome+timing 计数。提升层：工具（安全运行时）/ 工作流（逐次证明）。触发词：隔离生效性、完整性探针、outcome+timing、别名逃逸、退化沙箱。
+
+## r604B · 安全护栏的判决会随请求语言漂移：语言本身是安全面（来源：https://export.arxiv.org/abs/2610.22244《Language Is a Security Surface for Agent Guards》2026-10-15，2026-10-16 arXiv API 一手摘要；**摘要级 B**）
+- **实证**：步级守卫在每次工具调用前依据用户请求与已有轨迹判断下一步是否安全；用户用多种语言书写请求，而守卫提示词与其评测基准都是英文。论文追问：守卫的判决是否依赖请求语言。
+- **判据**：① **护栏与其评测必须多语言覆盖**：只在本语言上验证过的守卫，在其他语言请求下的判决不可信；② 与 §语法净化须懂条件作用域 分工：那条管净化不破坏语义，本条管净化与判决在跨语言下的稳定性；③ 验收：同一危险请求用多种语言表达，断言守卫判决一致（不一致即记录为语言面缺口，而非归为用户表达差异）。提升层：安全边界（护栏覆盖）/ 工具（多语言一致性）。触发词：语言即安全面、多语言守卫、护栏语言漂移、跨语言判决一致。
+
+## r604B · 安全评测数据含捷径线索时测的不是安全能力：标签可预测即构念失效（来源：https://export.arxiv.org/abs/2610.22243《Shortcut Sensitivity in Agent-Safety Evaluations》2026-10-15，2026-10-16 arXiv API 一手摘要；**摘要级 B**）
+- **实证**：agent 通过工具行动，敏感动作需要守卫监督，而守卫自身也须被可靠评测；但评测数据里可能带有使标签可预测的线索，且这些线索也会影响守卫判决。
+- **判据**：① 安全评测集在上线前须做**捷径敏感性检验**：去掉被测构念仍能预测标签 ⇒ 该集测的是线索不是能力；② 线索既影响标签也影响被测守卫，双向污染 ⇒ 高分不可归因；③ 与已落「rubric 对抗」「分歧暴露正确替代」分工：那两条管判者设计，本条管**数据集本身**的可预测性；④ 验收：对每个安全评测集跑一次「仅用表面特征预测标签」的基线，显著高于随机即标记重建。提升层：工作流（评测构念效度）/ 工具（数据集审计）。触发词：捷径敏感性、标签可预测、构念失效、安全评测集审计、表面特征基线。
+
+## r604C · 阻断判决须消费单一权威信号：客户端禁止从 scanner/moderation 原始字段自行重推导（来源：https://docs.openclaw.ai/clawhub/http-api.md，2026-10-16 urllib 一手 200/79,972B，逐串命中 `trust.blockedFromDownload is the install block signal. OpenClaw and other install clients should block installation when this value is true instead of re-deriving blocking rules from scanner or moderation fields`）
+- **实证**：clawhub http-api 把信任态合成成一个对象：`trust.blockedFromDownload`（安装阻断位）+ `trust.reasons`（稳定 reason code：`manual:quarantined` / `scan:malicious` / `package:malicious`）+ `trust.pending`（仍有信任输入未完成）+ `trust.stale`（结果已过期）+ `trust.scanStatus` / `trust.moderationState`；并明确要求安装客户端直接消费阻断位，**不要**从扫描器或审核字段重推阻断规则。
+- **判据**：① 准入判决应**消费一个上游已合成的判决位**（带 reason code 与判决时间），而不是本地把多个扫描器结果拼成结论——拼接规则一旦与上游漂移，同一技能在不同客户端得到不同信任态；② **pending / stale 是判决的一部分**：未完成的输入不能当通过，过期结果不能当当前；③ 与已落「三扫描器词汇表不互译」配对：那条给「为什么不能本地拼」，本条给「该消费什么」；④ 验收：准入代码里只存在一个阻断判据来源，且 pending/stale 有明确分支（不得落进默认放行）。提升层：工作流（准入判决单一来源）/ 安全边界（供应链）。触发词：阻断单一信号、禁止本地重推导、reason code、pending/stale 分支、trust 合成对象。
+
+## r604C · 风险计严须把「链」作为独立对象：单点发现率不等于可利用性（来源：Qoder r644-Q-B 转来 https://snyk.io/blog/frontier-models-vulnerabilities-attacker-chains/ 2026-10-16 curl 一手 137,055B：`Evo COS proved 10 of 15 exploit chains, while Claude Security and Claude Code Security found vulnerabilities but no chains`；`chain scored at its own severity on top of its member findings`；`agents will chain together whatever they find`）
+- **实证**：Snyk 2026-10-07 的活体应用测试：Evo COS 证明了 15 条利用链中的 10 条，而另外两个前沿模型只发现了漏洞、没有成链；链的严重度在其成员发现之上**单独计**；且 agent 会把找到的任何东西串起来。
+- **判据**：① agent 可读到的风险清单须允许「由多个中低危组合出的高危链」**单独计严**，不被成员最高分封顶；② 评估结论要区分「发现了漏洞」与「证明了可走通的链」——后者需要活体/可执行环境证据，**纯静态命中数不得充当可利用性**；③ 与已落「假成功 known-answer 回归集」分工：那条防假成功，本条防「发现即视为可利用」的计严膨胀；④ 验收：风险报告中链与单点分开计数，链的证据标注 live/dynamic 或 static-only。提升层：工作流（风险计严口径）/ 安全边界（可利用性）。触发词：利用链单独计严、可利用性证据、静态命中≠可利用、chain severity、agent 串联风险。
