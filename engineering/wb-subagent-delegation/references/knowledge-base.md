@@ -37,3 +37,30 @@
 
 ## r601A · 派发瞬间仍是策略干预点：spawn mod hook 从「只能拒」升级为可改写子代理 prompt/model（来源：api.github.com/repos/anthropics/claude-code/releases/tags/v2.1.300 一手逐串命中 `Added support for rewriting a workflow agent's prompt and model in the agent.spawn mod hook, which could only refuse workflow agents before`，2026-10-14 发布 / 2026-10-16 gh api 核验）
 - **判据**：① 委派规格在 spawn 时刻仍是可编辑对象——宿主策略可在派发瞬间统一纠偏（改 prompt/改模型），而不是只能事后作废重派；② 「只能拒」到「可改写」把拦截变成校正，但改写权是策略位不是计划位——与「已批准计划不可自签改写」的边界：spawn 点属计划外运行时策略位，改写不得溯及已批准的计划内容；③ 双改冲突（宿主改 + 调用方改同一字段）须有确定性优先级，不能后写静默覆盖。提升层：工作流（委派策略）。触发词：spawn mod hook、派前改写、refuse 到 rewrite、委派策略位、双改冲突优先级。
+
+## r602A · 委派继承「危险带」：handoff 应 curated 只传有用来结论，不隐式全量继承（来源：arxiv.org/abs/2610.00041 一手 abstract；Qoder r640-Q-C 提名，B 级单族模型）
+
+- **判据**：① 中能力子代理对 stale 继承状态服从最高、构成非单调净损害（低于 fork-fresh）⇒ 无差别继承使中档子代理反被拖累；② handoff 内容裁剪判据：只传「有用来结论」，历史/中间态按需取，不默认全量；③ 能力路由器的迁移性取决于同时预测 reuse benefit 与 stale-context penalty，只优化前者会把中档模型派进危险带；④ 局限标注：单族模型、数字挂 abstract。提升层：工作流（委派策略）。触发词：继承危险带、curated handoff、stale 继承、中能力子代理、fork-fresh 基线。
+
+## r602A · yield 交接三件套：持久化意图→冻结子运行 ID→批次代际+1（来源：docs.openclaw.ai/concepts/subagent-yield-handoff 一手原文「Persist yield intent, freeze the child run IDs, advance the batch generation」；同页分级截断 findings≤4096 字/单条≤512 字；Qoder r641-Q-A 提名，A 级）
+
+- **判据**：① 交出执行权前先持久化 yield 意图（防交接窗口丢状态）；② 冻结本轮子运行 ID 集合——重试只重放未终态者，不得新派已冻结 ID（防重复派发同一子任务）；③ 批次代际号 +1，旧代际回传一律判过期（防迟回消息污染新批）；④ 与既有「让出（yield）交接传完成所有权」分工：那条管所有权语义，本条管冻结+代际的机读机制；⑤ 回传体积帽随三件套一起落地。提升层：工作流（交接机制）。触发词：yield 三件套、冻结子运行 ID、批次代际、迟回判过期、findings 体积帽。
+
+## r602B · 团队设计=算力分配问题：增量算力投哪个阶段/什么模型/几个 worker（来源：arXiv 2610.17471《Scaling Inference-Time Compute with Teams of Coding Agents》一手 abstract：formulate team design as a compute allocation problem——varying one at a time the workflow stage at which a lead delegates (planning, implementation, or verification), the models that form the team, and the number of workers；teams outperform solo but cost 3-7×；2026-10-16 实拉）
+
+- **判据**：① 多 agent 不是「越多越好」——更多 agent 轻易产生重复工作、协调失败与更高成本；团队设计要当作算力分配问题：从单 agent 起步，问「下一份推理算力投到哪」；② 三个可调维度：lead 在哪个工作流阶段委派（计划/实现/验证）、团队由什么模型构成、worker 数——逐个单独变，才能读出回报曲线；③ 实证锚：团队胜出单 agent 但成本 3-7×，算力分配正确时异质团队才够本；④ 与 §委派继承危险带 分工：那条管「传什么」，本条管「投多少、投哪层」。提升层：工作流（委派策略）。触发词：团队算力分配、委派阶段选择、异质团队、3-7 倍成本、Pareto 前沿。
+
+## r602B · 扇出还是中继由数据所有权决定，不是查询形状（来源：arXiv 2610.18157《Fan Out or Relay? Ownership-Aware Routing for LLM Agents Querying Siloed Tables》一手 abstract：fan-out accurate in 12/13 on single-owner questions yet answers at most 4.3% of two-owner joins；on BIRD two-table joins fan-out 32-44% when one owner holds both and 1-4% otherwise；hiding returned rows from an otherwise identical planner cuts two-owner accuracy from 23.2% to 5.1%；2026-10-16 实拉）
+
+- **判据**：① 组织内问题的数据分属多个 owner 时，coordinator 可 fan-out（同时问所有 owner）或 relay（依次问并复用已返回行）——选错不是效率问题是对错问题：单 owner 问题扇出 12/13 准确，跨 owner 联接扇出最多答 4.3%；② 翻转点跟随所有权而非查询形状：同一「两表联接」在单一 owner 持两表时扇出 32-44%，分开持有时 1-4%——按查询长相判断路由必错；③ 中继的优势来自条件化于已返回行——把已返回行对规划器藏起来，双 owner 准确率 23.2%→5.1%，「让 planner 看见中间结果」是中继生效的必要条件；④ 落地：路由决策前先取所有权图谱（公开信息），再定扇出/中继。提升层：工作流（委派路由）。触发词：fan-out vs relay、所有权感知路由、数据孤岛、中间结果条件化、路由按所有权。
+
+## r602B · 协调自由度=委派给下游的决策空间大小：连续量，两端即集中/分散（来源：arXiv 2610.17751《Degrees of Freedom in Multi-Agent Coordination: Between Centralized and Decentralized Regimes》一手 abstract：DoF quantifies the size of the decision space delegated to downstream agents；controls granularity of delegated work and the target probability that each task unit is assigned to branches；endpoints recover the two coordination regimes；2026-10-16 实拉）
+
+- **判据**：① 集中协调（显式控制、单点瓶颈）与分散协调（局部自治、靠分布式决策协作）之间是连续谱——协调自由度（DoF）量化「委派给下游 agent 的决策空间大小」；② 两个控制量：委派工作的粒度 + 每个任务单元分配到各分支的目标概率——调这两个量就是在谱上移动；③ 与 §团队算力分配 分工：那条管算力投哪，本条管决策空间放多少；④ 落地：派任务时显式记录「本次委派留了多少决策空间给子 agent」，复盘时按 DoF 档位归因（不是只按成败）。提升层：工作流（协调设计）。触发词：协调自由度、DoF、委派决策空间、集中-分散谱、粒度×分配概率。
+
+## r602B · 决策委派给廉价 judge 前，按任务阶段分别评 judge 质量（来源：arXiv 2610.19596《JevCoder: When Does Decision Delegation Pay Off in Code Repair?》一手 abstract：which repair decisions can be delegated to a low-cost probabilistic judge to reduce token use while maintaining repair quality；judges answer questions with probabilities over predefined answers, without generating explanations；evaluate judgment quality across repair stages；2026-10-16 实拉）
+
+- **判据**：① 修复类任务里「哪个决策可以委派给低代价概率 judge」是省 token 的关键杠杆，但 judge 质量按修复阶段差异大——全局一个「judge 靠谱度」数字会误导委派决策；② 委派前按阶段分别测 judge 判断质量（概率作答、不生成解释的形态本身降低了成本也限制了适用范围）；③ 与 §委派继承危险带 分工：那条管「继承内容裁剪」，本条管「judge 型委派的阶段化准入」；④ 落地：委派矩阵按（阶段 × 决策类型）标注可委派/不可委派，不按 agent 整体标注。提升层：工作流（委派准入）。触发词：决策委派、概率 judge、阶段化 judge 质量、修复阶段、委派矩阵。
+
+## r602C · 子代理归属是传输层属性：subagentRunId 是调用句柄不是定义标识，并行产出不带归属=一堵没有区分的文字墙（来源：docs.ag-ui.com/concepts/subagents.md 19,034B 一手逐串命中 "subagentRunId is an opaque handle for one invocation of a subagent. Run the same subagent twice and you get two different values" / "Without extra information there is no way to tell which subagent produced a given message, so three concurrent researchers render as one undifferentiated wall of text" / "a subagent that finished with outcome: { type: "suspended" } may reuse its id on a resuming run"；2026-10-16 r602C 站点实拉深钻，ag-ui 为本轮新入必须项站）
+- **判据**：① 并行子代理的产出必须在事件流里带生产者归属（SubagentStarted/Finished/Error 三事件括住活动期，消息带 subagentRunId）——否则 N 个并发研究者渲染成一堵没有区分的文字墙，用户与下游都无法归因；② **调用句柄≠定义标识**：subagentRunId 是单次调用的 opaque handle，同一子代理跑两次两个值——transient 状态（折叠组/转圈/进度行）按它键控，任何持久化不得按它（要"哪种子代理"用 name）；③ 暂停复用例外：outcome=suspended 的子代理恢复运行**可**复用同一 id，客户端必须把后续 SubagentStarted 当续跑（waiting→running）而非重复；生产者无法关联时铸新 id，等待态经它应答过的 interrupt id 解除；④ 嵌套关联用 parentToolCallId/parentMessageId（agents-as-tools 模式）把子代理绑到催生它的调用，不必翻 rawEvent；⑤ 与 §yield 三件套 分工：那条管交接时的冻结+代际，本条管运行期事件流的归属键语义。提升层：工作流（委派归属）。触发词：subagentRunId、调用句柄vs定义标识、子代理归属、一堵文字墙、suspended 复用 id、parentToolCallId 关联。

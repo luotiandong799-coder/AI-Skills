@@ -765,3 +765,7 @@
 
 ## r601A · 退役通告须「温和期+与消费方清单联动」：calm notices 列出替代 API 与最终兼容日，断崖式废弃致下游静默坏（来源：api.github.com/repos/openclaw/clawhub/pulls/3962 merged 2026-10-15 一手逐串命中 `show calm API retirement notices` / `lists replacement APIs in expandable details` / `adds an "API update" item to the publisher dashboard` / `preserves deprecatedApi, replacement, and removeAfter` / `The date is inclusive`，2026-10-16 gh api 核验；与 §r322B 日落登记资格化 互补——那条管登记资格与时点载体，本条管通告形态×清单联动）
 - **判据**：① 自家接口退役 = 温和期通告 + 替代 API 明示 + 最终兼容日（inclusive，最后一天仍可用），不是直接断供；② 通告与消费方清单联动——「谁还在用旧 API」一目了然，通告才能精准投放；③ 结构化字段（deprecatedApi/replacement/removeAfter）与散文说明并存——只有散文的通告不可枚举、不可机检；④ 发布者仪表盘挂「API update」项——通告是发布流程的一部分，不是事后补救。提升层：工作流（退役工序）。触发词：退役温和通告、calm retirement notices、removeAfter inclusive、替代 API 明示、消费方清单联动、发布者仪表盘。
+
+## r602A · 评审结论须公开·归属·可申诉：单点权威裁决不得作准入依据（来源：skills.re 原文「REVIEWS ARE PUBLIC, ATTRIBUTED, AND CONTESTABLE」+「Report Skill / Claim as author」两条用户通道一手；Qoder r641-Q-B 提名，B 级平台承诺非实验）
+
+- **判据**：① 技能审计/评审记录必须三要素——可指认评审者（公开归属）、可被作者申诉（contestable）、申诉后留痕版本链；② 单点权威裁决（只有 verdict 无人可对）不得作为准入依据——没有申诉通道的评审会把误判固化成永久拒绝；③ 与既有申诉双轨（按危险度切分）分工：那条管申诉权开放度，本条管评审结论的可指认性与版本链；④ 与退役通告互补：那条管公告，本条管裁决可申诉性；⑤ Claim as author 是归属纠错的独立通道，与下架通道分开。提升层：工作流/可复用 Skill（准入治理）。触发词：评审公开归属可申诉、contestable、claim as author、单点裁决、申诉版本链。

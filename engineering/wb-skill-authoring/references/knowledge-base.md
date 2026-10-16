@@ -4172,3 +4172,23 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 
 ## r601B · harness 变更按「可重放任务」验收：with/without 对照 + 无任务变差才保留，删除同样先测，从未使用的文本不增不删（来源：arxiv.org/abs/2610.14216《Cortex: Measurement-Gated Evolution and Pruning of Coding-Agent Skills and Rules》abs 一手，2026-10-16 实拉逐串命中 `tests changes to the harness instead of trusting them` / `saves fixes from the developer's sessions as replayable tasks` / `keeps it only if repeated runs with and without it show a net gain and no task made noticeably worse` / `Existing text is tested the same way before it is deleted` / `neither adds nor deletes text the agent never used`）
 - **判据**：① 「改好了」是假设不是事实——一次通过证明不了什么（同 agent 同任务这次过下次可能挂），harness 变更必须落成可重放任务集做 A/B；② 保留判据=净增益 ∧ 无任务显著变差（单条件达标不算数）；③ 删除与新增同门槛——删现有文本前也用同一套任务测；④ 从未被使用的文本既不增也不删——为「以后可能用」而加的内容是没有账龄的死重。提升层：可复用 Skill（harness 治理）。触发词：harness 验收、可重放任务、with/without 对照、无任务变差、删除先测、未使用文本不增不删、Cortex。
+
+## r602A · 框架注入字段与用户参数同名字碰撞：args_schema 未声明即被静默覆盖（来源：api.github.com/repos/langchain-ai/langchain/issues/40476「MCP tools with a parameter named "config" silently broken by LangChain's RunnableConfig injection」+ #40879「InjectedToolCallId is overridden by a value inside args when a custom args_schema does not declare the field」（2026-10-12/13）一手）
+
+- **判据**：① 框架注入面（config/InjectedToolCallId/callbacks）与用户参数共用同一个命名空间，args_schema 未显式声明注入字段时，用户传入的同名值静默覆盖框架值（或反之）；② 发布前用「框架保留名清单」扫工具参数名，撞名的要么改名要么显式声明；③ 与 r594A（工具 optional 在传输层被改写为必填）分工：那条管声明与传输层不一致，本条管注入面与用户面名字碰撞；④ 验收：用保留名（config/run_id/tool_call_id）各造一个用例。提升层：可复用 Skill（工具契约）。触发词：RunnableConfig 注入碰撞、参数名 config、InjectedToolCallId 覆盖、框架保留名、args_schema 声明注入字段。
+
+## r602A · 非空门禁必须跑在归一化之后：空白串不是内容（来源：api.github.com/repos/vercel-labs/skills/issues/2472（2026-10-13）「whitespace-only required metadata is accepted after normalization」一手）
+
+- **判据**：① 非空校验的时序：先 trim + 折叠内部空白再判非空，「非空串」≠「有内容」——归一化前判非空会让纯空白元数据过审；② 与既有 description 非空门禁分工：那条立门禁存在，本条补归一化时序与空白态；③ 同类门禁（必填字段/触发词/版本号）统一跑在归一化形式上。提升层：可复用 Skill（校验时序）。触发词：whitespace-only 元数据、归一化后判非空、空白串过审、门禁时序。
+
+## r602A · 提问纪律补边：有合理默认值的分支不提问（假设+声明），依赖问题按前沿门排序（来源：github.com/mattpocock/skills#1112「every open branch is put to the user, even ones with a sensible default（no "assume and state" category）」+ #895「rounds asked dependent questions together, fix with frontier gate + pivot ordering」（2026-10-09/12）一手）
+
+- **判据**：① 有合理默认值的分支应「假设+声明」而非提问——提问成本也是成本，把每个开放分支都抛给用户是把决策负担转嫁；② 与 r595A（提问不预置推荐答案）分工：那条管选项措辞不编码推荐答案，本条管「什么问题值得问」；③ 依赖性问题按前沿门+pivot 排序一起问，避免一轮问出互相制约的多个问题导致答案互相改写；④ 假设+声明后要留推翻入口（用户一句「不对」即可改）。提升层：可复用 Skill（交互纪律）。触发词：assume and state、默认值分支不提问、前沿门排序、依赖问题合并问、提问成本。
+
+## r602B · 指令是证据不是目标：stated requirements ≠ true requirements，结果对齐要从指令+环境推断（来源：arXiv 2610.17757《Instructions Are Evidence, Not Objectives: Measuring Outcome Alignment of Agents》一手 abstract：100 条 SWE-chat 轨迹中 56% 初始指令遗漏后续才显必要的需求、52% 有用补充需求本可从项目推断；2026-10-16 实拉）
+
+- **判据**：① 用户按自己对任务的理解陈述需求（stated requirements），与完成任务强加的真实需求（true requirements）系统性不同——初始指令 56% 遗漏后续必要需求，其中 52% 本可从项目环境推断；② agent 应把指令当证据：从指令 + 环境推断真实需求并满足它，即使用户还没意识到全部需求（outcome alignment）；③ 对技能设计的含义：执行类技能要把「从环境补全需求」写成默认行为（读项目结构/既有约定/失败信号），不是等用户补充；④ 与 §澄清须覆盖推断 分工：那条管「推断结果要告知」，本条管「推断本身是默认动作而非可选增强」。提升层：可复用 Skill（指令设计）。触发词：指令是证据、stated vs true requirements、结果对齐、从环境推断需求、outcome alignment。
+
+## r602B · 长程任务的结构化工作状态：当前问题/假设/发现/仓库关系/未完成 + 受影响工件检索（来源：arXiv 2610.17616《StateHarness: Maintaining Evolving Project State for Long-Horizon Coding Agents》一手 abstract：working agent records current problem and hypothesis, important findings and decisions, discovered repository relationships, unfinished work；runtime support prompts record updates, searches for callers/tests/documentation that may be affected by a change, maintains a compact working brief；2026-10-16 实拉）
+
+- **判据**：① 长程任务要求 agent 维持演进的项目视图——正在解决什么问题、已学到/改了什么、哪些工件可能受影响、什么还未解决；信息散落在增长的历史里时，局部编辑会与后续后果脱节；② 结构化字段集：当前问题+假设 / 重要发现与决策 / 发现的仓库关系 / 未完成工作，外加一份紧凑工作简报供后续决策；③ 运行时支持两动作：记录更新 + 检索「可能受本次变更影响的调用方/测试/文档」——后者把「改一处的波及面」从记忆题变成检索题；④ 与 §长任务落盘时机 分工：那条管何时落盘，本条管落什么结构。提升层：可复用 Skill（长程工作流）。触发词：StateHarness、演进项目状态、工作简报、受影响工件检索、长程上下文。

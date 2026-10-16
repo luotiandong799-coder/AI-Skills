@@ -758,3 +758,35 @@ audit 越滚越大、resolved 台账条目永远躺在 live 文件里。groom �
 
 ## r601A · 审批应答是数据不是对话：载荷自描述合法决策集、校验在落盘前、提交组原子（来源：api.github.com/repos/langchain-ai/langchain/pulls/41062 merged 2026-10-14 一手逐串命中 `interrupt_mode="per_call"` / `each interrupt has type tool_approval and carries a response_schema listing that tool's allowed decisions` / `Reviewers answer by interrupt ID` / `validates each edit before saving` / `a bad edit is only caught when the tool runs`，2026-10-16 gh api 核验）
 - **判据**：① 批式中断「一条 interrupt 装一轮全部 gate 调用、决策另列按位置匹配」=让审批 UI 猜语义——per-call 每次调用独立中断 + response_schema 自带该工具允许的决策集，应答按 interrupt ID 归位；② 校验必须在保存前逐条做（edit 不得换工具、args 过 schema、未声明参数忽略），任一坏应答抛错且整组不保存——防「部分接受」暗态；③ 默认仍 batched ⇒ 迁移是显式选择，采用 per-call 要接受每调用一中断的 UI 噪音成本；④ JSON-schema 定义的工具不校验（官方明示边界）——声明能力边界与声明能力同等重要。提升层：工作流/工具（审批通道）。触发词：审批载荷自描述、response_schema、interrupt_mode per_call、按 ID 应答、落盘前校验、提交组原子、部分接受暗态。
+
+## r602A · 压缩产物逐行来源判定（SJC）：无来源行不得作为可执行事实（来源：arXiv 2610.20927 一手 abstract「83% 失败轨迹可追溯到模型据一条无支撑摘要行采取行动；轻量校验可靠性 +2.1%～8.9% 且零额外 token」；Qoder r639-Q-C 提名；compressor 为豆包自留地，按 §9 转落 ag KB）
+
+- **判据**：① 摘要/上下文压缩的输出在注入下一步前，须逐行标注「是否有保留上下文支撑」——无来源行降级为提示或丢弃，不作为可执行事实；② 已落纪律分工：r541C 溯源门控管写入侧溯源、抗抖动停止管何时停止压缩，本条补读取侧逐行证据判定这一失败主通道；③ 与 r594B（每条相关≠集合充分）分工：那条管写入时证据范围，本条管读取时逐行支撑；④ 验收：抽一条压缩产物逐行过支撑标注，无支撑行占比即质量指标。提升层：可复用 Skill（记忆/上下文治理）。触发词：SJC、逐行来源判定、无支撑摘要行、压缩产物读取侧、83% 失败轨迹。
+
+## r602A · A2A 最弱参与者计预算 + 三类下层失败账（来源：arXiv 2610.19342 增量补入 r601A 同条——结论(3)「结果分 credits the agent completing the task while staying blind to the coordination, verification, and conduct failures」+ 逐字「inherits the reliability of its least reliable participant unless the protocol or mechanism performs the check」；Qoder r641-Q-C 提名，A 级 abs 全文逐字核）
+
+- **判据**：① 多 agent 协作中「核验」必须由协议或机制显式指派归属方，任何未指派的同伴事实声明默认按系统最弱参与者可靠性计预算，不得按声明方自报质量计；② 验收不得只看聚合结果分——评审须同时留协调/验证/行为三类下层失败账；③ 与 r601A（核实义务不能缺省）同源同条：那条立触发义务，本条补计量口径与验收结构。提升层：工作流（协作协议设计）。触发词：最弱参与者可靠性、未指派声明计预算、三类下层失败账、聚合结果分盲区。
+
+## r602A · 作用域坍塌作晋升门禁第三维：经验条目须携带被证有效时的作用域标签（来源：arXiv 2610.05176 一手 abstract「procedural knowledge escapes the coordination scope in which it was shown effective and is repeatedly reused at incompatible decision levels」+「memory pollution arises when outdated, weakly supported, or spuriously successful procedures become recurring components」；有开源 github.com/fenhg297/AECG 可复核；Qoder r641-Q-C 提名，B 级）
+
+- **判据**：① 晋升门禁现有两维（巩固时机 r634-Q-C、留存方式 append-only r600B），补第三维=作用域/决策层级——经验条目须携带「被证明有效时的作用域标签」（哪一层决策、哪个协调范围），跨层复用需重新验证而非直接命中；② 「偶发成功」（spuriously successful）不得计为支持度——单次撞对不是证据；③ 与 §记忆质量须内建 分工：那条管质量信号，本条管作用域边界。提升层：可复用 Skill（记忆治理纪律）。触发词：作用域坍塌、scope collapse、晋升门禁第三维、决策层级、偶发成功不计支持度。
+
+## r602A · 职责-委派原子耦合律：职责定义与任务委派不可分拆派发（来源：arXiv 2610.21243（RCM）一手 abstract「+18.7 vs 基线」；Qoder r642-Q-A 提名，摘要级待核正文）
+
+- **判据**：① 多 agent 协调中职责定义与任务委派若分拆派发，接收方按自身默认解释补全职责=隐性重新授权，修法是把两者作为原子单元一起下发；② 补 MAST 分类学缺失的「结构约束型修法」——不是提醒 agent 更小心，是改派发结构；③ 验收：派发体里职责声明与任务描述同进同退，抽查「只收到任务没收到职责」的接收侧行为。提升层：工作流（多 agent 协调）。触发词：职责委派原子、RCM、结构约束型修法、隐性重新授权、派发结构。
+
+## r602B · 证据分级成熟度模型：能力分数不越过控制门，证据等级与能力评级分离（来源：arXiv 2610.18603《AgentStripes: An Evidence-Graded Maturity Model for AI Agents》一手 abstract 逐字：levels 0-7 stripes / 12 process areas holding 40 capabilities / three gates (basic, safety, proof) that hold an agent at a level however high its score / evidence grades E0 to E5；2026-10-16 实拉）
+
+- **判据**：① 基准只报告「能做什么」，不报告「这个发布版本是否被工程化为可靠/安全/可观测，以及证据有多强」——能力评分与控制门是两条轴，门可以把高分 agent 压在低级别；② 每条能力单独拿 rating(0-3) + evidence level(E0-E5)——「会做」与「证据充分」是两个读数，合成 credit 后过 severity-weighted 聚合；③ 分工：instrument 收集证据、LM judge 按显式标准解释证据、算术确定性——判定权不给模型，模型只做解释；④ 对本仓含义：技能/agent 的「已启用」状态之外要有「证据等级」字段，缺证据的能力按低级别计。提升层：可复用 Skill（治理成熟度）。触发词：AgentStripes、证据分级、控制门压低高分、E0-E5 证据等级、能力评级与证据分离。
+
+## r602B · 协作传输校准信念而非仅动作：同动作不同理由=决策相关信息丢失（来源：arXiv 2610.19215《Narrowing the Collaboration Gap, Probably》一手 abstract 逐字「Communicating only proposed actions can discard decision-relevant uncertainty: two agents may prefer the same action for different reasons」；2026-10-16 实拉）
+
+- **判据**：① 持私有信息的 agent 间只传「提议动作」会丢掉决策相关不确定性——两个 agent 偏好同一动作可能出于不同理由，理由差异在后续信息到来时决定要不要改；② 替代接口：传对动作的校准信念（calibrated beliefs over actions），让聚合发生在信念层而不是动作层；③ 与 §A2A 最弱参与者计预算 分工：那条管「谁核验」，本条管「传什么才可聚合」；④ 落地：handoff/汇报模板里结论行必须带置信度与依据分布，不只带结论。提升层：工作流（协作协议）。触发词：校准信念传输、同动作不同理由、决策相关不确定性、信念层聚合。
+
+## r602B · 自演化系统的不安全行为起源归因：继承的行为 vs 本地独立发生（来源：arXiv 2610.17488《Origin Attribution for Unsafe Behavior in Self-Evolving Multi-Agent Coding Systems》一手 abstract：unsafe change may originate in one agent, propagate through intermediate recipients, and survive subsequent revisions before an audit reveals it；挑战=rewriting obscures textual similarity / independent occurrences confound temporal ordering / intermediate recipients can resemble the source；2026-10-16 实拉）
+
+- **判据**：① 自演化多 agent 系统里安全失败有历史——不安全变更可能源于某个 agent、经中间接收方传播、在后续修订中存活，审计发现时起源已超出被检测 agent；② 归因任务=恢复「把不安全行为引入目标代码谱系的 agent 与程序版本」，或判定它本地发生；③ 三大混淆源：改写抹掉文本相似性、独立发生混淆时间序、中间接收方与源头相似——溯源不能只靠文本比对和时间序；④ 与条目级血缘纪律分工：那条管记忆/条目继承，本条管代码谱系里不安全行为的跨 agent 传播与本地性判定。提升层：可复用 Skill（溯源归因）。触发词：起源归因、自演化 MAS、不安全行为传播、继承 vs 本地发生、谱系溯源。
+
+## r602B · 决策有效性带时间戳：决策时新鲜≠行动时有效，迟到信息须路由到已做决策（来源：arXiv 2610.18126《Fresh at Decision, Stale at Action: Routing New Information to LLM Decisions Already Made》一手 abstract：six timestamps define a decision / freshness ceiling bounds what up-to-date evidence guarantees at action time / accuracy factorises into routing（deliver information to affected decisions before their revision deadlines）and temporal judgment；decision ledger indexed by watch conditions written at decision time；2026-10-16 实拉）
+
+- **判据**：① 决策在做出那一刻的有效性由当时证据新鲜度界定，但它提交的动作是潜在的、在变化的世界里稍后执行——「决策时新鲜」不保证「行动时有效」；② 新鲜度天花板（freshness ceiling）划定「最新证据能保证什么」，之后发布的信息带来的风险要显式记账；③ 能力二因子：路由（在修订截止日前把新信息送达受影响的已做决策）+ 时态判断（按行动时刻读它）——只有前者没有后者，信息到了也不会改决策；④ 落地：长程任务的决策账本按「决策时写下的 watch 条件」索引，新信息到达时按条件匹配受影响的既有决策而不是广播重判。提升层：工作流（决策治理）。触发词：决策时间戳、新鲜度天花板、修订截止日、watch 条件索引、迟到信息路由。
