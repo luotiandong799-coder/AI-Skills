@@ -769,3 +769,15 @@
 ## r602A · 评审结论须公开·归属·可申诉：单点权威裁决不得作准入依据（来源：skills.re 原文「REVIEWS ARE PUBLIC, ATTRIBUTED, AND CONTESTABLE」+「Report Skill / Claim as author」两条用户通道一手；Qoder r641-Q-B 提名，B 级平台承诺非实验）
 
 - **判据**：① 技能审计/评审记录必须三要素——可指认评审者（公开归属）、可被作者申诉（contestable）、申诉后留痕版本链；② 单点权威裁决（只有 verdict 无人可对）不得作为准入依据——没有申诉通道的评审会把误判固化成永久拒绝；③ 与既有申诉双轨（按危险度切分）分工：那条管申诉权开放度，本条管评审结论的可指认性与版本链；④ 与退役通告互补：那条管公告，本条管裁决可申诉性；⑤ Claim as author 是归属纠错的独立通道，与下架通道分开。提升层：工作流/可复用 Skill（准入治理）。触发词：评审公开归属可申诉、contestable、claim as author、单点裁决、申诉版本链。
+
+## r603A · 检查点历史可修剪⇒可回退窗成为受容量策略支配的资源，须与复盘能力显式耦合（来源：api.github.com/repos/langchain-ai/langgraph/releases（langgraph-checkpoint-postgres==3.2.0，2026-10-14，一手 atom 实拉）#9290 给 PostgresSaver/AsyncPostgresSaver 增加 prune）
+- **实证**：LangGraph 给 Postgres saver 增加 `prune` 能力后，time-travel/故障复盘/失败回放可查的位点随保留策略收窄——位点从「写入即永存」变成「受容量策略支配的资源」。
+- **判据**：① 引入任何历史/位点修剪能力时，必须同时声明「保留窗与哪类恢复动作绑定」——复盘要用的位点≠运行要用的位点，两类需求分别论证；② 「因位点被剪而无法复盘」必须是可报出的终态，而不是「查无此状态」式的静默无果；③ 与 §发布重置位点、§at-least-once 重复窗口精确到哪一步 分工：那两条管位点的写入与重放语义，本条管位点保留策略与事后取证能力的耦合；④ 验收：修剪后尝试复盘一个被剪位点，断言得到显式「位点已不在保留窗」而非空结果。提升层：工作流（状态治理）。触发词：checkpoint prune、保留窗、复盘位点、time-travel 收窄、可回退窗受容量支配。
+
+## r603A · 发布资产暴露面含非代码文件：debug info/line tables 是源码结构图，公开渠道发布=泄露私有代码布局（来源：api.github.com/repos/windmill-labs/windmill/issues/11809（2026-10-16）一手 gh api 200 逐串命中 `The EE .debug file split off the release binary holds the name of every EE function with its source file and line` / `attaching it to the public GitHub release published a map of the private EE code`）
+- **实证**：windmill 把 EE 二进制拆出的 `.debug` 文件（`debug = "line-tables-only"`）挂到公开 GitHub release——该文件含每个 EE 函数名及其源文件与行号，等于公开了一份私有代码结构图；修复为改传私有 S3（GLACIER_IR）。
+- **判据**：① **发布资产清单须含「非代码但描述代码结构」的文件**——debug info / line tables / source maps / 覆盖率报告都携带源码级结构信息，公开渠道发布前逐类判泄露面，不能只审代码本体；② 泄露面按「重建成本」估：函数名+文件+行号足以让人无需源码复现布局与规模；③ 与 §证据产物的脱敏边界 分工：那条管诊断/证据产物里能写什么，本条管发布渠道上能挂什么；④ 验收：release 资产清单逐个文件过一遍「是否含源码级结构信息」，含则走私有渠道。提升层：工作流（发布卫生）/ 安全边界（暴露面）。触发词：debug info 泄露、line-tables、源码结构图、release 资产审查、source map、公开渠道暴露面。
+
+## r603A · 不可信/未评审代码的执行面隔离按血缘属性路由：orphan 不因父删而回归信任池（来源：api.github.com/repos/windmill-labs/windmill/issues/11811（2026-10-16）一手 gh api 200 逐串命中 `where unreviewed, often AI-generated code runs` / `with no way for a developer to land such a job on a root workspace's workers` / `a fork orphaned by its parent's deletion stays isolated`）
+- **实证**：windmill 让实例管理员把 dev workspace 与 fork（未评审、常为 AI 生成的代码）的全部 job 路由到独立 worker 池，且开发者无法把这类 job 落到 root workspace 的 worker 上；隔离判定按血缘属性——「有 parent」或「id 以 wm-fork- 开头」，父被删后成为孤儿的 fork 仍保持隔离。
+- **判据**：① **执行面隔离的判据是代码来源血缘而非当前归属**——按「现在挂在谁下面」判定信任级，父级一删隔离即失效；② 隔离属性须对 orphan 粘滞：任何允许重新认父/重新归属的路径都是隔离逃逸通道；③ 未评审/AI 生成代码与人工评审代码分池执行，且分池对开发者不可绕（不能由执行者自选落点）；④ 与 §键的维度必须等于隔离边界的维度 分工：那条管复用键的作用域维度，本条管执行路由的血缘判据与不可绕性；⑤ 验收：删除父 workspace 后断言其孤儿 fork 的 job 仍只在隔离池执行。提升层：工具（执行隔离）/ 工作流（不可信代码治理）。触发词：执行池隔离、血缘路由、orphan 粘滞、AI 生成代码分池、不可绕落点、dev workspace isolation。

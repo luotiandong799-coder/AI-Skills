@@ -4010,3 +4010,14 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 
 ## r602C · 校验器/解析器不得因一个非法单元丢弃整份产物：隔离坏单元（来源：api.github.com/repos/n8n-io/n8n/issues/41157（2026-10-15）一手 gh api 200）
 - **判据**：① 解析半结构化 agent 输出（如观测笔记 marker 行）时，单行无 marker/格式偏离不应导致整份响应被丢弃——只拒绝对抗性的真非法单元（代码围栏、未知 marker、未缩进游离文本），保留合规段；② 丢弃整份=把一次格式偏差放大成零产出，且静默丢失已得信息；③ 与 §验证器双指标配对验收 分工：那条管验证器验收口径，本条管解析容错粒度；④ 验收：注入一行无 marker 文本，断言其余合规笔记保留而非全丢。提升层：可复用 Skill（解析容错）。触发词：解析容错、丢弃整份、隔离坏单元、保留合规段、半结构化输出。
+
+## r603A · 扁平化命名空间里同键多源写入=重复 JSON 成员：严格解析器整体拒收，签名有效也进不去（来源：api.github.com/repos/windmill-labs/windmill/issues/11804（2026-10-16）一手 gh api 200 逐串命中 `carried two email keys in its payload` / `openidconnect flattens standard and additional claims into one JSON object, so both were serialized` / `Strict JSON parsers reject duplicate members`）
+- **实证**：windmill job OIDC token 的 `email` 被两个源各写一次——EE 按标准 claim 写（来自 `permissioned_as_email`），JobClaim 里又写一份（来自 job token 的 authed email）；openidconnect 把两类 claim 扁平化进同一个 JSON 对象后两个键都被序列化；Elasticsearch 的 Nimbus JWT 解析器拒绝重复成员，token 签名验证通过仍被整体拒收。
+- **判据**：① **同一扁平命名空间里多个子系统各写同一键 = 重复成员**——序列化层不合并、不报错，静默产出严格解析器拒收的载荷；② 对端解析器的严格度是未知数：宽松解析器取其一、严格解析器整体拒绝，同一产物两种命运；③ 验收须断言**键唯一性**（序列化后按键名去重计数），并用严格解析器（拒绝重复成员）做对端验证；④ 与 §信封约定键与载荷键隔离 分工：那条管信封判定形状，本条管多源写同一键的重复成员。提升层：工具（序列化契约）。触发词：重复键、duplicate member、claim 多源、扁平化序列化、严格解析器拒收、键唯一性断言。
+
+## r603A · 过滤只作用于已加载子集=假阴性：「未找到」不得当作「不存在」（来源：api.github.com/repos/activepieces/activepieces/issues/16581（2026-10-16）一手 gh api 200 逐串命中 `The Piece Sets "Set Name" filter only filtered the currently loaded page on the client, so sets beyond page 1 could never be found by name`）
+- **实证**：Piece Sets 的名称过滤只过滤客户端已加载页，第 1 页之后的集合永远无法按名称找到；修复把 `name` 谓词下沉到 ListPieceSetsRequestQuery/controller/service（ILIKE + cursor pagination），并删掉客户端过滤 flag。
+- **判据**：① **过滤/检索只作用于已加载子集时，「没找到」是假阴性不是证据**——子集外的命中被静默排除，而 UI 呈现与「不存在」不可区分；② 正解二选一：过滤条件下沉到服务端全量，或显式断言「已扫全集」并把范围写进结论；③ 对 agent 工具面的含义：任何「先取一页再本地过滤」的检索链路，都要回答「漏检面有多大」；④ 与 §分页被忽略导致能力集静默缺失 分工：那条管生产端不翻页，本条管消费端把翻页后的子集当全集过滤；⑤ 验收：造一个只在第 2 页的命中，断言过滤后仍能找到。提升层：工具（检索正确性）。触发词：客户端过滤假阴性、已加载子集当全集、过滤条件下沉、搜不到不等于不存在、ILIKE 服务端过滤。
+
+## r603B · 验证前先冻结验证者对主张的解释：单字段冻结的翻转率是隐藏解释方差的探针（来源：https://export.arxiv.org/api/query cat:cs.CL 2610.20457《Same Claim, Different Interpretations》2026-10-16 一手 abstract：Claim Cards record the verifying agent's interpretation in 9 fields marked stated/inferred/default before evidence collection；>40% of fields were non-stated across 900 runs；freezing one field flipped the verdict on ~1/3 of claims versus ~1/7 expected by chance, p<0.001）
+- **判据**：① 同一句主张，不同验证者会给出不同解释（哪些是 stated、哪些是 inferred、哪些是 default）——>40% 字段非 stated 意味着解释偏差是常态不是边角；② 取证前先把解释显式冻结成 claim card（9 字段 + stated/inferred/default 标注），否则「证据相同结论相反」无法归因；③ **冻结单字段看翻转率**是隐藏解释方差的诊断探针——翻转率显著高于随机（1/3 vs 1/7）即证明该字段是结论的隐藏变量；④ 与 §预先登记预期 分工：那条管登记期望输出，本条管登记对被测主张的解释；与 §评分口径 分工：那条管分数怎么算，本条管判据判的是什么；⑤ 验收：对同一主张让两个验证者独立填卡，比对非 stated 字段集，冲突字段进复核。提升层：可复用 Skill（验证纪律）。触发词：claim card、解释冻结、stated/inferred/default、翻转率探针、隐藏解释方差、验证前登记。
