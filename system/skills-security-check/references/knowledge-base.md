@@ -1097,3 +1097,9 @@ Step C: 是否包含恶意意图？
 1. **工具名必须字母开头，且不得把 URL 凭据内嵌进工具名**（crewAIInc/crewAI#8117）：IP 地址型 MCP 服务器（`http://127.0.0.1:8800/mcp`）派生的工具名 `127_0_0_1_8800_mcp_<tool>` 被所有 provider 拒绝（函数名须字母开头）；且 URL 里的 `user:pass@` 直接进了工具名，等于把凭据作为每个工具名的一部分喂给模型。规则：① 工具/函数命名派生自地址时，若首字符非 ASCII 字母须补 `mcp_` 之类前缀；② 构建名称前先剥离 URL 的 `user:pass@`，凭据绝不进入任何要呈现给模型的标识符。提升层：模型（工具面安全/凭据泄露）。触发词：工具名字母开头、URL 凭据不进工具名、IP 派生工具名、MCP 工具命名。
 
 判非（本轮核实）：#2025（eval viewer CSRF/DNS rebinding）与 ssc「本地评估服务暴露面/出站副作用声明」同族；#528/#542 为依赖声明/CI 提案等实现细节；其余为具体技能缺陷。
+
+## r600C（2026-10-16 · docs.openclaw.ai/gateway/security/network-exposure 一手 curl 200 · skills-security-check 1.134.0）
+
+1. **agent 运行时生成的 HTML/JS 是不可信内容：不与特权 web 面共享 origin，不暴露给不可信网络或用户**（docs.openclaw.ai/gateway/security/network-exposure 284,485B 一手实拉）：Gateway 的 HTTP 面同时承载 Control UI（SPA）、hosted widget 文档与 A2UI renderer 资产——官方对 widget 文档的措辞是「contain agent-authored HTML/JS; treat them as untrusted content when loaded in a normal browser, do not expose them to untrusted networks or users, and do not share their origin with privileged web surfaces」。规则：① agent 产物里的 HTML/JS 与技能内容同族——按不可信输入处置（渲染面前先过净化/隔离），不因「是自己生成的」豁免；② origin 是安全边界——生成物不得与特权控制面共享 origin（同源即可互相读写），要分域分端口；③ 暴露面按「谁会加载它」分级：不可信网络/用户可达的生成物等于把执行面拱手让人。提升层：安全（agent 产物暴露面）。触发词：agent 生成 HTML 不可信、widget 文档、origin 隔离、特权 web 面、A2UI renderer、生成物暴露面分级。
+
+判非（本轮核实）：openclaw /gateway/sandboxing/supported-capability-matrix（沙箱只隔离工具执行、控制面在沙箱外、逐后端能力矩阵）与 agent-guild「策略天花板不是实现清单」重叠 >60%；n8n enable-ssrf-protection（应用层是纵深、网络层才是主防线；重定向目标与 DNS 解析都要校验）与 ssc 出站副作用/DNS rebinding 同族；n8n control-telemetry（默认开遥测、退出靠环境变量）为产品配置且「本地≠自动隐私」已由 execute 侧落地；openclaw MCP Events（版本化 profile 显式声明不支持草案特性）与 rm 特性三态/能力声明单一来源同族；n8n use-git-in-n8n（平台内嵌源码控制≠完整版本控制、PR 评审在平台外）与 rm 版本治理相邻；deeplearning.ai 两门新课（spec-driven-development-with-coding-agents 的 constitution/认知负债/意图保真、ai-coding-workflows-from-cloud-to-local 的本地模型 viability 条件）与 wb-spec-driven §r349C 规约四段/sd 廉价模型经济学重叠 >60%。
