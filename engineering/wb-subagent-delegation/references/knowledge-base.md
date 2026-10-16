@@ -34,3 +34,6 @@
 ## r600A（2026-10-16 · GitHub ag-ui-protocol/ag-ui#3077 一手 gh api 200 · wb-subagent-delegation 1.26.0）
 
 1. **并发槽的释放时机是真实终态，「表面完成」仍占槽 = 容量悄悄漏光**（ag-ui-protocol/ag-ui#3077）：已 COMPLETED 但仍有 pending client tool calls 的 run 继续计入 max_concurrent_executions——界面看它完成了，配额看它还活着；槽只挂不释，吞吐随 pending 积累悄悄降到零且无任何报错。规则：① 并发/预算槽的释放条件按「含挂起子调用的终态」定义，不按表面完成态；② 挂起子调用期间父任务保持占槽，语义上是「未做完」不是「做完了」；③ 与 §队列是 lane-aware FIFO 分工：那条管排队与上限结构，本条管占槽到哪一刻才算完——释放判据错，上限结构再对也兜不住。提升层：工作流（并发与预算）。触发词：并发槽泄漏、pending 子调用占槽、表面完成、释放时机=真实终态、max_concurrent_executions。
+
+## r601A · 派发瞬间仍是策略干预点：spawn mod hook 从「只能拒」升级为可改写子代理 prompt/model（来源：api.github.com/repos/anthropics/claude-code/releases/tags/v2.1.300 一手逐串命中 `Added support for rewriting a workflow agent's prompt and model in the agent.spawn mod hook, which could only refuse workflow agents before`，2026-10-14 发布 / 2026-10-16 gh api 核验）
+- **判据**：① 委派规格在 spawn 时刻仍是可编辑对象——宿主策略可在派发瞬间统一纠偏（改 prompt/改模型），而不是只能事后作废重派；② 「只能拒」到「可改写」把拦截变成校正，但改写权是策略位不是计划位——与「已批准计划不可自签改写」的边界：spawn 点属计划外运行时策略位，改写不得溯及已批准的计划内容；③ 双改冲突（宿主改 + 调用方改同一字段）须有确定性优先级，不能后写静默覆盖。提升层：工作流（委派策略）。触发词：spawn mod hook、派前改写、refuse 到 rewrite、委派策略位、双改冲突优先级。

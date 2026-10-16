@@ -211,3 +211,9 @@
 1. **审问/评测类问题必须自包含，不得依赖会话早前捏造的实体名或未定义术语**（mattpocock/skills#1280）：grilling 实践七周里约 40 次「听不懂/请简化」，几乎每次问题都依赖会话前半段才出现的标签（agent 自己编的 "fund accumulator"）、早前消息里的发现、或受试者看不到的文档。规则：评测/审问/红队提问要可独立作答——实体、术语、上下文都须内含在题目里或明确可取得；凡需要「记得上半场说了什么」才能答的题，结果不可复现且测的是记忆而非能力。提升层：可复用 Skill（评测问题设计）。触发词：评测问题自包含、会话内捏造命名、不可复现提问、grilling 可答性。
 
 判非（本轮核实）：mattpocock#1283（决策地图新会话可发现）与 compressor「入口发现/渐进披露」重叠 >60%；其余 ae 相关近期为基准/训练层，无方法增量。
+
+## r601A · 自纠错收益必须按「挽回/破坏」两率分开报：聚合准确率掩盖破坏面，内部事后信号做门不总优于无条件策略（来源：arxiv.org/abs/2609.35832《When Should LLMs Trust Their Own Revisions? A Risk-Aware Study of Intrinsic Self-Correction》abs 一手，2026-10-16 实拉逐串命中 `improves by 25.5 percentage points on GSM8K` / `refinement changes 19.1% of initially correct answers into wrong ones` / `Aggregate accuracy can conceal substantially different revision behavior`）
+- **判据**：① 报自纠错收益必须同时给「正确→错误」破坏率——29 模型上 GSM8K +25.5pp 与 19.1% 破坏并存，只报净增益等于把伤害藏进统计量；② 修订的接受判据不能只挂模型内部事后信号（原文：不总优于无条件策略），要挂外部可得证据；③ 与 §修订哈希/候选面 分工：那条管改动的可追溯，本条管「这次修订该不该被接受」的计量口径。提升层：模型/工作流（自纠错评估）。触发词：修订破坏率、挽回数与破坏数、聚合准确率掩盖、自纠错门控、内部事后信号。
+
+## r601A · 评分标准本身要过对抗验收：同模型写 gaming 答案骗不过 rubric 才算修好（来源：arxiv.org/abs/2610.21040《Recursive Reward Improvement via Adversarial Meta-Prompt Evolution》abs 一手，2026-10-16 实拉逐串命中 `reward-hacking adversary` / `two answers` / `HealthBench +10.9/+12.4` / `no external model +10.3` / `unseen tasks +6.6/+8.0`；B 级——修复步数少、adversary 与 scoring 同模型有共谋风险，先登记后验证）
+- **判据**：① evaluator 外置红线的补件=rubric 自己也要被攻一遍——用同模型生成「该得高分但不实质」的答案撞评分标准，撞得过就修；② 「solver 点名预期话题而无实质内容」是典型 exploit 形态，固定 rubric 会被它刷分；③ 可无外部模型自跑（同模型既当 adversary 又当 solver）降低采用门槛，但同源共谋风险要在报告里声明。提升层：工作流（评测攻防）。触发词：rubric 对抗验收、reward-hacking adversary、评分标准攻防闭环、点名话题无实质、RRI。

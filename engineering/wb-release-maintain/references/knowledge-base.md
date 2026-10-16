@@ -762,3 +762,6 @@
 2. **特性/规范项有三态（Draft/Current/Final）+ 弃用须至少保留 12 个月或 90 天加急移除，且必须给迁移路径**（modelcontextprotocol.io/learn/versioning.md）：Deprecated 项仍属规范但排定移除，至少留 12 个月（或按加急移除例外留 90 天）才真正删，且必须文档化迁移路径（或声明无需迁移）。规则：弃用不是「随时可删」——给下游留出可被机器/人检到的保留窗 + 明确迁移指引，与既有「弃用=带 removeAfter 日期的登记项」互补：本条补「最短保留时长」下限，那条补「无日期无删除资格」的硬门槛。提升层：工作流/治理（弃用生命周期）。触发词：弃用 12 个月保留、90 天加急移除、迁移路径强制、特性三态。
 
 判非（本轮核实）：mcp architecture「协议只定义上下文交换契约、不规定 LLM 使用方式」为通用架构原则无方法增量；mastra「模型 ID 不得改」已落 sa；skillhub 分数面仍为 SPA 壳无判据；agentskills/specification 与 n8n llms.txt 本轮无新方法增量（r598C 已落）。
+
+## r601A · 退役通告须「温和期+与消费方清单联动」：calm notices 列出替代 API 与最终兼容日，断崖式废弃致下游静默坏（来源：api.github.com/repos/openclaw/clawhub/pulls/3962 merged 2026-10-15 一手逐串命中 `show calm API retirement notices` / `lists replacement APIs in expandable details` / `adds an "API update" item to the publisher dashboard` / `preserves deprecatedApi, replacement, and removeAfter` / `The date is inclusive`，2026-10-16 gh api 核验；与 §r322B 日落登记资格化 互补——那条管登记资格与时点载体，本条管通告形态×清单联动）
+- **判据**：① 自家接口退役 = 温和期通告 + 替代 API 明示 + 最终兼容日（inclusive，最后一天仍可用），不是直接断供；② 通告与消费方清单联动——「谁还在用旧 API」一目了然，通告才能精准投放；③ 结构化字段（deprecatedApi/replacement/removeAfter）与散文说明并存——只有散文的通告不可枚举、不可机检；④ 发布者仪表盘挂「API update」项——通告是发布流程的一部分，不是事后补救。提升层：工作流（退役工序）。触发词：退役温和通告、calm retirement notices、removeAfter inclusive、替代 API 明示、消费方清单联动、发布者仪表盘。
