@@ -1989,3 +1989,19 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 
 ## r608C 下沉（站点面一手 curl 200 逐串命中，2026-10-17）
 - **可调试性的最低配置 = 步骤内文档化状态转移 + 变更点留日志 + 可视化方法**（来源：docs.crewai.com `/v1.15.28/en/guides/flows/mastering-flow-state.md` 一手 200/28,070B）：每个步骤 docstring 写清 `State before` 与 `State after`；配合 `log_state(step_name)` 在每步后打状态快照；再提供一个把状态渲染成可读形态的调试方法。规则：状态类缺陷的定位成本由这三者决定，三者缺一即视为不可调试。
+
+## r609A 下沉（GitHub 面一手 `gh api` 200 逐串命中，2026-10-17）
+- **存活性证据不足时不得回收锁：把活跃持有者判成陈旧会制造假重启**（openclaw/openclaw#174895「A live Gateway state owner is judged definitely stale and its lock file is reclaimed」）：Windows 上同 PID 命名空间的短命 CLI 进程把运行 8–14 小时的 Gateway 判为「definitely stale」，删掉其 `state.<hash>.lock`，导致在跑的实例丢失状态所有权并自我重启，一天内发生 4 次。规则：① 「陈旧」是**强断言**，只能用不依赖 PID 的证据（心跳时间戳 + 独立存活探测）来下，PID 复用/跨进程视角差异都会让 PID 判定失效；② 回收是破坏性动作，判据不足时的正确动作是**不回收并告警**，回收错了的代价（重启 + 状态丢失）远大于多留一会儿锁；③ 同一把锁的判定逻辑必须在所有进程形态（长驻服务 / 短命 CLI / 定时任务）里共用一份，任何一类进程用自己的判据都会互相抢锁。
+- 提升层：工具（锁与租约判定）/ 工作流（进程形态无关的存活判定）。触发词：definitely stale、锁被抢占、PID 复用误判、短命进程回收长驻锁、假重启、lease reclaim。
+- **平台侧的配额驱动隐性降级必须显式暴露给调用方**（anthropics/claude-code#102883「Prompt cache TTL downgraded to 5 minutes near weekly quota limit」）：临近周配额时限时，prompt 缓存 TTL 被下调到 5 分钟，调用方无任何提示，只表现为命中率莫名变差。规则：① 凡因外部压力（配额/限流/降级）改变行为参数，必须随响应回传或在状态面可见——**性能回归的第一嫌疑是隐性降级，不是代码**；② 缓存命中率是「结果指标」，TTL 是「原因指标」，排障时必须能读到原因指标；③ 降级要可区分于故障：TTL 下调是策略，超时是故障，混在一起会让重试逻辑对策略做重试。
+- 提升层：工具（降级可观测）/ 工作流（排障归因）。触发词：TTL downgraded、配额降级、隐性降级、缓存命中率下降、原因指标可见、quota-driven degradation。
+- **改写全局/共享状态必须有还原路径，且还原要覆盖异常分支**（crewAIInc/crewAI#8237「Fix suppress_logging not restoring logger level」）：`suppress_logging` 压制日志等级后没有恢复，导致一次压制影响整轮后续。规则：① 抑制/覆盖类操作是**成对**的，写的时候就要把还原写在 finally 或等价结构上，不能依赖调用方记着还原；② 还原要恢复**原值**而不是恢复「已知默认」——原值可能本就被改过；③ 跨轮/跨任务泄漏的抑制最难排查（表现为「日志怎么没了」），故抑制动作应带作用域标记与超时兜底。
+- 提升层：工具（状态改写可逆性）/ 工作流（异常分支还原）。触发词：suppress_logging、日志等级未还原、成对操作、恢复原值非默认值、抑制跨轮泄漏。
+
+## r609B 下沉（arXiv 一手 `abs/{id}` 页 200 逐篇命中，2026-10-17）
+- **治理/护栏是被测系统的一部分：干预会诱发失败，成本盲的治理器把失败转成永久阻塞**（arXiv 2610.09037《When the Governor Becomes the Disturbance》）：受控文件恢复环境里，监管强度上升会触发注入式工具失败，**成本盲的治理器**把这些失败变成持续阻塞、任务永远完不成；改用「按已知诱发事件的移动平均降低干预概率」的自适应退避后完成率改善——Gemini 2.5 Flash 上 6 个任务 576 个 episode，且**中等退避强度**取得最高总成功率（不是越强越好，也不是越弱越好）。判据：① 归因时不要把治理器排除在系统外——工具失败可能是监管动作诱发的，表现为「工具不稳定」而根因在治理；② 退避须**感知自己诱发的事件**，用无关的全局失败计数做退避会调错方向；③ 退避强度存在最优中间点，把它设成固定值等于假设强度-收益单调；④ 论文自陈局限（成本机制是注入的、诱发事件对退避规则直接可见）⇒ 落地时要先确认「能否观测到自己的诱发事件」，观测不到则该退避方案不适用。
+- 提升层：工具（治理器自省 · 成本感知退避）/ 工作流（干预成本纳入归因）。触发词：governor becomes the disturbance、成本盲治理器、自适应退避、中等退避强度最优、干预诱发失败、诱发事件可观测前提。
+
+## r609C 下沉（站点面一手 curl 200 逐串命中，2026-10-17）
+- **计量契约三细则：计量点早于校验、限流码分层、计量单位按请求类型分层**（来源：`skillsmp.com/llms.txt` 13,497B + `/docs/api` 3,554B，均一手 200）：① 原文「Admitted keyword attempts **consume daily quota before parameter validation** and the minute guard, **including parameter errors and minute-limit rejections**」⇒ **被拒请求也要计费时，这件事必须是契约的一部分**——调用方按「失败不计费」写重试会把配额打穿；② 429 必须按 `error.code` 区分 `RATE_LIMITED` 与 `DAILY_QUOTA_EXCEEDED`，且**两者都带 `Retry-After`**⇒ 日配额耗尽与分钟限流的恢复动作完全不同（一个是等到明天、一个是等几秒），混成一个码会让重试要么无效要么过久；③ 计量单位分层：有效 `tools/call` 消耗一个 tool-call 单位，`initialize` / `tools/list` 等非工具请求**只消耗 ingress**⇒ 把心跳与枚举当成调用来计量会让健康检查吃掉业务预算。判据：排障「配额莫名见底」时先查计量点位置，而不是查调用次数。
+- 提升层：工具（限流与计量契约）/ 工作流（重试与配额归因）。触发词：quota before validation、失败也计费、RATE_LIMITED vs DAILY_QUOTA_EXCEEDED、Retry-After、tool-call unit vs ingress、健康检查吃预算。
