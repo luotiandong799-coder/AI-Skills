@@ -2010,3 +2010,9 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - claude-code#102780：中断/截断重试须有退避与熔断上限，不得无限重试；且须保住 prompt cache（不得丢弃部分响应整轮重发导致零缓存命中循环）。
 - autogen#8351：包装/装饰器型组件必须向被包装者委托状态保存与恢复（save_state/load_state），否则恢复会话静默丢失模型上下文（wrapped agent 状态未被持久化）。
 
+
+## r610A 下沉（GitHub 面一手 gh api 200 逐串命中，2026-10-17）
+- **关键告警不得独依赖 warnings 通道：`warnings.simplefilter("ignore")`/`-W ignore` 可全局静音；须同发 logger 落盘并以回归测试证明抑制下仍可达**（microsoft/autogen#7906：LocalCommandLineCodeExecutor 的本地执行安全提示只有 UserWarning，应用 `simplefilter("ignore")` 后提示彻底消失；修复=logger.warning 双通道+回归测试证明全局抑制时日志仍有记录）：判据：① 安全/弃用类信号至少双通道（warnings + logger），且日志通道不依赖 warnings 过滤器；② 验收动作=在被抑制环境里跑一遍，断言日志非空；③ 与 dl「告警自身失败须留痕三态」分工：那条管告警发送失败，本条管告警通道被环境静音。
+- 提升层：工具（告警通道韧性）/ 工作流（可观测性）。触发词：simplefilter ignore、warnings 全局静音、双通道告警、抑制下可达、logger 落盘。
+- **状态展示与可行动作以服务端轮询状态为准：本地计时器超时不得推断失败——进行中任务被判失败=诱导重复操作**（langgenius/dify#44202：工作流归档删除前端 60 秒本地计时器到点就把"删除中"翻成"重试删除"，而轮询仍报 pending/processing；刷新即恢复"删除中"，用户已对实际仍在跑的任务发起重试）：判据：① 状态机的权威源是服务端状态，本地计时器只能控制轮询节奏不能改判状态；② 超时≠失败≠可重试——长任务的"超过本地耐心"与"真的失败"是两回事；③ 可行动作（重试/取消）的启用条件必须绑定权威状态，否则用户被 UI 诱导对在途操作重复触发；④ 刷新后回弹"删除中"就是 bug 的自证信号——本地态与权威态打架。
+- 提升层：工具（状态机权威源）/ 工作流（长任务交互）。触发词：本地计时器、60 秒重试、pending 推断失败、诱导重试、服务端轮询权威。

@@ -126,3 +126,15 @@
 - 2610.22195（HTN-Orchestrate）：编排须分离全局规划与本地执行——Planner 维护子任务层次与依赖、推迟分解到前置结果可得时再做；动态 dispatch 给执行灵活但须显式建模子任务层次。
 - 2610.22322（MPT）：去中心化 agent 群须联合学习"个体动作策略"与"自编排/协调结构"（market-based 出价决定谁行动、集体结果给局部训练信用），避免固定编排结构割裂两者学习。
 
+
+## r610A 下沉（GitHub 面一手 gh api 200 逐串命中，2026-10-17）
+- **子执行无父上下文可继承时，作用域主体必须显式传入；缺必需主体显式抛错，不静默默认**（n8n-io/n8n#41292：agent eval 在主实例上跑 workflow 工具，agent 不是 workflow 所以没有 parent workflow ID；executeWorkflow() 新增 parentProjectId（策略检查用 checkForProject() 以该 project ID 为准）、configureAdditionalData 回调、parentWorkflowId 改可选——需要父而无父的调用抛 UnexpectedError）：判据：① 子执行的作用域（项目/工作区/权限载体）不能沿"隐式父链"继承了事——调用方无父时必须显式给；② 策略检查以显式传入的主体为准，不是默认落点；③ 缺必需主体=显式失败，静默用默认作用域会把越权操作记到错误账上；④ 与 sa「环境推断目标须可显式覆盖」分工：那条管推断值可覆盖，本条管无继承源时禁止推断。
+- 提升层：工具（子执行作用域传递）/ 工作流（委托权限载体）。触发词：parentProjectId、显式作用域、无父上下文、checkForProject、UnexpectedError。
+- **fork=继承父完整一手上下文，子代理会恢复父编排角色并重放其扇出；spawn 限制若按 agent 类型名义施加会被换类型绕过——须按可执行能力封闭**（anthropics/claude-code#89101：fork 子代理 3/4 案例恢复父的编排角色，把父的整个 fan-out（含兄弟 scope）当自己的 children 重放；嵌套 fork 被硬阻后，同一 fork 立刻用 general-purpose 类型重试同批 children 成功——按名字 block 训练出绕道；孙子进程 ListAgents 不可见且能以 "another Claude session" 标签给 main 发消息）：判据：① 上下文继承=角色继承，给子代理全量父上下文前先问"它会以为什么身份行动"；② spawn 限制必须挡在能力面（什么类型能 spawn、能 message 谁、能否再委托），挡在名义类型上等于没挡；③ 委托授权按"子可执行的动作集合"下发，不按 agent 类型的名字下发；④ 与 ssc「派生子代理必须注册可见」分工：那条管可见性与身份，本条管委托面的能力封闭。
+- 提升层：工作流（委托授权封闭）/ 工具（spawn 策略）。触发词：fork 上下文继承、编排角色重放、扇出越权、换类型绕过、能力面封闭。
+
+## r610B 下沉（arXiv 一手：export.arxiv.org API 200 + abs 页逐篇命中；API 通道本轮恢复，r607 终结论撤销）
+- **经验记忆作软先验优于硬处方：规定下一步工具的指导常常是错的，收益实为额外计算；文本化洞察优于结构化工具记忆**（arXiv 2610.21571《Rethinking the Role of Tool Graph Memory》：tool graph memory 九模型两基准上很少显著优于基线，有增益处 LLM 调用成本翻倍以上；记忆给出的指导常常不正确，随机指导或无指导保留大部分增益（说明收益来自额外计算而非记忆本身）；即使提示了正确的下一个工具，大量失败依旧（如放弃不调工具）；同经验存成文本洞察几乎零额外调用即超过 tool graph memory）：判据：① 给下游的"下一步该做什么"的建议只能是先验不能是处方——错误指导会把可恢复失败变成执行错误；② 评估记忆组件时要跑"随机建议/无建议"负对照，拿不掉对照组增益的记忆不成立；③ 经验沉淀优先文本洞察（可读、可判、便宜），结构化图谱留给确有增益处；④ 即使指导正确，覆盖不了放弃/不调用这类失败形态——验收要包含无动作失败。
+- 提升层：工作流（经验利用形态）/ 工具（记忆组件设计）。触发词：tool graph memory、软先验 vs 处方、负对照、随机指导、文本洞察、放弃不调用。
+- **强模型从每步作者转为评审：弱模型起草（只读调用保 grounded、首个改环境动作扣留），强模型单次 prefill 验证整段、提交最长合法前缀、修复首个被拒步骤**（arXiv 2610.21463《SpecAgent》： tau^2-Bench 上贴近强模型成功率（差 1 分内）同时内存流量与墙钟约减半； AutomationBench/VitaBench 弥合 44–75% 质量差距； MCP-Atlas 边缘-云部署弥合 53–75% 差距而强模型 token 产出至多一半）：判据：① 分工原则=强模型不 author every step，改为 verify drafted segment；② 起草侧只读执行保证每步 grounded in real observations，首个环境修改动作扣到验证后；③ 验证用单次 prefill 替代逐 token 解码——提交最长语义合法前缀+只修复首个被拒步；④ 与 sd「双模型主-副手」分工：那条管委派框架，本条管起草-验证协议的具体形状。
+- 提升层：工作流（强弱模型协作协议）。触发词：SpecAgent、draft-verify、read-only grounding、最长合法前缀、单次 prefill 验证、扣留首个写动作。

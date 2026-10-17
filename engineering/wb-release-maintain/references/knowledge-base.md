@@ -840,3 +840,13 @@
 ## r607 共学落点（2026-10-17 · GitHub/arXiv）
 - n8n#41265：工具/契约定义变更须向已缓存的消费者广播失效通知；通知总线按订阅主体维度（user+grant+client）共享；重订阅时发刷新信号，防客户端持旧 schema 拒绝合法结果。
 
+
+## r610A 下沉（GitHub 面一手 gh api 200 逐串命中，2026-10-17）
+- **弃用信号的粒度与预算治理：成员级触发+兼容面安静+警告预算按单元拆细+迁移建议指向真实存在的 API+最终兼容日与移除版本明示**（PrefectHQ/prefect#23328：仅当调用 Pendulum 独有成员（in_tz/add/diff/start_of 等无 stdlib 对应物）时告警，stdlib 兼容调用（isoformat/astimezone/算术）保持安静；弃用窗口=max(六个月, 三个 minor 版本)；openclaw/openclaw#174902：同族弃用警告共享预算会互相埋没——改为每 deprecated 方法×每插件×每进程一条；补齐缺失诊断；JSDoc 与迁移指南写明最终兼容日 2026-12-31 与 2027 年 1 月首个稳定版移除；部分迁移建议指向不存在的方法）：判据：① 弃用告警按"不兼容成员被调用"触发，兼容路径零噪声——告警疲劳会让真信号被忽略；② 警告预算按单元（方法×组件×进程）拆细，防同族互埋；③ 迁移建议里的 API 名必须真实存在，否则把用户引向死路；④ 窗口取时间与发布次数的较长者，最终兼容日+移除版本两句话写进文档。
+- 提升层：发布（弃用治理）/ 工具（告警粒度）。触发词：成员级弃用、兼容面安静、弃用窗口、警告预算拆细、最终兼容日、迁移建议指向存在 API。
+- **外部注册表/目录腐烂源于手工发布：更新挂进 release 流水线自动触发，跳过 rc，等上游索引就绪**（browser-use/browser-use#6083：MCP Registry 还serve 0.13.5（2026-07-17）而 PyPI 已 0.13.11——每次忘记手工 publish，PulseMCP/Glama 等 ingest registry 的目录就整体变旧；修复=stable release 成功或手动 dispatch 后自动读 server.json、跳过 rc tag、等版本上 PyPI、mcp-publisher v1.8.1 DNS 认证发布 com.browser-use/browser-use）：判据：① 凡有外部目录/注册表消费者，发布动作必须自动化挂进 release 管线，手工步骤必腐烂；② 发布门：只发 stable、等上游索引（PyPI/registry）确认可解析再发；③ 所有权证明（DNS TXT 公钥）是注册表发布的前置件；④ 与 rm「协议版本日期戳」分工：那条管版本契约语义，本条管版本向外部目录的分发时效。
+- 提升层：发布（外部分发时效）/ 工作流（release 管线）。触发词：registry 腐烂、手工发布、自动 publish、跳过 rc、等 PyPI 就绪、DNS 所有权。
+
+## r610C 下沉（站点面一手 curl 200 逐串命中，2026-10-17）
+- **自托管产物必须与云产物同一比特位：RC 标签=周稳定性门，晋升前 canary soak + 刷新最新 main，自托管发布晚云一天且直接用云部署的同一镜像**（www.activepieces.com/docs `handbook/engineering/onboarding/release-cycle.md` 一手 200/4,736B：周四 17:00 UTC staging 冻结+打 release-candidate 标签=稳定性门；周五六 canary 每日从 main 跑；周日 09:00 先重建 canary 到最新 main 再把 RC 晋升生产并建 deploy/cloud/YYYY-MM-DD 分支；周一 09:00 自托管发布用云周日部署的同一 release-candidate 镜像重新打版本号——"no separate build, no divergence"）：判据：① 自托管/内部分发与云侧共用同一构建产物，禁止为不同渠道各建一次；② 晚一天不是拖延是把云侧问题挡在自托管用户之前——错峰是控制项；③ 晋升前把 canary 刷新到最新 main，"soak 过"的必须是"要发的"那棵树；④ 每次部署建 dated 分支留证，回滚与审计有锚点。
+- 提升层：发布（多渠道同源分发）/ 工作流（RC 门与晋升）。触发词：same bits、no divergence、release-candidate 门、canary soak、错峰发布、dated deploy 分支。

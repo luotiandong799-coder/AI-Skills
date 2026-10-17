@@ -4285,3 +4285,15 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - openclaw#174465：已准入/已持久化的提示投影（prompt projection）不得被后续追加（如交付指令）变更，否则使早期生成绑定游标失效；呈现/交付类指令应走运行时上下文载体，不改已准入内容。
 - openclaw#174586：能力守卫/校验须下沉为无依赖叶子模块，避免只读路径为取一个校验而拉起重型状态获取链（history reader 不应 import host acquisition module）。
 
+
+## r610A 下沉（GitHub 面一手 gh api 200 逐串命中，2026-10-17）
+- **技能引用的第三方工具面会漂移：改名或合并（create+update→单一 save_issue、deepseek-chat→deepseek-v4-flash）让引用旧名的技能静默失效或运行时报错**（openai/skills#203「linear skill references deprecated MCP tool names」+ n8n-io/n8n#36248「文档内容须对照实时 tool surface 核验而非（stale）docs/mcp.md」+ FlowiseAI/Flowise#6667「提供方下线旧模型名后节点直接报错、workaround=导出流程手改 modelName」）：自有命名面改名可走全链路同步（§重命名必须全链路同步），第三方面握在别人手里——只能钉版本快照/别名表，且验收时对照实时 tool surface 逐项核。判据：① 技能引用外部工具/模型名时记录来源端点与快照时间；② 提供方把两个工具合并成一个入口（save_issue 兼管 create/update）时，旧双名引用静默失效——技能须注明合并后的统一语义；③ 技能文档宣称的工具面以实时探查为准，内部过时文档不作依据。④ 失败模式分两档：改名=静默找不到、下线=运行时报错，验收用例两档都要有。
+- 提升层：工具（技能引用的外部面）/ 工作流（技能验收）。触发词：deprecated MCP tool names、save_issue 合并入口、工具面漂移、实时 tool surface 核验、陈旧文档、模型下线报错。
+- **交互选择的非交互降级必须显式失败，不得静默猜默认**（vercel-labs/skills#2355「Installer etiquette」）：`skills add <repo> --all` 在管道/脚本/`-y` 场景静默选 project scope + symlink，scope 提示被 `-y` 的自动探测（"project if in a project"）跳过；一个用户把 37 个技能装进随机项目目录，agent 始终看不到。判据：① scope（全局/项目）、link mode（symlink/copy）、target agents 三个选择必须 first-class，交互模式逐项问、非交互模式由 flag 或持久偏好决议；② 无 flag 无偏好时 error with guidance——loud > silent，禁环境推断代决；③ 偏好持久化（lock 文件/全局配置）且 per-run flag 可覆盖，不重复猜；④ 装完打印一行"装到哪了、以什么形态、给哪些 agent"。
+- 提升层：工具（安装/配置类 CLI 设计）。触发词：non-interactive default、scope/link mode/target agents、loud > silent、静默猜默认、偏好持久化、安装位置错配。
+- **frontmatter 读写是同一枚硬币：读侧必须 safe_load 真解析 + string 类型门禁，写侧按需引号化，只修一边仍失真**（anthropics/skills#1997「parse_skill_md manually strips quotes and joins continuation lines ⇒ evaluation/description 命令收到与文件不一致的元数据：普通 description 丢右引号、转义引号保持转义、字面块丢换行」+ vercel-labs/skills#2507「`demo: x` 产出非法 YAML、`true`/`123` 变非字符串值致技能不可发现、`my skill # best` 被注释静默截断」）：判据：① 读 frontmatter 用 `yaml.safe_load` 且要求 mapping + string 值，非法 YAML 显式 ValueError，不静默跳过；② 序列化名字/标量按 YAML 规则引号化（冒号、`#`、前导数字、布尔字样、空值）；③ 类型强转（`true`/`123`→非 string）让发现机制直接漏掉该技能——发现面以 string 型元数据为前提；④ 读侧保真与写侧引号化配对验收。
+- 提升层：工具（frontmatter 读写双面）/ 工作流（技能发现）。触发词：safe_load、手写剥离拼接、引号丢失、注释截断、类型强转、技能不可发现、frontmatter 保真。
+
+## r610B 下沉（arXiv 一手：export.arxiv.org API 200 + abs 页逐篇命中；API 通道本轮恢复，r607「API 不可达」终结论撤销）
+- **大工具集默认全量暴露是双重成本：token 贵且损害选择；按调用轨迹检索子集显著更准更省**（arXiv 2610.21267《TRACER: Trajectory-Aware Tool Retrieval for LLM Agents》：混合零售/电信 tau^2 环境，GPT-5.4 工具选择准确率 +4.7pts、每步输入 token -80%，128 工具只露 5 个；六环境四模型 21/24 组优于全注册表，落后组最多 -2.2pts）：检索前端把观察到的工具调用序列索引成 trie，用经验先验 + 上下文先验的混合排序给续接候选。判据：① 工具/技能数量增长时"全给模型看"准确率会掉——暴露面必须可检索；② 排序混合经验频率与当前上下文，缺一则偏（纯经验=路径依赖，纯上下文=重复发现）；③ token 预算与选择质量同向改善，不是 trade-off；④ 失败面要单独分析（两套 regime 的失败模式不同）。
+- 提升层：工具（工具/技能暴露面设计）/ 工作流（大注册表检索）。触发词：TRACER、tool retrieval front-end、全注册表暴露、trie 调用序列、经验+上下文先验、暴露面子集。
