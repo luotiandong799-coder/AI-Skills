@@ -2005,3 +2005,8 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 ## r609C 下沉（站点面一手 curl 200 逐串命中，2026-10-17）
 - **计量契约三细则：计量点早于校验、限流码分层、计量单位按请求类型分层**（来源：`skillsmp.com/llms.txt` 13,497B + `/docs/api` 3,554B，均一手 200）：① 原文「Admitted keyword attempts **consume daily quota before parameter validation** and the minute guard, **including parameter errors and minute-limit rejections**」⇒ **被拒请求也要计费时，这件事必须是契约的一部分**——调用方按「失败不计费」写重试会把配额打穿；② 429 必须按 `error.code` 区分 `RATE_LIMITED` 与 `DAILY_QUOTA_EXCEEDED`，且**两者都带 `Retry-After`**⇒ 日配额耗尽与分钟限流的恢复动作完全不同（一个是等到明天、一个是等几秒），混成一个码会让重试要么无效要么过久；③ 计量单位分层：有效 `tools/call` 消耗一个 tool-call 单位，`initialize` / `tools/list` 等非工具请求**只消耗 ingress**⇒ 把心跳与枚举当成调用来计量会让健康检查吃掉业务预算。判据：排障「配额莫名见底」时先查计量点位置，而不是查调用次数。
 - 提升层：工具（限流与计量契约）/ 工作流（重试与配额归因）。触发词：quota before validation、失败也计费、RATE_LIMITED vs DAILY_QUOTA_EXCEEDED、Retry-After、tool-call unit vs ingress、健康检查吃预算。
+
+## r607 共学落点（2026-10-17 · GitHub/arXiv）
+- claude-code#102780：中断/截断重试须有退避与熔断上限，不得无限重试；且须保住 prompt cache（不得丢弃部分响应整轮重发导致零缓存命中循环）。
+- autogen#8351：包装/装饰器型组件必须向被包装者委托状态保存与恢复（save_state/load_state），否则恢复会话静默丢失模型上下文（wrapped agent 状态未被持久化）。
+

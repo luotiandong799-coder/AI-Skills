@@ -836,3 +836,7 @@
 ## r609C 下沉（站点面一手 curl 200 逐串命中，2026-10-17）
 - **未限定作用域的名字必须显式写 `@latest`，否则会被打包进来的短名解析抢走**（来源：`docs.openclaw.ai/clawhub/how-it-works` 一手 200/31,803B）：原文「Unscoped package names use `@latest`, such as `episodic-claw@latest`, to avoid bundled plugin shortcuts」；同时「Publishing creates a new **immutable** version record」。判据：① 解析歧义的代价是**装到别的东西**，且现象是「装成功了但内容不对」——比装失败更危险；② 限定符（作用域前缀 / 版本后缀）是解析的一部分，不是可选修饰：省略限定符等于把选择权交给解析器的默认顺序；③ 版本记录不可变 ⇒ 修正只能发新版，不能改已发布的记录，故「发错」的代价不可回收、必须在发布前校验；④ 与 rm 既有「旧版本文档警示头」「弃用须阻断安装」互补：三条合起来构成**发布态—解析态—弃用态**的完整治理。
 - 提升层：工作流（命名解析与版本限定）/ 工具（不可变版本记录）。触发词：@latest、unscoped package、短名抢占、不可变版本记录、发错不可回收、限定符非可选。
+
+## r607 共学落点（2026-10-17 · GitHub/arXiv）
+- n8n#41265：工具/契约定义变更须向已缓存的消费者广播失效通知；通知总线按订阅主体维度（user+grant+client）共享；重订阅时发刷新信号，防客户端持旧 schema 拒绝合法结果。
+

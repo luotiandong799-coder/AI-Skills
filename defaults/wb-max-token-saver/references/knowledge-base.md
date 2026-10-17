@@ -910,3 +910,7 @@ ercel-labs/skills/find-skills，2026-04 实拉；与 WB ctx 工具面安全分�
 ## r607A · 上下文裁剪后必须丢弃孤儿工具消息：只留下 ToolMessage 而没有携带 tool_calls 的父消息，会直接触发模型 API 的 400（来源：api.github.com/repos/langchain-ai/langchain/issues/35313，2026-10-17 r607A 一手 gh api 200 逐串命中 `it can return ToolMessages at the start of the result without their corresponding AIMessage (which contains the tool_calls)` / `messages with role 'tool' must be a response to a preceding message with 'tool_calls'` / `_last_max_tokens works by reversing the messages, calling _first_max_tokens, and re-reversing` / `Added a _drop_orphaned_tool_messages() helper that post-processes the trimmed result`；r607A 落地）
 - **判据**：① **裁剪的边界不能落在「一对」消息的中间**：工具调用与其结果是结构性配对，从尾部裁剪时切点恰好切掉父消息会留下无父的结果 ⇒ 裁剪算法必须有配对感知，切点要避开 tool 对。② **合法性由消费方（模型 API）定义，不由生产者定义**：本地看「消息都在」没意义，API 侧要求 tool 消息必须紧跟带 tool_calls 的消息 ⇒ 裁剪的验收要按消费方契约断言，不是按「条数对了」断言。③ **后处理比改裁剪主逻辑便宜且可独立验证**：加一道孤儿清理比重写 `_last_max_tokens` 的反向逻辑风险低 ⇒ 结构性约束优先用独立的后处理钩子保证。④ 与 mts 既有「裁剪只作用于给模型的视图、存储完整历史不动」分工：那条管**裁剪的作用域**，本条管**裁剪结果的结构合法性**。
 - **提升层**：工具（上下文裁剪的配对感知）/ 工作流（裁剪结果按消费方契约验收）。触发词：孤儿 ToolMessage、orphaned tool messages、role tool must be a response、裁剪切点避开 tool 对、反向裁剪的副作用、按消费方契约断言。
+
+## r607 共学落点（2026-10-17 · arXiv）
+- 2610.22130（DropKV）：KV-cache 驱逐须基于"输出扰动最小化"而非纯注意力分数启发式；将残差-输出扰动解耦可近最优且核化（kernelizable），长上下文缩放下须可核化、不牺牲分布。
+

@@ -4279,3 +4279,9 @@ description 里出现的**内部方法论术语**（"假性不收敛""凭据读�
 - 提升层：工具（规范定位符与标识派生）/ 工作流（注册表引用治理）。触发词：canonical URL、不要从 id 拼装、skillUrl、第三方目录、不得暗示背书、引用方限流义务。
 - **无公开参数 schema 的内置工具，要用结构化提示驱动而非 JSON 参数，并把 CLI 兜底的适用时机写清楚**（来源：`agenticskills.io` 一手 200/147,596B，image_gen 指南原文：「a built-in Codex tool with **no public argument schema** — you steer it with a structured prompt, not JSON parameters… when the `scripts/image_gen.py` CLI fallback is the right call instead」）。判据：① 契约缺位时不要假装它有——编一个 JSON schema 会产出「看起来合法但被忽略」的参数；② 无 schema 工具的**可用性探测**与**调用方式**要一起写（有没有这个工具、输出落在哪），只写语法会让调用方在不可用时静默失败；③ fallback 路径必须给出**何时该走它**的判据，只声明存在等于让调用方自己试错；④ 与 sa 既有「技能版本可固定」互补：内置工具随平台版本变，无 schema 面变化时既无 changelog 也无兼容承诺 ⇒ 这类工具要额外标「契约不稳定」。
 - 提升层：工具（无契约工具的调用约定）/ 工作流（兜底路径选择判据）。触发词：no public argument schema、结构化提示驱动、内置工具可用性探测、CLI fallback 时机、契约不稳定标记。
+
+## r607 共学落点（2026-10-17 · GitHub/arXiv）
+- anthropics/skills#1965：元数据字段校验须先判"字段是否提供"而非真值（falsy 值 false/0/null/[]/{} 与缺失是两态）；提供即校验，含 1–500 字符长度边界。
+- openclaw#174465：已准入/已持久化的提示投影（prompt projection）不得被后续追加（如交付指令）变更，否则使早期生成绑定游标失效；呈现/交付类指令应走运行时上下文载体，不改已准入内容。
+- openclaw#174586：能力守卫/校验须下沉为无依赖叶子模块，避免只读路径为取一个校验而拉起重型状态获取链（history reader 不应 import host acquisition module）。
+

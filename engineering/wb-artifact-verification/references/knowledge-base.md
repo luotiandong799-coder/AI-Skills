@@ -4095,3 +4095,8 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 ## r609B 下沉（arXiv 一手 `abs/{id}` 页 200 逐篇命中，2026-10-17）
 - **一条关于 agent 的声明要可核查，必须先固定四要素 + 决策规则，且记录可获得**（arXiv 2610.07459《Auditable Claims about AI Agents》）：EU AI Act 第 12 条要求高风险系统可自动记录事件，但没说哪些记录能裁定哪条声明。作者的单句主张是：声明要能被检查，必须先点名 **policy（依据哪条策略）/ scope（覆盖什么）/ records（哪些记录能裁定它）/ who writes them（谁写这些记录）**，并在下任何结论前把决策规则固定下来、且记录确实可取。agent 额外带来三个条件：**由独立记录覆盖**、**授权绑定到每个动作的实参**（不是只绑到动作名）、**完整性而不止完整性（completeness beyond integrity）**。判据：① 「每封外发邮件都有人审批」这类声明，若没说清审批记录由谁写、覆盖哪些通路，就不可核查——声明的可审计性是**声明本身的属性，不是证据多少的属性**；② 授权绑实参是 agent 特有缺口：同一个工具名、不同参数的风险完全不同，只记动作名的日志永远裁定不了「是否越权」；③ 完整性 > 完整性：记录没被篡改不等于记录覆盖了全部发生的事，缺记录会让声明以「无反例」形式假通过；④ 落地形态是一张 claim-check 表（论文给了六条常见声明的示例），空格要显式写「不采」。
 - 提升层：验证（保证声明的可核查性）/ 工具（授权日志绑实参）。触发词：auditable claim、claim-check 表、授权绑定动作实参、完整性而非完整性、独立记录覆盖、AI Act Article 12。
+
+## r607 共学落点（2026-10-17 · GitHub/arXiv）
+- dify#44058：模型产出的结构化工具参数须经 schema 适配器校验（pydantic validate_json），不得裸 json.loads + 宽泛 suppress(Exception)；参数非法不得丢整份或静默。
+- dify#44144：聚合导出不得重复计入模型用量与成本（aggregate wrappers 不重复 accounting）；远端读取置于 SQL 事务外，避免读持有事务锁。
+
