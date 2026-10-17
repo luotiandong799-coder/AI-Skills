@@ -2016,3 +2016,27 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 - 提升层：工具（告警通道韧性）/ 工作流（可观测性）。触发词：simplefilter ignore、warnings 全局静音、双通道告警、抑制下可达、logger 落盘。
 - **状态展示与可行动作以服务端轮询状态为准：本地计时器超时不得推断失败——进行中任务被判失败=诱导重复操作**（langgenius/dify#44202：工作流归档删除前端 60 秒本地计时器到点就把"删除中"翻成"重试删除"，而轮询仍报 pending/processing；刷新即恢复"删除中"，用户已对实际仍在跑的任务发起重试）：判据：① 状态机的权威源是服务端状态，本地计时器只能控制轮询节奏不能改判状态；② 超时≠失败≠可重试——长任务的"超过本地耐心"与"真的失败"是两回事；③ 可行动作（重试/取消）的启用条件必须绑定权威状态，否则用户被 UI 诱导对在途操作重复触发；④ 刷新后回弹"删除中"就是 bug 的自证信号——本地态与权威态打架。
 - 提升层：工具（状态机权威源）/ 工作流（长任务交互）。触发词：本地计时器、60 秒重试、pending 推断失败、诱导重试、服务端轮询权威。
+
+## r611A 下沉（GitHub 一手：gh api 单页 20 仓 200，编号判重后逐篇读正文）
+- **参数归一化改变过滤语义：单类异常被当作「仅对该类重试」实则全异常重试——兼容性重构须保持过滤集合语义不变**（langchain-ai/langchain#41274：`with_retry` 接受 callable 的重构（#41158，1.6.9）未把单类归一为元组，`retry_if_exception_type=ValueError`（单类）被求值成「所有异常都匹配」，非异常的 KeyError 也被重试到 stop_after_attempt；回归=显式传单类+断言非目标异常零重试）：判据：① 「接受更宽输入类型」的重构（单值→集合/callable）必须保持原过滤语义，归一化在入口做；② 重构引入的行为变化用「旧写法等价」回归用例钉住，不能只测新写法；③ 重试/过滤类参数的默认与单值形态是高风险面——错了不报错，只是多试。
+- 提升层：工作流（重试语义回归）。触发词：参数归一化、单类 vs 元组、过滤语义保持、重构等价回归、非目标异常被重试。
+- **启动路径的同步外部依赖须有挂起护栏：无交互会话环境下同步触达 OS 凭据存储不快速失败而无限挂起，端口从未开，整链超时**（browser-use/browser-use#5415：移除 `--use-mock-keychain`/`--password-store=basic` 后，Chromium profile 初始化同步探 OS 凭据存储；headless/CI/临时 profile 无交互会话应答 ⇒ 无限挂起、CDP 端口从未打开，watchdog 30s 到点；macOS 与有 keyring daemon 的 Linux 中招）：判据：① 启动序列每一步外部调用（凭据存储/网络/文件锁）都须有超时与失败分支，「不失败」不等于「会返回」；② 环境能力探测（有无交互会话/有无 keyring）决定走真实存储还是 mock，默认按最小能力面；③ 病象是「端口从未开+看门狗超时」，根因常在上游某步同步挂起——从启动链最慢的外部依赖查起。
+- 提升层：工作流（启动依赖 fail-fast）。触发词：启动挂起、OS 凭据存储同步、mock keychain、CDP 端口未开、看门狗超时、无交互会话。
+- **退出路径须排空在途异步：fire-and-forget 请求后立即强制退出，在途 socket 遇 teardown 触发 libuv 断言，退出码损坏把成功命令变失败**（vercel-labs/skills#2461：`track()` 发 fire-and-forget telemetry fetch，`flushTelemetry()` await 后 `main().finally` 立即 `process.exit()`；undici 仍持在途 socket 状态，Windows teardown+线程池唤醒撞上已 closing 的 handle ⇒ `UV_HANDLE_CLOSING` 断言、exit code `0xC0000409`；对**新建 TCP 连接**确定性复现，连接复用不复现）：判据：① 退出前显式排空/中止在途异步（或禁强制退出走自然事件循环排空），fire-and-forget+立即 exit 是断言配方；② 退出码是契约——「命令成功但 abort 退出」让脚本/CI/hook 全判红，比慢一步严重得多；③ 只在特定连接形态复现的崩溃先查连接生命周期（新建 vs 复用）再查平台。
+- 提升层：工作流（退出确定性与退出码契约）。触发词：UV_HANDLE_CLOSING、fire-and-forget+process.exit、在途 socket、退出码损坏、新建连接复现、自然排空。
+- **前置条件违反的报错语义：内部断言失败（500）改为领域错误（400）+可操作消息，检查置于所有状态变更的统一入口，同态短路防误拒**（activepieces/activepieces#16481：对从未发布的 flow 发 ENABLED 原本撞 `publishedFlowVersionId is required is null or undefined` 的 500+服务端错误日志；修复=`FLOW_OPERATION_INVALID`(400, "Publish the flow before turning it on")，检查跑在每个状态变更上取代 assertNotNullOrUndefined；禁用一个未发布流本就不可达（未发布恒 DISABLED，同态检查先返回）故不会误拒）：判据：① 用户可修复的前置违反报领域错误+下一步动作，内部断言形态的 500 是把实现细节漏给调用方；② 前置检查放统一入口（所有状态变更）而不是单个调用点，漏一个入口就是一个 500；③ 短路条件（同态/不可能态）要显式，否则新检查会把合法路径误拦。
+- 提升层：工作流（错误语义与前置检查）。触发词：500→400、领域错误、可操作消息、统一入口检查、同态短路、assertNotNull 反模式。
+- **全量枚举改定向查询：读「机器上每个进程」的调用随进程表增大即崩；退出前记录未捕获异常使崩溃原因落日志**（activepieces/activepieces#16562：worker 用 `si.processes()` 读每个沙箱内存——该调用读全机进程，进程表增大后炸（#15616）；修复=pidtree 定位沙箱进程树+pidusage 只读这些进程的 RSS；worker 退出前记录 uncaught exception/unhandled rejection（崩溃原因进日志）仍以 code 1 退出让进程管理器重启）：判据：① 「读全量再筛」的调用把数据源规模当稳定假设——进程表/行数/节点数都会涨，改定向查询（先定位再读）；② 测量面按目标集合收窄，全机扫描既慢又撞规模上限；③ 崩溃路径的留痕（退出前 flush 未捕获异常）是事后定位的唯一线索，重启策略（exit 1）与留痕并存不互斥。
+- 提升层：工作流（查询定向化与崩溃留痕）。触发词：si.processes 全机扫描、pidtree+pidusage 定向、进程表规模、退出前留痕、unhandled rejection。
+
+## r611B 下沉（arXiv 一手：API 429 未达，列表面 8 轨 200 代偿 + abs 页逐篇摘要）
+- **恢复操作须因果评估：同一执行状态下有/无恢复对比，把「救回失败轨迹」与「破坏本会成功的轨迹」分开；平均成功率掩盖这个张力；干预路由器只用恢复前可用信息决策**（arXiv 2610.00372《When Harnesses Lose the Signal》：CIR 在 ALFWorld 长程任务把成功率从 70.33% 提到 73.33%（+3.00pp）且不触碰任何观测正确的轨迹；对照显示恢复收益不能仅由环境返回的新观测解释）：判据：① 恢复/重试/回滚类操作按因果对评估（同状态 ±干预），平均值会把 rescue 与 harm 抵消掉；② 干预决策只能用干预前信息（事后信息不可得），路由器有效性按此约束验；③ 「不动正确轨迹」是恢复策略的合格线——先证明不伤害再谈收益。
+- 提升层：工作流（恢复的因果评估）。触发词：causal recovery、同状态对比、rescue vs harm、干预前信息、不伤正确轨迹。
+
+## r611A 补下沉（GitHub 一手：gh api 缓存复核，编号判重后读正文）
+- **审批恢复路径的 session items 单边持久化：调用不落账只落输出，下次运行整个会话被拒**（openai/openai-agents-python#4827：blocked-output deferral 后，同时有 output_guardrails 且 tool_use_behavior≠run_llm_again 的 agent 在 needs_approval 工具挂起时把 interrupted turn 的 session items 推迟写入（park-time 写入为空 by design）；审批恢复且已批准工具非 terminal 时无任何路径持久化 deferred items——恢复侧只存 resolved turn 的 new_step_items（工具输出）、最终输出扫描只覆盖最终响应项；结果 Session 里出现 function_call_output 而其 function_call 从未写入，下次 Runner.run 时 provider 以 400「No tool call found for tool_call_id」拒绝整个会话）：判据：① 断点恢复的持久化必须做「调用-输出配对对账」——单边落账（只存 output 不存 call）比不存更危险，它污染整个会话而非单个轮次；② 「by design 的空写入」是债务不是设计：挂起写空+恢复补写的两段路径必须有汇聚点，否则中间态永悬；③ 恢复路径验收用「恢复后直接重放同一 session」——配对断裂只在重放时显形；④ 与既有「恢复前清状态」「陈旧取消位污染」同族不同面：那些管残留清理，本条管配对完整性。
+- 提升层：工作流（断点恢复与状态持久化）。触发词：deferred session items、单边持久化、function_call_output 无主、400 No tool call found、恢复重放、配对对账。
+
+## r611A 补下沉（GitHub 一手：gh api 缓存复核，claude-code 缺陷报告正文）
+- **缓存 TTL 假设须按入口分别实测：同账户同版本同模型下 interactive 写 5 分钟而 -p/SDK 写 1 小时**（anthropics/claude-code#101685：2026-10-12 18:18 UTC 起每个新交互会话主对话 prompt cache 按 5 分钟 TTL 写入，而同账户同机同版本同模型的 headless claude -p 仍按 1 小时；文档称交互轮/-p/SDK 轮同属 main conversation bucket；证据来自本地转录 message.usage.cache_creation 非 sidechain 行——18:18 前启动的交互会话持续写 1h 直到 idle，其后 5 个全 5m 且 1h 恒 0，4 个 -p 运行全 1h）：判据：① 「文档说同 bucket」不等于运行时同策略——入口（interactive/-p/SDK）可以是隐性的 TTL 决定变量，成本模型按入口分别实测而非按文档推断；② 缓存探针读 usage 元数据（cache_creation/TTL 分布），不看「有没有缓存」；③ 隐性策略变更无公告——以时点切分的实测分布是唯一证据（本例 18:18 UTC 前后对比）；④ 与 mts「schema 体积门禁」不同面：那条管入上下文成本，本条管缓存复用假设的有效期。
+- 提升层：工具（缓存行为实测与成本假设）。触发词：prompt cache TTL、入口决定 TTL、cache_creation、5m vs 1h、隐性策略变更、成本假设实测。

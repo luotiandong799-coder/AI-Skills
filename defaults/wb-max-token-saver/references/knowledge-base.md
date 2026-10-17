@@ -918,3 +918,11 @@ ercel-labs/skills/find-skills，2026-04 实拉；与 WB ctx 工具面安全分�
 ## r610B 下沉（arXiv 一手：export.arxiv.org API 200 + abs 页逐篇命中；API 通道本轮恢复，r607 终结论撤销）
 - **工作记忆的瓶颈在"干扰下读出"不在"定位"：抑制无关项身份信息比增强目标信号更有效**（arXiv 2610.21176《Language Models Share a Readout Bottleneck in Working Memory》：15 个预训练 LLM（70M–14B）+ 最小 transformer 上，承载任务的注意力头在多数漏配 trial 上确实盯住了目标，线性探针近完美解码目标/诱饵位置，但模型自己的决策几乎区分不了； sharpen attention 增益可忽略，抑制非目标项的身份信息在几乎所有模型×负载下提升敏感性；大模型任务摊到更多头，去干扰收益更大）：判据：① 上下文工程的着力点是降低无关项的可读性/可及性，不是反复突出目标——定位机制通常没坏，坏在读出一刻的干扰；② 诱饵错误（重复当前刺激但位置错）是干扰的标志形态，出现时先删干扰项再调目标信号；③ 容量摊薄（头更多）反而放大去干扰收益——大上下文不是豁免理由。
 - 提升层：上下文（干扰治理优先于目标增强）。触发词：working memory readout bottleneck、干扰 vs 定位、诱饵错误、抑制非目标身份、上下文干扰。
+
+## r611A 下沉（GitHub 一手：gh api 单页 20 仓 200，编号判重后逐篇读正文）
+- **上下文预算参数的单位口径要一致：触发/保留已支持「窗口分数」而修剪只接受绝对 token——预算类参数统一提供相对与绝对两种口径并按模型 profile 解析**（langchain-ai/langchain#41120：`SummarizationMiddleware.trigger`/`.keep` 接受 `ContextSize=("fraction", x)` 按 `model.profile.max_input_tokens` 解析，`trim_tokens_to_summarize` 只接受 `int|None` ⇒ 同一预算族参数两种单位，跨模型迁移时绝对值全部失效）：判据：① 同一预算族（触发/保留/修剪）的单位口径必须一致，混用绝对+相对=换模型即全体失准；② 相对口径按模型 profile 的窗口解析，绝对值不进代码只进配置；③ 加新预算参数时先问「换成小窗口模型它还成立吗」。
+- 提升层：上下文（预算参数单位一致）。触发词：ContextSize fraction、窗口分数、绝对 token、预算族单位一致、profile 解析、换模型失准。
+
+## r611B 下沉（arXiv 一手：API 429 未达，列表面 8 轨 200 代偿 + abs 页逐篇摘要）
+- **详细 system prompt 的成本-收益要双边报：无一致准确率增益而 token 1.5-2.3×、每次成功调用成本 2.2-4.5×；但长 prompt 对供应商 API 抖动更稳（首过正确率 54.0%→71.6%）**（arXiv 2610.00084《Scientific Agents: Evaluating Profession-Specific System Prompts》：503 个职业 profile × 四对照 × 九基准 4,531 题，平均准确率差 -0.6pp（CI [-1.5,+0.2]），无基准显示统计清晰提升；60 个工具题上 profile 组 46.7% vs 基线 56.7%（-10.0pp，因 token/时限停止更频）；但 SuperGPQA 上频繁 API 丢弃下短基线首过仅 54.0%、profile 71.6%）：判据：① 「更详细的 prompt 更好」默认不成立——准确率无一致增益时先算 token/成本账；② 长 prompt 有一个可测优势：API 抖动下的首过存活率，按部署环境权衡；③ 工具使用场景 prompt 长度可能反噬（token/时限停止），分场景评。
+- 提升层：上下文（prompt 长度成本-收益）。触发词：profession-specific prompt、无一致增益、token 1.5-2.3×、成本 2.2-4.5×、API 抖动首过存活、工具题反噬。

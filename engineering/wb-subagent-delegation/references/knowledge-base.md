@@ -138,3 +138,7 @@
 - 提升层：工作流（经验利用形态）/ 工具（记忆组件设计）。触发词：tool graph memory、软先验 vs 处方、负对照、随机指导、文本洞察、放弃不调用。
 - **强模型从每步作者转为评审：弱模型起草（只读调用保 grounded、首个改环境动作扣留），强模型单次 prefill 验证整段、提交最长合法前缀、修复首个被拒步骤**（arXiv 2610.21463《SpecAgent》： tau^2-Bench 上贴近强模型成功率（差 1 分内）同时内存流量与墙钟约减半； AutomationBench/VitaBench 弥合 44–75% 质量差距； MCP-Atlas 边缘-云部署弥合 53–75% 差距而强模型 token 产出至多一半）：判据：① 分工原则=强模型不 author every step，改为 verify drafted segment；② 起草侧只读执行保证每步 grounded in real observations，首个环境修改动作扣到验证后；③ 验证用单次 prefill 替代逐 token 解码——提交最长语义合法前缀+只修复首个被拒步；④ 与 sd「双模型主-副手」分工：那条管委派框架，本条管起草-验证协议的具体形状。
 - 提升层：工作流（强弱模型协作协议）。触发词：SpecAgent、draft-verify、read-only grounding、最长合法前缀、单次 prefill 验证、扣留首个写动作。
+
+## r611B 下沉（arXiv 一手：API 429 未达，列表面 8 轨 200 代偿 + abs 页逐篇摘要）
+- **委派预算的容错守恒：reply 丢失/超时后效果完成/消息重复/分支分区/DAG join 别名都会击穿父子配额；对策=独占托管信用+派发许可证（绑定血缘/纪元/归一效果/最大计费/接收方/幂等键）+网关首收验签；不确定效果保持计费直到认证结算、围栏无效果证明或永久退役**（arXiv 2610.00349《Fault-Tolerant Budget Conservation in Distributed Multi-Agent Delegation》：预算=量化资源向量以独占 escrow credit 在委派 DAG 中流动；证明所有权划分/账实守恒/后代不放大/最多一次结算/迟到完成安全/分区禁锢；TLA+ 有界检查+独立 JS explorer+崩溃注入双进程 SQLite 实验检出 timeout-refund 与历史证书校验变异）：判据：① 父子配额约束在故障（丢Reply/超时/重复/分区/join 别名）下不守恒——超支是默认结局不是意外；② 不确定副作用按「已计费」处理直到三选一（认证结算/围栏无效果证明/退役），超时≠免费；③ 幂等键+血缘+纪元绑定进派发许可证，网关首收验签；④ 模型检测要有崩溃注入实验，纯静态证明漏 time-out refund 变异。
+- 提升层：委派（预算守恒与不确定计费）。触发词：escrow credit、dispatch permit、不确定效果计费、fenced no-effect proof、最多一次结算、迟到完成安全、崩溃注入检出。
