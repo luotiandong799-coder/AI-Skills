@@ -4247,3 +4247,29 @@ exit code: SUCCESS=0 / FAILURE=1 / INCONCLUSIVE=2   # 退出码必须与 verdict
 
 - **一条请求一条宽事件：duration/status/sampling 同源可关联**（来源：activepieces.com/docs/install/configure-operate/setup-opentelemetry.md 一手实拉）：每个 API 请求与 worker job 执行发单条宽事件 JSON（evlog），含 duration、status、sampling context；采样变量 AP_LOG_SAMPLE_RATE_INFO（info 级保留百分比）+ AP_LOG_KEEP_SLOW_MS（慢于阈值必留，默认 2000ms），**warn/error 永不采样丢弃**；BullMQ 队列指标以 gauge 每 60s 导出（queue×state：waiting/active/failed/delayed/paused），每条数据点带 service.name/host.name，多副本产出可区分序列；另注意 OTLP collector 解析到私网 IP 会被 SSRF 过滤拦掉，需进 AP_SSRF_ALLOW_LIST——观测出口本身可能被安全策略拦截。判据：① 宽事件让「多慢、什么状态、采样上下文」同源一行——分散多行日志要靠时间戳拼且易丢字段；② 采样合法性来自保留谓词显式（与「按比例丢弃必须显式保留谓词 r381-Q_C」互补：那条立规矩，本条给宽事件+队列指标的实现形态）；③ 观测导出失败先查 SSRF 白名单再怀疑 collector。
 - 提升层：验证（观测证据形态）/ 工具（队列指标导出）。触发词：wide-event 宽事件、evlog、AP_LOG_KEEP_SLOW_MS、warn/error 不采样、BullMQ gauge、service.name 可区分、OTLP SSRF 白名单。
+
+## r621 学习轮（2026-10-23）
+
+### r621A · 守卫生成的起止事件必须在异常分支也发终态
+crewAI#8402：guardrail 正常返回会发 Started/Completed 一对；抛异常时立即向上传播，Completed 永不发出，tracking listener 的 span 一直挂到执行结束被强制收尾，状态标成「orphan」，真正的 ValueError 反而没进 trace。判据：事件配对器的 except 分支必须补发终态，且终态要携带原始错误文本；否则排障时只能看到 sweep 标签，看不到真实原因。
+
+### r621A · 结束类事件必须校验自身帧在栈顶再弹栈
+crewAI#8406：scope-ending 事件（a2a_delegation_completed）在 except 里无条件发出，但对应的 started 事件在卡片拉取/鉴权/扩展校验之后才发；早期失败时 Completed 无配对，于是弹掉了外层 flow_started 帧，日志只留一条 pairing mismatch。判据：结束事件入栈前先断言栈顶是本类帧，不匹配则该发不发（改发 error 事件），不要用「弹一个大概是对的」兜底。
+
+### r621A · 同一条后处理必须被流式与非流式入口共用
+autogen#8337：非流式 create() 对工具名跑了 normalize_name()，流式 create_stream() 拼装时没跑，同一次 API 响应在两条路径产出不同的 FunctionCall.name；原始名违反 `^[a-zA-Z0-9_-]{1,64}$` 时下一轮回放会被 400 拒。判据：归一化属于出口契约，不是某条路径的实现细节——两条路径须共用同一个收口函数，并用「同输入两路径结果相等」做回归。
+
+### r621A · 写失败必须回滚内存镜像
+browser-use#5527：write_file 先改内存文件对象再落盘，落盘抛 OSError 后错误返回了，但内存里已是新内容、新建文件也仍留在 registry 与序列化状态里；后续读与状态恢复会报告从未持久化的数据。判据：失败路径要恢复到最后一次持久化态并同步 registry，验收方式是「注入 I/O 失败后读回旧值」。
+
+### r621A · 错误结果的 schema 合规义务须显式规定
+mcp#569：工具带 output schema 且报 isError 时是否仍需给结构化结果，规范未写清。建议口径：无执行错误时 MUST 给符合 schema 的结果；有执行错误时 MAY 省略结构化结果；客户端 SHOULD 只对非错误结果做 schema 校验。判据：设计错误通道时先问「这条错误的合规义务归谁」，否则校验器会把合法错误判成协议违规。
+
+### r621B · 验证器须自报辨识边界，不能把「离线通过」当「上线安全」
+2610.31130 Post-Audit Mirage：可构造一对安全/有害生命周期，使验证器可见证据完全相同，而隔离评分器记录相反的部署真相；因此离线审计存在原理性不可辨识区。判据：验证结论要按四态返回（放行 / 暂缓 / 无法判定 / 不支持该结论），并注明本次结论覆盖不到的群体与效应量区间。
+
+### r621B · 证据缺失下的不安全执行是独立失效类
+2610.31650 EpiSEM-Bench：工具响应只要「省略」一条与安全相关的事实，agent 就可能执行被禁止的动作，而它引用的每条陈述都为真、用户请求也完全合规，不存在说谎或幻觉。判据：安全验收要单独测「是否主动索取缺失事实」，把「依据为真」与「依据充分」分成两个断言。
+
+### r621C · 跨服务 trace 串联靠请求元数据传播，不靠日志拼接
+MCP SEP-414：规范把 OpenTelemetry trace context 的传播约定写进请求元数据（traceparent/tracestate 随调用走），服务端从请求里取上游上下文而不是新起根 span。判据：多跳 agent 链路要能用一个 trace id 串起来，验收方式是「跨 3 跳后仍是同一 trace、parent 关系不断」。

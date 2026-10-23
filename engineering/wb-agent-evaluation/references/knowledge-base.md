@@ -406,3 +406,20 @@
 
 - **scorer 挂到工作流步骤上：每步可评分，不只终局打分**（来源：mastra.ai/docs/evals/overview.md 一手实拉）：Mastra Evals 的 scorer 除挂在 agent 上还可挂到单个 workflow step——每个 scorer 收该步自己的输入与输出，「在每一步测质量而不是只测最终答案」；每个 scorer 独立采样率（实例：relevancy rate 0.5、safety rate 1.0——安全类全采）；live evals 异步跑不阻塞主链，scorers 可进 CI/CD 持续监控。判据：① 只评终局产物丢失中间步骤质量归因——「哪一步开始坏」要靠逐步评分定位；② 采样率按 scorer 风险分级设置，别全局一个率（安全/合规类应全采）；③ 非确定性输出的「测试」形态是 scorer（数值分 0–1）而非 pass/fail 断言——把 AI 输出当确定件写断言是类别错误。与「judge 策略不可迁移（既有）」不同面：那条管 judge 提示策略的作用域，本条管评测量的挂载粒度与采样分级。
 - 提升层：评测（逐步质量归因）。触发词：step-level scorers、逐步评分、scorer 采样率分级、live evals 异步、AI 输出的测试是 scorer 不是断言。
+
+## r621 学习轮（2026-10-23）
+
+### r621B · 自动评委系统性地偏爱记忆型回答
+2610.31272：87 名用户用自己的 ChatGPT 问题与个人记忆给出约 1,000 组两两判断，记忆条件下的回答并不总被偏好、部分场景用户明显更爱无记忆版本；而自动评审与用户一致度有限，且显著更常偏向记忆型回答。判据：记忆/个性化类改动必须用真人偏好校准，不能只看 LLM judge；报告里要同时给「评委偏好」与「用户偏好」两条线。
+
+### r621B · 用相似度几何预测记忆检索成败，多半打不过难度基线
+2610.26433：在 LongMemEval-small 的 2,367 个问题-系统对上，用 25 个几何特征预测回答正确性，pooled AUROC 0.640，低于问题难度基线 0.655；控住难度与系统身份后几何带来的增益不显著（+0.002，95% CI [-0.010, 0.014]）。判据：任何「用内在信号预测成败」的方案都要报相对难度基线的增量，单看绝对值会高估。
+
+### r621B · harness 收益随模型档位递减，须分层归因
+2610.28802：24 组模型-框架配置、265 个已确认根因；从最小提示换成带 CodeQL 派生调用图的工程化提示，小/中档模型关键性加权产出提升 20–86%，前沿模型仅 2%。同时实验同时改了 prompt 与 context，拆开看才知道是上下文结构而非措辞在起作用。判据：技能与上下文工程的收益要按模型档位分段报告，禁止把强模型的结果外推到弱模型。
+
+### r621C · 观测出口迁移按 OTLP 单口径
+langfuse llms.txt（2026-10-23 实拉 17,860B）：读侧 /api/public/traces、/sessions、/observations 已收敛到 /api/public/v2/*，写侧统一到 POST /api/public/otel/v1/traces（OTLP/HTTP）或 ingestion 批量口，旧的分散 span/generation 端点退为兼容。判据：接入观测时先确认写入口是否 OTLP，非 OTLP 的私有端点视为会变。
+
+### r621C · 跨格式 trace 导入必须先定义去重语义
+zenml/kitaru import 文档（docs.zenml.io/llms.txt 71,013B，2026-10-23 实拉）：支持 Langfuse JSONL、LangSmith、Braintrust、Logfire、Phoenix、MLflow 与自有 JSONL 七类导入，每类都写明「accepted export shapes / dedup semantics / span 如何映射成节点」；并明确 Langfuse 仍是 system of record，Kitaru 只取可重放会话。判据：任何 trace 二次摄入方案，去重键与「谁是记录真身」必须在导入前写定，否则重复导入会把指标抬高。

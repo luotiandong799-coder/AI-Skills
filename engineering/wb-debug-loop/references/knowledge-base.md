@@ -2106,3 +2106,29 @@ ew\`: **reject the newest message when the queue is already full**」；③「**
 
 - **工具输入校验错误必须走 Tool Execution Error 通道，模型才可能自愈**（来源：modelcontextprotocol.io SEP-1303《Input Validation Errors as Tool Execution Errors》Final Standards Track，2025-08-05，modelcontextprotocol/modelcontextprotocol#1303 实拉一手）：Protocol Error 是 JSON-RPC 错误响应，被客户端应用层捕获、**不回传模型上下文**；只有 Tool Execution Error（正常结果内 isError: true）会作为工具结果喂回模型。旧规范把 "invalid arguments" 归 Protocol Error、"invalid input data" 归 Tool Execution Error，两类混用导致校验反馈丢失——模型看不到「日期必须是未来」这类 schema 表达不了的程序化校验信息，就盲目重试同一错误（Cursor 连送 2024 年日期连错 3 次的实测实例）。SEP-1303 把两类合并为 input validation errors 统一走 Tool Execution Error。判据：① 设计工具错误通道先问「这个失败信息模型能看到吗」——可见才能自纠，不可见就是盲目重试循环；② 排障「模型反复犯同一个错」先查错误分层与回传通道，别先归因为模型笨；③ 该变更向后兼容（不改协议结构、不清除既有错误类型），但客户端行为会变——升级 SDK 后要回归「校验失败→模型读到→自我纠正」全链路。与「两级错误语义（既有）」分工：那条管协议错/工具错怎么分层、agent 按层决策，本条管**输入校验这类失败放错层会让自愈链路直接断**。
 - 提升层：工具（MCP 工具契约）/ 工作流（自愈重试设计）。触发词：SEP-1303、input validation errors、isError:true、Protocol Error 被客户端吞、模型看不到校验信息、盲目重试、工具错误通道分层。
+
+## r621 学习轮（2026-10-23）
+
+### r621A · 单次运行态与进程级累计量必须分开
+crewAI#8415：LiteAgent.kickoff 重置了迭代计数与工具结果，但 guardrail 重试计数是只增不减的 PrivateAttr，累计失败一旦到阈值，之后每次 kickoff 第一次失败就直接抛；同时 usage_metrics 取的是 LLM 实例的生命周期累计，而不是本次增量。同项目的 Agent 用局部计数器 + baseline 差值，孪生实现不对称。判据：凡是「每次运行该归零」的量，写在运行入口的初始化里；累计型指标一律报告 delta_since(baseline)。
+
+### r621A · 失败路径不清 in-progress 标志会把一次失败放大成永久静默
+crewAI#8394：渲染型 listener 是进程级单例，多个失败分支（memory save failed、无 retrieval failed handler、knowledge search failed）都不清 in-progress 布尔，之后所有同类事件被 `if xxx_in_progress: return` 挡掉，spinner 与开始行全部消失，completed 还会错配。判据：每个 started/failed/completed 三元组都要有对应的清理点，且「缺 handler」本身算缺陷——失败事件必须有消费者。
+
+### r621A · 缓存键必须覆盖影响输出的全部策略参数
+autogen#8211：ChatCompletionCache 接收并透传 tool_choice，却不把它放进 cache key；「必须调用工具」「不得调用工具」「必须调用某个工具」三种策略共用一条缓存，第二第三个调用方拿到第一个的答案，流式路径同样。判据：缓存键的枚举口径是「改变它会改变输出」的全部入参；校验方式是同一 messages 只改一个策略参数必须 cache miss。
+
+### r621A · schema 校验通过不等于调用契约成立
+autogen#8319：FunctionTool 能为带 positional-only 参数的函数生成合法 schema，但 run_json 按关键字传参，校验通过后抛 TypeError。判据：校验层与执行层对「怎么传参」必须共用同一份签名模型；验收要跑 positional-only、async、带 cancellation_token 三类形态。
+
+### r621A · 开关的副作用不能超过它的名字
+llama_index#23601：disable_validation 文档写「跳过运行前的事件图校验」，实现里 @catch_error 处理器是在验证阶段装配的，跳过验证等于把所有错误恢复也关掉，同一份工作流在开关两侧行为不同。判据：跳过校验类开关只允许影响校验本身；处理器装配、路由表构建等运行必需步骤要从事前校验里拆出来。
+
+### r621A · 预算要在归一化之后计量
+llama_index#23575：SentenceSplitter 的 _merge 按 split token 求和做预算，_postprocess_chunks 之后才 strip，strip 改变了跨边界的分词结果，实测 chunk_size=64 时产出 64/65/65/34 两块超预算；chunk_size 在下游是硬上限（embedding 上下文）。判据：所有「不得超限」的量，都在最终产物形态上复测一次，而不是在中间表示上估算。
+
+### r621B · 只评终答会让派生状态的过时无法归因
+2610.25373 MemDerive：长跑 agent 的记忆多为派生状态（没有任何一条记录写着它，得由多条历史按规则算出来），现有记忆基准只给终答打分，答案错了无法定位到「漏算/算旧」的那一态，静默过时的状态完全不被发现。判据：诊断型评测要记录 gold 推导 DAG 与支撑事件，按访问/演化/干扰三维度分档。
+
+### r621B · agentic 检索的指标假设会整体失效
+2610.30423 LARA：CTR/MRR/NDCG 假设用户先看到排序再行动；agentic 助手里是生成层先读结果、用户可能几轮后才行动、结果又混合了模型自身知识——三者合称归因缺口。做法是把检索质量、参与度、产品成功拆成三层，用一个四字段 lineage 串起来，不需要重新建模。判据：检索评估先问「谁先读、何时行动、结果从哪来」。
