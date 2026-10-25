@@ -4273,3 +4273,26 @@ mcp#569：工具带 output schema 且报 isError 时是否仍需给结构化结�
 
 ### r621C · 跨服务 trace 串联靠请求元数据传播，不靠日志拼接
 MCP SEP-414：规范把 OpenTelemetry trace context 的传播约定写进请求元数据（traceparent/tracestate 随调用走），服务端从请求里取上游上下文而不是新起根 span。判据：多跳 agent 链路要能用一个 trace id 串起来，验收方式是「跨 3 跳后仍是同一 trace、parent 关系不断」。
+
+### r625A · 压缩摘要与定时提示重入上下文必须保留 agent 来源标签
+anthropics/claude-code#81955（2026-10-25 一手实拉）：定时提示（scheduled prompts）与压缩摘要（compaction summaries）重新进入上下文时**戴着用户权威**（user authority）出现，即 agent 自己写的文本被当作人说的。判据：凡由系统/agent 生成而重新注入的内容，必须带不可剥离的 `author` 归属字段；下游任何「这是用户意图吗」的判断（自动放行档、审批豁免、意图来源白名单）都按该字段取值，而不是按它在消息序列里的位置。触发词：agent 文本戴用户权威、compaction summary 归属、定时提示注入、author 标签、意图来源。
+
+
+### r625A · 跨字段校验器只能看见声明顺序之前的字段，跨字段不变量会静默失效
+crewAI#8569/#8570（2026-10-25 一手实拉）：`GuardrailResult.validate_result_error_exclusivity` 用 `@field_validator("result","error")`，而 pydantic v2 的 `info.data` 只含**已验证**字段（声明顺序为 success→result→error），于是 success=True 分支下该互斥校验是死代码。判据：依赖多字段的校验器，其可见上下文由字段声明顺序决定，写在后面的字段看不到写在后面的兄弟字段；跨字段不变量不能靠「字段级校验器 + info.data」实现，要用模型级校验或在顺序上把被依赖字段前置并加回归测试。触发词：field_validator 死代码、info.data 声明顺序、跨字段不变量、模型级校验。
+
+
+### r625A · 序列化与反序列化必须成对测试，不对称即静默丢事件
+microsoft/agent-framework#5569（2026-10-25 一手实拉）：`BaseEventJsonConverter.Write` 处理了包括 `StateDeltaEvent` 在内的全部已知事件类型，但 `Read` 缺 `AGUIEventTypes.StateDelta` 分支 ⇒ 写得出、读不回。判据：只要存在「枚举→序列化」的映射表，就必须有一份「同一枚举→反序列化」的对照测试，逐项断言 round-trip；缺 case 的表现不是报错而是静默丢弃，因此不能用冒烟测试覆盖。触发词：序列化不对称、Read/Write 缺 case、round-trip 测试、静默丢事件。
+
+
+### r625B · 批准的有效性按取得时刻审计，压缩不得把未验证的批准洗成来源不可分辨的记忆
+arXiv 2610.29869《Compaction Laundering: Provenance Destruction in Context-Compacting Coding Agents》（2026-10-25 export API 一手摘要）：长时间运行的编码 agent 必须压缩上下文——总结对话、丢弃原文、把摘要当记忆往前带；该文表明压缩会破坏来源，使「压缩时刻尚未验证的批准」在进入记忆后变得与已验证批准无法分辨。判据：批准的审计键是**取得时刻的状态**而不是它在当前上下文里是否还在；任何会重写/摘要历史的执行动作，都必须为「未决批准」保留一条独立的状态记录，压缩可以丢正文但不能丢「这条当时还没批」这一事实。触发词：compaction laundering、来源破坏、批准取得时刻、未决批准、压缩不洗状态。
+
+
+### r625B · 跨异构运行时的安全诊断需要可重放与证据归一化
+arXiv 2610.30738《AgentTriage: Replayable Security Diagnosis Across Heterogeneous Agent Runtimes》（2026-10-25 一手摘要）：工具型 agent 写文件/执行代码/发送数据时，其最终响应解释不了由此产生的安全事件，而异构运行时通过互不兼容的接口暴露相关证据。判据：agent 的自述不是安全证据——事后归因必须落在一次可重放的执行记录上；当执行体有多种运行时时，还要先把各自的证据格式归一到同一套事件模型，否则「同一类事件在不同 runtime 下看起来完全不同」，诊断结论不可比。触发词：replayable diagnosis、异构运行时、证据格式归一化、agent 自述不是证据。
+
+
+### r625C · 连续性投影进新会话的摘要是「引用态」、有损且有界，不是事实等价物
+docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl 一手 200/5,958B）原文：把既有会话的连续性投影进一个全新的 Codex 线程时，会带上已保存的压缩与分支摘要，即使更早的用户消息已不复存在；「Summaries stay quoted as prior context, separate from the current request」，且仍受投影尺寸上限约束，过大的摘要或更早的完整轮次可被省略。判据：跨会话「连续性」不等于「完整性」——投影是有损的、有上限的，摘要以引用态进入而非并入当前请求；任何依赖连续性的下游结论都要按「可能被省略」来设计，不能把「会话续上了」当成「历史都在」。触发词：continuity projection、摘要引用态、投影有损、有界连续性、会话续上不等于历史完整。

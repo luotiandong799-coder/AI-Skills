@@ -423,3 +423,18 @@ langfuse llms.txt（2026-10-23 实拉 17,860B）：读侧 /api/public/traces、/
 
 ### r621C · 跨格式 trace 导入必须先定义去重语义
 zenml/kitaru import 文档（docs.zenml.io/llms.txt 71,013B，2026-10-23 实拉）：支持 Langfuse JSONL、LangSmith、Braintrust、Logfire、Phoenix、MLflow 与自有 JSONL 七类导入，每类都写明「accepted export shapes / dedup semantics / span 如何映射成节点」；并明确 Langfuse 仍是 system of record，Kitaru 只取可重放会话。判据：任何 trace 二次摄入方案，去重键与「谁是记录真身」必须在导入前写定，否则重复导入会把指标抬高。
+
+### r625B · 自动化 agentic 设计与自改进的结论必须来自非平稳条件
+arXiv 2610.31436《Conservative Meta-Agent Search: Architecture Adaptation under Non-Stationarity》（2026-10-25 一手摘要）：自动化 agentic 系统设计通常在静态任务套件 + 即时标量奖励下评估，而部署系统面对的是持续漂移、延迟的依赖反馈与相关组件失效。判据：在静态套件上得到的架构/自改进增益不能外推到部署环境；评估面必须显式包含漂移、反馈延迟与相关性失效三件事，否则选出来的「最优架构」只是对静止世界的过拟合。触发词：非平稳评估、静态套件不外推、漂移、延迟反馈、相关失效。
+
+
+### r625B · 护栏评估必须在故意对抗条件下做，正常使用下的通过率不构成保证
+arXiv 2610.31593《Simulated Control Evals》（2026-10-25 一手摘要）：控制评估衡量 safeguard 能否阻止一个**正在故意尝试**造成不良后果的模型；这类评估通常使用专门搭建的控制环境，该工作提出用模拟环境来做。判据：把护栏放在配合的模型上测，通过率只反映「正常情况下不误伤」；控制评估的问题是「对手主动找路时会不会被挡住」，两者是不同的量，前者不能替代后者。触发词：control eval、故意对抗、safeguard 对抗评估、模拟控制环境。
+
+
+### r625B · 按置信度分配审计预算可给出可证明的可靠性保证
+arXiv 2610.31662《Reliable AI-Assisted Decisions via Selective Auditing》（2026-10-25 一手摘要）：在线监控系统每轮输出一个决策与估计其可信度的置信分，据此做选择性审计并给出可靠性保证。判据：人工复核是有限资源，均匀抽样与「全部复核」都不经济；置信分的作用是把审计预算投到最可能出错的决策上，并且这个分配必须能给出**可证明**的可靠性界，而不是只说「抽查了一部分」。触发词：selective auditing、置信分驱动审计、可靠性保证、审计预算分配。
+
+
+### r625B · 二值安全标签缺解释深度，评估量表要下沉到提示级的诊断 rubric
+arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety with Prompt-Level Rubrics》（2026-10-25 一手摘要）：现有安全基准主要依赖 safe/unsafe 二值标签，缺少解释深度，且自动评判之间一致性低；该工作提出 prompt 级 rubric 的诊断式评估。判据：二值标签能给出通过率但给不出「为什么不安全」，因而无法指导修复；评估量表要落在最小决策单元（这里是一条提示）上并给出可归因的维度分，否则评判者之间的一致性低会成为结论的主要噪声源。触发词：二值标签、prompt 级 rubric、诊断式安全评估、评判一致性。

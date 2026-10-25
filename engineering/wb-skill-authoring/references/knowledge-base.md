@@ -4358,3 +4358,10 @@ modelcontextprotocol#2600：规范仓库的 schema 生成链用 typescript-json-
 
 ### r621B · 从交互历史里回收可复用提示策略
 2610.26485 Promptile：用户会自发形成从隐式指令到显式模板的提示策略，这些经验散落在历史对话里；交互行为本身是这些策略的证据，策略可被分解、重组、跨任务复用。框架从历史中识别并验证策略，组织成可检索、可组合、可适配的组件。判据：个性化不应只抽偏好与工作流，还要抽「怎么问」这一类可复用组件。
+
+### r625A · 用户输入的查询元字符必须转义，否则「搜索」变成通配匹配
+langgenius/dify#44739（2026-10-25 一手实拉）：`SkillManagementService.list_skills` 用 `like = f"%{keyword.strip()}%"` 直接 `.ilike()`，未转义 `%`/`_`、也未传 `escape=`，用户关键字里的通配符被当成模式。判据：把用户输入拼进任何模式语言（SQL LIKE / 正则 / glob / 路径通配）之前必须先转义该语言的元字符并显式声明转义符；这类缺陷不报错、只静默改变匹配集，属于「搜索结果看起来不对」型缺陷。触发词：LIKE 通配符转义、escape 子句、查询元字符、用户输入进模式语言。
+
+
+### r625A · schema 缺 type 键时应按结构键推断，而不是降级为 Any
+crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `items` 无 `type: array`）时静默降级为 `Any`，污染展示给模型的 schema。判据：JSON Schema 不强求 `type`，但 `items` 只可能描述数组、`properties` 只可能描述对象——缺类型时的正确处理是**按结构键推断**，把「未知」降级成 `Any` 等于放宽到最弱约束，把一次可诊断的缺失变成一次静默的能力扩张。触发词：schema 缺 type、items/properties 推断、降级为 Any、工具 schema 污染。

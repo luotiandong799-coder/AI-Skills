@@ -1450,3 +1450,54 @@ activepieces#16683：/mcp 每个项目一份工具清单发给所有 OAuth 客�
 
 ### r621B · 受约束操作改为「先出证明再放行」
 2610.28484 Proof-Carrying Contracts（PC2）：约束写进指令/政策/协议都只是文本，无法强制；改为要求 agent 在操作执行前提交一份机器可检的证明，说明该操作在其模型允许的所有情形下都保持约定约束，由执行系统 Airlock 校验后控制访问。各方只需约定要保的性质，不需要检查或信任对方的 agent 实现。判据：对外部 agent 的高风险调用，门禁位置应在执行前而非事后审计。
+
+### r625A · 编辑权与替换权必须分成两个权限位
+activepieces#16846（2026-10-25 一手 gh api 实拉）：连接替换新增独立权限 `REPLACE_APP_CONNECTION`，此前任何持有 `WRITE_APP_CONNECTION` 的人都能替换。原文动机是管理员需要「能让某角色编辑连接但不允许替换，或反之」。判据：修改一个凭据对象的字段，与把这个凭据对象整体换成另一个，是两个不同副作用——前者改内容，后者改身份；把它们绑在同一个权限位上，等价于把「换掉信任锚」免费赠给任何编辑者。触发词：编辑权不等于替换权、REPLACE_APP_CONNECTION、换绑凭据、权限位拆分。
+
+
+### r625A · 守卫配置的写入面必须在守卫之外
+anthropics/claude-code#84863（2026-10-25 一手实拉）：`settings.json` 的 `sandbox.filesystem` 只暴露 `allowWrite` 白名单、无读限制，而 agent 本身可以编辑 `settings.json`，于是「agent 能静默破坏它自己的沙箱强制」。判据：检查一项守卫是否成立，不能只测「守卫是否启用」，必须再测「守卫的开关落在谁的可写面上」——写入面在被守卫主体之内时，守卫只是默认值不是约束。触发词：守卫配置可写、自破沙箱、settings.json、allowWrite、守卫开关的写入面。
+
+
+### r625A · 脱敏必须发生在落盘/序列化之前，不是发送之前
+browser-use#5741（2026-10-25 一手实拉）：`MessageManager.create_state_messages()` 先把 `state_message.text` 存进 `self.last_state_message_text`，之后 `_set_message_with_type(..., 'state')` 才应用 `_filter_sensitive_data()`；`Agent._finalize()` 拿的是脱敏前那份字符串并写进 `AgentHistory.state_message`。判据：写路径上任何「先存原文、后脱敏」的顺序都会把原文固化进持久化对象，脱敏只保护了出站那一瞬间；正确位置是序列化/落盘之前，且落盘对象不得持有未脱敏副本。触发词：脱敏顺序、先存原文后脱敏、state_message、过滤在前存储。
+
+
+### r625A · 校验要双向：结构校验作用于原始入参，组装完成后再校验一次
+langflow#15946（2026-10-25 一手实拉）：MCP stdio 参数经 shell wrapper / Windows batch launcher 解释后要校验最终 shell 参数；同时命令关键字检查施加在**原始参数**上，使合法 header 名值保持可用；并拒绝 header 插入之后出现的 shell 语法。判据：单层校验必然有一侧漏——只查原始输入会被「插入后重组」绕过，只查最终串会误杀合法值且无法定位注入点；正确形态是「原始入参上做白名单/结构校验」+「组装结果上再做一次语法校验」。触发词：双向校验、原始入参校验、组装后校验、header 插入、shell 语法注入。
+
+
+### r625A · 认证白名单不等于授权白名单：免鉴权端点仍须做归属校验
+FlowiseAI/Flowise#6696（2026-10-25 一手实拉）：`/api/v1/feedback` 在 `WHITELIST_URLS` 内免鉴权，而 `getAllChatMessageFeedback` 对 `chatflowid` 零归属校验 ⇒ 未认证 IDOR。判据：「不需要认证」与「不需要归属判断」是两个决定，前者只说明调用者不必自证身份，不说明该资源对所有人开放；把端点放进免鉴权清单时必须单独回答「这个端点上的对象按什么键归属」。触发词：白名单端点、免鉴权 IDOR、归属校验、WHITELIST_URLS、认证豁免不等于授权豁免。
+
+
+### r625A · 批量动作必须逐条走单条动作的排除规则
+langflow#15978（2026-10-25 一手实拉）：把 HTTP 工具排除规则应用到 batch actions，防止显式 URL 登录继承进程凭据，并把 client 与组件注册表限制在每个请求作用域内。判据：策略通常写在「单条动作」的入口上，批量入口一旦绕过该入口就等于策略整体失效；凡新增 batch/bulk 形态，必须显式确认它复用了单条路径上的每一条排除与隔离规则。触发词：批量动作、batch actions、排除规则继承、请求作用域注册表、显式 URL 不继承进程凭据。
+
+
+### r625B · ALLOW 不等于准入完整：判定之外还要证明绑定完整
+arXiv 2610.29701《Beyond Policy Engines: Binding-Complete Execution Admission》（2026-10-25 export API 一手摘要）：策略引擎判定 ALLOW，但一个正确的 ALLOW 并不成立「治理来源完整参与」「上下文精确绑定」「理由充分」三件事。判据：把 ALLOW 当作准入终点是范畴错误——ALLOW 只回答「有没有一条策略说可以」，不回答「这次执行是否把策略要求的全部来源与上下文都绑上了」；执行侧必须单独回答绑定完整性，缺任何一项都应视为未准入。触发词：binding-complete、ALLOW 不等于准入、治理源完整参与、上下文精确绑定、理由充分。
+
+
+### r625B · 规则是学出来的，审计对象就是它的手写前置件
+arXiv 2610.31388《Auditing the Hand-Written Inputs of Learned Access Control》（2026-10-25 一手摘要）：学习式访问控制实际部署在两个人造产物之后——由小型可信盾执行的 hard-deny 集，与决定「哪些请求由挖掘规则回答」的 region map。判据：当策略主体由学习/挖掘产生时，信任并不落在那些规则上，而落在两个手写输入上；审计与对抗测试的对象必须转向 hard-deny 集（有没有该拒的没拒）与 region map（有没有请求落到无人回答的区域），只审挖掘出的规则等于审了最不可控又最不关键的那一层。触发词：hard-deny set、region map、手写输入审计、学习式访问控制、可信盾。
+
+
+### r625B · 执行 harness 应形式化为推理层与动作层之间的可认证监督器
+arXiv 2610.31376《Certified Execution Harness for Agentic AI》（2026-10-25 一手摘要）：用 Petri 网把 LLM 与其工具之间的执行 harness 形式化为一个监督控制器，置于推理与动作之间，在提示注入下保证安全工具执行。判据：把拦截点做成「一段规则」只能得到经验性保证；要做「可认证」的保证，拦截层必须是可形式化建模、其行为可穷举验证的离散控制器，且位置固定地在推理输出之后、工具调用之前。触发词：certified execution harness、Petri 网监督控制、推理与动作之间、可形式化拦截层。
+
+
+### r625B · 逐文档授权不等于对拼出的结论授权：机密性判定要在结论层
+arXiv 2610.30418《Agent Mosaic: Recognizing Confidentiality Leaks in Agentic LLM Systems》（2026-10-25 一手摘要）：agent 从各自可访问的文档检索信息，再披露一个由它们拼装出的敏感结论——mosaic effect。判据：访问控制通常按对象授权，但泄露发生在**组合**上；只要 agent 能把多份各自合法的材料合成一个更高敏感度的新结论，逐项授权就不构成对该结论的授权，机密性判定必须在结论层再做一次，而不是假定「每份材料都合规 ⇒ 输出合规」。触发词：mosaic effect、组合泄漏、结论层授权、逐文档授权不足、机密性合成。
+
+
+### r625B · 把策略写进 agent 的提示词不可靠，须落成可执行环境里的 guard 与策略基准
+arXiv 2610.28989《AgentPolicyForge: From Executable Environments to Policy Benchmarks and Adaptive Guards》（2026-10-25 一手摘要）：定制 agent 部署在工具/资源/执行条件上定义策略，但把这些策略放进任务 agent 的提示词并不能可靠阻止违规；该工作从可执行环境出发生成策略基准并训练 guard。判据：提示词里的策略是「请求」不是「约束」——它是否生效取决于模型这一次听不听；要让策略有保证，必须把它落成环境侧可执行的 guard，并配一份能测出「策略有没有被遵守」的策略基准，否则无法证明它生效。触发词：策略入提示不可靠、可执行 guard、策略基准、AgentPolicyForge、自适应守卫。
+
+
+### r625C · 连续性投影的最小充分集不含参数值，但被投影的结果内容未经脱敏
+docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl 一手 200/5,958B）原文：线程 bootstrap 投影会投影工具调用名与 id、输入形状与工具结果内容，且「without secret masking」，但**不会**把原始工具调用参数值复制进投影。判据：这一组取舍要两面读——好的一面是投影只带形状与结果、不带参数值，缩小了复制面；坏的一面是结果内容本身未经脱敏，于是「跨会话连续性通道」是一条新的数据出口。凡引入会话投影/迁移通道，必须同时声明它带什么、不带什么、以及带走的内容是否经过脱敏。触发词：投影最小集、不带参数值、结果内容未脱敏、without secret masking、跨会话出口。
+
+
+### r625C · 压缩设施必须声明它不暴露什么：能知道压缩发生了，但不知道留下了哪些条目
+docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl 一手 200/5,958B）原文：mirror 记录原生压缩的起止状态，但「it does not expose a human-readable compaction summary or an auditable list of which entries Codex kept after compaction」。判据：压缩是有损变换，其可观测性必须显式给出边界——能证明「压缩发生了、何时起止」，不能证明「丢了什么、留了什么」；任何在压缩之后做取证/审计的流程都要先接受这个边界，否则会把「查不到」误读成「没丢」。触发词：压缩可观测边界、不暴露保留清单、auditable list 缺失、压缩后取证。
