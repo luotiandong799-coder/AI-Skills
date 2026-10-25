@@ -1,8 +1,8 @@
----
+﻿---
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、崩溃恢复、限流预防、分批、批大小、条件循环、终止条件、无限循环、缺信息要问、把失败当空结果、毒化产物、传输损坏、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、确认词、验证边界、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、注入失败测韧性、hook 担保硬约束、部分完成度连续分、并发上限、槽位释放、暂停占槽、超限行为、队列代价、并发不是限流、可用余量、容量快照、自己记账、跑完不释放、客户端超时不等于取消、等待时释放、检查点重放、不死锁、占槽还是放手、可重放性、失败传播、部分成功、下游被跳过、跳过传染、旁支是绿的、停了不等于收权、令牌leeway、工具里叫停、工具内重试、停止是完成不是取消、兄弟调用、调用次数上限、上限会重置、批次截断、上限算谁的、工具钩子、改参数再调、钩子顺序、顶替返回值、暂停不是失败、熔断状态、错误回调收不到暂停、步骤级定位、span 过滤、保数据不保性能、按类型粗筛、过滤顺序、我不处理、责任链、待处理请求、挂起、拦截被吞、拒答当正常输出、审批门、执行前一刻阻断、暂停落盘、批准过期、动态阈值、三级分类、置信不是授权、可逆性、能不能撤销、可重试标记、首个响应即终局、广播不等于会签、超时分支、没人回、挂起双出口、取消链接、resume 与 cancel、挂起等回调
-version: 3.227.0
+version: 3.251.0
 agent_created: true
 ---
 
@@ -3722,3 +3722,543 @@ Judge 的可靠性来自协议设计，不是来自"模型很聪明"。
 - **Durable event log：环境死亡不抹叙事**：**sandbox 死→harness 收到 tool failure→记录失败→让模型选恢复路径→provision 新 sandbox→只在安全时才重试；执行环境死亡不自动抹掉工作叙事**（Anthropic 系原文）→ 判据：**恢复路径由模型在记录到失败后选择**；环境重启≠任务重做。
 - **队列 worker 崩溃的限制认知**：**worker 崩溃后 job 被 reaper 回收由另一 worker 接，执行从头重启——无 checkpointing 时不支持从崩溃点续跑**（n8n 原文）→ 判据：**评估平台持久化能力时先问"崩溃后从哪继续"**；从头重跑的平台要把任务拆到最小可重跑单元。
 - **提升层**：工具/工作流（checkpoint 工程）。
+## 工作流就绪的结构化输出契约：schema 承载形状 · 消息承载行为（来源：Dify 官方《Prompt Engineering for Workflow-Ready LLM Apps》（decision/score/evidence 严格 schema）+ Skill4Agent《schema-first-prompting》（JSON schema 是结构契约，消息只放 task+context+behavior）+ Prompt Architects《26 Scenario Templates With Output Contracts》（输出契约=精确 keys+闭合枚举带 fallback+空输入响应）+ Anthropic 官方（正导向指令优于负向+XML 格式指示符）+ Camp Claude《Ten-Layer Brief》2026 实拉；与 §输出治理观察层（r619B）分工——那边管"观察什么、断言什么"，本条管"提示词怎么把输出契约写对"）
+给 workflow 用的 LLM 输出，提示词的唯一职责是产出一个可解析的契约；散文是 bug。
+- **Schema 承载形状，消息承载行为**：**JSON schema 是结构契约；API 支持 tool/function parameters 或结构化输出时把形状放那里，user/system messages 只放 task+context+behavior——不逐字段散文重复**（schema-first 原文）→ 判据：**形状放结构化通道（工具参数/schema），自然语言只写行为**；同一字段写两遍就是漂移源。
+- **输出契约三件套**：**精确 JSON keys+闭合允许值列表（带强制 fallback）+对空/不可读输入的已定义响应**（Prompt Architects 原文）→ 判据：**契约=键+枚举+fallback**；缺一即"模型在错误位置对了"的断链源（场景通常不是因模型错而断，而是模型对在错误位置）。
+- **负向指令堵格式泄漏**：**"Return ONLY valid JSON matching the schema — no markdown, no code fences, no explanation"——小模型爱加 fences 和散文，说清即移除大部分失败**；**结构化步骤 temperature 降到 0-0.2（高温增加格式漂移）**（n8n Community 原文）→ 判据：**格式边界用负向指令显式声明**；结构化步骤低温。
+- **正导向优于负向**：**"Do not use markdown" → "Your response should be composed of smoothly flowing prose paragraphs"；用 XML 格式指示符 "Write the prose sections in <smoothly_flowing_prose_paragraphs> tags"**（Anthropic 官方原文）→ 判据：**能说"该做什么"就不说"别做什么"**；格式域用 XML 标签封装。
+- **十层简报按场景分层叠加**：**chat 从 Layer1 role+Layer2 tone 开始；cowork 任务加 Layer3 background data+Layer4 instructions（真正工作在这）；automation/API 加 Layer5 examples+Layer8 guidelines+Layer9 formatting——这些让 prompt 可靠到无人值守可跑**（Camp Claude 原文）→ 判据：**按用途分层组装，不一次性十层全上**；要无人值守再加示例/准则/格式层。
+- **提升层**：可复用 Skill（提示工程）/工作流。
+
+## 结构化输出的加固链：prompt 契约 + 解析器强制 + 解码层约束（来源：n8n 官方《Production AI Playbook》（Structured Output Parser 强制 schema 不匹配重试）+ nodbot（五段验证层位置）+ Make 官方（system prompt 定义 schema+LLM 后加 validation 模块双保险）+ DeepLearning.AI《Getting Structured LLM Output》（instructor retry-based+outlines 改 logits）+ n8n Community（Ollama format:json 解码层约束）+ Claude SME Cookbook（output_config.format+strict:true 双保险）+ SurePrompts（模型原生结构化输出特性最可靠）2026 实拉；与 §工具结果断言层（r617）分工——那边管工具返回值，本条管 LLM 输出从生成到消费的整条加固链）
+结构化输出不是靠"说得再清楚点"，是每一层都有一道强制。
+- **Prompt 契约+调用后校验双保险**：**在 system prompt 定义精确输出 schema+LLM 调用后加 validation 模块；free-text 模型→JSON > Parse JSON + Filter 检查必填字段存在**（Make 官方原文）→ 判据：**提示词给 schema 只是第一层**；模型外校验是第二层，两层都做。
+- **解析器强制**：**Structured Output Parser 给 JSON schema（或从 JSON 示例生成），确保模型输出匹配；不匹配可重试或路由错误处理；定义允许值/类型/必填一次，输出一致可机器读**（n8n 官方原文）→ 判据：**parser 不匹配时走重试或错误分支**；"允许值一致性"由 schema 保证不靠模型自觉。
+- **五段验证层位置**：**Normalize（输入归一）→LLM 产出→Parser 定 expected schema→Code node 验证类型/enum/长度/必填/业务规则→IF/Switch 决定 auto-action/repair/clarification/human review/deny**（nodbot 原文）→ 判据：**校验层=parser+code 两层**；分流决策五选一，不只 auto-action。
+- **解码层约束最可靠**：**模型原生结构化输出（JSON mode/Structured Outputs/tool use）永远是最可靠选项；Ollama format:json 强制 token sampling 只采合法 JSON tokens——不是提示工程而是解码层约束；instructor 校验失败 re-prompt 直到通过；outlines 修改 LLM logits 逐 token 强制结构**（SurePrompts/n8n Community/DeepLearning.AI 原文）→ 判据：**优先解码层（原生结构化/format/logits）**；提示层是最后的兜底。
+- **响应与工具参数双保险**：**output_config.format 配 strict:true 工具定义——最终响应与任何工具调用参数都保证有效**（Claude SME Cookbook 原文）→ 判据：**结构化输出与严格工具并存**，不只保响应。
+- **提升层**：工作流/工具（输出加固链）。
+
+## 提取提示词配方与行为规则封装（来源：Langflow 模板（sales offers 提取全配方：全量提取/缺省补 null/去重保变体/永不抛错；Document Classification 缺值 default+多实例流式独立对象）+ MasterPrompting（enum 分类字段+每属性 description）+ datawizard（answer/evidence 分离+unsupported_claims+confidence 评估钩子）+ Anthropic 官方（<investigate_before_answering> 行为标签+多文档 <document><document_content><source> 结构）+ Activepieces（费用政策转结构化 System Prompt 给 Auto-Approve/Flag 二元框架）2026 实拉；与 §AI 代码收 diff 五连查（r617）分工——那边管收代码，本条管写提取提示词的完整配方）
+提取类提示词是结构化输出里最高频的形态；配方与行为封装是它的两个杠杆。
+- **提取全配方**：**用预定义 schema（str/int/float/bool/dict）+提取 ALL 匹配实例+缺值补 default（null/0/'N/A'）+去精确重复但保留字段值不同的变体+永远返回合法 JSON 不抛错**（Langflow 模板原文）→ 判据：**提取提示词六要素=schema+全量+缺省+去重+变体+不抛错**；少一个就静默丢数据。
+- **Enum 分类+description**：**分类字段用 enum——永远别让模型自由文本"选个分类"再解析；每个 property 加 description——模型用它理解该字段放什么**（MasterPrompting 原文）→ 判据：**分类枚举进 schema**；description 是模型的字段说明书。
+- **答案与证据分离**：**answer/used_sources/unsupported_claims/confidence(0-1) 全 required；文档不支持的部分放 unsupported_claims——分离答案生成与证据处理，给评估天然钩子**（datawizard 原文）→ 判据：**带证据的答案把"支撑不了的内容"单列字段**；confidence 让下游可阈值化。
+- **行为规则用 XML 标签封装**：**<investigate_before_answering>"Never speculate about code you have not opened... you MUST read the file before answering"</...>——行为规则写进标签让模型当规则读**；**多文档每个包 <document> 内 <document_content>+<source>+metadata**（Anthropic 官方原文）→ 判据：**规则域与数据域用 XML 隔离**；文档带 source 可溯源。
+- **政策转二元决策框架**：**把公司费用政策转成结构化 System Prompt——显式定义 Auto-Approve 标准（$50 以下有收据餐费）+Flag 标准（酒类商店）——模型有二元决策框架**（Activepieces 原文）→ 判据：**政策类任务先转"通过/标记"两套显式标准**再给模型。
+- **提升层**：可复用 Skill（提取提示词）/工作流。
+## 检索质量评估与召回门：检索生成分开评 · recall 硬门 · RAG triad（来源：Claudexia《RAG with Claude 2026》（recall@10<0.85 任何 prompt 都救不了+分开评估 retrieval/generation）+ DeepLearning.AI《Building and Evaluating Advanced RAG》（RAG triad：Context Relevance/Groundedness/Answer Relevance）+ dev.to《Lost in the Middle》（position sweep 测量中间 chunk 被边缘干扰项压倒）2026 实拉；与 §输出观察层（r619B）分工——那边管生成输出断言，本条管 RAG 的检索侧评估）
+坏 RAG 先分诊：检索错还是生成错，指标分开看。
+- **检索与生成分开评估**：**Retrieval quality: recall@k against labelled (question, correct-document) pairs；Generation quality: faithfulness（答案是否匹配检索上下文）+answer correctness（LLM-judge on held-out eval set）；两种指标别混**（Claudexia 原文）→ 判据：**检索打分用 recall@k**；生成打分用 faithfulness/correctness；混在一起无法定位环节。
+- **Recall 硬门**：**recall@10 低于 ~0.85 时，任何 prompt 工程都救不了答案**（Claudexia 原文）→ 判据：**先修检索到 recall 达标再碰 prompt**；在低 recall 上叠提示词是徒劳。
+- **RAG triad 三指标**：**Context Relevance（检索上下文相关吗）/Groundedness（答案有依据吗）/Answer Relevance（答案答所问吗）——评估 relevance 与 truthfulness**（DeepLearning.AI 原文）→ 判据：**RAG 评估三件套=上下文相关+答案有据+答所问**；三指标对应三个环节可分别归因。
+- **Lost in the middle 测量**：**decoder-only 模型最注意 prompt 开头和问题邻近文本——位置 5/10 的正确 chunk 被边缘可信干扰项压倒；检索完美答案仍错；用 position sweep 测量**（dev.to 原文）→ 判据：**正确 chunk 塞中间=被忽略**；reranker 减 chunk 数+最强 chunk 放首尾+问题放……位置用 sweep 验证。
+- **提升层**：工作流/可复用 Skill（RAG 评估）。
+
+## Chunk 质量判据与分块策略谱系：七标准 · 三种切法 · 双索引（来源：nodbot（好 chunk 七标准）+ itechnicallykan（semantic-boundary 优于 fixed-size）+ freeacademy（fixed/semantic/structural 三种策略谱系）+ moeidsaleem（parent-child 先在最高流量类别原型+检索时去重 0.92）+ Dify 1.12.0《Summary Index》（chunk+summary 双索引）+ aiforanything（overlap 10-15%+source-based upsert 防 stale index）+ explainx（chunk 2000+ 是最大新手错误）2026 实拉；与 §知识库工程（既有）分工——那边管双路召回与分块原则，本条管 chunk 质量判据与策略选择谱系）
+分块是 RAG 里最不 glamorous 但收益最直接的变量；质量判据先行。
+- **好 chunk 七标准**：**回答一个具体问题；含标题或节路径；不切断命令/JSON/表格；有 source_url+section_heading；不超合理字符限制；不混不同意图；含足够上下文让模型无需整页理解**（nodbot 原文）→ 判据：**chunk 验收=七项自查**；不满足即"检索到了但没法用"。
+- **三种分块策略谱系**：**fixed-size（256-512 tokens+10-20% overlap，散文基线，简单可预测但可能切断语义）；semantic（句子 embeddings 漂移处切，密集技术文档 recall 更好）；structural（尊重 markdown headings/code blocks）**（freeacademy/itechnicallykan 原文）→ 判据：**散文用 fixed、技术文档用 semantic、结构文档用 structural**；边界在句子和主题断点不在盲目字符数。
+- **Parent-child 原型先行**：**异构文档语料先在最高流量查询类别原型 parent-child chunking，量 recall delta 再全量推**（moeidsaleem 原文）→ 判据：**新分块策略小范围验证再铺开**；recall 不升不推。
+- **Summary Index 双索引**：**chunk 内容+summary 内容都向量化存库；查询匹配两者——命中 chunk 返回该 chunk，命中 summary 召回所有共享相同/语义相似 summary 的 chunks——summary 查询匹配高层语言，模型收到更完整上下文**（Dify 原文）→ 判据：**小 chunk 精确+大 summary 聚合并存**；query 走哪条路让命中决定。
+- **重叠与陈旧治理**：**overlap 设 chunk 的 10-15%（No overlap 症状=答案缺跨 chunk 上下文）；文档更新后重跑 embed_and_store+source-based upsert（Stale index 症状=答案基于旧文档）；chunk 2000+ 是最常见新手错误（多主题塞进单个检索段落）**（aiforanything/explainx 原文）→ 判据：**overlap 10-15%**；更新走 source-based upsert；chunk 从 500-1000 起步。
+- **提升层**：可复用 Skill（分块工程）/工作流。
+
+## 混合检索与重排的量化收益：recall 提升实测 · 重排 ROI · 去重（来源：markaicode《Anthropic Hybrid Retrieval》（dense+sparse recall@20 78%→94%+rerank 减无关注入 20-25%）+ kunavo（RRF 融合 70%→90% recall@5+防幻觉三模式）+ stochasticsandbox（reranker 30-50 候选→top 3-5 最高 ROI+relevance gating）+ agentlist（reranker 延迟瓶颈四解）+ moeidsaleem（检索时去重 cosine 0.92）+ techdailyshot（缓存频繁查询）2026 实拉；与 §混合检索（既有）分工——那边管机制，本条管量化收益与重排工程）
+混合+重排不是技巧是基线；收益是可测量的。
+- **Hybrid 的量化收益**：**dense semantic+sparse keyword 覆盖语义和精确匹配——实测 recall@20 从 78%→94%（vs dense-only）；rerank 再精修 top 候选进 context window，减少无关 chunk 注入 20-25%**（markaicode 原文）→ 判据：**生产基线=dense+sparse+rerank**；收益有实测背书（recall@20 +16pt）。
+- **RRF 融合默认**：**vector+BM25+reciprocal rank fusion 是选对 decent embedding 后最大质量提升——典型 70%→90% recall@5**（kunavo 原文）→ 判据：**融合用 RRF**；比换 embedding 提升更大。
+- **重排最高 ROI**：**cross-encoder reranker 对 30-50 候选选 top 3-5——hybrid search 之后最高 ROI 组件；Relevance gating：reranker 分数阈值防无相关上下文时幻觉答案**（stochasticsandbox 原文）→ 判据：**先 hybrid 后 rerank**；reranker 分低于阈值→答"没找到"不硬答。
+- **重排延迟瓶颈四解**：**P95<500ms 时 reranker 占近半预算——减初始 top-k（30→15）/用更小 reranker（MiniLM）/批量推理/轻量 LLM reranking（只输出 rank 不生成文本）**（agentlist 原文）→ 判据：**延迟敏感先减 top-k**；rerank 模型按预算缩放。
+- **检索时去重**：**retrieved set 上 cosine 相似度阈值 0.92 去重——五行代码，对生成连贯性有可测影响**（moeidsaleem 原文）→ 判据：**检索后去重**；重复 chunk 塞满上下文=浪费窗口。
+- **提升层**：工作流/工具（检索管线）。
+## 编排形态与委派契约：节点级任务声明 · 委派读报告 vs 动态工作流 · 交接显式化（来源：Dify《Introducing New Agent》（Agent Task 定义节点职责+declarative outputs）+ Claude《Multiagent orchestration》（subagents 委派读报告 vs dynamic workflows 程序组合 vs advisor）+ AI Tools Guidebook（LangGraph 显式 edge 防跳过）+ IETF AAIF（handoff 条件/目标/上下文传递 flag）+ Pulumi GSD（orchestrator 不碰工作只收结果）2026 实拉；与 §多 Agent 协作纪律（r617）分工——那边管五种编排模式与共享层，本条管节点级委派契约与交接显式化）
+编排的可靠性来自契约显式，不来自 agent 自觉。
+- **Agent Task=节点级任务声明**：**同一 agent 在不同 workflow 承担不同职责，不用重配 Prompt/Skills/Tools——用 Agent Task 定义当前节点该做什么/可用哪些上游变量/应产出什么；declarative outputs 让结果以预定义结构传给下游**（Dify 原文）→ 判据：**agent 本体配置一次，职责在节点声明**；输出结构声明式定义。
+- **委派两形态**：**subagents=agent 自己委派任务并读每个 subagent 报告；dynamic workflows=写程序后台跑多个 agent 组合结果；也可 consult advisor model 指导；你决定可用哪种，agent 决定何时用**（Claude 原文）→ 判据：**小委派走 subagent（读报告）**；后台并行组合走 dynamic workflow；拿不准问 advisor。
+- **交接显式化**：**编排层强制 handoff 顺序——显式 edge（A 完成 B 才可开始），不是默认 fallthrough 可跳过 A 的 conditional edge；handoff 声明 Condition+target agent+flags 控制 context/memory 是否传给接收 agent**（AI Tools Guidebook/IETF 原文）→ 判据：**交接=条件+目标+上下文传递与否显式 flag**；默认 fallthrough 会悄悄跳过。
+- **Orchestrator 不碰工作**：**GSD 防 context rot——主会话为每个 research/planning/execution/verification 任务 spawn fresh-context subagent，收集结果而非积累**（Pulumi 原文）→ 判据：**编排者只收集不累积**；每任务独立 fresh 上下文。
+- **提升层**：工作流/可复用 Skill（编排契约）。
+
+## Subagent 隔离与懒加载：隔离上下文 · 隔离工具 · 新鲜窗口防腐烂（来源：jamesokun（subagent 两属性：isolated context 从 clean window 开始+中间推理任务后丢弃；isolated tools 只加载所需+lazy-loaded+主 agent 不付成本；return result only）+ Anthropic《Claude Code Advanced Patterns》（Parallel Claude 多无关任务各自 terminal/worktree / Subagents 委派聚焦子任务带隔离上下文 / Agent Teams 大任务拆独立 workstream 协调）+ Claude《Harnessing Claude's Intelligence》（context editing=选择性移除 stale/irrelevant 上下文；subagents=知道何时 fork 新鲜上下文隔离工作）+ Rominur Hub-and-Spoke（subagents 不直接互通信，全经 coordinator）+ Opus 4.5 System Card（orchestrator 无直接 search 访问）2026 实拉；与 §多 Agent 决策树（既有）分工——那边管什么时候拆，本条管拆后隔离与上下文代价）
+subagent 的价值=隔离；不隔离的"subagent"只是换了个名的同一上下文。
+- **隔离上下文**：**subagent 从 clean window 开始，中间推理任务后丢弃；isolated tools——只加载所需 skills/tools，主 agent 不为其付成本；lazy-loaded；return result only**（jamesokun 原文）→ 判据：**subagent=干净窗口+按需工具+只回结果**；主 agent 上下文不被子任务污染。
+- **新鲜窗口防 context rot**：**context editing=选择性移除 stale/irrelevant 上下文（旧工具结果/thinking blocks）；subagent=知道何时 fork 到 fresh context window 隔离特定任务**（Claude 原文）→ 判据：**长任务定期剪 stale 上下文**；聚焦子任务 fork 新鲜窗口。
+- **三种规模层级**：**Parallel Claude（多个无关任务同时，各自 terminal/worktree）；Subagents（从主会话委派聚焦子任务带隔离上下文）；Agent Teams（大任务拆独立 workstream 协调）**（Anthropic 原文）→ 判据：**无关并行=Parallel；聚焦委派=Subagent；大规模协调=Teams**；规模决定形态。
+- **Hub-and-spoke 不直连**：**coordinator 居中管理所有与 specialist 通信——任务分解/委派/结果聚合/决定调哪个；subagents 不直接互通信，所有信息流经 coordinator；orchestrator 无直接 search 访问（权限隔离）**（Rominur/Opus 原文）→ 判据：**子代理间信息全经 coordinator**；编排者按最小权限给工具。
+- **提升层**：可复用 Skill（subagent 编排）/工作流。
+
+## 队列与并发治理：任务入队 · 队列定义先行 · 调度延迟可观测 · 幂等+检查点恢复（来源：Trigger.dev《Concurrency & Queues》（触发不立即执行，taskrun 入队；默认每 task 自己 queue；自定义 queue 共享 limits）+ v4 GA（v4 自定义 queues 必须 deploy 前代码定义，v3 动态创建导致改并发混乱）+ docs/skill.md（queue() 共享 ordering；concurrency {total: N} 限制并行；concurrencyLimit() 命名 limits 跨任务共享）+ how-it-works（Checkpoint-Resume+idempotency keys 实现 durable execution）+ vs Temporal（Trigger.dev 单概念 tasks vs Temporal 多原语）2026 实拉；与 §定时任务记账判据（既有）分工——那边管 cron 排期语义，本条管执行队列与并发治理）
+并发不是"多跑几个"，是"谁和谁共享队列、最多几个并行、堵了多少"。
+- **任务入队语义**：**触发任务不立即执行——taskrun 放进 queue；默认每 task 自己 queue，并发只受环境限制；自定义 queue 可跨任务共享 limits**（Trigger.dev 原文）→ 判据：**任务=入队等待执行**；默认单队列，需共享限制才自定义。
+- **队列定义先行**：**自定义队列（含并发限制）必须 deploy 前在代码定义——v3 动态创建导致改并发时一堆混乱问题**（Trigger.dev 原文）→ 判据：**队列即代码，先定义再部署**；动态改并发=自找混乱。
+- **调度可观测**：**dashboard 看每个 queue 的 scheduling delay 和 backlog；concurrency 按 tenant/whole task cap；concurrencyLimit() 命名限制跨任务共享**（Trigger.dev 原文）→ 判据：**排队状态必须可观测**；调度延迟/积压是容量信号不是神秘卡顿。
+- **Durable 执行**：**Checkpoint-Resume System+idempotency keys——复杂工作流崩溃后从最后检查点高效恢复重放**（Trigger.dev 原文）→ 判据：**长任务靠检查点恢复**；幂等键防重复执行。
+- **提升层**：工具/工作流（队列治理）。
+## 工具面选择与调用机制契约：Function Calling vs ReAct · 工具描述纪律 · prompt 点名工具（来源：Dify《Agent node》（Function Calling=LLM 原生工具参数传递 vs ReAct=Thought→Action→Observation 显式推理）+ 51CTO《Dify Agent策略选型与调优》（多工具避坑）+ Dify《Build Your First Agent》（prompt 内点名工具名+描述何时用）+ n8n Community（禁止 AI Agent 套 AI Agent——主 agent 调工具不调 agent）2026 实拉；与 §工具循环终止条件（既有）分工——那边管循环何时停，本条管调用机制选型与工具描述质量）
+工具不是越多越好，是"描述得清楚、调用机制选对、prompt 里点得名"。
+- **双调用机制选型**：**Function Calling=LLM 原生 function calling——直接通过 tools parameter 传工具定义，LLM 内置机制决定何时何方式调用，最佳 GPT-4/Claude 3.5 等强 function calling 模型；ReAct=结构化 prompts 引导显式推理 Thought→Action→Observation 循环，透明决策，适合无/弱 function calling 模型**（Dify 原文）→ 判据：**有强 function calling 就用原生参数传递**；弱模型用 ReAct 循环保透明。
+- **工具描述纪律**：**严禁"通用工具""辅助函数"等无意义词汇作工具描述——必须具体说明输入输出及适用场景；工具参数类型必须与后端 API 一致，避免类型转换失败；不要所有场景统一 ReAct，按场景分层**（51CTO 原文）→ 判据：**每个工具描述=输入+输出+适用场景**；参数类型对后端契约。
+- **Prompt 内点名工具**：**模型基于 query 决定用哪个工具；要更精确就在 prompt 里点名工具名+描述何时该用——"when they should be used"**（Dify 原文）→ 判据：**关键工具在 prompt 显式点名+触发条件**；不靠模型瞎猜。
+- **单层工具面**：**不要用 AI Agent 节点作另一个 AI Agent 节点的工具——用 Tool 节点（HTTP Request Tool/Code Tool）直接连主 agent；主 agent 调工具不调其他 agent**（n8n Community 原文）→ 判据：**工具面=工具节点**；agent 套 agent 是反模式。
+- **提升层**：工具/工作流（工具面治理）。
+
+## 工具错误的分类治理与降级链：技术错误系统重试 vs 逻辑错误回馈 LLM · 错误即工具响应 · 复杂→简单→人工（来源：n8n Blog《LLM Tool Calling Error Handling》（node-level retry 自动退避+looped IF 高级策略）+ n8n Blog《Tool Calling LLM》（system-level retry 静默处理技术错误 vs model-level reasoning 逻辑错误喂回 LLM）+ n8n Community（On Error Continue=agent 得到错误作 tool response；Never Error=400/500 时节点 green 错误传 agent；sub-workflow 隔离错误）+ n8n Blog《Production AI Playbook》（复杂 agent chain 失败→回退简单窄 scope 单步 LLM；关键工作流永远人工升级路径）+ n8n 模板（AI 诊断+telemetry+per-incident retry counter 三分重试预算）2026 实拉；与 §重试分两类（既有）分工——那边管 transport/tool 重试分类，本条管工具错误的内容分类与降级链）
+工具错误按"能不能自己重试"分类：技术错误系统重试，逻辑错误必须回馈 LLM 改方案。
+- **错误二分法**：**技术错误（rate limits）系统层静默重试；逻辑错误（validation failure）必须喂回 LLM 让模型"reason"出不同方案——比如问用户更小的退款额（"Error: The refund amount exceeds the daily limit"）**（n8n 原文）→ 判据：**技术错误系统处理**；逻辑错误是给模型的输入不是吞掉的异常。
+- **错误即工具响应**：**工具节点 On Error 设 Continue (Using Error Output)——工具抛错时 agent 得到错误作为 tool response 而非整个 workflow 死掉；HTTP 节点 Never Error——API 400/500 节点保持 green，错误消息传给 agent 让它读错误并决策**（n8n Community 原文）→ 判据：**错误作为工具输出回传**；agent 有读取并应对的机会。
+- **错误隔离容器**：**把整个 agent+所有工具移入 sub-workflow，调用节点设 On error: Continue——保留 HTTP 请求工具引导特性+捕获 agent 执行错误**（n8n Community 原文）→ 判据：**可失败子系统装进 sub-workflow 容器**；错误被边界捕获。
+- **降级链**：**复杂 agent chain 持续失败→回退简单单步 LLM call with narrowly scoped prompt（flexibility 换 reliability）；关键工作流永远保留人工升级路径——automated handling 失败时路由到 human=防坏结果的 safety net**（n8n 原文）→ 判据：**降级=复杂→简单→人工**；每条链都有落点。
+- **分诊式重试**：**AI diagnostics+telemetry+per-incident retry counter（最多三次）决定是否可自动重试；transient 且预算够→exponential backoff 重试+记录结果；不可重试或预算耗尽→升级**（n8n 模板原文）→ 判据：**重试是带预算的决策不是无条件循环**；每次重试留痕。
+- **提升层**：工作流/可复用 Skill（错误治理）。
+
+## 工具化 scenario 与工作流即工具：on demand+输入输出契约 · MCP 暴露工作流 · 工具三来源（来源：Make Academy（scenario 作工具必须 on demand+定义 scenario inputs and outputs+开头 Start a scenario module+结尾 Return output module 管理数据）+ Make《MCP Server》（active and on-demand scenarios 变 tools——AI 识别匹配任务自动触发无需人工）+ Activepieces（MCP exposes workflows and tool actions——agent 调用具体步骤/传参数/收结构化输出）+ LangFlow Docs（任何 Langflow 组件可作为工具连接，包括其他 Agent 组件与 MCP Tools 组件）2026 实拉；与 §工具面选择（r621A 新增）分工——那边管工具描述与调用机制，本条管把整个工作流/场景变成可调用工具）
+把重复工作流包装成工具，比每次手写调用更强：工具面即复用面。
+- **Scenario 即工具三要素**：**构建 scenario 作工具必须：设 on demand+定义 scenario inputs and outputs+开头 Start a scenario module+结尾 Return output module 管理数据**（Make Academy 原文）→ 判据：**工具化工作流=按需触发+显式输入输出契约+头尾模块**；契约不清不可作工具。
+- **自动触发语义**：**active and on-demand scenarios=AI 可用工具；AI 识别任务匹配某 scenario 即自动触发无需人工干预——Make scenarios 变 tools**（Make 原文）→ 判据：**发布成 active+on demand 即入工具面**；AI 自动按匹配调用。
+- **MCP 暴露工作流**：**MCP exposes workflows and tool actions to external AI systems——agent 调用具体步骤/传参数/收结构化输出 within broader LLM runtime**（Activepieces 原文）→ 判据：**MCP 是工作流的对外工具接口**；暴露步骤+参数+结构化输出。
+- **组件即工具**：**任何 Langflow 组件可作为工具连接，包括其他 Agent 组件与 MCP Tools 组件**（LangFlow 原文）→ 判据：**工具=任意可组合组件**；工具面由组件图构成。
+- **提升层**：工作流/可复用 Skill（工作流工具化）。
+## 行为参数与推理预算控制：temperature 谱+预设 · adaptive thinking/effort 旋钮 · token-budget-aware reasoning（来源：Dify《LLM node》（Temperature 0 deterministic 到 1 creative；Top P 限词选择概率；Frequency Penalty 减重复；Presence Penalty 鼓励新话题；Presets Precise/Balanced/Creative）+ Anthropic《Claude Sonnet 5/5.5》（adaptive thinking 默认开；manual extended thinking 400；sampling parameters 被忽略；effort level 平衡 cost/speed/quality——Claude Code 默认 Medium/Platform 默认 High）+ Redis《Token-Budget-Aware LLM Reasoning》（match tokens 花在思考的量到问题难度——stop paying for reasoning you don't need）2026 实拉；与 §token/缓存治理（既有）分工——那边管输入输出缓存比例，本条管行为参数与推理预算）
+行为控制从"调采样参数"转向"调推理预算"：effort 是成本质量的直接旋钮。
+- **行为参数谱**：**Temperature 0（deterministic）到 1（creative）；Top P 限制词选择概率；Frequency Penalty 减少重复；Presence Penalty 鼓励新话题；Presets Precise/Balanced/Creative**（Dify 原文）→ 判据：**确定性任务=低温**；创造性任务=高温；预设三档快速起步。
+- **推理预算旋钮**：**adaptive thinking 默认开；manual extended thinking 返回 400（已弃用）；设置 sampling parameters（temperature/top_p/top_k）可能被忽略；effort level=成本速度质量平衡——Claude Code/apps 默认 Medium，Platform 默认 High；低=回答快 token 少适合 routine，高=reason 更长自查更彻底**（Anthropic 原文）→ 判据：**新模型用 effort 控制不用采样参数**；routine 用低 effort，关键任务用高。
+- **Token 预算匹配难度**：**match tokens 模型花在思考上的量到问题难度——stop paying for reasoning you don't need；prompt-level 技术 cut reasoning spend；caching/routing/memory 在架构层减**（Redis 原文）→ 判据：**思考花销=问题难度**；简单问题不付思考钱。
+- **提升层**：模型/工作流（行为控制）。
+
+## 成本分层与路由策略：模型分层 · 三分类路由 · BYOK 防转卖 · per-request 硬预算（来源：n8n 模板（GPT-4o-mini vs GPT-4o+confidence scoring 智能路由；返回 model used/confidence/escalation/estimated cost）+ LangFlow《LLM Selector》（judge LLM 按 optimization 选模型 quality/speed/cost/balanced）+ Activepieces《Reasoning vs Standard》（evaluate complexity route to most cost-effective tier；BYOK 用自己的 key 跑自己选的模型——reseller 在你打开产品前已替你定价）+ AIPromptsHub（Haiku 4.5 classifier $0.001/task 标 easy/medium/hard→easy 55-65% 走便宜层→medium Sonnet→hard Opus 40-60% 削减）+ agentic-ai KB（per-request budgets：hard token limits per agent invocation 防 runaway loops）2026 实拉；与 §模型分层（r621B 新增）分工——那边管行为参数，本条管选模型与成本路由）
+模型成本=选型×路由×预算；三个都做才压得住。
+- **三分类路由**：**Haiku 4.5 classifier（$0.001/task）标每个任务 easy/medium/hard；easy（55-65% 工作量）→Haiku 4.5；medium→Sonnet 4.6；hard→Opus——40-60% 成本削减；classification/extraction/routing/formatting 不需 frontier，便宜 10-30×/token**（AIPromptsHub/mm-ais 原文）→ 判据：**先分类再路由**；简单步骤绝不碰 frontier。
+- **Judge LLM 路由**：**judge LLM 按 optimization 维度选模型——quality/speed/cost/balanced（默认 balanced）；路由决策返回 model used/confidence score/escalation status/estimated cost**（LangFlow/n8n 原文）→ 判据：**路由结果四要素可见**（用了谁/多自信/升不升级/多少钱）；维度可配。
+- **BYOK 防转卖**：**用自己的 provider key 跑自己选的模型——model spend 落自己账户自己费率；platform that resells you a model has made your ai decision and priced it before you ever opened the product**（Activepieces 原文）→ 判据：**模型支出走自己的 key 和费率**；被平台转卖=被提前定价。
+- **Per-request 硬预算**：**set hard token limits per agent invocation prevent runaway loops——get_openai_callback 强制执行**（agentic-ai KB 原文）→ 判据：**每次调用带 token 硬上限**；超限即截断/升级。
+- **提升层**：工具/工作流（成本路由）。
+
+## 缓存经济与提示结构：prefix caching 折扣差 · static-first 结构 · 显式缓存断点 · 语义缓存（来源：ai-tldr（Anthropic+OpenAI stable prefix 缓存 system prompt/ref docs/few-shot——读缓存 key-value state 按输入价零头）+ datarekha（DeepSeek automatic aggressive：Write 1.0x/Read 0.02x/TTL hours/98% off；OpenAI 50% read worse than Anthropic 90% but avoid write premium）+ devtoollab（static content first, dynamic content last——get it wrong cache never hits；60-90% input tokens cost fraction）+ 西班牙语案例（explicit cache breakpoints——<1 周 hit 83%→91%，writes 降 2/3，inference 降 36%）+ deeplearning.ai《Semantic Caching》（reuse responses based on meaning——hit rate/precision/latency 指标+cross-encoders+LLM validation）2026 实拉；与 §token/缓存治理（既有）分工——那边管 1:5:0.1 比例与缓存破坏时机，本条管缓存的经济账与提示结构）
+缓存命中是提示结构问题：静态在前动态在后，结构错缓存永不命中。
+- **折扣差与结构**：**DeepSeek automatic aggressive（Write 1.0x/Read 0.02x input/98% off）；OpenAI cache reads 10% standard+GPT-5.6+ writes 1.25×；Anthropic 90% read discount；prefix written once+reused nine times=2.15× total vs 10× without caching**（datarekha/Algofuse 原文）→ 判据：**按 provider 缓存读写价差选型**；高频前缀值得写一次。
+- **Static-first 结构**：**静态内容放前，动态内容放后——结构错缓存永不命中；结构对 60-90% 输入 token 以零头计价**（devtoollab 原文）→ 判据：**提示=静态前缀+动态后缀**；system prompt/ref docs/few-shot 全前置。
+- **显式缓存断点**：**session agents 移到显式 cache breakpoints——<1 周 cache hit 83%→91%；cache writes 降约 2/3+inference costs 降 36%**（OpenAI 合作案例原文）→ 判据：**缓存断点显式声明**；命中率是可度量的优化目标。
+- **语义缓存**：**reuse model responses based on meaning instead of exact text——embedding similarity 跳冗余调用；用 hit rate/precision/latency 评估；cross-encoders+LLM validation 增强**（deeplearning.ai 原文）→ 判据：**近似查询走语义缓存**；命中率与精度分开评。
+- **提升层**：模型/工具（缓存经济）。
+## 结构化输出机制与校验门：constrained decoding · schema 编译 grammar · additionalProperties:false · stop_reason 检查 · 形状≠正确性（来源：Anthropic《Structured outputs》（schema 编译成 grammar 约束生成——no token can violate；Always valid（no more JSON.parse errors）/Type safe（guaranteed field types+required）/Reliable（no retries for schema violations）；复杂 schema 编译慢需简化）+ aiclaude《Best Practices》（required+additionalProperties: false on every object always；check stop_reason before trusting parsed response every time；structured outputs guarantee shape not correctness——keep own accuracy checks）+ Claude Lab《Validation Gates and Repair Loops》（tool-use enforcement+schema validation gate+single repair loop+graceful degradation fallback 消除 broken JSON）2026 实拉；与 §工具结果断言层（既有）分工——那边管可疑结果打标交还模型，本条管结构化输出的机制保证与校验门）
+结构化输出把"生成合法性"前移到解码层；但形状保证不等于正确性保证。
+- **约束解码三保证**：**JSON schema 编译成 grammar 约束生成——模型无法产出违反 schema 的输出；Always valid（不再有 JSON.parse() 错误）/Type safe（字段类型与必填被保证）/Reliable（schema 违规无需重试）**（Anthropic 原文）→ 判据：**能上 constrained decoding 就上**；schema 违规重试层可省。
+- **Schema 写法纪律**：**required+additionalProperties: false 每个对象恒写；复杂 schema 编译更慢——超大 schema 应简化**（aiclaude/Anthropic 原文）→ 判据：**每对象 required+关闭额外属性**；schema 过大拆小。
+- **信任前检查 stop_reason**：**check response.stop_reason before trusting parsed response every time；structured outputs guarantee shape not correctness——keep your own accuracy checks**（aiclaude 原文）→ 判据：**解析前先看 stop_reason**；形状通过后仍需业务准确度检查。
+- **验证门+修复+降级**：**tool-use enforcement+schema validation gate+single repair loop+graceful degradation fallback——消除 broken JSON 出生产线**（Claude Lab 原文）→ 判据：**四件套组合**：工具强制+验证门+单次修复+优雅降级。
+- **提升层**：模型/工具（结构化输出机制）。
+
+## 输出校验分层与失败分类：schema conformance→semantic plausibility · 结构错误 vs 语义错误 · 范围/合理性检查 · LLM 不能自验（来源：Openlayer《Tool-Calling Guardrails》（三级输出验证：Schema conformance 第一检查——missing fields/null where agent assumes populated/type mismatches 快且确定性；Semantic plausibility 更难——search returns results but none relevant）+ Kanopy《Structured Output Patterns》（Schema violations=valid JSON not match schema→retry with error context model self-corrects；Semantic errors=schema-conformant wrong values→validation rules/improve prompts/second model verification）+ devops.gheware（Schema validation structured outputs 远易验证；Range and sanity checks——numeric plausible/timestamps valid/entity references consistent）+ DEV《LLMs Can't Verify Their Own Output》（LLM 不能自验输出；deterministic backstop 必须；tool returns empty array or error→override LLM prose entirely；Whitelist 优于 Correctness Checker——citation accurate 难查，in pre-approved list 易查）2026 实拉；与 §结构化输出机制（r621C 新增）分工——那边管生成层保证，本条管返回后的校验分层与失败分类）
+校验是分层的：先形状后语义；确定性检查打底，语义检查升级。
+- **两级校验**：**Schema conformance=第一检查（缺字段/null 被当作有值/类型不匹配——快确定性，拦住大量下游问题）；Semantic plausibility=更难（搜索返回结果但全不相关）**（Openlayer 原文）→ 判据：**先跑确定性 shape 检查**；再跑语义合理性；两层都过才放行。
+- **失败两类修复**：**Schema violations→retry with error context（模型看到校验错误通常自纠）；Semantic errors→加验证规则/改进 prompt/第二模型做 verification step**（Kanopy 原文）→ 判据：**按失败类型选修复**：结构错回喂错误，语义错换验证手段。
+- **范围与合理性检查**：**numeric values 是否合理范围；timestamps 是否有效；实体引用是否一致——structured outputs（JSON+schema）远比 free text 易验证**（devops.gheware 原文）→ 判据：**数值/时间/实体三查**；结构化输出优先。
+- **确定性兜底**：**LLM 不能自验自己的输出；tool 返回空数组或错误→彻底 override LLM 文本；用白名单不用正确性检查器——citation 是否准确难查，是否在预批准列表易查**（DEV 原文）→ 判据：**确定性兜底必须存在**；检查用白名单判定。
+- **提升层**：工作流/可复用 Skill（输出校验分层）。
+
+## 修复重试链与降级：错误回喂自纠 · 编号错误回喂 · 更强重试 prompt · 安全 fallback · 单次强化重试（来源：n8n《Production AI Playbook》（AI 输出不匹配结构不 fail workflow——loop 回 AI step 带含 error message 的更新 prompt；most models self-correct on second attempt when told what went wrong；max retry count 2-3 通常够）+ n8n 模板（numbered validation errors 喂回下一次 extraction attempt 重试直到 pass/maxAttempts；失败返回 failure details errors/attempts used/last raw extraction）+ revaturelabs（Always cap retries；Log raw failed output every time——cannot fix what you cannot see；safe sensible fallback value 全重试耗尽时；retry prompt stronger not identical——same prompt often produces same mistake）+ MLflow（validation failure 不是 edge case 是 certainty——从第一次调用就设计；workable pattern=single retry with tightened prompt/stricter schema→fallback safe default/human review queue；retrying indefinitely burns tokens on call already shown can't comply）2026 实拉；与 §工具错误的分类治理（r621A 新增）分工——那边管工具调用错误的分类与降级链，本条管输出校验失败的具体重试链写法）
+重试链的核心不是"再试一次"，是"带着错误证据的更强一次"。
+- **错误回喂自纠**：**输出不匹配结构→不 fail——loop 回 AI step 带含 error message 的更新 prompt；模型被告诉错在哪时第二次通常自纠；max retry 2-3 防无限循环**（n8n 原文）→ 判据：**重试必须携带错误消息**；上限 2-3 次。
+- **编号错误回喂**：**把 numbered validation errors 喂回下一次 extraction attempt 重试直到 pass 或 maxAttempts；成功返回 validated items/失败返回 failure details（errors/attempts used/last raw extraction）**（n8n 模板原文）→ 判据：**错误逐条编号回喂**；失败详情三要素返回。
+- **更强重试 prompt**：**Always cap retries；Log raw failed output every time（看不到就没法修）；安全 fallback 值全耗尽时用；retry prompt 更强而非相同——重复相同 prompt 常产出相同错误**（revaturelabs 原文）→ 判据：**重试 prompt 必须增强**；原始失败输出必留档；永远有兜底值。
+- **单次强化重试**：**validation failure 是确定性不是边缘情况——第一次调用起就设计；可用模式=单次强化重试（tightened prompt/stricter schema）→fallback 安全默认值/人工队列；无限重试=在已证明无法遵守的调用上烧 token**（MLflow 原文）→ 判据：**重试预算=一次强化**；第二次失败直接降级。
+- **提升层**：工作流/可复用 Skill（修复重试链）。
+## 编排形态与交接机制：agent 即工具 · 子工作流打包 · 三交接方式 · 嵌套上限（来源：Dify（v1.3+ nested agent nodes——one agent invoke another as tool；emergent behavior across specialized LLM roles；替代 monolith god-agent）+ n8n《Production AI Playbook：Complex Agent Patterns》（sub-workflows as reusable agent components——Call n8n Workflow Tool 打包任何 workflow 为 agent 可调工具；sub-workflow 带自己 trigger/logic/output；parent 像调工具传 input 收 output；执行路径可预测/同逻辑多复用→sub-workflow 更干净）+ Anthropic 官方（agent 可 hand work to other agents 三方式：subagents 委派读报告 / dynamic workflows 写程序后台跑 / advisor model 干活时咨询——you decide which agent can use+agent determines when）+ Make（Sub-Agents 2026-07：父 agent 委派专门子 agent；**一层嵌套**——sub-agent 不能再有 sub-agent；Conversation IDs 允许 parent 继续与 sub-agent 对话）+ LangFlow（将智能体用作工具=创建多智能体流）2026 实拉；与 §多Agent协作纪律（既有）分工——那边管"拆了之后怎么协作"（共享层/接口契约/质检回退），本条管"编排形态与交接机制的选型"）
+交接机制决定多 agent 系统的复杂度天花板：agent 即工具是通用形态，子工作流打包是可预测路径的干净形态。
+- **agent 即工具**：**嵌套 agent 节点——一个 agent 把另一个 agent 当工具调用；跨专门 LLM 角色产生单 agent 无法复现的涌现行为；取代"什么都会的全能单体"（god-agent）**（Dify 原文）→ 判据：**角色已专门化就互相暴露为工具**；警惕全能单体。
+- **子工作流打包**：**Call n8n Workflow Tool 把任何 workflow 打包成 agent 可调工具；sub-workflow 是带自己 trigger/logic/output 的独立工作流；parent 像调工具一样传 input 收 output；执行路径可预测/同一 agent 逻辑多处复用→sub-workflow 更干净**（n8n 原文）→ 判据：**可预测路径/跨工作流复用→打包子工作流**；探索型路径用 agent 内联。
+- **三交接方式**：**subagents（agent 自己委派任务并读取各 subagent 报告）/dynamic workflows（agent 写 workflow——后台程序跑多 agent 组合结果）/advisor model（agent 干活时咨询顾问模型）——你决定 agent 能用哪种，agent 自己决定何时用**（Anthropic 原文）→ 判据：**委派读报告/脚本编排/咨询顾问三种按需配**；控制权在宿主。
+- **嵌套上限**：**父 agent 可有子 agent，但子 agent 不能再有子 agent（一层嵌套）；Conversation IDs 让父 agent 继续与子 agent 的对话**（Make 原文）→ 判据：**嵌套限制一层**；跨层对话用 Conversation ID 续。
+- **提升层**：工作流/可复用 Skill（编排形态选型）。
+
+## 动态工作流：编排脚本化后台执行 · 结果变量 · 逻辑代码化 · 降主 agent 负担（来源：Anthropic Claude Cookbook《Orchestrate subagents at scale with dynamic workflows》+ InfoQ（Claude 开始自己写程序管理 Agent——主 Agent 生成可执行编排程序，任务协调/子 Agent 启动/结果聚合下放后台程序，降低主 Agent 运行时负担）2026 实拉；与 §工作流自动化形态谱系（r621A 新增）分工——那边管"工作流形态谱系"（Markdown 意图驱动/规则过滤/六模式目录），本条管"agent 自己写编排程序"的机制）
+多 agent 编排的进阶形态：协调逻辑从主 agent 的逐步推理移到后台可执行程序——主 agent 只负责写程序。
+- **编排脚本化**：**主 agent 不逐步编排，而是写一段 JavaScript orchestration script 传给 Workflow tool；runtime 在后台执行该程序**（Claude Cookbook 原文）→ 判据：**编排=生成脚本**；运行时独立后台跑。
+- **并行/分阶段 spawn+结果变量**：**脚本并行或分阶段 spawn subagents；把各 subagent 结果存在变量里；连接逻辑（过滤/循环/验证轮次）用普通代码写**（Claude Cookbook 原文）→ 判据：**spawn 模式由脚本定**；结果聚合进变量；逻辑全代码化。
+- **降主 agent 负担**：**任务协调/子 agent 启动/结果聚合职责下放后台程序——主 agent 运行时负担显著降低**（InfoQ 原文）→ 判据：**能下放的协调职责全部下放**；主 agent 保留生成脚本与验收。
+- **提升层**：工具/工作流（动态编排机制）。
+
+## 子 agent 折叠与拆分判据：逐个折叠 · 翻转任务对比 · 失败才加协调 · 三病拆分（来源：Anthropic《Building agents: when to fold subagents into your main agent loop》（fold subagents into main agent one at a time——把每个 subagent 的 prompts 转成 skills+API calls 转成 MCP tools；compare eval performance with and without；**don't just examine final score——看哪些任务 flipped**）+ LangChain《What is an AI agent?》（graduate to multi-agent only when you hit clear limits——context overflow/capability sprawl/team boundaries 是升级到 sub-agents/routers 的常见理由）+ Make（Too much context/too many instructions/too hard to debug——拆子 agent 治三病）+ ai-portal.ai（01 Start with a single agent——coordination only when it demonstrably fails；02 Pattern>framework；03 every agent must have a budget——turns）2026 实拉；与 §多Agent决策树（既有）分工——那边管"什么时候拆/什么时候不拆"的总判据，本条管"折叠回主循环的具体做法与评估方法"）
+子 agent 不是越多越好：先单 agent 起步，失败才加协调；要折叠就逐个折并用任务翻转评估。
+- **逐个折叠**：**把每个 subagent 的 prompts 转成 skills、API calls 转成 MCP tools，一次折叠一个进主循环；折叠前后跑 eval 对比——不只对比总分，要看哪些任务 flipped（翻转）**（Anthropic 原文）→ 判据：**折叠逐个做**；评估看翻转任务分布而非总分。
+- **失败才加协调**：**从单 agent 开始；协调只在它确实失败（demonstrably fails）时才加；Pattern 比 framework 重要——同一模式可跨 LangGraph/CrewAI/AutoGen 移植；每个 agent 必须有预算（turns 等）**（ai-portal 原文）→ 判据：**协调=失败驱动的增量**；模式先于框架；agent 有预算。
+- **三病拆分**：**上下文太多/指令太多/难调试——这三者出现即拆子 agent；升级到多 agent 的常见触发：context overflow/capability sprawl/team boundaries**（Make/LangChain 原文）→ 判据：**拆分的动机是具体病症**；context 溢出/能力蔓延/团队边界三者任一出即考虑。
+- **提升层**：工作流/可复用 Skill（子 agent 治理）。
+## Agentic RAG：迭代检索 · 查询改写 · 自评充分性 · agent 决策与管线执行分离 · Self-RAG（来源：SkillGen《AI Agent Knowledge Retrieval 2026》（agentic RAG 不再单次检索直接答——iterate：search→evaluate→reformulate（结果不足时改写查询）→跨多源综合；单次检索复杂问题失败）+ Atlan《What is RAG 2026》（nine types；Agentic RAG=RAG 嵌入多 agent 系统——专门 agent 并行处理 query decomposition/retrieval/validation/synthesis，2026 企业主导模式）+ Oracle《Hybrid Retrieval for Agent Memory》（agentic retrieval 不替换混合管线而是组合它——每次查询都过同一六阶段 same scope filters/RLS boundary/reranker；**agent 决定问什么，管线决定返回什么并强制可返回什么**）+ NPBlue（Self-RAG：模型检索→判断是否充分→批评自己的答案对照→迭代；更贵但更高精度）2026 实拉；与 §Agentic 检索决策（既有）分工——那边管"单次检索的决策"（按复杂度路由/自评相关性/改写重搜/幻觉自检），本条管"检索的 agent 化模式"（迭代循环与架构分层））
+2026 检索的主流形态：单次检索让位给 agent 驱动的迭代循环——但管线仍把守返回边界。
+- **迭代检索循环**：**不再检索一次就作答——迭代：search→evaluate（评估找到什么）→reformulate（结果不足时改写查询）→跨多源综合再答；单次检索在复杂问题上失败**（SkillGen 原文）→ 判据：**复杂查询走迭代环**；结果不足必改写重搜。
+- **四任务并行**：**Agentic RAG=RAG 嵌入多 agent 系统——专门 agent 并行处理 query decomposition（查询分解）/retrieval/validation/synthesis；2026 企业 agent 主导模式**（Atlan 原文）→ 判据：**分解/检索/验证/综合四任务分 agent 并行**。
+- **决策与执行分离**：**agentic retrieval 不替换混合管线而是组合它——agent 每次查询都过同一六阶段（scope filters/RLS boundary/reranker）；agent 决定问什么，管线决定返回什么并强制什么可被返回**（Oracle 原文）→ 判据：**agent 决策层与管线执行层分离**；返回边界由管线强制。
+- **Self-RAG 自评**：**模型检索→判断信息是否充分→批评自己的答案对照检索→不足则迭代；更贵但更高精度**（NPBlue 原文）→ 判据：**高价值任务上自评环**；成本换精度要显式选。
+- **提升层**：工作流/可复用 Skill（Agentic 检索模式）。
+
+## RAG 防幻觉与评估：RAGAS 四指标 · RAG triad · 防幻觉 prompt 三要素 · 按 ID 引用（来源：yuzec.com（RAGAS=2026 RAG 评估事实标准——Faithfulness 每 claim 被检索上下文支持=测幻觉 target>0.85；Answer Relevancy 是否真正回答所问）+ Convly（RAGAS scores faithfulness/context precision/context recall with LLM as judge；建 20-50 QA pairs 从真实文档+每变更跑——这也是让每个先前决策诚实的方式）+ deeplearning.ai《Building and Evaluating Advanced RAG》（RAG triad：Context Relevance/Groundedness/Answer Relevance 评估相关性与真实性）+ Developers Digest《RAG with Claude》（防幻觉 prompt 三要素：system message 只用来源作答/来源没有就说没有/不用先验知识/按 ID 引用；chunks 带清晰分隔符+显式 ID；user question）+ GeekChamp（manual testing not enough——look good on few examples fail on larger set；small test dataset+run through pipeline+compare metrics as you change chunking/retrieval/embeddings/prompts）2026 实拉；与 §评估与防回归（r621C 新增）分工——那边管"通用输出评估栈"（三类评估器/最小评估栈），本条管"RAG 专用的评估指标与防幻觉 prompt 结构"）
+RAG 评估是专用的：faithfulness 量化幻觉，评估集随变更重跑；防幻觉从 prompt 结构做起。
+- **RAGAS 四指标**：**Faithfulness（每 claim 被检索上下文支持——测幻觉，生产 target>0.85）/Answer Relevancy（真正回答所问而非泛泛）/Context Precision/Context Recall——LLM as judge 打分**（yuzec/Convly 原文）→ 判据：**RAG 评估四指标齐**；faithfulness 是幻觉量化值。
+- **评估集纪律**：**建 20-50 QA 对（来自真实文档）+每变更跑（chunking/retrieval/embeddings/prompts 变即重跑）——manual testing 不够：几个例子好看≠大查询集不失败；评估让每个先前决策变得诚实**（Convly/GeekChamp 原文）→ 判据：**20-50 对真实评估集**；变更必重跑。
+- **RAG triad 三元组**：**Context Relevance（检索上下文与查询相关？）/Groundedness（答案扎根于上下文？）/Answer Relevance（答案回应查询？）——相关性与真实性的三面评估**（deeplearning.ai 原文）→ 判据：**三元组各测一面**；检索/生成/响应三层各有过。
+- **防幻觉 prompt 三要素**：**system message：只用提供来源作答/来源没有就说没有/不用先验知识/按 ID 引用；retrieved chunks：清晰分隔符+每块显式 ID 供引用；user question**（Developers Digest 原文）→ 判据：**三要素缺一不可**；块 ID 让引用可核验。
+- **提升层**：工作流/可复用 Skill（RAG 评估与防幻觉）。
+
+## RAG 质量护栏：噪声>无上下文 · 来源戳 · diff 后处理 · 低置信人工 · 检索即工具（来源：SitePoint《Local RAG for Agents》（**Injecting noise misleads the agent more than having no context at all**；每注入 chunk 含 source file path+indexed timestamp——agent 与人可验证来源与时效；post-processing 对比 diff 与检索上下文，标记引用任何检索块中不存在的 API/函数/模式——不完美但抓明显编造）+ skills.sh 生态 retrieving-advanced（monitor retrieval quality and adjust weights；cache retrieval results when possible）+ n8n（retrieve-as-tool 模式——Vector Store 作 AI Agent 工具，检索块作上下文；只给检索证据+references）2026 实拉；与 §工具结果断言层（既有）分工——那边管"工具返回值的可疑打标"，本条管"RAG 注入内容的质量护栏"）
+RAG 护栏的底线：宁可少给不可乱给；每个注入块可溯源，改动与检索上下文对账。
+- **噪声红线**：**注入噪声误导 agent 的程度超过完全没有上下文；检索质量需监控并调权重；检索结果尽量缓存**（SitePoint/retrieving-advanced 原文）→ 判据：**低质块宁可不注入**；质量监控+缓存并重。
+- **来源戳**：**每个注入 chunk 必须含 source file path+indexed timestamp——agent 与人工审核者都能验证信息来自哪里、是否新鲜**（SitePoint 原文）→ 判据：**来源+时间戳随块走**；可溯源可验时。
+- **diff 后处理**：**agent 产出编辑后，post-processing 把 diff 与检索上下文对比——标记引用了任何检索块中不存在的 API/函数/模式的改动；不完美但能抓住明显编造**（SitePoint 原文）→ 判据：**输出与检索上下文对账**；引用超界即标记。
+- **检索即工具**：**Vector Store 以 retrieve-as-tool 模式挂给 AI Agent——查询嵌入→检索→文本块作工具/上下文；生成只用检索证据+引用来源**（n8n 原文）→ 判据：**检索暴露为工具**；回答只锚检索证据。
+- **提升层**：工作流/可复用 Skill（RAG 质量护栏）。
+## 注入防御输入侧分层：关键词过滤 · 正则+ML 双层 · 语义相似度 · 长度限制 · 独立分类器 · 负约束精简（来源：CSDN《Dify 注入检测 5 大方法》（关键词过滤预定义敏感词库；**规则+ML 双层过滤——轻量正则实时拦截已知模式+BERT 分类器识别语义层越狱+每 24h 再训练适应新型攻击**）+ openagentskill ai-security（**Injection signature filter：regex 匹配 INJECTION_SIGNATURES；Semantic similarity filter：embedding 相似度到已知 jailbreak 模板；Input length limit：超 token 预算拒绝——防 many-shot 与 context stuffing；Content policy classifier：独立安全分类器分离主模型**）+ shshell（**negative constraints 用单一 Constraint String——'LIMIT: No non-technical topics.'（4 tokens）vs 罗列所有不能做**）+ PromptGenius（**hard delimiters 第一防御——<user_input> 标签包裹+指示当数据；sandwich defense——用户输入后重复约束，尾部指令重申**）+ ai-tldr（**regex 不单独拦——flag+收紧工具门；fence 剥伪造 </document> 标签防提前闭合数据段；scrubber 杀外泄通道即使上层全失败——no layer trusts the others to have worked**）2026 实拉；与 §Agent 工具面安全（既有）分工——那边管"工具面威胁"（描述注入/同名拦截/per-tool 最小权限），本条管"输入侧多层过滤机制与提示结构"）
+输入侧防御是多层过滤器，不靠单点：每层各拦一段，层间不互信。
+- **四件套过滤**：**Injection signature filter（regex 匹配已知注入签名）/Semantic similarity filter（embedding 相似度对已知 jailbreak 模板）/Input length limit（超 token 预算即拒——防 many-shot 与 context stuffing）/Content policy classifier（独立安全分类器，与主模型分离）**（openagentskill 原文）→ 判据：**四层齐**；长度限制是成本与安全双保险。
+- **规则+ML 双层**：**轻量正则实时拦截已知攻击模式+BERT 分类器识别语义层越狱尝试；定期分析日志异常模式自动提取特征回馈规则引擎；模型周期再训练适应新型攻击**（CSDN 原文）→ 判据：**快层拦已知+慢层拦语义**；特征反馈闭环。
+- **负约束精简**：**不罗列所有不能做（'Don't talk about X, Y, Z...'）——用单一 Constraint String：'LIMIT: No non-technical topics.'（4 tokens）；negative constraints 放在末尾效果最好**（shshell 原文）→ 判据：**约束字符串化**；放尾部。
+- **硬分隔符+三明治**：**<user_input> 标签包裹用户输入+显式指示把该块当数据——单此即挡住多数注入；sandwich defense：用户输入后重复约束（尾部指令重申），不只开头一次**（PromptGenius 原文）→ 判据：**前中后三处声明**；尾部重申兜底。
+- **无层互信**：**regex 只 flag 不独拦（flag 收紧工具门）；fence 剥掉伪造的闭合标签（防攻击者提前"关闭"数据段）；scrubber 杀外泄通道即使上层全失败——no layer trusts the others to have worked**（ai-tldr 原文）→ 判据：**层间不互信**；每层独立兜底。
+- **提升层**：可复用 Skill/工作流（输入侧注入防御）。
+
+## 动作层确定性护栏：权限分离 · 工具沙箱 · deny 策略 · 确定性工具边界 · 审批 fail-closed（来源：Best AI Web（**架构层强制权限分离——LLM output 永不直接触发特权动作**；red-team Garak/PyRIT 在发布前凡读外部数据）+ OpenClaw（sandbox mode ro 只读挂载禁用 write/edit/apply_patch；per-agent sandbox+tool restrictions v2026.1.6；CVE-2026-100573 沙箱策略绕过——MCP loopback 调用 sandbox.tools.deny 拒绝的工具；**Fail-Closed Approvals：执行审批超时 fail closed（deny）不挂起不默认宽松**；sub-agents/cron 默认无网络+只读 root fs）+ ClawGuard（**deterministic tool-call boundary enforcement——间接注入防护不需安全微调/架构修改；AgentDojo/SkillInject/MCPSafeBench 验证**）+ securitylab（**cc_hook 按工具名拦截每个 tool call（含 Skill 调用+skill 让 agent 做的事 Bash/Read/Write/WebFetch）——skill 可以承诺任何事，其动作仍被拦**）+ n8n（Guardrails 节点 check mode 分 pass/fail 分支）2026 实拉；与 §Guardrails 与动作门（r621C 新增）分工——那边管"通用动作门五执法点"（fail closed/白名单/写前校验），本条管"动作层确定性机制"（权限分离/沙箱边界/审批超时））
+文本层过滤是概率的，动作层护栏是确定性的：输出可以撒谎，动作边界不能。
+- **权限分离**：**架构层强制：LLM output 永不直接触发特权动作——中间必过权限层；发布前 red-team（Garak/PyRIT）凡读外部数据的系统**（Best AI Web 原文）→ 判据：**特权动作永远经中间层**；外部数据系统先红队。
+- **确定性工具边界**：**deterministic tool-call boundary enforcement——间接注入防护不需安全微调/架构修改；cc_hook 按工具名拦截每个 tool call，包括 Skill 调用本身与 skill 让 agent 做的事（Bash/Read/Write/WebFetch）——skill 可以承诺任何事，它的动作仍被拦截**（ClawGuard/securitylab 原文）→ 判据：**边界在动作层不在文本层**；skill 指令不豁免。
+- **沙箱边界**：**ro 只读挂载工作区（禁用 write/edit/apply_patch）；per-agent 独立 sandbox+tool restrictions；sub-agents/cron/隔离任务默认无网络+只读 root fs+受限工作区；注意 MCP loopback 类组件可能绕过 sandbox.tools.deny——deny 了要验证真拦得住**（OpenClaw 原文）→ 判据：**只读挂载+无网络默认**；deny 策略定期验证。
+- **审批 fail-closed**：**执行审批超时即拒绝（deny）——不挂起、不默认宽松；'Don't ask again' 授权会延续到近似相关但有害的动作——宽授权是系统性风险**（OpenClaw/arXiv 原文）→ 判据：**审批超时=拒绝**；谨慎使用永续授权。
+- **提升层**：工作流/可复用 Skill（动作层确定性护栏）。
+
+## Agent 技能供应链安全：技能行行皆指令 · 授权延续 · 只信已验证 · MCP 五检查 · protocol pivoting（来源：arXiv 2510.26328（**Agent Skills 使平凡提示注入成为可能——技能文件行行皆指令，注入极易执行（vs 邮件/网页需迭代优化）；"检测数据中的指令"类防御对 skills 无效（全是指令）；长文件+代码依赖+引用其他 skill 使人工监督困难；实验：篡改 Anthropic pptx skill 加一行'调用 backup 脚本'→Claude Code 编辑完 PPT 即上传到外部 API；'Don't ask again' 授权延续到近似有害动作**；结论：只依赖已验证 Agent Skills，扫描继承扫描器自身 jailbreak 面）+ XBSTACK（**MCP 五检查：Server 来源可信/Tool Description 不误导模型/Tool Input Schema 足够严格/Authorization Server 正确/Credential 绑定正确 issuer**）+ GLOBAI（**protocol pivoting：恶意 prompt 在可信 agent 链间跳转——MCP 协议层缺陷，Google/JPMorgan/Weaviate/Rapid7 等近五月承认相关漏洞**）2026 实拉；与 §Agent 工具面安全（既有）分工——那边管"运行时工具面威胁"，本条管"供应链侧"（技能/插件/MCP 生态的引入风险）
+2026 新战场在供应链：技能文件、插件市场、MCP server 的引入动作本身就可被武器化。
+- **技能注入现实性**：**Agent Skills 文件行行皆指令→平凡注入极简可行（无需迭代优化）；"检测数据中的指令"防御天然失效（技能内容全是指令）；长技能文件+脚本依赖+引用其他技能使人工逐行审核不可行；'Don't ask again' 永续授权可把良性任务的授权延续到近似有害动作**（arXiv 原文）→ 判据：**只装已验证来源的技能**；授权不可永续。
+- **MCP 五检查**：**①Server 来源可信 ②Tool Description 不误导模型 ③Tool Input Schema 足够严格 ④Authorization Server 正确 ⑤Credential 绑定正确 issuer——协议兼容≠安全**（XBSTACK 原文）→ 判据：**接入 MCP 过五检查**；信任基于可验证属性非兼容性。
+- **protocol pivoting**：**恶意 prompt 可在可信 agent 链间跳转（protocol pivoting）——MCP 协议层缺陷；多家厂商近五月承认相关漏洞——链式 agent 的每一跳都是注入传播面**（GLOBAI 原文）→ 判据：**agent 链每跳设边界**；跨 agent 数据不隐含可信。
+- **提升层**：可复用 Skill/工作流（技能与插件供应链安全）。
+## MCP 工具设计三原则：按意图分组不镜像 API · 描述精确化 · 少而够用（来源：Anthropic《Building agents that reach production systems with MCP》（**按意图分组工具，不按端点镜像 API——更少、描述良好的工具 consistently outperform exhaustive API mirrors；不要把你的 API 一对一包成 MCP server；remote server 是唯一跨 web/mobile/cloud-hosted agents 运行的配置，主流 client 都优化消费它**）+ n8n《MCP Guide》（**AI agent 读你的 MCP tool description 决定何时用它——模糊描述导致错误调用；'Manages users'→'Creates a new user account with the given email address and role. Returns the user ID on success.'**）+ OpenClaw（**首批五个实用 server 顺序：filesystem→memory→GitHub→search→SQLite——覆盖大多数 assistant workflows 而不 overloading the model with dozens of tools**）+ Developers Digest（**每 server 加 tool definitions 到模型 context——耗 token 且让 tool selection 变差；先装一两个填真实 gaps**）2026 实拉；与 §多Agent协作纪律（既有）分工——那边管"拆了之后共享知识层用类型化工具"，本条管"MCP 工具本身怎么设计"）
+MCP 工具设计是成本与效果的平衡：少而精、按意图、描述即文档。
+- **按意图分组，不镜像 API**：**更少、描述良好的工具 consistently outperform exhaustive API mirrors——不要把你的 API 一对一包成 MCP server**（Anthropic 原文）→ 判据：**工具按"agent 要完成的意图"分组**，不按"我的 API 有哪些端点"。
+- **描述精确化**：**AI agent 读 tool description 决定何时用——模糊描述导致错误调用；'Manages users'→'Creates a new user account with the given email address and role. Returns the user ID on success.'**（n8n 原文）→ 判据：**描述=输入+动作+输出**；动词开头。
+- **少而够用**：**每 server 加 tool definitions 到模型 context——耗 token 且让 tool selection 变差；先装一两个填真实 gaps；首批五 server（filesystem/memory/GitHub/search/SQLite）覆盖多数工作流**（Developers Digest/OpenClaw 原文）→ 判据：**工具数服从任务数**；装新 server 前先问"填什么 gap"。
+- **remote server 最大化触达**：**remote 是唯一跨 web/mobile/cloud-hosted agents 运行的配置——本地 stdio server 只服务本地 client**（Anthropic 原文）→ 判据：**要跨端就用 remote**；纯本地场景 stdio 更简单。
+- **提升层**：可复用 Skill/工作流（MCP 工具设计）。
+
+## MCP server 生产护栏：schema 验证 · 参数化查询 · fail closed · 两阶段验证 · per-tool 限流（来源：Anthropic（**每个 tool parameter 是 user-controlled input——按 JSON Schema 验证；构造查询用参数化查询 never string concatenation；MCP spec 不帮你做这些，server code 必须做；prompt injection via MCP 是真实威胁向量**）+ loooop.dev 官方 MCP 开发技能（**server-side 严格 schema 验证+sanitize outputs before returning；验证失败 log 成结构化 errors；Zod/AJV/python-jsonschema 强运行时验证器+fail closed on unexpected input；每工具/server token 最小权限+role-based checks+scope-scoped tokens+高风险工具独立 service account**）+ Ginger Labs（**两阶段输入验证管线：pattern-based+semantic，每个 tool call；per-tool rate limits with retry_after responses**）2026 实拉；与 compressor §Agent 工具面安全（既有）分工——那边管"消费方侧的威胁识别"（描述注入/同名拦截），本条管"server 实现侧的生产护栏"）
+MCP server 是你的代码，安全不来自协议：spec 只定义通信，验证与护栏全靠 server 自己。
+- **参数即用户输入**：**每个 tool parameter 是 user-controlled input——按 JSON Schema 验证后再处理；构造查询用参数化查询，never string concatenation；MCP spec 不帮你做这些**（Anthropic 原文）→ 判据：**参数进下游前过 schema**；拼接查询即注入通道。
+- **服务端验证+fail closed**：**server-side 严格 schema 验证+sanitize outputs before returning to client；验证失败 log 成结构化 errors；Zod/AJV/python-jsonschema 强运行时验证器+fail closed on unexpected input**（loooop.dev 原文）→ 判据：**入参出参都验证**；意外输入拒绝执行。
+- **两阶段输入验证**：**pattern-based+semantic 两阶段管线（每 tool call）；per-tool rate limits with retry_after responses**（Ginger Labs 原文）→ 判据：**快层拦已知+慢层拦语义**；限流按工具粒度。
+- **工具级最小权限**：**每工具/server token 最小权限；role-based checks+scope-scoped tokens；高风险工具用独立 service account**（loooop.dev 原文）→ 判据：**token 绑工具不绑全量**；高险工具隔离账号。
+- **提升层**：可复用 Skill（MCP server 实现护栏）。
+
+## 工具形态三选一：Native node 确定性 · Agent tool 单动作 · MCP server 组合（来源：n8n Docs（**Native node：你预先知道确切 API 调用——确定性步骤，每次同结果；Agent tool：agent 决定是否调用一个固定动作——单节点连 AI Agent 用于一个明确动作；MCP server：暴露给任意 MCP client——单个 workflow 可组合三种**）+ Make《MCP vs API》（**Make MCP Server 把任何 scenario 变描述化可调用 tool 供外部 AI agent——structured inputs/outputs+full visibility into every call；AI agent 需要作调用方时用 MCP 层**）2026 实拉；与 §编排形态与交接机制（r622A 新增）分工——那边管"agent 间如何交接"，本条管"工具接入形态怎么选"）
+工具接入有三种形态，按确定性/决策权/暴露面选，可混用。
+- **三选一判据**：**Native node——预知确切 API 调用（确定性步骤，每次同结果）；Agent tool——agent 决定是否调用一个固定动作（单节点单动作）；MCP server——暴露给任意 MCP client**（n8n 原文）→ 判据：**确定性路径走 native，决策点走 agent tool，跨端消费走 MCP**。
+- **MCP vs API 分工**：**AI agent 需要作调用方时用 MCP 层——scenario 变描述化工具，structured inputs/outputs+每个调用全可见；API 用于你程序里的确定集成**（Make 原文）→ 判据：**调用方是 agent→MCP；调用方是你的代码→API**。
+- **组合使用**：**单个 workflow 可组合三种形态**（n8n 原文）→ 判据：**同一流程内按步选型**，不强制统一。
+- **提升层**：工具/工作流（工具接入形态选型）。
+## 多模态抽取管线：类型分流 · 降级链 · 大文档异步 · 逐页聚合（来源：n8n 模板（**Webhook 收上传→Switch 按文件类型分流：image→Tesseract OCR/PDF→PDF parser/CSV→as-is**；多页 PDF 用 pdfinfo+pdfseparate 拆页→每页 OCR→合并文本；大文档（≤100MB）上传 Subworkflow.ai→服务端 Extract job→job record 跟踪→poll；**PDF 先试直接文本提取→image 用 OCR API→问题 PDF（CamScanner 类）fallback OCR 处理**）+ Activepieces（**AI Field Extraction：AI 步骤解析 PDFs/images→提取结构化字段→normalize dates/amounts→JSON 映射下游动作**）+ Make（**AI Content Extractor 原生——PDF/图片/音频结构化抽取至 2000 页/500MB；发票流程：OCR 拉字段→对照 PO→干净直批 mismatch 才人工**）2026 实拉；与 §RAG 质量护栏（r622B 新增）分工——那边管"检索注入内容的质量"，本条管"文件→文本的抽取入口管线"）
+文档抽取是文件工程的入口：类型分流、逐级降级、大文件异步，缺一即脆。
+- **类型分流**：**Webhook 收上传→Switch 按类型分流：image→Tesseract OCR/PDF→PDF parser/CSV→as-is——各类型走各自解析器，不统一硬扛**（n8n 原文）→ 判据：**入口按类型分流**；每种类型选其专属解析路径。
+- **降级链**：**PDF 先试直接文本提取→image 用 OCR API→问题 PDF（CamScanner 类）fallback OCR——先轻后重逐级降级，不是一步上最重**（n8n 原文）→ 判据：**直提失败才上 OCR**；重手段当 fallback。
+- **大文档异步**：**大文档上传→服务端 Extract job→job record 跟踪进度→poll——异步 job 模式，不在请求内同步等**（n8n 原文）→ 判据：**大文件走异步 job**；同步会超时。
+- **逐页聚合**：**多页 PDF 用 pdfinfo+pdfseparate 拆页→每页 OCR→合并文本——页级处理再聚合，防单页超限**（n8n 原文）→ 判据：**长文档页级处理**；聚合顺序保序。
+- **结构化映射**：**AI 步骤解析→提取结构化字段→normalize dates/amounts→JSON 映射下游动作（record creation/status updates）**（Activepieces 原文）→ 判据：**抽取终点是规范 JSON**；字段先归一化再入库。
+- **提升层**：工作流/可复用 Skill（多模态抽取管线）。
+
+## Layout-First OCR 与区域路由：结构在前 · 路由解析器 · 每步可视化调试（来源：abstract-ocr（**Layout-First OCR：OCR 在结构理解之后应用而非之前——防 column interleaving/错误阅读顺序/内容误分类；preprocessing→column detection→region classification→ordered OCR assembly**）+ NovoFlow（**Phase 1 Router（按 ehr_type 路由）→Phase 2 Detect Table（Moondream3 找表边界）→Phase 3 Reconstruct Table（OCR 重建列区域）；每步都配 debugging tools+visualization tests 看 OCR 返回什么、为什么**）+ DocClaw arXiv（**OCR-oriented skill：先 layout analysis 识别文档区域→路由不同区域类型到特定解析工具（text recognition/formula parsing/table parsing）→低质量区域视觉增强**）+ PaddleOCR PP-ChatOCRv4（Stage 1 Structured Extraction：layout detection+text recognition+tables/formulas/seals 解析）2026 实拉；与 §结构化输出机制（r621C 新增）分工——那边管"生成侧 schema 保证"，本条管"抽取侧先结构后识别"）
+Layout-First：先懂版面再读字——结构是 OCR 的上下文，不是结果。
+- **结构在前**：**OCR 在结构理解之后应用而非之前——防 column interleaving（列交错）/错误阅读顺序/内容误分类**（abstract-ocr 原文）→ 判据：**先 layout 分析再识别**；读序错误=抽取全错。
+- **区域路由**：**layout analysis 识别区域→不同区域类型路由到特定解析工具（text recognition/formula/table parsing）——不一个引擎通吃**（DocClaw 原文）→ 判据：**区域类型→专属解析器**；表格/公式/正文各走各的。
+- **每步可视化调试**：**每步配 debugging tools+visualization tests——理解 OCR 返回什么、为什么；OCR 是黑盒，可视化是唯一观察窗**（NovoFlow 原文）→ 判据：**阶段产物可见**；抽取出错能定位到步骤。
+- **低质量区域增强**：**识别低质量区域→视觉增强再识别——提升 recognition quality**（DocClaw 原文）→ 判据：**低质区先增强后识别**；一次失败不直接放弃。
+- **提升层**：可复用 Skill（Layout-First OCR 与区域路由）。
+
+## VLM vs OCR 选型：确定性吞吐 vs 语义抽取 · 每页双处理 · token 按大小（来源：AnhTu（**OCR 仍是高量/标准格式/吞吐量与确定性输出的主力；VLM 在 messy/layout-heavy/需语义抽取时 step-change——按任务选工具，VLM 不替换 OCR everywhere**）+ Anthropic（**PDF 每页作为图像处理——charts/tables/figures/layout-dependent 证据，plain text extraction 会丢；Claude PDF Chat 每页 text+image 双处理；token 按大小计费——~300 tokens 缩略图/~1000-1200 文档页，无 flat fee**）+ Developers Digest（**Vision 强项：结构化文档（一致布局）/图表（系列/轴标签/趋势）/UI 截图/图内代码/图表**）2026 实拉；与 §视觉提取三纪律（既有）分工——那边管"从图里提取文字/数据的纪律"（置信度/锚定/宽表裁剪），本条管"OCR vs VLM 选型与双处理模式"）
+选型判据：标准格式确定性吞吐用 OCR，乱版语义抽取用 VLM——不是替换是分工。
+- **分工判据**：**OCR=高量/标准格式/吞吐量+确定性输出主力；VLM=messy/layout-heavy/需语义抽取时 step-change——VLM 不替换 OCR everywhere**（AnhTu 原文）→ 判据：**标准件走 OCR，乱件走 VLM**；吞吐优先选确定性。
+- **每页双处理**：**PDF 每页作为图像处理——charts/tables/figures/layout-dependent 证据，plain text extraction 会丢；Claude PDF Chat 每页 text+image 双处理**（Anthropic 原文）→ 判据：**布局证据必须走视觉通道**；纯文本抽取丢布局证据。
+- **token 按大小**：**图片 token 按尺寸计费——~300 缩略图/~1000-1200 文档页，无 flat fee；高分辨率细节越准但 token 越贵**（Anthropic 原文）→ 判据：**按需选分辨率**；缩略图够就不上高清。
+- **Vision 强项清单**：**结构化文档（一致布局）/图表（系列/轴标签/趋势描述）/UI 截图/图内代码高保真/图表**（Developers Digest 原文）→ 判据：**这五类直接上 Vision**；类外先试 OCR。
+- **提升层**：工具/工作流（OCR vs VLM 选型）。
+## 文件系统记忆与分层：无隐藏状态 · MEMORY.md 分层保持 short · 可靠设置分离（来源：OpenClaw（**内置记忆=写 plain Markdown 到 workspace（~/.openclaw/workspace）——无 hidden state：不在盘上模型就不记得；多 agent 每 agent 自己 workspace 自己记忆；USER.md+MEMORY.md 注入 context**）+ claw-stack（**MEMORY.md 每会话开始加载，保持 short（<200 行）避免消耗 context budget（大任务描述会话）——只含最当前高优先级事实：recent activity/active projects/key contacts/infrastructure notes**）+ Developers Digest（**memory 三实践模式：append-only memory files（MEMORY.md 记 decisions/learnings）/按域 structured context files（architecture/conventions/incidents）/session snapshots（每会话末捕获完成了什么+下一步）**）2026 实拉；与 §记忆提取四策略+两级沉淀（既有，AWS）分工——那边管"提取策略与沉淀层级"，本条管"文件系统实现形态与分层纪律"）
+记忆的文件系统实现：可见、可审计、不占上下文预算。
+- **无隐藏状态**：**不在盘上模型就不记得——没有 hidden state；多 agent 每 agent 自己 workspace 自己记忆**（OpenClaw 原文）→ 判据：**记忆=磁盘文件**；看不到的"记得"不可靠。
+- **MEMORY.md 保持 short**：**每会话开始加载，保持 short（<200 行）避免消耗 context budget——只含最当前高优先级事实（recent activity/active projects/key contacts/infrastructure notes）**（claw-stack 原文）→ 判据：**常驻记忆只放最高优先级**；细节进引用文件。
+- **三实践模式**：**append-only memory files（记 decisions/learnings）+按域 structured context files（architecture/conventions/incidents）+session snapshots（每会话末捕获完成了什么+下一步）**（Developers Digest 原文）→ 判据：**决定/学习追加式**；快照在会话末写。
+- **可靠设置分离**：**stable user preferences/durable facts/daily notes/search 分开——重要上下文可用而不塞整个 transcript 进每个 prompt**（OpenClaw 原文）→ 判据：**按类型分文件**；不混装。
+- **提升层**：工作流/可复用 Skill（文件系统记忆实现）。
+
+## Compaction 前记忆转储：silent turn 写盘 · 轻量→重量恢复链 · 压缩保 decisions/files/risks（来源：OpenClaw（**自动 compaction 前 OpenClaw 跑 silent agentic turn 写 durable state 到盘（memory/YYYY-MM-DD.md）——compaction 不能擦掉关键上下文**）+ Claude Code 泄露 PPT（**prompt-too-long 413 恢复链：①Context Collapse 轻量（归档旧轮次为摘要）→重试→②Reactive Compact 重量（全量压缩 session memory）→重试→③**）+ context-engineering-collection 技能（**context-compression：compacting long sessions while preserving decisions, files, risks**）2026 实拉；与 §压缩后规则重声明（既有，Anthropic）分工——那边管"压缩后规则还活不活"，本条管"压缩前把关键上下文先转储出来"）
+压缩前的记忆转储：让 compaction 只丢可丢的，不丢关键状态。
+- **compaction 前写盘**：**自动 compaction 前跑 silent agentic turn 写 durable state 到盘（memory/YYYY-MM-DD.md）——compaction 不能擦掉关键上下文**（OpenClaw 原文）→ 判据：**压缩前必转储**；关键状态先进盘。
+- **轻量→重量恢复链**：**413 prompt-too-long 恢复：①Context Collapse 轻量（归档旧轮次为摘要）→重试→②Reactive Compact 重量（全量压缩 session memory）→重试→③**（Claude Code 原文）→ 判据：**先轻后重逐级恢复**；轻量能过就不过早重量。
+- **压缩保什么**：**compacting long sessions while preserving decisions, files, risks——决策/文件/风险是压缩必须保留的三类**（context-compression 技能 原文）→ 判据：**压缩清单含三必保**；decisions/files/risks 不漏。
+- **提升层**：工作流（Compaction 前记忆转储）。
+
+## 会话 ID 记忆控制：复用=有记忆 · 留空=省成本 · 窗口上限 · 隔离用户（来源：Make（**Conversation ID：复用 ID→Make 检索 stored history 加入当前请求=conversation memory；留空→无记忆且每次生成新 ID——不需要历史就留空显著省成本；Maximum conversation history 定义记住的最大回复数；同 thread ID 跨 runs 整个 thread 传入+tokenUsageSummary 监控**）+ Dify/Mem0（**Window Size 50-100 好起点；always pass conversation_id；第一代会话级记忆按 token 计数动态截断硬边界**）+ LangFlow（**chat memories 按 session_id 分组；自定义 session IDs 隔离不同用户/应用；消息存 langflow.db 带 session_id**）+ n8n（Data Table memory 按 session_id 持久化+name/email 查找）2026 实拉；与 §按任务状态压（既有）分工——那边管"何时压缩"，本条管"会话记忆的开关与窗口控制"）
+会话记忆是显式开关：要记忆就复用 ID，不要就留空——成本是用户的选择。
+- **复用=有记忆，留空=省成本**：**复用 Conversation ID→检索 stored history 加入当前请求；留空→无记忆且每次生成新 ID——不需要历史就留空显著省成本**（Make 原文）→ 判据：**记忆是显式选择**；不需要历史不白付 token。
+- **窗口上限**：**Maximum conversation history 定义记住的最大回复数；Window Size 50-100 好起点**（Make/Dify 原文）→ 判据：**窗口有界**；默认全量是浪费。
+- **session ID 隔离**：**chat memories 按 session_id 分组；自定义 session IDs 隔离不同用户/应用**（LangFlow 原文）→ 判据：**记忆按会话隔离**；不同用户不串记忆。
+- **按 ID 查找历史**：**Data Table memory 按 session_id 持久化，可选按 name/email 查找过去上下文**（n8n 原文）→ 判据：**记忆可寻址**；不只按最近时间。
+- **提升层**：工具/工作流（会话记忆控制）。
+## 评估与可观测分工：Observability=发生了什么 · Evaluation=好不好 · 两个问题都要用（来源：Make《Agent observability 2026》（**Q4：Observability shows you what happened during a run. Evaluation judges whether that outcome was good, using methods like LLM as a judge or code based checks against a known correct answer. Q1：agent observability 在传统 APM 上加 AI 特定信号——which tools an agent called**）+ InfoWok《AI Agent Observability & Evals Part 6》（**Observability shows what one run did（traces, cost, tool calls）. Evals score the agent across a fixed test set so you catch regressions. Use both——they answer different questions.**）+ n8n《Production AI Playbook》（**Step 3: Set alert thresholds——分类准确率 <85%/helpfulness<3.5 触发；Step 4: Track the right signals**）+ LangChain《What is an AI agent?》（**online evals 与 offline evals 分工**）2026 实拉；与 §评估驱动（r619B 新增，既有）分工——那边管"评估方法与输出治理"，本条管"可观测与评估的边界分工与组合使用"）
+可观测回答"发生了什么"，评估回答"好不好"——两个不同问题，缺一个都只能修一半。
+- **两问题分用**：**Observability shows what happened during a run；Evaluation judges whether the outcome was good——LLM as judge 或 code based checks against a known correct answer**（Make 原文）→ 判据：**先看发生了什么，再判好不好**；只评估无可观测=只看结果猜原因，只可观测不评估=知道失败不知道标准。
+- **AI 特定信号**：**agent observability 在传统 APM 上加 AI 特定信号——which tools an agent called**（Make 原文）→ 判据：**工具调用轨迹是可观测的核心 AI 信号**；没有它和普通 APM 无异。
+- **offline/online 双轨**：**online evals（生产流量打分）与 offline evals（固定测试集）分工**（LangChain 原文）→ 判据：**发布前离线测、发布后在线评**；两条轨都要跑。
+- **alert 阈值驱动**：**Set alert thresholds——分类准确率 <85%/average helpfulness <3.5 触发 alert，用 notification nodes 路由到团队**（n8n 原文）→ 判据：**阈值先定后监控**；指标无阈值=看板不是监控。
+- **提升层**：工作流（评估与可观测分工）。
+
+## 行为评估与 calibrated 判据：binary/rubric 胜过 Likert · 指标映射业务 · 多 trial 报成功率（来源：MLflow《Evaluating and Improving Agent Skills》（**Skill evaluation should measure behaviors, not just outputs——traces 验证技能选了正确工具/API 期望顺序调用/遵循业务策略/高效执行计划/完成必要验证步骤/cited retrieved evidence——behavioral metrics 比 answer accuracy 提供更丰富洞察**）+ MLflow《production-grade agents》（**Calibrated judges outperform Likert scale ratings——不问"rate 1 to 5"，定义 binary 或 rubric 判据：did the agent complete the task/did it stay within its permission boundary/did it escalate correctly；success metrics 映射 user/business outcomes（task completion rate/escalation rate）非模型 benchmark 分数**）+ jamesm.blog《Agent Reliability》（**Multi-trial evaluation：每测试用例跑多次（10, 100+）报 success rate 非 binary pass/fail——90% 通过优于 60%，100% 确定性通过可疑（真实生产流量不会）；Statistical regression detection：改 prompt/model version/tool surface 时测**）+ 吴恩达 Agentic AI（**Component-level evaluations——加组件级评估到 lab**）2026 实拉；与 §评估闭合邻域（wb-skill-authoring 既有）分工——那边管"技能激活评测的邻域封闭"，本条管"技能行为评估的判据设计"）
+评估技能/agent 看行为不看最终答案：判据要可判定、指标要映射业务、结论要带统计。
+- **行为评估**：**measure behaviors, not just outputs——traces 验证选了正确工具/API 期望顺序/业务策略/高效执行计划/验证步骤/引用证据**（MLflow 原文）→ 判据：**评估清单含过程项**；答案对但过程错也是失败。
+- **calibrated 判据**：**Calibrated judges outperform Likert scale——定义 binary/rubric 判据（完成度/权限边界/升级正确性），不问 1-5 打分**（MLflow 原文）→ 判据：**判据可判定**；"几分"的主观分不可回归。
+- **指标映射业务**：**success metrics 映射 user/business outcomes（task completion rate/escalation rate）非模型 benchmark 分数**（MLflow 原文）→ 判据：**业务指标为准**；benchmark 分数不直接等于业务价值。
+- **多 trial 报成功率**：**每测试用例跑多次报 success rate 非 binary pass/fail——90% 优于 60%，100% 确定性通过可疑（真实生产流量不会）；改 prompt/model/tool surface 时做 statistical regression detection**（jamesm.blog 原文）→ 判据：**成功率而非二分**；全过与全挂同样可疑。
+- **组件级评估**：**component-level evaluations——把每个组件单独评估**（吴恩达 原文）→ 判据：**组件单独评**；整链评估定位不到组件。
+- **提升层**：工作流/可复用 Skill（行为评估与判据设计）。
+
+## 生产 traces 回流 eval：incidents 起步 · 无人审 transcripts · trace→dataset case · skill-on/skill-off（来源：Arize《Anthropic's Tips for Building Evals You Can Trust》（**数据管线：①Study public benchmark——examine how it frames tasks/samples inputs/defines success/captures evidence/grades the result ②Mine production traces for real behavior——Start with reported incidents, then analyze the larger archive of transcripts that no human has reviewed**）+ Anthropic《Demystifying evals for AI agents》（**dedicated evals teams 拥有核心基础设施，domain experts+product teams 贡献大多数 eval tasks 并自己跑**）+ FutureAGI《Agent Skill Regression Testing》（**skill-on/skill-off agent skill evaluation：capture span-level traces of both runs，score with paired evals，prove a skill edit is safe**）+ Langfuse（**turn a production trace into a dataset case and test a proposed agent change**）+ LangChain（**production traces and feedback from monitoring become test cases for the next build**）2026 实拉；与 §生产闭环（r621C 新增）分工——那边管"输出校验与回退机制"，本条管"生产痕迹转评测用例的数据回流"）
+评估集从真实行为长出来，不从假设长出来：生产 traces 是 eval 数据的第一来源。
+- **数据管线两步**：**①Study public benchmark（怎么 frame tasks/sample inputs/define success/capture evidence/grade）②Mine production traces——start with reported incidents, then analyze the larger archive of transcripts that no human has reviewed**（Arize 原文）→ 判据：**eval 数据源自生产**；从真实 incident 起步再挖无人审档案。
+- **组织分工**：**dedicated evals teams 拥有核心基础设施，domain experts+product teams 贡献大多数 eval tasks 并自己跑**（Anthropic 原文）→ 判据：**基建集中、用例众包**；专家写用例自己跑，平台团队管设施。
+- **trace→dataset case**：**turn a production trace into a dataset case and test a proposed agent change**（Langfuse 原文）→ 判据：**每生产 trace 可转用例**；改 agent 前拿真实 trace 测。
+- **skill-on/skill-off**：**capture span-level traces of both runs，score with paired evals，prove a skill edit is safe**（FutureAGI 原文）→ 判据：**改技能先双跑对比**；开/关技能配对评估再发。
+- **开发闭环**：**production traces and feedback from monitoring become test cases for the next build**（LangChain 原文）→ 判据：**监控反馈回流测试集**；build→test→deploy→monitor 循环。
+- **提升层**：工作流（生产 traces 回流 eval）。
+## Agent 起步与预算铁律：单用途 agent 渐进 · 每 agent 有 budget（turns/tokens/tools/clock）· Start small（来源：Anthropic《Building Effective AI Agents》（**teams begin with single-purpose agents that do one thing well, then gradually develop into more sophisticated systems；Simple systems are cheaper to run（fewer tokens/less compute），easier to debug，give clear metrics that tie to business outcomes；Choose the right model for the job**）+ ai-portal《Multi-Agent Orchestration》（**01 Start with a single agent——add coordination only when it demonstrably fails；02 Pattern > framework——same pattern 跨 LangGraph/CrewAI/AutoGen 可移植；03 Every agent must have a budget——turns, tokens, tools, wall-clock。Or it's not an agent, it's a bug**）+ LangFlow《Build a multi-agent system》（**Start small——simple two-agent system 做到 accuracy/performance 达标再扩展**）+ Make Academy（**高能力模型+清晰 instructions 起步**）2026 实拉；与 §多Agent协作纪律（既有）分工——那边管"拆了之后怎么协作"（按技能建/共享层/接口契约/质检回退），本条管"起步姿态与预算约束"）
+Agent 系统从单用途起步，每 agent 都要有硬预算——没有预算的 agent 是 bug。
+- **单用途起步**：**begin with single-purpose agents that do one thing well, then gradually develop；simple systems cheaper to run/easier to debug/metrics tie to business outcomes**（Anthropic 原文）→ 判据：**先做精一件事**；简单系统省 token 好查错指标可归因。
+- **预算铁律**：**Every agent must have a budget——turns, tokens, tools, wall-clock。Or it's not an agent, it's a bug**（ai-portal 原文）→ 判据：**四维预算必设**；无上限的 agent 会把成本和控制一起交给模型。
+- **Start small**：**add coordination only when it demonstrably fails**（ai-portal 原文）+ **simple two-agent system 达标再扩展**（LangFlow 原文）→ 判据：**先单 agent 后协调**；失败可证才加复杂度。
+- **Pattern > framework**：**same pattern 跨 LangGraph/CrewAI/AutoGen 可移植**（ai-portal 原文）→ 判据：**学模式不绑框架**；换实现不动设计。
+- **提升层**：工作流（Agent 起步与预算）。
+
+## 工作流 vs Agent 选型：能定序用 workflow · 需要自主决策才 agent · workflow 作 tools 传给 agents（来源：Activepieces《AI Agent vs Workflow: When to Use Each》（**非确定性 AI agents 与 code-defined API events 单执行引擎并行——probabilistic steps 锚定 immutable triggers；webhook/new DB row 是不可变 trigger 确保只在 verified data 时触发；keep deterministic actions deterministic——AI 分类/总结/抽取/草稿，输出验证后才改 payment/删 record/发敏感消息，高影响动作用 confidence thresholds 或 explicit human approval**）+ Dify（**simple case 模型自选工具；复杂流程用 Chatflow/Workflow 固定顺序防随机变化；Agent 节点不要无处不在——只在需要自主决策编排时插入**）+ Principles of Building AI Agents（**3 个独立任务难单 LLM call 完成→各自转 workflow（stipulate 顺序+结构）→workflow 作为 tools 传给 agents**）+ Anthropic（**workflows bring structure to autonomy——execution patterns 对 coordinated steps/predictable outcomes/orchestrated timing**）2026 实拉；与 §多Agent决策树（既有）分工——那边管"什么时候拆 agent"，本条管"workflow 与 agent 的形态选型与组合"）
+能确定性定序的走 workflow，需要自主决策的才放 agent：确定性锚定、非确定性收权。
+- **形态选型**：**simple case 模型自选工具；复杂流程用 workflow 固定顺序防随机变化；Agent 节点只在需要自主决策时插入**（Dify 原文）→ 判据：**先问能不能定序**；能定序就不放 agent。
+- **确定性锚定**：**probabilistic steps 锚定 immutable triggers——webhook/DB row 只在 verified data 时触发**（Activepieces 原文）→ 判据：**非确定性步骤挂不可变触发**；无触发验证的自动化会乱开火。
+- **keep deterministic deterministic**：**AI 分类/总结/抽取/草稿，输出验证后才改 payment/删 record/发敏感消息；高影响动作 confidence thresholds 或 explicit human approval**（Activepieces 原文）→ 判据：**AI 不直接改数据**；高影响动作过阈值或人批。
+- **workflow 作工具**：**独立任务各自转 workflow 作为 tools 传给 agents**（Principles 原文）→ 判据：**确定性流程工具化**；agent 编排确定性子流程。
+- **提升层**：工作流（形态选型与组合）。
+
+## 模型路由与工具最小化：premium reasoning only where it changes the outcome · Limit Tools（来源：OpenClaw/getopenclaw《Practical Operator Setup》（**model routing instead of one expensive brain for everything——cheap/local model classify/summarize/prepare drafts；stronger model review complex decisions/public copy/security analysis/code changes；The practical win is not 'one model to rule them all'——spending premium reasoning only where it changes the outcome**）+ n8n《Production AI Playbook》（**Not every agent needs your most capable（and expensive）model——lightweight model for classification/routing/simple extraction；reserve most capable for advanced reasoning/nuanced generation/complex tool use——configuration decision, not an architecture change**）+ Activepieces《AI Agents Best Practices》（**Clear Prompts：include context/constraints/expected output format；Limit Tools：give agents only the tools they need——too many tools can confuse the AI**）+ Dify（**Clear Tool Descriptions help the Agent understand when and how to use each tool**）2026 实拉；与 §按任务选模型（r623B 新增）分工——那边管"推理成本与任务匹配"，本条管"多模型路由配置与工具面最小化"）
+不是"一个模型统治一切"：贵推理只花在改变结果的地方；工具只给需要的。
+- **模型路由**：**cheap/local model classify/summarize/prepare drafts；stronger model review complex decisions/security/code changes——spending premium reasoning only where it changes the outcome**（getopenclaw 原文）→ 判据：**按任务分级路由**；分类路由用便宜模型，复杂决策才上强模型。
+- **配置非架构**：**每 agent/LLM node 连不同模型=configuration decision, not an architecture change**（n8n 原文）→ 判据：**换模型不换架构**；分级选型是配置层的事。
+- **Limit Tools**：**give agents only the tools they need——too many tools can confuse the AI**（Activepieces 原文）→ 判据：**工具面最小化**；工具多到混淆=提示词写不清也救不回。
+- **工具描述**：**Clear Tool Descriptions help the Agent understand when and how to use each tool**（Dify 原文）→ 判据：**描述写明时机**；"何时/如何使用"比"工具是什么"重要。
+- **提升层**：工作流/可复用 Skill（模型路由与工具最小化）。
+## MCP 配置即攻击面：stdio 命令 allowlist · 工具暴露=权限授予 · enforcement 在推理层外（来源：LangFlow CVE-2026-105697（**<1.10.3 MCP stdio transport 直接执行 user 提供的 command/args——no allowlist/no sandboxing（前包 bash -c "exec {command}"）；任何能到 MCP server settings 的用户可 RCE；attack chain 4 HTTP requests；1423 hack attempts/月**）+ CSA《MCP Tool Exposure is a Privilege Grant》（**Two-Gate Authorization——decision 应含 what the tool is trying to do and what it is trying to affect；keep enforcement outside the reasoning layer——agent 可决定想请求什么 action，trusted security 层执行授权**）+ Microsoft《Agent Governance Toolkit》（**AGT 是 MCP client 与 tool servers 之间的 runtime governance layer——每 tool call 执行前过 policy；pipeline：definition scanning→policy evaluation→response inspection**）2026 实拉；与 §Agent 工具面安全（既有）分工——那边管"工具描述注入/同名拦截/guardian 三问"，本条管"MCP 配置层攻击面与授权架构"）
+MCP server 配置本身就是执行入口：命令要 allowlist、工具暴露是权限授予、授权执行放推理层外。
+- **配置即 RCE**：**stdio transport 直接执行 command/args 无 allowlist——任何能到 MCP server settings 的用户可 RCE**（CVE 原文）→ 判据：**MCP 命令必 allowlist**；配置字段等于执行入口。
+- **工具暴露=权限授予**：**MCP tool exposure is a privilege grant——two-gate authorization，decision 含 what tool 试图做什么+影响什么**（CSA 原文）→ 判据：**接工具=授权限**；按授权限流程审。
+- **enforcement 在推理层外**：**keep enforcement outside the reasoning layer——agent 可决定请求什么 action，trusted security 层执行授权**（CSA 原文）→ 判据：**授权不由模型判**；模型提议、安全层裁决。
+- **治理层前置**：**AGT 在 client 与 servers 之间——definition scanning→policy evaluation→response inspection**（Microsoft 原文）→ 判据：**执行前过策略**；调用前评估调用后检查。
+- **提升层**：工具/工作流（MCP 配置攻击面与授权架构）。
+
+## per-tool 最小权限矩阵：read-only 起步 · write 显式 allowlist · task-specific identity · 不 edit long-lived token（来源：Hermes《MCP Security Control Matrix》（**Identity and scopes：task-specific identity 非 owner/org-admin credential；Read vs write：begin read-only，write tools 放 explicit allowlist；Approval gate：human approval for messages/deploys/deletes/purchases/refunds/production mutations**）+ Top MCPs《How to Secure an MCP》（**scope every credential to least privilege——auth provider 默认 broad scopes；cut repo-only for GitHub/read-only for DBs/restricted keys for Stripe/single-channel for Slack；scope 变就 re-issue token，never edit the scope of a long-lived credential**）+ Dify（**MCP 发布访问控制：每 request 经 authentication token validation+workspace authorization+rate limiting+workflow 权限/配额/feature flags；双重授权：host 侧代码节点在工具调用前段过 JWT/IP/tenant 检查**）2026 实拉；与 §per-tool 最小权限（既有）分工——那边管"每工具 scope+速率+出口白名单"，本条管"凭据身份与读写分级的落地矩阵"）
+工具权限按矩阵落：身份任务级、读写分级、凭据最小且可旋转。
+- **task-specific identity**：**给 server 任务级身份，非 owner/org-admin credential**（Hermes 原文）→ 判据：**身份按任务建**；绝不用管理员凭据跑 agent。
+- **读写分级**：**begin read-only；write tools 放 explicit allowlist**（Hermes 原文）→ 判据：**只读起步写显式**；写工具逐个白名单。
+- **凭据最小化**：**auth provider 默认 broad scopes——cut repo-only/read-only/restricted keys/single-channel；scope 变 re-issue token，never edit scope of long-lived credential**（Top MCPs 原文）→ 判据：**新 token 替代旧 scope**；长期凭据不改 scope。
+- **双重授权**：**host 侧代码节点在工具调用前段过 JWT/IP/tenant 检查——不依赖 MCP server 单侧**（Dify 原文）→ 判据：**两侧都验**；server 侧+host 侧双层。
+- **提升层**：工具/工作流（per-tool 权限矩阵）。
+
+## 审批门与执行权限四模式：deny/allowlist/ask/full · human approval 清单 · HITL gates（来源：OpenClaw《Exec Approvals / Permission Modes》（**Security Mode：deny=block all host exec；allowlist=只 allowlisted commands 可跑；full=allow everything（elevated）；allowlist mode 推荐生产——only allowlisted commands 免批执行，其他 prompts human confirmation with the exact command displayed**）+ deeplearning.ai community（**human in the loop gates——agent 必须 pause+ask permission before executing 任何 system level command**）+ Activepieces（**高影响动作 confidence thresholds 或 explicit human approval；log prompt/model/output/final action**）+ Hermes（**human approval for messages/deploys/deletes/purchases/refunds/production mutations**）2026 实拉；与 §高风险操作审批（既有偏好）分工——那边管"操作层面触发审批"，本条管"执行权限的模式选择与审批清单"）
+执行权限先选模式再谈信任：生产用 allowlist，敏感操作清单化审批。
+- **权限四模式**：**deny=block all host exec；allowlist=只 allowlisted；ask=allowlist matches 免批+miss 问人；full=allow everything（elevated）**（OpenClaw 原文）→ 判据：**生产用 allowlist**；full 等同提权慎用。
+- **显示命令求批**：**allowlist mode——only allowlisted commands 免批执行，其他 prompts human confirmation with the exact command displayed**（OpenClaw 原文）→ 判据：**未列命令显式展示再批**；人批的是看到的那条。
+- **审批清单**：**human approval for messages/deploys/deletes/purchases/refunds/production mutations**（Hermes 原文）→ 判据：**清单化审批**；消息/部署/删除/购买/退款/生产变更都过人。
+- **HITL gates**：**agent 执行任何 system level command 前必须 pause+ask permission**（DL.ai 原文）→ 判据：**系统命令全过门**；无例外的 HITL。
+- **提升层**：工具/工作流（审批门与执行权限）。
+## 上下文工程是组装不是堆砌：right info/right format/right time · 最小高信号 token 集 · 每 token 付租金（来源：Trantorinc《Context Engineering: The New Prompt Engineering for 2026》（**designing dynamic systems that provide the right information, in the right format, at the right time——shift from "how do I word this prompt?" to "what information environment does this AI system need"**）+ AnhTu.dev《Context Engineering for AI Agents in 2026》（**All of context engineering reduces to one sentence: find the smallest set of high-signal tokens that maximize the likelihood of your desired outcome. Every token you add must "pay rent"**）+ 曼海姆大学《Context Engineering》讲义（**filling the context window with just the right...**）+ deeplearning.ai（**Andrew Ng 2026：AI 默认是 prone to flattery 的高 IQ 新毕业生——每层 prompt engineering 最终都在对抗讨好**）2026 实拉；与 §上下文预算管理（既有）分工——那边管"何时规划着压"，本条管"怎么组装才值得进窗口"）
+上下文工程的第一原理：模型看到什么=组装决策，不是措辞技巧。
+- **组装三要素**：**right information+right format+right time——设计动态系统在正确时刻给正确信息**（Trantor 原文）→ 判据：**从"怎么措辞"转向"需要什么信息环境"**；每步问该给什么。
+- **最小高信号集**：**smallest set of high-signal tokens that maximize likelihood of desired outcome**（AnhTu 原文）→ 判据：**窗口是预算不是仓库**；每次注入都过"这 token 付得起租金吗"。
+- **付租金判据**：**every token you add must pay rent——and that rent is not cheap**（AnhTu 原文）→ 判据：**新增内容必须能换算成产出增益**；装饰性上下文一律砍。
+- **对抗讨好**：**AI 默认是 prone to flattery 的高 IQ 新毕业生**（Ng 原文）→ 判据：**提示与上下文要对抗"顺着你说"**；关键判断点显式要求挑战。
+- **提升层**：工作流/工具（上下文组装哲学与判据）。
+
+## 系统提示最小化与三层持久上下文：system=核心指令 · user message 承载动态 · CLAUDE.md/skills 持久层（来源：Maisum Hashim《Lessons from 50+ AI Agent Deployments》（**Keep the system prompt minimal——system prompt 只放 core instructions，not examples/context/reference material；用 user messages 传动态 context——换 context 不 redeploy；repeated context 走 prompt caching**）+ Developers Digest（**Context engineering=designing the persistent context around every AI interaction: CLAUDE.md files, system prompts, skill libraries and memory systems**）+ Anthropic《Skill authoring best practices》（**Default assumption: Claude is already very smart——只加它没有的；challenge each piece: "Does Claude really need this explanation?" "Can I assume Claude knows this?" "Does this paragraph justify its token cost?"；concise skill ≈50 tokens；long skills 用 progressive disclosure 拆多文件**）+ Anthropic Help（**correct it like a colleague not a search engine——只说 what is wrong（"That changes the public API; keep the signature the same"），Claude 保留其余只改那一点**）2026 实拉；与 §约束块显式化（既有）分工——那边管"coding prompt 里把约束写清"，本条管"提示分层架构"）
+提示分三层：系统提示只放指令，动态数据走用户消息，持久知识进文件/skill。
+- **system 最小化**：**system prompt=core instructions only——not examples/context/reference material**（Maisum 原文）→ 判据：**系统层只放"怎么干活"**；示例与材料另放。
+- **动态走 user message**：**用 user messages 传动态 context——换 context 不 redeploy**（Maisum 原文）→ 判据：**变量内容进 user 层**；改数据不动系统层。
+- **持久层进文件**：**persistent context=CLAUDE.md/system prompts/skill libraries/memory systems**（Developers Digest 原文）→ 判据：**跨会话知识进文件**；不塞系统提示。
+- **默认假设模型已聪明**：**只加它没有的；Does Claude really need this explanation? / Does this paragraph justify its token cost?——concise skill ≈50 tokens**（Anthropic 原文）→ 判据：**写 skill/上下文先三问**；50 token 能讲清的不写 500。
+- **长 skill 渐进披露**：**long skills 用 progressive disclosure——divide into many files and split them out**（Anthropic 原文）→ 判据：**长文档拆多文件按需加载**；不整篇塞进激活面。
+- **纠正像同事不像搜索引擎**：**first answer off 不重述整 request，只说 what is wrong——"That changes the public API; keep the signature the same"**（Anthropic 原文）→ 判据：**纠正点对点**；其余保留不重写。
+- **提升层**：工作流/可复用 Skill（提示分层与持久上下文架构）。
+
+## 任务分解排序与执行纪律：每步 input/output/dependencies/completion criteria · blocking 失败即停 · Action purge（来源：PromptRefinery《7 Context Engineering Prompts for AI Agents 2026》（**Task Decomposition Sequencing：break task into ordered steps; for each step define required input, expected output, dependencies, and completion criteria; execute in order, confirm completion after each one, and stop immediately if a blocking step fails——makes execution easier to audit and debug**）+ PromptRefinery《10 Context Compression Prompts 2026》（**The Action Item Purge：Completed tasks are dead weight in a context window——strike through every item done, return only remaining To-Do items**）+ Anthropic Help（**Scope big tasks**）2026 实拉；与 §多Agent协作纪律（既有）分工——那边管"拆成多 agent 怎么协作"，本条管"单任务怎么分解执行"）
+任务分解成可审计步骤：每步有明确契约，失败即停，完成即清。
+- **步骤带契约**：**每步 define required input/expected output/dependencies/completion criteria**（PromptRefinery 原文）→ 判据：**每步四要素齐**；无契约的步骤不可审计。
+- **顺序执行+逐项确认**：**execute in order, confirm completion after each one**（PromptRefinery 原文）→ 判据：**步步确认**；跳过确认=执行链断裂。
+- **blocking 失败即停**：**stop immediately if a blocking step fails**（PromptRefinery 原文）→ 判据：**阻断步失败立即停**；不带着坏前提往下跑。
+- **完成即清（Action purge）**：**Completed tasks are dead weight——strike through done, return only To-Do**（PromptRefinery 原文）→ 判据：**完成项从工作区移除**；agent 只看到待办。
+- **scope 大任务**：**把大任务切成可管理范围**（Anthropic 原文）→ 判据：**先切范围再动手**。
+- **提升层**：工作流（任务分解与执行纪律）。
+## Chunking 2026 证据与五 metadata：overlap 无收益 · sentence≈semantic ≤5k · >2.5k 降质 · recursive 512 起步 · metadata 五字段（来源：AgentStack《RAG Chunking Strategies That Actually Work in 2026》（**2026 systematic analysis：overlap delivered no measurable retrieval benefit while increasing indexing cost；sentence chunking matched semantic chunking up to about 5,000 tokens；clear quality drop beyond roughly 2,500 tokens——complex chunking isn't automatically better, and overlap isn't automatically useful**）+ Diego Rodriguez《RAG Chunking in 2026》（**begin with recursive 512-token splits counted by a real tokenizer, size chunks to your query type, add semantic/late/contextual machinery only when your own golden set says the added cost buys accuracy；measurement：50 golden queries span-based, recall@k+end-to-end accuracy, re-sweep on corpus drift**）+ Moeid Saleem《The Hidden Chunking Variable》（**add five metadata fields to every chunk: Source ID, section path, doc date, content type, language——one engineering day, pays off on every filtered query；build a 50-question golden retrieval dataset this week, measure chunk recall@5 before adding any RAG features——need a baseline**）+ DEV imversion（**record every run in a scorecard: Recall@k, MRR, answer completeness, context waste, latency, token cost + failure modes——split tables, broken definitions, duplicated context, missed headers; best default is the one that wins consistently, not the one that sounds advanced**）2026 实拉；与 §检索基础分层（既有）分工——那边管"检索管线分层"，本条管"切块策略的 2026 证据与元数据基建"）
+切块先看证据：2026 实测推翻"overlap 必有收益"；元数据是过滤查询的基建。
+- **overlap 无收益**：**overlap 无可测 retrieval benefit 且增 indexing cost**（AgentStack 原文）→ 判据：**不加无谓重叠**；复杂切块不自动更好。
+- **sentence≈semantic**：**sentence chunking 匹配 semantic chunking 至 ~5000 tokens；>~2500 tokens 质量明显下降**（AgentStack 原文）→ 判据：**先简单切块**；超 2.5k 必降质。
+- **recursive 512 起步**：**begin with recursive 512-token splits counted by a real tokenizer，size chunks to your query type；只在 golden set 证明加价买来精度时才加 semantic/late/contextual**（Diego 原文）→ 判据：**真实 tokenizer 计数**；复杂机制按 golden set 决定。
+- **五 metadata 字段**：**Source ID/section path/doc date/content type/language——1 engineering day，pay off on every filtered query**（Moeid 原文）→ 判据：**每 chunk 五字段齐**；过滤查询靠元数据。
+- **scorecard 记录**：**Recall@k/MRR/answer completeness/context waste/latency/token cost+failure modes（split tables/broken definitions/duplicated context/missed headers）；best default=consistently wins 非 sounds advanced**（imversion 原文）→ 判据：**每次改动进 scorecard**；好默认=稳定胜出。
+- **提升层**：工具/工作流（chunking 证据与元数据基建）。
+
+## Rerank 价值量化与默认栈：over-retrieve top-50/100 → cross-encoder → top-10/20 · 每层增益（35/49/67%）· 0.03 cosine 噪声（来源：n8n Community（**when two chunks are within ~0.03 cosine distance, which one ranks first is basically noise——your embeddings being correct doesn't prevent this；fix: Limit 20（default 4）+Rerank Results**）+ Anthropic Contextual Retrieval 数据（**contextual embeddings alone reduced retrieval failures by 35 percent, +contextual BM25 by 49 percent, +reranking over top twenty by 67 percent**）+ Claudexia《RAG with Claude 2026》（**2026 default stack：over-retrieve top-50 to top-100，rerank down to top-10 or top-20 with a cross-encoder（Cohere Rerank 3/bge-reranker）**）+ FlowKit（**wide retrieval 20-50 candidates with match_documents 而非 4-5 常规，maximize chances the right passage is in the lot；reranking=cross-encoder 对每 candidate 按 exact question 打分**）2026 实拉；与 §检索基础分层（既有）分工——那边管"reranking 在管线中的位置"，本条管"检索宽度与 rerank 的量化收益"）
+Rerank 默认栈：宽召回再精排；每层增益可量化，相近向量排序是噪声。
+- **0.03 cosine 噪声**：**两 chunk 在 ~0.03 cosine distance 内谁第一基本是噪声——embedding 正确也救不了**（n8n 原文）→ 判据：**相近向量不信任原始排序**；必过 rerank。
+- **宽召回再精排**：**Limit 20（默认 4）+Rerank Results；wide retrieval 20-50 candidates，maximize chances the right passage is in the lot**（n8n/FlowKit 原文）→ 判据：**召回要宽**；4-5 个候选大概率漏。
+- **2026 默认栈**：**over-retrieve top-50 to top-100 → cross-encoder rerank → top-10/20**（Claudexia 原文）→ 判据：**宽→精两级**；cross-encoder 逐候选按精确问题打分。
+- **每层增益量化**：**contextual embeddings -35% 失败/+BM25 -49%/+rerank top-20 -67%**（Anthropic 原文）→ 判据：**逐层加并量化**；每层值钱程度可算。
+- **提升层**：工具/工作流（rerank 默认栈与量化）。
+
+## 检索质量先测后调：golden set 30-50 问 · Hit Rate+faithfulness 定位 · scorecard · 同 versioned set（来源：ianas.fr《How to Optimize RAG》（**start by measuring——generate 30 to 50 questions representative of your real users, measure Hit Rate（is the right chunk retrieved?）and faithfulness（is the answer grounded in the context?）——immediately tells you whether the problem is in retrieval or generation；everything else before that step is blind optimization**）+ LokeshReddy（**Recall@k asks whether at least one required chunk appears in top k——retriever found evidence；Precision@k asks how much of the returned set is useful——exposes noisy context and token waste；MRR rewards placing the first supporting chunk early，matters when context windows are short；multi-hop 用 full required set 的 recall**）+ aimec.io（**every configuration should be evaluated against the same versioned question set so that improvements are measurable**）+ MLflow（**LLM judge 请求 structured output（JSON score+rationale）可可靠 parse；calibration=most teams skip 的步骤——run against human-labeled 20-30 examples**）2026 实拉；与 §RAG triad 评估（既有）分工——那边管"三轴怎么测"，本条管"评估基建：golden set/先测定位/版本化问题集"）
+检索质量先建测量再谈优化：golden set 立基线，Hit Rate+faithfulness 定位问题在检索还是生成。
+- **先测量**：**generate 30-50 representative questions，measure Hit Rate+faithfulness——立刻定位 retrieval 还是 generation 问题；之前都是盲优化**（ianas 原文）→ 判据：**先立基线再优化**；两指标定位故障层。
+- **指标分工**：**Recall@k=evidence found；Precision@k=暴露噪声+token 浪费；MRR=首支持块早出现（短窗口重要）；multi-hop 用全集 recall**（Lokesh 原文）→ 判据：**按问题型选指标**；multi-hop 不看单块。
+- **版本化问题集**：**every configuration 用 same versioned question set 评估——improvements measurable**（aimec 原文）→ 判据：**问题集锁版本**；换配置可对比。
+- **judge 校准**：**structured output（JSON score+rationale）可靠 parse；calibration=最常跳过的步骤——human-labeled 20-30 例对比**（MLflow 原文）→ 判据：**judge 先校准再上岗**；20-30 例起。
+- **提升层**：工作流/可复用 Skill（RAG 评估基建）。
+## 工具治理四因素与单 agent 上限：reversibility/impact/verifiability/track record · 5-7 tools 拆多 agent（来源：DXC（**actions are assessed using factors including reversibility, impact, verifiability, and an agent's track record——decide 何时 require oversight**）+ Alice Labs LangGraph Guide（**single-agent architectures hit a practical ceiling around 5-7 distinct tools or responsibilities——beyond that, the LLM's context window fills with tool descriptions, reasoning quality degrades, and the agent becomes unreliable; the solution is...**）+ ACL Digital Meta-Harness（**supervisor graph：create_supervisor(agents=[research_agent, finance_agent, compliance_agent], prompt="Route the request to the right specialist"）**）2026 实拉；与 §多Agent协作纪律（既有）分工——那边管"拆了之后怎么协作/按技能建 agent"，本条管"何时该拆的量化阈值+审批触发判据"）
+Agent 治理先回答"什么时候需要人管"：四因素判据；单 agent 超 5-7 tools 就该拆。
+- **四因素判据**：**actions 按 reversibility/impact/verifiability/agent's track record 评估——决定何时需要 oversight**（DXC 原文）→ 判据：**高风险动作先问四因素**；不可逆/影响大/难验证/履历差→人管。
+- **5-7 tools 上限**：**single-agent 达 practical ceiling ~5-7 tools/responsibilities——超过后窗口被 tool descriptions 填满、推理降质、不可靠**（Alice Labs 原文）→ 判据：**超过即拆**；按技能分组多 agent。
+- **supervisor 编排**：**create_supervisor(agents=[research, finance, compliance], prompt="Route the request to the right specialist"）**（ACL 原文）→ 判据：**编排者只路由**；各 agent 单车道。
+- **提升层**：工作流（审批触发与拆 agent 阈值）。
+
+## Policy is code：策略编译成工具边界校验 · 拒绝是结构性的非请求 · guarded tool call 过 policy checks（来源：Langflow Policies（**natural language policies 用 ToolGuard 编译成 validation logic 附到 agent 可访问的工具；runtime 时 agent 正常规划，但任何 guarded tool call 必须过 policy checks 才执行——把策略执行从 soft instruction 变成 deterministic control point at the exact place where business risk actually happens: the tool boundary**）+ OpenClaw《Why OpenClaw》（**Policy is code. Denial is structural, not a request the model is asked to honor; approval paths deny requests when validation fails**）+ LANGFLOW_ALLOW_CUSTOM_COMPONENTS（**环境变量让 admin 禁用 custom component 执行**）2026 实拉；与 §约束块显式化（既有）分工——那边管"coding prompt 写清约束（软指令）"，本条管"把策略变成工具边界的确定性校验（硬控制）"）
+策略要变成代码不是叮嘱：自然语言→编译成工具边界校验，拒绝是结构性的。
+- **策略编译**：**ToolGuard 把自然语言策略编译成 validation logic 附到工具——guarded tool call 必须过 policy checks 才执行**（Langflow 原文）→ 判据：**策略落到工具边界**；不是 prompt 里叮嘱。
+- **确定性控制点**：**policy enforcement 从 soft instruction 变成 deterministic control point at the tool boundary——业务风险发生的确切位置**（Langflow 原文）→ 判据：**风险在哪校验在哪**；工具调用即拦截点。
+- **结构性拒绝**：**Denial is structural, not a request the model is asked to honor——approval paths deny requests when validation fails**（OpenClaw 原文）→ 判据：**拒绝由代码执行**；不依赖模型自觉。
+- **组件禁用**：**LANGFLOW_ALLOW_CUSTOM_COMPONENTS 让 admin 禁用 custom component 执行**（Langflow 原文）→ 判据：**高风险组件可整体关**；环境变量即开关。
+- **提升层**：工具/工作流（策略代码化）。
+
+## HITL 审批与四治理控制：Wait-for-Approval 步 · approver 可编辑再批 · identity/permissions+approval thresholds+output validation+audit trail（来源：Activepieces Harness（**flow 里插入 Wait for Approval 步——halt execution 直到 designated manager 审查 proposed output——即使 732+ 集成，高风险动作保持人工控制**）+ Make Agentic OS（**four governance controls：identity and permissions（每个 agent 可读写什么）/action approval thresholds（高风险不可逆动作前人工签字）/output validation（schema checks+quality gates on agent outputs）/audit trail and explainability（可读的 agent 决定+为什么）**）+ Make AI Automation（**HITL review module 插在 AI output 与 action module 之间；configure reviewer in Slack/email；approver 可 edit AI output 再 approve——only approved output continues**）+ Make Agentic Process（**confidence thresholds 路由 low-confidence outputs 到 human review；log reasoning+decisions for auditability；gate consequential actions 定价例外/合同条款/审批 在 explicit human steps 后**）2026 实拉；与 §审批门与执行权限四模式（r624C 既有）分工——那边管"审批模式分类"，本条管"四治理控制全谱+approver 可编辑机制"）
+人环不是开关是谱系：四治理控制齐备，approver 可编辑再批，低置信自动路由人工。
+- **Wait-for-Approval 步**：**flow 插入审批步——halt 直到 manager 审查 proposed output**（Activepieces 原文）→ 判据：**高风险动作插入暂停点**；人工看产出再放行。
+- **approver 可编辑**：**approver 可 edit AI output 再 approve——only approved output continues**（Make 原文）→ 判据：**审批含编辑权**；不只 yes/no。
+- **四治理控制**：**identity/permissions+approval thresholds+output validation（schema checks+quality gates）+audit trail/explainability**（Make 原文）→ 判据：**四件套齐**；缺一即治理缺口。
+- **低置信路由**：**confidence thresholds 把 low-confidence outputs 路由人工 review；log reasoning+decisions for auditability**（Make 原文）→ 判据：**低置信自动转人工**；推理留痕可审。
+- **提升层**：工作流/可复用 Skill（HITL 审批谱系）。
+## 记忆注入方式选择与声明式永久记忆：auto-injection vs 检索式 · memory:notes block · 会话边界写/会话前召回（来源：dsh-memory-notes（**Auto-injection——notes 目录（$DSH_HOME/memory/*.md）内容渲染进每个 session 的 system prompt 作为 memory:notes context block——agent 无需记得去找就能看到过去决策；remember 工具 list/read/add/update notes**）+ 阿里云百炼 Model Studio memory（**after a conversation ends, the plugin automatically extracts and stores key information; before the next conversation begins, it automatically recalls relevant memories**）+ WorkBuddy Agent Memory 技能（**2 步开启：指令开头 # 启用技能 Agent Memory + 明确告诉它哪些信息需要永久记住——身份/报告格式等规则声明式写入**）2026 实拉；与 §记忆提取四策略（既有）分工——那边管"提取什么策略"，本条管"注入方式（自动 vs 检索）与写入时机"）
+记忆注入先选形态：自动注入让 agent 无需找，声明式让用户显式点名，会话边界定写读时机。
+- **auto-injection**：**memory 目录内容渲染进每个 session 的 system prompt 作 memory:notes block——agent 无需记得去找**（dsh-memory-notes 原文）→ 判据：**关键记忆自动进上下文**；不依赖 agent 主动检索。
+- **会话边界写读**：**会话结束后自动提取存储关键信息；下个会话开始前自动召回相关记忆**（阿里原文）→ 判据：**写=会话末，读=会话前**；不随时写也不临时找。
+- **声明式永久记忆**：**指令开头启用 Agent Memory+明确声明哪些信息永久记住**（WorkBuddy 原文）→ 判据：**用户点名才存**；身份/格式规则声明式持久化。
+- **提升层**：工作流/可复用 Skill（记忆注入形态与时机）。
+
+## 记忆去重与冲突处理：相似度阈值→置信度提升 · 语义相反→更新 · 检索 vs 事实提取分工（来源：DataClaw《如何让 Agent 安全访问数据》（**记忆去重：设置相似度阈值，语义相似则提升置信度；记忆冲突：设置相似度阈值，语义相反则进行更新**）+ DEV《AI Agent Memory: Context Management Strategies for 2026》（**Facts answer what do we know now? Retrieval answers what was said earlier——嵌入 prior messages/tool outputs/checkpoints 进向量库，按 task ID/step type/tool name/approval state 元数据过滤**）2026 实拉；与 §记忆提取四策略（既有）分工——那边管"提取与沉淀"，本条管"入库后的去重/冲突仲裁与两类查询分工"）
+记忆入库后要治理：相似合并提置信度，冲突按语义更新，查询分清"知道什么"与"说过什么"。
+- **去重与冲突仲裁**：**相似度阈值判相似→提升置信度；判语义相反→更新覆盖**（DataClaw 原文）→ 判据：**入库后过相似度/相反度双检**；相似合并、相反更新。
+- **两类查询分工**：**Facts 答"现在知道什么"，Retrieval 答"之前说过什么"**（DEV 原文）→ 判据：**按问题类型选通道**；事实用事实库、原文用检索。
+- **检索元数据过滤**：**嵌入 prior messages/tool outputs/checkpoints，按 task ID/step type/tool name/approval state 过滤**（DEV 原文）→ 判据：**检索带元数据维度**；按任务/步骤/工具/审批态过滤。
+- **提升层**：工作流（记忆治理与查询分工）。
+
+## 技能生成触发四判据：工具≥5 次/错误恢复/用户修正/非直观有效流程（来源：Hermes Agent 架构全解（**自主生成技能触发条件：调用了 5 次及以上工具 / 从错误里成功恢复 / 用户给过修正指导 / 走通了一套不那么直观的有效流程——满足即生成 ~/.hermes/skills/ 技能文件——不是普通日志，而是一套下次能直接照搬的可复用指令集**）2026 实拉；与 §重复工作流固化为资产（既有偏好）分工——那边管"怎么固化"，本条管"什么信号触发固化"）
+固化技能看信号：四次触发判据齐备才值得固化成可复用指令集。
+- **四判据**：**工具调用≥5 次 / 从错误成功恢复 / 用户给修正指导 / 走通非直观有效流程**（Hermes 原文）→ 判据：**四信号任一命中即生成技能**；不是每次成功都固化。
+- **产物形态**：**技能文件=可复用指令集，不是普通日志**（Hermes 原文）→ 判据：**固化的是可照搬流程**；日志归日志、技能归技能。
+- **提升层**：可复用 Skill（自进化固化触发）。
+## MCP Gateway 与工具分级：裸连=侧门 · 四分级 low/medium/high/critical 高风险默认审批 · agent 当用户管（来源：ApFramework《AI Agent 安全最佳实践 2026》（**每一个 MCP Server 都应该通过 Gateway 接入，经过认证和权限检查。裸连 MCP Server 等于给 Agent 开了一个侧门：你甚至无法列出一个 Agent 到底接了多少个 MCP Server，每个 Server 又暴露了什么工具；工具要分级，不能一视同仁——low/medium/high/critical 四个等级，高风险工具默认需要审批**）+ Activepieces（**treats the AI agent as a user rather than just a script——同样的 RBAC/SSO/SCIM 策略应用到 agent 的每个连接；autonomy 与工具潜在影响成反比——按 side effects 分类，routine data retrieval 自动化，不可易逆转动作强制 HITL**）2026 实拉；与 §Policy is code（r625C 既有）分工——那边管"策略编译成工具边界校验"，本条管"MCP 接入形态（Gateway）+工具分级授权"）
+MCP 与工具接入先分级：全部走 Gateway，工具按副作用四分级，agent 当用户管。
+- **MCP 走 Gateway**：**每个 MCP Server 过 Gateway 接入+认证+权限检查；裸连=侧门——无法列出 agent 接了多少 Server/每 Server 暴露什么**（ApFramework 原文）→ 判据：**所有 MCP 单一入口**；能枚举 agent 的工具面。
+- **工具四分级**：**low/medium/high/critical——高风险工具默认需审批，不一视同仁**（ApFramework 原文）→ 判据：**按副作用分级**；查询自动、删除审批。
+- **agent 当用户管**：**同 RBAC/SSO/SCIM 策略应用到 agent 每个连接；autonomy 与工具影响成反比**（Activepieces 原文）→ 判据：**agent=一等身份**；不可逆动作强制人环。
+- **提升层**：工具/工作流（MCP 接入与工具授权分级）。
+
+## 权限模式权衡与 containment：sandbox vs bypass vs manual（93% 接受率）· 监督能做什么而非做什么 · 一次性 TTL 密钥不落盘（来源：Anthropic《How we built Claude Code auto mode》（**Sandboxing is safe but high-maintenance——每个新能力需要配置，需要 network/host access 就破坏隔离；bypassing permissions zero-maintenance but no protection；manual prompts 居中——实际用户接受 93%**）+ Anthropic《How we contain Claude》（**不监督 agent 做什么，监督它能做什么——enforcing access boundaries（sandboxes/VMs/egress controls）封顶爆炸半径**）+ Dify 5 层纵深（**Vault 动态 secret 引擎生成一次性 TTL 密钥，Envoy 过滤器实时注入，避免密钥明文落盘**）2026 实拉；与 §Agent 安全三优先（r625C 既有）分工——那边管"治理顺序（身份→范围→模型）"，本条管"权限模式选型+封顶策略+密钥注入形态"）
+权限模式先选型：sandbox 安全但维护重、bypass 无保护、manual 居中；防御用 containment 封顶爆炸半径。
+- **三模式权衡**：**sandbox 安全但高维护（每新能力要配置）；bypass 零维护无保护；manual 居中——用户实际接受 93%**（Anthropic 原文）→ 判据：**按维护成本+保护需求选**；多数场景 manual 足够。
+- **containment 哲学**：**不监督 agent 做什么，监督它能做什么——enforce access boundaries 封顶爆炸半径**（Anthropic 原文）→ 判据：**防"能"不防"做"**；沙箱/VM/出口控制优先。
+- **密钥不落盘**：**Vault 一次性 TTL 密钥+Envoy 实时注入，避免明文落盘**（Dify 原文）→ 判据：**凭据动态注入**；无常驻明文密钥。
+- **提升层**：工具/工作流（权限选型与封顶策略）。
+
+## 社区 Skill 安全四查与实证：inspect source/权限/活跃/只装懂的 · 26.1% 带漏洞 · 安装激活=operator-level authority（来源：SkillsMP（**Treat community skills like any open-source code：inspect the source, review scripts and permissions, check recent activity, and only install what you understand**）+ SkillFed 研究（**26.1% of marketplace agent skills carry at least one vulnerability——data exfiltration 13.3%/privilege escalation 11.8%/supply-chain risk；8,126 vulnerable skills, 14 patterns**）+ arXiv《Towards Secure Agent Skills》（**operator-level authority 赋给任何已安装激活的 skill——operator-level instructions 并入 system prompt，以 agent 无法被后续用户输入覆盖的 elevated authority 解释**）2026 实拉；与 §技能安装安全治理（既有）分工——那边管"安装流程与签名"，本条管"市场实证风险+安装即提权的事实"）
+装社区 skill 前先四查：市场实证 26.1% 带漏洞，且安装激活即 operator 级提权。
+- **四查**：**inspect source/review scripts+permissions/check recent activity/only install what you understand**（SkillsMP 原文）→ 判据：**装前四查**；看不懂不装。
+- **实证风险**：**26.1% 市场 skills 至少一个漏洞——data exfiltration 13.3%/privilege escalation 11.8%**（SkillFed 原文）→ 判据：**市场默认不可信**；按漏洞率设审查强度。
+- **安装即提权**：**安装激活的 skill 获得 operator-level authority，并入 system prompt，用户后续输入无法覆盖**（arXiv 原文）→ 判据：**装 skill=扩权限**；按装权限流程审。
+- **提升层**：可复用 Skill（社区技能准入）。
+## 编排者职责与委托纪律：永不自己实现 · triage→plan→delegate→独立评审 gate · Delegation only（来源：dsh-expert-orchestrator（**never implements changes itself——triage 每个请求→project-management expert 规划→delegate 实现给 best-fit domain experts→independent review 把关交付；Delegation only——实现总是被委托（merged expert roster 优先）**）2026 实拉；与 §多 Agent 协作纪律（r625A 既有）分工——那边管"拆了怎么协作（接口/共享层/质检）"，本条管"编排者自身的行为约束"）
+编排者先定职责：自己只做分诊/规划/把关，实现一律委托。
+- **编排者不实现**：**never implements changes itself——triage→规划→委托→独立评审 gate**（dsh-expert-orchestrator 原文）→ 判据：**编排者零实现**；只做分诊/规划/把关。
+- **Delegation only**：**实现总是被委托，专家名单优先**（原文）→ 判据：**委托=默认路径**；不因"自己能干"抢专家活。
+- **独立评审 gate**：**交付过独立 review**（原文）→ 判据：**实现与评审分离**；写的人不审自己的活。
+- **提升层**：工作流/可复用 Skill（编排者纪律）。
+
+## 子 Agent 包装与进程治理：ManagedAgent 工具化（name+description）· 程序即编排（控制流）· idle eviction+bounded count（来源：smolagents（**nesting agents as tools through the ManagedAgent wrapper——name+description 让 orchestrator 调用**）+ OpenClaw Swarms（**normal JavaScript control flow（Promise.all/while/if）就是编排——没有 graph DSL、没有独立 workflow 格式，程序本身就是编排；awaitable collector children**）+ dsh-claude spec（**idle eviction 默认 30 分钟；bounded live process count 默认 4——限制降级时逐出最少闲置条目，全忙时 FIFO 等用户轮次；取消时中断并终止属主进程树**）2026 实拉；与 §多 Agent 协作纪律（r625A 既有）分工——那边管"协作模式与接口"，本条管"子 agent 的封装形态+编排载体+进程资源上限"）
+子 agent 先封装：包装成带名字/描述的工具，编排用控制流而非图 DSL，进程设闲置逐出与数量上限。
+- **工具化包装**：**ManagedAgent 把子 agent 包装成工具（name+description）供 orchestrator 调用**（smolagents 原文）→ 判据：**子 agent=可命名工具**；描述写清何时调用。
+- **程序即编排**：**控制流（Promise.all/while/if）就是编排，无 graph DSL——程序本身是编排**（OpenClaw 原文）→ 判据：**编排可编程**；不引入图 DSL。
+- **进程治理**：**idle eviction（默认 30 分钟）+bounded live process count（默认 4）——限制降级逐出最少闲置，取消时终止属主进程树**（dsh-claude spec 原文）→ 判据：**子进程有上限与逐出**；取消必清进程树。
+- **提升层**：工具/工作流（子 agent 封装与进程治理）。
+
+## 协作模式与团队分工：共享 Memory 同步 · 角色化（Manager/Custodian）· 简单 agents 代码通信>刚性图+共享状态（来源：WaytoAGI/CSDN《AI Agent Development Trends 2026》（**去中心化协作：多个对等 Agent 通过共享上下文和消息队列协作——一个生成/一个审查/一个测试，通过共享 Memory 实现信息同步**）+ MAGIS（**四角色：Manager（团队组装/会议组织/计划制定）、Repository Custodian（仓库管理）**）+ Thoughtworks Radar Vol.34（**PydanticAI Adopt——simple agents communicating through code execution over rigid graphs with massive shared state；often produces leaner, more debuggable systems than LangGraph**）2026 实拉；与 §多 Agent 决策树（既有）分工——那边管"什么时候拆"，本条管"协作信息载体（共享 Memory）+角色分工+架构取向"）
+协作先定载体：对等 agent 共享 Memory 同步，角色化分工，简单代码通信优先于刚性图。
+- **共享 Memory 同步**：**对等 Agent 通过共享上下文+消息队列协作，共享 Memory 实现信息同步**（趋势原文）→ 判据：**协作有共享载体**；生成/审查/测试各司其职。
+- **角色化分工**：**Manager（团队组装/会议组织/计划制定）+Repository Custodian（仓库管理）**（MAGIS 原文）→ 判据：**角色=职责边界**；组装/管理/执行分离。
+- **简单优先**：**simple agents 代码执行通信 > 刚性图+海量共享状态——常比 LangGraph 更 lean/debuggable**（Thoughtworks 原文）→ 判据：**编排先简后重**；共享状态最小化。
+- **提升层**：工作流（协作载体与团队分工）。
+## 评估驱动迭代：golden dataset+worst-decile · offline=ground truth/online=benchmark 双跑 · 部署阈值按错误成本（来源：FutureAGI（**golden dataset 100-500 个代表性输入（expected outputs 或 grading rubrics），跑 evaluator suite（groundedness/context adherence/toxicity/custom LLM-judge for task accuracy），比较 aggregate scores 加 worst-decile failures**）+ LangChain（**online evals 是 benchmark 不是 ground truth——告诉我 helpfulness 是否隔夜下滑、tool 是否更常失败；offline evals 是 ground-truth 测试——prompt 变更/模型替换/新架构是否真改善；两个都要**）+ designedbyai（**阈值反映错误成本而非通用 benchmark——起点：routine scenarios ≥95% task success/重要 workflows ≥90%/<2% unhandled tool failures/测试中零未授权动作**）2026 实拉；与 §AI 生成代码收 diff 五连查（r625A 既有）分工——那边管"单次收代码前怎么查"，本条管"持续评估体系怎么建"）
+评估先建库：golden dataset 配 expected output，offline/online 双跑，阈值按错误成本定。
+- **golden dataset 100-500**：**代表性输入+expected outputs/rubrics，跑 evaluator suite，比 aggregate scores 加 worst-decile**（FutureAGI 原文）→ 判据：**评估有黄金集**；不止看均值，看最差十分位。
+- **offline/online 双跑**：**offline=ground-truth（改 prompt/换模型/新架构是否真改善）；online=benchmark（隔夜下滑/工具失败率）——两个都要**（LangChain 原文）→ 判据：**离线验真改善，在线看漂移**。
+- **阈值按错误成本**：**routine ≥95% task success/重要 ≥90%/<2% tool failures/零未授权动作——支付/医疗/安全更严**（designedbyai 原文）→ 判据：**阈值跟风险走**；不套通用 benchmark。
+- **提升层**：工作流（评估体系）。
+
+## LLM Judge 工程五要素与校准：criterion/examples/randomization/schema/self-consistency · Cohen's Kappa 季度校准 · 1 judge+1 deterministic 配对（来源：FutureAGI（**judge prompts 是 eval-time programs——criterion/calibrated examples/randomization/schema/self-consistency 五个元素决定 signal vs noise**）+ Datalaria（**未校准的 evaluator 模型有 optimistic drift；季度算 Cohen's Kappa（自动 LLM judge vs 高级人工工程师）**）+ FutureAGI（**生产门控配对：一个 LLM-judge 指标+一个确定性检查（regex/JSON schema 等）**）2026 实拉；与 §评估驱动迭代（同轮 ①）分工——那条管"评估体系骨架"，本条管"judge 本身怎么写/怎么防漂移"）
+judge 先工程化：五要素定信号，季度校准防漂移，门控配对减幻觉。
+- **五要素**：**criterion/calibrated examples/randomization/schema/self-consistency**（FutureAGI 原文）→ 判据：**judge prompt 是程序不是话术**；五要素齐全才是信号。
+- **季度校准**：**evaluator 未校准会 optimistic drift——季度算 Cohen's Kappa（judge vs 高级人工）**（Datalaria 原文）→ 判据：**judge 定期对人**；Kappa 下滑即重新校准。
+- **门控配对**：**一个 LLM-judge 指标+一个确定性检查（regex/JSON schema）配对**（FutureAGI 原文）→ 判据：**judge+deterministic 双保险**；不单靠主观评分。
+- **提升层**：工具/可复用 Skill（judge 工程）。
+
+## 质量门与回归阻断：PR 触发 eval gate · 2-of-3 阈值+ties fail closed · 模型发布重查 evaluator（relocate 不淘汰）（来源：Activepieces（**监听 PR 事件→对提议分支触发 eval run→与 main 基线比较——gatekeeper 逻辑防止 prompt/RAG 回退被 merge**）+ agenteval（**determinism-first：runs 默认 3+2-of-3 默认通过阈值；judge ties fail closed——无显式 passThreshold 时要求严格多数，平票=失败**）+ SpecStory（**每次模型发布重查 evaluator——位置反映"生成器不能做什么"的假设，假设会过期，模型提升时移动 evaluator；更好的模型不淘汰 evaluator，relocate 它**）2026 实拉；与 §评估驱动迭代（同轮 ①）分工——那条管"评估体系骨架"，本条管"质量门机制与回归阻断"）
+质量门要自动：PR 触发比较基线，多次运行+平票失败，模型升级重挂 evaluator。
+- **PR eval gate**：**PR 事件触发分支 eval 与 main 基线比较，回退阻止 merge**（Activepieces 原文）→ 判据：**改动过门**；prompt/RAG 回退进不了主干。
+- **2-of-3+ties fail closed**：**runs 默认 3、2-of-3 通过；无显式阈值时平票=失败**（agenteval 原文）→ 判据：**确定性优先**；不确定就不放行。
+- **relocate 不淘汰**：**模型升级重查 evaluator 位置——raw capability 增长时 evaluator 移到新难点**（SpecStory 原文）→ 判据：**evaluator 随模型搬家**；不因"变好了"删门禁。
+- **提升层**：工作流/可复用 Skill（质量门机制）。
+## System Prompt 五组件与缓存布局：ROLE/CONTEXT/INSTRUCTIONS（stable content first）· 每句挣位置（移除非核心约束）· Role 含"不是什么"（来源：skills.ws（**System Prompt 五组件按序：ROLE（expertise/persona/audience）/CONTEXT（背景/领域/数据）/INSTRUCTIONS（任务步骤）——stable content first 让它缓存（see Caching）**）+ n8n Context Engineering（**控制上下文=对写进 system prompt 的内容自律；每句必须挣得位置，移除非核心任务必需的约束——否则徒增成本；好设计是简洁结构化格式（markdown headers/clear JSON schemas）不是防御性文字**）+ n8n 博客（**Role 五件：是什么和不是什么（You are not a sales representative）/Context/Task/Constraints/Output format**）2026 实拉；与 §上下文预算管理（r625A 既有）分工——那边管"窗口用多少开始规划压缩"，本条管"system prompt 怎么写省且稳"）
+system prompt 先布局：五组件按序（稳定内容在前利于缓存），每句挣位置，角色写清"不是什么"。
+- **五组件按序**：**ROLE/CONTEXT/INSTRUCTIONS——stable content first 便于缓存**（skills.ws 原文）→ 判据：**稳定内容前置**；变化内容后置。
+- **每句挣位置**：**移除非核心约束，否则徒增成本；用 markdown headers+JSON schemas 而非防御性文字**（n8n 原文）→ 判据：**system prompt 无废句**；删约束不删核心。
+- **Role 双向**：**写是什么+不是什么（You are not a sales representative）**（n8n 原文）→ 判据：**角色双向界定**；防越界行为。
+- **提升层**：可复用 Skill（system prompt 工程）。
+
+## 结构化输出 Prompt 工程：约束输出形状（length/schema/forbidden=contract spec）· 五件组合（instructions+context+example+uncertainty+format control）· 不可信输入分隔符（BEGIN/END）（来源：FutureAGI（**约束输出形状：length limits/JSON schemas/forbidden phrases 都减少 variance——production prompts 更像 contract specifications 而非 open requests**）+ Claude blog（**结构化输出五件组合：explicit instructions（提取什么）+context（格式为何重要）+example structure（展示格式）+permission to express uncertainty（use null if unsure）+format control（begin with opening brace）**）+ AgentRoost（**不可信输入分隔符：动态内容（email bodies/form/webhook payload）包进 ---BEGIN TICKET---/---END TICKET--- 清晰标签，只回 category name**）2026 实拉；与 §System Prompt 五组件（同轮 ①）分工——那边管"整体骨架"，本条管"输出侧的形状约束与安全边界"）
+结构化输出先定形：prompt 是 contract spec，五件组合给全信息，不可信输入加分隔符。
+- **输出形状约束**：**length limits/JSON schemas/forbidden phrases 减 variance——production prompts=contract specifications**（FutureAGI 原文）→ 判据：**prompt 像合同**；约束形状减少方差。
+- **五件组合**：**instructions+context+example structure+uncertainty permission（use null if unsure）+format control（begin with opening brace）**（Claude blog 原文）→ 判据：**输出信息齐五件**；不确定可显式表达。
+- **不可信分隔符**：**动态内容包 ---BEGIN X---/---END X---，只回指定格式**（AgentRoost 原文）→ 判据：**输入与指令分离**；注入内容有界。
+- **提升层**：可复用 Skill（结构化输出）。
+
+## Schema 三件套：schema 展示法（TypeScript interface 形态+system prompt）· 显式边界指令（exactly five items/no extra text）· validator agent 第二次调用（来源：Channel Tel（**直接展示期望字段名而非散文描述——像展示 TypeScript interface；模型在 token 层懂类型符号；schema 放 system prompt 而非 user turn（system 指令更强）**）+ deepai.mov（**"Return exactly five items"/"Respond only with valid JSON, no extra text"/comparison table 指定 columns——显式画边界模型就尊重**）+ wowhow（**Schema 三层：Layer 2 few-shot examples of valid output（模型从 examples 学结构比 schema 描述快，尤其 nested）；Layer 3 validator agent step——production 加第二次 model call 传输出+schema 验证**）2026 实拉；与 §结构化输出 Prompt 工程（同轮 ②）分工——那边管"prompt 形状"，本条管"schema 表达方式+验证环节"）
+schema 先表达：TS interface 形态+system prompt 位置，显式边界指令，validator 二调验证。
+- **展示法**：**写 TypeScript interface 形态字段名而非散文；schema 放 system prompt**（Channel Tel 原文）→ 判据：**schema 用类型符号**；模型 token 层懂。
+- **显式边界**：**exactly five items/valid JSON no extra text/表格指定 columns**（deepai.mov 原文）→ 判据：**边界写死**；模型尊重明确边界。
+- **validator 二调**：**few-shot examples 教结构（nested 尤其快）+第二次 model call 验证输出与 schema**（wowhow 原文）→ 判据：**输出过验证**；生产必有 validator。
+- **提升层**：工具/工作流（schema 保证链）。
+## Contextual Retrieval 与上下文工程：LLM 生成 50-100 token chunk context prepend · embedding+BM25 用 combined text · 检索失败率 -49%/-67%（+hybrid）（来源：Anthropic 官方 engineering（**Contextual Retrieval：pass top-N chunks+query 过 reranking model→打分→选 top-K（官方 top 20）→作为 context 生成；Combine Contextual Retrieval+Reranking 最大化检索精度**）+ Katili（**对每个 chunk，LLM 接收整个文档+该 chunk，产出短 context（50-100 tokens）解释 chunk 在文档中位置——prepend 到 chunk 再 embedding，BM25 索引也用 combined text——top-20 检索失败率 -49%，+hybrid search -67%**）2026 实拉；与 §Agentic 检索决策（r625 既有）分工——那边管"检索动作怎么编排"，本条管"检索前 chunk 本身怎么带上下文"）
+Contextual Retrieval 先加上下文：LLM 生成 chunk 位置说明 prepend 后再嵌入，BM25 也吃 combined text。
+- **context prepend**：**整文档+单 chunk→LLM 产出 50-100 token 位置上下文→prepend 再 embedding**（Anthropic/Katili 原文）→ 判据：**chunk 自带语境**；孤立 chunk 变可检索。
+- **combined text**：**BM25 索引与 embedding 都用 prepend 后的文本**（Katili 原文）→ 判据：**双通道同料**；向量与关键词一致。
+- **效果量化**：**top-20 检索失败率 -49%，+hybrid -67%**（Katili 原文）→ 判据：**先验证再落地**；chunking 级最大单项 win。
+- **提升层**：工作流/可复用 Skill（上下文检索）。
+
+## RAG 决策与阈值：<20 万 token 直接 Prompt+缓存（不建 RAG）· 几百页以上 RAG 仍更便宜更快 · 检索封装为模型可调工具（来源：CSDN（**小数据量优先用 Prompt：知识库不到 20 万 Token 直接放进 Prompt+Prompt 缓存，比任何 RAG 都简单可靠；建库用混合检索（Embedding+BM25+Reranking）验证最佳组合；把检索能力交给模型：不写死检索管线，把知识库封装为模型可调用的工具；从 20 个测试问题开始评估**）+ Agile（**1M+ token 窗口可处理整个小语料；几百页以上语料 RAG 仍更便宜、更快、更可控；hybrid 小 RAG 进长上下文模型正出现**）2026 实拉；与 §Contextual Retrieval（同轮 ①）分工——那边管"建库后 chunk 怎么带上下文"，本条管"要不要建 RAG+怎么交检索权"）
+RAG 先决策：数据量小时不建库，超阈值再建，检索封装成工具交给模型。
+- **阈值决策**：**<20 万 token 直接 Prompt+缓存，比任何 RAG 简单可靠**（CSDN 原文）→ 判据：**先量语料**；小数据不建库。
+- **阈值上限**：**几百页以上 RAG 仍更便宜更快更可控；1M+ 窗口处理小语料**（Agile 原文）→ 判据：**大数据才 RAG**；长上下文与 RAG 互补。
+- **检索交权**：**不写死检索管线，知识库封装为模型可调工具；从 20 个测试问题开始评估**（CSDN 原文）→ 判据：**检索是工具**；管线不写死。
+- **提升层**：工作流（RAG 决策）。
+
+## Agentic 检索编排：router 最简 agentic RAG（Q&A vs summarization）· retrieve→judge→rewrite→retry agentic loop · swarm retrieval 并行 backup（来源：deeplearning.ai（**最简 agentic RAG=router——给定 query 选 Q&A 或 summarization 引擎执行；加 tool calling——LLM 不仅选函数还推断参数**）+ rag7（**true agentic loop：retrieve→judge→rewrite→retry 全自主到 max_iter；swarm retrieval：一法失败时部署并行策略作 backup；HyDE hypothetical document embeddings 改善模糊查询召回**）2026 实拉；与 §Agentic 检索决策（r625 既有）分工——那边管"按复杂度路由+自评相关性+改写重搜+幻觉自检+retry 上限"五动作，本条管"检索编排的三种形态（router/loop/swarm）+HyDE"）
+Agentic 检索先选形：最简 router 起步，复杂走 judge→rewrite→retry 循环，必要时 swarm 并行 backup。
+- **router 最简**：**query 选 Q&A/summarization 引擎；tool calling 同时选函数+推参数**（deeplearning.ai 原文）→ 判据：**先 router**；一步到位不拆。
+- **agentic loop**：**retrieve→judge→rewrite→retry 到 max_iter，全自主**（rag7 原文）→ 判据：**循环有上限**；judge 在 loop 内。
+- **swarm+HyDE**：**一法失败并行策略 backup；hypothetical document embeddings 改善模糊查询**（rag7 原文）→ 判据：**有 backup 路径**；模糊查询先 HyDE。
+- **提升层**：工作流/可复用 Skill（检索编排）。
