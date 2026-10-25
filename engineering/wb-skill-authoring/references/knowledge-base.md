@@ -4390,3 +4390,39 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - **实证（一手原文级）**：Tier 分档的**门 vs 建议并非全局常量，而是每层自带默认 + 覆盖开关**——Tier 1 恒为 gate；Tier 2 默认 gate、可用 `--no-block-on-dedup` 降为 advisory；Tier 3 默认 advisory、可用 `--block-on-agent-eval` 升为 gate。**缺 scanner 证据报 `INCOMPLETE` 且非零退出**；`--no-llm` **只关模型阶段、不豁免 Scanner**。另核实威望：该工具明确接入 [Agent Skills specification](https://agentskills.io/) 并作为 NVIDIA Verified Skills pipeline 的一环，论文 arXiv:2608.20614。
 - **判据**：① **评估器每层的「默认方向 + 翻转开关 + 证据缺失态」必须三项同列**，只写「是否是门槛」会在CI里被任何一方悄悄改写语义。② **证据缺失不是通过**：`INCOMPLETE` 必须占非零退出码并单独记账——否则「跑不到」会被算作「没发现」。③ **开关的作用面要写明边界**（如 `--no-llm` 只影响模型阶段），避免「关掉一个东西」被误解成「豁免一整块」。
 - **提升层**：工作流（评测门禁）+ 工具（退出码契约）。
+
+## r627A · 安装器遇到目标已存在就中止、没有 update/reinstall：安装必须幂等可升级，否则技能无法演进（来源：api.github.com/repos/openai/skills/issues/127，gh api 一手 200，逐串命中 `if os.path.exists(dest_dir): raise InstallError(f"Destination already exists: {dest_dir}")` / `There is no built-in way to: update a skill from the same repo / reinstall a corrupted skill / overwrite a skill intentionally` / `Requiring manual directory deletion breaks automation`）
+
+- **判据**：① **「已存在即报错」把安装做成了一次性动作**：技能会随上游演进，没有 update 路径 ⇒ 用户要么手工删目录（破坏自动化），要么永远停在旧版本。② **安装器要提供三态语义**：不存在→安装；存在且同源→`--update` 拉取同 repo/ref 最新；存在且状态可疑→`--force` 重装 ⇒ 报错不能是唯一分支。③ **「重装损坏的技能」是恢复路径的一部分**：本地被改坏或拉取中断留下的半成品，必须能靠同一条命令自修复 ⇒ 安装器同时承担首次安装与灾难恢复两个职责。④ **幂等性要被测试**：同一条安装命令跑两次，第二次必须成功且结果一致（或明确提示已是最新），而不是抛异常。
+- **提升层**：可复用 Skill（安装/升级的幂等语义）。
+- **触发词**：安装器目标已存在、无 update 路径、重装损坏技能、安装不幂等。
+
+## r627A · skill-creator 引用了仓库里根本不存在的文件：引用完整性必须机检，模型找不到比不引用更糟（来源：api.github.com/repos/openai/skills/issues/109，gh api 一手 200，逐串命中 `skills/.system/skill-creator/SKILL.md references two files that don't exist` / `references/workflows.md` / `references/output-patterns.md` / `This confused Codex as it couldn't find the files` / `seems leftover from another coding agent's skill-creator skill`）
+
+- **判据**：① **技能正文里写出的每一个相对路径都是一条承诺**：指向不存在的文件时，模型会花轮次去找、找不到就猜 ⇒ 引用错误直接转化为行为不确定。② **断链机检是技能发布前的必跑项**（与规则本体的断链检查同一思路）：解析 SKILL.md 与 references 里的相对路径，逐个 `Test-Path`/`os.path.exists` ⇒ 发布前断链 0 才能算完成。③ **典型来源是复制他人的技能模板**：带着别人的 `references/` 文件名过来，自己仓库里没有 ⇒ 复用外部技能模板后必须重跑引用完整性检查。④ 与 sa 既有「首句 30 字符内 + 触发词只加末尾」分工：那条管**描述字段可被正确匹配**，本条管**正文引用的文件真实存在**。
+- **提升层**：可复用 Skill（引用完整性机检）。
+- **触发词**：引用不存在的文件、references 断链、skill-creator 模板残留、模型找不到引用文件。
+
+## r627A · 无法审计哪些技能被真正触发过：触发可观测要区分「从未匹配」与「匹配但落选」（来源：api.github.com/repos/anthropics/skills/issues/2054，gh api 一手 200，逐串命中 `which of my skills are actually being triggered, and which have never fired` / `Skills that never trigger are pure overhead, but without usage data there's no safe way to identify them` / `whose descriptions matched but weren't selected` / `That would distinguish "never matched" from "matched but lost resolution"`）
+
+- **判据**：① **每个已安装技能的名称与描述都是常驻的每请求成本**：从不触发的技能是纯开销，但**没有用量数据就无法安全地裁剪**（删掉的可能正是偶尔才需要的那个）⇒ 触发可观测是裁剪决策的前提。② **必须记录两个集合而不只是一个**：**候选集**（描述匹配上了但没被选中）与**选中集**（实际触发）⇒ 只记录选中集时，「从未匹配」与「匹配了但输给别的技能」这两种完全不同的病会被混为一谈：前者要改描述让它能被匹配，后者要改消歧让它能被选中。③ **「该技能已 N 个会话未被调用」这类最小指标就足以让裁剪可决策** ⇒ 不必先建完整 telemetry，先有计数即可。④ 与 anthropics/skills#2051（同批）分工：那条管**多命中时如何决出唯一胜者**，本条管**命中/落选/未命中要被看得见**。
+- **提升层**：可复用 Skill（触发可观测 → 可裁剪、可调优）。
+- **触发词**：技能触发审计、从未触发、候选集 vs 选中集、裁剪决策无依据。
+
+## r627A · 多个技能命中同一查询时缺少消歧语义：描述里要写显式负向触发，重叠不可避免就得可预测（来源：api.github.com/repos/anthropics/skills/issues/2051，gh api 一手 200，逐串命中 `when several installed skills have overlapping trigger conditions` / `Is it purely description-similarity-based, or does the model see all candidate descriptions and pick one` / `Is there any precedence` / `putting explicit "do NOT use for X" negative triggers in the description`）
+
+- **判据**：① **技能数量涨到几十个时重叠是必然**，此时缺的不是「避免重叠」而是**重叠时的可预测性** ⇒ 消歧语义（谁优先、能否多选、是否严格单选）必须被写明，否则无法预测哪个技能会触发。② **最有效的消歧手段写在描述里：显式负向触发（"do NOT use for X"）**——它既缩小自己的触发面，也等于告诉选择者边界在哪 ⇒ 负向触发是描述字段的一部分，不是注释。③ **「匹配了但落选」是独立的一类故障**，需要候选集可见才能诊断（见 anthropics/skills#2054 同批条目）⇒ 消歧规则与可观测性要一起设计。④ 与 sa 既有「首句 30 字符内 + 触发词只加末尾」分工：那条管**单个描述的可匹配性**，本条管**多个描述并存时的选择语义**。
+- **提升层**：可复用 Skill（多命中消歧 + 显式负向触发）。
+- **触发词**：多技能命中同一查询、触发消歧、负向触发词、重叠描述、落选。
+
+## r627B · 提示/风格评测要报分布而不是单一点估计：没有普遍最优的风格，且均值差异常来自少数离群运行（来源：arxiv.org/abs/2610.30223，一手摘要逐串命中 `no single prompt was best: the strongest prompt depended on the task type and on whether results were summarized by the mean or the median` / `Many differences in mean scores came from a few outlier runs, showing that evaluating prompting by a single metric can obscure how much its effectiveness varies` / `extending prompt comparison from accuracy to runtime speed`）
+
+- **判据**：① **「哪个提示更好」不是全局问题而是「对哪个目标、用哪个汇总量」的问题**：同一批结果按均值排和按中位数排会给出不同的最优 ⇒ 报结论时必须同时给出汇总口径。② **均值差异常由少数离群运行驱动** ⇒ 只报均值会把「某几次跑飞了」当成「这个方法更好/更差」；多次运行的分布（至少中位数 + 离群情况）是提示类实验的最低报告要求。③ **评估维度要包含速度而不只是准确率**：本例把提示比较扩展到运行时速度 ⇒ 只在准确率上调优会选出「更准但慢得多」的方案。④ **要有人类/基线对照才有解释力**：与人类 IOI 选手描述性对照后，AI 在一个任务上超过平均选手、另两个不如 ⇒ 没有对照时的「提升 X%」不可解释。⑤ 与 sa 既有描述字段类条目分工：既有条目管**描述怎么写更好匹配**，本条管**怎么评估「哪种写法更好」这个结论本身**。
+- **提升层**：可复用 Skill（评测方法的报告口径）。
+- **触发词**：没有普遍最优提示、均值 vs 中位数、离群驱动均值、速度维度、人类对照。
+
+## r627C · Skills 不是 Tools：技能注入「怎么想」，工具给「能做什么」，二者独立配置且互补（来源：docs.crewai.com/v1.15.30/en/concepts/skills.md，curl 200 / 15,762B 一手正文逐串命中 `Skills are NOT tools. This is the most common point of confusion` / `Skills inject instructions and context into the agent's prompt. They tell the agent how to think about a problem` / `Tools give the agent callable functions to take action (search, read files, call APIs)` / `They are configured independently and complement each other` / `Agents first receive each configured skill's name and description. When a description applies to the current request, the agent loads that skill's full instructions for that execution`）
+
+- **判据**：① **最常见的混淆是把技能写成工具**：技能 = 注入指令与上下文（改变 agent 的思考方式），工具 = 可调用动作 ⇒ 混写的结果是技能里塞一堆「调用某某函数」，既丢了指令价值又复制了工具逻辑。② **加载模型是两段式：先只有 name + description 常驻，命中后才加载正文** ⇒ 描述的职责是**让正确的技能被选中**，正文的职责是**把事说清楚**；把正文的细则挤进描述会同时损害两端。③ **目录结构是可约定的最小集合**：`SKILL.md`（必需）+ `references/`（可选参考）+ `scripts/`（可选可执行）+ `assets/`（可选静态）⇒ 「可选」的部分是渐进披露的手段，不是装饰。④ **用 CLI 脚手架起步而不是手写**：`crewai create skill <name>` 生成合法目录与 `SKILL.md` ⇒ 结构合法性应当机检/脚手架保证，不靠记忆。⑤ 与 sa 同批 anthropics/skills#2051/#2054 分工：那两条管**多技能命中时的消歧与可观测**，本条管**技能与工具的职责分界**。
+- **提升层**：可复用 Skill（技能 vs 工具的职责分界 + 两段式加载）。
+- **触发词**：技能不是工具、how to think、两段式加载、SKILL.md 目录结构、脚手架起步。

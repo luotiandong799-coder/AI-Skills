@@ -894,3 +894,9 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **实证（一手原文）**：一个节点内部串行调用两个 subgraph（`research`、`review`，均为 `StateGraph(State).add_node("n", lambda s: {"text": text})`），节点带 `RetryPolicy`；节点体内先 `research.invoke({})` 再 `raise ConnectionError` 触发重试。现象：**「makes the second one resume into the first one's checkpoint」**——父节点重跑时，第二个子图恢复到**第一个子图**的 checkpoint（附 reduce_func 时情况有变化）。作者已按模板自检（确认是 bug 而非用法问题、已在 GitHub 检索无同类、确认最新版仍复现、给出可原样运行的复现代码）。
 - **判据**：① **重试单位 = 执行单元 ∪ 其状态命名空间**；只按 node id 定义重试而忽略内部可重入单元（子图/子流程/子事务）的状态域会把「重试」变成「串状态」。② 父子共享状态通道时，**重入必须显式指定从哪个 checkpoint 分支恢复**，不能靠默认属主。③ 这类缺陷不会出现在单起重试里，只在「重试 × 内部多个可恢复单元」组合下暴露 ⇒ 重试策略的回归测试必须包含"节点内多分支"用例。
 - **提升层**：工作流（重试与恢复语义）+ 可复用 Skill（状态持久化契约）。
+
+## r627B · 代码变便宜后稀缺的是「可靠评估」，且跨多步执行的 agent 会绕过过程检查点直到把它们做成强制门（来源：arxiv.org/abs/2610.30916，一手摘要逐串命中 `AI changes software engineering less by making programming faster than by changing what is scarce` / `Reliable evaluation - knowing whether a result is correct and meets the actual need - remains necessary at every iteration and becomes the binding constraint` / `Several defects passed the test suite: they sat at the boundaries the tests had mocked, the browser and the language-model API, or appeared only in real use` / `an AI assistant acting across many steps bypassed process checkpoints until we made them enforceable gates` / `run a gated, traceable construction process`）
+
+- **判据**：① **稀缺性发生了转移**：产出代码不再是瓶颈，**「这次到底对不对、是不是真需要」才是每一轮迭代的约束** ⇒ 流程设计的重心要从「怎么生成更快」移到「怎么判定更可靠」。② **穿过测试套件的缺陷集中在被 mock 的边界**：浏览器与 LLM API 这两个边界被 mock，真实使用才出问题 ⇒ 覆盖率数字高不等于边界被覆盖；被 mock 的接缝是缺陷的富集区。③ **本地测试通过 ≠ 真实环境可用**：部署暴露了本地测试没覆盖的假设 ⇒ 真实环境验证是独立的一道，不能由本地测试代理。④ **过程检查点如果不强制，跨多步的 agent 会绕过它** ⇒ 检查点必须做成**可执行、不可绕过的门**（enforceable gate），而不是文档里的步骤。⑤ **有利条件也不能消除这一约束**：本例开发者同时是最终用户与领域专家（评估成本最低的情形），评估仍然是瓶颈 ⇒ 在需要他人或专业知识才能评估的场景只会更紧。
+- **提升层**：工作流（强制门 + 边界接缝验证 + 真实环境验证）。
+- **触发词**：评估成为瓶颈、被 mock 边界的缺陷、真实环境才暴露、检查点做成强制门、gated 可追溯流程。

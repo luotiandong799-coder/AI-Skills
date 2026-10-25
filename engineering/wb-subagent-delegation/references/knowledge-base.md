@@ -152,3 +152,9 @@
 ## r612B 下沉（arXiv 一手：export API 六轨 502 连续 2/3 未达，list 页面 527 条代偿 + 38 篇 abs 摘要，与全库 2,159 编号比对）
 - **动态并发是执行策略不是免费加速：短任务看模型能力、长任务看编排，13 个并发特有失败模式要预先列检**（arXiv 2610.10263《When Sub-Agents Work in Parallel》：agent 在执行中决定是否/如何 spawn 并发子代理；受控对比匹配的 Codex/Claude Code/Kimi Code 开关该策略；354 任务×2,124 执行跨任务复杂度与执行horizon：模型能力基本决定短任务结果，长 horizon 开发让编排成为任务完成的核心；刻画 13 个并发特有失败模式+28 个可观测模式及并发占优的条件）：判据：① 并发策略按任务 horizon 分开评估——短任务上并发收益被协调成本吃掉，长任务上编排质量是主变量；② 失败模式要按「并发特有」预列清单——串行正确的轨迹在并发下有专属失效面（竞态/重复/边界漂移）；③ 开关式受控对比是验收并发策略的唯一干净方法——同一批任务开/关两跑；④ 与既有「取消三范围」不同面：那条管取消语义，本条管并发策略的收益条件与失败模式编目。
 - 提升层：委派（动态并发的收益条件与失败模式）。触发词：dynamic concurrency、13 failure modes、28 patterns、短任务看模型长任务看编排、开关受控对比、并发特有失效面。
+
+## r627B · 并行化的前提是「允许带假设先行」，代价是必须有双向收敛机制：VERDICT 的假设式并行规格合成（来源：arxiv.org/abs/2610.29147，一手摘要逐串命中 `existing approaches remain fundamentally bottom-up, requiring callees to be verified before their callers. This dependency limits parallelism and provides no principled mechanism for resolving interprocedural inconsistencies` / `assumption-based parallel specification synthesis assigns an agent to each function and allows it to proceed immediately using assumed contracts for its callees` / `bidirectional interprocedural conflict reconciliation: when a synthesized contract contradicts an assumption, agents propagate the necessary revisions both up and down the call graph until the contracts converge` / `the first approach that scales to the complete 20,000-line X.509 parser`）
+
+- **判据**：① **「被依赖者先做完」的严格自底向上是并行的天敌**：它把调用链变成串行链 ⇒ 想并行就必须允许子任务**带着对下游的假设**先开工。② **允许假设的代价是必然产生跨过程不一致，所以假设必须配双向调和**：只向上或只向下传播都不收敛，要沿调用图**双向传播修订直到一致** ⇒ 「先并行后对齐」不是可选项，而是这套做法的组成部分。③ **没有调和机制的并行会在调用链上放大错误**：假设错一处，所有依赖它的 caller 都基于错误假设验证通过 ⇒ 并行化的收益要用「收敛机制是否存在」来换，不能只要收益。④ **规模是这套机制的成果指标**：首个能覆盖完整 20,000 行 X.509 解析器的方案 ⇒ 并行 + 双向调和把可处理规模提升了一个量级。⑤ 与 sd 既有委派条目分工：既有条目管**派什么、派给谁、怎么验收**，本条管**子任务之间互相依赖时如何既并行又收敛**。
+- **提升层**：工作流（子任务并行 + 假设—冲突双向收敛）。
+- **触发词**：假设式并行、自底向上限并行、双向冲突调和、跨过程不一致、调用图上传播修订。

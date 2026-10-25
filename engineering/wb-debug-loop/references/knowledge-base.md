@@ -2181,3 +2181,75 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **实证（一手原文）**：本地两次 native Codex turn 在 context 准备阶段耗时 60,096 ms / 60,059 ms 后报 `worker task timed out`，随后走 model-fallback 决策 `reason=timeout`、`status=408`，最终给用户的是「openai/gpt-6-astra request failed (request timed out, HTTP 408)」。作者自我纠偏原话：**「These logs establish a local preparation failure. They do not establish that the OpenAI API returned HTTP 408.」**
 - **判据**：① **错误对象必须携带它实际发生的层/stage 与是否本地产生**，跨层重抛时不得用下游状态码覆盖上游事实。② **超时尤其危险**：不同系统的超时彼此无语义关联，滥用同一个 `timeout` 会让「本地卡住」冒充「供应商失败」。③ 误导性归因会把用户/排障流程指向没坏的东西，成本高于「原因未知」。
 - **提升层**：工具（错误语义）+ 工作流（排障路径）。
+
+## r627A · 失败的流被计为成功、重试列表因此为空：失败的判定要落在「流怎么终止的」而不是「有没有拿到内容」（来源：api.github.com/repos/langgenius/dify/issues/44695，gh api 一手 200，逐串命中 `Completion batch stream failures are marked as successful and skipped by Retry` / `an HTTP 200 SSE stream that emits a partial answer followed by an error` / `a response-body connection failure after a partial answer` / `then use the footer's Retry action`）
+
+- **判据**：① **「有内容」不等于「成功了」**：SSE 流先吐出部分答案再报错、或吐完部分答案后连接断开，这两种都拿到了非零长度的内容，但都是失败 ⇒ 成败判定必须看终止状态（正常 end / error event / 连接中断），不能看内容长度。② **失败分类直接决定重试能否生效**：被标成成功的失败项不会进入 Retry 集合，用户点重试时它们**连被重试的资格都没有** ⇒ 重试机制的正确性依赖于上游分类的正确性，分类错了重试就是装饰。③ **HTTP 200 不代表流成功**：200 只说明响应头已发出，流中途出错仍是失败 ⇒ 流式接口的状态判定要在流结束处做，不是在响应头处做。④ **验收必须包含「部分输出后失败」这一类**：成功流 / 完整失败两类用例都覆盖不到它，而它恰恰是最容易漏网的一类。
+- **提升层**：工作流（失败分类 → 可重试集合的正确性）。
+- **触发词**：批量流失败算成功、Retry 跳过失败项、部分答案后报错、HTTP 200 但流失败。
+
+## r627A · 分页请求 401 时不刷新 preAuthentication 凭证：重试/续跑路径必须重跑凭证刷新，否则每次重试用同一张废票（来源：api.github.com/repos/n8n-io/n8n/issues/42054，gh api 一手 200，逐串命中 `HTTP Request node with pagination does not refresh credentials that use preAuthentication on 401`）
+
+- **判据**：① **凭证刷新的触发点必须覆盖「每一次实际发起请求」，包括分页产生的后续请求**：只在首请求前跑 preAuthentication ⇒ 首请求拿到 401 后，后续分页请求继续用已失效凭证，重试次数再多也是同一结果。② **401 是「凭证需要刷新」的信号，不是「这次请求失败了」**：把 401 当成普通失败重试而不刷新凭证，重试就是在放大同一个错误。③ **凡「循环中的请求」（分页、轮询、批量）都要单独问一句：凭证/令牌/会话在这个循环里会不会过期，过期时谁负责续？** ⇒ 长循环中的生命周期管理是独立的设计项，不是首请求路径的副产品。④ 与 dl 既有「超时截止点告警」分工：那条管**长循环要有截止**，本条管**长循环里的凭证要能续**。
+- **提升层**：工具（长循环内的凭证生命周期）。
+- **触发词**：分页 401、preAuthentication 不刷新、重试不换凭证、长循环凭证过期。
+
+## r627A · flow 返回非完成态时 flow 级 retries 从不执行，run 卡在 AwaitingRetry：重试必须同时挂在「抛出」与「返回态」两条路径上（来源：api.github.com/repos/PrefectHQ/prefect/issues/23534，gh api 一手 200，逐串命中 `Flow-level retries never run when a flow returns a non-completed state` / `run is stranded in AwaitingRetry with retry_type="in_process"`）
+
+- **判据**：① **「失败」有两种表达：抛异常 与 返回一个非完成态**；重试若只挂在异常路径，返回态路径的失败会进入一个**既没有重试也没有终态**的悬挂状态（本例 AwaitingRetry 且 retry_type=in_process ⇒ 等待一个永远不会发生的进程内重试）。② **悬挂态比失败更贵**：失败会通知到人，悬挂态只在看板里静静地待着，且占用并发槽位与状态存储。③ **设计重试时要先枚举「失败的表达方式」**：异常、返回错误态、超时、外部标记取消——每一种都要么接上重试，要么接上明确的终态，不允许有第四种去向。④ **验收要跑「返回非完成态」这条路径**：只测抛异常的重试套件完全看不到它。
+- **提升层**：工作流（失败表达的两条路径都要闭合）。
+- **触发词**：返回非完成态不重试、AwaitingRetry 悬挂、retry_type in_process、挂起无终态。
+
+## r627A · 结构化解析失败的生成被写进缓存又重放出来：缓存的写入点必须在解析/校验之后（来源：api.github.com/repos/langchain-ai/langchain/issues/41431，gh api 一手 200，逐串命中 `LLM cache stores a generation that fails structured-output parsing and then replays it`）
+
+- **判据**：① **缓存键通常只覆盖输入，不覆盖「这次输出是否被接受」**：生成被缓存发生在解析之前，于是「解析失败的坏输出」和「好输出」共用同一个键 ⇒ 第一次失败会污染后续每一次相同输入。② **坏输出被缓存后具备「确定性复现」的可怕性质**：同一个 prompt 每次都拿到同一个失败结果，用户会以为是模型能力问题，实际是缓存把一次偶发失败固化成了必然。③ **写入点的正确位置是校验通过之后**：只有被判定可用的结果才具备复用价值；解析/裁决失败的结果要么不写，要么写到独立的「失败记忆」里并标记不可复用。④ **验收要断言「失败一次后第二次仍然重新调用模型」**，而不是断言「第二次拿到了结果」。
+- **提升层**：工具（缓存写入点与校验顺序）。
+- **触发词**：失败生成被缓存、坏输出重放、缓存键不含校验结果、偶发失败被固化。
+
+## r627A · 限流器收到非正/非有限配置就永久挂起：参数非法必须快速失败或钳制，不许进入无限等待（来源：api.github.com/repos/langchain-ai/langchain/issues/41458，gh api 一手 200，逐串命中 `InMemoryRateLimiter hangs forever on non-positive or non-finite configuration`；同族 #41456 / #41453 为同一提交的三条重复报告，取一）
+
+- **判据**：① **「等待时长」由配置算出时，非法配置会产出 `inf`/`nan`/负数 ⇒ 等待变成永不返回**；这类代码必须在入口就把值钳制到合法域（正数、有限、上限），或对非法值直接抛错。② **挂起是最难诊断的失败形态**：没有异常、没有日志、CPU 为空、超时告警若不覆盖该段就完全静默 ⇒ 凡「睡眠/等待」的时长来自外部输入，都要有上界。③ **同一非法配置在多个入口重复出现（三条重复 issue）说明缺的是入口校验而不是修单点** ⇒ 修复位置应在配置解析层，而不是各个使用点。④ 与 dl 既有「布尔标志缺失会被静默读成 false」同族不同点：那条管**缺失被读成默认值**，本条管**非法值进入算术后被放大成永久等待**。
+- **提升层**：工具（外部数值配置的合法性边界）。
+- **触发词**：限流器永久挂起、非有限配置、等待时长来自配置、inf/nan 等待。
+
+## r627A · 异步任务失败后兄弟任务没人取消、异常没人回收：并发路径的失败必须显式传播取消（来源：api.github.com/repos/crewAIInc/crewAI/issues/8522，gh api 一手 200，逐串命中 `Pending async tasks are awaited one at a time in a plain loop. When one raises, the exception propagates immediately and the remaining tasks in pending_tasks are never cancelled or awaited` / `asyncio.gather propagates the first exception without cancelling the siblings` / `Task exception was never retrieved` / `Wasted token spend and event traffic from runs whose result has already been discarded`）
+
+- **判据**：① **`await` 循环与裸 `asyncio.gather` 都不带取消语义**：前者在第一个异常处直接跳出循环、剩下的 future 无人认领；后者传播首个异常但不取消兄弟 ⇒ 「快速失败」和「停止兄弟」是两件事，必须分别实现。② **被遗弃的兄弟任务有三重代价**：继续烧 token、继续发事件（污染观测）、异常永不回收（日志里只剩一句 warning）⇒ 取消不是清理细节，是成本与可观测性的共同要求。③ **正确形态是 `return_exceptions=True` + 显式 cancel + 逐个回收异常**，或直接用带取消语义的 gather 包装；失败路径要写「谁负责取消谁」。④ **验收要断言「调用方拿到异常后，兄弟协程已结束」**，而不是只断言异常类型。
+- **提升层**：工作流（并发失败传播与取消）。
+- **触发词**：兄弟任务未取消、gather 不取消、Task exception was never retrieved、失败后仍在烧 token。
+
+## r627A · 上下文压缩遇到第一次 provider 拒绝就把整个 run 杀掉：降级必须有阶梯，最后一级不能是终止（来源：api.github.com/repos/crewAIInc/crewAI/issues/8488，gh api 一手 200，逐串命中 `The context-compaction refactor in #8277 dropped the pre-refactor retry ladder` / `re-chunk with tighter chars-per-token estimates (4.0 -> 3.0 -> 2.5) when the provider rejected a summary request as too long` / `pre-packs chunks purely by get_input_tokens_count - which is a chars/4 estimate ... so a token-dense conversation (~3.5 chars/token) exceeds the real window even though the estimate said it fit` / `kills the whole agent run`）
+
+- **判据**：① **估算器是近似，降级阶梯是估算器的保险**：chars/4 对代码与散文混排（实测约 3.5 chars/token）会低估 ⇒ 一旦低估就会触发 provider 拒绝，此时如果没有「更紧的估算再切一次」的阶梯，唯一的出路就是放弃。② **重构时最容易丢的是「不那么优雅但很管用的降级逻辑」**：retry ladder 看起来是补丁，实际是这条路径唯一的容错 ⇒ 删降级前要先问「删掉之后第一次失败会怎样」。③ **降级链的终点必须是可运行态而不是终止**：文档承诺 `respect_context_window=True` 时「压缩内容以适配窗口」，实际却是杀掉运行 ⇒ 语义承诺与实现不符本身就是缺陷。④ **验收要用「故意低估的估算器 + 真实的 token 密度」构造用例**，只测正常密度的套件永远触发不到拒绝分支。
+- **提升层**：工作流（降级阶梯不可退化为终止）。
+- **触发词**：压缩首拒即杀 run、retry ladder 被删、chars/4 低估、token 密度高的会话。
+
+## r627A · handoff 参数非法直接结束 run，而 function tool 参数非法回给模型：同类错误的两条处置路径必须一致（来源：api.github.com/repos/openai/openai-agents-python/issues/5392，gh api 一手 200，逐串命中 `Invalid handoff arguments end the run, while invalid function tool arguments go back to the model`）
+
+- **判据**：① **「模型给出的参数不合法」是一类错误，应当有一条统一的处置策略**（回给模型让它自修）；分成两策略意味着 handoff 成了**模型无法自愈的单向终点**——一次格式错误就终结整个 run。② **不一致的根源通常是两条路径由不同代码处理**：函数工具走了统一的 schema 校验与错误回转，handoff 走了另一条构造路径 ⇒ 每当新增一类「模型产出驱动的调用」，都要确认它是否接入了统一的错误回转。③ **自愈能力是 agent 的核心，任何「直接终止」的分支都要有明确理由**（如安全、不可逆）⇒ 参数格式错误不属于这类理由。④ **验收要断言「handoff 参数非法后模型收到错误信息并重新生成」**，而非断言「run 结束」。
+- **提升层**：工作流（错误处置路径一致性 → 自愈可达）。
+- **触发词**：handoff 参数非法终止、错误回转只对 function tool、同类错误两种处置、不可自愈终点。
+
+## r627B · 干预点选在「第一次不可逆动作之前」，比周期性审查更划算：PAUSE 的单次规划干预（来源：arxiv.org/abs/2610.29870，一手摘要逐串命中 `Agents reach their first source-code edit at a median of 60% of trajectory progress, after exploration, bug reproduction, and testing` / `PAUSE intercepts this edit request before it executes, which requires no learned monitor, no search over checkpoints, and no extra model call (search-free)` / `online steering improves resolution by 16.8% on Verified in OpenHands and by 14.7% on Multilingual in SWE-agent` / `Offline, PAUSE recovers 35.4% of eligible failed Verified tasks, and resuming from the recorded prefix uses 33-41% fewer Executor tokens than restarting`）
+
+- **判据**：① **「第一次实际改写」是天然的高价值干预点**：此时探索、复现、测试都做完了（中位 60% 进度），信息最全、代价尚未发生 ⇒ 干预的收益/成本比在这一点上最高。② **周期性审查的两个弱点被同一次设计绕开**：频繁审查贵；**没有异常行为不等于方向正确**（监视器只在出问题时才触发，而「平稳地走错」不触发）⇒ 定时/触发式监督都覆盖不到「没报错但方向错」。③ **不需要学习式监视器、不需要搜索检查点、不需要额外模型调用**：干预点由**动作类型**决定（首次写源码）而不是由状态判定 ⇒ 零额外推理成本的干预更可部署。④ **离线同样可用且更省**：从记录的轨迹前缀恢复 35.4% 失败任务，比重启省 33–41% Executor token ⇒ 失败复盘应优先「从前缀续跑」而不是「从头再来」。⑤ 与 dl 既有「降级阶梯」条目互补：那条管**失败后的多级退路**，本条管**在失败发生前的一次性校准**。
+- **提升层**：工作流（干预点选择 + 从前缀续跑）。
+- **触发词**：首次编辑前干预、无监视器无搜索、平稳地走错、离线从前缀恢复、省 Executor token。
+
+## r627C · 取消与超时的协议语义：断开即取消、超时必须存在、进度可重置时钟但不能取消上限（来源：modelcontextprotocol.io/specification/2026-07-28/basic/patterns/cancellation.md，curl 200 / 4,658B 一手正文逐串命中 `Streamable HTTP: Closing the SSE response stream is the cancellation signal. The server MUST treat a client disconnect as cancellation of that request` / `stdio: There is no per-request stream to close. The client MUST send a notifications/cancelled notification referencing the request ID` / `Implementations SHOULD establish timeouts for all sent requests, to prevent hung connections and resource exhaustion` / `Implementations MAY choose to reset the timeout clock when receiving a progress notification ... However, implementations SHOULD always enforce a maximum timeout, regardless of progress notifications`）
+
+- **判据**：① **「取消」必须有一个与传输方式对应的具体信号**：流式传输上关闭响应流就是取消（服务器 MUST 把断开当取消）；无流的 stdio 必须显式发 `notifications/cancelled` 并带 requestId ⇒ 只做「客户端停止等待」而不给对端信号，服务端会继续烧资源。② **取消是请求级的，靠 requestId 关联**：`notifications/cancelled` 带请求 ID 与可选 reason ⇒ 没有 ID 的「取消」无法定位该停哪一个，广播式取消会误伤并发请求。③ **超时要覆盖「所有发出的请求」而不是「觉得会慢的那些」**：目的是防挂起连接与资源耗尽 ⇒ 请求级可配超时是 SDK 的职责，不是调用方的自觉。④ **进度通知可以重置时钟，但必须另有最大超时兜底**：允许续时是因为「有进展说明还活着」，但若没有上限，一个持续输出进度的任务可以永远不结束 ⇒ **可续时钟 + 硬上限**是唯一正确组合，两者缺一都会有挂死或误杀。⑤ 与 dl 既有「兄弟任务未取消」（crewAI#8522）分工：那条管**并发失败后要显式取消兄弟**，本条管**取消信号与超时在协议层怎么表达**。
+- **提升层**：工具（取消信号 + 双层超时）。
+- **触发词**：断开即取消、notifications/cancelled、请求级超时、进度重置时钟、最大超时兜底。
+
+## r627C · 恢复点必须包含「事件历史 + lineage」而不只是状态快照，且自动检查点是 best-effort（来源：docs.crewai.com/v1.15.30/en/concepts/checkpointing.md，curl 200 / 16,386B 一手正文逐串命中 `the full state of the crew, flow, or agent - configuration, agent memory and knowledge sources, task progress, intermediate outputs, internal state and attributes - alongside the kickoff inputs, the event history up to that point, and a lineage ID` / `Auto-checkpoint writes (event-driven) are best-effort: a failed write is logged and the run continues. Manual state.checkpoint() and state.acheckpoint() calls re-raise on failure` / `Forking does the same restore under a new lineage, so the new branch and the original run can write checkpoints side by side without overwriting each other` / `The default task_completed produces one checkpoint per finished task`）
+
+- **判据**：① **「状态快照」不等于「可恢复」**：只存配置与进度，恢复时会丢掉**到此为止的事件历史**（无法解释为何走到这里）与**记忆/知识源**（恢复后 agent 失忆）⇒ 恢复保真要按「重建运行所需的一切」来列清单。② **lineage ID 是分支恢复的关键**：fork 用新 lineage，使分支与原 run 的检查点**并存而不互相覆盖** ⇒ 没有 lineage 时，「从检查点分叉试另一条路」会直接毁掉原 run 的恢复点。③ **自动检查点是 best-effort（写失败只记日志、run 继续）⇒ 恢复点可能缺失**：这是有意的性能取舍，但它意味着**「我以为有检查点」和「真有检查点」是两件事** ⇒ 关键不可逆动作之前应当手动 `checkpoint()`（会 re-raise），用失败可见换恢复点确定存在。④ **写入粒度是可配的取舍**：默认 `task_completed` 一个任务一份；`llm_call_completed` 更细但文件数量暴涨 ⇒ 粒度选择要同时报磁盘成本与恢复精度。⑤ 与 dl 既有「重放保真」条目分工：那条管**重放内容要与首跑一致**，本条管**恢复点本身要存什么、以及它是否真的存在**。
+- **提升层**：工作流（恢复点完整性 + best-effort 的显式补偿）。
+- **触发词**：检查点含事件历史、lineage ID、fork 并存、自动写入 best-effort、手动 checkpoint 才抛错。
+
+## r627C · 「成功」可以被显式改判：运行时返回 `wm_failure` 把没抛错的 run 重新标记为失败（来源：www.windmill.dev/docs/core_concepts/error_handling.md，curl 200 / 12,349B 一手正文逐串命中 `A script or flow can return a top-level wm_failure field (string) to retag the run as a failure even though the runtime did not raise an error` / `the run is marked as failed on the Runs page, configured error handlers fire, and the stored result is wrapped as { "error": { "name": "ManualFailure", ... } }` / `This applies to any job, regardless of how it was triggered` / `a manually-tagged failure can also set a custom HTTP status code or response headers`）
+
+- **判据**：① **「没抛异常」只说明运行时没意见，不说明业务判定成功**：需要一种**由业务层显式改判**的通道，让「拿到 200 但内容不对」也能走完整失败路径（错误处理器触发、状态标失败、结果被包装）⇒ 否则失败语义被运行时垄断。② **改判必须走「标准失败路径」而不是另开一条**：本例改判后错误处理器照样触发、结果照样包成错误对象 ⇒ 只打个日志或只在 UI 标红，下游的补偿逻辑全都收不到。③ **改判通道要对所有触发方式一致生效**（手动/定时/流程步骤/webhook）⇒ 只在部分入口生效会造成「同一个 job 从不同入口进来结论不同」。④ **改判仍要能携带细节**：同步 webhook 上可同时设自定义状态码与响应头 ⇒ 改判不等于丢掉表达力。⑤ 与 dl 同批 dify#44695 正好反向互补：那条是**失败被误计为成功**（分类错），本条是**给业务层一个主动把成功判为失败的正式通道**（机制缺）。
+- **提升层**：工作流（成败判定的业务层改判通道）。
+- **触发词**：wm_failure、重新标记为失败、手动失败、错误处理器照样触发、业务层改判。

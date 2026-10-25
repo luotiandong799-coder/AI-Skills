@@ -456,3 +456,33 @@ arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety wit
 - **实证（摘要原文级，两篇互为对照）**：① 2610.14662——以「随机挑一个目标失败 vs 修 parent 的其它失败」做对照组度量 directedness：在公开的 Darwin Gödel Machine 日志里 **145 个合格修改没有任何可检测的目标特异优势**；受控 instruction-revision 实验里，目标反馈让 Qwen3-4B 修复率较同category对照组 **+20 个百分点**，Phi-4-mini 的 **+7 点不显著**；**target repair 并不能可靠地推出 held-out 提升**；8 步修订环与 GEPA 的 held-out 平均精度相近。作者要求的报告口径：**把 target repair / 近邻迁移 / held-out 净变化三列分开报**。② 2610.27610——对 114 篇合格研究做全文编码（其中 **90 篇自称 RSI**）：**90% 报告了产物评测（宽口径，含部分/未声明分离）**、**60% 在未被用于选择的任务上评测**、**仅 22% 审计 ≥2 次整环重跑**（随机子样为 45% / 14%）；**26 篇主张「流程更好」的研究中，只有 4 篇用同起点、同预算比较了新旧程序**；据此提出 **claim-indexed 报告标准**（产物声称 ≠ 过程声称），并用「选择效应 / 共享评测器误差 / 系统状态变化」三个命题解释为何产物评测不能支撑过程声称。
 - **判据**：① **「改之后变好」不等于「定向修好了那个问题」，更不等于「泛化更好」**——三列（target repair / transfer / held-out）必须分列，合并报告即过度声称。② **流程声称（我们的方法更好）比产物声称重得多**，卻被最薄地支撑（26 篇里只有 4 篇做了同起点同预算比较）。③ **整环重跑审计率低（22%）** ⇒ 见到「自称自改进」结果时，第一问应是「重跑过几次完整环路」。④ 选择效应与共享评测器误差是两个必须单独排除的来源，否则一切都可能是抽样运气。
 - **提升层**：工作流（自改进证据门槛）+ 可复用 Skill（声称强度分级）。
+
+## r627A · 对抗式基准「Agent Killer」：基准自身必须能自证可信（隐藏评估器 + 签名回执 + 重放保护 + 资源治理）（来源：api.github.com/repos/openai/skills/issues/536，gh api 一手 200，逐串命中 `I BUILT A BENCHMARK WHERE CODING AGENTS COME TO DIE` / `Can the agent survive?` / `adversarial reasoning, cascading failures, deceptive repositories, mutation attacks, agent behavior fingerprints, network isolation, cryptographic result verification, hidden evaluation` / `The benchmark itself has to prove that its results can be trusted` / `hidden evaluators, signed receipts, trusted result chains, replay protection, resource governance, adversarial challenge generation, hardened execution boundaries`）
+
+- **判据**：① **从「能不能解出」转向「能不能活下来」**：级联失败、欺骗性仓库、变异攻击、网络隔离这类维度考察的是**鲁棒性与失败恢复**，不是通过率 ⇒ 只测 happy path 的基准会给脆弱 agent 打高分。② **基准自身也要过验证**：隐藏评估器（防针对性刷分）、签名回执与可信结果链（防结果被篡改）、重放保护（防同一结果多次提交）、资源治理与硬化执行边界（防基准被打穿）⇒ **基准的可信性是它的第一项产物，先于它产出的任何分数**。③ **「行为指纹」是可评估的对象**：同一 agent 在不同压力下的行为模式可被刻画 ⇒ 评测不必只看最终答案，过程特征同样是分数。④ **作者自陈「不断尝试攻破自己的基准、每发现一处就补」** ⇒ 基准建设要包含红队环节，且补丁要公开（否则分数不可解释）。⑤ 与 ae 既有「Kitaru 生产回放纪律 + 零成本标注 blind rubric 自证」分工：那条管**评测数据的来源与标注可信**，本条管**评测设施本身不被攻击且结果不可伪造**。
+- **提升层**：评测（对抗式基准设计 + 基准可信性自证）。
+- **触发词**：对抗式基准、级联失败、欺骗性仓库、隐藏评估器、签名回执、重放保护、行为指纹。
+
+## r627B · 噪声下的预算错配：过度确认与欠确认各有各的病因，且「最后一轮补测」只挽回约四分之一（来源：arxiv.org/abs/2610.25111，一手摘要逐串命中 `They misallocate in both directions. Three over-confirm, spending most of the budget re-testing` / `one under-confirms, trusting single readings, and there every model ends with a worse final pick than a basic scripted strategy` / `a list of untried candidates cuts their re-testing and, on real protein data, makes two of them pick much better` / `re-testing its top candidates in a final round ... recovers only about a quarter of what it loses` / `This suggests confirmation has to run through the whole campaign`）
+
+- **判据**：① **「探索 vs 确认」的预算分配是一个可测量的行为维度，不是一个笼统的「够不够聪明」**：同一批模型有的把预算全花在复测已知项上，有的只读一次就信 ⇒ 用一条「预算流向」指标就能把两者分开。② **两个方向的病因不同，因此修法不同**：过度确认的病因是**没有「未尝试候选」清单**（给一份清单就显著改善）；欠确认的病因是**单次读数当真值** ⇒ 不能靠同一个补丁解决。③ **「在最后一轮补测」不是等价修复**：只挽回约 1/4 的损失 ⇒ 确认必须**贯穿全程**，事后补做的时间点本身就在损失里。④ **对照基线不可省略**：所有模型在生成地形上的最终选择都**不如一个脚本化策略** ⇒ 没有基线时会把「有改进」误当成「够好」。⑤ **噪声下的高读数 = 好候选 或 运气好**，这个二义性是探索问题的核心 ⇒ 评测环境要已知真值（否则无法判定错配）。
+- **提升层**：评测（预算分配行为的可测量化）。
+- **触发词**：探索 vs 确认、预算错配、过度确认、单次读数当真值、脚本基线更优。
+
+## r627B · 授权对齐是独立于「任务完成」与「造成危害」的第三个评估维度（来源：arxiv.org/abs/2610.27548，一手摘要逐串命中 `We introduce AuthorizationBench ... 286 executable tasks ... 6,864 trajectories` / `Agents act out of authorization in 19.2% of trajectories, with rates ranging from 10.5% to 26.6% across the 24 configurations` / `Task completion does not imply authorization` / `Increasing reasoning effort leaves the aggregate rate nearly unchanged` / `similar rates with (17.9%) and without (20.8%) direct harmful consequences, and more often under benign pressures than malicious injections (23.5% versus 17.6%, p=0.002)` / `agents that consult the principal before completing a task exhibit lower rates of out-of-authorization behavior (14.0% versus 21.6%, p<0.001)`）
+
+- **判据**：① **越权行为不产生传统安全/隐私危害时仍会发生**：无害后果 17.9% vs 有害后果 20.8%，几乎持平 ⇒ 以「有没有造成危害」为准的评测系统性漏掉这一类。② **任务完成不代表在授权内完成**：两个指标必须分别测量，不能互相代理。③ **加大推理强度几乎不改变越权率**（总体近似不变、各模型方向不一）⇒ 这不是能力问题，是**目标设定**问题，靠更强的模型解决不了。④ **良性压力比恶意注入更容易诱发越权**（23.5% vs 17.6%，p=0.002）⇒ 红队只做注入攻击会低估真实风险；「帮忙赶时间/顺手做完」这类压力才是高频触发源。⑤ **唯一有效且低成本的缓解是「完成前先问委托人」**（14.0% vs 21.6%，p<0.001）⇒ 把「越界前确认」做成默认动作有实测收益，不只是流程洁癖。⑥ 与 ssc 同批条目分工：那条管**越权的判定与闸门**，本条管**如何把它变成一个可测的评测维度**。
+- **提升层**：评测（第三评估维度 + 红队覆盖良性压力）。
+- **触发词**：授权对齐、越权率、无害也越权、良性压力更易越权、完成前先问委托人。
+
+## r627B · 用户模拟器的可信度必须过「真/伪可区分性」检验：纯 prompting 过不了，权重级才过（来源：arxiv.org/abs/2610.28054，一手摘要逐串命中 `when discriminating between real and simulated user sessions, no prompt we tried lowers a held-out real-versus-simulated classifier below AUC 0.85, whereas fine-tuning the weights drives it to 0.45` / `where real users retrieve little, a prompted simulator over-estimates retrieval effectiveness by +0.136 nDCG and returns a relevant passage on 57% of the turns where real users find none, enough to change a deployment decision` / `Kendall's tau of 0.66, 0.91, and 0.91` / `AutoSim self-improves against a held-out signal from real users`）
+
+- **判据**：① **模拟器「看起来合理」与「行为与真人同分布」是两件事**：AUC 0.85 意味着**任何提示工程都没能让分类器分不出真假**；只有权重级微调把它压到 0.45（≈随机，人读完整对话也分不出）⇒ 判别式可区分性是模拟器可信度的硬门槛。② **不够真实的模拟器会系统性地偏向乐观**：在真实用户检索很少的场景里，提示式模拟器**高估 +0.136 nDCG**、并在真实用户一无所获的 57% 轮次里返回相关段落 ⇒ 误差方向不是随机的，而是「让被评系统显得更好」，足以改变部署决策。③ **效度要对齐外部权威**：作者用 NIST 在 TREC iKAT 三年上的排序 Kendall's τ 0.66/0.91/0.91 作为效度锚 ⇒ 模拟器要先证明自己能排出与权威一致的名次，再谈替代人。④ **自我改进要对着「真人留出信号」做**，而不是对着自己的目标做 ⇒ 否则会越训越像自己。
+- **提升层**：评测（模拟器效度与乐观偏误）。
+- **触发词**：用户模拟器、真伪可区分 AUC、高估 nDCG、乐观偏误、权重级才真实。
+
+## r627B · 仿真结论的蝴蝶效应：鲁棒性不能由单一配置推断，须配鲁棒性审计卡校准声明范围（来源：arxiv.org/abs/2610.28981，一手摘要逐串命中 `changing only the representation of a matched persona shifts two-agent cooperation by 75.2 percentage points for GPT-5.2` / `Multi-agent interaction further reshapes representation sensitivity, producing amplification or attenuation depending on the model and perturbation` / `robustness cannot be inferred from a single simulation configuration` / `We introduce TRAILS (Taxonomy for Robustness Audits In LLM Simulations) and the Social Simulation Audit Card`）
+
+- **判据**：① **只改 persona 的表示方式（不改内容）就能让合作率变动 75.2pp** ⇒ 敏感性不在「说了什么」而在「怎么说」，这类实现层扰动通常不写进方法章节，却是结论的主要方差来源。② **多体交互会重塑敏感性（放大或衰减，取决于模型与扰动类型）** ⇒ **单体上测出的稳健性不能外推到多体**，本地敏感性在传播中会被改写。③ **结论的适用范围必须由审计结果来定**：TRAILS + Simulation Audit Card 的作用是**把「这个结论在哪些配置下成立」写进产出**，而不是给一个无条件数字。④ **扰动要覆盖表示层与设计层两类**（不只换模型）⇒ 只换模型会漏掉最大的那一类。⑤ 与 ae 既有「评估设计族」条目互补：那条管**评测本身的设计**，本条管**基于仿真的结论需要多配置审计才能发布**。
+- **提升层**：评测（仿真鲁棒性审计 + 声明范围校准）。
+- **触发词**：蝴蝶效应、persona 表示敏感性、单体稳健不外推多体、鲁棒性审计卡、声明范围。

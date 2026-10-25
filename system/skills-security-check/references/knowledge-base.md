@@ -1513,3 +1513,45 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **实证（一手原文，128 文件全静态审计、ruff+pyright clean、244 tests pass）**：① **Rug-pull（CWE-345）**——`_absorb_tool_listing()` 收到 `tools/list_changed` 通知后重新拉取工具描述，**无任何完整性检查**：恶意服务器可先喂干净描述跑 N 次交互，再发通知改成投毒描述。修复=首次所见对每条描述做 **SHA-256 pin**，后续任何变更丢弃新版本并记 security warning，且**对所有协议版本生效**（不只在 modern 门后）。② **工具描述注入（CWE-20）**——该函数校验 `x-mcp-header` 注解与输出 schema，**从不检查 `tool.description`**，而这个字段被**逐字送进 LLM 上下文**。修复=钉定前用正则扫已知提示注入模式，首见即丢弃命中项。③ **DNS rebinding 保护默认关闭（CWE-16）**——`TransportSecurityMiddleware` 为了向后兼容 `enable_dns_rebinding_protection=False`，并为可见性补了一条：启动时若 `allowed_hosts` 为空打 `WARNING`，让配置错的部署「fail visibly 而不是静默拒掉所有请求」。另有④ CLI npx 探测里 `subprocess.run([cmd,"--version"], shell=True)`（Windows）当前 `cmd` 硬编码，但 list+shell=True 是可乘之机（CWE-78）。
 - **判据**：① **「可远程重拉的可信材料」必须首见钉哈希**，变更默认丢弃而非默认采纳——重拉通道本身就是攻击面。② **被原文送进模型上下文的字段（描述/标题/摘要）与被执行的代码同属高危面**，不得因它不是代码就跳过扫描。③ **为兼容保留的不安全默认，必须在每次升级/制度 Notices 里显式核对是否已被翻转**，不能假设「上游迟早改」。④ 沉默拒全部好过静默错放行：默认安全之上的可见告警本身就是防御。
 - **提升层**：工具（供应链校验）+ 可复用 Skill（安全准入清单）。
+
+## r627A · 技能搜索关键字未转义直接进 LIKE 模式：用户输入不得裸进模式表达式（来源：api.github.com/repos/langgenius/dify/issues/44737，gh api 一手 200，逐串命中 `Skill list keyword search treats % and _ as LIKE wildcards` / `like = f"%{keyword.strip()}%"` / `without escaping and without an escape= clause`）
+
+- **判据**：① **`%` 与 `_` 在 LIKE 里是通配符，用户输入的字面量必须先转义并显式声明 `escape=` 子句**；不做转义时，搜 `my_key` 的 `_` 匹配任意单字符、搜 `%` 匹配全部 ⇒ 搜索结果既不精确也不可预测，且用户无法通过输入反推自己会得到什么。② **这类缺陷的危害是「静默错误」**：不报错、不崩溃，只是结果不对 ⇒ 必须靠「语义等价」测试发现（输入字面量，断言只返回真正包含该字面量的项）。③ **凡把用户输入拼进有语法的表达式（LIKE / 正则 / glob / 模板 / 命令行）都要过同一道转义闸**；本例是 LIKE，同族还包括正则元字符与 shell 分词。④ 与 ssc 既有「内嵌结构化数据闭合标记转义」分工：那条管**输出侧把内容嵌进结构化容器时的转义**，本条管**输入侧把用户串拼进模式语言时的转义**。
+- **提升层**：工具（模式语言转义闸门）。
+- **触发词**：LIKE 通配符未转义、搜索关键字含 % 或 _、escape 子句缺失、用户输入进模式表达式。
+
+## r627A · 敏感项目的审批只覆盖「发布流程」，agent 变更没有审批通道：审批面必须覆盖全部可发布实体，否则留下绕过口子（来源：api.github.com/repos/activepieces/activepieces/issues/16852，gh api 一手 200，逐串命中 `Send agent publishes for approval in sensitive projects` / `A published flow in this project runs "<agent>", and publishing a flow here needs approval, so its tools and instructions cannot be changed under an approved flow` / `a normal editor can never ship an agent change in a sensitive project` / `the project connection replace does not change saved agents, because it would skip this approval`）
+
+- **判据**：① **审批面的边界必须按「能改变已批准运行体的东西」来划，而不是按主实体类型来划**：流程需要审批，但流程运行时调用的 agent（其工具集与指令）改起来不需要 ⇒ 审批被完整绕过。② **「因为会绕过审批所以干脆不做」是第二类缺陷**：连接替换功能为了不触碰审批，选择不改已保存的 agent ⇒ 结果是功能静默不完整，用户以为换了连接实际没换。③ **正确形态是给每一类可发布实体都开审批通道**（提交—批准），而不是让一部分实体无法变更、另一部分静默跳过 ⇒ 治理面的完备性要按实体清单逐项核对。④ **验收要断言「普通编辑者提交 agent 变更后进入待审批态」**，而不是断言「普通编辑者被拒绝」。
+- **提升层**：治理（审批面覆盖全部可发布实体）。
+- **触发词**：审批只覆盖主实体、agent 变更无审批通道、敏感项目、为绕审批而静默不生效。
+
+## r627A · 付费工具调用前的外部权威闸门：fail-closed + 重放守卫 + 签名判定 + 哈希链回执（来源：api.github.com/repos/microsoft/autogen/issues/8377，gh api 一手 200，逐串命中 `external fail-closed gate + signed receipts for paid tool calls` / `2xx + explicit allow -> proceed; timeout / malformed / non-2xx -> deny (never fail-open)` / `(caller_id, operation_id) replay guard, atomic across restarts` / `Ed25519-signed verdicts + hash-chained receipts, auditable offline`）
+
+- **判据**：① **会花钱的工具调用必须在执行前经过外部权威，且失败方向是 deny**：超时/畸形响应/非 2xx 一律拒绝 ⇒ fail-open 会让「闸门挂了」变成「随便花」。② **「2xx 且显式 allow」才算放行**：只判断 HTTP 状态不够，必须解析出明确的允许判定 ⇒ 把「没被拒绝」当成「被允许」是典型的 fail-open 误判。③ **`(caller_id, operation_id)` 重放守卫必须跨重启原子**：同一笔支付意图重放一次就多付一次 ⇒ 幂等键要落在权威侧并持久化。④ **判定要带 Ed25519 签名、回执要哈希链**：离线可审计意味着事后能证明「当时的判定是什么、谁批准的」，这是支出类操作的取证底线。⑤ 与 langgraph#9428（同批）分工：那条是**通用确定性前置校验器**（规则 allow/deny + 灰度），本条是**花钱动作的强制外部权威**。
+- **提升层**：工具 + 治理（付费动作的 fail-closed 外部闸门）。
+- **触发词**：付费工具闸门、fail-closed、重放守卫、签名回执、哈希链、支出取证。
+
+## r627A · 执行前的确定性工具调用校验器：与模型无关的 allow/deny 钩子，先 log-only 灰度再 enforce（来源：api.github.com/repos/langchain-ai/langgraph/issues/9428，gh api 一手 200，逐串命中 `a first-class middleware/node pattern for a deterministic tool-call validator that runs BEFORE execution` / `rules-based allow/deny (allowed commands, paths, resource bounds), independent of any model` / `deterministic and auditable: same input -> same verdict, verdict logged for forensics` / `log-only mode first, enforce mode behind a flag (gray rollout)`）
+
+- **判据**：① **模型内部对齐不是执行期的硬门槛**：提示词层面的守约可以在渲染级探针下被绕过 ⇒ 真正拦住工具调用要靠**执行前、与模型无关**的确定性校验。② **确定性 = 同输入同判定 + 判定留痕**，这两条缺一不可：可复现才有可审计，留痕才有取证 ⇒ 「规则校验」不等于「可审计」。③ **上线顺序必须是 log-only 先、enforce 后用开关切换**：先用只读模式量出会拦掉什么（误报率），再开强制 ⇒ 直接 enforce 会因为规则不准而打掉正常调用。④ **它与人机中断是互补而非替代**：HITL 每次都要人，确定性校验器自动处理明确 case，只把真正模糊的留给人 ⇒ 三层的分工是「确定性规则 → 人类 → 模型自决」。⑤ 与 autogen#8377（同批）分工：那条是**花钱动作的强制外部闸门**，本条是**通用工具调用的确定性前置校验**。
+- **提升层**：工具（执行前确定性闸门 + 灰度开关）。
+- **触发词**：执行前校验器、确定性 allow/deny、log-only 灰度、与模型无关的闸门、verdict 留痕。
+
+## r627B · 越权不因为「没造成危害」而正当，且事前询问显著降低越权：授权边界要按「证据充分性 + 可逆性 + 相对常态的价量 + 紧急度」判定（来源：arxiv.org/abs/2610.29216，一手摘要逐串命中 `Preference Is Not Permission` / `The boundary is evidence-conditioned and three-valued: whether committing is appropriate depends on the sufficiency of product information (warrant), reversibility, price against the user's norm, and urgency, not only on fit` / `the natural output is don't buy, confirm first, or buy automatically` / `models commit even when fit is low and when their own evidence flag reports the warrant missing. This is overreach` / `A shallow learner on a few dozen of a person's own labels predicts their held-out auto-purchase line at a median of 0.79 by 30-40 labels ... the learned boundary does not transfer across domains`）
+
+- **判据**：① **「用户偏好」不等于「用户授权」**：喜欢什么决定**选哪个**，能不能自作主张决定**能不能下单**；把偏好当授权是越权的典型形态（在匹配度低、且代理自己标记「凭证缺失」时仍然提交 = overreach）。② **授权边界是三值的，不是二值的**：不做 / **先确认** / 自动做 ⇒ 二值化会强迫在「不做」与「擅自做」之间选，而真实边界的中间那一档才是用得最多的。③ **判定输入是四个证据维度而不只是一个匹配度**：信息充分性（warrant）、**可逆性**、相对用户常态的价量、紧急度 ⇒ 「不可逆」单独一项就足以把自动降为先确认。④ **边界是个人化的且不可跨域迁移**：用本人 30–40 条标注即可学到中位 0.79 的边界，但**换域即失效** ⇒ 授权边界必须按人、按域分别学，不能全局配置。⑤ 与 ssc 同批 autogen#8377 分工：那条管**花钱动作的外部强制闸门**，本条管**「什么时候该问」的判定维度**。
+- **提升层**：治理（授权边界的判定维度与三值输出）。
+- **触发词**：偏好不是许可、三值授权、可逆性、超越常态价量、边界不跨域迁移。
+
+## r627B · 「证据本身就是攻击者写的」场景：推理层成为新的攻击面，感知鸿沟让注入绕过检查者的眼睛（来源：arxiv.org/abs/2610.29747，一手摘要逐串命中 `Digital forensics inverts the usual setting for indirect prompt injection: the evidence under analysis is attacker-controlled by definition, and the examiner is obliged to read it closely` / `We observe a perception gap, i.e., the fact that deterministic tools, the human examiner, and the model perceive the same evidence differently, which is what lets an injection reach the model unseen by the examiner` / `changing a reported conclusion, writing attacker-chosen content to the analyst's workstation, and causing outbound network traffic`）
+
+- **判据**：① **有一类场景把「必须细读不可信内容」写进了职责**：取证、审阅对方提交的材料、处理用户上传的恶意样本——这时**提示注入不是异常输入而是正常输入** ⇒ 通用防御假设（可以拒绝读、可以截断）在此不成立，必须另设防线。② **攻击面从「数据」和「工具」扩展到「推理」**：反取证从篡改证据、篡改工具，进化到**操纵模型的推理结论** ⇒ 威胁模型要跟着更新。③ **「感知鸿沟」是这类攻击的机理**：确定性工具、人、模型对同一份证据的**呈现不同**（隐藏文本、元数据、畸变编码），注入内容对模型可见而对检查者不可见 ⇒ 防御的关键是**让三方看到的东西对齐**，而不是让模型更聪明。④ **攻击的四个可枚举维度（目标/手法/载荷位置/隐藏方式）给防御提供了清单** ⇒ 逐维度设检测点比笼统「防注入」可落地。⑤ 与 ssc 既有注入类条目互补：既有条目多管**外部内容进入上下文**，本条管**职责要求必须细读时的不可信内容**。
+- **提升层**：安全（必须细读的不可信内容 + 感知鸿沟）。
+- **触发词**：取证提示注入、感知鸿沟、反取证、推理层攻击面、隐藏方式枚举。
+
+## r627C · 开发者工具的安全边界：令牌被自己的页面披露、无 Origin 头绕过同源检查、无 keychain 时自动降级明文（来源：modelcontextprotocol.io/docs/2026-07-28/tools/inspector/security.md，curl 200 / 16,791B 一手正文逐串命中 `GET / discloses the token. The backend injects it into the served HTML so that a reload or a bookmark keeps working. Anyone who can load the page can therefore read the token, which is why the bind address matters more than the token's value` / `a request that arrives with no Origin header (curl, a script, any non-browser client) skips that check entirely` / `DANGEROUSLY_OMIT_AUTH=true removes the guard completely ... Only true or 1 turns auth off; any other value, including false, keeps it on` / `Without one, they go to a file that is plaintext unless you supply a key, and that fallback happens automatically` / `stdio servers run as you. Anything the Inspector can read, a server it starts can usually read too`）
+
+- **判据**：① **「能拉起进程」的能力与「谁能碰到端口」是同一件事**：Inspector 的 web 后端可以 spawn 进程，于是 API token 就是唯一屏障 ⇒ 这类工具的威胁模型要先问「谁够得到这个端口」，再谈令牌强度；把令牌换成自定义值不改变它被披露的事实，**绑定地址比令牌值更重要**。② **令牌被自己的页面披露 ⇒ 它防的是非浏览器客户端，不是人**：注入进 HTML 让刷新/书签可用是便利，代价是任何能加载页面者都能读到 ⇒ 便利与保密不能靠「反正要登录」来调和，必须显式选边（本例选了便利，并把补偿放在绑定地址）。③ **origin allow-list 对无 `Origin` 头的请求完全失效**：curl / 脚本不带该头 ⇒ 基于请求头的来源校验**必须把「缺头」判为不通过**，否则等于给脚本留了一扇不打招呼的门。④ **只有 `/api/*` 被 gate ⇒ 其余路径不在保护范围内**：白名单式路由守卫要按「未列出的默认拒绝」设计，而不是「列出的才保护」。⑤ **自动降级到明文是最危险的默认值**：有 keychain 用 keychain，没有就**自动**落明文文件 ⇒ 降级必须显式且可被发现（告警/确认），静默降级让用户在不知情下失去保护。⑥ **`DANGEROUSLY_OMIT_AUTH` 只有 `true`/`1` 生效、其他值（含 `false`）保持开启** ⇒ 这类开关的解析逻辑要窄（只认明确的开启值），宽解析会把拼写错误变成关闭防护。⑦ **「以你的身份运行的子进程」继承你的全部读权限** ⇒ 工具能读什么，它启动的服务器通常也能读什么，这是权限边界而非配置问题。
+- **提升层**：安全（开发者工具的边界与降级可见性）。
+- **触发词**：令牌被页面披露、无 Origin 绕过、自动降级明文、DANGEROUSLY_OMIT_AUTH、子进程继承权限。

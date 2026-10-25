@@ -4308,3 +4308,111 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **实证（摘要原文级）**：每条经验性声明都蕴含一条必须对其cases成立的属性，但**只在prose里陈述**；没有显式属性，就没有测试能判定什么证据会证伪它 ⇒ 验证跟不上声明产出速度。ARATest 的做法：抽象出**property skeleton**（跨声明递归出现的参数化关系）作为声明语义的近似；typed declaration 把声明绑定到骨架并**固定比较的量/用例/作用域/数值策略**；共享 case type 强制每个生成器按声明的统计单元供给用例；**三值语义**给每个属性 `holds` / `violated` / `inconclusive` 三种裁决之一；**每个 violation 都带一个可重放 witness**；默认生成器直接读 agent-native research artifacts 里 incidental 到该声明的证据。
 - **判据**：① **声明不落成属性 ⇒ 不可验收**；把 prose 声明压成 parameterized relation 是让「结论」可被机器担保的必经一步。② **必须有第三种裁决 `inconclusive`**——二值裁决会强迫在无信息时下结论（这正是幻觉的温床）。③ **违规要带可重放 witness**：不可重放的失败不能被归类为证据。④ 在比较量/统计单元未固定前，「同一声明不同实现」根本不可比。
 - **提升层**：工作流（验收自动化）+ 可复用 Skill（声明→可测属性纪律）。
+
+## r627A · 并行迭代中单项产物是 schema 本身、整 run 仍报 SUCCESS：成功态必须落到「每个产物已实例化」而不是「流程没抛错」（来源：api.github.com/repos/langgenius/dify/issues/44722，gh api 一手 200，逐串命中 `Parallel iteration returns the JSON Schema itself for one item while the run still reports SUCCESS` / `parallel mode on, max parallelism 10, error response terminate on error`）
+
+- **判据**：① **「流程成功」与「每份产物有效」是两层判定，不能互相替代**：迭代节点开了 parallel、错误策略是 terminate on error，仍然有一项返回了结构定义本身而非按结构填出的内容 ⇒ 单靠「没有异常、状态是 SUCCESS」会把**未实例化的模板**当成合格产物放行。② **并行分支的产物要逐个实例化校验**（该字段是否还有 `$schema`/`properties` 之类的定义骨架残留、必填字段是否真有值），而不是抽查首项或只看聚合状态。③ **失败策略写在配置里不等于被执行**：terminate on error 只保证「抛错时终止」，不保证「产物形态被检查」⇒ 配置的成功语义要单独用产物级断言兑现。④ 与 av 既有「解析器不因单非法单元丢整份」分工：那条管**解析不要因为一个坏单元丢掉整份正确内容**，本条管**不要因为整份没抛错就放过每个单元**。
+- **提升层**：验证（产物实例化逐项断言）。
+- **触发词**：并行迭代、产物是 schema 本身、run 报 SUCCESS、terminate on error 未生效、聚合状态替代逐项校验。
+
+## r627A · 开关默认开、其依赖插件默认关，doctor/lint/UI 三方全静默：配置—依赖一致性必须在启动面可见，静默降级是最贵的失败（来源：api.github.com/repos/openclaw/openclaw/issues/183700，gh api 一手 200，逐串命中 `rememberAcrossConversations is on by default, but its required Active Memory plugin is disabled by default` / `openclaw plugins inspect active-memory -> Reason: bundled (disabled by default)` / `setup, openclaw doctor, openclaw doctor --lint and the Control UI are all silent` / `this went unnoticed for about two months`）
+
+- **判据**：① **「功能开关」与「实现该功能的组件」是两个独立默认值，必须成对校验**；二者不自洽时功能处于**已启用但永不执行**的状态——比报错更坏，因为它不留下任何痕迹。② **自检面（doctor / lint / 状态面板）必须把这种不自洽列为 finding**；三个入口同时沉默 ⇒ 没有任何一层在做依赖可达性检查。③ **代价是时间维度的**：作者两个月后才从「agent 显得健忘」反推出来 ⇒ 静默降级的平均发现周期以月计，务必把它当成一等缺陷而非文档问题。④ **验收要断言「功能真的执行了」而不是「配置是真的」**：本例的可观测证据是网关日志里有没有 `active-memory:` 行；只断言配置项等于 true 的测试永远抓不到它。
+- **提升层**：验证（配置—依赖一致性断言 + 执行面留痕）。
+- **触发词**：开关默认开依赖默认关、静默降级、doctor 无 finding、功能永不执行、启用但无组件。
+
+## r627A · 同一索引在 SQLite 与 PostgreSQL 上排序不同，且衰减参数硬编码不可配：跨后端语义必须同序，算法参数不得埋在源码里（来源：api.github.com/repos/openclaw/openclaw/issues/183697，gh api 一手 200，逐串命中 `temporalDecay: { enabled: true, halfLifeDays: 30 }` / `hard-codes` / `None of these can be set in config` / `no fs.stat fallback in that branch, so a missing entry gives null, and null means no decay` / `the two engines rank the same index differently`）
+
+- **判据**：① **同一份索引 + 同一批 embedding + 同一查询，换存储引擎得到不同排序 = 语义缺陷**，不是性能差异；跨后端一致性要有对照测试（两引擎跑同一查询比对 top-k 序）。② **「取不到时间戳」的默认分支决定行为**：本例缺失 mtime 落到 `null` → 不衰减 ⇒ 一个**取数失败的兜底分支**悄悄变成了**另一种排序策略**；兜底分支必须显式声明其语义后果，不能靠 `null` 的自然流向决定。③ **衰减/权重/MMR 这类影响结果的超参硬编码在源码里 ⇒ 无法复现、无法调、无法解释差异**；凡影响排序的参数必须可配且被记录进结果（否则两次结果不同时无从归因）。④ 与 av 既有「并列时间戳分页缺 tie-breaker」分工：那条管**同分时的稳定序**，本条管**不同实现路径的同一算法必须给出同一序**。
+- **提升层**：验证（跨后端一致性对照 + 超参可配可溯）。
+- **触发词**：跨引擎排序不一致、时间衰减只在一个后端生效、超参硬编码、null 兜底变成另一种策略。
+
+## r627A · Task 的 per-execution 计数器跨执行不重置：执行边界不清会让预算、节拍、事件全部算错（来源：api.github.com/repos/crewAIInc/crewAI/issues/8552，gh api 一手 200，逐串命中 `retry_count, _guardrail_retry_counts, used_tools, tools_errors, and delegations` / `are never reset when a task execution starts` / `the effective guardrail_max_retries budget of every later execution is shortened by the leftovers of previous ones` / `the modulo is computed over a lifetime total rather than per-execution usage`）
+
+- **判据**：① **凡名字里带 per-execution 语义的量，必须在执行开始时显式重置**；挂在对象实例上而靠「创建即归零」隐含保证，一遇到对象复用（`kickoff()` 二次、`replay()`、同进程重跑）就全部失准。② **泄漏的三个后果分别是预算被吃短、节拍错拍、事件载荷报错**：guardrail 重试预算被上一轮残余扣掉；`used_tools % N` 的提醒节拍按生命周期总量取模；事件里的 `delegations` 计数虚高 ⇒ 一个状态重置遗漏会同时污染限流、提示、观测三条链路。③ **「第一次尝试就显示 Attempt 2」是这类缺陷的外部指纹**——看到序号起始值不对，先查计数器归属而非查重试逻辑。④ **验收必须跑「同一对象执行两次」**：只跑一次的测试永远命中不到跨执行状态泄漏。
+- **提升层**：验证（执行边界状态重置断言）。
+- **触发词**：per-execution 计数器未重置、二次 kickoff、Attempt 2 出现在首次、预算被上一轮吃短、生命周期总量取模。
+
+## r627A · 缓存 clear 只清了条目没清驱逐顺序：清空必须重置驱逐元数据，否则容量约束形同虚设（来源：api.github.com/repos/crewAIInc/crewAI/issues/8550，gh api 一手 200，逐串命中 `UploadCache.aclear() clears the backend and provider keys but retains the old eviction order` / `evicts already-deleted keys instead of live entries, allowing it to exceed max_entries` / `A one-line reset of _key_access_order in aclear() fixes this`）
+
+- **判据**：① **缓存是「数据 + 元数据」两件事，clear 必须同时重置两者**；只清条目留下 LRU 顺序，驱逐会去踢已经不存在的键，真实条目越堆越多 ⇒ `max_entries` 从硬约束退化成建议值。② **这类缺陷只在「clear 之后复用」路径出现**：作者给的复现是 clear→写 a→写 b，`max_entries=1` 却留下 2 条 ⇒ 容量类回归必须包含「清空后复用」这条路径，而不是只测「持续写入直到淘汰」。③ **验证方式是断言 `len(cache) == 1` 而不是断言「没有报错」**：容量约束的可观测对象是条目数，任何缓存改动都应有一条直接断言长度的用例。
+- **提升层**：验证（容量约束在清空—复用路径上仍成立）。
+- **触发词**：clear 后超过 max_entries、驱逐顺序残留、LRU 元数据未重置、清空后复用。
+
+## r627A · 自动生成的名字不走与手填名相同的校验：构建通过、运行才炸，等于把错误推迟到最贵的时刻（来源：api.github.com/repos/microsoft/autogen/issues/8281，gh api 一手 200，逐串命中 `Handoff validates a custom name with str.isidentifier(), but the auto-generated default transfer_to_{target} is not validated or slugified` / `construction and AssistantAgent(..., handoffs=[...]) succeed, then the first model call fails` / `Invalid name: transfer_to_support desk`）
+
+- **判据**：① **「用户手填的值」和「框架推导的值」必须走同一套校验**：本例自定义名过 `isidentifier()`，自动名 `transfer_to_{target}` 直接拼接 ⇒ 目标名含空格时构造成功、首次模型调用才在 `convert_tools` 抛 `Invalid name`。② **校验缺口出现在「拼接处」**：凡由模板拼出标识符、路径、命令、键名的地方，都要在拼接**之后**再跑一遍与手填值相同的规则（或先 slugify 再拼）。③ **失败时机的成本排序是 构造期 < 首次调用期 < 运行中期**：构造期拒绝只需一行报错，运行期失败要复现整条链路 ⇒ 自动生成值宁可在构造期拒绝也不要在运行期炸。④ 与 av 既有「校验两端同源自证恒真」互补：那条管**校验方与被校验方同源导致恒真**，本条管**一条路径有校验、另一条没有**。
+- **提升层**：验证（自动生成值复用同一校验规则）。
+- **触发词**：自动生成的名字未校验、构造成功运行失败、isidentifier 只校验自定义名、拼接后才非法。
+
+## r627A · 序列化保留可变对象引用，put 之后检查点内容还会变：「已保存」不等于「已冻结」（来源：api.github.com/repos/langchain-ai/langgraph/issues/9365，gh api 一手 200，逐串命中 `JsonPlusSerializer retains mutable bytearray references, changing saved checkpoints after put`）
+
+- **判据**：① **持久化的语义是「此刻状态的快照」，不是「此刻对象的引用」**；序列化写出时若保留 `bytearray`/`bytearray` 之类的可变引用，调用方事后原地修改会**改写已经落库的检查点** ⇒ 检查点不再是可信的历史。② **深拷贝/不可变化是持久化边界的硬要求**：在 put 之前把可变容器转成不可变形态（bytes / tuple / frozendict），而不是信任调用方不改。③ **验收要断言「保存后修改源对象，读回内容不变」**——这是序列化类改动最少被写、却最能抓到别名污染的一条用例。④ 与 av 既有「序列化往返不对称」分工：那条管**还原后字段丢失/变形**，本条管**保存后仍被源对象牵动**。
+- **提升层**：验证（持久化快照不可被源对象事后改写）。
+- **触发词**：bytearray 引用、保存后检查点被改、可变对象别名、序列化快照不冻结。
+
+## r627A · 流式路径下参数非法的 tool call 变成裸 chunk 又被送回模型：流式与非流式的错误暴露必须一致（来源：api.github.com/repos/langchain-ai/langchain/issues/41460，gh api 一手 200，逐串命中 `with output_version="v1" and streaming, a tool call with invalid JSON arguments stays a raw tool_call_chunk block in AIMessage.content and is sent back to Chat Completions`）
+
+- **判据**：① **同一类错误在流式与非流式两条路径上的可观测性必须对齐**：非流式会解析失败并暴露，流式把非法参数留在 `AIMessage.content` 里当普通内容 ⇒ 错误被降级成内容，一路带着走。② **「非法参数被回传」比「报错」危险**：它不中断流程，模型下一轮看到的是自己产生的畸形块，可能据此继续生成 ⇒ 静默污染比显式失败更难归因。③ **验收要覆盖 streaming × 结构化输出 × 非法参数 的组合**：只测非流式或只测合法参数的套件抓不到它。
+- **提升层**：验证（流式路径错误暴露一致性）。
+- **触发词**：流式非法工具参数、raw tool_call_chunk、送回 Chat Completions、streaming 错误静默。
+
+## r627B · 完整性判据要建立在「等价规则下的规范化标识」而不是原始字节校验和：Same Data, Different Bytes（来源：arxiv.org/abs/2610.24916，export.arxiv.org API 八轨全 200，一手摘要逐串命中 `serialization-invariant identification method that assigns the same identifier to data representations equivalent under explicit rules` / `For equivalent re-encodings, the proposed configuration increased expected-outcome rates by 80.4 percentage points over the ordinary-tool baseline and by 70.2 percentage points over the checksum baseline` / `increased evidence-supported rejection of altered content by 3.5 percentage points over the checksum baseline`）
+
+- **判据**：① **校验和不匹配有两种截然不同的成因——内容被改 与 等价重编码；把它们当成一种会让验证器在最常见的场景里误报**：同样的逻辑数据换一种序列化（键序、缩进、浮点表示、换行）字节就变，原始校验和必然不等 ⇒ 校验和判的是「字节相同」，不是「数据相同」。② **正解是先声明等价规则、再在规则下计算规范化标识**：规则显式 ⇒ 等价重编码得到同一标识，真正被改的内容才落不等 ⇒ 同一套机制同时提升「该接受时接受」(+80.4pp / +70.2pp) 与「该拒绝时拒绝」(+3.5pp)，不是取舍。③ **保留原校验和、新增规范化标识，而不是替换**：字节级校验和仍能捕获「字节确实变了」这一事实层，规范化标识回答「变了是否等于改了」⇒ 两层信息各有用途。④ **对照要包含三类样本**：等价重编码（应接受）、被改内容（应拒绝）、引用不可达（应报错）⇒ 只测第二类的套件会得出「校验和够用」的错误结论。
+- **提升层**：验证（完整性判据的等价语义）。
+- **触发词**：校验和不匹配、等价重编码、序列化不变标识、字节相同不等于数据相同。
+
+## r627B · 人在静默缺陷面前会「看起来没问题」：监督不能充当验证层，验证必须产出诊断性证据（来源：arxiv.org/abs/2610.27801，一手摘要逐串命中 `users accepted plausible outputs without thorough evaluation, and only recognized these lapses in retrospect` / `Participants were often highly confident while missing silent defects: they performed generic checks, failed to generate diagnostic evidence, or even misinterpreted defect evidence` / `combining task outcomes, interaction logs, gaze, physiological signals, and self-reports`）
+
+- **判据**：① **「看起来可信」与「已被验证」是两件事，且前者会抑制后者**：缺陷越隐蔽（silent defect），人的自信越高 ⇒ 把监督交给人而不给他诊断工具，等于把最难的一类错误交给最不设防的一道防线。② **失效的三种形态都指向「没有产出诊断证据」**：做通用检查（不针对该产物）、产不出诊断证据（只有「看起来对」）、**甚至把缺陷证据读反** ⇒ 验证的产出必须是可判定的证据，不是印象。③ **有效性要分三层量：perceived（自评）/ behavioral（行为日志）/ effective（实际检出）**；只取自评会系统性高估 ⇒ 人工监督类研究必须同时量行为与实效，三者背离本身就是结论。④ **设计含义：需要的是「及时、按任务校准的再介入」而不是「更多监督」** ⇒ 提示人去看，但要在有可疑证据时提示，而不是一律提示（一律提示会钝化）。
+- **提升层**：验证（诊断性证据 vs 通用检查）+ 工作流（校准式再介入）。
+- **触发词**：静默缺陷、高自信漏检、通用检查不产出诊断证据、自评高估、监督失效。
+
+## r627B · 生成物要带「论证理由」而不是只有产物：AssureCode 的结构化论证（来源：arxiv.org/abs/2610.29758，一手摘要逐串命中 `a language of justification rationales that explicitly relate informal natural language prompts, formal specifications, assumptions about developer intentions, and program analysis evidence in a structured and verifiable format`）
+
+- **判据**：① **产物能跑 ≠ 产物对齐意图**；对齐关系本身需要被显式写出来——自然语言意图、形式规格、**关于意图的假设**、程序分析证据四者要结构化地连成一条链。② **「假设」必须作为一等对象出现在论证里**：意图从来没有被完整陈述，把推断出的部分写成显式假设，才能被检查、被反驳、被替换 ⇒ 隐含假设是验证的盲区。③ **借鉴安全关键系统的 assurance case**：论证不是说明文而是有结构的理由图，每个结论挂证据 ⇒ 可被机器部分检查，也能被人复核。④ 与 av 既有「声明不落成属性 ⇒ 不可验收」（ARATest 条）互补：那条管**把声明压成可测属性**，本条管**把产物—意图—假设—证据连成可复核的论证链**。
+- **提升层**：验证（产物携带结构化论证）。
+- **触发词**：论证理由、assurance case、意图假设显式化、产物对齐意图、结构化可验证格式。
+
+## r627B · 静默的信息丢失比可见的缺失更危险：文档摄入层丢掉「格式承载的语义」，agent 自信地错（来源：arxiv.org/abs/2610.30026，一手摘要逐串命中 `one layer is lost by every mainstream converter - the meaning an author encodes in how text looks` / `the loss makes agents confidently wrong rather than visibly incomplete` / `Formatting-blind ingestion collapses from micro F1 0.690 to 0.150 (docling) and 0.075 (plain text)` / `highlight (+0.302) and colour (+0.262)` / `bold, italic, monospace and strikethrough each sit within +/-0.003 of zero` / `32.8% of 6,460 documents carry a deliberate colour or highlight` / `validated the labels against rendered page images through an independent modality`）
+
+- **判据**：① **「把文档转成 token」这一步是无声的语义漏斗**：作者用**高亮与颜色**（合计 +0.564 F1）标注「这条是要求」，主流转换器全部丢掉 ⇒ 下游不是「少了一条信息」，而是**在缺失信息上照样给出自信答案**。② **别把「格式」当装饰一概而论**：加粗/斜体/等宽/删除线各自贡献 ≈0，高亮/颜色贡献显著 ⇒ 该修的是具体通道，笼统地「保留格式」既贵又不准。③ **确定性匹配器优于 LLM 裁判**：作者用文件自身的 OOXML 属性 + 确定性匹配打分 ⇒ 摄入层评测要能对答案，不能靠模型评。④ **跨模态独立验证**：标签用**渲染后的页面图像**这一独立模态复核 ⇒ 「是否真的有这个视觉线索」不能由同一个解析器自证。⑤ **为 agent 显式标注线索比仅仅保留线索更有效**（+0.085，p=0.049）⇒ 保真之后还要转成模型能消费的形式。
+- **提升层**：验证（摄入层保真 + 跨模态独立验证）。
+- **触发词**：静默线索丢失、高亮/颜色承载语义、格式盲摄入、自信地错、摄入层评测。
+
+## r627B · 去相关的正确做法是「表示多样性」而不是「多采样投票」：对位语言验证自动形式化规格（来源：arxiv.org/abs/2610.30059，一手摘要逐串命中 `because model errors are often correlated, agreement among outputs may reflect shared mistakes rather than correctness` / `contrapuntal languages: pairs of task-specific formal languages, each designed to express the intended specification, yet admitting no structure-preserving translation between them` / `we accept a specification only if a solver proves the two formalizations equivalent` / `increases the proportion of accepted specifications that are correct ... by 12.0% on HumanEval+ and 42.9% on LiveCodeBench`）
+
+- **判据**：① **多采样投票的前提是误差独立，而同源模型的误差恰恰相关**：一致只说明「它们犯同一个错的次数够多」⇒ 一致性测的是相关性，不是正确性。② **真正的去相关来自表示层的不可互译**：两门任务专用形式语言之间**不存在结构保持的翻译**，迫使模型各自独立地形式化一次 ⇒ 共享的错误倾向无法被照搬。③ **判定交给求解器而不是人**：两形式化等价才接受 ⇒ 无 oracle、无人工复核成本；这解决了「自动形式化的规格本身不可信」的死结。④ **接受率之外还要看「被接受的规格里正确的比例」**：作者量的是 precision 的提升（+12.0% / +42.9%）⇒ 只报接受率会把「放宽门槛」当成进步。⑤ 与 av 既有「校验两端同源自证恒真」互补：那条指出**同源导致恒真**，本条给出**构造非同源的通用手法**。
+- **提升层**：验证（无 oracle 下的规格可信化）。
+- **触发词**：误差相关、投票无效、对位语言、无结构保持翻译、求解器证等价。
+
+## r627B · 三分之二的错误轨迹「没有说错任何等式」——它们把错误的计划执行对了：无参考解时如何验证一条推理轨迹（来源：arxiv.org/abs/2610.30200，一手摘要逐串命中 `two thirds of wrong traces state no false equation, having executed a mistaken plan correctly, and on wrong-plan failures the detector flags a wrong trace less often than a right one` / `self-assessment degrades the answer it was meant to protect, sampling agreement measures stability rather than correctness, and perturbation studies read the expected answer off a human-written template, grading a model rather than a trace` / `A candidate-derived metamorphic probe ... we abstract the trace into a program over the question's quantities, perturb one quantity, execute the program, and ask the model the rewritten question once` / `A flag earns its retry only when detector precision exceeds D/(R+D)`）
+
+- **判据**：① **无参考解时的三种替代品各有各的错法**：自评**损害它本要保护的答案**；采样一致测的是**稳定性不是正确性**；扰动研究按**人类写的模板**读期望答案 ⇒ 测的是模型不是轨迹。② **「每一步都算对了、计划本身是错的」是这类检测器的结构性盲区**：检测器对错误计划的**标记率低于正确轨迹**（反向信号）⇒ 只查局部等式正确性的检测器在最需要它的那类失败上方向相反。③ **让轨迹自己供给测试**：把轨迹抽象成「以题目数量为变量的程序」，扰动一个量、执行程序、用改写后的问题问模型一次 ⇒ 每条轨迹都自带一条测试，不依赖模板。④ **必须同时量「探针否证了多少正确轨迹」**：本例 45.5% ⇒ 只看「抓到多少错误」会高估收益。⑤ **标记是否值得重试有明确阈值：detector precision > D/(R+D)**（R=重试修好错误轨迹的率，D=重试损坏正确轨迹的率）⇒ 低于该阈值的标记**越用越糟**，这是「要不要重试」的可计算判据，而不是凭感觉。
+- **提升层**：验证（无参考解轨迹验证 + 重试的收益阈值）。
+- **触发词**：错误计划执行正确、无参考解验证、变形探针、detector precision 阈值、自评损害答案。
+
+## r627B · 通过「要求的改动」不等于「没破坏别处」：28.2% 的通过 run 仍失败连续性检查（来源：arxiv.org/abs/2610.31118，一手摘要逐串命中 `of the Change runs passing every requested-work check, 28.2% still fail a continuity check` / `Every task freezes a repository snapshot, staged requirements, browser evidence and deterministic checks before evaluation, and enters only once a reference passes every check and plausible-wrong ones fail` / `a simulated user reveals the requirements one stage at a time, and every check cleared earlier stays armed for the rest of the run`）
+
+- **判据**：① **验收要分成两层：「要你做的做了」与「没让你动的地方还活着」**；只测前者会放过近三成的回归 ⇒ 第二层不是加分项而是及格线。② **早先通过的检查要在整轮里保持武装**：本基准里「之前清掉的检查」全程继续生效 ⇒ 回归是累积的，一次通过不代表持续通过。③ **基准任务入库要过双重闸门：参考解全过 + 似是而非的错误解全败** ⇒ 只满足前者时，任务可能根本区分不出好坏，分数就失去意义。④ **冻结快照 + 分阶段需求 + 浏览器证据 + 确定性检查**：评测的四个要素要在评估**之前**定死，否则会随实现漂移。⑤ 与 av 既有「fault-enforcing tests / 测试通过不等于正确」分工：那条管**测试能否证伪**，本条管**测试的覆盖面是否包含未改动部分**。
+- **提升层**：验证（连续性维度 + 检查全程武装 + 基准双重闸门）。
+- **触发词**：网站连续性、通过请求项但破坏别处、检查全程武装、参考过错误解败、冻结快照。
+
+## r627C · 内嵌 Schema 的方言必须显式声明：缺省方言不写明会让同一份契约在两端被不同版本解析（来源：modelcontextprotocol.io/seps/1613-establish-json-schema-2020-12-as-default-dialect-f.md，curl 200 / 7,644B 一手正文逐串命中 `This SEP establishes JSON Schema 2020-12 as the default dialect for embedded schemas within MCP messages` / `Schemas may explicitly declare alternative dialects via the $schema field. This resolves ambiguity that has caused compatibility issues between implementations` / `Validation failures between clients and servers assuming different versions` / `implementations were split between draft-07 and 2020-12`）
+
+- **判据**：① **「用 JSON Schema」没说清用哪一版就等于没说清**：draft-07 与 2020-12 在同一份 schema 上的行为不同 ⇒ 两端各自默认时，契约在传输中悄悄改变含义，表现为随机验证失败。② **正确形态是「缺省方言写进规范 + 允许显式 `$schema` 覆盖」**：缺省值消除了无声明时的歧义，显式字段保留了演进空间 ⇒ 二者缺一：只写缺省无法换版，只让显式则回到歧义。③ **「默认方言」是契约的一部分，不是实现细节**：验证器按哪一版解析必须与 schema 一起传递或约定 ⇒ 把版本假设埋在实现里，跨语言 SDK 必然分化。④ **验收要覆盖「无 `$schema` 字段」这一最常被忘的输入**：大部分手写的 schema 不带 `$schema`，而这恰恰是唯一会走默认分支的情形。⑤ 与 av 既有「schema 字符串约束覆盖率」条目分工：那条管**约束写得全不全**，本条管**按哪一版方言解析**。
+- **提升层**：验证（契约方言显式化）。
+- **触发词**：JSON Schema 方言、draft-07 vs 2020-12、$schema 缺省、跨实现验证失败。
+
+## r627C · 只允许 type/properties/required 会挡住组合校验，且输出侧同样需要 schema：输出契约不能只有输入契约（来源：modelcontextprotocol.io/seps/2106-json-schema-2020-12.md，curl 200 / 19,046B 一手正文逐串命中 `inputSchema restriction: Currently only allows type, properties, and required fields. This prevents use of composition keywords like anyOf, oneOf, and allOf` / `outputSchema restriction: Also restricted to type: "object" with only properties and required, despite the specification claiming to support "JSON Schema."` / `structuredContent: Accepts any JSON value validated by outputSchema`）
+
+- **判据**：① **把 schema 限制在「扁平对象」三件套上，等于宣布复杂但合法的输入无法被表达**：`anyOf`/`oneOf`/`allOf` 是表达「要么 A 要么 B」「二者必居其一」的最小手段 ⇒ 限制它们的后果是**校验退化为手工 if-else**，而手工分支不会出现在契约里、无法被对方发现。② **输出侧同样需要 schema，且不必是 object**：服务端可以返回任意合法 JSON，把 `outputSchema` 也钉死成 `type: object` 会让真实返回值无法被描述 ⇒ 「输入有契约、输出靠约定」是不对称的、也是最常出错的一侧。③ **「规范声称支持 JSON Schema」与「实际只支持其子集」是两类不同的东西**：当子集未被显式声明时，实现方会按完整规范理解 ⇒ 差异就发生在这个缝里。④ **放宽与兼容可以同时做到**（保留 `type: object` 作为输入必需，同时允许任意附加关键字）⇒ 「要么全开要么全禁」是伪二选一。
+- **提升层**：验证（输入/输出双侧契约 + 组合关键字可用）。
+- **触发词**：inputSchema 只允许三字段、anyOf oneOf allOf 被挡、outputSchema 也需契约、structuredContent 任意 JSON。
+
+## r627C · 非标准扩展字段会污染契约：废弃 `enumNames`，枚举模式回到标准且支持多选（来源：modelcontextprotocol.io/seps/1330-elicitation-enum-schema-improvements-and-standards.md，curl 200 / 16,549B 一手正文逐串命中 `deprecating the non-standard enumNames property in favor of JSON Schema-compliant patterns` / `introducing additional support for multi-select enum schemas in addition to single choice schemas` / `In the UI, this amounts to the difference between using checkboxes or radio buttons`）
+
+- **判据**：① **给标准格式加「自定义字段」的代价是下游全部要特判**：`enumNames` 不在 JSON Schema 里 ⇒ 通用校验器不认、跨实现要各自解释，契约从「可验证」退化成「可读」。② **多选与单选是两种不同的语义，必须在模式里区分**（checkbox vs radio）⇒ 只支持单选时，调用方要么拆成多次调用，要么放弃多选，两种都是把语义损失转嫁给用户。③ **修法要同时给「标准合规写法」和「迁移路径」**：本例给出标准模式写法并同步更新 TS/Python SDK 与客户端实现 ⇒ 只宣布废弃而不给替代，等于把所有下游晾在半路。④ **契约的「附加信息」应走标准允许的位置**（如 `title`、`oneOf` + `const` 组合）⇒ 想加人类可读标签不是没有标准做法，只是要多写一点。
+- **提升层**：验证（契约标准合规 + 多选语义）。
+- **触发词**：enumNames 非标准、枚举多选、checkbox vs radio、契约自定义字段污染。
