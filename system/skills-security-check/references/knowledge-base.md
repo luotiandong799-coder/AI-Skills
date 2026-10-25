@@ -1501,3 +1501,15 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 
 ### r625C · 压缩设施必须声明它不暴露什么：能知道压缩发生了，但不知道留下了哪些条目
 docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl 一手 200/5,958B）原文：mirror 记录原生压缩的起止状态，但「it does not expose a human-readable compaction summary or an auditable list of which entries Codex kept after compaction」。判据：压缩是有损变换，其可观测性必须显式给出边界——能证明「压缩发生了、何时起止」，不能证明「丢了什么、留了什么」；任何在压缩之后做取证/审计的流程都要先接受这个边界，否则会把「查不到」误读成「没丢」。触发词：压缩可观测边界、不暴露保留清单、auditable list 缺失、压缩后取证。
+
+## r626A · 守卫完备性按「事件通道 × 能否写回替换」逐格核验；被丢弃的守卫返回必须有回执（来源：github.com/anthropics/claude-code issues #97278 正文 + v2.1.280 实测表，2026-10-26 r626A 一手 `gh api` 实拉逐串命中 `updatedToolError` / `updatedToolOutput` / `hookSpecificOutput`）
+
+- **实证（一手原文）**：`PostToolUse` 钩子可通过 `hookSpecificOutput.updatedToolOutput` **整体替换**模型看到的成功输出（Bash 为 `{stdout, stderr, interrupted, isImage}`）；`PostToolUseFailure` **无对等字段**。作者注册 Bash 上的 PostToolUseFailure 钩子跑 `seq 1 2000; false`（2001 行，exit 1），四种写法**逐一直测**全部 ignored、`model received all 2001 raw lines`：① `updatedToolError: "<digest>"`；② 对象式 `updatedToolOutput: {stdout, stderr, interrupted, isImage}`；③ 顶层 `decision: "block"` + `reason`（原文错误照送，reason 被当作另一条 "hook blocking error" 追加）；④ exit code 2 + stderr 指针（同 block）。对照组同一钩子的 `PostToolUse` 分支用对象式 `updatedToolOutput` **能正确替换**。另记：**「Unknown keys in the failure response are stripped without a warning, so a hook author gets no signal that the replacement was discarded.」** 该诉求原始 issue #77180 于 2026-09-18 被自动 stale 关闭且无维护者回复。
+- **判据**：① **失败通道恰是最长、最易泄密的输出面**（失败构建/测试产出最大，错误输出里堆积 secret/token/path），守卫不覆盖失败通道 = 结构性缺口而非待补事项。② **「原子能力是否对等」要逐个钩子事件列矩阵核验**（PostToolUse / PostToolUseFailure / PreToolUse / Stop…），不得由「该产品有钩子协议」外推到「每个事件都有替换能力」。③ **守卫返回被忽略必须 observable**：静默 strip 未知键 ⇒ 「装了守卫」是虚假安全感，应有回执或至少一条 warning。④ 已知回落方案要在账本里登记其覆盖面缺口（原文 workaround：用 PreToolUse 的 `updatedInput` 改写命令让 shell 自己落盘截断——它改变的是命令而不是错误通道）。
+- **提升层**：工具（守卫接口面）+ 可复用 Skill（安全准入/脱敏纪律）。
+
+## r626A · 工具目录是供应链入口：首见即钉哈希 + 描述注入扫描 + 安全默认逐版核对（来源：github.com/modelcontextprotocol/python-sdk PR #3754 正文，2026-10-26 r626A 一手实拉逐串命中 `_absorb_tool_listing` / `enable_dns_rebinding_protection` / CWE 编号）
+
+- **实证（一手原文，128 文件全静态审计、ruff+pyright clean、244 tests pass）**：① **Rug-pull（CWE-345）**——`_absorb_tool_listing()` 收到 `tools/list_changed` 通知后重新拉取工具描述，**无任何完整性检查**：恶意服务器可先喂干净描述跑 N 次交互，再发通知改成投毒描述。修复=首次所见对每条描述做 **SHA-256 pin**，后续任何变更丢弃新版本并记 security warning，且**对所有协议版本生效**（不只在 modern 门后）。② **工具描述注入（CWE-20）**——该函数校验 `x-mcp-header` 注解与输出 schema，**从不检查 `tool.description`**，而这个字段被**逐字送进 LLM 上下文**。修复=钉定前用正则扫已知提示注入模式，首见即丢弃命中项。③ **DNS rebinding 保护默认关闭（CWE-16）**——`TransportSecurityMiddleware` 为了向后兼容 `enable_dns_rebinding_protection=False`，并为可见性补了一条：启动时若 `allowed_hosts` 为空打 `WARNING`，让配置错的部署「fail visibly 而不是静默拒掉所有请求」。另有④ CLI npx 探测里 `subprocess.run([cmd,"--version"], shell=True)`（Windows）当前 `cmd` 硬编码，但 list+shell=True 是可乘之机（CWE-78）。
+- **判据**：① **「可远程重拉的可信材料」必须首见钉哈希**，变更默认丢弃而非默认采纳——重拉通道本身就是攻击面。② **被原文送进模型上下文的字段（描述/标题/摘要）与被执行的代码同属高危面**，不得因它不是代码就跳过扫描。③ **为兼容保留的不安全默认，必须在每次升级/制度 Notices 里显式核对是否已被翻转**，不能假设「上游迟早改」。④ 沉默拒全部好过静默错放行：默认安全之上的可见告警本身就是防御。
+- **提升层**：工具（供应链校验）+ 可复用 Skill（安全准入清单）。

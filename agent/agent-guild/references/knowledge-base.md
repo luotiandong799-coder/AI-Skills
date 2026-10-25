@@ -932,3 +932,33 @@ anthropics/claude-code#59248（2026-10-25 一手实拉）：静默的保留期�
 
 ### r625B · 记忆的价值取决于三问：留存了哪些区分、有界消费者能否用得上、什么可以重建
 arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手摘要）：记忆的价值取决于「哪些区分存活下来」「一个有界的 agent 能否使用它们」「什么可以被重建」。判据：评估一套记忆机制不能只看它存了多少或召回率多高，要按三问分别回答——第三问最关键：凡可以在需要时重建的内容，存下来只增加陈旧与冲突面，不产生价值；记忆的收益来自「不可重建的区分」。触发词：记忆价值三问、可重建性、有界消费者、留存哪些区分。
+
+## r626B · 记忆能否免check取决于「拿它去做什么」：动作条件化验证（来源：arXiv 2610.31446《When Is a Memory Safe Enough to Act On? Action-Conditioned Verification for Long-Lived Agents》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：长生命周期 agent 跨会话携带记忆，许多动作不可逆 ⇒ 陈旧记忆直接变成伤害。既有工作都在改善**记忆本身**（取回/刷新/调和），但原文点破：**「whether an entry must be re-checked before acting is not a property of the entry」**——同一个记忆地址，例行寄件可免check使用，高价值寄件就该重新确认。该文把「是否需要复核」formulate 为一个**序贯停止问题**：一次验证值它的成本，**仅当它能改变 agent 下一步做什么**；在满足 verifier 可靠性与成本条件下，**提高动作后果会把同一条记忆依次推进 proceed / verify / direct-abstention 三个状态**。`AMV-Guard` 据此抽取候选动作的记忆前提并执行门控。
+- **判据**：① **「这条记忆要不要重验」的属性挂在动作上，不挂在记忆上**——按记忆新鲜度/置信度分档设阈值是错的自变量。② 与 §二·10 提问与信息获取同构：**值得做的验证/提问 = 会改变下一步的那一个**。③ 存在第三种出口：**直接弃权**（当后果大到没有任何可接受验证成本时），顺序舞不是「要么用要么验」二选一。
+- **提升层**：工作流（记忆 prescription 门）+ 可复用 Skill（记忆治理）。
+
+## r626B · 治理态损坏：记忆内容没变而「哪些记录进入上下文」被改，96.25% 生效（来源：arXiv 2610.30698《Governance-State Corruption in Long-Term Memory for LLM Agents: A Cross-Model Stress Test》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：定义 governance-state corruption = **改变哪些留存记录进入模型可见上下文**的故障，而存储内容与任务保持不变。6 个 provider、731 个基准基准 base 产出 **2,080 对配对故障**；离线控制面检查中，**损坏在 ==96.25%== 的配对中改变了 operative projection，而 oracle-backed enforcement 恢复到 ==100%==**。下游评测：LongMemEval/Memora 的非概率抽样子面板解掉 300 个配对三元组中的 298 个（238 个不同 base）；clean 减 corrupted 的差异 = LongMemEval 二值正确率 **40.54 个百分点**（95% base-cluster 区间 [30.32, 50.71]）、重标定 Memora FAMA **30.60 点**（[23.31, 37.69]），两边均显示恢复。
+- **判据**：① **记忆系统的失效可以完全不触碰内容**：「哪条进上下文」是独立故障面，只看Retrieval命中率/内容质量的系统性审计会漏掉它。② **可控出错（96.25%）+ 强制恢复（100%）同案存在** ⇒ 这类故障是**可通过强制性 enforcement 治理**的，不是只能靠模型自觉。③ 下游差异达 40pp 量级 ⇒ 「治理态」应作为一等验收对象，与「召回质量」并列分报。
+- **提升层**：工作流（记忆治理/投影一致性）+ 可复用 Skill（审计检查项）。
+
+## r626B · 多 agent 存在从众与失控级联，且 LLM 群体比人类更不会自我纠正（来源：arXiv 2610.30769《LLM Multi-Agent Systems Are Vulnerable to Herding and Runaway Cascades》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：复刻经典 Music Lab 实验，在大量 LLM agent 群体里做「是否暴露累计推荐数」的对照。**暴露组出现失控级联**：集体推荐变得极端且不可预测、越来越偏离歌曲的内在吸引力。**与人相比，LLM 群体普遍远比人类易从众，且不像人类那样能自我纠正（less able to self-correct）**。作者点名的受影响面：推荐系统、**自动化评测**、复杂问题求解、以及未授权的合谋。
+- **判据**：① **任何「让多个 agent 相互看见彼此输出」的设计都要默认enable herding**——评审团/投票/自洽投票（self-consistency）/多模型aggregate都在受影响面里。② 自动化评测受影响尤其危险：把 LLM 裁判的peer judgment 拿来衔接（多judge互相参照）会系统性放大偏差。③ 「LLM 级联不会自我纠正」⇒ 不能寄望于多跑几轮自然收敛；要在机制上做隔离（隐藏他人 choice / 独立论证 / 固定 randomization 顺序）。
+- **提升层**：工作流（多 agent 编排）+ 可复用 Skill（多agent评审纪律）。
+
+## r626C · 后台自学习必须有「触发计数 + 单轮硬预算 + 冷却 + 失败不重试」四件套，并显式排除事件来源（来源：docs.openclaw.ai/tools/self-learning.md 10,186B，2026-10-26 r626C 一手 python urllib 实拉逐串命中）
+
+- **实证（一手原文级）**：触发=按会话累计 **10 次 model iteration** 才排队 review 并清零计数（前台自己改过已学技能也清零，避免重复复核）；队列满足 **30 秒无 agent/reply 运行**才串行开始，review 一次一个，前台回复**永不等待** review，review 遇到新 run 就让位且**不重放**；输入 excerpt **bounded to 64 transcript events and 32 KiB**，大工具结果可被显式omission notice 替代。源排除清单：provider/prompt 错误终止的 turn（被中断的仍计数）、**cron/heartbeat/hook/subagent/memory/Incognito 会话**、以及背景 Workshop 自身、不报告 resolved model 与 `skill_workshop` 可用性的 runtime、tool policy 隐藏 `skill_workshop` 的 turn。压缩过的会话仍算合格；**计数存内存 ⇒ Gateway 重启即清零**。
+- **判据**：① **「什么时候学」必须有计数门槛与静默窗口**，否则自学习会与前台争抢资源并互相污染。② **单轮输入必须双限（事件条数 + 字节）**，且有明确的「省略了什么」标记。③ **后台任务失败不重试、让位不重放**——持久化的失败比漏学一次更贵。④ **事件来源必须显式排除**（定时/心跳/钩子/子agent/匿名会话），否则定时任务噪声会被当成 lessons 沉积。⑤ 内存计数会在重启后清零——这是诚实边界，应写在文档里。
+- **提升层**：工作流（后台巩固节律）+ 可复用 Skill（自学习入库纪律）。
+
+## r626C · 会话连续性投影的可验证边界：投「标识与形状」、不投「参数值」，且 rewind/branch 必须使旧绑定失效（来源：docs.openclaw.ai/plugins/codex-harness-runtime/compaction.md 5,958B，2026-10-26 r626C 一手实拉）
+
+- **实证（一手原文级）**：所有权划分写在文档中："**Codex app-server owns native token-pressure and manual thread compaction. OpenClaw separately owns its transcript mirror.**" 关键口径：Ultrafast 档把 native 自动压缩封顶在 **260,000 total context tokens**（保留更低的自配置 `model_auto_compact_token_limit`），档位切回后在下一 turn 恢复原 limit，**绝不发setting不匹配的 turn**； **incognito thread 没有持久化 resume source ⇒ 创建期压缩设置不能原地改**，需要换档时只能提示用户恢复原速度或开除新隐身会话。`agents.defaults.compaction.maxActiveTranscriptBytes` **只约束 seeding fresh native thread，不适用于普通/heartbeat turn**；省略未被 summary 覆盖的历史前，先试一次 host compaction 并预留合适篇幅，**整轮 turn 与 tool/result 配对保持完整**。投影面：映 **tool-call names and ids、input shapes、tool-result content（不做 secret masking）**，但**不拷贝 raw tool-call argument values**；**rewind/branch 切换使旧 native binding 失效**；session generation 轮换后**只有 recorded predecessor under that session key 可被 adopt**。
+- **判据**：① **跨会话/跨档位恢复时，投影内容要按「形状 vs 值」划线**——可投影 shape/ids/names，不得投影参数值（后者是凭据与隐私面）。② **自动化不能越过参数可调面**： incognito 这类无 resume source 的形态必须显式「要么恢复原设置、要么重开」，不得静默套用别档设置。③ **绑定要有代际与 代际规则**：rewind/branch 后旧 binding 失效，只有 recorded predecessor 可 adopt——这正是"同一 key 的真值源"应有的样子。④ 设置封顶与「只在 seeding fresh thread 生效」这类**作用域隐含差异**必须写清，否则会被当成全局限制。
+- **提升层**：工作流（压缩与恢复边界）+ 可复用 Skill（跨会话连续性契约）。

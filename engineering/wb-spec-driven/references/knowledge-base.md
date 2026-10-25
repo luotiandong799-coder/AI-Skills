@@ -1111,3 +1111,21 @@ spec 的步骤约束不要落在两个极端：**代码写死流程**（控制�
 - **判据**：① **「变更判定」与「副作用触发」是两个动作**：判定为 false 不得派发下游；上游任何一次噪声写都会被放大成整条链路执行。② **重试幂等要写成副作用契约**：同一幂等键的重复请求合并为一次写入，验收断言重试后行数不变。
 - 提升层：工作流（副作用与触发规格）。
 - 触发词：无变化更新不触发副作用、重试重复写入、重试幂等契约。
+
+## r626B · 提问门用价值-信息（VoI）而非不确定性阈值（来源：arXiv 2609.37588《Rational Clarification by Assistive Agents via Value-of-Information Reasoning (REVOIR)》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：常见做法是「问到不确定性低于阈值为止」，忽略三件事：不确定性下降对下游表现的影响、**问 vs 直接做的成本**、以及**用户可能不经询问自行纠正**。REVOIR 在推理时按时对一个问题的 VoI（=答案带来的期望任务回报增益）做澄清决策。结果（原文）：ADAPT 上偏好满足比 fine-tuned 澄清策略 ==+13–15%== 且**提问少 5 倍**、无需训练；当「行动后可获得廉价用户纠正」时，REVOIR 会自然推断出**提问并不总是划算**。反向失效（原文）：**「vanilla reasoning agents fail to adaptively clarify user requests, and request fewer clarifications as reasoning effort increases.」**
+- **判据**：① **「不确定性高」不是提问理由，「答了能不能改变我下一步做什么」才是**。② 提问决策必须计入「用户纠正随时可得」这个默认回退，否则会高估提问收益。③ **「算力越强越不问」是实测存在的失效模式** ⇒ 不能默认提高推理强度会自动改善澄清策略。
+- **提升层**：工作流（澄清/需求处理）+ 模型层（决策判据）。
+
+## r626B · 「问得少」与「问得好」是两个正交目标，必须分列评测（来源：arXiv 2610.24411《Ask Less, Ask Better》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：现有评测通常**只数问题个数**，把必要与可avoidable的提问等权。该文用 interruption budget（限问数）+ user-attention cost（对「难读/不值得问」的问题额外收贵）。8 模型 × 4 客服域：**限 1–3 个问题使注意力成本降 ==36–73%==，同时保留无限提问时 ==86–94%== 的任务回报**；与人审一致率 75%；把每个问题对着**用户更早的答案记忆**复阅一遍可再降 ==13%== 成本而几乎不掉回报；**同成本下最Efficient模型的提问回报 > 其余模型的 2 倍**。作者结论原话：**「asking less and asking better are distinct goals, and that evaluations of proactive agents should measure both.」**
+- **判据**：① 提问约束=**预算**，提问质量的度量要独立于计数：**同样问 3 个，值不值差一倍以上**。② **提问前先查历史答案**（同一会话里用户大概率已答过），这是几乎无成本的确定性收益。③ 评测必须双轴（数量 + 质量），只优化一轴会让 agent 学会「问最小数量的坏问题」。
+- **提升层**：工作流（提问契约）+ 可复用 Skill（评测两轴）。
+
+## r626B · 「相关因子够多」≠「可判定」：factor coverage bias 与 evidentialsufficiency 的正确判据（来源：arXiv 2610.25819《When to Stop Asking: Factor Coverage Bias and LLM Determinability Judgments》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：成对 determinable–undeterminable 受控基准：给任一侧额外加 1 个 **decision-relevant factor** 但**不改变其可判定性**，模型会更倾向把被加的那一侧判为可判定，且**该偏误不随 reasoning effort 增加而消退**；对照条件下加 irrelevant text 抑制选择的效应，**reasoning 能大幅降低**（⇒ 与 context-length 效应是可分离的两个失效源）。原文口径：判断可判定性应看「missing information could **change the conclusion**」，而非可用信息量的多少。
+- **判据**：① **信息获取/收敛的唯一判据是「缺失信息能否改变结论」**；「已收集了多少相关因子」不但不等价，还会主动误导模型。② **加推理算力对本偏误无效** ⇒ 不能靠「多想一会儿」补偿；必须用外部 check（缺失项能否翻盘）。③ 「相关度」与「决定性」分账：相关但翻不了结论的信息，收集即浪费。
+- **提升层**：模型层（可判定性判断）+ 工作流（提问/收敛门）。

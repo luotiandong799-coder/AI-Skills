@@ -438,3 +438,21 @@ arXiv 2610.31662《Reliable AI-Assisted Decisions via Selective Auditing》（20
 
 ### r625B · 二值安全标签缺解释深度，评估量表要下沉到提示级的诊断 rubric
 arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety with Prompt-Level Rubrics》（2026-10-25 一手摘要）：现有安全基准主要依赖 safe/unsafe 二值标签，缺少解释深度，且自动评判之间一致性低；该工作提出 prompt 级 rubric 的诊断式评估。判据：二值标签能给出通过率但给不出「为什么不安全」，因而无法指导修复；评估量表要落在最小决策单元（这里是一条提示）上并给出可归因的维度分，否则评判者之间的一致性低会成为结论的主要噪声源。触发词：二值标签、prompt 级 rubric、诊断式安全评估、评判一致性。
+
+## r626A · 评测信封必须三态：crash ≠ 未触发，且 crash 不得计入分母（来源：github.com/anthropics/skills issues #1478 正文，2026-10-26 r626A 一手 `gh api` 实拉逐串命中 `query_triggers[query].append(False)` / `should_trigger: false` / `run_loop.py`）
+
+- **实证（一手原文）**：`skills/skill-creator/scripts/run_eval.py` 的 `run_eval()` 里，一次评测跑抛异常（子进程崩溃 / 超时 / API 错误）被 `except Exception` 吞掉并 `query_triggers[query].append(False)`——与合法的「技能未触发」**同值**。而 `should_trigger: false` 的用例判据是 `trigger_rate < threshold`，于是 **「an infrastructure failure is scored as a correct result」「Crashing improves the score.」** 信封字段只有 `query / should_trigger / trigger_rate / triggers / runs / pass` 与 `total/passed/failed` 汇总，**没有 `errored` 字段，且 `runs` 把崩溃那次算作真实一次跑**——连分母看起来都是健康的。唯一痕迹是 stderr 一行 warning；而 `run_loop.py:20` 直接 `from scripts.run_eval import ...` 在进程内调用，**优化器看不到这个差异**，会据此挑选「最优」 description。
+- **判据**：① **评测结果必须三态**：`triggered` / `not-triggered` / `errored`；把基础设施故障折叠进负例 ⇒ 崩溃被奖励。② **errored 既不计分子也不计分母**，并应让整轮评测判定失败/不可用，而不是参与打分。③ **任何被自动优化器消费的评测产物，其错误态必须进信封字段**——只写 stderr 等于对下游不可见。④ 「优化器在优化什么」要能被审计：优化目标一旦吃到含噪与折叠故障的计数，收敛方向会被系统性带偏。
+- **提升层**：工作流（评测工程）+ 可复用 Skill（评测产物契约）。
+
+## r626B · 架构变更的晋升门：方差惩罚 + 预设 margin + canary + 预设回滚（来源：arXiv 2610.31436《Conservative Meta-Agent Search: Architecture Adaptation under Non-Stationarity》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：部署态系统面对的是**持续漂移、延迟且相互依赖的反馈、相关组件故障、以及昂贵的架构变更**，而常见评测只在静态任务集+即时标量奖励上做。CMAS 把元层架构搜索 formulate 为**带切换成本与硬风险约束的序贯 incumbent replacement**：召回存档架构 → 提出类型化图编辑 → 用 **paired shadow replay under common random numbers** 对 incumbent 打分并做**组件级介入式归因**；晋升条件=**经验校准过的、带方差惩罚的同时性得分超过预先指定的 margin**，且晋升后必须有**模拟 canary 阶段 + 预先指定的回滚**。因 backtest 不能证明元层技能，作者另建 MetaInvest-Bench（体制切换模拟器，使 surrogate 最优架构可计算）。
+- **判据**：① **「切换成本」必须显式计价**——架构变更不是免费的，单次得分更高不足以晋升。② **common random numbers 的配对 shadow replay** 是在就地观察之外唯一能把噪声压到可比较的手段；不用 CRN 的 A/B 等于没比。③ **方差惩罚 + 预设 margin + canary + 预设回滚四件同缺一不可**：只用均值会因为一次好运晋升。④ 「回测不能证明元层能力」——必须有专门的、机制可计算的模拟器做这一层面的验收。
+- **提升层**：工作流（发布/晋升门）+ 可复用 Skill（架构变更治理）。
+
+## r626B · 自改进证据必须三列分报；且「产物评测」与「环程重跑」是两种强度的声明（来源：arXiv 2610.14662《Does Failure Feedback Direct Agent Self-Modification?》+ arXiv 2610.27610《Auditing the Product, Not the Recursion》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级，两篇互为对照）**：① 2610.14662——以「随机挑一个目标失败 vs 修 parent 的其它失败」做对照组度量 directedness：在公开的 Darwin Gödel Machine 日志里 **145 个合格修改没有任何可检测的目标特异优势**；受控 instruction-revision 实验里，目标反馈让 Qwen3-4B 修复率较同category对照组 **+20 个百分点**，Phi-4-mini 的 **+7 点不显著**；**target repair 并不能可靠地推出 held-out 提升**；8 步修订环与 GEPA 的 held-out 平均精度相近。作者要求的报告口径：**把 target repair / 近邻迁移 / held-out 净变化三列分开报**。② 2610.27610——对 114 篇合格研究做全文编码（其中 **90 篇自称 RSI**）：**90% 报告了产物评测（宽口径，含部分/未声明分离）**、**60% 在未被用于选择的任务上评测**、**仅 22% 审计 ≥2 次整环重跑**（随机子样为 45% / 14%）；**26 篇主张「流程更好」的研究中，只有 4 篇用同起点、同预算比较了新旧程序**；据此提出 **claim-indexed 报告标准**（产物声称 ≠ 过程声称），并用「选择效应 / 共享评测器误差 / 系统状态变化」三个命题解释为何产物评测不能支撑过程声称。
+- **判据**：① **「改之后变好」不等于「定向修好了那个问题」，更不等于「泛化更好」**——三列（target repair / transfer / held-out）必须分列，合并报告即过度声称。② **流程声称（我们的方法更好）比产物声称重得多**，卻被最薄地支撑（26 篇里只有 4 篇做了同起点同预算比较）。③ **整环重跑审计率低（22%）** ⇒ 见到「自称自改进」结果时，第一问应是「重跑过几次完整环路」。④ 选择效应与共享评测器误差是两个必须单独排除的来源，否则一切都可能是抽样运气。
+- **提升层**：工作流（自改进证据门槛）+ 可复用 Skill（声称强度分级）。

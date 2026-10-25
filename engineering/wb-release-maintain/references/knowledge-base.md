@@ -882,3 +882,15 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 
 ### r621B · 授权状态须在执行前独立可验
 2610.22899 ChainIT Authority Protocol：支付系统能认证用户、设备、账户与凭证，但对端拿不到「这一笔交易、此刻、在该组织授权范围内」的紧凑可验证据；agentic 交易下，agent 可以产出合法签名却超出委派目的、或在授权变更后、或在与人批准的细节不一致时执行。协议把持久身份、带版本的授权记录、来源证据、预算与审批状态分开，做执行前的授权与证据控制面。判据：签名只证明「谁签的」，不证明「有权这么做」，二者要分开取证。
+
+## r626A · 检查点序列化必须容忍不可序列化字段：单字段不可序列化不得让整份快照失败（来源：github.com/crewAIInc/crewAI issues #7398 正文，2026-10-26 r626A 一手实拉逐串命中 `PydanticSerializationError` / `Callable 'guardrail' cannot be JSON-serialized`）
+
+- **实证（一手原文）**：开启 auto-checkpointing 后 `CheckpointListener._do_checkpoint` 调 `state.model_dump(mode="json")`。任何 `Task` 的 `guardrail` 是 **Python callable**（函数/lambda，区别于字符串守卫）时：先冒 `UserWarning: Callable 'guardrail' cannot be JSON-serialized and will be dropped during checkpointing; restored checkpoints will not run this guardrail.`，**随后 `model_dump(mode="json")` 仍然抛** `PydanticSerializationError: Unable to serialize unknown type: <class 'function'>`，再被事件处理器以整段 traceback 记录为 `WARNING:crewai.state.checkpoint_listener:Auto-checkpoint failed for event task_completed`。净效果（原文）：**「every checkpointed event on a guardrail-bearing task emits a traceback, and no usable checkpoint is written for that task.」** 版本 `crewai` 1.15.10（1.15.21 亦复现）。期待行为=作者自己给出的口径：**降级必须真的降级**——从快照里丢掉不可序列化字段、给**一次**安静通知、**其余部分照写**。
+- **判据**：① **「守卫存在」反而可能让恢复能力归零**：带守卫的任务恰是最需要检查点的一类，一旦序列化容错缺失，等于在最关键路径上失去恢复点。② **warn 之后不许再 raise**——「已通知会丢弃」与「仍然抛异常」同时出现是最坏组合：既承认降级又实际不降级。③ 快照纪律应默认「**能写多少写多少 + 显式丢弃清单**」，每份快照自带「这份快照少了什么」，否则恢复时不知道恢复了什么。④ callable guardrail 是文档化一等特性 ⇒ 检查点以为支持面=文档支持面，而非「能 JSON 化的子集」。
+- **提升层**：工作流（恢复点治理）+ 可复用 Skill（检查点契约）。
+
+## r626A · 重试的作用域必须包含 checkpoint 命名空间隔离：只按节点 id 定重试会把重试变成串状态（来源：github.com/langchain-ai/langgraph issues #9253 正文，2026-10-26 r626A 一手实拉，含最小可复现代码）
+
+- **实证（一手原文）**：一个节点内部串行调用两个 subgraph（`research`、`review`，均为 `StateGraph(State).add_node("n", lambda s: {"text": text})`），节点带 `RetryPolicy`；节点体内先 `research.invoke({})` 再 `raise ConnectionError` 触发重试。现象：**「makes the second one resume into the first one's checkpoint」**——父节点重跑时，第二个子图恢复到**第一个子图**的 checkpoint（附 reduce_func 时情况有变化）。作者已按模板自检（确认是 bug 而非用法问题、已在 GitHub 检索无同类、确认最新版仍复现、给出可原样运行的复现代码）。
+- **判据**：① **重试单位 = 执行单元 ∪ 其状态命名空间**；只按 node id 定义重试而忽略内部可重入单元（子图/子流程/子事务）的状态域会把「重试」变成「串状态」。② 父子共享状态通道时，**重入必须显式指定从哪个 checkpoint 分支恢复**，不能靠默认属主。③ 这类缺陷不会出现在单起重试里，只在「重试 × 内部多个可恢复单元」组合下暴露 ⇒ 重试策略的回归测试必须包含"节点内多分支"用例。
+- **提升层**：工作流（重试与恢复语义）+ 可复用 Skill（状态持久化契约）。

@@ -4296,3 +4296,15 @@ arXiv 2610.30738《AgentTriage: Replayable Security Diagnosis Across Heterogeneo
 
 ### r625C · 连续性投影进新会话的摘要是「引用态」、有损且有界，不是事实等价物
 docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl 一手 200/5,958B）原文：把既有会话的连续性投影进一个全新的 Codex 线程时，会带上已保存的压缩与分支摘要，即使更早的用户消息已不复存在；「Summaries stay quoted as prior context, separate from the current request」，且仍受投影尺寸上限约束，过大的摘要或更早的完整轮次可被省略。判据：跨会话「连续性」不等于「完整性」——投影是有损的、有上限的，摘要以引用态进入而非并入当前请求；任何依赖连续性的下游结论都要按「可能被省略」来设计，不能把「会话续上了」当成「历史都在」。触发词：continuity projection、摘要引用态、投影有损、有界连续性、会话续上不等于历史完整。
+
+## r626B · 测试套件本身要被注入检验：REGATTA 故障注入 + 参考规则溯源审计（来源：arXiv 2610.30924《REGATTA: A Cross-Domain Measurement Framework and Fault-Injection Harness for Enterprise AI Agents》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：起手命题=agent 评测需要两件证据：**测试套件是否真的暴露指定故障**、以及**它的参考规则本身可不可信**。三件 instrument：① 125 条带来源引用的 checklist（跨 5 个行业×法域单元）；② 覆盖 5 类的 **25-fault corpus**；③ 在设计阶段与执行阶段分别对 suite 级故障检出打分的 harness。对 3 个 LLM 生成器产出的 **180 套（5,400 场景）**做四项测量诊断的结果：**来源审计发现 24 条误述在行规则、46 条额外引用缺陷、31 条只有无约束力/不可识别/不可核验的来源、仅 24 条核实干净**；且「只有最初被substance标记的条目才获得过作者review，24 条干净行全是 AI-only review」。作者的自我限定必须一起抄：**「Results therefore describe the instruments as written, not legal compliance.」** 另注：执行阶段故障画像跨生成器稳定。
+- **判据**：① **「有测试套件」不等于「套件能检出该故障」**——故障注入针对套件本身，是比「跑一遍看红绿」更强一层的验收。② **参考规则（checklist/rubric）自身需要溯源审计**：引用率不达标/来源无约束力是常态（本例 101/125 有问题面），把规则当真理再去评 agent 会把错误固化。③ **「AI-only review 的条目」要显式标记**，与人审条目分开统计，否则质量分布被掩盖。④ 结论范围必须随数字一起给出（本例：「描述的是工具写出来的样子，不是合规结论」）。
+- **提升层**：工作流（评测/验收工具链）+ 可复用 Skill（ Ruleset 溯源纪律）。
+
+## r626B · 声明要落成可执行属性：ARATest 的三值语义与可重放 witness（来源：arXiv 2610.30495《From Prose to Properties: Testing Research Claims with ARATest》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：每条经验性声明都蕴含一条必须对其cases成立的属性，但**只在prose里陈述**；没有显式属性，就没有测试能判定什么证据会证伪它 ⇒ 验证跟不上声明产出速度。ARATest 的做法：抽象出**property skeleton**（跨声明递归出现的参数化关系）作为声明语义的近似；typed declaration 把声明绑定到骨架并**固定比较的量/用例/作用域/数值策略**；共享 case type 强制每个生成器按声明的统计单元供给用例；**三值语义**给每个属性 `holds` / `violated` / `inconclusive` 三种裁决之一；**每个 violation 都带一个可重放 witness**；默认生成器直接读 agent-native research artifacts 里 incidental 到该声明的证据。
+- **判据**：① **声明不落成属性 ⇒ 不可验收**；把 prose 声明压成 parameterized relation 是让「结论」可被机器担保的必经一步。② **必须有第三种裁决 `inconclusive`**——二值裁决会强迫在无信息时下结论（这正是幻觉的温床）。③ **违规要带可重放 witness**：不可重放的失败不能被归类为证据。④ 在比较量/统计单元未固定前，「同一声明不同实现」根本不可比。
+- **提升层**：工作流（验收自动化）+ 可复用 Skill（声明→可测属性纪律）。

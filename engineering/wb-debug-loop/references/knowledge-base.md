@@ -2151,3 +2151,33 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 
 ### r625C · 不可持久化的对象，其创建期参数必须冻结；需要变更只能重建
 docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl 一手 200/5,958B）原文：incognito 线程没有持久化的恢复源，因此其创建时的压缩设置不能就地更改；若速度变更需要不同的上限，平台保留会话并要求恢复原速度或另起一个 incognito 会话，且「No turn is sent with mismatched settings」。判据：凡没有可恢复状态的对象，创建期参数就是不可变契约；系统必须在检测到配置不匹配时拒绝运行并交给用户选择，而不是带着一半旧一半新的设置继续——「半改」状态比「改不了」危险，因为它看起来在跑。触发词：incognito 参数冻结、创建期不可变、拒绝不匹配设置、半改状态。
+
+## r626A · 「输入过长」是永久性失败：不得进重试通道，配额/长度类错误必须与瞬时错误分账（来源：github.com/activepieces/activepieces issues #16806 正文，2026-10-26 r626A 一手 `gh api repos/{repo}/issues/16806` 实拉逐串命中 `This endpoint's maximum context length is 524300 tokens` / `CONTEXT_OVERFLOW_PATTERNS` / `USER_FAILURE` / `196/196`）
+
+- **实证（一手原文）**：`classifyAgentRunError`（`run-agent-turn.ts`）「keeps every provider 400 `internal` unless it names a retired model」，于是 context-overflow 400 被重新抛出 `EXECUTE_AGENT_RUN` → job failed → 被重试 → 告警；原文点破要害：**「though no retry can shrink the input」**。修复口径：命中 `CONTEXT_OVERFLOW_PATTERNS` 的 400（OpenRouter/OpenAI "maximum context length"、OpenAI `context_length_exceeded`、Anthropic "prompt is too long"、Google "input token count ... exceeds the maximum"）在**任何** provider（含托管 key）一律归类 `user`，run 返回 `USER_FAILURE`，但**用户仍看到 provider 原文**。测试：`it.each` 修复前 4 条失败，修复后 196/196 agent 测试通过。
+- **判据**：① **重试只对「换一次可能成功」的错误成立**；输入规模类错误（上下文溢出、载荷超限、配额耗尽）换一次也不变小 ⇒ 必须终止重试并转为「用户可见的确定性失败」。② **「Provider 报 400」不等于「我们这边该重试」**：错误分类必须按*能否自愈*而不是按*错误来自谁*。③ 降级不等于吞错：归类为 user failure 时**必须保留 provider 原始文案**，否则用户无法自查。④ 巡逻/告警必须按「确定性失败」与「瞬时失败」分桶计数，混在一桶会把容量类问题伪装成稳定性抖动。
+- **提升层**：工作流（重试编排）+ 工具（错误分类表）。
+
+## r626A · 重试准入的状态检查与置位必须合成一条条件更新（先检后置的竞态会让「重试」变成「重跑」）（来源：github.com/activepieces/activepieces issues #16707 正文，2026-10-26 r626A 一手实拉逐串命中 `FLOW_RUN_NOT_RETRYABLE` / `RETURNING id` / `SELECT ALL` 走同一路径）
+
+- **实证（一手原文）**：修复前 `POST /v1/flow-runs/:id/retry` 带 `FROM_FAILED_STEP` **不校验 run 状态就重新入队**，三种后果：① 停在 **Delay For** 的 run 跳过等待立即继续；② 停在 **Wait for Approval** 的 run 报 `Cannot read properties of null (reading 'queryParams')` 且审批链接失效；③ **已成功**的 run 被再跑一遍。触发面是 UI「Select all」——它发的是**筛选条件而非 run id**，所以会波及可见页之外的 run。修复口径：把状态检查与置 `QUEUED` 合并为**一条条件更新**（`status IN (...) ... RETURNING id`），使检查与写入**不可能竞态**；可重试集显式枚举 `FAILED/INTERNAL_ERROR/QUOTA_EXCEEDED/TIMEOUT/MEMORY_LIMIT_EXCEEDED` 外加 `QUEUED/RUNNING`（后者用于营救 stranded run）；其余（SUCCEEDED/PAUSED/CANCELED/LOG_SIZE_EXCEEDED）返回 **409 `FLOW_RUN_NOT_RETRYABLE` 且完全不动该 run**（无状态变更、无事件、无派工）；因 PGlite 驱动不报 affected rows，判定用 `RETURNING` 行数而非 `UpdateResult.affected`。
+- **判据**：① **「允许重试的状态」必须是白名单枚举，不是黑名单排除**——漏列举即静默误伤。② 检查与写入必须同一原子语句，两段式 check-then-write 在高并发下等价于没有检查。③ **批量操作的入参定义危险**：传「筛选条件」比传「显式 id 列表」覆盖面大得多，批量重试必须先按 id 逐个判准入再合并报告。④ 「被拒绝」要可区分：显式错误码 + 不改状态，比静默跳过更易排障。
+- **提升层**：工作流（重试编排）+ 工具（错误码与 WriteResult 口径）。
+
+## r626A · 每次运行的重置清单必须可核查：漏一项就等于把重试预算泄漏给下一次运行（来源：github.com/crewAIInc/crewAI issues #8542 正文，2026-10-26 r626A 一手实拉逐串命中 `_guardrail_retry_count` / `guardrail_max_retries`）
+
+- **实证（一手原文）**：`LiteAgent.kickoff` 在 `try` 顶部手写重置 `self._iterations = 0` / `self.tools_results = []` / `self._tool_failures = []`，**唯独漏了 `self._guardrail_retry_count`**（`PrivateAttr(default=0)`，每次 guardrail 失败 +1，判据 `if self._guardrail_retry_count >= self.guardrail_max_retries: raise`）。后果（原文场景：长驻服务/flow/循环复用同一 agent 实例调用 `kickoff`）：run 1 消耗（甚至耗尽）预算后计数不清零 → run 2 的**第一次** guardrail 失败即按陈旧计数判定，预算已耗尽则立刻抛「Agent's guardrail failed validation after N retries」，部分消耗则**静默地少拿到重试次数**。
+- **判据**：① **每次运行的「重置清单」必须与「状态字段清单」同源可比对**（枚举全部 per-run 字段并断言无遗漏），手写逐项赋值必漏。② **「预算类计数」属最易漏的一类**：它不像结果缓冲那样清不清零会被立刻看见，出错表现为「运气不好」。③ 复用执行体（agent/组件/handler 实例）是常态而非异常 ⇒ per-run 状态清理要从设计第一天就当作 API 的一部分。
+- **提升层**：工具（状态生命周期）+ 工作流（复用执行体的预算治理）。
+
+## r626A · 探活探针的输出预算要可配，且「空响应」不得自动升级为「连接/凭据失败」（来源：github.com/openclaw/openclaw issues #183722 正文，2026-10-26 r626A 一手实拉）
+
+- **实证（一手原文）**：`models.probe`（Control UI 控制台测试连接）把 completion 上限设为 **8 output tokens 且不可配置**；推理型模型把 8 个 token 全花在 reasoning content 上并返回 `content: null` + `finish_reason: "length"`，这段空完成被分类为 `empty_response` → 映射成通用 `unknown` → 最终以**「Connection failed — The connection check failed.」**呈现。事实是同一网关上该 provider **其他所有请求都正常**。作者点出两个独立缺陷：① 对这类模型「the check is unwinnable by construction」且预算不可配；② 「the reported cause is wrong and sends the operator to debug networking and credentials」。复现：同一网关下 `qwen3.7-plus`、`gpt-oss-20b` 均失败，Anthropic（低预算下非推理输出）通过。
+- **判据**：① **探活的输出预算必须 ≥ 让目标模型产出可见文本所需量**，且可从 UI/RPC 配置——固定极小预算等于对推理型模型恒假。② **「无响应 / 响应为空 / 不可达」必须三态分账**，把「返回了空正文」升级为「连接失败」会把排障方向整体带偏。③ 探活结论的措辞也是契约：错误归因错误比不探活更贵。
+- **提升层**：工具（连通性判定）+ 工作流（可观测与排障路径）。
+
+## r626A · 跨层重抛必须保留原始 stage 与 local origin：本地阶段失败不得伪装成上游 HTTP 状态码（来源：github.com/openclaw/openclaw issues #155627 正文，2026-10-26 r626A 一手实拉逐串命中 `WorkerTaskError: worker task timed out` / `reason=timeout` / `status=408`）
+
+- **实证（一手原文）**：本地两次 native Codex turn 在 context 准备阶段耗时 60,096 ms / 60,059 ms 后报 `worker task timed out`，随后走 model-fallback 决策 `reason=timeout`、`status=408`，最终给用户的是「openai/gpt-6-astra request failed (request timed out, HTTP 408)」。作者自我纠偏原话：**「These logs establish a local preparation failure. They do not establish that the OpenAI API returned HTTP 408.」**
+- **判据**：① **错误对象必须携带它实际发生的层/stage 与是否本地产生**，跨层重抛时不得用下游状态码覆盖上游事实。② **超时尤其危险**：不同系统的超时彼此无语义关联，滥用同一个 `timeout` 会让「本地卡住」冒充「供应商失败」。③ 误导性归因会把用户/排障流程指向没坏的东西，成本高于「原因未知」。
+- **提升层**：工具（错误语义）+ 工作流（排障路径）。

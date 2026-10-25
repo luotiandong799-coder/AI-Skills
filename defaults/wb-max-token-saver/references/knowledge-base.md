@@ -940,3 +940,21 @@ claude-code#104494：主循环先按当前消息列表判断自动压缩，然�
 
 ### r621A · 省略计数要用实际保留长度，不用配置窗口
 autogen#8328：HeadAndTailChatCompletionContext 在头部删掉一条 tool-call、尾部删掉一条 tool-result 之后，仍按配置的 head_size/tail_size 计算被省略条数；8 条消息保留 2 条却只报 Skipped 4（实际省略 6）。判据：计数类元数据一律从修剪后的实际集合算出，配置值只能做上界不能做结果。
+
+## r626B · 停止门要「测」不要「问」：ACS 用答案状态稳定性（自信且稳定）判定停点（来源：arXiv 2609.34590《The Model Knows When to Stop》，2026-10-26 r626B 一手 `export.arxiv.org/api/query?id_list=2609.34590` 实拉摘要）
+
+- **实证（摘要原文级）**：Verbalized gate（直接问模型「读够了吗」）==8.4%–45.6%== 的过早停止率；ACS（探测答案状态既 confident 且 stable）==0%–12%==（LongBench-v2 全量 + 2 个 frontier 模型；250 道 S-NIAH、两族 5 模型）。ACS **是唯一匹配或超过 full-reading 精度的停止策略**；只需输出侧生成与 token log-prob、无训练组件、跨模型跨基准共用一份配置。作者另给验收陷阱：**「Because a stopping policy can save computation simply by stopping too early, we evaluate the stopping decision itself using evidence position where available.」**
+- **判据**：① **不得用「模型自述读够了」当停止门**——自述的是「是否轻松」不是「是否已足够」，且过早停止率在两族模型间差到 45.6%。② 「省了算力」本身不能证明省得对：**必须单独评测停止决策本身**（有证据位置信息的任务要用独立口径复评）。③ 「可测量替代自述」这条通用法门：凡是需要「够了吗」的判定，优先找外部可观测状态量（答案 Excursion/稳定性）而非问主体。
+- **提升层**：工作流（长上下文预算）+ 模型层（停止策略）。
+
+## r626B · 信念预测与停止控制解耦：一份 probe 支持多档价格（来源：arXiv 2610.30450《Same Beliefs, Different Policies (BELT)》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：把「当前/未来答案的信念」从冻结 LLM 隐状态里学出来，** fit 线性停止策略**；因预测目标与 token 价格无关，同一份 probe 可通过 CPU 策略 refit 或阈值调整覆盖不同精度-成本权衡。OOD 数学基准 5 项平均减生成 token ==41%（Qwen3-1.7B）== / ==51%（OLMo-3-7B-Think）== 且不损精度；数学训练的 probe **迁移到 coding 与 agentic 任务无需再训练**；探针比最强基线 OS-Pruner 的一个 checkpoint 少 ==21.2x== 参数、训练 GPU-hours 少 ==55x==（OS-Pruner 需 5 个价格专用 checkpoint）。
+- **判据**：① **停止/预算策略的目标量要与「价格」解耦**，否则每次改预算都要重train，策略无法被预算层复用。② 迁移性要作为停止器的选型指标之一（数学→coding→agentic）。③ 「策略本体很轻」（线性/探针）比「端到端控制器」更适合被放进 agent 系统的预算层。
+- **提升层**：工作流（预算/停止层）+ 工具（控制器选型）。
+
+## r626B · 自进化循环需要 anytime-valid 停止门 + 变点回选早期产物（来源：arXiv 2610.04756《When Is Enough Enough in Self-Evolving LLM Systems?》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：自进化系统通常在**预设迭代/算力预算**下跑，没有「何时不必再进化」的判据，导致两害：饱和后继续烧算力；以及**返回过拟合/钻营评测信号的后期产物**。解法双问——何时停：把停止formulate为在线序贯检验，用自进化系统**already产生的 per-item paired评测结果**构造 anytime-valid restart detector；停后输出什么：作为变点估计问题，用估计出的迁移点**回选更早的产物**。plug-and-play、不改底层算法。数字（原文例子）：SearchQA + SkillOpt + DeepSeek V4 Flash，**在 round 4 停而非满预算 40，token 用量 -91.6%，unseen-test 精度 82.43% vs 82.00%**。
+- **判据**：① **迭代预算不是停止判据**——「跑满 N 轮」与「第 N 轮最好」都不成立；要用现有配对评测结果做序贯检验。② **最后一份产物并不最优**：过度迭代会去适配评测信号，停点应配合「回选变点前的早期产物」。③ 这套物品可直接复用于本仓的「多轮学习/自进化/迭代改写」类任务：-91.6% token 且不损精度是极硬的收益实证。
+- **提升层**：工作流（自进化/迭代循环治理）+ 可复用 Skill（停止判据）。

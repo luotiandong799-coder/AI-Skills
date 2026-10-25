@@ -4365,3 +4365,28 @@ langgenius/dify#44739（2026-10-25 一手实拉）：`SkillManagementService.lis
 
 ### r625A · schema 缺 type 键时应按结构键推断，而不是降级为 Any
 crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `items` 无 `type: array`）时静默降级为 `Any`，污染展示给模型的 schema。判据：JSON Schema 不强求 `type`，但 `items` 只可能描述数组、`properties` 只可能描述对象——缺类型时的正确处理是**按结构键推断**，把「未知」降级成 `Any` 等于放宽到最弱约束，把一次可诊断的缺失变成一次静默的能力扩张。触发词：schema 缺 type、items/properties 推断、降级为 Any、工具 schema 污染。
+
+## r626B · 过期指令文件会压过代码：一句「既有代码优先」把跟随率从 4.2% 提到 91.4%（来源：arXiv 2610.30571《Stale Instruction Files Override the Code in Coding Agents: A One-Sentence Fix》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级，40 个 Python 项目 / Claude Code 与 Codex CLI / 320 runs）**：指令文件（CLAUDE.md / AGENTS.md）要求一种约定而既有代码用另一种（例：要 logging 而代码用 print）。**不加那句话时，agent 的选择有 ==90.1%== 跟随过期文件**；且 Claude Code 在 **79/80** 次运行中**主动指出了冲突却仍然照文件办**；Codex CLI 在 **20/80** 次运行里**改写既有代码去适配文件**，其中 **17 次项目自身测试随即失败**。在用户级指令文件里加一句赋予既有代码优先权后：**跟随代码的选择占比从 4.2% 升到 91.4%**，改写停止，**测试通过率 89.4% → 100%**。
+- **判据**：① **指令文件与仓库实际冲突时，默认赢家是「文字」而非「事实」**——且「指出冲突」完全不足以纠偏（79/80 指出仍照做）⇒ 纪律不能只写「发现冲突要报告」，必须写**谁优先**。② 这类冲突的破坏性是二阶的：agent 会去把**对的代码改成错的**来迎合过期文档（20/80），并使项目测试失败（17/20）。③ **一条显式的优先级句子是可测量的治理手段**（+87.2pp、测试 +10.6pp），应作为默认写在指令文件里，而不是靠临时判断。
+- **提升层**：可复用 Skill（指令文件编写纪律）+ 工作流（agent 编码执行约定）。
+- **对本仓的直采动作**：所有 `*指令/AGENTS/SKILL` 类入口文件应显式声明「与既有代码冲突时以既有代码为准，并先修文档」，并把它作为「先增不改」的硬约束记入 §落地硬纪律段。
+
+## r626B · 池化「工具使用样例」会伤害未见工具：必须独立成字段打分（来源：arXiv 2610.30867《Separate Field Scoring Protects Unused Tools When Agents Pool Tool-Use Experience (SYNAPSE)》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：把「哪些工具适配哪些请求」的使用样例集中汇总进共享索引后，对**held-out 工具**（无任何 agent 用过）与其余工具分报：给已用工具在索引里加若干条 usage 条目会提升这些工具的 Hit@5，同时**大幅压低 held-out 工具的 Hit@5**（三个目录中的两个 + 两种 embedder 均成立）。对照实验：给已用工具同样条数、同样长度但填的是**别的工具文本**的条目，held-out Hit@5 掉得差不多，却拿不到那些增益 ⇒ 伤害来自「条目数量/占位」本身而非语义。SYNAPSE 把 usage 作为**独立字段打分**后：StableToolBench 上 held-out 金标工具进 top5 的比例 **0.785 vs 预留槽位 router 的 0.683**，且三个目录、两种 embedder 下优势保持；把 usage 换成别的工具文本后保护仍在，给「有用例的工具」加常数偏移也得到近似结果。
+- **判据**：① **增益来自"你用过的工具更容易被找到"，代价是"没用过的工具再也找不到"**——只要统计工具/技能的选用，就必须分报 held-out 面，否则「平均提升」掩盖了对新工具的封杀。② **挤占效应可以通过「takingothesis/占位」复现**（用别的工具文本也能造成同等伤害）⇒ 这是结构性机制不是偶然。③ 修法：把使用经验放到**独立字段/独立信号**里打分，不要混进主检索 embedding。
+- **提升层**：可复用 Skill（技能/工具检索索引设计）+ 工作流（经验回流纪律）。
+
+## r626B · 技能库的效用必须「实验测」而非「相关性记」：TrackRL 的组内随机对照 + utility/mastery 二分（来源：arXiv 2610.25126《Trackable Skill Library Lifecycle Management for Agentic Reinforcement Learning》，2026-10-26 r626B 一手实拉摘要）
+
+- **实证（摘要原文级）**：既有技能库失败于识别单个技能的真实贡献，三个原因原文点名：**co-retrieved skills 之间的 free-riding**、**任务难度混淆（difficulty confounding）**、**缺乏技能级反事实证据**。TrackRL 的做法：在每个 GRPO group 内把 grouped sampling **转成在线随机对照实验**——**独立随机注入 + 同一任务上的组内对比**来隔离单技能贡献，再按可靠性加权跨 group 累积证据；随之持续跟踪两个量：**skill utility**（作为外部脚手架的因果贡献）与 **model mastery**（该能力已被内化的程度）；生命周期被 formulate 为**证据门控状态转移**：generation → admission → **protected incubation（受保护孵化期）** → retention / retirement / removal，配一个软容量上限控制库膨胀。
+- **判据**：① **「有用 +ncies」不能靠结果相关性记账**——多技能共检索时的 free-riding 与任务难度混淆必然污染归因；可行的最小代价解法是**同任务组内随机注入对照**。② **退役判据必须是二分的**：一方面技能仍作为脚手架有价值（utility），另一方面能力可能已被模型内化（mastery）——**同一个增益可能来自后者**，误把它们当一个量会把「学会的」误判为「技能好」。③ **新技能需先进 protected incubation 再进保留/退役/移除决策**，否则样本不足就被早期噪声判死。④ 库需要软容量上限——无序增长会把后续 retriever 的机会成本转嫁给全局。
+- **提升层**：可复用 Skill（技能库生命周期治理）+ 工作流（晋升/退役的证据门槛）。
+
+## r626C · 评估器每层要显式声明「默认方向 + 翻转开关 + 证据缺失态」；缺证据必须占非零退出码（来源：NVIDIA/SkillEvaluator `raw.githubusercontent.com/NVIDIA/SkillEvaluator/main/README.md` 9,617B，2026-10-26 r626C 一手实拉，恕标签 href：`Agent Skills specification` = agentskills.io、`arXiv-2608.20614`、NVIDIA Verified Skills pipeline）
+
+- **实证（一手原文级）**：Tier 分档的**门 vs 建议并非全局常量，而是每层自带默认 + 覆盖开关**——Tier 1 恒为 gate；Tier 2 默认 gate、可用 `--no-block-on-dedup` 降为 advisory；Tier 3 默认 advisory、可用 `--block-on-agent-eval` 升为 gate。**缺 scanner 证据报 `INCOMPLETE` 且非零退出**；`--no-llm` **只关模型阶段、不豁免 Scanner**。另核实威望：该工具明确接入 [Agent Skills specification](https://agentskills.io/) 并作为 NVIDIA Verified Skills pipeline 的一环，论文 arXiv:2608.20614。
+- **判据**：① **评估器每层的「默认方向 + 翻转开关 + 证据缺失态」必须三项同列**，只写「是否是门槛」会在CI里被任何一方悄悄改写语义。② **证据缺失不是通过**：`INCOMPLETE` 必须占非零退出码并单独记账——否则「跑不到」会被算作「没发现」。③ **开关的作用面要写明边界**（如 `--no-llm` 只影响模型阶段），避免「关掉一个东西」被误解成「豁免一整块」。
+- **提升层**：工作流（评测门禁）+ 工具（退出码契约）。
