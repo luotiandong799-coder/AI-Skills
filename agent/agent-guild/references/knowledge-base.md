@@ -974,3 +974,10 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 - **判据**：① **长程运行的核心困难不是执行而是「事后理解」**：委托人回来时要评估自己没看着做的工作 ⇒ 可审计性要按「事后理解」设计，不是按「过程监控」设计。② **三个层次必须连通：目标—决策—产物**：只看产物无法判断决策是否服务于目标；只看决策无法定位产物从哪来 ⇒ 缺任何一层都无法回答「这个结果是不是我要的」。③ **轨迹树要渲染「选了什么 + 放弃了什么」**：分支结构展示被放弃的路径 ⇒ 只看最终路径会让人无法判断这个选择是否经过考虑。④ **同一产物要提供多种投影（本例六种）**：不同复核目的需要不同视图 ⇒ 单一线性日志不足以做判断。⑤ **收益要量「主观工作量」**：Atlas 显著降低主观工作量 ⇒ 可理解性的收益指标是复核成本，不是信息量。
 - **提升层**：工作流（长程运行的可审计表征）。
 - **触发词**：事后理解、三层表征、轨迹树、放弃了什么、主观工作量。
+
+
+## r628A · 自动演化的档位迁移不得静默降级
+- **来源**：`openclaw/openclaw#181747`（一手：`Since #161057, background learning either changes skills on its own (auto) or does nothing (off). Users who reviewed proposals before they applied lost that workflow, and Doctor silently switched their propose config to off` / propose 模式下后台评审保存为 drafts 待人审）
+- **判据**：① **自我演化的档位必须显式三档**（auto 直接改、propose 存草稿待人审、off 不动），要么全自动要么全关会逼用户放弃审核；② **配置迁移遇到已废弃档位要告知并落到最近等价档**，Doctor 静默改成 off 等于把想审核的人变成没有学习的人；③ **后台学习的产物要可评审**（drafts 形态），否则无人能对其负责。
+- **提升层**：工作流（自动演化治理）/ 可复用 Skill（配置迁移）。
+- **触发词**：propose 模式、Doctor 静默降级、background learning drafts、三档演化。

@@ -4426,3 +4426,22 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - **判据**：① **最常见的混淆是把技能写成工具**：技能 = 注入指令与上下文（改变 agent 的思考方式），工具 = 可调用动作 ⇒ 混写的结果是技能里塞一堆「调用某某函数」，既丢了指令价值又复制了工具逻辑。② **加载模型是两段式：先只有 name + description 常驻，命中后才加载正文** ⇒ 描述的职责是**让正确的技能被选中**，正文的职责是**把事说清楚**；把正文的细则挤进描述会同时损害两端。③ **目录结构是可约定的最小集合**：`SKILL.md`（必需）+ `references/`（可选参考）+ `scripts/`（可选可执行）+ `assets/`（可选静态）⇒ 「可选」的部分是渐进披露的手段，不是装饰。④ **用 CLI 脚手架起步而不是手写**：`crewai create skill <name>` 生成合法目录与 `SKILL.md` ⇒ 结构合法性应当机检/脚手架保证，不靠记忆。⑤ 与 sa 同批 anthropics/skills#2051/#2054 分工：那两条管**多技能命中时的消歧与可观测**，本条管**技能与工具的职责分界**。
 - **提升层**：可复用 Skill（技能 vs 工具的职责分界 + 两段式加载）。
 - **触发词**：技能不是工具、how to think、两段式加载、SKILL.md 目录结构、脚手架起步。
+
+
+## r628A · 检索/匹配入口必须把用户输入按字面量转义后再拼进匹配器，否则 % 与 _ 直接变成通配符造成静默错配
+- **来源**：`langgenius/dify#44756` + `#44738`（2026-10-26 r628A 一手 `gh api` 200 逐串命中 `escape LIKE wildcards in skill list keyword search` / `search keywords containing %, _ or trailing backslashes were interpolated directly into f"%{keyword}%" without escaping and passed to ilike(...) without an escape clause` / `searching 100% matched all items containing 100, and searching my_key matched my key`）
+- **判据**：① **用户查询是字面量，不是模式**：技能名/片段名检索这类「用户串 → 匹配器」的入口，拼接前必须过 `escape_like_pattern` 之类显式转义，靠「用户输入不会带百分号」的假设等于把语义交给用户；② **同一漏洞两个服务各修一遍**（`SkillManagementService.list_skills` 与 `SnippetService.get_snippets`）说明这类写法是复制扩散的，修一处要顺手全库搜同类拼接；③ **尾部反斜杠单独算一种**：转义符本身也被 SQL 解释，只处理 % 与 _ 仍会漏。
+- **提升层**：工具（检索入口）/ 可复用 Skill（技能发现面）。
+- **触发词**：LIKE 通配符转义、escape_like_pattern、100% 命中所有、my_key 命中 my key、模式注入。
+
+## r628A · 枚举发现面必须「先收全、后过滤」：白名单点名也救不了只取首页
+- **来源**：`run-llama/llama_index#23715` + `#23714`（一手：`MCP servers can paginate tools/list, but LlamaIndex currently exposes only the first page` / `A tool on a later page is missing from the agent even when explicitly named in allowed_tools` / 修复 `Collect all pages in the same session before filtering` / `Preserve tool order and the first result's metadata without modifying server responses`）
+- **判据**：① **过滤必须在全量之后**：先按白名单或关键词裁一遍再去翻页，等价于把没翻到的页直接判为不存在；② **“显式点名”不能证明“确实装上了”**——点名的工具仍可能因分页缺失，交付前要回读实际暴露的工具清单；③ **同一会话内收全**：跨会话拼页会引入中途变更，工具顺序与首页元数据要原样保留。
+- **提升层**：工具（能力发现）/ 可复用 Skill（工具面完整性）。
+- **触发词**：nextCursor、发现只取首页、allowed_tools 点名仍缺失、先收全后过滤。
+
+## r628C · 工具清单的发现策略要有可度量的切换阈值，且服务端通知的失效优先级高于 TTL
+- **来源**：`modelcontextprotocol.io/docs/2026-07-28/develop/clients/client-best-practices.md`（2026-10-26 r628C 一手 200/19,463B 逐串命中 `Once the tool definitions take up a significant part of the available context window, clients should switch to progressive discovery. We recommend that clients implement thresholds to determine when to switch` / `treat a cached list as stale once a list_changed notification arrives, even before its TTL`）
+- **判据**：① **渐进发现要有阈值而不靠感觉**：工具定义占了多少上下文必须量化成可判定的门槛，否则切换时机随会话漂移；② **缓存失效有两个来源，通知优先**：TTL 是兜底，`list_changed` 到达即刻判陈旧——只认 TTL 会在服务端已变更后继续用旧清单；③ 与 `skills-security-check` 的「按角色作用域渐进交付能力」分工：那条管交付面按权限收窄，本条管发现时机与失效信号。
+- **提升层**：工具（发现面缓存）/ 可复用 Skill（技能加载策略）。
+- **触发词**：progressive discovery 阈值、list_changed 先于 TTL、工具定义占上下文。

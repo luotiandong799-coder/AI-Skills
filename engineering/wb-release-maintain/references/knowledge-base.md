@@ -900,3 +900,40 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **判据**：① **稀缺性发生了转移**：产出代码不再是瓶颈，**「这次到底对不对、是不是真需要」才是每一轮迭代的约束** ⇒ 流程设计的重心要从「怎么生成更快」移到「怎么判定更可靠」。② **穿过测试套件的缺陷集中在被 mock 的边界**：浏览器与 LLM API 这两个边界被 mock，真实使用才出问题 ⇒ 覆盖率数字高不等于边界被覆盖；被 mock 的接缝是缺陷的富集区。③ **本地测试通过 ≠ 真实环境可用**：部署暴露了本地测试没覆盖的假设 ⇒ 真实环境验证是独立的一道，不能由本地测试代理。④ **过程检查点如果不强制，跨多步的 agent 会绕过它** ⇒ 检查点必须做成**可执行、不可绕过的门**（enforceable gate），而不是文档里的步骤。⑤ **有利条件也不能消除这一约束**：本例开发者同时是最终用户与领域专家（评估成本最低的情形），评估仍然是瓶颈 ⇒ 在需要他人或专业知识才能评估的场景只会更紧。
 - **提升层**：工作流（强制门 + 边界接缝验证 + 真实环境验证）。
 - **触发词**：评估成为瓶颈、被 mock 边界的缺陷、真实环境才暴露、检查点做成强制门、gated 可追溯流程。
+
+
+## r628A · 组件升级与重发布必须传完整上下文，且每个自持状态的组件要单独声明迁移
+- **来源**：`activepieces/activepieces#16695` + `#16719` + `#16543`（一手：`When a piece is upgraded in a running flow and the flow is republished, the trigger's hooks run with context.isRepublish = true` / `Most pieces passed a hand-picked { auth, store, propsValue }, which drops isRepublish, so the checkpoint was reset and events from that gap were lost` / `36 pieces also keep their own saved state (seen-id lists, snapshots, cursors, pagination bookmarks)`）
+- **判据**：① **手挑字段传参等于静默丢标志位**：只传下游看起来要用的字段，会把 `isRepublish` 这类控制标志吃掉，表现为升级窗口内事件丢失而不是报错；② **升级路径要清点谁自己存了状态**：helper 保留的 lastPoll/lastItem 只是一半，各 piece 自存的 seen-id、快照、游标、分页书签要在 onDisable/onEnable 钩子里显式保留；③ **先修依赖再修本体**：本批要求先合 #16543（把 isRepublish 传给 onDisable），否则守卫是空操作——迁移类修复要按依赖顺序落地。
+- **提升层**：工作流（升级与重发布）/ 工具（状态迁移）。
+- **触发词**：isRepublish、手挑上下文丢标志、重发布检查点重置、36 pieces 自持状态。
+
+## r628A · 版本迁移入口要提供 latest 与精确两档，并对非目标类型显式拒绝
+- **来源**：`activepieces/activepieces#14830`（一手：给 `ap_update_step` 加可选 `pieceVersion`——`latest` 解析为最新可用版本 / 精确版本 validated against the piece registry，不存在给友好错误并以 `~1.2.3` 形式 pin / `non-PIECE step — rejected with a clear message` / 设定版本后现有 update path 会 re-validate the step against the new action schema）
+- **判据**：① **取值域要封闭**：迁移入口只接受 latest 或合法版本号，其它一律明确报错——静默无操作比报错更贵；② **改版本后必须重新校验**：新版本的 action schema 可能与旧步骤不兼容，落版本不等于落兼容；③ **拒绝要带类型和原因**，让调用方能自行纠正而不是盲目重试。
+- **提升层**：工具（迁移接口）/ 工作流（版本治理）。
+- **触发词**：pieceVersion、latest 解析、非 PIECE 拒绝、改版本后 re-validate。
+
+## r628A · 「省略」与「显式设为默认值」必须可区分，否则重部署会静默复活已暂停的调度
+- **来源**：`PrefectHQ/prefect#23095`（一手：`Redeploying a deployment whose schedule was paused (and has no slug) silently re-activates the schedule` / `The client always sent active: True — the schedule factories defaulted active to True, so the server could not tell "user omitted active" from "user explicitly set active=True"` / 修复用内部 `_UNSET` 哨兵作默认值，并用 `_active_provided` 记录调用方是否显式传值）
+- **判据**：① **默认值不等于未设置**：配置对象要用三态（未设置、显式默认、显式其他），否则重部署这条路径会把运行期状态悄悄重置；② **客户端不能替用户补参数**：客户端总是发 active: True 看起来无害，实际抹掉了用户意图；③ **重部署的默认语义是不改变既有运行态**，需要改变时必须由调用方显式说出。
+- **提升层**：工具（配置三态）/ 工作流（重部署语义）。
+- **触发词**：_UNSET 哨兵、_active_provided、重部署复活暂停调度、省略不等于默认。
+
+## r628B · 复用既有保证证据的两个有效性条件，以及 fail-closed 发布门
+- **来源**：arXiv `2610.27672`「Reusing Assurance Evidence in AI Pipelines」（2026-10-26 r628B 一手 export API 摘要逐串命中 `Reuse is safe only if each control's declared dependencies cover everything that can change its outcome, and only if the release gate checks that reused evidence describes the candidate being released` / `A reference gate implementing these checks with Ed25519 digital signatures blocks eight of nine manipulation scenarios, against one for a gate that trusts the planner and three for a gate that only verifies signatures`）
+- **判据**：① **依赖声明必须覆盖所有能改变结果的输入**：少声明一个依赖，复用就是无依据的；② **复用的证据必须绑定到本次要发布的候选身份**，否则拿别的版本的结论放行这一版就成立；③ **门必须 fail-closed**：证据缺失或不匹配时阻断而非放行；④ **强度排序要实测**：信任 planner 的门拦 1 个、只验签拦 3 个、验签加依赖加候选身份拦 8 个（共 9 场景），只做签名校验远不够。
+- **提升层**：工作流（发布门）/ 可复用 Skill（证据治理）。
+- **触发词**：reuse validity conditions、fail-closed 门、Ed25519 证据、候选身份绑定。
+
+## r628C · 协议版本按请求声明，不支持时回带支持列表，弃用必须留下迁移路径
+- **来源**：`modelcontextprotocol.io/docs/2026-07-28/learn/versioning.md`（2026-10-26 r628C 一手 200/3,512B 逐串命中 `Every request declares the protocol version it is using via the MCP-Protocol-Version header` / 服务端不支持时 responds with an `UnsupportedProtocolVersionError` listing the versions it does support，客户端据此 retry / `Deprecated features document a migration path (or state that none is required)` / 另有 deprecated features registry）
+- **判据**：① **版本协商不能只在握手期做一次**：每个请求都声明，才能支持两端多版本共存与逐步迁移；② **错误响应要携带可行动信息**：返回不支持却不列出支持列表，等于让调用方猜；③ **弃用不等于删除**：必须有迁移路径（或显式声明无需迁移）并进弃用注册表，否则下游无法排期。
+- **提升层**：工具（协议兼容）/ 工作流（弃用治理）。
+- **触发词**：MCP-Protocol-Version、UnsupportedProtocolVersionError、deprecated registry、弃用迁移路径。
+
+## r628C · 迁移说明必须单列「哪些状态找不回来」
+- **来源**：`docs.openclaw.ai/channels/matrix-migration`（2026-10-26 r628C 一手 200/270,666B 逐串命中 `Credential-file import is Doctor-only; runtime reads only the current SQLite credential state` / `If your old installation had local-only encrypted history that was never backed up, some older encrypted messages may remain unreadable after the upgrade regardless of the migration path` / `including the older version's final-save limitation`）
+- **判据**：① **迁移文档除成功路径外必须有不可恢复面章节**，并写清触发该面的前置条件（本地仅存、从未备份、旧版本 final-save 限制）；② **无论走哪条迁移路径都不可读这类结论要直说**，否则用户会在已不可挽回的状态上反复重试；③ **导入通道要分权限**：某些导入只由修复工具 Doctor 执行、运行时只读当前状态，把两者写混会让用户以为运行时也会兜底。
+- **提升层**：工作流（迁移说明）/ 工具（升级路径）。
+- **触发词**：不可恢复面、local-only encrypted history、Doctor-only import、final-save limitation。

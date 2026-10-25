@@ -486,3 +486,28 @@ arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety wit
 - **判据**：① **只改 persona 的表示方式（不改内容）就能让合作率变动 75.2pp** ⇒ 敏感性不在「说了什么」而在「怎么说」，这类实现层扰动通常不写进方法章节，却是结论的主要方差来源。② **多体交互会重塑敏感性（放大或衰减，取决于模型与扰动类型）** ⇒ **单体上测出的稳健性不能外推到多体**，本地敏感性在传播中会被改写。③ **结论的适用范围必须由审计结果来定**：TRAILS + Simulation Audit Card 的作用是**把「这个结论在哪些配置下成立」写进产出**，而不是给一个无条件数字。④ **扰动要覆盖表示层与设计层两类**（不只换模型）⇒ 只换模型会漏掉最大的那一类。⑤ 与 ae 既有「评估设计族」条目互补：那条管**评测本身的设计**，本条管**基于仿真的结论需要多配置审计才能发布**。
 - **提升层**：评测（仿真鲁棒性审计 + 声明范围校准）。
 - **触发词**：蝴蝶效应、persona 表示敏感性、单体稳健不外推多体、鲁棒性审计卡、声明范围。
+
+
+## r628B · 评估器先行的自我演化：轮内冻结、轮间反事实修订
+- **来源**：arXiv `2610.29005`「VeriEvolve」（一手摘要逐串命中 `A central obstacle to self-improving agents is the absence of a reliable fitness signal for realistic stateful tasks` / `constructs this missing evaluation layer before optimizing the agent` / `synthesizes instruction-grounded challenge states and an executable evaluator` / `During each round of workflow evolution, the evaluator is frozen and serves as the fitness signal` / `Between rounds, revises the evaluator by converting the end states of strong and weak runs into a pair of counterfactual test cases` / 30 个 MCPMark Filesystem 任务 → 30 evaluators、141 challenge states、生成集 141/141 一致、held-out 113/122）
+- **判据**：① **先造判分器再优化**：没有可靠适应度信号时的自我改进是在噪声里爬山；② **同一轮内评估器必须冻结**，否则分数上升可能来自评估器变松；③ **轮间用强与弱 run 的终态做反事实对**修订评估器——这是把谁跑得好转成哪一步决定成败的具体做法；④ **一致性要分两档报**（生成集与 held-out），只报前者等于没留出集。
+- **提升层**：评测（适应度信号）/ 工作流（演化循环）。
+- **触发词**：evaluator-first、轮内冻结评估器、counterfactual test cases、held-out 一致率。
+
+## r628B · 规范-Oracle 缺口：通过条件必须可从任务描述推导
+- **来源**：arXiv `2610.30635`「What the Specification Did Not Say」（一手摘要逐串命中 `Passing those tests can require information the description never stated: a constant's name, a module path, an exact message` / 五语言静态审计分类每个被评分测试的 name、path、literal 依赖，`held-out precision 89.2%, recall 92.9%` / `Build units with such a dependency fail in 80.6% of runs, against 48.4% for comparable units without`）
+- **判据**：① **评测项的所有通过条件必须可从任务描述推导**，否则分数里混进了能否猜中上游实现细节；② **后果可量化**：含未说明依赖的构建单元失败率 80.6% 对 48.4%，差距不是噪声；③ **依赖链会叠加不一致**，多任务串联时前序的未声明依赖会污染后续评分；④ **可用静态审计预先体检**（P 89.2、R 92.9），不必等跑分。
+- **提升层**：评测设计（基准有效性）。
+- **触发词**：specification-oracle gap、未声明的名字与路径依赖、80.6% 对 48.4%、静态体检。
+
+## r628B · 稳定性得分以获得先前的充分性为前提，且不与充分性合并
+- **来源**：arXiv `2610.31012`「Evaluating Artificial Wisdom」（一手摘要逐串命中 `seven stage-level criteria assess judgment under current conditions, while two transition components assess material-update adequacy and commitment-preserving stability` / `Stability requires prior adequacy; switching within registered commitment classes is permitted, and persistent error earns no stability credit` / `A nine-component profile is primary, with a secondary bottleneck score and separate critical-failure reporting`）
+- **判据**：① **复合指标不能让始终错误拿稳定性分**：先充分才谈稳定，否则稳定变成对错误的固化；② **注册过的承诺类内切换不算失稳**，要区分改口与在允许范围内调整；③ **关键失败必须单独上报**，被九分量画像均摊后不可见；④ **参考规范要先版本化**并先行确定可接受响应与变更实质性，再开始评测。
+- **提升层**：评测设计（指标合成）。
+- **触发词**：stability requires prior adequacy、persistent error 无稳定性分、关键失败单独报、九分量画像。
+
+## r628B · RAG 配置评测走非侵入旁路加受控消融
+- **来源**：arXiv `2610.27816`「RAG-NIMBF」（一手摘要逐串命中 `attaches to existing RAG pipelines as a non-invasive evaluation layer` / `evaluates the configuration space through controlled ablation with end-to-end experiment tracking` / 度量组合 = LLM 答案质量 + 检索正确性 + 运行时指标）
+- **判据**：① **配置空间的结论必须来自受控消融**（每次只动一个维度），整体前后对比无法归因；② **评测层挂旁路不改被测系统**，改了就不是同一个系统；③ **三类度量要并列**：只报答案质量会把检索错了但生成蒙对记成成功。
+- **提升层**：评测（配置归因）/ 工作流（实验追踪）。
+- **触发词**：non-invasive evaluation layer、controlled ablation、配置空间归因、三类度量并列。

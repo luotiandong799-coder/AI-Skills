@@ -1129,3 +1129,10 @@ spec 的步骤约束不要落在两个极端：**代码写死流程**（控制�
 - **实证（摘要原文级）**：成对 determinable–undeterminable 受控基准：给任一侧额外加 1 个 **decision-relevant factor** 但**不改变其可判定性**，模型会更倾向把被加的那一侧判为可判定，且**该偏误不随 reasoning effort 增加而消退**；对照条件下加 irrelevant text 抑制选择的效应，**reasoning 能大幅降低**（⇒ 与 context-length 效应是可分离的两个失效源）。原文口径：判断可判定性应看「missing information could **change the conclusion**」，而非可用信息量的多少。
 - **判据**：① **信息获取/收敛的唯一判据是「缺失信息能否改变结论」**；「已收集了多少相关因子」不但不等价，还会主动误导模型。② **加推理算力对本偏误无效** ⇒ 不能靠「多想一会儿」补偿；必须用外部 check（缺失项能否翻盘）。③ 「相关度」与「决定性」分账：相关但翻不了结论的信息，收集即浪费。
 - **提升层**：模型层（可判定性判断）+ 工作流（提问/收敛门）。
+
+
+## r628B · 个性化应改编排层而不是换运行时：编排可变、运行时复用
+- **来源**：arXiv `2610.27977`「LiveUIBench: Evaluating Agent as App Workflows」（一手摘要逐串命中 `Personalizing applications produced by agent-to-app or UI-to-code approaches can require changes to the generated implementation` / `A shared agent runtime renders and updates the interface while carrying out the requested operations` / `Revising the orchestration and interface while reusing that runtime provides a lightweight [path]`）
+- **判据**：① **把可变部分收在编排、稳定部分收在运行时**：需求变化改编排即可，不必重建运行时；② **生成实现与持续供给行为是两种形态**，后者要在运行期继续响应，设计时不能按一次性产物做；③ **同一应用对不同用户的需求可能冲突**，个性化要落在可替换的编排层而不是唯一的运行时。
+- **提升层**：工作流（编排与运行时分离）/ 工具（个性化路径）。
+- **触发词**：Agent as App、shared agent runtime、编排可变运行时复用、个性化改编排。

@@ -4416,3 +4416,28 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **判据**：① **给标准格式加「自定义字段」的代价是下游全部要特判**：`enumNames` 不在 JSON Schema 里 ⇒ 通用校验器不认、跨实现要各自解释，契约从「可验证」退化成「可读」。② **多选与单选是两种不同的语义，必须在模式里区分**（checkbox vs radio）⇒ 只支持单选时，调用方要么拆成多次调用，要么放弃多选，两种都是把语义损失转嫁给用户。③ **修法要同时给「标准合规写法」和「迁移路径」**：本例给出标准模式写法并同步更新 TS/Python SDK 与客户端实现 ⇒ 只宣布废弃而不给替代，等于把所有下游晾在半路。④ **契约的「附加信息」应走标准允许的位置**（如 `title`、`oneOf` + `const` 组合）⇒ 想加人类可读标签不是没有标准做法，只是要多写一点。
 - **提升层**：验证（契约标准合规 + 多选语义）。
 - **触发词**：enumNames 非标准、枚举多选、checkbox vs radio、契约自定义字段污染。
+
+
+## r628A · 事件必须晚于状态提交发布，否则订阅者读到的是中间态
+- **来源**：`PrefectHQ/prefect#23588`（一手：`my subscriber got the Suspended event, immediately read the run, and saw Running. The event beat the commit` / `after_transition emits through PrefectServerEventsClient while the state-writing transaction is still open` / `a subscriber that reacts right away reads pre-commit state`）
+- **判据**：① **通知的发出时点必须晚于状态对外可见的时点**：事务未提交就发事件，收到事件立刻查询这个标准模式会系统性读到旧值；② **事件驱动的下游不能靠再等一会兜底**，要把顺序保证做进发布方；③ **这类缺陷只在有并发订阅者时出现**，单测很容易漏——回归要带一个立即回读的订阅者。
+- **提升层**：工作流（事件时序）/ 工具（可观测性）。
+- **触发词**：event beat the commit、事务内发事件、订阅者读到旧状态、发布后于提交。
+
+## r628A · 结构化输出 schema 生成器的两处静默失效面
+- **来源**：`browser-use/browser-use#6209` + `microsoft/autogen#8248`（一手：① `SchemaOptimizer.create_optimized_json_schema` 对位于名为 required 的字段下的嵌套模型不置 strict，其可选属性未进 required 数组 ⇒ `Any output model (or action param model) with such a field fails on every call`；② `optional tool args like country: Optional[str] = None come out of BaseTool.schema without a top-level type, just anyOf` ⇒ `Some providers (Gemini) reject the declaration because a property has no type field`）
+- **判据**：① **属性名与协议保留键同名是真实冲突**：required 既是 JSON Schema 关键字又能是业务字段名，生成器必须按我在生成 schema 的上下文把字段路径与关键字分开处理；② **单非 null 分支要把 type 提升到顶层**，只给 anyOf 会让严格 provider 直接拒绝；③ **共同特征是 schema 看起来合法、调用时必失败**——验收必须真发一次调用，不能只做 schema 解析。
+- **提升层**：工具（结构化输出契约）。
+- **触发词**：嵌套在 required 字段下、Optional 缺顶层 type、strict mode 每次失败、schema 生成冲突。
+
+## r628A · 流式分块必须逐字符保真，且与最终值可对账
+- **来源**：`microsoft/autogen#8380`（一手：`create_stream() currently splits a stored string on whitespace and inserts single spaces between tokens`，重放一段带换行的代码得到压平的一行，而 `CreateResult.content` 仍是原始的 / 修复覆盖 `ordinary text, repeated and surrounding spaces, indented code, CRLF, tabs, non-breaking spaces`）
+- **判据**：① **分块拼接必须可逆**：按空白切分再插单空格，会吞掉缩进、换行、制表与不间断空格；② **流式视图与终值必须能对账**：两者不一致时，用流做增量处理的下游拿到的是另一份数据；③ **回归用例要覆盖不可见字符**（CRLF、Tab、NBSP），只测普通文本测不出来。
+- **提升层**：工具（流式契约）/ 工作流（回放一致性）。
+- **触发词**：stream 重放丢缩进、非间断空格、流与终值对账、逐字符保真。
+
+## r628B · 变更要带与之对应的验证证据：build-verify 配对度量
+- **来源**：arXiv `2610.29143`「VeeReview」（一手摘要逐串命中 `Reviewing a pull request requires verification evidence that addresses the proposed change` / `Coding agent benchmarks and studies of pull request outcomes do not directly assess this relationship` / 四类 build and verify pairs，三类由确定性信号约束的模型判断，Module Design-Unit Test 由 diff 与仓库树的规则判定 / 1,454 对 agent 与 human PR，来自 741 个仓库）
+- **判据**：① **验收按构建物与验证物配对检查**，只统计 build-only 率会把改了但没验当成合格；② **模型判断要用确定性信号约束**（仓库信号加规则），纯模型判断不可复算；③ **agent 与 human 的对比要同仓库配对**，否则差异来自项目而非作者。
+- **提升层**：工作流（验收证据）/ 评测（证据充分性）。
+- **触发词**：V-Model build-verify pairs、build-only 率、验证证据与变更对应、确定性信号约束。

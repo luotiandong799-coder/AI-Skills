@@ -1555,3 +1555,46 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **判据**：① **「能拉起进程」的能力与「谁能碰到端口」是同一件事**：Inspector 的 web 后端可以 spawn 进程，于是 API token 就是唯一屏障 ⇒ 这类工具的威胁模型要先问「谁够得到这个端口」，再谈令牌强度；把令牌换成自定义值不改变它被披露的事实，**绑定地址比令牌值更重要**。② **令牌被自己的页面披露 ⇒ 它防的是非浏览器客户端，不是人**：注入进 HTML 让刷新/书签可用是便利，代价是任何能加载页面者都能读到 ⇒ 便利与保密不能靠「反正要登录」来调和，必须显式选边（本例选了便利，并把补偿放在绑定地址）。③ **origin allow-list 对无 `Origin` 头的请求完全失效**：curl / 脚本不带该头 ⇒ 基于请求头的来源校验**必须把「缺头」判为不通过**，否则等于给脚本留了一扇不打招呼的门。④ **只有 `/api/*` 被 gate ⇒ 其余路径不在保护范围内**：白名单式路由守卫要按「未列出的默认拒绝」设计，而不是「列出的才保护」。⑤ **自动降级到明文是最危险的默认值**：有 keychain 用 keychain，没有就**自动**落明文文件 ⇒ 降级必须显式且可被发现（告警/确认），静默降级让用户在不知情下失去保护。⑥ **`DANGEROUSLY_OMIT_AUTH` 只有 `true`/`1` 生效、其他值（含 `false`）保持开启** ⇒ 这类开关的解析逻辑要窄（只认明确的开启值），宽解析会把拼写错误变成关闭防护。⑦ **「以你的身份运行的子进程」继承你的全部读权限** ⇒ 工具能读什么，它启动的服务器通常也能读什么，这是权限边界而非配置问题。
 - **提升层**：安全（开发者工具的边界与降级可见性）。
 - **触发词**：令牌被页面披露、无 Origin 绕过、自动降级明文、DANGEROUSLY_OMIT_AUTH、子进程继承权限。
+
+
+## r628A · 扩展与工具函数的入参必须在入口校验，非法值不得透传
+- **来源**：`n8n-io/n8n#37856`（一手：`Validate inputs in the expression extensions` / `chunk() now requires a positive integer size` / `numberList() now requires integer bounds` / `urlDecode() now raises an extension error on malformed input` / `Previous behavior let invalid input pass through. Invalid sizes reached the chunk loop. Invalid bounds reached the array constructor. Malformed sequences reached the decoder directly`）
+- **判据**：① **边界校验放在暴露面入口**：表达式与工具函数是模型可直接调用的暴露面，入参来自生成内容，不能假设合法；② **透传的错误在下游爆炸**：非法 size 进循环、非法 bounds 进构造器、畸形序列进解码器——报错点与错因点分离，排查成本翻倍；③ **抛类型化错误**（ExpressionExtensionError）而不是返回空值，静默返回会让上层当作没数据。
+- **提升层**：工具（暴露面输入校验）。
+- **触发词**：ExpressionExtensionError、chunk 负数入参、入参校验在入口、非法值不透传。
+
+## r628A · 删除接口的多条件必须求交，且空集合语义必须显式
+- **来源**：`crewAIInc/crewAI#8574` + `#8575`（一手：`record_ids bypassed age and scope checks, deleting records regardless of their timestamp or scope` / `the row-scanning loop ignored record_ids, causing records outside the specified ID set to be deleted` / `Supplying an empty record_ids=[] list previously fell through to deleting all table rows`）
+- **判据**：① **多条件组合必须显式定义为交集**：要么短路放行（绕过年龄与作用域）、要么互相忽略（越出 ID 集合），两种都是越权删除；② **空集合等于不匹配，绝不等于全匹配**：空列表落到删全表是默认分支写法错误，删除接口的空输入必须显式拒绝；③ **删除类接口要给删了哪些的可回读结果**，否则越权删了也不可审计。
+- **提升层**：工具（删除语义）/ 工作流（数据安全）。
+- **触发词**：record_ids 求交、空集合删全表、删除条件组合、越权删除。
+
+## r628A · 授权票据必须绑定运行与会话世系，不能只用调用 ID
+- **来源**：`openai/openai-agents-python#5413`（一手：`an approval decision issued in one run can authorize a protected tool call in a different run when the same call_id is used with identical arguments` / `The approval record is keyed by call_id but not bound to the run lineage` / 复现：run 1 批准 write_marker(path=A)，run 2 用同一 call_id 直接被放行）
+- **判据**：① **批准的键等于 call_id 加运行或会话标识**：只有 call_id 时，同参数重放会继承上一次的人类批准；② **人类批准是有作用域的一次性授权**，不是这个参数组合以后都可以；③ **恢复与续跑路径要重新走批准**：从 state 恢复的执行与产生该 state 的执行不是同一次运行，批准不得随 state 迁移。
+- **提升层**：工具（授权作用域）/ 工作流（审批持久化）。
+- **触发词**：call_id 复用、approval 绑定 run lineage、跨 run 继承批准、状态恢复重审。
+
+## r628B · 安全能力不做形态迁移假设：文本拒答率不能代理工具调用安全
+- **来源**：arXiv `2610.28982`「Behavior Beyond Text: Evaluating Refusal Transfer Failure in LLM Agents」（一手摘要逐串命中 `While large language models are increasingly deployed as tool-calling agents, their safety evaluations still focus primarily on their ability to refuse harmful requests in text` / `requests refused in text frequently result in unsafe tool calls` / `Under standard tool-enabled prompting, this divergence occurs for 10-52 percent of harmful requests refused in chat` / 2,304 prompts 四域，同一请求做 text-only、standard tool-enabled、adversarially framed tool-enabled 匹配三元组）
+- **判据**：① **安全评测要按同一有害请求乘以多种呈现形态做匹配对照**，单看文本拒答率会系统性高估；② **10 到 52 个百分点的 divergent 区间说明这不是边缘案例**，而是主要失效面；③ **机制层面确有对应表征**（refusal-associated residual direction），不是提示词偶发——因此不能靠再强调一遍来修复。
+- **提升层**：模型（安全对齐）/ 评测（安全评测设计）。
+- **触发词**：refusal transfer failure、匹配三元组、10-52% divergent、工具启用下的拒答。
+
+## r628B · 守卫模型要按「接口不变」训练与评测
+- **来源**：arXiv `2610.30742`「UniGuard: Multi-View Guardrail Learning for Cross-Interface Safety Generalization」（一手摘要逐串命中 `most are trained on fixed prompt or response interfaces and become unreliable when the same safety case appears as a conversation, agent trajectory, multi-agent trace, or policy-conditioned input` / 把 1,000 条公开安全用例转成 prompt、response、多轮对话、agent-trace、multi-agent-trace 五种视图 / 分类加监督对比加非对称置信校准 / 未见接口基准上 F1 提升 45.12）
+- **判据**：① **守卫的失效是换了个接口形态就认不出**，不是能力不够；② **训练与评测都要做多视图**：同一安全用例的多种承载形态要一起出现；③ **置信度要非对称校准**：不同接口上的拒绝阈值不该一刀切。
+- **提升层**：模型（守卫训练）/ 评测（跨接口泛化）。
+- **触发词**：multi-view guardrail、interface-invariant、agent-trace 视图、未见接口 F1。
+
+## r628B · 钓鱼评测要把「识别恶意」与「服从恶意」分开度量
+- **来源**：arXiv `2610.31404`「AgentPhishing」（一手摘要逐串命中 `risks depend not only on whether agents recognize malicious messages, but also on how they respond` / `Existing phishing datasets were developed primarily for conventional detection` / `PhishOpt, which optimizes reusable email-generation skills against individual agents under fixed benchmark constraints and a realism constraint`）
+- **判据**：① **检测率与服从率是两个指标**：认出是钓鱼但仍照做，检测口径上算识别成功、风险口径上是完全失败；② **红队要针对具体代理实例优化**，用静态数据集会低估；③ **可复用的攻击技能是被优化的产物**：攻击面也会技能化，防守评测要假设对手会针对你迭代。
+- **提升层**：评测（对抗评测）/ 工具（红队方法）。
+- **触发词**：AgentPhishing、PhishOpt、检测不等于服从、针对实例优化红队。
+
+## r628C · 安全与扫描工具自身要在沙箱内运行，且凭证不进被评估代码
+- **来源**：`raw.githubusercontent.com/snyk/agent-scan/main/README.md` 200/25,272B + `modelcontextprotocol.io/docs/2026-07-28/develop/clients/client-best-practices.md`（一手逐串命中 `Run scans inside a sandbox (Docker container, VM, or disposable environment) when evaluating untrusted or third-party MCP configs` / `To retrieve tool descriptions, Agent Scan starts stdio MCP servers by executing the commands in the config` / code mode：`Authorization tokens and credentials are held by the host and never exposed to the generated code` / `The sandbox runs model-generated code in an isolated environment with no direct network access`）
+- **判据**：① **为了检查而执行也是执行**：扫描器为了取工具描述会真的按配置启动第三方 MCP server，扫描动作本身必须放在一次性环境里；② **凭证由宿主代理**：函数桩是沙箱唯一出口，生成代码不持有 token、也不直连网络；③ **沙箱边界要能禁网**：不能只靠代码看起来没联网，网络权限要整体拒绝后由宿主转发。
+- **提升层**：工具（扫描器隔离）/ 工作流（最小权限）。
+- **触发词**：沙箱内扫描、凭证由宿主持有、no direct network access、函数桩出口。

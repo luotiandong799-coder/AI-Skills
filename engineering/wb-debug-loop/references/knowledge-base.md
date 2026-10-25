@@ -2253,3 +2253,10 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **判据**：① **「没抛异常」只说明运行时没意见，不说明业务判定成功**：需要一种**由业务层显式改判**的通道，让「拿到 200 但内容不对」也能走完整失败路径（错误处理器触发、状态标失败、结果被包装）⇒ 否则失败语义被运行时垄断。② **改判必须走「标准失败路径」而不是另开一条**：本例改判后错误处理器照样触发、结果照样包成错误对象 ⇒ 只打个日志或只在 UI 标红，下游的补偿逻辑全都收不到。③ **改判通道要对所有触发方式一致生效**（手动/定时/流程步骤/webhook）⇒ 只在部分入口生效会造成「同一个 job 从不同入口进来结论不同」。④ **改判仍要能携带细节**：同步 webhook 上可同时设自定义状态码与响应头 ⇒ 改判不等于丢掉表达力。⑤ 与 dl 同批 dify#44695 正好反向互补：那条是**失败被误计为成功**（分类错），本条是**给业务层一个主动把成功判为失败的正式通道**（机制缺）。
 - **提升层**：工作流（成败判定的业务层改判通道）。
 - **触发词**：wm_failure、重新标记为失败、手动失败、错误处理器照样触发、业务层改判。
+
+
+## r628A · 「本次执行里看得到」不等于「已持久化」：持久化上下文重建会把同一对象当成未变更
+- **来源**：`n8n-io/n8n#42077`（一手：`The write is visible during the execution, but the next delivery starts from the previously stored state, so counters, cursors and de-duplication records kept in node static data silently stop working` / 2.19.2 起首次出现，携带 #28973「Persist execution context before writing to db」的 backport / `WorkflowRunner.establishContextForPersistence` builds a `Workflow` over `data.workflowData.staticData`, the same object the webhook has just modified / `ObservableObject.create` defines `__dataChanged = false` on that top-level object）
+- **判据**：① **验证写成功必须跨次执行回读**：本次执行内读得到只证明内存里有，下一次投递或重启才是持久化判据——计数器、游标、去重记录这类跨次才有意义的状态尤其；② **变更检测的对象身份会被重建吞掉**：用同一份对象引用去建持久化上下文、并顺手把 `__dataChanged` 置 false，等于告诉持久化层没改过；③ **回归要钉版本**：这类缺陷由 backport 引入（2.19.0 好、2.19.2 坏），定位时先二分出是哪个依赖改动带进来的。
+- **提升层**：工作流（持久化验证）/ 工具（状态回读）。
+- **触发词**：静态数据不持久化、next delivery、__dataChanged、执行内可见不等于已落盘。

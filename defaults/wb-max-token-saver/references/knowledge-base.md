@@ -958,3 +958,16 @@ autogen#8328：HeadAndTailChatCompletionContext 在头部删掉一条 tool-call�
 - **实证（摘要原文级）**：自进化系统通常在**预设迭代/算力预算**下跑，没有「何时不必再进化」的判据，导致两害：饱和后继续烧算力；以及**返回过拟合/钻营评测信号的后期产物**。解法双问——何时停：把停止formulate为在线序贯检验，用自进化系统**already产生的 per-item paired评测结果**构造 anytime-valid restart detector；停后输出什么：作为变点估计问题，用估计出的迁移点**回选更早的产物**。plug-and-play、不改底层算法。数字（原文例子）：SearchQA + SkillOpt + DeepSeek V4 Flash，**在 round 4 停而非满预算 40，token 用量 -91.6%，unseen-test 精度 82.43% vs 82.00%**。
 - **判据**：① **迭代预算不是停止判据**——「跑满 N 轮」与「第 N 轮最好」都不成立；要用现有配对评测结果做序贯检验。② **最后一份产物并不最优**：过度迭代会去适配评测信号，停点应配合「回选变点前的早期产物」。③ 这套物品可直接复用于本仓的「多轮学习/自进化/迭代改写」类任务：-91.6% token 且不损精度是极硬的收益实证。
 - **提升层**：工作流（自进化/迭代循环治理）+ 可复用 Skill（停止判据）。
+
+
+## r628A · 缓存断点与标记类逻辑必须覆盖所有内容块分支，缺分支的表现是静默不生效
+- **来源**：`browser-use/browser-use#5849`（一手：`puts the prompt-cache breakpoint on the last block of a message, but only the text branch was given the flag` / `_serialize_content_part_image had no use_cache parameter, so a message whose final part is an image serialized with zero cache_control blocks — cache=True was dropped silently` / `The agent's own vision step is exactly that shape`）
+- **判据**：① **以最后一块为锚点的优化必须枚举所有块类型**：文本、图片、工具结果等，缺一个分支不报错，只是那次优化没了；② **静默丢弃比报错更贵**：预算模型按有缓存计算，实际每次全量；③ **自查方式是按块类型做矩阵回归**，而不是测一条典型消息。
+- **提升层**：工具（缓存标记覆盖）/ 工作流（预算准确性）。
+- **触发词**：cache breakpoint 只给 text 分支、图片结尾丢 cache_control、静默丢缓存。
+
+## r628C · 省 token 的正确位置是数据流设计：中间数据在沙箱内处理，不进模型上下文
+- **来源**：`modelcontextprotocol.io/docs/2026-07-28/develop/clients/client-best-practices.md`（一手逐串命中 `Filter and deduplicate inside the sandbox, not in the model's context` / `The log data and ticket creation flow directly between servers without ever entering the model's context. Only the console.log output [returns to the model]`）
+- **判据**：① **搬运与过滤前移到执行侧**：日志这类中间数据 server 与 server 直传，模型只收结论；② **压缩是事后手段，数据流设计是事前手段**——先决定什么进上下文，再决定进来的怎么压；③ **凭证同理留在宿主**：沙箱只暴露函数桩，既省上下文又收窄权限面。
+- **提升层**：工具（上下文数据流）/ 工作流（代码模式）。
+- **触发词**：sandbox 内过滤去重、中间数据不入上下文、只有结果回模型。
