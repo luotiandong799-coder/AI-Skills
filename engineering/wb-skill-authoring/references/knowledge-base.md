@@ -4475,3 +4475,19 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - 事实：workingMemory 设为 agentManaged:false（只读）后，工具指令被正确移除，但提示词仍告诉 agent「你不能更新它」，造成模型困惑。
 - 判据：**只读/受限态的提示词要陈述事实，不要陈述禁令**——「没有可用更新工具」与「禁止更新」在模型侧是两种信号，后者会诱导绕行。能力声明与实际工具集不一致是提示缺陷的高发区。
 - 提升层：可复用 Skill。触发词：只读措辞、能力声明不一致、提示自相矛盾、agentManaged false。
+
+
+<!-- r631A 自 SKILL.md 下沉（原文零删减） -->
+## r562C 下沉条目：技能装载接口必须**钉住唯一标识形态**——`ap_load_skill` 只接受技能名（flow_building）而非 guide topic（build_flow），传错时表现为"技能找不到"而非"传错字段"；近义标识（name/slug/topic/id）必须点名接受哪一个并对其他形态显式报错（全文见 references/knowledge-base.md，2026-10-14 r562C，来源 activepieces #16445）。触发词：技能名 vs guide topic、近义标识、传错形态报找不到。 · **r564A 下沉条目：预烘物料要按「分发面」与「可见面」分开取哈希**（合一个哈希 ⇒ 永不对等、每次重建沙箱全量重写 18–24 文件 / 约 2.3s）；可见性是取用时的裁决而非物料属性；**能力有无只能问运行期注册表**，拿 `N8N_ENABLED_MODULES` 当探测器会与「默认模块不设也开」长期相悖，且开关换了要逐个入口核（全文见 references/knowledge-base.md，2026-10-14 r564A，来源 n8n #41027/#41026）。触发词：预烘技能包、manifest hash 不命中、分发面与可见面、load_skill 不服务、能力判定单一真身。
+## r588C 下沉条目：**技能迁移性靠「穿插教学」而非事后补教，复核范围按未决问题选**——一次成功任务会留下「程序及其使用条件」未测的白区；SSL 穿插式指导效用 0.801（无技能 0.723 / Trace2Skill 0.761 / SKILL-KD 0.751，35 族 408 用例），Issue-Guided SSL 达 0.805 且教嬈 token 少 61.7%（arXiv 2610.17860）；另：技能水印可在 1,536 连续 token 窗口识别整段复制，混入 1–3 个背景技能后检测率仍 72.2%（arXiv 2610.15725）。全文见 references/knowledge-base.md。触发词：穿插教学、使用条件沉淀、Issue-Guided 复核、教嬈 token 少 61.7%、技能水印、1536 token。
+
+
+<!-- r631A 自 SKILL.md 下沉（原文零删减） -->
+## 技能作用期内的「临时减权」与「条件式工具广告」：正负两个开关要对称，广告按能力存在与否而不是按同一工具的详略（来源：code.claude.com/docs/en/skills 1,120,539B 一手 curl 200 逐串命中，2026-10-27 r631A）
+- **实证**：官方 skills 文档字段表原文——`disallowed-tools`：**"Tools removed from Claude's available pool while this skill is active. Use for autonomous skills that should never call certain tools, such as `AskUser…`"**；同页预算控制 `skillListingBudgetFraction`（示例 `0.02` = 2%）与 `SLASH_COMMAND_TOOL_CHAR_BUDGET`，技能清单合并后截断 1,536 字符；工具广告随技能声明的 `resources`/`scripts` 存在与否而变（有才广告对应工具）。
+- **判据**：① **授权面必须有与 `allowed-tools` 对称的减法开关，且作用域是「技能激活期间」**——`allowed-tools` 预批的是"这段时间可以多用这些"，`disallowed-tools` 收的是"这段时间内从可用池里拿掉这些"；只有加法没有减法时，一个自治技能在执行期依然握着提问/交互类工具，"自治"就只是声明。与 sa 既有「拒绝先于允许」分工：那条管**裁决次序**，本条管**作用期内的池收缩**（时间维度）。② **减权的正当用途是"这类技能永不该调的工具"**，典型是把 `AskUserQuestion` 一类从自治技能里摘掉 ⇒ 收窄清单应按"该技能的性质禁止什么"来写，不是按"这次任务用不上什么"来写。③ **条件式广告与详略分级是两件事**：r156C 三档 detail 是**同一个工具的给多给少**，条件广告是**另一个工具在不在场上**（有 scripts 才广告执行类工具）⇒ 广告面要按"能力是否存在"枚举，否则模型会看到它其实拿不到的工具名。④ **清单本身也占预算**：2% 预算 + 1,536 字符截断意味着**多写技能 = 挤掉别人的发现面** ⇒ 技能数量不是免费的，新增技能要计入发现面预算（与 §成本两笔账同源，本条给的是**清单侧**的预算位）。
+- 提升层：可复用 Skill（技能授权面与时间作用域）/ 工具（工具广告契约）。触发词：disallowed-tools、技能期内减权、临时减权、可用池收缩、条件式工具广告、能力存在才广告、skillListingBudgetFraction、2% 清单预算。
+
+
+<!-- r631A 自 SKILL.md 下沉（原文零删减） -->
+## 修订整包不可变且发布只对新会话生效、陈旧编辑报冲突不覆盖；「加载位置」与「谁能看见」是两个独立控件且子级列表非空即整体替换；硬平台过滤不可被 always 豁免（来源：docs.openclaw.ai/tools/skills.md，2026-09-30 r321A 独立实拉 39,741B；细则见 references/knowledge-base.md §r321A）

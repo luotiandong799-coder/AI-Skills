@@ -2,25 +2,21 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、通才助手、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、persona 市场退场、GPT Store 停用、迁移为插件、优先可机读注册表、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配、skillContentHash、baseSkillHash、保存缺基准 400、基准过期 409、publish pins refs、delete refused names agents、scope inheritance、flag off 全路由 404、reviewability debt、accountable contribution、预烘技能包、baked bundle、manifest hash 不命中、分发面与可见面、load_skill 不服务、能力判定单一真身、默认模块不设也开
-version: "1.219.0"
+version: "1.220.0"
 ---
 # wb-skill-authoring（技能层：写得能被触发、能被执行）
-
 来源：WaytoAGI 精选 2026-09-01《Agent Skill 100 问》（skill 描述写法、触发排查、脚本/参考文件拆分、跨工具迁移、安全审查）。
 核心判断：**skill 的价值 = 能否在该触发时被触发 + 读到的内容是否够执行。** 写得好但没人触发 = 不存在。
-
 **与相邻技能的分工**（防抢触发）
 | 场景 | 走谁 |
 |---|---|
 | 从零新建一个技能 | 平台内置 `skill-creator`（官方结构 / frontmatter / 脚本规范） |
 | 改造 / 体检**已有**技能（触发不准、描述过宽、去重合并、安装后接线、触发评测、安全审查） | **本技能** |
 | 长内容（书 / 长视频 / 播客 / 课程）蒸馏成技能 | `cangjie-skill`（本技能只管蒸馏产物落地后的写法与验收） |
-
 > 本节（设计原则）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 > 本节（写"什么时候不该跑"：STOP / WAIT / PROCEED 快速路径表）已整段下沉至 `references/knowledge-base.md`，需要时按标题检索。
 > 本节原文已零删减下沉 `references/knowledge-base.md §r442B 下沉：技能是"指令 + 所需工具"的打包，不是一段文字（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·技能是指令所需工具的打包不是一段文字）`（正文预算 ≤500 行）
 ## 触发评测：发布前盲测（新技能 / 改过 description 必做，细则已下沉 KB）（全文见 references/knowledge-base.md §下沉·触发评测发布前盲测新技能改过description必做细则已下沉KB）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r513C · 触发评测：发布前盲测（新技能 / 改过 desc）
-
 ## 按需阅读（渐进披露，不要常驻加载）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·按需阅读渐进披露不要常驻加载）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·r513C · 按需阅读（渐进披露，不要常驻加载）（全文见 re）
 
 ## 声明式白名单只约束"工具调用面"，不约束"数据面"：判据按"被约束的是哪类调用"而非"有没有该字段"（来源：learn.microsoft.com/en-us/agent-framework/agents/skills、docs.github.com/.../add-skills、geminicli.com/docs/cli/skills、code.visualstudio.com/.../agent-skills、cursor.com/docs/context/rules，2026-10-01 r362-Q-C 实拉；与 r361-Q-B B1 跨客户端效力漂移 相邻）（全文见 references/knowledge-base.md §下沉·wb-skill-authoring·声明式白名单只约束工具调用面不约束数据面判据按被约束的是哪类调用而非有没有该字段）
@@ -37,7 +33,7 @@ version: "1.219.0"
 ## 卸载必须留「显式卸载」marker（enabled: false tombstone），阻断启动修复静默重装；重装不静默恢复启用（来源：docs.openclaw.ai cli/plugins/uninstall-and-update，2026-09-30 r320A 实拉）（全文见 references/knowledge-base.md §下沉·卸载必须留显式卸载markerenabledfalsetombstone阻断启动修复静默重装重装）
 
 ## 撤销与审核分层：吊销只阻断后续发布、不推翻既有审核结论；恢复走 successor 重跑检查并保留失败尝试为审计史…（原文已下沉 references/knowledge-base.md §L495）
-## 修订整包不可变且发布只对新会话生效、陈旧编辑报冲突不覆盖；「加载位置」与「谁能看见」是两个独立控件且子级列表非空即整体替换；硬平台过滤不可被 always 豁免（来源：docs.openclaw.ai/tools/skills.md，2026-09-30 r321A 独立实拉 39,741B；细则见 references/knowledge-base.md §r321A）
+## 修订整包不可变且发布只对新会话生效、陈旧编辑报冲突不覆盖；「加载位置」与「谁能看见」是两个独立控件（原文已零删减下沉 references/knowledge-base.md §r631A 下沉，2026-10-27 r631A；触发词：修订包不可变、发布对新会话生效、陈旧编辑冲突、加载位置与可见性分离）
 ## 并发写仲裁三件套（陈旧写报冲突 / 相同保存 no-op / 会话钉修订）与幂等契约四元组（键作用域·占用时点·失败是否回放·保留期）；代理不得自动重试非幂等请求（来源：docs.openclaw.ai/tools/skills.md 39,705B + docs.stripe.com 1,336,845B + RFC 9110 §9.2.2 502,941B，2026-09-30 r322C 独立实拉；细则见 references/knowledge-base.md §r322C）（全文见 references/knowledge-base.md §下沉·并发写仲裁三件套陈旧写报冲突相同保存no-op会话钉修订与幂等契约四元组键作用域占用时点失败是否）
 
 ## 扩展点是「观察 + 否决」双职：回调里抛错即可阻止被钩的操作，且钩子无沙箱、回调继承宿主实例全权限——扩展点的权限边界等于宿主权限，选钩前必须先声明（来源：docs.n8n.io/hosting/configuration/external-hooks/ 1,023,234B，2026-09-30 r324B 独立实拉，原文 lowercase「forbid an action by throwing an error」命中；与 §审批门四旋钮 互补——那条管“变更怎么放行”，本条管“放行机制自身有多大权”；细则见 references/knowledge-base.md §r324B）（全文见 references/knowledge-base.md §下沉·扩展点是观察否决双职回调里抛错即可阻止被钩的操作且钩子无沙箱回调继承宿主实例全权限扩展点的权限边）
@@ -491,10 +487,13 @@ version: "1.219.0"
 - **判据**：① **失败样本的默认去处不该是丢弃**：它们承载的是"缺口在哪"的诊断信息 —— 只用失败来记一次错（或只在统计里占一个分母），等于把最贵的数据当垃圾回收 ⇒ **失败要留下"为什么会失败"的可机读归因，而不是只留一个 bool**。② **干预必须是"在策略内"的**：预定义提示库是 off-policy 的，它不与当前这次尝试的具体错误对齐 —— **泛泛的鼓励/通用技巧不构成纠偏**，纠正内容要与当下失败同分布、针对这一次的具体缺口。③ **干预要前向，不要事后**：目标是改变**下一次尝试**的行为，而不是事后给一个正确答案来修补记录 ⇒ **事后精炼改变的是档案，前向干预改变的是行为**，两者不要互相冒充。④ **先做实时根因诊断，再生成干预**：不复述失败现象而定位缺口，否则提示会落在已经掌握的地方 —— 对症的前提是诊断，诊断的前提是这次失败的现场证据。⑤ **改进机制应当以"附着"方式存在**：即插即用、不改动宿主基础设施 ⇒ **要求重写宿主才能生效的改进，落地率会被宿主改造成本吃掉**。⑥ 与 sa 1.139.0（失败驱动新增、契约评估与任务结果不一致驱动修订既有边界）分工：那条管**什么时候触发修订**，本条管**触发之后用何种干预才真的有效**（实时根因诊断 + 在策略内动态生成 vs 静态提示库 / 事后精炼）。
 - 提升层：可复用 Skill（失败驱动的自我修订机制）/ 工作流（迭代纠偏环设计）。触发词：失败轨迹不丢弃、zero-reward collapse、on-policy 干预、off-policy 静态提示库、post-hoc refinement 无效、实时根因诊断、前瞻性引导下一次尝试、即插即用不改宿主、诊断信息高于通过率。
 
-## r562C 下沉条目：技能装载接口必须**钉住唯一标识形态**——`ap_load_skill` 只接受技能名（flow_building）而非 guide topic（build_flow），传错时表现为"技能找不到"而非"传错字段"；近义标识（name/slug/topic/id）必须点名接受哪一个并对其他形态显式报错（全文见 references/knowledge-base.md，2026-10-14 r562C，来源 activepieces #16445）。触发词：技能名 vs guide topic、近义标识、传错形态报找不到。 · **r564A 下沉条目：预烘物料要按「分发面」与「可见面」分开取哈希**（合一个哈希 ⇒ 永不对等、每次重建沙箱全量重写 18–24 文件 / 约 2.3s）；可见性是取用时的裁决而非物料属性；**能力有无只能问运行期注册表**，拿 `N8N_ENABLED_MODULES` 当探测器会与「默认模块不设也开」长期相悖，且开关换了要逐个入口核（全文见 references/knowledge-base.md，2026-10-14 r564A，来源 n8n #41027/#41026）。触发词：预烘技能包、manifest hash 不命中、分发面与可见面、load_skill 不服务、能力判定单一真身。
-## r565A 下沉条目：① **技能/脚本元数据必须转义后再序列化**（`generate-metadata` 输出未加引号的 summary，` #` 之后被静默截断）⇒ 元数据一律走带引号序列化，并做「解析回来的值 == 原值」往返断言；② **技能装载契约会随宿主版本漂移**（`argument-hint` 改成数组形态后 Copilot CLI ≥1.0.65 直接不装载）⇒ frontmatter 字段形态按目标宿主版本矩阵验收，装载失败要有可观测信号（宿主版本 + 字段形态）；③ **技能产出文本要过目标仓的校验契约**（create-pr skill 建议的标题 scope 被 check-pr-title 拒绝）。触发词：元数据未转义、井号静默截断、往返断言、argument-hint 数组形态、宿主版本漂移、装载契约矩阵、技能产出过目标仓 linter。
-## r565B 下沉条目：① **测试套件本身是自演化 agent 的改进信号来源**——Small but Mighty 指出小而精的测试集比「多跑几步」更能驱动自我改进；落地形态是把「哪些失败被测试捕获」作为修订触发器，而非只统计通过率。② **agent 控制要跨框架可重放**——Pollard 的 Governed Semantic Execution Trees 把执行表达为受治理的语义树，使控制与重放与框架解耦；技能层对应要求是产出可重放语义执行记录（决策/工具/边界三要素齐备），否则复盘只能靠日志文本反推。触发词：测试套件作改进信号、修订触发器、语义执行树、框架无关、控制与重放解耦、决策-工具-边界三要素。
-## r566A 下沉条目：③ **技能产出物必须保留目标格式的结构顺序**——以附件形式落地的技能产物（PPTX 等）若装配时忽略 slide/条目顺序，目标格式的结构语义即丢失；装配后须断言顺序与来源一致（来源：github.com/langgenius/dify issue #43892，2026-10-14 实拉）
-## r566C 下沉条目：④ **安装期须校验宿主最低版本 + 内联技能入库须归一身份**——插件/技能安装时按声明校验宿主最低版本并拒绝不兼容安装（dify PR #44021）；把宿主内联技能复制进技能库时按稳定标识归一身份，避免同一技能多份身份并存（n8n PR #41030 / #41023） · r568B 下沉条目：**技能发现面有两个新确定性门：①description 与 when_to_use 拼接后共享 1536 字符截断预算；②嵌套技能首次编辑该子目录文件才进入上下文**——code.claude.com/docs/en/skills.md：`description` 与 `when_to_use` 合并文本在技能列表里**截断到 1536 字符**（两字段共享一个预算，长 when_to_use 会挤掉 description 本体）⇒ 编写判据=合并长度自查，关键触发词放截断安全带内；`paths`（glob，逗号串或 YAML 列表）把激活条件从模型语义判断降为**文件路径谓词**（机制面；措辝面 r541C 已落）；`.claude/skills/` 子目录里的嵌套技能**启动时不加载，首次读或编辑该子目录文件才加载**且此后本会话可用，此前不在 `/` 菜单也不能按名调用 ⇒ monorepo 里依赖它的检查/守卫须显式预载（`/add-dir` v2.1.257+）。判据：① 两字段预算共享，编写时按合并长度验收；② 激活确定性分两门：路径谓词（paths glob）+ 嵌套目录首次编辑才入上下文；③ 「编辑前对模型不可见」的技能，其守护职责须由常驻面承担。来源：code.claude.com/docs/en/skills.md 106,978B（2026-10-14 r568B 一手 curl 200 逐串命中 `the combined description and when_to_use text is truncated at 1,536 characters in the skill listing` / `Glob patterns that limit when this skill is activated` / `They load the first time Claude reads or edits a file in that subdirectory and stay available for the rest of the session`；Qoder r613-Q-C 提名）。触发词：1536 合并截断、when_to_use 挤占 description、paths glob 激活谓词、嵌套技能首次编辑才加载、monorepo 不可见、/add-dir 预载。
+## r565A/r565B/r566A/r566C 下沉条目（元数据转义序列化 / 测试套件作改进信号 / 产物保留目标格式结构顺序 / 安装期校验宿主最低版本 + 内联技能归一身份）（原文均在 references/knowledge-base.md）
 
-## r588C 下沉条目：**技能迁移性靠「穿插教学」而非事后补教，复核范围按未决问题选**——一次成功任务会留下「程序及其使用条件」未测的白区；SSL 穿插式指导效用 0.801（无技能 0.723 / Trace2Skill 0.761 / SKILL-KD 0.751，35 族 408 用例），Issue-Guided SSL 达 0.805 且教嬈 token 少 61.7%（arXiv 2610.17860）；另：技能水印可在 1,536 连续 token 窗口识别整段复制，混入 1–3 个背景技能后检测率仍 72.2%（arXiv 2610.15725）。全文见 references/knowledge-base.md。触发词：穿插教学、使用条件沉淀、Issue-Guided 复核、教嬈 token 少 61.7%、技能水印、1536 token。
+## r562C/r588C 下沉条目（技能装载接口钉住唯一标识形态 / 预烘物料按分发面与可见面分开取哈希 / 技能迁移性靠穿插教学 / 技能水印 1536 token 窗口）（原文均在 references/knowledge-base.md §r631A 下沉）
+
+## 技能卫生要有「代价口径」：退役判据须同时观测上下文成本与调用频次，且「零通过」不等于「无贡献」（来源：code.claude.com/docs/en/changelog 4,644,825B 一手 curl 200 逐串命中 + arXiv 2610.32322《Beyond Gain: Skill Internalization for Agent Skill Retirement》abs 页 41,826B 一手实拉，2026-10-27 r631A）
+- **实证**：①Claude Code changelog 原文「Added **`/skill-doctor`** to show **which loaded skills go unused and what they cost in context**, so you can prune them」——官方把「未被使用」与「占用多少上下文」放在同一条诊断里，另配 `[Claude Tag]` 按技能的运行频次遥测。②arXiv 2610.32322 原文：既有的 gain 规则（对比有/无该技能的两次运行）在「技能已被模型内化」与「模型与技能都做不到（uncovered）」两种情形下 **gain 都近似为零**；在 SkillsBench 上 **28/31 的退役决定建立在「没有任何一次运行完整通过」的探针上**；改用「扣住技能、按该技能合成的任务给模型打分，且仅当另一个模型确实从该技能获益时才采信高分（近一半高分来自没有模型受益的任务）」，无辅助判定的复现性更好（**Cohen's κ 0.42 vs gain 规则的 0.23**）但**跨模型不同**，须逐模型读。论文发布 1,251 技能 × 4 模型的任务与分数。
+- **判据**：① **技能卫生要有成本维度，且成本与使用是两个独立指标**——「加载了但没用过」与「用了但很贵」是两种病灶；只统计调用频次会把常驻吃 context 却从不触发的技能判为健康，只看上下文占用会把低频但关键时救命的技能误删 ⇒ prune 依据必须是**「频次 × 上下文成本」双指标同表**，与 §r545A（Gotchas 是养护主战场）分工：那条管"内容养哪一节"，本条管"条目留不留下"。② **「零通过」不是退役的正当理由**——28/31 的退役建立在没跑通过的探针上，等于"模型从未真正用过"被当成"模型已经不需要它" ⇒ 退役判据必须证明**该能力确实已被内化**（扣住技能后仍能做，且别人用它确有增益），不能只证明"这次没跑通"。③ **uncovered 与 internalized 在 gain 口径下不可区分**——两者 gain 都≈0，用单一 gain 阈值退役会成批删掉"其实谁都不会做"的能力 ⇒ 凡"有/无对比"型收益指标，都要先问"零收益的另一种解释是什么"。④ **退役结论要按模型分别读**：κ 0.42 高于 0.23 但仍属中等一致，且跨模型结论不同 ⇒ 一个技能对 A 模型可退役、对 B 模型不可退役，"这个技能该退了"必须带模型主语。⑤ 与 §r547B（只增不修会腐烂 / 可证伪契约）分工：那条管**什么时候触发修订**（契约与结果不一致），本条管**什么时候触发退役**（内化 vs 从未受益的区分 + 成本口径）。
+- 提升层：可复用 Skill（技能库卫生与退役治理）/ 工具（遥测口径）。触发词：skill-doctor、未使用技能、上下文成本、prune、退役判据、zero-gain、uncovered vs internalized、Cohen's kappa 0.42、28/31、逐模型退役、技能遥测双指标。
+
+## 技能作用期内的「临时减权」与「条件式工具广告」：正负开关对称、广告按能力存在与否（原文已零删减下沉 references/knowledge-base.md §r631A 下沉，2026-10-27 r631A；触发词：disallowed-tools、技能期内减权、条件式工具广告、2% 清单预算）
