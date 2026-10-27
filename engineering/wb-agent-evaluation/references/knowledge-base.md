@@ -541,3 +541,16 @@ arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety wit
 - 事实：批量评估把多个参数列表（如不同评估的 kwargs）传给运行器，长度不一对齐或格式（dict/list/scalar）混合时，运行器不报错但把参数错位配对，评分结果悄悄错。
 - 判据：① **批评估运行前必须校验所有 eval_kwargs 列表等长且格式一致**，不齐/不纯即 fail fast，不静默对齐；② **错位配对是静默错误**，表面跑完、分数却不可信——评估工具自身的输入校验是评估可信的前提；③ 与 ae 既有"评估集本身是结论的前提"（r629 评估集构建）分工：那条管数据集质量，本条管**评估运行器自身的参数合法性**。
 - 提升层：评测（运行器输入校验）/ 工具（fail-fast）。触发词：eval_kwargs 长度校验、混合格式、BatchEvalRunner、错位配对、静默错误评分、批评估 fail-fast。
+
+## r632A · 完成信号与输入完整性是两个独立断言：流被截断的工具调用不得被当作完整调用发出（来源：github.com/vercel/ai/pull/24103，gh api 一手 200 正文逐串命中）
+
+- 事实：OpenAI 兼容流在工具调用参数中途断开时，`doStream` 的 `flush()` 会先调 `toolCallTracker.flush()`，用已到的半截参数补 `tool-input-end` 并发出一个 `tool-call` part，之后才检查 `finishReason == null` 并发「Response stream ended without a finish reason」错误。测试用 mock 流确定性复现（连接关闭与收到 DONE 两种变体），参数是 `{"value":"Spark` 这样的半截 JSON。相信 tool-call part 的客户端会执行这个被截断的调用。该 PR 只有测试没有修复。
+- 判据：① **「调用已发出」与「调用参数是完整的」必须分开断言**；把完整性默认绑定在完成信号上，等于把传输故障伪装成一次合法执行；② 与 vercel/ai #24057（被拒绝的 host tool call 仍然走工具自己的 `toModelOutput`，拒绝对象 `{ type: 'execution-denied', reason }` 被当成工具输出喂给为真实结果写的转换函数，直接 TypeError 让 turn 在 finish() 阶段失败、流永不完成）合成一条主轴：**结果通道的语义类别不能被压扁**——截断、被拒、出错、成功是四个不同的类别，共用一条通道会让下游按错误的类别解释。
+- 提升层：工具（工具调用协议完整性）/ 可复用 Skill（评测探针设计）。触发词：截断工具调用、truncated tool call、execution-denied、toModelOutput 误用、完成信号 vs 输入完整性、流中断仍发 tool-call。
+
+## r632B · 归因顺序：先判「是否正常完成并可评测」，再判「对不对」（来源：arXiv 2610.32483《When Agents Fail: Model or Harness--Who is to Blame?》2026-10-23 一手摘要）
+
+- 事实：agent 的基准分数是模型与执行 harness 的联合行为，作者主张 harness 必须通过与底层模型的交互来评测，并给出五个互补测度，其中 Valid Completion Rate（VCR）= 多可靠地正常结束并交付可评测结果，**与该结果是否正确无关**；Model-Harness Fit = harness 在给定模型上通过有效完成支撑任务达成的程度。
+- 判据：① **评测要先分离「跑完了没」与「跑对了没」**——把未完成、崩溃、格式不可解析一律计入「错」，会把 harness 缺陷错记成模型缺陷；② 与 ae 既有「按 model-harness 配置分列增益」（SKILL.md 正文）分工：那条管**结果表的分列呈现**，本条管**归因的先后顺序**——先算 VCR 分层，再在同一层内比较；③ 报告任何 agent 基准提升时，必须同时给出 VCR，否则「提升」可能只是「更多次跑完了」。
+- 提升层：可复用 Skill（评测指标设计）/ 工作流（失败归因）。触发词：Valid Completion Rate、VCR、harness 归因、模型还是 harness、不可评测结果、异常终止计入失败。
+
