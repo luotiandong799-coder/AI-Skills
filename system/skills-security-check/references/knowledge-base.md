@@ -1634,3 +1634,31 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 事实：多渠道 agent 框架为每种渠道都提供审批控件（按钮、卡片、事件元数据、模态提交），审批元数据随渠道形态各异。
 - 判据：**审批语义必须与渠道渲染层解耦**——渠道只负责呈现与回收用户决定，判定、记录、幂等由统一内核负责，否则同一动作在不同渠道会有不同的审批强度与审计痕迹。
 - 提升层：安全 / 工作流。触发词：跨渠道审批、exec approval、审批与渠道解耦、统一审计。
+
+## r630A · 安全检查前须归一化注入字符：作业参数里的 NUL/控制字符要在「基于名称的黑白名单/权限检查」之前剥离或归一化，否则攻击者用 NUL 截断或控制字符绕过检查（来源：github.com/windmill-labs/windmill/issues/11989，gh api 一手 200 逐串命中 `normalize NUL escapes in job args before name-based checks`）
+
+- 事实：作业参数名/值里嵌 NUL 或控制字符转义，在「按名称做安全/权限判定」之前若未归一化，名字比较或路径检查会被截断或污染，本应被拦的动作通过。
+- 判据：① **任何「基于名称/字符串的形状判定」之前，先归一化输入**（剥离/转义 NUL、控制字符、非常规空白）；② **安全检查面必须是归一化后的规范形态**，不能在原始字节上做黑白名单；③ 与 ssc 既有"标识解析禁用 split('.'）启发式"（r568A）同族：那条管解析截断导致策略永不命中，本条管注入字符导致检查被绕过——都是"判定前的输入净化"缺口。
+- 提升层：安全（检查前净化）。触发词：NUL 注入、控制字符绕过、name-based check、作业参数归一化、检查前净化、注入绕过安全判定。
+
+## r630A · 依赖 CVE 须钉版本并随 release 同步修复：worker 镜像仍随依赖默认版本漂到含 CVE 的版本，须显式钉版本并随 release 同步修复（来源：github.com/windmill-labs/windmill/issues/11994 + #11995，gh api 一手 200 逐串命中 `windmill-ee 1.848.2 image still ships Node v24.22.0 (CVE-2026-111497)` / `pin node to 24.22.1 in the worker image for CVE-2026-111497`）
+
+- 事实：发布镜像里的运行时依赖（Node）随基础镜像默认版本漂移到含已知 CVE 的版本；只升应用版本号不钉底层依赖，等于把 CVE 留在交付物里。
+- 判据：① **交付物（镜像/包）里的依赖必须显式钉版本**，不能信"最新"；② **CVE 修复要随对应 release 一起发布**，否则"已修"只在源码分支为真、在用户拉到的镜像里为假；③ 与 ssc 既有"训练/评测环境配置即攻击面"（r590A CVE-2026-65616）分工：那条管配置错配的利用链，本条管**交付物依赖版本漂移**这一供应链缺口。
+- 提升层：安全（供应链）。触发词：CVE 钉版本、镜像依赖漂移、release 同步修复、worker 镜像、供应链版本。
+
+### §下沉·skills-security-check·r630A·安全检查前须归一化注入字符NUL控制字符绕过namebasedcheck作业参数归一化检查前净化
+- 事实：（windmill#11989，gh api 一手 200 逐串命中 `normalize NUL escapes in job args before name-based checks`）作业参数里的 NUL/控制字符要在「基于名称的黑白名单/权限检查」之前剥离或归一化，否则攻击者用 NUL 截断或控制字符绕过检查。
+- 判据：名称类检查（含 allowed-tools / permissioned_as 判定）必须作用于净化后的输入；NUL 截断、控制字符伪装是绕过 name-based 检查的高频低噪形态。
+- 提升层：安全（输入净化）。触发词：NUL/控制字符、name-based 检查前净化、作业参数注入。
+
+### §下沉·skills-security-check·r630A·依赖CVE须钉版本并随release同步修复镜像依赖漂移供应链版本
+- 事实：（windmill#11994 + #11995，gh api 一手 200 逐串命中 `windmill-ee 1.848.2 image still ships Node v24.22.0 (CVE-2026-111497)` / `pin node to 24.22.1 in the worker image for CVE-2026-111497`）worker 镜像随依赖默认版本漂到含 CVE 的版本。
+- 判据：① 交付物（镜像/包）里的依赖必须显式钉版本，不能信「最新」；② CVE 修复要随对应 release 一起发布，否则「已修」只在源码分支为真、在用户拉到的镜像里为假。
+- 提升层：安全（供应链）。触发词：CVE 钉版本、镜像依赖漂移、release 同步修复、worker 镜像。
+
+### §下沉·skills-security-check·r630C·装前分诊输入须用bundle实测能力非frontmatter声明59低报
+- 事实：（arXiv 2610.19264，Qoder r667-Q-B 提名·WB 审计代落）6,309 条 marketplace listing 一半具 shell 执行证据、fs 读 35%/写与网络各 31%/凭据 13%、7/10 含至少一项提权能力；6,061 条可解析 frontmatter 仅 770 条有任何声明、59% 声明者低报自身能力，低报率跨市场悬殊（ClawHub 88% vs skillsmp 31%）。
+- 判据：装前分诊输入必须是「bundle 实测能做到什么」而非 frontmatter 声明；声明不可信，须以实测能力画像为准。
+- **实践**（github.com/anthropics/skills#1943）：marketplace manifest 刷新后整批插件加载失败（"conflicting manifests"）——清单/签名冲突须每次刷新重校验；#2032/#1728 embedded JSON 中转义闭合 script 标签防 XSS/注入——与 §审查面须归一化注入字符 分工（那条管作业参数 NUL/控制字符，本条管可信模板里的脚本标签）。
+- 提升层：安全（分诊/供应链）。触发词：声明不可信、59% 低报、提权能力画像、conflicting manifests、script 标签转义。

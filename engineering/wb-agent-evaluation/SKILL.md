@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算、机械验证优先、LLM judge 替代路径、授权动作降级为交互即验收失败
-version: "1.86.0"
+version: "1.87.0"
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -218,3 +218,4 @@ version: "1.86.0"
 - **r590C · 交互型产物必须真机交互验收：「静态全绿」与「交互可用」是两个门（arXiv 2610.17895 Interaction-as-a-Judge，2026-10-15 r590C 一手 API 200 命中摘要原文）**——computer-use agent 直接与产物交互评测，人类偏好预测 **65.6%→69.1%**、需求验证 **77.0%→81.6%**；推理期五轮内修复坏需求 **75.5%**（纯代码自反馈仅 55.4%）；训练期当奖励信号使胜率 +6.7pp，同时代码长度 −35.7%、构建失败率 −7.2pp。判据=① 网页/桌面应用/游戏这类交互产物不能用「静态分析+单测全过」当验收结论，须让代理实际驱动一遍；② 交互反馈可复用作修复信号，但必须与「只看代码的自反馈」配对对照，否则无法归因；③ 与 r588A 严格满足率条目分工——那条管聚合评分口径，本条管验收手段。
 - **提升层**：工作流（验收手段）/ 模型（交互反馈作修复信号）。
 - 触发词：Interaction-as-a-Judge、交互式验收、CUA 真机交互、65.6% 提升到 69.1%、75.5% vs 55.4%、静态全绿不等于可用、交互反馈作奖励信号、构建失败率降 7.2pp。
+- **r630A · 批评估运行器须校验 eval_kwargs 列表长度与格式一致性：BatchEvalRunner 在长度不一或格式混合时静默错位，须运行前显式校验（来源：github.com/run-llama/llama_index/issues/23707，gh api 一手 200 逐串命中）（全文见 references/knowledge-base.md §下沉·批评估运行器须校验eval_kwargs列表长度与格式一致性错位配对静默错误评分）

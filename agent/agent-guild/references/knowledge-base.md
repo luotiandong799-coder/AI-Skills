@@ -993,3 +993,8 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 - 事实：即便答案有文档支撑，若忽略用户处境也可能不合适；这产生两个相连挑战——用历史条件识别新知识需求、把该知识套到用户处境。既有基准分别推进记忆召回、个性化检索、记忆引导行动，两者联合评估仍不足。
 - 判据：**单测召回会高估记忆系统的实用度**——「检索到了」与「用对了」之间有第二道关。评测记忆能力应设计为两跳：历史条件 → 知识需求，知识 → 当前处境。
 - 提升层：评测 / 记忆。触发词：记忆联合评测、两跳记忆、处境适配、ColaBench、个性化检索。
+
+### §下沉·agent-guild·r630B·后台自学习四件套触发计数单轮预算冷却阶梯失败不重试来源排除
+- 事实：（docs.openclaw.ai/tools/self-learning.md，Qoder r668-Q-B 提名·WB 审计代落）后台自学习回路必须有「触发计数 + 单轮硬预算 + 冷却阶梯 + 失败不重试」四件套，且事件来源显式排除。
+- 判据：每会话累计 10 次 model iteration 才排队 review、空闲 30s 后串行执行；输入 bounded to 64 transcript events + 32 KiB；预算 16,384-token context / ≤2,048 output / low reasoning / ≤2min；来源排除 cron/heartbeat/hook/subagent/memory；一次 review 最多一个变更；未用满 30 天自动归档；限流时全 Gateway 后台 review 统一暂停 15→30→最多 60min；Failed/interrupted reviews discarded instead of retried。
+- 提升层：工作流（自动化守护）/ 可复用 Skill（技能自产入库纪律）。触发词：self-learning 触发计数10、16K·2K·≤2min 预算、冷却阶梯15→30→60、失败不重试、来源排除、30天归档。

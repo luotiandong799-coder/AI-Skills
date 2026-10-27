@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、TTL seconds*1000、absolute deletion date、valid date in the future、7-day minimum、alreadyDeleted、audience human、AI 孪生动作、消费者退出生产者仍跑、关闭要传播到下层流、shield 异步关闭、后台清理任务只跑在 leader 内存定时器、durable system task
-version: "1.288.0"
+version: "1.290.0"
 agent_created: true
 ---
 
@@ -484,3 +484,6 @@ agent_created: true
 - **r588A · 嵌套调用的等待预算是独立时钟，父步骤超时值不覆盖它**（dify #44159，一手 gh api 200 逐串命中）：Agent 等待 Workflow 子工具超过 **250 秒** 即以失败终止，该上限与 Agent 步骤超时不是同一个数。判据=① 编排层须逐层声明等待上限（父步骤 / 子工具 / 流式首包），不得用父值推断子值；② 「子工具慢」与「子工具挂死」是两个事实，证据分开取（子调用自身耗时 vs 父层主动放弃日志）；③ 长任务显式改异步交接，不靠调大同步上限。
 - **提升层**：工具（等待预算语义）/ 工作流（嵌套编排排障）。
 - **触发词**：子工具等待上限、250 秒、等待预算独立时钟、父步骤超时不覆盖嵌套、异步交接替代调大超时、子调用挂死证据。
+- **r630A · 取消/中断必须线程安全且不能让消息通道死锁：取消令牌要在正确事件循环线程派发，流式中途取消不能卡死 on_messages_stream（来源：github.com/microsoft/autogen/issues/8358 + #8182，gh api 一手 200 逐串命中）（全文见 references/knowledge-base.md §下沉·取消中断必须线程安全且不能让消息通道死锁取消令牌要在正确事件循环线程派发流式中途取消不能卡死on_messages_stream）
+- **r630C · 安全重试的冲突态必须三分，判据单位是「键 + 完整请求指纹」而非键**：同键同体→重放首个成功响应；同键异体→422（不是重试/新建）；同键在途→409；失败响应不占键（故可重跑）；指纹含 JSON 字段顺序与空格；幂等键归属用户而非 API key；保留期 12h + GET/PUT/PATCH/DELETE 忽略该头 + 返回文件的 POST 不覆盖（来源：docs.n8n.io/connect/n8n-api/idempotency.md，Qoder r668-Q-A 提名·WB 审计代落）。判据=已落 r369B「key 稳定派生 + 工具四类注册表」只规定怎么造键与何时重试，未规定同键撞体时该重放/拒绝/等待——这正是 agent 重投最难查的三种结局；重试门控须对 422 与 409 走不同分支。提升层：工作流（重试安全契约）/ 工具。触发词：Idempotency-Key 冲突态三分、422 同键异体、409 同键在途、指纹含 JSON 序、归属用户、12h TTL。
+- **r630C · 挂起必须占用「成功通道」而不是错误通道**：挂起时 exit 0 且 stdout JSON `"status":"paused"`（非非零码、非 stderr）；且只自动重试 GET/PUT/DELETE、POST 永不自动重试、429 须显式 `--retry-on-limit`；HITL 侧成功提交即终态（同 form_token 不可重投）、被拒则表单不变可重投（来源：docs.dify.ai/.../error-handling-and-retries-for-agents.md + .../human-input-flow.md，Qoder r668-Q-A 提名·WB 审计代落）。判据=任何「等人/等事件」的中间态若走非零码或 stderr，调用方误判为失败并触发重试，把一次挂起变成 N 次重复执行——中间终态必须与成功共用通道、用 body 状态字段区分。提升层：工作流（调用侧状态机）/ 工具（CLI 契约）。触发词：挂起占 exit 0、paused 状态字段、POST 不自动重试、成功提交即终态。

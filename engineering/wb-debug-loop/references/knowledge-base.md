@@ -2302,3 +2302,9 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 事实：BRA 用受控析因框架测量「计算 / 信息 / 反馈」三类推理期资源各自的边际贡献与交互，固定失败态与修订协议；任务相关规格稳定提升修复率，公开测试反馈则不然。
 - 判据：**卡住时的加码决策要按资源类型做归因，而不是简单加预算**；不同类型资源的收益差异极大（规格 > 公开测试反馈），盲目扩容等于把预算投到零收益通道。
 - 提升层：工作流 / 工具。触发词：卡住加预算、推理期资源归因、边际贡献、规格 vs 测试反馈。
+
+## r630A · 取消/中断必须线程安全且不能让消息通道死锁：取消令牌要在正确事件循环线程派发，流式中途取消不能卡死 on_messages_stream（来源：github.com/microsoft/autogen/issues/8358 + #8182，gh api 一手 200 逐串命中 `CancellationToken.link_future() cancels asyncio futures from the wrong thread` / `prevent deadlock when tool call is cancelled during on_messages_stream`）
+
+- 事实：取消令牌把 future 取消派发到了错误的线程（非创建它的事件循环线程），asyncio future 跨线程取消会静默失效或抛错；工具调用在流式接收期间被取消会在消息通道上造成死锁，整条 on_messages_stream 卡住。
+- 判据：① **取消/中断是并发原语，必须落在创建被取消对象的那个事件循环线程上**——跨线程 cancel 等于没取消或崩溃，不能靠"发了取消"记账；② **流式中途取消要显式解开消息通道锁**，否则取消信号与流读取互相持有对方需要的锁即死锁；③ 与 dl 既有"取消是协作式而非抢占式"（r490A）分工：那条管生效粒度是执行单元间隙，本条管**跨线程派发正确性**这个更底层的并发 bug。
+- 提升层：工具（异步取消语义）/ 工作流（并发正确性）。触发词：取消跨线程、CancellationToken.link_future、流式中途取消死锁、on_messages_stream 卡死、asyncio future 跨线程。

@@ -535,3 +535,9 @@ arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety wit
 - 事实：pi-observability-plugin 假定一个进程一个会话；当扩展在同一进程内以多个 AgentSession 跑子 agent 时，父 span 丢失、子 agent 嵌套错乱。
 - 判据：**并发会话是观测插件的一等输入，不是异常输入**。设计/接入可观测方案时，显式验证「同进程多会话」场景下 parent 传播与嵌套是否正确，否则评测数据本身就是错的。
 - 提升层：评测 / 工具。触发词：span 丢失、嵌套错乱、同进程多会话、parent 传播。
+
+## r630A · 批评估运行器须校验 eval_kwargs 列表长度与格式一致性：BatchEvalRunner 在多个评估参数列表长度不一或格式混合时静默错位，须在运行前显式校验（来源：github.com/run-llama/llama_index/issues/23707，gh api 一手 200 逐串命中 `validate eval_kwargs list lengths and mixed formats in BatchEvalRunner`）
+
+- 事实：批量评估把多个参数列表（如不同评估的 kwargs）传给运行器，长度不一对齐或格式（dict/list/scalar）混合时，运行器不报错但把参数错位配对，评分结果悄悄错。
+- 判据：① **批评估运行前必须校验所有 eval_kwargs 列表等长且格式一致**，不齐/不纯即 fail fast，不静默对齐；② **错位配对是静默错误**，表面跑完、分数却不可信——评估工具自身的输入校验是评估可信的前提；③ 与 ae 既有"评估集本身是结论的前提"（r629 评估集构建）分工：那条管数据集质量，本条管**评估运行器自身的参数合法性**。
+- 提升层：评测（运行器输入校验）/ 工具（fail-fast）。触发词：eval_kwargs 长度校验、混合格式、BatchEvalRunner、错位配对、静默错误评分、批评估 fail-fast。
