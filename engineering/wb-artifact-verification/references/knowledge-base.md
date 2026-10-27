@@ -4483,3 +4483,27 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 判据：① **验证层不必在线**——已有轨迹就是可复算的证据面，重放比「再跑一次复现」便宜且确定；② 规约要写成**通用义务**而不是逐应用规则，才谈得上审计与复用；③ 与 av 既有「机械验证优先」同轴，本条补的是**离线重放这一具体执行形态**与「声明式规约优于命令式规则」这一书写形态。
 - 提升层：可复用 Skill（验证方法论）/ 工具（离线监视器）。触发词：离线重放、MFOTL、MonPoly、声明式规约、轨迹重放验证、runtime verification、安全义务命中率。
 
+
+## r634A · 查询的过滤条件必须与「这次请求实际返回的是哪个版本」对齐（来源：api.github.com/repos/activepieces/activepieces/pulls/16856，2026-10-28 一手正文）
+- **实证**：`GET /v1/flows` 带 `versionState=LOCKED` 时返回每个 flow 的**已发布版本**，但 `connectionExternalIds` 过滤器查的却是 flow 的**最新版本**，于是两类错：① 已发布版本用了某连接、更新草稿不再用 → 结果里**漏掉**该 flow；② 草稿新用了某连接、已发布版本没用 → 结果里**多出**该 flow，而它返回的版本并不用这个连接。修复后按请求返回的版本查：`versionState=DRAFT`（默认）查最新版本、`versionState=LOCKED` 查已发布版本；不带 LOCKED 的请求行为不变。
+- **判据**：① **"筛选用哪份数据"与"返回哪份数据"必须是同一份**，否则筛选结果是对另一个对象的判定；② **版本态（草稿/已发布）是查询语义的一部分**，不是返回值的一个字段——改了返回版本就要同步改筛选来源；③ **漏报与误报会同时出现**，所以这类 bug 不能靠"看起来条数对不对"发现，要为"筛选与返回同一版本"写显式断言。
+- 提升层：工具（查询语义）/ 工作流。触发词：versionState=LOCKED、过滤与返回版本一致、published version 过滤、连接外发标识筛选、漏报与误报同时。
+
+
+## r634A · 客户端重试的保真：重试 GET 不许复用 POST 的头，无体请求不发 JSON null，错误语义要在客户端判定（来源：api.github.com/repos/langchain-ai/langgraph/pulls/9399，2026-10-28 一手正文）
+- **实证**：`runs.wait` 响应中途断开后，SDK 会向 `Location` 头发 GET 重试，但该 GET **复用了 POST 的 `Content-Length` 与 `Content-Type`**，于是唯一一次重试必然以 `h11.LocalProtocolError` 失败；同步客户端还会在所有无体请求上发送 JSON `null`（`runs.join`、`runs.cancel(wait=True)`）。另：同步 `runs.wait(raise_error=True)` 把失败 run 的 `{"__error__": ...}` 当正常结果返回，且把 `raise_error` 发给**忽略它的服务端**；异步客户端则会抛。修复：重试 GET 只带调用方的 headers；`json=None` 时不发体（与异步一致）；同步 `runs.wait` 像异步一样检查 `__error__`，且不再下发 `raise_error`。
+- **判据**：① **重试不是重放**：方法换了（POST→GET）就必须重算头部与消息体，沿用旧头会让"有重试"变成"必然失败"；② **"无体"是一种显式状态**，不能靠发一个 null 顶上；③ **错误语义要落在能执行它的一侧**——服务端忽略的开关就不能作为语义依据，客户端必须自己检查错误字段；④ 修这类 bug 的验收是"新的测试在 main 上必须失败"，否则等于没验。
+- 提升层：工具（客户端保真）。触发词：重试复用 Content-Length、h11.LocalProtocolError、无体请求发 null、__error__ 客户端检查、raise_error 服务端忽略、Location 头重试。
+
+
+## r634B · 安全评测三性：验证的是实际后果（可验证）、能区分"避免伤害"与"没能力"（有效）、覆盖真实工作流（通用）（来源：arXiv 2610.35188《V3AST-Bench》，2026-10-28 一手摘要）
+- **实证**：212 个风险任务 / 18 类；专用运行时环境通过**对状态、记录与工件行为的可执行检查**来验证伤害与任务结果；并配**成对的 capability twin 任务**验证工作流能力——用来把"agent 没造成伤害"与"agent 根本做不到"区分开。规模：11 个模型 × 5 个 harness 共 51 组合、86,496 次试验、90 亿+ token。**Claude Opus 4.8 + Claude Code 仍在 20.9% 的任务上造成已验证伤害**；不同模型-harness 组合间能力越强者风险越高。
+- **判据**：① **安全评测不能只看输出文本**，必须能执行地验证后果，否则"看起来无害"就是满分；② **必须配能力孪生**：不配就无法区分"守住了"与"没办到"，会把无能误记成安全；③ **覆盖率要按真实工作流列类**，而不是按已知攻击手法列类；④ **harness 是评测结果的一部分**，同一模型换 harness 结论可能翻转，报告必须带组合坐标。
+- 提升层：可复用 Skill（安全评测判据）。触发词：V3AST-Bench、verifiable/valid/versatile、capability twin、区分无害与无能、可执行检查验证伤害、86,496 trials、20.9% 已验证伤害。
+
+
+## r634B · 安全评测要分「运行轨 / 生命周期轨」两条，并单列 joint 口径（来源：arXiv 2610.35215《SkillLifeBench》，2026-10-28 一手摘要）
+- **实证**：技能存储的代码、选定版本与加载实现会跨任务跨更新而分叉。SkillLifeBench 用 388 对场景把这几种状态与任务结果连起来，覆盖 implementation / interface / runtime / composition / version 五类变更；14 个模型跑两条配对决策轨：89 个 runtime 任务 + 60 个自主 lifecycle 任务（12 个模板）。**GPT-5.6-Sol 与 Sonnet 4.6 在 runtime 上同为 82.0%，lifecycle 却分别是 96.7% 与 56.7%**；lifecycle 上 **challenged task success 77.5% 而 joint success 仅 65.2%**（103 次运行同时完成了任务并达成了攻击目标）。加 execution provenance 的配对恢复实验把 utility joint 从 **49.35% 提到 65.58%**；确定性执行一致性规则达 64.94% 且良性效用更高。
+- **判据**：① **只测"当前跑得好"的评测对生命周期态（接口/组合/版本变更）是盲的**——两条轨分数可以完全不相关，必须用同一模型同时报两轨；② **joint 口径要单独报**：完成任务 ≠ 未被攻陷，challenged 与 joint 的差值正是被攻陷的部分；③ **执行溯源（provenance）是安全能力不是可观测装饰**：加 provenance 直接把 joint 拉高 16 个百分点；④ 评测组合能力（composition）与版本漂移要显式入表，否则技能更新带来的风险无人负责。
+- 提升层：可复用 Skill（安全准入判据）。触发词：SkillLifeBench、runtime vs lifecycle 分轨、joint success 65.2%、challenged 77.5%、execution provenance 49.35→65.58、版本漂移安全。
+

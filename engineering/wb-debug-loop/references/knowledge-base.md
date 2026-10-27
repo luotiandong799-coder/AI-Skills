@@ -2326,3 +2326,15 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **判据**：① **同一资源上的并发调度必须有显式策略枚举（等待 / 跳过 / 失败）并写进设计**，默认落在哪一档要可见；把"撞车"默认实现成"失败"，等于把一个正常态当故障处理。② **失败告警与调度冲突要分级**：冲突是**可预期的正常态**，不是故障；接进 failureAlert 会把噪声升级成寻呼疲劳，等真故障来时已被埋掉 ⇒ 告警通道按"是否需要人现在介入"分派，不按"是否抛异常"分派。③ **报错文案要指向冲突本身而不是底层实现机制**："changed while starting work" 描述的是乐观锁，使用者需要的是"同一会话已有实例在运行"。④ **"修复"的方向是增加选项而不是消除冲突**：issue 的表述是 `instead of waiting or skipping`——承认冲突不可消除，只可选择语义。⑤ 与 §挂起/等待/取消四类静默故障（r631C）分工：那条管**单次执行内部的等待与取消**，本条管**多次调度之间的竞争**。
 - 提升层：工作流（调度语义）/ 工具（告警分级）。触发词：调度冲突三档、wait skip fail、changed while starting work、failureAlert 误升级、寻呼疲劳、cron 撞车、冲突不可消除只可择语义。
 
+
+## r634A · 检查点恢复的「不可带回清单」：不可序列化的回调降级为 null 并显式告警，而不是让恢复整体失败（来源：api.github.com/repos/crewAIInc/crewAI/pulls/8596，2026-10-28 一手正文）
+- **实证**：从检查点恢复时按文件重建 crew，具名模块级回调在 `CREWAI_DESERIALIZE_CALLBACKS=1` 下本就能回来、没开则**明确拒绝**。真正的缺陷是**不可保存的可调用对象**：绑定方法回来变成未绑定并抛 `TypeError`；partial 或可调用实例会**阻塞检查点写入**；lambda 形态的 tool `cache_function` 或 agent 回调让**恢复直接失败**。修复后这些一律保存为 `null`、告警说明"已丢弃"、**恢复得以完成**，且丢失的 tool `cache_function` 恢复为"永不缓存"（fail closed）。配套新增文档节「**What a restore does not bring back**」；检查点 JSON 形状与 `from_checkpoint` 签名不变。
+- **判据**：① **恢复能力要有显式的"不可带回清单"**，并把它写成文档节——不清楚丢了什么，恢复就等于不可信；② **降级方向必须 fail closed**：丢了缓存函数就当"不缓存"，而不是当"随便缓存"；③ **局部不可恢复不应让整体恢复失败**：能回的部分先回，丢的部分逐条告警，比全盘失败可操作；④ **写入侧的阻塞比读取侧的报错更隐蔽**：partial/可调用实例会让检查点根本写不出来，要在写入前就判定可序列化性。
+- 提升层：工作流。触发词：unrestorable callbacks、save as null、What a restore does not bring back、fail closed 缓存、partial 阻塞检查点写入、绑定方法未绑定、降级而非整体失败。
+
+
+## r634A · 审批必须跨「会话恢复」兑现：改用原生 defer 而不是把待批状态存在桥接内存里（来源：api.github.com/repos/vercel/ai/pulls/24119，2026-10-28 一手正文）
+- **实证**：一轮在内置工具审批待决时被停住、随后会话在**桥接已不在跑**的环境里恢复（例如从快照起的新沙箱），审批只活在旧桥接的内存里。重生的桥接用 `Continue.` 提示重跑线程，Claude Code 把该次调用标记为 interrupted，**宿主给的答复被静默丢弃**。修复改用 Claude Code 原生 `defer` 权限决策：`PreToolUse` 钩子把需审批的调用 defer，Claude Code 结束该轮但**把调用留在会话 transcript 里**；宿主答复后桥接**无提示地恢复会话**，钩子把决策应用到同一次调用；重生的桥接凭 `deferredToolUseId` 续接该调用而不是发 `Continue.`。**已知限制（须同引）**：同一条消息里多个调用需审批时，Claude Code 只保留一个 deferred，其余报工具错误、由 Claude 重新发起；移交期间发来的用户消息改投到恢复后的查询而不是丢失。
+- **判据**：① **待批状态的存在位置决定它能活多久**：放在进程内存里，进程一没它就消失，且消失方式是"静默丢弃答复"——最坏的一类失败；② **把待决调用写进 transcript 才算持久化**，恢复时才能凭 id 精确续接；③ **恢复后重新发起 ≠ 恢复原调用**：会让用户被重复询问、甚至重复执行；④ **受限能力要显式声明**（一消息只保一个 deferred），否则多调用场景下会以为全都挂住了。
+- 提升层：工作流（审批持久化）/ 工具。触发词：deferredToolUseId、原生 defer、审批跨 resume、答复被静默丢弃、PreToolUse defer、一消息只保一个 deferred、重复审批。
+

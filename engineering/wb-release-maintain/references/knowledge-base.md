@@ -975,3 +975,15 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **判据**：① **定义与执行必须解耦到"启动瞬间"**：开始执行时把定义图钉成快照，此后重发布只影响新执行 ⇒ 否则一次例行发布会改变正在跑的行为，而且**最隐蔽的受害点是循环/迭代内的嵌套调用**（顶层看起来没变，子调用已被偷换）。② **"不可变"必须覆盖嵌套调用，不能只钉顶层**：只钉入口不钉子节点，等价于没钉——判据是"沿调用树往下每一层取的是不是同一个快照"。③ **恢复与自动保存的先后顺序是正确性条件，不是性能优化**：草稿保存必须先完成再恢复，否则 autosave 会用旧草稿覆盖刚恢复的配置 ⇒ **两个各自都在"写正确数据"的动作，顺序错了就是互相破坏**；凡"后台自动保存"与"用户显式恢复"并存的系统，都要显式排这条序。④ **派生动作要声明取哪个源（草稿 vs 已发布）**：本例同批明写导出取草稿、发布取版本 ⇒ 混用会导致"我恢复完了"与"它导出的是旧内容"同时为真。⑤ 与 §版本是不可变快照、端点决定谁跟最新版 分工：那条管**消费者侧钉版本防漂移**，本条管**执行侧钉定义防在飞被改** + **恢复与自动保存的写入顺序**；与 §r557A（编辑态字段泄进持久层）分工：那条管**字段不该被持久化**，本条管**持久化之后的覆盖顺序**。
 - 提升层：工作流（发布与执行解耦）/ 工具（配置恢复语义）。触发词：source graph before execution、重发布不影响在飞、loops and iterations、draft saves finish before restoration、autosave 覆盖恢复、导出取草稿发布取版本、恢复与自动保存排序。
 
+
+## r634A · 升级预检的读法：只读打开、只读跨版本稳定列、先探测再读、流式低内存，且绝不启动服务或写密钥（来源：api.github.com/repos/langflow-ai/langflow/pulls/16027，2026-10-28 一手正文）
+- **实证**：新增 `langflow.upgrade_check.reader`，用**本版本的代码读你要升级自的那个版本的数据库**（升级前跑）。要点：① SQLite 用 `mode=ro`、Postgres 开 `READ ONLY` 事务并在结束后回滚；② **只读"从 1.10 起每个版本都有的普通列"**，而不用本版本的 ORM 模型（`select(Flow)` 会要 1.12.6 及更早没有的列），并在读之前**先检查 `flow_version`、`trigger` 与部署表是否存在**；③ 先一次性读 users/projects/alembic revision，再**小批流式**读 flows、saved components 与仍在跑的旧版本（被 trigger 钉住或挂在部署上），Postgres 用服务端游标——1,000 个约 330KB 的 flow 峰值 70MB，而一次性全载是 691MB；④ **绝不启动 Langflow 的服务，也绝不写 secret key**。另注：SQLite WAL 即使在只读打开时也会生成 `-shm`/`-wal` 旁文件，测试专门校验数据库文件字节不变。
+- **判据**：① **预检必须"零副作用"**：只读事务、不启动服务、不碰密钥，否则预检本身就成了变更源；② **跨版本要用最小公共面**而不是本版本的模型——用新模型读旧库必然因缺列而炸，且这个失败会被误读成"数据坏了"；③ **先探测后读取**是版本兼容的标准动作；④ **内存与规模要一起设计**：流式把 691MB 压到 70MB，预检才有资格在生产上跑；⑤ 只读也会产生旁文件（WAL/-shm），"只读无痕"是错的，要显式验证源文件未被改动。
+- 提升层：工作流。触发词：upgrade check、mode=ro、READ ONLY 事务、跨版本稳定列、先探测再读、流式 70MB vs 691MB、不启动服务、不写 secret key、WAL 旁文件。
+
+
+## r634C · 备份与 RPO 由「能不能重建别人」分区决定，可重建存储不必备份；重试退避起点要长于故障转移（来源：www.activepieces.com/docs/install/guarantees/disaster-recovery.md，2026-10-28 一手正文 7,786B 逐串命中）
+- **实证**：原文把后端存储分成**两个 system of record（Postgres：flows/runs/trigger schedules/waitpoints/connections；S3：run logs、大 webhook payload、flow bundles）** 与**一个可重建态（Redis：BullMQ 队列与缓存，"Everything in Redis except the queue itself can be rebuilt from Postgres"）**。RPO 表直接写：Redis 的 RPO = **你的 Redis 持久化窗口**（AOF `everysec` 时 ≤1s；无持久化则整个队列）。并明写「**Do not bother backing up Redis.** Enable persistence (AOF everysec ...) to shrink the queue-loss window, but treat the rest of Redis as a rebuildable cache.」恢复 runbook 从 Postgres waitpoints 回填；**队列任务只重试一次，指数退避从 8 分钟起——刻意长于一次典型故障转移**，让重试落在恢复之后且已完成的步骤不重跑。
+- **判据**：① **备份对象的判据是"别人能不能从它重建"，不是"它重不重要"**：先给每个存储贴 system-of-record / rebuildable 标签，再决定备不备、RPO 多少；② **RPO 要追到一个具体参数**（AOF everysec ≈ 1s 窗口），写"RPO<5 分钟"这类自我安慰没有意义；③ **可重建层只做"缩小窗口"不做"备份"**，省下的成本投到真相源的持久化上；④ **重试退避起点要按恢复时间定**（8 分钟 > 典型 failover），太短会在故障转移完成前把重试打光；⑤ 恢复路径要能从真相源**回填**可重建层（waitpoints → 队列），否则"可重建"只是口号。
+- 提升层：工作流。触发词：system of record vs rebuildable、Do not bother backing up Redis、AOF everysec 1s、RPO 是持久化窗口、waitpoints 回填、退避起点 8 分钟长于故障转移。
+
