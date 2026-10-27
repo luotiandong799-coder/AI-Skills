@@ -1,9 +1,9 @@
 ---
 name: system/skills-security-check
-description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全、秘密引用解析三覆盖、$var: 头部引用字面外泄、variables:read:<path> scope、日志不回显解密值、名称解析宽容度按读写分面、setup replacement、不进轮换不可 pin、tool-free turn 激活、失败保持非激活、个人账户存储隔离、会话级单选、故障转移不拿他人个人账户兜底、OAuth 验证钩子时机枚举、validateOAuthCredential、terminally fenced、计划后执行前重验、TOCTOU 面、隐式选择精确匹配、prefix alone never selects a harness、明文 HTTP 端点硬拒、legacy alias 归一、roleMapping 三模式、applyResolvedRoles 独立事务、claim-match 只评不写、跨会话组合攻击、Instruction Propagation、Data Boundary Violation、Evidence Poisoning、SkillRelayBench、SkillRelayGuard、工件来源上下文恢复、执行前 advisory、恶意产能按发布者聚合熔断、判定器与判定对象同面受审、扫描判级三原则、门控资格与分诊资格两档、滥用门 denylist、未来公共 provider 默认受检、PLATFORM_CONTROLLED_PROVIDERS、email_verified 证明范围、domain 级 invalid 拒绝 mailbox 级允许、mailbox 存在性 oracle、拒绝响应防泄漏、缓存按信号稳定性、资格退场按操作分面创建编辑关删除保留、门禁服务端路由强制 UI 锁不是门禁、删除级联语义显式、空 tier 删除旗标迁移第一剩余 tier、社区版误伤验证、维护态放行按副作用判、GET 也会写 token、路由分类枚举测试未分类即构建失败、读仍写什么台账、信任源自举未检查、sandbox 缺省沿用、job 身份为默认、viewer 显式 opt-in、publisher 模式读取他人角色、on_behalf_of、Home 与 Workspace 双侧校验、BindingLostError"
+description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全、秘密引用解析三覆盖、$var: 头部引用字面外泄、variables:read:<path> scope、日志不回显解密值、名称解析宽容度按读写分面、不进轮换不可 pin、tool-free turn 激活、失败保持非激活、个人账户存储隔离、会话级单选、故障转移不拿他人个人账户兜底、OAuth 验证钩子时机枚举、validateOAuthCredential、terminally fenced、计划后执行前重验、TOCTOU 面、隐式选择精确匹配、prefix alone never selects a harness、明文 HTTP 端点硬拒、legacy alias 归一、roleMapping 三模式、applyResolvedRoles 独立事务、claim-match 只评不写、跨会话组合攻击、Instruction Propagation、Data Boundary Violation、Evidence Poisoning、SkillRelayBench、SkillRelayGuard、工件来源上下文恢复、执行前 advisory、恶意产能按发布者聚合熔断、判定器与判定对象同面受审、扫描判级三原则、门控资格与分诊资格两档、滥用门 denylist、未来公共 provider 默认受检、PLATFORM_CONTROLLED_PROVIDERS、email_verified 证明范围、domain 级 invalid 拒绝 mailbox 级允许、mailbox 存在性 oracle、拒绝响应防泄漏、缓存按信号稳定性、资格退场按操作分面创建编辑关删除保留、门禁服务端路由强制 UI 锁不是门禁、删除级联语义显式、空 tier 删除旗标迁移第一剩余 tier、社区版误伤验证、维护态放行按副作用判、GET 也会写 token、路由分类枚举测试未分类即构建失败、读仍写什么台账、信任源自举未检查、sandbox 缺省沿用、job 身份为默认、viewer 显式 opt-in、publisher 模式读取他人角色、on_behalf_of、Home 与 Workspace 双侧校验、BindingLostError、无法执行≠无意见、Git Bash 缺失放行"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: "1.207.0"
+version: "1.208.0"
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -492,7 +492,7 @@ visibility: "public"
 
 
 
-## r631B 下沉条目（4 条旧条目原文已零删减下沉 references/knowledge-base.md §r631B 下沉）
+## r631B 下沉条目（4 条旧条目原文已零删减下沉 references/knowledge-base.md §r631B 下沉；**r633A 下沉**：安全钩子的「执行不了」不等于「无意见」（依赖缺失时 PreToolUse/PermissionRequest 直接放行）+ 超时文案须区分「没等到答复」与「被拒绝」，原文同下沉
 
 ## 审计取证面要前移到「钩子回调输入」：技能身份四元组必须由平台随回调一起给出，而不是靠审计方事后反推（来源：code.claude.com/docs/en/changelog 4,644,825B 一手 curl 200 逐串命中，2026-10-27 r631B）
 - **实证**：官方 changelog 原文「Added the skill's **frontmatter, source, plugin name and file path** to what a mod's `skill.prompt` hook receives」——把技能自身的四个身份字段（frontmatter 声明 / 来源 / 插件名 / 文件路径）直接放进钩子回调的输入里。

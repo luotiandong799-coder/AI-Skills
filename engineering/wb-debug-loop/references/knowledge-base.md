@@ -2315,3 +2315,14 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 判据：① **超时是观测面的事件，不是执行面的终止**——「超时转后台」等于把无界进程的所有权交给了一个看不见的后台；② **同一条命令已在后台运行时，再次派发前必须告知或去重**，否则 agent 的「重跑」在语义上是全新的，在资源上是叠加的；③ 与 dl 既有「超时优先判定早于结果接纳」（Qoder r670-Q-C）分工：那条管终态判定的排序，本条管**超时后进程的实际存活与资源无界**；④ 与 n8n 内存水位两级准入（Qoder r671-Q-A：>=80% 连续两次采样只 hold 新执行，>=95% 单次采样才 stop 掉 run data 最重的一条，被停执行存为 failed 且不带 run data）合成一条主轴：**压力下的执行取舍必须是显式的分级动作（软挡新 / 硬杀旧 / 有降级终态），而不是默认「继续跑」**。
 - 提升层：工具（进程与资源所有权的终止语义）/ 工作流（重试与派发去重）。触发词：超时转后台、命令仍在运行、进程堆积、OOM、重复派发、后台任务无界、内存水位准入、hold and stop。
 
+
+## 取消是「跨进程路由」问题而不是本地标志位：DB 标了 canceled，worker 仍在跑且并发槽被占（来源：gh api repos/n8n-io/n8n/issues/42311 一手 200，title 原文 `fix(core): Stop a queue-mode job on the worker when the stop request comes from a different process`，state=open，created 2026-10-27；2026-10-28 r633B 实拉）
+- **实证**：标题原文如上——queue mode 下**停止请求来自另一个进程**时，需要把停止**投递到 worker 上那个 job** 才能真正停掉。同轮旁证核对：Qoder r673-Q-A 引用 LangFlow #15999「Cancel works across pods」作旁证，经 gh api 一手实拉其标题**实为 `feat(evals): add datasets and flow evaluations`**（open，2026-10-26），与该表述不符 ⇒ **该旁证不成立，已剔除**；登记为一条取证据纪律：**二手/转述的 issue 引文必须回源核标题，标题不符即整条旁证作废**。
+- **判据**：① **"取消"必须有能打到正在执行它的那个进程的投递通道**，并按 execution id 定位；只在协调者侧把状态置为 canceled，会留下"列表显示已取消、实际仍在跑且并发槽继续被占"的幽灵态——**取消的验收标准是资源是否释放，不是标志是否置位**。② **取消态与资源占用要同表核对**：排查"明明取消了还在跑"时，先查取消命令的**投递路径**再查执行体逻辑；把两者混在一起会一直在错的一侧找 bug。③ **多进程/多副本下，"谁在执行"是运行时事实而非配置事实**：按进程号 / 节点名去停是错的抽象层，要按执行对象的 id 路由。④ 与 §超时≠终止（dl 1.292.0）分工：那条说"超时后任务仍在跑"（**没人叫停**），本条说"取消命令本身可能根本没送达执行者"（**叫了没听见**）——两者症状相同、根因相反，处置也相反。
+- 提升层：工作流（执行态取消语义）/ 工具（队列与槽位）。触发词：queue mode 停止、跨进程取消、stop request different process、幽灵取消、并发槽被占、取消未送达、回源核标题。
+
+## 调度冲突必须显式三选一（wait / skip / fail），且 fail 档不得顺带寻呼：把可预期的撞车接进 failureAlert 是告警分级错误（来源：gh api repos/openclaw/openclaw/issues/186129 一手 200，title 原文 `cron: agent-turn jobs sharing a session:<id> fail with "changed while starting work" and page via failureAlert when another run is active, instead of waiting or skipping`，state=closed，created 2026-10-27；2026-10-28 r633B 实拉）
+- **实证**：标题原文如上——共享同一 `session:<id>` 的 agent-turn 定时任务，在已有 run 活跃时的现状是**直接失败 + 通过 failureAlert 寻呼**，而**不是等待或跳过**；issue 已 closed（修复方向即把这三档显式化）。
+- **判据**：① **同一资源上的并发调度必须有显式策略枚举（等待 / 跳过 / 失败）并写进设计**，默认落在哪一档要可见；把"撞车"默认实现成"失败"，等于把一个正常态当故障处理。② **失败告警与调度冲突要分级**：冲突是**可预期的正常态**，不是故障；接进 failureAlert 会把噪声升级成寻呼疲劳，等真故障来时已被埋掉 ⇒ 告警通道按"是否需要人现在介入"分派，不按"是否抛异常"分派。③ **报错文案要指向冲突本身而不是底层实现机制**："changed while starting work" 描述的是乐观锁，使用者需要的是"同一会话已有实例在运行"。④ **"修复"的方向是增加选项而不是消除冲突**：issue 的表述是 `instead of waiting or skipping`——承认冲突不可消除，只可选择语义。⑤ 与 §挂起/等待/取消四类静默故障（r631C）分工：那条管**单次执行内部的等待与取消**，本条管**多次调度之间的竞争**。
+- 提升层：工作流（调度语义）/ 工具（告警分级）。触发词：调度冲突三档、wait skip fail、changed while starting work、failureAlert 误升级、寻呼疲劳、cron 撞车、冲突不可消除只可择语义。
+

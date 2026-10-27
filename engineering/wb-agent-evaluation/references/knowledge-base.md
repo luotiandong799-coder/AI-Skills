@@ -554,3 +554,9 @@ arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety wit
 - 判据：① **评测要先分离「跑完了没」与「跑对了没」**——把未完成、崩溃、格式不可解析一律计入「错」，会把 harness 缺陷错记成模型缺陷；② 与 ae 既有「按 model-harness 配置分列增益」（SKILL.md 正文）分工：那条管**结果表的分列呈现**，本条管**归因的先后顺序**——先算 VCR 分层，再在同一层内比较；③ 报告任何 agent 基准提升时，必须同时给出 VCR，否则「提升」可能只是「更多次跑完了」。
 - 提升层：可复用 Skill（评测指标设计）/ 工作流（失败归因）。触发词：Valid Completion Rate、VCR、harness 归因、模型还是 harness、不可评测结果、异常终止计入失败。
 
+
+## 「凭据有效」不等于「连接可用」：失败归因必须区分过期 / 版本漂移 / 载荷缺字段三类，三者处置互不替代（来源：gh api repos/PipedreamHQ/pipedream/issues/22350 一手 200，body 1,701B 全文实读；标题原文 `[BUG] notion_api_key: data source actions fail with "Invalid request URL." because the app pins Notion-Version 2022-02-22`（open，2026-10-27）；2026-10-28 r633C 实拉）
+- **实证**：issue 正文自述 Root cause——`notion_api_key` 复用 `@pipedream/notion` 的动作，这些动作已改用 `dataSources.retrieve` / `dataSources.query`（`GET /v1/data_sources/{id}`、`POST /v1/data_sources/{id}/query`），**这些端点仅自 Notion API version `2025-09-03` 起存在**；而 `notion_api_key.app.mjs` 把 `_getNotionClient()` 覆写为 `notionVersion: "2022-02-22"` ⇒ 在 2022-02-22 下 `/v1/data_sources/...` 路径不存在，Notion 返回 `Invalid request URL.`。同一批动作在 OAuth `notion` app（钉 `2025-09-03`）下正常。复现步骤明写：用**有效的** internal integration secret、且数据源已共享给该集成，仍然失败。建议修复是"把 `notionVersion` 改成 `2025-09-03` 并 bump 受影响组件版本"。
+- **判据**：① **连接失败要分三态归因，处置互不替代**：**凭据失效**（过期 / 撤销 → 刷新或重授权）、**版本漂移**（凭据有效但客户端钉的 API 版本不再提供该端点 → 升级版本头）、**载荷/字段缺失**（端点存在但请求体不合当前契约 → 补字段 / 加空值防护）。本例是第二态，而它的报错 `Invalid request URL.` 读起来像"URL 拼错了"，若按第一态处置（重新授权 / 换密钥）**永远修不好**。② **报错文本是归因陷阱，不能作为分类依据**：判据是**先按"凭据是否确实有效"做一次正面验证**，再决定走哪条处置路径；把报错字符串当分类标签会系统性误诊。③ **"同一能力两条接入路径"时，覆写点必须纳入上游升级的同步清单**：`notion_api_key` 复用 OAuth 版动作但**覆写了客户端构造**，共享面升级了而覆写点没跟上 ⇒ 判据：**凡复用上游组件又覆写其客户端 / 配置 / 版本常量的部分，要登记为升级联动项**，否则上游一次演进只坏一半路径。④ **报障要把"凭据确实有效"作为已知事实写清**：本例复现步骤特意写明 secret 有效且已共享，立刻排除一整类归因 ⇒ 这是可复用的取证纪律。
+- 提升层：工具（连接与凭据诊断）/ 工作流（失败分诊）。触发词：凭据有效但连接不可用、Notion-Version 2022-02-22、Invalid request URL、版本漂移、三态归因、覆写客户端未同步升级、dataSources 端点、报错文本是归因陷阱。
+

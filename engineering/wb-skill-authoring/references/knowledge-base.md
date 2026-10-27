@@ -4505,3 +4505,14 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - 判据：① **预算要写成多维配额（按来源 + 按事件并发 + 按 owner 键控）而不是一句「少挂钩子」**——三个维度各自会先撞墙；② **后台自改进必须有界且带背压**：无界草稿会自己变成新的腐烂源，背压（满额即停）比清理更可靠；③ 与 sa 既有「2% 清单预算」「disallowed-tools 期内减权」分工：那两条管声明面开销，本条管**运行时钩子与后台审阅的资源面**。
 - 提升层：工具（钩子运行时）/ 工作流（自改进节奏）。触发词：钩子预算、1024 hooks、matcher 字符上限、每事件 12 个钩子、once 钩子 owner 键控、自改进审阅、64 事件 32KiB、草稿背压、skill workshop。
 
+
+## hook 的入口与出口是宿主契约：谁生效由固定顺序决定、承诺落定后的追加不进会话（来源：docs.openclaw.ai/automation/hooks/writing-hooks 253,655B 一手 curl 200 逐串命中 "`handler.ts`, `handler.js`, `index.ts`, then `index.js`, using the first file it finds" / "Append messages before the handler's promise settles; detached work that pushes later can miss the producer's delivery step" / "sessionKey | Session correlation key; Gateway events use a Gateway key instead"，2026-10-28 r633A）
+- **实证**：①入口发现顺序原文——宿主按 `handler.ts` → `handler.js` → `index.ts` → `index.js` 的固定次序查找，**取第一个找到的文件**（"using the first file it finds"），文档示例用 JavaScript 故无需 TypeScript 编译；②回复时机原文——「**Append messages before the handler's promise settles**; detached work that pushes later can miss the producer's delivery step」；③事件对象是固定字段集（含 `sessionKey`——"Session correlation key; Gateway events use a Gateway key instead"，即网关事件换键而非沿用会话键）。
+- **判据**：① **同目录存在多个合法入口文件时，"谁生效"由宿主的固定顺序决定，不由内容决定** ⇒ hook / 技能包必须只保留一个入口文件，或显式声明期望入口并自检其余候选不存在；否则一次重构（新增 `index.js` 就盖掉 `handler.ts`）会**静默换实现且零报错**——这不是内容 bug 而是解析顺序 bug，只读代码看不出来。② **"先回执、后补内容"的设计必须把追加做在承诺落定之前**，或改成显式二次调用；把异步补写当"最终一致"会丢消息，且**丢在生产者投递步骤之外**，日志里看不到。③ **相关性键在不同事件源之间会换键**（Gateway 事件不用 `sessionKey`）⇒ 凡按会话键做关联 / 去重 / 幂等的逻辑，都要先确认"这个事件用哪个键"，否则跨源关联静默断链。④ 与 §钩子预算多维配额（r632C，同一事件挂多少钩子 / 占多少资源）分工：那条管**数量与资源**，本条管**单个钩子的入口与出口语义**。
+- 提升层：可复用 Skill（hook 写作契约）/ 工作流（执行态消息面）。触发词：hook 入口顺序、handler.ts 优先、first file it finds、promise settles、异步补话无效、detached work、sessionKey 换键。
+
+## 「禁止自动」不等于「禁止手动」：一个声明位承载两种可见性时，宿主会把它实现成整体隐藏（来源：docs.claude.com/en/docs/claude-code/skills.md 118,164B 一手 200 逐串命中 "Add `disable-model-invocation: true` to prevent Claude from triggering it automatically" / "an `allowed-tools` grant clears when you send your next message"；故障侧 openclaw #184918（2026-10-26）「Skill picker hides user-invocable skills that set `disable-model-invocation`」由 Qoder r672-Q-C 转述，2026-10-28 r633A 补规格侧一手）
+- **实证**：规格侧原文——该位的用途是「...skills you want to invoke directly with `/skill-name` rather than letting Claude decide when to run them」，即**同一句话里"用户手动调"与"不让模型自动调"是并存的**；故障侧——openclaw #184918 显示装载器把该位实现成"picker 隐藏这些技能"。
+- **判据**：① **一个声明位只承载一种可见性语义**——"不许模型自动用"与"不许用户手动用"是两个独立轴，装载器必须分别求值；压进一个位后，下游会按最短路径实现成"藏起来"，而作者写这个位时想的是"只降自动"。② **降权类声明必须自带"用户入口是否保留"的显式结论**，不靠读者从规格推断；写技能时若要"只许手动"，正文要明写"仍可通过 X 调用"。③ **跨宿主复用字段前逐位核对宿主实现**——同名位在不同宿主语义不同，迁移技能不能逐行拷贝 frontmatter。④ 与 §触发权双向控制（r173-B，补 `user-invocable` 另一方向 + 拦截含防绕过）分工：那条管**作者该声明哪两个方向**，本块管**宿主不得把单向降权解释成双向封禁**。
+- 提升层：可复用 Skill（声明位语义）/ 工具（装载器实现）。触发词：声明位双语义、禁自动≠禁手动、picker 隐藏、disable-model-invocation 误实现、user-invocable 迁移核对。
+

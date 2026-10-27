@@ -969,3 +969,9 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - 判据：① **外部依赖登记是一次性的，能力面不是**——工具会消失/被替代，复查必须成为有节律的动作，否则「已登记的集成」会静默变成「已失效的集成」；② **破坏性协议变更的滚动顺序（先退役旧消费者再放新流量）不是可选运维细节**，共享队列上的取消/守卫语义变更尤其如此；③ **恢复能力受留存窗口约束**：重放窗口 < 挂起寿命 = 名义可恢复、实际不可恢复，改 retention 等同于改 SLA。
 - 提升层：工作流（依赖治理）/ 工具（发布与滚动顺序）。触发词：工具生态演进、工具消失被替代、Δτ-Bench、legacy worker retire、共享队列协议变更、重放窗口、retention 缩短、挂起寿命。
 
+
+## 执行面要「启动即钉定义快照」：重发布不得改变在飞运行（含循环与迭代内的调用），且恢复前必须先落定草稿保存（来源：gh api repos/langgenius/dify/releases/tags/1.18.0 一手，release body 35,944B 逐串命中 `Source graphs are captured before execution, so republishing a tool does not change an in-flight run, including calls inside loops and iterations` / `Agent version menus now offer Restore, and pending draft saves finish before restoration so autosave cannot overwrite the restored configuration` / `Skill duplication and export use the latest saved draft content`，2026-10-28 r633B 实拉）
+- **实证**：官方 release 正文三句原文如上——①定义图**在执行之前捕获**，因此重发布工具**不会改变一个在飞的运行**，且明确点出**包括循环与迭代内部的调用**；②Agent 版本菜单新增 Restore，且**待保存的草稿先落定再执行恢复**，使 autosave 无法覆盖刚恢复出来的配置；③同批另写**技能复制与导出取"最新已保存草稿"**，而 Agent 导出可指定**已发布版本**——两个派生动作取不同源。
+- **判据**：① **定义与执行必须解耦到"启动瞬间"**：开始执行时把定义图钉成快照，此后重发布只影响新执行 ⇒ 否则一次例行发布会改变正在跑的行为，而且**最隐蔽的受害点是循环/迭代内的嵌套调用**（顶层看起来没变，子调用已被偷换）。② **"不可变"必须覆盖嵌套调用，不能只钉顶层**：只钉入口不钉子节点，等价于没钉——判据是"沿调用树往下每一层取的是不是同一个快照"。③ **恢复与自动保存的先后顺序是正确性条件，不是性能优化**：草稿保存必须先完成再恢复，否则 autosave 会用旧草稿覆盖刚恢复的配置 ⇒ **两个各自都在"写正确数据"的动作，顺序错了就是互相破坏**；凡"后台自动保存"与"用户显式恢复"并存的系统，都要显式排这条序。④ **派生动作要声明取哪个源（草稿 vs 已发布）**：本例同批明写导出取草稿、发布取版本 ⇒ 混用会导致"我恢复完了"与"它导出的是旧内容"同时为真。⑤ 与 §版本是不可变快照、端点决定谁跟最新版 分工：那条管**消费者侧钉版本防漂移**，本条管**执行侧钉定义防在飞被改** + **恢复与自动保存的写入顺序**；与 §r557A（编辑态字段泄进持久层）分工：那条管**字段不该被持久化**，本条管**持久化之后的覆盖顺序**。
+- 提升层：工作流（发布与执行解耦）/ 工具（配置恢复语义）。触发词：source graph before execution、重发布不影响在飞、loops and iterations、draft saves finish before restoration、autosave 覆盖恢复、导出取草稿发布取版本、恢复与自动保存排序。
+
