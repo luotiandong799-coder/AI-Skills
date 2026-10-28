@@ -4576,3 +4576,21 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 ##### r639A · 流式读取「遇首个错误即停」会丢掉尾部计量块：usage 挂在 finish chunk 上，对特定错误要继续排空流（来源：api.github.com/repos/mastra-ai/mastra/pulls/28671，r639A 一手 gh api 200 逐串命中 `made the structured-output validation error reach the stream before the model's finish chunk` / `The LLM step loop stops reading at the first error, so it never read the finish chunk that carries the token usage` / `onFinish reported usage/totalUsage as undefined for schema-mismatch runs` / `The loop now keeps draining the stream after that specific error so usage is recorded`）
 - **判据**：① **"出错就停止消费流"会连尾部携带的元数据一起丢**——计量、结束原因、trace id 常在最后一块，停读 = 静默丢失。② **修复要窄**：只对"这一特定错误"继续排空，不是所有错误都继续读 ⇒ 排空策略要按错误类型分档。③ **成本可见性依赖这条路径**：schema 不匹配的跑次恰恰是最该看 token 消耗的，却因为停读而永远记不到 ⇒ 计量缺失会系统性偏向"失败样本无成本"的错误结论。
 - 提升层：工具（流式消费与计量）/ 验证（成本数据完整性）。触发词：finish chunk、usage undefined、遇错停读、drain after error、schema-mismatch 计量丢失。
+
+## r640A · 终态写入的有界重试，与超时后引擎间"保存了什么"的分裂（一手：dify#44938 / mastra#28659）
+
+### A12 终态写入失败被吞 → 已完成运行永久停留 running（dify#44938）
+
+- 一手事实：记录运行最终状态的那一次数据库写入失败（故障转移、连接池重启或语句超时）时，调度层的分层派发器捕获层异常**仅记日志**：答案仍送达用户、消息在另一事务中保存，但运行行保留启动时写入的 `running` 状态——**无错误、无结束时间、也没有定时任务来收拢它**。日志、运行历史与 `GET /v1/workflows/run/{id}` 于是把一个已完成的运行显示为仍在运行。
+- 修复形态（一手）：终态保存是**租户作用域 upsert、位于自身事务中**，因此重试瞬时失败是安全的；`_finish_workflow_execution` 现在以**有界退避（3 次尝试）**重试保存后再重新抛出。测试：`pytest tests/unit_tests/services/test_workflow_persistence.py` 55 passed（新增 2）——终态保存失败两次后第三次成功 → 3 次尝试后持久化 `SUCCEEDED`；持续失败 → 恰好在有界次数后重新抛出（红/绿双向验证）。
+- 可复用判据：**终态写入与"结果送达用户"不是同一事务**时，会出现"用户已拿到答案、系统仍显示运行中"的幽灵态；判定终态写入是否可重试，要看它是否是独立事务内的幂等 upsert，而不是笼统地"失败就记日志"。
+
+### A13 超时后各执行引擎保存的记忆不一致（mastra#28659）
+
+- 一手事实：agent 运行命中 `modelSettings.timeout.totalMs` 时，各引擎把**不同量**的这一轮写入记忆。场景矩阵（tool 睡 2500ms + `totalMs: 1000` 为 A；模型首 chunk 4000ms + `totalMs: 1000` 为 B；tool 50ms 完成 + 后续模型调用卡 4000ms + `totalMs: 1500` 为 C；E 为无超时对照）：
+  - `normal` / `fs`：A/B/C 全为 `[]`（什么都不存）
+  - `durable` / `evented`：A/B/C 均为 `user[text]`
+  - `inngest`：A 为 `user[text], assistant[tool:result]`；B 为 `user[text]`；C 为 `user[text], assistant[tool:result,step-start]`
+- 两个具体问题（一手）：① **Inngest 保存了在截止时间之后才完成的工具结果**（A 场景）——与 #27941 声称的"超时执行的迟到写入被隔离、仅在 `savePerStep` 开启时保存已完成步骤"矛盾；既有的奇偶性测试 `parity-error-surfaces.scenario.test.ts` 没抓到，因为其工具永远不完成。② **引擎之间对"是否保存用户消息"不一致**：normal/fs 什么都不存，durable/evented 存用户提示；测试 `:256` 行把这分裂钉死为 `savePerStep || engine === 'durable' || engine === 'evented'`，而把 Inngest 排除在外。
+- 待决问题（一手原文）：超时是目前唯一能让运行以"normal/fs 上不保存用户消息"结束的路径。默认引擎上，模型错误会保存 `user[text], assistant[error]`，调用方 abort 会保存用户消息 + 取消标记；而超时后，**下一轮没有任何"用户曾提出请求"的记录，也没有任何"一个带副作用的工具已启动"的记录**。
+- 可复用判据：**把"超时"当作一个终态来定义它在记忆/审计中留下的痕迹**，并让所有执行引擎一致；跨引擎奇偶性测试必须包含"工具在截止时间后才完成"这一分支，否则迟到写入会一直漏网。

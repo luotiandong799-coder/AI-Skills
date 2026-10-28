@@ -1839,3 +1839,47 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 ##### r639B · 系统提示泄漏抽取是「跨轮次涌现」行为，逐条独立评估会系统性漏检；检测要建跨查询关系图（来源：arxiv.org/abs/2610.36295《Detecting and Mitigating Query-Based System Prompt Leakage Attacks》，r639B 一手 abs 页 citation_title/citation_abstract 取得（注：arXiv API 列表标题与此 ID 错配，以 abs 页为准，API 标题作废），逐串命中 `Existing defenses often assess queries independently, missing malicious behavior that emerges across interactions` / `models cross-query relationships using a bounded semantic interaction graph, statistically filters candidate components, and converts them into line graphs for graph convolutional network (GCN) classification` / `captures multi-hop patterns in query similarity that distinguish coordinated extraction from benign workflows` / `improves recall by up to 36% over the strongest baseline while maintaining a false positive rate of at most 3.4%` / `Leave-one-attack-family-out tests yield 99.98% mean recall and 99.99% mean F1`）
 - **判据**：① **单条无害 ≠ 组合无害**：逐条独立评估漏掉的正是"跨交互才成立"的抽取行为 ⇒ 检测单元应是会话的一段而非单条查询。② **关系图要有界**：无界相似度图会随会话长度爆炸，需要先做统计过滤再转线图分类。③ **冷启动要另配轻量检测器**：交互历史攒够之前用 prompt 级检测兜底，不能等图建起来才防护。④ **泛化验收用留一攻击族**：`Leave-one-attack-family-out` 才是"未见攻击族"的诚实口径，随机划分会高估。
 - 提升层：安全边界（提示泄漏检测）/ 评测（泛化口径）。触发词：system prompt leakage、cross-query、bounded semantic interaction graph、line graph GCN、leave-one-attack-family-out、多跳相似度。
+
+## r640A · MCP 工具派发前的信任验证钩子（一手：Flowise#6433）
+
+### A11 无框架级钩子在 MCP 工具执行前校验服务端可信性（Flowise#6433）
+
+- 一手事实：agent 调用 MCP 工具时，**没有任何框架级钩子可在执行前校验 server 是否可信**；用户从不可信来源配置 MCP server 的部署缺少中间层。提案形态：可插拔的 `mcpTrustVerifier.verify(serverUri, toolName, params) -> { allowed, reason }`。
+- 四条硬性要求（一手）：① 在**任何 MCP 工具调用派发之前**运行；② 入参包含 server URI、工具名、参数；③ 返回 allow / deny / warn 并带可选元数据；④ **opt-in 且未配置时零开销**。
+- 归属：OWASP MCP Top 10 之 **MCP08「未校验的 MCP Server 信任」**；同类提案见 Langflow #13333、LangChain #37657、Semantic Kernel #14032 —— 说明这是跨框架的共性缺口而非单点。
+- 可复用判据：**"工具能否被调用"与"工具来源是否被信任"是两个决策点**，后者需要独立的、在派发前执行的验证位；验证位必须能返回 warn（允许但留痕）而不只是二值放行。
+
+## r640B · 技能本身的保密性与跨会话携带攻击（一手：arXiv 2610.34365 SEEK / 2610.28425 CarryoverBench abs 页）
+
+### B2 技能可被黑盒抽取：保密性须按自适应多轮攻击者评估（SEEK, 2610.34365）
+
+- 一手摘要要点：科学 agent 把领域专长打包为可复用技能（规划分析、选择工具、执行流程），这种模块化带来**保密性风险——交付技能能力的那些交互，本身也会把技能泄露出去**。作者构建覆盖 8 个开源/闭源科学 agent 平台、40 个受保护技能的可扩展基准，比较直接探测、固定策略探测与 bandit 引导的迭代探测，在"有参照"与"无参照"两种评测下度量。
+- 一手数字：**8/8 平台（100%）至少泄露一个受保护技能；4 个平台在单次直接请求下达到 100% 攻击成功率**。对能抵抗简单探测的平台，SEEK（黑盒、自演化的红队 agent，把响应证据 consolidate 进持久记忆并演化可复用攻击技能，只用**用户可见的响应**）在 SpatialAgent 与 Biomni 的 12 个技能上达到 **100% 攻击成功率**，同时把首次成功的平均轮次相对 bandit 引导探测**减少 31.8% 与 38.2%**。即便面对一个能阻断全部三种基准协议的保密策略，SEEK 仍从 6 个受保护技能中提取出 1 个。
+- 可复用判据：**"技能内容是否会被对话本身泄露"是一个独立的安全面**，与"技能是否被恶意注入"不同向。防御必须以**自适应、多轮的攻击者**为评估对象；针对单轮/固定策略通过不等于安全。
+- 落地动作：涉及私有/受保护技能的分发面，评测清单须包含"迭代探测"这一档，且要记录首次成功轮次（越短越危险），而非只记最终是否泄露。
+
+### B3 携带攻击：一次注入可跨会话反复触发，5 轮无衰减（CarryoverBench, 2610.28425）
+
+- 一手摘要要点：现代 LLM agent 通过两个通道跨会话持久化状态——**被静默前置到系统提示的长期记忆文件**，与**无需用户输入即唤醒 agent 的定时任务**。一次性间接提示注入写入任一通道后，可在攻击者离开很久之后跨会话反复触发，这类威胁被称为 **carryover attacks（携带攻击）**。既有提示注入基准只评估"首次观测到恶意内容的那一轮"，**对植入载荷后续何时、以何种频率重新触发的闸门从未被度量**。
+- 一手设计：CarryoverBench = 12 个个人助理场景、101 个攻击任务，覆盖三条触发通道：**Instant（同轮 IPI）**、**Autonomous（心跳定时）**、**Latent（记忆重新浮现）**；基于规则的验证器把**植入（planting）与触发（triggering）作为两个独立阶段**分别计分。
+- 一手结论：跨 5 个前沿模型，**植入的载荷在 5 轮内重新触发且无可测量的衰减**；在植入成功的条件下，**触发阶段几乎不提供额外保护**。把 Latent 通道移植到第二个运行时（Hermes）会削弱但不能消除该效应 → **携带攻击的防御需要运行时层控制，而不只是提示层干预**。
+- 可复用判据：持久记忆与定时任务是两个**独立且都必须设闸**的注入持久化通道；"注入是否成功"与"注入是否被再次触发"必须分阶段度量——只看前者会漏掉跨会话复发。防御面必须落在运行时（记忆写入闸门、定时任务的输入信任边界），提示层加固不足。
+
+## r640C · 默认值在升级时静默放宽、审批绑定失败即拒绝、停机开关的覆盖盲区（一手：docs.openclaw.ai/gateway/security/tool-permissions.md，200/15,512B）
+
+### C5 升级会让省略的旧配置采用更宽松的新默认（跨 provider / 跨会话消息）
+
+- 一手原文：具备消息工具访问权限的 agent **默认可跨会话与跨 channel provider 发送消息**（例如 WebChat 会话可在不额外选择加入的情况下发到已配置的 Discord 频道）。`tools.message.crossContext.allowAcrossProviders` **默认为 `true`**；**当该设置被省略时，升级会采用这个默认值；只有显式的 `false` 才会继续阻断受保护的消息动作跨越绑定的源 provider。** `allowWithinProvider` 同样默认为 `true`，独立控制针对同一 provider 上另一会话的动作；要把受保护消息动作限制在当前绑定会话，必须**两个都设为 `false`**。
+- 一手边界：这些控制只保护**消息变更类**动作（发送、回复、编辑、删除、建话题），**不限制所有 channel 动作——读取与管理动作有各自独立的权限**；也不限制无绑定源会话的 CLI 调用，也不能替代文件系统、shell 或沙箱限制。
+- 可复用判据：**"省略即用默认"在安全语义上是危险的**——升级会把原本行为未定义的省略项变成显式宽松。审计暴露面时必须检查"被省略的键"在升级后会得到什么值，而不只是检查已显式配置的值；收紧需要**逐个显式置 false**，而非留空。
+
+### C6 审批绑定无法唯一识别操作数时，拒绝执行而非承诺语义覆盖
+
+- 一手原文：**审批模式绑定精确的请求上下文，并且在可能时绑定一个具体的本地脚本/文件操作数。若系统无法为解释器/运行时命令识别出唯一的直接本地文件，则基于审批的执行被拒绝，而不是承诺完整的语义覆盖。** 另：对 `host=node`，批准后的运行还会存储一份准备好的 `systemRunPlan`；后续批准的转发复用该存储计划，**且 gateway 校验会拒绝调用方在审批请求创建之后对 command/cwd/session 上下文的任何编辑**。
+- 可复用判据：**审批面要么精确绑定，要么拒绝（fail-closed）**，绝不能"尽力匹配后放行"。此外，**被批准的计划必须冻结**：审批创建之后的任何调用方编辑都应被拒绝，否则审批与执行之间存在可篡改窗口。
+
+### C7 控制面工具默认拒绝清单，且"停机开关"不覆盖清理动作
+
+- 一手原文：对任何处理不可信内容的 agent/界面，**默认拒绝这四个控制面工具**：`gateway`、`cron`、`sessions_spawn`、`sessions_send`（`gateway` 因配置读取会暴露 secret 与宿主拓扑、更新会改变运行中的安装、清理会永久退役合格的回滚副本而保持 owner-only）。`commands.restart=false` 关闭 `/restart`、`/update`、外部聊天中的 gateway 更新/重启动作，以及**外部 `SIGUSR2` 重启请求**；但**清理（cleanup）不会停止 Gateway，也不依赖这个 flag**。
+- 一手补充（节点远程执行）：gateway 的 `nodes.commands.deny` **deny 列表只按精确节点命令名匹配（例如 `system.run`），不匹配命令载荷内部的 shell 文本**；一个重连的节点宣告了不同的命令列表**本身并不构成漏洞**——只要 gateway 全局策略与该节点自身的 exec 审批仍然执行边界。
+- 可复用判据：① 停机/禁用开关必须**逐动作声明覆盖范围**，并显式列出"不受此开关约束"的动作（本例 cleanup）；② **匹配粒度必须与威胁模型对齐**：命令 ID 级 deny 不等于命令载荷级 deny，声明覆盖面时不能跨粒度承诺。

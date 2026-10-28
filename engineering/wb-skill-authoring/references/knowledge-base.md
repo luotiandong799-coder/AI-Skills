@@ -4611,3 +4611,36 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 ##### r639B · LLM 自写技能在基准上零增益；技能质量拆成四维可无标签自改进，22 个技能把 SpreadsheetBench 从 16.0% 提到 52.0%（来源：arxiv.org/abs/2606.10546《SkillAxe: Sharpening LLM-Authored Agent Skills Through Evaluation-Guided Self-Refinement》，r639B 一手 abs 页 citation_title 与 API 标题一致、citation_abstract 全文取得，逐串命中 `human-authored skills improve pass rates by 16.2 percentage points, while LLM-authored skills provide no measurable gain` / `decomposes skill quality into four interpretable dimensions (quality impact, trigger precision, instruction compliance with fault attribution, and solution-path coverage)` / `producing structured improvement briefs that require no ground-truth labels, test suites, or environment rewards` / `improves pass rates by 28% relative over unimproved LLM skills and closes 47--67% of the gap to human-authored skills` / `raises pass rate from 16.0% to 52.0% using only 22 skills`）
 - **判据**：① **"模型写一份技能"不等于"技能有用"**：同一基准上人类写的 +16.2pp、LLM 写的零增益 ⇒ 技能产出必须有通过率验收，不能因为生成了就算资产。② **质量可拆四维且互不替代**：**质量影响**（用了到底有没有提升）/ **触发精度**（该触发时触发、不该触发时不触发）/ **指令遵循（带故障归因）**（没遵循要定位到哪条指令）/ **解法路径覆盖**（是否覆盖真实会走到的路径）⇒ 只测最后效果会把"触发错了"误判成"写得不好"。③ **自改进可以无标签**：改进简报只需轨迹，不需要 ground-truth / 测试套件 / 环境奖励 ⇒ 技能库的自维护闭环不需要先建评测集。④ **规模律**：22 个技能即带来 16.0%→52.0%，印证"少而精"而非堆量。
 - 提升层：可复用 Skill（技能质量模型）/ 评测（技能验收维度）。触发词：LLM-authored skills 零增益、quality impact、trigger precision、instruction compliance fault attribution、solution-path coverage、SkillsBench、SpreadsheetBench 52.0%。
+
+## r640A · 技能对「环境能力」的未检查假设，与急切注入对渐进披露的破坏（一手：anthropics/skills#1942 / #1487）
+
+### A7 流程依赖某环境能力前必须先检查并声明回退（anthropics/skills#1942）
+
+- 一手事实：`skill-creator` 的"运行与评估测试用例"环节按设计会为每个测试用例派生一个 with-skill 子 agent 与一个 baseline 子 agent；但该 harness 的指令**禁止在未获用户明确要求时派生 agent**，于是文档主路径无法执行，测试退化为内联健全性检查。而该回退路径在技能里**只被描述为 Claude.ai 的专属路径**，不是通用的"此处无子 agent"路径。
+- 建议形态（一手原文）：在评估循环之前加**环境能力检查**——此处能否在未征得用户同意的情况下派生子 agent？不能则走内联路径，并把并行的 with-skill/baseline 循环作为**可选升级**提供给用户（"我可以跑 N 对测试 agent，要吗？"）。内联路径由此成为**通用回退**而非某一产品面的特例。
+- 一手原则原文：**在一个技能的工作流依赖某项环境能力（子 agent、某个包、浏览器、某个 CLI）之前，它应先检查该能力是否存在，并声明回退路径。一个未经检查的假设会在流程中段失败，而那正是恢复代价最高的位置。**
+- 落地动作：写技能流程时，凡用到「派生子 agent / 需要某依赖 / 需要浏览器或 CLI」的步骤，必须在步骤前加能力检查 + 回退声明，不得把回退绑定在单一产品面。
+
+### A8 急切注入破坏渐进披露：624,401 字符一次注入 + 预算感知降级为索引（anthropics/skills#1487）
+
+- 一手事实：调用 `Skill(claude-api)` 注入单条消息 **624,401 字符（约 156k tokens）**，= `SKILL.md` + **31 个 reference 文档**的拼接。默认上下文模型上这一次调用即耗尽窗口，下一次 API 调用直接 `Prompt is too long`，会话不可恢复——"不是缓慢劣化，而是一次工具调用从鲜活会话到死亡会话"。
+- 构成：`shared/model-migration.md` 143,685 字符（23%）、Managed Agents 套件 14 个文件 202,069 字符（32%）、`SKILL.md` 68,375（11%）、其余 17 个文件 210,272（34%）。**其中 55% 是两个本应按需加载的功能区**：`model-migration.md` 在 SKILL.md 自己的子命令表里写明"命中 `migrate` 子命令时立即读取"，却仍被无条件急切加载；Managed Agents 套件同理。
+- 三条结构性缺陷（一手）：① **没有更轻的调用方式**——技能只暴露一个子命令 `migrate`，而分派指令作用于"已加载的文本"，文档必须先完整注入才能读到子命令；② **触发器宽度与载荷体积严重不匹配**——任何含 "Opus"/"Sonnet"/"Claude" 字样的 prompt（包括编辑一个名为 `CLAUDE.md` 的文件）都会命中，且描述中使用"不要因为它看起来是一行改动就跳过"这类**压制模型判断**的措辞；③ **载荷对触发它的任务是过期的**——内容戳为 `cached: 2026-06-24`，把 Fable 5 描述为"最强已发布模型"，完全不含 Opus 5（正是该任务要写入的事实）。
+- 建议修复（一手，按影响排序）：① 让 `shared/` 变成渐进式——SKILL.md 只带 references 索引，由模型按需 Read，仅此一项削减约 89% 载荷；② 兑现已有的条件门控；③ 收窄触发器（要求 API/SDK 信号：anthropic import、API 调用点、代码中的 model-id 字符串），编辑 `.md` 不应命中；④ 软化反判断措辞；⑤ **预算感知加载——一个即将吃掉 200k 窗口约 78% 的技能应降级为索引，而不是把会话搞挂。**
+- 可复用判据：**"条件加载"写在表里不算数，必须验证默认路径真的没有把它拉进来**；技能体积与其触发器宽度必须成比例；技能应自带"预算过大时降级为索引"的行为，而非让调用方会话失败。
+
+## r640B · 工具配置对失败率的可迁移定律，与过程框架的六维分类法（一手：arXiv 2608.26199 / 2606.04967 abs 页）
+
+### B4 MCP 工具调用基准：工具描述详尽度、few-shot 的反作用、累积上下文（2608.26199）
+
+- 一手摘要要点：在有状态、依赖顺序的专家工作流（建组件、加端口、接线）场景下，作者用 MCP server 复现专有硬件设计工具的状态与依赖逻辑，构建覆盖**单操作编辑、多步依赖链、无效请求、拼写错误的提示、多 server 工具上下文**的基准，评测 7 个开源模型，比较系统提示、工具描述详尽度、上下文范围、单 agent vs 多 agent 架构四类管线选择。
+- 一手结论（可直接迁移的四条）：① **详尽的工具描述持续减少失败**；② **少样本提示（few-shot）会让某些模型出现严重的不作为（inaction）**；③ **累积上下文会伤害受限模型**；④ **多 agent 分解对弱 worker 或长会话有帮助，代价是额外调用**。
+- 可复用判据：**"给例子"不是无代价的改进**——few-shot 在特定模型上会诱发不作为，属于必须在目标模型上实测的配置项，不能当作通用最佳实践。工具描述详尽度的收益方向是稳定的正向，应作为默认项；而多 agent 分解是**有代价的权衡**（更多调用），只在弱 worker / 长会话下净正。
+
+### B5 六维过程分类法与"过程深度 ↔ 可移植性"的结构性权衡（2606.04967）
+
+- 一手摘要要点：作者对 AI 软件开发框架做定向一手检索并按功能纳入标准与采用度筛选出 6 个框架（GitHub Spec Kit、OpenSpec、BMAD Method、Get Shit Done、Spec Kitty、Reversa），分别走不同路径：完整版与轻量版的**规格驱动开发**、agent 驱动的敏捷规划、面向 agent 的**上下文工程**、worktree 隔离与评审、从遗留系统**恢复可运行规格**。
+- 核心贡献（一手）：**六维过程分类法 = 规格（specification）/ 上下文（context）/ 角色（roles）/ 执行（execution）/ 验证（validation）/ 可移植性（portability）**，并配一套评分细则使之成为可复制的度量工具；作者将其应用于 6 个框架 + 一个样本外案例 Spec-Flow。
+- 两个突出结论（一手）：① 在已采用某种过程的框架之间存在**收敛**——孤立提示失去中心地位，而**持久产物、工作契约、可追溯性、人工评审**成为降低歧义与协调 agent 的机制；② **没有一个框架强力覆盖全部六个维度**，暴露出**过程深度与跨 agent 可移植性之间的结构性权衡**。
+- 复现风险清单（一手）：规格与代码之间的漂移、对生成产物的过度信任、社区扩展的脆弱性、平台依赖、缺乏覆盖完整过程的基准。
+- 可复用判据：评估/设计一个"给 agent 用的过程框架"时，用这六维打分而不是看功能清单；**主动接受"深度 vs 可移植性"不可兼得**，并显式声明本框架偏哪一侧。五项风险应作为过程框架的固定自检项，其中"对生成产物的过度信任"与"社区扩展脆弱"直接对应验证面与依赖治理面。

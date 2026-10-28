@@ -2390,3 +2390,67 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 ##### r639C · 重试安全存在「第三态」：成功已发生但结算未确认时必须禁止自动重试，只查账（来源：skillsmp.com 2026-10-28 r639C 一手 HTTP 200 / 305,618B 正文，逐串命中 `Successful search settlement could not be confirmed and may already be charged. Check account usage; do not retry automatically.` / `Subscription-month API allowance exhausted (account usage metering)`；并 `estimateChangeHint` 明示 `New usage is estimated; the export service settles the actual amount`）
 - **判据**：① **重试判据不是二值的"到达 / 未到达服务端"，而是三态的「未到达（可重试）/ 确定失败（可重试）/ 成功已发生但结算未确认（禁止自动重试）」**——第三态自动重试等于把一次已成功的计费动作再打一遍。② **预估值与结算值是两个量**：dedup 窗口内"不额外计费"是预估，实际由导出服务结算 ⇒ 预算看板要区分 estimated 与 settled，不能把预估当余额。③ **配额耗尽的语义是"计量周期"而非"请求次数"**：`Subscription-month API allowance exhausted (account usage metering)` ⇒ 退避重试跨越不了周期边界，只能等周期或查账。④ 与 dl 既有「保留第一次钉住的结果，先修不确定性」分工：那条管测试可否采信，本条管生产侧已计费动作可否重放。
 - 提升层：工具（重试/幂等判据）/ 工作流（配额与计量）。触发词：settlement could not be confirmed、do not retry automatically、已计费不确定态、estimated vs settled、订阅月配额。
+
+## r640A · 重试与取消的「作用域泄漏」四型（一手：crewAI#8415 / n8n#37779 / langgraph#9253 / autogen#7956 / vercel#22671）
+
+### A1 孪生路径不对称：重试预算跨 run 泄漏 + 生命周期累计计量（crewAI#8415）
+
+- 一手事实：`LiteAgent.kickoff` 在每次运行开头重置 `_iterations`、`tools_results`、`_tool_failures`，但 `_guardrail_retry_count` 是 `PrivateAttr` **只增不重置**。跨 kickoff 累计失败一旦达到 `guardrail_max_retries`（默认 3），后续每个 kickoff 在**第一次** guardrail 失败即抛 `"Agent's guardrail failed validation after 3 retries..."`，该 run 实际获得 0 次重试。
+- 同一 issue 的第二半：`usage_metrics` 取 `self.llm.get_token_usage_summary()` 返回 **LLM 实例生命周期累计**；`Agent.kickoff` 已用「快照 baseline + `delta_since(baseline)`」修复（EPD-177，由 `TestKickoffUsageMetricsArePerCall` 钉住），但并行执行引擎 `LiteAgent` **从未收到孪生修复** → 同一 LiteAgent 第二次 `kickoff()` 把此前所有调用的 token 重复计入（实测 100/10 → 200/220、requests 2）。
+- 可复用判据：**凡"Agent 有、LiteAgent 无"的修复，必须显式核对孪生路径是否同步**；只看主路径的回归测试（本例 `TestKickoffUsageMetricsArePerCall`）会给出虚假安全感。
+- 落地动作：新增/修改「每次运行开始重置」的块时，同时枚举三件事——① 重试/预算计数器；② 计量基线（快照而非累计）；③ 与主路径对称的孪生执行引擎。
+
+### A2 重试不理解挂起/恢复协议 → 静默清空上下文并无限重启（n8n#37779）
+
+- 一手事实：AI Agent V3 节点 `retryOnFail: true` 且自身触发 `maxIterations` 时，`checkMaxIterations()` 抛 `NodeOperationError`，被引擎通用重试循环（`workflow-execute.ts`）捕获并重试 `runNode()`，**该循环不理解 Agent 的 suspend/resume（`EngineRequest`/`EngineResponse`）协议**，重试后 `toolsAgentExecute` 收不到任何先前工具调用历史 → 从零重启。
+- 关键机制：**重试预算 `maxTries` 的作用域是"节点从执行栈出队一次"，不是整个执行**。一次"成功"（哪怕上下文被重置）会返回新的 `EngineRequest` 并触发外层 `continue executionLoop`，于是 `maxTries` 每 `maxIterations` 轮被重置一次 → **重启次数不被 `maxTries` 约束**。
+- 实证：① LLM prompt 字节长度在每个重置点精确回落到首次调用基线（一次执行中连续观测 11 个重置周期，共 105 次工具调用）；② 重置边界最后一次工具调用完成到下一次 LLM 调用开始的间隔稳定比正常轮间（~500ms）长约 2000ms，与 `waitBetweenTries: 2000` 精确吻合；③ 关闭 `retryOnFail` 后复位消失，节点干净失败为 `"Max iterations (N) reached..."`。
+- 可复用判据：**对确定性上限（迭代数/预算耗尽）抛出的错误，重试不应生效**；若必须重试，重试前须能重建完整前序上下文，否则"重试"实为"静默重启"。
+- 落地动作：任何"自动重试"开关加在 agent/子 agent 节点上时，先判该节点是否有挂起-恢复语义；有则要么禁用重试，要么要求重试携带上下文。
+
+### A3 重试之间不重置任务暂存区 → 子图命名空间漂移（langgraph#9253）
+
+- 一手事实：带 `retry_policy` 的节点内先后调用两个子图 `research`、`review`，两次调用之间抛出 `ConnectionError` 耗尽重试；恢复后 `invoke(None)` 期望得到 `REVIEW`，实际得到 `RESEARCH`——`review` **恢复进了 `research` 的检查点并直接返回其结果而未运行**。文档声称多个子图"可在单节点内调用而无检查点命名空间冲突"。
+- 根因：`pregel/_retry.py` 的 `run_with_retry` **在重试之间不重置 task scratchpad**，于是 `subgraph_counter` 持续累加，子图命名空间整体偏移。
+- 可复用判据：**重试必须重置除"已提交状态"之外的一切派生计数器**（子图序号、命名空间、临时 ID）；检查点命名空间由计数器派生时，计数器漂移 = 恢复到别人的检查点。
+
+### A4 取消不是"杀死任务"，可能是"永久挂起"（autogen#7956）
+
+- 一手事实：在工具调用进行中 `cancellation_token.cancel()`，`StaticWorkbench.call_tool` / `call_tool_stream` 用 `except Exception as e:` 包裹 `await result_future`；而 Python 3.8 起 `CancelledError` 继承 `BaseException` 而非 `Exception`，**因此不被捕获**，直接传播出 `call_tool`。它逃进 `AssistantAgent._execute_tool_call`（无 try/except），再进入 `_execute_tool_calls` 内未设 `return_exceptions=True` 的 `asyncio.gather(...)`；`gather` 抛出后其后的 `stream_queue.put_nowait(None)`（结束哨兵）永不执行，消费循环 `while True: event = await stream.get(); if event is None: break` 无其他终止路径 → `on_messages_stream` 不再产出事件、不返回、不抛错，**取消把 agent 挂死而非停止**。
+- 连带面：任何在运行时事件处理器内 await 该流的地方同样挂死（如 `ChatAgentContainer.handle_request`），`stop_when_idle()` 也因此永不解析。
+- 可复用判据：① 工具/执行的取消路径必须**显式捕获 `asyncio.CancelledError`**；② 并行 gather 必须 `return_exceptions=True`；③ **流结束哨兵必须放在 `finally`**，不能放在正常路径的最后一行。
+
+### A5 状态标记 `isRetryable` 不足以判定可重试：需调用方否决钩子（vercel#22671）
+
+- 一手事实：某 PR 落地后，凡是 provider 标记 `isRetryable` 的失败都会被重试至 `maxRetries` 并在步内退避，**调用方无从否决**；实测矩阵场景 S4（内容过滤拒绝以可重试 500 形式在每次尝试返回）：旧行为 1 次调用 / 1 ms，新行为 3 次调用 / 约 6 s 后 `AI_RetryError`，且 `onError` 只在重试之后触发一次、返回值被忽略。
+- 反例集（经网关时确定性失败伪装成 5xx）：内容审核拒绝、已下架的模型 id、被包装成 500 的 provider "invalid request"。生产数据：自有否决逻辑上线前，两个用例**每天各有 7 次和 11 次运行，每次约 6 分钟**在重试注定失败的调用。
+- 可复用判据：**"是否可重试"不能只由 HTTP 状态码/错误标签决定**；必须提供调用方侧决策点（`shouldRetry(error, attempt)` 或"永不重试的错误码/消息模式清单"）。回调无法跨越持久化步骤边界时，该决策须以**数据**形式表达（错误码清单/消息模式），由步骤自身求值。
+- 落地动作：给重试加"否决清单"时，清单要能覆盖"确定性失败被包装为可重试"这一类。
+
+### A6 取消的语义边界：显式 Stop/cancel 仍为终态（n8n#37779 同族补注）
+
+- 一手事实（同源 issue 的对照面）：显式会话 Stop/cancel 保持**终态性**——崩溃循环断路器、恢复重试预算、当前权限校验、归档/重置排除项在其后仍然适用。即"取消"与"达到上限"是两类不同事件，前者终态、后者可被误重试。
+- 可复用判据：设计恢复面时把「用户显式取消」「确定性上限」「瞬时失败」三态分开；仅第三态可自动重试。
+
+## r640B · 运行时自愈的真实收益上界（一手：arXiv 2609.34701 ResonAct abs 页）
+
+### B1 流式指标做运行时诊断与自愈：恢复率是瓶颈，不是检测（ResonAct）
+
+- 一手摘要要点：MAS 失败来源包括工具退化、上下文传播错误、协调崩溃、重复交互导致任务无法完成；既有可观测框架只提供 trace 与日志，**诊断与修复主要在执行完成之后**进行，限制了运行时恢复的机会。ResonAct 把执行轨迹、agent 交互、工具调用摄入流式分析层，持续派生**任务进度 / 上下文健康 / 工具可靠性**三类指标，作为运行时控制信号检测异常执行模式并用结构化失败模型定位根因；随后按诊断结果动态选择修复策略并执行动作。框架作为**外部控制平面**运行，无需修改应用 agent 或编排逻辑即可介入。
+- 一手数字（企业工作流场景 + AppWorld 基准）：基于流式指标的分析能识别执行劣化并定位故障；策略驱动的修复把任务完成率提升**至多 10.00 个百分点**；**检测精度 70.59%–82.91%、召回 63.09%–100%、恢复率 10.48%–46.67%**，运行时开销 **-0.25% 至 14.12%**。
+- 可复用判据：评估"自愈/自动恢复"能力时，**检测指标与恢复率必须分开报告**——本例检测召回可达 100%，但恢复率最低仅 10.48%，即"看见了却修不好"是常态。把"能检测"当作"能恢复"的代理指标会严重高估收益。
+- 落地动作：给任何自愈/自动修复机制设定验收门时，必须写明三个数：检测精度、检测召回、**修复成功率**；只报前两个视为不合格证据。
+- 补充判据：外部控制平面形态（不改 agent/编排即可介入）值得作为默认架构选择——它把恢复逻辑与业务逻辑解耦，但代价是需要可观测数据足够结构化才能定位根因。
+
+## r640C · 时间源与取消的两条硬纪律（一手：docs.openclaw.ai/gateway/restart-recovery.md，200/117,837B）
+
+### C3 排空等待用 elapsed time：系统时钟校正不改变等待预算
+
+- 一手原文：这些排空等待**使用 elapsed time，因此系统时钟校正不会缩短或延长它们的等待预算**。
+- 可复用判据：**任何"等待到某时限"的门控必须用单调/经过时间（elapsed/monotonic），不能用墙钟时间戳**——墙钟可能因 NTP 校正、时区、休眠而跳变，进而把一个 5 分钟的排空压缩成 0 或拉伸成无限。对应到本库：超时、退避、TTL、租约到期一律以经过时间计。
+
+### C4 关闭期的取消仍保留重启恢复（即使 provider 已报错且 turn 已结算）
+
+- 一手原文：**若一次重启耗尽其排空预算，取消仍保留重启恢复能力——即使 provider 报告了错误，且该 turn 在关闭过程发现它之前就已结算。** 另：显式 session Stop/cancel 保持终态性，崩溃循环断路器、恢复重试预算、当前权限校验、归档/重置排除在其后仍然适用；Gateway 停止接受新工作后等待活动 agent turn 与后台任务完成，**上限为排空预算（默认 5 分钟）**，因此大多数重启根本不打断任何东西。
+- 可复用判据：**"关闭期的取消"与"用户显式取消"不是同一事件**——前者必须保留可恢复性，后者才是终态。把两者合并处理会让"为了关停而取消"永久丢掉本可恢复的工作。
+- 补充判据：设计一个"默认 5 分钟排空"这类上限时，应同时给出"大多数情况下实际打断为零"的观测，避免把上限当作常态开销。

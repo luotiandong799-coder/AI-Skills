@@ -1055,3 +1055,32 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 ##### r639C · 上下文裁剪的运行位置由 provider/endpoint/认证三元组决定，换认证方式会静默改变缓存行为；投影视图要可持久化复原（来源：docs.openclaw.ai/concepts/session-pruning.md，2026-10-28 r639C 一手 HTTP 200 / 11,278B 逐串命中 `trims old tool results from the model's context` / `without rewriting normal conversation text. Your full history is preserved` / `records it in the hidden openclaw.cache-ttl transcript marker so the same view can be restored after a Gateway restart` / `The request's provider, endpoint, and authentication determine where it runs` / `Direct Anthropic API-key requests use server-side clearing; other eligible routes prune locally after the cache TTL expires`）
 - **判据**：① **裁剪只作用于工具结果、不改写对话正文**，且原始条目不被重写 ⇒ 裁剪是"投影"不是"改写历史"，验收=原文仍可还原。② **投影视图必须持久化**：用隐藏 transcript marker 记录，使得 Gateway 重启后能复原同一视图；否则重启即丢缓存前缀，裁剪收益归零。③ **行为随认证方式静默切换**：直连 Anthropic API key 走服务端清除，其它合格路由走本地 TTL 后裁剪 ⇒ 换 key / 换 endpoint / 换 provider 会改变裁剪时机而没有任何报错，评估缓存收益时必须先固定在哪个三元组下测。④ 裁剪的真实收益是前缀缓存：减少需要缓存的工具内容，让后续请求落在更短前缀上。
 - 提升层：工具（上下文裁剪/前缀缓存）/ 工作流（认证变更影响面）。触发词：session pruning、cache-ttl marker、投影视图复原、provider/endpoint/auth 三元组、server-side clearing、本地 TTL 裁剪。
+
+## r640A · 检查点静默失败与运行时协议版本 fail-fast（一手：crewAI#8624 / langfuse#16734）
+
+### A9 检查点序列化失败只记日志 → 静默降级为"无检查点"→ 恢复重跑整段（crewAI#8624）
+
+- 一手事实：Flow 配置 `on_events=["method_execution_finished"]` 自动检查点；一旦某个方法运行过带 `@tool` 的 `Agent`，此后**每个**检查点都失败：`PydanticSerializationError: Unable to serialize unknown type: <class 'function'>`。监听器只记录该错误、流程继续运行、不再有检查点。之后某方法失败并从最新检查点恢复时，恢复到该 agent **之前**，于是 agent 连同其 LLM 调用与工具调用一起重跑。
+- 实证对照（同仓库 issue 内给出可复现脚本）：带 agent → `checkpoints written: 1`，恢复执行 `['work','llm','finish']`；不带 agent → `checkpoints written: 2`，恢复执行 `['finish']`。
+- 根因：运行状态根节点把 agent 与其 executor 与 flow 并存，agent 持有工具，而 `Tool.func`（`crewai/tools/base_tool.py`）是裸 `Callable[P, R | Awaitable[R]]` **无序列化器**；`add_two.model_dump(mode="json")` 报错，`exclude={"func"}` 才通过。同类症状在 #5620 已有修复，但**该修复未覆盖 agent 的工具这条路径**。
+- 可复用判据：**检查点/快照失败必须从"记日志继续"升级为"显式降级可见"**——静默丢检查点的后果不在写入时刻显现，而在恢复时刻以"重跑整段（含付费 LLM 调用）"的形式放大。序列化器缺失应给出可操作方向（如存 dotted path 而非函数对象，参照已有 `SerializableCallable` 处理 `cache_function` 的做法）。
+
+### A10 沙箱运行时协议版本在首次接触即断言，不匹配立刻失败（langfuse#16734）
+
+- 一手事实：guest `/health` 现在返回 `protocolVersion`（`SANDBOX_RUNTIME_PROTOCOL_VERSION = 1`）；worker 在与 Docker / Lambda MicroVM 沙箱**首次接触时**断言该版本，不匹配立即失败，**而不是重试 30 秒、或以"文件/bash 工具损坏"的形式暴露出来**。
+- 测试计划（一手）：确认缺失 `protocolVersion` 的 health body 被当作 `0` 并拒绝；确认匹配的 `protocolVersion: 1` 被接受；升级后须从同一 Langfuse 版本重建 MicroVM 镜像（否则 CI 因陈旧 guest 变红）。
+- 可复用判据：**跨进程/跨镜像的运行时契约应在握手处 fail-fast 并给出版本归因**，让版本错配以"版本不匹配"报出，而不是退化成难以定位的工具行为异常；同时契约变更必须绑定"配套镜像/运行时重建"动作，否则只改一侧会让另一侧持续报错。
+
+## r640C · 关闭/恢复面的预算纪律（一手：docs.openclaw.ai/gateway/restart-recovery.md，200/117,837B）
+
+### C1 重试预算耗尽触发所有权回收，而不是静默丢弃（producer custody）
+
+- 一手原文要点：待投递行在重启后排空或重试。**当一次投递耗尽其重试预算，恢复过程回收已过期的生产者保管权（producer custody）；活跃生产者保持所有权。失败的投递不能再次发送，但保留其信息。**
+- 可复用判据：重试预算耗尽后的处置要**显式三分开**——① 所有权（custody）归谁；② 该消息是否允许再次发送（禁发）；③ 信息是否保留（保留）。只写"重试 N 次后放弃"会丢掉第①与第③项，导致恢复时既无法判断谁还能重试该工作，也丢失了排障所需信息。
+- 落地动作：定义任何"投递/任务"的重试上限时，同时定义耗尽后的 custody 归属与信息保留策略。
+
+### C2 预算相减必须有下界：从一个大 drain 里减去短超时会把它全部耗尽
+
+- 一手原文要点：两项 allowance 在截止时间无法负担它们时被同一条规则限定（与 launchd 预算相同的理由）：**"从一个 315 秒的 drain 中减去两个按短停止超时尺寸取值的值，会把它完全耗尽并让活动工作……"**；**准备金（reserve）永不低于关闭预算的一半**；退出余量（exit margin）在降至某阈值前保持完整的 5 秒；可以为一次不足 5 秒的 drain 让出部分准备金。
+- 一手补充：`Gateway status` 报告进程自有的 `shutdownBudget`，并带 `activeWork` 计数与独立的 `writeCustody` 数组；维护动作从 Gateway status 读取常驻关闭预算，**较旧的 Gateway 没有该事实时走"短预算路径"：围栏准入并观察生命周期排空，直到空闲或更新步骤截止**。
+- 可复用判据：**多个超时/预算嵌套相减时必须有下界保护**（本例 reserve ≥ shutdownBudget/2），否则"外层短超时"会把内层 drain 预算吃成 0 并抛弃活动工作。版本能力缺失（旧 Gateway 无 `shutdownBudget`）必须有显式的降级路径，而不是静默按 0 处理。

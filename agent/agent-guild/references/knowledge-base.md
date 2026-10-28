@@ -1056,3 +1056,18 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 ##### r639B · 长时程自主作业的可信性三件套：状态外置成可检视的文件化工件、评审闸门可证伪、负面结果透明报告（来源：arxiv.org/abs/2609.31683《Autonomous Research Project Management as an Agent Skill ...》，r639B 一手 abs 页 citation_title/citation_abstract 取得（arXiv API 列表标题与此 ID 错配，以 abs 页为准），逐串命中 `Long-horizon state was decoupled into a file-based epic- and issue-tracking substrate` / `Across 74 sub-agent sessions ... with only four discrete human steering events` / `routing two failed hypothesis review gates back to literature retrieval` / `scientific credibility requires inspectable state, falsifiable review gates, and transparent reporting of negative results` / `favour agent-accessible structured formats over static PDF manuscripts`）
 - **判据**：① **长时程状态不能只活在上下文里**：外置成文件式 epic/issue 底座，74 个子会话仅 4 次人工介入 ⇒ 可检视性是自主度的前提，不是事后补充。② **评审闸门必须可证伪**：闸门判否要能触发具体回路（这里是回退到文献检索），而不是"重试一次"。③ **负面结果要留痕**：只有成功的轨迹会让后续决策系统性乐观。④ **给 agent 的结构化格式优于给人看的静态文稿**：交付物如果是 PDF，agent 无法把它当状态消费。
 - 提升层：工作流（长时程自主作业）/ 记忆（可检视状态底座）。触发词：file-based epic/issue substrate、74 sub-agent sessions、falsifiable review gates、负面结果透明、agent-accessible structured formats。
+
+## r640B · 负载是独立能力维；演化编辑须有归属与有界守卫（一手：arXiv 2610.33178 AOS-Bench / 2610.35966 EMMA abs 页）
+
+### B6 负载管理是独立能力：隔离成功不迁移到流式，固定并发 2 接近最优（AOS-Bench, 2610.33178）
+
+- 一手摘要要点：编码 agent 正从"一次一个请求"转为"用户持续递交工作流的常驻助理"——一个构建、一个数据处理任务与一个缺陷修复可能同时挂在同一台机器上。agent 必须决定何时接新任务、如何委派与重叠、如何留在机器的 CPU 与内存预算内；既有基准**孤立地评估每个任务**，无法度量这一点。AOS-Bench 把 agent 系统当作**负载管理器**来评估：经核验的任务随时间到达，须在共享 CPU 与内存限制下交付；同一批任务逐个运行作为每系统的对照。
+- 一手数字（5 个模型-harness 对）：**隔离态任务成功率不能均等地迁移过来**；重负载下每个系统掉 **13 至 23 点**；中负载下各系统在隔离成功率上相差 11 点，而在流式成功率上相差 **26 点**，其中两个隔离态仅差 0.6 点的系统，分别只交付了同一批任务的 **54% 与 68%**。执行策略干预把大部分差距追溯到**任务接入**：串行派发让重负载下 **73% 的任务无人认领**。但更精细的管理不一定更好——**固定并发 2 在中负载与重负载下都落在最优 agent 管理策略 4 点以内**，且在每种策略下中位 CPU 使用率都低于配置核心的 **30%**，而任务还在排队。
+- 可复用判据：**"单任务能力"与"负载管理能力"是两个能力维**，前者不能预测后者。并发策略的收益存在明显边际递减（固定并发 2 已接近最优），且真正的瓶颈常在**任务接入（intake）**而非调度精细度；同时要警惕"CPU 空闲但任务在等"这类**资源与吞吐脱钩**的信号。
+
+### B7 演化的编辑必须有归属与有界守卫，否则学习跟随骨干模型的结构偏好（EMMA, 2610.35966）
+
+- 一手摘要要点：多 agent 演化虽缓解跨任务干扰，但既有方法**对更新规则缺乏清晰定义，且依赖骨干模型自行决定"改哪里、改多少"**；这种**作用域不明的演化**使学习跟随骨干的结构偏好而非观测到的失败——**一个骨干不断累积技能，另一个则不断派生新 agent**。EMMA 把多 agent 系统的配置（控制器路由记忆、继承通才提示的专家、每步程序性技能）视为**情景记忆**。
+- 机制（一手）：**EMMA 显式化更新的归属（ownership）与可采纳性（admissibility）**——一个 reflector 把每个被诊断的失败**分配给拥有其修正的那个作用域**，并在该作用域内**提出一次编辑**；**骨干无关的守卫**保证每个被接受的编辑都是**有作用域的、增量的、有界的**。
+- 一手结果：在 KramaBench、AppWorld、BBEH 上跨 5 个骨干与 4 个基线（ACE、GEPA、EvoMAS、ADAS），EMMA 在每个基准上都取得最佳总体表现，最高超过最强基线 **32.5%**，跨骨干保持一致改进，且比最高效的基线少用 **17–38% 的训练执行次数**。
+- 可复用判据：**"让模型自己决定改哪里"会让演化轨迹被骨干偏好带偏**；应改为「诊断失败 → 归属到拥有该修正的作用域 → 在该作用域内提一次编辑 → 由与骨干无关的守卫裁定是否越界/超量」。这一形态把"学到什么"与"谁在学"解耦，也天然产生可审计的编辑记录。
