@@ -2499,3 +2499,73 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 
 - **原文事实**：①「Queued replies and progress updates **retain their submitting request's authority**. Completing another turn does not invalidate that queued request.」②「That **does not extend revoked device authority** or permissions removed by a current policy」③`collect` 模式「Coalesce compatible queued messages into a **single** followup turn … Messages must **share routing, authorization, and execution settings** and must not have **distinct exclusive admission**」。④`interrupt`「abort the active run for that session, then run the newest message. This cancellation **does not resume the old turn through Gateway restart recovery**.」⑤重发定位「A restart-recovery resend is an **ordinary input in the same session mailbox**」；「An `interrupt` message wins instead: it cancels a resend that has not started and runs, and it ends a running recovered turn like any active run.」⑥「**Stopping or interrupting a resend before it starts ends that recovery without sending it again.**」⑦lane 并发「`main` uses `max(8, available CPU parallelism * 4)`，ordinary sub-agent queues default to 8 per spawning session，**default 1 for unconfigured lanes**」。⑧「`queueAhead` records the enqueue-time backlog, **not a prediction of admission order** after priority and aging.」⑨「Embedded attempt preparation **yields to the event loop after 16 stage starts or at least 8 ms** of synchronous dispatch work per slice … A running stage is **not preempted**.」⑩排队前的消息先持久化：「A running turn reads a **consistent transcript prefix**, so a later queued message does not invalidate its context read.」
 - **判据**：①**「授权在提交时快照」与「授权在消费时复核」是两条都要的规则**——本例保留了前者（不被后续轮次失效），同时明确不保留已被撤销的部分；只做前者会让撤销形同虚设，只做后者会让排队期间的正常轮次互相打断。②**合并多条排队消息的前提是准入条件同质**（共享 routing/authorization/execution，且不能有互斥准入）⇒ 「合并」不是无条件优化，它是一条需要可判定同质性条件的变换。③**取消恢复重发 = 永久放弃该次恢复**（不会再发）⇒ 「取消」在恢复路径上是**终态**而不是「暂停」，与一般执行路径上的取消语义不同，必须单独声明。④**恢复重发在邮箱里只是普通输入**，因此它要跟其他消息一样排队、一样可被 interrupt 抢占——恢复没有特权通道。⑤**积压计数不等于准入顺序**（priority 与 aging 会重排）⇒ 用积压数向用户报「你前面还有 N 个」会报错。⑥**让出事件循环的粒度用「启动次数」与「同步工作时长」双阈值（16 / 8ms）**，且运行中的 stage 不被抢占 ⇒ 并发启动不饿死网关请求，但也无法中断已在跑的 stage。
+
+## r643A · 多路重试收敛到同一冷却截止期时，重试次数不增加成功率：且「剩余配额高」不能作为「不是限流」的反证
+
+- **原文事实**：openai/codex#57084（`Linux / VS Code: recurring HTTP 429s with shared retry deadlines despite 84–99% Pro allowance remaining`，86 comments）。① 2026-10-25 的 14 条重试告警分布在 8 个 turn 上，**其中若干重试「converged on common deadlines within 0.7 seconds」**。② 2026-10-26 在**周配额剩余 99%** 时仍出现精确 HTTP 429（`exceeded retry limit, last status: 429 Too Many Requests`）。③ 另一类错误面是 `Selected model is at capacity`，作者明确说明两者**是否有共同根因尚未确立**。④ 作者自述限制：剩余配额数字来自带时间戳的会话遥测，**不得描述为历史 `/status` 输出**；未捕获原始 `Retry-After` 头与上游 request/trace ID，本地 thread/turn ID 不是 HTTP 请求 ID。
+- **判据**：① **重试只有在「每次重试面对的限流窗口不同」时才提高成功率**——若多路重试落在同一 deadline 上（本例 0.7s 内收敛），重试只放大延迟与消耗，不提高通过概率；诊断重试失效时先查「截止期是否共享」而不是加次数。② **配额维度与限流维度是两条独立的轴**：「总配额还剩 99%」不能反证「不是限流」，短窗口策略、按账户/模型的准入都可能独立触发。③ **区分 capacity 与 429**：两者错误面不同、可能成因不同，合并统计会掩盖其中一条。④ 证据纪律：配额数字必须挂时间戳遥测的原始出处，不得改写成工具命令输出。
+- **提升层**：工具（重试策略 / 限流诊断）/ 验证（证据口径）。触发词：shared retry deadline、429 与 capacity 区分、剩余配额高仍限流、Retry-After 未捕获。
+- **来源**：https://github.com/openai/codex/issues/57084 （2026-10-28 实拉，一手正文 3,353 字符）
+
+## r643A · 「表象同因」诊断陷阱：三个各自可复现的独立根因共用一个现象，先入为主的 SQLite 锁假设被自身日志证伪
+
+- **原文事实**：openclaw/openclaw#170956（`Windows: slow startup, unclean plugin shutdown, and schtasks permission error`，25 comments）。① 用户**最初怀疑 SQLite 锁竞争**（类比 #100623 / #118719），但读取自己 `~/.openclaw/logs/stability/*.json` 与 `~/.openclaw/logs/support/*.json` 后**发现三个各自可复现的独立根因**。② Finding 1：单次启动的 phase 跟踪里有两个阶段耗时**分钟级**，而同一跟踪里其余阶段都是「single-digit-to-low-hundreds of ms」——差 2–3 个数量级。③ Finding 2：关停时 `acpx` / `duckduckgo` / `llama-cpp` 三个插件**各有恰好 1 个**在途调用在 5000ms 强制退役窗口内不返回，抛 `PluginInstanceDrainTimeoutError`，`reason: "gateway.stop_close_failed"`。④ Finding 3：Windows 更新因权限错误**禁用了计划任务**。⑤ 作者主动提示「a maintainer may want to split these into separate issues」。
+- **判据**：① **「同一现象」不等于「同一根因」**——本例用户视角只有「gateway 重启/更新不干净」，实际是三个正交缺陷；把现象当缺陷去修，必然只修掉其中一个甚至零个。② **先入为主的假设必须能被自身日志证伪**：本例是靠读 `stability/*.json` 推翻 SQLite 锁假设的，不是靠推理。③ **单根因优先的直觉在「需要重试多次才成功」这类模糊现象上最容易失效**——因为每次重试成功的概率来自不同根因的组合，看起来像随机。④ 主动请求拆分（本例作者提示）能避免后续把三个修复塞进一个不相关的 PR。
+- **提升层**：诊断方法论。触发词：表象同因、先入为主假设、日志自证伪、多根因拆分、重试多次才成功。
+- **来源**：https://github.com/openclaw/openclaw/issues/170956 （2026-10-28 实拉，一手正文 4,870 字符）
+
+## r643A · 错误处理器「执行了」不等于「异常被吸收了」：后者依赖执行拓扑与流式消费模式
+
+- **原文事实**：langchain-ai/langgraph#8608（`error_handler runs but the original exception is still raised`，closed，16 comments）。① 作者在**所有**配置下都观察到 handler **恰好执行一次**（「The handler runs exactly once in every case, including the failing ones」），但原始异常仍然从图里抛出。② 异常被吸收**只**发生在：单个失败节点 + `invoke`/`ainvoke`，或 `stream_mode="values"` / `"updates"`。③ 只要同一 superstep 里放入第二个节点，**连普通 `invoke` 也会抛出**。④ 节点保持独立，但改用 `stream_mode="custom"` / `"messages"` 或 `subgraphs=True` 流式消费，**也会抛出**。⑤ 复现环境：clean checkout of `main` @ `644815f9e5bc52ad8f7a5227a456227e9c3e639b`（tag `1.2.11`，无本地修改）。
+- **判据**：① **「钩子被调用」与「错误被隔离」是两个独立可观测事件**——前者只证明插桩生效，后者才证明错误没有外溢；断言错误已处理之前必须验证的是后者。② **错误处理语义不是全局常量，而是「执行拓扑 × 消费方式」的函数**：并行/同 superstep 与特定 stream_mode 会改变异常是否被吸收，文档里的示例成立条件必须显式声明覆盖范围。③ 排查此类问题时用「最小矩阵法」把拓扑（单节点/多节点）× 消费方式（invoke/values/updates/custom/messages/subgraphs）展开，通常一次就能定位到边界。
+- **提升层**：错误处理 / 工作流。触发词：error_handler 执行≠吸收、并行节点、stream_mode 依赖、拓扑相关错误处理。
+- **来源**：https://github.com/langchain-ai/langgraph/issues/8608 （2026-10-28 实拉，一手正文 2,627 字符）
+
+## r643A · 取消只在 await 检查点生效 ⇒ handler 返回到 respond() 之间的同步段是「不可取消窗口」，落在此窗口的取消会破坏不变量并崩掉整个进程
+
+- **原文事实**：modelcontextprotocol/python-sdk#2416（`Bug: AssertionError: Request already responded to — cancellation race in v1.27.0`，open，16 comments）。① 竞态路径：客户端 `tools/call` → handler 完成并返回结果 → **在 handler `return` 与 `await message.respond(response)` 之间这段同步代码里**，`notifications/cancelled` 到达。② 取消处理器（`session.py:403-406`）调用 `responder.cancel()`，它会 `_cancel_scope.cancel()` + 置 `_completed = True` + 发出 `"Request cancelled"` 错误响应。③ 回到 `_handle_request` 执行到 `await message.respond(response)`（`server.py:800`）→ 命中 `assert not self._completed`（`session.py:129`）→ **崩溃**。④ 根因：`cancel_scope.cancel()` 只有在任务处于 `await` 时才抛 `CancelledError`；handler 已返回，中间是**同步段，没有投递检查点**，因此 `server.py:773` 的 `except anyio.get_cancelled_exc_class()` 守卫**永不触发**。⑤ PR #2334（v1.27.0）只修了 `ClosedResourceError` 崩溃路径，没堵这个窗口。⑥ 影响：崩掉整个 MCP 服务进程，杀死所有在途请求（作者场景是管理多个长跑后台 agent）。
+- **判据**：① **取消不是「随时生效」，而是「只在 await 检查点生效」**⇒ 关键区段之间的同步段构成不可取消窗口，落在窗口内的取消无法被优雅处理。② **断言式不变量在并发路径上必须降级为幂等守卫**：`assert not self._completed` 应改为「已取消/已完成则跳过 respond」，否则一次竞态会把局部状态问题放大成整个进程崩溃（影响半径从 1 个请求 → 全部在途请求）。③ 评审取消逻辑时优先问两个问题：**同步段在哪**、**这段窗口内到达取消会发生什么**。
+- **提升层**：并发 / 运行时。触发词：cancellation race、不可取消窗口、assert 降级幂等守卫、await 检查点。
+- **来源**：https://github.com/modelcontextprotocol/python-sdk/issues/2416 （2026-10-28 实拉，一手正文 2,744 字符）
+
+## r643A · 预算耗尽是「需要交棒的状态」而非「需要报错的错误」：注入合成消息令其总结并征询，且末轮剥离工具
+
+- **原文事实**：langchain-ai/langchain#40444（`Token budget middleware that checks in with the user instead of hard-stopping`，open，12 comments）。① 默认 `exit_behavior="check_in"`：预算超限时不在 `before_model` 硬停、也不抛裸 `limit exceeded`。② 而是**注入一条合成 `HumanMessage`**，要求模型停手、总结已完成与待办、并**向用户征询下一步**；该消息标记 `additional_kwargs={"lc_source": "token_budget"}`，文案可通过 `check_in_prompt` 定制。③ **该最终模型调用会剥离工具**，使 run 以一条普通 AI 回复正常结束，由用户决定后续。④ 计量读取每次模型响应的 `usage_metadata`，模型不报时回退 `count_tokens_approximately`。
+- **判据**：① **预算上限触达时的正确姿态是「保留成果 + 明确剩余 + 交还控制权」，不是抛错终止**——硬停会把已积累的上下文与工作一并丢弃，而交棒式降级把决策权交回人。② **末轮必须剥离工具**：否则最后一轮仍可能触发新的副作用，令「预算封顶」这一约束形同虚设。③ 与既有「超时非回滚授权」（dl）同族：都是「到达上限 ≠ 自动回滚/终止」，而是转入显式的交接姿态。
+- **提升层**：工作流 / 预算治理。触发词：exit_behavior check_in、预算交棒、末轮剥离工具、合成 HumanMessage。
+- **来源**：https://github.com/langchain-ai/langchain/issues/40444 （2026-10-28 实拉，一手正文 10,211 字符）
+
+## r643A · 预算计数的作用域（turn / thread）与存储位置（state 私有字段，非中间件实例）是两个独立决策
+
+- **原文事实**：同上 langchain#40444。① 累积两份计数：`turn_token_usage`（**每次 invocation 重置**）与 `thread_token_usage`（**随 checkpointer 持久化**）。② 作者明确要求：**计数器放在 agent state 里并标记为 private，而不是放在中间件实例上**（「Counters live in the agent state, marked private, not on the middleware instance」）。③ 限额参数 `turn_token_limit` / `thread_token_limit`，形态与 `ModelCallLimitMiddleware` 的 `thread_limit` / `run_limit` 对齐，但**命名须标明「数的是什么」与「覆盖哪个作用域」**。
+- **判据**：① **计数存储位置是预算设计的第一决策**：挂在中长期对象（中间件实例）上会让计数跨线程串味——长生命周期对象持有短期预算，等于把「本轮预算」变成「进程累计预算」。② **双作用域必须分别命名**：混用会让「本轮超限」与「累计超限」无法区分，进而无法选择正确的恢复动作（重跑本轮 vs 终止会话）。③ 命名要自带语义（数什么、覆盖哪一段），避免评审时靠猜。
+- **提升层**：工作流 / 状态管理。触发词：turn_token_usage、thread_token_usage、计数器不落中间件实例、预算作用域命名。
+- **来源**：https://github.com/langchain-ai/langchain/issues/40444 （2026-10-28 实拉）
+
+## r643B · 更多证据不一定更好：检索证据预算从 64 增到 512 token，准确率反而从 45% 掉到 32%
+
+- **原文事实**：arXiv 2610.36308《When Retrieval Is Not Enough: Obsolete Facts in Agent Memory》（2026-10-28 实拉）。① 在 MemoryAgentBench 的单跳 FactConsolidation 任务上，Qwen2.5-7B-Instruct 配 6K 历史：**BM25 准确率在检索证据预算从 64 token 增到 512 token 时，从 45% 掉到 32%**——而 **gold-assisted 事后审计发现每一组检索结果里都包含最新陈述**。② 多数错误发生在**问题本身也含有一条过期陈述版本**的样本上。③ 冻结 prompt、证据固定为四条陈述：**把一条无关陈述换成与之竞争的过期陈述，准确率从 100% 降到 44.6%**（Qwen2.5）、**从 100% 降到 87.8%**（Qwen3-14B），**全部 50 次有害配对翻转都被归类为 stale**。④ 32K 历史复现同样偏向 BM25-64 而非 BM25-512（**69% vs 58%**）。
+- **判据**：① **"检索到了正确事实"不等于"用对了事实"**——本例每组检索结果都含有最新陈述，增大预算反而更差；因此排查检索退化时不能只看「有没有召回」，要看「召回了多少以及竞争项是什么」。② **过期竞争项比同尺寸的无关证据更危险**（100% → 44.6%，且 50 次有害翻转全为 stale）：噪声只是无效，过期证据是**反向证据**。③ 记忆系统的证据预算是一个**需要调的负向参数**，不是「越大越全越好」。④ 对照设计值得复用：**保真替换 vs 目标事实替换**的双臂干预，能把「多样性/数量效应」与「特定事实效应」分开。
+- **提升层**：工具（检索策略）/ 诊断。触发词：证据预算增大反而降准、过期竞争项、stale 翻转、保真替换对照。
+- **来源**：https://arxiv.org/abs/2610.36308
+
+## r643C · 错误信息指向的层必须与实际故障层一致：存储生命周期故障被报成嵌入提供方错误会把排障带偏
+
+- **原文事实**：`docs.openclaw.ai/concepts/memory.md`（2026-10-28 实拉，HTTP 200 / 19,991 字符）。①「If `memory_search` reports that its **storage scope closed**, run `openclaw plugins reload memory-core`, or restart the Gateway, then retry.」②「**This is a storage lifecycle failure, not an embedding provider error.**」③ 另一处同类：「`memory_get` reports unsupported paths as **read errors**, not missing arguments or a globally disabled memory service.」④ 还有能力缺失的专用码：「A vector request without the capability fails with `DATABASE_SEARCH_CAPABILITY_UNAVAILABLE` and an actionable next step.」⑤ 检索回退路径：用 `sessions_search` 取 `sessionKey`/`messageId`/`sessionId` 再交给 `sessions_history` 取有界且脱敏的摘录。
+- **判据**：① **错误分类是最便宜也最容易被做错的诊断设施**——把存储生命周期故障报成"嵌入提供方错误"，排障者会去查 provider、查额度、查网络，而真正的动作是重载插件或重启。② **「不支持的路径」应报读错误，而不是"参数缺失"或"服务全局禁用"**——后者会让人以为改参数或开服务能解决，实际是路径本身不支持。③ **能力缺失要有专用错误码 + 可执行的下一步**，而不是笼统失败。④ 与 r643A 的 langgraph#8608「处理器执行了 ≠ 异常被吸收」同族：都是"表面现象与实际层位不一致"。
+- **提升层**：诊断方法论 / 错误分类。触发词：错误层位一致、存储生命周期≠嵌入错误、专用能力错误码、可执行的下一步。
+- **来源**：https://docs.openclaw.ai/concepts/memory.md
+
+## r643C · 按「有无 cooldown 提示」给配额错误分极：无冷却提示的永久配额错误应直接停止，不进重试预算
+
+- **原文事实**：`docs.openclaw.ai/cli/memory.md`（2026-10-28 实拉，HTTP 200 / 35,562 字符）。①「Other transient errors keep the **shorter three-attempt budget**.」②「**Permanent quota errors without a cooldown hint stop that operation.**」③ 配套：「Validation errors identify the provider, model, batch size, and rejected condition.」「A rejected batch still aborts indexing; full rebuilds publish only a complete index.」
+- **判据**：① **重试预算的准入判据应是「错误是否自描述了可等待的恢复信号」**——有 cooldown hint 说明重试有意义；没有则说明等待不会改变结果，重试纯属消耗。② 这会**收敛** r643A 的 codex#57084 那条：那条指出"共享冷却截止期"让重试无效，本条给出可操作的**判据**（看有没有 cooldown hint），两者合成一条可执行规则：**先看有无冷却提示 → 有则按提示退避、无则直接停 → 再查退避截止期是否共享**。③ 校验类错误要**自报四个字段**（provider / model / batch size / 被拒条件），否则无法复现也无法分诊。
+- **提升层**：工具（重试策略）/ 错误分极。触发词：cooldown hint 分极、永久配额错误直接停、三Attempt 预算、校验错误四字段。
+- **来源**：https://docs.openclaw.ai/cli/memory.md
+
+## r643C · 并发预算的归属层级须显式声明：普通子代理消耗**其直接父会话**的预算，而群体收集器用**组**的独立预算
+
+- **原文事实**：`docs.openclaw.ai/concepts/queue.md`（2026-10-28 实拉，HTTP 200 / 26,156 字符）。① 队列是 lane-aware FIFO，每 lane 有可配并发上限：未配置 lane 默认 1；`main` 用 `max(8, available CPU parallelism * 4)`；普通子代理队列默认**每个生成会话 8**；Swarm collector 队列默认**每组 32**。②「Ordinary sub-agent runs instead use **their immediate spawning/controller session's budget**, set by `agents.defaults.subagents.maxConcurrent`.」③「Swarm collector children use **their group's separate budget**, set by `tools.swarm.maxConcurrent`.」④「Asynchronous stage work can still overlap and **does not count toward that time budget**; this does not lower the run concurrency limit or change session serialization.」
+- **判据**：① **并发预算必须先回答"算在谁头上"**——同一批子代理是分摊父会话预算还是各自有独立预算，决定了限流的生效位置；本例两种子代理（普通 vs Swarm collector）归属不同，混为一谈会让限流形同虚设。② **"不计入预算"的工作要显式列出**（本例异步阶段工作可重叠且不计入时间预算），同时说明它**不改变**什么（不降低并发上限、不改变会话串行化）——防止"不计入"被读成"不受限"。③ 与 r643A 的 n8n#37779「重试预算必须声明作用域」同族：那一条是重试的作用域，本条是并发的作用域，合成一条通则：**任何预算/上限都必须声明作用域与归属**。
+- **提升层**：工作流 / 资源预算。触发词：并发预算归属、父会话预算、组独立预算、不计入预算的显式列举。
+- **来源**：https://docs.openclaw.ai/concepts/queue.md

@@ -4619,3 +4619,24 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 
 - **原文事实**：①「the standard agent made changes without the required "yes" in **13 of 50 tasks** with gpt-4.1 and in **29 of 128 task-runs** with Claude Haiku 5.5; the **Concordat agent made none**, with **no significant difference in task success**.」②「**tau-bench's own reward did not detect most of these violations**.」
 - **判据**：①**「任务成功 + 基准通过」不构成「过程合规」的证据**——合规类属性若不在 reward 里显式建模，违规就是 reward 的盲区，而且盲区与成功率正交（成功率无显著差异 ⇒ 用成功率当代理指标完全查不出）。②**评测「通过」必须区分「结果正确」与「过程约束被满足」两条独立通道**，后者需独立的检查器（本例是协议运行时），不能指望 reward 顺带覆盖。③**给基准加协议约束后成功率不掉**（no significant difference），说明「合规成本必然换准确率」不是定律，主张取舍前要先测。
+
+## r643A · 「能连上」不等于「活着」：探活与阻塞业务共用事件循环时，阻塞会同时让探针失效
+
+- **原文事实**：openclaw/openclaw#160959（`[Bug]: Gateway blocks for minutes while capturing large external plugins (2026.9.6 regression)`，open，61 comments）。① `capturePluginGenerationArtifact`（`src/plugins/plugin-generation-artifact.ts`）**在主线程同步复制**插件包；未设 `entryFile` 时 `copyPackage` 复制整个根目录，再由 `capturePluginDependencies` → `linkDependency` → `copyPackage` → `copy` 遍历复制依赖树。② 隔离复现（origin/main `4d4d99d`，合成 878 MB context-engine 插件）：**先卡 219 s 才开始监听，然后又卡 168 s**；日志 `prepared model runtime startup degraded after 120000ms`。③ 生产（2026.9.6，插件根为 Bun 全局安装：134 MB 包 + 兄弟 `node_modules` 1.5 GB / 221 包）：进程 T+0 启动，**T+2m20s 才 `http server listening`，`/healthz` 直到约 T+7m 才不超时**。④ 期间 **Gateway 接受 TCP 连接但不回应任何东西**，包括 `/healthz`、WebSocket RPC 与频道轮询；4 次 inspector 采样显示同一堆栈；`eventLoopDelayMaxMs=124352`（124 s）。⑤ 对照：`thinkingDefault` 单独 patch 热应用只要 50 ms。
+- **判据**：① **存活判定的最低要求必须是「有响应」，不是「TCP 可建立」**——本例 TCP 握手照常完成，但连 `/healthz` 都不回，只测端口的探针会给出健康假象。② **探针与可能阻塞的工作负载必须隔离**（离环执行或独立进程），否则二者同归于尽，最需要告警的时刻恰好没有告警。③ **`eventLoopDelayMaxMs` 是比「进程在不在」更早的失效信号**，长跑服务应优先暴露事件循环延迟而不是只暴露端点。
+- **提升层**：可观测性 / 治理。触发词：接受 TCP 不回应、healthz 同源失效、eventLoopDelayMaxMs、事件循环阻塞。
+- **来源**：https://github.com/openclaw/openclaw/issues/160959 （2026-10-28 实拉，一手正文 2,725 字符）
+
+## r643A · 清单完整性不得依赖「近期活动」派生：派生视图会静默过滤无近期活动的条目，且刷新不自愈
+
+- **原文事实**：openai/codex#36040（`Regression: iOS Remote only lists projects with recent chats`，open，98 comments）。① 已连接的 Mac 主机上 4 个已保存本地项目，**iOS Remote 只列出其中 2 个**；本地核查确认 4 个项目均仍注册为本地项目、指向存在且可访问的目录、是有效 Git 仓库、且都有已存在的 Codex thread。② 可见性与最近聊天活动**完全相关**：7/29、7/20 的可见，6/16 的两个不可见。③ 无新项目活动时的重启/刷新**不会**让旧项目出现。④ 触发与绕过：在旧项目的任一既有会话里发一条新消息 → 下拉刷新 → 该项目立即出现在移动端列表。作者据此确认「mobile project discovery is coupled to recent chat activity」。⑤ 关联报告 #23952（同样现象）。
+- **判据**：① **列举/发现接口的数据源必须是完整存量（注册库 / 配置），不能是「近期活动」这类派生视图**——派生视图等价于对无近期活动的条目做静默过滤，且因为过滤发生在数据源层，刷新不会自愈。② **活动只能用于排序，不能用于过滤**——把活动当过滤条件是这类「清单里少东西」缺陷的统一成因。③ 验证清单类接口时，构造一条「长期无活动但有效」的条目并断言其必须出现，能直接暴露此类耦合。
+- **提升层**：工具（发现与列举）/ 可观测性。触发词：清单只显示近期、发现与活动耦合、派生视图漏项、刷新不自愈。
+- **来源**：https://github.com/openai/codex/issues/36040 （2026-10-28 实拉，一手正文 2,832 字符）
+
+## r643A · 调试可观测与合规可追溯是两类产物：后者要确定性标识、输入输出哈希、人工监督留痕与追加-only 存储
+
+- **原文事实**：langchain-ai/langchain#35357（`Feature: Structured compliance audit logging for EU AI Act (Article 12)`，closed，22 comments）。① 背景：EU AI Act（Regulation 2024/1689）2026 年 8 月全面生效，Article 12 要求高风险 AI 系统支持**全生命周期事件的自动记录**，日志须能追溯系统运行。② 作者判定 LangChain 现有 `BaseCallbackHandler` 与可观测集成「primarily designed for **debugging and monitoring**, not for **regulatory compliance audits**」。③ 合规所需字段：带**确定性标识符**的 chain/agent 执行轨迹、每步**输入/输出对**（可选 PII 脱敏，与 GDPR Article 5 互动）、**模型标识与版本**、**ISO 8601 带时区时间戳**、**人工监督决策（批准 / 拒绝 / 覆写）**、操作的**风险分级**。④ 存储：须能写**追加-only** 后端（文件 / DB / S3）。⑤ 复用面：不止 EU AI Act，也覆盖 SOC2、ISO/IEC 42001 与内审。
+- **判据**：① **「便于诊断」与「可供举证」对日志的要求是冲突的**——调试日志求便利（可采样、可裁断、可改写），合规日志求不可否认（确定性 ID、输入输出哈希、只追加不可改）。② **用调试日志顶替合规证据，在真正需要举证时会两样都拿不出来**：既没有可校验的哈希，也没有人工监督的记录。③ 因此合规字段是与用途绑定的固定集合（谁、何时、什么版本、输入输出哈希、人做了什么决定、风险几级），不是「先看情况再补」。④ 与 av 既有的「表格提取可审计锚定」相邻但更完整：那一条解决「证据锚在源上」，本条解决「证据链本身不可篡改且有监督记录」。
+- **提升层**：治理 / 可观测性。触发词：调试日志≠合规日志、追加-only 防篡改、人工监督决策留痕、输入输出哈希、确定性标识符。
+- **来源**：https://github.com/langchain-ai/langchain/issues/35357 （2026-10-28 实拉，一手正文 2,209 字符）

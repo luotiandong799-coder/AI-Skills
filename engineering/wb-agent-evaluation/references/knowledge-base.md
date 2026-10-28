@@ -633,3 +633,38 @@ arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety wit
 
 - **原文事实**：①「existing benchmarks … grade with tests and prompts that **misjudge both correct and incorrect patches**」。②「we jointly synthesize **hidden probes**, which enforce the requirements the **original tests leave unchecked**, and a prompt that states **every interface the probes call without revealing the solution**」。③结果「the **probes reject 32% of the submissions that pass every official test**」。④「with the **original pull request descriptions as prompts, no model resolves a single task**」。⑤「Failure analysis shows that **structural and state errors dominate** and that **agents' own tests rarely check memory, time, or traffic**」。⑥「Turning these findings into an **agent skill raises the resolved rate** of a frontier model on the Megatron-LM tasks by **10.5%**」。⑦最强模型只解出 38.9%；共享执行环境复用依赖与工件，存储降 52–57%、构建时间降 13–14%。
 - **判据**：①**「通过官方测试」对「满足需求」的覆盖率有限（本例 32% 漏判）**——验收不能只跑既有测试，必须补「原测试未检查的要求」的独立探针；探针与提示要**联合设计**（提示声明接口、探针强制要求，且提示不泄露解法）。②**agent 自写测试的覆盖盲区是可枚举的（内存 / 时间 / 流量）**⇒ 给 agent 的测试规范要明确列出这些非功能维，否则它只会测它想得到的。③**PR 描述作为 prompt 时零解出**，说明「问题描述质量」是 agent 成功率的自变量，评测打分时要固定/声明这一变量。④**把基准失败分析转成技能可带来 +10.5% 的实测提升**——这是「评测反哺技能」的直接证据，闭环应有这一步，而不只是出报告。⑤共享执行环境的复用收益（存储 −52~57%、构建 −13~14%）是评测基础设施本身的优化项，与被测对象无关，不要算进 agent 能力。
+
+## r643A · 空洞正确陷阱：负样本全通过只在正样本也能通过时才构成证据，触发类评测必须同时报告正样本触发率 >0
+
+- **原文事实**：anthropics/skills#556（`run_eval.py: claude -p never triggers skills/commands (0% trigger rate across all queries)`，open，13 comments）。① `run_eval.py` 在 `.claude/commands/` 下写带 YAML frontmatter 的命令文件，再用 `claude -p` 跑测试查询。② 8 个技能、共 **144 次查询**：**每一个 should-trigger 查询都是 0/3 触发率**，包括显式的「run /lucas:memory-layer please」。③ **should-not-trigger 查询同样是 0/3**——作者称之为「correctly, but **vacuously**」。④ 作者排除的假设3：即使是显式「run this skill」也失败，因此「简单查询不触发技能」不是唯一原因。⑤ 作者给出的可能成因：`.claude/commands/` 下的命令与 `~/.claude/skills/` 下技能的**触发路径不同**（命令可能不在 `available_skills` 列表里，或只能靠显式 `/command-name` 调用）；`claude -p` 模式可能根本不加载/不呈现命令。⑥ 建议修法含：加 `--debug` 把**模型实际看到的 system prompt 与 available skills 列表** dump 出来验证。
+- **判据**：① **负样本全通过是空集上的正确**——若正负样本都是 0/3，说明触发机制根本没进入模型视野，此时「should-not 全通过」不是安全性证据，而是**评测本身失效的强信号**。② **任何触发/路由类评测必须同时报告正样本触发率并要求 >0**，否则整套结果不可采信。③ **显式指令（「run /skill please」）是最强的活性探针**：它能一次区分「触发机制未加载」与「模型不认为该触发」。④ **「把模型实际看到的东西 dump 出来」是这类问题的通用取证动作**——评审时优先要求证据是「输入快照」而不是「输出断言」。
+- **提升层**：评测效度。触发词：空洞正确、vacuously correct、负样本空集、触发率 0、活性探针、输入快照取证。
+- **来源**：https://github.com/anthropics/skills/issues/556 （2026-10-28 实拉，一手正文 2,144 字符）
+
+## r643B · 消融不等于因果证据：成功率消融「同时改变信息与计算」，且聚合率会掩盖相互抵消的得失
+
+- **原文事实**：arXiv 2610.23372《Beyond Success Rate: Interventional Evaluation of Memory in Vision-Language-Action Systems》（2026-10-28 实拉 `arxiv.org/abs` `citation_abstract`）。① 原文判据：「success-rate ablations alone cannot establish the use of task-relevant facts: they change **information and computation together**, while **aggregate rates can hide offsetting gains and losses**」。② 提出 IMEP（Interventional Memory Evaluation Protocol）回答四问：记忆是否有净收益 / 在什么条件下有益 / 改动记忆是否改变任务结果 / 这些效应是否特定于任务相关事实。③ 在检索接口处比较四类干预：**目标事实替换（target-fact substitutions）**、保真替换（fact-preserving replacements）、最小数值扰动、精确副本。④ 并把**决策正确性**与**运动执行成功**分开评估。⑤ 结果：跨回合 learned-bank 实验里，一次 ULP（one-unit-in-the-last-place）干预（含其安装过程）改变了 **11.9%** 的 seed-paired 结果，而改变关键事实相对保真替换**没有产生明确的额外效应**。⑥ ChainBench 上：完整记忆配置把任务成功率从 **39.1% 提到 74.3%**，与 oracle-decision 条件持平。
+- **判据**：① **消融改变的是两个变量，不是因果**：去掉记忆既改了可用信息，也改了模型的计算路径，因此「消融后变差」不能证明「记忆被读取并使用了」。② **聚合成功率会掩盖抵消效应**——一部分样本变好、另一部分变差时，均值看不出问题；必须按 seed 配对（seed-paired）看翻转分布，本例 ULP 干预翻转了 11.9%。③ **要证明「记忆真的被用」，干预必须落在目标事实上并与保真替换对照**：只有目标事实替换显著劣于保真替换，才说明模型依赖的是那条具体内容。④ **决策与执行要分开打分**：本例 VLA 场景里执行成功会掩盖决策错误，反之亦然。
+- **提升层**：评测效度 / 验证方法论。触发词：消融≠因果、seed-paired 翻转、保真替换对照、决策与执行分评。
+- **来源**：https://arxiv.org/abs/2610.23372
+
+## r643B · 记忆选择的正确目标是「充分性」不是「相关性」：找最小充分子集，评测须覆盖冗余族与联合必要族
+
+- **原文事实**：arXiv 2610.23266《Beyond Marginal Influence: Interaction-Aware Memory Selection for LLM Agents》（2026-10-28 实拉）。① 原文判据：基于「记录相关性或**个体影响力**」的排序「cannot identify **sufficient subsets** under **redundant or jointly necessary** evidence」。② 研究问题定义为 **per-decision memory sufficiency**：选出一个**保持完整记忆行为**的小子集。③ 提出 JointCoreBench：**9 个交互族、6 个工作流域**、自然语言决策、**精确充分集 oracle**、6,912 个精确条件；以及 JointCore 基线：按相关性代价排序的**分组删除**（先测块再测单条记录）。④ 结果：代价排序的 JointCore 在 **100.0%** 用例中恢复出最小代价充分集，子集评估次数从 **30.00 降到 11.13（−62.9%）**，活跃记忆节省 **87.8%**。⑤ 泛化：4 个 12B–70B 模型族、每模型 432 任务，未加权均值 **10.28 vs 16.00** 次模型查询，最小代价恢复率 **50.6% vs 43.1%**（对比代价感知的单条删除）。⑥ 诚实边界：作者明确写「JointCore is an efficient **benchmark baseline**; the study does **not** establish deployment-ready memory compression」。⑦ 另测了物理删除、UNKNOWN 掩码、PENDING 哨兵、反事实值、替代标签，识别到**依赖接口的**行为差异。
+- **判据**：① **相关性与充分性是两个不同的目标函数**：相关性排序挑「像查询的」，充分性挑「少了它行为就变的最小集合」；后者才能同时处理冗余（多条说同一件事，取一条即可）与联合必要（缺任一条都不行）。② **先测块再测单条**是应对冗余族的高效搜索序（本例评估次数 −62.9%）。③ 作者自陈的「不证明可直接部署」是**效度边界声明的样板**：给出强数字的同时显式写出不覆盖什么。④ 用「掩码/哨兵/反事实」多形态干预能暴露只在单一接口下成立的行为。
+- **提升层**：评测效度。触发词：充分性≠相关性、最小充分子集、冗余族、联合必要、分组删除、效度边界声明。
+- **来源**：https://arxiv.org/abs/2610.23266
+
+## r643B · 记忆的隐性代价是响应多样性坍缩（熵 −34.7%），且用户侧干预无法补偿 ⇒ 属设计层而非配置层
+
+- **原文事实**：arXiv 2610.25127《MemBubble: Benchmarking How Agent Memory Shapes LLM Response Diversity》（2026-10-28 实拉）。① 问题：记忆让响应个性化，但会**降低响应多样性**，从而收窄用户可获取的信息范围。② 现有评测多依赖合成交互、覆盖的记忆系统少。③ MemBubble：基于**真实**用户-助手对话抽取的偏好构建，**1000 个实例**；测试查询构造在与用户偏好**不同但主题相关**（共享偏好类别）的场景，以度量记忆对响应分布的集中程度。④ 结果：跨多个 LLM 与记忆机制，**熵相对「直接提供完整交互历史」平均下降 34.7%**。⑤ 作者尝试了简单的用户侧干预与信息可用性调整，**均不能有效缩小多样性差距**。
+- **判据**：① **记忆优化个性化时会同步收窄多样性**，这是一个此前没有被单独度量的代价项；它不在准确率指标里，因此常规评测完全看不见。② 熵下降 34.7% 说明这**不是边缘效应**，而是分布层面的集中。③ 关键结论在最后一句：**用户侧手段无效 ⇒ 这是设计缺陷不是使用方式问题**，靠提示或配置兜不住，必须在记忆构建/检索策略层解决。④ 评测记忆系统时应把「多样性保持」列为与准确率并列的独立轴。
+- **提升层**：评测效度 / 记忆治理。触发词：响应多样性坍缩、熵下降、个性化代价、用户侧干预无效。
+- **来源**：https://arxiv.org/abs/2610.25127
+
+## r643B · 「召回到」与「恰当地用」必须分离评测：文件型记忆提升准确率但把偏好外溢到无关上下文
+
+- **原文事实**：arXiv 2610.30485《Why Bother Me Again? Benchmarking Personal Agent Memory for Interaction Preferences》（2026-10-28 实拉）。① 现有记忆基准聚焦**事实召回**与**个性化答案**，极少测**交互偏好**（何时该澄清、何时该确认、何时该自主行动）。② MemPABench：交互式环境，on-policy 评测；长程任务要求 agent 决定 clarify / confirm / act autonomously；**4 个 grounded 模拟用户、14 条偏好**，覆盖工作与个人两类上下文；反馈跨越 **4 个月内 99 个会话**，每用户 5 次事件驱动的变化以测试记忆更新。③ 结果：在 **4 个记忆系统 × 4 个 LLM 骨干**上，当前记忆在**偏好选择**上收益有限：**检索型系统（Mem0 / MemOS / simple RAG）都不优于 No Memory**；**文件型记忆提升了准确率，但会把偏好应用到无关上下文之外**。④ 分析：当前记忆难以检索交互偏好，也难以适应偏好变化；**即使正确的偏好已在手边，覆盖 agent 的默认交互习惯仍然困难**。
+- **判据**：① **「能取回」与「用得恰当」是两个能力，必须分开打分**——本例文件型记忆在召回维度上是赢的，但在适用范围维度上是输的，合并成一个分数会把它误判为纯提升。② **过泛化是检索型记忆的典型失败态**：偏好被套用到不该生效的上下文，这是「记忆越准越危险」的具体形态。③ **偏好是会变的**：基准必须包含**变更事件**（本例每用户 5 次），否则测的是静态拟合而非持续适应。④ 与上一条（多样性坍缩）互补：一个是响应分布变窄，一个是适用范围变宽，合起来刻画记忆「又窄又泛」的双向失真。
+- **提升层**：评测效度。触发词：召回≠恰当使用、偏好外溢、过泛化、偏好变更事件、on-policy 评测。
+- **来源**：https://arxiv.org/abs/2610.30485

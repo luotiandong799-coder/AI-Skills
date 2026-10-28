@@ -4669,3 +4669,17 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 
 - **原文事实**：①文档首页直接对 agent 说话：「Trust these **authoritative docs**, maintained against the current `@mastra/core` release, **over training data**.」②「**Model IDs such as `openai/gpt-6.1-sol` are real and must not be changed.** Signatures match that rel[ease]」。③同页给出可机读的构造契约：`import { Agent } from "@mastra/core/agent"`，构造参数 `{ id, name, instructions, model }`，`model` 是字符串；provider 必填且限定 `"openai" | "anthropic" | "google" | "xai"`。④另有把 skills 装进用户已装 coding agent 的命令形态（"installs Mastra skills for your installed coding agent"）。
 - **判据**：①**面向 agent 的文档应把「本文件优先于你的训练数据」写成显式声明**——否则模型会用训练记忆里的旧 API 覆盖文档里的新 API，且不会报错。②**对「看起来像占位符但其实是真实值」的标识符要逐一点名禁止改写**（本例 model ID）⇒ 只说「不要改示例」无效，必须给出具体字面量与「real」标注。③**声明要绑定到具体版本**（maintained against the current release）而不是笼统说「以文档为准」，否则无法判断文档是否比训练数据新。④把 provider 选项写成可机读枚举而不是散文，便于 agent 直接校验。⑤这是可复用的**文档编排模式**：权威声明 + 字面量禁改清单 + 版本锚点 + 机读契约，四件套一起给。
+
+## r643C · 自主改技能的最低保障三件套：先存前版 / 可撤销 / 新建的用归档代替回滚
+
+- **原文事实**：`docs.openclaw.ai/skill-workshop.md`（2026-10-28 实拉，HTTP 200 / 19,025 字符）。① 触发机制：「after **10 accumulated model iterations** in a conversation, a background run reviews it and saves anything worth keeping.」②「**Every change saves the previous version first**, and can be undone.」③ 撤销入口：「Say "undo" in the conversation and the agent restores the previous version with `skill_workshop`, whether channel notices are on or off.」④ 批量回滚语义：「Each restores the version saved **before the review's first change** of a skill and **archives skills the review created**.」⑤ 关键分支：**「A skill that was just created has no earlier version; archive it instead.」** ⑥ 通知与降级：默认在 Control UI 显示 `Learned` 行；可设 `skills.workshop.autonomous.channelNotices: true` 改为发到触发该次审查的会话；工具不可用（如沙箱会话或工具策略隐藏）时「It replies with an explanation instead」。
+- **判据**：① **任何自动写入都必须先落前版再改**——顺序反了就没有可回滚点。② **撤销粒度是「本轮审查的第一次改动之前」，不是「上一版」**：批量自主改动要能一次整体回退到审查起点，否则撤销会退到中间态。③ **「新建」没有前版，因此回滚的正确替代动作是归档**——把"回滚不可能"显式转化为"归档"，避免出现"撤销失败"这类无出路状态。④ **工具不可用时要明确说明原因并指出是哪个沙箱设置/配置层隐藏了它、以及精确的 `allow`/`alsoAllow` 改法**，而不是静默跳过。
+- **提升层**：工作流 / 技能生命周期。触发词：先存前版、批量回滚到审查起点、新建用归档代回滚、工具不可用的显式说明。
+- **来源**：https://docs.openclaw.ai/skill-workshop.md
+
+## r643C · 写 SKILL.md 的门禁分两级：致命发现直接拒写并点名文件/行/规则，咨询级不阻断但逐条提示
+
+- **原文事实**：同上 `docs.openclaw.ai/skill-workshop.md`。① 致命级：「A **critical security-scanner finding, including a literal secret, refuses the write and names the file, line, and rule**.」② 咨询级（最多三条，`Advisory (not blocking)`）：「authoring issues the write introduced — **a description over 160 bytes or opening with "This skill"**, **a body over 250 lines or 12 KB**, **emphasis words**, **three or more Never/Don't steps**, **update notes or dates**」。③ 拒写时的提示：「A write is refused | The error names the fix: rename the skill, correct the frontmatter, shorten the description or `SKILL.md`, or remove the flagged line.」
+- **判据**：① **门禁必须分「阻断」与「咨询」两级**——只有致命项（字面密钥）才拒写，风格类问题阻断会拖慢迭代；混在一级会让真正的风险被风格噪音淹没。② **拒写必须点名三要素：文件、行、规则**，否则作者无从修起。③ 咨询项本身是一份**可直接对标的质量清单**：描述 >160 字节或以 "This skill" 开头、正文 >250 行或 12 KB、强调词、≥3 个 Never/Don't 步骤、更新说明或日期——这些恰好都是可机检的项。④ 错误信息要**直接给出修法**（重命名 / 改 frontmatter / 缩短 / 删掉被标记的行），而不是只报"不合规"。⑤ 与本项目既有纪律对齐：正文行数红线（≤200 触发下沉 / >500 硬异常）与 description 长度上限都是同一类机检门禁，可复用其「阻断 vs 咨询」的分级思路。
+- **提升层**：技能工程 / 质量门禁。触发词：致命拒写点名三要素、Advisory not blocking、描述 160 字节、正文 250 行/12KB、≥3 个 Never 步骤、错误即修法。
+- **来源**：https://docs.openclaw.ai/skill-workshop.md

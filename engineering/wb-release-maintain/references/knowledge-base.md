@@ -1104,3 +1104,24 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 
 - **原文事实**：①常量表：`PROTOCOL_VERSION = 4`、`MIN_CLIENT_PROTOCOL_VERSION = 4`、`MIN_NODE_PROTOCOL_VERSION = 3`、`MIN_PROBE_PROTOCOL_VERSION = 3`，四者「live in the same **N-1 window**」。②「**Device auth, pairing, scopes, command policy, and exec approvals are unchanged by this compatibility window.**」③超时族：`requestTimeoutMs = 30_000`；`OPENCLAW_HANDSHAKE_TIMEOUT_MS = 30_000`（env 可抬升 paired server/client budget）；device-token 关闭后 fast-retry clamp = `250` ms；`stopAndWait()` 默认 `1_000` ms；tick-timeout close 用 code `4000`，当静默超过 `tickIntervalMs * 2`。④owner 表按操作列出归属（如 `worktrees-restore-owner-v1`、`exec-approvals-set-owner-v1`）。⑤「**pre-mutation refusal; other errors after dispatch do not prove rollback**」——回复要「inspect the target and its operation-specific status or recovery output」。
 - **判据**：①**声明兼容性时要把安全子系统显式排除在窗口之外**——「N-1 兼容」若被读成「整体降一级也能跑」，会让鉴权与审批面出现预期外的不匹配；正确写法是列出**不受窗口影响**的清单（本例五类）。②**停止/握手路径的预算与调用路径的预算是不同币种**（`stopAndWait` 1s vs `requestTimeoutMs` 30s，相差 30 倍）⇒ 声明「超时」时必须指明它属于哪条路径，否则关闭阶段会按调用阶段的尺度被误判为充足。③**重连风暴要用 fast-retry clamp（250ms）钳制**，这是关闭/断连路径上独立于正常重试的参数，声明重试策略时不要把它并入通用重试预算。④**「派发之后的错误不能证明回滚」**——只有**变更前拒绝**才是「未发生变更」的证据；排障时把「报错了」当成「没改」是错的，必须去查目标对象的操作特定状态或恢复输出。⑤按操作列出归属 owner 表 ⇒ **恢复类操作要预先声明唯一责任人**，避免多重恢复互相覆盖。
+
+## r643A · 排空窗口的严格性须显式声明：残留「恰好 1 个」在途调用即整体判硬失败，会让单个卡住的插件绑架整个生命周期
+
+- **原文事实**：openclaw/openclaw#170956 Finding 2（25 comments）。① 关停流程中 `acpx` / `duckduckgo` / `llama-cpp` 三个插件**每个都 consistently 恰好有 1 个 still-running call**，在 **5000ms 强制退役窗口**内始终不返回。② 抛 `PluginInstanceDrainTimeoutError`，`reason: "gateway.stop_close_failed"`，把例行的重启/更新变成**硬关停失败**。③ 用户侧表现：重启/更新「pas na veel proberen」（要试很多次）才成功一次。④ 同文件 Finding 3：Windows 更新还因 `schtasks` **权限错误禁用了计划任务**，进一步让重启不可靠。
+- **判据**：① **排空窗口的语义必须显式声明「残留 N 个在途调用时是降级继续还是整体判失败」**——本例是 N=1 即整体硬失败，副作用是任意一个卡住的插件都能绑架整个进程生命周期。② 更稳的姿态二选一：把残留调用就地取消/超时计数后**记名忽略**（局部失败不升级为全局失败），或把判定粒度**降到插件级**而非全局级。③ 与 rm r561B（「关停没有排空期 → 在途回调吃裸 503」）是同一轴的**两端**：那条讲缺排空期的后果，本条讲有排空期但判定过严的后果；两条合起来才构成完整的关停预算设计约束。
+- **提升层**：生命周期 / 工作流。触发词：drain 窗口残留 1 个即失败、PluginInstanceDrainTimeoutError、stop_close_failed、插件级判定粒度。
+- **来源**：https://github.com/openclaw/openclaw/issues/170956 （2026-10-28 实拉，一手正文 4,870 字符）
+
+## r643A · 「未复现」不等于「已修复」：结论升级前须先证明复现环境与原始故障环境等价
+
+- **原文事实**：openclaw/openclaw#185819（`[Bug]: Windows quick-start Codex onboarding completes device authorization, then fails activation with inactive harness runtime artifact (2026.10.7)`，open，12 comments）。① 原始故障：2026.10.7（157d8c2）Windows 10 引导完成设备授权后推理激活失败。② 后续 2026.10.8（`cb3484b56fa4991c6840608596b0cdc3c1739f67`，含 #183964）带插桩的复现尝试**未复现**。③ 作者**明确拒绝升级结论**：「This is a **non-reproduction**, not proof the issue is fixed」。④ 作者自列的环境差异：原始运行机器上有**已存在的 Codex 安装/登录**，插桩运行用的是**全新隔离的 Codex home**；且源码**在 Linux 上编译**后与 Windows 依赖手工组装，**未测试 2026.10.8 的 npm 官方发行版**；完整 `pnpm build` 在该归档检出下未完成，因此「完整发行版构建与官方 Windows 安装仍未验证」。⑤ 另：Control UI 构建错误定位为**手工组装的检出缺少生成的插件 UI 资产**，执行 `pnpm plugins:assets:build` 后 `OPENCLAW_CONTROL_UI_REQUIRE_PLUGIN_DISTRIBUTIONS=1 pnpm ui:build` 成功。
+- **判据**：① **复现失败只能注销为「未复现」，要升级到「已修复」必须先证明环境等价**——本例三处不等价（凭据状态、构建来源、发行渠道）任何一处都足以让否定结果失效。② **凭据状态是最常被忽略的等价项**：「已有登录」与「全新 home」会走到完全不同的代码路径，用后者否定前者等于没测。③ **构建来源同理**：交叉编译 + 手工组装的产物不能代表官方发行版，关闭缺陷前必须跑官方渠道的安装。④ 这条同时是**证据分级的样板**：作者把所有「未验证」项逐条列出，而不是让否定结论看起来像肯定结论。
+- **提升层**：验证 / 发布治理。触发词：non-reproduction、未复现≠已修复、环境等价性、凭据状态差异、交叉编译不代表发行版。
+- **来源**：https://github.com/openclaw/openclaw/issues/185819 （2026-10-28 实拉，一手正文 4,516 字符）
+
+## r643C · 索引/产物的重建原子性：不完整或失败的重建永不替换已发布版本，下次同步续建并纳入期间变更
+
+- **原文事实**：`docs.openclaw.ai/cli/memory.md`（2026-10-28 实拉，HTTP 200 / 35,562 字符）。①「An admitted rebuild **can finish during shutdown**; an **incomplete or failed rebuild never replaces the published index**.」②「The next sync **resumes the rebuild**, incorporating source changes before publishing the complete index.」③「full rebuilds **publish only a complete index**.」④「A rejected batch **still aborts indexing**.」⑤ 相关清理的非阻塞姿态：「File removal runs asynchronously so cleanup does not block the Gateway event loop.」
+- **判据**：① **「重建」与「发布」必须是两个可分离的动作**：重建可以跨停机完成，但只有完整产物才能进入发布位——这是防止"重建到一半把可用的旧版本顶掉"。② **续建而非重来**：下次同步接着做并纳入期间的源变更，等于把重建变成可恢复的长事务。③ **单批被拒即中止整轮索引**，而不是"跳过坏批继续"——后者会产生一个看起来完整、实际缺块的产物。④ 清理类动作要**异步化**，避免二次阻塞（呼应 r643A 的 openclaw#160959：阻塞型工作会让最需要响应的时刻恰好无响应）。
+- **提升层**：发布治理 / 生命周期。触发词：重建不替换已发布、续建、仅发布完整产物、单批被拒即中止、清理异步化。
+- **来源**：https://docs.openclaw.ai/cli/memory.md

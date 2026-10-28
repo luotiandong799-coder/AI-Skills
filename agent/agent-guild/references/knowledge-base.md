@@ -1096,3 +1096,59 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 
 - **原文事实**：①「existing systems typically retrieve memories based on their **relevance to the current query** … However, **relevance alone does not characterize how a memory contributes to task solving**: the same memory may serve different roles across tasks, such as directly supporting the answer or **linking to complementary memories with weaker semantic relevance but necessary information**.」②做法「organizes interaction histories into **local threads** and constructs task-oriented workspaces by **assigning roles and jointly selecting complementary memories**」。③结果（LoCoMo / MemGallery，四个开闭源底座）：macro-F1 +2.23–3.14；LoCoMo 上相对 SimpleMem 的 LLM-Judge +4.07 / +4.31 个百分点，同时 **context tokens 减少约 12.8% / 5.1%**。
 - **判据**：①**检索排序的目标函数应是「对解题的贡献」而不是「与查询的相似度」**——两者不等价：必要的补充信息常常语义相似度更低，会被相关度排序直接剪掉。②**记忆的角色是相对任务而定的属性，不是记忆自身的固有属性**（同一条在不同任务里角色不同）⇒ 组织记忆时应按任务构建工作区，而不是维护一张全局相关度表。③**联合选择优于逐条排序**（jointly selecting complementary memories）：逐条 top-k 会重复取同类而漏掉必需的互补项。④**效果好且更省**（macro-F1 提升的同时 context tokens 下降 5.1–12.8%）说明「多取一点更稳」的直觉在此不成立。
+
+## r643A · 授权与信任是正交的两个判定：信任须按技能作用域声明，且证明来源必须是可验证签名记录而非自述信誉
+
+- **原文事实**：microsoft/autogen#7525（`Feature: Agent trust verification via MoltBridge for cross-org multi-agent scenarios`，open，58 comments）。① 问题定位：跨组织（不同公司 / 不同 LLM 供应商 / 不同信任域）协作时，缺「是否该**信任**这个 agent 把**这件**事做好」的标准判据。② 与 #7524 的分工：#7524 的 OPA 授权层解决「这个 agent **允许不允许**做」，本提案解决互补问题「**该不该信任**它做」。③ MoltBridge 的四要素：**Ed25519 密码学身份**（每个 agent 一把可验证密钥对）、**基于 attestation 的信任**（信任来自历史交互的**签名记录**，而非自述信誉）、**技能作用域化信任**（代码审查受信任 **≠** 金融交易受信任）、**图遍历**（信任可传递、可查询「它是否被我已信任的 agent 信任」）。④ 落地形态：`api.moltbridge.ai` 28 个端点；`@moltbridge/mcp-server`（npm）提供 `search_agents` / `get_trust_score` / `create_attestation` / `register_agent`；A2A agent card 在 `api.moltbridge.ai/.well-known/agent.json`（A2A v0.3.0，8 skills）。⑤ 集成点：委派前信任查询、MCP 集成、任务后 attestation 落边（累积可验证信任图）。
+- **判据**：① **「能不能做」（授权）与「该不该交给它做」（信任）必须分开建模**——只有授权层时，一个权限合法但能力/记录未知的 agent 会被无条件委派；两者正交，缺一即留下「合法但不可靠」的空洞。② **信任必须按作用域声明**：全局可信 ⇒ 越权泛化（代码审查的可信不应外溢到金融交易）；作用域是信任的维度而非过滤器。③ **证明来源必须是可验证的签名记录，不能是自述信誉**——自述无法证伪，签名 attestation 可校验、可追溯、可累积。④ 与 ag 既有「发言人定权 / 角色作用域可见性」同族：那一条定「谁能看见/谁能说」，本条定「交给谁做靠什么判」。
+- **提升层**：安全边界 / 跨 agent 协作。触发词：授权≠信任、技能作用域信任、attestation 非自述、Ed25519 agent 身份、信任图遍历。
+- **来源**：https://github.com/microsoft/autogen/issues/7525 （2026-10-28 实拉，一手正文 2,834 字符）
+
+## r643B · 记忆的「净价值」口径：专用记忆系统多数不如 naive RAG ⇒ 出现负净价值（memory tax）
+
+- **原文事实**：arXiv 2610.34073《Memory Tax: Dissecting the Net Value of Agent Memory》（2026-10-28 实拉）与 2610.29823《MemoryTax: The Bitter Lesson of Agent Memory》。① 34073：「many dedicated memory systems **underperform naive RAG** in many cases, indicating a **negative net value**」。② 把净价值拆成 **memory benefit**（增益）与 **memory tax**（损耗），二者都源于「记忆过程改变了原始信息的组织与访问方式」——即**对原始历史的双刃偏离**：为增益而设计（重组事实、蒸馏偏好），但有些偏离会**移除或遮蔽证据**，形成 tax。③ 2610.29823 的量化：在一条 LoCoMo 对话（**419 turns / 152 questions**）上跑 4 种记忆法（full context / BM25 / Mem0 / Zep）× 3 个 coding agent（Pi / Codex / Claude Code），每个配 GPT-4o-mini / GPT-6 Luna / Claude Opus 5.5，并记录每次 rollout 的成本——作者自陈是**短实证研究，1 对话 × 每格 1 次运行**。④ 关键数字：**Mem0 只在 GPT-4o-mini 下胜过 full context**；且 **Mem0 的构建记忆本身开销就超过一整轮 full-context rollout**。⑤ 在 Claude Opus 5.5 下，Pi 位于成本-准确率前沿：**99% 准确率，成本不到 full context 的一半**；其唯一一次失手是答案键本身标错。
+- **判据**：① **记忆系统的评价基线必须包含 naive RAG**，否则「专用记忆有效」这一结论是在没有对照组的条件下得出的。② **记忆是「对原始历史的偏离」，偏离天然双刃**——重组与蒸馏带来增益，同时可能删掉或遮蔽证据；因此评价单位应是**净价值**而非独立性能。③ **构造记忆的成本是真实成本且可能吞掉全部收益**（本例构建 > 一整轮 full context），只在多轮复用时才可能摊薄。④ 自陈的「单对话单运行」是**效度边界**，引用这些数字时必须带上这个限定。
+- **提升层**：记忆治理 / 评测效度。触发词：memory tax、净价值口径、对原始历史的偏离、naive RAG 基线、构建成本吞收益。
+- **来源**：https://arxiv.org/abs/2610.34073 · https://arxiv.org/abs/2610.29823
+
+## r643B · 记忆的价值上界由「写入者」设定：更强的读者找不回更弱的写者漏掉的东西
+
+- **原文事实**：arXiv 2610.29823。① 对比对象：Mem0 / Zep 这类「**在任何问题到来之前就先决定保留什么**」的设计型记忆，vs coding agent 保留原始历史、让模型用自己的工具去搜索。② 研究问题：一旦模型强到能自己搜索，设计型记忆是否还有帮助。③ 结果：「Agent memory is a **costly patch for a weak model**」。④ **记忆存在上限，且上限由写记忆的那个模型决定**——原文：「a stronger reader does not recover what a weaker writer left out」。⑤ 附带发现：Pi 的部分领先来自「只有 agent 能读到的图片说明」；在证据不含照片的 **88 个问题**上，Pi 与 full context 只差一个答案。
+- **判据**：① **"先决定留什么"这一动作本身就是信息瓶颈，且瓶颈强度由写入模型的能力封顶**——下游无论换多强的读取模型都无法补回。② 因此「升级读取模型」与「升级记忆系统」不是可互换的投入：前者受后者写入质量的硬约束。③ **能力足够时，让模型自行检索原始历史优于预先设计记忆**——这是 bitter lesson 在 agent memory 上的具体形态。④ 对照组的构造方式值得学：**拆分「证据是否含图片」这一类子集**，能防止把数据可得性差异误读成模型能力差异。
+- **提升层**：记忆治理 / 架构决策。触发词：写者设定上界、costly patch for a weak model、自行检索优于预设计忆、证据子集拆分对照。
+- **来源**：https://arxiv.org/abs/2610.29823
+
+## r643B · 遗忘是记忆的一等公民：睡眠式生命周期治理（聚类失败→蒸馏为规则→删原始→规则衰减/晋升），且存在跨场景稳定运行点
+
+- **原文事实**：arXiv 2610.25561《Let Them Sleep: Recursive Self-Pruning Memory for Long-Horizon LLM Agents》（2026-10-28 实拉）。① 问题诊断：「Storing every trace and retrieving the nearest neighbors works early and **quietly stops working later**: the store fills up with **failures the agent then repeats**, and with facts that were true fifty turns ago」。② RSPM 机制：周期性 sleep → **聚类近期失败** → 把每个簇**蒸馏成一条短规则** → **删除刚学过的原始 episode**；规则**会衰减除非被强化**；跨多上下文复现的规则**晋升为通用规则**。③ 三个差异极大的场景均提升：**难度校准的 SWE-bench 模拟 +9.1**、**12 个对话基准的时序一致性 +11.9**、**LoCoMo-10 长程 QA +7.6**。④ 更关键的发现：**两个各自对记忆库做插桩的研究，在未被调参指向对方的情况下，收敛到几乎相同的运行点——约 93% 更少的重试循环、约 30% 更少的存储条目**。作者据此推断「知道该忘什么」是 agent memory 的**一般性质**而非基准特技。
+- **判据**：① **记忆系统的退化主要来自「该忘的没忘」**：失败轨迹被保留会引发重复失败，过期事实会持续误导；因此遗忘不是清理工作而是功能。② **「蒸馏后删除原始」是防重复失败的关键一步**——只蒸馏不删除，失败轨迹仍在库里被近邻检索命中。③ **规则的衰减与晋升构成两级记忆**：未被强化的规则自然淘汰，跨上下文复现的升为通用，等价于带时间常数的置信度机制。④ **独立研究收敛到同一运行点（−93% 重试 / −30% 条目）说明存在可迁移的操作参数**，值得作为默认配置而非每次重调。
+- **提升层**：记忆治理 / 生命周期。触发词：递归自我剪枝、睡眠周期、失败聚类蒸馏、规则衰减与晋升、跨场景运行点。
+- **来源**：https://arxiv.org/abs/2610.25561
+
+## r643B · 记忆对象的计算分类法：constants / functions / operators 三类各有不同检索语义
+
+- **原文事实**：arXiv 2610.32464《Agentic Memory Management Is the Next Frontier of Information Retrieval》（perspective，2026-10-28 实拉）。① 主张：agent 记忆管理（AMM）研究信息的**结构、分析、组织、存储、搜索、检索与「使用」**，是 IR 研究的自然延伸。② 提出系统级 AMM 框架，并给出记忆对象的**计算分类法**：**constants**（常量）、**functions**（函数）、**operators**（算子），**each with distinct retrieval semantics**。③ 强调与既有 IR 研究的差异与联系，并给出研究议程：基准、记忆效用的候选原则、混合参数化与非参数化更新的优化过程。④ 论证动机：现在信息消费与保留发生在 agent 内部，因此信息管理也发生在 agent 内部。
+- **判据**：① **记忆不是同构条目集合，按「常量 / 函数 / 算子」分类后检索语义才成立**——常量按身份取回、函数按调用求值、算子按作用变换，三者混在一个相关性排序里必然互相干扰。② 尤其要显式建模「**使用**」这一环节（作者列为 AMM 的研究对象之一），否则只测取出不测用，无法判断记忆是否真正起作用。③ 视角价值：把 agent 记忆纳入 IR 框架，可直接复用 IR 的检索评估与效用度量方法。
+- **提升层**：记忆治理 / 信息检索。触发词：AMM、记忆对象分类法、constants/functions/operators、检索语义差异、记忆使用。
+- **来源**：https://arxiv.org/abs/2610.32464
+
+## r643B · 记忆更新的确定性三态门 + 「候车室」暂存层（延迟承诺）+ 惊喜度按检索可靠性下调
+
+- **原文事实**：arXiv 2610.29467《PreCoMem: Predictive Cognitive Memory for Self-Evolving Long-Term Dialogue Agents》（2026-10-28 实拉）。① 张力：长程对话 agent 既要记忆稳定以维持个性化，又要在用户真的改变时适应；现有系统要么把每条观察都追加，要么按启发式规则覆盖旧条目 ⇒ **难以区分瞬时噪声与真实的信念漂移**。② PreCoMem 把记忆表示为**关于用户状态的带置信度权重的信念**（confidence-weighted beliefs）。③ 核心信号 **Effective Surprisal** = 语义偏离 + 矛盾证据，并**在检索发散、不可靠时下调该信号**。④ **双阈值门**把每一轮映射到**三个确定性更新之一**：**MAINTAIN**（强化被支持的信念）/ **PROFILE**（把模糊线索存为低置信假设）/ **CORRECT**（对被可靠反驳的事实做软衰减）。⑤ **PROFILE 阶段是显式的候车室（waiting room），防止对噪声证据过早承诺**。⑥ 结果：LoCoMo / LongMemEval-S / PersonaMem-v2 上一致 SOTA；新增 DiMoBench 验证能在非平稳信念漂移下适应且不对噪声过反应。
+- **判据**：① **更新的取值域应是确定性的三态而非连续写入**：维持 / 暂存 / 纠正，每种都有明确触发条件，避免「追加 vs 覆盖」这一伪二选一。② **「候车室」是延迟承诺的具体机制**——模糊线索先以低置信落地，被后续证据支持才晋升，这把「抗噪」从事后过滤前移到写入决策。③ **惊喜度必须按检索可靠性加权**：检索本身发散时，偏离信号不可信，直接下调可从源头抑制噪声写入。④ 与 r643B 上一条（遗忘/睡眠）互补：那一条管**淘汰与晋升**，本条管**写入与暂存的判定**。
+- **提升层**：记忆治理 / 状态更新。触发词：Effective Surprisal、双阈值门、MAINTAIN/PROFILE/CORRECT、候车室延迟承诺。
+- **来源**：https://arxiv.org/abs/2610.29467
+
+## r643C · 注入预算超限时只能截断「副本」不得改源文件，且截断本身是要被当作信号处理的降级事件
+
+- **原文事实**：`docs.openclaw.ai/concepts/memory.md`（2026-10-28 实拉，HTTP 200 / 19,991 字符）。①「If `MEMORY.md` grows past the **bootstrap file budget**, OpenClaw **keeps the file on disk intact** but **truncates the copy injected into context**.」②「Treat that as a **signal** to move detailed material into `memory/*.md`, keep only a durable summary in `MEMORY.md`, or raise the bootstrap limits if you want to spend more prompt budget.」③ 配套边界：「Project instructions, sessions, settings, and credentials are **not** part of this memory-only action.」「Config, credentials, and skills are not part of this memory-only action.」
+- **判据**：① **注入预算是「视图层」约束，不是「存储层」约束**——超限时截断的是注入上下文的副本，磁盘上的真身必须保持不变；否则一次超限就会永久丢失内容。② **截断本身必须升级为信号而不是静默通过**——本例明确给出了三种响应（下沉到 `memory/*.md` / 只留持久摘要 / 提高限额），把「降级」变成了有明确处置路径的事件。③ 这直接印证本项目 MEMORY.md 4000 上限的实践形态：**真身可重读、注入的是副本、超限触发下沉动作**，与 `rules/07` §八「无损压缩只删冗余内联副本、单源文件始终真身可重读」完全同构。④ 记忆类动作要显式声明**不覆盖什么**（项目指令/会话/设置/凭据/配置/技能），否则"记忆"会被误当成能改配置或凭据的通道。
+- **提升层**：记忆治理 / 上下文预算。触发词：注入预算超限、截断副本不改真身、截断即信号、memory/*.md 下沉。
+- **来源**：https://docs.openclaw.ai/concepts/memory.md
+
+## r643C · 遗忘的一致性边界：索引文本、向量与源行必须一起移除，且已排除的会话在后续重建中仍保持排除
+
+- **原文事实**：同上 `docs.openclaw.ai/concepts/memory.md` 与 `docs.openclaw.ai/cli/memory.md`。①「**Forgetting removes indexed text and vectors together with their source rows.**」②「**Sessions previously selected by `memory forget` also remain excluded.**」（出现在 `memory index` 章节，说明后续重建不会把它们捞回来）③ 反面的复用规则：「When a memory file changes, indexing can **reuse unchanged chunks** from the published index of that same file and source, even when their line numbers shift or the embedding cache is disabled.」
+- **判据**：① **删除的"完整"必须按载体逐一声明**：索引条目、向量、源行是三个载体，只删其一等于留下可重建的残余（向量能反推、源行能重索引）。② **删除要跨后续操作保持**：被排除的会话在之后的重建里仍被排除，否则"删了又被自动重建捞回来"= 删除失效。③ 与 `rules/07` §10.7 的 M22 删除传播（主记录软删除 + 派生/索引/副本标删除传播 + 外部副本诚实标 unreachable）同族，本条提供了**工程侧的等价实现样板**：三个载体同删 + 排除状态持久化。④ 注意与"复用未变 chunk"并不矛盾：复用发生在**未删除**的内容上，删除是复用之上的过滤器。
+- **提升层**：记忆治理 / 删除语义。触发词：遗忘三载体同删、排除状态持久、删除传播、重建不捞回已删。
+- **来源**：https://docs.openclaw.ai/concepts/memory.md · https://docs.openclaw.ai/cli/memory.md
