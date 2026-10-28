@@ -1191,3 +1191,13 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **原文事实**：升级前把本次发布的代码接上一版本的数据库先跑一遍**只读检查**——SQLite `mode=ro`；Postgres **每事务开头 `SET TRANSACTION READ ONLY` 且每读后回滚**；只访问**各版本都存在的公共列**。
 - **可复用判据**：① 兼容性检查的隔离姿态要**可机检**（只读模式 + 事务级只读 + 回滚），不是「小心点跑」；② 检查只能访问**公共列**，访问新版本才有的列会让检查本身在新旧库上不可比；③ 与既有「升级前跑兼容性检查 + audit log 记 before/after」互补——那条管流程，本条管**隔离姿态**。
 - **提升层**：工作流（升级预检）。触发词：新代码读旧库、mode=ro、事务级只读并回滚、只访问公共列。
+
+## r647（2026-10-29 三轮共学落地）
+
+- 「静态可达性审计须跟随 wrapper 的命名导入」（来源：openclaw/openclaw#187031）：导出审计没跟随 wrapper 的路径选择式命名导入，把四个在用的 PR 缓存 helper 报成未使用。判据：删代码前的可达性分析必须穿过再导出与包装层，否则会把在用代码误判为死代码删掉。
+
+- 「钉定后连 force 也不允许覆盖 + 新组织默认非可信」（来源：docs.openclaw.ai/clawhub/cli.md）：已钉定的技能拒绝 install --force，本地字节不会被意外替换；--version 为必填以便作者核对被阻断的确切版本；组织发布者需 owner/admin（与版本撤回同权），新创建的组织发布者默认不是 trusted/official，scoped 包名须转移给匹配的 scope owner。判据：钉版必须不可被常规安装动作绕过。
+
+- 「分层版本对齐：major/minor 对齐而 patch 可异」（来源：docs.langflow.org/release-notes）：严格 SemVer 下 Desktop 与核心 OSS 包的 patch 版本可以不同，但 major/minor 必须对齐；官方建议先在新虚拟环境或 VM 装新版本再升级主安装。判据：多发行件之间的对齐要精确到哪一级，不能笼统说「版本一致」。
+
+- 「迁移时字段重命名必须保留旧值」（来源：activepieces.com/docs/install/reference/breaking-changes.md）：字段重命名后，此前配置的步骤丢失 tag 值并把该字段显示为空的必填项。判据：重命名类迁移必须自带旧值搬运，否则静默丢配置。

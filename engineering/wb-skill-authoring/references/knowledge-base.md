@@ -4803,3 +4803,17 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - **原文事实**：活动 = 「**the latest of: a recorded read of its `SKILL.md`, a foreground `skill_workshop` `view`, and its last change**」（第三项把**作者自己改动**也算成活动）；「**Codex app-server harness reads skills with its native shell, which OpenClaw cannot attribute to a skill, so cleanup stays off for Codex agents**」。
 - **可复用判据**：① 自动退役的作用域须按**可观测性逐宿主开关**，不可归因时**关闭自动清理**而不是按「零使用」误退役；② 活动度定义若把「作者改动」算进去，被持续维护的错误技能会**永不退役** ⇒ 活动与「被使用」要分开记；③ 退役阈值与作用域开关要成对配置。
 - **提升层**：可复用 Skill（退役判据）。触发词：活动度含作者改动、遥测不可归因即关清理、作用域按宿主开关。
+
+## r647（2026-10-29 三轮共学落地）
+
+- 「契约保持的技能压缩 + 单元错配」（来源：arXiv 2608.05604 SkillZip）：技能以包检索、以文本压缩、检索后才转成执行图，三者单元不一致；压缩须在段级图上把重复且契约有效的 motif 重写为可逆 ported macro，并保留边界签名、依赖闭包、验证器可达性与来源可追溯。判据：压缩后若无法展开回等价执行单元，就不是压缩而是损毁。
+
+- 「声明意图 vs 编码行为的两套规约」（来源：arXiv 2609.06052 SkillSpec）：Hoare 式地把技能正确性表述为规约推理，从周边声明意图导出 ExpectSpec，在部分披露意图下从编码行为推断 FactSpec，用 intent mask 调节可见范围；典型失效是意图冲突造成的静默失败。判据：技能评审要对比「它声称做什么」与「它编码成什么」，不是只跑一遍。
+
+- 「用后验信念替代经验成功率更新技能」（来源：arXiv 2606.08348 Bayesian-Agent）：把技能当贝叶斯证据对象，维护技能可靠性与失效模式的后验信念，再转成可审计的技能动作与面向模型的护栏；在轨迹稀疏、昂贵且上下文相关的场景，后验更新比原始经验率稳健（增量修复 SOP-Bench 80%→95%）。判据：n 很小时不得用经验率直接定去留。
+
+- 「正文索引的规模上限与降级可发现性」（来源：docs.openclaw.ai/tools/skills.md）：正文索引按名称顺序一次四个、最多读 1,024 个技能；指令体索引要求存在有效的原生 skills_read 工具；技能与参考文件必须在执行环境中可访问，沙箱运行时二进制也要在容器内；超出预算的技能仍可通过 skills_search 被发现。判据：索引必须有明示上限，且超预算应降级为「可发现」而不是消失。
+
+- 「自我改进类动作的时机与环境可用性」（来源：docs.openclaw.ai/tools/skill-workshop.md）：每 agent 每天至多一次，在已完成的 turn 之后运行，且永不延迟该 turn；沙箱运行拿不到该工具。判据：自改动作必须挂在回合外并限频，否则既拖慢执行又把自我修改暴露在不可信上下文里。
+
+- 「技能 URI 末段即技能名，身份可从路径恢复」（来源：modelcontextprotocol.io/seps/2640）：经 MCP 提供的技能必须符合 Agent Skills 规范，SKILL.md 必须以含 name/description 的 YAML frontmatter 起始；skill URI 最后一段必须等于声明的技能名，使名称无需读 frontmatter 即可从 URI 恢复。判据：路径与声明不一致的技能不应被装载。

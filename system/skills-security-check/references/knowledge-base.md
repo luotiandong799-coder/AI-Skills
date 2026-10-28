@@ -2143,3 +2143,35 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **原文事实**：langflow #15943：「Component definitions can invoke **decorators and metaclasses without explicit call syntax**」＋「Definitions containing restricted calls or references are **rejected before component building begins**」；anthropics/skills #1961：本机监听「Any web page open in the same browser could POST to `/api/feedback`, and a **DNS-rebinding page could read the data back**」，且修复后**自陈残留**：「Some other values still reach `innerHTML` unescaped: `r.passed`, `r.total`, `r.errors`」。
 - **可复用判据**：① 只匹配 `name(...)` 形态调用的 AST 扫描会漏掉 **import/装饰/类定义期即执行**这条隐式路径；② 扫描时点要在**构建之前**而非之后；③ 补丁必须附**未覆盖点清单**，否则评审会把它读成「已修完」；④ **本机监听 ≠ 只有本机可用**（DNS rebinding 是反例）。
 - **提升层**：安全边界（扫描覆盖面）。触发词：定义期隐式执行、扫描在建组件前、补丁附未覆盖清单、本机监听非本机专属。
+
+## r647（2026-10-29 三轮共学落地）
+
+- 「授权记忆的键须含对象实例 ID」（来源：n8n-io/n8n#42097）：「Always allow」按 workflows:<action>:<workflowId> / 工作区维度存 grant，批准一个工作流不同动作于同类动作在另一个工作流；grant 跨重载、跨任意 main 生效。判据：长期授权的键若只含动作类别，会把一次批准放大成全类别批准。
+
+- 「审批请求须携带运行时原生标识」（来源：vercel/ai#24189 #23477）：内建工具审批请求带的是 harness 工具名（bash/write/edit）而输入是运行时形状，原生名在重建流时被丢弃，导致按运行时名称（Bash/Write）检查的闸门认不出这次调用、静默放行。判据：审批载荷必须原样保留运行时原生名（nativeToolName）且不改写工具名与输入。
+
+- 「外部可控串进入协议头前必须做字符集校验」（来源：activepieces/activepieces#17003）：自由输入的 HTTP 响应头名直传 reply.headers()，含非法 token 字符（如尾部空格）时抛 ERR_INVALID_HTTP_TOKEN，在 glob 路由下是进程级崩溃而非请求级错误。通则：任何外部可控串进入协议语法位前先做字符集白名单。
+
+- 「违规状态粘性 + 完成 JSON 仍产出」（来源：browser-use/browser-use#6193）：确认违规与歧义的受限控件转换在浏览器会话生命周期内变 sticky，阻断后续动作并阻止成功完成，但结构化完成 JSON 仍照常产出。判据：违规状态必须在会话级持久，同时终态载荷仍要可解析，避免安全状态与可观测性互相抵消。
+
+- 「提权后凭据上下文可能整体缺失」（来源：openai/codex#42621）：Windows 提升沙箱以 CodexSandboxOffline 身份运行且无用户 profile，凭据管理器报 <No profile>，Git 在私有仓认证前就失败（SEC_E_NO_CREDENTIALS）。判据：凭据可用性依赖执行身份，切换身份/提权后必须显式重新验证凭据通道是否仍存在。
+
+- 「安全开关的粒度与副作用」（来源：anthropics/claude-code#77580）：关闭鼠标点击批准的开关同时禁掉了文本的鼠标拖选，用户为了拿回拖选只能整体关掉这个安全开关。判据：一个开关只对应一类风险动作，顺带禁掉无关能力会诱导用户关闭安全项。
+
+- 「技能投毒的时延形态：自变异投毒」（来源：arXiv 2606.02540 SkillHarm）：除固定载荷投毒（FPP）外，存在 Self-Mutating Poisoning——首次执行表现良性、静默改写持久技能内容，危害延后到后续复用才出现；12 类风险按被针对的工作流组件（数据管线/系统环境/代理自主性）分类。判据：只检视一次执行的技能评测无法覆盖 SMP，必须跨复用比对持久内容。
+
+- 「静态无害不等于执行期安全」（来源：arXiv 2607.20121 OpenSkillRisk）：263 个来自真实技能市场的风险技能分七类，其风险只在受控沙箱实际执行时才显现，静态检视看似无害。判据：技能安全评测必须含执行期观测，不能只有静态清单比对。
+
+- 「技能准入双阶段：静态证据门 + 影子执行轨迹归因」（来源：arXiv 2608.17588 TRUSS）：先按源与领域证据核功能声明并评估九项安全属性，通过者再由 shadow agent 在可控执行环境加载，brokered tools 记录保留来源的执行轨迹，把功能失败与属性违例回溯到具体技能内容。判据：只过静态门或只过执行门都不够，且失败必须可归因到技能内的具体片段。
+
+- 「自演化管线的查询投毒面」（来源：arXiv 2608.08303）：用内部自演化替代外部技能市场可消除直接技能注入，却引入新面——攻击者只提交查询即可诱导受污染的轨迹，把可信演化管线导向产出带后门的技能。判据：「内部构建」不等于可信，演化输入（查询/轨迹）与技能产物同属攻击面。
+
+- 「执行前计划级静态验证」（来源：arXiv 2609.18674 CaMeLoT）：把生成的计划转成带工具调用、来源与污点标注的有限状态转移系统，用 CTL 时序策略在执行前做模型检查；不安全计划在消耗任何 LLM 调用与工具调用之前被拒，既省 token 也免去回滚与拆沙箱。判据：安全是整条执行的属性而非单步属性，计划本身就是必须验证的工件。
+
+- 「治理与被治理者共享进程信任边界」（来源：arXiv 2609.29647 AgentKernel）：现有治理栈是与被监控代理同进程的应用级中间件，共享信任边界故可被绕过；身份、输入中介、记忆治理、执行控制需下沉为强制不可绕过的底座服务。判据：能以被治理者同等权限被杀/被改的治理不算治理。
+
+- 「沙箱的作用域是执行不是进程边界」（来源：docs.openclaw.ai/gateway/sandboxing.md）：Gateway 进程始终留在主机，只有工具执行进入沙箱；被全局或单 agent 拒绝的工具，开启沙箱不会把它带回来；沙箱化执行默认排除 agent 的托管 GitHub 身份。判据：沙箱不扩大权限面，也不复活已拒绝项。
+
+- 「端点的令牌类型专用化」（来源：activepieces.com/docs/install/reference/breaking-changes.md）：某路由自始只接受 engine token，用户 token / API key / 浏览器从不可达。判据：面向内部组件的端点应按令牌类型专用，混用令牌类型等于把内部面暴露给会话凭据。
+
+- 「恢复凭据的自举不得依赖待恢复凭据」（来源：docs.openclaw.ai/gateway/protocol/versioning）：隐式回环设备配对恢复、QR/setup-code 签发与 SDK 设备令牌保留在 bootstrap owner 处，使获取 RPC 凭据不需要先拥有那些凭据。判据：恢复通道必须先于被恢复凭据可用，否则死锁。

@@ -4820,3 +4820,21 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **原文事实**：早期 Opus/Sonnet 与 Haiku（≤4.5）上**所有已缓存的 thinking blocks 被剥离**，且**其后所有消息也从缓存移除**；「**Cache writes occur only at the breakpoint**, and if that block changes (timestamps, per-request context, the incoming message), **the prefix hash never matches**」；须验证 `tool_use` content blocks 的**键顺序稳定**（Swift、Go 的 JSON 转换会随机化键序而破坏缓存）。
 - **可复用判据**：① 缓存前缀的任何一字节变化（含时间戳与每请求上下文）都会使前缀哈希永不匹配 ⇒ 变体内容必须放前缀之后；② 特定模型代际会剥离思考块及其后消息，缓存设计要按代际分别验；③ **键序稳定性**是缓存可用的前提，须在序列化层固定。
 - **提升层**：工作流/成本（缓存前缀）。触发词：thinking block 剥离、断点块变化即失效、tool_use 键序随机化。
+
+## r647（2026-10-29 三轮共学落地）
+
+- 「可观测 provider 只给最小发送接口 + 配置解密移出请求路径」（来源：langgenius/dify#44673）：四条重叠 trace 管线合并为一条，每个 provider 只实现自己的 send；此前配置在请求路径上解密，且各 provider 包直接触达 DB/Redis/进程全局 SDK 状态。判据：可观测性插件不得拿到存储与全局态，配置解密不得在请求热路径。
+
+- 「告警分组与处置动作 + 客户标识隔离」（来源：activepieces/activepieces#16866）：按 fingerprint 分组、每个新问题起一个 agent、要求 resolve 而非 ignore；OOM 报告里客户名只留在私有 org 工件。判据：告警若只能 ignore 就会永久积压；跨租户标识不得进共享告警通道。
+
+- 「计量单位必须与下游成本单位一致」（来源：deepset-ai/haystack#11351）：ranker 的 word_count_threshold 用 split() 数空格分词，而下游真实成本按 token 计——英文散文约 1.3 token/词，代码密集文档可达 2.5-4 token/词，非拉丁脚本与 URL/哈希同样膨胀。判据：用错单位的预算会造成系统性偏差而不是噪声。
+
+- 「终态义务的差异化」（来源：docs.openclaw.ai/concepts/agent-loop.md）：外部直连/group/channel turn 可显式以 token-only NO_REPLY 结束（即使原本要求回复）；而子代理、private completion、Control UI 等内部结果必需会话必须给出当前源的完整最终结果，只有进度的镜像不满足该义务。判据：终态要求按会话类型分层，不能统一判定「有没有回」。
+
+- 「审计写入的裁剪上限与事件分级默认」（来源：docs.openclaw.ai/gateway/audit.md）：run 与 tool 事件在审计开启（默认）时记录，消息生命周期事件为 opt-in 默认关闭；每次写入或维护 tick 最多裁剪 1,024 行；过期清理后的剩余预算通过不构建全部保留 ID 集合的方式计算。判据：维护操作本身必须有上限，否则清理会长事务化。
+
+- 「账本不能证明未发生 + 证据采集不阻断运行」（来源：docs.openclaw.ai/cli/audit.md）：审计账本不能证明某次审批或动作「没有发生」；批准与投递检查从不写通用重复项；best-effort 证据永不阻塞或中止 agent 运行。判据：留痕能力要声明否定性边界，且观测通道不得成为运行的前置依赖。
+
+- 「输出预算被不可见思考吃掉的判定信号」（来源：docs.openclaw.ai/concepts/compaction.md）：摘要输出预算耗尽却无可见文本，可能是推理模型把额度花在思考上；摘要额度还受压缩保留预算限制，单加 maxTokens 未必提高；新增的角色标签与分隔符等脚手架每次至多 847 UTF-8 字节并计入 token 估算。判据：只报「无输出」会误判为失败，须区分「思考耗尽」与「生成失败」。
+
+- 「长程会话评测须植入可确定性核查的锚点」（来源：arXiv 2610.34425 CTXAgent）：benchmark 在会话中植入 planted facts、瞬时观察与常驻指令，并以确定性方式核查，会话长 35-212 轮。判据：只测最终任务分会漏掉「是否守住了常驻约束」，必须有可确定性判分的锚点。
