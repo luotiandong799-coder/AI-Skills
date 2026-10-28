@@ -1051,3 +1051,8 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 - **实证**：agent 间知识状态失配（context drift）会产出无法用模型缺陷解释的矛盾。**朴素全量广播同步使幻觉率较不同步基线 +34%（HR 0.658 vs 0.492，p=0.0022，d=1.18）**，是**传播错误 agent 状态的污染效应**；`SSVP` 周期性交换**压缩状态摘要**、在高分歧处先标记，HR 0.463 且**少 58% API 调用**。**注意范围**：该污染效应在软件域不复现（各条件 HR<0.2），即**仅适用于"一个错误共享信念沿评估维度级联"的任务**。
 - **判据**：① **跨 agent 传播取消/撤销前须先过滤已污染状态**，否则"同步"本身制造幻觉。② **摘要交换优于全量广播**且成本更低。③ **结论带适用域**：级联型任务成立，软件域不成立，禁止无差别外推。④ 与既有「反回音室（发言顺序/锚计数）」分工：那条管**讨论机制**，本条管**状态同步策略的污染风险**。
 - 提升层：工作流（跨 agent 同步策略）。触发词：full-broadcast、+34% 幻觉、HR 0.658/0.492、SSVP、压缩状态摘要、58% fewer calls、污染效应域限定。
+
+
+##### r639B · 长时程自主作业的可信性三件套：状态外置成可检视的文件化工件、评审闸门可证伪、负面结果透明报告（来源：arxiv.org/abs/2609.31683《Autonomous Research Project Management as an Agent Skill ...》，r639B 一手 abs 页 citation_title/citation_abstract 取得（arXiv API 列表标题与此 ID 错配，以 abs 页为准），逐串命中 `Long-horizon state was decoupled into a file-based epic- and issue-tracking substrate` / `Across 74 sub-agent sessions ... with only four discrete human steering events` / `routing two failed hypothesis review gates back to literature retrieval` / `scientific credibility requires inspectable state, falsifiable review gates, and transparent reporting of negative results` / `favour agent-accessible structured formats over static PDF manuscripts`）
+- **判据**：① **长时程状态不能只活在上下文里**：外置成文件式 epic/issue 底座，74 个子会话仅 4 次人工介入 ⇒ 可检视性是自主度的前提，不是事后补充。② **评审闸门必须可证伪**：闸门判否要能触发具体回路（这里是回退到文献检索），而不是"重试一次"。③ **负面结果要留痕**：只有成功的轨迹会让后续决策系统性乐观。④ **给 agent 的结构化格式优于给人看的静态文稿**：交付物如果是 PDF，agent 无法把它当状态消费。
+- 提升层：工作流（长时程自主作业）/ 记忆（可检视状态底座）。触发词：file-based epic/issue substrate、74 sub-agent sessions、falsifiable review gates、负面结果透明、agent-accessible structured formats。

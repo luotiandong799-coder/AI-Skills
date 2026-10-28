@@ -1025,3 +1025,33 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **对照两型**：智谱=**引用计数回收 + 末版 400 保护**（本 SKILL.md 已落）；阿里=**硬删不可恢复、只支持删除不支持归档**（已落）。
 - **判据**：① **"从目录消失"与"从执行面消失"是两轴**：openclaw/Claude 都保留已装副本 ⇒ 摘牌 ≠ 卸载，验收必须分别断言。② **命名空间保留期要可机读**（`slugReservedUntil` 是响应字段，不是文档描述）⇒ 声称"保留 N 天"必须有 API 字段可查。③ **版本号复用禁令只有 openclaw 服务端强制**（`cannot be republished with different contents`）；智谱改用服务端 ID 使复用无意义、阿里自动生成、JFrog 靠约定 ⇒ **不能默认任何平台都禁版本复用**。④ **"先替代再删"是硬规则不是建议**（openclaw 明文），Anthropic 亦有 `renames` 迁移映射 ⇒ 摘除必须有迁移路径字段。⑤ **恢复端点要存在**（`undelete`）⇒ 只删不可恢复的通道（阿里）不适用于需审计回滚的资产。⑥ **重命名历史必须 append-only**：改旧条目会断掉从最老名字开始的解析链。
 - 提升层：工作流（发布/撤版治理）/ 可复用 Skill（技能库摘除契约）。触发词：soft-delete、reserve the slug 30 days、slugReservedUntil、undelete、版本号不可复用、Publish a replacement before deleting、removed plugin stays installed、forceRemoveDeletedPlugins、renames append-only、映射 null 作墓碑。
+
+
+##### r639A · 耗时预算必须走单调时钟：墙钟变化会同时造成提前超时与无限延长等待（来源：api.github.com/repos/openclaw/openclaw/pulls/186484，r639A 一手 gh api 200 逐串命中 `premature timeouts, extended waits, and delayed node-stat checkpoints when the wall clock changes during an operation` / `keep their original elapsed-time budgets across NTP corrections or manual clock changes` / `src/shared/monotonic-time.ts` / `This is a bounded first cutover, not a claim that every wall-clock elapsed measurement in OpenClaw is fixed`）
+- **判据**：① **凡是"过了多久"的量都必须由单调时钟产出**，墙钟只用于"什么时候"的展示值 ⇒ NTP 校正/手动改钟会同时制造两种故障：向前跳=预算瞬间耗尽（提前超时），向后跳=预算永远走不完（无限等待）。② **区分时刻与时长两个类型**（承 av「墙钟 vs 时刻」）：持久化时间戳保留原有语义，只把"经过时间"换成单调源。③ **改造要声明边界**：原文自陈是 bounded first cutover，未覆盖全部墙钟测量 ⇒ 修时钟问题要给出"覆盖了哪些、还剩哪些"，不要宣称全局修好。
+- 提升层：工具（超时/预算计量）/ 工作流（发布与运维）。触发词：monotonic time、NTP correction、提前超时、延长等待、elapsed-time budget、node-stat checkpoint。
+
+
+##### r639A · 重放路径上的确定性产物要缓存：输出逐字节相同时，重复计算是纯浪费且按"每请求"放大（来源：api.github.com/repos/openclaw/openclaw/issues/169357，r639A 一手 gh api 200 逐串命中 `history replay decodes and re-encodes the stored original on every model request` / `The encoded output is byte-identical every time, so all of that work is repeated` / `A 12 MP phone photo costs about 0.9 to 1.2 s per request` / `a follow-up turn with 8 tool rounds waits about 8 s longer per photo, and with three photos about 24 s`）
+- **判据**：① **"产物逐字节相同"就是可缓存的充分条件**，不必等profiler——凡是重放/重建路径上的确定性变换（编码、缩放、序列化、模板渲染）都应按下游产物做键缓存。② **成本按"请求 × 轮次 × 对象数"三重叠乘**，单看一次 0.9–1.2 s 会低估；8 轮 × 3 张 = 24 s 是用户可感延迟。③ **缓存键要绑"原始存储对象"而不是"当前视图"**：重放每一轮都重新解码说明缓存层建在了错的粒度上。
+- 提升层：工具（重放/缓存层）/ 工作流（交互延迟预算）。触发词：history replay、re-encode、byte-identical、逐请求重编码、重放缓存粒度。
+
+
+##### r639A · 「文档声明的默认值」与「键缺失时的实际行为」是两件事，且回收默认值失效会级联到共享硬上限，把单会话泄漏变成全局拒绝服务（来源：api.github.com/repos/openclaw/openclaw/issues/166017，r639A 一手 gh api 200 逐串命中 `mcp.sessionIdleTtlMs` default (10 min) is not applied when the key is unset` / `session MCP runtimes are never evicted` / `the spawn broker fills up to its hard cap of 256 children and every exec/read/MCP start then fails` / `13 service-child-relay.js children of the spawn broker per session, never evicted (observed up to 13 h old)`）
+- **判据**：① **默认值必须在"键缺失"这条路径上单独验证**——文档写 600000 ms 不等于不写这个键就按 600000 ms 跑；常见实现是只有显式读到键才装配回收逻辑。② **回收失效的后果不在本会话内**：13 个 relay/会话 × N 会话累积到 spawn broker 硬上限 256 后，**所有** exec/read/MCP 启动失败 ⇒ 单会话的资源泄漏是全局故障，监控要盯共享上限而不是单会话 TTL。③ **硬上限被打满时应显式报"上限"而非报"启动失败"**，否则运维看到的是一堆无关错误。
+- 提升层：工具（资源回收/生命周期）/ 工作流（容量与上限监控）。触发词：sessionIdleTtlMs、默认值键缺失不生效、spawn broker hard cap 256、relay 永不回收、全局拒绝服务。
+
+
+##### r639A · 关停不得取代远端工作：租约要带执行代际并用精确 owner token 释放，否则陈旧清理会释放继任者的租约（来源：api.github.com/repos/mastra-ai/mastra/pulls/28676，r639A 一手 gh api 200 逐串命中 `shutting down the API process could abandon an execution claim still being used by remote workers` / `renew the original claim and perform terminal settlement independently of the API observer` / `API shutdown detaches local participation instead of superseding remote work` / `Thread leases carry the execution generation, and renewal/release use the exact owner token so stale cleanup cannot release a recovered successor's lease` / `Previously accepted unfenced shared configurations are rejected before dispatch`）
+- **判据**：① **"我要停了"的正确语义是脱离本地参与，不是宣告远端工作作废**——本地进程退出不等于远端 worker 的工作结束，接管者只能续租不能抢占。② **租约必须带代际（generation）**：同一资源被重新认领后，旧持有者的清理动作会打到新持有者身上 ⇒ 释放/续租都要校验 owner token 且比到代际。③ **共享执行必须先有存储级栅栏**：无栅栏的共享配置要在派发前拒绝，不能"先跑起来再说"。
+- 提升层：工具（认领/租约语义）/ 工作流（关停与恢复）。触发词：execution claim、execution generation、exact owner token、stale cleanup、run fencing、detach local participation。
+
+
+##### r639C · 崩溃恢复必须走独立执行通道并与派发队列解耦，且"显式取消"始终是终态（来源：docs.openclaw.ai/gateway/restart-recovery.md，2026-10-28 r639C 一手 HTTP 200 / 117,502B 逐串命中 `eligible interrupted turns resume, native subagents settle, and queued deliveries drain` / `always enter automatic main-session recovery, including after a crash, forced kill, or missed shutdown marker` / `A session waiting for execution capacity or execution start does not block reconciliation of later sessions or already-delivered replies` / `Recovery uses agents.defaults.maxConcurrent for its separate execution lane, leaving interactive reply slots` / `Explicit session Stop/cancel remains terminal`）
+- **判据**：① **恢复面不得复用交互式派发队列**：等待执行容量的会话若占住队列，就会把后面的会话和已投递回复一起堵死 ⇒ 恢复要有自己的执行通道与并发额度。② **恢复默认开启、不依赖运维动作**（含 crash/强杀/缺关闭标记）⇒ 恢复是平台责任，不是操作手册里的一步。③ **恢复与取消是两条不同的终态**：显式 Stop/cancel 永远终态，不能被自动恢复复活；恢复只承接"被中断"而非"被终止"。④ 恢复仍受既有闸门约束（崩溃循环断路器、恢复重试预算、当前权威检查、归档/重置排除）⇒ 恢复不是绕过护栏的通道。
+- 提升层：工具（恢复执行通道）/ 工作流（崩溃恢复与队列解耦）。触发词：restart recovery、separate execution lane、不阻塞后续会话、显式取消为终态、tombstone、crash-loop breaker。
+
+
+##### r639C · 上下文裁剪的运行位置由 provider/endpoint/认证三元组决定，换认证方式会静默改变缓存行为；投影视图要可持久化复原（来源：docs.openclaw.ai/concepts/session-pruning.md，2026-10-28 r639C 一手 HTTP 200 / 11,278B 逐串命中 `trims old tool results from the model's context` / `without rewriting normal conversation text. Your full history is preserved` / `records it in the hidden openclaw.cache-ttl transcript marker so the same view can be restored after a Gateway restart` / `The request's provider, endpoint, and authentication determine where it runs` / `Direct Anthropic API-key requests use server-side clearing; other eligible routes prune locally after the cache TTL expires`）
+- **判据**：① **裁剪只作用于工具结果、不改写对话正文**，且原始条目不被重写 ⇒ 裁剪是"投影"不是"改写历史"，验收=原文仍可还原。② **投影视图必须持久化**：用隐藏 transcript marker 记录，使得 Gateway 重启后能复原同一视图；否则重启即丢缓存前缀，裁剪收益归零。③ **行为随认证方式静默切换**：直连 Anthropic API key 走服务端清除，其它合格路由走本地 TTL 后裁剪 ⇒ 换 key / 换 endpoint / 换 provider 会改变裁剪时机而没有任何报错，评估缓存收益时必须先固定在哪个三元组下测。④ 裁剪的真实收益是前缀缓存：减少需要缓存的工具内容，让后续请求落在更短前缀上。
+- 提升层：工具（上下文裁剪/前缀缓存）/ 工作流（认证变更影响面）。触发词：session pruning、cache-ttl marker、投影视图复原、provider/endpoint/auth 三元组、server-side clearing、本地 TTL 裁剪。
