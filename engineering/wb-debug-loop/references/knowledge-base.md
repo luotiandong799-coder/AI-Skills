@@ -2368,3 +2368,15 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **实证**：n8n #42232 —— `Stop discards queued input before it aborts the active run`；同时取消**活动中的后台子作业**与**待决交互（pending interactions）**；`Shared cleanup runs once` on the requesting instance。
 - **判据**：① **取消必须定义顺序**：先丢弃排队输入 → 再中止活动运行 → 再级联后台子作业 → 最后处理待决审批；顺序不定会在"队列仍在被消费"时中止主体，产生半截执行。② **级联范围要显式列出**（后台子作业、待决交互是否在内），不列则子作业会变成孤儿继续跑。③ **共享清理必须幂等且只执行一次**（`runs once` on requesting instance），否则多实例下重复清理会二次破坏。④ 与既有「停止意图必须落库」（本 KB r636A，管**意图不复活**）分工：那条管**停止之后谁有权写**，本条管**停止那一刻的动作序与级联范围**。
 - 提升层：工作流（取消协议）/ 工具（清理幂等）。触发词：discards queued input、取消动作序、级联后台子作业、pending interactions、shared cleanup runs once。
+
+## r638A 下沉条目 · 历史重建取整行会把线性对话变成二次内存：每轮存完整 prompt，读时 O(n²/2)（来源：api.github.com/repos/langgenius/dify/issues/44528，2026-10-28 一手 gh api 200 正文，逐串命中 `about n^2/2 turns of text` / `700 | 1,355.6 MB` / `Message.message`）
+
+- **实证**：`BaseAgentRunner.organize_agent_history` 每次回复**无 limit 读取整会话所有 `Message` 行**（整行含 `Message.message`）。FC/CoT runner 把最终 `prompt_messages`（系统提示 + 每先前轮 + 当轮 query + 工具调用与结果）存进该列 ⇒ **第 n 行的副本含前 n−1 轮**，建历史要读约 **n²/2 轮文本**，而该方法**根本不用这列**（只需 id/conversation_id/parent_message_id/query/answer）。隔离实测（PostgreSQL 15，每链 40 字 query + 411 字 answer + 152 字系统提示，Apple M5 Max）：**100 轮 26.5MB/0.19s、200 轮 106.7MB、300 轮 240.6MB、500 轮 692.8MB、700 轮 1,355.6MB/4.17s**。
+- **判据**：① **历史重建只取所需列**，别 `SELECT *` 整行；把完整 prompt 逐轮落库会把线性对话变成二次内存。② **量级要用"每轮 RSS 跳升随会话增长"来观测**，而不是只看单次耗时。③ 与既有「上下文是五阶段管道/管道存活率」分工：那条管**窗口内的截断与到达率**，本条管**库层历史重建的复杂度陷阱**。
+- 提升层：工作流（历史读取）/ 工具（列裁剪与复杂度）。触发词：n^2/2、organize_agent_history、Message.message、700 轮 1355.6MB、只取所需列、二次内存。
+
+## r638A 下沉条目 · 缓存句柄指向临时资源时须用"打到真实运行时"的信号复核：控制面 200 会把已删沙箱报为存活（来源：api.github.com/repos/n8n-io/n8n/pull/41805，2026-10-28 一手 gh api 200 正文，逐串命中 `a 404 can also mean a missing file` / `recreates the sandbox only when this check also returns 404` / `GET /sandboxes/{id} reads only the API store and returns 200` / `.sandbox-initialized`）
+
+- **实证**：Assistant 在每 chat 线程一个远程沙箱里跑命令，n8n 缓存句柄并标 running。沙箱服务会因空闲/runner 重启移除沙箱，n8n 原先不重建 ⇒ 该线程后续全 `sandbox not found`。修复两段：① `withClient` 遇 **404** 先 `GET /sandboxes/{id}`（限 10 秒）确认——**404 也可能是缺文件**，故**仅当存在性检查也 404 才重建**，同 id 重建后**只重试一次**，并发失败**共享一次重建**。② 重建出的沙箱是空的：每轮读 `.sandbox-initialized` 标记，缺失则清 bundle 缓存并**重跑 workspace setup**。关键：**API 可能把已删沙箱报为存活**（runner 重启后 `GET /sandboxes/{id}` 只读 API store 返回 200），而**标记读打到 runner 才得 404**——所以标记才是真信号。**移除前 agent 写的文件会丢**；若在轮中被移除，该轮在空沙箱里继续，下一轮开头重新 setup。
+- **判据**：① **缓存句柄指向临时资源时必须用"打到真实运行时"的信号复核**，控制面 200 不等于资源存在。② **重建要区分"缺文件"与"资源被删"**，只在后者重建，且**幂等/并发共享**。③ **重建后要重跑初始化**（标记缺失即重跑 setup）。④ 与既有「恢复必须携带检查点」分工：那条管**审批/恢复的幂等与作用域**，本条管**临时资源句柄失效的复核信号与重建幂等**。
+- 提升层：工作流（临时资源句柄复核）/ 工具（重建幂等）。触发词：sandbox recreate、404 也可能是缺文件、GET /sandboxes 只读 API store、.sandbox-initialized、轮中移除空沙箱续跑、并发共享重建。

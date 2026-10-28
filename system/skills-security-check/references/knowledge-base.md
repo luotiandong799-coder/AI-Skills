@@ -1811,3 +1811,21 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **实证**：`hosts without KVM/HVF have no safe option today`；`Many managed Kubernetes node pools do not expose it`；软件模拟回退 `LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION=true` 被官方限定为 `trusted/development workloads only`，理由逐字 `TCG is not a security boundary.`。
 - **判据**：① **强隔离档位要在部署矩阵上验证可用性**，不能只在文档上验证存在性——托管节点池普遍不暴露硬件虚拟化，这是结构性不可达。② **回退路径的属性要一并声明**：TCG 是功能兼容层不是安全边界，把它当"仍有隔离"等于把防护清零。③ **不可达时的正确处置是 fail-closed 或显式降级登记**，不是静默走模拟路径。④ 与既有「沙箱不可用=fail-closed / 安全环境不存在必须报错」（本 KB 已落）分工：那两条管**缺失时的处置纪律**，本条管**硬件前提在目标环境普遍不成立**这一部署现实，以及**官方回退档不具备边界属性**。
 - 提升层：工作流（部署矩阵验证）/ 安全（隔离档位可达性）。触发词：no safe option without KVM/HVF、托管 K8s 不暴露、TCG is not a security boundary、trusted/development only、强隔离物理不可达。
+
+## r638B 下沉条目 · 技能注入检测按"通道"分道：文本扫描对纯描述注入有盲区，内部信号类检测器不得跨通道外推（来源：arXiv 2604.22888《RouteGuard》+ 2608.08468，2026-10-28 一手 abstract 实拉，逐串命中 `0.8834 F1` / `recovers 90.51% of description attacks missed by lexical screening` / `internal-signal detection rather than text-only filtering`）
+
+- **实证**：RouteGuard 是冻结骨干检测器，用响应条件下注意力 + 隐藏态对齐 + 可靠性门控晚融合；在关键 **Skill-Inject 通道切片**上达 **0.8834 F1**，并**找回 lexical screening 漏掉的 90.51% 描述类攻击**；作者结论：防技能投毒须**内部信号检测而非纯文本过滤**。相邻否证（本机 r660-Q-C，2610.28988）：**注意力信号检测在 agentic 任务环境近随机**。
+- **判据**：① **内部信号类检测器的可用性按通道分别验收**：同一方法在"技能描述注入通道"0.8834 F1、在"agentic 任务环境"近随机，**禁止单通道正果推广为全环境可用**。② **文本类扫描对纯描述注入的盲区不可由"扫过"抵销**（2608.08468：仅 42% 检出）。③ 与既有「扫描全绿≠安全边界」（恶意技能三口径）分工：那条管**扫描结论不可作保证**，本条管**检测器能力本身按通道分道、且需与负果并记**。
+- 提升层：工具（检测器分通道验收）/ 模型。触发词：Skill-Inject 通道、0.8834 F1、90.51% 描述攻击、internal-signal detection、注意力检测近随机、按通道验收。
+
+## r638B 下沉条目 · 跨技能链审查须同报"攻击成功率下降"与"良性放行率"：只报前者等于用误停换安全（来源：arXiv 2608.09732《ColluSkill / ChainGuard》，2026-10-28 一手 abstract 实拉，逐串命中 `96.0%` / `22.5%` / `99.5% of benign workflows`）
+
+- **实证**：ColluSkill 把完整恶意意图**拆成互相依赖的子载荷**嵌进各自合理独立的技能，靠上下文依赖/产物传递/执行交接按序组合成有害工作流，六个代表性扫描器上**平均攻击成功率 96.0%**，优于单技能与多技能攻击基线；ChainGuard 是**上下文感知的技能链扫描器**（联合分析候选技能与已装技能、重建跨技能依赖与产物流），把攻击成功率压到 **22.5%**，同时**放行 99.5% 良性工作流**。
+- **判据**：① **链级审查必须两个数一起报**：ASR 下降 + 良性放行率；只报 ASR 等于把误停成本藏起来。② **"每件都干净"不等于"组合安全"**（接已落 KnotScryer 组合面"报链不报件"），本条补**防御侧可测指标**。③ 与既有「单技能扫描器」分工：那条管单件准入，本条管**有序组合的链级防御与双指标验收**。
+- 提升层：工具（链级扫描双指标）。触发词：ColluSkill、ChainGuard、96.0%→22.5%、99.5% 良性放行、链级安全、子载荷拆分。
+
+## r638A 下沉条目 · 沙箱权限拒绝必须按"实际授予"而非底层工具 CLI 措辞报错：死板的 run-again 提示不可执行，且须按执行模式分支（来源：api.github.com/repos/activepieces/activepieces/pull/16718，2026-10-28 一手 gh api 200 正文，逐串命中 `run again with the --allow-write flag` / `Only os.tmpdir() is accessible from a code step` / `No filesystem access is available to a code step in this execution mode`）
+
+- **实证**：代码步写/读硬编码路径（如 `/tmp/pjs-bold-....ttf`）时，Deno 抛 `Requires write access ... run again with the --allow-write flag`——但**用户从不直接调用 Deno，引擎内部 spawn**，该提示**对任何人不可执行**，也**不提示真因是应改用 `os.tmpdir()`**（曾造成两次生产回归）。修复：`toErrorPayload` 在 read/write `NotCapable` 拒绝时追加澄清——tmp 实际授予（`UNSANDBOXED`/`SANDBOX_PROCESS`）时提示 **`. Only os.tmpdir() is accessible from a code step.`**；锁定模式（`SANDBOX_CODE_ONLY`/`SANDBOX_CODE_AND_PROCESS`）时提示 **`. No filesystem access is available to a code step in this execution mode.`**。分支由 `Deno.permissions.querySync({name,path:tmpDir})` 判定（query 本身无需授权，锁定态也可安全调用）；`tmpDir` 在生成时透传真实 `os.tmpdir()` 而非硬编码 `/tmp`。
+- **判据**：① **报错要按"实际授予"表达可执行动作**，不能照抄底层 CLI 的 flag 建议（用户无权也不该直接调底层）。② **同一拒绝要按执行模式分支**：能读 tmp 与完全禁 fs 是两种真相，给错提示会造成二次误导。③ **路径从真实运行时取值**（`os.tmpdir()`），硬编码 `/tmp` 在非该路径宿主上必错。④ 与既有「沙箱不可用=fail-closed」分工：那条管**缺失时拒绝执行**，本条管**拒绝时的错误可执行性与模式分支**。
+- 提升层：工作流（沙箱错误契约）/ 工具。触发词：run again with --allow-write、Only os.tmpdir()、No filesystem access、permissions.querySync、tmpDir 透传、拒绝报错按模式分支。
