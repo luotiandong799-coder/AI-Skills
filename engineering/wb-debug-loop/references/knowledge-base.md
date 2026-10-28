@@ -2356,3 +2356,15 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **实证**：v1.18.0 release body 原文「**Persist task ownership and stop intent** so **late writes or a concurrent resume cannot revive a stopped workflow**. Failed asynchronous trigger dispatches are recorded as failed in trigger logs, and elapsed time remains consistent across resumptions」（关联 #40277/#43009/#44161）。
 - **判据**：① **取消不是"发个信号"而是"落一个不可逆状态"**：只发停止信号时，晚到的写或另一路的 resume 仍能把执行救回来，表现为"我停了它还在跑/跑完了" ⇒ 停止意图要落库并在每次恢复前被检查。② **任务所有权要一并持久化**：谁持有这个执行决定"谁的写算数"，没有所有权记录就无法判定迟到写是合法续跑还是越权复活 ⇒ 归属与意图是一组，缺一不可。③ **恢复路径的计时要连续**：原文同时修"elapsed time remains consistent across resumptions" ⇒ 恢复后计时跳变会让超时判断失准，与"复活"属于同一类**终态被重放**问题。④ 与既有「取消下推」「排空+二次扫描」分工：那两条管**覆盖面与收尾顺序**，本条管**停止态对后续任何写/恢复的否决权**。
 - 提升层：工作流（执行态治理）/ 工具（取消与恢复语义）。触发词：Persist task ownership、stop intent、late writes 复活、concurrent resume、恢复后计时连续。
+
+## r637A 下沉条目 · 失败转移的谓词必须覆盖"非终态全集"，且不得为本地取消/超时合成服务端状态码（来源：api.github.com/repos/n8n-io/n8n/issues/42142 + api.github.com/repos/vercel/ai/issues/24056，2026-10-28 一手 gh api 200 正文，逐串命中 `buildStatus = 'succeeded'` / `only updates rows` / `made up`）
+
+- **实证**：n8n #42142 —— 版本停在 `buildStatus = 'succeeded'` 却指向一个**已废弃的 bundle 产物**；根因 `failBuild` **只更新 `WHERE buildStatus = 'running'` 的行** ⇒ **成功提交之后才到达的超时在状态机里没有出口**，产物已废而状态仍报成功。vercel/ai #24056 —— `No response came back, so the 500 is made up`，即本地超时/取消被**合成为服务端 500**，下游告警把"我们自己设的超时或一次取消"读成"网关挂了"。
+- **判据**：① **写终态前先验超时/取消**，否则迟到事件无处安放。② **失败转移的谓词是"非终态全集"而不是"某个进行中态"**：按 `running` 过滤等于给所有其它中间态留了永久悬挂出口。③ **本地发起的中断必须原样上抛为"不可重试类"，绝不借服务端状态码表达**——借码表达会把责任方从调用侧搬到服务侧，排障方向从第一步就错。④ 与既有「500 instead of 408」（本 KB 已落）分工：那条管**错误码分类被版本反转**，本条管**本地中断被伪装成服务端错误**与**失败转移谓词不闭合**。
+- 提升层：工作流（状态机出口闭合）/ 工具（错误契约的责任归属）。触发词：failBuild 只更新 running、buildStatus succeeded 指向废弃产物、非终态全集、500 is made up、超时合成的 500、不可重试类上抛。
+
+## r637A 下沉条目 · 取消是一串有序动作：队列→活动→子任务→待决审批，且共享清理只跑一次（来源：api.github.com/repos/n8n-io/n8n/pull/42232，2026-10-28 一手 gh api 200 正文，逐串命中 `discards queued input`）
+
+- **实证**：n8n #42232 —— `Stop discards queued input before it aborts the active run`；同时取消**活动中的后台子作业**与**待决交互（pending interactions）**；`Shared cleanup runs once` on the requesting instance。
+- **判据**：① **取消必须定义顺序**：先丢弃排队输入 → 再中止活动运行 → 再级联后台子作业 → 最后处理待决审批；顺序不定会在"队列仍在被消费"时中止主体，产生半截执行。② **级联范围要显式列出**（后台子作业、待决交互是否在内），不列则子作业会变成孤儿继续跑。③ **共享清理必须幂等且只执行一次**（`runs once` on requesting instance），否则多实例下重复清理会二次破坏。④ 与既有「停止意图必须落库」（本 KB r636A，管**意图不复活**）分工：那条管**停止之后谁有权写**，本条管**停止那一刻的动作序与级联范围**。
+- 提升层：工作流（取消协议）/ 工具（清理幂等）。触发词：discards queued input、取消动作序、级联后台子作业、pending interactions、shared cleanup runs once。

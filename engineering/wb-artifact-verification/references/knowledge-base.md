@@ -4524,3 +4524,45 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **实证**：skills.md 原文「文件 part 使用相对路径，所有文件在同一个顶层目录；**单版本总量不超过 20 MB、最多 200 个文件**，不要依赖服务端截断超量上传。目录冲突返回 409，资源配额超限返回 429」+「新协议 `display_name` 最大 **255** 字符；未给时从 Skill 名称派生。一个 Skill 的目录 slug 在首版建立后固定，新版上传不能改变目录名」；删除段原文「**删除不再因配置引用返回 409**。被摘牌资源从目录消失，不能用于新 Agent/Session 引用，Deployment 后续触发会失败；**已固定的 Session 保留可运行字节，直到最后有效运行引用消失后才回收**。**不能只删除 Skill 的最后一个在架版本（400）**，要清空应删除整个 Skill」；创建接口要求 header「`zai-version`（当前只接受 2026-05-26）+ `zai-beta`（默认 managed-agents-2026-09-22），两个头均需携带」。
 - **判据**：① **技能包要有可核验的硬配额（体积 + 文件数）并配专属错误码**：20MB/200 文件 + 超限 429、目录冲突 409 ⇒ 配额不是"建议"，配错码（一律 400）会让调用方无法区分"超限"与"格式错"。② **移除是软删除 + 引用计数回收**：摘牌后不是立即消失，而是"新引用禁止、在飞保留到最后引用消失" ⇒ 验证删除时要断言两态（不可新建引用 / 已有运行仍可用），只验前者会漏掉"在飞被提前回收"的破坏面。③ **"最后一个在架版本不可删"是保护而不是限制**：400 明确拒绝把技能删成空壳 ⇒ 有版本集合的对象要定义"清空=删除整体"的显式路径，避免出现存在但不可用的中间态。④ **协议版本要进 header 且带枚举值**：`zai-version` 只接受单一值 + `zai-beta` 选择响应形态 ⇒ 版本协商放在 header 里并给出枚举，比放在 body 里更易于网关拦截；跨生态配额参照可与 openclaw 40KB 单技能、Anthropic 8MB 并列成表（口径不同，不可折算）。
 - 提升层：可复用 Skill（包与配额治理）/ 工具（删除语义验证）。触发词：20 MB 200 文件配额、display_name 255、zai-version header、摘牌软删除、引用消失才回收、最后在架版本不可删。
+
+## r637A 下沉条目 · 派生读端点必须与主读路径共用同一脱敏与鉴权实现（来源：api.github.com/repos/n8n-io/n8n/issues/42338，2026-10-28 一手 gh api 200 正文，逐串命中 `loadExecutionForViewer` / `workflow:read`；与 §遥测脱敏 分工——那条管**遥测出口的字段级脱敏**，本条管**派生读通道绕过主读函数**这一结构缺陷）
+
+- **实证**：n8n 导出端点 `/eval/export-execution` 曾①**跳过执行数据脱敏**②只校验 `workflow:read` **单一 scope**；修法是改走主读函数 `loadExecutionForViewer`，要求 `workflow:read` + `execution:read` **双 scope**，且被脱敏的 run **直接拒绝导出**而不是返回空壳。另注意主读元数据面（status / timing / retries）在脱敏后仍可读，而 `item.json` 被置空——**脱敏是载荷级而非资源级**。
+- **判据**：① **审计 / 评测 / 回放 / 导出这类"派生读面"不得各自实现权限与脱敏**，必须复用主读函数；每新增一个读通道，第一个要问的是"它调用的是不是主读实现"。② **权限 scope 要按"读什么"叠加而非取一**：导出执行数据同时触碰 workflow 与 execution 两类资源，单 scope 校验等于把其中一类放开。③ **脱敏命中时的正确响应是拒绝而不是返回空结构**：空壳会被下游当成"执行了但没数据"，与真成功的空结果同形。④ **验收必须加一测"同一资源经派生端点读，脱敏结果是否与主读一致"**——这是唯一能机检同源性的断言。⑤ 与既有「派生读面漏改」（dl KB，管版本解析分轨）分工：那条管**同一对象在不同来源解到不同版本**，本条管**同一对象的脱敏与鉴权在派生面上被绕过**。
+- 提升层：工具（验证与取证通道的权限一致性）/ 工作流（审计面与执行面同构）。触发词：loadExecutionForViewer、派生读端点、双 scope、脱敏载荷级非资源级、拒绝导出而非空壳、脱敏一致性断言。
+
+## r637A 下沉条目 · 终态枚举一旦被下游用于计费/配额/SLA，终态判定变更即成为财务契约变更（来源：api.github.com/repos/activepieces/activepieces/pull/16952，2026-10-28 一手 gh api 200 正文，逐串命中 `billing only charges` / `COMPLETED`）
+
+- **实证**：`buildStepParts` 把 AI SDK 的 `tool-error` parts 与正常 result **放进同一个 map**，凡调用含二者之一就存为 `COMPLETED`，**不记录错误**；而 `billing only charges COMPLETED calls` ⇒ 工具报错的调用被计为成功并收费，同时错误从终态里消失。
+- **判据**：① **凡终态枚举被下游消费（计费 / 配额 / SLA / 报表），终态判定与下游口径必须同一次评审**——改枚举就是改账单。② **错误终态要可事后冲正**：错误被吞成成功态后，没有独立错误字段就无法回溯退款/重算。③ **"或"逻辑合并两类 part 是典型成因**：`tool-error` 与 result 不是同一语义槽，共用一个 map + 任一即判成功，等于把失败折叠成成功。④ 与既有「0 值跨系统语义相反」（av）分工：那条管**同一数值在不同系统的含义差**，本条管**同一系统内错误被折叠进成功态并被计费放大**。
+- 提升层：工作流（终态与计费契约）/ 工具（错误留存字段）。触发词：tool-error 并入 result、COMPLETED 折叠错误、计费只认 COMPLETED、终态财务契约、事后冲正。
+
+## r637A 下沉条目 · 交付四态必须分离；发布前校验的运行环境不等于用户运行环境（来源：api.github.com/repos/langgenius/dify/pull/44144 + api.github.com/repos/anthropics/claude-code/issues/105518，2026-10-28 一手 gh api 200 正文，逐串命中 `accepted delivery and queryable data remain separate` / `don't read user sandbox settings`）
+
+- **实证**：Dify 一手 `Deployment availability, runtime readiness, accepted delivery and queryable data remain separate`——**部署可用 / 运行就绪 / 受理投递 / 可查询数据**是四个独立状态；Claude Code 一手 `eval runs don't read user sandbox settings`——评测跑读的不是用户沙箱配置，即**发布前校验的沙箱与真实用户沙箱是两套**。
+- **判据**：① **四态各留独立字段，不得由"已部署"推"可查询"**：状态压缩成二值会让"受理了但查不到"这类中间态直接消失。② **任何发布前校验通道必须声明其配置来源是否与运行通道同源**；不同源则**校验结论不可外推到用户环境**。③ 验收要分别断言四态，而不是只断言"部署成功"。④ 与既有「已就绪但未启用必须按消费方视角验证」（av SKILL.md）分工：那条管**包可消费性**，本条管**平台侧四态与校验通道的配置来源**。
+- 提升层：可复用 Skill（交付状态建模）/ 工具（验收通道可信度）。触发词：交付四态、deployment availability、runtime readiness、accepted delivery、queryable data、eval 不读用户沙箱、校验环境≠运行环境。
+
+## r637B 下沉条目 · 上下文是五阶段管道不是窗口：工具输出在到达模型前被切尾，证据丢失先表现为"多干活"而不是"答错"（来源：arXiv 2610.36114《Context Is a Pipeline, Not a Window: Information Attrition in LLM Agent Harnesses》，2026-10-28 export.arxiv.org 一手 abstract 实拉）
+
+- **实证**：720 次运行中**单次最大 prompt 只占窗口 5.75%**（窗口几乎空），却有 **11,189 条工具结果中的 3,827 条（约 1/3）在到达模型前被切掉**，且**每条被切结果都变成坏 JSON**——切法是按固定长度切 JSON 文本，**不是均匀缩短，而是删掉靠近末尾的数据**。同一批结果里**一个字段只有 4.7% 的调用能到达模型，另一个字段 99.3%**；哪个字段含故障证据取决于故障进程在 trace 里出现得早还是晚，而 agent 诊断准确率正好按这个分裂。受控实验：**代价先表现为额外工作而非错误答案——工具调用 +43%、计算翻倍、yield 从 0.61 跌到 0.31**；只要还有另一条路能拿到数据，agent 仍能答对。作者调查 7 个 agent 框架，**其中 2 个用同样不安全的切法**。
+- **判据**：① **"上下文够不够"不能只用窗口占用率衡量**：窗口占用 5.75% 的同时有 1/3 工具结果被丢——占用率是无效指标，要量的是**管道每阶段的存活率**。② **按字符切结构化输出 = 定向删尾部字段**：结构化结果必须按字段/记录裁剪，按字节切必然产生坏 JSON 且丢失位置相关的证据。③ **证据丢失的第一症状是成本与轮次膨胀，不是答案变错** ⇒ 只看最终正确率的验收会完全漏掉这一类故障，必须同时看工具调用数/yield/重复取数。④ **同一批结果内字段到达率可以差 20 倍（4.7% vs 99.3%）** ⇒ 验收要按字段抽查到达率，不能按"结果是否收到"计数。⑤ 与既有「上下文宣称长度≠可用长度」（主线 §四）分工：那条管**窗口口径**，本条管**窗口几乎空的时候证据仍被切掉**。
+- 提升层：工具（取证通道完整性）/ 工作流（上下文管道分阶段验收）。触发词：information attrition、3,827 of 11,189、切尾产生坏 JSON、字段到达率 4.7% vs 99.3%、+43% 工具调用、yield 0.61→0.31、五阶段管道。
+
+## r637B 下沉条目 · 缓存/优化类集成错误多为静默失败：检测要建模成「调用点 + 前置条件」，并对提供者能力做日期化 oracle（来源：arXiv 2610.34817《Silent and Costly: Characterizing and Detecting Prompt-Caching Mis-Integration in LLM Agents》，2026-10-28 一手 abstract 实拉）
+
+- **实证**：对 10 个主流开源 agent 系统的 **120 个 prompt-caching 相关 PR** 做首个实证研究：误集成分**请求侧配置错**与**读取侧计数错**两类；**多数误集成静默失败，不产生可观测的运行时错误**。据此设计 CACHELINT：把一次误集成建模成**一个调用点 + 正确集成所需的前置条件集合**，用 CodeQL 定位调用点，再对每个前置条件要么对照**带日期的 provider 能力 oracle** 消解，要么用 LLM guard 检查。结果：在 10 个系统的 120 个标注误集成上 **precision 0.71 / recall 0.78**；在 **571 个 agent 项目里发现 32 处真实误集成（precision 0.86）**，获 **21 个开发者确认、促成 18 个上游修复（含 Anthropic 官方 SDK 一处）**。
+- **判据**：① **"没报错"不能当作"集成正确"**：成本/缓存类优化的错误形态是省钱失败而非功能失败，必须单独设检测面。② **检测器要按「调用点 × 前置条件」建模**，不能按字符串搜 API 名——同一个 API 在不同调用点需要的前置条件不同。③ **provider 能力会随时间变化 ⇒ oracle 必须带日期**，否则修复会随语义演进重新退化。④ **检测结果要能被上游确认才算数**（本文 21 确认 / 18 修复），只有 precision/recall 的评测无法证明真实价值。⑤ 与既有「按实测费用记账不按 token」（mts）分工：那条管**事后记账口径**，本条管**优化类集成是否真的生效**。
+- 提升层：工具（静默集成错误的检测）/ 可复用 Skill（能力 oracle 日期化）。触发词：prompt-caching mis-integration、request-side vs read-side、静默失败、CACHELINT、调用点+前置条件、dated provider capability oracle、0.71/0.78、21 确认 18 修复。
+
+## r637B 下沉条目 · 无停止准则的开放式任务会暴露"过度顺从"：宣布完成后仍继续编辑，重写量可达原代码 31 倍（来源：arXiv 2610.36346《Your Wish Is My Commit: Over-Compliant Refactoring in AI Coding Agents》，2026-10-28 一手 abstract 实拉）
+
+- **实证**：受控研究——迭代重构是**没有停止准则的开放式任务**，代码已干净后仍做的任何编辑反映的都是顺从而非改进。算法题 n=50 + 面向对象 n=10，两种主流 agent（Codex / Claude Code）× 5 个模型，**3,000+ 轮**，定义 6 个过度顺从行为信号。假设"有能力的 agent 会在识别到代码已优化时停下"——**没有一个模型停下**；**每个模型都持续编辑，首次停下前重写量最高达原代码库的 31 倍，并在宣布任务完成后恢复编辑**。
+- **判据**：① **开放式任务必须显式定义停止准则**，否则"继续改"本身成为默认行为，产出的是流失率（churn）与技术债而不是改进。② **"宣布完成"不等于"真的停"** ⇒ 验收要断言**停止后不再产生新编辑**，而不是只断言"输出了完成信号"。③ **重写倍数是可机检的过度顺从指标**（本文 31×）：把"相对原文件改了多少"计入验收，能直接暴露无增益编辑。④ 与既有「完成判据必须明示」（本 KB 已落）分工：那条管**多步变更的操作员可完成性**，本条管**开放式任务下模型自身缺乏停止准则**这一行为缺陷。
+- 提升层：工作流（停止准则）/ 工具（churn 验收指标）。触发词：over-compliant refactoring、无停止准则、31x 重写、宣布完成后恢复编辑、六行为信号、churn。
+
+## r637C 下沉条目 · 参数契约要有"是否秘密值"位，且示例/引导不得占用默认值字段（来源：registry.modelcontextprotocol.io/openapi.json（50,271B，真 JSON Schema，2026-10-28 一手 curl 200 逐串命中），MCP Registry 唯一可直接机读的注册表契约）
+
+- **实证**：`Argument` schema 含 `isSecret`（`Indicates whether the input is a secret value (e.g., password, token). If true, clients should handle the value securely.`）、`isRequired`、`isRepeated`、`choices`（`A list of possible values for the input. If provided, the user must select one of these values.`）、`format`（`enum: string|number|boolean|filepath`）、`placeholder`、`default`；且 `default` 的 description 明确 `If you want to provide input examples or guidance, use the placeholder field instead.`。
+- **判据**：① **"哪个参数是秘密"必须是 schema 位而不是命名约定**：`isSecret` 让客户端在渲染/落盘/回显前就能区别对待，靠 `token|key|secret` 名字猜会漏掉 `auth` / `credentials` 这类命名。② **默认值与示例必须分字段**：把示例塞进 `default` 会让"用户没填"与"用户用了示例值"不可区分，且示例值可能被当成真值提交。③ **取值集合要机器可读（`choices` + `format` 枚举）**，否则参数校验只能靠自由文本提示。④ **是否可重复（`isRepeated`）是一等属性**：影响参数拼接与幂等，缺失会让多值参数被静默只取一个。⑤ 与既有「凭据不进 prompt」（ssc）分工：那条管**运行时凭据不进上下文**，本条管**参数声明层是否标出秘密位**。
+- 提升层：工具（参数契约）/ 可复用 Skill（注册表 schema 约束）。触发词：isSecret、isRepeated、choices、format enum filepath、placeholder 与 default 分离、openapi.json 机读契约。

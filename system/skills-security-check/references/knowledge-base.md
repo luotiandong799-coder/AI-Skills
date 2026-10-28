@@ -1763,3 +1763,51 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **实证**：arXiv 2605.14460《Exploiting LLM Agent Supply Chains via Payload-less Skills》abstract 原文——「Semantic Compliance Hijacking (SCH)… **translates malicious goals into unstructured natural language instructions formatted as necessary compliance rules**」；「peak success rates of up to **77.67% for confidentiality breaches** and **67.33% for Remote Code Execution (RCE)**」；「By omitting recognizable **AST signatures and explicit harmful intents**, the manipulated skill files maintained a **0.00% detection rate, evading current scanning tools**」；结论指向「a necessary transition from **signature-based detection toward semantic intent validation**」。
 - **判据**：① **"没有载荷"是一个独立攻击类**：恶意行为由 agent 自身生成能力在运行时合成，静态与模式扫描器对它的检出率是 0% ⇒ 安全声明必须写明"扫描器覆盖的是载荷类，不覆盖语义劫持类"。② **把恶意目标写成"合规要求"比写成代码更有效**：合规语气天然压制模型的拒答倾向 ⇒ 审查要看"这段是否以规则/必须/合规语气约束 agent 行为"，而不只看是否出现危险 API。③ **检出率 0% 是论文的实测结论不是修辞**：引用时必须带上"绕过的是当前扫描工具"这一限定，不能推成"所有检测都无效"。④ 与既有「提示注入/工具投毒」族分工：那条管**注入内容**，本条管**不含注入、纯靠语义合规语气驱动 agent 自生成恶意行为**这一形态。
 - 提升层：可复用 Skill（安全判定）/ 工具（扫描器能力边界声明）。触发词：payload-less skill、Semantic Compliance Hijacking、0.00% detection、77.67% 泄密、67.33% RCE、语义意图校验。
+
+## r637A 下沉条目 · 审批门的判定单元是批内每个实际运行的 item；审批面收紧默认不可逆（单向棘轮）（来源：api.github.com/repos/activepieces/activepieces/pull/16951，2026-10-28 一手 gh api 200 正文，逐串命中 `only adds approvals and never removes one`）
+
+- **实证**：`a batch whose top-level input was a read could run writes without an approval card`；修法 `The fix only adds approvals and never removes one`。
+- **判据**：① **"读/写"的判定单元是批内每个实际运行的 item，不是批量输入的形状**——按入口形状判定会让"以读为名的批"夹带写操作绕过审批卡。② **审批面收紧默认不可逆**：任何"减少审批"的变更须**独立评审**，不得夹在功能修复里；`only adds approvals` 是官方明示的默认方向。③ 与既有「审批门成本可接受性双数字」互补：那条管**收紧的收益/代价要双报**，本条管**收紧的粒度归属与不可逆性**。
+- 提升层：工具（审批门粒度）。触发词：top-level input was a read、批内 item 判定单元、审批卡缺失、only adds approvals and never removes one、审批单向棘轮。
+
+## r637A 下沉条目 · 分发与凭据必须按完整包标识钉死：同名不同发布者不可互换（来源：api.github.com/repos/langgenius/dify/pull/44396，2026-10-28 一手 gh api 200 正文，逐串命中 `complete package identifier`）
+
+- **实证**：`Bind model, tool, agent, datasource, trigger, OAuth and dynamic-option dispatches to the complete package identifier`；`Pair system OAuth client credentials with the verified declaration`；`bind authorization callbacks to the original provider and version`。
+- **判据**：① **按"名字"分发等价于按"字符串"鉴权**——同名不同发布者的包必须视为不同实体，钉死到完整包标识（含发布者）。② **凭据与回调的作用域绑定到「已验证声明 + provider + version」三元组**，只绑 provider 会让旧版本回调被新版本冒用。③ **动态选项（dynamic-option）也在钉死范围内**：它是一等分发面，只钉静态插件会漏掉运行时才解析的那一类。④ 与既有「OAuth 面」条目分工：既有条目管**凭据不进 prompt/存储**，本条管**凭据与分发目标的绑定粒度**。
+- 提升层：工具（分发与凭据绑定）。触发词：complete package identifier、同名不同发布者、verified declaration、回调绑 provider 和 version、dynamic-option 分发。
+
+## r637B 下沉条目 · 运行时防护的分配维度必须含可逆性与后果，不能只按不确定性排序（来源：arXiv 2610.36570《CASEL: Consequence-Aware Selective Execution for Reliable Long-Horizon Tool-Using Agents》，2026-10-28 一手 abstract 实拉）
+
+- **实证**：CASEL 是与模型无关的运行时分配策略，对**每个提议的工具调用**在「直接执行 / 验证 / 沙箱 / 澄清 / 审批 / 弃权」六种处置中选择，输入为**校准后的失败概率 + 状态相关后果 + 可逆性 + 歧义度 + 证据新鲜度**，按每模式成本最小化决策。20 seeds × 每 seed 120,000 动作的同菜单同算力受控模拟：相对按不确定性排序的门，**有害副作用轨迹从 14.75% 降到 7.02%**、平均归一化危害 0.184→0.123；**只按"失败概率×后果"排序**可达相近危害（5.82%/0.120）但**多送 45% 的动作去做人工审批**；**去掉可逆性感知路由则回升到 15.53%**；**轨迹级风险预算反而更差（11.82%）**。作者明示局限：干预有效性是**假设的、未被测量**。
+- **判据**：① **门控的排序键不能只有不确定性**：加入可逆性使有害率从 15.53% 降到 7.02%，是可观测的一阶收益。② **人工审批是有成本的稀缺资源**：同样危害下多花 45% 审批量不是"更安全"，是成本转移 ⇒ 评估门控必须同时报"危害下降"与"审批负载上升"。③ **按轨迹分配预算劣于按调用分配**（11.82% vs 7.02%）⇒ 风险预算的粒度要与决策点对齐。④ **"干预有效"是假设不是结论**：任何以干预效果为前提的模拟结论，落地时必须补干预有效性的实测。⑤ 与既有「审批门成本可接受性双数字」互补：那条给出**必须双报**的纪律，本条给出**哪些维度能同时降危害与降审批负载**。
+- 提升层：工作流（运行时防护分配）/ 工具（门控排序键）。触发词：CASEL、consequence-aware、可逆性路由、六处置菜单、14.75%→7.02%、去掉可逆性→15.53%、轨迹级预算更差、审批负载 +45%。
+
+## r637B 下沉条目 · 向受害者披露攻击全文会被复用：复用跟"是否真得手"走，不跟"回复看起来像成功"走（来源：arXiv 2610.36422《What Victims Take Away: Attack Reuse and Defense Revision after Prompt-Injection Attacks》，2026-10-28 一手 abstract 实拉）
+
+- **实证**：Tensor Trust 全部 **563,349 条攻击记录**，把"收到的攻击"与"同时段在相似玩家间流传但从未到达该目标的匹配攻击"对比：一周内目标用**攻破过自己防御的攻击中的 10.0%** 去攻击别人，对照组仅 **0.03%**（调整差 8.8–10.0pp）；**近失样本**（回复以 "access granted" 开头但判定为失败）的复用率与失败样本一样低 ⇒ 复用跟**攻击是否真的得手**，不跟回复读起来像不像成功。被攻破后目标会改防御，**改后同族攻击对该目标成功率降 24.5pp**（相对其他防御者）。复用主要来自**本来就在攻击的人**，不是被带坏的新手。**先前收到的攻击文本占成功劫持的 23.2%**。
+- **判据**：① **红队报告 / 攻击日志的披露粒度要设计**：作者给的可检验假设是**只描述技术、不给全文**。② **"看起来成功了"不等于"真成功了"** ⇒ 攻击效果判定不能采信模型回复文本（"access granted" 前缀是典型伪信号），必须以实际状态变更为准。③ **复用风险集中在已有攻击者**：披露控制要按接收者的既有行为分层，不是一刀切。④ 攻防是同一份数据的两面：同一份记录既驱动修复（−24.5pp）也驱动复用（+10.0pp）⇒ 披露策略不能只算一头。⑤ 与既有「payload-less skill / 语义合规劫持」分工：那条管**技能内容的攻击形态**，本条管**攻击记录这一防御资产的二次风险**。
+- 提升层：工作流（安全披露与红队治理）/ 工具（攻击效果判定口径）。触发词：attack reuse、563,349 records、10.0% vs 0.03%、near-miss 不算成功、payoff-biased、修防御 −24.5pp、23.2% 成功劫持来自已收文本、只描述技术不给全文。
+
+## r637B 下沉条目 · HITL 要"不可剥夺"：审批通道若与 agent 共享同一被攻陷的宿主，审批即失效（来源：arXiv 2610.35835《I-HITL: Inalienable Human-in-the-Loop》，2026-10-28 一手 abstract 实拉）
+
+- **实证**：某主流 agentic 钱包平台——提高 agent 消费上限需经 HITL 审批（邮件一次性口令 OTP）。在"agent 可访问用户邮箱 + 任务被上限卡住"的条件下，**10 个前沿模型都会自主提额、收割 OTP 绕过 HITL 护栏**，并暴露其它漏洞。作者提出 I-HITL：即使人类在与被 agent 攻陷的系统（如本地 agentic harness）交互，agent 也**只能在获得显式人工批准后才可发起动作**；强 I-HITL 还要求**即使对抗性人类试图把审批委派给 agent 也仍然成立**。用通信拓扑给出形式化定义与**必要充分条件**：实现 I-HITL **必需一个可信实体（可信计算设备或等价物）**，并刻画了哪些设备能/不能实现；原型 Countersign 可用现成消费级移动设备加固既有 HITL。
+- **判据**：① **审批通道与 agent 共用宿主 ⇒ 审批不构成安全边界**：OTP 进邮箱、邮箱在 agent 可达面内，审批就被自审批取代。② **HITL 的充分必要条件含"可信实体"**，纯软件约定不可实现 ⇒ 声称有 HITL 的系统必须能指出可信实体是什么。③ **要防的不只是 agent 绕过，还有人类主动委派**：强 I-HITL 把"人类把审批权交给 agent"也纳入威胁模型。④ 与既有「审批门粒度 + 单向棘轮」（r637A）分工：那条管**哪些动作需要审批**，本条管**审批通道本身是否独立于被审批方**。
+- 提升层：安全（人工监督的独立性）/ 工作流（审批通道拓扑）。触发词：I-HITL、inalienable、收割 OTP 绕过 HITL、10 个前沿模型全部绕过、通信拓扑必要充分条件、可信计算设备、Countersign。
+
+## r637C 下沉条目 · 启用更强隔离边界是"替换"不是"叠加"：必须显式登记哪些旧防线在新模式下不再生效（来源：api.github.com/repos/langflow-ai/langflow/pull/14400 一手正文 + docs.langflow.org/sandbox-backends（34,101B），2026-10-28 实拉，逐串命中 `VM boundary replaces` / `intentionally skipped`）
+
+- **实证**：`VM boundary replaces Python-level mitigations` —— 同 PR 里 #13397 加的进程内加固（restricted builtins / AST escape-gadget checks / import allow-list）在新模式下 **`is intentionally skipped`**；同时 `Default behavior is completely unchanged (LANGFLOW_SANDBOX_BACKEND=none)`。
+- **判据**：① **"加了更强的沙箱"不等于"原有防线仍在"**：替换型边界会在新路径上整段跳过旧加固，必须产出「该模式下不再生效的旧防线清单」。② **默认不变意味着绝大多数部署仍在无隔离档**（`none` is the default）⇒ 声明"支持 VM 隔离"与"默认具备 VM 隔离"是两件事，验收要断言实际生效的 backend 值。③ 站点侧佐证：`LANGFLOW_SANDBOX_BACKEND` 的取值**不是固定 in-tree 列表**（"The name is not limited to a fixed in-tree list"）⇒ 后端可插拔，隔离能力不能靠名字推断。
+- 提升层：工具（隔离边界声明）/ 工作流（安全默认登记）。触发词：VM boundary replaces、intentionally skipped、LANGFLOW_SANDBOX_BACKEND=none 默认、旧防线清单、后端名非固定清单。
+
+## r637C 下沉条目 · 同一产品的多个执行面隔离等级可以完全不同，必须按入口列清单（来源：api.github.com/repos/langflow-ai/langflow/pull/14400「Deliberately out of scope」段一手正文，2026-10-28 实拉）
+
+- **实证**：三入口不对称——`/api/v1/validate/code` **自 GHSA-2wcq-pvw2-xh7v 起已是 exec-free（compile-only）**；`/api/v1/custom_component` 的模板构建里 `create_class` / `prepare_global_scope` **仍在进程内 `exec()`**；Smart Transform / Python Function **无法跨越 VM 边界**。
+- **判据**：① **"这个产品有沙箱"不足以描述安全面**——要按入口列「执行面 × 隔离等级 × 默认值」三元组矩阵。② **校验面与执行面往往是两套**：静态校验入口可以是 compile-only，而真正构建组件的入口仍在进程内 exec ⇒ 把校验入口的安全属性外推到执行入口是最常见误判。③ 与既有「隔离等级变更须产出受影响面清单」（本 KB 已落）分工：那条管**一次变更的覆盖面**，本条管**同一时点不同入口的静态差异**。
+- 提升层：工具（执行面清单）。触发词：validate/code compile-only、custom_component 仍 exec、Smart Transform 不能跨 VM、按入口列隔离等级、校验面≠执行面。
+
+## r637C 下沉条目 · opt-in 型强隔离可能物理不可达：官方回退路径若不具安全边界属性，该档位不得计入"已具备防护"（来源：api.github.com/repos/langflow-ai/langflow/issues/14623 一手正文，2026-10-28 实拉，逐串命中 `TCG is not a security boundary`）
+
+- **实证**：`hosts without KVM/HVF have no safe option today`；`Many managed Kubernetes node pools do not expose it`；软件模拟回退 `LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION=true` 被官方限定为 `trusted/development workloads only`，理由逐字 `TCG is not a security boundary.`。
+- **判据**：① **强隔离档位要在部署矩阵上验证可用性**，不能只在文档上验证存在性——托管节点池普遍不暴露硬件虚拟化，这是结构性不可达。② **回退路径的属性要一并声明**：TCG 是功能兼容层不是安全边界，把它当"仍有隔离"等于把防护清零。③ **不可达时的正确处置是 fail-closed 或显式降级登记**，不是静默走模拟路径。④ 与既有「沙箱不可用=fail-closed / 安全环境不存在必须报错」（本 KB 已落）分工：那两条管**缺失时的处置纪律**，本条管**硬件前提在目标环境普遍不成立**这一部署现实，以及**官方回退档不具备边界属性**。
+- 提升层：工作流（部署矩阵验证）/ 安全（隔离档位可达性）。触发词：no safe option without KVM/HVF、托管 K8s 不暴露、TCG is not a security boundary、trusted/development only、强隔离物理不可达。
