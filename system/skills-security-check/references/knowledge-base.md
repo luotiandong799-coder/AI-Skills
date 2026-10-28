@@ -1984,3 +1984,46 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **判据**：① **身份建立（配对/发令牌）与逐次授权（命令审批）是不同的面**，文档与实现都不得让前者被读成后者。② **deny list 只匹配精确命令名、不匹配载荷内的 shell 文本**——这是一个必须显式声明的**覆盖范围边界**，否则会误以为"已经挡住了"。③ 判断节点重连后命令列表变化**是否**构成漏洞，判据不是"列表变了"，而是**全局策略与该节点自身的 exec approvals 是否仍在执行边界**——把判据落在边界是否仍生效上，而不是落在表象上。④ `--force` 只覆盖"覆盖写入"这一件事，不旁路安装安全策略——**每个强制标志都要声明它不覆盖什么**。
 - **提升层**：安全边界 / 信任模型。触发词：配对≠逐命令审批、deny list 只匹配命令名、节点策略可更严或更宽、--force 不旁路安装策略。
 - **来源**：https://docs.openclaw.ai/gateway/security/tool-permissions.md
+
+
+## r644A · 代码执行守卫必须走确定性 AST 不变量分析：LLM-as-judge 有四项不可接受的成本（延迟 / 预算 / 概率性 / 可被注入）（来源：github.com/microsoft/autogen issue #8390 + github.com/run-llama/llama_index issue #23767，gh api 一手 200）
+
+- **原文事实**：llama_index #23767 对 LLM-as-Judge 守卫的原文判词：「Introduce **500ms–2000ms round-trip network latency per tool call**, consume **token budgets**, and remain **probabilistic**（vulnerable to prompt injection jailbreaks）」。autogen #8390 的对位方案是进程内确定性 AST 不变量分析（静态分析 Python AST），针对的正是"越权提权、socket 外联、凭据采集"三类。
+- **判据**：① **守卫的位置成本必须逐项列出再选型**——延迟、预算、概率性、可注入性，四项里任何一项落到"每个工具调用都要付"的位置上，都不能用概率性判定来做。② **确定性不变量分析的适用面是"形状"而不是"意图"**：AST 能确定地说"这里有 socket 创建"，不能说"这是不是用户想要的" ⇒ 两者是分层关系，不是替代关系。③ **概率性守卫的正确位置是低频、可人工复核处**（如最终产物评审），不是每次工具调用的热路径。
+- **提升层**：工具（守卫选型）/ 安全（确定性不变量分析）。触发词：AST 不变量守卫、LLM-as-judge 四项成本、500-2000ms 往返、概率性守卫不进热路径、socket breakout、凭据采集。
+- **来源**：https://github.com/run-llama/llama_index/issues/23767
+
+## r644A · 输出侧的凭据泄漏面要按三处枚举：流式事件 / 持久化记录 / UI，来源不只有工具结果（来源：github.com/microsoft/autogen issue #8357，gh api 一手 200）
+
+- **原文事实**：`SensitiveDataRedactor` 的动机原文：「When agents call tools, process **environment variables**（such as OpenAI/Anthropic/Azure/AWS keys）, or **generate reasoning outputs**, there is a risk of inadvertently emitting raw credentials or secrets into **streaming websocket events**, **SQLite database records**, and the **Studio UI**.」
+- **判据**：① **泄漏面要按"数据落到哪"枚举，不是按"数据从哪来"枚举**——三个落点（流式/持久化/UI）各有独立的保留期与可见范围，只堵入口会漏掉整条下游。② **来源也比直觉多**：除了工具结果，还有**进程环境变量**与**模型自己的推理输出**——后者常被当作"只是文本"而放行。③ **清洗要在写入落点之前做**，而不是在读取时脱敏：读取时脱敏意味着库里已经有明文。
+- **提升层**：安全（凭据泄漏面）/ 工具（输出过滤）。触发词：凭据泄漏三落点、流式 websocket、SQLite 记录、UI 展示、环境变量来源、推理输出来源。
+- **来源**：https://github.com/microsoft/autogen/issues/8357
+
+## r644B · 持久计费态边界：不受信内容一旦进入后续计费上下文，就会被反复计量——最大单会话累计输入达首次调用的 14,293 倍（来源：arxiv.org/abs/2609.28585《Persistent Billable State: Denial-of-Wallet Attacks and Defenses in Tool-Calling LLM Agents》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：「When a runtime carries an external tool return into later model inputs, providers **meter it again**. An admitted malicious or compromised tool can thereby convert untrusted data into **recurring victim-billed processing** without victim credentials or local runtime privilege.」作者称之为 persistent billable state，并把 host 是否/如何让它进入后续计费上下文的决策形式化为 persistent billable-state boundary。实测 243 次执行中，「the maximum per-session cumulative input reaches **14,293x** the session's first-call input」。
+- **判据**：① **"内容只读进来一次"是错觉**——只要它留在上下文里，每一轮都会按整段重新计费，放大倍数是轮次级而非一次级。② **准入审查通过不等于成本审查通过**：一个通过了安全审查的工具返回，仍可以是成本攻击载体 ⇒ 二者是两条独立的门。③ **这条边界的决策权在 host**（是否带入、带入多久、是否摘要后再带），agent 自己看不到计量 ⇒ 不能指望模型"少说点"。
+- **提升层**：安全（成本攻击面）/ 工作流（上下文保留策略）。触发词：persistent billable state、Denial-of-Wallet、14,293x、复查计量、准入与成本两道门。
+- **来源**：https://arxiv.org/abs/2609.28585
+
+## r644B · 提议 / 决策 / 执行三权分离要用「签名评估证明 + 绑定该证明的短时 act token」串起来，执行点执行前验二者（来源：arxiv.org/abs/2610.30221《Agentic Architecture of Information Systems. The AAM/5C Model》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：单一授权规则 R-AUT 把三者分开——「a probabilistic planner (L4) **proposes**; a governance layer (L6) **decides** under signed policies and records its verdict in a **signed evaluation proof**; a security layer (L5) issues a **short-lived act token bound to that proof**; a **policy enforcement point verifies both** before the target layer materializes the act.」五个能力是 Capture / Comprehend / Choose / Coordinate / Control，跨七个逻辑层实例化。
+- **判据**：① **"提议"必须来自概率性组件而"决策"必须来自确定性组件**——把两者合并，等于让模型自己给自己签批。② **决策要落成可验证的证明，而不是落成一个布尔值**：布尔值无法回答"依据当时的哪份策略"，事后审计也无从复算。③ **执行令牌必须绑定证明且短时**：解绑后令牌就成了可转移的空白授权，长时后撤销就失去意义。④ 与既有 ssc「长期授权三条边界（版本/进程/时间）」互补：那条管授权何时失效，本条管授权如何在三段之间**不失真地传递**。
+- **提升层**：安全（授权架构）/ 可复用 Skill（三权分离）。触发词：R-AUT、signed evaluation proof、act token 绑定证明、PEP 验二者、概率提议确定性决策。
+- **来源**：https://arxiv.org/abs/2610.30221
+
+## r644C · 入口令牌授予的是"能进来"，不是"是谁发的"：payload 当不受信数据，且目标 agent 的工具与工作区要另行限制（来源：docs.openclaw.ai/gateway/config-hooks.md，2026-10-28 一手 200 / 38,088B）
+
+- **原文事实**：①「**Hook tokens grant ingress access, not an authenticated sender identity**; treat payload content as **untrusted data** and **restrict the target agent's tools and workspace separately**.」②「`openclaw doctor` reports unresolved hook credentials in its current environment and gives recovery guidance; it **does not generate a replacement secret or overwrite the configured reference**.」③「`hooks.token` should be **distinct from** active Gateway shared-secret auth（`gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN` / `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`）.」④「Only trusted code producing a **fixed key** should mark `sessionKeySource: "static"`; **never** use that marker to bypass policy for a payload-derived key.」
+- **判据**：① **"持令牌"与"身份已认证"是两个断言**——把入口令牌当身份，等于把"能敲门"当成"是他本人"，于是 payload 内容会被当成可信指令。② **入口通过之后还要再收一次工具与工作区的范围**：两道限制不能合并成一道，因为它们的失效原因不同（令牌泄漏 vs 目标权限过宽）。③ **诊断工具修复凭据的边界要写死**：只报告 + 给恢复指引，**不生成替代密钥、不覆盖已配置引用**——自动补密钥会把一次配置错误变成一次静默的凭据轮换，所有人都不知情。④ **入口令牌必须与主认证令牌不同**：复用会让一次泄漏同时拿到两处权限。⑤ **"静态 key"标记只能给产生固定 key 的可信代码**：用它给 payload 派生的 key 开后门，等于提供一个绕过策略的开关。
+- **提升层**：安全（入口与身份分离）/ 工具（诊断面边界）。触发词：hook token 非身份、payload 不受信、doctor 不生成替代密钥、hook token 与主认证相异、static sessionKey 后门。
+- **来源**：https://docs.openclaw.ai/gateway/config-hooks.md
+
+## r644C · 凭据收窄时自动化必须停下并给恢复消息，绝不回落到更宽或不同的凭据（来源：docs.openclaw.ai/automation/cron-jobs/payloads.md，2026-10-28 一手 200 / 46,242B）
+
+- **原文事实**：「**Revoked apps, account/runtime changes, and interactive approval requirements stop execution with a recovery message; they never fall back to broader or different credentials.**」配套重校验句：「Each occurrence **revalidates** the original operator scopes, role, device, access grant, model restrictions, and **exact session identity** under current policy.」以及 grant 语义：「answering **Always allow** mints a **scoped standing grant** … This **preserves the original operator scope ceiling**; it is **not a new PR-only permission or a blanket grant to automations**.」
+- **判据**：① **无人值守路径上，"换个能用的凭据继续跑"是最危险的兜底**——它把授权失效这一信号彻底抹掉，且跑成功之后没人会回头看。② **停下时要给可恢复的消息**，不是静默失败：这类失效大多是一次性的（重新授权/重新批准），给路径才能恢复。③ **每次发生都要按六项重校验**（作用域/角色/设备/访问授权/模型限制/精确会话身份）——授权是快照，环境是流变的，只在创建时校验等于把快照当现状。④ **Always allow 铸造的是有作用域的派生授权，保留原 operator 上限**：把它理解成"给自动化的 blanket 授权"会造成权限静默扩张。
+- **提升层**：安全（凭据收窄处置）/ 工作流（自动化重校验）。触发词：凭据收窄即停、不回落更宽凭据、recovery message、每次发生重校验六项、scoped standing grant、非 blanket 授权。
+- **来源**：https://docs.openclaw.ai/automation/cron-jobs/payloads.md

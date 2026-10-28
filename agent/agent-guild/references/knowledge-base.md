@@ -1152,3 +1152,25 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 - **判据**：① **删除的"完整"必须按载体逐一声明**：索引条目、向量、源行是三个载体，只删其一等于留下可重建的残余（向量能反推、源行能重索引）。② **删除要跨后续操作保持**：被排除的会话在之后的重建里仍被排除，否则"删了又被自动重建捞回来"= 删除失效。③ 与 `rules/07` §10.7 的 M22 删除传播（主记录软删除 + 派生/索引/副本标删除传播 + 外部副本诚实标 unreachable）同族，本条提供了**工程侧的等价实现样板**：三个载体同删 + 排除状态持久化。④ 注意与"复用未变 chunk"并不矛盾：复用发生在**未删除**的内容上，删除是复用之上的过滤器。
 - **提升层**：记忆治理 / 删除语义。触发词：遗忘三载体同删、排除状态持久、删除传播、重建不捞回已删。
 - **来源**：https://docs.openclaw.ai/concepts/memory.md · https://docs.openclaw.ai/cli/memory.md
+
+
+## r644B · 记忆里的「抽象」会自我再生成错误：错误经「抽象→执行→再抽象」循环存续，超过原始错误知识本身（来源：arxiv.org/abs/2610.27406《More Memory, Worse Agents: Error Reproduction and Anti-Persistence in LLM Agents》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：核心设计问题是"只存轨迹与结果，还是连从中推出的规则/摘要/技能一起存"。原文：「errors in stored abstractions can propagate to subsequent decisions through retrieval and reuse. They can also **shape execution trajectories**, which then become the basis for **new abstractions that reproduce the original errors**. We term this feedback mechanism **error reproduction**: errors are regenerated through a cycle of **abstraction, execution, and re-abstraction**, extending their persistence **beyond direct reuse of the original faulty knowledge**.」
+- **判据**：① **删掉那条错误的原始记录不等于删掉了这个错误**——它已经经由被它影响的轨迹重新进入了抽象层，所以"反持久化"必须针对循环而不只是针对条目。② **抽象层比轨迹层更危险**：轨迹错了只影响一次，抽象错了会改写后续轨迹的生成分布，再被抽象成新的"共识"。③ **晋升门要加一条反再生成检查**：一条经验若其来源轨迹本身已被它自己影响过，它的证据就不是独立样本。④ 与既有 ag「晋升三门（score / recall-frequency / query-diversity）+ taint gated」互补：那套管"什么样的候选能进"，本条管"已经进去的东西会通过循环自我复制" ⇒ 需要周期性的**独立样本复核**。
+- **提升层**：记忆治理（反再生成）/ 可复用 Skill（经验晋升门）。触发词：error reproduction、抽象→执行→再抽象、anti-persistence、抽象层污染、独立样本复核。
+- **来源**：https://arxiv.org/abs/2610.27406
+
+## r644B · 「内容充分」不等于「接收方可用」：消息效用 = 接收方增益 − 协议税，还要过 action closure 第三关（来源：arxiv.org/abs/2610.03769《Bayes-Sufficient Compression Is Not Enough》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：框架名为 **receiver-relative bounded coordination**，把消息效用表达为「**receiver gain minus protocol tax**」。原文：「Compression beats raw context when tax savings exceed losses from omitted information and decoder mismatch. Even **Bayes-sufficient** compression can fail when a bounded executor **cannot use its surface form**.」三阶段分解：**externalization / absorption / action closure**，「explaining how errors remain **after the correct content reaches the receiver**」。另有单交叉条件下的结论：sender 升级只在接收方负担超过阈值后才有帮助。
+- **判据**：① **跨 agent 传消息要过三关，不是一关**——发出（externalization）、收到（absorption）、能据此行动（action closure）；前两关都过了，第三关不过仍然失败，而且**看起来像"对方没照做"**。② **"信息论充分"是相对于某个接收方而言的**：对 A 充分的压缩对 B 可能不可用 ⇒ 压缩方案要声明接收方能力假设。③ **升级发送方不是万能解**：接收方负担未过阈值时，更强的发送方不产生收益。
+- **提升层**：可复用 Skill（跨 agent 消息设计）/ 记忆治理（压缩判据）。触发词：receiver-relative bounded coordination、协议税、action closure、Bayes 充分仍失败、表面形式不可用、sender 升级阈值。
+- **来源**：https://arxiv.org/abs/2610.03769
+
+## r644B · 共享记忆要显式暴露「被忽视的分支」并做多样性感知推荐，否则集体只会追领先者（来源：arxiv.org/abs/2609.18094《Agora: Git as Shared Memory for Collective AutoResearch》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：Agora 把各 worker 的贡献存成 Git 里的**追加式 DAG**，每个 commit 记录 result / insight / hypothesis / verification / report 并链接到先前工作。关键设计：「Searchable views show leading results, **neglected branches**, and **verification status**; **diversity-aware recommendations** suggest experiments **beyond the current leaders**.」实证：近 12 天运行中 13 个语言模型 worker、**无分配任务、无中央规划者**，发布 1,703 条贡献，解决了权重迁移问题（141 个预训练 donor 模型、冻结的 119.6M 参数混合体、无训练数据与梯度更新）。
+- **判据**：① **共享记忆的视图决定了集体探索的方向**——只按"当前最好"排序，所有人会挤在同一条分支上，"被忽视的分支"必须是一个一等视图而不是需要自己算出来的东西。② **贡献要带类型（result/insight/hypothesis/verification/report）与溯源链接**：否则后来者无法区分"已验证的结论"与"当时猜的"。③ **验证状态要与结果并列展示**，不能只在结果页里附带 ⇒ 未验证的高分结果是最容易被误当结论的东西。
+- **提升层**：可复用 Skill（跨 agent 共享记忆）/ 工作流（集体探索）。触发词：被忽视分支视图、diversity-aware 推荐、追加式 DAG、贡献类型化、验证状态并列、无中央规划者。
+- **来源**：https://arxiv.org/abs/2609.18094

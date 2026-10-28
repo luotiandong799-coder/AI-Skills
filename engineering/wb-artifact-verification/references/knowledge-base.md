@@ -4640,3 +4640,46 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **判据**：① **「便于诊断」与「可供举证」对日志的要求是冲突的**——调试日志求便利（可采样、可裁断、可改写），合规日志求不可否认（确定性 ID、输入输出哈希、只追加不可改）。② **用调试日志顶替合规证据，在真正需要举证时会两样都拿不出来**：既没有可校验的哈希，也没有人工监督的记录。③ 因此合规字段是与用途绑定的固定集合（谁、何时、什么版本、输入输出哈希、人做了什么决定、风险几级），不是「先看情况再补」。④ 与 av 既有的「表格提取可审计锚定」相邻但更完整：那一条解决「证据锚在源上」，本条解决「证据链本身不可篡改且有监督记录」。
 - **提升层**：治理 / 可观测性。触发词：调试日志≠合规日志、追加-only 防篡改、人工监督决策留痕、输入输出哈希、确定性标识符。
 - **来源**：https://github.com/langchain-ai/langchain/issues/35357 （2026-10-28 实拉，一手正文 2,209 字符）
+
+
+## r644A · 流式/增量写入的统计必须按实体 ID 去重，且保留该 ID 见到的最大值——早期行在流结束前就落盘（来源：github.com/anthropics/claude-code issue #104042，gh api 一手 200）
+
+- **原文事实**：「Stats tab counts each API response **once per transcript line** (~2x inflated token totals)」。修复口径原文：「Each API response should count once, **deduplicated by `message.id`** (keeping the **largest usage seen for that id**, since an **early line can be written before streaming ends**)」。作者还显式列出不精确的三种来源：当天的缓存可能在当天结束前就被算过、超过 `cleanupPeriodDays` 的 transcript 已不在、resumed 或 forked 会话会把旧行复制进新文件。问题是在核对"按 message.id 去重的使用量排行榜显示得比 Stats 页少"时发现的。
+- **判据**：① **流式写入天然产生同一实体的多个中间版本**，统计如果按"行"而不是按"实体"计数，结果必然膨胀且膨胀倍数不稳定。② **去重时取最大值而不是第一条或最后一条**：流式场景下早期行是**不完整**的，最后一条未必最大（重试/续写会补）。③ **聚合口径必须自带不精确的三种来源声明**，否则两个口径对不上时无法判断谁错。
+- **提升层**：可复用 Skill（证据统计口径）/ 工具（计量）。触发词：按 message.id 去重、取最大值、早期行不完整、transcript 行重复计数、fork 复制旧行。
+- **来源**：https://github.com/anthropics/claude-code/issues/104042
+
+## r644A · trace 的保留与丢弃必须以 root 为单位：采样器看不到 tracer 身份时，子 span 跟随其 root（来源：github.com/n8n-io/n8n issue #42174，gh api 一手 200）
+
+- **原文事实**：「An OTel sampler **cannot see which tracer made a span**, so the shared sampler cannot keep Agent 365 spans when the customer's OTel is off.」解法是给 `Agent365Sdk` tracer 配专用 provider；并明确「child spans **follow their root**, so a **trace is kept or dropped as a whole**」。另有版本卫生事实：OTel 包在 `api-logs`/`instrumentation` 0.211.0 与 `resources`/`sdk-trace-*` 2.12.0 上存在多余副本。
+- **判据**：① **采样决策的粒度必须是一个完整 trace，不是一个 span**——半保留的 trace 比全丢更坏：它看起来是完整的，实际缺了关键段，据此做归因会得到错的结论。② **"采样器看不到的维度"决定了它能不能当路由用**：tracer 身份不在采样器视野里，就不能指望它按来源分流，只能另设 provider。③ 依赖副本版本不一致本身就是一类缺陷（同一 OTel 生态内两套版本）。
+- **提升层**：可观测性（trace 原子性）/ 工具（采样路由）。触发词：trace 整体保留或整体丢弃、子 span 跟随 root、sampler 看不到 tracer、专用 provider、OTel 版本副本。
+- **来源**：https://github.com/n8n-io/n8n/issues/42174
+
+## r644A · Webhook 生命周期的补偿必须双向对称：enable 失败要删掉刚建的那个，disable 遇 404 视为已完成（来源：github.com/activepieces/activepieces issue #16869，gh api 一手 200）
+
+- **原文事实**：「**Webhook lifecycle:** enable **deletes the new webhook if saving it fails**; disable **treats 404 as done**.」另有投递侧四件：HMAC 签名 + timing-safe 比较 + 时间窗；按 delivery ID 去重；TLS 校验的 dispatcher；API key 去除首尾空白且只发往指定 https host 的相对路径、ID 做编码、媒体 URL 仅 https。测试 38 条覆盖「签名（有效/伪造/错密钥/被篡改/过期）、重放去重、enable 清理、disable on 404」。
+- **判据**：① **创建与销毁的失败语义必须各自闭合**：enable 半途失败留下一个没人认领的 webhook（资源泄漏 + 后续重复触发），disable 对 404 报错会让已经不存在的东西挡住状态收敛。② **"对方说没有"在销毁路径上等同于"已经完成"**，而在创建路径上不等于"可以重建" ⇒ 同一个 404 在两条路径上语义相反，必须分别写死。③ **重放去重按投递 ID 而不是按内容**：内容相同但 ID 不同是两次真实投递，按内容去重会吞掉一次。
+- **提升层**：工作流（外部副作用补偿）/ 工具（webhook 契约）。触发词：enable 失败删新建、disable 404 视为完成、delivery ID 去重、timing-safe 比较、时间窗。
+- **来源**：https://github.com/activepieces/activepieces/issues/16869
+
+## r644B · 「探索性配对可行性研究」与「确证有效性实验」是两种产物，引用时必须连同这个自陈一起登记（来源：arxiv.org/abs/2610.33853《ArchGuard-APR》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：作者自陈「We evaluate the implemented pipeline through an **exploratory paired feasibility study, not a confirmatory effectiveness experiment**. **Six executions were planned; four completed**, and two black-4 conditions ended in **pre-provider infrastructure attrition**.」工程侧做法：确定性仓库分析 + 不可变仓库图 + 显式架构画像 + 图引导上下文检索 + 角色化修复编排 + **补丁策略强制** + 隔离执行反馈 + provider 成本控制 + **规范化的 source-free 证据**。动机句：「A candidate change can satisfy a narrow test while violating dependency boundaries, modifying an unsafe path, or relying on context that omits relevant repository structure.」
+- **判据**：① **"跑通了 4/6"和"有效"是两件事**——作者自己把结论限定在可行性，引用方若升级成有效性，就把 1/3 的损耗当成噪声丢掉了。② **损耗要写明发生在哪一层**（本例是"pre-provider infrastructure attrition"，即还没到被测对象就损耗）⇒ 损耗发生在被测之前时，剩下 4 次也不是 6 次的无偏样本。③ **证据要 source-free 规范化**：带源文本/路径/格式的证据会让比对结果依赖无关差异。④ **补丁要通过策略强制而不只是通过测试**——窄测试通过与架构约束合规是两个判据。
+- **提升层**：验证（证据等级自陈）/ 可复用 Skill（结果引用纪律）。触发词：exploratory vs confirmatory、计划 6 完成 4、pre-provider attrition、source-free 证据、补丁策略强制、架构画像。
+- **来源**：https://arxiv.org/abs/2610.33853
+
+## r644B · 结果保持框架 + 过程维度独立评测：执行失败要先能归因到模型 / harness / 二者交互三方（来源：arxiv.org/abs/2610.15714《MedHarnessBench》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：「Existing benchmarks primarily emphasize **terminal task outcomes**, making it difficult to determine whether execution failures arise from **the agent model, the runtime harness, or their interaction**.」作者给出 outcome-preserving（结果保持）框架，独立评测七个过程维度：Care Action Fulfillment / Clinical Resource Competence / Patient-Evidence Alignment / Clinical Workflow Continuity / **Clinical Auditability** / **Closed-Loop Verification** / Clinical Conduct Boundaries；另有 normalized intervention trace 追踪干预是否被记录与核对。
+- **判据**：① **只知道"没做成"，不知道"谁的错"，就无法决定改什么**——改模型、改 harness、改两者的接口是三条完全不同的工作量。② **过程维度必须与结果维度分开打分**：结果保持（outcome-preserving）的意思是过程评分不得改变任务是否算完成的判定，否则过程分会被结果分污染。③ **Auditability 与 Closed-Loop Verification 要单列为维度**：它们不是"做得好不好"，而是"事后能不能复盘/有没有回头验证"，混进能力分里会在能力尚可时掩盖审计缺失。
+- **提升层**：评测（归因三分）/ 验证（过程维度独立）。触发词：outcome-preserving、模型/harness/交互三方归因、Auditability 单列、Closed-Loop Verification 单列、intervention trace。
+- **来源**：https://arxiv.org/abs/2610.15714
+
+## r644C · 清理动作自身要有成本门槛：清除掉的 token 太少、不值得新写一次缓存时就不该清（来源：docs.openclaw.ai/concepts/session-pruning.md，2026-10-28 一手 200 / 11,278B）
+
+- **原文事实**：「`clear_at_least` prevents a clearing event that would remove **too few tokens to justify the new cache write**.」配套：「Clearing **invalidates the prompt cache from the first cleared result**」；清除时打 info 行 `[anthropic] server-side context edit: cleared N tool results (M input tokens)`；路由分叉——直连 Anthropic API-key 走服务端清除，其余缓存 TTL 合格的路由在 TTL 过期后本地剪枝。
+- **判据**：① **清理不是免费的正收益动作**——它有一个明确的副作用（从首个被清除结果起缓存失效，需要重写一次缓存），收益小于这个代价时清理是净亏。② **门槛要配在"这次清多少"上，不是配在"要不要启用清理"上**——前者每次判断，后者一次性决定，挡不住高频小额清理。③ **清理必须留可见痕迹**（本例是 info 行带 N/M 两个量），否则"为什么缓存命中率掉了"无从查起。
+- **提升层**：可观测性（清理留痕）/ 工作流（成本门槛）。触发词：clear_at_least、清除量门槛、清理使缓存失效、重写缓存代价、cleared N tool results。
+- **来源**：https://docs.openclaw.ai/concepts/session-pruning.md

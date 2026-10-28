@@ -1136,3 +1136,18 @@ spec 的步骤约束不要落在两个极端：**代码写死流程**（控制�
 - **判据**：① **把可变部分收在编排、稳定部分收在运行时**：需求变化改编排即可，不必重建运行时；② **生成实现与持续供给行为是两种形态**，后者要在运行期继续响应，设计时不能按一次性产物做；③ **同一应用对不同用户的需求可能冲突**，个性化要落在可替换的编排层而不是唯一的运行时。
 - **提升层**：工作流（编排与运行时分离）/ 工具（个性化路径）。
 - **触发词**：Agent as App、shared agent runtime、编排可变运行时复用、个性化改编排。
+
+
+## r644B · 契约四件套把「图能确定的一切」移出模型自由裁量：命名产物 / 输入解析 / 参数接管 / 产物校验（来源：arxiv.org/abs/2610.31096《GeoAgent: Contract-Constrained LLM Agents for Seismic Data Processing》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：问题句「Models **omit arguments, invent units, feed the previous artifact into the wrong input**, and **report completion without a verifiable product**.」解法是四条显式契约——**named artifacts / input resolution / parameter takeover / artifact validation**，「move everything the graph can determine **out of the model's discretion**」。规模事实：54 个算子 agent（51 个由声明式规范生成）、1,937 个算子的索引、九阶段状态图、确定性几何工具解析自描述头部并交叉校验。
+- **判据**：① **"交给模型决定"应该是穷举之后的剩余，不是默认选项**——先问"这一步能不能由结构确定"，能就写成契约。② **四件套各管一类跑偏**：命名产物管"喂错输入"、输入解析管"参数缺失"、参数接管管"编造单位"、产物校验管"报完成但没东西"。③ **"报告完成"必须绑定到可验证产物**——没有产物校验这一条，前三条都可以通过"声称做完"绕过。
+- **提升层**：规约（契约设计）/ 工具（声明式生成）。触发词：契约四件套、named artifacts、parameter takeover、artifact validation、移出模型自由裁量、报完成需可验证产物。
+- **来源**：https://arxiv.org/abs/2610.31096
+
+## r644B · 双时标修复：快时标用确定性校验把模型输出包成"提案"，慢时标才从经验里改进（来源：arxiv.org/abs/2610.02038《Mimir: Physics-Grounded LLM Agents for Long-Horizon Irrigation Control》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：论文区分两个修复时标——「At the **fast** timescale, a structured physical interface and **deterministic simulator** turn an LLM output into a **proposal** that we **numerically check, revise**, and subject to **bounded deterministic action selection** before execution. At the **slow** timescale, recurre[nt]…」问题域判据句：「actions alter future states, **errors compound across decisions**, and an agent must improve from experience **without being allowed to rewrite the physical rules that make execution safe**.」
+- **判据**：① **模型输出要被降级为"提案"并强制过确定性校验**——在错误会跨决策累积的长时程场景里，直接执行等于把安全规则交给概率性组件。② **改进与执行必须分在两个时标上**：慢时标改经验/策略，快时标只做校验与有界选择；混在一起会让"这次改得好"直接变成"这次就敢多做"。③ **"可以改进"与"可以改规则"是两件事**：安全规则要在可改进范围之外显式声明（本例的物理规则）。
+- **提升层**：规约（双时标结构）/ 工作流（长时程控制）。触发词：双时标修复、确定性模拟器包壳、模型输出降级为提案、bounded deterministic action selection、可改进 vs 可改规则。
+- **来源**：https://arxiv.org/abs/2610.02038

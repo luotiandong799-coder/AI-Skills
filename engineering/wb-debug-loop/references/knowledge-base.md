@@ -2569,3 +2569,60 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **判据**：① **并发预算必须先回答"算在谁头上"**——同一批子代理是分摊父会话预算还是各自有独立预算，决定了限流的生效位置；本例两种子代理（普通 vs Swarm collector）归属不同，混为一谈会让限流形同虚设。② **"不计入预算"的工作要显式列出**（本例异步阶段工作可重叠且不计入时间预算），同时说明它**不改变**什么（不降低并发上限、不改变会话串行化）——防止"不计入"被读成"不受限"。③ 与 r643A 的 n8n#37779「重试预算必须声明作用域」同族：那一条是重试的作用域，本条是并发的作用域，合成一条通则：**任何预算/上限都必须声明作用域与归属**。
 - **提升层**：工作流 / 资源预算。触发词：并发预算归属、父会话预算、组独立预算、不计入预算的显式列举。
 - **来源**：https://docs.openclaw.ai/concepts/queue.md
+
+
+## r644A · 上下文窗口的兜底值不是中性默认：它会移动下游阈值，未知模型静默落 8K 兜底会过早触发工具结果推迟与压缩（来源：github.com/crewAIInc/crewAI issue #8704，gh api 一手 200）
+
+- **原文事实**：`get_context_window_size()` 只查模型目录，目录里没有的模型（如新上的 OpenRouter 模型）**静默拿到 8192 token 兜底**，于是「tool results were deferred and context compacted far too early」。修复三件：① 显式值在所有 provider 与自定义 `BaseLLM` 上都生效；② 兜底对每个模型**只告警一次**；③ 该值不发给 provider API，但必须在 `model_dump` / checkpoint 恢复 / `to_config_dict` 往返中存活。测试覆盖「显式值被尊重、兜底告警一次、推迟与压缩门随之移动、校验、checkpoint 与 config-dict 往返」。
+- **判据**：① **兜底值的危害不在"不准"，在它同时是下游决策的输入**——同一个 8192 既决定推迟门也决定压缩门，于是"认不出这个模型"被静默翻译成"提前开始丢东西"。② **未知主键走兜底时必须发声**：每模型一次告警，而不是每次调用或完全静默。③ **兜底值必须可往返**：一个决定了下游门限的数，若在 dump/restore 往返中丢失，恢复出来的运行会用另一个门限，且看不出为什么。④ 与既有「配置校验分默认值侧静默忽略 / 显式值侧直接失败」互补：那条管"不合法的值怎么处置"，本条管"合法但认不出的输入落兜底后**会传导成什么**"。
+- **提升层**：工作流（上下文预算）/ 工具（模型能力探测）。触发词：context_window_size、8K 兜底、兜底值移动下游阈值、deferral 过早、兜底告警一次、门限往返存活。
+- **来源**：https://github.com/crewAIInc/crewAI/issues/8704
+
+## r644A · 恢复点必须快照「已投递但未消费」的队列：只快照已消费状态会让在途交接无报错地消失（来源：github.com/geekan/MetaGPT issue #2151 + #2155，gh api 一手 200）
+
+- **原文事实**：#2151 原文「recovery may complete **without an obvious serialization error** while silently dropping an in-flight handoff」——消息已投递进 Role 的接收队列但还没进 memory，Team 恢复时这部分丢失。修复 #2155 的做法：在既有 Pydantic checkpoint 路径里加入**非消费性快照**（non-consuming snapshot），保留 FIFO 顺序、ID、路由字段与具体消息类型；测试覆盖「子类型感知去重、恢复标记、memory 索引一致性、ignore_id=True」，并明确要求"恢复后的队列必须与已记录的消息对齐，已记录的消息不被再处理一次"。
+- **判据**：① **"已投递"与"已消费"是两个状态，恢复快照必须覆盖它们之间的那一段**——只存 memory 等于把在途窗口当成不存在。② **快照必须是非消费性的**：为了做快照而把队列读掉，快照本身就销毁了它要保护的东西。③ **恢复后要做对齐而不是重放**：保住顺序与 ID 是为了能判断"这条已经处理过"，否则恢复会变成重复处理。④ 与既有 dl「序列化没报错 ≠ 能恢复」互补：那条讲写入侧的自证判据，本条讲**读侧漏掉了哪一类状态**。
+- **提升层**：工作流（恢复语义）/ 记忆治理（在途状态）。触发词：未消费队列、非消费性快照、在途 handoff 静默丢失、FIFO 保序恢复、恢复后不对齐即重放。
+- **来源**：https://github.com/geekan/MetaGPT/issues/2155
+
+## r644A · 共享可变字段要改成「每任务独立实例」，但原有并发守卫必须保留继续大声失败（来源：github.com/crewAIInc/crewAI issue #7333，gh api 一手 200）
+
+- **原文事实**：`Agent` 只持有一个 `agent_executor` 字段，而 `create_agent_executor()` 会**改写这个字段**；两个 `async_execution=True` 任务分给同一个 agent 时，两者在这个字段上竞争，然后同时调用它 ⇒ 崩溃。修复是给每个 async task 自己的 executor。关键取舍原文：「The guard in `AgentExecutor` is **left as-is** — concurrent entry would still corrupt state, so it should keep failing loudly if anything else reaches it.」
+- **判据**：① **修"共享可变字段"的正确做法不是放宽守卫，而是消除共享**——第一处修的是成因，第二处保留的是兜底。② **守卫是最后一道防线，不是待清理的噪音**：把它一起删掉，等于把"我们以为不会再发生"当成了"不会再发生"。③ 顺带一条迁移纪律：`executor_class=CrewAgentExecutor` 仍可用但发 DeprecationWarning 且指向那个会失败的 executor ⇒ **废弃提示指向的目标本身必须是可用的**，别把用户导向一个已知会坏的路径。
+- **提升层**：工作流（并发执行）/ 工具（执行器契约）。触发词：每任务独立 executor、共享可变字段、并发守卫保留、失败要大声、废弃提示指向可用目标。
+- **来源**：https://github.com/crewAIInc/crewAI/issues/7333
+
+## r644A · 确定性恢复框架要先分类再实现：导航/遮挡/滚动/重定位/等待/超时/重试各是一类，且部分步恢复要带帧重映射与缺失元素守卫（来源：github.com/browser-use/browser-use issue #5307，gh api 一手 200）
+
+- **原文事实**：模块化重构里的恢复框架被显式枚举为「browser / navigation / overlay / scroll / relocate / wait / timeout / retry」八类；`agent/pipeline.py` 用 `StepPipeline` + `ContextPreparer` + `ActionPhase` + `PostProcessor` 收口 hooks、超时、步骤日志与单步生命周期。恢复侧三条：「Deterministic recovery framework（上述八类）」「Safer reruns: **partial-step resume**, **frame remapping**, **missing-element guards**」。
+- **判据**：① **恢复不能写成一坨"重试一下"**——先枚举"可能错在哪一类"，每类的恢复动作不同（重定位 ≠ 等待 ≠ 重试），混在一起就只能靠加长超时掩盖。② **部分步恢复必须配帧重映射**：只恢复"走到哪一步"而环境标识（帧/上下文）已变，恢复会把动作打到错的对象上。③ **缺失元素要显式守卫而不是让选择器静默返回空**——空结果被当成"无需操作"是最常见的静默通过。
+- **提升层**：工作流（恢复分类学）/ 工具（执行管线）。触发词：恢复分类八类、partial-step resume、frame remapping、missing-element guard、单步生命周期收口。
+- **来源**：https://github.com/browser-use/browser-use/issues/5307
+
+## r644C · 恢复是续跑不是重放：可能已产生副作用的失败 / 未完成工具 / 异步工作仍阻塞，恢复不重放原任务也不追加重试预算（来源：docs.openclaw.ai/concepts/agent-loop.md，2026-10-28 一手 200 / 48,687B）
+
+- **原文事实**：①「Failures that may have caused **side effects**, **unfinished tools**, and **asynchronous work** still block it; the continuation **does not replay the original task or increase the retry budget**.」②「Recovery uses the existing **bounded session retry budget** and remains cancellable; **refusals and inconsistent terminal responses do not qualify** for this continuation.」③「**Approval waits pause the unused attempt budget**; resolving all pending approvals **resumes that same budget**.」④「In Control UI chat, recovery **stays beside the working indicator** rather than creating a message for every failed attempt.」⑤「A compaction failure label does not turn that unfinished tool timeout into a paused run; completed tool results remain in the transcript.」
+- **判据**：① **"恢复"的语义边界必须先定死**：重放原任务会把已产生的副作用再做一遍，追加重试预算会让"恢复"变成绕开预算的后门 ⇒ 两者都要显式禁止。② **审批等待暂停的是"未用的那部分"预算，解决后恢复的是同一份预算**——把等待当成消耗会惩罚等人，把等待当成重置会让预算翻倍。③ **恢复的失败尝试不该刷屏**：为每次失败新建一条消息，会让"一次任务"在界面上变成 N 次，掩盖真正的进度。④ **不是所有失败都有资格进恢复**：拒答与不一致的终态响应被显式排除 ⇒ 恢复的准入清单要写死，不能靠"看起来卡住了"来判断。⑤ **压缩失败标签不能改写未完成的工具超时**：两者在 transcript 里的后果不同（已完成工具结果必须保留）。
+- **提升层**：工作流（恢复语义）/ 可观测性（恢复留痕形态）。触发词：恢复不重放原任务、不追加重试预算、审批等待暂停未用预算、恢复不新建消息、拒答无恢复资格、压缩标签改写超时。
+- **来源**：https://docs.openclaw.ai/concepts/agent-loop.md
+
+## r644C · 压缩失败要走两条分叉：自动重试一次、手动只报不重试；provider 失败回落内置 summarizer 等于换了语义（来源：docs.openclaw.ai/concepts/compaction.md，2026-10-28 一手 200 / 34,905B）
+
+- **原文事实**：①「In `mode: "default"`, automatic compaction **retries invalid summary output once**; **manual compaction reports the failure without retrying**.」②「A configured compaction provider that fails or returns an empty result, **including a provider-local timeout without caller cancellation**, falls back to the **built-in summarizer**.」③「The summary allowance is also limited by compaction's **reserved budget**, so increasing `maxTokens` alone may not raise it.」④「If the **recovery compaction itself fails** … the reply says so and suggests trying again or running `/compact`.」⑤「If retained user messages still exceed that budget, client-side compaction **selects a smaller recent tail instead of retrying the same oversized window**.」
+- **判据**：① **自动与手动的失败语义必须不同**：自动场景没人盯着，重试一次是合理的；手动场景用户就在等，静默重试会让"点了没反应"变成"等了两倍时间且不知道为什么"。② **回落内置 summarizer 是一次语义替换，不是降级保活**——用户配的压缩器（可能带领域规则）被换成通用摘要器，出来的上下文语义变了，但没有任何错误 ⇒ 回落必须可见。③ **预算不足时的正确动作是改小窗口，不是重试同一个超大窗口**：同一个输入再跑一次只会再失败一次。④ **"调大 maxTokens 就能提高摘要额度"是错觉**：额度同时受保留预算约束，单改一个旋钮不生效。
+- **提升层**：工作流（压缩失败分叉）/ 工具（回落可见性）。触发词：自动重试一次 vs 手动不重试、回落内置 summarizer、provider-local timeout、保留预算限制额度、改小窗口不重试、恢复压缩失败要说出来。
+- **来源**：https://docs.openclaw.ai/concepts/compaction.md
+
+## r644C · 压缩会改变会话身份：后继会话必须由 sessionTarget 显式指出，下一次重试/轮次必须改用它（来源：docs.openclaw.ai/concepts/context-engine.md，2026-10-28 一手 200 / 31,610B）
+
+- **原文事实**：「When compaction changes the **active session identity**, `result.sessionTarget` (a typed `ContextEngineSessionTarget` carrying the session identity and store scope) identifies the **successor session that the next retry or turn must use**; `result.sessionId` mirrors the successor id.」
+- **判据**：① **压缩不是"内容变短"这一个副作用**——它可能同时产生一个新的会话身份，重试若仍用旧 id 会打到已经不存在的会话上，或者静默在新会话里重跑一遍。② **"下一个动作用哪个会话"必须由返回结构显式带出，不能靠调用方记住**：身份变更发生在被调方内部，调用方没有别的途径知道。③ 与既有 dl「序列化没报错 ≠ 能恢复」互补：那条管写入侧自证，本条管**身份变更后的指向**。
+- **提升层**：工作流（重试指向）/ 工具（上下文引擎返回值）。触发词：压缩改变会话身份、sessionTarget 后继会话、重试须改指向、sessionId 镜像、store scope 随行。
+- **来源**：https://docs.openclaw.ai/concepts/context-engine.md
+
+## r644C · 重试只覆盖设置阶段：脚本启动之后的失败不进 setup 重试；排队溢出丢最老但保留摘要并注入为合成后续（来源：docs.openclaw.ai/automation/cron-jobs/payloads.md 46,242B + docs.openclaw.ai/concepts/queue.md 26,468B，2026-10-28 一手 200）
+
+- **原文事实**：①「**A failure after the script starts never triggers this setup retry.**」②「Throws, timeouts, exhausted tool budgets, invalid results, and `nextCheck` without pacing are **normal automation run errors**: they enter run history, backoff, and failure-alert handling **without persisting returned state**.」③ queue：`drop: "summarize"`（默认）——「drop the oldest queued entries as needed, **keep compact summaries**, and **inject them as a synthetic followup prompt**」。④「When the next queued follow-up is from the **same sender and route** … it **takes over the outstanding request**; otherwise a recovery turn starts on the stalled turn's route.」⑤「Custom-session agent turns enter the session's ordinary turn queue and **wait for active work before preparing context**, so a scheduled tick cannot invalidate an in-progress compaction.」
+- **判据**：① **重试的作用域必须写清楚覆盖哪一段**：本例只覆盖 setup，脚本一旦启动就进入"普通运行错误"通道（历史 + 退避 + 告警），不重试 ⇒ 把两段混在一起会让已跑了一半的脚本被重跑。② **排队溢出不能是硬丢**：丢最老的同时保留紧凑摘要并作为合成后续注入，让被挤掉的内容仍以摘要形式到达；纯丢弃会让"排队太多"变成"任务静默消失"。③ **同发送者同路由的 follow-up 可以接管未完成请求**——这是一个显式的"并单"规则，不声明就会出现两个并行恢复互相覆盖。④ **定时触发要等活跃工作做完再准备上下文**——否则一次 tick 会让进行中的压缩失效，把长任务打成碎片。
+- **提升层**：工作流（重试作用域与排队策略）/ 工具（自动化运行语义）。触发词：setup 重试边界、脚本启动后不重试、drop summarize 合成后续、同发送者接管在途请求、tick 等活跃工作、不打断进行中压缩。
+- **来源**：https://docs.openclaw.ai/automation/cron-jobs/payloads.md

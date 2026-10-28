@@ -4683,3 +4683,39 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - **判据**：① **门禁必须分「阻断」与「咨询」两级**——只有致命项（字面密钥）才拒写，风格类问题阻断会拖慢迭代；混在一级会让真正的风险被风格噪音淹没。② **拒写必须点名三要素：文件、行、规则**，否则作者无从修起。③ 咨询项本身是一份**可直接对标的质量清单**：描述 >160 字节或以 "This skill" 开头、正文 >250 行或 12 KB、强调词、≥3 个 Never/Don't 步骤、更新说明或日期——这些恰好都是可机检的项。④ 错误信息要**直接给出修法**（重命名 / 改 frontmatter / 缩短 / 删掉被标记的行），而不是只报"不合规"。⑤ 与本项目既有纪律对齐：正文行数红线（≤200 触发下沉 / >500 硬异常）与 description 长度上限都是同一类机检门禁，可复用其「阻断 vs 咨询」的分级思路。
 - **提升层**：技能工程 / 质量门禁。触发词：致命拒写点名三要素、Advisory not blocking、描述 160 字节、正文 250 行/12KB、≥3 个 Never 步骤、错误即修法。
 - **来源**：https://docs.openclaw.ai/skill-workshop.md
+
+
+## r644A · 技能正文应写成确定性执行阶段 + 肯定式约束，而不是对话式散文；回退矩阵要枚举运营态并对用户静默错误（来源：github.com/anthropics/skills issue #2028，gh api 一手 200）
+
+- **原文事实**：重构目标原文「the prompt is reorganized from **conversational prose into a deterministic, stage-based execution specification**」，「**While preserving 100% of the original business logic**, URLs, JSON schema fields, and fallback behaviors」。并引入 **Fallback Routing Matrix**：显式定义 4 个运营态（direct match / broad team-rollout query / 0 direct matches with confirmed learning intent / failed-stale-inaccessible catalog fetch），同时「enforcing **silent error handling**（omitting network telemetry or staleness status from **user-facing output**）」。另保留精确阈值不变（`staleAfter` 优先级、30 天 `generatedAt` 兜底窗口、每会话 1 次抓取上限）。
+- **判据**：① **散文式技能正文把顺序与停止条件留给模型推断**，阶段式规格把它们写成结构 ⇒ 同一份内容，后者的执行方差更小。② **"保留 100% 业务逻辑"是重构的验收项，不是附带说明**——改写法最容易 silently 改掉阈值与回退行为，必须逐项对照。③ **对用户静默错误 ≠ 对日志静默错误**：面向用户的输出里省略网络遥测与陈旧状态是对的，但状态本身必须仍在内部可见，否则"看起来正常"会掩盖失败分支。
+- **提升层**：可复用 Skill（技能正文形态）/ 工作流（回退矩阵）。触发词：确定性执行阶段、肯定式约束、conversational prose 反模式、Fallback Routing Matrix 四态、对用户静默错误、改写保留 100% 逻辑。
+- **来源**：https://github.com/anthropics/skills/issues/2028
+
+## r644B · harness 模块要按「对性能与效率的显著性」剪枝：反复修补会让复杂度只增不减（来源：arxiv.org/abs/2610.04178《SHarP: Saliency-based Pruning of Agent Harnesses》+ arxiv.org/abs/2609.32459《Beyond the Model: Demystifying Harness Effects》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：SHarP 动机句「to meet task requirements and address failures, these systems are often **iteratively refined by amending and patching their instructions, tools, and workflows**, continuously increasing harness complexity. It is therefore unclear whether some resulting harness modules are **redundant, introducing substantial token overhead with little, if any, performance gain**.」方法：先识别 tools / instructions / support 三类模块，再按各模块对 performance 与 efficiency 的 **saliency** 剪枝。2609.32459 侧证实 harness 本身（非基座模型）显著影响结果：两个 harness × 十个模型 × 三个基准，并构建 NanoHarness 逐组件（含 tool registry 等五类）分析。
+- **判据**：① **"为了修一个失败加一块"是单向阀**——每块都在当时有理由，累积起来却没人再问它是否还有用 ⇒ 需要显式的减法机制。② **剪枝判据要双目标（性能 + 效率）**：只看性能会把"无害但很贵"的模块全留下，只看效率会剪掉低频但关键的模块。③ **"基座模型不变、只换 harness 分数就变"这件事本身要被测量**，否则技能/harness 的收益与模型升级的收益会被混为一谈。
+- **提升层**：可复用 Skill（harness 体检）/ 工作流（减法机制）。触发词：harness 剪枝、saliency 双目标、冗余模块 token 开销、只增不减的复杂度、harness vs 模型效果分离。
+- **来源**：https://arxiv.org/abs/2610.04178
+
+## r644B · 外部策略记忆：把修正做成「路由局部的自然语言更新」并有界聚合，不动模型参数也不动程序结构（来源：arxiv.org/abs/2609.33379《NLPG: Natural-Language Policy Gradients for Self-Evolving Language Agents》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：「NLPG diagnoses execution traces, **propagates downstream feedback backward through the module graph**, and converts recurring failures into **route-local natural-language corrections** that are aggregated into **bounded policy updates** for subsequent executions.」动机是「existing approaches typically rely on scalar rewards or repeatedly modify entire prompts, making it difficult to **capture and reuse procedural improvements while preserving a frozen agent**」。
+- **判据**：① **修正在哪条路由上发生，就只改那条路由**——整体改提示词会把一个局部缺陷扩散到本来正确的路径上。② **反馈要沿模块图反向传播**，而不是只看最终标量的对错：同一个失败分数在不同模块上对应不同的修正。③ **更新必须有界**：策略记忆若可无限增长，就等于把"经验"变成了一条无人审查的、会自我强化的指令源。④ 与既有 sa「文本学习率预算 + 被拒编辑缓冲 + 留出集严格改进门」互补：那套管"改多少、改了被拒怎么办、什么算变好"，本条给出**改在哪一个粒度上**（route-local 而非整份提示词）。
+- **提升层**：可复用 Skill（策略记忆）/ 工作流（反馈归因）。触发词：route-local 修正、模块图反向传播、有界策略更新、冻结 agent 也能改进、NLPG。
+- **来源**：https://arxiv.org/abs/2609.33379
+
+## r644B · 工具库与工具使用策略必须用同一个可验证信号共同进化：只进化一侧，对应那类失败就不可纠正（来源：arxiv.org/abs/2610.17740《Coupled Harness--Model Evolution for Scientific Equation Discovery》2026-10-28 一手 abs 页 200）
+
+- **原文事实**：「Such a discovery system has two parts that must work together: a library of **executable computational tools** and the model's **tool-use policy** … Yet existing systems adapt only one part, keeping either the toolset or the model fixed, which leaves **the corresponding failures uncorrectable**.」做法：从同一可验证的 fit-error 信号出发，工具进化阶段让 agent 通过诊断自身失败来生长工具库（能力缺失时新增工具、选错时修订选择规则）。
+- **判据**：① **失败要先分"缺能力"还是"用错能力"**——前者要加工具，后者要改选择规则；只开一条进化通道，另一类失败会永久停留。② **两侧必须共用同一个可验证信号**，否则工具进化会朝自己的目标走（工具更多）、策略进化朝另一个目标走（调用更少），互相抵消。③ 与既有 sa「技能修订三旋钮（预算/被拒缓冲/离线巩固）」互补：那条管**一条进化通道内部怎么收敛**，本条管**两条通道必须同时存在且同信号**。
+- **提升层**：可复用 Skill（自进化架构）/ 工作流（失败二分）。触发词：工具与策略共同进化、单侧进化留不可纠正失败、共同可验证信号、缺能力 vs 用错能力。
+- **来源**：https://arxiv.org/abs/2610.17740
+
+## r644C · 能力声明要按生命周期方法求交集，未声明/未知键永不注入；且某些功能位会强制覆盖显式 opt-in（来源：docs.openclaw.ai/concepts/context-engine.md，2026-10-28 一手 200 / 31,610B）
+
+- **原文事实**：①「OpenClaw **intersects the declaration with the fields available for each lifecycle method**, so **undeclared or unknown keys are never injected**.」②「these direct API-key routes, **memory-extraction (memory flush) turns always disable native compaction and checkpoint replay, even with explicit opt-in**, so extraction can use the **unsummarized history**.」③ 当压缩改变活动会话身份时，`result.sessionTarget`（带会话身份与 store scope 的类型化 `ContextEngineSessionTarget`）标识**下一次重试或轮次必须使用的后继会话**，`result.sessionId` 镜像该后继 id。
+- **判据**：① **能力声明的作用域是"方法级"而不是"全局级"**——同一个引擎在不同生命周期方法上可注入的字段不同，按全局声明注入会把不该出现的键塞进去。② **"未声明/未知键永不注入"要写成默认而非例外**：宽容注入会让上游新增字段直接变成下游未审的行为。③ **显式 opt-in 不是万能的**：某些功能位（本例记忆抽取必须看未摘要历史）在语义上与压缩/重放互斥，此时必须强制覆盖用户的 opt-in 并**说明为什么**，否则抽取拿到的是已经被摘要过的历史，抽出来的东西系统性失真。
+- **提升层**：可复用 Skill（能力声明契约）/ 工具（上下文引擎接口）。触发词：方法级能力交集、未知键不注入、显式 opt-in 被强制覆盖、未摘要历史、sessionTarget 后继会话。
+- **来源**：https://docs.openclaw.ai/concepts/context-engine.md
