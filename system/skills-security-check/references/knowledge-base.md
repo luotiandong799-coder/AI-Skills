@@ -1883,3 +1883,18 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 一手原文：对任何处理不可信内容的 agent/界面，**默认拒绝这四个控制面工具**：`gateway`、`cron`、`sessions_spawn`、`sessions_send`（`gateway` 因配置读取会暴露 secret 与宿主拓扑、更新会改变运行中的安装、清理会永久退役合格的回滚副本而保持 owner-only）。`commands.restart=false` 关闭 `/restart`、`/update`、外部聊天中的 gateway 更新/重启动作，以及**外部 `SIGUSR2` 重启请求**；但**清理（cleanup）不会停止 Gateway，也不依赖这个 flag**。
 - 一手补充（节点远程执行）：gateway 的 `nodes.commands.deny` **deny 列表只按精确节点命令名匹配（例如 `system.run`），不匹配命令载荷内部的 shell 文本**；一个重连的节点宣告了不同的命令列表**本身并不构成漏洞**——只要 gateway 全局策略与该节点自身的 exec 审批仍然执行边界。
 - 可复用判据：① 停机/禁用开关必须**逐动作声明覆盖范围**，并显式列出"不受此开关约束"的动作（本例 cleanup）；② **匹配粒度必须与威胁模型对齐**：命令 ID 级 deny 不等于命令载荷级 deny，声明覆盖面时不能跨粒度承诺。
+
+## r641B · 安全基准要按公开攻击框架做「类别映射」枚举，而不是按已知个案积累（来源：arXiv 2603.10387《Don't Let the Claw Grip Your Hand: A Security Analysis and Defense Framework for OpenClaw》，2026-10-28 r641B 经 `arxiv.org/abs/2603.10387` 取 `citation_abstract` 一手）
+- **实证**：原文「By testing **47 adversarial scenarios across six major attack categories derived from the MITRE ATLAS and ATT&CK frameworks**, we have demonstrated that OpenClaw exhibits significant inherent security issues. It primarily **relies on the security capabilities of the backend LLM** and is highly susceptible to s[uggestion]…」
+- **判据**：① **评测集的覆盖度要由外部框架保证，不能由作者见过的案例保证**——按 MITRE ATLAS/ATT&CK 的类别逐格填场景，才有"哪一格还没测"这个问题的答案；按个案积累的基准只能回答"这些我都测过了"。② **"依赖后端模型的安全能力"本身就是结论**——平台层不自带约束时，安全面全部外包给模型，任何模型侧的能力波动都会直接平移成平台的安全波动 ⇒ 评估一个 agent 框架时，先问"去掉底层模型自带的拒答，还剩什么"。③ 与既有 Cap88「扩展机制中性、不自带安全约束」的关系：本条是它的**实证样本**（开源框架实测 47 场景），入账作佐证，不重复立点。
+- **提升层**：安全边界 / 评测方法。触发词：47 adversarial scenarios、MITRE ATLAS 类别映射、六类攻击、安全依赖后端 LLM、框架化枚举而非个案。
+
+## r641C · 同一个工具上的读/改/清三种动作风险等级不同，必须各自单独准入（来源：docs.openclaw.ai `gateway/security/tool-permissions.md` 15,512B，2026-10-28 r641C 一手 curl 200 逐串命中）
+- **实证**：原文「The `gateway` tool stays **owner-only** because **config reads can expose secrets and host topology**, **updates change the running installation**, and **cleanup permanently retires eligible rollback copies**.」「**Each maintenance action requires an explicit owner request or operator-scheduled admission.**」
+- **判据**：① **同一工具上的三个动词是三个不同的风险面**——读=信息泄露、改=运行态变更、清=销毁回滚副本（不可逆）；把它们归到一个"gateway 权限"下授予，等于用最重的那一档给最轻的动作，或用最轻的那一档放行最重的动作。⇒ **权限粒度要落到"能力 × 动词"，不是"能力"**。② **维护动作要求"一次性显式请求"而非长期持有权限**——每个动作各自准入，使"曾经批准过"不构成下一次的凭据。③ 与既有「审批挂在哪一级」（Cap37，工具级 vs 流程级）的分工：那条管挂载点，本条管**同一挂载点内部的动词拆分**。
+- **提升层**：安全边界 / 治理。触发词：读改清三种风险面、能力×动词授权、维护动作一次性准入、owner-only gateway、清理销毁回滚副本。
+
+## r641C · 沙箱只钳住自己的进程树，不阻碍跨 agent 读取会话；工具档位不收窄会话工具的可达面（来源：docs.openclaw.ai `gateway/security/tool-permissions.md` 15,512B，2026-10-28 r641C 一手 curl 200 逐串命中）
+- **实证**：原文「**Tool profiles do not narrow session-tool reach**, and sandboxing only clamps the sandboxed caller to its **spawn tree**; an **unsandboxed agent can still read a sandboxed agent's sessions**.」「Session visibility is Gateway-wide and agent-to-agent messaging is **on by default**, so pair persona profiles with `tools.sessions.visibility` and `tools.agentToAgent` when agents on one Gateway should not see or message each other.」
+- **判据**：① **"给它上了沙箱"不等于"它跟别人隔开了"**——沙箱的收窄方向是**纵向**（自己这棵进程树能碰什么），跨 agent 的**横向**读取（会话可见性、互发消息）是另一组开关，且**默认全开**。⇒ 多 agent 部署的横向隔离必须显式配 `sessions.visibility` + `agentToAgent`，只配沙箱会留下"彼此可读全部会话"的默认面。② **工具档位（profile）与会话工具是两个面**——把某 agent 设成只读档，它调用会话工具的可达面并不随之收窄 ⇒ 档位是"这类工具给不给"，不是"所有面一起收"。③ **默认开着的能力要在文档里点名**——"agent-to-agent messaging is on by default" 这类句子才是真正的暴露面声明，消灭它只能靠显式配置，不能靠"我没开过"。
+- **提升层**：安全边界。触发词：沙箱只钳进程树、纵向收窄不横向隔离、未沙箱 agent 可读沙箱会话、sessions.visibility、agentToAgent 默认开、档位不收窄会话可达面。

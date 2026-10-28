@@ -4644,3 +4644,18 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - 两个突出结论（一手）：① 在已采用某种过程的框架之间存在**收敛**——孤立提示失去中心地位，而**持久产物、工作契约、可追溯性、人工评审**成为降低歧义与协调 agent 的机制；② **没有一个框架强力覆盖全部六个维度**，暴露出**过程深度与跨 agent 可移植性之间的结构性权衡**。
 - 复现风险清单（一手）：规格与代码之间的漂移、对生成产物的过度信任、社区扩展的脆弱性、平台依赖、缺乏覆盖完整过程的基准。
 - 可复用判据：评估/设计一个"给 agent 用的过程框架"时，用这六维打分而不是看功能清单；**主动接受"深度 vs 可移植性"不可兼得**，并显式声明本框架偏哪一侧。五项风险应作为过程框架的固定自检项，其中"对生成产物的过度信任"与"社区扩展脆弱"直接对应验证面与依赖治理面。
+
+## r641A · 能力适配层的「有效能力」必须是源元数据的派生视图，不可回写；类型口径要在 schema 与提示两侧同时成立（来源：langgenius/dify #44962 + #44968 2026-10-28 r641A 一手 gh api 200）
+- **实证**：原文「**Expose the prepared adapter's effective structured-output capability without mutating provider metadata**, and keep native/prompt routing based on the **original provider schema**.」「**Preserve boolean types in native schemas and prompt instructions.**」「Boolean fields can also fail final schema validation because Dify **converts native boolean schemas to strings** and instructs prompt-based responses to use strings.」「Polling retains provider-declared capabilities, and strict result validation remains enabled.」
+- **判据**：① **适配层算出的"实际能用"是派生视图，绝不能写回不可变的源元数据**——写回的那一刻，源与派生两个真相合一，后续任何"按原始声明判定"的分支都失效；正确形态是**暴露派生值、保留源值、路由按源值判定**。② **类型转换必须在"声明侧"与"请求侧"同时改**——只把 native schema 的 bool 转成 string、却忘了提示也要求 string（或反之），结果是运行时产出与终态校验各按一套口径，报错出现在最下游的 schema 校验而不是转换那一处。⇒ 凡有"兼容层做类型降级"的地方，校验规则与生成提示必须同源生成。③ **降级通道要保留严格校验**——fallback（prompt 模式）不等于放宽验收，"strict result validation remains enabled" 是让降级不变成放水的关键。
+- **提升层**：工具 / 工作流。触发词：派生视图不回写源元数据、provider metadata 不可变、布尔类型双侧一致、schema 与提示同源、降级通道保留严格校验、native/prompt 路由按源 schema。
+
+## r641A · 动态选项必须有静态兜底：目录不可达时降级，而不是让整个能力不可用（来源：FlowiseAI/Flowise #6509 2026-10-28 r641A 一手 gh api 200）
+- **实证**：原文「Includes an `asyncOptions` **Model Name** loader (`listModels`) that lists chat-capable models live from `GET /v1/models`, **with a static fallback when the catalog is unreachable**.」
+- **判据**：① **"实时拉取选项"把上游可用性变成了本节点的前置依赖**——上游一抖，这个能力从"可选列表不新"升级成"整个节点不可用"；必须有静态兜底把降级止在"列表陈旧"这一层。② **兜底内容要声明自己的陈旧性**——静态列表是"上次已知可用"，不是"当前全部"；把它当实时列表展示会让用户以为上游只有这些。③ 与既有「配置读取失败应 fail-closed 拒绝而非回落宽路径」的分工：那条管**安全凭据/策略**（回落即放宽 ⇒ 必须拒绝）；本条管**选项目录**（回落只是信息变旧 ⇒ 应降级而非拒绝）。**同是"取不到"，一个拒绝一个降级，分界是回落会不会放宽安全面。**
+- **提升层**：工具。触发词：动态选项静态兜底、catalog 不可达降级、asyncOptions、实时列表陈旧性、取不到时拒绝 vs 降级的分界。
+
+## r641C · 同步/发布默认「保留目标侧引用」= 静默分叉：新对象悬空、旧引用不动、全程无报错（来源：www.activepieces.com/docs/install/reference/breaking-changes.md 77,945B，2026-10-28 r641C 一手 curl 200 逐串命中）
+- **实证**：原文「Applying a release (Environments / Git Sync) or running Project Replace used to **keep whatever connection the destination step already pointed at**. A step whose connection changed in the source **silently kept the old one**, and the connection the release created for it stayed **unreferenced with status `MISSING`**.」；同类「Because the field was renamed, **a step configured before this release loses its tag value** and shows 'Tags' as an empty required field.」
+- **判据**：① **合并方向的默认值必须是显式的，沉默的默认值会制造双份真相**——"保留目标侧"让源已改的引用在目标侧不动，同时新对象悬空标 `MISSING`：两个状态长期不一致，而两边各自看都"正常"。⇒ 发布/同步/迁移类操作必须把"源覆盖"与"目标保留"做成显式选择，不能用不报错的缺省。② **悬空状态要给可机读标记**（`MISSING`）而不是靠人发现 ⇒ 任何"引用创建成功但没被指向"的情况都要有独立状态字段。③ **字段重命名即数据丢失**——旧配置在改名后丢值且表现为"必填项为空"，而不是"配置了但读不到" ⇒ 改名必须伴随迁移或旧键回读，否则用户看到的是自己没填而不是系统丢了。
+- **提升层**：治理 / 工作流。触发词：同步方向静默默认、保留目标侧引用、MISSING 悬空连接、双份真相、字段重命名丢值、发布合并方向显式化。

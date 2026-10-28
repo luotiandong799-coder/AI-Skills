@@ -2454,3 +2454,23 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 一手原文：**若一次重启耗尽其排空预算，取消仍保留重启恢复能力——即使 provider 报告了错误，且该 turn 在关闭过程发现它之前就已结算。** 另：显式 session Stop/cancel 保持终态性，崩溃循环断路器、恢复重试预算、当前权限校验、归档/重置排除在其后仍然适用；Gateway 停止接受新工作后等待活动 agent turn 与后台任务完成，**上限为排空预算（默认 5 分钟）**，因此大多数重启根本不打断任何东西。
 - 可复用判据：**"关闭期的取消"与"用户显式取消"不是同一事件**——前者必须保留可恢复性，后者才是终态。把两者合并处理会让"为了关停而取消"永久丢掉本可恢复的工作。
 - 补充判据：设计一个"默认 5 分钟排空"这类上限时，应同时给出"大多数情况下实际打断为零"的观测，避免把上限当作常态开销。
+
+## r641A · 失败要按「会不会被重投递」分极性：断开类让位给副本，活连接超时才宣告失败（来源：activepieces/activepieces #16896 2026-10-28 r641A 一手 gh api 200）
+- **实证**：原文「If a worker's socket drops while its `getAgentConfig` RPC is in flight, the call rejects with `RpcTimeoutError`… At that point the worker can't tell whether the API already locked the conversation for the run. It used to fail the flow step anyway」；修复后「Now a flow-step run whose config RPC failed because the socket dropped (`RpcTimeoutError.disconnected`) **exits quietly**. A plain timeout on a **live socket is never redelivered**, so it still fails the step」；两种后果分别是「the redelivered copy runs the step and the flow completes」与「no worker heartbeats it, so `CHAT_STALE_SWEEP` resumes it」。
+- **判据**：① **"不知道有没有生效"的失败必须让位给重投递副本，而不是抢先宣告失败**——抢先宣告会把"其实已经跑成"变成"报错 + 一个孤儿副本"双重损失。② **判定依据必须是错误里携带的重投递语义（`disconnected` vs `timeout`），不是笼统的"超时"** ⇒ 错误分类要带"这条错误会不会引发重试/重投递"这一元信息；只有耗时数字的错误类型逼着调用方去猜，猜错方向就同时制造失败与重复。③ **让位不是放任**：让位必须有一条兜底路径（本例是 stale sweep 扫描无人心跳的锁），否则"安静退出"会退化成静默丢失。
+- **提升层**：工作流 / 可靠性。触发词：RpcTimeoutError disconnected、重投递元信息、让位给副本、活连接超时才失败、未知生效状态不宣告失败、让位需兜底扫描。
+
+## r641A · 重试资格由幂等性分界：会创建新对象的那一次不重试，只读取的那一次才退避（来源：langchain-ai/langgraph #9462《fix(sdk-py): retry failed stream reconnects with backoff》2026-10-28 r641A 一手 gh api 200）
+- **实证**：原文「**The first POST still raises on any error, since retrying it could start a duplicate run.**」；重连侧「retry a reconnect that fails to open: 429, 5xx, transport error, non-SSE」「sleep 1, 2, 4, 5, 5s (+ up to 25% jitter) before each reconnect」「**reset the 5 attempts once a reconnect yields an event**」；代价「A run created without `stream_resumable=True` can't replay what it sent while the client was away, so it now loses about a second more of events. Resumable runs lose nothing.」
+- **判据**：① **重试资格由副作用性质决定，不由"这次失败了"决定**——首次 POST 会创建新 run（不幂等）故一律不重试，reconnect GET 只读（幂等）故可退避重试 ⇒ 同一条调用链上两个方向的错误要用两套重试策略，写成一套等于在写操作上制造重复对象、在只读操作上放弃恢复。② **成功要重置计数，不是只在上层重置**——"reset the 5 attempts once a reconnect yields an event" 让预算按"连续失败段"计而不是按单次流的一生累计 ⇒ 否则长时间存活的流会被早期几次抖动耗尽预算。③ **退避的代价必须声明到能观测的粒度**（非 resumable 的 run 会多丢约一秒事件，resumable 不丢）⇒ 重试改动的可观测副作用要写出来，否则"更稳了"掩盖了"丢得多了一点"。
+- **提升层**：工作流 / 可靠性。触发词：幂等性决定重试资格、首次 POST 不重试防重复 run、只读重连可退避、成功重置计数、退避代价显式化、resumable 与非 resumable 差异。
+
+## r641A · 错误处理器自身失效会「取代」原始错误且静默跳过处理逻辑（来源：langchain-ai/langgraph #9338 2026-10-28 r641A 一手 gh api 200）
+- **实证**：原文「A custom ToolNode error handler annotated with a valid union of exception types crashes when its module uses `from __future__ import annotations`. The resulting `AttributeError` **replaces the tool error** instead of invoking the handler. The same handler works without postponed annotations.」
+- **判据**：① **错误处理器必须自检**——处理器自身抛出的异常会顶替被处理的那个错误，现象是"报了一个完全无关的错"且原始错误永久丢失 ⇒ 排障时看到"A 处报错但栈指向处理器"，第一结论应是处理器挂了，不是 A 真的有问题。② **延迟求值注解（`from __future__ import annotations`）下，任何运行时反射类型签名的代码都要显式解析 stringified annotations**，否则注解静默变成字符串、类型匹配静默失败、处理器静默不被调用——**没有一行报错**。③ 与既有「失败要按谁不可判定分极性」互补：那条管守卫该阻塞还是该警告，本条管**守卫自己坏了要不要报警**——答案是必须，且不能被当成被守卫对象的失败。
+- **提升层**：工具 / 可靠性。触发词：错误处理器自检、AttributeError 取代原始错误、延迟注解反射失效、from __future__ import annotations、处理器静默不被调用。
+
+## r641A · 崩溃恢复与停滞处理争用同一行时，胜负必须由「条件写」仲裁而不是到达顺序（来源：n8n-io/n8n #40166《fix(core): Preserve recovered execution data on stalled-job crashes》2026-10-28 r641A 一手 gh api 200）
+- **实证**：原文「In queue mode, Bull reports a job as stalled when its worker dies. Before this PR, the stalled-job handler could **replace crash-recovery data with an empty run**」；修复「This PR persists the crash transition and the error payload in **one guarded write**. If crash recovery transitioned the execution first, the write **matches no rows** and the stored data stays.」；另附「The guarded write no longer rewrites `storedAt`.」「A store-read failure in the guarded write is reported. The handler finalizes without hooks. The claim rolls back, so crash recovery…」
+- **判据**：① **两个都合法的写路径争用同一条记录时，胜负必须由"条件写"判定，不能由谁先到判定**——后到者匹配 0 行即静默放弃（而不是覆盖），这样"保留更完整的那份数据"成为结构性保证而不是时序运气。② **恢复态的写入不能顺带改写无关字段**（`storedAt`）⇒ 修复路径的写集合要最小化，否则"抢救数据"会顺手污染取证字段。③ **读失败要上报并回滚 claim，且此时不跑 hooks** ⇒ 失败路径上"少做一点"比"尽力做全套"更正确：hook 是以"这次真的崩了"为前提的副作用，前提不成立时跑它就是误报。
+- **提升层**：工作流 / 可靠性。触发词：guarded write 仲裁、崩溃恢复与 stalled 争用、匹配 0 行即让位、不重写 storedAt、读失败回滚 claim、失败路径不跑 hook。
