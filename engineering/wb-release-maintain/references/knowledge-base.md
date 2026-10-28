@@ -1125,3 +1125,15 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **判据**：① **「重建」与「发布」必须是两个可分离的动作**：重建可以跨停机完成，但只有完整产物才能进入发布位——这是防止"重建到一半把可用的旧版本顶掉"。② **续建而非重来**：下次同步接着做并纳入期间的源变更，等于把重建变成可恢复的长事务。③ **单批被拒即中止整轮索引**，而不是"跳过坏批继续"——后者会产生一个看起来完整、实际缺块的产物。④ 清理类动作要**异步化**，避免二次阻塞（呼应 r643A 的 openclaw#160959：阻塞型工作会让最需要响应的时刻恰好无响应）。
 - **提升层**：发布治理 / 生命周期。触发词：重建不替换已发布、续建、仅发布完整产物、单批被拒即中止、清理异步化。
 - **来源**：https://docs.openclaw.ai/cli/memory.md
+
+## r645A · 构建期安装来源必须钉死版本，否则制品标签与内部实装版本不一致（来源：api.github.com/repos/FlowiseAI/Flowise/pulls/6670，gh api 一手 200，逐串命中 "npm install -g flowise which installs whatever is latest on npm" 与 "image tagged 3.1.3 running CLI 3.1.2"）
+- 一手事实：Dockerfile 用 `npm install -g flowise`（不指定版本）拉当前最新，导致镜像 tag 与容器内实际 CLI 版本不一致（镜像标 3.1.3、实装 3.1.2）。修复是引入 `FLOWISE_VERSION` build arg 并写死到 `npm install -g flowise@${FLOWISE_VERSION}`，发版只需改默认值。
+- 提升层：工具（构建可复现）/ 工作流（发布版本治理）。
+- 判据：① **构建期不得出现浮动版本安装**——任何 `-g pkg`、`latest`、无锁安装都会让「制品标签」与「制品内容」分叉，且分叉只在运行时暴露；② **版本要作为 build arg 由发版流程统一注入**，而不是散落在 Dockerfile 里；③ 版本不一致的排查成本集中在「用户报的行为与 tag 对不上」，属于最难定位的一类发布缺陷。
+- 触发词：npm install -g 浮动版本、镜像 tag 与实装不符、FLOWISE_VERSION build arg、构建期不锁版本、发版注入版本。
+
+## r645A · 依赖 pin 分级：外部用范围、内部用精确，且下界必须用最低分辨率实测（来源：api.github.com/repos/browser-use/browser-use/pulls/6002，gh api 一手 200，逐串命中 "Replaces exact == pins with >=minimum,<next_major ranges for external dependencies. Internal packages ... keep exact pins" 与 "uv pip install --resolution lowest-direct"）
+- 一手事实：外部运行时依赖由 `==` 精确 pin 改为 `>=min,<next_major` 区间，内部紧密耦合包（bubus、cdp-use、browser-use-sdk、browser-harness、browser-use-core）与开发依赖保持精确 pin。下界不是猜的：用 `uv pip install --resolution lowest-direct` 让每个直接依赖落在声明最小值，再 import 全部模块并跑 `pytest tests/ci`（1219 passed / 33 skipped）；猜低了的再抬到能过的最低版本（openai 1.99.2、mcp 2.0.0、reportlab 4.1.0、markdownify 1.0.0、numpy 1.26.0、oci 2.138.1 等）。
+- 提升层：工作流（依赖治理）/ 可复用 Skill（发布与兼容面）。
+- 判据：① **按耦合度分两级**——对外给下游让出解析空间（下界，不含下一主版），对内同轴发布的包必须精确锁；② **下界要实测不要估**，最低分辨率安装 + 导入 + 跑测试是唯一可信的下界来源；③ 抬下界的理由要逐包记录（哪个 API / 哪个 wheel 才存在），否则下界会退化成又一个猜测。
+- 触发词：外部范围内部精确、lowest-direct、下界实测、next_major 上界、同轴包精确 pin、抬下界理由逐包记录。

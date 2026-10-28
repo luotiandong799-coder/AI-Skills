@@ -4719,3 +4719,27 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - **判据**：① **能力声明的作用域是"方法级"而不是"全局级"**——同一个引擎在不同生命周期方法上可注入的字段不同，按全局声明注入会把不该出现的键塞进去。② **"未声明/未知键永不注入"要写成默认而非例外**：宽容注入会让上游新增字段直接变成下游未审的行为。③ **显式 opt-in 不是万能的**：某些功能位（本例记忆抽取必须看未摘要历史）在语义上与压缩/重放互斥，此时必须强制覆盖用户的 opt-in 并**说明为什么**，否则抽取拿到的是已经被摘要过的历史，抽出来的东西系统性失真。
 - **提升层**：可复用 Skill（能力声明契约）/ 工具（上下文引擎接口）。触发词：方法级能力交集、未知键不注入、显式 opt-in 被强制覆盖、未摘要历史、sessionTarget 后继会话。
 - **来源**：https://docs.openclaw.ai/concepts/context-engine.md
+
+## r645A · 缓存/模板键必须编码行为契约，只编码输入内容会让旧键在行为变更后继续复用（来源：api.github.com/repos/vercel/ai/pulls/24161，gh api 一手 200，逐串命中 "changed Vercel sandbox template generation from persistent sandboxes with automatic snapshots to explicit manual snapshots, without bumping the template hash and name" 与 "session creation to time out waiting for a manual snapshot that nothing will create"）
+- 一手事实：模板生成语义由「自动快照」改成「显式手动快照」，但模板 hash 与名字没变，于是旧模板被继续复用；旧模板的自动快照在新语义下被拒，会话创建一边等一个永远不会有人创建的手动快照，一边超时。修复是版本号 +3 失效旧模板，并让 hash 输入与名字前缀共用同一个常量以免二者再度漂移。
+- 提升层：工作流（缓存失效）/ 可复用 Skill（模板与快照治理）。
+- 判据：① **缓存键要编码「这份产物按什么规则被生产出来」**，不只是「由哪些输入文件生产」——语义变了而输入没变，是最容易被漏掉的失效场景；② **键的两个出口（hash / name）必须同源常量**，否则一次只改一边就会产生「名字变了内容没变」或反之；③ 失效表现为等待一个永不发生的信号（超时）而不是报错，这是行为键失效的典型指纹。
+- 触发词：模板 hash 未 bump、自动快照改手动、旧模板被复用、等一个不会发生的信号、TEMPLATE_VERSION 同源、行为契约入键。
+
+## r645A · 默认装配不得依赖厂商信号：换厂商等于失去默认治理（来源：api.github.com/repos/openclaw/openclaw/issues/178373，gh api 一手 200，逐串命中 "applyContextPruningDefaults only materialises contextPruning defaults when hasAnthropicDefaultSignal(cfg, env) is true" 与 "on a non-Anthropic install no old-tool-result reducer runs at all"）
+- 一手事实：旧工具结果裁剪的默认值只在 `hasAnthropicDefaultSignal(cfg, env)` 为真时才实体化；cache-ttl 之外的模式里 `resolveCacheTtlPruningSettings` 直接返回 undefined，`limitHistoryTurns` 遇到 undefined 直接 no-op。于是在非 Anthropic 安装上**完全没有旧工具结果缩减器**，每条保留的工具结果（单条上限 16K/32K/64K 字符）都被重新序列化进每一次请求，直到压缩发生为止（40×16K 字符约 160K token 每轮重复计费，缓存读取仍然计费）。
+- 提升层：可复用 Skill（配置默认）/ 工作流（成本治理）。
+- 判据：① **默认治理的触发条件不能绑定厂商探测**——把「默认是否生效」交给运行时环境判断，等于让同一份配置在不同后端上有不同的安全/成本基线；② **undefined 必须走显式分支而不是 no-op**：`limitHistoryTurns(undefined)` 静默不限制，比报错更难发现；③ 重复计费的来源是「保留量」不是「调用次数」，裁剪缺失时成本随轮次线性累积。
+- 触发词：hasAnthropicDefaultSignal、默认裁剪依赖厂商信号、非 Anthropic 无缩减器、undefined 即 no-op、旧工具结果重复计费、保留量线性累积。
+
+## r645B · 发现面是全目录被 expressions 的第一个受害者：把「候选上下文可伸缩」当作检索目标，Agent Card/技能发现走确定性结构化信号（arXiv 2610.21113《SSR: Structural Signal Retriever for Scalable Agent Discovery in LLM-Orchestrated Multi-Agent Systems》，abs 页一手摘要）
+- 一手事实：问题不是能不能检索到相关 Agent Card，而是**每个候选都会增大 prompt 规模、推理成本、延迟与溢出上下文的风险**。SSR 是确定性、免训练的检索方法：从承载能力的字段导出结构化词法信号、用 IDF 加权、用倒排信号索引（ISI）做选择性候选打分。1,000 agent 规模下相对全目录编排：**LLM 输入降 98.8%、编排延迟降 70.9%**；MS MARCO 上 IDF 在结构化表示内提升检索有效性，ISI 保持有效性同时把被显式打分的段落减 96.8%；端到端实验显示全目录编排会出现可观测的运行失效，而预选不会。
+- 提升层：可复用 Skill（技能/agent 注册表发现）/ 工作流（候选面预算）。
+- 判据：① **停留在"全目录丢给模型选"是随 registry 规模必然失效的模式**，随库增大出现ork failure；② **发现层的质量目标是"候选上下文大小"而不只是召回@k**——两个都要报；③ 优先用**确定性、可追溯（traceable）的结构化信号**，而不是再引入一次模型调用来做筛选（那等于把问题搬了一层）。
+- 触发词：candidate-context scalability、Structural Signal Retriever、Inverted Signal Index、IDF over structural signals、输入降 98.8%、延迟降 70.9%、full-catalog 编排失效。
+
+## r645C · 从未被访问的捆绑文件是诊断信号，不是资产：应据此删减而不是继续堆积（来源：docs.claude.com/en/docs/agents-and-tools/agent-skills/best-practices.md 200/42,127B 一手实拉逐串命中 "Ignored content: If Claude never accesses a bundled file, it might be unnecessary or poorly signaled in the main instructions."）
+- 一手事实：官方把「捆绑文件从未被访问」直接解读为两种可能——**这个文件不必要**，或**主指令里对它的信号不够**；两条处置方向完全相反（删 vs 改引用）。同页另有两条 authoring 口径：`SKILL.md` 正文建议控制在 500 行以内；`description` 要同时说清「做什么」与「何时用」，正文只放实现细节。
+- 提升层：可复用 Skill（技能库维护）/ 工具（使用埋点）。
+- 判据：① **技能库要有"引用命中"埋点**——没有访问记录的打包文件是腐坏信号，不是冗余备份；② **零命中先判"信号不足"再判"不需要"**：先看主指令有没有明确指向它，改完引用仍零命中才删；③ 描述字段承载触发判断、正文承载实现，把"何时用"写进正文会让选择面失效。
+- 触发词：从未被访问的捆绑文件、零命中先改信号再删、SKILL.md <500 行、description 说清做什么与何时用、技能库腐坏诊断。

@@ -2027,3 +2027,45 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **判据**：① **无人值守路径上，"换个能用的凭据继续跑"是最危险的兜底**——它把授权失效这一信号彻底抹掉，且跑成功之后没人会回头看。② **停下时要给可恢复的消息**，不是静默失败：这类失效大多是一次性的（重新授权/重新批准），给路径才能恢复。③ **每次发生都要按六项重校验**（作用域/角色/设备/访问授权/模型限制/精确会话身份）——授权是快照，环境是流变的，只在创建时校验等于把快照当现状。④ **Always allow 铸造的是有作用域的派生授权，保留原 operator 上限**：把它理解成"给自动化的 blanket 授权"会造成权限静默扩张。
 - **提升层**：安全（凭据收窄处置）/ 工作流（自动化重校验）。触发词：凭据收窄即停、不回落更宽凭据、recovery message、每次发生重校验六项、scoped standing grant、非 blanket 授权。
 - **来源**：https://docs.openclaw.ai/automation/cron-jobs/payloads.md
+
+## r645A · 前缀作用域谓词的三类越界：抹掉根作用域、泄漏兄弟前缀、运算符优先级把年龄门槛挤出子树（来源：api.github.com/repos/crewAIInc/crewAI/issues/8558，gh api 一手 200，逐串命中 "the OR scope = '/' clause wipes unrelated top-level (global) memories" 与 "scope LIKE '<prefix>%', a plain string prefix: /proj also matches /project"）
+- 一手事实：`LanceDBStorage.delete(scope_prefix=...)` 的谓词是 `{prefix_filter} OR scope = '/'`。三处缺陷均可在真实临时库上复现：① `delete(scope_prefix="/proj")` 会连带删除 `/` 下的全部全局记忆（可通过公开 API `UnifiedMemory.forget(scope=...)` 触达）；② `_scope_prefix_filter` 用普通字符串前缀 `scope LIKE '<prefix>%'`，`/proj` 同时匹配兄弟 `/project`，搜索与删除都越界；③ 条件用 " AND " 拼接而未给 OR 加括号，`older_than=X` 被解析成 `scope LIKE '/keep/%' OR (scope = '/' AND created_at < X)`，年龄门槛对子树完全失效。对照 Qdrant 后端用物化的 `scope_ancestors`（`["/","/foo"]`）只匹配自身与路径子代，两个后端行为不一致。
+- 提升层：工具（数据删除面）/ 安全（作用域越权）。
+- 判据：① **作用域匹配必须是路径边界化的**（精确等于，或 `prefix + '/' + 任意`），裸字符串前缀会把兄弟命名空间卷进来；② **删除谓词里出现 OR 就是危险信号**——要么加括号，要么拆成两次显式查询；③ **多后端的同名词不同语义要当作缺陷报**，不能只修一个后端；④ 忘记（forget）这类公开 API 的破坏半径要在集成测试里用真实存储验证，而不是只测内存实现。
+- 触发词：scope_prefix 越界、OR scope='/'、LIKE 前缀匹配兄弟、运算符优先级吃掉 older_than、scope_ancestors、forget 破坏全局记忆、多后端语义不一致。
+
+## r645A · 秘密文件的正确写入姿势：先以受限模式创建再写内容，并对既有文件无条件 chmod（来源：api.github.com/repos/browser-use/browser-use/pulls/5649，gh api 一手 200，逐串命中 "creates the file with O_CREAT|O_TRUNC and mode 0600 before any content is written" 与 "follows with an unconditional chmod, because os.open's mode argument is ignored when the file already exists"）
+- 一手事实：`gmail_token.json` 以进程 umask 落盘（默认 Linux 为 0644），同机其他账户可读；而 `Credentials.to_json()` 序列化 token、refresh_token、client_id 与 client_secret，令牌还带 `gmail.readonly` 作用域——读到此文件即可对用户邮箱（含他处服务的验证码与重置邮件）发起调用。同目录的 `cloud_auth.json` 早已是 0600。修复用一个小 helper：先 `os.open(O_CREAT|O_TRUNC, 0600)` 再写，使凭据从不存在于世界可读文件中；随后无条件 chmod 修掉旧版本留下的 0644；chmod 抛 OSError 时容忍，保证 Windows 与无 POSIX 模式的文件系统仍能写。
+- 提升层：工具（凭据落盘）/ 安全（本地暴露面）。
+- 判据：① **先定模式、后写内容**——先写再改权限会留下一个可读窗口；② **`os.open` 的 mode 对已存在文件无效**，所以修旧文件必须显式 chmod，且要覆盖「更短的新内容截断后残留旧凭据」这一路径；③ 目录模式（0755）是独立的第二道面，配置目录应 0700 作纵深防御；④ 影响面要如实分级（需同机本地账户 + 集成为 opt-in），不要因为「低严重」就跳过修复。
+- 触发词：umask 0644、refresh_token 落盘、先建模式后写内容、os.open mode 对已存在文件无效、无条件 chmod 修旧、目录 0700、截断残留旧凭据。
+
+## r645B · 技能是「代码 + 指令」混合体：单一扫描面只看一半，而野外样本构成会让检出率排名摆动 66 个点（arXiv 2606.07131《MalSkillBench: A Runtime-Verified Benchmark of Malicious Agent Skills》，abs 页一手摘要）
+- 一手事实：首个运行时验证的恶意技能基准，3,944 个恶意技能按 108 格三维分类；其中 3,214 个来自 Generate-Verify-Feedback 闭环（必须在 Docker 沙箱内以系统调用监控 + LLM 裁判实际触发才收录），另有 703 个野外样本与 4,000 个匹配良性技能。实测：代码注入核验产出率 **94.5%**、提示注入只有 **75.8%**（正是这种脆弱性使后者更难检出）；野外样本面很窄——被一次加密货币窃取活动主导（**86.6% 单一行为、81% 来自两个账号**），另有一小撮攻击 agent 控制面的新形态；最强技能专用检测器对代码注入达 **98.4% 召回**，却在提示注入与 agent 控制面攻击上崩塌，**只用野外样本打分会让排名摆动最多 66 个召回点**；供应链扫描器与提示注入防御各自只看一半，任何组合都恢复不了「代码—指令」关系。
+- 提升层：工具（技能安全扫描）/ 可复用 Skill（基准构成效度）。
+- 判据：① **对技能要做两个面的联合推理**——只扫代码或只审提示都漏一半，且两面的组合不等于联合推理；② **基准构成要控制产业礁主导度**——野外样本被单一活动主导时，评测结论描述的是那次活动而非能力；报检出率时必须同时给出**按活动与类别的构成分布**；③ **「难生成」不等于「难检出」**——提示注入的低核验产出率本身就是提示。
+- 触发词：MalSkillBench、runtime-verified、94.5% vs 75.8%、wild-only 排名摆动 66 点、86.6% 单一活动、code+instruction 混合体、控制面攻击小尾巴。
+
+## r645B · 因果证据永不授权：观测记录只记意图/结果/计费/因果链，高敏出站要一次性精确人工释放（arXiv 2606.03895《Agent libOS: A Runtime Substrate for Capability-Controlled Self-Evolving LLM Agents》，abs 页一手摘要）
+- 一手事实：部署后动作面会持续扩张（恮久进程、获得心得、激活 Skills、合成工具、fork 子进程、挂远程资源、提交 checkpoint 为镜像），**当"可见"被误当成"被许可"时**就产生权限提升与数据外泄。libOS 分三平面：操作准入合并**进程身份 + 任务权限上限 + 类型化能力 + 策略或人工审批 + 预算 + 具体原语**；信息流准入传播标签与**不可变来源引用**、解析 Host 登记的 Sink、并对条件性高敏出站要求**精确的一次性人工释放**；**持久因果证据记录意图、结果、计费与因果链，但从不授予权限**。Provider 侧效果走 prepare-dispatch-settle 协议以暴露歧义、防止盲重放。作者明写不保证项：**不防提示注入、不做内核级沙箱、不能回滚不可逆的外部副作用**。
+- 提升层：安全（权限模型）/ 可复用 Skill（自进化运行时基）。
+- 判据：① **证据不等于授权**——trace/审计数据承载事实，绝不能因为它"在系统里"就变成通行凭证；② **"看得见"与"做得到"是两个平面**，必须分别认定，action surface 可以随 evolve 扩大而 resource authority 与 information flow 不随之扩大；③ **一次性释放语义**：高敏出站用"精确一次性人工释放"，不是长期放行；④ **不保证清单要正面写出**，否则使用者会把"有治理"读成"全覆盖"。
+- 触发词：visibility is mistaken for permission、evidence never grants authority、Task Authority ceilings、typed Capabilities、one-shot Human release、prepare-dispatch-settle 防盲重放、不保证清单。
+
+## r645C · 鉴权面与存在面分码返回，且错误响应永不回显身份/令牌/幂等键/摘要（来源：同上 clawhub http-api.md 200/85,221B，逐串命中 "Anonymous or invalid/revoked credentials return 401; unauthorized callers, missing versions and deleted versions return 404." 与 "Error text, scanner results, identities, token IDs, GitHub run IDs, idempotency keys, artifact digests, and storage IDs are never returned."）
+- 一手事实：匿名、凭据无效或已吊销 → **401**；调用方未授权、版本缺失、版本已删除 → **404**（不泄露存在性）。错误通道明确不回显：错误原文、扫描器结果、身份、token ID、GitHub run ID、幂等键、产物摘要、存储 ID。报告本身只进审核队列，**不会自动隐藏或阻断下载**，是否隔离/吊销要由审核动作显式执行。
+- 提升层：安全（错误面最小化）/ 工具（状态码契约）。
+- 判据：① **401 管"你是谁"，404 管"你配不配知道它存在"**——把未授权报成 403/200 会泄露存在性；② **错误信息里绝不放幂等键、摘要与各类 ID**：它们是"排障有用、泄露致命"的字段，排障要通过可追溯的关联号而不是原样回显；③ **报告与执法分离**：举报进队列不等于封禁，自动化执法前要有明确的审核动作，避免"举报即下架"成为攻击面。
+- 触发词：401 vs 404 存在性隐蔽、never returned 清单、不回显 idempotency key 与 digest、扫描结果不回显、举报不自动封禁、moderation queue 非执法。
+
+## r645C · 凭据健康度以「成功结果」为准：成功结果优先于保留行，即使另一条凭据正在上报失败（来源：docs.openclaw.ai/concepts/models.md 200/52,571B 一手实拉逐串命中 "A successful provider result takes precedence over retained rows, even when another credential reports failure."）
+- 一手事实：模型/提供者状态表里，一次成功的提供者结果会覆盖保留的旧行，哪怕同时有另一条凭据在报失败——即失败的陈旧记录不得驱逐已观测到的成功证据。相关：模型 pin 是**会话状态**而非配置，用户改默认不会影响已 pin 的会话，提示语明确区分「本会话已 pin 到 X；配置主模型 Y 只作用于新建/未 pin 的会话」，清除要显式执行。
+- 提升层：工具（凭据健康度判定）/ 可复用 Skill（状态与配置分离）。
+- 判据：① **健康度判定要偏向"最近一次成功"**，否则一条残留失败会让可用凭据被误判为不可用（反过来会掩盖真实故障，所以要以**成功证据**为准而非以"没报错"为准）；② **pin 是状态、配置是默认值**，二者混为一谈会出现"改了配置没生效/要不要改也没生效"的双盲；③ 状态类提示要能给**显式清除动作**，不要只描述现象。
+- 触发词：successful result takes precedence、陈旧失败不得驱逐成功证据、pin 是状态不是配置、/model default 清 pin、保留行 vs 实时结果。
+
+## r645C · 审阅者的思考预算必须显式有界：推理模型当评审时，思考津贴加在裁决预算之上而非从里面扣（来源：docs.openclaw.ai/tools/exec.md 200/44,509B 一手实拉逐串命中 "Reviewers marked as reasoning models automatically receive a bounded thinking allowance on top of the 1,024-token verdict budget"）
+- 一手事实：被标记为推理模型的审阅者会在 1,024 token 的裁决预算**之外**再获得一份**有界**的思考津贴（依 `thinking`，缺省 medium）。同页另两条：① 每个被管理进程有自己的代理 grant，**跨发起轮次存活**，在进程退出、取消、超时或网关关闭时被撤销；② 被拒绝时评审要把理由回给 agent，而 agent **必须选择实质更安全的替代方案或转问用户，而不是绕过拒绝**。
+- 提升层：安全（审批裁决面）/ 工具（预算分层）。
+- 判据：① **思考预算不能从裁决预算里出**——否则模型越"想"，裁决可用的 token 越少，评审质量随思考强度下降；津贴要显式有界并单独计量；② **进程级 grant 的生命周期必须列出全部撤销点**（退出/取消/超时/关闭），跨轮存活意味着不能只在发起轮回收；③ **拒绝要带理由 + 禁止绕道**——允许"换个说法绕过"等于把审批降级成延迟。
+- 触发词：bounded thinking allowance、裁决预算 1,024、思考不挤占裁决、进程 grant 跨轮存活、撤销点四件套、拒绝给理由且禁止绕道。

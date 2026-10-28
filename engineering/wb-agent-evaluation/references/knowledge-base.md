@@ -668,3 +668,33 @@ arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety wit
 - **判据**：① **「能取回」与「用得恰当」是两个能力，必须分开打分**——本例文件型记忆在召回维度上是赢的，但在适用范围维度上是输的，合并成一个分数会把它误判为纯提升。② **过泛化是检索型记忆的典型失败态**：偏好被套用到不该生效的上下文，这是「记忆越准越危险」的具体形态。③ **偏好是会变的**：基准必须包含**变更事件**（本例每用户 5 次），否则测的是静态拟合而非持续适应。④ 与上一条（多样性坍缩）互补：一个是响应分布变窄，一个是适用范围变宽，合起来刻画记忆「又窄又泛」的双向失真。
 - **提升层**：评测效度。触发词：召回≠恰当使用、偏好外溢、过泛化、偏好变更事件、on-policy 评测。
 - **来源**：https://arxiv.org/abs/2610.30485
+
+## r645B · 多 agent 成本要按「这一层自己生成了什么」分解：被注入的记忆是被计费的输入，也是唯一可由编排侧直接调节的部分（arXiv 2609.23790《Total Cost of Agency: Exact Attribution of Memory Injection Cost in Multi-Agent LLM Workflows》，arxiv.org/abs/2609.23790 一手 citation_abstract 抽摘要）
+- 一手事实：工作流里每个节点从记忆取上下文注入自己的 prompt，这些 token 与 system prompt、用户 query 同价计费；而生产可观测工具只报总 token，不区分「某节点生成的」与「某节点被交给的」，这部分账单对付费方不可见。TCA 把成本拆成 base prompt / inference / memory injection / miss penalty / context-accumulation 五项，并给出精确归因：一趟**非计费的两趟 token 计数**直接测注入量，而不是用字数代理估算。200 任务企业基准实测：注入占可优化可变成本 **13.6%**、占全额账单约 **12%**；其占比在工作流深度 1 处为结构性零，到深度 6 升至 **27.6%**；把检索窗口容量从 32 降到 2，注入 token 降 **28.7%** 而精度变化落在种子变异之内。
+- 提升层：可复用 Skill（成本归因）/ 工作流（优化面选择）。
+- 判据：① **"总token"不是可行动单位**——你看不见的那一维永远不会被测；真正的杠杆在被交接的部分，不在模型推理本身；② **注入成本随深度线性上升、在深度1为零** ⇒ 单点改进结论不能外推到深链；③ 归因要**直接计数**（可用非计费通道），字数是代理，代理会在优化点失真；④ 控制器成本时要固定模型档位，否则占比被模型定价淹没（作者明说总成本由 model tier 主导）。
+- 触发词：memory injection cost、Total Cost of Agency、TCA 五项分解、非计费两趟计数、深度1结构性零、检索窗口 32→2、字数代理失真。
+
+## r645B · 增长形态要显式证伪：「二次拟合首项系数为负」是比「拟合优度高」更有信息量的结论（同上 2609.23790）
+- 一手事实：注入 token 在深度 2–6 区间随深度**线性**增长（R^2 = 0.9974）；作者特意做二次拟合并报告**首项系数为负**，因此在该深度区间内数据**不呈现凸增长**。同时全文交代：五项分解中有两项在该 harness 中**按构造为零**，五种图重写变换单独作用是**近似成本中性**的，prompt caching 未评估（所有数字为未缓存情形）。
+- 提升层：可复用 Skill（评测方法）/ 工作流（结论适用范围）。
+- 判据：① **报告线性之前先试二次，并把"没有凸性"当作结论写进正文**——只报 R^2 会把"高拟合"误读成"形态已证明"；② **按构造为零的项必须点名**，否则读者会把零当作未经测量的量；③ **负结果（变换近似中性）与未测面（未缓存）要面写**，否则优化建议会被外推到未验证区间；④ 等价判定要用**种子级变异带宽**，不能只看点估计。
+- 触发词：negative leading coefficient、R² 0.9974、线性而非凸、按构造为零的项、transform 成本中性、未缓存情形、种子变异等价带。
+
+## r645B · 记忆检索的验收单位是「预算内是否装满完整证据」，不是逐片段 top-k（arXiv 2609.25913《When Does Execution Provenance Help Agent Memory Retrieval?》，abs 页一手摘要）
+- 一手事实：把 agent 记忆检索表述为**预算化证据补全（budgeted evidence completion）**，在共享源坐标上对 gold span 精确计分。用工具入参与输出构造 source-aligned provenance 单元后，Full Support@2048 比 512 token 平铺窗口高 **19.07** 点，且仍比四种平铺块大小的 per-metric oracle 高 **11.96** 点；固定候选与种子分数时，图传播再加 **4.55** 点（95% CI [2.98, 6.18]），增益集中在「gold 证据跨多个执行事件」的场景；实体共现扩展没有可比收益，关系与拓扑控制对照确认依赖类型化转换。
+- 提升层：可复用 Skill（评测指标）/ 工具（记忆检索验收）。
+- 判据：① **指标要对齐失败模式**——"每片都召回一点"不等于"证据集装得进预算"，奖惩对象应是完整证据集是否在预算内；② **粒度对齐优先于模型结构**：先看候选是否按来源对齐（+19），再谈图传播（+4.55），两者量级差 4 倍；③ 宣称增益要带 **CI** 并做关系/拓扑对照消融，否则无法排除是通用近邻效应。
+- 触发词：budgeted evidence completion、Full Support@2048、source-aligned provenance units、per-metric oracle、CI [2.98, 6.18]、实体共现无收益、粒度优先于结构。
+
+## r645B · 评测口径三件套：方向感知的指标契约 + 配置指纹 + 「缺失标未评」而非标失败（arXiv 2610.22511《AuditKIT: A Unified Evaluation Spine》，abs 页一手摘要）
+- 一手事实：统一结果表示里记录 benchmark 精度、judge 评估、运行时、工具使用与检索质量五类度量，配 **direction-aware metric contracts**（高好还是低好写进契约）、**configuration fingerprints** 与可扩展后端。对 agent：turn-aware 工具调用匹配、区分并行与串行执行、**区分「已验证的任务结果」与「轨迹级诊断」**；**缺失或不可观测的证据标记为 unscored，而不是计作失败**。七个案例表明答案抽取、运行时行为与指标选择会改变评测结论。
+- 提升层：可复用 Skill（评测基础设施）/ 工具（结果可比性）。
+- 判据：① **"没测得" ≠ "做错了"**——把缺失计成失败会让 infra 缺陷伪装成能力缺陷；② **指标方向要进契约**，否则聚合时把延迟当收益；③ **没有配置指纹的结果不可比**（prompt/ retrieval/ serving 任一变动都改变结论）；④ 结果层与轨迹层要分开报告，混在一起会让"过程难看"污染"任务是否达成"。
+- 触发词：AuditKIT、direction-aware metric contract、configuration fingerprint、unscored vs failed、并行/串行分离、verified outcome vs trajectory diagnostics。
+
+## r645B · 自改进写入前必须做「同批后验 + 回滚」：编辑只有在同一批上变好才提交（arXiv 2607.00685《M2Note: Continual Evolution of Vision Language Models via Mistake Notebook Learning》，abs 页一手摘要）
+- 一手事实：把失败轨迹转成「subject + guidance」笔记写入可编辑记忆；为稳定持续进化，采用 **batch-level post-verification with rollback**——只有当笔记编辑让**同一批**的表现变好才提交编辑，从而减少噪声更新、防止回归。
+- 提升层：工作流（自进化闭环）/ 可复用 Skill（记忆写入门）。
+- 判据：① **更新要用写入前的同一批评测兜底**，用下一批验证等于把回归推给未来；② **回滚是同批概念的一部分**——不能回滚的"后验"只是记录；③ 笔记形态要可执行（subject 归域 + guidance 给可复用的验证步骤），不然检索回来的只是感想。
+- 触发词：batch-level post-verification、回滚后才提交、防止自进化回归、mistake notebook、guidance 可执行、annotated failure categories。

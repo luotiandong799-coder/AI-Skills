@@ -4683,3 +4683,45 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **判据**：① **清理不是免费的正收益动作**——它有一个明确的副作用（从首个被清除结果起缓存失效，需要重写一次缓存），收益小于这个代价时清理是净亏。② **门槛要配在"这次清多少"上，不是配在"要不要启用清理"上**——前者每次判断，后者一次性决定，挡不住高频小额清理。③ **清理必须留可见痕迹**（本例是 info 行带 N/M 两个量），否则"为什么缓存命中率掉了"无从查起。
 - **提升层**：可观测性（清理留痕）/ 工作流（成本门槛）。触发词：clear_at_least、清除量门槛、清理使缓存失效、重写缓存代价、cleared N tool results。
 - **来源**：https://docs.openclaw.ai/concepts/session-pruning.md
+
+## r645A · 诊断通道不得占用模型可见面：送模型前剔除执行器自有的子 trace，原始响应另存（来源：api.github.com/repos/simstudioai/sim/pulls/9326，gh api 一手 200，逐串命中 "Agent workflow tools return internal child execution spans alongside their final result" 与 "Remove executor-owned child trace metadata from the model-facing copy before secret projection"）
+- 一手事实：Agent 工作流工具把内部子执行 span 与最终结果一起返回；这些 span 被带进下一次模型请求后，要么撑爆上下文窗口，要么让秘密投影因为体积触发而扣住一个本来很小且可用的结果。修复是在投影之前从模型可见副本里删掉执行器自有的子 trace 元数据（含通过 wire 别名选中的规范工具与重放的工具响应），原始响应仍完整保留给 trace、计费与执行记录。
+- 提升层：工具（工具输出契约）/ 可复用 Skill（模型可见面与审计面的分离）。
+- 判据：① **「给模型的」与「给审计的」是两份副本，不是一个副本做裁剪**——裁剪会丢失证据，正确做法是分流；② 框架自有的诊断元数据不属于模型输入，应在投影/脱敏之前剔除，否则会污染体积判定与脱敏判定；③ 重放的工具响应同样要处理，且重放不得重复执行或重复计费子工作流。
+- 触发词：子执行 span 进模型、17 MiB 诊断 trace、秘密投影被体积触发、模型可见副本与原始副本分流、wire 别名、重放不重复计费。
+
+## r645A · 观测配置走「秘密只写」接口：GET 只回非秘密字段与已配置标记，改目标必须重填秘密（来源：api.github.com/repos/langgenius/dify/pulls/44673，gh api 一手 200，逐串命中 "Secrets are write-only. GET /apps/<id>/trace-config returns the non-secret fields plus configured_secrets" 与 "Changing a destination field (host, endpoint or URL) requires entering the secrets again"）
+- 一手事实：观测（trace）导出配置原先在请求路径上解密，四类重叠通道共用一个弱类型载荷；重构后 secret 只写不读：GET 返回非秘密字段加 `configured_secrets` 标记，留空或省略表示保留原值；一旦改动目标字段（host / endpoint / URL），必须重新录入秘密。
+- 提升层：工具（配置面）/ 安全（凭据暴露面）。
+- 判据：① **导出目标的秘密与目的地绑定**——换目的地必须重填，否则等于把旧凭据发往新地址，或让配置在不知情下指向别处；② **GET 不回明文秘密，只回「是否已配置」**，留空 = 保留原值，不要用一个假的占位符逼用户重填；③ 解密不要发生在请求路径上。
+- 触发词：秘密只写、configured_secrets、改目标重填秘密、GET 不回明文、留空保留原值、请求路径不解密。
+
+## r645A · 观测投递失败要三分（可重试 / 被拒 / 结果未知），并用确定性 ID 让重发变成更新而非复制（来源：同上 dify#44673，gh api 一手 200，逐串命中 "Each failure is classified as retryable, rejected or outcome-unknown" 与 "IDs are deterministic, so a resend updates the same records instead of duplicating them"）
+- 一手事实：统一后的 trace 投递把每次失败分为 retryable / rejected / outcome-unknown 三类；retryable 只存已构建的 trace 并重发，上限 OPS_TRACE_EXPORT_MAX_ATTEMPTS；span 与 trace 的 ID 是确定性的（OpenTelemetry ID + 类型化 LLM 用量与成本），因此重发是更新同一条记录而不是新建副本。
+- 提升层：工作流（投递语义）/ 可复用 Skill（观测面统一）。
+- 判据：① **必须有「结果未知」这一类**——只有成功/失败二值时，超时会被强行归到某一侧，导致重复或丢失；② **重发要幂等**：确定性 ID 让幂等由数据本身保证，而不是靠去重表；③ 多通道共用一个弱类型载荷是观测面腐坏的起点，合并应换成「一个管道 + 一条最小 provider 接口（verify / project_url / send）」。
+- 触发词：outcome-unknown、retryable 三分类、确定性 ID 重发即更新、OPS_TRACE_EXPORT_MAX_ATTEMPTS、最小 provider 接口、多通道合并。
+
+## r645B · 「验证 agent 自报已达成」必须与系统日志对账：拦截率 100% 不等于端到端安全（arXiv 2610.26548《Agentic Orchestration of EDC Data Space Retrieval》，abs 页一手摘要）
+- 一手事实：600 次运行的多维策略推理评测中任务成功率 89%、策略违规 0；失败方式是**拒答而非错路由**（消费者凭证校验不过时「refuse assets rather than fabricating them」），层级地理访问控制下 100% 拦截未授权区域请求。**但在这批被拦请求里，verification agent 会幻觉说 1% 的请求已完成，而系统日志确认从未有数据被取出**；端到端已验证交付率 86%。可靠性强烈依赖请求措辞：专业/专家化请求达 98%，随意且欠明确的请求只有 72%。
+- 提升层：工具（验收口径）/ 安全（策略执行证据）。
+- 判据：① **自报的"已完成"必须与独立日志逐条对账**，不能把验证者自述当验收证据；② **"安全失败"要显式计入报告**——拒答是正确行为，把它记成败会误导优化方向；③ **成功率必须按输入档次分层报**（专业 98% / 随意 72%），单一均值会掩盖"措辞依赖"这一真实脆弱面；④ 拦截率与幻觉率要同时报，否则"100% 拦截"会被误读为端到端安全。
+- 触发词：refuse rather than fabricate、verification agent 幻觉 1%、系统日志对账、端到端已验证交付率 86%、按请求措辞分层、拒答非失败。
+
+## r645B · 评测协议必须声明「一次性生成」还是「闭环工作区」，两者差距在一个量级（arXiv 2610.11482《Evaluating Local Language Model Agents for Reproducible Data Engineering》，abs 页一手摘要）
+- 一手事实：15 个数据工程任务、10 个本地配置、每个模型×模式×任务重复 5 次共 1,500 次评分的机制下，**闭环工作区条件比一次性生成把通过率提高 26.7–52.0 个百分点**（>2B 参数模型）；最强配置达 85.3% 产物级成功，量化 9B 模型以约 6.5GB 内存占 footprint 达 69.3%。增益最大处是**中间产物暴露了可被检视与修复的错误**。
+- 提升层：可复用 Skill（评测协议声明）/ 工具（产物可复现）。
+- 判据：① **报 'one-shot' 通过率而不说，是最常见的隐藏对外开放度差异**——闭环能给 agent 修复机会，二者不可比；② **中间产物要可被 agent 检视**（确定性 checker 只判最终件会低估闭环收益）；③ 数据工程类任务用**确定性 checker 判产物**（脚本/表/结构化文件/图/报告）而非文本相似度。
+- 触发词：closed-loop workspace vs one-shot、通过率 +26.7–52.0pp、中间产物暴露错误、确定性 checker 判产物、产物级成功率、5 次重复降方差。
+
+## r645B · 长期自治要有「声明台账」：完整性核验 → 结果到声明的映射 → 声明审计核账，自改进提案须评审通过后才采纳（arXiv 2605.03042《ARIS: Autonomous Research via Adversarial Multi-Agent Collaboration》，abs 页一手摘要）
+- 一手事实：长期研究工作流的核心失效不是可见崩溃，而是**看起来合理的无支撑成功**——声明的证据支持不完整、被误报、或静默继承自执行者的 framing。ARIS 默认配置是**跨模型对抗协作**（执行模型推进，另一模型家族的 reviewer 评审中间产物并要求修改）；保证层三阶段蹭核：**完整性核验 → result-to-claim 映射 → 声明审计（把文稿陈述与 claim ledger 及原始证据交叉核对）**；自改进闭环记录 research trace 并提出 harness 改进，**只在 reviewer 通过后采纳**。
+- 提升层：可复用 Skill（验收与核账）/ 工作流（长期自治保证层）。
+- 判据：① **声明必须与证据逐条可映射**——维护 claim ledger（每句结论↔原始证据，rendezvous 表），否则审计只能抽查；② **同一模型家族 Self-Review 共享盲点**，评审要用不同家族的模型；③ **自改进闭环的采纳权利不属于被改对象**——提出与采纳分离，改动须外部评审通过。
+- 触发词：plausible unsupported success、claim ledger、result-to-claim mapping、跨模型对抗评审、自改进提案须评审通过、tri-stage 声明审计。
+
+## r645C · 流式产物一旦校验失败就必须终止流并要求丢弃部分产物：绝不出产「单据失真但看起来完整」的归档（来源：docs.openclaw.ai/clawhub/http-api.md 200/85,221B 一手实拉逐串命中 "If a signed file disappears or fails an integrity check, the stream terminates and the client must discard the partial ZIP and retry; the proxy never emits a completed archive whose _manifest.json or X-Export-Errors misstates its contents."）
+- 一手事实：导出代理对签名文件缺失或完整性校验失败的处理是**终止流**，客户端必须丢弃已收到的部分 ZIP 并重试；代理明确不产出「内容单据（`_manifest.json` / `X-Export-Errors`）与真实内容不符」的完成归档。配套：被隔离或已吊销的发布在产物下载路由返回 403；封禁或过期的尝试返回 `failed` 且 `recoverable: false`。
+- 提升层：工具（产物交付）/ 可复用 Skill（流式产物验收）。
+- 判据：① **部分产物不是降级产物**——校验失败时"给一半"比"给报错"更危险，因为下游会把它当完整件；② **单据必须自证一致**：清单与错误头要说真话，宁可终止也不发失真的完成态；③ **可恢复性要在错误里明示**（`recoverable: false` 让调用方不再空转重试）。
+- 触发词：discard the partial ZIP、完整性校验失败即终止流、_manifest.json 不失真、X-Export-Errors、403 for quarantined/revoked、recoverable: false。

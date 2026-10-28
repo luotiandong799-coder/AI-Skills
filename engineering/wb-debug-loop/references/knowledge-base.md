@@ -2626,3 +2626,87 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - **判据**：① **重试的作用域必须写清楚覆盖哪一段**：本例只覆盖 setup，脚本一旦启动就进入"普通运行错误"通道（历史 + 退避 + 告警），不重试 ⇒ 把两段混在一起会让已跑了一半的脚本被重跑。② **排队溢出不能是硬丢**：丢最老的同时保留紧凑摘要并作为合成后续注入，让被挤掉的内容仍以摘要形式到达；纯丢弃会让"排队太多"变成"任务静默消失"。③ **同发送者同路由的 follow-up 可以接管未完成请求**——这是一个显式的"并单"规则，不声明就会出现两个并行恢复互相覆盖。④ **定时触发要等活跃工作做完再准备上下文**——否则一次 tick 会让进行中的压缩失效，把长任务打成碎片。
 - **提升层**：工作流（重试作用域与排队策略）/ 工具（自动化运行语义）。触发词：setup 重试边界、脚本启动后不重试、drop summarize 合成后续、同发送者接管在途请求、tick 等活跃工作、不打断进行中压缩。
 - **来源**：https://docs.openclaw.ai/automation/cron-jobs/payloads.md
+
+## r645A · 关键路径必须独占资源池，且策略绑定要用能力谓词而非对象相等（来源：api.github.com/repos/simstudioai/sim/pulls/9347，gh api 一手 200，逐串命中 "Billing writes and auth lookups get their own connection pools" 与 "isPrimaryPoolClient() in @sim/db replaces the executor === db checks"）
+- 一手事实：慢查询占满进程 10 连接池后，postgres.js 会把新查询管道化到繁忙连接上，于是计费事务的 BEGIN 排在大结果集后面，被自己的 4s transaction_timeout 杀掉；修复给计费写与认证查各开独立池（4 / 3 连接）。同时，原先 `executor === db` 的对象相等判断用来决定是否启用认证策略缓存与上报用量缓存——拆池后子池客户端不等于 db，缓存被静默绕过；改为 `isPrimaryPoolClient()` 能力谓词后缓存仍在子池生效、在事务与副本上永不生效。
+- 提升层：工作流（资源隔离）/ 工具（策略绑定方式）。
+- 判据：① **关键路径与副路径不共享有限资源池**——池被谁饿死，取决于最慢的那个使用者，不由关键性决定；② **策略/缓存的启用条件不要用对象身份（A === B），要用能力谓词（isPrimaryX()）**，否则一次拆分就让策略静默失效且无告警；③ 回退要能降级——环境变量未设时子池回落到进程 URL，客户端侧隔离仍然成立。
+- 触发词：连接池饿死、关键路径独占池、transaction_timeout 被副路径挤掉、executor === db、能力谓词替代对象相等、策略缓存静默绕过、子池客户端。
+
+## r645A · 内层调用超时不得长于外层预算，且两侧都必须可配置（来源：api.github.com/repos/openclaw/openclaw/issues/136405，gh api 一手 200，逐串命中 "EMBEDDING_QUERY_TIMEOUT_REMOTE_MS is hardcoded at 60 s" 与 "the recall lane, however, imposes DEFAULT_TIMEOUT_MS = 15000"）
+- 一手事实：嵌入客户端的单次 HTTP 调用超时硬编码 60s（批量 120s），而召回车道整体预算 15s；一次远程嵌入停顿就把整个用户可见延迟预算烧光，表现为 15s 硬失败，无重试、无降级、无配置项。可配面缺失三项：嵌入单调用超时、嵌入重试策略、召回车道预算。
+- 提升层：工具（超时分层）/ 工作流（预算分配）。
+- 判据：① **嵌套超时必须单调收紧**——内层超时应短于外层预算，否则外层总是先超时，用户的等待被最内层一次停顿决定；② **硬编码的超时等于没有超时策略**，凡是会被外层预算包住的调用，超时与重试都要能配置；③ 停顿的正确处置是「快速失败 + 重试」或「可恢复的部分结果」，不是让外层整段超时。
+- 触发词：嵌套超时倒挂、内层硬编码 60s、召回车道预算 15s、嵌入停顿、无配置项、快速失败后重试、部分结果降级。
+
+## r645A · 拦截或失败选定之后必须关闭已排队的调用，驳回才算生效（来源：api.github.com/repos/openai/openai-agents-python/pulls/5446，gh api 一手 200，逐串命中 "queued native tools continuing to run while a selected function-tool failure drains completed output" 与 "including after a parallel input guardrail rejects the input"）
+- 一手事实：选中某个函数工具失败后，已完成输出在收尾（drain），期间排队的原生工具继续运行；即使并行输入守卫已经拒绝了输入，排队项仍在跑。修复是：选中失败即刻取消活跃的原生类别并关闭它们的调用队列，同时保留三样东西——选定的错误、已完成输出的有界收尾、真实调用方取消与既有审批。
+- 提升层：工作流（取消传播）/ 工具（队列生命周期）。
+- 判据：① **「判定已下」与「执行已停」必须同时成立**——守卫拒绝、失败选定都是判定，判定不关闭队列等于只拦住了入口；② 收尾要有界且保序：保留第一个选定错误、给已取消任务一个收尾宽限期，调用方取消则绕过宽限期；③ 驳回输入时，已排队项属于被驳回作用域，必须一并取消。
+- 触发词：排队工具仍在跑、守卫驳回后未取消、失败选定后 drain、关闭调用队列、收尾宽限期、调用方取消绕过宽限。
+
+## r645A · 自动压缩必须服从工具组完整性：待审批的未解决调用不得被压过去（来源：api.github.com/repos/openai/openai-agents-python/pulls/5363，gh api 一手 200，逐串命中 "automatic Responses compaction during a pending tool approval. Compaction currently sends the unresolved call to the API, which returns HTTP 400"）
+- 一手事实：工具审批悬挂期间触发自动压缩，把未解决调用原样发给 API，得到 HTTP 400，而 400 先于审批中断到达调用方，审批流程被压缩吞掉。修复是把既有的「工具组完整性检查」从部分快照扩展到自动历史，宿主 MCP 的审批请求与响应用其既有 request ID 校验；调用与输出齐全后压缩才允许进行。
+- 提升层：工作流（编排时序）/ 工具（压缩与审批的互斥）。
+- 判据：① **压缩不是无条件的空间回收**——压缩前必须检查「工具调用与输出是否成对且已终结」；② **悬挂态（审批 / 人工确认）优先于自动维护动作**，自动动作应在悬挂解除后再跑，而不是抢先造成 400；③ 校验身份用既有 request ID 复用，不要新建一套匹配逻辑。
+- 触发词：压缩撞审批、未解决调用被压缩、HTTP 400 早于审批中断、工具组完整性、悬挂态优先于自动维护、request ID 复用。
+
+## r645A · 资源释放记账必须携带持有凭证，否则「取消 + 重试 + 过期」叠加会让并发上限失效（来源：api.github.com/repos/PrefectHQ/prefect/issues/23296，gh api 一手 200，逐串命中 "the lease ID is not passed through and the concurrency slot is then decremented twice" 与 "we can have two runs execute"）
+- 一手事实：UI 取消走 force，进入取消态时未透传租约 ID，并发槽先被批量删除活跃槽减一次，约 300s 后又被常规租约过期再减一次。因为槽数下限为 0，通常无害；但当被取消的运行已重试、租约过期落在重试运行期间、且该窗口内又有一次调度，就会出现两个运行同时执行——并发限制静默失效。
+- 提升层：工作流（记账幂等）/ 工具（并发控制）。
+- 判据：① **释放必须幂等且带凭证**——释放动作要携带租约/令牌 ID，重复释放对同一租约只生效一次；② **「下限保护」不等于正确**：槽数被夹到 0 掩盖了双减，真正爆雷要等「取消 + 重试 + 过期 + 新调度」四件事同时发生；③ 强制状态变更的路径（force）最容易漏带凭证，应显式补上保留租约的编排规则。
+- 触发词：并发槽双减、租约 ID 未透传、取消路径漏凭证、释放记账幂等、force 状态变更、并发上限静默失效、重试与过期叠加。
+
+## r645A · 取消身份必须在错误转换之前保留：不得把 Abort/Timeout 编造成 HTTP 500 并标成可重试（来源：api.github.com/repos/vercel/ai/pulls/24130，gh api 一手 200，逐串命中 "misreported as retryable GatewayResponseError failures with an invented HTTP 500 status" 与 "asGatewayError did not recognize AbortError or TimeoutError cancellation reasons"）
+- 一手事实：网关错误转换不识别 AbortError / TimeoutError 的取消原因，落到兜底分支凭空造出一个 500 响应；上层把它当可重试的服务端错误，于是对一次「用户主动取消」发起重试。修复是在转换前先保原对象，并补 Error 与 DOMException 的取消身份测试。
+- 提升层：工具（错误分类）/ 工作流（重试判定）。
+- 判据：① **错误分类先做身份识别再做包装**——取消不是失败，不能被分进可重试；② **禁止在分类兜底里编造状态码**：没有状态码就报「无状态码 + 原始原因」，编造 500 会把调用方的重试策略带偏；③ 取消的标识要跨异常类型（Error、DOMException、TimeoutError）一致识别。
+- 触发词：取消被误报 500、AbortError 未识别、编造状态码、retryable 误标、错误转换前保留身份、DOMException 取消。
+
+## r645A · 回退链切换时要剥离上游生成的私有中间态，否则回退恰好在最需要时失败（来源：api.github.com/repos/deepset-ai/haystack/issues/13465，gh api 一手 200，逐串命中 "FallbackChatGenerator gives the same message history to every generator in its chain" 与 "Provider B gets a reasoning block or signature it didn't create and rejects the request"）
+- 一手事实：回退生成器只在入口做一次消息规范化，随后把同一份 messages 原样交给链上每个生成器。若早先的助手消息带 provider A 的 ReasoningContent，切到 B 时 B 会收到自己没产生过的推理块或签名并拒绝请求；在 Agent 里每个工具轮次都会往内部历史加带推理的助手消息，用户无法清理。故障是双向的：A 后期失败由 B 接手会带上 A 的推理；B 作为回退答过一轮后，下一轮 A 优先又会带上 B 的推理。
+- 提升层：工作流（回退）/ 工具（消息规范化时机）。
+- 判据：① **回退不是「换个执行者继续」，而是「换执行者 + 重新准备输入」**——上游私有字段（推理块、签名、厂商专有结构）在切换点必须剥离或转换；② 规范化要发生在**每个候选之前**，不是整条链只做一次；③ 双向都要考虑：主→备与备→主都会污染，因回退成功后主用会再次被优先。
+- 触发词：回退传同一份历史、ReasoningContent 跨厂商、推理签名被拒、strip_reasoning_on_fallback、回退恰好在该用时失败、双向污染。
+
+## r645A · 输出限额应限制「保留量」而不是「流过的帧数」，且触发限额要区分任务失败与送达失败（来源：api.github.com/repos/openclaw/openclaw/issues/186967，gh api 一手 200，逐串命中 "CLI JSONL output exceeded 20000 lines; refusing to parse output." 与 "The flood protection should bound what is retained, not how many frames went by"）
+- 一手事实：一次长任务跑了 40 分钟、文件与提交全部落盘成功，只因普通 stream-json 记录超过冻结不可配的 maxTurnLines=2e4，解析器丢弃了终端 result，运行被标为失败、请求方看到一个任务失败的错误。此前修的是「不再计入 partial 增量」与「字符预算」，没覆盖「行数预算」。
+- 提升层：工作流（限额语义）/ 工具（结果回传）。
+- 判据：① **限保护的是内存/保留量，不是事件个数**——按帧数计费会让「做了很多小事」被判为「输出过大」；② **传输限额触发时，必须区分「任务失败」与「结果送达失败」**：已完成的副作用已经提交，把回传失败当任务失败会导致整任务重跑；③ 限额常量不可配时，至少让错误文案说明「限额是每轮次的、工作可能已完成、会话仍可用」。
+- 触发词：maxTurnLines、超过 20000 行拒绝解析、限额对象错位、保留量 vs 帧数、已完成副作用、回传失败被当任务失败、限额常量不可配。
+
+## r645B · agentic 工作负载的六条系统性质：瓶颈会随请求/模型/部署迁移，控制面税挤占产出算力（arXiv 2608.15127《From LLM Inference to Agentic Workloads: Characterization and Implications for Serving Systems》，abs 页一手摘要）
+- 一手事实：AgentSysBench（10 个代表性 agentic 应用 + 统一系统级插桩）实到六条性质：① 执行重且有状态，**10 个应用里 5 个由非 LLM 组件主导延迟**，沙箱工作集内存峰值 **28 GB/会话**；② 组件资源亲和异质（GPU 推理 / 内存检索 / CPU 沙箱），任务延迟相差**最高 32 倍**；③ **瓶颈随请求、模型与部署迁移**；④ 生产会话在活跃步之间把状态空置**数分钟到数小时**；⑤ **控制面税**——辅助 LLM 调用与工具 schema/观测带来的上下文开销挤占产出算力与上下文；⑥ 三个应用的生产轨迹显示搜索查询与网页抓取存在大量**跨请求冗余**。四项设计验证：任务感知调度降延迟 29–40%、通信感知布局最高 4.5×、状态卸载降内存 4.6×、工具结果缓存去掉 35.2% 冗余搜索调用并省 19.3% 聚合搜索延迟。
+- 提升层：工作流（容量与瓶颈治理）/ 工具（serving 面决策）。
+- 判据：① **不要拿一次画像当 Deployment 结论**——瓶颈会迁移，容量决策必须建立在多请求×多模型×多部署的样本上；② **延迟主体常在你不量的那一侧**（非 LLM 组件主导 5/10），只测模型延迟的系统性测量错误; ③ **空置会话状态要能卸载**（分钟至小时级空闲）；④ **工具结果缓存是最先应该做的收益项**，因为跨请求冗余是实测存在而非假设。
+- 触发词：AgentSysBench、bottlenecks shift across requests/models/deployments、28 GB per session、延迟相差 32×、control-plane tax、state offloading、tool-result caching 35.2%。
+
+## r645C · 可重放性的判定依据是「生产者拥有的检查点元数据」，不是渲染后的工具输出：包装、截断与显示钩子都不得改变判定（来源：docs.openclaw.ai/gateway/restart-recovery.md 200/117,837B 一手实拉逐串命中 "Recovery uses producer-owned checkpoint metadata in the transcript, not the rendered tool output: network wrapping, output truncation, and display hooks cannot change whether a current checkpoint is replay-safe."）
+- 一手事实：恢复路径读的是 transcript 里由生产者写入的检查点元数据，而不是给使用者看的渲染结果；网络包装、输出截断、显示钩子都不影响「当前检查点是否可安全重放」。配套三条规定：① **恢复不重跑发送方任务、不恢复旧审批**（"Recovery never reruns the sender task or restores old approvals."）；② **执行前按当前身份与当前访问策略重新解析 operator 来源**，来源已被撤销则不可恢复（"a revoked source cannot resume."）；③ **已删除会话、过期注册表记录、被撤销的 custody 不可恢复**。
+- 提升层：工作流（恢复语义）/ 工具（检查点契约）。
+- 判据：① **判定重放要看"写入时记录的元事实"，不看"事后渲染出来的样子"**——截断与包装会改变样子但不改变事实，把它们当依据会让恢复随展示层配置漂移；② **恢复 ≠ 补跑**：恢复只补齐被中断的续体，不重做已完成的发送侧动作，也不复活已经过期的授权；③ **恢复前重新鉴权**：来源是引用，权限是当下状态，恢复时必须用当前策略重解析，而不是沿用中断时的快照。（与既有「重放=重复资源」条互补：那条说重放的代价，本条说可重放性由谁判定。）
+- 触发词：producer-owned checkpoint metadata、渲染输出不作数、replay-safe 判定依据、恢复不重跑发送方、不复活旧审批、撤销来源不可恢复、恢复前重解析当前权限。
+
+## r645C · drain 完成的判据包含「结果已持久化并结清」，执行跑完不等于排空完成（同上 restart-recovery.md，逐串命中 "Finishing the job's execution does not by itself complete the drain: result persistence must also settle"）
+- 一手事实：执行体跑完并不让 drain 结束，结果持久化也必须结清；窗口到期时网关会报告未完成的那部分工作。另外，若一次重启耗尽了 drain 预算，**取消动作会保留重启恢复能力**，即使提供方上报了错误、且这一轮在关停发现它之前就已结算。
+- 提升层：工作流（关闭与排空）/ 工具（终态判定）。
+- 判据：① **"执行完成"与"结果落地"是两个终态条件**，只满足前者不算排空完成，报告里要能列出还差哪一项；② **关闭路径要与恢复路径解耦**——预算耗尽的取消不应顺手销毁可恢复性；③ 关停要显式留出原生关闭预算给终态动作（最终写入、worktree 租约释放、检查点、数据库连接关闭）。
+- 触发词：drain 包含结果持久化、执行完不等于排空完、窗口到期报剩余工作、取消保留恢复能力、关闭预算留给终态动作。
+
+## r645C · 死信与槽释放的两条纪律：死信条件是「次数 且 时长」双闸；槽释放与后继排空必须在诊断抛异常时照常发生（来源：docs.openclaw.ai/concepts/queue.md 200/26,468B 一手实拉逐串命中 "a message becomes eligible for dead-lettering only after both eight failed attempts and 24 hours" 与 "Admission failures and completed tasks release their slots and drain queued successors even when diagnostics throw"）
+- 一手事实：瞬时会话准入冲突沿用可重试失败的入口重试策略——一条消息只有在**既失败 8 次、又经过 24 小时**之后才够格进死信（退避有上限）。而准入失败与已完成任务**即使诊断记录抛错**，也会释放自己的槽并排空后继；诊断失败只标记任务（"lane task diagnostics failed after settlement"），不影响资源回收。
+- 提升层：工作流（队列与死信）/ 工具（资源记账）。
+- 判据：① **死信用 AND 不用 OR**——只看次数会把瞬时抖动误判为永久失败，只看时长会让持续失败无限重试；② **记账与埋点必须解耦**：诊断/日志抛错绝不能挡住槽释放与后继排空，否则一次可观测性故障会变成容量泄漏；③ 断言"运行中的轮次永不被抢占"要写进契约（有槽占用与排队在前的延迟，但没有抢占）。
+- 触发词：dead-letter 双闸 8 次且 24 小时、准入重试退避有上限、诊断抛错不挡槽释放、记账与埋点解耦、运行轮次不被抢占。
+
+## r645C · 循环检测的记账口径：被参数校验拒绝的调用没有执行，但仍记为一次失败调用；恢复一旦转终态，未开始的调用不可开始（来源：docs.openclaw.ai/tools/loop-detection.md 200/11,935B 一手实拉逐串命中 "Calls rejected by argument validation ... never run, but they are recorded as failed calls" 与 "Once recovery becomes terminal, no unstarted call can begin"）
+- 一手事实：像 `exec` 不带 `command` 这类被参数校验拒绝的调用不会执行，但仍被记录为失败调用，因此重复它会像任何其他循环一样被检测到。恢复转终态后，**尚未开始的调用一律不能开始**，即使另一个动作此前已被准入并在等待准备。另注：后压缩守卫的启用条件是「主开关未被显式置为 false」，而滚动历史检测本身默认关闭——同一族里两个键的默认方向不同。
+- 提升层：工具（调用记账）/ 工作流（循环与恢复终态）。
+- 判据：① **"没执行"也要记账**——不记账就等于给"用非法参数反复试探"留了一个检测盲区；② **终态不可逆**：恢复转终态后，之前已准入但未开始的动作同样作废，不做例外；③ **同一配置族内默认值方向可能相反，必须逐键查表**，不能按族名推断（滚动检测默认 false，后压缩守卫默认非显式 false 即启用）。
+- 触发词：校验拒绝仍计失败调用、循环检测盲区、恢复终态不可逆、未开始调用不可开始、同族默认值方向相反、逐键查表。
+
+## r645C · 缓存的三条硬事实：TTL 混合必须长在前短在后，存活窗口从写入起算且包含生成耗时，任何可变前缀会让前缀哈希永不命中（来源：docs.claude.com/en/docs/build-with-claude/prompt-caching.md 200/162,264B 一手实拉逐串命中 "Cache entries with longer TTL must appear before shorter TTLs"、"Time spent generating a response counts against the lifetime" 与 "Cache writes occur only at the breakpoint, and if that block changes (timestamps, per-request context, the incoming message), the prefix hash never matches."）
+- 一手事实：默认缓存 TTL 为 5 分钟（1 小时为可选档）。三条约束：① 同一请求可混用两种 TTL，但**长 TTL 的缓存块必须出现在短 TTL 之前**；② **生成响应所花的时间计入存活期**——若一次响应流式生成用了 4 分钟，复用同一前缀的下一次请求必须在该响应完成后约 1 分钟内发起；③ **缓存只在断点处写入**，一旦该块内容变化（时间戳、每请求上下文、新到的消息），前缀哈希就永远匹配不上。自增会话里「每轮新增少于 20 个块」时末块写法才成立（前面内容不变）。
+- 提升层：工作流（成本与延迟）/ 工具（缓存策略）。
+- 判据：① **TTL 序列必须单调不增**，顺序错了直接失去长档意义；② **把"生成耗时"算进窗口**——长响应会吃掉自己的复用窗口，评测与容量估算必须扣掉；③ **前缀要设计成不可变**：把时间戳、每请求上下文放在前缀里等于关闭缓存（"You pay for a fresh cache write on every request and never get a read."）；④ 判据的落点是"前缀里有什么"，不是"有没有开缓存"。
+- 触发词：longer TTL before shorter、生成时间计入存活期、断点写入、可变前缀永不命中、每轮 <20 块、每请求都付写不入读。

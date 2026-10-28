@@ -1174,3 +1174,21 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 - **判据**：① **共享记忆的视图决定了集体探索的方向**——只按"当前最好"排序，所有人会挤在同一条分支上，"被忽视的分支"必须是一个一等视图而不是需要自己算出来的东西。② **贡献要带类型（result/insight/hypothesis/verification/report）与溯源链接**：否则后来者无法区分"已验证的结论"与"当时猜的"。③ **验证状态要与结果并列展示**，不能只在结果页里附带 ⇒ 未验证的高分结果是最容易被误当结论的东西。
 - **提升层**：可复用 Skill（跨 agent 共享记忆）/ 工作流（集体探索）。触发词：被忽视分支视图、diversity-aware 推荐、追加式 DAG、贡献类型化、验证状态并列、无中央规划者。
 - **来源**：https://arxiv.org/abs/2609.18094
+
+## r645B · 并行预算按「阶段边际收益」分配：规划边际持续，实现与验证在四个 worker 后饱和（arXiv 2610.17471《Scaling Inference-Time Compute with Teams of Coding Agents》，abs 页一手摘要）
+- 一手事实：把组队当成算力分配问题，逐项变动「lead 在哪一阶段分派给 worker（planning / implementation / verification）」「队伍构成」「worker 数量」。团队胜过单人但成本高 3–7 倍；算力分配得当时，17 agent 异构队以低 **70%** 的成本逼近强 5 agent 同构队至 1.4 点以内。三条发现：**① 规划是最值得 Worker 花算力的阶段**——只把规划分派出去、自己实现与验证的 lead，与全程分派的 lead 收益相当而成本减半；**② 便宜模型当规划者划算、当实现者不划算**——强 lead 配便宜规划者以 13.9% 的额外成本找回全强队 47.5% 的收益增量，而便宜实现者拉低收益；**③ 规划者随队伍增大持续增益，实现者与验证者超过四个 worker 即平台化**。
+- 提升层：工作流（并行预算分配）/ 可复用 Skill（角色与模型档位匹配）。
+- 判据：① **不要按角色等分预算**——同加一个 worker，投在规划上的边际远高于投在实现/验证；② **廉价档位的正确落点是「产出方案」而非「产出最终件」**（与 Model Router 的 L0/L1/L2 分级一致：-plan.proposal 可 L0，实现/核验升档）；③ **饱和点要写出来**（实现/验证 >4 worker 平台化），否则会有「继续加人应该更好」的错误外推。
+- 触发词：planning delegation half cost、cheap planners not implementers、47.5% reward for 13.9% cost、plateau beyond four workers、17-agent 异构队 70% 降本。
+
+## r645B · 「先排全图再补补丁」等于在证据最弱时承诺最强：增量扩展要以已完成节点的置信/不确定性为条件（arXiv 2609.39154《DAGent: Evaluate-then-Grow Planning for Deep Research Agents》，abs 页一手摘要）
+- 一手事实：既有 DAG 系方法先实例化任务级计划、失败或缺证据后才修图（Plan-then-Patch），作者指出这在深度研究里很脆——**系统在证据最弱的时候承诺得最强**，后续修订还要为本来不该计划的分支付算力。DAGent 改为**逐批生长任务图**，每次扩展以已完成节点的 confidence 与 uncertainty 信号为条件；默认以紧凑 QueryDocs 传播上下文、保留完整执行轨迹供按需回放。三基准上以更低 per-task token / 工具调用 / 步数达到更高精度（同架构对照）。
+- 提升层：工作流（规划节奏）/ 可复用 Skill（上下文传播策略）。
+- 判据：① **承诺强度必须随证据强度递增**——一次性排完深图是最反这条的做法；② **每批只扩展一步，并把归因信号（置信/不确定）作为输入**，不要把不确定性留到失败后才处理；③ **紧凑传播 + 完整轨迹可回放**是配套件：默认给摘要，需要时能取回全量，避免"要精度就得塞满上下文"的二选一。
+- 触发词：Evaluate-then-Grow、Plan-then-Patch 脆、证据最弱时承诺最强、confidence/uncertainty conditioned expansion、QueryDocs 紧凑传播、按需回放全量轨迹。
+
+## r645B · 共享记忆要把「硬授权过滤」与「分级信任排序」分开：拒绝=硬过滤，信任=乘性衰减, 执行前按动作风险设闸（arXiv 2608.10509《MAP-Graph: Provenance-Aware Shared Memory for Multi-Agent Workflows》，abs 页一手摘要）
+- 一手事实：相关证据未必对某个 agent 或动作可采信，限制会沿派生链传播——摘要能把私有、被投毒、不可信或已撤销的来源藏起来，导致未授权读取或不安全动作。MAP-Graph 在类型化执行图上表示 agent / 来源 / 记忆 / 声明 / 动作：**先排除权限不合格的记录（硬授权），再按语义相似度 × 路径信任（乘性）重排合格记忆**，并在**动作执行前**按风险敏感度设闸，同时保留受影响的沿袭关系供审计。2,700 合成任务 × 三域：整体任务成功 94.96%、精确决策 72.70%、干净设定 90.22%（成功要求正确的是 Allow 而非安全干预）。
+- 提升层：跨 agent 协作（共享记忆治理）/ 安全（来源与派出控制）。
+- 判据：① **可_allowed 性优先于相关性**——不能先按相似度排序再查权限，排序过程本身会泄露；② **信任要沿路径乘性衰减**，无权重的 OR 式合并会让一条脏来源污染整份可用证据；③ **闸门位置在动作之前**，且粒度是"动作风险"不是"记忆类型"；④ 被排除的沿袭要**留存供审计**，过滤不等于删除。
+- 触发词：hard authorization vs graded trust、multiplicative path trust、permission-ineligible 先排除、risk-sensitive gating before action、retain lineage for audit、Allow vs safe intervention。
