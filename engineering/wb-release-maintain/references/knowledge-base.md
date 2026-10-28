@@ -1137,3 +1137,57 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - 提升层：工作流（依赖治理）/ 可复用 Skill（发布与兼容面）。
 - 判据：① **按耦合度分两级**——对外给下游让出解析空间（下界，不含下一主版），对内同轴发布的包必须精确锁；② **下界要实测不要估**，最低分辨率安装 + 导入 + 跑测试是唯一可信的下界来源；③ 抬下界的理由要逐包记录（哪个 API / 哪个 wheel 才存在），否则下界会退化成又一个猜测。
 - 触发词：外部范围内部精确、lowest-direct、下界实测、next_major 上界、同轴包精确 pin、抬下界理由逐包记录。
+
+## r646A · 恢复流程遇到「成对工件只剩一半」不得给出永久拒绝——一次缺件会级联阻塞后续所有迁移（来源：openclaw/openclaw#186974，一手 gh api 200）
+
+- **原文事实**：遗留 config-audit 恢复在**原始归档检查点存在、但其脱敏伴生文件缺失或被截断**时**永久拒绝**（`audit-logs` → `step-refused`：`Skipped config audit log recovery because its sanitized archive is missing or truncated`），进而**阻塞更新最终化与后续迁移**；`managed-outgoing-images`、`apns-registrations`、`exec-approvals`、`mcp-oauth` 随之进入 `blocked-by-prior-refusal`。
+- **可复用判据**：① 成对工件（原始 + 脱敏）缺一半时，正确姿态是**降级或显式人工裁决**，不是永久拒绝；② 「拒绝」要区分**本次拒绝**与**永久拒绝**，后者会把一次缺件升级为长期阻塞；③ 恢复流程的拒绝必须给出**可解除条件**，否则后续步骤只能级联挂起。
+- **提升层**：工作流（恢复与迁移）。触发词：成对工件缺一半、永久拒绝、blocked-by-prior-refusal、更新最终化被阻塞。
+
+
+## r646A · 模板/默认值的继承不得覆盖显式入参——被吞掉的 `persistent: false` 会在停止时产生未声明的快照写入（来源：vercel/ai#23475 + #24179，一手 gh api 200）
+
+- **原文事实**：从模板创建的 live sandbox **丢掉了显式传入的 `persistent: false`**，于是每次 stop 都写快照；修复后按 false/true/省略三态分别验证请求转发与停止快照。
+- **可复用判据**：① 显式入参优先于模板默认值，**模板不应有覆盖能力**；② 「省略」与「显式 false」必须是两个可区分的状态，不能都落成默认；③ 被吞掉的属性会在**下游动作**（此处=停止）才暴露后果，故创建面要断言属性真的落地。
+- **提升层**：工作流（配置继承）。触发词：persistent false 被吞、模板覆盖入参、停止写未声明快照、三态验证。
+
+
+## r646A · 发布门必须钉住「被测过的那个工件」——用同 tag 重建镜像会替换掉 staging 测过的镜像（来源：activepieces/activepieces#16996，一手 gh api 200）
+
+- **原文事实**：`cut` 选取 `e2e-staging` 检查通过的最新 main commit；`e2e-matrix` 与 `upgrade-test` 跑在该 commit 构建的 `version.sha.beta` 镜像上、**不重新构建**；旧 `cloud-hotfix` 流程用 `no-cache` 重建**同一个 tag**，从而**替换掉 staging 已经测过的镜像**。
+- **可复用判据**：① 发布门引用的必须是**不可变工件标识**（commit sha / digest），tag 可重建 ⇒ 不等于同一工件；② 已测镜像不允许被同名重建覆盖；③ 日 gates 应带「车队已在跑候选则不再申请审批」的短路，避免无意义的人工介入。
+- **提升层**：工作流（发布门禁）。触发词：no-cache 重建同 tag、替换已测镜像、sha 钉工件、日 gate 短路。
+
+
+## r646A · 加载/反序列化必须还原「配置化的缓存键」——用默认键重建会让既有缓存静默失效并触发全量重算（来源：run-llama/llama_index#23698，一手 gh api 200）
+
+- **原文事实**：配置 `IngestionCache(collection="tenant")` 的管线在 persist/load 之后找不到既有缓存条目——`IngestionPipeline.load()` **用默认 collection 重建了缓存**，于是未变更的输入被重新跑一遍转换；显式指定 collection 时旧条目仍可读。
+- **可复用判据**：① 缓存键属于**配置**，不属于可重建的默认；反序列化必须原样还原；② 缓存失效的正确信号是「未命中并明确报告」，不是「静默重算」；③ 命中率回归要覆盖默认与自定义键两种配置，否则只在默认路径上测会漏。
+- **提升层**：工作流（缓存与持久化）。触发词：load 重建缓存键、collection 丢失、缓存静默失效、全量重算。
+
+## r646C · 版本/版本-gated 迁移「记为已运行但未执行」会让降级留下不完整 schema（来源：www.activepieces.com/docs/install/reference/breaking-changes.md 200/78,105B，一手）
+
+- **原文事实**：「**Edition-gated migrations are recorded as run without executing**, so switching earlier leaves the schema incomplete.」；同页另有 `FAILED`/`INTERNAL_ERROR`/`MEMORY_LIMIT_EXCEEDED` 由新行为恢复为 `500`（`TIMEOUT` 原为 `504`，现同为 `500`），以及 `AP_PREWARM_CACHE_ON_STARTUP=true` 可恢复预热**但仅在启用流数量适中、worker 有内存余量时推荐**。
+- **可复用判据**：① 迁移记录与实际执行必须**同真**——「记为已运行」而实际跳过会制造**静默不完整 schema**，且只在降级时暴露；② 版本-gated 的迁移要在**切回旧版**路径上也做验证，不能只测升级方向；③ 「可恢复旧行为」的开关要附**适用条件**，不是无条件推荐。
+- **提升层**：工作流（迁移完整性）。触发词：记为已运行未执行、降级留不完整 schema、gated 迁移双向验证。
+
+
+## r646C · 卸载/更新要连带清理五类残留面，不能只删主条目（来源：docs.openclaw.ai/cli/plugins/uninstall-and-update.md 200/24,232B，一手）
+
+- **原文事实**：「If the new package version removes or renames children, OpenClaw removes the retired children's **entries, allow/deny policy, exact child load paths, channel config, and memory/context slot selections** while preserving retained/new children.」；另「If the Gateway rejects a lifecycle request because another operation is still running, the CLI honors its retry delay **within the existing request timeout**」。
+- **可复用判据**：① 卸载的清理清单要**按残留面逐类列**（条目/策略/加载路径/通道配置/上下文槽选择），只删条目会留下幽灵策略与失效路径；② 清理必须与「保留 retained/new」成对，避免误删仍在用的子项；③ 生命周期请求被拒时重试要**守在既有请求超时内**。
+- **提升层**：工作流（卸载完整性）。触发词：卸载五类残留、allow/deny 幽灵策略、上下文槽选择清理、超时内重试。
+
+
+## r646C · 发布参数会静默改变「跳过未变更」语义——提供 tags/categories/topics 会给每个被选技能都发新 patch 版本（来源：docs.openclaw.ai/clawhub/publishing.md 200/18,359B，一手）
+
+- **原文事实**：「Like `tags`, `categories` and `topics` apply to **every** skill the run publishes, and supplying them **suspends the unchanged-skill skip** — the run releases a **new patch version of each selected skill, including skills whose files did not change**.」
+- **可复用判据**：① 发布入参的**副作用**要在文档里点名（此处=取消幂等跳过）；② 「未变更即不发版」是默认行为，**任何能关掉它的参数都要显式标注**；③ 版本号洪水会污染「按版本钉定」的下游，故发布面要能预演本次会产生多少新版本。
+- **提升层**：工作流（发布语义）。触发词：tags 暂停未变更跳过、文件未变也发 patch、发布入参副作用。
+
+
+## r646C · 升级预检 = 用新代码只读跑旧库：不写、不建表、只访问各版本公共列（来源：api.github.com/repos/langflow-ai/langflow/pulls/16027，r693-Q-A 一手，本轮复核）
+
+- **原文事实**：升级前把本次发布的代码接上一版本的数据库先跑一遍**只读检查**——SQLite `mode=ro`；Postgres **每事务开头 `SET TRANSACTION READ ONLY` 且每读后回滚**；只访问**各版本都存在的公共列**。
+- **可复用判据**：① 兼容性检查的隔离姿态要**可机检**（只读模式 + 事务级只读 + 回滚），不是「小心点跑」；② 检查只能访问**公共列**，访问新版本才有的列会让检查本身在新旧库上不可比；③ 与既有「升级前跑兼容性检查 + audit log 记 before/after」互补——那条管流程，本条管**隔离姿态**。
+- **提升层**：工作流（升级预检）。触发词：新代码读旧库、mode=ro、事务级只读并回滚、只访问公共列。

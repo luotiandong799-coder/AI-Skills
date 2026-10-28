@@ -2069,3 +2069,77 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 提升层：安全（审批裁决面）/ 工具（预算分层）。
 - 判据：① **思考预算不能从裁决预算里出**——否则模型越"想"，裁决可用的 token 越少，评审质量随思考强度下降；津贴要显式有界并单独计量；② **进程级 grant 的生命周期必须列出全部撤销点**（退出/取消/超时/关闭），跨轮存活意味着不能只在发起轮回收；③ **拒绝要带理由 + 禁止绕道**——允许"换个说法绕过"等于把审批降级成延迟。
 - 触发词：bounded thinking allowance、裁决预算 1,024、思考不挤占裁决、进程 grant 跨轮存活、撤销点四件套、拒绝给理由且禁止绕道。
+
+## r646A · 工作区内的操作不得使用登录 shell——登录 shell 会把工作区启动文件变成可执行面（来源：openai/openai-agents-python#5406，一手 gh api 200）
+
+- **原文事实**：SDK 的文件检查与快照创建原本用 `sh -lc`，会启动登录 shell 并**从工作区加载 shell 启动文件**；修复把这些辅助命令改成 `sh -c`，使工作区内容不再被当作启动脚本执行。
+- **可复用判据**：① 凡工作目录不可信时，辅助命令一律用**非登录、非交互** shell；② 「只读取文件」的辅助动作若走登录 shell，等价于把工作区内容提升为**可执行输入**；③ 该约束属于沙箱加固项，须与「命令白名单」并列写，不能被读成「只是性能优化」。
+- **提升层**：工具（沙箱边界）。触发词：sh -lc 换 sh -c、登录 shell 加载工作区、启动文件成为执行面、快照命令加固。
+
+
+## r646A · 凭据刷新不得跨存储域——降级写入明文回退文件会消耗另一存储的 refresh token 并导致后续 400 清空登录（来源：anthropics/claude-code#104359，一手 gh api 200）
+
+- **原文事实**：持有环境凭据（`CLAUDE_CODE_OAUTH_TOKEN` 等）的 CLI 进程**仍然刷新并持久化了 claude.ai 登录**；macOS 上钥匙串不可写（沙箱进程）时刷新结果被写到 `~/.claude/.credentials.json`，该写入**消耗钥匙串里的 refresh token**，下一个从钥匙串刷新的进程拿到 HTTP 400，登录被清空。
+- **可复用判据**：① 进程用环境凭据认证时，**不得刷新或持久化别的存储里的登录**；② 回退存储不是「备用的同一份数据」，而是**第二个刷新面**——写入它会消耗主存储的刷新令牌；③ 凭据存储不可写时的正确姿态是**不刷新**，不是降级明文落盘。
+- **提升层**：安全边界（凭据生命周期）。触发词：环境凭据仍刷新登录、Keychain 不可写降级明文、refresh token 被消耗、后续 400 清空。
+
+
+## r646A · 沙箱启动前的环境枚举失败必须局部化——不相干资源不可阻断全部命令启动（来源：openai/codex#52908，一手 gh api 200）
+
+- **原文事实**：MXC 启动器在启动本地沙箱命令前枚举一个**不可访问的映射网络驱动器**（Z:，Windows drive type 4），枚举以错误 1326 失败，导致**连纯本地的 `Write-Output` 健康探测也返回退出码 1**；退出沙箱后重试本地操作成功，产生反复的审批/提权开销。
+- **可复用判据**：① 启动前置的环境枚举必须是**可失败的旁路**，失败只影响它所枚举的那个资源；② 与本次操作无关的资源不可成为全局阻断条件；③ 「沙箱内失败、沙箱外成功」会被用户读成需要提权，实际是**前置枚举的失败域过大**。
+- **提升层**：工具（沙箱启动面）。触发词：错误 1326、映射驱动器阻断、启动前枚举、无关资源全局失败。
+
+
+## r646A · 缓存复用面必须与写凭据面分离——持有写凭据的作业不得隐式消费共享缓存（来源：langgenius/dify#44954，一手 gh api 200）
+
+- **原文事实**：共享 web 准备作业只安装**钉版运行时**、不装工作区依赖、不跑包生命周期脚本；消费方作业只拿**只读缓存访问**；而**发布评论 / release / 制品的带写凭据作业不得隐式消费这块新缓存**。
+- **可复用判据**：① 缓存是**写面**——能往里写的东西就能污染读它的人，故缓存的生产者与消费者要按凭据面分开；② 缓存准备作业的最小权限 = 只钉运行时 + 不执行生命周期脚本；③ 「谁可以写这块缓存」必须在作业清单里显式列出，不能靠默认共享。
+- **提升层**：安全边界（供应链）。触发词：缓存只读访问、写凭据不消费缓存、生命周期脚本不执行、缓存投毒面。
+
+
+## r646A · 凭据 schema 的暴露要按「护照 + 节点 + 连接版本」三维收窄（来源：langgenius/dify#44960，一手 gh api 200）
+
+- **原文事实**：为已发布 WebApp 工具节点暴露 API-key 凭据 schema 端点，作用域由 **App Passport、node ID、connection revision** 三者共同限定。
+- **可复用判据**：① 凭据结构（schema）本身是信息，暴露范围要按**调用方身份 + 目标节点 + 连接版本**三维收窄；② 「连接版本」必须进作用域——换版本后旧 schema 不应继续可读；③ schema 端点与取值端点要同等收窄，不能只给值不加门禁。
+- **提升层**：安全边界（凭据暴露面）。触发词：凭据 schema 端点、App Passport 作用域、connection revision、节点级收窄。
+
+## r646B · 安全机制「已实现」不等于「已启用」——HarnessSecurity 实测约半数已确认实现是 opt-in（来源：arxiv.org/abs/2610.07639，一手 citation_abstract）
+
+- **原文数字**：十机制分类法、400 个 harness×机制单元，由研究者与 LLM 评审独立评级——**约一半已确认实现的机制是 opt-in**；**闭源 harness 存在大量证据缺口**；HarnessSecurity-Bench = 23 个任务覆盖**五个攻击面**且**不牺牲合法任务需求**；用**相互独立的确定性 oracle** 分别测任务效用与攻击效果；9 机制 × 6 harness × 2,500 次试验、81,155 次工具调用、22 亿+ token。
+- **可复用判据**：① 安全清单要区分**「实现」与「默认启用」**，opt-in 的机制等于未启用；② 闭源 harness 的机制存在性**不可取证**，须标注证据缺口而不是填「有」；③ 安全基准不得以降低合法任务完成率为代价，效用与攻击必须**用独立 oracle 分测**（同一 oracle 会把「做不了」误判成「安全」）。
+- **提升层**：安全边界（机制默认态）。触发词：约半数 opt-in、闭源证据缺口、效用与攻击独立 oracle、不牺牲合法任务。
+
+
+## r646B · 组合面攻击的第二种机制：只往库里**添加**合规技能即可致违规——5% 添加使违规率 35.02%→58.45%（来源：arxiv.org/abs/2610.35082 CoSA，一手 citation_abstract）
+
+- **原文数字**：CoSA **不改变既有技能与运行时权限**，机制含 capability supplementation 与**重塑 artifact exchange / decision reuse / target-action bindings**；CoSA-Bench 288 任务；**每个原始池最多添加 5% 即把策略违规率从 35.02% 抬到 58.45%**；轻量 **harness 级信息流 + 授权守卫**使违规 **65.28%→6.67%**，同时良性完成率仅 **66.67%→65.00%**（≈1.7pp 代价）。
+- **可复用判据**：① 技能库**扩容须按与既有技能的组合效应评估，扩容比例本身就是风险量**；② 准入面**逐件审**看不见该类风险（两件各自合规，相互作用致违规）；③ 守卫要报**双向数**（拦下多少 + 误伤多少良性），只报拦截率不完整；④ 本条管**库的构成**，与「单次动作该不该拦」不同轴。
+- **提升层**：安全边界（库构成风险）。触发词：加技能致组合违规、5% 即 +23.43pp、守卫双向数、良性代价 1.7pp。
+
+## r646C · 资源上限要声明「是不是强制的」——采样防护可被冲过、共享页重复计数、并发不共享总量（来源：docs.openclaw.ai/tools/exec.md 200/44,509B，一手）
+
+- **原文事实**：「This is a **sampled safeguard, not a kernel-enforced ceiling**: rapid allocations can overshoot it, **shared resident pages may count more than once** across processes, and **concurrent commands do not share an aggregate budget**.」；另：每个托管进程有自己的 proxy grant，**跨 originating turn 存活**，在进程退出/取消/超时/网关关停时被撤销；内存缓存保留最多 128 个最近快照键。
+- **可复用判据**：① 声明资源上限时必须写明**强制级别**（内核强制 vs 采样防护），否则「设了上限」会被当成「不会超」；② 共享内存的**重复计数**会让总量预算失真，并发命令需单独聚合；③ 授予（grant）的生命周期要**绑定到进程**而非绑定到轮次，并列出全部撤销触发点。
+- **提升层**：安全边界（资源与授权）。触发词：采样防护非强制上限、共享页重复计数、grant 绑进程、撤销触发点清单。
+
+
+## r646C · 审批后的入参必须不可变，且 deny 只匹配精确命令名而不匹配载荷内的 shell 文本（来源：docs.openclaw.ai/gateway/security/tool-permissions.md 200/15,512B，一手）
+
+- **原文事实**：「The deny list matches **exact node command names only**（例如 `system.run`）, **not shell text inside a command payload**」；`host=node` 的审批运行会存一份 `systemRunPlan`，**后续批准的转发复用该存储计划**，且网关校验会**拒绝调用方在审批请求之后修改 command/cwd/session context**。
+- **可复用判据**：① 审批的对象是**具体入参**，批准之后入参须冻结（存计划 + 拒绝事后编辑）；② 白/黑名单若只匹配命令名，**载荷内的 shell 文本仍是执行面**，须单独处理；③ 「批准了什么」与「实际跑了什么」要有可比对机制（存储计划即比对基准）。
+- **提升层**：安全边界（审批绑定）。触发词：审批后入参不可变、systemRunPlan 冻结、deny 不匹配载荷 shell。
+
+
+## r646C · 钉定之后还要检「同标签内容被换」，且信任门要问「对我要装的这个源生不生效」（来源：docs.openclaw.ai/cli/plugins/uninstall-and-update.md 200/24,232B + /cli/skills.md，r692-Q-B 一手，本轮复核）
+
+- **原文事实**：「When a stored integrity hash exists and the fetched artifact hash changes, OpenClaw treats that as **npm artifact drift**」；交互面打印 expected/actual 哈希并请求确认，**非交互面直接拒绝更新**，除非调用方给出**显式 continuation policy**；同页另句：「**Official ClawHub packages and bundled OpenClaw plugin sources bypass this release-trust check.**」
+- **可复用判据**：① 装机路径必须能**检出同标签换内容**，默认姿态是**非交互拒绝**（不静默接受新哈希）；② 装前审查表要加一列「**这条门对我要装的这个源生不生效**」——官方/内置源常被豁免，**豁免即盲区**；③ 有人/无人两态下同一策略强度不同，须分别声明。
+- **提升层**：安全边界（钉定后漂移）。触发词：artifact drift、非交互默认拒、官方源 bypass 检查、豁免即盲区。
+
+
+## r646C · 静态扫描要覆盖「定义期隐式执行」，且补丁必须附未覆盖点清单（来源：api.github.com/repos/anthropics/skills/pulls/1961 + langflow-ai/langflow/pull/15943，r691-Q-B / r691-Q-C 一手，本轮复核）
+
+- **原文事实**：langflow #15943：「Component definitions can invoke **decorators and metaclasses without explicit call syntax**」＋「Definitions containing restricted calls or references are **rejected before component building begins**」；anthropics/skills #1961：本机监听「Any web page open in the same browser could POST to `/api/feedback`, and a **DNS-rebinding page could read the data back**」，且修复后**自陈残留**：「Some other values still reach `innerHTML` unescaped: `r.passed`, `r.total`, `r.errors`」。
+- **可复用判据**：① 只匹配 `name(...)` 形态调用的 AST 扫描会漏掉 **import/装饰/类定义期即执行**这条隐式路径；② 扫描时点要在**构建之前**而非之后；③ 补丁必须附**未覆盖点清单**，否则评审会把它读成「已修完」；④ **本机监听 ≠ 只有本机可用**（DNS rebinding 是反例）。
+- **提升层**：安全边界（扫描覆盖面）。触发词：定义期隐式执行、扫描在建组件前、补丁附未覆盖清单、本机监听非本机专属。

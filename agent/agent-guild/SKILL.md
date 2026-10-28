@@ -22,7 +22,7 @@ description: |
   未加入？先跑 docs/ONBOARDING.md。、审批模式、分层授权、只读免审、gated actions、Manual/Auto/YOLO、Auto≠沙箱、越权复核、goal、验收标准、定义完成、粘滞质量门、amend/pause/resume、逐轮评分、记忆与技能、AGENTS.md、按需加载、全局vs项目、自改进回滚路径、不可恢复污染、冻结难解锁、transcript 乱序、撤回须传播到派生副本、事件名与实现语义不一致
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
-protocol_version: "3.2"
+protocol_version: "1.152.0"
 version: "1.150.0"
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild

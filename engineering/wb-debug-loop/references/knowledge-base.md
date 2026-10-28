@@ -2710,3 +2710,92 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 提升层：工作流（成本与延迟）/ 工具（缓存策略）。
 - 判据：① **TTL 序列必须单调不增**，顺序错了直接失去长档意义；② **把"生成耗时"算进窗口**——长响应会吃掉自己的复用窗口，评测与容量估算必须扣掉；③ **前缀要设计成不可变**：把时间戳、每请求上下文放在前缀里等于关闭缓存（"You pay for a fresh cache write on every request and never get a read."）；④ 判据的落点是"前缀里有什么"，不是"有没有开缓存"。
 - 触发词：longer TTL before shorter、生成时间计入存活期、断点写入、可变前缀永不命中、每轮 <20 块、每请求都付写不入读。
+
+## r646A · 重试预算必须绑定「整体请求期限」而不是连接超时——分阶段 timeout 里的 connect 值不是预算（来源：e2b-dev/e2b#1977，一手 gh api 200）
+
+- **原文事实**：`get_httpx_transport` 改为构造 `PyqwestDeadlineTransport`，使所有共享 httpx 消费者拿到 `Timeout(300, connect=60)` 时**整体期限=300**；`_request_deadline` 改读 `request_deadline`，使**重试预算等于被强制执行的期限（300，不是 60）**。
+- **可复用判据**：① 声明「超时」时必须区分**连接超时**与**整体请求期限**，二者不是同一个预算；② 重试预算只能以整体期限为上界，用 connect 值当预算会把每次重试的等待算漏；③ 超时语义应在 transport 层统一注入，而不是靠每个调用点各自传参。
+- **提升层**：工作流（超时与重试的作用域）。触发词：connect 不是预算、整体请求期限、request_deadline、transport 层统一超时。
+
+
+## r646A · 并发额度的释放点必须是「响应体读完」而非「收到响应头」，且空响应形态要有立即释放清单（来源：e2b-dev/e2b#1717，一手 gh api 200）
+
+- **原文事实**：`releaseOnBodyEnd`——slot 在收到 headers 后仍持有，直到 body 被读取/取消/出错才释放；`204`、`content-length: 0`（断言 `bodyUsed === false`）、`HEAD`、locked/used body 走**立即释放**；15 个用例在 node 与 workerd 双运行时覆盖 `max=1, reserved=1` 溢出。
+- **可复用判据**：① 并发额度的生命周期终点是**响应体消费完**，不是请求返回；② 空响应与不可读 body 必须列入「立即释放」白名单，否则额度被永不读取的响应占满；③ 释放点的跨运行时一致性要用同一组用例在多个运行时上验。
+- **提升层**：工具（并发额度记账）。触发词：slot 到 body end、204 立即释放、HEAD 不放 slot、reserved 溢出。
+
+
+## r646A · 已断开后的等待必须抛「已断开」而不是「超时」，且解码器残留字节的跨 SDK 语义差异须显式声明（来源：e2b-dev/e2b#1972，一手 gh api 200）
+
+- **原文事实**：断开后只有 stream 错误被抑制，回调错误（`onStdout` 等）仍上报；UTF-8 解码器里残留的字节，async Python 与 JS 仍并入 `stdout`/`stderr`、但 async Python 不再传给回调（JS 原本就不传）、**sync Python 行为不变**；修复后 `wait()` 在 `disconnect()` 之后抛 `SandboxError` 而非 `TimeoutError`。
+- **可复用判据**：① 连接已终止后的等待，错误类型必须表达**「已断开」这一事实**，不能用 TimeoutError 冒充——后者会诱导调用方重试一个永不返回的对象；② 缓冲残余的处理要在**每个 SDK/同步异步变体**上分别声明，否则同源 API 行为不一致被当成偶发；③ 断开后「抑制什么」要逐通道列举（stream 抑制≠回调抑制）。
+- **提升层**：工具（错误语义）。触发词：disconnect 后 wait、SandboxError 非 TimeoutError、解码器残留字节、跨 SDK 差异。
+
+
+## r646A · 批量派发里被取消的项要同时满足四条：保留取消语义、其余项全部落定、派发异常不进事件循环、整批失败仍可重试（来源：dagster-io/dagster#34346，一手 gh api 200）
+
+- **原文事实**：18 个回归用例覆盖派发前取消与批内取消、三键队列中每个位置、成功值、逐键错误与整批错误；断言**取消被保留**、**其余 future 全部 settle**、**没有派发异常冒泡到事件循环**、**整批失败仍保持可重试**。
+- **可复用判据**：① 「取消」是要在结果里**被保留的状态**，不能被吞成普通失败或成功；② 批量派发必须保证**其余项的确定性终态**，不允许部分悬挂；③ 派发器自身的异常不得逃逸进事件循环；④ 整批失败与逐项失败的可重试性要分开声明。
+- **提升层**：工作流（批量派发与取消）。触发词：取消被保留、其余 future settle、异常不冒泡、整批可重试。
+
+
+## r646A · 上下文压力驱动的续跑要分成三条显式路径，且每条各自带预算与延迟边界（来源：openclaw/openclaw#129388，一手 gh api 200）
+
+- **原文事实**：`continue_work` 路径持久化待办工作、**强制预算与延迟上界**、起定时器、**重新获取会话回复 lane**、在当前轮最终化之后才起下一个模型轮；`continue_delegate` 路径持久化委派意图、做 spawn/准入记账、管理子会话生命周期、跨会话耐久路由回传；另有 `request_compaction` 路径。
+- **可复用判据**：① 「上下文不够了」不是一个布尔，而是**续跑 / 委派 / 请求压缩**三条互斥路径；② 续跑必须显式声明**延迟上界**（否则变成不可预测的延迟执行）；③ 续跑要**重新竞争执行 lane**，不能假定原 lane 仍归自己；④ 续跑的下一轮必须等当前轮**最终化之后**才启动。
+- **提升层**：工作流（续跑与预算）。触发词：continue_work、continue_delegate、延迟上界、重获回复 lane。
+
+
+## r646A · 资源压力驱逐必须排除「会被自动恢复」的会话，否则驱逐与恢复互相打架形成振荡（来源：anthropics/claude-code#104649，一手 gh api 200）
+
+- **原文事实**：Windows 可用内存低于 5% 时，应用暂停所有空闲 ≥60 秒的会话（含远程控制会话），日志 `pressure evicting ... remote-started session yielded`；而远程控制 8 秒后自动恢复 ⇒ **每约 2 分钟一次的暂停-恢复循环**。
+- **可复用判据**：① 驱逐策略的输入不能只有「空闲时长」，还须排除**具备自动恢复机制的会话**；② 驱逐与自愈是两个独立控制器，作用于同一对象时必须显式仲裁，否则产生振荡而非收敛；③ 驱逐日志要能被外部读到，否则循环只能靠用户观察发现。
+- **提升层**：工作流（资源治理）。触发词：pressure evicting、驱逐恢复振荡、远程会话被驱逐、空闲阈值与自愈冲突。
+
+
+## r646A · 连续的审批暂停必须保住「已完成的宿主工具结果」，且恢复后不得重复执行（来源：vercel/ai#23592，一手 gh api 200）
+
+- **原文事实**：助手消息同时含审批门控的内建工具调用与宿主工具调用时流会挂住；修复要求**已完成宿主结果能跨越连续审批暂停存活**、覆盖审批流关闭、跨另一次审批暂停保留已完成结果、会话 detach/resume、**宿主执行 exactly-once**。
+- **可复用判据**：① 审批暂停是**中间态**不是终态，已产出的工具结果必须跨越它存活；② 多次暂停叠加时不得重新执行已完成的调用；③ 「审批通过」与「结果已存在」是两个独立位，恢复时都要检查。
+- **提升层**：工作流（审批与恢复）。触发词：审批暂停保结果、exactly-once 宿主执行、detach/resume、流挂住。
+
+## r646C · 三权分离：源输入拥有取消与保管权、操作拥有执行与期限、适配器只保留协议呈现与投递元数据（来源：docs.openclaw.ai/concepts/session-controller.md 200/27,135B，一手）
+
+- **原文事实**：「The source input owns **cancellation and custody**; the operation owns **execution and deadlines**; Gateway adapters retain only **protocol presentation and delivery metadata**」；且「Heartbeats and queued follow-ups still respect the **delivery barrier and its timeout policy**」。
+- **可复用判据**：① 取消权与执行权必须**分属不同主体**——执行方无权自行裁定取消生效；② 适配器/中间层**不得持有**执行期限与保管语义，只留投递元数据；③ 心跳与排队后续消息**同样受投递屏障约束**，不能作为绕过屏障的旁路。
+- **提升层**：工作流（权属分离）。触发词：取消权与执行权分离、适配器只留投递元数据、心跳也受投递屏障。
+
+
+## r646C · 排队中的输入由网关持有「取消身份」，且该取消不通过重启恢复复活旧轮（来源：docs.openclaw.ai/concepts/queue.md 200/26,477B，一手）
+
+- **原文事实**：当 prompt 停留在 followup/collect 队列中（例如另一轮活跃时到达的 TUI 或 webchat `chat.send`），Gateway 为该 client `runId` 保留一个 **Gateway-owned cancel identity**，直到该排队项被处理；「**This cancellation does not resume the old turn through Gateway restart recovery.**」
+- **可复用判据**：① 排队中的输入需要一个**由调度方持有的取消身份**，否则无人能对尚未开始的输入执行取消；② 取消与「重启恢复」是两条独立路径——**取消掉的轮不得被恢复机制复活**；③ 取消身份的存活期要显式规定（到排队项被处理为止）。
+- **提升层**：工作流（取消与恢复边界）。触发词：Gateway-owned cancel identity、排队输入取消、取消不通过恢复复活。
+
+
+## r646C · 关停时取消并 join 派发队列，但把「未完成的认领」留给下一个进程；普通中断保留原取消原因（来源：docs.openclaw.ai/gateway/restart-recovery.md 200/117,853B，一手）
+
+- **原文事实**：「Stopping the Gateway **cancels and joins the dispatch queue** while **preserving unfinished claims** for the next process.」；「Ordinary session interruptions and timeouts **retain their original cancellation cause**; they do not create Gateway-restart recovery custody.」
+- **可复用判据**：① 关停路径要**先停止派发再交还工作**——未完成的认领必须被保留给下一进程，而不是随关停消失；② 中断原因要**原样保留**，不被恢复机制改写成「需恢复」；③ 「可恢复」不是所有中断的默认属性，须由**成因**决定。
+- **提升层**：工作流（关停与交接）。触发词：关停保留未完成认领、取消原因不被改写、恢复保管权由成因决定。
+
+
+## r646C · 诊断命令不得污染运行态缓存，且嵌套重试预算要落在调用方期限之内（来源：docs.openclaw.ai/cli/memory.md 200/39,752B，一手）
+
+- **原文事实**：CLI `memory status --deep` **在单独进程中运行且不刷新 Gateway 的 readiness 缓存**；交互式 `memory_search` **保持三次尝试、在 agent tool 的 30 秒期限内最多 8 秒总重试 sleep**。
+- **可复用判据**：① 诊断/自检命令与运行态缓存要**进程隔离**，否则诊断本身会改变被诊断对象的状态；② 嵌套重试预算必须**显式小于外层期限**（8 秒 < 30 秒），不能把外层期限整个让给重试；③ 重试预算要同时给出**次数上界**与**总睡眠上界**。
+- **提升层**：工作流（预算嵌套）。触发词：诊断不刷新 readiness、8 秒嵌套在 30 秒内、次数与总睡眠双上界。
+
+
+## r646C · 对账方的状态枚举必须与写入方同步——新增的可观测状态不进枚举即被判「不存在」（来源：api.github.com/repos/n8n-io/n8n/pulls/42405，r692-Q-A 一手，本轮复核）
+
+- **原文事实**：n8n 给 idle worker 增加 `claiming` 中间态，而 Bull 的 job list 只读 `wait` 与 `active` ⇒ 对账「把 DB 里 `new/running` 的执行与队列里 `active/waiting` 的 job 比对，缺 job 者判 `crashed`」会把**正在被认领的执行判成崩溃**（逐字："a job in `claiming` was not in any list that n8n reads"）；该态停留**<1 毫秒**，但对账只在「main 成为 leader + 每 180 分钟」跑。
+- **可复用判据**：① 任何一方新增可观测状态，须**同时进入对账方的枚举**；② **低频对账 + 瞬时新态 = 错判成长期驻留**，故对账频率与状态寿命要一起设计；③ 「读不到」与「不存在」在对账里必须区分。
+- **提升层**：工作流（对账前置条件）。触发词：状态枚举不同步、claiming 被判 crashed、低频对账放大瞬时态。
+
+
+## r646C · 错误类型即恢复算子：五类状态机之外，「哪类错误计入停用计数」是独立于「可重试」的第二维（来源：developers.make.com 错误面 + api-reference，r693-Q-A 一手，本轮复核）
+
+- **原文事实**：同一载荷错误按声明类型进五种状态机——回滚+「连续 N 次（默认 3）才停用」/ 可降级为「停靠不中断（存 incomplete 供人工修数据续跑）」/ 挂起约 20 分钟自动续且**明确不计入连续计数**/ 退避后下轮重试（重连耗尽才停用）/ 立即停用+通知。
+- **可复用判据**：① 错误分类要**直接映射到恢复算子**（回滚/停靠/挂起/退避重试/停用+通知），不只是打标签；② **「计入停用计数」与「可重试」是两个独立维度**，把自愈型限流挂起计入停用计数会让平台在外部配额恢复前自我关停；③ 「连续 N 次才停用」的 N 要能被错误类型逐类覆盖。
+- **提升层**：工作流（错误分派）。触发词：错误类型即恢复算子、停用计数第二维、自愈型挂起不计入停用。

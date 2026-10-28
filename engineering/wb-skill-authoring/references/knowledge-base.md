@@ -4743,3 +4743,63 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - 提升层：可复用 Skill（技能库维护）/ 工具（使用埋点）。
 - 判据：① **技能库要有"引用命中"埋点**——没有访问记录的打包文件是腐坏信号，不是冗余备份；② **零命中先判"信号不足"再判"不需要"**：先看主指令有没有明确指向它，改完引用仍零命中才删；③ 描述字段承载触发判断、正文承载实现，把"何时用"写进正文会让选择面失效。
 - 触发词：从未被访问的捆绑文件、零命中先改信号再删、SKILL.md <500 行、description 说清做什么与何时用、技能库腐坏诊断。
+
+## r646A · 只服务于触发的段落在正文里是纯成本——触发信息与正文信息应分层（来源：obra/superpowers#2632，一手 gh api 200）
+
+- **原文事实**：以 `perf(skills)` 名义**删掉 trigger-only 的「When to Use」段**，每次加载省 **1,462 tokens** 上下文。
+- **可复用判据**：① 「何时使用」是**路由期**信息，一旦技能已入选，它在正文里只剩成本；② 触发词应进 frontmatter 的 description/触发面，不占正文预算；③ 正文瘦身要声明「被移走的信息去了哪里」，否则等于丢内容（配 r691-Q-B 的守恒声明纪律）。
+- **提升层**：可复用 Skill（上下文预算）。触发词：When to Use 段、trigger-only 成本、路由信息与正文分层、每加载省 1462 token。
+
+
+## r646A · 面向 AI 的动作与面向人的动作必须有两套元数据契约（来源：activepieces/activepieces#16870，一手 gh api 200）
+
+- **原文事实**：新增 AI actions 带 output schemas 与新事务触发器；测试覆盖元数据维度 `audiences` 与 **AI 可见动作不放 dropdowns**（AI 无法使用下拉枚举），另覆盖 dedupe、三态更新、同步排序、触发器的 baseline / fire-once 行为。
+- **可复用判据**：① 同一动作给人和给模型的**输入形态不同**：下拉枚举对人友好、对模型不可用；② 元数据里要有 `audiences` 之类的显式维度区分两类消费者；③ AI 可见动作必须带**输出 schema**，否则模型无法判定结果形状。
+- **提升层**：可复用 Skill（工具契约）。触发词：AI 可见动作无下拉、audiences 维度、output schema、fire-once 基线。
+
+## r646B · 技能效果归因必须做差——仅操作规格已 +0.162，技能叠加只 +0.024（与零不可区分），诱饵技能≈无技能（来源：arxiv.org/abs/2610.37459，一手 citation_abstract）
+
+- **原文数字**：技能臂 **+0.136 reward / 28 个任务中 26 个改善**；但**仅操作规格 +0.162**，技能叠加仅 **+0.024（作者自陈 indistinguishable from zero）**；十任务子集上 **decoy skills 得分与无技能相当**、裸参照 SQL 几乎追平定向技能；schema 混淆/重排下仍保留 **86% / 70%** 增益；280 条 with-skill 运行仅 **25** 条全过严格检查。
+- **可复用判据**：① 评技能效果的**最低臂集**=有技能 / 无技能 / **去格式留规格** / **诱饵技能** / **裸参照物**；缺任一，"+0.136" 不可解释为技能机制有效；② 「有提升」与「提升归给谁」是两个不同轴（已落 WITH-WITHOUT 配对管前者）；③ 严格检查通过率要与 reward 分列报（25/280 才是真实可用率）。
+- **提升层**：可复用 Skill（效果归因）。触发词：去格式留规格臂、诱饵技能臂、技能叠加仅 +0.024、25/280 严格通过。
+
+
+## r646B · 被撤销的约束要留「墓碑态」，且自我改进流水线可能反向放大违规复发（来源：arxiv.org/abs/2610.33766 StateWise，一手 citation_abstract）
+
+- **原文数字**：命名两个失败模式 **persistence failure** 与 **relapse**，用**带墓碑的带类型状态**表示被撤销约束，由**可执行检查器**测量，并以编译出的 ground-truth 状态免费获得；数据侧只保留**通过与编译状态做精确往返校验**的轮次；效果 **relapse 降 8–22 点**、对话成功率 **+8–19 点**；反直觉负果——在 Llama-3.1-8B 上**每个监督式变体都使 relapse 大约翻倍**（起效的是偏好阶段，不是监督阶段）。
+- **可复用判据**：① 规则/约束被撤销后**不能只删**——删除后无法区分「从未有」与「已废」，须建**可机检的失效态**；② 「已撤销约束仍在多轮里复发」是**可测量指标**（relapse）不是模糊的「忘了」；③ 自改进流水线**加监督数据可能使该指标翻倍**，改进前须把 relapse 单列为负向 KPI。
+- **提升层**：工作流 + 模型（约束态治理）。触发词：撤销约束墓碑态、relapse 可测量、监督变体使 relapse 翻倍。
+
+
+## r646B · 技能生命周期要设「受保护孵化期」，且效用与掌握度须分轨记（来源：arxiv.org/abs/2610.25126，一手 citation_abstract）
+
+- **原文事实**：技能生命周期为**证据门控的状态转迁**（生成→准入→**受保护孵化**→留用/退役/移除），孵化窗口内**不得因早期稀疏证据被退役判定**；且须**分轨记**「技能作为脚手架的因果贡献」与「模型对该能力的内部化程度」，二者不可互相代理——**共检索导致的搭便车**会使单技能效用估计系统性偏高，需同一任务组内独立随机注入 + 组内对照才可比。
+- **可复用判据**：① 新技能要有**证据量下限之前的免退役窗口**，否则早期稀疏数据会误杀；② 「有用」与「模型已内化」是两个轴，后者上升不等于前者下降，不能互相代理；③ 多技能共存时单技能效用须用**组内对照**测，共检索会制造搭便车假象。
+- **提升层**：可复用 Skill（生命周期）。触发词：受保护孵化期、效用与掌握双轨、共检索搭便车、组内随机注入。
+
+## r646C · 嵌套技能需独立显式同意，且名字与内容摘要「两半」必须同时保存、不得单半做键（来源：modelcontextprotocol.io/seps/2640-skills-extension.md 200/65,653B，一手）
+
+- **原文事实**：「Activating a **nested skill** … requires **fresh, explicit user consent**; approval of the enclosing skill d[oes not suffice]」；「Hosts **MUST preserve both halves** wherever a skill is recorded or addressed, including the registry, persisted approvals, the cache, and any tool or path through which the model reaches the skill, and **MUST NOT key any of these on th[e single half]**」；内容陈旧时「hosts **MUST NOT use the unverified content**; to recover from staleness, call `skills/get` … (or `skills/list` to refresh the catalog)」。
+- **可复用判据**：① 批准外层不等于批准嵌套，**嵌套激活是独立授权事件**；② 标识必须**双半**（名字 + 内容摘要）同时保存，任一单半做键会让同名的不同内容互相覆盖；③ 陈旧内容**必须先停用再回源**，不得「先用着再刷新」。
+- **提升层**：可复用 Skill（标识与授权）。触发词：嵌套技能独立同意、双半标识不得单半做键、陈旧即停用再回源。
+
+
+## r646C · 审查必须落在「被交付的那一件工件」上——发布冻结为 pending 并对该确切工件扫描，未过则 search/install/download 三面皆不可见（来源：docs.openclaw.ai/clawhub/publishing.md，r692-Q-B 一手，本轮复核）
+
+- **原文事实**：「stores the release as **pending** and runs automated security checks **on that exact artifact**」；「A pending release stays out of **search, install, and download surfaces** until the security checks pass」。
+- **可复用判据**：① 审计结论未绑定到**工件标识（哈希/发布 ID）**者，不得读成「这个包是安全的」——审的可能是仓库的另一份内容；② 三种市场设计要并列成选择判据：**提交时扫描+徽章** / **装机后才生成审计（未审 404）** / **发布即冻结并按确切工件扫描**；③ 治理态要覆盖**可发现面**，不只覆盖可安装面。
+- **提升层**：可复用 Skill（审查绑定面）。触发词：pending 按确切工件扫描、三面下架、审计绑定工件标识、可发现面也治理。
+
+
+## r646C · 审计记录的触发时点决定它的覆盖率——装机后才生成审计、未审返回 404，故「无记录」≠「安全」（来源：www.skills.sh/docs/api，r691-Q-B 一手，本轮复核）
+
+- **原文事实**：「**Audits are generated automatically after a skill is installed for the first time** — there may be a delay」，且未审条目返回 **404**。
+- **可复用判据**：① 装前审查若依赖市场审计，先问「该市场的审计是**被提交触发**还是**被安装触发**」——后者对冷门技能几乎必然无记录；② `404` / 无记录的正确读法是「**还没人装过或还没扫到**」，不是「已通过」；③ 越冷门的技能越不可能有审计 ⇒ 审计覆盖率本身要作为选择市场的一项指标。
+- **提升层**：可复用 Skill（市场治理设计）。触发词：装机后生成审计、404 不等于安全、提交触发 vs 安装触发。
+
+
+## r646C · 技能「活动度」的定义要把作者自身改动计入，且遥测不可归因时应关闭自动清理（来源：docs.openclaw.ai/tools/skill-workshop.md 200/22,558B，r691-Q-B 一手，本轮复核）
+
+- **原文事实**：活动 = 「**the latest of: a recorded read of its `SKILL.md`, a foreground `skill_workshop` `view`, and its last change**」（第三项把**作者自己改动**也算成活动）；「**Codex app-server harness reads skills with its native shell, which OpenClaw cannot attribute to a skill, so cleanup stays off for Codex agents**」。
+- **可复用判据**：① 自动退役的作用域须按**可观测性逐宿主开关**，不可归因时**关闭自动清理**而不是按「零使用」误退役；② 活动度定义若把「作者改动」算进去，被持续维护的错误技能会**永不退役** ⇒ 活动与「被使用」要分开记；③ 退役阈值与作用域开关要成对配置。
+- **提升层**：可复用 Skill（退役判据）。触发词：活动度含作者改动、遥测不可归因即关清理、作用域按宿主开关。

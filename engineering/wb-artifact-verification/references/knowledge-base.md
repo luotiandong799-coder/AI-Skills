@@ -4725,3 +4725,98 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 提升层：工具（产物交付）/ 可复用 Skill（流式产物验收）。
 - 判据：① **部分产物不是降级产物**——校验失败时"给一半"比"给报错"更危险，因为下游会把它当完整件；② **单据必须自证一致**：清单与错误头要说真话，宁可终止也不发失真的完成态；③ **可恢复性要在错误里明示**（`recoverable: false` 让调用方不再空转重试）。
 - 触发词：discard the partial ZIP、完整性校验失败即终止流、_manifest.json 不失真、X-Export-Errors、403 for quarantined/revoked、recoverable: false。
+
+## r646A · 参考实现与存储实现的过滤语义分歧必须「对齐或显式报错」，静默分歧比显式失败更危险（来源：deepset-ai/haystack#13312，一手 gh api 200）
+
+- **原文事实**：内存参考实现对**列表值字段**的 `in`/`not in` 判定与 OpenSearch/Elasticsearch 的 terms 语义**发散**；给出的两条出路是①把 `in`/`not in` 按**交集非空**求值以对齐 term 型存储，或②在「`in` 作用于列表值字段」时抛 `FilterError`，**让分歧响亮而不是静默**。
+- **可复用判据**：① 同一查询语言有多个执行后端时，语义分歧必须显式处置（对齐 或 报错），不允许第三种——静默不同；② 「本地参考实现」与「真实存储」的差异应有一致性测试固定；③ 报错位要选在**查询构造期**，而不是等到结果已返回才发现口径不同。
+- **提升层**：工具（一致性验收）。触发词：内存与存储语义发散、列表值字段 in、FilterError 让分歧响亮、参考实现一致性。
+
+
+## r646A · 聚合节点不加载明细时，依赖明细的遥测会静默归零——「零」是「没看到」不是「没发生」（来源：n8n-io/n8n#42482，一手 gh api 200）
+
+- **原文事实**：queue mode 下 main 在 worker 完成后**不加载 run data**（自 2.27.0 起），改用 worker 摘要构建 finished run，run data 为空 ⇒ Insights 对「动态节省时间」**每次执行都记 0 分钟**；同一原因使**私有凭据使用的遥测计数也为 0**，该 PR 未改这一点。
+- **可复用判据**：① 遥测口径必须声明它依赖的数据面，数据面被裁剪时遥测应报**不可得**而非 0；② 分布式聚合里「主节点看不到明细」是常态，任何按明细统计的指标都要显式标注适用模式；③ 修一处指标不等于修同源的另一处，要列出**同原因未修清单**。
+- **提升层**：可观测性（指标口径）。触发词：queue mode 遥测归零、不载 run data、Insights 记 0、同原因未修清单。
+
+## r646B · 单次执行评级会系统性高估 agent 产出的管线——ArrivalBench：重跑同一批产物，7.0–79.2%「已认证」的静默错误（来源：arxiv.org/abs/2610.02363，一手 citation_abstract）
+
+- **原文数字**：40 个任务上，单次执行评级对 11 个模型产出的管线**认证 86–100%**；按对抗但可重放的投递调度（迟到/重复/乱序/重试记录）**重执行同一批产物，发现 7.0–79.2% 的已认证管线静默出错**。每个模型上**幂等性危害失败多于顺序危害**。crash 与 wrong table 是**两种不同判决**（crash 被既有监控看见，wrong table 看不见）。
+- **可复用判据**：① 验收不能只跑一次快照，须在**投递扰动下重跑**并要求末态等于全量日志的批量重算；② oracle 要**重算而非分类**，才能把「崩溃」与「错表」分开；③ 危害归因要按**幂等性 vs 顺序**分列，二者修法不同；④ 修复回路不解决该问题——对着快照测修过的管线与一次通过的管线重放失败率相当。
+- **提升层**：工作流（验收口径）。触发词：单次评级高估、重放发现静默错误、幂等危害多于顺序、crash 与错表分判。
+
+
+## r646B · 只读副本必须是「带守卫的幂等投影」，且要显式列出该保证**不覆盖**什么（来源：arxiv.org/abs/2610.00519 Harbormaster，一手 citation_abstract）
+
+- **原文事实**：DynamoDB 读存储是 PostgreSQL 的**幂等投影**，每次写入由该变更的 **LSN 守卫**保护；论文证明**重放变更日志的任意前缀或后缀，每个被投影的键都停在其最高已应用 LSN 的值**；同时**明确点出该结果不覆盖的效应**——**重复缓存失效**与**重复审计行**。另有「候选模型须过 holdout 门与影子比对才进 canary，且每个 canary 步由 burn-rate 检查守卫」。
+- **可复用判据**：① 投影型副本的正确性要表述为**可证的重放性质**（任意前缀/后缀重放后停在哪），而不是「最终一致」；② 单调守卫（LSN/序号）必须在写入路径上，**不能被绕过**；③ 任何幂等/重放保证都必须附**不覆盖项清单**——重复缓存失效与重复审计行正是最容易被误认为「已解决」的两项；④ 模型/策略上线要**holdout + 影子 + 逐步 burn-rate** 三段。
+- **提升层**：工作流（投影与重放）。触发词：幂等投影、LSN 守卫、任意前缀后缀重放、不覆盖项清单、burn-rate canary。
+
+
+## r646B · 生成式「重构」会漏词、重复或幻觉——须把「归属预测」与「重构」解耦，重构走确定性索引（来源：arxiv.org/abs/2610.06603 EPOR，一手 citation_abstract）
+
+- **原文事实**：要**保住每一个词的出现与源内顺序**的精确重构目标下，直接用 LLM 生成分离文本会**遗漏、重复或幻觉词汇**；EPOR 把**来源归属预测**与**重构**解耦，推理时用 completion-safe 约束解码 + **确定性索引重构**，产出结构性合法的 K 源划分且每个观测出现恰好一次。
+- **可复用判据**：① 凡要求**保真**（不漏不重不造）的重构任务，不能交给生成模型端到端完成；② 正确形态 = 模型只预测**归属/路由**，重组由**确定性索引**执行；③ 「精确重构」要作为独立验收指标单列，不能混在相似度分数里。
+- **提升层**：工作流（保真重构）。触发词：生成式重构漏重幻觉、归属预测与重构解耦、确定性索引重构、exact-once 保真。
+
+
+## r646B · 七层证据 + 合取式声明晋升：哈希相等之外还要出处、谓词专属根条件、阴性对照、可复现打包、历史重放与独立复核（来源：arxiv.org/abs/2610.02838，一手 citation_abstract）
+
+- **原文事实**：密封执行清单绑定声明的系统身份/角色/schema/发布标识；七层证据以登记过的派生关系保存并由共同关联身份串联；**声明晋升采合取规则**——除哈希相等外，还需 provenance、predicate-specific root conditions、negative controls、reproducible packaging、historical replay、independent review；论文证明**复制来的哈希不能建立独立派生**。
+- **可复用判据**：① 「哈希对得上」是**必要条件不是充分条件**——复制的哈希同样对得上；② 证据层之间要有**登记的派生关系**，否则多层证据可能同源；③ 晋升为「已证明」必须**同时**满足多类条件（含阴性对照与独立复核），任一缺失即为未晋升；④ 声明晋升规则要写在清单里，不能靠评审临场判断。
+- **提升层**：工作流（证据分级）。触发词：复制哈希不证独立派生、七层证据、合取晋升、阴性对照与独立复核。
+
+
+## r646B · 成本收益读数必须绑定计价模型——同一批缩减在 flat 下 26/42 降本、在 caching-aware 下 0/42（来源：arxiv.org/abs/2610.35496，一手 citation_abstract）
+
+- **原文数字**：42 种轨迹缩减配置、9,400 次运行、SWE-bench Verified——**flat 计价下 26/42 项成本下降；caching-aware 计价下 0 项下降**（缩减破坏了低计费的缓存前缀）；另一侧**立即删除显著降低效果、延迟删除几乎无损**（可删至 100% 推理文本），且 agent 会**重新抓取被删内容**补偿，使轮数与 token 反升。
+- **可复用判据**：① 「省了多少 token」不是成本结论，**必须写明计价口径**（两种计价可反向）；② 缩减的**时机**（立即 vs 延迟）与**位置**（是否切断缓存前缀）是两个独立变量；③ 评测须单列 **re-fetch 计数**，否则端到端效果会掩盖过度重取。
+- **提升层**：工作流（成本口径）。触发词：flat 与 caching-aware 反向、立即删除 vs 延迟删除、re-fetch 计数必列。
+
+
+## r646B · 多阶段增量任务的失败主因是「继承缺陷」且几乎不被察觉——分数须按新错/继承错二分，并必须重跑早期阶段的 P2P（来源：arxiv.org/abs/2610.37434 + 2610.37482，一手 citation_abstract）
+
+- **原文数字**：10 个 coding agent × 73 个手工复核任务（2–10 阶段，单持久会话、无外部测试反馈与回滚）——池化成功率**从第一阶段的 62.7% 掉到在最终代码上测整个 feature 的 28.5%**；**继承缺陷出现在 72.9% 的失败后期阶段**；agent **约 95% 的情况下没注意到早期错误**。同向证据：把「已验证的进展」显式建态后 success **12.0%→28.2%**、每解出任务 lifecycle token **−38.7%**。
+- **可复用判据**：① 多阶段分数必须按**本轮新错 vs 继承错**二分报告，否则 62.7→28.5 会被误读成「越往后越不会做」；② 验收必须**重跑早期阶段的 P2P**，只测当阶段看不见继承；③ 「无外部测试反馈、无回滚」是**评测设定**不是能力结论，跨设定比较前先对齐；④ 进展本身应作为**已验证状态**保存。
+- **提升层**：工作流（增量验收）。触发词：继承缺陷 72.9%、95% 未察觉、P2P 重跑、进展建态省 38.7% token。
+
+## r646C · 审计上下文的构造是五步流水线，且原始上下文丢失时须明确声明「精确检视不可用」（来源：docs.openclaw.ai/gateway/audit.md 200/41,826B，一手）
+
+- **原文事实**：「The queue drain **initializes schema and HMAC-key state**, **pseudonymizes raw references**, **constructs the immutable context**, **validates its canonical bytes**, and **persists it** through the existing shared-state worker.」；「If the original queued context was lost, **exact inspection stays explicitly unavailable**.」
+- **可复用判据**：① 审计上下文要在**排空阶段**一次性构造并做规范化字节校验，避免事后拼接；② 假名化是构造步骤之一，不是可选加固；③ **上下文丢失时必须显式声明不可用**，而不是返回一份降级内容还标成「已审计」——这是审计面最容易造假的缺口。
+- **提升层**：证据/审计（上下文构造）。触发词：审计上下文五步、规范化字节校验、丢失即明确不可用。
+
+
+## r646C · 审计覆盖词汇要统一：hook 放行/拦截、节点配对、worker 准入都算 `enforced` 门（来源：docs.openclaw.ai/cli/audit.md 200/21,411B，一手）
+
+- **原文事实**：「Plugin, node, and worker receipts use the same **coverage vocabulary**」——已注册插件 `before_tool_call` hook 的 allow/block、节点配对或能力判定、以及精确 worker 凭据/构建/属主 epoch 准入，**都属于 `enforced` gates**。
+- **可复用判据**：① 审计收据必须共用**同一套覆盖词汇**，否则「已强制」在不同层含义不同；② 「enforced」要有**列举式定义**（哪些判定算门），不能靠读者推断；③ 准入（credential/build/owner-epoch）属门禁面，须与执行面分账。
+- **提升层**：证据/审计（覆盖词汇）。触发词：覆盖词汇统一、enforced 列举定义、worker 准入属门。
+
+
+## r646C · 遍历型 API 是 live read 而非冻结快照——须按包+发布去重，并在遍历中遇到 release 变化时重试（来源：docs.openclaw.ai/clawhub/http-api.md 200/85,255B，一手）
+
+- **原文事实**：「**Pages are live reads, not a frozen snapshot**; **deduplicate by package and release** and **retry if releases change during traversal**.」；并要求缓存结果、遵守 `429`/`Retry-After`、链接回 canonical listing、不暗示官方背书。
+- **可复用判据**：① 分页遍历的全量抓取**没有一致性快照**保证，须按 (包, 发布) 去重；② 遍历期间 release 变化要**重试**而非静默接受；③ 第三方镜像须遵守限流并**不得暗示官方背书**（合规面，非性能面）。
+- **提升层**：工作流（遍历一致性）。触发词：live read 非快照、按包与发布去重、遍历中变化即重试。
+
+
+## r646C · 「有校验器」不等于「有发布闸」——旗舰官方技能仓根内无 CI workflow、无校验脚本，市场清单对每插件写 `strict: false`（来源：api.github.com/repos/anthropics/skills/git/trees/main?recursive=1 与 .claude-plugin/marketplace.json，r692-Q-B 一手）
+
+- **原文事实**：官方 `anthropics/skills` 仓根只有 `.claude-plugin/.gitignore/README.md/THIRD_PARTY_NOTICES.md/skills/spec/template`——**无 CI workflow、无仓内校验脚本**；`.claude-plugin/marketplace.json` 对每个插件写 `"source":"./"` + **`"strict": false`** + 显式 `skills` 白名单。
+- **可复用判据**：① 评估任一技能/插件仓的质量门，先查**闸是否在仓内、由谁执行**——仓内没有 ⇒ 那些 `validate` 脚本只是给人跑的建议动作；② `strict:false` 是**宿主对清单字段放弃强校验**的显式声明；③ 「有校验器」「有 CI 徽标」「文档写了 pre-publish checklist」三类证据须降级为**作者意图级**，只有「仓内 workflow + 强制步骤 + 失败即阻断」才算闸。
+- **提升层**：证据（闸门在场性）。触发词：仓内无 CI 即无闸、strict false 放弃强校验、徽标与脚本不可作闸证据。
+
+
+## r646C · 扫描覆盖例外必须前置声明：不覆盖 Skills API / Console 上传，且「扫描未完成」与「扫描失败」同样阻断（来源：docs.claude.com/.../overview.md 200/21,912B + platform.claude.com/.../enterprise 200/576,853B，一手）
+
+- **原文事实**：「**Scanning doesn't cover Skills uploaded through the Skills API or the Claude Console.**」；Enterprise 侧：「A Skill that **fails the scan** is blocked from use. A Skill whose **scan hasn't completed** is blocked from use.」且 API 上传的**不被扫描**，故 API 部署只能「rely on the **review checklist** and **version pinning**」。
+- **可复用判据**：① 任何「已扫描/已合规」结论必须先声明其**覆盖的上传通道与运行时**；② **未判定态必须阻断**（pending ≠ 通过），与已落「审批无回复默认拒」同向；③ 不被平台扫描的通道，替代控制是**审查清单 + 版本钉定**，二者须成对写。
+- **提升层**：安全边界（覆盖例外）。触发词：扫描不覆盖 API 上传、未判定也阻断、review checklist 与版本钉定成对。
+
+
+## r646C · 缓存前缀的三个破坏源：thinking block 剥离、变体块、键序随机化（来源：docs.claude.com/en/docs/build-with-claude/prompt-caching.md 200/162,386B，一手）
+
+- **原文事实**：早期 Opus/Sonnet 与 Haiku（≤4.5）上**所有已缓存的 thinking blocks 被剥离**，且**其后所有消息也从缓存移除**；「**Cache writes occur only at the breakpoint**, and if that block changes (timestamps, per-request context, the incoming message), **the prefix hash never matches**」；须验证 `tool_use` content blocks 的**键顺序稳定**（Swift、Go 的 JSON 转换会随机化键序而破坏缓存）。
+- **可复用判据**：① 缓存前缀的任何一字节变化（含时间戳与每请求上下文）都会使前缀哈希永不匹配 ⇒ 变体内容必须放前缀之后；② 特定模型代际会剥离思考块及其后消息，缓存设计要按代际分别验；③ **键序稳定性**是缓存可用的前提，须在序列化层固定。
+- **提升层**：工作流/成本（缓存前缀）。触发词：thinking block 剥离、断点块变化即失效、tool_use 键序随机化。
