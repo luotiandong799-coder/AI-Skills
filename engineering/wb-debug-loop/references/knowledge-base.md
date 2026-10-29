@@ -2829,7 +2829,7 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 「无效编辑自动回退 + 验证器输出修复建议」（来源：arXiv 2607.01709 COMFYCLAW）：把工作流构建形式化为类型化图编辑并自动回退无效编辑；区域级验证器把失败翻译成可操作的修复建议而非只给成败二值。判据：验证器的产出必须是「下一步改什么」，不是「对/错」。
 
 
-## r648 三轮共学新增（9 点）
+## r648 三轮共学新增（12 点）
 
 - 「恢复正确性要双向覆盖：既防重跑也防漏跑」（来源：langchain-ai/langgraph#9484）
   与 #9276/#9315（恢复后重跑已完成任务，即「跑太多」）成对，本例是「跑太少」——节点 TimeoutPolicy 加图级 step_timeout 双超时下，兄弟失败后恢复的子图丢掉 Send 扇出已调度的任务，只返回第一步的状态。
@@ -2867,7 +2867,6 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
   调高 AP_FLOW_TIMEOUT_SECONDS 后，agent 工具、chat 动作与 MCP action 运行会继承同一上限，不想被拖那么久就必须另调；同时单 run 的 max steps 服务端封顶 50 turns（honoured up to a ceiling）。
   判据：单一全局超时会被最慢的调用类型绑架，短动作承担了不属于它的等待
 
-## r648 三轮共学新增（3 点）
 
 - 「重放上轮推理须走模型识别的推理通道(reasoning_content/preserve_thinking)，否则模型模仿 <think> 标签污染」（来源：langgenius/dify#44964）
   Agent App 把上轮推理原样重放为字面 `<think>` 标签，模型随即模仿；应走 DashScope `reasoning_content` + `preserve_thinking=True`（模型识别为推理），或整体丢弃。

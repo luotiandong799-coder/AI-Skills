@@ -4819,7 +4819,7 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - 「技能 URI 末段即技能名，身份可从路径恢复」（来源：modelcontextprotocol.io/seps/2640）：经 MCP 提供的技能必须符合 Agent Skills 规范，SKILL.md 必须以含 name/description 的 YAML frontmatter 起始；skill URI 最后一段必须等于声明的技能名，使名称无需读 frontmatter 即可从 URI 恢复。判据：路径与声明不一致的技能不应被装载。
 
 
-## r648 三轮共学新增（11 点）
+## r648 三轮共学新增（12 点）
 
 - 「工具描述必须写明「何时用我」与「优先用哪个兄弟工具」，并给出分级读取参数」（来源：modelcontextprotocol/servers#5393/#5394）
   search_nodes 说明匹配范围（名称/类型/观察，大小写不敏感）、用于关键词/主题/部分名、精确名称优先 open_nodes、整图才用 read_graph；open_nodes 说明已知名称时它最廉价。同时给三个读工具加 observationLimit（0 = 仅名称/类型/计数概览）、entityTypes 过滤、limit 截断，并在 outputSchema 暴露 observationCount。
@@ -4864,12 +4864,6 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - 「命名标识软删除要有保留期并公布到期时间，版本撤回走 fail-closed」（来源：docs.openclaw.ai/clawhub/cli.md 与 /http-api.md）
   属主发起的软删除为该 slug 保留 30 天并在响应里返回 slugReservedUntil；--version 撤回一个自有非 latest 版本走 fail-closed 流程。
   判据：删除后立即可再注册会让依赖方被同名不同物劫持；撤回失败若开放会留下应下架的版本
-
-## r648 三轮共学新增（2 点）
-
-- 「Schema 优化/压缩不得把 default/const/enum/examples 实例值当 schema 遍历」（来源：browser-use/browser-use#6216）
-  SchemaOptimizer.create_optimized_json_schema 把实例值（default/const/enum/examples）当 schema 遍历，导致 LLM 看到与模型实际不同的默认值（filters.default 变成 `{'type':'object'}`、columns.default 变成 `[{}]`）。
-  判据：schema 优化若把实例值当结构遍历，会静默改变 LLM 看到的默认值/约束，破坏工具契约保真——优化只动描述/结构，不碰实例值
 
 - 「审批/权限请求须携带原生工具名(nativeToolName)，桥接层不得丢弃」（来源：vercel/ai#23477）
   内置工具审批请求只带 harness 工具名，原生名（如 Bash）在送达审批前被丢弃；提案在 `toolCall.providerMetadata[harnessId].nativeToolName` 补回并文档化（Claude Code bridge 已发 nativeName）。

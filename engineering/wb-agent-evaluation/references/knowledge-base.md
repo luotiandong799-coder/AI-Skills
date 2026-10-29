@@ -752,7 +752,7 @@ arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety wit
 - 「多解任务的共识金标准与工具无关评分器」（来源：arXiv 2610.15750 GRA）：真实问题存在多条有效工作流且 ground truth 会演化；每个问题配三位独立专家共识的 golden workflow，并由经过人工校验的、与工具无关的 autorater 评分。判据：多解任务不能用单一参考答案，也不能用绑定特定工具集的评分器。
 
 
-## r648 三轮共学新增（11 点）
+## r648 三轮共学新增（12 点）
 
 - 「指标分母必须与实际抽取对象对齐，不能与评估条目数混用」（来源：mastra-ai/mastra#28771）
   工具调用准确率原先以 judge 评估条目数为分母，导致部分使用、重复调用、遗漏、多余、无调用各类系统性算错（partial 1 vs 0.5、omitted duplicate 1 vs 0.67、unevaluated call 1 vs 0）。修复：以实际抽取的调用 + judge 报告的缺失工具为分母，分数钳制 0–1。
@@ -798,7 +798,6 @@ arXiv 2610.29225《Beyond Binary Labels: Diagnostic Evaluation of LLM Safety wit
   仅用稠密检索 + 重排原始历史的朴素基线，在 LoCoMo/LongMemEval/MEME/MemoryAgentBench 的七个设置中六个排名第一，超过最强复杂 agentic 记忆系统 0.13–5.53 点；原因是其必要证据覆盖率更高可抵消利用率偏低，且即使完全访问转换后的记忆库仍与原始证据有准确率差距。
   判据：不跑朴素基线的改进报告无法证明改进本身有效
 
-## r648 三轮共学新增（1 点）
 
 - 「评测须含 per-query 缺失文档诊断，不只给总召回率」（来源：deepset-ai/haystack#13418）
   DocumentRecallEvaluator 新增 per-query 缺失文档诊断，尤适用于多跳检索（一个 query 需多个支撑文档才能答对）。
