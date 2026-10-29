@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算、机械验证优先、LLM judge 替代路径、授权动作降级为交互即验收失败、凭据有效≠连接可用、版本漂移、三态归因
-version: "1.109.0"
+version: 1.110.0
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -63,7 +63,6 @@ version: "1.109.0"
 - **判据**：① **「每件都过审」不是装配安全的前提**：失效不在单个技能里，而在它们的交互上 ⇒ 引入多技能装配时，评测单元必须从「单件」扩到「组合」（技能对、三元组），只做单件审等于没审装配。② **绕过面同时覆盖静态扫描与运行时监控**：原文并列 per-skill scanners 与 runtime monitors ⇒ 加一道运行时监控不能替代组合级审查，两者是同一盲区下的两道同向失效。③ **级联的破坏形态是"静默降级"不是"报错"**：实例里没有任何环节失败——每件都按自己写的方式工作，结果是关键告警在汇总阶段消失 ⇒ 评测指标若只看"有没有报错/有没有拒绝"，抓不到这一类；要看**末端产物里关键信息是否还在**。④ **与既有条目串成链**：完整性（哈希/签名）→ 单件扫描（已知噪声率高）→ 上下文复核（裁决）→ **组合级联回归（本条）**，四道各自独立，任何一道通过都不代表下一道通过。
 - **与既有能力分工**：wb-artifact-verification §恶意第二档零恶意件组合（r436A）管**验证侧要开组合档**；本条给**评测侧的基准与量级**（213 例、三实例链条、运行时监控一并失效）。
 - 提升层：工作流（评测设计）/ 可复用 Skill（装配审查）。触发词：SkillCascade、213 cascading test cases、逐件全绿组合发作、evading per-skill scanners and runtime monitors、组合级回归、静默降级。
-
 
 ## 评测必须声明「检索口径」：只用 name+description 路由相对全正文路由准确率下降 31–44%；技能增强要按检索/并入/应用三段分别计量（来源：arxiv.org/html/2606.11435v1 360,565B，2026-10-08 一手 curl 逐串命中 `only skill names and descriptions could result in a 31-44% drop in routing accuracy compared to using the full skill body` / `SkillRouter ... roughly 80K skills and 75 expert-verified queries` / `SRA-Bench ... 636 manually written gold skills into a 26,262-skill ... corpus` / `three separate stages: retrieval, incorporation, and application`；与 §评测设计三事（SkillsBench 87 tasks / +16.6pp / 13 of 87 负增益）互补——那条给配对评测的基准量级，本条给"用哪部分内容做检索"这一口径变量的一手代价）
 - **实证**：原文「SkillRouter Zheng et al. (2026) contains roughly **80K skills** and **75** expert-verified queries. SkillRouter demonstrates that **only skill names and descriptions could result in a 31-44% drop in routing accuracy** compared to using the full skill body」；「SRA-Bench Su et al. (2026a) decomposes skill augmentation into **three separate stages: retrieval, incorporation, and application**. It mixes **636 manually written gold skills into a 26,262-skill web-collected corpus**」；对比表把 SkillRouter 的口径记为 "compares metadata-only vs. full-body retrieval and reranking"。
@@ -162,7 +161,6 @@ version: "1.109.0"
 ## r566B 下沉条目：③ **授权集完整性：被批准文件未变时仍须校验授权集**——审批通过后若被批准文件内容未变、而授权集合已漂移，按文件判定的「批准」即失效，须复校授权集（来源：arXiv 2610.15137《When the Approved File Is Unchanged》，2026-10-14 实拉）
 ## r566B 下沉条目：④ **缓存感知的循环成本：轮次成本 ≠ 观测次数**——缓存未命中才产生真实 token 成本，按观测次数估算会把预算系统性高估（TurnCost 缓存感知循环工程，arXiv 2610.15093）；预算对照一律以 cache-aware 口径报，缓存命中不计入轮次成本 · r567B 下沉条目：① **多候选增益归因须配非多样性对照，否则增益数字随基线选择而变**——LLM aggregator 四匹配条件（Direct/Single-slot/Duplicate/Multi-candidate）下总候选增益 CIV 代数拆分为附加候选对比 DSV 与候选上下文对比 CCV，拆分（而非 CIV 本身）依赖所选对照；重复候选 vs 单槽的 repetition gap 达 -8.33pp[-13.25,-3.75]，即「多给一个候选」的增益里有整块上下文效应混入（来源：arXiv 2610.18786，2026-10-14 r567B abs 一手实拉）。触发词：多候选增益归因、Duplicate/Single-slot 对照、CIV 拆分 DSV CCV、repetition gap、上下文效应混入增益。
 
-
 ## r568A · 自进化能力必须在「演化的流式环境」上评测，固定 held-out 集会高估学习能力（来源：arxiv.org/abs/2610.07792 44,710B，2026-10-14 r568A 一手 https 200 逐串命中 `evolving-environment streaming dataset (EESD)` / `hidden policies evolve` / `ServeLearnBench, spanning retail support, banking, and sales-pitch generation with 53 environment windows and 7,718 tasks` / `five learning harnesses (RAG, Mem0, SkillOpt, Continual Harness, and Prime) across six models` / `28 model-harness pairs and 252 learning runs`；经 Qoder r610-Q-B 提名）
 - **实证**：ServeLearnBench 形式化 EESD——agent 必须在交互与结果反馈中推断、应用、修订 **latent 环境知识**，而隐藏策略持续演化；覆盖零售支持、银行、销售话术生成三域，53 个环境窗口、 7,718 个任务；五个学习 harness（RAG/Mem0/SkillOpt/Continual Harness/Prime）× 六个模型（GPT-5.6 Terra/Opus 5/Kimi K3/GLM-5.3/DeepSeek V4.1 Flash/GLM-5.3 Flash），28 个模型-harness 对、 252 个学习 run。既有基准或显式给目标知识、或假设静态环境、或规模与知识多样性不足 ⇒ 固定集上量「从经验学到」会把「记住了静态集答案」算成学习能力。
 - **判据**：① **评测环境必须是演化面**：评自改进/记忆/技能优化时，任务分布与环境知识须随窗口漂移（hidden policies evolve），否则测的是静态集记忆而非持续学习；② **同一 harness 家族同场对测**：RAG/Mem0/SkillOpt 等在同流上对比才能区分「真从经验学到」与「记住答案」；③ 与 §oracle 失效与配置依赖（ae r565B）分工：那条管评测自身失效，本条管评测构造的环境假设；与 §抗饱和基准（ae r562B）互补——那条让成功抬高门樠，本条让环境本身演化。
@@ -181,7 +179,6 @@ version: "1.109.0"
 
 - **提升层**：工作流（技能库评测/排障归因纪律）/ 可复用 Skill（技能路由设计）。触发词：技能路由崩塌、loaded-skill recall、zero-load 率、mask 描述、显式预选、语义干扰、指令干扰、Before you name a cause、unconfirmed 标注、失败路径全节点表达式、live run 失败触发、技能指针中途加载。
 
-
 ## r571B 下沉条目：① 验证延迟本身改变稳定性；② 自修订增益须先扣除格式修复；③ 归因方法须先胜平凡「最后一步」基线；④ 外置评分须做信任校准（来源：arXiv 2606.27409 / 2608.04355 / 2610.16661 / 2610.15772，2026-10-15 r571B 一手 https abs 页 200 逐串命中）
 
 - **实证**：① Delayed Verification Destabilizes Multi-Agent LLM Belief（2606.27409，42,534B）：多 agent 靠 verifier/critic 抑制幻觉，但验证是**延迟**的，延迟窗口内错误断言已在 agent 网络扩散；给出失稳阈值与校正器最优放置——「验证延迟 =2 即失稳」，稳定阈值为黄金分割倒数，5 个开源模型上验证。② The Calibration Floor: Format Repair Can Masquerade as Self-Correction（2608.04355，43,499B）：自修订后的准确率变化通常被当成推理变化，实则在**答案抽取边界**就可能失败；修订增益中约 71% 可归因于格式修复，5 个前沿模型的内容 margin ≈ 0。③ Structural Baselines Matter for Agent Failure Detection and Attribution（2610.16661，41,071B）：工具 agent 会静默失败（未完成、无报错、回答流畅）；平凡规则「指认最后一步」的失败定位正确率高达 67%–96%，且存在**完全无表面信号**的失败子类。④ RSIPO（2610.15772，43,872B）：递归自改进用技能-策略协同演化，教师分数作为外置信号需经验贝叶斯（empirical Bayes）收缩校准后才可作为信任权重。
@@ -195,11 +192,9 @@ version: "1.109.0"
 - **提升层**：工作流（自演化治理）/ 评测口径（加载语义）。
 - 触发词：harness 自演化、更新目标与准入分离、解释态 vs 工具代码、retention bound、按需加载评测语义、51%/38%、每答评测高估。
 
-
 - **r576A · 评测批次须冻结起始配置快照，完成判定要原子校验最终计数**（n8n #41147，一手 gh api 200）：批跑中允许新增检查与应用建议，但每个批次捕获起始的 agent 配置、工具与已解析技能，使建议不会改变排队用例的输入（新增项只作用于下一批）；批量完成等待进行中的定点重跑，并在写摘要前原子核对最终计数。判据=运行中变更不得回溯影响在跑批次；完成态以原子计数为准，不用"看起来跑完了"。
 - **提升层**：工作流（评测编排）/ 模型（评测可信度）。
 - 触发词：评测批次配置快照、运行中加检查、定点重跑、完成计数原子校验。
-
 
 - **r576C · 技能增益按「同配置下相对无技能」的通过率差计量，且结论绑定该配置与执行器**（arXiv 2610.08875 下游效用实证：87 个 SkillsBench 任务 ×9 种配置，2026-10-15 r576C 一手 curl abs 200；arXiv 2609.36746 EASE：策展器与执行器耦合，换执行器即退化，abs 200 一手）：效用定义为 **pass-rate difference from No-Skill，同任务、同模型—harness 配置**；同一批技能换个配置结论就变，用不同执行器训练的 curator 只在自己那个执行器上最优。判据=① 报绝对通过率不算技能增益，必须报相对 No-Skill 的差；② 评测报表必须写明配置与执行器，跨配置/跨执行器的增益结论不可迁移。
 - **提升层**：模型（增益归因）/ 工作流（评测口径）。
@@ -221,3 +216,5 @@ version: "1.109.0"
 - **r630A · 批评估运行器须校验 eval_kwargs 列表长度与格式一致性：BatchEvalRunner 在长度不一或格式混合时静默错位，须运行前显式校验（来源：github.com/run-llama/llama_index/issues/23707，gh api 一手 200 逐串命中）（全文见 references/knowledge-base.md §下沉·批评估运行器须校验eval_kwargs列表长度与格式一致性错位配对静默错误评分）
 
 ## r633C 下沉条目（「凭据有效」不等于「连接可用」：失败归因须分过期 / 版本漂移 / 载荷缺字段三类且处置互不替代；含覆写点须纳入上游升级同步清单）（原文均在 references/knowledge-base.md）
+
+## r651 下沉条目（B：压缩损伤的评测必须配对同态起点，且 benchmark 对压缩不敏感不等于无损；对比的两组必须同一指标总体，选择性排除会让比率指标失去信息；评测要测「代理是否满足使用条件」，泄漏是时间维违规且不归因意图）（原文均在 references/knowledge-base.md）（原文均在 references/knowledge-base.md）

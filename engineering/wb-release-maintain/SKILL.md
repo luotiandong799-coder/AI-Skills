@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、评分项与否决项分列、证据可复跑、配对按稳定 id 优先于名称、改名因此降为非破坏性、rename-column、破坏性判定只留丢数据操作、拒绝集显式枚举且拒写、swap cycle 拒绝、id 跨表冲突、包内重复 id 拒绝、旧包按名配对静默采纳包 id、竞态限制诚实声明、diff 面板锚点、top panel 将被更新的一方、推拉面板互换、节点级 JSON diff、trustedSource、clearBindings、credential blanking、一路由一读模型、license 只 gate 写、RBAC_ACCESS_POLICY_BINDING_LOCKED、replace vs append、aes-256-gcm、MAX_BYTES_OVERHEAD、CBC fallback、多段推送第二段被拒、stable vs beta tag、renovate 只取稳定、apiKeyId 计数键、轮换不重置预算、ms_outlook 重命名、回调 URI 变化、required_mcp_variables、默认租约载体、重启丢租约、active_slots 不释放、os.path.exists 对远端恒假、python_version.txt unknown、加入与移除判据不对称、发布提交重解析锁、release 夹带依赖升级、缓存失效、先删叶子再删父、删除失败保留行可重试、重发布不影响在飞、恢复前先落定草稿
-version: "1.219.0"
+version: 1.220.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -183,18 +183,15 @@ sources:
 - **判据**：① **改值与生效是两次独立动作**——写库成功只代表"存下来了"，引用它的运行期仍是旧快照；发布（reload）才是原子切换点，且不改配置本身。发布流程里必须把"写完还剩一步"写进定义完成，否则出现"我改了但没生效"的伪故障。② **部分失败的降级不是一档而是两档**——失败方的引用标识、提供方定义、非密契约**全部未变**才算 stale（可带警告上线）；只要契约变了就是 cold（语义已经不是原来那个），两者处置完全不同，不能都用"降级上线"概括。③ **不可归类的失败必须保住旧快照**——strict / unmapped 失败直接报错并保留上一个可用快照，而不是带着未知状态上线；"先上再说"在这里等于把旧快照也弄丢。
 - 提升层：工作流 / 可复用 Skill。触发词：写入≠生效、reload 是发布、stale vs cold、非密契约未变、保住旧快照、降级两档。
 
-
 ## 存储满时的取舍只有两档：停服或丢记录，没有第三选项；保留期与运行时长都是套餐属性（来源：help.make.com `errors-that-dont-create-incomplete-executions.md` 1,401B + `audit-logs.md` 8,460B，2026-10-03 r390C 独立 curl 取 `.md` 原文实拉；与 §破坏性变更公告三件套 互补）
 - **原文**：「When your incomplete executions storage is full, Make checks the **enable data loss** setting: If the data loss is **disabled**, Make **disables the scenario**. If the data loss is **enabled**, Make keeps scheduling scenario runs and **discards the incomplete execution** if it cannot be stored」；「When the scenario runs longer than the **scenario run duration limit**. You can check the limit for your **plan**」；「Audit logs are stored for **12 months**.」
 - **判据**：① **容量耗尽是一次显式的二选一，不是可以两全的配置**：要么停掉服务保住记录，要么继续服务丢掉记录。**"允许数据丢失"是一个业务开关不是技术细节**——它的默认值决定了这个系统在压力下的行为是"宁可停"还是"宁可丢"，必须在上线前明确选过。② **运行上限与保留期都是套餐属性**：时长上限按套餐定，审计日志只留 12 个月 ⇒ 做容量/合规承诺时不能按理想值写，要按当前套餐的实际值写，并在续费/换档时复核。③ **"记录被丢弃"要有可观测出口**：既然选了继续服务，就必须让用户能知道丢了多少、什么时候丢的，否则"丢了"和"没发生"在现象上一致。
 - 提升层：工作流 / 工具。触发词：存储满二选一、enable data loss、停服 vs 丢记录、运行时长按套餐、审计保留 12 个月。
 
-
 ## 已发布版本是不可变对象；配额告警阈值随套餐分档；依赖的生命周期终止日期必须写进前置面（来源：www.activepieces.com/docs `flows/versioning.md` 1,323B + pipedream.com/docs `workflows/limits.md` 9,083B + `workflows/building-workflows/errors.md` 9,150B 顶部公告，2026-10-03 r391B 独立 curl 取 `.md` 原文实拉；与 §破坏性变更公告三件套 / §门禁覆盖面差集 互补——那两条管变更怎么宣布与门禁漏口，本条管版本不可变性、告警分档与 EOL 前置面）
 - **原文**：版本模型「You can edit a flow as many times as you want in **draft** mode … Once you're done with your changes, you can publish it. **The published version will be locked and uneditable.** If you try to edit a published flow, Activepieces will **create a new draft** … and **copy the published version** to the new version.」；告警分档「| Free tiers | You'll receive an email when you reach **100%** of your usage. | | Paid tiers | You'll receive an email at **80% and 100%** …」；EOL 公告「> **Workflows and String are shutting down on March 31, 2027.**」置于文档顶部 Warning；「**These limits are subject to change at any time**」。
 - **判据**：① **发布即冻结：published 版本锁定且不可编辑，再次编辑走的是"新建 draft + 复制已发布内容"** ⇒ 任何"改线上"的动作在实现上都是"复制一份新的再改"，回滚因此天然可用（旧版本还在）。设计发布流程时不要把"已发布"当成可写对象，否则就失去了可回滚性这一前提。② **告警阈值要按套餐写成表，不能写一个数**：免费档只在 100% 报警一次，付费档在 80% 与 100% 各报一次 ⇒ 同一套代码在不同套餐上"有没有提前预警"是两种体验；把阈值写死成单个百分比，等于默认所有人都有提前量。③ **生命周期终止（EOL）属于前置面，位置要在文档最顶部**：平台自己把"Workflows 与 String 将于 2027-03-31 关停"放在文档开头当 Warning ⇒ 选型与验收清单里必须有"依赖项的 EOL 日期"一栏，写在附录里等于没有写。④ **限额声明要带"可随时变更"的保留条款**：官方明说限额随时可能调整 ⇒ 把具体数值硬编码进自己的校验逻辑，会在对方调整的那天产生假失败；数值应可配置，且失败信息要能指出"撞的是哪条限额"。
 - 提升层：工作流 / 治理。触发词：published 锁定不可编辑、编辑即新建 draft、回滚天然可用、告警阈值分档、80% 与 100%、EOL 日期前置面、限额可随时变更。
-
 
 ## 密钥轮换后的系统是「混合密钥态」；功能开关与数据格式绑定后，关掉开关等于永久数据丢失（来源：docs.n8n.io `deploy/host-n8n/configure-n8n/security/rotate-encryption-keys.md` 5,972B + `build/manage-workflows/view-change-history.md` 4,190B，2026-10-03 r391C 独立 curl 取 `.md` 原文实拉；与 §破坏性变更三件套 / §数据库只向前迁移 互补——那两条管版本升级方向，本条管加密格式与开关的耦合、以及轮换完成后的真实状态）
 - **原文**：双层模型「**Instance encryption key** (`N8N_ENCRYPTION_KEY`): your master key, set at deployment time. **This key never changes.** n8n uses it only to protect the data encryption keys. / **Data encryption key**: the key that directly encrypts your credential data. **This is the key you rotate.**」；惰性重加密「n8n generates a new data encryption key and **uses it for all future writes**. Existing data encrypted with the previous key **remains readable**. n8n **silently re-encrypts each record to the new key the next time you update it**.」；单向「**Enabling encryption key rotation is a one-way change. There's no rollback path.**」；「Once you enable … n8n begins writing … in a new format that includes a key identifier. **Older versions of n8n, and instances running without the feature flag, can't read this format.**」；「**Don't disable the feature flag** after any data has been written in the new format. … makes all data encrypted after you enabled the feature **permanently inaccessible**. **Don't downgrade your n8n version** after enabling.」；「The only recovery path is **restoring from a database backup taken before you enabled the feature**.」；前置「All n8n instances, main and all workers, **share the same `N8N_ENCRYPTION_KEY` value** … You need to be the **instance owner**」；版本历史保留「Versions from the last **24 hours** are available for all users. Versions from the last **five days** are available on n8n Cloud Pro. Full workflow history … **Enterprise**」；「n8n **never prunes named versions automatically**」；「n8n creates a new version when you: **Save** your workflow. **Restore an old version** (n8n saves the latest version before restoring). **Pull from a Git repository** (n8n saves versions to the **instance database, not to Git**)」；「**Changes to workflow settings do not create a new version.**」
@@ -214,7 +211,6 @@ sources:
 - 因此发布前必须回答三问：这次改动属于哪一类？会不会断现有连接？在跑的任务会不会丢？——只看"配置保存成功"回答不了任何一个。
 - 热应用让"改配置"变成一种无版本、无 diff 的发布 ⇒ 与 §覆盖值区间变更后自动 clamp 同族：凡是热生效的配置，都要在发布清单里点名，否则复盘时没有变更点可查。
 
-
 ## CI 定义类文件是特权路径，判据是「路径+模式+blob」精确三元组，内容等价不构成授权；发布幂等四要素缺一不可；发布管线保留已提交字节不做行尾重整（来源：docs.openclaw.ai `gateway/config-secrets-env.md` 10,309B + `gateway/config-tools.md` 7,517B 索引页 + `gateway/config-tools/github-identity.md` 17,020B，2026-10-03 r395A 独立 curl 取 `.md` 原文实拉）
 
 - **特权路径按文件类别分权，不按仓库统一授权**：`.github/workflows/*.yml|yaml` 的提交/删除/重命名一律要求原始请求者的完整 operator 写权限，会话级写权限不够 ⇒ 发布门禁要先把路径分成「普通源码」与「能改变 CI 行为的定义文件」两类，后者单独要权。
@@ -224,14 +220,12 @@ sources:
 - **结算完成不授权下一次**：连接断开或权限结束后，已接受的 PR 响应仍会完成它自己那份回执，本地分支更新也会完成匹配的 index 事务，但这次收尾**不授权再一次 push 或建 PR**；未确认的结果保留其原有的人工确认/恢复要求 ⇒ 「系统善后成功」不等于「下一次可以自动来」。
 - **发布保留已提交文件字节**：发布按普通 Git 属性转换暂存，显式保留未变更文件的原有字节，**包括已存在的 CRLF 行尾**，不做无关文件的行尾重整 ⇒ 发布管线默认不 renormalize，否则会制造大量与本次改动无关的 diff（呼应本机 CRLF 机检教训）。
 
-
 ## 并发预算是多轴且互不联动；换运行时就换账本；陈旧引用会被拒绝执行而不是无害忽略；写配置默认拒绝破坏性替换（来源：docs.openclaw.ai `gateway/config-tools/sessions-and-subagents.md` 9,632B + `gateway/config-tools/custom-providers.md` 13,129B，2026-10-03 r395B 独立 curl 取 `.md` 原文实拉）
 
 - **并发不是一个数，是三条互不联动的轴**：`maxConcurrent`（并发运行数，默认 8）、`maxChildrenPerAgent`（每会话准入子代数，默认 5，**提高并发上限并不会提高这个**）、以及生命周期总额度（swarm 的 `maxTotalPerGroup`，默认 200）⇒ 调一条不动另一条，扩容时三条要分别核对，否则会被最紧的那条静默卡住。
 - **预算的作用域与账本随运行时变**：`maxConcurrent` 是按「直接派生的那个控制会话」计数，**独立会话之间不共享这笔预算**；swarm collector 子进程走独立的 `tools.swarm.maxConcurrent`，不占用父级的普通子 agent 车道；Codex-native 子 agent 用自己的调度器与限额 ⇒ 「并发是多少」这个问题必须先回答「在哪个运行时、按哪一级计」。
 - **陈旧引用会被拒绝执行，且需要显式清理**：`allowAgents` 里指向已删除 agent 的条目，`sessions_spawn` 会**直接拒绝**，并从 `agents_list` 中省略；需要跑 `doctor --fix` 才能清掉 ⇒ 引用完整性不是文档问题，是运行时拒绝面，删除主体后必须有一道清理动作。
 - **写配置的默认值是「拒绝破坏性替换」**：安全编辑走 `--strict-json --merge`（追加式），`config set` 默认拒绝会覆盖整块的替换，只有显式 `--replace` 才放行 ⇒ 自动化写配置时把「破坏性」做成需要额外开关的动作，能挡掉一整类误覆盖。
-
 
 ## 安全机制必须声明自己是第几层防御；凭据轮换要「先并存后摘旧」且依赖停用会级联；离职撤销的作用域是三层差集（来源：docs.n8n.io `security/enable-ssrf-protection.md` 3,822B + `security/block-specific-nodes.md` 2,425B + `basic-configuration/use-environment-variables/ssrf-protection.md` 7,039B + pipedream.com/docs `conduit/configure/access-control.md` 13,330B + `conduit/configure/scim.md` 9,789B，2026-10-03 r395C 独立 curl 取 `.md` 原文实拉；n8n 与 Pipedream 均经各自 `llms.txt`（287,049B / 34,240B）定位）
 
@@ -275,12 +269,10 @@ sources:
 - **判据**：① **已发布的链接是对外契约**：重排（拆页 / 改名 / 迁移）时可以改的是自己的组织方式，不能顺手打断别人的引用 ⇒ 旧锚点必须保留并指向新落点，"移动了而已"不是断链的理由。② **迁移留映射表，不留一句"已移动"**：逐条「旧标题 → 新页面#锚点」才可机检核验无遗漏（尤其拆分后一节可能对应多处）⇒ 只有一句"已移动"的迁移，等于把完整性检查推给每一个读者。③ **断链的代价由引用方承担、收益由重构方获得**：这是典型的外溢成本，所以验收标准要写在重构这一侧（旧链接全量探活 200 / 锚点可解析），而不是等下游报错。
 - 提升层：工作流 / 交付维护。触发词：重构不破链、保留旧锚点、拆分页面、链接重定向、旧→新映射表、断链验收、外溢成本。
 
-
 ## 把「曾经自动生效的额度」改成「必须显式开启的选项」是一次语义迁移：必须给等价换算式与最坏上界式，否则老配置在新版本表现为间歇性失败（来源：docs.openclaw.ai `concepts/active-memory/recommended-setup.md` 2,673B，2026-10-04 r413A 独立 curl 取 `.md` 原文实拉；与 §重构不破链 / §回滚须反转迁移 互补——那两条管"结构重排后引用还成不成立""回滚怎么走"，本条管"同一个配置项在新版本里换了含义但值没变"）
 - **原文**：「Before v2026.5.2 the plugin **silently extended** `timeoutMs` by an extra 30000 ms during cold start… v2026.5.2 moved that grace behind an **explicit** `setupGraceTimeoutMs` config: `timeoutMs` is now the recall-work budget by default unless you opt in.」「If you upgraded from v2026.4.x and tuned `timeoutMs` for the old implicit-grace world … set `setupGraceTimeoutMs: 30000` to restore the pre-v2026.5.2 **effective** budget.」「Worst-case blocking time is `timeoutMs + setupGraceTimeoutMs + 3000` ms」
 - **判据**：① **隐式→显式是兼容性最差的一类变更**——值没动、语义变了，配置校验全部通过，失败只在特定条件（冷启动 / 首次调用 / 资源竞争）下出现，于是被当成随机 flaky 而不是升级回归。⇒ 迁移说明里必须给出**等价换算式**（旧有效值 = 新值 + 需补的显式项）而不是一句"新增了 X 配置"。② **最坏上界要写成公式而不是描述**——上界 = 主预算 + 显式宽限 + 固定前后置开销，且内外两层看门狗共享同一有效预算；只写"可能更慢"无法验收。③ **宽限被分离出来之后，默认值的选择就带了取舍**：低值（5000–15000ms）换来的是"重启后第一次调用可能空返回"，这是**被接受的成本**而不是 bug ⇒ 新默认值要连带说明它牺牲了什么。④ **前后置固定开销不延长业务执行**——preflight 与结算各有独立固定额度，不能算进业务预算；把固定开销写进可调预算会让"加机器"看起来像"加超时"。⑤ 对发布/依赖守卫的落点：升级评审清单里单列一类「**语义迁移项**」——字段没增删、类型没变、但有效行为变了，这类项只做 diff 是扫不出来的，必须逐个给换算式与上界式。
 - 提升层：工作流 / 可复用 Skill。触发词：隐式宽限变显式、语义迁移项、等价换算式、最坏上界公式、升级后间歇超时、冷启动预算。
-
 
 ## 批量状态迁移要过三闸、批准凭证只绑不可变事实；比对必须先归一化，且三类不同物种分三类处置（来源：docs.openclaw.ai `clawhub/publishing.md` 18,217B，2026-10-04 r416A 独立 curl 取 `.md` 原文实拉；与 §发布闸门只卡部署 / §版本真源唯一 互补——那两条管"什么时候上线"与"版本从哪来"，本条管"一次性改动一大批已有记录时，什么证明你改对了"）
 - **原文**：「ClawHub stores what you pass and displays the normalized form」「These topic names are reserved by ClawHub and are rejected: `approved`, … `verified`. The check runs on the normalized form, so `Official` and `staff pick` are rejected too.」「Use `dry_run: true` to preview new and changed skills without publishing.」「Automatic changelog generation and preview use a ten-second provider deadline … If the provider is unavailable or times out, ClawHub returns local fallback notes so publishing and preview can continue.」「Run the default dry run for each of … `cursor` until `isDone`. Apply from the initial cursor with `dryRun: false`, then repeat the dry run to verify no remaining matches.」「Deleting trusted publisher config is the rollback path.」「That workflow route does not accept cancelled parents.」「It defaults to a dry run; add `"dryRun":false` to discard each pending release」「Transfers to another user normally require recipient acceptance.」
@@ -343,7 +335,6 @@ sources:
 - **判据**：① **同名工具/技能的出现是缺陷而非覆盖策略**：成熟系统为此单独出修复版 `disambiguate duplicate tool names`，说明"后写覆盖"在实现侧不被接受 ⇒ 发布说明遇到"命名冲突"类修复，要按**破坏性变更**申报（已装用户的旧行为会变），不能按 bugfix 轻描淡写。② 一条mapping约束：新增/更新条目时先断言名字（可寻址主键）唯一，冲突即拒，不要落到"最后写入胜出"。③ 诚实边界：本条证据只覆盖"实现侧主动消歧"这一半，"批量更新须可逐技能选择"那一半来自尚未可复核的信源（本轮实拉未达），暂不落地。
 - 提升层：工具 / 工作流。触发词：同名消歧、duplicate tool names、主键唯一优先于覆盖便利、命名冲突按破坏性变更申报。
 
-
 ## 「verified」是带再验证时钟的状态而非一次性终点；验签凭证用独立 detached 文件，使有效性可离线判定（来源：developer.nvidia.com/blog/nvidia-verified-agent-skills-provide-capability-governance-for-ai-agents/ 271,316B，2026-10-08 独立 curl 实拉逐串命中 `Cataloged and synced daily from the NVIDIA product team that owns it` / `Signed with a detached skill.oms.sig` / `nv-agent-root-cert.pem` / `model_signing verify ... --certificate-chain`；与 §11 强制段落最小发布模板 互补——那条管发布记录写什么，本条管认证态如何保鲜与如何离线验）
 - **判据**：① **认证标记自带失效机制**：流水线末两段是 `cataloging → synchronization` 且入目录后走每日同步循环 ⇒ 「已验证」是需要被周期性重新证明的状态，发布记录须写明再验证周期与触发条件，否则徽标随时间失真却仍对外展示。② **验签凭证要与制品分离**：detached `skill.oms.sig` + 公开根证书，使任何人在离线环境对证书链本地校验 ⇒ 在线不可用时不至于把「查不到」读成「无效」或反过来读成「有效」。③ 与 §安全型破坏性变更 分属两轴：那条管规则翻转（默认关+白名单豁免+迁移步骤），本条管认证态保鲜与凭证形态。
 - 提升层：可复用 Skill。触发词：verified 带再验证时钟、cataloged and synced daily、detached skill.oms.sig、根证书链离线验签、认证态保鲜。
@@ -359,7 +350,6 @@ sources:
 - **判据**：① **删除动作必须有速率上界，超界默认"不删、转人工"**：一次同步要删的数量超过阈值就整批取消并落 overflow 文件 ⇒ 批量删除的异常放大本身就是事故信号，宁可漏删一轮也不能让"配置读错"变成"删掉半个库"。② **任一配置解析失败=整轮停止删除，不是跳过该项**：解析失败会让正常技能看起来"未登记"，此时继续删就是无差别删除 ⇒ 清理脚本的容错方向必须是 fail-safe（失败即停），与执行纪律里"失败即停"同构但作用面是批量破坏性操作。③ **只写期望集不够，必须配反向豁免清单**：未登记的目录不会自动消失而是变成孤儿 ⇒ 入库准入应同时维护「注册清单」与「豁免清单（含豁免人+理由+日期）」，禁止"没登记=默认放行"的静默漏挂。④ **删除要发生在可见的地方**：原文把删除并入同步 commit，「where the deletion is visible in the sync PR diff」⇒ 退役必须是可审阅的 diff，不是脚本里的静默 rm。⑤ **退役率无人汇报=治理缺口**：公开市场与规范一律不公布 delete/merge rate，只能靠 commit-log 关键字抽样自测自报，否则"只增不减"会把库做成垃圾场。
 - **与既有能力分工**：§审核处置权按危险度双轨 管**审核态怎么流转**；本条管**已入库技能被清理时的速率上限、失败语义与名册完整性**。
 - 提升层：工作流（退役治理）/ 工具（清理脚本）。触发词：PRUNE_CAP、删除速率上界、解析失败整轮停删、overflow 转人工、期望集与豁免清单、孤儿目录、退役率自测、删除可见于 diff。
-
 
 ## 自动更新的放行粒度是「类别 × 子集」，不是全局开关：三档策略（关闭 / 仅 patch / 始终最新）按类别各自设定（来源：docs.dify.ai/llms-full.txt 2,990,942B，2026-10-08 一手 curl 逐串命中 `update strategy (off, patch versions only, or always the latest)` / `applied to every integration in the category or a chosen subset`；与 §存量自动升级 / §版本区间声明 互补——那两条管"要不要升、区间怎么声明"，本条管"自动更新这个动作按什么维度被授权"）
 - **实证**：官方原文「Integrations can also be set to update automatically. **Each category** (tools, models, data sources, and so on) has its own **update strategy (off, patch versions only, or always the latest)**, applied to **every integration in the category or a chosen subset**」。
@@ -402,7 +392,6 @@ sources:
 - **判据**：① **幂等性要显式声明，409 + "不会覆盖"是安全重试的前提**：同名返回 409 且语义为"仅新增" ⇒ 调用方可放心重试而不会产生静默替换；反之若接口是 upsert 语义，重试就会覆盖他人写入 ⇒ 下发接口的 upsert/insert-only 语义必须在文档里写明，不能靠试出来。② **防枚举会主动牺牲排障信息**：权限缺失与对象不存在返回同一错误，是安全设计而非缺陷 ⇒ 排障"资源不存在"时必须**换一个已知有权限的身份交叉验证**，否则会把权限问题误判成名字写错；这一条与 r275B（GitHub 404-vs-403 单形态）互补——那条讲单点判别，本条讲三语义并存时的处置顺序。③ **503 与 504 的处置完全相反**：503 = 安装失败（状态未变，可原样重试）；504 = 超时（**结果未知**，可能已装上一半）⇒ 把 504 按"失败"重试会产生重复装载或半装状态；超时类错误必须先查询当前态再决定动作。④ **参数校验错误要把期望格式写进消息**：`expected path/name` 直接给出正确形态 ⇒ 错误信息含"应该长什么样"，调用方才能自纠，否则只能猜。
 - **与既有能力分工**：r485C「缺证据即回退」管**同步链上源端缺签名时怎么处置**；r441B「批量退役三闸」管**存量怎么删**；本条管**下发动作这一刻的错误契约怎么定**。
 - 提升层：工作流（接口契约）/ 可复用 Skill（发布与装载）。触发词：409 不会覆盖、仅新增语义、没有权限与不存在同错误、防枚举牺牲排障信息、503 与 504 分态、504 结果未知不得重试、invalid skill ref expected path/name、换身份交叉验证。
-
 
 ## r492B-2 · 下发面「三无一钉」：下载 URL 钉在开发分支、无版本可选、无 checksum/签名，导致装载既不可复现也不可验真（来源：www.modelscope.cn/skills/install.sh 27,039B，2026-10-10 r492B 一手 curl 实拉；`local download_url="https://www.modelscope.cn/skills/${skill_path}/archive/zip/master"` 出现于 506/760 两处，全文 `sha256|md5sum|gpg|signature` **0 命中**）
 - **判据**：① **钉 `master` 等于把制品身份交给一条移动指针**：同一条安装命令今天与明天拿到的是不同比特，回滚与复现都无从谈起 ⇒ 发行面必须提供钉 `tag`/`commit`/`digest` 的取法，移动分支只能作开发通道。② **无版本可选 ⇒ 无法表达"我要哪一版"**：连 Pin 的入口都没有时，使用者唯一能做的本地补偿是**把取到的内容连同取数时刻落盘归档**（自己钉），不能指望上游。③ **无 checksum/签名 ⇒ 篡改不可检测**：安装脚本先把 zip 落到临时文件再解压**，链路里任何一环（CDN、中间人、镜像）改写产物都无法察觉 ⇒ 安全审查要把「有没有摘要、摘要在什么位置校验、校验失败是否中断」三件列为必检，缺一件即判该通道不可信。④ **这三件缺一不可且互相独立**：给了版本号但 URL 仍钉分支 = 仍不可复现；给了 checksum 但脚本内禁失败 = 仍不可验真 ⇒ 逐件分别判，不许用"有一点就够"放行。
@@ -457,7 +446,6 @@ sources:
 - **判据**：① **"清理"策略的正确表述是引用关系，不是时间**：本例的回收条件是"不被四类主体引用"而非"超过 N 天" ⇒ 写清理规则时必须先枚举"谁可能持有引用"，漏一类就会删掉还在用的东西；用 TTL 近似引用关系是这类事故的标准成因。② **"半条记录"是发布治理的验收项**：`failed or interrupted creation attempts no longer leave partial snapshot records behind` ⇒ 创建类操作要按"要么全有要么全无"验收，测试用例里必须有"创建中途失败"与"创建被中断"两格，只测成功路径会漏掉脏数据面。③ **替换不等于累积**：`replacing named snapshots no longer keeps unused superseded snapshots around` ⇒ 名字稳定的制品在替换时应清掉被取代的版本，否则"同名"掩盖了版本堆积；清点存量时要按"被引用"而不是按"名字唯一"计数。④ **"降级/移除"的声明粒度要覆盖对象、API、CLI、RBAC 四层**：本例四类同时消失 ⇒ 只说"资源池接口变了"会让 CLI 脚本与权限模型两处的断链在升级后才暴露；影响面清单必须逐层列。⑤ **依赖约束要带上界**：`Click >=8.3.3,<=8.5.0` 是**双侧区间** ⇒ 只写下界的约束无法阻止"未来某个不兼容大版本被装上"，发布说明里写依赖时必须写区间；同时它意味着**插件与自定义 CLI 扩展**也在约束范围内，不只是主包。⑥ 与 §升级只换服务端不换制品（rm 1.105.0 快照须全量重建）、§组件降级故障信号（rm 1.106.0）分工：那两条管"快照内容过期要重建"与"revision 对不上要清理重建"，本条管**快照记录本身的生命周期与数据库体积治理**，落点是回收判据（引用关系）+ 创建原子性 + 替换不累积。
 - 提升层：工作流（升级与清理）/ 工具（依赖区间声明）。触发词：anonymous snapshot 回收、引用关系清理、快照创建原子化、partial snapshot records、superseded snapshots、数据库体积治理、依赖区间上界、API/CLI/RBAC 四层移除。
 
-
 ## 升级 / 迁移「暂停窗口」要把放行面按副作用界定而非按 HTTP 方法界定，并用会红的枚举检查兜住新增入口；「完成」标记必须绑定它实际写入的目标，目标变更即失效，且失效范围按该步骤真实写入的部件精确回退（来源：api.github.com/repos/langflow-ai/langflow/pulls/15633 + /pulls/15613，2026-10-12 r532B 一手 curl 200 逐串命中 `A migration pause lets every GET through as a read. Two GET routes stored data anyway, the two browser routes of the OAuth flow` / `a consent that came back during a pause wrote tokens after the database copy` / `a PR that adds a GET route fails this test until its author adds the path to READS in this file, or gives the route dependencies=[Depends(changes_the_instance)]` / `172 of them today` / `A copy that was made to another destination no longer completes its step: the step reads blocked with destination_changed until the copy is made again` / `another database sends all three back. Another bucket sends back only the file copy`；r532B 落地）
 - **实证**：Langflow 迁移功能把实例置于「暂停态」以便做数据库 / 文件 / 知识库拷贝，同一批 PR 给出两条治理事实。① **放行面按方法判是错的**（#15633）：暂停态默认让每个 GET / HEAD 通过（今天共 172 条，含特性开关挂载的），但有**两条 GET 路由确实写数据**——OAuth 流程的两个浏览器路由，暂停期间回来的 consent 在数据库拷贝之后写入了 token；它们现在显式声明 `changes_the_instance` 并在暂停期被拒。作者同时加了会红的检查：新增 GET 路由的 PR 若不把路径加进 `READS` 白名单、或不声明 `changes_the_instance`，测试就失败；该方法审计时立刻见效——审计轨迹新加 5 条 GET、数据主体功能新加 7 条，其中 3 条「记录谁读了谁的数据」其实是写。② **完成标记要绑目标**（#15613）：拷贝步骤只要「本次暂停期间某次运行成功写过」就算 done，不管写到哪；管理员随后换一个数据库或 bucket，旧拷贝仍计数、新目的地其实空着。修法是把「这次拷贝实际写到哪个目的地」记进记录本身（随 `PUT /destinations` 保存，不含口令 / 密钥），目标一变该步骤置为 `blocked` + `destination_changed` 直到重做；且**回退范围按部件切**：数据库拷贝只管库，知识库拷贝管库 + KB store，文件拷贝管库 + bucket ⇒ 换 bucket 只回退文件拷贝，换库三者全回退。
 - **判据**：① **「读」的定义是副作用，不是 HTTP 方法**：本例两条 GET 会写 ⇒ 任何「维护窗口放行只读」的策略都必须逐个入口确认它真的不写，按方法名批量放行会把「浏览器回跳 / 回调 / 审计留痕」这类隐式写入漏在外面。② **隐式写入最爱藏在「读的副作用」里**：那 3 条只是「记一行是谁读了谁的数据」，却改变了状态 ⇒ 判定是否只读时要单独审「是否写审计 / 指标 / 会话 / 令牌」，不要只看业务表。③ **默认放行 + 靠人记得声明 = 不可持续**：作者的修法是给所有新增路由加一道会红的测试（进白名单或显式声明），并明写代价与「若代价高于所守之物可关闭此 PR」 ⇒ 治理规则必须有**自动化卡点**，且卡点成本要被显式评估，不能只发一份规范。④ **白名单要能被枚举和审计**：`172 of them today` ⇒ 放行清单必须可打印、可 diff；「放行了多少条、最近新增哪几条」是审计项，否则窗口期实际暴露面无人知道。⑤ **「完成」是带目标的状态，不是一次性布尔值**：目标（目的地 / 分支 / 环境）一变，旧 done 立即失效并给出原因码（`destination_changed`）⇒ 凡是跨环境、跨目标的迁移 / 同步步骤，完成标记要存「完成到哪」，而不是只存「完成」。⑥ **回退与失效的粒度要按真实写入面切，不按步骤名一刀切**：换 bucket 只回退文件拷贝 ⇒ 依赖图要按「这个步骤写了哪些部件」建模，否则要么多回退（白做）、要么少回退（留脏）。⑦ 与 §发布治理管存储体积（rm 1.113.0 快照按引用回收、创建原子化）、§运行时可得性由制品档位决定（rm 1.112.0）分工：那两条管**回收判据**与**分发档位**，本条管**迁移窗口的放行面**与**完成标记的归属**，落点是升级期的读写分面与目标绑定。
@@ -498,3 +486,5 @@ sources:
 - **实证**：NVIDIA/skills 仓最近提交里重复出现 `chore(metadata): regenerate metadata.json, skills.sh.json, benchmarks.json, and versions.json`，生成者明确标注为 `.github/workflows/generate-skill-metadata.yml`（Generated by …）；与之交替出现的只有 `chore: sync skills (…)` 这类**改源**的提交——即「改源」与「再生索引」是两类不同的提交，索引从不被人手编辑。
 - **判据**：① **索引是派生数据，人一动手改它就失去了"与源一致"这一唯一价值**——人工修一次索引，就等于允许索引与源出现合法偏差，从此"索引对不对"变成不可判定的问题 ⇒ 派生索引的正确形态是**构建产物**：只读、由流水线独占写、带生成来源标注。② **把冲突治理从纪律搬到结构**：多人同改一个 `metadata.json` 必然冲突；让所有人都不改、只由 CI 再生，冲突量直接归零，比任何"小心合并"的纪律都可靠 ⇒ 凡是能被算出来的文件，都应问一句"为什么它在版本控制里还允许人手改"。③ **生成来源标注是可验收性的前提**：产物带 `Generated by <workflow>`，让"这份索引是哪个源快照算出来的"成为可查字段 ⇒ 与 av 既有「派生索引须与源快照绑定安装校验」分工：那条管**安装/装载时校验**，本条管**发布侧确立独占生成权**（谁有权写这份文件）。④ **改源与再生必须是两个动作、两笔提交**：`chore: sync skills` 与 `chore(metadata): regenerate …` 分开，使每次索引变化都能回溯到某次源变化；把两者合并进一个提交，等于抹掉"为什么索引变了"的证据。⑤ **排障方向随之改变**：索引不对时，正确动作是**改源并重跑流水线**，不是手改索引——手改只修好这一处，下一次再生立刻被打回，且掩盖了真正的源错误。
 - 提升层：工作流（发布流水线）/ 治理（派生数据所有权）。触发词：派生索引、CI 独占再生、regenerate metadata、Generated by workflow、人不手改、改源与再生分离、索引是构建产物、发布侧所有权。
+
+## r651 下沉条目（C：恢复是加后继而不是改写历史：失败尝试与原始授权必须留档，终态永不丢弃；引用型字段的变更必须进 diff，否则「无变化」是假信号）（原文均在 references/knowledge-base.md）（原文均在 references/knowledge-base.md）

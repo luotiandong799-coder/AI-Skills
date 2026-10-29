@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、TTL seconds*1000、absolute deletion date、valid date in the future、7-day minimum、alreadyDeleted、audience human、AI 孪生动作、消费者退出生产者仍跑、关闭要传播到下层流、shield 异步关闭、后台清理任务只跑在 leader 内存定时器、durable system task、跨进程取消、幽灵取消、调度冲突三档
-version: "1.325.0"
+version: 1.328.0
 agent_created: true
 ---
 
@@ -386,18 +386,15 @@ agent_created: true
 - **判据**：① **原因清单的可达性（reachability）是正确性要求不是文风要求**——不可达的原因让读者去查没坏的东西，比没有原因更贵：它把排障引向错误的面且消耗信任；② **原因按目标形态裁剪**——只提供适应该形态的原因（可按 title 给的目标才报 title 类原因），想用一个通吃所有形态的清单，必然混入不可达项；③ **文案是契约**——错误描述里每个原因的存废与形态条件要有词面级回归测试（改文案=改契约；测试钉住「blames deletion rather than rename」，只改字符串就红）；④ 与 dl r543A「失败汇总逐项带理由」分工：那条管**有没有理由、理由与打标是否同源**，本条管**理由是否真实可达、是否按形态裁剪、文案是否被测试钉住**——前者防「只说哪条失败」，后者防「说的原因根本到不了」。
 - 提升层：工作流（错误信息质量）/ 工具（诊断面设计）。触发词：误导性原因、不可达原因、reachable causes、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、transport 自己报错。
 
-
 ## 嵌套执行上下文的继承语义必须逐原语显式定义：未定义的调用会静默挂起而非报错，且作用域要用 AsyncLocalStorage 不是布尔 flag（来源：api.github.com/repos/windmill-labs/windmill/pulls/11699，2026-10-12 merged 16:47Z，一手 gh api 逐串命中）
 - **实证**：workflow-as-code 里"任务体内调用任务/步骤"永久挂起：任务体跑在**重放工作流以到达其步骤**的子 job 里，那一轮中除正被执行的步骤外每个步骤都停在**永不 resolve 的 promise**上——这对工作流体自身的其余步骤是对的，却**连带抓住了任务体自己发出的调用**（`step()`/`sleep()`/`taskScript()`/`taskFlow()`/`waitForApproval()` 与 Python 客户端同病）。表现是"子 job 永久等待，无报错、无内层 job"。而任务是单个 job、没有自己的轮次，**本就无法派发或检查点一个步骤**。修复后逐原语定义语义：任务体内 `task()`/`@task` 与 `step()` **就地（in place）在同 job 运行、结果 JSON 往返**（`step()` 不做检查点；任务的 task options 不适用），`sleep()` 在 job 内等待，而 `taskScript()`/`taskFlow()`/`waitForApproval()` **显式抛出指向工作流体的错误**。机制选择：TS 用 `AsyncLocalStorage` 作用域、Python 用 `ContextVar`——**布尔 flag 不行**：在 `Promise.all([a(), b()])` 下工作流体与任务体并行重放，flag 会让工作流体的调用误走"就地执行"而在本 job 跑出一个兄弟任务。取舍写明：**嵌套任务就地运行而非报错**，因为那与任务在工作流外本来的行为一致。测试：两客户端新增回归（嵌套 task/step、工作流体兄弟不被跑、从任务体派发须报错）——**无修复时全部以超时失败**。
 - **判据**：① **上下文继承规则的空档表现为静默挂起，不是报错**：未定义的调用若落在"等待永不兑现的承诺"上，系统给不出任何信号——**嵌套/派发类 API 的语义表必须逐原语填满，空档的默认行为必须是显式错误**。② **就地执行 vs 派发 vs 报错是三种不同语义，要按原语分别裁定**：能安全就地跑的（纯计算/等待）就地跑并声明"不检查点、task options 不适用"；必须报错的要指向正确位置（"该在工作流体里调"）——笼统地"都支持"或"都禁止"都会留空档。③ **作用域机制要在并发下检验**：`Promise.all` 下工作流体重放与任务体并行，布尔 flag 无法区分调用来源 ⇒ 用 `AsyncLocalStorage`/`ContextVar` 这类随异步调用链传播的作用域；选型判据是"**兄弟分支并存时它还能不能指认调用方**"。④ **"无修复即超时失败"是这类 bug 的标准回归形态**：静默挂起的修复必须有能在修复前挂住的测试，否则测试通过只证明没崩。⑤ 与 dl 1.197.0（同一未应答请求只问一次）分工：那条管**交互层的重复提示**，本条管**执行层的嵌套语义空档导致永久等待**。
 - 提升层：工具（执行上下文与派发语义）/ 工作流（嵌套任务的排查面）。触发词：任务体内调用静默挂起、嵌套执行上下文、in place 就地运行、永不 resolve 的 promise、逐原语定义语义、AsyncLocalStorage 作用域、ContextVar、布尔 flag 在并发下失效、Promise.all 并行重放、无修复即超时失败、taskScript 须报错。
 
-
 ## 技能/规则修订前先把执行证据锚到具体条目：跨重复运行比失败与成功的抽象轨迹定位「可疑动作」，再定编辑点（来源：arxiv.org/abs/2610.11858v1（SkillMorph）一手 export.arxiv.org 2026-10-13 r547B 实拉摘要逐串命中）
 - **实证**：技能提供可复用指引，但"**incomplete or unsuitable guidance can impair task execution**"。已有做法用 LLM 从执行反馈生成修订，但"**grounding these revisions in explicit behavioral evidence remains challenging**"。SkillMorph 的核心："**link execution evidence to specific skill contents before generating revisions**"——具体是"**compares failure and success evidence in abstracted trajectories across repeated runs and tasks, incorporating changes between evolution loops to identify suspicious actions**"，再用这些可疑动作"**localize edit sites in the skills and generate corresponding revisions**"。SWE-Skills-Bench 与 CannBot 上，其演化的技能在 trial-level accuracy 与 execution consistency 上均优于原技能与四种既有技能演化方法；并已用于自动 kernel generation（AI 算子开发团队接受了 6 个技能修订 PR）。
 - **判据**：① **"这次失败了所以改技能"是未定位的修订**：执行反馈与技能内容之间缺一条因果链，直接让模型生成修订等于让它猜改哪里——**修订前必须先建立"证据 → 具体条目"的锚点**。② **定位靠失败与成功的对照，不靠失败单独**：只在失败轨迹里找可疑动作会把"成功跑也做了的动作"误判为嫌疑；跨重复运行与多任务比对**两类轨迹**，差异面才是定位信号。③ **轨迹要抽象化再比**：原始轨迹噪声淹没结构差异，比对的是抽象后的动作序列——定位精度取决于抽象层选得对不对。④ **把"演化循环之间的变化"也算进证据**：上一轮改了什么会改变本轮的可疑动作集，忽略它会在同一处反复修订（与 dl 1.197.0「按询问内容去重」同构：都要记住已做过什么）。⑤ **编辑点是局部的**：定位输出是 edit sites（条目级），不是"重写这份技能"——整篇重写会把没问题的部分一并换掉且无从非回归（与 sa 1.139.0 Skill-V「修订须保受保护约束 + 历史回放非回归」配套：一个给定位，一个给验收）。⑥ 与 dl KB:507「定位阶段只产出失败点矩阵、不许同时提修复」分工：那条管**角色边界**（不许边定位边改），本条管**定位方法**（用什么证据、怎么比、怎么落到编辑点）。
 - 提升层：工作流（技能/规则修订的故障定位）/ 工具（轨迹抽象与对照）。触发词：修订前先锚定证据、SkillMorph、可疑动作 suspicious actions、失败与成功轨迹对照、抽象轨迹、跨重复运行比对、演化循环间的变化、edit sites 条目级定位、整篇重写是未定位修订、execution consistency、SWE-Skills-Bench。
-
 
 ## 错误处理路径自身的崩溃会抹掉真实错误：跨边界序列化按原始类型白名单抽取，且 name/message/stack 必须显式置为可枚举可配置可写（来源：api.github.com/repos/n8n-io/n8n/pulls/33503，2026-10-13 r551B 一手 gh api 200 逐串命中 `the database driver throws an error object that often contains the raw query buffer (which can be massive)` / `attempts to serialize it over IPC via JSON.stringify, it crashes with a fatal JavaScript heap out of memory exception, masking the actual DB error` / `act as a strict primitive whitelist instead of mutating the error in-place` / `Object.create(Object.getPrototypeOf(error)) ... without triggering non-configurable descriptor traps` / `Explicitly enforces enumerable: true, configurable: true, and writable: true via Object.defineProperties on name, message, and stack` / `simulate a 50MB Buffer injection alongside non-configurable properties` / `JSON.parse(JSON.stringify(safeErr))`；r551B 落地）
 - **实证**：节点执行 DB 查询违反约束（如 PostgreSQL duplicate key）时，驱动抛出的错误对象常携带**原始查询 buffer（可能极大）**；JS Task Runner 捕获后经 IPC 用 `JSON.stringify` 序列化，直接 fatal `JavaScript heap out of memory` 崩溃，**真实 DB 错误被掩盖**。修法：`makeSerializable` 改为严格的**原始类型白名单**（`string`/`number`/`boolean`），不再原地改错误对象；用 `Object.create(Object.getPrototypeOf(error))` 动态克隆原型以保留类身份（`UnsupportedFunctionError` 等）且不触发 non-configurable 描述符陷阱；对 `name`/`message`/`stack` 显式 `Object.defineProperties` 设 `enumerable/configurable/writable = true` 使其存活于 IPC 序列化边界。测试注入 50MB Buffer + non-configurable 属性，并用 `JSON.parse(JSON.stringify(safeErr))` 显式模拟 IPC 边界。
@@ -425,7 +422,6 @@ agent_created: true
 ## r566B 下沉条目：① **「同一个任务」要有可执行契约，不能靠提示相似度**——工具型 agent 鲁棒性评测须用可执行契约界定任务同一性，否则跨变体比较的是提示相似度而非能力（来源：arXiv 2610.14477《What Counts as the Same Task?》，2026-10-14 实拉）
 ## r566C 下沉条目：① **自愈动作须独立成可追踪条目**——后台自愈调查（self-healing candidate verification / background investigation tracking）与其执行结果分离留痕；自愈不得复用原失败条目充当证据（来源：github.com/n8n-io/n8n PR #41020 / #41004，2026-10-14 实拉） · r567A 下沉条目：① **单条毒记录不得升级为整批丢失，确定性失败的重试耗尽即丢数据**——一个含 null byte 的事件让 PostgreSQL 拒收整批 → persister 原批 requeue → 重试 `max_flush_retries`(5) 次（对同一毒批是确定性失败）→ 丢 N 条且日志只记数量不记内容；批写路径须逐条隔离/先净化毒记录，重试前先判「是否确定性失败」（来源：prefect #23197，2026-10-14 r567A 一手 gh issue 实拉）。② **重建/修复循环必须有进展判据与退出条件，零进展=无声挂起而非继续转**——旧索引行 `workflowVersionId>versionCounter` 致依赖索引 rebuild 空转 14+ 小时、主进程与 PG 各 ~50% CPU 无输出，结束日志谎报 processed 12,921,816 条（实际卡住 15 条）；循环验收断言「处理数随轮推进」，零进展即退出并报警（来源：n8n #40246，2026-10-14 r567A 一手 gh issue 实拉）。触发词：毒记录丢整批、null byte 拒批、确定性失败不重试、重建无进展、rebuild 空转、处理数推进判据、零进展退出。
 
-
 ## r568A · 批量装配操作不是原子事务：首败即停且不回滚先前成功项，调用方须自带补偿与重入设计（来源：docs.openclaw.ai/cli/plugins/install.md 28,066B，2026-10-14 r568A 一手 curl 200 逐串命中 `Each plugin keeps its own policy and capability-consent checks. The command stops at the first failure; earlier successful enables remain committed, and later IDs are not processed.`；经 Qoder r610-Q-C 提名；与 r326A Make Commit-after-each-module 合成跨厂通则）
 - **实证**：`openclaw plugins enable codex cua-computer` 一次启用多个插件——每个插件各自过策略与能力同意检查，命令在**第一个失败处停止**，**先前已成功的 enable 保持已提交状态不回滚**，后续 id 不再处理。另一形态：安装时宿主配置有效但新插件自身配置缺失，OpenClaw 记录为 disabled 而非写入无效 enabled 条目（先装后配，`plugins enable` 是独立激活步）。
 - **判据**：① **批量装配的失败形状是「部分提交」不是「全或无」**：技能/plugin/工具集的批量启用、迁移、恢复遇首败即停，先前成功项已生效 ⇒ 调用方不得按原子事务假设，须自带补偿（记录断点、可重入、失败续跑）与显式回滚路径；② **安装≠启用≠可运行是三态**：install 落盘、enable 激活、config 就绣——验收要分态断言，把「已安装」当「已启用」会漏掉整类「装了没生效」；③ **通则成文依据**：Make Commit-after-each-module（rm r326A 已落）+ openclaw enable-loop 首败即停（本条）两家一手 ⇒ 「批量操作部分提交不回滚」达 2 厂实证，后续厂（n8n/Pipedream/Dify）证据只作增量登记；④ 与 dl「异步写失败不回滚已生效的会话选择」（r343B）分工：那条是异步单写的两档（运行时/持久），本条是同步批量装配的事务形状。
@@ -439,7 +435,6 @@ agent_created: true
 
 - **提升层**：工作流（并发写排障/失败可见性）。触发词：条件写防丢更新、WHERE schemaVersion、FOR NO KEY UPDATE、FOR KEY SHARE、每 flow 一次一保存、halt 丢后续、失败可见队列续跑、burst 出队下限。
 
-
 ## r571C 下沉条目：① 部分更新须显式三态语义或 read-modify-write，禁止隐式全量替换；② 致命一轮不得丢弃进度游标，重启用路径不得重置检查点（来源：PipedreamHQ/pipedream PR #22204 + issue #22024 + PR #22191 + activepieces PR #16512，2026-10-15 r571C 一手 gh api 200 逐串命中）
 
 - **实证**：① `events.update` 是**全量替换**语义但调用方只发手挑的 body ⇒ 未提供的字段被清空：只更新 title 就把重复事件的 RRULE 抹掉、整个序列塌成单事件，还一并清掉 colorId/visibility/transparency（issue #22024 同族）；修复走 read-modify-write，先读回完整对象再合并后写。② Drive source 单次跑遍历整个 changes feed ⇒ 大 backlog 触发 OOM / 128MiB 上限；失败时**丢弃所有 db 写与 emit，page token 永不前进** ⇒ 之后每轮以同样方式失败，形成毒态循环（#22191）。③ activepieces #16512：审批路径重新启用 trigger 时未带 `isRepublish`（直接 republish 路由带）⇒ 轮询的 `onEnable` 把 `lastPoll/lastItem` 重置为审批时刻 ⇒ 自上次轮询以来的新条目**永不再投**。
@@ -448,8 +443,6 @@ agent_created: true
 
 - **提升层**：工具（更新契约与采集循环排障）/ 工作流（检查点治理）。
 - 触发词：全量替换丢字段、read-modify-write、RRULE 被抹、只改一字段回归、游标永不前进、毒态循环、lastPoll 重置、审批路径漏 isRepublish、检查点丢失。
-
-
 
 ## r572A 下沉条目：① 返回值里的错误对异常式重试不可见；② 可观测性必须建在「静默丢弃」路径上，且严重级按失败因分类（来源：langgenius/dify PR #44061 + activepieces PR #15450，2026-10-15 r572A 一手 gh api 200 逐串命中）
 
@@ -472,7 +465,6 @@ agent_created: true
 - **提升层**：工具（容错语义一致性）/ 工作流（阶段枚举）。
 - 触发词：Continue On Fail 覆盖阶段、连接设置阶段、容错阶段分叉、横切契约逐阶段断言、握手失败不容错。
 
-
 - **r576A · 连接池在事务池化模式下，会话级 SET 会粘滞并污染后续借用者**（activepieces #16531，一手 gh api 200）：`SET statement_timeout = 0` 落在随机 backend 上并随连接归还而保留，`CREATE INDEX CONCURRENTLY` 落到另一个 backend 仍受 60s 默认限制，`RESET` 又落到第三个 ⇒ 保护既不生效，还留下一条被污染的空闲连接服务普通查询（实测 0/5 传到下条语句）。判据=需要会话级状态时用专用连接串，不在共享事务池里做 SET/RESET。
 - **提升层**：工具（连接与迁移配置）/ 工作流（长迁移执行）。
 - 触发词：transaction pooling、会话级 SET 粘滞、PgBouncer、statement_timeout、专用迁移连接串。
@@ -494,3 +486,5 @@ agent_created: true
 - 提升层：工作流（挂起与取消语义）/ 可观测性（计量归因口径）。触发词：re-arm、leader takeover、等待执行永挂、审批无取消入口、兄弟任务取消传播、TaskCompletedEvent 假完成、usage 近似值、pause or stop、暂停后计量不可作精确账单、静默非结果。
 
 ## r633B 下沉条目（取消是跨进程路由问题——DB 标 canceled 而 worker 仍在跑且槽位被占；调度冲突须显式 wait/skip/fail 且 fail 档不得顺接 failureAlert；含「回源核 issue 标题」取证据纪律）（原文均在 references/knowledge-base.md）
+
+## r651 下沉条目（A：兄弟节点失败不得剥夺已完成节点的写入持久化；重连必须以最新事件为起点，保留旧游标或丢游标都算失败；多 outcome 扇出须 FIFO 全量匹配下游，单变量覆盖会吃掉分支；锁的获取路径与释放路径必须同族，跨族释放等于没释放；引用读取要 defer 到解码同点发生，只查状态不得因引用整体失败；校验因目标为空而提前返回时，必须留下「未校验」标记；默认值只填补缺失输入，不得成为副作用动作的触发器）（原文均在 references/knowledge-base.md；B：任务目标与运行条件维持是两个目标，agent 定义必须同时含两者）（原文均在 references/knowledge-base.md；C：真正持有者存在时，影子实现必须让位并指名持有者；隔离要求优先于吞吐：专用队列的任务宁可等待，也不由不匹配的 worker 拾取；句柄返回前必须先持久化：返回即可解析是返回的契约；请求键一次性：已应答的键不得复用，同一键不得指两个不同请求）（原文均在 references/knowledge-base.md）（原文均在 references/knowledge-base.md）
