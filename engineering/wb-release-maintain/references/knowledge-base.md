@@ -1203,7 +1203,7 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - 「迁移时字段重命名必须保留旧值」（来源：activepieces.com/docs/install/reference/breaking-changes.md）：字段重命名后，此前配置的步骤丢失 tag 值并把该字段显示为空的必填项。判据：重命名类迁移必须自带旧值搬运，否则静默丢配置。
 
 
-## r648 三轮共学新增（3 点）
+## r648 三轮共学新增（5 点）
 
 - 「安全修复的版本约束要「下限 + 排除区间」，仅设下限会放行受影响的更高版本」（来源：openai/openai-agents-python#5431）
   依赖元数据原先允许受 GHSA-rwrf-2pqf-9j8j 影响的 MCP 版本。修复：要求 mcp>=1.30.0 且排除受影响的 2.0 与 2.1 两个发布，同时保留 1.x 已修补版本与 3 以下的 2.x；新增 wheel 与 sdist 元数据测试拒绝脆弱版本并接受两个已修补下限。
@@ -1216,3 +1216,11 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - 「依赖版本通配符不得被静默剥离，须显式钉定或显式报错」（来源：activepieces.com/docs/install/reference/breaking-changes.md）
   REST API 用 ~ 或 ^ 的通配版本会被静默剥离并钉到 base version，行为与用户所写的解析规则不同。
   判据：静默改变版本解析结果，会让「我以为会小版本升级」变成「永远停在 base」
+
+- 「传递依赖须显式钉下界，只钉上界会挡掉修复版」（来源：simstudioai/sim#9421）
+  OTel JS 3 要求 api 1.10，而 `@trigger.dev/core` 钉 api 1.9.1，api 1.10 会忽略 1.9 注册的全局；只钉上界 `<13` 把修复版 13.0.0 挡在解析图外，且大版本带 5 个 breaking change。
+  判据：只钉上界等于拒绝修复；传递依赖必须有显式下界，并按"是否挡住修复版"定期复核
+
+- 「显式入参/选项透传不得静默丢弃字段」（来源：vercel/ai#23476）
+  `createLiveSandboxFromSnapshot` 把调用方的 `persistent` 从 options 剥掉，导致 `persistent:false` 永不到达 `Sandbox.create()`，每次 stop 都写了未声明的快照。
+  判据：透传层静默丢字段会把"用户显式关掉的行为"变成"默认开启"，且错误只在副作用处暴露

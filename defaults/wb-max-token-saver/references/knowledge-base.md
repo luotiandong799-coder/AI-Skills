@@ -999,7 +999,7 @@ autogen#8328：HeadAndTailChatCompletionContext 在头部删掉一条 tool-call�
 - **提升层**：可复用 Skill（上下文预算）。触发词：三量纲预算、UTF-16 单元计长度、省略描述保留条目、已加载即跨轮常在。
 
 
-## r648 三轮共学新增（2 点）
+## r648 三轮共学新增（4 点）
 
 - 「超出输出上限应返回可寻址引用 + 短预览，而非截断文本；大结果卸载并设载荷到期」（来源：code.claude.com/docs/en/skills.md 与 docs.agno.com/llms.txt）
   Bash 工具输出越过 inline ceiling 时以「文件路径 + 短预览」返回而不是截断文本；结果卸载可配置阈值、head 预览与载荷到期（payload expiry）。
@@ -1008,3 +1008,11 @@ autogen#8328：HeadAndTailChatCompletionContext 在头部删掉一条 tool-call�
 - 「缓存复用不能只靠前缀匹配，必须把「缓存操作序列」纳入同一性」（来源：arXiv 2610.28577 Cache Engineering for Agents）
   agent 可主动 drop 部分缓存、repos 调整保留键的位置编码，于是相同 token 序列在不同缓存操作序列下产生不同的缓存状态——历史依赖（history dependence）使前缀匹配不足以保证复用正确；为此需要无状态接口 + 内部有状态复用的服务引擎。
   判据：只按 token 前缀判定复用，会在存在主动缓存操作时静默复用错误状态
+
+- 「预算/长度额度须随开关回收——关闭的功能不得静默占用预算」（来源：run-llama/llama_index#23761）
+  `include_metadata=False` 时元数据仍消耗 splitter 容量；修复在禁用时跳过 `DEFAULT_METADATA_FORMAT_LEN`。
+  判据：开关关闭的功能若仍占预算/长度额度，会把"我以为关了"变成"悄悄吃掉配额"，关闭即须回收
+
+- 「预算提醒须在耗尽前触发，且压缩须跳过已标记消息」（来源：deepset-ai/haystack#13359）
+  `StepBudgetReminderHook` 在 agent 逼近 `max_agent_steps` 前给予警告；compaction 在找用户任务/轮次边界时跳过已标记消息。
+  判据：预算提醒只在耗尽后报等于没提醒；压缩跳过标记消息才能保留不可压缩的控制信号
