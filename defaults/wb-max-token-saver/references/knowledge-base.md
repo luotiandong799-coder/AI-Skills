@@ -1016,3 +1016,11 @@ autogen#8328：HeadAndTailChatCompletionContext 在头部删掉一条 tool-call�
 - 「预算提醒须在耗尽前触发，且压缩须跳过已标记消息」（来源：deepset-ai/haystack#13359）
   `StepBudgetReminderHook` 在 agent 逼近 `max_agent_steps` 前给予警告；compaction 在找用户任务/轮次边界时跳过已标记消息。
   判据：预算提醒只在耗尽后报等于没提醒；压缩跳过标记消息才能保留不可压缩的控制信号
+
+## r649C · 缓存命中的确定性两点（站点一手 · 2026-10-29）
+
+### r649C-1 · 工具调用内容块的键顺序必须稳定（docs.claude.com `.../prompt-caching.md`，165,990B）
+文档要求核对 `tool_use` 内容块里的键顺序是否稳定，原因是部分语言（Swift、Go 等）在 JSON 转换时**会随机化键顺序，从而打断缓存**。判据：**缓存键对序列化顺序敏感，而序列化顺序不是所有语言都保证的**；跨语言/跨运行时构造请求时，必须显式固定键顺序，否则缓存命中率会以无法复现的方式波动。
+
+### r649C-2 · 预热必须使用与真实流量完全相同的配置（docs.claude.com `.../prompt-caching.md`）
+思考配置（`mode`、`budget_tokens`）与 `output_config.effort` **都会被渲染进 prompt**，因此用不同配置做预热，会写入一条真实流量**永远命中不到**的缓存条目。判据：**预热的成本只有在配置同构时才成立**；预热与生产在思考配置/effort 上不一致，等于花钱写一个不会被读的条目，并让命中率指标失真。
