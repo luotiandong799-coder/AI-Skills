@@ -2827,3 +2827,56 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 「规划结构须超越 DAG」（来源：arXiv 2610.07004 TopoPlanner，2026-10-29 实拉）：顺序/DAG 规划器无法表达验证-修正回路、收敛分支合并与可复用中间态；规划表示必须能承载回路与合并，否则只能规划出退化的线性工作流。
 
 - 「无效编辑自动回退 + 验证器输出修复建议」（来源：arXiv 2607.01709 COMFYCLAW）：把工作流构建形式化为类型化图编辑并自动回退无效编辑；区域级验证器把失败翻译成可操作的修复建议而非只给成败二值。判据：验证器的产出必须是「下一步改什么」，不是「对/错」。
+
+
+## r648 三轮共学新增（9 点）
+
+- 「恢复正确性要双向覆盖：既防重跑也防漏跑」（来源：langchain-ai/langgraph#9484）
+  与 #9276/#9315（恢复后重跑已完成任务，即「跑太多」）成对，本例是「跑太少」——节点 TimeoutPolicy 加图级 step_timeout 双超时下，兄弟失败后恢复的子图丢掉 Send 扇出已调度的任务，只返回第一步的状态。
+  判据：只回归「重复执行」一边的恢复测试，会漏掉更隐蔽的任务丢失
+
+- 「遍历可变容器前先做浅快照再深拷贝，不要引入锁或代理」（来源：crewAIInc/crewAI#8750/#8749）
+  plain 方法跑在 worker 线程，事件发送侧深拷贝流状态；直接遍历活字典时另一线程增删 key 会让 deepcopy 抛 RuntimeError: dictionary changed size during iteration，报错被记到正在启动的方法上并使整个 flow 失败。修复：先对顶层字典做浅快照再深拷贝其值，嵌套值仍深拷贝，不可拷贝值回退到该快照。
+  判据：并发写与遍历同存时，崩溃被记到无辜的方法上，定位方向完全错
+
+- 「关闭序列的各步必须互不阻断，否则一步失败会连带泄漏全部后续资源」（来源：significant-gravitas/auto-gpt#16390）
+  执行器优雅停机等待在途 run 时，若某个 run 在遍历 run map 期间结束，shutdown 崩溃，之后线程池从不关闭、集群锁从不释放、队列消费者从不断开、待写成本日志从不 drain；进程带着仍在执行的 run 退出，节点报「interpreter shutdown 后无法调度新 future」。修复：等待期间的 run 结束不再终止等待，等待之后的每一步即使等待失败也执行。
+  判据：清理序列用直线写法时，前半段任何异常都会让后半段全部跳过
+
+- 「错误分类用异常子类表达，新子类必须继承旧父类以保持捕获兼容」（来源：langchain-ai/langsmith-sdk#3732）
+  exec 因 EINVAL（含 argv 里的 NUL）拒绝启动原先归到泛化的 CommandError，调用方要解析消息文本才能区分；CommandError 同时装其他命令失败，匹配过宽。修复：新增 InvalidCommandError 继承 SandboxOperationError，except SandboxOperationError 仍能捕获。
+  判据：让调用方字符串匹配错误消息，等于把错误分类外包给文本解析
+
+- 「无效动作要前移到执行前的确定性前置条件校验，而不是执行后反馈」（来源：arXiv 2610.32648 StateMirror）
+  4398 条轨迹显示「幻觉工具使用」（访问不存在路径、缺包）普遍且昂贵，恢复中位数需 3 步交互与 22.4K token。做法是在 harness 边界截获动作、用 AST 与命令分析抽取状态谓词、对照活仓库确定性校验：2,508 个动作上 precision 0.940 / F1 0.817，比最强 LLM judge 的 F1 高 35.3%，中位延迟 17.73s→1.50ms 且零 token 消耗。
+  判据：执行后反馈必然已付出恢复成本；可静态抽取的前置条件不应留给模型判断
+
+- 「续写机制必须明确是否消耗重试预算，且部分轮次不可续写」（来源：docs.openclaw.ai/concepts/agent-loop.md）
+  continuation 不重放原任务也不增加重试预算；推理在输出 token 上限被截断时不给同模型续写（因为重放会省略那个部分轮次）；host 的输出上限警告不算作 assistant answer；可重放尝试仍可用配置的兜底模型。
+  判据：续写若计入重试预算会耗尽重试；对已省略的部分轮次续写会产生语义断裂
+
+- 「重放窗口不可用时必须显式要求用户操作，不得静默降级」（来源：docs.openclaw.ai/concepts/compaction.md）
+  嵌入运行时独立限制为模型重放而加载的历史；若旧版本使重放所需完整窗口不可用，OpenClaw 明确要求用户执行 /compact，而不是悄悄缩窗口继续。
+  判据：静默缩小重放窗口会把「能力下降」伪装成「正常完成」
+
+- 「子上下文的失败必须与调用方一致传播，不做静默隔离或回退」（来源：docs.openclaw.ai/concepts/context-engine.md）
+  上下文模式 isolated/fork 下，调用方的失败同样向外传播，不得顺带 quarantine 或 fallback。
+  判据：为「稳」而做的子上下文隔离会把失败吞成半成功状态
+
+- 「为长流程设的超时会泄漏给短动作，超时上限要按调用类型分别设定」（来源：activepieces.com/docs/install/reference/breaking-changes.md）
+  调高 AP_FLOW_TIMEOUT_SECONDS 后，agent 工具、chat 动作与 MCP action 运行会继承同一上限，不想被拖那么久就必须另调；同时单 run 的 max steps 服务端封顶 50 turns（honoured up to a ceiling）。
+  判据：单一全局超时会被最慢的调用类型绑架，短动作承担了不属于它的等待
+
+## r648 三轮共学新增（3 点）
+
+- 「重放上轮推理须走模型识别的推理通道(reasoning_content/preserve_thinking)，否则模型模仿 <think> 标签污染」（来源：langgenius/dify#44964）
+  Agent App 把上轮推理原样重放为字面 `<think>` 标签，模型随即模仿；应走 DashScope `reasoning_content` + `preserve_thinking=True`（模型识别为推理），或整体丢弃。
+  判据：推理重放若不走原生推理通道，会把"思考过程"变成模型要复制的模板，污染后续输出——重放前先判通道，无通道就丢
+
+- 「stop 与 kill 语义二分——stop 保留已缓冲消息可读、kill 丢弃；停机信号须同时打在状态位与执行体」（来源：e2b-dev/e2b#2026）
+  stop() 后已入队消息仍可读、之后的丢弃；kill 直接丢弃。凡是"置状态→异步干活→再翻状态"的写法，停机信号须同时打在状态位与执行体。
+  判据：只翻状态位不中断执行体，会留下"已停止但未完成"的窗口，竞态宿主
+
+- 「批量清理须带游标续跑（从每批结束点续，不每次从最旧键重走）」（来源：simstudioai/sim#9419）
+  幂等清理删掉 4 次全表 stat 扫描，每批从上次结束点续而非从最旧键重走。
+  判据：无游标的全表重扫在大数据量下既慢又重复消耗；清理批次须可断点续跑

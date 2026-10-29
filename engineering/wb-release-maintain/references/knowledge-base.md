@@ -1201,3 +1201,18 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - 「分层版本对齐：major/minor 对齐而 patch 可异」（来源：docs.langflow.org/release-notes）：严格 SemVer 下 Desktop 与核心 OSS 包的 patch 版本可以不同，但 major/minor 必须对齐；官方建议先在新虚拟环境或 VM 装新版本再升级主安装。判据：多发行件之间的对齐要精确到哪一级，不能笼统说「版本一致」。
 
 - 「迁移时字段重命名必须保留旧值」（来源：activepieces.com/docs/install/reference/breaking-changes.md）：字段重命名后，此前配置的步骤丢失 tag 值并把该字段显示为空的必填项。判据：重命名类迁移必须自带旧值搬运，否则静默丢配置。
+
+
+## r648 三轮共学新增（3 点）
+
+- 「安全修复的版本约束要「下限 + 排除区间」，仅设下限会放行受影响的更高版本」（来源：openai/openai-agents-python#5431）
+  依赖元数据原先允许受 GHSA-rwrf-2pqf-9j8j 影响的 MCP 版本。修复：要求 mcp>=1.30.0 且排除受影响的 2.0 与 2.1 两个发布，同时保留 1.x 已修补版本与 3 以下的 2.x；新增 wheel 与 sdist 元数据测试拒绝脆弱版本并接受两个已修补下限。
+  判据：只写下限等于默认所有更高版本都安全，而修补未必落在连续区间上
+
+- 「内联/打包依赖会逃出依赖治理，须显式声明可升级路径」（来源：modelcontextprotocol/typescript-sdk#3109）
+  2.4.0 把 ajv 与其 fast-uri 3.1.8 打进 dist（tsdown noExternal），消费者无法用 overrides/resolutions 提升，lockfile 扫描器也看不见；3.1.8 在 2026-10-23 又新增 4 条公告（修复在 3.1.9）。
+  判据：打进产物的依赖不在消费者的治理范围内，公告再多也无法被下游响应
+
+- 「依赖版本通配符不得被静默剥离，须显式钉定或显式报错」（来源：activepieces.com/docs/install/reference/breaking-changes.md）
+  REST API 用 ~ 或 ^ 的通配版本会被静默剥离并钉到 base version，行为与用户所写的解析规则不同。
+  判据：静默改变版本解析结果，会让「我以为会小版本升级」变成「永远停在 base」

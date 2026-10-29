@@ -4817,3 +4817,60 @@ crewAI#7668（2026-10-25 一手实拉）：MCP 工具 schema 缺 `type`（如 `i
 - 「自我改进类动作的时机与环境可用性」（来源：docs.openclaw.ai/tools/skill-workshop.md）：每 agent 每天至多一次，在已完成的 turn 之后运行，且永不延迟该 turn；沙箱运行拿不到该工具。判据：自改动作必须挂在回合外并限频，否则既拖慢执行又把自我修改暴露在不可信上下文里。
 
 - 「技能 URI 末段即技能名，身份可从路径恢复」（来源：modelcontextprotocol.io/seps/2640）：经 MCP 提供的技能必须符合 Agent Skills 规范，SKILL.md 必须以含 name/description 的 YAML frontmatter 起始；skill URI 最后一段必须等于声明的技能名，使名称无需读 frontmatter 即可从 URI 恢复。判据：路径与声明不一致的技能不应被装载。
+
+
+## r648 三轮共学新增（11 点）
+
+- 「工具描述必须写明「何时用我」与「优先用哪个兄弟工具」，并给出分级读取参数」（来源：modelcontextprotocol/servers#5393/#5394）
+  search_nodes 说明匹配范围（名称/类型/观察，大小写不敏感）、用于关键词/主题/部分名、精确名称优先 open_nodes、整图才用 read_graph；open_nodes 说明已知名称时它最廉价。同时给三个读工具加 observationLimit（0 = 仅名称/类型/计数概览）、entityTypes 过滤、limit 截断，并在 outputSchema 暴露 observationCount。
+  判据：描述只写「做什么」不写「何时用/何时别用」，模型会一律选最贵的那条路
+
+- 「把不可信内容嵌入结构化文本时，围栏长度要按内容动态计算」（来源：modelcontextprotocol/servers#5386）
+  git prompt 把 diff 嵌入 Markdown 围栏，围栏长度取「内容中最长反引号串 + 1」，使 Markdown 文件自身的反引号无法提前闭合；prompt 复用既有 open_repo/git_status/git_diff 助手，因此 --repository  confinement 与参数注入守卫原样生效；prompts/get 无 isError，预期失败须显式说明。
+  判据：固定长度围栏会被内容里的同字符序列突破，且失败静默表现为格式错乱
+
+- 「更新类工具参数要三态化，二态布尔会把「未提及」塌缩成 false」（来源：activepieces/activepieces#17000）
+  agent 把省略的可选 Checkbox 填成 false，于是每次更新都把未提及的开关关掉（改会议时间会关掉等候室、改待办文字会取消勾选、改角色名会取消高亮）。修复：改为 Yes / No / Leave unchanged 三态，Leave unchanged 与省略值都让该字段不进请求，既有 true/false 值原样透传。
+  判据：给 agent 的「更新」语义里，缺省必须可表达为「不改」，否则更新等于重置
+
+- 「递归类型的 schema 生成要维护展开栈并改用 $ref/$defs，hydration 按生成类身份绑定」（来源：anthropics/claude-agent-sdk-python#1450/#1448 与 jlowin/fastmcp#6137）
+  自引用或互引用的 TypedDict 让 create_sdk_mcp_server 在建 schema 阶段就 RecursionError（早于任何工具执行）。修复：转换时传递正在展开的 TypedDict 栈，重复即发 {"$ref": "#/$defs/<qualname>"} 并在根挂 $defs；客户端侧则把递归引用绑定到每个生成类的身份（否则无 title 时多个生成类共享显示名 Root，几层后 .data 用了错类）。
+  判据：递归结构在「建 schema」与「反序列化」两侧各有一次身份丢失，必须分别按身份绑定
+
+- 「schema 遍历器要区分模式位与实例位，且对 properties 映射只下降字段不下降键名」（来源：browser-use/browser-use#6216/#6215）
+  SchemaOptimizer 把 default/const/enum/examples 的实例值当 schema 走，于是 dict 默认里的 title 被删、type: object 的数据字典被加上 additionalProperties: false 与 required、minItems 被移除，模型看到的默认值与真实默认不同；字段名恰为 required/default 时也被当关键字处理。修复：单一 walker _iter_schemas 跳过实例值，properties 映射只访问字段 schema 不访问映射本身。
+  判据：遍历器分不清「模式」与「数据」，会把用户数据当结构改写，且字段名与关键字同名时必然出错
+
+- 「合成/自动生成的工具与用户工具同名时，用户定义优先且列表不得重复」（来源：jlowin/fastmcp#6132）
+  ResourcesAsTools / PromptsAsTools 追加的 list_resources、read_resource、list_prompts、get_prompt 会与用户同名工具冲突。修复：list_tools 先收集已有名字再追加；get_tool 先问下游，用户工具存在即返回并优先于合成工具。
+  判据：冲突时若合成工具胜出，用户行为会被静默替换；不去重则列表出现同名条目
+
+- 「相似技能的判定要用能力证据的联合支持度，而非描述相似度」（来源：arXiv 2610.34728 SKALOS）
+  技能库扩大后语义相近候选难以区分，而改写的异构描述会掩盖能力差异。做法是多层次能力图对齐等价表达、按半环以「最弱证据」给每条分支打分（因为各自相关的能力元素未必在同一实现里联合成立）、并检查抽取出的需求是否被单一实现共同支持；再用排序反馈图校准抽取误差。NDCG@10 +2.68 点，ALFWorld 成功率 22%→29%。
+  判据：描述相似度会在能力边界上打平，必须落到可枚举的能力证据并做联合性检查
+
+- 「复用层应放在「叶子动作落地」而非高层规划，选择器要能主动 defer」（来源：arXiv 2610.32412 LeafSkill）
+  高层规划是任务特定的，叶子层动作落地跨任务复现且可对照环境允许的动作校验。做法是把动作模板绑定到当前对象与允许动作，用 1.7B 冻结选择器选择已绑定动作或把未变子任务 defer 回原 agent；技能留在参数外，冻结选择器可用后训练新增的技能类型（97.34% 未见技能类型被采纳）。词法/句法改写下精确匹配检索不到任何参考动作，语义检索保留 96–97% 候选覆盖。
+  判据：复用错层（复用高层规划）收益低；不能 defer 的选择器会强制接管它并不擅长的子任务
+
+- 「技能装载应是能力需求驱动的按需加载，而非渐进披露或一次性静态检索」（来源：arXiv 2610.23554 SkillBrowser）
+  渐进披露为增长中的技能库暴露元数据→上下文污染；检索限制目录暴露，但从初始任务查询出发的静态检索与推理中涌现的能力需求不对齐。Meta-Skill 管理的选择性技能暴露 = 识别当前能力需求 → 形成定向查询 → 按需加载；在 SRA-Bench 六子集五模型上优于静态检索与 LLM 选择，并缓解「本来就解得出的实例」上的准确率退化。
+  判据：一次性装载在推理中途既过时又占位；能力需求是随推理演进而非初始查询固定的
+
+- 「技能冻结（pin）必须同时封锁强制覆盖安装路径」（来源：docs.openclaw.ai/clawhub/cli.md）
+  pinned 技能被 update --all 跳过、被 update <skill> 直接拒绝、并且拒绝 install --force（防止本地字节被意外替换）；pin 可带 reason 并在列表显示 pinned 标记；只有 clawhub unpin 之后才可变更。
+  判据：pin 若不拦 --force，最需要保护的字节恰好在最粗暴的路径上失守
+
+- 「命名标识软删除要有保留期并公布到期时间，版本撤回走 fail-closed」（来源：docs.openclaw.ai/clawhub/cli.md 与 /http-api.md）
+  属主发起的软删除为该 slug 保留 30 天并在响应里返回 slugReservedUntil；--version 撤回一个自有非 latest 版本走 fail-closed 流程。
+  判据：删除后立即可再注册会让依赖方被同名不同物劫持；撤回失败若开放会留下应下架的版本
+
+## r648 三轮共学新增（2 点）
+
+- 「Schema 优化/压缩不得把 default/const/enum/examples 实例值当 schema 遍历」（来源：browser-use/browser-use#6216）
+  SchemaOptimizer.create_optimized_json_schema 把实例值（default/const/enum/examples）当 schema 遍历，导致 LLM 看到与模型实际不同的默认值（filters.default 变成 `{'type':'object'}`、columns.default 变成 `[{}]`）。
+  判据：schema 优化若把实例值当结构遍历，会静默改变 LLM 看到的默认值/约束，破坏工具契约保真——优化只动描述/结构，不碰实例值
+
+- 「审批/权限请求须携带原生工具名(nativeToolName)，桥接层不得丢弃」（来源：vercel/ai#23477）
+  内置工具审批请求只带 harness 工具名，原生名（如 Bash）在送达审批前被丢弃；提案在 `toolCall.providerMetadata[harnessId].nativeToolName` 补回并文档化（Claude Code bridge 已发 nativeName）。
+  判据：审批者看不到真实工具名会做出错误授权决策；桥接层透传不得静默剥离标识字段

@@ -4838,3 +4838,86 @@ docs.openclaw.ai `plugins/codex-harness-runtime/compaction.md`（2026-10-25 curl
 - 「输出预算被不可见思考吃掉的判定信号」（来源：docs.openclaw.ai/concepts/compaction.md）：摘要输出预算耗尽却无可见文本，可能是推理模型把额度花在思考上；摘要额度还受压缩保留预算限制，单加 maxTokens 未必提高；新增的角色标签与分隔符等脚手架每次至多 847 UTF-8 字节并计入 token 估算。判据：只报「无输出」会误判为失败，须区分「思考耗尽」与「生成失败」。
 
 - 「长程会话评测须植入可确定性核查的锚点」（来源：arXiv 2610.34425 CTXAgent）：benchmark 在会话中植入 planted facts、瞬时观察与常驻指令，并以确定性方式核查，会话长 35-212 轮。判据：只测最终任务分会漏掉「是否守住了常驻约束」，必须有可确定性判分的锚点。
+
+
+## r648 三轮共学新增（20 点）
+
+- 「策略替换必须是读回-合并而非重组覆盖，检查不完整即拒绝变更」（来源：vercel/ai#24183）
+  harness 通过策略管理器追加变换时重组成了完整原生策略，丢掉 response rules，导致此前被沙箱拒绝的请求被放行；原生 SDK 读回也看不到 response rules。修复：替换前先检查原始会话元数据里的隐藏规则，检查不完整时拒绝变更，并对含 response rules 的策略抛 HarnessCapabilityUnsupportedError。
+  判据：任何「附加一条规则」的实现若走重组覆盖，都会静默删除未显式读回的既有规则；观测不到 ≠ 不存在
+
+- 「跨系统 schema 转换要有元数据保留白名单，宣告约束不得弱于执行侧」（来源：vercel/ai#24181）
+  宿主工具 JSON Schema 转 Zod 时保留了结构与描述，却丢掉数值边界、字符串长度、数组项数与默认值，于是对外宣告的 schema 弱于宿主实际校验。修复：用显式 .meta() 白名单透传九类字段（含递归 schema 与 falsy 默认值），宿主仍负责强制执行与填默认。
+  判据：宣告弱于执行会让模型合法地发出宿主会拒的输入；转换层必须列白名单并逐项回归
+
+- 「出站调用的目的地由服务端配置钉定，证书主机名校验与地址钉定须同时成立」（来源：langflow-ai/langflow#16044）
+  agentic MCP 调用原先可由入站 Host 决定网络目的地。修复：钉到真实后端监听地址与端口，TLS 保留证书主机名校验，跟随同源重定向，沿用运维 CA 配置，忽略环境代理，每个请求用后关闭 client；CLI 证书参数要灌进内部调用所用的应用设置。
+  判据：目的地若可由请求头派生即 SSRF；钉地址与验主机名不是二选一，必须并存
+
+- 「权限提升要走全新授权而非 refresh，且新授权 scope 必须包含旧授权并集」（来源：modelcontextprotocol/typescript-sdk#3114）
+  403 insufficient_scope 时 auth() 只做 refresh，而 RFC 6749 §6 规定 refresh 不能新增 scope，于是重试拿到同样 403 并抛「upscoping 后仍 403」，用户从未被要求补授权。修复：token 缺少被挑战 scope 时传 forceReauthorization 发起新授权，且新授权同时申请此前已请求与已授予的 scope。
+  判据：提升路径若复用 refresh 会把「能力不足」误报成「服务器拒绝」，且新令牌会静默丢掉旧能力
+
+- 「缺失凭据与无效凭据必须产生不同的 401 挑战」（来源：modelcontextprotocol/python-sdk#3780/#3779/#3769）
+  无 Authorization 头与无效/过期 token 原先都返回 error="invalid_token"，违反 RFC 6750 §3.1（缺失时不带错误码），客户端无法据此发现授权服务器。修复：缺失时发 discovery 挑战（resource_metadata + scope，无 error），无效时保留 invalid_token。
+  判据：把「没带」与「带了但不对」合成一种响应，会让客户端失去定位授权服务器的入口
+
+- 「高风险动作的授权是外部 fail-closed 闸门 + 重放守卫 + 可离线审计的签名收据」（来源：microsoft/autogen#8377（SpendAuthority 提案））
+  付费工具调用在工具执行前由外部机构校验支付意图——仅 2xx 且显式 allow 才放行，超时/畸形/非 2xx 一律拒绝（永不 fail-open）；(caller_id, operation_id) 重放守卫跨重启原子；Ed25519 签名裁决 + 哈希链收据可离线审计。
+  判据：闸门若内置在同一进程会与被测对象同命运；fail-open 的超时等于无闸门
+
+- 「审计账本需要稳定事件 ID + 单调序号，并显式声明有界性」（来源：docs.openclaw.ai/cli/audit.md 与 /gateway/audit.md）
+  账本每条有稳定 event id 与单调递增 sequence，只存身份/顺序/溯源/动作/状态/归一化结果码，永不存内容；有界 100,000 行并按期剪枝，剪枝后剩余预算用不构建全保留 ID 集合的方式算。
+  判据：没有稳定 ID 与单调序号的账本无法去重与排序；不声明上界的账本会无限增长
+
+- 「await 之后必须重新校验「确切的活跃属主」与其执行预算，撤销阻断下一个效果」（来源：docs.openclaw.ai/concepts/session-controller.md + /gateway/audit.md + /concepts/agent-loop.md）
+  被撤销的 grant 不能授权后续效果；await 之后要同步 revalidate 那个确切的 live owner 及其执行预算；steering 也要 revalidate 同一 active owner。
+  判据：属主身份是易变的，缓存下来的属主会让撤销延迟生效甚至完全失效
+
+- 「审批授权要绑定确切执行上下文，长期 grant 须有可见账本与逐条撤销」（来源：docs.openclaw.ai/tools/exec-approvals.md）
+  已批准的 node-host 运行绑定 cwd、确切 argv、env 绑定与钉定的可执行文件路径；grant 默认「直到被撤销」；standing-grant 账本列出 N 天/已过期/已撤销并支持逐行 Revoke；grant 是派生关联，须对照 live approval row 重新校验。
+  判据：只批准「某类命令」而不绑定具体值，等于批准了该类下的任意参数；不可见不可撤销的长期授权等于永久授权
+
+- 「撤销类端点自身必须做调用方身份认证」（来源：activepieces.com/docs/install/reference/breaking-changes.md）
+  POST /revoke 原先允许完全不出示客户端身份的调用者撤销刷新令牌，任何拿到刷新令牌的人都能断开其所有者。修复：此后注册的客户端调用 /token 与 /revoke 必须出示身份。
+  判据：把「被撤销对象本身」当作唯一凭据，会让撤销变成任何人可用的破坏接口
+
+- 「重试预算不得挂在会被丢弃的对象上；流式不解除配额上限；上限只能收紧」（来源：activepieces#16995/#17007 与 breaking-changes）
+  六位登录码的错误预算挂在码本身，第五次错就把码丢弃 → 换新码立刻又有五次、无上限（修复加 ceiling）；分片写入存储照样计入配额，流式不解除上限；per-project 覆盖在云上被 Math.min(override, planLimit) 钳制，只能降低不能提高，UI 显示该天花板。
+  判据：预算载体一旦可被重置，限流就失效；覆盖若可上调，计划上限就形同虚设
+
+- 「机器身份令牌需 mint/scope/revoke 三动作，数据隔离把读写钉到认证主体」（来源：docs.agno.com/llms.txt）
+  service accounts 铸造不透明 agno_pat_ 令牌并支持列范围与撤销；AuthorizationConfig(user_isolation=True) 让非管理员会话读写钉定到 JWT subject。
+  判据：只有铸造没有撤销的机器身份无法失效；靠应用层过滤做隔离会漏，须钉到认证主体
+
+- 「安全守卫必须在表面形式不变性下评测，规范化解析应置于守卫之前」（来源：arXiv 2610.24055 ToolRosetta）
+  守卫只在整洁 JSON 工具调用上评测，但真实编码 agent 走 execute_bash/execute_code 的字符串载荷。同动作重渲染为 Python 调用/shell/去掉 rationale 后，前沿守卫稳定（误差 ≤3.4 点），但 5 个专用守卫中 4 个在 shell 形态下假阳性率上升 21–47 点，挡掉 1/3 到 9/10 的良性动作；去掉 rationale 会按守卫各自方向漂移，说明意图是从 rationale 读的。在守卫前加恢复规范调用的解析器可构造性消除该效应。
+  判据：只在一种表面形式上测出的守卫分数不可外推；守卫前的规范化能一次性消除表面敏感
+
+- 「安全指标须同时报失败方式与任务完成度，不能只报 ASR」（来源：arXiv 2610.23254）
+  审计 33,000 条轨迹发现失败攻击中 76–80% 是「忽略」而非「拒绝」；仅改系统提示 ASR 从 0.2% 变到 43%；ATOM 矩阵显示 21.7% 的 episode 安全但没完成用户任务。
+  判据：把每次未成功的攻击都记成成功防御，会把「什么都不做」误判为安全；安全必须配效用一起报
+
+- 「多层守卫不能假设错误独立相乘，须实测等价层数并记录实际服务模型版本」（来源：arXiv 2610.07359）
+  1,119 条标注动作上，两个 LLM judge 组合只相当于 1.2–1.4 层（强耦合），规则层 + 1 judge ≈1.86–2.09 层；solo 准确率不能预测某层带来的增量（某云端规则包把 solo miss 率降 20% 却不增加任何联合覆盖）；某一 judge 层在 112 批次中有 50 批被非请求的模型版本服务，该事件推翻了一个前置结论。
+  判据：按乘法叠加估出的栈强度会系统性高估；不记录实际服务版本，结论不可复现
+
+- 「策略编译成闸门必须做 schema 级可操作性校验，并重放检查过度拒绝」（来源：arXiv 2610.11030 NOMOS）
+  自然语言策略四趟编译成确定性工具调用闸门，仅用工具 schema 级静态校验（无证明器/求解器/LLM）就修复或拒绝掉 37%（航空）与 13%（零售）的候选规则——否则多数规则实际不可操作；把编译规则重放到未防御轨迹上，发现某开发绑定拒绝了 95.9% 本应通过的任务调用。
+  判据：只看「违规下降」会漏掉「把合法工作一起挡掉」；不可操作的规则等于没有规则
+
+- 「来源溯源要区分服务端解析与自声明，自声明不得提升为已验证」（来源：docs.openclaw.ai/clawhub/http-api.md 与 /cli/skills.md）
+  provenance 仅在 ClawHub 于发布/导入时解析并存下 repo/ref/commit/path 才标 server-resolved-github-import，否则为 unavailable；不可用或自声明的源 URL 只留在原始 provenance 信封内，不被提升到 commit-pinned 的 verifiedSourceUrl。
+  判据：自声明来源若是可提升的，溯源就退化成装饰；验证状态必须由服务端解析动作产生
+
+- 「幂等重放返回既有结果，且内部标识符不得进入对外响应」（来源：docs.openclaw.ai/clawhub/http-api.md）
+  精确授权的 replay 返回 200 与既有结果（新建返回 202）；run ID、幂等键、工件摘要与存储 ID 从不返回；仅字节完全相同的重放才被视为重复。
+  判据：幂等若重新执行会破坏副作用唯一性；内部标识外泄会放大重放面
+
+- 「取消必须同时撤销工具权限与审批授权，重放事实不能恢复执行授权」（来源：docs.openclaw.ai/concepts/agent-loop.md）
+  Cancellation revokes the run's tool and approval authority immediately；已有 replay facts 不能重新打开执行授权。
+  判据：只停推进不撤授权，取消后残留的授权窗口仍可被后续动作利用
+
+- 「解码期溯源绑定 + 可审计的信任提升，避免安全以可用性为代价」（来源：arXiv 2610.31974）
+  跨模态信任洗白（LSB/DCT/元数据隐写）可绕过文本扫描器。解码期溯源绑定 = HMAC 认证信任标签 + MCP 维护的溯源账本 + 上下文污点跟踪，即使被攻陷 agent 换成合法标签也能拦；四组件消融验证各角色；受审的信任提升机制把合法任务完成率从 67% 提到 100% 而不削弱防护。
+  判据：入口一次标注会被后续解码绕过；只做拦截不做提升机制，合法任务会被一起挡住
