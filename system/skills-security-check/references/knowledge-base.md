@@ -2512,12 +2512,12 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 
 ## r657Q-14 · 注入风险必须按「承载面位置」定级，位置轴独立于内容轴
 - **实证**：2610.38867：固定注入内容只改位置，GPT-5.4 跟随 README/TODO 中的不安全指令平均比同一指令放在代码或数据文件中**多 2.6 倍**（trust region effect：agent 对环境不同区域隐式赋不同信任级）（2026-10-31 摘要逐字实拉）
-- **判据**：判据：**严重度公式须含「该文本所处区域」因子**，文档类（README/TODO/CHANGELOG/issue 模板）与数据/代码类不得同权重；红队须做**同内容多位置**矩阵，只换 payload 不换位置的测试会系统性低估文档位风险。
+- **判据**：**严重度公式须含「该文本所处区域」因子**，文档类（README/TODO/CHANGELOG/issue 模板）与数据/代码类不得同权重；红队须做**同内容多位置**矩阵，只换 payload 不换位置的测试会系统性低估文档位风险。
 - 提升层：可复用 Skill/工具（安全扫描）
 
 ## r657Q-15 · 治理位归属判据：被治理者不得持有自己的治理开关
 - **实证**：NVIDIA OpenShell 原文：「An agent cannot govern itself. Security and governance belong in the infrastructure the agent operates in.」；职责拆为 Gateway（生命周期与策略）/ Supervisor（出站请求对照策略 + 中介凭证访问）/ Sandbox（限制文件系统与进程）/ Policy Prover（验证策略权限是否停留在上界内）四件套，运维扩展只能挂 **Gateway interceptors**（without modifying the gateway），违规毫秒级隔离（2026-10-21 发布，2026-10-31 实拉）
-- **判据**：判据：**能力体自身不得持有其治理开关**，否则「关掉治理」与「执行能力」在同一权限面内；四件套拆分给出了可落地的责任边界清单，其中 Policy Prover（验证权限不越上界）是本仓此前缺的一档。
+- **判据**：**能力体自身不得持有其治理开关**，否则「关掉治理」与「执行能力」在同一权限面内；四件套拆分给出了可落地的责任边界清单，其中 Policy Prover（验证权限不越上界）是本仓此前缺的一档。
 - 提升层：工作流（安全架构）
 
 ## r657Q-16 · 钩子不是全档位拦截层：按命令来源可被降为「只能拦不能批」，限制也不自动向派生执行体传播
@@ -2527,17 +2527,17 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 
 ## r657A-15 · OAuth/凭据错误码必须是可机读的分支依据，且撤销端点与令牌端点须同码
 - **实证**：modelcontextprotocol/python-sdk#3743/#3765/#3723（2026-10-31 gh api 200）：`unsupported_grant_type`（服务端未实现该 grant）/ `unauthorized_client`（客户端未被授权该 grant）/ `invalid_client`（认证失败）三码各归其位；客户端按错误码分支（只在 invalid_client 时重注册、在 unauthorized_client 时停止重试）会因码错而行为错误；WWW-Authenticate 头须按实际使用的认证方式给
-- **判据**：判据：**认证/授权错误码是控制流的一部分，不是提示文案**——码错会让「该停的不停、该重试的不重试」；且**同一语义在不同端点必须同码**（撤销端点与令牌端点不一致会让客户端无法统一处理）。
+- **判据**：**认证/授权错误码是控制流的一部分，不是提示文案**——码错会让「该停的不停、该重试的不重试」；且**同一语义在不同端点必须同码**（撤销端点与令牌端点不一致会让客户端无法统一处理）。
 - 提升层：工具（凭据/身份契约）
 
 ## r657A-16 · 多秘密脱敏必须用最左最长匹配，重叠秘密否则尾部泄漏
 - **实证**：windmill#12121：重叠秘密（如同时存在 `password` 与 `password-and-more`）须按 LeftmostLongest 匹配，否则部分掩码导致尾部泄漏；且性能改动会破坏该模式，需 mutation test 守住（2026-10-31 实拉）
-- **判据**：判据：**脱敏匹配器的匹配语义（贪婪/最长）是安全属性，不是实现细节**；多个重叠秘密同时存在时，短优先会给攻击者留下可复原的尾部。任何性能向的脱敏重构都必须有覆盖重叠秘密的回归测试。
+- **判据**：**脱敏匹配器的匹配语义（贪婪/最长）是安全属性，不是实现细节**；多个重叠秘密同时存在时，短优先会给攻击者留下可复原的尾部。任何性能向的脱敏重构都必须有覆盖重叠秘密的回归测试。
 - 提升层：工具（脱敏）
 
 ## r657A-17 · 凭据探测失败不得导致进程崩溃，须回落到其他凭据源
 - **实证**：anthropics/claude-code#106288：macOS Keychain 凭据探测未包 try/catch ⇒ exec 被拒时整个进程崩溃，而 API key 其实在环境变量里可用（2026-10-31 实拉）
-- **判据**：判据：**「探测通道被拒」与「凭据不可用」是两回事**——探测失败必须回落，不得升级为进程级失败；凭据解析链的每个源头都要独立容错，任一源抛错不得中止整条链。
+- **判据**：**「探测通道被拒」与「凭据不可用」是两回事**——探测失败必须回落，不得升级为进程级失败；凭据解析链的每个源头都要独立容错，任一源抛错不得中止整条链。
 - 提升层：工具（凭据解析）
 
 ## r657A-18 · 陈旧会话标记不得触发完整重认证；认证失败须显示服务器实际拒绝原因
@@ -2552,7 +2552,7 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 
 ## r657B-17 · 检测不等于遏制：已识别的对抗内容仍会进持久记忆并延后触发
 - **实证**：2609.17320 Emergence World：16 天、85 万余次 LLM 调用、近 500 亿 token 的长程多 agent 运行中，「systems could recognize threats while still interacting with adversarial content, writing it into their own persistent memory, and acting on it up to 46 hours later」（2026-10-31 实拉）
-- **判据**：判据：**检测与遏制必须分开计量**——「已检测」不构成「未污染记忆」，更不构成「不会照它行动」；长程运行的威胁响应须覆盖「写入记忆」这一落点，并注意延后触发（46 小时）会让因果关系在日志里断开。
+- **判据**：**检测与遏制必须分开计量**——「已检测」不构成「未污染记忆」，更不构成「不会照它行动」；长程运行的威胁响应须覆盖「写入记忆」这一落点，并注意延后触发（46 小时）会让因果关系在日志里断开。
 - 提升层：记忆/安全（感染链）
 
 ## r657C-9 · 撤销必须在凭据颁发方执行；按名引用时「删+重建同名」是换值不是撤销，且版本号归零
@@ -2562,12 +2562,12 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 
 ## r657C-10 · 凭据的替换形态是「按受众分发的短期身份令牌」，不是「把长期密钥换个地方存」
 - **实证**：docs.e2b.dev/iam/workload-identity.md：「prove who it is with short-lived identity tokens instead of long-lived credentials… you define named workload tokens when creating the sandbox. Each token is scoped to an audience, the external service that will verify it, such as AWS STS. That service can exchange the token for its own temporary credentials.」（2026-10-31 实拉 8,347B）
-- **判据**：判据：**作用域 = 受众（audience）**，一个令牌只对一个可验证方有效；且交换发生在对侧（对方用自己的临时凭据），**我方从不持有长期密钥** ⇒ 「把密钥塞进环境变量」即使加了轮换也不等价，因为作用域维度缺失。
+- **判据**：**作用域 = 受众（audience）**，一个令牌只对一个可验证方有效；且交换发生在对侧（对方用自己的临时凭据），**我方从不持有长期密钥** ⇒ 「把密钥塞进环境变量」即使加了轮换也不等价，因为作用域维度缺失。
 - 提升层：工具（凭据形态）
 
 ## r657C-11 · 错误与调用栈是数据出口的一种，且默认以明文存放不编码
 - **实证**：docs.temporal.io/failure-converter.md：「The default Failure Converter copies error messages and call stacks as plain text… Failure messages and call stacks are not encoded as codec-capable Payloads by default; you must explicitly enable encoding these common attributes on failures.」（2026-10-31 实拉 2,615B）
-- **判据**：判据：**「有编码能力」不等于「默认编码」**——错误面是最容易被漏掉的数据出口（它看起来只是日志），敏感值一旦进 message/stack 即以明文落地。脱敏出口枚举须把「错误对象与调用栈」列为独立一项并显式启用编码。
+- **判据**：**「有编码能力」不等于「默认编码」**——错误面是最容易被漏掉的数据出口（它看起来只是日志），敏感值一旦进 message/stack 即以明文落地。脱敏出口枚举须把「错误对象与调用栈」列为独立一项并显式启用编码。
 - 提升层：工具（脱敏/数据出口）
 
 ## r657C-12 · 钩子启用的粒度是逐钩子，顶层开关不构成启用；钩子级 env 只用于资格判定不注入环境
