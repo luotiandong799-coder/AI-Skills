@@ -1032,3 +1032,13 @@ autogen#8328：HeadAndTailChatCompletionContext 在头部删掉一条 tool-call�
 - **实证**：原文——「Claude invokes some bundled skills automatically when relevant; **others, including `/verify`, run only when you invoke them, which keeps you in control of when these longer-running checks spend time and tokens**」；另注「Unlike CLAUDE.md content, a skill's body loads only when it's used, so long reference material costs almost nothing until you need it」。
 - **判据**：① **自动执行的判据不止于"相关"，还要过一道成本阈值**：相关性决定该不该用，成本决定由谁发起；把长耗时检查放进自动路径等于把预算决策外包给了触发条件。② **成本必须是用户可见且可控的变量**，而不是实现细节——此处通过"只在显式调用时跑"把选择权交回调用者。③ **惰性加载只对未被使用的部分成立**：一旦自动触发的部分把高成本内容读入上下文，progressive disclosure 的节省即归零 ⇒ 自动面必须窄、显式面才可宽。
 - **提升层**：工作流（成本可见性与触发策略）/ 工具（上下文预算归属）。触发词：longer-running checks、显式调用才跑、spend time and tokens、自动 vs 显式面成本阈值、惰性加载只对未使用部分成立。
+
+## r658 · 共学三轮落地点（2 条，2026-10-31）
+
+### r658B-1 · 上下文优化口径要覆盖整个按需加载包，且不得破坏渐进披露边界
+- **实证**：一手：arXiv 2608.30785 SkillZip Pro（与 rm 同名条目共用一手来源，本条取压缩/上下文成本面）：生产技能是目录包，根在激活时加载、references/schemas/scripts/assets/嵌套子技能按需加载；**只压根会漏掉大部分部署成本**，**扁平化会摧毁渐进加载边界**。
+- **判据**：评估「省了多少上下文」时按**实际执行路径上的加载量**算，而不是按根文件大小；任何压缩/摊平方案都不得合并按需边界（合并后每次都全量入上下文，省下的字节会在后续每一轮被吃掉）。提升层：工具（上下文预算）/ 可复用 Skill（包结构）。
+
+### r658Q-2 · 任何跨请求复用都要先声明身份边界：缓存作用域就是授权域
+- **实证**：一手（Qoder r728-Q-B-4 转落，来源 MCP caching 原文）：`cacheScope=private` 意为「restrict reuse to the same authorization context」；缺省 `ttlMs` 视为 0（immediately stale）；通知可越过 TTL 立即使缓存作废。
+- **判据**：做缓存/配额记账/结果共享时，第一问是**复用域是否等于授权域** —— 「能省一次调用」与「跨身份泄露」是同一开关的两面；未声明作用域的复用按「不可复用」处理。另：TTL 缺省即立即可疑（不是永不过期），且要有可被通知即时作废的通道。提升层：工具（缓存语义）/ 安全（复用边界）。

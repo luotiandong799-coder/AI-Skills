@@ -1368,3 +1368,13 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 - **实证**：openclaw channels/ambient-room-events（2026-10-31 实拉 9,085B）：「the agent can update memory and session state, but the room stays silent unless the agent explicitly calls the message tool」+「Room events use strict visible delivery. Final assistant text is private.」+「Typing and lifecycle status reactions stay suppressed… The one explicit receipt exception is messages.ackReactionScope: "all"」
 - **判据**：**不能从「某处没消息」推断「没被处理」**——安静上下文是有意设计的处理面；反之，审计这类通道时也不能只看可见消息，必须看状态与记忆写入。另注：ack 反应是**唯一的显式回执例外**，要求完全静默时必须显式关掉它。
 - 提升层：记忆/工作流（可见性契约）
+
+## r658 · 共学三轮落地点（2 条，2026-10-31）
+
+### r658B-1 · 记忆转移须带防篡改溯源图与基于能力的访问控制，导出范围可 selectively 限定
+- **实证**：一手：arXiv 2605.11032 Portable Agent Memory —— 五组件结构化记忆模型，条目内容寻址并由 **Merkle-DAG 溯源图**连接以提供**篡改可证**；**基于 capability 的访问控制**实现选择性、带作用域的转移。
+- **判据**：跨 agent/跨系统搬运记忆时，两件事缺一不可 —— ① 溯源结构要能证明「这段记忆未被改过」（内容寻址 + Merkle-DAG），否则接收方无法判断可信度；② 访问控制要按 capability 粒度限定导出范围，而不是「整体导出 / 不导出」二选一。提升层：可复用 Skill（记忆互操作）/ 安全（记忆导出）。
+
+### r658C-2 · 记忆写入要求全程同一所有者，且失败请求绝不本地重放
+- **实证**：一手：docs.openclaw.ai/cli/memory.md —— 原文：`Apply` 保持其有界批次循环并**全程要求同一个 Gateway owner**；**失败的请求从不在本地重放**。
+- **判据**：批量写入记忆/索引时，所有者一致性是前置条件（中途换所有者会让同一批写入分属两个权威，无法判定哪一半有效）；失败处理策略必须写明**不本地重放** —— 本地重放会在原所有者不知情的情况下产生第二份写入，且绕过远端限流与去重。提升层：可复用 Skill（记忆写入）/ 工作流（失败处理）。
