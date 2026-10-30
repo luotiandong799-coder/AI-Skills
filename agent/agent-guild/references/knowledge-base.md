@@ -1335,3 +1335,36 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 - **实证**：原文——「We agreed … to **hide archived workflows by default**」；「We **rejected deleting the findings of archived workflows**: that loses the **won't fix choice** and the **owner** when a workflow is restored」。
 - **判据**：① **归档改变的是可见性，不是所有权与结论**——消失的 findings 在恢复时无法重建，导致同一问题被二次研判。② **"won't fix" 是与 "fixed" / "open" 并列的终态，必须有承载物**：删掉它就只剩"未知"，下次又要走一遍完整判定。③ **owner 必须随对象归档而保留**，不是随对象可见而存在。
 - **提升层**：工作流（生命周期状态与可见性分离）/ 记忆（条目归档语义）。触发词：归档工作流、不删 findings、won't fix 选择、恢复丢 owner、默认隐藏归档。
+
+
+<!-- r657 共学落地 · 2026-10-31 -->
+
+## r657Q-11 · 跨来源轮次合并的合法性判据：仅当各来源的受理生命周期可联合提交/联合否决时才允许合并
+- **实证**：openclaw docs/concepts/queue（2026-10-31 实拉 27,090B）：「collect：静默窗后把兼容的排队消息合并为单个后续轮」；条件「消息必须共享路由、授权与执行设置，且不得各自持有独占的受理生命周期」；后果「使用持久入站受理的通道（Discord、Telegram）保持独立后续轮，collect 等同 followup——每条消息持有一个独占的受理生命周期，于是一个来源不可能在另一个来源否决合并轮之前先提交它」
+- **判据**：**合并省的是轮次，代价是把「多方各自可否决」压成「一次成败」**。判据：多 agent 汇聚/多通道 fan-in 只有在授权与路由同源且无独立提交点时才允许折叠。已落 r339A / r352C 均管**合并后的计量与排布**，无一条管「什么条件下合并才合法」。
+- 提升层：工作流（消息汇聚与授权原子性）
+
+## r657Q-12 · 审批应答解析必须 fail-closed：非约定形状一律按拒绝
+- **实证**：langchain-ai/deepagents `skills/trust.py`：「The client answers with {"approved": bool}. **Any other answer is a deny.**」+「pins trims pending pins to the current visible user turn」+「Disclosure does not bypass filesystem permissions or human approval」（2026-10-31 实拉）
+- **判据**：判据三条：①畸形/缺字段/超时应答归 deny（不因解析失败而放行）；②**审批有效位 = 当前可见用户回合**，跨回合复用旧批准即越权；③「已向用户披露」不构成授权，披露与审批是两条独立线。与已落「分享不授编辑权」「执行前重新校验活权限」同族，补的是**应答解析档位**这一空白位。
+- 提升层：工作流（授权契约）
+
+## r657B-13 · 长程执行中，仓库变更会让早期执行证据失效：记忆必须状态一致
+- **实证**：2610.04838 MemTrace：长程软件开发中「repository changes can invalidate earlier execution evidence」；三个长程基准上 pass@1 +21.2 点 / Resolved Rate +4.4 点 / Milestone Score +17.8 点（2026-10-31 实拉）
+- **判据**：判据：**累积的历史证据须随仓库状态变化而重验**——只读累积等于持有过期证据，且「每条都曾为真」不能推出「现在仍为真」。记忆写入须带它依赖的状态指纹，状态变更时标为待重验而非直接引用。
+- 提升层：记忆/证据
+
+## r657B-14 · 长期记忆的真实收益形态是「把运行期失败前移为执行前护栏」，评测须报这个前移率
+- **实证**：2608.11224：49 个真实材料工具问题 / 138 可执行子任务上，记忆使 GPT-5.2 任务成功率近翻倍（无参数更新）；元素固体状态方程计算中**记忆把波函数初始化失败转化为执行前护栏，Correct/Partial/Error 从 22/1/4 变为 25/2/0，避免 92%% 的重复错误**；13 个仿真工作流中记忆使 token 与工具调用减半（第三轮起）
+- **判据**：判据：**记忆评测不能只报「记住了多少 / 答对多少」，要报「多少次失败被前移到执行前」**——这才是记忆的因果机制；且收益有轮次门槛（第三轮起才减半），单轮评测会低估。
+- 提升层：记忆/工作流
+
+## r657B-15 · 记忆的收益按「每美元」报，并须声明是否引入 schema 漂移
+- **实证**：2609.11060：CLBench 上环境探测使通过率 39%→73%、pass-discounted reward 8.60→22.60，同时**查询数 8.8→4.7/题、任务 agent 成本 $3.38→$1.68**；6 个 APEX 世界中 18 项记忆 vs 基线比较全部为正，且**无 schema drift**（2026-10-31 实拉）
+- **判据**：判据：**记忆/检索类改动须报「每美元收益」而不只是准确率提升**（成本可能同向下降，忽略它会错过收益最大的那一项）；且**必须声明是否引入 schema 漂移**——漂移是记忆系统的慢性失效，不报则长期成本不可见。
+- 提升层：记忆/评测口径
+
+## r657C-8 · 「被处理」不等于「被发出」：安静上下文里 agent 可更新状态而不发言
+- **实证**：openclaw channels/ambient-room-events（2026-10-31 实拉 9,085B）：「the agent can update memory and session state, but the room stays silent unless the agent explicitly calls the message tool」+「Room events use strict visible delivery. Final assistant text is private.」+「Typing and lifecycle status reactions stay suppressed… The one explicit receipt exception is messages.ackReactionScope: "all"」
+- **判据**：判据：**不能从「某处没消息」推断「没被处理」**——安静上下文是有意设计的处理面；反之，审计这类通道时也不能只看可见消息，必须看状态与记忆写入。另注：ack 反应是**唯一的显式回执例外**，要求完全静默时必须显式关掉它。
+- 提升层：记忆/工作流（可见性契约）

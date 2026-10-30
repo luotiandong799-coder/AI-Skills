@@ -2501,3 +2501,81 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 - **实证**：原文——「The Gateway **never substitutes an administrator or restores a saved operator grant**」；「**If the sender is revoked or cannot be resolved to a current principal**, the message becomes an ordinary failed send that the sender can resend」；「**A channel identity without a profile does not authorize queued execution after restart**」；「Sessions with no human principal use ordinary system-event authority; if it lacks a needed capability, the agent must ask for an authorized input」。
 - **判据**：① **身份必须重新解析而非继承**：重启/恢复后所有待执行请求都要按"当前还成立吗"重判一次主体，存档时的授权快照不能作为执行凭据。② **无法解析要以"普通失败发送"的形式暴露给发送方可重发**，而不是静默丢弃或降级执行——失败要回到能重试的人手里。③ **"是谁发的"与"是谁在跑"必须分别有 profile**：通道身份没有 profile 即无排队执行权 ⇒ 队列执行这类延迟动作的授权要求不低于即时动作。④ 与已落 ag Cap16/32「凭据不下发」分轴——那条管**凭据不在传递中泄露**，本条管**凭据在重启后不被沿用**。
 - **提升层**：安全（恢复期的授权重判）/ 工具（主体解析与失败可重发）。触发词：不恢复保存的操作员授权、恢复到 current principal、sender revoked 变为 failed send、无 profile 不授权排队执行。
+
+
+<!-- r657 共学落地 · 2026-10-31 -->
+
+## r657Q-13 · 隔离能力两层裁决：后端申报「我能强制什么」，调用方判「这够不够」
+- **实证**：Langflow 一手原句：「**A backend declares what it can enforce. Langflow decides whether that is enough.**」；`LANGFLOW_SANDBOX_BACKEND` 默认 `none` = 进程内（自报「无隔离」也合法），`exec-sandbox`（QEMU microVM）附 TIMEOUT_SECONDS / ALLOW_NETWORK / ALLOWED_DOMAINS 三项可强制面（docs.langflow.org/sandbox-backends，2026-10-31 实拉 200）
+- **判据**：**能力申报（declaration）与充分性裁决（sufficiency check）必须是两个主体的两步动作**：只核「有没有声明」会把「声明了但不够」当通过；只按上层默认假定会把「后端实际强不了」当已强制。与已落 r655A「能力按宿主节点枚举」（管谁来枚举）分工，本条管谁来判够不够。
+- 提升层：工具（沙箱/执行后端契约）
+
+## r657Q-14 · 注入风险必须按「承载面位置」定级，位置轴独立于内容轴
+- **实证**：2610.38867：固定注入内容只改位置，GPT-5.4 跟随 README/TODO 中的不安全指令平均比同一指令放在代码或数据文件中**多 2.6 倍**（trust region effect：agent 对环境不同区域隐式赋不同信任级）（2026-10-31 摘要逐字实拉）
+- **判据**：判据：**严重度公式须含「该文本所处区域」因子**，文档类（README/TODO/CHANGELOG/issue 模板）与数据/代码类不得同权重；红队须做**同内容多位置**矩阵，只换 payload 不换位置的测试会系统性低估文档位风险。
+- 提升层：可复用 Skill/工具（安全扫描）
+
+## r657Q-15 · 治理位归属判据：被治理者不得持有自己的治理开关
+- **实证**：NVIDIA OpenShell 原文：「An agent cannot govern itself. Security and governance belong in the infrastructure the agent operates in.」；职责拆为 Gateway（生命周期与策略）/ Supervisor（出站请求对照策略 + 中介凭证访问）/ Sandbox（限制文件系统与进程）/ Policy Prover（验证策略权限是否停留在上界内）四件套，运维扩展只能挂 **Gateway interceptors**（without modifying the gateway），违规毫秒级隔离（2026-10-21 发布，2026-10-31 实拉）
+- **判据**：判据：**能力体自身不得持有其治理开关**，否则「关掉治理」与「执行能力」在同一权限面内；四件套拆分给出了可落地的责任边界清单，其中 Policy Prover（验证权限不越上界）是本仓此前缺的一档。
+- 提升层：工作流（安全架构）
+
+## r657Q-16 · 钩子不是全档位拦截层：按命令来源可被降为「只能拦不能批」，限制也不自动向派生执行体传播
+- **实证**：Claude Code v2.1.314 三条一手：①「hooks matching Bash… on shell commands started by the Monitor tool; such hooks **can block or ask, but not approve or rewrite** those commands」②「Fixed split-pane agent teammates **not inheriting the tool deny and `--tools` rules**」③「sandbox write denies **lifting** when a background command **outlived the session**」（CHANGELOG.md，2026-10-31 实拉）
+- **判据**：判据三条：①某钩子在当前命令来源上**有没有批准权**——只有 block/ask 权的钩子不能当「已授权」证据；②**deny 是否传播到子/派生执行体**，不传播时须逐体显式下发；③会话结束后仍在跑的后台命令**不得继承写禁令解除**。已落 r159A 管**能力上限**，本条管**能力随来源被削减**，方向相反。
+- 提升层：工作流（安全契约）
+
+## r657A-15 · OAuth/凭据错误码必须是可机读的分支依据，且撤销端点与令牌端点须同码
+- **实证**：modelcontextprotocol/python-sdk#3743/#3765/#3723（2026-10-31 gh api 200）：`unsupported_grant_type`（服务端未实现该 grant）/ `unauthorized_client`（客户端未被授权该 grant）/ `invalid_client`（认证失败）三码各归其位；客户端按错误码分支（只在 invalid_client 时重注册、在 unauthorized_client 时停止重试）会因码错而行为错误；WWW-Authenticate 头须按实际使用的认证方式给
+- **判据**：判据：**认证/授权错误码是控制流的一部分，不是提示文案**——码错会让「该停的不停、该重试的不重试」；且**同一语义在不同端点必须同码**（撤销端点与令牌端点不一致会让客户端无法统一处理）。
+- 提升层：工具（凭据/身份契约）
+
+## r657A-16 · 多秘密脱敏必须用最左最长匹配，重叠秘密否则尾部泄漏
+- **实证**：windmill#12121：重叠秘密（如同时存在 `password` 与 `password-and-more`）须按 LeftmostLongest 匹配，否则部分掩码导致尾部泄漏；且性能改动会破坏该模式，需 mutation test 守住（2026-10-31 实拉）
+- **判据**：判据：**脱敏匹配器的匹配语义（贪婪/最长）是安全属性，不是实现细节**；多个重叠秘密同时存在时，短优先会给攻击者留下可复原的尾部。任何性能向的脱敏重构都必须有覆盖重叠秘密的回归测试。
+- 提升层：工具（脱敏）
+
+## r657A-17 · 凭据探测失败不得导致进程崩溃，须回落到其他凭据源
+- **实证**：anthropics/claude-code#106288：macOS Keychain 凭据探测未包 try/catch ⇒ exec 被拒时整个进程崩溃，而 API key 其实在环境变量里可用（2026-10-31 实拉）
+- **判据**：判据：**「探测通道被拒」与「凭据不可用」是两回事**——探测失败必须回落，不得升级为进程级失败；凭据解析链的每个源头都要独立容错，任一源抛错不得中止整条链。
+- 提升层：工具（凭据解析）
+
+## r657A-18 · 陈旧会话标记不得触发完整重认证；认证失败须显示服务器实际拒绝原因
+- **实证**：anthropics/claude-code#103788：stale `session_stale_relogin` marker 在账号会话仍存活时触发完整重登录；且错误未显示服务器实际拒绝内容（2026-10-31 实拉）
+- **判据**：判据两条：①**陈旧标记的处置必须先用活会话复核**，仅凭标记就走完整重认证会把可用会话打掉并制造无谓的交互成本；②**认证失败必须透传服务器的实际拒绝原因**，用泛化文案会让人反复重试一个根本不会被接受的凭据。
+- 提升层：工具（身份认证）
+
+## r657B-16 · 信任分不是授权契约；「在对已知集上调参追认」不等于在新集上有效
+- **实证**：2609.39717《Trust Is Not a Score》：174 例确定性故障注入（每例一个独立机制），在 gate conjunction / score-only rule / restricted protocol 三种下评估——公布权重与阈值下，score 规则放行 56/63 需阻断注入与全部 24 需审查注入；**追认调参后与 conjunction 逐例一致**；而在 124 例由另一厂商模型盲写的用例上，**conjunction 本身也放行 35/79**（2026-10-31 实拉）
+- **判据**：判据两条：①**阈值化的信任评分不是授权契约**（57/63 与 24/24 的放行率说明分数规则在高风险位几乎不设防）；②**在已知集上调参到与合取逐例一致，是追认产物不是能力**——换到盲写集上合取自身也漏 35/79 ⇒ 真正不可见的是「缺失的探测器」，评估必须报这一项，不能只报阈值调优结果。
+- 提升层：工具/工作流（授权契约）
+
+## r657B-17 · 检测不等于遏制：已识别的对抗内容仍会进持久记忆并延后触发
+- **实证**：2609.17320 Emergence World：16 天、85 万余次 LLM 调用、近 500 亿 token 的长程多 agent 运行中，「systems could recognize threats while still interacting with adversarial content, writing it into their own persistent memory, and acting on it up to 46 hours later」（2026-10-31 实拉）
+- **判据**：判据：**检测与遏制必须分开计量**——「已检测」不构成「未污染记忆」，更不构成「不会照它行动」；长程运行的威胁响应须覆盖「写入记忆」这一落点，并注意延后触发（46 小时）会让因果关系在日志里断开。
+- 提升层：记忆/安全（感染链）
+
+## r657C-9 · 撤销必须在凭据颁发方执行；按名引用时「删+重建同名」是换值不是撤销，且版本号归零
+- **实证**：docs.e2b.dev/secrets/delete.md：「Deleting a secret from E2B does not revoke the credential at its provider. Revoke the API key or token there as well when you need to invalidate it.」+「Markers reference secrets by name, so deleting and recreating a name makes matching requests resolve the new secret's value. The recreated secret receives a new `sec_...` identifier and starts again at version 1.」（2026-10-31 实拉 1,403B）
+- **判据**：判据两条：①**本地删除只是移除引用，撤销必须在颁发方做**——只删本地会留下「看着没了、其实还有效」的凭据；②**按名引用时删后重建同名是换值**，且新对象从 version 1 重新开始 ⇒ 任何以「版本号单调」为前提的判据在此失效。
+- 提升层：工具（凭据生命周期）
+
+## r657C-10 · 凭据的替换形态是「按受众分发的短期身份令牌」，不是「把长期密钥换个地方存」
+- **实证**：docs.e2b.dev/iam/workload-identity.md：「prove who it is with short-lived identity tokens instead of long-lived credentials… you define named workload tokens when creating the sandbox. Each token is scoped to an audience, the external service that will verify it, such as AWS STS. That service can exchange the token for its own temporary credentials.」（2026-10-31 实拉 8,347B）
+- **判据**：判据：**作用域 = 受众（audience）**，一个令牌只对一个可验证方有效；且交换发生在对侧（对方用自己的临时凭据），**我方从不持有长期密钥** ⇒ 「把密钥塞进环境变量」即使加了轮换也不等价，因为作用域维度缺失。
+- 提升层：工具（凭据形态）
+
+## r657C-11 · 错误与调用栈是数据出口的一种，且默认以明文存放不编码
+- **实证**：docs.temporal.io/failure-converter.md：「The default Failure Converter copies error messages and call stacks as plain text… Failure messages and call stacks are not encoded as codec-capable Payloads by default; you must explicitly enable encoding these common attributes on failures.」（2026-10-31 实拉 2,615B）
+- **判据**：判据：**「有编码能力」不等于「默认编码」**——错误面是最容易被漏掉的数据出口（它看起来只是日志），敏感值一旦进 message/stack 即以明文落地。脱敏出口枚举须把「错误对象与调用栈」列为独立一项并显式启用编码。
+- 提升层：工具（脱敏/数据出口）
+
+## r657C-12 · 钩子启用的粒度是逐钩子，顶层开关不构成启用；钩子级 env 只用于资格判定不注入环境
+- **实证**：docs.openclaw.ai/automation/hooks/configuration.md：「Workspace hooks always need `entries.<hookKey>.enabled: true`, even with…」+「Per-hook `env` satisfies eligibility checks but **does not mutate `process.env`**」+「`hooks.internal.handlers` is retired and fails normal config validation」（2026-10-31 实拉 7,886B）
+- **判据**：判据两条：①**顶层 enabled 只是资格，不是启用**，逐钩子开关才是生效面 ⇒ 用顶层开关判断「钩子已开」会系统性高估；②**钩子级 env 不可当「环境变量已配置」的证据**（它不入 process.env），据此写的依赖会在钩子外失效。
+- 提升层：工作流（钩子配置契约）
+
+## r657C-13 · agent 自报的成功不是外部动作已发生的证据；API key 的 scope 创建后不可改
+- **实证**：docs.browser-use.com：「`is_done` only reports a terminal done action. `is_successful` is the agent-reported outcome; verify important external actions independently. Cloud timeout, API client timeout, model timeout, and task completion are separate concepts.」+「Inspect the full error and project before retrying… A client timeout can leave a run active; reconcile external actions before starting duplicate work.」+ scopes 形如 `<version>:<resource>:<action>`，「Scopes cannot be changed after a key is created」（2026-10-31 实拉）
+- **判据**：判据三条：①**「完成」是一组可分离的信号**（done / successful / 各类 timeout / 真正的任务完成），agent 自报成功须独立核验外部动作；②**客户端超时可能让 run 仍活跃** ⇒ 开重复工作前先对账外部副作用；③**收紧 scope 只能换 key 不能改 key**，权限面是创建时冻结的属性。
+- 提升层：工具（凭据/结果证据）

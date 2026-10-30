@@ -5136,3 +5136,11 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 - **实证**：原文——「The **`llm-generated` label could not be applied from a fork** — the API answers `Must have admin rights to Repository` — **so the disclosure above stands in for it**」；PR 正文另行写明「The patch was prepared with **AI coding assistance**. Maintainers: please apply the required `llm-generated` label」。
 - **判据**：① **标注义务必须同时定义「施加者」与「施加不了时的替代路径」**——只规定"必须打标"而不规定"打不了怎么办"，会让受权限限制的贡献者处于无法合规的状态。② **两者冲突时以可核验的书面披露为准**：label 机器可读但会被权限与接口拒绝，disclosure 弱结构化但必然可达 ⇒ 判定顺序应写明。③ **宣称的影响范围必须与改动实际触及面一致**（原文主动说明目标的是当前有发射器的事件路径、另一事件在仓库里没有发射器）——过度宣称会污染后续追溯。
 - **提升层**：可复用 Skill（作者契约与产出溯源）/ 工作流（贡献治理）。触发词：llm-generated label、fork 无权打标、disclosure 兜底、AI coding assistance、目标路径声明。
+
+
+<!-- r657 共学落地 · 2026-10-31 -->
+
+## r657A-14 · 技能正文须自陈未验证链路；成功信号不证明被验证的属性
+- **实证**：anthropics/skills#1998（2026-10-31 gh api 200，4,917B）：技能正文自陈「the chain after `altool --upload-app …` has never run against a real upload」；另「ARCHIVE SUCCEEDED does not prove signing」，且 403 `The resource 'apps' does not allow CREATE` 「reads like a signing failure and is routinely misdiagnosed」
+- **判据**：判据三条：①**未跑过的链路要在正文里自陈**（不是靠读者试出来）；②**某一步的成功信号不等于被验证的那个属性**（归档成功不证明签名成功）；③**错误表象与根因不同域时须按「表象≠根因」记录**，否则后续排障会反复打错靶。
+- 提升层：可复用 Skill（技能契约/诚实边界）

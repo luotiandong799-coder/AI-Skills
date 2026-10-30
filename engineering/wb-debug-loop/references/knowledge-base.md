@@ -3352,3 +3352,96 @@ Functional API 在 resume 时会重新执行一个「其异常已被入口点捕
 - **实证**：原文——「It waits only a **short bounded time** for in-flight persistence and gives other resource cleanup a **bounded grace**」；「A long model stream, tool call, or background process **does not get a full run-completion drain** before shutdown」；「An external stop or restart logs bounded-grace leftovers … and **returns with status `0` unless required persistence failed**」；「Their running code keeps its old shutdown behavior until restarted; **installing new files cannot shorten an already-running Gateway's drain**」。
 - **判据**：① **"等到干净"必须按资源类分层**：必需持久化（会丢数据的那一类）要真等到，其余（服务子进程清理、sidecar、插件运行时）只给有界宽限并**记录残留**——不分层就会被最长的一个任务绑架，或反过来把必需持久化也砍掉。② **退出码必须反映分层结果**：此处只有必需持久化失败才非 0，其余残留在日志里 ⇒ 外部编排据此判断是否重试。③ **已在运行的进程沿用旧关停行为**：替换文件不会缩短正在跑的那个实例的排空 ⇒ 滚动发布里"改了 drain 逻辑"对当前实例无效，必须等下一次重启才生效。
 - **提升层**：工作流（关停与排空契约）/ 工具（退出码语义）。触发词：short bounded time、bounded grace 残留、长任务不享受完整排空、status 0 除非持久化失败、旧 drain 不被新文件缩短。
+
+
+<!-- r657 共学落地 · 2026-10-31 -->
+
+## r657A-1 · 重试的「续跑粒度」须三层分列，幂等边界画在最小整段重放单元上
+- **实证**：n8n 一手同页三句：「重试从已保存的执行状态续跑，不是从触发器重跑整个 workflow」「失败节点会重新拿到保存的输入并处理每一条条目，包括失败前已处理过的条目」「失败节点若是 Execute Sub-workflow，重试会把整个子工作流从头再跑一遍」（docs.n8n.io 错误处理与恢复文档，2026-10-31 实拉 200）
+- **判据**：「步骤级续跑」≠「步骤内条目级续跑」≠「嵌套单元级续跑」；单元一旦内联为参数化子流程即成为原子重放单位 ⇒ 幂等键按**最小整段重放单元**授予，而非按失败点。补 r145B 正向结论的两个失效边界，并更正候选池「回归与并发治理方法论」条的二手口径。
+- 提升层：工作流
+
+## r657A-2 · 限流封禁期内的重试是自伤回路，且配额类失败不落 HTTP 码
+- **实证**：Dify 知识库限流页：「Refused requests count too, so retrying right away keeps the workspace blocked」+「the failed Knowledge Retrieval node shows up in the run's result or event stream, not as an HTTP error」（docs.dify.ai/knowledge/knowledge-request-rate-limit.md，2026-10-31 实拉）
+- **判据**：①重试前先问「被拒的这次是否计入配额」，计入则退避必须 ≥ 窗口重置时刻，只用指数退避不够；②配额类失败在编排面是**带内事件**而非状态码，验收/告警只监听 HTTP 4xx 将永久漏报。
+- 提升层：工作流（错误处理/限流）
+
+## r657A-3 · 超时预算只计自身工作时间，排队等待不计
+- **实证**：NVIDIA SkillSpector 2.12.0 changelog：「count only the bytecode walk's own CPU time against its 5 s budget, so time spent waiting behind concurrent analyzers no longer reports a static runtime_limit」；配套「retry transient provider failures within the workflow deadline」（2026-10-31 实拉）
+- **判据**：给有超时的步骤定预算先问「时钟从何时走」——含排队即产生**虚假超限**，且该假超限还会触发重试放大；重试的合法边界是工作流总期限，不是单项预算。与已落「超时非回滚授权」「provider pacing 可压过上限」不同维（那两条管超时的后果，本条管超时的计量口径）。
+- 提升层：工具/工作流
+
+## r657A-4 · 错误体量守卫要在计入预算之前施加，已结算调用不得进执行
+- **实证**：microsoft/agent-framework#9514 一手正文：Apply the existing error-size guard to SDK-rejected local tool calls before memory budgeting. Keep settled calls out of execution（2026-10-31 gh api 200）
+- **判据**：「先记账后守卫」会让一个超大错误先吃掉内存预算再被拒 ⇒ 守卫必须在**计入预算之前**；且已结算（settled）的调用不得再进执行面，否则重复执行已完成的副作用。
+- 提升层：工具（错误处理/预算）
+
+## r657A-5 · 「可 checkpoint 性」必须先验序列化能力，且保存时与加载时校验对称
+- **实证**：同 #9514：`SecretString` 不可 pickle ⇒ checkpoint 无法持久化；CosmosCheckpointStorage **save 成功但 load/resume 失败**（保存时校验与加载时校验不对称，#8874/#8875）
+- **判据**：校验只在加载侧 ⇒ 产生「保存成功、恢复必失败」这一类最贵的失败：错误在写入时完全不显形。判据：**序列化能力纳入可 checkpoint 性的前置校验，且两侧校验必须对称**。
+- 提升层：工作流（恢复/持久化）
+
+## r657A-6 · 429 必须分子类型：配额耗尽型是非瞬态，不得进重试通道
+- **实证**：crewAI#8388：quota/billing 类 429（`insufficientquota` 等）与限流型 429 同码不同性，前者重试永不成功（2026-10-31 实拉）
+- **判据**：「429 = 限流 = 可重试」是错误默认。判据：**重试分类必须按 429 的子类型分支**，配额耗尽型属非瞬态，重试只会占满并发并延迟真实修复。
+- 提升层：工作流（重试分类）
+
+## r657A-7 · 「取最新」必须与「读取时验证未被并发改写」同源；且不得为了返回一个而解码全部
+- **实证**：microsoft/agent-framework#9902：get_latest 三期扫描 + 后扫描校验（re-stat 全部已读文件 + 重扫目录树，任何变化则抛 _CheckpointScanInvalidated 并重试 3 次），且只解码胜出者（不 reopen，因为可能解码到被替换后的文件）
+- **判据**：「选出来」和「选出来时它还活着」是两步；只做第一步会在并发写入下静默读到一个已被替换的文件。判据：**选最新 + 读取期未变更校验必须同批完成**，且**只解码胜出者**（解码全部会把已被替换的对象带进结果）。
+- 提升层：工作流（恢复/checkpoint）
+
+## r657A-8 · 失败态不得进缓存：缓存命中会从「构建过」变成「跳过执行」
+- **实证**：Prefect#23523：Returning Failed state caches the exception，之后调用直接 skip execution（2026-10-31 gh api 200）
+- **判据**：幂等缓存把失败也当成结果 ⇒ 后续调用不再执行，故障表现是「什么都没跑却没报错」。判据：**缓存的准入面必须排除失败态**，否则缓存本身成为故障掩体。
+- 提升层：工作流（缓存/幂等）
+
+## r657A-9 · 可选时间量必须区分「未设置」与「零」，否则往返后语义失真
+- **实证**：temporalio/sdk-python#2028：`next_retry_delay` 未设置时返回 `timedelta(0)` 而非 None（2026-10-31 实拉）
+- **判据**：「未设置」被序列化成「零延迟」，往返一次后语义从「无值」变成「立即重试」。判据：**可选时间量用三态（未设置/零/正值）**，禁止用零值表达缺省。
+- 提升层：工具（序列化保真）
+
+## r657A-10 · 包装层（重试/错误处理）必须保持被包装单元的语义，含预处理
+- **实证**：windmill#12094：触发器带 retry/error handler 时把目标包装成 SingleStepFlow，Hub script 不支持且 `apply_preprocessor` 被跳过（2026-10-31 实拉）
+- **判据**：「加个重试」会改变执行路径本身：预处理器被跳过、Hub 单元不可用。判据：**包装层必须显式申报它保留了被包装单元的哪些行为**，未申报的部分默认视为已丢失。
+- 提升层：工作流（包装层契约）
+
+## r657A-11 · 前置检查的修复建议必须由真实错误码推导，不得统一归因；平台差异须显式排除
+- **实证**：All-Hands-AI/OpenHands#16512：Docker 启动前 writability preflight fail-fast，修复建议从真实 OS 错误选择（权限→chmod/--user；只读挂载→去掉 :ro）而非一律归咎 uid；Windows（Docker Desktop 透明处理）为例外（2026-10-31 实拉）
+- **判据**：统一的归因（「uid 不对」）会把真实根因（只读挂载）挡在视野外，且修复动作无效。判据：**建议必须由实测错误派生，并对不适用平台显式声明例外**，否则前置检查只是多一次误导。
+- 提升层：工作流（前置检查/可观测）
+
+## r657A-12 · 恢复必须可再入：restore 之后再次 restore 要能重放
+- **实证**：llama_index#23795：从 journal 恢复后再恢复失败（waiting step 用 ctx.send_event 而非 return）（2026-10-31 实拉）
+- **判据**：恢复路径本身也要能被恢复 ⇒ 判据：**恢复动作不得依赖只在首次执行时成立的前置**（如特定 step 的返回形态），验收须跑「恢复→再恢复」二连，而不是只跑一次恢复。
+- 提升层：工作流（恢复）
+
+## r657B-1 · 可靠性故障项必须各自带「能重现它的变异证明」，否则只是叙事
+- **实证**：2608.26225《Agent Mesh》：147 起编号故障跨 81 次运行，each with a measured cost and, in most cases, a mutation proof reproducing the failure（ arXiv，2026-10-31 实拉）
+- **判据**：「发生过 N 次故障」不是可靠性证据，**能被复现地触发才是**。判据：故障台账每条须带可执行的变异证明与实际代价；且服务网格三件套（retry/timeout/circuit break）不足以覆盖**非幂等**委派，需补「身份充分性」与「证据充分性」两个原语。
+- 提升层：工作流（委派可靠性）
+
+## r657B-2 · 约束前置为动作掩码优于生成后校验再修
+- **实证**：2610.00328 ContractRL：契约导出的动作掩码在确定性校验器之前过滤畸形/禁止的 RFC-6902 操作；0.9362 语义成功率 / 34.4 tokens，对比 Patch-SFT 0.9076 / 44.9 tokens 与全量重生成 0.9148 / 137.2 tokens（192 cases × 5 seeds；三种子配对 +0.0396，95%% CI [+0.0137,+0.0662], p=0.0039）
+- **判据**：「先生成后校验再修」把约束放在损失已发生之后 ⇒ 判据：**约束应编译为动作掩码前置到生成前**；修复类动作还需**不可变修复历史 + 剩余预算可见**，否则模型无法判断还能改几次。
+- 提升层：工具/工作流（修复）
+
+## r657B-3 · 失败轨迹的诊断收益按「重放对」计量，不按任务通过率
+- **实证**：2609.40111 Agent Error Dataset：50,228 错误-诊断对 / 9,961 源任务 / 33 环境 / 19 harness 家族 / 23 策略模型；3,062 匹配重放对上首次提案修正把校验器通过率从 18.4%% 拉到 51.1%%（+32.7pp）
+- **判据**：诊断-修正回路的收益单位是**同一失败能否被复现地修好**，不是整体通过率。判据：**诊断类改动必须在匹配重放对上验收**，否则「通过率上升」可能只是题目变简单。
+- 提升层：工作流（失败分析）
+
+## r657B-4 · 重试时展示前次失败制品是净负面，展示针对本次的诊断才是挽回项
+- **实证**：2610.22698：给模型看它失败的前一次尝试会降低成功率并显著增加复制该尝试；在 Qwen 上加该次尝试的编译错误能挽回损失；换成另一题的失败证明则基本消除退化；换掉诊断则恢复大幅减弱（2026-10-31 实拉）
+- **判据**：「把上次失败的东西再给一次」与「给这次的诊断」不可互换：前者诱导复制，后者才提供信息。判据：**重试上下文必须区分「失败制品」与「诊断」，默认只带诊断**；失败证明的存在本身是性能负担。
+- 提升层：工作流（重试上下文）
+
+## r657C-1 · 幂等键的存活窗口按「首次请求起算、重试不延长」表述
+- **实证**：docs.e2b.dev/sandbox/idempotency.md：「E2B keeps each key for 24 hours from the first request that used it, and retries don't extend this. Once a key expires, a request with that key creates a new sandbox.」（2026-10-31 实拉 5,663B）
+- **判据**：补 r630C（保留期 12h）缺失的那一维：**窗口是否随重试刷新**。若实现为「每次重试刷新窗口」，则幂等保护会变成无限窗口，过期清理永不生效 ⇒ 判据必须显式写「起算点 + 重试是否延长」两端。
+- 提升层：工具（幂等契约）
+
+## r657C-2 · checkpoint 写入的失败语义按调用形态分档；恢复的来源是被存下来的对象，不是调用方当前对象
+- **实证**：crewAI checkpointing 文档：「Auto-checkpoint writes (event-driven) are best-effort: a failed write is logged and the run continues. Manual state.checkpoint() calls re-raise on failure.」+「A restore builds the crew from the checkpoint file, not from the object you call kickoff() on, so callables you set on crew are not copied over.」+ fork 在新 lineage 下并存写不互相覆盖（2026-10-31 实拉 18,664B）
+- **判据**：①「开了 checkpointing」不等于「一定会保存」——自动写入失败是静默的，只有手动调用才抛 ⇒ 关键节点须用手动调用并接住异常；②**恢复得到的对象来自文件，调用方挂在对象上的运行时附件（callable/回调）在恢复后缺席** ⇒ 验收恢复路径必须复测这些附件，不能只测数据流。
+- 提升层：工作流（恢复/持久化）

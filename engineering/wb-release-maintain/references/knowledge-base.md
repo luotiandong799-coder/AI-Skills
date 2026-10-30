@@ -1392,3 +1392,51 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **实证**：原文四条——「**An update failure does not by itself authorize a candidate restart**」；「**A blocking live Doctor result does not become a restart grant**」；「**Failed suspension never triggers automatic re-enablement of the rejected installation**」；「The writer-stamp guard does not block this **intentional** recovery」。
 - **判据**：① **失败不是授权**：更新失败、健康检查失败、暂停失败都只产出"状态"，是否被允许重启动作必须由独立的授权判定给出，不能由失败次数或失败严重度推导。② **诊断工具的输出不得直接充当执行令**——blocking 的 Doctor 结果是证据，不是 grant。③ **被拒绝的安装不得因挂起失败而被自动重新启用**：一次否决保持有效直到显式撤销，否则故障重试会绕过否决。④ 与已落 ag SPEC「Update failures MUST be atomic or recoverable」分轴——那条管**更新本身必须可回滚**，本条管**失败之后谁有权再动一次**。
 - **提升层**：工作流（失败到动作的授权分离）/ 工具（否决的持久性）。触发词：update failure 不授权重启、Doctor result 不是 grant、拒绝后不自动重启用、intentional recovery、writer-stamp guard。
+
+
+<!-- r657 共学落地 · 2026-10-31 -->
+
+## r657Q-1 · 规范层无版本/签名/registry ⇒ 「版本主张」不能由被装载文件自身字段自证
+- **实证**：Agent Skills 规范字段表封闭 6 项（name/description/license/compatibility/metadata/allowed-tools），`metadata` 为 string→string 自由袋且示例把版本写成 `metadata: version: "1.0"`（agentskills.io/specification.md，2026-10-31 实拉 7,685B）；ClawHub publishing：「Publishing skips unchanged content. A new skill starts at 1.0.0, and later changes automatically publish the next patch version.」（2026-10-31 实拉 18,359B）
+- **判据**：规范无版本字段 ⇒ 技能内任何「版本」字样皆为**自述**；且注册表侧版本号还是**自动 patch 递增**，更不可能承载作者意图。判据：**发布锁与新鲜度判定落到仓外锚（git SHA / 锁文件 / 外部 registry 记录），自述版本只可用于展示不可用于判定**。
+- 提升层：可复用 Skill/工作流
+
+## r657Q-2 · 结构约束的作用时点是发布校验，且默认不追溯存量
+- **实证**：Dify `MAX_TREE_DEPTH=50`：「Longer paths cannot be published. Changes apply only to newly published workflows」（2026-10-31 实拉）
+- **判据**：与已落「行数硬界」不同维：改阈值**不会让既存违规产物失效**，且门禁在发布点不在写入点。判据：**调参后必须单独跑一次存量普查**，否则「已收紧」是错觉。
+- 提升层：可复用 Skill（治理判据）
+
+## r657Q-3 · 撤回有两档生效时点，关闭同步不是撤回动作
+- **实证**：Claude Code 原文：「a skill was added, edited, or turned off on claude.ai… in the running session without a restart」（在线档：当轮即改）与「set syncClaudeAiSkills to false… the next time it starts it moves the skills it already synced」（离线档：下次启动才生效，且是「移走」不是就地删除）（code.claude.com/docs/en/skills.md，2026-10-31 实拉 118,879B）
+- **判据**：撤销一个能力要先分清它走哪一档；走离线档时「已关闭」到「实际不可用」之间存在**带旧副本的窗口**。判据：**验收须重启后复测，不能关完即判成**；与已落「失败状态不得自动升格为授权」互补（那条管升格，本条管降级的时点）。
+- 提升层：工作流（发布与撤销）
+
+## r657Q-4 · 撤销能力有三个互不相等的档位，用错档会留下「已撤销却仍可用」或「想留档却已失效」
+- **实证**：OpenClaw docs/tools/skills.md：「Removing a skill from the library excludes it from new selections without deleting a revision already selected by a session」「Disabling removes it from new-session defaults; explicit attachment remains available」+「sessions snapshot eligible skills when a session starts… including across Gateway restarts」（2026-10-31 实拉）
+- **判据**：三分判据：①下架（不影响已选中修订）②停默认（显式调用仍可）③会话钉版（重启后仍用旧修订）。**撤销类验收必须问「撤的是哪一档」**，并单独复测「已在跑的会话」与「显式指名调用」两条路径；与上条互补（那边管何时生效，本条管撤到什么范围）。
+- 提升层：工作流 + 可复用 Skill
+
+## r657A-13 · 同一能力的多条装载路径，版本选择必须一致
+- **实证**：activepieces#15984：OAuth2 piece 重命名 props 后旧步骤重连仍拿到新 prop 名；embed SDK 走独立路径（#15921 保持在存储版本 ⇒ embed 用户看不到新 scope）（2026-10-31 gh api 200）
+- **判据**：主应用与 embed 走不同版本选择 ⇒ 权限面出现「看得见的」与「拿得到的」不一致。判据：**同一能力的多装载路径须共用同一版本决议**，且**凭据重连不迁移参数契约**（重连只换凭据，不换已存步骤的参数形状）。
+- 提升层：可复用 Skill/工作流
+
+## r657C-3 · 版本标签（可变）与构建 ID（不可变）是两类钉法，复现必须用后者
+- **实证**：docs.e2b.dev/template/tags.md：标签为 `name:tag` 且可多变；「you can start a sandbox from a specific build by passing its build_id directly. This is useful when you need to pin a sandbox to an exact build artifact — for example, during debugging or when reproducing an issue from a known build.」（2026-10-31 实拉 8,268B）
+- **判据**：标签可被重新指向 ⇒ 同标签两次拉到的可能是不同构建物。判据：**可复现/调试一律钉 build_id，标签只用于部署环境路由**；「我钉了版本」这句话必须追问钉的是标签还是构建 ID。
+- 提升层：工作流（钉版/发布）
+
+## r657C-4 · 回滚的执行体是较新版本的迁移逻辑；可逆性由发布说明显式声明，缺省方向必须写明
+- **实证**：activepieces rollback 文档：「The rollback command runs against the current (newer) image since it has the migration reversal logic. After rolling back the database, you swap to the older image.」+「Releases that include non-reversible database changes will have a note at the bottom of the release notes… If you don't see a note, the release is rollback-safe.」（2026-10-31 实拉 3,505B）
+- **判据**：回滚不是「换回旧镜像」就完事——**反向迁移逻辑只存在于新版**，先降镜像会失去回滚能力。判据：**回滚步骤的顺序（先在新镜像跑反向迁移→再换旧镜像）必须写进 runbook**；且「未标注即可逆」这一缺省方向必须显式声明，否则读者无从判断沉默含义。
+- 提升层：工作流（发布/回滚）
+
+## r657C-5 · 能力收缩（移除端点/收回可用能力）必须成清单声明，校验时点迁移会改变失败显形位置
+- **实证**：activepieces breaking-changes（78,105B，2026-10-31 实拉）：「Seven actions are no longer offered to agents」「The legacy product-embed connection-key and app-credential endpoints are removed」「Applying a release or a project replace now updates changed connection references」「A custom AI provider is now checked when you save it」「Agent steps on Activepieces AI credits are limited to the models Activepieces offers」
+- **判据**：「曾经可用」会变成隐性依赖：端点被移除、agent 可用动作被收回，若不在发布说明成列声明，调用方只在运行时才发现。判据：**能力收缩条目单列并给出替代路径**；另注意**校验时点从「使用时」移到「保存时」会把失败提前，同时也把「保存成功」与「配置可用」混为一谈**。
+- 提升层：工作流（发布说明/兼容）
+
+## r657C-6 · 恢复的标识必须指到「被记录的运行」；弃用须给出替换字段而非只说「将移除」
+- **实证**：crewAI inputs-id-deprecation：`inputs.id` 用于 `@persist` flow hydration 被弃用，替换为 `restore_from_state_id`；弃用理由是「the hydration source and the recorded run are no longer the same UUID」（2026-10-31 实拉 6,131B）
+- **判据**：用「输入里的 id」承载恢复标识，会因语义漂移（hydrate 源 ≠ 运行 UUID）而恢复到一个不同对象。判据：**恢复标识必须是被记录运行自身的标识**，输入字段不得兼任；**弃用说明必须同时给出替换字段与失效机理**，只写「将移除」无法迁移。
+- 提升层：工作流（恢复/弃用迁移）

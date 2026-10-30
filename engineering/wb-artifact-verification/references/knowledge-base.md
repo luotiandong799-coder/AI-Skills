@@ -5194,3 +5194,46 @@ design-it-twice 的多个子智能体都指向同一份预先收集的事实简�
 - **实证**：原文——「OpenClaw treats verification as a ClawHub **server decision** and **does not reject an installed skill just because that generated card changes the bundle fingerprint**」；「**`verify` reads the stored scan and does not start another scan**」；另「It uses the same owner-aware service as the Control UI and agent workflow; it **never writes** the library database or revision directories on the CLI host」。
 - **判据**：① **验证结论的有效性锚点是"服务端当时的判定"，不是"当前算出来的指纹"**：展示层卡片重算导致指纹变化不应反过来推翻已装制品的验证结论，否则同一份 bytes 会因元数据刷新而在通过/不通过之间跳变。② **验证必须有复用语义：`verify` 是读既有扫描结果，不是触发新一轮扫描** ⇒ 一个蓄意的读取动作不应带副作用，重复执行必须给出同一个答案（可复算性）。③ **只读工具必须在文档级声明"不写入"**：此处 CLI 明确不写库与修订目录，客户端才能把它放进自动化批次而不担心并发改写。
 - **提升层**：工作流（验证的可复算性）/ 工具（只读语义声明）。触发词：verification 是服务端决策、fingerprint 变化不推翻结论、verify 不触发新扫描、只读不写库。
+
+
+<!-- r657 共学落地 · 2026-10-31 -->
+
+## r657Q-5 · 同一被检物在不同校验器下结论相反 ⇒ 「校验宽松度差异表」与「校验器自陈适用范围」须成发布前机检项
+- **实证**：一手三态：参考实现严格拒绝未知字段；Claude Code「accepts the field but doesn't act on it」（保留字段）；某客户端实现原文「deliberately relaxes」。且官方 skills-ref README 自陈「intended for demonstration purposes only. It is not meant to be used in production.」（code.claude.com/docs/en/skills.md:416 + skills-ref README，2026-10-31 逐串命中）。第二家：ClawHub skill-format「The web GitHub importer is stricter than local publish/sync… only discovers SKILL.md or legacy skills.md files in public, non-fork repositories owned by the signed-in GitHub account」（2026-10-31 实拉 9,157B）
+- **判据**：**以参考校验器通过为发布证据 = 无效证据**。差异表须逐实现记「未知字段处置 = 拒绝/保留/剥离」与「是否声明非生产件」两列；并补第三列「不同装载路径下的严格度是否一致」（web 导入 > 本地发布 ⇒ 本地通过不等于导入面通过）。
+- 提升层：可复用 Skill/工具
+
+## r657Q-6 · 验收三态 +「自述永不 proven」；做对之后残留风险 100%% 落在「证据过期」
+- **实证**：2610.39109 PCM：agent 不可写的 append-only Merkle 日志 + 包含证明 + agent 不可控签名者，接收方离线判 proven/unproven/failed，「a claim that rests only on the agent's own report is never proven」；926 条消息（712 谎）PCM 只放行 10 条（1.4%%，95%% CI 0.8–2.6%%），**10 条全部是过期证据**，plain A2A 放行全部 712，六种已部署协议模型放行 504–712，两独立校验器 926 条判定全一致、约 1 ms
+- **判据**：判据：**真伪轴与新鲜度轴必须分离计量**——三态做对之后剩下的漏网全是 stale evidence。⇒ 每条「已验证」结论要带时间戳状态（有效/过期/不可判定），且**append-only + 独立签名者在本仓不可得时只做「标注过期」的弱化版，不得写成已实现可验证**。
+- 提升层：可复用 Skill/工具（证据）
+
+## r657Q-7 · 历史修剪的最小单位是「调用-结果对」
+- **实证**：microsoft/agent-framework#9890 原文：keep a tool call/result pair together when trimming history（2026-10-31 实拉）
+- **判据**：按条数修剪会截出孤儿结果消息并使模型拒绝后续请求 ⇒ **修剪/压缩类变更须以序列结构合法性为机检项**，不得只按 token 数切。
+- 提升层：工具（上下文工程）
+
+## r657Q-8 · 预览态与写通道共享同一活对象时，须显式停写而非只读渲染
+- **实证**：Langflow /concepts-flows：「Langflow temporarily pauses auto-save so the preview doesn't overwrite your current draft」+「Select a previously saved version to preview the flow in read-only mode」（2026-10-31 实拉）
+- **判据**：验收「历史版本长什么样」时，确认预览是**只读且已断开自动落盘**，否则一次查看即污染当前草稿。与已落「验证结果与制品指纹解耦」互补：那条管不触发新扫描，本条管不触发新写入。
+- 提升层：工作流 + 可复用 Skill
+
+## r657B-5 · 工具输出「盲从」是独立故障面；评分器必须先冻结再与人类对齐
+- **实证**：2609.37153：118 任务 × 3 adapters，投毒使任务成功率下降 26–39 个百分点；**冻结评分器后**与 200 条轨迹人工标注 96% 任务成功一致（2026-10-31 实拉）
+- **判据**：工具返回的错误值被模型当真 ⇒ 与「注入」不同族（无需恶意内容，只需工具说谎）。判据：**评测前先冻结评分器再做人类一致性校验**，否则测出的下降可能来自评分器自身漂移而非被测能力。
+- 提升层：工具（评测效度）
+
+## r657B-6 · 溯源评测必须分报「块级检出」与「来源归属」，聚合分高不代表归属对
+- **实证**：2606.18037 ProvenanceGuard：40-trace held-out 上 block F1 0.802 / source accuracy 0.858；更难的多源基准上 block F1 0.846 而 **source-plus-relation accuracy 掉到 0.229**；50 例受控临床混淆探针全部检出（2026-10-31 实拉）
+- **判据**：语义相近来源下「块检出来了」与「归属到正确来源」差距极大。判据：**溯源类评测禁止只报聚合分**，必须分报块级与归属两级；且**不输出 claim-to-source ID 的基线不可与之比较**（它根本没有归属这一维）。
+- 提升层：工具（证据/溯源）
+
+## r657B-7 · 安全契约必须用「证据派生的工作流」验证，弱控制在合成用例上几乎全败
+- **实证**：2609.25956 GCAC：18 条 evidence-derived traces（care gaps / service failure / consent change / stale state / duplicate events / untrusted text / acute-change routing），完整契约 18/18 通过，**event-threshold 控制只满足 2/18、stateless-planner 控制只满足 1/18**（2026-10-31 实拉）
+- **判据**：「事件阈值」「无状态规划」这类弱控制在**从真实证据派生的轨迹**上近乎全败，却在合成用例上看起来可用 ⇒ 判据：**安全契约的验收集必须由证据派生（来自真实失败模式），合成用例只能作补充**；且控制强度须按「通过了几条真实轨迹」报，不按「有没有控制」报。
+- 提升层：可复用 Skill/工作流（安全验证）
+
+## r657C-7 · 缓存键必须含身份维度：「同一脚本同一输入」不是充分键
+- **实证**：windmill caching：「A run only reuses a result cached for the same identity it runs as and the same person it was started for… Runs started by schedules or triggers share an entry only when they run as the same user.」（2026-10-31 实拉 4,539B）
+- **判据**：只按（脚本 + 输入）做键 ⇒ 跨用户命中等于跨用户数据泄漏。判据：**缓存键必须含「运行身份」与「发起人」两维**，且定时/触发类运行的共享关系须显式声明（同用户才共享），不能默认共享。
+- 提升层：工具（缓存/多租户）
