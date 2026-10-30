@@ -5155,3 +5155,42 @@ design-it-twice 的多个子智能体都指向同一份预先收集的事实简�
 - **判据**：只有文本结果无法机检，只有结构化结果无法人读与回溯。判据：工具结果同时给出两种表示并让错误标记独立；验收时两侧都要断言——缺结构化侧会让下游无法自动化校验，缺文本侧会让人工审计失去可读性。
 
 - **提升层**：工具（结果契约）/ 可复用 Skill。触发词：structuredContent 与 content 并存、outputSchema、isError 独立标记、结果双表示
+
+
+## r656-Q10 · **「X 等价于 Y / 与 Y 一致 / 可互换」是独立待核命题：17 条等价声明仅 10 条（约 59%）被确认，92% 的冗余源自包内与下游拷贝**（来源：arxiv.org/abs/2610.30405，经 Qoder r717-Q-C 提名，2026-10-31）
+- **实证**：对已发表等价性声明逐条复核，**17 条中仅 10 条成立**；**92% 的冗余来自同一实现被复制后各自声称等价**（包内拷贝 + 下游拷贝）。
+- **判据**：① 吸收任何带「等价 / 一致 / 可互换」措辞的结论时，**把等价本身当作与数值、口径并列的第三个待核命题**逐条核，不随主结论打包继承——一次未核的等价声明会把两个不同机制并成一条，后续所有引用继承同一个错。② **独立口径计数须按实现来源去重**：跨实现拷贝会让"多个来源"退化成"同一个来源的 N 份"，据此得出的"多源交叉验证"是伪重量级证据。③ 与已落分轴：r577C 管**等价 schema 表述作为混淆变量**（换写法影响测量），本条管**等价声明作为待核断言**（关系本身可能是假的）；「聚合站与主榜差 8–55 分」管数值。
+- **提升层**：工作流（循证吸收与判重）/ 评测（来源独立性）。触发词：等价声明复核、17 条仅 10 条、包内与下游拷贝、多源退化为单源、独立口径按实现来源去重。
+
+## r656A-2 · **同一消息的多种 item 表示必须在同一套规范化路径上：只加固 dict 分支会留下永久漏洞；默认能力须按模型档案判定而非按请求是否携带该参数**（来源：api.github.com/repos/langchain-ai/langchain/issues/39687，r656A 一手 gh api 200）
+- **实证**：原文——「make the coercion decision **model-aware**: treat thinking as active when the **model profile says it runs by default**, not only when the request carries a thinking key」；「add the same `.strip()` guard to the **str-item branch** … that the dict branch already has, so a stray empty string can never produce an empty text block」。后果是在默认开启思考的机型上流式产生畸形累积消息，**下一轮回放该消息直接 400**——旗舰机型上普通两轮流式对话崩溃。
+- **判据**：① **消息的每种合法表示（dict / str / 其它）必须走同一套归一化**，只修一个分支等于把漏洞从热路径挪到冷路径而非消除。② **能力的实际状态必须以"档案/配置声明"为唯一判据**——请求里没传这个参数不等于该能力是关闭的（模型默认开即应视为开）。③ **一次畸形的中间产物会污染后续所有轮次**：故障不在生成那一刻爆发，而在回放时集中爆发，定位成本被推到远端。
+- **提升层**：工具（消息装配契约）/ 评测（跨轮回放保真）。触发词：model-aware coercion、str-item 分支、strip 守卫、累积畸形回放 400、默认思考机型。
+
+## r656A-6 · **流式终止回调属于「消费契约」：不消费流就不会跑，而这一失败是静默的**（来源：api.github.com/repos/vercel/ai/issues/24198，r656A 一手 gh api 200）
+- **实证**：原文——「the first `onEnd` example … constructs a `streamText` result but **never consumes it**. Copying that standalone Node example **starts generation but never reaches `onEnd`**, so the promised token-usage log is absent」；修复后补一句「the stream **must be consumed** (… `consumeStream`) for `onEnd` to run」，并用确定性 mock 复现。
+- **判据**：① **把"回调注册了"当成"回调会发生"是一类静默漏测**：副作用绑在消费动作上时，未被消费的结果对象既不报错也不执行下游。② **文档示例必须是可运行的最小完整例**：示例自身没消费，读者照抄却拿不到承诺的输出 ⇒ 缺陷在文档而非 SDK，但表现为用户侧"功能没生效"。③ **复现要能确定性执行**（mock / 固定流程），"我试了一下没打日志"不是可举证的证据。
+- **提升层**：工具（异步回调契约）/ 验收（示例可执行性）。触发词：onEnd 不触发、stream 必须被消费、consumeStream、文档示例不可运行、promised log absent。
+
+## r656A-10 · **测试通道与生产通道必须是同一条查询、同一组默认值：默认值往往是唯一没人设置、因此唯一没被测到的路径**（来源：api.github.com/repos/activepieces/activepieces/pull/17058，r656A 一手 gh api 200）
+- **实证**：原文——「the **default Parent Folder `/`** built the path `root:/`, which Microsoft Graph rejects … **uploading to the library root failed whenever the default was kept**」；「the **builder's test** sent `$filter=createdDateTime gt <unquoted date>` … so **testing the trigger always failed**. The test **now uses the same `$top=10` query that published flows already use**. **Polling in published flows is unchanged**」；另注 Next Link 只在前缀匹配连接自身 base URL 时才跟随。
+- **判据**：① **测试通道必须与生产通道同 query、同参数形态**，否则两端互不相证：此处"测试永远失败、生产一直正常"，测试信号完全是噪声。② **默认值必须进测试矩阵**——用户不填时走的分支是唯一没有客户端侧埋点、也最容易被保留默认的用户走到的路径。③ **外部服务的 URL 拼接错误常表现为"某个功能永远失败"而非报错**，且只在保留默认时出现 ⇒ 冒烟必须包含"全默认"配置。
+- **提升层**：工具（连接器默认值覆盖）/ 评测（测试与生产通道同构）。触发词：default Parent Folder、root 被拒、builder test 与已发布流程不同查询、全默认冒烟、Next Link 前缀限定。
+
+## r656B-2 · **「数值存在」不等于「数值归因正确」：内部一致性检查挡不住错置数值，单次 LLM-judge 只判真假不判性质**（来源：arxiv.org/abs/2610.38691《Beyond fabrication: Misattributed numbers in papers written by AI research agents》，r656B 一手 abs 200）
+- **实证**：论文指出「Such verdicts, often produced by a **single LLM judge**, identify failure **without explaining its nature**, and existing checks either test a paper for **internal consistency** or test whether a reported value **appears somewhere** in an agent's output」——前者查不出数值错挂到别的主体或别的实验，后者只要数字出现过就算通过。
+- **判据**：① **三类检查互不替代**：存在性（数字有没有）、一致性（自己是否自洽）、归因性（挂没挂对主体与条件）。只做前两类时，伪造以外的"错置"缺陷完全逃逸。② **判定要给出失效性质分类**，否则同为"不通过"无法决定是修数据还是修引用。③ 与已落 av KB:3784（2610.10265 记忆失效三态）分轴——那条管**个人记忆在进入生成前就已失效的阶段定位**，本条管**生成物里的数值归属正确性**；另与 r656-Q10 相邻：那条核关系断言（等价），本条核数值归属。
+- **提升层**：评测（事实性检查分层）/ 工作流（出具结论前的复核清单）。触发词：misattributed numbers、存在性与一致性与归因性三分、single LLM judge、失效性质分类、appears somewhere 不算通过。
+
+## r656B-5 · **终值正确掩盖中间产物互不一致：顺序执行体的多类产物要分层一致性审计，并把「数值承诺遵循」与普通结构校验分开**（来源：arxiv.org/abs/2610.36476《FIDES-Live: Evaluating Behavioral Concordance in Sequential Trading Agents》，r656B 一手 abs 200）
+- **实证**：论文指出「Sequential trading agents produce **decisions, orders, execution receipts, account states, and reports that need not agree, even when the final portfolio value is correctly computed**」；协议「separates **structured decision validity**, optional **numerical commitment adherence**, execution a…」。
+- **判据**：① **终端指标（组合市值、最终分数）正确不构成过程正确**：中间产物之间存在一致性契约，任一对不上就是缺陷，即使终值恰好算对。② **结构有效性（决策是否合规）与数值承诺遵循（报了多少是否真的执行了多少）是两类检查**，后者常因"可选"而被整个跳过，而它恰好是唯一能发现"说的和做的不同"的一层。③ **执行回执与账户状态必须互证**：只信一侧（如只信账户、不信回执）会让"状态被就地修正"这类问题隐形。
+- **提升层**：评测（过程一致性）/ 工作流（多层产物互证）。触发词：FIDES-Live、behavioural concordance、多类产物互证、终值正确掩盖不一致、numerical commitment adherence、回执与账户状态。
+
+
+
+
+## r656C-2 · **验证结果与制品指纹解耦；验证动作读快照而非触发新扫描**（来源：docs.openclaw.ai/cli/skills.md 25,744B，r656C 一手 curl 200）
+- **实证**：原文——「OpenClaw treats verification as a ClawHub **server decision** and **does not reject an installed skill just because that generated card changes the bundle fingerprint**」；「**`verify` reads the stored scan and does not start another scan**」；另「It uses the same owner-aware service as the Control UI and agent workflow; it **never writes** the library database or revision directories on the CLI host」。
+- **判据**：① **验证结论的有效性锚点是"服务端当时的判定"，不是"当前算出来的指纹"**：展示层卡片重算导致指纹变化不应反过来推翻已装制品的验证结论，否则同一份 bytes 会因元数据刷新而在通过/不通过之间跳变。② **验证必须有复用语义：`verify` 是读既有扫描结果，不是触发新一轮扫描** ⇒ 一个蓄意的读取动作不应带副作用，重复执行必须给出同一个答案（可复算性）。③ **只读工具必须在文档级声明"不写入"**：此处 CLI 明确不写库与修订目录，客户端才能把它放进自动化批次而不担心并发改写。
+- **提升层**：工作流（验证的可复算性）/ 工具（只读语义声明）。触发词：verification 是服务端决策、fingerprint 变化不推翻结论、verify 不触发新扫描、只读不写库。

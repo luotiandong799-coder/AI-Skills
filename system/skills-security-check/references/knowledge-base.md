@@ -2457,3 +2457,47 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 - **判据**：审批被当成授权边界是常见误解。判据：审批只做『比配置更严』这一个方向，放宽必须改配置而不是改审批；身份与只读策略要由各自的机制提供。另：可执行文件身份须用解析后的真实路径（软链不算数）。
 
 - **提升层**：工具（审批与授权边界）/ 可复用 Skill。触发词：审批只能收紧、审批不是身份边界、不是只读策略、resolved real-path identity
+
+
+## r656-Q2 · **「申报完整性门禁」与「申报值采信」必须分立：前者查存在性、后者查行为证据**（来源：docs.openclaw.ai/cli/policy/rules，经 Qoder r713-Q-B 提名，2026-10-31）
+- **实证**：同一份策略同时给出两条独立要求——「Require governed tools to **declare metadata keys** such as `risk`, `sensitivity`, or `owner`」与「Set to false to require **strict manual allowlists without implicit skill CLI approval**」。前者是**存在性必填**，后者是**不得据申报值自动放行**。
+- **判据**：① **准入机检查"是否申报"（缺键 = finding），放行判断查"行为证据"（不采信申报值）**——二者必须分列，否则要么退化成纯自查放行（违 r654「工具注解不可信」），要么因噎废食连申报要求一起取消。② **生产者可能无权施加申报标记**，故申报义务必须配兜底声明通道（见 r656A-11 crewAI `llm-generated` 事例：fork PR 无 admin 权限加不了 label，改以书面 disclosure 替代；两者不一致时以可核验的书面声明为准）。③ 与已落分轴：r654 只否定**据值放行**、未规定**存在性必填**；r135C / sa「owner 标注」是推荐字段而非门禁。
+- **提升层**：可复用 Skill（技能准入契约）/ 工作流（申报与采信两道）。触发词：declare metadata keys、存在性必填、manual allowlist、implicit approval、申报与采信分立、label 无权施加。
+
+## r656-Q4 · **「零注入投毒」：合法成功经验即可作案材料，内容扫描与任务正确性验证全部通过**（来源：arxiv.org/abs/2610.07645（SkillPoison），经 Qoder r714-Q-C 提名，2026-10-31；第二家一手佐证：arxiv.org/abs/2610.37738《Poisoned Skills: Propagating Jailbreaks Through Agent Markdown Files》）
+- **实证**：SkillPoison 先强化目标行为、再**剥离其适用上下文条件**，从而塑造技能提炼器的泛化边界，**95.71% ASR（三基准）**；论文明写「no malicious injection, all trajectories task-correct and passing verification + lexical inspection」。第二例 Poisoned Skills 证明 SKILL.md 一类 Markdown 配置文件本身是可传播的注入通道。
+- **判据**：① **内容干净 ≠ 安全**：本族攻击制品内无恶意串，**失效点在"泛化边界被塑造"** ⇒ 词法扫描与"轨迹是否任务正确"对其完全无效。② **提炼自成功经验的可复用条目必须携带适用条件（上下文约束）并与条目同存**，缺条件的条目不得晋升——把**上下文条件完整性**补进晋升门，而非只补"来源可信度"。③ 与已落分轴：注入与误编码绕过（r155C、r654）、监督放宽（r654）、组合攻击都假定**制品内容里有坏东西**；本条制品内容干净。
+- **提升层**：可复用 Skill（准入威胁模型）/ 工作流（晋升门字段集）。触发词：零注入投毒、SkillPoison 95.71%、剥离适用条件、Poisoned Skills Markdown 通道、晋升须带上下文约束。
+
+## r656-Q5 · **校验点必须按「对象 × 动作」枚举并按对象边界重复施加，父作用域不覆盖子资源读取**（来源：api.github.com/repos/n8n-io/n8n/releases + api.github.com/repos/Significant-Gravitas/AutoGPT/issues，经 Qoder r715-Q-A 提名，2026-10-31）
+- **实证**：① n8n 2.45.7 原句「**Require `execution:read` when workflow-scoped routes read execution data**」——已能读 workflow 的路由，现须另具执行读 scope；② AutoGPT #16436 原句「when `find_library_agent(include_graph=true)` hands Otto a workflow graph that **another user owns**, that graph now goes through the **same content check** as Otto's other reads」——**跨属主对象不因"经由合法检索路径拿到"而免检**。
+- **判据**：① **校验点清单的枚举维度必须是「对象 × 动作」，不是「入口 / 父资源」**；凡入口能间接带出别的对象（子资源、他人属主、嵌套引用），该对象自己的读/检门必须在**取回处重复施加**，否则入口授权成为万能钥匙。② 与已落 ssc KB:2357「写权限不蕴含读权限」分轴——那条管**权限位之间的不推导**，本条管**校验点的枚举维度与施加位置**。③ 典型漏检形态：拥有父资源读权 ⇒ 顺带读到子资源、邻居对象、嵌套引用。
+- **提升层**：工具（权限位设计）/ 工作流（校验施加位置契约）。触发词：execution:read、include_graph 跨属主、同一 content check、对象×动作枚举、取回处重复施加。
+
+## r656-Q8 · **装载 allowlist 必须按「来源」闭合：自学/自产技能绕过 allowlist ⇒ 权限空洞**（来源：docs.openclaw.ai/tools/skill-workshop，经 Qoder r716-Q-B 提名，2026-10-31）
+- **实证**：文档原句「**Learned skills bypass `agents.defaults.skills` and `entries.<id>.skills` allowlists**」——管理员写的 allowlist 约束**人工技能**，不约束 **agent 自己产出的技能**；同页另给配额（50 草稿/agent、30 天归档、`maxSkillBytes` 40000）。
+- **判据**：① **装载允许清单的覆盖范围必须按"来源"闭合**，否则「只允许这 5 个技能」实际含义是「只允许这 5 个**人类写的**技能」，自产条目从旁路进。② **配额与保留窗是缓解措施而非准入**——二者不可互相顶替：来源未闭合时，配额只限制"旁路能进多少"，不限制"能不能进"。③ 与已落分轴：r643C sa 管**写入内容检查**、agent-guild 1.28.0 管 **role-scoped 可见性**、r541B / r545C 管**装载优先级**——三者都假定"候选集是给定的"，本条说**候选集之外还有一条不受控来源**（与 r656-Q4 成对：那半说内容检查看不见投毒，这半说清单检查看不见旁路）。
+- **提升层**：工具（权限边界的定义域）/ 工作流（来源闭合性检查）。触发词：Learned skills bypass allowlist、自学技能绕过清单、来源未闭合、50 草稿配额、maxSkillBytes。
+
+## r656A-8 · **认证材料的「呈现形式」必须由验证方按类型强制；错误码须能穿透中间件，压成单一 invalid_token 会掩盖真实失败**（来源：api.github.com/repos/modelcontextprotocol/python-sdk/issues/3728，r656A 一手 gh api 200）
+- **实证**：原文——「a **`cnf`-bound token sent as `Bearer` is accepted if the verifier does not refuse it itself. RFC 9449 section 7.2 and the SEP-1932 draft say a server that supports DPoP **must refuse it**」；「a failing backend returns `None` and the middleware **always answers `invalid_token`**, so the backend needs a way to **pass the error code through** for `invalid_dpop_proof`」；修复同时要求中间件在 `Bearer` 之外发出带 `algs`（必要时带 `DPoP-Nonce`）的 `DPoP` challenge。
+- **判据**：① **绑定型凭据在错误的呈现通道上必须被拒**——核验成功不等于呈现合法；由"后端自己会不会拒绝"决定安全性，等于把不变量外包给每个实现。② **中间件不得把所有失败归一化成一个错误码**：压缩后的 `invalid_token` 让运维无法区分"凭据过期"与"呈现方式非法"，进而误放宽。③ **challenge 要同时给出被接受的形式**（此处 `DPoP` + `algs`），只拒绝不引导会得到重试环路。
+- **提升层**：工具（鉴权中间件）/ 安全（凭据呈现面）。触发词：cnf-bound token as Bearer、RFC 9449 7.2、invalid_dpop_proof、错误码穿透、DPoP challenge algs。
+
+## r656B-3 · **「暴露」不等于「承诺」：内部监视器的评测必须把注入暴露与行为承诺双分层，文献冲突多为评测伪影**（来源：arxiv.org/abs/2610.37679《Exposure Is Not Commitment: Double-Stratified Evaluation of Latent Monitors for Tool-Using Agents》，r656B 一手 abs 200）
+- **实证**：论文主张「We argue much of the **conflict is an evaluation artifact**, and propose a **double-stratification protocol**: separate **injection exposure** from **behavioral commitment**, in both the evaluation and the training population」。
+- **判据**：① **把"模型见过注入"与"模型真的承诺执行"混为一层会让召回与误报不可比**：见过但没形成承诺的样本与未见过的样本混在一起评估，得到的是混合密度而非能力。② **分层必须同时施加于评测集与训练分布**，只在一侧分层则另一侧的分布漂移会把结论带回去。③ **内部监视器读的是"内部是否出现该表征"，而 harness 的拦截点应在"是否真正形成动作承诺"的下游**——两层不能用同一套标签评估，也不能互相替代。
+- **提升层**：评测（安全监视器效度）/ 工具（拦截点分层）。触发词：Exposure Is Not Commitment、double-stratification、injection exposure vs behavioral commitment、评测伪影、latent monitor。
+
+## r656B-6 · **多阶段审核管线的「检查作用域」必须显式声明并互补：攻击者会停在层间夹缝（Scope-Gap Injection）**（来源：arxiv.org/abs/2610.34777《Scope-Gap Injection: Exploiting Evaluator Channel Blind Spots in the OpenClaw Agent Security Competition》，r656B 一手 abs 200）
+- **实证**：竞赛管线为三段——**S1 静态 skill 扫描 / S2 LLM-judge 对 task 与 skill definition 做安全检查 / S3 实执行审计**；论文观察到「a **scope gap**: S2 appears to inspect the task i…」而漏掉了 skill 的实际用法面，攻击包因此能穿过逐层检查。
+- **判据**：① **每层扫描都要写出"我看的是哪个对象、哪个面"**：S1 看文件文本，S2 看任务与定义文本，S3 看运行时行为——三层都通过仍可能有缝（定义写的与运行时用的不是同一份语义）。② **层间覆盖必须是并集而非各自收缩**：发现某层"看起来查了 X"就假定 X 已被管住，恰恰是夹缝来源。③ **最有效的验证是把"定义面通过"与"使用面通过"分成两个 case**，而不是给一个综合分。④ 与 r656-Q4（内容检查看不见投毒）、r656-Q8（清单检查看不见旁路）构成同一条规律：**每种检查有自己的盲区族，盲区不会因为多了几层而自动消失**。
+- **提升层**：安全（多层管线的覆盖声明）/ 评测（安全赛道设计）。触发词：Scope-Gap Injection、S1/S2/S3 三段、评价者通道盲点、定义面 vs 使用面、层间夹缝。
+
+
+
+
+## r656C-6 · **恢复必须把主体重新解析到「当前 principal」：存档的操作员授权、已撤销的发送者、无 profile 的通道身份一律不继承**（来源：docs.openclaw.ai/gateway/restart-recovery.md 30,415B，r656C 一手 curl 200）
+- **实证**：原文——「The Gateway **never substitutes an administrator or restores a saved operator grant**」；「**If the sender is revoked or cannot be resolved to a current principal**, the message becomes an ordinary failed send that the sender can resend」；「**A channel identity without a profile does not authorize queued execution after restart**」；「Sessions with no human principal use ordinary system-event authority; if it lacks a needed capability, the agent must ask for an authorized input」。
+- **判据**：① **身份必须重新解析而非继承**：重启/恢复后所有待执行请求都要按"当前还成立吗"重判一次主体，存档时的授权快照不能作为执行凭据。② **无法解析要以"普通失败发送"的形式暴露给发送方可重发**，而不是静默丢弃或降级执行——失败要回到能重试的人手里。③ **"是谁发的"与"是谁在跑"必须分别有 profile**：通道身份没有 profile 即无排队执行权 ⇒ 队列执行这类延迟动作的授权要求不低于即时动作。④ 与已落 ag Cap16/32「凭据不下发」分轴——那条管**凭据不在传递中泄露**，本条管**凭据在重启后不被沿用**。
+- **提升层**：安全（恢复期的授权重判）/ 工具（主体解析与失败可重发）。触发词：不恢复保存的操作员授权、恢复到 current principal、sender revoked 变为 failed send、无 profile 不授权排队执行。

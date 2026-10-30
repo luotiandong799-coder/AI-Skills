@@ -1358,3 +1358,37 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **判据**：凭据与计费归属变化后，旧版本不是『功能少一点』而是直接不可用。判据：这类变更要在发布说明里点名受影响版本区间，并提供按流逐个迁移的清单；只发新行为说明，用户会以为旧流还能凑合跑。
 
 - **提升层**：工作流（迁移与发布说明）。触发词：worker 代调用、旧端点 404、旧版本流必然失败、按 provider 实际成本计费、迁移清单
+
+
+## r656-Q1 · **引用型制品「钉到不可变版本」的代价由平台以配额形式收取，且不与功能差异一起公布**（来源：help.aliyun.com/zh/model-studio/developer-reference/rate-limit，经 Qoder r713-Q-B 提名，2026-10-31）
+- **实证**：同一模型两种引用形态的限额相差近 50 倍——可变别名 `latest` = 30,000 RPM / 5,000,000 TPM，日期快照 `-2026-06-08` = **600** RPM / 1,000,000 TPM，`preview` = 60 RPM。该差距**不写在功能文档里**。
+- **判据**：① **「要不要钉版」不是纯正确性决策，而是「正确性 × 吞吐」的双目标决策**——只按"可复现性"单向推荐钉版，等于把速率退化当作零成本。② **凡技能引用外部可变指针（模型别名 / 镜像 tag / skill 名）时，须显式写出"钉版后限额取哪个数"**，否则上线后第一次流量高峰才发现。③ 与已落分轴：r138A 管兼容窗口（旧名保留一个大版本）、r350B 管限速器形态（固定窗口 vs 滑窗）——本条补的是**引用形态本身的供应面代价**。
+- **提升层**：工作流（引用决策的成本面）/ 工具（外部指针选取）。触发词：可变别名配额、latest vs 日期快照、preview 60 RPM、钉版吞吐代价、引用形态供应面。
+
+## r656-Q6 · **有状态流把执行钉在起始进程/节点上：不问亲和就表现为「取不到」而非「报错」；node-local 锁保证的是「每主机一次」而非「全局一次」**（来源：docs.langflow.org/deployment-multi-worker，经 Qoder r715-Q-A 提名，2026-10-31）
+- **实证**：文档原句「**A flow build started on worker A cannot be polled or streamed from worker B**」；「**MCP over SSE does not work** … because the SSE stream and the POST message endpoint that feeds it **must run in the same process**」；孤儿清扫「guarded by a **file lock, which is node-local**」⇒ 一主机/Pod 各跑一次 reconcile；换 `LANGFLOW_JOB_QUEUE_TYPE=redis`（Redis Streams）才可跨 worker 取事件。
+- **判据**：① **多实例部署前须显式列出"只能在起始实例完成"的动作清单**（轮询、取流、SSE 喂送、孤儿清扫），并为这些动作配一个**「取不到 ≠ 没发生」的可观测出口**——跨实例轮询表现为空结果而非错误。② **node-local 锁的多实例语义是「每主机一次」不是「全局一次」**，拿它做全局不变量即错（与 r654「容量扫描只报告不改写」同类静默）。③ 与已落分轴：r321A 会话钉管**会话**归属、r651 管清单方向、r543A 管诊断误报质量——**无一条讲流式通道与喂送端点的进程共址约束**。
+- **提升层**：工作流（部署形态与状态可见性）/ 工具（跨实例能力矩阵）。触发词：worker A cannot be polled from worker B、SSE 与 POST 须同进程、node-local file lock、进程亲和、LANGFLOW_JOB_QUEUE_TYPE=redis。
+
+## r656A-4 · **同一资源的不同粒度不得各自演化出不同的守卫覆盖：只能靠删掉非活跃限额才绕过租约路径**（来源：api.github.com/repos/PrefectHQ/prefect/issues/23674，r656A 一手 gh api 200）
+- **实证**：原文——「**Workaround:** we've deleted the two inactive limits, so those tags no longer take the lease path」；「#23658 and its PR #23659 cover a `410` on **deployment (flow) leases**. This is a **different path**: **task tag leases never reach that check**, and the ERROR log fires before it anyway」。
+- **判据**：① **守卫应当按"资源 × 动作"铺设，而不是按"当时写到的那条代码路径"铺设**——同一语义的两种粒度（flow lease / task tag lease）只有一条做了 410 检查，另一条永远走不到 ⇒ 缺陷表现为"某些标签报错、某些不报错"，被当成偶发日志而非覆盖缺口。② **日志在检查之前打印会吞掉真正的失败点**，排查时被误导到错误信息而非缺失的守卫。③ **临时绕法是删掉触发者而不是修好检查**——此类 workaround 必须登记为技术债并标注"未确认是否真的止住"。
+- **提升层**：工作流（守卫覆盖的粒度一致性）/ 工具（租约路径清单）。触发词：task tag leases、different path、410 on deployment leases、报错先于检查、inactive limits 绕行。
+
+## r656A-9 · **删掉一个坏掉的能力同样是破坏性变更：失效能力的退役要走破坏性版本语义**（来源：api.github.com/repos/activepieces/activepieces/pull/17060，r656A 一手 gh api 200）
+- **实证**：原文——某 action「cannot work, and four descriptions advertise a feature the API no longer has … the action returns an error whatever the user does … Its own description also said "No API key required" while the code sent a bearer token」；处置为「`package.json` `0.2.0` → `0.3.0`, since **removing an action is breaking for any flow that used it**」；并注明「There is nothing to repoint it at」。
+- **判据**：① **删除不可用能力仍然算破坏性变更**——已有流程引用它时会从"运行时报错"变成"装载期报错"，前者还能拿到部分结果，后者直接起不来。② **描述与实际不同步本身就是退役判据**：当 description 承诺了 API 已不存在的能力（含"无需 API key"这类安全相关陈述）时，修不如删。③ **无替代品的删除必须显式告知下游**，写明"删，且没有可重定向目标"，不能让能力静默消失。
+- **提升层**：工作流（能力退役与版本语义）/ 工具（插件接口契约）。触发词：removing an action is breaking、0.2.0 到 0.3.0、描述承诺不存在的能力、无替代品的删除、Nothing to repoint。
+
+## r656A-12 · **依赖收敛与 override 的验证对象是「被包装方的调用约定」而非版本号；保留的告警须区分「待修」与「设计保留」并写下理由**（来源：api.github.com/repos/All-Hands-AI/OpenHands/issues/19088，r656A 一手 gh api 200）
+- **实证**：原文——「Forcing `glob` 9 or later **breaks `@electron/asar` 3.4.1, which wraps `glob` with `promisify`**; **the promise API never calls the callback**」；「The other three warnings stay **by design**: every age-eligible electron-builder 26.x … still pins `@electron/asar` 3.4.1 (glob ^7) … and forcing rimraf 6 breaks `temp`'s **callback-style cleanup**」；另一项用 narrow override 移除 `boolean` 警告，并保证 `bootstrap()` 与 `GLOBAL_AGENT_` 环境变量仍被旧版 `@electron/get` 3.1.0 调用。
+- **判据**：① **升级或覆写依赖时，验证对象是"谁在用它、怎么用"，不是版本号高低**：此处 `promisify(glob)` 依赖回调约定，glob 9+ 改 promise 后包装层静默不回调（**不报错、只是永不触发**）。② **未消解的告警必须二分并有书面理由**——"设计保留"不是懒政的别名，但它要求把"为什么不能修"（上游 pin + 调用约定）写进票据；否则下次清理者会重复撞墙。③ **override 的作用域要收窄**（此处只作用于 `app-builder-lib` 子树），避免把整棵依赖树拉到新形态。
+- **提升层**：工作流（依赖治理）/ 工具（override 作用域）。触发词：promisify 包装 glob、调用约定 vs 版本号、warnings stay by design、narrow override、callback-style cleanup。
+
+
+
+
+## r656C-1 · **失败状态不得自动升格为授权：修复动作与重启/重试授权是两个独立决策**（来源：docs.openclaw.ai/gateway/restart-recovery.md 30,415B，r656C 一手 curl 200）
+- **实证**：原文四条——「**An update failure does not by itself authorize a candidate restart**」；「**A blocking live Doctor result does not become a restart grant**」；「**Failed suspension never triggers automatic re-enablement of the rejected installation**」；「The writer-stamp guard does not block this **intentional** recovery」。
+- **判据**：① **失败不是授权**：更新失败、健康检查失败、暂停失败都只产出"状态"，是否被允许重启动作必须由独立的授权判定给出，不能由失败次数或失败严重度推导。② **诊断工具的输出不得直接充当执行令**——blocking 的 Doctor 结果是证据，不是 grant。③ **被拒绝的安装不得因挂起失败而被自动重新启用**：一次否决保持有效直到显式撤销，否则故障重试会绕过否决。④ 与已落 ag SPEC「Update failures MUST be atomic or recoverable」分轴——那条管**更新本身必须可回滚**，本条管**失败之后谁有权再动一次**。
+- **提升层**：工作流（失败到动作的授权分离）/ 工具（否决的持久性）。触发词：update failure 不授权重启、Doctor result 不是 grant、拒绝后不自动重启用、intentional recovery、writer-stamp guard。

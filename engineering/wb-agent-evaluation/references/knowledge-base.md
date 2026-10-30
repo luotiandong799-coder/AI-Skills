@@ -918,3 +918,24 @@ ChipMEM 指出：在同一批任务上反复接触基准反馈，会奖励「针
 - **判据**：单轴提升不构成晋升证据。判据：评测报告至少双轴配对（质量 + 延迟/成本），重跑按版本对比成回归；只报质量轴时，读者无法排除『用延迟换分数』。
 
 - **提升层**：工作流（评测口径）/ 可复用 Skill。触发词：双轴配对呈报、准确率与延迟同报、单轴提升不作晋升证据、p95 退化
+
+
+## r656A-7 · **对照组的 harness 必须保证两侧默认工具集一致，否则「带技能 vs 不带技能」的对照不成立且失败静默**（来源：api.github.com/repos/anthropics/skills/issues/518，r656A 一手 gh api 200）
+- **实证**：原文——「We worked around this by adding explicit "You MUST use the Bash tool to execute commands" instructions to subagent prompts, but the **skill-creator should ensure Bash is available by default for both `with_skill` and `without_skill` runs**」；「**Impact**: Results look like they were **never graded**」。
+- **判据**：① **对照实验的控制变量清单必须包含"两侧默认可用工具"**——一侧缺 Bash 时，差的不是技能内容而是 Bash 本身，增益会被记到被评测对象头上。② **此类失效的观感是「没评分」而不是「评错了」**：用户只能手翻 JSON 才发现不匹配 ⇒ 评测流水线必须在出口断言"评分已实际发生"，而不是只看产出文件存在。③ 与已落 r639A「基准须绑定当次可用工具的不可变快照」分轴——那条管**记录带什么**（运行侧），本条管**两侧拿到的默认集是否相同**（harness 侧）。
+- **提升层**：评测（对照组有效性）/ 工具（harness 默认配置）。触发词：with_skill 与 without_skill、两侧默认工具一致、Bash available by default、看起来从未评分、评分出口断言。
+
+## r656B-1 · **工具调用轨迹要按「前缀可执行性」逐前缀评估：最终成功会掩盖中间不可执行的前缀**（来源：arxiv.org/abs/2610.40444《Prefix Executability: Evaluating Tool-Using Agents Beyond Final Success》，r656B 一手 abs 200）
+- **实证**：论文提出轨迹级协议——「measures whether **every prefix of a predicted tool-call sequence** remains executable under **tool schemas, state preconditions, and data dependencies**」。
+- **判据**：① **只在终点打分会把"中途某步本就不可执行"的成功判成有效能力**——回滚、试探、自我纠错会让最终答案正确而中间步骤非法。② **可执行性是三元的而非二元的**：格式合 schema、前置状态满足、数据依赖已就绪，三者要分别登记。③ 与已落 2610.03080《MintEval》分轴——那条管**执行结果是否与描述的策略一致**（行为等价），本条管**序列的每个前缀本身是否可执行**（顺序与依赖合法性）。
+- **提升层**：评测（轨迹级评分）/ 工作流（轨迹可回放性）。触发词：prefix executability、每个前缀可执行、state preconditions、data dependencies、最终成功掩盖中间。
+
+## r656B-4 · **自改进要同时报「群体覆盖」与「最优个体」两个数：前者远高于后者，只盯被选中的 parent 会浪费整个群体**（来源：arxiv.org/abs/2610.36660《The View from Nowhere: Population-Centered Agent Evolution》，r656B 一手 abs 200）
+- **实证**：论文指出「existing approaches center improvement on **selected parent agents** and their evolutionary experience, leaving the broader population largely underused」，并给出「population coverage（**至少被一个变体解出的任务占比**）」与「best individual performance」之间的实质差距。
+- **判据**：① **两个指标回答两个问题**：coverage 回答"这个群体能不能解"，best-individual 回答"拿到的那个版本能不能解"；只报后者会把"群体里有人会、发布版不会"判成相同结果。② **parent 选择策略本身是优化变量**——把演化预算集中在少数被选中的 parent 上，等价于主动丢弃其余个体的解法。③ 与 r656-Q9「守卫清单不减」互补：那条管**别让自改进删掉安全资产**，本条管**别让自改进只继承单一路径的能力资产**。
+- **提升层**：评测（自改进报告口径）/ 工作流（演化预算分配）。触发词：population-centered、population coverage vs best individual、selected parent、演化预算集中、群体未被利用。
+
+## r656B-7 · **自反馈环里「批评」与「候选生成」是两个能力不等的角色：目标体是自己最好的批评者、却是差的提议者**（来源：arxiv.org/abs/2610.34965《The Target Agent Is Its Own Best Critic but a Poor Proposer: Self-Improved Red Teaming》，r656B 一手 abs 200）
+- **实证**：论文考察红队自改进循环里「criticism and attack proposal」两个核心角色，结论为题所示——同一模型在**批评**上位、在**提议**上位不成立。
+- **判据**：① **不能假定"能诊断"蕴含"能提出"**：把两者塞进同一个自我循环时，改进会被提议侧能力卡住，而观测到的失败却常被记成"批评不够深"。② **两个角色要分别供给、分别评估**——提议能力不足时应当外部注入候选或换用更专用的 proposer，而不是继续加大自我批评轮数。③ **增益要相对于角色替换汇报**，否则"循环 n 轮的改进"无法区分来自批评还是来自提议。
+- **提升层**：评测（自改进角色分解）/ 工作流（红队与自省循环设计）。触发词：Best Critic Poor Proposer、批评与提议分离、自我红队、角色替换增益、proposer 能力瓶颈。

@@ -452,3 +452,11 @@ JSON Schema 只表达**结构合法性**（类型、必填、枚举），表达�
 - 原文："Increasing your workflow's memory gives you a **proportional increase in CPU**. If your workflow is limited by memory or compute, increasing your workflow's memory can **reduce its overall runtime** and make it more performant."；"**Pipedream charges credits proportional to your memory configuration**."；"You **do not** use credits testing workflows, but workspaces on the **Free** plan are limited to 750 of test runtime per day. If you exceed this limit when testing in the builder, you'll see a **Runtime Quota Exceeded** error."；用量通知："Free tiers | You'll receive an email when you reach 100% of your usage. Paid tiers | You'll receive an email at 80% and 100%."
 - 判据：① **先问"这个旋钮同时在动哪几个面"**——内存配置同时改 CPU（更快）与计费权重（更贵），只算一面会做出反向决策：为了省钱调低内存，结果跑得更久、总账反而更贵；凡"配置即资源"的参数（内存/并发/副本数），优化时必须把**耗时**与**单价**放同一张表上算总分；② **"不计费"的资源仍然受限，只是限制换了名字**：调试运行不走计费额度，但免费档有独立的**每日测试运行时上限**，超限报的是 `Runtime Quota Exceeded` 而不是"额度没了"——排障时看到这个名字要知道自己撞的是调试配额，不是计费配额；③ **告警触发点本身是套餐属性**：付费档在 80% 就提前告警（因为超出要真花钱），免费档只在 100% 才通知（因为超出只是停服）——设计配额提醒时，触发阈值要按"超出后用户损失的性质"分层，而不是所有用户同一个百分比。
 - 提升层：工具/成本。触发词：内存即CPU即计费、一个旋钮两面、Runtime Quota Exceeded、调试不计费但受限、80% vs 100% 告警、套餐决定告警阈。
+
+
+
+
+## r656C-5 · **自反思的写入必须是事件驱动且有显式触发条件，而不是每次会话都产出一次变更**（来源：code.claude.com/docs/en/skills.md 118,879B，r656C 一手 curl 200）
+- **实证**：原文——「Claude edits the recorded file **only when it steered a run wrong**, such as a command that failed or a missing step, so you can commit the file **without per-session diffs**」。
+- **判据**：① **写入契约必须先定义"什么算一次需要记录的错误"**（此处＝命令失败或缺失步骤），否则每轮会话都给反思文件留一行 diff，文件从"经验库"退化成"活动日志"，审阅成本吃掉全部收益。② **不写是默认态、写是例外态**——把触发条件写成白名单（具体的失败类别）而非黑名单。③ **可提交性是设计目标**：反思文件要能被 commit 而不夹杂每次会话的噪声 ⇒ 变更必须原子、可解释、可追溯到单个触发事件。
+- **提升层**：工作流（写入触发条件白名单）/ 记忆（反思文件的可提交性）。触发词：只在 steer 错时写、per-session diffs、触发条件白名单、失败类别清单、不写是默认态。

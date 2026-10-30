@@ -1024,3 +1024,11 @@ autogen#8328：HeadAndTailChatCompletionContext 在头部删掉一条 tool-call�
 
 ### r649C-2 · 预热必须使用与真实流量完全相同的配置（docs.claude.com `.../prompt-caching.md`）
 思考配置（`mode`、`budget_tokens`）与 `output_config.effort` **都会被渲染进 prompt**，因此用不同配置做预热，会写入一条真实流量**永远命中不到**的缓存条目。判据：**预热的成本只有在配置同构时才成立**；预热与生产在思考配置/effort 上不一致，等于花钱写一个不会被读的条目，并让命中率指标失真。
+
+
+
+
+## r656C-4 · **高成本检查默认不自动执行：自动 vs 显式调用的分界要把"时间与 token 花在哪里"写进设计约束**（来源：code.claude.com/docs/en/skills.md 118,879B，r656C 一手 curl 200）
+- **实证**：原文——「Claude invokes some bundled skills automatically when relevant; **others, including `/verify`, run only when you invoke them, which keeps you in control of when these longer-running checks spend time and tokens**」；另注「Unlike CLAUDE.md content, a skill's body loads only when it's used, so long reference material costs almost nothing until you need it」。
+- **判据**：① **自动执行的判据不止于"相关"，还要过一道成本阈值**：相关性决定该不该用，成本决定由谁发起；把长耗时检查放进自动路径等于把预算决策外包给了触发条件。② **成本必须是用户可见且可控的变量**，而不是实现细节——此处通过"只在显式调用时跑"把选择权交回调用者。③ **惰性加载只对未被使用的部分成立**：一旦自动触发的部分把高成本内容读入上下文，progressive disclosure 的节省即归零 ⇒ 自动面必须窄、显式面才可宽。
+- **提升层**：工作流（成本可见性与触发策略）/ 工具（上下文预算归属）。触发词：longer-running checks、显式调用才跑、spend time and tokens、自动 vs 显式面成本阈值、惰性加载只对未使用部分成立。

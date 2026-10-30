@@ -3333,3 +3333,22 @@ Functional API 在 resume 时会重新执行一个「其异常已被入口点捕
 - **判据**：把多层超时当一个旋钮，调完发现没生效是常态。判据：声明超时要点名是哪一层（云端/客户端/模型/任务完成）；解析限流必须容忍字段缺失（有 Retry-After 就够，不要假设 limit_rps 一定在）；事件流里『重连成功』与『首次就绪』必须是不同事件，否则重连会被当成新会话。
 
 - **提升层**：工具（超时与限流语义）/ 工作流。触发词：四层超时、Retry-After 无 limit_rps、browser.reattached 与 browser.ready、验收与可用性分离
+
+
+## r656A-1 · **总超时覆盖不到「永不结束的流」：周期性字节到达会让 timeout 参数静默惰性，必须有「无进展超时」作为第二根标尺**（来源：api.github.com/repos/langchain-ai/langchain/issues/35597 + /repos/langchain-ai/langgraph/issues/9499，r656A 一手 gh api 200）
+- **实证**：langchain#35597——`timeout=None` 让 HTTP 请求无限阻塞，服务端已生成完毕（EOS，180 tokens）而客户端永不关闭，只能 `kill -9`，`strace` 显示 `futex_wait`；langgraph#9499——「**Against a stream that never finishes, `timeout=` is silently inert**」，且 `conn.sendall(b": heartbeat")` 是 bytes 而非事件，**客户端永不返回也不抛错**。
+- **判据**：① **「总超时」与「空闲/无进展超时」是两根不同标尺**——只要对方周期性吐字节（心跳、SSE 注释帧），挂在读取循环里的调用看起来永远"活着"，总超时根本不触发 ⇒ 长期流式通道必须有第二根"多久没有有效事件"的标尺。② **"框架层有 timeout 参数"不等于它对目标失效形态生效**：验证方式是在受控服务端上永不终止地流心跳，看客户端是否真的返回；默认值为 `None` 的超时等于没有超时。③ 与已落 dl KB:2101「派生子进程须带 idle timeout」分轴——那条管**资源生命周期回收**，本条管**单次调用的失效上限**。
+- **提升层**：工具（客户端超时语义）/ 工作流（恢复可编程性）。触发词：timeout 惰性、心跳不是事件、永不结束的流、无进展超时、timeout=None、挂死只能 kill -9。
+
+## r656A-3 · **配额记账在失败开放下的三条生存期规则：迟到退款不得复活已过期配额、退款失败保持占用至到期、取不到对端即跳过执行**（来源：api.github.com/repos/Significant-Gravitas/AutoGPT/issues/15059，r656A 一手 gh api 200）
+- **实证**：原文——「Admission and refund each have a **250ms deadline**. Handled Redis failures **fail open**; failed refunds **remain charged until expiry**, and **late refunds cannot recreate expired counters**. Missing or invalid peers **skip enforcement**」；并用「atomic single-key Lua operations compatible with Redis Cluster」规避跨 slot。
+- **判据**：① **退款必须有截止时刻**：超过截止的迟到退款只能作废，**绝不能复活已过期的计数器**——否则时间窗被静默拉长，限流失去意义。② **失败开放要分别写出每一侧的失效行为**：此处退款失败为继续占用到自然到期（保守），Redis 不可用为放行（激进）；同一套配额里两种极性并存，必须分别声明。③ **依赖不可用时的降级是"跳过执行"而非"按估计值执行"**（missing/invalid peers skip enforcement）。④ **记账原语必须原子且与集群拓扑兼容**：此处要求 single-key Lua，跨 key 事务在 Redis Cluster 上不可靠。
+- **提升层**：工具（配额原语）/ 工作流（失败极性的显式声明）。触发词：250ms deadline、late refunds cannot recreate、remain charged until expiry、fail open Redis、skip enforcement、single-key Lua。
+
+
+
+
+## r656C-3 · **关停是分层有界宽限而非统一排空：必需持久化要等到，其余资源只给有界宽限，长任务不享受完整排空**（来源：docs.openclaw.ai/gateway/restart-recovery.md 30,415B，r656C 一手 curl 200）
+- **实证**：原文——「It waits only a **short bounded time** for in-flight persistence and gives other resource cleanup a **bounded grace**」；「A long model stream, tool call, or background process **does not get a full run-completion drain** before shutdown」；「An external stop or restart logs bounded-grace leftovers … and **returns with status `0` unless required persistence failed**」；「Their running code keeps its old shutdown behavior until restarted; **installing new files cannot shorten an already-running Gateway's drain**」。
+- **判据**：① **"等到干净"必须按资源类分层**：必需持久化（会丢数据的那一类）要真等到，其余（服务子进程清理、sidecar、插件运行时）只给有界宽限并**记录残留**——不分层就会被最长的一个任务绑架，或反过来把必需持久化也砍掉。② **退出码必须反映分层结果**：此处只有必需持久化失败才非 0，其余残留在日志里 ⇒ 外部编排据此判断是否重试。③ **已在运行的进程沿用旧关停行为**：替换文件不会缩短正在跑的那个实例的排空 ⇒ 滚动发布里"改了 drain 逻辑"对当前实例无效，必须等下一次重启才生效。
+- **提升层**：工作流（关停与排空契约）/ 工具（退出码语义）。触发词：short bounded time、bounded grace 残留、长任务不享受完整排空、status 0 除非持久化失败、旧 drain 不被新文件缩短。
