@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、能不能跑、接受态绑定单报告、harness 塑形信念、belief-rollout 诊断、终端成功看不见分叉、BIWM、证据被 harness 压缩、attestationHash 排除 checkedAt、同状态同哈希、审计四元组、启用新规则域须复审刷新、间隔截顶防计时器溢出、缺席折叠成空集合、校验两端同源自证恒真、压缩切点避开 tool 对、缺口标注禁止猜测、被调用方 commit 调用方 session、flush vs commit、transaction already closed、expire_on_commit、extract_class_name、first Component subclass、run2 not found in First、data.type 优先于 vertex_type、fault-enforcing tests、测试通过不等于正确、counterfactual monitor、recoverable checkpoint、false-alarm 2.0-3.3%、cross-provider review、explicit failure states、truncation levels、read-only 假设要实测、projectId、optInAvailable、并列时间戳分页、游标缺 tie-breaker、模型产出作观测记录、准入策略按假阳性上限、分隔符被硬编码、序列化往返不对称、夹具必须封闭、MockTransport、example.invalid、外部依赖版本假设
-version: 2.398.0
+version: 2.401.0
 agent_created: true
 ---
 # 生成物验证（独立 oracle + 差分 + 变异测试）
@@ -492,3 +492,9 @@ agent_created: true
 ## r588A 下沉条目：**并行工具调用会把思考块复制到每一路，下一轮 API 直接拒；子工具等待预算是独立时钟**——多路分支各自携一份会话级块，下一轮变成重复内容并被 API 拒（n8n #41152；串行用例不触发）；Workflow 子工具等待超 250 秒即失败，该上限与步骤超时不同一个数（dify #44159）。判据= 资产归属材资不可分发、验收用例按并行构造、等待上限逐层声明、长任务改异步交接。全文见 references/knowledge-base.md。触发词：thinking block 重复、并行工具调用 400、子工具等待上限、250 秒、等待预算独立时钟。
 
 ## r651 下沉条目（B：留痕要显式二选一：结论可见 或 过程可追溯，声称留痕必须说明是哪一类；证据登记去重要保守分级，宁可重复登记也不误合并；停止条件用饱和而非固定轮数；验收判据要用「最终用户走完整回路」，构建成功不等于可交付）（原文均在 references/knowledge-base.md；C：排序/评分信号必须声明它的强度：先验不保证结果；空清单或部分清单不是「没有」的证明；声明「可审计」必须同时声明覆盖边界：临时执行路径的审计证据是有意丢弃的；分片请求宁可省略全局计数字段，也不返回一个近似的全局值）（原文均在 references/knowledge-base.md）（原文均在 references/knowledge-base.md）
+
+## r655 下沉条目（A：4：持久化记录的分隔符必须唯一，且不可由内容本身产生；18：未识别的分类必须转成可诊断错误，不得以 HTTP 500 暴露；28：目录非历史全集：『目录中查无』不可用作『从未存在/未受影响』的否定证明；29：类型不变但值被改写的静默损坏须单列一类：大整数经 float 往返）（原文均在 references/knowledge-base.md）
+
+## r655 下沉条目（B：6：保证随载体失效：跨进程/跨故障域复用必须重新证明条件；7：可重放的四要素：append-only 动作账 + 逐步执行记录 + 版本化工件 + 环境记录；8：记忆准入判据从『相似度』移到『谓词单调性』：删除残差不升相似度即判污染）（原文均在 references/knowledge-base.md）
+
+## r655 下沉条目（C：24：证据不得补造：绑定不匹配的记录保持未知，绝不复制进决策事实表；25：拦截要成为可归属事件：零拦截不等于安全，可能等于护栏空转；26：聚合站可排序不等于可引用：无 version、无扫描字段即不可钉版不可证审；27：审计声明须点名二进制产物一侧：产物要单独给校验路径；28：工具结果须双表示并存：人读文本与机读结构化内容缺一不可）（原文均在 references/knowledge-base.md）

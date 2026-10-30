@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: "1.52.0"
+version: 1.53.0
 agent_created: true
 ---
 
@@ -230,3 +230,5 @@ agent_created: true
   5. **孤儿标记要由等待行状态仲裁**：行仍 PENDING 则忽略 marker，否则清理线程会把未消费的等待行判死。
   6. **与 §委派契约要给非终态留位置分工**：那条管契约里给「正在等人」建模，本条管**怎么确证回调真被吃掉了**；与 r396B（消费方返回码决定审计转发成败）方向相反互补。
 - 提升层：工作流（委派/回调契约的验证归属）。触发词：投递回执不证消费、waitpoint_consumed、stale && !marker、TTL 覆盖重试窗、首退避 1s、终态反推假阳、PENDING 仲裁优先、送达不等于完成。
+
+## r655 下沉条目（C：33：子代理的能力面快照在启动时刻取：派前须等能力面就绪或声明迟到能力不纳入）（原文均在 references/knowledge-base.md）

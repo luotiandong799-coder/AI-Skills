@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算、机械验证优先、LLM judge 替代路径、授权动作降级为交互即验收失败、凭据有效≠连接可用、版本漂移、三态归因
-version: 1.112.0
+version: 1.114.0
 ---
 
 # wb-agent-evaluation（Agent 评估与复盘）
@@ -218,3 +218,7 @@ version: 1.112.0
 ## r633C 下沉条目（「凭据有效」不等于「连接可用」：失败归因须分过期 / 版本漂移 / 载荷缺字段三类且处置互不替代；含覆写点须纳入上游升级同步清单）（原文均在 references/knowledge-base.md）
 
 ## r651 下沉条目（B：压缩损伤的评测必须配对同态起点，且 benchmark 对压缩不敏感不等于无损；对比的两组必须同一指标总体，选择性排除会让比率指标失去信息；评测要测「代理是否满足使用条件」，泄漏是时间维违规且不归因意图）（原文均在 references/knowledge-base.md）（原文均在 references/knowledge-base.md）
+
+## r655 下沉条目（B：12：恢复类评测必须分阶段出指标：聚合成功率会掩盖中断处理差异；13：中断恢复要分别评『续对步骤 / 回应插话 / 不重发已听内容』三项；14：最低臂集必须含『纯操作性规格、无技能包』这一臂，否则规格的收益会被算成技能的收益）（原文均在 references/knowledge-base.md）
+
+## r655 下沉条目（C：29：能力等级不得由比值单独给出：分母为 0 须显式判未知；30：准确率提升必须与延迟退化配对呈报，单轴读数可以是性能回退换来的）（原文均在 references/knowledge-base.md）

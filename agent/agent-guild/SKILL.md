@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "1.152.0"
-version: 1.158.0
+version: 1.159.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -44,7 +44,6 @@ description_en: "Cross-agent shared memory protocol: agents on one machine share
 `python3 <SKILL_DIR>/scripts/ag.py` (referred to as `ag`). Requires Python 3.9+
 (stdlib only, no third-party packages). On Windows use `python` instead of
 `python3` if that is what your PATH exposes.
-
 ## Mandatory Session Contract (once per session, MUST)（原文已下沉 agent-guild/references/knowledge-base.md §r349C 下沉）
 ## Self-check (each session, before real work)
 
@@ -56,7 +55,6 @@ grep -E '"protocol_version"' ~/.agent-guild/skills/agent-guild/manifest.json | h
 ```
 Not registered → run onboarding first. Central major version > yours → re-run
 onboarding from the top.
-
 ## The `ag` CLI — use it for all writes
 
 Writes to shared files are atomic + audited when done through the CLI
@@ -91,7 +89,6 @@ If the CLI is unavailable (no Python, sandboxed runtime), fall back to the
 manual file operations below — Edit in place, never Write-overwrite a shared
 file. Every capability in this skill is reachable by plain file reads/writes;
 the CLI only adds atomicity and an audit trail.
-
 ## 升级纪律（禁止自动升级）
 
 外部组件（Skill / MCP / 插件 / 外部脚本 / 权限相关组件）一律：
@@ -112,7 +109,6 @@ the CLI only adds atomicity and an audit trail.
 - Some files missing → read what exists, note the rest, don't block.
 - `registry.json` not writable → log the issue, proceed read-only.
 - Inbox file in an unexpected format → read anyway, reply with a structured request for clarity.
-
 ## Spec
 
 - Manifest: `manifest.json`
@@ -121,7 +117,6 @@ the CLI only adds atomicity and an audit trail.
 - Learning ledger (self-improvement): `docs/LEARNINGS.md`
 - Repository: https://github.com/dqsjqian/agent-guild
 - License: MIT
-
 ## Agent 自主权分三档：只读免审，gated 需审，Auto≠沙箱
 
 > 原文已下沉 `references/knowledge-base.md §r395-ag`（保持原文零删减）。
@@ -129,7 +124,6 @@ the CLI only adds atomicity and an audit trail.
 - **实证**：阿里云 Skills 门户内置 HITL 插件，在 **Agent 与 Aliyun CLI 之间**插入检查点——高风险命令（删除/计费/对外暴露）在执行前被识别并**暂停等待人工确认**；风险评级由**云端风险评级服务**做（非本地规则库）。
 - **判据**：① 安全锁的**拦截点应落在工具调用执行通道（CLI wrapper / 工具层），不是对话层**——对话层的"请确认"可被模型自说自话绕过，通道层拦截才是物理阻断；② 风险分级可**外包给独立远端服务**（云端评级）而非写死在 agent 规则里，分级随服务演进、不污染本地规则面。与 §三档审批 分工：三档是"agent 自身审批模式"，本条是"在 agent 之外的执行通道上架一道物理检查点 + 评级外包"。
 - 提升层：工作流 / 安全边界。触发词：HITL、执行通道拦截、CLI wrapper 检查点、云端风险评级、高风险暂停、物理阻断。
-
 ## 目标驱动：让 agent 自己起草验收标准并逐轮评分（来源：LangChain Deep Agents Code goals-and-rubrics，2026-09-23 r150-B 独立实拉首读，清单外新信源）
 
 - **goal：给目标，让 agent 起草验收标准再开工**：目标有生命周期，被接受后跨轮保持活跃，直到完成/阻塞/暂停/清除；每轮后续都按验收标准评分。适合开放任务——把"要做成什么样"显式化成定义完成。
@@ -137,7 +131,6 @@ the CLI only adds atomicity and an audit trail.
 - **amend/pause/resume 不重放**：改目标不必取消当前任务重来——`/goal amend` 协调改目标与标准、`/goal pause` 暂存、`/goal resume` 从现有对话续上。判据：调整方向不该付出"重跑一遍"的代价。
 - **与"先立规约"的互补**：spec-driven 是人在动手前写验收；这里是 agent 在拿到目标后自己起草、人审后执行。两者都要求"完成"先于"动手"，差异在谁起草。
 - 与 §三档审批 的分工：那条管"能不能自己改"；本条管"改完怎么算改好、怎么逐轮验收"。
-
 ## 记忆与技能是频谱：常驻上下文 vs 按需加载（来源：LangChain Deep Agents Code memory-and-skills，2026-09-23 r150-B 独立实拉首读，清单外新信源）
 
 - **记忆=总是加载的常驻上下文**：`AGENTS.md`（全局 `~/.deepagents/<agent>/AGENTS.md` + 项目 `.deepagents/AGENTS.md`）在会话开始就拼进 system prompt，放人格/通用偏好/跨项目约定/架构。自动记忆按主题存 `.deepagents/<agent>/memories/*.md`，任务前检索、不确定时查、新信息自动存。
@@ -145,7 +138,6 @@ the CLI only adds atomicity and an audit trail.
 - **判据：常驻 vs 按需**：通用且每次都要的放记忆（always-loaded）；任务专属、只在特定场景才用的放技能（on-demand）。不要为了"全加载"把所有知识塞进 AGENTS.md——那会撑爆上下文且稀释重点。
 - **额外记忆文件要被 AGENTS.md 引用才生效**：放在 `.deepagents/` 的附加文件，启动时并不自动读，必须在 AGENTS.md 里指名，agent 需要时再去读取。
 - 与 §三档审批 / §目标驱动 的分工：那两条管行为边界与验收；本条管"知识该常驻还是按需"，决定 context 装什么。
-
 ## Skill Evaluation（技能评估/淘汰/优化 · 学习闭环的一部分）
 
 用户要求「Skill Evaluation 的 skill 学习必须做」。本学习技能除从外部信源学习外，也承担**内部技能库的健康审计**：
@@ -171,28 +163,23 @@ the CLI only adds atomicity and an audit trail.
 <!-- 2026-10-05 r420C 下沉：治理处置申诉期冻结态一节 → references/knowledge-base.md §r420-ag-C -->
 
 <!-- 2026-10-05 r420C 下沉：说过 ≠ 记着（发消息不入队）一节 → references/knowledge-base.md §r420-ag-C -->
-
 ## 晋升收益门：只把「期望收益为正」的经验结晶成技能（来源：arXiv 2607.16621 MSCE 2026-09-28 r283-B 经 Qoder r316-Q-A 实拉取证；续 r205 §记忆晋升三门）
 - **实证**：原文机制是**只把"正期望收益的 L2 策略"结晶为可调用技能**，并用 **reflection-weighted value backfilling** 把稀疏的终局反馈回传给中间步骤（基准 EvoAgentBench + LoCoMo）。
 - **判据**：r205 已落的晋升三门是**频次口径**（score / recall-frequency / query-diversity）——回答"它常被用到吗"；本门是**收益口径**——回答"留住它划算吗"。**收益为负或不确定的策略不晋升**：一条被高频调用但每次都把事情带偏的经验，频次门全过、收益门不过，结晶成技能只会把错误固化。稀疏反馈还要有回传机制，否则只有终局成败可观测、中间步骤分不到功劳。
 - **落地动作**：晋升候选同时过四门（频次三门 + 收益一门）；收益无法估计时**默认不晋升**，只留在日志里继续观察。
 - 提升层：可复用 Skill / 工作流。触发词：晋升收益门、期望收益为正、结晶为技能、value backfilling、频次口径 vs 收益口径、不确定即不晋升。
-
 ## Capability 18 — 白名单字段的「空值语义」必须显式声明，且配置要能锁死为只读（原文已下沉 references/knowledge-base.md §r426A-ag 下沉 Cap18–Cap20；触发词：allowlist 空值语义、空等于拒绝全部、配置锁死只读）
 ## Capability 19 — 共享记忆里「多条条目」不等于「多份独立证据」：采纳判定要按来源族门控（原文已下沉 references/knowledge-base.md §r426A-ag 下沉 Cap18–Cap20；触发词：来源族门控、相关条目折叠为一条证据、误采纳率、错误信念复述）
 ## Capability 20 — 记忆检索范围就是权限范围，且扩大范围不保证更准（原文已下沉 references/knowledge-base.md §r426A-ag 下沉 Cap18–Cap20；触发词：可见面即权限、扩记忆回归、全局记忆反降）
 ## Cap23 / Cap24 / Cap25 沙箱边界三角（原文已下沉 references/knowledge-base.md §r418A 下沉；触发词：fail-closed 缺能力藏入口、挂载戳穿沙箱、shared 作用域、沙箱网络边界、私网不可达）
-
 ## Cap26 机器人入站是独立于人、独立于 API 的第三条通道："看得见"与"会触发"是两个开关，互聊护栏是滑动窗口不是硬阻断（来源：docs.openclaw.ai/channels/bot-loop-protection 2026-09-29 r290-B 独立 curl 实拉 5,889B；与 Cap18 入站准入双门 allowFrom+requireMention 互补——那条管人类入站，本条管 bot 入站）
 - 原文：Discord/Slack 在支持 `allowBots` 的频道默认接受 bot 消息（走正常 mention 与访问规则），显式 `allowBots: false` 才关；"**Bot messages can remain visible as conversation context independently of turn admission.**"；"Pair loop protection bounds rapid exchanges between two bot identities. It is a **sliding-window rate guard**, so **slower exchanges below the budget can continue**."
 - 判据：① 入站治理要回答两个**独立**问题——这条消息**能否进入上下文**（可见性）与**能否驱动一次回合**（准入）；多 agent 群里只读旁听是一等配置，不是靠拉黑；② 两个 bot 互相激发的死循环不能用"禁止 bot 触发"一刀切——代价是砍掉所有合法的 bot 协作；正确形态是**速率护栏**（窗口内超预算才停），低于预算的正常慢速对话照常跑。
 - 提升层：工具。触发词：bot 入站、allowBots、可见不等于触发、滑动窗口、互聊死循环、旁听模式。
-
 ## Cap27 定时任务"没跑"有五个独立原因，其中两个是静默开关；创建者权限与投递目标是两个字段（来源：docs.openclaw.ai/automation/cron-jobs/troubleshooting 2026-09-29 r290-B 独立 curl 实拉 4,407B）
 - 原文："Check the `cron.enabled` config setting and `OPENCLAW_SKIP_CRON` in the Gateway's launch environment. **Either can disable automatic runs**; clear both disable settings and restart the Gateway to enable scheduling."；"`reason: not-due` in run output means the manual run was checked with `--due` and the job was not due yet."；"`handler-unavailable` means the heartbeat service was not registered or stopped during the wait. The attempt is recorded as skipped."；"If a capped job's **stored named creator account** is unavailable, the run fails **before model/tool execution**… **changing the delivery `--account` does not change creator authority**."
 - 判据：① 排查顺序 = **双静默开关（配置位 + 环境变量位，任一即全停）→ 宿主时区 vs `--tz` → 是否真的到期（`not-due` 是正常结果不是故障）→ 心跳/执行器是否注册（`handler-unavailable`）→ 创建者账号是否还在**；② 排障命令梯由粗到细（status → gateway status → automations status → list → runs → heartbeat last → logs --follow → doctor），**先确认系统级再确认作业级**，倒着查会把正常状态误判成故障；③ **投递目标 ≠ 权限主体**——改收件人不改权限，任何"换个账号重发就好了"的修复都是假修复，必须回到创建者身份。
 - 提升层：工具/工作流。触发词：定时任务没跑、cron.enabled、SKIP_CRON、not-due、handler-unavailable、创建者账号、投递目标不等于权限。
-
 ## Cap28 评审权与写权同源：能看差异的人就是能推送的人，diff 面板的上下位固定为「将被更新的那一方」（来源：docs.n8n.io《Compare versions》2026-09-29 r294-A 独立 curl 取 `.md` 原文 4,906B 核验；与 Cap11 评审质量取决于给评审者什么上下文 互补——那条管"给什么"，本条管"谁有资格拿到"）
 - 原文：diff 视图"displays two workflows stacked vertically"，push 时 **top=远端分支（将被写入的一方）**、pull 时 **top=本地（将被覆盖的一方）**，"In both cases, the top panel always displays the workflow that will update with changes."；"Only users who can push or pull commits for an instance can access workflow diffs: instance owners, instance admins, project admins."；变更计数 = 节点 + 连接 + 工作流一般设置三者合计。
 - 判据：① **差异视图的方位必须自解释**——上下两栏的含义随方向翻转，靠记忆一定读反；正确做法是让界面（或自己的输出）明写"上面板 = 会被改的那一侧"，否则评审者会把 diff 方向读反，做出的合并决策正好相反；② **评审入口绑定写权限意味着没有"只读评审"这一档**——想让某人 review 就必须给他 push/pull 权，等于同时给了他绕过 review 直接改的能力；需要只读评审时必须另开通道（导出快照/生成补丁），不能指望平台的 diff 视图；③ 变更计数把**结构性改动与配置改动混成一个数**，评审时不要拿这个总数当改动量级（改一个全局设置和加一个节点都记 1），要展开看类型分布（新增 N / 修改 M / 删除 D）。
@@ -201,72 +188,57 @@ the CLI only adds atomicity and an audit trail.
 - 原文："Instance owners and instance admins can push changes to and pull changes from the connected repository. **Project admins can push changes to the connected repository. They can't pull changes from the repository.**"；另见同页特性可用性：Business/Enterprise 套餐 + "You must be an n8n instance owner or instance admin to **enable and configure** source control"。
 - 判据：① **把 Git 权限当成四格矩阵而不是一个开关**——启用配置 / 推 / 拉 / 看差异各自独立，官方就实现了"能推不能拉"这一格；设计多 agent 或多成员协作时，按方向授权比按角色授权更贴合真实风险（能推 = 能污染上游，能拉 = 能被上游污染，两者危害不同）；② **"有这个功能"不等于"这个功能开着"**：套餐位（Business/Enterprise）与实例特性开关是两层前置，排障"为什么没有 Git 菜单"要先分清是没买还是没开；③ 单向授权要有配套——只能推不能拉的人无法自证与上游一致，给他推权就要另给一条只读的比对/快照通道，否则他把上游改坏了自己也不知道。
 - 提升层：工作流/工具。触发词：project admin 能推不能拉、推拉分离、单向授权、source control 权限、套餐加开关双前置。
-
 ## Cap30 告警可以分层静音，但「系统把你停掉了」那一类不可静音；跳过与失败是两个独立计数器（来源：docs.openclaw.ai《Automation delivery》2026-09-29 r294-C 独立 curl 取 `.md` 原文 16,578B 核验；与 Cap27 定时任务没跑的五个原因 互补——那条管"为什么不跑"，本条管"跑了之后谁被告知"）
 - 原文：`job.failureAlert: false` 关掉该任务的执行与投递失败告警，"The **auto-disable safety notification remains active**"；全局 `cron.failureAlert.enabled:false` 关继承，而 per-job 的 `failureAlert` 对象"**activates and tunes the policy even when the job had no existing route**"；`delivery.bestEffort:true` 抑制继承/默认告警，"An explicit per-job `failureAlert` remains **authoritative**"；"`failureAlert.includeSkipped:true` opts … into repeated skipped-run alerts. **Skipped runs keep a separate consecutive-skip counter, so they do not affect execution-error backoff.**"；`delivery.failureDestination` "is only supported on `sessionTarget="isolated"` jobs unless the primary delivery mode is `webhook`."
 - 判据：① **静音是分层的（全局继承 → 投递模式 → 单任务显式），且显式永远赢**——所以"我明明关了告警怎么还发"的答案通常是某个 job 上有显式对象；反过来要静音必须指名到那一层，不能假设关全局就全关；② **安全类告警要设计成不可静音**——用户可以选择不听"这次失败了"，但不能选择不听"因为这个任务一直失败，我把它停了"；凡是会自动改变系统行为的动作（自动禁用、自动降级、自动回收），其通知必须与普通失败告警分通道且不可被同一开关关掉；③ **跳过 ≠ 失败，必须两个计数器**——把 skipped 计入 failure backoff 会让"正常跳过"被放大成"连续失败"并触发退避甚至停用；④ 失败投递目的地带**前置条件**（隔离会话或 webhook 主投递），配了不生效时先查前置而不是查地址。
 - 提升层：工具/工作流。触发词：failureAlert、bestEffort、安全通知不可静音、auto-disable、skipped 独立计数器、failureDestination 前置条件、显式覆盖继承。
-
 ## Cap31 审计账本要声明「它证明不了什么」：只存元数据不存内容、不构成授权证据、缺授权绝不事后补造（来源：docs.openclaw.ai《Audit history》2026-09-29 r296-B 独立 curl 取 .md 原文 36,899B 核验；与 §Capability 13「留痕范围由显式输出决定」互补——那条管单次记录装哪些字段，本条管整本账本的能力边界）
 - 原文："The ledger stores identity, ordering, provenance, action, status, and normalized outcome codes. It **never stores** prompts, message bodies, tool arguments, tool results, attachments, filenames, URLs, command output, or raw error text."；"it does not make the activity ledger lossless and **does not turn audit records into authorization evidence**."；"Auto-review, full-access policy, native hook decisions, and requests rejected before operator routing have no operator-owned row and remain unsupported as operator-approval evidence; **later tool events never manufacture one**."
 - 判据：① **审计系统必须写明"证明不了什么"，否则用户会拿它当它承担不了的东西用**——这本账本能回答"谁在什么时候跑了、怎么结束的"，但**不能当授权凭据**；设计任何审计/留痕设施都要同时输出能力边界清单（不存什么、不算什么证据），边界声明与留存内容同等重要；② **缺失的授权记录不许由后续行为反推补造**——一次执行如果没有人工审批行，后面发生了多少工具事件都不能"凑出"一条审批证据；事后再造一条等于把"未审批"洗成"已审批"，这是审计系统最危险的造假方式；③ **多来源合并只 join 不复制**：审批、外发投递、定时任务各自是 owner-native 源，"Run inspection merges both sources directly; **neither is copied into the generic decision-fact table**"——复制一份进通用表会产生第二份可能过期的真相；④ **关联键不足时如实报 unknown**："`runId` alone never joins one of these rows to an execution. Legacy, missing, deleted, corrupt, or mismatched bindings **remain unknown or absent; they never change task behavior**"——绑定坏了不改变任务行为，也**绝不猜一个绑定填上**。
 - 提升层：可观测性/治理。触发词：审计边界声明、审计不算授权证据、不补造审批行、只 join 不复制、runId 不足以关联、绑定缺失报 unknown。
-
 ## Cap32 凭据分「只写不可读」与「可读」两类，空凭据必须被拒；出网白名单没配就 fail-closed；迁移不写含明文的回滚备份（来源：docs.openclaw.ai《Secrets》2026-09-29 r296-B 独立 curl 取 .md 原文 15,672B 核验；与 §Cap16 容器级凭据分离 互补——那条管"密钥不在执行体里"，本条管"密钥存进来之后怎么被读写"）
 - 原文："Secret values **never appear** in human, `--json`, or `--plain` output. `store get` refuses a `secret` entry as **write-only by design** and exits `2`. It exits `3` when the name does not exist. Environment-kind values are readable."；"A `secret` entry **may not be empty**, because an empty credential cannot be diagnosed later."；"Secret egress substitution **fails closed** until each secret has at least one exact allowed host."；"`secrets apply` **intentionally does not write rollback backups containing old plaintext values**."
 - 判据：① **"读不出来"要当成设计确认而不是故障**——秘密类条目从设计上不可回读（读命令显式拒绝并用**不同退出码区分"拒绝读"与"不存在"**）；排障"取不到值"时先分清是这一类设计还是真的没配；② **空凭据必须在写入侧就拒掉**——理由不是"空值没用"而是"空凭据事后无法诊断"：一个空值和"配错了"在现象上一样，却没有任何线索可查；凡凭据类字段，**空值应视为配置错误而非缺省**；③ **出口白名单缺省方向必须是拒绝**：出网替换在"至少一个精确主机"配好之前一律不生效——与 §Cap18（白名单空=拒绝全部）同向，本条给的是**可外发凭据**这一最高风险面的官方写法；④ **回滚备份本身也是泄漏面**：迁移工具"故意不写含旧明文的备份"，靠严格预检 + 原子应用 + 失败时内存态尽力恢复来兜底——**备份策略要连"备份了什么内容"一起设计**，否则为可用性做的备份会成为最大的一份明文副本。
 - 提升层：安全边界/工具。触发词：只写不可读、write-only by design、exit 2 拒绝读、空凭据被拒、egress fail-closed、allowed host、迁移不写明文备份。
 
 > 下沉索引：Quick start (for an agent that has NOT j 等 1 节原文已移至 `references/knowledge-base.md`（按最旧批次下沉，正文只留指针）
-
 ## 争议处置按性质分通道：内容权 / 违规举报 / 命名空间各走独立入口；公开通道只收可公开证据并明确禁放私密证明；裁决按四要素（公开证据·既有使用·安全风险·用户影响）权衡；结果三态含「维持原状」且无时限承诺（来源：docs.openclaw.ai/clawhub/content-rights.md 1,166B + namespace-claims.md 4,167B，2026-09-30 r324B 独立实拉；与 §撤销与审核分层 互补——那条管“结论怎么撤”，本条管“争议往哪递”；细则见 references/knowledge-base.md §r324B）
-
 ## Cap33 技能级作用域可见性 / Cap34 记忆分四层（原文已下沉 references/knowledge-base.md §r428C 下沉；触发词：role-scoped skill、discovery 缺席、记忆四层、注入侧截断、supersede in place）
 - **提升层**：工作流/记忆治理。触发词：记忆四层、USER/MEMORY/日志/DREAMS、不追加矛盾偏好、supersede in place、注入侧截断、磁盘完整、截断即迁移信号、心跳不维护记忆。
-
 ## Cap36 客户端凭据在服务端按终端用户签发、短时效并绑定来源白名单；限流必须可被程序读取（来源：pipedream.com/docs `connect/api-reference/create-connect-token` 9,194B，2026-10-01 r344C 独立 curl 实拉；与 §Cap32 只写不可读 / §Cap18 白名单空=拒绝 互补——那两条管"密钥存进来之后怎么被读写""白名单缺省方向"，本条管"发给浏览器的那一枚短令牌长什么样"）
 - **原文**："To securely scope connection to a specific end user, **on your server**, you retrieve a **short-lived token** for that user, and return that token to your frontend."；"When using the Connect API to make requests **from a client environment like a browser**, you **must** specify the **allowed origins** for the token. Otherwise, this field is optional."；429 响应同时给 `Retry-After`、`X-RateLimit-Limit`、`X-RateLimit-Remaining`（"always 0 when throttled"）、`X-RateLimit-Reset`。
 - **判据**：① **"谁在连"必须由服务端决定**——连接/授权类令牌在服务端按终端用户单独签发并短时效，前端只拿凭证；把一枚通用长期令牌放在前端，等于把"以谁的名义"交给浏览器；② **凡会离开服务端的令牌必须带来源白名单**，且这是**必填**（原文用 must），不是"可选加固"——否则任何页面都能拿着它调；③ **限流的四个头要齐着给**（何时可重试 / 上限 / 剩余 / 重置时刻）：只回一个 `Throttled` 等于让调用方靠猜退避，猜错就是把瞬时抖动放大成雪崩。
 - 提升层：安全边界/工具。触发词：短时效令牌、服务端签发、allowed_origins、来源白名单、浏览器侧令牌、限流四头、Retry-After、X-RateLimit。
-
 ## 拒绝/封禁名单必须按「能力等价集」枚举，不能按工具名点杀（来源：docs.openclaw.ai/gateway/config-tools/tool-policy.md 18,865B，2026-10-01 r349C 独立 curl 实拉，`does not deny `apply_patch`` 逐串命中；经 Qoder r368-Q-C 提名）
 - 原文：「`deny: ["write"]` **does not deny `apply_patch`**」。
 - 判据：① **按名字写的 deny 只覆盖同名工具，名字不同的等价能力工具整个逃逸** ⇒ 「已经禁了写操作」这类断言，只要没枚举等价能力集就站不住；审计拒绝名单要问「还有哪些工具能达成同一效果」。② 与既有「授权清单覆盖语义」不同维：那条管 **allow 的覆盖与追加**（谁的授权盖过谁），本条管 **deny 的逃逸面**（哪种写法根本没被拦住）。③ 正向表述必须可机检：给出等价能力清单并逐项验证被拒，而不是给出一条正则或名字。
 - 提升层：工作流/安全边界。触发词：deny 不覆盖 apply_patch、按能力等价集枚举、拒绝名单逃逸面、按名点杀失效、同名工具才被拦。
-
 ## Cap37 审批挂在哪一级决定它拦不拦得住：流程级检查点 vs 工具级拦截；驳回是「反馈 + 有界回环」不是布尔值；外发审批链接把审批权移出账号体系（来源：docs.flowiseai.com `tutorials/human-in-the-loop.md` 15,347B + `using-flowise/monitoring.md` 7,765B，2026-10-02 r352A 独立 curl 实拉逐串命中；与 §HITL 执行通道层 互补——那条管拦截点在哪一层，本条管挂在哪一级对象上）
 - **原文**：「There are 2 ways human in the loop can be used: Using **Human Input** node to halt the execution / Enable **Require Human Input** for Agent's tools」；「When Require Human Input is enabled, we place an additional checkpoint **after tool calls are detected**」；回环节点「**Max Loop Count**: 5 (prevents infinite loops)」，驳回分支「Send feedback and loop back to the agent for improvements」；轨迹分享「The execution trace is now available as a **public link**… **Users outside of Flowise can reject or approve**」；监控「`/api/v1/metrics` endpoint … **requires API key authentication**」且「only **high-level metrics** such as API requests, counts of flows/predictions are tracked. For details node by node observability, we recommend using Analytic」。
 - **判据**：① **审批有两个挂载点，粒度不同效果差一个量级**——流程级检查点只拦你画好的那一条路径，agent 自主改道就可能整体绕过；工具级（`Require Human Input`）挂在工具本身，**无论 agent 怎么编排、什么时候决定调用都被拦**。⇒ 凡要求「这个动作一定经过人」的，挂工具级；只挂流程级等于把保证寄托在 agent 会走那条路上。② **驳回不是布尔值，是「拒绝 + 可执行的修改意见 + 有界回环」**（反馈回灌 agent + `Max Loop Count` 封顶）：只有布尔驳回，人只能反复手动重来；没有上限的回环则打转成死循环。与 §Cap14 迭代上限 互补——那条说自修循环要设上限，本条补上：上限之外还必须有反馈回路，否则上限只是把死循环变成「放弃」。③ **把执行轨迹做成公开链接外发审批，等于在账号体系之外开了第二条授权路径**——链接本身就是凭证（与 §Cap28「评审权=写权」正好相反：那条里能评审就必须能写，这里不能写的人也能批准）。⇒ 凡用分享链接/快照实现外部评审，必须带时效与范围，并把链接产生的批准与账号内的批准进同一本审计账，不能因「人不在系统里」就漏记。④ **观测面自身是被保护面，且内建指标只到聚合层**：指标端点要 API key（观测通道不是免费旁路），默认只有 API 请求数 / 流程数这类高层计数，逐节点可观测要显式开关或外接。⇒ 说「有监控」时必须分清聚合层与节点层，把聚合指标当成「出了问题能查到」是自欺。
 - 提升层：工作流/安全边界。触发词：HITL 粒度、流程级 vs 工具级、Require Human Input、驳回带反馈、有界回环、外发审批链接、链接即凭证、评审权脱离账号、观测端点鉴权、聚合指标 vs 节点级可观测。
-
 ## Cap42 执行身份绑定：共享的是凭据模板不是授权；管理权不含使用权；删模板级联删掉别人的连接（来源：docs.n8n.io `administer/manage-credentials/end-user-credentials.md` 9,720B + `verify-user-identity/use-saml/manage-users-with-saml.md` 1,830B + `follow-best-practices.md` 2,455B，2026-10-03 r390A 独立 curl 取 `.md` 原文实拉；与 §Cap32 只写不可读 / §Cap40 权限组合 互补——那两条管"密钥怎么读写""权限怎么组合"，本条管"这次执行是以谁的身份跑的、跑出来的数据归谁看"）
 - （原文+判据已下沉 references/knowledge-base.md §r425A-ag）
 - 提升层：安全边界 / 工作流。触发词：终端用户凭据、执行身份、模板 vs 连接、管理权不含使用权、admin 只见 redacted、删模板级联删连接、触发权限第二道门。
-
 ## Cap43 会话键相同不等于会话合并：取消半径是 agent 不是 key；隔离与归并是两个方向的配置；隐私模式必须声明「防谁」（来源：docs.openclaw.ai/concepts/session 22,767B，2026-10-03 r390B 独立 curl 取 `.md` 原文实拉；与 §入站准入双门 / §Cap35 改向与中止 互补——那两条管谁能进来、怎么改向，本条管进来之后上下文归谁、取消动作波及多远）
 - （原文+判据已下沉 references/knowledge-base.md §r425A-ag）
 - 提升层：安全边界 / 工作流。触发词：会话键不合并、取消半径、DM 隔离四档、identityLinks、大小写敏感 ID、incognito 防谁、活动不延长、过期不归档、隐私模式不限制工具。
-
 ## Cap44 队列溢出是策略不是故障：三种丢弃语义与默认合成补偿；排队不借权限，撤回对已接受的运行仍生效；并发是分车道的两级预算（来源：docs.openclaw.ai/concepts/queue 17,971B，2026-10-03 r390B 独立 curl 取 `.md` 原文实拉；与 §Cap35 改向/中止/配对合成结果 互补——那条管运行中的改向语义，本条管队列满与并发预算）
 - （原文+判据已下沉 references/knowledge-base.md §r425A-ag）
 - 提升层：工作流 / 安全边界。触发词：队列溢出策略、drop summarize/old/new、合成补偿、cap 20、排队不借权限、撤销作用于在飞、会话 lane、两级并发预算、换运行时绕不过。
-
 ## Cap45 策略变更事件本身要入账；凭据过期应能原地重授权而不是重建（来源：help.make.com `credential-requests-reauthorization-2fa-enforcement-logs.md` 1,630B + `audit-logs.md` 8,460B，2026-10-03 r390C 独立 curl 取 `.md` 原文实拉；与 §Cap31 审计边界 / §Cap42 凭据归属 互补——那两条管账本证明不了什么、执行身份归谁，本条管"谁改了规则"与"凭据过期后怎么续"）
 - （原文+判据已下沉 references/knowledge-base.md §r425A-ag）
 - 提升层：治理 / 安全边界。触发词：策略变更入审计、谁关掉了 2FA 强制、reauthorize vs 重建、凭据续期、平行授权累积。
-
 ## Cap46 沙箱 / 工具策略 / 提权是三道不同的门：沙箱决定「在哪跑」，工具策略决定「能不能调用」，提权只是 exec 的逃生口；强制沙箱 fail-closed 并把 rw 压成 ro（来源：docs.openclaw.ai `gateway/sandboxing.md` 8,613B + `gateway/sandboxing/what-gets-sandboxed.md` 1,573B + `gateway/sandbox-vs-tool-policy-vs-elevated.md` 9,792B + `gateway/sandboxing/workspace-access.md` 7,119B，2026-10-03 r391A 独立 curl 取 `.md` 原文实拉；与 §Cap40 权限组合评审 / §Cap42 执行身份 互补——那两条管权限授予给谁，本条管授予之后代码在哪执行、能不能逃出去）
 - **原文**：「This is **not a perfect security boundary**, but it materially limits filesystem and process access when the model does something dumb.」；三层分工「1. **Sandbox** … decides **where tools run** (sandbox backend vs host). 2. **Tool policy** … decides **which tools are available/allowed**. 3. **Elevated** … is an **exec-only escape hatch**」；「Tool allow/deny policies still apply **before** sandbox rules. If a tool is denied globally or per-agent, sandboxing doesn't bring it back.」；规则「`deny` **always wins**. If `allow` is non-empty, everything else is treated as blocked. … Tool policy is the hard stop: `/exec` cannot override a denied `exec` tool. … Tool policy filters tool availability **by name**; it does not inspect side effects inside `exec`. If `exec` is allowed, denying `write`, `edit`, or `apply_patch` **does not make shell commands read-only**.」；MCP「For sandboxed MCP servers, the sandbox tool policy is a **second allow gate** … add `bundle-mcp`, `group:plugins`, or a server-prefixed MCP tool name/glob … then **restart/reload the gateway and recapture the tool list**」；强制策略「An operator role with `sandbox: "required"` **overrides agent mode**, **cannot be escaped through elevated execution or host overrides**, and **fails closed** when its sandbox cannot be provisioned.」；「For a role-required sandbox, OpenClaw **caps configured `rw` workspace access at `ro`** and logs an `agent/sandbox` warning.」；绑定校验「OpenClaw validates bind sources **twice**: first on the normalized source path, then again after resolving through the deepest existing ancestor. Symlink-parent escapes do not bypass blocked-path or allowed-root checks.」；「Binding `/var/run/docker.sock` **effectively hands host control to the sandbox**」；「`scope: "shared"` ignores per-agent binds (only global binds apply).」
 - **判据**：① **"进了沙箱"与"没有这个能力"是两件必须分开声明的事**：沙箱只决定执行位置（容器内 vs 宿主），它**不是完整安全边界**，官方原文直接说"只是模型犯傻时限制文件与进程访问"。把沙箱当成授权面，等于把一个减爆炸半径的措施当成访问控制。② **三道门的否决顺序要写明**：工具策略先于沙箱生效——全局被 deny 的工具，沙箱不会把它带回来；`deny` 恒赢且 `allow` 非空即默认全封。⇒ 排查"为什么这个工具不可用"时，先看策略再看沙箱，顺序反了会得到错误结论。③ **按名过滤意味着 exec 是策略的盲区**：允许 `exec` 时再 deny `write`/`edit`/`apply_patch` **不构成只读**，因为策略不检查 shell 命令内部干了什么。想做只读 agent 必须 deny `group:runtime`，而不是 deny 几个文件工具。④ **更强的策略会把弱配置向下压，且降级必须留痕**：creator role 的 required sandbox 覆盖 agent 自己的 mode、提权逃不出去、**供应不出来时 fail-closed**（不是退回宿主继续跑）；同时把配置里写的 `rw` 压成 `ro` 并记一条 `agent/sandbox` 警告。⇒ 任何"配置被更强的策略覆盖"的场景，沉默覆盖都是缺陷，必须留下可查的降级记录。⑤ **挂载是绕过沙箱文件面的正门，要按"交出什么"来审**：bind 会穿透沙箱文件系统（默认 rw，源码/密钥应显式 `:ro`）；路径校验做两遍（归一化后 + 解析最深存在祖先后再一次）以挡住符号链接父目录逃逸；挂 `/var/run/docker.sock` 等于把宿主机控制权交出去；`scope: shared` 会忽略 per-agent 挂载——这几条都是"看起来只是加了个目录"的操作。
 - 提升层：安全边界 / 工作流。触发词：沙箱不是安全边界、where vs which、deny 恒赢、allow 非空全封、exec 是策略盲区、group:runtime、沙箱第二道门、MCP 工具消失、fail-closed、rw 压成 ro、bind 穿透、docker.sock、scope shared。
-
 ## Cap47 · 默认「自动批准」本身就是提权面；要真正关掉往往得同时动两个开关（来源：docs.openclaw.ai `gateway/config-gateway.md` 36,884B，2026-10-03 r393B 独立 curl 取 `.md` 原文实拉；与 Cap40 授权评审对象是权限组合 互补——那条管怎么审一个角色，本条管"这个门默认是开的还是关的"）
 
 - 节点配对默认开启同主机自动批准（`autoApproveLocal` 默认 true）：同主机设备**静默配对并静默升级访问**，不需要人点确认 ⇒ 默认值就是"同主机可信"，部署前先确认这个前提成不成立。
 - 关掉自动批准要**两个开关同时动**：`sshVerify=false` **并且** unset `autoApproveCidr` 列表；只关一个是无效配置——`sshVerify` 仅关闭 SSH 验证这条路，不影响 CIDR 自动批准。
 - CIDR 自动批准是"可选、默认不开"的白名单，一旦配上等于把整个网段变成可信配对源；它与 SSH 验证是两条独立通道，互不影响 ⇒ 收紧一条不等于收紧了全部。
 - 通则：凡是"自动批准 / 静默升级"类开关，默认态、关闭条件、以及各通道是否独立，必须在声明里写全；只写"支持手动审批"而不写"默认是自动"等于误导。
-
 ## Cap48 凭据绑定点是「进程启动」，撤销半径是「下一次启动」；profile 不可用必须 fail-closed 拒绝执行而不是回落宽路径；一次性交接用后硬删；出口白名单空数组 ≠ 放行全部（来源：docs.openclaw.ai `gateway/config-secrets-env.md` 10,309B + `gateway/config-tools.md` 7,517B 索引页 + `gateway/config-tools/github-identity.md` 17,020B，2026-10-03 r395A 独立 curl 取 `.md` 原文实拉）
 
 - **绑定点决定撤销半径**：本地 exec 在**每次进程启动前**读取并校验所选 profile，把 access token 只放进私有子进程环境并清除同义环境变量；已启动的进程**保留启动时的 token 直到退出**，retired profile 文件要到下一次 Gateway 重启才清理 ⇒ **「改了配置」不是即时吊销**，声明里必须写清「什么时候生效、什么还在用旧凭据」。
@@ -275,13 +247,11 @@ the CLI only adds atomicity and an audit trail.
 - **一次性交接用后硬删**：PAT 设置路径下浏览器把粘贴的 token 放进 secret store 作为 one-use handoff，网关在拿它校验之前**硬删除该交接**；两条设置路径都只写 account-owned 私有 profile，**不改主机全局 CLI 登录与 OS keyring** ⇒ 导入凭据的第一原则是「不污染宿主已有凭据面」。
 - **白名单空数组是「最小放行」不是「全部放行」**：出口代理 `allowedHosts` 存在时只放行列出的主机 + 绑定了 secret 的主机 + `bypassHosts`；**空数组表示只允许绑定或绕过的主机** ⇒ 空值语义必须逐项写清，读代码式地假设「空=不限制」会直接把策略读反。
 - **盲隧道是有意的取舍**：`bypassHosts` 走认证过的 blind CONNECT，哨兵**不做替换**，因此证书固定客户端会认证失败，代价是明文不暴露 ⇒ 这类「宁可失败也不解密」的通道要在声明里点名是设计选择，而不是写成缺陷。
-
 ## Cap49 凭据回写只存「来源标记」不存解析值，且标记必须取解析前的配置快照生成（来源：docs.openclaw.ai `gateway/config-tools/sessions-and-subagents.md` 9,632B + `gateway/config-tools/custom-providers.md` 13,129B，2026-10-03 r395B 独立 curl 取 `.md` 原文实拉）
 
 - **回写的是来源指针，不是解析结果**：被 SecretRef 管理的 provider 凭据在回写时**从 source marker 刷新**（env 引用写 `ENV_VAR_NAME`，file/exec/store 引用写 `secretref-managed`），而**不持久化解析后的密钥** ⇒ 配置里出现的是「去哪取值」，不是「值是什么」。
 - **标记必须在解析前的快照上生成**：marker 持久化的来源是**生效中的 source config 快照（解析前）**，不是解析后的运行时值 ⇒ 这一顺序是关键：一旦拿解析后的值去生成标记，就等于把明文固化回了配置，脱敏在最接近落盘的那一步被破坏。
 - **判重提示**：与 §Cap32「凭据只写不可读 / 空凭据必须被拒」互补——那条管能不能读回值，本条管回写时写的是值还是取值的路。
-
 ## Cap50 身份供给必须与登录同源且按提供方分隔；地址回收需要人工闸门，「看起来 404」不等于已释放；跨层身份要先从上位层撤（来源：docs.n8n.io `security/enable-ssrf-protection.md` 3,822B + `security/block-specific-nodes.md` 2,425B + `basic-configuration/use-environment-variables/ssrf-protection.md` 7,039B + pipedream.com/docs `conduit/configure/access-control.md` 13,330B + `conduit/configure/scim.md` 9,789B，2026-10-03 r395C 独立 curl 取 `.md` 原文实拉；n8n 与 Pipedream 均经各自 `llms.txt`（287,049B / 34,240B）定位）
 
 - **供给与登录必须同源**：每个 SCIM 连接绑定**某一个** SSO provider，它推送的每个用户按该 provider 的身份 keying——这正是「供给与登录解析到同一个人」的原因，也**防止一个 provider 认领属于另一个 provider 的用户** ⇒ 打通身份同步时，先确认「这次同步用哪个登录通道」，混通道等于制造重复身份与抢号面。
@@ -289,7 +259,6 @@ the CLI only adds atomicity and an audit trail.
 - **身份标识的迁移也被拒**：试图把已供给用户的 `externalId` 移到另一个身份会被拒绝，正确做法是 remove 后重新 provision ⇒ 身份主键不可就地改，迁移路径是「删除+重建」而不是「改字段」。
 - **撤销/降权要先从上位层动手**：instance admin **不能在工作区内被改名或移除**——owner 不行，SCIM 推送也不行；要下线一个运维实例的人，必须**先撤掉他的 instance 角色** ⇒ 权限是分层的，下层再高的权限也动不了上层的身份，执行顺序错了会表现为「明明执行成功却没生效」。
 - **判重提示**：与 §Cap42 管理权不含使用权 / §Cap48 改配置不是即时吊销 互补——那两条管「管理权不蕴含使用权」「改配置到撤销之间有时延」，本条管「跨层身份的撤销顺序」与「自动同步解决不了的回收场景」。
-
 ## Cap51 批准绑定的是「那一刻的二进制」而非命令文本；授权是每次使用时重算的衍生关联；覆盖不全时拒绝而非假装全覆盖（来源：docs.openclaw.ai `tools/exec-approvals.md` 39,387B，2026-10-03 r396B 独立 curl 取 `.md` 原文实拉）
 
 - **批准不是身份边界，也不是只读策略**：官方明确审批只降低误执行风险，**既不是 per-user 鉴权边界，也不是文件系统只读策略**；一旦批准，命令按所选宿主/沙箱权限改写文件 ⇒ 「走完审批」不等于「这次执行被限制了」，审批面与权限面是两个面。
@@ -297,26 +266,22 @@ the CLI only adds atomicity and an audit trail.
 - **识别不了就拒绝，不假装全覆盖**：文件绑定是 best-effort，**不是对所有解释器/运行时加载路径的完整建模**；当无法唯一确定一个本地文件操作数时，官方选择**拒绝铸造这次批准运行**，而不是放行并假装覆盖 ⇒ 安全类绑定遇到「模型外」的情况，正确方向是 fail-closed 拒跑，而不是降级放行。
 - **撤销在 spawn 边界生效，迟到的批准不复活**：校验在进程 spawn 前立刻执行，所以落在在飞窗口里的撤销或作业编辑**仍然赢**；而关闭或取消那一轮后，**迟到的批准无法重启它**；`SYSTEM_RUN_DENIED` 表示节点**拒绝了执行**，不是「可能已经跑过」 ⇒ 撤销的生效点是启动边界，批准的有效期到 turn 结束为止。
 - **长期授权是衍生关联，每次使用都重算**：standing grant 只是「衍生相关」，每次使用都要拿**原始的批准行、自动化行、撤销态重新校验**；授权失效条件包括作业被删或**实质性定义变更**（即使后来改回原定义也不恢复）、命令/cwd/env 差一个字节、撤销、过期、原始批准记录消失 ⇒ 「改回原样」不恢复授权，而「暂停再启用」保留 ⇒ 定义变更与运行状态变更是两类事件。
-
 ## Cap52 看得见审批卡 ≠ 能批准它；批准权的来源按通道分叉，且严格通道只认显式名单（来源：docs.openclaw.ai `tools/exec-approvals-advanced.md` 27,837B，2026-10-03 r396C 独立 curl 取 `.md` 原文实拉）
 
 - **投递位置只决定提示出现在哪，不决定谁有权批准**：官方明确 session 投递**不授权该会话里的每个参与者批准**；通用同会话 `/approve` 仍要求发送者本身已获该频道会话的命令授权 ⇒ 「他看见了」与「他能批」是两个集合，把审批投到群里不等于把决定权交给群里。
 - **批准权有三条可能的来源，且各通道取哪条不同**：① 发送者本身具备命令授权；② 通道若暴露**显式 approvers**，这些人即使在该会话内没有命令授权，也能授权 `/approve`；③ 更严格的通道（Discord / Telegram / Matrix / Slack 原生审批 DM 等）**只按自己解析出的 approver 名单**判定——例如 Telegram 话题里的审批提示**所有人可见**，但只有 `channels.telegram.execApprovals.approvers` 或 `commands.ownerAllowFrom` 解析出的数字用户 ID 能批准或拒绝 ⇒ 声明审批能力时必须写清「本通道按哪条来源判定批准权」，否则可见面会被误当成授权面。
-
 ## Cap53 IM/工单类审批：响应权与可见权是两条独立的门，空列表=全放行反模式（来源：docs.n8n.io `integrations/builtin/app-nodes/n8n-nodes-base.slack/approvals.md` 8,545B，2026-10-03 r405A 独立 curl 取 `.md` 实拉；与 §Cap52 看得见审批卡≠能批准 互补——Cap52 管通道显式 approvers 的权限源分叉，本条管 IM/工单系统里"谁能看见请求"与"谁能响应"被同一列表错误耦合的反模式）
 
 - **审批列表控制的是响应权不是可见权**：n8n Slack Approvals 的 `Restrict Who Can Approve` 决定谁能批准，列表为空时频道所有成员都能批准 ⇒ 「看得见请求」被错误等同于「能批准」，是危险反模式；审批可见性必须显式收敛到私信道/DM，不能靠"列表非空"顺带隐藏。
 - **未授权者点击→私密 ephemeral 提示 + workflow 继续等待**：不推进、不泄露决策，是「识别不了就拒绝而非假装覆盖」（Cap32 同源）在 IM 的具体实现。
 - **空列表语义必须显式声明**：n8n 是「空=全放行」，与授权类白名单「空=全拒」（sa 3.82.0）字面相反，混用会制造「以为要批其实谁都能批」的漏洞；配置审批面时把两种空态都写清。
 - 提升层：安全边界/工作流。触发词：审批响应权≠可见权、空列表全放行反模式、IM 审批私密提示、Restrict Who Can Approve。
-
 ## Cap54 能「管理授权」的权限自身是提权面：自改角色/自邀请=提权通道，且角色编辑即时全局生效（来源：docs.n8n.io `administer/manage-users-and-access/set-permissions-and-roles-rbac/create-custom-roles/create-custom-instance-roles.md` 8,015B + `see-available-roles.md` 4,301B，2026-10-03 r406A 独立 curl 取 `.md` 实拉；与 §Cap51 批准绑定二进制 / §Cap52 可见≠授权 / §Cap53 响应权≠可见权 同族——前几条管单次授权的源与门，本条管「授权管理权」本身的提权风险）
 
 - **拥有「管理角色/管理成员」权限 = 能给自己提权**：n8n 自定义实例角色中，`Roles: Manage all roles` 持有者可编辑自己角色、追加原本未授予的权限；`Members: Manage` 持有者可邀请自己控制的账号再赋 Admin；`Roles: Manage project roles` 持有者可改自己所在项目的角色自授权限 ⇒ 「授权管理权」与「被管理的授权」不能由同一主体掌控，否则授权管理变成自服务提权通道，须把「能改授权」与「被授权者」分离。
 - **角色编辑即时全局生效，无过渡窗**：n8n 改自定义角色「对所有被分配用户在整个实例立即生效」，无 dry-run/暂存；撤销/变更边界落在「角色定义修改点」而非「下次登录/重载」——与 Cap51「撤销在 spawn 边界生效」同源，但此处是配置侧即时生效，没有进程边界兜底。
 - **删除角色前须先迁移成员**：n8n 要求删角色前把用户改派其他角色，否则成员悬空 ⇒ 撤销授权有级联依赖，不能只删角色不处理成员（与 r399-B「PATCH 语义按类型分叉」的删除前置条件同源）。
 - 提升层：安全边界/授权模型。触发词：授权管理权提权、自改角色、自邀请提权、角色编辑即时全局生效、删角色前迁移成员。
-
 ## Cap55 决定的权威源是服务端记录而非提交动作；敏感命令的审批提示与结果同走私密路由（来源：docs.openclaw.ai `tools/exec-approvals-advanced.md` 27,837B（Approval forwarding / Native approval delivery / Official mobile operator apps 三段），2026-10-03 r408A 独立 curl 取 `.md` 原文实拉；与 §Cap51 批准绑定二进制 / §Cap52 可见≠授权 同族——前两条管「批准什么」与「谁能批」，本条管「批了之后以谁的记录为准」与「结果发到哪」）
 - **原文**：① 移动端提交决定后若**回执丢失**，应用**禁用控件并重新读取记录**；若另一个界面已先胜出，应用显示**那条已记录的决定**；**待处理提示绑定在签发它的 Gateway 上，切换活动 Gateway 不能重定向旧 approval ID**。② owner-only 的敏感组命令（`/diagnostics`、`/export-trajectory`）用**私密 owner 路由**发送审批提示**与最终结果**：先试同一 surface 的私密路由，没有则退到 `commands.ownerAllowFrom` 中第一个可用路由（因此 Discord 群命令的审批与结果可能发到 owner 的 Telegram DM），**群聊只收到一句简短确认**。③ 请求者本人不必是审批者。
 - **判据**：① **「我点了批准」不等于「批准生效」**——并发界面下权威是服务端那条记录，提交方拿到的是待确认的意图；**回执丢失时正确动作是重读而非假定自己的选择成立**，否则会出现两个界面各自认为已生效。② **ID 绑定签发者**：审批 ID 只对签发它的实例有效，切换 Gateway 不能改投旧 ID——多实例/多 Gateway 环境下「换个地方批」不是可用手段，反而说明该请求已随签发者失效。③ **高风险操作的输出与输入同等敏感**：审批提示走私密路由而结果发在群聊，等于把「谁批准」保护了、把「批准换来了什么」公开了；验收要**同时确认提示与结果两条投递路径**。④ **路由降级会改投递面**：私密路由不可用时退到 ownerAllowFrom 第一个可用项，意味着结果可能出现在完全不同的通道上——「没收到结果」先查路由降级链，而不是判定执行失败。⑤ **请求者≠审批者是默认形态**，不要默认发起人具备批准权，也不要因发起人不能批就认为流程挂死。
@@ -341,22 +306,18 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：`发送 user.interrupt 后，平台会主动停止当前模型响应，并向运行中的命令发出停止信号；命令在宽限期内（当前约 3 秒）没有结束会被强制终止，本轮必然停下`；`中断不会产生 session.error`；`interrupt 之前尚未处理的消息会被跳过，之后提交的 user.message 会在下一轮执行`；`若停在 requires_action，interrupt 会取消整组等待中的工具调用和审批`；`停在 requires_action：在等你处理 event_ids 里列出的调用……此时发 user.message 会被拒绝（400）`；`更新 Agent 返回 409……服务器上当前版本已经变了——通常是别人（或另一次请求）刚更新过。先 GET 最新 Agent，用返回的 version 再更新；CI 这类声明式同步可以省略 version，后写覆盖`。
 - **判据**：① **主动中断与失败是两条通道**：中断不产生 `session.error` ⇒ 监控不要用"有没有错误事件"判断"是不是出了问题"，被中断的轮次在错误面上完全干净，要另设中断计数。② **中断有宽限期且必然停**：命令先收到停止信号、宽限期内不退出才强杀 ⇒ "发了 interrupt 却还在跑"看的是宽限期，不是中断失效。③ **等待态的输入类型是受限的**：`requires_action` 下只能回 `user.custom_tool_result` / `user.tool_confirmation`，发新 `user.message` 直接 400 ⇒ 等待态不是"可以顺便追加要求"的时机，想把新指令带进去必须等本轮结束或先取消。④ **中断是整组取消**：对等待中的一整组工具调用与审批一次性取消 ⇒ 部分响应没有意义，恢复后要按"整批重来"处理，不能假设其中某几条已经生效。⑤ **中断会吞掉未处理的排队消息**：中断前入队但还没处理的消息被跳过 ⇒ 重要指令不要在 interrupt 前后脚发送，否则静默丢失。⑥ **版本冲突的两种正确解法按场景分**：交互式先 GET 再带 version；CI 声明式同步**省略 version 让后写覆盖**——把交互式做法搬进 CI 会造成无谓的冲突失败，反之则会互相覆盖。
 - 提升层：工作流 / 安全边界。触发词：中断不产生 error、宽限期强杀、等待态拒绝新指令、中断取消整组、中断吞掉排队消息、声明式同步省略 version、409 版本冲突先 GET。
-
 ## Cap62 安全加固先画责任分界表：平台只限「未认证可猜」的面，业务突发与滥用由部署方判；代理之后必须显式声明否则审计全记成代理（来源：pipedream.com/docs `conduit/deploy/hardening.md` 6,976B，2026-10-04 r410C 独立 curl 取 `.md` 原文实拉；与 §Cap36 限流四头可机读 互补——那条管"被限了怎么知道何时重试"，本条管"谁该限哪些面、限流计数放在哪一层"）
 - **原文**：`Nothing in Conduit requires public reachability … so a deployment on a private network or behind a VPN is fully supported, and for an internal tool it is the right default`；`Every surface where an unauthenticated caller could guess, flood, or probe is throttled per client IP, with no configuration`；`On the PostgreSQL tier these two counters are shared across replicas, so running N replicas does not multiply the rate a credential-guesser gets`；`The other limiters are per-replica by design (≈N× the single-instance rate cluster-wide)`；`Conduit does not impose sustained throughput quotas on authenticated tool calls — a burst of legitimate agent traffic is business, not abuse, and distinguishing the two is a policy decision`；`set CONDUIT_TRUSTED_PROXIES so audit records and per-IP limits attribute requests to real clients rather than the proxy`；`A body over its cap is an error, never a truncation — a short read cannot pass for a complete one anywhere in the gateway`；`Reports that say nothing about the deployment are dropped rather than recorded: content a browser extension injected into the page … and reports naming a page outside CONDUIT_BASE_URL, which the endpoint being unauthenticated otherwise lets anyone submit`；checklist 表把每个关注点映射到 `Conduit` 或 `Your edge`。
 - **判据**：① **加固方案的第一产物是一张责任分界表，不是一组配置**：官方把每个关注点（入站认证/授权/暴力破解/体量滥用/TLS/超大载荷/出站 SSRF/静态密钥/审计）逐行标注"平台内置"还是"你的边缘" ⇒ 说"我们做了安全加固"却拿不出这张表，等于说不清哪一格是空的。② **限流的适用范围按"未认证能不能猜"划界**：平台只限登录、OAuth 各端点、失败的 MCP/SCIM 认证、CSP 报告、CLI 下载；**已认证的工具调用不做持续吞吐配额**——业务突发与滥用的区分是策略判断，不该由平台替部署方拍板 ⇒ 把已认证流量也一律限流，等于把正常业务当攻击；完全不限未认证面，等于放任猜测。③ **计数器的共享范围是安全属性，不是实现细节**：会被穷举的那几个面（密码失败、MCP/SCIM 认证失败）计数跨副本共享，**否则跑 N 副本就让猜测者拿到 N 倍速率**；其余限流器故意按副本 ⇒ 判断一个限流器对不对，要问"这个计数跨实例后还成立吗"。④ **有代理时必须显式声明可信代理**：否则审计记录与 per-IP 限流全部归因到代理那一台 ⇒ 这会同时污染取证与限流，且症状是"所有请求来自同一个 IP"，排查时极易误判为单客户端攻击。⑤ **无认证的可观测端点是投毒面**：CSP 违规报告端点不认证 ⇒ 任何人可提交；官方丢弃"与本次部署无关"的两类报告（浏览器扩展注入的、指向 BASE_URL 之外页面的）⇒ 凡开放收集的可观测数据必须带"与本次部署相关"的过滤，否则观测面被噪声淹没。⑥ **超限是错误不是截断**：超上限的 body 一律报错，短读绝不能冒充完整读 ⇒ 与 §上传超限 part 静默丢弃 正好是一对正反写法。
 - 提升层：安全边界 / 工具。触发词：加固责任分界表、平台限流 vs 边缘限流、只限未认证可猜面、跨副本共享计数、N 副本不等于 N 倍速率、业务突发不是滥用、CONDUIT_TRUSTED_PROXIES、审计归因到代理、CSP 报告投毒、超限是错误不是截断。
-
 ## Cap63 信任不跨层传递：令牌签发必须单点、可见与可调用是两道门、出站只带自己的凭据（来源：pipedream.com/docs `conduit/deploy/architecture.md` 5,764B，2026-10-04 r411B 独立 curl 取 `.md` 原文实拉；与 §Cap46 三道门 / §Cap42 执行身份 / §Cap62 责任分界表 互补——那三条管执行位置、数据归属、谁该加固哪一格，本条管"凭据由谁签发"与"边界之间是否互信"）
 - **原文**："the surfaces enforce their own checks rather than **trusting each other**"；"It is the **only** token issuer: externally issued tokens (your identity provider's JWTs included) are **not accepted** at the MCP endpoint — the identity provider authenticates the human during sign-in, and Conduit mints what clients hold"；策略面 "computes each user's effective tool set (allow policies ∩ the user's enabled connectors) and enforces it on **every tool listing *and* every call** — **a tool hidden from the list cannot be invoked by name**"；出网 "Every HTTP request … leaves through a **single hardened client** that blocks requests to private and internal addresses, never follows redirects, and requires HTTPS"；"Upstream calls use Conduit's own credentials for each connector — **the client's bearer token is never forwarded to an upstream service**."
 - **判据**：① **认证人与签发凭据是两个职责，必须分开**——上游 IdP 只证明"这个人是谁"，本系统签发"这个客户端持有什么"；直接接受外部 JWT，等于把受众、生命周期、撤销能力一并交给上游，本系统从此无法单独吊销一枚令牌。⇒ 凡接入外部身份源，落点是"用它认证、不拿它当凭据"。② **同一平面上的组件互不授信，各自独立校验**——授权服务器、管理 API、策略引擎、目录同步各自做检查，而不是"前一个验过了后面就信"；省掉一层校验的前提必须是"这一层的输入不可能来自别处"。③ **可见性与可调用是两道门，只做前一扇等于留后门**：从列表里隐藏的工具，调用侧必须同样拒绝——"看不见"是给不知道名字的人的门槛，对知道名字的人毫无作用；验收方式固定为"按名字直接调用被隐藏项，应被拒"。④ **出站只有一个口，且加固规则写在口上不在调用点上**：阻断私网/内网地址、不跟随重定向、强制 HTTPS，这三条如果散在每个调用方各自实现，漏一个就等于没有；同时**调用方的令牌绝不转发给上游**——否则上游拿到的是调用方的权限面而非服务自己的，一个服务就变成了权限放大器。
 - 提升层：安全边界 / 工具。触发词：唯一签发者、外部 JWT 不接受、认证与签发分离、隐藏不等于不可调用、按名调用仍被拒、单一出网口、出站不转发客户端令牌、组件互不授信。
-
 ## Cap64 可丢的与不可丢的必须分通道；观测端点默认不监听并做到「结构上不可能公网可达」（来源：pipedream.com/docs `conduit/deploy/monitoring.md` 9,842B，2026-10-04 r411B 独立 curl 取 `.md` 原文实拉；与 §Cap62 无认证可观测端点是投毒面 / §Cap37 观测端点需鉴权 互补——那两条管"谁能往里塞"与"要不要鉴权"，本条管"哪些数能放在会丢的通道上"与"能不能被公网摸到"）
 - **原文**："Metrics are aggregated **in memory and reset to zero when the process restarts** … anything Conduit must **count exactly** (usage dashboards, the audit log) is stored in its database **independently of these metrics**"；"Unset (the default), no listener starts and nothing is exposed"；"The port is deliberately **not** part of the chart's Service or Ingress: … the endpoint can **never be exposed through the public entry point by accident**"；"unauthenticated by design … It reveals operational shape (connector names, request rates, session counts) but **never payloads, secrets, or per-user data**"；指标里 `outcome` 三值 `ok` / `error`（"the call ran and failed"）/ `denied`（"blocked by access policy before running"），且 "Denied calls never run, so they record no duration"。
 - **判据**：① **会重置的通道只能放可容忍丢失的量**：内存指标重启归零、`rate()` 跨重置拼接是预期行为 ⇒ 凡必须精确的数（用量、计费、审计）必须落在独立持久存储上，把它挂在会重置的通道上，会让"少算了"变成静默且不可恢复的偏差（用户看到的是"这个月好像用得少"，而不是"我们丢了数据"）。判一个数字可不可信，先看它走的是哪条通道。② **默认不监听 + 结构上不可达，优于"默认开但记得关"**：端口刻意不放进 Service/Ingress、抓取走 pod IP ⇒ 公网暴露不是靠人记得配，而是在拓扑上做不到；把"不该被公网访问"交给配置纪律，等于把它交给下一次改动。③ **不认证的观测端点必须写清它暴露的是什么**：只有操作形状（名字、速率、计数），且从不带 payload/密钥/每用户数据 ⇒ "免鉴权"能成立的前提是"内容本身不敏感"，不写这条边界的免鉴权端点只是没想清楚的端点。④ **被拒绝必须单独计一档，且不进耗时分布**：`denied` 是策略在跑之前拦下的，与 `error`（跑了并失败）混在一起会让"策略生效"显示成"故障率上升"；它也不该产生耗时样本，否则 P99 里混进一批根本没执行的调用。
 - 提升层：可观测性 / 安全边界。触发词：指标会重置、必须精确计数走数据库、默认不监听、端口不进 Service、结构上不可公网、观测端点暴露面声明、denied 与 error 分档、拒绝不计耗时。
-
 ## Cap65 控制的粒度必须匹配被控对象的可伪造性：身份可自造时逐身份封禁无效，须上提到准入姿态；撤销不等于禁止（来源：pipedream.com/docs `conduit/use/mcp-authorization.md` 15,363B，2026-10-04 r412A 独立 curl 取 `.md` 原文实拉；与 §Cap63 信任不跨层传递 / §Cap64 会重置的通道 互补——那两条管"谁签发、谁能被摸到"，本条管"封禁一个可自造身份的对象到底有没有用"）
 - **原文**："a block on one holds only until it registers again under another"；"To keep self-registering clients out for good, use *Verified clients only* or *Only allowed clients*, which refuse anything unproven that you have not allowed"；"A revocation makes a member re-approve a client; **to keep a client out, block it**"；"a grey question mark when it only registered itself and presented signals any client could imitate"；"A client you add is decided about on its own, even when its document sits under a vendor Conduit recognizes"；"Registration happens before anyone signs in and names no workspace, so it is the authorization server's own switch."
 - **判据**：① **先问被控对象能不能自己造一个身份**：能自造（自注册、换个名字重来）⇒ 按身份逐条封禁只是把对手逼去换一个身份，投入随封禁条数线性增长而收效为零；此时控制必须上提到**准入姿态**（只许已验证身份 / 只许白名单），把默认从"允许除非被抓到"改成"拒绝除非被证明"。② **撤销与禁止是两种控制，别混用**：撤销（revoke）只强制重新授权，作用域限于本工作区，且当事人在别处重新同意即全域解除 ⇒ 它治"这次授权要不要复核"，不治"这个对象该不该进来"；要"不让进"必须用 block/准入。把撤销当禁止用，会得到一个看起来在生效、实际可自愈的假控制。③ **身份按可出示的凭证判定，不按声称的名字**：同名的未验证安装是**独立实体**，单独成行、单独决策；"它说它是 X"不构成它是 X，名牌之下的每一行各自承担自己的结论。④ **发生在归属确立之前的动作，其控制点不可下放**：注册发生在登录之前且不指明工作区 ⇒ 它只能有一个实例级开关；凡是"在身份/归属确定之前发生的动作"，控制必然是全局的，想按租户下放在结构上就做不到。
@@ -365,7 +326,6 @@ the CLI only adds atomicity and an audit trail.
 - **原文**："The default `escalate` mode runs its blocking recall sub-agent **only when the message asks about the past and the deterministic memory lane found no strong trusted trigger match**"；表格 `escalate` | "Default. Run only for recall intent when lane 1 has no strong hit." / `always` | "Preserve the previous behavior and run on every eligible targeted turn."；"Flat retrieval is strongest for **direct fact matches** and **weaker on temporal and multi-session questions**."
 - **判据**：① **升级条件要两条同时成立**：意图匹配（这轮确实在问过去）**且**廉价确定性通道没有强命中 ⇒ 只拿"廉价失败"当条件，会把冷启动、无关问题、以及本来就不该深挖的轮次全部拖进阻塞式子调用，成本由所有轮次平摊而收益只落在少数轮次上。② **检索层必须声明自己的能力边界**：扁平/向量检索强于直接事实匹配、弱于时序与跨会话问题（有 LongMemEval / PrefEval 这类基准量化该差距）⇒ 不写边界的检索层，用户感知到的"想不起来"会被误判成"根本没存过"，于是重复沉淀已有信息。③ **改默认不许删掉旧行为**：`escalate` 作默认、`always` 保留旧路径 ⇒ 分层优化要给一条显式逃生口，否则"优化"对依赖旧行为的场景就是静默破坏。
 - 提升层：工作流 / 记忆检索。触发词：深召回升级、阻塞式召回、廉价通道先跑、意图匹配才升级、检索能力边界、时序与跨会话弱项、escalate 与 always、保留旧行为。
-
 ## Cap67 工具清单是「限流」不是「授权」：配置里列出工具名不产生授权，授权面由父 agent 的有效工具策略决定（来源：docs.openclaw.ai `concepts/active-memory/memory-tools.md` 5,831B，2026-10-04 r413A 独立 curl 取 `.md` 原文实拉；与 §Cap63 信任不跨层传递 / §Cap66 昂贵召回双条件放行 互补——那两条管"凭据由谁签发""什么时候值得召回"，本条管"召回工具配上了到底算不算被允许用"）
 - **原文**：「`toolsAllow` is a **limit, not a permission grant**. Before starting recall, Active Memory filters these names through the parent agent's **finalized tool policy**.」「`allow` and `alsoAllow` **cannot be combined** in the same scope.」「A later allowlist **cannot restore** tools excluded by a profile.」「These grants also give the **parent agent** access to the named tools; they are not recall-only permissions.」「A tool listed there is **registered**, but that output does not prove the parent agent or Active Memory is **authorized** to call it.」「wildcards, `group:*` entries, and core agent tools … are **silently filtered out**」
 - **判据**：① **白名单是上限不是许可**——`toolsAllow` 只回答"最多用这几个"，不回答"可以用这几个"；真正生效的是它与父级工具策略的**交集**，交集为空时该能力静默缺席（`status=policy-disabled`），症状是"明明配了却没召回"。⇒ 凡"在某处列出能力名"的配置，都要追问它在哪一层被过滤，"列了"不等于"批了"。② **注册可信 ≠ 授权可信**——`plugins inspect` 能证明工具已注册，不能证明调用方被授权；排查"配了不生效"时这两件事必须分开取证，否则会把授权问题误修成注册问题。③ **放宽与收紧不是对称操作**——`alsoAllow` 只能在 profile 之外**加**，不能覆盖显式 deny / provider / agent / sandbox 限制，也不能救回被 profile 排除的工具；且 `allow` 与 `alsoAllow` 同域互斥。⇒ 收紧是减法、放宽只有加法这一个方向，**被减掉的东西没有对等补回路径**，配之前要想清楚哪一层在减。④ **为了子能力开的授权会同时抬高父 agent 的能力面**——给召回子 agent 开的 `alsoAllow` 同时把该工具交给父 agent，授权不是"仅这次用"，开给局部的口子是全域的。⑤ **非法条目应拒绝启动而非静默放宽**（与 sa 3.124.0 同族判据在此面复现）：只收精确工具名，通配/组/核心工具被静默过滤 ⇒ 静默过滤让"配错了"表现成"没配"。
@@ -398,74 +358,60 @@ the CLI only adds atomicity and an audit trail.
 - **配对成功不得连带授予命令**：自动批准 CIDR 只批准**设备**，命令面仍须单独批准，理由是配对本身不构成对能力的同意。**能连带批准初始命令面的通道必须记录了明确的所有权或管理员同意证据**（SSH 回读到的精确设备密钥、带管理员同意的 setup code）；仅「来自可信网络段」不是这类证据。⇒ 自动授权的资格由**证据类型**决定，不由网络位置决定。
 - 危险与隐私类命令即使对端已声明也须平台侧显式一次性 opt-in ⇒ **对端自称支持不构成授权**。
 - 落地口径：任何「连接端 + 中枢 + 能力清单」三层结构（设备配对、MCP 服务器注册、插件工具发布、子 agent 能力上报）都适用——先分清「谁在声明」「谁在批准」「谁在设天花板」，再决定否定项该放在哪一层。
-
 ## Cap76 控制的「误读澄清」必须与能力声明同表同级：先写清它防什么，再写清什么情况不算它失效，「未承诺」不等于「被绕过」（来源：docs.openclaw.ai/gateway/security/trust-model.md 9,980B + gateway/security.md 14,456B，2026-10-05 r419A 独立 curl 取 `.md` 原文实拉逐串命中；与 Cap67「工具清单是限流不是授权」/ Cap75「显式不该做护栏」互补——那两条管"清单不产生授权"与"程序定义要带负向约束"，本条管"每项控制声明必须自带误读澄清，且与正向声明同级存放"）
 - **原文**：Trust boundary matrix 三列 `Boundary or control | What it means | **Common misread**`；"`sessionKey` (session IDs, labels) is a **routing selector, not an authorization token**."；"[Named operator roles](/gateway/operator-scopes#named-operator-roles) bound what each teammate's connections can do; they are **collaboration guardrails, not tenant isolation**."；"Prompt/content guardrails - Reduce model abuse risk | misread: *prompt injection alone proves auth bypass*"；"Browser evaluate - Intentional operator capability when enabled | misread: *any JS eval primitive is automatically a vuln*"；"Local TUI shell - Explicit operator-triggered local execution | misread: *local shell convenience command is remote injection*"；「Everyone who can message a tool-enabled agent shares that agent's delegated tool authority」。
 - **判据**：① **控制项的价值有一半在「它不是什么」**——只写「我提供了 X」，消费方会把 X 当成它没承诺的东西（把选择器当令牌、把护栏当租户隔离、把运营商能力当漏洞）⇒ 每项能力/控制声明必须与「常见误读」成对出现，不能把澄清丢进 FAQ 或等出事再解释。② **澄清要与声明同表同级**：误读是同一张表的第三列，不是脚注也不是附录——同表同级才能让评审在看到能力的同一眼看到它的边界。③ **区分「未承诺」与「被攻破」**：prompt injection 得手 ≠ 认证被绕过；存在 eval 原语 ≠ 存在漏洞；本地 shell 便利命令 ≠ 远程注入 ⇒ 复盘/上报时先判「这个控制是否曾承诺挡住它」，没承诺过的归入设计范围问题，不与安全事件混账。④ **同名的两个词必须并列分家**：routing selector vs authorization token、collaboration guardrail vs tenant isolation ⇒ 名字相近而语义不同的两件事要在同一处并列定义，否则下游按其中一种语义使用时无人会发现。⑤ **共享能力 = 共享授权**：能给工具型 agent 发消息的每个人，都共享该 agent 被委托的工具权限 ⇒ 「谁能跟它说话」与「它能做什么」是一条边界的两端，只收紧一端等于没收紧。⑥ 对 guild 的落点：共享身份/规则/交接的能力声明（Cap 清单、gated actions、分层授权）一律补一列「它不是什么」；新增 Cap 时同步写明该项**不防什么**，其他 agent 判重时才不会把「未覆盖」误读成「已失效」。
 - 提升层：可复用 Skill / 治理。触发词：误读澄清、它不是什么、未承诺不等于被绕过、路由选择器不是授权令牌、协作护栏不是租户隔离、同表同级、控制声明带负向列、共享发信即共享授权。
-
 ## Capability 77 — 提问是「不续命、不授权、有终态」的暂停原语；提问权不可随委派下放（来源：docs.openclaw.ai `tools/ask-user.md` 9,167B + `tools/acp-agents/controls.md` 9,158B，2026-10-05 r420-A 独立 curl 取 .md 原文实拉）
 - **实证**：官方原文「Answering a question does not grant the agent additional permissions.」「A pending question does not extend an explicit run budget.」「An aborted agent run cancels its pending Gateway question.」；超时返回 `status: "no_answer"` 后「the agent then continues with its best judgment」；`ask_user` 仅主会话可用，「Subagents and other non-primary runs do not receive it」；需要凭据时走 `secrets` 工具而非提问（masked prompt，不入 chat / transcript / 模型上下文）；多问题在消息通道「degrade to readable text」。
 - **判据**：① **暂停不换时间**——等待人类不延长任何显式预算，run 被中止则其待答提问一并取消；把「在等人」当成「还在跑」会让预算与超时全部失真。② **回答 ≠ 授权**——人类回应的唯一产物是答案本身，不附带任何能力授予；凡"答了就算同意了方案/放开了权限"的设计都是把确认与授权混为一谈。③ **无答必须有既定去向**——`no_answer` 是合法终态且明确要求 agent 以最佳判断继续；"等人等到卡住"不是合法状态。④ **提问权不可委派**——子 agent 拿不到提问工具，委派任务不等于把"回头问人"的能力一起转交；需要子 agent 请示时，必须由主会话代问或预置决策规则。⑤ **提问通道不是安全输入面**——凭据走独立 masked 通道，绝不进对话与上下文；在提问里收密钥等于把秘密写进转录。⑥ **同一提问跨通道形状会降级**——结构化控件在消息通道降为可读文本，语义保持但可机读性丢失；依赖结构化回执的下游必须在降级通道上改用文本解析或显式回退。⑦ 人类等待须有上下界（超时钳制 30–3600s），无界等待等价于把控制权交出去且收不回。
 - **与既有能力分工**：Cap67 管「工具清单是限流不是授权、生效的是交集」（清单与父策略）；Cap73 管「配对成功不得连带授予命令」（设备/通道配对）；Cap71 管「一次性触发用完即停用」（调度形状）。本条管**人机交接这一条回路本身的语义**——等待、回应、无答各是什么。
 - 提升层：工作流 / 安全边界。触发词：ask_user、提问不授权、no_answer、暂停不续命、提问权不可委派、凭据不走提问、通道降级。
-
 ## Capability 78 — 双身份分离：拥有会话的 agent 与外部执行体是两个独立身份，冲突必须可见失败（来源：docs.openclaw.ai `tools/acp-agents/controls.md` 9,158B + `tools/acp-agents/sessions.md` 7,281B，2026-10-05 r420-A 独立 curl 取 .md 原文实拉）
 - **实证**：官方原文「The OpenClaw agent that owns a session is separate from the external harness selected by ACP.」——owner 携带 `agentId`，`agent` 只是 harness 名；「Bare keys such as `global` require an explicit owner when ownership is explicit.」「Conflicting owner/key pairs fail visibly.」；运行时控制须 owner identity 或 `operator.admin`，非 owner 只能用 `sessions`/`doctor`/`install`/`help`，且「For non-owner senders, `/acp sessions` lists only the current bound or requester session」；「`/acp steer` queues a follow-up; it cannot add input to the running ACP turn.」「To redirect work in progress, run `/acp cancel` first」；「`/acp cwd` … closes the previous handle before replacing it」。
 - **判据**：① **归属与执行是两个身份，必须各自命名**——"谁的会话"与"哪个引擎在跑"分开记账，混成一个字段后既无法审计也无法回收。② **裸名必须有显式归属，冲突要可见失败而不是静默择优**——两个身份撞在一起时报错，比悄悄选一个更能防止越权。③ **只读也分可见面**——非 owner 的"列表"只列自己；把"能读"当成"能读全部"会在审计时漏掉别人的领地。④ **转向 ≠ 改道**——排队指令只能在当前回合结束后跑，没有插队能力；想改正在做的事必须先取消，"我发了新指令所以它应该改方向"是不成立的假设。⑤ **换上下文会销毁旧句柄**——切换工作目录先关闭上一个 handle，热替换不成立；凡是"改了就立刻生效且不中断"的预期都要显式验证。
 - 提升层：工作流 / 安全边界。触发词：双身份、owner 与 harness、裸键显式归属、冲突可见失败、只读可见面、steer 不插队、换目录销毁句柄。
-
 ## Capability 79 — 短时能力凭证：撤销先于过期、URL 不放可复用凭据、缓存命中不绕过鉴权（来源：docs.openclaw.ai `web/control-ui/security-model.md` 12,843B，2026-10-05 r420-C 经 llms.txt 211,319B 定位真路径后 .md 实拉）
 - **实证**：官方原文「Browser-rendered image, audio, video, and document URLs use `mediaTicket=<ticket>` instead of the active gateway token or password. The ticket expires quickly and cannot authorize a different source.」「Losing session visibility or role permissions stops new reads through existing tickets, even before they expire.」；「The revision is a cache key, not an access token; unversioned image requests retain the original image.」；「Conditional requests still require authentication before returning `304 Not Modified`.」；「keeps media rendering compatible with browser-native media elements without putting reusable gateway credentials in visible media URLs」；已加载图像在连接或元数据续期失败时仍可见但「it does not extend its media ticket or authorize fresh reads」；显式 missing / access-denied / 源、凭据或访问范围变化即清除保留图像；管理员 **Allow image**「without changing the session's permissions or allowing its parent folder」；过载时返回 `503` + `Retry-After: 1`「instead of a permanent lookup failure」。
 - **判据**：① **撤销先于过期**——授权状态一变，票据立刻失效，不等 TTL；把过期当作唯一的失效机制等于给撤销留了一个 TTL 长的窗口。② **可见 URL 里只能放不可复用、不可换源的一次性凭证**——把长期凭据放进资源 URL 等于把凭据写进日志、referrer 与浏览器历史。③ **缓存命中不得绕过鉴权**——条件请求返回 304 之前仍要过认证；"命中了就不查权限"是最常见的越权捷径。④ **展示存活 ≠ 授权存活**——已渲染内容可以在凭证失效后继续显示（体验需要），但这既不延长票据也不授权新读取；缓存是展示层概念，绝不能升格成权限层概念。⑤ **失效信号必须逐条枚举**——missing / access-denied / 源变化 / 凭据变化 / 访问范围变化，任一即清缓存；靠"感觉该清了"必然留下一条没清的路径。⑥ **一次性例外不得扩面**——放行单个文件不等于放行其父目录，也不改变会话权限；例外的粒度要写到被放行的最窄对象。⑦ **过载降级要带重试语义**——503 + Retry-After 把临时状态表达为"稍后再来"，压成永久失败会让调用方误判为终态。⑧ **修订号是缓存键不是令牌**——无版本的请求仍应返回原对象，不得因为版本号不对就当成未授权。
 - **与既有能力分工**：Cap56 管「令牌轮换不能借以升级角色」；Cap73 管「能力生效要过三道门」；本条管**凭证在签发之后的整段生命周期**——何时失效、失效如何传播、缓存与展示会不会让它"假活"。
 - 提升层：安全边界 / 工具。触发词：短时凭证、撤销先于过期、URL 不放凭据、缓存不绕过鉴权、展示存活不等于授权存活、一次性例外不扩面、Retry-After、修订号是缓存键。
-
 ## Capability 80 — 治理是否生效取决于装配路径：经构造器接入才自动获得聚合/去重/缓存，手工组合则三者全无（来源：learn.microsoft.com/agent-framework/agents/skills 156,444B，2026-10-05 r421-A 独立 curl 实拉逐串命中；消化 Qoder r407-Q-A N10 积压点）
 - **实证**：官方原文「Builder — AgentSkillsProviderBuilder assembles multiple sources into a single provider, applying **aggregation, deduplication, caching, and optional filtering**. In Python, compose source classes such as AggregatingSkillsSource, FilteringSkillsSource, and DeduplicatingSkillsSource **directly**.」；「DeduplicatingSkillsSource — removes duplicate skill names (**case-insensitive, first occurrence wins**). Duplicates are logged at warning level.」；「refresh_interval … **When None (the default), cached results never expire**.」；「Concurrent callers for the same cache key **share a single in-flight fetch**, so the inner source is queried at most once per key.」；`cache_isolation_key_selector`「**Returning None (or leaving it None) uses a single shared cache bucket**」。
 - **判据**：① **"有治理"不是能力的属性，是装配方式的属性**——同一批技能源经构造器装配就自动获得聚合/去重/缓存，手工逐个组合则三者全部消失、顺序也全由调用方自控 ⇒ 迁移或换装配器时，治理能力会随装配方式一起丢失而不报错；验收要问"这批能力是谁在管"，不是"这批能力有没有"。② **去重策略必须显式择优并留痕**——大小写不敏感、首个胜出、重复项打 WARNING ⇒ 静默 last-wins 与静默 first-wins 同样危险（前者悄悄换掉，后者悄悄丢掉），唯一的区别是有没有那条警告；凡"同名冲突"必须有可观测的一条记录。③ **缓存默认永不过期是显式选择不是缺陷**——`refresh_interval` 为 None 即永不过期 ⇒ 任何"缓存多久失效"的问题必须先确认这个旋钮是否被设置；把它当"实现了缓存"就默认有失效机制，会让陈旧目录长期假活。④ **缓存分域键决定泄漏面**——不设隔离键则所有调用方共享同一个桶 ⇒ 多主体（per agent / per tenant）场景下"共享缓存"等于跨主体可见；分域是安全属性不是性能调优。⑤ **并发合流要写在契约里**——同键并发共享单次在途取数，源最多被查一次 ⇒ 合流既省调用也掩盖了"有多少人真的想要"，观测侧要单独立计数。
 - **与既有能力分工**：Cap72 管「分层作用域只允许收窄不允许放大」（谁能给自己加东西）；Cap67 管「工具清单是限流不是授权」（清单与授权）；本条管**装配这一层**：同一份内容走不同装配路径时，治理是"附带获得的"还是"必须自己接的"。
 - 提升层：工具 / 治理。触发词：装配路径、构造器聚合去重缓存、手工组合失治理、first occurrence wins、缓存永不过期、隔离键分域、共享缓存桶、并发合流。
-
 ## Capability 81 — 收紧型完整性规则以「默认关的 flag」灰度落地：开关为真 ≠ 行为已换（来源：www.activepieces.com/docs/install/reference/environment-variables.md 24,703B，2026-10-05 r421-A 独立 curl 取 `.md` 实拉；消化 Qoder r407-Q-A N9 + r408-Q-B B8 积压点）
 - **实证**：官方环境变量表原文「`AP_ENFORCE_CONNECTION_PIECE_BINDING` | Reject a step's connection at runtime unless the connection was created for the same piece as the step. | **`false`**」——绑定收紧规则出厂即为关；同族先例 n8n `N8N_SCHEDULER_ENABLED=true` 缺配套 publication service 时**只 warning、旧行为原样继续**。
 - **判据**：① **收紧型规则默认关是迁移兼容取舍，不是安全建议**——"凭据只能被创建它的那个能力用"是完整性收紧，出厂关着是为了让存量流程继续跑 ⇒ 抄默认值 = 把过渡期妥协固化成长期架构；启用这类 flag 前要问"关着时谁在受益"。② **"开关为真"与"行为已换"之间隔着前置依赖**——启用新子系统需要同族第二个开关在位，否则只 warning、旧行为继续 ⇒ 失败模式不是报错而是"看起来在跑"，是最难发现的一类假生效；启用类变更的验收动作必须是**验证行为真的换了**，不是读回配置值。③ **首次覆盖范围要单独确认**——新开关的覆盖范围常不含同类能力（须另 flag）⇒ 只开一个就以为同类全部收紧，会在同源的另一半上留出未收紧面。④ 对 guild 的落点：跨 agent 引入新纪律时，先判这条纪律是"收紧型"（会打破存量）还是"放宽型"，收紧型一律走 flag + 灰度 + 存量豁免清单，不一次性全局生效。
 - 提升层：工具 / 治理。触发词：收紧型 flag 默认关、灰度而非破坏性变更、开关为真不等于行为已换、前置依赖静默降级、同类能力另需 flag、迁移兼容默认值。
-
 ## Capability 82 — 删除即持久准入政策：被遗忘项先入删除账本再清产物，排除状态跨重复清除与跨全量重建存续（来源：docs.openclaw.ai `cli/memory.md` 35,246B，2026-10-05 r421-A 独立 curl 取 `.md` 原文实拉逐串命中；消化 Qoder r407-Q-A N4 积压点）
 - **实证**：官方原文「A real purge **records the selected session IDs as forgotten in the agent's SQLite database before removing artifacts**.」；「Automatic dreaming ingestion, `memory session-backfill`, and transcript indexing, **including `memory index --force`**, check those records.」；「**Repeating the purge does not remove the exclusion, and removing an admission-policy rule does not undo it.** Future sessions with new IDs are not excluded by a previous purge.」；另有「Sessions previously selected by `memory forget` also remain excluded.」
 - **判据**：① **删除的顺序是"先记账、后清产物"**——先把 ID 写进持久排除账本，再删实体 ⇒ 反序会留下一个窗口：产物还没清完，重新入场的摄取流程已经把它当新材料读回来了。② **排除状态必须比任何一次重建更长寿**——跨重复清除、跨准入规则移除、跨 `--force` 全量重建都存续 ⇒ "重建索引"不能成为"被删内容复活"的通道；凡有全量重建路径的系统，删除决定必须存在重建读不到也抹不掉的地方。③ **排除的粒度是 ID 不是规则**——新会话 ID 不受既往清除影响 ⇒ 用规则表达"以后都别要这类东西"会连带误伤，用 ID 表达则精确但需持久；两者要分开存放，不能互相替代。④ **副作用的宽度要和意图核对**——按非空选择清除会连带清掉该 agent **整个**嵌入缓存 ⇒ 一次"删几个会话"的操作可能抹掉不相关内容的向量，操作前必须能回答"这次会顺带清掉什么"。
 - **与既有能力分工**：Cap79 管「短时凭证撤销先于过期」（临时访问的失效）；Cap59 管「删除不抹历史版本」（版本保留）；本条管**被删除对象的"永不复活"**——删除决定本身要成为一条比重建更持久的政策。
 - 提升层：工具 / 记忆治理。触发词：删除即准入政策、先记账后清产物、跨重建存续、forget 账本、排除粒度是 ID、连带清空嵌入缓存、删除防复活。
-
 ## Capability 83 — 守卫失败要按「谁不可判定」分极性：被检对象读不懂 ⇒ 阻塞；守卫自己没准备好 ⇒ 只警告继续；兼容窗口永不覆盖安全面（原文+判据已下沉 references/knowledge-base.md §r427A-ag；触发词：守卫读不懂就阻塞、跳过等于放行、兼容窗口不覆盖安全面、N-1 契约边界、插件面不在契约内）
-
 ## Capability 84 — 循环上限要按「循环的种类」分别设置，且按对端分别计数：自递归 ≠ 跨实体往返（来源：docs.flowiseai.com/llms-full.txt 618,913B「Understanding Max Iteration parameter in Workers」段，2026-10-05 r422-B 独立 curl 实拉逐串命中；与 Cap74「预算计尝试非产出」互补——那条管计数口径，本条管上限该按什么维度切分）
 - **实证**：官方原文「`Max Iterations Cap` … serves as a guardrail against excessive, potentially infinite, interactions between the Supervisor and Worker. **Unlike the Supervisor node's `Recursion Limit`, which restricts how many times the Supervisor can call itself**, the Worker node's `Max Iteration` parameter limits **how many times a Supervisor can iterate or query a specific Worker**. By capping or limiting the Max Iteration, we ensure that costs remain under control, even in cases of unexpected system behavior.」
 - **判据**：① **"自己调自己"与"来回调别人"是两个正交的循环，必须两个计数器**——Recursion Limit 只约束主管自调用，Max Iteration 约束主管对某个工人的查询次数 ⇒ 只设前者时，A↔B 无限往返完全不受约束，而"我设了递归上限"会给人一种已被兜住的错觉；排查失控循环时先问"失控的是哪一种循环"。② **上限要挂在"对端"上，不是全局一个值**——限制的是"查询某个特定 worker 的次数"，每个工人各有一份 ⇒ 全局上限会被"轮流调用多个工人"摊薄绕过（每轮都换一个对端，全局计数永远不满）。③ **上限的验收问题是"成本是否可控"而不是"有没有死循环"**——原文把收益写成 costs remain under control ⇒ 失控的形式不只是卡死，也可以是长时间合法运行导致的成本失控；只看 CPU/挂起会漏掉这一类。④ **两个上限的默认值要分别核对**——不同层级、不同种类的限制常有各自默认值，改了一个不等于另一个也收紧 ⇒ 变更验收要逐个上限验证，不能因为"限制了循环"就认为所有循环都被限制。
 - **与既有能力分工**：Cap74 管「预算计的是尝试次数不是产出数量」（计数口径）；Cap71 管「队列有界、超限停源留错」（积压封顶）；本条管**多实体编排中上限该按哪些维度切分**（种类 × 对端）。
 - 提升层：工具 / 治理。触发词：递归上限与迭代上限是两个计数器、按对端计数、自递归不等于跨实体往返、上限挂在对端、成本失控也是失控、逐个上限验证。
-
 ## Capability 85 — 认证只定「角色」，授权在每次调用上另判；应用内权限不是隔离边界，强隔离要在 OS 用户/主机层（原文+判据已下沉 references/knowledge-base.md §r427A-ag；触发词：认证定角色授权另判、应用内权限不是隔离、等待式读取返回前重检五要素）
-
 ## Capability 86 — 凭证作用域必须下沉到「资源」这个最小单元，租户/工作区级默认值是漏洞（来源：api.github.com/repos/langgenius/dify/releases 244,162B，v1.17.1 一手命中，2026-10-05 r424-A 独立 curl 实拉 JSON 逐串命中；消化 Qoder r418-Q-A 积压点，更正其"Dify v1.17.1"为带 issue 上下文的实词）
 - **实证**：官方原文「**Knowledge base service-API keys were scoped to the whole workspace**: one key could read and write **every** knowledge base in the tenant, so giving an integrator a key gave them a key to the whole tenant.」；v1.17.1 新增「**Dataset-Scoped** Knowledge Base API Keys」将作用域收敛到单个知识库。
 - **判据**：① **默认作用域越大，越接近漏洞**——"一钥通tenant读改写所有知识库"是出厂默认就存在的敞口，不是配置错误 ⇒ 评价凭证方案时，先看"拿到这把钥匙最坏能摸到多大范围"，再看它默认就是多大；默认过大的系统，集成方一拿 key 就等于拿到全租户。② **blast radius 的最小单元是"资源"不是"应用/用户"**——按知识库隔离（dataset-scoped）而非按 workspace/tenant ⇒ 给第三方集成时，只能给"它该用的那一个"，不能给"它所在的那一堆"。③ **收敛动作要可独立撤销与审计**——dataset-scoped 之后，每个 key 绑一个资源，回收/轮换/审计都落到资源粒度 ⇒ 租户级 key 一旦泄露，回滚要重发全租户所有依赖。④ **同类收敛要顺势做满**——同批次 Dify 还把 RAG/conversation/workspace-credential/OAuth-client 资源"consistently bound to their owners and app scope"，说明作用域下沉不是单点补丁，而是一组资源的统一治理 ⇒ 引入任何凭据体系时，逐个资源问"它默认绑在哪一级"。
 - **与既有能力分工**：Cap79 管「短时凭证撤销先于过期、一次性票据不扩面（放行单文件不放行父目录）」；本条管**长期服务凭据的默认作用域粒度**——Cap79 防的是"一次性令牌被放大"，本条防的是"长期 key 出厂就过大"，两者都是作用域最小化，按凭证寿命分两侧。
 - 提升层：工具 / 治理。触发词：凭证作用域下沉到资源、租户级 key 是漏洞、dataset-scoped、blast radius 最小单元、默认作用域越大越接近漏洞、收敛可独立撤销。
-
 ## Capability 87 — 新能力不得绕过宿主既有的安全策略；自建旁路等于关掉这道墙（来源：api.github.com/repos/langgenius/dify/releases 244,162B，v1.17.0 一手命中「Agent skills bypassed the SSRF private-network policy」段，2026-10-05 r424-A 独立 curl 实拉 JSON 逐串命中；与 Cap63 信任不跨层传递 / Cap64 可丢通道结构上不可公网可达 互补——那两条管"凭据由谁签""哪些数能放会丢通道"，本条管"新能力不能悄悄拆掉宿主已有的边界"）
 - **实证**：官方原文「**Agent skills bypassed the SSRF private-network policy.** Agent traffic goes through a **separate proxy that ignored `SSRF_PROXY_ALLOW`**」；同批次另有「short-lived agent authorization tokens」「token expiry (EMAIL_CODE_LOGIN_TOKEN_EXPIRY_MINUTES)」「Azure Key Vault / Pluggable KMS」。
 - **判据**：① **能力一旦引入，必须复用宿主既有策略，不能另走一条不带策略的旁路**——agent 流量走了独立代理、该代理没继承 SSRF 允许列表 ⇒ 加一个能力，等于在不知情的情况下把网络边界墙开了一个洞；评价新能力时，先问"它走的通道有没有继承宿主已有的安全约束"，没有就是回归。② **"独立实现"最易漏掉的是安全默认值**——不是故意绕开，而是新模块没接旧策略 ⇒ 接入任何新代理/通道/执行体，安全策略是必接项不是可选项；审计清单里"安全策略是否透传"要和"功能是否可用"并列。③ **能力通道要可观测、可统一管控**——SSRF 策略失效是因为代理层各自为政 ⇒ 凡引入并行通道，必须能纳入同一套策略/审计面，否则它迟早成为绕过点。④ **配套：短命授权令牌 + 令牌过期 + 外部 KMS** 是"凭据生命周期"的同一组手段（Cap79 的短时凭证在此得到开源产品级佐证）⇒ 新能力的授权缺省应是短命、可过期、由专用密钥库管理，而非长命共享。
 - **与既有能力分工**：Cap63 管"信任不跨层传递、令牌单点签发"；Cap64 管"可丢通道结构上不可公网可达"；本条管**新增能力对宿主既有边界的尊重**——前两条定的是"应该怎么建"，本条定的是"不能拆掉已有的"。
 - 提升层：工具 / 治理。触发词：能力不绕过宿主策略、自建旁路等于拆墙、独立代理须继承安全默认、策略透传是必接项、并行通道须统一管控。
-
 ## Capability 88 — 扩展/插件机制默认是中性能力放大器，不自带安全约束；约束要靠独立的 allow/策略列表显式叠加（来源：docs.openclaw.ai `concepts/model-providers/custom-providers.md` 18,145B，2026-10-05 r424-B 独立 curl 取 `.md` 原文实拉逐串命中；与 Cap87 能力不绕过宿主策略 互补——那条讲"新增能力必须复用宿主策略"，本条讲"扩展点天然不绑策略，约束要显式加"）
 - **实证**：官方原文「it neither **restricts overrides** nor **registers a new runtime model** by itself. For custom provider models, also add `models.providers.<id>.models[]` …; use `agents.defaults.modelPolicy.allow` **separately** when you want an override restriction.」；另有「Many of the bundled provider plugins … already publish a **default catalog**. Use explicit `models.providers.<id>` entries only when you want to **override** the default base URL, headers, or model list.」
 - **判据**：① **扩展点开放 ≠ 受控，二者是独立的两件事**——自定义 provider 扩展点"既不限制覆盖、也不注册新运行时模型"，限制要另配 allow 列表 ⇒ 不要把"平台支持插件/自定义"误读成"已经过安全评审"，扩展点的存在只是把能力放大器装上了，约束是另一份要单独写的东西。② **默认走信任目录，覆盖才是显式动作**——bundled 插件自带默认目录，只有在你想改 base URL/headers/模型列表时才写显式 entries ⇒ 覆盖是显式、可审计、非默认的；凡是"静默合并"自定义配置的扩展点，等于把默认信任边界交给调用方随意改。③ **约束叠加是"另配"而非"内置"**——modelPolicy.allow 与扩展注册是两条独立的配置路径 ⇒ 引入任何扩展机制时，默认假设它不限制任何东西，必须主动去挂约束，漏挂就是敞口（Cap87 的"悄悄拆墙"在扩展点场景的具体形态）。④ 对 guild 的落点：引入任何"可装插件/可自定义 provider/可注册节点"的能力，发布门禁里单列一条"扩展点的约束是否显式挂上"，与"功能是否可用"并列验收。
 - **与既有能力分工**：Cap87 管"新能力不得绕过宿主既有策略"（被动防拆墙）；Cap79 管"凭证作用域最小化"；本条管**扩展机制本身的约束缺省是空**，必须主动加 allow/策略（主动补墙）。
 - 提升层：工具 / 治理。触发词：扩展点中性需另配策略、默认目录vs显式覆盖、allow列表显式叠加、扩展开放不等于受控、静默合并自定义配置。
-
 ## Cap93 扩展体的可达面锚定在「安装位」，不随调用者身份放大；它自带的状态存储继承同一边界（来源：docs.dify.ai `en/develop-plugin/features-and-specs/advanced-development/reverse-invocation-app.md` 4,256B + `features-and-specs/plugin-types/persistent-storage-kv.md` 4,246B，2026-10-06 r428-C 独立 curl 取 `.md` 原文实拉；经 `docs.dify.ai/llms.txt` 2,639B → `_llms/en/cloud/developer-resources.md` 30,974B/152 页定位真路径）
 - **原文**：反向调用页明写「**Plugins can only access Apps within the Workspace where the plugin resides.**」——插件可反向调用宿主 App，但可达集被钉在插件所在的那个 workspace；持久存储页「Persistent storage lets plugins keep data **within the same workspace** across interactions」——扩展自带的 KV 状态沿用同一个边界。
 - **判据**：① **反向调用是"被调方反向伸手拿宿主能力"的通道，它的边界必须由被调方装在哪决定，不由谁在调用它决定** ⇒ 若边界跟随调用者，同一份扩展在不同人手里就变成不同权限面，权限会沿调用链被抬升（普通成员调它只看到自己 workspace，管理员调它不应因此看见别人的）⇒ 判断一道反向通道的收窄是否可信，先问"这个半径是绑在被调方身上还是绑在调用方身上"。② **"装在哪"从部署细节升级为安全属性** ⇒ 安装位置不再是运维便利问题，而是作用域声明；迁移/复制一个扩展体到别处，等于给它换了一整个可达集，必须按权限变更来评审而不是按文件移动来处理。③ **状态面与调用面是同一个半径的两半**——扩展自带的持久化沿用同一 workspace 边界 ⇒ 只收窄调用面而放任状态面（或反之），收窄只是表面：真正的一致性要求是"读得到什么"与"存得下什么"落在同一个边界上。④ **与 Cap33 分工**：Cap33 管"这个技能对哪个 agent 根本不存在"（谁能看见/装得上这个能力，按身份判）；本条管"它装好之后能碰到哪些宿主对象"（它伸出手的半径，按安装位判）⇒ 同一道边界的两端，两端要分别声明，只写一端时另一端的默认可能完全不同。⑤ **与 Cap86 分工**：Cap86 管长期凭据的默认作用域粒度（默认过大即漏洞）；本条管扩展体运行期的可达面与状态面（边界锚定在安装位、不随调用者移动）⇒ 前者是"拿到钥匙能开多大的门"，后者是"装在这间屋子里能碰到哪些东西"。
@@ -478,23 +424,20 @@ the CLI only adds atomicity and an audit trail.
 - **原文**：「`gateway.nodes.commands.deny` entries that **look effective but only match exact command IDs** (for example `system.run`), **not shell text inside the payload**」；同页把这类与「sandbox Docker 配了但 sandbox 模式没开」「全局 `tools.profile="minimal"` 被单 agent 覆盖」并列在 **Policy drift** 名下。另附扫描预算事实：深层扫描「check up to **500 source files** per plugin or skill … **skip files larger than 1 MiB**。Traversal also stops after **100,000 directory entries**」；工作区技能扫描另有限额「**2,000 skill files** and **40,000 directory visits**」；且「A `*.code_safety.scan_truncated` warning means **some files were not checked; it does not identify dangerous code**」。`--fix` 被明文限定为窄集：「it flips open group policies to allowlists, tightens state/config/include-file permissions (`600` files, `700` dirs), and on Windows uses ACL resets instead of POSIX `chmod`」。
 - **判据**：① **写 deny 之前先问"它比对的字段是什么"**——本例 deny 只比对命令 ID 这一层，payload 里的 shell 文本完全不参与匹配 ⇒ 一条"禁止 system.run"的规则，在"换个入口、payload 里写 shell"面前等于没写；验收拒绝类规则的动作固定为**拿一条同义但不同标识符的动作去撞**，撞得过就是漏。② **"看起来生效"是Policy drift 的识别特征，不是配置成功的证据**——官方把三种形态归在同一类：配置写了但模式没开、全局基线被局部覆盖、拒绝规则只匹配 ID ⇒ 共同点是**每一条单独看都"已配置"，组合起来不产生约束**；审计这类系统要逐条问"这条约束在运行时由谁真正执行"，找不到执行者即判无约束。③ **扫描器的截断是覆盖声明，不是风险声明**——`scan_truncated` 只说"有文件没被检查"，官方明确它不是危险代码指标 ⇒ 把截断警告读成"发现可疑"会误报，读成"扫完了没问题"会漏报；正确读法是把它与预算一起登记：本次扫到哪、跳过什么（>1 MiB 文件 / 第 100,000 个目录项之后）。④ **不同扫描面有不同预算，结论不可跨面比较**——单插件/单技能 500 文件 vs 工作区技能 2,000 文件 ⇒ 同一个"扫过"在两个面上的覆盖强度差 4 倍，混在同一张"已扫描"清单里会让覆盖率失真。⑤ **自动化修复的门必须是可枚举的窄清单**——`--fix` 只做群策略改 allowlist、权限收紧、Windows ACL 三类，官方用 "intentionally narrow" 自陈 ⇒ 自动修复的边界要写在文档里让人能背下来；凡是超出这个清单的修复都由人来做，否则"一键修"会顺手改掉用户的显式选择（与 av「自动修复严守证据自证门槛」分工：那条管**证据够不够**，本条管**动作范围窄不窄**）。
 - 提升层：治理 / 安全边界。触发词：deny 只匹配命令 ID、payload 内 shell 文本、Policy drift、看起来生效、全局基线被局部覆盖、scan_truncated、扫描预算 500 文件、跳过大文件、自动修复窄清单、intentionally narrow。
-
 ## Cap96 带抑制机制的审计器必须把「本次输出被过滤过」自报出来；白名单条目本身要反向机检是否存在（来源：docs.openclaw.ai/gateway/security/audit-checks.md 40,660B，2026-10-06 r432-C 独立 curl 取 `.md` 原文实拉逐串命中；与 §Cap31 审计账本要声明证明不了什么 / §Cap95 拒绝规则的匹配面 互补——那两条管"不存什么、不证明什么""deny 比对哪个字段"，本条管"输出被谁过滤过"与"允许列表里有没有幽灵"）
 - **原文**：检查项 `security.audit.suppressions.active` | 级别 **info** | 描述 `Audit output has configured suppressions and may be filtered` | 关联配置 `security.audit.suppressions`；同页 `plugins.allow_phantom_entries` | **warn** | `plugins.allow lists an ID with no matching installed plugin` | `plugins.allow`。
 - **判据**：① **有抑制/豁免机制的检查装置，必须每次输出都自报"本次结果经过 N 条抑制"**——原文把这件事做成一条独立 checkId，且刻意只给 **info**：抑制可能正当（已评审的豁免），系统不替人判对错，只负责**让"这份输出不完整"这件事可见**。⇒ 抑制机制一旦存在，"没发现"就分裂成两种可能（真的没有 / 被过滤掉了），不报这一条，读报告的人一律按前者理解，抑制表会静默长成系统的默认失效通道。② **info 不是"不重要"，是"无法判定对错的事实"**——这类事实的正确分级是强制可见但不逼人处理：升成 warn 会让正当抑制变成噪声，降到 debug 等于没报 ⇒ 分级标准应是"我能不能判它对错"，不是"它可不可疑"。③ **白名单不是免检区，条目要反向机检**：`plugins.allow` 里列了一个没有对应已安装插件的 ID 就要报 ⇒ 拼写错、插件已卸载、名字改过，三种情况在"列表"这一面看都完全正常；凡"在某处列出能力名"的机制（allow/白名单/豁免表），必须周期性验证**每一项当前仍指向一个真实存在的对象**。④ **"声明"与"实体"的一致性是独立检查面，且要持续对账**：同页另有 `plugins.installs_version_drift`（索引记录与已安装包漂移）⇒ 一次性的准入校验在下一次实体变更后即失效；允许项与实体之间的差必须单独成类、周期重算。⑤ 与 Cap95 的分工：Cap95 判据②把"配置写了但模式没开/全局被局部覆盖/deny 只匹配 ID"归为 Policy drift，识别特征是"每条单独看都已配置、组合起来不产生约束"；本条补的是**输出侧**——即使所有配置都正确生效，抑制与幽灵条目仍会让结论不完整，这一面不在"配置是否生效"的检查范围里。
 - 提升层：可观测性 / 治理。触发词：抑制项自报、suppressions active、info 级强制可见、输出被过滤、幽灵白名单条目、allow_phantom_entries、白名单反向机检、声明与实体一致性、豁免表只增不减。
-
 ## Cap97 放宽权限是单步有序操作：一次只放开一项控制且顺序不可换（先收窄接收方白名单、再开写能力），触发权不等于隔离边界，通道的信任度决定挂在它上面的 agent 能带多少能力与凭据（来源：docs.openclaw.ai `gateway/security/exposure-runbook.md` 8,776B，2026-10-06 r433C 独立 curl 取 `.md` 原文逐串命中；与 Cap95「拒绝规则的匹配面」/ Cap96「审计器须自报被过滤」互补——Cap95 管"已写的规则到底匹不匹配"，Cap96 管"审计输出有没有被遮"，本条管"把边界往外挪的那一步该怎么挪"）
 - **原文**：①「**Widen one control at a time**: add a specific channel allowlist before enabling write-capable tools, or enable a reverse proxy before accepting remote Control UI traffic.」②「**Pairing approves the sender to trigger the bot. It does not make that sender a separate host security boundary.**」③「If more than one person can message the bot, treat this as **shared delegated tool authority, not per-user host isolation**.」④「**Do not combine `"*"` allowlists with broad tool access.**」⑤「Set `session.dmScope: "per-channel-peer"` … when multiple people can DM the bot, so DM sessions don't share context.」⑥「Route shared channels to agents with **minimal tools and no personal credentials**.」⑦「Do not assume local config credentials apply to an explicit remote URL.」⑧ 五种暴露模式各有对应的 Required controls 列（loopback+隧道 / loopback+Tailscale Serve / 内网 bind / 可信反代 / 公网），反代模式要求「The proxy must strip or overwrite client-supplied identity and forwarding headers」。
 - **判据**：① **放宽必须一次一项，且顺序是硬的**——原文用 before 把"加入 allowlist"钉在"开放写能力"之前、把"起反代"钉在"接受远程控制面流量"之前 ⇒ 同时在两个维度放松时，出问题无法归因到哪一项；一次一项的副产物是回滚也只需要回一项。② **"谁能触发"与"触发后能用什么"是两个旋钮，禁止一次性拨到底**——`"*"` 白名单 × 宽工具 access 被原文单列为禁配组合 ⇒ 接收面放宽到全集时，能力面必须同时收到最小集；两个维度都给全集就等于把大门敞开并把钥匙挂门上。③ **准入/配对批准的是触发权，不是隔离边界**——拿到配对的人只是可以叫 bot 干活，他并没有因此获得独立的主机/凭据边界 ⇒ 用"已经配对过了"来推"可以给他更多工具"是范畴错误；多一个人能发消息，系统的性质就从"个人工具"变成"共享委托的工具权限"。④ **多人可达 ⇒ 会话必须按说话对象切**：`dmScope` 设成 per-channel-peer 就是为了让不同人的会话不共享上下文 ⇒ 共享助手场景里最常被漏的不是权限，是上下文串味——A 说过的信息出现在 B 的回答里，且没有任何报错。⑤ **通道信任度要向下传导到 agent 的能力与凭据配置**：共享通道只能路由到最小工具面、且**不带个人凭据**的 agent ⇒ 凭据不能挂在能被公共输入触达的执行体上；这条的实用判据是"这条输入路径上最不可信的那个人，能够碰到哪些凭据"。⑥ **选暴露模式就是认领一份控制项清单**：每一档都有 Required controls，升档的代价是配齐该档全部控制项，不是"网络能通就行"；其中代理档还要显式剥离客户端自带的身份/转发头，否则外部可以直接伪造身份头绕过代理侧的鉴权。⑦ **显式远程地址不继承本地凭据假设**：用显式 URL 调远程端点时必须显式传凭据，本地配置里的凭据不会自动跟随 ⇒ 把本地调试跑通的调用直接改 URL 指向远端，会卡在鉴权上或更糟地落到匿名可达。
 - 提升层：安全边界 / 治理 / 工作流。触发词：放宽单步有序、Widen one control at a time、先白名单后写能力、触发权不等于隔离边界、星号白名单禁配宽工具、dmScope per-channel-peer、共享通道最小工具且无个人凭据、反代必须剥离身份头、显式远程 URL 不继承本地凭据。
-
 ## 共享记忆的「删除」必须声明边界：准入与遗忘是两件事，预览不是计划，失败会留半截（来源：docs.openclaw.ai/concepts/memory-provenance.md 15,637B，2026-10-11 r513B 一手 curl 200 实拉逐串命中 `Neither is a general erasure` / `identifiable artifacts` / `does not delete original session transcripts` / `computed from current state` / `mutation lock`）
 - **判据**：① **准入策略（admission policy）与遗忘（forget）是两个正交控制**——前者只挡将来的摄取与回填，后者才移除已落地的条目；二者都不是「把 agent 见过/写过的东西全部擦除」。做数据卫生时必须先分清自己要的是哪一种，不能拿"以后不再摄取"当"已删除"。② **执行删除的命令默认立即生效**，只有显式 `--dry-run` 才出预览；预览是**按当前状态实时算出来的、不是存下来的删除计划**，并发写者不共享 mutation lock ⇒ 清理期间必须暂停直接编辑与外部写入，事后再跑一次预览核对残留。③ **删除有明确不覆盖的清单**：原始会话转录、自由编辑的记忆条目、存储之外的副本都不在范围内——凡是声称"删干净了"的结论，都要逐项对照这张不覆盖清单。④ 溯源记录分三档粒度（chunk 级 / 条目级 / 文件级 curated-write），删除与审计各自用不同档，**不能互相替代**。
 - 提升层：治理 / 工作流（共享记忆卫生）。触发词：admission policy、forget、删除边界、预览非计划、mutation lock、原始转录不删、三档溯源。
-
 ## 扩展（插件）治理两面：信任位下沉到「能力 × 单元」粒度 + 生命周期三非对称语义（卸载留 disabled 标记 / 更新沿用首次安装源 / 生效需宿主动作）（来源：docs.openclaw.ai/gateway/config-extensions.md 21,413B + docs.openclaw.ai/cli/plugins/uninstall-and-update.md 20,071B，2026-10-12 r541C 一手 curl 200 逐串命中 `allowPromptInjection: false` / `when false, core blocks prompt-mutating hooks such as before_prompt_build` / `Entry config changes replace the affected instance` / `active plugins can still declare restart-triggering config prefixes` / `the plugin stays disabled and tracked so you can retry uninstall` / `OpenClaw starts from its recorded install source` / `restartRequired, and the applied runtime receipt with its generation and source digests`；提名 Qoder r539-Q-B ③ + r539-Q-C ④；**r633C 下沉**：自改进闭环缺审批时损坏「用户不可恢复」且保护与解锁方向相反（冻结后无交互确认不能重新启用）+ 持久化层的顺序与撤回须端到端传播，原文同下沉
 - **实证**：① OpenClaw 插件配置里每个 entry 的 hooks 段带 `allowPromptInjection` 开关——置 false 时核心**阻止 `before_prompt_build` 一类改提示的钩子**，即「这个单元能不能向模型注入提示」是逐插件可配的；② 热加载的作用域是**被改的那个实例**：默认 hybrid reload 下策略/entry/发现路径变更热重载插件运行时，**entry 配置变更只替换受影响的实例**，源码或 manifest 改动才需 `plugins reload <id>`，且插件可**自行声明会触发重启的配置前缀**；③ 卸载失败时插件**保持 disabled 且被跟踪**（可重试卸载），若排空期又有加载路径引用则保留文件并要求先移除引用；④ 更新时**从记录的安装源出发**（多 entry 包的子 id 解析到包属主、同级一起更新），JSON 输出带 `restartRequired` 与**带 generation 和 source digests 的运行时回执**；⑤ 卸载排空先于移除安装记录，配置写入要等文件清理落定，`--keep-files` 与链接安装同样走排空。
 - **判据**：① **授权粒度要落到「能力 × 单元」**：不只「装/不装」，还要有逐单元的「该单元可否向模型注入提示」一类开关 ⇒ 评估一个扩展的信任面时，最小单位是它声明的每条能力（hook/tool/通道），不是整个包。② **热变更的失效半径=被改对象的作用域**：改 entry 配置只退役受影响实例、不做全局重启 ⇒「改了 A 会不会让 B 的准入结论失效」的答案由作用域决定；插件能自声明重启触发前缀意味着**失效半径有一部分是扩展自己说了算**，审计时要读这份声明。③ **「已卸载」不等于状态消失**：卸载保留 disabled 标记供重试与审计 ⇒ 残留态必须可检测，重装/审计要能识别「曾经装过」；④ **更新必须沿用首次安装源**：不得静默换源 ⇒ 更新链的可信度锚在首次安装记录上，换源=换信任锚。⑤ **生效需宿主动作且回执带 digests**：`restartRequired` + 运行时回执（generation + source digests）⇒ 「配置写了」不等于「运行态换了」，验收要读回执不读配置文件；`reload` 不跑构建，改源码后要显式重建。⑥ 与 Cap68（写入不推进生命周期）分工：那条管**哪些写入算交互**，本条管**扩展的信任位与生命周期语义**——同属生命周期治理，一个在记忆条目、一个在插件面。
 - 提升层：治理（跨 agent 扩展信任）/ 工作流（插件安装更新验收）。触发词：allowPromptInjection、能力×单元授权、热变更失效半径、restart-triggering config prefixes、disabled and tracked、install source、restartRequired、runtime receipt source digests、reload 不跑构建。 · **r568C 下沉条目：Managed Agents `auto` 权限档=服务端现算三态，客户端门控按 `evaluated_permission` 而非配置值**——claude-api skill 随 anthropics/skills PR #1750 更新两个已上线特性：① `auto` 是 `always_allow`/`always_ask` 之后第三种策略，服务端逐调用现算并三态处置：直接运行、按高风险拒绝（error tool result、session 继续跑、客户端不能 override）、或达不成判定时暂停待批准；信任面收窄——只有 `user.message` 算用户意图，工具结果、抓取的页面、MCP 响应、跨线程消息都不算（防注入内容被当授权）；② `evaluated_permission` 与 `evaluation` 字段落在 `agent.tool_use`/`agent.mcp_tool_use` 上（含完整形态表、`evaluation` 缺席时的行为、未知 `type`/`reason_code` 的 open-set 指引），客户端确认往返按 `evaluated_permission === 'ask'` 门控而不是按配置的策略值；`ant beta:sessions connect` 会话查看器同步；文档明确警告 auto 档「不是人工检查点」（not a human checkpoint）。判据：① 自动放行档的验收按三态枚举（跑/拒/暂停），拒绝态须留下 error tool result 且 session 延续；② 意图来源白名单化——只有用户消息算数，其余上下文一律不算授权；③ 客户端交互按服务端现算结果门控，不按本地配置推断；④ 高危拒绝不可被客户端 override。来源：github.com/anthropics/skills#1750（claude-api skill；2026-10-14 gh api 一手 200 逐串命中 `the server evaluates each call and runs it, denies it as high-risk (error tool result, session keeps running, client cannot override), or pauses for approval when it reaches no determination` / `user.message counts as your intent; tool results, fetched pages, MCP responses, and cross-thread messages do not` / `Gate the confirmation round-trip on evaluated_permission === 'ask', not on the configured polic` / `the "not a human checkpoint" warning`；镜像文档 platform.claude.com/docs/en/managed-agents/permission-policies；Qoder r615-Q-A 提名）。触发词：auto 权限档、evaluated_permission、服务端现算三态、意图来源白名单、not a human checkpoint、客户端不可 override、sessions connect。
 ## r651 下沉条目（B：给每条声明打 kind / authority / scope 三标签，治理匹配放在检索侧而非只做内容过滤；记忆治理要写侧与读侧分离：生命周期状态正确，不等于查询时资格正确）（原文均在 references/knowledge-base.md；C：污染门：不可信与系统派生的候选永不进入巩固提示与持久晋升路径）（原文均在 references/knowledge-base.md）（原文均在 references/knowledge-base.md）
+## r655 下沉条目（B：15：记忆晋升门须三轴 AND：频次轴 + 广度轴 + 质量轴，且展示面与候选面物理分离；16：用『重复指令率』作记忆有效性的正向自证指标）（原文均在 references/knowledge-base.md）

@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全、秘密引用解析三覆盖、$var: 头部引用字面外泄、variables:read:<path> scope、日志不回显解密值、名称解析宽容度按读写分面、不进轮换不可 pin、tool-free turn 激活、失败保持非激活、个人账户存储隔离、会话级单选、故障转移不拿他人个人账户兜底、OAuth 验证钩子时机枚举、validateOAuthCredential、terminally fenced、计划后执行前重验、TOCTOU 面、隐式选择精确匹配、prefix alone never selects a harness、明文 HTTP 端点硬拒、legacy alias 归一、roleMapping 三模式、applyResolvedRoles 独立事务、claim-match 只评不写、跨会话组合攻击、Instruction Propagation、Data Boundary Violation、Evidence Poisoning、SkillRelayBench、SkillRelayGuard、工件来源上下文恢复、执行前 advisory、恶意产能按发布者聚合熔断、判定器与判定对象同面受审、扫描判级三原则、门控资格与分诊资格两档、滥用门 denylist、未来公共 provider 默认受检、PLATFORM_CONTROLLED_PROVIDERS、email_verified 证明范围、domain 级 invalid 拒绝 mailbox 级允许、mailbox 存在性 oracle、拒绝响应防泄漏、缓存按信号稳定性、资格退场按操作分面创建编辑关删除保留、门禁服务端路由强制 UI 锁不是门禁、删除级联语义显式、空 tier 删除旗标迁移第一剩余 tier、社区版误伤验证、维护态放行按副作用判、GET 也会写 token、路由分类枚举测试未分类即构建失败、读仍写什么台账、信任源自举未检查、sandbox 缺省沿用、job 身份为默认、viewer 显式 opt-in、publisher 模式读取他人角色、on_behalf_of、Home 与 Workspace 双侧校验、BindingLostError、无法执行≠无意见、Git Bash 缺失放行"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.249.0
+version: 1.252.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -487,3 +487,9 @@ visibility: "public"
 - 提升层：工具（审计取证面）/ 安全边界（技能供应链溯源）。触发词：hook 回调输入、技能身份四元组、frontmatter/source/plugin/file path、skill.prompt hook、取证面、同名技能仲裁、溯源。
 
 ## r651 下沉条目（A：返回了 200 且返回了对象，不等于命中了目标：必须校验返回对象的身份；服务端不校验，不构成移除客户端校验的理由）（原文均在 references/knowledge-base.md；B：授权「谁更小」可能无解：最小充分授权构成反链时须报不可比，不得降级为相等）（原文均在 references/knowledge-base.md；C：自动审阅的适用边界是能否完整解析操作数绑定，解析不全即降级人工；系统不得代行管理员，也不得恢复已保存的运营者授权；临时提权的额度必须作用域受限且永不持久化；清单成员资格两个方向都不成立：在内不保证会执行，不在内不证明已禁用；配置重定向后，旧位置的信任数据不得被带入；字节长度不符即视为完整性失败，等价摘要不符，不必等摘要算完）（原文均在 references/knowledge-base.md）（原文均在 references/knowledge-base.md）
+
+## r655 下沉条目（A：5：权限声明的『广告面』与『强制面』必须分离；6：凭据请求面反直觉：列出 scope 可能比不列更容易失败；12：文件面须固定目标 host 并自带凭据：下载字节不落盘、不跟随跳转；30：读接口须自带读资格：写权限或同域管理权限不蕴含读权限；31：阻断信号的执法归属：上游『已阻断』不自证本机『已阻断』；32：呈面即执行面：能力清单呈现时就要按策略过滤，不得把不可用能力广告给模型）（原文均在 references/knowledge-base.md）
+
+## r655 下沉条目（B：9：语义重放：单次令牌已消费仍可被重新签发多次执行，授权须持持久单调状态；10：执行门是三态不是二态：可观测性不完整导致的 halt 不等于 deny）（原文均在 references/knowledge-base.md）
+
+## r655 下沉条目（C：17：权限枚举只能逐字抄服务端，不得按对称模式推断；18：deny 规则的四类静默失效面：路径解析后 / 跨执行主体 / 依赖缺失 / 作用域；19：字段严格度两侧并存：装前审查要按字段落在哪一侧分别出卷；20：所有权转移使句柄绑定的信任信号失效，须显式重认；21：沙箱默认关闭且逃生舱是显式开关：禁用 exec 必须走 deny，不能靠指令面；22：确定性拒绝必须先于 AI 评审：字节码类产物在评审前即拒；23：审批面是单向的：批准只能收紧，且审批不是身份边界）（原文均在 references/knowledge-base.md）

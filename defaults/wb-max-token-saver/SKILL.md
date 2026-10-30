@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、裁剪保序、部分保留超预算、请求级开销双计、复合内容漏计、超大工具结果延迟注入、延迟加载命名空间封装
-version: "1.88.0"
+version: "1.89.0"
 ---
 
 # wb-max-token-saver（输出阶段：压缩废话）
@@ -181,3 +181,10 @@ agentic loop（每轮循环读上下文）是账单黑洞：单轮 12k token 的
 - **判据**：① 循环上下文先问"能不能引用不重放"——summary ID 引用是四件套里最便宜的一刀，优先做。② 动态裁剪必须带精度代价声明：裁剪前先 A/B 测"裁了之后结果变没变"，5-8% 的代价不是白送，是明码标价的选择。③ 模板骨架化只适用于**结构稳定**的循环提示；任务内容本身千变万化时骨架不成立。④ 级联的省是"便宜的干粗活、贵的干细活"——分界不清时级联反而双份成本。
 - **提升层**：模型 / token 治理。触发词：agentic loop 循环压缩、summary ID 引用、相关性打分裁剪、top 80% 保留、模板骨架化 Task/Data/Rules/Output、多模型级联压上下文、5-8% 精度代价需 A/B。
 - **r630B · 停止决策不得用「模型说读够了」当门：verbalized confidence gate 过早停止率 8.4%–45.6%，而 ACS（探测答案置信且稳定）0%–12% 且是唯一匹配/超过 full-reading 精度的停止策略**（来源：arXiv 2609.34590，Qoder r667-Q-C 提名·WB 审计代落；LongBench-v2 全量 + 2 frontier 模型，仅需输出侧 log-prob，跨模型共用配置）。判据=停止门必须是可测的「答案状态稳定性探测」，不是模型自陈充分性；且停止策略本身须独立评估（停太早会虚假省算力）——与 §推理时扩展与过思考（mts 1.69.1 Nelson–Narens 监控/控制分离）分工：那条管元认知监控，本条管停止门的实证下限。提升层：模型 / token 治理（停止决策）。触发词：ACS、verbalized gate 过早停止、答案稳定性探测、停止策略独立评估。
+
+## 成本感知蒸馏：per-step 成本 + Preserve/Prune/Repair 三补丁（来源：arXiv 2604.23853《ClawTrace: Cost-Aware Tracing for LLM Agent Skill Distillation》2026 实拉，r652C 落地，与 §成本四层分工——那边管"每一层都主动选择"，本条管"技能提炼时按步骤成本剪枝"）
+- **没有 per-step 成本就分不清"补缺"与"剪贵"**：**skill-distillation 流水线缺每步成本信号，就无法区分"加缺失步骤修 bug"与"删一个昂贵但从没影响结果的步骤"**（ClawTrace）→ 判据：**学习一条工作流/技能时给每个步骤挂成本（token/延迟/调用）**；无成本标签=剪枝与补漏全靠猜。
+- **三补丁类型**：**Preserve 补丁保留导向成功的步骤；Prune 补丁删昂贵且无关紧要的步骤（必须附对具名高成本步骤的反事实论证）；Repair 补丁基于 oracle 证据修失败**（ClawTrace CostCraft）→ 判据：**删步骤必须给"删了它结果不变"的反事实论证**；说不清删了不影响结果=不许删。
+- **剪枝规则可跨任务转移，保序规则反而过拟合**：**同一技能应用到 30 个无关任务时，prune rules 跨 benchmark 转移并砍 32% 中位成本；preserve rules 基于 benchmark 特有惯例，在新任务类型上引发回归**（ClawTrace 消融）→ 判据：**通用化优先剪"冗余开销"，慎保留"特定惯例"**；把某任务集的成功惯例固化为普适规则=换任务就回归。
+- **成本标签聚合找低效点**：**每 span 挂成本 tag（tokens_input×price_input + tokens_output×price_output），按 session/任务类型/agent 聚合——识别"简单任务吃大量 token"的低效 agent**（Ayi NEDJIMI《LLMOps Monitoring》2026）→ 判据：**成本按任务类型聚合对比，不是看单次调用**；单次便宜但高频=总账最大头。
+- **提升层**：工具 / token 治理（成本感知提炼）。触发词：per-step cost、Preserve/Prune/Repair、反事实论证、成本标签聚合、低效 agent、成本感知蒸馏。
