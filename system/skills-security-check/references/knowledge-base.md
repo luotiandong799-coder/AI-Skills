@@ -2304,3 +2304,24 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 - **实证**：此前 HashiCorp Vault 里的密钥必须被复制进 Windmill 才能用，结果是同一份秘密存了两处且必然与源头漂移。改为引用后：路径按 `vault kv get` 的写法记录，Windmill 检测 mount 是 KV v1 还是 v2，**只缓存这个 mount 版本、从不缓存值**；每一次读取变量都对 Vault 重新解析，因此在 Vault 侧轮换即时生效。同时新增 AppRole 认证方式，其 `secret_id` 只从每个 server / worker 的 `VAULT_APPROLE_SECRET_ID` **环境变量**读取，绝不进 settings。
 - **判据**：① **复制等于承诺同步**：双份存储的代价不是多占空间，是两份必然分歧且无法证明哪份有效。② **缓存的对象必须是解析方式而不是取回结果**：缓存值会让轮换失效，而「mount 是 v1 还是 v2」这类元数据可以安全缓存，因为它变化的代价是不命中而不是陈旧。③ **每次读取都回源，让失效成为可见错误**：引用化的附带收益是「取不到」立刻暴露，而不是静默返回旧值。④ **引导凭据不得进入配置存储**：AppRole 的 `secret_id` 若写进 settings，就又产生一个需要被保护、会被备份、会漂移的秘密，回到起点。
 - **提升层**：工具（密钥管理）。触发词：引用而非副本、只缓存取法不缓存值、AppRole secret_id 只从环境、轮换即时生效、凭据漂移、双份存储即分叉。
+
+## r654A-1 · MCP 文件系统服务器的路径参数缺遍历约束，提示注入下可 ../ 越界（来源：api.github.com/repos/modelcontextprotocol/servers/issues 一手 gh api 200 正文）
+- **实证**：`@modelcontextprotocol/server-filesystem` 的 11 个工具把文件路径当作无 schema 校验的无界字符串；在提示注入下，LLM 会供给 attacker-controlled 路径（含 `../` 遍历序列）越过预期目录。风险评分低（2/100）但实际影响面是全文件系统读/写越权。
+- **判据**：① **路径参数是最高危的一类输入**：它把「能访问哪」的边界决策完全交给调用方字符串，必须在 schema 层强制基目录白名单与遍历归一化。② **低 CVSS 分不等于低影响**：评分只看「利用难度」不看「越权半径」，自动化应把「越界可达根/他租户」单列为一类高危。③ **工具侧的输入契约要显式声明安全边界**：不写边界即默认可越界。
+- **提升层**：工具（路径参数强约束）。触发词：filesystem 路径无界、../ 遍历、提示注入越权、基目录白名单、低分高影响。
+
+## r654A-2 · A2A 把「等待人工确认」的工具误报为 INPUT_REQUIRED，使授权状态被当成输入缺口（来源：api.github.com/repos/google/adk-python/issues 一手 gh api 200 正文）
+- **实证**：A2A spec v1.0 §7.6 把「agent 在破坏性动作前需人工批准」列为 in-task authorization 的范例；但 google/adk-python 的 `A2aAgentExecutor` 把一个正等待人工确认的工具回报成 `INPUT_REQUIRED` 状态，于是「要不要放行」这个授权问题被混进「还缺什么输入」这个数据问题，客户端据此可能错误地继续或终止。
+- **判据**：① **授权态与输入态是两类正交状态，不得共用一个枚举**：把 pending-approval 编码成 input-required，会让编排层用「补齐输入」的逻辑去处理「等人拍板」。② **等待人类确认的语义必须显式**：它既不是成功也不是失败，也不是缺输入，而是第三态。③ **跨协议转发授权状态时须保留其类别**：A2A→客户端映射若塌缩类别，下游护栏失效。
+- **提升层**：工具（授权态语义）/ 可复用 Skill（状态分类）。触发词：A2A INPUT_REQUIRED、pending-approval 误编码、授权态第三态、跨协议状态映射塌缩。
+
+## r654B-1 · 技能正文含「监督放宽指令」是一类独立载荷，现有扫描器在该类上双率不达标（来源：arxiv.org/abs/2610.37734《When Skills Tell Agents Not to Ask》一手 abs 页 摘要）
+- **实证**：分析 153 万条 GitSkills，约 1/17（≈8.8 万）含「不必询问用户 / 跳过确认 / --no-verify 绕检查 / 不回头核对」类指令；70.1% 无条件适用（不依赖任何触发条件），shell/install/sudo 类 odds 1.7–1.8×；2.4% 的技能家族占了一半副本（副本数会膨胀同一上游载荷）。开源扫描器在该类上召回 ≤46% 且精度 <0.4，codebook-prompted LLM 召回 61%/精度 0.71。
+- **判据**：① **「放宽监督」是与恶意/越权并列的独立扫描类别**：它不是「有害指令」的子集，而是「静默取消人工升级门」这一特定形态。② **发生率/适用条件/集中度是三个不同分母**：1/17 是「含该类」宽口径、36% 是「有安全缺陷」、0.27%/4.93% 是「恶意率」——三者不可互校。③ **无条件适用 + 家族集中度决定危害面**：70.1% 无条件意味着任何上下文都生效，2.4% 家族占半副本意味着按件计数会重复计同一载荷。④ **扫描器工作点须按载荷类分别标定**：通用双率不可外推到该类。
+- **提升层**：工具（扫描器工作点标定）/ 可复用 Skill（载荷分类）。触发词：oversight-loosening directive、1/17、70.1% 无条件、家族集中度、扫描器双率按类标定。
+
+## r654C-1 · 工具注解（readOnly/destructive/openWorld/idempotent hint）默认不可信，客户端不得据其做安全决策（来源：modelcontextprotocol.io/specification/2025-06-18/server/tools 一手 200 原文 129,419B）
+- **实证**：MCP server tools 规范写明 `annotations`（含 readOnlyHint / destructiveHint / openWorldHint / idempotentHint）是「optional properties describing tool behavior」，并明确要求「for trust & safety and security, clients MUST consider tool annotations to be untrusted unless [from a trusted source]」。
+- **判据**：① **自声明的行为注解不是行为保证**：一个工具标 `readOnlyHint:true` 不代表它只读，标 `destructiveHint:false` 不代表它不破坏；安全决策必须按实测行为而非标签。② **信任须绑定来源而非字段**：只有来自可信源的注解才可采信，否则一律按不可信处理。③ **审批/沙箱门禁不得读注解放行**：把 hint 当授权依据等于把护栏交给被护栏对象。
+- **提升层**：工具（注解不可信）。触发词：tool annotations untrusted、readOnlyHint 不保证只读、destructiveHint 不保证非破坏、信任绑定来源、门禁不读注解。
+

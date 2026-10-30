@@ -5009,3 +5009,9 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 - **实证**：SEP 规定 MCP 上的技能必须以 `skill://<skill-path>/SKILL.md` 寻址，**`<skill-path>` 的最后一段必须等于 SKILL.md 里声明的技能名**，因此「技能名永远可以只从 URI 恢复，无需读 frontmatter」；除末段外的其它段不做更多约束，但首段占据 authority 组件，**不做 DNS 或网络解析**（客户端 MUST NOT 尝试解析它），不得把它当主机名。规范还明确：**主机不得因为一个资源的 URI 用了某个 scheme 就得出「它是技能」的结论**；技能的 name/description SHOULD 直接取自 SKILL.md 的对应字段。
 - **判据**：① **把命名信息编进地址，换来免读取即可路由**：末段等于技能名意味着在拿到正文之前就能做清单、去重与冲突检测，代价是改名等于换地址。② **URI 的语法位置不承担网络语义**：authority 段在这里只是命名空间占位，按主机名去解析它会产生一次无意义且可能有副作用的 DNS 行为。③ **scheme 不是身份、也不是类型证明**：按 URI 形状判断资源类别会让任何自造 scheme 的资源获得技能待遇，真正的判定要落到「SKILL.md 的 frontmatter 是否符合技能规范」。
 - **提升层**：工具（技能发现与寻址）/ 可复用 Skill（命名约束）。触发词：skill://、技能名可从 URI 恢复、末段等于技能名、authority 不解析 DNS、scheme 不证明是技能、frontmatter 才是类型判据。
+
+## r654A-1 · 技能描述必须是第三人称，且 skill-creator 单文件不得超过 500 行（来源：api.github.com/repos/anthropics/skills/issues 一手 gh api 200 正文）
+- **实证**：anthropics/skills 仓库内 docx/pdf/pptx/xlsx 四个技能的描述以「Use this skill…」开头，违反其自身 best-practices 指南要求的第三人称（如「Skill for creating…」）；同一指南要求 SKILL.md 单文件不超过 500 行，但 skill-creator 本身已超 500 行，形成「规范制定者自己破例」的示范漏洞。
+- **判据**：① **描述视角是技能可否被机器正确检索的前置条件**：第三人称的「Skill for X」让清单与匹配按能力而非指令理解，第一人称「Use this…」把它读成一次调用。② **单文件行数上限不是排版偏好而是可维护硬界**：超 500 行后 skill-creator 自身的 eval loop 出现 grading 路径、Bash 阻塞、聚合等多处 rough edges，作者自己在修。③ **规范制定者的技能若破例，等于把例外写进默认**：下游作者会复制「官方也超行」的范本。
+- **提升层**：可复用 Skill（描述规范与行数预算）。触发词：第三人称描述、Use this 禁用、单文件 ≤500 行、skill-creator 超限、规范制定者破例。
+
