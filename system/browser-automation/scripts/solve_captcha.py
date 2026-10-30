@@ -67,7 +67,7 @@ def solve_recaptcha_v3(site_key: str, page_url: str, action: str = "verify", min
     
     if keys.get('2captcha'):
         api_key = keys['2captcha']
-        resp = requests.post("http://2captcha.com/in.php", data={
+        resp = requests.post("https://2captcha.com/in.php", data={
             "key": api_key,
             "method": "userrecaptcha",
             "googlekey": site_key,
@@ -120,7 +120,7 @@ def solve_hcaptcha(site_key: str, page_url: str, provider: str = None) -> str:
     
     if keys.get('2captcha'):
         api_key = keys['2captcha']
-        resp = requests.post("http://2captcha.com/in.php", data={
+        resp = requests.post("https://2captcha.com/in.php", data={
             "key": api_key,
             "method": "hcaptcha",
             "sitekey": site_key,
@@ -170,7 +170,7 @@ def solve_turnstile(site_key: str, page_url: str, provider: str = None) -> str:
     
     if keys.get('2captcha'):
         api_key = keys['2captcha']
-        resp = requests.post("http://2captcha.com/in.php", data={
+        resp = requests.post("https://2captcha.com/in.php", data={
             "key": api_key,
             "method": "turnstile",
             "sitekey": site_key,
@@ -227,7 +227,7 @@ def inject_captcha_token(page, token: str, captcha_type: str = "recaptcha"):
 # Private helper functions
 
 def _solve_2captcha_recaptcha(api_key, site_key, page_url, invisible=False):
-    resp = requests.post("http://2captcha.com/in.php", data={
+    resp = requests.post("https://2captcha.com/in.php", data={
         "key": api_key,
         "method": "userrecaptcha",
         "googlekey": site_key,
@@ -284,7 +284,7 @@ def _poll_2captcha(api_key, task_id, max_attempts=60):
     for _ in range(max_attempts):
         time.sleep(3)
         result = requests.get(
-            f"http://2captcha.com/res.php?key={api_key}&action=get&id={task_id}&json=1"
+            f"https://2captcha.com/res.php?key={api_key}&action=get&id={task_id}&json=1"
         ).json()
         
         if result.get("status") == 1:
