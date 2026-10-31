@@ -5214,3 +5214,25 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 ### r658Q-17 · 信任级别与技能声明字段之间没有因果关系：不得用「目录已受信」推断字段被放行
 - **实证**：一手（Qoder r732-Q-C-1 转落，来源 code.claude.com/docs/en/skills）：官方明言工作区信任**不门控** `allowed-tools`，该字段另成一条裁决链。
 - **判据**：验证「某权限声明是否生效」时，**不得**用「所在文件夹/工作区已受信」去推断该字段被放行或被加强；要逐一枚举对该字段有覆盖力的机制（受管策略、会话状态、消息级减权）并实测。作为「信任不沿路径传递」的第四条反向事实。提升层：工具（权限声明面）/ 安全（信任非传递）。
+
+## r659 · 共学三轮落地点（5 条，2026-10-31）
+
+### r659A2 · 契约层遇到无法识别的输出不得静默降级为空值
+- **实证**：langchain#41605：with_structured_output 传 dict/JSON schema 时，模型返回一个未识别的工具名（幻觉工具名），invoke() 静默返回 None 而不抛错。（来源：https://github.com/langchain-ai/langchain/issues/41605，2026-10-31 实拉）
+- **判据**：结构化输出/解析层对「无法映射到契约的输出」必须显式失败并给出类别，禁止静默返回空值——空值与「模型确实给了空答案」在下游不可区分。提升层：工具（契约与解析）。
+
+### r659B10 · 同一载体承载记忆与技能时，写入须分叉：历史只追加、当前状态重写后必须重验
+- **实证**：arXiv 2609.16669（Memory-Skill Isomorphism）：记忆与技能共用同一渐进披露载体（常驻 description 放热线索、SKILL.md 放冷索引与策展策略、references/*.md 放细节 L0→L1→L2），并给 1,024 字符的 description 预算；写入分叉——history appended，current state rewritten and revalidated。（来源：https://arxiv.org/abs/2609.16669，2026-10-31 实拉）
+- **判据**：一个载体同时承载历史与当前状态时，必须分叉写入路径：追加型与重写型不能共用一次写，重写后必须重验，否则索引与细节会漂移且无法回溯。提升层：可复用 Skill（载体与治理）。
+
+### r659B15 · 控制策略应作为带版本与谱系的可移植资产
+- **实证**：arXiv 2608.09380（OpenLoopEvolve）：把 agent 的观察、规划、记忆、动作、验证、恢复、停止与预算控制表示为带版本和谱系的可移植策略资产，并提供在线（持续反馈触发候选）与离线（从归档轨迹与失败中搜索）两种演化模式。（来源：https://arxiv.org/abs/2608.09380，2026-10-31 实拉）
+- **判据**：控制策略（何时重试、何时停、预算怎么分）要从提示词里抽出来做成版本化资产，否则跨轨迹无法积累与复盘；演化模式要能在线/离线选择。提升层：可复用 Skill（策略资产化）。
+
+### r659C12 · 无有效字段的更新请求须显式失败，不得静默成功
+- **实证**：www.activepieces.com/docs/install/reference/breaking-changes.md（77,945B 实拉）：逐字「A call that supplies only a blank description now fails with "At least one field (name, description, or privacy) must be provided to update the board." instead of silently doing nothing.」（来源：https://www.activepieces.com/docs/install/reference/breaking-changes.md，2026-10-31 实拉）
+- **判据**：空更新不得静默成功；「什么都没改」与「改成功了」在调用方不可区分，必须显式报错并列出可接受字段。提升层：工具（接口契约）。
+
+### r659Q9 · 分发面可把成本与风险做成可机检的上架字段，规范层只有软预算
+- **实证**：Qoder r734-Q-B-6 一手：腾讯 SkillHub 技能详情页逐字段外露 14.1K tokens 预估消耗、v3.0.0、更新时间、AI 评分、下载与收藏，页签含版本历史与评测报告，并有依赖声明表与风险申报表（风险项/等级/防护措施）；对照 agentskills.io：compatibility 仅 ≤500 自由文本、token 预算是建议、allowed-tools 标注 Experimental。（来源：https://agentskills.io/specification，2026-10-31 实拉）
+- **判据**：装载准入应优先消费结构化申报（依赖/风险/成本三表），把自由文本 compatibility 只当补充；上下文成本属分发元数据、应在装前可见；规范里标 Experimental 的字段不得当稳定契约依赖。提升层：可复用 Skill（元数据与准入面）。来源：skillhub.cn/skills、agentskills.io/specification。

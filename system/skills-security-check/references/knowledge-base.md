@@ -2633,3 +2633,57 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 ### r658Q-13 · 缓存不是信任凭证：从远端到缓存到本地技能目录的每一跳都是信任边界，缓存只传输不升级
 - **实证**：一手（Qoder r732-Q-C-5 转落，来源 MCP Skills 扩展完整性面 + registry 网关文档）：已缓存的远端字节**不因落地到本地而获得本地文件系统技能的信任级**。
 - **判据**：装载路径上的每一跳都要重新走一遍准入 —— 缓存只是**传输缓存**，从缓存装载要与首次下载走同一套校验；「已经在本地了」不构成降低校验强度的理由。与已落「跨会话产物不可信」互补（那条是技能间跳，本条是网络→磁盘→装载跳）。提升层：可复用 Skill（装载准入）/ 安全（信任传递）。
+
+## r659 · 共学三轮落地点（13 条，2026-10-31）
+
+### r659A6 · 工具内派生子进程必须断开协议管道
+- **实证**：modelcontextprotocol/python-sdk#3788：Windows stdio 服务器中，工具 handler 内 subprocess.run 继承 stdin，子进程永不结束、工具调用挂死，只能等 MCP 空闲超时（Claude Code 默认 30 分钟）。（来源：https://github.com/modelcontextprotocol/python-sdk/issues/3788，2026-10-31 实拉）
+- **判据**：工具/钩子内派生的子进程一律 stdin=DEVNULL 或等价脱离；继承协议管道从来不是工具想要的行为，且其失败形态是「无响应」而非「报错」。提升层：工具（执行面边界）。
+
+### r659A9 · 容量闸门须同时给出限额层级与「拒绝后能否重试」
+- **实证**：AutoGPT#16461：启动或唤醒 E2B 沙箱要等两个限额——deployment 级上限（未设则不限）与 account 级默认 10；connect 会返回是否允许唤醒已暂停实例（resumes 默认 True）；被拒绝时不重试。（来源：https://github.com/Significant-Gravitas/AutoGPT/pull/16461，2026-10-31 实拉）
+- **判据**：任何并发/配额闸门都要声明「限额挂在哪一层」与「拒绝后能否重试」两个参数；唤醒已暂停实例属独立能力，须显式开关而非暗示于连接成功。提升层：可复用 Skill（配额准入）。
+
+### r659A13 · 权限清单是静态超集，工具下线不自动收缩权限面
+- **实证**：AutoGPT#16455：get_copilot_tool_names() 被刻意保留为「静态权限超集」——每个被广告的 MCP 工具都必须被允许，不可用工具的未使用权限名可以保留。（来源：https://github.com/Significant-Gravitas/AutoGPT/pull/16455，2026-10-31 实拉）
+- **判据**：「已授予的权限集合」与「当前可用工具集合」必须分列管理：前者是超集、不随后者自动收缩；收缩只能由显式动作完成，否则工具短暂不可用会造成权限反复授予与审计抖动。提升层：可复用 Skill（权限准入）。
+
+### r659A15 · 缺失凭据应回 challenge 而非 error，两类应答形状须分列
+- **实证**：modelcontextprotocol/python-sdk#3779：无令牌时返回带 resource_metadata 与 scope 的鉴权挑战，不带 error code。（来源：https://github.com/modelcontextprotocol/python-sdk/pull/3779，2026-10-31 实拉）
+- **判据**：「未认证」与「被拒绝」必须用不同应答形状区分（challenge vs error）；合并成同一错误会让客户端无法判断该去取凭据还是该放弃。提升层：工具（鉴权协议）。
+
+### r659B3 · 授权状态不得只由记忆承载：内生授权洗白
+- **实证**：arXiv 2609.01836（EAL-Bench）：长跑 agent 用持久记忆保存权限与限制；记忆误表演化中的授权状态时，agent 自己的记录会让未授权动作看起来被允许，称为 endogenous authorization laundering；并给出基准度量记忆是否正确保存演化中的授权态、错误是否传导到未授权动作。（来源：https://arxiv.org/abs/2609.01836，2026-10-31 实拉）
+- **判据**：权限状态必须以权威源为准，记忆只能缓存；执行前须向权威源复核，且复核结果要可作为证据留痕。提升层：可复用 Skill（授权面）。
+
+### r659B9 · 授权产物须可验证地由策略与证据派生；决策记录本身不是授权
+- **实证**：arXiv 2609.11596（EBL-Core）：为「从候选动作到执行授权」定义合规格档，绑定结构化意图对象、Root/Operational 策略、证据义务、类型化证据、上下文、时间与可验证的 Decision Derivation，以 Execution Release Contract 收口，并明确 ERC 本身不是授权。（来源：https://arxiv.org/abs/2609.11596，2026-10-31 实拉）
+- **判据**：授权必须能回溯到哪条策略、哪些证据、何时，且该回溯可验证；仅有「决策已记录」不构成授权。提升层：可复用 Skill（授权面）。
+
+### r659B12 · 隐私控制点须前置到共享态被更新之前
+- **实证**：arXiv 2609.19226（PAPC）：隐私损失在最终答案出现之前就已产生——一次记忆写入、共享工作区更新、跨 agent 消息或工具事件都可能把暴露成本加给另一个委托方；成本取决于拓扑与扇出而不只是内容。（来源：https://arxiv.org/abs/2609.19226，2026-10-31 实拉）
+- **判据**：隐私控制必须拦截信息移动事件在它更新共享态或外部通道之前；只审最终输出会漏掉中间暴露，且高扇出会把单次泄露代价放大。提升层：可复用 Skill（隐私准入）。
+
+### r659C4 · 进程级凭据授予的撤销事件须逐项枚举
+- **实证**：docs.openclaw.ai/tools/exec.md：逐字「Each managed process has its own proxy grant, which survives the originating turn and is revoked on process exit, cancellation, timeout, or Gateway shutdown.」（来源：https://docs.openclaw.ai/tools/exec.md，2026-10-31 实拉）
+- **判据**：授予的生命周期必须显式列出全部撤销触发（进程退出 / 取消 / 超时 / 宿主关闭）；只声明「跨轮次存活」而不声明撤销面，等于给出事实上的无限期凭据。提升层：可复用 Skill（凭据生命周期）。
+
+### r659C5 · 长期信任不覆盖结构更强的类别，且信任不自动扩写白名单
+- **实证**：docs.openclaw.ai/tools/exec.md 与 tools/exec-approvals.md（44,246B 实拉）：逐字「Durable allow-always trust does not bypass that rule: a chained command still requires every top-level segment to match.」与「allow-always does not persist new allowlist entries for inline-eval commands.」（来源：https://docs.openclaw.ai/tools/exec-approvals.md，2026-10-31 实拉）
+- **判据**：blanket 信任只覆盖它被授予的那一类；命令链接、inline-eval 一类结构更强的形式必须逐段重新匹配，且不因长期信任而自动写入白名单。提升层：可复用 Skill（审批与信任面）。
+
+### r659C6 · 运行期审批对配置派生策略只能收紧，不能放宽
+- **实证**：docs.openclaw.ai/tools/exec-approvals.md：逐字「approvals can only tighten config-derived security/ask, never」放宽；且 askFallback: "full" 也不能替代 reviewer 或显式审批。（来源：https://docs.openclaw.ai/tools/exec-approvals.md，2026-10-31 实拉）
+- **判据**：运行期审批与配置策略之间要有单调性：运行期只能更严；任何兜底放宽字段都要显式排除在这条单调性之外，否则配置上限形同虚设。提升层：可复用 Skill（审批单调性）。
+
+### r659C7 · 被拒/过期/取消的审批请求是终态；同一请求的后续动作须各自独立满足当前权限
+- **实证**：docs.openclaw.ai/automation/cron-jobs/schedules.md（31,903B 实拉）：逐字「A declined, expired, or canceled approval request is closed and cannot later be approved」与「Later actions, including actions from the same request, must independently satisfy their current permissions and approval settings.」（来源：https://docs.openclaw.ai/automation/cron-jobs/schedules.md，2026-10-31 实拉）
+- **判据**：审批闭环后不可补批，需要再次尝试必须重新发起；同一请求内的后续步骤不得继承前一步已获的批准。提升层：工作流（审批生命周期）。
+
+### r659C8 · 授权面变更使既有审批失效，审批不可跨变更继承
+- **实证**：docs.openclaw.ai/automation/cron-jobs/schedules.md：逐字「A revoked grant, removed session, explicit exec denial, or changed sandbox configuration cannot inherit the old approval.」，且升级后隔离项不会自动恢复。（来源：https://docs.openclaw.ai/automation/cron-jobs/schedules.md，2026-10-31 实拉）
+- **判据**：审批可继承的前提是底层授权面未变；任何授权面变更（撤回授予、移除会话、显式拒绝、沙箱配置改动）都使既有审批失效并须重新申请。提升层：可复用 Skill（审批继承边界）。
+
+### r659C17 · 令牌默认继承创建者全权，最小权限不是默认态
+- **实证**：www.windmill.dev/docs/core_concepts/user_tokens.md（11,221B 实拉）：逐字「By default, tokens inherit the full permissions of the user who created them.」，且 WM_TOKEN 默认拥有作业运行身份的全权。（来源：https://www.windmill.dev/docs/core_concepts/user_tokens.md，2026-10-31 实拉）
+- **判据**：令牌默认等于创建者权限，因此最小权限必须靠显式收窄动作获得；把默认当最小权限会系统性超额授权，且审计上「未设权限」会被读成「已最小化」。提升层：可复用 Skill（凭据与权限准入）。

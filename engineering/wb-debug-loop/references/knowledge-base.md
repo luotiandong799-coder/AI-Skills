@@ -3507,3 +3507,57 @@ Functional API 在 resume 时会重新执行一个「其异常已被入口点捕
 ### r658Q-15 · 取消已被应答不等于动作已停止；未达终态期间不得启动同一目标的替代写入
 - **实证**：一手（Qoder r732-Q-C-3 转落，来源 SEP-2663 Tasks：cancellation 已 ack，任务仍可能未到终态）。
 - **判据**：发出取消后，「取消请求成功」**不得**作为「动作已停止」的证据写入结论；须继续观察终态，且在未观察到终态期间**不得启动针对同一目标的替代写入**（否则两个执行体重叠）。与已落「超时非回滚授权」互补：那条管超时后不能假定已回滚，本条管取消后不能假定已停止。提升层：工作流（失败与中断处置）。
+
+## r659 · 共学三轮落地点（13 条，2026-10-31）
+
+### r659A3 · 流式通道不得让配置的超时在响应体阶段失效
+- **实证**：dify#45198：SDK 用配置 timeout 建 AbortController 定时器，但 requestRaw() 在 finally 里无条件 clearTimeout；一旦返回流式包装，SDK 级超时保护整体消失。（来源：https://github.com/langgenius/dify/issues/45198，2026-10-31 实拉）
+- **判据**：超时必须覆盖响应完整生命周期（含响应体停止产数据的情形）；返回流式/惰性包装时须显式重新挂载超时，不得因 finally 清理而静默取消保护。提升层：工具（超时契约）。
+
+### r659A4 · 自动恢复重试须有上限、终态只报一次、且显式排除不可重试类别
+- **实证**：OpenHands#19142/#19144：自动沙箱恢复对瞬时失败无限重试且每次都弹提示；修法为限定重试次数、终态只提示一次，并明确「认证、校验、权限失败不按瞬时错误重试」，另给 5 秒重连宽限。（来源：https://github.com/All-Hands-AI/OpenHands/issues/19142，2026-10-31 实拉）
+- **判据**：自动重试必须三件套：上限 + 终态单次上报 + 不可重试类别清单；把权限错误当瞬时错误重试会把确定性拒绝变成噪声风暴并放大副作用。提升层：工作流（恢复与重试）。
+
+### r659A7 · 中断路径上的完成回调不得对已取消任务取异常
+- **实证**：browser-use#6264：SignalHandler._cancel_interruptible_tasks 挂的 done 回调对已取消任务调用 Task.exception()，产生事件循环回调错误；原条件本意是静默消费完成。（来源：https://github.com/browser-use/browser-use/pull/6264，2026-10-31 实拉）
+- **判据**：取消/中断路径的收尾回调必须先判 cancelled 再取结果；在中断路径里抛新异常会把「已取消」掩盖成「回调失败」。提升层：工作流（取消语义）。
+
+### r659A11 · 输入契约不匹配属不可重试类，须立即失败
+- **实证**：mastra#29080：Temporal step 输入与 inputSchema 不匹配时，直接让 activity 失败且不重试，并把解析后的输入交给 step（与默认引擎一致）。（来源：https://github.com/mastra-ai/mastra/pull/29080，2026-10-31 实拉）
+- **判据**：输入校验失败是确定性错误，不得计入重试预算；重试只会把同一错误放大为多次副作用尝试。提升层：工作流（重试分类）。
+
+### r659A12 · 解析层须为「不可解析的模型输出」预定义降级语义
+- **实证**：dify#45200：模型输出不符合单动作格式会崩溃或选错工具；修法是非动作负载按文本处理、动作列表只执行一个、额外字段不改变调用目标，且「不应中止 agent 运行」。（来源：https://github.com/langgenius/dify/issues/45200，2026-10-31 实拉）
+- **判据**：解析器必须为格式不符预定义三档降级（当文本 / 取首个 / 忽略额外字段），不得让格式噪声终止运行或改变目标；解析失败要可观测但不能等于运行失败。提升层：工具（解析契约）。
+
+### r659B11 · 并发 agent 的托管层须把资源治理做成运行期可核验信号
+- **实证**：arXiv 2610.07257（MemMux）：多 agent 并行时无法回答多少内存属于哪个 agent、无法确认被终止 agent 的后代真已消失、无法发现逃离子进程；把这些当运行期验证问题，做成 per-agent 归因、完全回收、逃逸进程可见性等可核对信号。（来源：https://arxiv.org/abs/2610.07257，2026-10-31 实拉）
+- **判据**：并发 agent 的托管层要把资源治理落成运行期可读信号而不是事后统计；终止后必须能证明后代已回收，逃逸进程必须可见。提升层：工具（可观测与回收）。
+
+### r659C3 · 存活能力由独立开关决定：关超时不等于延长寿命
+- **实证**：docs.openclaw.ai/tools/exec.md（47,997B 实拉）：逐字「Surviving a Gateway restart additionally requires durable: true; disabling the timeout alone does not extend the host or worker lifetime.」（来源：https://docs.openclaw.ai/tools/exec.md，2026-10-31 实拉）
+- **判据**：「不被超时杀死」与「能活过宿主重启」是两个能力、各由独立开关控制；验收存活必须分别确认两个开关，禁用超时不构成存活证明。提升层：工作流（执行生命周期）。
+
+### r659C10 · 重试预算按连续故障窗口计，中间的有效工作重置计数
+- **实证**：docs.openclaw.ai/concepts/retry.md（16,632B 实拉）：逐字「A completed successful model response resets the retry count, backoff, and outage window, so useful model work between failures does not exhaust recovery for a later outage.」（来源：https://docs.openclaw.ai/concepts/retry.md，2026-10-31 实拉）
+- **判据**：重试预算与退避要按连续故障窗口计量，一次成功产出即清零；否则长会话会被早期故障耗尽后续恢复预算，表现为「明明刚还在正常工作却不再重试」。提升层：工作流（重试与预算）。
+
+### r659C11 · 重试准入须与剩余时间预算挂钩，而非只看次数
+- **实证**：docs.openclaw.ai/concepts/retry.md：逐字「With a replay-safe model fallback available, default embedded provider retries stop admitting retries once half the bounded run timeout is spent, including the initial request.」（来源：https://docs.openclaw.ai/concepts/retry.md，2026-10-31 实拉）
+- **判据**：重试不能只看次数上限，还要看剩余时间预算（如半程门槛）；否则重试本身会把运行拖到总超时，把「可恢复」变成「必然超时」。提升层：工作流（重试与预算）。
+
+### r659C15 · 幂等键绑定一次意图，取消或失败后重做须换键
+- **实证**：docs.dify.ai/llms-full.txt：逐字「To repeat a canceled crawl preview or a failed Import Website Pages run, don't retry it: start a new preview or import with a new Idempotency-Key.」（来源：https://docs.dify.ai/llms-full.txt，2026-10-31 实拉）
+- **判据**：幂等键的语义是同一意图的重复提交，不是同一目标的重做；取消或失败后重做必须换键，复用旧键会让服务端判为同一意图而直接跳过。提升层：工具（幂等语义）。
+
+### r659Q4 · 取消的生效边界由被取消方的检查节奏决定，不由请求方决定
+- **实证**：Qoder r733-Q-A-5 一手：Temporal CancelledFailure 在 Activity 下一次心跳才抛出、Local Activity 可无心跳取消、子 Workflow 默认等待取消完成；Prefect CANCELLING 态触发 cleanup，默认 30s grace / 300s server timeout，且无 deployment 的嵌套 run 不能被独立取消。（来源：https://docs.temporal.io/develop/typescript/workflows/cancellation，2026-10-31 实拉）
+- **判据**：判定「已停止」须给出该执行体的检查周期与可取消的最小单元两个参数；二者缺一时「取消成功」只说明请求被受理。本条给的是中间态为何持续存在的机制解释（协作式检查点），与「取消 ack ≠ 终态」互补。提升层：工作流（失败与中断处置）。来源：docs.temporal.io/develop/typescript/workflows/cancellation。
+
+### r659Q11 · 错误率型熔断对「连续成功下的重复副作用」完全失明
+- **实证**：Qoder r735-Q-C-2 一手（GitHub agent 生态讨论 + MCP Tasks 面）：熔断器读的是失败率，非幂等委托每次都成功，故永不触发；委托/回调类执行在成功返回时仍可能已被重复投递。（来源：https://modelcontextprotocol.io/specification/2025-06-18/server/tools，2026-10-31 实拉）
+- **判据**：副作用去重不能交给失败率信号，须独立计「同一目标已发出几次」；以 delegation 为最小中断单元——取消/暂停只撤委托边界，不撤委托内已确认的副作用；熔断规则要显式声明哪类故障我不观测。提升层：工作流（失败与中断处置）。
+
+### r659Q14 · 入口失败时追踪键缺席，以执行 ID 为主键的重放/去重/归因须定义无 ID 分支
+- **实证**：Qoder r736-Q-A-2 一手：n8n 逐字「execution.id is absent if the trigger node fails because the workflow doesn't execute」。（来源：https://docs.n8n.io/llms.txt，2026-10-31 实拉）
+- **判据**：错误处理分支的输入契约在触发节点失败时没有执行 ID；凡以执行 ID 为主键的重放、去重与归因必须显式定义无 ID 分支，否则触发级失败静默不可追。提升层：工作流（可追性）。来源：docs.n8n.io。

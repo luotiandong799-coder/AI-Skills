@@ -987,3 +987,25 @@ ChipMEM 指出：在同一批任务上反复接触基准反馈，会奖励「针
 ### r658B-2 · 技能评测须回答「该不该注入」，并用长度匹配对照剥离「多出来的 prompt」这一混淆因素
 - **实证**：一手：arXiv 2608.23067 WebDev-Skills-Bench —— 因为每个被注入的技能都会扩大每次查询的 prompt，一个有效的技能基准**不仅要判断 agent 能否解出任务，还要判断这个技能该不该被注入**；基准设了四种匹配条件，**包含长度匹配对照**；规模为 31 个公开 WebDev 技能 × 50 个 Web-Bench 项目 × 1000 个有序任务。
 - **判据**：技能效果评测必须至少三条件 —— 无技能、有技能、**等长无关文本**（对照出「只是因为 prompt 变长」的部分）；缺长度对照时，任何增益都可能来自注意力/上下文分布的改变而非技能内容。此外要单独产出「注入适宜性」结论：有些技能能解任务但不该常驻。提升层：工作流（评测设计）/ 工具（对照设置）。
+
+## r659 · 共学三轮落地点（5 条，2026-10-31）
+
+### r659A14 · 记忆评测须含「错误重放率」与「弃权率」两轴
+- **实证**：letta#3448：开放的记忆基准协议把 decision safety 拆成 repeats、stale facts、contradictory updates、TTL、abstention、wrong-replay rate 六项。（来源：https://github.com/letta-ai/letta/issues/3448，2026-10-31 实拉）
+- **判据**：记忆系统的评测不能只测召回与准确率，必须同时报「把过时/被撤回内容当现行重放」的比率与「该答却弃权」的比率；只有这两轴才能区分记得多与记得对。提升层：工作流（评测效度）。
+
+### r659B7 · 平均 benchmark 准确率测的是能力，不量化可靠性声明
+- **实证**：arXiv 2609.35316：可靠性定义为在规定时段与规定运行条件下以规定证据完成预期功能；给出四级诊断框架 component / operational-loop / agentic-conduct / network-and-governance。（来源：https://arxiv.org/abs/2609.35316，2026-10-31 实拉）
+- **判据**：报「可靠」必须同时给出时段、运行条件与证据三要素；故障分级不能只到组件级，要覆盖 agent 行为面与治理网络面。提升层：工作流（评测与验收）。
+
+### r659B16 · 技能演化评测须保证「能力重叠但解不重叠」
+- **实证**：arXiv 2609.39284（EngramBench）：现有技能演化评测存在可辨识性问题——把真实能力抽象与死记解泄漏（从历史训练数据抄高度相似代码）结构性混淆；以 capability overlap without solution overlap 为公理构造 30 个学习任务与 13 个未见迁移任务。（来源：https://arxiv.org/abs/2609.39284，2026-10-31 实拉）
+- **判据**：评技能演化必须先排除解空间重叠，否则测到的是检索/记忆而非泛化；迁移集要与学习集能力重叠而解不重叠。提升层：工作流（评测设计）。
+
+### r659Q8 · 回退执行不改变申报口径，「名义执行体」与「实际执行体」必须分列计量
+- **实证**：Qoder r734-Q-B-4 一手：openclaw 模型回退逐字「Fallback execution does not change the session's selected model.」，且先轮换 auth profiles 再跨模型回退、限流场景 16 total attempts (15 retries)、退避上限 60s、「Cooldowns last exactly as providers specify」。（来源：https://docs.openclaw.ai/concepts/model-failover，2026-10-31 实拉）
+- **判据**：回退链触发后，评测/成本/归因三条账要分别落到实际执行体而非会话申报值；反向断言：会话里写的是模型 A 不能作为这一步由 A 完成的证据。提升层：工具（计量与归因）。来源：docs.openclaw.ai/concepts/model-failover。
+
+### r659Q13 · 回撤必须与净增益并列记账，三轴同源计量须再加一列时间维回撤
+- **实证**：Qoder r735-Q-C-4 一手（NVIDIA Skill Lift / Nemo-Gym）：加入准入 gate 后 drawdown 约 −75%、技能库紧凑约 11x；同批给出优化对象仅为技能文本与 MCP 工具描述（55%→95%、turns 155→53、tokens 81K→29K）。（来源：https://developer.nvidia.com/blog，2026-10-31 实拉）
+- **判据**：能力/安全/成本三轴同源计量须再加一列时间维回撤（峰值到谷值的最大跌幅），与净增益同时报；只报净增益的评估不足以支持「变好了」。提升层：工作流（评估与验收）。

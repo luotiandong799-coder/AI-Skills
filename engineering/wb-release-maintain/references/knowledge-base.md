@@ -1494,3 +1494,29 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 ### r658Q-13 · 不得把「取最新」外包给服务端排序：列表首条不等于最新版
 - **实证**：一手（Qoder r731-Q-B-4 转落，来源 MCP Registry）：注册表版本排序按**文本比较**，于是首条不等于最新。
 - **判据**：向第三方 registry 取「最新版」时，不得取列表第一项；要自己按语义版本比较，并把「服务端排序语义未知」当作一条独立断言记入结论。与已落「版本号时间序」互补：那条管版本与时间的对应，本条管**列表顺序不可外包给服务端**。提升层：工具（取数与判定）/ 工作流（依赖解析）。
+
+## r659 · 共学三轮落地点（6 条，2026-10-31）
+
+### r659A1 · 检查点分叉时「恢复所写的更新」与「恢复值」必须同源
+- **实证**：langgraph#9509：检查点把恢复它的 Command 的 update/goto 写成自己的 NULL_TASK_ID pending writes；从该检查点 fork 会重放 update 却把旁边的 resume 值丢掉。修法是被寻址检查点已被取代时丢弃 NULL_TASK_ID 写入、保留 RESUME。（来源：https://github.com/langchain-ai/langgraph/issues/9509，2026-10-31 实拉）
+- **判据**：以检查点为重放/分叉单元时，必须显式声明该检查点携带的 pending writes 中哪些参与重放；「更新重放成功」不等于「恢复语义等价」。验收重放要同时断言恢复值是否随之迁移。提升层：工作流（重放与恢复语义）。
+
+### r659A8 · 恢复旧快照时缺失项应走默认填充而非抛错
+- **实证**：haystack#13493：恢复 legacy breakpoint 快照时，resume 分支直接索引 socket_inputs_values[0] 未判空，快照中空 socket 列表导致 IndexError 而不是按默认恢复组件；修法与首次运行口径一致——缺失 socket 用默认值填充。（来源：https://github.com/deepset-ai/haystack/pull/13493，2026-10-31 实拉）
+- **判据**：恢复/反序列化路径对「缺失字段」的处置口径必须与首次运行一致，不得用「必然存在」的假设做直接索引；旧版本快照的空集合是合法输入。提升层：工作流（恢复兼容）。
+
+### r659A10 · 持久化序列化对键与值须同等类型保真
+- **实证**：langgraph#9510：ormsgpack 从不把 dict 的键走 _msgpack_default 类型化路径（只有值走），检查点往返因此丢失 Enum/UUID/date 一类复合键类型。（来源：https://github.com/langchain-ai/langgraph/issues/9510，2026-10-31 实拉）
+- **判据**：检查点/快照的序列化路径必须对 key 与 value 同等保真；往返测试要覆盖「复合类型作键」这一格，否则恢复得到的是结构相同但类型退化的状态。提升层：工具（持久化保真）。
+
+### r659C2 · 迁移后不可回滚是显式终态，须识别为「拒绝」而非失败后重试
+- **实证**：docs.openclaw.ai/gateway/restart-recovery.md（31,429B 实拉）：状态迁移后 refused（state-migrated-no-rollback），updater 只做有界修复。（来源：https://docs.openclaw.ai/gateway/restart-recovery.md，2026-10-31 实拉）
+- **判据**：状态迁移不可逆时要把「拒绝」作为一等终态显式返回；把它当普通失败会驱动无意义重试并放大不一致。提升层：工作流（恢复与迁移）。
+
+### r659C13 · 时间旅行遗留状态会污染后续恢复，重放前须隔离前次映射
+- **实证**：docs.langchain.com/langsmith/agent-server-changelog（2.1MB 实拉）：逐字「Fixed a bug where a thread's checkpoint_map from a prior time-travel run would persist and contaminate a subsequent Command(resume=...), causing nested subgraphs to incorrectly replay from the start.」（来源：https://docs.langchain.com/langsmith/agent-server-changelog，2026-10-31 实拉）
+- **判据**：时间旅行/回放调试会留下状态残留；正式恢复前必须清理或隔离前次时间旅行的检查点映射，否则嵌套子图会从头重放，表现为「恢复后重复执行」。提升层：工作流（重放隔离）。
+
+### r659Q2 · 兼容分支的退役条件 = 存量在飞实例全部终结，而非新版本发布满 N 天
+- **实证**：Qoder r733-Q-A-2 一手：Temporal patched() 向历史插入 marker 使旧执行走非匹配分支，deprecate_patch() 仅在旧执行全部结束后方可安全移除；配套 Windmill「Scripts are never overwritten」与 Activepieces「existing flows continue until edited」。（来源：https://docs.temporal.io/develop/python/versioning，2026-10-31 实拉）
+- **判据**：任何给旧路径留的兼容钩子/降级分支，其删除资格由可观测的存量清零判定，不能由日历或版本号判定；日历只能给出最早可查，清零证据才是可删。与「发布期门禁不追溯存量」成对——两条缺任一条即出现「存量既不受新门禁保护又已失去旧兼容」的真空窗口。提升层：工作流（发布与退役）。来源：docs.temporal.io/develop/python/versioning。
