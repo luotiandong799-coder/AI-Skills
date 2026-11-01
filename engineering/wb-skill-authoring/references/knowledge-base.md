@@ -5236,3 +5236,22 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 ### r659Q9 · 分发面可把成本与风险做成可机检的上架字段，规范层只有软预算
 - **实证**：Qoder r734-Q-B-6 一手：腾讯 SkillHub 技能详情页逐字段外露 14.1K tokens 预估消耗、v3.0.0、更新时间、AI 评分、下载与收藏，页签含版本历史与评测报告，并有依赖声明表与风险申报表（风险项/等级/防护措施）；对照 agentskills.io：compatibility 仅 ≤500 自由文本、token 预算是建议、allowed-tools 标注 Experimental。（来源：https://agentskills.io/specification，2026-10-31 实拉）
 - **判据**：装载准入应优先消费结构化申报（依赖/风险/成本三表），把自由文本 compatibility 只当补充；上下文成本属分发元数据、应在装前可见；规范里标 Experimental 的字段不得当稳定契约依赖。提升层：可复用 Skill（元数据与准入面）。来源：skillhub.cn/skills、agentskills.io/specification。
+
+### r660 · P1 权限字段跨源存在性不齐（不作隔离边界）
+- **判据**：掌控字段 allowed-tools 在 agentskills.io 规范中被明标 experimental；阿里 OpenCode 变体有 tools:{write:false,edit:false}；智谱 Managed Agents 无任何运行时权限字段；Full Stack Skills 不带工具清单而把宿主元数据另置 agents/openai.yaml ⇒ 技能正文不得把 frontmatter 权限字段当隔离边界；凡依赖该字段处须写“按目标注册表逐一核对字段存在性与稳定性，缺位时回退装载侧审批”。与既有 allowed-tools 白名单（正面最小工具面）不冲突：那条管“用哪些工具”，本条管“该字段在规范层是否可靠”。
+- **提升层**：工具（装载契约）/可复用 Skill
+- **来源**：r742-Q-B 实拉 agentskills.io / OpenCode / 智谱 / Full Stack Skills（2026-11-01）
+- **触发词**：allowed-tools experimental、权限字段跨源不齐、frontmatter 权限不作隔离边界
+
+### r660 · A-1 装载期拒绝越权编辑引用凭据的节点
+- **判据**：Pipedream per-step credential access control：使用权与编辑权分列，越权变更须在装载期拒绝而非运行时才失败。与 ssc r625A（编辑权≠替换权权限位拆分）互补：r625A 管凭据对象自身的 edit/replace 两权限位，本条管“引用该凭据的步骤参数”的编辑权独立于调用权。可在装载期静态判定（谁能改引用凭据的节点）而非运行时才失败。
+- **提升层**：工具（授权粒度）/工作流（协作面编辑权）
+- **来源**：r736-Q-A Pipedream 一手
+- **触发词**：per-step credential、使用权≠编辑权、装载期拒绝越权编辑
+
+### r660 · P2 安装单元闭包律（sibling 不可依赖）
+- **判据**：原文“a skill must not rely on sibling skills being present”（788 技能拆 51 包独立 semver）；凡技能内引用其他技能正文，须在自身包内自带可独立成立的最小面，或显式标为软引用（不可用则降级而非中断）。与 sa KB:1046（路由指向幽灵）互补：那条是失败实例，本条是分装侧通则。收编来的技能在国内两个市场（阿里有/智谱无）会表现“同一份 frontmatter 一边生效一边被忽略”的静默差异。
+- **提升层**：可复用 Skill（编写与分发契约）
+- **来源**：r742-Q-B Full Stack Skills 788技能/51包
+- **触发词**：安装单元闭包、sibling skills、引用即自带最小面/软引用
+

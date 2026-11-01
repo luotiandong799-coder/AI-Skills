@@ -2687,3 +2687,10 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 ### r659C17 · 令牌默认继承创建者全权，最小权限不是默认态
 - **实证**：www.windmill.dev/docs/core_concepts/user_tokens.md（11,221B 实拉）：逐字「By default, tokens inherit the full permissions of the user who created them.」，且 WM_TOKEN 默认拥有作业运行身份的全权。（来源：https://www.windmill.dev/docs/core_concepts/user_tokens.md，2026-10-31 实拉）
 - **判据**：令牌默认等于创建者权限，因此最小权限必须靠显式收窄动作获得；把默认当最小权限会系统性超额授权，且审计上「未设权限」会被读成「已最小化」。提升层：可复用 Skill（凭据与权限准入）。
+
+### r660 · B-2 治理双通道：安全违规与权利主张分道
+- **判据**：一个治理面若把“安全违规”与“权利主张”混在一条流程，会出现证据要求错配（安全要可复现载荷，权利要权属材料）与处置词汇混用；应显式分道各自声明处置档位与申诉入口。实例：openclaw clawhub content-rights（URLs+contact+evidence，staff 定夺）与 moderation（unsafe/misleading/out-of-policy，ban/token revocation/hidden/removed）是两套独立通道与两套处置动词。与 ssc KB:1062（阻断态过期豁免/申诉）互补：那条管单通道误报救济，本条管双通道分置。
+- **提升层**：工作流（治理流程）
+- **来源**：r736-Q-B openclaw clawhub 实拉
+- **触发词**：治理双通道、content-rights、安全违规≠权利主张、处置动词分道
+
