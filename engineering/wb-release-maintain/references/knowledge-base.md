@@ -1561,3 +1561,11 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **实证**：PyPI「yanked always ignored by installer unless only match」「Deleting and yanking two different actions, yanking does not free up」；crates.io「does not delete, still available」「only yanked in exceptional circumstances」；pub.dev「retract within 7 days, can be restored again within 7 days, Retraction isn't deletion」「a published package lasts forever」；NuGet「local=delete / nuget.org=unlisted」「While indexing, appears under Unlisted」；Homebrew「three-stage: Deprecated→Disabled→Removed」「automatically removed one year after disable」「zero installs in last 90 days / outstanding CVEs」；GitHub Marketplace「must first delete the listing」。
 - **判据**：① yank 仍会被解析器选中（唯一匹配时）⇒ "撤销"≠"不可能被装到"，yank 作恶意版本处置须另配显式拒绝；② 撤销可逆性有窗口（pub.dev 7 天可撤＋7 天可恢复）⇒ 操作后须记窗口，超窗不可逆，别按"随时可回滚"设计；③ 生命周期阶段可自带自动推进（Disabled 满一年自动 Removed）⇒ "先停用"实际是预约删除；④ 同命令不同源语义不同（NuGet 本地=删/在线=下架）⇒ 删除封装须按源分档输出实际语义；⑤ 删除与下架顺序约束（先撤 listing 再删 app）；⑥ 触发条件资格化（90 天零安装/未修 CVE），明文拒绝"上游一句要求就删"。与 JSR 三档（r767-Q-C C3）并表不重复：本条管"内容是否还在"，C3 管"信任轴覆盖哪条"。
 - 提升层：工作流＋可复用 Skill。触发词：撤销八档、yank≠delete、7 天窗口、Disabled→Removed 自动、按源分档、顺序约束。
+
+## r774-Q-A · 投递失败证据是一等状态：连续失败自动停用通道，恢复须成对动作（来源：pipedream docs/workflows/triggers 2026-11-02 实拉，逐字 Reactivate a disabled webhook and clear its delivery failure evidence）
+- **判据**：① 连续失败自动停用通道；② 恢复须由两动作组成（重新激活 + 清除失败证据），只做前者等于带着旧判决复活通道；③ signing_key 仅创建时/OAuth 请求下返回 => 轮换凭据的重取路径不是"更新一下就拿到"。
+- 提升层：工具（通道恢复契约）/ 工作流。触发词：reactivate+clear failure evidence、自动停用通道、恢复成对动作、signing_key 重取路径。
+
+## r775-Q-B · 再分发侧的复验触发点与丢弃策略：镜像/同步仓每次同步跑签名漂移检测 + 必需产物齐套校验，缺件整条丢而非报错待补（来源：NVIDIA/skills Roadmap Sync-time compliance gates + drops any skill missing required artifacts before publishing 2026-11-02 实拉）
+- **判据**：① 补 r437B「verified 带再验证时钟」的执行细节缺口：再验证触发时机=同步事件，失败形态分"漂移"与"缺件"两类，后者是静默淘汰不是拒绝；② 凡从上游镜像能力的仓，须自陈"复验在哪个事件触发 + 不满足时是丢是标是拦"；只写"上游已 verified"=空头背书。
+- 提升层：工作流（再分发复验）/ 工具。触发词：sync-time compliance gates、missing artifacts dropped、再验证触发=同步事件、缺件整条丢。

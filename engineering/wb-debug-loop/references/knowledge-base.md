@@ -3622,3 +3622,7 @@ Functional API 在 resume 时会重新执行一个「其异常已被入口点捕
 - **实证**：三点合成一条：① 写侧往返校验失败即 `WorkflowCheckpointException` 抛出、坏检查点根本不落盘（与 r753「序列化成功不等于可恢复·往返校验」同向，本条补"校验发生在写之前而非读时"这一位置）；② 读侧用 restricted unpickler + `allowed_checkpoint_types` 的 `"module:qualname"` 表述，且 "Module-prefix allow listing is type-only: helper functions… are rejected"——白名单粒度必须是**类型**，按模块前缀放行等于把该模块内一切可调用对象一起放行；③ 续跑身份须 "preserve the topology and executor identities" 且用稳定 ID，明令禁止 conversation/request/user ID 与 PII、密钥充当 ID。
 - **判据**：① 往返校验须发生在写侧（坏检查点不落盘），而非读时——与 r753 序列化保真互补：那条管"写后读得到"，本条管"写前就拒坏"；② 反序列化白名单粒度必须是类型级（module:qualname），按模块前缀放行是过宽（helper 一并放行）；③ 续跑身份键禁止借用可被外部控制的标识（会话/请求/用户 ID、PII、密钥）——借用可被人控制的命名空间＝检查点身份可被冒充，一次会话号变化即拓扑对不上。
 - 提升层：工作流／工具。触发词：检查点信任边界、写侧往返校验、类型级白名单、module:qualname、续跑身份键、禁止借用外部标识。
+
+## r774-Q-A · 幂等键的匹配口径与归属主体须同报（来源：docs.n8n.io/connect/n8n-api/idempotency 2026-11-02 实拉）
+- **判据**：① 匹配需 path+query+body 全等且含 JSON 字段顺序与空格 => 同义不同序列化=幂等静默失效，重试会二次执行；② 键窗口 12h，409=首个在途 / 422=同键不同请求，两种码分属两种恢复动作；③ Keys belong to the user, not to one API key => 换凭据不重置已消耗窗口（与 r769-B4「双窗配额换 key 不重置」同判据但作用在幂等面）。
+- 提升层：工具（幂等契约）。触发词：idempotency matching=path+query+body+JSON order、409 vs 422、keys belong to user、报幂等须同报匹配口径+TTL+归属。

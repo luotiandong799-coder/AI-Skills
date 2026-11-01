@@ -2725,3 +2725,28 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 - **实证**：MS Agent Framework 一份文档钉死四件事：① 信息流是**两轴**而非单轴——`integrity`(trusted/untrusted) × `confidentiality`(public/private/user_identity)，合标签取 `combine_labels()` 的 "most restrictive"（单轴黑白名单答不出"可读但不可信"这类态）；② 缺省方向 `default_integrity=IntegrityLabel.UNTRUSTED`，理由 "fails closed rather than open"；③ 执法开关有两态，`enable_policy_enforcement=False` 即 dry-run——"闸门在跑"与"闸门在拦"是两件事；④ MCP server 带来的标签是 "restriction-only" unless `trust_server_ifc=True`（外部标签只能收紧不能放宽）。配套：护栏数值上界本身 fail-closed（成环、>16 variable-reference levels、>100 references 即拒），`rewritten_arguments()`「报告展开后的参数但不重新暴露隐藏字节」——审计面与展示面分离。
 - **判据**：① 信息流标签须两轴建模（integrity × confidentiality），单轴黑白名单无法表达"可读但不可信"；② 缺省方向必须显式声明且默认 fails-closed（untrusted）；③ 执法器必须有 dry-run 显式态——"策略在观察"与"策略在执行"是两件事，配置面须把后者单独证明（与 r767-Q-C C1「判官缺席默认方向」同族但对象为标签执法器）；④ 外部（MCP server）标签默认只能收紧不能放宽，除非显式 `trust_server_ifc=True`。
 - 提升层：可复用 Skill／工作流。触发词：IFC 两轴标签、combine_labels、fails-closed 缺省、dry-run 态、restriction-only、审计面与展示面分离。
+
+## r772-Q-B · 中心网关在"发现之前"改写能力面描述并预筛候选集：策略介入点前移到 discovery，agent 看见的工具描述未必出自发布者（来源：truefoundry docs /blog/mcp-gateway-registry 2026-11-02 实拉，逐字 override descriptions and annotations + bulk-edit access + policies applied before discovery）
+- **判据**：① 策略介入点前移到发现阶段 => 候选集在 agent 看见前就被裁剪，"我没用"≠"我被允许用"，授权申请无法覆盖"不知道存在的工具"；② 描述文本是 prompt 载体，中间层可改写它 => 审计若只记"调用了哪个工具 ID"，改写后语义永久丢失，须把"该次会话工具描述的实际发出文本（或其哈希）"记进审计；③ 网关兼 Auth overrides 与 Centralized Authentication Vaulting => 凭据替换与描述改写同属一个不可见改写面，应成对核查。
+- 与既有分工：r312-Q-B「分发双通道上游可被改写」管装载前源侧替换，本条管装载后服务时中心改写+策略预筛，链路两环节 => 重叠<60%。
+- 提升层：可复用 Skill（安全审计）/ 工作流（审计账本）。触发词：override descriptions、before discovery、策略预筛、描述即prompt载体、网关改写面成对核查。
+
+## r772-Q-B · 外部裁决方的第三种输出"无判定"须按"没回答"记账，且不得谎报为拦截或静默放行（来源：claude-code releases v2.1.316/v2.1.314 2026-11-02 一手实拉）
+- **判据**：① 外部 hook 的 allow 显式重解释为 no answer（由分类器或权限提示决策），不是授权；② 无判定被错记成 blocked 会污染 /permissions 清单与运维判断（fixed: auto mode reporting blocked when safety check gave no verdict）；③ 无人值守任务因无判定停轮必须标记为 failed（fixed: cloud scheduled tasks not marked failed）。净新点：对象是外部裁决方第三种输出及其对权限清单+运行终态的两处记账污染，区别于我方 r321B 采集结论三态（管我方采集）与 r652A fail-open 族（管我方闸门失败姿态）。
+- 提升层：工作流（权限记账）/ 安全边界。触发词：no verdict、allow=no answer、无判定不得谎报拦截、停轮须标failed。
+
+## r772-Q-B · 远端策略的本地副本是"降级成无策略"的通道：验不过即拒 + 拉不到不得以空策略启动（来源：claude-code v2.1.314 逐字 a stored copy that doesn't verify is refused + forceRemoteSettingsRefresh let sessions start without policy when server unreachable）
+- **判据**：① 策略缓存区分"已验证副本"与"未验证副本"，后者一律拒绝使用（可用性让位于约束在场）；② 网络失败走自己分支，不得把"取不到"实现成"没有约束"（这是 dl「expired is always false」在配置面的同型故障）；③ 强制刷新是有失败态的动作，需"刷新失败即拒启"显式档位而非静默继续。
+- 提升层：工作流（配置约束在场）。触发词：stored copy doesn't verify、without policy、取不到≠无约束、刷新失败即拒启。
+
+## r775-Q-B · 引用外部扫描结果的旁路可信度提示须声明两硬约束（来源：vercel-labs/skills src/telemetry.ts + src/add.ts 2026-11-02 源码级实拉）
+- **判据**：① 失败姿态——查询 3s 超时/任何错误返回 null，绝不阻断安装，缺席只能显式为"无提示/unknown"，禁止渲染成"安全"（比 r383A 旧值继续可用更严：旁路提示不允许沿用旧值）；② 发信门——仅当 GitHub 正向确认为公开仓后才把仓库名/skill 名发给审计服务，private 与 unknown 一律不发（未知≠可发，与 r488C 服务端防枚举合并错误码构成客户/服务两向同一判据）。
+- 提升层：工具（外发收缩）/ 安全边界。触发词：telemetry timeout=null、unknown≠safe、private/unknown 不发、旁路提示不沿用旧值。
+
+## r776-Q-C · 扫描覆盖分母的诚实口径与豁免权归属（来源：nvidia/skillspector README 2026-11-02 实拉）
+- **判据**：① 主动排除项仍占分母并标为完全未检（entirely uninspected），报覆盖率时分母不缩水、状态须显式 uninspected 而非 skipped-pass——与 r649A「不适用断言移出分母」同轴反向两半合为完整判据；② --fail-on-incomplete / --transitive-deny-prefix 用 exit code 2 作 1 之外的第三终态；③ 豁免面由调用方持有（explicit caller option, not author-controlled ignore file），补 ssc 现有作者侧声明（allowed-tools/IFC/dry-run）缺失的控制权轴。
+- 提升层：工具（扫描契约）/ 工作流。触发词：excluded remain in denominator、uninspected≠skipped-pass、caller not author、exit code 2。
+
+## r777-Q-A · 自动/人工复审通道只能追加或确认，不得放宽；无据高判由系统强制降级（来源：The-Swarm-Corporation/SkillScanner README + swarms.ai blog 2026-11-02 实拉；第二家佐证 OpenClaw callers cannot downgrade + r423C 点名"需第二家佐证才敢写通则"）
+- **判据**：① 任何自动/人工复审通道都无权撤销静态发现，只能解释它；解释不了就降等而非放行（APPROVE with unexplained HIGH/CRITICAL → downgraded to CAUTION）；② 降级须由系统执行而非流程要求（给了也会被改写），把不变式做进判决合并器；③ 同一发现按可执行面加权 1.3x（CRITICAL 50/HIGH 25/MEDIUM 10/LOW 5 × executable-file 1.3x）——严重度不仅看类别，还看落在可执行物上（与 r776-C1 测没测互补：那条管测没测，本条管测到后怎么合并）。
+- 提升层：工具（判决合并器）/ 安全边界。触发词：APPROVE→CAUTION 强制降级、复审不可撤销静态发现、executable 1.3x、合并单向性。

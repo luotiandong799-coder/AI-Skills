@@ -5291,3 +5291,7 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 - **实证**：agentskills discussion #620 提案 `metadata.derived-from`＋`derived-from-hash`(SHA-256)，原文「half of all SKILL.md files are verbatim copies」「only 11.1% of changes reach every copy」（转引 arXiv:2610.11169，标二手未取正文）；`discussions/436` 的 `metadata.sources{type,uri,path,ref,last-reviewed}` 用于 freshness/staleness 检测；`skills.sh` 实测 `isDuplicate`「detected fork/copy of another」；`npx skills update`「Only skills that changed are re-downloaded」。
 - **判据**：① 本仓技能库若允许多处引用同一内容，须把"源—派生"关系做成可机读字段（非注释），否则升级只覆盖首个副本；② 扩散率 11.1% 是"只增不删"的维护侧代价（与 Library Drift 结果驱动退役同向，但这是维护侧度量）；③ `last-reviewed` 是一等字段，"看过但无时间戳"的证据不可用于陈旧判定；④ 变更检测复用"只重下变化项"（内容摘要比对非版本号），但摘要字段须带算法前缀（与 r751-Q-B 哈希无算法标识合并判定）；⑤ `isDuplicate` 类布尔由聚合站单方判定，引用排名/去重结论时须标"聚合站判定，非权威"。
 - 提升层：可复用 Skill＋工作流。触发词：逐字复制、11.1% 扩散率、derived-from、血缘字段、isDuplicate、只增不删。
+
+## r776-Q-C · 技能的"存放"与"发现"是独立基建层，厂商一致选私有+治理+发现三合一（来源：AWS Agent Registry GA 2026-08-31 + Google Gemini Enterprise Skill Registry + NVIDIA verified catalog，均 2026-11-02 实拉；WB r666C 建议换道方向，本轮升 A）
+- **判据**：① 技能的存放与发现不是 SKILL.md 的属性，而是独立基建（AWS private, governed catalog and discovery layer；Google 同名 Skill Registry；NVIDIA daily-sync verified catalog + skill card）；② 本仓对应用语=入库台账与检索面须分开声明谁治理、谁发现，勿把"能被搜到"当"已被治理"；③ 公开侧对照 ClawHub（upload gate+automated checks）/skills.sh（三厂商审计列）作治理 vs 发现二分的可验实例。
+- 提升层：可复用 Skill（技能资产存放与发现）。触发词：私有治理目录+发现层、catalog≠discovery、谁治理谁发现、存放与发现独立基建。
