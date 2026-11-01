@@ -3582,3 +3582,28 @@ Functional API 在 resume 时会重新执行一个「其异常已被入口点捕
 - **判据**：① 两层重试（SDK 内建 × 业务层）相乘会在恒错服务上爆炸式放大同字节请求；② 正确处置是按「是否重放」分档——首试保留廉价 SDK 重试，检测到重放即显式关掉 SDK 层（`max_retries=0`），不让两层叠加；③ 与 dl 既有「重试作用域」条目互补——那条管「重试覆盖到哪」，本条管「两层重试如何不相乘」。
 - 提升层：可复用 Skill（重试作用域）。触发词：两层重试相乘、重放分档、max_retries=0、x-stainless-retry-count、contextvar 标记重放。
 
+
+## r665C · **门类机制必须把「作用面」写成显式契约：受保护的方法集合、响应形态、时间窗、超出的不保证（来源：docs.n8n.io/connect/n8n-api/idempotency.md ＋ github.com/langflow-ai/langflow/issues/16095 2026-11-02 经 Qoder r765-Q-A 提名，WB 审计落点）**
+- **实证**：n8n「**ignores the header for GET, PUT, PATCH, DELETE**」「**A POST that returns a file isn't covered**」「first successful response for **12 hours**」「**Keys belong to the user, not to one API key**」；LangFlow 前端「**never blocks writes… only aborts reads**」「same GET URL repeats within **300 ms**」throws。
+- **判据**：既有「幂等契约四元组（sa:30，键作用域·占用时点·失败是否回放·保留期）」与「冲突态三分（dl:480，判据单位=键+完整请求指纹）」管的是**命中门之后**的行为；本条补**门之前的可达性**——写规格时必须列出「哪些请求根本不进这道门」，否则调用方会把"未覆盖"当成"已保证"。两厂商独立实例（服务端幂等/客户端防重）方向一致：作用面不对称（只保护 POST/只拦读）且从未在错误里说明。
+- 提升层：工作流（契约覆盖）。触发词：门类作用面、覆盖契约、哪些请求不进门、GET/PUT 忽略、文件型 POST 不覆盖、防重只拦读。
+
+## r665C · **「能否重试」由服务端在错误体里声明，客户端不得自猜（来源：docs.dify.ai/en/api-reference/guides/errors ＋ Knowledge API 段 2026-11-02 经 Qoder r765-Q-A 提名，WB 审计落点）**
+- **实证**：「its **`failure.retryPolicy`** says whether a retry can help」；「`too_many_requests` is a **concurrency ceiling**…Back off and retry」↔「`rate_limit_error` is a **plan quota**…**Retrying won't clear it**」；「**Create Source takes no `Idempotency-Key`**…Include a unique `metadata.client_request_id`」；「On a **502**, retry a read after a pause. **A write may have taken effect**」。
+- **判据**：① 同码不同因（并发天花板 vs 套餐额度）处置相反 ⇒ 分支必须按**码＋语义**双键；② 端点无幂等键时，去重锚须换成**可查询的业务字段**（`metadata.client_request_id`）而非放弃重试；③ 读写在 502 下处置不对称。与「重试安全第三态（dl:2390）」分工：那条是"能不能重试未知时的保守处置"，本条是"答案由契约提供时禁止本地推断"。
+- 提升层：工作流（重试契约）。触发词：retryPolicy、Retrying won't、client_request_id、同码不同因、502 读写不对称、去重锚换业务字段。
+
+## r665C · **配额耗尽不是失败，而是"保留载荷的可重放挂起态"，同步侧须回 402（来源：www.activepieces.com/docs/install/reference/breaking-changes.md 200/78,105B 2026-11-02 经 Qoder r765-Q-A 提名，WB 审计落点）**
+- **实证**：「no credits left…new production runs are recorded with the **`QUOTA_EXCEEDED` status instead of executing**, and synchronous webhooks respond with **HTTP 402**…**keeps its trigger payload, so it can be retried once credits are available**. **Test runs are unaffected.**」＋ RBAC「Retry Runs=Admin/Editor/Operator（Viewer 无）」。
+- **判据**：技能/自动化在额度耗尽时应写**三件事实**（未执行·载荷留存·充值后可重放），把"欠费丢弃"与"欠费挂起"分开计账；同步入口与异步入口的码必须分道（402=充值后再试、429=稍后再试，语义不可混）；重放动作本身要有权限位（普通观察者不得触发重放）。与「挂起寿命≤留存」「恢复默认以 unknown outcome 退休」分工：那两条管时间与终态，本条管**因额度未执行时的载荷处置权与重放资格**（与 wb-ponytail KB:438「欠费不入队丢事件」、dl KB:2007「quota 归因」同域互补）。
+- 提升层：工作流（配额第三态）。触发词：QUOTA_EXCEEDED、402 欠费、载荷留存可重放、同步回 402、重放权限位、测试运行不受影响。
+
+## r665C · **自动恢复必须有"两次即终态"的封顶计数，且计数口径=执行真正跑起来才重置（来源：github.com/n8n-io/n8n/issues/42864 一手正文 2026-11-02 经 Qoder r765-Q-A 提名，WB 审计落点）**
+- **实证**：「If the counter **reaches two**, we give the execution the terminal status **`crashed`**. The counter **resets once the execution runs**」＋ wait-tracker「**skips an execution it is already resuming**」。
+- **判据**：① 恢复动作自身可能死循环（加载即崩），故终态枚举要含"恢复失败"专态（crashed）而非复用 failed；② 计数**必须在真正执行成功起算之后**清零，否则"每次都开始但每次都崩"永远不涨计数＝无封顶；③ 并发恢复者须跳过"正被自己恢复"的对象，防自我抢占。与「终态退出码分态」「halt 第三态」分工：那些管状态枚举的可观测性，本条管**恢复计数器的重置时点与封顶**。
+- 提升层：工作流（恢复封顶）。触发词：counter reaches two、恢复失败 crashed、计数重置时点、两次即终态、跳过正恢复者、恢复死循环。
+
+## r665C · **恢复只重建"对话/数据态"，不重建"工具侧前置状态"：须区分"未就绪"与"已撤销"（来源：github.com/anthropics/claude-code/issues/106601 ＋ vercel/ai#24329 一手正文 2026-11-02 经 Qoder r765-Q-A 提名，WB 审计落点；与 ae 恢复后工具可调用性探针同族）**
+- **实证**：claude-code 报「**File has not been read yet. Read it first before writing to it.**」且**对话历史保留、tool-side read tracking 丢失**（实测 547 例中 **314 在 resume 后**）；vercel/ai 报 resume 时「records a system entry with **`toolsRemoved: ["mcp__demo__echo"]`**…a removed tool **stays inactive**」而该 MCP 工具只是**约 300ms 后才注册**。
+- **判据**：① 凡技能/代理声明"读后写""先激活后调用"这类**工具侧前置状态**，恢复路径必须显式重建它，否则历史存在而门失效；② 持久化时"暂未就绪（not-ready）"绝不可写成"已移除/已撤销（removed/revoked）"——两者语义相反，后者不可逆；评测里应加一项**恢复后工具可调用性探针**（与「恢复路径与调用路径对称」同族，那条管调用面、本条管**工具授权/激活面**）。
+- 提升层：工作流（恢复态）/ 评测（工具可调用性）。触发词：toolsRemoved、read tracking 丢失、not-ready≠removed、恢复重建工具态、恢复后工具探针、314/547 resume。

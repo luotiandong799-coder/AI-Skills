@@ -5281,3 +5281,8 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 - **判据**：① 跨标准迁移（如本仓技能格式 ↔ Agent Plugins 1.0）的验收只能是**字段差集**（本仓有而目标标准无的字段 = 静默丢失的功能），不是「加载成功」；② 封闭字段集 + MUST report-and-ignore 使「丢功能」成为合规行为，故迁移前必须显式列出差集并判定每项的业务影响；③ 与 sa 既有「schema 验证两硬键 additionalProperties:false + required 显式枚举」互补——那条管「写 schema 不出界」，本条管「跨标准读 schema 时不靠加载成功当验收」。
 - 提升层：可复用 Skill（跨客户端可携面）。触发词：字段差集、MUST report and ignore、封闭字段集、迁移验收。
 
+
+## r665B · **能力面按实际内容收缩：不声明不存在的能力（来源：learn.microsoft.com/en-us/agent-framework/agents/skills ms.date 2026-10-23／updated 2026-11-01T13:04Z，经 Qoder r764-Q-C 提名，WB 审计落点）**
+- **实证**：四阶段披露中 `load_skill` 恒被 advertise，而 `read_skill_resource` **仅当技能真有资源**、`run_skill_script` **仅当真有脚本**才 advertise（与 KB:1510 四阶段 token 预算互补：那条管每级预算，本条管**按资产存在性收缩入口**）。
+- **判据**：给 agent 的工具/入口清单应按**资产实际存在性**收缩，不按"框架支持该能力"全量声明——声明一个必然失败或空转的入口＝让模型多花一次调用＋一次错误处理预算；要求「无 `references/` 就不宣称可继续下钻、无 `scripts/` 就不宣称可执行」，并把该断言做成零模型成本的体检项。与 agentskills「无技能时完全不注册激活工具」分工：那条管技能**有无**，本条管单技能**内部资源有无**。
+- 提升层：工作流（加载/披露契约）。触发词：能力面收缩、advertise 条件化、无资源不宣称、无脚本不宣称、按实际内容收缩入口。

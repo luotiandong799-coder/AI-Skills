@@ -2715,3 +2715,8 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 - **判据**：① 扫描器必须把「排除/剪枝目录表」当作覆盖面声明的一部分公开，并与「运行时会选中的工件集合」求交集断言为空（剪枝为提效，攻击物正栖息在被剪掉的目录里）；② 形变检测第一优先级是「通道迁移」（正文→附件/引用/外部资源），不是字符级扰动；③ 与 ssc 既有「检索期/执行期分两阶段、ASR 被高估 87-97%」互补——那条管评估口径，本条管形变轴优先级与剪枝表即覆盖面。
 - 提升层：工具（扫描器覆盖面标定）/ 可复用 Skill（载荷分类）。触发词：通道迁移>改字符、剪枝表=覆盖面声明、phonetic variant 降 ASR、附件载荷 23%→78%、别名 never followed。
 
+
+## r665C · **令牌自助声明的 scope 不是授权证据：授予面与裁决面可分属两套主体（来源：developers.make.com/api-documentation/authentication/api-scopes-overview 200/13,108B 2026-11-02 经 Qoder r765-Q-A 提名，WB 审计落点）**
+- **实证**：「**Even if you are not the administrator, you can assign to your token the scopes meant for administrators.** However, if you try to access the admin resources as a regular user, you will receive the `403 Access denied`」。
+- **判据**：安全体检不得把「凭证带某 scope」当作「该操作被允许」的证据——授予面（用户可自改）与裁决面（资源侧按身份判定）分离时，scope 清单只能证明**意图**不能证明**许可**；技能规格若引用第三方 API scope，必须写「实际可达性以资源侧 403/404 为准，需实测」。与「信任分不是授权契约（r657 已落）」分工：那条管**评分**，本条管**scope 声明**（已落 Make scenarios:run 与 write 分离 KB:2401 管 scope 切分形态，本条管"声明≠许可"的判定纪律）。
+- 提升层：工具/安全（审批裁决面）。触发词：scope 声明非授权、授予面与裁决面、Even if you are not the administrator、403 不进授权分支、声明只证意图。
