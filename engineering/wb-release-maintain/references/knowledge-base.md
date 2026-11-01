@@ -1520,3 +1520,18 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 ### r659Q2 · 兼容分支的退役条件 = 存量在飞实例全部终结，而非新版本发布满 N 天
 - **实证**：Qoder r733-Q-A-2 一手：Temporal patched() 向历史插入 marker 使旧执行走非匹配分支，deprecate_patch() 仅在旧执行全部结束后方可安全移除；配套 Windmill「Scripts are never overwritten」与 Activepieces「existing flows continue until edited」。（来源：https://docs.temporal.io/develop/python/versioning，2026-10-31 实拉）
 - **判据**：任何给旧路径留的兼容钩子/降级分支，其删除资格由可观测的存量清零判定，不能由日历或版本号判定；日历只能给出最早可查，清零证据才是可删。与「发布期门禁不追溯存量」成对——两条缺任一条即出现「存量既不受新门禁保护又已失去旧兼容」的真空窗口。提升层：工作流（发布与退役）。来源：docs.temporal.io/develop/python/versioning。
+## r744-Q-A · 日落态必须带显式禁用操作全集（来源：docs.n8n.io/release-notes v3.0，2026-11-01 实拉）
+- **实证**：n8n v3.0 把废弃节点冻结为「不可编辑/重命名/禁用/复制/剪切/pin，仅可删除或替换」。
+- **判据**：日落登记不仅要标「何时删」，还要给**存留期动词白名单**；尤其「复制」必须冻结，否则日落对象可被一键复活成新的未审计实例。与既落 r188「关阀门≠拆阀门」、r659C「不可回滚=显式终态」互补。
+- **提升层**：工具（生命周期治理）。触发词：日落态禁用操作全集、复制必须冻结、verb whitelist。
+
+## r747-Q-A · 替代机制上线不等于旧机制作废（来源：docs.temporal.io/worker-versioning.md + patching.md，2026-11-01 实拉）
+- **实证**：Temporal 推出 Worker Versioning（Pinned/Auto-Upgrade + Build ID + Ramping）后，官方 `patching.md` 全篇无任何 deprecation 字样，且 worker-versioning 明确「用 Auto-Upgrade 仍需自行以 patching 保 replay-safe」。
+- **判据**：治理机制换代时，退役旧机制的判据是**官方显式弃用声明**，不是「有了更强新机制」；据此旧校验/旧兼容分支在新机制发布后仍须逐轮维护，除非取到弃用文句。
+- **提升层**：工作流/可复用 Skill。触发词：替代≠作废、显式弃用声明、replay-safe patching。
+
+## r748-Q-B · 名录类上游的拉取拓扑与频率本身是治理决定（来源：modelcontextprotocol.io/registry/about.md，2026-11-01 实拉）
+- **实证**：MCP 官方 registry 自陈 preview 阶段「可能破坏性变更或数据重置」、明示**不适合自托管**、并规定 host 应用**不应直连**官方名录而应经符合其 OpenAPI 的聚合器**低频定期拉取**（文档示例：每小时一次）；同一页明确**不收私有服务器**（`*.internal`、私有 Artifactory npx 一律拒），私有需求须自建 registry。
+- **判据**：① 装载/分发所依赖的名录若由他人持有，就必须假定它会破坏性变更或整体重置，因此**本地要有可独立生效的副本与拉取节流**，直连+高频是反模式；② 「名录不收私有资产」意味着内部技能/工具的可见性不能靠公共名录承载，需自成一条发布轨。
+- **提升层**：工作流/可复用 Skill。触发词：名录拉取拓扑、低频定期拉取、不应直连官方名录、私有资产自建 registry。
+

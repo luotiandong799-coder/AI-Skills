@@ -3561,3 +3561,18 @@ Functional API 在 resume 时会重新执行一个「其异常已被入口点捕
 ### r659Q14 · 入口失败时追踪键缺席，以执行 ID 为主键的重放/去重/归因须定义无 ID 分支
 - **实证**：Qoder r736-Q-A-2 一手：n8n 逐字「execution.id is absent if the trigger node fails because the workflow doesn't execute」。（来源：https://docs.n8n.io/llms.txt，2026-10-31 实拉）
 - **判据**：错误处理分支的输入契约在触发节点失败时没有执行 ID；凡以执行 ID 为主键的重放、去重与归因必须显式定义无 ID 分支，否则触发级失败静默不可追。提升层：工作流（可追性）。来源：docs.n8n.io。
+## r744-Q-A · 副作用的承载资格判据：可靠执行逻辑必须落在有重试/恢复语义的执行单元内（来源：mastra.ai/docs/workflows/error-handling.md，2026-11-01 实拉）
+- **实证**：Mastra 官方明言「必须可靠完成的工作要写成 step」（must be written as a step）；回调/hook 侧路即使被 await，也可能不 durable、不重试、内部异常不改变主流程结局。
+- **判据**：凡声明「可靠执行」的逻辑，必须落在有重试/恢复语义的执行单元（step/activity）内；监听器/收尾回调（onFinish/onError 类）只许记账，不许产生副作用。与既落 r159B「onFinish/onError 收态不对称」互补（那条管收什么态，本条管能不能带副作用）。
+- **提升层**：工作流。触发词：副作用承载资格、回调不许带副作用、must be written as a step、durable step。
+
+## r747-Q-A · 退避上限是相对默认值，重试次数默认「0=无限」哨兵（来源：docs.temporal.io/encyclopedia/retry-policies.md，2026-11-01 实拉）
+- **实证**：Temporal Activity 重试默认 Initial Interval 1s、Backoff 2.0，而 **Maximum Interval 默认 = 100×Initial（不是绝对秒数）**，**Maximum Attempts 默认 0 表示无限**。
+- **判据**：① 引用/复刻退避配置的默认值时必须写「相对首间隔的倍数」这一公式，绝对秒数会随用户改 Initial Interval 静默漂移；② 参数取 0 作「无限制」哨兵时，「未设上限」在机检层必须显式申报为无限，否则与「0 次重试」两种语义不可区分。
+- **提升层**：工具/工作流。触发词：Maximum Interval 100×Initial、Maximum Attempts 0=infinite、退避相对默认值。
+
+## r747-Q-A · 自动重试的每一次尝试必须自带三个可核验出口（来源：pipedream.com/docs/workflows/building-workflows/settings.md，2026-11-01 实拉）
+- **实证**：Pipedream step 重试导出 `cancel_url`/`rerun_url`/`resume_ts` 三元组，且「first-error 通知默认关，8 次全败才通知」；**OOM/Timeout 不自动重试**。
+- **判据**：只给「重试中」状态是不够的——外部（人或上游系统）要能在退避窗口内**取消、立刻推进、并预知下次尝试时刻**；缺 `resume_ts` 就无法判断该等还是该介入，缺 cancel/rerun 就只能等窗口耗尽；而 OOM/Timeout 不自动重试意味着「等」在部分失败型上根本没有终局。
+- **提升层**：工作流。触发词：cancel_url、rerun_url、resume_ts、重试三出口、first-error 通知默认关。
+
