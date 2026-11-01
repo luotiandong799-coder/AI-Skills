@@ -5260,3 +5260,24 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 - **判据**：技能中的硬约束（轮次/体积/禁止项）必须置于截断通道不可剥落的位置（头部契约或独立 references 指针），长技能默认假设尾部不可达。
 - **提升层**：可复用 Skill。触发词：截断重挂、20,000 字符截断、尾部不可达、截断安全位置。
 
+
+## r662C · **抓取前枚举面扩到 Sitemap+Schemamap+Agentmap+Content-Signal，并按「目录全开/数据API禁爬/单点白名单」三分读许可**（来源：SkillsMP robots.txt+llms.txt 一手，经 Qoder r751-Q-B 提名，2026-11-02）
+- **实证**：SkillsMP `robots.txt` 全 UA `Disallow: /api/` + `Allow: /api/llms.txt` 单点白名单；另公布三张图 `Sitemap:/sitemap.xml`、`Schemamap:/schemamap.xml`、`Agentmap:/.well-known/ai-catalog.json`；响应头 `Content-Signal: ai-train=yes, search=yes, ai-input=yes`；ClaudeBot Crawl-delay=5。即站点机器可读面不止 llms.txt/robots/sitemap 三件套。
+- **判据**：① 抓取前枚举面应扩到 Sitemap+Schemamap+Agentmap+Content-Signal 四类；② 读许可按「目录面全开 / 数据 API 禁爬 / 单点白名单（如 /api/llms.txt）」三分建模——目录面可全抓、数据 API 整类禁爬、白名单单点放行；③ 与 sa KB:2895（先读 robots 的 Allow/Disallow 与 llms.txt）互补——那条管「先读机器可读面再猜端点」，本条补「枚举面不止三件套 + 目录/数据二分许可」。
+- 提升层：可复用 Skill（名录抓取纪律）。触发词：Schemamap、Agentmap、ai-catalog.json、Content-Signal、三分读许可、Disallow/Allow 单点白名单。
+
+## r662C · **采用可携容器 ≠ 获得信任链：容器标准化与信任标准化是两条独立演进线**（来源：Linux 基金会 AAIF《From skills and tools to portable agent plugins》agent-plugins.org/schemas/1.0.0，2026-08-06，经 Qoder r752-Q-C 提名，2026-11-02）
+- **实证**：Agent Plugins 1.0 仅标准化 `plugin.json`（`$schema` 指向 `agent-plugins.org/schemas/1.0.0`）+ `skills/` + `mcp.json` + 反域名命名空间，含校验/失败隔离/可移植路径变量，但**明文把分发、运行时权限、trust（发布者身份/签名/来源）留给客户端**；共建方 Amazon/Cursor/Microsoft/OpenAI/Vercel，兼容客户端 VS Code/Cursor/GitHub Copilot。
+- **判据**：① 一个技能被打包成「可携容器格式」只证明它能被装载，不证明它的来源/作者/签名被验证过——可携性与信任链是两个正交维度；② 接入第三方可携包时，「能装」不能作为「可信」的证据，信任仍须走本仓既有验签/信任表/发布者族核验（sa KB:2077 技能签名与信任链同一族但属不同机制）；③ 凡把「该格式可携」读成「该技能已受信任」的结论，都是把一条维度的结论外推到另一条维度。
+- 提升层：可复用 Skill（跨客户端可携与信任面）。触发词：Agent Plugins 1.0、可携容器≠信任链、trust 留给客户端、反域名命名空间。
+
+## r662C · **完整性锚有两种且互不可代：钉版本必须先声明钉的是哪一类锚**（来源：tessl.io/registry + agentskills RFC#210 + skills.sh 治理面 三源同现，经 Qoder r754-Q-B 提名，2026-11-02）
+- **实证**：tessl.io/registry 以 40-hex git commit SHA 作 `sourceRef` 钉定身份；agentskills RFC#210 的 `skills.lock` = 按路径排序后文件内容串联的 SHA-256（内容哈希，非 commit 哈希，SHOULD 提交入库）；skills.sh 治理面 `hash` = 文件内容 SHA-256 但**可空**。
+- **判据**：① 提交锚能答「从哪次提交取」但答不了「同一提交号在不同仓库/换主后是否是同一字节」；内容锚对同一字节跨仓库稳定，但答不了「这份内容的来源与作者意图」——把任一当另一用即越权推定；② 因此「来源核验/撤回是否影响我」走提交锚+发布者族，「我装的与我审过的是否同一份」走内容锚；③ 锁文件必须显式标注它钉的是哪一类锚，缺标注即视为不可据以断言完整性。
+- 提升层：可复用 Skill（pin 语义/治理面）。触发词：提交锚、内容锚、sourceRef、skills.lock、两种完整性锚互不可代。
+
+## r662C · **可携标准的「封闭字段集 + 未知字段 MUST report and ignore」使跨标准迁移变成一次合规的静默丢功能：迁移验收只能是字段差集**（来源：agent-plugins.org 1.0.0 `/specification.md` 44,846B，经 Qoder r755-Q-C 提名，2026-11-02）
+- **实证**：顶层字段封闭为 `$schema/name/version/description/author/homepage/repository/license/keywords/extensions` 十项、`required` 仅 `["$schema","name"]`、`additionalProperties: false`；未知字段处理被写成**义务**而非缺陷——「Clients MUST report and ignore each unknown field」。
+- **判据**：① 跨标准迁移（如本仓技能格式 ↔ Agent Plugins 1.0）的验收只能是**字段差集**（本仓有而目标标准无的字段 = 静默丢失的功能），不是「加载成功」；② 封闭字段集 + MUST report-and-ignore 使「丢功能」成为合规行为，故迁移前必须显式列出差集并判定每项的业务影响；③ 与 sa 既有「schema 验证两硬键 additionalProperties:false + required 显式枚举」互补——那条管「写 schema 不出界」，本条管「跨标准读 schema 时不靠加载成功当验收」。
+- 提升层：可复用 Skill（跨客户端可携面）。触发词：字段差集、MUST report and ignore、封闭字段集、迁移验收。
+

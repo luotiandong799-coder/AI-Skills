@@ -5364,3 +5364,14 @@ design-it-twice 的多个子智能体都指向同一份预先收集的事实简�
 - **来源**：r743-Q-C NVIDIA SkillKit 实拉
 - **触发词**：Verified 不覆盖质量、认证标签负边界、范围声明同条
 
+
+## r662A · **「已升级≠已加固」「已钉版≠已锁行为」「已签名≠签到了真正加载的字节」——三条同一族的可机检验收**（来源：microsoft/playwright-mcp #1805（GHSA-46jr / CVE-2026-118768 类），经 Qoder r755-Q-C 提名，2026-11-02）
+- **实证**：`package-lock.json` 已解析到修补版 SDK **1.32.0**，但 advisory 要求的 `maxToolInputElements`、`maxRequestBodySize` 在 `src/index.ts` 各 **0 occurrences**；advisory 原文「**Upgrading alone changes nothing. Make both of these changes.**」；攻击量=默认 4 MiB body 限内**单个请求 ~450,000 数组元素**即可耗尽内存致 **SIGABRT**。
+- **判据**：① 「升级到修补版本」不构成「已加固」——必须核对 advisory 要求的代码改动确实落地，而非仅依赖链依赖解析到修补版；② 「已钉版」≠「已锁行为」（锁只钉版本，不钉行为）；③ 「已签名」≠「签到了真正加载的字节」（签名验的是包，行为改动在源码）；④ 接纳验收要可机检：解析到修补版 + 源码含 advisory 要求的改动项，二者缺一即未加固。
+- 提升层：可复用 Skill（验证强度与身份判据）。触发词：已升级≠已加固、Upgrading alone changes nothing、maxToolInputElements、锁版本不锁行为、签名不保证加载字节。
+
+## r662C · **只读挂载的作用面只到「写」，不到「读」——把「只读」读成「隔离」会留下凭据读取面**（来源：docs.openclaw.ai/gateway/sandboxing.md 一手，经 Qoder r754-Q-B 提名，2026-11-02）
+- **实证**：只读挂载 **「prevents profile edits, not credential reads」**；同页另两条：shared scope 拒绝身份注入、工具 deny 先于沙箱生效（后者已落 ag KB:22 Cap22，不重提）。
+- **判据**：① 任何以「该挂载/该目录是只读」为据的隔离结论，都必须再问一句「路径内是否含可被读取的凭据（profile、token、会话密钥）」；只读把破坏性写变成不可能，对静默外泄一类毫无约束；② 正确处置是「把凭据文件移出挂载路径」或「按产物粒度单独发读权限」，不是「给它加只读位就算安全」；③ 与已落 ed SKILL:3925「deny 了要显式」同向——只读是写权限约束，不是读面隔离。
+- 提升层：工具（隔离面与凭据面）/ 可复用 Skill（沙箱与审批边界）。触发词：只读挂载只到写不到读、prevents profile edits not credential reads、凭据读取面、只读≠隔离。
+

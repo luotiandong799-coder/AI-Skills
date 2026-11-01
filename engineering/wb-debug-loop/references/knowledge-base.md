@@ -3576,3 +3576,9 @@ Functional API 在 resume 时会重新执行一个「其异常已被入口点捕
 - **判据**：只给「重试中」状态是不够的——外部（人或上游系统）要能在退避窗口内**取消、立刻推进、并预知下次尝试时刻**；缺 `resume_ts` 就无法判断该等还是该介入，缺 cancel/rerun 就只能等窗口耗尽；而 OOM/Timeout 不自动重试意味着「等」在部分失败型上根本没有终局。
 - **提升层**：工作流。触发词：cancel_url、rerun_url、resume_ts、重试三出口、first-error 通知默认关。
 
+
+## r662A · **两层重试相乘的处置不是「调小某一层」，而是「按是否为重放分档关下层」：首试保留廉价 SDK 内建重试，重放时显式置 max_retries=0**（来源：crewAI #8333，2026-11-01，PR body 逐字，经 Qoder r753-Q-A 提名，2026-11-02）
+- **实证**：SDK `max_retries` 默认 2（3 个 HTTP 尝试/调用）× CrewAI 重试 ≤3 ⇒ 恒 429 服务下**一个 LLM 调用发 27 个字节相同请求**（`x-stainless-retry-count` 0→1→2 循环九次）；修法=用 `_llm_retry_replay` **contextvar 标记「这次是不是对已失败调用的重放」**，`in_rate_limit_retry_replay()` 为真时 `client.with_options(max_retries=0)`（9 调用点全接），实测降到 **15**。
+- **判据**：① 两层重试（SDK 内建 × 业务层）相乘会在恒错服务上爆炸式放大同字节请求；② 正确处置是按「是否重放」分档——首试保留廉价 SDK 重试，检测到重放即显式关掉 SDK 层（`max_retries=0`），不让两层叠加；③ 与 dl 既有「重试作用域」条目互补——那条管「重试覆盖到哪」，本条管「两层重试如何不相乘」。
+- 提升层：可复用 Skill（重试作用域）。触发词：两层重试相乘、重放分档、max_retries=0、x-stainless-retry-count、contextvar 标记重放。
+
