@@ -2720,3 +2720,8 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 - **实证**：「**Even if you are not the administrator, you can assign to your token the scopes meant for administrators.** However, if you try to access the admin resources as a regular user, you will receive the `403 Access denied`」。
 - **判据**：安全体检不得把「凭证带某 scope」当作「该操作被允许」的证据——授予面（用户可自改）与裁决面（资源侧按身份判定）分离时，scope 清单只能证明**意图**不能证明**许可**；技能规格若引用第三方 API scope，必须写「实际可达性以资源侧 403/404 为准，需实测」。与「信任分不是授权契约（r657 已落）」分工：那条管**评分**，本条管**scope 声明**（已落 Make scenarios:run 与 write 分离 KB:2401 管 scope 切分形态，本条管"声明≠许可"的判定纪律）。
 - 提升层：工具/安全（审批裁决面）。触发词：scope 声明非授权、授予面与裁决面、Even if you are not the administrator、403 不进授权分支、声明只证意图。
+
+## r666 · **标签格执法器的四个"默认方向"须各自显式声明，否则门形同虚设**（来源：learn.microsoft.com/en-us/agent-framework/agents/security 2026-11-02 实拉，经 Qoder r771-Q-A 提名，WB 审计落点）
+- **实证**：MS Agent Framework 一份文档钉死四件事：① 信息流是**两轴**而非单轴——`integrity`(trusted/untrusted) × `confidentiality`(public/private/user_identity)，合标签取 `combine_labels()` 的 "most restrictive"（单轴黑白名单答不出"可读但不可信"这类态）；② 缺省方向 `default_integrity=IntegrityLabel.UNTRUSTED`，理由 "fails closed rather than open"；③ 执法开关有两态，`enable_policy_enforcement=False` 即 dry-run——"闸门在跑"与"闸门在拦"是两件事；④ MCP server 带来的标签是 "restriction-only" unless `trust_server_ifc=True`（外部标签只能收紧不能放宽）。配套：护栏数值上界本身 fail-closed（成环、>16 variable-reference levels、>100 references 即拒），`rewritten_arguments()`「报告展开后的参数但不重新暴露隐藏字节」——审计面与展示面分离。
+- **判据**：① 信息流标签须两轴建模（integrity × confidentiality），单轴黑白名单无法表达"可读但不可信"；② 缺省方向必须显式声明且默认 fails-closed（untrusted）；③ 执法器必须有 dry-run 显式态——"策略在观察"与"策略在执行"是两件事，配置面须把后者单独证明（与 r767-Q-C C1「判官缺席默认方向」同族但对象为标签执法器）；④ 外部（MCP server）标签默认只能收紧不能放宽，除非显式 `trust_server_ifc=True`。
+- 提升层：可复用 Skill／工作流。触发词：IFC 两轴标签、combine_labels、fails-closed 缺省、dry-run 态、restriction-only、审计面与展示面分离。

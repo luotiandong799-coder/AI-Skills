@@ -5286,3 +5286,8 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 - **实证**：四阶段披露中 `load_skill` 恒被 advertise，而 `read_skill_resource` **仅当技能真有资源**、`run_skill_script` **仅当真有脚本**才 advertise（与 KB:1510 四阶段 token 预算互补：那条管每级预算，本条管**按资产存在性收缩入口**）。
 - **判据**：给 agent 的工具/入口清单应按**资产实际存在性**收缩，不按"框架支持该能力"全量声明——声明一个必然失败或空转的入口＝让模型多花一次调用＋一次错误处理预算；要求「无 `references/` 就不宣称可继续下钻、无 `scripts/` 就不宣称可执行」，并把该断言做成零模型成本的体检项。与 agentskills「无技能时完全不注册激活工具」分工：那条管技能**有无**，本条管单技能**内部资源有无**。
 - 提升层：工作流（加载/披露契约）。触发词：能力面收缩、advertise 条件化、无资源不宣称、无脚本不宣称、按实际内容收缩入口。
+
+## r666 · **技能会被逐字复制，而改动只有 11.1% 到达所有副本 ⇒ 血缘字段与"改动扩散率"必须成为治理对象**（来源：agentskills/discussions/620 提案 metadata.derived-from+derived-from-hash(SHA-256)，转引 arXiv:2610.11169 二手数字，经 Qoder r769-Q-B 提名，WB 审计落点）
+- **实证**：agentskills discussion #620 提案 `metadata.derived-from`＋`derived-from-hash`(SHA-256)，原文「half of all SKILL.md files are verbatim copies」「only 11.1% of changes reach every copy」（转引 arXiv:2610.11169，标二手未取正文）；`discussions/436` 的 `metadata.sources{type,uri,path,ref,last-reviewed}` 用于 freshness/staleness 检测；`skills.sh` 实测 `isDuplicate`「detected fork/copy of another」；`npx skills update`「Only skills that changed are re-downloaded」。
+- **判据**：① 本仓技能库若允许多处引用同一内容，须把"源—派生"关系做成可机读字段（非注释），否则升级只覆盖首个副本；② 扩散率 11.1% 是"只增不删"的维护侧代价（与 Library Drift 结果驱动退役同向，但这是维护侧度量）；③ `last-reviewed` 是一等字段，"看过但无时间戳"的证据不可用于陈旧判定；④ 变更检测复用"只重下变化项"（内容摘要比对非版本号），但摘要字段须带算法前缀（与 r751-Q-B 哈希无算法标识合并判定）；⑤ `isDuplicate` 类布尔由聚合站单方判定，引用排名/去重结论时须标"聚合站判定，非权威"。
+- 提升层：可复用 Skill＋工作流。触发词：逐字复制、11.1% 扩散率、derived-from、血缘字段、isDuplicate、只增不删。

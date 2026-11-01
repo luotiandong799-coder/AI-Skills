@@ -1401,3 +1401,8 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 - **实证**：arXiv 2608.15193（Valhalla）：多数结构化知识系统是节点中心的扁平图，适合个人知识管理但难跨用户共享与重组；以五层 File-Resource-Entity-Relationship-Graph 取代，由 File 与 Resource 层保留源身份与出处。（来源：https://arxiv.org/abs/2608.15193，2026-10-31 实拉）
 - **判据**：知识库/记忆的结构要分层并保留源身份层，扁平图无法承载出处与权限边界；共享与重组能力取决于是否有稳定的语义边界。提升层：工具（知识组织）。
 
+
+## r666 · **能力协商与审批门的"第二次失效"：方法名存在不足证可用；审批在同类第二次调用即失灵**（来源：docs.openclaw.ai/gateway/protocol/versioning.md + gateway/tools-invoke-http-api.md + gh api microsoft/agent-framework release 1.24.0 + docs/decisions/0037-agent-skills-design.md，经 Qoder r769-Q-B 提名，WB 审计落点）
+- **实证**：openclaw `PROTOCOL_VERSION 4; MIN_CLIENT 4; MIN_NODE 3; MIN_PROBE 3`，operations **require their own capability** 在 `hello-ok.features.capabilities` 声明，**Method presence alone is insufficient**（示例位 worktrees-retire-snapshot-owner-v1）；plugin-owned node capabilities **withheld until the node upgrades**；tools-invoke 的 **403（会话/来源证明缺失）vs 404（策略不允许）** 分码；microsoft/agent-framework 1.24.0「explicit default approval mode for local MCP tools and prompts outside the per-tool approval lists」、warns when `never_require_approval`；ADR 0037 `AgentFileSkillsSource` 递归扫描（max 2 levels）……
+- **判据**：① "方法名存在"不足以证明能力可用——能力须按操作独立声明并 advertised，缺能力须显式 capability 位而非默认可用；② 本地 MCP 工具须有默认审批档，且 `never_require_approval` 要告警；③ 审批门在同类第二次调用即失灵（ADR 0037 第二次审批失效）⇒ 审批状态须按调用次序号断言，不能只判"首次通过"；④ 403 vs 404 分码＝"缺证明"与"策略禁"是两种失败，错误处理须分别；⑤ plugin 能力在节点升级前扣留 ⇒ 能力协商是动态握手而非静态方法表。
+- 提升层：工具＋工作流。触发词：能力协商、Method presence insufficient、403 vs 404、默认审批档、第二次审批失效、capability 位。

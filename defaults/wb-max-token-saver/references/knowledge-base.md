@@ -1053,3 +1053,13 @@ autogen#8328：HeadAndTailChatCompletionContext 在头部删掉一条 tool-call�
 - **判据**：① 凡按元数据/声明尺寸（大小字段、`content-length`、清单里的 size）先判再读的装载路径，都必须改为对「解码后累计读出的字节数（含读取期间增长）」判上限；② 上限是一组互相自洽的向量（文件数/单文件/总量/每会话技能数/索引条目/提示字符），不能只用一个标量；③ 非法字节/路径类（UTF-8 破坏、NUL、穿越、软硬链接）在装载期直接拒，不靠上层过滤。
 - 提升层：工具（装载路径预算）。触发词：实际读出字节、including when they grow during a read、一组自洽向量上限、声明尺寸不可先判、256 KiB 拒绝而非截断。
 
+
+## r666 · **上下文策略的成本口径要算"未缓存 prefill 与能耗"，两策略叠加要测增量而非各自收益**（来源：arXiv 2610.34763《The Physical Cost of Context》一手 abs，经 Qoder r767-Q-C 提名，WB 审计落点）
+- **实证**：Eager（预载 10 块检索）+ Compact（anchored history compaction）均过五点非劣门；Eager 比按需搜索降模型调用 35.7%、GPU 能耗代理 33.2%，Compact 不再额外省；仅留最近 5 观测（Mask-5）再砍 Eager prompt 33.3% 却**丢失 135.9k 可复用 token、未缓存 prefill +608.5%、能耗代理 +125.6%、且策略未过质量门**；arXiv 2610.34425 CTXAgent 自管上下文稳定 <100k token，比显式 200k 窗口便宜 34%、比默认便宜 49%。
+- **判据**：① prompt 体积↓ 可让总成本↑（Mask-5 省 33.3% prompt 却抬未缓存 prefill 608.5%）⇒ 须计"可复用前缀是否被毁"；② 两策略叠加边际收益须单独测（Compact 在 Eager 上 saves nothing further）；③ 策略验收须挂质量非劣门作前置，省了成本但过不了门的策略直接否；④ 固定窗口阈值本身是可优化项而非约束；⑤ 与本体 §五「正文≤200行／大块下沉 KB」同向：压缩/下沉决策加"是否破坏可复用前缀"一维。
+- 提升层：工作流＋可复用 Skill。触发词：未缓存 prefill、可复用前缀、Mask-5、质量非劣门、策略叠加边际、物理成本。
+
+## r666 · **外部检索配额是双窗计量、换钥不重置、且"总数"可以是不精确的**（来源：skillsmp.com/llms.txt+/agents.md+/pricing.md + 实调 /api/v1/skills/search 响应头，经 Qoder r769-Q-B 提名，WB 审计落点）
+- **实证**：匿名 REST admitted-attempt limits；anonymous 600 实搜/UTC 天、Free 50/天、Standard 5,000 & Professional 25,000/订阅月；Per-minute burst 30/min/account；实测头 x-ratelimit-daily-limit:50/daily-remaining:48/**daily-reset:1793577600**/minute-limit:10/minute-remaining:9；**「rotating an API key does not reset usage」**；pagination.totalIsExact（实测 false）；错误码 SEARCH_COMPLETION_UNCERTAIN/MONTHLY_QUOTA_EXCEEDED/RATE_LIMIT_UNAVAILABLE/AUTH_UNAVAILABLE；language 含 mul(混合)/**und(undetermined)**。
+- **判据**：① 日窗与分窗并存，剩余额度分别看，只读一个头会在 30/min 处被拒；② 重置时刻是服务端显式 epoch，本地"到 0 点就好"是错；③ 换 API key 不重置（同 account 计量）⇒ 任何"换 key 续命"方案直接判废；④ `total` 可标不精确，以"总数"做验收须同时取 totalIsExact/isCapped；⑤ 错误码区分"查询不确定/额度耗尽/限流器不可用"——后两者属基础设施故障，按"判官缺席"同族：不得当 0 结果；⑥ 语言 und＝未知不可映射为"无"或"英文"（与缺证取 unknown 非 zero 同判据）。
+- 提升层：工具＋工作流。触发词：双窗配额、换 key 不重置、totalIsExact、daily-reset epoch、und 未知、限流器不可用。

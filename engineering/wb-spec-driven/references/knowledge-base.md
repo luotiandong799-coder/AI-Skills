@@ -1158,3 +1158,8 @@ spec 的步骤约束不要落在两个极端：**代码写死流程**（控制�
 - **来源**：r741-Q-A Dify 实拉对照
 - **触发词**：失败策略不对称、Loop 无档位、构件类型适用表
 
+
+## r666 · **共享状态写面按声明闭集收缩：未声明的键写不进，而不是写进来再清理**（来源：docs.flowiseai.com/using-flowise/agentflowv2.md 2026-11-02 实拉，经 Qoder r771-Q-A 提名，WB 审计落点）
+- **实证**：Flowise AgentFlowV2 Flow State 键 "Must be declared in Start Node" 且 operational 节点 "update pre-defined keys only"；另设 `Ephemeral Memory` 布尔区分"本轮即弃"与"跨轮持久"。
+- **判据**：① 状态键集合从"运行时涌现"改为"入口时刻封闭声明"——运行节点写出新键属契约违规而非合法扩展，状态膨胀不需要事后 GC；② 与 r764-Q-C「能力面按内容收缩」分工：那条收缩读/可见面，本条收缩**写面**；③ 声明面兼作作用域声明，同一份状态须同时有生命周期档位（Ephemeral vs persistent）。
+- 提升层：工作流。触发词：写面闭集、预声明键、Start Node 声明、Ephemeral Memory、状态膨胀前置防、契约违规。
