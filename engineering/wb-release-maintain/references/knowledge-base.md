@@ -1569,3 +1569,15 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 ## r775-Q-B · 再分发侧的复验触发点与丢弃策略：镜像/同步仓每次同步跑签名漂移检测 + 必需产物齐套校验，缺件整条丢而非报错待补（来源：NVIDIA/skills Roadmap Sync-time compliance gates + drops any skill missing required artifacts before publishing 2026-11-02 实拉）
 - **判据**：① 补 r437B「verified 带再验证时钟」的执行细节缺口：再验证触发时机=同步事件，失败形态分"漂移"与"缺件"两类，后者是静默淘汰不是拒绝；② 凡从上游镜像能力的仓，须自陈"复验在哪个事件触发 + 不满足时是丢是标是拦"；只写"上游已 verified"=空头背书。
 - 提升层：工作流（再分发复验）/ 工具。触发词：sync-time compliance gates、missing artifacts dropped、再验证触发=同步事件、缺件整条丢。
+
+## r784-Q-B · 配额/上限须声明"量的是提交值还是清洗归一化后的残余"，且保留名判定要写明跑在归一化形式上（来源：docs.openclaw.ai/clawhub/publishing.md 200/18,359B，2026-11-02 实拉）
+- **判据**：① 同一"上限 N 个"结论须能回答"提交 N 个含非法项时，是整条拒还是裁到 N-残余"，答不出即判该上限不可据此复算；② 保留名/保留 topic 的检查跑在 normalized form 上（Official/staff pick 在归一化后也被拒）；③ 与已落 `rm 1.237.0`（上限计量对象）分工：那条管量什么，本条管在管线哪一段量。
+- **提升层**：工具。触发词：count what is left after that not what you passed、归一化后计量、保留名判定跑在 normalized form。
+
+## r786-Q-A · 配置项的生效时机是逐项属性，且必须靠穷尽性机检逼声明（来源：github.com/n8n-io/n8n/pull/42697，2026-11-02 实拉）
+- **判据**：① 新增设置若未声明作用域须编译/CI 失败，不得默认继承任一档；② 生效时机与存储位置正交（同一条设置可"存即生效"version 或"发布才生效"live），混为一谈会让"改了但没发布"与"发布了但没改"两类故障不可区分；③ 穷尽性由编译期保证——map 须列出 IWorkflowSettings 每个 key，否则新设置 without a scope does not compile。
+- **提升层**：可复用 Skill/工作流。触发词：WORKFLOW_SETTINGS_SCOPE、does not compile、生效时机逐项、version vs live。
+
+## r786-Q-A · "无限"的哨兵值按计量域分裂，跨域不可复用同一常量（来源：github.com/langgenius/dify/pull/45117，2026-11-02 实拉）
+- **判据**：① 同一字段名在两个计量域里 `0` 分别是"无限"与"零容量"（Count quotas 用 0=无限，Trigger events/App Runs 用 -1=无限且 0=零容量），写一份通用判定必然错判；② 比较器须按域声明，`-1`/`0` 语义须写进契约文本与验收用例；③ reset_date `-1`＝不重置。
+- **提升层**：工具/工作流。触发词：0 for unlimited、-1 for unlimited、zero capacity、哨兵值按域分裂。

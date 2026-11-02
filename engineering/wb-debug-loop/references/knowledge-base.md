@@ -3626,3 +3626,7 @@ Functional API 在 resume 时会重新执行一个「其异常已被入口点捕
 ## r774-Q-A · 幂等键的匹配口径与归属主体须同报（来源：docs.n8n.io/connect/n8n-api/idempotency 2026-11-02 实拉）
 - **判据**：① 匹配需 path+query+body 全等且含 JSON 字段顺序与空格 => 同义不同序列化=幂等静默失效，重试会二次执行；② 键窗口 12h，409=首个在途 / 422=同键不同请求，两种码分属两种恢复动作；③ Keys belong to the user, not to one API key => 换凭据不重置已消耗窗口（与 r769-B4「双窗配额换 key 不重置」同判据但作用在幂等面）。
 - 提升层：工具（幂等契约）。触发词：idempotency matching=path+query+body+JSON order、409 vs 422、keys belong to user、报幂等须同报匹配口径+TTL+归属。
+
+## r786-Q-A · 中断/暂停态在观测面上刻意不携带终态字段，并须带致停对象标识（来源：developers.make.com/.../scenarios/logs.md + docs.dify.ai CLI，2026-11-02 实拉）
+- **判据**：① 把 parked 行填一个终态值＝让下游把它当已完成消费（与 r768-Q-A「静默成功」同族但方向相反——本条是缺字段即信息）；② 恢复入口须指明被停在哪一个模块/节点（interruptModuleId），否则续跑只能从头；③ Make `EXECUTION_PAUSED` 行 deliberately carries no status，Dify suspended 用 hints 把恢复编码成下一条命令。
+- **提升层**：工具/工作流。触发词：deliberately carries no status、parked row、中断态缺终值、interruptModuleId。

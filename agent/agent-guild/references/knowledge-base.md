@@ -1410,3 +1410,7 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 ## r774-Q-A · 派单检查单补一维：先与"同上下文并行"基线比，再与 best-of-N 比（来源：arxiv 2606.10662 v2 2026-11-02 实拉；补 WB r666C 聚焦建议 2 的域缺口）
 - **判据**：DeLM 以共享上下文并行替代派单，SWE-bench Verified n=4 66.08% vs 编排派单式最强基线 AOrchestra 55.26%（+10.8 点）、DeepSWE 93.33% 比 Claude Code 高 11.7 点且延迟 130.75→64.77 分钟、Terminal-Bench 4.0 85.00% 1.54× faster；翻转条件引 2604.02460 become competitive when a single agent's effective context utilization is degraded。=> 派单增益常低于单 agent 的证据域从客服域扩到代码域；现有落点只到 best-of-N 基线，补"同上下文并行"基线这一维。
 - 提升层：工作流（派单检查单）/ 可复用 Skill。触发词：DeLM 共享上下文并行、派单 vs 同上下文并行、代码域派单增益、effective context utilization 翻转条件。
+
+## r788-Q-C · 自进化状态存的是实例不是规则；保留原始历史可反超学习式方法（来源：arxiv 2610.40758 CLR-Bench，2026-11-02 一手 abstract）
+- **判据**：① 巩固产物要断言它学的是规则还是实例（覆盖率按未见成员测）；② "写入摘要"可能比"保留原始轨迹"更差⇒晋升门须与 raw history 基线对照；③ 少量显式规则文本优于自动抽象（一句 lesson 提升≈学习式总和）。与 §四 Library Drift（自产 +0.0pp vs 策展 +16.2pp）构成第二家一手，并给出失败形态＝学到实例。
+- **提升层**：工作流/记忆治理。触发词：learned instances not rules、raw history 反超、75-98% 成员 almost never class name、晋升门对照 raw baseline。

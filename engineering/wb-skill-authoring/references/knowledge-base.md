@@ -5295,3 +5295,19 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 ## r776-Q-C · 技能的"存放"与"发现"是独立基建层，厂商一致选私有+治理+发现三合一（来源：AWS Agent Registry GA 2026-08-31 + Google Gemini Enterprise Skill Registry + NVIDIA verified catalog，均 2026-11-02 实拉；WB r666C 建议换道方向，本轮升 A）
 - **判据**：① 技能的存放与发现不是 SKILL.md 的属性，而是独立基建（AWS private, governed catalog and discovery layer；Google 同名 Skill Registry；NVIDIA daily-sync verified catalog + skill card）；② 本仓对应用语=入库台账与检索面须分开声明谁治理、谁发现，勿把"能被搜到"当"已被治理"；③ 公开侧对照 ClawHub（upload gate+automated checks）/skills.sh（三厂商审计列）作治理 vs 发现二分的可验实例。
 - 提升层：可复用 Skill（技能资产存放与发现）。触发词：私有治理目录+发现层、catalog≠discovery、谁治理谁发现、存放与发现独立基建。
+
+## r784-Q-B · 同一标准的正文/参考实现/已发货客户端三者口径互斥时，合规判定必须写明按哪一层执行（来源：agentskills.io/specification.md + skills-ref/validator.py + client-implementation/adding-skills-support.md + issue #514/#641/#633，2026-11-02 实拉）
+- **判据**：① 对本仓任何"符合/不符合规范"的结论，须写明按哪一层判定＋该层是否已在这类产物上真跑过；② 正文对未知/多余字段完全沉默，参考实现「Unexpected fields… Only … allowed」硬拒，客户端「Lenient validation… don't block skill loading on cosmetic issues」——三者口径互斥；③ 与已落 r655-11「文档存在/校验器存在/校验器跑过」三档分立并列：那条判"有没有验证能力"，本条判"验证结论彼此矛盾时以谁为准"。
+- **提升层**：可复用 Skill。触发词：the prose the validator and a shipping client each say something different、三层口径互斥、lenient validation、判定层声明。
+
+## r787-Q-B · 目录"首条即最新"是未声明假设：注册表版本序按字符串比较，非 semver（来源：registry.modelcontextprotocol.io/openapi.json，2026-11-02 实拉）
+- **判据**：① 技能安装/回退决策若取"列表第一条"会在 `1.10` < `1.9` 这类序上装到旧版；② 须自按语义序比较并回读版本号确认，把"服务端排序≠权威版本序"写进装载契约；③ 与已落「双轨版本流」(rm r764-C3) 互补——那条说存在两条流，本条说目录面给的序不可信。
+- **提升层**：可复用 Skill/工作流。触发词：compared as text not semver、first result not necessarily latest、字符串版本序、目录序不可信。
+
+## r787-Q-B · 技能装载须三态分离（Inventory/Readiness/Visibility）且允许"部分装载"（来源：docs.openclaw.ai/tools/skills.md 200/50,330B，2026-11-02 实拉）
+- **判据**：① 在册≠可用≠可选是三种状态，混用会让"技能存在但没生效"（r768-Q-A 授权开关空转的装载面镜像）无处安放；② 须为每态各出一个计数并各自可查询；③ 门控失败须报告并跳过该文件而不中断兄弟（否则单个坏文件＝全库不可用），与 av「扫描截断元数据」不同轴（本条管装载代数）。
+- **提升层**：可复用 Skill。触发词：Invalid skill files reported and skipped、valid siblings still load、装载三态、部分装载。
+
+## r787-Q-B · 检索/排行面不含版本与摘要字段＝安装决策不可从该面得出（来源：skills.sh/api/search?q=pdf 200 JSON，2026-11-02 实拉）
+- **判据**：① 按 installs 排序是流行度信号，不携带任何完整性/版本/扫描证据，据此选包＝把治理交给营销数；② "可见性"是检索流水线一等阶段⇒搜索结果为空可能是可见性门而非目录缺项，须向调用方分报；③ 目录面与制品面字段集差（此面缺 digest）应作为可机检的注册表能力声明记录。
+- **提升层**：工作流/可复用 Skill。触发词：search result no version/digest/signature、按 installs 排序、可见性门、注册表能力声明。

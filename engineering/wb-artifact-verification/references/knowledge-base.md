@@ -5391,3 +5391,27 @@ design-it-twice 的多个子智能体都指向同一份预先收集的事实简�
 - **实证（逐串）**：SEP-2640「Digests establish consistency with the server's manifest, not trust in its content」＋「A changed, added, or removed file revokes that approval」；OWASP「A signature proves authorship, not safety」；skilldoctor「heuristic, not a sandbox」；skill-audit「a clean report is not a safety guarantee」。
 - **判据**：① 验收结论必须写明它证明的是哪一层——一致性 / 来源 / 内容安全性 / 覆盖完整性——四者缺一即不得合并成一句「已验证」；② 校验产物须把「哈希一致 / 签名有效 / 扫描无告警 / 范围完整」记为四个独立字段，禁止任一字段为真即整体判通过；③ 与 r429C（没扫到不许算通过）是同一条门的上下两半（那条封"缺态冒充通过"，本条封"有态冒充可信"），与 r524C（自证式摘要非签名）/ 2969（签名只证发布物未改不证内容安全）分工：digest/签名两态已由那两条落，本条补"干净报告/heuristic 不证安全"第三态＋把三者合成四字段强制分解。
 - **提升层**：工作流（验收判决的解释边界与字段拆分）。触发词：四字段分解、哈希一致/签名有效/扫描无告警/范围完整、干净报告不证安全、heuristic not sandbox、已验证不得合并、有态冒充可信。
+
+## r783-Q-A · 失败的"可查记录"有构造性盲区：先列盲区再拿记录数当分母（来源：help.make.com/errors-that-dont-create-incomplete-executions.md 200/1.4KB + docs.n8n.io/handle-errors-gracefully.md 200/5.1KB，2026-11-02 实拉）
+- **判据**：① 错误记录面＝失败全集的子集，且缺的是哪几段由平台构造决定，不是漏扫；② 凡用"不完整执行数/失败率"下结论，须先声明该四类是否适用本场景（Make 四类例外：错误发生在首个模块 / 不完整执行存储满 / 超过场景运行时长上限 / 初始化或回滚阶段均不生成 incomplete execution；n8n 在 trigger 节点失败时 error 字段 Not present）；③ 分母本身偏小却当作全量，会系统性低估失败率。与已落 `rm 1.240.0`（投递失败证据一等状态）分工：那条要"失败成为一等状态"，本条要"先承认有些失败按构造不可能成为状态"。
+- **提升层**：工作流（失败观测口径）。触发词：构造性盲区、四类不产生不完整执行、记录面≠失败全集、分母偏小、trigger 节点字段缺席。
+
+## r785-Q-C · 覆盖率"检全程度"必须分档且半检须标成因（来源：github.com/openclaw/clawhub/issues/4113 一手 body，2026-11-02 实拉）
+- **判据**：① 覆盖率字段不能是一个百分比——须同时报"全检/半检/未检"三档计数；② 半检必须标明成因（解析器 span/长度上限属构造性盲区，与"没扫到"不同处置）；③ 只有分母口径（已落 `ssc 1.280.0`）或只有百分比的覆盖声明，会把"解析器读不动"洗成"扫过了"。与 r781-Q-B（门控被检范围三厂同因）同族合并提案。
+- **提升层**：可复用 Skill（产物字段）/ 工具。触发词：fully/partially inspected、检全程度分档、半检成因、span 上限构造性盲区。
+
+## r785-Q-C · 判决字段与可见性字段正交：clean 不等于可取（来源：github.com/openclaw/clawhub/issues/4055 一手，2026-11-02 实拉）
+- **判据**：① 消费侧不得用"判决=clean"推"对象可用"，可用态须单独取；② 只读 verdict 的报表会把"已被 moderation 隐藏/待发布"计成"安全可用"；③ 与已落"缺证取 unknown 非 zero"（r636）互补：那条分"没跑完 vs 没发现"，本条分"跑了且干净 vs 不可取得"——产物字段层第二个正交维度。
+- **提升层**：工具/工作流。触发词：verdict:clean × 403 pending.publication、判决与可见性正交、clean≠可取、moderation 隐藏。
+
+## r786-Q-A · 缓存键须含完整隔离域且禁止回退旧无域条目；滑动 TTL 不能当"旧键已消失"证据（来源：github.com/langgenius/dify/pull/45226，2026-11-02 实拉）
+- **判据**：① 投毒面来自"名称相同但端点/域不同"的键碰撞，缓存键须并入租户 ID＋输入模态等完整隔离域；② 修复须"no fallback to legacy unscoped entries"，旧无域条目不得被新带域逻辑回退命中；③ 滑动 TTL（idle interval）不是"自创建起 guaranteed lifetime"，判"旧无域条目是否还在"须枚举而非等 TTL；④ 修复只防新增、不自动修已污染条目，验收要查存量重建是否发生。
+- **提升层**：工具。触发词：versioned cache hash、legacy unscoped fallback、滑动 TTL≠绝对寿命、缓存投毒隔离域。
+
+## r786-Q-A · 并行兄弟分支须拿共享可变状态的深拷贝，且合并须按稳定键排序保证可复现（来源：github.com/FlowiseAI/Flowise/pull/6483，2026-11-02 实拉；av SKILL.md:247 已落浅拷贝污染兄弟）
+- **判据**：① 并行分支各自拿共享可变状态的 deep-cloned copy，避免原地改写互污染（已落）；② 净新子集＝输出合并顺序若取决于完成先后则结果不可复现，须以稳定键（nodeId/序号）排序而非到达顺序；③ 与 mts「缓存复用域=授权域」不同轴（那条管复用合法性，本条管确定性）。
+- **提升层**：工具。触发词：deep-cloned、merge by stable key、reproducible behavior、合并顺序确定性。
+
+## r788-Q-C · 评估环境须跑前认证＋跑后从归档证据独立复判；污染集"一条都不接受"才是有效门（来源：arxiv 2610.40246 EnvOS，2026-11-02 一手 abstract）
+- **判据**：① "提示模型去重查"几乎没用，把新值直接给到决策点才有用（与 r783-A 失败留痕、av「证据不补造」互补）；② 验收污染测试须报"接受了几条脏"——日志式检查会系统性低报（26 条脏 episode 简单日志只抓 4 条，归档证据复判 0 接受）；③ 评测器与被评对象的取证通道须是同一集合（旁证 2610.34777 judge 不看 attachment，attachment 放置使接受率 78% vs in-skill 23%）。
+- **提升层**：评测层。触发词：跑前认证、归档证据独立复判、污染集零接受、取证通道不一致。

@@ -2760,3 +2760,31 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 - **实证（逐串）**：NVIDIA Tier-1 在任意深度排除 evals/.evals/results/.results/versions/.versions/__pycache__/.git/.venv/node_modules/ 并滤除 skill.oms.sig/skill-card.md/benchmark.md 单条发现，且文档自认"独立全目录扫描更宽"；skillfortify #10 `PRUNED_DIR_NAMES` 含 __pycache__（PEP 552 UNCHECKED_HASH，产物 `calculate-magic-circle SAFE | 0 total findings`）；skillhawk #248 `TEXT_EXTENSIONS` 不含 .pyc→`100/100 (A+) CLEAN`；QwenPaw #8179 ZIP 源 `_is_probably_text_blob()` 跳过二进制；nedlir PoC 单样绕过 30 个扫描器（"excuse-the-cache"）。
 - **判据**：① 任一"复检/二审/换扫描器"记录须写明两次所检文件集合（排除目录＋扩展名白名单＋是否含字节码通道），写不出即判该次比较无效、不得引用其差值；② 与 r776-C1（分母口径）分工：C1 管"排除项/豁免归属怎么算进分母"，本条管"两个检验器各自排除集不同⇒判决数值不可直接对齐"——同一技能在门与独立扫描器两处被检内容集不同，比较即失真。
 - **提升层**：工具（检验器范围契约）。触发词：被检内容集对齐、排除目录白名单、字节码通道、Tier-1 scope、TEXT_EXTENSIONS、excuse-the-cache、换扫描器比较无效。
+
+## r783-Q-A · 限次/锁定保护的计量主体必须显式选边：绑身份+时间窗，或绑一次性对象（来源：activepieces breaking-changes 0.91.0，2026-11-02 实拉）
+- **判据**：① 计数挂对象⇒申领新对象即刷新预算（等于无上限）；计数挂身份+窗口⇒轮换凭据不续命；② 凡实现"最多 N 次"须回答"N 次随什么归零"，写不出即判该上限可被绕过；③ 反方向锚（修法形态）已在案 `mts KB`「rotating an API key does not reset usage」——成对呈现。
+- **提升层**：工作流（保护机制计量）。触发词：guesses、重新申领、预算被重置、计量主体选边、绑对象 vs 绑身份。
+
+## r785-Q-C · 被检对象自我授权不受信任门控：未信任工作区的项目技能仍应用 allowed-tools（来源：code.claude.com/docs/en/skills.md 200/118,879B，2026-11-02 实拉）
+- **判据**：① 权限来源审查必须独立于"工作区是否被信任"这一门，扫描/门禁不得以"目录未信任所以跑不起来"为由跳过对技能自带授权字段的检查；② 同一声明字段在管理配置下有"生效/被无视(allowManagedPermissionRulesOnly)/反噬失预批准(strictPluginOnlyCustomization×hooks)"三态；③ 授权按回合回收、正文按上下文驻留（生命周期不同轴，不得由"内容还在"推"权限还在"）；④ 热重载只覆盖正文不覆盖 frontmatter 权限字段（改权限须重开会话才生效，改正文立即生效⇒二者不可同法验）。
+- **提升层**：工具/工作流（安全边界）。触发词：grant itself、Workspace trust doesn't gate、自我授权、管理配置三态、授权回合级生命周期。
+
+## r785-Q-C · 豁免设计本身可保留协同摘牌能力：补注 ssc 1.280.0（来源：github.com/openclaw/clawhub/issues/3681，2026-11-02 一手）
+- **判据（补注 1.280.0「豁免权归属」）**：① "豁免官方项"不是修复而是缩小受害面，摘牌触发权须归属到与举报人不同的主体；② 本例为第二例——四普通账号各报一次即自动隐藏任何可见技能，豁免设计仍保留协同摘牌机制。不新开版本号，并入 KB。
+- **提升层**：安全边界。触发词：协同摘牌、豁免权归属第二例、举报式自动隐藏。
+
+## r786-Q-A · 权限交集须在分页与计数之前求，且任何过滤面不得加宽；无权限须返回空集而非全域（来源：github.com/langgenius/dify/pull/45247，2026-11-02 实拉）
+- **判据**：① 先分页后过滤会让 total/计数与可见集不同源（授权口径失真）；② 验收＝用受限 key 请求列表，断言 total 与条目集同受交集约束，且逐一尝试各过滤参数（RBAC/maintainer fallback/search/tag/include_all）不得使可见集变大；③ 受限 key 必须返回空列表，never become workspace-wide。
+- **提升层**：安全边界。触发词：intersect before pagination/counting、cannot widen、restricted key→empty list、权限交集。
+
+## r787-Q-B · 远程来源技能的授权面须与本地技能不同权，且批准不可跨层级继承、不可按 uri 单键持久化（来源：modelcontextprotocol.io/seps/2640-skills-extension Final，2026-11-02 实拉）
+- **判据**：① 三重不可信——来源不同权（远端声明的工具预批一律作废）/ 父子嵌套批准不传导（每项须新批准）/ 标识符不可作批准缓存键（skill://<path> 可重命名复用，须按内容摘要或带发布者身份的键）；② 验收＝"远程技能带 allowed-tools 安装后是否直接免批执行"＋"改 uri 后旧批准是否仍生效"；③ SEP 已 Final＝标准进程一手，与已落「scope 声明非授权」(ssc 1.274.0) 不同轴。
+- **提升层**：安全边界。触发词：allowed-tools MUST be ignored for MCP-origin、approval does not substitute、MUST NOT key on uri alone、远程技能不同权。
+
+## r787-Q-B · 目录元数据面的保留词与不可见字符须在归一化形态上核查，且校验不过则整体不发布（来源：docs.openclaw.ai/clawhub/publishing.md 200/18,359B，2026-11-02 实拉）
+- **判据**：① 信任标记本身可被申报方写入，信誉词表（approved/audited/certified/verified…）须保留并做归一化（大小写/Unicode 规范化后）比对，不是原样字符串比对；② "校验失败即全拒"是 fail-closed，而 dry-run/预览通道不得复用同一豁免（否则预览成了绕过）；③ 长度与字符集约束属可机检项，须进安装前门。
+- **提升层**：可复用 Skill/安全边界。触发词：reserved topics、invisible formatting chars、normalized form checked、校验失败即全拒、dry-run 不豁免。
+
+## r788-Q-C · 自进化的学习通道授权不外溢到执行通道：用户主动授权过的"读外部内容并照做"被第三方写入同型任务后即成未授权执行模板（来源：arxiv 2610.39122 Evolve-IPI，附代码仓，2026-11-02 一手）
+- **判据**：① 巩固/自改进门除"外部证据""可回退"外须加一维"授权继承性"——从"用户当时批准过的行为"学到的策略，默认不得升格为长期权限；② 验收＝把 adaptation 与 test 两阶段授权主体分开计，出现"一次授权→长期生效"即判失败；③ 与已落「自变异投毒 SMP 延后危害」(r647) 成对：那条是写入型污染，本条是反馈型污染（用户正反馈本身在教坏模板）。
+- **提升层**：安全边界。触发词：self-evolution、反馈型污染、授权继承性、adaptation≠test 授权、ASR +14~48pp。
