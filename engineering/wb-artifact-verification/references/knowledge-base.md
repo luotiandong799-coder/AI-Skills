@@ -5386,3 +5386,8 @@ design-it-twice 的多个子智能体都指向同一份预先收集的事实简�
 ## r774-Q-A · 审计写入是提交条件而非旁路日志：事件写不成则变更回滚（来源：docs.langflow.org/audit-logging 2026-11-02 实拉，逐字 saves a flow or project change and its event in the same database transaction. If the event cannot be saved, the change is rolled back.）
 - **判据**：① 审计通道不可用时变更必须失败，不得静默放行；② "被拒绝（请求在成为变更前被拒）"与"执行失败"在事件账上必须是两种可区分记账形态——本例把前者记为 No event 而非 failed 事件，与 r649A「回滚仍记账」方向相反、互为补集（那条=变更失败审计要留；本条=审计写不成变更不许走）。
 - 提升层：工作流（审计门控）/ 工具。触发词：audit in same transaction、event save fail→change rollback、审计不可用则变更失败、No event≠failed。
+
+## r778-Q-B · 验收结论四字段分解强制 + 干净报告≠安全保证（来源：modelcontextprotocol.io SEP-2640 Final + OWASP AST01 + skilldoctor/skill-audit README，均 2026-11-02 实拉）
+- **实证（逐串）**：SEP-2640「Digests establish consistency with the server's manifest, not trust in its content」＋「A changed, added, or removed file revokes that approval」；OWASP「A signature proves authorship, not safety」；skilldoctor「heuristic, not a sandbox」；skill-audit「a clean report is not a safety guarantee」。
+- **判据**：① 验收结论必须写明它证明的是哪一层——一致性 / 来源 / 内容安全性 / 覆盖完整性——四者缺一即不得合并成一句「已验证」；② 校验产物须把「哈希一致 / 签名有效 / 扫描无告警 / 范围完整」记为四个独立字段，禁止任一字段为真即整体判通过；③ 与 r429C（没扫到不许算通过）是同一条门的上下两半（那条封"缺态冒充通过"，本条封"有态冒充可信"），与 r524C（自证式摘要非签名）/ 2969（签名只证发布物未改不证内容安全）分工：digest/签名两态已由那两条落，本条补"干净报告/heuristic 不证安全"第三态＋把三者合成四字段强制分解。
+- **提升层**：工作流（验收判决的解释边界与字段拆分）。触发词：四字段分解、哈希一致/签名有效/扫描无告警/范围完整、干净报告不证安全、heuristic not sandbox、已验证不得合并、有态冒充可信。

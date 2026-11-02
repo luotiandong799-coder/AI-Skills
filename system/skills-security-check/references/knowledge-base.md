@@ -2750,3 +2750,13 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 ## r777-Q-A · 自动/人工复审通道只能追加或确认，不得放宽；无据高判由系统强制降级（来源：The-Swarm-Corporation/SkillScanner README + swarms.ai blog 2026-11-02 实拉；第二家佐证 OpenClaw callers cannot downgrade + r423C 点名"需第二家佐证才敢写通则"）
 - **判据**：① 任何自动/人工复审通道都无权撤销静态发现，只能解释它；解释不了就降等而非放行（APPROVE with unexplained HIGH/CRITICAL → downgraded to CAUTION）；② 降级须由系统执行而非流程要求（给了也会被改写），把不变式做进判决合并器；③ 同一发现按可执行面加权 1.3x（CRITICAL 50/HIGH 25/MEDIUM 10/LOW 5 × executable-file 1.3x）——严重度不仅看类别，还看落在可执行物上（与 r776-C1 测没测互补：那条管测没测，本条管测到后怎么合并）。
 - 提升层：工具（判决合并器）/ 安全边界。触发词：APPROVE→CAUTION 强制降级、复审不可撤销静态发现、executable 1.3x、合并单向性。
+
+## r778-Q-B · 扫描器覆盖率必须附「输入语言与编码前置假设」：解除 r776-C3 验证门槛（来源：cisco-ai-defense/skill-scanner#282 + NVIDIA/Skillspector#644/#813/#884 + NVIDIA/SkillEvaluator#241 + spring-ai-alibaba PR#4998 + QwenPaw PR#8400，均 2026-11-02 实拉）
+- **实证（逐串）**：BOM(U+FEFF)→Hidden Instructions 假阳（#644）；JS execFile→假阳 CRITICAL（#282）；`compile(` 文本→假阳（QwenPaw #8400）；NBSP vs 空格→judge verdict 翻转（SkillEvaluator #241）；孤引号跨行/heredoc→命令被漏检（#813）；合法 Rust/Python/shell 触发 static_parse_limit（#694）；TS 模板字面量 ${…}→partial inspection（#884）；UTF-8 BOM 直接拒收 frontmatter（#4998）；一次 parse 路径改动使同技能分数 0→SAFE→CAUTION 漂移（#524）。
+- **判据**：① 扫描/评估报告在给出判决的同时，必须声明「所支持的语言集合 + 预处理假设（BOM/NBSP/CRLF/模板字面量/heredoc）+ 本次是否发生 static_parse_limit 降级」三项；② 缺任一项时，通过态不得当作未检出的证明；③ 与 r776-C1（分母口径＋豁免归属）互补：C1 管"没扫的算不算进分母"，本条管"扫了但因编码/语法边界实际没看懂"——后者不体现在分母里，只伪装成一次正常扫描。
+- **提升层**：工具（扫描器行为契约与报告字段）。触发词：BOM 假阳、NBSP 翻转 verdict、heredoc 漏检、static_parse_limit 降级、partial inspection、frontmatter 拒收、编码边界前置假设、语言集合声明。
+
+## r781-Q-B · 跨检验器判决比较前须先对齐「被检内容集」：门控与独立扫描器的排除清单各自成文才可比（来源：NVIDIA release-checklist.md#tier-1-skillspector-scope + skillfortify#10 + skillhawk#248 + QwenPaw#8179 + nedlir PoC，均 2026-11-02 实拉；系 r779-Q-C C2 候选验证门槛已过）
+- **实证（逐串）**：NVIDIA Tier-1 在任意深度排除 evals/.evals/results/.results/versions/.versions/__pycache__/.git/.venv/node_modules/ 并滤除 skill.oms.sig/skill-card.md/benchmark.md 单条发现，且文档自认"独立全目录扫描更宽"；skillfortify #10 `PRUNED_DIR_NAMES` 含 __pycache__（PEP 552 UNCHECKED_HASH，产物 `calculate-magic-circle SAFE | 0 total findings`）；skillhawk #248 `TEXT_EXTENSIONS` 不含 .pyc→`100/100 (A+) CLEAN`；QwenPaw #8179 ZIP 源 `_is_probably_text_blob()` 跳过二进制；nedlir PoC 单样绕过 30 个扫描器（"excuse-the-cache"）。
+- **判据**：① 任一"复检/二审/换扫描器"记录须写明两次所检文件集合（排除目录＋扩展名白名单＋是否含字节码通道），写不出即判该次比较无效、不得引用其差值；② 与 r776-C1（分母口径）分工：C1 管"排除项/豁免归属怎么算进分母"，本条管"两个检验器各自排除集不同⇒判决数值不可直接对齐"——同一技能在门与独立扫描器两处被检内容集不同，比较即失真。
+- **提升层**：工具（检验器范围契约）。触发词：被检内容集对齐、排除目录白名单、字节码通道、Tier-1 scope、TEXT_EXTENSIONS、excuse-the-cache、换扫描器比较无效。
