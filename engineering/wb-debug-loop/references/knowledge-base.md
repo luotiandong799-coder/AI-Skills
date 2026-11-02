@@ -3630,3 +3630,10 @@ Functional API 在 resume 时会重新执行一个「其异常已被入口点捕
 ## r786-Q-A · 中断/暂停态在观测面上刻意不携带终态字段，并须带致停对象标识（来源：developers.make.com/.../scenarios/logs.md + docs.dify.ai CLI，2026-11-02 实拉）
 - **判据**：① 把 parked 行填一个终态值＝让下游把它当已完成消费（与 r768-Q-A「静默成功」同族但方向相反——本条是缺字段即信息）；② 恢复入口须指明被停在哪一个模块/节点（interruptModuleId），否则续跑只能从头；③ Make `EXECUTION_PAUSED` 行 deliberately carries no status，Dify suspended 用 hints 把恢复编码成下一条命令。
 - **提升层**：工具/工作流。触发词：deliberately carries no status、parked row、中断态缺终值、interruptModuleId。
+
+## r670A · 恢复/续跑类保证必须同条声明其例外档与节拍可调性（来源：www.activepieces.com `docs/install/guarantees/crash-recovery.md` 200/3,670B 一手，2026-11-02 实拉；经 Qoder r789-Q-A A2 提名）
+
+- **原文事实**：「已完成不重复、排队不丢弃」之外明写——「失败瞬间那一个 in-flight 步骤会重跑」「**at-least-once, not exactly-once**」「副作用可能 twice」，且 checkpoint 节拍**固定 15 秒、不可配置**。
+- **判据**：技能里凡写「支持断点续跑 / 幂等重试」，必须**并列三要素**：① **重复窗口**（哪一段可能重跑、重跑几次）；② **节拍及其可调性**（固定值要写明，别让使用者以为可调）；③ **副作用要求**（调用方必须幂等，否则「保证」不成立）。只落「双保证」不落例外档 = 把 at-least-once 当 exactly-once 读。
+- **提升层**：工作流（续跑与重试语义）。
+- **注**：Qoder 指 `defaults/wb-context-compressor` SKILL.md:1445 现条目只落双保证未落例外档——该技能属豆包自留地，本轮不介入，已在给豆包文件中通告由豆包自行补。

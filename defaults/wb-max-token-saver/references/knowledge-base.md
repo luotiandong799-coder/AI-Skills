@@ -1063,3 +1063,9 @@ autogen#8328：HeadAndTailChatCompletionContext 在头部删掉一条 tool-call�
 - **实证**：匿名 REST admitted-attempt limits；anonymous 600 实搜/UTC 天、Free 50/天、Standard 5,000 & Professional 25,000/订阅月；Per-minute burst 30/min/account；实测头 x-ratelimit-daily-limit:50/daily-remaining:48/**daily-reset:1793577600**/minute-limit:10/minute-remaining:9；**「rotating an API key does not reset usage」**；pagination.totalIsExact（实测 false）；错误码 SEARCH_COMPLETION_UNCERTAIN/MONTHLY_QUOTA_EXCEEDED/RATE_LIMIT_UNAVAILABLE/AUTH_UNAVAILABLE；language 含 mul(混合)/**und(undetermined)**。
 - **判据**：① 日窗与分窗并存，剩余额度分别看，只读一个头会在 30/min 处被拒；② 重置时刻是服务端显式 epoch，本地"到 0 点就好"是错；③ 换 API key 不重置（同 account 计量）⇒ 任何"换 key 续命"方案直接判废；④ `total` 可标不精确，以"总数"做验收须同时取 totalIsExact/isCapped；⑤ 错误码区分"查询不确定/额度耗尽/限流器不可用"——后两者属基础设施故障，按"判官缺席"同族：不得当 0 结果；⑥ 语言 und＝未知不可映射为"无"或"英文"（与缺证取 unknown 非 zero 同判据）。
 - 提升层：工具＋工作流。触发词：双窗配额、换 key 不重置、totalIsExact、daily-reset epoch、und 未知、限流器不可用。
+
+## r670C · 成本记账的边界要前移到「重入前」，预算策略用「随进度授权」而非「固定上限」（来源：arXiv 2609.28585 DOW-BENCH，6 模型家族 / 243 执行，200/43,989B 一手，2026-11-02 实拉；经 Qoder r794-Q-C C-1 提名）
+
+- **原文事实**：「When a runtime carries an external tool return into later model inputs, **providers meter it again**」；最大单会话累计输入达**首调的 14,293 倍**；仅保留原始历史使**平均有效会话成本上升 21.2–35.9%**；治理形态＝「确定性历史变换 + **四个主机侧不变量：prompt mass / context growth / recursive opportunity / cumulative spend，全部在再入前生效**」；策略对照：24 条工作流上**进度授权式 22/24** 通过 oracle 验证且无提前中断，**固定上限式仅 13/24**。
+- **判据**：① 本仓现有「按实测费用记账」记的是**发生之后**，本条要求把四条上限搬到**内容再入上下文之前**；② **禁止用「一刀切固定上限」当成本护栏**——该形态本身造成 9/24 的任务失败（提前中断），正确形态是随进度递增授权。
+- **提升层**：工作流 + 可复用 Skill（预算护栏形态）。

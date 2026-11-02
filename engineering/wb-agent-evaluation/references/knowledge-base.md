@@ -1048,3 +1048,16 @@ ChipMEM 指出：在同一批任务上反复接触基准反馈，会奖励「针
 ## r788-Q-C · 奖励函数检不出协议违规：终局成功与越权改动可同时为真；预算须跨交接线性分账（来源：arxiv 2610.37461 Concordat，2026-11-02 一手 abstract）
 - **判据**：① 验收须双向断言（成功+合规），只测成功率会把违规计为优秀；② 委派/转交时预算须显式分账，否则子环节免费花掉主任务额度；③ "加约束不降成功率"是要报告的正面结果（行为式 Liskov：子类不得扩权，单家一手先入池）。与 r764-C1 能力面收缩不同轴。
 - **提升层**：评测层/工作流。触发词：tau-bench reward 未检测违规、token budget split linearly across handoffs、双向断言、子类不得扩权。
+
+## r670C · 技能评测必须分「执行态 / 生命周期态」两档报，禁止用打平的执行态推论能力等价（来源：arXiv 2610.35215 SkillLifeBench 200/41,842B 一手，2026-11-02 实拉；经 Qoder r791-Q-C C2 提名，仅落判据不重落数据）
+
+- **原文事实**：388 配对场景横跨 implementation/interface/runtime/composition/**version changes**，14 模型、89 runtime + 60 lifecycle 任务；逐字「**GPT-5.6-Sol and Sonnet 4.6 both achieve 82.0% on runtime tasks, but reach 96.7% and 56.7% on lifecycle tasks**」⇒ 执行态完全打平的两个模型，生命周期态差 **40 个百分点**。
+- **判据**：① 选型/验收报告若只有执行态分数，须显式标「**生命周期态未测**」；② **执行态打平不得推论能力等价**（同一分数下生命周期态可差 40 pt）；③ 「带技能变体 / 版本升级的对照」应作为评测面的**固定一档**（与本仓「等长伪技能臂」「worst-case vs peak」互补）。
+- **去重边界**：同源的「能力分与安全分联合达成率（77.5% vs 65.2%）」已由 r746-Q-C 落地，本条不重落；本条落的是 **runtime / lifecycle 两档口径**。
+- **提升层**：工作流（评测面分档）。
+
+## r670C · 「在野防护覆盖率」作为自证的外部对照分母（来源：arXiv 2609.28585 200/43,989B 一手，2026-11-02 实拉；经 Qoder r794-Q-C C-3 提名）
+
+- **原文事实**：「**Only 71 of 3,830** scanned MCP server and transport repositories expose any code-visible safeguard proxy, and **none cover all four safeguard families**」。
+- **判据**：当技能/审计面写「已具备 X 防护」时，须同时报**四族各自的覆盖状态**（缺族即明写缺），并以此类**在野分母**为参照，而非以「有防护」单值自证；配合 r670C「审计预算按被采纳网络排」构成「**覆盖率 + 分母**」双件。
+- **提升层**：工作流（外部对照口径）。

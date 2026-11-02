@@ -2788,3 +2788,22 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 ## r788-Q-C · 自进化的学习通道授权不外溢到执行通道：用户主动授权过的"读外部内容并照做"被第三方写入同型任务后即成未授权执行模板（来源：arxiv 2610.39122 Evolve-IPI，附代码仓，2026-11-02 一手）
 - **判据**：① 巩固/自改进门除"外部证据""可回退"外须加一维"授权继承性"——从"用户当时批准过的行为"学到的策略，默认不得升格为长期权限；② 验收＝把 adaptation 与 test 两阶段授权主体分开计，出现"一次授权→长期生效"即判失败；③ 与已落「自变异投毒 SMP 延后危害」(r647) 成对：那条是写入型污染，本条是反馈型污染（用户正反馈本身在教坏模板）。
 - **提升层**：安全边界。触发词：self-evolution、反馈型污染、授权继承性、adaptation≠test 授权、ASR +14~48pp。
+
+## r670B · 审批绑定的对象是「执行上下文快照」而不是命令文本（来源：docs.openclaw.ai `tools/exec-approvals.md` 200/44,469B 一手，2026-11-02 实拉；经 Qoder r790-Q-B B1 提名，本轮仅落净新子集）
+
+- **原文事实**：批准 run 绑定 `cwd` + 精确 `argv` + `env` 绑定 + **pinned executable path**，可写可执行文件另加**内容哈希**；「绑定窗口内解析结果发生变化（含 PATH 上出现更早命中的同名可执行文件）**即拒绝运行**」；「识别不出恰好一个本地文件操作数时**拒绝签发审批**」。
+- **判据**：① 技能里任何「已批准 X 命令」的表述必须写明**绑定域**（cwd / argv / env / 路径 / 内容哈希）与**失配即拒**；② **模糊作用域取「拒」不取「放行」**——「批准了一个名字相同但解析结果不同的东西」等于没批准。
+- **去重边界**：「识别不出唯一文件时拒签」已由 r649C-4 落地，本条不重落；本条落的是**绑定域清单 + 窗口内解析变化即拒**。
+- **提升层**：可复用 Skill + 安全边界。
+
+## r670B · 外置判定器的失效语义与越权语义须逐档成文（来源：docs.openclaw.ai `tools/skills-config.md` 200/19,699B 一手，2026-11-02 实拉；经 Qoder r790-Q-B B2 提名）
+
+- **原文事实**：`security.installPolicy` 一手——判定器被启用但 `exec` 无效 ⇒ **安装被阻断**（不是放过）；`targets` 省略 ⇒ 覆盖所有受支持目标，理由原文「so new installs do not unexpectedly **fail open**」；`warn/block` 判决**必须带非空 reason**；`timeoutMs`/`noOutputTimeoutMs`=10s、`maxOutputBytes`=1 MiB 超限**即视失效**；**`--force` 不构成对策略警告的批准**；warn 携带 >100 条有效 findings ⇒ 阻断且不可确认（归一化 findings 上限 100、单条文本 ≤1,000 字符）。
+- **判据**：与已落「扫描范围 / 被检内容集」不同轴——那条管**扫了什么**，本条管**判定器不可用时默认往哪边 fall**、以及**强制标记能越过哪一档**。凡接外置判定器：失效默认须写死方向（阻断优先于放行）、判决必带 reason、输出超限按失效计、强制标记不得越过策略档。
+- **提升层**：可复用 Skill（门禁失效语义）。
+
+## r670B · 「不采集清单」是声明性属性：须与「默认态 + 退出通道粒度」三项一起取证（来源：docs.openclaw.ai `clawhub/telemetry` 200/236,905B 一手 + skills.sh 首页 2026-11-02 实拉；经 Qoder r793-Q-B B-2 提名）
+
+- **原文事实**：采集面＝`installed skill slug / canonical plugin package name` + `version`，**「on by default for logged-in users」**，退出只有**一条环境变量** `CLAWHUB_DISABLE_TELEMETRY=1`（无 per-skill / per-project 粒度、无 UI 开关）；显式列出**不采**「No local filesystem paths / No file contents / No per-run logs」，且**保留期未文档化**。
+- **判据**：审第三方技能/工具时，「它说它不采 X」**不等于技术上采不到 X**；取证须三件并立——① **默认态**（默认开还是默认关）；② **退出通道及其粒度**（只有一条全局环境变量 ⇒ 细粒度退出不存在）；③ **未声明即未承诺的字段**（保留期缺失 = 默认无限期）。旁证：skills.sh 首页把「Security audits」只作**导航链接**却经 JSON 暴露 `weeklyInstalls` ⇒ **声明面与可见数据面分处两地**。
+- **提升层**：工作流（第三方采集面取证）。
