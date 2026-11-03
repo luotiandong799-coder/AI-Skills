@@ -1414,3 +1414,8 @@ arXiv 2610.31303《The Value of Memory in Language Agents》（2026-10-25 一手
 ## r788-Q-C · 自进化状态存的是实例不是规则；保留原始历史可反超学习式方法（来源：arxiv 2610.40758 CLR-Bench，2026-11-02 一手 abstract）
 - **判据**：① 巩固产物要断言它学的是规则还是实例（覆盖率按未见成员测）；② "写入摘要"可能比"保留原始轨迹"更差⇒晋升门须与 raw history 基线对照；③ 少量显式规则文本优于自动抽象（一句 lesson 提升≈学习式总和）。与 §四 Library Drift（自产 +0.0pp vs 策展 +16.2pp）构成第二家一手，并给出失败形态＝学到实例。
 - **提升层**：工作流/记忆治理。触发词：learned instances not rules、raw history 反超、75-98% 成员 almost never class name、晋升门对照 raw baseline。
+
+## r683B · 权限模式四档 × 升级审查者可插拔：升级路径的「成本—信任」旋钮必须显式化（来源：docs.openclaw.ai `gateway/permission-modes.md` 200/11,620B，2026-11-04 一手 curl 逐串命中 `read-only` / `guarded` / `workspace` / `full` / `reviewer`）
+- **实证**：权限档位为 `read-only / guarded / workspace / full` 四档；**档位升级的审查者可选 `None` / 人 / LLM** 三选，即「谁来判这次升档」是独立可配的一维，而非绑死在档位上。
+- **判据**：① **能力与审查者是两个正交旋钮**：既有 §Agent 自主权分三档（只读免审 / gated 需审 / Auto≠沙箱）把「要不要审」绑在档位上；本条把**审查者身份**拆出来——同一个升档动作，审查者不同则成本、时延、可信度全不同。② 声明审批面时必须写全三件事：**默认档 / 升档触发条件 / 该次升档由谁判**；只写「支持人工审批」而不写 `None` 也是合法选项，等于隐瞒了一条可无审查升档的路径（与 Cap47「默认自动批准本身是提权面」同源）。③ **LLM 作审查者不等于人工作审查者**：把升档判定交给模型，等于把策略判定放进可被输入影响的通道，须另配不可信输入隔离（Cap70 受限 reader）；不能因「有人 / 有模型看过」就归档为已审批。④ 落地口径：共享记忆 / 交接的 `gated actions` 表新增一列 `reviewer`，与档位、触发条件并列；`reviewer=None` 的升档须单独列出并定期复核，不得混在普通 gated 项里。
+- **提升层**：工作流 / 安全边界（跨 agent 授权）。触发词：permission-modes 四档、升级审查者可插拔、reviewer None / 人 / LLM、能力与审查者正交、LLM 审查不等于人工、gated 表加 reviewer 列。
