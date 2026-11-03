@@ -5433,3 +5433,29 @@ design-it-twice 的多个子智能体都指向同一份预先收集的事实简�
 - **原文事实**：逐字「**Compression succeeds on 10/12 and 11/12 history-dependent tasks, versus 2/12 under deletion for each provider**」。
 - **判据**：凡以「删 / 截 / 不携带历史」作为成本或注入防御，必须并列报该防御下的**历史依赖任务成功率**，不得只报「已阻断」——「更安全」与「更可用」不是同一个方向。与已落「扫描范围声明」「构造性盲区」不同轴（那些管**检了多少**，本条管**防御把功能一起削掉多少**）。
 - **提升层**：工作流（防御手段验收档）。
+
+
+## r681B-2 · 可辩护的安全/质量结论 = 「扫描器来源三元组 + 每维独立连续分 + 覆盖面计数器 + 未知态」四件同报（来源：skills.sh /audits 200/487,667B，2026-11-04 实拉）
+- **原文**：「Combined security audit results from **Gen Agent Trust Hub, Socket, and Snyk**」；`score:{license, maintenance, quality, supplyChain, vulnerability, overall}`，同页实测 **0.36 与 0.9**；`verdict:"SAFE|LOW|MEDIUM"`；`status:**clean|unknown**|success`；`total_files_scanned / total_commands / total_remote_executions / total_credentials / total_urls_checked / total_python_packages`。
+- **判据**：① **连续分与分档并存**：分档回答「放不放行」，每维连续分回答「哪一维差」——只有前者无法比较两个 PASS，只有后者无法设门禁；② **每维分开、不许合成分当结论**：`overall` 与 `supplyChain` 可以反号（0.36 vs 高 overall），合成值会**把最险的一维平均掉**；③ **覆盖面要用计数器自证**：`total_files_scanned` 与 `total_files_checked` 是两个字段——**扫了多少 ≠ 检了多少**，缺后者则「无发现」无法区分「没问题」与「没看」；④ `status:unknown` 与 `clean` 分离，是主线 §161「缺证取 unknown 非 zero」落到**安全审计产物字段**的具体形态；⑤ **结论要报扫描器来源三元组**，单一扫描器的结论不可交叉验证。
+- **提升层**：工作流（审计产物 schema）/ 工具（报告字段）。
+- **触发词**：每维连续分、扫描器来源三元组、total_files_scanned vs checked、覆盖面计数器、unknown 与 clean 分离、合成值平均掉最险一维。
+
+## r681C-4 · 引用官方看板前先拿分项重算汇总：同页内部就能不自洽，回主源核对不足以发现它（来源：NVIDIA SkillEvaluator 官方博客，2026-11-04 复拉 200/257,043B）
+- **原文**：四维增益 **Correctness +41（46→87）/ Effectiveness +39（39→78）/ Discoverability +40 / Efficiency +35**，表 2 另有「Security 97→98 **+1**」；**同一页汇总行写「All dimensions (average)…+31」**。按四维均值应约 **+38.75**（含 Security 亦为 +37.2），与页内 **+31** 不符；原文已自陈只有 Correctness/Effectiveness 两维「measured **consistently in both conditions**」。
+- **判据**：① **汇总值必须由分项现场重算**，不与分项同信度引用——「已回主榜核对」只解决**跨站差**（聚合站与主榜差 8–55 分），解决不了**主源页内自相矛盾**；② 对不上时处置是**降级为「口径未定」并报出两个数**（分项与汇总各一），不择一引用、不擅自取均值当结论（沿用 r788-Q-C 禁用令：不得把 41 误读成区间「31→41」，本条给**该令的成因**）；③ **凡带「average/总」字样的增益数字，须同时核对参与均值的项目集合**（四维 vs 五/六维、是否含 Security 这类几乎不动的分项）——**集合不一致正是均值不可复现的常见来源**。
+- **与 r680C 判非的「双规则并列」（av §785/§1236/§4171）分工**：那三条管「**同一产物用两条评分规则并报**」，本条管「**同一来源页里汇总值与其自己列出的分项算术对不上**」——前者是规则选择问题，后者是引用前的**重算动作**，互不覆盖。
+- **提升层**：工作流（引用前对账步骤）/ 可复用 Skill（验收清单）。
+- **触发词**：分项重算、汇总值与分项对不上、口径未定、参与均值的项目集合、回主源核对不足以发现页内矛盾。
+
+## r681A-2 · 脱敏地板单调性：局部/下游策略只能加严不得放宽，且任何人工查看被脱敏数据都须产生可检索审计事件（来源：docs.n8n.io/build/host-n8n/configure-n8n/security/redact-execution-data.md，2026-11-04 实拉）
+- **判据**：① **脱敏配置是单调的**——局部策略只能匹配**不低于全局下限**的强度，任何「下游比全局更松」的配置都应当被拒；② **校验脱敏配置时测的是上界是否可被下压，不是当前值**——只看当前脱敏了什么字段，测不出「明天能不能被改松」；③ **人工查看被脱敏数据必须落可检索审计事件**——脱敏的价值在「没人看到」，一旦有查看通道就必须有对应的可见记录，否则脱敏是装饰。
+- **与已落分工**：§三台账 2.78.0 n8n redact 条目记「有哪些脱敏开关」，本条记「这些开关的方向性约束与查看审计」，为同族增量非重复。
+- **提升层**：可复用 Skill / 安全边界。
+- **触发词**：脱敏地板、不得低于全局下限、只能加严不得放宽、测上界可否被下压、查看脱敏数据须留审计事件。
+
+## r681C-11 · 技能生命周期阶段要分证据等级，未支持阶段报 unknown；渐进加载创造三类「看起来成功」的失败边界（来源：arXiv 2608.08793《Skill Runtime Intelligence》，2026-11-04 一手 API 复核）
+- **原文**：「Progressive loading creates failure boundaries poorly represented by session-, model-, or tool-centric traces: a Skill can be **discovered but not activated**, **activated without instructions**, or **appear successful without an independently verified outcome**」；Run Panorama「separates **immutable events, deterministic relations, inferred diagnoses, and controlled outcomes** with **four evidence grades**」；「preserving **unsupported stages as unknown**」。
+- **判据**：① **渐进加载把「成功」切成四段，逐段都可能是假成功**——发现≠激活、激活≠拿到指令、跑完≠有独立验证的结果 ⇒ 只报端到端成败会漏掉中间三处断点；② **观测产物要带证据等级**：不可变事件 / 确定性关系 / 推断诊断 / 受控结果四档分开，推断不能直接当结论引用；③ **未支持的阶段显式报 unknown**——用推断把看不到的阶段填满，等于把未知洗成已知，与主线「缺证取 unknown 非 zero」同向。
+- **提升层**：可观测性 / 工作流（技能生命周期验收）。
+- **触发词**：Run Panorama、四证据等级、discovered but not activated、activated without instructions、假成功、未支持阶段报 unknown。

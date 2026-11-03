@@ -1061,3 +1061,37 @@ ChipMEM 指出：在同一批任务上反复接触基准反馈，会奖励「针
 - **原文事实**：「**Only 71 of 3,830** scanned MCP server and transport repositories expose any code-visible safeguard proxy, and **none cover all four safeguard families**」。
 - **判据**：当技能/审计面写「已具备 X 防护」时，须同时报**四族各自的覆盖状态**（缺族即明写缺），并以此类**在野分母**为参照，而非以「有防护」单值自证；配合 r670C「审计预算按被采纳网络排」构成「**覆盖率 + 分母**」双件。
 - **提升层**：工作流（外部对照口径）。
+
+
+## r681B-3 · 质量分是「版本属性」不是技能属性：必须绑定每次发布自动重跑，且均值与场景数同报（来源：tessl.io/registry 200/331,284B，2026-11-04 实拉）
+- **原文**：构造质量「**Runs on every publish, before anyone sees your skill**」；「**Every publish is versioned.** Developers pin, update, and find your skill like a package」；行为增益「The **measurable change in agent behaviour attributable to your skill. Proof, not claims**」；卡片副标「**Average score across 5 eval scenarios**」「Security: Passed, **5 of 5**」。
+- **判据**：① **不随发布重算的分数会在几次编辑后变成化石**，引用它等于引用旧快照 ⇒ 分数必须挂在版本上并在每次发布时重跑；② **均值必须带样本量**——「Average score across 5 eval scenarios」这句话本身就是可复用的产物字段，只报均值不报场景数无法区分「5 个场景平均 79」与「50 个场景平均 79」的可信度；③ **均值掩盖离散度**：凡「N 个场景均值 X」必须能下钻到每场景，否则单场景崩盘被平均掉。
+- **与已落分工**：ae「评测产物先约定落盘契约 + with/without 纵向双跑」管**跑之前**怎么建对照，本条管**每次发布**要不要重跑与分数怎么带着样本量出门。
+- **提升层**：工作流（评测门禁与产物 schema）。
+- **触发词**：发布即评、分数是版本属性、Runs on every publish、均值带样本量、Average score across N scenarios。
+
+## r681C-2 · 判卷协议本身要先过一致性检验；「judge 自纠有效」与「被评 agent 自纠无效」是条件不同、不可互推的两条结论（来源：arXiv 2610.38076《Prompt Lottery in LLM-as-a-Judge》+ arXiv 2610.24320《The Judge Can Debias Itself》，2026-11-04 abs 页一手复核）
+- **原文**：2610.38076「judges exhibit **6-9× larger agreement degradation under prompt rephrasings than humans**」，且该敏感性**可反转模型排名**（附 10 人用户研究对照）；2610.24320**自我觉察式去偏在 20/21 个模型-偏差组合上有效、最高 +15pp**，而**微调一个外部 critic 反而在 5/9 组合上引入新退化**。
+- **判据**：① **判卷 prompt 是被测项**——凡用 LLM judge 出排名，必须并列报「**同一判据在同义改写下的一致率**」，一致率退化未测则排名结论不成立；② **排名可反转要作一票否决**——分数差小于改写噪声即报「不可区分」，不报领先方；③ **成对呈现，勿把「外置」当无条件结论**：§四「自反思的极限」已落「自改无效、他改有效」（2606.05976），本批 **2610.24320 给出反向例**——评判者**对自己打分**时自纠有效（20/21），**被外部微调**时才退化 ⇒ 「evaluator 必须外置」这条红线的适用范围限定为「**评的是自己的产出**」，评他人产出时觉察式自纠可用。
+- **与 r680C 判非的 2611.03377 分工**：那条换的是**打分规则**（snap/abstain/likelihood 三分支），本条换的是**判卷提示的句法**；前者四串落点均不覆盖「改写一致率」这一测量。
+- **提升层**：工作流（评测协议与一票否决）。
+- **触发词**：改写一致率、Prompt Lottery、agreement degradation、排名可反转一票否决、judge 自纠、觉察式去偏、外置红线适用条件。
+
+## r681C-3 · 选择性 KV 复用让「同一提示的分数」不可跨请求顺序比较：可比性要声明，成本对价要三项同报（来源：arXiv 2610.05833《Request Order Matters》，2026-11-04 一手 API 复核）
+- **原文**：5% 重算预算下**答案跨序变异 69.0% → 26.1%**、对全 prefill 保真 **+34.5–52.5pp**、中位 **TTFT 约 5.7×**，主因 **contiguity（缓存片段是否连续）**；逐字「an unchanged prompt can produce **different answers depending on the requests processed before it**」。
+- **判据**：① **提示相同 ≠ 条件相同**——滚动会话/带缓存的宿主里，评测分数受**前面跑过什么请求**影响 ⇒ 报任何分数要同报缓存策略（全 prefill / 复用范围 / 重算预算）；② **顺序是实验变量不是噪声**——跨序变异可达 69% ⇒ 多轮对照须固定顺序或随机化并报告，不能只重复跑次数；③ **降本要报三项对价**：重算预算 + TTFT 倍数 + 保真增益三件同列，才能判断省下的钱买到的是可比还是不可比。
+- **与 dl KB:1863（处理器内共享缓存=串扰，修法=每请求无状态）分工**：那条管**线上正确性 bug**，本条管**评测协议的可比性声明** ⇒ 评测侧不要求每请求无状态，但要求**声明缓存历史与顺序**。
+- **提升层**：工作流（评测协议）+ 工具（分数记录字段）。
+- **触发词**：跨序变异、contiguity、缓存历史可比性、重算预算、TTFT 倍数、顺序是实验变量。
+
+## r681C-9 · 技能可用性要分三面独立评分：Trigger（是否触发）/ Compliance（是否照做）/ Boundary（是否避开禁用操作），且执行只有在触发之后才计分（来源：arXiv 2608.04828《Skill-Use》，2026-11-04 一手 API 复核）
+- **原文**：「Existing evaluations mostly judge the quality of a skill or its contribution to task success, leaving unexamined whether an agent can **recognize a relevant skill and apply it on its own**」；Skill-Use 在 progressive disclosure 下评测（只给 name + short description，须自行取全文再遵循），分离三面 **Trigger / Compliance / Boundary**，「A Skill-Use (SU) score combines the three and **credits execution only after the skill is triggered**」。
+- **判据**：① **「技能质量高」与「agent 会用这个技能」是两个被测对象**——评技能文本质量评不出「该触发时没触发」这一类失败；② **三面必须分开报**：触发成功但照做差、照做好但越界、三者组合都不同，合成分会把「没触发」与「触发了做错」混成同一种低分；③ **执行分只在触发后计**——不这样定序，模型可以绕过技能直接把任务做对而拿到执行分，测的就不是技能使用；④ 与 §全需命中率（r681C-1）分工：那条量**目录侧选没选中**，本条量**选中之后用得对不对**。
+- **提升层**：工作流（评测协议）/ 工具（评分字段）。
+- **触发词**：Skill-Use、Trigger/Compliance/Boundary、三面分报、执行分在触发后计、技能质量不等于会被用。
+
+## r681C-10 · 诊断分高 ≠ 建议满足目标版本契约：增益须报分布而非均值，天花板对会让增益集中在少数任务（来源：arXiv 2609.30120《Evaluating Agent Skills for Version-Specific Plugin Migration》，2026-11-04 一手 API 复核）
+- **原文**：「a higher diagnostic score does not by itself show that the resulting migration advice **satisfies the target version's contract**」；64 reports / 16 tasks / 每条件两次 / 328 criterion decisions，mean recorded reward **93.83 → 98.75（+4.92，95% bootstrap [0.31, 10.86]）**，「the gain is **concentrated in one task**, and **eight task pairs are at the ceiling**」；「Tracing every decision to its **contract domain**… exposes **grading errors that favor either arm**; in one, a containment predicate that **accepts the parent directory still receives full credit**」。
+- **判据**：① **分数与契约满足是两件事**——诊断分衡量「像不像做对了」，不衡量「是否满足目标版本的契约」，引用前者替代后者是范畴错误；② **增益要报分布**：+4.92 的均值若集中在 1 个任务、8 对已在天花板，则这个均值描述的是少数任务而非整体能力 ⇒ 凡「技能带来 +X 分」必须同时报增益落在几个任务、多少已在天花板；③ **评分错误双向偏袒**（favor either arm）说明 rubric 本身要回溯到契约域逐条审，不能只看总分；④ **「接受父目录仍得满分」是判定谓词过宽的形态** ⇒ 通过性判定必须给出反例（父目录/相邻路径）验证谓词没有被放宽。
+- **提升层**：工作流（评测协议与验收谓词）。
+- **触发词**：诊断分不等于契约满足、增益报分布、天花板对、grading errors 双向偏袒、判定谓词过宽、父目录反例。

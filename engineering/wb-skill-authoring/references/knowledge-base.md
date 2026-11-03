@@ -5335,3 +5335,41 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 - **原文事实**：从全部 SKILL.md 的 git 历史重建 **2,193,119 次采纳**；原文「**GitHub stars do not identify**」源仓；「**skill copies almost never change with their source**」；同样 100 仓的审计预算，按模型排名选可拦掉后续高风险采纳的 **14.9%**，按最多人 star 选只拦 **0.5%**（**29.8 倍差**）。
 - **判据**：① **热度可用于发现，不可用于风险优先级**——星数是仓库级存量信号，不是条目级风险信号；② 副本不随源更新 ⇒ 上游的修复/废弃传不到副本，故引用外部技能须带**来源快照 + 复扫触发**；③ 审计预算按**被采纳网络**（谁被谁抄）排，而非按流行度排。
 - **提升层**：工作流 + 可复用 Skill（选型与审计排期）。
+
+
+## r681C-1 · 技能目录的召回要用「全需命中率」度量，且第一手修法是先重写元数据而不是加路由层（来源：arXiv 2611.00544《Skill++》，2026-11-04 abs 页一手复核）
+- **原文**：「As a library grows to **731 skills over ten sessions**, Skill++ **selects all required skills for 76.3%** of queries, **versus 36.4%** under the original metadata」，方法=**只改 name/description、零路由器训练**；机制面「a **similar new skill can displace an earlier one**, breaking previously correct routing **even though the earlier skill and the router are unchanged**」。
+- **判据**：① **Top-1 命中会掩盖集合失败**——任务常需多技能齐备，「选中一个」达标不等于任务可行 ⇒ 目录指标要报「**全部所需技能都被选中的比例**」；② **目录增长是回归源，且回归不体现在任何单条技能上**——新增相似技能会让**旧技能与路由器都没变**的路由失效 ⇒ 加技能时要把「旧技能是否被挤掉」列进同批验收，不能只看新技能自己是否被触发；③ **元数据重写优先于路由改造**——36.4%→76.3% 由改 description 取得 ⇒ 触发率问题先按「文案+负例」协议修，仍不达标才谈架构；④ **十会话口径**：技能库是持续变动的对象，验收要跨会话重跑，单次评测的召回不代表长期召回。
+- **与已落分工**：§同职接管 2610.25064、§路由坍缩 2610.18522 量**单个技能/规模**，本条量**集合命中 + 跨会话时序**（第三轴）。
+- **提升层**：可复用 Skill（目录治理）+ 工作流（加技能时的回归验收）。
+- **触发词**：全需命中率、目录召回、元数据重写优先于路由、相似技能挤掉旧技能、跨会话召回。
+
+## r681A-1 · 工具可见性三段式校验：list → describe → call 三次分别可校验，服务端动态裁决而非启动期静态注入（来源：pipedream.com/docs/conduit/changelog.md v0.16.0，2026-10-22，2026-11-04 实拉）
+- **原文**：把 agent 用工具拆成 `list_available_tools`（当下可见集）→ `describe_tools`（契约）→ `call_tool`（执行）三次独立可校验动作；**主动作废在途权限**（provisioning rules 被删、角色改由 SCIM 组供给）时，可见性随之收敛且无需重启会话。
+- **判据**：① **可见集必须是每次调用前现算的，不是启动期快照**——否则权限回收后会话内仍在用旧可见集，「已回收」在会话内不成立；② **三段各自可校验**：看得见（list）／契约对得上（describe）／调得动（call）是三个可分别断言的门，只测「能不能调」会漏掉「看得见但契约已变」；③ **在途权限作废无需重启**是验收项，不是优化项——做不到重启才生效的方案，撤销半径就是会话长度。
+- **提升层**：可复用 Skill / 工作流。
+- **触发词**：list_available_tools、describe_tools、三段式、在途权限作废、可见集非启动期快照。
+
+## r681C-5 · 召回的对象应是「带角色标注的执行契约」而非扁平技能列表（来源：arXiv 2605.06978《Group of Skills: Group-Structured Skill Retrieval》，2026-11-04 一手 API 复核）
+- **原文**：「retrieving relevant skills is not the same as presenting usable context. Existing methods typically return atomic skills or dependency-aware bundles whose internal roles remain implicit, leaving the agent to infer the **execution entry point, support skills, visible requirements, and failure-avoidance guidance**」；GoSkills「changes the agent-facing retrieval object from a flat skill list to a compact, **role-labeled execution context**」，渲染固定执行契约含 **Start / Support / Check / Avoid** 四字段。
+- **判据**：① **「召回到」不等于「可执行的上下文」**——返回一堆技能而让 agent 自己猜入口点，等于把编排决策推给模型；召回产物应显式标注入口（Start）、辅助（Support）、校验（Check）、避坑（Avoid）四种角色；② **角色是产物字段不是文档习惯**：内部角色隐式时，agent 必须推断执行顺序，推断错了没有任何报错；③ **组结构优于依赖打包**——依赖感知包只说明「这些要一起拿」，不说明「谁先谁后、谁校验谁」。
+- **提升层**：可复用 Skill / 工具。
+- **触发词**：GoSkills、角色标注执行契约、Start/Support/Check/Avoid、召回不等于可执行上下文、入口点显式化。
+
+## r681C-6 · 技能要能按「内部单元」估值：内容价值须与上下文成本分离（来源：arXiv 2608.04562《What Is a Skill Worth? Structure-Aware Shapley Valuation》，2026-11-04 一手 API 复核）
+- **原文**：「assigning credit to the internal units of a fixed skill, such as **rules, examples, scripts, and heuristics**」；「skill units are structured: they may **depend on other units, belong to a document hierarchy, trigger agent behavior, and consume limited prompt context**」；SkillSV「compiles a skill into units, dependencies, and hierarchy, so that **only valid counterfactual skills** are evaluated… uses **paired deletion and length-neutral padding** to separate content value from context cost」。
+- **判据**：① **技能不是原子对象，内部单元价值不均**——规则/示例/脚本/启发式各自贡献不同，整篇保留或整篇删掉都测不出谁在起作用；② **反事实必须合法**：按依赖与层级编译后才做删除，否则「删掉这条规则」的对照可能本身就不是合法技能；③ **内容价值与上下文成本必须分离**（配对删除 + 长度中性填充）——否则「删了变好」可能只是因为变短，不是因为删对了；④ 与 §正文预算（SKILL ≤500 行）互补：那条给上限，本条给**该删哪一部分**的度量方法。
+- **提升层**：可复用 Skill（技能内部结构治理）。
+- **触发词**：SkillSV、技能内部单元估值、Shapley、配对删除、长度中性填充、内容价值 vs 上下文成本、反事实合法性。
+
+## r681C-7 · 技能的收益依赖执行者能力：同一技能可让强模型 +31 分而弱模型 -9 分，且违规要求往往已写在技能里（来源：arXiv 2610.33024《Evolving to Match Capabilities》，2026-11-04 一手 API 复核）
+- **原文**：「skills that improve stronger models can provide little benefit or even degrade performance for weaker ones. Across seven models and three benchmarks, we identify **103 task-skill pairs where skills improve GPT-5.6-luna by 31.1 points but degrade Gemma-4-E4B by 8.8 points**. In **86% of failed weak-model runs, the violated requirement is already stated in the skill**」。
+- **判据**：① **「技能写好了」不等于「对任何执行者都有效」**——技能收益是**执行者 × 技能**的交互效应，不是技能的固有属性 ⇒ 推广/复用一条技能前要按目标执行者能力做适配（skill adaptation），不能假设写好即生效；② **失败原因已在文档里不等于文档有效**——86% 的弱模型违规项技能里明明写了，说明「写了」到「照做」之间隔着一个执行能力门槛 ⇒ 排查「明明写了为什么没遵守」时，先判执行者能力够不够，而不是再加一遍同样的话；③ **评测结论必须绑定执行者型号**：跨模型引用同一条技能增益会得出相反的部署决策。
+- **提升层**：可复用 Skill / 工作流。
+- **触发词**：skill adaptation、技能收益依赖执行者、强模型增益弱模型退化、写了没照做、86% 违规项已写明、评测绑定执行者型号。
+
+## r681C-8 · 技能可「编译冻结」：强模型只作离线作者，验收布局须在冻结后抽取，且全程防篡改账本（来源：arXiv 2610.25114《Compile Once, Run Cheap》Skill-RSI，2026-11-04 一手 API 复核）
+- **原文**：「a strong general model acts only as an **offline author** that writes, runs, diagnoses and repairs a manipulation skill in simulation **until it passes an exam on layouts drawn after freezing**; the frozen skill then runs **as code alone or under a cheap caller that reads only its description**」；compile protocol =「**isolated, audited author; hidden validation layouts; no-feedback and inherit-only controls; tamper-evident ledger**」；reuse protocol「runs the **identical files** with executors from **another model family**」。
+- **判据**：① **作者与执行者分离，且作者只在离线出现**——贵模型写、便宜模型跑，成本模型才成立；把作者留在每次执行的回路里等于没省；② **验证布局必须在冻结之后抽取**——作者不能见过验收集，否则「通过考试」只是记忆回放；③ **交叉验证要设无反馈与仅继承两个对照**，否则测不出「是真的会了还是靠调试时的反馈」；④ **防篡改账本**：冻结产物被改要有痕迹，否则「冻结」无法自证；⑤ **跨模型族复用同一份文件**是复用协议的最低验收项（换执行家族仍能跑）。
+- **提升层**：可复用 Skill / 工作流（技能编译与验收）。
+- **触发词**：Skill-RSI、编译冻结、离线作者、hidden validation layouts、no-feedback 对照、tamper-evident ledger、跨模型族复用、冻结后抽验收集。

@@ -1600,3 +1600,17 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **原文事实**：`~/.claude/skills/.trash` 与 `~/.claude/plugins/.trash` **曾无限增长**，修复后「各约 **1024 条上限**，**无论 `cleanupPeriodDays` 怎么设**」；同期修掉「技能文件监视器会检查 `.trash` 里每一个已删除技能」。
 - **判据**：① 软删除/归档区自身需要一个与「保留期」**正交的条数上限**——保留期一旦失效（永不过期配置、清理任务挂掉），回收区仍会撑爆；② 落入回收区的条目**默认仍在被监视/扫描**，要么显式把监视面缩到激活集，要么接受这份成本，**不能假设「删了就不管了」**。
 - **提升层**：工作流 + 治理（对标本仓 M22 `.deleted/`）。
+
+
+## r681A-4 · 迁移不搬运：钉住的旧值若与新字段类型不匹配，迁移只换引用、值须显式重选，且这不是损坏（来源：Activepieces breaking-changes 0.90.0，2026-11-04 实拉 78KB 真页）
+- **原文**：「**Re-pick the attachment** … The stored value is a plain string and the field now holds a file, so **it does not carry across**」；同页另给读时惰性迁移「Every flow is moved to the AI piece version … **the first time its version is read, before it can run**」。
+- **判据**：① **版本/引用迁移成功 ≠ 值还在**——迁移验收要单列「**字段值可得性**」一项，类型变更字段的正确终态是「**显式空 + 要求重填**」；② **静默保留旧字符串是最坏解**——下游按新类型（文件）解析旧字符串而失败，且失败点远离迁移点，归因困难；③ **「这不是损坏」要显式写进迁移说明**——否则用户/agent 会把「要重填」误判为迁移失败并回滚；④ **惰性迁移的作用点是「读时、运行前」**，验收要确认读路径确实触发了迁移而不是等到跑起来才炸。
+- **提升层**：工作流（版本迁移验收）。
+- **触发词**：迁移不搬运、Re-pick、does not carry across、字段值可得性、显式空要求重填、类型变更字段。
+
+## r681A-5 · 可恢复性要声明谱系形态：线性无分支 vs 可分叉，两形的验收不同（来源：CrewAI checkpointing + Windmill versioning，2026-11-04 实拉）
+- **原文**：CrewAI「saves a snapshot of execution state… resume after a failure or **be forked into an alternate branch**」；Windmill「**scripts are never overwritten**, instead subsumed by a child script」、「**Linearity**: the lineage … **there is no branching and there is no merging**」、「The previous "HEAD" is **archived but still deployed forever**」。
+- **判据**：① **允许分叉的快照 ⇒ 必须回答「分叉后哪条是权威支、两支是否会各自重放副作用」**；② **线性谱系 ⇒ 旧 HEAD 永久在场**，验收要查「被取代版本是否仍在服务面（僵尸版本）」；③ **不得笼统写「支持从检查点恢复」**——该表述在两形下失败模式不同（前者重复副作用，后者僵尸版本）。
+- **与已落分工**：r627「检查点须含事件历史 + lineage」管**字段完备性**，本条管**分支语义**。
+- **提升层**：工作流（可恢复性验收）。
+- **触发词**：谱系形态、可分叉 vs 线性、权威支、僵尸版本、no branching、forked into an alternate branch。

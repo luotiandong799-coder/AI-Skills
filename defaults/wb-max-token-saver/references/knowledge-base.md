@@ -1069,3 +1069,11 @@ autogen#8328：HeadAndTailChatCompletionContext 在头部删掉一条 tool-call�
 - **原文事实**：「When a runtime carries an external tool return into later model inputs, **providers meter it again**」；最大单会话累计输入达**首调的 14,293 倍**；仅保留原始历史使**平均有效会话成本上升 21.2–35.9%**；治理形态＝「确定性历史变换 + **四个主机侧不变量：prompt mass / context growth / recursive opportunity / cumulative spend，全部在再入前生效**」；策略对照：24 条工作流上**进度授权式 22/24** 通过 oracle 验证且无提前中断，**固定上限式仅 13/24**。
 - **判据**：① 本仓现有「按实测费用记账」记的是**发生之后**，本条要求把四条上限搬到**内容再入上下文之前**；② **禁止用「一刀切固定上限」当成本护栏**——该形态本身造成 9/24 的任务失败（提前中断），正确形态是随进度递增授权。
 - **提升层**：工作流 + 可复用 Skill（预算护栏形态）。
+
+
+## r681A-1 · 自报成本前先声明计量拆分表：一次逻辑动作 = 几个计量事件 × 在哪个触发点 × 哪条路径豁免（来源：docs.dify.ai knowledge/knowledge-request-rate-limit.md，2026-11-04 实拉 200/3.5KB）
+- **原文**：「Each uploaded file, **twice**: once when you add it, and once when processing starts」「A streaming query **counts once**, when you start it」「（app 侧检索）These **don't**」。
+- **判据**：① **自动化技能在自报「跑了 N 次 / 花多少」之前，必须先声明该动作在计量模型里是 1 个还是 2 个事件**；② **起算点要写清是「提交」还是「处理开始」**——同一个上传动作两处都可起算，选错会让预算差一倍；③ **豁免路径要显式枚举**（内部检索 / 预览 / 试跑不计），否则「试跑不花钱」与「试跑也算」两种假设会同时存在于同一份账里。
+- **与已落分工**：mts 现记的是**实测费用发生之后**（按实测费用记账），本条补的是**记账前的事件拆分表**，两者是上下游关系非重复。
+- **提升层**：工作流 + 可复用 Skill。
+- **触发词**：计量事件拆分表、上传计两次、起算点提交还是处理开始、豁免路径枚举、记账前拆分。

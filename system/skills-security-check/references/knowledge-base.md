@@ -2807,3 +2807,10 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 - **原文事实**：采集面＝`installed skill slug / canonical plugin package name` + `version`，**「on by default for logged-in users」**，退出只有**一条环境变量** `CLAWHUB_DISABLE_TELEMETRY=1`（无 per-skill / per-project 粒度、无 UI 开关）；显式列出**不采**「No local filesystem paths / No file contents / No per-run logs」，且**保留期未文档化**。
 - **判据**：审第三方技能/工具时，「它说它不采 X」**不等于技术上采不到 X**；取证须三件并立——① **默认态**（默认开还是默认关）；② **退出通道及其粒度**（只有一条全局环境变量 ⇒ 细粒度退出不存在）；③ **未声明即未承诺的字段**（保留期缺失 = 默认无限期）。旁证：skills.sh 首页把「Security audits」只作**导航链接**却经 JSON 暴露 `weeklyInstalls` ⇒ **声明面与可见数据面分处两地**。
 - **提升层**：工作流（第三方采集面取证）。
+
+
+## r681B-1 · 溯源键要跨重命名稳定且带可验签时间戳——「改名重投」是一类可检测攻击，不是巧合（来源：MCP registry openapi.json 200/50,271B，2026-11-04 实拉）
+- **原文**：repo id「Should remain **stable across repository renames** and may be used to **detect repository resurrection attacks**」+「**signed_timestamp**: Hex-encoded signature of timestamp」「Authenticate using **DNS TXT record public key and signed timestamp**」（skillsmp 旁证「The repository may have been renamed, moved, made private, or deleted」）。
+- **判据**：① **技能/服务端溯源只存 URL 或 owner/repo 名等于没存**——仓库改名、转移、私有化、删除后同一 URL 可指向全新内容 ⇒ 准入台账要记**不可变 id + 采集时刻的签名时间戳**，命中「同 id 换主」即触发复检；② **时间戳本身要可验签**，否则「我什么时候审过的」由被审方自报；③ **所有权（DNS TXT）解决「谁拥有这个命名空间」，稳定 id 解决「这条来源是不是当年那条」——两问独立**，只做前者仍检不出复活攻击。
+- **提升层**：工具（溯源台账字段）+ 工作流（复检触发条件）。
+- **触发词**：signed_timestamp、resurrection、仓库复活、跨重命名稳定 id、溯源只存 URL 等于没存、DNS TXT 所有权与稳定 id 两问独立。
