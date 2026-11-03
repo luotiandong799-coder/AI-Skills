@@ -5373,3 +5373,24 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 - **判据**：① **作者与执行者分离，且作者只在离线出现**——贵模型写、便宜模型跑，成本模型才成立；把作者留在每次执行的回路里等于没省；② **验证布局必须在冻结之后抽取**——作者不能见过验收集，否则「通过考试」只是记忆回放；③ **交叉验证要设无反馈与仅继承两个对照**，否则测不出「是真的会了还是靠调试时的反馈」；④ **防篡改账本**：冻结产物被改要有痕迹，否则「冻结」无法自证；⑤ **跨模型族复用同一份文件**是复用协议的最低验收项（换执行家族仍能跑）。
 - **提升层**：可复用 Skill / 工作流（技能编译与验收）。
 - **触发词**：Skill-RSI、编译冻结、离线作者、hidden validation layouts、no-feedback 对照、tamper-evident ledger、跨模型族复用、冻结后抽验收集。
+
+
+## r682A · 技能装载存在「不可见注入通道」：排查生效/未生效时不能只枚举公开调用面（来源：help.aliyun.com/zh/model-studio/managed-agents-custom-mcp-skills 2026-11-04 一手 curl 200/106,333B；Qoder r799-Q-B 净新② 提名，`activate_skill`/`不可见注入` 全库 0 命中）
+- **实证**：平台经**隐藏工具 `activate_skill`** 把 SKILL.md 全文注入上下文；用户与调用方可见的公开工具面里没有这条通道，作用域为 workspace。
+- **判据**：① 「技能为什么生效 / 为什么没生效」的排查清单必须包含**平台私有的不可见装载通道**，否则会把「根本没走到公开调用面」误判成「描述没命中」；② 枚举要连**注入的字节量**一起记（全文注入与元数据注入的上下文成本不同量级）；③ 与已落「装载三态（在册/可用/可选）」分工：那条是可见面的状态代数，本条补上「存在一条不出现在可见面的一等装载路径」这一维度；④ 验收动作=对一个已挂载技能，问「它由哪条通道进入上下文」，答不出即装载台账不完整。
+- **提升层**：可复用 Skill（装载与诊断）。触发词：activate_skill、隐藏注入工具、不可见装载通道、公开调用面不等于装载面、注入字节量。
+
+## r682A · 命名恒等式应作为一条可机检断言，并把 lint 复制进 CI 才成门禁（来源：github.com/partme-ai/full-stack-skills `skills-toolchain` 机读清单 51 packages / 788 skills，Qoder r799-Q-B 净新③ 提名；`name == directory`/`catalog-inventory` 全库 0 命中）
+- **实证**：`lint_skills.py` 强制「frontmatter shape / naming / single-line description / no host prefix / **name == directory**」；`docs/catalog-inventory.json` 作目录真相；`cp workflows/skill-lint.yml .github/workflows/lint.yml` 即把 lint 变成 CI 门禁；`skill_vendor.py update|check` 保证 in-tree == lockfile == upstream。
+- **判据**：① 「标识与目录名强制相等」要落成**一条可机检断言**，不是写在规范里的建议——人工核对必然随技能数增长而失效；② 目录真相用**机读清单**钉住（与 `_tools/verify_skill_index.py` 同构），清单与磁盘双向对账；③ **lint 只有进了 CI 才是门禁**，放在仓库里供人手跑等于可选动作；④ 与本仓 §二·5 六项对账分工：那条管索引/分类表一致，本条管单个技能的标识恒等与描述形状；⑤ 落地口径：本条先入判据台账，`name == directory` 断言是否并入 `verify_skill_index.py` 留待专项评估（避免改动每轮合规脚本）。
+- **提升层**：工具 / 工作流（技能库机检）。触发词：name == directory、single-line description、no host prefix、catalog-inventory、lint 进 CI、目录真相机读清单。
+
+## r682B · 优化对象是 harness 不是模型：组件准入是「提升 ∧ 通用 ∧ 可审计」合取条件（来源：arXiv 2611.03434《Optimize the Harness, Not the Model》CLEO 2026-11-04 一手摘要 200 逐串命中；`Optimize the Harness`/`Minimal Agent`/`只准入` 全库 0 命中）
+- **实证**：给**固定**自托管 LLM 拟合最小 agent harness，只准入「提升准确率、且保持通用与可审计」的工具/护栏/记忆策略/循环组件；held-out 达 83.8% pass，距最强开箱 Claude Code SDK 基线仅 1.2 点，而体积小**两个数量级**。
+- **判据**：① 能力增益可来自**编排壳**而非换模型；先穷举 harness 再谈升模型；② 组件准入是**合取**：能提升但只对本任务有效（不通用）或不可审计，都不准入——「加上有收益」不足以通过；③ 体积/可审计性本身是验收维度，小两个数量级换 1.2 点是可接受交易；④ 与本仓用户长期标准「少而精、不为堆砌收小众技能」同向，本条给了一手外部锚：宁可更小的壳。
+- **提升层**：工作流 / 可复用 Skill。触发词：Optimize the Harness、CLEO、最小 harness、提升且通用且可审计、合取准入、体积换 1.2 点。
+
+## r682B · 中间候选晋升 ≠ 最终部署选择：把部署偏好施加在迭代中间步会过早淘汰「对后续改进有价值」的候选（来源：arXiv 2611.02079《ParetoSaddler》2026-11-04 一手摘要 200；`Pareto-Guided`/`中间候选`/`过早淘汰` 全库 0 命中）
+- **实证**：联合质量-成本优化时，用 Bayesian bootstrap Pareto support 晋升「任一维有可信进展」的候选，晋升者继续作后续父代；**部署偏好只在最终选择时施加**。ClawMark 质量 70.86%→81.35% 同时单任务成本 $1.17→$1.01。
+- **判据**：① 优化期筛选要**宽松且多目标**（任一维有可信进展即保留），最终选型才按偏好收敛；两者用同一把尺会让「当前不优但携后续价值」的候选被单步贪心剪掉；② 被晋升候选必须**继续可作父代**，否则优化链退化成一次性筛选；③ 质量与成本各自报「可信进展」，不合成单一分数；④ 与 §晋升收益门 分工：那条判「经验该不该结晶成技能」，本条判「迭代中间产物该不该被淘汰」。
+- **提升层**：工作流 / 可复用 Skill（技能优化迭代）。触发词：中间晋升与最终选择分离、Bayesian bootstrap Pareto support、任一维可信进展、过早淘汰、部署偏好后置、继续作父代。
