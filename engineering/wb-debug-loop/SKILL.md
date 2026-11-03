@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、TTL seconds*1000、absolute deletion date、valid date in the future、7-day minimum、alreadyDeleted、audience human、AI 孪生动作、消费者退出生产者仍跑、关闭要传播到下层流、shield 异步关闭、后台清理任务只跑在 leader 内存定时器、durable system task、跨进程取消、幽灵取消、调度冲突三档
-version: 1.364.0
+version: 1.365.0
 agent_created: true
 ---
 
@@ -494,3 +494,5 @@ agent_created: true
 ## r655 下沉条目（B：1：恢复轮次必须重新注入系统级前置：只恢复会话历史会让身份与规则静默回退；2：可恢复性是一等原语：保存下来的状态未必是允许的恢复起点；3：监督预算应随经验自适应，且『恢复已验证』才回到常规路径；4：暂停要落成带类型的持久化记录，跨进程恢复不得重跑已收敛工作；5：写失败要有结构化类型化错误与带外暂存：六层耐久写面）（原文均在 references/knowledge-base.md）
 
 ## r655 下沉条目（C：1：退役的闸门不得仍被依赖：恢复项须与墓碑记录的 run 逐项匹配；2：版本不兼容即断连，且重连后明确不重放被拒请求；3：禁用写类工具不会让 exec 变只读：能力禁用的作用域错觉；4：采样型守卫不是硬上限；诊断与命令输出必须分字段；5：带扩展参数前必须做能力探测：先 list 再发，不得对每个请求盲目附加；6：暂停点分三类且暂停对象须结构化：执行前批准 / 执行后审阅 / 失败后人工；7：超时是四层分离的概念，限流响应可能缺字段，重连事件须区别于就绪事件）（原文均在 references/knowledge-base.md）
+
+## r684 下沉条目（B：空文本带 provider replay signature 逐字节保留；C：退化输出结构阈值作廉价早停守卫）（原文均在 references/knowledge-base.md）
