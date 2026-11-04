@@ -5536,3 +5536,21 @@ design-it-twice 的多个子智能体都指向同一份预先收集的事实简�
 - **实证**：`info.ownsCompaction: true` 时 OpenClaw **默认关闭**原生 compaction 与 stored Responses checkpoint replay，须显式把 `params.responsesServerCompaction` 置 `true` 才重开；`estimatedTokens` 用于压缩阈值与诊断，**不用于决定是否发 provider 请求**；`commitTurn` 只对**被接受的成功轮次**调用，恢复时移除未获宿主准入的 admission，**never infers success from later transcript entries**。
 - **判据**：① **「声明接管」的代价是宿主侧默认关，不是两层叠加**：不写清让位默认，会出现两层同时压缩或两层都不压缩；重开必须是显式开关且可审计。② **估算类字段不得升格为放行/拦截门**：它可用于诊断与阈值建议，但一旦拿它决定「请不请求」，测量误差就直接变成行为变化。③ **状态推进只由宿主验收驱动**：绝不能从后续转录里出现某些记录就反推「上一轮其实成功了」；恢复时对未验收项删除并留痕。与已落 `sa/KB:3051`（插槽独占、旧实现不兜底）分工：那条管**替换实现后的能力归属**，本条管**装好之后谁有权推进状态**。
 - **提升层**：工作流（状态一致性）/ 安全边界（上下文组装）。触发词：ownsCompaction、宿主默认让位、显式才重开、estimatedTokens 不作门、commitTurn 只认被接受轮次、不反推成功。
+
+
+## r686 下沉条目（A：完成断言位按服务端生效截断值；B：404 体内嵌端点目录 / 派生状态双源 / schema 日期锚）
+
+### r686A-2 · 完成/分页断言位必须按服务端**实际生效**的截断值计算，按客户端请求值算=撒谎字段（来源 api.github.com/repos/langgenius/dify/releases?per_page=15，2026-11-04 WB 一手 curl 200/896,225B，逐串命中 `has_more`×6 / `v1.17.1`×13 / `truncated`×4 / `actual`×6；Qoder r831-Q-A 提名）
+- **实证**：Dify v1.17.1 修复项记载 `has_more` 类完成断言曾按请求参数计算、未按服务端实际生效的截断结果计算；同批 release 正文含 `truncated` / `actual` / `limit` 三词同现。
+- **判据**：① 任何「是否还有更多 / 是否全部完成」的布尔位，其口径必须钉在**服务端实际生效的截断值**上，不得由客户端请求值推导；客户端请求值只是**愿望**，不是**事实**。② 与 `limit` 上限主从配对成「夹住位置」的**双向检查**：既验「请求是否被上限夹住」，也验「返回是否按夹住后的值算完成」，两者缺一即可能出现「还有数据却报完成」。③ 该布尔位一旦失真，下游分页/汇总会把不完整结果当全量 → 属**静默数据缺失**，验收必须构造「请求值 < 实际可用量」与「触发上限夹住」两组用例。
+- **提升层**：工具 / 工作流（完成态取证）。触发词：has_more 撒谎字段、服务端生效截断值、请求值不是事实、夹住位置双向检查、静默数据缺失。
+
+### r686B-1 · 404 响应体可内嵌**契约目录**，端点漂移后一次请求即可自愈重发现；2xx 也须验 Content-Type（来源 SkillsMP `api/v1/timeline` 404/351B 逐串命中 `availableEndpoints` / `ENDPOINT_NOT_FOUND` / `openapi`×2；对照 skills.sh `llms.txt` 404 返回 HTML 与根域 200/924,750B，2026-11-04 WB 一手 curl）
+- **实证**：错误应答逐字 `{"success":false,"error":{"code":"ENDPOINT_NOT_FOUND","message":"No API endpoint at /api/v1/timeline. See availableEndpoints…"}}` 并带 `openapi` 指针；而另一站 404 给的是 HTML 页（200 也可能是 HTML 壳）。
+- **判据**：① 端点改版后脚本反复猜路径、误判「平台没有该能力」是常见故障；让错误应答携带**可用端点白名单 + 规范指针**，把重发现从「人工读文档」变成「一次 404 拿到目录」。② 存在性判断须**主机 × 状态码 × Content-Type × 字节量级**四件齐看：只认 2xx 会把 HTML 壳当 API 响应（与 r685B-1 主机维度取证互补，本条补的是**错误面主动自描述**）。③ 局限：仅对自描述站点成立；白名单本身可能不全，不得把「目录里没有」当成「能力不存在」的强证据。
+- **提升层**：工具（取证与错误处理）/ 工作流（端点漂移自愈）。触发词：availableEndpoints、ENDPOINT_NOT_FOUND、404 内嵌端点目录、契约自愈重发现、2xx 验 Content-Type。
+
+### r686B-3 · 派生状态必须声明**两源**（持久账本 ⊕ 现场探针），并给取证最小记录集（来源 docs.openclaw.ai/cli/update/status-and-history.md，2026-11-04 WB 一手 curl 200/35,862B，逐串命中 `durable record` / `dev:ino` / `bootId` / `termination`×2；Qoder r832-Q-B 提名）
+- **实证**：更新状态由 durable record 与 live 检查派生；最小记录集含文件系统身份 `dev:ino`、`pid`、`bootId`、`termination`，用于跨重启对齐「这条记录说的是不是同一个进程/同一个文件」。
+- **判据**：① 报告「当前状态」时必须写明它来自**哪两源**：账本证明「发生过什么」，探针证明「现在还是不是」；只有一源时，状态更新到一半的窗口会被读成当前事实。② 跨重启一致性靠**身份字段**（dev:ino / bootId / pid）而不是靠时间或名字；文件名相同不等于对象相同。③ 取证最小集要可机检地列全：缺 bootId 时无法区分「重启后同名进程」，缺 termination 时无法区分「正常退出 vs 被杀」。④ 与 r685B-4 `sourceFreshness` 分工：那条管**新鲜度标记**，本条管**状态由几路合成 + 身份对齐**。
+- **提升层**：可观测性 / 工具（取证契约）。触发词：派生状态双源、durable record ⊕ live check、dev:ino、bootId、termination、跨重启身份对齐。

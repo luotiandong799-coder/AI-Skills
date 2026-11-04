@@ -1656,3 +1656,11 @@ openai/skills#131：技能装上之后就丢了来源（repo URL、ref/branch、
 - **实证**：Dify 1.18.0 release 原文「`/runs` now accepts composition v2 and **rejects v1 requests**. Existing session snapshots are **converted on read** and saved as v2; **old runtimes cannot read newly saved v2**」「Retire old workflow consumers **before** admitting new-version traffic」。
 - **判据**：① **兼容要按方向分别声明**：旧快照能被读侧转换，只证明「旧数据可读」；新写入一旦落成 v2，旧运行时读不了就会破坏在飞流程 ⇒ 只报「双向兼容」或只报「不兼容」都会误导割接排期。② **割接顺序是硬约束**：先排空旧消费者、再放新版本流量；「双写过渡」在本模型下不成立，因为写侧没有 v1 落点。③ 与已落 r515A「旧运行时不强制执行新约束态」分工：那条管**新增约束态在旧版上失效**，本条管**数据格式在读写两侧的存活窗错开**；与 r519B「快照内嵌旧运行时须全量重建」分工：那条管快照内容完整性，本条管流量切换次序。
 - **提升层**：工作流（迁移/割接）。触发词：composition v2、converted on read、旧运行时不能读新写入、先排空旧消费者、读写兼容不对称。
+
+
+## r686 下沉条目（A：升级兼容预检是三档动作，不是一次「检查通过」布尔）
+
+### r686A-1 · 升级前兼容预检须分**只读报告 / 试改 / 阻断**三档，断言粒度逐节点且以内容哈希短路（来源 docs.langflow.org/lfx-compatibility，2026-11-04 WB 一手 curl 200/40,830B，逐串命中 `read-only compatibility report` / `one line per node` / `does not modify` / `exits non-zero` / `No changes are written to disk`；Qoder r828-Q-A 提名）
+- **实证**：`lfx upgrade` 无 flag 时「Run it with no flags to get a **read-only compatibility report** … prints **one line per node** with its status. It **does not modify the file**」；`check` 档「Reports compatibility issues and **exits non-zero** if any component is blocked. **No changes are written to disk**」；`safe` 档「Applies all safe upgrades」。
+- **判据**：① 「检查通过」不是布尔，而是**动作档位**：只读报告（可随时跑、零副作用）/ 阻断档（非零退出、供 CI 门禁）/ 试改档（只应用 safe 类）；把三者揉成一个命令，会让「想看一眼」变成「已经改了」。② **断言粒度到节点**：逐节点一行 status，使「哪个组件不兼容」可定位，而不是整包一个失败码。③ 内容哈希可作 `Unchanged` 短路，但**哈希相等是必要非充分**（相同字节不等于运行期依赖相同），不得拿它替代兼容判定。④ 与 r685A-2「读侧兼容 ≠ 写侧兼容」分工：那条管**方向**，本条管**检查动作的安全档位**。
+- **提升层**：工具（预检 CLI 档位）/ 工作流（升级验收协议）。触发词：read-only compatibility report、one line per node、exits non-zero、No changes are written to disk、safe 档、内容哈希短路必要非充分。

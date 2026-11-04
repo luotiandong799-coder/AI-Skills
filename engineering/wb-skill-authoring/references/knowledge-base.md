@@ -5410,3 +5410,16 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 - **实证**：原文指出把人写的软件手册变成可执行可复用技能的难点是「**mismatches between documented and deployed software versions**」与「**differences in scope between documentation coverage and task requirements**」；因此框架分两阶段——先从文档识别软件支持的任务、推断操作轨迹并泛化成 Skills，再用**执行引导的技能演化**持续修。
 - **判据**：① **一次性「读文档→生成技能」会同时踩两个坑**：版本错配让步骤指向已不存在的界面/参数，覆盖错配让技能只覆盖文档写过的窄任务；两者成因不同、修法不同，须分别验（版本面对齐实际部署、覆盖面用真实任务回补）。② **技能产出要带执行反馈回路**：生成不是终点，跑出来的失败轨迹才是演化输入；没有回路的技能库会随上游软件升级静默过期。③ 与已落「Library Drift」「结果驱动退役」分工：那两条管**库中技能该不该留**，本条管**技能刚从外部资料生出来时先核什么**。
 - **提升层**：可复用 Skill（技能构造与演化）/ 工作流。触发词：ScienceCUA、resource-to-skill、文档版本与部署版本错配、文档覆盖与任务范围错配、执行引导演化、从手册构造技能。
+
+
+## r686 下沉条目（B：重复参数独立歧义档 / C：字段级事件出处与使用结果回灌）
+
+### r686B-2 · 重复参数必须走**独立歧义错误档**，不可 first-wins / last-wins 静默取值（来源 SkillsMP 搜索 API `?q=test&limit=1&limit=2` → 400/142B 逐串命中 `INVALID_LIMIT` / `at most once`；`limit=51` → 400/142B 同档，2026-11-04 WB 一手 curl；Qoder r829-Q-B 提名）
+- **实证**：重复参数与越界参数共享 `INVALID_LIMIT … must appear at most once as an integer between 1 and 50` 错误体，服务端**既不 last-wins 也不 first-wins**，直接拒绝。
+- **判据**：① 参数校验分档要与「缺参 MISSING_QUERY」「格式非法 INVALID_QUERY」**三档分立**：重复出现是**歧义**，不是格式错误，也不是可猜的取值偏好；把歧义折叠成「取第一个」会让上游传参错误静默通过。② 错误体必须能定位到**哪个参数**（而非笼统 400），否则调用方无法区分是重复还是越界。③ 与 r685B-5「409 AMBIGUOUS_SKILL_SLUG 歧义态」同族但不同面：那条是**资源标识歧义**，本条是**请求参数歧义**；两者共同要求「歧义不可静默择优」。
+- **提升层**：工具（参数校验分档）/ 工作流（取证诚实性）。触发词：INVALID_LIMIT、at most once、重复参数独立歧义档、静默 first/last-wins、三档分立。
+
+### r686C-4 · 技能/记忆条目须**逐字段挂事件级出处**，且只认已验证轨迹；使用结果回灌改变检索排序（来源 arXiv 2611.01386，2026-11-04 WB 一手 curl 200/43,128B，逐串命中 `verified attempts`×3 / `supporting events for each field`×3 / `search rank`×3 / `Most of the gain`×3；Qoder r833-Q-C 提名）
+- **实证**：已验证轨迹编译法要求 `only verified attempts as evidence`、`cites the supporting events for each field`、`verified use outcomes change the search rank`；「Most of the gain is on the tasks that the teacher solved」。
+- **判据**：① 一条沉淀记录不是「一段文本」，而是**字段 → 支持事件**的映射；整条只有一个来源指针时，无法确定哪个字段是推断、哪个是实测 → 无法做局部修订与回滚。② **证据准入**先于检索排序：未验证的尝试不得进巩固提示与晋升路径（与 agent-guild 污染门同向）。③ **使用结果要回流改排序**，但不能改写原始事件；排序是可重算的派生量，与事实层物理分离。④ 增益归因须按「教师可解题 / 不可解题」分层，否则跨库报「+N 分」会把样本构成差异当能力提升。
+- **提升层**：可复用 Skill（技能/记忆构造）/ 工作流（经验归纳）。触发词：字段级事件出处、verified attempts、支持事件回指、使用结果改检索序、教师可解题分层。

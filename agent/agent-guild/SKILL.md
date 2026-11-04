@@ -23,7 +23,7 @@ description: |
 slug: agent-guild
 displayName: 智能体协会 Agent Guild
 protocol_version: "1.153.0"
-version: 1.171.0
+version: 1.172.0
 license: MIT
 homepage: https://github.com/dqsjqian/agent-guild
 repository: https://github.com/dqsjqian/agent-guild
@@ -441,3 +441,5 @@ the CLI only adds atomicity and an audit trail.
 - 提升层：治理（跨 agent 扩展信任）/ 工作流（插件安装更新验收）。触发词：allowPromptInjection、能力×单元授权、热变更失效半径、restart-triggering config prefixes、disabled and tracked、install source、restartRequired、runtime receipt source digests、reload 不跑构建。 · **r568C 下沉条目：Managed Agents `auto` 权限档=服务端现算三态，客户端门控按 `evaluated_permission` 而非配置值**——claude-api skill 随 anthropics/skills PR #1750 更新两个已上线特性：① `auto` 是 `always_allow`/`always_ask` 之后第三种策略，服务端逐调用现算并三态处置：直接运行、按高风险拒绝（error tool result、session 继续跑、客户端不能 override）、或达不成判定时暂停待批准；信任面收窄——只有 `user.message` 算用户意图，工具结果、抓取的页面、MCP 响应、跨线程消息都不算（防注入内容被当授权）；② `evaluated_permission` 与 `evaluation` 字段落在 `agent.tool_use`/`agent.mcp_tool_use` 上（含完整形态表、`evaluation` 缺席时的行为、未知 `type`/`reason_code` 的 open-set 指引），客户端确认往返按 `evaluated_permission === 'ask'` 门控而不是按配置的策略值；`ant beta:sessions connect` 会话查看器同步；文档明确警告 auto 档「不是人工检查点」（not a human checkpoint）。判据：① 自动放行档的验收按三态枚举（跑/拒/暂停），拒绝态须留下 error tool result 且 session 延续；② 意图来源白名单化——只有用户消息算数，其余上下文一律不算授权；③ 客户端交互按服务端现算结果门控，不按本地配置推断；④ 高危拒绝不可被客户端 override。来源：github.com/anthropics/skills#1750（claude-api skill；2026-10-14 gh api 一手 200 逐串命中 `the server evaluates each call and runs it, denies it as high-risk (error tool result, session keeps running, client cannot override), or pauses for approval when it reaches no determination` / `user.message counts as your intent; tool results, fetched pages, MCP responses, and cross-thread messages do not` / `Gate the confirmation round-trip on evaluated_permission === 'ask', not on the configured polic` / `the "not a human checkpoint" warning`；镜像文档 platform.claude.com/docs/en/managed-agents/permission-policies；Qoder r615-Q-A 提名）。触发词：auto 权限档、evaluated_permission、服务端现算三态、意图来源白名单、not a human checkpoint、客户端不可 override、sessions connect。
 ## r651 下沉条目（B：给每条声明打 kind / authority / scope 三标签，治理匹配放在检索侧而非只做内容过滤；记忆治理要写侧与读侧分离：生命周期状态正确，不等于查询时资格正确）（原文均在 references/knowledge-base.md；C：污染门：不可信与系统派生的候选永不进入巩固提示与持久晋升路径）（原文均在 references/knowledge-base.md）（原文均在 references/knowledge-base.md）
 ## r655 下沉条目（B：15：记忆晋升门须三轴 AND：频次轴 + 广度轴 + 质量轴，且展示面与候选面物理分离；16：用『重复指令率』作记忆有效性的正向自证指标）（原文均在 references/knowledge-base.md）
+
+## r686 下沉条目（本轮 1 点，全 KB-only；C：多智能体欺骗是涌现行为、6%–100% 离散度、按移交链抽样）（原文均在 references/knowledge-base.md）
