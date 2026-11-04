@@ -5506,3 +5506,33 @@ design-it-twice 的多个子智能体都指向同一份预先收集的事实简�
 - **实证**：① 2×2 因子 + 记忆 + 对照（无标签同协议基线 / 隔日 interleaved control / benign 任务）实验：真实信封下强标签把语义突破率降 **56–61pp**，弱标签收益仅强标签的 **1/4–1/2**；**伪造信封削弱强标签收益（交互 OR=2.10, p=0.022）且方向随前端异质**；**记忆效价的影响超过任何标签操纵**（成功记忆抬高突破率、失败记忆压低、多数冲突组合回到无记忆基线）；interleaved control 复现「unlabeled is worst」；benign 任务上强标签代价按前端/后端分层显现。作者据此把信封层扩为「准入面 + 上下文组装面」，安全边界是标签声明、前端权限、历史记忆共同塑造的**动态结果**。② 12 个真实 harness（含 Claude Code / Codex）的上下文组装面首次系统分析给出两类提权：**M-CPE**（低权上下文的攻击者内容被并入**更高权消息角色**）、**X-CPE**（内容**越过引入它的上下文范围继续存活**），后果含 full agent compromise / RCE / **被操纵的 tool 或 skill 调用**。
 - **判据**：① **「已打标」不构成安全结论**——标签强度是连续变量（弱标签只有 1/4–1/2 收益），验收要报强度档与实测突破率，不能报布尔；② **守卫收益必须按交互项评**：信封真伪会让强标签收益变号（OR=2.10），逐前端实测而非取均值；历史记忆效价的影响量级超过标签操纵 ⇒ 只调标签不审记忆，等于在最大的那一轴上没做控制；③ **安全守卫的成本要按任务性质分布报**（benign 任务上的代价按前端/后端分层显现），单一均摊成本会掩盖 benign 面的可用性损失；④ **上下文校验要二维记账**：不只扫「这段内容是什么」，还要记「它来自哪一级权限的上下文」与「它被放进了哪一级权限的消息角色 / 是否越出引入范围」——M-CPE/X-CPE 都是**内容本身合法但权限位置错了**；⑤ 与 §r683C mcpvenom（工具投毒证据三档）分工：那条管投毒载荷与模型级抵抗，本条管**组装面把合法内容抬进高权角色**；与 Cap37「观测端点鉴权」/ §r684A-3「导出按身份校验能力」分工：那两条管通道面，本条管入模前的组装面；⑥ 对本仓落点：注入类验证清单加一列「来源权限 / 落位角色权限 / 是否越出引入范围」，三者任一不匹配的命中即判违规，不进「内容看起来无害就放行」。
 - **提升层**：工作流（验证规约）/ 安全边界（上下文组装）。触发词：交互项评守卫、标签强度连续变量、伪造信封收益变号、记忆效价超过标签、benign 代价分层报、M-CPE、X-CPE、来源权限 vs 落位角色权限、越出引入范围、被操纵的 skill 调用。
+
+## r685A-1 · 流式输出的阻塞点由「变量声明序」决定，不由执行完成序决定（来源：docs.dify.ai `en/guides/workflow/node/answer.md` 200/33,393B 与 `.md` 200/1,579B，2026-11-04 r685 独立 curl 逐串命中 `sequence of variables` 2/1）
+- **实证**：Dify Answer 节点原文「**the sequence of variables determines streaming, not execution order**」——模板里变量的排列顺序决定流式输出何时开始、在何处停，流式边界止于**首个未解析变量**；即便后续变量已经算完、执行序上先完成，也不豁免前面的阻塞。
+- **判据**：① **验收流式/模板输出时要能预测阻塞点**：把变量引用顺序当成可机检的输入契约，逐项标「此处是否已有值」；只测「最终文本对不对」会把「中途卡住再补齐」与「一路顺畅」判成同一结果。② **声明序与执行序是两条轴**：并发预取、异步求值只改后者，不改前者 ⇒ 优化执行调度不能拿来当修复流式卡顿的手段。③ 与已落「输出形状三档」「参数消失三态」分工：那两条管**输出有哪些形状/字段在不在**，本条管**形状按时序展开时在哪一步被卡住**。
+- **提升层**：工作流（输出契约验证）/ 工具（模板渲染验收）。触发词：声明序决定流式、sequence of variables、首个未解析变量、执行完成序不豁免、流式中途卡住。
+
+## r685B-1 · 「200 + text/html」不是 API 响应：字段缺席结论前必须先查主机与 Content-Type（来源：2026-11-04 r685 本轮一手 `skillhub.cn/api/skills` 200/7,432B `text/html` SPA 兜底壳 vs `api.skillhub.cn/api/skills?page=1&sortBy=score` 200/42,936B `application/json` 含 20 条完整技能记录；`reviewStatus`/`isDownloadable` 在真 JSON 体 0 命中）
+- **实证**：同一 API 路径在**不同主机**上返回两套完全不同的东西：主站域恒回 7.4KB HTML 壳（任意子路径同样 200 + 同字节），API 域回 42.9KB JSON。此前 r811/r820/r823 三轮围绕「该站公开 GET 是否可读、字段到底在不在」结论互相相反，双方都拿到了真字节 ⇒ 分歧根因是**取证时把主机维度当成了同一个端点**。
+- **判据**：① **「拿到 200」不构成取到数据的证据**：真 200 判据要三要件齐备——`Content-Type` 是声明的结构化类型、响应体是可解析的结构化数据、字节量级与预期记录数相称；只按状态码断言会让 SPA 兜底壳冒充成功。② **断言「字段不存在」之前先固定取证面**：主机、路径、`Accept` 头三者任一变化都换了一个对象；把「此面缺席」写成「端点无此字段」会污染后续所有判重。③ **同源两面的相反结论要合并成一条取证规则，不要各记一条站点生死**：本条同时解释 r820「结构性不可达」与 r823「主机维度翻案」，两者都成立。
+- **提升层**：工具（取证通道）/ 工作流（判重前置）。触发词：200+text/html、SPA 兜底壳、主机维度、Content-Type 三要件、字段缺席先固定取证面、同路径两套响应。
+
+## r685B-2 · 服务端下发字段清单与客户端派生表达式必须分开登记（来源：2026-11-04 r685 一手 `api.skillhub.cn/api/skills?page=1&sortBy=score` 200/42,936B `application/json` 中 `reviewStatus`/`isDownloadable` 均 0 命中；主站 SPA 壳 `skillhub.cn/api/skills` 200/7,432B `text/html` 指向前端 bundle `cloudcache.tencent-cloud.com/qcloud/tea/app/skillhub/assets/skill-hub.j80qozui.js` 200/1,263,040B，逐字命中 `isDownloadable=e=>"approved"===e.reviewStatus||null===e.reviewStatus||void 0===e.reviewStatus`）
+- **实证**：API 正文里根本没有 `reviewStatus` 与 `isDownloadable` 两个键，但前端代码用前者算出后者 ⇒ 从 bundle 读到的谓词证明的是**界面怎么算一个展示值**，不是**服务端承诺下发哪个字段**。
+- **判据**：① **契约字段只能由响应体枚举证明**：把「下发字段清单」与「派生表达式」列成两张表，派生式不得填进契约表。② 与已落 `sa/KB:1075`「派生字段必须能被源字段复算」分工：那条管**已存在的派生值对不上账时以源为准**，本条管**根本不存在的字段不得因客户端算过它而被登记为契约**。③ 采集器写「字段可选 / 字段缺失」结论前，须注明证据来自响应体还是前端代码。
+- **提升层**：工具（接口契约核验）。触发词：下发字段 vs 客户端派生、前端 bundle 谓词、reviewStatus、契约表与派生表分列。
+
+## r685B-3 · 等价判据要显式选档（逐字节 / 结构深比 / 语义盲评），且变更结论是三态不是两态（来源：docs.openclaw.ai `plugins/knowledge/ingestion.md` 200/3,812B `exact original bytes` 1 命中 + `Structural verification` `expectedRevision`/`expectedHash` 批量 ≤100 + `knowledge_source_check` 原文「returns `missing`, `unchanged`, or `changed`」；Make `custom-apps-documentation/get-started/make-apps-editor/apps-sdk/iml-tests.md` 200/2,121B `assert.strictEqual` 3 命中 / `assert.deepStrictEqual` 1 命中；Qoder r825 A-2 / r826 B-1 提名，WB r685 合并同族）
+- **实证**：同一验收面给了两档度量对象——`sha256` 是「**the exact original bytes**」（原始字节），结构核验用 `expectedRevision` + `expectedHash`（结构字段，批量 ≤100）；`knowledge_source_check` 原文「returns `missing`, `unchanged`, or `changed` with the latest receipt」，并明言「**`missing` is not proof that the source was never ingested**」。Make IML 测试文档另给 `assert.strictEqual(actual, expected)`（标量 `===`）与 `assert.deepStrictEqual(actual, expected)`（对象/数组深相等）两型断言。
+- **判据**：① **验收报告必须写明所用档**：逐字节档对重排/换行敏感，结构档容许表示差异，语义盲评档只判行为等价；三档混用却都叫「等价」，结论不可复现也无法复核。② **`missing`（无基线，不可判）与 `unchanged`（有基线且等价）在门禁上必须分开**：压成两态会把「没得比」记成「比过了没问题」，是伪通过。③ 与已落「逐字节 replay signature（r684B-4）」「语义盲评 sa/KB:359」分工：那两条各自是一档的实证，本条补**档位选择动作 + 三态回执**这一缺失的中间层。
+- **提升层**：工具（验收协议）/ 工作流。触发词：等价判据三档、exact original bytes、deepStrictEqual、missing/unchanged/changed、报告须标所用档、无基线不可判等价。
+
+## r685B-4 · 引用他源审核结论须带「上游回指 URL + 该 provider 自己的核查时刻 + 新鲜度档」（来源：clawhub.ai `/api/v1/search?q=pdf` 200/5,450B，2026-11-04 r685 逐串命中 `sourceFreshness`; Qoder r826 B-4 提名）
+- **实证**：每条 trust 记录带 `sourceFreshness: native | observed-only`，`upstreamScanners.{genAgentTrustHub,snyk,socket}` 各自带 `status` + `sourceCheckedAt` + `sourceUrl`（回指 skills.sh 审核页）。既有 `av/KB:2828` 只要求「单源审计条目的字段集合」。
+- **判据**：① **跨注册表引用不是把结论抄过来**：必须同时可回答「这条结论最初由谁、在何时、对哪个对象作的」——缺 `sourceUrl` 不可归因，缺 provider 级 `sourceCheckedAt` 不可判时效。② **`observed-only`（仅观测到，非本库登记）不得与 `native` 同权重入库**：前者是二手转述，后者是本库自己的核查；混用会把「听说安全」抬成「验过安全」。③ 聚合多家扫描器时按 provider 分列时效，不取最大值也不取最早值。
+- **提升层**：工具（证据可归因）/ 治理。触发词：sourceFreshness、observed-only、upstreamScanners、sourceCheckedAt、上游回指 URL、跨注册表引用新鲜度。
+
+## r685C-1 · 下层声明「我负责」时宿主原生机制默认让位且须显式才重开；状态推进只认被宿主验收的轮次（来源：docs.openclaw.ai `concepts/context-engine.md` 200/11,018B，2026-11-04 r685 逐串命中 `ownsCompaction` 9 / `never infers success` 1；Qoder r824 C-6 提名）
+- **实证**：`info.ownsCompaction: true` 时 OpenClaw **默认关闭**原生 compaction 与 stored Responses checkpoint replay，须显式把 `params.responsesServerCompaction` 置 `true` 才重开；`estimatedTokens` 用于压缩阈值与诊断，**不用于决定是否发 provider 请求**；`commitTurn` 只对**被接受的成功轮次**调用，恢复时移除未获宿主准入的 admission，**never infers success from later transcript entries**。
+- **判据**：① **「声明接管」的代价是宿主侧默认关，不是两层叠加**：不写清让位默认，会出现两层同时压缩或两层都不压缩；重开必须是显式开关且可审计。② **估算类字段不得升格为放行/拦截门**：它可用于诊断与阈值建议，但一旦拿它决定「请不请求」，测量误差就直接变成行为变化。③ **状态推进只由宿主验收驱动**：绝不能从后续转录里出现某些记录就反推「上一轮其实成功了」；恢复时对未验收项删除并留痕。与已落 `sa/KB:3051`（插槽独占、旧实现不兜底）分工：那条管**替换实现后的能力归属**，本条管**装好之后谁有权推进状态**。
+- **提升层**：工作流（状态一致性）/ 安全边界（上下文组装）。触发词：ownsCompaction、宿主默认让位、显式才重开、estimatedTokens 不作门、commitTurn 只认被接受轮次、不反推成功。

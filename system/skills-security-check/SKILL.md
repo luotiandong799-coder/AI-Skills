@@ -3,7 +3,7 @@ name: system/skills-security-check
 description: "腾讯云鼎实验室出品，Skill安全审查工具。对用户指定的skill.md文件及其配套的文档、程序、脚本等进行全面安全审计，确保引用安全、秘密引用解析三覆盖、$var: 头部引用字面外泄、variables:read:<path> scope、日志不回显解密值、名称解析宽容度按读写分面、不进轮换不可 pin、tool-free turn 激活、失败保持非激活、个人账户存储隔离、会话级单选、故障转移不拿他人个人账户兜底、OAuth 验证钩子时机枚举、validateOAuthCredential、terminally fenced、计划后执行前重验、TOCTOU 面、隐式选择精确匹配、prefix alone never selects a harness、明文 HTTP 端点硬拒、legacy alias 归一、roleMapping 三模式、applyResolvedRoles 独立事务、claim-match 只评不写、跨会话组合攻击、Instruction Propagation、Data Boundary Violation、Evidence Poisoning、SkillRelayBench、SkillRelayGuard、工件来源上下文恢复、执行前 advisory、恶意产能按发布者聚合熔断、判定器与判定对象同面受审、扫描判级三原则、门控资格与分诊资格两档、滥用门 denylist、未来公共 provider 默认受检、PLATFORM_CONTROLLED_PROVIDERS、email_verified 证明范围、domain 级 invalid 拒绝 mailbox 级允许、mailbox 存在性 oracle、拒绝响应防泄漏、缓存按信号稳定性、资格退场按操作分面创建编辑关删除保留、门禁服务端路由强制 UI 锁不是门禁、删除级联语义显式、空 tier 删除旗标迁移第一剩余 tier、社区版误伤验证、维护态放行按副作用判、GET 也会写 token、路由分类枚举测试未分类即构建失败、读仍写什么台账、信任源自举未检查、sandbox 缺省沿用、job 身份为默认、viewer 显式 opt-in、publisher 模式读取他人角色、on_behalf_of、Home 与 Workspace 双侧校验、BindingLostError、无法执行≠无意见、Git Bash 缺失放行"
 description_zh: "腾讯云鼎出品，Skill 安全审计工具"
 description_en: "Scan a third-party skill for security risks before enabling it"
-version: 1.289.0
+version: 1.290.0
 allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
@@ -495,3 +495,5 @@ visibility: "public"
 ## r655 下沉条目（C：17：权限枚举只能逐字抄服务端，不得按对称模式推断；18：deny 规则的四类静默失效面：路径解析后 / 跨执行主体 / 依赖缺失 / 作用域；19：字段严格度两侧并存：装前审查要按字段落在哪一侧分别出卷；20：所有权转移使句柄绑定的信任信号失效，须显式重认；21：沙箱默认关闭且逃生舱是显式开关：禁用 exec 必须走 deny，不能靠指令面；22：确定性拒绝必须先于 AI 评审：字节码类产物在评审前即拒；23：审批面是单向的：批准只能收紧，且审批不是身份边界）（原文均在 references/knowledge-base.md）
 
 ## r668 下沉条目（扫描器判决报告须附「语言集合＋编码前置假设＋static_parse_limit 降级标志」三项；跨检验器比较须先对齐被检内容集＝排除目录＋扩展名白名单＋字节码通道；全文见 references/knowledge-base.md）
+
+## r685 下沉条目（本轮 1 点，全 KB-only；原文均在 references/knowledge-base.md）

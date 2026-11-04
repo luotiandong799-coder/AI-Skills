@@ -1142,3 +1142,23 @@ ChipMEM 指出：在同一批任务上反复接触基准反馈，会奖励「针
 - **实证**：renderer 把录制的 run 转成文本 packet，software checkers 校验 records 与 packets，LLM judge 只读 packet 打分。作者提出四条**输入保证义务**：① 必需内容在 rendering 后仍存活；② 每个 checker 覆盖它所声明的要求；③ **失败的检查要截断后续使用**；④ **judge 读的是最后一次被检查过的那些字节**。一条 30 trajectories 的管线里，哈希全部匹配、checker 全通过、staging 成功，四条义务却**同时被违反**：renderer 漏掉所有结构化工具调用，60 个被判 step 中 53 个是空白；某一 judge 配置下，后续上下文让 error step 比 correct step 多举 13 次旗，补齐调用后差值降到 2（−11，95% cluster-bootstrap 0.17–0.53）；两份独立写的 checker 都接受了一条未匹配的 tool result；集成测试里 stub 读到了失败构建的 packet、以及 staging 之后被改过的副本。补三条控制后，19 个构造故障里 18 个在 stub 读任何 packet 之前被拦下。
 - **判据**：① **「哈希一致 + checker 通过 + 拷贝成功」三项齐全不等于输入正确**——三者都作用在各自的对象上，没有一项证明「judge 最终读到的字节 = 被检查过的字节」；验收要单独断言这条链路；② **四条义务是链不是清单**：渲染保真 → 检查器覆盖 → **失败即截断**（时序义务，不是并行校验）→ 末次检查后字节不再变化；任何一环换成「事后补验」都会留下 staging 后漂移的窗口；③ **失败检查必须真阻断下游使用**，只记一条告警而让 packet 继续送 judge，等于把「已知坏输入」送入评分；④ **空白/缺失要能被判卷侧识别**：53/60 空白 step 仍被判分且哈希匹配，说明覆盖率报告必须包含「被判 step 中有多少有内容」，否则通过率的分母是虚的；⑤ 与 §r684C-1（基准有效性筛查）分工：那条管题目和判据本身有没有缺陷，本条管**判卷输入这条链路的保真与时序**；与 §r683C DeliverBench（交付单位是整包）分工：那条管评的是什么，本条管评的是谁；⑥ 与 av KB:4783「规范化字节校验」相邻但不同轴：那条管上下文构造一次成型，本条管**检查之后到判卷之前**这一段不得再变。
 - **提升层**：工作流（评测输入链路）/ 可复用 Skill（判卷规约）。触发词：输入保证链、judge 只读被检字节、失败检查截断后续使用、required content survives rendering、staging 后漂移、53/60 空白仍匹配哈希、coverage 分母、加盖控制拦在 stub 之前。
+
+## r685A-4 · 历史指标序列不重写旧行：口径变更那一行就地注记并标为新基线，可比性单位是「同口径段」（来源：pipedream.com/docs/conduit/load-tests.md 200/7,087B，2026-11-04 r685 逐串命中 `new baseline`; Qoder r822 A-2 提名，按并案只取净新子集）
+- **实证**：原文逐字「their user counts are **not directly comparable with today's model** — **the row notes what changed**」「**new baseline, not comparable with earlier rows**」。
+- **判据**：① **口径变更时保留旧行原值并就地写「改了什么」**，把该行标成新基线；静默回填旧行会抹掉历史，静默续写则让不同口径的数被直接相减。② **可比性单位是段不是整条序列**：跨段引用必须显式声明「不同口径，禁止直比」；报趋势图时按段切分而不是一条线画到底。③ 与已落 `av/KB:1087`「跨管线只比名次不比分数」、`av/SKILL.md:200`「四元组随数字同带」分工：那两条管**空间/管线与报数附带字段**，本条管**同一序列内部的时间分段与行内自解释**，并案归四元组族的「时间维」。
+- **提升层**：工具（评测/指标口径）。触发词：新基线、行内注记 what changed、分段基线、口径变更不重写旧行、同口径段才可直比。
+
+## r685C-2 · 指标字段必须自带口径钉（单位粒度 + harness 身份 + 兼容声明），字段缺失或改名即口径变更（来源：docs.openclaw.ai `gateway/opentelemetry/model-calls-and-metrics.md` 200/9,300B，2026-11-04 r685 逐串命中 `observation_unit` 5; Qoder r826 B-2 提名）
+- **实证**：`openclaw.model_call.observation_unit = turn`、`gen_ai.operation.name = invoke_agent` 双挂，`openclaw.harness.run` / `openclaw.harness.id = claude-cli`，官方明言目的是「compatibility with **older or external emitters**」。既有 `av/KB:2980-2981` 只要求**验收结论绑定 harness 标识**。
+- **判据**：① **口径不能只写在结论备注里**，要作为每条指标自带的字段随数据发布，外部采集器才能按字段判等；字段缺失或改名即判口径变更，**禁止与历史序列直比**。② **单位粒度（`observation_unit`）与执行体身份（`harness.id`）是两枚独立的钉**：只钉 harness 不钉单位，同一个数仍可能是「每轮」或「每请求」；两者缺一，跨版本聚合会静默改量纲。③ 声明兼容策略是字段设计的一部分：为旧/外部发射器保留旧字段名并给出映射，比要求全链路同时升级更可落地。
+- **提升层**：工具（可观测字段）/ 工作流（评测口径治理）。触发词：observation_unit、harness.id、指标字段自带口径钉、兼容 older or external emitters、字段改名即口径变更、单位粒度与执行体身份两枚钉。
+
+## r685C-4 · 工具收益评测要按「文本足迹」分 in-/out-of-distribution 两臂，否则测到的是记忆不是推理（来源：arXiv 2611.03308《LLMs Depend on Specialist Tools for Out-of-Distribution Generalization》2026-11-04 r685 一手 API 摘要 200；窄串全库 0 命中）
+- **实证**：为分离 reasoning 与 recall，作者从 MassSpecGym 建 100 分析物基准，**按每个分析物的 textual footprint 切成 in-distribution（文献充分记载）与 out-of-distribution（几乎无记载）两臂**，并**固定模型、harness、输出格式，只变「能否访问领域专用工具」**。
+- **判据**：① **不做文本足迹分臂，工具增益会被语料记忆冒充**：模型在 ID 臂凭记忆答对，看起来「不用工具也行」；一到 OOD 臂才暴露对工具的真实依赖。② **消融实验要固定其余三件、只动一件**：模型 / harness / 输出格式任一漂移，测出的差值就不可归因给工具。③ 与已落「工具消融测试（禁用工具重跑对比轨迹）」分工：那条给**消融动作**，本条给**分组口径与归因前提**；报工具收益必须同时给 ID / OOD 两臂的分数。
+- **提升层**：工作流（评测设计）/ 工具。触发词：文本足迹分臂、in-distribution / out-of-distribution、分离推理与回忆、固定 harness 只变工具访问、工具收益不可单臂报。
+
+## r685C-5 · 「需求发现」是独立被测阶段，须与「交付执行」分轴报分（来源：arXiv 2611.03551《Can LLM Agents Be Forward-Deployed Engineers?》2026-11-04 r685 一手 API 摘要 200；窄串全库 0 命中）
+- **实证**：模拟客户以**模糊请求**开局，agent 须在 discovery 阶段自行发现**验收标准、数据权限、硬件约束**，再进 delivery 阶段规划并执行；15 个模型中最强者发现 >80% 的 withheld requirements，开源权重模型仅 40–50%。
+- **判据**：① **把「发现率」与「交付成功率」分列**：只看最终交付，会把「需求都没问全但恰好做对了」与「完整发现后正确交付」混成同一分；被隐藏的验收条件是可在开局前枚举、开局后核对的显式集合。② **模糊输入才是发现能力的测试面**：需求写全了就测不到发现；与 `r683C` DeliverBench「交付单位是项目不是任务」分工：那条管**交付物的粒度**，本条管**开工前那段信息获取**作为独立被测量。③ 报发现率须带分母（withheld 条数）与缺口清单，否则「>80%」不可复核。
+- **提升层**：工作流（评测设计）/ 可复用 Skill（验收契约）。触发词：需求发现率、withheld requirements、discovery vs delivery 分轴、模糊请求开局、发现率须带分母与缺口清单。

@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、能不能跑、接受态绑定单报告、harness 塑形信念、belief-rollout 诊断、终端成功看不见分叉、BIWM、证据被 harness 压缩、attestationHash 排除 checkedAt、同状态同哈希、审计四元组、启用新规则域须复审刷新、间隔截顶防计时器溢出、缺席折叠成空集合、校验两端同源自证恒真、压缩切点避开 tool 对、缺口标注禁止猜测、被调用方 commit 调用方 session、flush vs commit、transaction already closed、expire_on_commit、extract_class_name、first Component subclass、run2 not found in First、data.type 优先于 vertex_type、fault-enforcing tests、测试通过不等于正确、counterfactual monitor、recoverable checkpoint、false-alarm 2.0-3.3%、cross-provider review、explicit failure states、truncation levels、read-only 假设要实测、projectId、optInAvailable、并列时间戳分页、游标缺 tie-breaker、模型产出作观测记录、准入策略按假阳性上限、分隔符被硬编码、序列化往返不对称、夹具必须封闭、MockTransport、example.invalid、外部依赖版本假设
-version: 2.430.0
+version: 2.431.0
 agent_created: true
 ---
 # 生成物验证（独立 oracle + 差分 + 变异测试）
@@ -463,3 +463,5 @@ agent_created: true
 ## r668 下沉条目（验收结论四字段分解强制：哈希一致/签名有效/扫描无告警/范围完整 独立记，禁单字段真即整体通过；干净报告/heuristic≠安全保证；digest/签名两态已由 r524C/2969 落不重落；全文见 references/knowledge-base.md）
 
 ## r684 下沉条目（A：观测导出范围上限=下游能完成的身份校验能力；C：守卫收益按标签强度×信封真伪×记忆效价交互项评+M-CPE/X-CPE 按「来源权限 vs 落位角色权限」二维记账）（原文均在 references/knowledge-base.md）
+
+## r685 下沉条目（本轮 6 点，全 KB-only；原文均在 references/knowledge-base.md）
