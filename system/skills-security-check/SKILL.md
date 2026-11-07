@@ -8,6 +8,8 @@ allowed-tools: Read, Grep, Glob, Bash
 display_name: "system/skills-security-check"
 display_name_en: "system/skills-security-check"
 visibility: "public"
+module: SI
+modules: SI
 ---
 > 正文预算管理：「功能描述（全文见 references/knowledge-base.md §下沉·sk」（全文已零删减下沉 references/knowledge-base.md §下沉·功能描述（全文见 references/knowledge-base.md §下沉·sk）
 ## 约束（全文见 references/knowledge-base.md §下沉·skills-security-check·r439·约束）

@@ -9,6 +9,8 @@ category: 求职招聘
 version: 2.0.1
 author: wangtengfei
 agent_created: true
+module: KI
+modules: KI,TI
 ---
 
 # 简历 AI 帮你写

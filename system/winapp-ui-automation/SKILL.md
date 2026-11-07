@@ -5,6 +5,8 @@ version: 1.0.0
 agent_created: true
 description: >-
   Windows UI 元素识别与控件级定位：用 UIA/UIA3（FlaUI、pywinauto、UIAutomation COM）枚举并识别窗口、按钮、输入框、菜单、列表、树、表格等元素，以 AutomationId/Name/ControlType/运行时 ID 做控件级定位与交互，不依赖固定屏幕坐标。适用于目标程序暴露无障碍树、需稳定可重复定位桌面控件的场景；Qt 类自绘应用（如微信 4.x 暴露 0 元素）退回 vision/OCR（见 computer-use-windows 与 win-native-app-automation）。含环境自适应重识别（原 windows-ui-adaptive 已并入，2026-09-26）：DPI/分辨率/主题/语言/窗口大小/软件版本/动态界面变化时按稳定属性重新定位目标。触发词：UIA、UIAutomation、控件识别、控件级定位、FlaUI、pywinauto、AutomationId、无障碍树、元素定位、窗口枚举、DPI适配、分辨率适配、界面变化、动态布局、主题适配、语言适配、窗口大小变化、控件重识别、自适应定位。
+module: PI
+modules: PI,OI
 ---
 
 # Windows UI 元素识别（通用"眼睛"层）

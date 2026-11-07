@@ -3,6 +3,8 @@ name: bsk-drive-logged-in-browser
 description: 用 bsk（BrowserSkill）驱动用户「已登录」的 Chromium 浏览器完成实操任务——发邮件、填表、点流程、读页面、抓数据。凡用户说「打开我的浏览器…」「用我登录的 XX 发/做/提交…」「帮我操作网页」「固定标签那个页面…」时使用。核心覆盖 WorkBuddy 环境下的实战坑：daemon 被回收、Agent Window 被关、PATH 缺 coreutils、弹窗确认、用户窗口标签的坐标层。触发词：bsk、BrowserSkill、驱动浏览器、操作已登录浏览器、固定标签、发邮件、163邮箱、填表提交、Agent Window、借用标签、borrow、daemon 被回收、52800、send email。（统一入口=browser-automation；本技能为其 bsk 驱动底层实现位，由它路由；两者同一功能位，只划边界不文件级合并。）
 version: 1.2.0
 agent_created: true
+module: OI
+modules: OI,PI
 ---
 
 # 用 bsk 驱动用户已登录浏览器

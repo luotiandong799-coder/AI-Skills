@@ -10,6 +10,8 @@ author: 武汉弈枢科技有限公司
 category: 效率工具
 metadata:
   tags: [memory, knowledge, governance, skill, ai-agent]
+module: MI
+modules: MI,KI
 ---
 
 # AI 智能体记忆与技能治理（Memory & Skill Governance）

@@ -5,6 +5,8 @@ version: 1.0.0
 author: 本地整理（翻译自 blader/humanizer + hardikpandya/stop-slop + Wikipedia AI writing signs）
 license: MIT
 type: 文本润色 / 去 AI 味
+module: KI
+modules: KI,TI
 ---
 
 # humanizer-zh · 把 AI 味改成人话

@@ -1,0 +1,15 @@
+{
+  "task_id": "trial_2026-11-07",
+  "steps": {
+    "compile": {
+      "completed": true,
+      "exit_code": 0,
+      "evidence": "py_compile exit=0"
+    },
+    "test": {
+      "completed": true,
+      "exit_code": 0,
+      "evidence": "selftest 8/8 passed"
+    }
+  }
+}

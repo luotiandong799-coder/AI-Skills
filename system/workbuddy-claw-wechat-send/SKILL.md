@@ -7,6 +7,8 @@ display_name_en: WeChat Claw Bot Message Push
 description_zh: 通过本地 WorkBuddy 助理已配置的微信通道（Claw / weixinClawBot 机器人）向用户推送文本消息。适用于需要将通知或任务结果经微信送达用户的场景，例如自动化每日资讯推送、定时提醒、任务结果回传等。无需额外申请微信 API 凭证，直接复用本地 settings.json 中已落盘的 botToken 与接收人 userId。发送前会自动以 getupdates 轮询进行会话热身，规避冷 bot 的 session timeout。
 description_en: Send a text message to the user through the local WorkBuddy assistant's WeChat channel (Claw / weixinClawBot bot). Use this skill when a task needs to push a notification or result to the user via their connected WeChat bot, e.g. daily news push, reminders, or delivering automation output. No external WeChat API credentials are needed — the bot token and recipient id are already present in the local WorkBuddy settings. A getupdates warm-up is performed automatically before sending to avoid session timeout on a cold bot.
 agent_created: true
+module: OI
+modules: OI,PI
 ---
 
 # Send a message via the WorkBuddy Claw WeChat bot

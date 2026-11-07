@@ -1,0 +1,37 @@
+{
+  "task": "trial_code_validation",
+  "goal": "第一轮试运行：验证 skills/_tools 关键模块语法与执行智能引擎自测通过情况",
+  "default_ttl_seconds": 86400,
+  "steps": [
+    {
+      "id": "compile",
+      "action": "run_command",
+      "params": {
+        "command": "python -m py_compile D:/腾讯AI/skills/_tools/execution_intelligence.py D:/腾讯AI/skills/_tools/dag_scheduler.py D:/腾讯AI/skills/_tools/memory_tx.py D:/腾讯AI/skills/_tools/context_budget.py D:/腾讯AI/skills/_tools/guardian_precheck.py D:/腾讯AI/skills/_tools/model_router.py"
+      },
+      "guard": "true",
+      "idempotent": true,
+      "risk": "low"
+    },
+    {
+      "id": "test",
+      "action": "run_command",
+      "params": {
+        "command": "python D:/腾讯AI/skills/_tools/execution_intelligence.py selftest"
+      },
+      "guard": "compile.exit_code == 0",
+      "depends_on": ["compile"],
+      "idempotent": true,
+      "risk": "low"
+    },
+    {
+      "id": "report",
+      "action": "analyze_results",
+      "params": {},
+      "guard": "test.completed == true",
+      "depends_on": ["test"],
+      "idempotent": true,
+      "risk": "low"
+    }
+  ]
+}

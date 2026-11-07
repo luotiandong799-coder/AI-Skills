@@ -3,6 +3,8 @@ name: mcp-builder
 description: Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).、工具过载、上下文爆、按需加载、渐进式发现、search_tools、catalog/inspect/execute、阈值切换、服务器按需连、代码模式、组合调用、沙箱执行、逐次授权、跨 server 不可信、MCP 调试、Inspector、stdio 日志、协议协商、server/discover、_meta 字段、-32022、-32602、-32021、启动路径
 license: Complete terms in LICENSE.txt、三原语、工具资源提示、反模式、巨型服务器、批量变体、什么时候不该用、stdio、Streamable HTTP、无状态默认、会话头、OAuth 2.1、受众绑定、签发者、细粒度范围、一次性补齐、握手是契约、协议错误、工具执行错误、isError、可重试标记、建议动作
 version: 1.5.0
+module: OI
+modules: OI
 ---
 
 # MCP Server Development Guide

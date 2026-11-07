@@ -6,6 +6,8 @@ description: |
   a PR's UI, validate a deployed page, or operate a tab they identify. Requires
   the bsk CLI and browser extension.
   (统一入口为 browser-automation；本技能是其 bsk 驱动底层实现位，由它路由。)
+module: OI
+modules: OI,PI
 ---
 
 # system/browser-skill

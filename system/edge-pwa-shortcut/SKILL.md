@@ -1,6 +1,8 @@
 ---
 name: edge-pwa-shortcut
 description: 用脚本方式把任意网站做成 Edge 独立窗口 App（伪 PWA）。包含启动参数 --app=、独立 user-data-dir 绕过单实例复用、Python + pywin32 替代被安全策略拦掉的 PowerShell COM。
+module: OI
+modules: OI,PI
 ---
 
 # Edge 独立窗口快捷方式（脚本版 PWA）

@@ -5,6 +5,8 @@ version: 1.0.0
 display_name: 拆工单
 display_name_en: To Tickets
 agent_created: true
+module: EI
+modules: EI
 ---
 
 # To Tickets（拆工单）

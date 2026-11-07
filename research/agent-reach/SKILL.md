@@ -13,6 +13,8 @@ description: >
   NOT for 内容加工/写操作/已有专门 skill 的平台（走 web-scrape 或 browser-automation）。
 metadata:
   homepage: https://github.com/Panniantong/Agent-Reach
+module: OI
+modules: OI,PI
 ---
 
 # Agent Reach — 互联网能力路由器

@@ -5,6 +5,8 @@ version: 1.0.0
 agent_created: true
 description: >-
   Windows 桌面级操控（手）：鼠标移动/点击/拖拽、键盘输入、窗口切换与前置、截图、视觉与 OCR 定位、等待与桌面级交互。优先用 windows-mcp 的 Snapshot/Screenshot/Click/Type/Shortcut/Clipboard；中文输入走剪贴板+Ctrl+V（SendKeys 不支持非 ASCII）；坐标点击仅作兜底，能用控件/键盘解决就不点坐标。需要像素级或跨应用桌面交互时结合截图+视觉/OCR。触发词：computer use、桌面操控、鼠标点击、键盘输入、截图、视觉定位、OCR定位、窗口切换、屏幕交互、GUI点击、桌面自动化。
+module: PI
+modules: PI,OI
 ---
 
 # Windows 桌面操控（通用"手"层）

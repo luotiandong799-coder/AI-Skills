@@ -1,6 +1,8 @@
 ---
 name: web-scrape
 description: 抓取网页并输出干净的 Markdown、纯文本、HTML 或结构化 JSON。当用户要读取、抓取、整理某个网站或 AI Agent 站点的内容，需要批量采集公开网页数据、提取列表页字段，或要求"把某个网页/网站抓下来"时使用。不适用于需要登录、付费墙后的内容。也不适用平台类内容（小红书/推特/B站/LinkedIn/YouTube/雪球/播客）与全网调研——那些走 `agent-reach`。
+module: KI
+modules: KI,OI
 ---
 
 # 网页抓取

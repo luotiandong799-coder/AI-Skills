@@ -32,6 +32,8 @@ display_name: "智能体协会 Agent Guild"
 display_name_en: "Agent Guild"
 description_zh: "跨 agent 共享记忆协议：本机多个 AI agent 共享身份、规则、记忆与交接消息，纯本地 Markdown/JSON，无服务器"
 description_en: "Cross-agent shared memory protocol: agents on one machine share identity, rules, memory and handoff messages. Local-only Markdown/JSON, no server."
+module: OI
+modules: OI,RI
 ---
 
 # Agent Guild — Runtime Skill

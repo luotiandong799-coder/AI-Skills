@@ -3,6 +3,8 @@ name: win-native-app-automation
 description: 用 windows-mcp 驱动 Windows 原生桌面应用（微信电脑版、QQ、任意 GUI 软件）完成查看、点击、输入、发送等实操。当用户说「用我登录的微信/QQ 发条消息」「操作某个桌面软件」「点某个原生应用的按钮」「帮我看看那个窗口」时使用。核心：入口先选对（原生应用走 windows-mcp，不是 bsk）；**关键步骤**（看屏定位、发送后、状态变化、异常）用 `Snapshot(use_vision)` 验证，普通连续操作不逐步截图；中文输入用剪贴板+Ctrl+V；发送类动作优先用键盘 Enter，绝不靠找按钮坐标。含 windows-mcp 不可用时的内置 PowerShell 降级通道、微信 4.x(Qt) 会话列表滚动方法、未读红点识别判据。触发词：微信发消息、电脑版微信、原生应用、桌面软件自动化、windows-mcp、驱动微信、QQ 发消息、点击桌面应用。
 version: 1.2.0
 agent_created: true
+module: PI
+modules: PI,OI
 ---
 
 # 用 windows-mcp 驱动 Windows 原生应用

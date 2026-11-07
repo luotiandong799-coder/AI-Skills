@@ -7,6 +7,8 @@ version: 1.0.0
 display_name: "github"
 display_name_en: "github"
 visibility: "public"
+module: OI
+modules: OI,SI
 ---
 
 # GitHub Skill

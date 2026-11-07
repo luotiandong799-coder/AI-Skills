@@ -7,6 +7,8 @@ sources:
   - 合并自旧 skill `stealth-browser` v1.0.0（本地四层反检测 + 8 个 python 脚本）
   - 合并自旧 skill `smooth-browser` v0.1.0（smooth.sh 云端自然语言浏览器代理：会话纪律 / 结构化输出 / live-view 人工接管）
   - 合并自旧 skill `wb-browser-reuse` v1.0.0（腾讯开源 BrowserSkill「借不抢」范式：标签页借用/归还、确认锚定扩展设置、类型化人助、本地优先数据边界、观测-动作纪律；2026-09-19 实拉 github.com/Tencent/BrowserSkill 的 README / `skill/SKILL.md` / `apps/extension/PRIVACY.md`）
+module: OI
+modules: OI,PI
 ---
 
 # browser-automation（网页自动化：先选路径，再动手）

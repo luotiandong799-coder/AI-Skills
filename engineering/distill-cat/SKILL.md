@@ -5,6 +5,8 @@ version: 2.1.0
 display_name: 萃猫
 display_name_en: Distill Cat
 agent_created: true
+module: KI
+modules: KI,RI
 ---
 
 # 萃猫（distill-cat）— 蒸馏总控

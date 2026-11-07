@@ -6,6 +6,8 @@ version: 1.0.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Playwright Scout + Screenshot QA，用户提供文章 2026-09-17）
+module: VI
+modules: VI
 ---
 
 # wb-ui-visual-qa（界面视觉检查：截图说话，不靠描述）

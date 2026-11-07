@@ -8,6 +8,8 @@ description_en: Ripgrep for fast text search across files; FFmpeg for audio/vide
 category: tool
 version: "1.0.0"
 author: "doubao"
+module: PI
+modules: PI
 ---
 
 # rg-ffmpeg-tools（搜索与音视频工具箱）

@@ -4,6 +4,8 @@ description: >-
   本地 .git 损坏时的取证与恢复。当出现 `fatal: not a git repository`（明明 .git 目录还在）、`git fsck` 刷屏 `failed to load pack entry` / `unable to read`、`.git/refs` 或 `packed-refs` 消失、`objects/pack/*.pack` 不见只剩 .idx、git 命令全部报 unknown revision / ambiguous argument、仓库突然"不被识别"时使用。流程：只读取证（reflog 是最重要的幸存线索）→ 分清「refs 丢失可原地重建」还是「pack 损毁只能从远端重取」→ 保留工作树、只换 .git → 三查验收（fsck_rc=0 + HEAD==远端 sha + status 干净）。也适用于：**把敏感/私人文件从 git 历史里彻底清除**（`git filter-repo` 抹路径 + `--force-with-lease` 推送 + 发现「force push 后 GitHub 仍保留不可达对象，旧 SHA 照样匿名可读」这条反直觉事实）、全历史密钥审计（判定到底哪些算敏感）、多副本（live + 镜像）一致性核对、恢复后 status 一堆 M 的真假甄别（stat 假脏 vs 真改动）、autocrlf 造成的 CRLF 漂移排查。触发词：.git 损坏、仓库坏了、not a git repository、failed to load pack entry、pack 丢失、refs 丢失、git 仓库打不开、fsck 报错、reflog 取证、从远端恢复仓库、git 仓库修复、corrupt git repo、recover git repository、objects 损坏、**历史重写、抹除历史、隐私问题、force push、force-with-lease、filter-repo、删掉历史里的文件、旧提交还能读到、仓库重命名、删库重建、密钥审计、敏感内容扫描**。不适用：GitHub 连不上 / push 超时（走 github-ssh-over-443）、只是合并冲突或撤销提交（走 git 常规操作）。
 version: 1.2.0
 agent_created: true
+module: OI
+modules: OI,SI
 ---
 
 # git-repo-recovery（本地 .git 损坏的取证与恢复）

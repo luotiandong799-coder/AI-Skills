@@ -14,6 +14,8 @@ tags:
   - automation
   - pywinauto
   - windows
+module: OI
+modules: OI,PI
 ---
 
 # 微信 PC 端自动控制 v1.1.0

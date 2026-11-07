@@ -4,6 +4,8 @@ description: >-
   WB 统一 AI 信息入口的总架构原则与输入路由：外部信息如何归一进 AI、如何判断价值、如何路由到正确 Skill、隐私与记忆边界。当用户要梳理「统一输入/信息入口/输入增强/WeChatBridge/输入路由/价值判断/聊天增强/任务提取」或 WB 输入层架构，或要新增输入类能力时应用。本技能是编排/元层原则，不替代各引用 Skill 的执行细节，重叠>60% 一律引用不重复建。触发词：统一输入、信息入口、输入增强、WeChatBridge、输入路由、价值判断、聊天增强、任务提取、记忆管理、开源学习、Fast/Deep 执行。
 version: 1.0.1
 compatibility: WorkBuddy；引用 media/ engineering/ defaults/ agent/ system/ rules/ 下现有 skill（不重复建）
+module: TI
+modules: TI,CI
 ---
 
 # AI 输入入口增强系统（WeChatBridge 融合终版）

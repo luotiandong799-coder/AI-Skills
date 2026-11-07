@@ -9,6 +9,8 @@ category: tool
 version: "1.0.0"
 author: "unknown"
 allowed-tools: "Bash, Read, Write"
+module: PI
+modules: PI
 ---
 
 # 图片处理技能指令

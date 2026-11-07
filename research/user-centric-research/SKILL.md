@@ -19,6 +19,8 @@ triggers:
   - 找工具
   - 会不会重复造轮子
   - 值不值得自研
+module: VI
+modules: VI,TI
 ---
 
 # 默认工作流：需求驱动·市面搜索

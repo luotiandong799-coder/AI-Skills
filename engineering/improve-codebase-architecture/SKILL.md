@@ -5,6 +5,8 @@ version: 1.0.0
 display_name: 架构深化
 display_name_en: Improve Codebase Architecture
 agent_created: true
+module: EI
+modules: EI,TI
 ---
 
 # Improve Codebase Architecture（架构深化）

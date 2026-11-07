@@ -38,6 +38,8 @@ metadata:
       - toutiao
       - trends
       - html-report
+module: KI
+modules: KI
 ---
 
 # last30days-cn

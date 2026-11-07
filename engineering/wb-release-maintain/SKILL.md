@@ -6,6 +6,8 @@ version: 1.252.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
+module: EI
+modules: EI
 ---
 # wb-release-maintain（发布维护：改动要讲人话，升级要先看破坏面）
 ## 核心原则

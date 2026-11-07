@@ -5,6 +5,8 @@ version: 1.0.0
 agent_created: true
 description: >-
   Windows 命令行执行能力（手·命令行）：自动选 PowerShell/CMD/Windows Terminal 处理文件、进程、服务、网络与系统操作，优先用命令行减少 GUI 点击。覆盖文件增删改查、进程查杀、服务启停、网络诊断（Test-Connection/Resolve-DnsName）、注册表只读查询、系统信息获取。破坏性命令（删/改/停服务）遵循 personal-ai-os 三级权限与安全规则；删除优先回收站。触发词：PowerShell、CMD、命令行、批处理、进程管理、服务管理、网络诊断、文件命令行、系统命令、脚本执行。
+module: OI
+modules: OI
 ---
 
 # Windows 命令行执行（命令行"手"层）

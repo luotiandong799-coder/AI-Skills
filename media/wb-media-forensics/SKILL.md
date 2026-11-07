@@ -3,6 +3,8 @@ name: wb-media-forensics
 description: 视频 / 图片类内容的取证与提取（反爬短链 → 拿到内容本体 → 抽帧读图）。当用户发来视频分享链接（抖音 / 快手 / B站 / 小红书 / 视频号短链）、要求"看看这个视频讲了什么""视频里推荐的工具/仓库是什么"、页面被反爬拦住拿不到正文、或视频没有可用字幕接口时使用。四步链路：短链解析 → Edge 无头渲染取播放地址 → 下载 + 本地解码抽帧 → 拼联络表多模态读图。触发词：抖音、快手、B站、小红书、视频链接、看看这个视频、视频讲了什么、逐帧、逐帧分析、口播、字幕、抓视频、video frames、media forensics。
 agent_created: true
 version: 1.2.0
+module: VI
+modules: VI
 ---
 
 # wb-media-forensics（媒体内容取证：先取画面，再下结论）

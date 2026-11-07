@@ -5,6 +5,8 @@ version: 1.0.0
 agent_created: true
 description: >-
   Windows 多引擎自动化 Fallback 路由器：按"UIA/UIA3/FlaUI → pywinauto → OCR/视觉定位 → 坐标兜底"顺序选最稳引擎；当前方式无法可靠识别或操作时自动降级到下一引擎，不卡死不无限重试。只做调用决策与路由，不重复实现各引擎（识别走 winapp-ui-automation，输入/视觉走 computer-use-windows，命令行走 powershell-windows-cli）。触发词：自动化引擎、多引擎、fallback、降级、回退、引擎切换、自动化策略、Windows自动化路由、自动化排错。
+module: OI
+modules: OI,PI
 ---
 
 # Windows 多引擎自动化路由（大脑层）

@@ -11,6 +11,8 @@ sources:
   - deeplearning.ai short courses《AI Agents for Image and Video Generation》：生成→自动评分→未达标迭代闭环
   - 合并自旧 skill `image2-prompts`（B站「星火目」GPT-Image-2 案例库，2026-04-23）
   - GitHub `Leonxlnx/taste-skill`（Anti-Slop Frontend Skill）AI TELLS 禁令 + Pre-Flight 检查表（2026-09-12 取独有点并入，整包不装：其余为框架专用实现细节）
+module: PI
+modules: PI
 ---
 
 # 生成类视觉任务工作流

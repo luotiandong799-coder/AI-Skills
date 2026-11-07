@@ -5,6 +5,8 @@ version: 1.1.0
 agent_created: true
 description: >-
   智能消息自动回复 + 自学习 + 优化复盘。监听微信/QQ/企业微信/钉钉/飞书/Telegram/Slack/Teams 新消息，识别联系人与群聊、消息类型与重要度、场景与连续上下文，判断是否回复，按联系人/群聊独立风格生成回复，并从真实结果做自学习、错误学习、效果学习与复盘，持续进化经验。只做"消息大脑"（识别/判断/风格/经验/复盘/发送前九步检查）；读发消息的驱动走 win-native-app-automation，Windows 操作方式择优走 windows-ops-experience，权限/停止条件/清理走 personal-ai-os，通用记忆治理走 meta/knowledge-governance。触发词：自动回复、消息自动回复、智能回复、帮我回消息、监听微信消息、回微信、回QQ、回复风格、联系人风格学习、消息分类、该不该回、自动回复边界、防重复发送、防回环、回复复盘、回复经验、消息大脑、群消息处理。
+module: OI
+modules: OI,PI
 ---
 
 # 智能消息自动回复（消息大脑）

@@ -2,6 +2,8 @@
 name: windows-migrate-to-d-via-junction
 description: 把 Windows 上占 C 盘的应用数据目录整体迁到 D 盘，并用 NTFS 目录 junction 让原路径继续可用（应用无感）。当用户要求"C 盘迁移到 D 盘""把 X 目录搬到 D 盘""C 盘不留垃圾""应用数据换盘"，或需要给正在使用的应用/CLI 配置目录减负时使用。含 WorkBuddy 沙箱的能力边界（哪些自动化通道可用/被拦）与已验证的绕法。关键词：junction、目录联接、C盘迁移、换盘、migrate to D、workbuddy 数据目录、.workbuddy。
 agent_created: true
+module: SI
+modules: SI
 ---
 
 # Windows: 把应用数据目录迁到 D 盘（junction 方案）

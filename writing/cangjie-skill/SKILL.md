@@ -7,6 +7,8 @@ display_name_en: "Cangjie Skill Factory"
 description_zh: "将书籍、长视频、播客或课程蒸馏为一组可执行技能。适用于拆书、蒸馏、把XX做成skill等场景，通过RIA阅读法提取框架、原则、思维模型和方法论，生成原子化可复用的Agent技能。"
 description_en: "Distill books, long-video transcripts, podcasts, or courses into executable agent skills. Extracts frameworks, principles, mental models, and methodologies into atomic, reusable skills using RIA reading method."
 visibility: "public"
+module: KI
+modules: KI,TI
 ---
 
 # cangjie-skill — 把一本书蒸馏成一组可执行 skills 的元 skill

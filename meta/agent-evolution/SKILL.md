@@ -16,6 +16,8 @@ metadata:
     - engineering/wb-debug-loop
     - system/skills-security-check
     - agent/agent-guild
+module: AI
+modules: AI
 ---
 
 # 智能体能力进化引擎（agent-evolution）

@@ -5,6 +5,8 @@ description: >-
 agent_created: true
 source: https://b23.tv/e02sWvz （B站「小星说AI」《你的提示词都是在"许愿"》，2026-05-27，40 条完整原文已抓取）
 source2: 抖音「云川往事·AI Agent工具图鉴」grill-me（https://v.douyin.com/kp5wHKvnbOU/，2026-09-13 逐帧取证内化）
+module: TI
+modules: TI,KI
 ---
 
 # 41 条工程化提示词库
