@@ -54,8 +54,35 @@ modules: DI,TI
 - 多 Agent 协作决策 → 委托 `agent-guild` 做收件箱交接。
 - 决策记录 → **MI** 沉淀为"已验证经验"。
 
-## 六、来源（2026-11-07 实拉）
+## 六、MCDA 形式化（加权 / AHP / TOPSIS + 敏感性）
+
+> 加权决策矩阵的严谨版：把"拍分"升级为可审计的多准则决策分析（MCDA）。2026-11-07 实拉。
+
+**① 加权和与归一化**
+- 综合值 `V(a)=Σ wᵢ·sᵢ(a)`，权重归一 `Σwᵢ=1, wᵢ≥0`。
+- 效益型归一 `s=(x−min)/(max−min)`；成本型反向 `s=(max−x)/(max−min)`——方向反了结论必错。
+
+**② AHP 定权重（防"拍脑袋定权"）**
+- 成对比较矩阵 A：`aᵢⱼ=1/aⱼᵢ, aᵢᵢ=1`；取主特征向量为权重。
+- **一致性比率 CR** 必须算：常规阈值 CR<0.1；选项多、矩阵大时可放宽（实拉案例用到 0.2）。CR 超标=判断自相矛盾，须重填。
+
+**③ 聚合方式（按需）**
+- 加权和（补偿型，最常用）/ TOPSIS（正负理想解距离，`Pᵢ=Sᵢ⁻/(Sᵢ⁺+Sᵢ⁻)`，越近 1 越优）/ 超排序 outranking（PROMETHEE/VIKOR 概念：允许"不可补偿"）。
+- 超排序可用一致性指数 `C(a,b)=Σ_{i:sᵢ(a)≥sᵢ(b)} wᵢ` 表达"a 在多大权重上不劣于 b"。
+
+**④ 敏感性分析（必做，否则结论不稳）**
+- **OAT（一次一因素）**：目标权重 0%→100%，其余等比缩放保和=1，观察排名反转点 → 画 tornado 图看哪条标准最撼动结论。
+- **阈值分析**：找出使 top 选项发生 rank reversal 的权重临界值（安全边界）。
+- **全局敏感性**：蒙特卡洛/狄利克雷 bootstrap 抽样上千组权重向量，算**排名稳定性** `RS(a)=P(a 排第一)`；高 RS=稳健，低 RS=靠权重假设撑着。
+- **情景分析**：预设若干权重方案（"成本优先" vs "质量优先"），看结论是否随立场翻转。
+- **判读铁律**：MCDA 排名是**条件性**的——依赖标准/权重/归一化/聚合规则/不确定性假设。输出须分开"稳健 top"与"边缘候选"，并声明在什么权重变化下结论会变。
+
+## 七、来源（2026-11-07 实拉）
 
 - Weighted Decision Matrix / Pugh：skillmd.ai/skills/decision-matrix-1；ruleskill.com/skills/iflytek/decision-matrix
 - Pre-Mortem / Opportunity Cost / ICE / RICE / Eisenhower / 10-10-10：hub.decision.ai/skills/nickcrew/decision-maker；skilld.dev/gh/iflytek/skillhub/decision-matrix
 - 加权 Pros&Cons + Type1/Type2 门（贝索斯）：github.com/alivirgo/Major-AI-Skills/blob/master/skills/pros-and-cons-table/SKILL.md
+- MCDA 敏感性分析（OAT/阈值/蒙特卡洛/情景）+ AHP 加权求和：ecologysci.com/posts/multicriteria-decision-analysis-for-ecosystem-services-a-comprehensive-framework-for-assessment-optimization-and-validation
+- AHP 成对比较/一致性比率 CR/±25% 敏感性：mdpi.com/2071-1050/13/23/13483
+- 加权和 V(a)/归一化/超排序一致性指数/排名稳定性 RS：sustainablecatalyst.com/?p=2841
+- TOPSIS 正负理想解 + AHP/TOPSIS 敏感性：tandfonline.com/doi/full/10.1080/14786451.2023.2167999
