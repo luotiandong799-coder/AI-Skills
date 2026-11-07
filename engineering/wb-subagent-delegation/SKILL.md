@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.56.0
+version: 1.57.0
 agent_created: true
 module: OI
 modules: OI
@@ -69,6 +69,27 @@ modules: OI
 - **★先问"这一步的序列能不能预先枚举"**：能枚举（路径固定、工具顺序已知）→用确定性骨架（harness），模型只在指定节点做判断；不能枚举（要探索未知页面/非结构化材料）→才放自主循环。**判据：序列化不等于自动化——用自主循环跑一条已知路径，付出的是不可预测的成本与不可复现的结果，换不来任何额外能力。**
 - **★选错的代价是不对称的**：该用骨架却用了循环 → 失败模式是"转圈烧预算且从不收敛"；该用循环却用了骨架 → 失败模式是"遇到没预料到的分支就断"。**宁可直接报错，也不要让它假装跑完。**
 - 与 §委派准入 的分工：那条管"要不要派"；本条管"派出去之后怎么连"。
+
+## 编排模式正式化：Anthropic 五工作流模式 + 汇聚语义 + HITL 门（来源：Anthropic《Building Effective Agents》2024-12 + buildingeffectiveagents.com/patterns + Orloj AgentSystem docs + devops.com durable runtime，2026-11-07 实拉）
+
+> 上节"六连接形状"是拓扑直觉；本节补业界统一的五模式词汇 + 两个本文原先缺的模式（evaluator-optimizer、orchestrator-workers 动态拆解）+ 汇聚/人在环的硬语义。两者互补不重复：六形状选"怎么连"，五模式选"用什么范式、花多少成本"。
+
+- **★先判 workflow vs agent**：工作流=预定义控制流（可枚举、可审计、便宜、可复现）；agent=模型自定控制流（开放式、贵、风险高）。**先上最简单能解决的工作流，量测证明不够再升 agent**；多数任务停在链式/路由即可。
+- **★五模式（成本递增，可组合）**，映射上节形状（不重展开）：
+  | 模式 | 一句话 | 对应/补充 |
+  |---|---|---|
+  | Prompt Chaining 链式 | 固定步骤串，步间可插**质量门**（输出不合格即停链） | ≈顺序 pipeline |
+  | Routing 路由 | 分类器分派到 N 个专能处理（分类器本身是单点故障，要单独测） | ≈交接/集中路由 |
+  | Parallelization 并行 | sectioning（独立子任务并行）+ **voting（同题多次取共识/多数）** | ≈fan-out；补 **voting** |
+  | Orchestrator-Workers 编排-执行 | 中心模型**动态拆**子任务再分派——子任务**不预先确定** | ≈分层；补"**动态拆解**" |
+  | Evaluator-Optimizer 评估-优化 | 生成→批判→修订循环到评估通过或预算耗尽 | **新**：接 `agent-evolution` Reflexion/GEPA |
+  | （第六）Autonomous Agent | 模型自循环，需停止条件 + 沙箱 | =上节"自主循环" |
+- **★成本类必须声明**：链式最便宜；并行线性于 N（延迟=最慢那路，非总和）；orchestrator **最贵**（要 worker 上限 + 每任务预算上限，防过度拆解）；evaluator 成本由**迭代数**主导（要迭代上限）。**组合**：路由→链；orchestrator 包 evaluator；并行嵌任意；多数生产系统 2–3 个模式组合。
+- **★fan-in 汇聚语义必声明（三选）**：`wait_for_all`（等全部）/ `quorum`（达 quorum_count 或 quorum_percent 即触发）/ 单路直通。上游失败时 `on_failure` 三档：`deadletter`（默认，进死信待查）/ `skip`（跳过继续）/ `continue_partial`（带部分结果继续）。条件路由把分支数减少时，**join 期望分支数要自动收缩**，否则永远等不满。
+- **★部分失败用"类型化失败结果"，不抛异常**：抛异常会中断整批（"first exception wins"，其他块白跑）；应每个 worker 返回 typed failure（成功/失败/未覆盖 三态 + 原因），主 Agent 据类型决定降级/重试/标未覆盖。
+- **★HITL 门（人在环）不是边缘情况**：不可逆 / 高影响 / 低置信 → 设 review checkpoint：暂停到 `WaitingApproval`、记录 blocked_on；`allow_request_changes` + `max_review_cycles` 限制反复打回；**HITL 必须带超时升级分支**（批准事件 与 定时器 竞速，超时 escalate；成功路径要 cancel 定时器，否则实例悬挂在 Running）。
+- **判据落点**：① 控制流能预先枚举→工作流（链式/路由/并行），不能→agent 循环；② 编排者保持"编排"角色别自己下场干活（否则成瓶颈）；③ 每类模式声明成本上限（worker 数 / 迭代数 / 预算）。
+- 与本文分工：§拓扑选型管"选形状"，本条管"选范式 + 花多少 + 怎么汇聚 + 什么时候停给人"；§双模型主-副手管"两个档位模型怎么省"，本条 evaluator 与它互补。
 
 ## 并行度不是免费的：顺序保证、写冲突与超限语义必须先声明好（来源：Pipedream 官方 `docs/workflows/building-workflows/settings/concurrency-and-throttling`，2026-09-27 r199-A 实拉 10,537B）
 - **★并行会取消顺序保证，而且覆盖是静默的**：文档举的例子是两个事件同时往同一张表写同一行，后写的把先写的盖掉，**不抛任何错**（"one event can overwrite data from another event … and no error will be thrown"）。**判据：只要多个并行块写同一个目标（同一文件 / 同一行 / 同一外部资源），就降级为串行（单 worker）；只有目标集合互不相交时才谈并行。**
