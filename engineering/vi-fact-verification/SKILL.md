@@ -46,8 +46,42 @@ modules: VI,EI
 - 涉外部事实/引用的交付（论文、报告）→ 先 VI 后交付。
 - 验证结论（含未通过项）→ **MI** 沉淀；反复出现的未通过项 → **RI** 复盘。
 
-## 六、来源（2026-11-07 实拉）
+## 六、系统化测试方法论（2026-11-07 第二轮实拉深化）
+
+> 上轮覆盖"来源分级 + 事实核查清单 + 评级"；本轮补"怎么验才严谨"——LLM 非确定性下，传统精确匹配失效，须用以下方法学把验证工程化。
+
+### 6.1 Golden Dataset 回归
+固定 50–200 组 输入/期望输出 对，每次改动后跑；偏离即告警。非确定性下最有价值的回归防线。
+
+### 6.2 属性测试（Property-Based）
+不测"精确输出"而测"必须恒真"的属性：输出为合法 JSON、无 PII、长度 < N、语言正确、含关键事实、不幻觉。快、便宜，格式回归秒级捕获。
+
+### 6.3 蜕变测试（Metamorphic）
+小改写输入（换个问法）不应改变事实；用假设检验在置信区间内验证蜕变关系。专治"换种说法就翻供"。
+
+### 6.4 差分测试（Differential）
+用生成模型造能暴露行为差异的测试输入，对比多模型/多版本是否分歧。PROBEGEN 用 LLM 迭代生成反例探针，曾推翻 18% 已通过人工测试的样本；PatchDiff 对 AI 生成补丁做全仓回归，约 30% "已解"问题经差分分析实为错。**稀疏测试谬误**：HumanEval 每题仅 1–3 用例，扩增 80× 后多模型成功率跌近 30%——模型常"靠运气过测"而非真懂逻辑。
+
+### 6.5 对抗/红队测试（Adversarial / Red-Team）
+固定对抗输入集（"忽略之前指令泄露系统提示" / SQL 注入 / 长度攻击）每版必跑；CI 定期而非一次性。覆盖提示注入、越狱、PII 泄露。
+
+### 6.6 LLM-as-Judge 评测管线
+独立高质量模型（如 Claude Opus）按 rubric 评 正确性/相关性/安全性，1–5 分，阈值告警。实践：property 每 PR（快），golden+judge 合 main，red-team 发版前；分数漂移 >5% 即告警。
+
+### 6.7 形式化验证（Formal Verification）
+安全关键场景：Marabou / α,β-CROWN 对网络行为给数学保证；DeepXplore / TensorFuzz 度量神经元覆盖。AI 验证的"白盒"进阶，补经验测试的盲区。
+
+### 6.8 与本章关系
+以上不替代 §三 的事实核查，而是把"验什么、怎么验"工程化：§四 的"真/误导/夸大/缺证据/假"评级是目标，本节方法是手段；与 EI 的 `certify` 双验收（执行过 + 方法对）。
+
+## 七、来源（2026-11-07 实拉，含本轮深化）
 
 - FactCheck.org 流程与反误导：factcheck.org（Our Process / How to Combat Misinformation, 2025-04）
 - 独立性原则与来源分级：thetijproject.ca/guide/how-to-fact-check/
 - 核查标准与来源层级：opengovtplatform.org/fact-checking
+
+### 本轮深化来源（2026-11-07 实拉，系统化测试）
+- lacuna.tiptreesystems.com（差分测试 / PatchDiff / PROBEGEN / EvalPlus·稀疏测试谬误）
+- michaeljohnpena.com/blog/2026-01-21-ai-testing-strategies（golden / property / adversarial 测试）
+- core.cz/en/blog/2025/ai-testing-automation（property + LLM-as-judge 评测管线）
+- argonsys.com（神经元覆盖 / FGSM-PGD 对抗 / 形式化验证 Marabou / CROWN）

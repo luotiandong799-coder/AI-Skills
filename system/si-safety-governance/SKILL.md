@@ -49,9 +49,51 @@ modules: SI,EI
 - 安装新 Skill/MCP 前 → SI 扫描（不执行被扫对象，仅静态+可选 LLM）。
 - 扫描结论 → **MI** 留痕；反复出现的中危 → **RI** 复盘。
 
-## 六、来源（2026-11-07 实拉）
+## 六、架构级安全方法论（2026-11-07 第二轮实拉深化）
+
+> 本技能上轮覆盖"扫描 17 类 + 风险评分"；本轮补"架构级防御"——光靠检测挡不住提示注入（LLM 分不清指令与数据），须靠架构让危险能力永不汇聚。
+
+### 6.1 致命三要素（Lethal Trifecta, Simon Willison）
+三项能力**单独都寻常**，仅当"在同一进程汇聚"时致命：
+1. **访问私有数据**（PII / 密钥 / 内部系统）
+2. **暴露不可信内容**（README / issue / 网页 / MCP 工具描述 / 检索片段）
+3. **外传通道**（网络出口 / 把数据送出的工具调用）
+注入内容可借此指挥 Agent 收集并外泄私有数据。架构目标：让三要素**永不落在同一步**。
+
+### 6.2 STRIDE ↔ Agent 攻击面映射
+| STRIDE | Agentic 表现 | 缓解 |
+|---|---|---|
+| Spoofing 仿冒 | 伪造 Agent 身份调用越权端点 | 会话盐化 XML 分隔符、强鉴权 |
+| Tampering 篡改 | 文档/DB/工具描述植入注入劫持推理 | 第三方文件/检索/DB 输入全部清洗 |
+| Repudiation 抵赖 | 缺动作日志无法溯源 | 独立不可变日志（查询/上下文/推理/工具调用） |
+| Info Disclosure 泄露 | 注入诱导抽取系统设置/密钥 | 输出净化、限 API、限制工具输出大小 |
+| DoS 拒绝服务 | 无限推理循环/超额 token | token 上限、递归深度上限、限流 |
+| EoP 提权 | 越权链式调用达成高危结果 | 最小权限 IAM + 破坏性动作 HITL |
+
+### 6.3 双 LLM 隔离（Dual-LLM / Split-Context）
+- **隔离 Worker（LLM1）**：沙箱、零工具、零网络，只把不可信内容转成**结构化校验数据**，不执行其中指令。
+- **受信 Controller（LLM2）**：只接收 Worker 的校验后 JSON，持工具与私有数据。
+- 注入载荷永远到不了"能行动"的上下文，三要素不汇聚。
+- 代价：多一次 LLM 推理（约 +80ms / 双倍 token 处理量），但中和约 99% 间接注入。
+
+### 6.4 沙箱 / Egress / RBAC / HITL
+- **Egress**：默认拒绝网络出口，按任务白名单放行。
+- **隔离运行时**：微 VM / gVisor / Firecracker / WASM，禁用网络、硬资源上限、短超时、只读根。
+- **RBAC**：工具权限按当前任务最小集，不用便利的全局服务账号。
+- **HITL**：转账/删数据/发布等不可逆动作需人类确认；闸门须"稀有、具体、展示将要发生什么"，否则一周内被橡皮图章化（频繁/模糊的批准对话会被点过）。
+
+### 6.5 DREAD 评分（补充 §四 的风险分级）
+对每项威胁：Damage / Reproducibility / Exploitability / Affected users / Discoverability 各 1–10，加权和定位 CRITICAL/HIGH。与 §四 的静态扫描评分互补：扫描给"代码风险"，DREAD 给"威胁业务影响"。
+
+## 七、来源（2026-11-07 实拉，含本轮深化）
 
 - NVIDIA/SkillSpector（71 规则 / 17 类 / 风险评分 / SARIF / MCP 工具）：github.com/NVIDIA/SkillSpector
 - skillhawk（Skill/MCP 安全扫描器，提示注入/危险命令/权限边界）：github.com/Bersilk-hub150/skillhawk
 - trailofbits/skills（安全研究审计技能）：github.com/trailofbits/skills
 - 互补：本仓 `system/skills-security-check`（供应链引用审计）
+
+### 本轮深化来源（2026-11-07 实拉，架构级安全）
+- stride.build/blog/architectural-trust-boundaries-prompt-injection（架构信任边界 / 双 LLM / 致命三要素 / STRIDE 映射）
+- codesecai.com/defending-against-indirect-prompt-injection-in-rag-the-2026-enterprise-security-playbook/（RAG 间接注入 STRIDE 映射 + 沙箱）
+- ai-roadmap-365.github.io/day-344-threat-modeling-ai-systems（双 LLM 隔离架构 + DREAD 评分）
+- fourfoldai.com/post/the-new-enterprise-stack-ai-apis-agents-and-automation-layers（多智能体 STRIDE / 临时沙箱 / RBAC / HITL）
