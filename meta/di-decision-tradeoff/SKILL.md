@@ -3,6 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
 module: DI
 modules: DI,TI
+version: "1.1.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -77,7 +78,20 @@ modules: DI,TI
 - **情景分析**：预设若干权重方案（"成本优先" vs "质量优先"），看结论是否随立场翻转。
 - **判读铁律**：MCDA 排名是**条件性**的——依赖标准/权重/归一化/聚合规则/不确定性假设。输出须分开"稳健 top"与"边缘候选"，并声明在什么权重变化下结论会变。
 
-## 七、来源（2026-11-07 实拉）
+## 七、决策日志与校准训练（来源：brierscore.com / digitaladvisory.com，2026-11-07 实拉）
+
+**核心原则：决策 ≠ 结果**。好决策（当时信息下合理）可能结果差，坏决策可能侥幸赢——只评过程，因为过程是唯一可控的。
+
+**决策日志七字段（结果出来前写，防事后偏差）**：
+1. 决策内容与备选方案 2. 最强证据 3. 概率估计（必须给数字，"大概"不可结算）4. 最大不确定性/最大假设 5. 预期结果+置信度 6. **改主意触发器**（什么证据出现我会改变判断）7. 评审日期（何时对账现实，过期不评=日志退化为档案）
+
+**日志腐坏四征兆（digitaladvisory）**：事后补写（=给未来写的新闻稿）、预期写得太模糊（怎么都不算错）、只记舒服的决策、写给未来读者看的体面话。有任一征兆，日志已失效。
+
+**按桶校准复盘（brierscore.com 预测日志法）**：定期按概率桶（0.5-0.6/0.6-0.7…）汇总——说 70% 的事是否约 70% 发生？哪类问题主导错误？一次只修一个重复错误（如基率忽视/过度自信），下 5 个决策强制应用（如">500 元支出前必须找一个反证来源"）。
+
+**与 MCDA 的分工**：本节管"决策后学习闭环"（时间维度）；§六 MCDA 管"单次多方案结构化对比"（空间维度）。
+
+## 八、来源（2026-11-07 实拉）
 
 - Weighted Decision Matrix / Pugh：skillmd.ai/skills/decision-matrix-1；ruleskill.com/skills/iflytek/decision-matrix
 - Pre-Mortem / Opportunity Cost / ICE / RICE / Eisenhower / 10-10-10：hub.decision.ai/skills/nickcrew/decision-maker；skilld.dev/gh/iflytek/skillhub/decision-matrix
