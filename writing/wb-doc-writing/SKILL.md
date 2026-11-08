@@ -2,7 +2,7 @@
 name: wb-doc-writing
 description: >-
   技术文档写作与评审（写给人看的文档：设计文档 / RFC / 提案 / 迁移方案 / ADR 决策记录 / 决策日志 / 评审报告）。当用户要求"写设计文档""写方案/RFC""写 ADR""记录一下为什么这么决定""评审这份文档""帮我改/润色这段技术文字""这份文档交付前过一遍""找找文档里的问题"时应用。核心方法论：编辑即诊断（每次编辑必须点名它修的具名缺陷，最小编辑胜出；无缺陷就改写自然或已批准的语言，本身就是缺陷）；缺口标记法（事实无来源写 [source wanted]、主张缺失写 [input wanted]、未完成段写 [DRAFT - input wanted]，删除留洞优于编造）；控制三问（改写后问"哪句还像语言模型 / 增删了事实吗 / 是否以新修辞形式重建了被删模式"，增和删都算错）；不受理清单（禁用构造清单本身不证明任何东西，同一段落多个迹象同时出现才标记）；Why & What 决策框（替代方案必须带最强论点，否则是稻草人）；设计文档完备性五缺陷；ADR 的 Negative 强制非空 + 接受后不可编辑 + append-only 决策日志；评审报告的判决先行与命名空情况；交付前去名测试与冷读整读。触发词：设计文档、RFC、提案、ADR、决策记录、决策日志、superseded、评审文档、文档评审、改文档、润色、技术写作、语言模型味、AI 味、去名测试、source wanted、input wanted、稻草人、Why & What、Negative 不得为空。不适用：做事前的规约与验收标准（走 wb-spec-driven）；交互式教学课程（走 wb-teaching）；生成物的正确性验证（走 wb-artifact-verification）。、复制断言要重新取证、假移植比遗漏更糟、镜像结构可以镜像结论不行、逐字搬移、保住块形态、表格折成散文是编辑、真重复要上报
-version: 1.11.0
+version: 1.20.0
 agent_created: true
 module: KI
 modules: KI,TI
@@ -346,3 +346,12 @@ Instead of: [被否掉的选项] - [为何不选]
 - 反模式：正文里写"2025 年 8 月之后"；旧法直接删导致考古无门；人读报告套死模板；同一概念三种叫法。
 - **提升层**：可复用 Skill（文档结构）+ 输出（模板严格度）。
 - 触发词：会过期的内容、日期条件句、旧版怎么摆、legacy、折叠区、模板写死还是给骨架、术语统一、一个概念一个词
+## r690B 下沉条目（1 点，KB-only：证据匹配主张类型——六类主张取证表、数字/缺席/改名三纪律、示例六查与未运行标注）（原文均在 references/knowledge-base.md）
+## r693A 下沉条目（1 点，KB-only）（原文在 references/knowledge-base.md）
+## r693B 下沉条目（1 点，KB-only）（原文在 references/knowledge-base.md）
+## r694B 下沉条目（1 点，KB-only）（原文在 references/knowledge-base.md）
+## r694C 下沉条目（1 点，KB-only）（原文在 references/knowledge-base.md）
+## r695B 下沉条目（2 点，KB-only）（原文在 references/knowledge-base.md）
+## r696C 下沉条目（1 点，KB-only：结论分级四档锚点 + 强弱判别问句——等级不得超过已证明影响、未验证不给级）（原文在 references/knowledge-base.md）
+## r697B 下沉条目（1 点，KB-only：知识记录默认扩展既有 owner——新建须证「装不下」、authority 三态、现在时）（原文在 references/knowledge-base.md）
+## r699A 下沉条目（1 点，KB-only：模型味文案的 ban/cap/context 三级判据——一条禁令必须配一条正面动作，具体只能来自输入）（原文在 references/knowledge-base.md）

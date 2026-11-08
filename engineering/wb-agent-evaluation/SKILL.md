@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算、机械验证优先、LLM judge 替代路径、授权动作降级为交互即验收失败、凭据有效≠连接可用、版本漂移、三态归因
-version: 1.143.0
+version: 1.147.0
 module: VI
 modules: VI
 ---
@@ -230,3 +230,33 @@ modules: VI
 ## r685 下沉条目（本轮 4 点，全 KB-only；原文均在 references/knowledge-base.md）
 
 ## r686 下沉条目（本轮 2 点，全 KB-only；C：分数是抽取规则的属性+三量随分数发布、强验器按档分配标注量+抑制作弊统计量）（原文均在 references/knowledge-base.md）
+## r695B 下沉：评测问题集要满足六属性，且每道题必须自己先解一遍
+
+来源：Anthropic 官方 `anthropics/skills`·`skills/mcp-builder/SKILL.md` Phase 4（11,129B，2026-11-08 实拉原文）。提升层：工作流（评测集构造）。
+
+- **十道题，每题都要满足六属性，缺一条就出局**：
+  1. **独立**——不依赖其他题的答案（否则一题错会连坐）；
+  2. **只读**——只用非破坏性操作就能答（评测不能改状态）；
+  3. **复杂**——需要多次工具调用与深挖，不能一问一答；
+  4. **真实**——真人会关心的用例，不是为考试编的题；
+  5. **可验证**——有唯一清晰答案，能靠字符串比对判分；
+  6. **稳定**——答案不随日期漂移（"今天股价多少"这种题不可入集）。
+- **出题后必须自己把每题解一遍**：原文流程是"列工具能力 → 用只读操作探数据 → 出 10 题 → **自己解出答案以确认可解且答案存在**"。判据：**没被解过的题不算题**——它可能无解、可能有多个答案、也可能答案藏在一次查询之外；这三种都会让评测把"题烂"记成"能力差"。
+- **与 §评测产物落盘契约 / §指标必须收敛为数值 的分工**：那两条管对照与判分形态，本条管**题本身该长什么样**——题不合格时，再好的判分流程也只产出精确的噪声。
+## r697B 下沉：指令文件的效果要用"多轮退化曲线"证明——单轮抽样只证明能对一次（来源：同上 `AGENTS.md`·`/vibe-test` 自定义命令 + 同仓 vibe-tests 执行契约）
+
+- **分层抽样跑一批，不是挑一个好例子**：整套 21 个测试按 `promptCategory` 分层，日常跑 5 个代表样本（`/vibe-test 5`）；每个样本记录 `persona`（如 naive）、`promptCategory`、`trajectoryDepth`，结果落 `<promptId>.tsx` + `<promptId>.json`（含 `evaluation.success / componentsUsed / escapeHatches`）。
+  - 判据：**评的是"这批 prompt 上的分布"，不是"我演示的那一个"**；`persona` 与 `escapeHatches` 必须记——逃逸到自造 API 正是指令没写清的症状。
+- **退化模式：把单轮变成 10 轮，插 filler / distractor / recovery**：`--degradation` 用 10 轮对话（填充轮、分心轮、恢复轮）模拟真实长会话，在第 **0 / 6 / 8 / 10** 轮各打一次探针，输出逐轮质量折线。
+  - 判据：**第 6/8/10 轮才是分水岭**——指令在 turn 0 生效只说明"开头记得"，插了分心内容还能回到正轨才叫"指令稳"。只测 happy-path 单轮，等于给指令文件发一张没做过的合格证。
+- **产物要与真实渲染对齐**：结果由 CI 工作流批量构建并截图，再跑聚合脚本出汇总——**代码能生成 ≠ 组件能渲染**，两件事分开验。
+  - 判据：**评测链路里"渲染/打开"必须是独立一步**，否则会把"生成了不存在的组件"记成成功。
+## r698A 下沉：会话事后诊断——七维度并行取证，无 `path:line` 的结论一律丢弃（来源：同上 `skills/diagnosing-superpowers/SKILL.md` 6,941B，2026-11-08 实拉）
+
+- **先把抱怨翻译成问题陈述**：一次只问一个问题，直到能写出「哪一场会话 + 大致轮次 + 期望什么 + 实际发生什么 + 在意哪个可观察量（墙钟/ token / 重复动作 / 某个具体动作）」。原文判据：**"it took too long" is a complaint, not a problem statement**。
+- **定位要可验证**：会话解析成绝对路径；确认历史会话的方法是**引用它的首条 prompt + 时间戳**；被排除的候选要逐条写明理由（或写 "none"）；子代理的 transcript 也要枚举。
+- **按维度分派并行分析师，而不是一个人顺着看**：`skill-timeline`（技能该触发却没触发）/ `plan-adherence`（计划漂移）/ `repeated-work`（重复劳动）/ `stumbles`（反复踩坑）/ `quality-evidence`（质量证据缺失）/ `request-conflicts`（用户要求自相冲突）/ `cost-and-time`（成本与时长）。长会话按轮次区间切分同一维度再并行。
+- **证据门槛是硬的**：每个结论必须带 `path:line` 引用，**没有引用就没有结论**；所有数字来自 transcript 或自己跑过的命令，不来自记忆。
+- **报告先行、判定后置**：按固定节次写完报告并给出文件路径；"是否要改框架"由 triage 的人决定，诊断者只报告。提 issue 前先**搜 open + closed 找同症状**，能并到最近的那条就不新开。
+- 判据：**事后诊断的价值在"可核对的定位"，不在"听起来合理的归因"**——一条没有行号的解释，在下一次复盘里无法被证伪，也无法被复用。
+## r698C 下沉条目（1 点，KB-only：技能评估三层阶梯——结构免费/路由免费/行为付费，第 2 层不过先改 description）（原文在 references/knowledge-base.md）

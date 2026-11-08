@@ -1,0 +1,89 @@
+# 原有技能只读快照
+
+生成时间：2026-11-07T11:31:56
+根目录：D:\腾讯AI\skills
+排除：writing/supply-chain-thesis-master（本次新建）
+
+> 说明：本快照在验收阶段生成，用于**事后核验**本次任务未修改/删除/覆盖任何原有技能；
+> 它不是事前备份。因本次未对原有技能执行任何写操作，无需回滚。
+> 合并/备份/恢复能力的演练证据见 `tests/runtime/dup-drill/`（虚拟样本，不进入真实技能库）。
+
+原有技能总数：60
+
+## 按顶层目录
+
+| 目录 | 数量 |
+|---|---|
+| agent | 4 |
+| defaults | 3 |
+| engineering | 15 |
+| media | 4 |
+| meta | 4 |
+| research | 5 |
+| system | 21 |
+| writing | 4 |
+
+## 逐项哈希（sha256 前 12 位）
+
+| 相对路径 | sha256[:12] | 字节 |
+|---|---|---|
+| agent/agent-guild/SKILL.md | 638db8313fea | 158383 |
+| agent/ai-input-enhancement/SKILL.md | 35154fb0f91c | 8598 |
+| agent/grill-me/SKILL.md | c371fc69ae02 | 5767 |
+| agent/prompt-library-40/SKILL.md | 0e68a09e3066 | 4977 |
+| defaults/wb-context-compressor/SKILL.md | 424e900aca6e | 1460752 |
+| defaults/wb-max-token-saver/SKILL.md | 507fae36efca | 34111 |
+| defaults/wb-ponytail/SKILL.md | c66a16a846e9 | 26727 |
+| engineering/distill-cat/SKILL.md | bb015d6944d9 | 11943 |
+| engineering/improve-codebase-architecture/SKILL.md | b84ba1b32b86 | 4576 |
+| engineering/multimodal-intelligence/SKILL.md | 1e597393d8c9 | 3391 |
+| engineering/to-tickets/SKILL.md | cb9266f1bc4e | 3847 |
+| engineering/wb-agent-evaluation/SKILL.md | b7715be63d56 | 87406 |
+| engineering/wb-artifact-verification/SKILL.md | 60c4d7fc4b0b | 254898 |
+| engineering/wb-debug-loop/SKILL.md | 08f0ea8b14b8 | 191265 |
+| engineering/wb-doc-file-intel/SKILL.md | 109706d9cb81 | 5228 |
+| engineering/wb-execute-discipline/SKILL.md | 637d5a2c52fd | 1475759 |
+| engineering/wb-release-maintain/SKILL.md | 9911683a5383 | 201312 |
+| engineering/wb-skill-authoring/SKILL.md | 4ba9f106ad9c | 184442 |
+| engineering/wb-spec-driven/SKILL.md | 0021aa7c235f | 63307 |
+| engineering/wb-subagent-delegation/SKILL.md | 131441e3e740 | 50519 |
+| engineering/wb-teaching/SKILL.md | 698e3ca4ea5c | 3392 |
+| engineering/wb-ui-visual-qa/SKILL.md | 34a6024cd171 | 3296 |
+| media/image-processor/SKILL.md | 8588b4dfdbe9 | 2416 |
+| media/rg-ffmpeg-tools/SKILL.md | 4d7eb2528fee | 3288 |
+| media/wb-media-forensics/SKILL.md | b1a1b45e3344 | 7421 |
+| media/wb-visual-gen/SKILL.md | c1071e09cdcd | 14922 |
+| meta/agent-evolution/SKILL.md | 0e74fc92375f | 12471 |
+| meta/knowledge-governance/SKILL.md | ee8b02adce33 | 13441 |
+| meta/personal-ai-employees/SKILL.md | 1c300b16bfe4 | 9395 |
+| meta/personal-ai-os/SKILL.md | 33893e3160e9 | 41296 |
+| research/agent-reach/SKILL.md | a5560c132dd8 | 7101 |
+| research/last30days-cn/SKILL.md | 6a3c05a470f6 | 6192 |
+| research/local-semantic-search/SKILL.md | 6ffc6143750a | 2220 |
+| research/user-centric-research/SKILL.md | ad3200b5bac0 | 4785 |
+| research/web-scrape/SKILL.md | f4739625e17a | 11307 |
+| system/browser-automation/SKILL.md | cff203f85db8 | 22870 |
+| system/browser-skill/SKILL.md | 3e06202933b2 | 15241 |
+| system/bsk-drive-logged-in-browser/SKILL.md | 252a2cc87d66 | 19976 |
+| system/bsk-local-build-and-connect/SKILL.md | a8bff24abd73 | 12091 |
+| system/computer-use-windows/SKILL.md | c02dc212795d | 2946 |
+| system/edge-pwa-shortcut/SKILL.md | 9721c74ac815 | 4846 |
+| system/git-repo-recovery/SKILL.md | 3714ead9ee32 | 11392 |
+| system/github/SKILL.md | f8b6f3b380d6 | 1306 |
+| system/github-ssh-over-443/SKILL.md | 362406a8e688 | 5647 |
+| system/local-file-dedup/SKILL.md | 888dd4e6d763 | 6293 |
+| system/mcp-builder/SKILL.md | f0cdd248ce46 | 27224 |
+| system/powershell-windows-cli/SKILL.md | ce1226007a2c | 2690 |
+| system/skills-security-check/SKILL.md | e57374ad0a58 | 182415 |
+| system/smart-message-autoreply/SKILL.md | 02540bfdb6ca | 18429 |
+| system/wechat-desktop-claw-automatic-control__skillhub/SKILL.md | 14cfd7e4c6af | 8077 |
+| system/win-native-app-automation/SKILL.md | 9c3e1a3ba303 | 25657 |
+| system/winapp-ui-automation/SKILL.md | 4a3f42980ea5 | 4464 |
+| system/windows-automation/SKILL.md | 49d81380268b | 2473 |
+| system/windows-migrate-to-d-via-junction/SKILL.md | a0cbe8611a2a | 11692 |
+| system/windows-ops-experience/SKILL.md | 4d14270be640 | 4646 |
+| system/workbuddy-claw-wechat-send/SKILL.md | e7893fbb3f39 | 4469 |
+| writing/cangjie-skill/SKILL.md | d11b07412e40 | 13951 |
+| writing/humanizer-zh/SKILL.md | c1ac9abccc29 | 6847 |
+| writing/resume-ai-help/SKILL.md | 421a11f5332b | 15999 |
+| writing/wb-doc-writing/SKILL.md | 76d854a1762f | 39717 |

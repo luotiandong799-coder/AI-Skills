@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.57.0
+version: 1.64.0
 agent_created: true
 module: OI
 modules: OI
@@ -255,3 +255,10 @@ modules: OI
 - 提升层：工作流（委派/回调契约的验证归属）。触发词：投递回执不证消费、waitpoint_consumed、stale && !marker、TTL 覆盖重试窗、首退避 1s、终态反推假阳、PENDING 仲裁优先、送达不等于完成。
 
 ## r655 下沉条目（C：33：子代理的能力面快照在启动时刻取：派前须等能力面就绪或声明迟到能力不纳入）（原文均在 references/knowledge-base.md）
+## r690B 下沉条目（1 点，KB-only：评审类委派三道前置——输入预检在父进程做、简报禁递归扇出、换会话评审、先提交再评三点 diff）（原文均在 references/knowledge-base.md）
+## r691B 下沉条目（1 点，KB-only：并行实现委派三坑——worktree 只推迟冲突（共享文件须串行或先定死命名）、worktree 只含已跟踪物（夹具测试假绿）、子代理不继承上游流程指令）（原文在 references/knowledge-base.md）
+## r692A 下沉条目（1 点，KB-only：评审委派两个泄漏——子代理不禁止自调用会递归扇出、评审不收敛按引用处理即停）（原文在 references/knowledge-base.md）
+## r693B 下沉条目（1 点，KB-only）（原文在 references/knowledge-base.md）
+## r693C 下沉条目（1 点，KB-only）（原文在 references/knowledge-base.md）
+## r698C 下沉条目（1 点，KB-only：agent brief 耐久优先——不写路径行号，写接口/行为契约/可独立验证的验收/显式范围）（原文在 references/knowledge-base.md）
+## r699B 下沉条目（1 点，KB-only：扇出只产候选不打分——分片≤8/并发≤4/每片≤8轮/递归关，叶子代理能力封闭，收工出覆盖率回执）（原文在 references/knowledge-base.md）

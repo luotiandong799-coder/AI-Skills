@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、裁剪保序、部分保留超预算、请求级开销双计、复合内容漏计、超大工具结果延迟注入、延迟加载命名空间封装
-version: 1.96.0
+version: 1.97.0
 module: CI
 modules: CI
 ---
@@ -190,3 +190,4 @@ agentic loop（每轮循环读上下文）是账单黑洞：单轮 12k token 的
 - **剪枝规则可跨任务转移，保序规则反而过拟合**：**同一技能应用到 30 个无关任务时，prune rules 跨 benchmark 转移并砍 32% 中位成本；preserve rules 基于 benchmark 特有惯例，在新任务类型上引发回归**（ClawTrace 消融）→ 判据：**通用化优先剪"冗余开销"，慎保留"特定惯例"**；把某任务集的成功惯例固化为普适规则=换任务就回归。
 - **成本标签聚合找低效点**：**每 span 挂成本 tag（tokens_input×price_input + tokens_output×price_output），按 session/任务类型/agent 聚合——识别"简单任务吃大量 token"的低效 agent**（Ayi NEDJIMI《LLMOps Monitoring》2026）→ 判据：**成本按任务类型聚合对比，不是看单次调用**；单次便宜但高频=总账最大头。
 - **提升层**：工具 / token 治理（成本感知提炼）。触发词：per-step cost、Preserve/Prune/Repair、反事实论证、成本标签聚合、低效 agent、成本感知蒸馏。
+## r699B 下沉条目（1 点，KB-only：工作量四档只动广度深度、不动评审与审计；严格度是第二条轴）（原文在 references/knowledge-base.md）

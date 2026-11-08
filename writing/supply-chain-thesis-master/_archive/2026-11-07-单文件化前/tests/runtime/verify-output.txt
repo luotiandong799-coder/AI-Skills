@@ -1,0 +1,97 @@
+Supply Chain Thesis Master 验收证据
+数据: tests/fixtures/virtual-tasks.md (全部虚构)
+============================================================
+
+== T1 模块路由：12 模块 / 9 环节 ==
+  帮我做仓储方向的开题报告，写研究背景和技术路线  ->  01-topic-proposal.md  |  # 01 选题与开题
+[PASS] 路由 01-topic-proposal.md | 存在=True 登记=True
+  这三篇文献是真的吗，帮我做真实性核验  ->  02-literature-review.md  |  # 02 文献检索与综述
+[PASS] 路由 02-literature-review.md | 存在=True 登记=True
+  分析仓库拣选作业和货位布局问题  ->  03-warehouse-management.md  |  # 03 仓储管理专业知识
+[PASS] 路由 03-warehouse-management.md | 存在=True 登记=True
+  帮我算安全库存和订货点  ->  04-inventory-management.md  |  # 04 库存管理专业知识
+[PASS] 路由 04-inventory-management.md | 存在=True 登记=True
+  这个题目该用什么研究方法  ->  05-research-methods.md  |  # 05 研究方法
+[PASS] 路由 05-research-methods.md | 存在=True 登记=True
+  清洗这份库存台账并计算指标  ->  06-data-analysis.md  |  # 06 数据处理与分析
+[PASS] 路由 06-data-analysis.md | 存在=True 登记=True
+  给我一份论文章节大纲和字数分配  ->  07-thesis-outline.md  |  # 07 论文大纲与结构
+[PASS] 路由 07-thesis-outline.md | 存在=True 登记=True
+  写第 4 章企业现状分析  ->  08-academic-writing.md  |  # 08 论文正文写作
+[PASS] 路由 08-academic-writing.md | 存在=True 登记=True
+  第 3 章和第 5 章内容重复了  ->  09-content-deduplication.md  |  # 09 内容去重
+[PASS] 路由 09-content-deduplication.md | 存在=True 登记=True
+  这段太像 AI 写的，帮我润色  ->  10-academic-humanization.md  |  # 10 学术表达润色
+[PASS] 路由 10-academic-humanization.md | 存在=True 登记=True
+  参考文献格式不对，GB/T 7714 怎么排  ->  11-citation-formatting.md  |  # 11 引用与格式
+[PASS] 路由 11-citation-formatting.md | 存在=True 登记=True
+  交稿前做最终质量审查和答辩准备  ->  12-quality-defense.md  |  # 12 论文质量与答辩
+[PASS] 路由 12-quality-defense.md | 存在=True 登记=True
+
+== T2 规则 / 公式单源（排除 tests 与 deliverables） ==
+  扫描文件数: 35
+[PASS] 公式单源 SS\s*=\s*Z | 命中=['references/formulas-and-indicators.md']
+[PASS] 公式单源 ROP\s*=\s*d | 命中=['references/formulas-and-indicators.md']
+[PASS] 公式单源 EOQ\s*=\s*√ | 命中=['references/formulas-and-indicators.md']
+[PASS] 公式单源 销货成本\s*/\s*平均库存 | 命中=['references/formulas-and-indicators.md']
+[PASS] 公式单源 拣货总件数\s*/ | 命中=['references/formulas-and-indicators.md']
+[PASS] 公式单源 账实相符 SKU 数\s*/ | 命中=['references/formulas-and-indicators.md']
+[PASS] 保量阈值 92% 单源 | 命中=['references/academic-writing-rules.md']
+[PASS] 模块内无规则表副本 | 命中=[]
+[PASS] 10 模块指向唯一规则源 | 编号引用
+[PASS] 04 模块用编号引用公式 | I1/I2/I3/I6/I7/I8
+
+== T3 测试 B：指标计算（按公式库 W/I 编号独立复算） ==
+  I1 库存周转率: 9,000,000 / 1,500,000 = 6.00 次 | 分母为销货成本；平均库存取期初期末均值
+  I2 库存周转天数: 365 / 6.00 = 60.83 天 | 按 365 天折算
+  I3 呆滞库存占比: 225,000 / 1,800,000 = 12.5% | 呆滞阈值为超 180 天未动销
+  I6 安全库存: 1.65 × 40 × √9 = 198 件 | Z=1.65 为假设服务水平；σd 按日、LT 按日，单位一致
+  I7 订货点: 120 × 9 + 198 = 1,278 件 | d 为日均需求
+  I8 经济订货批量: √(2 × 43,800 × 200 / 6) = 1,709 件 | S、H 为假设值，须做敏感性说明
+  W2 人均拣货量: 12,000 / (6 × 30) = 66.67 件/人/天 | 不含复核与补货工时
+  W4 拣货准确率: 1 − 36 / 2,400 = 98.5% | 以拣货行为单位
+  W7 库存准确率: 188 / 200 = 94.0% | 随机抽查 200 个 SKU
+[PASS] I1 周转率分母为销货成本 | 6.00
+[PASS] I6 安全库存单位一致 | 198
+[PASS] I7 订货点含安全库存 | 1,278
+[PASS] W7 抽查口径写明 | 94.0%
+  勾稽检查：期初 + 入库 − 出库 = 期末 -> 入库/出库流水未提供，标记「待补」，不编造
+[PASS] 缺流水不编造勾稽结论 | 输出待补
+  已生成 tests/runtime/task-B-indicators.md
+
+== T4 正文润色：保护项与保量 ==
+  规则版本：已含阈值冲突裁决
+[PASS] P1 数字/引用/公式编号不丢失 | 丢失=[]
+[PASS] P1 不新增数字 | 新增=[]
+[PASS] P1 术语保持 | 丢失=[]
+  P1 汉字数 51 -> 49  保量比 96.1%
+[PASS] P1 保量 ≥92% | 96.1%
+[PASS] P2 数字/引用/公式编号不丢失 | 丢失=[]
+[PASS] P2 不新增数字 | 新增=[]
+[PASS] P2 术语保持 | 丢失=[]
+  P2 汉字数 87 -> 42  保量比 48.3%
+  P2 判定：套话密集段触发「需补料」分支（不判失败，不编造补足）
+[PASS] P2 阈值冲突按新规则处置 | 需补料分支
+
+== T5 重复技能：识别 / 备份 / 合并 / 恢复 ==
+  原始哈希: {'warehouse-picking': '3a49def6', 'warehouse-picking-v2': '9ba9ea27', 'inventory-abc': '20bfd419'}
+  Jaccard(bigram): A-vs-B=0.777  A-vs-C=0.146  B-vs-C=0.122
+[PASS] 高重叠对被识别 (≥0.30) | 0.777
+[PASS] 不同主题对不被误合并 (<0.30) | 0.146/0.122
+[PASS] 同内容信号未误报 | 3 份内容互不相同
+[PASS] 同名信号命中 | 目录名相似
+[PASS] 备份完成 | 3 个文件
+[PASS] 合并保留基准全部内容 | base 4 条
+[PASS] 合并吸收 v2 独有内容 | 2 条独有点
+[PASS] 合并未纳入不同主题技能 | inventory-abc 未混入
+[PASS] 从备份恢复后哈希一致 | ['3a49def6', '9ba9ea27', '20bfd419']
+[PASS] 原始技能未被改动 | 原文件只读
+
+== T6 引用核验 / 最终质量审查 ==
+[PASS] 虚构文献标待核验/待补 | 未当真实文献使用
+[PASS] 不承诺检测结果 | 本地预检口径
+[PASS] 问题-原因-对策对应 | 三段齐备
+[PASS] 资料隔离声明 | 测试资料未混入真实项目
+
+============================================================
+汇总: 49/49 PASS

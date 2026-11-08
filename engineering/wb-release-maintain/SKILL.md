@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、评分项与否决项分列、证据可复跑、配对按稳定 id 优先于名称、改名因此降为非破坏性、rename-column、破坏性判定只留丢数据操作、拒绝集显式枚举且拒写、swap cycle 拒绝、id 跨表冲突、包内重复 id 拒绝、旧包按名配对静默采纳包 id、竞态限制诚实声明、diff 面板锚点、top panel 将被更新的一方、推拉面板互换、节点级 JSON diff、trustedSource、clearBindings、credential blanking、一路由一读模型、license 只 gate 写、RBAC_ACCESS_POLICY_BINDING_LOCKED、replace vs append、aes-256-gcm、MAX_BYTES_OVERHEAD、CBC fallback、多段推送第二段被拒、stable vs beta tag、renovate 只取稳定、apiKeyId 计数键、轮换不重置预算、ms_outlook 重命名、回调 URI 变化、required_mcp_variables、默认租约载体、重启丢租约、active_slots 不释放、os.path.exists 对远端恒假、python_version.txt unknown、加入与移除判据不对称、发布提交重解析锁、release 夹带依赖升级、缓存失效、先删叶子再删父、删除失败保留行可重试、重发布不影响在飞、恢复前先落定草稿
-version: 1.252.0
+version: 1.258.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -500,3 +500,10 @@ modules: EI
 ## r685 下沉条目（本轮 1 点，全 KB-only；原文均在 references/knowledge-base.md）
 
 ## r686 下沉条目（本轮 1 点，全 KB-only；A：升级兼容预检只读/阻断/试改三档 + 逐节点断言 + 哈希短路必要非充分）（原文均在 references/knowledge-base.md）
+
+## r689A 下沉条目（1 点，KB-only：交付正文三件套——最小可视化摘要 + before/after 可执行证据 + merge-danger 单向门/双向门与爆炸半径声明）（原文均在 references/knowledge-base.md）
+## r690A 下沉条目（1 点，KB-only：报告与证据成比例——0 confirmed 合法、严重度不超已证影响、待验/已证分区、incomplete 只报已验证部分）（原文均在 references/knowledge-base.md）
+## r690C 下沉条目（1 点，KB-only：交付不等于关单——执行器不勾验收项、不关工作项，依赖链 frontier 靠显式状态更新推进）（原文均在 references/knowledge-base.md）
+## r691B 下沉条目（1 点，KB-only：交付节点只有一个——全量评审写进交付定义、评审循环须带停止判据、并行编排产出默认是草稿）（原文在 references/knowledge-base.md）
+## r692B 下沉条目（1 点，KB-only：合并冲突先读两侧意图、能兼容就都留、提交前跑检查、不 --abort）（原文在 references/knowledge-base.md）
+## r692C 下沉条目（1 点，KB-only：可逆性随时间翻转、作者自评最可疑、爆炸半径具名）（原文在 references/knowledge-base.md）

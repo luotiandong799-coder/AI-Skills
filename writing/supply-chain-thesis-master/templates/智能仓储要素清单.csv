@@ -1,0 +1,23 @@
+﻿层级,要素,公开资料表述,一手来源,论文处理方式
+设备,密集库 / 立体库,密集库与料箱机器人组合设计，货架高度超过 8 米，提高存储密度,https://www.ec100.cn/Home/detail--6637279.html,写类型，不写高度与面积
+设备,料箱机器人 ACR / CTU,多层料箱机器人（投产报道称 ACR，项目启动报道称 CTU），负责料箱搬送与出入库,https://www.zhangtongshe.com/article.html?id=10371,两种叫法按阶段分列
+设备,伸缩降厢式机器人,政府官网列举的智能仓设备之一,https://www.shqp.gov.cn/shqp/qpyw/20260616/1374432.html,写类型
+设备,智能装卸料机 / 自动装卸料机,衔接入库与料箱搬运的自动装卸设备,https://www.ec100.cn/Home/detail--6637279.html,写类型
+设备,输送系统 / 自动分拨线,沿轨道把料箱输送到指定仓位，并承担出库分拨,https://www.ec100.cn/Home/detail--6637279.html,写类型
+设备,货到人拣选工作站,料箱送到工作站，人员按可视化指示完成拣选,https://www.ec100.cn/Home/detail--6637279.html,写类型
+设备,旋转式 EVM 智能小仓库,现场刷脸领料，后台实时同步库存并自动触发补货,https://www.thepaper.cn/newsDetail_forward_32831516,写类型与流程，不写宣传效率数字
+设备,弹簧机 / 格子机 / 称重机 / 刀具柜 / 流利式货架 / 智能无人仓,客户现场侧智能仓储设备种类,https://business.zkh360.com/EVM,写类型
+系统,WMS 仓库管理系统,负责物料与库位信息管理、任务下发,https://www.ec100.cn/Home/detail--6637279.html,写系统名与职能
+系统,WCS 仓库控制系统,与 WMS 高度集成，控制设备执行并反馈状态,https://www.ec100.cn/Home/detail--6637279.html,写系统名与职能
+系统,自动导航 / 视觉识别 / 智能拣选系统,支撑储位智能定位与仓内无人化作业,https://www.shqp.gov.cn/shqp/qpyw/20260616/1374432.html,写系统名与职能
+系统,数字孪生 / 3D SCADA 可视化,设备运行动态三维可视化，按品类、数量、位置优化调度,https://www.ec100.cn/Home/detail--6637279.html,写系统名与职能
+系统,安全库存补货提醒 / 领用查询 / 库存查看 / 报表分析,在线库存管理功能，支持缺货提醒与数据同步,https://business.zkh360.com/EVM,写功能
+作业环节,入库：验收 → 装卸 → 输送 → 上架,密集库与料箱机器人完成入库输送和上架,https://www.ec100.cn/Home/detail--6637279.html,写流程
+作业环节,在库：一品一位 + 批次管理,储位智能定位、库存查看、批次与账实管理,https://www.zhangtongshe.com/article.html?id=10371,写流程
+作业环节,出库：订单 → 料箱搬送 → 货到人拣选 → 复核包装 → 自动分拨,人员按 3D SCADA 指示完成拣选，替代人到货走动线,https://www.ec100.cn/Home/detail--6637279.html,写流程
+作业环节,现场领料：刷脸 → 智能小仓库 → 后台库存同步 → 自动补货,产线侧紧固件领用闭环,https://www.thepaper.cn/newsDetail_forward_32831516,写流程
+业务模式,JMI 联合库存管理 / VMI 供应商库存管理 / OOD 领用即下单,智能仓储设备的库存管理业务模式,https://business.zkh360.com/EVM,写模式名
+规模数据,使用面积 9600㎡ / 建筑占地 4300㎡,两处公开口径不一致，须分列标注,https://www.ec100.cn/Home/detail--6637279.html,不写入正文，仅作行业参照
+规模数据,一期 3.6 万料箱 / 2.7 万 SKU；投产 4.8 万料箱,项目启动与投产两个阶段的口径，不可混用,https://www.zhangtongshe.com/article.html?id=10371,不写入正文，仅作行业参照
+规模数据,32 台拣货机器人 / 8500 订单行每日 / 拣选效率 +300%,2026 年现场报道口径，与 2024 投产报道不完全一致,https://www.thepaper.cn/newsDetail_forward_32831516,不写入正文，不写成案例企业实测值
+规模数据,人力成本 -27% / 拣货准确率 >99% / 空间 +25% / 作业效率 +30%,企业公开宣传效率数据,https://www.ec100.cn/Home/detail--6637279.html,不写入正文，不作为本研究结论
