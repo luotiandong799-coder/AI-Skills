@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.67.0
+version: 1.69.0
 agent_created: true
 module: OI
 modules: OI
@@ -267,3 +267,5 @@ modules: OI
 
 ## r707B 下沉条目（1 点，KB-only：并行派发＝一个独立问题域一个 agent（3+ 不同根因失败/多子系统/无共享状态），子 agent 不继承会话上下文只拿构造好的上下文，有共享状态或顺序依赖改串行，写入型并行先隔离）（原文在 references/knowledge-base.md）
 
+## r712A 下沉条目（1 点，KB-only：看板式交接＝任务态每轮重写/archive 只追加逐字折叠/分层读命中即停/写超时先回读/board 为隔离单位）（原文在 references/knowledge-base.md）
+## r712B 下沉条目（1 点，KB-only：并行五模式＝研究+实现回灌/多文件/测试 watcher+修复者/跨 harness/三视角评审；只并行互不依赖、合并前复审、worktree 隔离、pane ≤5–6）（原文在 references/knowledge-base.md）

@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算、机械验证优先、LLM judge 替代路径、授权动作降级为交互即验收失败、凭据有效≠连接可用、版本漂移、三态归因
-version: 1.153.0
+version: 1.155.0
 module: VI
 modules: VI
 ---
@@ -271,3 +271,5 @@ modules: VI
 
 ## r705C 下沉条目（1 点，KB-only：agent 12 层栈诊断＝prompt/历史/长期记忆/蒸馏产物/召回/工具选择/工具执行/结果解读/答案成形/渲染/隐藏修复循环/持久化 逐层排除，五种高频模式（wrapper regression·记忆污染·工具纪律·传输篡改·隐藏层），发现按 blocker/major/minor 排序并给代码级修法）（原文在 references/knowledge-base.md）
 
+## r711B 下沉条目（1 点，KB-only：误判经济学＝指标从失败成本选+混淆矩阵早做+错误分析六步闭环+晋升门槛 fail closed+迭代台账槽位）（原文在 references/knowledge-base.md）
+## r712C 下沉条目（1 点，KB-only：评审独立性靠"各自定稿再汇总"的流程 + 同源即相关误差要披露 + 校准需金标准集与 FNR/FPR/balanced accuracy + 无法核验的写 unverified 不许称独立）（原文在 references/knowledge-base.md）

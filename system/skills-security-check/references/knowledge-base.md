@@ -2851,3 +2851,9 @@ Knowledge 的读写范围由本次运行的 scope tag 决定，而 **tag 来自�
 - **正则要窄，锚定具体形态**：命中 `rm -rf /`、`--no-verify`、写入 `.env`/密钥文件这类**明确形态**；不要用"包含 delete 就拦"的宽匹配——宽规则的误报会让真规则一起被忽略。
 - **新规则先 warn 观察一段再升 block**：先看它命中什么、误报多少，再决定收紧或升级；每条规则正文写清**为什么存在**与**误报时怎么处理**。
 - 判据：**规则文件是"下不为例"的机器版本**；写不进规则的约束，只能算提醒，不能算护栏。
+## r711A · MCP 依赖漂移判型的三个补口：容器 digest / 参数边界 / pin 纪律（来源：GitHub `affaan-m/ECC`·`.agents/skills/mcp-dependency-review/SKILL.md` 10,228B，2026-11-08 一手实拉；与 `## r704A` 重叠约 55%，此处只保留其未覆盖的判型与纪律）
+
+- **容器与 Python 的判型表**（r704A 只覆盖 npm 侧）：Docker `@sha256:<完整 digest>`＝**SAFE**（digest 固定镜像内容，即使同时带 tag）；**任何 tag 或无 tag 无 digest＝HIGH**——包括长得像版本号的 `:1.2.3`，因为 tag 可被重新指向；Python `pkg==1.2.3` 或 `uvx pkg@1.2.3`＝SAFE，`pkg==1.*` 不算精确；无版本或 `@latest`＝HIGH；`>=`/`~=`/通配＝MEDIUM；editable / 直接 URL / VCS 引用＝**REVIEW**（不得从"看起来像 commit"推断安全）。
+- **参数边界先切对，再判型**：`npx --package X exe` 里 **X 才是包选择器、exe 是可执行名**；`uvx --from SPEC cmd`、`pipx run --spec SPEC cmd` 同理解析 `--from`/`--spec`（含 `--from=` 形式）；`docker run --rm -i img:tag cmd` 里 **img:tag 是镜像**，前面的 volume/env 选项值不能当镜像。解析不出边界或语法不受支持 → **REVIEW，且不许为了判型去执行命令**。
+- **pin 必须 pin 到"已审过的版本"**：不得把今天 registry 的最新版填进去冒充修复；不知道团队审过哪版，就写"版本待确认"。`-y`/`--yes` 只说明抑制交互确认，**本身不是漏洞**。
+- **报告收尾的三句边界**：本次未执行任何 MCP server；可变引用是可复现性/评审信号，不是入侵结论；SAFE 只约束直接选择器，不含传递依赖与授权/注入/隔离——**干净结果不等于完整 MCP 安全评估**。

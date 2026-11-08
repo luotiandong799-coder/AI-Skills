@@ -314,3 +314,26 @@ Personal AI OS 不允许无限膨胀。定期审查 Skill / MCP / Workflow / Exp
 **任务完成后清理不再需要的临时上下文、缓存与中间文件**（`D:\腾讯AI\yt\tmp\` 之类），**但绝不删除用户数据**（判据见 §七 与 §三十四）。
 
 ---
+
+## r713A｜记忆流架构的三条治理判据（MI · 2026-11-08 实拉加厚，KB-only）
+
+> 落地理由：`wb-context-compressor` 与 `agent-evolution` 已把「三因子加权 / decay 0.995 / 反思阈值 150 / 信念树」写透，本轮**不重复**；只取全库 0 命中的架构层三条。
+
+**A-1 写入端不预筛，容量是检索侧的问题而不是写入侧的问题**
+- 实证：Generative Agents 的 memory stream 是**时间驱动的 append-only 列表**，观察随模拟时间流式追加，「不管成败，每一步都记」，**不预先筛掉「不重要」的**；与「失败驱动」的教训库相反。原文摘要：架构用自然语言 "store a complete record of the agent's experiences"。
+- 判据：① 在写入时判断「这条重不重要」会丢掉**事后才显出价值**的上下文，且该判断一次性不可重算 ⇒ 记忆治理的容量旋钮应放在检索/剪枝侧，不在准入侧做重要性丢弃；② 但这套是重方案（25 agents 跑两天耗数千美元 token、耗时数天），**不自动迁移到轻量场景**——先算成本再决定要不要「全记」。与已有「写粒度由 ingestion 单元决定」互补：那条管怎么切，本条管要不要在写入时丢。
+
+**A-2 派生层回写同一条流，才不会「高层结论只在生成那一刻可用」**
+- 实证：reflection 与 plan **都存回 memory stream 并参与检索**（讲义原文 "Plans are also stored in memory stream and included in retrieval process"）；反思递归（可对反思再反思）；观察与既有计划冲突时**只重规划受影响的段**，不整体重跑（"replans the affected segment"）。
+- 判据：① observation / reflection / plan 三类对象**共用同一检索面**，不能把高层结论另存到检索不到的地方；② 重规划的粒度是「受影响段」而非全量重做 ⇒ 计划改向不应付出「重跑一遍」的代价；③ 派生结论要带指回原观察的指针，否则递归抽象会失去可核验性。
+
+**A-3 组件必要性要消融证明，并同时给出成本量级**
+- 实证：论文摘要逐字 "We demonstrate through ablation that the components of our agent architecture--observation, planning, and reflection--each contribute critically to the believability of agent behavior"；第三方复述逐项缺失后果：无 observation→用陈旧信念行动、无 reflection→交互停在表层、无 plan→行为退化为反应式噪声。
+- 判据：① 声称「某组件必要」必须给**逐项移除**的证据，不能只给「架构包含三件套」的清单；② 论文同时给成本量级（25 agents / 2 天 / 数千美元 token，第 7 节）⇒ 记忆架构的可行性结论必须**连成本一起报**，只报效果不报量级不足以判断能否迁移。
+
+**来源（本轮独立实拉，2026-11-08）**：
+- arXiv 2304.03442《Generative Agents: Interactive Simulacra of Human Behavior》Park et al.，v1 2023-04-07 / v2 2023-08-06，一手 abs 页全文核验 → https://arxiv.org/abs/2304.03442
+- CSDN《agent推理范式反思--教训存哪里:记忆与经验库》中文深读（时间驱动 vs 失败驱动、成本量级）→ https://tushouhao.blog.csdn.net/article/details/167227347
+- 中科院计算所研讨会讲义 2024（plan 入流 / 反思触发 / top-down 分解）→ https://www.cs.cas.cz/~petra/slides/2024_vidnerova_kadlecova_core_seminar.pdf
+- AI Engineering from Scratch · Generative Agents Simulation（三组件消融复述）→ https://aiengineeringfromscratch.com/lesson?path=phases/16-multi-agent-and-swarms/17-generative-agents-simulation
+- 判非登记：`三因子加权/0.995/min-max/反思阈值150/信念树` 已在 `agent-evolution/SKILL.md:192` 与 `wb-context-compressor` 落地，本轮不重复。

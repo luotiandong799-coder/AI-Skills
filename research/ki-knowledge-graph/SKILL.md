@@ -67,3 +67,10 @@ modules: KI,CI
 - GraphRAG vs LightRAG 成本与决策树 / 实体漂移 / 陈旧图 / 问题形态：callsphere.ai/blog/vw6g-microsoft-graphrag-knowledge-graph-2026
 - query policy（local/global/hybrid/mix）非全局开关：bloss0m.com/blog/101-unified-knowledge-graph-rag
 - KG 三元组 / LightRAG keyword 双层 / 与向量混合：lup.lub.lu.se/student-papers/record/9239602
+## r712C 下沉：建图的三级取证与边级置信——确定性优先、LLM 只碰语义层（来源：GitHub `Graphify-Labs/graphify`·`docs/how-it-works.md` 5,903B + `docs/node-summaries-rfc.md` + `docs/superpowers/specs/2026-05-04-incremental-updates-dedup-design.md`，★144k，2026-11-08 一手实拉）
+
+- **三级取证，按成本从零到贵**：**Pass 1** 用 Tree-sitter 抽类/函数/import/调用图/注释，**纯本地零 API 成本**；**Pass 2** 音视频本地转写（faster-whisper），转写 prompt 用已建图里的 top god nodes 做领域偏置，转写结果缓存；**Pass 3** 只有文档/论文/图片/转写文本才交给 LLM 子代理并行抽 nodes/edges。→ 判据：**代码不进 LLM 语义抽取**——把"结构化能拿到的"交给解析器，把"只有语义能拿到的"才花钱；纯代码语料整个 Pass 3 跳过。
+- **每条边必须带取证等级，不许一律平等**：`EXTRACTED`（源码里直接可见：调用/import，置信恒 1.0）/ `INFERRED`（模型推断，带 0–1 分）/ `AMBIGUOUS`（不确定，进报告待人工复核）。INFERRED 用**离散档**而非连续小数：0.95 近确定（显式跨文件引用且目标唯一）/ 0.85 强证据（命名+上下文吻合）/ 0.75 合理（有上下文但不显式）/ 0.65 弱（仅命名相似）/ 0.55 推测。
+- **重复证据不丢，压到 `also_seen`**：同一对节点同一关系的多次发现，边只保留**置信最高**的那份，其余每次的 confidence/score/source_file/location 依弱到强列进 `also_seen`。→ 判据：**去重不等于删证据**——保留"还有谁这么说过"，才能事后判断这条边是不是同一来源反复自证。
+- **增量靠内容哈希，不靠时间戳**：每个文件按内容 SHA256 指纹，重跑只处理新增/改动文件，缓存落在 `graphify-out/cache/`。→ 判据：**时间戳会骗人（重新 checkout、touch 都改 mtime），内容哈希不会**。
+- **结构本身就是相似度信号**：社区发现用 Leiden 按边密度聚类，模型抽出的 `semantically_similar_to` 边直接参与聚类，**不另建 embedding 与向量库**。→ 判据：小语料（6 文件）图的价值是结构清晰不是压缩，语料越大 token 收益才复利（52 文件实测 71.5×）。

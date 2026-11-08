@@ -2,7 +2,7 @@
 name: personal-ai-employees
 description: >-
   个人 AI 员工体系（8 岗）总路由与五步执行协议。把用户目标自动分派给 8 个专职 AI 员工（战略顾问/供应链专家/职业发展顾问/销售顾问/学习教练/信息分析师/自动化工程师/知识管理专家），每岗统一走「任务分析→执行方案→输出结果→复盘优化→Skill沉淀」，并复用 personal-ai-os 与现有 wb-* / 专家技能，不新建重复能力。触发词：个人AI员工、AI员工体系、AI战略顾问、AI供应链、AI职业发展、AI销售顾问、AI学习教练、AI信息分析、AI自动化工程师、AI知识管理、哪岗来做、分派任务、员工路由、agency、个人AI公司、我的AI团队。
-version: 1.0.0
+version: 1.1.0
 agent_created: true
 module: OI
 modules: OI,MI
@@ -118,3 +118,33 @@ modules: OI,MI
 
 - 处理 **#2 供应链** 或 **#4 销售** 任务时，先 `Read references/domain-expertise.md` 加载领域框架与用户专业锚点，再以专家视角产出，避免泛泛而谈。
 - 其他 6 岗无需加载该文件，直接路由到对应现有技能。
+
+## 八、扇出闸门与编排预算（OI · 2026-11-08 实拉加厚）
+
+> 本机已有「⓪ 闸门：简单任务不判岗」与「五步协议」。本节补**决定要不要 fan-out、fan-out 到几路、失败怎么续跑**的编排层判据；与 `wb-subagent-delegation` 的「双模型主-副手」互补，不重复实现调度器。
+
+### 8.1 先选编排形态，再谈分派：三态 + 五问闸门
+| 形态 | 适用 | 成本 | 可调试性 |
+|---|---|---|---|
+| 单 agent（单循环单窗口） | 任务放进一个窗口、步骤天然串行 | 基线 ~1× | 最高 |
+| 固定流水线（DAG） | 步骤事先已知且稳定、要确定性 | 低–中、可预测 | 最高 |
+| orchestrator-worker（并行子代理） | 子任务**独立可并行**、信息量超单窗口、接大量复杂工具 | 高（官方实测约为 chat 的 15×） | 最低（跨轮非确定） |
+- 五问闸门（**任一为否 ⇒ 降一档**）：① 子任务真的互相独立？（B 需要 A 的输出 = 流水线，不是 fan-out）② 工作是否超出单个上下文窗口？③ 并行是否真实？（官方："most coding tasks involve fewer truly parallelizable tasks than research"）④ 任务价值是否高到付得起 token 溢价？⑤ 非确定性是否可观测、可调试？
+- 官方不适域逐字："some domains that require **all agents to share the same context** or involve **many dependencies between agents** are not a good fit for multi-agent systems today."
+- 判据：**选最便宜够用的一档**；「加一个 agent」不是默认优化动作。与已落「少而精、8 岗不堆 agent」同向，本节给的是可机检的选择题而非态度。
+
+### 8.2 并行度要两层同时开，才拿得到量级收益
+- 官方原则 8 逐字："we introduced two kinds of parallelization: (1) the lead agent spins up **3-5 subagents in parallel** rather than serially; (2) the subagents use **3+ tools in parallel**. These changes **cut research time by up to 90%** for complex queries."
+- 判据：① 只并行一层（只起子代理但每个仍串行搜索，或反之）拿不到这个量级 ⇒ 排查「并行了却没变快」先数**两层各开了几路**；② 早期失败形态是「串行搜索」与「为简单查询起 50 个子代理」，两端都属**并行度与任务复杂度不匹配**；③ 提速收益要连同成本一起报（此即 8.1 的第 ④ 问）。
+
+### 8.3 方差归因决定优化顺序；长跑从出错点续跑
+- 官方："three factors explained **95% of the performance variance** in the BrowseComp evaluation … **token usage by itself explains 80%** of the variance, with the number of tool calls and the model choice as the two other explanatory factors"；且"upgrading to Claude Sonnet 4 is a **larger performance gain than doubling the token budget** on Claude Sonnet 3.7"。
+- 生产侧："we can't just restart from the beginning: restarts are expensive and frustrating … built systems that can **resume from where the agent was when the errors occurred**"；"combine the adaptability of AI agents with deterministic safeguards like **retry logic and regular checkpoints**"；并让模型知道工具正在失败以便自适应。
+- 判据：① 优化顺序应是**先换模型档 / 再看预算 / 最后加 agent**，不是先扩 token 预算；② 方差归因是**三因素**，「token 解释 80%」不等于「另外 20% 不重要」；③ 长跑 agent 的恢复点必须落在最近检查点，**重启 = 昂贵且恼人**，柔性自适应与确定性护栏是互补不是二选一；④ 评估复杂流程用「离散检查点验证状态是否变化」，不要逐中间步全验。
+
+## 九、来源（本轮独立实拉，2026-11-08）
+- Anthropic Engineering《How we built our multi-agent research system》（2025-06-13）**一手全文 WebFetch 逐字核验**：90.2% / 95%·80% / 4×·15× / 3-5 subagents / 3+ tools / up to 90% / resume from where / regular checkpoints / rainbow deployments → https://www.anthropic.com/engineering/multi-agent-research-system
+- BackendBytes《Designing a Multi-Agent Backend: The Orchestrator Pattern》三态决策表与五问（独立交叉）→ https://backendbytes.com/articles/multi-agent-orchestrator-backend
+- The Daily Brief 独立摘要（八条 prompt 原则、评测与生产章节结构交叉）→ https://www.beri.net/learning/anthropic-multi-agent-research-system
+- Back From The Future《Workflows vs Agents》（fan-out 适用边界独立交叉）→ https://www.backfromthefuture.nl/en/insights/workflows-vs-agents
+- 判非登记（豆包自留地，WB 不重复落地）：`effort scaling 三档` 见 `wb-execute-discipline/KB:994`、`rainbow deployments` 见 `wb-execute-discipline/KB:999`、`15×/4× token 与 BrowseComp 80%` 见 `wb-context-compressor/KB:3619,5229`（均为二手引述）。本轮只取全库 0 命中的 `3-5 subagents / 3+ tools / 95% of the performance variance / resume from where / regular checkpoints` 与一手三态闸门。
