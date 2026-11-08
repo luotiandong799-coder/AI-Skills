@@ -186,6 +186,8 @@ modules: MI,AI
 1. WorkBuddy 原生是否已具备；2. 已装 Skill 是否已具备；3. 已装 MCP 是否已具备；4. 是否与其他组件重复；5. 是否只是换包装；6. 是否可能冲突；7. 是否增加不必要依赖；8. 是否增加权限风险；9. 是否降低稳定性。
 重复时：**保留更稳定、更安全、更兼容、更简单的方案。**
 
+> **工具层优胜劣汰执行协议（单源指针，2026-11-08）**：横向测试评分卡（成功率25/稳定20/速度15/兼容15/安全15/Token10）、A/B/C/D 四类处置、统一执行架构路由表、清理迁移检查单、当前降级决议（windows-mcp FileSystem/Scrape 实测移除等）→ 全文见 `D:\腾讯AI\skills\00_工具优胜劣汰治理.md`。本技能 §三十四/三十五/四十七/五十二 为原则层，该文件为执行层，不重复展开。
+
 ---
 
 > §三十五 自动优化与淘汰（保留/降级/替换/删除 四态流程）已下沉 `references/knowledge-base.md` §E。
@@ -464,8 +466,8 @@ modules: MI,AI
 | 智能消息自动回复（微信/QQ/企微/钉钉/飞书等：判断该不该回、按联系人风格回、自学习/复盘） | `smart-message-autoreply` | 技能 |
 | 浏览网页 / 抓页面 / 填表 / 搜索 | **Playwright MCP**（headless，Edge 内核） | mcp.json |
 | 需登录态 / 反爬 / 验证码的浏览器任务 | `browser-automation`、`bsk-drive-logged-in-browser`、`agent-browser` | 技能 |
-| 读写本地文件（限定 D 盘） | **File MCP**（filesystem，白名单 `D:\腾讯AI` + `D:\腾讯AI\skills`） | mcp.json |
-| 查看系统/进程/环境信息（只读） | **Desktop Commander 只读代理**（`list_processes` / `get_file_info` / `list_directory` / `read_file`） | mcp.json + 代理脚本 |
+| 读写本地文件 | **原生 Read/Write/Edit/Glob/Grep**（2026-11-08 修正：旧「File MCP」条目失实，mcp.json 从未配置 filesystem server；windows-mcp FileSystem 已实测降级） | 原生工具 |
+| 查看系统/进程/环境信息（只读） | **原生 Bash/PowerShell** + windows-mcp `Process`（列表/kill） | 原生工具 + mcp.json |
 | 排障（报错、崩溃、变慢、跑不起来） | `wb-debug-loop` | 技能 |
 | 多步实现 / 交付类改造 | `wb-spec-driven` | 技能 |
 | 批量目标全量覆盖 / 失败换路 | `wb-execute-discipline` | 技能 |
@@ -497,7 +499,7 @@ modules: MI,AI
 
 ## B3. 电脑维护（PC Maintenance）
 - **触发**："电脑变慢 / C 盘满 / 磁盘清理 / 系统体检 / 开机启动项 / 某软件报错"。
-- **流程**：①只读扫描先行（Desktop Commander 只读代理 / PowerShell 工具），扫描阶段不改任何东西；②排障走 `wb-debug-loop`；③清理走 `local-file-dedup` / `windows-migrate-to-d-via-junction`；④删除动作三项齐全（加粗风险警告 + 逐条列路径 + 明确确认），用回收站不用 `rm`。
+- **流程**：①只读扫描先行（原生 Glob/Grep/PowerShell；2026-11-08 修正：旧「Desktop Commander 只读代理」已不在 mcp.json，扫描改用原生工具），扫描阶段不改任何东西；②排障走 `wb-debug-loop`；③清理走 `local-file-dedup` / `windows-migrate-to-d-via-junction`；④删除动作三项齐全（加粗风险警告 + 逐条列路径 + 明确确认），用回收站不用 `rm`。
 - 不碰私钥/密码管理器/银行支付目录/`AppData`/`Library`/`~/.config`/系统目录；禁 `rm -rf`/`del /S /Q`/`shutil.rmtree`/通配符批量删；单批 ≤10 文件，每批验证，失败即停。
 
 ## B4. AI 信息雷达（AI Radar）
@@ -505,7 +507,7 @@ modules: MI,AI
 - 不编造来源与数据；抓取失败如实报"未取到"；评论类标注观点属性。
 
 ## B5. 个人知识管理（Personal Knowledge）
-- **流程**：①扫描走 File MCP（白名单已强制，越界返回 `Access denied`）或 Desktop Commander 只读代理；②分类产出清单（路径+大小+时间+标签），**只出清单，不移动不删除**；③结构化沉淀走 `wb-doc-writing`；④去重走 `local-file-dedup`（先只读）；⑤用户确认后再动。
+- **流程**：①扫描走原生 Glob/Grep/Read（2026-11-08 修正：旧「File MCP / Desktop Commander」条目失实，已不在 mcp.json；原 windows-mcp FileSystem 经横向测试降级移除）；②分类产出清单（路径+大小+时间+标签），**只出清单，不移动不删除**；③结构化沉淀走 `wb-doc-writing`；④去重走 `local-file-dedup`（先只读）；⑤用户确认后再动。
 - 不读私钥/密码/银行支付文件；不外传本地内容（除非明确要求并确认目标）。
 
 ---

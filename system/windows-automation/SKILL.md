@@ -46,3 +46,5 @@ modules: OI,PI
 - 鼠标/键盘/截图/视觉 → `computer-use-windows`
 - 文件/进程/服务/网络/系统 → `powershell-windows-cli`
 - 高风险（删/改/发/支付）→ 先回 personal-ai-os 三级权限判定
+
+> **2026-11-08 优胜劣汰实测更新（单源 `skills\00_工具优胜劣汰治理.md` §四/§八）**：桌面 GUI 原语（截图/UI树/点击/输入/窗口/剪贴板）默认入口 = **windows-mcp**（沙箱内唯一 GUI 通道，实测可用）；文件操作一律走原生 Read/Glob/Grep（mcp FileSystem 已实测降级移除）；网页抓取走 playwright/原生（mcp Scrape 已降级）；pywinauto 降为 windows-mcp 故障时的兜底引擎。本路由的降级序调整为：**windows-mcp → UIA/pywinauto → OCR/视觉 → 坐标**。
