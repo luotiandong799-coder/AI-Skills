@@ -1,9 +1,9 @@
 ---
 name: di-decision-tradeoff
-description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
+description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
 module: DI
 modules: DI,TI
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -91,7 +91,39 @@ version: "1.1.0"
 
 **与 MCDA 的分工**：本节管"决策后学习闭环"（时间维度）；§六 MCDA 管"单次多方案结构化对比"（空间维度）。
 
-## 八、来源（2026-11-07 实拉）
+## 八、期望价值/期望效用 + 信息价值（EVPI）（2026-11-08 实拉）
+
+把"拍分/加权"升级为**概率化期望决策**：当选项结果含不确定状态（各状态有概率 pⱼ）时，用期望而非单点估值，并能量化"是否值得再调研"。
+
+**① 期望货币值 EMV / 期望效用 EU**
+- EMV(i)=Σⱼ pⱼ·Rᵢⱼ（Rᵢⱼ=选 i 时状态 j 的收益）；选 argmaxᵢ EMV。
+- 期望效用 EU=Σ pᵢ·u(结果ᵢ)；u(·) 为效用函数（风险厌恶者 u 为 concave，如 u(W)=√W 或 log W）。**EU 与 EMV 排序可能不同**——EMV 只看钱，EU 看"钱的效用"；大额/高风险下 EU 更稳（圣彼得堡悖论即因线性期望失真，D. Bernoulli 1738 用对数效用解）。
+- 适用：结果有概率、金额大、风险态度显著时（保险/投资/赌注），优先 EU 而非 EMV。
+
+**② 信息价值 EVPI（决定"该不该再调研/买情报"）**
+- EV|PI = Σⱼ pⱼ·(maxᵢ Rᵢⱼ)（若事先已知状态 j，每状态选最优 i 的期望）；
+- EVPI = EV|PI − EMV。即"消除不确定性"最多值多少钱。
+- **判读**：报价 > EVPI → 拒买情报（不值）；报价 ≪ EVPI → 可买；EVPI≈0 → 当前不确定性不影响最优选择，无需再调研（直接定）。这是"调研/等待/买数据"决策的硬上限。
+- 偏信息价值 EVPPI：只对少数关键参数求完美信息，比全模型 EVPI 更常用于研究优先级（PCORI）。
+
+**③ 风险 vs 不确定性（Knight 1921）**
+- 风险=结果集与概率可知（保险/频率）；不确定性=概率本身未知、无参照类（Knightian）。EVPI/EU 仅适用于"风险"；纯不确定性须降级为情景分析+专家判断，不可硬套概率。
+
+**④ 行为边界（防过度迷信期望）**
+- Allais(1953)/Ellsberg(1961) 悖论：真实人在同批选择中会违反独立性/确凿性原则且偏好稳定不改——EU 是**规范基准**非描述模型；选项含"确定性组件"或"模糊概率"时，结论须标注"与 EU 偏离风险"。
+- EU 计算对输入敏感：u(·) 形态、概率估计、结果取值任一错 → 排序翻转；须做 §六④ 敏感性。
+
+## 九、来源（2026-11-07 + 2026-11-08 实拉）
+
+### 2026-11-08 新增（期望效用/EVPI，WebSearch 交叉核验）
+- EVPI 定义与公式 EVPI=EV|PI−EMV、投资三选项例：en.wikipedia.org/wiki/Expected_value_of_perfect_information（2026-11-08）
+- EVPI=WS−RP、报童问题例：lancaster.ac.uk STOR-I 讲义 Rebekah Fearnhead (2025)
+- EVPI=E_Θ maxⱼ NB − maxⱼ E_Θ NB、EVPPI 公式：pcori.org Value of Information and Research Prioritization（2026-11-08）
+- 自适应管理 EVPI=E_s[max_a U(a,s)]−max_a E_s[U(a,s)]：Springer 10.1007/978-3-031-99739-6_23（2026-11-08）
+- 期望效用 EU=Σ pᵢ·u(结果ᵢ)、风险态度、圣彼得堡悖论：biz.libretexts.org Risk Management 3.4 Choice under Uncertainty（2026-11-08）
+- vNM 四公理(完备/传递/连续/独立)、Allais/Ellsberg 悖论、Knight 风险vs不确定性：pressbooks.calstate.edu criticalthinking ch12（2026-11-08）
+
+### 2026-11-07 原来源
 
 - Weighted Decision Matrix / Pugh：skillmd.ai/skills/decision-matrix-1；ruleskill.com/skills/iflytek/decision-matrix
 - Pre-Mortem / Opportunity Cost / ICE / RICE / Eisenhower / 10-10-10：hub.decision.ai/skills/nickcrew/decision-maker；skilld.dev/gh/iflytek/skillhub/decision-matrix
