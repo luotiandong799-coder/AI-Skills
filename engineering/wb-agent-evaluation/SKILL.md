@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算、机械验证优先、LLM judge 替代路径、授权动作降级为交互即验收失败、凭据有效≠连接可用、版本漂移、三态归因
-version: 1.147.0
+version: 1.153.0
 module: VI
 modules: VI
 ---
@@ -260,3 +260,14 @@ modules: VI
 - **报告先行、判定后置**：按固定节次写完报告并给出文件路径；"是否要改框架"由 triage 的人决定，诊断者只报告。提 issue 前先**搜 open + closed 找同症状**，能并到最近的那条就不新开。
 - 判据：**事后诊断的价值在"可核对的定位"，不在"听起来合理的归因"**——一条没有行号的解释，在下一次复盘里无法被证伪，也无法被复用。
 ## r698C 下沉条目（1 点，KB-only：技能评估三层阶梯——结构免费/路由免费/行为付费，第 2 层不过先改 description）（原文在 references/knowledge-base.md）
+## r700B 下沉条目（1 点，KB-only：答案质量/工具速度/令牌成本三问分账；实验先冻结、两组隔离、保留全部运行含失败）（原文在 references/knowledge-base.md）
+## r701C 下沉条目（1 点，KB-only：先立比较基座；每维配 1–5 级 rubric 且同一证据对任何对象同分；权重不参与单维打分；张力两轴分开报告绝不平均；分数带证据锚）（原文在 references/knowledge-base.md）
+## r702A 下沉条目（1 点，KB-only：top-N 必须有绝对置信度地板，够格不足就少给或空；空态写清为什么空 + 下一步取数；独立性别放在 fan-out/enrichment 下游，否则同源重复计成多源互证）（原文在 references/knowledge-base.md）
+
+
+## r702B 下沉条目（1 点，KB-only：Jaccard/保留率只是回归护栏不是真值；Precision@5/nDCG@5 只在判定池内有效；稳定性/相关性/覆盖分三槽报，基线-候选同题集对照）（原文在 references/knowledge-base.md）
+
+## r703B 下沉条目（1 点，KB-only：上线前只做几个人眼轻评、上线后用例集从生产长出来，bug 输入必须回流数据集，修复后跑全量回归；与"对照组/配对差/三次重复"条分工）（原文在 references/knowledge-base.md）
+
+## r705C 下沉条目（1 点，KB-only：agent 12 层栈诊断＝prompt/历史/长期记忆/蒸馏产物/召回/工具选择/工具执行/结果解读/答案成形/渲染/隐藏修复循环/持久化 逐层排除，五种高频模式（wrapper regression·记忆污染·工具纪律·传输篡改·隐藏层），发现按 blocker/major/minor 排序并给代码级修法）（原文在 references/knowledge-base.md）
+

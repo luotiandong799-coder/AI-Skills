@@ -1,6 +1,6 @@
 ---
 name: agent-evolution
-version: "1.3.0"
+version: "1.4.0"
 description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。
 license: MIT
 metadata:
@@ -192,3 +192,47 @@ modules: AI
 **Generative Agents 记忆流三因子（打分取用）**：Recency（指数衰减 0.995）+ Importance（1-10 创建时打分）+ Relevance（嵌入余弦）；近期重要性累计过阈值（150）触发反思——回答"最近经验说明什么高层问题"，产出带指针的抽象结论，可再反思形成信念树。
 
 **治理铁律**：没有仪表化的自改进 = 无监督漂移（unsupervised drift）。谁能写记忆/冲突谁赢/如何审计，三问不答就不许升 Self-editing；kill switch / 审计链 / 第二意见不是摩擦，是系统能被允许自主的前提。
+
+## 十五、自适应的「何时改」与「改完怎么算好」：漂移门 + 对照验收（2026-11-08 r706A 实拉）
+
+> 与 §十一 EASE（策展输入须含执行器行为画像）、§十三 GEPA（同样本重跑、更好才接受）分工：那两条管「拿什么决定改」与「改完要不要接受」；本节管**触发时机**（策略何时被判定失效）与**验收对照实验怎么搭**（什么比较才算有效证据）。§十四 治理铁律只说"无仪表化即漂移"，本节给仪表本身。
+
+### 15.1 触发门：把「该改了」做成单变量变点检测
+
+- **ADWIN** 保持变长窗口，切成 W0/W1 两子窗比均值；同分布假设不成立即报漂移，随后 `W0 ← W1` 并初始化新 W1 ⇒ **旧数据自动出窗，无需人工决定忘掉多少历史**。
+- **★监控性能指标，不监控原始数据**：River 原文 "Drift detectors monitor the model usually through a performance metric"、"Drift detectors work on univariate data. This is why they are used to monitor a model's performance and not the data itself"。对 Agent：喂 0/1（本轮做对/做错）或单一质量分，**不要把整段上下文塞进检测器**。
+- **检测器对输入有期望**（"define their expectations regarding input data. It is important to know these expectations to feed a given drift detector with the correct data"）⇒ 换监控指标必须重标阈值，照搬别处的 δ 无效。
+- **参数即「灵敏度 vs 误报」的显式权衡**（River dev 文档）：`delta=0.002`（显著性）、`clock=32`（每 32 点查一次，越大越省算力但检测延迟增加）、`min_window_length=5`（越小延迟越低、误报越多）、`grace_period=10`（不足 10 点不检测）。⇒ **自改进不能一有波动就改策略**，先定最小观察窗与误报预算。
+- 检测后 `reset()` 是官方示例里的好习惯 ⇒ 报一次漂移 = 一次有界状态重置，不是持续报警。
+
+### 15.2 分清漂移类型，避免「环境变了就重写策略」
+
+- **虚拟漂移**：只有 P(X) 变、X→y 关系不变 ⇒ 输入分布变了但既有策略仍有效，**不改策略**（只更新触发词/描述）。
+- **真实漂移**：P(X,y) 变 ⇒ 策略与目标的关系失效，才触发改写；再分 **abrupt**（立即切换）与 **gradual**（需累积证据）。
+- 判据：**「最近题目不一样了」不等于「方法不行了」**。混为一谈会洗掉仍有效的经验，是 §十一 EASE「换执行器即退化」之外的另一类自伤。
+
+### 15.3 验收门：与同时部署的等价基线比，不与历史成绩比
+
+- **★基线必须同时部署**：Spinnaker 逐字 "always compare the canary against an equivalent baseline, deployed at the same time"——基线用当前生产同版本同配置、同时部署、同规模、同流量，只留「版本/配置」一个变量，排除缓存预热/堆大小等混淆。⇒ 策略 A/B 必须**同一批任务、同时段**跑新旧两版；拿上周成绩当对照无效。
+- **★关键指标一票否决**：`critical: true` 使该指标被判 High/Low 时整个 canary 直接 `score = 0`，"regardless of group scores"；或把关键指标单独成组。⇒ 安全/合规类指标**不参与加权平均**，不能被一堆变好的指标掩盖（"Don't put too many metrics in one group"）。
+- **双阈值**：`marginal`（任一 run 低于即整体立即失败）与 `pass`（最终 run 必须 ≥，比较含等号）；官方起点 **75 / 95**。⇒ 既要「过程中没崩」也要「终态达标」，只看终分会把中途劣化放过。
+- **样本量下限**：每指标至少 **50 个时序点**才有统计效力（官方起点 3 小时 × 3 run）。⇒ 小样本试跑的「变好了」不构成验收证据。
+- **缺数据 ≠ 通过**：judge 对 NaN 有 `remove`/`replace` 与 `Nodata`/`NodataFailMetric`/`Pass` 分类，`mustHaveData: true` 让缺数据计为失败；仅误差类指标适合 `replace`（无数据=零错误）。⇒ 验收里「这项没采到」必须与「这项通过」分开记账。
+- **判定要同时过统计显著与效应量**：Mann-Whitney U 非参数检验 + 98% 置信 + `allowedIncrease/allowedDecrease` 效应阈值 + ±(0.25×|Hodges-Lehmann|) 容差死区；离群用降敏 IQR 剔除。⇒ 微小但显著的差异不该触发策略切换。
+- **验收门自身可低成本迭代**：用 `retrospective analysis` 拿历史监控数据回放调配置，不必等实时数据攒够。
+
+### 15.4 落地清单（自改进策略换版四步）
+
+1. 定单一监控指标（0/1 或质量分）+ 最小观察窗 + 误报预算，才允许自动触发改写。
+2. 触发后先判虚拟/真实漂移；虚拟只更新描述，不动策略。
+3. 改写版与**同时部署的等价基线**同批任务对照跑，安全指标一票否决，样本 ≥50，缺数据单独记。
+4. 过 marginal + pass 双阈值才接受；否则回滚基线并留痕（接 §十四 kill switch / 审计链）。
+
+### 15.5 来源（2026-11-08 r706A 实拉，逐字核验）
+
+- riverml.xyz/latest/introduction/getting-started/concept-drift-detection（虚拟/真实漂移、abrupt/gradual、监控性能指标、单变量、输入期望；WebFetch 全文）
+- riverml.xyz/0.11.0/api/drift/ADWIN · /dev/api/drift/ADWIN/ · /0.15.0/api/drift/ADWIN/（W0/W1 切分、检测后 W0←W1、delta=0.002 / clock=32 / min_window_length=5 / grace_period=10 / reset；Bifet & Gavalda 2007 SIAM SDM）
+- spinnaker.io/guides/user/canary/best-practices/（baseline not production、critical: true、marginal 75 / pass 95、≥50 data points、retrospective analysis；WebFetch 逐字）
+- spinnaker.io/docs/guides/user/canary/judge/（NaN 策略与 Nodata 分类、Mann-Whitney U 98%、效应量阈值、HL 容差死区、IQR 离群）
+- spinnaker.io/docs/guides/user/canary/canary-overview/ · /config/canary-config/（基线对照、指标分组与权重）
+- 判非：BS 分解三病灶、验收六要素等已在本仓 `engineering/*` 与 `meta/pdi-forecasting` §六，本轮不重复落。

@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、能不能跑、接受态绑定单报告、harness 塑形信念、belief-rollout 诊断、终端成功看不见分叉、BIWM、证据被 harness 压缩、attestationHash 排除 checkedAt、同状态同哈希、审计四元组、启用新规则域须复审刷新、间隔截顶防计时器溢出、缺席折叠成空集合、校验两端同源自证恒真、压缩切点避开 tool 对、缺口标注禁止猜测、被调用方 commit 调用方 session、flush vs commit、transaction already closed、expire_on_commit、extract_class_name、first Component subclass、run2 not found in First、data.type 优先于 vertex_type、fault-enforcing tests、测试通过不等于正确、counterfactual monitor、recoverable checkpoint、false-alarm 2.0-3.3%、cross-provider review、explicit failure states、truncation levels、read-only 假设要实测、projectId、optInAvailable、并列时间戳分页、游标缺 tie-breaker、模型产出作观测记录、准入策略按假阳性上限、分隔符被硬编码、序列化往返不对称、夹具必须封闭、MockTransport、example.invalid、外部依赖版本假设
-version: 2.444.0
+version: 2.450.0
 agent_created: true
 module: VI
 modules: VI
@@ -484,3 +484,11 @@ modules: VI
 ## r694C 下沉条目（1 点，KB-only）（原文在 references/knowledge-base.md）
 ## r696C 下沉条目（1 点，KB-only：覆盖率台账 + 二终态——单元=surface×boundary×attack class、prior run 逐条改判、scoped 自报部分覆盖、只许两个终态）（原文在 references/knowledge-base.md）
 ## r699C 下沉条目（1 点，KB-only：机检回执=基本校验、展示级验收要九项全过零告警；先修 schema 再修几何）（原文在 references/knowledge-base.md）
+## r700A 下沉条目（1 点，KB-only：独立评审不告知意图、先画面后代码、首行四态、≤8 条按成本排序、10 轮收笔）（原文在 references/knowledge-base.md）
+## r700C 下沉条目（1 点，KB-only：task_context 不许省略已知事实；逐条判 applies_when/exception；查不到规则≠没有规则；delivery.complete=false 必须读全或暂停；压缩后重取规则）（原文在 references/knowledge-base.md）
+## r701A 下沉条目（1 点，KB-only：本条消息没跑验证就不能声称通过；五步闸门；lint≠编译、agent 自报≠diff；回归测试必须红绿验证；红牌词自查）（原文在 references/knowledge-base.md）
+## r701B 下沉条目（1 点，KB-only：空结果=无信号不是零；单条极值不判因果，要有对照组与有界窗口；结论须带记录 id 与精确时间窗；默认只读元数据不拉 payload；核验期只读不许启停实验）（原文在 references/knowledge-base.md）
+## r702A 下沉条目（1 点，KB-only：只对"用户会据以行动"的实质回答，在定稿后附 2–3 条绑定具体内容的追问（哪句该核实/哪步逻辑该看依据/被迫假设了什么），每会话至多一次，答案先完整给出）（原文在 references/knowledge-base.md）
+
+## r703B 下沉条目（1 点，KB-only：写改测试前三问（哪个错误会失败/等价重构是否也失败/已有检查是否已抓住）；正确期望须独立依据，实现不能自证、AI 同写实现与测试要查同一错误假设；最小有效决策表增/改/并/退订；说不清就保留并记缺证据）（原文在 references/knowledge-base.md）
+

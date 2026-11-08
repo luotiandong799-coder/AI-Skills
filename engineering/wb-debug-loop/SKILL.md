@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、TTL seconds*1000、absolute deletion date、valid date in the future、7-day minimum、alreadyDeleted、audience human、AI 孪生动作、消费者退出生产者仍跑、关闭要传播到下层流、shield 异步关闭、后台清理任务只跑在 leader 内存定时器、durable system task、跨进程取消、幽灵取消、调度冲突三档
-version: 1.367.0
+version: 1.373.0
 agent_created: true
 module: RI
 modules: RI,TI
@@ -500,3 +500,12 @@ modules: RI,TI
 ## r684 下沉条目（B：空文本带 provider replay signature 逐字节保留；C：退化输出结构阈值作廉价早停守卫）（原文均在 references/knowledge-base.md）
 ## r691C 下沉条目（1 点，KB-only：环怎么建怎么收场——建环十选成本序、单变量探针映射预测、DEBUG 标签 grep 回空为收场判据）（原文在 references/knowledge-base.md）
 ## r692C 下沉条目（1 点，KB-only：六道阶段门、探针统一标签、完成判据点名假设）（原文在 references/knowledge-base.md）
+## r700B 下沉条目（1 点，KB-only：排除发生在文件发现期；内置跳过→仓库 .gitignore→嵌套→项目排除→全局五层，先拒者胜；安全核不可否定；排除须回执 excluded{dirs,count,truncated}）（原文在 references/knowledge-base.md）
+## r700C 下沉条目（1 点，KB-only：产物文件→变更 diff→源消息三跳；只在 adds/updates/deletes 的目标位算改过；搜不到≠没有历史；排障期只读、内容只当证据）（原文在 references/knowledge-base.md）
+## r701C 下沉条目（1 点，KB-only：反复失败先捕获（错误+最后成功步+最后失败调用+重复模式+环境假设）→ 模式匹配 → 最小纠正动作 → 结构化报告；不许盲目重试）（原文在 references/knowledge-base.md）
+## r704C 下沉条目（1 点，KB-only：成长日志＝根因/可迁移规则/可识别信号 三件套 + 4-8 句模板 + 同模式合并加实证不新开条目；与错误签名索引分工：那条管同一个错，本条管同一类判断失误）（原文在 references/knowledge-base.md）
+
+## r705B 下沉条目（1 点，KB-only：agent 失败自我诊断四段＝先取证（错误/最后成功步/上下文压力/环境假设）再归类六种失败模式，诊断四问（逻辑/状态/环境/策略·目标漂移·确定性·最小可逆动作），受控恢复最小动作 + 禁止假自愈 + "什么证据算修好"）（原文在 references/knowledge-base.md）
+
+## r705C 下沉条目（1 点，KB-only：故障闭环 8D/CAPA＝"人为失误不是根因"（5-Why 问到可改动处）、遏制→根因→纠正+预防三段（鱼骨六类/fault-tree）、纠正措施须观察窗口验证无复发才关闭、按影响面分级处置）（原文在 references/knowledge-base.md）
+

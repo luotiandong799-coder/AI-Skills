@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.64.0
+version: 1.66.0
 agent_created: true
 module: OI
 modules: OI
@@ -262,3 +262,6 @@ modules: OI
 ## r693C 下沉条目（1 点，KB-only）（原文在 references/knowledge-base.md）
 ## r698C 下沉条目（1 点，KB-only：agent brief 耐久优先——不写路径行号，写接口/行为契约/可独立验证的验收/显式范围）（原文在 references/knowledge-base.md）
 ## r699B 下沉条目（1 点，KB-only：扇出只产候选不打分——分片≤8/并发≤4/每片≤8轮/递归关，叶子代理能力封闭，收工出覆盖率回执）（原文在 references/knowledge-base.md）
+## r701A 下沉条目（1 点，KB-only：每任务 5 轮上限；1–3 轮回原实现者、4–5 轮换人升模型；交测试+命令+输出三件才复审；复审只审 fix diff；Minor 只记账；控制者不自修）（原文在 references/knowledge-base.md）
+## r704B 下沉条目（1 点，KB-only：外发审批契约＝草稿哈希 + epoch 键控决策 + 交付 claim/receipt 账本，防"陈旧审批放行改写稿"与"重复发送"；账本复用已确认事实少重复问询）（原文在 references/knowledge-base.md）
+

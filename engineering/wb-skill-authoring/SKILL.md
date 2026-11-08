@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配、skillContentHash、baseSkillHash、保存缺基准 400、基准过期 409、publish pins refs、delete refused names agents、scope inheritance、flag off 全路由 404、reviewability debt、accountable contribution、预烘技能包、baked bundle、manifest hash 不命中、分发面与可见面、load_skill 不服务、能力判定单一真身、默认模块不设也开、hook 入口顺序、promise settles、异步补话无效、声明位双语义、禁自动≠禁手动
-version: 1.301.0
+version: 1.307.0
 module: KI
 modules: KI
 ---
@@ -470,3 +470,12 @@ modules: KI
 ## r698A 下沉条目（2 点，KB-only：反合理化加固的适用边界与四构件；说服原理按技能类型配比——纪律型/指南型/协作型/参考型）（原文在 references/knowledge-base.md）
 ## r698B 下沉条目（1 点，KB-only：横切约束放平台层，别写进单条技能正文——递归护栏/深度上限的归属）（原文在 references/knowledge-base.md）
 ## r698C 下沉条目（1 点，KB-only：被拒技能改动的 append-only 台账——一行五列含改前改后分数，作提案期判重索引）（原文在 references/knowledge-base.md）
+## r701A 下沉条目（1 点，KB-only：写技能先跑不带技能的基线压力场景并逐字记录借口；只写挡得住这些失败的最小内容；纯参考型不测；反合理化要封死具体绕法；description 写"即将违规的症状"）（原文在 references/knowledge-base.md）
+## r702A 下沉条目（1 点，KB-only：grader 判 PASS 要"证据 + 真实完成"；除预设断言外抽事实/过程/质量三类隐式声明逐条核验；第二职责是批评评估本身——弱断言上的 PASS 比无用更糟）（原文在 references/knowledge-base.md）
+
+## r703A 下沉条目（2 点，KB-only：①规则蒸馏＝脚本确定性收集 + LLM 跨技能聚类判定，2+ 技能才升格，聚类分批后跨批合并去重、阈值按全局算、不 grep 预筛；②技能库盘点＝快扫 diff/全量双模式 + results.json 缓存即基线 + .trash 归档不入账 + 断点续跑）（原文在 references/knowledge-base.md）
+
+## r704A 下沉条目（1 点，KB-only：技能合规测量＝从 .md 自动生成行为 spec、支持性/中性/竞争性三级提示、LLM 分类 tool-call trace、时序确定性校验，核心指标是"不点名时还遵守吗"（提示独立性）；先 --dry-run 再全量）（原文在 references/knowledge-base.md）
+
+## r705A 下沉条目（2 点，KB-only：① 横切原则蒸馏成规则＝≥2 技能重复出现才上升，确定性盘点+LLM 交叉读判 append/revise/create+跨批去重复检门槛；② 配置与技能库 GC＝按通道定陈旧信号+软删三级+逐项确认+GC 日志）（原文在 references/knowledge-base.md）
+## r705B 下沉条目（1 点，KB-only：造新技能前先搜＝五级召回（本地技能名→市场→GitHub code search --filename SKILL.md→仓库 stars→网页≤3 条）+ 外部体检（意外 shell/写/网络/凭据/安装·维护度·复制到独立分支看 diff）+ 排序五档最多 10 条 + 三选项（use/fork/create）+ Gap 列）（原文在 references/knowledge-base.md）
