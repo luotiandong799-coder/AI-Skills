@@ -5640,3 +5640,23 @@ Pydantic 把下划线开头的名字当成私有属性，于是 `_tenant` 这类
 - **排序规则（定死的优先级）**：技能名精确命中 > 描述命中关键词/同义词 > 本地已装 > 维护中的 GitHub 源 > 仅网页提及；最终列表**最多 10 条**，超出的砍尾部。
 - **输出三选项 + 缺口列**：`Use existing`（直接调用/安装）/ `Fork or extend`（复制最近的那个再改）/ `Create fresh`（确认无近邻再造）。表格必须有 **Gap** 列写清"它差在哪"——没有缺口列，"看起来像"就会被当成"能直接用"。
 - 判据：**只有在"搜过且确实没有近邻"或用户明确选择 create 之后，才允许新建**。
+## r709A · ① 技能库双层分类：DAILY 与 LIBRARY 是「加载面」问题，不是价值排序（来源：GitHub `affaan-m/ECC`·`.agents/skills/agent-sort/SKILL.md` 5,911B，2026-11-08 一手 contents API 实拉；逐串命中 `DAILY` / `LIBRARY` / `Every DAILY decision must cite concrete repo evidence` / `LIBRARY does not mean "delete"; it means "keep accessible without loading by default"` / `Do not duplicate every skill body inside the router`）
+
+技能库变大以后的问题不是「哪些技能好」，而是「哪些技能该在每个会话里常驻」。按加载面分两桶，不按重要性打分：
+
+- **DAILY**：本仓库/本项目每个会话都该加载，且与当前语言、框架、工作流或操作面强匹配。
+- **LIBRARY**：值得留着，但不值得默认加载；必须仍可被检索、路由或手动选中。**LIBRARY ≠ 删除**——把它理解成「移出常驻面、保留可达性」。
+- **每条 DAILY 判定必须引用具体证据**，不许写「感觉有用」：扩展名分布、包管理器与 lockfile、框架配置、CI/hook 配置、构建与测试脚本、imports/依赖清单、明确描述技术栈的仓库文档。证据表一行五列：`组件路径 | 类型 | 分桶 | 仓库证据 | 一句理由`（例：`skills/frontend-patterns | skill | DAILY | 84 个 .tsx + next.config.ts | 主前端栈`）。
+- **升 DAILY 的判据**：仓库确实在用对应栈 / 组件足够通用能帮到每个会话 / 仓库已依赖相应运行时或工作流。**降 LIBRARY 的判据**：off-stack / 以后可能要但现在不每天用 / 只增加上下文开销而无即时相关性。
+- **路由技能只放导航，不复制正文**：`skill-library` 这类路由里写清 DAILY vs LIBRARY 的含义、分组触发词、库引用位置即可；**把每个技能正文抄进路由，等于换个地方全量常驻**，等于没分层。
+- **落装后必须复核四点**：DAILY 文件确实在预期位置 / 过期语言规则没有留在生效面 / 不兼容的 hooks 没有被装上 / 结果与仓库真实栈一致。
+- 判据：**技能库的成本在 description 常驻，不在磁盘体积**——71 个技能全量常驻，是替每一个 off-stack 技能在每个会话里付费。
+## r709A · ② 跨宿主投影兼容：schema 校验通过 ≠ 在另一个宿主跑得起来（来源：GitHub `affaan-m/ECC`·`.agents/skills/skill-host-compat/SKILL.md` 3,771B，2026-11-08 一手实拉；逐串命中 `Codex leaves those tokens as literal text` / `A Codex copy may only use name, description, metadata, license, and allowed-tools` / `Do not treat a passing validate-skills.js run` / `name:` must match the directory）
+
+同一份技能要被多个宿主（Claude Code / Codex / Cursor / 豆包等）加载时，**「能解析」和「能执行」是两道门**：
+
+- **宿主变量在别的宿主里是字面量**：`$CLAUDE_SESSION_ID` / `$CLAUDE_SKILL_DIR` / `$CLAUDE_PLUGIN_ROOT` / `$CLAUDE_PROJECT_DIR` / `$ARGUMENTS` 写进可执行代码块，原宿主会替换，复制到 Codex 后**原样当字符串**——于是 `ls "$CLAUDE_SKILL_DIR"` 变成列一个不存在的目录，且不报错只给空结果。投影副本要么改写成 `$(pwd)`/显式路径，要么干脆不在正文里写宿主变量。
+- **投影副本的 frontmatter 有字段白名单**：只允许 `name` / `description` / `metadata` / `license` / `allowed-tools`；`version` / `origin` / `argument-hint` 这类只属于原宿主或原仓库的字段，在副本里要剥离（留着不是冗余，是让校验器误判来源）。
+- **结构性校验只证明「文件在」**：它只查 SKILL.md 存在、name/description 是可用 YAML。跨树一致性要单独跑一遍：canonical ↔ 各投影副本一一对应、`name` 必须等于目录名、列为可选的副本不是必需、禁止同一个技能两处不同步。
+- **未实测的宿主标 `not-tested`**，不许用「应该没问题」替代——宿主兼容是装出来的，不是推出来的。
+- 判据：**一门技能多宿主，等于同一个脚本要在多套变量语义下成立**；先问「这段可执行代码在目标宿主解析成什么」，再问「文档写得对不对」。

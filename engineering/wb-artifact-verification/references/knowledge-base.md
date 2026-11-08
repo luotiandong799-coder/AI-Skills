@@ -5722,3 +5722,31 @@ design-it-twice 的多个子智能体都指向同一份预先收集的事实简�
 - **有任一条不清楚就全部暂停**：不要"先实现 1、2、3、6，4 和 5 待会儿问"——**条目之间可能互相关联**，部分理解 = 错误实现。
 - **按来源分级信任**：写这份代码的人的意见通常可直接执行；外部/自动评审给的结论仍需核实（评审者可能不了解上下文）。
 - 判据：**评审的价值在于把"意见"变成"已验证的结论"**；全盘接受和全盘抵触都是没做核实。
+## r709A · 测试点台账：绿 CI 只能证明「跑过」，不能证明「覆盖到了」（来源：GitHub `affaan-m/ECC`·`.agents/skills/test-collaboration/SKILL.md` 11,111B，2026-11-08 一手实拉；逐串命中 `TEST-ORDER-001` / `missing, in progress, unverified, covered, or not applicable` / `"Hard to test" is not a reason` / `Without a TEST-ID or an explicit manual exit, the defect is not fully closed` / `Separate green client and server tests do not prove compatibility`）
+
+生成物验证只管「这一次对不对」，测试点台账管「这类事以后还会不会被挡住」——两件事，别合并：
+
+- **稳定 ID + 五态**：`TEST-<域>-<序号>`（如 `TEST-ORDER-001`）配 `missing` / `in progress` / `unverified` / `covered` / `not applicable`。`not applicable` 必须给理由（类型系统、schema、lint 已提供更合适的确定性护栏），**「难测」不是理由**。
+- **台账只回答「哪条证据证明了它」**：成功标准仍归 Spec/Issue 单源；把业务判据抄进台账＝造一份会漂移的副本。
+- **缺陷关闭必须二选一**：建/链一个 TEST-ID，或记录「当前不可自动化 + 人工验证步骤 + 证据」。两者都没有 = **缺陷没关**。回归用例必须复现真实失败形态，不是更简单的相似输入；记改前失败与改后通过。
+- **跨边界合同用一条 ID 串四层证据**：contract（schema lint）/ consumer（由合同生成的类型与 mock）/ provider（验证真实序列化响应，不是内部 DTO）/ integration（至少一条真实跨边界路径，或显式记录缺口）。**客户端绿 + 服务端绿 ≠ 兼容**——那只能证明两边各自自洽。
+- **标 covered 前五查**：文件存在 / 断言验行为（不只是「被调用」或 HTTP 200）/ 命令真跑且 exit 0 / 跑在标准 runner 或明确命名的专项组 / 证据与 ID 的输入·期望·边界对得上。任一不满足就留在 `unverified`，不许升格。
+- **重扫按事件不按日历**：首次全量；测试目录、配置、CI、标准入口变更时重扫受影响区；新 ID / 缺陷时对齐相关模块；重大特性·接口·安全边界变更时重扫该路径；交付收尾时只对齐本次触碰项。
+## r709B · 目标环境验收与本地检查是两件事：本地全绿只证明"本地成立"（来源：GitHub `affaan-m/ECC`·`.agents/skills/verification-loop/SKILL.md` 3,480B，2026-11-08 一手 contents API 实拉；逐串命中 `Passing local checks, review, merge, or release does not establish target acceptance` / `Report VERIFIED or FAILED for an executed target check` / `next permitted check or precise access dependency`）
+
+六段本地核验（build / type / lint / test / security / diff）全过，是一个**独立结论**，不是"可用"的同义词：
+
+- **目标验收单独一槽，四态枚举**：`VERIFIED`（真跑过目标环境）/ `FAILED`（跑过且失败）/ `NOT PERFORMED`（没有权限或环境，未跑）/ `NOT APPLICABLE`（纯本地任务）。四态都要带**环境与版本 + 证据 + 下一步许可动作或缺失的访问依赖**。
+- **合并、评审通过、发布完成都不构成目标验收**：它们只改变了代码所在的位置，没有验证目标环境里的行为。
+- **`NOT PERFORMED` 不是失败，但绝不能写成通过**：写"本地检查 PASS；staging 未验证（无访问）；下一步由有权限的维护者跑 smoke"——这比一句"应该没问题"信息量高一个量级。
+- **纯本地任务才可标 `NOT APPLICABLE`**，且要显式写出来；留空等于让读者自己猜。
+- 判据：**验收结论必须区分"我在哪台机器上看到的"**——同一个 PASS，在本地容器与在目标环境里不是同一件事。
+## r709C · 跨产物一致性：先有单一事实源，再写第二份材料（来源：GitHub `affaan-m/ECC`·`.agents/skills/investor-materials/SKILL.md` 2,724B + `.agents/skills/market-research/SKILL.md` 2,227B，2026-11-08 一手实拉；逐串命中 `All investor materials must agree with each other` / `If conflicting numbers appear, stop and resolve them before drafting` / `Include contrarian evidence and downside cases` / `Separate fact, inference, and recommendation clearly`）
+
+同一件事有多份对外材料（简历 / 一页纸 / 报告 / 演示 / 申请表单）时，错误不在单份写得差，而在**它们互相矛盾**：
+
+- **先盘点规范事实，再动笔**：把会被反复引用的字段列成一份事实源——关键数字（业绩、规模、时间）、角色与头衔、时间线、金额与用途、里程碑。**冲突就停下来解决，不要带病出稿**：两份材料里同一指标差 20%，评审只会记住"这人不靠谱"。
+- **每个数字回对源**，并在成稿里让假设显式（不埋在脚注或小字里）；收入/预算的加总必须自洽（分项加得起来）。
+- **四条红线**：不可核验的声明 / 没有假设的模糊市场规模 / 团队角色头衔前后不一 / 加不平的收入或预算。
+- **研究型材料再加四条**：每条重要断言带来源；**主动带反方证据与下行情景**（只给顺风的报告等于没做研究）；陈旧数据要标出来；**事实 / 推断 / 建议三分**，别把建议写成事实。
+- 判据：**材料数量增加时，风险不是"写不完"，而是"版本漂移"**——单一事实源是唯一解，而不是最后再"统一口径"。

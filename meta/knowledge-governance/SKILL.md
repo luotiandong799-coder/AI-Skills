@@ -5,7 +5,7 @@ display_name_en: "AI Memory & Skill Governance"
 description: "AI 智能体记忆与技能统一治理：解决记忆无限膨胀、身份/事实/偏好混层、技能内容重叠重复三大问题。分层判据（身份层/记忆层/画像层/技能层/外部记忆）+ 五类处置动作（保留/合并/压缩/外置技能/归档）+ 安全护栏，零信息丢失防膨胀。部署为定时任务后全自动巡检执行，无需人工触发。"
 description_zh: "AI 智能体记忆与技能统一治理：解决记忆无限膨胀、身份/事实/偏好混层、技能内容重叠重复三大问题。分层判据（身份层/记忆层/画像层/技能层/外部记忆）+ 五类处置动作（保留/合并/压缩/外置技能/归档）+ 安全护栏，零信息丢失防膨胀。部署为定时任务后全自动巡检执行，无需人工触发。"
 description_en: "Unified governance for AI agent memory and skills: solves memory bloat, mixed identity/fact/preference layers, and overlapping or duplicated skills. Layered rules (identity/memory/profile/skill/external) + five disposal actions (keep/merge/compress/move-to-skill/archive) + safety guardrails with zero information loss. Runs as a scheduled auto-inspection task; no manual trigger needed."
-version: 1.1.0
+version: 1.2.0
 author: 武汉弈枢科技有限公司
 category: 效率工具
 metadata:
@@ -230,3 +230,4 @@ modules: MI,KI
 
 ## 学习轮沉淀区（本段）
 （r319 起的连续学习轮章节共 5 章已下沉 references/knowledge-base.md §≤200迁移，正文留此指针）
+## r709B 下沉条目（1 点，KB-only：本地规则只写增量＝不得豁免项目级+无缺失不建副本+不按目录配额建空文件+边界不由目录名证明+相对链接按各自目录解析）（原文在 references/knowledge-base.md）
