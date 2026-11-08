@@ -3,7 +3,7 @@ name: meta/pdi-forecasting
 description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议。
 module: PDI
 modules: PDI,TI,DI
-version: "1.2.0"
+version: "1.3.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -96,7 +96,28 @@ Brier 分数只是一个数，分解才知道**错在哪**，避免修错方向�
 4. 画可靠性图必带每箱样本数；样本 <100 只作定性参考。
 5. 校准映射用独立集或 CV 拟合，禁止在同一批结算样本上自校准。
 
-## 八、来源
+## 八、校准指标自身也是一把尺：ECE 的三个结构性缺陷与重校准的连锁代价（2026-11-08 r717B 实拉）
+
+> 与 §七 分工：§七管「评分规则与 Brier 三量分解」，§7.3 管「可靠性图这个估计量自带偏差-方差误差」；本节管 **ECE 作为单一数字的可比性 / 抵消盲点 / 忽略 sharpness**，以及**把概率重新映射之后下游阈值会怎样**。
+
+### 8.1 ★ECE 只测校准，不测 sharpness（信息量）
+- mbrenndoerfer 逐字："ECE also only measures calibration, not sharpness. Sharpness is the property that the model's confidence scores are informative: a model that always predicts the marginal class probability (for example, predicting 0.7 confidence for a class with 70% base rate) is perfectly calibrated but useless"；mlmentorship 逐字："Doesn't measure sharpness: a model that predicts 0.5 for everything has ECE = 0 if base rate is 0.5, but is useless."
+- ⇒ **「ECE 降到 0」不等于「判断变得有用」**：恒定报基率即可拿到完美校准分。PDI 台账里报校准必须与适当评分规则（Brier / log，见 §7.1–7.2）及分辨率同时报；校准与 sharpness 是两个独立目标，理想是「既准又有区分」。全库 `sharpness` 唯一命中是豆包自留地 KB 的「continuity vs sharpness」（上下文卫生），不同维度；`MCE` / `debiased` 词边界 0 命中。
+
+### 8.2 ★ECE 是分箱协议的函数，且两个盲点会互相掩护
+- mbrenndoerfer 逐字："Different researchers use different bin counts (typically between 10 and 20), making it difficult to compare ECE values across papers without knowing the exact evaluation protocol. A model with ECE of 0.03 reported with 15 bins may not be directly comparable to one with ECE of 0.04 reported with 10 bins."；"Equal-width binning can produce misleading ECE estimates if the confidence distribution is imbalanced"；Adaptive binning "complicates comparison across models and implementations"。
+- thelion 逐字："ECE has two blind spots. Overconfidence in one bin and underconfidence in another partly cancel. And if almost all predictions fall in the top bin, ECE mostly measures that bin."（实例：ECE 0.031 / 1,200 题 / 990 题挤在 0.9–1.0 箱，低箱每箱仅 handful）；lifeofresearch 预印本补：「等宽箱 plugin 估计量有偏且小样本偏差大」（Roelofs 2022 等质量箱/去偏、Kumar 2019、Nixon 2019「重校准方法排名随校准度量选择而变」、Blasiok 2023「ECE 甚至不是预测器的连续函数」）。
+- mlmentorship 变体清单：MCE=最坏箱（安全关键视角）、Adaptive ECE=等频箱、Class-wise ECE、Top-label ECE（多类只用 top-class 概率 ⇒ "ignoring whether the full distribution is well-calibrated"）。
+- ⇒ **报 ECE 必须附「箱数 + 分箱策略 + 每箱样本数 + 是否 MCE」四件套**，否则跨轮 / 跨台账的 ECE 数字不可比；单看一个下降的 ECE 不能证明校准改善（可能被抵消、可能只测了顶箱）。与 §7.3 的分层：那条是「校准曲线的估计误差」，本条是「把曲线压成一个数之后丢掉的信息」。
+
+### 8.3 ★重校准不是无损操作：argmax 不变 ≠ 下游决策不变
+- thelion 逐字："Temperature does not change which Choice option wins, but it changes every Noul probability and every Score expectation, so every threshold tuned before the fit has to be tuned again."（实例：0.8 的退款路由阈值 + 拟合 T=2.2 → 自动批准份额 "drops by half overnight"，"Nothing was wrong with the fit"）。
+- mlmentorship 逐字："Shared positive scaling preserves multiclass argmax, not every probability-threshold action."；Platt 的截距可改变 0.5 处决策、isotonic 的平台可造平局或把分数推过操作阈值、**vector / matrix scaling "can change class ordering and accuracy"**；收口 "Calibration is not generally lossless on accuracy or decision cost."
+- 两个连带失效面：① **子群反向** thelion "A single temperature can also help the average and hurt a subgroup. Nimble's fit improved average calibration, while the ECE of its Score questions rose from 0.105 to 0.177"；② **分布漂移** "Laya's English checkpoint scored 0.000 accuracy on Khmer text while reporting 0.952 confidence ... No threshold on confidence can catch that"。
+- ⇒ 任何「把历史预测重新映射 / 重校准」的动作，必须连带做：重验所有基于概率阈值的护栏（弃权线、0.1–0.9 带、升级线）→ 分子群报校准 → 声明「仅分布内有效」；否则「我调了校准」不等于「概率可用了」。mlmentorship 四个 common pitfalls（拟评同批、报 ECE 不配可靠性图、假设重缩放必有帮助、把校准与 accuracy 混淆）并入落地清单。
+- 判非：§7.3 的 cube_root / 空箱 / 独立校准集、§7.2 的 BS 三量分解、§7.1 严格适当规则均不重复；`vi-fact-verification` L96 只讲「温度缩放用留出集、ECE 与分类质量并列报」，未覆盖阈值失效 / 子群 / 漂移三连。
+
+## 九、来源
 
 ### 2026-11-07 首拉
 
@@ -116,3 +137,12 @@ Brier 分数只是一个数，分解才知道**错在哪**，避免修错方向�
 - onlinelibrary.wiley.com/doi/10.1002/2013JD020195（Murphy 分解实证：人类预报 reliability 差但 resolution 高 ⇒ 单看总分误判）
 - JMLR 23-0106 / Gneiting & Raftery 2007（严格适当定义式，经 ima.qq.com 索引实拉）
 - 判非：BS 三病灶表、周度复盘流水线已在 §六（brierscore.com / inferensys.com / brightlearn.ai），本轮不重复落；`wb-agent-evaluation` 的评测集有效性亦不在此重复。
+
+### 2026-11-08 r717B 增补（逐字核验，四独立域交叉）
+
+- mbrenndoerfer.com/writing/calibration-machine-learning-confidence-accuracy-ece/limitations-and-impact（2026-02-26；ECE 箱数 10–20 不可比、0.03@15箱 vs 0.04@10箱、equal-width 失衡误导、只测校准不测 sharpness、恒报基率 0.7 完美校准但无用、温度缩放假设跨类均匀；WebFetch 全文逐字）
+- www.thelion.ai/guide-to-decision-models（Ch.7 Calibration；"Temperature ... changes calibration without changing accuracy at all"、0.8 阈值 + T=2.2 → 份额腰斩、"every threshold tuned before the fit has to be tuned again"、ECE 两盲点 0.031/1200/990、Nimble Score ECE 0.105→0.177、Laya Khmer 0.000 accuracy / 0.952 confidence；WebFetch 逐字核验）
+- mlmentorship.com/concepts/expected-calibration-error（2025-08-18；ECE 加权定义、MCE/Adaptive/Class-wise/Top-label 变体、"Shared positive scaling preserves multiclass argmax, not every probability-threshold action"、Platt/isotonic/vector-matrix 对决策的影响、"Calibration is not generally lossless"、四个 common pitfalls；WebFetch 全文逐字）
+- lifeofresearch.com/preprints/133/files/136/calibrated-is-not-informative.pdf（预印本；binned ECE 有偏、Roelofs 2022 等质量箱/去偏、Kumar 2019、Nixon 2019 排名随度量变、Blasiok 2023 ECE 非连续、分布漂移 Ovadia 2019；WebSearch 结果全文，逐串命中）
+- metricgate.com/blogs/predictive-uncertainty-calibration-methods/（交叉佐证：ECE/MCE/Brier 三者并用、子群漂移 overall ECE 0.01 可藏 0.15、Platt/isotonic 不改 AUC、堆叠校准两次会劣化；WebSearch 结果全文）
+- 判非：`ECE` 全库 46 命中经词边界复核仅 6 文件且为 `recent` 等子串噪声；`vi-fact-verification` L96、`00_AI智慧进化研究主线` 的 AUROC/ECE、`wb-agent-evaluation` KB 的 isotonic vs temperature scaling 均属不同命题；`sharpness` / `温度缩放` 命中在豆包自留地 KB（上下文卫生 / 评测阈值诊断），WB 0 落地。

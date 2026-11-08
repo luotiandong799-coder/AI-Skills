@@ -1,6 +1,6 @@
 ---
 name: agent-evolution
-version: "1.4.0"
+version: "1.5.0"
 description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。
 license: MIT
 metadata:
@@ -236,3 +236,30 @@ modules: AI
 - spinnaker.io/docs/guides/user/canary/judge/（NaN 策略与 Nodata 分类、Mann-Whitney U 98%、效应量阈值、HL 容差死区、IQR 离群）
 - spinnaker.io/docs/guides/user/canary/canary-overview/ · /config/canary-config/（基线对照、指标分组与权重）
 - 判非：BS 分解三病灶、验收六要素等已在本仓 `engineering/*` 与 `meta/pdi-forecasting` §六，本轮不重复落。
+
+## 十六、自适应的探索-利用门：别把「在线自适应」和「确认谁更好」混成一种实验（2026-11-08 r717A 实拉）
+
+> 与 §十五 分工：§15.1 ADWIN 管「何时判定策略失效」，§15.3 管「改完与同时部署的等价基线比」；本节管**改之前那笔探索预算怎么花**，以及**哪种实验目标该用哪种分配**。两节合起来覆盖「触发→探索→验收」全链。
+
+### 16.1 ★目标函数分裂：regret 最小化 ≠ 估计方差最小化
+- dswok 逐字："Bandits minimize cumulative regret during learning: the loss from not picking the best arm on each round. A/B tests minimize estimation variance on a specific contrast: the uncertainty about which arm is best after a fixed sample."；"Use A/B when a clean ship/kill decision matters more than regret during the decision period."
+- 同一页收口："Bandits are not a substitute for a well-designed A/B test when the goal is a confirmed causal effect estimate for a specific contrast."
+- ⇒ **策略改版验收（§15.3 要干净的 ship/kill 判定）与在线流量自适应是两种不同实验，禁止混用**：要「确认的因果效应估计」必须固定分配；拿自适应分配的数据去签「新版更好」的验收证书，会被流量分配本身污染。DataExpertise 逐字："Standard A/B testing is epsilon-greedy with ε = 0.5 ... which is optimal for hypothesis testing but suboptimal for regret minimisation because it never increases allocation to the better-performing variant during the test." ⇒ 反过来也成立：为省 regret 而动态调流量，就放弃了假设检验的最优性。先声明目标，再选分配。
+
+### 16.2 ★探索预算按不确定性分配，恒定随机试＝永不学习
+- DataExpertise 逐字：ε-greedy "explores uniformly — it is equally likely to explore the arm that has been pulled 5 times and the arm that has been pulled 500 times — wasting exploration budget on well-characterised arms"；UCB1 用 `argmax_k [x̄_k + sqrt(2 log t / n_k)]` 让少拉的臂自动拿到探索奖励，Thompson 用后验采样；两者 `O(K log T)`，ε-greedy 固定速率是线性 regret。
+- Vitor Sousa 逐字："Linear regret R(T) = Θ(T) would mean we're making a constant mistake forever—we never learn."；判定标准是**次线性** "R(T)=o(T)"，即平均每轮 regret 趋 0。其 10,000 轮数值：linear ~10,000 / ε-greedy ~464 / UCB ~130 / Thompson ~100；LinUCB `O(d√(T log T))` 为维度付 √d 代价。
+- ⇒ 自改进不能「每次固定拿 10% 任务随机试新写法」——那是恒定 ε、线性 regret。探索额度应随候选已被验证的次数衰减（UCB 的 n_k 项 / Thompson 后验收窄），并把「候选池的累积遗憾是否次线性」当作进化引擎是否真在学习的体检指标。Lai & Robbins 下界 `Ω(log T)` 提醒：**不确定性下的学习有不可消除的成本**，不存在零代价探索。
+
+### 16.3 三个让朴素自适应失效的现实条件（归因窗口 / 漂移 / 相关候选）
+- dswok "Common pitfalls" 逐字：① "Delayed rewards break naive bandit algorithms. Attribution windows must be modeled explicitly, or credit lands on the wrong arm."；② "Non-stationary reward distributions invalidate the regret bounds. Sliding-window or discounted-reward variants handle drift."；③ "Correlated arms (shared features, similar content) mean independent bandits waste data. Contextual bandits share statistical strength across arms with similar context."
+- Vitor Sousa 的**部分反馈**："We only observe rewards for actions we take ... we never know what would have happened if we'd chosen differently (the counterfactual outcome)." ⇒ 只跑一个候选就永远没有反事实对照，这与 §15.3「同时部署等价基线」是同源要求。
+- ⇒ 落到 Agent 自改进：任务结果常**延迟**（收尾才有 0/1 成败），必须先显式定「哪一段反馈归属于哪一版策略」的归因窗口，否则把上一版的成果记到新版头上；环境非平稳时（接 §15.2 真实漂移）regret 界失效，改用滑窗/折扣计数而非继续按原界验收；同源候选（同一提示词的多个改写）应按 context 共享统计强度，别为每份变体从零攒样本。
+- 判非：§15.1 漂移门、§15.3 基线对照与双阈值、§十三 GEPA「同样本重跑更好才接受」均不重复落地；本轮只补「探索侧」与「实验目标分叉」。
+
+### 16.4 来源（2026-11-08 r717A 实拉，逐字核验，三独立域交叉）
+
+- dswok.com/General-ML/Multi-armed-bandits（2026-07-31；"Regret vs estimation" 两目标分叉、"Common pitfalls" 延迟奖励/非平稳/相关臂、bandit 非 A/B 替代、ε-greedy 线性 regret；WebFetch 全文逐字）
+- www.dataexpertise.in/multi-armed-bandits-online-learning-thompson-sampling-explore-exploit/（2026-10 前后；ε-greedy 均匀探索浪费、UCB1 公式 `sqrt(2 log t / n_k)`、`O(K log T)`、A/B=ε=0.5 固定分配、FTRL/Vowpal Wabbit 在线学习；WebFetch 全文逐字）
+- www.vitorsousa.com/blog/contextual-bandits-math（2025-11-15；regret 界表 ε O(T^2/3) / UCB O(√(T log T)) / TS O(√T) / LinUCB O(d√(T log T))、10,000 轮 10000/464/130/100、partial feedback 反事实不可观测、`R(T)=o(T)` 次线性、Lai-Robbins Ω(log T) 下界、LinUCB α=0.1–2.0；WebFetch 全文逐字）
+- 判非：`UCB` / `LinUCB` / `epsilon-greedy` / `部分反馈` / `延迟奖励` 全库词边界 0 命中；`bandit` 命中均在豆包自留地 `defaults/wb-context-compressor/references/knowledge-base.md`（测试时算力缩放 / shadow-first bandit），与 regret 理论、探索预算分配无关，不重复；`Thompson` 命中仅为同 KB 的路由实验，不同维度。豆包自留地 WB 0 落地。

@@ -3,7 +3,7 @@ name: ri-retrospective
 description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置。
 module: RI
 modules: RI,EI
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -151,7 +151,31 @@ incident.io 逐字归纳（"How actions die"）：
 - **行动项五要素**：owner + tracking number + priority + verifiable end state + 按主题分组并区分 **Prevent / Mitigate**（本条只作为 SRE 原文归档，不与 §5.4 的三要素重复主张）。
 - **深度**：不止查故障邻近区域，跨团队看影响与系统缺陷。
 
-## 八、来源（2026-11-07 首拉 / 2026-11-08 r706C 增补）
+## 八、复盘有效性用复发率验收 + 反事实语言门 + 替换测试（2026-11-08 r717C 实拉）
+
+> 与 §七 分工：§7.1 准入触发器、§7.3/7.4 管**单条行动项**的动词与四种死法、§7.6 关闭三态；本节管**组织级有没有真的学到**（验收指标与季度仪式）、**复盘文档怎么写才不污染归因**（语言门 / 局域理性 / 主持中立），以及**无责与问责的可操作分界**。
+
+### 8.1 ★验收指标是复发率，不是文档数或行动项完成率
+- zakhassan 逐字："The most direct signal is incident recurrence rate — the fraction of incidents that represent a failure mode you've seen before. A genuine learning culture drives this number down over time."；前提是给事故打 `failure_mode` / `is_recurrence` 标签并按 90d 窗口查询（原文给出 PromQL 分子分母）。
+- 配套三个量："action item closure velocity — the ratio of action items completed per quarter to action items opened. If this ratio is below 1.0, your backlog is growing and systemic debt is accumulating faster than you're paying it down"；"items older than 90 days without progress are a signal of organizational prioritization failure, not engineering failure"；心理安全用季度 1–5 脉冲 + 独立发言人数 / 出席人数衡量参与分布。
+- 收口："The goal was never to have better postmortem documents."；"If your system design looks the same a year from now despite a year of postmortems, the learning culture is aspirational rather than real."；stackademic 交叉："repeat incident rate ... above 30%, your postmortems are producing documentation, not learning"，且"时间线凭记忆重建、根因停在症状"是典型坏味道。
+- ⇒ **「行动项全关了但复发率不降」仍判复盘无效**；与 §7.4 分层：那条管单条存活，本条管组织级成效。落地：复盘台账必须带失效模式标签，季度算复发率 + 闭环速度比 + 90 天存量；写「本轮产出 N 篇复盘」不算成效证据。
+- ★**单次复盘与季度学习复盘是两层**：zakhassan "A postmortem is incident-specific ... Individual incidents are noisy ... Treating each incident in isolation also makes it easy to miss patterns — the same class of failure appearing in different subsystems, the same type of action item that never gets implemented"；Learning review 每季度跑，把复盘语料当 "evidence about the state of the sociotechnical system, not just a collection of individual events"，议程五段（事故清单 / 模式分析含 "same root class appearing ≥2x" / 行动项审计含「上季被降优先级的项是否牵涉本季事故」/ 心理安全脉冲 / 前瞻风险）。反事实换框：不问 "what caused this?"，改问 "what would have had to be true for this incident not to happen?"，列**联合充分**的多个条件，按 generalizability 与 cost 挑干预组合 ⇒ "portfolio of interventions that would reduce the probability of this class of incident"。
+
+### 8.2 ★反事实语言门 + 局域理性 + 主持中立（可机检）
+- tinycto 逐字："Counterfactual reasoning—speculating about what people 'could have, should have, or failed to do'—is the most pervasive anti-pattern in incident postmortems. It is fueled by hindsight bias: knowing the outcome makes the failure seem obvious in retrospect."；"True blameless postmortems ban counterfactual language."
+- 四条硬规则："Ban counterfactual words: Scrub words like 'could have', 'should have', 'failed to', 'carelessly', and 'inadvertently'"；"Reconstruct the local rationality: Map out the exact UI screens, alert notifications, and architectural assumptions present during the action"；改为问 "Given the information, dashboard signals, time pressure, and organizational tools available to the engineer at that exact second, why did their action make complete sense to them at the time?"；行动项要技术护栏（automated schema validation / read-only DB replays / CI-CD gating / IAM scoping）而非 "remind developers to be more careful"。
+- **可机检**：tinycto "establish automated linting rules on postmortem markdown templates to flag words like 'should have' or 'human error'" + "Appoint trained postmortem facilitators outside the impacted team"；sph.sh "Hindsight bias in the timeline. Build it strictly from what each responder knew at the time, not from what the reviewers know now"；pmmilestone "Reconstruct the timeline first using logs, chat transcripts and pager data. Only then discuss what to do about it"、"Cap action items at five. A postmortem with 27 actions produces zero completed actions"、"Someone not directly involved in the incident" 主持。
+- sph.sh 的复发实例：第一次复盘停在「谁 merge 的 + 测试覆盖率 should have caught it」，同类 bug 两个发布周期后由**另一个人、另一条代码路径**复发；第二次深入到「无幂等保证 / 无 dry-run / 两服务无共享锁」并加幂等键、dry-run、重复写告警，该类才不再出现。⇒ **措辞不是文风问题，是会不会找到真因的因果开关**。
+
+### 8.3 ★替换测试：无责与问责的可操作分界
+- sph.sh 逐字："The substitution test is the hinge. It comes from James Reason's work and was popularized in Dekker's Just Culture. Would another competent person, with the same information and the same pressures, likely have made the same choice? If yes, the problem is the situation, not the person, and you stay in blameless analysis. If a reasonable peer clearly would not have, you have moved toward genuine recklessness, and the accountability path applies."；且 "Even then, the system learning still happens; an accountability case does not excuse the organization from fixing the conditions."
+- PagerDuty 的诚实修正："perfect blamelessness is unrealistic, because human bias toward attribution does not vanish on command. They prefer 'blame awareness'"，模板**刻意不设「谁造成事故」字段**，响应者只以角色出现（"the on-call engineer" / "an unspecified responder"），名字不作为归责载体。
+- 其余可复用动作：pmmilestone "Highlight near misses as well as full incidents. A caught-in-canary bug carries the same lessons at a fraction of the cost"、"Read old reports before writing a new one. Half the time the current incident is a variant of a past one, and the past report has the fix"、"Repeat incidents are review failures, not incident failures"。
+- ⇒ 与 §7.5「无责 ≠ 无人负责」互补：那条是原则声明，本条给**判定测试**。落地：复盘模板 + 禁用词 lint + 当事者视角时间线 + 局域理性栏 + 场外主持人；是否转问责由替换测试裁定，不靠主持人直觉。
+- 判非：§7.2 三分、§7.3 动词门、§7.4 四死法、§7.6 三类关闭态均不重复；全库 `替换测试` / `局域理性` / `local rationality` / `facilitator` / `repeat incident` / `near miss` 词边界 0 命中；`复发率` 仅 `wb-debug-loop` KB「按症状分诊导致复发率统计不出来」（不同命题）。
+
+## 九、来源（2026-11-07 首拉 / 2026-11-08 r706C、r717C 增补）
 
 - github.com/poloplay0114/hard-won-claude-skills（verification-discipline / handoff-protocol / engineering-economy / spec-citation / cache-discipline / ui-station-delivery，MIT，2026-08）
 - 互补：本仓 `engineering/wb-debug-loop`（调试复盘）、`agent/agent-guild`（learnings 台账）
@@ -173,3 +197,12 @@ incident.io 逐字归纳（"How actions die"）：
 - incident.io/blog/sre-incident-postmortem-best-practices（postmortem=artifact vs incident review=会议、文档应会前存在；blameless 不是无后果；语言对照表；psychological safety）
 - incident.io/blog/why-do-post-mortem-action-items-fail-how-to-make-incident-follow-ups-actually-get-done（动词对照表全量、系统性升级五步公式、"we're assigning ownership of the fix, not responsibility for the incident"）
 - 判非：§5.4 已有的 owner+到期日+验证测试、§5.2 的 5 Whys/FTA/排障树、§5.1 无责骨架与量化影响均不重复落地；`wb-agent-evaluation` 的评测有效性、`wb-debug-loop` 的调试六道门亦不在此重落。
+
+### 2026-11-08 r717C 增补来源（逐字核验，四独立域交叉）
+
+- zakhassan.com/blog/building-a-learning-culture-from-incidents-beyond-blameless-postmortems（2026-05-07，Staff SRE；incident recurrence rate 定义 + PromQL 90d 查询、closure velocity <1.0、>90 天无进展是优先级失败、季度 Learning Review 五段议程与模板、反事实分析「what would have had to be true」、供应商故障专门节、"The goal was never to have better postmortem documents"；WebFetch 全文逐字）
+- tinycto.tv/learn/blameless-postmortem-counterfactual-bias（counterfactual 是最普遍反模式、hindsight bias、禁用词表 could/should have/failed to/carelessly/inadvertently、局域理性重构原问句、latent traps、技术护栏型行动项、markdown 模板 lint、场外 facilitator、Dekker Safety Differently；WebFetch 全文逐字）
+- sph.sh/en/posts/blameless-culture-postmortem-thinking（2026-06-21；Dekker Old/New View、Allspaw second story、替换测试 James Reason / Just Culture、PagerDuty blame awareness 与 unspecified responder、无「谁造成事故」字段的模板、时间线 hindsight bias、双收费 bug 两次复盘实例、行动项只改系统；WebFetch 全文逐字）
+- pmmilestone.com/encyclopedia/post-incident-review（时间线先用 logs/chat/pager 重建再讨论、行动项上限 5 vs 27、owner+due date 进日常 tracker、near miss 同等价值、场外主持、5 工作日内、"Repeat incidents are review failures"、读旧报告；WebFetch 全文逐字）
+- blog.stackademic.com/your-incident-postmortem-process-is-probably-making-your-team-worse-heres-the-data-3092c9005ad2（交叉佐证：repeat incident rate >30% = 产出文档非学习、行业 35–50%、凭记忆重建时间线 / 根因停在症状 / 行动项无人认领四坏味道；WebSearch 结果全文）
+- 判非：r706C 的 SRE/incident.io 七源（准入触发器 / 三分 / 动词门 / 四死法 / 三态关闭 / soak time）不重复；本节只补「组织级有效性度量 + 语言门 + 替换测试」三维。豆包自留地 WB 0 落地。
