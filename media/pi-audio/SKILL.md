@@ -3,6 +3,7 @@ name: media/pi-audio
 description: 音频感知（Audio/Speech Perception）。当需要把录音/会议/播客/通话转成文字、标"谁在什么时候说了什么"、生成字幕、做语音合成（TTS）、识别音频事件（警报/音乐/故障声）或理解音频内容时调用。提供 ASR 选型（AudioTranscribe 本地/Whisper API/faster-whisper/whisperX）、长音频分段并行、VAD 去静音防幻觉、pyannote 说话人分离与时间戳对齐、LLM 后处理、SRT/VTT 输出、TTS 与隐私护栏。不用于音视频格式转码（走 rg-ffmpeg-tools）、图像理解（走 multimodal-intelligence）。
 module: PI
 modules: PI
+version: "1.1.0"
 ---
 
 # PI · 音频感知（Audio / Speech Perception）
@@ -95,3 +96,19 @@ modules: PI
 - pyannote diarization / 时间重叠对齐 / 已知人数提升准确率：pyannote.ai + pyannote.ai/blog/multi-speaker-meeting-transcription-pyannoteai-whisper
 - 音频流水线阶段 / 隐私保留 / 评测（WER）：aijobsok.com/topics/multimodal-ai/audio-processing-pipelines
 - 语音 AI 三件套 / STT-LLM-TTS / 指标 / voice fraud：primo.ai/w/index.php?oldid=46727
+
+## r708C 下沉：分离评测是三分量诊断，幻觉阈值必须按域校准（2026-11-08 实拉）
+
+> 与既有「WER / pyannote 对齐 / VAD 去静音防幻觉」分工：那些管**流水线搭起来**；本节管**"做完了到底错在哪"的量法**与**阈值的可信区间**。判重：全库 `WDER` / `JER` / `collar` / `no_speech_prob` / `missed speech` / `speaker confusion` 词边界 **0 命中** ⇒ 净新。
+
+- **DER 是三分量之和，不是单一分数**：`DER = (Missed Speech + False Alarm + Confusion) / 总参考语音时长`。三分量各自指向**不同修法**：missed（参考有语音、系统没标）→ 查 VAD / 重叠处理；false alarm（非语音区被标语音）→ 查噪声门限；confusion（语音区在、说话人标签错）→ 查嵌入/聚类/跨文件链接。**只报总 DER 不知道该修哪**，须用 `detailed=True` 分列输出。
+- **分数脱离评分协议不可比**：报告必须同时写明 ① **forgiveness collar**（常见 ±0.25s；pyannote 的 collar 是**总宽**，0.5 等价于双边 0.25；DIHARD 用零 collar 从严）② **重叠语音是否计分** ③ 参考集条件（远场/电话/会议）。标签置换歧义先用 Hungarian 求最优映射。判据：**没写这两项设置的 DER 数字不要跨来源比较**。
+- **按用途选指标**：DER 按时长加权，对**话少的说话人**不敏感 ⇒ 少数说话人要并报 **JER**（每说话人等权 Jaccard，DIHARD 引入）；下游是**带说话人标签的转写稿**时用 **WDER**（按词界算，短犹豫里的一次混淆对 DER 几乎无感、对 WDER 会跨好几个词）。看**逐文件**分数，别只看均值——一类录音三倍于其余的失效会被平均掉；同时核对「估计说话人数」与参考，一个被拆成两人的说话人几乎不抬 DER 却毁掉分人摘要。
+- **`no_speech_prob` 不是通用字段**：仅 OpenAI `whisper` 库 `model.transcribe()` 的 dict 输出提供；**`faster-whisper` / streaming API / `whisper.js` 都没有** ⇒ 换引擎时该过滤规则整体失效，必须改用该引擎自有信号并重测。
+- **阈值按域标定，别抄 0.5**：收 50+ 份本域真实转写，人工标"静音区幻觉 vs 真实语音"，画分布后选阈（语音密集域常见 0.6–0.75，示例 0.65）。边界例：`0.51` 且含微弱语音会被误滤。过滤要**可配置**（音频编辑、带时间空档的字幕需保留静音段），不硬编码。
+- 组合防线（与"先裁静音"串联）：`no_speech_prob` 阈值 + 幻觉正则（`[(` / music / applause / laughter / silence / inaudible / untranscribed）+ 时长/字符下限 + **词级时间戳落在有效片段外即丢弃**；解码侧关掉 `condition_on_previous_text`（噪声多人会放大错误传播）、温度回退封顶、`logprob_threshold` / `compression_ratio_threshold` 触发重切或人工复核。判据：**段级平均置信度会掩盖段内一整句臆造**，须下钻词级。
+
+**来源（2026-11-08 实拉，逐串核验）**：
+- `www.pyannote.ai/blog/how-to-evaluate-speaker-diarization-performance` — HTTP 200 / 464,580B，命中 Missed Speech·False Alarm·Confusion·WDER·JER·Jaccard·collar·overlap。
+- `theaicompendium.com/8-audio/speaker-diarization.html`（DER 公式 / Hungarian / ±0.25s collar / JER 对少数说话人）、`pixldata.com/blog/audio-annotation-guide`（三分量 + 必须随数报 collar 与是否计重叠）、`www.aicassindra.com/blogs/audio/audio_diarization.html`（`pyannote.metrics` `detailed=True` 分列三分量、参考集自建 20–40 分钟/类型）。
+- `theneuralbase.com/whisper/learn/beginner/hallucination-on-silence` — HTTP 200 / 214,348B，命中 no_speech_prob(35 处)·0.65·50+·fasterwhisper·calibrat·configurable；`blog.gitcode.com/de1aa2f5d03a23c8702e30a0a93af759.html`（五道防线 + 幻觉正则 + 词级范围过滤）；`transcribeall.io/knowledge/how_do_you_prevent_whisper_hallucinations...`（解码参数、条件关闭、段级均值盲区）。

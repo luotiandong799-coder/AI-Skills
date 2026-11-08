@@ -3,6 +3,7 @@ name: vi-fact-verification
 description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。
 module: VI
 modules: VI,EI
+version: "1.1.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -85,3 +86,20 @@ modules: VI,EI
 - michaeljohnpena.com/blog/2026-01-21-ai-testing-strategies（golden / property / adversarial 测试）
 - core.cz/en/blog/2025/ai-testing-automation（property + LLM-as-judge 评测管线）
 - argonsys.com（神经元覆盖 / FGSM-PGD 对抗 / 形式化验证 Marabou / CROWN）
+
+## r708B 下沉：证据充分性门 + 数值核验是决定性计算，不是再看一眼（2026-11-08 实拉）
+
+> 与既有「证据链 / 来源分级 / 原子主张分解」分工：那些管**怎么找证据、怎么标来源**；本节管**什么时候有资格下"已验证"结论**，以及**带数字/单位的声称该由谁算**。判重：全库 `证据族/来源族` 0 命中，`FEVER` / `NotEnoughInfo` 词边界 0 命中，"拆原子主张"已由 co-learn 豆包线落地 ⇒ 不重复。
+
+- **三态而非二值**：`Supported / Refuted / NotEnoughInfo(NEI)`。FEVER 一手（ACL N18-1074）：**185,445 条**人工核验声称、标注者 Fleiss κ=0.6841、**前两类必须记录构成判断所必需的句子**；NEI 是**一等输出**，不是"暂时没查到"的占位。
+- **证据充分性先于判真**：高模型置信度**不得**直接产出二值结论。判真/判假要同时满足 `p(标签) ≥ τ` **且** `证据充分度 s_evid ≥ τ_E`（所需变量是否都可观测）；缺任一，落 NEI 而非硬判。多份高置信证据互相矛盾 → 触发**歧义条件**，不做多数投票。判据：**"没有反证"不构成 SUPPORTED**。
+- **置信度要校准并单独报**：温度缩放校准用留出集；ECE 与分类质量**并列报告**——F1 上升但变得更过度自信，不算更可靠。弃权阈值（`when to abstain`）、top-k 截断、风险-覆盖曲线是同一组可调旋钮。
+- **"带正确证据"反而更差是硬证据**：FEVER 原文——给出正确证据时标签准确率 **31.87%**，忽略证据反是 **50.91%**。⇒ **检索到证据不等于会用证据**；验证管线要单独评测"证据选择"这一环（Evidence F1），FEVER Score 要求**标签正确 + 证据集完整**双达成，单看标签分会把"蒙对"当"验对"。
+- **数值声称交给确定性代码，不交给模型口算**：LLM 生成的数值最常错在**报告期 / 单位 / 口径 / 公式**（不是算术）。管道固定三步：① Verification Planner 声明 `metric / period / unit / operands / computation` → ② Provenance Verifier 把操作数落到**权威事实**（如 XBRL 字段）并从**候选无关的来源**授权公式 → ③ 用约束求解器（Z3）验候选值，输出 `Verified / Violated / Abstain`：**事实或公式无法唯一确定时必须弃权**，不许脑补。不一致时用 **unsatisfiable core** 直接点名冲突的「事实 / 公式 / 候选值」，便于定向修。判据：验收指标是 **false accept（错误数值被放行）**，不是平均分。
+- **跨源冲突先对齐口径再比**：单位、人口/总体、地域、期间、阈值、比较基线各自归一；**不对冲突数字取平均**（`$20` 与 `$18` 不报 `$19`，按主源报并附条件）；发布日期 ≠ 所述期间；`Unsupported ≠ Contradicted`、`Mixed ≠ Unverifiable`、`Misleading` 不要求每个细节都假、`Outdated` 必须有时间依据。
+- 判据：**一次验证的产出是「标签 + 证据集 + 充分性判定 + 校准后的置信度」四元组**，缺证据集或充分性判定的"已验证"是虚报。
+
+**来源（2026-11-08 实拉，逐串核验）**：
+- `aclanthology.org/N18-1074/`（FEVER, Thorne et al. NAACL 2018）— HTTP 200 / 41,998B，命中 185,445·NotEnoughInfo·31.87·50.91·Fleiss·evidence。
+- `arxiv.org/html/2608.10213v1`（VeriFin）— HTTP 200 / 213,480B，命中 Abstain·Verified·Violated·Z3·unsatisfiable core·false accept·Provenance Verifier·reporting period·unit。
+- 交叉：`github.com/sandbaseai/awesome-workbuddy/.../evidence-standards.md`（权威/邻近性/独立性分维、冲突不取平均、单位归一）；`github.com/moshiur00/claim-polygraph.../PROJECT_SPECIFICATION_AND_PLAN.md`（数值/时间确定性检查、判定分类学）；`ijsrtjournal.com/article/aeris-chart...`（证据充分性门 + 温度缩放 ECE + 矛盾触发 NEI）；`readever.app/zh/blogs/how-to-triangulate-sources`（对齐定义与时间框架、证据族独立性）。

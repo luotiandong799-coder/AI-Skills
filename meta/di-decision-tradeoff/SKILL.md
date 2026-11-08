@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
 module: DI
 modules: DI,TI
-version: "1.2.0"
+version: "1.3.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -132,3 +132,19 @@ version: "1.2.0"
 - AHP 成对比较/一致性比率 CR/±25% 敏感性：mdpi.com/2071-1050/13/23/13483
 - 加权和 V(a)/归一化/超排序一致性指数/排名稳定性 RS：sustainablecatalyst.com/?p=2841
 - TOPSIS 正负理想解 + AHP/TOPSIS 敏感性：tandfonline.com/doi/full/10.1080/14786451.2023.2167999
+
+## r708A 下沉：深不确定下不预测、改压力测试（RDM / DMDU，2026-11-08 实拉）
+
+> 与上文 EU/EVPI 分工：EU/EVPI **假定概率分布已知或可估**，回答"再调研值不值"；RDM 处理**多方连概率分布与模型都无法达成一致**的深不确定，回答"不预测未来也能选什么"。两者是互补的两条决策轴，不互相替代。
+
+- **XLRM 是决策框架，不是分析产物**：`X` 外部不确定因素 / `L` 可控杠杆（策略）/ `R` 二者到结果的关系（模型）/ `M` 绩效度量。**先定 XLRM 再跑模型**；缺 M 就无法定义"策略失败"，缺 X 的杠杆清单会把假设藏进模型里。判据：说不出这四格，就别开始算。
+- **目标从"最优"换成"跨未来够用"（satisficing）**：深不确定下不找单个最可能未来去优化，而是让策略在**大量似然未来**里都达到阈值；用"牺牲峰值表现换低敏感性 / 保留未来选项"作为鲁棒定义。判据：报结论时给**达标比例与阈值**，不给"最优方案"四个字。
+- **核心动作是压力测试而非概率加权**：RDM 在成百上千组假设上跑模型、把每组当**同等可能**来试探，不赋似然权重；与蒙特卡洛（按分布抽样估期望）方向相反。经典提问是"**要我们相信哪些假设成立，才会弃 A 选 B**"，把分歧从"谁预测得准"转成"结论依赖哪条假设"。
+- **场景发现（scenario discovery）找的是失败箱，不是叙事场景**：用 PRIM / CART 在参数空间里圈出"策略未达阈值"的输入组合；箱体三指标同时权衡 **coverage**（覆盖多少政策相关案例）/ **density**（箱内尽量少决策无关输入）/ **interpretability**（能用少数关键参数说清）；用 **resampling test** 验可复现、**quasi-p-value** 估"这个约束是否偶然"。判据：输出的是可机检的**参数边界**，不是三五个故事线。
+- **鲁棒性判据的选择本身会改变排序**：domain criterion / regret（`Max_i(u_ij) − u_ij`）/ satisficing 三档没有"所有情形下最好"的一档，**不同判据常给出不同策略排序** ⇒ 判据必须在问题框架阶段选定并写明，不允许跑完再挑一个支持既定结论的。
+- 判据：**深不确定下的产出是"策略 + 它在哪些假设下失效 + 补救触发条件"，不是单点最优解**；自适应策略（随新信息演化）通常比静态策略更鲁棒，代价是复杂度与近/远期投资拆分。
+
+**来源（2026-11-08 实拉，逐串核验）**：
+- `uncertainfutures.github.io/theory/scenario-discovery/` — HTTP 200 / 19,687B，命中 coverage·density·interpretability·PRIM·CART·quasi-p-value·resampling·threshold。
+- `www.rand.org/content/dam/rand/pubs/research_reports/RR1900/RR1932/RAND_RR1932.pdf` — **HTTP 403（正文未取到，如实登记不冒充命中）**；其 XLRM / satisficing / 与蒙特卡洛的分工由下列 4 个独立域交叉补足：
+- `tile.loc.gov/.../2024739970.pdf`（RAND 科罗拉多河报告，WebSearch 摘要正文命中 XLRM / satisficing / scenario discovery）；`www.edgechat.ai/robust-decision-making`（XLRM 四要素 / regret / PRIM-CART 细节）；`sciencedirect.com/science/article/abs/pii/S2215016126003183`（OSeMOSYS-RDM：LHS 抽样 + PRIM 场景发现）；`onlinelibrary.wiley.com/wol1/doi/10.1111/j.1539-6924.2007.00940.x/references`（Lempert & Collins 2007：三种鲁棒判据与预防原则对照）。
