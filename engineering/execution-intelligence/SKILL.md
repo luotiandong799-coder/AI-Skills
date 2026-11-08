@@ -3,6 +3,7 @@ name: execution-intelligence
 description: 执行智能主动调用治理规范（方案 A）。当任务属于多步骤/依赖/批量改动/部署/条件分支/验收类，或需要明确风险边界与执行证明时，按本规范主动调用 _tools/execution_intelligence.py 做 EDG 规划、Guard 判定、GDR 复用与 CCS 验收。不注册 Hook、不接管宿主工具调用、不改模型路由/权限。
 module: EI
 modules: EI
+version: 1.0.0
 ---
 
 # execution-intelligence · 执行智能主动调用治理规范（方案 A）
@@ -110,3 +111,23 @@ python execution_intelligence.py selftest                                  # 8 �
 
 - 停用：不再在触发任务中调用即可，零副作用（工具不被任何 Hook/自动化引用）。
 - 卸载：删除本 SKILL.md 及 `D:\腾讯AI\skills\_tools\execution_intelligence.py` + 其 `_acceptance_ei_*` 验收件；未改动任何既有工具、规则、模型配置或插件权限。
+
+
+## 九、契约式执行：Guard 的最小完备集与责任归属（2026-11-08 实拉，r715A）
+
+> 方法论实拉：CMU SEI《API Security through Contract-Driven Programming》（2024-03-18，WebFetch 一手全文逐字）+ llm-coding.github.io/Semantic-Anchors·Design By Contract + 中文维基《契约式设计》+ sagecode.org Eiffel 教程，共 4 独立域交叉。与 §三 Guard 判定分工：§三管「五态结果怎么读」，本节管「断言该写哪三类、失败算谁的」。
+
+- **r715A-1 契约三问＝执行规格的最小完备集**：每步（每次调用）须同时答 ① **expect** 前置条件（运行前必须为真）② **guarantee** 后置条件（运行后必须为真）③ **maintain** 不变式（无论怎么变换都不许变）——SEI 逐字 `What does the contract expect? / What does the contract guarantee? / What does the contract maintain?`（Hoare triple 三问）。且**每条断言只有一个责任方**：前置违反＝调用方（client）的 bug，后置或不变式违反＝实现方（supplier）的 bug；SEI 原文 `A caller or consumer that uses an API function whose preconditions are not met is not entitled to the postconditions`。⇒ 落地到本技能：EDG 每步 Guard 不只写「能不能跑」，要写明三类断言；CCS 拒发证书时按责任方分类（输入不合规 / 输出没达标 / 状态被破坏），而非一律「未完成」。**不双方重复防御性检查**（Semantic Anchors 逐字 `No defensive double-checking on both sides`）：内部可信接缝由调用方保证前置即可，供应商不必再校验被自己前置排除的状态。
+- **r715A-2 契约继承三不可违 + 边界张力**：复用/替换既有步骤（子类型、新实现、换工具）时，SEI 逐字 `Preconditions cannot be strengthened` / `Postconditions cannot be weakened` / `Invariants cannot be weakened`——实现不得收窄可接受输入、不得放大输出范围、不得改变不变式（`pop()` 不许新增「栈至少 5 个元素」的前置；`size` 永不为负）。这是 Liskov 替换原则的契约级表述。安全反例：OWASP 2023 API 头号风险 **BOLA** 即「实现未履行前置条件」（请求须携带对**该特定对象**有效的授权 token）⇒ 安全缺陷可归约为契约违约。与 **Postel 定律**按边界分工：DbC 对**可信内部模块缝**严格、违约 fail hard；Postel 对**不可信外部输入**宽松；混用会把无效状态放进内部。⇒ 判据：换实现先验这三条，别只看「接口签名没变」。
+- **r715A-3 机检天花板：不是每条契约都能自动生成断言**：OpenAPI 能表达前置（输入域、security scheme）与后置（返回码 + schema），**无法表达不变式**——SEI 逐字 `there is, however, no way to document outside of a text description what an endpoint may or may not change in terms of state`（REST 的 GET 幂等只能写文字）。RESTler / Dredd 从 OpenAPI 自动生成测试用例、JML 编译器把 Javadoc 转成运行时断言，前提都是契约**机器可读**。⇒ 验收设计必须把「能自动生成的断言」与「只能人工复核的文字约定」分开列；文档里写了一句「幂等」不等于已验收，CCS 对后者只能标「需人工」，不得据文字描述签 PASS。
+
+**提升层**：工作流（执行规格与验收判定）+ 可复用 Skill。触发词：契约三问、expect/guarantee/maintain、责任归属、前置不可加强、后置不可削弱、不变式、BOLA、Postel 边界、OpenAPI 不表达不变式、fail hard、断言自动生成。
+
+**判非（本轮独立实拉 5 域，登记不落地）**：progressive delivery 线（`sre.google/workbook/canarying-releases/` / `alerting-on-slos/` 的 canary 受控实验、error budget、multi-window multi-burn-rate、time confounding；Argo Rollouts `AnalysisTemplate` 自动 abort；`DrHazemAli/enterprise-system-design` change class CH0–CH4 + gate invariants I1–I10；techsensedev GKE SRE pipeline；kubo.hexabase 5% 流量×20% 错误率→整体 1%）已逐域取证，但 `engineering/wb-release-maintain` 现存 canary 概念 4 处，且该线属发布运维而非 EI 契约语义 ⇒ 按 rules/07 去重铁律判非换道，留候选池，不冒充本轮独点。
+
+## 十、来源（2026-11-08 r715A 实拉）
+
+- `resources.sei.cmu.edu/blog/api-security-through-contract-driven-programming/`（CMU SEI，2024-03-18，WebFetch 一手全文逐字：Hoare 三问、三不可违、BOLA、OpenAPI 不表达不变式、RESTler/Dredd/JML）
+- `llm-coding.github.io/Semantic-Anchors/anchor/design-by-contract`（DbC 语义锚：责任归属、契约继承与 LSP、Postel 边界张力、No defensive double-checking）
+- `hackcn.de/zh-cn/契约式设计`（中文维基：契约三问、供应商不校验前置、fail hard、发布版可移除断言）
+- `sagecode.org/roadmap/pgp/eiffel/`（Eiffel require/ensure/invariant 语法与继承规则）

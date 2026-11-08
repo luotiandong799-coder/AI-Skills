@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配、skillContentHash、baseSkillHash、保存缺基准 400、基准过期 409、publish pins refs、delete refused names agents、scope inheritance、flag off 全路由 404、reviewability debt、accountable contribution、预烘技能包、baked bundle、manifest hash 不命中、分发面与可见面、load_skill 不服务、能力判定单一真身、默认模块不设也开、hook 入口顺序、promise settles、异步补话无效、声明位双语义、禁自动≠禁手动
-version: 1.308.0
+version: 1.310.0
 module: KI
 modules: KI
 ---
@@ -480,3 +480,5 @@ modules: KI
 ## r705A 下沉条目（2 点，KB-only：① 横切原则蒸馏成规则＝≥2 技能重复出现才上升，确定性盘点+LLM 交叉读判 append/revise/create+跨批去重复检门槛；② 配置与技能库 GC＝按通道定陈旧信号+软删三级+逐项确认+GC 日志）（原文在 references/knowledge-base.md）
 ## r705B 下沉条目（1 点，KB-only：造新技能前先搜＝五级召回（本地技能名→市场→GitHub code search --filename SKILL.md→仓库 stars→网页≤3 条）+ 外部体检（意外 shell/写/网络/凭据/安装·维护度·复制到独立分支看 diff）+ 排序五档最多 10 条 + 三选项（use/fork/create）+ Gap 列）（原文在 references/knowledge-base.md）
 ## r709A 下沉条目（2 点，KB-only：①技能库 DAILY/LIBRARY 双层分类＝按加载面分桶+每条 DAILY 引仓库证据+五列证据表+LIBRARY≠删除+路由不复制正文+落装四复核；②跨宿主投影兼容＝宿主变量在别宿主成字面量+副本字段白名单+结构校验≠可跑+未测标 not-tested）（原文在 references/knowledge-base.md）
+## r714A 下沉条目（1 点，KB-only：能力拆分四要件＝独立输入/专业判断/成品/验收，拆分触发条件＝真实独立请求或重复失败；「技能存在≠专长有效」，须以实际失败与可复现任务验证）（原文在 references/knowledge-base.md）
+## r714B 下沉条目（1 点，KB-only：技能演进基准门＝分数不低于改前基线才发布、机械回归先行、退步即回滚、ADR 记 before/after 分数与证据路径）（原文在 references/knowledge-base.md）

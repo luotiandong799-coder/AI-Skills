@@ -2,7 +2,7 @@
 name: wb-visual-gen
 description: >-
   生成类视觉任务（AI 生图 / 改图 / 视频 / 3D / 网页前端）的端到端工作流与验收清单。当用户要求生图、写图像 prompt、AI 绘图、做海报/写真/地图/概念图、图生图改图、文生视频/图生视频、3D 生成、AI 做网页/前端页面，或生成结果"不对/不满意要改"时使用。含：需求拆解 → 给材料 → prompt 公式 → 参数 → 生成 → 对照验收清单自评 → 定向迭代（不重生成碰运气）→ 什么算做完。另含网页/UI 生成的**反 AI 味设计基线**（禁 AI 紫渐变 / 三等分卡片 / Inter 默认 / 假截图 / 假数据名等 AI tells + 上线前检查表），适用于交付页面与 `show_widget` 内联 HTML/SVG。含 GPT-Image-2 六类爆款案例库（references/）。用户级默认可用。触发词：页面太 AI 味、像模板、设计丑、排版改一下、反 AI 味、设计基线。
-version: 1.10.0
+version: 1.11.0
 agent_created: true
 sources:
   - WaytoAGI 精选 2026-09-10《GPT Image 2.5 提示词与图像编辑完全指南》（摘要级，飞书正文需登录未取全文）
@@ -193,3 +193,13 @@ modules: PI
 ## r700A 下沉条目（1 点，KB-only：品牌色凭记忆=失败；只抓首页+同源 CSS 机械提取、spec 带来源与日期 90 天过期、抓不到就说抓不到）（原文在 references/knowledge-base.md）
 ## r709B 下沉条目（1 点，KB-only：演示文稿硬门＝一屏一页零滚动+密度上限表+五档尺寸验收+三份单页预览做视觉探索，装不下拆页不许缩字号）（原文在 references/knowledge-base.md）
 ## r712B 下沉条目（1 点，KB-only：三级门 Floor 不可豁免/Reflex 可书面豁免/Finish 不阻断 + 颜色字体必须走 token + 禁 transition:all 与尺寸动画 + 绝不编造指标证言 logo + material 三栏清点 + sloplint 机器扫描）（原文在 references/knowledge-base.md）
+## r715B-1 · 界面文案五条：文案是设计内容不是装饰（来源：`anthropics/skills`·`skills/frontend-design/SKILL.md` 9,390B，2026-11-08 实拉）
+
+- **先问"这屏必须说什么"，再写**：文案是界面的一部分，和间距、配色同级；**每个元素只干一件事**，不堆营销词。
+- **按用户的语言命名，不按系统实现命名**：用户管的是"通知"，不是"webhook config"；说清"是什么/能做什么"，不要"卖"。
+- **默认主动语态，CTA 说明按下之后会发生什么**：写 **"Save changes"** 而不是 "Submit"；**同一个动作全流程同名**——按钮写 Publish，提示就说 Published。
+- **报错不道歉、不模糊**：说清**发生了什么 + 怎么修**，用界面的声音而不是人的语气；**空状态是行动的邀请**，不是情绪。
+- 语气：plain verbs、句首大写、无填充词；每个写出来的元素只承担一个职责。
+- 与 §三·五 反 AI 味分工：那条管**视觉 tell**，本条管**文字 tell**（"Elevate / Seamless / Unleash" 之外，错别字级的含糊报错同样是 tell）。
+- **提升层**：工作流（界面文案）+ 可复用 Skill。
+- 触发词：CTA 文案、错误提示、空状态、active voice、Submit vs Save changes、按用户命名

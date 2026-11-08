@@ -5,7 +5,7 @@ display_name_en: "AI Memory & Skill Governance"
 description: "AI 智能体记忆与技能统一治理：解决记忆无限膨胀、身份/事实/偏好混层、技能内容重叠重复三大问题。分层判据（身份层/记忆层/画像层/技能层/外部记忆）+ 五类处置动作（保留/合并/压缩/外置技能/归档）+ 安全护栏，零信息丢失防膨胀。部署为定时任务后全自动巡检执行，无需人工触发。"
 description_zh: "AI 智能体记忆与技能统一治理：解决记忆无限膨胀、身份/事实/偏好混层、技能内容重叠重复三大问题。分层判据（身份层/记忆层/画像层/技能层/外部记忆）+ 五类处置动作（保留/合并/压缩/外置技能/归档）+ 安全护栏，零信息丢失防膨胀。部署为定时任务后全自动巡检执行，无需人工触发。"
 description_en: "Unified governance for AI agent memory and skills: solves memory bloat, mixed identity/fact/preference layers, and overlapping or duplicated skills. Layered rules (identity/memory/profile/skill/external) + five disposal actions (keep/merge/compress/move-to-skill/archive) + safety guardrails with zero information loss. Runs as a scheduled auto-inspection task; no manual trigger needed."
-version: 1.5.0
+version: 1.6.0
 author: 武汉弈枢科技有限公司
 category: 效率工具
 metadata:
@@ -234,3 +234,15 @@ modules: MI,KI
 ## r711B 下沉条目（1 点，KB-only：术语债务＝一词多义按角色拆+冲突先问不静默重定义+场景探边界+代码≠业务意图+needs confirmation+产物边界与 ADR 只链接）（原文在 references/knowledge-base.md）
 ## r711C 下沉条目（1 点，KB-only：知识收尾六面矩阵+发布状态七档+权限四档+知识归属表+生成记忆只读+先减后加+最小规则文件五要素）（原文在 references/knowledge-base.md）
 ## r712A 下沉条目（1 点，KB-only：记忆变更取证链＝记忆文件→diff→会话消息反向查；变更证据在 operations 条目不在文本提及；只读取证边界）（原文在 references/knowledge-base.md）
+## 推荐类内容的两条硬纪律：目录实时拉取 + 反硬推（来源：`anthropics/skills`·`skills/academy-guide/SKILL.md` 7,755B，2026-11-08 实拉）
+
+- **不内嵌静态清单**：被推荐的内容持续发布，任何写死在技能里的列表都会过期 ⇒ 每会话**拉一次**实时目录（该技能用 `catalog.json`），只从当次拉到的条目里选。
+- **新鲜度按字段判，不按感觉判**：当前日期早于条目的 `staleAfter` 才可信；**没有 `staleAfter` 字段时，`generatedAt` 超过约 30 天即视为过期**。拉不到 / 返回不是 JSON / 已过期 ⇒ **视为"没有目录"**，此时**不得凭记忆报具体条目**，只能给稳定的入口页。
+- **反硬推：hedge 就是匹配失败的信号**。如果一句话要写成"虽然这偏 X，但可能对 Y 有帮助"或"这没完全覆盖，但……"，说明匹配不成立，**别说**；沉默优于噪音——"一次错推烧掉的信任，大于十次对推建立的信任"。
+- **上限 2 条，通常 1 条**：即使对方问"你们全部材料有哪些"，也只给精选 1–2 条 + 指向可检索的资源库，不做清单倾倒。
+- **匹配看意图不看主题**："X 是怎么工作的 / 怎么开始用 X" 是强匹配；"帮我把这份文档整理一下"即使主题相关也是**任务中**，不该推教程。
+- 判据：推荐是**答案的补充**，永远不是答案的替代——先直接回答问题，再（可选）加一条。
+- 与 §知识库时效治理 分工：那条管"库内条目什么时候该复核"，本条管"**对外推荐时凭什么敢说这条现在还有效**"。
+- 反模式：凭记忆报课程/文档名；用一句 caveat 硬推；把"全部材料"理解成"全部列出"。
+- **提升层**：工作流（推荐纪律）+ 可复用 Skill（防腐化）。
+- 触发词：目录实时拉取、staleAfter、generatedAt 30 天、视为没有目录、hedge 是匹配失败、沉默优于噪音、最多 2 条

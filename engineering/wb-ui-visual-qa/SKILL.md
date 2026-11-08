@@ -2,7 +2,7 @@
 name: wb-ui-visual-qa
 description: >-
   界面视觉检查与回归（合并 Claude Code 自动化 Skill 的 Playwright Scout 与 Screenshot QA 两个能力：自动打开网页、截图、定位 UI 问题 + 桌面/移动端双端视觉过检）。当需要验证页面长什么样、截图找布局/样式/文案问题、对比改动前后视觉差异、做桌面和移动端双端视觉回归时使用。不用于抓取网页内容（走 web-scrape / browser-automation）、不用于功能自动化测试（走 browser-automation 操作路径）。
-version: 1.6.0
+version: 1.7.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Playwright Scout + Screenshot QA，用户提供文章 2026-09-17）
@@ -118,3 +118,13 @@ modules: VI
 - **豁免有名额与寿命**：一条闸门只能豁免一次、必须按子条款编号指名、理由不得空泛或与他条逐字复用；**同一条闸门连续三次被豁免，就不再是例外，而是 house style**，应该写进项目的 design.md 而不是继续豁免。
 - **可机检的要机检**：凡有静态半边的闸门交给 lint 跑，人只走"判官档"与"渲染档"——**人和脚本分工，判决口径以闸门表为准**（脚本与表冲突时表赢）。
 - 判据：**质量门的价值在"分级"与"可豁免但要留证"，不在"门越多越好"。**
+## 前端验证的"侦察后动作"与黑盒脚本纪律（来源：`anthropics/skills`·`skills/webapp-testing/SKILL.md` 3,913B，2026-11-08 实拉）
+
+- **先分叉再动手**：**静态 HTML** → 直接读文件取选择器；**动态 webapp** → 服务器是否已在跑？没跑就先用捆绑的 `with_server.py`（支持前后端多服务，`--server "cd backend && python server.py" --port 3000` 这种写法）拉起，再写精简的 Playwright 脚本；已在跑就直接连。
+- **动态页必须"侦察后动作"**：① 打开页面并 `wait_for_load_state('networkidle')` → ② 截图或读 DOM → ③ 从**渲染后的状态**里取选择器 → ④ 再执行动作。**顺序反了就会对着未渲染的空壳找按钮**，这是本类任务最常见的失败。
+- **捆绑脚本当黑盒用**：先跑 `--help`，**不要先读源码**——脚本往往很大，读进上下文就是污染；只有当黑盒跑不通、确实需要定制时才读。
+- 选择器要描述性（`text=` / `role=` / CSS / ID），等待用 `wait_for_selector`，结束后关浏览器。
+- 与 §视觉提取三纪律 分工：那条管"从图里提文字/数据"，本条管"**在真实浏览器里验交互**"。
+- 反模式：不等 networkidle 就 `page.locator('button')`；把整份测试脚本读进上下文再照抄；用坐标点击代替语义选择器。
+- **提升层**：工具（浏览器自动化）+ 工作流（前端验证）。
+- 触发词：networkidle、侦察后动作、reconnaissance-then-action、with_server.py、黑盒脚本、--help 先跑、动态页选择器

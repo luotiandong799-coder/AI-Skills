@@ -1221,3 +1221,10 @@ spec 的步骤约束不要落在两个极端：**代码写死流程**（控制�
 - **防五种死法**：① 作弊达标（`.skip`、放松断言、mock 被测对象、删测试、`|| true`）→ 基线不可退（测试数/覆盖率 ≥ 基线、skipped 0）、点名禁止具体姿势、判卷标准冻结、暗卷自留；② 幻觉命令 → 书里每条命令亲手跑过；③ 失忆 → `PROGRESS.md` + 开工回执 ≤10 行；④ 一条道走到黑 → 任务 0 核前提、同一验收连败 3 次换项、结果比基线差就回滚如实报；⑤ 静默事故 → **反向验证**：亲手制造一次失败，证明报警器会响。
 - **暗卷**：2–3 条执行者看不见的抽查自留会话侧，不进书；执行者不能自己批卷，验收由管理者复跑明卷+暗卷。
 - 判据：**委托书的质量＝执行者能否零追问跑完，且作弊路径已被堵死**；压不进 4000 字符就是活太大，拆件而不是删约束。
+## r714B-1 计划即验证对：没有 `verify:` 命令的步骤不算步骤；任务台账默认 `failing`（来源：GitHub `danielvm-git/bigpowers`·`.cline/skills/plan-work/SKILL.md` 12,792B，2026-11-08 实拉）
+
+- **原文**：`Do NOT proceed with a plan until the task's success criteria are clear. If success is ambiguous, convert the task into "step → verify: <cmd>" pairs here before writing tasks — every task ships a runnable verify: or the plan is not done`；`"I think it works" is not a step`；`Every step MUST follow: N. <What to do> → verify: <runnable command that proves it worked>`；`Every new task entry starts with status: failing. Only flip to status: passing after its verify: command exits 0 during develop-tdd or verify-work. Never pre-mark passing at plan time`；改造既有行为的需求必须用 `ADDED` / `MODIFIED` / `REMOVED` / `RENAMED` 四标签，其中后三者的 `Before:` / `After:` 缺一即门禁 FAIL。
+- **判据**：① **一步一证明**——每步必须能写成可在本项目跑的一条命令；写不出就先别往下拆，说明"成功"还没定义清楚。② **计划期一律 failing**，只有命令真实退出 0 才翻 passing；提前标 passing 等于把"没验过"伪装成"验过了"。③ **改行为要写 Before/After**：只说"改成 X"，评审无法判断这是修正、扩展还是破坏。④ 验收标准含糊时，先把任务反向拆成 `step → verify` 对，再写任务清单——顺序反了就会得到一堆"实现 XX 流程"式的假步骤。
+- **与 §验收标准条 分工**：那条管"验收标准写什么"，本条管"**每一步怎么证明、状态什么时候翻**"。
+- 反模式：步骤写"实现用户创建流程 / 补充测试"；计划评审时全部标 passing；改需求只写 after 不写 before。
+- **提升层**：工作流（计划与验收）+ 可复用 Skill。

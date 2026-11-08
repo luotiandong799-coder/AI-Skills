@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、能不能跑、接受态绑定单报告、harness 塑形信念、belief-rollout 诊断、终端成功看不见分叉、BIWM、证据被 harness 压缩、attestationHash 排除 checkedAt、同状态同哈希、审计四元组、启用新规则域须复审刷新、间隔截顶防计时器溢出、缺席折叠成空集合、校验两端同源自证恒真、压缩切点避开 tool 对、缺口标注禁止猜测、被调用方 commit 调用方 session、flush vs commit、transaction already closed、expire_on_commit、extract_class_name、first Component subclass、run2 not found in First、data.type 优先于 vertex_type、fault-enforcing tests、测试通过不等于正确、counterfactual monitor、recoverable checkpoint、false-alarm 2.0-3.3%、cross-provider review、explicit failure states、truncation levels、read-only 假设要实测、projectId、optInAvailable、并列时间戳分页、游标缺 tie-breaker、模型产出作观测记录、准入策略按假阳性上限、分隔符被硬编码、序列化往返不对称、夹具必须封闭、MockTransport、example.invalid、外部依赖版本假设
-version: 2.454.0
+version: 2.457.0
 agent_created: true
 module: VI
 modules: VI
@@ -497,3 +497,22 @@ modules: VI
 ## r709A 下沉条目（1 点，KB-only：测试点台账＝TEST-ID 五态+台账只答证据不抄成功标准+缺陷须 ID 或显式人工出口+合同四层证据+covered 前五查+按事件重扫；绿 CI≠覆盖到）（原文在 references/knowledge-base.md）
 ## r709B 下沉条目（1 点，KB-only：目标环境验收四态＝VERIFIED/FAILED/NOT PERFORMED/NOT APPLICABLE，本地全绿不等于目标可用，合并评审发布都不构成验收）（原文在 references/knowledge-base.md）
 ## r709C 下沉条目（1 点，KB-only：跨产物一致性＝先立单一事实源+冲突先解决再动笔+每数回源+假设显式+四条红线+研究材料加反方与三分）（原文在 references/knowledge-base.md）
+## r714B 下沉条目（1 点，KB-only：质量门判决四态含 WAIVED（输入缺失≠通过）+ 按序 first-match + 启发式链接占比 >50%/>80% 降一/两档 + PASS 前必须尝试证伪、BLOCKER 覆盖 PASS）（原文在 references/knowledge-base.md）
+## r715B-2 · 预览渲染器不是证据：字体替换会让"看得见的溢出"失真（来源：`anthropics/skills`·`skills/pptx/SKILL.md` 20,782B，2026-11-08 实拉）
+
+- **写进文件的字体名由用户端渲染，QA 端常被替换**（LibreOffice 用替代字体，部分替代字体**宽度不同**）⇒ 预览里"刚好放得下"和"溢出了"**都可能与真机不一致**。
+- **安全字体（QA 与 Office 两侧都可信）**：Arial、Calibri、Cambria、Times New Roman、Courier New、Bookman Old Style、Century Schoolbook——正文与"要靠它判断是否溢出"的元素只用这些。
+- **QA 不可信字体**（替代字体宽度不同）：Georgia、Trebuchet MS、Impact、Arial Black、Garamond、Consolas、Palatino Linotype（Calibri Light 视环境而定）。用户点名要用就照用，但**容器多留约 10% 余量**，且**不要拿预览的"放得下"当验收证据**。
+- **绝不默认 Aptos**：新版 Office 默认字体，本环境没有度量兼容替代，旧版 Office 又没有它——两头都不可靠。
+- 判据：**"预览通过"只有在"预览用的字体与交付端同一度量"时才算证据**；字体被替换时，证据降级为"结构对不对"，尺寸结论作废。
+- 与 §PASS 前先证伪 分工：那条管"要不要证伪"，本条管"**这份证据本身是否可信**"。
+- **提升层**：工具（QA 渲染）+ 可复用 Skill（验收可信度）。
+- 触发词：字体替换、font substitute、Aptos、溢出误判、安全字体清单、预览不可信
+## r715C-2 · 修订交付：每一处改动都要机器证明被跟踪（来源：同上 `docx/SKILL.md` 的 TRACKED CHANGES 段）
+
+- **"我都标了修订"是断言，不是证据**：用 `--author "<你署的名>"` 配 `--original` 校验，**任何改了却没有 `<w:ins>`/`<w:del>` 包住的文字都会被报出来**——它在"接受修订"视图里完全看不见，恰恰最容易漏。
+- **删除的写法有硬语法**：`<w:del>` 内的文字元素是 **`<w:delText>`**，不是 `<w:t>`；删掉一个**段落标记**等于"把这段并入下一段"，写法是 `<w:pPr><w:rPr><w:del .../></w:rPr></w:pPr>` + 给该段每个 run 包 `<w:del>`（`<w:del/>` 必须排在该 rPr 其它子元素之前，顺序受 schema 约束）。
+- **"接受修订"视图里的空项目符号可能只是视图产物**：pandoc 不合并段落；LibreOffice 版 accept 除"后接空段落"外能合并 ⇒ 判"文档有缺陷"要回 XML 看段落标记，不能拿视图下结论。
+- 判据：**修订交付的验收点是"每处改动都可追溯"，不是"看起来像改过"**。
+- **提升层**：工具（docx 修订）+ 可复用 Skill（交付验收）。
+- 触发词：tracked changes、w:ins、w:delText、删除段落标记、接受修订、空项目符号、author 校验

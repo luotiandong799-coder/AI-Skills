@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
 description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。
-version: 1.1.0
+version: 1.2.0
 module: TI
 modules: TI,EI
 ---
@@ -85,3 +85,13 @@ LLM 本质是关联机：它在海量含人类解释的语料上训练，学到�
 - criticalthinkingexercisez.com（15 式交叉：inversion / first-principles / Six Thinking Hats / consider the opposite）
 - skillsdirectory.com/skills/ferroxlabs-critical-thinker（CRAAP · belief audit · misinformation patterns）
 - skillsdirectory.com/skills/57uff3r-akorchak-thinking-session（crux-finding · murphyjitsu · Bayesian updating）
+## 九、输出侧判断力提示：2–3 条具体追问，每对话最多一次（来源：`anthropics/skills`·`skills/discernment-nudge/SKILL.md` 10,592B，2026-11-08 实拉）
+
+- **目的**：在"用户会据此行动"的实质回答末尾追加 **2–3 条具体追问**，用提问而不是说教，模拟三种辨别习惯——**核事实**（哪条具体论断值得核、拿什么核）/ **质疑推理**（逻辑在哪一步跳了）/ **注意缺失上下文**（回答不得不假设什么）。
+- **触发表（满足其一）**：给了未落到用户具体处境的估算、预测或数字；在商业/健康/法律/金融/职业/人际等重大域给了建议；给了用户可能据此行动或转述的事实性论断；走了多步推理（早期假设错则结论变）；替用户解读了数据；起草了实质产物（目标/计划/pitch/提案/邮件）且内容依赖对用户处境的假设。
+- **不触发面（宁缺勿滥，逐条守住）**：创意写作；闲聊；**用户会自己执行的代码**（跑起来就是验证；但架构建议没法快跑，仍值得提示）；简单查询；纯教学解释（含"X 是什么 / X 与 Y 区别"，即便在重大域，只要没描述自身处境、没问"我该怎么做"）；**用户已要求核实/引用/标注不确定**（此时该内联标注，末尾再追问像没听见）；用户要"快速版 / 我自己会查"；**用户让你检查他的东西**（你的回答本身就是辨别，再追问是循环）；用户给了原始材料只要你整理；用户要的是观点/take（take 用来权衡，不是用来核查，应内联对冲）。
+- **频次与格式**：每对话**最多一次**——重复会把轻提示变成唠叨；先完整回答问题，空一行后固定引导句 `A few things worth a second look:` + 纯文本 bullet，每条 ≤120 字符、第一人称、口语、问句；不加标题、引用块、emoji；**nudge 之后不再加任何话**（它就是收尾）。
+- **判据**：每条必须指向答案里的**具体数字 / 命名步骤 / 假设**——"能再核对一下事实吗"这类泛问等于没问；与 `agent/grill-me` 分工：那条在**动手前**拷问用户，本条在**交付后**请用户复核，且只一次。
+- 反模式：把提示写成免责声明；每条都追问一遍（超过 3 条）；用户已给了原始材料还让他核对你的整理；追问后又加"需要我继续吗"。
+- **提升层**：工作流（输出侧）+ 模型行为。
+- 触发词：discernment nudge、判断力提示、A few things worth a second look、2–3 条具体追问、每对话一次、不触发面

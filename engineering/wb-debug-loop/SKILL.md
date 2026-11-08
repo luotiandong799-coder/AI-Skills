@@ -2,7 +2,7 @@
 name: wb-debug-loop
 description: >-
   有纪律的排障循环（诊断 bug / 报错 / 性能回归的根因）。当出现报错、崩溃、白屏、500、失败、失败原因、找不到原因、查不出、定位、排查、排障、根因、复现、回归、性能变慢、卡顿、内存泄漏、超时、内存溢出、debug、troubleshooting、root cause、stack trace、崩溃日志、模型行为、幻觉、选型、补丁、修复验证、patch、变体、这算 bug 吗、加固算修复吗、兜底不是修复、重试掩盖、静默降级、缓解不是修复、改指令算修了吗、装了不生效、静默失败、幻影字段、声明但未写入。不适用：只是"该不该写这段代码"的取舍（走 wb-ponytail）、多步实现任务的规划与交付（走 wb-spec-driven）、任务级"点名目标全量覆盖 / 失败换路攻坚"纪律（走 wb-execute-discipline）、卡住运行恢复、同标识嵌套事件开合计数、completion event replaced、stayed in Running、partial success 映射、NodeStart 优先级、僵尸运行、重放安全按操作分面、502 禁重放创建类、Retry-After 不是重放许可、custom retry 重置耗尽预算、进程级共享态清理归属、cleanup 越界清 startup 态、concurrent invocations race、跳过非本职钩子、overlapping invocations 回归测试、过期注释 thread-local、失败汇总逐项带原因、理由与标记同检查器产出、validateProps 同源、不怪 schema 接受的引用、每步 invalid 理由、误导性原因比没原因更贵、原因清单逐条可达、把读者引向没坏的东西、原因按目标形态裁剪、错误文案是契约、词面回归测试、按 ID watch 改名不触发、403 不进 404 分支、TTL seconds*1000、absolute deletion date、valid date in the future、7-day minimum、alreadyDeleted、audience human、AI 孪生动作、消费者退出生产者仍跑、关闭要传播到下层流、shield 异步关闭、后台清理任务只跑在 leader 内存定时器、durable system task、跨进程取消、幽灵取消、调度冲突三档
-version: 1.373.0
+version: 1.374.0
 agent_created: true
 module: RI
 modules: RI,TI
@@ -508,4 +508,12 @@ modules: RI,TI
 ## r705B 下沉条目（1 点，KB-only：agent 失败自我诊断四段＝先取证（错误/最后成功步/上下文压力/环境假设）再归类六种失败模式，诊断四问（逻辑/状态/环境/策略·目标漂移·确定性·最小可逆动作），受控恢复最小动作 + 禁止假自愈 + "什么证据算修好"）（原文在 references/knowledge-base.md）
 
 ## r705C 下沉条目（1 点，KB-only：故障闭环 8D/CAPA＝"人为失误不是根因"（5-Why 问到可改动处）、遏制→根因→纠正+预防三段（鱼骨六类/fault-tree）、纠正措施须观察窗口验证无复发才关闭、按影响面分级处置）（原文在 references/knowledge-base.md）
+## 条件式等待替代猜时间：等条件，不等时长（来源：`obra/superpowers`·`skills/systematic-debugging/condition-based-waiting.md` 3,516B，2026-11-08 实拉）
 
+- **核心原则**：等**你真正关心的那个条件**，不要猜"大概要多久"。`sleep(50)` 在快机器上碰巧过、在 CI 负载下必挂——**flaky 的根因常常是猜时间，不是代码**。
+- 通用写法：`waitFor(condition, description, timeoutMs=5000)`，**条件不成立就轮询**（10ms 一次），**超时抛出带 description 的错误**；**每次循环内重新取状态**（把 getter 放循环内，别在循环外缓存）。
+- 常见错误三条：轮询过快（1ms 空转烧 CPU）、**无超时**（条件永不成立就死循环）、**用陈旧数据**（循环外取一次状态判到底）。
+- **什么时候任意延时是对的**：被测行为本身就是"定时"（debounce/throttle/采样间隔）——此时也要**先等触发条件，再按已知节拍延**，并**在注释里写明 WHY**（例："200ms = 2 ticks @100ms"）。
+- 判据：**测试里每出现一个 `sleep`，要么能说出它在等什么条件，要么能说出它在测什么节拍**；两者都说不出就是猜。
+- 与 §超时分层 分工：那条管"超时设多长/怎么分层"，本条管"**为什么不该用固定延时替代条件**"。
+- 触发词：condition-based waiting、waitFor、flaky、arbitrary delay、poll 10ms、无超时、红绿

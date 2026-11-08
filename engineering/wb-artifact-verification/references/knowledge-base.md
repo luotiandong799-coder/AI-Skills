@@ -5750,3 +5750,14 @@ design-it-twice 的多个子智能体都指向同一份预先收集的事实简�
 - **四条红线**：不可核验的声明 / 没有假设的模糊市场规模 / 团队角色头衔前后不一 / 加不平的收入或预算。
 - **研究型材料再加四条**：每条重要断言带来源；**主动带反方证据与下行情景**（只给顺风的报告等于没做研究）；陈旧数据要标出来；**事实 / 推断 / 建议三分**，别把建议写成事实。
 - 判据：**材料数量增加时，风险不是"写不完"，而是"版本漂移"**——单一事实源是唯一解，而不是最后再"统一口径"。
+## r714B-3 质量门判决四态 + 启发式置信降档 + PASS 前必须证伪（来源：GitHub `danielvm-git/bigpowers`·`.cline/skills/gate-trace/SKILL.md` 4,340B，2026-11-08 实拉）
+
+- **四态判决**：`PASS`（全部满足，放行）/ `CONCERNS`（非关键问题，**需显式人工 override** 才放行）/ `FAIL`（关键缺口，阻塞）/ `WAIVED`（**无法评估**——输入缺失，本就无法判，不是通过）。
+- **按序 first-match**：判定规则按 R1…R5 顺序执行，命中第一条即出结论，不累加"总体印象分"。
+- **Oracle confidence downgrade**：追溯链接若来自**启发式**（文件名匹配、任务引用）而非显式标签，按启发式占比降档——`>50%` 降一档（PASS→CONCERNS、CONCERNS→FAIL），`>80%` 降两档（PASS→FAIL）。原文模型来自 TEA。
+- **PASS 前必须证伪**：`Before emitting PASS, attempt to refute the verdict — list at least one concrete traceability gap that would block merge if it were real. If the gap is real, downgrade the verdict. Rubber-stamping is prohibited; every PASS must survive one refutation attempt.`
+- **完整性批评器三分类**：`BLOCKER` / `WARNING` / `FILLED`，**BLOCKER 覆盖任何 PASS → FAIL**。
+- **判据**：① **输入缺失是独立一态**——不许把"没数据可判"和"判过了"混为一谈；② **证据链质量本身计入判决**：靠猜出来的链接即使结论对，也要降档；③ **PASS 是"活过一次证伪尝试"的结果**，不是"没发现问题"的默认值；④ 每条判决必须带 rationale 与关键比率，便于复核。
+- **与 §目标环境验收四态（VERIFIED/FAILED/NOT PERFORMED/NOT APPLICABLE）分工**：那条管"**在哪个环境验、验没验**"，本条管"**证据链强度与整体判决怎么出**"。
+- 反模式：缺输入时直接写"通过"；只统计覆盖率不看链接来源；通过前不做一次反驳；BLOCKER 被平均成 CONCERNS。
+- **提升层**：工作流（质量门）+ 可复用 Skill。

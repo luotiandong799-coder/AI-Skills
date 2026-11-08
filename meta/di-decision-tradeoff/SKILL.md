@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
 module: DI
 modules: DI,TI
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -148,3 +148,21 @@ version: "1.3.0"
 - `uncertainfutures.github.io/theory/scenario-discovery/` — HTTP 200 / 19,687B，命中 coverage·density·interpretability·PRIM·CART·quasi-p-value·resampling·threshold。
 - `www.rand.org/content/dam/rand/pubs/research_reports/RR1900/RR1932/RAND_RR1932.pdf` — **HTTP 403（正文未取到，如实登记不冒充命中）**；其 XLRM / satisficing / 与蒙特卡洛的分工由下列 4 个独立域交叉补足：
 - `tile.loc.gov/.../2024739970.pdf`（RAND 科罗拉多河报告，WebSearch 摘要正文命中 XLRM / satisficing / scenario discovery）；`www.edgechat.ai/robust-decision-making`（XLRM 四要素 / regret / PRIM-CART 细节）；`sciencedirect.com/science/article/abs/pii/S2215016126003183`（OSeMOSYS-RDM：LHS 抽样 + PRIM 场景发现）；`onlinelibrary.wiley.com/wol1/doi/10.1111/j.1539-6924.2007.00940.x/references`（Lempert & Collins 2007：三种鲁棒判据与预防原则对照）。
+
+
+## 十、排序反转与权重—量表对齐（2026-11-08 实拉，r715C）
+
+> 与 §六④ 敏感性分析的**分工声明（判重结论）**：§六④ 处理「**权重变了**排名会不会翻转」（OAT / 阈值 / 蒙特卡洛 / 情景，输出 RS）；本节处理「**选项集变了**（增删或复制一个备选）排名会不会翻转」——成因是相对归一化而非权重假设，属另一条轴，互补不覆盖。来源：`sciencedirect.com/science/article/pii/S0895-7177(11)00785-0`《On rank reversal in decision analysis》+ `sciencedirect.com/science/article/abs/pii/S0377221799000405`《On the relativity of relative measures》+ 墨尔本大学 CEBRA《Uses and Misuses of MCDA in Environmental Decision-Making》PDF + USP 收录 Dyer《Remarks on the Analytic Hierarchy Process》PDF，4 独立域交叉；`rank reversal` 全库仅 1 处泛用、`秩反转` / `IIA` / `Distributive` / `Ideal mode` / `absolute scale` 全 0 命中。
+
+- **r715C-1 排序反转（rank reversal）与无关方案独立性 IIA**：增删（甚至复制）一个备选会改变既有 A/B 的排序，极端情形 **total rank reversal**（最优直接变最差）；ScienceDirect 逐字 `the alternatives' order of preference changes when an alternative is added to or removed from the decision problem`、`Such rank reversals violate the invariance principle of utility theory`。IIA 公理源流：Luce & Raiffa 1957 axiom 7 `If an act is non-optimal ... it cannot be made optimal by adding new acts`；Belton & Gear 1983 发现「加入新副本」即可翻转；Dyer 1990 据此判定 AHP 不可接受；Harker & Vargas 反驳为理论误用。TOPSIS 同样有此现象。⇒ 判据：**决策结论必须声明「在哪个选项集下成立」**；增删候选后重跑，不沿用旧排序；与 §六④ 并列两条必检轴（权重扫描 + 选项集扰动），只做前者不算稳健。
+- **r715C-2 Distributive / Ideal 两种合成模式须先选，且「保序」不总是对的**：EJOR 逐字 AHP `now supports two types of synthesis procedures – one that preserves rank and one that does not`；`Distributive` 把每准则下备选得分归一到和为 1 ⇒ 得分依赖**其他备选表现**，是排序反转的机制根源；`Ideal` 只除以该准则最优得分 ⇒ 保序。但**不能为了「不反转」盲目换法**：Luce & Raiffa 自己承认全保序 `yields unreasonable results`，Tversky 等给出一批「反转本应发生」的实证（context-dependent preference），Vargas 1997 反例证明乘法合成虽保序却在已知真值下给出无效答案；保序方法有无穷多种。⇒ 判据：先判本次决策**该不该受无关备选影响**，再选模式并写明理由；选项集是封闭固定的用 Ideal，允许「参照系随候选变化」的用 Distributive 并对扰动做复核。禁止把 rank reversal 一律当 bug 修掉。
+- **r715C-3 权重脱离量表无意义；swing 式诱导与多利益相关方聚合前提**：墨尔本 CEBRA 逐字 `criteria weights, taken on their own, are meaningless`、`weights and performance scales must be aligned`；权重反映的是**该准则上备选的实际取值范围**（Edwards & Barron 1994 逐字 `weights reflect the range of the attribute (criterion) being weighted, as well as its importance`），改量表必须同步改权重，否则只重标定评分尺度就能翻盘（`the final ranking of options can be sensitive to changes in the performance scoring scales`）。Dyer 1990 p.256 诱导法：先告知决策者各准则**实际变动区间**，再问「从最差到最好这一整段变化」相对另一准则同等变化的重要度（SMART/swing 思路），而非抽象问「哪个更重要」。多利益相关方在未定义指标尺度时各按心中不同量表给权重，`any aggregation of these individual weights into group weights rather meaningless`。改用**绝对标度**（高/中/低，Saaty 1987 absolute scale）可使排名不随选项集变化。⇒ 判据：与 §四硬护栏「权重必须由用户确认」互补——那条管**谁来定**，本条管**定之前必须先固定 0/1 端点含义**；报加权结论时附「量表端点定义」，跨方比较先统一量表。
+
+**提升层**：可复用 Skill（多方案权衡）/ 工作流（结论稳健性声明）。触发词：rank reversal、秩反转、total rank reversal、IIA、Luce-Raiffa axiom 7、Belton & Gear、Dyer 1990、Distributive/Ideal 合成模式、absolute scale、权重与量表对齐、swing weighting、量表端点、组权重不可聚合、选项集扰动复核。
+
+## 十一、来源（2026-11-08 r715C 实拉，逐串核验）
+
+- `www.sciencedirect.com/science/article/pii/S0895-7177(11)00785-0` —《On rank reversal in decision analysis》：定义、total rank reversal、IIA 公理源流、AHP/TOPSIS 双方法、Belton&Gear/Dyer/Harker&Vargas/Saaty 论争。
+- `www.sciencedirect.com/science/article/abs/pii/S0377221799000405` —《On the relativity of relative measures》：Distributive vs Ideal 两模式逐字、Saaty 1994 要求显式选择、Tversky 等「反转本应发生」、Vargas 1997 乘法合成反例。
+- `cebra.unimelb.edu.au/__data/assets/pdf_file/0011/2220887/0607_0610.pdf` —《Uses and Misuses of MCDA》：权重脱离量表无意义、Edwards&Barron 原句、Dyer p.252/p.256 诱导法、多方聚合前提、绝对标度。
+- `edisciplinas.usp.br/pluginfile.php/8024038/mod_resource/content/2/Paper%202.Remarks-on-the-analytic-hierarchy-process.pdf` — Dyer《Remarks on the AHP》：A4 稀释 8/18→9/12 的数值例、hierarchic composition 失效、supermatrix 175 次比较的成本量级。
