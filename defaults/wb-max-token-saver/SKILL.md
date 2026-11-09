@@ -2,7 +2,7 @@
 name: wb-max-token-saver
 description: >-
   动作与 token 压缩、答案优先（已合并原 caveman 技能，**管输出侧：我 → 用户**；输入侧"读进来怎么取舍"不归本技能，走 `wb-context-compressor`）。每轮回复默认应用：先给结论（answer-first）、无空泛套话、无 AI 味填充、无重复开场白；工具输出 / 日志 / 长文本只保留与问题相关的要点，不原样堆砌；做长任务时控制上下文与工具调用的消耗（少读、按需读、不重复读）；完整文档 / 报告 / 分析任务按完整交付、不因"简短"缩水；结论必须基于已核实证据；安全警告 / 不可逆确认 / 多步顺序 / 用户要求澄清时临时恢复完整句式，之后立刻恢复压缩。触发词："caveman mode" / "use caveman" / "less tokens" / "省 token" / "降低调用成本" / "换便宜模型" / "模型降档" / "先强后弱" / "一次性成本" / "边际成本" / "减少轮数" / "换挡信号" / "热路径" / "别唠叨" / "正常模式" / "off"。关闭："stop caveman" / "normal mode" / "正常模式"。、裁剪保序、部分保留超预算、请求级开销双计、复合内容漏计、超大工具结果延迟注入、延迟加载命名空间封装
-version: 1.102.0
+version: 1.104.0
 module: CI
 modules: CI
 ---
@@ -199,3 +199,22 @@ agentic loop（每轮循环读上下文）是账单黑洞：单轮 12k token 的
 ## r710A 下沉条目（3 点，KB-only：有效窗口是任务的函数 / 规则预算按条数不按行数 / 多 agent 隔离自带 cache tax）（原文在 references/knowledge-base.md）
 
 ## r715B 下沉条目（3 点，KB-only：渲染后完整前缀=缓存键 / 最小长度按型号分裂且隐藏不计入 / 三档计费与断点回溯及排障三信号）（原文在 references/knowledge-base.md）
+
+## r726C · 缓存的四条硬事实：换模型就换 lineage · 缺遥测不等于全量重算 · 工具定义是 pin · 系统提示预算有数（来源：docs.openclaw.ai `reference/prompt-caching` 395,167B / sha256 f507126eb04e + `reference/token-use` 280,902B / a43107595c19，2026-11-14 r726C 本轮实拉；逐串命中 `Changing the model always starts a different cache lineage` / `the absence of telemetry does not mean` / `The session checkpoint retains those description and schema bytes` / `bootstrapMaxChars`）
+
+- **缓存连续性有三个杀手，前两个是配置不是内容**：`Changing the model always starts a different cache lineage`；改 thinking / reasoning level **即使 prompt 与模型不变**也可能失效；所以原文的建议是 `Start a new session for a planned change`——要换就换会话，别在原会话里试。注意失效只是"下一次请求 miss 这份缓存状态"，**不保证提前删除 provider 的旧条目**（它按自己的过期时间走）。→ 判据：**想省钱的会话不要在跑起来之后改模型或改思考档**；这两件事会把整段前缀变成冷启动。
+- **缓存计数要认"来源优先级"，缺遥测不等于重算**：provider 暴露时归一成 `cacheRead` / `cacheWrite`；usage 摘要（`/status` 一类）在 live 快照没有缓存计数时回退到**最后一条 transcript usage 条目**，但**非零的 live 值永远优先**；OpenAI 兼容路由同时接受嵌套 `prompt_tokens_details.cached_tokens` 与顶层 `cached_tokens`（含 Together / StepFun 的写法）。原文明确：provider 不报缓存计数时命中率就是**未知**，`the absence of telemetry does not mean the provider processed every token again`。→ 判据：**没有数字就写"未知"**，别把"没报"当成"没命中"去做成本结论。
+- **工具定义是会话级 pin，不是每轮重算**：会话建立时按当时工具面捕获定义（描述 + schema **字节**），`The session checkpoint retains those description and schema bytes` 跨后续发现与重连；选择/刷新桌面只把当前能力写进 **tool result**，**绝不重写定义**；不可用的动作返回**具名结构化拒绝**（说明当前可用动作）。失效条件只认 **provider 配置变化**，**设备就绪状态不算**；但真正的 config / skill / tool 刷新仍会生效——工具集不是永久冻结。→ 判据：**工具清单越稳定，前缀越可缓存**；每轮动态重排工具描述，等于每轮自毁缓存。
+- **只有"实际压缩或 reset"才开新 prompt 系列，权限变更不必换 system prompt**：会话内的 bounded transcript reload **保留已接纳的历史边界**，即使压缩摘要落在加载窗口之外；`Actual compaction or reset starts a new prompt series`。权限变化通过**执行门 + 历史内指令更新**即时生效，不需要替换早先的 system prompt。→ 判据：**别用"重写系统提示"来改权限**——那既破缓存又不必要；也別把"重载历史"当成"换了新会话"。
+- **系统提示预算有明确数字，且技能/记忆都只放指针**：每次运行重建 system prompt，含工具清单+短描述、**技能清单只放元数据**（说明按 `read` 按需加载，受 `skills.limits.maxSkillsPromptChars` 限制）、自更新指令、workspace 与 bootstrap 文件（`AGENTS.md` / `SOUL.md` / `IDENTITY.md` / `USER.md` / `BOOTSTRAP.md`，有则加 `MEMORY.md`）。大注入文件按 `agents.defaults.bootstrapMaxChars`（默认 **20,000**）截断，bootstrap 总注入受 `agents.defaults.bootstrapTotalMaxChars`（默认 **60,000**）封顶。有 memory 工具时原生 Codex turn **不粘贴原始 MEMORY.md**、只给一个指针；**小写 `memory.md` 永不注入**（它是 `doctor --fix` 的 legacy 输入）；`memory/*.md` 日常也不在 bootstrap 里；reset/startup 才可能注入一次性 startup-context 块。→ 判据：**按需加载不是口号，是字数上限**——把技能说明和整份记忆塞进系统提示，等于每轮都为它们付费。
+
+- **提升层**：模型（缓存 lineage 与计数口径）/ 工具（工具定义 pin 与刷新边界）/ 工作流（系统提示预算分配）/ 可复用 Skill（按需加载的写法）。
+
+## r728C · 用量与成本五条口径：中断不计 · total ≠ 窗口 · TTL 到期即全量重写 · 分档费率 · 压缩三档（来源：docs.openclaw.ai `reference/token-use` 280,963B / 36b3bccb05fe + `tools/tokenjuice` 241,567B / 6aafccc89482，2026-11-15 r728C 本轮实拉）
+
+- **★流被打断就不算用量，中间快照不是用量**：最终 usage 报告没到，token 与成本**不可用**；中间 token 快照**不算完整 usage**，`/status` 会**清掉上一响应的计数**而不是继续显示；成本汇总只保留已完成响应的已知金额并**标注 aggregate incomplete**。→ 判据：**provider 报的终止 0 是测量值，初始化的 0 不是测量**；报账时把「未知」写成 0 比不写更糟。
+- **★`usage.total` 与「当前上下文占用」是两个口径，不能互相推断**：provider 的 `usage.total` 含 cached input、output 与**多轮 tool-loop 的多次调用**，适合成本与遥测但**会高估实时窗口**；上下文显示与诊断用**最新一次请求的占用**（含其 completion 与保留的 reasoning），内置工具循环里由 provider 边界记录「该次测量 + 新追加项」。→ 判据：**回答「还剩多少上下文」只看窗口口径；回答「这次花了多少」才看 total**，混用会得出反向结论。
+- **★缓存 TTL 到期等于全量重写，只有两条路可选**：① **保活**——心跳间隔设在 TTL 略下（1 小时 TTL 就设 55 分钟）以免整段 prompt 重写；② **剪枝**——开启 cache-ttl pruning，在 TTL 过期时先剪会话再重置缓存窗口，让后续请求复用刚缓存好的上下文。另可按 agent 单独设 `cacheRetention`（突发告警类设 `none`，省掉缓存写）。→ 判据：**隔离的定时 job 不会替别的会话保活**，别假设「跑过就有命中」，要按总用量比较；静默时段与繁忙延后都会让保活失效。
+- **★分档计费按「请求的总 prompt 输入」选一档，选中费率作用于该请求全部桶**：档位由 uncached input + cacheRead + cacheWrite 之和决定，**output 不参与选档**；档区间半开 `[start, end)`，末档开口；turn 总额按每次模型请求分别求和并保留 tier / model 边界（工具循环与重试各自成段）。→ 判据：**只有聚合 token、没有逐请求成本时，分档成本应当省略**，不能把总量当成「一个大请求」去套档——那是系统性低估或高估。
+- **★压缩只该动结果，不该动命令；且要分三档判断能不能压**：safe-inventory 策略——**精确文件内容读取保持原样**、**独立的仓库清单类命令可压缩**、**不安全的混合命令序列保持原样**；压缩发生在命令执行**之后**，只改回灌给模型的 tool_result，**不改 shell 输入、不重跑、不改 exit code**；规则缓存按「用过的不同工作目录数」（128）释放，忽略的 fallback 目录不计数，避免旧 worktree 的规则集无限增长，释放后当前项目在下一次可用结果上重载。→ 判据：**压缩的收益在「回灌」，风险在「判错能不能压」**——宁可原样，不要把混合序列压成看起来完整的摘要。
+- **提升层**：模型（用量与窗口口径）/ 工具（缓存保活与压缩三档）/ 工作流（成本记账与分档求和）/ 可复用 Skill（省 token 的判定清单）

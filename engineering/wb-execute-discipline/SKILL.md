@@ -1,8 +1,8 @@
-﻿---
+---
 name: wb-execute-discipline
 description: >-
   任务执行纪律（覆盖零省略 + 失败持续攻坚 + 失败≥2次必根因诊断）。当用户点名一批目标（站点 / 仓库 / 文件 / 信源 / 清单）要求"全部学完 / 全部处理 / 一个都不能少"，或执行中出现失败（访问失败、超时、被拦、报错）时应用：用户点名的每一个目标必须真实执行，不得抽样、轮换、以旧代新、静默跳过；失败不等于放弃，必须逐级换路径继续攻（直连 → 镜像/备用域名/API → 浏览器渲染 → 替代入口）；同一目标失败 ≥2 次必须先停手写根因假设、用最小探针验证、纠正后再试新路径，禁止对同一命令原样重试。触发词：一个都不能少、全部学完、全量、零省略、不能跳过、失败了继续、别放弃、再试、换条路、为什么错、不再犯、失败两次、老是失败、重复失败、信源全拉、全量实访、定时任务执行、周期任务执行、重试有意义吗、200但没内容、空壳页、重放幂等、崩溃恢复、限流预防、分批、批大小、条件循环、终止条件、无限循环、缺信息要问、把失败当空结果、毒化产物、传输损坏、固定字段、编造身份。不适用：单个 bug / 报错的技术诊断循环细节（走 wb-debug-loop）、强删、清理被拒、结果树重跑、确认词、验证边界、不重跑、定点修复、全量验证、格式化不重跑、CI 兜底。、注入失败测韧性、hook 担保硬约束、部分完成度连续分、并发上限、槽位释放、暂停占槽、超限行为、队列代价、并发不是限流、可用余量、容量快照、自己记账、跑完不释放、客户端超时不等于取消、等待时释放、检查点重放、不死锁、占槽还是放手、可重放性、失败传播、部分成功、下游被跳过、跳过传染、旁支是绿的、停了不等于收权、令牌leeway、工具里叫停、工具内重试、停止是完成不是取消、兄弟调用、调用次数上限、上限会重置、批次截断、上限算谁的、工具钩子、改参数再调、钩子顺序、顶替返回值、暂停不是失败、熔断状态、错误回调收不到暂停、步骤级定位、span 过滤、保数据不保性能、按类型粗筛、过滤顺序、我不处理、责任链、待处理请求、挂起、拦截被吞、拒答当正常输出、审批门、执行前一刻阻断、暂停落盘、批准过期、动态阈值、三级分类、置信不是授权、可逆性、能不能撤销、可重试标记、首个响应即终局、广播不等于会签、超时分支、没人回、挂起双出口、取消链接、resume 与 cancel、挂起等回调
-version: 3.316.0
+version: 3.331.0
 agent_created: true
 module: EI
 modules: EI
@@ -4900,3 +4900,147 @@ Agentic 检索先选形：最简 router 起步，复杂走 judge→rewrite→ret
 - **固定区逐字保留**，可变区才重写；不要"从零再搭一个更像的"——重建会把已调好的品牌一致性、控件可用性一起丢掉，且 diff 里看不出来。
 - 反模式：因为"我更喜欢另一种布局"而重排固定区；把模板的注释标记当建议而不是边界。
 - **提升层**：工作流（改既有产物）+ 可复用 Skill。
+
+## r717B · 合流节点四条硬契约：先分类、默认 join 会丢行、同名字段默认被覆盖、类型不容错（来源：docs.n8n.io `integrations/builtin/core-nodes/n8n-nodes-base.merge/` 1,009,125B + `flow-logic/merging/` 489,461B，2026-11-08 r717B 二次独立实拉，逐串命中 `default behavior is to leave out the items without a match` / `n8n prioritizes Input 2` / `Fuzzy Compare ... disabled, default` / `waits for the execution of all connected inputs`）
+
+- **先分清「我在合并哪一类」，再谈参数**：① **一条流被 If/Switch 分裂后要汇回**——要的是「对齐/追加」，不是 join；② **两个独立节点的输出要拼成一条记录**——这才是 join 语义；③ **同一个节点执行了多次（item 循环）**——Merge 节点拿不到同节点的多次执行，必须由 Code node 自己收拢 items；④ **比较后再合并**——Compare Datasets 一次输出最多四路（both / only A / only B / different），别用 Merge 硬凑。判据：**合并对象选错，后面所有 join 参数都是在调一个错的模型**——先答「这两路是同一批数据的两半，还是两批不同的数据」。
+- **默认 join 会静默丢行**：Matching Fields 默认 `Keep Matches`（即 inner join），未配上的行**直接不出现在输出里**；Position 模式的默认行为同样是 `leave out the items without a match`，要保留必须显式开 `Include Any Unpaired Items`。判据：**行数变少不会报错**——每跑完一次合流先核对「输入 A 条数 + 输入 B 条数 vs 输出条数」，差额要么有解释（inner join），要么就是 bug。
+- **同名字段默认被「输入 2」覆盖**：Clash Handling 默认 `n8n prioritizes Input 2`——两路都有 `language` 字段时，输出取的是输入 2 的值，且**没有任何提示**。要两侧都留，选 `Always Add Input Number to Field Names`（字段名带输入序号）。判据：**「值看起来对、但来源不对」不是算错了，是被覆盖了**——合并后抽一条记录，把同名字段的来源逐字段回标一遍。
+- **类型不容错，Append 是同步栅栏**：`Fuzzy Compare` 默认**关闭**，所以 `"3"` 与 `3` 视为不同值，join **静默配不上**（要容错必须显式开，且开了就要接受「看起来像同一个值」的误配）；`Append` 会**等所有连进来的输入都执行完**才出结果，缺一路就是**阻塞**而不是部分输出；`All Possible Combinations` 是笛卡尔积，输出行数 = 两侧条数之积，几十条就会炸。判据：**合流节点的三种失败形态各不相同**——丢行（inner）、配不上（类型）、卡住（栅栏），报错信息一个都不会给你。
+
+- **提升层**：工作流（合并对象分类与行数核对）/ 工具（join 参数极性）/ 可复用 Skill（数据合流契约模板）。
+
+## r718A · 权限是求交不是替换：tool policy 先于沙箱 · 位置与批准是两个旋钮 · 模式名是二元组预设 · 改完只认 effective policy（来源：docs.openclaw.ai `gateway/sandboxing` 257,827B + `gateway/sandboxing/modes-scope-and-backend` 246,290B + `tools/permission-modes` 254,582B + `gateway/security/tool-permissions` 281,554B，2026-11-08 r718A 首次独立实拉，逐串命中 `Tool allow/deny policies still apply before sandbox rules` / `tools.elevated is an explicit escape hatch` / `Permission mode is separate from tools.exec.host` / `requested policy, the host policy sources behind it, and the effective result`）
+
+- **权限逐层求交，沙箱不「赎回」被 deny 的工具**：tool allow/deny 策略**先于**沙箱规则生效——原话 `If a tool is denied globally or per-agent, sandboxing doesn't bring it back`。而 `tools.elevated` 是**显式逃生门**：它把 `exec` 放到沙箱外跑（默认 gateway，exec target 为 node 时在 node 上）。判据：**收紧只能向下叠加，放松必须显式开洞**——排障时先问「是谁 deny 的」，别指望加沙箱或改 scope 能把工具放回来；反过来看到 elevated 就当「这是有人主动开的洞」，不是配置默认值。与 §权限四模式分工：那条讲四档语义，这条讲**三层的先后顺序与不可逆性**。
+- **「跑在哪」和「谁批准」是两个独立旋钮**：原话 `Permission mode is separate from tools.exec.host=auto. tools.exec.host chooses where a command runs. tools.exec.mode chooses how host exec is approved`。判据：被拦时**先分两问**——是位置不对（本该进沙箱却在宿主上跑），还是批准不对（位置对但没人批）？把两个旋钮混成一个「权限不够」去调，通常会把位置改坏来绕过批准。
+- **模式名是 (security, ask) 的预设组合，不是一个维度的档位**：每个 `tools.exec.mode` 都解析成 `security`（allowlist 严格度）+ `ask`（未命中是否弹人）一对值——`deny` = deny/off、`allowlist` = allowlist/off，`auto` 则是「有用宿主权限但不把每次 miss 都变成人工提示」的那一档。判据：**改一个模式名 = 同时改两个维度**；只想「放宽严格度但仍要问人」时，模式名表达不出来，必须回到两个底层字段去配，别硬套档位名。
+- **改完只认 effective policy，不认「我写进去的值」**：`openclaw approvals get` 一次打印三样——**requested policy / 背后的 host policy sources / effective result**；再用 `exec-policy show` 验实际，且要**重启后才生效**。判据：策略是多源合并的，**「我写的」≠「生效的」**——改完不看 effective，等于不知道哪个源赢了；汇报权限变更时，引用 effective 值而不是配置片段。
+
+- **提升层**：工作流（权限排障两问与变更验收）/ 工具（mode 的二元组语义与 elevated 逃生门）/ 可复用 Skill（权限配置变更的验收清单）。
+
+## r718B · 并发与节流是两道「与」闸门 · 不设并发就没有顺序保证且静默丢数据 · 队列有界满了就丢 · 暂停等于 limit=0（来源：pipedream.com/docs `workflows/building-workflows/settings/concurrency-and-throttling` 267,593B / sha256 9bdcf887fb00，2026-11-08 r718B 本轮重新实拉，逐串命中 `no guarantee that they will execute in the order in which they were received` / `The conditions for both concurrency and throttling must be met` / `events will be lost` / `set the limit to 0`）
+
+- **并发和节流是两道「与」闸门，不是一个「限流」开关**：并发控**同时跑几个**（worker 数），节流控**每期放几个**（limit 0–10000 事件 / interval 1–10000 秒分时）。原文明确 `The conditions for both concurrency and throttling must be met in order for a new event to trigger a workflow execution`。判据：**并发=1 不等于限速**——串行跑完一个立刻上下一个，长期速率照样能打爆下游；只调一个闸门，另一半问题原样存在。
+- **不设并发就没有顺序保证，而且是静默丢数据**：原话 `there is no guarantee that they will execute in the order in which they were received`；官方给的例子是两个事件并发写同一行表格，互相覆盖，**`no error will be thrown`**——丢的是数据，不是任务。判据：所有「读-改-写同一资源」（同一行、同一文件、同一计数器、同一记录状态）的流程必须 `concurrency=1` 序列化；这类错误在日志里看不见，只能靠并发模型预防。
+- **队列是有界的，满了就丢不是变慢**：默认 100 事件/工作流，超出直接 `Event Queue Full` 并丢事件（会报错+发邮件），付费可增到 10,000。判据：**限流的真实语义是「超容量即丢弃」**——上线前先算 峰值速率 × 单事件处理时长 vs 队列上限，只看平均速率会在高峰入口丢任务。补充边界：队列只对 **event source 触发**的 workflow 生效，native HTTP / cron / SDK / email 触发**没有队列**，这些入口限流只能靠上游削峰。
+- **「暂停」不是攒着，是 `limit=0`**：官方做法是把节流 limit 设为 0 来停止队列调用工作流。判据：**暂停语义要写清是「拒收」还是「缓收」**——limit=0 是拒收（配合队列才谈得上后续补跑）；把「暂停」当缓冲区用，恢复时会发现中间那段没了。
+- **worker 数决定补位模型**：5 workers 的官方描述是「最多 5 个并行，处理中再来事件进队列，完成后按序补位」。判据：并发数与队列深度要一起定——只加 worker 不加队列，峰值仍然丢；只加队列不加 worker，延迟会线性堆。
+
+- **提升层**：工作流（并发/节流/队列三件套的容量核算与暂停语义）/ 工具（worker 与 limit/interval 的配置口径）/ 可复用 Skill（上线前的入口容量检查清单）。
+
+## r719A · 一个 gateway 一个信任边界：陌生来源先配对 · 发消息默认跨渠道 · 漂移靠命令体检（来源：docs.openclaw.ai `gateway/security` 259,061B / sha256 f81064378c3a，2026-11-09 r719A 本轮首次独立实拉；逐串命中 `One trust boundary per gateway` / `not a hostile multi-tenant security boundary` / `answer an unknown DM sender with a pairing code instead of processing the message` / `group access is allowlisted, usually behind a mention gate` / `Agents with message-tool access can send across conversations and channel providers by default` / `one command tells you if you have drifted`）
+
+- **一个 gateway 只装一个信任边界，别拿它当敌对多租户隔离**：原文明确 OpenClaw `is not a hostile multi-tenant security boundary for mutually adversarial users sharing one agent or gateway`；混信任或互相对抗的用法要 `split trust boundaries: separate gateway + credentials, ideally separate OS users or hosts`。判据：**先问"这些人互相信任吗"，答否则拆实例**——把不同信任级别的活塞进同一 agent，是边界问题不是配置问题，调策略调不回来。
+- **陌生来源先建立关系再对话：未知 DM 回配对码，不把消息交给模型**：常规主机安装时大多数渠道对未知私信发送方 `answer ... with a pairing code instead of processing the message`；群组访问默认白名单，且通常挂在**提及门（mention gate）**后面。判据：**默认拒绝、按需放行**——"能收到消息"不等于"该处理这条消息"；先配对/入白名单，再谈内容。
+- **发消息权限默认是跨会话跨渠道的，必须显式收窄**：原文 `Agents with message-tool access can send across conversations and channel providers by default`——拿到消息工具的 agent 默认能发到别的会话和别的渠道商。判据：**给消息工具时必须同时写"能发到哪"**（限本渠道/本会话）；只写"可以发消息"等于给了全域外呼权。
+- **基线漂移靠一条命令体检，不靠记忆**：`openclaw security audit` 一条命令回答"我是否偏离保守默认"；配套有逐项 `checkId` 目录、严重度、auto-fix 支持，以及**按顺序修**的指引。判据：**安全基线必须是可复核的**——说不出用哪条命令复查的基线，等于没有基线；体检结果按 checkId 逐项关，不靠"感觉配好了"。
+
+- **提升层**：工作流（信任边界拆分与陌生来源准入）/ 工具（消息工具的出站范围、审计命令）/ 可复用 Skill（入口分级与基线复核）。
+
+## r719B · 子流程是带契约的接口：零错误才可被调 · 输入三模式 · 可调用范围可设 · 不占配额（来源：docs.n8n.io `flow-logic/subworkflows` 534,552B / sha256 1cc4b2557b9b，2026-11-09 r719B 本轮重新实拉；逐串命中 `Sub-workflow mustn't contain errors` / `the parent workflow can't trigger it` / `Define using fields below` / `Define using JSON example` / `Accept all data` / `This workflow can be called by` / `don't count towards your plan's monthly execution or active workflow limits`）
+
+- **子流程必须自身零错误，否则父流程连触发都做不到**：原文 `Sub-workflow mustn't contain errors` / `If there are errors in the sub-workflow, the parent workflow can't trigger it`。判据：**父流程"调用失败"要先看子流程自己是否红着**——子流程是独立可运行单元，不是父流程里的语法块；拆出去之前先让它单独跑通。
+- **输入契约三模式，默认用字段模式而不是 Accept all data**：`Define using fields below`（逐个字段名+类型，父侧节点自动拉取这些字段）/ `Define using JSON example`（给一段示例 JSON 定形状）/ `Accept all data`（`won't define any required input items`，缺失与不一致全部由子流程自己兜）。判据：**Accept all data = 主动放弃接口校验**——只在子流程确实要吞任意负载时用；否则字段模式把类型错误挡在调用处。
+- **子流程不是全局工具，可调用范围可设**：Workflow Settings 里的 `This workflow can be called by` 控制哪些流程能调它。判据：**封装成子流程≠对所有人开放**——把它当接口就要同时定"谁能调"，否则等于给所有流程开了后门。
+- **拆子流程不涨配额，但要多算一跳**：`Sub-workflow executions don't count towards your plan's monthly execution or active workflow limits`（Cloud）。判据：**拆分不是为了省配额**（它本来就不计），是为了可复用与可独立调试；成本在每次调用的上下文与跳转，不在配额。
+
+- **提升层**：工作流（子流程接口化：零错误、契约、可调用范围）/ 工具（字段模式与调用方自动拉取）/ 可复用 Skill（拆分前先独立跑通）。
+
+## r720A · 工具面的四道闸：不可信内容默认禁用四工具 · deny 只管命令 ID · 审批只认单个文件 · 原子替换 · 三次同错即停（来源：docs.openclaw.ai `gateway/security/tool-permissions` 281,554B / sha256 393e59dc658f + `gateway/security/secure-file-operations` 257,413B / be37a548693e + `tools/loop-detection` 263,575B / 6daa1aefd561，2026-11-10 r720A 本轮实拉；逐串命中 `deny these by default` / `matches exact node command names only, not shell text inside a command payload` / `cannot identify exactly one direct local file` / `atomic sibling-temp + rename` / `After three consecutive identical tool errors`）
+
+- **处理不可信内容的 agent，默认禁掉四个高权工具**：原文 `For any agent/surface handling untrusted content, deny these by default`，清单 `gateway` / `cron` / `sessions_spawn` / `sessions_send`。判据：**读外部内容的 agent 不该同时持有改配置、造定时任务、派生与跨会话发消息的权**——这与"输入侧过滤"是两码事，禁的是能力不是内容。
+- **deny 名单只匹配命令 ID，不匹配载荷里的 shell 文本**：`gateway.nodes.commands.deny` 原文 `matches exact node command names only, not shell text inside a command payload`。判据：**deny 是入口级开关，不是内容过滤**——别把 `system.run` 加进 deny 就认为挡住了"用 run 里执行的坏命令"。
+- **审批模式只承诺它能精确锚定的范围，锚不住就拒绝**：原文 `If OpenClaw cannot identify exactly one direct local file for an interpreter/runtime command, approval-backed execution is denied rather than promising full semantic coverage`；批准后转发复用已存的 `systemRunPlan`，调用方再改 command/cwd/session 会被 gateway 拒。判据：**审批的是"这一个具体文件+这一段上下文"，不是"这类操作"**——想让人审，就得先把命令收敛到单个可指认的脚本。
+- **写状态/配置走原子替换，读方不冻结文件**：`writes state/config files via atomic sibling-temp + rename`；普通读拿到的是"当时句柄里的字节"，文件可能在读的过程中被改写。判据：**要"完整旧或完整新"，责任在写方**——写方必须 sibling-temp + rename，读方别指望锁。路径侧配套：拒绝 `..` 逃逸、绝对路径与不该出现分隔符处的分隔符，按策略拒绝符号链接/硬链接，绑定目录解析符号链接后再比黑名单。
+- **三次同错即停 + 进度判定要先去抖**：`After three consecutive identical tool errors`（同工具+同参数+同错误结果）→ 屏蔽该动作、给模型一次恢复机会；未改动的重试在执行前被拦，并以带工具名与错误类的诊断收轮。进度比较时**剥掉易变字段**（per-call debug 计时、hit score、message id / file id / 时间戳、卡片写版本与回执措辞），只有稳定元数据（顺序、路径、片段、行范围、警告）变化才算进展；另有 **post-compaction guard**：压缩重试后再现同一 (tool, args, result) 三元组即中止，破"溢出→压缩→同循环"。
+  - 判据：**第三次不是"再试一次"，是必须换路子**；去抖后再判重，否则"同一调用换个 id"会被当成新进展，循环计数永远不涨。
+  - 与既有 §循环要可观测（第 1186 行）分工：那条管"用次数+token 盯出风暴"，本条管"三次同错直接拦、并按去抖后的指纹判进展"。
+
+- **提升层**：工具（deny 清单与审批锚点）/ 工作流（原子替换与三次同错即停）/ 可复用 Skill（不可信内容 agent 的最小工具面）。
+
+## r721A · 工具面的四个新闸：工具目录的信任边界 · 审批只能收紧 · 结构化补丁 · 进度卡归父会话（来源：docs.openclaw.ai `tools/tool-search` 322,059B / sha256 0ae8530743ff + `tools/exec-approvals` 377,224B / f688c65ea3fe + `tools/apply-patch` 241,291B / f347548abe94 + `tools/progress-card` 292,605B / b58e00a29c93，2026-11-10 r721A 本轮实拉；逐串命中 `bounded directory of the available trusted tool names and descriptions` / `not copied into the system prompt` / `only tighten` / `ask fallback (default: deny)` / `where a single edit call would be brittle` / `Spawned sub-agents never receive progress_card`）
+
+- **工具目录只放"可信的名字与描述"，不把第三方描述搬进系统提示**：Tool Search 给模型的是 `a bounded directory of the available trusted tool names and descriptions`；MCP 与 client 提供的工具 `Their untrusted names and descriptions are not copied into the system prompt`，模型先 `searches compact descriptors`、再 `describes one selected tool when it needs the exact schema`、最后才调用。`catalogMode: "direct-only"` 的工具不进目录、保持模型可见；目录本身必须 `cache-stable`（否则每轮变一次就废掉前缀缓存）。判据：**延迟加载不只是省 token，更是把不可信描述挡在系统提示之外**——与 §工具定义按需加载（L4558）分工：那条管"少花 token"，本条管"谁的描述有资格进提示"。
+- **审批只能收紧，不能放宽；没有 UI 就按 deny 兜底**：命令执行要 `policy + allowlist + (optional) user approval` 三者同时同意；`approvals can only tighten config-derived security/ask, never loosen them`（字段缺省时回落到 `tools.exec.*`）；伴生 UI 不可用时，本该弹窗的请求一律走 `ask fallback (default: deny)`。判据：**审批层是加法不是豁免通道**——任何"批过一次就放行同类"的设计都在放宽而不是收紧，除非它显式记成 standing grant 并可撤销。
+- **批准必须绑定精确执行上下文**：批准后的主机执行 `bind the exact execution context: cwd, exact argv, env binding when present, and pinned executable path when applicable`——换个目录、改个参数、换解释器就等于没批。判据：**审批对象是"这一次执行"，不是"这个命令名"**；把批准挂在命令名上，等于给同一名字的所有变体开了门。
+- **多文件多 hunk 改动走结构化补丁，不用一串单点 edit**：`apply_patch` 用 `*** Begin Patch` 包住 `*** Add File` / `*** Update File` / `*** Move to:` 操作，原文称它 `ideal for multi-file or multi-hunk edits where a single edit call would be brittle`。判据：**改 3 个文件 5 处时，5 次 edit 里任何一次上下文漂移都会中途失败**；一次成型的补丁要么整体成立要么整体不成立，回滚半径也更清楚。
+- **进度卡是单值会话状态，只归父会话**：`progress_card` 每次调用 `replaces the whole card`，最新一次写即真相；它是 durable session state，重连/刷新从 Gateway 读最新卡而不是从 transcript 重建，transcript 只留一条短回执；`Spawned sub-agents never receive progress_card or its prompt reminder`，子代理把结果交回父会话、由父会话更新。建卡门槛：`only for substantial work with at least two meaningful sequential steps`，不得为凑卡编步骤。判据：**进度是"当前状态"不是"事件流水"**——用增量事件拼进度，重连后必然对不上；让子代理各自写卡，必然互相覆盖。
+
+- **提升层**：工具（工具目录与审批）/ 工作流（补丁与进度卡）/ 可复用 Skill（工具面信任边界）。
+
+## r722A · 执行面的三层控制与两道上限：沙箱/工具策略/提权分工 · 提权不扩权 · 生效值解释器 · Bot 对答熔断（来源：docs.openclaw.ai `gateway/sandbox-vs-tool-policy-vs-elevated` 263,040B / sha256 4a4a972cb281 + `gateway/permission-modes` 250,361B / 886c499e8049 + `channels/bot-loop-protection` 250,726B / f2424a3b8d2d，2026-11-12 r722A 本轮实拉；逐串命中 `decides where tools run` / `decides which tools are available` / `exec-only escape hatch` / `maxEventsPerWindow 20`）
+
+- **三层控制各管一件事，别混着诊断**：Sandbox 决定**工具在哪跑**（沙箱后端 vs 宿主机），Tool policy 决定**哪些工具存在/可调用**，Elevated 是 `exec-only escape hatch from ordinary sandboxing`——只改变 exec 的运行位置，**不授予任何额外工具**。判据：报"工具被挡"先分清是哪一层——把工具策略缺失误判成沙箱拦截，会在关沙箱上白折腾（工具仍然不存在）。
+- **提权是"换个地方跑"，不是"多给权限"**：elevated 不覆盖 tool allow/deny、不是 skill-scoped；已经是 direct 执行时它实际是 no-op（仍受门控）；`/elevated full` 只是**跳过该 session 的 exec 审批**，且 creator role 的 `required` 沙箱**不能被 elevated 或 host override 绕过**。判据：审批豁免必须**会话级、可回收、可枚举**——把"关审批"做成全局开关，等于把护栏一次性拆掉。
+- **权限问题先读生效值，不靠读配置猜**：`sandbox explain` 会打印 effective sandbox mode/scope/workspace access、当前 session 是否被沙箱、effective 工具 allow/deny **以及该规则来自哪一层（agent / global / default）**、以及 elevated 状态。判据：**多层配置并存时，"我以为的值"和"实际生效的值"经常不同**——直接打印生效值比逐层读配置文件快且不会漏。
+- **两方对答要设熔断，不要让 bot 互聊无限循环**：bot-authored 消息进入 dispatch 时护栏默认开启，内置 `maxEventsPerWindow 20` / `windowSeconds 60` / `cooldownSeconds 60`；预算按 **bot pair** 计，且 `One budget covers every topic of a forum chat`（换 topic 不能重置）；配置继承**最窄优先**（room > account > channel > shared default）。护栏只作用于 bot 写的消息，不影响人写消息、单 bot 部署与自消息过滤。判据：**多 agent/多 bot 协作必须显式设"窗口 + 冷却 + 共同预算"**——只在单条消息上加"别循环"的提示词，挡不住对答放大。
+
+- **提升层**：工具（三层控制分工与提权边界）/ 工作流（权限诊断与对答熔断）。
+
+## r723A · 执行面的四条硬边界：fast-path 不是信任清单 · 校验只读结构不探测存在性 · 批准权等于执行权 · 交付承诺分严格与尽力（来源：docs.openclaw.ai `tools/exec-approvals` 377,224B / sha256 f688c65ea3fe + `tools/exec-approvals-advanced` 319,237B / 4c1a4e6fe6ed，2026-11-13 r723A 本轮实拉；逐串命中 `narrow fast-path` / `no host filesystem existence checks` / `operator.write does not subsume it` / `downgraded to session-only instead of failing`）
+
+- **stdin-only 快路径是窄口径，不是通用信任清单**：safe bins 只放"从标准输入读、不碰文件"的过滤器，`reject positional file args and path-like tokens, so they can only operate on the incoming stream`；默认只有 `cut` / `uniq` / `head` / `tail` / `tr` / `wc`，`grep` 与 `sort` 不在默认列表（opt-in 后 grep 的模式必须 `-e/--regexp` 给出，位置式 pattern 被拒，目的就是不让文件操作数伪装成位置参数走私进来）；**解释器/运行时**（python3 / node / ruby / bash / sh / zsh）永远不进 safeBins——凡"能求值代码、能起子进程、能按设计读文件"的命令，只能走显式 allowlist 且保留审批。判据：**判断一个候选该不该进快路径，只看它离开 stdin 还能不能造成副作用**；能，就不是 fast-path 的料。
+- **参数校验只看结构，不做存在性探测**：校验 `depends only on the argument structure (no host filesystem existence checks)`，目的明确——`prevents file-existence oracle behavior from allow/deny differences`；未知长选项与歧义缩写一律拒绝，可识别的只读布尔旗标（`wc -l` / `tr -d` / `uniq -c`）才放行，未识别的短旗标不硬拒而是落到配置的审批策略（含 auto 模式的自动审阅）。判据：**权限层一旦开始"查这个文件在不在"，它就成了信息泄露通道**——结构校验 + 未知即拒，才能既安全又不假装知道。
+- **批准权就是远程执行权，要按执行级授权**：审批解析由专用 `operator.approvals` scope 把守（`operator.write` 不包含它，`does not subsume it`）；`Treat approval-resolution access as remote-execution-grade authority and grant operator.approvals deliberately, even when the client only presents a small approval UI`。判据：**能给"同意"的客户端，等价于能执行**——别因为界面小、只点一下按钮，就把它当低危权限发出去；第三方集成只申请它实际调用方法所需的最小 scope。
+- **交付承诺分严格与尽力两档，不许静默混用**：把审批提示转发到聊天频道走正常出站投递；调用方显式要求**严格外部交付**但解析不到外部频道时，请求直接 `fails with INVALID_REQUEST`；只有开了 `bestEffortDeliver` 且确实没有外部频道时，才 `downgraded to session-only instead of failing`。判据：**严格模式缺渠道就该报错，尽力模式才允许降级**——把降级偷偷塞进严格路径，会让"已送达"变成一句没人能验证的话。
+
+- **提升层**：工具（执行白名单与审批口径）/ 工作流（权限分级与交付语义）。
+
+## r724A · 逃生口与自动审批的四条边界：elevated 只对沙箱内生效 · full 的免审是条件式 · 三重门与三级解析 · auto 三连拒即升人（来源：docs.openclaw.ai `tools/elevated` 249,669B / sha256 e8b37d7147bd + `tools/permission-modes` 254,582B / 65456cc36791 + `gateway/sandbox-vs-tool-policy-vs-elevated` 263,040B / 4a4a972cb281，2026-11-14 r724A 本轮实拉；逐串命中 `Sessions whose creator role requires sandboxing cannot use elevated mode to escape` / `otherwise the normal approval policy still applies` / `three consecutive reviewer denials escalate to a human`）
+
+- **elevated 只对"已在沙箱里"的 agent 有意义，而且逃不出强制沙箱**：原话 `Elevated mode only changes behavior when the agent is sandboxed. For unsandboxed agents, exec already runs on the host`，且 `Sessions whose creator role requires sandboxing cannot use elevated mode to escape`。判据：**逃生口有天花板**——看到 elevated 先问"这个会话的 creator role 是否强制沙箱"，强制沙箱的会话里配 elevated 只是无效动作，不是绕过手段；对本来就没沙箱的 agent，开 elevated 等于什么都没做。
+- **`full` 的"跳过审批"是条件式的，不是模式自带的**：原文 `In full mode, exec approvals are skipped when the resolved exec mode/host approval policy is already fully permissive (security full, ask off); otherwise the normal approval policy still applies`；而 `on/ask` 模式"configured approval rules always apply"。判据：**一个开关不能覆盖另一个开关**——把 elevated 设成 full 就以为无人值守，是最常见的误判；实际要先确认底层 policy 本身已是 `security full + ask off`，否则 full 只是"跑到沙箱外"而不是"免审"。
+- **elevated 的可用性有三重门，生效顺序是三级**：可用性 = 全局 `tools.elevated.enabled` + 按渠道的发送者 allowlist（`tools.elevated.allowFrom`）+ per-agent gate，缺一门就不生效；级别解析顺序为 **消息内联指令 > 会话 override（须发一条纯指令消息）> 全局默认**，内联只作用于该条消息。判据：**"谁能提权"和"这次提没提"是两套判断**——排障时先查三重门（人有没有资格），再查解析顺序（这次到底用了哪一级），把"没生效"笼统归因于配置错了是白费。
+- **auto 档不是"全自动通过"，而是逐次判定 + 三连拒熔断**：`ask` 与 `auto` 共享同一套 allowlist/ask 设置，`auto` 只是额外启用 native auto-reviewer；reviewer 的 **allow 只放行一次低或中风险执行**，**deny 必须返回理由**让 agent 改走更安全的路径或找人，**连续三次 reviewer 拒绝就升级到人工**，review 失败也按 ask 处理；原有的 binding 检查与显式人工审批要求仍然生效。判据：**自动审批的价值在"会拒绝并说明为什么"**——只统计通过率的 auto 配置是失控的；熔断阈值（3 连拒）要写进运行手册，否则无人值守时一直拒就是静默停摆。
+
+- **提升层**：工具（elevated 语义与 auto-reviewer 边界）/ 工作流（提权排障的三重门与三级解析、无人值守的熔断口径）。
+
+## r725A · 事件钩子的四条执行纪律：三种"在不在"不是一回事 · 无超时无重试 · 重载是整组替换 · 启用改本地（来源：docs.openclaw.ai `automation/hooks` 265,877B / sha256 37cd014925ef + `automation/hooks/writing-hooks` 254,273B / 76894f95b60e，2026-11-14 r725A 本轮实拉；逐串命中 `They do not prove that the Gateway imported the handler` / `no general handler timeout, cancellation signal, durable event queue, automatic retry, or exactly-once guarantee` / `the previous handlers stay active` / `always inspect and modify local config`）
+
+- **"合格 / 已启用 / 已加载"是三件事，CLI 报告只覆盖前两件**：requirements 满足（OS/二进制/环境/配置在目标主机上通过）、config 允许（每 hook/来源策略放行，workspace hook 需显式 opt-in）、loaded（运行中的 Gateway 真的选中、import 了 handler、注册了事件，还要过总开关与名字选择）。原文明确 `They do not prove that the Gateway imported the handler, that the global selection includes it, or that its event has fired`，且 `This proves that a handler ran; openclaw hooks check alone does not`。判据：**装完只看 `list/info/check` 的 ready/eligible 字段等于没验**——要验就验实际副作用或 hook 专属日志。
+- **handler 没有超时、取消、持久队列、自动重试、恰好一次**：同一事件的 handler 串行（family 先于 exact，各自按注册顺序），dispatcher 捕获异常后继续跑后面的；不同事件之间不串行；重启或进程退出会丢在途工作。要求：副作用短且有界、网络调用自带超时、限制数据体积、把操作设计成可重复执行；`void doHeavyWork(event)` 会逃出 handler 的 wait/error 边界，不能当通用解法；需要耐久作业生命周期就交给 automation/service，长驻定时器/套接字/客户端归 plugin service 并带显式 shutdown。
+- **配置重载是整组替换，在途用旧、后续用新**：reload 先准备好新选中的 handler 再一起替换；某个选中项加载失败时**旧 handler 保持生效**（`the previous handlers stay active`）；已在跑的事件用原 handler 收尾，之后的事件才用新选择；reload 不会重放 `gateway:startup`。判据：**重载语义要写成"在途旧、后续新、失败保旧"**，否则排障时会把旧 handler 的日志当成新配置的证据。
+- **"启用/禁用"改的是本地配置，作用域也不等于隔离**：`hooks enable` / `hooks disable` **always inspect and modify local config**，不走 RPC 改远端 Gateway，必须在对端主机上跑；`--agent <id>` 只决定检查哪个 workspace，不是隔离注册表（`hooks.internal.entries.<hookKey>` 是全局的）；Gateway 只从它选定的 workspace 把目录 hook 装进**进程级注册表**，不会因为"你检查了某 agent"就加载所有 agent 的 `hooks/`；已加载 handler 要自己按 agent/session 过滤。判据：**远端没生效先问"这条命令改的是哪台机器、哪个注册表"**。
+
+- **提升层**：工具（hook 生命周期与重载语义）/ 工作流（加载三态验收、副作用可重复设计、作用域排障）。
+
+## r726A · 重试的四条工程纪律：按请求不按流程 · 三套信封不可混用 · 成功才重置预算 · 恢复续跑不重发（来源：docs.openclaw.ai `concepts/retry` 270,349B / sha256 4727aa98ce5f + `concepts/queue-steering` 283,691B / 939925bb3d2c，2026-11-14 r726A 本轮实拉；逐串命中 `Retry per HTTP request, not per multi-step flow` / `A completed successful model response resets the retry count` / `Preserve ordering by retrying only the current step` / `only actions with unknown outcomes need inspection`）
+
+- **重试粒度是"每个 HTTP 请求"，不是"每个多步流程"**：原文 `Retry per HTTP request, not per multi-step flow`；保序的办法就是 `retrying only the current step`。→ 判据：**整条流水线失败时不要从头重跑**——只重跑当前那一步，前面已成的结果留在原地；否则既破坏顺序又可能重复副作用。
+- **退避参数分三套信封，不能互相套用**：共享渠道信封 = **3 次尝试、10% 抖动、最小延迟 400ms、上限 30s**；Discord 发送与 REST = 最小 **500ms**、REST 调用上限 **300s**；Discord Gateway WebSocket 重连是**另一套**——最多 50 次、2000ms 起指数退避到 30000ms 封顶、**无抖动**。→ 判据：**"重试 3 次、等 30 秒"只对渠道发送成立**；把它当全局默认，会在长轮询通道上过早放弃、在 WS 上做出无抖动的齐步重连（同时打爆）。
+- **回退预算与整轮 deadline 耦合，成功才重置**：有 replay-safe 模型回退时，内嵌 provider 重试在 bounded run timeout **用掉一半就停止接受重试（含首次请求）**，把余量留给 fallback；in-flight 请求保留自己的超时，故剩余回退时间不保证。计数上：连续中断通常允许 **16 次总尝试（15 次重试）** 应对限流；共享组织 TPM 耗尽且有 replay-safe fallback 时**最多 2 次同模型重试（15 秒窗口）**后转 fallback；其他瞬时失败 **8 次 / 90 秒窗口**。**只有一次完整成功的模型响应**才重置重试计数、退避与中断窗口——部分流、失败响应、**光有工具活动都不算**。→ 判据：**"跑了一会儿"不是进展**；把工具活动当成恢复证据，会让真正的故障耗尽预算却在账面上看着没事。
+- **恢复是"接着跑"，不是"重发原请求"，且有一张不可重试清单**：恢复在既有 transcript 上继续，附"保留已完成工作与原请求约束"的指令；**已记录的 tool result 决定什么完成了**，`only actions with unknown outcomes need inspection before retrying`；若已有结果已满足剩余请求，就直接汇报、不再调工具；恢复**不覆盖**用户"停止 / 不要重试"的指令。不进这套预算的：计费失败、认证错误、provider 拒绝；**空错误体不能让永久性 4xx 变成可重试**，无 body 的 400/422 直接暴露不静默重提，空成功响应走独立的 response-repair。→ 判据：**"重试"要有资格判定**——先问"这次失败是不是同一类瞬时故障、这个动作结果是否未知"，两问不过就别重试。
+- **运行中插入的指令，作用点是工具调用边界，不是随时打断**：一条 assistant 消息里的多个 tool call 是**已承诺的计划**，直到其中一个开始执行前都不检查 steering；顺序模式下，某个调用启动后、**每个后续调用前**设检查点，若有待处理 steer 就跳过尚未启动的尾部；并行模式**一起准备一起发**、没有检查点、**等待中的 steer 不会跳过任何并行批次**。被跳过的调用仍收到配对的合成结果（`Skipped to process an incoming message.`），保证"每个请求的调用都有结果"；steering 消息紧接在 tool results 之后、下一次 LLM 调用之前注入。→ 判据：**"插话"不是"打断"**；指望它中止正在跑的调用会失望，正确用法是在批次边界改变下一步计划。
+
+- **提升层**：工作流（重试保序、回退预算、steering 边界）/ 工具（三套退避信封与不可重试清单）/ 可复用 Skill（恢复续跑的资格判定）。
+
+## r727C · 超时预算的四条工程纪律：解析顺序 · 分层余量 · 收成失败响应 · 父死线不可重启（来源：docs.openclaw.ai `plugins/codex-harness-reference/timeouts` 244,968B / 60dc4457046e + `tools/loop-detection` 263,636B / c47db978ba77，2026-11-15 r727C 本轮实拉）
+
+- **超时预算按固定顺序解析，不是"谁写谁赢"**：正数 per-call `timeoutMs` → 正整型 `timeoutSeconds` **再加 30,000ms 的 setup/完成余量** → 工具专属默认（图像生成 120s、图像理解 60s、`message` 固定 600s 外层预算）→ 通用动态工具 90s 默认。动态工具预算**上限 600,000ms**；app-server 侧 watchdog 在适用预算之外**再各加 30,000ms**（一次给 setup/completion，一次给结果递送）。→ 判据：给工具写超时先问「我覆盖的是哪一层」，覆盖错层会出现「命令没超时，外层先杀了」。
+- **`timeoutSeconds: 0` 不是"无限"**：它关闭命令计时器，但**保留 transport 自身的有界等待**；未配置时继承 exec 的运行时/per-agent/全局默认（**1,800 秒**）；前台 `node_exec` 用的是 exec 解析后的预算，不是通用 90s 也不是 600s 上限。→ 判据：要"跑很久"就显式给正数覆盖，别用 0 假装没有上限。
+- **超时必须收成「失败响应 + turn 继续」，不能让会话停在 processing**：超时后中止工具信号（支持的平台）、返回 failed dynamic-tool response 让本轮继续；**等待预算从不在请求方 run/tool 关闭后继续保留审批权限**（authority 随 run 结束失效）。→ 判据：超时的输出契约是「明确失败 + 可继续」，不是「静默挂住」；审批窗口再长，也不能长过发起它的 run。
+- **父死线不可被工具调用重启**：重放 pending 工具请求仍沿用原父 deadline，**工具调用不能 restart 它**；`autoreview` 的 per-pass 超时参数**不构成整通上限**，父 deadline 仍在新一轮 pass 上继续走；无限父级不加执行 watchdog，但 Stop 与权限撤销仍然生效。→ 判据：子步骤的超时参数只约束自己，别把「某一步放宽」当成「整件任务可以无限期」。
+- **超时后的重试有共享语义与退避**：同一连接上、目录源与查询都相同时，后来者可以**共享**先前挂起的 native 请求——**先前调用者保持 failed，新调用者用自己的预算与当前授权**；连续两次本地目录源失败进入**有界退避（5s 起翻倍至最多 60s）**，成功恢复或配置重载即清零；刷新挂起期间**旧的缓存页仍可读**。→ 判据：重试要么共享查询、要么退避，不能"一边重试一边把预算叠满"。
+- **提升层**：工具（预算解析顺序与分层余量 / timeoutSeconds:0 语义）/ 工作流（超时收尾契约、父死线、退避与缓存兜底）/ 可复用 Skill（工具超时配置检查清单）
+
+## r729B · 执行面隔离的五条判据：三层控制各管一事 · 按名过滤不查副作用 · 目录枚举不经 shell · 挂载双重校验 · 谁在沙箱外（来源：docs.openclaw.ai `gateway/sandbox-vs-tool-policy-vs-elevated` 263,101B / aee142483788 + `gateway/sandboxing/what-gets-sandboxed` 225,926B / 7077e6264a6b，2026-11-09 r729B 本轮独立实拉）
+
+- **★三层控制回答三个不同问题，混成一个开关必然「以为禁了其实没禁」**：`sandbox`（mode/scope/workspaceAccess）决定**在哪跑**（沙箱后端还是宿主）；`tool policy`（profile / byProvider / 全局与 per-agent allow+deny / 沙箱专用 allow+deny）决定**哪些工具可调用**；`elevated` 只是 **exec 专用的逃生门**（默认逃到 gateway，exec target 为 node 时逃到 node）。补充边界：**elevated 绕不过 creator role 的 `sandbox: "required"`**；且沙箱本来就关着时，elevated **什么都不改变**（exec 早已在宿主上跑）。→ 判据：排障先问是「位置错」「工具不可用」还是「批准缺」，别一律当「权限不够」。
+- **★deny 永远赢；allow 非空即「白名单模式」**：只要 `allow` 非空，其余全部视为被禁；`/exec` 不能覆盖已被 deny 的 `exec`。更要命的一条：**tool policy 只按工具名过滤，不看 `exec` 内部副作用**——`exec` 被放行时，禁掉 `write` / `edit` / `apply_patch` **并不等于 shell 变只读**。→ 判据：**「禁写」与「只读」是两件事**；真要只读，得在命令层（只读账号、只读挂载、命令白名单）落实，不能靠工具名清单假装。
+- **★目录枚举走专用通道，不靠 shell，也不返回半截文件名**：`ls` 是**目录发现**而非 shell 执行授权，返回**完整、JSON 引号包裹的文件名 + 续页游标 `after`**，同目录同 `after` 继续翻页；每页按所选模型的 tool-result 预算裁切。自定义后端若不实现 `SandboxFsBridge.readDirectory`，`ls` 直接**隐藏**，且**不回退去读宿主文件系统**。→ 判据：**「列目录」要有独立能力位**——用 shell `ls` 兼任会把枚举变成执行，用截断输出兼任会让模型拿到半个名字去猜路径。
+- **★挂载（bind）是沙箱文件系统的穿孔，必须双重路径校验**：第一次校验规范化后的源路径，第二次在**解析到最深的已存在祖先之后**再校验——**symlink 父目录逃逸不能绕过 blocked-path / allowed-root 检查**；叶子路径尚不存在也照样安全校验（`/workspace/alias-out/new-file` 若经符号链接父目录指到被禁路径或根外，直接拒绝绑定）。两个默认陷阱：不写 `:ro|:rw` 就是**读写**（源码与密钥应显式 `:ro`）；`scope: "shared"` **忽略 per-agent binds**（只应用全局 binds）。挂 `/var/run/docker.sock` 等于把宿主控制权交给沙箱，只能是有意为之。`workspaceAccess`（none/ro/rw）与 bind 模式**互相独立**，别用一个推另一个。
+- **★「什么在沙箱内」要写成清单，未列的就是在宿主上**：沙箱内 = `exec` / `ls` / `read` / `write` / `edit` / `apply_patch` / `process` 等工具执行 + 可选沙箱浏览器；**故意留在宿主** = Gateway 进程本身、经 `elevated` 放行的工具。另一条常见「惊喜」：mode=`non-main` 只沙箱**非主**会话，群与频道会话默认进沙箱而主会话不进。→ 判据：**隔离声明按工具逐项列白名单**，「整体已沙箱化」这句话在没有清单时没有信息量。
+- **★生效值要能自证，且审计要能定位到规则**：`sandbox explain`（可 `--session` / `--agent` / `--json`）一次打印四样——生效的 mode/scope/workspaceAccess、当前会话是否真被沙箱、工具 allow/deny **来自 agent/global/default 哪一层**、elevated 门与修复键路径；策略删工具或沙箱策略拦调用时，日志写 `agents/tool-policy` 审计条目（规则标签 + 配置键 + 受影响工具名）。→ 判据：**权限结论只引用 effective 值**，配置片段不算证据。
+- **提升层**：工具（三层控制与挂载校验）/ 工作流（隔离声明清单与权限排障顺序）/ 可复用 Skill（执行面前置检查单）
+
+## r730A · 内部钩子的六条落地判据：两套系统不混用 · 受信任代码 · 观测点不是拦截点 · 关停 join · 投递只认一个生产者 · 旧版元数据静默失效（来源：docs.openclaw.ai `automation/hooks` 265,938B / sha256 85dc3eafd4ef + `automation/hooks/writing-hooks` 254,334B / d28c247004f5 + `automation/hooks/event-types` 247,837B / 92306a0c176d，2026-11-09 r730A 本轮独立实拉；逐串命中 `Internal hooks are trusted code, not sandboxed scripts` / `These are separate systems` / `These are observation points, not a complete transport audit` / `a handler that never settles can therefore prevent in-process shutdown` / `Pushing to event.messages is not a general send-message API` / `The pre-July 2026 metadata.clawdbot format is no longer read`）
+
+- **★内部事件钩子与插件钩子是两套系统，配置键与事件名都不可互换**：`hooks.internal` 配本页的事件处理器（`HOOK.md` + handler），`hooks.enabled` 配 **HTTP ingress**；内部事件名形如 `message:received`，typed 插件名形如 `message_received`，两套不能互相注册。旧 API `api.registerHook` 只注册内部事件，拿它注册 `before_tool_call` / `message_received` / `session_start` 这类 typed 名**只得到警告不生效**。→ 判据：装钩子先问「我配的是进程内事件还是插件生命周期」，配错层的症状是「配置写了但永远不触发」。
+- **内部钩子是受信任代码，不是沙箱脚本**：它们以 Gateway 进程的文件系统、网络与环境权限运行；来自工作区目录或下载包里的钩子要在启用前逐行看——「放进去就生效」等于把宿主权限给了这段代码。同时 `workspace` 放置**既不是 agent 沙箱、也不保证 Gateway 会加载**该工作区的钩子（需显式启用）。→ 判据：**钩子的信任级别按「可执行代码」审，不按「配置文件」审**。
+- **事件是观测点，不是审计面也不是拦截面**：被抑制/重复的入站派发、无 sessionKey 的路径可能根本不产生事件；快速原生命令路径也可能跳过。原文 `These are observation points, not a complete transport audit or a way to block message processing`。→ 判据：**别用「没收到事件」推断「没发生动作」**；要审计就得另设落盘记录，要拦截就得用审批/tool policy 层。
+- **关停与重启的等待是「有界等待 + 最终 join」，永不 settle 的 handler 能拖死进程内关停**：`gateway:shutdown` / `gateway:pre-restart` 的**初始等待有界**，超时后独立拆卸继续，但**超时不取消 handler**；关闭共享状态前会 join 真实完成，所以一个永不 settle 的 handler 会让 in-process shutdown 卡住。→ 判据：**钩子里不留悬空 Promise**；需要长驻的东西交给带显式 shutdown 的 service，别塞进事件处理器。
+- **`event.messages` 不是通用发消息 API，投递只认一个生产者**：只有「聊天命令处理 `/new` / `/reset`」会 await handler、按空行拼接并尝试回复到原渠道/收件人（保留账号与线程）；**由 Gateway 会话 RPC 触发的同名事件只跑 handler、不投递**；compaction 的两个事件转给调用方的 notice 回调；其余核心事件一律当回复忽略。且必须在 handler 的 promise settle 前 append，**游离的异步工作补推会错过投递窗口**；要控制正常回复或取消，得用 typed 插件钩子。→ 判据：**「我 push 了 messages 却没发出去」先查生产者**，别先怀疑网络。
+- **`HOOK.md` 元数据有硬契约，旧版块会静默失效**：handler 发现顺序 `handler.ts` → `handler.js` → `index.ts` → `index.js` 取第一个；`export` 指定导出名（默认 `default`）；`events` 至少一条才注册；`requires.bins / anyBins / env / config` 分别要求「全部在 PATH」「至少一个」「非空值」「配置路径为真」；`always` 只绕过二进制/环境/配置要求，**不绕过 OS 与启用策略**。最坑的是 **pre-July-2026 的 `metadata.clawdbot` 已不再读取**——只改块名不合并，旧块里的事件声明与 requirements 会被**静默忽略**。→ 判据：**升级老钩子必须迁 `openclaw` 块**，并回读 `hooks info` 确认事件数。
+
+- **提升层**：工具（钩子生命周期与元数据契约）/ 工作流（信任审查、观测与拦截分层、投递生产者核对）/ 可复用 Skill（钩子上线前检查单）。

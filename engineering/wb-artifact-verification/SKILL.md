@@ -2,7 +2,7 @@
 name: wb-artifact-verification
 description: >-
   对"生成出来的东西"做独立验证并给出明确的成功/失败判定。当用户要求"验证生成结果""验证这个脚本/代码能不能跑""验证是否成功""帮我确认结果对不对""check 一下生成物""验证执行结果"，或给出"先生成再验证再反馈"这类任务时使用。核心是三条互相独立的证据源（独立算法 oracle / 外部已知常数 / 随机差分模糊测试）+ 故障注入（变异测试）证明验证器本身有检出能力，禁止只跑一次"看起来没问题"就宣布成功。另含"证明检查真的跑到了"：非零退出不等于检出（import 报错/构建失败也非零），须打到达标记；被测方须侧盲；判不出结果时"不确定"是一等判定，不得默认通过、不得伪造因果。另含"验证通道禁止副作用"：验证命令不得借检查之名做发布/部署/推送/外发。触发词：验证、能不能跑、接受态绑定单报告、harness 塑形信念、belief-rollout 诊断、终端成功看不见分叉、BIWM、证据被 harness 压缩、attestationHash 排除 checkedAt、同状态同哈希、审计四元组、启用新规则域须复审刷新、间隔截顶防计时器溢出、缺席折叠成空集合、校验两端同源自证恒真、压缩切点避开 tool 对、缺口标注禁止猜测、被调用方 commit 调用方 session、flush vs commit、transaction already closed、expire_on_commit、extract_class_name、first Component subclass、run2 not found in First、data.type 优先于 vertex_type、fault-enforcing tests、测试通过不等于正确、counterfactual monitor、recoverable checkpoint、false-alarm 2.0-3.3%、cross-provider review、explicit failure states、truncation levels、read-only 假设要实测、projectId、optInAvailable、并列时间戳分页、游标缺 tie-breaker、模型产出作观测记录、准入策略按假阳性上限、分隔符被硬编码、序列化往返不对称、夹具必须封闭、MockTransport、example.invalid、外部依赖版本假设
-version: 2.457.0
+version: 2.460.0
 agent_created: true
 module: VI
 modules: VI
@@ -516,3 +516,32 @@ modules: VI
 - 判据：**修订交付的验收点是"每处改动都可追溯"，不是"看起来像改过"**。
 - **提升层**：工具（docx 修订）+ 可复用 Skill（交付验收）。
 - 触发词：tracked changes、w:ins、w:delText、删除段落标记、接受修订、空项目符号、author 校验
+
+## r719C · 审计结论的判读：两级扫描 · truncated≠干净 · 严重度随配置 · auto-fix 只修权限位 · no-action 清单（来源：docs.openclaw.ai `gateway/security/audit-checks` 298,026B / sha256 4824557245f7 + `gateway/security/trust-model` 249,792B / 85cebce9134f，2026-11-09 r719C 本轮重新实拉；逐串命中 `check up to 500 source files per plugin or skill` / `skip files larger than 1 MiB` / `Traversal also stops after 100,000 directory entries` / `2,000 skill files and 40,000 directory visits` / `scan_truncated warning means some files were not checked; it does not identify dangerous code` / `Some checks only run with openclaw security audit --deep` / `Not vulnerabilities by design`）
+
+- **审计分两级，默认那一级根本没跑代码扫描**：`Some checks only run with openclaw security audit --deep`——plugin/skill 代码扫描（`plugins.code_safety*` / `skills.code_safety*`）与 `gateway.probe_*` 只在 `--deep` 下跑；其余 checkId 普通审计即跑。判据：**先说清用的是哪一级，再谈结论**——拿 plain audit 的结果宣称"代码已审"是范围错报。
+- **`scan_truncated` 只表示"没查完"，不表示"危险"**：原文 `a scan_truncated warning means some files were not checked; it does not identify dangerous code`；扫描本身有硬边界——每插件/技能最多 **500 个源文件**、**跳过 >1 MiB 文件**、遍历到 **100,000 个目录项**即止，workspace 技能扫描另有 **2,000 文件 / 40,000 次访问**上限。判据：**报告必须带覆盖率**——"截断"是未覆盖声明，把它读成"有问题"和读成"没问题"都是错的。
+- **同一 checkId 的严重度随配置变化，别按级别名排序**：原文 `A severity like warn/critical means the same checkId can be emitted at either level depending on config`（例：Gateway 是否远程暴露）。判据：**排序依据是"当前配置下实际暴露面"，不是 severity 字面**——同一条检查在本机回环是 warn、暴露到公网就是 critical。
+- **auto-fix 只覆盖权限位类，结构问题没有自动修复**：checkId 表里 `fs.*.perms_*`（world/group writable、readable）标 `yes`；`fs.state_dir.symlink`、`fs.config.symlink`（"another trust boundary"）标 `no`。判据：**跑完 auto-fix 不等于修完**——权限位能被命令改，符号链接/信任边界/升级类要人判；按 primary fix key 逐项关。
+- **先过 no-action 清单再报漏洞**：原文单列 `Not vulnerabilities by design` / `Common findings closed as no-action`——仅注入链但无策略/认证/沙箱绕过、假定同主机敌对多租户、正常 operator 读路径（`sessions.list` / `chat.history`）被当 IDOR、仅 localhost 缺 HSTS、把节点配对元数据当第二层审批等，均按设计不成立。判据：**报之前先问"这是缺陷还是设计选择"**——不先过 no-action 清单，产出的是误报清单。
+
+- **提升层**：工具（审计分级与扫描边界）/ 工作流（覆盖率与修复顺序）/ 可复用 Skill（finding 判读：no-action 清单先行）。
+
+## r724C · 验证姿态的四条硬契约：只读姿态也分两种成功语义 · 体检必须带范围声明 · 分段可重跑 · 候选对象要冻结（来源：docs.openclaw.ai `cli/doctor/lint` 263,491B / sha256 36bab71cc354 + `reference/full-release-validation/release-checks` 264,480B / bd2f5c687e3b，2026-11-14 r724C 本轮实拉；逐串命中 `exits 0 after a report is produced` / `threshold-based exit code` / `never opens operator databases` / `two-minute deadline` / `rerun_group=install-smoke` / `same immutable OpenClaw candidate`）
+
+- **同样"只读"，两种成功语义：看 payload 还是看退出码**：裸 `doctor --json` 是只读且非交互（无提示、无修复、无配置/状态改写），但它**出完报告就退出 0**——原文 `exits 0 after a report is produced so output formatting does not change ordinary Doctor's advisory success contract`，健康与否要看 payload 的 `ok` 与 `findings`；而显式 `--lint` 是部署前置姿态，用的是 **`threshold-based exit code`**。判据：**先问"这个工具的 0 是没发现问题，还是只是跑完了"**——把报告式工具的 0 当通过，会把 findings 全放过；把阈值式工具的 1 当崩溃，会把发现当故障去查。
+- **体检结论必须带范围声明，没查的项要显式列**：隔离进程里的有界诊断只覆盖 core 配置、Gateway 配置、命令归属、Node 运行时与已装资源，`never opens operator databases or creates database inspection copies`，并**明确 defer** 数据库、插件、凭据、工作区检查；完整报告要停 Gateway 在宿主跑 `--lint`；托管诊断有 **`two-minute deadline`**，超时杀进程树并把中断回报给调用方。判据：**"体检通过"= "在声明的范围内通过"**——不写范围就是过度承诺；被 defer 的那几项要么补检，要么在结论里点名。
+- **验证要设计成分段可重跑，失败只重跑对应组**：Release Checks 把校验切成 resolve target → package artifact → install smoke → cross-OS → windows node → repo/live E2E → docker release path 等段，每段有独立句柄（`rerun_group=install-smoke` / `cross-os` / `windows-node` / `live-e2e`），失败后的动作是 **`Rerun: select the concrete group for the failed surface`**。判据：**验证链的可维护性在于"能只重跑坏的那一段"**——一整条链只能整体重跑，晚期失败会逼你重复全部前置成本，也就没人愿意真跑。
+- **被验对象要冻结成不可变候选，全链同一个**：先 `Resolve target ref` 一次，再用 **immutable package tuple**（或为直派打包一个候选 tarball）暴露给下游；跨 OS 与 windows node 段都对着 **`same immutable OpenClaw candidate`** 跑。判据：**"各阶段测的是不是同一个东西"必须先钉死**——每段各自取最新，晚段测的已经是另一个对象，pass/fail 不能合并成同一个结论。
+
+- **提升层**：工具（退出码与 payload 的双语义、快照式只读边界）/ 工作流（分段重跑与候选冻结）/ 可复用 Skill（体检范围声明与验证链设计）。
+
+## r728B · 验收证据的五条硬规矩：失败四分类 · 窄证据 ≠ 授权 · 证据不被「现在」刷新 · 预算不截断 · 未跑不许报通过（来源：docs.openclaw.ai `reference/full-release-validation/evidence` 250,446B / efb1d016e334 + `plugins/knowledge/evidence` 239,711B / 0aac781a28d2 + `start/why-openclaw/provenance` 233,051B / b245174ccb22，2026-11-15 r728B 本轮实拉）
+
+- **★失败先分四类，只有一类能改「被验对象」**：product / harness-tooling-provenance / infrastructure-credential / wrapper。**只有确认的 product failure 才改 Code SHA**；处置是「一次诊断 → 一次修复 → 一次窄重试 → 重新评估」，**不自动全量重跑**。→ 判据：改产物指纹之前必须先证明失败属于产物本身；把环境/凭证/工装问题当产品缺陷改，会把验证变成自我实现。
+- **★窄证据本身不是发布授权，每个失败都要判 blocker 还是 flake**：除非命中已签入的豁免策略（`RELEASE_VALIDATION_WAIVERS`，默认空，逐条含精确版本/子角色/job 名/原因），否则**任何被选中的失败都阻断**；豁免可以绑 `{runId, runAttempt}` 限定到一次具体执行，不覆盖同一 job 后续失败；被豁免的失败仍原样记入状态/清单/摘要，**不省略测试、不改原始结论**。→ 判据：**豁免是签入代码里的一条有精确靶心的记录，不是一次「这次先放过」的口头决定**。
+- **★证据只能被认证，不能被「现在」刷新**：读者对保留证据做认证，**不重新拉取 registry 观测、不按当前时钟判过期**；registry 准入既不是发布授权，也不承诺 registry 状态此后未变；最终写入者仍要自己做 trust / approval / content / **readback** 四道自检。→ 判据：**「当时通过」是一条历史事实，不能拿后来的状态回填成「现在可用」**；验收报告里写清证据时间点与读取方式。
+- **★证据预算要在 fanout 前算，超了就 sealing 失败，绝不截断证据**：按已知的包裹证据先估预算，后续 job/attempt 增长仍可能超出最终产物上限并导致封存失败——设计上**不接受「裁掉一部分证据以适配上限」**。→ 判据：证据量与产物上限冲突时，先拆产物或缩范围，不要删证据；被截断的证据等于把验收变成抽样。
+- **★未跑 / 省略 / 延后一律不许报成通过**：跨 OS 安装升级 lane 在 beta / stable / full 验证里都是必需的，清单记录其**真实结论**，失败即阻断；诊断产物必须保留，**绝不把 failed / omitted / deferred 的 lane 写成 passed**。→ 判据：验收表里每一行只能取「通过 / 失败 / 未跑」三值，缺项就显式写缺项。
+- **★证据的来源等级必须存在正文之外，且污染随内容传播**：每个索引片段的 origin class（owner / agent / untrusted / system）**存在散文之外**——被召回的文字**无法自我提升信任等级**，分类也**永不默认 owner**；回合内一旦出现网络来源的工具结果，此后同一回合的所有助手消息都被标 tainted、按 untrusted 归档；自动会话摄取的排除项（cron / heartbeat / subagent）只是入口过滤，不阻止有权限的工具直接写文件。→ 判据：**来源可信度是元数据字段，不是正文里的一句自述**；验收引用外部内容时，先看它属于哪一类，再看它说了什么。
+- **提升层**：工作流（失败分类与阻断判据、证据时间点与未跑标注）/ 工具（证据预算与来源等级元数据）/ 可复用 Skill（验收证据清单）

@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.70.0
+version: 1.73.0
 agent_created: true
 module: OI
 modules: OI
@@ -286,3 +286,31 @@ modules: OI
 - 与 r353A 的"批处理保内序"分工：那条管消息队列合并语义，本条管**子任务派发粒度**。
 - 反模式：把 12 个单行常量改动派成 12 个子代理；把需要独立测试的新模块塞进同形批次。
 - 触发词：same-shape、同形小活、一次下发、dispatch brief、评审面、批与派
+
+## r720B · 子代理的权限天花板是结构性的：硬 deny 层 · 委派工具是 operator 授权 · 策略不追溯 · 续跑沿用捕获策略（来源：docs.openclaw.ai `tools/subagents/tool-policy` 245,599B / sha256 cae5c19e834c + `tools/subagents` 255,888B / b21d8734a7ad，2026-11-10 r720B 本轮重新实拉；逐串命中 `Hidden sub-agents always lose` / `ordinary allow / alsoAllow entries cannot override it` / `delegateToolsTo is an operator-owned permission, not a sessions_spawn argument` / `Existing children keep their recorded policy` / `keeps the requester policy captured at spawn`）
+
+- **隐藏子代理有一层不可覆盖的硬 deny**：`Hidden sub-agents always lose gateway, agents_list, session_status, progress_card, cron, message, sessions_send, and the conversations_* tools regardless of depth or role`，且这层从持久化的子会话信封每轮重建，`ordinary allow / alsoAllow entries cannot override it`。到配置的 depth cap 再收走 `subagents` / `sessions_list` / `sessions_history` / `sessions_spawn`，通信只剩 announce 链。判据：**派生出去的执行者不该握有系统级、交付级与再派生工具**——这是结构性天花板，不是你写 allow 就能开的。
+- **"把工具委派给 coding agent"是 operator 级授权，不是 spawn 参数**：`delegateToolsTo` 必须点名已配置的具体目标 agent，不能替代 `allowAgents`、不能指向任意目标；它只放宽**发起方自己**的 `tools.deny` 层，全局/provider/sender/会话/沙箱/继承限制照旧，重复的 deny 仍然 deny。判据：**委派授权只在"谁允许谁"这一层生效，不穿透其他闸门**；无法安全投影的授权应在创建前失败，而不是起一个跑不动的子代理。
+- **策略修正不追溯已存在的子代理**：`Existing children keep their recorded policy`——改完配置要新建 child 才生效。判据：**发现子代理权限不合适，别指望热修**；先把该 child 结束，再按新策略重开。
+- **续跑沿用 spawn 时捕获的 requester 策略**：`sessions_yield` 后的 continuation `keeps the requester policy captured at spawn`，且要求同 batch 每个 child 都携带同一份已核验策略；冲突或缺失就退回普通受限策略。handoff **不授予额外工具、也不推断发送者身份**，执行时仍走当前工具限制与实时吊销检查。判据：**恢复上下文不等于恢复权限**——续跑是"同一批同一策略"的重放，不是提权机会。
+
+- **提升层**：工具（子代理工具面）/ 工作流（策略变更与重开）/ 可复用 Skill（委派授权边界）。
+
+## r725C · 子代理的五条协调纪律：announce 逐级上传 · 等完成事件不轮询 · 完成投递不是再发公告 · 迟到结果要复核 · 认证按 agentId 解析（来源：docs.openclaw.ai `tools/subagents/nesting` 251,787B / sha256 1adc97851a50 + `tools/subagents/announce` 263,476B / b55355033d0e + `concepts/subagent-yield-handoff` 275,088B / 638f9cc26511，2026-11-14 r725C 本轮实拉；逐串命中 `Results flow back one level at a time` / `instead of building poll loops` / `does not ask the child to generate a separate announcement` / `review it and continue any unfinished work` / `resolved by agent id , not by session type`）
+
+- **结果逐级上传，每层只看直接子**：后代完成后向**直接父**宣布，父先把自己所有子综合完再向上宣布，主代理收到最终 announce 才交付用户；`Each level only sees announces from its direct children`。默认递归到**深度 5 且深度 5 是叶子**（0 = main、1 = `subagent:<uuid>`、2–4 = flat key with lineage），orchestrator 才有 `sessions_spawn` / `subagents` / `sessions_list` / `sessions_history`，叶子没有递归工具。判据：**别设计"孙辈直连主代理"的汇报路径**——它不存在；要汇总结论就在父层做，或把 `maxSpawnDepth` 降到 1 直接产叶子。
+- **等完成靠事件，不要围着列表建轮询**：原文 `start child work once and wait for completion events instead of building poll loops around sessions_list, sessions_history, /subagents list, or exec sleep commands`。已结束子会话只保留**短期可见窗口**，陈旧的 store-only 子链接过了新鲜度窗口就被忽略——这是为了不让旧的 `spawnedBy` / `parentSessionKey` 元数据在重启后把**幽灵子代理**复活。判据：**列表是用来"看活的"，不是用来"等完成"的**；轮询既费 token 又会把已结束的当成还在跑。
+- **完成投递不等于让子代理再写一条公告**：完成时子结果直接交给 requester，`delivery does not ask the child to generate a separate announcement`；`expectsCompletionMessage: false` 的运行跳过投递并记为 not required。子代理必须给出**有意义的结果或具体 blocker**——精确的 `NO_REPLY` 或空输出**不能结算**缺失结果，会触发 missing-answer recovery；多个结果一起收时，保留但无可见结果的按 `(no output)` 交回。判据：**"安静"不是"完成"**；把 NO_REPLY 当交付，等于把没干的活记成干完了。
+- **迟到的完成事件要复核，但不要重复已交付的更新**：若子完成事件在你已经发出最终答案之后才到，原文要求 `review it and continue any unfinished work`，同时 `Avoid repeating an already delivered update`。去重靠**记录的完成事实与源消息投递事实**，不靠 silent token；父的复核回合可以 `NO_REPLY` 收尾——这只结算"父已复核"，子任务本身仍欠结果。判据：**交付后再到的结果算"补做"，不算"重发"**。
+- **认证按 agentId 解析，不按会话类型**：子会话 key 是 `agent:<agentId>:subagent:<uuid>`，本地 auth overlay 从该 agent 的 `agentDir` 加载，共享 profiles 作为**回退合并**、冲突时 agent profile 覆盖；合并是**加性**的，`There is no setting that isolates an agent's auth from the shared profiles`，且**子不继承父已选的账号**。记忆归属同理：`spawnedBy` / `spawnedBySessionId` / `parentSessionLifecycleRevision` / `spawnedBySenderIsOwner` 是**宿主写的事实、不是工具参数**，owner 标志绝不从子代理的合成启动权限推断，缺失或 false 不授予 owner 访问。判据：**"换了会话类型"不等于"换了身份"**；身份看 agentId 与宿主记录，别信调用方自报。
+
+- **提升层**：工作流（逐级汇总与迟到结果处置）/ 工具（完成投递与去重语义）/ 可复用 Skill（子代理协调的边界写法）。
+
+## r728A · 子代理运行期五条事实：准入 ≠ 执行并发 · 预算归属 · 陈旧窗口 · 静默关停 · 投递积压（来源：docs.openclaw.ai `tools/subagents` 255,949B / 952e9e90b8d2 + `tools/subagents/operations` 262,381B / d612ca24370f + `tools/subagents/announce` 263,537B / deabeb24e985 + `tools/subagents/tool-policy` 245,660B / 75c375f4d702，2026-11-15 r728A 本轮实拉）
+
+- **★准入上限与执行并发是两套闸门，调一个不动另一个**：`agents.defaults.subagents.maxConcurrent`（默认 8）管「同时跑几个」；`maxChildrenPerAgent`（默认 5）管「一个会话能挂几个活跃子」——**提高执行并发不会提高准入数**。Swarm collector 另走 `subagent:swarm:<group>` lane，用 `tools.swarm.maxConcurrent`（32）、`maxChildrenPerGroup`（50）、`maxTotalPerGroup`（200）。→ 判据：报「子代理起不来」先确认卡在哪一闸；超准入的 spawn 直接被拒，超并发的只是排队，两种故障现象不同。
+- **★并发预算属于「直接 spawn 它的那个会话」，不随投递目标搬家**：嵌套 orchestrator 的子用 orchestrator 的预算，不用祖父的；改「完成投递给谁」不改变执行预算归属；超限的 accepted run 排队等槽。→ 判据：**预算看的是谁按的 spawn，不是谁收结果**；把子挂到别的会话收结果，不会给它腾出并发额度。
+- **★「没有 endedAt」不等于还活着**：只有当前进程**能验证执行 owner** 或 collector 有精确在队预占时，未结束的 run 才持续计入；否则超过陈旧窗口（**2 小时，或配置的 run timeout + 短宽限，取更长者**）就停止计 active/pending。这些保留计数只喂 `/subagents list`、状态摘要、后代完成门控与每会话并发检查，**不构成执行者存活的证明**。→ 判据：排查「一直显示 running」先看能不能验证 owner，别拿列表状态当心跳。
+- **★优雅关停是「静默取消子、只恢复根」**：关停时记录 running 子代理的顶层 requester，再走普通 abort 路径取消子——子**静默终态**，关停期间不给父发完成公告也不发失败通知；**只有 root requester 收到启动时的标准 resume 输入**，子不独立恢复，Gateway 也不收养旧子任务、不重建 requester 的完成 turn。崩溃/SIGKILL 写不了关停标记时，只能从上一代 Gateway 的持久 run identity 恢复**合格的 root**。→ 判据：**stopped ≠ yielded**，替换者不继承 workspace 与发布所有权；恢复后用父的 transcript + 子会话历史先查「文件/外部动作是否已变」，再决定续发还是新起。
+- **★完成投递有积压阈值与硬过期，过期不等于执行失败**：积压达 **25** 才告警一次（同值不重复刷），积压不丢结果；requester 忙时延迟到下一次 wake，若那次仍没投出就**立即记 failed** 而非继续悬挂；悬挂投递 **7 天**过期——终止自动投递，但**不把成功执行改判为失败**，`/subagents info <runId>` 仍能看到捕获结果、被丢弃的投递状态与原始错误。→ 判据：**执行结论与交付结论分两栏记**；「没收到结果」先查 info 与子会话历史，不要重跑一遍已完成的活。
+- **提升层**：工具（两套上限与 lane 预算）/ 工作流（关停恢复与投递积压处置）/ 可复用 Skill（子代理容量与故障排查清单）

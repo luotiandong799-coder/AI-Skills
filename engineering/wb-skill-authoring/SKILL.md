@@ -2,7 +2,7 @@
 name: wb-skill-authoring
 description: >-
   Skill 的写法与体检：触发词设计、description 质量、文件拆分、跨工具迁移、安装前安全审查、安装后接线、触发评测、盲测、诱饵用例、no-skill 对照、效果归因、技能无增益、技能抢触发、误触发、负向边界、不适用于、审计技能、技能过期、拼写错误、乱码、失效工具名、重复触发、技能快速路径表、双路由、meta-router、description 上限、name 规范、快照基线、触发率、近失、指令改写、改了指令还是不行、改了两遍还是这样、调指令算修了吗、别再加一句必须、拆技能、技能合并、技能去重、查重、技能素材来源、gotchas、控制度校准、给默认不给菜单。、规则该写多少、AGENTS.md 变长、allowed-tools 是限制吗、禁用工具、权限叠加、停用还是删除、参数分发、万能技能、专用子代理、防递归、显式契约、靠推断、角色重叠、示例与考题要不相交、自动放行的兜底层、硬禁清单、技能选择准确性评测、不需要却加载、选错 skill、评委团、集成必须留子分、ensemble、多评委同签名、judge_scores、可溯源、provenance、CI 出证、无旁路、禁读环境变量与文件系统、输入走显式参数、审计面等于参数表、一个包一个服务、代理层不受理、可重跑产物、脚本沉淀、不许硬编码结果、连跑两次存证、产物自带说明、版本号不塞 description、双榜分离、社区热度榜、官方自研榜、创建者域名标注、匿名统一标签、纯 UI 信源不学、审计盲区、只记写不记读、传参值不入库、失败也留痕、跨面不同步、surface 能力面、按面降级、导航四信号、签名强度、显式调用跳过路由、@标识调用、语义检索、诚实无匹配、skillContentHash、baseSkillHash、保存缺基准 400、基准过期 409、publish pins refs、delete refused names agents、scope inheritance、flag off 全路由 404、reviewability debt、accountable contribution、预烘技能包、baked bundle、manifest hash 不命中、分发面与可见面、load_skill 不服务、能力判定单一真身、默认模块不设也开、hook 入口顺序、promise settles、异步补话无效、声明位双语义、禁自动≠禁手动
-version: 1.310.0
+version: 1.319.0
 module: KI
 modules: KI
 ---
@@ -482,3 +482,86 @@ modules: KI
 ## r709A 下沉条目（2 点，KB-only：①技能库 DAILY/LIBRARY 双层分类＝按加载面分桶+每条 DAILY 引仓库证据+五列证据表+LIBRARY≠删除+路由不复制正文+落装四复核；②跨宿主投影兼容＝宿主变量在别宿主成字面量+副本字段白名单+结构校验≠可跑+未测标 not-tested）（原文在 references/knowledge-base.md）
 ## r714A 下沉条目（1 点，KB-only：能力拆分四要件＝独立输入/专业判断/成品/验收，拆分触发条件＝真实独立请求或重复失败；「技能存在≠专长有效」，须以实际失败与可复现任务验证）（原文在 references/knowledge-base.md）
 ## r714B 下沉条目（1 点，KB-only：技能演进基准门＝分数不低于改前基线才发布、机械回归先行、退步即回滚、ADR 记 before/after 分数与证据路径）（原文在 references/knowledge-base.md）
+
+## r717C · 技能包 frontmatter 三字段的语义 + 一道机器校验门（来源：agentskills.io `specification` 262,060B，2026-11-08 r717C 二次独立实拉，逐串命中 `Space-separated string of pre-approved tools`、`Must be 1-500 characters`、`name ... must match the parent directory name`、`skills-ref validate ./my-skill`）
+
+- **`allowed-tools` 是「预先批准清单」，不是能力上限、也不是禁止清单**：spec 定义为 `pre-approved tools the skill may use`（空格分隔，标 Experimental）。语义是**授权面**——写进去的默认被放行，没写进去的由宿主自己决定；且明确写着「支持程度因实现而异」。判据：① 只写**最小集**（多写一个 = 多一份默认授权）；② **不能拿它当权限控制**（它不拦任何东西，只表达「这些我打算用」）；③ 跨宿主交付时，别因为自己写了 allowed-tools 就假设对方会按它约束。与 §tool name shadowing 分工：那条讲「同名工具混进来」，这条讲「声明字段的语义被误读」。
+- **`compatibility` 是「环境契约」，且只在该写时才写**：可选，1–500 字符，用来声明目标产品 / 必需系统包 / 网络访问（例：`Requires git, docker, jq, and access to the internet`）。原文明确 **Most skills do not need the compatibility field**——这是个**例外字段**，不是必填项。判据：**只有当「不写就会有人装完跑不起来」时才写**；每份都抄一句「兼容所有环境」等于把契约稀释成噪音，真需要判读的人反而看不见。与 `description` 分工：description 回答「做什么、何时用」，compatibility 回答「跑得起来吗」。
+- **`metadata` 是 string→string 的附加槽，键名要避开通用词**：spec 允许任意键值对存放非规范属性；官方建议 **键名取得相对唯一**，避免与其它来源的键冲突。判据：`version` / `author` / `owner` 这类通用键在多来源技能合流时**最容易互相覆盖**——要么加前缀（`wb-version`），要么把真正重要的版本信息放到规范字段/索引里，别只塞 metadata。
+- **交付前跑 `skills-ref validate ./my-skill`，不靠通读**：官方参考库会给 frontmatter 合法性与命名规范做机检。几条最容易被通读漏掉、但校验器会直接拦的：**name 必须与父目录同名**（宿主按目录名寻址，不一致就是静默找不到）、只允许小写字母/数字/连字符、不得首尾连字符、**不得出现连续连字符 `--`**、≤64 字符；`description` 非空且 ≤1024。判据：**通读只能确认「我看得懂」，校验器确认的是「机器装得上」**——`name` 与目录名不一致是最典型的「人看着没问题、装上去不生效」。
+
+- **提升层**：工具（校验器当交付门）/ 可复用 Skill（frontmatter 字段语义与最小授权）/ 工作流（技能包发布前的机检节点）。
+
+## r720C · 触发面的四个硬格式：description 一行 ≤160 字符 · 两道方向相反的闸 · command-dispatch 绕模型 · {baseDir} 免硬编码（来源：docs.openclaw.ai `tools/creating-skills` 275,198B / sha256 f8b32d04e2ab + `tools/skills` 385,027B / c77a33f833a0，2026-11-10 r720C 本轮重新实拉；逐串命中 `keep it one line and under 160 characters` / `user-invocable` / `disable-model-invocation` / `command-dispatch` / `command-arg-mode` / `Using {baseDir}`）
+
+- **description 是索引不是摘要，格式有硬上限**：原文 `description is shown to the agent and in slash-command discovery — keep it one line and under 160 characters`。判据：**它在发现面被读，不在阅读面被读**——超长/多行不会让技能更"说明清楚"，只会让发现面变糊；把细节放正文与 references，description 只写"什么时候该用它"。
+- **两个触发开关方向相反，别当成同一个**：`user-invocable`（默认 true，是否暴露为斜杠命令）与 `disable-model-invocation`（默认 false，置 true 后**不进系统提示**，仍可用 `/skill` 手动跑）。判据：**一个管"人能不能点名"，一个管"模型能不能自己想用"**——要"只准手动、不准自动"就设 `disable-model-invocation: true`；要"不给斜杠入口、但允许模型调用"才用 `user-invocable: false`。两者都关=只能靠内部引用，等于死技能。
+- **`command-dispatch: tool` 让斜杠命令绕过模型直连工具**：配合 `command-tool` 指定工具名、`command-arg-mode: raw` 把用户原始参数串原样转发。判据：**确定性操作不必过一遍模型**——固定重跑、查表、拉数这类命令，走 dispatch 既省 token 也免掉模型改写参数的风险；需要模型判断的才留在对话路径。
+- **技能目录内文件一律用 `{baseDir}` 引用，不硬编码绝对路径**：原文 `Reference files inside the skill directory without hardcoding paths — the agent resolves {baseDir} against the skill's own directory`。判据：**技能要能换机器、换工作区、被复制安装**——写死 `D:/...` 的技能一搬家就断，且断在运行期最难查。
+
+- **提升层**：工具（技能发现面与命令派发）/ 工作流（技能可移植）/ 可复用 Skill（description 与触发闸的写法）。
+
+## r721C · 技能自学习的四道工序：触发计数 · 审阅者权限边界 · 托管 revision 语义 · 轨迹取证（来源：docs.openclaw.ai `tools/self-learning` 258,949B / sha256 d96812665598 + `tools/skill-workshop/personal-library` 228,245B / 3dd52ee43d3c + `tools/trajectory` 263,777B / 332cf83c9e33，2026-11-11 r721C 本轮实拉；逐串命中 `reaches 10 since its last review` / `must view a skill before it patches` / `absorbed_into` / `publish complete managed revisions` / `per-session flight recorder`）
+
+- **自学习按"攒够工作量"触发，不按轮次触发**：每个 session 跨轮累计 model iterations，`When a session reaches 10 since its last review, a review is queued and the count starts over`；前台这一轮自己已经改过 learned skill 时计数同样清零（避免重复审已保存的东西）；`Reading or viewing a learned skill does not queue an extra review`。判据：**学习频率跟工作量挂钩，不跟时间挂钩**——每轮都审会把噪声写进技能库，攒够再做才筛得出"值得复用"的。
+- **审阅者只能读技能、不能扩查，改之前必须先看**：后台 review 跑在私有会话里，只能用 skill_workshop 的 list/view + save lesson，`It cannot browse files, fetch more history, or re-run your task`；`The review must view a skill before it patches, writes, or archives it`；归档必须给 `absorbed_into` 或 `reason`。准入只有三类证据：方法被纠正、试错后得到的非显然方法、既有技能有错/缺/过时步骤；`Details true of only one request`（某个产品、订单、日期、地点）留在会话里不进技能。判据：**技能库只收可重复程序，一次性细节留在对话**——把个案写进技能，下次会被错误泛化。
+- **托管发布的 revision 语义：发布 ≠ 生效，省略 ≠ 清空**：create/update 经校验与扫描后 `publish complete managed revisions`，响应给出 skill 与 revision 及何时可用；但 `Publication does not replace the current session's selection`，要在下一轮生效必须显式 attach/refresh。update 的 `name` 参数指的是 **slug 而非命令名**；省略 `name` 或 `proposal_content` 表示保留原值；`files` 是具名 support-file upsert，省略或传 `[]` 保留其余全部文件；省略的可执行位也保留；要删文件走 `delete_files`。判据：**更新语义按"缺省即保留"设计**——否则一次只改描述的更新会顺手清掉别的文件。
+- **技能改进要有可导出的运行轨迹作证据**：trajectory capture 是 `per-session flight recorder`，记录每次 agent run 的结构化时间线，`/export-trajectory` 打成脱敏 support bundle，覆盖发给模型的 prompt / system prompt / tools、哪些 transcript 消息与工具调用导致了这个答案、以及该 run 是否超时/中止/被压缩。输出参数只接受**相对目录**（落在 `.openclaw/trajectory-exports/` 下），绝对路径与 `~` 一律拒绝。判据：**改技能前先有"这次到底怎么跑的"证据**——凭印象改 prompt，改的往往是错的那一层。
+
+- **提升层**：可复用 Skill（技能生命周期与发布语义）/ 工作流（自学习触发与取证）。
+
+## r722C · 技能工程的四条硬契约：五段运维契约 · 可写边界与生效时机 · allowlist 三类语义 · 可见性不是授权（来源：docs.openclaw.ai `tools/custodian-skills` 241,113B / sha256 dfd22379d5b3 + `tools/skills` 385,027B / c77a33f833a0 + `tools/skills-config` 307,485B / f74cf8723a82，2026-11-12 r722C 本轮实拉；逐串命中 `Gather` / `Mutate` / `not a shell-time authorization boundary` / `replaces defaults entirely`）
+
+- **运维型技能用五段契约，诊断与修复分两步**：成品运维技能统一五节顺序——`Gather`（读脱敏后的当前配置并检查 live 状态）→ `Mutate`（用**经过校验的非交互写**，绝不直接编辑文件）→ `Repair`（用 lint 做诊断，**只有被明确批准的修复**才执行）→ `Prove`（跑一个真实端到端结果）→ `Report`（记下改了什么、观察到什么、还剩什么）。判据：**诊断技能只准诊断**——只读技能可以建议下一步，但绝不自己执行修复；修复必须是另一段、且有明确批准。
+- **可写边界与生效时机要分清**：本地补充放在被配置的 agent 工作区 `skills/<name>/SKILL.md`，**不要写进 release 拥有的包目录**（工作区技能优先级本就更高于 bundled 层，且作用域限定在该 agent 工作区）；改完技能要**开新会话**（技能在会话启动时加载，旧会话不会热更新）。判据：**改在会被下次发布覆盖的地方，等于白改**；改完不重开会话，等于没改。
+- **allowlist 有三类语义，别混成一个开关**：`skills.allowBundled` 只管 bundled 技能（空列表=全部禁用，managed/agent/workspace 技能不受影响）；`skills.entries.<key>.enabled: false` 单独关掉某个技能（即使它是 bundled 或已安装）；agent 级 `agents.entries.*.skills` 是**替换默认基线**而不是叠加（`[]` 表示该 agent 没有任何技能）。判据：**"禁用"要指名到层**——用错层会出现"以为关了其实还在跑"或"以为还在其实全没了"。
+- **可见性不是授权边界**：技能 allowlist 只是技能发现、提示注入、斜杠命令发现、沙箱同步与快照的**可见性与加载过滤**，`not a shell-time authorization boundary`——能跑 host exec 的 agent 仍可执行外部客户端、读执行用户可见的主机文件（含 MCP 客户端注册表）。要真隔离必须叠加：沙箱或 OS 用户隔离 + 收紧或精确 allowlist host exec + MCP 侧按 agent 独立凭据。判据：**"把它藏起来"不等于"让它做不到"**——权限问题只能用权限手段解，不能用列表过滤解。
+
+- **提升层**：可复用 Skill（技能编写契约与发布边界）/ 工作流（诊断-修复分离与生效时机）。
+
+## r723C · 技能自学习的五条治理判据：产物三分归属 · 当轮修补 · 先存旧版再即时生效 · 审查有硬预算 · 保鲜靠归档与瘦身（来源：docs.openclaw.ai `tools/skill-workshop` 299,347B / sha256 7f03f3cb5312 + `tools/skill-workshop/personal-library` 228,245B / 3dd52ee43d3c + `tools/self-learning` 258,949B / d96812665598，2026-11-13 r723C 本轮实拉；逐串命中 `Learned skills are procedures, not memory` / `saves the previous version first` / `64 transcript events and 32 KiB` / `shrunk without changing its rules`）
+
+- **学习产物按"谁该读它"三分归属，别全塞进技能**：`Learned skills are procedures, not memory`——技能只装"用户会重复做的那套方法"；**关于用户或世界的事实**归 memory；**某个代码库的约定、构建命令、架构**归该仓库的 docs 或 AGENTS.md，"where every agent working there reads it"。判据：**落笔前先问读者是谁**——一个仓库的知识写进公约文件，事实上记忆，只有可复用方法才配进技能；把三类混进一个 SKILL.md，等于让每个会话都背着别人的仓库知识跑。
+- **修补发生在被误导的那一轮，不攒着**：当用到的已学技能"错了或不完整"，就在**同一轮**里 view 技能、patch 那个误导步骤；重大多步工作做完后立刻保存跑通的流程（有覆盖同类任务的技能就补进去，没有才新建）。判据：**误导发生的那一刻是修补成本最低的时刻**——隔几轮再回头，只剩一句"当时好像不太对"，改不出具体那一步。
+- **即时生效，但先存旧版、留撤销**：`Every change applies immediately, saves the previous version first, and can be undone`；同时技能快照在会话启动时固定——**改动只对新会话生效**，正在跑的会话仍用启动时那份。判据：**"立刻生效"和"可回退"必须同时成立**——只生效不可退是赌博，只可退不生效是自欺；另外别指望改完当前会话就变聪明。
+- **后台学习审查有硬预算，塞不下就停，不猜**：review 只读最近一段 excerpt（`bounded to 64 transcript events and 32 KiB`），大工具结果可被显式省略通告替代且 `missing outcomes must not be inferred`；必需上下文边界放不进预算时**不发起模型调用直接停**；发起者与模型在 20,000 events / 8 MiB 窗口内另查，找不到就报告"输入在窗口外"而不是猜是谁发起的。运行约束：16,384 token 上下文、最多 2,048 输出 token、低推理、两分钟内。判据：**审查的价值在于"敢说没看见"**——预算不够还硬生成一条"经验"，产出的就是编造。
+- **新鲜度靠两条自动治理，不靠人工回忆**：`skills nobody uses for 30 days are archived`（30 天未用的已学技能归档）；`once a day, one oversized learned skill is shrunk without changing its rules`（每天缩一个超长技能，**只减体量不改规则**）。判据：**技能库的腐烂是静默的**——不做归档与瘦身，库只会越写越长、越读越慢，最后没人敢动；注意减肥不许顺手改规则，那是两件事。
+
+- **提升层**：可复用 Skill（写法与治理）/ 工作流（学习时机与审查预算）。
+
+## r726B · 个人技能库的四条边界：两个工具不混用 · 支撑文件只按需整读 · 没有草稿只有署名回合 · 共享≠转移所有权（来源：docs.openclaw.ai `tools/skill-workshop/personal-library` 228,245B / sha256 3dd52ee43d3c，2026-11-14 r726B 本轮实拉；逐串命中 `separate from the Workshop skill_workshop tool` / `Use read with artifact_path` / `no pending-draft action` / `requires a current, authenticated human turn`）
+
+- **个人技能库与工作坊是两个工具、两套权限，别混用**：个人技能走 `skill_library`，学习型技能走 `skill_workshop`；在共享 Gateway 或非管理员身份下，`skill_library` 是**唯一**可用的创作工具（原文 `separate from the Workshop skill_workshop tool`）；单档 Gateway 的管理员才额外保留 `skill_workshop`，所以目标是个人库时要**明确说**"建到个人库"。工具策略按 `group:agents` 管控，和其它代理类工具一样受同一套开关约束。→ 判据：**先确认"这条技能该落在哪个库"，再选工具**；选错工具写出来的东西不在你以为的位置。
+- **支撑文件按需整读，绝不返回半截或 base64**：读单个 support file 用 `read` + `artifact_path`（默认 `SKILL.md`）；二进制或超大工件会给出**显式省略**并指向 My skills 或 CLI，原文 `they are never returned as partial instructions or a base64 dump`。→ 判据：**"读不到全文"要报读不到，不能给片段让人以为读到了**；半截说明比没有说明更危险，因为下游会照它执行。
+- **个人创作没有"待发布草稿"这个状态**：原文 `Personal authoring has no pending-draft action: unsolicited improvements are suggestions, not publications`；个人变更必须由**当前已认证的人类回合**发起——自主评审、cron 任务、子代理运行都**不会**获得新的个人创作权限。→ 判据：**"顺手改好了"只是建议**；没有人类回合授权就发布，等于绕过审批链。
+- **换人插话要补一条署名消息，共享不等于转移所有权**：若另一个人 steer 了正在进行的创作回合，必须在发布前发一条**新的、带署名**的消息（原文 `send a fresh attributed message before publishing`）；共享只让技能对团队**可用**，把管理所有权转给团队**只有管理员能做**。→ 判据：**"谁能用"和"谁拥有"是两件事**；把共享当转让，会让团队里任何人都能改掉别人的技能。
+
+- **提升层**：工具（两个创作工具与读取边界）/ 工作流（人工授权回合与换人署名）/ 可复用 Skill（共享与所有权的分离）。
+
+## r727B · 安装准入的四条工程事实：策略协议是 JSON 进出 · 审批提示自己也有输出预算 · 发现靠 watch+快照 · 凭证按缺失才注入（来源：docs.openclaw.ai `tools/skills-config` 307,546B / b1988c708535 + `tools/skills` 385,253B / 55ef38f0e430，2026-11-15 r727B 本轮实拉）
+
+- **安装准入是一个可执行的本地策略，不是一个配置开关**：`security.installPolicy` 在源材料已暂存、安装/更新继续之前运行受信命令；命令收 **stdin 一个 JSON**（`protocolVersion:1`、`targetType`、`targetName`、`sourcePath`、`sourcePathKind`、`source`、`origin`、`request`），必须回 **stdout 一个 JSON**（`decision: allow|warn|block`，warn/block 必须带非空 `reason`，可带 `findings[]`）。→ 判据：策略命令必须是**直接普通文件**（可信属主、受限权限、父目录可验证），符号链接与不安全路径直接拒绝；不带 shell 执行。
+- **阻断判据是「任一项不成立就阻断」，不是「看最后一行」**：`block`、非零退出、超时、非法 JSON、非对象响应、协议版本/decision 缺失或非法、warn/block 的 reason 缺失或为空——**每一条都阻断安装**。策略「启用但不可用」时安装同样被阻断（不 fail-open）；批量更新**按目标逐个判定**，一个目标被 block 只失败该目标，不禁用策略、也不跳过后续目标。`--force` **不能**批准策略 warning。
+- **审批提示自己也有输出预算，超了就整条阻断**：`reason` 与单条 finding 文本 ≤ **1,000 字符**；最多保留 **100 条** normalized findings；**warn 且有效 findings >100** 直接阻断且不可确认（allow/block 保留前 100 条）；整体渲染（标题+目标+脱敏理由+findings+恢复指引）超过 **4,000 字符**聚合上限也阻断，**不呈现半截审阅**。→ 判据：审批界面宁可「整条不给看」，也不给「看一半就点同意」；交互式确认要求操作者**手打目标名**。
+- **技能发现靠 watch + 快照，生效在下一次 agent turn**：`skills.load.watch` 默认开（含分组根下的嵌套文件），外加**每 30 分钟一次安全重扫**兜住漏掉的事件；显式技能变更、相关配置变更、Gateway 启动都会请求**立即重扫**；**现有会话不热替换，而是在下一次 agent turn 用新快照**。`extraDirs` 是最低优先级（低于 bundled 与 plugin）；`allowSymlinkTargets` 只列窄的可信目标目录，不要指向 `~` 或整个 projects 目录。
+- **凭证按「进程里还没有」才注入**：`skills.entries.<key>.env` 只在同名变量未设置时注入；`apiKey` 支持 `SecretRef { source:"env", provider:"default", id:"VAR_NAME" }`；`entries` 的 key 默认取技能名，技能声明 `metadata.openclaw.skillKey` 时改用该 key（含连字符要加引号）。→ 判据：环境里已有的值不被覆盖，避免「配置悄悄盖掉运行时真值」。
+- **提升层**：工具（安装准入协议 / 快照生效时机 / 凭证注入）/ 工作流（审批输出预算 / 逐目标批量判定）/ 可复用 Skill（技能安装治理清单）
+
+## r729C · 技能生效与审查的五条判据：自动化三档 · 结论带版本坐标 · 坏技能逐个隔离 · 显式引用上限 8 · 审查绑定 revision（来源：docs.openclaw.ai `releases/2026.8.1/skills` 256,882B / 595569dafa03 + `tools/skills-config` 307,546B / b1988c708535，2026-11-09 r729C 本轮独立实拉）
+
+- **★自动学习是三档语义，不是开关**：`off` 关掉自动修补、未用清理与瘦身；`propose` 照跑后台复查但只产出待审草稿（`/learn drafts`），不归档不瘦身；`auto` 才能直接创建/更新 **Workshop-owned** 的技能，并做「同轮修补」或定向补丁。三条边界必须一起记：①**用户主动创建、`/learn`、手动学习会话在三种模式下都可用**——关自动 ≠ 关掉学习能力；②自己写的与他人共享的技能**所有权不变**，自动学习只能提建议，不能改写或删除；③**新装默认 `auto`，升级保留既有选择**——自动化等级是用户选择，不是每次升级重刷的默认值。
+- **★「改完什么时候生效」是会随版本变的结论，必须带版本坐标**：旧结论是「改动只对新会话生效、当前会话仍用启动快照」；`v2026.8.1` 起 canonical 与 managed-worktree 技能的编辑在**持久 Gateway 会话的下一轮**即可用（`Refresh edited skills in persistent Gateway sessions`），并且「技能指令**整份**读出，不再因为读窗口被拒」。同时该版本明确：**正在进行的这轮对话仍用它加载的那一版，下一轮才换新**。→ 判据：写这类"生效时机"结论必须附版本/日期，否则半年后就变成错误知识。另一版本级事实：配置键也已搬家（workshop 设置从 `skills.workshop` 迁到 `plugins.entries.skill-workshop.config`，`doctor --fix` 迁移、`openclaw update` 顺带跑），**旧键写在新版不生效**。
+- **★坏技能逐个隔离，不拖累整本目录**：`malformed metadata` / 不可读文件 / 指令超大 / 被遮蔽的同名副本，都**按出问题的那个技能单独报错**，其余有效技能继续加载；缺 frontmatter 闭合分隔符要告警，超长 description 报**字节级**错误（不是笼统的"格式错"）。→ 判据：**技能库的第一需求是"坏一个不影响其余"**——加载器整库失败会让一条写坏的技能锁死全部能力。模型可见目录可被压缩，但 `openclaw skills check` 才是**完整清单**，盘库时以它为准。
+- **★显式引用有条数与边界**：聊天与 agent 入口里可一次点名**最多 8 个** `$skill-name`（含被隐藏、不参与模型自动选择的技能）；picker 只把引用加进草稿**不发送**；Code Mode 只能在**既有沙箱与 allowlist 之内**列读技能。→ 判据：**「能显式点名」不等于「能绕过可见性/权限」**——显式引用解决的是选择精度，不是授权。
+- **★审查决定绑定到「你审过的那一版」，且注入发现硬阻断**：Workshop 里每个 apply/reject/quarantine 决定都绑定**确切的 proposal revision**，提案一变就**重新排队复审**；critical 级 prompt-injection 发现**直接阻止 apply**；apply 中断可安全恢复且**不覆盖别处已改的目标**；远端 Gateway 是变更权威；已应用 revision 按技能分组、最新在前，**diff 不完整要显式标 truncated**。→ 判据：**审的是版本不是意图**——没有 revision 绑定的"我审过了"，在同名提案被替换后等于没审。
+- **提升层**：可复用 Skill（生效时机与审查绑定）/ 工作流（自动化档位与所有权边界）/ 工具（逐技能隔离与完整清单入口）
+
+## r730C · 运维技能的投放面与命令调用面：系统代理定投递 · lint 1 不是失败 · 命令必须整条独立 · 剥离是最小删除 · 只有模型选择持久（来源：docs.openclaw.ai `tools/custodian-skills` 241,174B / sha256 2116d87f274f + `tools/slash-commands` 370,153B / 93381dccfcdd + `tools/creating-skills` 275,259B / 2a631a85d70c，2026-11-09 r730C 本轮独立实拉；逐串命中 `no agent receives the library` / `Lint exit code 1 means findings, not a failed diagnostic command` / `Must be sent as the only content in the message` / `removal leaves the remaining text's spacing and line endings intact` / `Model selection is the exception`）
+
+- **★运维技能（Custodian）按「系统代理」定投递，没定就是零投递**：这类 playbook 随发布版本走、装在 bundled 优先级层，但**只投给 `agents.defaults.systemAgent.agentId` 解析出的那个 agent**。解析链是：该设置 → 保留的 legacy 默认所有者 → 唯一配置的 agent → 无显式 roster 时的 legacy main；**若配了多个 agent 却既无 system agent 也无 legacy owner，则没有任何 agent 收到这套库**。对其余 agent，它在技能发现、快照、斜杠命令目录、沙箱同步、面向模型的 skills prompt 里**全部不存在**。→ 判据：**内部运维手册是发行物不是用户资产**；要定制就写进该 agent 的 workspace（优先级高于 bundled），别改发布包。
+- **★`lint` 退出码 1 是「有发现」不是「命令失败」，而普通 `doctor` 不是只读**：原文 `Lint exit code 1 means findings, not a failed diagnostic command`——读到报告后应继续跑其余检查，不要因为退出码 1 就中断整轮。另一条更贵的坑：普通 `doctor`（**包括 `--non-interactive`**）会复制旧配置、迁移状态，**不能当只读替代**；只读诊断排除的是 config/service 修复与 state 迁移，**不排除**附带的日志与缓存记账。→ 判据：**跑诊断前先问「这条命令会不会顺手改状态」**，把「只读」写成命令级结论而不是印象。
+- **★斜杠命令必须整条独立，句中出现的不是命令**：命令是「整条消息只包含 `/...`」才由 Gateway 处理（`Must be sent as the only content in the message`）；`How does /queue work?` 这类普通散文原样进模型；`!` 宿主命令要落在命令文本**起始**（群 mention 之后），且仍要命令授权与 elevated 权限；`hello ! poll` 与 Markdown 图片 `![diagram](image.png)` 都还是普通聊天。→ 判据：**给技能写触发词要按「独立消息」设计**，指望句中出现就触发，是把文档承诺写成了不存在的机制。
+- **★内联指令的剥离是「最小删除」，不是重写消息**：只移除被识别的指令、它的参数与紧邻分隔符（独占一行时连同该行行尾）；**剩余文本的空格、换行、代码缩进原样保留**；没识别到指令的文本一字不动；**追加的 prompt context 不被扫描、也不会被当指令剥掉**；写错的模式（如 `/queue backlog`）仍会报错而不是被静默吞掉。指令独占整条消息时会持久化会话设置并回执，命令与回执都作为 user/assistant 消息留在历史。→ 判据：**「剥指令」不能顺手改格式**——缩进被吃掉，代码块就废了。
+- **只有模型选择是持久化例外，其余按「单条 vs 会话」分账**：文本里夹带的指令只是内联提示、**不改会话设置**；唯一例外是授权用户的内联 `/model` 或配置的 `/<alias>` **会持久会话选择**，owner/admin 的 `-a` / `-g` 还会请求更新所选默认。反方向也有例外：`/exec security=... ask=...` **只作用于当前那条消息**、永不影响后续轮次（要会话级就用 session permission modes），而 `/exec host=... node=...` 仍持久落点。未授权发送者的指令**按普通文本处理**；设了 `commands.allowFrom` 它就是唯一白名单。→ 判据：**「指令文本」不构成权限证明**，授权判定必须在执行侧再算一次。
+
+- **提升层**：可复用 Skill（运维技能投放面与命令调用契约）/ 工作流（诊断只读性与剥离最小性）/ 工具（持久化边界与授权校验）。

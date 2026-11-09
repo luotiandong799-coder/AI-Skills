@@ -2,7 +2,7 @@
 name: wb-release-maintain
 description: >-
   仓库发布与依赖维护（合并 Claude Code 自动化 Skill 的 Changelog Miner、Release Notes、Dependency Guard 三个能力：从代码改动找关键变更补遗漏、从 diff 提炼用户可读的更新说明、升级依赖前先看破坏面）。当需要为仓库写更新说明/发布说明、梳理一段改动里哪些是关键变更哪些有遗漏风险、升级依赖前评估影响范围时使用。不用于日常 git 操作（走 github skill / gh CLI）、不用于排障（走 wb-debug-loop）。、输入集版本化、评测集版本、复现门票、未版本化不许续、增量版本、旧引用钉旧版、兼容面判定、存量自动升级、新老行为并存、版本区间声明、特性声明单一来源、轻量版本化、发布态语义、草稿发布不可变快照、回滚重发旧版、提升扇出、停用挡在用、交付证据门槛、3 个真实可访问不重复案例、完整交互过程、评分项与否决项分列、证据可复跑、配对按稳定 id 优先于名称、改名因此降为非破坏性、rename-column、破坏性判定只留丢数据操作、拒绝集显式枚举且拒写、swap cycle 拒绝、id 跨表冲突、包内重复 id 拒绝、旧包按名配对静默采纳包 id、竞态限制诚实声明、diff 面板锚点、top panel 将被更新的一方、推拉面板互换、节点级 JSON diff、trustedSource、clearBindings、credential blanking、一路由一读模型、license 只 gate 写、RBAC_ACCESS_POLICY_BINDING_LOCKED、replace vs append、aes-256-gcm、MAX_BYTES_OVERHEAD、CBC fallback、多段推送第二段被拒、stable vs beta tag、renovate 只取稳定、apiKeyId 计数键、轮换不重置预算、ms_outlook 重命名、回调 URI 变化、required_mcp_variables、默认租约载体、重启丢租约、active_slots 不释放、os.path.exists 对远端恒假、python_version.txt unknown、加入与移除判据不对称、发布提交重解析锁、release 夹带依赖升级、缓存失效、先删叶子再删父、删除失败保留行可重试、重发布不影响在飞、恢复前先落定草稿
-version: 1.262.0
+version: 1.263.0
 agent_created: true
 sources:
   - Claude Code 自动化 Skill 清单（Changelog Miner + Release Notes + Dependency Guard，用户提供文章 2026-09-17）
@@ -515,3 +515,13 @@ modules: EI
 
 ## r707C 下沉条目（1 点，KB-only：事项分流＝2 类别（bug/enhancement）+5 状态（needs-triage/needs-info/ready-for-agent/ready-for-human/wontfix），每张恰一类别一状态、状态冲突先问，PR=带代码的 issue，AI 发的每条首行带生成声明）（原文在 references/knowledge-base.md）
 
+
+## r717A · 备份与版本契约：活文件不是备份、恢复不在原地、兼容闸门是双向的（来源：docs.openclaw.ai `install/backups` 323,708B + `start/why-openclaw/versioned-state-guarded-upgrades` 226,097B，2026-11-08 r717A 独立实拉逐串命中：`Never copy live .sqlite` / `can be torn or corrupt` / `restore never happens in place` / `a build refuses to open a database newer than itself` / `never a fallback to latest`）
+
+- **活文件不是备份**：运行中的数据库直接拷 `.sqlite` / `-wal` / `-shm` / `-journal` 会拿到撕裂或损坏的副本——写入发生在拷贝过程中，页与 WAL 之间不自洽。必须走**在线备份 API**（SQLite online-backup），或由服务所有者停写后再做文件级快照；文档同时给了三种安全路径（一次性归档 / 单库快照 / 内容增量）。判据：**动手前先问「这东西还在被写吗」**——只要答案是「在」，文件复制这条路就不成立，不管拷完能不能打开。
+- **备份是带毒资产，不是保险箱**：归档里含 auth profiles、渠道/供应商凭据、会话历史 ⇒ ① **加密存储**；② 目标目录按「与活动状态目录同级」的限制设权限，不能因为它是备份就放宽；③ **怀疑备份泄露就轮换凭据**（备份泄露等于凭据泄露）。④ `--verify` 会解压一次并在私有临时区保留数据库快照做完整性+哈希校验 ⇒ **要预留未压缩快照的空间**；空间吃紧时校验只能重读归档，**不得降级为「能解压就算过」**。判据：**备份的权限级别 = 原始数据的权限级别**，备份越多份，凭据暴露面越大。
+- **恢复不在原地发生**：原文明确 `restore never happens in place`——恢复落到新位置、校验通过后再切换；PostgreSQL 族的恢复、Git 备份与通用本地快照都要求**先由服务所有者停 Gateway 再恢复**，工具不会替你停。配置畸形时归档创建会**直接失败**（无法解析 agent / plugin 的归属），此时先用 `--only-config` 只存活动 JSON 配置（不解析它的 `$include` 依赖），修好配置再跑全量归档。判据：**「恢复成功」的前提是「原目录没被动过」**——先覆盖再校验，等于把唯一可用副本当成试验田。
+- **兼容闸门是双向且不对称的**：schema 带两处版本契约——**构建拒绝打开比自己新的库**（旧代码读新格式会静默错读），**升级工具拒绝 schema 支持比磁盘库更旧的目标**（降级会丢列），两侧都拦；而**没有 schema 元数据的旧包无法预检** ⇒ 「能不能预检」本身取决于目标包是否携带元数据，别把「预检通过」当成「任意版本都安全」。保守轨的更新器**重新取回并校验确切选中的那个包**，**registry 数据缺失或不一致按 error 处理，绝不 fallback 到 latest**。判据：**「取不到就装最新」是把一次网络抖动翻译成一次未经评审的升级**。
+- **崩溃恢复要分「优雅关停」与「崩溃」两种语义**：优雅关停后给每个仍在运行的 root session 发一条普通 resume 输入；**崩溃故意什么都不恢复**（半途状态不可信），并由 crash-loop breaker 保住控制面可达、同时抑制渠道自启动。判据：**自动恢复只对「干净退出」开放**；崩溃后自动重放会把坏状态带回来，并且掩盖真正的崩溃原因。
+
+- **提升层**：工具（在线备份/校验/版本闸门）/ 工作流（恢复落点与关停次序）/ 可复用 Skill（备份权限与凭据轮换纪律）。

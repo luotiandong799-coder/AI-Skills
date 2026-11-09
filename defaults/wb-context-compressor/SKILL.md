@@ -1,8 +1,8 @@
-﻿---
+---
 name: wb-context-compressor
 description: >-
   上下文聚焦（**只管输入侧：源材料 → 我**）。处理长命令输出 / 大日志 / 长文档 / 历史上下文时自动应用：只注入与当前任务相关的信息，不重复搬运无关上下文；摘要不得丢失关键错误、关键数据、关键步骤；用户明确指定要保留 / 参考的内容（偏好、约束、历史产物）不得丢弃；长期指令文件（AGENTS.md / skill）失效时按其被忽略的原因排查而不是重复粘贴；**压缩时机按任务状态定、不按 token 数定（子任务完成才压，半途/卡住禁止压）**；放进来的材料要过准入、暴露面要最小化；**窗口撑满时按四步降级（大输入转检索 → 砍工具/MCP 数量 → 限历史轮数 → 才换大模型）**；**记忆要持续裁剪而非只存**；验证、测试、安全检查等必要步骤一步不省。**输出侧的废话压缩不归本技能，走 `wb-max-token-saver`。** 触发词：上下文太长、撑满了、超限、被截断、摘要、保留哪些、别丢关键信息、记忆膨胀、记忆太长、检索不到、找不到以前说的、只给相关的、工具输出太长、MCP 挂太多、历史轮数、换大模型、降级、忘记前面、信息被挤掉、静默截断、裁了就变义、注入文件、条件注入、前缀缓存、恢复注入、压缩预算、总账、脱敏。、dirty 节点、陈旧产物、缓存失效、失效传播、复用旧结果、底座开关、持久化默认关、缓存不命中、配了不生效、三级默认、全局覆盖父级、存储可达性、跨运行复用、知识保留、记忆生效了吗、最后一轮还带着前面的事实吗、对话退化、重复短语、低熵、滑窗评测、无标注监控、轻量启发式指标、原生压缩、provider 压缩、压缩不生效、压缩要落盘、摘要可携带、compactUIMessages、HTTP 200 不等于读到、登录墙、JS 壳、正文空检测、可见文本词数、大 HTML 落盘要先校验、GPT Store 需登录、命中还跑钩子、工具结果缓存、缓存键盲区、什么能进键、纯读才可缓存、媒体绕过缓存、缓存落临时目录、脱敏按字段名、忽略分隔符、字段清单是替换、默认脱敏在后、保留关联性、首尾字符、脱敏三档、加工是替换、保留系统提示、加工顺序、加工层不能短路、历史没有系统提示、系统提示静默失效、覆写开关、权威归属、命中直返、策展答案、绕过生成、换模型重建、既读又改、自改指令跨轮、读完不改配置
-version: 3.887.0
+version: 3.896.0
 module: CI
 modules: CI
 ---
@@ -4683,3 +4683,95 @@ Chunk 先量化：512+25% 起步、Recall@5 设 0.90 目标、先修分块再上
 ## r700C 下沉条目（1 点，KB-only：经验只对可执行任务检索、查询含目标/对象/操作/约束、只搜经验根、按任务与环境判相关、只读 1–3 条正文、失败后最多补一次、优先级链 指令>请求>环境证据>记忆）（原文在 references/knowledge-base.md）
 ## r703A 下沉条目（1 点，KB-only：活体上下文只报原生命令 /context·/status，禁止估算替代；静态审计须显式 --audit 且有界（命名安装根、禁递归枚举、禁启动 CLI/MCP 计数、每类≤50 条）；eager 与 on-demand 开销分列）（原文在 references/knowledge-base.md）
 
+
+## r718C · 索引阶段就定了检索上限：1,200 字符硬上限 · 摘要质量决定可检索性 · 换模型重建代价不对称 · 图片只靠 caption 被检索 · 同名上传是新增（来源：docs.dify.ai `cloud/use-dify/knowledge-base/retrieval-settings` 163,085B / 09679ab1dfc8 + `knowledge-base/review-indexed-documents` 164,947B / 2891ebb483a7 + `knowledge-base/test-and-tune` 160,626B / 81be918c3fd2，2026-11-08 r718C 本轮重新实拉，逐串命中 `Chunks are capped at 1,200 characters` / `adds a second document instead of replacing the first` / `only an image's caption or alt text is kept`）
+
+- **切块有 1,200 字符硬上限，表格按行切是设计不是 bug**：原文 `Chunks are capped at 1,200 characters`，超长内容（如长代码块）**在限长处直接切断**；多行表格（价目表）则**每行一个 chunk**。判据：**结构要迁就切块，不是切块迁就结构**——一个标题一个主题、一段一个意思、必须同时被检索到的内容放同一标题下且不超上限；代码块/流程被腰斩时改源文档，不是调 TOP K。
+- **摘要质量直接决定「能不能被检索到」**：索引时按语义切块分节、**每节写摘要**；原文说摘要没抓住要点会让相关内容**更难被找到**，修法是让源内容的**标题更清晰、主题句更明确**，给模型更好的分节信号。判据：检索命中率差，先查「节摘要是否说清了这一节是什么」，再查检索参数——**索引阶段的错误，检索端救不回来**。
+- **换模型的代价不对称，换之前先算重建账**：换 **system reasoning model 不花 token**——已索引文档保留旧模型产物，要按新模型重建必须手动对单篇点 `Re-index`（且不同模型切分/摘要方式不同）；换 **embedding model 则全库重新生成向量并计费**。判据：**「换模型」先分两问：是否触发全量重算、由谁付费**；以为换个更强的模型就自动生效，是最常见的空操作。
+- **纯文本 embedding 下，图片只能靠 caption / alt text 被检索**：文本模型只保留图片的说明文字，没有 caption 的图**检索不到**；要按图内容检索必须换 vision embedding 并对文档 `Re-index`。判据：图多的知识库先补 caption/alt，再谈换模型——没有文字的图对文本检索等于不存在。
+- **同名上传是「新增第二份」，不是覆盖**：上传同名文件会**再建一个文档而不是替换旧的**。判据：更新知识库文档要么删旧再传、要么走源同步（`Sync now`）；靠同名覆盖会让同一内容出现两份，检索重复命中、上下文白占额度。
+
+- **提升层**：可复用 Skill（知识库入库前的结构检查与重建账）/ 工作流（检索质量差时的排查顺序：源结构 → 摘要 → 参数）/ 工具（Re-index 与 vision embedding 的触发条件）。
+
+## r721B · 上下文治理的四个新判据：字节级护栏 · 压缩所有权唯一 · 能力协商拒跑 · 三种队列模式（来源：docs.openclaw.ai `concepts/compaction` 331,014B / sha256 39ab3bd8f29c + `concepts/context-engine` 332,281B / deec8f2dc72d + `concepts/queue-steering` 283,691B / 939925bb3d2c，2026-11-11 r721B 本轮实拉；逐串命中 `maxActiveTranscriptBytes` / `ownsCompaction` / `refuses to start the run` / `keeps Alice's identity and prepared permissions`）
+
+- **按字节设护栏，不等 token 估算**：`agents.defaults.compaction.maxActiveTranscriptBytes` 一旦设置且 transcript 达到该体积，运行时会在**一次 run 开始前**触发本地压缩（支持 `"20mb"` 这类字符串，0 或不设关闭）。判据：**token 是估算，字节是事实**——估算偏差会在长工具输出上放大，字节阈值给出的是确定的上界；与 §上下文预算（按用量规划）分工：那条管"何时开始规划压"，本条管"硬闸在哪"。
+- **压缩所有权必须唯一**：引擎声明 `ownsCompaction: true` 时，运行时内建自动压缩被关闭，`/compact`、溢出恢复压缩、以及 `afterTurn()` 里的主动压缩全归该引擎的 `compact()` 实现；`ownsCompaction` 为 false 或未设**也不代表**回落到 legacy 引擎的压缩路径。判据：**一套会话只能有一个压缩权威**——两套同时压，摘要会互相踩掉对方保留的标识符。
+- **上下文引擎能力不足就拒跑，不降级跑**：运行时若缺少引擎声明所需的某项能力，`refuses to start the run`；组装侧 `assemble()` 必须在传入的 `tokenBudget` 内返回消息。判据：**降级跑比不跑更贵**——引擎在不支持的宿主上跑会写坏状态，拒跑把故障前移到启动时刻、且错误可定位。
+- **队列三模式要按"能不能打断当前执行"选**：`steer`（默认）尝试把新输入送进正在跑的 runtime，**包括工具执行中**；`collect` 不打断，等当前 run 结束、过 debounce 窗口后**只合并兼容消息**成后续轮（有独立 durable ingress 的消息如 Discord/Telegram 不参与批处理）；`interrupt` 直接中止当前 run 并起最新消息。协作 steering 默认开启，但执行**沿用原发起者的身份与已准备好的权限**（后加入者只能影响动作，不改执行者身份）。判据：**"新信息要不要立刻生效"决定模式**——不是所有插话都该抢占当前 run；抢占也不该顺带换掉执行身份。
+- 附：steer 的排空不用 debounce 计时器，而是在工具启动与模型边界按运行时配置的 drain 模式 FIFO 排空——所以"等一会儿再发"对它无效。
+
+- **提升层**：工作流（上下文治理闸门与队列语义）/ 工具（引擎能力协商）/ 可复用 Skill（压缩权威与护栏写法）。
+
+## r722B · 上下文与记忆治理的四道判据：进展只比语义字段 · 三同错误封动作 · 压缩-溢出防再犯 · 预算分母未知就标未知（来源：docs.openclaw.ai `tools/loop-detection` 263,575B / sha256 6daa1aefd561 + `concepts/context` 283,360B / f7a5bdb56f0f + `concepts/memory-provenance` 274,892B / 87b155260f6f，2026-11-12 r722B 本轮实拉；逐串命中 `identical tool errors` / `Post-compaction guard` / `does not substitute a generic window` / `memory forget deletes immediately`）
+
+- **判"有没有进展"只比语义字段，非语义字段先剥掉**：滚动历史在比较重复调用时会剥离 delivery id 与 timestamp，`so delivery IDs alone do not make repeated equivalent sends look like progress`；有 run id 时只在**该 run 内**评估（心跳与新 run 不继承旧计数）；`progress_card` 的成功调用比**已保存的 Markdown 与 plan**，不比 write revision 或回执措辞；参数校验失败的调用（如没有 command 的 exec）虽未执行，仍记为失败调用参与循环判定。判据：**先去抖可变字段，再判重复**——否则每次 id 不同，任何重复都会被当成新动作。
+- **同一动作同错三次即封，只给一次恢复机会**：`After three consecutive identical tool errors (the same tool, arguments, and error result)`，该动作在执行前被拦，并以点名工具与错误类的有界诊断结束该轮；改参数、改错误结果、成功调用才重置连击；`Loop-policy vetoes do not count as failures`；`There is no automatic tool retry`。判据：**重试必须"变着法试"**——原样重试是把轮次预算烧在同一堵墙上；被策略否决不是失败，别把它记进错误连击。
+- **压缩之后要单独装"再犯"护栏**：`Post-compaction guard` 在每次 compaction-retry 之后武装，窗口内重复同一 `(tool, args, result)` 三元组就中止 run——否则会出现 context overflow → compaction → 再溢出的闭环。升级路径是**先警告后阻塞**：同参同结果的 `wait` 重复十次才封下一次，且阻塞**不取消**仍在执行中的调用；embedded loop 中首个 critical loop 阻塞整批工具调用，模型仍有一次响应机会去换法或直接作答。判据：**压缩解决容量，解决不了"压缩完继续原地打转"**——两者要分开设闸。
+- **预算分母未知就标未知，不借别的模型顶替**：状态与会话列表只用所选模型发现到的容量与配置上限；两者都不可用时分母显示 `?`（JSON 为 null），`reports do not substitute a generic window or another model's capacity`；模型或上下文上限变更后，meter 显示 "Context window" 直到新 run 提供匹配估计；过期 token 总数保持近似且**不触发**上下文告警。判据：**分母标错比标不出来更危险**——它会让人以为还有余量；未知就让它是未知。
+- **记忆删除要报边界，并按血缘删**：`memory forget deletes immediately unless you pass --dry-run`；它不删原始 session transcript、不删每一次自由编辑、也不删扫描范围之外的副本；三类记录分工不同——chunk provenance（索引期写入，供可信度与召回框架）、entry origins（追踪条目来源，用于从某 session 反查派生条目）、curated-write records（写入观察者，用于清理时定位文件）；**没有 origin 行的旧记忆无法按血缘删除**；会话删除是另一套生命周期操作且通常保留已删 transcript 归档。判据：**删之前先出报告、再动手**——承诺"全删干净"而实际只清了扫描范围内那部分，是最常见的隐私误判。
+
+- **提升层**：工作流（进展判定与压缩防再犯）/ 工具（预算分母口径与记忆删除边界）/ 可复用 Skill（记忆治理写法）。
+
+## r723B · 上下文与重试的五条预算判据：重试单位是单请求 · 重试要给降级让路 · 标识符整值保留 · 字节守卫与 token 双尺度 · 恢复重过权限（来源：docs.openclaw.ai `concepts/retry` 270,349B / sha256 4727aa98ce5f + `concepts/compaction` 331,014B / 39ab3bd8f29c + `concepts/queue` 306,500B / 940bea5450b0，2026-11-13 r723B 本轮实拉；逐串命中 `Retry per HTTP request, not per multi-step flow` / `half the bounded run timeout` / `does not send a cut-off identifier` / `eight times the effective context token budget` / `resume marker`）
+
+- **重试单位是单个请求，不是整条多步流程**：`Retry per HTTP request, not per multi-step flow`，且 `Preserve ordering by retrying only the current step`、`Avoid repeating operations that could create duplicate effects`；默认 3 次尝试、10% 抖动、起步 400ms、上限 30s。判据：**重试最小可重单元**——重跑整条流程会把已成功的步骤再做一遍；只有"当前这一步"值得重来。
+- **重试要给降级路径留时间窗**：存在 replay-safe 的 fallback 时，默认重试在**用掉一半 bounded run timeout**（含首个请求）后就不再接纳新的重试，把剩下的时间让给 fallback，好在 cron/run 截止前完成；`An in-flight request keeps its own timeout, so the remaining fallback time is not guaranteed`。判据：**重试与降级争同一份时间预算**——不设这道闸，重试会把 fallback 的窗口吃光，最后两条路都没走成。
+- **摘要里的标识符只能整值保留，不能截断冒充**：压缩默认 `identifierPolicy: "strict"`，要求原样保留不透明标识符；降级摘要允许省略装不下的标识符，但**质量审计的纠正反馈只报完整值**、并说明省略了多少个，`It does not send a cut-off identifier as if it were an exact value`。判据：**ID 类字段没有"差不多"**——截断的 `msg_abc…` 比缺失更危险，因为它看起来还能用。
+- **字节守卫与 token 预算是两把尺**：`maxActiveTranscriptBytes` 达阈值时在 run 前触发本地压缩（正字节数或 `"20mb"` 开启，0/未设=关）；它不是切原始字节，而是走正常语义压缩；压缩被拒或仍超限时用**有界视图**继续——省略最老的整个 turn、保留 tool call 与 result 配对、保留 system 指令与当前请求，超大的历史 turn 可整条省略；这个兜底不改写已保存消息，也不把失败尝试算成成功压缩。独立的 hydration 字节上限 = **8 倍有效上下文 token 预算**（最小 1KiB、最大 64MiB），超限时按 quarter-cap 步进推进省略前缀。判据：**byte 与 token 不通用**——字节先撞墙时，token 预算还有余量，但模型已经看不到那段历史了；要么整条丢，不要半条留。
+- **"已接收"可恢复，但恢复要重过权限**：`chat.send` 的输入在 Gateway 应答前就落 per-agent 数据库；collect 模式把"合并 turn"与"标记源输入已消费"放在**同一事务**；优雅关闭把已接收的输入 id 写进根会话的 `resume marker`，启动时按**每个发送者当前的权限**重新准入；崩溃留下的队列行保持惰性——不发中断提示、也不自动重发。判据：**恢复 ≠ 重放 ≠ 沿用旧授权**——把旧输入直接重投，等于用过期许可替别人做决定。
+
+- **提升层**：工作流（重试预算与压缩兜底）/ 工具（标识符与字节口径）/ 可复用 Skill（恢复语义写法）。
+
+## r724B · 跨会话状态与记忆删除的五条判据：陈旧是默认 · 通知面窄于日志面 · 只记元数据 · 准入与遗忘两段 · 无世系即删不掉（来源：docs.openclaw.ai `concepts/session-state` 263,431B / sha256 41f760a2c005 + `concepts/memory-provenance` 274,892B / 87b155260f6f，2026-11-14 r724B 本轮实拉；逐串命中 `never message content` / `Needs a cursor` 语义 / `Neither is a general erasure of everything the agent has seen or written` / `A preview is computed from current state, not saved as a deletion plan`）
+
+- **陈旧假设是默认状态，"被介入"才是事件**：多会话同做一件事时（主管派子代理、人直接跳进 worker、两个 agent 用 sessions_send 协同），每方都对别人建了假设，**另一 actor 一插手，假设立刻过期**。机制是三件套：durable signal log 记录状态变更 → watcher 持 **per-target 游标**，只收**一次性合并**的 stale 通知 → 用 `changesSince` 拉精确增量。原文的定位就是 `It tells the affected session once. It then gives that session a cheap way to catch up before acting`。判据：**协作里"我以为还是那样"是常态而非意外**——接手/续跑前先按游标拉增量，别拿上一轮的印象当现状。
+- **通知面必须窄于日志面，否则通知失去意义**：signal log 记十类事件（created / human_direct_message / upstream_missing / goal_changed / child_spawned / run_completed / run_failed / compacted / adopted …），但**只有三类真正通知 watcher**——人直接发消息、被收养会话的上游消失、目标态变更；`child_spawned` 只 **seed 游标**不发通知，其余是 log-only 供对账用；子运行完成的通知职责仍归 sub-agent announcements，signal log **不重复投递**。判据：**"记下来"和"叫醒人"是两件事**——把全量事件都推送，真正需要人介入的那三条会淹没；日志为对账存在，通知为行动存在。
+- **事件只带元数据与一行摘要，绝不带消息正文；版本号用游标不用时间戳**：`Events carry metadata and a one-line summary — never message content`；每个会话的 state version 就是日志里**最高序号**，存在抗裁剪的 durable per-session head 上，`sessions_list` / `session_status` 都会报。判据：**状态同步通道里放正文，等于开了第二条内容泄露面**——同步只传"哪变了、变到第几版"，要内容回到原会话按版本取。
+- **"准入"和"遗忘"是两个控制，各管一段，且都明说不是彻底抹除**：admission policy 把匹配会话**排除出未来**的自动摄取与历史回填；`memory forget` 只删**可识别的 artifact**；原文 `Neither is a general erasure of everything the agent has seen or written`，且 forget **不删原始会话 transcript、不删每一条自由编辑的记忆、不删扫描范围之外的副本**。判据：**删除承诺按"删得到什么"写，不按"删干净了"写**——对外说清边界（哪几个 store、哪类条目），比说"已彻底删除"可信得多。
+- **预演不是保存的计划，失败会留半清理；无世系就删不掉**：`--dry-run` 只是按**当前状态**算一遍，`A preview is computed from current state, not saved as a deletion plan`，正式执行**没有二次确认也没用 --apply**；敏感清理要**先暂停其他直接写入**（它们不与记忆插件共享 mutation lock），事后重跑预演查残留；失败会留下 partial cleanup，先修存储错误再原命令重跑，且 purge 期间**不得手删 corpus/origin 证据**。而定向删除的前提是 lineage：只有记录了 source-session 世系的条目才能按会话清掉，所以**写入时不记来源，删除时就只能整库抹**。判据：**删除能力是在写入时埋下的**——要按来源删，就得在入库时留 lineage。
+
+- **提升层**：工作流（跨会话接手与增量同步）/ 工具（游标式版本与事件面设计）/ 可复用 Skill（记忆删除的边界与预演纪律）。
+
+## r725B · 压缩输入的预算分配：分层配额 · 缺口标数并不许猜 · "没改"要显式证据 · 截断摘要整条拒收 · 省略要可数（来源：docs.openclaw.ai `concepts/compaction` 331,014B / sha256 39ab3bd8f29c，2026-11-14 r725B 本轮实拉；逐串命中 `capped at 160,000 characters` / `marked with the number of messages left out` / `explicitly reports changed: false` / `rejects responses cut short` / `[image data omitted from summary input]`）
+
+- **摘要输入按"信息价值分层配额"填，不是按比例截断**：内置压缩对旧历史只发一次模型请求（分裂回合额外加一次、质量审计失败每次纠正再加一次），单次会话输入上限 **160,000 字符（约 40,000 token）**，summarizer 自身窗口更小则取更小。超限时按顺序填：**最新消息原文占一半**；**用户自己的旧消息占四分之一**（承载 asks / decisions / corrections，每条裁到 ≤2,000 字符，装不下就均匀铺满历史）；**最旧消息占十分之一**；其余消息均匀取段、每段 ≤6,000 字符。→ 判据：**压缩输入要按"谁的话更不可替代"配额**（最近原文 > 用户决策 > 远古上下文 > 中间过程），而不是等比例缩。
+- **缺口要标被省略的条数，并明确禁止猜**：每个缺口用 `the number of messages left out` 标注，同时告诉 summarizer **不要猜缺口内容、要保留上一份摘要的事实**；CJK 按近似 token 权重计（不是按字符数一刀切）。→ 判据：**摘要里"这里少了 N 条"是给下一轮的诚实边界**——不标数，模型会用想象把缺口填平。
+- **只有显式 `changed: false` 才能把一次编辑从"改动文件"元数据里省略**：压缩与分支摘要省略某次 edit/write 时，必须其匹配的 tool result **明确报 `changed: false`**；同一路径更早的变更仍要保留；**结果缺失、或只报错没给结论，一律保守保留**——原文 `an error alone does not prove that no file changed`。→ 判据：**"没改"是肯定性证据，不是"没看到改"的推断**；从缺失或错误里推"没改"，会把真实改动从摘要里抹掉。
+- **被输出上限截断的摘要整条拒收，且失败不写条目**：内置摘要拒绝因模型 output token 上限被截断的响应（即使里面已经有摘要文本）；`mode: "default"` 下自动压缩重试一次，**手动压缩只报失败不重试**；没有有效摘要时**原始历史留在上下文里、不写压缩条目**；分支导航同样拒收截断摘要并保持当前分支不变。→ 判据：**"看起来像摘要"不等于"完整摘要"**——半截摘要会把"没说完"固化成事实，宁可这次不压。
+- **预算耗尽却无可见文本时，先怀疑 thinking 吃掉了额度**：推理模型可能把输出预算花在思考上；可设 `thinkingLevel: "off"`（模型支持时）或换 summarizer 模型；错误里会给出所选模型、摘要额度与模型 maxTokens，而摘要额度还受压缩 reserved budget 限制，**单加 maxTokens 不一定有用**。另外非文本输入是**带标记的省略**不是静默丢弃：图片等打 `[image data omitted from summary input]`，前 8 条各最多 2 个固定标记、之后汇总一句，新增标记+角色标签+分隔符每次请求 ≤ **847 UTF-8 字节**并计入 token 估算。→ 判据：**省略要留可数痕迹**——标记数量、字节上限都写死，才能事后核对"丢了什么、丢了多少"。
+
+- **提升层**：工作流（摘要输入的分层配额与失败处置）/ 模型（截断与 thinking 预算的归因）/ 可复用 Skill（省略标记与"未改"证据纪律）。
+
+## r727A · 会话治理六条边界：主会话是汇聚点 · 创建通知要合并 · 修剪是投影不是改写 · 预算先归档再删 · 检索有硬数值（来源：docs.openclaw.ai `concepts/main-session` 249,506B / bae62ca26d89 + `concepts/session-pruning` 261,079B / ea05ed4d71f1 + `concepts/session-search` 245,893B / fb303601c1ed，2026-11-15 r727A 本轮实拉）
+
+- **主会话是汇聚点，不是聊天记录**：默认 DM 全部折叠进 `agent:<agentId>:main`（后缀固定，`session.mainKey` 自定义值被忽略）；heartbeat 唤醒它、子会话把结果 announce 回发起它的会话、群活动以合并通知上浮。→ 判据：多入口（手机/桌面/web）共享同一份上下文，换设备不用重建记忆；新入口不该另开一套记忆。
+- **新会话创建只投一条有界摘要，不逐会话唤醒**：默认往 Home 队列投系统通知（sessionKey、可用标题、创建者、创建来源），Home 在**下一次 turn 或 heartbeat** 才看到；多个 pending creation 合并共享这一份**有界内存摘要**（满了淘汰更老条目），且不订阅后续活动；Home 自身、draft、incognito、隐藏内部会话、cron 运行不通知；重置或重开已有会话不重复通知；`session.notifyOnCreate: false` 可关。→ 判据：事件汇聚用「通知队列 + 下一次运行消费」，不是「一条事件一次唤醒」。
+- **隔离与可见是两套开关，别混用**：群/房间会话在 `session.groupScope: "per-group"`（默认）下保持隔离，但主会话自动 watch、按会话 coalesce 成紧凑通知；`tools.sessions.visibility: "all"`（默认）允许主会话跨 Gateway 用 session 工具，跨 agent 由 `tools.agentToAgent` 管控（默认开，可 `enabled:false` 或 `allow` 白名单），系统提示会点名 watched groups。**per-peer DM 路由只分离上下文，不限制 session 工具可见性**。→ 判据：要隔离就动 dmScope/groupScope，要收权限就动 visibility/agentToAgent，两个诉求别用一个配置去解。
+- **修剪是投影不是改写**（`contextPruning.mode: "cache-ttl"`）：只裁旧工具结果，**原文条目不重写**；投影记在隐藏 transcript marker，Gateway 重启与 idle 卸载后按 mark 还原，后续请求复用同一份投影字节。新一轮修剪要同时过两道门：**TTL 到期**（默认 5 分钟，Anthropic 插件种 1 小时）+ **上下文占比**（低于约 30% 直接跳过且时钟继续走）。**成功请求刷新 TTL 时钟（含工具循环中的请求），失败请求不刷新**。→ 判据：TTL 管「能不能开新一轮」，不管「旧投影能不能重放」——重启后旧投影照旧可用。
+- **直连 Anthropic API key 走服务端清除，参数是推导的不是可配的**：`trigger = max(50000, floor(contextWindow*0.3))` 输入 token；`keep` = 最近 3 次工具调用及其结果；`clear_at_least = max(12500, floor(contextWindow*0.05))`；`clear_tool_inputs: false`（保留调用参数）；`exclude_tools` 继承 `tools.deny` / `tools.allow`。清除会让 prompt 缓存从第一个被清结果起失效，`clear_at_least` 就是防止「清得太少、不值一次新缓存写」。→ 判据：服务端清除优先于本地修剪（Bedrock/Google/OAuth/代理等路由才回落到客户端修剪）。
+- **磁盘预算先归档再删，在途豁免**：`session.maintenance.maxDiskBytes` 默认 **10gb**；超预算时先把**最老且未被引用**的历史抽成**已验证压缩归档**，再删数据库行；**live / routed / in-flight 会话永不做预算牺牲品**。→ 判据：清理动作顺序固定为「选最老 → 归档 → 验归档 → 删行」，在途任务进豁免名单，绝不先删后补。
+- **跨会话检索给硬数值与超时语义**：查询 ≤ **4,096 UTF-16 单元**、最多 **25 条命中**、单条 excerpt **300 单元**+省略号、总结果 **32 KiB**；越权结果**在应用 limit 之前**移除；incognito 永不进结果；单次搜索 **90 秒**预算（reader 60 秒 + 调度/授权余量）。**超时不等于没有匹配**——应带 `sessionKey` 或更具体关键词重试。→ 判据：检索必须能区分「没找到」和「没查完」，否则会把超时误报成「不存在」。
+- **提升层**：工作流（主会话汇聚 / 通知合并 / 归档式清理 / 检索超时语义）/ 工具（pruning 双门与服务端清除参数 / 可见性与 agentToAgent 边界）/ 可复用 Skill（会话治理检查清单）
+
+## r729A · 记忆五层与写入安全：注入时机表 · 写才是难点 · 结构性排除 · 并发改写 · 双车道召回（来源：docs.openclaw.ai `concepts/memory-architecture` 300,462B / 05dd21322d8e，2026-11-09 r729A 本轮实拉）
+
+- **★五层记忆按「谁写 + 何时注入」分工，不是按内容主题分工**：Instructions（`AGENTS.md` 等，**只有人能写**，会话开始必注入）→ Curated core（`MEMORY.md` / `USER.md`，只由 dreaming 整合或用户直接指令写，**会话开始且 provenance 合格、且在 bootstrap 预算内**才注入）→ Episodic（`memory/YYYY-MM-DD.md`、会话转写，agent 工作中 / 记忆 flush / 转写摄取写，**只在召回时用，从不在会话开始注入**）→ Prospective（standing intents 与 cron，只在**触发命中**时注入）→ Review（`DREAMS.md` 与整合报告，**永不注入模型，只给人读**）。→ 判据：**最常见的错配是把 episodic 当 curated 用**——日记本就该大、可追加、靠检索取；把它整段塞进启动上下文，等于把「按需档案」当「常驻指令」。
+- **★写才是难点，索引不是**：长期评测反复显示「**写了什么**比怎么索引更决定记忆系统质量**」（LongMemEval, arXiv:2410.10813）；因此策展被刻意**移出回复路径**，放进独立的 dreaming 后台扫描。→ 判据：**回复链上只允许「追加观察」，不允许「重写长期记忆」**——重写在热路径上做，既要压延迟又要在信息不全时下判断，两头都输。
+- **★晋升门是结构性排除 + 有界改写，不是「打分加惩罚」**：候选先按固定规则打分（检索相关性、召回频次、查询多样性、新近度、跨日复现、概念丰富度）过阈值；`untrusted` / `system` 在**构建任何 prompt 之前**就被结构剔除——这是**前置条件**，不是扣分项，召回一百次也升不上去。改写输出必须同时满足三关：结构校验通过、落在 bootstrap 文件预算内、**丢失的既有条目不超过一个有界比例**；任一失败即**退化为 append-only**（本次扫描只追加不改写）。→ 判据：**记忆的「删」比「加」危险**，重写必须有丢失上限兜底。
+- **★改写 `MEMORY.md` 用乐观并发：哈希复核 + 原子改名 + pre-image**：构建整合输入时抓的内容哈希，在原子改名**之前**再校验一次；期间被编辑器或另一会话改过就**中止本轮改写走 append**；每次被接受的改写都存 pre-image，并把人类可读的变更摘要追加到 `DREAMS.md`。→ 判据：**纯 Markdown 文件不要求所有编辑者共享锁**，用「哈希 + 原子换名 + 可回滚前置镜像」换掉全局锁，残留竞态窗口是毫秒级且可恢复。
+- **★召回按成本分两条车道**：Lane 1 常开、**零模型调用**——① bootstrap 注入（只在 provenance 合格时、每轮在预算内刷新，长会话能捡到新的整合结果而无需重启）；② 排名搜索（混合相关性 × 30 天半衰期的指数衰减 × 重要度乘子，重要度在**写入时**由带模型的写者赋 1–10，缺失则中性排序）。Lane 2 跑真实子代理，只留给真正需要的轮次。→ 判据：**默认车道必须零成本、可退化**；把「要不要多想一步」做成显式升级，比让每轮都跑重召回便宜得多。
+- **★记忆链路失败不许吃掉这一轮**：回复路径上每一步记忆操作都带超时或回退（或两者都有）——记忆子系统挂了只降低召回质量，**不允许阻塞回复**。另有一条反直觉纪律：**被注入过的内容要结构标记、永不二次抽取**——「被召回一百次的同一事实，仍然只是一条事实」，否则会形成召回反馈回路，把注入物反复「学」成新记忆。
+- **提升层**：模型（写入时重要度评分）/ 工具（并发改写与 pre-image）/ 工作流（五层注入时机与晋升门）/ 可复用 Skill（记忆卫生检查清单）
+
+## r730B · 上下文卫生与驻留工作集：投影才修不改编存档 · 掩码分层 · 失败帧两档 · 运行时载体不是用户话 · 逐页取史 · 发布失败即失效（来源：docs.openclaw.ai `reference/transcript-hygiene` 285,530B / sha256 ffe919d747e6 + `reference/session-management-compaction/resident-history` 260,582B / 121b063972ca + `reference/session-management-compaction/compaction` 268,250B / c27ab6d992ab + `.../housekeeping` 236,411B / a4c0347915c8，2026-11-09 r730B 本轮独立实拉；逐串命中 `in-memory adjustments used to satisfy strict provider requirements` / `are not secret-masked in model context or persisted transcripts` / `projection retains the completed calls and their signed thinking` / `runtime context is not user transcript` / `must not install complete history into the live manager` / `is never replayed`）
+
+- **★上下文卫生是「发给 provider 前」的内存态整形，不是改存档**：运行时 transcript 状态留在 SQLite，`assistant-prefill stripping` 只在构造外发载荷时发生。整形清单固定十一类：仅运行时的 prompt 上下文不进用户可见轮、tool call id 消毒、tool 参数校验、**工具结果配对修复**、轮次校验/排序、thought 与 thinking 签名清理、图片载荷消毒、重放前空文本块清理、重放前「只有推理没有输出」的长度轮清理、跨会话路由 prompt 的 provenance 标记、空错误/中止轮剔除、纯语音轮按口播文本重放。→ 判据：**上下文出问题先改投影层，别去重写历史**；改存档会让冷重放的前缀和审计一起失真。
+- **★秘密掩码分层：transcript 层根本不掩码**：原文 `Tool arguments, results, and conversation text are not secret-masked in model context or persisted transcripts`，`.env` 读取也保留原文；**只有 logging 与 diagnostic export 保留掩码**。连带三条硬后果：①已被掩码的旧历史保持原样、**删掉的文本不可重建**；②旧版本一次被掩码的中断请求，重试时过不了 exact-input 校验——系统**保持拒绝**，不会把不同的 secret 值当成同一输入；③正确做法是**先查上次尝试的结果再开新请求**，不要带副作用盲目重试。→ 判据：**「重试被拒」可能是掩码语义，不是网络故障**。
+- **★失败帧按两档投影：完成的留、半成品丢**：模型投影会剔除空 error/aborted 轮与**没有已完成结果的失败工具帧**；若失败帧里已有完成的工具工作，则**保留完成的调用与其签名 thinking、省略未完成调用与部分文本、换成可重放的 stop reason**，而存储的失败与计费事实一字不改（无需数据库迁移）。→ 判据：**压缩与重放要区分「已完成工作」与「未完成半成品」**，一刀切丢整帧会丢掉已完成的结果，一刀切全留会把半截参数喂给模型。
+- **★运行时上下文不是用户 transcript，压缩时必须排除载体**：运行时/system 上下文可以进 prompt，但它不是用户写的；Gateway 回复、队列 followup、ACP、CLI、嵌入式运行各自持有**面向 transcript 的 prompt body**，存下来的可见用户轮用这个 body 而不是运行时增强后的 prompt。无用户文本的 runtime-only 轮被标成 hidden internal-system input，**保留在模型历史里给冷重放保前缀，但不属可见聊天**；压缩与 CLI session notes **排除 `openclaw.runtime-context` 自定义消息类型**（含没有 carrier 元数据的旧条目、含主动退出 provider 重放的条目）。→ 判据：**把运行时载体当用户话压进去 = 污染用户意图，还破坏缓存边界**。
+- **★驻留工作集：取旧历史是「逐页读并释放」，不是把全史装进活管理器**：活跃 `SessionManager` 只保留当前上下文与有界导航事实；为某次操作取更早历史**不得把完整历史装进 live manager**（否则驻留视图远超打开预算）。做法：每页读完**先释放再取下一页**，不在累计中膨胀；版本校验必须与读取处在**同一 SQLite 快照**内；continuation 绑定 target/branch/version/next position，**永不跟随最新活动分支**；**不跨 provider/plugin 异步工作持有 SQLite 事务**；任意历史查询结果归操作所有，不能变成第二个 manager 缓存。→ 判据：**「翻历史」和「驻留历史」是两件事**，混在一起就是内存与一致性的双重负债。
+- **★快照发布不变量：失败保旧、发布失败即失效、绝不重放**：提交的 append / 后缀替换 / 导航 / 改写，必须**先发布一个有界替换快照再通知观察者**；写入失败保留旧快照；**提交成功但发布失败**走既有 committed-write 错误路径让 manager 失效，**永不重放**。另一条易错点：raw 与 model 视图**只有表示一致时才共享同一 frozen payload**——entry-ID 相等不足以证明等价，投影、脱敏、改写之后同一个 ID 可能已经不是同一个东西。快照自带字节/事件计数与完整性标记。→ 判据：**「同 ID」不等于「同内容」**；缓存复用要按表示比对，不按 ID 比对。
+
+- **提升层**：工具（投影层与快照发布不变量）/ 工作流（掩码分层与失败帧两档、运行时候选排除）/ 可复用 Skill（上下文卫生清理清单与驻留预算检查）。

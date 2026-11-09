@@ -3,7 +3,7 @@ name: vi-fact-verification
 description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。
 module: VI
 modules: VI,EI
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -103,3 +103,29 @@ version: "1.1.0"
 - `aclanthology.org/N18-1074/`（FEVER, Thorne et al. NAACL 2018）— HTTP 200 / 41,998B，命中 185,445·NotEnoughInfo·31.87·50.91·Fleiss·evidence。
 - `arxiv.org/html/2608.10213v1`（VeriFin）— HTTP 200 / 213,480B，命中 Abstain·Verified·Violated·Z3·unsatisfiable core·false accept·Provenance Verifier·reporting period·unit。
 - 交叉：`github.com/sandbaseai/awesome-workbuddy/.../evidence-standards.md`（权威/邻近性/独立性分维、冲突不取平均、单位归一）；`github.com/moshiur00/claim-polygraph.../PROJECT_SPECIFICATION_AND_PLAN.md`（数值/时间确定性检查、判定分类学）；`ijsrtjournal.com/article/aeris-chart...`（证据充分性门 + 温度缩放 ECE + 矛盾触发 NEI）；`readever.app/zh/blogs/how-to-triangulate-sources`（对齐定义与时间框架、证据族独立性）。
+
+## 八、无 Oracle 时的验证：判据谱系 / 形式约束 / 属性测试闭环（2026-11-09 r731B 实拉，3 独点）
+
+> 来源（≥3 独立域、一手逐字）：`computer.org/csdl/journal/ts/2015/05/06963470/13rRUx0geBw`（Barr et al., IEEE TSE 41(5) 2015《The Oracle Problem in Software Testing: A Survey》，2026-11-09 WebFetch 一手全文）；`earlbarr.com/publications/testoracles.pdf` + `web.eecs.umich.edu/~weimerw/2024-481F/readings/testoracles.pdf`（同论文 PDF 镜像，WebSearch 一手逐字；curl 下载 45s 超时、WebFetch 返回 application/pdf 被丢弃，如实登记不冒充直读）；`hypothesis.readthedocs.io/en/hypothesis-python-4.57.1/quickstart.html` 与 `/en/latest/quickstart.html`（Hypothesis 官方文档两版本，WebFetch 一手全文）。
+> 判非：窄串 `oracle problem` / `property-based testing` / `metamorphic relation` / `shrinking` 全库 SKILL.md 0 命中；`metamorphic` / `蜕变` 仅 §6.3 一句（「小改写输入不应改变事实」＝MR 单例），与本轮「判据谱系 / 形式约束 / 属性工程」正交 ⇒ 走「优＝加厚现有」不新建。r708B 的 FEVER 三态 / 证据充分性门 / Z3 数值核验不复用。
+
+### 8.1（r731B-1）★验证前先声明 oracle 来源与「旧版当 oracle」的隐含假设
+- **原文**：「We have placed them with **derived test oracles**, because, in practice, metamorphic relations are **usually manually inferred from a white-box inspection of a SUT**」；「Regression testing ... rests on the **implicit assumption that the previous version can serve as an oracle** for existing functionality」；「The biggest challenge in metamorphic testing is **automating the discovery of metamorphic relations**」。
+- **判据**：① 验收报告须写明判定基准从哪来（人写期望 / 派生关系 / 参考实现 / 隐式不变量），不能只写「已验证」；② 改版、换模型、换提示规约时旧版输出不能直接当真值——这个隐含假设已失效，须重建基准；③ 蜕变关系靠人工从规格推导，「自动发现关系」是未解难题不是既有能力，禁止把「让验证自己找关系」写进能力承诺。
+- **与 §6.3 分工**：那句是 MR 的一个实例（换说法不变事实），本条管**基准来源与假设登记**，是更上一层的验证姿态。
+- **提升层**：验证 / 治理。触发词：oracle 来源、derived test oracle、旧版不能当真值、隐含假设、MR 需人工推导、自动发现关系未解。
+
+### 8.2（r731B-2）★蜕变关系是「≥2 次执行 + 输出间约束」，非确定性系统须换关系类型
+- **原文**：形式化 `f(x1)o1 f(x2)o2 ... : [expr ∧ k ≥ 2]`；「a constraint on the values of **stimulating the single SUT f at least twice**, observing the responses, and imposing a constraint on how they interrelate」；非数值例 `R_OR: A1=(A2∪A3) ⇒ |A2| ≤ |A1|`（搜索引擎结果集）与 `e^a e^{-a}=1`；「When the SUT is **nondeterministic** ... defining metamorphic relations solely in terms of **output equality is usually insufficient**」→ set intersection / **statistical metamorphic testing**（用统计分析检查关系）。
+- **判据**：① MR 必须写成**可执行的两跑对照**（排序不变 / 包含 / 长度不增 / 集合交集 / 统计区间），不是单次输出断言「输出应正确」；② LLM/Agent 输出逐字相等不成立，用 equality 当唯一关系会把正常波动全报成失败；③ 关系不限于数值，非数值的一致性关系同样可机检 ⇒ 无标准答案时优先找「多次执行之间必须成立」的约束。
+- **提升层**：验证 / 可复用 Skill。触发词：k≥2、至少两次执行、输出间约束、非数值蜕变关系、非确定性用统计蜕变、equality 不足。
+
+### 8.3（r731B-3）★属性测试把 oracle 缺口转成「属性 + 生成 + shrinking + 反例固化」闭环
+- **原文**：Hypothesis 官方「`@given` ... takes a **strategy**, which describes the type of inputs」、「**By default, Hypothesis generates 100 random inputs**」、「Hypothesis doesn't just find *any* counter-example ... it knows how to **simplify the examples** it finds to produce **small easy to understand ones**」；`Falsifying example: test_decode_inverts_encode(s='')` 与 `s='001'`；`decode(encode(s)) == s` 不变量；`@example("")`「ensure that particular edge cases ... are tested every time」「although Hypothesis will **remember failing examples**, **we don't recommend distributing that database**」；`.filter()` 优于复杂条件、`assume()` 丢弃整例、`@composite` 让生成值相互依赖。
+- **判据**：① 验收不能只写单个样例；写属性（round-trip / 幂等 / 不变量 / 不崩溃）+ 生成策略 + 最小反例；② 失败反例须**显式固化**为回归样例（`@example`），不依赖本地失败数据库（官方不建议分发）；③ 生成范围贴合真实域，过滤器别宽到丢弃大多数样本；④ 与 §8.2 衔接：属性是「单跑可判」的谓词，蜕变关系是「跨跑」的约束，两者互补而非替代。
+- **提升层**：验证 / 工作流。触发词：property-based testing、@given strategy、100 默认样本、shrinking 最小反例、@example 固化、失败数据库不分发。
+
+### 本轮来源（2026-11-09 r731B 实拉）
+- computer.org/csdl/journal/ts/2015/05/06963470/13rRUx0geBw（Barr et al. IEEE TSE 2015，WebFetch 一手全文逐串）
+- earlbarr.com/publications/testoracles.pdf · web.eecs.umich.edu/~weimerw/2024-481F/readings/testoracles.pdf（PDF 镜像，WebSearch 一手逐字；直读失败如实登记）
+- hypothesis.readthedocs.io/en/hypothesis-python-4.57.1/quickstart.html · /en/latest/quickstart.html（官方文档，WebFetch 一手全文）
