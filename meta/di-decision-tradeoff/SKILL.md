@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
 module: DI
 modules: DI,TI
-version: "1.5.0"
+version: "1.6.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -198,3 +198,36 @@ DecisionMind 逐字："Members built on the same core logic produce a choice, a 
 - 既有 §十 r715C 三条（排序反转 / Distributive-Ideal / 权重-量表对齐）全在**补偿型内部**讨论；r708A 的 RDM/XLRM 处理**深不确定下的概率不可知**；本轮三点是**补偿 vs 非补偿的聚合规则选择**，三条轴正交，结论不复用。
 - `wb-execute-discipline` / `wb-context-compressor` 为豆包自留地，WB 0 落地；A 轮 OI 结论一律不复用；r731/r717/r715 各轮结论不复用。
 - 换道：ELECTE 厂商站的产品导流（ELECTE ≠ ELECTRE 的辨析、SaaS 风险页）不落地；`people.dsv.su.se` PDF WebFetch 403、TU Delft PDF 二进制被丢弃，均如实登记为搜索快照逐串核验，未冒充一手全文直读；阈值具体数值属易漂移参数，只取不等式与外生性判据。
+
+
+## 十二、多主体偏好聚合：循环、不可能与议程（2026-11-11 r736B 独立实拉 · DI）
+
+> 与 §十 r715C 的**分工声明（判重结论）**：§十处理「**一个决策者**在补偿型方法里，增删/复制备选会不会翻转排序」（成因是相对归一化，rank reversal）；本节处理「**多个决策者 / 评审者**的偏好能不能合成一个不循环的排序」（成因是偏好聚合），属另一条轴，互补不覆盖。与 §十一 r733B（非补偿 ELECTRE 的输出类型）分区：那边管成员族产生 choice/ranking/sorting，本节管聚合前的可行性。与 §九 r708A（深不确定 RDM/XLRM）分区：那边是概率不可知，本节是偏好冲突。
+
+### r736B-1 ★两两多数可以直接没有「综合排序」，加权给分不等于存在社会偏好
+
+- SEP《Arrow's Theorem》(Winter 2022 Edition, First published 2014-10-13 / substantive revision 2019-11-26) §1 逐字：三人偏好 ABC / BCA / CAB，逐对投票得 A 胜 B、B 胜 C，却「it is just the other way around, since there are two voters who prefer C to A. **We do not have a social ordering of the alternatives at all. We have a cycle.**」；「Pairwise majority decision doesn't result in a social maximum, though… because they cycle, the social preferences do not.」
+- 判据：① 多评审打分 / 多干系人排序 / 多 agent 投票汇总前，**先检验是否成环**（逐对矩阵算一遍）；② 成环时合法输出是「本组无稳定序 + 环的具体路径」，不是硬挑一个第一名；③ 加权求和总能算出一个数，但**数字存在 ≠ 排序合法**——它只是选定了一种聚合规则；④ 与 r733B「不可比、不完整排序是合法结果」同向，那里来自方法族设计，这里来自偏好结构本身。
+
+### r736B-2 ★五条看似温和的条件不可兼得；任何「综合意见」都必须声明放弃了哪条
+
+- SEP 逐字五条件：`Unrestricted Domain (U)`（能处理任何偏好组合）、`Social Ordering (SO)`（结果必须是传递且连通的排序，不许循环）、`Weak Pareto (WP)`（全员严格偏好 x>y 则社会也如此）、`Nondictatorship (D)`（不存在一个人的严格偏好永远成为社会偏好）、`Independence of Irrelevant Alternatives (I)`（x 与 y 的社会比较只取决于各人对 x/y 的偏好）。定理原文：「**Suppose there are more than two alternatives. Then no social welfare function f satisfies U, SO, WP, D, and I.**」
+- 合法逃生口只有三类，且**每一类都在显式放弃一条**：① 域限制——SEP §5.1 单峰偏好 + 奇数投票者 ⇒ Black (1948) 证明两两多数必出排序，且赢家是**中位选民的 bliss point**（偶数投票者单峰也不保证传递性，需 Moulin 1980 的 phantom voter）；② 放宽 IIA —— Borda / 评分制（§5.2/5.3）；③ 引入基数效用或分数/等级（§5.3/5.4）。SEP《Social Choice》(First published 2013-12-18, substantive revision 2022-10-14) 逐字：「To avoid it, **we must relax at least one of the five conditions** or give up the restriction of the aggregation rule's inputs to orderings」。
+- 判据：① 输出「综合大家意见后的推荐」时，必须写明**用了哪种聚合规则、放弃了哪条公理、候选项集是否固定**；② 禁止宣称「客观地综合了所有人的意见」——不存在同时满足五条件的客观综合；③ 若方案能沿**单一维度**（成本/工期/风险预算）排开、且各干系人偏好单峰，可改用中位规则并说明那一维是什么；④ 单峰不是默认成立的前提，须先问「大家是否在同一个评价轴上」，答不出就退回 §一的多方案对比矩阵而不是强行投票。
+
+### r736B-3 ★IIA 违反是议程操纵的入口，候选清单本身就是决策变量
+
+- SEP《Social Choice》Table 3/4 逐字实证：两个 profile 只在 Individual 1 的排序上有差别，且**x 与 z 的相对顺序都没变**，Borda 分却从 z(52)>x(51) 翻成 x(52)>z(51)——「Despite identical individual preferences between x and z in Tables 3 and 4, **the social preference between x and z is reversed, a violation of independence of irrelevant alternatives**.」紧接原文：「Such violations are common in real-world voting rules, and they make preference aggregation potentially vulnerable to **strategic voting and/or strategic agenda setting**.」另给 plurality 反例：34%/33%/33% 分布下「an alternative that is **majority-dispreferred to every other alternative** may win under plurality rule」，且「Plurality rule… also violates the weak Pareto principle」。
+- Gibbard–Satterthwaite（SEP 逐字）：「There exists no social choice rule satisfying universal domain, non-dictatorship, the range constraint, resoluteness, and strategy-proofness.」唯一平凡满足的是独裁。Moulin (1980) 逐字：限制到单峰域时，中位投票类方案可满足其余条件。SEP 还区分 sincere / insincere manipulation（2000 年 Nader→Gore 妥协投票属前者），并登记「计算复杂性可阻碍操纵」（Bartholdi/Tovey/Trick 1989、Harrison & McDaniel 2008 Kemeny 行为激励兼容）。
+- 判据：① **候选项清单与呈现顺序必须事先冻结并留痕**——加一个陪跑选项就可能改变既有两选项胜负，与 §十 r715C 的 rank reversal 同现象不同成因（那里是归一化，这里是计分依赖全体排序）；② 多人评审要收**完整排序或成对比较**，只收「第一名」等于偷偷换成 plurality 规则并引入多数不偏好者胜出；③ 「请如实打分」不是防操纵措施——策略免疫在通用域下定理级不可能，只能靠收窄域（单峰/二元）或降低可操纵收益；④ 与 `agent/grill-me` r735C 决策卫生四步互补：那条防锚定与信息顺序污染（**流程**），本条防候选集与聚合规则污染（**结构**），两条要一起用。
+
+**提升层**：可复用 Skill（群体决策）/ 工作流（多评审汇总验收）。触发词：Condorcet 循环、投票悖论、Arrow 不可能定理、U/SO/WP/D/I 五条件、IIA 违反、Borda 计分翻转、单峰偏好、Black 中位选民、phantom voter、策略性投票、strategic agenda setting、Gibbard-Satterthwaite、候选集冻结、plurality 多数不偏好者胜出。
+
+### r736B 来源与判非（独立实拉，2026-11-11）
+
+- Stanford Encyclopedia of Philosophy《Arrow's Theorem》Winter 2022 Edition 一手 WebFetch 200 全文逐字 → https://plato.stanford.edu/archives/win2022/entries/arrows-theorem/
+- Stanford Encyclopedia of Philosophy《Social Choice Theory》一手 WebFetch 200 逐字（First published Wed Dec 18, 2013; substantive revision Fri Oct 14, 2022）→ https://plato.stanford.edu/entries/social-choice/
+- SEP《Normative Economics and Economic Justice》spr2026（Black 1958 单峰一致性、Condorcet 悖论）→ https://plato.stanford.edu/archives/spr2026/entries/economic-justice
+- SEP 镜像交叉（不计独立域）→ https://plato.sydney.edu.au//entries///arrows-theorem/index.html · https://seop.illc.uva.nl/archives/spr2019/entries///arrows-theorem/
+- 判重：`Condorcet` / `single peaked` / `median voter` / `irrelevant alternatives` / `agenda` / `spoiler` 全库 SKILL.md **0 命中**；`IIA` 命中集中在 `meta/di-decision-tradeoff` §十 r715C（AHP rank reversal 语境，Luce-Raiffa axiom 7 / Belton&Gear / Dyer 1990），本轮为社会选择公理化语境（Arrow 1951 / SEP），已在节首写明分工，不并存两套口径；`Arrow` 5 命中经查为箭头符号与地名子串噪声。⇒ 净新，取「优＝加厚现有」不新建（DI 唯一载体）。
+- 未采纳：SEP 的政治哲学引申（Riker 对民主的解读）、Gibbard-Satterthwaite 的证明细节、phantom voter 的形式化构造、计算复杂性阻碍操纵的实证结论（仅登记不转为行动条款）。r715C 的 Distributive/Ideal、r733B 的 ELECTRE 输出类型、r708A 的 RDM 结论一律不复用。`wb-execute-discipline` / `wb-context-compressor` 为豆包自留地，WB 0 落地。

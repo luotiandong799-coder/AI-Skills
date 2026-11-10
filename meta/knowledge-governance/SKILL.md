@@ -5,7 +5,7 @@ display_name_en: "AI Memory & Skill Governance"
 description: "AI 智能体记忆与技能统一治理：解决记忆无限膨胀、身份/事实/偏好混层、技能内容重叠重复三大问题。分层判据（身份层/记忆层/画像层/技能层/外部记忆）+ 五类处置动作（保留/合并/压缩/外置技能/归档）+ 安全护栏，零信息丢失防膨胀。部署为定时任务后全自动巡检执行，无需人工触发。"
 description_zh: "AI 智能体记忆与技能统一治理：解决记忆无限膨胀、身份/事实/偏好混层、技能内容重叠重复三大问题。分层判据（身份层/记忆层/画像层/技能层/外部记忆）+ 五类处置动作（保留/合并/压缩/外置技能/归档）+ 安全护栏，零信息丢失防膨胀。部署为定时任务后全自动巡检执行，无需人工触发。"
 description_en: "Unified governance for AI agent memory and skills: solves memory bloat, mixed identity/fact/preference layers, and overlapping or duplicated skills. Layered rules (identity/memory/profile/skill/external) + five disposal actions (keep/merge/compress/move-to-skill/archive) + safety guardrails with zero information loss. Runs as a scheduled auto-inspection task; no manual trigger needed."
-version: 1.6.0
+version: 1.7.0
 author: 武汉弈枢科技有限公司
 category: 效率工具
 metadata:
@@ -246,3 +246,36 @@ modules: MI,KI
 - 反模式：凭记忆报课程/文档名；用一句 caveat 硬推；把"全部材料"理解成"全部列出"。
 - **提升层**：工作流（推荐纪律）+ 可复用 Skill（防腐化）。
 - 触发词：目录实时拉取、staleAfter、generatedAt 30 天、视为没有目录、hedge 是匹配失败、沉默优于噪音、最多 2 条
+
+
+## r736C · 分层记忆的物理边界：驱逐不删、挂载面与常驻元信息（2026-11-11 独立实拉 · MI）
+
+> 与既有分层的**分工声明**：`defaults/wb-context-compressor` 已从二手汇编写过 MemGPT/Letta 三层存储与分页调用机制（**豆包自留地，WB 本轮 0 落地**）；本轮只从 Letta 官方一手文档取**治理侧的四条判据**，落在本技能（MI 载体）。与 `meta/mi-memory` r732B（五能力评测 / 双时态 / episode 溯源）分区：那边管事实的生命周期与是否被正确召回，本节管「移出上下文」这个动作到底改了什么、以及谁有资格写常驻层。
+
+### r736C-1 ★驱逐 ≠ 删除：可见性与可检索性是两个独立验收点
+
+- Letta Docs《Introduction to Stateful Agents》逐字：「In Letta, all state, includes memories, user messages, reasoning, tool calls, are all **persisted in a database, so they are never lost, even once evicted from the context window**.」「The Letta API stores all messages, so **even after a compaction / eviction, an agent's old messages are still retrievable via the API (for developers) and retrieval tools (for agents)**.」
+- 判据：① 治理动作里凡写「移出 / 压缩 / 归档 / 驱逐」，必须**显式声明是否同时删持久层**；默认分离——从 prompt 移除不级联删除库；② 验收分两点分别取证：`当前上下文是否还包含`（注入侧）与 `历史能否检索回来`（检索侧），只验前者会把「看不见」误判成「已清理」或把「已清理」误判成「还在」；③ 与 agent-guild Cap34「注入侧截断 ≠ 磁盘不完整、截断是迁移信号」同向，本条补上**运行时语义**：上下文是有界缓存，库才是状态真身；④ 与 §五「零信息丢失防膨胀」一致——压缩的对象是**每轮要付的 token**，不是历史本身。
+
+### r736C-2 ★常驻是挂载关系，共享块是一个跨 agent 的单一写面
+
+- Letta Docs 逐字：「Memory blocks can be **attached and detached** from agents - memory blocks that are attached to an agent are **in-context (pinned to the system prompt)**. Memory blocks can be attached to **multiple agents at once ("shared blocks")**.」Letta ADE 博客逐字（2025-01-15）：「Core memory works through "Blocks" - which each represent a **persisted, editable section of the in-context memory**… your agent can update them using `core_memory_append` and `core_memory_replace` tools.」
+- 判据：① 分层判据不能只按「重不重要」切，要按「**每轮必须可见 vs 按需检索**」切——重要但低频的材料应放在可检索层，不是挤占常驻；② 共享块必须维护**挂载清单与写者**：一个 agent 改块，所有挂它的 agent 下一轮同时变化，把共享块当私有块改会造成静默跨 agent 污染；③ 与 agent-guild「共享记忆乐观锁 / 先读 content_sha256 再带条件提交」互补：那条防并发写覆盖，本条防**挂错了对象**；④ 落到本机 13 模块体系：用户级 `MEMORY.md` 是每轮常驻块，模块 `MEMORY.md` 是按需检索层，C 盘 junction 是共享挂载面——三者写入权限与生效半径不同，不能一把 Edit 全改。
+
+### r736C-3 ★常驻预算要显式分配，且「外部有什么」这类元信息必须常驻
+
+- Letta ADE 博客逐字：「For each of these components, you can control **how much of the context window they are allocated** (such as by setting **character limits to sections of memory or tool responses).」；「Letta handles this intelligently, using **recursive summarization and message pruning** to automatically limit the context size.」；「Letta allows you to artificially import **context window limits lower than the model's actual context window limit**… giving an agent too much to think about at once can actually make it less effective」；外部记忆侧：「We make sure your agent always knows what's available by **keeping memory statistics right in the context window**. This way, it knows when it should dig into these memory banks for more information.」
+- MemGPT 原论文（arXiv 2310.08560v2, 2023-10-12 / 2024-02-12）摘要逐字：「we propose **virtual context management**, a technique drawing inspiration from **hierarchical memory systems in traditional operating systems** that provide the appearance of large memory resources through **data movement between fast and slow memory**… and utilizes **interrupts to manage control flow**」。
+- 判据：① 常驻层要给出**配额表**（系统提示 / 工具定义 / 核心记忆各占多少字符），用户级 4000 字符上限正是一种配额，不是「记得少」而是「每轮付得起」；② 压缩时**必须保留外部层的目录/统计元信息**，只留摘要不留「外面还有多少、怎么查」＝ agent 根本不会去翻，等价于把资料删了；③ 主动把可用窗口设得**小于**模型上限是有意的设计（降低无关信息稀释），不是能力浪费——与 `defaults/ci-context` r732C「n² 注意力梯度非悬崖」互补，那条讲长上下文的代价曲线，本节讲预算分配动作；④ 溢出治理顺序：先按配额裁常驻 → 递归摘要/消息剪枝 → 历史转可检索层，**不删库**。与 §五处置动作（保留/合并/压缩/外置技能/归档）串成一条链。
+
+**提升层**：可复用 Skill（记忆治理）/ 工作流（压缩与归档验收）。触发词：驱逐不删、evicted from the context window、compaction 后仍可检索、attached/detached、pinned to system prompt、shared blocks、core_memory_append/replace、character limits、recursive summarization、message pruning、memory statistics 常驻、外部层目录元信息、virtual context management、快慢内存数据搬移、interrupt 控制流、常驻配额表。
+
+### r736C 来源与判非（独立实拉，2026-11-11）
+
+- Letta Docs《Introduction to Stateful Agents》一手 WebFetch 200 逐字 → https://docs.letta.com/v1-sdk/concepts/stateful-agents
+- Letta 官方博客《Introducing the Agent Development Environment》2025-01-15 一手 WebFetch 200 全文逐字 → https://www.letta.com/blog/introducing-the-agent-development-environment
+- arXiv 2310.08560v2《MemGPT: Towards LLMs as Operating Systems》摘要页一手 WebFetch 200 逐字 → https://arxiv.org/abs/2310.08560
+- quidproquo.cc《Letta/MemGPT 完整介紹》2026-08-22 中文交叉（「archival memory 不會因 context overflow 自動填入、memory blocks 與 archival memory 也不是自動同步的同一套資料」）→ http://quidproquo.cc/posts/ai/ai-memory/2026-08-22-letta-memgpt-agent-memory （二手，非方法论源）
+- ai.miraheze.org《Letta》三层与 white-box memory 说明 → https://ai.miraheze.org/wiki/Letta?diff=31571&oldid=prev （社区 wiki，仅作交叉）
+- 判重：`virtual context` / `recursive summarization` / `message pruning` / `character limit` 全库 SKILL.md **0 命中**；`core memory` / `archival memory` / `memory block` / `context overflow` 命中**全部在豆包自留地 `defaults/wb-context-compressor`**（二手汇编的物理分层与分页机制），WB 依纪律 0 落地；本轮从官方一手取的是治理判据（驱逐语义 / 挂载面 / 配额与元信息），与二手汇编不并存两套口径。⇒ 净新，取「优＝加厚现有」不新建。
+- 未采纳：Letta v1 版本演进（heartbeats / send_message 移除，社区 wiki 口径未一手核验）、Atlan 四 tier、MemoryOS 分段、FSRS/Ebbinghaus 衰减公式（已在豆包自留地）。r732B 五能力/双时态/溯源、r713A 写入端不预筛、r732C 注意力预算结论一律不复用。
