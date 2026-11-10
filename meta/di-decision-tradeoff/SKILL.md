@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
 module: DI
 modules: DI,TI
-version: "1.4.0"
+version: "1.5.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -166,3 +166,35 @@ version: "1.4.0"
 - `www.sciencedirect.com/science/article/abs/pii/S0377221799000405` —《On the relativity of relative measures》：Distributive vs Ideal 两模式逐字、Saaty 1994 要求显式选择、Tversky 等「反转本应发生」、Vargas 1997 乘法合成反例。
 - `cebra.unimelb.edu.au/__data/assets/pdf_file/0011/2220887/0607_0610.pdf` —《Uses and Misuses of MCDA》：权重脱离量表无意义、Edwards&Barron 原句、Dyer p.252/p.256 诱导法、多方聚合前提、绝对标度。
 - `edisciplinas.usp.br/pluginfile.php/8024038/mod_resource/content/2/Paper%202.Remarks-on-the-analytic-hierarchy-process.pdf` — Dyer《Remarks on the AHP》：A4 稀释 8/18→9/12 的数值例、hierarchic composition 失效、supermatrix 175 次比较的成本量级。
+
+## r733B · 非补偿性决策、优超关系与输出类型（来源：2026-11-11 r733B 本轮独立实拉，≥2 独立域一手交叉）
+
+> 模块：DI｜二轮深化第 4 批｜本轮定位：DI 3886B/6 条（次薄、主技能数仅 1）
+
+### r733B-1 ★加权求和是补偿型，会把致命短板被高分抹平；有硬约束准则时必须换非补偿结构
+
+ELECTE 逐字："A weighted-sum model is compensatory. Give each criterion a weight, score every alternative, multiply, and add. The mathematics permits a high score on one criterion to offset a low score on another"；给的实例是供应商 A 价格 9 / 交付可靠性 1、供应商 B 两项均 4，价格权重足够高时 A 在加权平均中胜出，而 "a missed delivery would stop production"。逐字结论 "a strong result on one criterion shouldn't automatically cancel out a failure that matters more than the average suggests"；"Weighted scoring asks which alternative has the highest total; ELECTRE asks whether one alternative is sufficiently supported and free from unacceptable failure"。Stockholm 学术综述逐字把两类方法对立起来："A central distinction within MCDA methodology lies between compensatory and non-compensatory approaches"、"ÉLECTRE employs veto thresholds that can block an alternative from being selected despite high performance in most other respects"，并指出非补偿准则常对应 "hard constraints or categorical imperatives"。判据：① 出加权矩阵之前先问「本决策有没有不可补偿准则」（安全 / 不可逆 / 合规 / 合同硬门槛）；有则该矩阵不是合适的聚合规则，须显式列 veto 条件并允许方案被一票阻断；② 异量纲（欧元 / 天数 / 检验分 / 定性风险）合并成单一数字是 "false precision"，逐字 "Combining them into one number can create false precision"；③ 与既有 §一/§四加权矩阵、ICE/RICE 等互补不覆盖——它们仍是纯补偿型决策的正确工具，本条只界定其适用边界。与 r715C-3「权重脱离量表无意义」分工：那条在补偿型内部修权重口径，本条判定补偿型本身不适用。
+
+### r733B-2 ★权重语义随方法而变（汇率 vs 投票权），且阈值是外生输入不是方法从数据里找出来的
+
+DecisionMind 逐字："Here, weights are not an 'exchange rate' as in TOPSIS but a 'voting weight' the criterion brings to the decision"；优超断言须两条件同时成立——"The first is concordance: a sufficiently large share of the criteria must support this claim. The second is the absence of discordance: even a single criterion on which the other side is clearly superior can refute the claim"，后者 "works like a kind of veto"。TU Delft 论文逐字给出阻断机制："A discordance index of 1 for any criterion ... means that no improvement in one alternative's performance or deterioration in the others' performance can offset this veto effect (Figueira et al., 2013)"，并给出阈值不等式 `v_j >= p_j >= q_j >= 0`（否决 / 偏好 / 无差异）。DecisionMind 逐字："ELECTRE III and TRI require the decision-maker to set, separately for each criterion, preference, indifference and veto thresholds; these thresholds come from outside and are not estimated from the data"；"A third error is presenting ELECTRE III's or TRI's thresholds or boundary profiles as 'an objective line the method finds by itself'"；灌溉合作社案例中收紧成本否决线会让最贵标书滑落 ⇒ "This makes the choice of the veto threshold a critical decision"。判据：① 报结论必须声明用的是哪种聚合语义，禁止把 §四/R715C 的「权重=边际替代率」直接搬到优超法；② 阈值须来源于运营容忍度 / 合同 / 法规 / 明确记录的管理判断，且在报告中标注为决策人输入；③ 必须做阈值敏感性测试——"Treat sensitivity testing as part of the decision, not as an optional presentation exercise"，禁止挑一组刚好支持既定结论的阈值。与 r715C-3 同源不同义：那条管权重端点定义，本条管阈值外生性与权重语义随方法漂移。
+
+### r733B-3 ★先定输出类型再选方法族成员；不可比与不完整排序是合法结果，不是需要修掉的缺陷
+
+DecisionMind 逐字："Members built on the same core logic produce a choice, a ranking or a sorting, depending on the purpose"——ELECTRE I 出 core set（"those that cannot be separated with these thresholds", not "the best ones"）、II/III 出全序或偏序、TRI 与预定义边界剖面比较后分类（accept/conditional/reject）；"An order (ELECTRE II, III) is not a distance score in the manner of TOPSIS"；"A category assignment (TRI) states not the alternative's absolute quality but where it falls relative to predefined boundary profiles. If the boundary profiles change, the assignment changes with them"。ELECTE 逐字承认局限："ELECTRE can produce incomplete rankings, incomparabilities, or intransitive relations"、"No automatic objectivity: The method structures judgement, but it doesn't eliminate judgement"；Stockholm 学术综述逐字 "These methods admit intransitivities and incomparabilities by design"，并警告 "Substituting a since-long well-established and sound axiomatic computational core for homemade calculi only leads to questionable results and opaqueness"。判据：① 开工先答「本次要的是选择集 / 全排序 / 归类」，再选成员；把 core set 读成排行榜、把 TRI 类别读成绝对质量分都是范畴错误；② 如实输出「两者不可比」或「本组无法区分」，禁止为了给一个完整排名硬调阈值；③ 不同成员结果不可直接横比（"different members produce different types of output under different assumptions"）；④ 换聚合核心必须建立在既有公理化方法上，不得自造混合算式。与 r715C-2「保序 vs 允许反转」互补：那条在补偿型内部讨论该不该受无关备选影响，本条给出「不接受全序」这一合法输出形态。
+
+**提升层**：可复用 Skill（DI 模块方法论）/ 工作流（决策或编排的验收链）。
+
+### r733B 来源与判非
+
+- ELECTE《ELECTRE Method Explained: A Practical Decision Guide》Fabio Lauria，2026-09-04 → https://www.electe.net/post/electre-method-explained（WebFetch 200 全文逐字；厂商站，商业立场如实登记）
+- DecisionMind Academy《ELECTRE》→ https://decisionmind.app/academy/methods/electre（WebFetch 200 全文逐字，独立域）
+- Stockholm University DSV《Widely Used Multi-Criteria Decision Analysis Methods》→ https://people.dsv.su.se/~mad/Popular_MCDA_Methods.pdf（WebFetch 403 Forbidden，正文经 WebSearch 结果快照逐串核验，如实登记）
+- TU Delft JSCMS《Dry port location selection ... Northern Vietnam》ELECTRE III 案例 → https://journals.open.tudelft.nl/jscms/article/download/7743/6067/28572（WebFetch 返回 application/pdf 二进制被丢弃，正文经 WebSearch 结果快照逐串核验，如实登记）
+- 同厂商中文版交叉（不计独立域）：https://www.electe.net/zh/文章/electre-method-explained
+- 判非：`outranking` 唯一命中在本技能 L71 概念列举，无机制内容；豆包自留地 WB 0 落地。
+
+- 窄串 `veto threshold` / `concordance` / `discordance` / `non-compensatory` / `incomparab` 全库 SKILL.md **0 命中**；`outranking` 仅 1 命中，为 `meta/di-decision-tradeoff` L71 的一句概念列举「超排序 outranking（PROMETHEE/VIKOR 概念：允许"不可补偿"）」，无 veto / 阈值 / 输出类型 / 不可比性任何机制 ⇒ 按 rules/07 取「优＝加厚现有」并写明与 L71 的互补关系，不新建、不并存两套口径。
+- 既有 §十 r715C 三条（排序反转 / Distributive-Ideal / 权重-量表对齐）全在**补偿型内部**讨论；r708A 的 RDM/XLRM 处理**深不确定下的概率不可知**；本轮三点是**补偿 vs 非补偿的聚合规则选择**，三条轴正交，结论不复用。
+- `wb-execute-discipline` / `wb-context-compressor` 为豆包自留地，WB 0 落地；A 轮 OI 结论一律不复用；r731/r717/r715 各轮结论不复用。
+- 换道：ELECTE 厂商站的产品导流（ELECTE ≠ ELECTRE 的辨析、SaaS 风险页）不落地；`people.dsv.su.se` PDF WebFetch 403、TU Delft PDF 二进制被丢弃，均如实登记为搜索快照逐串核验，未冒充一手全文直读；阈值具体数值属易漂移参数，只取不等式与外生性判据。

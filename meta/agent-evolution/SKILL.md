@@ -1,6 +1,6 @@
 ---
 name: agent-evolution
-version: "1.5.0"
+version: "1.6.0"
 description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。
 license: MIT
 metadata:
@@ -263,3 +263,34 @@ modules: AI
 - www.dataexpertise.in/multi-armed-bandits-online-learning-thompson-sampling-explore-exploit/（2026-10 前后；ε-greedy 均匀探索浪费、UCB1 公式 `sqrt(2 log t / n_k)`、`O(K log T)`、A/B=ε=0.5 固定分配、FTRL/Vowpal Wabbit 在线学习；WebFetch 全文逐字）
 - www.vitorsousa.com/blog/contextual-bandits-math（2025-11-15；regret 界表 ε O(T^2/3) / UCB O(√(T log T)) / TS O(√T) / LinUCB O(d√(T log T))、10,000 轮 10000/464/130/100、partial feedback 反事实不可观测、`R(T)=o(T)` 次线性、Lai-Robbins Ω(log T) 下界、LinUCB α=0.1–2.0；WebFetch 全文逐字）
 - 判非：`UCB` / `LinUCB` / `epsilon-greedy` / `部分反馈` / `延迟奖励` 全库词边界 0 命中；`bandit` 命中均在豆包自留地 `defaults/wb-context-compressor/references/knowledge-base.md`（测试时算力缩放 / shadow-first bandit），与 regret 理论、探索预算分配无关，不重复；`Thompson` 命中仅为同 KB 的路由实验，不同维度。豆包自留地 WB 0 落地。
+
+## r733C · 离线策略评估的前提、方差与灰度边界（来源：2026-11-11 r733C 本轮独立实拉，≥2 独立域一手交叉）
+
+> 模块：AI｜二轮深化第 4 批｜本轮定位：AI 3926B/6 条（第三薄、主技能数仅 1）
+
+### r733C-1 ★倾向性概率是离线评估的前提：日志 schema 漏一个字段，就永久失去「用历史证明新版更好」这条路
+
+neuralmasteryai 逐字："A bandit in production logs every decision: the context, the arm shown, the reward, and the probability with which the logging policy chose that arm"；"That last number makes it possible to estimate how a different policy would have done, without deploying it"；更硬的限定 "Store the probability of the chosen action with every logged decision. Without it, off-policy evaluation is impossible and every new policy has to be tested live with an A/B test."。PracHub 逐字 "Logged propensities are mandatory for IPS/SNIPS; without them, estimates can be arbitrarily biased"。GeekChamp 给出完整字段链："Log complete decisions: timestamp, context, candidates, chosen action, policy ID, propensity, reward definition, reward timestamp, and model version"，并须 "Verify propensities were recorded before action selection"。判据：① 策略/提示词/Skill 改版前先查历史日志是否带 propensity + 候选集 + 策略版本 + 奖励定义与时间戳；缺任一则该批日志**不可**用来签「新版更好」，只能退回 §15.3 同时部署等价基线；② 日志 schema 是决策能力的前提而非可后补的运维细节——记录时没写就永久丢失反事实，事后补造等于伪造证据（与 agent-guild Cap31 审计不补造同源）；③ 与 §16.3「未选中动作的反事实收益永不观测」互补：那条陈述限制，本条给出唯一可绕过的条件（记录 propensity 后用 IPS 加权估计）；④ "No single library supplies the difficult operational pieces automatically" ⇒ 不能指望框架自带这套日志。
+
+### r733C-2 ★IPS 无偏但高方差，权重尾部主导结论；旧策略没试过的动作得到的是「假 0」而非「差」
+
+neuralmasteryai 逐字："Inverse propensity scoring (IPS) reweights each logged round by πnew(a|x)/πlog(a|x): rounds where the old policy chose what the new one would choose count more, the rarer the old policy made that choice"；数值例：旧策略 article0 占 0.90、其余各 0.05，评估「总出 article1」只能用其中 2,482 轮、每轮权重 20，估 0.055 而真值 0.060；"The variance comes from those large weights, and it is why logging policies keep some exploration: an arm the old policy never shows can never be evaluated"；代码注释逐字 "set eps = 0.0. Article 1 is never logged, every weight is zero, and IPS estimates 0: you cannot evaluate an action the old policy never took"。PracHub 逐字："Self-normalized IPS (SNIPS) reduces variance but introduces small bias; watch tail weights"；"Candidates often quote a single metric (e.g., IPS uplift) without checking weight distribution or support mismatch. If a few impressions carry huge weights, your estimate is fragile—show diagnostics: effective sample size, clipping analyses, and sensitivity to propensity misspecification"；"Direct Method, IPS, and Doubly Robust trade bias–variance; DR helps when either model or propensities are imperfect"。判据：① 报离线提升必须同时报权重分布 / 有效样本量 / 裁剪敏感性 / propensity 误设敏感性，单报一个 uplift 数字不可采信；② 支持集条件（positivity）不满足时，估计值 0 是**不可估**不是**效果为零**，禁止据此淘汰候选；③ 与 §16.2「探索预算按不确定性衰减」呼应但不同层：那条管在线 regret 最优化，本条管离线评估的可行性边界——ε=0 的纯贪心历史日志虽然在线看着省，却把整条离线评估路径关掉了。
+
+### r733C-3 ★离线结论只能排在灰度之前：三段验收链不可跳，且离线分本身有四类污染源
+
+PracHub 逐字："Another miss is jumping straight to a 50% A/B after 'good' offline results. Strong answers pair OPE with high-confidence bounds, then propose a guardrailed ramp with pre-defined stop criteria on core metrics and safety checks for long-tail cohorts"；"Confidence intervals matter: bootstrap, concentration bounds, or HCOPE for safety guarantees"；"Safe policy improvement (e.g., SPIBB) constrains changes where data are uncertain"；"Rollout tactics: canaries, shadow serving, interleaving, staged ramps, automatic kill-switches"。GeekChamp 逐字："Offline results should precede a staged rollout, not replace a holdout, guardrails, and rollback plan." ⇒ 验收链三段不可跳：**离线过滤（带置信下界）→ 小流量灰度（预置停止条件 + 长尾子群检查）→ 全量**；「离线更好」不构成发布证据。四类污染逐字："Leakage: a feature or label unavailable at decision time makes offline results unrealistically strong"；"Delayed attribution: ... require a clear link to the original action and treatment of censored outcomes"；"Perverse incentives: a policy can improve a target metric while harming users or another business objective"；"Changing scale: seasonality, inflation, traffic mix, or reward-definition changes break comparisons across time"；并要求 "Track guardrails such as complaints, bounce rate, latency, safety violations, fairness measures, and long-term retention alongside the optimized reward"。判据：① 报离线结论前逐项排除四类污染，尤其决策时不可得特征与奖励定义漂移；② 优化目标之外必须同报护栏指标，防止代理指标反激励；③ 与 §15.3 灰度双阈值 / critical:true 分工：那条给灰度内部怎么判，本条补灰度之前那道离线门与灰度之后那道护栏/回滚门；④ 与 §16.1「bandit 与 A/B 目标互斥」不冲突——本条谈的是验收链形状，不是流量分配的目标函数。
+
+**提升层**：可复用 Skill（AI 模块方法论）/ 工作流（决策或编排的验收链）。
+
+### r733C 来源与判非
+
+- neuralmasteryai《Multi-Armed & Contextual Bandits》→ https://neuralmasteryai.com/docs/reinforcement-learning/bandits（WebFetch 200 全文逐字，含可运行 IPS 代码与数值例，2026-11-11）
+- PracHub《Off-Policy Evaluation and Safe Rollouts》Last updated 2026-04-25 → https://prachub.com/concepts/off-policy-evaluation-and-safe-rollouts（WebFetch 200 全文逐字）
+- GeekChamp《Contextual Multi-Armed Bandits: Algorithms, Evaluation, and Deployment》2026-10-01 → https://geekchamp.com/contextual-multi-armed-bandits-in-reinforcement-learning-algorithms-evaluation-and-deployment/（WebFetch 200 全文逐字；页面含广告插入，如实登记）
+- 辅助交叉（WebSearch 快照）：inferensys.com/glossary/.../off-policy-evaluation（五类估计器偏差—方差）、lacuna.tiptreesystems.com/.../overcoming-support-deficiency-in-off-policy-evaluation（common support / positivity 定义）。
+- 判非：`off-policy` 唯一命中在豆包自留地 `wb-execute-discipline`；`propensity` / `SNIPS` / `doubly robust` / `effective sample size` 全库 0 命中；豆包自留地 WB 0 落地。
+
+- 窄串 `propensity` / `SNIPS` / `doubly robust` / `effective sample size` / `support deficiency` 全库 SKILL.md **0 命中**；`off-policy` 仅 1 命中，位于豆包自留地 `wb-execute-discipline`（语义为在线策略/离线评估的泛提及，无 IPS / 倾向性 / 支持集机制）；`IPS` 亦无本义命中 ⇒ 净新。
+- 既有 §15（漂移门 / 基线对照 / 双阈值）与 §16（bandit vs A/B / 探索预算 / 三失效条件）全部落在**在线改与在线验收**；本轮三点是**不部署能否评估、日志要记什么、离线与灰度的先后**，属不同层，结论不复用。
+- 豆包自留地 0 落地；A 轮 OI、B 轮 DI 结论一律不复用；r732/r731/r717/r715 各轮结论不复用。
+- 换道：Vowpal Wabbit 命令参数族、逐估计器公式推导属易漂移工具细节，只取可迁移判据不作落地；GeekChamp 页面含 Outbyte 广告插入、PracHub 为面试向内容站，均如实登记立场，结论一律与 neuralmasteryai 的可运行代码/数值例交叉后才采纳。

@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.73.0
+version: 1.74.0
 agent_created: true
 module: OI
 modules: OI
@@ -314,3 +314,34 @@ modules: OI
 - **★优雅关停是「静默取消子、只恢复根」**：关停时记录 running 子代理的顶层 requester，再走普通 abort 路径取消子——子**静默终态**，关停期间不给父发完成公告也不发失败通知；**只有 root requester 收到启动时的标准 resume 输入**，子不独立恢复，Gateway 也不收养旧子任务、不重建 requester 的完成 turn。崩溃/SIGKILL 写不了关停标记时，只能从上一代 Gateway 的持久 run identity 恢复**合格的 root**。→ 判据：**stopped ≠ yielded**，替换者不继承 workspace 与发布所有权；恢复后用父的 transcript + 子会话历史先查「文件/外部动作是否已变」，再决定续发还是新起。
 - **★完成投递有积压阈值与硬过期，过期不等于执行失败**：积压达 **25** 才告警一次（同值不重复刷），积压不丢结果；requester 忙时延迟到下一次 wake，若那次仍没投出就**立即记 failed** 而非继续悬挂；悬挂投递 **7 天**过期——终止自动投递，但**不把成功执行改判为失败**，`/subagents info <runId>` 仍能看到捕获结果、被丢弃的投递状态与原始错误。→ 判据：**执行结论与交付结论分两栏记**；「没收到结果」先查 info 与子会话历史，不要重跑一遍已完成的活。
 - **提升层**：工具（两套上限与 lane 预算）/ 工作流（关停恢复与投递积压处置）/ 可复用 Skill（子代理容量与故障排查清单）
+
+## r733A · 级联错误、自包含任务书与预算相乘（来源：2026-11-11 r733A 本轮独立实拉，≥2 独立域一手交叉）
+
+> 模块：OI｜二轮深化第 4 批｜本轮定位：OI 3703B/7 条（全库最薄）· DI 3886B/6 条 · AI 3926B/6 条 · PDI 4116B/6 条
+
+### r733A-1 ★编排失败是分布式系统故障，错误必须上浮且在交接边界做输出校验
+
+Microsoft 官方逐字把多智能体编排归入 "classical distributed systems problems such as node failures, network partitions, message loss, and cascading errors"，并给出两条硬动作："Validate agent output before you pass it to the next agent"、"Surface errors instead of hiding them, so downstream agents and orchestrator logic can respond appropriately"；原因逐字 "Low-confidence, malformed, or off-topic responses can cascade through a pipeline"，接收方应 "retry, request clarification, or halt the workflow to avoid bad input propagation"。判据：① 子 agent 结果进入下一跳之前必须有质量门（重试 / 请求澄清 / 中止三态），"看起来合理"不构成验收证据；② 错误不允许被中间层吞掉——隐藏错误等于让下游在脏输入上继续推理；③ 输出非确定性 ⇒ 验收用 "scoring rubrics or language-model-as-judge evaluations rather than exact-match assertions"，逐字精确匹配断言是错误验收方式；④ 隔离还须带 "Security trimming must be implemented in every agent in the pattern"——每个 agent 各自裁权限，不能指望编排器统一裁剪一次。与 r728A「完成投递积压 / 静默关停」分工：那条管结果交付与关停语义，本条管内容污染与故障传播。
+
+### r733A-2 ★子 agent 缺信息是任务书漏字段，不是上下文给少了；会话键复用会覆盖编排器 persona
+
+WSO2 官方逐字："By default a sub-agent is isolated: it receives only the task the orchestrator composes in its tool call, and runs in a fresh session"；"the trade-off is that results depend entirely on the orchestrator writing self-contained subtask specifications, which is also the pattern's main failure mode"；"Because the sub-agent cannot see the conversation, anything it needs must be in the task description"。⇒ 排查「子代理答非所问 / 缺信息」的正确动作是补全 handoff 字段并写进工具描述，而不是放开全量上下文（那会同时毁掉故障隔离）。存储侧逐字："Never reuse the orchestrator's session key"——"A sub-agent writing into the orchestrator's session pollutes it with the sub-agent's internal turns, and the store keeps only the latest system message per key, so the sub-agent's persona overwrites the orchestrator's"；"Never let two concurrent runs share the same memory instance and session ID"（两 run 交错成 "a single corrupted conversation"）。判据：① 默认无状态子 agent，确需记忆则按「子 agent × 会话」独立取键；② 会话键是身份容器不是聊天室编号，共用会把 persona 写没；③ "workers do not see each other's outputs" 是编排模式的显式属性，跨 worker 共享事实必须经编排器显式下发。与豆包自留地 `wb-context-compressor` 的 session key（n8n 多用户跨 run 混串）不同面：那条管跨用户隔离粒度，本条管父子 persona 覆盖与并发 run 交错损坏。
+
+### r733A-3 ★迭代预算按层级相乘、token 复利；交接载荷按 schema 而非 transcript，编排器不得当累加器
+
+WSO2 逐字："Every delegation is a full agent run with its own prompt, its own tool-calling loop, and its own tokens. A sub-agent that averages four reasoning steps turns one call into five"；"Token spend compounds. The orchestrator pays for the sub-agent's entire run, then pays again to reason about the result"；"Latency is additive"；"Iteration budgets multiply. Each agent enforces its own maximum iterations, so the worst case is their product, not their sum"。⇒ 两层各设 10 次迭代上限，最坏是 100 不是 20；层级越深越要逐层压上限并保持浅。LMVersity 逐字："A transcript records how an agent got somewhere, not where things stand"（整段转录把探索路径与已定结论同等可信地喂给下游）、"The orchestrator ends up holding the sum of everyone's context instead of the sum of everyone's conclusions — the single-bloated-agent failure mode rebuilt with extra hops"、"merge and discard once a worker's result has been folded into the plan, keeping the merged conclusion and a pointer back to the worker's original payload, not the payload itself"。判据：① handoff 按 schema（goal / decided facts / pointers / next steps）构造，每次交接自问「我是不是直接粘了 transcript」；② 每个跨交接的 finding 带指针（文件路径 / 查询 / 来源标签），否则出错只能全链路重跑；③ 共享黑板必须带单写者 + 时间戳 + 已定/半成形区分，"An unmoderated blackboard is a design that was never actually chosen, just defaulted into"；④ 验收看编排器上下文是随 worker **数量**增长还是随 worker **输出量**增长——后者说明上游没做合并。与 r732C「压缩不可逆 ⇒ 上下文做成窗口外可查询对象」互补：那条给可恢复性架构，本条给编排器在窗口内就别堆全量的合并纪律。
+
+**提升层**：可复用 Skill（OI 模块方法论）/ 工作流（决策或编排的验收链）。
+
+### r733A 来源与判非
+
+- Microsoft Learn《AI agent orchestration patterns》→ https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/ai-agent-design-patterns（WebFetch 200 全文逐字，2026-11-11）
+- WSO2 Integrator《Multi-Agent Systems》Last updated 2026-10-16 → https://wso2.com/integration-platform/docs/saas/develop-and-test/integration-artifacts/ai-integrations/agents/multi-agent（WebFetch 200 全文逐字）
+- LMVersity《Multi-Agent Context Mistakes》Lesson 125/131，Updated 2026-09-15 → https://lmversity.com/learn/context-engineering/multi-agent-context-mistakes（WebFetch 200；页面自述 AI-assisted, not yet individually reviewed，已与两家官方逐字交叉）
+- 二手不落地：subagentic.ai 转述 GitHub Engineering Blog（2026-02-24）、clarigital.com Agentic AI Atlas（WebSearch 快照仅作方向佐证）。
+- 判非：`session key` / `circuit breaker` 命中均在豆包自留地（wb-context-compressor / wb-execute-discipline），语义为隔离键选取与重试熔断，不构成重叠；豆包自留地 WB 0 落地。
+
+- 窄串 `cascading errors` / `self-contained subtask` / `iteration budgets multiply` / `handoff schema` / `shared blackboard` / `security trimming` 全库 SKILL.md **0 命中**（本批脚本机检）；`session key` 命中集中于豆包自留地 `wb-context-compressor`（n8n 跨 run/多用户隔离键）、`circuit breaker` 命中于 `wb-context-compressor` 与 `wb-execute-discipline`（自校正循环上限 / provider failover），语义分别为「隔离键选取」「重试熔断」，无一条给出父子会话 persona 覆盖、交接边界输出校验或迭代预算相乘 ⇒ 净新。
+- 既有 §核心判断「能一次完成就不要拆多个 Agent」与 WSO2 "A single agent with five tools is usually better than two agents with three tools each" 同向，本轮不重复立论，只补拆开之后的失败面；r728A 五条运行期事实（准入/并发/陈旧窗口/静默关停/投递积压）不复用。
+- 豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 永不落地；本轮落 `engineering/wb-subagent-delegation` 载体自身，0 新建。
+- 换道：subagentic.ai 对 GitHub Engineering Blog 的转述属二手（页面自陈转载），且 deadlock / tool loop 已被既有自校正循环上限覆盖 ⇒ 只作方向佐证不作落地；LMVersity 页面自述 AI-assisted 未逐条人工复核，故其结论一律与 WSO2 / Microsoft 官方逐字交叉后才采纳。
