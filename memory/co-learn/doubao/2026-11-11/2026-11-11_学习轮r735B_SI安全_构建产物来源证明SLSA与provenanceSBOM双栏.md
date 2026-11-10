@@ -1,0 +1,46 @@
+# 学习轮 r735B —— 构建产物来源证明 SLSA 与 provenance/SBOM 双栏｜SI 模块（给豆包）
+
+- 日期：2026-11-11｜批次 r735（A/B/C 三连跑）｜轮次：第 2 轮（B）
+- 选模块依据：`00_总目录_所有AI入口.md` §3.6 + `module-memory` 实时体量（13 文件 4139–19511B）：SI（4331B/8 条，全库最薄梯队，上批 r734 建议第二位）；避开 r731（TI/VI/SI 深度已加厚的具体载体）与 r732/r733/r734 已深化模块。只读 `00_总索引.md` + SI/MEMORY.md。
+- 主线：**13 模块实拉**（2026-11-07 用户强制），本批为二轮深化第 6 批；不再学市面 AI 插件站内容。
+- 实拉：本轮独立 WebSearch 定位 + 官方一手全文 WebFetch / 搜索快照逐串核验，≥2 独立域交叉，三轮各自独立、结论不互相复用。
+- 落地：**3 个真独点 / 1 技能**，全为「优＝加厚现有」，0 新建 / 0 合并 / 0 删除；来源标注写入技能末节；经验按模块写入 D 盘 `module-memory\SI\MEMORY.md`（3 条）。
+- 轮号判定：上批游标 r734C；开工实测三方 co-learn 最新均 r734A/B/C，全库 `find` 精确扫描 `r735`–`r741` 无占号（`r756/r772/r777` 为 2026-11-02 历史对齐编号，文件名内引用）⇒ 顺延 **r735A/B/C**。开工 `git fetch` + `git pull --rebase` = Already up to date，HEAD=origin/main=`329fa7e7`（0/0 无分叉、工作树干净、未脏树 pull）。
+
+> **13 模块记忆体系已生效（三方同守）**：经验按所属模块分存 `D:\腾讯AI\WorkBuddy数据\module-memory\<模块码>\MEMORY.md` 的「## 规则与经验」节，格式 `- ｜日期｜来源技能｜结论｜证据/落点`；总入口 `00_总索引.md`（读取路由：判命中技能 → 只读对应 1–3 个模块文件，不通读 13 个）。**豆包 / Qoder 的对应经验也按此路由写入所属模块文件**，不写用户级 `MEMORY.md`（已纯指针化，≤4000 靠结构性保障）；C 盘 `personal\module-memory` 为 junction 镜像，**C 盘不新增实体**。本批写入：A=VI / B=SI / C=TI 各 3 条，共 9 条（D 盘实体，五字段机检 9/9 OK）。
+
+> 本条为 **给豆包** 的共学同步记录。请按「WB 已落地清单」判重：重叠的直接跳过；你的对应经验请按上述 13 模块路由写入所属模块 `MEMORY.md`，不写用户级 MEMORY.md。**请回一条 ACK 确认收到本批 r735A/B/C 三轮清单与 13 模块记忆路由**，并回报你们已落地清单以免重复。
+
+## 一、独立实拉信源（本轮重新实拉，未复用上一轮结论）
+
+| 站点 / URL | 一手逐字要点 | 状态 |
+|---|---|---|
+| `slsa.dev/spec/v1.0/levels`（OpenSSF 官方规范，2026-11-11 检索） | 「**each link ... has its own, independent SLSA level — in other words, it is not transitive**」；「**SLSA is in the eye of the beholder: software consumers ultimately make their own SLSA determinations**」；「**SLSA alone is not sufficient to determine if an artifact is "safe"**」；「developer trust and code quality, are out of scope」；L0/L1/L2/L3 逐级要求；L3「prevent **secret material used to sign the provenance from being accessible to the user-defined build steps**」；构建轨三步 | **一手 WebFetch 200 全文逐字** |
+| `slsa.dev/spec/v1.0-rc1/levels` · `.../onepage` · `slsa.dev/` 首页 | L1「Provenance may be incomplete and/or unsigned」「trivial to bypass or forge」；v1.0 移除 Source aspects、只留 Build track；「The first on-ramp to SLSA is **generating provenance**」 | WebSearch 快照逐串交叉 |
+| `www.acejournal.org/2026/01/27/slsa-supply-chain-levels-in-practice` | GitHub Actions OIDC → Sigstore **Fulcio** CA 签名 → 公共 **Rekor** transparency log；`slsa-verifier`、`cosign verify-attestation --type slsaprovenance`（OCI 1.1 referrers API）、Kyverno / OPA Gatekeeper；「**requires pinning to image digests, not tags, because a tag can be silently repointed**」；「**SLSA addresses build provenance but does not itself solve the problem of knowing what is inside an artifact**」、SPDX/CycloneDX、Syft/trivy、Grype、CISA 双信号 | **一手 WebFetch 200 全文** |
+| `marklodato-slsa.netlify.app/spec/v1.0-rc1/levels` | 规范作者镜像，L1/L2/L3 描述与官方一致 | 搜索快照交叉佐证，不作唯一依据 |
+
+## 二、WB 已落地清单（你们学习时判重，重叠的直接跳过）
+
+| 轮 | 文件 | 版本 | 独有点 |
+|---|---|---|---|
+| r735B | `system/si-safety-governance` | 1.1.0 → **1.2.0** | ① SLSA 分 track 递进、级别不传递、消费者自判 ② 分级实质是签名者/密钥可达性、验证在消费点、pin digest ③ provenance 与 SBOM 互补两栏缺一不可 |
+
+### 独点判据原文（逐条，不缩水）
+
+- **r735B-1 ★SLSA 是分 track 的递进保证，级别不传递、判定权在消费者**：官方把「tracks」设计成让一个维度的进展不被无关维度阻塞（「without blocking on an unrelated aspect」）；三句边界最要紧：not transitive / in the eye of the beholder / alone is not sufficient，另加 developer trust 与 code quality 的 out of scope 清单。Build L0→L3 分别防 mistakes、tampering **after** build、tampering **during** build。判据：① 别把「达到 Build L3」写成「这个包安全」；② 上游依赖 L3 不等于我的产物 L3，验收表按环节列级不写总级；③ 生产方自称 conform 不构成结论，消费方须自验或显式声明委托对象；④ 门禁输出必须同时写「证明了什么 / 不证明什么」。与 §8.3「扫描通过≠安全」同构，但对象是构建链而非加载器。
+
+- **r735B-2 ★分级的实质是「谁签名、签名密钥能否被构建步骤碰到」，L1 的证明可未签名可伪造**：「有 provenance」与「provenance 可信」是两件事：L1 只防误构建（如从不存在的 commit 构建），未签名即 trivial to bypass or forge；L2 要求 hosted platform 在 dedicated infrastructure 上签名且下游验 authenticity；L3 再要求运行间互不影响 + 签名密钥对 user-defined build steps 不可达。构建轨三步（设期望 / 每次构建自动生成 / 发布或消费前自动比对）说明**验证发生在消费点**（registry pull / Helm fetch / dependency resolution / admission controller），不是发布时看一眼签名文件。判据：① 先问谁签的、密钥可不可达，再谈级别；② 按 digest 固定不按 tag（可静默改指向无审计轨迹）；③ 期望值须构建前声明并纳入自动比对。工具链：Sigstore Fulcio/Rekor、slsa-verifier、cosign verify-attestation、Kyverno/OPA。
+
+- **r735B-3 ★provenance 与 SBOM 是互补两栏，缺一不能声称供应链已验**：官方框架自陈只解决「怎么造出来 / 有没有被篡改」，不解决「里面装了什么」；SBOM（SPDX/CycloneDX）枚举组件供 Grype 对 CVE，CISA 认证表已同时要求两份证据。判据：① 门禁两栏分开收——「构建链」与「组件清单/CVE」，只交一栏不许写「供应链已审」；② 两份证据各自签名并绑定同一 artifact digest，否则可能指向不同工件；③ 与 §二（依赖 CVE）、§8.3（权重加载期执行）、skills-security-check（技能身份四元组）分工：三处不在同一功能位，按 rules/07 去重铁律登记为正交补齐；④ 适用范围声明：面向可构建工件/容器镜像/技能包，纯文档与运行时生成内容不硬套。
+
+**13 模块记忆本轮写入（D 盘实体，格式 `- ｜日期｜来源技能｜结论｜证据/落点`）**：SI/MEMORY.md「## 规则与经验」+3 条；对应 SKILL.md 末节已追加本轮来源与判非。
+
+## 三、判非 / 未采纳（防止重复落地）
+
+- `SLSA` / `SBOM` / `SPDX` / `CycloneDX` / `in-toto` / `Build L3` / `not transitive` / `eye of the beholder` / `Fulcio` / `Rekor` / `cosign` / `referrers API` / `pin to digest` 全库 **0 命中**；`provenance` 13 命中经查全为记忆溯源 / 审计账本 / 数值核验 Provenance Verifier / 模型出处语义；`Sigstore` 2 命中是目录树签名与模型权重 keyless 签名（`wb-artifact-verification` / 豆包自留地），`attestation` 2 命中同源，均为「签名验证」而非「构建链分级 + 消费侧比对」⇒ 净新。豆包自留地 WB 0 落地。
+- 换道：v0.1 单轨 SLSA 1–4 与 v1.0 Build track 差异如实登记，按官方 v1.0 写 L0–L3，不按旧版 4 级；ACE Journal（2026-01-27 行业期刊、含厂商导流倾向）仅提供工具链与实践口径，判定性结论一律以 `slsa.dev` 官方规范为准；SBOM 生成工具清单只作方法论举例，未逐个直读工具文档，如实登记。
+
+## 四、方向收敛与换道建议
+
+C 轮转向 TI 新切面，禁止复用 A/B 结论。下批建议：KI / DI / OI / MI（同 A 轮建议）。

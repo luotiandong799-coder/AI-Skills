@@ -2,7 +2,7 @@
 name: wb-agent-evaluation
 description: >-
   Agent 评估能力：让 Agent 不仅完成任务，还能判断自己完成得好不好。覆盖 Agent Trace（执行轨迹）、Observability（可观测性）、过程评估、结果评估、LLM-as-a-Judge、指标设计。核心产出：对真实 WB 任务复盘，区分「结果问题」与「执行过程问题」，并证明优化有效。当用户要求复盘一次 Agent 执行、评估某个技能/工具选择是否正确、检查是否存在无效步骤或未验证结论、设计评估指标时使用。触发词：复盘、评估这次执行、做得好不好、过程评估、结果评估、执行轨迹、LLM 评委、LLM-as-a-Judge、指标设计、trace 分析、无效步骤、未验证结论、优化有效吗、评测口径。不适用：单次任务的排障（走 wb-debug-loop）、生成物验证（走 wb-artifact-verification）。、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、online perturbations、execution failures、task interruptions、mission updates、skill-level interface、干净回合基线、适配收益随长度递减、framework_issue、foreign workflow read、harness 泄漏不算 agent 失败、仍计入 pass rate、failed calls do not count、超时优先、harnessFault、过度自信失败、不确定性不是正确性代理、accepted-set 准确率、预算对照、可比预算下报告、架构结论依赖预算、机械验证优先、LLM judge 替代路径、授权动作降级为交互即验收失败、凭据有效≠连接可用、版本漂移、三态归因
-version: 1.155.0
+version: 1.156.0
 module: VI
 modules: VI
 ---
@@ -273,3 +273,25 @@ modules: VI
 
 ## r711B 下沉条目（1 点，KB-only：误判经济学＝指标从失败成本选+混淆矩阵早做+错误分析六步闭环+晋升门槛 fail closed+迭代台账槽位）（原文在 references/knowledge-base.md）
 ## r712C 下沉条目（1 点，KB-only：评审独立性靠"各自定稿再汇总"的流程 + 同源即相关误差要披露 + 校准需金标准集与 FNR/FPR/balanced accuracy + 无法核验的写 unverified 不许称独立）（原文在 references/knowledge-base.md）
+
+## 九、实验可信度先验门：样本比例失配 SRM（2026-11-11 r735A 实拉，3 独点）
+
+> 定位：本组管「**这次评测/对照有没有资格被解读**」，是读任何指标之前的一道前置门；与既有 §评测口径/§指标收敛为数值（怎么判分）、§r711B 误判经济学（失败成本选指标）、§r712C 评审独立性（judge 校准）分工——那几条管结果怎么算，本条管数据流本身是否可信。SRM 不过，后面所有分数都是精加工过的噪声。
+
+### 9.1（r735A-1）SRM 是症状不是病因；检测到就必须先定位根因，不能"忽略继续读数"
+- **原文**（Microsoft Research KDD 2019《Diagnosing Sample Ratio Mismatch in Online Controlled Experiments: A Taxonomy and Rules of Thumb for Practitioners》，Fabijan 等，一手 WebFetch 200 全文）：「**Just like fever is a symptom for multiple types of illness, an SRM is a symptom for a variety of data quality issues.**」；「A simple statistical check is used to detect an SRM, **correctly identifying the root cause and preventing it from happening in the future is often extremely challenging and time consuming**」；「**Ignoring the SRM without knowing the root cause may result in a bad product modification appearing to be good and getting shipped to users, or vice versa.**」；论文基于「four different software companies in over 25 different products used by hundreds of millions of users」归纳出 SRM 分类法。Tessl `ab-test-validity-checklist`（一手 WebFetch 200 全文）：「if the observed allocation ... deviates significantly from intended ..., the experiment is **invalid until root cause is found**」「**If SRM is detected: stop ship discussion; root-cause first**」，并给出 5 类根因（Logging bugs / Bot filtering 分臂不一致 / Redirects / Telemetry drops / Randomisation bugs·hash collisions）。
+- **判据**：① **SRM 检验是"能不能读结果"的准入，不是"结果好不好"的一项指标**——观测到分流偏离预期时，第一动作是停读数、查分流/日志/过滤链，不是去看 OEC 涨没涨；② 结论栏必须写「SRM p 值 + 通过与否」，缺这一项不许写「A 优于 B」；③ **"没找到根因但指标很漂亮"是最危险的组合**（论文原话：坏改动可能显得好并被上线），漂亮结果反而要先当 bug 查（与既有 Twyman's Law 同向但落点是分流而非量级）；④ 与 §agent 12 层栈诊断分工：那条排"生成侧"故障，本条排"采样/分配侧"故障，二者可同时命中。
+
+### 9.2（r735A-2）阈值按功效选 p<0.0001，且检测力随 N 缩放；只跑整体一次会漏掉分维度失配
+- **原文**（Tessl 一手全文）：「**p < 0.0001 is the canonical SRM-detection boundary** (the chi-square is super-sensitive at large N; this threshold prevents false-positive SRM alarms)」；χ²=Σ((observed−expected)²/expected)，示例 N=1e6、503k/497k ⇒ χ²=36、p<0.0001；Kohavi 书 + Microsoft 实践给出 guardrail 表（Quality/Engagement/Revenue/Trust 四类），「Percentage-only thresholds on fast endpoints are a trap - use **max(%, absolute)**」。BuildWithAIToday（一手 WebFetch 200 全文）：「chi2 = (n_ctrl − n_trt)² / N」，「For N=100,000 and a 1% imbalance ... chi2 = 10 ... For N=10,000 and the same 1%, chi2 = 1.0, not significant. **So SRM detection scales with N: tiny bugs become detectable at large scales**」；「**Dimensional SRM can mask overall balance** — 10% of US mobile users lost from treatment offset by a 10% gain in control-side desktop users, the overall ratio looks fine but both segments are compromised」；Facebook/Microsoft 的做法是「hundreds of stratified chi-squared tests」；并给出在 10%/50%/100% 计划样本处各跑一次的检查点。
+- **判据**：① **不要用 0.05 当 SRM 阈值**——大 N 下卡方过敏，0.05 会把无数正常波动判成故障，0.0001/0.001 才是实践口径（BuildWithAIToday 用 α=0.001、Tessl 用 p<0.0001，二者都是"远严于 0.05"，记为同族不同档）；② **同样的 1% 偏差，N=1万查不出、N=10万就能查出** ⇒ 报「SRM 未检出」必须同时报 N 和阈值，小样本"没检出"不构成可信证明；③ **必须分维度跑**（country/device/new-vs-returning/day），整体比例合格不能替代分段检查，两段各自污染可以互相抵消；④ guardrail 阈值用 `max(百分比, 绝对值)` 双下限，纯百分比在快端点上形同虚设；⑤ 检查点前置到 10% 样本，早发现省整轮流量。
+
+### 9.3（r735A-3）SRM 不能靠重加权"修"回来；唯一可靠动作是修 bug 后重跑
+- **原文**（BuildWithAIToday 一手全文「Why results from SRM experiments cannot be simply reweighted」）：「A natural instinct when SRM is detected is to **reweight** the two arms to the intended 50/50 ratio using inverse probability weighting (IPW). **This is invalid unless you know the exact selection mechanism**」；「If the selection is non-random and correlated with the outcome ... IPW reweighting will produce a **biased estimate with no guarantee of the direction or magnitude of bias**」；「**The correct remedy is to identify the bug, fix it, and re-run with the corrected logging**」；例外仅当「identify the exact set of users dropped (e.g., a bot filter log exists), **reconstruct the full intention-to-treat population**, and run an ITT analysis」，且「**pre-register this recovery analysis before looking at outcomes**」。Scaledojo（搜索快照交叉）：「When it fails, **the results cannot be trusted, whatever they say**」；并给出 launch decision 须同时过 SRM 门与 guardrail 门。
+- **判据**：① **"加权后显著"不是修复，是把未知选择偏差折进估计**——除非能点名被丢弃的确切用户集合并重建 ITT 全样本，否则一律不做统计补救；② 补救分析必须**预注册**（先看结果再挑补救法＝挑 p 值）；③ **SRM 实验的正确产出是根因 + 修复 + 重跑**，不是一份"调整后的结论"；④ 与 §r709B 目标环境验收四态分工：那条管「本地绿≠目标可用」，本条管「采样被污染⇒本轮数据整体不可采信」，是更强的整体否决；⑤ 与既有 §评测产物落盘契约衔接：SRM 判定、N、阈值、分维度结果须一并落盘，便于复盘时证明这轮结论确实是"读过门"的。
+
+### 本轮来源（2026-11-11 r735A 实拉）
+- `microsoft.com/en-us/research/publication/diagnosing-sample-ratio-mismatch-in-online-controlled-experiments/` — KDD 2019 Fabijan et al.，一手 WebFetch 200 全文摘要（SRM 症状隐喻、根因难定位、忽略根因的双向误判、4 公司 25 产品经验）。
+- `tessl.io/registry/testland/ab-test-validity-checklist/1.1.13/files` — 一手 WebFetch 200 全文（Kohavi/Tang/Xu《Trustworthy Online Controlled Experiments》ISBN 978-1108724265 引用、p<0.0001 边界、χ² 公式与算例、5 类根因、guardrail 表与双下限、pre/post 两次 SRM 门、Twyman/novelty/segment 稳定性）。
+- `buildwithaitoday.com/track/experiment-design/learn/exd-sample_ratio_mismatch` — 一手 WebFetch 200 全文（χ²=(n_ctrl−n_trt)²/N、N 缩放算例、分维度掩盖、IPW 无效性、ITT 例外与预注册、10/50/100% 检查点）。
+- `scaledojo.dev/genai/learn/ml-serving-and-monitoring/online-experiments-for-ml-systems`、`codecide.net/apps/abs/resources/unequal-allocation-ratios-in-a-b-testing`、`github.com/BlackRaptorAI-Labs/.../experimentation/SKILL.md` — 搜索快照交叉佐证（SRM 作 guardrail、有意不等比例须在实验规格里预声明、Microsoft 约 6% 成熟实验出现 SRM）。**厂商/教程站立场已标注，结论一律经上述一手源交叉后采用。**
