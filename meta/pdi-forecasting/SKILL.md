@@ -3,7 +3,7 @@ name: meta/pdi-forecasting
 description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议。
 module: PDI
 modules: PDI,TI,DI
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -146,3 +146,26 @@ Brier 分数只是一个数，分解才知道**错在哪**，避免修错方向�
 - lifeofresearch.com/preprints/133/files/136/calibrated-is-not-informative.pdf（预印本；binned ECE 有偏、Roelofs 2022 等质量箱/去偏、Kumar 2019、Nixon 2019 排名随度量变、Blasiok 2023 ECE 非连续、分布漂移 Ovadia 2019；WebSearch 结果全文，逐串命中）
 - metricgate.com/blogs/predictive-uncertainty-calibration-methods/（交叉佐证：ECE/MCE/Brier 三者并用、子群漂移 overall ECE 0.01 可藏 0.15、Platt/isotonic 不改 AUC、堆叠校准两次会劣化；WebSearch 结果全文）
 - 判非：`ECE` 全库 46 命中经词边界复核仅 6 文件且为 `recent` 等子串噪声；`vi-fact-verification` L96、`00_AI智慧进化研究主线` 的 AUROC/ECE、`wb-agent-evaluation` KB 的 isotonic vs temperature scaling 均属不同命题；`sharpness` / `温度缩放` 命中在豆包自留地 KB（上下文卫生 / 评测阈值诊断），WB 0 落地。
+
+
+## 十、预测对象形态决定评分规则：从二元事件到分位／区间／全分布／多变量（2026-11-11 r734A 实拉，四独立域交叉）
+
+> 与 §七（Brier 三分解／可靠性图）、§八（ECE 三缺陷／重校准）分工：那两节全在处理**二元事件的点概率**；本节处理**预测对象本身是什么形状**——分位数、区间、完整分布、多变量场景各需要不同的尺，且这些尺是同一族的不同投影，不是彼此独立的指标。
+
+- **r734A-1 ★先声明预测对象，再选评分规则；拿 Brier 评区间预测是范畴错误**：MDPI《Recent Advances in Probabilistic Electricity Price Forecasting》§6.7 逐字给出按形态的尺表——"**Quantile forecasts** should primarily be evaluated using the pinball loss or the CRPS approximated from quantiles"／"**Prediction intervals** should be assessed using both coverage and sharpness information"／"**Full marginal predictive distributions** are naturally evaluated using CRPS"／"**Multivariate scenarios** require multivariate scores, such as the energy score or variogram score"；二元事件才是 "the Brier Score is a natural evaluation metric"。且四把尺并非并列发明：arXiv 2609.37273 EC.2.2 逐字 "The CRPS is therefore the **integral of the so-called Brier scores** for the associated binary probability forecasts at all real-valued thresholds"、"S(P̂,y) = 2∫₀¹ ℓᵤ(y,Q(u))du"（CRPS = 所有分位 pinball loss 的平均）、"The interval score defined here is **the sum of the pinball losses at its two endpoint quantile levels**: Sα([L,U],y)=ℓ_{α/2}(y,L)+ℓ_{1−α/2}(y,U)"；"CRPS aggregates quantile performance across all quantile levels, whereas the interval score samples that same quantile-based scoring idea at only two levels"。判据：① 预测台账先登记「本次输出是事件概率／单点分位／区间／CDF／场景向量」，再登记用哪把尺；② 只评一个分位数（如 P90）的 pinball loss 不能用来宣称「整个分布更好」；③ 给区间或连续量套 Brier/ECE 属于把二元事件的尺误用到别的对象上，与 §8.1「ECE=0 不等于判断有用」是两类错误。
+
+- **r734A-2 ★coverage 与 width 必须作为联合约束，且只有 proper interval score 能把两者折成一个数**：MDPI §6.2 逐字 "A calibrated interval should have PICPα ≈ 1−α. Nevertheless, **interval coverage should not be interpreted separately from interval width. A model can achieve nominal coverage by producing excessively wide intervals**"；"PIAW and its normalized version, PINAW, **reward narrow intervals regardless of whether the empirical coverage is adequate**. Therefore, they are best interpreted jointly with PICP and, preferably, with a proper interval score"；Winkler 分数式 (6) `ISα(L,U;y) = (U−L) + (2/α)(L−y)1{y<L} + (2/α)(y−U)1{y>U}`——"This score **rewards narrow intervals but penalizes observations that fall outside the interval**, with larger penalties for more severe violations. It is therefore consistent with the calibration-sharpness principle"。temporalcv 官方文档逐字同式并标注 "Reference: **Gneiting & Raftery (2007, equation 43)**"、"Alias for compute_interval_score(). **Winkler (1972)** is the original formulation"、CRPS = `E|X−y| − 0.5·E|X−X′|`。判据：① 只报「95% 区间覆盖率 94.8%」等于允许无限宽区间刷满，必须同时报平均宽度与 IS；② PIT 直方图近似均匀只诊断**边际**校准（MDPI §6.5 "average scores may hide systematic failures during specific hours, price regimes or high-renewable periods"），不评依赖结构；③ AWD 是诊断量不是评分规则，不能拿来排名模型。
+
+- **r734A-3 ★分数差要做显著性检验，且统计分数改进不等于决策价值**：MDPI §6.6 逐字 "Forecast comparisons should **not rely only on differences in average scores**. Since electricity prices are serially dependent ... apparent improvements may be driven by sampling variability"；给出 Diebold–Mariano（`DM = d̄ / sqrt(σ̂²_d/T)`）、Giacomini–White 条件预测能力检验（`H₀: E[g_t]=0`，`g_t=z_t·d_t`），多模型并列时 "pairwise testing can lead to multiple-testing problems. In such cases, researchers may use **model confidence set** procedures"；§6.7 又给出两条边界——"**CRPS is scale-dependent** and does not assess cross-hour or cross-market dependence. Therefore, comparisons across markets with different price levels or volatility should be interpreted carefully"、"**a statistically superior probabilistic forecast does not always imply higher decision value**"，须报完整 forecast-to-decision 链。判据：① 宣称「新版比旧版好」必须附分数差检验与所用尺，不能只比两个平均数；② 跨题目集／跨波动期比原始 CRPS 无意义（与 §7.2「跨题目集比原始 BS 无意义」同构，但那是 UNC，这是尺度与依赖）；③ 预测台账的「结算」栏须包含「尺 + 差检验 + 决策映射」三项，缺任一不许写「预测能力已提升」。
+
+**提升层**：工作流（预测台账与结算协议）+ 可复用 Skill。触发词：评分对象形态、CRPS、pinball loss、Winkler／interval score、PICP/PINAW、energy score、variogram score、PIT、Diebold–Mariano、Giacomini–White、model confidence set、scale-dependent、forecast-to-decision。
+
+**判非（本轮独立机检，登记不落地）**：`CRPS`／`pinball`／`Winkler`／`interval score`／`PICP`／`energy score`／`variogram`／`Diebold-Mariano`／`Giacomini-White`／`model confidence set` 全库 SKILL.md **0 命中**；`PIT` 11 命中经查为 `pit`/`pivot` 等子串与其他命题，非 PIT 直方图；§7 的 Murphy 分解、§8 的 ECE 分箱均属点概率层，本节不重立论；MDPI 综述中 QRA／conformal／normalizing flows 等**建模方法**族不属 PDI 评分规则，不搬。arXiv PDF 与 MIT 系 PDF 的 WebFetch 二进制拒绝如实登记（见下来源），未冒充一手全文直读。
+
+### 2026-11-11 r734A 增补来源（逐字核验，四独立域交叉）
+
+- `www.mdpi.com/1996-1073/19/15/3552`（Energies 2026, 19(15), 3552, Dudek/Piotrowski/Kopyt/Baczyński；WebFetch 200 全文 87,081 字符，§6.1–6.7 逐字：pinball 式(1)、PICP 式(4)、PIAW 式(5)、Winkler IS 式(6)、CRPS 式(8)(9)(10)、energy/variogram 式(11)–(13)、PIT、DM 式(15)、GW 式(17)、§6.7 按形态选尺清单）
+- `arxiv.org/pdf/2609.37273`《When Stress Tests Miss the Risk》EC.2.2（**WebFetch 返回 application/pdf 二进制被丢弃**；改由 WebSearch 快照 + `ar5iv.labs.arxiv.org/html/2609.37273` 交叉，逐串命中 strictly proper 定义、CRPS=阈值 Brier 积分、CRPS=全分位 pinball 平均、IS=两端点 pinball 之和；ar5iv 可见正文在 §5.2 处截断、EC.2.2 未取到，如实登记不冒充全文）
+- `temporalcv.readthedocs.io/en/stable/api/metrics.html`（WebFetch 200 逐字：`L(y,q;τ)=τ·max(y−q,0)+(1−τ)·max(q−y,0)`、`CRPS=E|X−y|−0.5·E|X−X′|`、`IS=(u−l)+(2/α)(l−y)I(y<l)+(2/α)(y−u)I(y>u)`、"A well-calibrated narrow interval scores better than a wide one"、Gneiting & Raftery (2007, eq.43) / Winkler (1972) / Koenker & Bassett (1978)）
+- `www.mdpi.com/1996-1073/14/6/1679/html`（Energies 2021, 14(6), 1679；WebSearch 快照：IS/QS/IGN/CRPS 分解、reliability/resolution/sharpness 三分、PIT 直方图 "cannot be considered a decisive attribute to compare different models"）
+- `umatechnology.org/probabilistic-forecasting-learning-uncertainty`（WebSearch 快照：coverage 与 sharpness 定义、"Two models may both achieve 90% coverage, but one may produce intervals that are half as wide"、评分须按 horizon 与 subgroup 分报、预测与过高／过低代价对齐）
