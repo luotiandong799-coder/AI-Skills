@@ -1,6 +1,6 @@
 ---
 name: agent-evolution
-version: "1.6.0"
+version: "1.7.0"
 description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。
 license: MIT
 metadata:
@@ -294,3 +294,30 @@ PracHub 逐字："Another miss is jumping straight to a 50% A/B after 'good' off
 - 既有 §15（漂移门 / 基线对照 / 双阈值）与 §16（bandit vs A/B / 探索预算 / 三失效条件）全部落在**在线改与在线验收**；本轮三点是**不部署能否评估、日志要记什么、离线与灰度的先后**，属不同层，结论不复用。
 - 豆包自留地 0 落地；A 轮 OI、B 轮 DI 结论一律不复用；r732/r731/r717/r715 各轮结论不复用。
 - 换道：Vowpal Wabbit 命令参数族、逐估计器公式推导属易漂移工具细节，只取可迁移判据不作落地；GeekChamp 页面含 Outbyte 广告插入、PracHub 为面试向内容站，均如实登记立场，结论一律与 neuralmasteryai 的可运行代码/数值例交叉后才采纳。
+
+
+## 十七、序贯检验与随时有效推断（2026-11-11 r737B 实拉，≥2 独立域一手交叉）
+
+### r737B-1 ★固定视界检验只允许「读一次」，边跑边看边改=假阳性膨胀
+
+t/z 检验的 α 只在预设样本量那一次成立（Statsig 逐字「you read the metrics once, after you reach that target sample size」）；连续监控每次提前决策都是一次额外的拒绝机会，指标与 p 值随噪声进出显著区，「early decisions can only increase the false positive rate, even when you intend to make a less biased decision」。⇒ 自适应策略「看到提升就改版」若没有 anytime-valid 推断，等于把噪声峰固化成策略改进；验收协议必须先写明「读数时刻是预设一次，还是允许的监控节奏」。
+
+### r737B-2 ★随时有效是可报价的交易，不是免费的停止权
+
+mSPRT 以 Λ_t>1/α 保证「probability of ever falsely rejecting ≤α, regardless of how many times you inspect」；置信序列要求 P(∀t: θ∈C_t)≥1−α 同时覆盖所有时刻，代价是区间更宽（Adobe 逐字「更保守」「界限通常比信賴區間計算更寬」；MetricGate 典型比 1.1–1.5、小样本实例 5.065）且小效应需多 20–40% 观测才达同等 power。⇒ 「能随时停」必须用更宽区间 + 更多样本换；τ 必须**实验前**固定（事后按数据调 τ 抬 I 类错误）；结论报最终置信序列而非二元拒绝，「Do not lower alpha post hoc」。与 §16.2 分工：那条管探索预算怎么分配，本条管停止时刻的统计有效性。
+
+### r737B-3 ★随时有效只管停止时刻，不管设计缺陷、多指标与效应量精度
+
+mSPRT 不控制跨指标 family-wise error（Adobe 对两个以上处理用 Bonferroni 补）；早停显著「doesn't guarantee enough power to detect regressions in other metrics」；早停给的是欠功效的 lift 估计，要准确效应量必须等满预设 power；anytime-valid 修不了非随机分配、错误分母、曝光错配、SRM、指标切换、结果成熟度不足（ABLabz 逐字），更不能用 1 日转化的序列宣称 30 日留存。⇒ 越过停止边界前先过数据质量门（SRM / 曝光日志 / 身份变更 / 事件完整性），快速安全监控与长期有效性指标拆成两套具名程序；与 §17 分工：那条管离线过滤→灰度→全量的部署链，本条管读数链的停止规则。
+
+**提升层**：PI 输入保真 / AI 验收协议 / PDI 结算台账（按轮）。触发词：peeking、fixed horizon、always-valid、confidence sequence、mSPRT、1/α、τ 事先固定、family-wise error、早停效应量。
+
+### r737B 来源与判非（逐字核验）
+
+- `docs.statsig.com/experiments/advanced-setup/sequential-testing`（Statsig 官方，WebFetch 200 全文逐字）：「Traditional A/B tests (t-tests and z-tests) are fixed-horizon tests. When you design the experiment, you set the number of units to observe, and you read the metrics once, after you reach that target sample size.」；「Continuous monitoring of an experiment, or peeking, inflates the false positive rate above the significance level you chose.」；「In frequentist procedures, early decisions can only increase the false positive rate, even when you intend to make a less biased decision.」；「an early significant result on some metrics doesn't guarantee enough power to detect regressions in other metrics」；「Early decisions often produce underpowered lift estimates with high uncertainty … If you need an accurate measurement of the effect size, wait for the full power」；mSPRT 用 Zhao et al. arXiv 1905.10493，逐字展开 Z*_{α/2}、τ、σ 与 p-value* 公式。**一手官方全文逐字**
+- `experienceleague.adobe.com/zh-hant/docs/journey-optimizer/.../experiment-calculations`（Adobe 官方，最后更新 2026-10-08，WebFetch 200 全文逐字）：「信賴序列是信賴區間的循序類比」「每個實驗只能計算一次95%信賴區間，以提供相同的95%覆蓋率保證；而不是針對每個新使用者」「信賴序列可讓您持續監視實驗，而不會增加『誤判為真』的錯誤率」；「有了信賴序列，您可以隨時檢視和解讀實驗中的資料，並安全地停止或繼續實驗」；「信賴序列會比固定水平線方法更保守。信賴序列的界限通常比信賴區間計算更寬」；两个以上处理「Bonferroni 更正…控制以系列為基礎的錯誤率」；「統計顯著性…不是成功的可能性」。**一手官方中文全文逐字（第二独立域）**
+- `metricgate.com/docs/sequential-testing-always-valid/`（WebFetch 200 全文逐字）：「A confidence sequence is a sequence of intervals such that with probability at least 1 − alpha, every interval simultaneously covers the true parameter.」；mSPRT「Reject when Λ_t > 1/α. This threshold guarantees that the probability of ever falsely rejecting is at most alpha, regardless of how many times you inspect the data.」；「The ratio of confidence sequence width to fixed-horizon interval width typically falls between 1.1 and 1.5 at the planned sample size」（mtcars 实例 5.065）；Limitations 逐字「require 20 to 40 percent more observations」「Tau must be chosen before the experiment; tuning it to observed data inflates type I error」「The mSPRT does not control family-wise error across multiple metrics」；「Do not lower alpha post hoc」「Report the final confidence sequence as the summary of evidence rather than a binary decision」。**工具文档一手逐字（第三独立域）**
+- `ab-labz.com/glossary/experiment-design/always-valid-inference`（WebSearch 快照逐字）：「P_H0(there exists t such that p_t ≤ α) ≤ α」「It is stronger than saying P(p_T ≤ α) ≤ α for one fixed, preselected T」；「'Always valid' does not mean always useful, always precise, or immune to bad experimentation」；「It does not fix nonrandom assignment, an incorrect denominator, users exposed to the wrong experience, interference, metric switching」；「Inspect sample ratio mismatch, exposure logging, identity changes, and event completeness before acting on a boundary」「Continuous monitoring can quickly detect harm, but it can also quickly act on a tracking outage」；「A confidence sequence for one-day conversion cannot justify a claim about 30-day retention」。**独立术语站交叉（含实验设计前置清单）**
+
+- **判非**：窄串词边界全库 SKILL.md：`peeking` / `always-valid` / `confidence sequence` / `mSPRT` / `family-wise` **全 0 命中**；`Bonferroni` 唯一命中在 `research/wb-experiment-design`（一般多重比较校正，无 anytime-valid 机制）；`bootstrap` 10 命中均为重采样取区间，无停止规则语义。与既有三节正交：§15 管「何时改（漂移门）」、§16 管「流量怎么分配（bandit vs A/B）」、r733C §十七 管「不部署怎么评估（OPE）」；本轮管「何时可以停」。豆包自留地 WB 0 落地。
+- **换道/未采纳**：换道：Statsig 的 Z*_{α/2} / τ / σ 闭式解、MetricGate 的 mtcars 具体数值属厂商实现细节，只取可迁移判据不作公式搬运；Adobe 的「宣告实验为有结论」产品行为不搬；r735A 的 SRM 已由 VI 模块落地，本轮仅把它列为数据质量门的一项，不重复立论。A/C 两轮结论一律不复用。

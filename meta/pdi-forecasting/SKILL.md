@@ -3,7 +3,7 @@ name: meta/pdi-forecasting
 description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议。
 module: PDI
 modules: PDI,TI,DI
-version: "1.4.0"
+version: "1.5.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -169,3 +169,31 @@ Brier 分数只是一个数，分解才知道**错在哪**，避免修错方向�
 - `temporalcv.readthedocs.io/en/stable/api/metrics.html`（WebFetch 200 逐字：`L(y,q;τ)=τ·max(y−q,0)+(1−τ)·max(q−y,0)`、`CRPS=E|X−y|−0.5·E|X−X′|`、`IS=(u−l)+(2/α)(l−y)I(y<l)+(2/α)(y−u)I(y>u)`、"A well-calibrated narrow interval scores better than a wide one"、Gneiting & Raftery (2007, eq.43) / Winkler (1972) / Koenker & Bassett (1978)）
 - `www.mdpi.com/1996-1073/14/6/1679/html`（Energies 2021, 14(6), 1679；WebSearch 快照：IS/QS/IGN/CRPS 分解、reliability/resolution/sharpness 三分、PIT 直方图 "cannot be considered a decisive attribute to compare different models"）
 - `umatechnology.org/probabilistic-forecasting-learning-uncertainty`（WebSearch 快照：coverage 与 sharpness 定义、"Two models may both achieve 90% coverage, but one may produce intervals that are half as wide"、评分须按 horizon 与 subgroup 分报、预测与过高／过低代价对齐）
+
+
+## 十一、边际覆盖与条件覆盖不可兼得（2026-11-11 r737C 实拉，≥2 独立域一手交叉）
+
+### r737C-1 ★「90% 覆盖」默认是边际覆盖，不是「每个 x / 每个子群都 90%」
+
+conformal 只承诺 P(Y_{n+1}∈Ĉ(X_{n+1})) ≥ 1−α（对随机测试点平均）；条件覆盖 P(Y∈Ĉ(X)|X=x)=1−α 是更强要求，且 (2)⇒(1) 反之不成立。JRSSB 逐字：无分布假设 / 有限样本有效 / 条件覆盖三者「impossible to obtain all three … simultaneously (Barber et al., 2020; Vovk, 2012)」，conformal 是主动「relaxes the third criterion to the marginal coverage guarantee」。Springer Theorem 1 明写靠 **exchangeability** 证明，连续分数下还有上界 1−α+1/(n+1)。⇒ 结算栏必须写「保证类型 = 边际」，并声明 exchangeability 前提（时序/分布漂移下保证不自动成立）；禁止把平均有效讲成人人有效。
+
+### r737C-2 ★精确条件覆盖不可得，实务折中是「预先声明关心的有限维平移族」
+
+JRSSB 2025 把条件覆盖改写成「一族协变量 shift 上的覆盖」：目标类有限维时可「simultaneously obtain exact finite-sample coverage over all possible shifts」（例如每个**预指定**子群都精确覆盖），无限维类只能「quantifying the coverage errors」并用超参控制误差；ASA JSM 摘要同源佐证「impossible to form non-vacuous prediction intervals that give valid conditional coverage in finite samples」。⇒ 预测区间必须随附「保证的是哪一类覆盖、覆盖哪些预声明子群、gap 上界多少」；与 §十 r734A 的 PICP≈1−α 分工：那条讲覆盖率与宽度要联合约束（防无限宽刷分），本条讲这个覆盖率数字的作用域。
+
+### r737C-3 ★边际有效掩盖高风险子群，且往往不知道该查哪个子群
+
+JRSSB「Marginal validity does not preclude substantial variation in coverage among relevant subpopulations」；NeurIPS 2023 ImageNet 实例：名义 90% 下整体 89.8%，water jug 类仅 **50.8%**、flamingo **99.2%**；Springer 举末期患者被 undercover、少数族裔风险被误估，并逐字「oftentimes we do not have prior knowledge that what subpopulations may be at stake, or do not have access to the sensitive attribute information」（Fairness under unawareness）。⇒ 高风险预测必须分子群报覆盖 + 显式列出「未核验的子群」；仅报一个总覆盖率等于把最脆弱的那部分藏进平均数。
+
+**提升层**：PI 输入保真 / AI 验收协议 / PDI 结算台账（按轮）。触发词：边际覆盖、条件覆盖、exchangeability、covariate shift、coverage gap、子群覆盖、PICP 作用域。
+
+### r737C 来源与判非（逐字核验）
+
+- `academic.oup.com/jrsssb/article-abstract/87/4/1100/8058684`（JRSSB 2025, 87(4) 1100–1126, Gibbs/Cherian/Candès《Conformal prediction with conditional guarantees》，WebFetch 200 摘要+引言逐字）：「Prior work has shown that it is impossible to provide exact conditional coverage universally in finite samples.」；三目标逐字「(1) make no assumptions on the underlying data-generating mechanism, (2) be valid in finite samples, and (3) satisfy the conditional coverage guarantee … Unfortunately, prior work has shown that is impossible to obtain all three of these conditions simultaneously (Barber et al., 2020; Vovk, 2012).」；「conformal prediction, which relaxes the third criterion to the marginal coverage guarantee」；「Marginal validity does not preclude substantial variation in coverage among relevant subpopulations.」；「When the target class of shifts is finite-dimensional, we show how to simultaneously obtain exact finite-sample coverage over all possible shifts. For example, given a collection of subgroups, our prediction sets guarantee coverage over each group.」；无限维类「quantifying the coverage errors」+ 可调超参。**一手期刊官方全文逐字**
+- `link.springer.com/10.1007/s10994-024-06627-7`（Machine Learning《Adjusting regression models for conditional uncertainty calibration》，WebFetch 200 全文逐字）：「Conformal Prediction methods have finite-sample distributional-free marginal coverage guarantees. However, they generally do not offer conditional coverage guarantees, which can be important for high-stakes decisions.」；Theorem 1「We can prove that C(·) satisfies the marginal coverage guarantee by exchangability」，连续分数时「P(Y_{n+1}∈C(X_{n+1})) ≤ 1−α + 1/(n+1)」；「marginal coverage does not guarantee predictive sets with valid coverage for certain subgroups, especially for rare events or minorities」；「significantly undercover end-stage patients in survival year estimation, or misestimate the risk of minorities in tasks like recidivism prediction」；「oftentimes we do not have prior knowledge that what subpopulations may be at stake, or do not have access to the sensitive attribute information (Chen et al., 2019)」。**一手期刊官方全文逐字（第二独立域）**
+- `papers.nips.cc/paper_files/paper/2023/file/cb931eddd563f8d473c355518ce8601c-Paper-Conference.pdf`（NeurIPS 2023《Class-Conditional Conformal Prediction with Many Classes》，WebSearch 快照逐字）：ImageNet 实例「Running STANDARD using a nominal coverage level of 90% on 50,000 examples … yields prediction sets that achieve very close to the correct marginal coverage (89.8%). However, this marginal coverage is achieved by substantially undercovering some classes and overcovering others. For example, water jug … only include it in 50.8% of the cases … flamingo … 99.2%」；形式化「class-conditional coverage: P(Y_test ∈ C(X_test) | Y_test = y) ≥ 1 − α, for all y」，且「(2) implies (1)」。**学术一手交叉（PDF 未全文直取，仅快照数值）**
+- `ww2.amstat.org/meetings/jsm/2023/onlineprogram/abstract.cfm?sid=3157&tid=3157-p3`（ASA JSM 2023 摘要，WebSearch 快照逐字）：「In general, it is impossible to form non-vacuous prediction intervals that give valid conditional coverage in finite samples. Thus, popular predictive inference methods only provide marginal coverage over the covariates.」；同一组作者给出「coverage over a class of covariate shifts」的折中路径与「exact coverage over each group」。**独立学会摘要交叉**
+- `econstor.eu/bitstream/10419/308058/1/1913045811.pdf`《An Introduction to Conformal Inference for Economists》：**WebFetch 返回 Anubis 反机器人验证页，正文未取到**；WebSearch 快照含 Proposition 1（Lei et al. 2018 / Foygel Barber et al. 2021）与 exchangeability 论证，但按先例**不冒充一手全文直读**，本轮仅作现象登记，结论一律由 JRSSB + Springer 两篇一手交叉支撑。**访问受阻，如实登记不采纳**
+
+- **判非**：窄串词边界全库 SKILL.md：`marginal coverage` / `conditional coverage` / `exchangeability` / `calibration set` / `undercover` **全 0 命中**；`conformal` 唯一命中在本技能 §十 r734A 的**判非段**（明确写「QRA／conformal／normalizing flows 等**建模方法**族不属 PDI 评分规则，不搬」）。本轮不引入任何建模方法/算法流程，只取**统计保证的验收语义**（覆盖类型、三目标不可兼得、exchangeability 前提、子群 gap），与 r734A 判非不冲突且正好补齐其留下的元层；与 §十 的 PICP/PINAW/IS 分工：那节是「怎么打分」，本节是「这个分数保证不了什么」。豆包自留地 WB 0 落地。
+- **换道/未采纳**：换道：clustered conformal / CLASSWISE / normalized conformal 等**生成预测集的算法族**按 r734A 判非一律不搬；econstor PDF 被 Anubis 反爬拦截，其 Proposition 1 仅作 WebSearch 快照登记、不冒充一手全文；Springer 的端到端训练改条件校准方案属建模方法，不采纳。A/B 两轮结论一律不复用。
