@@ -2,7 +2,7 @@
 name: personal-ai-employees
 description: >-
   个人 AI 员工体系（8 岗）总路由与五步执行协议。把用户目标自动分派给 8 个专职 AI 员工（战略顾问/供应链专家/职业发展顾问/销售顾问/学习教练/信息分析师/自动化工程师/知识管理专家），每岗统一走「任务分析→执行方案→输出结果→复盘优化→Skill沉淀」，并复用 personal-ai-os 与现有 wb-* / 专家技能，不新建重复能力。触发词：个人AI员工、AI员工体系、AI战略顾问、AI供应链、AI职业发展、AI销售顾问、AI学习教练、AI信息分析、AI自动化工程师、AI知识管理、哪岗来做、分派任务、员工路由、agency、个人AI公司、我的AI团队。
-version: 1.1.0
+version: 1.2.0
 agent_created: true
 module: OI
 modules: OI,MI
@@ -142,9 +142,27 @@ modules: OI,MI
 - 生产侧："we can't just restart from the beginning: restarts are expensive and frustrating … built systems that can **resume from where the agent was when the errors occurred**"；"combine the adaptability of AI agents with deterministic safeguards like **retry logic and regular checkpoints**"；并让模型知道工具正在失败以便自适应。
 - 判据：① 优化顺序应是**先换模型档 / 再看预算 / 最后加 agent**，不是先扩 token 预算；② 方差归因是**三因素**，「token 解释 80%」不等于「另外 20% 不重要」；③ 长跑 agent 的恢复点必须落在最近检查点，**重启 = 昂贵且恼人**，柔性自适应与确定性护栏是互补不是二选一；④ 评估复杂流程用「离散检查点验证状态是否变化」，不要逐中间步全验。
 
-## 九、来源（本轮独立实拉，2026-11-08）
+## 九、恢复语义：checkpoint 不等于可恢复，重试不等于恢复（OI · r738A 2026-11-11 实拉，三独立域交叉）
+
+§8.3 的 "resume from where" 与 "regular checkpoints" 给出了长跑 agent 的恢复点，没有回答「恢复时凭什么敢跳过已完成步骤」。持久化执行（durable execution）的答案是：编排本身不持有状态，状态在服务端的 Event History 里，Worker 靠**重放历史**重建决策；因此 "same history, same Workflow decisions" 是硬约束，不是优化目标。
+
+- **（r738A-1）重试是战术，恢复是策略，两者不共用一套计数**。官方逐字："Retry is a tactic where we are re-executing a failed operation." / "Recovery is a strategy where resuming a workflow from a known good state without re-executing completed steps." / "Do not use application-layer retries as a substitute for durable state." ⇒ 应用层的 `for i in range(3)` 在 Worker 崩溃时计数归零（"if the worker crashes on attempt two, the retry count resets"），而服务端协调的 activity 重试让 "retry count, back-off timing, and failure state survive any worker restart"。判据：① 编排层的恢复资格由**外部历史**判定，不由进程内计数器判定；② "已完成步骤不重跑" 要能举证（历史里有记录），否则只是"从头再来了一次且恰好幂等"；③ 迁移到多 agent 长跑时，先问"checkpoint 存的是结果还是可重放的事件序列"。
+- **（r738A-2）确定性约束落在编排代码，副作用落在 Activity，边界按「碰不碰外部系统」划**。Temporal 官方逐字："The Temporal Platform requires that Workflow Definitions are deterministic." / "Non-deterministic work such as API calls, and database queries should be placed in Activities, which Temporal retries reliably."；官方 FAQ 对 LLM 更严："Workflow code must be deterministic — it is replayed from history whenever a Worker recovers from a failure."，同一 prompt 两次调用可能不同，故 LLM 调用、prompt 本身、凭据读取都必须进 Activity（"Prompt versioning and replay safety"）。判据：① 编排代码里出现 `random` / `now()` / 直接 HTTP / 遍历无序 map，重放时可能产出与历史不同的 Command 序列 → nondeterminism error；② 换 prompt 只影响新执行、在飞执行仍按历史里的 Activity 结果重放，这本身就是版本隔离；③ 凭据不要从 Workflow 参数传（会被序列化进历史），在 Activity 内从 secret store 取。
+- **（r738A-3）幂等键与补偿动作是设计期产物，编排代码改动要给在飞执行留桥**。官方逐字："A Retry Policy makes Activity completion observable exactly once, but it does not make the Activity code execute exactly once."；幂等键用 Workflow Run ID + Activity ID 组合，**不要含 attempt number**（重试间必须稳定）。补偿："Compensating activities must be defined at the time the forward activity is written, not after a partial failure is observed in production."；改编排逻辑会破坏重放，故需 Worker Versioning 或三步 Patching（`patched()` → `deprecate_patch()` → 旧执行退留存后移除），官方 danger 注记 2025 年前的实验版 Worker Versioning 于 2026-03 从 Server 移除。判据：① 每个写操作配一个与尝试次数无关的幂等键 + 一个已写好的反向动作；② "exactly once 可观测" 不等于 "副作用只发生一次"；③ 部署新编排前问"有没有在飞执行会拿旧历史重放新代码"，有则先 patch 再发；④ 事后补恢复被标注为 3–5× 成本（xgrid，商业立场登记）。
+
+**判非**：`deterministic` / `replay` 在本载体已有命中（§8.3 regular checkpoints、Anthropic 长跑恢复），本轮**不复用**该层，只补"凭什么可恢复"的确定性/幂等/版本化三层；`idempotency key` / `event history` 全库命中集中在 agent-guild 的审批/审计语境（Cap31/Cap51），与编排恢复语义不同族，不判为重复。窄串 `nondeterminism error` / `patch marker` / `deprecate_patch` / `compensating activit` / `replay test` / `continue_as_new` 全库 0 命中（本批机检）。
+
+## 十、来源（2026-11-08 首拉 / 2026-11-11 r738A 增补）
 - Anthropic Engineering《How we built our multi-agent research system》（2025-06-13）**一手全文 WebFetch 逐字核验**：90.2% / 95%·80% / 4×·15× / 3-5 subagents / 3+ tools / up to 90% / resume from where / regular checkpoints / rainbow deployments → https://www.anthropic.com/engineering/multi-agent-research-system
 - BackendBytes《Designing a Multi-Agent Backend: The Orchestrator Pattern》三态决策表与五问（独立交叉）→ https://backendbytes.com/articles/multi-agent-orchestrator-backend
 - The Daily Brief 独立摘要（八条 prompt 原则、评测与生产章节结构交叉）→ https://www.beri.net/learning/anthropic-multi-agent-research-system
 - Back From The Future《Workflows vs Agents》（fan-out 适用边界独立交叉）→ https://www.backfromthefuture.nl/en/insights/workflows-vs-agents
 - 判非登记（豆包自留地，WB 不重复落地）：`effort scaling 三档` 见 `wb-execute-discipline/KB:994`、`rainbow deployments` 见 `wb-execute-discipline/KB:999`、`15×/4× token 与 BrowseComp 80%` 见 `wb-context-compressor/KB:3619,5229`（均为二手引述）。本轮只取全库 0 命中的 `3-5 subagents / 3+ tools / 95% of the performance variance / resume from where / regular checkpoints` 与一手三态闸门。
+
+### 2026-11-11 r738A 增补来源（三独立域交叉，逐字核验）
+- `docs.temporal.io/develop/python/workflows/versioning`（Temporal 官方，WebFetch 200 全文逐字：deterministic / Activities / 两种 Versioning / patched 三步 / deprecate_patch / 2026-03 danger 注记）
+- `go.temporal.io/platform-hub/faqs`（Temporal 官方 FAQ，搜索快照逐字：LLM 必须进 Activity、continue_as_new、凭据在 Activity 内取、Prompt versioning and replay safety）
+- `learn.temporal.io/tutorials/go/background-check/durable-execution/`（Temporal 官方教程，搜索快照逐字：Replay test / intrinsic non-determinism / 随机·时钟·map 遍历清单 / nondeterminism error 日志）
+- `www.xgrid.co/resources/temporal-recover-instead-of-restart/`（独立第三方一手 WebFetch 200 全文逐字：retry vs recovery / idempotency key / saga upfront / 3–5x retrofitting；厂商立场登记）
+- `github.com/Nevaberry/nevaberry-plugins/.../workflows-activities-and-replay.md`（Temporal 知识补丁镜像，搜索快照逐字：attempt-independent key 不含 attempt number / replay-safe values / Replay guards observability-only）
+- 判非登记：`docs.temporal.io/encyclopedia/determinism` 与 `/workflow-execution/workflow-determinism` 均 **WebFetch 404**，如实登记、未冒充一手；改由官方 versioning 页 + 官方 FAQ + 官方教程三页交叉补足。

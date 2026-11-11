@@ -3,7 +3,7 @@ name: ri-retrospective
 description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置。
 module: RI
 modules: RI,EI
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -229,3 +229,21 @@ incident.io 逐字归纳（"How actions die"）：
 - `sunnyday.mit.edu/theses/Munekata-thesis.pdf`（MIT 学位论文《Safety in US Air Force Tandem Seat Pilot Training Applying STAMP Processes》；WebSearch 快照逐字："STAMP models safety as a control problem rather than ... reliability problem"、"CAST is ... an analysis method, not an investigation technique"、"control structures are drawn with information flowing to and from the control authority"、CAST 五步；`curl` 该 PDF **000 超时**，如实登记为快照取证）
 - `dspace.mit.edu/bitstream/handle/1721.1/118131/1051211763-MIT.pdf`（MIT《Systems Theoretic Accident Analysis of an Offshore Supply Vessel Collision》§2.5；WebSearch 快照逐字九步 + 第 6 步二选一归因 + 人的决策四要素 + "CAST is not designed to be a linear process"）
 - `dspace.mit.edu/bitstream/handle/1721.1/122433/1120721284-MIT.pdf` + `dspace.mit.edu/bitstream/handle/1721.1/126555/...`（MIT 铁路／Soma 矿难 CAST 案例；WebSearch 快照："The use of CAST does not lead to identifying single causal factors"、"not simply eliminate symptoms"、数据不确定下仍可给预防建议）· `qmro.qmul.ac.uk/.../Huang_Huayi_PhD_Final_111115.pdf` + `repository.lboro.ac.uk/.../16955600.pdf`（交叉佐证九步清单与 "steps can be carried out in any order"）
+
+## 十一、复盘文化的有效性度量：完成的行动项、事前触发条件、以及会奖励沉默的指标（RI · r738C 2026-11-11 实拉，五独立域交叉）
+
+§八给单篇复盘的语言门与行动项可验收动词，r717C 给复发率验收。本节处理另一层：**这一整套复盘机制本身有没有在起作用**。判断依据不在文档写得多完整，而在组织是否把结论变成改动，以及度量会不会反过来抑制上报。
+
+- **（r738C-1）触发条件必须事前定义，否则"要不要写复盘"变成事后裁量**。Google SRE 官方五类触发：用户可见停机/降级超阈、任何数据丢失、on-call 介入（回滚/切流）、解决时长超阈、监控失效（通常意味着人工发现）；并明确 "It is important to define postmortem criteria before an incident occurs so that everyone knows when a postmortem is necessary."，且 "any stakeholder may request a postmortem for an event"。判据：① 阈值写进规则、事故前生效；② 触发是客观条件匹配，不是负责人判断"这次算不算严重"；③ 存在"任何人可提请"的旁路，否则边界事件会被静默降级（与下面 days-since 计数器同族）。与 §八「行动项可验收动词门」分工：那条管单条行动项怎么写，本条管整场复盘该不该开。
+- **（r738C-2）有效性看行动项完成率，不看产出篇数；复发率与完成率是两个不同的量**。官方口径下 "A postmortem with no completed actions is a story."，Ben Treynor Sloss 引句 "To our users, a postmortem without subsequent action is indistinguishable from no postmortem."；行动项须 owner / priority / 真实日期 / 可外部验证的终态、并与功能需求进**同一个 backlog**（"file every action in the same tracker as other engineering work so it competes openly for time"），"improve" / "make better" 一类动词视为未写完。按 30/90 天跟踪关闭率；社区口径给出 85% 目标、并指出低完成率比不写更糟（制造改善幻觉）——该阈值为第三方立场、登记不作硬指标。判据：① 复盘质量报告至少并报"关闭率（30/90 天）"与"重复事件数"两栏；② 复发率是**结果**指标（同一事故是否再来），完成率是**过程**指标（结论是否兑现），只报前者会漏掉"改了但没改对"；③ 与 r717C 复发率验收分工明确，本条不重复立论。
+- **（r738C-3）少即是好的计数器会奖励沉默；失效早信号要在文档里查得出来**。"days since last incident" 只有"时间过去且没申报"这一种改善方式，会导致边界事件被改叫"只是告警"、延迟申报、降级严重度、近失不记录；替代指标组：首次信号到申报时长、近失上报数、有书面复盘的事故占比、复盘行动完成率，且"近失上报数上升"应读作信任上升而非安全变差。官方与二手共同列出的失效早信号：行动项永不关闭、只复盘客户可见事件、时间线含糊、无人愿当主持、只有当事组读过、发布严重滞后、重复事件。领导行为侧：不因某人复盘频繁而污名（"A team with many reviews may simply be honest. A team with none may be hiding."）、未评审的复盘等于没写过。判据：① 任何"越低越好"的安全指标先问"它能不能通过不报来变好"；② 复盘篇数不得进个人绩效；③ 每季度抽查近 N 篇看七个信号，比统计总篇数有用。
+
+**判非**：`second story` / 反事实语言门 / 替换测试 / 复发率验收已由 r717C 落地 §八，CAST/STAMP 由 r734B 落地 §十，本轮 **0 复用**，只补组织级有效性度量这一层。窄串 `30 and 90 days` / `same backlog` / `postmortem of postmortems` / `time from first signal` / `unreviewed postmortem` / `days since last` / `Wheel of Misfortune` 全库 0 命中；`85%` 10 命中经查为其他语境的泛数值，不与本轮立论冲突。
+
+### 2026-11-11 r738C 增补来源（五独立域交叉，逐字核验）
+
+- `sre.google/sre-book/postmortem-culture/`（Google SRE 官方第 15 章，**WebFetch fetch failed 如实登记**；由 `landing.google.com/sre/book/chapters/postmortem-culture.html` 官方镜像搜索快照逐字：primary goals / contributing root cause(s) / 五触发器 / "You can't 'fix' people, but you can fix systems and processes"）
+- `landing.google.com/sre/workbook/chapters/postmortem-culture/`（Google SRE Workbook 第 10 章，搜索快照逐字：坏复盘失败模式 / 案例三年后同类事件 blast radius 缩小；WebFetch 同样 fetch failed，登记）
+- `www.safeguard.sh/resources/blog/blameless-postmortem-template`（2026-10-18 一手 WebFetch 200 全文逐字：八字段模板含 What went well / Where we got lucky / Review questions / "A postmortem with no completed actions is a story." / "Report the completion rate to leadership."）
+- `centerconsulting.com/code-library/concepts/blameless-postmortem`（2026-06-08 校验，一手 WebFetch 200 全文逐字：first story / second story / 航空医疗起源；仅用于判非，未落地）
+- `www.safeguard.sh/resources/blog/why-a-days-since-last-incident-counter-backfires`（独立一手快照逐字：计数器反向激励 / 替代指标组）+ `www.safeguard.sh/resources/blog/reinforce-blameless-postmortem-culture-leaders-guide`（早信号 / 不污名化 / 未评审等于没写）+ `busfactor.tech/blog/blameless-postmortem-template`（Treynor Sloss 引句 / same backlog / verifiable end state / 30-90 天关闭率）+ `dev.to/senthil_kr/blameless-postmortems-a-leaders-guide-to-learning-from-incidents-10c0`（七个失效信号）+ `techblueprints.in/devops/monitoring/incident-management/postmortems`（85% / 30% 阈值，社区立场登记）
