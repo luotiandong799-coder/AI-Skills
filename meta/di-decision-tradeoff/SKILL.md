@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
 module: DI
 modules: DI,TI
-version: "1.7.0"
+version: "1.8.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -251,3 +251,24 @@ DecisionMind 逐字："Members built on the same core logic produce a choice, a 
 
 **提升层**：可复用 Skill（决策门分类前置门）/ 工作流（决策日志三栏）。触发词：one-way door、two-way door、Type 1 / Type 2 decision、可逆性、door classification、70% rule、nudge to stop waiting、exit clause、review date、disagree and commit、process not the topic。
 **来源**：rework 2026-10-12 更新页 WebFetch 200 全文逐字 + 2016/2017 股东信原文转录 + 澎湃中文一手 + 两处二手交叉（2026-11-14 实拉）；`process, not the topic` / `nudge to stop waiting` / `exit clause` / `look back` 全库 0 命中，`单向门` 仅见于 `engineering/wb-artifact-verification` 的「上传是单向门」产物可达性隐喻（登记不复用）⇒ 净新。`wb-execute-discipline` / `wb-context-compressor` 为豆包自留地，WB 0 落地。
+
+## 十四、决策质量 DQ：打分之前的六要素准入与最弱环（r744C 实拉，2026-11-14）
+
+> 与 §十三（门型定流程权重）分工：门型答「这轮流程该多重」，本节答「这轮流程本身哪一段不合格」。与 `meta/ri-retrospective` §r742C（**复盘层**「决策质量与结果质量分栏」）分工：那条的落点在事后评价对象分离，本节的落点在**决策时刻、结果未知时**的准入清单；两轮结论不复用。≥3 独立域一手交叉。
+
+### 14.1 ★决策质量 = 决策时刻的六要素过程判定，整体等于最弱一环
+Spetzler / Howard / SDG 谱系（*Decision Quality*, Wiley 2016）定义六要素：**appropriate frame**（在解正确的问题、范围与人对）、**creative doable alternatives**（真选择集，「A decision with one option is not a decision」）、**meaningful reliable information**（证据及不确定性诚实陈述，非 advocacy）、**clear values and trade-offs**（事前声明要什么、愿意放弃什么）、**sound reasoning**（把证据连到选择的逻辑）、**commitment to action**（「A decision nobody executes was a conversation」）。链式规则逐字：「**overall quality equals the weakest element**」「**100% on five elements with a broken frame is a low-quality decision**」；「**Improvement effort goes to the weakest link, and stops when more effort isn't worth it**」。
+- 判据：跑 §六 MCDA 打分**之前**先出六要素逐项评分（每项问「距 100% 差多少」，100% = 再投入不值得改善），整体取最小值；改进资源只投最弱项且边际收益转负即停。**禁把加权矩阵总分当决策质量**——那是方案排序，不是过程质量；五项满分而 frame 错仍是低质量决策。
+
+### 14.2 ★按结果评分是学习机制污染，且无结构化记录时记忆会按结果重写决策
+按结果给决策打分叫 **resulting**（Annie Duke, *Thinking in Bets* 2018）：逐字「**systematically promotes lucky recklessness and punishes sound judgment**」；学术一手 Vlek 1984 引文「**A decision is, therefore, a bet, and evaluating it as good or not must depend on the stakes and the odds, not on the outcome**」——理由是决策时刻 unchosen alternative 的结果永远不可观测，评价天然含不确定分量。Argumentree 逐字：「**A structured record makes the measurement honest; without one, post-hoc memory grades the decision the outcome deserved rather than the one that was made**」；可复核性判据是「could a **skeptic** inspect the frame, the alternatives considered, the evidence and its uncertainty, the stated trade-offs, the reasoning chain, and the execution plan — and find them adequate?」。
+- 判据：决策日志必须在**结果未知时**写六要素评分并冻结留痕（含证据与不确定性、权衡、推理链、执行计划），事后补写一律标注为重构而非原始记录；DQ「**tests one decision**」，而「**enterprise decision excellence is the system that makes good decisions repeatable**」（治理 / 文化 / 有效性 / 组织记忆）是另一层 ⇒ 别把「同类决策反复出问题」当单次 DQ 打分去修。
+
+### 14.3 ★诊断顺序由最弱项决定；更多数据 / 更强推演只补 information 一项
+Grafium 官方逐字诊断例：「**A decision rich in alternatives but built on a poor frame should not have more alternatives generated; the frame should be reworked**」；「A decision with a clear frame, alternatives, information and values but **no commitment to action is a decision in name only**」；「The framework keeps both visible **without establishing in advance which element will be weakest**」。规范性边界逐字：「decision quality is **normative**」而 bounded rationality「is a **descriptive** theory of how humans actually decide」——混用会把「人常这么决策」当成「这样决策合格」。工具边界逐字：数字孪生输出「may contribute **conditional, modelled evidence** to the useful-information element … **They do not supply decision quality or sound reasoning by themselves**」；Argumentree 并列「**Sound reasoning — the element that turns those inputs into a defensible choice — is the one no framework supplies**」「**Better data inside a wrong frame is still a low-quality decision — the chain rule spares no element**」。
+- 判据：拿到更强工具 / 更多数据 / 更多备选时，验收动作是**重跑六要素评分看最弱项是否已转移**，而不是继续往已达标项加料；六要素里只有 information 能被情报与模型抬高，frame / alternatives / values / reasoning / commitment 不随数据自动改善。
+
+**提升层**：可复用 Skill（决策准入清单）/ 工作流（决策日志冻结留痕）/ RI 复盘（分层边界）。触发词：decision quality、six elements、appropriate frame、commitment to action、chain rule、weakest link、resulting、Annie Duke、Spetzler、100% 边际停手、normative vs descriptive、enterprise decision excellence、conditional modelled evidence。
+
+**来源**：`https://www.argumentree.com/what-is/decision-quality?hl=en`（Last updated 2026-08-24，WebFetch **200 全文逐字**，含中英双页 `https://www.argumentree.com/zh/what-is/decision-quality`）+ `https://grafium.io/glossary/decision-quality-framework`（官方 glossary，WebFetch **200 全文逐字**）+ `https://symposium.org/wp-content/uploads/2021/12/global_perspectives_barometer_2016_final.pdf`（St. Gallen Symposium《Global Perspectives Barometer 2016》Info Box 3-1 六要素逐条与「linked as a chain … the weakest link will define the overall quality」，WebSearch 快照逐字）+ `https://dx.doi.org/10.1080/01446193.2019.1577559`（*Construction Management and Economics* 2019 论文，Howard 1988 / Spetzler 2016 六要素与 Vlek 1984 赌局引文，WebSearch 快照逐字）。四域交叉；Argumentree 自述为 argument-tree 产品方、其「第五要素无工具供给」属产品立场，仅取可迁移判据并登记；Bain *Decide & Deliver* 与 McKinsey 相关性证据按其自身口径标为 correlation，不作因果结论。
+**判非**：`chain rule` / `weakest link` / `appropriate frame` / `commitment to action` / `Spetzler` / `six elements` / `Annie Duke` / `normative` 全库 `SKILL.md` **0 命中**；`decision quality` 1 命中与 `outcome bias` 1 命中均在 `meta/ri-retrospective` §r742C（复盘层评价对象分离，本轮取决策时刻准入层，互补不重述）；`resulting` 5 命中经查为 `resulting in` 类英文子串噪声。按 rules/07 去重铁律拍板「优＝加厚现有」，不新建、不覆盖复盘层结论。豆包自留地 **WB 0 落地**。A/B 两轮结论一律不复用。

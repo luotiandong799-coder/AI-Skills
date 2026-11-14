@@ -2,7 +2,7 @@
 name: multimodal-intelligence
 description: >-
   多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。
-version: 1.1.0
+version: 1.2.0
 module: PI
 modules: PI
 ---
@@ -76,3 +76,27 @@ Tesseract 官方 confidence 在 2021 报纸语料上与 CER 仅微弱相关，�
 
 - **判非**：窄串词边界全库 SKILL.md：`CER` **0 命中**（此前 20 文件命中经查为 `USER`/`ANSWER` 等子串）；`WER` 唯一命中在 `media/pi-audio`（音频 ASR 词错率，无视觉版面/归一化链路）；`Levenshtein` 唯一命中在豆包自留地 `wb-context-compressor`（typosquatting 近似名，非编辑距离评测）；`reading order` / `psm` / `ground truth 归一化` / `置信区间上界` 全 0 命中 ⇒ 净新。与 `engineering/pi-perception` r732A（服务端降采样/坐标回算/token 计价）分工：那条管「模型实际看到什么分辨率」，本轮管「输出文本质量凭什么可信」。豆包自留地 WB 0 落地。
 - **换道/未采纳**：换道：TrOCR/Transkribus 具体 CER 数值与厂商排名（易过时、来自他人语料）不采纳；Transkribus 自家 help centre 与 CER explainer 阈值互相冲突，仅取「按用途分档」这一可迁移判据并登记分歧；econstor PDF 被 Anubis 反爬拦截（本轮 C 方向）如实登记，不冒充一手。B/C 两轮结论一律不复用。
+
+## 七、阅读顺序的独立验收口径（2026-11-14 r744A 实拉，≥3 独立域一手交叉）
+
+> 补 §六 r737A-2 明确点名但当时未给方法的「表格 / 多栏 / 边注版面必须另设文本区域顺序独立验收」。三条各管一层：双轨口径 → 顺序分数的构造与可比性 → 评测协议。
+
+### r744A-1 ★CER 被顺序拉低的成因是「对齐失败」不是「字认错」，故识别与顺序必须双轨记账
+OCR-D 官方逐字：「CER (if applied naively by comparing concatenated page-level texts) is **heavily dependent on the reading order** an OCR engine detects. Thus, where text blocks are **rearranged or merged, no suitable text alignment can be made, so CER is very low, even if single characters, words and even lines have been perfectly recognized**」。FCA（→ FCER）用行级最大匹配把两轴解耦：① 两侧文本切行 → ② GT 行按长度降序 → ③ 取最长 GT 行找编辑距离最低/覆盖最高的 OCR 行（可部分匹配）→ ④ 全匹配则双侧出队，部分匹配则切下未匹配片段回列表重排 → ⑤ 迭代 → ⑥ 剩余未匹配行按来源计为插入或删除 → ⑦ 对所有已配对行求 **micro-average CER = FCER**；出处 Clausner/Pletschacher/Antonacopoulos, *Pattern Recognition Letters* 131 (2020) 390–397, p.392。
+- 判据：报 OCR 质量固定两栏「字符识别（FCER 或行级 CER）」+「顺序（独立验收）」；只报一个页级 CER 时，版面重排会被误判成识别模型退化，据此换模型/调阈值是修错对象。与 §六 r737A-2 分工：那条立「必须另设」的规矩，本条给可执行的双轨算法。
+
+### r744A-2 ★阅读顺序的验收对象是「区域两两关系」而非一条序列，分数是相对 50% 一致基线的比值
+Clausner/Pletschacher/Antonacopoulos 2013 把任意两区域关系分五类：**direct / indirect successor·predecessor、unordered、undefined**；先按 **overlap area** 匹配 GT 与检出区域（**一个 GT 区域可对应多个检出**），再逐对比较关系类型，任何偏差按预定义 **penalty matrix** 计代价，代价同时取决于关系种类与重叠相对大小（官方逐字「Direct opposition is more expensive than indirect」）。示例：GT 为「somewhere after（含 unordered 组）」而检出为「directly before」罚 **10**，GT 为「directly after」则罚 **40**——理由是后者更具体。总误差 e 为全部 GT×检出关系比较之和，归一化到假设 50% 一致的误差 `e50 = pmax * nGT / 2`（pmax=矩阵最高单项罚、nGT=GT 区域数），成功度 `s = 1 / (e * (1/e50) + 1)`（官方公式渲染为 `s=1e∗(1/e50)+1`，此处按语义还原，**原文形式一并留档**）。
+- 判据：① 顺序分数不是「排序准确率」，随分数必须报 **pmax / nGT / 矩阵版本**，否则跨文档、跨标注粒度不可比；② 区域匹配允许一对多 ⇒ 先报匹配策略再报分数；③ 官方逐字 mAP「**is not adequate for document layout** for various reasons」（照片场景假设重叠可允许且不冲突 text flow，版面不成立），只可作参考不可作验收门；④ 更完备形态是 Clausner 2011 **Scenario-Driven Performance Evaluation**——不是单一指标，而是统一方法导出的一组 measures 按 **evaluation scenarios** 加权（headline/keyword extraction、linear fulltext、newspaper、figure extraction），且区分 benign deviations（多出空白）与 pathological（断行断词），故「换一个下游用途就要换一套权重」是设计而非缺陷。
+
+### r744A-3 ★评测协议先锁 GT 来源与线性化策略，再用四指标联读分离顺序失败与内容漂移
+ACM JCDL 2026《Accessibility Annotations as OCR Ground Truth》四指标互补：CER/WER 量替换·插入·删除，**Kendall τ** 只在 hypothesis/reference 已匹配词的位置上算「纯顺序一致性」，**LCS ratio** 把顺序与长度耦合（罚漏与伪内容）。官方逐字：「high τ with low CER indicates a clean transcription, **high τ with high CER indicates content drift under correct order, and low τ indicates a genuine reading-order failure**」。协议三处硬约束：① GT 顺序来自无障碍标注的 OOXML 文档序——「a screen reader consumes the document strictly in sequence … **no spatial inference is required** to recover it」；② 各系统输出一律取**默认预测顺序**，「**no coordinate re-sorting or post-hoc linearization**」——按坐标重排再算 τ 等于把要验的能力本身做掉；③ 报 **per-image medians** 而非均值，近空白/图主导页的短参考会放大归一化误差。Table 4 实证范围：Qwen3-VL 0.102/0.170/**0.996**/0.852、Tesseract 0.112/0.263/**0.994**/0.845、LayoutReader 0.734/0.931/**0.460**/0.315（CER/WER/τ/LCS）。
+- 判据：顺序验收表固定四栏并写 GT 来源 + 是否允许后处理线性化；第三域 OmniDocBench V1.5 / *Unlimited OCR Works* 把 **Reading-order Edit Distance** 与 Text Edit / Formula CDM / Table TEDS **分列**，而端到端 overall 是 text+formula+table 加权平均 ⇒ **总分高不代表阅读顺序合格**，须单独卡线。数值仅作量级参照，不搬作本机结论。
+
+**提升层**：PI 输入保真 / VI 验收协议 / 工作流（文档解析验收表）。触发词：reading order evaluation、FCA/FCER、penalty matrix、e50、success measure s、Clausner、unordered、direct successor、Kendall τ、LCS ratio、no post-hoc linearization、per-image median、Read-order Edit、scenario-driven evaluation、mAP 不适用于版面。
+
+### r744A 来源与判非（逐字核验）
+- `https://ocr-d.de/en/spec/ocrd_eval`（OCR-D 官方规范，2026-11-14 WebFetch **200 全文逐字**）：FCA 七步算法、Reading Order Evaluation 五类关系 / penalty matrix / 10 vs 40 / `e50=pmax∗nGT/2` / `s=1e∗(1/e50)+1`、mAP「not adequate for document layout」、Scenario-Driven 段；并给出 CER 定义、Bag of Words、P-R 曲线与全部参考文献（含 `primaresearch.org/.../ICDAR2013_Clausner_ReadingOrder.pdf`、`PRL_Clausner_FlexibleCharacterAccuracy.pdf`）。**一手官方全文**。
+- `https://dl.acm.org/doi/10.1145/3805696.3846504` + `https://dlnext.acm.org/doi/10.1145/3805696.3846504` 同 DOI（ACM JCDL 2026 论文，**WebSearch 快照逐字**）：四指标定义、失败模式三分、「no coordinate re-sorting or post-hoc linearization」、screen-reader 顺序 GT、per-image medians、Table 4 六系统数值、200 DPI / 191 页 / H200 设置。**dlnext WebFetch 仅返回 Basic Edition 订阅页，正文未全文直取，如实登记，不冒充一手全文**。
+- `https://arxiv.org/pdf/2606.23050`（*Unlimited OCR Works*）+ `https://baike.baidu.com/item/OmniDocBench%20V1.5`（**WebSearch 快照逐字**）：OmniDocBench 四类专用指标（Text Edit / Formula CDM / Table TEDS·TEDS-S / **Reading Order Edit Distance**）、overall 为 text+formula+table 加权平均；V1.5 标注阅读顺序与 Block 从属关系、19 种布局类别、200 DPI。**独立第三域交叉（数值不采信为结论）**。
+- **判非**：窄串全库 `SKILL.md`：`FCA` / `FCER` / `penalty matrix` / `e50` / `success measure` / `Clausner` / `OmniDocBench` / `TEDS` / `direct successor` / `unordered` **全 0 命中**；`reading order` 唯一命中在**本技能 §六 r737A-2**（点名缺口未给方法，本轮补齐、不重述结论）；`Kendall` 唯一命中在 `engineering/wb-artifact-verification` r567B（评分格式过滤器中「τ_b 折扣平局」，异命题）。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。B/C 两轮结论一律不复用。

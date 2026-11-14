@@ -1,7 +1,7 @@
 ---
 name: mi-memory
 description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。
-version: 1.3.0
+version: 1.4.0
 module: MI
 modules: MI,AI
 ---
@@ -83,3 +83,24 @@ modules: MI,AI
 
 **提升层**：工作流（记忆系统上线/巡检验收表）。触发词：AgentPoison、检索层投毒、unique embedding region、compactness loss、single-token trigger、ASR-ACC 双栏、poison rate <0.1%、perplexity examination、rephrasing、embedder 迁移、对抗验收。
 **来源**：arXiv 2407.12784 abs + HTML v1（2026-11-14 WebFetch 200 逐字）+ PDF/Figure 1 快照 + 三处元数据交叉；`retrieval success rate` / `compactness loss` / `single-token trigger` / `evasive to potential defenses` / `no additional model training` 全库 0 命中 ⇒ 净新（投毒机制本体命中全在豆包自留地，按 r739 先例只取元层）。
+
+## 十、实体解析与未解矛盾的治理口径（r744B 实拉，2026-11-14）
+
+> 与 §五 r732B（episode 溯源：事实从哪来）、§九 r740B（对抗验收：检索行为有没有被改写）分工：本节管「两次抽取指向同一实体吗」与「两条事实互相打架时系统放不放行」。≥3 独立域一手交叉。
+
+### 10.1 ★错误合并是一次写入污染多条后续答案，故身份判定必须先于相似度、先于作用域
+Supermemory 官方逐字：「a **mistaken merge can attach correct facts to the wrong entity and contaminate many later answers**」；「A display name is useful for reading but **usually insufficient as the only identity key**」；「**Do not merge across tenant or workspace boundaries** just because names and descriptions match. **Authorization scope should constrain candidate matches before semantic similarity is considered**」。ContextOS 官方并列「Entity-resolution **false positives** merge two real-world entities and corrupt downstream traversals」为已登记 failure mode。
+- 判据：解析流水线顺序固定为「**作用域 / 稳定源 ID → 归一化名与别名精确匹配 → 模糊 → 语义嵌入**」，语义相似放最后而不是第一；同一名字的两人、改名项目、多别名组织、复用邮箱各写专门用例；「**Measure incorrect merges and missed matches independently; they have different consequences**」——错合（污染）与漏配（碎片）分开计数，不可合报一个 F1。
+
+### 10.2 ★解析是三态不是二态，「不确定」必须是一等可留痕对象
+Neo4j 官方 NAMS 逐字：每个新抽取实体走 **type-strict resolver cascade**——「first *exact* match on normalized names and aliases, then *fuzzy* matching (**Levenshtein, Jaro-Winkler, token-sort**), then *semantic* match on embeddings」；「**High-confidence matches are auto-merged; clear non-matches become new nodes; the ambiguous middle band is written as a SAME_AS edge marked pending and surfaced here in the review queue**」；置信度低于**可配阈值**才转人工，面板分 pending / confirmed / rejected 三计数，每行带 source、target、confidence 与 flag 出它的方法（示例「92% via fuzzy」）。Supermemory 同向：「**Keeping two unresolved candidates can be preferable to confidently combining them**」、「An **inferred** match should remain distinguishable from a **confirmed** one」并留足 provenance 供新证据到达时重访。
+- 判据：二值 resolver 会把中间带强行并掉或强行拆开 ⇒ 验收必须查「第三态是否真实存在、阈值是否可调、每行是否记了 method 与置信分」；另 NAMS 写入是**异步管道**（store 立即返回，抽取/嵌入/去重/压缩在 memory:events 等 stream 上跑，`queue lag = 0` 才算图谱追上写入）⇒ 写后立刻读到的「没重」可能是**尚未解析**而非判定不重，验收要等 lag 归零或显式声明未结算。
+
+### 10.3 ★矛盾未解即阻断提交，图只描述分歧、不授予模型裁决权
+ContextOS 官方：同一 `(subject, predicate)` 上两条边断言冲突事实 ⇒ 检索 bundle **返回两条**并附 **EvidenceConflictMarker**（点名冲突 evidence refs、受影响的 decision requirements、resolved/unresolved 状态）；逐字「**An unresolved conflict is never silently ranked away**」，编译器把它带进 EvidenceGate、将 compiled view 标 **insufficient** 且保持 **`commit_allowed: false`**；resolved 状态必须「name a **resolution_ref** and the selected evidence refs so replay can reconstruct both the discarded branch and the rule or accountable review that selected the winner」；逐字「**The graph detects and describes the disagreement; it does not grant the model authority to resolve it**」——裁决只归确定性源优先级规则、新权威读、或其决定本身记为证据的具名复核人。Neutron 官方独立一手：矛盾「remains **unresolved until** an automatic, agent, or human resolution is recorded」，且「**stays within the Scopes of the claims that disagree**. A caller sees it, and can resolve it, **only when acting for every one of those Scopes**」；跨 Scope 解析须 `scopeIds` 覆盖全部；tombstone 从当前读移除但**队列 / 缓存 / 归档 / 压缩不得把它复活**。
+- 判据：记忆系统验收须含两项新门——① 存在未解矛盾时下游动作是否被阻断（而非取置信度高的那条）；② 裁决证据链能否重放重建被丢弃分支；可见面与可解面都要按 claims 的 Scope 交集收窄。另 Supermemory 逐字「**A simple rename is different from a split: changing the label does not repair facts attached to the wrong subject**」「**Inspect downstream answers after correcting the identity mapping, not only the graph's visual appearance**」⇒ 错合修复单位是**拆分 + 按来源重挂关系与派生记忆**，验收看下游答案，不看图谱画面对不对。
+
+**提升层**：工作流（记忆系统上线/巡检验收表）/ 安全边界（可见与可解按 Scope 交集）。触发词：entity resolution、type-strict resolver cascade、Jaro-Winkler、SAME_AS pending、HITL Resolution、queue lag、EvidenceConflictMarker、commit_allowed、resolution_ref、unresolved conflict、scope 交集、rename ≠ split、incorrect merges vs missed matches。
+
+**来源**：`https://neo4j.com/blog/genai/a-tour-of-the-neo4j-agent-memory-service-nams/`（William Lyon，2026-06-23，WebFetch **200 全文逐字**）+ `https://supermemory.ai/blog/entity-resolution-agent-memory-graphs`（Shardul Mane，2026-07-20，WebFetch **200 全文逐字**）+ `https://contextosai.com/docs/foundations/knowledge-graph`（官方 Knowledge Graph 规范，WebSearch 快照逐字）+ `https://neutronai.dev/docs/fundamentals/knowledge-decision-intelligence` 与 `https://neutronai.dev/docs/get-started/api`（官方，WebSearch 快照逐字，含 `GET /v1/contradictions`、`POST /v1/contradictions/resolve`、bitemporal `validAt`/`knowledgeAt`）。四域交叉；厂商立场逐条登记，仅取可迁移判据。
+**判非**：`entity resolution` / `EvidenceConflictMarker` / `commit_allowed` / `Jaro-Winkler` / `resolution_ref` / `false merge` / `HITL Resolution` / `POLE` / `source-priority` 全库 `SKILL.md` **0 命中**；`contradiction` 2 命中在豆包自留地（`defaults/wb-context-compressor`、`engineering/wb-execute-discipline`）、`tombstone` 2 命中在 `engineering/wb-release-maintain` / `engineering/wb-skill-authoring`（发布与技能生命周期墓碑）、`alias` 6 命中为通用别名语境，均非「记忆矛盾裁决」，登记不复用 ⇒ 净新。豆包自留地 **WB 0 落地**。A/C 两轮结论一律不复用。
