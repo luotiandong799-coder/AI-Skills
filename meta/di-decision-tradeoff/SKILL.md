@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
 module: DI
 modules: DI,TI
-version: "1.6.0"
+version: "1.7.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -231,3 +231,23 @@ DecisionMind 逐字："Members built on the same core logic produce a choice, a 
 - SEP 镜像交叉（不计独立域）→ https://plato.sydney.edu.au//entries///arrows-theorem/index.html · https://seop.illc.uva.nl/archives/spr2019/entries///arrows-theorem/
 - 判重：`Condorcet` / `single peaked` / `median voter` / `irrelevant alternatives` / `agenda` / `spoiler` 全库 SKILL.md **0 命中**；`IIA` 命中集中在 `meta/di-decision-tradeoff` §十 r715C（AHP rank reversal 语境，Luce-Raiffa axiom 7 / Belton&Gear / Dyer 1990），本轮为社会选择公理化语境（Arrow 1951 / SEP），已在节首写明分工，不并存两套口径；`Arrow` 5 命中经查为箭头符号与地名子串噪声。⇒ 净新，取「优＝加厚现有」不新建（DI 唯一载体）。
 - 未采纳：SEP 的政治哲学引申（Riker 对民主的解读）、Gibbard-Satterthwaite 的证明细节、phantom voter 的形式化构造、计算复杂性阻碍操纵的实证结论（仅登记不转为行动条款）。r715C 的 Distributive/Ideal、r733B 的 ELECTRE 输出类型、r708A 的 RDM 结论一律不复用。`wb-execute-discipline` / `wb-context-compressor` 为豆包自留地，WB 0 落地。
+
+## 十三、先分类决策门，再定流程权重（r740C 实拉，2026-11-14）
+
+> 本技能 description 已声明「单向/双向门 + EVPI 停手线」但正文此前无对应章节，本轮补齐结构性缺口。与 §八 EVPI 的分工：EVPI **算**「再调研值不值」，门型 **定**「该用多重的流程、谁拍板、多快拍」，两者互不替代；与 §七 决策日志（Brier 校准）互补：那条管「预测准不准」，本条管「选错能不能退」。
+> 来源：rework.com《One-Way vs Two-Way Door Decisions: Bezos's Decision Framework》（Tara Minh，更新 2026-10-12）WebFetch 200 全文逐字（内含 2015/2016 股东信原文引述与对照表）；rufuspollock.org 转录的 2016 / 2017 股东信英文原文；澎湃新闻中文一手（贝索斯高速决策四条）；fasterthannormal.co / Dialogue Review（Colin Powell 40/70 与 70% 阈值）交叉。厂商/媒体二手立场一律登记，不作结论来源。
+
+### 13.1 ★ 可逆性决定流程权重，与金额/风险/重要性不是同一问
+官方逐字："A decision can be large and still reversible. A decision can be small and still locked in."（带退出罚则的三年合同、公开承诺日期、裁员公告 = 小但锁死；区域试点 = 大但可退）、"the framework is about the process, not the topic"、"Reversibility asks something sharper: what does being wrong cost, and how long does that cost last?"。Bezos 点名的失败模式是 "the heavy-weight Type 1 decision-making process on most decisions"。
+- 判据：**跑 §六 MCDA 打分之前先出「门型」一行**；门型定的是流程重量、谁拍板、谁被咨询、要不要书面异议。把双向门送进重型流程，或把单向门当快决策，都是流程错配而非打分误差。与豆包自留地「按不可逆性选 HITL 审批模式」分工：那条是**动作执行层的确认门**，本条是**方案选择层的流程门**。
+
+### 13.2 ★ 70% 是双向门专用启发式，不是研究阈值
+官方逐字："The 70% rule belongs to the second column, not the first. Using it on a one-way door is a misreading, and it's the most common one."；"Both letters are Bezos's own statements of a management practice. Neither is a controlled study, so treat the framework as a judgment tool, not a measured result."；"It's a nudge to stop waiting, not a formula"。
+- 判据：引用 70% 必须同时写「门型 = 双向」+「启发式、非实测」两个标签；**单向门上不能用它砍调研预算**（对照表信息门槛：单向门 "High, with time spent closing gaps"，双向门 "Around 70%"）。Colin Powell 40/70（40% 下限防赌博、70% 上限防拖延）是另一独立口径，别与 Bezos 70% 混成一个数。
+
+### 13.3 ★ 双向门成立要靠「可设计的退出 + 回看日期」，不是口头可撤销
+官方逐字："Often you can turn a one-way door into a two-way door by piloting, phasing, or adding an exit clause"、"Many 'irreversible' decisions are only irreversible because nobody tried to design the exit"、"A two-way door is only two-way if somebody looks back. Put a date on it"、"A reversible choice nobody revisits is effectively permanent"、"Confusing reversible with free. A reversible decision can still cost money, time, and credibility. The point is that the cost is bounded."
+- 判据：决策日志固定三栏 **owner / 反转触发条件 / review date**；缺 review date 的「可逆」判定为事实单向门。可逆性是**可设计属性**（试点、分期、退出条款），不是固有属性；且可逆 ≠ 零代价，只是代价有界。输出推荐时先问五问：能否撤销 / 撤销代价（钱·时间·信任·士气）/ 谁被一起锁住 / 窗口多久关闭 / 能否缩小。
+
+**提升层**：可复用 Skill（决策门分类前置门）/ 工作流（决策日志三栏）。触发词：one-way door、two-way door、Type 1 / Type 2 decision、可逆性、door classification、70% rule、nudge to stop waiting、exit clause、review date、disagree and commit、process not the topic。
+**来源**：rework 2026-10-12 更新页 WebFetch 200 全文逐字 + 2016/2017 股东信原文转录 + 澎湃中文一手 + 两处二手交叉（2026-11-14 实拉）；`process, not the topic` / `nudge to stop waiting` / `exit clause` / `look back` 全库 0 命中，`单向门` 仅见于 `engineering/wb-artifact-verification` 的「上传是单向门」产物可达性隐喻（登记不复用）⇒ 净新。`wb-execute-discipline` / `wb-context-compressor` 为豆包自留地，WB 0 落地。

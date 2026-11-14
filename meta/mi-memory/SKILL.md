@@ -1,7 +1,7 @@
 ---
 name: mi-memory
 description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。
-version: 1.2.0
+version: 1.3.0
 module: MI
 modules: MI,AI
 ---
@@ -63,3 +63,23 @@ modules: MI,AI
 - CSDN 深读 + 中科院讲义（memory 容量治理 / 检索侧口径）
 - 落地：`meta/personal-ai-os/references/knowledge-base.md` §r713A A-1 / A-2 / A-3
 - r732B：arXiv 2410.10813（LongMemEval 五能力 / 七题型 / 30% drop）+ Zep 官方 v3 facts.md（四时间戳 / 字段不证真值）+ Zep 官方 provenance 博客（episode 集合 / AND-OR 谓词 / remove_episode 级联）+ getzep temporal-knowledge-graph + gamgee / sentra / aimemoryworks 交叉
+
+## 九、记忆/知识库的对抗验收口径（r740B 实拉，2026-11-14）
+
+> 与既有分工：豆包自留地已覆盖**投毒谱系 + 写时 HMAC 门控 + 隔离机制本体**，本条只取**验收口径**（报什么指标、抽检能不能抓到、防御怎么测才算过），不搬机制、不往那两个文件落地。与 §五 LongMemEval「五能力分桶报分」互补：那条测**功能正确性**，本条测**对抗下的可信性**，两条并行不合并。
+> 来源：arXiv 2407.12784《AgentPoison: Red-teaming LLM Agents via Poisoning Memory or Knowledge Bases》（Chen/Xiang/Xiao/Song/Li，2024-07-17 提交）abs 页与 HTML v1 全文 WebFetch 200 逐字；PDF 摘要与 Figure 1 快照逐串复核；mlsanity / scholarfeed / SerialsSolutions 元数据交叉（引文数不计结论）。≥2 独立形态交叉。
+
+### 9.1 ★ 投毒落在检索层，不落在模型权重
+官方逐字："AgentPoison requires no additional model training or fine-tuning"；触发器生成是 constrained optimization，把带触发的实例映射进 "a unique region in the embedding space"（compactness / target generation / coherence 三损失联合）；"high ASR even when we inject only one instance in the knowledge base with a single-token trigger"；投毒率 <0.1%。
+- 判据：验收对象是**记忆/知识库的写入面与检索簇**，不是微调记录；「我没重训模型」不构成记忆可信证明。换 embedder 也不能当清除——官方逐字 trigger "can be transferred to effectively attack other types of RAG embedders"。
+
+### 9.2 ★ 必须 ASR / ACC 双栏并报，且抽查式抽检在结构上抓不到
+官方逐字：平均 ASR ≥80%、benign 性能影响 ≤1%；Introduction 另给 "82% retrieval success rate and 63% end-to-end attack success rate"——**检索命中率 ≠ 端到端行动成功率**，是两个指标。
+- 判据：只跑 ACC（正常问答准确率）的记忆评测会显示「一切正常」，ASR 与 ACC 必须同表并报且分开标注分母；<0.1% 投毒率意味着按常规比例抽检几乎必然漏检 ⇒ **「抽查几条记忆没发现异常」不可作为安全验收项**，须改成针对「异常紧凑嵌入簇 + 触发词组合」的定向扫描。
+
+### 9.3 ★ 常规文本防御通过 ≠ 安全验收通过
+官方逐字："evasive to potential defenses based on perplexity examination or rephrasing"、"resilient to diverse augmentations"。
+- 判据：不能只在一个 embedder 上跑一遍困惑度/复述过滤就判安全；防御有效性须按「触发词 × 嵌入簇 × 多个 embedder」的联合面测，并把触发器可迁移写进威胁模型。与 §五 r732B 的 episode 集合溯源互补：溯源管「这条事实从哪来」，对抗验收管「检索行为有没有被改写」。
+
+**提升层**：工作流（记忆系统上线/巡检验收表）。触发词：AgentPoison、检索层投毒、unique embedding region、compactness loss、single-token trigger、ASR-ACC 双栏、poison rate <0.1%、perplexity examination、rephrasing、embedder 迁移、对抗验收。
+**来源**：arXiv 2407.12784 abs + HTML v1（2026-11-14 WebFetch 200 逐字）+ PDF/Figure 1 快照 + 三处元数据交叉；`retrieval success rate` / `compactness loss` / `single-token trigger` / `evasive to potential defenses` / `no additional model training` 全库 0 命中 ⇒ 净新（投毒机制本体命中全在豆包自留地，按 r739 先例只取元层）。

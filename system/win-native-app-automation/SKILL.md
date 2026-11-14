@@ -1,7 +1,7 @@
 ---
 name: win-native-app-automation
 description: 用 windows-mcp 驱动 Windows 原生桌面应用（微信电脑版、QQ、任意 GUI 软件）完成查看、点击、输入、发送等实操。当用户说「用我登录的微信/QQ 发条消息」「操作某个桌面软件」「点某个原生应用的按钮」「帮我看看那个窗口」时使用。核心：入口先选对（原生应用走 windows-mcp，不是 bsk）；**关键步骤**（看屏定位、发送后、状态变化、异常）用 `Snapshot(use_vision)` 验证，普通连续操作不逐步截图；中文输入用剪贴板+Ctrl+V；发送类动作优先用键盘 Enter，绝不靠找按钮坐标。含 windows-mcp 不可用时的内置 PowerShell 降级通道、微信 4.x(Qt) 会话列表滚动方法、未读红点识别判据。触发词：微信发消息、电脑版微信、原生应用、桌面软件自动化、windows-mcp、驱动微信、QQ 发消息、点击桌面应用。
-version: 1.2.0
+version: 1.3.0
 agent_created: true
 module: PI
 modules: PI,OI
@@ -289,3 +289,24 @@ Command blocked for security: Add-Type compiles and loads .NET code at runtime
 - 自造脚本若 `SetForegroundWindow` 没借 `AttachThreadInput`，目标窗没真正置前 → 点击落到 WorkBuddy 上，会误触模型选择菜单。
 - 结论：**这些坑 wx_reply.py 都已处理，直接用它，别再重摸。**
 
+
+## 11. DPI 坐标虚拟化：拿到的坐标不一定是屏幕像素（r740A 实拉，2026-11-14）
+
+> 与 `engineering/pi-perception` r732A 那条的**分工**：那条管**图像内容**被服务端降采样后的坐标锚（模型看到的是缩放+padding 后的图）；本条管 **OS 窗口坐标**被 DPI 虚拟化（应用拿到的是逻辑坐标）。两条要一起过，不能互相替代。
+> 来源：Microsoft Learn《High DPI Reference》(learn.microsoft.com/en-US/windows/win32/hidpi/high-dpi-reference)、《PhysicalToLogicalPoint function (winuser.h)》、《DPI_AWARENESS_CONTEXT handle (windef.h)》三页 WebFetch 200 一手全文逐字；中文版《高 DPI 参考》与《PhysicalToLogicalPoint 函式》逐串复核；CSDN 问答 2026-08-02（Per-Monitor v2 实操，社区立场仅登记不作结论来源）。≥2 独立域交叉。
+
+### 11.1 ★ 逻辑坐标与物理坐标是两套空间，进程感知档决定拿到哪一套
+官方逐字："The window seen on the screen corresponds to the physical coordinates. The application continues to work in logical space. Therefore, the application's view of the window is different from that which appears on the screen." `DPI_AWARENESS` 与 `PROCESS_DPI_AWARENESS` 的官方定义就是 "Represents DPI coordinate virtualization modes"——**它是坐标虚拟化模式，不是缩放百分比设置**。
+- 判据：截图/OCR 是物理像素，DPI-unaware 进程的 `GetWindowRect`/UIA 矩形是逻辑坐标，二者不在同一空间；验收第一步是**声明本进程 awareness 档**，再谈对齐，不要一上来乘缩放系数。与 §10.2 末节已有踩坑（`SetProcessDPIAware()` 须在新起进程里调）互补：那条解决「怎么让进程 aware」，本条解释「aware 之后仍有哪些坐标不成立」。
+
+### 11.2 ★ 五档上下文生命周期不同，且 Win8.1 后旧换算 API 已不再转换
+官方逐字：`SYSTEM_AWARE` "will query for the DPI once and use that value for the lifetime of the process"（改 DPI 不刷新）；`PER_MONITOR_AWARE` "checks for the DPI when it is created and adjusts the scale factor whenever the DPI changes"；`PER_MONITOR_AWARE_V2`（Win10 1703+）才给整棵窗口树 DPI 变更通知、非客户区/菜单/对话框/comctl32/theming 自动按监视器缩放；`UNAWARE_GDISCALED`（1809+）改善 GDI 文本质量但不改变坐标虚拟化。
+另：官方逐字 "In Windows 8.1 ... PhysicalToLogicalPoint and LogicalToPhysicalPoint no longer transform points. The system returns all points to an application in its own coordinate space." 必须换 `PhysicalToLogicalPointForPerMonitorDPI` / `LogicalToPhysicalPointForPerMonitorDPI`（官方定义 "regardless of the DPI awareness of the caller"）。
+- 判据：跨屏拖动或用户改缩放后，**进程启动时缓存的 system DPI 与所有缓存坐标全部失效**；取目标屏/目标窗当前值用 `GetDpiForWindow` / `GetDpiForMonitor`，监听 `WM_DPICHANGED`，不要用 `GetDpiForSystem` 一把尺量全桌面。截图位图还须 `SetResolution(dpiX,dpiY)`，否则默认 96 DPI 会拉伸（CSDN 实操登记）。
+
+### 11.3 ★ 换算锚是 hWnd，且有一组硬失败态
+官方逐字："the new coordinates are in the world coordinates whose origin is (0, 0) on the desktop"、"The coordinates passed to the API have to be on the hWnd"；子窗口"only the area of overlap between the parent and the child window is converted"；"PhysicalToLogicalPoint will fail on a window that has either 0 width or height"，某些版本（含 Win7）在 `ShowWindow(SH_HIDE)` 后仍失败。
+- 判据：隐藏/最小化/零尺寸窗口的坐标**不可直接换算**；先确认非零尺寸与可见，转换后还要确认点落在该 hWnd 上。GUI 自动化报坐标时固定写三件事：物理/逻辑、目标 hWnd、取样时的 awareness 档。
+
+**提升层**：可复用 Skill（GUI 坐标验收）/ 工作流（截图-UIA 对齐前置检查）。触发词：DPI 坐标虚拟化、逻辑坐标、物理坐标、PER_MONITOR_AWARE_V2、ForPerMonitorDPI、no longer transform points、WM_DPICHANGED、GetDpiForWindow。
+**来源**：Microsoft Learn 三页官方一手 WebFetch 200 逐字（2026-11-14 实拉）+ 中文版逐串复核 + CSDN 2026-08-02 实操（登记）；`coordinate virtualization` / `no longer transform points` / `PER_MONITOR_AWARE_V2` / `ForPerMonitorDPI` 全库 0 命中 ⇒ 净新。WB 不往豆包自留地两文件落地。
