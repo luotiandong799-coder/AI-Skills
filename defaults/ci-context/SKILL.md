@@ -1,7 +1,7 @@
 ---
 name: ci-context
-description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体。
-version: 1.4.0
+description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体、上下文装配流水线逐级留痕、检索评估与答案评估分离归因、块完整性与权限失败判据。
+version: 1.5.0
 module: CI
 modules: CI
 ---
@@ -89,3 +89,28 @@ Compile N Run 官方《A Checklist for Evaluating an Extended Model》逐字七�
 - `llm-safety-challenges.github.io/`（WebSearch 快照，评测污染/基准偏差背景，仅判非）
 - **判非**：`RULER` / `NoLiMa` / `HELMET` / `effective context length` / `claimed length` / `NIAH` / `needle-in-a-haystack` / `lexical overlap` / `short-context baseline` / `max_position_embeddings` / `rope_scaling` 全库 SKILL.md **0 命中**；co-learn 台账 `RULER` 9 / `NoLiMa` 5 命中**全在豆包自留地**：r139C 明写「长上下文评测基准（RULER/LongBench v2…）模型评测工具事实，个人不跑基准 → 不落」、r318B/r364B/r376C/r386A 学的是记忆基准/退化绝对阈值/长度能力曲线（ATLAS）、r710A 明写「NoLiMa 长上下文评测已落 `wb-context-compressor` ⇒ 判非」。按去重铁律＋豆包自留地纪律，WB **0 落地** `wb-context-compressor` / `wb-execute-discipline`，也**不搬** r386A 的 ATLAS 曲线数字与 r364B 的 32K–100K dumb zone 阈值；本轮只取「claimed≠effective 的预算口径 + 基准族各自抓什么 + 七步评估顺序 + 三个配置误判」这一**验收协议层**。`Lost in the Middle` 3 命中（本技能 §五 r732C 已学 U 型曲线与位置效应任务依赖、`wb-max-token-saver`、`wb-execute-discipline`），本轮不重述该结论、只作基准族分工对照。
 - **未采纳**：任何具体模型分数当通用阈值、ATLAS/AA-LCR 等 2026 榜单数字、PrecisionMemBench 精度数值（单源未复现）。A/C 两轮结论一律不复用。
+
+
+## 九、上下文工程是「每次请求重新装配的 payload」：分层定位、逐级留痕、检索评估先于答案（CI · r746B 2026-11-14 实拉，四独立域交叉）
+
+> §3–§8 分别处理窗口退化、缓存计费、注意力预算、工具面压力、有效长度；本轮补的是**装配这一层本身**：谁在改 payload、每次改动在哪一级、以及"答错了"该归因到哪一级。
+
+### r746B-1 ★ 五种实践控制不同对象，质量下降先定位变了哪一层
+Braintrust《What is context engineering?》（2026-09-20）逐字定义："the practice of designing and managing everything a language model receives for a single request. It covers how each context source is **selected, ordered, compressed, and fitted within the context window**"；"Prompt engineering focuses on the instructions themselves, whereas context engineering governs the information assembled around those instructions **at request time**"。官方五列对照表逐字：context engineering 控制 "The complete payload assembled for each request: selection, ordering, freshness, compression, and token budget"，**每个请求都变**，衡量 "Context precision and recall, groundedness, utilization, token share, plus task outcome"；prompt engineering 只在刻意编辑时变、用固定数据集上的分数变动衡量；RAG 控制"文档如何索引检索排序"、memory 控制"跨会话持久化什么"，两者逐字 "**supply candidates that context engineering then selects from, so improving either one does not guarantee a better payload**"；fine-tuning 是 "the only practice in this list that changes the model rather than its input"。
+- **判据**：答错先问"这一轮相对上一轮变了哪一层"——候选集（RAG/记忆）、装配策略（选择/顺序/截断/压缩）、指令文本、还是模型权重；四层的修复动作互不等价。报告健康度按 **context precision / recall（选对没）+ groundedness / utilization（用上没）+ token share（占了多少）+ task outcome** 分栏，不许只报端到端一个分。与 §六 r738B「四压力源」分工：那条按**来源**分（定义／往返／重复计费／旧结果），本条按**实践层**分。
+
+### r746B-2 ★ 装配流水线九级，每一级必须记下"丢了什么、为什么丢"
+同一官方原文："Filtering, conflict resolution, compression, ordering, and truncation can each change what survives into generation, so **each stage should log what it dropped and why**." 九级逐字：① 广收候选（"before applying the final token budget"）② 过滤排序 ③ 去重与冲突按显式优先规则（"Recency, source authority, or application-defined priority"）④ 按预算压缩（"**a shorter payload can still fail if summarization removes a critical detail**"）⑤ 排序与格式化 ⑥ 强制预算（"apply a defined truncation order that removes the lowest-value material first and **records exactly what was dropped**"）⑦ 执行并记 token/latency ⑧ trace 装配上下文（"source IDs, their order, age, token share, any filtering or truncation decisions"）⑨ 打分并把低分生产用例回灌回归集。官方失败表逐字八类各配探测信号，其中 **Silent truncation**＝"Quality drops with **no application error**, usually losing whichever component lands last"、检测靠 "Log the truncation decision per request and alert on truncation frequency"；**Relevant evidence ignored**＝"High context precision paired with low utilization"；**Permission leakage** 用确定性 scorer 断言每个入选源都在当前用户权限内。
+- **判据**：装配流水线每一级留结构化 trace（谁被丢、丢弃理由、该级前后 token 数），回归时按级定位而不是"整体质量掉了"。**"没有报错"不构成上下文健康证据**——静默截断、历史挤掉证据、权限越界三类都产出流畅答案。与 §五 r732C-3「压缩不可逆、原始轨迹先落盘」分工：那条保证可取回，本条保证**可归因**。厂商工具（Braintrust span/scorer）仅作实现示例，不绑定。
+
+### r746B-3 ★ 检索评估与答案评估分开；k 取生成器实际收到的条数，块要保住"规则+例外"
+PEI Learn《Evaluate retrieval before evaluating the answer》（Updated Aug 2026）逐字："Evaluate retrieval and generation **separately**. Otherwise prompt changes may hide an indexing, ranking, or permission problem."；四指标 recall@k / precision@k / rank / coverage，且 "**Choose k from the amount of context the generator actually receives. Evidence ranked twentieth is not useful if only five passages enter the prompt.**"；用例须含 "**questions whose answer is absent**"、"Retrieval should not be rewarded for returning a related passage when no source establishes the answer"；**chunk integrity** 六项清单（标题与节上下文／表头／定义／**a rule with its exception**／日期版本管辖元数据／原文链接）："A semantically relevant fragment may be unusable if the qualification was split into another chunk."；权限过滤逐字 "**A permission failure is critical even when the answer is factually correct**"；诊断序按 原问题→改写→过滤元数据→嵌入/词法→重排→分块→索引新鲜度，"**Adding prompt detail to the generation stage cannot retrieve a document that was filtered out incorrectly**"。Data AI Hub《RAG Evaluation Guide》（2026-07-21 复核）独立逐字："**Never optimize generation when context recall is low**; attribute metric drops to retrieval vs prompt vs model before changing anything."；"Combined scores hide root cause"；误诊表含 "Correct by lucky parametric guess → 常被误判 Success → 实为 Unfaithful，will fail next query"；"**Calibrate judges on your domain before CI trust**"。
+- **判据**：① 评估记录含「问题+权限上下文／所需证据与权威／期望相关与误导段落／检索器版本／recall·precision·rank·coverage／实际交付的上下文／答案忠实度与引证」八项；② k 按**实际进 prompt 的段数**定，不按检索返回条数；③ 分块验收要检查「规则与其例外、表头、版本元数据」是否同块，语义相关但被切断的片段判无效；④ 必备无答案用例与权限用例，权限失败即使答案事实正确也判 critical；⑤ 指标下降先归因（低 recall→分块/嵌入/过滤；recall 好而 faithfulness 低→提示/模型），**禁止用换模型修检索问题**。与 §八 r742B「七步评估顺序」分工：那条测的是**长上下文能力上限**，本条测的是**本次装配有没有把证据送到位**。
+
+### r746B 来源与判非（逐字核验，2026-11-14）
+- `braintrust.dev/articles/what-is-context-engineering`（Braintrust Team，2026-09-20，20 min；WebFetch 200 全文逐字：五列表／九级流水线／八类失败表）— **第一独立域（厂商工程一手，立场登记）**
+- `learn.promptengineering.org/lessons/evaluate-retrieval-before-the-answer`（PEI Learn，Updated Aug 2026；WebFetch 200 全文逐字：四指标／用例七字段／chunk integrity／权限／诊断序／RAG evaluation record）— **第二独立域（教学规范一手）**
+- `www.dataaihub.co/learn/rag-evaluation`（Data AI Hub，Last reviewed 2026-07-21；WebFetch 200，**AI 摘要 60s 超时，返回前 15,000 字逐字**，如实登记）— **第三独立域（教材站，立场登记）**
+- `www.aicharcha.com/research/context-engineering-evaluation-framework-2026`（aicharcha；WebSearch 快照逐字：retrieval vs answer 分离、claim 级引证、provenance 八字段、chunk/metadata/hybrid 分项）＋ `learn.microsoft.com` RAG 评估指引经其转述 — **第四独立域交叉（二手转述，不作唯一来源）**
+- **判重换道**：`context precision` / `context recall` / `groundedness` / `utilization` / `ablation` 命中全在豆包自留地 `defaults/wb-context-compressor`（RAG Triad 三轴、RAGAS 四维、三层指标、golden dataset+CI gate、judge 校准）与 `engineering/wb-execute-discipline`（按 workflow 类型选主指标）——**RAG 评估指标族机制本体已高度饱和，本轮不搬**；改取「装配层逐级留痕／k 与实际入窗条数／chunk integrity／权限失败即 critical／无答案用例」这套**验收协议与归因口径**。`chunk integrity` / `citation entailment` / `token share` / `log what it dropped` / `precision at k` / `silent truncation` 全库 SKILL.md **0 命中** ⇒ 净新。`taxonomy` 等其他命中见 C 轮登记。豆包自留地 WB **0 落地**。
+- **未采纳**：RAGAS/DeepEval/Promptfoo 具体分值阈值（0.70/0.75/0.85）、合成测试集生成配方、LLM-as-a-judge 偏差族、Braintrust 产品 API 与代码段——前者属豆包自留地已学的指标校准层，后者属工具绑定。

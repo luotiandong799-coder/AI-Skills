@@ -1,9 +1,9 @@
 ---
 name: meta/pdi-forecasting
-description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议。
+description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议、预测题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.6.0"
+version: "1.7.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -226,3 +226,29 @@ Satopää / Baron / Foster / Mellers / Tetlock / Ungar《Combining multiple prob
 - `olivlaw.com/en/us/cugetari/prognoza-20-extremizarea`（第三方课程笔记，含 log-odds 幂次 a 的算例与"a 从已结算题上学"的操作口径；**商业/教学立场，仅作算例交叉，不作结论唯一来源**）
 - **判非**：`extremiz` 全库 SKILL.md 仅 1 命中＝本技能 §三「多源平均 + 适度极端化」的一句技法口号（无机制、无适用边界、无验收）；本轮把它展开为两个独立成因、信息重叠度函数与聚合器选型，**不重复口号本身**。`Ranjan` 命中在 `engineering/wb-execute-discipline/SKILL.md`（Ranjan Kumar，人名巧合，非 Ranjan & Gneiting 2010），不同命题。`log odds` / `logit aggregat` / `information overlap` / `wisdom of crowds` / `opinion pool` / `linear pool` / `under-confident` / `1300 experts` / `calibrated forecasts` 全库 SKILL.md **0 命中**；`extremiz` co-learn 台账 1 命中经查为 r710A 之外的历史建议引用，非本命题。豆包自留地 WB 0 落地。
 - **未采纳**：具体极端化系数 a 的拟合值、GJP 各年 Brier 数字、beta-transformed linear pool 与 QRA/conformal 等建模方法族（沿用 §十 r734A 判非不搬）。B/C 两轮结论一律不复用。
+
+
+## 十三、先判「这题能不能结算」：题面规范是评分规则之前的门槛（PDI · r746A 2026-11-14 实拉，四独立域交叉）
+
+> 本轮取的是**题面（question specification / resolution criteria）**这一层：§7 管选哪把评分尺、§10 管预测对象形态、§11 管覆盖保证、§12 管多人聚合，但都默认「题目已经能被无争议地结算」。本轮补的是这个默认前提本身。
+
+### r746A-1 ★ 结算三要素：什么算、何时算、谁裁定；「我看见就知道」不是阈值
+Good Judgment《What's a month?》（Superforecaster Ryan Adler，事件 2025-08-04）逐字："**Ambiguity Kills Forecasts**"、"If a term or clause could be interpreted reasonably in different ways, we define that term and include examples as needed"、"everybody must be contemplating the same elements of an event they are asked to forecast"。实例：CNBC 两位评论员争 Tesla 股价"过去一个月"涨跌，一个用 7/3 收盘价约 $315（8/4 往前一个月是 7/4 休市），另一个用 7/7 开盘价约 $300——**两人都没算错，错在 "month" 没有共享定义**。原文引 Potter Stewart 在 *Jacobellis v. Ohio* 的 "I know it when I see it"，判词逐字："may work when deciding that a movie is not obscene, but it is **no way to set a threshold for a forecasting question**. Otherwise, we would invite **static from the crowd instead of signal**." 结论逐字："**Define upfront what counts, when it counts, and who decides**, and leave as little as possible to interpretation. Good forecasting starts with good question writing."
+- **判据**：写概率前先填三格——① 什么算发生（判定对象与阈值）② 何时算（截止时刻/时区/数据源发布日）③ 谁裁定（数据源还是仲裁人）。三格任一留白 ⇒ 该概率**不可结算**，禁止进入 Brier 台账；"等结果出来再看"就是把噪声当信号。与 §7.1「先选尺」分工：那条约束评分尺，本条约束**被评分的题面**。Good Judgment 另页登记：随机抽样研究中约 **5%** 预测市场题目存在严重缺陷可能作废、2025-03 Polymarket 美乌矿产协议在未签署情况下结算 Yes（**厂商立场，仅作交叉，不作结论来源**）。
+
+### r746A-2 ★ 规格缺陷是三类正交故障，不是一种「没写清楚」
+Rethink Priorities《Types of specification problems in forecasting》（Juan Gil，2021-07-20）逐字三分类：**Ambiguous**（"not tight enough for it to be clear how it should resolve"）／**Misaligned**（"the **letter of the question diverges from the spirit of the question**"）／**Uncompelling**（"not interesting or important enough to incentivize forecasters to think about it"，在兴趣驱动型平台尤甚）。Misaligned 实例：朝鲜导弹确已发射，但解析条件要求美国国防部确认，DoD 以涉国家情报为由拒发声明 ⇒ 结算为否；逐字 "**a confirmation source is, by definition and necessity, an integral part of the proposition**"。原文明确三类 "not 'crisp'"、一题可同时中多类，且代理量与目标量在长视界上会脱钩（"what if that organization changes methodology, leadership, focus"）。
+- **判据**：题面复核按**三行分别打勾**，不能只查歧义：① 无歧义（同一事实只解出一种结算）② 对齐（结算条件就是决策者真正关心的量；用代理量必须写明代理与目标的关联假设及失效条件）③ 有投入价值（有人愿意为它花时间，否则收不到有效预测）。歧义的两种收场各有代价，原文逐字：作废 "resolves neither positively or negatively"（预测者投入沉没）或交仲裁人 "some arbiter has final say"——此时 "**The forecaster would need to predict how they might decide (rather than the object-level question)**"，即预测对象被悄悄替换成"仲裁人会怎么判"，还额外引入仲裁人腐败空间。⇒ 仲裁兜底不得当作题面合格证明。
+
+### r746A-3 ★ 解析条件七条硬清单 + 时间跨度放大 + 标题与条件必须同向
+经 Metaculus《Guidelines for resolution conditions》在 Rethink Priorities 文内逐字转录的七条：**Aim for tight resolution conditions**（"limit the scope for ex-post quarrels"）／**Define your terms**（"Don't worry about being a little pedantic here!"）／**Be concrete**／**Use authoritative sources**（"be sure that the sources will be available at the time of resolution"）／**Consider and account for edge-cases**／**Consider fall-back criteria**（数据源停刊怎么办）／**Try to account for unknown unknowns**。原文："This problem becomes harder on **longer time scales** since there's more time for the world to change in a way that makes your question no longer make sense." Forecasting Wiki《How to Write Forecasting Questions》独立逐字补三条："**Questions do not resolve against "reality" they resolve against whatever source is stated**"；"**Compare the resolution criteria to the title question**. Is there any possibility where the criteria will go one way but the title question the other? ... It is unsatisfying when questions resolve on a **technicality**"；"The further into the future the more you want clarity as to what happens if the **resolution criteria disappears**." 同页 checklist 逐字要求 "written clearly enough as to leave no room for **ex post facto quarrels** over what really happened—and who was right"，并设"假想一位千里眼能否不问'原本是什么意思'就结算"的自检。
+- **判据**：题面模板固定七格（紧／定义／具体步骤／权威源+存续性／边缘案例／回退源／未知未知），**视界越长格数不减反增**；另加「标题↔解析条件同向检查」与「结算所依据的数据源是否仍在发布」两项。题目对象是所写数据源而不是"现实"⇒ 数据源停刊时若无回退条款，此题必须判为作废而非按印象结算。与 §11「结算栏写保证类型」互补：那条写统计保证，本条写**结算可执行性**。
+
+### r746A 来源与判非（逐字核验，2026-11-14）
+- `goodjudgment.com/whats-a-month/`（Good Judgment，Ryan Adler；WebFetch 200 全文逐字；事件日 2025-08-04）— **第一独立域（从业者一手）**
+- `rethinkpriorities.org/research-area/types-of-specification-problems-in-forecasting/`（Rethink Priorities，Juan Gil，2021-07-20；WebFetch 200 全文逐字，含 Metaculus 七条指南转录）— **第二独立域（研究机构一手）**
+- `forecasting.wiki/wiki/How_to_Write_Forecasting_Questions`（Forecasting Wiki；WebFetch 200 全文逐字；外链 Metaculus question-writing guidelines / checklist、Foretold、AI Forecasting Dictionary）— **第三独立域（社区规范一手）**
+- `goodjudgment.com`（《What the ForecastBench "Rematch" Still Won't Measure》，WebSearch 快照逐字：约 5% 题目有严重缺陷／2025-03 Polymarket 案例／GJ question team 题目失败率近零）— **厂商立场，仅交叉不作结论唯一来源**
+- `joyful-slides-532925.framer.app/threshold-2030/part-3-forecasting`（Threshold 2030，WebSearch 快照逐字：五要素 specificity/reliable sources/edge cases/fallback/unknowns 及严格适当评分+多重比较的示例解析条件）— **第四独立域交叉（会议教程）**
+- **判非**：三轮窄串全库 SKILL.md 精确扫描——`resolution criteria` / `question failure` / `ambiguity kills` / `fall-back criteria` / `unknown unknowns` / `misaligned question` / `letter of the question` / `operationalization` / `voided` / `Potter Stewart` **全 0 命中**；`arbiter` 唯一命中在 `defaults/wb-context-compressor/SKILL.md` §r608C 的 `StackArbiter` 产品名（子串噪声，非仲裁人命题）。`10-90 rule` / `clairvoyant` 等未纳入。B/C 两轮结论一律不复用；豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。
+- **未采纳**：评分系统激励失配、"Dead people can't get paid"、预测市场平台对齐整篇论文、arbiter 腐败的经济学讨论、题目类型（binary/category/range/conditional）分类学——属平台机制研究，与可迁移判据无关。

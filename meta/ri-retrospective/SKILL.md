@@ -1,9 +1,9 @@
 ---
 name: ri-retrospective
-description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置。
+description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。
 module: RI
 modules: RI,EI
-version: "1.5.0"
+version: "1.6.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -272,3 +272,28 @@ Cybermaniacs（2026-10-26）逐字："A technical timeline answers questions suc
 - `biascodex.com/hindsight-bias`（WebSearch 快照逐字：decision journals / 区分 'signals we missed' 与 'noise that became signal only in retrospect' / Fischhoff 1975 与 Roese & Vohs 2012 文献）＋ `sciencewalk.blog/what-is-the-i-knew-it-all-along-phenomenon`（WebSearch 快照，decision journal 与 consider-the-opposite）— 两独立域背景交叉，立场登记
 - **判非**：`outcome bias` / `fundamental attribution` / `Baron and Hershey` / `Hershey` / `decision timeline` / `decision rationale` / `bare approval` / `decision quality` / `two ledgers` / `reassessment` / `cognitive forcing` / `lucky win` / `label luck` 全库 SKILL.md **0 命中**；`hindsight bias` 2 命中＝本技能 §八 r717C 的**反事实语言门**（tinycto 引句）与 `meta/ti-critical-reasoning` 的 belief audit（记录预测是复盘输入），均为**语言/前置记录层**，本轮取的是**评价对象分离与决策时间线层**，明确分工不重述；`near miss` 1 命中＝r717C「near misses 同等价值」，本轮不重复该结论，只在"无事故样本"下另立"绕过控制但成功"这一不同命题。co-learn 台账 `outcome bias` / `decision timeline` **0 命中**，`hindsight bias` 6 命中经查均属 r717C 语言门语境。豆包自留地 WB 0 落地。
 - **未采纳**：Baron & Hershey 实验的具体效应量与样本数（二手转述，不冒充原始论文直读）、HRM 绩效制度设计（超出 RI 复盘技能边界）、NIST AI RMF 完整框架（只取"记录目标与理由"这一条）。A/B 两轮结论一律不复用。
+
+
+## 十三、让跨事故模式可见：severity 与 taxonomy 分工、起步标签 schema、标注自带证据等级（RI · r746C 2026-11-14 实拉，四独立域交叉）
+
+> §8 用复发率验收单次复盘有没有产生学习，§11 管计数器会不会奖励沉默，§12 管决策与结果分栏。本轮补的是**复盘产物如何变成可检索、可聚合、可核验的组织资产**——单个复盘讲一个故事，五十份打了标签的复盘才说明该往哪投。
+
+### r746C-1 ★ severity 管响应，taxonomy 管学习；只按严重度排序看到的是紧急度不是失效生物学
+Incident Index《Incident Taxonomy and Tags: Reporting Without Gaming Metrics》逐字："Severity ... answers '**how urgent and how bad right now?**' A taxonomy answers '**what kind of failure was this, where did it live, and what do we want to learn across quarters?**'"；"Teams that only sort by severity see trends in **urgency, not in failure biology**."；"**Keep severity for response policy**: paging, comms cadence, post-mortem requirement. **Keep taxonomy for learning**: which services repeat, which dependency classes burn time, where detection lagged." 同一事故可 "SEV2 for response while tags capture 'database failover' and 'vendor API throttle' as facts for analytics"。季度汇总逐字 "top three failure modes, detection gaps, customer-affected hours, and remediation backlog health"，图表须 "sourced from the same canonical tags"。
+- **判据**：复盘模板把两轴拆开——severity 只驱动响应动作与是否必须复盘；taxonomy（子系统/触发因 vs 贡献因素/失败模式/检测来源/客户可见与否/地域租户范围）驱动跨季度检索与投资。两者不可互相替代，更不可用 severity 当学习分类。与 §12 r742C-3「决策时间线」分工：那条重建单次决策的理由链，本条建立**跨事故可比的事实字段**。
+
+### r746C-2 ★ 起步 schema 5–8 字段 + 四个反模式 + 季度把一条模式转成带 owner 的路线项
+Safeguard《How should you tag past incidents so patterns become visible?》（Safeguard Security Team，Last reviewed 2026-10-19；转述 Google SRE Book 第 15 章「复盘完成评审后加入组织历史事故库」与 SRE Workbook「mature postmortem cultures often add **machine-readable tags** and other metadata for downstream analytics」）逐字："**One incident tells you a story. Fifty tagged incidents tell you where to invest.**" 起步八字段：detection source（自有监控/客户/合作方/研究者/审计）／cause class（访问控制/依赖/配置/构建发布/流程缺口/第三方）／affected area／severity／time to detect（分桶）／time to contain／action types（prevent/detect/mitigate）／status。设置六步：选单一可检索仓库→字段做**下拉**（"Free text produces twenty spellings of the same cause"）→回填过去一年→**标签进复盘关闭检查单**（"no postmortem is closed without them"）→每季度按 tag 计数看 top cause class 与最慢 detection source→"Turn one pattern into a roadmap item, with an owner"。四个反模式逐字：**Too many tags**（"Five to eight fields is plenty"）／**Tags as blame**（"Never tag a person. Tag the system and the control"）／**Counting incidents as a score**（"More incidents recorded can mean a healthier reporting culture, not a worse system"）／**One cause per incident**（"Allow multiple cause classes. Google's guidance speaks of contributing causes in the plural"）。近失也要打标，但用单独 severity/type 值以便与完整事故对比。Incident Index 独立补治理："**Assign owners for the taxonomy itself. When services are renamed, migrate tags or map old values explicitly**"、"Prefer **stable enums over clever synonyms**"、若领导只奖"更少事故"就会 "misclassify severity or avoid filing"。
+- **判据**：① 标签字典是**受控枚举且有人负责**，服务改名必须迁移旧值或显式映射，否则跨期对比静默断裂；② 标签是复盘关闭门（缺标签不算关）而非事后补录；③ 季度聚合必须落到一个带 owner 的路线项，只出图表不算闭环；④ 禁用"事故数"当绩效（与 §11 r738C-3「奖励沉默的计数器」同向，本条给出**标签层的抗博弈设计**：tag 系统与控制、不 tag 人、允许多因）；⑤ 近失单独取值，别与完整事故混在同一桶。
+
+### r746C-3 ★ 标注本身要带证据等级：已知 vs 潜在 + 原文锚点
+AI Incident Database 官方 GMF taxonomy（Goals, Methods, Failures；maintainer Nikiforos Pittaras / contributor Sean McGregor，SafeAI 2023 workshop paper）逐字：它是 "a **failure cause analysis taxonomy** for AI systems in the real world, interrelating the goals of the system deployment, the system's methods, and likely technical causal factors"；设计动机之一是公开事故报告 "which may **lack details and technical information**"／"noisy, low-information documents"。结构为**三个互相关联本体**（AI System Goals／AI Methods and Technologies／AI failure causes），每条标注强制配三件："**Confidence modifiers (known and potential)**, corresponding to the degree of certainty of the annotator"／"**Text samples** from the incident report relevant to the assigned label, which **ground each the classification to supporting text data**"／"**Free comments**, where the annotator may provide their rationale, evidence, sources"。检索相似事故时会带出历史标注、示例文本片段与标注者理由，以弥补报告细节缺失。
+- **判据**：任何标签都必须能回答"这是观察到的还是推断的"以及"报告里哪句话支撑它"。**没有原文锚点的标签不得进入跨事故统计**——否则聚合出来的是标注者的猜测分布，不是失效模式分布。三本体结构提示标签维应覆盖「目标／方法／失效因」而非只标后果。与 §10 r734B-3「数据不全须标证据强度、不得把推断写成事实」同构，本条把它落到**标签粒度并给出可机检字段**（confidence modifier + text sample）。与 §8 r717C「复发率按 failure_mode/is_recurrence 打标」分工：那条定义验收指标，本条定义**标签数据的可信度与可核验性**。
+
+### r746C 来源与判非（逐字核验，2026-11-14）
+- `safeguard.sh/resources/blog/tag-past-incidents-so-you-can-search-and-spot-patterns`（Safeguard Security Team，Last reviewed 2026-10-19；WebFetch 200 全文逐字；其引 Google SRE Book《Postmortem Culture》与 SRE Workbook《Postmortem Culture》属**二手转述**，如实登记，未冒充 Google 一手）— **第一独立域（厂商实践一手，含官方二手转录）**
+- `incidentdatabase.ai/taxonomies/gmf`（Responsible AI Collaborative / AIID 官方 taxonomy 页；WebFetch 200 全文逐字；外链 SafeAI 2023 workshop paper CEUR Vol-3381/17.pdf）— **第二独立域（学术/官方分类法一手）**
+- `incidentindex.com/guides/incident-taxonomy-tags-reporting`（Incident Index；WebFetch 200 全文逐字：severity vs taxonomy、useful dimensions、anti-patterns、rollups、governance）— **第三独立域（产品方指南，立场登记）**
+- `hireunderstudy.ai/blog/incident-postmortem-knowledge-capture`（WebSearch 快照逐字：postmortem graveyard、tag everything、决策树提取进 runbook、双向链接、runbook 更新内建进复盘流程）＋ `incidentdatabase.ai/es/taxonomies/csetv0`（CSETv0 字段与分布快照）— **第四独立域交叉（产品博客/镜像，不作结论唯一来源）**
+- **判重**：`machine-readable tags` / `detection source` / `cause class` / `tag as blame` / `five to eight` / `back fill` / `quarterly` / `confidence modifiers` / `GMF` 全库 SKILL.md **0 命中**；`taxonomy` 4 命中逐条核归属均**异命题**——`engineering/wb-agent-evaluation`（Microsoft KDD 2019 SRM 分类法）、`engineering/wb-subagent-delegation`（LLM 只能在固定 taxonomy 内选类别）、`defaults/wb-ponytail`（MCP 五层 taxonomy 触发词）、`engineering/wb-execute-discipline`（同族触发词）；`dropdown` 2 命中在 `wb-artifact-verification` / `wb-release-maintain`（界面控件与发布清单，非标签字典）⇒ 净新。A/B 两轮结论不复用；豆包自留地 WB **0 落地**。
+- **未采纳**：CSETv0 具体伤害等级分布数字、GMF 各标签的 incident 计数、Incident Index 的 RCA 模板与产品导流、hireunderstudy 的自动打标产品能力——前者是时点统计，后者是工具绑定。
