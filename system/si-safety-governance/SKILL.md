@@ -1,7 +1,7 @@
 ---
 name: si-safety-governance
 description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。
-version: 1.3.0
+version: 1.4.0
 module: SI
 modules: SI,EI
 ---
@@ -179,3 +179,27 @@ GitHub Docs 官方逐字：「**rotate the affected credential immediately** ...
 - `dev.to/rxkov/github-push-protection-is-a-pattern-match-not-a-secrets-boundary-2bf3`（2026-09-18 独立一手全文逐字：pattern match not boundary、四个洞、validity check ≠ partner notification、rotate on alert、fork/gist 传播面）
 - `www.safeguard.sh/resources/blog/github-secret-protection-deep-dive-push-protection-custom-patterns-validity-checks`（独立一手全文：active/inactive/unknown、扫描范围外清单、回溯积压）；`checkyourvibe.dev/blog/how-to/secret-scanning`（2026 独立一手：密码不拦、旧格式 token 不拦、可绕过、处置顺序）；`cloudspress.com` + `rottenwifi.com`（两篇独立一手：删除 commit 无效、须逐 commit 移除）
 - 立场登记：safeguard.sh / checkyourvibe.dev 均为安全厂商内容，产品宣传段判非；GitGuardian 统计数字仅作规模佐证，不作为本轮结论依据。
+
+
+## 十一、软件更新是独立攻击面：TUF 四类攻击、有序检查链与它不证明什么（r743C 实拉 · 2026-11-14，3 独点）
+
+> 与 §九（SLSA/provenance）、§十（push protection）分工：SLSA 证明「这个工件怎么被构建」，push protection 是「提交面的模式匹配」，TUF 防「客户端拿到的**是不是当下该拿的那一份**」。三者覆盖供应链的三个不同面，按 rules/07 登记为补齐而非并存。
+
+### 11.1（r743C-1）包签名 ≠ 更新安全：攻击面在元数据与时间，不在包体
+- **原文**：TUF 官方规范 1.0.37（Last modified 8 October 2026）§1.5.2 逐字列出攻击目标：**Rollback attacks**「An attacker cannot trick clients into installing software that is **older than that which the client previously knew** to be available」/ **Indefinite freeze attacks**「without the client being aware of the problem」/ **Mix-and-match attacks**「a **combination of metadata that never existed together** on the repository at the same time」/ Fast-forward / Arbitrary installation / Endless data / Extraneous dependencies / key compromise / wrong software。safeguard.sh 逐字「The SolarWinds attack **didn't exploit a bug. It exploited trust** ... signed with SolarWinds' **legitimate code signing certificate**」「The old version is **legitimately signed, so signature verification passes**」「The client continues running an outdated, vulnerable version while **believing it's up to date**」。
+- **判据**：① 验收清单逐问三件事：**旧版本能否被重放 / 陈旧元数据能否一直喂 / 不同时期的元数据能否混搭**；只答「有签名、走了 HTTPS」视为未覆盖。② 规范自陈边界逐字「When saying the framework protects against an attack, it means **the attack will be unsuccessful. It does not mean that a client will always successfully update during an attack** ... the framework **must detect when a client is unable to update**」⇒ 「装不上」与「被攻击但已检出」是两种成功/失败，不得把检测失败写成更新成功。③ 与 §9.1 SLSA「证明了什么/不证明什么」同构：安全声明同级写「不防什么」。
+
+### 11.2（r743C-2）检查链是四道有序门，每道各自 fail-closed
+- **原文**：TUF 官方规范 §5.5/5.6 逐字「**Check for a rollback attack.** The version number of the targets metadata file ... **MUST be less than or equal to** its version number in the new snapshot metadata file. Furthermore, any targets metadata filename that was listed in the trusted snapshot metadata file ... **MUST continue to be listed** ... discard the new snapshot metadata, abort the update cycle」；「**Check for a freeze attack.** The expiration timestamp in the new snapshot metadata file **MUST be higher than the fixed update start time** ... If the new snapshot metadata file is expired, discard it, abort the update cycle, and **report the potential freeze attack**」；「Check against snapshot role's targets hash ... This is done, in part, **to prevent a mix-and-match attack** ... **It is safe to check the hashes before the signatures, because the hashes come from the snapshot role, which we have already verified in the previous step**」；THRESHOLD 逐字「each SIGNATURE which is counted towards the THRESHOLD **MUST have a unique KEYID. Even if a KEYID is listed more than once** in the "signatures" list a client **MUST NOT count more than one verified SIGNATURE from that KEYID**」。
+- **判据**：① 客户端验收固定顺序 **root → timestamp → snapshot → targets**，每步逐项写「版本号 / 过期时间 / 哈希 / 阈值签名」四项的失败动作（discard + abort + 报告具体攻击名），不许合并成一句「验证通过」。② 新鲜度锚是 **fixed update start time**（本次更新开始时刻），不是检查时的当前时钟——否则长时间更新会被合法喂入过期元数据。③ 同一 KEYID 的重复签名不得凑数达阈值；哈希可先于签名校验的前提是**上一环已验证**，顺序不可任意调换。④ 与 §Cap95「拒绝规则匹配面须显式声明」同族：写出每道门比对的是哪个字段。
+
+### 11.3（r743C-3）freshness 是运维承诺，角色分离是妥协边界，且 TUF 不证明构建完整性
+- **原文**：TUF 官方 §1.5 逐字「**online keys ... must not be used for any role that clients ultimately trust for files they may install**」「The root role's private keys **MUST be kept very secure and thus should be kept offline**」，四顶层角色 Root / Targets / Snapshot / Timestamp（另有可选 Mirrors）。hivebook 逐字「**TUF secures delivery, not build integrity** — it ensures clients get authentic, fresh, consistent artifacts; it does not attest how those artifacts were built (that's in-toto)」「**Metadata expiration must be maintained** ... you need automation to re-sign them on schedule or **clients will (correctly) refuse stale metadata and updates stall**」「**Root key management is the whole ballgame**」；分工表逐字 TUF=update/distribution channel / in-toto=build pipeline provenance / Sigstore=artifact signing + transparency log，且「**Sigstore itself uses a TUF root to bootstrap trust in its keys**」。hivebook 一手勘误实证：Docker Notary v1 于 2025-07-31 归档、`notary.docker.io` 2026-12-08 关停、PEP 458 仍 `Accepted` 未实现、PyPI 实际发布的是 PEP 740 attestation、RubyGems PR #719 关闭未合。
+- **判据**：① 过期即拒收是**设计**不是故障 ⇒ 严禁为「先让更新跑起来」临时关掉过期检查（与 Cap87「新能力不得绕过宿主既有策略」同向）；须配自动重签作业并监控到期。② 角色/密钥按职责分离，在线密钥不得签客户端最终信任的角色；root 密钥离线 + 阈值 + 轮换仪式。③ 「已采用 TUF」这类现状断言须核**官方 adoptions 列表**，不引二手摘要（hivebook 逐条勘误四类误传即反例）；与 Cap76「误读澄清同表同级」同族。④ 与 §九/§十分工写成一行：构建溯源（SLSA/in-toto）· 交付新鲜度（TUF）· 凭据检出（push protection），缺任一不得写「供应链已验」。
+
+**来源（r743C 独立实拉 2026-11-14，≥2 独立域交叉）**：
+- `theupdateframework.org/specification/`（TUF 官方规范 **v1.0.37 / Last modified 8 October 2026**，WebFetch 200 逐字：§1.5.2 九类攻击目标与「does not mean a client will always successfully update」边界、§1.5 online keys 限制、§2.1 四顶层角色、root 离线、§5.5/5.6 rollback/freeze/mix-and-match/THRESHOLD 检查链；**主 spec 页 AI 摘要 60s 超时返回前 15000 字，如实登记**，§5 段由 `.io` 镜像页与搜索快照逐字交叉补足）
+- `theupdateframework.io/specification/latest/` + `theupdateframework.com/specification/draft/`（官方规范两独立镜像，搜索快照逐字命中同一检查链，双域交叉）
+- `hivebook.wiki/wiki/tuf-the-update-framework-secure-software-updates`（2026-09-22 复核的独立一手条目：四角色表、Gotchas、TUF/in-toto/Sigstore 分工表、Notary/PEP458/PEP740/RubyGems 四条勘误）
+- `safeguard.sh/resources/blog/software-update-mechanism-security`（独立一手全文逐字：SolarWinds「exploited trust」、rollback 旧版本仍合法签名、freeze 客户端自以为最新、role separation/threshold/expiration/consistent snapshots 五机制）
+- 立场登记：hivebook 为 AI 知识库条目（自带 verified 标注与复核日期），Safeguard.sh 为安全厂商内容，二者均不作唯一结论来源；核心机制以官方规范为准。

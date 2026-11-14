@@ -3,7 +3,7 @@ name: ei-reliability
 description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。
 module: EI
 modules: EI,VI
-version: 1.1.0
+version: 1.2.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -95,3 +95,26 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 - `www.kondevs.com/content-hub/reliability-patterns-timeouts-retries-idempotency-dlqs`（2026-10-29 独立一手全文逐字；unknown outcome、total deadline、DLQ 四要素与依赖链）
 - `sre.google/sre-book/handling-overload/`（Google SRE，**WebFetch fetch failed，如实登记不冒充一手全文**；其 10% client retry budget 口径仅见于 aitechmodel.com 搜索快照，未采信为本轮结论）
 - 商业/社区立场登记：`lumigo.io`（AWS 文章摘要）、`aitechmodel.com`（护栏清单）、`learnagent.wiki`（重试卡）仅作定位与交叉，未作结论来源。
+
+
+## 十一、双写不可原子与事务发件箱：at-least-once 的完整边界（r743B 实拉 · 2026-11-14，3 独点）
+
+> 与 §十（重试预算/超时链）分工：§十管**瞬时故障**的放大与取值；本节管**结构性缺口**——两次写入不共享事务时，任何重试次数都补不了。与 `execution-intelligence` §十一（写操作三态/effect class/幂等键）分工：那条管单次写操作的契约，本节管「本地库 + 消息代理」这条发布链。
+
+### 11.1（r743B-1）双写的四种排列全有崩溃窗口，重试补不了
+- **原文**：microservices.io 官方 Pattern: Transactional outbox 逐字「The command must **atomically** update the database and send messages ... However, **it is not viable to use a traditional distributed transaction (2PC) that spans the database and the message broker**. The database and/or the message broker might not support 2PC」；「sending a message **in the middle of a transaction is not reliable. There's no guarantee that the transaction will commit**」「if a service sends a message **after committing the transaction** there's no guarantee that it won't crash before sending the message」。exashard 逐字「**There is no ordering of two independent writes that is safe.** This is the dual-write problem, and **it is not solvable by being careful. It is solvable only by making the two writes into one write**」；「**Retries fix transient broker failures. They cannot fix a crash in the gap between two systems, because the intent to publish was only ever held in memory.**」。
+- **判据**：① 规格先画「两次写入的四种顺序 × 崩溃点」表：先发后写（宣布可能回滚的变更）/ 先写后发（崩溃丢事件）/ 事务中发（事务可能不提交）/ 2PC（组件不支持或耦合）。② 遇到不一致，禁止把「加一层重试」当修复——重试只覆盖 broker 瞬时故障，崩溃时重试循环本身已不存在。③ 正解是把事件写入业务数据的**同一个本地事务**（outbox 表），由独立 relay 发布；2PC 仅在明确支持且接受耦合时才列为候选，不默认。
+
+### 11.2（r743B-2）outbox 保证的是 at-least-once，重复窗口不能靠换顺序关掉
+- **原文**：microservices.io 官方 Result context 逐字「**The Message relay might publish a message more than once.** It might, for example, **crash after publishing a message but before recording the fact that it has done so**. When it restarts, it will then publish the message again. **As a result, a message consumer must be idempotent**, perhaps by tracking the IDs of the messages that it has already processed」。exashard 逐字「**You cannot close that gap by reordering, either: mark the row published first and a crash before the publish loses the event entirely, which is worse. Any two-system operation has this property, which is exactly the dual-write problem reappearing one layer down**」；「**The outbox and idempotent consumers are one design, not two**」；「It gives **at-least-once, not exactly-once**. Consumers must be idempotent by event ID」。
+- **判据**：① 规格把「有效一次」写成公式：**at-least-once 投递 + 消费侧按稳定 event ID 去重**，两半是一个设计，缺一不得写「恰好一次」。② 稳定 event ID 随事件发布，消费端把已处理 ID 与本地状态变更放进**同一本地事务**（inbox 表）；内存态去重在重启后失效。③ relay 的「发布→标记」两步本身是又一处双写，禁止用「先标记后发布」交换顺序来掩盖（会变成丢事件）。④ 与 §十一（execution-intelligence）的 effect class / point of no return 合用：不可逆副作用排最后，且必须能承受重复投递。
+
+### 11.3（r743B-3）豁免要两条件同时成立，替代方案各有明码代价
+- **原文**：exashard 逐字唯一豁免 ephemeral presence telemetry 两条件 **AND**：「The producing service **holds no database state** that the event needs to be consistent with ... There is no dual write here, because there is **no first write**」「The stream is **loss-tolerant**」；「**If only the first condition holds, you still want durability. If only the second holds, you still have a dual write that can announce a rolled-back change.** Both together, and the outbox is pure overhead」。六方案对比逐字：publish then write「Announces changes that may roll back; corrupts consumers」/ write then publish「Loses events on crash; no record that an event was owed」/ 2PC「Poor performance, poor broker support, **blocking on coordinator failure**」/ event sourcing「Solves it completely, but **re-architects your whole persistence model**」/ CDC without an outbox「**Leaks your internal schema as your public event contract**」，且「**If you use CDC, point it at the outbox table, not at your domain tables**」。microservices.io 官方 drawback 逐字「**Potentially error prone since the developer might forget to publish the message/event after updating the database**」。sourcegarden 逐字「a high-write outbox table accumulates dead rows fast ... bloat and vacuum pressure. **The outbox needs pruning and monitoring like any hot table**」。
+- **判据**：① 豁免须两条件同时成立并书面登记，只满足其一仍走 outbox；业务事件（注册/支付/订阅变更）自动不满足第二条。② 选型表逐条写失败模式，不写「性能更好/更简单」这种无边界结论；relay 在 polling（运维简单、有轮询延迟）与 CDC（低延迟、多一套基础设施）之间按延迟与运维成本定。③ outbox 表要有清理与监控策略，把它当队列表而非业务表。④ 官方 drawback 落到验收：业务写入与 outbox 插入必须封装在同一入口，防「忘记插事件」。
+
+**来源（r743B 独立实拉 2026-11-14，≥2 独立域交叉）**：
+- `microservices.io/patterns/data/transactional-outbox.html`（Chris Richardson 官方 pattern 页，WebFetch 200 全文逐字：2PC 不可行、三种 forces、Solution 四参与者、relay 重复与 idempotent consumer、Polling/Transaction log tailing 两实现、官方 drawback）
+- `exashard.com/posts/transactional-outbox-pattern`（2026-07-31 独立一手全文逐字：四种排列、重试无效、at-least-once not exactly-once、重排无解、豁免两条件、六方案对比表、CDC 只指 outbox 表）
+- `sourcegarden.com/blog/the-dual-write-problem`（独立一手全文逐字：relay 崩溃窗口、outbox 表 bloat/vacuum、CDC vs polling 选型）；`penluma.com/blog/system-design/11-distributed-transactions-and-idempotency`（独立一手：三档交付语义、idempotency key scope 到 operation 不是 record、check-then-act 竞态）；`codetoclarity.in`（独立一手：Transactional Inbox 模式与 OOM 崩溃时序）
+- 立场登记：`systemweakness.com`（社区长文，仅作 at-least-once 口径交叉）、`qaskills.sh` 无关不采。作者个人平台纪律（「every producer writes through a transactional outbox」）为经验立场，登记不作规范结论。

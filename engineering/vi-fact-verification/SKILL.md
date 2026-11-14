@@ -3,7 +3,7 @@ name: vi-fact-verification
 description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。
 module: VI
 modules: VI,EI
-version: "1.2.0"
+version: "1.3.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -129,3 +129,27 @@ version: "1.2.0"
 - computer.org/csdl/journal/ts/2015/05/06963470/13rRUx0geBw（Barr et al. IEEE TSE 2015，WebFetch 一手全文逐串）
 - earlbarr.com/publications/testoracles.pdf · web.eecs.umich.edu/~weimerw/2024-481F/readings/testoracles.pdf（PDF 镜像，WebSearch 一手逐字；直读失败如实登记）
 - hypothesis.readthedocs.io/en/hypothesis-python-4.57.1/quickstart.html · /en/latest/quickstart.html（官方文档，WebFetch 一手全文）
+
+
+## 九、变异测试：验证的是测试套件，不是代码（r743A 实拉 · 2026-11-14，3 独点）
+
+> 与 §8.2 蜕变关系 / §8.3 属性测试分工：那两条解决「没有 oracle 时怎么写断言」，本节解决「写好的断言到底有多强」。三者是验证能力的三个不同层，不互相替代。
+
+### 9.1（r743A-1）覆盖率只回答「跑没跑到」，不回答「错了会不会挂」
+- **原文**：PIT 官方首页逐字「Traditional test coverage (i.e line, statement, branch, etc.) **measures only which code is executed by your tests. It does not check that your tests are actually able to detect faults in the executed code. It is therefore only able to identify code that is definitely not tested.**」；极端例「tests with no assertions」。UCSB CS156 逐字「with code coverage, we can cheat: we can write a test suite that calls every single method ... if we then do **no assertions** ... the only thing we've shown is that our code doesn't compiles and doesn't crash. We have not shown that the code produces the correct result」，结论「in short, **it doesn't test our code; instead, it tests our tests**」。
+- **判据**：① 验收报告固定分两栏——**执行覆盖**（哪行被跑到）与**故障检出**（把故障注进已跑到的代码后测试会不会失败）；绿灯覆盖率只证明第一栏，不得写成「已验证」。② 「100% 行覆盖 + 零断言」是合法但零信息的绿色状态，须显式禁止作为完成证据。③ 与 §8.3 属性测试衔接：属性给「单跑可判」的谓词，变异给「断言强度」的度量，两者分别报数，不合并成一个分数。
+
+### 9.2（r743A-2）存活 ≠ 缺测试：七种结局先分诊，等价变异是分母污染
+- **原文**：PIT 官方 basic_concepts 逐字列出七态 **Killed / Survived / No coverage / Non viable / Timed Out / Memory error / Run error**，且「**No coverage is the same as Survived except there were no tests that exercised the line of code**」「A mutation may **time out** if it causes an infinite loop」「A **run error** means something went wrong when trying to test the mutation」「Under normal circumstances you should see no non viable mutations or run errors」。等价变异两类成因逐字：「The resulting mutant **behaves in exactly the same way as the original**」（官方 `i=2` 时 `>=1` 与 `>1` 等价例）与「behaves differently but **in a way that is outside the scope of testing**」（logging/debug，PIT 用 `FLOGCALL` 不生成此类）。UCSB 三解释：usually 缺测试 / sometimes 冗余代码该删 / rarely 等价变异。qaskills 逐字「**When a survivor is equivalent, do not add a silly test just to raise the score.** ... A mutation score that rewards meaningless assertions is worse than a lower score that reflects real risk」。
+- **判据**：① 见到 survived 先分诊七态：**No coverage** 才补测试；**等价变异**登记豁免、不给它补断言；**Timed Out / Memory error / Non viable / Run error** 是工具/环境噪声，须查测试隔离与堆配置，不得当作测试缺陷冲分。② 变异分数分母含不可杀变异体 ⇒ 「100%」不是必然可达目标，把等价变异计入分母却要求满分会诱发无意义断言。③ 存活也可能是「代码本身就是冗余的」，此时正确动作是删代码而非加测试。
+
+### 9.3（r743A-3）门禁是双阈值 + 增量 ratchet，不是一次性 100%
+- **原文**：UCSB 逐字「we first must have a '**green**' test suite ... **If even one fails, pitest won't even start** doing mutation testing」；「`-DmutationThreshold=100` means we want **100% of the mutants to be killed**, or else we'll fail the build」「`-DcoverageThreshold=100` means we want **100% of the lines of code** to be covered」——两个独立门。PIT 官方「**The most effective way to use mutation testing is to run it frequently against only the code that has been changed**」；官方运行机制「Before running the tests PIT performs a traditional line coverage analysis ... then uses this data along with the **timings of the tests** to pick a set of test cases targeted at the mutated code」。qaskills ratchet 逐字「If a package starts at 54 percent mutation score, **do not demand 90 percent next week. Set the threshold at 54 or slightly below, require new work not to reduce it**」「**Publish trends by package, not only a single repository score**」「Start with changed modules or critical packages」。
+- **判据**：① 前置条件写进验收——测试套件先全绿，否则变异分析根本不启动。② `mutationThreshold` 与 `coverageThreshold` 分列两个数、各自独立失败，禁止用一个「质量分」代替。③ 阈值按**包**取当前值做 ratchet（只准升不准降），不全局一刀切；范围限定在变更代码/关键包，按包发布趋势而非单一仓库分。④ 与 §9.2 合用：先分诊再决定「补断言 / 删冗余 / 登记等价」，ratchet 只允许抬真实检出力。
+
+**来源（r743A 独立实拉 2026-11-14，≥2 独立域交叉）**：
+- `pitest.org`（PIT Mutation Testing 官方首页，WebFetch 200 全文逐字：coverage 只测执行、gold standard、只跑变更代码）
+- `pitest.org/quickstart/basic_concepts`（PIT 官方基本概念页，WebFetch 200 全文逐字：等价变异两类成因、七态结局、行覆盖+测试耗时定向）
+- `ucsb-cs156.github.io/topics/testing/testing_pitest.html`（UCSB CS156 教学页，WebFetch 返回前 15000 字 + 搜索快照逐字：无断言作弊、tests our tests、三解释、双阈值、green suite 前置；**AI 摘要 60s 超时，如实登记**）
+- `qaskills.sh/blog/pit-java-mutation-testing-guide`（2026 独立一手全文逐字：等价变异不加傻测试、ratchet 54%、按包趋势、CI 调优；商业/教学立场登记，不作唯一结论来源）
+- `bell-sw.com/blog/a-comprehensive-guide-to-mutation-testing-in-java/`（BellSoft 一手实操交叉：38%/64% 分数报告与 mutator 清单）；`sourcegarden.com` 无关不采。
