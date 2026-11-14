@@ -1,7 +1,7 @@
 ---
 name: si-safety-governance
 description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。
-version: 1.2.0
+version: 1.3.0
 module: SI
 modules: SI,EI
 ---
@@ -147,3 +147,35 @@ modules: SI,EI
 - `slsa.dev/spec/v1.0-rc1/levels`、`slsa.dev/spec/v1.0-rc1/onepage`、`slsa.dev/` — 搜索快照逐串交叉（L1 unsigned、L3 隔离、Source track 移除、首个 on-ramp 是生成 provenance）。
 - `www.acejournal.org/2026/01/27/slsa-supply-chain-levels-in-practice` — 一手 WebFetch 200 全文（Sigstore Fulcio/Rekor、slsa-verifier、cosign verify-attestation、Kyverno/OPA、pin digest、SBOM gap 与 CISA 双信号）；**行业期刊立场（厂商导流倾向）已标注，判定性结论一律以官方规范为准**。
 - `marklodato-slsa.netlify.app/spec/v1.0-rc1/levels` — 规范作者镜像，搜索快照交叉佐证，不作唯一依据。
+
+## 十、凭据泄露检出的边界与处置顺序（r739C 实拉 · 2026-11-14）
+
+> 与 §九（SLSA 分 track / 签名者密钥可达性 / provenance 与 SBOM 双栏）分工：§九管**构建产物的来源证明**，本节管**凭据泄露的检出面与检出之后怎么办**；同属供应链安全族，但两者一个证明「东西从哪来」，一个回答「钥匙漏没漏、漏了先做什么」。豆包自留地 r275A 已把 secret scanning / push protection 作为 GHAS 功能清单登记，本节不重复功能介绍，只取官方未覆盖清单与检出失效面。
+
+### 10.1 push protection 是 push 面的模式匹配，不是凭据边界
+GitHub Docs 官方逐字：它「blocks pushes that contain secrets **before** they reach your repository」，拦的是四类——partner patterns（「where push protection is supported for that secret」）、**需显式启用**的 generic patterns（私钥 / 数据库连接串）、custom patterns（自定义正则，须逐个选择启用）、AI-detected unstructured secrets（**public preview and subject to change**）。官方另列五种 push surface（命令行 / Web UI commit / 文件上传 / REST API / GitHub MCP server **仅 public repositories**）。
+
+=> 覆盖集 = 模式表 ∩ 启用状态 ∩ push surface，不是「仓库里没有密钥」。dev.to 逐字：「**Push protection is a pattern match at the remote**」「Push protection does not block what it cannot name」「GitHub's scanner is a good delay. **It is not a boundary**」；`DATABASE_URL`、无厂商前缀 bearer、自建 API key、`.env`/`mcp.json` 里的 `env` 块都不在默认集合；密码类「push protection and validity checks are not supported」（checkyourvibe 2026 独立一手）。GitGuardian 口径：generic credentials 占检出泄露 **58%**（该统计仅作规模佐证，不搬为其结论）。
+
+判据：门禁声明必须写出「本次扫描面」（哪些 push surface / 哪些模式已启用），把「已开 push protection」写成「仓库已无凭据泄露风险」是范畴错误。CI 侧须另跑 gitleaks / trufflehog 扫**全历史**与 GitHub 看不见的文件（未被 git 跟踪的 `.env`、CI 日志、构建产物、容器镜像、托管面板、Slack/Jira 工单）——safeguard.sh 独立一手逐字：「Secret Protection only sees what happens inside a GitHub-hosted git push」。
+
+### 10.2 bypass 理由决定告警是否可见，这是治理盲区不是界面细节
+官方表逐字：默认「**anyone with write access** to the repository can bypass push protection by specifying a bypass reason」；三种理由的告警行为分别是——`It's used in tests` → **创建已关闭告警**（resolved as used in tests）、`It's a false positive` → **创建已关闭告警**、`I'll fix it later` → 创建开放告警。即三条路里两条不产生待办、不触发跟进通知；「The control then becomes a **dialog, not a gate**」（dev.to）。收紧手段是 delegated bypass，官方给三档：bypass privileges（可自批 + 审批他人请求）/ exemption from push protection（完全不触发）/ 组织级指定哪些模式纳入。
+
+判据：验收不能只查「有没有开 push protection」，还要查「bypass 权限面」与「关闭态告警是否进入审计视图」。把「扫描到了」推成「有人会处理」是错的——理由字段本身就能让告警静默落地。与 §Cap95「拒绝规则的匹配面必须显式声明」同族：这里要问的是「告警的落地状态由谁决定」。
+
+### 10.3 检出后先轮换再清历史；两类动作不可互换
+GitHub Docs 官方逐字：「**rotate the affected credential immediately** ... While you can also remove secrets from your Git history, this is **time-intensive and often unnecessary if you've already revoked the credential**」。理由在历史面：secret scanning 扫「your entire Git history on all branches」并告警，但 **push protection 不会 un-commit**——cloudspress/rottenwifi 两篇独立一手逐字：「a later commit that deletes a token leaves the original token in the earlier commit, so it still triggers protection」，必须从**每一个**含该值的 commit 里移除（tip 用 amend、更早用 interactive rebase）。dev.to 交叉：「64 percent were still valid in January 2026」（2022 年首见的密钥）、「**Rotate on alert. Do not wait for a rewrite of git history. The credential is the asset. The commit is the evidence.**」
+
+另有三类常被漏的传播面：① **private-to-public flip**——私有仓期间写入的密钥在可见性翻转那刻全部公开（内部仓含硬编码密钥概率为公开仓 6 倍，GitGuardian 口径）；② **fork 不随父仓轮换**——「Forks copy the blob ... Secret scanning on the parent does not fan out a revoke to every fork」；③ 公开 gist 与 secret gist 同样在扫描范围，但「It does not make the gist private for you」。
+
+还有一组易混：**validity check ≠ partner notification**。官方逐字：validity check 是「checking whether detected secrets are still **active**」（回问发行方，用于排优先级，返回 active/inactive/unknown）；partner notification 是「we **notify the provider** so they can take action, such as revoking the credential」，且「Partner secrets are reported directly to the provider and **aren't displayed in your repository alerts**」。dev.to：「Mix the two and the team waits for a vendor. **The vendor never sees a custom API key.**」
+
+判据：处置顺序固定为「轮换/吊销 → 查发行方访问日志 → 再决定是否重写历史 → 按真实原因关闭告警」；被拒的 push **不等于**凭据安全（值已离开本机，须按已暴露处理）。告警优先级 ≠ 修复：validity=inactive 只说明这把钥匙不能用了，不说明没被用过；「清理历史」与「使凭据失效」是两个独立验收点，缺一不得写「已处置」。
+
+**来源（r739C 独立实拉 2026-11-14，≥2 独立域交叉）**：
+- `docs.github.com/en/code-security/concepts/secret-security/secret-scanning`（GitHub Docs 官方，WebFetch 200 全文逐字：全历史扫描范围、partner integration、rotate immediately、validity checks 定义）
+- `docs.github.com/en/code-security/concepts/secret-security/push-protection`（GitHub Docs 官方，WebFetch 200 全文逐字：四类模式、五种 push surface、bypass 三理由告警行为表、delegated bypass 三档）
+- `dev.to/rxkov/github-push-protection-is-a-pattern-match-not-a-secrets-boundary-2bf3`（2026-09-18 独立一手全文逐字：pattern match not boundary、四个洞、validity check ≠ partner notification、rotate on alert、fork/gist 传播面）
+- `www.safeguard.sh/resources/blog/github-secret-protection-deep-dive-push-protection-custom-patterns-validity-checks`（独立一手全文：active/inactive/unknown、扫描范围外清单、回溯积压）；`checkyourvibe.dev/blog/how-to/secret-scanning`（2026 独立一手：密码不拦、旧格式 token 不拦、可绕过、处置顺序）；`cloudspress.com` + `rottenwifi.com`（两篇独立一手：删除 commit 无效、须逐 commit 移除）
+- 立场登记：safeguard.sh / checkyourvibe.dev 均为安全厂商内容，产品宣传段判非；GitGuardian 统计数字仅作规模佐证，不作为本轮结论依据。

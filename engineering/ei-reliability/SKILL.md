@@ -3,6 +3,7 @@ name: ei-reliability
 description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。
 module: EI
 modules: EI,VI
+version: 1.1.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -62,3 +63,35 @@ modules: EI,VI
 - microservices.io/patterns/data/saga.html（Saga 模式原文：编排 vs 合唱、补偿）
 - adevguide.com/backend/distributed-systems/saga-pattern（编排 / 合唱 / 补偿 / 幂等、可靠实现）
 - theaugmenteddev.com/blog/saga-pattern-distributed-transactions-microservices（持久化状态 / 幂等 / 超时、何时用）
+
+## 十、重试预算计价、层数相乘与超时取值方法论（r739A 实拉 · 2026-11-14）
+
+> 本节是 §六「有界重试 + 抖动 + 死信 + 超时」的**元层加厚**：§六给的是「要有界」的动作清单，本节给「界从哪来、按什么计价、在哪一层生效」。与 `engineering/execution-intelligence` §十一（写操作三态 / 对账先于重试 / effect class）分工：那条管「这次结果能不能判、判不了怎么办」，本条管「判得了之后重试总量怎么算」。豆包自留地已学退避参数模板与限流预算三层，本节不搬参数、只取未学的计价与取值语义。
+
+### 10.1 重试预算是「按错误类型计价 + 成功回补」的独立机制，不是请求限流
+AWS SDK standard 模式官方逐字：token budget 容量 **500 tokens**；每次 **transient（非限流）重试扣 14**、**throttling 重试扣 5**；重试成功只退还**该次**的成本，首次请求成功回补 **1 token**；预算耗尽时「the SDK stops retrying and returns errors directly to your code」。三条常被漏掉的语义：
+- **配额永不延迟首次请求**（「The retry quota never delays or blocks the initial request. Only retries are affected.」）——它是重试闸门，不是准入闸门。
+- **成功只补本次**：若第一次重试失败、第二次成功，净亏 14 tokens（不是全部退还），所以「多次重试才成功」也会缓慢消耗预算；耗尽最快的是「重试全失败」。
+- **作用域是单个 SDK client 实例**（「typically scoped to a single SDK client instance ... It is not shared across processes or hosts」）——多进程/多机部署不能靠它做全局背压。
+
+判据：**次数上限管单次调用，预算管整个客户端在故障期的放大倍数**，两者必须同时写。只写 `max_attempts=3` 不等于限制了重试风暴；验收要报出「预算容量 / 每类错误单价 / 耗尽后的行为 / 作用域」，并机检默认 3 次尝试下持续 transient 失败 >约 **22%**、throttling >约 **32%** 才开始净流失（低于此值成功回补快于消耗，预算看起来「没生效」）。把 token bucket 当成限流器复用会读反方向：限流器削的是正常流量，重试预算削的是「已经失败的那部分流量」。
+
+### 10.2 多层重试按乘法放大，只在栈的一层重试
+AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，最底层数据库承受 **243x**（3→9→27→81→243）；因此「In general, for low-cost control-plane and data-plane operations, our best practice is to **retry at a single point in the stack**」。同篇另给两个反直觉点：**capped exponential backoff 会让所有客户端在封顶速率上持续重试**（封顶解决了「等多久」，没解决「还在打」）；circuit breaker 虽被广泛推荐，但「introduce modal behavior into systems that can be difficult to test, and can introduce significant addition time to recovery」，AWS 的替代做法是本地 token bucket 限重试。
+
+判据：编排链路上每加一层重试，放大是**乘积不是和**。验收动作固定为画一张「调用栈 × 重试层」图并机检只有一层挂了重试策略；Agent 场景尤其要查 SDK 内置重试 + 应用 handler 重试 + 编排器重试三处叠加（同一请求被三处各重试 3 次即 27x）。不要在每一层都「顺手加个 retry」，也不要靠熔断开关去补一个本该由单层重试解决的结构问题。
+
+### 10.3 超时值由「可接受的假超时率」反推分位数；per-attempt timeout ≠ 整体 deadline
+- **取值方法论**（AWS 官方逐字）：「we choose an acceptable rate of false timeouts (such as 0.1%). Then, we look at the corresponding latency percentile on the downstream service (p99.9 in this example)」——超时不是拍脑袋常数，是先认领一个误判率再查分位；且该值「has to fit within the caller's own deadline」。两处已知不适用：跨公网客户端网络时延大、p99.9 与 p50 过于接近的紧时延服务。
+- **计时覆盖范围**：官方部署案例——20ms 超时在部署后集中触发，原因是计时器包含了新建 TLS 连接；另有「implementations where the timeout doesn't cover all remote calls, like DNS or TLS handshakes」。故验收必须写清「什么被计时覆盖」，不能只报一个数字。
+- **服务端定向延迟**：`x-amz-retry-after` 存在时 SDK 采用服务端给定值，但被钳制在「minimum of the computed backoff delay and a maximum of the computed backoff delay plus 5,000 ms」，且「**The SDK does not apply jitter to this value, because the service is expected to jitter it**」——客户端与服务端各加一次抖动是错的，前提是服务端已加；若下游是自研服务未加抖动，此处必须自行补。
+- **四模式的依赖链**（kondevs 2026-10-29 独立一手）：timeouts → retries → idempotency → DLQ「form a dependency chain. Skip one and the next one breaks」；DLQ 最低可运行集是监控告警 / 明确归属 / 留存策略 / **经测试且可安全重放的 redrive**（无幂等的 redrive 会制造新问题）。超时创建的是第三态 `unknown outcome`（r734C 已定三态），不是二值失败。
+
+判据：规格里同时写「per-attempt timeout / 端到端 deadline / 假超时率与对应分位 / 服务端 retry-after 的钳制区间与抖动归属」；只写「timeout=5s」视为未定义。SLO 应报 first-attempt success rate、eventual success rate、DLQ age，而不是单一 uptime——重试会把降级体验掩盖成「最终成功」。
+
+**来源（r739A 独立实拉 2026-11-14，≥2 独立域交叉）**：
+- `docs.aws.amazon.com/sdkref/latest/guide/feature-retry-behavior.html`（AWS SDK 官方，WebFetch 200 全文逐字；含 500/14/5/22%/32%/20s 上限/x-amz-retry-after 钳制）
+- `aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/`（AWS Builders' Library，Marc Brooker 2019-12-05，WebFetch 200 全文逐字；243x、single point in the stack、false timeout 0.1%→p99.9、jitter 于定时任务用同主机一致性方法）
+- `www.kondevs.com/content-hub/reliability-patterns-timeouts-retries-idempotency-dlqs`（2026-10-29 独立一手全文逐字；unknown outcome、total deadline、DLQ 四要素与依赖链）
+- `sre.google/sre-book/handling-overload/`（Google SRE，**WebFetch fetch failed，如实登记不冒充一手全文**；其 10% client retry budget 口径仅见于 aitechmodel.com 搜索快照，未采信为本轮结论）
+- 商业/社区立场登记：`lumigo.io`（AWS 文章摘要）、`aitechmodel.com`（护栏清单）、`learnagent.wiki`（重试卡）仅作定位与交叉，未作结论来源。
