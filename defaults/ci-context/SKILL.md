@@ -1,7 +1,7 @@
 ---
 name: ci-context
-description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象时使用。是 13 模块中 CI 的载体。
-version: 1.3.0
+description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体。
+version: 1.4.0
 module: CI
 modules: CI
 ---
@@ -64,3 +64,28 @@ modules: CI
 - r732C：Anthropic 官方《Effective context engineering for AI agents》+《Scaling Managed Agents》两篇 WebFetch 一手逐字；Chroma Context Rot 技术报告（2025-07-14）经 13labs.au / masterprompting.net / qatronic.com / adroit.io 四域交叉；Liu et al.《Lost in the Middle》TACL 2024 逐字引用
 
 - r738B：`platform.claude.com/docs/en/agents-and-tools/tool-use/manage-tool-context`（Claude 官方，**WebFetch 被地区重定向至 app-unavailable-in-region，如实登记**；由官方中/英双页 WebSearch 快照逐字核验四行表、Combining approaches 与 25% markup 原文）+ `anthropic.com/engineering/advanced-tool-use`（官方，WebFetch 200 全文逐字，仅作机制本体判非与背景，不搬数字）+ `www.safeguard.sh` 等不相关域未采纳。
+
+## 八、有效上下文长度必须按基准族测，"窗口没满"从来不是安全声明（CI · r742B 2026-11-14 实拉，三独立域交叉）
+
+§五给退化的架构根因（n² 注意力）与压缩可逆性，§六给工具面四条压力源。本节补的是**验收口径**：标称窗口是"能接受多少输入"，有效长度是"能可靠用上多少"，两者必须分开度量；而一个绿色的单针热力图几乎不能证明任何下游能力。
+
+### r742B-1 ★claimed length ≠ effective length，且两者差距是常态不是例外
+Compile N Run《Long Context in Practice》逐字："A config.json that says `max_position_embeddings: 131072` tells you **the largest position the model will accept. It does not tell you whether the model can find, use or reason over a fact that sits 100,000 tokens back**."；RULER（Hsieh et al., NVIDIA, COLM 2024）**effective context length** 定义逐字："the largest tested length at which a model's average score over the 13 tasks stays above a fixed threshold, chosen as **Llama2-7B's score at 4K tokens (85.6%)**"；实测"**Almost every model passes vanilla NIAH at its claimed length and fails RULER's threshold well before it**"：GPT-4 128K→64K、Llama3.1 70B 128K→64K、Qwen2 72B 128K→32K、Mistral-v0.2 7B 32K→16K。Futurecraft《Context Rot》独立逐字："In the authors' words, **'only half of them can maintain satisfactory performance at the length of 32K'**"（17 个声称 32K+ 的模型）；NoLiMa 有效长度表（保持短输入基线 ≥85% 的最长输入）：GPT-4o 声称 128K / 有效 8K、Gemini 2.0 Flash 声称 1M / 有效 4K，"The claimed window is **16x the effective length for GPT-4o and roughly 250x for Gemini 2.0 Flash**"。
+- 判据：① 上下文预算按**有效长度**定，不按 model card 的窗口数；② "窗口没满"在 §五 已被判为不构成堆料理由，本条给出可测量的判据——自己任务上按长度扫一遍并定保持率阈值，而不是看 fill 百分比；③ 换型号/换推理配置后有效长度会变，预算表须标型号、基准与日期。与 §三 r710A-1「按最重操作测窗口」分工：那条给工程测法，本条给公开基准对"标称 ≠ 可用"的量化证据与阈值定义方式。
+
+### r742B-2 ★绿色 NIAH 热力图只证明两件事；基准族彼此不可代替
+Compile N Run 逐字："**A green heatmap shows that positions work and copying works, nothing more.** Add distractors, multi-hop and non-literal variants."；HELMET（Yen et al., ICLR 2025）逐字："argues that synthetic tests and small task subsets give **noisy, inconsistent rankings**… Across 59 models, it found that **NIAH-style synthetic tasks do not reliably predict downstream performance**, that **categories correlate weakly with each other**, and that open models lag closed ones most on tasks requiring full-context reasoning"；NoLiMa（Modarressi et al., ICML 2025）去掉词面重叠后"at 32K, **11 of the 13 models fell below 50% of their own short-context baseline**, and even GPT-4o dropped from **99.3% to 69.7%**"。Futurecraft 独立交叉："Of 13 models claiming at least 128K, 'at 32K, for instance, 11 models drop below 50% of their strong short-length baselines.' GPT-4o went from 99.3% on short input to 69.7% at 32K."
+- 判据：① 基准按"它抓什么"分开记（NIAH＝位置/复制；Lost in the Middle＝位置偏置；RULER＝干扰项/多跳/聚合/QA 的有效长度；NoLiMa＝依赖关键词匹配；HELMET＝应用级下游排名），**不能用 A 的通过给 B 背书**；② 需求若含"跨多段材料推理"或"问题与证据无字面重叠"，单针检索通过率与它无关，必须换对应基准；③ 位置效应按 §五 r732C-2 是任务依赖的待验证假设，基准间的弱相关正好说明"换个任务排名就变"。与 §六 r738B-1「四种手段各减一样」同构但不同面：那条分流**工具面压力**，本条分流**评测能力**。
+
+### r742B-3 ★评估有固定顺序，且配置错误会伪装成"上下文能力差"
+Compile N Run 官方《A Checklist for Evaluating an Extended Model》逐字七步：1. **Short-context regression**（≤4K 重跑常规基准，"Static scaling methods can cost some short-context quality"）→ 2. **Perplexity sanity check**（"A blow-up means the configuration is wrong; **a flat curve proves little**"）→ 3. **NIAH grid**（"Anything less than near-perfect here usually means a **configuration error**"）→ 4. **RULER** 按自己业务阈值算 effective length → 5. **Position sweep** 在自家任务上把关键文档从首移到尾 → 6. **语义非字面测试**（NoLiMa 或 HELMET/LongBench/自家长文档任务）→ 7. **Cost and latency**（prefill 与 KV-cache 随长度增长，"Sometimes retrieval over a shorter context beats a long one on both quality and cost"）。《Common Mistakes》逐字："**Equating claimed and effective length**"、"**Reporting only vanilla NIAH**"、"**Using the chat model without its chat template**… which **looks like a context failure but is not**"、"**Forgetting to enable scaling at inference**… measures **extrapolation, not the advertised capability**"、"**Ignoring tokenization in length targets**… build haystacks by **token count**, not by characters"。
+- 判据：① 顺序不可跳——先短上下文回归再谈长，否则把配置退化误判成模型能力退化；② 症状"长上下文掉分"先排三个非能力因（chat template / rope_scaling / 字符数当 token 数），排完才归到 §五 的注意力预算；③ 报数字必须带长度口径、分词器、基准名与阈值，跨基准的分数不可比。Futurecraft 明确代际边界："Almost all the work below uses synthetic tasks and models from 2023-2025. **You can't carry its numbers over to current** … no comparable published tables for these models could be found."、"No such table exists for the late-2026 generation" ⇒ 本轮所有数值只作**方法示例**，落地时以自测为准，禁止写死成通用阈值。
+
+### r742B 来源与判非（逐字核验，2026-11-14）
+- `www.compilenrun.com/docs/ai/llm/llm-positional-encoding/llm-long-context-evaluation/`（WebFetch 200 全文逐字：RULER 13 任务/85.6% 阈值/有效长度表、HELMET 59 模型、NoLiMa 11 of 13、七步评估顺序、Common Mistakes 六条）— 一手教程全文
+- `futurecraft.pro/blog/context-rot`（2026-10-31 发布 / 2026-11-08 更新，WebFetch 200 全文逐字：基准对照表、NoLiMa 有效长度表、16x/250x、only half…at 32K、"put the important parts at the edges isn't universal advice"、代际边界声明）— 独立域一手交叉
+- `9to5ai.tech/long-context-recall-explained`（WebSearch 快照逐字：RULER/NoLiMa/HELMET/LongBench v2/AA-LCR/ATLAS 概览与"effective length"口径）— 独立域交叉
+- `github.com/fledgeling-co/fledgeling-plugins/.../compaction-gemini.md`（WebSearch 快照：NoLiMa 11/13、GPT-4o 99.3→69.7、PrecisionMemBench / Recall 掩盖检索失败；**单源未复现 + 含 Errata 自述，立场登记不作结论唯一来源**）
+- `llm-safety-challenges.github.io/`（WebSearch 快照，评测污染/基准偏差背景，仅判非）
+- **判非**：`RULER` / `NoLiMa` / `HELMET` / `effective context length` / `claimed length` / `NIAH` / `needle-in-a-haystack` / `lexical overlap` / `short-context baseline` / `max_position_embeddings` / `rope_scaling` 全库 SKILL.md **0 命中**；co-learn 台账 `RULER` 9 / `NoLiMa` 5 命中**全在豆包自留地**：r139C 明写「长上下文评测基准（RULER/LongBench v2…）模型评测工具事实，个人不跑基准 → 不落」、r318B/r364B/r376C/r386A 学的是记忆基准/退化绝对阈值/长度能力曲线（ATLAS）、r710A 明写「NoLiMa 长上下文评测已落 `wb-context-compressor` ⇒ 判非」。按去重铁律＋豆包自留地纪律，WB **0 落地** `wb-context-compressor` / `wb-execute-discipline`，也**不搬** r386A 的 ATLAS 曲线数字与 r364B 的 32K–100K dumb zone 阈值；本轮只取「claimed≠effective 的预算口径 + 基准族各自抓什么 + 七步评估顺序 + 三个配置误判」这一**验收协议层**。`Lost in the Middle` 3 命中（本技能 §五 r732C 已学 U 型曲线与位置效应任务依赖、`wb-max-token-saver`、`wb-execute-discipline`），本轮不重述该结论、只作基准族分工对照。
+- **未采纳**：任何具体模型分数当通用阈值、ATLAS/AA-LCR 等 2026 榜单数字、PrecisionMemBench 精度数值（单源未复现）。A/C 两轮结论一律不复用。

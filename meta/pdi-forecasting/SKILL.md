@@ -3,7 +3,7 @@ name: meta/pdi-forecasting
 description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议。
 module: PDI
 modules: PDI,TI,DI
-version: "1.5.0"
+version: "1.6.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -197,3 +197,32 @@ JRSSB「Marginal validity does not preclude substantial variation in coverage am
 
 - **判非**：窄串词边界全库 SKILL.md：`marginal coverage` / `conditional coverage` / `exchangeability` / `calibration set` / `undercover` **全 0 命中**；`conformal` 唯一命中在本技能 §十 r734A 的**判非段**（明确写「QRA／conformal／normalizing flows 等**建模方法**族不属 PDI 评分规则，不搬」）。本轮不引入任何建模方法/算法流程，只取**统计保证的验收语义**（覆盖类型、三目标不可兼得、exchangeability 前提、子群 gap），与 r734A 判非不冲突且正好补齐其留下的元层；与 §十 的 PICP/PINAW/IS 分工：那节是「怎么打分」，本节是「这个分数保证不了什么」。豆包自留地 WB 0 落地。
 - **换道/未采纳**：换道：clustered conformal / CLASSWISE / normalized conformal 等**生成预测集的算法族**按 r734A 判非一律不搬；econstor PDF 被 Anubis 反爬拦截，其 Proposition 1 仅作 WebSearch 快照登记、不冒充一手全文；Springer 的端到端训练改条件校准方案属建模方法，不采纳。A/B 两轮结论一律不复用。
+
+## 十二、聚合多个概率时"取平均"本身会系统性压扁信心（PDI · r742A 2026-11-14 实拉，四独立域交叉）
+
+§七管"用哪把尺评分"、§八管"校准指标自己有什么缺陷"、§十管"预测对象形态决定尺"、§十一管"区间/集合预测保证什么"。本节管更前置的一层：**多个独立预测合成一个数时，简单平均这个动作本身就是一个有偏估计量**。§三 那句"多源平均 + 适度极端化"只是技法口号，本轮补上它为什么成立、什么时候反而不该极端化、以及怎么验收。
+
+### r742A-1 ★两个彼此独立的压扁机制，只有一个能靠换统计量躲开
+Baron / Mellers / Tetlock / Stone / Ungar（Decision Analysis 2014, 11(2):133-145）官方摘要逐字：把多人概率估计合成共识时通常用简单加权平均，而"Such aggregated probabilities correspond more closely to the real world if they are transformed by **pushing them closer to 0 or 1**"。两个 distorting factors：
+- **因素一＝概率尺度两端被压缩**：逐字 "The first factor is the **compression of the probability scale at the two ends**, so that random error tends to push the average probability toward 0.5. This effect **does not occur for the median forecast, or, arguably, for the mean of the log odds** of individual forecasts." ⇒ 这是**算术平均这种统计量自带的**偏差，换中位数或对数几率均值即可绕开，不是"人太保守"。
+- **因素二＝每个人都把自己只见部分信息这件事算进了谨慎里**：逐字 "the result of forecasters taking into account their **individual ignorance of the total body of information** available. Individual confidence in the direction of a probability judgment (high/low) thus fails to take into account the **wisdom of crowds** that results from combining different evidence available to different judges." ⇒ 群体合并后掌握的信息多于任何个人，但平均把每个人的谨慎原样保留了；这一条**对 mean / median / mean of log odds 三者都生效**。
+- 官方结论逐字："We show that the same transformation function can approximately eliminate both distorting effects **with different parameters for the mean and the median**. And we show how, in principle, **use of the median can help distinguish the two effects**." ⇒ 判据：① 报聚合数必须写明用的是 mean 还是 median、有没有做 log-odds 变换；② 两种成因的修正强度参数不同，不能拿一个 extremize 系数一套用到底；③ 想判断"偏保守到底来自哪一个"，用中位数与均值之差做诊断，而不是凭直觉调系数。与 §7.2「一个 BS 同时测三件事」分工：那条讲单个分数不能证明校准，本条讲**聚合这个动作**本身带偏。
+
+### r742A-2 ★极端化强度是"信息重叠度"的函数，不是可调超参
+Satopää / Pemantle / Ungar《Modeling Probability Forecasts via Information Diversity》（arXiv:1406.2148，v1 2014-06-09 / v5 2015-09-10）官方摘要逐字：主观概率估计的异质性"is often more important than **measurement noise**"，论文建模"experts that use **partially overlapping information sources**"，并"shows how the **optimal amount of extremizing of the average probability forecast** (shifting it closer to its nearest extreme) **varies as a function of the experts' information overlap**. Our model thus gives a more principled understanding of the **historically ad hoc practice** of extremizing average forecasts."。UQAM 学位论文（GJP/ACE 综述）逐字佐证："An ideal opinion pool maximizes both calibration and sharpness (Ranjan & Gneiting, 2010)"、"linear opinion pools are **necessarily uncalibrated and lacking in sharpness**… too close to the marginal event frequency… leading to **underconfidence**"。
+- 判据：① 信息完全重叠 → 最优聚合退化为平均；完全不重叠 → 趋向投票；**同一个模型在同一批新闻上跑 5 次不是 5 个独立信息源**，对它做极端化等于凭空造信心；② 极端化系数 a 必须**从已结算的同类问题上学出来**（在 log-odds 上取均值再乘 a 映射回概率，a=1 即赔率几何平均，a>1 才产生极端化），不许在事后挑让 Brier 好看的 a；③ 登记每个来源的信息集（看了什么、与谁重叠），否则"多源"只是重复计数。与 §8.3「重校准不是无损操作」分工：那条改的是概率值到下游阈值的映射，本条改的是**多个概率如何合成一个**。
+
+### r742A-3 ★聚合器可以比"平均 + 极端化"更省，且同时做偏差校正与极端化
+Satopää / Baron / Foster / Mellers / Tetlock / Ungar《Combining multiple probability predictions using a simple logit model》（International Journal of Forecasting 2014, 30(2):344-356）官方著录摘要逐字："construct a **likelihood-based aggregation formula**… The resulting aggregator has a simple analytical form that depends on a **single, easily-interpretable parameter**. This makes it computationally simple, attractive for further development, and **robust against overfitting**. Based on a large-scale dataset in which **over 1300 experts tried to predict 69 geopolitical events**, our aggregator is found to be **superior to several widely-used aggregation algorithms**."；UQAM 综述逐字："Satopää et al. (2014) used a recalibration technique based on the logit function which was able to **out-perform both the unweighted mean and the Beta-transformed linear opinion pool** algorithm suggested by Ranjan and Gneiting (2010)"。DataField《Further Reading》独立第三方逐字："Introduces the logistic recalibration approach to finding the optimal extremizing factor. Shows that this approach outperforms simple extremizing and provides **both bias correction and extremization simultaneously**."；同页另立"**Forecast Combination Puzzle**"（Stock & Watson 2004 / Smith & Wallis 2009）："simple combination methods frequently outperform more sophisticated approaches"、"the **estimation error in optimal weights** is often large enough to offset the theoretical advantage of optimization"。
+- 判据：① 聚合方案升级前先问"多了几个待估参数"——单参数 logit 聚合器优于多参数的复杂加权，是因为后者在有限已结算题上把权重估歪；② 结算台账把「偏差校正」与「极端化」分两栏记，别用一次 Brier 改善同时给两者发奖；③ 简单平均是强基线（forecast combination puzzle），声称"新聚合更好"要在**同类题的样本外**比，不能只在拟合集上比。与 §7.1「严格适当规则」分工：那条约束评分尺，本条约束聚合器选型。
+
+### r742A 来源与判非（逐字核验，2026-11-14）
+- `pubsonline.informs.org/doi/10.1287/deca.2014.0293`（INFORMS 官方期刊页，Published Online 19 Mar 2014，WebFetch 200 摘要全文逐字）— 一手
+- `econpapers.repec.org/article/inmordeca/v_3a11_3ay_3a2014_3ai_3a2_3ap_3a133-145.htm`（RePEc/EconPapers 著录，Decision Analysis 2014 vol.11 iss.2 pp.133-145，WebFetch 200 摘要逐字，双域交叉）— 一手著录
+- `arxiv.org/abs/1406.2148`（arXiv 官方 abs 页，WebFetch 200 摘要逐字 + v1/v5 提交史）— 一手
+- `www.econbiz.de/Record/.../10011051471`（IJF 30(2):344-356 官方著录，1300 experts / 69 events / single parameter / robust against overfitting 摘要逐字）— 一手著录
+- `archipel.uqam.ca/20294/1/D5145.pdf`（UQAM 机构库学位论文，GJP 聚合算法综述，WebSearch 快照逐字：linear opinion pool / necessarily uncalibrated / logit 优于 unweighted mean 与 beta-transformed linear pool）— 学术一手交叉
+- `datafield.dev/learning-prediction-markets/part-04/chapter-25/further-reading.html`（独立教材书目页，WebFetch 200 全文逐字：Clemen 1989 / Ranjan & Gneiting 2010 / forecast combination puzzle / Satopää 2014 同时做 bias correction + extremization）— 独立域交叉
+- `olivlaw.com/en/us/cugetari/prognoza-20-extremizarea`（第三方课程笔记，含 log-odds 幂次 a 的算例与"a 从已结算题上学"的操作口径；**商业/教学立场，仅作算例交叉，不作结论唯一来源**）
+- **判非**：`extremiz` 全库 SKILL.md 仅 1 命中＝本技能 §三「多源平均 + 适度极端化」的一句技法口号（无机制、无适用边界、无验收）；本轮把它展开为两个独立成因、信息重叠度函数与聚合器选型，**不重复口号本身**。`Ranjan` 命中在 `engineering/wb-execute-discipline/SKILL.md`（Ranjan Kumar，人名巧合，非 Ranjan & Gneiting 2010），不同命题。`log odds` / `logit aggregat` / `information overlap` / `wisdom of crowds` / `opinion pool` / `linear pool` / `under-confident` / `1300 experts` / `calibrated forecasts` 全库 SKILL.md **0 命中**；`extremiz` co-learn 台账 1 命中经查为 r710A 之外的历史建议引用，非本命题。豆包自留地 WB 0 落地。
+- **未采纳**：具体极端化系数 a 的拟合值、GJP 各年 Brier 数字、beta-transformed linear pool 与 QRA/conformal 等建模方法族（沿用 §十 r734A 判非不搬）。B/C 两轮结论一律不复用。
