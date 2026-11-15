@@ -1,8 +1,8 @@
 ---
 name: multimodal-intelligence
 description: >-
-  多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。
-version: 1.3.0
+  多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。色彩管线与色差口径：sRGB 传递函数与线性光、ICC 渲染意图与 D50 PCS、ΔE 公式版本与观察条件四元验收。
+version: 1.4.0
 module: PI
 modules: PI
 ---
@@ -130,3 +130,30 @@ ACM JCDL 2026《Accessibility Annotations as OCR Ground Truth》四指标互补�
 - `https://ffmpeg.org/ffmpeg-filters.html`（FFmpeg 官方 filters 文档）— **WebFetch 仅返回前 15,000 / 99,996 字目录**，psnr / ssim / libvmaf 正文未取到，**如实登记、不引用其正文**；仅用于确认该文档存在这三节。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 — `全参考` / `无参考` / `reduced-reference` / `VMAF` / `LPIPS` / `PSNR` / `NIQE` / `BRISQUE` / `J.340` / `P.1204` / `exhaustive-search PSNR` / `校准误差` **全 0 命中**；`SSIM` 唯一命中在 `media/wb-media-forensics` §68（视频抽帧用 SSIM 感知差异捕捉关键帧，是采样触发器而非质量分数），与本轮「参考族 + 对齐 + 感知失配」命题不同，登记不复用；`coherent` / `reconcil` 命中在执行与治理技能为异命题。与 §六 CER/WER、§七 阅读顺序两族结论不复用。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。A / C 两轮结论一律不复用。
 - **未采纳**：VMAF 各 elementary metric（VIF / DLM / MAD）的权重与训练细节、ITU-T P.1204 各模型相关系数、DepictQA 多模态语言质量描述整段、NR-VMAF 卷积网络结构 —— 属实现与 benchmark 数值，非可迁移判据。
+
+## 九、色彩管线与色差口径：解码链、渲染意图与 ΔE 四元验收（2026-11-15 r754B 实拉，3 独点）
+
+> 分工：§八 管「有多少参考（FR/RR/NR）+ 对齐 + 指标版本」，本节管「这些数值是从哪条解码链与哪套色差口径读出来的」。两节是输入面与计分面，不复用结论。
+
+### 9.1 RGB 数不是颜色：色彩空间 + 传递函数 + 白点才定义感知输入
+- W3C CSS Color 4（CRD 2026-11-12）逐字给出 sRGB 解码：`if (abs <= 0.04045) { cl = c / 12.92; } else { cl = sign * (Math.pow((abs + 0.055) / 1.055, 2.4)); }`，并明写「**c is the gamma-encoded red, green or blue component. cl is the corresponding linear-light component**」；同页「**Most RGB spaces are not additive, because the components are gamma encoded. Undoing this gamma encoding produces linear-light values**」。
+- 同一个颜色逐字对应五组不同数值：`color(sRGB 0.41587 0.503670 0.36664)` / `color(display-p3 0.43313 0.50108 0.37950)` / `color(a98-rgb 0.44091 0.49971 0.37408)` / `color(prophoto-rgb 0.36589 0.41717 0.31333)` / `color(rec2020 0.47428 0.52316 0.41425)` ⇒ 脱离色彩空间谈 RGB 三元组没有感知含义。
+- **判据**：报「模型看到的颜色 / 两图色差 / 色调统计」先写三元组（空间 + 传递函数 + 白点）；均值、插值、alpha 合成、缩放、差分等运算必须在 **linear-light** 上做，直接在 gamma 编码值上算会系统性偏差（编码空间非线性光，混色预测不成立）。与 §8.2「FR 三重对齐」并列为两个前置校验：一个查帧/分辨率/亮度，一个查解码链。
+
+### 9.2 白点与渲染意图决定「转换后还算不算同一个颜色」，往返不是无损
+- W3C 逐字：「**To avoid cumulative round-trip errors, it is important that the identical chromaticity values are used consistently, at all places in a calculation**」；D65 是「**6500 Kelvin (actually 6504, because the value of Plank's constant has changed since the color was originally defined)**」；规范摘要明写它规定「**how colors are interpolated, and how to gamut map colors**」。
+- ICC.1:2004-04 §0.3 逐字：「**four rendering intents (colour rendering styles) are defined ... Each one represents a different colour reproduction compromise**」；media-relative 把介质白归一到 PCS `L*a*b* = (100,0,0)` 且「**this procedure inevitably introduces some change in all colours in the reproduction**」；「**When an exact colour match is required for all within gamut colours the absolute colorimetric rendering intent will define this**」；「**The colour rendering of the perceptual and saturation rendering intents is vendor specific**」。ICC.2:2018 §7.2.17 给四意图编码值（0/1/2/3），§7.2.18 给 PCS 照明体 D50 = `X 0,964 2 / Y 1,0 / Z 0,824 9`。ICC 官方讲义逐字：「**The ICC PCS is D50 and if the source or destination colorimetry is not D50, it must be transformed to D50 using a chromatic adaptation transform**」；官方幻灯片对复杂 RGB/CMYK profile 明确标「**Non-invertible profile**」。
+- **判据**：跨设备 / 跨格式转换若声称「颜色一致」，必须写 ① PCS 白点（D50）与源白点（常见 D65） ② 是否做色适应变换 ③ 渲染意图 ④ 有无 profile。media-relative 会改动域内**全部**颜色，只有 absolute 对域内精确匹配；perceptual/saturation 由厂商自定、不可跨实现比较；gamut mapping 是压缩妥协、复杂设备 profile 不可逆 ⇒ 往返测试不能当无损证据，跨管线累积误差要单列。
+
+### 9.3 ΔE 是「公式版本 + 参数因子 + 观察条件 + 用途」四元函数，不是色差单值
+- 二手逐字（厂商 / 检测机构 / 实现片段，均登记立场）：`ΔE*ab = √[(ΔL*)²+(Δa*)²+(Δb*)²]` 是 Lab 欧氏距离，「**在明度差、彩度与色相差视觉偏差**」上不均匀、饱和蓝区尤甚；CIE94 / CMC(l:c) 引入 `S_L/S_C/S_H` 与参数因子 `k_L,k_C,k_H`（参考条件全 1；纺织常 `k_L=2`、印刷推荐 `k_L=1.4`；CMC 可觉察取 `l=c=1`、可接受取 `l=2,c=1`）；CIEDE2000 增 `R_T` 旋转项「**校正颜色空间中蓝色区域容差椭圆主轴方向的偏转**」并改进低彩度区，官方表述是「**重新定义了色差计算方法**」而不是新建颜色空间；目视比较（D65/D50/TL84 标准光源箱 + 培训观察者）仍是验证仪器结果是否符合人类感知的基准。
+- **判据**：报色差固定五栏 —— **公式名 + 参数因子（kL/kC/kH 或 l:c）+ 照明/观察条件 + 用途（可觉察 vs 可接受）+ 样本来源**。同一对颜色跨公式数值不同，阈值不可跨版本抄；ΔE 是模型不是主观实验，「ΔE 小」不等于「感知一致」。与 §8.3 关系：那里只把 `CIEDE2000` 列为 libvmaf 内含 elementary metric 的名字，本节给它口径，不重述 VMAF 分代结论。
+- **诚实边界**：ΔE 公式族与行业参数逐字来自中文厂商/检测机构站与实现片段（**二手**）；未取得 CIE / Sharma 官方实现备注全文（域名解析失败，见来源节），故本节只取「版本 / 参数 / 条件 / 用途」这一可迁移**结构**，具体行业 `k_L` 取值标注待官方核验、不移植为通用事实。
+
+### r754B 来源与判非（2026-11-15 实拉，逐字核验）
+- `https://www.w3.org/TR/css-color-4/`（W3C **CSS Color Module Level 4, Candidate Recommendation Draft, 2026-11-12**）— **curl 200 / 1,252,283B 全文逐字**（WebFetch 两次 AI 摘要 60s 超时仅返回前 15,000 / 99,782 字，改 curl 去标签得 332,213 字全文）：sRGB 传递函数 `0.04045 / 12.92 / 0.055 / 1.055 / 2.4` 与「gamma-encoded / linear-light」、「Most RGB spaces are not additive」、同一颜色五空间数值、D65 6504K 与「cumulative round-trip errors」、additive color space / white point / chromaticity 定义、gamut map 摘要。**第一独立域（标准组织一手全文）**。
+- `https://www.color.org/ICC1V42old.pdf`（ICC.1:2004-04 §0.3）+ `https://www.color.org/specification/ICC.2-2018.pdf`（§7.2.17 / §7.2.18）+ `https://www.color.org/events/medical/Green.pdf`（ICC 官方讲义）+ `https://archive.color.org/files/slidepres2003.pdf`（ICC 教程）— **WebSearch 逐字快照**：四意图定义与「different colour reproduction compromise」、media-relative「inevitably introduces some change in all colours」、absolute 域内精确匹配、perceptual/saturation「vendor specific」、PCS 照明体 D50 三值、色适应变换必须、参考介质与 P2 观察条件、`Non-invertible profile`。**如实登记**：`https://www.color.org/` 首页 curl 200 / 29,415B 但为门户导航（无规范条文）；四份 PDF 未逐页下载，按快照取证、不冒充 PDF 全文。**第二独立域（标准组织官方规范，多份互证）**。
+- `https://www.nhnhnh.com/baike/1444.html`（三恩时）+ `http://www.mobccs.cn/news/575.html`（MOBCCS）+ `https://a.bjhgyjs.cn/xiangmu/cl/468131.html`（中析检测）+ `https://itohi.com/snippets/colors/color-difference`（实现片段）— **WebSearch 快照逐字（二手）**：ΔE76 / CMC(l:c) / CIE94 / CIEDE2000 四式、`S_L/S_C/S_H` 与 `k_L/k_C/k_H`、`R_T` 蓝色区旋转项、可觉察 vs 可接受、目视比较基准、公式实现权重 `S_C=1+0.045C*`、`S_H=1+0.015C*`。**第三~六独立域（厂商/检测机构/实现，二手立场逐条登记）**。
+- **失败登记**：`http://www2.ece.rochester.edu/~gsharma/ciede2000/`（Sharma 等 CIEDE2000 官方实现备注与测试数据）**curl 000 / `Could not resolve host`、WebFetch `fetch failed`**；`https://colour.readthedocs.io/en/develop/manual/color_difference.html` 与 `https://www.color.org/renderingintent.html` **WebFetch 404**；`https://www.color.org/renderingintent.html` 另由 `site:color.org` 检索定位到规范 PDF 才取得条文。以上均如实登记、**不引用其正文**。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 —— `linear-light` / `gamma encoded` / `rendering intent` / `chromatic adaptation` / `ΔE` / `色适应` / `色彩空间` / `白点` / `色域映射` **全 0 命中**；`CIEDE2000` 2 命中在本技能 §8.3 与 r750B 来源节（Netflix libvmaf **内含指标清单**，仅列名未给口径），本轮按「**优＝加厚现有**」补色差口径，不重述 VMAF v0/v1/HDR/NEG 分代结论；与 §六 CER/WER、§七 阅读顺序、§八 FR/RR/NR 三族结论均不复用。豆包自留地 **WB 0 落地**。A / C 两轮结论一律不复用。
+- **未采纳**：CSS gamut mapping 的 OKLCH chroma reduction 具体算法与 δEOK 阈值（正文未取到）、ICC 参考介质 89% 反射率 / 500 lux / 20% surround 数值、ΔE2000 完整公式与测试数据集、各厂商 ΔE 合格阈值表 —— 属实现数值或未核验二手，不迁移为通用判据。
