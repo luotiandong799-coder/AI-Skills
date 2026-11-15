@@ -3,7 +3,7 @@ name: vi-fact-verification
 description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。
 module: VI
 modules: VI,EI
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -153,3 +153,34 @@ version: "1.3.0"
 - `ucsb-cs156.github.io/topics/testing/testing_pitest.html`（UCSB CS156 教学页，WebFetch 返回前 15000 字 + 搜索快照逐字：无断言作弊、tests our tests、三解释、双阈值、green suite 前置；**AI 摘要 60s 超时，如实登记**）
 - `qaskills.sh/blog/pit-java-mutation-testing-guide`（2026 独立一手全文逐字：等价变异不加傻测试、ratchet 54%、按包趋势、CI 调优；商业/教学立场登记，不作唯一结论来源）
 - `bell-sw.com/blog/a-comprehensive-guide-to-mutation-testing-in-java/`（BellSoft 一手实操交叉：38%/64% 分数报告与 mutator 清单）；`sourcegarden.com` 无关不采。
+## 十、评估独立性：验证分数虚高可能来自管线，不是模型（r748A 实拉 · 2026-11-15，3 独点）
+
+> 适用：任何用留出集 / 交叉验证 / 评测集给结论打分的验证场景（模型选型、Agent 评测、检索质量、脚本验收）。
+> 与 §九分工：变异测试测「断言有多强」；本节测「评估流程本身有没有偷看答案」。二者互补，不重述。
+
+### 10.1（r748A-1）★泄漏的定义是「预测时拿不到的信息被用进建模」，不是「偷看了测试集」
+- scikit-learn 官方 1.9.1《Common pitfalls》§12.2 逐字：「**Data leakage occurs when information that would not be available at prediction time is used when building the model**」；后果固定为「**overly optimistic performance estimates** … poorer performance when the model is used on actually novel data」。
+- 官方硬数字反例（200 样本 / 10000 随机特征 / **完全随机的标签**，理论准确率 ≈0.5）：先在全数据做 `SelectKBest(k=25)` 再切分 → `accuracy_score` = **0.76**；先切分、只在训练集 fit 选择器 → **0.5**；用 `Pipeline` + `cross_val_score` → **0.43±0.05**。
+- 判据：**随机标签基线是泄漏探针**。给数据换成随机标签后分数线仍显著高于 chance，说明泄漏在评估管线里，不是模型学到了东西；验收报告先声明「baseline on random labels = X」，再看真实分数。绿灯高分本身不构成「已验证」。
+- 与 §9.1（覆盖率只测执行）对齐：一个虚高的分数和一个虚高的覆盖率是同一类错误——把「测到了」当成「测对了」。
+
+### 10.2（r748A-2）★`fit` / `fit_transform` 与 `transform` 是两道门，Pipeline 是结构性防线
+- 官方 §12.2.1 三条硬规则逐字：①「**Always split the data into train and test subsets first, particularly before any preprocessing steps**」；②「**Never include test data when using the `fit` and `fit_transform` methods**」，`fit(X)` 会给过于乐观的分；③ `transform` 应当同时用于 train/test（train 上 `fit_transform`，test 上 `transform`）。
+- 泄漏面覆盖「almost all transformations … including (but not limited to) `StandardScaler`, `SimpleImputer`, and `PCA`」——缩放均值、插补统计量、PCA 基、特征选择、文本词表、重采样，凡从数据里学出来的都算。反例：归一化用全数据均值时「information from the test subset is influencing the model」。
+- 同一文档 §12.1 给出**反方向的错**：train 缩放而 test 不缩放 → MSE **62.80**，两侧都变换 → **0.90**。⇒ 两个方向都要测：把 test 信息带进 fit 是虚高，漏给 test 做 transform 是虚低，症状相反但根因都是变换边界没声明。
+- 判据：**验收报告逐项声明每个 `fit` 的数据边界**（哪个对象、在哪个 split 之后、只吃哪些行），并优先用 `Pipeline` 把「学」与「应用」绑成一个对象；手工 `fit_transform` 调用链一律列为高风险。只报分数不报 fit 边界 = 未验证。
+
+### 10.3（r748A-3）★嵌套 CV 的内外环按「谁看了什么」分；折叠结构必须匹配部署时「新数据」的含义
+- 内外环职责（TechBloat / RottenWiFi / Jypi 三独立域快照逐字交叉）：**内环**承担全部数据依赖决定——超参、模型族、特征集、阈值选择、概率校准、早停点、评分指标（「If a threshold is selected after reviewing outer-fold predictions … the outer estimate is no longer a clean evaluation」）；**外环**只做一次性能估计，只报外层分数分布（mean ± std），**禁止把 inner best score 当最终性能**（「the clean estimate comes from the outer loop, not from the final tuning run」）。
+- 阈值/校准/早停属于调参，不是后处理：看完外层预测再挑阈值，等于让外层参与了选择，估计不再干净。嵌套 CV 的输出是「这套建模过程的性能估计」，不是最终那个模型；部署前需在全部训练数据上 refit。
+- 折叠策略按数据结构选，不是默认 KFold：类别不平衡 → `StratifiedKFold`；同一患者/客户/设备/家庭的多条记录 → 组感知切分（官方 `GroupKFold` 逐字「**Each group will appear exactly once in the test set across all folds**」）；时序预测 → `TimeSeriesSplit` + 必要时 embargo，匹配预测视界与重训节奏。
+- 判据：**「技术上正确的嵌套流程仍可能答错问题」**——嵌套 CV 修不了跨折重复样本、非代表性抽样、标签错误、以及「预测时根本拿不到的特征」。验收固定四问：切分单位是什么、同组是否跨折、时间是否穿越、哪些特征在预测时不可得。四问答不出，分数作废。
+
+**提升层**：可复用 Skill（验证协议）/ 工作流（评测管线准入清单）/ VI 验证（评估独立性）。触发词：data leakage、nested cross-validation、outer loop、fit_transform、Pipeline、GroupKFold、TimeSeriesSplit、threshold selection、随机标签基线、评估管线偷看。
+
+**来源（r748A 独立实拉 2026-11-15，≥2 独立域交叉，逐字核验）**：
+- `https://scikit-learn.org/stable/common_pitfalls.html`（scikit-learn **1.9.1 官方文档** §12.1/12.2/12.2.1/12.2.2，WebFetch **200 全文逐字**：泄漏定义、0.76/0.5/0.43±0.05、62.80/0.90、三条防泄漏规则、Pipeline + cross_val_score 用例）——**第一独立域（官方一手）**。
+- `https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GroupKFold.html`（scikit-learn 1.9.1 官方 API 页，WebFetch **200 全文逐字**：「Each group will appear exactly once in the test set across all folds」、`shuffle`/`random_state` 1.6 起、`n_splits` 默认 0.22 从 3 改 5）——**第二独立域（同官方不同规范页）**。
+- `https://scikit-learn.numpy.tw/1.6/common_pitfalls.html` 与 `/1.8/common_pitfalls.html`（中文镜像 1.6/1.8 双版本，WebSearch 快照逐字：「永遠不要在測試資料上呼叫 fit」「特徵選擇應僅使用訓練資料」）——**第三独立域（版本化镜像，交叉核验口径跨版本一致）**。
+- `https://www.techbloat.com/nested-cross-validation-for-machine-learning-with-python.html` · `https://rottenwifi.com/nested-cross-validation-why-it-matters-and-how-to-use-it-in-python` · `https://jypi.org/topics/machine-learning-with-scikit-learn-1`（三独立教学/技术域，WebSearch 快照逐字：内外环分工、inner best score 禁作最终性能、内层须含阈值/校准/早停/指标选择、StratifiedKFold / GroupKFold / TimeSeriesSplit + embargo、嵌套 CV 修不了重复样本与标签错误；教学立场登记，不作唯一结论来源）。
+- **判非**：`nested cross` / `train-test contamination` / `group k-fold` / `preprocessing leakage` / `temporal leakage` / `cross-validation pitfall` / `feature selection inside` 全库 `SKILL.md` **0 命中**；`data leakage` 1 命中属豆包自留地 `engineering/wb-execute-discipline`（术语表），`leakage` 5 命中分别属 CI 上下文、安全、写作、实验语境，均异命题。与 §9.1/9.2/9.3 变异测试族、§8.x 无 oracle 族分工明确（那条管断言与 oracle，本条管评估流程的独立性）。按 rules/07 去重铁律「优＝加厚现有」，不新建。豆包自留地 **WB 0 落地**。

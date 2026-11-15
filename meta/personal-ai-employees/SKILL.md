@@ -2,7 +2,7 @@
 name: personal-ai-employees
 description: >-
   个人 AI 员工体系（8 岗）总路由与五步执行协议。把用户目标自动分派给 8 个专职 AI 员工（战略顾问/供应链专家/职业发展顾问/销售顾问/学习教练/信息分析师/自动化工程师/知识管理专家），每岗统一走「任务分析→执行方案→输出结果→复盘优化→Skill沉淀」，并复用 personal-ai-os 与现有 wb-* / 专家技能，不新建重复能力。触发词：个人AI员工、AI员工体系、AI战略顾问、AI供应链、AI职业发展、AI销售顾问、AI学习教练、AI信息分析、AI自动化工程师、AI知识管理、哪岗来做、分派任务、员工路由、agency、个人AI公司、我的AI团队。
-version: 1.2.0
+version: 1.3.0
 agent_created: true
 module: OI
 modules: OI,MI
@@ -166,3 +166,31 @@ modules: OI,MI
 - `www.xgrid.co/resources/temporal-recover-instead-of-restart/`（独立第三方一手 WebFetch 200 全文逐字：retry vs recovery / idempotency key / saga upfront / 3–5x retrofitting；厂商立场登记）
 - `github.com/Nevaberry/nevaberry-plugins/.../workflows-activities-and-replay.md`（Temporal 知识补丁镜像，搜索快照逐字：attempt-independent key 不含 attempt number / replay-safe values / Replay guards observability-only）
 - 判非登记：`docs.temporal.io/encyclopedia/determinism` 与 `/workflow-execution/workflow-determinism` 均 **WebFetch 404**，如实登记、未冒充一手；改由官方 versioning 页 + 官方 FAQ + 官方教程三页交叉补足。
+## 十一、资源池槽位与排队优先级：并发预算不是「任务数」（r748C 实拉 · 2026-11-15，3 独点）
+
+> 适用：多 Agent / 多子任务 / 多工作流并行时的容量分配与执行顺序。
+> 与 §八分工：§8.1–8.3 管「要不要扇出、并行几路、优化顺序」；本节管「扇出后谁先拿到资源、每路占多少容量」。与 §九分工：那条管失败后怎么续，本节管没失败时的排队秩序。
+
+### 11.1（r748C-1）★并发预算的单位是「资源槽」不是「任务数」，且存在一层隐式天花板
+- Airflow 3.4.0 官方《Pools》逐字：pools「can be used to **limit the execution parallelism on arbitrary sets of tasks**」，按名称分配 worker slots；「if tasks are not given a pool, they are assigned to a default pool `default_pool`, which is **initialized with 128 slots** and can be modified through the UI or CLI (**but cannot be removed**)」。
+- `pool_slots` 让单个任务占多槽：官方 2 槽池算例里 `heavy_task` 占 2 槽即耗尽池，两个 `light_task` 各占 1 槽可并发，而 heavy 「would have to wait for **two** pool slots to become available」；「in terms of resource usage, the heavy task is **equivalent to two light tasks running concurrently**」。池级还可选是否把 **deferred tasks 计入已占槽**（3.4.0 新增）。
+- 判据：**编排预算表固定写四栏**——每类任务占几槽 / 池总槽 / 未指定池时的默认值 / 挂起任务是否仍占槽。只写「并发数 = N」会把 `default_pool` 的隐式 128 当成无限，也会把重任务与轻任务等价计价。分派前先问「这一路打的是哪个外部系统的容量」，把共享同一瓶颈的任务归进同一个池。
+
+### 11.2（r748C-2）★优先级是排队排序规则，不是抢占；默认 `downstream` 会把下游权重加到上游
+- Airflow 3.4.0 官方《Priority Weights》逐字：「`priority_weight` **defines priorities in the executor queue**」、默认 `1`、「larger numbers mean higher priority」；每个任务的 **true weight** 由 `weight_rule` 计算，三法：`downstream`（默认，effective weight = 所有**下游**后代权重之和 ⇒「**upstream tasks will have higher weight**」，适合先把所有 dag run 的上游跑完）、`upstream`（相反，适合逐个 dag run 做完）、`absolute`（精确值，且「**significantly speeding up the task creation process**」用于超大 DAG）。ASF #15183 commit diff 原文「the highest summed value wins」。
+- 关键时序：pools 页逐字「Tasks will be **scheduled as usual while the slots fill up**. Once capacity is reached, runnable tasks get **queued** … As slots free up, queued tasks start running based on the Priority Weights」⇒ **优先级只在槽满排队时生效**，槽没满不产生顺序差异。32 位整数限制（2,147,483,647 / −2,147,483,648）也是官方明写的边界。
+- 判据：**报告优先级必须同时写明 `weight_rule` 与所属 pool**。「给关键任务调高权重」在默认 `downstream` 下可能先抬高它的全部上游，意图与效果相反；要精确控制用 `absolute`。自定义 `PriorityWeightStrategy` 自 **2.9.0** 起且官方标 **experimental**；官方示例 `DecreasingPriorityStrategy` 让权重随 `try_number` 递减 ⇒ **重试次数会改变排队位次**，故障期的执行顺序不能用静态优先级表预测。
+
+### 11.3（r748C-3）★容器不继承资源约束，三层预算互相独立
+- 官方 warning 逐字（pools 页 + ASF #15183 diff）：「**Pools and SubDAGs do not interact as you might first expect. SubDAGs will not honor any pool you set on them at the top level; pools must be set on the tasks inside the SubDAG directly**」⇒ 在父容器上设的容量约束不会下沉到子任务，分组/嵌套结构必须逐层显式声明。
+- ASF #15183 官方 config diff 给出三个**独立旋钮**：`parallelism = 32`（「the maximum number of task instances that can run concurrently … **regardless of scheduler count and worker count**」）、`dag_concurrency = 16`（单 DAG 所有 run 的运行实例累加）、`max_active_runs_per_dag = 16`（活跃 run 数）。三者改一个不影响其余；`pool` 是第四层（按任务集合）。
+- 判据：**编排验收分列四层**（全局实例数 / 单工作流所有批次 / 活跃批次数 / 资源池槽）并逐层核对，任一层的「已限流」不能替代其余。跨版本语义会变（1.10.2 无 `pool_slots` 且优先级为「summed with downstream、highest wins」；2.2.4 引入 `pool_slots`；3.4.0 引入 deferred 占槽开关与自定义 weight rule），引用具体数值必须**绑定版本**，不把某版本默认值写成通用工程事实。
+
+**提升层**：可复用 Skill（容量与排队验收清单）/ 工作流（并发预算表）/ OI 编排（扇出后的资源治理）。触发词：pool_slots、default_pool 128、weight_rule downstream、absolute、priority_weight、deferred tasks、SubDAG 不继承、parallelism 与 dag_concurrency、排队优先级、资源槽、并发预算四层。
+
+**来源（r748C 独立实拉 2026-11-15，≥2 独立域交叉）**：
+- `https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/pools.html`（Airflow **3.4.0 官方**，WebFetch **200 全文逐字**：limit the execution parallelism on arbitrary sets of tasks、`pool_slots` heavy/light 算例、`default_pool` 128 槽不可删、deferred tasks 占槽可选）——**第一独立域（Apache 官方规范一手）**。
+- `https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/priority-weight.html`（Airflow 3.4.0 官方，WebFetch **200 全文逐字**：三种 weight_rule 定义、默认 downstream、32 位整数上下界、自定义策略 2.9.0 起 experimental、DecreasingPriorityStrategy 示例）——**第二独立域（同官方不同规范页）**。
+- `https://lists.apache.org/thread/fojrbyb76jh6jto0xwj8qk704prfxtqo`（ASF 官方邮件归档 · commit #15183 `38ecbd6`，WebFetch **200**；**AI 摘要 60s 超时 → 前 15,000/31,653 字原文逐字，如实登记**：`parallelism=32` / `dag_concurrency=16` / `max_active_runs_per_dag=16` 三层定义、priority-weight.rst 新增 61 行三法全文、「the highest summed value wins」旧文、Pools and SubDAGs warning）——**第三独立域（官方源码变更一手 diff）**。
+- `https://lists.apache.org/thread/9wwzyxt75khs92jnfn53mh06xs6rtgqv`（ASF commit #20257 `pool_slots` 文档，WebSearch 快照逐字）+ `https://airflow.apache.org/docs/1.10.2/concepts.html` · `/docs/apache-airflow/2.2.5/administration-and-deployment/pools.html` · `http://airflow.org.cn/docs/apache-airflow/3.2.0/administration-and-deployment/pools.html`（三个官方/社区版本页，WebSearch 快照逐字：跨版本语义演化核对）——**第四、五独立域（多版本归档交叉）**。
+- **判非**：`pool_slots` / `default_pool` / `weight_rule` / `priority_weight` / `128 slots` / `排队优先级` 全库 `SKILL.md` **0 命中**；`资源池` 2 命中经查属 `engineering/wb-release-maintain`（发布资源清单）与 `meta/personal-ai-os`（OS 资源目录），均异命题；`choreography` / `token bucket` / `backpressure` 命中属 `engineering/ei-reliability`（重试预算与编排模式表）、`engineering/wb-subagent-delegation`（编排模式表）、豆包自留地 `engineering/wb-execute-discipline`（术语表）与 `defaults/wb-context-compressor`，**均异命题、豆包自留地 WB 0 落地**。与 `engineering/wb-subagent-delegation` r745B（trigger rules / catchup）分工：那条管「哪些上游状态允许下游跑」，本节管「有多少槽、排队时谁先跑」，互补不重述。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。

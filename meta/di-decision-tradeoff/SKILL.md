@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
 module: DI
 modules: DI,TI
-version: "1.8.0"
+version: "1.9.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -272,3 +272,33 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 
 **来源**：`https://www.argumentree.com/what-is/decision-quality?hl=en`（Last updated 2026-08-24，WebFetch **200 全文逐字**，含中英双页 `https://www.argumentree.com/zh/what-is/decision-quality`）+ `https://grafium.io/glossary/decision-quality-framework`（官方 glossary，WebFetch **200 全文逐字**）+ `https://symposium.org/wp-content/uploads/2021/12/global_perspectives_barometer_2016_final.pdf`（St. Gallen Symposium《Global Perspectives Barometer 2016》Info Box 3-1 六要素逐条与「linked as a chain … the weakest link will define the overall quality」，WebSearch 快照逐字）+ `https://dx.doi.org/10.1080/01446193.2019.1577559`（*Construction Management and Economics* 2019 论文，Howard 1988 / Spetzler 2016 六要素与 Vlek 1984 赌局引文，WebSearch 快照逐字）。四域交叉；Argumentree 自述为 argument-tree 产品方、其「第五要素无工具供给」属产品立场，仅取可迁移判据并登记；Bain *Decide & Deliver* 与 McKinsey 相关性证据按其自身口径标为 correlation，不作因果结论。
 **判非**：`chain rule` / `weakest link` / `appropriate frame` / `commitment to action` / `Spetzler` / `six elements` / `Annie Duke` / `normative` 全库 `SKILL.md` **0 命中**；`decision quality` 1 命中与 `outcome bias` 1 命中均在 `meta/ri-retrospective` §r742C（复盘层评价对象分离，本轮取决策时刻准入层，互补不重述）；`resulting` 5 命中经查为 `resulting in` 类英文子串噪声。按 rules/07 去重铁律拍板「优＝加厚现有」，不新建、不覆盖复盘层结论。豆包自留地 **WB 0 落地**。A/B 两轮结论一律不复用。
+## 十五、信息价值的四把尺与「必要 ≠ 充分」门槛阶梯（r748B 实拉 · 2026-11-15，3 独点）
+
+> 适用：「要不要再查一轮 / 买数据 / 做一次调研 / 起一个验证实验」这类**为决策追加信息**的请求。
+> 与 §八分工：§八已给 EVPI=EV|PI−EMV 与「报价 > EVPI 就拒买」的硬上限；本节不重述定义，补的是**四量测各回答什么**、**门槛的充分性方向**、**研究设计怎么择优**。与 §十四 DQ 分工：那条管决策时刻的六要素过程质量，本节管「这个决策值不值得再买信息」。
+
+### 15.1（r748B-1）★EVPI / EVPPI / EVSI / ENBS 是四个不同问题的四把尺，不是同一个数的四种算法
+- ISPOR 官方 2020-03-31 公告逐字：Report 2「details methods for computing **4 specific VOI measures**: (1) the expected value of perfect information, (2) expected value of partial perfect information, (3) expected value of sample information, and (4) expected net benefit of sampling」；Report 1 面向「decisions about the adoption of healthcare or the funding of healthcare research」，Report 2 面向 methodologists/analysts——**读者不同、问题不同**。
+- 四个量各自回答：EVPI＝消除**全部**参数不确定性值多少；EVPPI＝只消除**一组**参数值多少（用来排研究优先级）；EVSI＝**某个具体研究设计**带来的部分信息值多少（Report 2 逐字 `EVSI = E_X[max_d E_θ|X {U(d,θ)}] − max_d E_θ{U(d,θ)}`）；ENBS＝population EVSI − 该研究总成本。EVPPI 是「任何以该组参数为对象的研究」的**上界**。
+- 判据：决策记录第一行先写「本轮问的是哪一把尺」。**禁止把 EVPI 上限当作「这项研究值多少」**——EVPI 假设全知，实际有限样本只能买到部分信息；按 §八「报价 > EVPI 拒买」只能得出否结论，正结论必须落到具体设计的 EVSI/ENBS。
+
+### 15.2（r748B-2）★门槛是阶梯，且「必要」与「充分」方向相反；研究成本含三项不只是调研费
+- Report 2 官方逐字：「A population EV(P)PI that is **less than** the estimated costs of any research study is a **sufficient condition** for establishing that research is **not of value**. A population EV(P)PI that is **greater than** the estimated cost … is a **necessary, but not sufficient** condition」；ENBS≥0 才是「conducting the study」的充分条件（「A positive ENBS … provides a sufficient condition regarding the worth of a specific research study」）。
+- 成本结构（Report 1 逐字，GPR/正文）：① 固定成本（setup、salaries）；② 每受试者/样本的可变成本；③ **机会成本**——「some participants will receive a non-optimal intervention **during the study**」，即研究期间相关方持续承受次优方案的损失。只算调研费会系统性高估「值得做」。
+- 判据：**判定表按结论强度排四行**：`EV(P)PI < 成本` ⇒ 直接否、停（充分）；`EV(P)PI > 成本` ⇒ 仅进入下一门（必要非充分）；`EVSI > 成本` ⇒ 仍只是必要；`ENBS = EVSI − 成本 ≥ 0` ⇒ 才够判「这个设计值得做」。写「EVPI 很大所以该做这项研究」是把必要条件当充分条件，按 §14.2 同族的学习机制污染处理。
+
+### 15.3（r748B-3）★研究优先级按「会不会改决策」排，不按「哪个最不确定」排；最优设计 = ENBS 最大
+- Report 1 GPR6 逐字：「**EVPPI should be undertaken for groups of parameters** where it is likely that a new study … would be informative for the whole group, rather than for individual parameters」；同页反直觉事实：「**the parameters with the highest EVPPI will not necessarily correspond to the parameters that are most uncertain** … Eliminating uncertainty in a very uncertain but unimportant parameter … will have **no value**」。
+- GPR9 逐字：「**Identify the most efficient study design as that with the greatest expected net benefit of sampling (ENBS)**」；EVSI/ENBS 须对**一组设计**（样本量、分配、随访长度、终点）分别算并取最大；「**When no design has a positive ENBS, the current available evidence should be considered sufficient for decision making**」。
+- 判据：调研清单按 **decision relevance**（该参数不确定性是否会翻转最优选项）排序，不按方差/置信区间宽度排；输出物是「最有效设计 + 其余设计的 ENBS 对照」，不是「最大样本量」或「最全的调研」。全设计 ENBS≤0 时正确动作是**按现有证据拍板**（接 §13 门型：双向门不必等），而不是继续找更好看的设计。
+- 结构不确定性补充（Report 2 逐字）：VOI 结果「always **conditional on the characterization of the decision problem**」；忽略结构不确定性「is equivalent to assuming that the model is perfect」，应参数化/情景/模型平均/差异分析显式纳入。⇒ 报告须写明「模型结构里哪些假设没被 VOI 定价」。
+
+**提升层**：可复用 Skill（调研准入清单）/ 工作流（研究设计择优）/ DI 决策（信息采购）。触发词：EVPI、EVPPI、EVSI、ENBS、necessary but not sufficient、sufficient condition、opportunity cost、groups of parameters、most efficient study design、decision relevance、structural uncertainty、ISPOR VOI Task Force。
+
+**来源（r748B 独立实拉 2026-11-15，≥2 独立域交叉）**：
+- `https://www.ispor.org/heor-resources/news-top/news/view/2020/03/31/ispor-value-of-information-task-force-publishes-two-new-good-practices-reports`（ISPOR 官方公告，**Published Mar 31, 2020**，WebFetch **200 全文逐字**：四量测清单、Report 1/2 受众分工、Value in Health 2020 年 2 月/3 月两期）——**第一独立域（学会官方一手）**。
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC7373630/`（ISPOR VOI Task Force **Report 2** 全文，PMC 官方 HTML，WebFetch **200**；**AI 摘要 60s 超时 → 返回前 15,000/95,031 字原文逐字，如实登记**：四量测摘要、参数/结构不确定性、GPR1–4、EVPI/EVPPI 定义与公式、risk-neutral 前提）——**第二独立域（PubMed Central 官方全文）**。
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC7373630/pdf/nihms-1604682.pdf`（Report 2 PDF，WebSearch 快照逐字：`EVSI` 公式 (10)、`ENBS` 定义、**necessary, but not sufficient**、population EV(P)PI 的 sufficient condition、研究成本含机会成本）——**第三独立域（同一报告的 PDF 版逐串核对）**。
+- `https://eprints.whiterose.ac.uk/id/eprint/158024/1/ISPOR_TF_Report_1_-_final_submitted.pdf`（Report 1 作者定稿，WebSearch 快照逐字：GPR6/7/8/9、ENBS 正负判据、三项成本、EVPPI 高≠最不确定、模型假设须声明）+ `https://ris.utwente.nl/ws/files/179932151/PIIS1098301520300279.pdf`（Report 1 另一机构仓储，WebSearch 快照逐字：informativeness、研究设计各要素、报告须按阈值范围图形化）+ `https://www.valueinhealthjournal.com/servlet/linkout?...doi=10.1016/j.jval.2020.01.004`（期刊页，WebSearch 快照逐字：EVPI/EVPPI/EVSI 公式 (4)(7)(10)、EVPI＝expected cost of uncertainty）——**第四、五独立域（学术仓储与期刊，交叉核验）**。
+- **实拉诚信登记**：`eprints.whiterose.ac.uk` 与 `ris.utwente.nl` 两份 PDF 经 Bash `curl -sL` 直取均返回 **000 / 0B（TLS 连接被拒）**，`WebFetch` 对 PDF 返回 `application/pdf` 字节丢弃；故上述两条按**搜索快照逐字**引用，**未冒充一手 PDF 直取**。按 r731/r745 先例如实登记，结论仅采可与 PMC 官方 HTML + ISPOR 官方公告互相印证的部分。ISPOR 为专业学会、报告为 Task Force 专家共识（非随机对照实测），价值观前提（risk-neutral、社会视角成本）已登记，不作普适事实。
+- **判非**：`expected value of perfect` / `decision curve` / `threshold probability` / `net benefit` / `reference point` / `loss aversion` 全库 **0 命中**；`value of information` / `EVPPI` 命中在**本文件 §八**（基础定义与本轮互补，不重述、不覆盖）；`EVSI` 1 命中在豆包自留地 `engineering/wb-execute-discipline` r687A（EVSI 与延迟成本比较，只读判非，**WB 0 落地**）。本轮净新在「四尺分工 + 必要/充分阶梯 + GPR6/9 设计择优 + 三项成本 + 结构不确定性」。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
