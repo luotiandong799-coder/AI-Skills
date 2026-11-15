@@ -1,9 +1,9 @@
 ---
 name: di-decision-tradeoff
-description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权
+description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序
 module: DI
 modules: DI,TI
-version: "1.10.0"
+version: "1.11.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -325,3 +325,32 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 - `https://pmc.ncbi.nlm.nih.gov/articles/PMC11652196/`（《Preference reversal in intertemporal decision making》2024）— WebFetch 仅返回 HHS 页眉、Bash `curl` **000/0B（TLS 拒连）** ⇒ 按 WebSearch 快照逐字：choice「qualitative reasoning / ordering strategy」、bidding「measuring an independent object with a caliper」、compatibility effect、loss 域同样反转、DFT/DDM 证据累积。**第三独立域（PubMed Central，快照口径）**。
 - `https://www.researchgate.net/publication/379803705_Preference_reversals_in_judgment_and_choice`（快照逐字：intransitivity + independence「only account for a small proportion of the reversals (**10%**)」、overpricing 归因 scale compatibility、Expression Theory / Change-of-Process 细节）+ `https://baike.baidu.com/item/偏好反转现象`（中文快照：Karni & Safra 1986 / Holt 1986、兼容性假设、权变加权、齐当别模型、为自己/为他人决策诱发反转）。**第四、五独立域（学术仓储与中文百科，立场已登记，不作唯一结论来源）**。
 - 判非：`preference reversal` / `程序不变` / `scale compatibility` / `尺度兼容` / `Lichtenstein` / `Slovic` / `权变加权` / `突出假说` 全库 SKILL.md **0 命中**；`elicitation` 3 命中全部属 MCP 客户端「向用户索取信息」（form/URL 两模式）与豆包自留地评测取样，异命题；`兼容性假设` / `procedure invariance` 在 DI 现有条目无覆盖。与 r715C（选项集增删）、r733B（ELECTRE 权重语义）、r736B（Arrow 偏好聚合）、r744C（决策质量六要素）、r748B（VOI 四尺）逐条分工，均不并存。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+
+## 十七、AHP 一致性检验的能力边界与规模陷阱（r756A 实拉 · 2026-11-15，3 独点）
+
+> 与 §十 r715C（选项集增删导致排序反转）、§十六 r752B（诱导方式构造偏好）分工：那两条管**结论依赖什么外部条件**，本条管**输入自身那道自洽门到底证明了什么**。§「加权决策矩阵」Step 的一致性比率 CR 是口号级要求，本节给出它的能力边界，按 rules/07「优＝加厚现有」不新建。
+
+### 17.1 一致性比率是「逻辑自洽门」，不是「结论正确性门」
+- 官方科普中国（中国科学院大学数学科学学院张三国教授认证词条，2026-02-21）逐字：「**一致性检验是AHP内置的质量控制机制，也是其区别于其他简单加权方法的核心特征**」；「AHP通过成对比较构建了一个相互关联的判断网络。例如，对A与B、B与C的判断，逻辑上蕴含了对A与C的特定判断。最大特征值的数学特性，使其能够**精确度量实际判断与这种逻辑传递性之间的偏差**」；CR 过高时「它向决策者发出明确信号：『您的判断存在矛盾，请重新审视您的偏好。』」，「这种『修正判断-重新计算CR』的迭代循环，极大地提升了**输入数据的质量**」。
+- 判据：**CR 绿灯只证明这组成对判断不互相矛盾，不证明权重反映真实偏好、更不证明排序正确**——一个完全一致的矩阵可以整体系统性偏离（每个判断都同样错且不违反传递性）。报告分两栏写「输入自洽性（CR）」与「结论有效性（外部证据/敏感性/选项集）」，禁把 `CR<0.1` 写成「权重可靠」「决策已验证」。与 §十四 DQ 六要素分工：DQ 评的是决策过程，CR 只评其中 information 的一个子面。
+- 文献立场（意大利巴勒莫大学学位论文，Saaty 1990 / Ishizaka & Lusti 2004 引述）：「**consistency is not necessary, and certainly not perfectly achievable by human subjects, but it is definitely desirable for the reliability of the results**」⇒ 一致性是**可取**不是**必要**，不得以「人做不到完全一致」为由跳过检验，也不得以「CR 达标」为由宣称结果可靠。
+
+### 17.2 阈值随矩阵阶数分档，RI 是随机基线不是「允许错误量」；整数标度自带不可消除的不一致
+- **定义链**（三域交叉逐字）：`CI = (λmax − n)/(n − 1)`；`RI` 是「对大量随机生成的正互反矩阵计算CI的平均值」（科普中国），Sabanci 论文「the average of C.I. values of these randomly generated matrices is defined as a reference point, Random Index (R.I.)」；`CR = CI/RI`（Roszkowska 综述写 `CR = CI/RI · 100%`，`CR≤10%`）。⇒ RI 是**随机判断的参照分母**，不是「可容忍的错误百分比」；引用必须写清用的是哪张 RI 表、n 是多少。
+- **阈值分档**（巴勒莫大学学位论文逐字）：「**the upper bound for CR to consider a respondent "sufficiently" consistent is 0.1 for n-dimensional matrices, with n bigger than 5. Only for n=3 the CR upper bound is equal to 0.05 and for n=4 the upper bound is 0.08**」；中文科普/百科统一写「当CR<0.10时可以接受」是**简化口径**。⇒ 小矩阵（n=3/4）照抄 0.1 会放过按分档应判超标的不一致；判定表固定写「n / CI / RI / CR / 该 n 的阈值档 / 阈值出处」六栏。
+- **整数标度是结构性不一致源**（Sabanci 大学《Modeling the Supplier Selection Process》逐字）：「**Varying levels of inconsistency are not rare cases in AHP. In fact, inconsistency might be observed due to several reasons even if the decision-maker is very consistent**」；具体反例「if Criterion A is strongly more important than Criterion C, and Criterion C is weakly more important than Criterion B, then it is not possible to make a consistent comparison between Criteria A and C, since the associated ratio is **5/3 which does not exist in the scale**」；「a consistent judgment … would be **15, which is beyond the upper limit of the scale**」；结论「**the inconsistency term is inherent in AHP**」。
+- 判据：**CR 超标的第一排查项不是逼决策者反复改判断**，而是 ①矩阵阶数与该档阈值 ②1–9 标度是否无法表达所需比值 ③是否把本该分组的准则塞进同一矩阵。「修正判断-重算 CR」的迭代循环若收敛不了，说明是**标度粒度/结构**问题，继续追问只会把用户的真实偏好磨成能填进标度的数。
+
+### 17.3 一致性检验有层级与规模边界：各层合格 ≠ 总排序合格
+- 科普中国逐字：「在完成所有层次的权重计算和一致性检验后……同样，**也可以对整个层次结构进行总的一致性检验，以确保各层次累积的不一致性仍在可接受范围内**」⇒ 每个局部矩阵 CR 全绿时，累积到总排序仍可能超限；报表须同时给「每层 CR」与「总排序 CR」两个数，只列前者判不合格。
+- 规模边界（Roszkowska 综述逐字）：「**it is not sensible to use the method for a large set of criteria**」，因成对比较数 `n(n−1)/2` 随准则数平方增长；Sabanci 论文亦点名特征向量法「obligation of a complete comparison matrix and **combinatorial growth of the number of comparisons**」。⇒ 备选/准则规模大时先分组、剪枝或换非两两比较方法，而不是硬填一张大矩阵再靠 CR 兜底。
+- 输出模板：决策记录的一致性栏固定六项 —— ①每层矩阵 n 与 CR ②总排序 CR ③各 n 所用阈值档与出处 ④RI 表来源 ⑤标度（1–9 或自定义）与是否出现不可表达比值 ⑥若迭代修正过，记录修正了哪几个判断与修正理由。缺任一项，不得写「已通过一致性检验」。
+
+### 本轮来源（2026-11-15 r756A 实拉）
+- `https://www.kepuchina.cn/article/articleinfo?ar_id=675994&business_type=100`（科普中国《层次分析法（运筹学理论）》，上传时间 **2026-02-21**，认证专家中国科学院大学张三国教授）— **WebFetch 200 全文逐字**：一致性检验定义、逻辑传递性偏差、CR 作为反馈工具、RI 表 n=1..11（0/0/0.52/0.89/1.12/1.26/1.36/1.41/1.46/1.49/1.52）、CR<0.10、层次总排序一致性、λmax≈5.073→CI=0.01825→CR≈0.016 实例、1–9 标度表、几何平均法权重。**第一独立域（中文权威科普一手，认证立场已登记）**。
+- `https://iris.unipa.it/bitstream/10447/105641/1/Anna_Errore_tesi.pdf`（意大利巴勒莫大学学位论文《ADVANCED STATISTICAL TOOLS FOR SIX SIGMA AND OTHER INDUSTRIAL APPLICATIONS》）— **WebSearch 快照逐字**：`CI=(λmax−n)/(n−1)`、Saaty 随机矩阵生成 RI、`CR=CI/RI`、阈值 **n=3→0.05 / n=4→0.08 / n>5→0.1**、`n(n−1)/2`、Ishizaka & Lusti「consistency is not necessary…but definitely desirable」、Belton&Gear/Dyer 批评线索。**Bash curl 403 / 5,549B 拦截页 ⇒ 如实按快照登记，未冒充一手全文**（**第二独立域，学术一手但取证口径降级**）。
+- `https://research.sabanciuniv.edu/id/eprint/48891/1/10384999.pdf`（Sabanci 大学《MODELING THE SUPPLIER SELECTION PROCESS FOR MECHANICAL PARTS》）— **WebSearch 快照逐字**：「inherent in AHP」、5/3 不在标度、15 超上限、Saaty 1977 CI 与 1980 CR、RI 为随机矩阵 CI 平均、「acceptably consistent if … ≤ 10 percent of the C.I. of the random index」、1–9 标度五方案比较、特征向量法完整矩阵与组合增长两缺陷。**第三独立域（学术一手，快照口径）**。
+- `https://repozytorium.uwb.edu.pl/jspui/bitstream/11320/2189/1/02_Ewa%20ROszkowska.pdf`（《RANK ORDERING CRITERIA WEIGHTING METHODS – A COMPARATIVE OVERVIEW》）— **WebSearch 快照逐字**：`CI=(λmax−n)/(n−1)`、`CR=CI/RI ·100%`、`CR≤10%` 接受、「The calculated priorities are plausible only if the comparison matrices are consistent or near consistent」、「not sensible to use the method for a large set of criteria」、ROC/RR/RS 与 AHP 权重对照表。**第四独立域（学术综述，交叉核验）**。
+- `https://baike.baidu.com/item/层次分析法`（中文百科快照，与科普中国**同源表述**，仅作口径一致性交叉，不单列为独立结论来源）+ `https://www.mdpi.com/2071-1050/13/23/13483`（本技能 §十已引，CR/±25% 敏感性，按「合」登记不重述）。
+- **判非**：`Random Index` / `RI 值` / `1-9 标度` / `整数标度` / `一致性不等于` / `逻辑传递性` / `一致性检验的能力边界` 全库 SKILL.md **0 命中**；`CI/RI` 1 命中为本技能 §「加权决策矩阵」既有 CR 口径（口号级），`AIP` 3 命中全为 `AIPromptsHub` 子串（异命题）；`Saaty` 命中在 §十 rank reversal 论争（异命题）。与 §十（选项集增删）、§十二（非补偿/veto）、§十三（门型）、§十四（DQ 六要素）、§十五（VOI 四尺）、§十六（诱导方式）逐条分工，均不并存。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除；豆包自留地 **WB 0 落地**。
