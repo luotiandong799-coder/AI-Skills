@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
-description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。
-version: 1.4.0
+description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）。
+version: 1.5.0
 module: TI
 modules: TI,EI
 ---
@@ -150,3 +150,31 @@ LLM 本质是关联机：它在海量含人类解释的语料上训练，学到�
 - `https://plato.stanford.edu/archives/fall2021/entries/abduction/` 与 `/archives/sum2018/entries/abduction/` — WebSearch 快照逐字，用于核验两义定义与非单调性段落跨版本一致（非新增结论来源）。
 - **判非**：窄串全库 SKILL.md — `abduction` / `abductive` / `Peirce` / `retroduction` / `inference to the best explanation` / `best explanation` / `explanatory virtue` / `theoretical virtue` / `bad lot` / `van Fraassen` / `monotonicity` / `falsification` / `2-4-6` / `Wason` / `hypothesis generation` **全 0 命中**；`IBE` 16 命中为 `-scribe` / `attribute` 类子串噪声，词边界 `\bIBE\b` 0。与既有 §8.1 有效性/健全性（论证结构）、§10 CoT 忠实度（自述推理）、`agent/grill-me` §r735C（判断离散度与独立评分）正交，未复用任何一轮结论。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。
 - **未采纳**：SEP §3.1 之后对 van Fraassen 两反驳的逐条辩护、§4 与贝叶斯确认理论的整段关系、ABD1/ABD2 全部形式化变体属专门哲学争论，只取可迁移判据；「Neptune / Vulcan / 电子发现」仅作机制例证，不写成工程事实。IEP 页面自述为同行评审百科但 §4d 属教学性概述，其美德清单与 SEP 的规范性讨论交叉后才采纳。
+
+## 十二、图尔敏论证图式：六要素、隐含理据与两层证成（2026-11-15 r747A 实拉，3 独点）
+
+> 适用：审一份方案/结论是否成立时，把「论证」拆成可逐格检查的部件，尤其逼出没写出来的隐含假设。与 §8.1「有效性 vs 健全性」互补：8.1 判断单个论证的结论真不真、推理对不对；本节给出论证的**内部结构**与「哪一层被攻击」。
+
+### 12.1（r747A-1）★六要素分「三基础 + 三扩展」；审查着力点是把隐含 warrant 逼出来，不是只核证据真假
+Purdue OWL 逐字：「breaks arguments down into six component parts: **claim, grounds, warrant, qualifier, rebuttal, and backing**」「every argument begins with **three fundamental parts: the claim, the grounds, and the warrant**」「The other three elements—backing, qualifier, and rebuttal—are **not fundamental** to a Toulmin argument, but may be added as necessary」；warrant 定义逐字「**the assumption that links the grounds to the claim**」，且「**either implied or stated explicitly**」。Wikipedia《Argumentation theory》快照同向：前三为 essential components，后三「may not be needed in some arguments」，并记该布局「was based on legal arguments」、原用于法庭论证的合理性分析。
+- **判据**：① 审论证按六格逐项填空——主张 C / 予料 D / 理据 W / 支援 B / 限定 Q / 反驳 R；三基础缺任一即不成论证，三扩展缺失不必强凑。② **warrant 通常是没写出来的那一句**，所以「证据都真」不等于论证成立：要显式写出「凭什么从 D 走到 C」再评它，否则双方争的是两回事。③ 明尼苏达开放教材快照逐字「Grounds should directly support the premises of the main argument itself, while **backing exists to help the warrants make more sense**」⇒ **grounds 支持 claim、backing 支持 warrant，两者不能互换**；把「再补一条数据」当成对理据的支援是错层补证据。④ 与 r745A 溯因分工：那条管「几个解释候选里选哪个」，本条管「一条已选论证内部由什么部件撑起来」，先拆结构再评候选，顺序不可倒。
+
+### 12.2（r747A-2）★内部证成 / 外部证成是两层：D+W→C 管推出，B 与 R 管前提本身对不对
+中国法学网（中国社科院法学所）王彬《案例指导制度下的法律论证》全文逐字：「一个完整的法律论证具有六个要素：1. …要提出一个主张 C（Claim），必须说明这一规范性命题的成立根据；2. 为证成主张 C，需要寻找予料 D（Data）…；要回答『如何从予料 D 中得出主张的』，需要提出理据 W（Warrant）…；4. 予料与理据的结合构成了论证的前提，但是，它们对主张 C 存在不同的强度，主张 C 的成立需要模态限定 Q（Qualifiers），指示从予料和理据到结论的跳跃力量…；5. 在模态限定 Q 下，除非条件（Rebuttal）R 出现，理据 W 无法被反驳；6. 支援 B（Backing）是对理据 W 的深度证立，它解决『为什么理据 W 可适用于某一特定案件』的问题」；关键两层逐字「从事实命题 D 与法律命题 W 推导裁决结论的过程属于**内部证成**的层次，内部证成涉及从既定前提推导出结论的法律决定的有效性问题；支援 B 对法律命题 W 的进一步证立以及反对它的反驳 R 则属于**外部证成**的层次，外部证成涉及**前提本身的正确性**问题」；并记「法律命题并非是绝对的、永恒正确的推理前提，而具有**可辩驳的特征**」「只具有『**初显优先性**』」「其拘束力并非是有无的问题，而是**程度的问题**」（引麦考密克／萨默尔：拘束力呈「正式拘束力→无正式拘束力但有影响力→…→仅具表述性价值」光谱）。
+- **判据**：① 出现「证据没问题但结论还是不对」时，先判是内部层（推理跳不过去）还是外部层（理据本身不适用本场景），两层修法完全不同。② **Q 与 R 要单列成字段**：Q 写「这个结论是必然／大概／在…条件下成立」，R 写「除非出现什么」。③ 规则、先例、既有结论迁移到新案/新任务时只带初显优先性，强度是程度不是布尔；「已有一条规则」不等于「已证成」。④ 与 `engineering/wb-instruction-prior`「目标须可验证」分工：那条管任务入口，本条管结论成文后的结构审查。
+
+### 12.3（r747A-3）★限定词与反驳是「可辩驳性」的一等结构，但也是弱论证的免责口，二者要分辨
+Purdue OWL 逐字「The **qualifier** shows that a claim **may not be true in all circumstances**. Words like 'presumably,' 'some,' and 'many' …」「The **rebuttal** is an acknowledgement of another valid view of the situation」「Including a qualifier or a rebuttal in an argument helps build your **ethos, or credibility**」；明尼苏达教材快照逐字「The qualifier (or **modal qualifier**) indicates the strength of the leap from the data to the warrant and may limit how universally the claim applies. The necessity of qualifying words comes from the plain fact that **most absolute claims are ultimately false … because one counterexample sinks them immediately**」，同时明确反向警告「**Qualifiers and reservations can be used to bolster weak arguments** … They are often used by advertisers who are constrained not to lie. Thus, they slip 'usually,' 'virtually,' 'unless,' and so on into their claims to protect against liability」；中国法学网同记 Toulmin「那种认为一个普遍的和永恒的程序法典，能够为我们的所有问题提供唯一的和明确的答案的想法是一种**原则的暴政**」。
+- **判据**：① 一个反例即击沉绝对断言 ⇒ 结论默认带 Q，禁写「一定／所有／必然」除非能给出全称保证；R 要写出具体例外条件而非「情况可能不同」。② **有 hedge ≠ 论证可靠**：审限时同时问「它是在诚实标注力度，还是在给不可证伪留后路」——若 Q/R 多到使结论在任何结果下都算说中，按 §8.1 / r731A 可证伪门判不合格。③ 承认反方（rebuttal）提升可信度是修辞效果，不构成证据；不得把「写了 rebuttal」当「已回应反驳」，回应须落到 D/W/B 的哪一格被改。④ 与 `agent/grill-me` §r735C 独立评分分工：那条管多人判断的聚合，本条管单个论证的限定粒度。
+
+**提升层**：思考 / 验证 / 写作审查。触发词：Toulmin 六要素、claim-grounds-warrant、隐含 warrant、backing 支持 warrant 不是 claim、内部证成 vs 外部证成、模态限定 Q、除非条件 R、初显优先性、可辩驳性、限定词是免责口。
+
+### r747A 来源与判非（2026-11-15 实拉，逐字核验）
+- `https://owl.purdue.edu/owl/general_writing/academic_writing/historical_perspectives_on_argumentation/toulmin_argument.html`（Purdue University OWL《Toulmin Argument》，Copyright 1995-2018）— **WebFetch 200 全文逐字**：六要素、三 fundamental / 三 not fundamental、warrant「the assumption that links the grounds to the claim」、qualifier / rebuttal / backing 逐字定义、ethos 句。**第一独立域（大学写作中心权威教学一手）**。
+- `http://iolaw.cssn.cn/fxyjdt/201706/t20170605_4650748.shtml`（中国法学网·中国社科院法学所，王彬《案例指导制度下的法律论证》，2017-06-05）— **WebFetch 200 全文逐字**：六要素中译与功能、内部证成/外部证成两层逐字、可辩驳性、初显优先性、拘束力程度与光谱、「原则的暴政」引文、注释 [1] Toulmin《The Uses of Argument》Updated Edition, CUP 2003, p.97 与 [2]《An Introduction to Reasoning》改 Data 为 Ground。**第二独立域（法学学术论文一手，与 Purdue 无引用关系）**。
+- `https://manifold.open.umn.edu/read/full-text/section/5be693bd-6c4f-4a15-8f4f-2f5e4c390cd8`（明尼苏达大学 OEN Manifold / Berea Writes!《Chapter 3 - Argument》）— **WebFetch 200 前 15,000 字**（AI 摘要 60s 超时如实登记）+ **WebSearch 快照逐字**补 Toulmin 段：Claim/Grounds/Warrant/Backing/Qualifier/Rebuttal 定义、「grounds should be tested for soundness」「warrants are often implicit and hence unstated. This gives space for the other person to question and expose the warrant」、「one counterexample sinks them immediately」、「Qualifiers and reservations can be used to bolster weak arguments」广告商免责用例。**第三独立域（开放教材，作交叉不作唯一来源）**；该页 curl 直连被拒（WinError 10061），未冒充一手全文。
+- `https://wikipedia.com/wiki/Argumentation_theory`（《Argumentation theory》Toulmin model 段）— WebSearch 快照逐字：六要素、前三 essential / 后三 may not be needed、原基于法庭法律论证、Brockriede & Ehninger 1963 引入修辞学、批评「does not fully consider the use of questions in argumentation」。**第四独立域（百科，仅作交叉与批评面登记）**。
+- `https://livrepository.liverpool.ac.uk/3196148/1/CompLegalArg24.pdf`（University of Liverpool《Computational Models of Legal Argument》）— **WebFetch 返回 403 Forbidden，无任何正文**，如实登记；Google 搜索快照含其 §2.2 Toulmin 六要素与三类攻击（rebutting / undercutting / undermining）逐字，仅作交叉，**不冒充一手**。
+- `https://www.peopleapp.com/rmharticle/30016353746`（人民日报客户端《97 思维模型：图尔敏论证模型》）、`https://tnstate.libguides.com/c.php?g=1341399`（田纳西州立大学图书馆《Types of Arguments》）— WebSearch 快照，中文术语对照与六术语清单交叉；科普/教学立场登记，不作唯一结论来源。
+- **判非**：窄串全库 `SKILL.md` 精确扫描（97 个文件）— `Toulmin` / `modal qualifier` / `grounds` / `rebuttal` / `internal justification` / `外部证成` / `defeasib` / `初显优先` / `implied warrant` / `unless clause` / `six component parts` **全 0 命中**；`warrant` 2 命中为 `defaults/wb-context-compressor`（豆包自留地）与本技能 §8.1 的通用「担保」义、`backing` 1 命中在豆包自留地、`qualifier` 1 命中在 `engineering/wb-execute-discipline`（豆包自留地），均非论证图式命题，登记不复用。与 §8.1 有效性/健全性两轴、§8.2 Steelmanning/Socratic、§8.3 Pre-Mortem、§十 CoT 忠实度、§十一 r745A 溯因/理论美德五族结论**均不复用**；与 `engineering/wb-instruction-prior`、`agent/grill-me` 分工已在上文逐条写明。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。
+- **未采纳**：Toulmin《The Uses of Argument》全书 field-dependent / field-invariant 之辩、Wikipedia 所记相对主义与绝对主义争论、中国法学网全文关于指导性案例效力定位的司法制度结论、Liverpool PDF 中 AI & Law 形式化（dialogue games / argumentation schemes）整段，均属专门领域争论或不可迁移制度事实，只取可迁移的结构判据。

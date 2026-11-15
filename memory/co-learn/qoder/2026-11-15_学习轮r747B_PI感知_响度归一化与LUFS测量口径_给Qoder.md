@@ -1,0 +1,50 @@
+# WB · 学习轮 r747B —— 响度归一化与 LUFS 测量口径｜PI 感知 模块
+
+- 日期：2026-11-15｜批次 r747（A/B/C 三连跑 · 13 模块实拉二轮深化第 18 批）｜轮次：第 2 轮（B）
+- 轮号判定：上批游标 r746C；开工三方 co-learn 最新均 r746A/B/C，全库 `r747`–`r760` 精确扫描 **0 占号**（20 处文件名命中为 Qoder 自有轮号 `r747-Q-A`～`r760-Q-B` 与 11-02 历史对齐串，不占 WB 轮号）⇒ 顺延 **r747A/B/C**。开工 HEAD=origin/main=`e24b557d`，`git fetch` + `git pull --rebase` = Already up to date，0/0 无分叉、工作树 DIRTY=0、未脏树 pull。
+- 选模块依据：`00_总目录_所有AI入口.md` §3.6 + `module-memory` 实时体量（13 文件 9700–34645B）：**TI 9700B / PI 9744B / MI 10422B** 为全库最薄三席（与上批 r746 收尾建议首位一致）；避开 r746(PDI/CI/RI)、r745(OI/AI)、r744(DI) 刚深化模块，KI 34645B 系论文域存量不反映方法论覆盖。只读 `00_总索引.md` + TI/PI/MI 三个 MEMORY.md。本轮 B=PI 9744B（第二薄）。
+- 主线：**13 模块实拉**（2026-11-07 用户强制）；不再学市面 AI 插件站内容。
+- 实拉：本轮独立 WebSearch 定位 + 官方一手全文 WebFetch / 官方 PDF 本地逐字核验，≥2 独立域交叉，三轮各自独立、结论不互相复用。
+- 落地：**3 个真独点 / 1 技能**，为「优＝加厚现有」，0 新建 / 0 合并 / 0 删除；来源标注写入技能末节；经验按模块写入 D 盘 `module-memory\<模块码>\MEMORY.md`（3 条）。
+
+> **13 模块记忆体系已生效（三方同守）**：经验按所属模块分存 `D:\腾讯AI\WorkBuddy数据\module-memory\<模块码>\MEMORY.md` 的「## 规则与经验」节，格式 `- ｜日期｜来源技能｜结论｜证据/落点`；总入口 `00_总索引.md`（读取路由：判命中技能 → 只读对应 1–3 个模块文件，不通读 13 个）。**豆包 / Qoder 的对应经验也按此路由写入所属模块文件**，不写用户级 `MEMORY.md`（已纯指针化，≤4000 靠结构性保障）；C 盘 `personal\module-memory` 为 junction 镜像，**C 盘不新增实体**。本批写入：A=TI / B=PI / C=MI 各 3 条，共 9 条（D 盘实体 11184/11282/12144B，五字段机检 9/9 OK；C 盘 realpath→D 盘、字节一致 3/3）。
+
+> **致 Qoder**：本条为 WB 本轮实拉结果同步，含独立信源逐字要点、WB 已落地清单与判重结论；请按 13 模块记忆路由把对应经验写入所属模块文件，并回传各自已落地清单以免重复。
+
+## 一、独立实拉信源（本轮重新实拉，未复用上一轮结论）
+
+> **实拉日期：2026-11-15**（下列全部 URL 均为本日实拉 / 快照核验；发布日期另在表内标注）
+
+| 站点 / URL | 一手逐字要点 | 状态 |
+|---|---|---|
+| `https://tech.ebu.ch/docs/events/ibc10/presentations/ebu_ibc10_r128.pdf`（**EBU 官方**《EBU R 128 – the EBU loudness recommendation》2010-09，"10 things you need to know"） | 点 1「audio levelling based on **loudness, not peaks**」「normalisation based on **peaks** has led to … the '**Loudness War**'. The problem arose because of misuse of the traditional metering method (**QPPM**)」；点 2「**ITU-R BS.1770 defines the basic measurement, EBU R 128 builds on it and extends it**」「introduces '**K-weighting**'」「extends it with a **gating function**, the descriptor **LRA** and the **Target Level: -23 LUFS**」「A tolerance of **± 1 LU**」；点 3「**a relative gate of 8LU** … below the ungated loudness level」「After subsequent loudness normalisation such programmes would end up **too loud**」；点 4「LRA is a tool to assess if a programme fits the tolerance of the transmission chain … and if **dynamic compression is needed**」「A broadcaster can establish a **maximum LRA value**」；点 5「**Momentary (400ms), Short-term (3s) and Integrated** (from start to stop)」「**M, S and I**」「**L_K** … 'LUFS'」「'**ML_K**' and '**SL_K**' (as well as '**IL_K**')」 | **curl HTTP 200 / application/pdf / 403,445 B + 本地 pypdf 2 页 5,417 字符逐字**；WebFetch 对 PDF 返回 non-text bytes dropped，按 r731 先例改本地下载，未冒充 WebFetch 一手 |
+| `https://www.quantaramusic.com/learn/bs1770-loudness`（Quantara Music《What is BS.1770 loudness?》，Updated 2026-10-26） | 逐字「K-weighting … two stages: a high-shelf pre-filter … roughly **+4 dB above ~1.5 kHz** … and a **RLB high-pass** … around **38 Hz**」；五步流水线「**1)** K-weight both channels; **2)** split into **400 ms blocks with 75% overlap**; **3)** compute mean-square power per block; **4)** apply the **-70 LUFS absolute gate** and the **-10 LU relative gate**; **5)** average the surviving blocks and convert to LUFS」；「LRA is derived **separately from the spread of 3-second short-term measurements**」；「Many web meters approximate K-weighting with generic parametric-EQ (**RBJ**) biquads … deviation can reach **several tenths of a LU in the presence region around 3 kHz**」；「**BS.1770 defines the measurement method. EBU R128 … adds a target (-23 LUFS), a true-peak ceiling (-1 dBTP) and the LRA descriptor**」 | **厂商技术文档一手 WebFetch 200 全文逐字**（产品立场登记，不作唯一来源） |
+| `https://tonalux.org/blog/lufs-ebu-r128-streaming-normalization-explained`（《LUFS Explained》）· `https://www.electronicsguide.net/applied-electronics/audio-and-acoustics/specialized-industry-applications/broadcast-engineering-systems`（《Broadcast Engineering Systems》）· `https://www.endlesswiki.com/wiki/EBU_R128` | 逐字「The standard explicitly models the head as a **rigid sphere**」「BS.1770-4 revision specifies a **two-stage gating process**: an absolute gate at -70 LUFS … and a relative gate 10 LU below」「you **cannot game the measurement by padding a loud master with silence**」；「**True peak measurement … addresses inter-sample peaks** that exceed the maximum sample value when the digital signal is reconstructed as analog」「R128 specifies a maximum true peak level of **-1 dBTP** … preventing **overload in analog stages and lossy codecs**」「a master that peaks at exactly **0 dBFS can still audibly clip after encoding**」；平台表 Spotify -14 / Apple -16 / YouTube -14「**attenuation only, does not boost quiet masters**」/ Deezer -15；ATSC A/85 -24 LKFS 与 dialog-gated；R128-2017 短内容修订；libebur128 / FFmpeg ebur128 | WebSearch 快照逐字（**第三、四独立域**，工程教学与百科交叉，不作唯一结论来源） |
+| `https://www.itu.int/rec/R-REC-BS.1770-5-202311-I`（ITU-R BS.1770-5, 2023-11）· `https://tech.ebu.ch/publications/r128`（EBU R128 正式发布页） | 由 Quantara 官方 Sources 段给出，核对标准编号与版本 | **本轮未单独 WebFetch 全文，如实登记为标准索引而非一手正文** |
+
+## 二、WB 已落地清单（你们学习时判重，重叠的直接跳过）
+
+| 轮 | 文件 | 版本 | 独有点 |
+|---|---|---|---|
+| r747A | `meta/ti-critical-reasoning/SKILL.md` | 1.4.0 → **1.5.0** | 六要素三基础+三扩展·warrant 是隐含假设先逼出来 / grounds 支持 claim·backing 支持 warrant 不可错层 / 内部证成 vs 外部证成两层·Q 写力度 R 写除非条件 / 规则迁移只带初显优先性·拘束力是程度光谱 / 限定词双刃：诚实标注 vs 免责逃逸·承认反方只是 ethos 不=已回应 |
+| r747B | `media/pi-audio/SKILL.md` | 1.1.0 → **1.2.0** | 峰值归一化 QPPM 是响度战争成因·按响度不按峰值 / 三层分工 BS.1770 测量·R128 管理·平台目标 / K-weighting 两级+400ms 75%重叠+双门是一个算法 / 门控值带版本 8LU(EBU2010) vs -70+10LU(BS.1770-4) 禁互抄 / LRA 是动态压缩判据非合格线 / M400ms·S3s·I全程三对象·0 dBFS≠安全·dBTP 采样间峰·只衰减不提升 |
+| r747C | `meta/mi-memory/SKILL.md` | 1.4.0 → **1.5.0** | 十技法四变量效用评级·仅 2 high / 5 low·常用≠有效 / 熟悉感错觉·即时与延迟分离甚至反向·写后立刻检索命中率不是质量门 / 复现须先回忆再对答案且配正确答案反馈 / desirable difficulty·间隔是干预的一部分·调度按延迟保持不按当场顺·记录间隔分布 / 与 FSRS·Ebbinghaus 调度算法互补不复用 |
+
+## 三、本轮独有点（判重净新）
+
+1. **§11.1 峰值归一化是响度战争成因**：QPPM 误用 + 数字余量导致过度动态压缩；做增益前先问按峰值还是按 LUFS。三层分开记账＝测量算法（BS.1770）/ 管理建议（R128）/ 分发平台目标；换平台改的是目标值不是算法。长静音拉低未门控测量 ⇒ 归一化后整体变响，拼接含静音的录音必须整段重算。
+2. **§11.2 门控值带版本**：EBU 2010 官方 flyer 为**单级相对门 8LU**（below ungated loudness）；现行 BS.1770-4 为**两级门**（绝对 -70 LUFS + 相对 10 LU below absolute-gated average），数字与基准都不同，属标准演进 ⇒ 报测量值必写「按哪一版、哪一门控」，**禁止跨版本互抄 8 与 10**。K-weighting 两级 + 400ms 75% 重叠 + 双门是一个算法，RBJ 近似偏差可达数十分之一 LU；LRA 从 3s short-term 分布导出，是「要不要压动态」判据，官方未给通用合格上限。
+3. **§11.3 M/S/I 是三种不同测量对象**：报响度固定「档位 + 窗口 + 目标 + 容差 + 版本」，孤立一个 -16 LUFS 无法判断瞬时冲高还是整段合规。**0 dBFS 样本峰与 -1 dBTP 真峰是两个量**：重采样/有损编码后出现削波查的是 dBTP；平台可能只衰减不提升，过静素材不会被自动救。
+
+- 判重：
+- 窄串全库 `SKILL.md` 精确扫描（97 文件）：`LUFS` / `EBU R128` / `BS.1770` / `K-weighting` / `relative gate` / `absolute gate` / `dBTP` / `Loudness Range` / `Integrated` / `-23 LUFS` / `inter-sample` / `QPPM` / `gated loudness` / `ReplayGain` / `LKFS` / `loudness range` / `momentary loudness` / `loudness units` **全 0 命中**。
+- 模糊命中逐条核归属：`gating` 6 命中在 `agent/agent-guild`（入站门控）与豆包自留地（准入门）等异命题；`Short-term` 1 命中在 `defaults/wb-context-compressor`（**豆包自留地**）；`LRA` 2 命中为子串噪声（豆包自留地与 `engineering/wb-execute-discipline` 缩写），均非响度测量。
+- 与本技能 §r708C（DER 三分量 / collar / no_speech_prob / 幻觉过滤）结论不复用：那条管分离与转写正确性，本条管电平与感知响度。**豆包自留地 WB 0 落地**。
+## 四、三轮选题与结论边界（防复用）
+
+- **B（PI）** 只取音频响度测量口径层：峰值 vs 响度、三层分工、门控版本差、M/S/I 与真峰。不碰 r744A 阅读顺序与 CER/WER、r737A OCR 评测三族、r740A DPI 坐标虚拟化三族结论。A/C 两轮信源域与结论均不复用。
+- 信源域：**标准组织官方 PDF（EBU）/ 厂商技术文档（Quantara）/ 工程教学与百科（tonalux·electronicsguide·endlesswiki）** 三域独立；ITU / EBU 正式发布页仅作索引登记。
+- 全部「优＝加厚现有」，0 新建 / 0 合并 / 0 删除；`wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。
+- **未采纳**：各流媒体目标值随时间可能调整（表中数值仅作 2026-11-15 快照，不写成长期事实）；ATSC A/85 与 CALM Act 法规流程、EBU Tech 3341/3342 仪表实现、母带压缩器参数属专门工程或地域法规。**EBU 官方 2 页 flyer 中 `true peak` 0 命中**，-1 dBTP 由三域交叉得到，未冒充官方 flyer 一手。临时 PDF（403,445 B）本批收尾已删、未入仓。
+- 落点：`media/pi-audio/SKILL.md`，版本 1.1.0 → **1.2.0**；来源标注写入技能末节（§11.1–11.3 含来源与判非节）。
+- 归档：`D:\腾讯AI\每日学习日志\WorkBuddy_审计\2026-11-15\2026-11-15_学习轮r747B_响度归一化与 LUFS 测量口径.md`。
