@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。
-version: 1.5.0
+description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。
+version: 1.6.0
 module: MI
 modules: MI,AI
 ---
@@ -130,3 +130,28 @@ BrainStrata 逐字「Cepeda and colleagues' 2006 meta-analysis of **317 studies*
 - `https://www.psychologytoday.com/us/blog/the-psychological-pundit/202008/studying-through-the-pandemic-tips-from-cognitive-science`（Gurung 访谈 Dunlosky，2020-08，含 PSPI 14(1) 4–58 doi 10.1177/1529100612453266）与 `https://www.structural-learning.com/blogcategories/revision`（Structural Learning《Revision》，Updated for 2026，六策略效用表）— **WebSearch 快照逐字**，三档划分与「re-reading produces familiarity」交叉确认。**第四、五独立域（科普/教学立场登记）**。
 - **判非（关键换道）**：`Ebbinghaus` / `FSRS` / `spaced repetition` / `retrievability` / `forgetting curve` 在 `defaults/wb-context-compressor`（**豆包自留地**）与 `meta/knowledge-governance` 已有命中 ⇒ **本轮不碰复习调度算法、参数与遗忘曲线公式**，改取「十技法效用评级框架 + 四变量口径 + 即时/延迟测量时点 + desirable difficulty」这一**验收协议层**，与已落的调度算法是互补而非重复。窄串全库 `SKILL.md` 精确扫描（97 文件）— `utility rating` / `low utility` / `practice testing` / `distributed practice` / `retrieval practice` / `familiarity` / `desirable difficulty` / `delayed retention` / `metacognit` / `spacing effect` / `Dunlosky` / `Yang` / `Cepeda` / `Roediger` / `Rohrer` **全 0 命中**；`interleav` 3 命中在豆包自留地、`engineering/wb-execute-discipline`（豆包自留地）、`meta/agent-evolution`（交错实验次序，异命题），登记不复用。与本技能 §五（LongMemEval 五能力）、§九（AgentPoison 双栏）、§十（NAMS 三态与矛盾阻断）结论均不复用；**豆包自留地 WB 0 落地**。A/B 两轮信源域与结论不复用。
 - **未采纳**：各 meta 分析的具体效应量数值（g=0.499 / d=0.83 / 七个月）仅作 2026-11-15 二手转述快照登记，**未核原始论文全文**，不作为工程事实写入判据；EEF 工具包、GCSE / 课堂组织、教师激励设计、Anki/SM-2 算法参数属教育与产品实现细节，只取「测量时点 + 效用评级 + 难度反向」三条可迁移验收口径。人类被试结论迁移到 agent 记忆按 rules/08 §五作待验证假设处理。
+
+## 十二、检索即改写：再巩固窗口、置信度与保真度反向（MI · r751A 2026-11-15 实拉，四独立域交叉）
+
+> 记忆不是只读档案。**每一次取回都可能重写原始痕迹**。与 §五（五能力评测/双时态/episode 溯源）、§九（AgentPoison 对抗验收）、§十（实体解析三态）、§十一（巩固技法效用）分工：本条管「读取动作本身对原始条目的污染」。
+
+### r751A-1 ★ 取回不是回放，是打开一次可写入窗口
+科普中国《重整记忆》逐字「**记忆检索是一种动态过程，它可以加强或改变记忆**」「**对原始记忆的回忆是启动重新整合的关键事件**」「检索会引发一波蛋白质合成的浪潮，而这需要重新整合记忆」「检索后的内存重新整合可以用于更新或将新信息集成到长期记忆(LTMs)中」；psychprofile.io 逐字 "**Every time we access a stored memory, we do not simply play back a static recording but rather reconstruct the event from fragmented pieces**" / "**Remembering is less like opening a file and more like editing a document, saving over the old copy each time**" / "Each recall reactivates a hippocampal-cortical ensemble and opens a **brief reconsolidation window** in which the memory can be updated by the current context, goals, and emotion"。
+- **判据**：① 「读出来→重新摘要→写回同一条」**不是无损整理**，是把当前上下文/目标/语气写进了原始痕迹 ⇒ 原始 episode 必须 append-only 且不可被派生视图覆盖，派生结论另存并带指回原条的指针（与 r713A「派生层回写同一条 stream」互补：那条保证派生可检索，本条保证原始不被改写）。② 验收固定问「原始版本还能按位置取回吗」，不能则判不可逆污染。③ 高频被召回的条目恰是累积漂移最多的条目，须按原文锚点周期回核，不能因「常被用到」判为可信。
+
+### r751A-2 ★ 置信度上升与客观准确率下降可以同时成立
+psychprofile.io 对照表逐字 "**Confidence**：Accuracy and confidence should track closely ⇒ **Confidence can rise while objective accuracy falls**"；"**Repeated retrieval improves accessibility more than fidelity**"；"**Delay increases reconstruction and susceptibility to distortion**"；"As a person recalls an event multiple times, small inaccuracies introduced during each reconsolidation can **accumulate, increasing confidence in details that never actually occurred**"；"**fluency can be mistaken for accuracy**"。
+- **判据**：① 记忆质量门禁用「召回流畅度／被引用次数／主观确定感」当证据——三者提升的是**可及性**不是**保真度**。② 报告固定「即时可及性 vs 延迟保真度」双栏（与 §十一 r747C 熟悉感错觉分工：那条管**学习技法**的即时/延迟分离，本条管**同一条记忆跨多次取回**的漂移）。③ 延迟越长、复述次数越多越依赖重构 ⇒ 长间隔后的回忆须回原文核，不能充当原始事实的新证据。
+
+### r751A-3 ★ 重整与消退是两个相反过程；要点层抗改、来源与周边细节易损
+科普中国逐字「记忆检索可能会启动两个**潜在的可分离但相反的过程：重新整合和灭绝**」「**简短的提示会导致重新整合，而更长的提示会导致记忆的消失**」；psychprofile.io 逐字 "**strong gist and schema-based details resist change, while peripheral and source details are more vulnerable**" / "The result is a memory that remains recognizably the same event but **carries new retrieval history**"；科普中国《脑部的记忆之道》快照逐字「每次从大脑中提取同一事件的记忆时，其内容都可能发生细微调整」。
+- **判据**：① 记忆更新策略按层分开：**要点/图式层**抗改可低频复核，**来源、时间、周边细节层**最易漂移须硬锚点（§五双时态四时间戳、episode 溯源正是落在这层）。② 「更新失败」不等于「没变化」——可能走了消退方向；提示/触发的**持续时长**是决定走向的变量，一次召回的效果不能只按「有没有命中」二分。③ 人类被试的神经机制迁移到 agent 记忆按 rules/08 §五作**待验证假设**，只取「读取即可能写入／可及性≠保真度／分层抗改」三条可机检口径，不引入蛋白质合成等生物实现。
+
+**提升层**：记忆治理 / 验收协议。触发词：reconsolidation、再巩固、检索即改写、editing a document、可及性≠保真度、confidence vs accuracy、gist 抗改而 source 易损、重整与消退两过程、提醒时长决定走向、原文锚点回核、append-only 原始 episode。
+
+### r751A 来源与判非（2026-11-15 实拉，逐字核验）
+- `https://www.kepuchina.cn/article/articleinfo?business_type=100&classify=0&ar_id=241072`（**科普中国《重整记忆》**，上传时间 2021-12-31；**WebFetch 200 全文逐字**：定义／蛋白质合成实验／检索引发再巩固／两相反过程／提醒时长决定走向／Salk 研究所《神经元》模型）— **第一独立域（官方科普一手，含对 Nader 2000 与 Salk 模型的转述，按转述登记）**。
+- `https://psychprofile.io/knowledge/how_does_recalling_a_memory_change_it.php`（PsychProfile Knowledge Base，**2026-11-09**，6 min；**WebFetch 200 全文逐字**：reconstructive retrieval／reconsolidation window／editing a document／confidence vs accuracy 对照表／gist vs peripheral／Mandela effect）— **第二独立域（心理测评机构知识库，商业立场登记，不作唯一来源）**。
+- `https://cloud.kepuchina.cn/newSearch/imgText?id=7500211864272191488`（科普中国《把记忆想成一盘随时重录的磁带》）、`https://www.kepuchina.cn/article/articleinfo?business_type=100&classify=0&ar_id=631091`（《脑部的记忆之道》，审校：广州医科大学附属第二医院 詹丽璇）、`https://www.bioguider.org/doc-view-5306.html`（《记忆重构》，含 Nader 2000／Hupbach 2007／Loftus 1974 著录）— **WebSearch 快照逐字**交叉；bioguider **WebFetch 返回 Cloudflare「Checking your browser / Just a moment」拦截**，如实登记**未冒充一手全文**；三域含科普/医学审校/教学百科立场，均不作唯一结论来源。
+- **判重**：全库 SKILL.md 精确扫描 `reconsolidation` / `再巩固` / `重整记忆` / `retrieval-induced` / `Hupbach` / `Loftus` / `记忆重构` / `检索即改写` / `misinformation effect` / `蛋白质合成` / `虚假记忆` **全 0 命中**；`Nader` 1 命中为 `meta/di-decision-tradeoff`「2000 年 Nader→Gore 妥协投票」、`destabiliz` 1 命中为 `engineering/wb-agent-evaluation` 的 Delayed Verification Destabilizes 论文题名，均**异命题**登记不复用。与本技能 §五/§九/§十/§十一 结论不复用；与 `meta/personal-ai-os` r713A 写入端不预筛/派生层回写为**互补非重复**（那条管要不要回写，本条管回写会改写原条）。**豆包自留地 WB 0 落地**。
+- **未采纳**：Nader 2000 蛋白质合成抑制剂剂量与时序、Loftus 1974 样本数与百分比、Mandela Effect 社会学解释、PTSD/情绪障碍临床应用——前者属生物实验细节、后者属临床域，均不迁移到 agent 记忆工程。

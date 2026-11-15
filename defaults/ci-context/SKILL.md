@@ -1,7 +1,7 @@
 ---
 name: ci-context
-description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体、上下文装配流水线逐级留痕、检索评估与答案评估分离归因、块完整性与权限失败判据。
-version: 1.5.0
+description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体、上下文装配流水线逐级留痕、检索评估与答案评估分离归因、块完整性与权限失败判据。前缀缓存块级链式哈希/三级有序驱逐/隔离维度（cache_salt·LoRA ID·感知哈希）。
+version: 1.6.0
 module: CI
 modules: CI
 ---
@@ -114,3 +114,28 @@ PEI Learn《Evaluate retrieval before evaluating the answer》（Updated Aug 202
 - `www.aicharcha.com/research/context-engineering-evaluation-framework-2026`（aicharcha；WebSearch 快照逐字：retrieval vs answer 分离、claim 级引证、provenance 八字段、chunk/metadata/hybrid 分项）＋ `learn.microsoft.com` RAG 评估指引经其转述 — **第四独立域交叉（二手转述，不作唯一来源）**
 - **判重换道**：`context precision` / `context recall` / `groundedness` / `utilization` / `ablation` 命中全在豆包自留地 `defaults/wb-context-compressor`（RAG Triad 三轴、RAGAS 四维、三层指标、golden dataset+CI gate、judge 校准）与 `engineering/wb-execute-discipline`（按 workflow 类型选主指标）——**RAG 评估指标族机制本体已高度饱和，本轮不搬**；改取「装配层逐级留痕／k 与实际入窗条数／chunk integrity／权限失败即 critical／无答案用例」这套**验收协议与归因口径**。`chunk integrity` / `citation entailment` / `token share` / `log what it dropped` / `precision at k` / `silent truncation` 全库 SKILL.md **0 命中** ⇒ 净新。`taxonomy` 等其他命中见 C 轮登记。豆包自留地 WB **0 落地**。
 - **未采纳**：RAGAS/DeepEval/Promptfoo 具体分值阈值（0.70/0.75/0.85）、合成测试集生成配方、LLM-as-a-judge 偏差族、Braintrust 产品 API 与代码段——前者属豆包自留地已学的指标校准层，后者属工具绑定。
+
+## 十、前缀缓存是块级链式哈希 + 有序驱逐 + 隔离维度（CI · r751B 2026-11-15 实拉，四独立域交叉）
+
+> **换道说明**：豆包自留地 `defaults/wb-context-compressor`、`engineering/wb-execute-discipline` 已有「能缓存就缓存／SGLang KV cache+RadixAttention 更快更便宜」等**口号级**命中；本轮不重复性能口号，改取**推理引擎块级机制层**（哈希构成／驱逐顺序／隔离维度／精确前缀硬边界），与 §四 r715B「API 计费层提示缓存」、§六 r738B「cached_tokens 不减窗口压力」分工。
+
+### r751B-1 ★ 缓存键是「块内 token + 全部前缀 token」的链式哈希，中间插一个字后面全失效
+vLLM 官方逐字「每个 KV 块可以通过**块内的标记以及块前缀中的标记**唯一标识」「`hash(prefix tokens + block tokens) <--> KV Block`」「将逻辑 KV 块映射到它们的哈希值，并维护一个包含所有物理块的**全局哈希表**」「此设计实现了自动前缀缓存，**而无需在 KV 块之间维护树结构**」；infra.bea.ai 逐字 "Standard prefix caching has a strict limitation: **only exact token-by-token matches from the beginning can be reused**. If shared text appears in the middle, or prompts are similar but not identical, **no reuse happens**"（并给 `[System]+[Doc]` 与 `[Doc]+[System]` 换序即零复用的例子）。
+- **判据**：① 稳定公共内容**必须前置且连续**，动态内容（时间戳／用户 ID／检索结果）只能放末尾；在稳定块**中间**插入任何变化内容，自断点起所有后续块哈希全变，命中率归零。② 「前缀看起来一样」不构成命中证据，验收按**实际 cached_tokens／命中块数**记，并连前缀深度一起报。③ 与 §四 r715B 分工：那条是 **API 计费侧**「渲染后完整前缀」，本条是**引擎侧块级哈希**；同向但层级不同，不可互相替代。
+
+### r751B-2 ★ 驱逐是有序三级策略，命中率不是「前缀相同就一直命中」
+vLLM 官方逐字「当没有空闲块时，我们将驱逐**引用计数**（即，当前使用该块的请求数量）**等于 0** 的 KV 块」「如果有多个引用计数等于 0 的块，我们优先驱逐**最近最少使用的块（LRU）**」「如果有多个块的最后访问时间相同，我们优先驱逐**位于最长前缀末尾的块**（即，其前面有最大数量块的块）」「此驱逐策略有效实现了与 [RadixAttention] 中**完全相同的策略**，该策略优先驱逐前缀树中引用计数为零和最近最少使用的**叶节点**」；infra.bea.ai 逐字 "Shared blocks use **reference counting** — they're only freed when **no request or cache entry** references them" / "When GPU memory is full, evict the **least recently used** (LRU) cached prefixes"。
+- **判据**：① 三级顺序是硬的（refcount=0 → LRU → 最长前缀尾块），**在飞请求持有的块不可驱逐**；由此命中率由「在飞请求数 × 显存水位 × 公共前缀深度」共同决定，而非纯前缀相似度。② 报缓存健康度须连 **refcount／内存水位／命中块数／前缀深度** 一起报，单报百分比不可归因。③ 最深的个性化尾块优先被淘汰是设计选择——公共前缀天然留存；与 §六 r738B「cached_tokens 上升≠窗口压力下降」分工（那条管计费 vs 上下文窗口，本条管命中率的物理成因）。
+
+### r751B-3 ★ 复用与隔离是同一套哈希策略的两面：键里必须带身份/权限维度
+vLLM 官方逐字「**多 LoRA 服务**：我们可以简单地让每个 KV 块的哈希值也**包含请求查询的 LoRA ID**」「**多模态模型**：我们可以使用不同的哈希方法来处理不同模态输入的缓存。例如，对图像使用**感知哈希**来缓存**相似**的输入图像」；AIInfraGuide 快照逐字「要留意**多租户环境下的隔离**——vLLM 提供 **cache_salt** 等机制，避免不同租户/权限的请求意外命中彼此的缓存**造成信息泄露**」「把公共内容前置才能命中」。
+- **判据**：① 缓存键必须包含**会改变 KV 的身份维度**（LoRA ID／adapter／租户／权限），漏一个就是跨租户误命中＝信息泄露面；启用前缀缓存前先列全这些维度。② 多模态**感知哈希是近似匹配**，与离散 token 的精确哈希语义不同 ⇒ 图像侧「命中」不能按文本侧等价性验收，须单定相似度阈值与误命中检测。③ 精确前缀是硬边界；CacheBlend（重算分歧 token）／Prompt Cache（预定义模块固定位置编码）／语义缓存（整响应跳过推理）是各自的近似复用，**不得混用命中口径**；与 §九 r746B「检索评估与答案评估分开」同构（不同层的命中不可互相背书）。
+
+**提升层**：上下文工程 / 缓存治理。触发词：块级链式哈希、hash(prefix+block)、全局哈希表、refcount=0 才驱逐、LRU、最长前缀末尾块、RadixAttention 叶节点等价、公共内容前置、精确前缀硬边界、cache_salt、LoRA ID 入哈希、感知哈希、命中率不可单报。
+
+### r751B 来源与判非（逐字核验，2026-11-15）
+- `https://docs.vllm.com.cn/en/latest/design/automatic_prefix_caching.html`（**vLLM 官方文档中文镜像**《自动前缀缓存》，页内 edit 链接指向 `docs/design/automatic_prefix_caching.md`；**WebFetch 200 全文逐字**：PagedAttention 块／hash(prefix+block) 一对一映射／全局哈希表／三级驱逐策略／与 RadixAttention 等价／多 LoRA 哈希含 LoRA ID／多模态感知哈希）— **第一独立域（官方文档）**。
+- `https://infra.bea.ai/guide/inference/engine-internals/prefix-caching`（Inference Systems，**2026-10-22**，10 min；**WebFetch 200 全文逐字**：块级共享／reference counting／RadixAttention radix tree 最长匹配／LRU／命中率表／多轮前缀／精确前缀严格限制／CacheBlend 重算分歧 token 20-50%／参考文献 SGLang arXiv 2312.07104）— **第二独立域（教学站一手，立场登记）**。
+- `https://docs.vllm.tw/en/latest/design/automatic_prefix_caching.html`（vLLM 繁体镜像）、`https://caomaolufei.github.io/AIInfraGuide/inference/.../23-prefix-cache-与-radixattention`（AIInfraGuide：**WebFetch 返回 `404 - 页面未找到`**，逐字内容按 **WebSearch 快照**引用，未冒充一手）、`http://theneuralbase.com/attention-mechanisms/learn/advanced/radixattention-prefix-caching`（The Neural Base，Verified April 2026，团队校对注）— **第三、四独立域交叉（镜像／指南／教学，不作唯一结论来源）**。`https://docs.vllm.ai/en/latest/design/automatic_prefix_caching.html` **WebFetch 重定向到 `/contributing/` 页（非目标文档）**，如实登记，未冒充英文官方一手；中文官方镜像逐字内容与繁体镜像一致。
+- **判重换道**：`RadixAttention` / `prefix caching` / `KV cache` / `prefill` / `TTFT` / `驱逐` 既有命中逐条核归属——`defaults/wb-context-compressor`（**豆包自留地**：3792「能缓存就缓存（语义缓存+prefix caching 双重优化）」、4463「SGLang KV cache+RadixAttention 更快更便宜」、1624「推理轨迹压缩进 KV cache」）、`engineering/wb-execute-discipline`（**豆包自留地**：缓存经济账／KV cache 二次复杂度／Min-Seek）、`engineering/wb-release-maintain`，均为**口号级或异命题**；`KV 块` / `cache_salt` / `radix tree` / `前缀树` / `LoRA ID` / `感知哈希` 全库 SKILL.md **0 命中**，`引用计数` 1 命中在豆包自留地 ⇒ 按 rules/07 四态判「**换道取机制层**」，不新建并行层、不搬性能口号。与本技能 §四/§六/§八/§九 结论不复用；豆包自留地 WB **0 落地**。
+- **未采纳**：具体 TTFT 百分比与命中率表数值（90%+／50-80%／0%）仅作时点快照登记、不作普适工程事实；`enable_prefix_caching=True` 等 API 参数、vLLM V1 版本开关、PagedAttention 显存分页实现、Mooncake 分布式 KV、GPU 型号与显存配置——属产品绑定与运维细节。
