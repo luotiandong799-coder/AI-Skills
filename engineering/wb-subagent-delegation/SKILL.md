@@ -1,8 +1,8 @@
 ---
 name: wb-subagent-delegation
 description: >-
-  子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。
-version: 1.75.0
+  子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。、僵尸任务、心跳超时、undead、存活判定、派发者绑定、槽位释放、状态漂移
+version: 1.76.0
 agent_created: true
 module: OI
 modules: OI
@@ -372,3 +372,27 @@ WSO2 逐字："Every delegation is a full agent run with its own prompt, its own
 - `https://apache.googlesource.com/airflow/+/e9e3c937f31f07b9235ffc74ac70482c864800e9/docs/apache-airflow/core-concepts/dags.rst` + Airflow 2.2.4 / 2.6.1 / 3.0.6 官方归档页 — WebSearch 快照逐字（googlesource `?format=TEXT` base64 通道 curl 返回空，如实登记、未冒充一手直取），用于核验规则清单跨版本演化（2.2.4 十项 → 3.4.0 十三项）。**第四独立域（官方源码仓库与多版本归档）**。
 - **判非**：`trigger_rule` / `upstream_failed` / `all_done` / `none_failed` / `depends_on_past` / `fail_fast` / `data_interval` / `logical date` / `catchup_by_default` / `all_done_setup_success` / `cascaded skip` 全库 **0 命中**；`backfill` 2 命中属 `agent/agent-guild`（收益回传 / 记忆回填）、`catchup` 命中属 `wb-release-maintain` r533A（升级迁移兜底，本轮明确分工不重述）、`choreography` 1 命中属 `ei-reliability` 编排模式表、`DAG` 命中属 SCM 因果图与通用语境。豆包自留地 **WB 0 落地**。
 - **未采纳**：Airflow 具体部署/Executor/集群调优、setup-teardown 完整语义、asset 调度与 timetable 全部实现类目属产品细节，只取可迁移的编排判据；版本号 3.4.0 与 13 项清单仅作「规则集随版本变化」的例证，不写成通用工程事实。
+
+## r752C · 存活判定：僵尸与 undead 是方向相反的两类失配（2026-11-15 实拉，3 独点）
+
+> 与 r745B（trigger rules / catchup 调度语义）、r748C（pool 槽位预算）分工：那两条管「怎么排、占多少预算」，本条管「登记状态与执行体实况不一致时怎么判、怎么回收」。
+
+### r752C-1 僵尸与 undead 方向相反，处置也相反
+- **原文**（Airflow 2.11.2 官方）：「***Zombie tasks*** are `TaskInstances` stuck in a `running` state **despite their associated jobs being inactive** (e.g. their process did not send a recent heartbeat as it got killed, or the machine died)…」「***Undead tasks*** are tasks that are ***not* supposed to be running but are**, often caused when you manually edit Task Instances via the UI. Airflow will find them periodically and **terminate them**」；1.10.13 版更直白「the existence of a process and a matching heartbeat, but **Airflow isn't aware of this task as running in the database**」「Tasks are instructed to **verify their state as part of the heartbeat routine, and terminate themselves** upon figuring out that they are in this 'undead' state」。
+- **判据**：子 agent / 编排排障先分方向——①「**登记为在跑、执行体已没了**」＝僵尸（编排器清理并发回调）；②「**执行体在发心跳、登记里却没有它**」＝undead（让进程自检自杀，不是重启编排器）。把两类一律当「卡住重试」会同时漏掉槽位泄漏与野进程。
+
+### r752C-2 僵尸检测是四条 AND，且清理必须显式释放并发预算
+- **原文**（官方 `_find_zombies` 源码 + 说明）：四条同时成立——「Only task instances in the **RUNNING** state」、「the associated job is **not in the RUNNING state or if the latest heartbeat** of the job is earlier than… **limit_dttm**」、「The job associated with the task must be of type **LocalTaskJob**」、「Only tasks **queued by the same job** that is currently being processed」。`_purge_zombies` 同时「A **TaskCallbackRequest** is also created… and the executor is informed to **no longer count the zombie as running when it calculates parallelism**」，源码逐字 `executor.change_state(ti.key, TaskInstanceState.FAILED, remove_running=True)`、`Stats.incr("zombies_killed")`。
+- **判据**：存活判定必须四要素齐全（状态 / 心跳阈值 / 执行体类型 / 派发者 ID），少一条就会把别人派的任务误清或把自家僵尸漏掉；**回收动作要连带释放资源槽**（与 r748C pool「槽位是被占住的预算」呼应），否则僵尸长期占并发额度、症状像「调度器变慢」。检测门不能只写「超时 N 秒」。
+
+### r752C-3 「卡住」有两条独立门；状态漂移不指根因；术语/参数须绑版本
+- **原文**（Airflow 3.4.0 troubleshooting 官方）：「**The message itself does not identify the root cause**」；「A task remains `queued`… If it stays queued longer than `scheduler.task_queued_timeout` (**default 600 seconds**)… There will often be **no task logs in the UI, because a worker never ran the task**」；「A task may remain `running`… If the task instance stops sending heartbeats, the scheduler detects a **task instance heartbeat timeout (formerly called a zombie task)**」；排查顺序「Check task logs → Check scheduler logs → Check worker or executor logs → Check infrastructure logs (container, pod, or host) for **OOM, eviction, or restarts** → Check whether a user or an external process changed the task state in the UI or through the REST API」。3.0.6 官方「Such tasks were **formerly known as zombie tasks**」；复现变量 2.11.2 `LOCAL_TASK_JOB_HEARTBEAT_SEC=600` / `SCHEDULER_ZOMBIE_TASK_THRESHOLD=2` / `ZOMBIE_DETECTION_INTERVAL=5` → 3.0.6 `TASK_INSTANCE_HEARTBEAT_SEC=600` / `TASK_INSTANCE_HEARTBEAT_TIMEOUT=2` / `TASK_INSTANCE_HEARTBEAT_TIMEOUT_DETECTION_INTERVAL=5`。ASF #35825 把定义由「supposed to be running but suddenly died」收紧为「stuck in a running state despite their associated jobs being inactive」并补 undead 定义（tasks.rst +77 行 / 78 insertions, 2 deletions）。
+- **判据**：① 排障按「**有没有任务日志**」先分叉（无日志＝queued/从未派发，日志戛然而止＝running 心跳断），两条门独立；② 「状态被外部改过」是待查项不是根因，禁止把状态不匹配消息直接当结论；③ 规则与配置引用**必须绑版本**，不把某版默认值写成通用事实（与 r748C 版本演化纪律同源）。
+
+### 本轮来源（2026-11-15 r752C 实拉）
+- `https://airflow.apache.org/docs/apache-airflow/3.4.0/troubleshooting.html` — **WebFetch 200 全文逐字**：Task state changed externally / 5 步排查梯 / queued 600s / running heartbeat timeout / SIGTERM -15 / SIGKILL -9 / `workers.socket_cleanup_timeout`。**第一独立域（Apache 官方 3.4.0）**。
+- `https://airflow.apache.org/docs/apache-airflow/2.11.2/core-concepts/tasks.html` — **WebFetch 200 全文逐字**：Zombie/Undead 两定义、`_find_zombies` SQL 四条件、`_purge_zombies` 回调与 `remove_running=True`、`zombies_killed`、复现三变量。**第二独立域（Apache 官方 2.11.2，含源码原文）**。
+- `https://airflow.apache.org/docs/apache-airflow/3.0.6/core-concepts/tasks.html` — **WebFetch 200 全文逐字**：「formerly known as zombie tasks」、新三变量、`execution_timeout` vs sensor `timeout`「Retrying does not reset the timeout」、SLA 3.0 移除。**第三独立域（Apache 官方 3.0.6，术语演化）**。
+- `https://lists.apache.org/thread.html/kxf4x3wxf7klm8ql58ybgbl299ycwn2p`（ASF 官方邮件归档，commit `177da9016bbedcfa49c08256fdaf2fb537b97d6c`，Pankaj Koti，2023-11-25，PR #35825）— **WebFetch 200 diff 全文逐字**：新旧僵尸定义对照、undead 新增段、四条检测判据、77 行 tasks.rst 变更。**第四独立域（ASF 官方提交 diff）**。
+- `https://airflow.apache.org/docs/apache-airflow/1.10.13/core-concepts/index.html` — WebSearch 快照逐字：undead「verify their state as part of the heartbeat routine, and terminate themselves」、zombie「absence of an heartbeat… and a running status in the database」。**第五独立域（旧版官方，作机制交叉）**。
+- **判非**：`zombie task` / `undead` / `心跳超时` / `task_queued_timeout` / `OOMKilled` / `liveness probe` 全库 SKILL.md **0 命中**；`僵尸运行` 命中属 `engineering/wb-debug-loop` r558（事件流完成计数导致永久 Running，异命题，按「合」登记不重述）；`僵尸会话` 属 `system/browser-automation`（会话不关占额度，异命题）；`心跳超时退出码 6` 命中属 2026-10-14 日志（长循环让出，异命题）。豆包自留地 **WB 0 落地**。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。

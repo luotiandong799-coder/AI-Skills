@@ -1,9 +1,9 @@
 ---
 name: di-decision-tradeoff
-description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。
+description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权
 module: DI
 modules: DI,TI
-version: "1.9.0"
+version: "1.10.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -302,3 +302,26 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 - `https://eprints.whiterose.ac.uk/id/eprint/158024/1/ISPOR_TF_Report_1_-_final_submitted.pdf`（Report 1 作者定稿，WebSearch 快照逐字：GPR6/7/8/9、ENBS 正负判据、三项成本、EVPPI 高≠最不确定、模型假设须声明）+ `https://ris.utwente.nl/ws/files/179932151/PIIS1098301520300279.pdf`（Report 1 另一机构仓储，WebSearch 快照逐字：informativeness、研究设计各要素、报告须按阈值范围图形化）+ `https://www.valueinhealthjournal.com/servlet/linkout?...doi=10.1016/j.jval.2020.01.004`（期刊页，WebSearch 快照逐字：EVPI/EVPPI/EVSI 公式 (4)(7)(10)、EVPI＝expected cost of uncertainty）——**第四、五独立域（学术仓储与期刊，交叉核验）**。
 - **实拉诚信登记**：`eprints.whiterose.ac.uk` 与 `ris.utwente.nl` 两份 PDF 经 Bash `curl -sL` 直取均返回 **000 / 0B（TLS 连接被拒）**，`WebFetch` 对 PDF 返回 `application/pdf` 字节丢弃；故上述两条按**搜索快照逐字**引用，**未冒充一手 PDF 直取**。按 r731/r745 先例如实登记，结论仅采可与 PMC 官方 HTML + ISPOR 官方公告互相印证的部分。ISPOR 为专业学会、报告为 Task Force 专家共识（非随机对照实测），价值观前提（risk-neutral、社会视角成本）已登记，不作普适事实。
 - **判非**：`expected value of perfect` / `decision curve` / `threshold probability` / `net benefit` / `reference point` / `loss aversion` 全库 **0 命中**；`value of information` / `EVPPI` 命中在**本文件 §八**（基础定义与本轮互补，不重述、不覆盖）；`EVSI` 1 命中在豆包自留地 `engineering/wb-execute-discipline` r687A（EVSI 与延迟成本比较，只读判非，**WB 0 落地**）。本轮净新在「四尺分工 + 必要/充分阶梯 + GPR6/9 设计择优 + 三项成本 + 结构不确定性」。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+## 十六、程序不变性：偏好是诱导方式构造出来的（2026-11-15 r752B 实拉，3 独点）
+
+> 与 §十（r715C rank reversal）分工：那条是**选项集增删**导致排序反转（AHP 归一化、IIA）；本节是**同一批选项换提问方式**导致偏好反转，两条轴不并存。与 §十五 VOI 分工：那条管「该不该再研究」，本节管「权重/排序从哪来」。
+
+### 16.1（r752B-1）选择与定价给出相反偏好序，偏好不是稳定待测量
+- **原文**：经典范式——「Lottery A provides a **9/12 chance of winning $110** and a 3/12 chance of losing $10（**P bet**）；Lottery B provides a **3/12 chance of winning $920** and a 9/12 chance of losing $200（**$ bet**）」；「When individuals are asked to **choose** between these two lotteries, they tend to choose **Lottery A**… When asked to select a **cash equivalent price** for each lottery separately they tend to place a **higher selling price on Lottery B**」。首报 Lichtenstein & Slovic 1971 / Lindman 1971，Tversky, Slovic & Kahneman 1990 系统复核。
+- **判据**：决策矩阵中的「权重 / 排序 / 打分」必须声明是哪种诱导得来（选择 / 定价 / 匹配 / 评级 / 吸引力判断），**禁止把不同诱导方式产出的权重混进同一个加权矩阵**；用户说「我更看重 X」与「我给 X 打更高分」冲突时先记为诱导方式差异，不急着判用户前后矛盾。
+
+### 16.2（r752B-2）主流解释是程序不变性违反 + 尺度兼容，不是传递性崩坏
+- **原文**：三类解释「(a) violations of **transitivity**… (b) violations of the **independence axiom**… (c) violations of **procedure invariance**」；「According to Tversky et al. (1990), however, the violations of transitivity and independence axiom can account for **only a small fraction** of observed preference reversals. Therefore, violations of procedure invariance (usually considered as arising from effects of **scale compatibility**) are **nowadays the most widely accepted explanation: Due to the identical scale, the payoffs of a lottery are weighted more heavily in pricing than in choice**」（ResearchGate 快照另给出该小比例约 **10%**）。机制族：contingent weighting「The exponential weight of the probabilities is **low under the pricing condition and high under the choice**… while **monetary outcomes are assumed to be weighted more heavily in pricing than in choice**」；change-of-process「The **bids are a multiplicative function** of probability and amount, whereas **ratings are an additive function**」；expression theory 把成因放在「changes in the mapping from a gamble's components to the response」。Columbia 综述逐字「the weight of a stimulus attribute is **enhanced by its compatibility with the response scale**」「**the answer to how much you like a decision option can depend greatly on how you ask the question**」。
+- **判据**：打分前先问「输出量纲与哪个属性同量纲」——同量纲属性会被系统性放大（收益与货币出价同量纲 ⇒ 定价时收益权重被抬高，选择时概率维度更突出）；改打分方式（金额 / 1–5 分 / 排序 / 两两匹配）等于改权重，须重跑而非沿用旧权重。
+
+### 16.3（r752B-3）反转可被参数设计制造或消掉，且「出价」是否等于「偏好」本身存疑
+- **原文**：Li 1994 / 该文三组赌局，原始参数下「**only 29%** of participants put a higher price on `$ bet` and, at the same time, actually choose the `$ bet`」；把最坏结果拉近（Problem 2：120/−10 vs 395/−15）后「**68%**」一致；反转最坏结果关系（Problem 3：270/−56 vs 930/−23）后「**66%**」。Columbia 综述「the preference-reversal phenomenon may be so robust because there are **multiple underlying causes, each of which may be operative in some situations but not others**」。作者质疑前提：「**The key issue is whether or not giving a price is the same as giving a preference**」；并指出同为货币的 bidding 与 subsidizing 两任务之间也出现排序反转，「make the existing explanations irrelevant」（expression theory / contingent weighting / change-of-process 三模型都不预测定价-补贴差异）。
+- **判据**：出现「选了 A、却给 B 更高分」时，排查顺序 = 属性参数设计（最坏结果/概率/金额的相对差）→ 输出量纲兼容 → 诱导方式一致性；**不要归因为「用户非理性」或「权重没调好」，也不要靠再问一次求一致来修**。反转本身是设计信号：它告诉你哪个属性维度在被输出量表放大。
+
+### 本轮来源（2026-11-15 r752B 实拉）
+- `https://www.thefreelibrary.com/Preference+reversal%3a+a+new+look+at+an+old+problem.-a0149975067`（《Preference reversal: a new look at an old problem》）— **WebFetch 200，AI 摘要 60s 超时 → 返回前 15,000/51,331 字原文逐字**：P bet/$ bet 具体概率金额、三类解释、Tversky 1990「only a small fraction」、程序不变性为最广泛接受解释、expression / contingent weighting / change-of-process 三模型、29%/68%/66% 三组参数、「giving a price is the same as giving a preference」、bidding-subsidizing 反例。**第一独立域（期刊论文全文）**。
+- `https://business.columbia.edu/sites/default/files-efs/pubfiles/1134/annual_review_constructive.pdf`（《Behavioral Decision Research: A Constructive Processing Perspective》Annual Review 综述）— **curl 200 / 4,394,813B，但 PDF 为扫描件，pypdf 46 页仅提取 45 字符 ⇒ 按 WebSearch 搜索快照逐字登记，未冒充一手 PDF 直取**：标准范式「two bets of comparable expected values… When asked to choose… most people prefer the bet with the higher probability of winning. When asked to bid… most people assign a higher value to the low-probability, high-payoff bet」、scale compatibility 定义、strategy compatibility、Schkade & Johnson 过程追踪、「multiple underlying causes」、「how you ask the question」。**第二独立域（学术综述，快照口径如实标注）**。
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC11652196/`（《Preference reversal in intertemporal decision making》2024）— WebFetch 仅返回 HHS 页眉、Bash `curl` **000/0B（TLS 拒连）** ⇒ 按 WebSearch 快照逐字：choice「qualitative reasoning / ordering strategy」、bidding「measuring an independent object with a caliper」、compatibility effect、loss 域同样反转、DFT/DDM 证据累积。**第三独立域（PubMed Central，快照口径）**。
+- `https://www.researchgate.net/publication/379803705_Preference_reversals_in_judgment_and_choice`（快照逐字：intransitivity + independence「only account for a small proportion of the reversals (**10%**)」、overpricing 归因 scale compatibility、Expression Theory / Change-of-Process 细节）+ `https://baike.baidu.com/item/偏好反转现象`（中文快照：Karni & Safra 1986 / Holt 1986、兼容性假设、权变加权、齐当别模型、为自己/为他人决策诱发反转）。**第四、五独立域（学术仓储与中文百科，立场已登记，不作唯一结论来源）**。
+- 判非：`preference reversal` / `程序不变` / `scale compatibility` / `尺度兼容` / `Lichtenstein` / `Slovic` / `权变加权` / `突出假说` 全库 SKILL.md **0 命中**；`elicitation` 3 命中全部属 MCP 客户端「向用户索取信息」（form/URL 两模式）与豆包自留地评测取样，异命题；`兼容性假设` / `procedure invariance` 在 DI 现有条目无覆盖。与 r715C（选项集增删）、r733B（ELECTRE 权重语义）、r736B（Arrow 偏好聚合）、r744C（决策质量六要素）、r748B（VOI 四尺）逐条分工，均不并存。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
