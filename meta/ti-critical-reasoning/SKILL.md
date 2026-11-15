@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
 description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）。
-version: 1.5.0
+version: 1.6.0
 module: TI
 modules: TI,EI
 ---
@@ -178,3 +178,31 @@ Purdue OWL 逐字「The **qualifier** shows that a claim **may not be true in al
 - `https://www.peopleapp.com/rmharticle/30016353746`（人民日报客户端《97 思维模型：图尔敏论证模型》）、`https://tnstate.libguides.com/c.php?g=1341399`（田纳西州立大学图书馆《Types of Arguments》）— WebSearch 快照，中文术语对照与六术语清单交叉；科普/教学立场登记，不作唯一结论来源。
 - **判非**：窄串全库 `SKILL.md` 精确扫描（97 个文件）— `Toulmin` / `modal qualifier` / `grounds` / `rebuttal` / `internal justification` / `外部证成` / `defeasib` / `初显优先` / `implied warrant` / `unless clause` / `six component parts` **全 0 命中**；`warrant` 2 命中为 `defaults/wb-context-compressor`（豆包自留地）与本技能 §8.1 的通用「担保」义、`backing` 1 命中在豆包自留地、`qualifier` 1 命中在 `engineering/wb-execute-discipline`（豆包自留地），均非论证图式命题，登记不复用。与 §8.1 有效性/健全性两轴、§8.2 Steelmanning/Socratic、§8.3 Pre-Mortem、§十 CoT 忠实度、§十一 r745A 溯因/理论美德五族结论**均不复用**；与 `engineering/wb-instruction-prior`、`agent/grill-me` 分工已在上文逐条写明。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。
 - **未采纳**：Toulmin《The Uses of Argument》全书 field-dependent / field-invariant 之辩、Wikipedia 所记相对主义与绝对主义争论、中国法学网全文关于指导性案例效力定位的司法制度结论、Liverpool PDF 中 AI & Law 形式化（dialogue games / argumentation schemes）整段，均属专门领域争论或不可迁移制度事实，只取可迁移的结构判据。
+
+## 十三、因果识别性判据：聚合反转、后门准则与对撞陷阱（TI · r750A 2026-11-15 实拉，3 独点）
+
+> 与 §三 / §四 分工：那两节回答「do-operator 是什么、后门/前门调整是什么」，本节回答**「一个因果结论能不能从手上这份观测数据算出来」**，给可机检的判定清单。三独立域一手交叉：SEP《Simpson's Paradox》（2026-06-06 实质修订）官方全文逐字 + PNAS Bareinboim & Pearl 2016《Causal inference and the data-fusion problem》官方全文 + UCLA CS r509《Causal inference in AI education: A primer》PDF 快照逐字。
+
+### 13.1 「多收数据也算不出来」是图的性质，不是样本量的性质
+- SEP 逐字：「**identifiability is a relationship between a DAG G, probability distribution P and a causal quantity Q, such that Q is identifiable if and only if it is uniquely determined by P given G**」。PNAS **Definition 2** 给可机检形式：对任意两个满足 G 假设的全设定模型 M1、M2，`P1(v)=P2(v) ⇒ Q(M1)=Q(M2)` —— 同一观测分布必须给出同一答案，Q 才可只由 P 与 G 表达（与真实机制 F、外生分布 P(u) 无关）。
+- 反例逐字：存在未观测的 S 与 T 共同原因时，「**the probability distribution is compatible with any possible distribution for p(S|do(T))**」——观测数据对干预效应零约束力。
+- PNAS 完备性逐字：「**The do-calculus was proved to be complete** for queries in the form Q=P(y|do(x),z) ... **if Q cannot be reduced to probabilities of observables by repeated application of these three rules, Q is not identifiable**」。三规则（插入/删除观测、行动与观测互换、插入/删除行动）反复用尽仍消不掉 do 算子 = 逻辑边界。
+- 判据：报「这个结论从现有数据推不出」必须同时给出 ① 图 G ② 那条缺失 / 未测的边 ③ 声明**识别性失败**而非模型不够强或数据不够多。禁止用换估计量、加特征、扩样本来回应识别性问题。
+
+### 13.2 聚合反转（Simpson）不是统计悖论，是「该条件化哪个变量」的图问题
+- SEP 逐字：全人群 `p(S|T)=p(S|¬T)`，而男女各层 `p(S|T,M)>p(S|¬T,M)` 且 `p(S|T,¬M)>p(S|¬T,¬M)`；成因是全概率展开 `p(S|T)=p(S|T,M)p(M|T)+p(S|T,¬M)p(¬M|T)` 两式**权重不同**（治疗组女性 27:13、对照组男性 7:5）。**Theorem 1**：若 `p(M|T)=p(M|¬T)` 权重相同，分层关联在聚合层保持，反转不可能发生。
+- UCLA r509 逐字给出关键陷阱：同一份观测数据可对应**两个观察等价、干预含义相反**的因果模型 —— (a) Z 是混杂须控制；(b) Z 只是对撞 `U1→Z←U2` 控制反而引入混杂偏误。两模型分别推出「按年龄分层点击率投 Ad 0」与「按聚合数据投 Ad 1」两个相反决策，且原文靠「不可能存在影响年龄的潜在混杂」这一领域知识才判 (a) 更可辩护。⇒ **数据本身不裁决，必须显式声明图**。
+- 判据：遇「整体与分组结论相反」，先输出 ① 分组变量与处理的关联 ② 候选图清单（混杂 / 中介 / 对撞） ③ 每个图下该不该分层，再给结论；禁止默认「分层更细所以更可信」。与 §8.1 有效性/健全性两轴分工：那条评单条论证结构，本条评聚合口径。
+
+### 13.3 后门准则两条硬约束；「多控制一个变量」会反向引入偏误
+- SEP 逐字后门准则：「**No node in Z is a descendant of X, and Z blocks every path between X and Y containing an arrow into X**」；命中则 `p(Y|do(X)) = Σ_Z p(Y|X,Z) p(Z)`。混杂的正式定义是 `P(Y|X,Z) ≠ P(Y|do(X),Z)`（即关系未被识别），并明确「**Confounders threaten causal inference not by providing an alternate explanation of why an effect occurred, but by undermining the possibility of measuring the causal relationship**」——混杂不是「还有别的解释」，是「根本量不出来」。
+- 方向陷阱逐字：共同原因 `X←Z→Y` 条件于 Z **阻断**路径；共同结果 `X→Z←Y` 「**the path will be blocked provided that one does not condition on Z or a descendant of Z**」——条件于对撞或其后代反而**打开**伪相关。PNAS **Definition 1 (d-separation)**：Z 阻断路径 p 当且仅当 p 含 Z 中的箭头发出节点，或含一个**不在 Z 且 Z 中无其后代**的碰撞节点；原文举例 `Z={X,Z3,W3}` 因 Z3 处收敛箭头而留下未阻断路径，故 `Z1⫫Y|(X,Z3,W3)` 不成立。
+- 判据：调整集须逐条写「为何不含 X 的后代」「每条含箭头入 X 的路径由谁阻断」「是否误纳入对撞 / 中介」。以「控制得越全越准」为默认即不合格。UCLA r509 补：条件于中介 M 会改变估计对象（总效应 vs 直接/间接效应），不得称作「控制了一切」。落地：方案评审 / 复盘归因时把「调整集 + 图 + 未测边」三项写进结论，与 §五 的「先找混杂」形成可执行版。
+
+### r750A 来源与判非（2026-11-15 实拉，逐字核验）
+- `https://seop.illc.uva.nl/entries/paradox-simpson/`（Stanford Encyclopedia of Philosophy，《Simpson's Paradox》，First published 2021-03-24 / **substantive revision 2026-06-06**）— **curl 200 全文 104,115 字逐字提取**（WebFetch 首轮 AI 摘要 60s 超时仅返回前 15,000 / 91,345 字，改 curl 取全文）：§3.3 识别性定义与 p(S|T)≠p(S|do(T))、§3.4 混杂定义 `P(Y|X,Z)≠P(Y|do(X),Z)` / 「Confounders threaten ... by undermining the possibility of measuring」/ 后门准则两条件与式 (5) / 共同原因 vs 共同效果对比、§2.2 Theorem 1 权重条件。**第一独立域（学术百科一手全文）**。
+- `https://www.pnas.org/doi/full/10.1073/pnas.1510507113`（PNAS，Bareinboim & Pearl，**2016-07-05**《Causal inference and the data-fusion problem》）— **WebFetch 200 全文逐字**：Definition 1 (d-separation) 两条件与 Z3 反例、Definition 2 (identifiability) 的 `P1(v)=P2(v)⇒Q(M1)=Q(M2)`、do-calculus 三规则式 (5)(6)(7)、「proved to be complete ... if Q cannot be reduced ... Q is not identifiable」、干预切断入边与 assignment mechanism。**第二独立域（期刊论文一手）**。
+- `https://ftp.cs.ucla.edu/pub/stat_ser/r509-reprint.pdf`（UCLA CS 技术报告 r509《Causal inference in AI education: A primer》）— **WebSearch 快照逐字**（PDF 正文未逐页 curl，如实登记）：Simpson 悖论 AdBot 例 3.1、Figure 5 两个观察等价模型 (a)/(b) 与相反决策、Definition 4.1 干预切断入边、Definition 4.2 后门准则两条件与调整公式、对 `U1→Z←U2` 的 d-separation 说明。**第三独立域（高校技术报告，作交叉不作唯一来源）**。
+- `https://theory.toys/toys/philosophy/causal-inference` + `https://lmversity.com/learn/maths-foundations/s4-6-causal-graphical-models-do-calculus-and-identifiability-limits`（教学 / 交互式工具）— WebSearch 快照逐字：Fork / Chain / Collider 三构型、collider adjustment 的 induced bias、未测混杂应报 non-identifiable。**教学立场交叉登记，不作结论唯一来源**。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 — `Simpson` / `辛普森` / `聚合反转` / `d-separation` / `碰撞节点` / `collider` / `identifiability` / `complete for` / `后门准则` / `共同效果` **全 0 命中**；`back-door` / `do-calculus` / `DAG` 命中在本技能 §三 / §四（概念层，无判定式、无完备性、无对撞），本轮按「优＝加厚现有」补判定层、不新建、不重述结论；`reconcil` / `coherent` 命中在 `execution-intelligence` 等为执行对账异命题。`wb-context-compressor` 的 `因果完备性` 命中为记忆因果链异命题。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。B / C 两轮结论一律不复用。
+- **未采纳**：SEP §5.1 线性回归参数化、§5.3 Sure-Thing Principle 决策论争论、§4 心理学对「为何觉得悖论」的实验、PNAS 全篇 data-fusion / transportability 与 selection bias 的形式化、UCLA 的因果阶梯三层教学内容 —— 属专门领域或已在 §一/§三覆盖，不迁移为通用判据。

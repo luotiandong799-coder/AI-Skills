@@ -2,7 +2,7 @@
 name: multimodal-intelligence
 description: >-
   多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。
-version: 1.2.0
+version: 1.3.0
 module: PI
 modules: PI
 ---
@@ -100,3 +100,33 @@ ACM JCDL 2026《Accessibility Annotations as OCR Ground Truth》四指标互补�
 - `https://dl.acm.org/doi/10.1145/3805696.3846504` + `https://dlnext.acm.org/doi/10.1145/3805696.3846504` 同 DOI（ACM JCDL 2026 论文，**WebSearch 快照逐字**）：四指标定义、失败模式三分、「no coordinate re-sorting or post-hoc linearization」、screen-reader 顺序 GT、per-image medians、Table 4 六系统数值、200 DPI / 191 页 / H200 设置。**dlnext WebFetch 仅返回 Basic Edition 订阅页，正文未全文直取，如实登记，不冒充一手全文**。
 - `https://arxiv.org/pdf/2606.23050`（*Unlimited OCR Works*）+ `https://baike.baidu.com/item/OmniDocBench%20V1.5`（**WebSearch 快照逐字**）：OmniDocBench 四类专用指标（Text Edit / Formula CDM / Table TEDS·TEDS-S / **Reading Order Edit Distance**）、overall 为 text+formula+table 加权平均；V1.5 标注阅读顺序与 Block 从属关系、19 种布局类别、200 DPI。**独立第三域交叉（数值不采信为结论）**。
 - **判非**：窄串全库 `SKILL.md`：`FCA` / `FCER` / `penalty matrix` / `e50` / `success measure` / `Clausner` / `OmniDocBench` / `TEDS` / `direct successor` / `unordered` **全 0 命中**；`reading order` 唯一命中在**本技能 §六 r737A-2**（点名缺口未给方法，本轮补齐、不重述结论）；`Kendall` 唯一命中在 `engineering/wb-artifact-verification` r567B（评分格式过滤器中「τ_b 折扣平局」，异命题）。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。B/C 两轮结论一律不复用。
+
+## 八、参考可用度分层与感知质量指标选型（PI · r750B 2026-11-15 实拉，3 独点）
+
+> 与 §六 CER/WER 文本层评测、§七 阅读顺序独立验收分工：那两节评「内容对不对 / 顺序对不对」，本节评**「画面好不好」这一整族的分数在什么前提下才有意义**。三独立域一手交叉：Fora Soft《Full-, Reduced-, No-Reference Video Quality Metrics》（2026-06-22）WebFetch 200 全文 + Netflix `vmaf` 官方 README（github raw 200 全文）+ Springer《A survey on facial image deblurring》§6.1–6.3 + 自动化学报中文核心 + FFmpeg filters 官方文档（仅目录，如实登记）。
+
+### 8.1 指标选型第一问不是精度，是「手上还有多少参考」
+- Fora Soft 逐字：「**Before you can pick a video quality metric, you have to answer one question: how much of the pristine original do you still have at the point where you want to measure?**」→ 三族是**三种不同的工作**，不是同一把尺的三档精度：**FR**（full-reference，PSNR / SSIM / MS-SSIM / VMAF，需完整母版）· **RR**（reduced-reference，ITU-T J.246 / J.249，仅需特征指纹但需旁信道）· **NR / blind**（NIQE / BRISQUE / NR-VMAF / ITU-T P.1203 / P.1204.3，无母版）。
+- 逐字：「**PSNR, SSIM, and VMAF are all full-reference and are useless on a live stream that has no original**」；「**a full-reference score where there was no master is meaningless, not low**」。RR 因「most companies are not able to connect the measurement point with the originating video supply」实际几乎不部署，NTIA 自述所有现行低带宽模型实现都跑在 FR 模式且**已停止 RR 研究**。NR 是直播 / 视频通话 / 监控 / UGC 的「**the only option**」，同时「**the hardest to trust**」——只可作趋势与告警信号，不可当 ground truth，且禁止跨差异很大的内容 / 设备比较 NR 分数。
+- 判据：报质量分先写「参考族 + 母版是否在场 + 是否同场景」。无母版却给 VMAF 分 = 无效测量，不是低分；生产侧只有 NR 时须在结论里标注「趋势信号」。与 §六「报 CER 必附公式/归一化/字符集」同构，本条把「参考」列为质量分数的第一必填项。
+
+### 8.2 FR 分数有前置的三重对齐，未对齐不是低分而是坏分
+- Fora Soft 逐字：「**A full-reference metric assumes the two videos are aligned: the same frame in each, at the same resolution, with the same brightness scaling**」；错 2 帧（f100 vs f098）即报「quality collapse that the eye would never see」，1 像素空间偏移或小亮度增益同理；结论逐字「**a full-reference number is only valid once the two videos are aligned. An unaligned full-reference measurement is not a low score, it is a broken one**」。
+- 官方口径：NTIA（VQM → ITU-T J.144）警告 PSNR「**is very sensitive to calibration errors**」；ITU-T **J.340** 专设 exhaustive-search PSNR，先穷举找最佳空间偏移 / 时间偏移 / 亮度增益再计分。图注逐字：alignment means「same frame, same pixels, same brightness」。
+- 判据：任何 FR 数字必须随附「帧对齐 / 分辨率 / 像素格式 / 亮度标定」四项校验结果；抽帧比对、缩放后比对、转码前后比对若未做对齐先修管线再报数。本仓 `media/rg-ffmpeg-tools` 侧执行时把对齐检查放在计分之前，不把「分数掉了」直接解释成质量退化。
+
+### 8.3 像素误差 ≠ 感知质量，且「读像素 / 读码流」是第二根独立轴
+- 多域逐字：Springer 综述「**the numerical results of PSNR are often inconsistent with the subjective perception of human vision. Using the PSNR metric tends to lead to oversmoothed results**」；「**Images with lower SSIM values may also have a good visual experience**」；自动化学报「PSNR 在捕捉感知差异方面存在着一定的局限性，因此 PSNR 值并不与人类的主观感知质量密切相关」。LPIPS 走预训练网络深层特征距离（`d(x,x0)=Σ_l (1/H_lW_l) Σ_hw ||w_l ⊙ (ŷ^l_hw − ŷ^l_0hw)||²₂`），NIQE / BRISQUE / PIQE 走自然场景统计，方向各不同（LPIPS/NIQE 越小越好，SSIM/PSNR 越大越好）。
+- Netflix 官方 README 逐字：VMAF 是「**an Emmy-winning perceptual video quality assessment algorithm developed by Netflix**」，`libvmaf` 同包内含 **PSNR, PSNR-HVS, SSIM, MS-SSIM and CIEDE2000**；模型分代明确（2026-06 发布 **v1** 新模型、v0 仍留存、2026-10-26 发布 VMAF-v1 的 **HDR 版**），并有 **NEG (No Enhancement Gain) mode** 专用于 codec 评测 ⇒ 同一段视频跨模型版本 / 跨 NEG 开关的分数不可直接比。
+- 第二根轴逐字：FR/RR/NR 是「有多少参考」，另有一根「**what the metric reads**: the decoded pixels, or the encoded bitstream」—— ITU-T **P.1204.3** 码流 NR、**P.1204.4** 像素 FR/RR、**P.1204.5** 混合 NR；「**no-reference does not mean low-tech**」。生成式 / 多解任务下 SSIM 与 LPIPS 这类成对指标也受限（OpenEnvision 逐字「SSIM assumes a meaningful paired reference and can be less appropriate when many visually valid outputs are possible」「PSNR ... often correlates poorly with human perceptual quality on generative tasks」）。
+- 判据：验收固定四栏 —— **指标名 + 参考族(FR/RR/NR) + 对齐状态 + 模型版本/读的是像素还是码流**；单一数字不得当质量结论。与 §七「CER 与顺序双栏」同属「一分数不足以承载多维质量」的结构，但对象从文本转到画面，不复用结论。
+
+### r750B 来源与判非（2026-11-15 实拉，逐字核验）
+- `https://www.forasoft.com/learn/video-quality/articles-vqm/full-reduced-no-reference-metrics`（Fora Soft Learn，Nikolay Sapunov，**Published 2026-06-22**）— **WebFetch 200 全文逐字**：FR/RR/NR 三族定义、Figure 1 三卡、「a full-reference score where there was no master is meaningless, not low」、对齐三重前提与 Figure 2 错 2 帧、NTIA「very sensitive to calibration errors」、ITU-T J.340 exhaustive-search PSNR、RR 旁信道困境与 NTIA 停止 RR 研究、NR 三风格（NSS / learned / bitstream-parametric）、「the only option」「hardest to trust」「Accuracy falls as reference information falls」、P.1204.3/4/5 三模型与第二轴。**第一独立域（工程实务一手全文）**。
+- `https://raw.githubusercontent.com/Netflix/vmaf/master/README.md`（Netflix 官方仓库 README）— **WebFetch 200 全文逐字**：「Emmy-winning perceptual video quality assessment algorithm」、`libvmaf` 内含 PSNR / PSNR-HVS / SSIM / MS-SSIM / CIEDE2000、2026-06 VMAF v1 与 v0 并存、2026-10-26 HDR-VMAF-v1、NEG mode（2020-07-13 memo）、FFmpeg `--enable-libvmaf`、BSD+Patent 许可。**第二独立域（指标作者官方一手）**。
+- `https://link.springer.com/content/pdf/10.1007/s41095-023-0336-6.pdf`（Springer《A survey on facial image deblurring》§6.1–6.3）— **WebSearch 快照逐字**：PSNR 与主观不一致 / oversmoothed、SSIM 亮度对比度结构三项、低 SSIM 也可能视觉好、LPIPS 深特征式 (11)、NIQE MVG 式 (12)、IFC/PIQE/NRQM。**第三独立域（同行评审综述，作交叉）**。
+- `https://aas.net.cn/article/doi/10.16383/j.aas.c240235`（《自动化学报》《基于深度学习的视频超分辨率重建算法进展》）— WebSearch 快照逐字：PSNR 局限、SSIM 式 (9)、LPIPS 式 (10) 与 VGG 特征、DepictQA 语言化质量感知。**中文核心期刊交叉域**。
+- `https://openenvision.org/WorldFoundry/docs/evaluation/metrics/perceptual` + `https://sciencedirect.com/topics/computer-science/spatial-quality`（指标计算契约 / 教材）— WebSearch 快照逐字：LPIPS/SSIM/MS-SSIM/PSNR 定义式、PSNR 生成任务弱相关、多解时 SSIM 不适用、IFC / NIQE / PIQE 口径。**教学与工具立场登记，不作唯一结论来源**。
+- `https://ffmpeg.org/ffmpeg-filters.html`（FFmpeg 官方 filters 文档）— **WebFetch 仅返回前 15,000 / 99,996 字目录**，psnr / ssim / libvmaf 正文未取到，**如实登记、不引用其正文**；仅用于确认该文档存在这三节。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 — `全参考` / `无参考` / `reduced-reference` / `VMAF` / `LPIPS` / `PSNR` / `NIQE` / `BRISQUE` / `J.340` / `P.1204` / `exhaustive-search PSNR` / `校准误差` **全 0 命中**；`SSIM` 唯一命中在 `media/wb-media-forensics` §68（视频抽帧用 SSIM 感知差异捕捉关键帧，是采样触发器而非质量分数），与本轮「参考族 + 对齐 + 感知失配」命题不同，登记不复用；`coherent` / `reconcil` 命中在执行与治理技能为异命题。与 §六 CER/WER、§七 阅读顺序两族结论不复用。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。A / C 两轮结论一律不复用。
+- **未采纳**：VMAF 各 elementary metric（VIF / DLM / MAD）的权重与训练细节、ITU-T P.1204 各模型相关系数、DepictQA 多模态语言质量描述整段、NR-VMAF 卷积网络结构 —— 属实现与 benchmark 数值，非可迁移判据。

@@ -3,7 +3,7 @@ name: meta/pdi-forecasting
 description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议、预测题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.7.0"
+version: "1.8.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -252,3 +252,31 @@ Rethink Priorities《Types of specification problems in forecasting》（Juan Gi
 - `joyful-slides-532925.framer.app/threshold-2030/part-3-forecasting`（Threshold 2030，WebSearch 快照逐字：五要素 specificity/reliable sources/edge cases/fallback/unknowns 及严格适当评分+多重比较的示例解析条件）— **第四独立域交叉（会议教程）**
 - **判非**：三轮窄串全库 SKILL.md 精确扫描——`resolution criteria` / `question failure` / `ambiguity kills` / `fall-back criteria` / `unknown unknowns` / `misaligned question` / `letter of the question` / `operationalization` / `voided` / `Potter Stewart` **全 0 命中**；`arbiter` 唯一命中在 `defaults/wb-context-compressor/SKILL.md` §r608C 的 `StackArbiter` 产品名（子串噪声，非仲裁人命题）。`10-90 rule` / `clairvoyant` 等未纳入。B/C 两轮结论一律不复用；豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。
 - **未采纳**：评分系统激励失配、"Dead people can't get paid"、预测市场平台对齐整篇论文、arbiter 腐败的经济学讨论、题目类型（binary/category/range/conditional）分类学——属平台机制研究，与可迁移判据无关。
+
+## 十四、层次预测的一致性（coherence）与对账：分解预测不会自动加总（PDI · r750C 2026-11-15 实拉，3 独点）
+
+> 与 §十（预测对象形态决定评分规则）、§十一（边际/条件覆盖）、§十二（概率聚合）、§十三（题面可结算性）分工：那四族管**单个概率怎么报、怎么结算**；本节管**把一件事拆成多个层级分别预测后，这些数还加不加得起来**——是预测台账的结构性验收，不是又一把评分尺。四独立域交叉：Hyndman《FPP2》§10 /《FPP3》§11 官方教材全文逐字 + Hyndman et al. `dow_hts.pdf` 作者论文 + CRAN `hts` 官方 refman + Monash 与斯里兰卡央行 staff study 综述。
+
+### 14.1 数据按结构加总，预测不会自动加总；「一致性」是独立验收门
+- FPP3 逐字：「**Forecasts are often required for all disaggregate and aggregate series, and it is natural to want the forecasts to add up in the same way as the data**」；「**we require forecasts that are coherent across the entire aggregation structure**」。FPP2 给矩阵式 `y_t = S b_t`，S 是 **summing matrix**，其下 m 行是单位阵、上方各行编码聚合约束；同一组数据若属性是**交叉**而非嵌套（grouped time series），存在多条合法聚合路径，S 的行数 n > m。
+- Hyndman 论文逐字：「**while time series data naturally aggregate according to a hierarchical structure, forecasts usually do not**」。传统三法各有结构性代价：**bottom-up** 只预报底层再求和（丢掉聚合层自身的信息，聚合层精度常不如直接预报）；**top-down** 先报总量再按历史比例分摊，「**will always produce biased forecasts even if the original forecasts are unbiased**」（Monash 综述补：历史比例会随时间变化、低层精度差、middle-out 集两者之短）。
+- 判据：任何「总体 + 分项」预测必须先声明 ① 聚合结构 S（嵌套 / 交叉 / 时间聚合） ② 一致性是不是硬要求 ③ 各层是独立预报还是由其他层导出。**分项加总 ≠ 总量**若未显式处理，是台账缺陷不是四舍五入误差；禁止用「分别预测完再手工凑齐总量」当作已做对账。
+
+### 14.2 MinT 是带前提的最优化：W_h 的四种近似决定它能不能用
+- FPP2 §10.7 逐字：使协调预测误差协方差迹最小且满足 `S G S = S` 的 `G = (S' W_h⁻¹ S)⁻¹ S' W_h⁻¹`，最优协调预测 `ỹ_h = S(S'W_h⁻¹S)⁻¹S'W_h⁻¹ ŷ_h`（式 10.8），称 **MinT (Minimum Trace)**；CRAN `hts` 逐字著录 Wickramasuriya, Athanasopoulos & Hyndman《Forecasting hierarchical and grouped time series through trace minimization》(JASA)，`MinT()` 参数含 `covariance = c("shr","sam")`、`nonnegative`、`algorithms = c("lu","cg","chol")`。Hyndman 论文逐字：MinT「**guaranteeing minimum variance unbiased forecasts**」——**无偏**是前提不是附赠。
+- W_h 四种近似各有适用面（FPP2 逐字）：① `W_h = k_h I`（OLS，`G` 与数据无关、最省算力，但**忽略层间尺度差与序列相关**）；② `W_h = k_h diag(Ŵ_1)`（WLS 方差缩放，用一步残差方差）；③ `W_h = k_h Λ, Λ=diag(S1)`（**structural scaling**，只依赖结构、**残差不可得时唯一可用**，如判断性预测 / 无残差模型）；④ `W_h = k_h W_1` 样本协方差，但 m 相对 T 很大时估计差，须**收缩到对角阵**（`covariance="shr"`）。FPP2 结论逐字：「**optimal reconciliation forecasts are generated using all the information available within a hierarchical or a grouped structure**」。
+- 判据：报协调结果必写「用了哪种 W_h + 是否有残差 + 基预测是否有偏」。Monash 实证反例逐字：「**MinT becomes infeasible for datasets with many repeated values or zeros**」（间断需求 / 多零值序列协方差奇异），此时退 WLS。把 MinT 当默认开关而不查前提 = 把带条件的无偏性当成无条件保证。
+
+### 14.3 「加总对得上」与「预测更准」是两本账
+- Hyndman 论文逐字引 Panagiotelis et al. (2021)：「**the predictive accuracy of reconciled forecasts cannot be worse than unreconciled forecasts in the mean squared error sense**」——这是**准确性收益**，但成立在基预测无偏、协方差可估、结构 S 正确之上；coherence 本身只保证**加总一致**，既不保证更准，也不保证概率校准 / 适当评分规则下的分数变好（与 §七「严格适当规则」分工）。
+- 时间维度是另一条轴：斯里兰卡央行 staff study 逐字记 Athanasopoulos et al. (2017) **THieF**（时间聚合层面对账）与 Kourentzes & Athanasopoulos (2019) **cross-temporal**（截面 × 时间两维同时对齐）；并明确 Spiliotis et al. (2020) 的**顺序**执行「**does not guarantee coherent forecast across all dimensions**」。⇒ 分层与分时间尺度各做一遍对账，不等于全维一致。
+- 判据：预测台账把「一致性验收（S 约束是否满足、哪些维度未对齐）」与「精度 / 校准验收（§七~§十三 的尺）」分成两栏分别报；对账只修加总，不拿它当「模型变好了」的证据。与 §十三 分工：那条管题面能不能结算，本条管多个可结算题之间的数是否自洽。
+
+### r750C 来源与判非（2026-11-15 实拉，逐字核验）
+- `https://otexts.robjhyndman.com/fpp2/hierarchical-forecasting.html`（Hyndman & Athanasopoulos《Forecasting: Principles and Practice》2nd ed. §10）— **curl 200 全文 42,387 字逐字提取**（WebFetch 首轮 AI 摘要 60s 超时仅返回前 15,000 / 48,944 字，改 curl 取全文）：coherent 定义、`y_t=S b_t` summing matrix 与展开、§10.3 bottom-up、§10.4 top-down 三种比例、§10.7 MinT 式 (10.8) `G=(S'W_h⁻¹S)⁻¹S'W_h⁻¹`、四种 W_h 近似（OLS / WLS variance scaling / structural scaling `weights="nseries"` / sample covariance + `covariance="shr"`）、「optimal reconciliation forecasts are generated using all the information available」。**第一独立域（教材作者官方全文）**。
+- `https://otexts.com/fpp3/hierarchical-forecasting.html`（FPP3 §11）— **WebFetch 200 前 15,000 / 66,039 字全文逐字**（AI 摘要 60s 超时，如实登记）：「forecasts to add up in the same way as the data」、coherent 定义、hierarchical vs grouped（嵌套 vs 交叉、`parent/child` 与 `attribute1*attribute2` 语法）、多聚合路径式 (11.3)(11.4)、澳大利亚旅游 / 监狱人口例。**第二独立域（同作者新版教材）**。
+- `https://robjhyndman.com/papers/dow_hts.pdf`（Hyndman et al.《Improving out-of-sample forecasts of stock price indexes with forecast reconciliation and clustering》）— **WebSearch 快照逐字**：「while time series data naturally aggregate ... forecasts usually do not」、top-down「will always produce biased forecasts even if the original forecasts are unbiased」、MinT「guaranteeing minimum variance unbiased forecasts」、Panagiotelis et al. (2021)「cannot be worse than unreconciled forecasts in the mean squared error sense」、reconciliation 两优势（coherence + 类似 forecast combination 的精度增益）。**第三独立域（作者论文，作交叉）**。
+- `https://cran.stat.unipd.it/web/packages/hts/refman/hts.html`（CRAN `hts` 6.0.3，**Date/Publication 2024-07-30**）— **WebSearch 快照逐字**：包功能含 bottom-up / top-down / optimal combination / **trace minimization (Wickramasuriya et al. 2018 JASA)**，`MinT()` 的 `covariance=c("shr","sam")` / `nonnegative` / `algorithms=c("lu","cg","chol")` 参数与著录。**第四独立域（官方包文档）**。
+- `https://www.cbsl.gov.lk/sites/default/files/cbslweb_documents/statistics/otherpub/staff_studies_Vol_51_2021.pdf`（斯里兰卡央行 Staff Studies Vol.51 §2.2）+ `https://researchmgt.monash.edu/ws/portalfiles/portal/637762132/517222219-oa.pdf`（Monash《Forecasting system's accuracy》）— **WebSearch 快照逐字**：Hyndman 2011 OLS 权重「completely independent of the data」、Wickramasuriya 2019 MinT 最小化迹、THieF 时间维度、cross-temporal 两步法、Spiliotis 2020 顺序法「does not guarantee coherent forecast across all dimensions」、Monash「**MinT becomes infeasible for datasets with many repeated values or zeros**」与退 WLS、top-down 三比例法偏差。**第五 / 六独立域（机构综述与同行评审实证，作交叉）**。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 — `coherence` / `summing matrix` / `MinT` / `trace minimization` / `top-down` / `bottom-up` / `base forecast` / `加总一致` / `层次预测` / `THieF` / `P.1204` **全 0 命中**（本技能 §十~§十三 全无分层加总命题）；`reconcil` 命中在 `engineering/execution-intelligence`（执行结果对账 / effect reconciliation）、`engineering/wb-debug-loop`（owner reconciliation）、`system/wb-spec-driven`（配置 reconcile）与 `system/skills-security-check`（策略合成），均为**执行态/配置态异命题**；`coherent` 命中在 `defaults/wb-context-compressor`（豆包自留地，coherent prompt）与 `engineering/wb-skill-authoring`（skillset 输出互洽），均非预测数值加总。按 rules/07 四态判「优＝加厚现有 `meta/pdi-forecasting`」，不新建并行层。豆包自留地 **WB 0 落地**。A / B 两轮结论一律不复用。
+- **未采纳**：MinT 的 shrink 协方差估计量具体形式、cross-temporal 一步法的维数灾难推导、各法在 M5 / 旅游数据上的数值对比、股票指数聚类实证结论 —— 属数值与专门领域，不迁移为通用判据。
