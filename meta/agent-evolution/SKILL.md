@@ -1,7 +1,7 @@
 ---
 name: agent-evolution
-version: "1.13.0"
-description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。 触发：并发实验分层、层间正交、发布层灰度、安全探索、shield 护栏、约束 MDP、代价 critic。
+version: "1.14.0"
+description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。 触发：并发实验分层、层间正交、发布层灰度、安全探索、shield 护栏、约束 MDP、代价 critic、持续学习灾难性遗忘、EWC、Fisher 信息、弹性权重整合、在线 EWC、突触智能、经验回放、稳定性可塑性权衡。
 license: MIT
 metadata:
   layer: meta
@@ -468,3 +468,21 @@ mSPRT 不控制跨指标 family-wise error（Adobe 对两个以上处理用 Bonf
 - `https://arxiv.org/html/2505.17342`（arXiv 2505.17342v2《A Survey of Safe RL and Constrained MDPs》WebFetch 200 全文逐字）+ `https://arxiv.org/pdf/2505.17342v2`（PDF 快照交叉）— Figure 12 shield pipeline、安全层 QP 最小调整 Dalal 2018 零违反、formal methods shielding Alshiekh 2018/ElSayed-Aly 2021 multiagent、human/oracle intervention Saunders、Lyapunov actor-critic Chow 2018、hard safety + performance bias + 早期 shield 逐步 lift、CMDP 结合方向。**第三独立域·综述一手**。
 - **判非 / 换道**：原选 `reward hacking` / `monitorability tax` / `obfuscated reward hacking` / Baker 2503.11926 命中 `meta/ti-critical-reasoning` §10.3（r731A 已落三条独点）+ 豆包自留地 `wb-context-compressor`（WB 0 落地）⇒ 按去重铁律四态判「**换道**」，不重述、不改 TI 技能，改取 AI 模块未覆盖的「探索过程安全约束」轴；`safe exploration` / `安全探索` / `CMDP` / `约束马尔可夫` / `安全动作` / `shield` 全库 SKILL.md **0 命中**；`Thompson` / `UCB` / `LinUCB` / `contextual bandit` / `regret` 命中集中在本技能 §16（bandit 探索/OPE，异命题，按「合」不重述）与 `wb-artifact-verification`（contextual bandit 异命题）；`Bayesian optimization` 命中豆包自留地（WB 0 落地）。与 §15 漂移、§16 bandit、§17 peeking、§18 performative、§19 CUPED、§20 时间、§21 SUTVA、§22 并发分层逐条分工，均不并存。与 r759/r758/r757 九模块结论不复用。**豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地**。
 - **未采纳**：VELM 的 reachability 具体算法与符号模型公式细节、QP 求解器实现、LTL 时序逻辑语法、Safety Gym benchmark 具体分数、CMDP 拉格朗日对偶推导、risk-sensitive CVaR 目标函数（异命题，留给后续）。
+
+
+## 二十四、持续学习的灾难性遗忘：改完就忘是默认态，保留旧能力要靠显式机制（r764A 独立实拉 2026-11-18，≥2 独立域一手交叉，3 独点）
+
+> 自改进闭环每轮改提示/改参数/改规则，本质是**连续任务学习**。默认顺序训练会把旧任务编码过的参数用新任务覆写——「灾难性遗忘」不是异常，是不加约束时的默认结果。「改到新版指标涨了」不等于旧能力还在（与 §18 performative「改到不改了≠改对了」同族，但本章管的是能力保留）。
+
+- **r764A-1 ★先声明任务身份在测试时是否可得，再选方法与评测口径**：continual learning 三场景不是同一道题——Task-Incremental（测试时有 task ID，输出空间每任务独立 head，关键在保每任务参数，最易）／Domain-Incremental（测试时无 task ID，输出共享，关键在抗 domain shift，中等）／Class-Incremental（测试时无 task ID，输出空间随任务增长，关键在区分所有类，最难）。AI Wiki 逐字表：Task ID at test time=Yes/No/No、Output space=Separate head per task/Shared across tasks/Grows with each task、Classic benchmark=Split MNIST (with task ID)/Permuted MNIST/Split MNIST (without task ID)。⇒ 自改进台账先登记「这次升级后，旧能力还会被显式点名调用吗」：能点名（task ID 可得）与不能点名（共享一个入口、类数还在涨）是两种难度，后者才是真实 agent 场景；拿 Task-IL 的通过率宣布 Class-IL 已解决是口径错配。
+
+- **r764A-2 ★EWC 是逐参数二次锚定，不是全局 L2；且「保旧」有硬前提**：EWC（Kirkpatrick et al. 2017 PNAS）把旧任务 posterior 近似为以 θ*_A 为均值、精度由 Fisher 信息矩阵对角线给出的高斯，损失 `L(θ)=L_B(θ)+Σ_i (λ/2)·F_i·(θ_i−θ*_A,i)²`——高 Fisher 参数被重罚、低 Fisher 参数放自由改（AI Wiki 逐字：「Parameters with high Fisher information … penalized more heavily, while parameters with low Fisher information are left free to adapt」）。它是 per-parameter 各向异性弹簧，与 L2「一律同等压小」不同。但一手综述（arXiv 2112.14146）列三条边界：① Fisher 对角线精确计算复杂度随输出数线性增长，「limiting the applicability of this method to low-dimensional output spaces」；② 二次惩罚项「only derived for the two-task case in the original paper」，多任务合理性被 Huszár 2018 质疑；③ Kemker 2018 实证「EWC fails to learn new classes incrementally in response to accumulating training data」。Online EWC（Schwarz 2018）用 Fisher  running average 把每任务一份矩阵压成单一惩罚项以支撑多任务。Synaptic Intelligence（Zenke 2017）在训练中在线累积每个参数对降 loss 的贡献分，EWC 是每任务结束后离线算——两者在 Permuted MNIST 性能相近。⇒ 声明「旧能力已保留」须附：锚的是哪些参数/用什么重要性度量/几任务场景/是否用了在线近似；单任务对单任务的 EWC 通过率不能外推到持续累积类。
+
+- **r764A-3 ★稳定性—可塑性是权衡不是优化目标；replay 三族的代价各不同**：一手综述逐字「balancing stability of existing representations with the plasticity required to efficiently learn new ones is a major unresolved topic of research in continual learning」，CLEAR 用 off-policy+行为克隆换稳定、on-policy 保可塑。正则化之外 replay 三族：原始缓冲（CLEAR「might prove unsuitable in cases where storage of a complete memory buffer is intractable」）／生成式重放（Deep Generative Replay 用生成模型造旧任务代表数据混进新数据）／压缩索引重放（REMIND 用 product quantization 压表征，「store one million compressed representations compared to just 20,000 when raw data input is stored」，同等内存下 50 倍）。GEM 类用情景记忆梯度约束更新方向（AI Wiki：gradient episodic memory 每任务存 M_k，既降当前 loss 又不让旧任务 loss 升）。⇒ 自改进留旧能力时按「存什么」选型：能存原始样本→ER；不能存数据但能训生成模型→生成式；内存受限→压缩表征；都不行才退正则化锚参数。验收必须同时报「新任务达标」与「旧任务回退幅度」两栏，只报前者等于没测遗忘。
+
+**来源（r764A 独立实拉 2026-11-18，≥2 独立域一手交叉）**：
+- `https://arxiv.org/html/2112.14146`（arXiv 2112.14146《Towards continual task learning in artificial neural networks: current approaches and insights from neuroscience》WebFetch 200 全文逐字）— EWC 公式与三限制（Fisher 对角随输出线性/二次项只对两任务推导/Kemker 2018 增量类失败）、SI 在线锚定、LwF 蒸馏与训练时间随任务线性、CLEAR 稳定性可塑性、Deep Generative Replay、REMIND 100万 vs 2万、stability-plasticity tradeoff。**第一独立域·一手综述**。
+- `https://aiwiki.ai/wiki/continual_learning/revisions/4`（AI Wiki continual_learning 条目 WebFetch 200 全文逐字）— 三场景逐字对比表（Task ID/Output space/Key challenge/Difficulty/Best methods/Benchmark）、三方法族、EWC quadratic + Fisher diagonal、Online EWC running average、SI online vs EWC offline。**第二独立域·一手百科**。
+- 快照交叉（不冒充一手全文）：`https://mbrenndoerfer.com/writing/online-offline-continual-learning-world-models/catastrophic-forgetting`（Fisher 定义式与 GEM 投影逐字）· `https://www.edgechat.ai/elastic-weight-consolation`→实为 elastic-weight-consolidation（PNAS Kirkpatrick 2017 存在性与 8000+ 引用、λ=5000 建议、TransE 12.62%→6.85% 45.7% 降幅）· `https://crad.ict.ac.cn/.../2022-06-1213.shtml`（中文综述 EWC/GEM/RWalk 公式交叉）。
+- **判非 / 去重**：`灾难性遗忘` / `catastrophic forgetting` / `continual learning` / `持续学习` / `EWC` / `弹性权重整合` 在本技能（agent-evolution）正文 **0 命中**；全库命中在 `engineering/wb-agent-evaluation` r568A（ServeLearnBench 用 Continual Harness 做演化环境评测——评测构造维度，异命题）与豆包自留地 `wb-context-compressor`/`wb-teaching`（口号级，WB 0 落地）。与本章「能力保留机制」不同命题，按「合」不重述、不改那些文件。与 §16 bandit 探索、§18 performative、§23 安全探索逐条分工。与 r763/r762/r761 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：Fisher 信息矩阵完整推导、Kronecker-factored 近似实现、product quantization 算法细节、各 benchmark 具体分数、λ 交叉验证网格（工程实现细节，留给后续）。

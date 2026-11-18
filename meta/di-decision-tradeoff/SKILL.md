@@ -1,9 +1,9 @@
 ---
 name: di-decision-tradeoff
-description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序、影响图、信息弧、决策节点、价值节点、决策基三要素
+description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序、影响图、信息弧、决策节点、价值节点、决策基三要素、前景理论、参照点依赖、损失厌恶、框架效应、确定性效应、反射效应、禀赋效应、编辑与评价两阶段
 module: DI
 modules: DI,TI
-version: "1.12.0"
+version: "1.13.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -378,3 +378,21 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 - `https://www.nap.edu/read/12557/chapter/4`（美国国家科学院出版社《Persistent Forecasting of Disruptive Technologies》ch4，WebFetch 200 一手全文逐字）— Howard & Matheson 1981、ID 是 BN 推广与决策树改进变体、四类弧定义、决策基三要素、精度依赖参数值质量与误差棒、技术预警用途。**第四独立域·国家级学术机构一手**。
 - **判非**：`influence diagram` / `影响图` / `informational arc` / `信息弧` / `decision node` / `价值节点` / `决策基三要素` 全库 SKILL.md **0 命中**；`regret` 命中本技能 §十（决策后悔/resulting，异命题）。与 §一（RDM/DMDU 深不确定）、§十（选项集）、§十二（非补偿/veto）、§十三（门型）、§十四（DQ 六要素）、§十五（VOI 四尺：EVPI/EVPPI/EVSI/ENBS）、§十六（诱导方式）、§十七（AHP 一致性）逐条分工，均不并存——本节是**结构建模层**，那八节是**方法/评价层**，本节为 §十五 VOI 提供信息弧结构前置。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除；豆包自留地 **WB 0 落地**。
 - **未采纳**：影响图的求解算法（variable elimination / junction tree 具体推导）、效用函数公理体系（vN-M 完整证明）、价值节点加性可分的数学前提详述、game theory 扩展形式博弈建模、具体工具（GeNIe/Netica）操作步骤、连续节点离散化细节。
+
+
+## 十九、前景理论：同一个决策换个说法就翻转，权重不是稳定偏好（r764C 独立实拉 2026-11-18，≥2 独立域一手交叉，3 独点）
+
+> DI 前面各章假设「权重/排序能被稳定诱导出来」——§十六证明诱导方式会构造偏好，本章再进一步：**参照点本身可被措辞移动**，同一客观选项在「收益框」与「损失框」下被归到价值函数不同侧，风险偏好直接翻转。这解释了为什么用户「刚才稳健、现在激进」未必是前后矛盾，而可能是你换了表述。
+
+- **r764C-1 ★评价的是相对参照点的变化量，不是绝对量；编辑阶段 situation-dependent，评价阶段才稳定**：前景理论（Kahneman & Tversky 1979）把决策分两阶段——「an editing phase, in which the problem is recognized and the decision framework is determined, and an evaluation phase, in which the alternatives are evaluated according to the problem recognition」；一手逐字「The former phase is situation-dependent and can be altered by slight differences in linguistic expression, whereas in the latter phase, once the problem is identified, situation-independent evaluations and decisions are made」。参照点是价值函数的原点、「is determined at the editing stage」，且「can easily be shifted depending on how the decision problem is edited」。⇒ 决策矩阵先固定「参照点写死是什么」（现状？预期？目标？——三参照点理论分底线/现状/目标），再 elicitation；同一批选项改了措辞（「保住 400」vs「损失 200」）后若权重变了，先归因于参照点被移动，不要直接改原始权重表或判用户非理性。
+
+- **r764C-2 ★价值函数 S 型 + 损失侧更陡 + 小概率超权：四条可检验的行为预测**：ScienceDirect 逐字——价值函数「S shaped … convex below the reference point (people are risk seeking in the domain of losses) and concave above it (people are risk averse in the domain of gains)」，且「asymmetric, steeper below the reference point than above it … loss aversion」；概率权重函数「small probabilities are overweighted, and large probabilities are underweighted」。由此四条：**确定性效应**（面对收益偏确定选项）、**反射效应**（面对损失偏冒险）、**损失厌恶**（损失痛苦 > 等量收益快乐，1992 量化版至少约 2 倍）、**禀赋效应**（拥有后估值抬高：Kahneman 1990 马克杯实验，拥有者要价高于未拥有者出价，WTA>WTP 违背新古典「估值不受所有权影响」）。⇒ 把选项摆进决策矩阵前先标注它落在 gain 还是 loss 域；报「loss aversion 系数约 2」须标来源（1992 量化版）与实际是否本地验证；2020 跨国复制研究（n=4,098 / 19 国 / 13 语言）验证大部分原始结论可复制，但不是精确系数普适。
+
+- **r764C-3 ★框架效应是偏好翻转不是噪声；参照点可以是「期望」而非现状**：ScienceDirect 逐字「the framing effect occurs when the same decision problem is perceived differently in different linguistic expressions in the editing stage」，且「By shifting the reference point, the same decision problem becomes risk-averse when the decision maker grasps the options in the gain domain, and risk-oriented … in the loss domain. Thus the framing effect can explain the reversal of preferences」。心理所 PDF（Lu 等）引入 Köszegi & Rabin 2006：参照点可以是**期望**而非现状——「an unexpected wealth of $400 is a gain, but receiving $500 with an expectation of $600 can be viewed as a loss」；并指出决策对象是「自己」还是「他人」会移动参照点（为自己决策时期望拿到 100% 作参照点，为他人决策时以 0% 作参照点），从而同一收益分配在自/他框架下风险偏好相反。⇒ 涉及「代用户做决定/给团队提方案」时，先声明以谁的期望为参照点；用户先稳健后激进，排查顺序=表述框架→参照点归属→gain/loss 域，与 §十六「诱导方式→输出量纲→诱导一致性」串联成完整诊断链；不靠「再问一遍求一致」掩盖框架效应。
+
+**来源（r764C 独立实拉 2026-11-18，≥2 独立域一手交叉）**：
+- `https://www.sciencedirect.com/topics/economics-econometrics-and-finance/prospect-theory`（ScienceDirect《Prospect Theory》百科条目 WebFetch 200 全文逐字）— 编辑/评价两阶段与 situation-dependent、参照点为价值函数原点且可移、价值函数 concave gain/convex loss/损失侧更陡、概率权重小超权大低权、框架效应致偏好翻转、Econometrica 1979 47:263-292 著录。**第一独立域·一手百科**。
+- `https://www.sciencedirect.com/topics/neuroscience/prospect-theory`（ScienceDirect neuroscience 版《Prospect Theory》WebFetch 快照逐字）— 确定性/反射/损失厌恶/禀 endowment、Kahneman 1990 马克杯 WTP/WTA、S 型价值函数与 4.1 节、Tversky-Shafir 1992 sure-thing 违反。**第二独立域·一手百科**。
+- 交叉快照（不冒充一手全文）：`https://ir.psych.ac.cn/bitstream/311026/32444/1/...pdf`（中科院心理所《Risk preferences in self-other decisions》PDF WebSearch 快照逐字，Köszegi-Rabin 参照点=期望、$400/$500/$600 例、自/他分配框架参照点 100% vs 0%）· 百度百科前景理论/风险决策机制（2020 跨国复制 n=4,098/19 国/13 语言、损失痛苦≥2 倍收益快乐、三参照点理论底线/现状/目标）。原始 1979 Econometrica 论文全文 PDF 未直接取得，按百科一手转述登记不冒充原文。
+- **判非 / 去重**：`前景理论` / `prospect theory` / `损失厌恶` / `参照点依赖` / `框架效应` / `禀赋效应` 全库 SKILL.md 0 落地；`loss aversion`/`reference point` 仅在本技能 §十五 r748B 的判非串（明确写「全库 0 命中」，那里主落地是 VOI 四把尺）。r748B 判非已预留本主题，本轮正式展开、不覆盖其 VOI 结论。与 §十六程序不变性（诱导方式构造偏好）、§十五 VOI（该不该再调研）、§十七 AHP（逻辑自洽门）分工，不并存。与 r762/r761/r760 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：价值函数/权重函数的具体参数拟合（α≈0.88/λ≈2.25 等）、累积前景理论的秩依赖权重公式、前景理论在金融/营销的具体应用案例（建模与场景细节，留给后续）。

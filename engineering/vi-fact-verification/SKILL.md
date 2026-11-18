@@ -1,9 +1,9 @@
 ---
 name: vi-fact-verification
-description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR
+description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标
 module: VI
 modules: VI,EI
-version: "1.6.0"
+version: "1.7.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -237,3 +237,21 @@ version: "1.6.0"
 - `https://arxiv.org/abs/2303.08896` + `https://searcharxiv.com/abs/2303.08896`（官方摘要与镜像，WebSearch 快照逐字，EMNLP 2023 / v3 2023-10-11）· `https://www.alphaxiv.org/zh/abs/2303.08896`（中文版摘要交叉）— 提交历史与作者著录，仅作版本/出处交叉，不单列结论来源。
 - **判非**：`SelfCheckGPT` / `采样一致` / `零资源黑盒` / `AUC-PR` 全库 SKILL.md **0 命中**；`self-consistency` 4 命中、`幻觉检测` 2 命中逐条查证全在豆包自留地 `wb-context-compressor`（§self-consistency 多采样 r648A 提答案质量、§RAG 幻觉检测 MARCH 三 agent、§NLI 蕴含检查）与 `wb-execute-discipline`（LLM-as-Judge consistency 协议），**均为异命题且 WB 0 落地**——那里用一致性**选更好的答案**、用外部源/NLI 验 RAG 答案，本轮用同源高温采样分歧度**给单句幻觉打分**，按「合」引用不重述。`NLI` / `DeBERTa` 在豆包自留地 RAG 语境（答案是否扎根检索片段），与本节「原句是否被本模型样本蕴含」不同义。与 §二来源分级、§三 FEVER 三态、§8.2 蜕变、§10 评估独立性、§11 多重检验逐条分工，均不并存。豆包自留地 **WB 0 落地**。
 - **未采纳**：BERTScore/QA/n-gram/NLI/Prompt 的完整实现代码、WikiBio 原论文数据集下载链接、alphaXiv AI 摘要与 arxiv html 正文的具体 AUC-PR 数字冲突（只取定性结论，不择一冒充实测）、原子事实级检测与多模态扩展（论文 future work，未验证）。
+
+
+## 十三、验证结论的「谱」依赖：换个人群/换种评测，准确率就变了（r764B 独立实拉 2026-11-18，≥2 独立域一手交叉，3 独点）
+
+> VI 前面各章管「这个分数是不是被管线/多重比较/采样虚高」，本章管一个更前置的问题：**这个准确率数字本身对它被测量的人群与评测方式有多依赖**。一个在特定样本上验证出的高准确率，换到真实使用人群可能系统性偏高——不是谁造假，是「准确率不是检验的固定固有属性」。
+
+- **r764B-1 ★准确率是 context/人群/评测法的函数，不是检验的固有常数；spectrum effect ≠ spectrum bias**：一手综述逐字「It is a common misconception that diagnostic accuracy is a fixed and inherent property of a medical test. There is empirical evidence that, in reality, diagnostic accuracy is also affected by the context in which it is deployed, the population in which it is used, and the methods by which it is evaluated」。要分两个概念：**spectrum effect**（预期变异）＝检验表现本就随疾病严重度/亚群而变，这是真实存在的异质性；**spectrum bias**（系统偏离）＝「in addition to expected variability, estimates … are distorted due to systematic deviations from their true values because of inadequate patient selection」。⇒ 验证报告固定写一行「本准确率测得的人群谱 + 预期随哪些亚群变（effect）+ 抽样是否系统性偏离真实使用场景（bias）」；把 effect 当 bias 会误判噪声为错误，把 bias 当 effect 会把抽样缺陷合理化。
+
+- **r764B-2 ★two-gate case-control 高估，single-gate cohort 才是解**：一手综述逐字：只收「advanced disease」病人对照「healthy controls」的两门（case-control）设计「the resulting sensitivity and specificity are likely to be overestimated…does not capture the actual mix of cases across the spectrum」；正确做法是「single-gate 'cohort' approach, enrolling patients who represent the intended use population」。CFP 官方给出机制：只查最病的人、不查同样多的健康人 ⇒ 制造虚假的正向关联（1970s 二尖瓣脱垂被报与胸痛/心律失常/卒中强相关，Framingham 社区样本严格标准后这些关联全消失；肥厚型心肌病在三级转诊中心被描述为高症状高致命，社区研究显示多数相对良性）。⇒ 验收一个「检测器/验证器」时，先问它的阳性样本是不是只取了「明显的重症例」、阴性是不是只取了「明显健康例」；若是，报出的高指标不可外推到真实混合人群，须重采样 single-gate 或标注适用人群边界。
+
+- **r764B-3 ★验证偏倚有方向，不是一律高估；且指标须预设防事后挑**：偏倚方向分型（Anesthesia Key 表 6.2 逐字）：partial verification bias（阳性更可能做金标准）→ sensitivity 假高、specificity 假低；differential verification bias（阳性做侵入金标准、阴性靠随访）→ 对可自愈病 sensitivity/specificity 双高、对只在随访期可检出的病双低；incorporation bias（index test 参与构成金标准）→ 两者双高；exclusion of ambiguous tests（剔除模棱两可结果）→ 双高；imperfect gold standard → 依误差是否相关方向不定。AJR 官方 PIOPED II 实例：低概率且 V/Q 阴性者未做侵入性肺动脉造影，因其随访极少发病可按阴性分析。另外「a study should focus on a limited set of predefined accuracy outcomes to avoid post hoc selection of the measure that appears more favorable」⇒ 验证报告须（a）声明每个偏倚的存在与方向，不笼统写「可能有偏倚」；（b）在看到结果前冻结用哪个指标，禁止事后挑最有利的那个报。
+
+**来源（r764B 独立实拉 2026-11-18，≥2 独立域一手交叉）**：
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC13665641/`（PMC13665641《Diagnostic Accuracy Studies: Sensitivity, Specificity, and Beyond》WebFetch 200 全文逐字）— 准确率非固有属性原句、Table 4 六类偏倚定义、two-gate vs single-gate、spectrum effect/bias 区分、预设指标避免事后挑选、Geersing 假阴性率<2.0% 样本量例。**第一独立域·一手综述**。
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC4644738/table/d35e1910/`（PMC4644738《Sources of Bias and Variations in Studies Evaluating Diagnostic Test Accuracy》WebFetch 逐字）— 四类偏倚 taxonomic（population-related / reference-standard-related / interpretation-related / analysis-related）：spectrum effect、sample selection、inappropriate reference、differential/partial verification、disease progression、diagnostic/test/clinical review、incorporation、indeterminate results、arbitrary threshold。**第二独立域·一手分类表**。
+- 交叉快照（不冒充一手全文）：`https://www.ajronline.org/doi/full/10.2214/AJR.11.7249`（AJR 官方 critically appraised topic，PIOPED II 验证偏倚实例、Bosniak 囊肿谱例、narrow spectrum 高估）· `https://aneskey.com/understanding-bias-in-diagnostic-research`（Anesthesia Key 表 6.2 各偏倚对 sensitivity/specificity 的方向）· `https://www.cfp.ca/.../62/9/708.atoms`（Canadian Family Physician 谱偏倚官方，二尖瓣脱垂/肥厚型心肌病社区对照、work-up bias 用 Bayes 或回归校正）。
+- **判非 / 去重**：`谱偏倚` / `spectrum bias` / `verification bias` / `work-up bias` / `two-gate` / `single-gate` / `incorporation bias` / `诊断准确性` 全库 SKILL.md **0 命中**；`sensitivity`/`specificity` 命中在 §8/§12 的 AUC-PR/自一致性语境（异命题）。与 PDI r734A/r737C 的 conformal 覆盖率保证分工：那两章管「区间覆盖率这个数保证不了什么」，本章管「准确率这个数依赖什么人群与抽样」，不并存。与 r763/r762/r761 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：STARD 报告清单逐条、Fagan nomogram 计算、似然比与预测值公式、Bayes 校正 work-up bias 的具体回归法（属诊断学建模细节，留给后续）。
