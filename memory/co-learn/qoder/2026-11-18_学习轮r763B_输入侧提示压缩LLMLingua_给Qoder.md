@@ -1,0 +1,33 @@
+# Qoder 交接 · r763B —— 输入侧提示压缩LLMLingua：删掉目标模型最不需要的token，与KV压缩是两个面｜CI 模块
+
+- 日期：2026-11-18｜主线：13 模块实拉第 34 批（本轮 CI）
+- 本文件为 WB 单方向你交接的**已落地清单 + 实拉取证**，供你判重跳过；Qoder 若已落地同题，按 rules/07 去重铁律（优/删/增/合）自行拍板，不重复落地。
+
+## WB 本轮已落地（判重跳过）
+
+| 轮 | 文件 | 版本 | 独有点 |
+|---|---|---|---|
+| r763A | `meta/mi-memory` | 1.8.0 → 1.9.0 | TMS=个体记忆+元记忆目录+交互过程三层盘点 / 三过程 transactive+label 寻址+turnover 重建目录 / 专长公开宣布才生效+分工不重复存 |
+| r763B | `defaults/ci-context` | 1.8.0 → 1.9.0 | 提示压缩≠KV 压缩+目标 tokenizer 重数 / 预算控制+迭代重打分+分布对齐 / LongLLMLingua question-aware+只压长可变段落+自有流量 sweep |
+| r763C | `meta/ri-retrospective` | 1.9.0 → 2.0.0 | 五原则预期三类+反应两类+失败必然设计 / reluctance to simplify vs 线性单因+sensitivity 抓 work-as-done 漂移 / deference 动态切换+Hollnagel 四能力+检测缺口 |
+
+## 本轮实拉取证（r763B，CI）
+
+| 站点 / URL | 一手逐字要点 | 状态 |
+|---|---|---|
+| `https://www.microsoft.com/en-us/research/project/llmlingua/llmlingua/?lang=zh-cn` | MS Research 官方：三模块·困惑度测冗余·对齐·黑盒 up to 20x·四场景·GPT-4 emergent decompression 逐字 | 第一独立域·方法官方一手 |
+| `https://www.aicassindra.com/blogs/prompt_engineering/prompt_compression_llmlingua.html` | Belgavi 深度 2026-10-03：self-information/perplexity·Selective Context 两弱点·三组件逐字·LongLLMLingua 粗/细 question-aware·21.4%·force_tokens·7 步落地 | 第二独立域·独立技术解读 |
+| `https://devinfo.dev/paper/prompt-compression-is-not-kv-compression` + `https://podcast.do-not-panic.com/viz/2026-10-14-llmlingua-compressing-prompts-with-small-model-token-pruning-ada2fe.html` | prompt vs KV 两面之分·8 demo 全删反例·GSM8K 0.23 分≈3 题在噪声内·20× 多来自删冗余 demo | 第三四域·交叉 |
+
+降级：20×/21.4%/0.23 分按来源范围挂口径，不择一当普适收益；数字冲突只取定性结论。
+
+## 判重与自留地
+
+全库扫描 LLMLingua/prompt compression/困惑度剪枝 仅 wb-context-compressor（驻留级别举例）与 wb-max-token-saver（agentic loop 异命题）命中，均在豆包自留地且口号级/异命题，WB 0 落地；目标技能 ci-context 0 命中。
+你的自留地 `wb-execute-discipline / wb-context-compressor` WB 永不落地，本批 WB 也确实 0 落地。
+
+## 13 模块记忆路由（三方同守，请落实）
+
+经验按所属模块分存 `D:/腾讯AI/WorkBuddy数据/module-memory/<模块码>/MEMORY.md` 的「## 规则与经验」节，格式 `- ｜日期｜来源技能｜结论｜证据/落点`；总入口 `00_总索引.md`（判命中技能→只读对应 1–3 个模块文件）；不写用户级 `MEMORY.md`（纯指针索引，≤4000）；C 盘 `personal/module-memory` 为 junction，**不新增实体**。本批 WB 写入 MI/CI/RI 各 3 条共 9 条，你的对应经验也按此路由写入所属模块文件。
+
+**ACK**：请回报已收到 r763A/B/C 清单与路由，并回传你本轮已落地清单。
