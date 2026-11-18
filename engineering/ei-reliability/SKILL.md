@@ -3,7 +3,7 @@ name: ei-reliability
 description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。
 module: EI
 modules: EI,VI
-version: 1.5.0
+version: 1.6.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -190,3 +190,30 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 - **失败与降级如实登记**：`https://redis.io/docs/latest/develop/use-cases/development-testing/` 与 `https://redis.io/blog/redlock-reasonable-distributed-locks-with-redis/` 均返回 **200 但正文为 `Page not found | Redis`** ⇒ 按「页面不存在」登记**不作信源**，Redlock 规范仅以两位作者文中的引用链接 `http://redis.io/topics/distlock` 登记、未冒充本轮一手访问；Kleppmann 全文后半（时钟跳变段之后）因 15,000 字截断未逐字取得，本节所有引文均落在已取得的前 15,000 字内。
 - **判非**：`fencing token` / `fencing` / `Redlock` / `GC pause` / `Martin Kleppmann` / `distributed lock` / `锁过期` / `stop-the-world` / `zxid` / `auto release` / `linearizable store` 全库 `SKILL.md` **0 命中**（`fencing` 1 命中属 `engineering/wb-debug-loop` 事件流围栏，异命题；`分布式锁` 1 命中即本技能 §一既有口号级一句 ⇒ 按「优＝加厚现有」）；`lease` 23 / `租约` 6 命中集中在 `defaults/wb-context-compressor`（**豆包自留地**上下文租约/缓存）与 `engineering/wb-artifact-verification` / `wb-release-maintain`（制品租约，异命题）；`互斥` 13 命中均为并发/独占通用词。模块 `EI/MEMORY.md` §10 重试预算/超时链、§11 双写与 outbox、§12 deadline/取消树、§13 扇出对冲均异命题、不复用。与 r757A(AI) / r756 / r755 结论不复用。**豆包自留地 WB 0 落地**。
 - **未采纳**：Redlock 完整加锁/释放 Lua 脚本与 5 节点部署参数、TLA+ 形式化证明细节、ZooKeeper Herd Effect 与读写锁配方、etcd lease 实现、CLOCK_DRIFT_FACTOR 调参、各中文站给出的 TTL/GC 具体毫秒经验值、二手「Redlock 增强模式」命名。
+
+## 十五、熔断器：在重试之上加一道"别再试了"的短路门（r761B 独立实拉 2026-11-18，≥2 独立域一手交叉，3 独点）
+
+### 15.1（r761B-1）熔断与重试是两种相反意图，必须组合而非二选一；状态机是三正常态 + 三特殊态
+
+- 官方原话：Retry「期望最终成功」而重试，Circuit Breaker「阻止执行很可能失败的操作」。二者组合方式是**通过熔断器调用重试**，且重试逻辑必须**对熔断器返回的异常敏感**——一旦熔断指示故障非暂时，立即停止重试。把熔断当成重试的替代品，或让重试无视熔断异常，都是把两个相反意图接反。
+- Resilience4j 明确「three normal states: CLOSED, OPEN, HALF_OPEN and three special states METRICS_ONLY, DISABLED, FORCED_OPEN」——后者分别=总是放行 / 总是放行不记指标 / 总是拒绝。原文更点出 METRICS_ONLY 也是「always allow access」，容易被误当作安全态（它只采集不拦截）。
+- 转换：CLOSED 下失败率≥阈值→OPEN；OPEN 拒绝调用（抛 CallNotPermittedException）；等待时长到→HALF_OPEN 放有限个探针；探针失败率仍≥阈值→回 OPEN，低于→回 CLOSED。DISABLED/FORCED_OPEN 下除状态转换外不产生事件、不记指标，只能靠显式转换或 reset 退出——即这两个态是「观测盲区」，排障时不能拿「没有指标」当「没有流量」。
+
+### 15.2（r761B-2）失败率不是瞬时比值：最小样本门 + 两种滑动窗口，缺样本时绝不跳闸
+
+- **最小调用门**：官方逐字——若 minimumNumberOfCalls=10，则必须记录满 10 次才计算失败率；只有 9 次时「even if all 9 calls have failed」也不跳闸。默认值 Resilience4j 给 `minimumNumberOfCalls=100`、`slidingWindowSize=100`、`failureRateThreshold=50`（%）。小流量服务照抄默认会导致熔断器**永不生效**（永远凑不满 100），照抄阈值更会在样本不足时乱跳——这两类错方向相反。
+- **两种窗口语义不同**：COUNT_BASED 聚合最近 N 次调用（环形数组 N 个 measurement）；TIME_BASED 聚合最近 N 秒（环形数组 N 个 bucket，每 bucket 聚合该秒全部调用，存 3 个 int[失败/慢/总] + 1 个 long 总耗时）。两者都采用 **Subtract-on-Evict**：新结果进来增量更新总量，最旧项被逐出时从总量减去并重置该槽；因此取 Snapshot 是 O(1)、与窗口大小无关，空间 O(n) 且不逐条存调用。
+- 计数口径可配：默认所有异常算失败；可指定哪些异常算失败、其余算成功；也可把某些异常标 ignored（既不算失败也不算成功）。⇒ 「失败率」是**按可配分类后的比率**，不是 HTTP 5xx 计数；接入口径不统一时两个熔断器的阈值不可比。
+
+### 15.3（r761B-3）HALF_OPEN 是受控探针而非放行：探测配额、自动转换开关、共享熔断器的资源分叉
+
+- `waitDurationInOpenState` 默认 60000ms 后才可能转 HALF_OPEN；`permittedNumberOfCallsInHalfOpenState` 默认 10 个探针；`automaticTransitionFromOpenToHalfOpenEnabled` 默认 **false**——为 false 时即使等待时长已过，也**必须有调用进来**才触发转换（避免为每个实例起后台监控线程）。即「时间到了」不等于「已进入半开」，验收要区分。
+- Azure 官方点出 HALF_OPEN 的意义：防止恢复中的服务被突然涌入的请求再次压垮——恢复期可能只能承载有限流量，探针配额正是这个上限；任一探针失败即回 OPEN 并重启计时器，成功计数需达到阈值（连续成功）才回 CLOSED。Closed 态的失败计数是**按时间周期自动重置**的，用于避免偶发失败就把熔断器打开。
+- 四个考量（Azure 逐字）：① OPEN 态可以用定时 ping / 健康检查代替纯计时；② 恢复时间极不稳定时应提供**手动强制闭合/强制打开**覆盖（对应特殊态）；③ 大量并发实例共享同一熔断器时实现不得阻塞请求或给每次调用加过多开销；④ **一个熔断器覆盖多底层 provider 会误判**——多分片场景一片坏一片好，错误混在一起会导致「该访问的被挡、不该访问的放行」。=> 熔断器的粒度要绑「独立故障域」，不是绑「资源类型名」。
+
+**来源（r761B 独立实拉 2026-11-18，≥2 独立域一手交叉）**：
+- `https://resilience4j.readme.io/docs/circuitbreaker`（Resilience4j 官方；WebFetch 200 全文逐字：六状态、失败率阈值/最小调用门、COUNT_BASED 环形数组与 TIME_BASED bucket、Subtract-on-Evict、Snapshot O(1)、参数默认值表、异常分类、事件与 CircularEventConsumer）——第一独立域（库官方一手）
+- `https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker`（Microsoft Azure Architecture Center 官方；WebFetch 200 全文逐字：上下文问题、Closed/Open/Half-Open 精确行为、与 Retry 组合及异常敏感、半开防压垮、失败计数按时间重置、四个 Problems and considerations）——第二独立域（架构模式官方一手）
+- **失败与降级如实登记**：WebSearch 对 resilience4j.readme.io + learn.microsoft.com 限定域首轮 0 结果 → 改用 WebFetch 直接取官方页全文成功；不冒充搜索命中。Azure 页的图示描述取文字转述（diagram 段落），未读到图像本体。
+- **判非**：`circuit breaker` / `熔断器` / `half-open` / `半开` 在 `ei-reliability` 目标技能无既有专节；全库命中中 `wb-subagent-delegation` r733A 一行是当时判非说明（非熔断器本体），豆包自留地（wb-context-compressor / wb-execute-discipline / wb-max-token-saver）命中按去重铁律不落地；与 §六有界重试、§十重试预算、§十三扇出对冲正交——本条管「重试之上的短路门与其状态/样本/粒度」。
+- **未采纳**：Resilience4j 完整配置 YAML 与 Spring Boot 集成、CircularEventConsumer 事件缓冲代码、Azure 示例 Flow A/B/C 全量步骤、具体重试退避时长表（只取可落纪律的判据与参数默认值口径）。

@@ -2,7 +2,7 @@
 name: wb-subagent-delegation
 description: >-
   子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。、僵尸任务、心跳超时、undead、存活判定、派发者绑定、槽位释放、状态漂移、数据感知调度、Asset/AssetAlias、事件触发、can_create、隐式信任、logical_date=None、data interval
-version: 1.77.0
+version: 1.78.0
 agent_created: true
 module: OI
 modules: OI
@@ -424,3 +424,33 @@ WSO2 逐字："Every delegation is a full agent run with its own prompt, its own
 - `https://www.datasops.com/blog/apache-airflow-3-upgrade`（Datasops，2026-06-16，WebFetch 200，AI 摘要 60s 超时 → 前 15,000/30,539 字原文逐字）— 2.4 Datasets 三局限、AssetAlias 解耦原文、AssetAll/AssetAny、AssetWatcher、`airflow.sdk` 稳定 API、DAG 版本化与 backfill 绑版本、`execution_date`→`logical_date`。**第三独立域（厂商迁移指南一手，商业立场已登记）**。
 - `https://skillbyexample.com/airflow/assets-and-data-driven-scheduling`（WebSearch 快照逐字：「A cron schedule runs whether or not yesterday's data actually arrived. **An Asset-triggered DAG runs when a specific upstream task actually finishes — the schedule is data, not time**」「**Airflow never touches the URI itself; it only tracks whether a task declared that it updated the thing the URI names**」「`schedule=[orders_extracted]` replaces a cron expression entirely」）+ `https://airflow.apache.tw/docs/apache-airflow/3.3.2/authoring-and-scheduling/assets.html`（官方中文镜像站快照，与第一域同源，仅作口径交叉）。**第四独立域（教学站，不作唯一结论来源）**。
 - **判非**：`AssetAlias` / `AssetAll` / `AssetAny` / `data-aware` / `asset-driven scheduling` / `outlets=` / `inlet_events` / `logical_date=None` / `producer DAG` / `consumer DAG` 全库 SKILL.md **0 命中**；`event-driven` 2 命中均在豆包自留地（`engineering/wb-execute-discipline` 触发频率 cron vs 事件选型、`engineering/wb-debug-loop` 队列仅对 event-driven 生效），为**异命题**且按纪律 WB 不往这两个文件落地；`schedule` / `catchup` 命中在 r745B（trigger rules 与 backfill，属触发规则面而非数据事件授权面），按「合」登记不重述。与 r733A（自包含任务书/会话键）、r738A（确定性重放，属 personal-ai-employees）、r741B（MCP 三原语控制主体）分工明确。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除；豆包自留地 **WB 0 落地**。
+
+## r761A · 动态任务映射：编排时"任务数由运行时数据决定"的三条硬约束（2026-11-18 实拉，≥2 独立版本官方文档逐字，3 独点）
+
+### r761A-1 映射维度是「展开参数」而非复制任务：expand 多参数是笛卡尔积，zip/concat 才是配对与拼接
+
+- 官方逐个把 `expand(x=..., y=...)` 称为 **cross product**：`add.expand(x=[2,4,8], y=[5,10])` 得到 6 次调用（x=2/y=5、x=4/y=5、x=4/y=10、x=8/y=5、x=8/y=10 等组合），且原文明确「the order of expansion is not guaranteed」——顺序不可依赖。
+- 想要「一一配对」必须显式 `.zip()`：默认按**最短**截断、多余丢弃；传 `default=` 才切换成 `zip_longest` 语义按最长补值。想要「两批上游汇总成一个任务」用 `.concat()`（等价 itertools.chain，可按序链式 `foo.concat(bar).concat(rex)`）。
+- 固定不变的参数走 `partial()`（如 connection id / 表名 / bucket），只有真正随数据变的走 `expand()`——两者用不同函数区分，正是为了防止把常量误当映射维度引发乘积爆炸。
+- 判据：编排器接「对每个元素做 X」时，先问这些元素是**同一序列配对**、**多序列拼接**还是**所有组合**；默认 `expand` 多参数是组合，不是配对。配错维度不是结果错就是任务数指数膨胀。
+
+### r761A-2 映射的三道前置门：可映射类型、模板不渲染、两道独立上限
+
+- **类型门**：只能对 dict、list 或任务存进 XCom 的这两类结果映射；上游返回不可映射类型（如纯字符串）会在运行时抛 `UnmappableXComTypePushed`。即任务数依赖的上游输出必须自证是「可枚举集合」。
+- **模板门**：被映射的字段**不再做模板渲染**——`make_list()` 返回 `["{{ ds }}"]`，`printer.expand(val=...)` 打印的是字面 `{{ ds }}` 而非日期。要插值必须自己调 `task.render_template` 或从 context 取。这是「映射先于/替代模板」的时序事实，写成编排器规则时不能假设二者叠加。
+- **两道上限互不替代**：`[core] max_map_length`（默认 **1024**）限制 expand **能创建多少实例**，超长上游直接让**源任务**失败；`max_active_tis_per_dag`（如 16）限制**同时跑多少副本**，且作用域是「该任务在所有活跃 DagRun 上的全部副本」，不是单个 run。前者管总量、后者管并发，混用会把「撑爆调度器」误当成「占满执行槽」。
+- **零长度即跳过**：输入为空不创建任何实例、映射任务标记 `SKIPPED`；下游要用 `NONE_FAILED` 之类允许 skipped 上游的触发规则才能把空跑当成功 no-op（与 r745B「默认 all_success 把 skip 当失败级联」同源，此处是具体落点）。
+
+### r761A-3 映射实例有独立身份与坐标：map_index 与 loop.index 不同源，rerun 只替换当前执行
+
+- 映射任务的每个副本是独立 TaskInstance，有各自的 state / tries / logs；`expand_mapped_task` 按 map index 升序列出新建实例并返回最大 index。迭代与映射位置是**两套坐标**：loop 迭代从 1 起、map index 从 0 起，故「iteration 1 的 map 1」与「iteration 2 的 map 1」是不同实例。
+- 消费映射输出的下游拿到的是按「先迭代后 map index」排序的序列；`ti.xcom_pull` 与模板里同写法只含**当前执行**，被 rerun 替换掉的旧迭代不出现——因此跨运行的对账不能靠 pull 历史序列。
+- 约束：映射整个 loop、嵌套 loop、把 loop 放进 mapped task group 都不支持；下游任务不能从 loop 任务里拉单个值、也不能用其输出再 expand。
+- 判据：编排「动态扇出 + 迭代」时必须给每个工作项存 (iteration, map_index) 二元组做身份，不能用单个序号；重试留在同一迭代不消耗新迭代，故重试幂等键要含这两个坐标。
+
+**本轮来源（2026-11-18 r761A 实拉，≥2 独立域官方文档逐字）**：
+- `https://airflow.apache.org/docs/apache-airflow/stable/authoring-and-scheduling/dynamic-task-mapping.html`（Apache Airflow stable/3.4 官方；WebFetch 200 逐字：expand/partial 分离、笛卡尔积 6 次调用、zip 最短/default、concat 链式、dict/list/XCom、UnmappableXComTypePushed、模板不渲染、`max_map_length=1024`、`max_active_tis_per_dag` 作用于所有 DagRun、零长度 SKIPPED + NONE_FAILED）——第一独立域（现行版一手）
+- `https://airflow.apache.org/docs/apache-airflow/2.4.0/concepts/dynamic-task-mapping.html` 与 `https://airflow.apache.org/docs/apache-airflow/2.10.1/authoring-and-scheduling/dynamic-task-mapping.html`（旧版本官方，关键参数与语义跨 2.4→3.4 一致，用于确认非单版本特性）——第二独立域（历史版本官方交叉）
+- `https://airflow.apache.org/docs/apache-airflow/stable/authoring-and-scheduling/loops.html` + `https://airflow.apache.org/docs/apache-airflow/2.3.2/_api/airflow/models/mappedoperator/index.html`（官方 loop 与 MappedOperator API；逐字：两套坐标、rerun 替换旧迭代、不支持的形态、expand_mapped_task 按 index 升序）——API 一手
+- **判非**：`dynamic task mapping` / `map_index` / `max_map_length` / `UnmappableXComTypePushed` / `zip_longest` 在全库 SKILL.md 0 落地（豆包自留地 wb-context-compressor 仅一句 Antler 口号级提及，异命题按「合」不重述）；与 r745B（触发规则）、r748C（并发预算槽）、r756C（事件触发面）同模块但正交——本条管「任务数由数据决定时的维度与上限」。
+- **未采纳**：具体 DAG 代码全文、S3ListOperator 业务示例、`parse_time_mapped_ti_count` 内部实现细节（只取可落编排纪律的判据）。

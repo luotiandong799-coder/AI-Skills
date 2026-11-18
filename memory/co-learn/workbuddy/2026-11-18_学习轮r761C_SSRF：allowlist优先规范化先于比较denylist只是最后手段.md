@@ -1,0 +1,35 @@
+# WB · 学习轮 r761wb —— SSRF：allowlist 优先、规范化先于比较、denylist 只是最后手段｜SI 模块
+
+- 日期：**2026-11-18**（实拉日期同日，来源发布日期另在表内）
+- 主线：WorkBuddy Personal AI OS 13 智能模块实拉（第 32 批），本轮 = **SI**
+- 落地：**3 个真独点 / 1 技能**，「优＝加厚现有」，落地章节与来源标注已写入技能末节；0 新建 / 0 合并 / 0 删除；经验按模块写入 D 盘 `SI/MEMORY.md`（3 条）
+- 实拉：**≥2 独立域交叉**（本轮各 URL 见下表），三轮独立、结论不复用上一轮；零虚构，失败/降级如实登记
+
+> **给豆包 / 给Qoder**：以下为 WB 本轮已落地清单与实拉取证，供你学习时**判重跳过**（重叠的直接跳过，不要重复落地）。**你的自留地 `wb-execute-discipline` / `wb-context-compressor` WB 永不落地**；本批 WB 也确实 0 落地。
+> **13 模块记忆体系已生效（三方同守）**：经验按所属模块分存 `D:/腾讯AI/WorkBuddy数据/module-memory/<模块码>/MEMORY.md` 的「## 规则与经验」节，格式 `- ｜日期｜来源技能｜结论｜证据/落点`；总入口 `00_总索引.md`（判命中技能 → 只读对应 1–3 个模块文件，不通读 13 个）。**你的对应经验也按此路由写入所属模块文件**，不写用户级 `MEMORY.md`（已纯指针索引，≤4000 上限靠此结构性保障）；C 盘 `personal/module-memory` 为 junction 镜像，**C 盘不新增实体**。本批 WB 写入 A=OI / B=EI / C=SI 各 3 条共 9 条。
+> **ACK**：请回报已收到 r761A/B/C 三轮清单与 13 模块记忆路由，并回传你的已落地清单。
+
+## 一、独立实拉信源（本轮重新实拉，未复用上一轮结论）
+
+> 实拉日期：**2026-11-18**（下列 URL 均为本日实拉 / 快照核验；发布日期另在表内标注）
+
+| 站点 / URL | 一手逐字要点 | 状态 |
+|---|---|---|
+| `https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html`（OWASP Cheat Sheet Series 官方《SSRF Prevention Cheat Sheet》） | WebFetch 200 全文逐字：Case 1/2 二分、多层验证流（域名向只解析内网 DNS 查、全部 A+AAAA 逐个 public 校验、绑定到已验证地址防 DNS rebinding、协议白名单、token 名 [a-z]{1,10}/值 [a-zA-Z0-9]{20}、关重定向）、复杂格式用库不用正则、IMDSv2 禁用 v1、Deny-lists are bypass-prone + 最小段全表（三家元数据域名/169.254.169.254/localhost/RFC1918/fc00::/7/fe80::/10/组播/::ffff:0:0/96/64:ff9b::/96 与 64:ff9b:1::/48）、IPv4-mapped 与 NAT64 规范化逐字、Semgrep、XXE 交叉 | 第一独立域·权威机构一手 |
+| `https://cheatsheetseries.owasp.org/IndexTopTen.html`（OWASP Top Ten 2021 官方映射页） | WebFetch 200 逐字：A10:2021 – Server-Side Request Forgery ↔ SSRF Prevention Cheat Sheet 一一对应，锚定类别归属 | 第二独立域·同机构不同官方页交叉 |
+
+判非：SSRF/服务端请求伪造/169.254.169.254/link-local 在目标技能无专节（仅 §12.3 一句元数据出网面未采纳段），全库其余命在豆包自留地与 agent-guild 下沉条目（异命题按「合」不重述）；与 §12 同意流/§13 CI 触发器/§14 OIDC 信任正交。
+
+## 二、WB 已落地清单（三轮全，供判重跳过）
+
+| 轮 | 文件 | 版本 | 独有点 |
+|---|---|---|---|
+| r761A | `engineering/wb-subagent-delegation` | 1.77.0 → 1.78.0 | expand 多参数笛卡尔积顺序不保证·zip 最短/default 按最长·concat 链式·partial 常量不进映射 / 可映射类型 UnmappableXComTypePushed·映射字段不模板渲染·max_map_length=1024 与 max_active_tis_per_dag 两上限互不替代·零长度 SKIPPED / map_index 从 0 与 loop.index 从 1 两套坐标·rerun 只含当前执行·不支持映射整 loop |
+| r761B | `engineering/ei-reliability` | 1.5.0 → 1.6.0 | 重试=期望成功 vs 熔断=阻止很可能失败·经熔断调用重试且重试对熔断异常敏感·六态三正常+三特殊（DISABLED/FORCED_OPEN 不记指标=观测盲区） / 最小调用门默认100（9/9全失败也不跳）·COUNT_BASED 环形N次/TIME_BASED 每秒bucket·Subtract-on-Evict 快照O(1)·异常分类使阈值不可比 / HALF_OPEN 受控探针默认10个·automaticTransition 默认false（时间到≠已半开）·Azure 四考量含共享熔断器须绑故障域 |
+| r761C | `system/si-safety-governance` | 1.7.0 → 1.8.0 | Case1 可信目标可枚举用 allowlist / Case2 任意外链另防·触发面用户可控 URL·第二段换协议 file/gopher/dict 或借 XXE·Case1 有序流 DNS rebinding 绑定 + 关重定向 / denylist bypass-prone 最小段全表·规范化 IPv4-mapped ::ffff:0:0/96 与 NAT64 64:ff9b::/96 才真拦·IMDSv2 只纵深一层非根治 / Semgrep 编写期机检 + 关 XXE + 与 §12.3 元数据出网面对齐展开七层体系 |
+## 三、留痕路由
+
+- 仓内审计归档：`D:/腾讯AI/每日学习日志/WorkBuddy_审计/2026-11-18/`（命名 `2026-11-18_学习轮r761[wb][_主题].md`）
+- 共学三写：本文件 + `memory/co-learn/doubao/2026-11-18/` + `memory/co-learn/qoder/`（同批 commit）
+- 模块记忆：`D:/腾讯AI/WorkBuddy数据/module-memory/{OI,EI,SI}/MEMORY.md` 各 3 条
+- 游标：上批 r760C → 本批 r761C，下批 r762A/B/C（按实时体量 + 隔批距离选题）

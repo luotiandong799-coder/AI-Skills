@@ -1,7 +1,7 @@
 ---
 name: si-safety-governance
 description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。
-version: 1.7.0
+version: 1.8.0
 module: SI
 modules: SI,EI
 ---
@@ -278,3 +278,30 @@ GitHub Docs 官方逐字：「**rotate the affected credential immediately** ...
 - `https://www.safeguard.sh/resources/blog/github-oidc-immutable-sub-trust-policy-migration`（快照逐字：2026-04-23 公告 / 06-10 更新 / **07-15 默认**、旧新格式与 @ 分隔符、通配失配原因、AssumeRoleWithWebIdentity 报错是 trust mismatch 不是 outage、组织内枚举角色的 AWS CLI、opt-in 单向、生产角色用精确 sub + environment）· `https://hackindex.io/platforms/aws/exploitation/oidc-federation-abuse`（快照逐字：三类 trust-policy 错误、StringLike `repo:acme-corp/*`、EKS IRSA 只查 issuer 让任意 pod 扮演）· `https://www.stateward.com/vulnerabilities/SC-GHA-OIDC-MISCONFIG-2021`（快照逐字：Tinder Security Labs 实证多个真实 AWS 角色可从非授权仓库扮演、CloudTrail 可见、2021 起长期系统性配置风险）· `https://cloudupload.tech/blog/hardening-github-actions-oidc`（快照逐字：四类审计错误、StringEquals 不解析通配、生产勿信任 pull_request、~35% 审计占比）· `https://www.opsresolve.com/kb/not-authorized-to-perform-sts-assumerolewithwebidentity`（快照逐字：两道门 trust policy vs identity policy、三条进入 immutable 的路径、两页对「created after July 15」边界口径略有分歧）。**第四~八独立域·安全社区/运维立场，逐条登记、不作唯一结论来源**；社区统计占比与「TLA 式」CVE 编号**未采纳为通用事实**。
 - **判非 / 换道**：`trust policy` / `sub claim` / `workload identity` / `condition key` / `AssumeRoleWithWebIdentity` / `StringLike` / `id-token: write` / `immutable subject` / `RoleSessionName` / `sts.amazonaws.com` / `sub condition` 全库 `SKILL.md` **0 命中**；`OIDC` 5 命中经查属本技能 §九（GitHub Actions OIDC → Sigstore Fulcio → Rekor **provenance 签名链**，异命题）、`engineering/wb-artifact-verification` §OIDC 发现文档算法漂移（PS256 宣告 vs RS256 签发，异命题）、**豆包自留地** `defaults/wb-context-compressor`（n8n 发布 OIDC 口号级）与 `engineering/wb-execute-discipline`（keyless 签名）；`confused deputy` / `混淆代理` 3 命中属本技能 §12（MCP 静态 client ID + 动态注册 + 同意复用，**异命题**：那条讲授权服务器被复用同意，本条讲云角色被任意仓库换取凭据，按「合」登记不重述）；`Sigstore` / `cosign` / `Rekor` / `Fulcio` / `transparency log` 命中均在本技能 §九与豆包自留地 ⇒ 按 rules/07 四态判「**换道**」，本轮不重做制品签名链，改取「联邦身份 trust policy 条件键」这一未覆盖轴。模块 `SI/MEMORY.md` §9 SLSA / §10 push protection / §11 TUF / §12 MCP 授权 / §13 CI 触发器均异命题、不复用。**豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地**。
 - **未采纳**：完整 trust policy JSON 编写与 AWS CLI 枚举脚本、四家云 vendor 推荐表全文、Azure/GCP/Vault 各家配置步骤、自定义 claim 模板 REST API 细节、Defender/env0 具体 GUID 与 aud 常量（只取「全客户共用」这一结构事实）、社区审计占比数字、EKS IRSA 利用链操作细节。
+
+## 十五、SSRF 是"服务器被当成代理"：allowlist 优先、规范化先于比较、denylist 只是最后手段（r761C 独立实拉 2026-11-18，≥2 独立域一手交叉，3 独点）
+
+### 15.1（r761C-1）先按"能否枚举可信目标"分两案，再选防御；SSRF 不限于 HTTP 也不止于内网
+
+- OWASP 把场景二分：**Case 1 应用只请求已识别的可信应用**（allowlist 可用）；**Case 2 应用可请求任意外部 IP/域名**（allowlist 不可用）。两案的防御完全不同，混用会得出「配个 allowlist 就防住」或「反正防不住就只黑名单」两种极端错误。触发面来自用户可控 URL：头像外链、自定义 Webhook/回调、内部服务代理请求；且第二段请求可能换协议/scheme（FTP/SMB/SMTP、file://、phar://、gopher://、data://、dict://），或借 XXE 放大——所以「只拦 http(s)」不等于防住 SSRF。
+- Case 1 的验证流是**多层且有序**：字符串格式校验 → IP/域名按 public 校验（域名要向只解析内网的 DNS 查，应返回「不知道」）→ **解析出域名背后所有 A+AAAA 地址逐个做 public 校验** → 把连接**绑定到已验证的那个地址**（只分开头检查 DNS 答案防不住 DNS rebinding）→ 协议白名单（仅 HTTP/HTTPS）→ token 参数名 `[a-z]{1,10}`、token 值 `[a-zA-Z0-9]{20}` → 业务数据校验 → 只用已验证信息构造请求且**关闭客户端重定向**。关键判据：域名「解析时是公网」与「连接时还是那个地址」是两件事，检查与绑定必须同一地址。
+- 复杂格式用字符串库而非手写正则——OWASP 逐字：正则对复杂格式「difficult to maintain and are highly error-prone」，只对 token/邮编这类简单格式用正则。
+
+### 15.2（r761C-2）denylist 是 bypass-prone 的最后手段，且"比较前先规范化"决定它是否真拦得住
+
+- 官方定性：`Deny-lists are bypass-prone. Prefer allow-lists.` 只有不可避免时才列最小段：AWS IMDS `169.254.169.254`/`metadata.amazonaws.com`、GCP `metadata.google.internal`、Azure IMDS 同 IP；localhost `127.0.0.0/8`、`0.0.0.0/8`、`::1/128`；RFC1918 私网三段；IPv6 ULA `fc00::/7`、Link-Local `fe80::/10`；组播 `224.0.0.0/4`、`ff00::/8`；**IPv4-mapped IPv6 `::ffff:0:0/96`**；**NAT64 `64:ff9b::/96`、`64:ff9b:1::/48`**。
+- 规范化的理由逐字：`::ffff:169.254.169.254` 与 IPv4 形式到同一主机，`64:ff9b::a9fe:a9fe` 在运行 NAT64 的网络上也到同一地址；只匹配 IPv4 形状字符串或只比 IPv4 CIDR 的检查会放过它们——**被禁的元数据 IP 仍可达**。⇒ 验收拒绝名单的动作固定为：拿同一目的地的**另一种地址表示**去撞，撞过就是漏（与 agent-guild Cap95「deny 只匹配命令 ID、payload 里同义动作逃逸」同构，本条在地址维度复现）。
+- 云上最小配套：迁到 **IMDSv2 并禁用 IMDSv1**——SSRF 常见目标就是窃取 metadata service 的凭据/token，IMDSv2 是纵深防御的一环，**不是** SSRF 的根治（原文只说 mitigates some instances）。把「开了 IMDSv2」当「已防 SSRF」是把纵深一层当全部。
+
+### 15.3（r761C-3）出网治理的可观测/可归因面：静态分析、协议关停与"元数据发现是服务器可控出网面"的落点
+
+- 官方把 Semgrep 列为离线静态分析手段，用预置或自定义规则在代码层强制 SSRF 安全标准——即 SSRF 防御不只靠运行时拦截，还要有一条**编写期机检**通道（与本仓 skills-security-check / 收紧型 flag 门禁同族）。
+- 协议面要显式关停：Disable the support for the following of the redirection（每处客户端都要关）；协议按白名单只留 HTTP/HTTPS；配合 XXE 防护（外部实体解析关掉）堵住借 XML 的第二段请求。
+- 与本仓已落地口径对齐：r749C §12.3 把「元数据发现 URL 是服务器可控出网面」记为旁栏未采纳具体 IP 段——本条把那一面**正式展开为体系**：Case 二分 → 验证有序流 → DNS rebinding 绑定 → 规范化 denylist → IMDSv2 → 静态机检，逐层各有失效面，缺任一层都不能声称「服务器出网已治理」。
+- 判据：给 agent/工具配出网白名单时，先问它走 Case 1（目标可枚举，白名单+绑定）还是 Case 2（任意外链，必须规范化+多协议+DNS 绑定）；再问 IPv4-mapped/NAT64 两种表示是否被规范化拦住；最后确认开了 IMDSv2 但**不**把它计入根治。
+
+**来源（r761C 独立实拉 2026-11-18，≥2 独立域一手交叉）**：
+- `https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html`（OWASP Cheat Sheet Series 官方；WebFetch 200 全文逐字：两 Case 分治、多层验证流、DNS rebinding 绑定显式、简单格式正则/复杂格式用库、关重定向、IMDSv2、deny-list bypass-prone 定性 + 最小段全表、IPv4-mapped/NAT64 规范化逐字、Semgrep、XXE 交叉）——第一独立域（权威机构一手）
+- `https://cheatsheetseries.owasp.org/IndexTopTen.html`（OWASP Top Ten 2021 官方映射；WebFetch 200 逐字：A10:2021 SSRF 与该 Cheat Sheet 的一一对应，确认 A10 归类与防御文档来源）——第二独立域（同机构不同官方页交叉，用于类别锚定）
+- **判非**：`SSRF` / `server-side request forgery` / `服务端请求伪造` / `169.254.169.254` / `link-local` 在目标技能 `si-safety-governance` 无既有专节（仅 §12.3 一句「元数据发现是出网面」未采纳段），全库其余命中在豆包自留地与 agent-guild 下沉条目（异命题，按「合」不重述）；与 §12（MCP 同意流）、§13（CI 触发器）、§14（OIDC 信任）正交——本条管「服务器出网请求面的目标验证与地址规范化」。
+- **未采纳**：Orange Tsai 攻击演讲细节、完整 deny-list 生产样例脚本、各语言正则代码段、XXE 独立防御体系（只取 SSRF 交叉面）、AWS IMDSv2 配置命令全文。
