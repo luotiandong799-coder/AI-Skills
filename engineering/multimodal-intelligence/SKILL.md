@@ -1,8 +1,8 @@
 ---
 name: multimodal-intelligence
 description: >-
-  多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。色彩管线与色差口径：sRGB 传递函数与线性光、ICC 渲染意图与 D50 PCS、ΔE 公式版本与观察条件四元验收。；主观评测协议（六项控制/MOS+95%CI/ΔSCI 与人数/ACR·DSIS·DSCQS·ACR-HR 选型/观察者筛选）。
-version: 1.5.0
+  多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。色彩管线与色差口径：sRGB 传递函数与线性光、ICC 渲染意图与 D50 PCS、ΔE 公式版本与观察条件四元验收。；主观评测协议（六项控制/MOS+95%CI/ΔSCI 与人数/ACR·DSIS·DSCQS·ACR-HR 选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。
+version: 1.6.0
 module: PI
 modules: PI
 ---
@@ -188,3 +188,34 @@ ACM JCDL 2026《Accessibility Annotations as OCR Ground Truth》四指标互补�
 - `https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.500-13-201201-S!!TOC-HTM-E.htm`（**ITU-R BT.500-13 官方目录**）— **WebSearch 逐字快照**：§2.1 观看条件（实验室/家庭/监视器分辨率与对比度）、§2.4 条件范围与锚定、§2.5 Observers、§4 DSIS、§5 DSCQS、§6 单刺激/刺激比较/SSCQE/SDSCE、Annex 2 §2.2 置信区间计算、§2.3 观察者筛选（区分 DSIS/DSCQS 与 SSCQE）。**第四独立域（标准组织官方目录，版本 2012；现行 BT.500-15 (05/2023) 由 P.910 参考表与 Fora Soft References 双域佐证，如实登记版本差）**。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `BT.500` / `DSIS` / `SAMVIQ` / `观看条件` / `平均意见分` / `绝对类别评级` / `DSCQS` / `ACR-HR` / `ΔSCI` **全 0 命中**；`ACR` 2 命中经查为 `writing/supply-chain-thesis-master`（智能仓储「ACR/CTU 料箱机器人」，异命题）与误抓子串；`MOS` 5 命中经查为 `wb-agent-evaluation`（MOSAIC-3M 数据集名）、`win-native-app-automation`（SetWindowPos 片段）等**子串误抓/异命题**；`主观评测` 1 命中在 `engineering/wb-execute-discipline`（自纠错在「主观评测任务」信息增益为负，异命题）；`observer` 1 命中在 `wb-debug-loop`（隔离 observer，异命题）。按 rules/07 四态判「**优＝加厚现有 `engineering/multimodal-intelligence`**」，不新建并行层。PI 模块记忆 §8（FR/RR/NR 与对齐）、§9（色彩/ΔE）结论**一律不复用**；豆包自留地 **WB 0 落地**。与 r757/r756/r755 九模块结论不复用；A / C 两轮结论亦不复用。
 - **未采纳**：BT.500 Annex 2 逻辑函数拟合目标模型的具体参数、P.1401 客观模型资格评定流程、P.1203/P.1204 参数模型公式、crowdsourcing gold/trapping 题库设计、SAMVIQ 完整实现、各版本 5 点/9 点量表逐条差异 —— 属标准实现细节与工程配置，不迁移为通用判据。
+
+
+## 十一、生成式描述的评测：语义命题 F-score 与「系统级 / 句子级」两口径（r762B · 2026-11-18 实拉）
+
+> 与 §六～§八分工：那些章节评「识别/画质」这类有确定参考的问题；本节评「图像描述生成」这类**一个图有多个合法答案**、自动指标只能近似人类判断的问题。与 §十主观测试协议同源：真值是人，指标只是对人类的预测——SPICE 论文把这一点做成了可机检的两口径分解。
+
+### 11.1 n-gram 重叠既不充分也不必要：同词不同图高分、同义改写零重叠低分
+- SPICE 论文（Anderson 等，ECCV 2016，arXiv:1607.08822）WebFetch 200 原文逐字：「Existing automatic evaluation metrics are primarily sensitive to n-gram overlap, which is **neither necessary nor sufficient** for the task of simulating human judgment」。论文给的两组反例：「A young girl standing on top of a tennis court.」vs「A giraffe standing on top of a green field.」描述两张极不同的图，却因共享 5-gram「standing on top of a」被 n-gram 指标打高分；「A shiny metal pot filled with some diced veggies.」vs「The pan on the stove has chopped vegetables in it.」几乎同义却无共同词、n-gram 相似度低。
+- 各指标机制逐字：Bleu「a modified precision metric with a sentence-brevity penalty, calculated as a weighted geometric mean over different length n-grams」；METEOR 用「exact, stem, synonym and paraphrase matches」对齐后算带碎片惩罚的加权 F-score；ROUGE 是 F-measure 摘要包；CIDEr「applies term frequency-inverse document frequency (tf-idf) weights to n-grams… compared by summing their cosine similarity」。
+- **判据**：评生成式文本（描述/摘要/转写）先问「共享词是不是同义的必要条件」——不是就别用 Bleu/ROUGE 单指标下结论。报指标必写它对齐的是词面还是语义命题。
+
+### 11.2 SPICE 的做法：依赖树 → 场景图（对象/属性/关系元组）→ F-score；图像本身被忽略，是纯文本评测
+- 论文逐字：两阶段「syntactic dependencies… established using a dependency parser… pre-trained on a large dataset」（Universal Dependency relations），再「map from dependency trees to scene graphs using a rule-based system」；「our metric computes an F-score defined over the conjunction of logical tuples representing semantic propositions in the scene graph」。场景图「explicitly encodes the objects, attributes and relationships found in image captions, abstracting away most of the lexical and syntactic idiosyncrasies」。
+- 作者项目页 panderson.me/spice WebFetch 200 逐字：「Reference and candidate captions are mapped through dependency parse trees… to semantic scene graphs… encoding the objects (red), attributes (green), and relations (blue) present. Caption quality is determined using an F-score calculated over tuples」。论文同页注明 AMR + Smatch「performed poorly as image caption representations」，故未采用。
+- **判据**：SPICE 是**文本对文本**的评分，不看图；它继承语义解析器的错误（「parser errors directly degrade the metric score regardless of actual caption quality」，二手实现说明逐字）。所以「SPICE 高」只证明候选覆盖了参考里的语义命题，不证明图里真有那些东西——图证仍归 Vision 通道（§一分工）。
+
+### 11.3 系统级与句子级是两个相关口径，差一个量级；参考数改变绝对分，MM/HC 各需不同指标
+- 系统级（MS COCO 15 条目＋人类生成字幕，按每个模型一个点）：项目页逐字「system-level correlation of 0.88 with human judgments on the MS COCO dataset, versus 0.43 for CIDEr and 0.53 for METEOR」；Springer ECCV 章节逐字「Only SPICE (top left) scores human-generated captions significantly higher than challenge entries, which is consistent with human judgement」，且「SPICE is the only metric to correctly rank human-generated captions first—CIDEr and METEOR rank human captions 7th and 4th, respectively」。
+- 句子级（Kendall τ，表 3）：Flickr 8K — Bleu-1 0.32 / Bleu-4 0.14 / ROUGE-L 0.32 / METEOR 0.42 / CIDEr 0.44 / **SPICE 0.45** / **Inter-human 0.73**；composite — 0.26 / 0.18 / 0.28 / 0.35 / 0.36 / **0.39**。论文逐字「Relative to the correlation between human scores of 0.73, this represents only a modest improvement over existing metrics」——句子级几乎没拉开差距，且离人类一致性上限很远。
+- PASCAL-50S 成对分类准确率（5 参考，表 4，四类配对）：HC（两条都对的人类字幕）Bleu-1 64.9 最高；HI（一错）METEOR 98.1；HM（人 vs 机）METEOR 94.2；**MM（两条都是机器生成）SPICE 68.2 最高** vs METEOR 66.8。论文逐字「SPICE is best at matching human judgments on pairs of model-generated captions (MM). METEOR is best at differentiating human and model captions (HM) and human captions where one is incorrect (HI). Bleu-1 performs best given two correct human captions (HC)」，并点明「distinguishing better performing algorithms is the primary motivation for this work」。
+- 参考数效应（项目页逐字）：「On MS COCO, with 5 reference captions scores are typically in the range 0.15 - 0.20. With 40 reference captions, scores are typically in the range 0.03 - 0.07. This is the expected result due to the impact of the recall component of the metric. On the MS COCO leaderboard, C40 SPICE scores are multiplied by 10.」
+- 语义命题可分解（表 2）：按 object / relation / attribute 及 color / count / size 子类报 F-score；论文逐字「the MSR entry — incorporating specifically trained visual detectors…—exceeds the human F-score baseline for tuples containing color attributes. However, there is less evidence that any of these models have learned to count objects」。
+- **判据**：报生成式描述的自动分固定四栏 —— ① 哪个指标（n-gram 还是语义命题）② 哪个口径（系统级 ρ 还是句子级 τ）③ 几条参考字幕 ④ 对比的是哪类配对（HC/HI/HM/MM）。用系统级 0.88 去证明「这条字幕写得好」是层次错配；不同参考数的 SPICE 绝对值不可比；要挑更好的模型看 MM 栏（SPICE 强），要挑错字幕看 HI/HM 栏（METEOR 强）。
+
+### r762B 来源与判非（2026-11-18 实拉，逐字核验）
+- `https://arxiv.org/html/1607.08822`（Anderson, Fernando, Johnson, Gould《SPICE: Semantic Propositional Image Caption Evaluation》，ECCV 2016 / LNCS 9909）— **WebFetch 200，AI 摘要 60s 超时后返回前 15,000 / 50,850 字原文逐字**：摘要、n-gram 不充分必要与两组反例、Bleu/METEOR/ROUGE/CIDEr 机制段、依赖树→场景图→F-score 方法段、AMR 判非、表 3/表 4 全值、caption-level vs system-level 区分、结论。**第一独立域（作者一手论文全文主体）**。
+- `https://www.panderson.me/spice/`（第一作者 Peter Anderson 官方项目页）— **WebFetch 200 全文逐字**：0.88 / 0.43 / 0.53 系统级相关、场景图定义与 F-score、参考数效应原文（5 refs 0.15–0.20 / 40 refs 0.03–0.07 / C40×10）、COCO leaderboard 与「Only SPICE scores human-generated captions significantly higher」、SPICE F-Score 0.167/Pr0.5/Re0.1 示例。**第二独立域（作者官方发布页，与论文逐字交叉）**。
+- `https://link.springer.com/10.1007/978-3-319-46454-1_24`（Springer ECCV 章节页）＋ `https://openresearch-repository.anu.edu.au/items/854e5cc6-...`（ANU 机构仓储著录，2016-09-16，DOI 10.1007/978-3-319-46454-1_24）＋ `https://www.aclweb.org/anthology/P18-3003.pdf`（ACL《Learning-based Composite Metrics for Improved Caption Evaluation》，组合指标 BLEU 0.202/METEOR 0.352/CIDEr 0.356/SPICE 0.366 vs EvalMS 0.386）— **WebFetch / WebSearch 逐字快照**：卷期页码、表 2/3/4 交叉、组合指标仍只是相关而非真值。**第三～五域（出版社/机构仓储/ACL 会议论文，交叉登记）**。
+- **失败与降级如实登记**：arxiv HTML 页 AI 摘要 **60s 超时**，取前 15,000 / 50,850 字原文逐字（表 3/4 的数值由同批 WebSearch 对该页的逐字快照补齐）；ANU PDF 与 Springer 正文页只有摘要/著录与部分图注可读，按快照登记，未冒充已读全文。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 —— `SPICE` / `CIDEr` / `METEOR` / `图像描述` / `caption` / `BLEU` **目标技能 `engineering/multimodal-intelligence` 0 命中**；其他命中在 `media/wb-visual-gen`（文生图，异命题）、`meta/agent-evolution`、`wb-media-forensics`（取证，异命题）、豆包自留地 `wb-context-compressor` 及大量 co-learn 历史记录。按 rules/07 四态判「**优＝加厚现有 `engineering/multimodal-intelligence`**」，补的是「生成式描述评测」这一正交层，不重述 §6 CER/WER、§7 阅读顺序、§8 FR/RR/NR、§9 色彩、§10 主观测试。PI 模块记忆前 16 条结论不复用。豆包自留地 WB 0 落地。与 r760(AI/VI/DI)/r761(OI/EI/SI) 九模块结论不复用；A/C 两轮结论亦不复用。
+- **未采纳**：SPICE 完整场景图解析规则与 WordNet 同义词匹配实现、各挑战赛逐系统分数、组合指标 EvalMS/EvalCS 训练细节、Flickr30k 数据集划分 —— 属实现细节与 benchmark 数值，不迁移为通用判据。

@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
-description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）；论证图式与批判性问题（推定可废止/assumptions 与 exceptions 举证责任方向/图式目录覆盖缺口与错分风险）。；因果跨域可迁移性（selection diagram/S-node 指向机制/transport formula 三式/trivially·directly·一般三档/meta-analysis 平均掉差异之误）。
-version: 1.8.0
+description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）；论证图式与批判性问题（推定可废止/assumptions 与 exceptions 举证责任方向/图式目录覆盖缺口与错分风险）。；因果跨域可迁移性（selection diagram/S-node 指向机制/transport formula 三式/trivially·directly·一般三档/meta-analysis 平均掉差异之误）。；认知接种与预驳斥（威胁唤醒+弱化攻击+反驳预热的两步动机-认知模型/refutational-same 与 -different 等效/counterarguing 才是抗体、材料只是提供弹药/被动阅读优于主动自生/接种泛化需显式验证）。
+version: 1.9.0
 module: TI
 modules: TI,EI
 ---
@@ -264,3 +264,32 @@ Purdue OWL 逐字「The **qualifier** shows that a claim **may not be true in al
 - **失败与降级如实登记**：`escholarship.org` PDF **python urllib 45s TimeoutError**（未取得全文，仅按 WebSearch 快照，不冒充一手 PDF）；`air.unimi.it`（本批 C 轮另一稿）**HTTP 403 Forbidden**。以上均不引用其正文数值之外的东西。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `selection diagram` / `transport formula` / `S-admissibility` / `外部效度` / `跨域因果` / `selection node` **全 0 命中**；`transportability` 1 命中＝**本技能 §十三 r750A 来源节明确写「PNAS 全篇 data-fusion / transportability 与 selection bias 的形式化 … 属专门领域或已在 §一/§三覆盖，不迁移为通用判据」＝r750A 判非未采纳**，本轮正式展开，按 rules/07 四态判「**优＝加厚现有**」而非新建并行层；`可迁移性` 3 命中经查为 `defaults/wb-context-compressor`（OTel 跨工具迁移 / DSPy 跨 locale）、`writing/supply-chain-thesis-master`（企业匿名化保留可迁移性），全为**异命题**。TI 模块记忆 §13 三条（识别性/Simpson/后门）结论**一律不复用**，本轮取正交的跨域迁移层。豆包自留地 `engineering/wb-execute-discipline` / `defaults/wb-context-compressor` **WB 0 落地**。与 r757(AI/EI/SI)、r756(DI/VI/OI)、r755(MI/CI/RI) 九模块结论不复用。
 - **未采纳**：sID 算法递归细节与 s-hedge 构造、Tian-Pearl/Shpitser 识别算法、Example 4~6 逐个图式、meta-analysis 逆方差权重公式、PNAS 2016 data-fusion 全篇、Manski 2007 边界定义原文 —— 属专门算法与形式化证明，不迁移为通用判据。
+
+
+## 十六、认知接种：给结论预装「反驳疫苗」而非事后辟谣（r762A · 2026-11-18 实拉）
+
+> 与 §八～§十五分工：那些章节教「怎么构造/评估一条论证」；本节教「在说服攻击到来**之前**，如何让一个已成立的判断更难被撬动」。与 SI 模块可信边界互补：SI 挡的是外部不可信输入，本节挡的是对**自己已有立场**的渐进侵蚀。证据等级声明：机制（两步模型/材料形式/威胁作用）有多篇一手与元分析支持；**effect size 的具体数值与数字预驳斥游戏的迁移效果存在系统综述级争议**，按下方判据分档使用，不把应用研究结果当理论定论。
+
+### 16.1 接种的两步动机-认知模型：先制造「我的立场会被攻」的威胁感，再给弱化攻击+反驳弹药
+- Sage 2026 系统综述（Loughnan 等，*Communication Research* 53(7)，DOI 10.1177/00936502251411467）WebFetch 200 原文逐字：心理接种「deliver weak *persuasive attacks* to stimulate a *threat* response to produce *counterarguments* that defend against future *persuasion*」；基础模型是「a two-step motivational-cognitive process which culminates in resistance to counter-attitudinal information」。第一步「stimulates a perception that one's attitudinal position on an issue is under threat」，可加「an explicit warning about future persuasive attempts」；第二步 prebunk「consists of the aforementioned threat-inducing attacks followed by their refutations」，且攻击消息须弱（「an incomplete or poorly supported argument」）以免「overwhelm the system (i.e., convince)」，反驳须足够强。
+- PMC11393549（*Processing of misinformation as motivational and cognitive biases*）WebFetch 200 全文逐字：「A prerequisite for inoculation to succeed is for people to develop threat perceptions as they lead to the realization of the vulnerability of their beliefs, which in turn motivates the building of defense systems」；且「the presence of a forewarning message tends to be more effective」于仅靠反态度消息自发产生的内在威胁（intrinsic threat）。
+- **判据**：给 AI agent 的判断做「免疫」，不能只塞结论和结论的理由（那是 supportive defense），必须显式写出「谁会用哪条看似合理的攻击来撬它」＋「这条攻击为什么站不住」两半；攻击样本要弱到不会被 agent 采信、反驳要强到能压住。缺威胁唤醒这一步＝只给了论据清单，不是接种。
+
+### 16.2 真正赋予抗性的是接种后的 counterarguing，不是喂进去的反驳材料本身
+- PMC11393549 逐字：「counterarguing, a cognitive process that occurs postinoculation treatment, is **not the same and goes beyond** refutational materials presented in a refutational preemption treatment」；「**It is this cognitive process—motivated by the perceived threat from impending attacks—that confers resistance**」（Insko 1967）。refutational preemption 两个功能：「to provide content to be used to refute potential attacks and to allow the practice of counterarguing」。
+- 被动 vs 主动：PMC 逐字「In addition to this more passive refutation approach, individuals are sometimes instructed to develop their own refutation material」（Compton and Ivanov 2013；McGuire and Papageorgis 1961）。
+- 威胁是否必要存在真实分歧：Sage 2026 逐字「Banas and Rains' (2010) meta-analysis which found that **threat did not predict inoculation**. However, the researchers noted their test was likely **underpowered**」；后续引入更贴合理论的「motivational threat」量表（Banas & Richards 2017；Richards & Banas 2018；「the traditional measure of threat operationalized an affective response that is not well aligned with the theory」）。接种科学站（inoculation.science）逐字记 Banas & Rains 2010 元分析「mean effect size of d = 0.43 across 41 experiments」。
+- **判据**：验收接种效果必须测「攻击真的来了以后 agent 会不会自己生成反驳」，而不是测「它能不能复述预驳斥文本」——复述材料 ≠ 产生抗体。威胁维度标为「理论核心但元分析证据不一致」，报告时不得省略这一分歧；引用 d=0.43 须同时带「41 实验 / Banas & Rains 2010 / threat 项未预测」三件配套事实。
+
+### 16.3 泛化不是白送的：refutational-same/-different 等效只在同一信念内成立，跨话题溢出须单独验证
+- PMC11393549 逐字：数十年证据表明「'refutational-same and -different' treatments are **equally effective**」，「suggesting that inoculation offers an **umbrella or blanket of protection**」；且「inoculation may even offer **cross-protection** such that its protection spillover from one topic to other related topics (e.g., from condom use to binge drinking, Parker et al. 2012, 2016)」；应用范围已从「cultural truisms」（刷牙之类无人反对的共识）扩展到转基因、疫苗等争议议题（Banas and Rains 2010；Compton and Pfau 2005）。
+- Nature *Humanities and Social Sciences Communications* 9:114 (2019) PDF（van der Linden 等）WebFetch 快照逐字：接种本为 prophylactic（暴露前），新近才测 therapeutic（「those who already carry an informational 'virus' can still benefit from inoculation treatments」，类比「therapeutic vaccines」）；并指出按具体话题做「vaccine」存在 scalability 与 generalisability 问题（Bonetto 2018；Roozenbeek & van der Linden 2018）。
+- **判据**：本技能只承诺「同一判断、换了攻击角度」的泛化（refutational-different 等效）；跨到相关话题必须拿该话题的独立攻击重测，不写「一次 inoculation 全领域免疫」。给 agent 免疫是预防性工程，别等立场已被污染再指望治疗性接种能等效恢复。
+
+### r762A 来源与判非（2026-11-18 实拉，逐字核验）
+- `https://journals.sagepub.com/doi/full/10.1177/00936502251411467`（Loughnan 等 2026《An Analysis of Studies Testing Digital Interventions to Inoculate Against Misinformation: A Systematic Review》，Communication Research 53(7)）— **WebFetch 200，AI 摘要 60s 超时后返回前 15,000 / 96,622 字原文逐字**：Abstract 的 k=72 与「studies did not pose hypotheses relating to the core factors… threat conferral and counterarguing」「empirical designs and analyses have introduced confounding factors」「links… are weak」「whether the interventions inoculate remains unbroached」；两步模型全段、威胁必要性争议段、Banas & Rains 2010 underpowered 注记。**第一独立域（同行评审系统综述一手）**。
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC11393549/`（*Processing of misinformation as motivational and cognitive biases*，PMC 全文）— **WebFetch 200 全文逐字**：forewarning + refutational preemption 两部分、威胁前提、被动/主动反驳、counterarguing 与材料的区别与「motivated by the perceived threat… confers resistance」、same/-different 等效与跨话题溢出段。**第二独立域（PubMed Central 开放全文，逐条与综述交叉）**。
+- `https://inoculation.science/inoculating-against-extremism/`（Inoculation Science 官方科普页）＋ `https://www.nature.com/articles/s41599-019-0279-9.pdf`（van der Linden 等 2019 PDF）＋ `https://datafield.dev/misinformation-media-literacy-critical-thinking/part-07/chapter-35/further-reading.html`（原始文献注释书目：McGuire 1961/1964、Papageorgis & McGuire 1961、Compton 2013、Maertens 2021 纵向衰减与 booster-shot）— **WebSearch 逐字快照**：d=0.43/41 实验、prophylactic vs therapeutic、接种衰减与加强针、原始文献著录。**第三～五域（机构专题站 / 期刊 PDF / 学术书目，交叉登记，不作唯一结论来源）**。
+- **失败与降级如实登记**：Sage 全文页 AI 摘要 **60s 超时**，取 WebFetch 返回的前 15,000 / 96,622 字原文逐字；Nature PDF 仅取得 WebSearch 逐字快照，未宣称读完 PDF 全文。d=0.43 为二手转述的元分析效应量，与 Sage 2026 系统综述的「结论未触及」并列登记、不择一冒充实测。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 —— `接种理论` / `inoculation` / `认知免疫` / `prebunk` / `refutational` **目标技能 0 命中**；命中仅 `defaults/wb-context-compressor/references/knowledge-base.md`（RLHF 对齐语境的「inoculation」异命题，**豆包自留地 WB 永不落地**）与 co-learn 历史记录。按 rules/07 四态判「**优＝加厚现有 `meta/ti-critical-reasoning`**」，补的是「判断的抗侵蚀工程」这一正交层，不重述 §八 steelmanning / §十 CoT 忠实度 / §十一 溯因 / §十三 因果识别。TI 模块记忆前 15 条结论不复用。豆包自留地 WB 0 落地。与 r760(AI/VI/DI)/r761(OI/EI/SI) 九模块结论不复用；B/C 两轮结论亦不复用。
+- **未采纳**：Bad News / Go Viral! 等具体游戏化 prebunk 产品的交互设计与大样本数值、Maertens 2021 三纵向实验的衰减曲线具体值、跨 cultures 五国实验数值、心理反应理论（reactance）与 post-inoculation talk 的社会网络扩散模型 —— 属应用产品与专项实验设计，不迁移为通用判据。

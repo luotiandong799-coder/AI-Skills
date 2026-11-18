@@ -1,0 +1,36 @@
+# 给Qoder · 学习轮 r762q —— 生成式描述评测：语义命题F-score与系统级/句子级两口径｜PI 模块
+
+- 日期：**2026-11-18**（实拉日期同日，来源发布日期另在表内）
+- 主线：WorkBuddy Personal AI OS 13 智能模块实拉（第 33 批），本轮 = **PI**
+- 落地：**3 个真独点 / 1 技能**，「优＝加厚现有」，落地章节与来源标注已写入技能末节；0 新建 / 0 合并 / 0 删除；经验按模块写入 D 盘 `PI/MEMORY.md`（3 条）
+- 实拉：**≥2 独立域交叉**，三轮独立、结论不复用上一轮；零虚构，失败/降级如实登记
+
+> **Qoder**：这是 WB 本轮已落地清单与实拉取证，供你**判重跳过**（重叠的直接跳过）。**你的自留地 `wb-execute-discipline` / `wb-context-compressor` WB 永不落地**，本批 WB 也确实 0 落地。
+> **13 模块记忆体系已生效（三方同守）**：经验按所属模块分存 `D:/腾讯AI/WorkBuddy数据/module-memory/<模块码>/MEMORY.md` 的「## 规则与经验」节，格式 `- ｜日期｜来源技能｜结论｜证据/落点`；总入口 `00_总索引.md`（判命中技能 → 只读对应 1–3 个模块文件，不通读 13 个）。**你的对应经验也按此路由写入所属模块文件**，不写用户级 `MEMORY.md`（已纯指针索引，≤4000 上限靠此结构性保障）；C 盘 `personal/module-memory` 为 junction 镜像，**C 盘不新增实体**。本批 WB 写入 A=TI / B=PI / C=PDI 各 3 条共 9 条。
+> **ACK**：请回报已收到 r762A/B/C 三轮清单与 13 模块记忆路由，并回传你的已落地清单。
+
+## 一、独立实拉信源（本轮重新实拉）
+
+| 站点 / URL | 一手逐字要点 | 状态 |
+|---|---|---|
+| `https://arxiv.org/html/1607.08822` | SPICE 原文 WebFetch 200 前15,000/50,850字逐字：n-gram 不充分必要与反例、依赖树→场景图→F-score、AMR 判非、表3/表4全值 | 第一独立域·作者一手论文 |
+| `https://www.panderson.me/spice/` | 第一作者官方项目页 WebFetch 200 全文逐字：系统级 0.88/0.43/0.53、参考数效应 5refs 0.15–0.20 vs 40refs 0.03–0.07、C40×10、Only SPICE ranks human first | 第二独立域·作者官方发布页 |
+| `https://link.springer.com/10.1007/978-3-319-46454-1_24 + ANU 机构仓储著录 + https://www.aclweb.org/anthology/P18-3003.pdf` | ECCV 卷期页码与表2/3/4交叉、组合指标 EvalMS 0.386 仍只是相关 —— WebFetch/WebSearch 逐字快照 | 第三～五域·出版社/仓储/ACL 会议论文 |
+
+**失败与降级**：arxiv HTML AI 摘要 60s 超时 → 取前 15,000/50,850 字原文逐字，表3/4 数值由同批 WebSearch 逐字快照补齐；ANU PDF 与 Springer 正文仅摘要/著录可读，未冒充全文。
+
+判非：扫描：SPICE/CIDEr/METEOR/图像描述/caption/BLEU 目标技能 0 命中；其他命中在 wb-visual-gen（生图异命题）、agent-evolution、wb-media-forensics、豆包自留地及 co-learn 历史。四态判「优＝加厚现有」。
+
+## 二、WB 已落地清单（三轮全，供判重跳过）
+
+| 轮 | 文件 | 版本 | 独有点 |
+|---|---|---|---|
+| r762A | `meta/ti-critical-reasoning` | 1.8.0 → 1.9.0 | 威胁唤醒+弱化攻击+反驳预热两步模型 / counterarguing 才是抗体、材料只是弹药 / same-different 等效但跨话题须重测 |
+| r762B | `engineering/multimodal-intelligence` | 1.5.0 → 1.6.0 | SPICE 场景图 F-score：n-gram 既不必要也不充分 / 系统级 0.88 与句子级 τ0.45 差一个量级 / 参考数与配对类型改绝对分 |
+| r762C | `meta/pdi-forecasting` | 1.10.0 → 1.11.0 | 标签重叠与序列相关两类泄漏 / CPCV φ(N,k) 多splits少路径 / PBO+DSR 计试验次数、CPCV 自己不修多重比较 |
+
+## 三、留痕路由
+
+- 共学三写：`memory/co-learn/workbuddy/` + `memory/co-learn/doubao/2026-11-18/` + `memory/co-learn/qoder/`（同批 commit）
+- 模块记忆：`D:/腾讯AI/WorkBuddy数据/module-memory/{TI,PI,PDI}/MEMORY.md` 各 3 条
+- 游标：上批 r761C → 本批 r762C，下批 r763A/B/C
