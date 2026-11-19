@@ -1,7 +1,7 @@
 ---
 name: agent-evolution
-version: "1.16.0"
-description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。 触发：并发实验分层、层间正交、发布层灰度、安全探索、shield 护栏、约束 MDP、代价 critic、持续学习灾难性遗忘、EWC、Fisher 信息、弹性权重整合、在线 EWC、突触智能、经验回放、稳定性可塑性权衡、异质性处理效应、因果森林、CATE、honest splitting、GRF、DML、DR-learner。
+version: "1.17.0"
+description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。 触发：并发实验分层、层间正交、发布层灰度、安全探索、shield 护栏、约束 MDP、代价 critic、持续学习灾难性遗忘、EWC、Fisher 信息、弹性权重整合、在线 EWC、突触智能、经验回放、稳定性可塑性权衡、异质性处理效应、因果森林、CATE、honest splitting、GRF、DML、DR-learner。、Hyperband、Successive Halving、多保真预算分配、纯探索无限臂bandit、early stopping、bracket网格、envelope函数、BOHB。
 license: MIT
 metadata:
   layer: meta
@@ -295,7 +295,6 @@ PracHub 逐字："Another miss is jumping straight to a 50% A/B after 'good' off
 - 豆包自留地 0 落地；A 轮 OI、B 轮 DI 结论一律不复用；r732/r731/r717/r715 各轮结论不复用。
 - 换道：Vowpal Wabbit 命令参数族、逐估计器公式推导属易漂移工具细节，只取可迁移判据不作落地；GeekChamp 页面含 Outbyte 广告插入、PracHub 为面试向内容站，均如实登记立场，结论一律与 neuralmasteryai 的可运行代码/数值例交叉后才采纳。
 
-
 ## 十七、序贯检验与随时有效推断（2026-11-11 r737B 实拉，≥2 独立域一手交叉）
 
 ### r737B-1 ★固定视界检验只允许「读一次」，边跑边看边改=假阳性膨胀
@@ -397,7 +396,6 @@ mSPRT 不控制跨指标 family-wise error（Adobe 对两个以上处理用 Bonf
 - **判非**：`novelty effect` / `primacy effect` / `surrogate metric` / `proxy metric` / `north star` / `correlated measurement error` / `long-term holdout` / `time-staggered` / `change aversion` / `user-learning` / `winner's curse` 全库 `SKILL.md` **0 命中**；模块 `AI/MEMORY.md` 已有 §15 漂移/canary、§16 bandit regret、§17 peeking、§18 performative、§19 CUPED 均为异命题、不复用。豆包自留地 **WB 0 落地**。
 - **未采纳**：HTA/医疗报销语境、Netflix 与 Lacuna 的具体收益数字、预实验协变量机器学习化（CUPAC）、Freedman/ANCOVA 理论细节、OEC 治理与执行签批流程。
 
-
 ## 二十一、实验干扰与 SUTVA：随机化单元决定了结论能不能成立（r753A 独立实拉 2026-11-15，≥2 独立域一手交叉，3 独点）
 
 > 定位：本节管「**这次对照的分派本身是否独立**」，是比读数链更靠前的实验准入。与 §十七（anytime-valid 停止规则）、§十八（performative 分布随策略变）、§十九（CUPED 降方差）、§二十（novelty/长期/代理）分工：那四条管怎么读、方差多大、效应是否稳态；本节管「对照组有没有被处理组污染」，违反时前面所有口径一起失效。与 VI 模块 r735A 的 SRM 分工：SRM 管数据流被污染（分流比失衡），本节管设计本身违反 SUTVA（分派单元不独立），两道门先后独立。
@@ -498,3 +496,5 @@ mSPRT 不控制跨指标 family-wise error（Adobe 对两个以上处理用 Bonf
 - 交叉快照（不冒充一手全文）：`https://samyarmodabber.github.io/course-deeprl-vitay/slides/pdf/2.5-TD.pdf`（Chemnitz  Deep RL 课程 PDF，`A^GAE=(1−λ)Σλ^nA^n=Σ(γλ)^kδ_{t+k}` 两式与两端点逐字）· `https://notes.lukasl.dev/Knowledge/Generalised-Advantage-Estimation`（递归式与两端点偏差—方差机制逐字）· `https://mbrenndoerfer.com/writing/ppo-algorithm-proximal-policy-optimization-reinforcement-learning/generalized-advantage-estimation`（λ=0.95 sweet spot、边界条件 A_T=0、反向递推逐字）· `http://theneuralbase.com/rlhf-theory/learn/intermediate/gae-generalized-advantage-estimation`（λ 偏离 1 的"common misconception"与 critic 好坏如何定 λ 逐字）· `https://braindrip.blog/courses/reinforcement-learning/04-policy-gradient-methods/advantage-estimation`（γ≠λ、V 完美时各 λ 均无偏、GAE≠TD(λ)、A 中心化逐字）· `https://arxiv.org/html/2606.16733`（λ-return `R̂_t=A^GAE+V_t^old` 与「held fixed during update of φ」逐字）· `https://zhangyongtian.github.io/.../基线原理与优势函数公式推导`（中文推导 λ=0.95 PPO 甜点交叉）。
 - **判非 / 去重**：`广义优势估计` / `GAE` / `generalized advantage estimation` / `优势估计` / `λ-return` 全库 SKILL.md **0 命中**（初判 GAE 命中 `wb-context-compressor` 经核为 self-consistency 语境异命题、且属豆包自留地 WB 0 落地）。与本章 §16 bandit 探索/regret、§23 安全探索、§24 持续学习逐条分工——那三章管「学什么/学得安不安全/别忘」，本章管「策略梯度信号本身的方差—偏差」。与 §19 CUPED 区别：CUPED 用实验前协变量做结果方差缩减（频率派实验估计），GAE 用 TD 误差指数加权做优势估计（RL 策略梯度），两者的"方差缩减"分属不同统计对象，不并存。与 r767/r766/r765 九模块结论不复用。**豆包自留地 WB 0 落地**。 **未采纳**：GAE 的完整理论证明（Schulman 原论文 §4 的 λ 与 γ 联合偏差界）、PPO clip 机制细节、MAPPO 多智能体 GAE、Retrace/V-trace off-policy 校正、GRPO 去 critic 路线（异命题，留给后续）。
 ## 二十六、异质性处理效应与因果森林（r772A 独立实拉 2026-11-19，≥2 独立域一手交叉，3 独点；正文下沉 `references/r772A_异质性处理效应与因果森林.md`）：§19 CUPED 估准整体 ATE、§21 SUTVA 管随机化独立，均只给平均效应；本章管「同一处理对不同人效果可能相反、ATE 把异质性平均掉」——ULE+unconfoundedness 下用因果森林估 CATE τ(x)。**独点1** honest splitting（构树/估计集分离）+ 分裂准则最大化处理效应异质性（非最小化 MSE），Wager&Athey JASA2018 证 pointwise consistent + 渐近正态 + 可构造置信区间，无关协变量多时强于最近邻匹配。**独点2** 变体分工：Causal Forest（直接平均诚实树 CATE）/ GRF（梯度分裂+importance weights 进局部矩条件，推广出 unconfoundedness）/ DML（DR efficient score 回归低维 CATE）/ DR-learner（高维 CATE 带 oracle 误差上界）/ mcf（多处理、CATE 的 MSE 找分裂），选型先对「统计推断/内部一致/新数据仅凭协变量预测」三性质表。**独点3** τ(x) 是条件平均非 ITE、依赖 unconfoundedness、pointwise 尾部方差大；输出 CATE+置信区间作差异化决策输入层，接 §十五 VOI 判「该 subgroup 再收集信息值不值」、§二十深不确定准则处理区间跨 0。判重：causal forest/因果森林/CATE/DML/GRF 全库本体 0；与 §19/§21/§25 分工不并存，豆包自留地 WB 0 落地。**三独立域逐字来源 + 判非全段见下沉文件。**
+
+## 二十七、Hyperband：固定预算下的多保真资源分配（r776A 独立实拉 2026-11-19，≥2 独立域一手交叉，3 独点；正文下沉 `references/r776A_Hyperband多保真资源分配.md`）：§16 bandit 管「在线自适应怎么分试验预算以最小 regret」，本章管「一次性超参搜索怎么把有限训练预算在候选间重分配」，同用 bandit 语言但目标与部署形态不同。**独点1** 把 HPO 写成 pure-exploration non-stochastic infinite-armed bandit，预算（迭代/样本/特征）分配给随机采样配置，靠 adaptive resource allocation + early-stopping 加速随机搜索（JMLR 2018 报 order-of-magnitude speedup）。**独点2** Successive Halving 的两难是候选数 K 与单候选预算 B/n 不能同时最大：K 大 budget 小会早停误杀慢热候选、K 小会把资源浪费在差配置；envelope 宽度与终损间距决定何时可区分，故首轮预算不是越小越好。**独点3** Hyperband 用 bracket 网格枚举多组 (K,b) 把两难交给预算自动扫（s_max=⌊log_η R⌋, B=(s_max+1)R, K=⌈Bη^s/(R(s+1))⌉, b=Rη^{-s}；s=s_max 最激进、s=0 即随机搜索），用户只给最短检查时间与最长 deadline；但 bracket 相互独立、下个 bracket 仍随机采样浪费前序信息，BOHB 用 TPE 补。判重：Hyperband/successive halving 本体 0（§19 判非句自我登记除外）；豆包自留地 WB 0 落地。**三独立域逐字来源 + 判非全段见下沉文件。**
