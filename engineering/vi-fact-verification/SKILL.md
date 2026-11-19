@@ -3,7 +3,7 @@ name: vi-fact-verification
 description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标
 module: VI
 modules: VI,EI
-version: "1.7.0"
+version: "1.8.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -255,3 +255,21 @@ version: "1.7.0"
 - 交叉快照（不冒充一手全文）：`https://www.ajronline.org/doi/full/10.2214/AJR.11.7249`（AJR 官方 critically appraised topic，PIOPED II 验证偏倚实例、Bosniak 囊肿谱例、narrow spectrum 高估）· `https://aneskey.com/understanding-bias-in-diagnostic-research`（Anesthesia Key 表 6.2 各偏倚对 sensitivity/specificity 的方向）· `https://www.cfp.ca/.../62/9/708.atoms`（Canadian Family Physician 谱偏倚官方，二尖瓣脱垂/肥厚型心肌病社区对照、work-up bias 用 Bayes 或回归校正）。
 - **判非 / 去重**：`谱偏倚` / `spectrum bias` / `verification bias` / `work-up bias` / `two-gate` / `single-gate` / `incorporation bias` / `诊断准确性` 全库 SKILL.md **0 命中**；`sensitivity`/`specificity` 命中在 §8/§12 的 AUC-PR/自一致性语境（异命题）。与 PDI r734A/r737C 的 conformal 覆盖率保证分工：那两章管「区间覆盖率这个数保证不了什么」，本章管「准确率这个数依赖什么人群与抽样」，不并存。与 r763/r762/r761 九模块结论不复用。**豆包自留地 WB 0 落地**。
 - **未采纳**：STARD 报告清单逐条、Fagan nomogram 计算、似然比与预测值公式、Bayes 校正 work-up bias 的具体回归法（属诊断学建模细节，留给后续）。
+
+
+## 十四、似然比：把「检验有多强」与「这个人验前多可能」拆开，验后才能 portable（r768B 独立实拉 2026-11-19，≥2 独立域一手交叉，3 独点）
+
+> §13 管「准确率这个数依赖什么人群与抽样」，本章管一个互补的操作问题：**当被验证对象的验前概率与你手里的研究人群不一样时，阳性/阴性预测值不能照搬，得用似然比把它迁移过来**。这正是 §13 末尾「未采纳 Fagan/似然比」预留的位置。核心洞察：sensitivity/specificity 描述「有病的人会不会被检出」（post hoc，相对穩），预测值描述「这个结果有多可信」（随患病率变）；似然比是二者的桥。
+
+- **r768B-1 ★LR 是「给定结果时，有病与无病者的似然之比」，与患病率无关故可 portable 到个体**：定义逐字（BMJ EBM 两步 Fagan）「The LR represents the direction and the strength of evidence provided by a test result. It is calculated by dividing the likelihood of the test result among patients with the condition by the likelihood of this same test result among patients without the condition」；二值检验两个 LR 可从 sensitivity(Se)/specificity(Sp) 直接算：**LR+ = Se/(1−Sp)**，**LR− = (1−Se)/Sp**。LR 取值 0→∞，**LR=1 无诊断价值**，离 1 越远证据越强；LR+>1 支持有病、LR−<1 支持无病。关键性质（Grimes PDF 逐字）：预测值「driven by the prevalence … even excellent tests have a poor positive predictive value when the disease is rare」，而 LR「portable … useful across an array of disease frequencies … can be applied to a specific patient」；LR 含 2×2 表全部四格且不限于二值（连续/有序结果可分层各算一个 LR，不必 dichotomise 丢信息）。⇒ 验证结论迁移到新场景时，报 Se/Sp + LR，不直接报研究人群的 PPV/NPV；PPV 只在「验前概率与研究人群相同」时成立（§13 的谱偏倚正是破坏这一前提）。
+
+- **r768B-2 ★验前 odds × LR = 验后 odds，再换回概率；Fagan 列线图是免换算的图形版**：贝叶斯更新在 odds 空间是乘法（先验 × 似然 = 后验）：`验前 odds = p/(1−p)` → `验后 odds = 验前 odds × LR` → `验后概率 = odds/(1+odds)`（Wikipedia pre/post-test 逐字）。验后概率还能作为下一个检验的验前概率串联（Grimes：「the post-test odds of the first test becomes the pretest odds for the second」）。Fagan 列线图三轴（左=验前概率、中=LR、右=验后概率）画一条直线即得，刻度按 log-odds 等距（De Gruyter 逐字：「a Fagan plot works on the log scale … the tick marks are spaced at the log odds scale」）。一手数值例（PMC5707117）：Se=90%/Sp=80% ⇒ LR+=4.5、LR−=0.125；验前 2% ⇒ odds=0.0205，阳性验后 odds=0.092 → 约 8.4%；验前 25% 者阴性验后约 3%。⇒ 验证器给「结果 + 置信度」时，置信度若要随场景迁移，必须走 odds×LR 而非照搬百分比；序列验证把前一步验后当后一步验前。
+
+- **r768B-3 ★LR+≥3 才常用于确认、诊断 odds ratio 合并两个 LR；自然频率是给非专业者的无错沟通法**：一手阈值（PMC5707117）「Commonly, only tests with a LR(+) of 3 or more are considered for a positive diagnosis」，ROC 曲线上某点的斜率正是该点的 LR+（「the coordinates of the points are equal to the LR(+) of the quantity value and correspond to the slope of the ROC curve」）——把 LR 与 ROC 接起来。诊断 odds ratio = LR+/LR−（一个阳性把 odds 放大 10×、阴性缩到 0.1× ⇒ DOR=100，PMC12427917 逐字）。沟通层面（De Gruyter）：概率式「患病率 43%、Se 44%、Sp 74%」人易算错，改说**自然频率**「1000 人中 434 人患病、其中 190 人验阳；566 人健康、其中 148 人假阳」再算 PPV=190/338≈57%，误差显著下降（Hoffrage & Gigerenzer）。⇒ 验证报告三件套：报 LR+ / LR−  quantifying 证据方向与强度；DOR 给单一区分度总结（但掩盖两 LR 各自的非对称）；对人沟通验后概率用自然频率而非条件概率句式。
+
+**来源（r768B 独立实拉 2026-11-19，≥2 独立域一手交叉）**：
+- `https://ebm.bmj.com/content/18/4/125.full.pdf+html`（BMJ Evidence-Based Medicine《The two-step Fagan's nomogram》全文 PDF WebFetch 逐字）— LR 方向/强度定义、LR 取值 0→∞ 与 LR=1 无价值、LR+=DSe/(1−DSp)、LR−=(1−DSe)/DSp、二值/有序/连续均可算、Fagan 三轴用法、乳腺癌 MRI Se75%/Sp96% 验前 2% → 验后 28%/0.6% 例。**第一独立域·期刊一手**。
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC5707117`（PMC5707117《Bayes' theorem, the ROC diagram and reference values》WebSearch 一手全文逐字）— LR+/LR− 定义与 Se/Sp 关系、LR+≥3 阈值、odds 乘法公式、Se90%/Sp80% 数值例、ROC 斜率=LR+。**第二独立域·论文一手**。
+- 交叉快照（不冒充一手全文）：`https://www.mwc.com.br/files/L-Epid02-03-Grimes[A784]%20-%20Likelihood%20ratios.pdf`（Grimes《Refining clinical diagnosis with likelihood ratios》逐字：LR portable、predictive value 随 prevalence、序列检验验后串验前、2/3 已发表产科检验高估价值）· `http://en.wikipedia.com/wiki/Pre-test`（验前/验后 odds 公式与 Fagan nomogram、PPV/NPV 与验后概率数值等价的条件与局限逐字）· `https://www.degruyter.com/.../cclm-2022-0225`（De Gruyter 诊断统计 Fagan plot log 刻度、natural frequencies 43% 改 1000 人例逐字）· `https://pmc.ncbi.nlm.nih.gov/articles/PMC12427917/pdf/diagnostics-15-02148.pdf`（DOR=LR+/LR−、10×/0.1×→100 逐字）· `https://www.sciencedirect.com/science/article/pii/S0093-691X(10)00023-3`（LR+=Se/(1−Sp)=16.4、验前37.4%→验后91% ELISA 孕检例逐字）。
+- **判非 / 去重**：`似然比` / `likelihood ratio` / `Fagan` / `验后 odds` 在本技能正文仅 §13「未采纳」一句预留，本章正式展开、不覆盖 §13 谱偏倚结论；`LR+/LR−` 与 §8 AUC-PR、§12 SelfCheckGPT 一致性、§13 spectrum bias 逐条分工——§8/§12 管分数怎么算、§13 管分数依赖什么人群，本章管「验前不同时怎么把结论迁过去」。与 PDI conformal 覆盖率、DI r764C 前景理论（参照点）、TI 贝叶斯更新异命题，不并存。与 r767/r766/r765 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：有序/连续检验的分层 LR 具体计算、似然比置信区间公式、work-up bias 的 Bayes 回归校正、Fagan nomogram 绘图实现（诊断学建模细节，留给后续）。
