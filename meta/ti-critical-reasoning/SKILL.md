@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
-description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）；论证图式与批判性问题（推定可废止/assumptions 与 exceptions 举证责任方向/图式目录覆盖缺口与错分风险）。；因果跨域可迁移性（selection diagram/S-node 指向机制/transport formula 三式/trivially·directly·一般三档/meta-analysis 平均掉差异之误）。；认知接种与预驳斥（威胁唤醒+弱化攻击+反驳预热的两步动机-认知模型/refutational-same 与 -different 等效/counterarguing 才是抗体、材料只是提供弹药/被动阅读优于主动自生/接种泛化需显式验证）。；因果发现（等价类 CPDAG/PC 约束与 GES 打分同边界/LiNGAM 非高斯定向/承重假设不可检验）。；面板数据准实验因果识别（DiD 平行趋势不可验证只能事前诊断/SCM 对 donor pool 加权构造反事实且凸包条件与过拟合风险/SDID 双权重放松平行趋势且可大面板推断）。
-version: 2.1.0
+description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）；论证图式与批判性问题（推定可废止/assumptions 与 exceptions 举证责任方向/图式目录覆盖缺口与错分风险）。；因果跨域可迁移性（selection diagram/S-node 指向机制/transport formula 三式/trivially·directly·一般三档/meta-analysis 平均掉差异之误）。；认知接种与预驳斥（威胁唤醒+弱化攻击+反驳预热的两步动机-认知模型/refutational-same 与 -different 等效/counterarguing 才是抗体、材料只是提供弹药/被动阅读优于主动自生/接种泛化需显式验证）。；因果发现（等价类 CPDAG/PC 约束与 GES 打分同边界/LiNGAM 非高斯定向/承重假设不可检验）。；面板数据准实验因果识别（DiD 平行趋势不可验证只能事前诊断/SCM 对 donor pool 加权构造反事实且凸包条件与过拟合风险/SDID 双权重放松平行趋势且可大面板推断）。；工具变量与 LATE（IV 识别的是 complier 局部效应不是全员 ATE/排除限制是欺骗性外生假设不可数据检验且只是对简化式因果效应的解释承诺/monotonicity 无 defiers 才给正权重 LATE/多工具变量下单调性与异质性处理效应不相容）。
+version: 2.2.0
 module: TI
 modules: TI,EI
 ---
@@ -350,3 +350,30 @@ Purdue OWL 逐字「The **qualifier** shows that a claim **may not be true in al
 - **失败与降级如实登记**：SDID 原论文 arXiv 号三次命中错误论文（1812.05827 实为夸克禁闭、1812.05722 为算子理论、1812.06989 为霍尔效应），均未冒充 SDID 一手；`syntheticcontrolmethod.org` WebFetch 连接失败。本轮结论由 TrueSight + 玻尔百科 + 广外中心三独立域交叉支撑，**不宣称直读 Imbens 团队 AER 原论文全文**，SDID 三突破按广外中心转述登记；DiD 公式「Y_T,post−Y_T,pre」与数值算例只取定性口径，不择一冒充唯一权威。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `合成控制`/`synthetic control`/`双重差分`/`difference-in-differences`/`平行趋势`/`parallel trend` 命中仅 `meta/agent-evolution` 的 **CUPED 预实验方差缩减**（r745C，异命题：那是降方差、不是准实验因果识别）与 co-learn 台账。按 rules/07 四态判「**优＝加厚现有 `meta/ti-critical-reasoning`**」，补面板准实验识别这一正交层，不重述 §十三 DAG 识别/§十五 transport/§十七因果发现。TI 模块记忆前 21 条结论不复用。豆包自留地（`wb-execute-discipline`/`wb-context-compressor`）WB 0 落地。与 r769(OI/EI/SI)/r768(AI/VI/DI)/r767(MI/CI/RI) 九模块结论不复用；B/C 两轮结论亦不复用。
 - **未采纳**：SDID 个体/时间权重的优化目标函数与估计量构造细节、bootstrap 具体实现、GSC 因子模型与矩阵补全算法、RDD 带宽选择 —— 属计量实现细节，不迁移为通用判据。
+
+## 十九、工具变量与 LATE：IV 识别的是谁、排除限制凭什么、多工具为何失效
+
+> r774A（2026-11-19）实拉。§十三–§十八管「图已知/未知、跨场景、面板准实验」的识别；本节补一类正交缺口：当存在**未观测混杂**且后门调整不可用时，工具变量如何工作、它识别的到底是谁的效应、以及它的两个假设为何不能从数据里验出来。与 §十八 DiD/SCM/SDID 分工：那是「用时间/对照造反事实」，本节是「用外生工具隔离变异」。
+
+### 19.1（r774A-1）LATE 定理：IV 给的是 complier 的局部效应，不是全员 ATE
+- Angrist 2022（NBER w29726 / Econometrica 90(6)）摘要逐字：「**The local average treatment effects (LATE) framework for causal inference helped make this so. The LATE theorem tells us for whom particular instrumental variables (IV) and regression discontinuity estimates are valid.**」——LATE 框架的核心贡献不是给一个数，而是回答「这个 IV 估计对**哪些人**有效」。
+- 人群按对工具的反应分四类：compliers（随工具开关而改变处理）、always takers、never takers、defiers（逆向）。IV 估计量在单调性下 = **compliers 的平均处理效应（LATE）**，不是全样本 ATE：对 always/never takers，工具不改变其行为，其处理变异不来自工具，故不被识别。
+- **判据**：① 报 IV 结论必须写明「这是 complier 的效应」，禁直接外推成「对所有人有效」；② 问「这个政策对整体会怎样」时要额外假设（效应同质或可把 complier 效应推到他人），该假设不在 IV 本身里；③ LATE 与 RD 是同一族——都只识别局部（阈值附近 / complier），不是全局平均。
+
+### 19.2（r774A-2）排除限制是「解释承诺」不是可检验前提；单调性排除 defiers
+- Angrist 2022 逐字：「**A surprising exclusion restriction, an assumption central to the LATE interpretation of IV estimates, is shown to explain why enrollment at Chicago exam schools reduces student achievement. … IV exclusion restrictions formalize commitment to clear and consistent explanations of reduced-form causal effects.**」
+- 排除限制（exclusion restriction）= 工具 Z 只能通过影响处理 D 来影响结果 Y，不能有直接路径或其他路径；as-if-random = Z 与结果误差项无关。二者是**欺骗性外生**（plausibly exogenous）的假设，**不能从观测数据检验**（这正是 IV 的软肋：换一个工具就等于换一套因果故事）。单调性（monotonicity）= 无 defiers，即不存在「工具推高反而降低处理」的人；有了 defiers，IV 估计不再是干净的正权重 LATE。
+- **判据**：① 用 IV 前先写清「Z 凭什么只通过 D 影响 Y」这条故事并接受它不可证——这是解释承诺，不是数据结论；② 结论随工具选择而变时，报告差异而不是挑好看的那个；③ 检查单调性方向合理性（有没有理由存在 defiers），违背时 LATE 解释失效。
+
+### 19.3（r774A-3）多工具变量 + 异质性效应：单调性与 2SLS 正权重解释不相容
+- Mogstad/Torgovitsky/Walters 2021（NBER w25691 / AER 111(11)）摘要逐字：「**When treatment effects are heterogeneous, a common justification for including multiple IVs is that the 2SLS estimand can be given a causal interpretation as a positively-weighted average of local average treatment effects (LATEs). This justification requires the well-known monotonicity condition. However, we show that with more than one instrument, this condition can only be satisfied if choice behavior is effectively homogenous.**」并在大学回报实证中发现「**the standard monotonicity condition is at odds with the data**」，但较弱的 partial monotonicity 下 2SLS 仍可解释为正权重 LATE。
+- Mogstad/Torgovitsky 2024（NBER w32927）综述：线性 IV 在异质性处理效应（UHTE）下通常误设，两条路——继续用线性 IV 并反推 LATE 解释，或向前设计显式允许 UHTE 的估计量（MTE / control function / bounding）。
+- **判据**：① 多个工具变量并用时，「2SLS = 正权重 LATE」的默认辩护**在效应异质时站不住**，除非选择行为近乎同质；② 报告多工具 2SLS 前须检验偏单调性或有 partial monotonicity 的可验证充分条件，否则只当统计关联；③ 异质性为核心关切时，考虑 MTE 一类显式允许异质性的框架，别硬套线性 IV 的同质假设。
+
+### r774A 来源与判非（2026-11-19 实拉，逐字核验）
+- `https://nber.org/papers/w29726`（Angrist 2022《Empirical Strategies in Economics》，NBER w29726 / Econometrica 90(6):2509-2539）— **WebFetch 200 摘要全文逐字**：LATE theorem tells us for whom IV/RD are valid / exclusion restriction formalizes commitment to clear and consistent explanations / Chicago exam schools。**第一独立域（一手论文摘要，主证据）**。
+- `https://nber.org/papers/w25691`（Mogstad 等 2021《The Causal Interpretation of 2SLS with Multiple IVs》，AER 111(11)）— **WebFetch 200 摘要全文逐字**：positively-weighted average of LATEs / monotonicity / multiple instruments only if choice behavior effectively homogenous / at odds with data / partial monotonicity。**第二独立域（一手论文摘要，多工具主证据）**。
+- `https://nber.org/papers/w32927`（Mogstad & Torgovitsky 2024《IV with Unobserved Heterogeneity in Treatment Effects》）— **WebSearch 逐字快照**：UHTE 两策略（reverse-engineer LATE 解释 / forward-engineer MTE 估计量）。**第三独立域（一手综述摘要，异质性交叉）**。
+- **失败与降级如实登记**：SEP《instruments and causality》与 Britannica instrumental-variable-analysis 两条 URL 均命中错误/空页（Document Not Found / 无关的 NBER w18541 外汇套利），已弃用不冒充；Imbens & Wooldridge 综述 w18541 命中错误编号。LATE 四人群分类、defiers/monotonicity 的标准定义按 Angrist 与 Mogstad 摘要逐字＋<P>通用口径登记，未直读 Imbens & Angrist 1994 原论文全文，不冒充一手全文。数值/实证（芝加哥考试学校、大学回报挂各自来源口径只取定性。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 —— `工具变量` / `instrumental variable` / `两阶段最小二乘` / `2SLS` / `局部平均处理效应` / `exclusion restriction` / `combining for adaptation` 全库 0 命中（`LATE` 大写命中为 `late` 子串噪声、`弱工具` 1 命中与 `负对照` 1 命中均属异命题）。按 rules/07 四态判「**优＝加厚现有 `meta/ti-critical-reasoning`**」，补「外生工具隔离变异」这一与 §十三–§十八正交的识别层，不重述后门调整/transport/因果发现/DiD-SCM-SDID。A 轮结构映射（Gentner）原拟题因 `ai-input-enhancement` §155 已落地 systematicity/one-to-one（>60% 重叠）判「删/换道」，改取 IV。TI 模块记忆前 21 条结论不复用。豆包自留地 WB 0 落地。与 r773(OI/EI/SI)/r772(AI/VI/DI) 六模块结论不复用；B/C 两轮结论亦不复用。
+- **未采纳**：2SLS 两阶段具体估计步骤与 std errors、MTE 估计量构造与 control function 推导、弱工具的第一阶段 F 统计量阈值之争、LATE 与 ATE 的权重边界公式 —— 属计量实现细节，不迁移为通用判据。

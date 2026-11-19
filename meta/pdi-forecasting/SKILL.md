@@ -1,9 +1,9 @@
 ---
 name: meta/pdi-forecasting
-description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议、预测题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO 五策略、误差累积与随机依赖两轴、windows_identical 跨视界可比与逐视界最准互斥）。；加权评分规则与预报员困境（w(y)S 破坏适当性/threshold-weighted 与 outcome-weighted 两类/条件分不进事件概率）。；回测验证协议（purging 标签重叠与 embargo 序列相关两道漏/CPCV 把一条历史变多条路径 φ(N,k)/PBO 与 Deflated Sharpe 计试验次数/单路径不是证据）。；事件型预警评测（point-adjustment 让随机探测器拿高 F1/事件级检出率·检测延迟·单位时间误报率三栏/range-based 与 k-delay 协议/ERDE 时间惩罚）。；专家概率引出与结构化启发协议（分位数法 X05/X50/X95 拟合分布/锚定偏差两种等价提问口径分叉/IDEA 四步 Investigate-Discuss-Estimate-Aggregate/Cooke Classical Model 种子题校准与信息双评分加权/校准优先于信息性/无种子题则等权/平均专家 90% 区间只含真值 36%）。
+description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议、预测题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO 五策略、误差累积与随机依赖两轴、windows_identical 跨视界可比与逐视界最准互斥）。；加权评分规则与预报员困境（w(y)S 破坏适当性/threshold-weighted 与 outcome-weighted 两类/条件分不进事件概率）。；回测验证协议（purging 标签重叠与 embargo 序列相关两道漏/CPCV 把一条历史变多条路径 φ(N,k)/PBO 与 Deflated Sharpe 计试验次数/单路径不是证据）。；事件型预警评测（point-adjustment 让随机探测器拿高 F1/事件级检出率·检测延迟·单位时间误报率三栏/range-based 与 k-delay 协议/ERDE 时间惩罚）。；专家概率引出与结构化启发协议（分位数法 X05/X50/X95 拟合分布/锚定偏差两种等价提问口径分叉/IDEA 四步 Investigate-Discuss-Estimate-Aggregate/Cooke Classical Model 种子题校准与信息双评分加权/校准优先于信息性/无种子题则等权/平均专家 90% 区间只含真值 36%）；预测组合的场景依赖（combining for adaptation 目标追平最佳单候选 vs combining for improvement 目标超越全部候选/不看场景套方法本身即制造组合之谜/估计误差只是解释之一/把简单平均当候选的 mAFTER 自适应/最优权重增益可能小到被估计误差淹没）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.13.0"
+version: "1.14.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -432,3 +432,33 @@ Rethink Priorities《Types of specification problems in forecasting》（Juan Gi
 - **失败与降级如实登记**：Hemming 2020 取题录库摘要（非期刊全文 PDF），按摘要逐字登记；Tversky/Kahneman 附录为网络中译、非英文原书，按中译逐字；Wiley/MDPI/ISPOR 取网页或 PDF 快照，未逐页核全文。36%、90%、5/90/5、10 个种子题等数值挂各自来源口径，只取定性结论、不择一冒充唯一权威。`elicitation` 全库命中为 MCP 客户端「向用户索取信息」与豆包自留地评测取样（异命题），本轮取「专家概率引出」义。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `专家概率引出` / `结构化启发` / `IDEA protocol` / `Cooke` / ` Classical Model` / `分位数法` / `德尔菲` **本技能与全库 0 命中**（`elicitation` 命中均属 MCP/豆包异命题）。按 rules/07 四态判「**优＝加厚现有 `meta/pdi-forecasting`**」，补「无数据时的概率引出」这一上游层，与 §二超预测（有反馈的自我校准）、§八 ECE（已给概率的校准度量）分工不重述；`贝叶斯更新` 在 `meta/ti-critical-reasoning` 与 `meta/di-decision-tradeoff` 属异命题，不在 PDI 重立。PDI 模块记忆前 17 条结论不复用。豆包自留地 WB 0 落地。与 r769(OI/EI/SI)/r768(AI/VI/DI)/r767(MI/CI/RI) 九模块结论不复用；A/B 两轮结论亦不复用。
 - **未采纳**：各协议的具体软件包/在线工具实现、种子题的最优个数之争（10 vs 更多）、校准分数的 p-value 检验公式、Kullback-Leibler 信息分数的完整推导 —— 属专项实现与统计细节，不迁移为通用判据。
+
+## 二十、预测组合的场景依赖：组合之谜有一半是「没先判场景」
+
+> r774C（2026-11-19）实拉。§七管「用哪把尺评分」、§九管聚合器选型（logit 单参数为何胜过复杂加权）。本节补更前置的一层：**在选任何组合方法之前，先判这些候选预测到底可不可能被超越**——这是 Qian 等对 forecast combination puzzle 的场景化解释，§九只用「估计误差」一因解释，本节补上另一半。
+
+### 20.1（r774C-1）CFA vs CFI：组合的目标由「候选本身还有没有提升空间」决定
+- Qian/Rolling/Cheng/Yang（arXiv:1505.00475 / Econometrics 2019, 7(3):39）逐字：Stock & Watson 2004 造词「Forecast Combination Puzzle」指「**the repeated finding that simple combination forecasts outperform sophisticated adaptive combination methods in empirical applications**」。核心新解——「**A key factor missing … is the true nature of improvability of the candidate forecasts**」，于是有两场景（Yang 2004）：
+  - **Combining for Adaptation（CFA）**：「**One of the candidates is pretty much the best we can hope for … any attempt to beat it will not succeed**」，正确目标是**追平那个未知的最佳单候选**，不是超越全部。
+  - **Combining for Improvement（CFI）**：「**a significant gain of accuracy over all the individual candidates can be materialized**」，正确目标是**找到优于所有单候选的组合**以克服各自缺陷。
+- 「**Applying combining methods without consideration of the underlying scenario can itself cause the puzzle**」「**Failure to recognize these scenarios can itself result in the FCP**」——在 CFA 场景套一个为 CFI 设计的优化加权方法，结果自然输给简单平均。
+- **判据**：① 组合前先问「这些候选里是不是已有一个基本到顶」，是 → 目标是 CFA（选稳健追平的方法），否 → CFI（才追求优化加权）；② 不看场景就比「SA vs 复杂方法谁好」是苹果比橘子，结论不可迁移；③ 盲用 SA 也可能次优（CFA 里 SA 未必命中最佳单候选，CFI 里 SA 放弃可得增益）。
+
+### 20.2（r774C-2）估计误差只是一因；「最优权重增益本就很小」是互补的另一半
+- Smith & Wallis 2009（经 arXiv 逐字转述）：「**the estimator targeting the optimal weight can have large variance and consequently, the estimated optimal weight can be very different from the true optimal weight, often even more so than simple equal weight**」——估权重要 MC 个参数，样本不够时估歪，这解释了一部分 puzzle。
+- Elliott & Liao 2025（UCSD working paper《On Why Averaging beats Optimal Linear Weights》）补互补论证：要让「估计误差」成为解释，前提是「**gains from using optimal weights must be small**」；他们问「**how big can the gains from optimal combination be**」，结论「**gains can indeed be small, and that for gains to be large the best approach to forecast combination is to discard some of the forecasts and average over the remaining ones**」。鲁利亚（Lirias）理论文给出分解：var(y_c)=(Ew)'Σ_yy(Ew)+tr(Σ_ww Σ_yy)，等权组合方差只有 ι'Σ_yy ι/m² 一项，估计权重多了 Σ_ww 与偏差项。
+- **判据**：① 「复杂方法输给 SA」别只归咎样本小——也可能是**最优权重相对 SA 的理论增益本来就小**；② 授予「优化加权」前先估潜在增益，增益小就别付估计成本的价；③ 增益要大时正确动作常是**丢掉部分候选再平均**（而非给全部候选估精细权重），与 §九「待估参数越少越稳」同向。
+
+### 20.3（r774C-3）把简单平均当候选：mAFTER 自适应场景，避免 SA 的不稳也保留其稳健
+- Qian 等逐字：multi-level AFTER（mAFTER）——「**first, we construct three new candidate forecasts using SA, AFTER and LinReg; second, we apply the AFTER algorithm on these new candidate forecasts**」「**by treating the simple average as a candidate forecast, the proposed strategy is shown to avoid the heavy cost of estimation error and, to a large extent, solve the forecast combination puzzle**」。「**mAFTER can perform aggressively to target the optimal weight when information is sufficient … and perform conservatively like SA when the degree of estimation error is high**」。
+- Tinbergen《The Evolution of Forecast Density Combinations》逐字核对 Bates & Granger 1969 正统：最优权重 = 对实现值回归各点预测、约束 Σw=1 的最小二乘估计（"optimal" 仅限最小化 RMSE）；「**it is often hard to beat an equal weighted combination**」这一 stylized fact；Smith & Wallis 用参数估计误差解释、Elliott 2017 用序列可预测性解释（不可预测成分越大、优化加权潜在增益越小）。
+- **判据**：① 把 SA 作为**一个候选**纳入自适应选择，而不是「SA vs 优化」二选一——信息足时激进用权重、估计误差大时自动退回 SA；② 与 §九的分工要记清：§九管聚合器选型（logit 单参数 vs 复杂加权），本节管**组合场景判定 + 是否把 SA 纳入候选**，均不改 Brier/评分尺（§七）；③ 组合结论迁用前声明场景（CFA/CFI）与样本相对候选数的比例。
+
+### r774C 来源与判非（2026-11-19 实拉，逐字核验）
+- `https://arxiv.org/html/1505.00475`（Qian 等《On the Forecast Combination Puzzle》，arXiv:1505.00475 / Econometrics 2019）— **WebFetch 200 全文逐字**：FCP 定义（Stock&Watson 引文）/ CFA vs CFI 两场景原文 / failure to recognize scenarios causes FCP / Smith&Wallis 估计误差 / mAFTER 两步与把 SA 当候选。**第一独立域（一手论文全文，主证据）**。
+- `https://www.mdpi.com/2225-1146/7/3/39/htm`（同文 MDPI 正式发表版）— **WebFetch 200 摘要与引言逐字**：puzzle 三解释（estimation error / invalid weighting formulas / screening）、CFA-CFI 区分、multi-level AFTER。**第二独立域（正式发表版，与第一交叉校核）**。
+- `https://econweb.ucsd.edu/~gelliott/Combination.pdf`（Elliott & Liao 2025《On Why Averaging beats Optimal Linear Weights》）— **WebSearch 逐字快照**：gains-from-optimal 互补论证、增益小、增益大则丢弃部分预测再平均。**第三独立域（一手工作论文，互补解释主证据）**。
+- `https://lirias.kuleuven.be/retrieve/373254`（鲁利亚《forecast combination puzzle: simple theoretical explanation》）＋ `https://papers.tinbergen.nl/18069.pdf`（Tinbergen《Evolution of Forecast Density Combinations》）— **WebFetch/WebSearch 逐字快照**：方差分解式 + Smith&Wallis 三条结论 + Bates&Granger 最优权重正统 + equal-weight hard to beat。**第四～五域（理论论文/机构工作论文，交叉登记）**。
+- **失败与降级如实登记**：Elliott & Liao 与 Tinbergen 两篇 PDF 仅取 WebSearch 索引摘要/页面逐字，未逐页核 PDF 全文（WebFetch 对 PDF 返回 non-text resource），按摘要口径登记；Bates & Granger 1969 原论文未直读，最优权重定义经 Tinbergen 转述；Smith & Wallis 2009 经 Qian 与 Lirias 转述，不冒充直读原论文。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 —— `combining for adaptation` / `combining for improvement` / `mAFTER` / `discard some` **全 0 命中**；`forecast combination puzzle` / `简单平均` 在 §九（r746 聚合器选型）已命中——故本轮**换道**取 §九未覆盖的「CFA/CFI 场景区分 + 估计误差互补论证 + mAFTER 把 SA 当候选」正交子面，不重述 §九「logit 单参数 vs 复杂加权/偏差校正与极端化分栏」。按 rules/07 四态判「**优＝加厚现有 `meta/pdi-forecasting`**」。TI 模块 r769(OI/EI/SI)/r768(AI/VI/DI) 六模块结论不复用；A/B 两轮结论亦不复用。豆包自留地 WB 0 落地。
+- **未采纳**：AFTER/mAFTER 算法的逐步实现与损失界证明、CFA/CFI 的统计判别检验公式、Bates-Granger 协方差矩阵估计细节、密度组合的 linear opinion pool 展开 —— 属专项统计实现，不迁移为通用判据。

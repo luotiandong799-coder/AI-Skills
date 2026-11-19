@@ -1,9 +1,9 @@
 ---
 name: media/pi-audio
-description: 音频感知（Audio/Speech Perception）。当需要把录音/会议/播客/通话转成文字、标"谁在什么时候说了什么"、生成字幕、做语音合成（TTS）、识别音频事件（警报/音乐/故障声）或理解音频内容时调用。提供 ASR 选型（AudioTranscribe 本地/Whisper API/faster-whisper/whisperX）、长音频分段并行、VAD 去静音防幻觉、pyannote 说话人分离与时间戳对齐、LLM 后处理、SRT/VTT 输出、TTS 与隐私护栏。不用于音视频格式转码（走 rg-ffmpeg-tools）、图像理解（走 multimodal-intelligence）。；响度归一化与 LUFS 测量口径（K-weighting/双门控/M·S·I 三时间常数/真峰 dBTP）。
+description: 音频感知（Audio/Speech Perception）。当需要把录音/会议/播客/通话转成文字、标"谁在什么时候说了什么"、生成字幕、做语音合成（TTS）、识别音频事件（警报/音乐/故障声）或理解音频内容时调用。提供 ASR 选型（AudioTranscribe 本地/Whisper API/faster-whisper/whisperX）、长音频分段并行、VAD 去静音防幻觉、pyannote 说话人分离与时间戳对齐、LLM 后处理、SRT/VTT 输出、TTS 与隐私护栏。不用于音视频格式转码（走 rg-ffmpeg-tools）、图像理解（走 multimodal-intelligence）。；响度归一化与 LUFS 测量口径（K-weighting/双门控/M·S·I 三时间常数/真峰 dBTP）；声音事件检测 SED 评测口径（segment-based F1/ER vs event-based collar F1 vs PSDS 交集匹配/DTC·GTC·αCT·αST 参数/50 工作点/threshold-independent/跨数据集与年份分数不可比）。
 module: PI
 modules: PI
-version: "1.2.0"
+version: "1.3.0"
 ---
 
 # PI · 音频感知（Audio / Speech Perception）
@@ -138,3 +138,31 @@ EBU 官方点 5 逐字「There are **three time constants which differ in the in
 - `https://www.itu.int/rec/R-REC-BS.1770-5-202311-I`（ITU-R BS.1770-5, 2023-11）与 `https://tech.ebu.ch/publications/r128`（EBU R 128 正式发布页）— 由 Quantara 官方 Sources 段给出，用于核对标准编号与版本，**本轮未单独 WebFetch 全文**，如实登记为标准索引而非一手正文。
 - **判非**：窄串全库 `SKILL.md` 精确扫描（97 文件）— `LUFS` / `EBU R128` / `BS.1770` / `K-weighting` / `relative gate` / `absolute gate` / `dBTP` / `Loudness Range` / `Integrated` / `-23 LUFS` / `inter-sample` / `QPPM` / `gated loudness` / `ReplayGain` / `LKFS` **全 0 命中**；`gating` 6 命中在 `agent/agent-guild`（入站门控）/ 豆包自留地（准入门）等异命题、`Short-term` 1 命中在 `defaults/wb-context-compressor`（豆包自留地）、`LRA` 2 命中为子串噪声（豆包自留地与 execute-discipline 的缩写），均非响度测量。**豆包自留地 WB 0 落地**。与本技能 §r708C（DER 三分量 / collar / no_speech_prob / 幻觉过滤）结论不复用：那条管分离与转写正确性，本条管电平与感知响度；A/C 两轮信源域与结论亦不复用。
 - **未采纳**：各流媒体平台的具体目标值随时间可能调整（表中数值仅作 2026-11-15 快照，不作为长期事实）；ATSC A/85 与 CALM Act 的法规合规流程、EBU Tech 3341/3342 的仪表实现细节、母带处理与压缩器参数，属专门工程或地域法规，只取可迁移的测量口径判据。**EBU 官方 2 页 flyer 中 `true peak` 0 命中**，-1 dBTP 由三域交叉得到，未冒充官方 flyer 一手。
+
+## 声音事件检测（SED）评测口径：三族分数不跨族比、参数冻结才可复现
+
+> r774B（2026-11-19）实拉。上文 DER/JER/WDER 管「谁在说话」的说话人日志，响度节管「多大声」，本节管「出现了什么声音事件、何时开始结束」的评测——三类问题用三套度量，互不替代。
+
+### 13.1（r774B-1）三族评测：segment-based、event-based(collar)、PSDS 是三种不同工作
+- segment-based（DCASE 2017 / 2024 Task4）：把时间切成 1 秒段，逐段判类是否 active，算 micro/macro F1 与 error rate（ER=替换+删除+插入 / 参考事件数，借自语音识别）；阈值固定 0.5。
+- event-based collar F1（DCASE 2018–2020）：整事件匹配，onset 容 200ms、offset 容 200ms 或事件时长 20% 取大者；**分数依赖所选阈值与 collar**，不同论文的 F1 数字不可直接比。
+- PSDS（polyphonic sound detection score，2021–2023 主指标）：按**事件交集**而非固定 collar 匹配，对主观标注边界更稳；扫 50 个工作点（0.01–0.99 线性）画 TPR–每小时误报 ROC 压成一个数。DCASE 2024 又引入 threshold-independent PSDS（用带时间戳的分数而非检出事件）。
+- **判据**：① 报 SED 分数必须写「哪一族 + 阈值/工作点 + collar 或交集参数 + 在哪个数据集哪个类集上算」；② segment F1 高不等于 event F1 高（一个跨多段的事件在 segment 里被重复计），两者分开报；③ DCASE 自己声明 2023 threshold-independent PSDS 与往年不可直接比，跨年分数别并排行。
+
+### 13.2（r774B-2）PSDS 参数是策略声明不是可调旋钮；ranking 是多指标拼接
+- DCASE 2024 Task4 官方逐字参数：DTC（Detection Tolerance criterion）0.7 / GTC（Ground Truth intersection）0.7 / αST（类间不稳定代价）1 / αCT（交叉触发对用户代价）0 / e_max 100。Collar F1 对照指标：onset 200ms / offset 200ms 或 20% 取大，阈值 0.5。
+- 早期两年两场景：scenario1（DTC/GTC 0.7，快速反应如报警，定位重要）vs scenario2（DTC/GTC 0.1 + cttc 0.3，避免类间混淆、反应时间次要）；最终排名 = 两场景 PSDS 各按 baseline 归一化后相加。DCASE 2024 ranking = pAUC_M（MAESTRO 集/类）+ PSDS（DESED 集/类）**之和**——两个不同数据集、不同类集、不同指标的拼接。
+- **判据**：① 引用 PSDS 必附 DTC/GTC/αCT/αST/e_max 五参数，缺一即不可复现；② 排名分是拼接量，不能反推「PSDS 高多少」的单项改进；③ 要快响应用 scenario1 参数、要少混淆用 scenario2，别拿一套参数声称覆盖全部应用。
+
+### 13.3（r774B-3）参考标注主观、合成训练与真实评测分离、多 run 标准差与能耗入账
+- aiunderstanding 逐字：参考标注有主观性（DCASE 组织者查 AudioSet 片段发现不少并不含所标事件）；合成声景训练的模型在真实录音上吃力；短/轻/重叠加事件与稀有类易漏；**分数依赖 metric/collar/threshold，跨论文常不可比**。
+- DCASE 2024 强制：三次不同初始化独立训练的输出分数（处理后+未处理）都要交，以评模型性能**标准差**；置信区间基于三次 run + 评测集 bootstrap。能耗（kWh，CodeCarbon，训练 + devtest 推理）当年起**强制上报**，另加 MACs/10s（THOP）作为计算复杂度补充。
+- **判据**：① 单 run 分数不当结论，至少三次初始化报标准差/置信区间；② 合成集成绩与真实集成绩分开报，排名只看真实集；③ 能耗与算力作为独立列，别把「PSDS 提升」与「用了多少算力」混成一个数。
+
+### r774B 来源与判非（2026-11-19 实拉，逐字核验）
+- `https://dcase.community/challenge2024/task-sound-event-detection-with-heterogeneous-training-dataset-and-potentially-missing-labels`（DCASE 2024 Task4 官方）— **WebFetch 200 全文逐字**：segment 五指标、PSDS 五参数（DTC .7/GTC .7/αST 1/αCT 0/e_max 100）、collar 200ms/20%、ranking=pAUC_M+PSDS、三 run 标准差、能耗强制、MACs。**第一独立域（赛事官方一手，主证据）**。
+- `https://www.emerald.com/atsip/article/13/1/1/1331409/Sound-Event-Detection-A-Journey-Through-DCASE`（Emerald 综述《A Journey Through DCASE Challenge Series》）— **WebSearch 逐字快照**：2013 AEER→2016 total ER→2017 segment ER→2018–2020 event F1 collar→2021–22 PSDS 50 工作点两场景→2023 threshold-independent PSDS、scenario1/2 定义、排名归一化相加。**第二独立域（学术综述一手，年份谱系交叉）**。
+- `https://dcase.community/challenge2020/task-sound-event-detection-and-separation-in-domestic-environments` + `https://dcase.community/challenge2022/task-sound-event-detection-in-domestic-environments` + `https://aiunderstanding.org/learn/sound-event-detection`（DCASE 官方历年页 + 技术长文）— **WebFetch/WebSearch 逐字快照**：PSDS 三形态（cross-trigger/macro）、αCT/αST 含义、PSDS 由 Bilen 等 ICASSP 2020 提出、标注主观性、合成vs真实、跨论文不可比、手算 F1 例。**第三～五域（官方历年/技术长文，交叉登记）**。
+- **失败与降级如实登记**：Mesaros 2016《Metrics for Polyphonic SED》原论文（MDPI）只取 DCASE 官方页转述的摘要与书目，未直读全文；Bilen PSDS 原始论文只取技术长文转述，不冒充已读全文；DTC/GTC 数值挂 DCASE 2024 官方口径，scenario 参数挂 2022 官方口径，不混为同一套。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 —— `sound event detection` / `声音事件检测` / `PSDS` / `polyphonic` / `Detection Tolerance` / `event-based F1` **全 0 命中**；`collar` 命中在 `engineering/pi-perception` 与本节上文 r708C（都是**说话人日志 diarization** 的 forgiveness collar，异命题：那是「谁在说话」，本轮是「什么事件、交集匹配」）。按 rules/07 四态判「**优＝加厚现有 `media/pi-audio`**」，SED 是音频评测的自然延伸，不重述上文 DER/WER/响度。PI 模块记忆前 17 条结论不复用。豆包自留地 WB 0 落地。与 r773(OI/EI/SI)/r772(AI/VI/DI) 六模块结论不复用；A/C 两轮结论亦不复用。
+- **未采纳**：sed_eval / sed_scores_eval / psds_eval 具体实现、CodeCarbon/THOP 工具用法、各参赛队排名分数、SCM 类教程细节 —— 属工具/赛事结果，不迁移为通用判据。
