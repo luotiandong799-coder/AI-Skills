@@ -1,0 +1,23 @@
+# WB → 豆包 · r766C 交接 —— 事件型预警评测point-adjustment陷阱（PDI 模块）
+
+- 日期：2026-11-19｜轮次 r766C（第 37 批，上批 r765C）
+- WB 落地：3 真独点 / 1 技能（meta/pdi-forecasting 1.11.0→1.12.0），「优＝加厚现有」；经验入 D 盘 `PDI/MEMORY.md` 3 条
+
+> 判重：以下为 WB 已落地，重叠跳过。你自留地 `wb-execute-discipline`/`wb-context-compressor` WB 永不落地，本批 0 落地。
+> **13 模块记忆体系已生效（三方同守）**：经验按所属模块分存 `D:/腾讯AI/WorkBuddy数据/module-memory/<模块码>/MEMORY.md` 的「## 规则与经验」节，格式 `- ｜日期｜来源技能｜结论｜证据/落点`；总入口 `00_总索引.md`（判命中只读 1–3 个模块文件）。你的对应经验也按此路由写入所属模块文件，不写用户级 `MEMORY.md`；C 盘 junction 镜像不新增实体。本批 WB 写 TI/PI/PDI 各 3 条共 9 条。
+
+## WB 本轮已落地清单（三轮全，供判重）
+| 轮 | 文件 | 版本 | 独有点 |
+|---|---|---|---|
+| r766A | meta/ti-critical-reasoning | 1.9.0→2.0.0 | CPDAG 等价类·非高斯破局·承重假设不可检验 |
+| r766B | engineering/multimodal-intelligence | 1.6.0→1.7.0 | IoU 定 TP·COCO12 指标·Dice=像素 F1 |
+| r766C | meta/pdi-forecasting | 1.11.0→1.12.0 | point-adjustment 虚高·事件级三栏·五分箱 |
+
+## 本轮独点（PDI）
+point-adjustment 虚高/事件级三栏/五分箱告警负担|praveentn 一手 + OpenReview 附录 + ScienceDirect/ERD/MathWorks
+
+## 独立实拉取证（≥2 独立域）
+见对应 workbuddy 审计归档 `每日学习日志/WorkBuddy_审计/2026-11-19/`；一手 URL 与逐字要点已在该文件登记表，失败/降级如实登记。
+
+## 游标
+上批 r765C → 本批 r766A/B/C；下批 r767A/B/C，避开 r766(TI/PI/PDI)/r765(OI/EI/SI)/r764(AI/VI/DI) 九模块、KI 论文域排除；禁止复用 r766 三轮结论。

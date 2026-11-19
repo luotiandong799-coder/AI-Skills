@@ -1,9 +1,9 @@
 ---
 name: meta/pdi-forecasting
-description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议、预测题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO 五策略、误差累积与随机依赖两轴、windows_identical 跨视界可比与逐视界最准互斥）。；加权评分规则与预报员困境（w(y)S 破坏适当性/threshold-weighted 与 outcome-weighted 两类/条件分不进事件概率）。；回测验证协议（purging 标签重叠与 embargo 序列相关两道漏/CPCV 把一条历史变多条路径 φ(N,k)/PBO 与 Deflated Sharpe 计试验次数/单路径不是证据）。
+description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议、预测题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO 五策略、误差累积与随机依赖两轴、windows_identical 跨视界可比与逐视界最准互斥）。；加权评分规则与预报员困境（w(y)S 破坏适当性/threshold-weighted 与 outcome-weighted 两类/条件分不进事件概率）。；回测验证协议（purging 标签重叠与 embargo 序列相关两道漏/CPCV 把一条历史变多条路径 φ(N,k)/PBO 与 Deflated Sharpe 计试验次数/单路径不是证据）。；事件型预警评测（point-adjustment 让随机探测器拿高 F1/事件级检出率·检测延迟·单位时间误报率三栏/range-based 与 k-delay 协议/ERDE 时间惩罚）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.11.0"
+version: "1.12.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -375,3 +375,30 @@ Rethink Priorities《Types of specification problems in forecasting》（Juan Gi
 - **失败与降级如实登记**：PBO 原始论文仅取得 SSRN 官方摘要页与著录（全文 PDF 未取得），CSCV 的算法细节以 Qlumina/Keel 全文与快照交叉，不冒充已读原论文全文；DSR 公式取 nvestiq 转述，标注第三方实现口径。不同来源对 PBO 的「健康阈值」表述不一（Bailey 自用 0.5 / 从业者推荐 <0.1），登记为口径差，不强行择一。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `PBO` / `CPCV` / `embargo` / `Deflated Sharpe` / `combinatorial` **目标技能 0 命中**；`purg` 在本技能 §15.3 仅作二手教学站一句话背景提及并明确判非未展开（r754C），本轮是正式展开其完整协议，按 rules/07 四态判「**优＝加厚现有 `meta/pdi-forecasting`**」，与 §15.3 分工见本节开头；其他 `purg`/`过拟合` 命中在 `meta/di-decision-tradeoff`、`engineering/vi-fact-verification`、`wb-release-maintain` 等（异命题或口号级）。豆包自留地 WB 0 落地。与 r760(AI/VI/DI)/r761(OI/EI/SI) 九模块结论不复用；A/B 两轮结论亦不复用。
 - **未采纳**：CSCV 的完整 SBO/logit 数学推导与 log(N) 期望最大公式、最小回测长度具体曲线、Monte Carlo permutation 八项评分卡阈值、各策略逐回测数值与交易成本模型 —— 属专门数学证明与策略 benchmark，不迁移为通用判据。
+
+## 十八、事件型预警评测：异常是区间不是点，point-adjustment 能让随机探测器拿高分（r766C · 2026-11-19 实拉，≥2 独立域交叉）
+
+> 与 §十三（题面可结算性）/ §十七（回测防过拟合）分工：那两节判「题能不能结算、模型是不是选出来的」；本节判**预警/异常检测器本身怎么评分**——异常是持续区间，逐点 P/R 与 point-adjustment 都测错对象。VOI/EVPI 已在 `meta/di-decision-tradeoff` §八/§十五落地本体（四把尺、门槛阶梯），本轮按去重铁律**不在 PDI 重述**，只处理预警评分。
+
+### 18.1（r766C-1）逐点 P/R 测错对象：真实异常是区间，一次告警运营上就够
+- praveentn 一手逐字：「Real anomalies are intervals, not instants: an outage lasts twenty minutes, a degradation lasts an afternoon」；逐点 P/R 双向失真——「A detector that flags one point inside a long anomaly has detected it operationally and scores near zero on recall. A detector that flags a long window overlapping a short anomaly scores well on recall for a mostly wrong alert」。运营问题是事件级三问：每个异常事件是否检出、延迟多少、发了多少对应不到事件的告警。
+- **判据**：异常/预警场景禁直接用逐 timestamp 的 accuracy/F1 当结论；accuracy 在异常占比不足 1% 时无意义，F1 被多数类主导。改报事件级三栏（检出率/延迟/单位时间误报），与 PR 曲线 + 告警预算联读。
+
+### 18.2（r766C-2）point-adjustment 是虚高机器：随机告警器也能拿高分
+- 逐字定义与危害：point-adjustment = 「if any point within a ground-truth anomaly window is flagged, mark the entire window as correctly detected, then compute per-point metrics」；「a detector emitting random alerts at a modest rate will hit at least one point in most long anomaly windows, and each hit is credited with the whole window」；「random or trivially simple detectors achieve high F1 under this protocol on standard benchmarks，故 published comparisons using it do not establish what they appear to」。OpenReview 附录逐字：长异常区间被冗余逐点告警多次奖励（artificial inflation），而且 Best-F1 还要扫阈值取最大——阈值选择偏差叠加。
+- 诚实的替代协议（逐字）：**Event F1**——「treats each maximal contiguous anomalous interval as a single event and measures precision/recall over events」，任一预测与该区间重叠即判检出，把事件时长与检测能力解耦；**F1-k-delay**（B-F-5/E-F-5，k=5）——「an anomalous interval is counted as detected only if the first predicted alarm occurs within the first k time steps after the onset」，迟到算 miss；**range-based P/R**——显式给 partial overlap 加权（存在/大小/位置），惩罚碎片化告警，防「firing off thousands of short, random alerts」；另有 affiliation metric（预测与 GT 事件的有向距离）、VUS-PR（volume under surface，抗标注滞后）、PA%K（需检出片段达 K% 才给分）。
+- ERD（Early Risk Detection）专用 **ERDE** 把时间直接写进误差：`ERDE_θ(d,k)={c_fp,FP; c_fn,FN; lc_θ(k)·c_tp,TP; 0,TN}`，`lc_θ(k)=1−1/(1+e^(k−θ))`——越晚的真阳性罚得越接近 c_tp；与之并列的 F-latency、lead-time 都是时间感知指标。
+- **判据**：读任何预警 F1 先问「哪种协议、k 或 θ 多少、是否 point-adjusted」；point-adjusted 高分不作为 detector 可用的证据。报预警能力固定三栏——事件级检出率 / 检测延迟（onset 后多久首个告警）/ 单位时间误报率；三栏缺一即不可判定系统是否可用。
+
+### 18.3（r766C-3）早期预警五分箱与告警负担：On-time 之外还要看 Early/Late/Missed/False
+- ScienceDirect 早期预警框架逐字：以 `TWARNING=timeEVENT−timeWARNING`、预设定 `TMIN`（还能采取有意义行动的最小提前量）与 `TMAX`（有意义预警的最大提前量）把每条告警分五箱——**False**（非事件记录）、**Early**（TWARNING≥TMAX）、**On time**（TMAX>TWARNING≥TMIN）、**Late**、**Missed**；「An ideal warning system will have a distribution with bin On Time=1 while other four bins=0」。两条画像：warning-proportion 时间profile 估「事件发生时给预警的概率」（类似 PPV），warning-per-record profile 估「被预警事件占全部事件比例」（类似 sensitivity）与「被预警非事件比例」（类似 FPR）；**单记录多次告警时后四箱之和>1，正是 warning burden（告警负担）**。
+- **判据**：预警系统验收把五分箱画成分布，不压成单一 TP/FP；理想不是「预警越多越好」而是 On-time 箱高、其余箱（尤其 False 与 Late）低；TMIN/TMAX 须按应用场景预先由领域知识定，不能看完结果再选。
+
+### r766C 来源与判非（2026-11-19 实拉，逐字核验）
+- `https://nap.nationalacademies.org/read/12568/chapter/7`（《Environmental Decisions in the Face of Uncertainty》，National Academies Press 2013，Box 5-3）— 本轮曾评估但**判非未落地**：VOI/EVPI/EVSI/EVIU 的「四把尺 + 上限 + 零价值条件」已在 `meta/di-decision-tradeoff` §八/§十五完整落地，按去重铁律不在 PDI 重述；本轮只借其「若没有任何结果会改变决策，则信息价值为零」作为 §十三题面可结算性的旁证，不新增 VOI 章节。**第一域（已落他处，判非登记）**。
+- `https://praveentn.live/learn/concepts/evaluating-anomaly-detectors`（异常检测器评测专文）— **WebFetch / WebSearch 逐字快照**：逐点 P/R 两种失真、point-adjustment 机制与「random detectors achieve high F1」、事件级三栏（detection rate / detection delay / false alarms per unit time）、range-based P/R、标签不可靠/基准过易/极端不平衡/必须在线四失效面。**第二独立域（方法一手，主证据）**。
+- `https://openreview.net/pdf/306465cef622bba5b8ee62a89e1120cb2d46971b.pdf`（TAD benchmark 线性模型评估，OpenReview 附录）— **WebSearch 逐字快照**：Best F1=point-adjustment 阈值扫描、Event F1（Si et al. 2024）定义、F1-k-delay（B-F-5/E-F-5，k=5 onset 窗）逐字。**第三独立域（会议论文附录，与专文交叉）**。
+- `https://www.sciencedirect.com/science/article/abs/pii/S2215016119301785`（早期预警指数告警系统性能刻画框架，ScienceDirect）＋ `https://api.emergentmind.com/topics/early-risk-detection-erd`（ERD 指标：ERDE/F-latency/lead-time 公式）＋ `https://www.mathworks.com/help/predmaint/ref/timeseriesanomalymetrics.html`（MathWorks timeSeriesAnomalyMetrics 官方：standard vs point-adjusted、MinAnomalyFraction、DetectionDelay 参数）— **WebFetch / WebSearch 逐字快照**：五分箱与 TMIN/TMAX、warning burden、ERDE 惩罚函数、MATLAB point-adjusted 实现口径。**第四～六域（期刊/主题聚合/工具官方，交叉登记）**。
+- **失败与降级如实登记**：ScienceDirect 仅取摘要页逐字，未冒充已读全文；OpenReview 附录 PDF 为逐字快照，正文主结论未逐页核；ERDE 公式取主题聚合站转述，标注二手。VOI 一手 NAP 页抓取成功但**判非不落地**（他技能已覆盖），如实登记本轮改为事件型预警评分。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 —— `point-adjustment` / `Event F1` / `事件级检出` / `ERDE` / `k-delay` **本技能 0 命中**；`VOI`/`EVPI` 命中在 `meta/di-decision-tradeoff` §八/§十五（本体已落地，本轮避开）。按 rules/07 四态判「**优＝加厚现有 `meta/pdi-forecasting`**」，补「预警检测器评分」这一正交层，与 §十三题面结算、§十七回测防过拟合分工不重述；本技能与 `engineering/vi-fact-verification` 的谱偏倚（r764B）分工：那节点评「诊断试验准确率」，本节点评「时序预警评分协议」。PDI 模块记忆前 17 条结论不复用。豆包自留地 WB 0 落地。与 r765(OI/EI/SI)/r764(AI/VI/DI)/r763(MI/CI/RI) 九模块结论不复用；A/B 两轮结论亦不复用。
+- **未采纳**：affiliation metric 的有向距离公式、VUS 的完整积分实现、PA%K 的具体 K 值标定、MathWorks 全部无监督指标清单 —— 属专项实现与参数标定，不迁移为通用判据。

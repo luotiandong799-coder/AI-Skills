@@ -1,8 +1,8 @@
 ---
 name: multimodal-intelligence
 description: >-
-  多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。色彩管线与色差口径：sRGB 传递函数与线性光、ICC 渲染意图与 D50 PCS、ΔE 公式版本与观察条件四元验收。；主观评测协议（六项控制/MOS+95%CI/ΔSCI 与人数/ACR·DSIS·DSCQS·ACR-HR 选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。
-version: 1.6.0
+  多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。色彩管线与色差口径：sRGB 传递函数与线性光、ICC 渲染意图与 D50 PCS、ΔE 公式版本与观察条件四元验收。；主观评测协议（六项控制/MOS+95%CI/ΔSCI 与人数/ACR·DSIS·DSCQS·ACR-HR 选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。；目标检测与分割评测口径（IoU 定阈值 TP/FP/FN、COCO mAP=12 指标与 10 个 IoU 阈值平均、AP 与 mAP 不区分、Dice=像素 F1 与 IoU 单调等价、mIoU 与 PixelAccuracy 分报、mask/box 同协议只换 IoU 算法）。
+version: 1.7.0
 module: PI
 modules: PI
 ---
@@ -219,3 +219,30 @@ ACM JCDL 2026《Accessibility Annotations as OCR Ground Truth》四指标互补�
 - **失败与降级如实登记**：arxiv HTML 页 AI 摘要 **60s 超时**，取前 15,000 / 50,850 字原文逐字（表 3/4 的数值由同批 WebSearch 对该页的逐字快照补齐）；ANU PDF 与 Springer 正文页只有摘要/著录与部分图注可读，按快照登记，未冒充已读全文。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `SPICE` / `CIDEr` / `METEOR` / `图像描述` / `caption` / `BLEU` **目标技能 `engineering/multimodal-intelligence` 0 命中**；其他命中在 `media/wb-visual-gen`（文生图，异命题）、`meta/agent-evolution`、`wb-media-forensics`（取证，异命题）、豆包自留地 `wb-context-compressor` 及大量 co-learn 历史记录。按 rules/07 四态判「**优＝加厚现有 `engineering/multimodal-intelligence`**」，补的是「生成式描述评测」这一正交层，不重述 §6 CER/WER、§7 阅读顺序、§8 FR/RR/NR、§9 色彩、§10 主观测试。PI 模块记忆前 16 条结论不复用。豆包自留地 WB 0 落地。与 r760(AI/VI/DI)/r761(OI/EI/SI) 九模块结论不复用；A/C 两轮结论亦不复用。
 - **未采纳**：SPICE 完整场景图解析规则与 WordNet 同义词匹配实现、各挑战赛逐系统分数、组合指标 EvalMS/EvalCS 训练细节、Flickr30k 数据集划分 —— 属实现细节与 benchmark 数值，不迁移为通用判据。
+
+## 十二、目标检测与分割评测：IoU 阈值决定 TP，mAP 是多阈值平均（r766B · 2026-11-19 实拉，≥2 独立域交叉）
+
+> 与 §六～§十一分工：那几节评的是「OCR 文字/图像质量/主观面板/生成字幕」；本节评的是**目标定位与像素分割**这一族任务，判据各自独立，不重述 CER/WER、色彩、主观测试或 SPICE。
+
+### 12.1（r766B-1）IoU≥阈值才计 TP：先定阈值再算 P/R/F1，同一预测换阈值结论会翻
+- ZOOZ 工程逐字：2D box 的核心是 `IoU=overlap_area/union_area`；`IoU≥threshold → TP`，`IoU<threshold 或无匹配 GT → FP`，GT 无匹配预测 → FN；再由 TP/FP/FN 算 Precision=TP/(TP+FP)、Recall=TP/(TP+FN)、F1。AP = PR 曲线下面积，mAP = 各类 AP 均值（COCO 上还跨 0.50–0.95 的 IoU 阈值再平均）。
+- 逐字解释为何用 IoU 不用中心距：「Two boxes can have the same center distance but very different overlap if one is much larger; IoU captures both position and size accuracy」。实例分割 `Mask_IoU=overlap_pixels/union_pixels`，TP 判据同逻辑；语义分割逐类 `IoU_c=TP_c/(TP_c+FP_c+FN_c)`、mIoU=各类 IoU 均值；关键点用 OKS 而非 IoU（按对象尺度 s 与关键点容忍 k_i 的高斯加权）。
+- **判据**：凡报检测/分割的 P/R/F1，必须附 IoU 阈值（0.5 宽松 / 0.75 严格 / 0.5:0.95 多阈值）与匹配规则（一个 GT 是否只匹配一个预测）；不写阈值的「准确率」不可比。
+
+### 12.2（r766B-2）COCO 的 12 指标：AP 与 mAP 不区分、10 阈值平均奖励定位、尺度与 AR 是独立维度
+- COCO 官方逐字：主指标 **AP @ IoU=.50:.05:.95（primary challenge metric）**，另有 `AP^IoU=.50`（PASCAL VOC metric）与 `AP^IoU=.75`（strict metric）；**「Traditionally, this is called 'mean average precision' (mAP). We make no distinction between AP and mAP」**。跨 10 个 IoU 阈值（.50:.05:.95）平均，「Averaging over IoUs rewards detectors with better localization」——这是刻意打破单阈值 .50 传统。
+- 尺度档逐字：`AP_small/AP_medium/AP_large`（area<32² / 32²<area<96² / area>96²，按 segmentation mask 像素数计），COCO 中约 41% 小、34% 中、24% 大；`AR_max=1/10/100` 是「给定每图最多 1/10/100 个检测时的最大召回」，最多 100 个 top-scoring 检测/图；默认 `iouThrs=.5:.05:.95`（T=10）、`recThrs=0:.01:1`（R=101）、`areaRng` 四档、`maxDets=[1 10 100]`（M=3）。**「detection with bounding boxes and segmentation masks are identical in all respects except for the IoU computation」**——box/mask 只差 IoU 在框还是掩码上算。
+- **判据**：报 COCO 系分数固定写清「AP 还是 AP50/AP75、是否跨尺度、maxDets 多少」；跨尺度分报 small/medium/large，不用总体 AP 掩盖小目标失效。AP=mAP 在此口径下同义，禁把两者当两个独立指标相加。
+
+### 12.3（r766B-3）Dice=像素 F1=2·IoU/(1+IoU)：与 IoU 单调等价但数值不可混报，mIoU 才是语义分割主指标
+- 逐字：Dice `=2|A∩B|/(|A|+|B|)=2TP/(2TP+FP+FN)`，「literally the F1 formula, so Dice = F1 for binary pixel classification」；`Dice=2·IoU/(1+IoU)` 与 IoU 单调相关、对同一模型排序相同，但数值不同，医学影像偏好 Dice（作 Dice Loss）；IoU「tends to penalize false positives more heavily than the DSC」。
+- 语义分割主指标是 mIoU，「PixelAccuracy can be skewed by majority classes」——95% 背景全预测背景得 95% pixel accuracy 却什么也没抓住；实例分割 AP_mask 与检测 AP 同协议、只把 IoU 换成 mask IoU；全景分割用 PQ=SQ×RQ。图像生成另走 FID（Inception 特征分布 Fréchet 距离，越低越好），与检测/分割不是同一族。
+- **判据**：① Dice 与 IoU 可互相换算、排序一致，但**数值不能混用或跨指标比较**；② 类别不平衡时禁报 pixel accuracy 当主指标，报 mIoU；③ 检测 mAP、分割 mIoU/Dice、生成 FID 分属不同任务族，禁把单一分数跨族比较「谁更好」。
+
+### r766B 来源与判非（2026-11-19 实拉，逐字核验）
+- `http://cocodataset.org/#detections-eval`（COCO 官方检测评测页）— **WebFetch 200 全文逐字**：12 指标定义、AP 与 mAP 不区分、10 IoU 阈值 .50:.05:.95、尺度档与 41/34/24% 分布、AR maxDets、params 默认值（R=101/T=10/A=4/M=3）、box 与 mask 同协议只换 IoU 算法、analyze() 的 C75/C50/Loc/Sim/Oth/BG/FN 错误分解与 ResNet AP .399→定位完美 .682 的数值。**第一独立域（基准官方一手）**。
+- `https://engineering.zooz.com/.../the-human-intelligence-behind-machine-vision-...`（ZOOZ Engineering 标注与指标长文）— **WebFetch / WebSearch 逐字快照**：2D/3D box 的 IoU 与 TP/FP/FN、BEV IoU、nuScenes ATE/AOE/ASE、mask IoU、Dice、语义分割 mIoU、关键点 OKS、polyline/点云 Chamfer、任务分档评测。**第二独立域（工程实践一手，与 COCO 官方交叉）**。
+- `https://s-samarth.github.io/DataSciencePreparation/ClassicalML/evaluation/vision-rl` + `https://danielhamlin.com/blog/Computer%20Vision/post-3-18-evaluation.html` + `https://www.nature.com/articles/s41597-025-06419-1_reference.pdf` — **WebSearch 逐字快照**：Dice=2·IoU/(1+IoU) 单调等价、FID 定义、PASCAL VOC 11 点插值 vs COCO 全点、Dice/IoU 在电极缺陷分割的公式与「IoU penalizes FP more heavily」、mAP@0.5 与 mAP@[0.5:0.95] 对照表。**第三～五域（教学笔记/工程博客/期刊数据集论文，交叉登记）**。
+- **失败与降级如实登记**：ZOOZ 长文与 danielhamlin 页只取 WebSearch 逐字快照，未冒充已读全文；Nature 数据集论文命中为 references PDF 页，公式与对照表按快照登记。PASCAL VOC 11 点插值与 COCO 全点积分是两代协议口径差，并列登记不择一。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 —— `mAP` / `IoU` / `Dice` / `平均精度` / `AP50` 的命中中，**本技能内仅 §七/§八/§九判非串出现 `mAP`（OCR-D「mAP 不适用于文档版面」异命题）**，目标检测/像素分割评测本体 **0 命中**；其余命中在 `agent-guild`/`grill-me`/`ci-context`/`wb-agent-evaluation` 等（泛词或异命题）。按 rules/07 四态判「**优＝加厚现有 `engineering/multimodal-intelligence`**」，补目标检测/分割评测这一正交层，不重述 §六 CER/WER、§七阅读顺序、§八 FR/RR/NR、§九色彩、§十主观、§十一生成字幕。PI 模块记忆前 17 条结论不复用。豆包自留地 WB 0 落地。与 r765(OI/EI/SI)/r764(AI/VI/DI)/r763(MI/CI/RI) 九模块结论不复用；A/C 两轮结论亦不复用。
+- **未采纳**：nuScenes 全部子指标与 BEV 实现、Panoptic PQ 的 SQ/RQ 公式细节、Chamfer 距离的 3D 重建协议、COCO analyze() 的 372 张图生成细节 —— 属专项基准实现，不迁移为通用判据。

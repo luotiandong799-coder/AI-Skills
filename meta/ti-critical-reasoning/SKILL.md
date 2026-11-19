@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
-description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）；论证图式与批判性问题（推定可废止/assumptions 与 exceptions 举证责任方向/图式目录覆盖缺口与错分风险）。；因果跨域可迁移性（selection diagram/S-node 指向机制/transport formula 三式/trivially·directly·一般三档/meta-analysis 平均掉差异之误）。；认知接种与预驳斥（威胁唤醒+弱化攻击+反驳预热的两步动机-认知模型/refutational-same 与 -different 等效/counterarguing 才是抗体、材料只是提供弹药/被动阅读优于主动自生/接种泛化需显式验证）。
-version: 1.9.0
+description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）；论证图式与批判性问题（推定可废止/assumptions 与 exceptions 举证责任方向/图式目录覆盖缺口与错分风险）。；因果跨域可迁移性（selection diagram/S-node 指向机制/transport formula 三式/trivially·directly·一般三档/meta-analysis 平均掉差异之误）。；认知接种与预驳斥（威胁唤醒+弱化攻击+反驳预热的两步动机-认知模型/refutational-same 与 -different 等效/counterarguing 才是抗体、材料只是提供弹药/被动阅读优于主动自生/接种泛化需显式验证）。；因果发现（等价类 CPDAG/PC 约束与 GES 打分同边界/LiNGAM 非高斯定向/承重假设不可检验）。
+version: 2.0.0
 module: TI
 modules: TI,EI
 ---
@@ -293,3 +293,30 @@ Purdue OWL 逐字「The **qualifier** shows that a claim **may not be true in al
 - **失败与降级如实登记**：Sage 全文页 AI 摘要 **60s 超时**，取 WebFetch 返回的前 15,000 / 96,622 字原文逐字；Nature PDF 仅取得 WebSearch 逐字快照，未宣称读完 PDF 全文。d=0.43 为二手转述的元分析效应量，与 Sage 2026 系统综述的「结论未触及」并列登记、不择一冒充实测。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `接种理论` / `inoculation` / `认知免疫` / `prebunk` / `refutational` **目标技能 0 命中**；命中仅 `defaults/wb-context-compressor/references/knowledge-base.md`（RLHF 对齐语境的「inoculation」异命题，**豆包自留地 WB 永不落地**）与 co-learn 历史记录。按 rules/07 四态判「**优＝加厚现有 `meta/ti-critical-reasoning`**」，补的是「判断的抗侵蚀工程」这一正交层，不重述 §八 steelmanning / §十 CoT 忠实度 / §十一 溯因 / §十三 因果识别。TI 模块记忆前 15 条结论不复用。豆包自留地 WB 0 落地。与 r760(AI/VI/DI)/r761(OI/EI/SI) 九模块结论不复用；B/C 两轮结论亦不复用。
 - **未采纳**：Bad News / Go Viral! 等具体游戏化 prebunk 产品的交互设计与大样本数值、Maertens 2021 三纵向实验的衰减曲线具体值、跨 cultures 五国实验数值、心理反应理论（reactance）与 post-inoculation talk 的社会网络扩散模型 —— 属应用产品与专项实验设计，不迁移为通用判据。
+
+## 十七、因果发现：从数据找回图，但观测数据只到等价类（r766A · 2026-11-19 实拉，≥2 独立域交叉）
+
+> 与 §十三（识别性/后门）/ §十五（跨域可迁移）分工：那两节假定**图已知**、在图上判识别或迁移；本节处理更前一步——**图未知时如何从观测数据把结构找回来**。因果发现的全部边界都挂在「观测只能看见条件独立关系」这一条上。
+
+### 17.1（r766A-1）观测数据只到马尔可夫等价类，PC 与 GES 两个算法族撞同一堵墙
+- Frontiers 2019 综述（Bayes 或 causal discovery 综述）Table 1 逐字对照：**PC / FCI / GES 输出 Markov equivalence class / Partial ancestral graph / Markov equivalence class；LiNGAM/PNL/ANM 在各自可识别条件下才输出「DAG as well as causal model」**。faithfulness 假设：PC/FCI 要、GES 要「some weaker condition」、LiNGAM/PNL/ANM 不需要；分布假设：只有 GES（常假设线性高斯或多项分布）与 LiNGAM 族要专门分布；「Properly handle confounders」一列 PC/FCI/GES/LiNGAM 全 No，只有 FCI 列 Yes。
+- javiermeseguer.me 一手逐字：多个 DAG 隐含同一组条件独立，「observational data sees nothing but those independencies — so it cannot tell those graphs apart」；发现算法返回的不是 DAG 而是 **CPDAG**——「some edges directed, others left undirected because the data does not contain the answer」；那条约 `X0−X4` 无向边「is not a failure of the algorithm. Both orientations imply identical independencies, so no amount of Gaussian observational data distinguishes them」。**GES 走另一条路（greedy search + BIC 打分而非检验条件独立），却返回同一个含同样无向边的 CPDAG；两个算法族撞同一边界，是数据的属性，不是某个方法的属性**。
+- **判据**：报「发现了因果结构」前先写输出类型（CPDAG/MEC vs 完整 DAG）与所用假设；无向边不是「没找到」，是观测数据原则上无法定向，不许靠主观挑一个方向补上。
+
+### 17.2（r766A-2）非高斯/函数因果模型用「残差独立只在真方向成立」打破等价
+- 同上一手逐字：LiNGAM 加一味料——噪声非高斯时出现高斯性掩盖的不对称：「for Y=βX+ε, the regression residual is independent of the regressor only in the true causal direction」。同一结构换均匀噪声后 LiNGAM 找回全部方向，包括 PC 碰不了的那条 `X4→X0`。DirectLiNGAM 把系数 prune 到精确 0：拟合矩阵四个非零 0.63/0.91，中间与 0.05–0.40 任何 cutoff 都得同一张图，**cutoff「looks like a tuning knob and is not one」**。
+- arXiv 2610.23543 综述逐字：LiNGAM 写线性 SCM `X=BX+ε, X=(I−B)⁻¹ε`，用 ICA 识别混合矩阵到 scaling/permutation 模糊，再由结构归一化与无环排序消歧；DirectLiNGAM 用「真外生变量与对其回归的残差独立」递归抽取顺序；Hyvärinen-Smith 2013 用成对似然比、Wang-Drton 2020 用稀疏+矩信息控排序误差。
+- **判据**：只有能核验「噪声非高斯/线性/可加」时才报完整定向 DAG；否则退回等价类。区分「识别了方向」与「识别了系数值」——前者靠非高斯不对称，后者还依赖结构归一化。
+
+### 17.3（r766A-3）承重假设不可从数据检验，Sachs 基准 precision 完美只因太保守
+- 一手逐字点破因果发现的软肋：**「All of it rests on assumptions that cannot be checked from the data being analysed. Causal sufficiency — no unmeasured common causes — is the load-bearing one」**——两个有隐藏共因、彼此无边的变量会被 PC 「produce a phantom edge」并如实报告；faithfulness 要求数据中唯一的条件独立就是图蕴含的那些（排除精确抵消）；此外条件独立检验在有限样本下必须可靠。
+- Sachs et al. 2005 基准（11 个磷酸化蛋白、853 个观测免疫细胞，有分子生物学共识网络做 ground truth）：PC 在 853 细胞上 skeleton 对 consensus network **precision 1.00 / recall 0.41（17 条真边找回 7 条、0 假边）**。原文自陈「Precision is not high here. It is perfect — and that deserves an explanation rather than an adjective, because the explanation is unflattering」。
+- **判据**：① 报重建质量必须 precision+recall 同报，只报 precision 会掩盖「过度保守、大半真边没找回」；② 声明「无未测共因」是外部领域假设、不是数据能证的结果；③ 发现输出要附「哪些边是等价类无向、哪些方向靠非高斯/函数假设才定」。与 §十三分工：那里评「给定图能否识别查询」，本节点评「图本身能不能被数据认出来」。
+
+### r766A 来源与判非（2026-11-19 实拉，逐字核验）
+- `https://www.frontiersin.org/articles/10.3389/fgene.2019.00524/pdf`（《Review of Causal Discovery Methods Based on Graphical Models》，Frontiers in Genetics 2019）— **WebFetch 返回非文本 PDF（如实登记），Table 1 与正文摘要由 WebSearch 对该 PDF 的逐字命中取得**：PC/FCI/GES/LiNGAM×faithfulness/分布假设/混杂处理/输出的对照表逐字、CI 法返回等价类与 FCM 返回唯一结构的前提、各方法可扩展性（PC/GES 上万变量、非线性 FCM 仅数十变量）。**第一独立域（同行评审综述一手，PDF 正文未直读，按逐字快照登记）**。
+- `https://javiermeseguer.me/projects/ci-discovery`（Causal Discovery 一手技术笔记）— **WebFetch / WebSearch 逐字快照**：Markov equivalence 上限、CPDAG、PC 的 skeleton→v-structure→propagate 两段、GES 同边界、LiNGAM 非高斯破局与 DirectLiNGAM cutoff、causal sufficiency/faithfulness、Sachs 853 细胞 precision 1.00/recall 0.41。**第二独立域（与综述交叉）**。
+- `https://inferensys.com/glossary/.../causal-discovery-algorithm` + `https://papers.nips.cc/paper/2018/file/e1314fc026da60d837353d20aefaf054-Paper.pdf`（NeurIPS 2018） + `https://arxiv.org/pdf/2610.23543` — **WebSearch 逐字快照**：constraint-based/score-based/functional/hybrid(MMHC)/time-series(PCMCI) 分类、GES 在等价类上搜、LiNGAM 用 ICA、CPDAG 图刻画「same skeleton and same v-structures」、GES/PC 在 faithfulness 下可证明一致但假设对检验误差敏感。**第三～五域（工具词库 / 会议论文 / arXiv，交叉登记）**。
+- **失败与降级如实登记**：Frontiers PDF WebFetch 明确返回「non-text resource」不重试，Table 1 逐字来自 WebSearch 对该 PDF 的索引命中，未冒充已读 PDF 全文；arXiv 2610.23543 仅取 WebSearch 逐字摘要段，未读完整 PDF。precision 1.00/recall 0.41 为同一笔记口径，与综述「等价类不可识别」并列登记、不择一冒充唯一实测。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 —— `causal discovery` / `马尔可夫等价` / `Markov equivalence` / `CPDAG` / `LiNGAM` / `PC 算法` / `v-structure` **全库 0 命中**；本技能 §十三/§十五虽有 Pearl/do-calculus/selection diagram，但那是「图已知求识别/迁移」，与「图未知从数据发现」异命题，按 rules/07 四态判「**优＝加厚现有 `meta/ti-critical-reasoning`**」，补因果发现这一正交前置层，不重述 §十一溯因（假设生成）/ §十三识别性/ §十五可迁移。TI 模块记忆前 21 条结论不复用。豆包自留地 WB 0 落地。与 r765(OI/EI/SI)/r764(AI/VI/DI)/r763(MI/CI/RI) 九模块结论不复用；B/C 两轮结论亦不复用。
+- **未采纳**：PC 完整定向传播规则与 FCI 的 PAG 细节、LiNGAM 的 ICA 算法实现与 high-dimensional 扩展、PCMCI 时滞公式与具体检验统计量、Sachs 数据集逐蛋白真边清单 —— 属算法实现与专项数据集，不迁移为通用判据。
