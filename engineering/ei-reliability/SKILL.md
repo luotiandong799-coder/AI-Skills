@@ -3,7 +3,7 @@ name: ei-reliability
 description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。
 module: EI
 modules: EI,VI
-version: 1.6.0
+version: 1.7.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -217,3 +217,23 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 - **失败与降级如实登记**：WebSearch 对 resilience4j.readme.io + learn.microsoft.com 限定域首轮 0 结果 → 改用 WebFetch 直接取官方页全文成功；不冒充搜索命中。Azure 页的图示描述取文字转述（diagram 段落），未读到图像本体。
 - **判非**：`circuit breaker` / `熔断器` / `half-open` / `半开` 在 `ei-reliability` 目标技能无既有专节；全库命中中 `wb-subagent-delegation` r733A 一行是当时判非说明（非熔断器本体），豆包自留地（wb-context-compressor / wb-execute-discipline / wb-max-token-saver）命中按去重铁律不落地；与 §六有界重试、§十重试预算、§十三扇出对冲正交——本条管「重试之上的短路门与其状态/样本/粒度」。
 - **未采纳**：Resilience4j 完整配置 YAML 与 Spring Boot 集成、CircularEventConsumer 事件缓冲代码、Azure 示例 Flow A/B/C 全量步骤、具体重试退避时长表（只取可落纪律的判据与参数默认值口径）。
+
+## 十六、入口流控：四种限流算法的失效面 + 负载卸载分类（r765B · EI 执行）
+
+> 本节管「谁能进、按什么速率进、满了怎么拒」，与 §十重试预算（失败后重发几次）、§15 熔断器（判失败后切断流量）、`personal-ai-employees` §12 背压（消费者驱动的需求信号）分工不同：限流是**生产者/入口侧封顶**，背压是**下游按需拉取**。判非：`token bucket` 在本技能 §10 是重试预算的价格单位（异命题），`滑动窗口` 在 §15 是熔断器的 COUNT/TIME 滑窗（异命题），限流算法本体 0 专节。
+
+**独点 1 — 四种算法按「对突发做什么 + 记什么状态」分，不是优劣排序**。逐字对齐多域：固定窗口（一计数/键，实现最简，但 12:00:59 打满 + 12:01:00 再打满 → 2 秒内 2× 配额，边界突发）· 滑动窗口日志（存每请求时间戳，精确无边界突发，但内存随限频线性涨）· 滑动窗口计数（当前+上一窗口两计数，估算 `prev×(1−elapsed)+cur`，边界峰消失、内存 O(1)，只是近似假设上一窗均匀分布，Cloudflare 等生产默认）· 令牌桶（桶容量 B + 每秒补充 R，每请求耗 1，允许最多 B 的突发，O(1) 状态，AWS API Gateway/Stripe 默认，因为真实流量本就突发）· 漏桶（请求入队按固定速率排空，突发被抹平成稳定流，代价是即使有容量也要排队 + 延迟，用于下游完全吃不了突发的场景）。判据：选算法先问「允许突发吗、下游能吸收吗、能接受多少内存」，不是背一个「最好算法」；突发大小与持续速率是令牌桶**两个独立旋钮**。
+
+**独点 2 — rate limiter 与 load shedder 是两类控制，Stripe 生产跑四种限流器**。Stripe 官方：rate limiter 控制流量速率（前提「users can afford to change the pace」），load shedder 依据**系统整体状态**而非单个用户决策、用于事故期保核心。四种：① Request Rate Limiter（每用户 N req/s，最重要，允许短暂 burst 应对闪购）；② Concurrent Requests Limiter（同时最多 20 个在途，治 CPU 密集端点资源争用——重试反而加剧过载，这个限流器从根上解决）；③ Fleet Usage Load Shedder（Redis 计数关键/非关键请求，预留 20% 容量给关键请求，超 80% 配额的非关键返回 503）；④ Worker Utilization Load Shedder（最后防线，按 critical/POST/GET/test-mode 四级逐步卸载，卸载与恢复都要慢否则 flapping）。判据：容量问题用 request limiter，资源争用用 concurrent limiter，事故保核心用 shedder；验收分列四种各自触发条件与状态码（429 vs 503）。
+
+**独点 3 — 生产落地要能失败打开、能一键关、能暗启动观测**。Stripe 工程实践逐字：把限流器挂进 middleware 时**所有层级捕获异常**（限流代码 bug 或 Redis 挂掉要 `fail open`，API 仍可用）；给用户清晰且可行动的错误（选 HTTP 429 还是 503 按场景）；内置 kill switch + feature flag 供人工逃生阀，配告警与指标看触发频率；**dark launch** 每个限流器先看它「会挡掉哪些流量」再决定是否真挡。客户端侧必须尊重 `429 + Retry-After` 并用 jitter 退避（否则限流只是把踩踏搬位置，呼应 §12 背压边界）。分布式限流：单机内存计数够用，多机要用共享存储（Redis `INCR`+`EXPIRE` 或 Lua/redis-cell 保原子），局部令牌桶 + 周期同步可降每请求 RTT，但要注意时钟漂移与热点键。
+
+**落地形态**：对外/高频动作入口先定「按谁计数（IP/API key/路由）+ 哪个算法 + 满了 429/503 + Retry-After + 客户端 jitter 退避」五要素；事故预案写清四级卸载顺序与恢复速率；限流器本身挂 kill switch 且 fail-open；验收断言每秒实际放行曲线（含边界突发是否漏）而非「配了限流」这个事实。
+
+**来源（r765B 独立实拉 2026-11-19，≥2 独立域一手交叉）**：
+- `https://stripe.com/blog/rate-limiters`（Stripe 工程博客 Paul Tarjan《Scaling your API with rate limiters》2017-03-30；WebFetch 200 全文逐字：四种 limiter、token bucket 实现、load shedder 依据 whole state、fail open / kill switch / dark launch / 429 vs 503）——第一独立域·一手生产实践。
+- `https://www.moesif.com/blog/technical/api-development/Mastering-API-Rate-Limiting-Strategies-for-Efficient-Management` + `https://howhttpworks.com/guides/api-rate-limiting`（两独立教学域，WebSearch 逐字：fixed window 2× 边界突发、sliding log 内存随限频涨、sliding counter 加权近似、token bucket 允许突发、leaky bucket 抹平但加延迟、算法对照表）——第二/第三独立域。
+- `https://resumax.ai/system-design/rate-limiting` + `https://aidev.fit/en/architecture/rate-limiting-patterns.html`（交叉快照：分布式 Redis `INCR`+`EXPIRE`/Lua/redis-cell、本地+周期同步降 RTT、时钟漂移与热点键）——快照不冒充一手。
+- **失败与降级如实登记**：Stripe 文只讲 token bucket 实现，未逐算法给代码；滑动窗口计数公式取教学域一致口径，数值算例（80×0.75+10=70）只取方法不择一为定值。
+- **判非**：`限流算法` / `令牌桶` 本体 / `漏桶` / `滑动窗口计数` / `load shedder` 在 `ei-reliability` 正文 0 专节；§10 `token bucket`（重试预算价格）与 §15 `滑动窗口`（熔断滑窗）均异命题；全库其余命中属异命题或豆包自留地，**WB 0 落地**。与 §10/§15 及 `personal-ai-employees` §12 背压分工。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+- **未采纳**：各算法完整代码实现、nginx `limit_req` / express-rate-limit 具体配置、Redis cell 模块部署细节、Stripe GitHub gist 实现全文（只取可落纪律的判据与分类）。

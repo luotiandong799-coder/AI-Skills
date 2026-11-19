@@ -2,7 +2,7 @@
 name: personal-ai-employees
 description: >-
   个人 AI 员工体系（8 岗）总路由与五步执行协议。把用户目标自动分派给 8 个专职 AI 员工（战略顾问/供应链专家/职业发展顾问/销售顾问/学习教练/信息分析师/自动化工程师/知识管理专家），每岗统一走「任务分析→执行方案→输出结果→复盘优化→Skill沉淀」，并复用 personal-ai-os 与现有 wb-* / 专家技能，不新建重复能力。触发词：个人AI员工、AI员工体系、AI战略顾问、AI供应链、AI职业发展、AI销售顾问、AI学习教练、AI信息分析、AI自动化工程师、AI知识管理、哪岗来做、分派任务、员工路由、agency、个人AI公司、我的AI团队。
-version: 1.3.0
+version: 1.4.0
 agent_created: true
 module: OI
 modules: OI,MI
@@ -194,3 +194,23 @@ modules: OI,MI
 - `https://lists.apache.org/thread/fojrbyb76jh6jto0xwj8qk704prfxtqo`（ASF 官方邮件归档 · commit #15183 `38ecbd6`，WebFetch **200**；**AI 摘要 60s 超时 → 前 15,000/31,653 字原文逐字，如实登记**：`parallelism=32` / `dag_concurrency=16` / `max_active_runs_per_dag=16` 三层定义、priority-weight.rst 新增 61 行三法全文、「the highest summed value wins」旧文、Pools and SubDAGs warning）——**第三独立域（官方源码变更一手 diff）**。
 - `https://lists.apache.org/thread/9wwzyxt75khs92jnfn53mh06xs6rtgqv`（ASF commit #20257 `pool_slots` 文档，WebSearch 快照逐字）+ `https://airflow.apache.org/docs/1.10.2/concepts.html` · `/docs/apache-airflow/2.2.5/administration-and-deployment/pools.html` · `http://airflow.org.cn/docs/apache-airflow/3.2.0/administration-and-deployment/pools.html`（三个官方/社区版本页，WebSearch 快照逐字：跨版本语义演化核对）——**第四、五独立域（多版本归档交叉）**。
 - **判非**：`pool_slots` / `default_pool` / `weight_rule` / `priority_weight` / `128 slots` / `排队优先级` 全库 `SKILL.md` **0 命中**；`资源池` 2 命中经查属 `engineering/wb-release-maintain`（发布资源清单）与 `meta/personal-ai-os`（OS 资源目录），均异命题；`choreography` / `token bucket` / `backpressure` 命中属 `engineering/ei-reliability`（重试预算与编排模式表）、`engineering/wb-subagent-delegation`（编排模式表）、豆包自留地 `engineering/wb-execute-discipline`（术语表）与 `defaults/wb-context-compressor`，**均异命题、豆包自留地 WB 0 落地**。与 `engineering/wb-subagent-delegation` r745B（trigger rules / catchup）分工：那条管「哪些上游状态允许下游跑」，本节管「有多少槽、排队时谁先跑」，互补不重述。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+## 十二、扇出负载超过消费能力：背压是需求信号，不是限速（r765A · OI 编排）
+
+> 上一节（§11）管「有多少并发槽、排队谁先跑」；本节管「当入队速率持续超过出队速率、槽与队列都要满时，压力怎么传到源头」。两者同一资源治理链的不同环：§11 是静态预算，本节是动态过载。判非：`backpressure` / `demand signal` / `request(n)` / `Little's law` / `load shedding` 在本技能既有正文 0 专节（§11 判非串提及为异命题），全库命中属异命题或豆包自留地，WB 0 落地。
+
+**独点 1 — 背压的本质是消费者声明需求，不是生产者自我限速（reactive pull）**。Reactive Streams 官方 `Subscription` 逐字：`No events will be sent by a Publisher until demand is signaled via this method`；`Whatever has been requested can be sent by the Publisher so only signal demand for what can be safely handled`；累计需求达 `Long.MAX_VALUE` 可被当作 `effectively unbounded`。判据：① 需求信号由下游向上游传（`request(n)` 授权发 n 个），发多少由消费端的处理能力决定，不是生产者按固定速率推；② 「只请求你能安全处理的量」是硬约束——把需求声明成无界等于主动放弃背压；③ 与 throttling/rate-limit 区分：后者是生产者无论消费者闲忙都自我封顶（见 `ei-reliability` 的限流），背压是消费者驱动的按需拉取。落到编排：fan-out 的子任务领取应按「空闲 worker 数」拉取（`prefetch` 上限），不是领导者一次性把全部子任务注入队列。
+
+**独点 2 — 无界队列把速率失配变成 OOM，有界队列才把它变成信号**。多域一致：生产 10000/s、消费 8000/s， backlog 每秒 +2000、一小时 720 万；有界缓冲把「内存无限涨」变成「满了必须 block/drop/shed」。缓冲定容用 Little's law：`in-flight = 到达率 × 系统内停留时间`；若 2000 req/s 下最多容忍 500ms 排队，队列应≤约 1000 项，再大只是没人等的延迟。四策略按数据类型选：block/pull（每条都不能丢，如文件/ETL）· drop old/new（遥测/实时帧/位置，陈旧即无价值）· sample/aggregate（极端量级日志）· reject early（用户请求，边缘 429/503 + `Retry-After`，快失败优于慢超时）。事件循环内 **不能** 用阻塞 put 做背压（会死锁整个 loop），必须靠有界 channel + 显式 reject/drop 或异步拉取。
+
+**独点 3 — 压力必须传到真正源头，且背压只管瞬时过载、不管容量不足**。逐层背压：任何一层「吸收压力却不再向上游传」就变成下一个无界缓冲；gRPC/HTTP2 用 `WINDOW_UPDATE` 接收窗口把流控跨网络传（gRPC 官方：`the gRPC framework will wait before returning from a write call`，并警告同步读写双方都大量写不读会 **deadlock**）。与熔断器分工：背压管**流速**，熔断器（见 `ei-reliability` §15）判定服务已失败后**切断全部流量**， Resilience 管线两者都要。联邦/跨组织边界（外部 webhook 进入）不是流控而是 rate-limit 合约。边界声明：持续需求高于产能是**容量规划问题**，背压/卸载只是桥接不是解药；削掉的压力若源头不配合重试退避（jitter + 重试预算）只是把踩踏搬个位置。
+
+**落地形态**：8 岗路由 fan-out 与并发委派时，工作队列一律有界 + 空闲 worker 按 `prefetch` 拉取；满队列按「数据能否 replay/是否实时」选 drop/reject，禁止无界 `LinkedBlockingQueue` 或 `Promise.all(unbounded[])`；验收报出每段的队列上限（按 Little's law 定）、满时策略、监控项（队列深度 + 最旧项 age，不盯 CPU）、以及压力能否回传到源。
+
+**来源（r765A 独立实拉 2026-11-19，≥2 独立域一手交叉）**：
+- `https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/org/reactivestreams/Subscription.html`（Reactive Streams 1.0.4 规范官方；WebFetch 200 逐字：`No events will be sent ... until demand is signaled via this method` / `only signal demand for what can be safely handled` / `effectively unbounded`）——第一独立域·规范一手。
+- `https://grpc.io/docs/guides/flow-control/`（gRPC 官方 Flow Control，last modified 2023-10-05；WebFetch 200 逐字：`wait before returning from a write call` / `the receiver has more capacity` / 同步读写双方 deadlock warning）——第二独立域·框架官方。
+- 交叉快照：`stackpractices.com/patterns/back-pressure-pattern`（bounded buffer / request(n) / Kafka max.poll.records+pause / 缓冲区按 p99 定容）、`designrounds.in/learn/backpressure`（10000 vs 8000 算例 / Little's law 1000 项 / Netflix-Envoy adaptive concurrency）、`inferensys.com/.../backpressure-handling`（DROP_OLDEST vs DROP_LATEST / edge load shedding）——第三域群，快照非一手不冒充。
+- **失败与降级如实登记**：官方规范页只取 demand 语义，未取完整 TCK 规则全文；背压数值算例（720 万/1000 项）来自二手教学域，只取定性量级与 Little's law 公式，不作为生产定值。
+- **判非**：`backpressure` / `request(n)` / `Little's law` / `load shedding` 在本技能正文 0 专节；全库命中均属异命题或豆包自留地（`wb-execute-discipline` 术语表 / `wb-context-compressor`），**豆包自留地 WB 0 落地**。与 §11（静态并发预算）互补不重述；与 `ei-reliability` 限流（生产者侧封顶）按「谁驱动速率」分工。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+- **未采纳**：Reactive Streams TCK 完整规则集、Project Reactor/Akka 具体 API 代码、Kafka `pause()/resume()` 逐行实现、Envoy adaptive concurrency 算法参数（只取可落编排纪律的判据）。

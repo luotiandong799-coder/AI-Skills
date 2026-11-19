@@ -1,7 +1,7 @@
 ---
 name: si-safety-governance
 description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。
-version: 1.8.0
+version: 1.9.0
 module: SI
 modules: SI,EI
 ---
@@ -305,3 +305,23 @@ GitHub Docs 官方逐字：「**rotate the affected credential immediately** ...
 - `https://cheatsheetseries.owasp.org/IndexTopTen.html`（OWASP Top Ten 2021 官方映射；WebFetch 200 逐字：A10:2021 SSRF 与该 Cheat Sheet 的一一对应，确认 A10 归类与防御文档来源）——第二独立域（同机构不同官方页交叉，用于类别锚定）
 - **判非**：`SSRF` / `server-side request forgery` / `服务端请求伪造` / `169.254.169.254` / `link-local` 在目标技能 `si-safety-governance` 无既有专节（仅 §12.3 一句「元数据发现是出网面」未采纳段），全库其余命中在豆包自留地与 agent-guild 下沉条目（异命题，按「合」不重述）；与 §12（MCP 同意流）、§13（CI 触发器）、§14（OIDC 信任）正交——本条管「服务器出网请求面的目标验证与地址规范化」。
 - **未采纳**：Orange Tsai 攻击演讲细节、完整 deny-list 生产样例脚本、各语言正则代码段、XXE 独立防御体系（只取 SSRF 交叉面）、AWS IMDSv2 配置命令全文。
+
+## 十六、依赖混淆：内部包名是公共攻击面，根因是解析顺序不是恶意代码（r765C · SI 供应链）
+
+> 与 §9（SLSA 构建溯源）、§10（push protection/密钥检出）、§11（TUF 交付新鲜度）、§12（MCP 授权/state）、§13（CI 触发器权限面）、§14（OIDC Condition）、§15（SSRF 出网面）分工：那些管构建/交付/凭据/触发器/出网，本节管**依赖解析阶段「哪个源的同名包胜出」**。判非：`dependency confusion` / `typosquat` / `supply chain` 在本技能正文仅 §r753C 判非串出现（异命题），本体 0 专节；pip/npm 官方一手未落地。
+
+**独点 1 — 攻击利用的是解析器默认规则，不需要访问受害系统、也不需要人打错字**。Alex Birsan 2021 研究：从 JS bundle / 泄露 manifest / 公开 commit 收集内部包名，在公共 registry 发同名 `99.0.0` 高版本包（postinstall 回传 hostname/path），35+ 组织回连（Apple/Microsoft/PayPal/Shopify/Netflix/Tesla），赏金 $130K+ —— 与 typosquatting 区别：后者等人拼错（`reqeusts`），依赖混淆里 build 请求的**名字完全正确**，错的是解析源。pip 官方原文把根因写死：`There is no priority in the locations that are searched. Rather they are all checked, and the "best" match for the requirements (in terms of version number) is selected`，并在 `--extra-index-url` 示例下明确警告 `Using the --extra-index-url ... is unsafe ... dependency confusion: an attacker can publish a package with the same name to a public index, which may then be chosen instead of your private package`。判据：凡「多源 + 最高版本胜出」的解析器，内部包名即公共攻击面；审计先问「这个包可能从哪个源解析」。
+
+**独点 2 — 修复在客户端与 registry 双向配置，不在「提高内部版本号」**。客户端按生态分叉（官方逐字）：npm 把内部包收进**组织独占 scope**（`Each npm user/organization has their own scope, and only you can add packages in your scope`，`@acme/pkg` 别人发不了），提交 `.npmrc` 写 `@acme:registry=<私有源>` 把 scope 绑死到单一 registry（`a scope only ever points to one registry`；作用域 auth token 只发给该 host，不漏给公共源）；pip 用 `--index-url` 指向受控私有代理、**删掉 `--extra-index-url`**（官方：前者是一个源、后者引入公共回退），加 `pip install --require-hashes` 让换包在安装期失败；uv 默认 first-index 策略只取首个含该包的索引的候选版本，可用 `tool.uv.sources` 按包钉索引。registry 侧：代理仓对内部命名空间配 BLOCK 路由规则 / exclude pattern，让这些名字**永不向上游查**，并用「请求一个内部不存在的名字应失败」验证规则真生效。防御性占位（空 tombstone 包）只对**已知名字**有效，是 stopgap 不是根治；提高内部版本号无效（攻击者选 99.0.0），代码审查也无效（恶意代码从不进你的仓库）。
+
+**独点 3 — 检出靠「解析源异常 + install 期行为」，不是靠签名或 CVE**。SCA（Snyk/Mend/JFrog Xray）做 namespace collision detection（同名包同时存在公私源即告警）；lockfile 固定 + `--require-hashes`（SHA-256 不符即拒）是最高 ROI 控制之一；postinstall 是载荷投递主通道，构建 agent 在 install 步对外发 DNS/HTTP 到陌生域名就是攻击签名，构建机出网过滤把信号变成阻断；SBOM（SPDX/CycloneDX）记每依赖的期望源+版本+hash，偏离基线从静默沦陷变可检出异常。MITRE ATT&CK 映射 T1195.001（供应链妥协）+ T1082（系统信息发现）+ T1552.001（文件中未加密凭据）。安全声明同级写「不防什么」：占位包不覆盖未发现的名字、签名不证明来源正确（公共源同名包也可签名）、SBOM 只列清单不阻止安装。
+
+**落地形态**：本仓/自动化凡 `pip install`/`npm i` 拉起外部依赖，先登记「哪些包名是内部/私有」，配单一可信源 + `require-hashes` + 锁文件；CI 出网设为默认拒绝并放行白名单；把「依赖从意外 registry 解析」当失败而非好奇心。与本仓规则对齐：`.ssh`/token 类凭据不写依赖配置（呼应 `rules/06`），公开仓暴露面收紧（呼应 `rules/06` 公开仓库红线）——本轮只落方法论，不改任何真实凭据。
+
+**来源（r765C 独立实拉 2026-11-19，≥2 独立域一手交叉）**：
+- `https://pip.pypa.io/en/stable/cli/pip_install/`（pip 官方文档 v26.3「Finding Packages」+ `--extra-index-url` 示例 Warning；WebFetch 200 全文逐字：`There is no priority in the locations that are searched` / `best ... in terms of version number` / `unsafe ... dependency confusion` / `--require-hashes`）——第一独立域·工具官方一手（最硬根因证据）。
+- `https://docs.npmjs.com/cli/v11/using-npm/scope`（npm Docs v11.21.3 官方；WebFetch 200 逐字：`only you can add packages in your scope` / `a scope only ever points to one registry` / `npm config set @myco:registry`）——第二独立域·工具官方一手。
+- `https://www.priviasecurity.co.uk/blog/cybersecurity-terms/what-is-dependency-confusion` + `https://www.parameter.ai/learn/dependency-confusion`（两独立安全域，WebSearch 逐字：Birsan 2021 研究/35+ 组织/$130K、npm scope + pip `--index-url` 修复、registry 侧 BLOCK 路由、占位包 stopgap、与 typosquatting 区别）——第三/第四独立域。
+- **失败与降级如实登记**：Birsan 原文与 OWASP CICD-SEC-3、NCSC 指南按多域二手转述登记，未冒充一手全文；具体赏金/组织数为公开报道口径，只取定性不逐项核验。
+- **判非**：`dependency confusion` / `extra-index-url` / `tombstone` / `占位包` 全库 `SKILL.md` 本体 0 命中；`typosquat` / `supply chain` 在本技能判非串出现（异命题）；全库其余命中属豆包自留地（skills-security-check/wb-release-maintain）或异命题，**豆包自留地 WB 0 落地**。与 §9–§15 正交（构建/交付/凭据/触发/出网 vs 解析源）。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+- **未采纳**：Birsan 完整 PoC 包名清单、各 registry 配置文件全文、Sigstore/PGP 签名实施细节、MITRE ATT&CK 全量技战术树（只取可落纪律的判据与映射主键）。
