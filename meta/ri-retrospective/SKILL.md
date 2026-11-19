@@ -1,9 +1,9 @@
 ---
 name: ri-retrospective
-description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/主持·记录·事故负责人三分离/发言权/时间盒议程与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。
+description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/主持·记录·事故负责人三分离/发言权/时间盒议程与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习深度分级（改动作/改假设策略/改学习机制本身·防御惯例与熟练无能阻断双环·反思-重构循环·学习与有效行为不等价须分层验收）。
 module: RI
 modules: RI,EI
-version: "2.1.0"
+version: "2.2.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -404,3 +404,23 @@ DevOps AI Toolkit 逐字 prep 四条「**Assemble the timeline in advance.** Pul
 - `https://legalclarity.org/after-action-reports-structure-process-and-applications/` + `https://legalclarity.org/after-action-report-what-it-is-and-how-to-write-one/`（**双页 WebFetch 逐字**：四问逐条、FM 7-0「not a critique」与「rank, ego, blame set aside」、促进者不评判只问开放题/是否题关闭讨论、主持人与指挥链分离更诚实、NIST 数日内+一周上限、ICS 214 日志作事实锚、具体改进项 vs 空泛观察对照）— **第三、四域交叉（条令在民用领域的转述，立场登记）**。
 - **判重**：全库 SKILL.md 精确扫描 `after-action` / `AAR` / `双环` / `事后回顾` 在 `meta/ri-retrospective` 全 0 命中；`AAR` 的 20+ 命中经逐条核为 `aar` 词根（如 `clear`、`parameter` 内子串）与豆包 co-learn 异命题，无本体。本节与 §7.1 触发门槛、§八 r717C 复发率、§十一 r738C 计数器、§十四 关闭≠修复、§十五 r755C 复盘会分工不复用（那几条管事故深挖，本条管每次行动的薄门）；与 r766(TI/PI/PDI)/r765(OI/EI/SI)/r764(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
 - **未采纳**：正式 AAR 的场地/教具/T&EO 完整清单、军语 proficiency 评级 T/T−/P/U 细目、ICS 214 日志格式全文、法律取证风险与记录可采性（属合规域，非复盘方法）、AAR 与 After Action **Report**（书面报告体）的完整区分展开（本轮只取 review 讨论法）。
+
+## r771C · 单环/双环/三环学习：改进的深度分三层，防御惯例会主动阻断深层学习（来源：Argyris & Schön 组织学习理论，eba.se 2007 文献综述 PDF 全文逐字 + Frontiers in Psychology《Digital Transformation and Organizational Learning》逐字 + talkingaboutorganizations.com 理论综述逐字 + uibk 知识管理论文 PDF 逐字，2026-11-19 实拉）
+
+**这一节管什么**：前面各节管「复盘怎么开、行动项怎么关、偏差怎么防」。本节管一个更根本的问题——**一次改进到底改到了哪一层**：只纠正表面动作，还是质疑了背后的假设、价值与学习机制本身。这与 §七/§八的复发率、§十二的三偏差分工：那些管复盘质量与归因，本条管**改进的深度分级与阻断它的组织防御**。
+
+### 三独点
+
+1. **单环/双环/三环是三种不同深度，判据是「改动作 / 改假设与策略 / 改学习机制本身」**：eba.se 综述逐字：单环学习「处理一阶问题（症状），在不改变公认惯例的前提下找有效解」；双环「组织成员质疑现有参照框架、开放地重思战略」；三环（Argyris & Schön 1996 追加）「质疑组织存在的理由本身」。Frontiers 逐字用恒温器类比：单环＝恒温器测到冷就开暖气、其他无所谓（维持既有价值框架）；双环＝把行动的观察效果与「策略及其服务的价值」连成双反馈环、挑战现状；三环＝激进转变视角与价值、重构新的集体结构。**判据：验收一次改进要问「改了哪一层」——只换执行动作是单环，改动背后的假设/目标/策略才是双环，连「我们如何学习」都改了是三环；把单环改进冒充双环是复盘最常见的深度假象。**
+
+2. **防御惯例（defensive routines）与熟练的无能（skilled incompetence）会主动阻断双环，越能干的组织越可能学不到**：eba.se 逐字：Argyris & Schön 与纯理性模型的关键分歧是「个人与组织会通过建立防御惯例来保护自己免于学习（protect themselves from learning by establishing defensive routines）」。talkingaboutorganizations 逐字：防御惯例让组织保护自己免受威胁或难堪信息、副作用是阻止个体与组织学习；「熟练的无能」指人的能力恰恰用在防御威胁上、因而阻止学习。uibk 逐字：存在限制双环的规范——员工常被警告不要质疑高层支持的政策与目标、为维持规范真相被掩盖。**判据：复盘「没人提异议」不等于达成共识，可能是防御惯例在压制质疑；要主动检查「是否有议题因为挑战了权威假设而没被摆上台面」，否则双环改进在结构上不可能发生。** 与 §八 r717C 无责复盘/局域理性分工：那条降低个人担责以鼓励说真话，本条指出即便无责，组织层面的防御惯例仍会挡住对根本假设的质疑。
+
+3. **三环不是「越高越好」，且学习与有效行为不必然等价，须分层验收而非一刀切**：eba.se 逐字：各层「并非独立」，学习被许多作者视为包含对行动与经验反思的循环过程，反思导致战略重构、进而产生新的改进行动；同时登记反例——「学习并不总导向提升组织效能的『智能』行为（Levitt & March 1988; Miner & Mezias 1996）」。uibk 逐字：三环（deutero learning）是「从经验中学习以改进学习本身」。Frontiers 逐字：三环涉及「unlearning」既有工作方式。**判据：不是所有复盘都要冲三环——常规改进单环足够，反复复发的同类问题才需要升级到双环质疑假设，系统性失效才动三环；同时「复盘产出了学习」不等于「行为更有效」，仍要接 §八 r717C 的复发率、§十一 r738C 的行动完成率做结果验收。**
+
+### 来源
+- `https://eba.se/app/uploads/2021/06/2007.1-Knowledge-and-Learning-in-Aid-Organizations-A-literature-review-with-suggestions-for-further-studies.pdf`（**eba.se 组织学习文献综述 PDF WebSearch 全文逐字**：Cyert & March 1963 奠基、Argyris & Schön 1978 单/双环定义、1996 三环、防御惯例 protect themselves from learning、学习不必然导向智能行为两篇反例、反思-重构循环）— **第一独立域（学术综述全文）**。
+- `https://www.frontiersin.org/article/905455`（**Frontiers in Psychology《Digital Transformation and Organizational Learning》WebSearch 全文逐字**：恒温器类比、单环在既有价值框架内、双环连接行动效果与策略价值的双反馈环、三环重构集体结构与 unlearning）— **第二独立域（期刊全文）**。
+- `https://www.talkingaboutorganizations.com/?p=6088`（**理论资源中心综述 WebSearch 全文逐字**：Aston 2020 三问句式——单环 Are we doing things right / 双环 Are we doing the right things / 三环 Is what we are doing right、防御惯例与熟练的无能、组织记忆与学习屏障）— **第三独立域（理论门户，立场登记）**。
+- `https://ulb-dok.uibk.ac.at/download/pdf/9000333.pdf`（**uibk 知识管理论文 PDF WebSearch 全文逐字**：单环恒温器纠错、双环质疑基本价值与规范「恒温器问设 60 度是否有意义」、限制双环的规范与真相掩盖、deutero/triple learning 改进学习本身）— **第四域（学术论文交叉）**。
+- **判重**：全库 SKILL.md 精确扫描 `单环学习`/`双环学习`/`三环学习`/`deutero`/`防御惯例`/`defensive routine`/`theory-in-use`/`espoused`/`skilled incompetence`/`Argyris`/`Schön` 全 0 命中。本节与 §七复发率、§八 r717C 三偏差、§十一 r738C 计数器、§十二 r742C 决策时间线、§十五 r755C 复盘会分工不复用（那些管复盘质量与归因，本条管改进深度分级与防御阻断）；与 r770(TI/PI/PDI)/r769(OI/EI/SI)/r768(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：Argyris 完整「主张理论/使用中理论（espoused vs theory-in-use）」模型全文、组织防卫模式 I/II 的完整推演、Senge 学习型组织五项修炼、Cyert & March 组织决策模型全文（本轮只取改进深度分层与防御惯例两条可操作口径）。

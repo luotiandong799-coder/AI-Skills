@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。
-version: "2.0.0"
+description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。
+version: "2.1.0"
 module: MI
 modules: MI,AI
 ---
@@ -236,3 +236,23 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 - `https://bjorklab.psych.ucla.edu/wp-content/uploads/sites/13/2016/07/RBjork_2003.pdf`（**UCLA Bjork Lab 官方 PDF 逐字**：「Forgetting is not simply a failure … there must be some means of restricting what is retrieved」，selection-suppression 与注意类比）— **第五域（实验室官方，立场登记）**。
 - **判重**：全库 SKILL.md 精确扫描 `retrieval-induced` / `RIF` / `检索诱发遗忘` 在 `meta/mi-memory` 仅 1 处（§r751A 判重串中作异命题预留，非本体）；`检索诱发` 全库 0。本节与 §十二 r751A（被读那条被改写）、§十一 r747C（学习技法延迟保持）、§十三 r755A（矛盾解决层）结论不复用；与 r766(TI/PI/PDI)/r765(OI/EI/SI)/r764(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
 - **未采纳**：具体抑制的神经环路/前额叶-海马机制（综述有但属生物层，不迁 agent）、Rp− 效应量具体百分比与样本量（口径随范式变）、Anderson & Spellman 1995 独立线索程序的完整实验材料、与 §七实体解析的合并策略（异命题）。
+
+## r771A · 睡眠依赖的系统巩固：离线期把不稳定表征转成长期存储，重激活是时钟而非背景（来源：Nature Communications 2021 s41467-021-23520-2 内源重激活逐字 + Nature Neuroscience 2023 s41593-023-01381-w SO/spindle/ripple 顺序耦合逐字 + Nature Communications ncomms15404 素材特异再加工 + npj Science of Learning 2025 s41539-025-00340-3 个性化 TMR，2026-11-19 实拉）
+
+**这一节管什么**：前面各节管「醒着时记忆怎么被改写/抑制/调度」。本节管**离线期（睡眠）系统级巩固**——新编码的不稳定表征如何在没有被提取时被转到皮层长期存储。与 §十二 r751A（取回即改写被读那条）、§十一 r747C（间隔练习的延迟保持）互补：那两条是清醒态的重写与练习调度，本条是无外部任务时的离线转移。人类神经机制迁移到 agent 按 rules/08 §五作待验证假设，只取三条可机检口径，不迁生理频率。
+
+### 三独点
+
+1. **系统巩固是「突触巩固」与「系统巩固」两条独立机制，且离线转移由三种振荡的顺序耦合定时**：原文逐字区分 synaptic consolidation（局部回路的 LTP，靠短延迟 co-firing 的 STDP）与 systems consolidation（记忆痕迹跨 hippocampal–cortical 网络转移）。三种 NREM 振荡各管一段：皮层慢波 SO 的 up-state 起兴奋窗口 → 丘脑皮层 spindle 嵌在 up-state、门控 Ca²⁺ 内流利于可塑 → 海马 ripple 落在 spindle 的可兴奋 trough、把重放送到皮层靶点。Nature Neuroscience 2023 iEEG 逐字：SO up-state 支配下 spindle 给 ripple 设定发生时间窗，顺序耦合带来放电率、局部短延迟互相关、跨区 MTL 交互三级阶梯式上升，为 STDP 与系统巩固造条件。**判据：「离线巩固」不是笼统睡一觉，而是「局部稳定化」与「跨区转移」两件事分别验收；转移是否发生看跨区交互/重放的时序耦合，不是看局部激活强弱。** 与 §十二 r751A 分工：那条管单次取回改写原条，本条管跨存储层的整体迁移。
+
+2. **重激活强度预测巩固水平，但「内源」与「外源提示（TMR）」是两类证据，且 TMR 对难记忆要个性化**：2021 内源范式（无外部线索）逐字：用多变量解码在 NREM 期捕捉到学习材料的自发重激活，且 **SO-spindle 耦合精度预测重激活强度、重激活强度又预测个体巩固水平**——这是相关性证据链。与之相对，TMR（睡眠中给线索外源触发）能增强表征，但 2025 npj 逐字：固定提示协议忽略个体差异与记忆痕迹强度，对「难回忆」材料收益递减（记忆强度-巩固呈倒 U），按个人回忆表现与任务难度调频的个性化 TMR 才显著降低衰减、改善纠错。**判据：报「重放提升巩固」须分清是自发重激活的相关证据还是外源提示的干预证据，二者不可互证；单一固定提示策略对高难条目可能反效果，须按条目强度分档调干预频率。**
+
+3. **巩固是周期性/分阶段的时序过程，机制归属仍有争议，迁移只取可机检口径不择一**：ncomms15404 逐字：再加工不是整夜均匀发生，而呈周期性、在学习后约 3h 与 6h 两个窗口最强；NREM 与 REM 分工有 sequential hypothesis（两阶段先后接续）与独立假说（各管不同方面）两说，原文明言「differential function … still controversial」。2025 TMR 亦记倒 U 关系。**判据：报告「巩固效果」须带时间窗与阶段口径（学习后多久、NREM/REM 哪段），不能笼统说「睡了一觉变好」；两说并存不择一。** agent 落地只取三条：① 把「离线巩固」拆成局部稳定化与跨层转移两个动作分别记录；② 高价值条目的再激活/摘要调度带时间窗与强度分档，不搞一次性固定频率；③ 迁移属待验证假设，不因「生物上有此机制」就当作 agent 必须实现。
+
+### 来源
+- `https://www.nature.com/articles/s41467-021-23520-2`（**Nature Communications 2021 内源重激活全文 WebSearch 逐字**：SO-spindle complex 给内源自发重激活定时、耦合精度→重激活强度→巩固水平的相关链、TMR 外源与内源之辨、systems consolidation 经由海马-新皮层转移逐字）— **第一独立域（期刊全文）**。
+- `https://www.nature.com/articles/s41593-023-01381-w`（**Nature Neuroscience 2023 iEEG 全文 WebSearch 逐字**：synaptic vs systems consolidation 两机制定义、SO up-state→spindle→ripple 顺序耦合、放电率/短延迟互相关/跨区交互三级阶梯、STDP 最优条件）— **第二独立域（期刊一手）**。
+- `https://www.nature.com/articles/ncomms15404`（**Nature Communications 素材特异再加工全文 WebSearch 逐字**：再加工周期性、学习后 3h/6h 峰、NREM/REM 分工 sequential vs 独立两说并存且「still controversial」）— **第三独立域（期刊全文）**。
+- `https://www.nature.com/articles/s41539-025-00340-3`（**npj Science of Learning 2025 个性化 TMR WebSearch 逐字**：固定协议忽略个体差异与痕迹强度、倒 U 关系、个性化按回忆表现与难度调频降低衰减）— **第四域（干预一手）**。
+- **判重**：全库 SKILL.md 精确扫描 `sharp-wave`/`ripple`/`sleep spindle`/`慢波`/`睡眠巩固`/`system consolidation`/`离线重放`/`SO-spindle` 全 0 命中（含本技能）。本节与 §十二 r751A（取回即改写）、§十一 r747C（间隔练习）、§十三 r755A（矛盾解决层）结论不复用；与 r770(TI/PI/PDI)/r769(OI/EI/SI)/r768(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：具体到频段（SO 0.5–1Hz/spindle 11–16Hz/ripple 100–200Hz）的生理参数、Ca²⁺ 内流分子通路与 STDP 波形、各类 TMR 刺激音频协议、NREM/REM 分工的唯一裁定（两说并存不择一）。

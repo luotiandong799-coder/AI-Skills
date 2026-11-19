@@ -1,7 +1,7 @@
 ---
 name: ci-context
-description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体、上下文装配流水线逐级留痕、检索评估与答案评估分离归因、块完整性与权限失败判据。前缀缓存块级链式哈希/三级有序驱逐/隔离维度（cache_salt·LoRA ID·感知哈希）。服务端 context editing 运行期语义（removal≠summarization·trigger/keep/clear_at_least/exclude_tools·applied_edits 回执与 count_tokens 预览破缓存）；注意力汇聚与流式无限上下文（softmax 归一把残余注意力压到首 token·驱逐 sink 触发困惑度悬崖·4 sink token + 滚动窗·cache 相对位置编码·sink 量化脆弱性与 off-by-one 缓解）。注意力分数保留的两时间窗（H2O 累积淘汰+近端双保·local 统计不需未来·SnapKV 预填充前 observation window 投票·静态剪枝随指令错位·top-k 逐点留会切断实体完整性须聚类）。
-version: "2.0.0"
+description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体、上下文装配流水线逐级留痕、检索评估与答案评估分离归因、块完整性与权限失败判据。前缀缓存块级链式哈希/三级有序驱逐/隔离维度（cache_salt·LoRA ID·感知哈希）。服务端 context editing 运行期语义（removal≠summarization·trigger/keep/clear_at_least/exclude_tools·applied_edits 回执与 count_tokens 预览破缓存）；注意力汇聚与流式无限上下文（softmax 归一把残余注意力压到首 token·驱逐 sink 触发困惑度悬崖·4 sink token + 滚动窗·cache 相对位置编码·sink 量化脆弱性与 off-by-one 缓解）。注意力分数保留的两时间窗（H2O 累积淘汰+近端双保·local 统计不需未来·SnapKV 预填充前 observation window 投票·静态剪枝随指令错位·top-k 逐点留会切断实体完整性须聚类）。RoPE 外推家族（PI线性插值/NTK改base保高频/YaRN按波长混合加温度·保真注意力模式与attention entropy才是成败真因·需长序列继续训练·路线与成本画像随族分裂）。
+version: "2.1.0"
 module: CI
 modules: CI
 ---
@@ -219,3 +219,22 @@ GitHub 一手整合逐字：「**Clearing invalidates the cached prefix from the
 - `https://aiwiki.ai/wiki/h2o_kv_eviction` + `https://thepradip.github.io/KVCache-research/` + `https://lacuna.tiptreesystems.com/work/snapkv-llm-knows-what-you-are-looking/`（**WebFetch/WebSearch 逐字**：H2O 与 Scissorhands/StreamingLLM 的时间窗谱系、SnapKV 只优化生成期不减 prefill、LongBench 1024 缓存 vs H2O、与 Medusa 并行解码 2.2×）— **第三～五域交叉（技术百科/解读，立场登记）**。
 - **判重**：全库 SKILL.md 精确扫描 `H2O` / `heavy hitter` 在 `defaults/ci-context` 仅 1 处（r759B 引 aiwiki「heavy-hitter/sliding-window 会静默删 sink」的异命题句，非本体）；`SnapKV` 仅在豆包自留地 `wb-context-compressor/references/knowledge-base.md` 1 处口号级命中，**WB 0 落地**；目标技能 `defaults/ci-context` 本体 0。与 §十（前缀复用）、r759B（sink 锚点）、r763B（提示压缩）结论不复用；与 r766(TI/PI/PDI)/r765(OI/EI/SI)/r764(AI/VI/DI) 九模块结论不复用。
 - **未采纳**：H2O 子模目标函数完整公式与近似系数、各模型逐层 sparsity 曲线与具体显存数字、SnapKV pooling kernel 超参与 voting 伪码、Scissorhands/Keyformer/AhaKV 完整族谱（只取时间窗维度留作后续候选）、压缩与量化叠加的完整方案。
+
+## r771B · RoPE 外推家族：位置插值与频率分配决定「训短用长」能否成立（来源：Zhong et al. COLING 2025 attention 视角 OpenReview beNTbglGFE + 位置编码综述 arXiv:2608.10021 全文逐字 + PI arXiv:2306.15595 / YaRN arXiv:2309.00071 / LongRoPE arXiv:2402.13753 一手口径 + 中文三线会战深度交叉，2026-11-19 实拉）
+
+**这一节管什么**：§八 r742B 管「标称窗口≠有效长度」的评估陷阱，r759B/r767B 管解码期的 KV 保留。本节管另一件事——**模型只训了短序列，凭什么能在长序列上工作**：不改架构、只改 RoPE 频率/位置索引的外推家族。它决定「能读多长」的上限，与「读长了怎么不丢 KV」是正交的两层。
+
+### 三独点
+
+1. **PI / NTK-aware / YaRN 是三种不同的频率改造，不能当成一族参数互换**：PI（Position Interpolation）逐字「按比例下采样位置索引塞回原预训练窗口」，线性缩放、实现最简但会扭曲原始注意力分布；NTK-aware 是非线性策略，只改 RoPE base 频率、保住高频位置信息（高维少插值、低维多插值）；YaRN 用 ramp 函数按波长分维度混合 PI 与 NTK，再加 temperature 因子修正注意力分布漂移。COLING 2025 逐字：JS 散度显示 NTK 与 YaRN 在预训练长度内几乎零扰动、PI 显著扭曲原始 2K 注意力分布。**判据：「扩展上下文」先问是哪条频率改造路线——线性插值保形状但损高频分辨率、非线性改 base 保高频、混合式另加温度校正；换路线即换注意力分布，不是同一旋钮的档位。**
+
+2. **外推成功的真因是「保住预训练注意力模式」，失败的真因是「注意力熵升高」，不是「位置索引算不出来」**：COLING 2025 从 attention 视角逐字三条发现：① 维持预训练长度的注意力模式改善外推；② 大注意力不确定性（attention entropy）导致检索错误；③ 用更长的 continual pretraining 长度能降熵、显著增强外推。检索失败与高熵区域精确对齐；证明「困难不在算位置、在于注意力是否仍聚焦」。NTK 在 PPL 上外推到 32×（4K→128K）优于 PI/YaRN（约 62K 起退化），把 NTK 在 32K 继续预训练可把 64K 测试的注意力熵压到 5 以下、几乎消除检索错误。**判据：外推方法好坏看「注意力模式是否保真 + 熵是否可控 + 有没有长序列继续预训练」，不看标称倍数；只改公式不做长上下文继续训练，检索仍会在高熵区崩。** 与 §八 r742B 分工：那条给「有效长度」的评估口径，本条给「为什么外推会失效、哪一族能救」的机制。
+
+3. **训练长度开销与免微调档位按族分裂，标称上下文要连成本画像一起报**：一手口径逐字：PI 不到 1000 步微调即从 2K 扩到 32K、插值注意力分数上界比硬外推小约 600 倍；YaRN Llama2-7B 4K→128K 约 400 步微调、扩 32K 折算约 128 A100 小时、比此前省约 10× token；LongRoPE 非均匀插值配进化搜索、8× 内免微调、渐进训练做到 2M；落地侧 Qwen3-235B 双块注意力+MInference 262K→1M（RULER 92.5，但跑满 1M 约需 1000GB 显存）、Qwen3-Next 用 YaRN 4.0× 扩到 1M（RULER 91.8）。综述逐字结论：能算出训练长度之外的位置特征 ≠ 可靠长上下文泛化，扩展必须经短上下文保持/逐位置困惑度/检索/推理/长上下文代码多维评估。**判据：报「支持 X K 上下文」必须同时标路线（PI/NTK/YaRN/LongRoPE）、微调步数与训练长度、是否免微调、成本量级——数字挂原文模型与设定，不作普适承诺；这与 §八 r742B「标称窗口不是能力证据」同源，本条补「路线与成本画像」维度。**
+
+### 来源
+- `https://openreview.net/forum?id=beNTbglGFE`（**Zhong et al.《Understanding the RoPE Extensions of Long-Context LLMs: An Attention Perspective》COLING 2025 OpenReview 摘要＋lacuna.tiptreesystems.com 解读 WebSearch 全文逐字**：PI/NTK/YaRN 三法机制、保持预训练注意力模式、attention entropy 与检索错误对齐、JS 散度、NTK 32×、32K 继续预训练降熵到 <5）— **第一独立域（会议论文＋一手解读）**。
+- `https://arxiv.org/abs/2608.10021`（**《Position Encoding in Transformers》技术综述 WebSearch 摘要逐字**：PI/RoPE scaling laws/NTK-aware/Dynamic NTK/NTK-by-parts/YaRN/LongRoPE/LongRoPE2 全族、频率分配与训练长度维度、能算位置特征≠可靠泛化、须多维评估）— **第二独立域（综述一手）**。
+- `https://alishangtian.com/article/user-e7af3dc5e6`（**《长上下文的注意力之战》WebSearch 全文逐字**：PI <1000 步 2K→32K、分数上界小约 600 倍、NTK-aware 出自 Reddit bloc97、YaRN 400 步/128 A100 小时/省 10× token、LongRoPE 8× 免微调→2M、Qwen3 双块注意力 1M/1000GB 与 RULER 92.5）— **第三独立域（工程深度交叉，立场登记）**。
+- **判重**：全库 SKILL.md 精确扫描 `位置插值`/`Position Interpolation`/`NTK-aware`/`YaRN`/`Dynamic NTK`/`NTK-by-parts`/`LongRoPE`/`RoPE 外推`/`attention entropy` 全 0 命中（本技能 r759B 的 `RoPE re-rotate` 是 cache 相对位置编码异命题，非外推）。本节与 r759B（sink 锚点）/r767B（KV 时间窗）/§八 r742B（有效长度评估）分工不复用；与 r770(TI/PI/PDI)/r769(OI/EI/SI)/r768(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：RoPE base/波长/温度的具体公式与超参搜索（NTK-by-parts ramp 分段函数全文）、LongRoPE2 进化搜索伪码、各模型逐位置困惑度曲线、Dynamic NTK 的 batch 动态换算实现、MInference 内核细节（本轮只取外推路线选择与失效机制）。
