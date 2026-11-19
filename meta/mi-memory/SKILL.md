@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。
-version: "2.1.0"
+description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。错误记忆与来源监控（DRM关键诱饵·模糊痕迹verbatim/gist双 trace·激活监测与来源监控失败·误导信息效应与DRM的verbatim反向作用·高置信≠真实须逐字锚点回归）。
+version: "2.2.0"
 module: MI
 modules: MI,AI
 ---
@@ -256,3 +256,18 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 - `https://www.nature.com/articles/s41539-025-00340-3`（**npj Science of Learning 2025 个性化 TMR WebSearch 逐字**：固定协议忽略个体差异与痕迹强度、倒 U 关系、个性化按回忆表现与难度调频降低衰减）— **第四域（干预一手）**。
 - **判重**：全库 SKILL.md 精确扫描 `sharp-wave`/`ripple`/`sleep spindle`/`慢波`/`睡眠巩固`/`system consolidation`/`离线重放`/`SO-spindle` 全 0 命中（含本技能）。本节与 §十二 r751A（取回即改写）、§十一 r747C（间隔练习）、§十三 r755A（矛盾解决层）结论不复用；与 r770(TI/PI/PDI)/r769(OI/EI/SI)/r768(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
 - **未采纳**：具体到频段（SO 0.5–1Hz/spindle 11–16Hz/ripple 100–200Hz）的生理参数、Ca²⁺ 内流分子通路与 STDP 波形、各类 TMR 刺激音频协议、NREM/REM 分工的唯一裁定（两说并存不择一）。
+
+## r775A · 错误记忆与来源监控：高置信的错误条目能从「语义要点」里自发长出来（来源：Reyna 等模糊痕迹理论综述 PMC4815269 全文逐字 + Saleh 等《Cognitive and neural mechanisms underlying false memories》PMC10567586 全文逐字 + CUNY Pressbooks 心理学教材 DRM/Loftus 逐字 + 百度百科「错误记忆」四理论模型，2026-11-19 实拉）
+
+### 三独点
+1. **DRM 范式证明「要点」本身会凭空造出未编码条目，且置信度与真词相当**：presented 词表（bed/rest/dream/snooze）共享语义，未呈现的关键诱饵（sleep）被高比例错误再认，"almost as highly as presented targets"；模糊痕迹理论（FTT）解释为我们并行存 verbatim trace（表面形式）与 gist trace（语义要点），"False recollections are based on meaning (gist), especially in the absence of verbatim information"，而 "recollection of verbatim content suppresses false memories"。判据：**按要点/摘要聚合生成的记忆条目必须标为派生（inferred/gist）且与逐字锚点分离存——「语义上应该存在」是错误条目的高发源，不是证据**；这与本技能 §五 r732B episode 溯源、§十二 r751A「检索即改写」互补（那两条管事实从哪来/被改写，本条管条目从要点里被凭空生成）。
+2. **误导信息效应与 DRM 里 verbatim 的作用方向相反，两类错误记忆不能互相替代验收**：一手逐字指出 misinformation 里 "verbatim memory ... promotes false-memory acceptance"（记得审讯里那个锤子 → 更可能误认现场有锤子），DRM 里 "better verbatim memory for the presented word would help people reject the unpresented word"（记得呈现的是螺丝刀 → 拒绝锤子诱饵）；gist 在两范式里都促接受。且 Ost 等 2013 实测 "failed to find correlations between misinformation effects ... and DRM effects"。判据：**「抗植入污染」与「抗要点诱饵」是两块独立指标，各自的负例用例要分开建**——前者测事件后信息覆盖，后者测无中生有的语义邻居，单测一个不能宣称记忆可信。
+3. **激活-监测理论（AMT）把错误定位到「来源归属失败」，想象膨胀说明纯内部模拟也能造出高置信记忆**：AMT 逐字 "false memory occurs when participants fail to monitor the source of the activated item, and thus mistakenly remember the critical lure that was generated externally ... rather than internally (from spreading activation)"，"Any disruption in the source monitoring has been shown to increase false memory"；imagination inflation 显示 "merely imagining a non-existent event increases the likelihood that the individual will later report having actually experienced that event"，靠反复心理模拟抬高熟悉度与可及性、混淆来源监控。判据：**high confidence 不能当真实性证据，验收要能逐条回答「这条是从材料编码来的，还是从要点/想象里生成后被误归属的」**——与 r751A「流畅度≠准确率」同族但落点在来源归属；与 agent 落地只取三条可机检口径（派生条目单独标源/抗污染与抗诱饵分栏/高置信条目强制逐字锚点回归），按 rules/08 §五作待验证假设。
+
+### 来源
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC4815269/pdf/nihms-749930.pdf`（**Reyna 等《How Fuzzy-Trace Theory Predicts True and False Memories》PMC 全文 PDF WebFetch/WebSearch 逐字**：DRM bed/rest/dream→sleep 关键诱饵、verbatim/gist 双 trace、misinformation 与 DRM 的 verbatim 反向作用、Ost 2013 无相关）— **第一独立域（理论一手全文）**。
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC10567586/`（**Saleh 等《Cognitive and neural mechanisms underlying false memories》PMC 全文 WebFetch 200 逐字**：DRM 语义相似生错、FTT gist 在无 verbatim 时驱动错、AMT 来源监控失败逐字、misinformation 由事件后信息覆盖原记忆）— **第二独立域（综述一手全文）**。
+- `https://pressbooks.cuny.edu/hursonpsych101extras?p=225`（**CUNY《Problems with Memory》教材 WebSearch 全文逐字**：FURNITURE 词表诱发未呈现家具、Donald Thomson 错认案、Loftus & Palmer 1974 smashed/contacted 与破玻璃两周后出现率翻倍）— **第三域（教材交叉）**。
+- `https://baike.baidu.com/view/88911.html`（**百度百科「错误记忆」WebSearch 全文逐字**：Deese1959→Roediger&McDermott1995、四理论模型——内隐激活/模糊痕迹/来源监测/激活监测、单词类 DRM 与事件类误导信息两范式分类）— **第四域（中文百科交叉，立场登记）**。
+- **判重**：全库 SKILL.md 精确扫描 `DRM`/`critical lure`/`关键诱饵`/`模糊痕迹`/`fuzzy-trace`/`激活监测`/`imagination inflation`/`想象膨胀`/`misinformation` 在 mi-memory 正文 0 命中（仅 §r751A 来源段列 `misinformation effect` 作判重词、Loftus 仅作判非异命题提及，非落地）；与本技能 §五 r732B（episode 溯源）/§十二 r751A（检索即改写/流畅度≠准确率）/§r767A（RIF 遗忘）/§r771A（睡眠巩固）不复用；与 r774(TI/PI/PDI)/r773(OI/EI/SI)/r772(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：Loftus 具体样本数/速度估计数值与百分比、fMRI/ERP 脑区与神经振荡、DRM 词表联想强度参数、错误记忆的年龄/情绪/人格差异、法庭证词应用与 Mandela Effect 社会学解释（均属实验细节或临床/司法域，不迁移到 agent 记忆工程）。
