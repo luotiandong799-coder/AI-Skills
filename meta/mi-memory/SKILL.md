@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。
-version: "1.9.0"
+description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。
+version: "2.0.0"
 module: MI
 modules: MI,AI
 ---
@@ -216,3 +216,23 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 - `https://ergngevd.top/wiki/Transactive_memory` + `https://oecs.mit.edu/`（**WebSearch 快照逐字**：Wegner 1985 提出、三过程 transactive 随交换更新、Hollingshead couples vs dyads 实验、成员专长 domain、external memory aid 类比、structural+process 二分、penn state 百科对照）— **第三、四域交叉（百科/认知科学入口，立场登记，不作唯一来源）**。
 - **判重**：全库 SKILL.md 精确扫描 `transactive` / `交互记忆` / `who knows what` / `谁知识谁` / `元记忆目录` / `分布式记忆` 仅 `meta/mi-memory` 1 命中，核为该技能 §r732B-1「记忆五能力」中的检索语境词，**非 TMS 本体**；与 §五/§七/§九/§十三/r759A 结论不复用；与 r762(TI/PI/PDI)/r761(OI/EI/SI)/r760(AI/VI/DI) 九模块结论不复用；豆包自留地 WB 0 落地。
 - **未采纳**：Wegner 1985 vs 1987 提出年份口径差（百科作 1985、论文作 1987，两存只记概念）、具体实验样本量与 effect size、TAS/TRS 两系统完整展开（本轮只取 TMS，留作 OI 编排候选）、神经定位与量化模型参数。
+
+## r767A · 检索诱发遗忘（RIF）：检索是抑制性选择，练一条会压低同类未练条（来源：Anderson, Bjork & Bjork 1994 检索练习范式，Brain Sciences 2021 综述 PMC8467325 全文逐字 + Anderson/Bjork/Bjork 2000 PubMed 11082860 逐字 + Rowland et al. 2014 Frontiers 复现与边界 PMC/PubMed 25484872 + Bjork Lab《Interference and Forgetting》PDF 逐字，2026-11-19 实拉）
+
+**这一节管什么**：记忆被检索不只是「读出」——选择性检索一个子集会**主动抑制**同类别未练习的相关项，使它们后来更难回忆。这是与 §十二 r751A「检索即改写被检索的那条」互补的另一面：r751A 管被读那条被改写，本节管**没被读的邻居被压低**。
+
+### 三独点
+
+1. **RIF 三态 Rp+/Rp−/control，练习收益不外溢到同类邻居反而使其低于基线**：检索练习范式＝学习类别-样例对（FRUIT-ORANGE）→ 只对部分类别的部分样例做词干线索练习（FRUIT-OR___）→ 延迟后类别线索自由回忆。结果模式 `Rp+ > control > Rp−`：Rp+（练习类别中练过的）回忆最好，Rp−（练习类别中没练的，如 FRUIT-BANANA）**低于** control（没练类别的没练项，如 METALS-IRON），尽管二者学习时长相同。综述逐字：「recall of Rp+ items is generally improved on the final test relative to the control items, and, more important, recall of Rp− items is typically impaired relative to the control items, thus reflecting RIF」。**判据：一次检索的成功不能当作「同簇其他条目仍可及」的证据，须单独测 Rp− 类邻居；把高频检索当免费的知识巩固是错的，它附带抑制代价。** 与 §十一 r747C 延迟保持、§十二 r751A 保真度分工（那两条管被练/被读条本身，本条管未被练的同簇项）。
+
+2. **抑制说 vs 阻断说是两个可分离的因果解释，独立线索（independent probe）是裁决实验**：blocking account 认为 Rp+ 被强化后在最终测验时抢答、干扰 Rp−；inhibition account（item suppression）认为练习时 Rp− 主动被压低其表征激活。综述逐字区分：抑制说「assumes that the suppression directly reduces the activation level of the competing memory representation itself」，故 RIF 应**与测验线索类型无关**；independent-probe 实验用**全新线索**（sports-S___ 而非原线索 hobby-S___）测 Rp−（Soccer），此时不会调出 Rp+ 产生阻断，「should exclude potential blocking effects」而 RIF 仍在 ⇒ 排除纯阻断解释。**判据：要证明「某条被抑制」而非「被别的条盖住」，必须换一条与练习线索无关的独立线索再测一次；只在原类别线索下观察下降，两种解释分不开。** 另有 2000 年实验逐字：竞争练习（词干要求回忆样例）产生 RIF，非竞争练习（同样重复次数但要求回忆类别名）不产生——「retrieval-induced forgetting is not caused by increased competition arising from the strengthening of practiced items, but by inhibitory processes specific to the situation of recall」。**重要纠正**：该 2000 论文题名带 recall-specific，但 2021 综述明确 RIF **并非只在回忆中出现**——「RIF is not only observed with category-cued recall but also arises in yes–no item recognition testing, and when ROC analysis is applied」；两处口径并存登记，不择一，判据取「抑制作用于表征本身、测验格式不是 band 时仍应复现」。
+
+3. **RIF 是稳健但带边界的效应，复现须带范式与样本口径，不支持的范式如实保留**：Rowland et al. 2014 逐字：传统 retrieval-practice 范式下本科生样本（Exp1）与 internet 样本（Exp2）都复现 RIF，但用 Anderson & Spellman 1995 **independent cue procedure 时未复现**（Exp3）。综述亦列反例 Williams & Zacks 2001。**判据：报告「检索会抑制邻居」必须写清用哪个范式与样本，不能当无条件定律；换线索程序后效应消失是真实边界而非实验失败，须与「抑制说」并列登记而非抹掉。** 人类记忆机制迁移到多 agent 记忆检索按 rules/08 §五作待验证假设，只取三条可机检口径：① 检索命中某条时记一条「同簇未检索项」的对照召回率，别只看命中率；② 判断抑制还是覆盖，用一条与本次检索词无关的独立证据 ID 再查一次；③ 换检索/排序程序的回归用例须包含 original 与 independent-cue 两种，缺一不算验完。
+
+### 来源
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC8467325/`（**Brain Sciences 2021 综述《The Mechanisms Underlying Interference and Inhibition》全文，WebFetch 200 逐字**：retrieval-practice 三阶段、Rp+/Rp−/control 定义、inhibition vs blocking 两说、independent probes 排除 blocking、RIF 在 recognition/ROC 亦出现、Williams & Zacks 2001 反例）— **第一独立域（同行评议综述全文）**。
+- `https://www.pubmed.ncbi.nlm.nih.gov/11082860/`（**Anderson, Bjork & Bjork 2000 PubMed 11082860 摘要逐字**：competitive vs noncompetitive practice 对照、「only the competitive practice subjects were impaired」「not caused by increased competition … but by inhibitory processes specific to the situation of recall」；题名 recall-specific 与 2021 综述口径冲突如实两存）— **第二独立域（原始实验一手摘要）**。
+- `https://pubmed.ncbi.nlm.nih.gov/25484872/`（**Rowland, Bates & DeLosh 2014 Frontiers in Psychology 摘要 PubMed 25484872 逐字**：本科生与 internet 样本复现、independent cue procedure 未复现）＋ `https://pmc.ncbi.nlm.nih.gov/articles/PMC1885480/`（RIF 三阶段与 `Rp+ > METALS-IRON > FRUIT-BANANA` 模式逐字）— **第三、四域交叉（复现边界与范式一手）**。
+- `https://bjorklab.psych.ucla.edu/wp-content/uploads/sites/13/2016/07/RBjork_2003.pdf`（**UCLA Bjork Lab 官方 PDF 逐字**：「Forgetting is not simply a failure … there must be some means of restricting what is retrieved」，selection-suppression 与注意类比）— **第五域（实验室官方，立场登记）**。
+- **判重**：全库 SKILL.md 精确扫描 `retrieval-induced` / `RIF` / `检索诱发遗忘` 在 `meta/mi-memory` 仅 1 处（§r751A 判重串中作异命题预留，非本体）；`检索诱发` 全库 0。本节与 §十二 r751A（被读那条被改写）、§十一 r747C（学习技法延迟保持）、§十三 r755A（矛盾解决层）结论不复用；与 r766(TI/PI/PDI)/r765(OI/EI/SI)/r764(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：具体抑制的神经环路/前额叶-海马机制（综述有但属生物层，不迁 agent）、Rp− 效应量具体百分比与样本量（口径随范式变）、Anderson & Spellman 1995 独立线索程序的完整实验材料、与 §七实体解析的合并策略（异命题）。
