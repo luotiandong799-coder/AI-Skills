@@ -1,8 +1,8 @@
 ---
 name: multimodal-intelligence
 description: >-
-  多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。色彩管线与色差口径：sRGB 传递函数与线性光、ICC 渲染意图与 D50 PCS、ΔE 公式版本与观察条件四元验收。；主观评测协议（六项控制/MOS+95%CI/ΔSCI 与人数/ACR·DSIS·DSCQS·ACR-HR 选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。；目标检测与分割评测口径（IoU 定阈值 TP/FP/FN、COCO mAP=12 指标与 10 个 IoU 阈值平均、AP 与 mAP 不区分、Dice=像素 F1 与 IoU 单调等价、mIoU 与 PixelAccuracy 分报、mask/box 同协议只换 IoU 算法）。
-version: 1.7.0
+  多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。色彩管线与色差口径：sRGB 传递函数与线性光、ICC 渲染意图与 D50 PCS、ΔE 公式版本与观察条件四元验收。；主观评测协议（六项控制/MOS+95%CI/ΔSCI 与人数/ACR·DSIS·DSCQS·ACR-HR 选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。；目标检测与分割评测口径（IoU 定阈值 TP/FP/FN、COCO mAP=12 指标与 10 个 IoU 阈值平均、AP 与 mAP 不区分、Dice=像素 F1 与 IoU 单调等价、mIoU 与 PixelAccuracy 分报、mask/box 同协议只换 IoU 算法）。；非视觉捷径与语言先验（VQA 盲模型靠问题文本「闭眼答对」/VQA v2 互补图配对逼模型用视觉/VQA-CP 答案分布偏移打回原形/无图像基线当主实验变量测视觉依赖/开放题归一化与多标注投票）。
+version: 1.8.0
 module: PI
 modules: PI
 ---
@@ -246,3 +246,32 @@ ACM JCDL 2026《Accessibility Annotations as OCR Ground Truth》四指标互补�
 - **失败与降级如实登记**：ZOOZ 长文与 danielhamlin 页只取 WebSearch 逐字快照，未冒充已读全文；Nature 数据集论文命中为 references PDF 页，公式与对照表按快照登记。PASCAL VOC 11 点插值与 COCO 全点积分是两代协议口径差，并列登记不择一。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `mAP` / `IoU` / `Dice` / `平均精度` / `AP50` 的命中中，**本技能内仅 §七/§八/§九判非串出现 `mAP`（OCR-D「mAP 不适用于文档版面」异命题）**，目标检测/像素分割评测本体 **0 命中**；其余命中在 `agent-guild`/`grill-me`/`ci-context`/`wb-agent-evaluation` 等（泛词或异命题）。按 rules/07 四态判「**优＝加厚现有 `engineering/multimodal-intelligence`**」，补目标检测/分割评测这一正交层，不重述 §六 CER/WER、§七阅读顺序、§八 FR/RR/NR、§九色彩、§十主观、§十一生成字幕。PI 模块记忆前 17 条结论不复用。豆包自留地 WB 0 落地。与 r765(OI/EI/SI)/r764(AI/VI/DI)/r763(MI/CI/RI) 九模块结论不复用；A/C 两轮结论亦不复用。
 - **未采纳**：nuScenes 全部子指标与 BEV 实现、Panoptic PQ 的 SQ/RQ 公式细节、Chamfer 距离的 3D 重建协议、COCO analyze() 的 372 张图生成细节 —— 属专项基准实现，不迁移为通用判据。
+
+## 十三、非视觉捷径：语言先验让模型「闭着眼睛答对」，盲模型基线才是照妖镜（r770B · 2026-11-19 实拉，≥2 独立域交叉）
+
+> 与 §六～§十二分工：那几节评「读得准不准 / 图质量好不好 / 检测分割对不对」——都假定模型真在用视觉输入；本节评更前置的一问：**模型到底有没有在看图？** 语言先验/非视觉捷径使高分可以完全不来自视觉理解，是评测效度（construct validity）层面的问题，不重述 OCR 的 CER、SPICE 命题 F-score 或 mAP/IoU。
+
+### 13.1（r770B-1）语言先验：问题文本本身泄露答案，「盲模型」不看图也能拿高分
+- Goyal 等 VQA v2 原论文（arXiv:1612.00837）摘要逐字：「**inherent structure in our world and bias in our language tend to be a simpler signal for learning than visual modalities, resulting in models that ignore visual information, leading to an inflated sense of their capability**」——世界结构与语言偏置是比视觉更简单的学习信号，模型忽略视觉、能力被虚高。
+- 一手长文（grapeot.me 十年脉络）逐字：Agrawal 2016 首析 VQA 语言先验（「What sport is…」高频答案 tennis 不需要图）；Goyal 2017 VQA v2 量化——「**完全无视视觉输入的盲模型(blind model)在二选一问题上能达到 67% 的准确率,在开放问题上也有 27%**」；2018 VQA-CP v2 改变测试集答案分布使其与训练不同，「当时的 SOTA 模型准确率直接下降了 24~27 个百分点……模型学到的很大程度上是问题表面形式和答案之间的统计关联,而非图片内容与答案之间的语义关系」。
+- 观微录逐字同构：VQA v1「有没有/是不是」答案严重偏斜（正确答案常是「是」），模型只记「看到『有没有』预测『有』」即可降损失、「不需要提取任何视觉特征」；二元问题类别均衡时随机猜 50%，只答「是」的垃圾模型在 yes 占比高的数据集也能高分。
+- **判据**：① 多模态任务报高分前必须先建**盲模型基线**（只给问题文本、不给图）——盲模型高分说明测的是语言先验不是视觉理解；② 二元/是否题单报准确率无意义（类别不均衡 + 语言先验灌水），必须配类别分布与问题-only 基线；③ 测评集与训练答案分布一致性要显式核对，分布一变 SOTA 掉 24–27 点说明模型在背统计关联。
+
+### 13.2（r770B-2）VQA v2 的互补图配对：同一问题配两张答案不同的相似图，逼模型真用视觉
+- VQA v2 原论文摘要逐字：「**we balance the popular VQA dataset by collecting complementary images such that every question in our balanced dataset is associated with not just a single image, but rather a pair of similar images that result in two different answers to the question**……approximately twice the number of image-question pairs……**All models perform significantly worse on our balanced dataset, suggesting that these models have indeed learned to exploit language priors. This finding provides the first concrete empirical evidence**」。
+- 观微录逐字解释机制：「这个人是男性吗」同时出现在男性与女性图片上，「只靠语言模式猜答案的模型,在这两个互补样本上必然错一个,总分被打回原形」。aiknowledge 逐字：VQA v1（Antol 2015，20.4 万图/61.4 万问）靠「how many 一律答 2 / is there 一律答 yes」走捷径，v2「让『只靠语言走捷径』几乎失效」。
+- **判据**：① 设计多模态评测时优先补**互补样本/最小对立对**（同问不同图答案不同、或同图不同问），让纯语言策略必然出错；② 平衡后在平衡集上显著掉分的模型，判定其原高分来自语言先验，不能以旧分数宣称视觉理解能力；③ VQA v2 还附「反例解释」——指出一张相似但答案不同的图，作为可解释性与「是否真看图」的双重验证。
+
+### 13.3（r770B-3）无图像基线当主实验变量、文本先验探测器与医学影像捷径——捷径是跨领域通病
+- aicompass 镜像（arXiv:2606.10400 措辞控制基准综述）逐字：Rahmanzadehgervi 2024 记录「大型视觉语言模型在视力正常者都能轻松完成的简单任务上失败」；Tong 2024 基于 CLIP 的模型有系统性盲点并传导到 VLM；Luo 2025「构建了一个文本先验探测器,其项目特意设计为仅凭文本即可作答,以衡量对视觉的规避程度」；「**无图像(仅文本)基线统一了这些发现:去除图像能精确地衡量一个模型依赖问题措辞的程度**」，该工作「将图像依赖性作为主要的实验变量而非次要诊断手段」。
+- CSDN 非视觉捷径逐字三形态——语言先验偏差 / 答案分布偏差（VSI-Bench「洗碗机长度」90% 答案集中 85–95cm）/ 模板结构泄露（固定句式「X 在 Y 的哪侧」）；「仅使用问题文本训练的『盲模型』平均准确率比随机猜测高出 33 个百分点」。
+- grapeot.me 医学影像逐字：Zech 2018 PLoS Medicine——肺炎检测模型实际学会识别拍片医院来源，「仅用医院来源信息做预测的简单模型就能达到 AUC 0.861，而 CNN 能以 99.95% 的准确率识别影像来自哪家医院」；根因「NIH 数据中肺炎患病率为 1.2%,而 Mount Sinai Hospital 为 34.2%」的基线差。
+- **判据**：① 把「去图像」从辅助诊断**升格为主实验变量**（固定 540 图集、跨四变体改措辞 + 大规模无图像消融配对），量化「没有图还能答对多少」；② 警惕**元数据/来源捷径**（医院标记、采集设备、模板句式）——模型可能靠混杂元数据而非目标特征，须做来源盲化/分布平衡；③ 捷径是跨 VQA 与医学影像的通病（近十年积累），任何「某任务高分」结论都要问「去掉目标模态/打散元数据后还剩多少」。
+
+### r770B 来源与判非（2026-11-19 实拉，逐字核验）
+- `https://arxiv.org/abs/1612.00837`（Goyal 等《Making the V in VQA Matter》，VQA v2 原论文）— **WebFetch 200 摘要全文逐字**：语言偏置致模型忽略视觉、互补图配对（一问两图两答案）、数据集翻倍、所有模型在平衡集显著更差、「first concrete empirical evidence」、反例解释模型。**第一独立域（原论文一手摘要，主证据）**。
+- `https://grapeot.me/share/mirage-multimodal-benchmark-20260405.html`（Computing Life·视觉理解评估十年困局）— **WebFetch/WebSearch 逐字快照**：2016–2018 语言先验脉络、盲模型 67%/27%、VQA-CP v2 掉 24–27 点、Zech 2018 医院来源 AUC 0.861/CNN 99.95%/患病率 1.2% vs 34.2%、MIRAGE 前沿模型量化。**第二独立域（技术长文一手，与第一交叉）**。
+- `http://bittide.aicompass.dev/article/...`（arXiv:2606.10400 措辞控制基准镜像）＋ `https://guanweilu.cn/article/453.html`（观微录·开放 vs 二元 VQA）＋ `https://blog.csdn.net/.../160554057`（非视觉捷径）＋ `https://aiknowledge.cn/article/68852`（视觉语言模型）— **WebFetch/WebSearch 逐字快照**：文本先验探测器、无图像基线当主变量、二元随机猜 50%/只答是、三形态捷径、盲模型高于随机 33 点、VQA v1 的 20.4 万图/61.4 万问与 v2 平衡机制。**第三～六域（镜像/技术博客/百科，交叉登记）**。
+- **失败与降级如实登记**：VQA v2 原论文仅取 WebFetch 摘要（PDF 正文未逐页核），按摘要逐字登记不冒充全文已读；arXiv:2606.10400 经 aicompass 镜像取得中文转述、未直取原论文；盲模型 67%/27%、VQA-CP 掉 24–27 点、盲模型高随机 33 点、医院 AUC 0.861 等数值均挂各自来源口径，只取定性结论、不择一冒充唯一权威。
+- **判非**：窄串全库 `SKILL.md` 精确扫描 —— `language bias` / `语言先验` / `捷径学习` / `answer prior` / `盲模型` 命中全部在 `wb-context-compressor`/`wb-agent-evaluation`/`wb-execute-discipline` 的 **references 下沉文件（豆包自留地）** 与 co-learn 台账，本技能正文（§六～§十二）0 命中本体。按 rules/07 四态判「**优＝加厚现有 `engineering/multimodal-intelligence`**」，补「视觉依赖效度」这一前置层，不重述 §十一 SPICE 命题 F-score（那是评字幕语义覆盖）、§十二 mAP（那是评定位）。PI 模块记忆前 17 条结论不复用。豆包自留地 WB 0 落地。与 r769(OI/EI/SI)/r768(AI/VI/DI)/r767(MI/CI/RI) 九模块结论不复用；A/C 两轮结论亦不复用。
+- **未采纳**：MIRAGE 对 GPT-5.1/Claude Opus 4.5/Gemini 3 Pro 的具体分数、VQA-CP 各模型逐项排名、CLIP 盲点清单、错措辞控制基准的四个变体构造细节 —— 属特定模型/数据集评测结果，不迁移为通用判据。
