@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。错误记忆与来源监控（DRM关键诱饵·模糊痕迹verbatim/gist双 trace·激活监测与来源监控失败·误导信息效应与DRM的verbatim反向作用·高置信≠真实须逐字锚点回归）。 定向遗忘两范式分离（item 编码+提取双因/list 提取抑制·accessibility≠availability 换线索验真删·直接抑制vs替代两策略）。
-version: "2.3.0"
+description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。错误记忆与来源监控（DRM关键诱饵·模糊痕迹verbatim/gist双 trace·激活监测与来源监控失败·误导信息效应与DRM的verbatim反向作用·高置信≠真实须逐字锚点回归）。 定向遗忘两范式分离（item 编码+提取双因/list 提取抑制·accessibility≠availability 换线索验真删·直接抑制vs替代两策略）。 编码特异性检索（线索效力来自编码时共存语境而非语义相似度·情境效应主要是回忆现象须换线索验真删·线索过载与判别竞争限制匹配）
+version: "2.4.0"
 module: MI
 modules: MI,AI
 ---
@@ -288,3 +288,20 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 - `https://www.mdpi.com/2227-9059/10/7/1555/html`（《Obliviate!》2022 元分析 WebSearch 全文逐字：直接抑制 vs 替代两策略、额叶-海马 vs VLPFC/IFG 神经分离、剂量-反应）+ `https://www.sciencedirect.com/science/article/pii/S0010945221002422`（2021 EEG 逐字：Forget 额叶振荡 vs Imagine 表征相似度、16 次有效/8% 平均下降/重复失败）— 第四域交叉（立场登记）。
 - **判重**：全库 SKILL.md 精确扫描 `directed forgetting`/`定向遗忘`/`intentional forgetting`/`选择性复述`/`release from inhibition` 在正文 0 命中；与本技能 §十三 r755A（系统自动 decay/eviction 双机制、遗忘四策略）/§r767A（RIF 练一条压同簇、换独立线索裁决）/§r751A（检索即改写、可及性≠保真度）分工不复用；与 r778(TI/PI/PDI)/r777(OI/EI/SI)/r776(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
 - **未采纳**：fMRI/ERP 脑区坐标与振荡频段、多项模型的具体参数估计与拟合优度、临床创伤/创伤后遗忘应用、各实验样本量与年龄组差异（属实验细节或临床域，不迁移到 agent 记忆工程）。
+
+## r783A · 编码特异性原则（encoding specificity）：线索效力来自"编码时与目标共存了什么"，不是语义相似度（MI · 2026-11-20 实拉，多独立域交叉）
+
+> 来源：Tulving & Thomson (1973) 原始实验经 Simply Psychology 全文（WebFetch 被 Cloudflare 拦，以 WebSearch 该页全文逐字片段登记，第一手）+ Wikipedia《Encoding specificity principle》（WebFetch fetch failed，以 WebSearch 全文逐字片段登记，第二独立域）+ UCL Hardwicke 2016 博士论文 PDF WebSearch 全文逐字（cue-overload / memory-as-discrimination，第三域）+ 科普中国「线索依赖性遗忘」与百度百科「编码特异性原则」WebSearch 全文逐字（中文权威交叉，第四域）。
+
+### 三独点
+1. **线索的效力来自"它是否在编码时与目标一起被存下"，不是它与目标的通常语义关联强度**：Tulving & Thomson (1973) 逐字——受试学习"BLACK—train"这类弱配对，测试时先给强关联词 white 常**再认失败**，随后给原弱线索 train 却能**回忆出同一个词**；"recognition failure of recallable words" 推翻了"再认总优于回忆"的默认假设。判据：**记忆检索的键不是语义相似度排序，而是写入那一刻与目标共存的上下文/线索**；给一条记忆建检索线索，必须在写入时就把它与目标一起编码，事后补的语义近似词不产生同等效力。与 §r732B episode 溯源互补：那条管事实从哪个 episode 来，本条管 episode 内"哪些线索与目标绑定"。
+2. **情境效应主要是"回忆现象"，测试供给强线索时消失——所以"取不出"不等于"没存"**：Godden & Baddeley (1975) 潜水员实验，岸上/水下学习与回忆四组合，环境匹配组回忆量高约 50%；1980 年同范式改测**再认**则无情境效应。判据：验收"记忆是否还在"必须换线索类型再测一次（自由回忆 vs 再认 vs 不同情境线索），单一路径取不出就判"已删"是错误结论——与 §r779A「accessibility≠availability 换线索验真删」同族，但本条给出"匹配编码情境"这一具体线索维度，并指出**测试本身供给强线索会抹平效应**。
+3. **编码-提取匹配不是唯一决定因素，须与线索过载/判别竞争并报**：UCL 论文逐字——cue-overload principle（Watkins & Watkins 1976）：一个线索关联的痕迹越多效力越低；Nairne (2002) 与 Poirier 等 (2012) 的 memory-as-discrimination 假说认为表观的"匹配越好记得越好"很大程度是因为线索更易把目标从竞争者中区分出来；反例：线索 X 只关联目标 A，线索 Y 同时关联 A 与竞争者 B，X+Y 虽使 A 匹配度最高，却因 Y 引入 B 的竞争反而不如只用 X。判据：**加线索不是越多越好，优先只绑定目标的独占线索、避免共用线索引入竞争**；与 §r767A RIF（练一条压同簇邻居，检索的抑制后果）不同面，本条是线索设计的竞争面。
+
+### 来源
+- `https://www.simplypsychology.org/context-and-state-dependent-memory.html`（**WebFetch 被 Cloudflare 拦 block**，以 WebSearch 该页全文逐字片段登记：Tulving & Thomson 1973 BLACK-train/white 再认失败、Godden & Baddeley 1975 约 50%、1980 recognition null、Marian & Neisser 2000 双语线索）— 第一独立域（实验综述一手，降级如实登记）。
+- `https://en.wikipedia.org/wiki/Encoding_specificity_principle`（**WebFetch fetch failed**，以 WebSearch 全文逐字片段登记：encoding depends on context、context words add/delete/replace 降 recognition、语义相关词未在编码时出现则无效、弱相关但编码在场胜过强相关但缺席、Tulving & Osler 1968）— 第二独立域（百科交叉，降级如实登记）。
+- `https://discovery.ucl.ac.uk/1519819/1/thesis_Hardwicke_2016.pdf`（UCL 博士论文 WebSearch 全文逐字：cue-overload principle、Nairne / Poirier memory-as-discrimination、X/Y 线索反例、Godden & Baddeley 与 Eich 1975 状态依赖）— 第三域（学术论文一手）。
+- `https://www.kepuchina.cn/article/articleinfo?business_type=100&ar_id=244499`（科普中国「线索依赖性遗忘」WebSearch 全文逐字：图尔文 1973 编码特殊性原理、巴德利内在/外在语境、鲍尔心境一致性）+ `https://baike.baidu.com/item/%E7%BC%96%E7%A0%81%E7%89%B9%E5%BC%82%E6%80%A7%E5%8E%9F%E5%88%99/53705432`（百度百科「编码特异性原则」WebSearch 全文逐字：2014《心理学名词》第二版界定）— 第四域（中文权威交叉，立场登记）。
+- **判重**：全库 SKILL.md 精确扫描 `encoding specificity`/`编码特异性`/`情境依赖`/`context-dependent`/`Tulving` 在记忆类技能正文 0 命中本体（`meta/di-decision-tradeoff` §r715C-2 的 `context-dependent preference` 是 AHP 合成模式"偏好依赖参照系"，异命题判非）；与本技能 §r732B（episode 溯源）/§r779A（定向遗忘 accessibility vs availability）/§r767A（RIF 换独立线索裁决）/§r751A（检索即改写）分工不复用；与 r782(TI/PI/PDI)/r781(OI/EI/SI)/r780(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：Godden & Baddeley 的具体词表与回忆百分比精度、Eich 1975 大麻状态依赖的神经机制、Marian & Neisser 双语自传体记忆细节、Tulving 1973 原始实验被试数与统计检验（属实验细节或临床域，只取三条可机检口径）。
