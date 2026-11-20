@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。错误记忆与来源监控（DRM关键诱饵·模糊痕迹verbatim/gist双 trace·激活监测与来源监控失败·误导信息效应与DRM的verbatim反向作用·高置信≠真实须逐字锚点回归）。
-version: "2.2.0"
+description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。错误记忆与来源监控（DRM关键诱饵·模糊痕迹verbatim/gist双 trace·激活监测与来源监控失败·误导信息效应与DRM的verbatim反向作用·高置信≠真实须逐字锚点回归）。 定向遗忘两范式分离（item 编码+提取双因/list 提取抑制·accessibility≠availability 换线索验真删·直接抑制vs替代两策略）。
+version: "2.3.0"
 module: MI
 modules: MI,AI
 ---
@@ -271,3 +271,20 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 - `https://baike.baidu.com/view/88911.html`（**百度百科「错误记忆」WebSearch 全文逐字**：Deese1959→Roediger&McDermott1995、四理论模型——内隐激活/模糊痕迹/来源监测/激活监测、单词类 DRM 与事件类误导信息两范式分类）— **第四域（中文百科交叉，立场登记）**。
 - **判重**：全库 SKILL.md 精确扫描 `DRM`/`critical lure`/`关键诱饵`/`模糊痕迹`/`fuzzy-trace`/`激活监测`/`imagination inflation`/`想象膨胀`/`misinformation` 在 mi-memory 正文 0 命中（仅 §r751A 来源段列 `misinformation effect` 作判重词、Loftus 仅作判非异命题提及，非落地）；与本技能 §五 r732B（episode 溯源）/§十二 r751A（检索即改写/流畅度≠准确率）/§r767A（RIF 遗忘）/§r771A（睡眠巩固）不复用；与 r774(TI/PI/PDI)/r773(OI/EI/SI)/r772(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
 - **未采纳**：Loftus 具体样本数/速度估计数值与百分比、fMRI/ERP 脑区与神经振荡、DRM 词表联想强度参数、错误记忆的年龄/情绪/人格差异、法庭证词应用与 Mandela Effect 社会学解释（均属实验细节或临床/司法域，不迁移到 agent 记忆工程）。
+
+## r779A · 定向遗忘（directed forgetting）：遗忘是受控执行过程，不是被动衰减（MI · 2026-11-20 实拉，多独立域交叉）
+
+> 来源：Rummel, Marevic & Kuhlmann 2016《Investigating storage and retrieval processes of directed forgetting: A model-based approach》DOI 10.1037/xlm0000266 PubMed 摘要 WebFetch 200 逐字（第一手）+ Anderson & Hanslmayr 2014 综述《Neural mechanisms of motivated forgetting》PMC4045208（item/list 两范式与 accessibility vs availability 术语逐字，第二独立域）+ Bäuml 等《Forget me (not)?》Frontiers PMC4644810 全文（选择性复述 vs 提取抑制两说逐字，第三域）+ MDPI 2022《Obliviate!》元分析（抑制/替代两策略神经分离逐字，第四域交叉）。
+
+### 三独点
+1. **item-method 与 list-method 的遗忘成本落在不同阶段，不能用一套「删除」口径概括**：Rummel 2016 多项模型逐字——两种范式的「遗忘收益」都来自 to-be-remembered 条目**更好的存储**（better storage）；但「遗忘成本」分野：list-method 成本来自 to-be-forgotten 条目**提取减少**（reduced retrieval），item-method 成本**不只**来自存储减少（当时主流观点），**还**来自提取减少（"occurred not only due to reduced storage ... but also due to reduced retrieval"），且实验二在排除回忆输出顺序影响后仍复现该新发现。这修正了「item=选择性复述编码期 / list=提取抑制」的简单二分。判据：**记忆清理要区分「当初没存好（写入侧）」与「存着但取不出（检索侧降权/抑制）」两栏**——与本技能 §十三 r755A「decay 降权不删 vs eviction 真删」互补：那条是系统自动机制，本条是**有意指令驱动的受控遗忘**，说明同一个「忘」字背后至少两类可分离的加工。
+2. **「可及性」与「可用性」是两种独立的遗忘，提取线索能区分它们**：Anderson & Hanslmayr 综述 Glossary 逐字定义——提取失败可能是「没访问到已存记忆」（accessibility）也可能是「记忆已不在系统里」（availability）。关键实验判据：list-method 的遗忘效应**只在自由回忆出现、再认测试不出现**，因为再认时重新呈现条目即解除抑制（release from inhibition），证明条目**已被编码并仍存着、只是暂时不可及**；item-method 效应在再认也出现，说明条目**根本没被好好编码**。判据：**验收「真删还是暂时压住」必须换一种提取线索再测一次**——原线索取不出不代表数据没了；这与 §r767A RIF「换独立线索再测证明被抑制而非被覆盖」同源，但那条测的是练一条压同簇邻居，本条测的是**遗忘指令**对目标条目本身的作用，机制族不同。
+3. **意图性遗忘有至少两条可分离策略——直接抑制 vs 替代/语境切换，产品含义不同**：MDPI 元分析与 ScienceDirect 2021 逐字——直接抑制（direct suppression）走额叶-海马抑制回路（frontally-mediated suppression），替代/thought substitution（想象别的事）走 VLPFC/IFG 语境转移（contextual shifting）；行为上两者都能造成遗忘，但 Forget 线索引发可预测未来遗忘的额叶振荡功率变化，Imagine 线索则靠条目-线索表征相似度下降。且抑制效应有剂量-反应关系（no-think 次数多才显著，16 次有效、1 或 4 次不显著），效应量小（32 研究元分析平均召回下降约 8%），并有重复失败案例。判据：**「让用户/agent 忘掉一条」要显式选策略**——压制（不再检索、降可及性、可恢复）适用于「暂时不该浮现」；替代（写一条新的语境/内容覆盖）适用于「旧值已失效要换新」；两者不可混报效果，且抑制的效应量小、需多次触发，不能做一次就算忘干净。按 rules/08 §五，人类记忆机制迁移到 agent 作**待验证假设**，只取三条可机检口径（存储/提取两栏、换线索验真删、策略显式声明），不因生物有此机制就断言 agent 必然如此。
+
+### 来源
+- `https://pubmed.ncbi.nlm.nih.gov/26950491/`（Rummel 等 2016 多项模型研究 PubMed 摘要 WebFetch 200 逐字：收益=更好存储、list 成本=提取减少、item 成本=存储+提取双因、输出顺序无关复现）— 第一独立域（期刊一手摘要）。
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC4045208`（Anderson & Hanslmayr《Neural mechanisms of motivated forgetting》PMC 综述全文 WebSearch 逐字：item/list 范式图、accessibility vs availability 术语、list 只在自由回忆出现再认消失=解除抑制）— 第二独立域（综述一手全文）。
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC4644810/pdf/fpsyg-06-01741.pdf`（Bäuml 等《Forget me (not)?》Frontiers 全文 PDF WebSearch 逐字：选择性复述说 vs 提取抑制说、loudness illusion 策略证据）— 第三域（实验期刊全文）。
+- `https://www.mdpi.com/2227-9059/10/7/1555/html`（《Obliviate!》2022 元分析 WebSearch 全文逐字：直接抑制 vs 替代两策略、额叶-海马 vs VLPFC/IFG 神经分离、剂量-反应）+ `https://www.sciencedirect.com/science/article/pii/S0010945221002422`（2021 EEG 逐字：Forget 额叶振荡 vs Imagine 表征相似度、16 次有效/8% 平均下降/重复失败）— 第四域交叉（立场登记）。
+- **判重**：全库 SKILL.md 精确扫描 `directed forgetting`/`定向遗忘`/`intentional forgetting`/`选择性复述`/`release from inhibition` 在正文 0 命中；与本技能 §十三 r755A（系统自动 decay/eviction 双机制、遗忘四策略）/§r767A（RIF 练一条压同簇、换独立线索裁决）/§r751A（检索即改写、可及性≠保真度）分工不复用；与 r778(TI/PI/PDI)/r777(OI/EI/SI)/r776(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：fMRI/ERP 脑区坐标与振荡频段、多项模型的具体参数估计与拟合优度、临床创伤/创伤后遗忘应用、各实验样本量与年龄组差异（属实验细节或临床域，不迁移到 agent 记忆工程）。
