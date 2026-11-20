@@ -2,7 +2,7 @@
 name: wb-outreach
 description: >-
   一对一对外沟通写作（不是群发）：冷邮件 / 自荐信 / 内推与引荐请求 / 会面后的跟进与更新。当用户要"给某公司 HR 发一封自荐邮件""请学长帮我内推""给招聘方写一封 cold email""上次聊完写封跟进""约人做访谈/请教"时使用。核心纪律：每封都必须为收信人单独个性化（写清"为什么是你"）、把请求降到最低摩擦（只给一个具体下一步）、用证据替代形容词、跟进有明确止损点。触发词：冷邮件、cold email、自荐信、内推、求引荐、warm intro、跟进邮件、first touch、 outreach、约访谈、请教信、投递附信。不适用：群发营销与投放文案（走 doubao-multiplatform-rewrite 一类平台技能）；简历正文改写（走 resume-ai-help）；技术文档与长报告（走 wb-doc-writing）。
-version: 1.0.0
+version: 1.1.0
 agent_created: true
 sources:
   - GitHub `affaan-m/ECC`·`.agents/skills/investor-outreach/SKILL.md` 2,644B（2026-11-08 r709C 一手 contents API 实拉）
@@ -82,3 +82,4 @@ sources:
 - `wb-doc-writing`：长文档、报告、方案的写作与评审。
 - `humanizer-zh`：成稿去 AI 味；本技能在**起草阶段**就避免模板句。
 - `doubao-multiplatform-rewrite` 等平台技能：一对多分发与平台改写；本技能是**一对一**。
+- `meta/shendeng-psychology`：收信人「心」的洞察上游（E 系列公式：对方怕什么/要什么）；本技能管信件骨架与请求结构，心理洞察归它，互补不重叠。
