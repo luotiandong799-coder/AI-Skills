@@ -6,7 +6,7 @@ description: 用于直接改写、润色或优化简历内容。当用户要求�
 description_zh: 用于直接改写、润色或优化简历内容。当用户要求「优化简历」「改写简历」「润色简历」「帮我写简历」「生成优化版简历」「把这段经历写得更好」，或上传整份简历并要求产出修改后的版本时触发。支持复现简历「AI 帮你写」两阶段追问与优化交互；整份优化固定生成 HTML 和 PDF，单字段优化只返回该字段。仅负责内容创作和改写，不执行整份简历诊断、问题清单或 6 维评分；用户仅要求分析问题、评审或打分时，本技能不覆盖该范围，直接说明并询问是否改走内容改写。
 description_en: Use when the user asks to directly rewrite, polish, optimize, or create resume content, including requests such as "optimize my resume", "rewrite my resume", "polish this experience", "help write my resume", or generating a revised version from an uploaded resume. It supports the two-stage ask-and-optimize interaction. Full-resume optimization must produce HTML and PDF, while single-field optimization returns only the revised field. This skill creates or rewrites content but does not perform comprehensive diagnosis, issue reporting, or six-dimension scoring. If the user only asks for analysis, review, feedback, or scoring, state clearly that this skill does not cover that scope and ask whether to proceed with content rewriting instead.
 category: 求职招聘
-version: 2.0.1
+version: 2.1.0
 author: wangtengfei
 agent_created: true
 module: KI
@@ -29,6 +29,7 @@ modules: KI,TI
 | 优化已上传的整份简历 | 已提供完整附件或全文 | 整份优化 | 本地 HTML + PDF；失败时降级为已完成内容 |
 | 只排版，不改内容 | 已提供整份简历 | 仅排版 | 本地 HTML |
 | 诊断、评分、问题报告 | 请求重点是评价而非改写 | 改用 `resume-diagnosis` | 由对应 skill 决定 |
+| JD 值不值得投 / 岗位打分 / 红线筛查 | 请求是岗位评估而非简历内容 | 改用 `writing/career-ops-resume` | A-F 评估 + 10 维分（<4.0 劝退；≥4.0 改措辞回本技能） |
 | 面试练习 | 请求重点是模拟面试或刷题 | 改用 `interview-brush` | 由对应 skill 决定 |
 
 用户已提供整份简历并泛化要求“优化简历”时，直接走整份优化；不再询问范围、模板或输出格式。只有用户明确限定字段时才缩小范围。
