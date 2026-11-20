@@ -1,8 +1,8 @@
 ---
 name: multimodal-intelligence
 description: >-
-  多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。色彩管线与色差口径：sRGB 传递函数与线性光、ICC 渲染意图与 D50 PCS、ΔE 公式版本与观察条件四元验收。；主观评测协议（六项控制/MOS+95%CI/ΔSCI 与人数/ACR·DSIS·DSCQS·ACR-HR 选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。；目标检测与分割评测口径（IoU 定阈值 TP/FP/FN、COCO mAP=12 指标与 10 个 IoU 阈值平均、AP 与 mAP 不区分、Dice=像素 F1 与 IoU 单调等价、mIoU 与 PixelAccuracy 分报、mask/box 同协议只换 IoU 算法）。；非视觉捷径与语言先验（VQA 盲模型靠问题文本「闭眼答对」/VQA v2 互补图配对逼模型用视觉/VQA-CP 答案分布偏移打回原形/无图像基线当主实验变量测视觉依赖/开放题归一化与多标注投票）。
-version: 1.8.0
+  多模态理解能力：让 Agent 能「看懂图片」与「读出文字」。生成质量 FID 的可比性陷阱（有限样本协方差估计使 FID 随样本量系统性偏高近似 1/n·2048 维放大/只对同样本数同特征网络同预处理可比·clear-fid 统一 resize 与 Inception 权重·只匹配均值协方差丢多模态结构·保真度与多样性混在一个数里需 precision-recall 拆开·不读 prompt 无法评价文图匹配·与人类偏好可背离）；Vision 负责图像语义理解（界面识别、故障图判断、流程图解读、商品图分析），OCR 负责把图片/PDF 中的文字、表格、文档结构化提取。两者分工：Vision 看懂画面意图，OCR 读取其中文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、这张图什么意思、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、商品图分析、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen/buddy-image-processing）、纯代码或纯文本任务（走对应工程技能）。色彩管线与色差口径：sRGB 传递函数与线性光、ICC 渲染意图与 D50 PCS、ΔE 公式版本与观察条件四元验收。；主观评测协议（六项控制/MOS+95%CI/ΔSCI 与人数/ACR·DSIS·DSCQS·ACR-HR 选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。；目标检测与分割评测口径（IoU 定阈值 TP/FP/FN、COCO mAP=12 指标与 10 个 IoU 阈值平均、AP 与 mAP 不区分、Dice=像素 F1 与 IoU 单调等价、mIoU 与 PixelAccuracy 分报、mask/box 同协议只换 IoU 算法）。；非视觉捷径与语言先验（VQA 盲模型靠问题文本「闭眼答对」/VQA v2 互补图配对逼模型用视觉/VQA-CP 答案分布偏移打回原形/无图像基线当主实验变量测视觉依赖/开放题归一化与多标注投票）。
+version: 1.9.0
 module: PI
 modules: PI
 ---
@@ -275,3 +275,24 @@ ACM JCDL 2026《Accessibility Annotations as OCR Ground Truth》四指标互补�
 - **失败与降级如实登记**：VQA v2 原论文仅取 WebFetch 摘要（PDF 正文未逐页核），按摘要逐字登记不冒充全文已读；arXiv:2606.10400 经 aicompass 镜像取得中文转述、未直取原论文；盲模型 67%/27%、VQA-CP 掉 24–27 点、盲模型高随机 33 点、医院 AUC 0.861 等数值均挂各自来源口径，只取定性结论、不择一冒充唯一权威。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `language bias` / `语言先验` / `捷径学习` / `answer prior` / `盲模型` 命中全部在 `wb-context-compressor`/`wb-agent-evaluation`/`wb-execute-discipline` 的 **references 下沉文件（豆包自留地）** 与 co-learn 台账，本技能正文（§六～§十二）0 命中本体。按 rules/07 四态判「**优＝加厚现有 `engineering/multimodal-intelligence`**」，补「视觉依赖效度」这一前置层，不重述 §十一 SPICE 命题 F-score（那是评字幕语义覆盖）、§十二 mAP（那是评定位）。PI 模块记忆前 17 条结论不复用。豆包自留地 WB 0 落地。与 r769(OI/EI/SI)/r768(AI/VI/DI)/r767(MI/CI/RI) 九模块结论不复用；A/C 两轮结论亦不复用。
 - **未采纳**：MIRAGE 对 GPT-5.1/Claude Opus 4.5/Gemini 3 Pro 的具体分数、VQA-CP 各模型逐项排名、CLIP 盲点清单、错措辞控制基准的四个变体构造细节 —— 属特定模型/数据集评测结果，不迁移为通用判据。
+
+## 十四、生成图像质量 FID：一个数字背后四个被违反的假设（PI · r786B 2026-11-20 实拉，≥4 独立域交叉）
+
+> 与 §六～§十三分工：那些评「读得准不准」（OCR/阅读顺序）、「图质量好不好」（FR/NR 失真）、「检测分割对不对」（mAP/mIoU）、「有没有真看图」（语言先验）——对象是**判别/理解**；本节评**生成**——一组生成图相对一组真实图的分布距离 FID。§十二曾一句「图像生成另走 FID」只给定义，本节展开其可比性条件与失效面。Heusel 等 2017（arXiv:1706.08500）定义：两组图过固定 Inception-v3 的 2048 维 pool3 特征，各拟合多元高斯，取两高斯的 Fréchet（2-Wasserstein）距离平方 `FID=‖μr−μg‖²+Tr(Σr+Σg−2(ΣrΣg)^{1/2})`，越低越好、0 表示两个拟合高斯重合。
+
+### 14.1（r786B-1）★样本量偏差使 FID 系统性偏高、近似 1/n 衰减且随特征维放大——跨论文不可直接比
+insightful-data-lab（2025-03-26）逐字实验：同一 32 维高斯抽两独立组、真距离应为 0，五重复平均 FD 在 n=64 时 **9.539**、256 时 2.333、1024 时 0.588、4096 时 0.147、16384 时 0.036——偏差 roughly in proportion to 1/n；且「grows with feature dimension because there are more covariance entries to estimate (Inception features have 2,048 dimensions, not 32)」。根因是有限样本协方差估计误差抬高 trace 项。Ultralytics 中文逐字：小样本抬高分数，原作者建议至少 10,000 张图，5,000 样本与 50,000 样本算出的分数不可比；差异小于绝对偏差不自动无信息（共同偏差可相消），须用重复采样/配对重采样看差值稳不稳。aiwiki 引 Chong & Forsyth CVPR 2020：FID 是有偏估计且**偏差依赖被评模型本身**，模型 A 比 B FID 低可能只是 A 的偏差项小、不是图更好，固定样本量也校不掉，需 FID-infinity 外推。判据：报 FID 必须同时写样本数、特征网络与权重、图像分辨率、resize 实现、参考集；不同样本量的两个 FID 数字不可比高低，差值须报配对重采样或不确定度。
+
+### 14.2（r786B-2）★只匹配均值与协方差会丢掉多模态结构——同前两矩的两组分布可以 FID≈0 却形状完全不同
+insightful-data-lab 逐字实验：真实数据是**两个分离簇**、生成数据是从同均值同协方差的单高斯抽样（填满两簇之间的空隙），结果 fake 有 **37.8%** 样本落在真实数据没有任何样本的区域（真实为 0.000）而 **FD 仍仅 0.0001**；反过来丢掉其中一个簇却被检出（FD=6.918）。结论逐字「FID sees only the mean and covariance of the features. Two sets with the same first two moments score 0 whatever their shapes」；真实图像的特征分布本就是多模态+重尾，高斯假设因此失效。aiwiki 引 Borji 2022 同构：FID/KID 只反映分布的前几阶矩、对全局结构不敏感；Jayasumana 2024 显示 FID 把 VQGAN 潜空间噪声造成的失真图评为比不失真版本更好、也不反映 Stable Diffusion/Muse 迭代精修的渐进改善。判据：FID 低不等于「图真的像/多样性对」，须配一项结构诊断（mode collapse 检查、最近邻记忆检查、或 precision/recall、CMMD 等免高斯假设的核距离）；声称「覆盖真实分布」不能只靠一个 FID。
+
+### 14.3（r786B-3）★FID 混淆保真度与多样性、读不到 prompt、且对实现细节敏感到可逆转排名
+insightful-data-lab 逐字：单个距离把「生成的图像像不像真的（fidelity）」与「是否覆盖真实图像的多样性（diversity）」两件事混在一起；提高扩散模型 guidance scale 通常在一定范围内用多样性换保真度，FID 沿 guidance 扫描是两者合成、可升可降，单看 FID 分不出变化来自哪一者——拆开需特征空间最近邻估计的 precision/recall 或独立多样性指标（Kynkaanniemi 2019 arXiv:1904.06991）。Inception 训练于 ImageNet 分类，对区分 ImageNet 类别敏感、对其不要求的属性（文字渲染、手、医学影像结构、艺术风格）较不敏感；且 FID 完全不用 prompt，「says nothing about whether an image matches its caption」——文生图任务须另报 CLIP Score 或 GenEval/DPG-Bench 这类逐项语义核验。实现敏感性（labhub 引 clean-fid CVPR 2022 与 aiwiki 引 Parmar 2022）：同一批图换 resize 实现（PIL bicubic 为参考，OpenCV/PyTorch/TF 各差 6 分以上）、JPEG 压缩质量、TF 与 PyTorch Inception 权重差异、参考图随机种子，都让 FID 偏移几个点——幅度可超过论文宣称的模型改进，正是 Clean-FID 标准化的动因。判据：文生图验收至少三项分报——FID（分布距离，同口径可比）+ 文图匹配（CLIP Score/逐项核验）+ 保真/覆盖拆分（precision-recall 或记忆检查）；只报 FID 一个数字不足以支撑「更好」或「更贴合提示」。
+
+### r786B 来源与判非（2026-11-20 实拉，逐字核验）
+- `https://insightful-data-lab.com/2025/03/26/frechet-inception-distance-fid`（WebFetch 200 全文逐字：FID 公式与一维校验 1.985、样本偏差五点数值 9.539/2.333/0.588/0.147/0.036 与 1/n、两簇 vs 同矩高斯 37.8%/0.0001/6.918、fidelity 与 diversity 混合、Inception 不读 prompt、CMMD 无偏替代）——第一独立域·带可复现实验的技术一手。
+- `https://www.ultralytics.com/zh/glossary/frechet-inception-distance-fid`（WebFetch/WebSearch 逐字：中文口径「至少 10,000 张图」「5,000 vs 50,000 不可比」「torchvision Inception 与原始 TF 权重不可比」「JPEG/resize 偏移几个点」、KID 小样本更稳、CLIP Score 补文图匹配、FD-DINOv2 因大规模人类研究发现 FID 不反映扩散图逼真度评价）——第二独立域·工程 glossary 一手。
+- `https://praveentn.live/learn/concepts/fid-and-generative-evaluation-metrics`（WebFetch 逐字：三个假设显性化、样本偏差足以反转模型排名、precision/recall 定义与 mode collapse=高 precision 低 recall、FID 看不见记忆化、guidance scale 使 FID 成曲线而非点）——第三独立域·概念长文一手。
+- `https://aiwiki.ai/wiki/frechet_inception_distance`（WebFetch 逐字：Chong & Forsyth CVPR 2020 有偏且模型依赖、FID-infinity、Parmar 2022 五项实现敏感、Jayasumana 2024 与人类判断相悖、Borji 2022 前几阶矩、FVD/FAD/FCD/Clean-FID 变体）——第四独立域·方法百科交叉。
+- **判重**：全库 SKILL.md 精确扫描 `Fréchet`/`Frechet`/`CMMD` 0 命中本体，唯一 FID 相关命中为本技能 §十二 r766B「图像生成另走 FID（定义句）」与 `media/pi-audio` r778B「FID 22 命中均为图像生成语境异命题」的判非句——均无专节、无样本偏差/结构/保真多样性的口径。本轮按四态判「**优＝加厚现有 engineering/multimodal-intelligence**」，把 §十二一句展开为独立评测节，不重述检测 mAP/分割 mIoU/语言先验结论。豆包自留地 WB 0 落地。与 r785(OI/EI/SI)/r784(AI/VI/DI)/r783(MI/CI/RI) 九模块结论不复用；A/C 两轮结论亦不复用。
+- **未采纳**：Heusel 原论文 GAN 训练细节、StyleGAN2 FID 2.84 / Imagen 7.27 / DALL-E 2 10.39 等特定模型分数、FVD/FAD/FCD 各领域变体公式 —— 属特定模型/特定域结果，不迁移为通用验收判据。

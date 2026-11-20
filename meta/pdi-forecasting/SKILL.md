@@ -1,9 +1,9 @@
 ---
 name: meta/pdi-forecasting
-description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议、预测题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO 五策略、误差累积与随机依赖两轴、windows_identical 跨视界可比与逐视界最准互斥）。；加权评分规则与预报员困境（w(y)S 破坏适当性/threshold-weighted 与 outcome-weighted 两类/条件分不进事件概率）。；回测验证协议（purging 标签重叠与 embargo 序列相关两道漏/CPCV 把一条历史变多条路径 φ(N,k)/PBO 与 Deflated Sharpe 计试验次数/单路径不是证据）。；事件型预警评测（point-adjustment 让随机探测器拿高 F1/事件级检出率·检测延迟·单位时间误报率三栏/range-based 与 k-delay 协议/ERDE 时间惩罚）。；专家概率引出与结构化启发协议（分位数法 X05/X50/X95 拟合分布/锚定偏差两种等价提问口径分叉/IDEA 四步 Investigate-Discuss-Estimate-Aggregate/Cooke Classical Model 种子题校准与信息双评分加权/校准优先于信息性/无种子题则等权/平均专家 90% 区间只含真值 36%）；预测组合的场景依赖（combining for adaptation 目标追平最佳单候选 vs combining for improvement 目标超越全部候选/不看场景套方法本身即制造组合之谜/估计误差只是解释之一/把简单平均当候选的 mAFTER 自适应/最优权重增益可能小到被估计误差淹没）；MCMC 收敛诊断（R-hat split+rank/folded 取 max + bulk·tail-ESS 双达标/收敛全局含 lp__、诊断只验失败不证收敛）。
+description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率的可结算判断、不作行动决策；题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO 五策略、误差累积与随机依赖两轴、windows_identical 跨视界可比与逐视界最准互斥）。；加权评分规则与预报员困境（w(y)S 破坏适当性/threshold-weighted 与 outcome-weighted 两类/条件分不进事件概率）。；回测验证协议（purging 标签重叠与 embargo 序列相关两道漏/CPCV 把一条历史变多条路径 φ(N,k)/PBO 与 Deflated Sharpe 计试验次数/单路径不是证据）。；事件型预警评测（point-adjustment 让随机探测器拿高 F1/事件级检出率·检测延迟·单位时间误报率三栏/range-based 与 k-delay 协议/ERDE 时间惩罚）。；专家概率引出（分位数法 X05/X50/X95 拟合分布/锚定偏差两种提问口径分叉/IDEA 四步/Cooke 种子题校准与信息双评分加权/校准优先信息性/无种子题等权/平均专家 90% 区间只含真值 36%）；预测组合的场景依赖（combining for adaptation 目标追平最佳单候选 vs combining for improvement 目标超越全部候选/不看场景套方法本身即制造组合之谜/估计误差只是解释之一/把简单平均当候选的 mAFTER 自适应/最优权重增益可能小到被估计误差淹没）；MCMC 收敛诊断（R-hat split+rank/folded 取 max + bulk·tail-ESS 双达标/收敛全局含 lp__、诊断只验失败不证收敛）；多变量评分（ES=CRPS 高维推广严格适当但相关误设判别力有限/VS 测相关结构仅适当非严格/二者 kernel scores 互补分报·DM 检验）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.16.0"
+version: "1.17.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -476,25 +476,25 @@ PIT 定义 `F(y)~U(0,1)`：U 形=区间太窄过自信、驼峰=太宽欠自信�
 ### 21.3（r778C-3）★预测者困境同样打校准诊断：按观测筛样本会让校准系统也显示失准，正解是 cPIT
 arXiv 2209.04872「The forecaster's dilemma also applies to diagnostic checks for calibration: if a rank or PIT histogram is constructed from only the forecasts issued when a high-impact event occurs, then the resulting histogram of a calibrated prediction system will in general not be uniform.」——Bellier 等 2017「strongly advise against observation-based stratification when constructing rank histograms」。若问题正是「极端事件发生了之后预报是否仍校准」，正解是 conditional PIT：`G(x)=[F(x)−F(t)]/[1−F(t)]` for x>t，else 0；对 y>t 的观测算 G(y) 画直方图，均匀即条件校准。关键陷阱：「These cPIT histograms are not equivalent to focusing on the bins on the right-hand side of the standard PIT histogram」——极端观测在预报本身已给极高概率时反而对应低 PIT 值 F(y)。另条件校准轴还有分组损失 `GL(p)=Var[f*(X)|f(X)=p]`，与 ECE 的边际轴正交。判据：只在事件发生后做诊断时，禁直接筛样本画普通 PIT；改 cPIT，并声明是条件于哪个阈值/事件。
 
-### r778C 来源与判非（2026-11-20 实拉，逐字核验；全文见 references/r778C.md）
-- `https://arxiv.org/html/2209.04872`（arXiv 2209.04872 §2.2 WebFetch 200 全文逐字：评分规则不能判定可信 / PIT 定义 / forecaster's dilemma 用于校准诊断 / Bellier 2017 反对按观测分层 / cPIT 公式与「不等同标准 PIT 右侧 bins」）
-- `https://arxiv.org/pdf/2108.03210v2`（Dimitriadis/Gneiting/Jordan《Regression Diagnostics meets Forecast Evaluation》PNAS：CORP reliability diagram、CORP 分解 MCB/DSC/UNC、PIT reliability diagram、England Bank CPI 案例、auto-calibration 与独立均匀 PIT 不等价）
-- `https://www.omnidatatec.com/insights/calibration-of-probabilistic-foundation-forecasts`（零样本基础预测校准诊断 WebSearch 快照逐字：覆盖 vs 锐度、按 horizon/regime/尾部三层覆盖、PIT 形状诊断、零样本区间宽度来自预训练语料噪声）
-- `https://erotica.readthedocs.io/en/latest/design-notes/calibration_theory.html`（校准理论设计笔记 WebSearch 快照逐字：Bröcker 2009 适当分数中 reliability 与 resolution 反号不可互证、CORP/MCB 替代 ECE、分组损失 GL、弃用 Hosmer–Lemeshow、ECE 是总体校准误差下界）
-- `https://scipedia.bohrium.com/sciencepedia/feynman/keyword/forecast_calibration`（玻尔科学百科·预测校准 WebSearch 快照逐字：PIT 形状 U/hump/slope 诊断、概率校准强于边际校准、二值校准斜率解释）
-- **判重**：`reliability diagram`/`expected calibration` 全库 SKILL.md 0 命中；`CRPS`/`pinball`/`Diebold`/`proper scoring`/`Brier` 命中全部在 `meta/pdi-forecasting` §十（r734A 按形态选尺 + DM/GW 检验）、§十六（r758C 加权保适当性）与 §七/§八（点概率层），**本轮不重述评分规则本体**，只补「评分与校准不可互证 + 聚合掩盖条件失准 + cPIT 条件诊断」正交子面；§11 边际/条件覆盖的 conformal 承诺与本节 cPIT 是不同命题（前者给覆盖保证，后者做诊断）。豆包自留地 WB 0 落地。
-
+### r778C 来源与判非（arXiv2209.04872+2108.03210+omnidatatec+erotica+bohrium 四域逐字；全文见 `references/r778C.md`）｜**判重**：评分/校准诊断本轮补正交子面，豆包自留地 WB 0 落地。
 ## 二十二、MCMC 收敛诊断：R-hat/ESS 是预测生产链的前置门禁（PDI · r782C 2026-11-20 实拉，全文见 references/r782C.md）
-
 > 对象：给未来事件配概率时，概率常由贝叶斯后验采样器产出；采样器没收敛，下游所有概率/区间/评分不可信。这不是评分规则（§七/§八）、不是回测切分（§十七），是两者的**前置门禁**。Vehtari 等 (2021) 改进版为当前标准。
-
 ### 22.1（r782C-1）★R-hat 比较链内与链间方差；先 split 再 rank-normalize，单看原始 R-hat 会漏掉非平稳与重尾
 传统 potential scale reduction R^=√(var^+/W)，var^+=(N−1)/N·W+1/N·B（W 链内方差、B 链间方差）：全链到平衡时两者相同 R^=1，未收敛 >1；阈值 Vehtari 2021 建议 **1.01**。两个必做的改造（Stan 官方逐字）：① **split R-hat**——计算前把每条链劈两半，「一条渐升一条渐降」时整链 R^ 可近 1 却没混合，劈半后两半未混使 R^ 显著 >1，借此测单链非平稳；② **rank normalization**——split R-hat 与 ESS 只在边际后验有有限均值方差时良定义，故先把所有链混合样本的值换成秩 r、再 `z=Φ⁻¹((r−3/8)/(S−1/4))`（分数偏移的反正态变换）喂进公式，专治重尾。判据：只报原始 Gelman-Rubin R^ 而不声明「split + rank-normalized」不合格；R^≤1.01 是必要非充分。
 ### 22.2（r782C-2）★报 R-hat 要取 bulk 与 folded 两者最大值；ESS 也分 bulk 与 tail，各管不同量
 为对链间尺度差异敏感，除秩标准化本体外还对**折叠值** ζ=|θ−median(θ)| 算秩标准化 split-R^（folded-R^），它测**尾部**收敛而非主体（bulk）；**保守起见对每个参数报两者的最大值**（Stan 官方逐字 propose to report the maximum of rank normalized split-R^ and rank normalized folded-split-R^）。ESS 对偶拆分：**Bulk-ESS**=秩标准化 split 链的 ESS（管中心趋势/均值精度），**Tail-ESS**=5% 与 95% 分位 ESS 的较小者（管分位/可信区间端点精度，RprobitB 逐字）。R 实现 posterior::rhat / ess_bulk / ess_tail；常用阈值 R-hat≤1.01、bulk/tail ESS≥400（每链≥100 的另一口径）。判据：报「收敛」须 R-hat(bulk/folded 取大) 与 bulk-ESS、tail-ESS **三项同时**达标；只给一个 R^ 或一个 ESS 无法区分「均值可信但分位噪声」这类失效。
 ### 22.3（r782C-3）★收敛是全局属性，不许只监控挑出来的参数；诊断只能发现失败、不能证明收敛
 Stan 官方逐字：能否只监控部分参数/生成量？「The short answer is ‘no’」；`lp__`（对数后验密度）未收敛就宣布收敛是错误——说明各链其实在不同空间区域，而 `lp__` 偏偏最难测（长尾、对位置变化快、易受离群点影响，即便大 N 极限也可能给大 R^）。收敛是**全局属性**、不依赖监控哪个函数（多变量函数靠 Cramer-Wold 定理：所有 margin 收敛）；「pre-convergence transience 与 post-convergence equilibrium 之间没有硬分界」；R^ 有强假设（函数近似高斯/只用前两阶矩+某种独立），对不同函数效果不同。Heidelberger-Welch / Geweke 等检验「None of these methods can prove convergence; they can only detect failures」（aiwiki 逐字）。判据：收敛声明至少覆盖 `lp__` 与关键量、写清 R-hat/ESS 阈值与是否 rank/fold；「R-hat 过了所以收敛」是把「未检出失败」当「已证明收敛」，禁止。
-### r782C 来源与判非（2026-11-20 实拉，逐字核验；全文见 references/r782C.md）
-- `https://mc-stan.org/docs/reference-manual/analysis.html`（Stan 官方 WebFetch 200 全文逐字：R^ 定义式与 1.01 阈值 / split R-hat 渐升渐降例 / rank normalization 公式与重尾理由 / folded ζ 与取 max / bulk-ESS 与 tail-ESS 定义 / convergence is global 与 lp__ / why inconsistent R-hat / Vehtari 2021 著录）——第一独立域·官方参考手册。
-- `https://metricgate.com/calculator/bayesian-rhat-ess-diagnostics` + `https://cran.rstudio.org/web/packages/Rtwalk/refman/Rtwalk.html` + `https://cran.r-project.org/web/packages/RprobitB/refman/RprobitB.html` + `https://aiwiki.ai/wiki/markov_chain_monte_carlo`（WebSearch 逐字：Vehtari 2021 codified / rank-normalization+folded / bulk vs tail ESS / 阈值 1.01 与 400 / posterior 包实现 / Geyer 1992 initial monotone sequence、MCSE=SD/√ESS、IAT=N/ESS、ESS_tail 取 5%/95% 较小者、每链≥100 / Heidelberger-Welch·Geweke「只能发现失败不能证明收敛」）——第二至四独立域·工具教学+R 包官方文档+方法百科交叉。
-- **判重**：全库 SKILL.md 精确扫描 `R-hat`/`Rhat`/`Gelman-Rubin`/`effective sample size`/`traceplot`/`MCMC 收敛`/`收敛诊断` 0 命中本体（散见命中为 ESS 子串/异命题）；`divergence` 命中均「分歧」语义异命题。豆包自留地 WB 0 落地。
+### r782C 来源与判非（Stan 官方+metricgate+Rtwalk/RprobitB+aiwiki 四域逐字；全文见 `references/r782C.md`）｜**判重**：R-hat/ESS/收敛诊断本体 0，豆包自留地 WB 0 落地。
+## 二十三、多变量概率评分：ES 测整体、VS 测相关，两者互补不可只报一个（PDI · r786C 2026-11-20 实拉，全文见 references/r786C.md）
+> 对象：§十 r734A-1 只点名「multivariate scenarios require the energy score or variogram score」无展开，本节补完整口径。当预测输出是**场景向量/多条联合轨迹**（y=(y₁,…,y_d)）时，CRPS/d logS 不再直接适用：LogS 对多元密度可用但「only a sample is available」时难用，且 log score 对距离不敏感（只奖精确命中、不奖邻近）。二者都属 kernel scores（Gneiting & Raftery 2007，用条件负定核构造），只需预报分布的样本即可算。
+### 23.1（r786C-1）★ES 是 CRPS 的高维推广、严格适当，但相关结构误设时判别力有限
+`ES(F,y)=E_F‖X−y‖ − ½E_F‖X−X′‖`（‖·‖ 为 R^d 欧氏距离，X,X′ 独立~F；β=1 为标准，亦可 ‖·‖^β）；Gneiting & Raftery 2007 证明 **strictly proper**。集成预报用经验 CDF 代入即得 ensemble ES。局限（Pinson & Tastu 2013）：discrimination ability may be limited while the dependence structure is misspecified——ES 对整体分布准确度敏感，但对相关结构错配不敏感。判据：评场景向量不能只报 ES 就宣称「联合分布对了」，相关性对错须另用 VS 或相关诊断。
+
+### 23.2（r786C-2）★VS 显式测成对差分的相关结构，仅适当非严格适当，p 与权重须事前冻结
+`VS^p(F,y)=Σ_iΣ_j h_{ij}(E_F|X_i−X_j|^p − |y_i−y_j|^p)²`（X~F，h_{ij}≥0 控制维对权重，标准取 1；p>0，Scheuerer & Hamill 2015 推荐常取 p=0.5，典型 0.5 或 1）。它直接量预报变差图与观测变差图之差，hence more sensitive to errors in the specification of correlations。适当性有前提：对「所有元素 2p 阶矩有限」的分布族是 proper，但 **not strictly proper**。判据：报 VS 须写 p、权重 h_{ij}、维数 d；不能把 VS 当严格适当的唯一裁决尺，与 ES 分列两栏（ES=整体、VS=相关）。
+
+### 23.3（r786C-3）★二者互补分报；skill score 正向、显著性用 DM；按观测结果加权会破坏适当性
+三维互补逐字（jhschlegel 2026）：the former captures overall distributional accuracy, while the latter more directly probes dependence。同框架还有 Gaussian 核的 MMDS、inverse multiquadric kernel 规则。评分差须做显著性：DM 检验（Diebold-Mariano 1995）计入预报误差时间依赖，等性能原假设下 t 渐近标准正态、负值表示被评预报更好；skill score `1−S(f)/S(f_ref)` 正向（越大越好，Gneiting-Raftery 2007）。红线（Gneiting & Ranjan 2011）：按**观测结果**加权的 proper rule generally rendered improper，保适当加权须走 threshold/outcome-weighted 正交路径（见 §十六）。判据：场景预报结算栏写 ES+VS 两数 + p/h_{ij} + DM 显著性 + skill score 参照预报；不得把按观测筛样本后的加权分当适当评分。
+
+### r786C 来源与判非（ETH/CRAN vignette+Springer+jhschlegel+RMetS 四域逐字；全文见 `references/r786C.md`）｜**判重**：energy/variogram/kernel score 本体 0，按四态判「增＝加厚现有」，不重述 §十/§十六/§十七；豆包自留地 WB 0 落地，与 r785/r784/r783 九模块及 A/B 两轮不复用。
