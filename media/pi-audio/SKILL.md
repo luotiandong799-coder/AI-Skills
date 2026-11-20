@@ -3,7 +3,7 @@ name: media/pi-audio
 description: 音频感知（Audio/Speech Perception）。当需要把录音/会议/播客/通话转成文字、标"谁在什么时候说了什么"、生成字幕、做语音合成（TTS）、识别音频事件（警报/音乐/故障声）或理解音频内容时调用。提供 ASR 选型（AudioTranscribe 本地/Whisper API/faster-whisper/whisperX）、长音频分段并行、VAD 去静音防幻觉、pyannote 说话人分离与时间戳对齐、LLM 后处理、SRT/VTT 输出、TTS 与隐私护栏。不用于音视频格式转码（走 rg-ffmpeg-tools）、图像理解（走 multimodal-intelligence）。；响度归一化与 LUFS 测量口径（K-weighting/双门控/M·S·I 三时间常数/真峰 dBTP）；声音事件检测 SED 评测口径（segment-based F1/ER vs event-based collar F1 vs PSDS 交集匹配/DTC·GTC·αCT·αST 参数/50 工作点/threshold-independent/跨数据集与年份分数不可比）。
 module: PI
 modules: PI
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # PI · 音频感知（Audio / Speech Perception）
@@ -166,3 +166,22 @@ EBU 官方点 5 逐字「There are **three time constants which differ in the in
 - **失败与降级如实登记**：Mesaros 2016《Metrics for Polyphonic SED》原论文（MDPI）只取 DCASE 官方页转述的摘要与书目，未直读全文；Bilen PSDS 原始论文只取技术长文转述，不冒充已读全文；DTC/GTC 数值挂 DCASE 2024 官方口径，scenario 参数挂 2022 官方口径，不混为同一套。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `sound event detection` / `声音事件检测` / `PSDS` / `polyphonic` / `Detection Tolerance` / `event-based F1` **全 0 命中**；`collar` 命中在 `engineering/pi-perception` 与本节上文 r708C（都是**说话人日志 diarization** 的 forgiveness collar，异命题：那是「谁在说话」，本轮是「什么事件、交集匹配」）。按 rules/07 四态判「**优＝加厚现有 `media/pi-audio`**」，SED 是音频评测的自然延伸，不重述上文 DER/WER/响度。PI 模块记忆前 17 条结论不复用。豆包自留地 WB 0 落地。与 r773(OI/EI/SI)/r772(AI/VI/DI) 六模块结论不复用；A/C 两轮结论亦不复用。
 - **未采纳**：sed_eval / sed_scores_eval / psds_eval 具体实现、CodeCarbon/THOP 工具用法、各参赛队排名分数、SCM 类教程细节 —— 属工具/赛事结果，不迁移为通用判据。
+
+## 十四、语音增强/分离的客观评测：保真、质量、可懂度三件事不可互证（PI · r778B 2026-11-20 实拉，≥2 独立域交叉）
+
+### 14.1（r778B-1）★三类指标测三个对象，必须成组报，禁单指标排名跨族比
+SI-SDR（Scale-Invariant SDR）测信号保真：对参考与估计做最优缩放后再比，增益失配不该拖垮一个好分离，是源分离主指标；SDRi/CI-SDR/SA-SDR/SIR/SAR 是其场景变体。PESQ（ITU-T P.862）与 POLQA（P.863）测感知质量：PESQ 只对电话线窄带验证过的损伤（codec artefact/丢包/加性噪声）可信，约 4 MOS 以上严重饱和，分不出「很好」和「极好」，新工作多改用 POLQA（授权，开源项目仍用 PESQ）。STOI/ESTOI 测可懂度：短时相关预测，「polish」判断或可懂度已 100% 时不可靠。综述明确推荐「report SI-SDR (or SI-SDRi) as the primary metric for separation accuracy, alongside traditional SDR ... PESQ for speech quality and STOI (or ESTOI) for speech intelligibility」，四件套覆盖信号保真 + 人类感知两面。判据：增强/分离报告至少给 SI-SDR + PESQ + STOI/ESTOI 三族，每族标口径（窄带/宽带、侵入/无参考）；只给一个数的排名不通过验收。
+
+### 14.2（r778B-2）★指标排名随度量剧烈翻转；非侵入指标换域必须重验相关性，不能继承论文 PCC
+CHiME-7 UDASE 官方结论：「the ranking of the methods varies a lot according to the chosen metric」——同一系统 SI-SDR 最好却在 TAS SI-SDR 最差之一。侵入指标与其 TorchAudio-Squim 非侵入估计的 Pearson 相关在 CHiME-7 UDASE 上只有 0.20–0.30，而原论文（Kumar 2023）报 0.95–0.98；原因是有监督非侵入模型训在 DNS Challenge 2020，泛化不到新域，「these ... estimates are not sufficiently reliable on the CHiME-7 UDASE data」。低 SNR 无人机噪声的可控主观实验再证：NISQA（学习型感知）、ESTOI（可懂度）与主观判断最一致，SI-SDR 次之，PESQ 较弱；「conventional objective metrics may fail to accurately reflect perceived speech quality」。判据：用 DNSMOS/NISQA/SQUIM 等无参考指标前，先在当前域做一次与主观或小样本侵入指标的相关性校验（PCC 明显低于文献值即判不可移植）；换数据集/语言/噪声类型视为换域，继承他人 PCC 是范畴错误。
+
+### 14.3（r778B-3）★客观指标三种失效：域外、饱和、可 gaming；「质量相近」≠「感知相同」
+AudioLab 归纳三种反复出现的失效：① 域外材料——PESQ 在电话线语音上验证，拿去评歌剧「you get numbers, but those numbers don't mean what they mean on phone-line speech」；经典指标天然带域，作者无意也不豁免。② 高端饱和——多数语音指标区分 bad/okay 好、okay/good 差，模型真好了指标就 plateau，dashboard 全绿却已退化。③ 可 gaming——「A model can learn to produce outputs that maximise PESQ without producing outputs that humans prefer.」感知差异/偏好与质量分是不同判据：论文实测 PESQ 的区分相关约 0.05、偏好方向约 0.31，SQUIM-STOI 两者约 0.62；两个信号质量评分相近仍可能被轻易区分，「质量相似不等于感知相同」，低相关不是指标无用而是测的不是一回事。判据：新品上线决策配一组主观听测（MUSHRA/ABX/MOS）做三角验证；任何单一客观指标不得直接当 go/no-go 门槛；指标分差须注明是否落在饱和区与域外区。
+
+### r778B 来源与判非（2026-11-20 实拉，逐字核验）
+- `https://hal.science/hal-04430786v1/file/CHiME_7_UDASE.pdf`（CHiME-7 UDASE 官方论文：ranking varies a lot / PCC 0.20–0.30 vs 0.95–0.98 / DNS Challenge 2020 训练不泛化 / TAS MOS 相对可靠；**WebFetch 被 Anubis 反爬拦截未取到正文**，以 WebSearch 返回的该 PDF 正文片段逐串登记，不冒充全文直读）
+- `https://qmro.qmul.ac.uk/handle/123456789/131888`（QMUL / IEEE Signal Processing Letters 33:2470-2474 (2026) 论文摘要 WebSearch 逐字：低 SNR 无人机噪声下 NISQA/ESTOI 与主观最一致、SI-SDR 次之、PESQ 较弱、metric 间 substantial inconsistencies）
+- `https://arxiv.org/pdf/2508.10830`（arXiv 2508.10830 语音分离综述 §B Objective Metrics WebSearch 快照逐字：SI-SDR/SDRi/CI-SDR/SA-SDR/SIR/SAR 家族分工、PESQ/POLQA/STOI/DNSMOS 三层面、四件套推荐、「no single metric is suitable for all speech separation tasks」、PESQ-NB 宽带/音乐不准）
+- `https://audiolab.tools/insights/evaluating-audio-ai-models`（AudioLab 评测指南 WebSearch 快照逐字：主观/客观 2x2、PESQ ~4 MOS 饱和、域外/饱和/gaming 三失效、「wrong evaluation strategy can let you ship a regression that 80% of listeners notice while every metric glows green」）
+- `https://nanless.github.io/audio-paper-digest-blog/posts/2026-10-29-perceptual-differences-and-preferences-in-speech-2610-36892`（arXiv 2610.36892 中文精读 WebSearch 快照：区分相关 PESQ 0.05 vs SQUIM-STOI 0.62、偏好方向 0.31 vs 0.62、质量相近≠感知相同、众包变异局限）
+- **判重**：全库 SKILL.md 精确扫描 `PESQ`/`STOI`/`SI-SDR`/`语音增强`/`speech enhancement`/`depth estimation` 全 0 命中；`FID` 22 命中均为图像生成/多模态生成语境异命题。本技能 §r708C 是说话人分离评测、§十三是声音事件检测（SED，检测命题），本轮补信号质量/可懂度（增强与分离命题），正交不复用。豆包自留地 WB 0 落地。

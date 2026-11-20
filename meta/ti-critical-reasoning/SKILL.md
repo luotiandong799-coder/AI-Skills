@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
 description: 因果推理与批判性思考（Thinking Intelligence）。当任务需要区分"相关"与"因果"、评估方案真实贡献、做反事实推演（"若当初换方案会怎样"）、识别 LLM 关联机误判因果时调用。基于 Pearl 因果阶梯、do-calculus、结构因果模型（SCM/DAG）、后门/前门调整。本技能是 TI 载体，补齐关联式推理的因果盲区。；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）；论证图式与批判性问题（推定可废止/assumptions 与 exceptions 举证责任方向/图式目录覆盖缺口与错分风险）。；因果跨域可迁移性（selection diagram/S-node 指向机制/transport formula 三式/trivially·directly·一般三档/meta-analysis 平均掉差异之误）。；认知接种与预驳斥（威胁唤醒+弱化攻击+反驳预热的两步动机-认知模型/refutational-same 与 -different 等效/counterarguing 才是抗体、材料只是提供弹药/被动阅读优于主动自生/接种泛化需显式验证）。；因果发现（等价类 CPDAG/PC 约束与 GES 打分同边界/LiNGAM 非高斯定向/承重假设不可检验）。；面板数据准实验因果识别（DiD 平行趋势不可验证只能事前诊断/SCM 对 donor pool 加权构造反事实且凸包条件与过拟合风险/SDID 双权重放松平行趋势且可大面板推断）。；工具变量与 LATE（IV 识别的是 complier 局部效应不是全员 ATE/排除限制是欺骗性外生假设不可数据检验且只是对简化式因果效应的解释承诺/monotonicity 无 defiers 才给正权重 LATE/多工具变量下单调性与异质性处理效应不相容）。
-version: 2.2.0
+version: 2.3.0
 module: TI
 modules: TI,EI
 ---
@@ -377,3 +377,21 @@ Purdue OWL 逐字「The **qualifier** shows that a claim **may not be true in al
 - **失败与降级如实登记**：SEP《instruments and causality》与 Britannica instrumental-variable-analysis 两条 URL 均命中错误/空页（Document Not Found / 无关的 NBER w18541 外汇套利），已弃用不冒充；Imbens & Wooldridge 综述 w18541 命中错误编号。LATE 四人群分类、defiers/monotonicity 的标准定义按 Angrist 与 Mogstad 摘要逐字＋<P>通用口径登记，未直读 Imbens & Angrist 1994 原论文全文，不冒充一手全文。数值/实证（芝加哥考试学校、大学回报挂各自来源口径只取定性。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `工具变量` / `instrumental variable` / `两阶段最小二乘` / `2SLS` / `局部平均处理效应` / `exclusion restriction` / `combining for adaptation` 全库 0 命中（`LATE` 大写命中为 `late` 子串噪声、`弱工具` 1 命中与 `负对照` 1 命中均属异命题）。按 rules/07 四态判「**优＝加厚现有 `meta/ti-critical-reasoning`**」，补「外生工具隔离变异」这一与 §十三–§十八正交的识别层，不重述后门调整/transport/因果发现/DiD-SCM-SDID。A 轮结构映射（Gentner）原拟题因 `ai-input-enhancement` §155 已落地 systematicity/one-to-one（>60% 重叠）判「删/换道」，改取 IV。TI 模块记忆前 21 条结论不复用。豆包自留地 WB 0 落地。与 r773(OI/EI/SI)/r772(AI/VI/DI) 六模块结论不复用；B/C 两轮结论亦不复用。
 - **未采纳**：2SLS 两阶段具体估计步骤与 std errors、MTE 估计量构造与 control function 推导、弱工具的第一阶段 F 统计量阈值之争、LATE 与 ATE 的权重边界公式 —— 属计量实现细节，不迁移为通用判据。
+
+## 二十、断点回归设计（RDD）：效应只在阈值处，带宽与偏差修正才是成败手（TI · r778A 2026-11-20 实拉，≥2 独立域交叉）
+
+### 20.1（r778A-1）★RDD 识别的是阈值处的局部效应，fuzzy RD 是换皮 IV，不是全员 ATE
+Hahn/Todd/van der Klaau 连续性识别式 `t_SRD = lim_{x↓c} E[Y|X=x] - lim_{x↑c} E[Y|X=x]`：门槛两侧刚好相邻的个体「as-good-as-randomly assigned」，跳变即处理效应——但只对阈值处局部人群成立，外推到远离 c 的用量须额外参数假设。sharp RD（`D=1{X≥c}`）直接从结果跳变读效应；fuzzy RD（阈值只改变处理概率）把「超过阈值」当工具变量，效应 = Y 跳变 / D 跳变 = Wald ratio = 单调性下 complier 的 LATE（§19 的工具变量与弱工具教训全数迁移，第一阶段跳变越弱估计越不稳）。原文：「the jump in E[Y|X] at c is the causal effect — for the local population at the cutoff」。判据：报 RDD 结论必须写「这是 c 处的局部效应（fuzzy 则 complier）」，禁外推全员；识别家族写清是 sharp 还是 fuzzy、running variable / cutoff 是什么。
+
+### 20.2（r778A-2）★局部低阶多项式 + 数据驱动带宽是设计决策；高阶全局多项式让远处数据污染边界
+「The most common approach is to use (non-parametric) local polynomial methods to approximate the two regression functions near the cutoff.」「The bandwidth is typically chosen in an optimal and data-driven fashion to ensure transparency and avoid specification searching.」——在 `Xi∈[c−h,c+h]` 内用 triangular kernel 分别拟合两侧局部线性（允许两侧斜率不同，防 X 的非线性冒充跳变），而非全域高阶多项式（Gelman–Imbens：高阶全局把任意的远端观测和多项式阶数绑架到边界估计，CI 过窄）。带宽 h 是偏差-方差权衡：窄 h 低偏差高方差、宽 h 反之；用 IK/CCT 的 MSE-optimal 数据驱动选择（rdrobust 默认），并强制报带宽敏感性表（h 减半/加倍）——只在一个带宽出现、窗口一动就消失的效应是警讯不是稳健发现。「Stay local, stay low-order.」判据：不写带宽选择规则与敏感性表的 RDD 不通过验收。
+
+### 20.3（r778A-3）★MSE-optimal 带宽留下偏差 ⇒ 常规 CI 失效，须 CCT 稳健偏差修正 + 三项证伪
+逐字：「When the bandwidth is chosen to be MSE-optimal, this approximation error appears in the standard distributional approximation and renders the conventional least squares confidence intervals invalid because conventional inference assumes that the approximation error is zero.」——点估计最优的带宽对推断并不最优，必须报 Calonico–Cattaneo–Titiunik 稳健偏差修正（RBC）CI：对点估计做偏差修正、标准误随偏差估计步调整；「These robust bias-corrected confidence intervals lead to valid inferences when using the MSE-optimal bandwidth, and remain valid for other bandwidth choices」。连续性假设无法直接观测，靠三项证伪：① McCrary/Cattaneo–Jansson–Ma 密度检验——running variable 在 c 处密度有跳变即受操纵/排序（「failing to reject 是与无操纵一致，不是证明无操纵」，且只测改变密度的那类操纵）；② 协变量连续性（把事前固定协变量当安慰剂结果，c 处有跳变即两侧本来就不同）；③ 安慰剂 cutoff（在无政策变化处重跑应 ≈0）。最危险的 compound-treatment（同一 c 处还有其他政策同时变）不可检验，只能靠制度论证。连续性框架（参数=阈值处平均处理效应）与局部随机化框架（参数=窗口 W 内平均、核心假设是 c 附近像随机实验）定义的是不同参数，禁混报。判据：RDD 报告须含 RBC CI + 三项证伪 + 框架声明，缺一判不完整。
+
+### r778A 来源与判非（2026-11-20 实拉，逐字核验）
+- `https://arxiv.org/html/2110.08410v1`（arXiv 2110.08410《Covariate Adjustment in RD Designs》§2.1 WebFetch 200 全文逐字：local polynomial / data-driven bandwidth / MSE-optimal 使常规 CI invalid / RBC 有效 / continuity vs local randomization 参数不同 / canonical 只用 outcome+score）
+- `https://ccfd.cufe.edu.cn/info/1073/4167.htm`（中央财经大学财税文摘·elite high school RDD：Gelman–Imbens 全局高阶多项式误导、Imbens–Lemieux 交叉验证带宽、Lee 协变量连续性检验、模糊 RD 选择偏误；中文一手交叉）
+- `https://casrai.org/guides/regression-discontinuity-design`（CASRAI 指南 WebSearch 快照：高阶全局多项式边界病态、IK/CCT 带宽和 RBC、McCrary 2008 密度检验机制与「未拒绝≠证明」、协变量平衡 + 安慰剂 cutoff 稳健项）
+- `https://edwardlg.github.io/assip-2026-empirical-finance/textbook/book/weeks/week-04/ch43-regression-discontinuity.html`（ASSIP 实证金融教材 ch4.3 WebSearch 快照：sharp vs fuzzy、triangular kernel local-linear、「stay local stay low-order」、带宽偏差-方差、McCrary + 协变量 + compound-treatment 审计）
+- **判重**：全库 SKILL.md 精确扫描 `断点回归` 0 命中；`regression discontinuity` 3 命中全部在 `meta/ti-critical-reasoning` r770A 来源段（GSC/RDD 替代）与「未采纳：RDD 带宽选择」及 LATE 定理引文，**无专节落地**；`RDD` 3 命中同属上述语境；`propensity score`/`倾向得分` 全库 0。本轮取 §18 DiD/SCM/SDID、§19 IV/LATE 之后的正交识别策略（阈值连续性 + 带宽/RBC 工程面），不复用其结论。豆包自留地 WB 0 落地。

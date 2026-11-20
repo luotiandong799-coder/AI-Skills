@@ -3,7 +3,7 @@ name: meta/pdi-forecasting
 description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议、预测题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO 五策略、误差累积与随机依赖两轴、windows_identical 跨视界可比与逐视界最准互斥）。；加权评分规则与预报员困境（w(y)S 破坏适当性/threshold-weighted 与 outcome-weighted 两类/条件分不进事件概率）。；回测验证协议（purging 标签重叠与 embargo 序列相关两道漏/CPCV 把一条历史变多条路径 φ(N,k)/PBO 与 Deflated Sharpe 计试验次数/单路径不是证据）。；事件型预警评测（point-adjustment 让随机探测器拿高 F1/事件级检出率·检测延迟·单位时间误报率三栏/range-based 与 k-delay 协议/ERDE 时间惩罚）。；专家概率引出与结构化启发协议（分位数法 X05/X50/X95 拟合分布/锚定偏差两种等价提问口径分叉/IDEA 四步 Investigate-Discuss-Estimate-Aggregate/Cooke Classical Model 种子题校准与信息双评分加权/校准优先于信息性/无种子题则等权/平均专家 90% 区间只含真值 36%）；预测组合的场景依赖（combining for adaptation 目标追平最佳单候选 vs combining for improvement 目标超越全部候选/不看场景套方法本身即制造组合之谜/估计误差只是解释之一/把简单平均当候选的 mAFTER 自适应/最优权重增益可能小到被估计误差淹没）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.14.0"
+version: "1.15.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -462,3 +462,24 @@ Rethink Priorities《Types of specification problems in forecasting》（Juan Gi
 - **失败与降级如实登记**：Elliott & Liao 与 Tinbergen 两篇 PDF 仅取 WebSearch 索引摘要/页面逐字，未逐页核 PDF 全文（WebFetch 对 PDF 返回 non-text resource），按摘要口径登记；Bates & Granger 1969 原论文未直读，最优权重定义经 Tinbergen 转述；Smith & Wallis 2009 经 Qian 与 Lirias 转述，不冒充直读原论文。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `combining for adaptation` / `combining for improvement` / `mAFTER` / `discard some` **全 0 命中**；`forecast combination puzzle` / `简单平均` 在 §九（r746 聚合器选型）已命中——故本轮**换道**取 §九未覆盖的「CFA/CFI 场景区分 + 估计误差互补论证 + mAFTER 把 SA 当候选」正交子面，不重述 §九「logit 单参数 vs 复杂加权/偏差校正与极端化分栏」。按 rules/07 四态判「**优＝加厚现有 `meta/pdi-forecasting`**」。TI 模块 r769(OI/EI/SI)/r768(AI/VI/DI) 六模块结论不复用；A/B 两轮结论亦不复用。豆包自留地 WB 0 落地。
 - **未采纳**：AFTER/mAFTER 算法的逐步实现与损失界证明、CFA/CFI 的统计判别检验公式、Bates-Granger 协方差矩阵估计细节、密度组合的 linear opinion pool 展开 —— 属专项统计实现，不迁移为通用判据。
+
+## 二十一、校准诊断不能被聚合评分替代：PIT 只是入口，条件校准才是硬门（PDI · r778C 2026-11-20 实拉，≥3 独立域交叉）
+
+> 正文逐字、公式与四域来源见 `references/r778C.md`。本节只留可执行的三独点与落点。
+
+### 21.1（r778C-1）★严格适当评分只能排序系统，不能证明系统可信/校准
+arXiv 2209.04872 §2.2 逐字：「Although proper scoring rules allow competing prediction systems to be ranked and compared objectively, they cannot be used to determine whether a prediction system is trustworthy, in the sense that the observed outcomes are statistically consistent with the forecasts that were issued.」——CRPS/Brier/LogS 的分解把 reliability 与 resolution 以相反符号捆绑，一个系统的校准差可被另一个的分辨率差抵消，故「分更好」不等于「校准更好」。判据：结算台账的「评分」栏与「校准诊断」栏分列，评分排名不得单独作为「预测可信」的证据（接 §7.1/§16，不重述其分解式）。
+
+### 21.2（r778C-2）★PIT 平坦/独立都只是弱校准；按视野与状态分层诊断，CORP + MCB 替代 ECE
+PIT 定义 `F(y)~U(0,1)`：U 形=区间太窄过自信、驼峰=太宽欠自信、倾斜=系统偏差；但「independent, uniformly distributed PIT values do not imply auto-calibration, except in a special case」（Dawid/Gneiting/Diebold 等）。零样本基础模型的 95% 区间宽度编码的是预训练语料的噪声而非本序列的，金融序列的波动聚集与厚尾使「平均覆盖正确」在 clustered 高波动期恰好系统性过窄——必须按 horizon step 分开报覆盖（h=1 好、h=13 坏是常态，pooled 图看不见），并按 regime（高/低波动、月末/月中、结构断点前后）分层。二值预测另报校准斜率（<1 过极端/过拟合、>1 过保守）。ECE/Hosmer–Lemeshow 依赖分箱且不稳定，改用 CORP reliability diagram（PAV、无分箱、90% consistency bands）+ MCB（≥0、零当且仅当校准）作标量、DSC 分离「未校准」与「无区分力」。判据：校准声明写清是哪一层（probabilistic / marginal / mean / threshold / quantile / auto），「PIT 平坦」只支撑最弱两层。
+
+### 21.3（r778C-3）★预测者困境同样打校准诊断：按观测筛样本会让校准系统也显示失准，正解是 cPIT
+arXiv 2209.04872「The forecaster's dilemma also applies to diagnostic checks for calibration: if a rank or PIT histogram is constructed from only the forecasts issued when a high-impact event occurs, then the resulting histogram of a calibrated prediction system will in general not be uniform.」——Bellier 等 2017「strongly advise against observation-based stratification when constructing rank histograms」。若问题正是「极端事件发生了之后预报是否仍校准」，正解是 conditional PIT：`G(x)=[F(x)−F(t)]/[1−F(t)]` for x>t，else 0；对 y>t 的观测算 G(y) 画直方图，均匀即条件校准。关键陷阱：「These cPIT histograms are not equivalent to focusing on the bins on the right-hand side of the standard PIT histogram」——极端观测在预报本身已给极高概率时反而对应低 PIT 值 F(y)。另条件校准轴还有分组损失 `GL(p)=Var[f*(X)|f(X)=p]`，与 ECE 的边际轴正交。判据：只在事件发生后做诊断时，禁直接筛样本画普通 PIT；改 cPIT，并声明是条件于哪个阈值/事件。
+
+### r778C 来源与判非（2026-11-20 实拉，逐字核验；全文见 references/r778C.md）
+- `https://arxiv.org/html/2209.04872`（arXiv 2209.04872 §2.2 WebFetch 200 全文逐字：评分规则不能判定可信 / PIT 定义 / forecaster's dilemma 用于校准诊断 / Bellier 2017 反对按观测分层 / cPIT 公式与「不等同标准 PIT 右侧 bins」）
+- `https://arxiv.org/pdf/2108.03210v2`（Dimitriadis/Gneiting/Jordan《Regression Diagnostics meets Forecast Evaluation》PNAS：CORP reliability diagram、CORP 分解 MCB/DSC/UNC、PIT reliability diagram、England Bank CPI 案例、auto-calibration 与独立均匀 PIT 不等价）
+- `https://www.omnidatatec.com/insights/calibration-of-probabilistic-foundation-forecasts`（零样本基础预测校准诊断 WebSearch 快照逐字：覆盖 vs 锐度、按 horizon/regime/尾部三层覆盖、PIT 形状诊断、零样本区间宽度来自预训练语料噪声）
+- `https://erotica.readthedocs.io/en/latest/design-notes/calibration_theory.html`（校准理论设计笔记 WebSearch 快照逐字：Bröcker 2009 适当分数中 reliability 与 resolution 反号不可互证、CORP/MCB 替代 ECE、分组损失 GL、弃用 Hosmer–Lemeshow、ECE 是总体校准误差下界）
+- `https://scipedia.bohrium.com/sciencepedia/feynman/keyword/forecast_calibration`（玻尔科学百科·预测校准 WebSearch 快照逐字：PIT 形状 U/hump/slope 诊断、概率校准强于边际校准、二值校准斜率解释）
+- **判重**：`reliability diagram`/`expected calibration` 全库 SKILL.md 0 命中；`CRPS`/`pinball`/`Diebold`/`proper scoring`/`Brier` 命中全部在 `meta/pdi-forecasting` §十（r734A 按形态选尺 + DM/GW 检验）、§十六（r758C 加权保适当性）与 §七/§八（点概率层），**本轮不重述评分规则本体**，只补「评分与校准不可互证 + 聚合掩盖条件失准 + cPIT 条件诊断」正交子面；§11 边际/条件覆盖的 conformal 承诺与本节 cPIT 是不同命题（前者给覆盖保证，后者做诊断）。豆包自留地 WB 0 落地。
