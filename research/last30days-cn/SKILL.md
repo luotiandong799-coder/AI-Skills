@@ -1,6 +1,6 @@
 ---
 name: last30days-cn
-version: "3.3.0-cn"
+version: "3.4.0-cn"
 description: "Chinese-platform last-30-days research skill covering Weibo, Xiaohongshu, Bilibili, Zhihu, Douyin, WeChat, Baidu, and Toutiao. Includes Markdown, JSON, compact context, and Guizang-inspired Swiss/IKB HTML report output."
 argument-hint: 'last30 AI 编程助手, last30 最近 30 天中文平台舆情, last30 具身智能 --html'
 allowed-tools: Bash, Read, Write, WebSearch
@@ -144,6 +144,13 @@ First-time setup helper:
 ```bash
 python {{SKILL_DIR}}/scripts/last30days.py setup
 ```
+
+## 上游 v4 增量吸收（来源：GitHub `mvanhorn/last30days-skill` v4 README，2026-11-20 实拉；只取可移植方法，不搬其英文平台依赖）
+
+- **官宣前信号优先于官宣后报道**：研究公司/产品动向时，除新闻外主动读两类源——当月专利申请（描述未发布内容或与一贯行为不符的才标记）与自家招聘页（新职位/新团队暗示未发布产品线）。国内对应：国家知识产权局公开检索、脉脉/官网/Mokahr 在招岗位；命中只作「信号」标注，不当结论。
+- **引用行（quote lines）**：每个故事下方单独列 1–3 条真实用户原话（评论/弹幕/帖子）并标平台与链接，不复述二手转述；原话与结论分开，让读者看到证据本身。
+- **市场/价格线**：涉及上市公司或可预测事件时，附 30 天股价走势或赔率变动一行作交叉参考；无数据源则省略，不编。
+- **判据**：以上三条都服务「同一故事多源互证」；单源命中仍按 r702B 规则贴 `single-source`。
 
 ## Synthesis Guidance
 
