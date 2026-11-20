@@ -1,9 +1,9 @@
 ---
 name: meta/pdi-forecasting
-description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议、预测题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO 五策略、误差累积与随机依赖两轴、windows_identical 跨视界可比与逐视界最准互斥）。；加权评分规则与预报员困境（w(y)S 破坏适当性/threshold-weighted 与 outcome-weighted 两类/条件分不进事件概率）。；回测验证协议（purging 标签重叠与 embargo 序列相关两道漏/CPCV 把一条历史变多条路径 φ(N,k)/PBO 与 Deflated Sharpe 计试验次数/单路径不是证据）。；事件型预警评测（point-adjustment 让随机探测器拿高 F1/事件级检出率·检测延迟·单位时间误报率三栏/range-based 与 k-delay 协议/ERDE 时间惩罚）。；专家概率引出与结构化启发协议（分位数法 X05/X50/X95 拟合分布/锚定偏差两种等价提问口径分叉/IDEA 四步 Investigate-Discuss-Estimate-Aggregate/Cooke Classical Model 种子题校准与信息双评分加权/校准优先于信息性/无种子题则等权/平均专家 90% 区间只含真值 36%）；预测组合的场景依赖（combining for adaptation 目标追平最佳单候选 vs combining for improvement 目标超越全部候选/不看场景套方法本身即制造组合之谜/估计误差只是解释之一/把简单平均当候选的 mAFTER 自适应/最优权重增益可能小到被估计误差淹没）。
+description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率与依据的可结算判断，绝不把它当行动决策或专业建议、预测题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO 五策略、误差累积与随机依赖两轴、windows_identical 跨视界可比与逐视界最准互斥）。；加权评分规则与预报员困境（w(y)S 破坏适当性/threshold-weighted 与 outcome-weighted 两类/条件分不进事件概率）。；回测验证协议（purging 标签重叠与 embargo 序列相关两道漏/CPCV 把一条历史变多条路径 φ(N,k)/PBO 与 Deflated Sharpe 计试验次数/单路径不是证据）。；事件型预警评测（point-adjustment 让随机探测器拿高 F1/事件级检出率·检测延迟·单位时间误报率三栏/range-based 与 k-delay 协议/ERDE 时间惩罚）。；专家概率引出与结构化启发协议（分位数法 X05/X50/X95 拟合分布/锚定偏差两种等价提问口径分叉/IDEA 四步 Investigate-Discuss-Estimate-Aggregate/Cooke Classical Model 种子题校准与信息双评分加权/校准优先于信息性/无种子题则等权/平均专家 90% 区间只含真值 36%）；预测组合的场景依赖（combining for adaptation 目标追平最佳单候选 vs combining for improvement 目标超越全部候选/不看场景套方法本身即制造组合之谜/估计误差只是解释之一/把简单平均当候选的 mAFTER 自适应/最优权重增益可能小到被估计误差淹没）；MCMC 收敛诊断（R-hat split+rank/folded 取 max + bulk·tail-ESS 双达标/收敛全局含 lp__、诊断只验失败不证收敛）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.15.0"
+version: "1.16.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -483,3 +483,18 @@ arXiv 2209.04872「The forecaster's dilemma also applies to diagnostic checks fo
 - `https://erotica.readthedocs.io/en/latest/design-notes/calibration_theory.html`（校准理论设计笔记 WebSearch 快照逐字：Bröcker 2009 适当分数中 reliability 与 resolution 反号不可互证、CORP/MCB 替代 ECE、分组损失 GL、弃用 Hosmer–Lemeshow、ECE 是总体校准误差下界）
 - `https://scipedia.bohrium.com/sciencepedia/feynman/keyword/forecast_calibration`（玻尔科学百科·预测校准 WebSearch 快照逐字：PIT 形状 U/hump/slope 诊断、概率校准强于边际校准、二值校准斜率解释）
 - **判重**：`reliability diagram`/`expected calibration` 全库 SKILL.md 0 命中；`CRPS`/`pinball`/`Diebold`/`proper scoring`/`Brier` 命中全部在 `meta/pdi-forecasting` §十（r734A 按形态选尺 + DM/GW 检验）、§十六（r758C 加权保适当性）与 §七/§八（点概率层），**本轮不重述评分规则本体**，只补「评分与校准不可互证 + 聚合掩盖条件失准 + cPIT 条件诊断」正交子面；§11 边际/条件覆盖的 conformal 承诺与本节 cPIT 是不同命题（前者给覆盖保证，后者做诊断）。豆包自留地 WB 0 落地。
+
+## 二十二、MCMC 收敛诊断：R-hat/ESS 是预测生产链的前置门禁（PDI · r782C 2026-11-20 实拉，全文见 references/r782C.md）
+
+> 对象：给未来事件配概率时，概率常由贝叶斯后验采样器产出；采样器没收敛，下游所有概率/区间/评分不可信。这不是评分规则（§七/§八）、不是回测切分（§十七），是两者的**前置门禁**。Vehtari 等 (2021) 改进版为当前标准。
+
+### 22.1（r782C-1）★R-hat 比较链内与链间方差；先 split 再 rank-normalize，单看原始 R-hat 会漏掉非平稳与重尾
+传统 potential scale reduction R^=√(var^+/W)，var^+=(N−1)/N·W+1/N·B（W 链内方差、B 链间方差）：全链到平衡时两者相同 R^=1，未收敛 >1；阈值 Vehtari 2021 建议 **1.01**。两个必做的改造（Stan 官方逐字）：① **split R-hat**——计算前把每条链劈两半，「一条渐升一条渐降」时整链 R^ 可近 1 却没混合，劈半后两半未混使 R^ 显著 >1，借此测单链非平稳；② **rank normalization**——split R-hat 与 ESS 只在边际后验有有限均值方差时良定义，故先把所有链混合样本的值换成秩 r、再 `z=Φ⁻¹((r−3/8)/(S−1/4))`（分数偏移的反正态变换）喂进公式，专治重尾。判据：只报原始 Gelman-Rubin R^ 而不声明「split + rank-normalized」不合格；R^≤1.01 是必要非充分。
+### 22.2（r782C-2）★报 R-hat 要取 bulk 与 folded 两者最大值；ESS 也分 bulk 与 tail，各管不同量
+为对链间尺度差异敏感，除秩标准化本体外还对**折叠值** ζ=|θ−median(θ)| 算秩标准化 split-R^（folded-R^），它测**尾部**收敛而非主体（bulk）；**保守起见对每个参数报两者的最大值**（Stan 官方逐字 propose to report the maximum of rank normalized split-R^ and rank normalized folded-split-R^）。ESS 对偶拆分：**Bulk-ESS**=秩标准化 split 链的 ESS（管中心趋势/均值精度），**Tail-ESS**=5% 与 95% 分位 ESS 的较小者（管分位/可信区间端点精度，RprobitB 逐字）。R 实现 posterior::rhat / ess_bulk / ess_tail；常用阈值 R-hat≤1.01、bulk/tail ESS≥400（每链≥100 的另一口径）。判据：报「收敛」须 R-hat(bulk/folded 取大) 与 bulk-ESS、tail-ESS **三项同时**达标；只给一个 R^ 或一个 ESS 无法区分「均值可信但分位噪声」这类失效。
+### 22.3（r782C-3）★收敛是全局属性，不许只监控挑出来的参数；诊断只能发现失败、不能证明收敛
+Stan 官方逐字：能否只监控部分参数/生成量？「The short answer is ‘no’」；`lp__`（对数后验密度）未收敛就宣布收敛是错误——说明各链其实在不同空间区域，而 `lp__` 偏偏最难测（长尾、对位置变化快、易受离群点影响，即便大 N 极限也可能给大 R^）。收敛是**全局属性**、不依赖监控哪个函数（多变量函数靠 Cramer-Wold 定理：所有 margin 收敛）；「pre-convergence transience 与 post-convergence equilibrium 之间没有硬分界」；R^ 有强假设（函数近似高斯/只用前两阶矩+某种独立），对不同函数效果不同。Heidelberger-Welch / Geweke 等检验「None of these methods can prove convergence; they can only detect failures」（aiwiki 逐字）。判据：收敛声明至少覆盖 `lp__` 与关键量、写清 R-hat/ESS 阈值与是否 rank/fold；「R-hat 过了所以收敛」是把「未检出失败」当「已证明收敛」，禁止。
+### r782C 来源与判非（2026-11-20 实拉，逐字核验；全文见 references/r782C.md）
+- `https://mc-stan.org/docs/reference-manual/analysis.html`（Stan 官方 WebFetch 200 全文逐字：R^ 定义式与 1.01 阈值 / split R-hat 渐升渐降例 / rank normalization 公式与重尾理由 / folded ζ 与取 max / bulk-ESS 与 tail-ESS 定义 / convergence is global 与 lp__ / why inconsistent R-hat / Vehtari 2021 著录）——第一独立域·官方参考手册。
+- `https://metricgate.com/calculator/bayesian-rhat-ess-diagnostics` + `https://cran.rstudio.org/web/packages/Rtwalk/refman/Rtwalk.html` + `https://cran.r-project.org/web/packages/RprobitB/refman/RprobitB.html` + `https://aiwiki.ai/wiki/markov_chain_monte_carlo`（WebSearch 逐字：Vehtari 2021 codified / rank-normalization+folded / bulk vs tail ESS / 阈值 1.01 与 400 / posterior 包实现 / Geyer 1992 initial monotone sequence、MCSE=SD/√ESS、IAT=N/ESS、ESS_tail 取 5%/95% 较小者、每链≥100 / Heidelberger-Welch·Geweke「只能发现失败不能证明收敛」）——第二至四独立域·工具教学+R 包官方文档+方法百科交叉。
+- **判重**：全库 SKILL.md 精确扫描 `R-hat`/`Rhat`/`Gelman-Rubin`/`effective sample size`/`traceplot`/`MCMC 收敛`/`收敛诊断` 0 命中本体（散见命中为 ESS 子串/异命题）；`divergence` 命中均「分歧」语义异命题。豆包自留地 WB 0 落地。

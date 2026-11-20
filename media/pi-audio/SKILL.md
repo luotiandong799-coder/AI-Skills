@@ -1,9 +1,9 @@
 ---
 name: media/pi-audio
-description: 音频感知（Audio/Speech Perception）。当需要把录音/会议/播客/通话转成文字、标"谁在什么时候说了什么"、生成字幕、做语音合成（TTS）、识别音频事件（警报/音乐/故障声）或理解音频内容时调用。提供 ASR 选型（AudioTranscribe 本地/Whisper API/faster-whisper/whisperX）、长音频分段并行、VAD 去静音防幻觉、pyannote 说话人分离与时间戳对齐、LLM 后处理、SRT/VTT 输出、TTS 与隐私护栏。不用于音视频格式转码（走 rg-ffmpeg-tools）、图像理解（走 multimodal-intelligence）。；响度归一化与 LUFS 测量口径（K-weighting/双门控/M·S·I 三时间常数/真峰 dBTP）；声音事件检测 SED 评测口径（segment-based F1/ER vs event-based collar F1 vs PSDS 交集匹配/DTC·GTC·αCT·αST 参数/50 工作点/threshold-independent/跨数据集与年份分数不可比）。
+description: 音频感知（Audio/Speech Perception）。当需要把录音/会议/播客/通话转成文字、标"谁在什么时候说了什么"、生成字幕、做语音合成（TTS）、识别音频事件（警报/音乐/故障声）或理解音频内容时调用。提供 ASR 选型（AudioTranscribe 本地/Whisper API/faster-whisper/whisperX）、长音频分段并行、VAD 去静音防幻觉、pyannote 说话人分离与时间戳对齐、LLM 后处理、SRT/VTT 输出、TTS 与隐私护栏。不用于音视频格式转码（走 rg-ffmpeg-tools）、图像理解（走 multimodal-intelligence）。；响度归一化与 LUFS 测量口径（K-weighting/双门控/M·S·I 三时间常数/真峰 dBTP）；声音事件检测 SED 评测口径（segment-based F1/ER vs event-based collar F1 vs PSDS 交集匹配/DTC·GTC·αCT·αST 参数/50 工作点/threshold-independent/跨数据集与年份分数不可比）。；语音反欺骗评测（ASVspoof 三任务 LA/PA/DF/有 ASV 看 min t-DCF 含 C0·C1·C2 串联 ASV 性能、无 ASV 的 DF 看 EER 不可跨任务比/progress→eval EER 崩塌是过拟合泛化失败/四基线 CQCC-GMM·LFCC-GMM·LFCC-LCNN·RawNet2 用 2019 数据无增强）。
 module: PI
 modules: PI
-version: "1.4.0"
+version: "1.5.0"
 ---
 
 # PI · 音频感知（Audio / Speech Perception）
@@ -185,3 +185,23 @@ AudioLab 归纳三种反复出现的失效：① 域外材料——PESQ 在电�
 - `https://audiolab.tools/insights/evaluating-audio-ai-models`（AudioLab 评测指南 WebSearch 快照逐字：主观/客观 2x2、PESQ ~4 MOS 饱和、域外/饱和/gaming 三失效、「wrong evaluation strategy can let you ship a regression that 80% of listeners notice while every metric glows green」）
 - `https://nanless.github.io/audio-paper-digest-blog/posts/2026-10-29-perceptual-differences-and-preferences-in-speech-2610-36892`（arXiv 2610.36892 中文精读 WebSearch 快照：区分相关 PESQ 0.05 vs SQUIM-STOI 0.62、偏好方向 0.31 vs 0.62、质量相近≠感知相同、众包变异局限）
 - **判重**：全库 SKILL.md 精确扫描 `PESQ`/`STOI`/`SI-SDR`/`语音增强`/`speech enhancement`/`depth estimation` 全 0 命中；`FID` 22 命中均为图像生成/多模态生成语境异命题。本技能 §r708C 是说话人分离评测、§十三是声音事件检测（SED，检测命题），本轮补信号质量/可懂度（增强与分离命题），正交不复用。豆包自留地 WB 0 落地。
+
+## 十五、语音反欺骗评测：ASV 任务看 t-DCF、无 ASV 看 EER，泛化失败是主战场（PI · r782B 2026-11-20 实拉，≥2 独立域交叉）
+
+> 与 §五说话人分离（「谁在说话」）/ §十三 SED（「什么事件」）/ §十四语音增强（质量保真）分工：本节是「这段语音是真人还是伪造/重放」的 countermeasure（CM）评测。ASVspoof 2021 官方计划 + 结果总结论文逐字核验。
+
+### 15.1（r782B-1）★指标按任务选：有 ASV 的 LA/PA 看 t-DCF，无 ASV 的 DF 看 EER，两个数字不可跨任务比
+ASVspoof 2021 三任务（官方 WebFetch 逐字）：logical access（LA，TTS/VC 合成语音经电话与 VoIP 编解码传输）、physical access（PA，真实空间录制重放、不同质量回放设备）、speech deepfake（DF，TTS/VC 伪造但**不含说话人验证 ASV**）。指标分工（官方原文）：LA 与 PA 用 **minimum tandem detection cost function（min t-DCF）**——因 CM 与未受保护的 ASV 是串联工作；DF 因没有 ASV 系统，revert to **equal error rate（EER）**（误接受=误拒绝的点），EER 是「best achievable (Bayes) error rate 的上界」。t-DCF 公式（结果论文 Eq.1 逐字）：`t-DCF = min_τ {C0 + C1·P_miss(τ) + C2·P_fa(τ)}`，P_miss/P_fa 是 CM 的漏检/误报率，C0/C1/C2 由预置成本、先验**与 ASV 性能**共同决定——C0/C1 依赖 bonafide 上 ASV 表现、C2 随 ASV spoof false alarm rate 线性增长（**攻击对 ASV 危害越大、CM 误报罚得越重**）。关键差异：2019 丢弃的 C0（ASV floor＝零错误 CM 时的 t-DCF，反映 ASV 自身错误）2021 **保留**；C 参数 LA/PA 不同、progress/eval 分区也不同——是「moving target metric」反映串联系统的设计目标随 ASV 变化。判据：报反欺骗分数必写任务（LA/PA/DF）+ 指标（min t-DCF/EER）+ ASV 工作点与 C 参数，LA 的 t-DCF 与 DF 的 EER 不可比高低。
+
+### 15.2（r782B-2）★progress 到 eval 的 EER 崩塌是泛化失败信号，不是「方法更好」的证据
+结果论文（alphaxiv 逐字）：DF 任务 progress 阶段部分系统 EER 低至 **0.10%**（近完美），最终 evaluation 最佳系统 T23 却为 **15.64%**（基线 22.38%）——巨大落差是**对 progress 分区严重过拟合**的信号：eval 分区含 100+ 未在 progress/ASVspoof2019 训练集出现的生成算法与 mp3/m4a/ogg 有损压缩。LA 相对乐观（最佳 min t-DCF 0.2177 vs 基线 0.3445，对应 EER 1.32%），PA 难（0.6824 vs 0.9434）。统计显著性：DF 顶级系统间差异多不显著（同样的泛化瓶颈），LA/PA 顶级层有清晰显著层级。判据：反欺骗「领先」必须在**独立 eval 分区**（新攻击算法+新压缩）复现才认；progress/开发集上的低 EER 不得外推；报分附显著性分组，别把不显著的差距当排序。
+
+### 15.3（r782B-3）★四条基线是评测锚点，报分须声明数据分区与是否用增强
+官方四条可复现基线（github.com/asvspoof-challenge/2021）：B1=CQCC-GMM、B2=LFCC-GMM、B3=LFCC-LCNN（含 LSTM）、B4=RawNet2（端到端原始波形）。**全部仅在 ASVspoof 2019 数据上训练、无数据增强**，为参赛系统提供公平比较点；2021 明确鼓励参赛者**自带**训练/开发数据并用数据增强模拟信道变化（因不发布新训练/开发数据、只发新评测数据）。ASV 后端是 x-vector（VoxCeleb2 训练）+ PLDA，在目标-nontarget EER 阈值工作（pool 该任务该分区全部 bonafide 段求得）。判据：复现/对比须写基线编号、训练数据版本（2019）、是否增强、ASV 工作点口径；「我们比基线好」但换了训练数据或增强策略的比较不成立。
+
+### r782B 来源与判非（2026-11-20 实拉，逐字核验）
+- `https://www.asvspoof.org/index2021.html`（ASVspoof 官方 WebFetch 200 全文逐字：三子挑战 LA/PA/DF、DF「no ASV」、4 基线名、t-DCF 参考实现、evaluation plan v0.4、无新训练/开发数据只发新评测数据、鼓励自带数据+增强）——第一独立域·挑战官方。
+- `https://www.asvspoof.org/asvspoof2021/asvspoof2021_evaluation_plan.pdf`（官方 evaluation plan WebSearch 全文逐字 TL;DR：LA/PA 用 slightly revised t-DCF、DF 用 EER 及原因、三任务定义、2021 目标=信道鲁棒/真实空间/数据增强/非 ASV deepfake 场景）——第二独立页·官方一手（PDF WebFetch 未取正文、以 WebSearch 全文片段逐字登记，如实标注）。
+- `https://arxiv.org/pdf/2109.00537v1`（ASVspoof 2021 结果总结论文 WebSearch 逐字：t-DCF Eq.1 含 C0 保留与 C2 随 ASV spoof FA 增长、moving target metric、EER 作为 Bayes 误差上界、x-vector+PLDA 后端、LA 0.2177/PA 0.6824/DF 15.64% 结果、progress 0.10%→eval 15.64% 泛化崩塌、显著性分组）——第三独立域·一手结果论文。
+- `https://www.alphaxiv.org/abs/2109.00537`（中文逐字：100+ 生成算法、mp3/m4a/ogg 压缩、EER 定义与四基线）——交叉佐证。
+- **判重**：全库 SKILL.md 精确扫描 `ASVspoof`/`anti-spoof`/`反欺骗`/`minDCF`/`t-DCF`/`EER`/`equal error rate` 0 命中（PI 唯一命中为本节来源段的 `engineering` 子串误命中）。本技能 §r708C 说话人日志、§十三 SED、§十四增强均异命题。豆包自留地 WB 0 落地。
