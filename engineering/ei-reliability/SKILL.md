@@ -1,9 +1,9 @@
 ---
 name: ei-reliability
-description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。
+description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。错误预算、燃尽率、burn rate、多窗口告警、multiwindow、SLO 告警、Page/Ticket 分档、短窗口泄漏问题。触发：错误率告警阈值怎么定、告警疲劳。
 module: EI
 modules: EI,VI
-version: 1.10.0
+version: 1.11.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -273,3 +273,18 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 - **判非/去重**：`chaos engineering` / `混沌工程` / `steady state` / `blast radius` 在本技能与 execution-intelligence 正文 0 专节；`爆炸半径` 全库命中为 agent-guild（cap86/cap32 凭证作用域）与 wb-context-compressor（工具面/Dual-LLM 隔离）的**安全作用域语义**，与本条「受控实验影响范围」异命题，不复用。`steady` / `drill` 等子串命中均非本体。**豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地**（wb-context-compressor 归档标题「r458B Agent 混沌工程与失败注入测试」为豆包侧历史标题，非 WB 本体落地）。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
 - **来源与诚信**：① `https://principlesofchaos.org/` — Principles of Chaos 官方一手 WebSearch 全文逐字（定义 / 四步 / 五条 Advanced Principles / does work vs how it works / try to disprove；中文镜像 principlesofchaos.org/zh 交叉）——**第一独立域·原则一手**；② `https://inferensys.com/glossary/agentic-memory-and-context-management/memory-consistency-and-isolation/chaos-engineering` — 一手全文逐字（可观测性四支柱 / 半径控制四技术 / 实验循环 / agentic memory 场景）——**第二独立域**；③ `https://engineering.zooz.com/@bgsnmbb/chaos-engineering-theoretical-foundations-and-industry-adoption-7ee2c6e19e45` + inferensys 第二词条 — 两独立一手交叉（control vs experimental group / 逐步放大半径 / 与传统验证式测试对照 / verification vs discovery）。官方四步与五原则为原文；可观测性/半径技术为二手一手解读，按原文口径登记，数值（如 99.9%/p95 200ms）为示例非普适阈值。
 - 提升层：执行可靠性 / 韧性验证。触发词：混沌工程、Chaos Engineering、稳态假说、steady state、证伪、control group vs experimental group、build confidence、does work not how it works、latency percentiles、Vary Real-world Events、流量激增、Run Experiments in Production、Minimize Blast Radius、可观测性四支柱、自动中止回滚、逐步放大半径、受控实验。
+
+
+## §20 r793B · 错误预算燃尽率告警：多窗口多档位，Page 按伤害速度、Ticket 按慢性消耗
+
+> 与 §15–§19（熔断/限流/舱壁/锁/混沌）正交：那些是「运行时防御机制」，本节是「什么时候叫人」——把 SLO 变成可执行的告警阈值，避免告警疲劳又漏掉慢性预算耗尽。来源：Google SRE Workbook《Alerting on SLOs》官方一手全文逐字 + safeguard.sh/obseria.io 两独立一手交叉（2026-11-22 r793B 实拉）。
+
+- **★burn rate = 观测错误率 ÷ 允许错误率；=1 恰好到期用完预算，>1 提前耗尽**：官方逐字「With an SLO of 99.9% over a time window of 30 days, a constant 0.1% error rate uses exactly all of the error budget: a burn rate of 1」；表 5-4 逐字枚举 burn rate 1→0.1%→30 天、2→0.2%→15 天、10→1%→3 天、1000→100%→43 分钟。公式「burn rate = observed error ratio / (1 - SLO target)」（obseria 一手），预算消耗比例 = burn rate × 告警窗口 ÷ SLO 周期（30 天=720h，故 14.4×1h/720h=2%、6×6h/720h=5%、1×3d/720h=10%）。⇒ 告警阈值不从「错误率超 X%」拍脑袋，而从「愿意在叫人前损失多少预算 + 选哪个窗口」反推 burn rate：定可接受预算损耗比例→定窗口→算阈值。同样 0.5% 错误率对 99.9% 是 crisis、对 99% 无害，burn rate 把它们归一到同一把尺（与 §19「稳态取可测输出」衔接：那个输出就是 good/bad 请求比）。
+
+- **★单一 burn rate 有低召回盲区，必须多窗口多档位；长窗证明预算真被花、短窗（≈长窗 1/12）让告警在恢复后快速消退**：官方逐字给出推荐起点表 5-6——2% 预算/1 小时长窗+5 分钟短窗/burn rate 14.4/**Page**；5%/6 小时+30 分钟/6/**Page**；10%/3 天+6 小时/1/**Ticket**。官方明写短窗理由「The short window ... makes the alert stop shortly after the problem is fixed, instead of firing for another hour while the long window still contains old errors」，经验法则短窗≈长窗 1/12；单档位反例逐字「Low recall: A 35x burn rate never alerts, but consumes all of the 30-day error budget in 20.5 hours」。告警两条件同时满足才触发（长短窗都超阈值），borough 官方 PromQL `(ratio_rate1h > 14.4*0.001) or (ratio_rate6h > 6*0.001) → severity: page` 与 `ratio_rate3d > 0.001 → severity: ticket`。⇒ 三档落地：快速燃烧（小时级耗尽）Page、中速（天级）Page、慢性（3 天消耗 10%）Ticket 上班处理；检测速度随严重度自适应（全中断约 1 分钟触发、2% 错误率约 43 分钟触发，均按官方口径示例不普适化）。
+
+- **★先止损再告警的取舍：不用固定错误率阈值/不用 duration Clause；阈值按服务分桶而非逐服务各设**：官方逐条否掉弱方案——短窗固定错误率「fires on tiny events（0.1% 错误率 10 分钟只花月预算 0.02%）」、长窗「keeps firing for hours after recovery」、duration clause「treats a total outage and a small leak the same」。推荐多 burn rate 的理由逐字「alert quickly if the error rate is high; alert eventually if the error rate is low but sustained」。并明确反对逐服务独立设窗口/burn rate「becomes toil nobody can manage」，改为把请求类型分桶（CRITICAL/HIGH_FAST/HIGH_SLOW/LOW/NO_SLO）按桶统一告警（TechnoLynx 一手逐字引 Workbook）。落地前置三件套（safeguard 一手）：good/bad 请求定义清晰、可信的 error ratio 指标、团队认账的 SLO（哪怕是粗的）；上线先验「跑两周不 Page，与记忆中的事故对照」。声明「不防什么」：阈值数字是 99.9%/30 天的起点值、换 SLO 必须重算；不替代熔断/限流（那些止血，本条叫人）。
+
+- **判非/去重**：`错误预算` 在豆包自留地 `wb-context-compressor`（r579C 允许失败率配额化/失败是预算不是事故，异命题——那条是调度取舍口径，本条是可执行 SLO 告警阈值与窗口公式）；`SLO` 在本技能 §90 一句「应报 first-attempt/eventual success rate 而非单一 uptime」与 §ri-retrospective 未采纳项（时限数字），均非 burn rate 专节。窄串 `burn rate` / `multiwindow` / `multi-burn-rate` / `14.4` / `短窗口 1/12` / `Page/Ticket 分档` 全库 SKILL.md 0 命中。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+- **来源与诚信**：① Google SRE Workbook《Alerting on SLOs》官方一手 WebFetch（首取失败如实登记，改用 WebSearch 命中官方 `sre.google/workbook/alerting-on-slos` 全文逐字）——表 5-4 burn rate 与耗尽时间、表 5-5 单档位优缺点、表 5-6 三档推荐参数 14.4/6/1 与 Page/Ticket、表 5-7 多 burn rate 优缺点、固定阈值与 duration 反例、短窗理由——第一独立域·官方一手；② `https://www.safeguard.sh/resources/blog/slo-burn-rate-alerts-explained` WebSearch 全文逐字（长短窗配对 1/12、三档起手值、两周不 page 验证、前置三件套、Last reviewed 19 October 2026）——第二独立域·独立实务一手；③ `https://obseria.io/glossary/burn-rate` WebSearch 逐字（burn rate 公式、预算消耗公式、长短窗分档、全中断 52 秒/2% 错误 43 分钟、PromQL 长短双条件）与 `https://ithelp.ithome.com.tw/articles/10421158` 中文逐字交叉（短窗理由、1/12 法则）。官方首取 WebFetch 失败不冒充成功；数值为 99.9%/30 天起点示例，不写成普适阈值。
