@@ -1,8 +1,8 @@
 ---
 name: wb-subagent-delegation
 description: >-
-  子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。、僵尸任务、心跳超时、undead、存活判定、派发者绑定、槽位释放、状态漂移、数据感知调度、Asset/AssetAlias、事件触发、can_create、隐式信任、logical_date=None、data interval
-version: 1.78.0
+  子Agent委派纪律（Subagent Delegation Workflow）。只有当任务能真正并行或明显提升效率时才调用子Agent；主Agent负责目标、任务拆分、分工、结果汇总；子Agent只处理明确范围，不重复调查他人已负责内容；子Agent返回结构化结果；主Agent统一去重、冲突检查与最终整合；简单任务禁止为"看起来高级"而调用多个Agent。触发词：子Agent、子代理、委派、并行处理、分给几个Agent、多Agent、并行跑、delegate、能不能并行、分工、派活、同时跑、并发、聚合结果、去重整合、等不等子代理。、派收台账、待收、已接单、已收到成果、已验收、续期、叫开工、僵尸任务、心跳超时、undead、存活判定、派发者绑定、槽位释放、状态漂移、数据感知调度、Asset/AssetAlias、事件触发、can_create、隐式信任、logical_date=None、data interval
+version: 1.79.0
 agent_created: true
 module: OI
 modules: OI
@@ -454,3 +454,11 @@ WSO2 逐字："Every delegation is a full agent run with its own prompt, its own
 - `https://airflow.apache.org/docs/apache-airflow/stable/authoring-and-scheduling/loops.html` + `https://airflow.apache.org/docs/apache-airflow/2.3.2/_api/airflow/models/mappedoperator/index.html`（官方 loop 与 MappedOperator API；逐字：两套坐标、rerun 替换旧迭代、不支持的形态、expand_mapped_task 按 index 升序）——API 一手
 - **判非**：`dynamic task mapping` / `map_index` / `max_map_length` / `UnmappableXComTypePushed` / `zip_longest` 在全库 SKILL.md 0 落地（豆包自留地 wb-context-compressor 仅一句 Antler 口号级提及，异命题按「合」不重述）；与 r745B（触发规则）、r748C（并发预算槽）、r756C（事件触发面）同模块但正交——本条管「任务数由数据决定时的维度与上限」。
 - **未采纳**：具体 DAG 代码全文、S3ListOperator 业务示例、`parse_time_mapped_ti_count` 内部实现细节（只取可落编排纪律的判据）。
+
+## EXT-S1 · 派收台账六态状态机：只有已验收或授权取消才退出未完清单（2026-11-22 外部共学，Solo to Team / Orchivane）
+- **★六态只追加、过程行不改状态**：待收｜已接单｜已收到成果｜退回｜已验收｜已取消，每行带任务标识只追加不改写（原期限、旧回件、失败保留）。`叫开工/续期/升级`是过程行，连续多条也不改变阶段；扫未完项必须回看每单**最近有效阶段行**，不能按物理末行名称筛选销项；旧单迟到的回件只归旧单，不改变新单阶段。已验收=「当前版本核验通过 ∧（有权接受者决定接受 ∨ 有明确适用的既有授权）」且记录接受者与依据，否则停在「已收到成果｜核验通过，待有权者决定」仍算未完。
+- **★新预计≠正式改期**：执行人逾期报的新时间只是执行估计；原承诺行保留（含原因与影响），新时间标「正式改期：未确认」，经有权者确认追加一行后才算新承诺；确认之前仍按原承诺计逾期——不能填个新日期把逾期抹掉。
+- **★死人开关 + 放行即叫开工**：平台不会主动通知完成的活（后台命令/外部会话/跨机器），**开跑当下**登记一行，不建定时闹钟（等待程序可能悄悄退出，通知可能永不到）；「等待停了」「对方说好了」都不算成果回来，去结果该在的位置看见才记「已收到成果」。授权/放行一出，派活人当场叫下一棒开工，收到「已接单」回执或开工证据才算接住——只有「消息发出去了」不算。
+- **★预算与停止条件显式化（Orchivane）**：派单简报含范围/预算/停止条件；到达停止条件即停，未用完的余量不授权再跑一轮；交接、上下文压缩、重试、工具恢复都**不重置预算**、不解除暂停。
+- 来源：GitHub `dabingfy-dot/solo-to-team-skills`（MIT，commit fedfd4e 2026-11-17，1091 stars）`skills/dispatch-accept-verify`+`evidence-before-done`+`ops-case-notes`+`beginner-ops-writing` 正文直读 + `alexzhu0/orchivane`（MIT，commit 5265857 2026-10-28）SKILL.md 全文直读；该包自述改写自 `obra/superpowers` verification-before-completion（MIT，commit 22f0b46）。2026-11-22 外部项目共学（EXT-S1），判重=四载体全库关键词 0 命中本体，判「增」。
+- **判非/未采纳**：16席岗位卡、六群分组、Grok Bot 持久团队形态（WorkBuddy 单Agent+子Agent模型不适配，编排位与 agent-guild/personal-ai-employees 重叠>60%，只取平台无关的台账方法）。

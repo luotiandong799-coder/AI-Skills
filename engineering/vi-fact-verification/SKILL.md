@@ -1,9 +1,9 @@
 ---
 name: vi-fact-verification
-description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试、mutation testing、mutation score、变异算子、存活变异体、等价变异体、等价不可判定、胜任程序员假设、耦合效应、human oracle problem、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、Bland-Altman、一致性界限、limits of agreement、一致性评价、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、可互换性、方法比较
+description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试、mutation testing、mutation score、变异算子、存活变异体、等价变异体、等价不可判定、胜任程序员假设、耦合效应、human oracle problem、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、补核受影响部分、核对不是危险动作、Bland-Altman、一致性界限、limits of agreement、一致性评价、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、可互换性、方法比较
 module: VI
 modules: VI,EI
-version: "1.14.0"
+version: "1.15.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -346,3 +346,10 @@ version: "1.14.0"
 - 交叉快照（WebSearch 逐字）：`https://etheses.whiterose.ac.uk/id/eprint/36618/1/Roslan_Firhard_MinorCorrections.pdf`（White Rose 论文：RIPR 模型、killed/survived/equivalent/stubborn/trivial 四分、mutation score 定义与 CPH 起源）· `https://inferensys.com/glossary/recursive-error-correction/verification-and-validation-pipelines/mutation-testing`（算子表、mutant sampling/higher-order/weak mutation/并行四类优化、与覆盖率对照表）· `https://byteledger.vizleo.com/blog/what-is-mutation-testing-2026`（Stryker/PIT 增量变异、mutation score 50–75% 健康区间、与 fuzz/property-based 组合）。
 - **判非/去重**：`变异测试`/`mutation testing`/`mutation score`/`变异体`/`等价变异体`/`胜任程序员假设`/`耦合效应`/`human oracle` 全库 SKILL.md 本体 0（§r776B fuzz 命中「变异策略」是覆盖率引导的输入变异，异命题）。与 §r776B fuzz（改输入找崩溃）、§十三蜕变测试（造 oracle）、§r784B 对抗验证（验分布）逐条分工，不并存。豆包自留地 WB 0 落地。
 - **未采纳**：RIPR 模型的感染/传播形式化（属检错链路分解，不直接给测试套件验收动作）、higher-order/weak mutation 的实现细节（是降本变体，单元操作仍以 simple mutant 为主）、各语言工具的具体 CLI 配置（工程操作细节，留后续）。
+
+## EXT-S1 · 核验结论与接受权限分记 + 证据复用边界（2026-11-22 外部共学，Solo to Team）
+- **★核验≠接受**：证据支持什么就报告什么；「核验通过」本身不授予验收权。先确认当前版本核验通过，再确认接受决定或明确适用的既有授权——两项都满足才记「已验收」；仅有核验时如实记「核验通过，待有权者决定」，保留未完。核验人已有该项授权则直接沿用不重复报批；执行人自查不替代独立核验（独审=非制作的真实上下文实际打开同版成品，见过已有结论不称盲审）。
+- **★有效证据=版本/范围/环境三同**：复用须写明哪一次核的哪个版本；之后有改动、出过失败或换环境（换机/换账号/换版本）的部分**只补核受影响部分**，不必整套重验，拿不准影响面就放大范围；他人报告只是线索不是证据；核旧版本或别的范围不算。只报「进行到哪」不触发重验，一旦说「这部分做完了」该部分就必须过检——换说法暗示做完与违反铁规同罪。
+- **★核对本身不得变成危险动作**：核对用只读、本地可逆手段；不为「试试能不能发出去」真发一条、不为测试下单、不为核对删东西；核对须碰对方账号/会被外人看到的，先走报审；实在核不了就说核不了并标「待核实」，不硬说做完。
+- **★交付三核分列**：「文件在某处」「宿主已上传附件」「用户原会话可取得」是三个独立事实，不能用路径/哈希/下载提示代替收件事实；「已交回」只是交付事实，不自动等于已验收。
+- 来源：GitHub `dabingfy-dot/solo-to-team-skills`（MIT，commit fedfd4e 2026-11-17，1091 stars）`skills/dispatch-accept-verify`+`evidence-before-done`+`ops-case-notes`+`beginner-ops-writing` 正文直读 + `alexzhu0/orchivane`（MIT，commit 5265857 2026-10-28）SKILL.md 全文直读；该包自述改写自 `obra/superpowers` verification-before-completion（MIT，commit 22f0b46）。2026-11-22 外部项目共学（EXT-S1），判重=四载体全库关键词 0 命中本体，判「增」。

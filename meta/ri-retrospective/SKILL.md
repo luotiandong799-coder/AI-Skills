@@ -1,9 +1,9 @@
 ---
 name: ri-retrospective
-description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/主持·记录·事故负责人三分离/发言权/时间盒议程与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习深度分级（改动作/改假设策略/改学习机制本身·防御惯例与熟练无能阻断双环·反思-重构循环·学习与有效行为不等价须分层验收）。正常事故理论NAT与HRO对照（Perrow交互复杂×紧耦合双条件·集中/分散权衡·实务漂移与盘旋渐进理论·瑞士奶酪随时间对孔·安全记录好不等于高可靠·降耦合与提前预案）。 故障树FTA与事件树ETA（演绎找致祸组合vs归纳看触发后果·定性最小割集/单点失效/共因·量化=触发频率×条件概率乘积）。 FMEA/FMECA与RPN排序陷阱（模式清单≠优先级·RPN序数相乘伪精度与并列·AP表严重度主导·先分档后档内排序） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结分析bowtie（顶事件左右屏障·effective/independent/auditable三门·培训审计是退化控制非屏障·近失改屏障状态不重复训）
+description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/主持·记录·事故负责人三分离/发言权/时间盒议程与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习深度分级（改动作/改假设策略/改学习机制本身·防御惯例与熟练无能阻断双环·反思-重构循环·学习与有效行为不等价须分层验收）。正常事故理论NAT与HRO对照（交互复杂×紧耦合·安全记录好≠高可靠·降耦合与提前预案）。 故障树FTA与事件树ETA（演绎找致祸组合vs归纳看触发后果·定性最小割集/单点失效/共因·量化=触发频率×条件概率乘积）。 FMEA/FMECA与RPN排序陷阱（模式清单≠优先级·RPN序数相乘伪精度与并列·AP表严重度主导·先分档后档内排序） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障有效/独立/可审计三门）。仍未证明栏（四块结构附没证明什么·可照做≠可审计·修正覆盖三分类）·effective/independent/auditable三门·培训审计是退化控制非屏障·近失改屏障状态不重复训）
 module: RI
 modules: RI,EI
-version: "2.7.0"
+version: "2.8.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -207,7 +207,6 @@ incident.io 逐字归纳（"How actions die"）：
 - blog.stackademic.com/your-incident-postmortem-process-is-probably-making-your-team-worse-heres-the-data-3092c9005ad2（交叉佐证：repeat incident rate >30% = 产出文档非学习、行业 35–50%、凭记忆重建时间线 / 根因停在症状 / 行动项无人认领四坏味道；WebSearch 结果全文）
 - 判非：r706C 的 SRE/incident.io 七源（准入触发器 / 三分 / 动词门 / 四死法 / 三态关闭 / soak time）不重复；本节只补「组织级有效性度量 + 语言门 + 替换测试」三维。豆包自留地 WB 0 落地。
 
-
 ## 十、控制结构视角的复盘：CAST 把「事件链」换成「约束为何没被执行」（2026-11-11 r734B 实拉，五独立域交叉）
 
 > 与 §七（准入触发器／贡献三分／动词门／四死法／三态关闭）、§八（复发率验收／反事实语言门／替换测试）分工：那两节是**流程与语言层**；本节是**因果模型层**——用什么结构解释事故，决定复盘能问出哪些问题。CAST/STAMP 在 §七「拒绝单一根因」之上给出可操作的结构载体。
@@ -272,7 +271,6 @@ Cybermaniacs（2026-10-26）逐字："A technical timeline answers questions suc
 - `biascodex.com/hindsight-bias`（WebSearch 快照逐字：decision journals / 区分 'signals we missed' 与 'noise that became signal only in retrospect' / Fischhoff 1975 与 Roese & Vohs 2012 文献）＋ `sciencewalk.blog/what-is-the-i-knew-it-all-along-phenomenon`（WebSearch 快照，decision journal 与 consider-the-opposite）— 两独立域背景交叉，立场登记
 - **判非**：`outcome bias` / `fundamental attribution` / `Baron and Hershey` / `Hershey` / `decision timeline` / `decision rationale` / `bare approval` / `decision quality` / `two ledgers` / `reassessment` / `cognitive forcing` / `lucky win` / `label luck` 全库 SKILL.md **0 命中**；`hindsight bias` 2 命中＝本技能 §八 r717C 的**反事实语言门**（tinycto 引句）与 `meta/ti-critical-reasoning` 的 belief audit（记录预测是复盘输入），均为**语言/前置记录层**，本轮取的是**评价对象分离与决策时间线层**，明确分工不重述；`near miss` 1 命中＝r717C「near misses 同等价值」，本轮不重复该结论，只在"无事故样本"下另立"绕过控制但成功"这一不同命题。co-learn 台账 `outcome bias` / `decision timeline` **0 命中**，`hindsight bias` 6 命中经查均属 r717C 语言门语境。豆包自留地 WB 0 落地。
 - **未采纳**：Baron & Hershey 实验的具体效应量与样本数（二手转述，不冒充原始论文直读）、HRM 绩效制度设计（超出 RI 复盘技能边界）、NIST AI RMF 完整框架（只取"记录目标与理由"这一条）。A/B 两轮结论一律不复用。
-
 
 ## 十三、让跨事故模式可见：severity 与 taxonomy 分工、起步标签 schema、标注自带证据等级（RI · r746C 2026-11-14 实拉，四独立域交叉）
 
@@ -495,3 +493,7 @@ DevOps AI Toolkit 逐字 prep 四条「**Assemble the timeline in advance.** Pul
 
 - **三独点**：①蝴蝶结＝FTA 左翼 + ETA 右翼汇于单一顶事件，画的是屏障路径不是计算、自身不给频率；②真屏障需 effective / independent / auditable，一条威胁路径通常仅 1–5 个，培训/审计/变更管理是退化控制不是屏障，"人误"应挂退化因子而非威胁；③近失事件改的是屏障状态（verified→degraded→复验）而非只重新培训，改进须落到「哪个屏障/谁拥有/上次何时验证」。全文下沉 `references/r791C.md`。
 - **来源**：IChemE/CCPS-EI 2018 概念书（qhsetech 逐字）+ ORS Consulting 官方构建规则（逐字）+ ScienceDirect 屏障人因 PDF（逐字）+ exida CCPS 综述四独立域；全库 bowtie 0 命中，与 §r779C FTA/ETA、§r775C NAT、§r787C HFACS 分工不复用，豆包自留地 WB 0 落地。
+
+## EXT-S1 · 成绩记录必附「仍未证明」栏：改进落地≠效果验证（2026-11-22 外部共学，正文见 references/EXT-S1_仍未证明栏.md）
+三独点速览：①每条改进记录四块结构末栏固定写「仍未解决的限制」，「方法已写进技能」≠「效果已验证」，缺口声明进行文结构而非收尾总声明；②证据四级分档（亲手运行/队内不可复核/推断/未验），承诺「方法可照做」不承诺「战绩可审计」，对他方状态断言须本回合实读否则标 unverified；③修正覆盖三分类：已更新／未变更（给理由）／不可核，不许沉默略过。
+来源：GitHub `dabingfy-dot/solo-to-team-skills`（MIT，commit fedfd4e 2026-11-17，1091 stars）`skills/ops-case-notes` 正文直读+Orchivane Close the turn 节；全文 references/EXT-S1_仍未证明栏.md。2026-11-22 外部项目共学（EXT-S1），判重=全库「仍未证明」0 命中，判「增」。

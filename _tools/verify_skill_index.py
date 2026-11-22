@@ -195,7 +195,7 @@ def audit():
     stray = []
     for cur, _d, files in os.walk(ROOT):
         rel = os.path.relpath(cur, ROOT).replace("\\", "/")
-        if rel == "." or rel.split("/")[0] in ("memory", "_tools"):
+        if rel == "." or rel.split("/")[0] in ("memory", "_tools") or rel.split("/")[0].startswith("."):
             continue
         if "SKILL.md" in files and rel.split("/")[0] not in CATS:
             stray.append(rel)
