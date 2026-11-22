@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
 description: 因果推理与批判性思考（Thinking Intelligence）：区分相关与因果、评估方案真实贡献、反事实推演、识别 LLM 关联误判因果时调用。基于 Pearl 因果阶梯/do-calculus/SCM/DAG/后门前门调整，补齐关联推理的因果盲区。；未测混杂敏感性 E-value（RR 阈值/点估计与 CI 端各算/保守不判混杂存在/连续暴露按 IQR 标准化）；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）；论证图式与批判性问题（推定可废止/assumptions 与 exceptions 举证/图式目录覆盖缺口与错分）。；因果跨域可迁移性（S-node 指向机制/transport formula 三式/三档/meta-analysis 抹平差异之误）。；认知接种与预驳斥（弱攻击+反驳预热/counterarguing才是抗体/被动阅读优于主动自生/泛化须显式验证）。；因果发现（CPDAG 等价类/PC 与 GES 同边界/LiNGAM 非高斯定向/承重假设不可检验）。；面板数据准实验因果识别（DiD 平行趋势不可验证只能事前诊断/SCM 对 donor pool 加权构造反事实且凸包条件与过拟合风险/SDID 双权重放松平行趋势且可大面板推断）。；工具变量与 LATE（IV识别complier局部效应非全员ATE/排除限制不可数据检验/monotonicity无defiers才给正权重/多工具下单调性与异质性效应不相容）。；目标试验仿真TTE（先写七组件RCT协议再映射观察数据/设计缺陷比统计失配更常致错/94%观察CER有设计缺陷）；永生时间偏倚（未来治疗状态定义暴露却提前起随访→强制对齐 time zero）；clone-censor-weight 克隆人工删失加 IPCW 仿效宽限期策略、仍受无未测混杂与 positivity 约束。；G方法/g-formula（处理-混杂反馈致传统回归双向偏倚/g-computation 拟混杂+结局模型前向模拟再平均/与 IPTW-MSM 建模侧对称差异/g-null 悖论/双重稳健 AIPTW·TMLE）。；交错处理时点TWFE偏误（已处理单位当对照产生负权重·效应异质时系数可翻负·Goodman-Bacon分解看timing权重·CS/SA/stacked稳健估计量·多估计量一致不等于验证·预期效应是设计问题重加权修不了）。
-version: 2.7.0
+version: 2.8.0
 module: TI
 modules: TI,EI
 ---
@@ -472,3 +472,15 @@ Barrios 三条 takeaway 逐字：①「The bias is arithmetic」——TWFE 是�
 - **判重**：全库 SKILL.md 精确扫描 `Goodman-Bacon` / `Callaway` / `staggered` / `TWFE` / `负权重` 命中仅 meta/agent-evolution §长期实验的「time-staggered treatments start a second copy later」（A/B 实验收敛检验异命题，非交错 DiD）；`交错DID`/`多期DID`/`交叠DID` 全库 0。本轮补的是 §13–23 全缺的「处理时点交错 + 效应异质」这一设计层，不重述后门/IV/RDD/TTE/G 方法的识别结论。豆包自留地 WB 0 落地。与 r793(OI/EI/SI)/r792(VI/AI/DI)/r791(MI/CI/RI) 九模块及 B/C 两轮不复用。
 - **未采纳**：具体 Stata/R `csdid`/`bacondecomp` 命令与安装细节、Triple Differences / 溢出 / 非线性设定的展开、150 小时规则的经济学解释 —— 属特定实现/特定域结果，不迁移为通用验收判据。
 
+## 三十二、中介分析：拆总效应前先声明 estimand，CDE / NDE / IDE 不能混报（r795A 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§13–23 全在「图上识别总效应」，本章管「总效应已经识别，还要不要拆成直接/间接」——拆之前先定 estimand，换个 estimand 就是另一个问题，不是同一个数的两种算法。
+
+**独点1** 三类效应定义互斥：CDE 对全体强制 do(M=m) 固定中介；NDE/NIE 为自然效应，NDE+NIE=总效应，NDE 走 mediation formula `Σ_z[E(Y|x′,z)−E(Y|x,z)]·P(z|x)` 按 `P(z|x)` 加权；IDE/IIE 改为「从中介分布抽样」而非 `do(M=m)`，识别假设更少但**不分解总效应**（Schuler 2024 逐字）。报告第一行必须写明报的是哪一类，禁止 CDE 与 NDE 混称。
+
+**独点2** 判据：把中介当普通协变量放进回归、把剩余系数称「直接效应」，却未同时声明顺序可忽略性两条 `{Y(t,m),M(t)}⊥T|X` 与 `Y(t,m)⊥M|T,X` → estimand 错配；条件于中介改变的是估计对象（总效应 vs 直接/间接），不是「控制得更全」。
+
+**独点3** 存在受 X 影响的 mediator–outcome 混杂 L（intermediate confounder）时，NDE/NIE 一般不可识别；此时只能报 IDE/IIE，并显式声明它不分解总效应、不保证单调性与严格中介零准则（Gervais 2025 逐字）。禁止在未声明情况下给出 NDE/NIE 点估计。
+
+- **判重：全库 `mediation` 4 命中均为后门/前门/调整集语境（TI §「条件于中介 M 会改变估计对象」仅一句），中介分析专节 0；与 §20 RDD、§13–23 识别策略分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://europepmc.org/articles/PMC11821701（Schuler 等，Health Serv Outcomes Res Methodol，2024-04-12，WebFetch 200 逐字：NDE+NIE=总效应 / CDE 定义 / interventional 假设更少但不分解）；https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12261401/（Gervais 等，2025，WebFetch 200 逐字：中间混杂下 natural effects 不可识别 / 无中间混杂时 IDE 退化为 NDE / 不满足单调性与严格中介零准则）。imai.princeton.edu/research/mediation.html WebFetch failed；FTP UCLA r379 PDF 非文本；均不冒充一手。 逐字全文与判非见 `references/r795A_中介分析.md`。

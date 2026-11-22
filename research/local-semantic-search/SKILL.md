@@ -2,7 +2,7 @@
 name: local-semantic-search
 description: >-
   本地语义搜索：在个人电脑上按「意图」而非关键词找内容。覆盖本地文件搜索、PDF 搜索、工作资料查找、历史记录检索、图片与文档关联搜索。核心是理解用户需求后找到相关内容，而非字符串匹配。当用户要在本机找资料、搜历史对话/文档、按意思查文件、跨 PDF 与笔记关联检索时使用。触发词：帮我找、本地搜索、搜一下我的、按意思搜、相关文件、历史记录里、之前那个文档、跨资料检索、语义搜索、找讲过的内容。不适用：联网全网搜索（走 web-scrape/agent-reach）、精确文件名查找（用 Glob/Grep）。
-version: 1.2.0
+version: 1.3.0
 module: KI
 modules: KI
 ---
@@ -101,3 +101,15 @@ modules: KI
 - CSDN BEIR 中文译解 → https://blog.csdn.net/zag666/article/details/128336349 （中文交叉，非一手）
 - 判重：`Hole@10` / `annotation selection bias` / `graded relevance` / `macro-average` / `near real-time` / `translog` 全库 SKILL.md **0 命中**；`nDCG` 4 命中均为指标名列举或 reranker 选型（`wb-context-compressor`、`wb-agent-evaluation` r702B、`wb-execute-discipline`），无判定池偏差机制；`refresh_interval` 唯一命中在 `agent/agent-guild` 讲的是缓存过期（同名不同义）；`fsync` 唯一命中在 `wb-execute-discipline` 讲 checkpoint 崩溃安全写（豆包自留地，WB 0 落地）。⇒ 净新，取「优＝加厚现有」不新建。
 - 未采纳：BEIR 的模型优劣结论（会过时）；2.x 的具体默认参数（以 current 为准）；ZeroEntropy 自家 leaderboard 排名（商业立场）。r735A 的 SRM / r702B 的判定池一句 / r732A 的 RRF 参数族结论一律不复用。
+## 四、分块 chunking：先定边界与可追溯性，再谈块大小（r795G 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§五 RRF 管「多路召回怎么融」，本章管**入库前怎么切**：切错了检索再强也补不回，三个可机检口径——语义边界、small-to-big 块 ID、late chunking 的处理顺序。
+
+**独点1** 边界判据：切分按 `\n\n → \n → 句末标点 → 词` 递归，尽量让段落/句子/词成块；出现 `text[i:i+N]` 纯字符硬切，且块内指代（其/it/its）的先行词落到相邻块 → 判语义边界破坏。LangChain 官方逐字：递归切分「trying to keep all paragraphs (and then sentences, and then words) together as long as possible」；`chunk_overlap` 用来缓解跨块信息丢失。中文须扩展 `。`，`\u200b` 等分隔符。
+
+**独点2** small-to-big 判据：每个子块带 `chunk_id` 与 `parent_node_id`；命中子块后按 `parent_node_id` 从 docstore 取父块喂生成器；验收断言 `sub.parent_id==parent.node_id`，输出能回溯 `doc_id + offset`。LlamaIndex 默认三层 2048/512/128，索引与检索只在叶节点，父块从 docstore 取。
+
+**独点3** late chunking 判据：顺序必须是「整文一次长上下文编码 → 按 token 边界切 hidden states → 各块 mean pooling」；代码里出现「先 split_text 再逐块 embed」即判非 late chunking，边界 cue 只用于 pooling span。论文逐字：先 embed all tokens，「chunking applied after the transformer model and just before mean pooling」。
+
+- **判重：`chunking`/`分块` 命中多在非本体的 context 压缩技能（豆包自留地 WB 0 落地）与文档读取技能；本技能 §一–§七 0 专节；与 §五 RRF、§七 判定池偏差分工不复用。**
+- **来源与诚信**：https://docs.langchain.com/oss/python/integrations/splitters/recursive_text_splitter（LangChain 官方文档，WebFetch 200 逐字：递归分隔符层级 / chunk_overlap / 中日泰分隔符缺口）；https://arxiv.org/html/2409.04701v3（Günther 等，arXiv:2409.04701，v1 2024-09-04，WebFetch 前 15000/57262 字逐字：先编码后切 / 普通分块丢上下文 / semantic chunking 用相邻句相似度）；https://developers.llamaindex.ai/python/framework/integrations/retrievers/auto_merging_retriever.html/（LlamaIndex 官方，WebFetch 200 逐字：父子递归合并 / 三层 2048-512-128 / 叶节点向量检索父块 docstore）。arXiv HTML AI 摘要 60s 超时，仅取前 15000 字原文，逐字片段均出自该段，如实登记。 逐字全文与判非见 `references/r795G_分块策略.md`。

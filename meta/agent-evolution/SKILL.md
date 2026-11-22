@@ -1,6 +1,6 @@
 ---
 name: agent-evolution
-version: "1.21.0"
+version: "1.22.0"
 description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。 触发：并发实验分层、层间正交、发布层灰度、安全探索、shield 护栏、约束 MDP、代价 critic、持续学习灾难性遗忘、EWC、Fisher 信息、弹性权重整合、在线 EWC、突触智能、经验回放、稳定性可塑性权衡、异质性处理效应、因果森林、CATE、honest splitting、GRF、DML、DR-learner。、Hyperband、Successive Halving、多保真预算分配、纯探索无限臂bandit、early stopping、bracket网格、envelope函数、BOHB、贝叶斯优化、Bayesian optimization、GP代理模型、采集函数、Expected Improvement、PI、UCB、探索利用权衡、Monte Carlo采集、异步并行评估、multi-fidelity、高维BO。、元学习、MAML、学会学习、learn to learn、快速适配、内循环外循环、支持集查询集、FOMAML、Reptile、Meta-SGD、任务分布初始化、势能奖励塑形、potential-based reward shaping、PBRS、策略不变性、F(s,s')=γΦ(s')−Φ(s)、望远镜抵消、势函数、奖励设计、稀疏奖励、Wiewiora Q值初始化、Dynamic PBRS、课程学习、curriculum learning、scoring function、pacing function、自步学习、self-paced learning、全局难度、局部难度、难例挖掘、anti-curriculum
 license: MIT
 metadata:
@@ -23,7 +23,6 @@ modules: AI
 # 智能体能力进化引擎（agent-evolution）
 
 本 Skill 是 **Hermes Agent 式长期进化的常驻协调层**。它不重实现任何能力，而是定义一条「任务后自动进化循环」，并把八大能力逐一路由到已有 Skill。目标：让 WorkBuddy 每完成一次高价值任务，就自动变强一点，同时**保持 Skill 库精简**。
-
 > 最高约束（来自用户原则，优先生效）：**少而精、禁止重复、优先复用、持续进化、结果导向**。本 Skill 自身不存放方法论正文，只做编排与触发。
 # 一、八大能力 → 已有技能路由表（优先复用，禁止重造）
 
@@ -39,11 +38,9 @@ modules: AI
 | 8 | 多入口适配 | `meta/personal-ai-os` Computer Agent + `system/browser-automation`/`bsk-*` + `system/computer-use-windows` + 各连接器 | 统一收口进本循环 |
 ## 二、持续进化主循环（统一生命周期）
 每次任务严格走：
-
 ```
 需求分析 → 任务规划 → 调用 Skill → 执行工具 → 结果检查 → 沉淀总结 → 优化迭代
 ```
-
 - **需求分析**：先判断任务指向，再定入口层（见 `meta/personal-ai-os` 信息获取梯度）。
 - **任务规划**：≥3 步的实现任务先立规约（`wb-spec-driven`）。
 - **调用 Skill**：命中即加载，不凭记忆复述冒充加载；多步组合用编排。
@@ -55,7 +52,6 @@ modules: AI
 ## 三、任务后自动复盘清单（每次高价值任务必跑）
 
 逐项回答，结论写进工作记忆，不达标则进入优化：
-
 1. **是否完成目标** —— 是/否；未达成原因与证据。
 2. **哪一步效率低** —— 标出耗时/调用最多的环节，给具体优化动作。
 3. **是否产生错误** —— 报错/失败/返工；根因与修复（走 `wb-debug-loop`）。
@@ -67,22 +63,16 @@ modules: AI
 **价值门（先过门，再谈 §四 条件）**——以下**一律不沉淀**，直接跳过：
 一次性操作 · 临时路径 · 当前机器专属细节 · 偶然命令 · 一次失败的临时 workaround ·
 纯环境差异 · 无法复用的聊天上下文 · 普通成功任务。
-
 过门条件（**同时满足**「可复用」与「有增益」两条才继续）：
 - **可复用**：跨任务 / 跨场景能用，不是本次独有。
 - **有增益**：明显提升效率、明显提升正确率、修复普遍性 bug、用户明确要求长期保留、原 Skill 已明显过时。
-
 过门后再看 §四 的触发条件（≥2 次同类任务 / ≥8 步可迁移 / 普适性坑 / 用户明说 / 已有 Skill 过时）：
-
 - 同一类任务 **≥2 次**出现，或单次任务步骤 **≥8 步**且方法可迁移。
 - 踩过坑且根因具有 **普适性**（不止本次有效）。
 - 用户明确说「以后这类都按这个来」。
 - 现有 Skill **已过时/描述失准** → **更新而非新建**。
-
 **目标：经验越来越精，不是越来越多。** 沉淀后必须能回答「下次哪个任务会因此少一步」，答不出 = 不该沉淀。
-
 沉淀方式：调用 `engineering/distill-cat` 产出技能包草稿 → `engineering/wb-skill-authoring` 审计（PyYAML 全解析、description≤1024、触发词只加末尾、首句<30字、无标点开头）→ 接线（写入相邻技能分工表/触发词）→ 同步仓库+live+push。
-
 **禁止重复硬规则**：新建前必须先 `grep`/全局技能清单确认无同类；存在同类则合并或扩展，绝不平行新建。
 
 ## 五、工作流记忆写入规范（避免重复询问）
@@ -97,12 +87,10 @@ modules: AI
 ## 六、前置安全检查（执行前）
 
 逐项过 `meta/personal-ai-os` §4–§8：
-
 - 权限是否足够（L0 自动 / L1 提示 / L2 必须确认）。
 - 是否涉及敏感操作（删文件、改注册表、发消息、付费、push）。
 - 是否需要用户确认（不可逆/合规/安全风险 → 停手请示）。
 - 是否可能造成错误（影响面、回滚点：`personal-ai-os` §5 先建状态与回滚点）。
-
 安装/更新外部 Skill 前必跑 `system/skills-security-check`（纯静态审计，绝不执行被审脚本）。
 
 ## 七、后置安全检查（执行后）
@@ -498,3 +486,15 @@ mSPRT 不控制跨指标 family-wise error（Adobe 对两个以上处理用 Bonf
 ## 二十九、元学习 / MAML：学的是「几步就能适配新任务」的初始化，不是单任务最优权重（r784A 独立实拉 2026-11-20，≥2 独立域一手交叉，3 独点；正文下沉 `references/r784A_元学习MAML.md`）：§24 持续学习管「别忘旧任务」、§27/§28 管「搜索怎么分配/选点」，本章管「跨任务学一个对梯度敏感、少量样本即可适配的初始化」。**独点1** 双层优化=内循环 `θ'=θ−α∇L_T(D_tr)` 支持集适配 + 外循环 `min_θ ΣL_T(θ',D_te)` 穿过内循环反传，目标是把 θ 放在梯度下降特别有效的区域；须声明任务分布/内外学习率/内步数三件。**独点2** 二阶导是代价核心；FOMAML 丢二阶近乎不掉性能、Reptile 不穿优化只把初始化朝适配后参数推、Meta-SGD 连逐参学习率一起学——同一目标的不同「过不过二阶/学不学逐参」旋钮。**独点3** 与迁移学习（为单一源任务优化）不同、需任务共享结构前提；任务太杂/分布太窄 meta-overfit，简单微调基线可追平 ⇒ 启用前先验任务共享性。判重：MAML/元学习/learn-to-learn 本体全库 0（artifact-verification 命中 RATED 在线 bandit 重排，异命题）。**两独立域逐字来源 + 判非全段见下沉文件**（WebFetch 200 全文：aiwiki + wikiprompt；arxiv 1707.02937 ID 抓错弃用如实登记）。
 ## 三十、基于势函数的奖励塑形：加中间奖励而不改变最优策略（r788A 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点；正文下沉 `references/r788A_基于势函数的奖励塑形.md`）：§23 安全探索管「学的过程受约束」、§28/§29 管「评估很贵/跨任务怎么学」，本章管「稀疏奖励下加中间奖励，怎样保证不改原本最优策略」。**独点1** Ng/Harada/Russell 1999 定理：势函数 Φ 有界但任意，塑形项 F(s,s′)=γΦ(s′)−Φ(s) 使 V~*=V*−Φ、Q~*=Q*−Φ 故最优策略不变；沿轨迹折扣求和望远镜抵消只剩 −Φ(s0)+γTΦ(sT)、终态势能为 0 时退化成只与起点有关的常数，策略序不变；非此形式的附加项会改最优策略（抓取奖励被反复抓取—松开刷分、悬停不拉抽屉）。**独点2** 定理不给「首选 Φ」：取 Φ=V* 时贪心即时塑形奖励即最优但 V* 未知；距离势 Φ=−d(s,goal)、γ=1 ⇒ F=d(s)−d(s′)；Wiewiora 2003 证 PBRS 等价于 Q 值初始化（Q-learning/Sarsa），Dynamic PBRS（Devlin & Kudenko 2012）势函数随 MDP 时间步变仍收敛，BSRS 是 MDP 步固定但训练步变——两个「动态」含义不同须分清。**独点3** PBRS 只保策略不变不保学得更快更稳，写不出势函数（「这段对话进展如何」）时不适用；线性变换 r′=pr+q(p>0) 也保策略不变但 indefinite horizon 下 q 大正/负诱发放弃或循环；与 §16 bandit 目标函数分裂、§23 安全规格独立分工，判重全库本体 0，豆包自留地 WB 0 落地。**两独立域逐字来源 + 判非全段见下沉文件**（WebFetch 200 全文：arXiv2501.00989 + Walking Labs 中文教程；growbotics/AAAI/ICAPS 交叉快照）。
 ## 三十一、课程学习：同一批数据按什么顺序喂，也是自适应旋钮（r792B 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点；正文下沉 `references/r792B_课程学习.md`）：§27/§28/§29/§30 管预算/选点/跨任务初始化/奖励塑形，本章管「单任务内数据顺序」。**独点1** 一门课程 = scoring function（人工先验/教师置信度/自身 loss 三路定难度）+ pacing function（难样本进池速度）；自步学习用当前 loss 自构课程免教师，但阈值升太慢会锁死难样本成反馈环（JMLR 逐字过拟合/不稳定 + TheoremPath 反馈环）。**独点2** 全局难度（最优假设处的 loss）vs 局部难度（当前假设处的 loss）解开「课程 vs 难例挖掘」矛盾：课程按外在全局难度排、同时不在对当前假设太易的样本上浪费时间；收敛率随全局难度单调降、随固定全局下的局部难度单调升；hard mining/boosting 降梯度方差、课程找好 basin，解不同问题非互斥。**独点3** 收益比直觉少（Wu/Dyer/Neyshabur 数千次训练：标准图像基准上随机增长池追平易到难，只在预算受限/标签有噪时明显获益）；窄课程烤进 shortcut；RL 晋升规则须多迭代平均+换关后等待+低失败率与长 episode 双条件，单迭代规则被噪声带跑。与 continual/active/transfer learning 分工：那些改任务或标签，课程只重排单一固定任务数据。判重：课程学习/self-paced/scoring/pacing 全库本体 0，豆包自留地 WB 0 落地。**三独立域逐字来源 + 判非全段见下沉文件。**
+## 主动学习：用标注预算换信息增益，随机采样是必须报告的基线（r795L 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§27/§28 管搜索预算与选点、§31 管同一批数据的顺序，本章管**该给哪些样本打标**：在反馈昂贵时，让模型自己挑最有信息量的样本，而不是把预算均摊。
+
+**独点1** 场景判据：须归入 pool-based（整池排序选样）/ stream-based（逐个到达即时决定标注或丢弃）/ membership query synthesis（合成新样本）三者之一；错分即错误条目。Settles 2009 逐字：主动学习让算法「choose the training data from which it learns」，以 fewer labeled instances 达更高精度。
+
+**独点2** 子策略判据：least confidence（top1 概率最低）、margin（top1−top2 差最小）、entropy（分布熵最大）须分列，不得互相替代或混称 QBC；QBC 用委员会分歧、expected error reduction 用预期误差下降，计算代价高须显式说明。Gal 2017 逐字：许多采集函数依赖模型不确定性，而深度模型很少表示这种不确定性。
+
+**独点3** 基线判据：声称「优于随机」须同时给 random baseline 与 cold start 处理（首轮模型太弱，常随机抽）；缺其一判证据不足。IEEE 逐字：不确定性采样是「the baseline every new method is measured against」，冷启动使早期 query 由过弱模型做出。
+
+- **判重：`主动学习`/`active learning` 本体与全库 SKILL.md 0 命中；与 §16 UCB/Thompson（决策选臂）、§31 课程学习（数据顺序）分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://minds.wisconsin.edu/handle/1793/60660（Settles，Active Learning Literature Survey，TR1648，UW-Madison CS，2009，机构元数据页逐字摘要：核心思想 / oracle 查询）；https://proceedings.mlr.press/v70/gal17a.html（Gal/Islam/Ghahramani，Deep Bayesian Active Learning with Image Data，ICML 2017，PMLR 70:1183-1192，WebFetch 200 逐字：不确定性依赖 / 深度模型缺不确定性表示）；https://technav.ieee.org/topic/active-learning（IEEE Technology Navigator，访问 2026-11-22，WebFetch 200 逐字：不确定性采样为默认基线 / cold start 首轮随机）。Settles PDF 正文 WebFetch 不支持（application/pdf），只取机构元数据页摘要，未伪装成正文引文。 逐字全文与判非见 `references/r795L_主动学习.md`。

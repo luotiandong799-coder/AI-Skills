@@ -3,7 +3,7 @@ name: ei-reliability
 description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。错误预算、燃尽率、burn rate、多窗口告警、multiwindow、SLO 告警、Page/Ticket 分档、短窗口泄漏问题。触发：错误率告警阈值怎么定、告警疲劳。
 module: EI
 modules: EI,VI
-version: 1.11.0
+version: 1.12.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -288,3 +288,15 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 - **判非/去重**：`错误预算` 在豆包自留地 `wb-context-compressor`（r579C 允许失败率配额化/失败是预算不是事故，异命题——那条是调度取舍口径，本条是可执行 SLO 告警阈值与窗口公式）；`SLO` 在本技能 §90 一句「应报 first-attempt/eventual success rate 而非单一 uptime」与 §ri-retrospective 未采纳项（时限数字），均非 burn rate 专节。窄串 `burn rate` / `multiwindow` / `multi-burn-rate` / `14.4` / `短窗口 1/12` / `Page/Ticket 分档` 全库 SKILL.md 0 命中。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
 
 - **来源与诚信**：① Google SRE Workbook《Alerting on SLOs》官方一手 WebFetch（首取失败如实登记，改用 WebSearch 命中官方 `sre.google/workbook/alerting-on-slos` 全文逐字）——表 5-4 burn rate 与耗尽时间、表 5-5 单档位优缺点、表 5-6 三档推荐参数 14.4/6/1 与 Page/Ticket、表 5-7 多 burn rate 优缺点、固定阈值与 duration 反例、短窗理由——第一独立域·官方一手；② `https://www.safeguard.sh/resources/blog/slo-burn-rate-alerts-explained` WebSearch 全文逐字（长短窗配对 1/12、三档起手值、两周不 page 验证、前置三件套、Last reviewed 19 October 2026）——第二独立域·独立实务一手；③ `https://obseria.io/glossary/burn-rate` WebSearch 逐字（burn rate 公式、预算消耗公式、长短窗分档、全中断 52 秒/2% 错误 43 分钟、PromQL 长短双条件）与 `https://ithelp.ithome.com.tw/articles/10421158` 中文逐字交叉（短窗理由、1/12 法则）。官方首取 WebFetch 失败不冒充成功；数值为 99.9%/30 天起点示例，不写成普适阈值。
+## 二十一、写偏斜 write skew：每条读都一致，整体仍不可串行化（r795C 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§六–§20 管「失败后怎么不丢状态」，本章管**并发下没失败也会错**：snapshot isolation 保证单条读看到一致快照，却挡不住两个事务各自读到对方将写的对象后写不相交集合，业务不变式被静默破坏。
+
+**独点1** 判据：日志出现 `r1(Y) r2(X) w1(X) w2(Y)` 且写集合不相交 `{X}∩{Y}=∅` → 判 write skew。PG Wiki 逐字：write skew 是「simplest form of serialization anomaly against which SSI protects you」；两个事务都执行到提交，先提交者胜、后者回滚。
+
+**独点2** 业务不变式（「至少一人值守」「余额≥0」）若只在单事务 SELECT 后写，SI 下可被破坏；规避三选一：升 SERIALIZABLE、显式 `SELECT FOR UPDATE` / 物化冲突行使写集合相交、交给数据库 CHECK/排他约束。不能只靠应用层的「我先读一遍」。
+
+**独点3** SSI 检测链 `T_in →rw T_pivot →rw T_out`，pivot 为环中首个提交者才回滚；机检信号 `pg_locks.mode='SIReadLock'`、SQLSTATE `40001`、`could not serialize access due to read/write dependencies` → 必须捕获并重试，否则把正常的并发回滚误报成业务失败。PG 官方逐字：predicate lock 不阻塞、不产生死锁。
+
+- **判重：`写偏斜`/`write skew`/`snapshot isolation`/`可串行化` 在本体 0 命中（仅 .research 研究快照与相邻技能 phrasal 命中）；与 §六有界重试、§十五分布式锁、§十七舱壁分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://www.postgresql.org/docs/current/transaction-iso.html（PostgreSQL GDG，v19 文档，WebFetch 200 逐字：SSI 定义 / 330 vs 300 反例 / predicate locks 不阻塞不死锁）；https://wiki.postgresql.org/wiki/SSI（PostgreSQL 官方项目 Wiki，WebFetch 200 逐字：write skew 定义 / first committer wins / dangerous structure）；https://arxiv.org/abs/1208.4179（Ports & Grittner，VLDB 2012，2012-08-21，补充：首个生产数据库 SSI 实现）。无。 逐字全文与判非见 `references/r795C_写偏斜SSI.md`。

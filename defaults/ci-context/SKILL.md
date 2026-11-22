@@ -1,7 +1,7 @@
 ---
 name: ci-context
 description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体、装配逐级留痕、检索与答案评估分离、块完整性与权限判据。前缀缓存块级链式哈希/三级有序驱逐/隔离维度（cache_salt·LoRA ID·感知哈希）。context editing（removal≠summarization·五参数·applied_edits回执+count_tokens预览破缓存）；注意力汇聚与流式无限上下文（softmax 归一把残余注意力压到首 token·驱逐 sink 触发困惑度悬崖·4 sink token + 滚动窗·cache 相对位置编码·sink 量化脆弱性与 off-by-one 缓解）。注意力两时间窗（H2O累积淘汰+近端双保·local统计不需未来·SnapKV预填充前投票·静态剪枝随指令错位·top-k逐点留切断实体须聚类）。RoPE 外推家族（PI线性插值/NTK改base保高频/YaRN按波长混合加温度·保真注意力模式与attention entropy才是成败真因·需长序列继续训练·路线与成本画像随族分裂）。KV低比特量化（KIVI非对称2bit·key逐通道固定outlier·value逐token值加权混合·残差缓冲保流式·误差面key移注意力vs value稀释·倍率挂模型口径）。 软token压缩第三面（gist/AutoCompressor·与提示硬删/KV量化正交·summary accumulation跨段累积·收益分母与丢信息并报）·KV分层放置·IO感知精确注意力FlashAttention（tiling增量softmax·重计算换HBM·exact非近似·正交KV压缩）虚拟上下文管理MemGPT（RAM↔外存分页·主上下文三段+recall/archival·70%水位自导向换页·递归摘要静默失真）
-version: "2.6.0"
+version: "2.7.0"
 module: CI
 modules: CI
 ---
@@ -319,3 +319,15 @@ GitHub 一手整合逐字：「**Clearing invalidates the cached prefix from the
 - `https://github.com/VanGong1999/llm-agents-interview/blob/main/CS329A%E8%87%AA%E6%88%91%E6%94%B9%E8%BF%9B%E6%99%BA%E8%83%BD%E4%BD%93/papers/memgpt.md`（**WebSearch 逐字**：Main context 三段 / External recall+archival / Queue manager pressure+flush / function calling 自我换页 / heartbeat 链式）— 第四域交叉（课程笔记立场登记）。
 - **判重**：全库 SKILL.md 精确扫描 `MemGPT`/`virtual context management`/`自导向换页`/`recall storage`/`archival storage` 在 ci-context 0 命中；r783B 曾把 `PagedAttention 显存分页内核` 列未采纳（那是**显存**分页产品实现，本节是**上下文 token** 的分层换页，粒度不同已如实登记）；豆包自留地对 MemGPT 有口号级提及但 WB 0 落地且与本轮参数/阈值/失真口径不复用。与 §r755B/§r763B/§r783B/§r787B 分工不复用；与 r790/r789/r788 九模块结论不复用。**豆包自留地 WB 0 落地**。
 - **未采纳**：Letta 产品化细节、Zep 时序图记忆对比数字、具体 top-K/embedding 型号参数、函数调用成本数字（论文未报），只取三条可机检口径。
+## 缓存复用 KV：CacheBlend 让非前缀块也能复用，代价是选择性重算（r795H 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§前缀缓存块级链式哈希管「公共前缀」复用，本章管**块顺序会变的场景**：多文档 RAG / 多轮共享参考里，同一块出现在不同位置，传统 prefix caching 因忽略与前文 cross-attention 而直接失效。
+
+**独点1** 非前缀判据：A/B 对照——同一文档块分别置于 prompt 位置 0 与 k>0，两次都应命中缓存；若 cache key 含「必须是公共前缀」约束则不合格。论文逐字：reused chunks「are not always the input prefix…ignore the text's cross-attention with the preceding texts」；引用必须是 `arXiv:2405.16444`（真实标题 CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion），不得写 2501.xxx。
+
+**独点2** 选中即重算：命中后不能直接拼 KV，须按「新算 KV 与载入 KV 的逐 token 偏差」降序取 top-k（HKVD tokens）重算，其余复用；论文给出 15% tokens 时 KV 加载可掩盖重算延迟，机检 `recompute_tokens/total_tokens ≤ 0.15` 为零额外延迟候选，但跨模型/硬件须实测 TTFT，不能当普适常数。
+
+**独点3** 场景判据：多文档 RAG、多轮共享参考、长上下文 agentic 才需要非前缀复用；固定单前缀场景用 prefix caching 即可。论文报 TTFT 降 2.2–3.3×、吞吐升 2.8–5×（不牺牲生成质量），这是原论文设定下的结果，不迁移成本仓验收阈值。
+
+- **判重：`CacheBlend` 本体仅 §r751B 前缀缓存判非句出现，无专节；与 §前缀缓存、§context editing、§KV 量化分工不复用。豆包自留地 `wb-context-compressor` WB 0 落地。ID 纠错：真实 arXiv:2405.16444，v1 2024-05-26。**
+- **来源与诚信**：https://arxiv.org/abs/2405.16444（Yao 等，arXiv:2405.16444，2024-05-26，WebFetch 200 逐字：非前缀不可用原因 / selectively recomputes / TTFT 2.2-3.3× 与吞吐 2.8-5×）；https://arxiv.org/html/2405.16444v3（WebFetch 200 逐字：HKVD top-k 偏差选择 / 15% tokens 时 KV 加载掩盖重算）；https://github.com/LMCache/LMCache（作者一手仓库，WebFetch 200 逐字：Non-prefix KV reuse / KV 从临时态变可持久复用知识 / 适用 RAG 与多轮）。题面猜测 ID arXiv 2501.xxx 不存在，已核实纠正；dblp 记录页 Anubis 反爬，未采用。 逐字全文与判非见 `references/r795H_CacheBlend.md`。

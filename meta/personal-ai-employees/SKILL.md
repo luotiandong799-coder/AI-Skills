@@ -2,7 +2,7 @@
 name: personal-ai-employees
 description: >-
   个人 AI 员工体系（8 岗）总路由与五步执行协议。把用户目标自动分派给 8 个专职 AI 员工（战略顾问/供应链专家/职业发展顾问/销售顾问/学习教练/信息分析师/自动化工程师/知识管理专家），每岗统一走「任务分析→执行方案→输出结果→复盘优化→Skill沉淀」，并复用 personal-ai-os 与现有 wb-* / 专家技能，不新建重复能力。触发词：个人AI员工、AI员工体系、AI战略顾问、AI供应链、AI职业发展、AI销售顾问、AI学习教练、AI信息分析、AI自动化工程师、AI知识管理、哪岗来做、分派任务、员工路由、agency、个人AI公司、我的AI团队。finalizer、终结器、两阶段删除、deletionTimestamp、finalizers 清空、删除钩子、owner reference 清理、卡住的 finalizer、强制删除 unsafe-delete、孤儿资源清理。Actor模型、actor、消息传递、mailbox、无共享状态、位置透明、有状态worker。工作流确定性、非确定性错误、replay重放、Event History、Command比对、版本化patch、Worker Versioning、SideEffect、计时器顺序
-version: 1.9.0
+version: 1.10.0
 agent_created: true
 module: OI
 modules: OI,MI
@@ -283,3 +283,15 @@ modules: OI,MI
 - **判非/去重**：`工作流确定性` / `非确定性错误` / `Event History` / `Command 比对` / `Worker Versioning` / `SideEffect` 在 OI 本体 SKILL.md 0 专节；`replay` 命中全在豆包自留地 `wb-context-compressor`（重放 payload 做 staging 验证、崩溃恢复双保证，异命题——那条测输入重放，本条是编排代码重放保证 Command 序列一致）与 `wb-max-token-saver`（O(n²) 历史重放，异命题）。与 r738A Temporal 同技术但不同轴：r738A 取幂等键/恢复策略，本条取确定性约束与版本化，互补不并存新层。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
 
 - **来源与诚信**：① `https://docs.temporal.io/workflow-definition` — Temporal 官方一手 WebFetch 200 全文逐字（deterministic constraints / 可安全与不安全改动清单 / 产生 Command 的 API 全集 / Command 与 Event History 逐位比对 / non-deterministic error 两成因 / 内联随机分支反例 / 两版本化策略 / patch 三步 / Worker 故障不由工作流处理）——第一独立页·官方一手；② `https://docs.temporal.io/develop/python/python-sdk-sandbox` — Temporal 官方 Python SDK sandbox 页 WebFetch 200 全文逐字（沙箱两组件 global state isolation + restrictions / 非完全隔离 / passthrough 只放已知无副作用模块 / skip sandboxing 三法 / 非确定即 fail task 直到修代码）——第二独立页·官方一手（不同文档）；③ `https://docs.temporal.io/develop/safe-deployments` 与 `https://docs.temporal.io/develop/typescript/workflows/basics` WebSearch 逐字交叉（replay testing 用历史喂当前代码校验 / Date.now 与 Math.random 替换为确定性版 / WeakRef 移除因 GC 不确定）。同厂商多页，如实登记为「同官方三页主题互补」而非多厂商交叉；Timer 改 0/-1 的不安全口径绑 SDK，不写成跨系统常量。
+## DAG 调度：拓扑序只定依赖方向，就绪队列才定执行顺序（r795I 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§r785A 并发四层与 weight_rule 管「资源槽怎么分」，本章补**调度器内核**：入度计数、环检测、失败传播，以及「topo_order[i] 不等于第 i 个执行」这一常见误读。
+
+**独点1** 入度/环判据：维护 `indeg[v]` 与 `S={v | indeg[v]==0}`，每消费边 `u→v` 执行 `indeg[v]--`，仅降为 0 才入队；结束断言 `len(order)<|V|` → 报环。复杂度 O(|V|+|E|)。UPenn 讲义逐字：保留「count of the arrows still pointing into it」，剩点无 0 入度则必有环。
+
+**独点2** 顺序≠执行判据：拓扑序只保证每条边前向，同层多源可任选（讲义原文无边时 n! 个拓扑序），因此 `topo_order[i]` 不等于第 i 个被执行的任务；真实执行由就绪队列 + worker / Pool 槽位决定，入队 ≠ 立即执行。
+
+**独点3** 失败传播判据：Airflow 默认 `all_success` 下上游 failed 或 skipped 会级联跳过下游；汇合节点须显式 `none_failed_min_one_success` 才是「任一支成功即继续」。重跑边界须限定在失败节点及其下游依赖闭包，不触碰闭包外已成功节点（此条为工程推断，官方页只直接支持 trigger rule 与 depends_on_past）。
+
+- **判重：`拓扑排序`/依赖调度正文在本体 0 专节；`DAG`/`拓扑` 命中是 Airflow 资源配额与 actor model 语境，异命题；与 §r785A 并发四层、§r793A Temporal 确定性分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://www.engineering.upenn.edu/~cit5920/knowledge/objects/graphs-and-trees/dags-and-topological-order（UPenn CIT 5920 讲义，WebFetch 200 逐字：indegree 计数 / 环判定 / n! 个拓扑序 / O(|V|+|E|)）；https://airflow.apache.org/docs/apache-airflow/stable/concepts/dags.html（Apache Airflow 3.4.0 官方，WebFetch 200 逐字：all_success 默认 / skip 级联 / none_failed_min_one_success / depends_on_past）；https://airflow.apache.org/docs/apache-airflow/2.1.0/concepts/overview.html（Apache Airflow 官方，WebFetch 200 逐字：task queue / 发给 worker 不保证同机 / Pools 限并发）。无。 逐字全文与判非见 `references/r795I_DAG拓扑调度.md`。

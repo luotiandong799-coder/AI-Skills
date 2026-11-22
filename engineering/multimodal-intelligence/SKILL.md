@@ -2,7 +2,7 @@
 name: multimodal-intelligence
 description: >-
   多模态理解：让 Agent「看懂图片」「读出文字」。生成质量FID可比性陷阱（有限样本协方差使FID随样本量偏高近似1/n·2048维放大/只同样本数同网络同预处理可比·只匹配均值协方差丢多模态结构·保真度与多样性需precision-recall拆开·不读prompt无法评文图匹配）；Vision 管画面语义（界面/故障图/流程图/商品图），OCR 管图片/PDF 文字表格结构化提取：前者看懂意图，后者读取文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen）、纯代码或纯文本任务。色彩管线与色差口径：sRGB线性光·ICC渲染意图与D50 PCS·ΔE公式版本四元验收。；主观评测协议（六项控制/MOS+95%CI/ACR·DSIS·DSCQS·ACR-HR选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。；目标检测与分割评测（IoU定TP/FP/FN·COCO mAP=12指标10阈值平均·Dice=像素F1与IoU单调等价·mIoU与PixelAccuracy分报·mask/box同协议只换IoU算法）。；非视觉捷径与语言先验（VQA 盲模型靠问题文本「闭眼答对」/VQA v2 互补图配对逼模型用视觉/VQA-CP 答案分布偏移打回原形/无图像基线当主实验变量测视觉依赖/开放题归一化与多标注投票）。；文图对齐组合式验收（CLIPScore 词袋化混淆主谓颠倒/VQAScore 用 P(Yes)/GenEval 目标检测实例级计数位置属性绑定·六类分报/GenAI-Bench 1600 组合提示+15000 人评/位置墙与属性绑定是短板）。；物体幻觉评测（CHAIR-I/S 受提示措辞影响可翻倍·POPE 轮询式 yes/no 三负采样 Random·Popular·Adversarial·正负1:1·Yes率偏置·提示鲁棒性std·只测物体存在不测属性数量位置）。
-version: 2.1.0
+version: 2.2.0
 module: PI
 modules: PI
 ---
@@ -331,3 +331,15 @@ alphaXiv 逐字：四种措辞下 POPE 报告平均 F1 67.43、标准差 0.78；
 - **判重**：全库 SKILL.md 扫描 `POPE` / `物体幻觉` / `CHAIR` / `polling-based` 命中仅 system/bsk-drive-logged-in-browser 的 `Popen`（Python 子进程 API 子串误命中，非学术指标）；本技能 §十五是文图对齐（VQAScore/GenEval 组合提示），与物体存在性幻觉异命题。按四态判「增＝加厚现有 engineering/multimodal-intelligence」，不重述 §十四 FID 或 §十五对齐结论。豆包自留地 WB 0 落地。与 r793(OI/EI/SI)/r792(VI/AI/DI)/r791(MI/CI/RI) 九模块及 A/C 两轮不复用。
 - **未采纳**：POPE 在 A-OKVQA/GQA 上的迁移数值、CHAIR 在全部模型上的逐项分数表、缓解幻觉的训练方法（本轮只做评测协议，不做缓解）——属特定实现/特定域结果，不迁移为通用验收判据。
 
+## 视觉 token 剪枝 FastV：第 2 层后按注意力分数剪，45% FLOPs 不是随便剪一半（r795J 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§CHAIR/POPE 管「幻觉怎么测」，本章管**推理成本**：VLM 深层对视觉 token 的注意力极稀疏，剪枝是 plug-and-play 的推理期旋钮，不改训练。
+
+**独点1** 标题/ID 判据：arXiv:2403.06764 的真实标题是「An Image is Worth 1/2 Tokens After Layer 2: Plug-and-Play Inference Acceleration for Large Vision-Language Models」（ECCV 2024 Oral），引用不含此标题即判错误条目；曾错配的 2403.01670 / 2404.10719 一律不得入库。
+
+**独点2** 参数判据：一手须同时出现 `K=2`（第 2 层后开始）与 `R=50%`（保留比例）；论文逐字「Beyond this selected layer, image tokens are re-evaluated based on their average received attention scores」，`K=2,R=50%` 报约 45% FLOPs 降低且不掉性能。宣称「末层剪枝」「需微调」与一手冲突——训练无关。
+
+**独点3** 分类判据：pruning（永久丢弃视觉信息）与 merging（合并冗余特征，如 ToMe/PruMerge）须分列；把 merging 方法归为 FastV 本体判混淆。与本章 §物体幻觉评测分工：剪枝省算力，不自动改善对象存在性幻觉，须另测。
+
+- **判重：`FastV`/视觉 token pruning 在本体与全库 SKILL.md 0 命中；与 §FID、§文图对齐、§CHAIR/POPE 分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://ar5iv.arxiv.org/html/2403.06764（Chen 等，arXiv:2403.06764，提交 2024-03-11，v3 2024-09-02，ECCV 2024 Oral，WebFetch 200 逐字：深层注意力低效 / 第 2 层后按平均注意力重评 / K=2 R=50% 约 45% FLOPs）；https://github.com/pkunlp-icler/FastV（作者官方仓库，WebFetch 200 逐字：plug-and-play inference acceleration / 45% theoretical FLOPs / Oral 2%）。第三方综述 arXiv:2603.27960 的提交日未单独核实，仅作分类交叉，不作标题一手。 逐字全文与判非见 `references/r795J_FastV视觉剪枝.md`。

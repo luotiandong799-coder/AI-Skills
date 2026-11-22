@@ -1,7 +1,7 @@
 ---
 name: mi-memory
 description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。错误记忆与来源监控（DRM关键诱饵·模糊痕迹verbatim/gist双 trace·激活监测与来源监控失败·误导信息效应与DRM的verbatim反向作用·高置信≠真实须逐字锚点回归）。 定向遗忘两范式分离（item 编码+提取双因/list 提取抑制·accessibility≠availability 换线索验真删·直接抑制vs替代两策略）。 编码特异性检索（线索效力来自编码时共存语境而非语义相似度·情境效应主要是回忆现象须换线索验真删·线索过载与判别竞争限制匹配）。序列位置效应（首因=LTM复述/近因=STM双分离·延迟抹近因不动首因·呈现速率反向·agent按存储层分流验收）前摄/倒摄干扰（学习阶段竞争vs检索抑制RIF正交·AB/AC延迟自发恢复推翻即时覆盖·相似性倒U最危险）
-version: "2.6.0"
+version: "2.7.0"
 module: MI
 modules: MI,AI
 ---
@@ -338,3 +338,15 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 - `https://baike.sogou.com/v7694162.htm`（**WebFetch 200 逐字**：前摄抑制/倒摄抑制中文定义、相似性从全同到全异的倒 U、首段只受倒摄/末段只受前摄、中间双重受扰）— 第四域交叉（科普词条立场登记）。
 - **判重**：全库 SKILL.md 窄串 `前摄抑制`/`倒摄抑制`/`proactive interference`/`AB-AC 范式`/`自发恢复` 正文命中仅在豆包自留地 `defaults/wb-context-compressor/references/knowledge-base.md`（三处，均是「无界记忆退化三机制」里的一个词组，无范式/恢复/倒 U，口号级），WB 主线技能 0 命中本体；与 §r767A RIF（检索抑制）、§r787A 序列位置、§r779A 定向遗忘、§r755A 矛盾消解位置分工不复用；与 r790(TI/PI/PDI)/r789(OI/EI/SI)/r788(AI/VI/DI) 九模块结论不复用。**豆包自留地 wb-execute-discipline / wb-context-compressor WB 0 落地**。
 - **未采纳**：被试人数与脑区定位、Brown 1968 / Shea & Zimny 1983 技能迁移细节、相似性的精确数学形式（学界无统一模型），人类被试结论迁移 agent 按 rules/08 §五作待验证假设只取三可机检口径。
+## 双过程再认：熟悉感是连续强度，记得才是带来源的阈值检索（r795F 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§错误记忆/来源监控管「高置信≠真实」，本章补认知层的分离机制——相似度命中只给 familiarity，来源与顺序来自 recollection，二者不是同一个标量的强弱。
+
+**独点1** 双通道输出：检索须分别给出连续相似度（familiarity，d′/ROC 曲率）与阈值式细节命中（recollection，含 source_id/span/timestamp/context）；只有单一标量判「不可区分熟悉与记得」。Yonelinas 2010 逐字：familiarity 是 quantitative memory strength、recollection 是 threshold retrieval「recall detailed qualitative information…where or when」。
+
+**独点2** 来源可追溯门槛：命中只有 similarity score 而无来源/时间/上下文时，标签固定为 `familiarity-only`，不得写「已记忆/可追溯」。Eichenbaum 2005 逐字：familiarity「offers no information about the order of events」——顺序与情境只有 recollection 给。
+
+**独点3** 评测双口径：在变化的置信阈值下分别报告 hit vs false alarm，并给出 ROC 截距（recollection）与弯曲度/d′（familiarity）；另设 inclusion / exclusion 两条件（PDP：允许用来源 vs 要求排除仅熟悉项）估两过程贡献 `I=R+F−(R×F)`。只报单一 accuracy 判不合格。
+
+- **判重：`familiarity` 本体仅 §r747A「熟悉感错觉」一句（巩固效用评级语境），`recollection`/ROC/PDP 专节 0；与本模块错误记忆、编码特异性分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://pmc.ncbi.nlm.nih.gov/articles/4251874/?report=classic（Yonelinas/Aly/Wang/Koen，Hippocampus 20(11)，2010-11，WebFetch 200 逐字：定量强度 vs 阈值检索 / d′ 与 ROC 截距）；https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13407481/fullTextXML（Balota，Memory & Cognition 54(5)，2026-01-30，WebFetch 200 逐字：PDP inclusion/exclusion / I=R+F−(R×F)）；https://pmc.ncbi.nlm.nih.gov/articles/PMC1389783/?report=classic（Eichenbaum & Fortin，J Exp Anal Behav，2005，WebFetch 200 逐字：全有全无 vs 连续增量 / 熟悉不提供顺序 / 截距与曲率）。PMC 默认 URL 返回 HHS 拦截页，改 ?report=classic 成功；Yonelinas 原始 PDF 403 未强取。 逐字全文与判非见 `references/r795F_双过程再认.md`。

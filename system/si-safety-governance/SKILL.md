@@ -1,7 +1,7 @@
 ---
 name: si-safety-governance
 description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。差分隐私、differential privacy、epsilon DP、隐私预算、Laplace 机制、sensitivity 敏感度、组合定理、post-processing immunity、DP-SGD、本地DP中心DP。BOLA、IDOR、越权访问、对象级授权、broken object level authorization、CWE-639。转述授权攻击面、同名对象冒充、能力缺口粉饰、CSRF、跨站请求伪造、synchronizer token、double submit、SameSite、Fetch Metadata、Origin/Referer 校验、token 与会话绑定
-version: 2.6.0
+version: 2.7.0
 module: SI
 modules: SI,EI
 ---
@@ -413,3 +413,15 @@ GitHub Docs 官方逐字：「**rotate the affected credential immediately** ...
 - **★能力缺口必须显式化，不得用文字粉饰**：宿主不支持私密切口/真实独审/指定群/原收件通道时，只报「该项未实现」；不得为「统一交回」把私密内容改发群聊或共享文件（泄漏面扩大），不得用通用 Skill 文字把缺口写成成功——这与 fail-closed「缺能力藏入口」同构，是**诚信攻击面**而非仅可靠性问题。
 - 来源：GitHub `dabingfy-dot/solo-to-team-skills`（MIT，commit fedfd4e 2026-11-17，1091 stars）`skills/dispatch-accept-verify`+`evidence-before-done`+`ops-case-notes`+`beginner-ops-writing` 正文直读 + `alexzhu0/orchivane`（MIT，commit 5265857 2026-10-28）SKILL.md 全文直读；该包自述改写自 `obra/superpowers` verification-before-completion（MIT，commit 22f0b46）。2026-11-22 外部项目共学（EXT-S1），判重=四载体全库关键词 0 命中本体，判「增」。
 - **判非**：16席权限边界表本体未采纳（产品形态不适配），只提取可迁移到单Agent+子Agent模型的授权防伪判据。
+## JWT 验签通过≠可信：alg 白名单、kid 注入与 claims 校验时序（r795K 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§十四 OIDC 信任策略管「联邦身份的授权面在 Condition」，本章管**令牌本身**：RS256→HS256 混淆、alg=none、kid 注入——验签动作做对了，也可能验的是攻击者指定的算法与密钥。
+
+**独点1** alg 判据：verify 调用须显式算法白名单（如 `algorithms:['RS256']`），从 token header 读 `alg` 再分支判高危。RFC 8725 逐字：`alg` 可改成 `none` 让某些库「validate」而无签名；`RS256` 可改成 `HS256`，库便拿 RSA 公钥当 HMAC 共享密钥验签。硬约束：「each key MUST be used with exactly one algorithm」。
+
+**独点2** 顺序判据：`iss`/`aud`/`exp` 必须在验签通过**之后**读取；先 decode 未验签 payload 并据此授权即违规。RFC 7519 逐字：`aud` 要求处理方「MUST identify itself with a value in the audience claim」，`exp` 之后「MUST NOT be accepted」。OWASP：验签通过只证明签名者持有密钥，解密成功本身「proves nothing about who issued the claims」。
+
+**独点3** kid 判据：`kid` 不得拼进文件路径/SQL，只允许白名单枚举或预载 JWKS 精确查找；出现 `../`、`http://`、引号即拒绝。OWASP 逐字：`kid`「reaches databases and directories as an injection vector」，且验证密钥不得直接取自 token，除非能经信任链绑到 issuer 的根信任锚。
+
+- **判重：`算法混淆`/`algorithm confusion`/`kid 注入`/JWT 专节本体全库 0；与 §十四 OIDC、§十凭据泄露、§十五 SSRF 分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://www.rfc-editor.org/rfc/rfc8725.txt（IETF RFC 8725，2020-06，WebFetch 200 逐字：alg=none / RS256→HS256 公钥当 HMAC 密钥 / 一密钥一算法 MUST）；https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/cheatsheets/JSON_Web_Token_Cheat_Sheet.md（OWASP 官方 Markdown 源，访问 2026-11-22，WebFetch 200 逐字：拒绝 alg=none / 公钥误作 MAC 密钥 / kid 注入 / 密钥须有信任链）；https://www.rfc-editor.org/rfc/rfc7519.txt（IETF RFC 7519 §4.1，2015-05，WebFetch 逐字：iss / aud MUST identify / exp MUST NOT be accepted）。OWASP Java cheat sheet 两 URL 404；HTML 页 AI 摘要超时，改用官方 Markdown 源取逐字。 逐字全文与判非见 `references/r795K_JWT混淆.md`。

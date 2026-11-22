@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序、影响图、信息弧、决策节点、价值节点、决策基三要素、前景理论、参照点依赖、损失厌恶、框架效应、确定性效应、反射效应、禀赋效应、编辑与评价两阶段、全局敏感性分析、Morris筛选、Sobol指数、一阶效应、总效应、交互效应、因子排序、因子固定、实物期权、real options、管理灵活性、延迟扩张放弃转换期权、ROV、不可逆投资、参考类预测、reference class forecasting、外部视角、inside view、规划谬误、planning fallacy、乐观偏差、optimism bias、reference class tennis、成本超支、uplift、Flyvbjerg、博弈论决策、game theory、占优策略、最佳回应、纳什均衡、混合策略、逆向归纳、子博弈精炼、不可信威胁、可信承诺、连锁店悖论、策略互动、效用函数 elicitation、标准赌局、standard gamble、确定等价、certainty equivalent、风险容忍常数、Arrow-Pratt、凹性风险规避、vNM公理、多属性效用、加性独立性、概率轮、权衡法、ELECTRE、PROMETHEE、outranking、非补偿性排序、concordance、discordance、净流、不可比、veto阈值
 module: DI
 modules: DI,TI
-version: "1.20.0"
+version: "1.21.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -480,3 +480,15 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 - **未采纳**：vNM 四公理（完备/传递/连续/独立）的形式化证明、多属性效用独立性检验的操作题设计、Savage 主观期望效用公理（异命题/建模细节，留后续）。
 
 ## 二十六、非补偿性排序 ELECTRE / PROMETHEE：一个准则差到不可接受，别的准则优异补不回来（r792C 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点；正文下沉 `references/r792C_非补偿性排序_ELECTRE_PROMETHEE.md`）：§六 MCDA 加权、§r788C 效用 elicitation 管「权重怎么定、效用从哪来」，本章管前置问题——**加权和默认可补偿，out ranking 默认不可**。选方法=选补偿逻辑（SINTEF 逐字），方法选择对结果影响可大过换决策者。**独点1** out ranking 假设 DM 不愿/不能给准则间 trade-off，故一准则的极差不能被另一准则极好补偿；out ranking relation 四态（A P B 严格偏好 / 逆偏好 / A I B 无差异 / **A R B 不可比**），不可比是一等输出不强行全序。**独点2** ELECTRE 走 concordance（多数准则支持）+ non-discordance（无准则强烈反对）双门槛、veto 可否决，ELECTRE III 有时排不出唯一最优（适合做短名单）；PROMETHEE 每准则定偏好函数 `P_i=F_i[d_i]∈[0,1]`、聚合 `π(a,b)=ΣP_i w_i`，PROMETHEE I 偏序图、**II 用净流 Φ=Φ⁺−Φ⁻ 给全序**，六种偏好函数可选。**独点3** 输出须附敏感性分析（权重/得分/阈值一微调排序可能翻），代价是要 elicitation 出 indifference/preference/veto 阈值（对 DM 常不直观）；与 §r788C 分工：那里测效用值本身，这里定能否用加权和的补偿结构。判重：ELECTRE/PROMETHEE/outranking/concordance/净流 全库本体 0，豆包自留地 WB 0 落地。**三独立域逐字来源 + 判非全段见下沉文件。**
+## 二十七、决策滞后 hysteresis：单阈值必震荡，切换规则要有状态与滞回带（r795B 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§八 EVPI 管「该不该再调研」、§十五 VoI 四把尺管「买哪种信息」，本章管**执行层的切换决策**：在噪声信号下，「超过阈值就切」会因反复越线产生高切换成本，正确形态是带锁存状态的双阈值。
+
+**独点1** 判据：实现必须含锁存状态——ON 条件 `PV≤T_low`、OFF 条件 `PV≥T_high`、带内 `state:=prev`；只有单一比较器 `PV vs T` 即判为必 chattering。CMU 讲义逐字：hysteresis 源于「internal state causes the output response to vary based on the history of the input」，双阈值使「small noise variations around a threshold level will not trigger a change」。
+
+**独点2** 滞回带 `ΔH=T_high−T_low` 必须成对配置且 `T_high>T_low`；`ΔH` 要覆盖信号峰峰值噪声，并与最大允许切换频率联动。混合系统实现须让 flow 集 `μ≤δ` 与 jump 集 `μ≥δ` 重叠；边界无缝拼接时「噪声 ε<δ 不误切换」不成立（arXiv:1910.02026 逐字：hysteresis gap prevents chattering）。
+
+**独点3** 决策记录须写明切换成本与滞回带取值理由；若策略切换、告警升降级、资源扩缩容只有一条阈值，判为「未计入切换成本」。与 §十五「单向/双向门」分工：门定流程与谁拍板，本条定状态机的上下界。
+
+- **判重：`hysteresis`/`滞后阈值`/`双阈值` 本体全库 0；与 §八 EVPI、§十五 VoI、单向/双向门分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://courses.ideate.cmu.edu/16-223/f2018/text/ex/Arduino/input-hysteresis/input-hysteresis.html（CMU IDeATe 16-223，2018 秋，WebFetch 200 逐字：历史依赖定义 / light_threshold 高于 dark_threshold / 小噪声不触发）；https://arxiv.org/html/1910.02026（Casau 等，arXiv:1910.02026，2019-10-04，WebFetch 200 逐字：hysteresis gap prevents chattering / flow μ≤δ 与 jump μ≥δ 重叠）。无。`2–3×噪声` 一类具体倍数非一手来源给出，未写入。 逐字全文与判非见 `references/r795B_决策滞后.md`。

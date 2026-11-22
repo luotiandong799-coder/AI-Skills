@@ -3,7 +3,7 @@ name: vi-fact-verification
 description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试、mutation testing、mutation score、变异算子、存活变异体、等价变异体、等价不可判定、胜任程序员假设、耦合效应、human oracle problem、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、补核受影响部分、核对不是危险动作、Bland-Altman、一致性界限、limits of agreement、一致性评价、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、可互换性、方法比较
 module: VI
 modules: VI,EI
-version: "1.15.0"
+version: "1.16.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -353,3 +353,15 @@ version: "1.15.0"
 - **★核对本身不得变成危险动作**：核对用只读、本地可逆手段；不为「试试能不能发出去」真发一条、不为测试下单、不为核对删东西；核对须碰对方账号/会被外人看到的，先走报审；实在核不了就说核不了并标「待核实」，不硬说做完。
 - **★交付三核分列**：「文件在某处」「宿主已上传附件」「用户原会话可取得」是三个独立事实，不能用路径/哈希/下载提示代替收件事实；「已交回」只是交付事实，不自动等于已验收。
 - 来源：GitHub `dabingfy-dot/solo-to-team-skills`（MIT，commit fedfd4e 2026-11-17，1091 stars）`skills/dispatch-accept-verify`+`evidence-before-done`+`ops-case-notes`+`beginner-ops-writing` 正文直读 + `alexzhu0/orchivane`（MIT，commit 5265857 2026-10-28）SKILL.md 全文直读；该包自述改写自 `obra/superpowers` verification-before-completion（MIT，commit 22f0b46）。2026-11-22 外部项目共学（EXT-S1），判重=四载体全库关键词 0 命中本体，判「增」。
+## 九、统计功效：没显著差异不等于没效果，事后功效不等于证据（r795D 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§八验「证据是否足够支持结论」，本章补一个高频误判：只报 `p` 不报效应量与区间，把样本不足造成的「没检出」写成「不存在」。
+
+**独点1** 三元组完整性：任何验证报告须同时出现功效、效应量、置信区间并给出 α；只有 `p<0.05/0.01` 而无 CI 判不合格。Giner-Sorolla 2024 逐字：四参数 α / population effect size / sample size / power 绑在一个设计上；「Once the study is analyzed, confidence intervals replace calculated power in describing results」。
+
+**独点2** 非显著措辞禁令：`p>α` 时正文禁止写「无效应/等效/证明无效」，只允许「未检出/证据不足」；要声称等效须给等效性界值并证明 CI 完全落在界内。Greenland 2016 逐字：除点估计恰好等于零外，「it is a mistake to conclude from P > 0.05 that a study found 'no association'」。
+
+**独点3** 事后功效禁令：效应量来自同一样本又用于回算该样本 power → 无效证据（Giner-Sorolla：no new information is gained）。只允许先验设计功效，或输入固定/外部效应量的 sensitivity analysis，其输出是 MDE（最小可检测效应）：「inputs the desired power and likely usable sample size, returns the minimum population effect size detectable at this power」。
+
+- **判重：`统计功效` 全库仅 agent-evolution 一句实验层交集流量不足；`power analysis` 0，本体 0 专节；与 §八 oracle/mutation、§九 Bland-Altman 分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://pmc.ncbi.nlm.nih.gov/articles/PMC11193916/?report=classic（Giner-Sorolla 等，Personality and Social Psychology Review，2024，WebFetch 200 逐字：四参数 / MDE sensitivity / 事后功效循环 / CI 替代 power）；https://pmc.ncbi.nlm.nih.gov/articles/PMC4877414/?report=classic（Greenland/Senn/Rothman 等，Eur J Epidemiol，2016-05-21，WebFetch 200 逐字：power 的 pre-study 定义 / type-II / P>0.05 误读禁令 / 必看 CI）；https://pmc.ncbi.nlm.nih.gov/articles/PMC1771282/（Br J Ophthalmol 社论，WebFetch 逐字：1−β 定义与样本量/α/MDE/方差 关系）。EBI Europe PMC fullTextXML HTTP 500；PDF 仅返回下载页；改用 ?report=classic 成功。 逐字全文与判非见 `references/r795D_统计功效.md`。
