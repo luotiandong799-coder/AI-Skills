@@ -1,9 +1,9 @@
 ---
 name: meta/pdi-forecasting
-description: 预测与概率判断（Predictive Intelligence）。当需要估计"某事件会不会发生/何时发生/量级多大"、给结论配概率、做情景推演、或要求"押个概率/预测一下/评估可能性"时调用。提供超预测五步法（精化问题→参考类基率→内部视角微调→贝叶斯小步更新→Brier 记分闭环）、费米拆解、范围敏感性、预测版 Pre-Mortem、0.1–0.9 校准带。输出带概率的可结算判断、不作行动决策；题面可结算性与解析条件（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO 五策略、误差累积与随机依赖两轴、windows_identical 跨视界可比与逐视界最准互斥）。；加权评分规则与预报员困境（w(y)S 破坏适当性/threshold-weighted 与 outcome-weighted 两类/条件分不进事件概率）。；回测验证协议（purging 标签重叠与 embargo 序列相关两道漏/CPCV 把一条历史变多条路径 φ(N,k)/PBO 与 Deflated Sharpe 计试验次数/单路径不是证据）。；事件型预警评测（point-adjustment 让随机探测器拿高 F1/事件级检出率·检测延迟·单位时间误报率三栏/range-based 与 k-delay 协议/ERDE 时间惩罚）。；专家概率引出（分位数法 X05/X50/X95 拟合分布/锚定偏差两种提问口径分叉/IDEA 四步/Cooke 种子题校准与信息双评分加权/校准优先信息性/无种子题等权/平均专家 90% 区间只含真值 36%）；预测组合的场景依赖（combining for adaptation 目标追平最佳单候选 vs combining for improvement 目标超越全部候选/不看场景套方法本身即制造组合之谜/估计误差只是解释之一/把简单平均当候选的 mAFTER 自适应/最优权重增益可能小到被估计误差淹没）；MCMC 收敛诊断（R-hat split+rank/folded 取 max + bulk·tail-ESS 双达标/收敛全局含 lp__、诊断只验失败不证收敛）；多变量评分（ES=CRPS 高维推广严格适当但相关误设判别力有限/VS 测相关结构仅适当非严格/二者 kernel scores 互补分报·DM 检验）。
+description: 预测与概率判断（Predictive Intelligence）：估计事件发生/时点/量级、给结论配概率、情景推演、"押个概率/预测一下"时调用。含超预测五步法（问题精化→参考类基率→内部微调→贝叶斯小步→Brier 闭环）、费米拆解、范围敏感性、Pre-Mortem、0.1–0.9 校准带；只输出可结算判断、不作行动决策。；题面可结算性（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO·误差累积与随机依赖两轴·windows_identical 跨视界可比与逐视界最准互斥）；加权评分与预报员困境（w(y)S 破坏适当性/threshold·outcome-weighted 两类/条件分不进事件概率）；回测协议（purge 标签重叠+embargo 序列相关两漏/CPCV 一条历史变多路径 φ(N,k)/PBO+Deflated Sharpe 计试验数/单路径非证据）；事件型预警（point-adjustment 让随机探测器拿高F1/事件级检出率·延迟·单位时间误报三栏/range-based 与 k-delay/ERDE）；专家概率引出（分位数法 X05/X50/X95/锚定两种提问口径/IDEA 四步/Cooke 种子题双评分加权/校准优先信息性/无种子题等权/平均专家90%区间仅36%含真值）；预测组合场景依赖（adaptation 追平最佳单候选 vs improvement 超越全部/不看场景套方法即制造组合之谜/mAFTER 把简单平均当候选）；MCMC 收敛（R-hat split+rank/folded 取max+bulk·tail-ESS双达标/全局含lp__/诊断只验失败不证收敛）；多变量评分（ES=CRPS高维推广严格适当但相关误设判别力有限/VS测相关仅适当非严格/二者kernel scores互补分报·DM检验）；pinball分位评分（严格适当·minimizer=条件τ分位/非对称τ与1−τ·τ=.5即MAE半/coverage gap>5pp/skill score对气候基线/单点分位好≠全分布好）；分位数交叉与尾部外推（q90<q80不连贯·单调参数化/联合拟合/事后排序/极端分位外推/边际分位非联合分布）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.17.0"
+version: "1.18.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -463,20 +463,12 @@ Rethink Priorities《Types of specification problems in forecasting》（Juan Gi
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `combining for adaptation` / `combining for improvement` / `mAFTER` / `discard some` **全 0 命中**；`forecast combination puzzle` / `简单平均` 在 §九（r746 聚合器选型）已命中——故本轮**换道**取 §九未覆盖的「CFA/CFI 场景区分 + 估计误差互补论证 + mAFTER 把 SA 当候选」正交子面，不重述 §九「logit 单参数 vs 复杂加权/偏差校正与极端化分栏」。按 rules/07 四态判「**优＝加厚现有 `meta/pdi-forecasting`**」。TI 模块 r769(OI/EI/SI)/r768(AI/VI/DI) 六模块结论不复用；A/B 两轮结论亦不复用。豆包自留地 WB 0 落地。
 - **未采纳**：AFTER/mAFTER 算法的逐步实现与损失界证明、CFA/CFI 的统计判别检验公式、Bates-Granger 协方差矩阵估计细节、密度组合的 linear opinion pool 展开 —— 属专项统计实现，不迁移为通用判据。
 
-## 二十一、校准诊断不能被聚合评分替代：PIT 只是入口，条件校准才是硬门（PDI · r778C 2026-11-20 实拉，≥3 独立域交叉）
+## 二十一、校准诊断不能被聚合评分替代：PIT 只是入口，条件校准才是硬门（PDI · r778C 2026-11-20 实拉，全文见 references/r778C.md）
+### 21.1 ★严格适当评分只能排序系统、不证可信/校准：评分栏与校准诊断栏分列，评分排名不单独当可信证据（接 §7.1/§16）。
+### 21.2 ★PIT 平坦/独立只是弱校准：U 形太窄/驼峰太宽/倾斜系统偏差，须按 horizon 与 regime 分层；弃 ECE 改 CORP(PAV+90%带)+MCB(零 iff 校准)+DSC 分力；校准声明须写明是哪一层。
+### 21.3 ★按已发生高影响事件筛样本画 PIT 会让校准系统也显失准（forecaster's dilemma）：正解 cPIT `G(x)=[F(x)−F(t)]/[1−F(t)]`，且 cPIT≠普通 PIT 右侧 bins；条件校准轴另有分组损失 GL(p)，与 ECE 边际轴正交。
+### r778C 来源与判非（arXiv2209+2108+omni+bohrium 四域逐字；全文见 `references/r778C.md`）｜**判重**：评分/校准诊断补正交子面，豆包自留地 WB 0 落地。
 
-> 正文逐字、公式与四域来源见 `references/r778C.md`。本节只留可执行的三独点与落点。
-
-### 21.1（r778C-1）★严格适当评分只能排序系统，不能证明系统可信/校准
-arXiv 2209.04872 §2.2 逐字：「Although proper scoring rules allow competing prediction systems to be ranked and compared objectively, they cannot be used to determine whether a prediction system is trustworthy, in the sense that the observed outcomes are statistically consistent with the forecasts that were issued.」——CRPS/Brier/LogS 的分解把 reliability 与 resolution 以相反符号捆绑，一个系统的校准差可被另一个的分辨率差抵消，故「分更好」不等于「校准更好」。判据：结算台账的「评分」栏与「校准诊断」栏分列，评分排名不得单独作为「预测可信」的证据（接 §7.1/§16，不重述其分解式）。
-
-### 21.2（r778C-2）★PIT 平坦/独立都只是弱校准；按视野与状态分层诊断，CORP + MCB 替代 ECE
-PIT 定义 `F(y)~U(0,1)`：U 形=区间太窄过自信、驼峰=太宽欠自信、倾斜=系统偏差；但「independent, uniformly distributed PIT values do not imply auto-calibration, except in a special case」（Dawid/Gneiting/Diebold 等）。零样本基础模型的 95% 区间宽度编码的是预训练语料的噪声而非本序列的，金融序列的波动聚集与厚尾使「平均覆盖正确」在 clustered 高波动期恰好系统性过窄——必须按 horizon step 分开报覆盖（h=1 好、h=13 坏是常态，pooled 图看不见），并按 regime（高/低波动、月末/月中、结构断点前后）分层。二值预测另报校准斜率（<1 过极端/过拟合、>1 过保守）。ECE/Hosmer–Lemeshow 依赖分箱且不稳定，改用 CORP reliability diagram（PAV、无分箱、90% consistency bands）+ MCB（≥0、零当且仅当校准）作标量、DSC 分离「未校准」与「无区分力」。判据：校准声明写清是哪一层（probabilistic / marginal / mean / threshold / quantile / auto），「PIT 平坦」只支撑最弱两层。
-
-### 21.3（r778C-3）★预测者困境同样打校准诊断：按观测筛样本会让校准系统也显示失准，正解是 cPIT
-arXiv 2209.04872「The forecaster's dilemma also applies to diagnostic checks for calibration: if a rank or PIT histogram is constructed from only the forecasts issued when a high-impact event occurs, then the resulting histogram of a calibrated prediction system will in general not be uniform.」——Bellier 等 2017「strongly advise against observation-based stratification when constructing rank histograms」。若问题正是「极端事件发生了之后预报是否仍校准」，正解是 conditional PIT：`G(x)=[F(x)−F(t)]/[1−F(t)]` for x>t，else 0；对 y>t 的观测算 G(y) 画直方图，均匀即条件校准。关键陷阱：「These cPIT histograms are not equivalent to focusing on the bins on the right-hand side of the standard PIT histogram」——极端观测在预报本身已给极高概率时反而对应低 PIT 值 F(y)。另条件校准轴还有分组损失 `GL(p)=Var[f*(X)|f(X)=p]`，与 ECE 的边际轴正交。判据：只在事件发生后做诊断时，禁直接筛样本画普通 PIT；改 cPIT，并声明是条件于哪个阈值/事件。
-
-### r778C 来源与判非（arXiv2209.04872+2108.03210+omnidatatec+erotica+bohrium 四域逐字；全文见 `references/r778C.md`）｜**判重**：评分/校准诊断本轮补正交子面，豆包自留地 WB 0 落地。
 ## 二十二、MCMC 收敛诊断：R-hat/ESS 是预测生产链的前置门禁（PDI · r782C 2026-11-20 实拉，全文见 references/r782C.md）
 > 对象：给未来事件配概率时，概率常由贝叶斯后验采样器产出；采样器没收敛，下游所有概率/区间/评分不可信。这不是评分规则（§七/§八）、不是回测切分（§十七），是两者的**前置门禁**。Vehtari 等 (2021) 改进版为当前标准。
 ### 22.1（r782C-1）★R-hat 比较链内与链间方差；先 split 再 rank-normalize，单看原始 R-hat 会漏掉非平稳与重尾
@@ -498,3 +490,10 @@ Stan 官方逐字：能否只监控部分参数/生成量？「The short answer 
 三维互补逐字（jhschlegel 2026）：the former captures overall distributional accuracy, while the latter more directly probes dependence。同框架还有 Gaussian 核的 MMDS、inverse multiquadric kernel 规则。评分差须做显著性：DM 检验（Diebold-Mariano 1995）计入预报误差时间依赖，等性能原假设下 t 渐近标准正态、负值表示被评预报更好；skill score `1−S(f)/S(f_ref)` 正向（越大越好，Gneiting-Raftery 2007）。红线（Gneiting & Ranjan 2011）：按**观测结果**加权的 proper rule generally rendered improper，保适当加权须走 threshold/outcome-weighted 正交路径（见 §十六）。判据：场景预报结算栏写 ES+VS 两数 + p/h_{ij} + DM 显著性 + skill score 参照预报；不得把按观测筛样本后的加权分当适当评分。
 
 ### r786C 来源与判非（ETH/CRAN vignette+Springer+jhschlegel+RMetS 四域逐字；全文见 `references/r786C.md`）｜**判重**：energy/variogram/kernel score 本体 0，按四态判「增＝加厚现有」，不重述 §十/§十六/§十七；豆包自留地 WB 0 落地，与 r785/r784/r783 九模块及 A/B 两轮不复用。
+
+## 二十四、pinball 评分与分位数交叉：单点分位不等于全分布，尾部外推不可信（PDI · r790C 2026-11-22 实拉，全文见 references/r790C.md）
+> 逐字、四域来源与判非见 `references/r790C.md`；本节只留三条可执行判据。
+### 24.1（r790C-1）★pinball 是分位严格适当尺：minimizer=条件 τ 分位、非对称惩罚 τ 与 1−τ、τ=.5 退化为 MAE 半；newsvendor 最优订量=`cu/(cu+co)` 分位，业务比率直接点名报哪个 τ。
+### 24.2（r790C-2）★mean pinball 必配经验覆盖与气候基线 skill score：coverage gap>5pp 判系统偏差、quantile sweep 无明显极小说明瞄准了别的分位、skill≤0 不如气候态；结算栏写 τ+n+mean pinball+MAE/RMSE+经验覆盖+skill，单点分位好不代表全分布好（全分布转 §十 CRPS）。
+### 24.3（r790C-3）★分位数交叉 q90<q80 会静默破坏下游 CRPS/覆盖：单调参数化/联合拟合优先、事后排序是权宜；极端分位无尾部数据即外推、不可与中心同置信度报；边际分位非联合分布、跨期决策要场景路径（§二十三）。
+### r790C 来源与判非（MetricGate+PraveenTN+r-statistics+marketmaker 四域逐字；全文见 `references/r790C.md`）｜**判重**：pinball/分位数交叉本体 0 专节（§十仅点名），按四态判「增＝加厚现有」；豆包自留地 WB 0 落地，与 r789/r788/r787 九模块及 A/B 两轮不复用。
