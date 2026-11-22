@@ -1,9 +1,9 @@
 ---
 name: meta/pdi-forecasting
-description: 预测与概率判断（Predictive Intelligence）：估计事件发生/时点/量级、给结论配概率、情景推演、"押个概率/预测一下"时调用。含超预测五步法（问题精化→参考类基率→内部微调→贝叶斯小步→Brier 闭环）、费米拆解、范围敏感性、Pre-Mortem、0.1–0.9 校准带；只输出可结算判断、不作行动决策。；题面可结算性（什么算/何时算/谁裁定、三类规格缺陷、回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO/DIRMO·误差累积与随机依赖两轴·windows_identical 跨视界可比与逐视界最准互斥）；加权评分与预报员困境（w(y)S 破坏适当性/threshold·outcome-weighted 两类/条件分不进事件概率）；回测协议（purge 标签重叠+embargo 序列相关两漏/CPCV 一条历史变多路径 φ(N,k)/PBO+Deflated Sharpe 计试验数/单路径非证据）；事件型预警（point-adjustment 让随机探测器拿高F1/事件级检出率·延迟·单位时间误报三栏/range-based 与 k-delay/ERDE）；专家概率引出（分位数法 X05/X50/X95/锚定两种提问口径/IDEA 四步/Cooke 种子题双评分加权/校准优先信息性/无种子题等权/平均专家90%区间仅36%含真值）；预测组合场景依赖（adaptation 追平最佳单候选 vs improvement 超越全部/不看场景套方法即制造组合之谜/mAFTER 把简单平均当候选）；MCMC 收敛（R-hat split+rank/folded 取max+bulk·tail-ESS双达标/全局含lp__/诊断只验失败不证收敛）；多变量评分（ES=CRPS高维推广严格适当但相关误设判别力有限/VS测相关仅适当非严格/二者kernel scores互补分报·DM检验）；pinball分位评分（严格适当·minimizer=条件τ分位/非对称τ与1−τ·τ=.5即MAE半/coverage gap>5pp/skill score对气候基线/单点分位好≠全分布好）；分位数交叉与尾部外推（q90<q80不连贯·单调参数化/联合拟合/事后排序/极端分位外推/边际分位非联合分布）。
+description: 预测与概率判断（Predictive Intelligence）：估计事件发生/时点/量级、给结论配概率、情景推演、"押个概率/预测一下"时调用。含超预测五步法（问题精化→参考类基率→内部微调→贝叶斯小步→Brier 闭环）、费米拆解、范围敏感性、Pre-Mortem、0.1–0.9 校准带；只输出可结算判断、不作行动决策。；题面可结算性（什么算/何时算/谁裁定·三类规格缺陷·回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO·误差累积与随机依赖两轴·跨视界可比与逐视界最准互斥）；加权评分（w(y)S破坏适当性·threshold/outcome-weighted两类）；回测协议（purge+embargo两漏/CPCV一条历史变多路径/PBO+Deflated Sharpe计试验数/单路径非证据）；事件型预警（point-adjustment让随机探测器拿高F1/事件级检出率·延迟·单位时间误报三栏/range-based与k-delay）；专家概率引出（分位数法X05/X50/X95/锚定两口径/Cooke种子题双评分加权/校准优先信息性/平均专家90%区间仅36%含真值）；预测组合场景依赖（adaptation 追平最佳单候选 vs improvement 超越全部/不看场景套方法即制造组合之谜/mAFTER 把简单平均当候选）；MCMC 收敛（R-hat split+rank/folded 取max+bulk·tail-ESS双达标/全局含lp__/诊断只验失败不证收敛）；多变量评分（ES=CRPS高维推广严格适当但相关误设判别力有限/VS测相关仅适当非严格/二者kernel scores互补·DM检验）；pinball分位评分（严格适当·minimizer=条件τ分位/非对称τ与1−τ·τ=.5即MAE半/coverage gap>5pp/skill score对气候基线/单点分位好≠全分布好）；分位数交叉与尾部外推（q90<q80不连贯·单调参数化/联合拟合/事后排序/极端分位外推/边际分位非联合分布）。；split conformal构造与有限样本可认证上限（四步·qhat=⌈(n+1)(1−α)⌉分位·(n+1)修正使覆盖exact·小样本上限n/(n+1)·坏预测器付宽度不付有效性·set size是信号·APS/RAPS/CQR·与置信区间/温度缩放区分）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.18.0"
+version: "1.19.0"
 ---
 
 # PDI · 预测与概率判断（Predictive Intelligence）
@@ -448,12 +448,10 @@ Rethink Priorities《Types of specification problems in forecasting》（Juan Gi
 - Smith & Wallis 2009（经 arXiv 逐字转述）：「**the estimator targeting the optimal weight can have large variance and consequently, the estimated optimal weight can be very different from the true optimal weight, often even more so than simple equal weight**」——估权重要 MC 个参数，样本不够时估歪，这解释了一部分 puzzle。
 - Elliott & Liao 2025（UCSD working paper《On Why Averaging beats Optimal Linear Weights》）补互补论证：要让「估计误差」成为解释，前提是「**gains from using optimal weights must be small**」；他们问「**how big can the gains from optimal combination be**」，结论「**gains can indeed be small, and that for gains to be large the best approach to forecast combination is to discard some of the forecasts and average over the remaining ones**」。鲁利亚（Lirias）理论文给出分解：var(y_c)=(Ew)'Σ_yy(Ew)+tr(Σ_ww Σ_yy)，等权组合方差只有 ι'Σ_yy ι/m² 一项，估计权重多了 Σ_ww 与偏差项。
 - **判据**：① 「复杂方法输给 SA」别只归咎样本小——也可能是**最优权重相对 SA 的理论增益本来就小**；② 授予「优化加权」前先估潜在增益，增益小就别付估计成本的价；③ 增益要大时正确动作常是**丢掉部分候选再平均**（而非给全部候选估精细权重），与 §九「待估参数越少越稳」同向。
-
 ### 20.3（r774C-3）把简单平均当候选：mAFTER 自适应场景，避免 SA 的不稳也保留其稳健
 - Qian 等逐字：multi-level AFTER（mAFTER）——「**first, we construct three new candidate forecasts using SA, AFTER and LinReg; second, we apply the AFTER algorithm on these new candidate forecasts**」「**by treating the simple average as a candidate forecast, the proposed strategy is shown to avoid the heavy cost of estimation error and, to a large extent, solve the forecast combination puzzle**」。「**mAFTER can perform aggressively to target the optimal weight when information is sufficient … and perform conservatively like SA when the degree of estimation error is high**」。
 - Tinbergen《The Evolution of Forecast Density Combinations》逐字核对 Bates & Granger 1969 正统：最优权重 = 对实现值回归各点预测、约束 Σw=1 的最小二乘估计（"optimal" 仅限最小化 RMSE）；「**it is often hard to beat an equal weighted combination**」这一 stylized fact；Smith & Wallis 用参数估计误差解释、Elliott 2017 用序列可预测性解释（不可预测成分越大、优化加权潜在增益越小）。
 - **判据**：① 把 SA 作为**一个候选**纳入自适应选择，而不是「SA vs 优化」二选一——信息足时激进用权重、估计误差大时自动退回 SA；② 与 §九的分工要记清：§九管聚合器选型（logit 单参数 vs 复杂加权），本节管**组合场景判定 + 是否把 SA 纳入候选**，均不改 Brier/评分尺（§七）；③ 组合结论迁用前声明场景（CFA/CFI）与样本相对候选数的比例。
-
 ### r774C 来源与判非（2026-11-19 实拉，逐字核验）
 - `https://arxiv.org/html/1505.00475`（Qian 等《On the Forecast Combination Puzzle》，arXiv:1505.00475 / Econometrics 2019）— **WebFetch 200 全文逐字**：FCP 定义（Stock&Watson 引文）/ CFA vs CFI 两场景原文 / failure to recognize scenarios causes FCP / Smith&Wallis 估计误差 / mAFTER 两步与把 SA 当候选。**第一独立域（一手论文全文，主证据）**。
 - `https://www.mdpi.com/2225-1146/7/3/39/htm`（同文 MDPI 正式发表版）— **WebFetch 200 摘要与引言逐字**：puzzle 三解释（estimation error / invalid weighting formulas / screening）、CFA-CFI 区分、multi-level AFTER。**第二独立域（正式发表版，与第一交叉校核）**。
@@ -462,13 +460,11 @@ Rethink Priorities《Types of specification problems in forecasting》（Juan Gi
 - **失败与降级如实登记**：Elliott & Liao 与 Tinbergen 两篇 PDF 仅取 WebSearch 索引摘要/页面逐字，未逐页核 PDF 全文（WebFetch 对 PDF 返回 non-text resource），按摘要口径登记；Bates & Granger 1969 原论文未直读，最优权重定义经 Tinbergen 转述；Smith & Wallis 2009 经 Qian 与 Lirias 转述，不冒充直读原论文。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `combining for adaptation` / `combining for improvement` / `mAFTER` / `discard some` **全 0 命中**；`forecast combination puzzle` / `简单平均` 在 §九（r746 聚合器选型）已命中——故本轮**换道**取 §九未覆盖的「CFA/CFI 场景区分 + 估计误差互补论证 + mAFTER 把 SA 当候选」正交子面，不重述 §九「logit 单参数 vs 复杂加权/偏差校正与极端化分栏」。按 rules/07 四态判「**优＝加厚现有 `meta/pdi-forecasting`**」。TI 模块 r769(OI/EI/SI)/r768(AI/VI/DI) 六模块结论不复用；A/B 两轮结论亦不复用。豆包自留地 WB 0 落地。
 - **未采纳**：AFTER/mAFTER 算法的逐步实现与损失界证明、CFA/CFI 的统计判别检验公式、Bates-Granger 协方差矩阵估计细节、密度组合的 linear opinion pool 展开 —— 属专项统计实现，不迁移为通用判据。
-
 ## 二十一、校准诊断不能被聚合评分替代：PIT 只是入口，条件校准才是硬门（PDI · r778C 2026-11-20 实拉，全文见 references/r778C.md）
 ### 21.1 ★严格适当评分只能排序系统、不证可信/校准：评分栏与校准诊断栏分列，评分排名不单独当可信证据（接 §7.1/§16）。
 ### 21.2 ★PIT 平坦/独立只是弱校准：U 形太窄/驼峰太宽/倾斜系统偏差，须按 horizon 与 regime 分层；弃 ECE 改 CORP(PAV+90%带)+MCB(零 iff 校准)+DSC 分力；校准声明须写明是哪一层。
 ### 21.3 ★按已发生高影响事件筛样本画 PIT 会让校准系统也显失准（forecaster's dilemma）：正解 cPIT `G(x)=[F(x)−F(t)]/[1−F(t)]`，且 cPIT≠普通 PIT 右侧 bins；条件校准轴另有分组损失 GL(p)，与 ECE 边际轴正交。
 ### r778C 来源与判非（arXiv2209+2108+omni+bohrium 四域逐字；全文见 `references/r778C.md`）｜**判重**：评分/校准诊断补正交子面，豆包自留地 WB 0 落地。
-
 ## 二十二、MCMC 收敛诊断：R-hat/ESS 是预测生产链的前置门禁（PDI · r782C 2026-11-20 实拉，全文见 references/r782C.md）
 > 对象：给未来事件配概率时，概率常由贝叶斯后验采样器产出；采样器没收敛，下游所有概率/区间/评分不可信。这不是评分规则（§七/§八）、不是回测切分（§十七），是两者的**前置门禁**。Vehtari 等 (2021) 改进版为当前标准。
 ### 22.1（r782C-1）★R-hat 比较链内与链间方差；先 split 再 rank-normalize，单看原始 R-hat 会漏掉非平稳与重尾
@@ -482,18 +478,23 @@ Stan 官方逐字：能否只监控部分参数/生成量？「The short answer 
 > 对象：§十 r734A-1 只点名「multivariate scenarios require the energy score or variogram score」无展开，本节补完整口径。当预测输出是**场景向量/多条联合轨迹**（y=(y₁,…,y_d)）时，CRPS/d logS 不再直接适用：LogS 对多元密度可用但「only a sample is available」时难用，且 log score 对距离不敏感（只奖精确命中、不奖邻近）。二者都属 kernel scores（Gneiting & Raftery 2007，用条件负定核构造），只需预报分布的样本即可算。
 ### 23.1（r786C-1）★ES 是 CRPS 的高维推广、严格适当，但相关结构误设时判别力有限
 `ES(F,y)=E_F‖X−y‖ − ½E_F‖X−X′‖`（‖·‖ 为 R^d 欧氏距离，X,X′ 独立~F；β=1 为标准，亦可 ‖·‖^β）；Gneiting & Raftery 2007 证明 **strictly proper**。集成预报用经验 CDF 代入即得 ensemble ES。局限（Pinson & Tastu 2013）：discrimination ability may be limited while the dependence structure is misspecified——ES 对整体分布准确度敏感，但对相关结构错配不敏感。判据：评场景向量不能只报 ES 就宣称「联合分布对了」，相关性对错须另用 VS 或相关诊断。
-
 ### 23.2（r786C-2）★VS 显式测成对差分的相关结构，仅适当非严格适当，p 与权重须事前冻结
 `VS^p(F,y)=Σ_iΣ_j h_{ij}(E_F|X_i−X_j|^p − |y_i−y_j|^p)²`（X~F，h_{ij}≥0 控制维对权重，标准取 1；p>0，Scheuerer & Hamill 2015 推荐常取 p=0.5，典型 0.5 或 1）。它直接量预报变差图与观测变差图之差，hence more sensitive to errors in the specification of correlations。适当性有前提：对「所有元素 2p 阶矩有限」的分布族是 proper，但 **not strictly proper**。判据：报 VS 须写 p、权重 h_{ij}、维数 d；不能把 VS 当严格适当的唯一裁决尺，与 ES 分列两栏（ES=整体、VS=相关）。
-
 ### 23.3（r786C-3）★二者互补分报；skill score 正向、显著性用 DM；按观测结果加权会破坏适当性
 三维互补逐字（jhschlegel 2026）：the former captures overall distributional accuracy, while the latter more directly probes dependence。同框架还有 Gaussian 核的 MMDS、inverse multiquadric kernel 规则。评分差须做显著性：DM 检验（Diebold-Mariano 1995）计入预报误差时间依赖，等性能原假设下 t 渐近标准正态、负值表示被评预报更好；skill score `1−S(f)/S(f_ref)` 正向（越大越好，Gneiting-Raftery 2007）。红线（Gneiting & Ranjan 2011）：按**观测结果**加权的 proper rule generally rendered improper，保适当加权须走 threshold/outcome-weighted 正交路径（见 §十六）。判据：场景预报结算栏写 ES+VS 两数 + p/h_{ij} + DM 显著性 + skill score 参照预报；不得把按观测筛样本后的加权分当适当评分。
-
 ### r786C 来源与判非（ETH/CRAN vignette+Springer+jhschlegel+RMetS 四域逐字；全文见 `references/r786C.md`）｜**判重**：energy/variogram/kernel score 本体 0，按四态判「增＝加厚现有」，不重述 §十/§十六/§十七；豆包自留地 WB 0 落地，与 r785/r784/r783 九模块及 A/B 两轮不复用。
-
 ## 二十四、pinball 评分与分位数交叉：单点分位不等于全分布，尾部外推不可信（PDI · r790C 2026-11-22 实拉，全文见 references/r790C.md）
 > 逐字、四域来源与判非见 `references/r790C.md`；本节只留三条可执行判据。
 ### 24.1（r790C-1）★pinball 是分位严格适当尺：minimizer=条件 τ 分位、非对称惩罚 τ 与 1−τ、τ=.5 退化为 MAE 半；newsvendor 最优订量=`cu/(cu+co)` 分位，业务比率直接点名报哪个 τ。
 ### 24.2（r790C-2）★mean pinball 必配经验覆盖与气候基线 skill score：coverage gap>5pp 判系统偏差、quantile sweep 无明显极小说明瞄准了别的分位、skill≤0 不如气候态；结算栏写 τ+n+mean pinball+MAE/RMSE+经验覆盖+skill，单点分位好不代表全分布好（全分布转 §十 CRPS）。
 ### 24.3（r790C-3）★分位数交叉 q90<q80 会静默破坏下游 CRPS/覆盖：单调参数化/联合拟合优先、事后排序是权宜；极端分位无尾部数据即外推、不可与中心同置信度报；边际分位非联合分布、跨期决策要场景路径（§二十三）。
 ### r790C 来源与判非（MetricGate+PraveenTN+r-statistics+marketmaker 四域逐字；全文见 `references/r790C.md`）｜**判重**：pinball/分位数交叉本体 0 专节（§十仅点名），按四态判「增＝加厚现有」；豆包自留地 WB 0 落地，与 r789/r788/r787 九模块及 A/B 两轮不复用。
+## 二十五、Split conformal 的构造与有限样本可认证上限（PDI · r794C 2026-11-22 实拉，全文见 references/r794C.md）
+> 与 §十 r734A / §十一 r737C 分工：那两章管「覆盖率的评分（与宽度联合，Winkler/PICP）」与「保证的作用域（边际 vs 条件、子群覆盖）」；本节管「一个 conformal 预测集到底怎么构造、小样本能承诺到什么水平」——构造机制层，逐字与四域来源见 `references/r794C.md`。
+### 25.1（r794C-1）★四步构造与 qhat 的 (n+1) 有限样本修正
+训练/留出校准/取分位/纳入候选四步；非一致分数常用 1−P(真类)；qhat = ⌈(n+1)(1−α)⌉ 分位，(n+1) 项让覆盖保证 exact；exchangeability 使新样本在 n+1 个分数中秩均匀，落进前 α 比例的概率 ≤ α，故覆盖 ≥ 1−α（Ultralytics / Scixa 逐字）。
+### 25.2（r794C-2）★小样本有可认证上限 n/(n+1)：数据撑不住的水平 conformal 拒绝承诺
+n=8 残差排序 {0.2,0.3,0.4,0.5,0.6,0.8,0.9,1.1}，α=0.125 时 k=⌈9×0.875⌉=8、q̂=1.1、区间 ŷ±1.1 覆盖≥87.5%；要 90% 需 k=9>n 故区间无界，最大可认证 8/9≈0.889；要 95% 须 n≥19。conformal 不承诺数据支撑不了的水平，这是诚实特性不是缺陷（Scixa 逐字）。
+### 25.3（r794C-3）★坏预测器付宽度不付有效性；conformal set ≠ 置信区间/置信分数/温度校准
+「A bad predictor pays in the width of the set, never in the validity of the coverage」——保证把模型无知从正确性换算成集合大小；所有有效方法都达到目标覆盖，竞争在集合多小。set size 是信号：APS/RAPS 用累计概率让集合随难度变、CQR 在噪声大处变宽、Mondrian 每类单独 qhat。三类区分：置信分数是无保证的单数；温度缩放改善分数匹配但不自带覆盖；统计置信区间描述总体参数（如均值）的不确定性，conformal 集描述单个新结果落在何处。校准集须来自部署数据且漂移时刷新，否则 exchangeability 不成立（Ultralytics 逐字）。
+### r794C 来源与判非（逐字、四域来源见 `references/r794C.md`）｜**判重**：split 构造（qhat 修正/可认证上限/三类区分）在 PDI 本体 0；§十 r734A 管 width×coverage 评分、§十一 r737C 管边际 vs 条件覆盖作用域，本条补构造机制层，明确交叉引用不重述；豆包自留地 WB 0 落地，与 r793/r792/r791 九模块及 A/B 两轮不复用。

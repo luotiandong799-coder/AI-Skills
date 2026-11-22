@@ -1,8 +1,8 @@
 ---
 name: multimodal-intelligence
 description: >-
-  多模态理解：让 Agent「看懂图片」「读出文字」。生成质量 FID 的可比性陷阱（有限样本协方差估计使 FID 随样本量系统性偏高近似 1/n·2048 维放大/只对同样本数同特征网络同预处理可比·clear-fid 统一 resize 与 Inception 权重·只匹配均值协方差丢多模态结构·保真度与多样性混在一个数里需 precision-recall 拆开·不读 prompt 无法评价文图匹配·与人类偏好可背离）；Vision 管画面语义（界面/故障图/流程图/商品图），OCR 管图片/PDF 文字表格结构化提取：前者看懂意图，后者读取文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen）、纯代码或纯文本任务。色彩管线与色差口径：sRGB 传递函数与线性光、ICC 渲染意图与 D50 PCS、ΔE 公式版本与观察条件四元验收。；主观评测协议（六项控制/MOS+95%CI/ΔSCI 与人数/ACR·DSIS·DSCQS·ACR-HR 选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。；目标检测与分割评测口径（IoU 定阈值 TP/FP/FN、COCO mAP=12 指标与 10 个 IoU 阈值平均、AP 与 mAP 不区分、Dice=像素 F1 与 IoU 单调等价、mIoU 与 PixelAccuracy 分报、mask/box 同协议只换 IoU 算法）。；非视觉捷径与语言先验（VQA 盲模型靠问题文本「闭眼答对」/VQA v2 互补图配对逼模型用视觉/VQA-CP 答案分布偏移打回原形/无图像基线当主实验变量测视觉依赖/开放题归一化与多标注投票）。；文图对齐组合式验收（CLIPScore 词袋化混淆主谓颠倒/VQAScore 用 P(Yes)/GenEval 目标检测实例级计数位置属性绑定·六类分报/GenAI-Bench 1600 组合提示+15000 人评/位置墙与属性绑定是短板）。
-version: 2.0.0
+  多模态理解：让 Agent「看懂图片」「读出文字」。生成质量FID可比性陷阱（有限样本协方差使FID随样本量偏高近似1/n·2048维放大/只同样本数同网络同预处理可比·只匹配均值协方差丢多模态结构·保真度与多样性需precision-recall拆开·不读prompt无法评文图匹配）；Vision 管画面语义（界面/故障图/流程图/商品图），OCR 管图片/PDF 文字表格结构化提取：前者看懂意图，后者读取文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen）、纯代码或纯文本任务。色彩管线与色差口径：sRGB线性光·ICC渲染意图与D50 PCS·ΔE公式版本四元验收。；主观评测协议（六项控制/MOS+95%CI/ACR·DSIS·DSCQS·ACR-HR选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。；目标检测与分割评测（IoU定TP/FP/FN·COCO mAP=12指标10阈值平均·Dice=像素F1与IoU单调等价·mIoU与PixelAccuracy分报·mask/box同协议只换IoU算法）。；非视觉捷径与语言先验（VQA 盲模型靠问题文本「闭眼答对」/VQA v2 互补图配对逼模型用视觉/VQA-CP 答案分布偏移打回原形/无图像基线当主实验变量测视觉依赖/开放题归一化与多标注投票）。；文图对齐组合式验收（CLIPScore 词袋化混淆主谓颠倒/VQAScore 用 P(Yes)/GenEval 目标检测实例级计数位置属性绑定·六类分报/GenAI-Bench 1600 组合提示+15000 人评/位置墙与属性绑定是短板）。；物体幻觉评测（CHAIR-I/S 受提示措辞影响可翻倍·POPE 轮询式 yes/no 三负采样 Random·Popular·Adversarial·正负1:1·Yes率偏置·提示鲁棒性std·只测物体存在不测属性数量位置）。
+version: 2.1.0
 module: PI
 modules: PI
 ---
@@ -312,3 +312,22 @@ GenEval 官方 table（逐字数值）：CLIP retrieval baseline Overall **0.35*
 - `https://lacuna.tiptreesystems.com/work/geneval-an-object-focused-framework-for-evaluating-text-vwem/version/art_072abe669df00d543dab554ff16006c2`（WebFetch 200 逐字：红方块蓝球互换例、六类与 553 prompts、83% vs 88% 人标一致率、position wall、IF-XL 位置偏置与 SD v2.1 换色、COCO 80 类局限）——第三独立域·独立技术综述一手。
 - **判重**：全库 SKILL.md 扫描 CLIP Score/GenEval 命中仅本技能 §14.3 一句「须另报 CLIP Score 或 GenEval/DPG-Bench 这类逐项语义核验」与其来源行——无专节、无词袋化机制/六类分报/位置墙口径；豆包自留地 defaults/wb-context-compressor 的 CLIP 命中为上下文压缩语境异命题、WB 0 落地。本轮按四态判「增＝加厚现有 engineering/multimodal-intelligence」，把 §14.3 一句展开为独立节，不重述 FID 样本偏差/结构丢失/保真多样性结论。与 r789(OI/EI/SI)/r788(AI/VI/DI)/r787(MI/CI/RI) 九模块不复用；A/C 两轮不复用。
 - **未采纳**：DPG-Bench 与 T2I-CompBench 的完整协议、VQAScore 内部训练细节与各基准逐项分数、CLIP-FlanT5 的架构参数 —— 属特定基准/实现，不迁移为通用验收判据。
+
+## 十六、物体幻觉评测：CHAIR 的提示敏感与 POPE 的轮询式二分类（PI · r794B 2026-11-22 实拉，≥2 独立域一手交叉）
+> 与 §十五分工：§十五管「生成的图/回答是否贴合组合提示（主谓、方位、数量、属性绑定画对没）」，用 VQAScore/GenEval；本节管「图生文描述或 LVLM 回答里是否出现图中根本不存在的物体」——是物体存在性的幻觉检测，不是对齐度。二者量纲与失败模式不同，不可互替。
+
+### 16.1（r794B-1）★CHAIR 两种形式与提示敏感性：同一模型换个措辞分数翻倍，排序可翻转
+alphaXiv（Li 等 EMNLP 2023, arXiv:2305.10355）逐字：CHAIR 来自 Rohrbach 等 2018，两种形式——CHAIR-I 统计幻觉物体提及数占所有物体提及数的比例；CHAIR-S 统计至少含一个幻觉物体的描述占所有描述的比例。「从自由形式文本中提取物体提及需要依赖规则，也可能受到提示和生成风格的影响。」对 LLaVA，用「为图像生成简短描述」时 CHAIR-S 为 32.7；用「请简要描述给定图像」时为 62.7，且作者指出某些比较中模型排序会变化。原文明确限定边界：这「并不能证明 CHAIR 在所有用途下都不可靠」——是特定测试中的提示敏感性，不过度推广。另须分 intrinsic（与图矛盾，如可见范围内断言火车旁有长椅，看图即可否证）与 extrinsic（超出图可验证范围，如断言火车内有座位，需图外信息），后者是否算错取决于用户意图（描述可见场景 vs 求建议）。判据：用 CHAIR 报幻觉率必须写提示模板与物体提取规则，换措辞后的分数不可直接比；把 intrinsic/extrinsic 混成一个数等于把「看图能查的错」与「图外无法判的断言」算成一笔。
+
+### 16.2（r794B-2）★POPE 把描述打分改成「图中有 {物体} 吗」的 yes/no 轮询，正负 1:1，三种负采样探不同偏置
+POPE（Polling-based Object Probing Evaluation）三步逐字：①通过人工标注或 SEEM 等自动分割工具，获取每张图像中存在的物体；②根据存在的物体生成「是」问题，再通过采样该图像中不存在的物体生成「否」问题；③提出「图像中有椅子吗？」之类的简短问题，根据标签对「是/否」回答评分。正向与负向问题比例 1:1。缺失物体三种选法——Random 随机采样一个不存在的物体；Popular 选数据集中频繁出现但图中不存在的物体（测是否默认常见物）；Adversarial 选经常与图中真实物体共同出现但图中不存在的物体（如看到餐桌问「有刀吗」，测是否靠共现先验而非像素）。后两者更难：InstructBLIP 的 POPE F1 从 Random 89.29 降到 Adversarial 78.45。「Yes bias」是关键失效——LLaVA / mPLUG-Owl 对几乎所有物体询问答 Yes，某些设置 Yes 率近 99%，而这种「全答是」模式在 caption 幻觉分数里是隐藏的。判据：LVLM 物体幻觉结算至少报 Random/Popular/Adversarial 三档 F1 + Yes 率；只报一个 caption 幻觉率无法诊断由共现先验引发的幻觉。
+
+### 16.3（r794B-3）★POPE 提示鲁棒性更好但仍是不同量纲、且不能消除幻觉；只测存在性
+alphaXiv 逐字：四种措辞下 POPE 报告平均 F1 67.43、标准差 0.78；CHAIR-I 平均 13.88、标准差 3.22——「这是不同量纲的不同指标」，该比较只说明这次测试中 POPE 的提示间变化较小，「并不能保证它在所有设置下都稳定」。四模板 POPE F1 为 68.65 / 66.83 / 66.67 / 67.58；四描述提示 CHAIR-I 为 10.50 / 18.80 / 14.60 / 11.60。硬边界逐字：POPE「是一种评估方法，而非缓解幻觉的技术，其得分也不能衡量 LVLM 的整体能力」；自动分割可能引入与人工标注不一致的标签，答案匹配流程会误判未明确含「是」或「否」的回答；研究范围限定粗粒度物体级错误，不涉属性、数量或位置。与 §十五 GenEval 分工：GenEval 六类含 counting/position/color attribution，POPE 只做存在性二分类。判据：报 POPE 须写负采样策略 + 提示模板 + 标签来源（人工/SEEM）；断言「模型不幻觉物体」须有三档 F1 + Yes 率 + 提示鲁棒性，单档 F1 不构成证据。
+
+### r794B 来源与判非（2026-11-22 实拉，逐字核验）
+- `https://www.alphaxiv.org/zh/abs/2305.10355`（Li 等《Evaluating Object Hallucination in Large Vision-Language Models》EMNLP 2023，人大/美团，WebFetch 200 全文逐字：CHAIR-I/S 定义、LLaVA 32.7 vs 62.7、intrinsic/extrinsic、POPE 三步与正负 1:1、Random/Popular/Adversarial 定义、InstructBLIP 89.29→78.45、POPE F1 67.43±0.78 对 CHAIR-I 13.88±3.22、四模板数值、局限边界）——第一独立域·原论文一手全文。
+- `https://research.elamur.ai/free/en/papers/li-2023-evaluating-object-hallucination-large-vision`（独立论文解读，WebSearch 逐字交叉：CHAIR 短描述指令 32.7 对 OSCAR Base 13.0、改「brief description」措辞可翻转排名、POPE 与 VQA 分工——MiniGPT-4 物体探测分更高但 LLaVA 在更广 VQA 上更好、SEEM 自动分割构建问题）——第二独立域·独立解读交叉（WebSearch 逐字非 WebFetch，如实登记）。
+- **判重**：全库 SKILL.md 扫描 `POPE` / `物体幻觉` / `CHAIR` / `polling-based` 命中仅 system/bsk-drive-logged-in-browser 的 `Popen`（Python 子进程 API 子串误命中，非学术指标）；本技能 §十五是文图对齐（VQAScore/GenEval 组合提示），与物体存在性幻觉异命题。按四态判「增＝加厚现有 engineering/multimodal-intelligence」，不重述 §十四 FID 或 §十五对齐结论。豆包自留地 WB 0 落地。与 r793(OI/EI/SI)/r792(VI/AI/DI)/r791(MI/CI/RI) 九模块及 A/C 两轮不复用。
+- **未采纳**：POPE 在 A-OKVQA/GQA 上的迁移数值、CHAIR 在全部模型上的逐项分数表、缓解幻觉的训练方法（本轮只做评测协议，不做缓解）——属特定实现/特定域结果，不迁移为通用验收判据。
+
