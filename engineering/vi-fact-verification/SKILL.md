@@ -3,7 +3,7 @@ name: vi-fact-verification
 description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试、mutation testing、mutation score、变异算子、存活变异体、等价变异体、等价不可判定、胜任程序员假设、耦合效应、human oracle problem、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、补核受影响部分、核对不是危险动作、Bland-Altman、一致性界限、limits of agreement、一致性评价、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、可互换性、方法比较
 module: VI
 modules: VI,EI
-version: "1.16.0"
+version: "1.17.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -365,3 +365,15 @@ version: "1.16.0"
 
 - **判重：`统计功效` 全库仅 agent-evolution 一句实验层交集流量不足；`power analysis` 0，本体 0 专节；与 §八 oracle/mutation、§九 Bland-Altman 分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://pmc.ncbi.nlm.nih.gov/articles/PMC11193916/?report=classic（Giner-Sorolla 等，Personality and Social Psychology Review，2024，WebFetch 200 逐字：四参数 / MDE sensitivity / 事后功效循环 / CI 替代 power）；https://pmc.ncbi.nlm.nih.gov/articles/PMC4877414/?report=classic（Greenland/Senn/Rothman 等，Eur J Epidemiol，2016-05-21，WebFetch 200 逐字：power 的 pre-study 定义 / type-II / P>0.05 误读禁令 / 必看 CI）；https://pmc.ncbi.nlm.nih.gov/articles/PMC1771282/（Br J Ophthalmol 社论，WebFetch 逐字：1−β 定义与样本量/α/MDE/方差 关系）。EBI Europe PMC fullTextXML HTTP 500；PDF 仅返回下载页；改用 ?report=classic 成功。 逐字全文与判非见 `references/r795D_统计功效.md`。
+## 十、等效性检验 TOST：不显著不是等效，先定等效界才有权说「一样」（r796D 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§9 管「没检出不等于没有」（防误报无效应），本章补正向命题——想证明「两者确实等效」必须换一套检验，不能靠 p>α。
+
+**独点1** 先看数据前写 Δ（±Δ 须附领域/成本-收益理由）与 α，再据 Δ 算样本量；判据——事后按结果挑 Δ、把 0 当等效界均判违规。Lakens 2017 逐字：researchers often incorrectly conclude an effect is absent based a nonsignificant result；「not possible to conclude there is no effect when p > α」。
+
+**独点2** 做两个单侧检验 H01:Δ≤−ΔL 与 H02:Δ≥ΔU，取较大 p 与 α 比；判据——两个都显著才等效，禁止用 p>α 宣布等效，禁止对两次检验做多重比较校正（Lakens 2018 逐字：not necessary to control for multiple comparisons）。若既非显著不同也非统计等效 → 写「数据不足」，不得二选一硬判。
+
+**独点3** 90% CI 必须完全落入 [−ΔL,+ΔU] 才写等效；判据——以「95%CI 含 0 / 不显著」替代等效结论、把等效检验与优效性 NHST 混用均判违规。界值来自 SESOI，界越窄所需样本越大（Lakens 2018 逐字）。与 §9 分工：§9 防止误报「无效应」，本条给「有界等效」的正向证据路径。
+
+- **判重：`TOST`/`等效性检验`/`equivalence test` 全库 SKILL.md 0；与 §9 统计功效（防误判）分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://journals.sagepub.com/servlet/linkout?dbid=4&doi=10.1177%2F14761270251410355&key=10.1177%2F1948550617697177&site=sage&suffix=e_1_3_5_47_1（Lakens，SPPS 8(4)，2017，WebFetch 200 逐字：p>α 不能推出无效应/TOST 两单侧/90%CI 排除界/0 假设不可能被支持）; https://journals.sagepub.com/servlet/linkout?dbid=4&doi=10.1177%2F25152459251323480&key=10.1177%2F2515245918770963&site=sage&suffix=e_1_3_5_19_1（Lakens/Scheel/Isager，AMPPS，2018-06，WebFetch 200 逐字：取较大 p/无需多重校正/不显著=数据不足/90%CI 全落界内/SESOI 决定样本量）。FDA 生物等效性指南限定域检索无结果，未虚构 URL；Δ 预先定的「before looking at data」原句被截断，标注为谨慎外推。 逐字全文与判非见 `references/r796D_TOST等效性.md`。

@@ -2,7 +2,7 @@
 name: personal-ai-employees
 description: >-
   个人 AI 员工体系（8 岗）总路由与五步执行协议。把用户目标自动分派给 8 个专职 AI 员工（战略顾问/供应链专家/职业发展顾问/销售顾问/学习教练/信息分析师/自动化工程师/知识管理专家），每岗统一走「任务分析→执行方案→输出结果→复盘优化→Skill沉淀」，并复用 personal-ai-os 与现有 wb-* / 专家技能，不新建重复能力。触发词：个人AI员工、AI员工体系、AI战略顾问、AI供应链、AI职业发展、AI销售顾问、AI学习教练、AI信息分析、AI自动化工程师、AI知识管理、哪岗来做、分派任务、员工路由、agency、个人AI公司、我的AI团队。finalizer、终结器、两阶段删除、deletionTimestamp、finalizers 清空、删除钩子、owner reference 清理、卡住的 finalizer、强制删除 unsafe-delete、孤儿资源清理。Actor模型、actor、消息传递、mailbox、无共享状态、位置透明、有状态worker。工作流确定性、非确定性错误、replay重放、Event History、Command比对、版本化patch、Worker Versioning、SideEffect、计时器顺序
-version: 1.10.0
+version: 1.11.0
 agent_created: true
 module: OI
 modules: OI,MI
@@ -295,3 +295,15 @@ modules: OI,MI
 
 - **判重：`拓扑排序`/依赖调度正文在本体 0 专节；`DAG`/`拓扑` 命中是 Airflow 资源配额与 actor model 语境，异命题；与 §r785A 并发四层、§r793A Temporal 确定性分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://www.engineering.upenn.edu/~cit5920/knowledge/objects/graphs-and-trees/dags-and-topological-order（UPenn CIT 5920 讲义，WebFetch 200 逐字：indegree 计数 / 环判定 / n! 个拓扑序 / O(|V|+|E|)）；https://airflow.apache.org/docs/apache-airflow/stable/concepts/dags.html（Apache Airflow 3.4.0 官方，WebFetch 200 逐字：all_success 默认 / skip 级联 / none_failed_min_one_success / depends_on_past）；https://airflow.apache.org/docs/apache-airflow/2.1.0/concepts/overview.html（Apache Airflow 官方，WebFetch 200 逐字：task queue / 发给 worker 不保证同机 / Pools 限并发）。无。 逐字全文与判非见 `references/r795I_DAG拓扑调度.md`。
+## 汇合同步 barrier：Cyclic 可复用、Latch 一次性，坏一个全坏（r796I 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§r795I 管 DAG 的入度计数与环检测，本章管**汇合点本身**：等到齐才放行、失败如何传播、以及和 trigger rule 的对应边界。
+
+**独点1** 放行条件不可互换：CyclicBarrier ⇔ `getParties()` 个参与方都调 `await()` 才放行且释放后可复用（cyclic）；CountDownLatch ⇔ `getCount()==0` 放行，one-shot「count cannot be reset」，且调用 countDown 的线程不必等归零。判据——需要可复用同步点却用 Latch、或反之，判错配（Oracle Java 21 官方 API 逐字）。
+
+**独点2** 失败传播 all-or-none：任一参与方 interrupt / timeout / barrier action 抛异常 → 其余所有等待方抛 `BrokenBarrierException`，barrier 置 broken 态；超时版额外抛 `TimeoutException`。判据——汇合点未定义 broken 态与超时出口，判「参与方不足可永久挂死」（该风险由 await 语义推出，非独立论文逐字）。
+
+**独点3** DAG join 映射：trigger rule 决定汇合——`all_success`（默认，全上游成功）/ `all_done`（不分成败）/ `one_success`（任一成功即放行）；barrier 语义对应前两者，不对应 `one_success`（Airflow 官方逐字）。判据——把 barrier 直接等同于任意 join 判错；分布式屏障的失败传播外推须标推断（Spark barrier 章节未取到一手）。
+
+- **判重：`屏障`/`barrier` 本体命中为 actor mailbox/其他语境，同步屏障专节 0；与 §r795I DAG 调度、§r793A Temporal 确定性分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CyclicBarrier.html（Oracle Java SE 21 官方 API，WebFetch 200 逐字：全员 await 放行/可复用/BrokenBarrierException 与 broken 态）; https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CountDownLatch.html（Oracle Java SE 21 官方 API，WebFetch 200 逐字：one-shot count cannot be reset/await 阻塞至零/countDown 方不必等）; https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html（Apache Airflow 官方，WebFetch 200 逐字：all_success 默认/all_done/one_success）。Spark Barrier Execution Mode 两页未返回正文；all-or-none 外推分布式标推断。 逐字全文与判非见 `references/r796I_汇合同步.md`。

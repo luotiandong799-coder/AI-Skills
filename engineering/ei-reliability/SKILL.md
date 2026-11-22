@@ -3,7 +3,7 @@ name: ei-reliability
 description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。错误预算、燃尽率、burn rate、多窗口告警、multiwindow、SLO 告警、Page/Ticket 分档、短窗口泄漏问题。触发：错误率告警阈值怎么定、告警疲劳。
 module: EI
 modules: EI,VI
-version: 1.12.0
+version: 1.13.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -300,3 +300,15 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 
 - **判重：`写偏斜`/`write skew`/`snapshot isolation`/`可串行化` 在本体 0 命中（仅 .research 研究快照与相邻技能 phrasal 命中）；与 §六有界重试、§十五分布式锁、§十七舱壁分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://www.postgresql.org/docs/current/transaction-iso.html（PostgreSQL GDG，v19 文档，WebFetch 200 逐字：SSI 定义 / 330 vs 300 反例 / predicate locks 不阻塞不死锁）；https://wiki.postgresql.org/wiki/SSI（PostgreSQL 官方项目 Wiki，WebFetch 200 逐字：write skew 定义 / first committer wins / dangerous structure）；https://arxiv.org/abs/1208.4179（Ports & Grittner，VLDB 2012，2012-08-21，补充：首个生产数据库 SSI 实现）。无。 逐字全文与判非见 `references/r795C_写偏斜SSI.md`。
+## 二十二、背压与有界队列：压力必须沿下游→上游传，无界缓冲只是把 OOM 往后挪（r796C 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§§16–21 管「谁能进、失败怎么退、并发怎么错」，本章管**进来之后排不下怎么办**：队列大小不是默认值，是要按可容忍延迟反推的硬边界。
+
+**独点1** 队列上限先算后配：按 Little's Law `L=λW`，由可接受等待 W 与到达率 λ 反推每个队列/缓冲上限并写明；判据——出现 unbounded queue / 「缓冲区默认无限」判不合格。Reactive Streams 规范逐字：all buffer sizes are to be bounded and these bounds must be known and controlled by the subscribers；无界缓冲在为无限流时导致 OOM。
+
+**独点2** 满队列策略四选一并写死：阻塞（按 demand 停生产）/ 丢弃式（onBackpressureDrop）/ 保留最新（onBackpressureLatest 覆盖旧值）/ 报错（MissingBackpressureException 终止序列）。判据：在入口 admission 写 429（RFC 6585，附 Retry-After）或 503（RFC 9110，临时过载）之后再写处理逻辑；禁止在已超时请求上继续耗资源、禁止无等待立即重试。
+
+**独点3** 背压信号须沿下游→上游传递（订阅者 demand、流控窗口、对生产者降速），再在入口做 load shedding；判据——若中间层吸收压力却不向上游传信号，该层就变成新的无界缓冲。与 §16 入口限流分工：那里管「按什么速率进」，本章管「排不下时的压力回传」。
+
+- **判重：`backpressure`/有界队列在本体仅 §16 load shedding 词组与 §75 SDK client 作用域，无专节；`wb-debug-loop` 有「背压分丢弃/阻塞两档」一句（相邻技能异命题），豆包自留地 WB 0 落地。按四态判「增」加厚。**
+- **来源与诚信**：https://github.com/reactive-streams/reactive-streams-jvm（Reactive Streams 官方规范 v1.0.4，WebFetch 200 逐字：缓冲必须有界且由订阅者控制/无限流无界致 OOM/backpressure mandatory）; https://raw.githubusercontent.com/ReactiveX/RxJava/3.x/docs/Backpressure-(2.0).md（RxJava 官方文档，WebFetch 200 逐字：下游通知上游降速/无界缓冲致堆 1M 元素/有界缓冲溢出终止/DROP 与 LATEST 两算子）; https://www.rfc-editor.org/rfc/rfc6585.txt（IETF RFC 6585，2012-04，WebFetch 逐字：429 too many requests/Retry-After）; https://www.rfc-editor.org/rfc/rfc9110.txt（IETF RFC 9110 §15.6.4，2022-06，WebFetch 逐字：503 temporary overload/Retry-After）。sre.google handling-overload 两页 fetch failed；Little's Law 公式仅 WebSearch 级证据已标注，未计一手。 逐字全文与判非见 `references/r796C_背压有界队列.md`。

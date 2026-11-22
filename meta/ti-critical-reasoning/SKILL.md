@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
 description: 因果推理与批判性思考（Thinking Intelligence）：区分相关与因果、评估方案真实贡献、反事实推演、识别 LLM 关联误判因果时调用。基于 Pearl 因果阶梯/do-calculus/SCM/DAG/后门前门调整，补齐关联推理的因果盲区。；未测混杂敏感性 E-value（RR 阈值/点估计与 CI 端各算/保守不判混杂存在/连续暴露按 IQR 标准化）；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）；论证图式与批判性问题（推定可废止/assumptions 与 exceptions 举证/图式目录覆盖缺口与错分）。；因果跨域可迁移性（S-node 指向机制/transport formula 三式/三档/meta-analysis 抹平差异之误）。；认知接种与预驳斥（弱攻击+反驳预热/counterarguing才是抗体/被动阅读优于主动自生/泛化须显式验证）。；因果发现（CPDAG 等价类/PC 与 GES 同边界/LiNGAM 非高斯定向/承重假设不可检验）。；面板数据准实验因果识别（DiD 平行趋势不可验证只能事前诊断/SCM 对 donor pool 加权构造反事实且凸包条件与过拟合风险/SDID 双权重放松平行趋势且可大面板推断）。；工具变量与 LATE（IV识别complier局部效应非全员ATE/排除限制不可数据检验/monotonicity无defiers才给正权重/多工具下单调性与异质性效应不相容）。；目标试验仿真TTE（先写七组件RCT协议再映射观察数据/设计缺陷比统计失配更常致错/94%观察CER有设计缺陷）；永生时间偏倚（未来治疗状态定义暴露却提前起随访→强制对齐 time zero）；clone-censor-weight 克隆人工删失加 IPCW 仿效宽限期策略、仍受无未测混杂与 positivity 约束。；G方法/g-formula（处理-混杂反馈致传统回归双向偏倚/g-computation 拟混杂+结局模型前向模拟再平均/与 IPTW-MSM 建模侧对称差异/g-null 悖论/双重稳健 AIPTW·TMLE）。；交错处理时点TWFE偏误（已处理单位当对照产生负权重·效应异质时系数可翻负·Goodman-Bacon分解看timing权重·CS/SA/stacked稳健估计量·多估计量一致不等于验证·预期效应是设计问题重加权修不了）。
-version: 2.8.0
+version: 2.9.0
 module: TI
 modules: TI,EI
 ---
@@ -484,3 +484,15 @@ Barrios 三条 takeaway 逐字：①「The bias is arithmetic」——TWFE 是�
 
 - **判重：全库 `mediation` 4 命中均为后门/前门/调整集语境（TI §「条件于中介 M 会改变估计对象」仅一句），中介分析专节 0；与 §20 RDD、§13–23 识别策略分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://europepmc.org/articles/PMC11821701（Schuler 等，Health Serv Outcomes Res Methodol，2024-04-12，WebFetch 200 逐字：NDE+NIE=总效应 / CDE 定义 / interventional 假设更少但不分解）；https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12261401/（Gervais 等，2025，WebFetch 200 逐字：中间混杂下 natural effects 不可识别 / 无中间混杂时 IDE 退化为 NDE / 不满足单调性与严格中介零准则）。imai.princeton.edu/research/mediation.html WebFetch failed；FTP UCLA r379 PDF 非文本；均不冒充一手。 逐字全文与判非见 `references/r795A_中介分析.md`。
+## 三十三、倾向得分：先定 estimand 再选匹配/加权，PS 不是结局模型（r796A 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§13–32 管「图上识别总效应」，本章管观察数据里另一种降维：把一堆协变量压成一个处理概率，用它做平衡而非预测结局。
+
+**独点1** estimand 先行：ATE↔IPTW（`w=1/e` 处理组、`1/(1−e)` 对照组）、ATT↔匹配、ATO↔overlap weights（每个单位权重∝被分到对立组的概率，有界且在该类平衡权重中渐近方差最小）。判据：方案只写「用了 PSM/IPW」却没声明目标人群（ATE/ATT/ATO）→ 不合格。Austin 逐字：PS 是「probability of treatment assignment conditional on observed baseline characteristics」且是 balancing score。
+
+**独点2** 平衡检验判据：先报告每个协变量绝对标准化差 SMD≤0.1（Austin/Medaglio 逐字），再画共同支撑/重叠分布并裁掉不重叠尾部，最后才报效应；禁止用 p>0.05 代替 SMD（样本量影响 p 而 SMD 不），禁止在非重叠区外推。匹配后仍须在结局模型里对残余不平衡做回归调整，禁止匹配完直接比两组均值。
+
+**独点3** PS 只由处理前协变量估计「处理概率」，用途是设计与平衡，把研究设计与结局分析分离；禁止把 PS 当结局预测模型、禁止纳入处理后变量。残余系统差异存在时须迭代修改 PS 模型而不是直接接受结果。
+
+- **判重：全库 `倾向得分`/`propensity score` 命中仅 TI §r778/RDD 判重语句，本体 0 专节；与 §13 后门、§20 RDD、§32 中介分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://europepmc.org/articles/PMC3144483（Austin，Multivariate Behav Res 46(3)，2011，WebFetch 200 逐字：PS 定义/balancing score/SMD<0.1/残余差异需修改模型/ATT 定义）; https://pmc.ncbi.nlm.nih.gov/articles/PMC9980423/（Medaglio 等，J Am Coll Clin Pharm 5(4)，2022，WebFetch 200 逐字：SMD≤0.1/common support/裁尾部/设计与分析分离）; https://arxiv.org/abs/1404.1785（Li/Morgan/Zaslavsky，arXiv:1404.1785，JASA 2018，WebFetch 逐字：overlap weights 权重∝对立组概率/有界/渐近方差最小）。tandfonline PDF 反爬、PMC 部分 URL HHS 拦截、Harvard 教材页 404；均未冒充一手。ATO 命名仅检索级证据已标注。 逐字全文与判非见 `references/r796A_倾向得分.md`。

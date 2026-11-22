@@ -3,21 +3,16 @@ name: meta/pdi-forecasting
 description: 预测与概率判断（Predictive Intelligence）：估计事件发生/时点/量级、给结论配概率、情景推演、"押个概率/预测一下"时调用。含超预测五步法（问题精化→参考类基率→内部微调→贝叶斯小步→Brier 闭环）、费米拆解、范围敏感性、Pre-Mortem、0.1–0.9 校准带；只输出可结算判断、不作行动决策。；题面可结算性（什么算/何时算/谁裁定·三类规格缺陷·回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO·误差累积与随机依赖两轴·跨视界可比与逐视界最准互斥）；加权评分（w(y)S破坏适当性·threshold/outcome-weighted两类）；回测协议（purge+embargo两漏/CPCV一条历史变多路径/PBO+Deflated Sharpe计试验数/单路径非证据）；事件型预警（point-adjustment让随机探测器拿高F1/事件级检出率·延迟·单位时间误报三栏/range-based与k-delay）；专家概率引出（分位数法X05/X50/X95/锚定两口径/Cooke种子题双评分加权/校准优先信息性/平均专家90%区间仅36%含真值）；预测组合场景依赖（adaptation 追平最佳单候选 vs improvement 超越全部/不看场景套方法即制造组合之谜/mAFTER 把简单平均当候选）；MCMC 收敛（R-hat split+rank/folded 取max+bulk·tail-ESS双达标/全局含lp__/诊断只验失败不证收敛）；多变量评分（ES=CRPS高维推广严格适当但相关误设判别力有限/VS测相关仅适当非严格/二者kernel scores互补·DM检验）；pinball分位评分（严格适当·minimizer=条件τ分位/非对称τ与1−τ·τ=.5即MAE半/coverage gap>5pp/skill score对气候基线/单点分位好≠全分布好）；分位数交叉与尾部外推（q90<q80不连贯·单调参数化/联合拟合/事后排序/极端分位外推/边际分位非联合分布）。；split conformal构造与有限样本可认证上限（四步·qhat=⌈(n+1)(1−α)⌉分位·(n+1)修正使覆盖exact·小样本上限n/(n+1)·坏预测器付宽度不付有效性·set size是信号·APS/RAPS/CQR·与置信区间/温度缩放区分）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.20.0"
+version: "1.21.0"
 ---
-
 # PDI · 预测与概率判断（Predictive Intelligence）
-
 > 本技能是 Personal AI OS 13 模块中 **PDI（预测智能）** 的唯一载体。TI 想明白因果、DI 在多方案中选择、PDI 负责"给未来事件配一个可结算的概率并持续校准"。
 > 方法论实拉自 2026-11-07 WebSearch（真实可核验）：judgmentcallpodcast.com（Tetlock/IARPA ACE、超预测 Brier≈0.14）、duelduck.com（五步框架、基率先行、单因素调整上限 10–15pp）、predictionmarketsindex.com（超预测者 Brier 0.166 vs 普通 0.259）、soul-atlas.github.io/souls/superforecaster（Tetlock 序列/似然比/参考类/Pre-Mortem）、xueqiu.com（费米化/双视角/贝叶斯更新/Brier 闭环）。
-
 ## 一、何时用
-
 - 用户要"评估可能性 / 押个概率 / 会不会发生 / 何时发生 / 量级多大"。
 - 需要把"云状问题"（战略、市场、项目风险）拆成可结算的判断。
 - 情景推演、风险预判、对某结论标注置信度。
 - **不适用**：需要执业资质的高风险结论（医疗/法律/重大投资）→ 只做概率整理，交有资质方；纯事实查询；已确定的历史事实。
-
 ## 二、超预测五步法（核心流程）
 
 | 步 | 动作 | 要点 |
@@ -151,7 +146,6 @@ Brier 分数只是一个数，分解才知道**错在哪**，避免修错方向�
 - **r734A-2 ★coverage 与 width 必须作为联合约束，且只有 proper interval score 能把两者折成一个数**：MDPI §6.2 逐字 "A calibrated interval should have PICPα ≈ 1−α. Nevertheless, **interval coverage should not be interpreted separately from interval width. A model can achieve nominal coverage by producing excessively wide intervals**"；"PIAW and its normalized version, PINAW, **reward narrow intervals regardless of whether the empirical coverage is adequate**. Therefore, they are best interpreted jointly with PICP and, preferably, with a proper interval score"；Winkler 分数式 (6) `ISα(L,U;y) = (U−L) + (2/α)(L−y)1{y<L} + (2/α)(y−U)1{y>U}`——"This score **rewards narrow intervals but penalizes observations that fall outside the interval**, with larger penalties for more severe violations. It is therefore consistent with the calibration-sharpness principle"。temporalcv 官方文档逐字同式并标注 "Reference: **Gneiting & Raftery (2007, equation 43)**"、"Alias for compute_interval_score(). **Winkler (1972)** is the original formulation"、CRPS = `E|X−y| − 0.5·E|X−X′|`。判据：① 只报「95% 区间覆盖率 94.8%」等于允许无限宽区间刷满，必须同时报平均宽度与 IS；② PIT 直方图近似均匀只诊断**边际**校准（MDPI §6.5 "average scores may hide systematic failures during specific hours, price regimes or high-renewable periods"），不评依赖结构；③ AWD 是诊断量不是评分规则，不能拿来排名模型。
 - **r734A-3 ★分数差要做显著性检验，且统计分数改进不等于决策价值**：MDPI §6.6 逐字 "Forecast comparisons should **not rely only on differences in average scores**. Since electricity prices are serially dependent ... apparent improvements may be driven by sampling variability"；给出 Diebold–Mariano（`DM = d̄ / sqrt(σ̂²_d/T)`）、Giacomini–White 条件预测能力检验（`H₀: E[g_t]=0`，`g_t=z_t·d_t`），多模型并列时 "pairwise testing can lead to multiple-testing problems. In such cases, researchers may use **model confidence set** procedures"；§6.7 又给出两条边界——"**CRPS is scale-dependent** and does not assess cross-hour or cross-market dependence. Therefore, comparisons across markets with different price levels or volatility should be interpreted carefully"、"**a statistically superior probabilistic forecast does not always imply higher decision value**"，须报完整 forecast-to-decision 链。判据：① 宣称「新版比旧版好」必须附分数差检验与所用尺，不能只比两个平均数；② 跨题目集／跨波动期比原始 CRPS 无意义（与 §7.2「跨题目集比原始 BS 无意义」同构，但那是 UNC，这是尺度与依赖）；③ 预测台账的「结算」栏须包含「尺 + 差检验 + 决策映射」三项，缺任一不许写「预测能力已提升」。
 **提升层**：工作流（预测台账与结算协议）+ 可复用 Skill。触发词：评分对象形态、CRPS、pinball loss、Winkler／interval score、PICP/PINAW、energy score、variogram score、PIT、Diebold–Mariano、Giacomini–White、model confidence set、scale-dependent、forecast-to-decision。
-
 **判非（本轮独立机检，登记不落地）**：`CRPS`／`pinball`／`Winkler`／`interval score`／`PICP`／`energy score`／`variogram`／`Diebold-Mariano`／`Giacomini-White`／`model confidence set` 全库 SKILL.md **0 命中**；`PIT` 11 命中经查为 `pit`/`pivot` 等子串与其他命题，非 PIT 直方图；§7 的 Murphy 分解、§8 的 ECE 分箱均属点概率层，本节不重立论；MDPI 综述中 QRA／conformal／normalizing flows 等**建模方法**族不属 PDI 评分规则，不搬。arXiv PDF 与 MIT 系 PDF 的 WebFetch 二进制拒绝如实登记（见下来源），未冒充一手全文直读。
 
 ### 2026-11-11 r734A 增补来源（逐字核验，四独立域交叉）
@@ -175,7 +169,6 @@ JRSSB 2025 把条件覆盖改写成「一族协变量 shift 上的覆盖」：�
 ### r737C-3 ★边际有效掩盖高风险子群，且往往不知道该查哪个子群
 
 JRSSB「Marginal validity does not preclude substantial variation in coverage among relevant subpopulations」；NeurIPS 2023 ImageNet 实例：名义 90% 下整体 89.8%，water jug 类仅 **50.8%**、flamingo **99.2%**；Springer 举末期患者被 undercover、少数族裔风险被误估，并逐字「oftentimes we do not have prior knowledge that what subpopulations may be at stake, or do not have access to the sensitive attribute information」（Fairness under unawareness）。⇒ 高风险预测必须分子群报覆盖 + 显式列出「未核验的子群」；仅报一个总覆盖率等于把最脆弱的那部分藏进平均数。
-
 **提升层**：PI 输入保真 / AI 验收协议 / PDI 结算台账（按轮）。触发词：边际覆盖、条件覆盖、exchangeability、covariate shift、coverage gap、子群覆盖、PICP 作用域。
 
 ### r737C 来源与判非（逐字核验）
@@ -185,7 +178,6 @@ JRSSB「Marginal validity does not preclude substantial variation in coverage am
 - `papers.nips.cc/paper_files/paper/2023/file/cb931eddd563f8d473c355518ce8601c-Paper-Conference.pdf`（NeurIPS 2023《Class-Conditional Conformal Prediction with Many Classes》，WebSearch 快照逐字）：ImageNet 实例「Running STANDARD using a nominal coverage level of 90% on 50,000 examples … yields prediction sets that achieve very close to the correct marginal coverage (89.8%). However, this marginal coverage is achieved by substantially undercovering some classes and overcovering others. For example, water jug … only include it in 50.8% of the cases … flamingo … 99.2%」；形式化「class-conditional coverage: P(Y_test ∈ C(X_test) | Y_test = y) ≥ 1 − α, for all y」，且「(2) implies (1)」。**学术一手交叉（PDF 未全文直取，仅快照数值）**
 - `ww2.amstat.org/meetings/jsm/2023/onlineprogram/abstract.cfm?sid=3157&tid=3157-p3`（ASA JSM 2023 摘要，WebSearch 快照逐字）：「In general, it is impossible to form non-vacuous prediction intervals that give valid conditional coverage in finite samples. Thus, popular predictive inference methods only provide marginal coverage over the covariates.」；同一组作者给出「coverage over a class of covariate shifts」的折中路径与「exact coverage over each group」。**独立学会摘要交叉**
 - `econstor.eu/bitstream/10419/308058/1/1913045811.pdf`《An Introduction to Conformal Inference for Economists》：**WebFetch 返回 Anubis 反机器人验证页，正文未取到**；WebSearch 快照含 Proposition 1（Lei et al. 2018 / Foygel Barber et al. 2021）与 exchangeability 论证，但按先例**不冒充一手全文直读**，本轮仅作现象登记，结论一律由 JRSSB + Springer 两篇一手交叉支撑。**访问受阻，如实登记不采纳**
-
 - **判非**：窄串词边界全库 SKILL.md：`marginal coverage` / `conditional coverage` / `exchangeability` / `calibration set` / `undercover` **全 0 命中**；`conformal` 唯一命中在本技能 §十 r734A 的**判非段**（明确写「QRA／conformal／normalizing flows 等**建模方法**族不属 PDI 评分规则，不搬」）。本轮不引入任何建模方法/算法流程，只取**统计保证的验收语义**（覆盖类型、三目标不可兼得、exchangeability 前提、子群 gap），与 r734A 判非不冲突且正好补齐其留下的元层；与 §十 的 PICP/PINAW/IS 分工：那节是「怎么打分」，本节是「这个分数保证不了什么」。豆包自留地 WB 0 落地。
 - **换道/未采纳**：换道：clustered conformal / CLASSWISE / normalized conformal 等**生成预测集的算法族**按 r734A 判非一律不搬；econstor PDF 被 Anubis 反爬拦截，其 Proposition 1 仅作 WebSearch 快照登记、不冒充一手全文；Springer 的端到端训练改条件校准方案属建模方法，不采纳。A/B 两轮结论一律不复用。
 
@@ -489,12 +481,20 @@ n=8 残差排序 {0.2,0.3,0.4,0.5,0.6,0.8,0.9,1.1}，α=0.125 时 k=⌈9×0.875�
 ## 二十六、层级预测协调：分别预测各层会加总不一致，协调是投影不是归一化（r795M 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
 
 §25 conformal 管「单个预测的不确定性」，本章管**多个层级之间的加总约束**：底层加总要等于上层，分别最优的各层预测直接放在一起通常不 coherent。
-
 **独点1** 一致性判据：协调须满足 `S G S = S` 且 `ỹ = S G ŷ`（G 为协调矩阵）；只有「先加总再归一化」而无投影矩阵 G → 非最优协调。FPP3 逐字：分别预测的各层「they are not coherent (they don't add up correctly)」，且「no top-down method satisfies this constraint, so all top-down approaches result in biased coherent forecasts」。
-
 **独点2** 谱系判据：按 W 结构区分 OLS(W=I)、WLS(W=diag σ²)、MinT(完整 W)、MinT-shrink(W 向对角收缩)；混用称谓判错。MinT 原始论文逐字：coherence 是「forecasts for the most disaggregated series…add-up exactly to…aggregated series」，完整 W「impossible to estimate in practice due to identifiability conditions」，故在无偏假设下最小化全体序列协调后 MSE。
-
 **独点3** 概率判据：概率预测须检验预测分布的线性约束（projection 或 copula 重排）；只在点预测协调却声称「区间自动一致」无一手支持。Gaussian 框架下 MinT 最小化对数评分（arXiv:2103.11128），此为分布假设下的结论，不自动外推到任意分布。
-
 - **判重：`层级协调`/`hierarchical reconciliation` 本体与全库 SKILL.md 0；`reconciliation` 7 命中为冲突消解/对账异命题；与 §十 width×coverage、§十一边际 vs 条件覆盖、§25 conformal 分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://otexts.com/fpp3/hierarchical.html（Hyndman & Athanasopoulos，Forecasting: Principles and Practice 3rd ed. §11.3，作者官方站点，WebFetch 200 逐字：bottom-up/top-down/middle-out 与 only strictly hierarchical / 不 coherent / top-down 有偏 / MinT=min_trace）；https://robjhyndman.com/publications/mint/（Wickramasuriya/Athanasopoulos/Hyndman，JASA 114(526):804-819，2019-06-14，WebFetch 200 逐字：coherence 定义 / W 不可估 / 无偏下最小化 MSE）；https://arxiv.org/abs/2103.11128（Wickramasuriya，Probabilistic forecast reconciliation under the Gaussian framework，2021-03-20，WebFetch 200 逐字：incoherent→coherent 映射 / OLS·WLS·MinT / Gaussian 下 MinT 最小化 log score）。arXiv:1706.09245 抓错（实为 Kassarnig 等教育行为论文），已弃用并如实登记；MinT.pdf fetch failed，改作者 publication 页。 逐字全文与判非见 `references/r795M_层级协调.md`。
+## 二十七、校准诊断：可靠度图读方向、ECE/MCE 与held-out 分箱稳健性（r796M 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§21 温度缩放与 §25 conformal 都是修正/构造，本章只做**诊断**：先看概率和频率对不对得上，再决定要不要动模型。
+
+**独点1** 方向判据：预测分箱后逐箱算 `conf_b=mean(p)`、`acc_b=mean(1[ŷ=y])`；`acc_b−conf_b<−δ` 判该箱过度自信（落在 y=x 对角线下方），`>+δ` 判欠自信（上方），全部箱 |差|≤δ 才判已校准。scikit-learn 逐字：predict_proba≈0.8 的样本约 80% 真属正类；Nixon 2019 逐字：overconfidence/underconfidence 由 calibration 度量。
+
+**独点2** 评估集与标量判据：诊断样本须与训练/校准/修正样本互斥（held-out）；报 `ECE=Σ_b(n_b/N)|acc_b−conf_b|` 并同时报 `MCE=max_b|acc_b−conf_b|`。判据——在训练集上出图或以其 ECE 下结论判不合格；以单一 Brier 值充当校准结论判不合格，须落到 Murphy 三项 `REL−RES+UNC`（Brier 低也可能校准更差、分辨力更高）。scikit-learn 逐字：用训练输出拟合校准器会有偏、把概率推向 0/1。
+
+**独点3** 分箱稳健性判据：固定 M 的 ECE 不得为唯一结论，须做 M 敏感性（如 M∈{10,15,20} 或等频 AdaECE）；排名随 M 翻转判「分箱数敏感/不可采信」，任一箱 n_b 过小则该箱不参与判定。Nixon 2019 逐字：等距分箱受数据分布离散影响、自适应分箱更稳。与 §21/§25 分工：本条只诊断不修正，温度缩放/conformal 构造不重述。
+
+- **判重：`可靠度曲线`/`reliability diagram` 本体 0；`校准` 命中为 §21 温度缩放与 §25 conformal 区分句，本轮只取诊断读图正交面；豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://scikit-learn.org/stable/modules/calibration.html（scikit-learn 官方 v1.9.1，WebFetch 200 逐字：calibration curves=reliability diagrams/分箱 x 轴=箱均预测概率/0.8→80%/训练输出拟合有偏/Brier Murphy 分解）; https://ar5iv.labs.arxiv.org/html/1904.01685（Nixon 等，arXiv:1904.01685，CVPR 2019 Workshop，WebFetch 200 逐字：ECE 等距分箱定义/过自信欠自信/等距分箱弱点/自适应分箱更稳）; https://proceedings.mlr.press/v70/guo17a.html（Guo 等，ICML 2017 PMLR 70:1321-1330，WebFetch 摘要逐字：confidence calibration 定义/温度缩放是单参数 Platt 变体；正文 PDF 非文本未取）。Guo PDF 非文本仅取 PMLR 摘要；Murphy 1973 DOI 验证码墙，三项分解由 scikit-learn 官方转述非原文。 逐字全文与判非见 `references/r796M_校准诊断.md`。

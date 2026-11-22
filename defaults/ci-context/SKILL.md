@@ -1,7 +1,7 @@
 ---
 name: ci-context
 description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体、装配逐级留痕、检索与答案评估分离、块完整性与权限判据。前缀缓存块级链式哈希/三级有序驱逐/隔离维度（cache_salt·LoRA ID·感知哈希）。context editing（removal≠summarization·五参数·applied_edits回执+count_tokens预览破缓存）；注意力汇聚与流式无限上下文（softmax 归一把残余注意力压到首 token·驱逐 sink 触发困惑度悬崖·4 sink token + 滚动窗·cache 相对位置编码·sink 量化脆弱性与 off-by-one 缓解）。注意力两时间窗（H2O累积淘汰+近端双保·local统计不需未来·SnapKV预填充前投票·静态剪枝随指令错位·top-k逐点留切断实体须聚类）。RoPE 外推家族（PI线性插值/NTK改base保高频/YaRN按波长混合加温度·保真注意力模式与attention entropy才是成败真因·需长序列继续训练·路线与成本画像随族分裂）。KV低比特量化（KIVI非对称2bit·key逐通道固定outlier·value逐token值加权混合·残差缓冲保流式·误差面key移注意力vs value稀释·倍率挂模型口径）。 软token压缩第三面（gist/AutoCompressor·与提示硬删/KV量化正交·summary accumulation跨段累积·收益分母与丢信息并报）·KV分层放置·IO感知精确注意力FlashAttention（tiling增量softmax·重计算换HBM·exact非近似·正交KV压缩）虚拟上下文管理MemGPT（RAM↔外存分页·主上下文三段+recall/archival·70%水位自导向换页·递归摘要静默失真）
-version: "2.7.0"
+version: "2.8.0"
 module: CI
 modules: CI
 ---
@@ -331,3 +331,15 @@ GitHub 一手整合逐字：「**Clearing invalidates the cached prefix from the
 
 - **判重：`CacheBlend` 本体仅 §r751B 前缀缓存判非句出现，无专节；与 §前缀缓存、§context editing、§KV 量化分工不复用。豆包自留地 `wb-context-compressor` WB 0 落地。ID 纠错：真实 arXiv:2405.16444，v1 2024-05-26。**
 - **来源与诚信**：https://arxiv.org/abs/2405.16444（Yao 等，arXiv:2405.16444，2024-05-26，WebFetch 200 逐字：非前缀不可用原因 / selectively recomputes / TTFT 2.2-3.3× 与吞吐 2.8-5×）；https://arxiv.org/html/2405.16444v3（WebFetch 200 逐字：HKVD top-k 偏差选择 / 15% tokens 时 KV 加载掩盖重算）；https://github.com/LMCache/LMCache（作者一手仓库，WebFetch 200 逐字：Non-prefix KV reuse / KV 从临时态变可持久复用知识 / 适用 RAG 与多轮）。题面猜测 ID arXiv 2501.xxx 不存在，已核实纠正；dblp 记录页 Anubis 反爬，未采用。 逐字全文与判非见 `references/r795H_CacheBlend.md`。
+## KV 显存分页 PagedAttention：块表映射非连续显存，COW 共享前缀（r796H 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§前缀缓存管「要不要重算」，本章管**算完的 KV 怎么放**：连续预分配造成 60–80% 浪费，分页把它降到 <4%，与前者正交。
+
+**独点1** OS 类比四元组齐全：blocks=pages / tokens=bytes / requests=processes / block table 映射逻辑块→非连续物理块；判据——缺「物理块非连续」或缺 block table 不命中。论文逐字：divides KV cache into blocks … not necessarily stored in contiguous space；one can think of blocks as pages, tokens as bytes, requests as processes。
+
+**独点2** 数字成对出现：现有系统仅 20.4–38.2% KV 显存放真实 token 状态、浪费 60–80% → vLLM under 4%；判据——只写「零浪费」判不精确。定长块消除外部碎片，块级共享 + reference count + Copy-on-Write 让共享前缀只存一份（vLLM 官方博客逐字）。
+
+**独点3** 正交判据：PagedAttention 管显存放法与碎片/共享（怎么放），prefix caching 管跨请求复用已算 KV（是否重算）；判据——把两者等同或互相替代判错（论文 §6.4 shared prefix 只论证吞吐收益，官方 prefix caching 页面 404 未取一手，正交性为机制归纳按推断标注）。
+
+- **判重：`PagedAttention` 在本体仅 r783B 未采纳句（当时判为显存产品实现未展开），无专节；与 §前缀缓存/KV 量化/FlashAttention/MemGPT 分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://arxiv.org/html/2309.06180（Kwon 等，SOSP 2023，arXiv:2309.06180，WebFetch 200 逐字：OS 分页启发/块非连续/20.4-38.2% 利用率/消除外部碎片/块级共享）; https://blog.vllm.ai/2023/06/20/vllm.html（vLLM 官方博客，2023-06-20，WebFetch 200 逐字：浪费 60-80%→under 4%/block table COW/reference count）。arXiv PDF 非文本改 HTML；docs.vllm.ai prefix caching 页 404，正交性标推断。 逐字全文与判非见 `references/r796H_PagedAttention.md`。

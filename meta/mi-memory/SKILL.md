@@ -1,7 +1,7 @@
 ---
 name: mi-memory
 description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。错误记忆与来源监控（DRM关键诱饵·模糊痕迹verbatim/gist双 trace·激活监测与来源监控失败·误导信息效应与DRM的verbatim反向作用·高置信≠真实须逐字锚点回归）。 定向遗忘两范式分离（item 编码+提取双因/list 提取抑制·accessibility≠availability 换线索验真删·直接抑制vs替代两策略）。 编码特异性检索（线索效力来自编码时共存语境而非语义相似度·情境效应主要是回忆现象须换线索验真删·线索过载与判别竞争限制匹配）。序列位置效应（首因=LTM复述/近因=STM双分离·延迟抹近因不动首因·呈现速率反向·agent按存储层分流验收）前摄/倒摄干扰（学习阶段竞争vs检索抑制RIF正交·AB/AC延迟自发恢复推翻即时覆盖·相似性倒U最危险）
-version: "2.7.0"
+version: "2.8.0"
 module: MI
 modules: MI,AI
 ---
@@ -350,3 +350,15 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 
 - **判重：`familiarity` 本体仅 §r747A「熟悉感错觉」一句（巩固效用评级语境），`recollection`/ROC/PDP 专节 0；与本模块错误记忆、编码特异性分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://pmc.ncbi.nlm.nih.gov/articles/4251874/?report=classic（Yonelinas/Aly/Wang/Koen，Hippocampus 20(11)，2010-11，WebFetch 200 逐字：定量强度 vs 阈值检索 / d′ 与 ROC 截距）；https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13407481/fullTextXML（Balota，Memory & Cognition 54(5)，2026-01-30，WebFetch 200 逐字：PDP inclusion/exclusion / I=R+F−(R×F)）；https://pmc.ncbi.nlm.nih.gov/articles/PMC1389783/?report=classic（Eichenbaum & Fortin，J Exp Anal Behav，2005，WebFetch 200 逐字：全有全无 vs 连续增量 / 熟悉不提供顺序 / 截距与曲率）。PMC 默认 URL 返回 HHS 拦截页，改 ?report=classic 成功；Yonelinas 原始 PDF 403 未强取。 逐字全文与判非见 `references/r795F_双过程再认.md`。
+## 测试效应：检索不是中性读取，短时重读占优、延迟测试占优（r796F 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§双过程再认管「熟悉与记得分离」，本章管**每次检索本身会改造记忆**：把「多复习几遍」换成「分散地提取」，才对延迟保持有效。
+
+**独点1** 短期/延迟交叉反转必须写出：5 分钟后重复学习优于重复测试，但延迟测试（2 天/1 周）下先前测试保持显著更好，即使重复学习提高了学习者信心（Roediger & Karpicke 2006 逐字）。判据——只写「测试永远优于重读」或只写「多复习几遍」均不合格。
+
+**独点2** 机制锚点：提取会直接强化记忆表征（「retrieve … directly strengthen the memory representation」），recall 式测试收益大于 recognition 式多选题；判据——方案无 retrieval 动作、只有 exposure/重读，判「未命中测试效应」。元认知错觉须写进结论：重读提升 confidence 却不提升延迟保持。
+
+**独点3** 三要素可机检：retrieval（recall 非 recognition）+ spacing（分散而非集中，study time is distributed）+ feedback（增强但非必需）；判据——agent 记忆检索「每次检索都强化特定路径」是人类被试结论的跨领域类比，必须标注推断不得当实证引用。
+
+- **判重：`测试效应`/`testing effect`/`retrieval practice` 本体 0 命中（retrieval practice 仅豆包自留地一句），与 §r795F 双过程再认、§巩固效用分工不复用。**
+- **来源与诚信**：https://journals.sagepub.com/doi/10.1111/j.1467-9280.2006.01693.x（Roediger & Karpicke，Psychological Science 17(3)，2006，WebFetch 200 逐字：testing effect 定义/5min 与延迟反转/信心提升但保持更差）; https://journals.sagepub.com/stoken/rbtfl/dEzGRXuJ8AzLI/full（Rohrer & Pashler，Educational Researcher 39(5)，2010，WebFetch 200 逐字：提取直接强化表征/测试+学习优于等时重读/分散学习/回忆优于再认）。无 WebFetch 失败。agent 外推已标推断。 逐字全文与判非见 `references/r796F_测试效应.md`。

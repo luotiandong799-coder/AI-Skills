@@ -1,7 +1,7 @@
 ---
 name: si-safety-governance
 description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。差分隐私、differential privacy、epsilon DP、隐私预算、Laplace 机制、sensitivity 敏感度、组合定理、post-processing immunity、DP-SGD、本地DP中心DP。BOLA、IDOR、越权访问、对象级授权、broken object level authorization、CWE-639。转述授权攻击面、同名对象冒充、能力缺口粉饰、CSRF、跨站请求伪造、synchronizer token、double submit、SameSite、Fetch Metadata、Origin/Referer 校验、token 与会话绑定
-version: 2.7.0
+version: 2.8.0
 module: SI
 modules: SI,EI
 ---
@@ -425,3 +425,15 @@ GitHub Docs 官方逐字：「**rotate the affected credential immediately** ...
 
 - **判重：`算法混淆`/`algorithm confusion`/`kid 注入`/JWT 专节本体全库 0；与 §十四 OIDC、§十凭据泄露、§十五 SSRF 分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://www.rfc-editor.org/rfc/rfc8725.txt（IETF RFC 8725，2020-06，WebFetch 200 逐字：alg=none / RS256→HS256 公钥当 HMAC 密钥 / 一密钥一算法 MUST）；https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/cheatsheets/JSON_Web_Token_Cheat_Sheet.md（OWASP 官方 Markdown 源，访问 2026-11-22，WebFetch 200 逐字：拒绝 alg=none / 公钥误作 MAC 密钥 / kid 注入 / 密钥须有信任链）；https://www.rfc-editor.org/rfc/rfc7519.txt（IETF RFC 7519 §4.1，2015-05，WebFetch 逐字：iss / aud MUST identify / exp MUST NOT be accepted）。OWASP Java cheat sheet 两 URL 404；HTML 页 AI 摘要超时，改用官方 Markdown 源取逐字。 逐字全文与判非见 `references/r795K_JWT混淆.md`。
+## CSP 内容安全策略：纵深防御第二层，先 report-only 观测再强制（r796K 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§JWT 管令牌可信、§SSRF 管服务器被当代理，本章管**浏览器侧的第二道 XSS 防线**：即使转义失败也能挡住资源加载。
+
+**独点1** 定位判据：CSP 是纵深防御第二层，MDN/OWASP/W3C 三处一致——「not an alternative to sanitizing input」「not a replacement for careful input validation and output encoding」；判据——把 CSP 写成输入转义替代品、或唯一防线，判违规。MDN 逐字：provide a defense in depth against XSS, protecting the website even if sanitization fails。
+
+**独点2** nonce/hash 判据：指令含 nonce 或 hash 时浏览器忽略 `unsafe-inline`；CSP3 的 `strict-dynamic` 允许带 nonce/hash 的脚本加载更多脚本，MDN 明确这会降低安全性，须显式声明为何需要。判据——同时写 `unsafe-inline` 与 nonce 却以为更严格，判理解错误。
+
+**独点3** 上线顺序判据：先发 `Content-Security-Policy-Report-Only` 只上报不拦截（W3C/OWASP 逐字：precursor to blocking mode / fail closed），观测后再切强制 `Content-Security-Policy`；`default-src` 是其余 fetch 指令的 fallback，`default-src 'self'` 为同源兜底。JSONP/AngularJS 具体绕过面本轮未取一手，不得写成已验证。
+
+- **判重：`CSP`/`内容安全策略` 在本体仅 §七未采纳句「CSP 全量策略」，无专节；与 §JWT/§SSRF/§CSRF 分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP（MDN 官方，WebFetch 200 逐字：纵深防御 XSS/不替代输入净化/nonce-hash 忽略 unsafe-inline/report-only）; https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html（OWASP 官方，WebFetch 200 逐字：强 CSP 是第二层/不可作唯一防线/report-only 是强制前奏）; https://www.w3.org/TR/CSP3/（W3C 官方标准，WebFetch 200 逐字：Report-Only 只观察不强制/strict-dynamic/不替代输入验证与输出编码）。四官方源全抓取成功；JSONP/AngularJS 绕过面无一手未写。 逐字全文与判非见 `references/r796K_CSP.md`。

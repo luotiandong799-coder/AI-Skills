@@ -3,7 +3,7 @@ name: ri-retrospective
 description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/主持·记录·事故负责人三分离/发言权/时间盒议程与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习深度分级（改动作/改假设策略/改学习机制本身·防御惯例与熟练无能阻断双环·反思-重构循环·学习与有效行为不等价须分层验收）。正常事故理论NAT与HRO对照（交互复杂×紧耦合·安全记录好≠高可靠·降耦合与提前预案）。 故障树FTA与事件树ETA（演绎找致祸组合vs归纳看触发后果·定性最小割集/单点失效/共因·量化=触发频率×条件概率乘积）。 FMEA/FMECA与RPN排序陷阱（模式清单≠优先级·RPN序数相乘伪精度与并列·AP表严重度主导·先分档后档内排序） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障有效/独立/可审计三门）。仍未证明栏（四块结构附没证明什么·可照做≠可审计·修正覆盖三分类）·effective/independent/auditable三门·培训审计是退化控制非屏障·近失改屏障状态不重复训）
 module: RI
 modules: RI,EI
-version: "2.9.0"
+version: "2.10.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -23,19 +23,16 @@ version: "2.9.0"
    - 绝不轻信自报结果：工具说自己成功 ≠ 真的成功。
    - 精确对账：数值/状态逐项比对，不留"差不多"。
    - 比较锚点：用已知正确样本作基准。
-
 2. **handoff-protocol（与实现者协作不失控）**
    - 一句话结论：先给结论再给过程。
    -  phantom stall vs 真实失败：区分"卡住"与"已挂"。
    - 双向对账：双方状态互认，不假设。
    - 自曝假绿：曾报绿但实际未完成的，主动标注。
-
 3. **engineering-economy（最小改动）**
    - 最小改动、最短测试、最佳特性。
    - 动手前先看外部世界（依赖/环境/契约）。
    - 先冻结契约（接口/§条款）再改实现。
    - 性能由基线断言守住。
-
 4. **spec-citation（条款即公共 API）**
    - 编辑前 grep 活引用；语义锚点优于行号。
 
@@ -111,23 +108,19 @@ version: "2.9.0"
 
 - incident.io 逐字："'Review', 'explore', 'investigate' describe activity, not change. They are easy to start and impossible to finish in any meaningful sense. Prefer verbs that create a visible result: add, remove, change, update, test, deploy."；"If an action starts with 'review', it's worth asking what decision that review leads to - and making that the actual action."
 - 对照表（写进复盘模板的硬门）：
-
 | 过程动词（禁作最终行动项） | 结果动词（可验收） |
 |---|---|
 | Review / Explore / Investigate / Discuss / Consider / Evaluate | Add / Remove / Change / Update / Test / Deploy |
-
 - 判据：**「复查监控」永远没有完成态**；把它改写成「这条 review 要导向什么决定」，把决定本身写成行动项。接 §5.4「加强意识不可验收」，本条给可机检的动词白名单。
 
 ### 7.4 行动项的四种死法 + 第五种（系统性）
 
 incident.io 逐字归纳（"How actions die"）：
-
 1. **Nobody owns it** —— "the team should improve monitoring" 是共同意向不是行动；名字才是意向与承诺的分界。
 2. **It lives in the wrong place** —— 只写在复盘文档或临时表格里，不进日常真正打开的工具（tracker），等于借来的时间。
 3. **It's a direction, not a task** —— "Improve alerting" 是罗盘方向不是目的地，没有「yes, done」的那一刻。
 4. **Nobody checks** —— 没有人在既有的站会/交接里问一句「还有未闭环的复盘行动吗」。
 5. **系统性问题是 leadership problem** —— 「理清组件归属」「改激励结构」不该伪装成工程任务塞进 sprint；正解是具名缺口 + 量化后果 + 具体方案 + 给对层级的人 + 期限（例："Component X has no clear owner, which meant it took 40 minutes to find someone…Can we assign ownership to Team Y by end of month?"）。
-
 **反近因偏差（soak time）**：incident.io 指南逐字 "with the influence of recency bias … there's a temptation to prioritize tasks that may not be worth the effort"，故建议给负责团队一段沉淀时间再决定是否承诺，并「we'd encourage you to avoid committing to actions until the owning team has had time to … weigh up the relative importance」；行动项应与事故严重度成比例，讨论时还要看二阶效应（新行动可能引入新风险）。⇒ **复盘会上当场拍出的长清单不是成果，是偏差产物**。
 
 ### 7.5 ★无责 ≠ 无人负责：blame 向后，accountability 向前
@@ -210,15 +203,10 @@ incident.io 逐字归纳（"How actions die"）：
 ## 十、控制结构视角的复盘：CAST 把「事件链」换成「约束为何没被执行」（2026-11-11 r734B 实拉，五独立域交叉）
 
 > 与 §七（准入触发器／贡献三分／动词门／四死法／三态关闭）、§八（复发率验收／反事实语言门／替换测试）分工：那两节是**流程与语言层**；本节是**因果模型层**——用什么结构解释事故，决定复盘能问出哪些问题。CAST/STAMP 在 §七「拒绝单一根因」之上给出可操作的结构载体。
-
 - **r734B-1 ★复盘单位是控制结构，不是失效事件；安全是控制问题不是可靠性问题**：ScienceDirect《Learning from non-failure of Onagawa nuclear power station》(2020-12) 逐字 "STAMP consists of three principles: **safety constraints, hierarchical safety control structures, and process models**"；"accidents are viewed as **violations of system safety constraints and inadequate or ineffective control in enforcing safety constraints**"；"**There is no single root cause for accidents, and safety becomes a control problem where the goal of control is to enforce safety constraints**"；MIT Munekata 论文逐字 "STAMP **models safety as a control problem rather than the traditional view of safety as a reliability problem**"、"STAMP asks **why certain safety constraints were not enforced in the system**"、"It is much easier to blame the operators than to look at the confounding factors that may lead to human behaviors"。判据：① 复盘问题从「哪个组件／谁失效」改成「哪条约束、由谁负责执行、为何没执行」；② 停在找到 failure event 就写行动项，等于把症状当原因；③ 与 §7.2「贡献／缓解／风险三分」互补——三分是分类词汇，控制结构是因果骨架，两者要同时用。
-
 - **r734B-2 ★CAST 九步里第 6 步是核心，且必须逐层上溯；它是分析方法不是调查技术**：MIT smadnick《Cyber Safety》(2014-07) 表 2.3 逐字 "Moving up the levels of the hierarchical safety control structure, establish how and why each successive higher level control **allowed or contributed to** the inadequate control at the current level"；引用 Leveson 原文 "**fully understanding the behavior at any level of the sociotechnical safety control structure requires understanding how and why the control at the next higher level allowed or contributed to the inadequate control at the current level**"，并明写 "This step is the core of CAST analysis ... **This is in contrast to Chain of Events Model where the focus is on a failure event and analysis stops once a failure event is identified**"；MIT dspace 118131 逐字给出第 6 步的二选一归因 "either the responsibility for enforcing it **was never assigned** to a component ... or a component ... **did not exercise adequate control**"，以及人的决策须按四类解释（当时可得信息／缺失信息、behavior-shaping mechanisms、value structures、process models 缺陷及其成因）；同篇 "**CAST is not designed to be a linear process**"（MIT smadnick 亦写 "these steps can be carried out in **any order**"）；Munekata 原文 "CAST is an **analysis method, not an investigation technique** ... used to help identify what questions should be asked and what system design recommendations can be implemented"。判据：① 复盘模板须列出控制结构各层的角色／职责／控制动作／反馈通道，缺反馈通道就没法解释「为何上层没发现」；② 行动项若只落在物理层（修那个坏部件），等于跳过了第 6 步；③ 九步可按任意顺序迭代，做成线性 checklist 会丢掉「上层允许」这个主要结论；④ 与 §8.2「反事实语言门」互补：语言门管措辞（防后见之明），第 6 步管归因方向（防停在人）。
-
 - **r734B-3 ★时间维度独立成一步：控制结构随时间向高风险态迁移**：MIT smadnick 表 2.3 第 8 步逐字 "Determine the dynamics and changes in the system and the safety control structure ... and any **weakening of the safety control structure over time**"；"**Most accidents/incidents occur when a system migrates towards a higher risk state over time.** Understanding the dynamics of this migration towards less safe and secure environment will help with implementing appropriate countermeasures"；MIT dspace 122433 逐字 "CAST ... provides the ability to examine the entire sociotechnical system design to identify the weakness in the existing safety control structure and to identify changes that will not simply **eliminate symptoms but potentially all the causal factors, including the systemic ones**"；MIT Soma 矿难论文逐字 "the interactions in the system components and their changing nature during the course of the accident"、且在数据高度不确定／缺失时仍可给出预防建议。判据：① 复盘模板加一问「事故前 6–12 个月，哪些变更／降本／角色调整削弱了这条控制与反馈」，只重建事发当天时间线不算完成第 8 步；② 与 §8.1「复发率按 90d 窗口」互补——那条是组织级结果指标，本条是单次复盘必须重建的结构演化；③ 数据不全不等于不能复盘：约束执行链可从职责与反馈缺口推出（Soma 案例），但须显式标注证据强度，不得把推断写成事实。
-
 **提升层**：工作流（复盘模板与归因结构）+ 可复用 Skill。触发词：CAST、STAMP、safety constraints、hierarchical safety control structure、process model、control loop feedback、chain of events、migration to high-risk state、上层允许、分析而非调查、九步非线性、约束未分配。
-
 **判非（本轮独立机检，登记不落地）**：`CAST`／`STAMP` 经 **grep -w 词边界** 全库 SKILL.md **0 命中**（初始 7／10 命中全为 `broadcast`／`timestamp` 等子串噪声，已剔除）；`safety control structure`／`hierarchical control`／`chain of events`／`migration to a high-risk`／`an analysis method, not an investigation technique` 均 0 命中；`safety constraints` 1 命中位于豆包自留地 `wb-context-compressor`（语义为「给 SKILL.md 加 Safety Constraints 节」的工程约定），与事故因果模型无关，WB 按纪律 **0 落地**该文件；`sre.google` / `incident.io` 七源（r706C）与组织级学习度量四源（r717C）不重复立论，本节只补系统论因果模型这一层。
 
 ### 2026-11-11 r734B 增补来源（逐字核验，五独立域交叉）
@@ -498,3 +486,15 @@ DevOps AI Toolkit 逐字 prep 四条「**Assemble the timeline in advance.** Pul
 
 - **判重**：`AcciMap` 本体仅在 §r759C / §r790A「未采纳」中作为「不做方法优劣排序」的相邻短语出现，无独立专节；按 rules/07 判「增」。该两处未采纳项声明的是「学界无定论、不做优劣排序」，与本轮 AcciMap 六层映射专节不冲突，按「改了就删」不删有效声明。豆包自留地 WB 0 落地。
 - **来源与诚信**：https://pmc.ncbi.nlm.nih.gov/articles/PMC11905254/?report=classic（Wong & Pawlicki，J Appl Clin Med Phys，2025，WebFetch 200 逐字：六层 / ActorMap Step 4 / Step 8 / root cause seduction）；https://pmc.ncbi.nlm.nih.gov/articles/PMC5179528/?report=classic（Goode 等，Front Psychol，2016，WebFetch 200 逐字：government→regulators→company→management→staff→work / 上下双向 / 图重建因）；https://sciencedirect.com/science/article/pii/S0950423019306552（Xing 等，J Loss Prev Process Ind，2020-03，WebFetch 逐字：六层枚举 / HFACS 受限于分类与航空域 / STAMP 控制结构）。Rasmussen 1997 与 Svedung & Rasmussen 2002 原文未获取；未在任何抓取来源找到「succession of layers」字面短语，未编造。 逐字全文与判非见 `references/r795E_AcciMap.md`。
+## 公正文化 Just Culture：无责≠无问责，替换测试定可责边界（r796E 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§无责复盘仪式管「怎么开会让敢说」，本章管**追责边界在哪**——只喊 blameless 会把故意违规也一并放过，只罚人会压掉报告量。
+
+**独点1** 替换测试 substitution test：判据——把当事人换成「同资质、同动机、同情境」的另一个人，若也会犯同样错 → 判 blameless（human error）；GAIN/Roadmap 逐字：「could a different person (well motivated, equally competent, and comparably qualified) have made the same error under similar circumstances」。只归因「健忘/疏忽/道德弱点」的 person approach 与 system approach 二分须写进结论（Reason 2000 逐字）。
+
+**独点2** 公正文化两半都必须写：判据——鼓励甚至奖励报告安全信息，同时清晰划定可接受/不可接受行为界线；只有前半是误读。四分类：human error 不追责但需 corrective training、negligible/reckless（「conscious disregard of an obvious risk」）/willful 才追责。
+
+**独点3** 报告激励链：判据——反制措施有效性取决于个人是否愿意报告错误，需要信任氛围（GAIN 逐字）；若复盘后报告量下降，判「问责边界设计失败」而非「员工素质问题」。与 §blameless postmortem 边界：无责=golden error 不罚，不推出「完全取消问责」——该边界无 SRE 一手直接支撑，按推断标注。
+
+- **判重：`Just Culture`/`公正文化`/substitution test 在本体仅 r795E/§172 相邻短语，无专节；与 §无责复盘仪式、§r795E AcciMap 分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://www.bmj.com/content/320/7237/768.full（James Reason，BMJ 320:768，2000-03-18，WebFetch 200 逐字：person approach vs system approach/unsafe acts 源于个体心理异常）; https://www.coloradofirecamp.com/just-culture/definitions-principles.htm（GAIN Working Group E《Roadmap to a Just Culture》2004-09 官方报告 HTML 转载，WebFetch 200 逐字：信任+奖励报告且划清行为界线/substitution test 原文/reckless 定义/报告意愿决定反制有效性）。traficom.fi 官方 PDF 非文本、skybrary.aero Cloudflare、sre.google postmortems fetch failed；blameless 边界仅推断已标注。 逐字全文与判非见 `references/r796E_公正文化.md`。

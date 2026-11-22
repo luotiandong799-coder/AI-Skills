@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序、影响图、信息弧、决策节点、价值节点、决策基三要素、前景理论、参照点依赖、损失厌恶、框架效应、确定性效应、反射效应、禀赋效应、编辑与评价两阶段、全局敏感性分析、Morris筛选、Sobol指数、一阶效应、总效应、交互效应、因子排序、因子固定、实物期权、real options、管理灵活性、延迟扩张放弃转换期权、ROV、不可逆投资、参考类预测、reference class forecasting、外部视角、inside view、规划谬误、planning fallacy、乐观偏差、optimism bias、reference class tennis、成本超支、uplift、Flyvbjerg、博弈论决策、game theory、占优策略、最佳回应、纳什均衡、混合策略、逆向归纳、子博弈精炼、不可信威胁、可信承诺、连锁店悖论、策略互动、效用函数 elicitation、标准赌局、standard gamble、确定等价、certainty equivalent、风险容忍常数、Arrow-Pratt、凹性风险规避、vNM公理、多属性效用、加性独立性、概率轮、权衡法、ELECTRE、PROMETHEE、outranking、非补偿性排序、concordance、discordance、净流、不可比、veto阈值
 module: DI
 modules: DI,TI
-version: "1.21.0"
+version: "1.22.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -58,7 +58,6 @@ version: "1.21.0"
 ## 六、MCDA 形式化（加权 / AHP / TOPSIS + 敏感性）
 
 > 加权决策矩阵的严谨版：把"拍分"升级为可审计的多准则决策分析（MCDA）。2026-11-07 实拉。
-
 **① 加权和与归一化**
 - 综合值 `V(a)=Σ wᵢ·sᵢ(a)`，权重归一 `Σwᵢ=1, wᵢ≥0`。
 - 效益型归一 `s=(x−min)/(max−min)`；成本型反向 `s=(max−x)/(max−min)`——方向反了结论必错。
@@ -149,7 +148,6 @@ version: "1.21.0"
 - `www.rand.org/content/dam/rand/pubs/research_reports/RR1900/RR1932/RAND_RR1932.pdf` — **HTTP 403（正文未取到，如实登记不冒充命中）**；其 XLRM / satisficing / 与蒙特卡洛的分工由下列 4 个独立域交叉补足：
 - `tile.loc.gov/.../2024739970.pdf`（RAND 科罗拉多河报告，WebSearch 摘要正文命中 XLRM / satisficing / scenario discovery）；`www.edgechat.ai/robust-decision-making`（XLRM 四要素 / regret / PRIM-CART 细节）；`sciencedirect.com/science/article/abs/pii/S2215016126003183`（OSeMOSYS-RDM：LHS 抽样 + PRIM 场景发现）；`onlinelibrary.wiley.com/wol1/doi/10.1111/j.1539-6924.2007.00940.x/references`（Lempert & Collins 2007：三种鲁棒判据与预防原则对照）。
 
-
 ## 十、排序反转与权重—量表对齐（2026-11-08 实拉，r715C）
 
 > 与 §六④ 敏感性分析的**分工声明（判重结论）**：§六④ 处理「**权重变了**排名会不会翻转」（OAT / 阈值 / 蒙特卡洛 / 情景，输出 RS）；本节处理「**选项集变了**（增删或复制一个备选）排名会不会翻转」——成因是相对归一化而非权重假设，属另一条轴，互补不覆盖。来源：`sciencedirect.com/science/article/pii/S0895-7177(11)00785-0`《On rank reversal in decision analysis》+ `sciencedirect.com/science/article/abs/pii/S0377221799000405`《On the relativity of relative measures》+ 墨尔本大学 CEBRA《Uses and Misuses of MCDA in Environmental Decision-Making》PDF + USP 收录 Dyer《Remarks on the Analytic Hierarchy Process》PDF，4 独立域交叉；`rank reversal` 全库仅 1 处泛用、`秩反转` / `IIA` / `Distributive` / `Ideal mode` / `absolute scale` 全 0 命中。
@@ -198,7 +196,6 @@ DecisionMind 逐字："Members built on the same core logic produce a choice, a 
 - 既有 §十 r715C 三条（排序反转 / Distributive-Ideal / 权重-量表对齐）全在**补偿型内部**讨论；r708A 的 RDM/XLRM 处理**深不确定下的概率不可知**；本轮三点是**补偿 vs 非补偿的聚合规则选择**，三条轴正交，结论不复用。
 - `wb-execute-discipline` / `wb-context-compressor` 为豆包自留地，WB 0 落地；A 轮 OI 结论一律不复用；r731/r717/r715 各轮结论不复用。
 - 换道：ELECTE 厂商站的产品导流（ELECTE ≠ ELECTRE 的辨析、SaaS 风险页）不落地；`people.dsv.su.se` PDF WebFetch 403、TU Delft PDF 二进制被丢弃，均如实登记为搜索快照逐串核验，未冒充一手全文直读；阈值具体数值属易漂移参数，只取不等式与外生性判据。
-
 
 ## 十二、多主体偏好聚合：循环、不可能与议程（2026-11-11 r736B 独立实拉 · DI）
 
@@ -326,7 +323,6 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 - `https://www.researchgate.net/publication/379803705_Preference_reversals_in_judgment_and_choice`（快照逐字：intransitivity + independence「only account for a small proportion of the reversals (**10%**)」、overpricing 归因 scale compatibility、Expression Theory / Change-of-Process 细节）+ `https://baike.baidu.com/item/偏好反转现象`（中文快照：Karni & Safra 1986 / Holt 1986、兼容性假设、权变加权、齐当别模型、为自己/为他人决策诱发反转）。**第四、五独立域（学术仓储与中文百科，立场已登记，不作唯一结论来源）**。
 - 判非：`preference reversal` / `程序不变` / `scale compatibility` / `尺度兼容` / `Lichtenstein` / `Slovic` / `权变加权` / `突出假说` 全库 SKILL.md **0 命中**；`elicitation` 3 命中全部属 MCP 客户端「向用户索取信息」（form/URL 两模式）与豆包自留地评测取样，异命题；`兼容性假设` / `procedure invariance` 在 DI 现有条目无覆盖。与 r715C（选项集增删）、r733B（ELECTRE 权重语义）、r736B（Arrow 偏好聚合）、r744C（决策质量六要素）、r748B（VOI 四尺）逐条分工，均不并存。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
 
-
 ## 十七、AHP 一致性检验的能力边界与规模陷阱（r756A 实拉 · 2026-11-15，3 独点）
 
 > 与 §十 r715C（选项集增删导致排序反转）、§十六 r752B（诱导方式构造偏好）分工：那两条管**结论依赖什么外部条件**，本条管**输入自身那道自洽门到底证明了什么**。§「加权决策矩阵」Step 的一致性比率 CR 是口号级要求，本节给出它的能力边界，按 rules/07「优＝加厚现有」不新建。
@@ -379,7 +375,6 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 - **判非**：`influence diagram` / `影响图` / `informational arc` / `信息弧` / `decision node` / `价值节点` / `决策基三要素` 全库 SKILL.md **0 命中**；`regret` 命中本技能 §十（决策后悔/resulting，异命题）。与 §一（RDM/DMDU 深不确定）、§十（选项集）、§十二（非补偿/veto）、§十三（门型）、§十四（DQ 六要素）、§十五（VOI 四尺：EVPI/EVPPI/EVSI/ENBS）、§十六（诱导方式）、§十七（AHP 一致性）逐条分工，均不并存——本节是**结构建模层**，那八节是**方法/评价层**，本节为 §十五 VOI 提供信息弧结构前置。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除；豆包自留地 **WB 0 落地**。
 - **未采纳**：影响图的求解算法（variable elimination / junction tree 具体推导）、效用函数公理体系（vN-M 完整证明）、价值节点加性可分的数学前提详述、game theory 扩展形式博弈建模、具体工具（GeNIe/Netica）操作步骤、连续节点离散化细节。
 
-
 ## 十九、前景理论：同一个决策换个说法就翻转，权重不是稳定偏好（r764C 独立实拉 2026-11-18，≥2 独立域一手交叉，3 独点）
 
 > DI 前面各章假设「权重/排序能被稳定诱导出来」——§十六证明诱导方式会构造偏好，本章再进一步：**参照点本身可被措辞移动**，同一客观选项在「收益框」与「损失框」下被归到价值函数不同侧，风险偏好直接翻转。这解释了为什么用户「刚才稳健、现在激进」未必是前后矛盾，而可能是你换了表述。
@@ -396,7 +391,6 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 - 交叉快照（不冒充一手全文）：`https://ir.psych.ac.cn/bitstream/311026/32444/1/...pdf`（中科院心理所《Risk preferences in self-other decisions》PDF WebSearch 快照逐字，Köszegi-Rabin 参照点=期望、$400/$500/$600 例、自/他分配框架参照点 100% vs 0%）· 百度百科前景理论/风险决策机制（2020 跨国复制 n=4,098/19 国/13 语言、损失痛苦≥2 倍收益快乐、三参照点理论底线/现状/目标）。原始 1979 Econometrica 论文全文 PDF 未直接取得，按百科一手转述登记不冒充原文。
 - **判非 / 去重**：`前景理论` / `prospect theory` / `损失厌恶` / `参照点依赖` / `框架效应` / `禀赋效应` 全库 SKILL.md 0 落地；`loss aversion`/`reference point` 仅在本技能 §十五 r748B 的判非串（明确写「全库 0 命中」，那里主落地是 VOI 四把尺）。r748B 判非已预留本主题，本轮正式展开、不覆盖其 VOI 结论。与 §十六程序不变性（诱导方式构造偏好）、§十五 VOI（该不该再调研）、§十七 AHP（逻辑自洽门）分工，不并存。与 r762/r761/r760 九模块结论不复用。**豆包自留地 WB 0 落地**。
 - **未采纳**：价值函数/权重函数的具体参数拟合（α≈0.88/λ≈2.25 等）、累积前景理论的秩依赖权重公式、前景理论在金融/营销的具体应用案例（建模与场景细节，留给后续）。
-
 
 ## 二十、没有可信概率时的决策准则：minimax regret 与深度不确定性鲁棒性（r768C 独立实拉 2026-11-19，≥2 独立域一手交叉，3 独点）
 
@@ -492,3 +486,15 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 
 - **判重：`hysteresis`/`滞后阈值`/`双阈值` 本体全库 0；与 §八 EVPI、§十五 VoI、单向/双向门分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://courses.ideate.cmu.edu/16-223/f2018/text/ex/Arduino/input-hysteresis/input-hysteresis.html（CMU IDeATe 16-223，2018 秋，WebFetch 200 逐字：历史依赖定义 / light_threshold 高于 dark_threshold / 小噪声不触发）；https://arxiv.org/html/1910.02026（Casau 等，arXiv:1910.02026，2019-10-04，WebFetch 200 逐字：hysteresis gap prevents chattering / flow μ≤δ 与 jump μ≥δ 重叠）。无。`2–3×噪声` 一类具体倍数非一手来源给出，未写入。 逐字全文与判非见 `references/r795B_决策滞后.md`。
+## 二十八、Cynefin 分域：先定因果可知性再选动作链，别拿 best practice 硬套复杂域（r796B 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§27 决策滞后管切换的状态机，本章管更前置的问题——**这件事属于哪个域**，域错了后面流程再精致也是用错方法。
+
+**独点1** 先定域再选动作链：Clear（因果自明，sense-categorize-respond）/ Complicated（因果存在但需专家分析，sense-analyze-respond）/ Complex（「no linear material causality」，只能 probe-sense-respond）/ Chaotic（无有效约束、需立即止损，act-sense-respond）。判据：对 Complex 域直接套标准流程或 best practice 判违规。Cynefin.io 官方逐字逐域定义可机检。
+
+**独点2** 第五域 Confusion 必须显式：判据——先写「当前不知在哪个域」的出口（拆成子问题分别归域）再给方案，禁止把 Confusion 当 Chaotic 直接「先干再说」。OpenLearn 逐字：模型含五个域（confused/clear/complicated/chaotic/complex）。
+
+**独点3** 域随认知和约束迁移，不是永久标签：最稳定的是 Complex↔Complicated 迭代，稳定到低风险才把部分问题降到 Clear；Chaotic 须先建立约束再转 Complex→Complicated→Clear。判据：长期路线图未写域迁移条件即判静态误判。
+
+- **判重：`Cynefin` 全库 SKILL.md 0 命中；与 §六加权矩阵、§二十七滞后分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://cynefin.io/wiki/Cynefin_Domains（Cynefin Company 官方 Wiki，2021-02 框架版，WebFetch 200 逐字：Clear/Complicated/Complex/Chaotic 逐域定义/Complex 无线性因果/Chaotic 需立即稳定/域间迭代）; https://www.open.edu/openlearn/mod/oucontent/view.php?id=140156&section=4.2（英国开放大学 OpenLearn，WebFetch 200 逐字：五域含 confused/三动作链 probe-sense-respond 与 act-sense-respond/禁止标准解法套复杂场景）。HBR 2007 付费墙仅首段、Kurtz&Snowden PDF fetch failed；均未入引文。 逐字全文与判非见 `references/r796B_Cynefin.md`。

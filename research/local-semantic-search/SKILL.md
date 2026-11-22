@@ -2,7 +2,7 @@
 name: local-semantic-search
 description: >-
   本地语义搜索：在个人电脑上按「意图」而非关键词找内容。覆盖本地文件搜索、PDF 搜索、工作资料查找、历史记录检索、图片与文档关联搜索。核心是理解用户需求后找到相关内容，而非字符串匹配。当用户要在本机找资料、搜历史对话/文档、按意思查文件、跨 PDF 与笔记关联检索时使用。触发词：帮我找、本地搜索、搜一下我的、按意思搜、相关文件、历史记录里、之前那个文档、跨资料检索、语义搜索、找讲过的内容。不适用：联网全网搜索（走 web-scrape/agent-reach）、精确文件名查找（用 Glob/Grep）。
-version: 1.3.0
+version: 1.4.0
 module: KI
 modules: KI
 ---
@@ -113,3 +113,15 @@ modules: KI
 
 - **判重：`chunking`/`分块` 命中多在非本体的 context 压缩技能（豆包自留地 WB 0 落地）与文档读取技能；本技能 §一–§七 0 专节；与 §五 RRF、§七 判定池偏差分工不复用。**
 - **来源与诚信**：https://docs.langchain.com/oss/python/integrations/splitters/recursive_text_splitter（LangChain 官方文档，WebFetch 200 逐字：递归分隔符层级 / chunk_overlap / 中日泰分隔符缺口）；https://arxiv.org/html/2409.04701v3（Günther 等，arXiv:2409.04701，v1 2024-09-04，WebFetch 前 15000/57262 字逐字：先编码后切 / 普通分块丢上下文 / semantic chunking 用相邻句相似度）；https://developers.llamaindex.ai/python/framework/integrations/retrievers/auto_merging_retriever.html/（LlamaIndex 官方，WebFetch 200 逐字：父子递归合并 / 三层 2048-512-128 / 叶节点向量检索父块 docstore）。arXiv HTML AI 摘要 60s 超时，仅取前 15000 字原文，逐字片段均出自该段，如实登记。 逐字全文与判非见 `references/r795G_分块策略.md`。
+## 五、HyDE：先生成假设文档再嵌入，绕过 query-doc 表征不对齐（r796G 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+
+§四管「文档怎么切」，本章管**查询侧**：短问题与长文档的向量不对齐，用 LLM 先写一份「假答案文档」再检索，比直接 embed query 更接近语料空间。
+
+**独点1** 流程三段缺一不可且顺序固定：query → instruction-following LLM 零样本生成 hypothetical document（可含幻觉）→ 无监督编码器（Contriever）嵌入该文档 → 在语料嵌入空间按向量相似检索真实文档。判据——用 query 直接 embed、或跳过生成假设文档 → 非 HyDE。Gao 2022 逐字：generate a hypothetical document 再 encode into embedding vector。
+
+**独点2** 语义鸿沟处理机制：论文把任务分解为 NLG（生成）+ NLU（编码），query-doc 相似度「no longer explicitly modeled nor computed」，靠 encoder 的 dense bottleneck 过滤假文档里的错误细节（「may contain false details」）。判据——不得把假文档当事实来源输出，它只用于检索定位。
+
+**独点3** 与改写类区分：HyDE 改写对象是「文档空间假设」而非 query 本身，不产生多 query 并行检索（区别于 multi-query / query rewriting）；且无需相关性标注、zero-shot 开箱即用。判据——把 HyDE 与 generative retrieval（直接生成 doc id 指向真实文档）混称判错。注意：正交区分由流程推出，非论文原文措辞。
+
+- **判重：`HyDE`/`假设文档` 在 KI 本体 0；豆包自留地 `wb-context-compressor` 有 query transformation 提及（WB 0 落地异命题）；与 §四分块、§五 RRF 分工不复用。**
+- **来源与诚信**：https://arxiv.org/html/2212.10496（Gao/Ma/Lin/Callan，arXiv:2212.10496，v1 2022-12-20，WebFetch 200 逐字：零样本生成假设文档/Contriever 编码/假文档含错误细节/dense bottleneck 过滤/无需相关性监督）; https://aclanthology.org/2023.acl-long.99/（ACL 2023 pp.1762-1777，WebFetch 200 逐字：文档为 fake 含幻觉/向量定位语料邻域/与 generative retrieval 的区别）。arXiv PDF 非文本已改 HTML；「no relevance feedback」「semantic gap」非论文原词，按原词表述。 逐字全文与判非见 `references/r796G_HyDE.md`。
