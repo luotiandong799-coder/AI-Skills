@@ -1,7 +1,7 @@
 ---
 name: ci-context
-description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体、装配逐级留痕、检索与答案评估分离、块完整性与权限判据。前缀缓存块级链式哈希/三级有序驱逐/隔离维度（cache_salt·LoRA ID·感知哈希）。context editing语义（removal≠summarization·trigger/keep/clear_at_least/exclude_tools·applied_edits回执+count_tokens预览破缓存）；注意力汇聚与流式无限上下文（softmax 归一把残余注意力压到首 token·驱逐 sink 触发困惑度悬崖·4 sink token + 滚动窗·cache 相对位置编码·sink 量化脆弱性与 off-by-one 缓解）。注意力两时间窗（H2O累积淘汰+近端双保·local统计不需未来·SnapKV预填充前投票·静态剪枝随指令错位·top-k逐点留切断实体须聚类）。RoPE 外推家族（PI线性插值/NTK改base保高频/YaRN按波长混合加温度·保真注意力模式与attention entropy才是成败真因·需长序列继续训练·路线与成本画像随族分裂）。KV低比特量化（KIVI非对称2bit·key逐通道固定outlier·value逐token值加权混合·残差缓冲保流式·误差面key移注意力vs value稀释·倍率挂模型口径）。 软token压缩第三面（gist/AutoCompressor·与提示硬删/KV量化正交·summary accumulation跨段累积·收益分母与丢信息并报）·KV分层放置·IO感知精确注意力FlashAttention（tiling增量softmax避物化N×N·backward重计算换HBM·exact非近似FLOPs反增内存线性·与KV压缩正交因动计算非缓存）
-version: "2.5.0"
+description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体、装配逐级留痕、检索与答案评估分离、块完整性与权限判据。前缀缓存块级链式哈希/三级有序驱逐/隔离维度（cache_salt·LoRA ID·感知哈希）。context editing（removal≠summarization·五参数·applied_edits回执+count_tokens预览破缓存）；注意力汇聚与流式无限上下文（softmax 归一把残余注意力压到首 token·驱逐 sink 触发困惑度悬崖·4 sink token + 滚动窗·cache 相对位置编码·sink 量化脆弱性与 off-by-one 缓解）。注意力两时间窗（H2O累积淘汰+近端双保·local统计不需未来·SnapKV预填充前投票·静态剪枝随指令错位·top-k逐点留切断实体须聚类）。RoPE 外推家族（PI线性插值/NTK改base保高频/YaRN按波长混合加温度·保真注意力模式与attention entropy才是成败真因·需长序列继续训练·路线与成本画像随族分裂）。KV低比特量化（KIVI非对称2bit·key逐通道固定outlier·value逐token值加权混合·残差缓冲保流式·误差面key移注意力vs value稀释·倍率挂模型口径）。 软token压缩第三面（gist/AutoCompressor·与提示硬删/KV量化正交·summary accumulation跨段累积·收益分母与丢信息并报）·KV分层放置·IO感知精确注意力FlashAttention（tiling增量softmax·重计算换HBM·exact非近似·正交KV压缩）虚拟上下文管理MemGPT（RAM↔外存分页·主上下文三段+recall/archival·70%水位自导向换页·递归摘要静默失真）
+version: "2.6.0"
 module: CI
 modules: CI
 ---
@@ -304,3 +304,18 @@ GitHub 一手整合逐字：「**Clearing invalidates the cached prefix from the
 - `https://m.x-mol.com/news/770514`（WebSearch 全文逐字：两大技术中文逐字、"即使重计算FLOPs增加运行更快内存序列线性"、最多减 9× HBM 访问）— 第四域交叉。
 - **判重**：全库 SKILL.md 精确扫描 `FlashAttention`/`IO-aware`/`IO 感知`/`online softmax` 0 命中本体（`defaults/wb-context-compressor` 的 tiling 是切块检索异命题且属豆包自留地 WB 0 落地）；本技能 §r783B 曾把 `PagedAttention 显存分页内核` 列未采纳（那是显存分页产品实现，本节是 IO 感知精确注意力算法，粒度不同已如实登记）；与 §r763B/§r775B/§r767B/§r751B/§r783B 分工不复用；与 r786(TI/PI/PDI)/r785(OI/EI/SI)/r784(AI/VI/DI) 九模块结论不复用。**豆包自留地 wb-execute-discipline / wb-context-compressor WB 0 落地**。
 - **未采纳**：CUDA 内核融合具体实现、多 GPU / kernel regression / block-sparse matrix multiply 扩展、FlashAttention-2/3 版本演进细节、具体 SRAM 阈值分配（属实现与版本细节，只取三条可机检口径）。
+
+## r791B · MemGPT 虚拟上下文管理：让模型自己按水位换页，宿主固定截断是另一条路（CI · 2026-11-22 实拉，多独立域交叉）
+
+### 三独点
+- **分页类比与三段主上下文 + 两类外存**：原文逐字 virtual context management「draws inspiration from hierarchical memory systems in traditional operating systems which provide the illusion of an extended virtual memory via paging between physical memory and disk」；主上下文＝RAM 三段（只读系统指令 / 可经函数读写的 working context / FIFO 消息队列，队首是被驱逐消息的递归摘要），外部＝磁盘两类（recall storage 可按时间戳/文本/embedding 检索；archival storage 通用读写长期溢出）。与 §r755B context editing（宿主按规则定点清除）正交——那是服务端替你删，这是模型自己换页；与 §r763B 提示压缩（永久删 token）正交——那是删发送量，这是搬去外存可召回。
+- **水位阈值 + 自导向换页 + 可召回**：约 70% 插 memory pressure 警告让模型把重要信息写入 working context 或 archival、到 flush 阈值驱逐并更新递归摘要，被驱逐项仍在 recall 可再取回；检索分页防溢出、`request_heartbeat=true` 一回合链式多步检索，由模型决定何时换页而非宿主固定截断。判据：上下文管理要有「水位线 + 溢出可召回 + 摘要失真登记」三件套，只有 truncate 没有 recall 路径的系统在被问及被驱逐内容时无法自证。
+- **递归摘要是静默失真面、收益须挂同 retriever 口径**：被驱逐消息压成递归摘要保 gist 丢细节，论文自承未量化；DMR 32.1%→92.5%（GPT-4）是在 same retriever / top-K cosine over ada-002 下取得，不能当「任意上下文管理都提升 3 倍」；限制逐条登记：评测集小、部分题 LLM 生成 + LLM judge、额外函数调用成本/延迟未报、working context 无整合机制可陈旧或矛盾。报提升须带基线同 retriever、评测集规模、函数调用成本三栏。
+
+### 来源
+- `https://skyao.net/learning-ai-agent/timeline/2023/memgpt/paper`（**WebFetch 200 全文逐字**：Packer 等 2023 arXiv:2310.08560 中文逐字、三段主上下文、70% 警告与 flush、recursive summary、heartbeat、DMR 数字）— 第一独立域（论文一手中文译）。
+- `https://www.edgechat.ai/memgpt`（**WebFetch 200 全文逐字**：英文逐字 virtual context management / recall+archival / self-directed edits / paginated retrieval / interrupts / 2024-09 更名 Letta；并登记 Zep 94.8% vs 93.4%、评测小集/LLM judge/成本未报/working context stale 等限制）— 第二独立域（技术百科一手英文）。
+- `https://beancount.io/bean-labs/research-logs/2026/05/02/memgpt-towards-llms-as-operating-systems`（**WebSearch 逐字**：70% 警告 100% flush 与递归摘要、DMR 32.1→92.5 / 35.3→93.4、嵌套 KV 基线 0%、与 Lost-in-the-Middle 关联）— 第三域（研究日志逐字，非 WebFetch 不冒充全文）。
+- `https://github.com/VanGong1999/llm-agents-interview/blob/main/CS329A%E8%87%AA%E6%88%91%E6%94%B9%E8%BF%9B%E6%99%BA%E8%83%BD%E4%BD%93/papers/memgpt.md`（**WebSearch 逐字**：Main context 三段 / External recall+archival / Queue manager pressure+flush / function calling 自我换页 / heartbeat 链式）— 第四域交叉（课程笔记立场登记）。
+- **判重**：全库 SKILL.md 精确扫描 `MemGPT`/`virtual context management`/`自导向换页`/`recall storage`/`archival storage` 在 ci-context 0 命中；r783B 曾把 `PagedAttention 显存分页内核` 列未采纳（那是**显存**分页产品实现，本节是**上下文 token** 的分层换页，粒度不同已如实登记）；豆包自留地对 MemGPT 有口号级提及但 WB 0 落地且与本轮参数/阈值/失真口径不复用。与 §r755B/§r763B/§r783B/§r787B 分工不复用；与 r790/r789/r788 九模块结论不复用。**豆包自留地 WB 0 落地**。
+- **未采纳**：Letta 产品化细节、Zep 时序图记忆对比数字、具体 top-K/embedding 型号参数、函数调用成本数字（论文未报），只取三条可机检口径。

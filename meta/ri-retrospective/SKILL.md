@@ -1,9 +1,9 @@
 ---
 name: ri-retrospective
-description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/主持·记录·事故负责人三分离/发言权/时间盒议程与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习深度分级（改动作/改假设策略/改学习机制本身·防御惯例与熟练无能阻断双环·反思-重构循环·学习与有效行为不等价须分层验收）。正常事故理论NAT与HRO对照（Perrow交互复杂×紧耦合双条件·集中/分散权衡·实务漂移与盘旋渐进理论·瑞士奶酪随时间对孔·安全记录好不等于高可靠·降耦合与提前预案）。 故障树FTA与事件树ETA（演绎找致祸组合vs归纳看触发后果·定性最小割集/单点失效/共因·量化=触发频率×条件概率乘积）。 FMEA/FMECA与RPN排序陷阱（模式清单≠优先级·RPN序数相乘伪精度与并列·AP表严重度主导·先分档后档内排序） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）
+description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/主持·记录·事故负责人三分离/发言权/时间盒议程与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习深度分级（改动作/改假设策略/改学习机制本身·防御惯例与熟练无能阻断双环·反思-重构循环·学习与有效行为不等价须分层验收）。正常事故理论NAT与HRO对照（Perrow交互复杂×紧耦合双条件·集中/分散权衡·实务漂移与盘旋渐进理论·瑞士奶酪随时间对孔·安全记录好不等于高可靠·降耦合与提前预案）。 故障树FTA与事件树ETA（演绎找致祸组合vs归纳看触发后果·定性最小割集/单点失效/共因·量化=触发频率×条件概率乘积）。 FMEA/FMECA与RPN排序陷阱（模式清单≠优先级·RPN序数相乘伪精度与并列·AP表严重度主导·先分档后档内排序） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结分析bowtie（顶事件左右屏障·effective/independent/auditable三门·培训审计是退化控制非屏障·近失改屏障状态不重复训）
 module: RI
 modules: RI,EI
-version: "2.6.0"
+version: "2.7.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -490,3 +490,8 @@ DevOps AI Toolkit 逐字 prep 四条「**Assemble the timeline in advance.** Pul
 - `https://railroads.dot.gov/sites/fra.dot.gov/files/fra_net/471/ord0624.pdf`（WebSearch 全文逐字：HFACS 源于 GEMS+Swiss cheese、19 unique categories、active 与 latent 对流对齐、后三层可存在多年、四层图）— 第四域交叉。
 - **判重**：全库 SKILL.md 精确扫描 `HFACS`/`人为因素分析`/`unsafe supervision`/`preconditions for unsafe acts` 正文 0 命中本体——仅本技能 §r759C「未采纳」曾把 `HFACS` 列为"与 FRAM/AcciMap/STAMP 优劣排序不迁移"的相邻方法，本轮按去重四态判"增"（§r759C 只取 FRAM 可变性耦合，HFACS 四层人为因素分类是正交缺口），已按"改了就删"铁律同步从 r759C 未采纳清单移除 HFACS 短语，避免新旧并存。与 §r734B CAST/STAMP、§r775C NAT、§r759C FRAM 分工不复用；与 r786(TI/PI/PDI)/r785(OI/EI/SI)/r784(AI/VI/DI) 九模块结论不复用。**豆包自留地 WB 0 落地**。
 - **未采纳**：AcciMap/STAMP/FRAM 与 HFACS 的优劣排序（学界无定论）、GEMS 通用错误建模嵌套动作层次细节、19 类完整定义表与各领域改编版对照、ATSB 预测效度统计数字（属相邻方法与领域适配细节，只取三条可机检口径）。
+
+## r791C · 蝴蝶结分析（bow tie）：屏障要过有效/独立/可审计三门（RI · 2026-11-22 实拉，多独立域交叉）
+
+- **三独点**：①蝴蝶结＝FTA 左翼 + ETA 右翼汇于单一顶事件，画的是屏障路径不是计算、自身不给频率；②真屏障需 effective / independent / auditable，一条威胁路径通常仅 1–5 个，培训/审计/变更管理是退化控制不是屏障，"人误"应挂退化因子而非威胁；③近失事件改的是屏障状态（verified→degraded→复验）而非只重新培训，改进须落到「哪个屏障/谁拥有/上次何时验证」。全文下沉 `references/r791C.md`。
+- **来源**：IChemE/CCPS-EI 2018 概念书（qhsetech 逐字）+ ORS Consulting 官方构建规则（逐字）+ ScienceDirect 屏障人因 PDF（逐字）+ exida CCPS 综述四独立域；全库 bowtie 0 命中，与 §r779C FTA/ETA、§r775C NAT、§r787C HFACS 分工不复用，豆包自留地 WB 0 落地。

@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。错误记忆与来源监控（DRM关键诱饵·模糊痕迹verbatim/gist双 trace·激活监测与来源监控失败·误导信息效应与DRM的verbatim反向作用·高置信≠真实须逐字锚点回归）。 定向遗忘两范式分离（item 编码+提取双因/list 提取抑制·accessibility≠availability 换线索验真删·直接抑制vs替代两策略）。 编码特异性检索（线索效力来自编码时共存语境而非语义相似度·情境效应主要是回忆现象须换线索验真删·线索过载与判别竞争限制匹配）。序列位置效应（首因=LTM复述/近因=STM双分离·延迟抹近因不动首因·呈现速率反向·agent按存储层分流验收）
-version: "2.5.0"
+description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。错误记忆与来源监控（DRM关键诱饵·模糊痕迹verbatim/gist双 trace·激活监测与来源监控失败·误导信息效应与DRM的verbatim反向作用·高置信≠真实须逐字锚点回归）。 定向遗忘两范式分离（item 编码+提取双因/list 提取抑制·accessibility≠availability 换线索验真删·直接抑制vs替代两策略）。 编码特异性检索（线索效力来自编码时共存语境而非语义相似度·情境效应主要是回忆现象须换线索验真删·线索过载与判别竞争限制匹配）。序列位置效应（首因=LTM复述/近因=STM双分离·延迟抹近因不动首因·呈现速率反向·agent按存储层分流验收）前摄/倒摄干扰（学习阶段竞争vs检索抑制RIF正交·AB/AC延迟自发恢复推翻即时覆盖·相似性倒U最危险）
+version: "2.6.0"
 module: MI
 modules: MI,AI
 ---
@@ -322,3 +322,19 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 - `https://psychologysorted.blog/wp-content/uploads/2019/07/glanzer-and-cunitz_1966.pdf`（WebSearch 全文逐字：46 名美国陆军男性、15 表×15 词、immediate/10s/30s 干扰三条件、30s 近因消失首因保持、样本局限）— 第四域交叉（原始实验教程，立场登记）。
 - **判重**：全库 SKILL.md 精确扫描 `serial position`/`系列位置`/`首因效应`/`primacy`/`recency effect` 记忆类正文 0 命中本体（`defaults/wb-context-compressor` 的 recency 0.25 是记忆价值函数的衰减因子，异命题且属豆包自留地 WB 0 落地）；与本技能 §r751A（检索即改写，同条跨时漂移）/§r767A（RIF 检索抑制）/§r779A（定向遗忘 accessibility≠availability）/§r783A（编码特异性换线索）分工不复用；与 r786(TI/PI/PDI)/r785(OI/EI/SI)/r784(AI/VI/DI) 九模块结论不复用。**豆包自留地 wb-execute-discipline / wb-context-compressor WB 0 落地**。
 - **未采纳**：unitary-store 单一存储反证（PMC 同文 Ranganath & Blumenfeld 2005：MTL 损伤也损害新异信息的短时保持，双分离可作任务差异解释）——作为真实学术冲突如实登记，不否定双分离判据但也不冒充"两套存储已被证明"；Glanzer & Cunitz 原始被试数与统计检验细节、Brodie & Prytulak 呈现速率参数、fMRI 脑区坐标（属实验细节，只取可机检双端操纵判据）。
+
+## r791A · 前摄/倒摄干扰（interference）：干扰发生在「学习两套材料之间」，与检索阶段抑制 RIF 正交（MI · 2026-11-22 实拉，多独立域交叉）
+
+### 三独点
+- **PI/RI 两向与 RIF 分工**：APA 逐字「proactive interference (PI): interference in new learning due to previous learning of similar or related material」＝旧学干扰新学；「retroactive interference ... new learning or exposure to new information impairs the ability to remember material ... previously learned」＝新学干扰旧学。两者都发生在**学习两套材料之间**，与 §r767A RIF（检索一套的子集反过来压同簇未练条）是不同阶段——判「记不住」先问是被另一套材料在学习时挤掉，还是检索时被同簇竞争抑制，对策不同（前者改写入隔离/键设计，后者换独立线索再测）。
+- **AB/AC 范式 24h 自发恢复推翻「即时覆盖＝永久改写」**：Briggs 1954 先学 A-B 再学 A-C，即时 C 回忆超 B（RI），但延迟 24 小时后 B 自发恢复并超过 C（Wikipedia 逐字「once participants were tested after a delay of 24 hours the Bi responses spontaneously recovered and exceeded the recall of the Ci items」）⇒ 新值盖旧值在即时测量成立、延迟后旧值回潮；故 §r755A 矛盾消解单靠写入侧覆盖不够，检索侧必须带时间/版本信号，且验收要「写入后即时＋延迟」双测（与 §r747C 即时/延迟双栏、§r779A 换线索验真删同族不同面）。
+- **相似性倒 U 与 release from PI**：完全相同＝复习无干扰、中等相似＝干扰最大、完全不同＝干扰最小（搜狗百科逐字「材料的相似性减小到了一定程度时...抑制作用最大...到两种材料完全不同时...最小」）⇒ 更新规则时「只改一点点、留两条高度相似但不同的记录」最危险，要么就地更新同一条、要么显式换键分家；APA 另列 release from proactive interference（换材料类别干扰骤降）可作「是否同簇竞争」的探测手段。
+
+### 来源
+- `https://d251dzbm8mzqab.cloudfront.net/proactive-interference`（**WebFetch 200 逐字**：APA 官方 proactive interference 定义、与 retroactive 对照、release from PI 词条）— 第一独立域（学会官方词条一手）。
+- `https://d251dzbm8mzqab.cloudfront.net/retroactive-interference`（**WebFetch 200 逐字**：APA 官方 retroactive interference 定义「new learning ... impairs the ability to remember material or carry out activities previously learned, especially if the two sets of material are similar」）— 同一学会第二词条。
+- `https://psychologydictionary.org/interference/`（**WebFetch 200 逐字**：Underwood 1957 干扰与遗忘、PI/RI 双向定义、相似材料干扰、新旧密码/语言例、similarity-based interference）— 第二独立域（心理学辞典一手）。
+- `https://en.wikipedia.org/wiki/Interference_theory`（**WebFetch 失败如实登记**；**WebSearch 逐字**：配对形容词 70%/40%/25% 三列表递减、Briggs 1954 AB/AC 与 24h 自发恢复、RI 含 unlearning 不只 competition）— 第三域（WebSearch 逐字，不冒充全文）。
+- `https://baike.sogou.com/v7694162.htm`（**WebFetch 200 逐字**：前摄抑制/倒摄抑制中文定义、相似性从全同到全异的倒 U、首段只受倒摄/末段只受前摄、中间双重受扰）— 第四域交叉（科普词条立场登记）。
+- **判重**：全库 SKILL.md 窄串 `前摄抑制`/`倒摄抑制`/`proactive interference`/`AB-AC 范式`/`自发恢复` 正文命中仅在豆包自留地 `defaults/wb-context-compressor/references/knowledge-base.md`（三处，均是「无界记忆退化三机制」里的一个词组，无范式/恢复/倒 U，口号级），WB 主线技能 0 命中本体；与 §r767A RIF（检索抑制）、§r787A 序列位置、§r779A 定向遗忘、§r755A 矛盾消解位置分工不复用；与 r790(TI/PI/PDI)/r789(OI/EI/SI)/r788(AI/VI/DI) 九模块结论不复用。**豆包自留地 wb-execute-discipline / wb-context-compressor WB 0 落地**。
+- **未采纳**：被试人数与脑区定位、Brown 1968 / Shea & Zimny 1983 技能迁移细节、相似性的精确数学形式（学界无统一模型），人类被试结论迁移 agent 按 rules/08 §五作待验证假设只取三可机检口径。
