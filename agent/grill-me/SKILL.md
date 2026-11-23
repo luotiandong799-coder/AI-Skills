@@ -1,6 +1,6 @@
 ---
 name: grill-me
-version: 1.3.0
+version: 1.4.0
 description: >-
   把 AI 从"好好先生"变"拷问官"。当用户提出方案、需求、选题、架构或功能想法并希望先对齐再动手时使用。触发场景与词语：用户说"grill me"、"拷问一下"、"先挑毛病"、"先当杠精"、"先别写，先问"、"帮我审审这个方案/需求"、"跟 AI 对方案"；或任务涉及写功能、改架构、定选题、讨论方案，且关键假设、依赖、边界或验收标准尚未对齐。核心行为：先提问后输出，顺决策树挖依赖/边界/验收标准/隐藏假设，可查证的自己查，每问附推荐答法，挑完反例再下结论。不适用于：用户要的是现成的提示词模板/话术参考（走 `prompt-library-40`）。不适用于：需要跨经典交叉研判的人生/商业综合决策分析（走 `distill-cat`）。
 module: TI
@@ -87,3 +87,11 @@ modules: TI
 - `www.organisationalprompts.ai/p/the-scatter-of-noise-in-your-decisions` — 一手 WebFetch 200 全文（决策卫生架构性、四步逐字、首位发言者锚定、55% vs 10% 保险业噪声审计、Kahneman–Klein 两条件与 2009 adversarial collaboration、复制危机边界）。**作者自陈观点仅代表本人、与雇主无关，立场已标注。**
 - `www.peopleapp.com/rmharticle/30023351846`（人民日报客户端《〈思考，快与慢〉之后，卡尼曼的〈噪音〉之旅》）— 中文一手正文交叉（判断目标准确性、掩盖首位招生官打分、「直觉应被告知、约束和延迟」、算法是唯一完全消除噪声的方法）。
 - `en.arabpsychology.com/theorists/daniel-kahneman-1934-2024`、`en.arabpsychology.com/experiments/variation-daniel-kahneman-amos-tversky` — 搜索快照逐串交叉（MAP 协议、信息排序、独立判断聚合、Meehl/Dawes 线性模型、教学去偏局限）；**心理学科普站立场，结论经上述三源交叉后采用。**
+
+### r801A（信号检测论 SDT：把「能不能分辨」与「愿不愿意说是」拆开，2026-11-23 独立实拉）
+§r735C 决策卫生管「多人判断的离散度与编排」，本章管**单次判断内部**的敏感度与反应倾向分离；与 `vi-fact-verification` 三态分工（那条判证据够不够，本条判「报上来的命中数能不能当能力」）。
+**独点1** 四指标数学独立：`d′=z(命中率)−z(虚报率)`、判定标准 `c=−0.5[z(H)+z(FA)]`（c 越正越保守）、`β=f(z_H)/f(z_FA)`；单看 hit rate 不是敏感度——宽松标准 hits 多但 FA 也多，d′ 可完全相同。判据——评审/日志里「检出多」「报得多」不得直接判能力强，必须同时要虚报率才能算 d′；`β`/`c` 随奖惩、先验、指令移动，`d′` 不随，问「提升检出」先分清改的是敏感度（信号/噪声/训练）还是标准（奖惩/门槛），只挪标准不提升真实辨别力。
+**独点2** 四 outcome（hit/miss/false alarm/correct rejection）与 ROC：`hit rate=H/(H+M)`、`FA=FA/(FA+CR)`；ROC 沿同一条曲线移动=标准变化（bias），跳到更弓的曲线=敏感度变化（d′）；等方差高斯 ROC 对称、不等方差（再认记忆常见）不对称；AUC 是 bias-free 敏感度。判据——跨系统/跨评审比 AUC 或 d′，不比单个阈值上的命中数；只报「准确率」不报 FA 判不合格（accuracy 被 base rate 与标准污染）。
+**独点3** 范式决定标准能否分离：evaluation/rating 一次实验得多个 ROC 点，forced-choice 不设标准故直接测 d′；医学筛查、证人指认、记忆再认皆同构。判据——拷问官追问「这个结论落在 ROC 哪个工作点、FA 代价多大、是判定标准松了还是真辨别力强了」，与 §r735C「可信直觉两前提」叠加：低有效性环境里先降 d′ 预期再定标准。
+**判重**：`信号检测论`/`signal detection theory`/`d-prime`/`辨别力` 全库 SKILL.md+module-memory+co-learn 0 专节（false alarm/命中率窄串命中均为评测泛用语境，非 SDT 机制）。豆包自留地 `wb-execute-discipline`/`wb-context-compressor` WB 0 落地。
+**来源与诚信**（≥2 独立域一手）：`http://mathematicalpsychology.com/SDT_Overview`（WebFetch 200 全文逐字：d′/c/β 三公式、敏感度与标准数学独立、等方差对称 vs 不等方差不对称 ROC、rating/forced-choice/multidimensional 扩展、Green & Swets 1966 / Macmillan & Creelman 2005 引文）；`https://unseel.com/psychology/signal-detection`（一手全文：四 outcome、常见误解「hit rate is sensitivity」「liberal observer is more sensitive」逐字、AUC bias-free）；`https://baike.baidu.com/item/%E4%BF%A1%E5%8F%B7%E6%A3%80%E6%B5%8B%E8%AE%BA/11003451`（中文一手：d′=Z击中−Z虚报、β=O击中/O虚报、1954 Tanner & Swets）。

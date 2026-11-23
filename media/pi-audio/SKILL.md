@@ -3,7 +3,7 @@ name: media/pi-audio
 description: 音频感知（Audio/Speech Perception）。当需要把录音/会议/播客/通话转成文字、标"谁在什么时候说了什么"、生成字幕、做语音合成（TTS）、识别音频事件（警报/音乐/故障声）或理解音频内容时调用。提供 ASR 选型（AudioTranscribe 本地/Whisper API/faster-whisper/whisperX）、长音频分段并行、VAD 去静音防幻觉、pyannote 说话人分离与时间戳对齐、LLM 后处理、SRT/VTT 输出、TTS 与隐私护栏。不用于音视频格式转码（走 rg-ffmpeg-tools）、图像理解（走 multimodal-intelligence）。；响度归一化与 LUFS 测量口径（K-weighting/双门控/M·S·I 三时间常数/真峰 dBTP）；声音事件检测 SED 评测口径（segment-based F1/ER vs event-based collar F1 vs PSDS 交集匹配/DTC·GTC·αCT·αST 参数/50 工作点/threshold-independent/跨数据集与年份分数不可比）。；语音反欺骗评测（ASVspoof 三任务 LA/PA/DF/有 ASV 看 min t-DCF 含 C0·C1·C2 串联 ASV 性能、无 ASV 的 DF 看 EER 不可跨任务比/progress→eval EER 崩塌是过拟合泛化失败/四基线 CQCC-GMM·LFCC-GMM·LFCC-LCNN·RawNet2 用 2019 数据无增强）。
 module: PI
 modules: PI
-version: "1.5.0"
+version: "1.6.0"
 ---
 
 # PI · 音频感知（Audio / Speech Perception）
@@ -205,3 +205,11 @@ ASVspoof 2021 三任务（官方 WebFetch 逐字）：logical access（LA，TTS/
 - `https://arxiv.org/pdf/2109.00537v1`（ASVspoof 2021 结果总结论文 WebSearch 逐字：t-DCF Eq.1 含 C0 保留与 C2 随 ASV spoof FA 增长、moving target metric、EER 作为 Bayes 误差上界、x-vector+PLDA 后端、LA 0.2177/PA 0.6824/DF 15.64% 结果、progress 0.10%→eval 15.64% 泛化崩塌、显著性分组）——第三独立域·一手结果论文。
 - `https://www.alphaxiv.org/abs/2109.00537`（中文逐字：100+ 生成算法、mp3/m4a/ogg 压缩、EER 定义与四基线）——交叉佐证。
 - **判重**：全库 SKILL.md 精确扫描 `ASVspoof`/`anti-spoof`/`反欺骗`/`minDCF`/`t-DCF`/`EER`/`equal error rate` 0 命中（PI 唯一命中为本节来源段的 `engineering` 子串误命中）。本技能 §r708C 说话人日志、§十三 SED、§十四增强均异命题。豆包自留地 WB 0 落地。
+
+## 十六、MFCC 与 log mel 前端：特征提取口径（PI · r801B 2026-11-23 独立实拉，≥3 独立域一手交叉）
+§十三 SED 管评测口径、§十四增强、§十五反欺骗管任务层；本章管**进模型之前的前端特征**——同一段音频选 log mel 还是 MFCC、报几个系数、要不要 delta，决定下游看到什么。
+**独点1** mel 刻度与两条特征层级不同：`F_mel=2595·log10(1+F_Hz/700)`，1kHz 以下近似线性、以上近似对数；mel filterbank（20/40/64/128 个三角滤波器、中心频率在 mel 上等距→Hz 上低频密高频疏）作用于频谱得 mel spectrogram，取 log 得 **log mel energies**（保留频谱粗形状、抹平谐波细节）。MFCC 是在 log mel energies 上再做 **type-II DCT** 的倒谱表示，二者是不同层级，禁混称。判据——报「用了 MFCC」与「用了 log mel」不是一回事；当前深度学习环境音频默认前端是 log mel energies，不是 MFCC。
+**独点2** DCT 两作用 + 系数口径：① 去相关（相邻 mel 滤波器重叠致输出高度相关，去相关后 GMM/HMM 才能用对角协方差）；② 只留前几个系数平滑频谱并降维，低阶含频谱整体形状、高阶含细节。保留系数 12–20：语音识别 8–12 足够表粗形状、乐器识别约 20 抓细节、环境音 16–20；第 0 系数=信号能量（log energy），声场景分类保留（公园静于车流）、声音事件检测常省略（同声源不因响度变类）。delta/acceleration 用一阶/二阶正交多项式 `Δc(i,u)=Σ_{k=-K..K}k·c(i,u+k)/Σk²`（2K+1 帧、K 常取 3 或 4）补时序动态。判据——复现/对比须写 n_mfcc、是否含第 0 系数、是否加 delta/delta-delta、hop/nfft；缺项则「比基线好」不成立。
+**独点3** 深度学习弃 DCT 去相关是下游模型决定的，不是 MFCC 过时：Heittola 学术一手逐字「Along with the emergence of deep learning based approaches the decorrelation step has been dropped out because modern deep learning techniques can efficiently take advantage of correlated information in the data during the learning process」「Currently, log mel energies are the most commonly used acoustic features in deep learning based approaches for the content analysis of environmental audio」；HMM/GMM 时代因须对角协方差才选 MFCC。判据——选型看下游：HMM/GMM/对相关敏感的模型选 MFCC，DNN/CNN/Transformer 可直接吃高度相关的 log mel；「MFCC 一定更好」是错的，压缩即丢信息（mlarchive 逐字 main disadvantage = losing some information）。
+**判重**：`MFCC`/`梅尔倒谱`/`mel-spectrogram` 全库 SKILL.md+module-memory 0 专节（"mel spectrogram" 2 命中为非机制泛提及）；本技能 §十三–§十五均异命题。豆包自留地 WB 0 落地。
+**来源与诚信**（≥3 独立域一手）：`https://toni-heittola.github.io/thesis/content_analysis`（Toni Heittola 博士论文学术一手 WebFetch 200 全文逐字：mel 公式/decorrelation 两作用/12–20 系数/第 0 系数/delta 公式/深度学习弃 DCT）；`https://mlarchive.com/machine-learning/the-ultimate-guide-for-sound-features-and-their-applications`（一手全文：log→DCT 流程、DCT 压缩原理、13/40 常用值、相关敏感度选型）；`https://pmc.ncbi.nlm.nih.gov/articles/PMC13299600/`（同行评议一手：librosa n_mfcc=13/nfft=2048/hop=512/DCT-II 具体实现）；`https://libsonare.libraz.net/docs/glossary/analysis/mel-mfcc-timbre.html`（Slaney mel：1kHz 下 3mel/200Hz、上对数）。

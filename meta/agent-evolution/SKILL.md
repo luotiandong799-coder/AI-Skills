@@ -1,6 +1,6 @@
 ---
 name: agent-evolution
-version: "1.23.0"
+version: "1.24.0"
 description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。 触发：并发实验分层、层间正交、发布层灰度、安全探索、shield 护栏、约束 MDP、代价 critic、持续学习灾难性遗忘、EWC、Fisher 信息、弹性权重整合、在线 EWC、突触智能、经验回放、稳定性可塑性权衡、异质性处理效应、因果森林、CATE、honest splitting、GRF、DML、DR-learner。、Hyperband、Successive Halving、多保真预算分配、纯探索无限臂bandit、early stopping、bracket网格、envelope函数、BOHB、贝叶斯优化、Bayesian optimization、GP代理模型、采集函数、Expected Improvement、PI、UCB、探索利用权衡、Monte Carlo采集、异步并行评估、multi-fidelity、高维BO。、元学习、MAML、学会学习、learn to learn、快速适配、内循环外循环、支持集查询集、FOMAML、Reptile、Meta-SGD、任务分布初始化、势能奖励塑形、potential-based reward shaping、PBRS、策略不变性、F(s,s')=γΦ(s')−Φ(s)、望远镜抵消、势函数、奖励设计、稀疏奖励、Wiewiora Q值初始化、Dynamic PBRS、课程学习、curriculum learning、scoring function、pacing function、自步学习、self-paced learning、全局难度、局部难度、难例挖掘、anti-curriculum
 license: MIT
 metadata:
@@ -241,34 +241,7 @@ modules: AI
 - www.vitorsousa.com/blog/contextual-bandits-math（2025-11-15；regret 界表 ε O(T^2/3) / UCB O(√(T log T)) / TS O(√T) / LinUCB O(d√(T log T))、10,000 轮 10000/464/130/100、partial feedback 反事实不可观测、`R(T)=o(T)` 次线性、Lai-Robbins Ω(log T) 下界、LinUCB α=0.1–2.0；WebFetch 全文逐字）
 - 判非：`UCB` / `LinUCB` / `epsilon-greedy` / `部分反馈` / `延迟奖励` 全库词边界 0 命中；`bandit` 命中均在豆包自留地 `defaults/wb-context-compressor/references/knowledge-base.md`（测试时算力缩放 / shadow-first bandit），与 regret 理论、探索预算分配无关，不重复；`Thompson` 命中仅为同 KB 的路由实验，不同维度。豆包自留地 WB 0 落地。
 
-## r733C · 离线策略评估的前提、方差与灰度边界（来源：2026-11-11 r733C 本轮独立实拉，≥2 独立域一手交叉）
-
-> 模块：AI｜二轮深化第 4 批｜本轮定位：AI 3926B/6 条（第三薄、主技能数仅 1）
-
-### r733C-1 ★倾向性概率是离线评估的前提：日志 schema 漏一个字段，就永久失去「用历史证明新版更好」这条路
-
-neuralmasteryai 逐字："A bandit in production logs every decision: the context, the arm shown, the reward, and the probability with which the logging policy chose that arm"；"That last number makes it possible to estimate how a different policy would have done, without deploying it"；更硬的限定 "Store the probability of the chosen action with every logged decision. Without it, off-policy evaluation is impossible and every new policy has to be tested live with an A/B test."。PracHub 逐字 "Logged propensities are mandatory for IPS/SNIPS; without them, estimates can be arbitrarily biased"。GeekChamp 给出完整字段链："Log complete decisions: timestamp, context, candidates, chosen action, policy ID, propensity, reward definition, reward timestamp, and model version"，并须 "Verify propensities were recorded before action selection"。判据：① 策略/提示词/Skill 改版前先查历史日志是否带 propensity + 候选集 + 策略版本 + 奖励定义与时间戳；缺任一则该批日志**不可**用来签「新版更好」，只能退回 §15.3 同时部署等价基线；② 日志 schema 是决策能力的前提而非可后补的运维细节——记录时没写就永久丢失反事实，事后补造等于伪造证据（与 agent-guild Cap31 审计不补造同源）；③ 与 §16.3「未选中动作的反事实收益永不观测」互补：那条陈述限制，本条给出唯一可绕过的条件（记录 propensity 后用 IPS 加权估计）；④ "No single library supplies the difficult operational pieces automatically" ⇒ 不能指望框架自带这套日志。
-
-### r733C-2 ★IPS 无偏但高方差，权重尾部主导结论；旧策略没试过的动作得到的是「假 0」而非「差」
-
-neuralmasteryai 逐字："Inverse propensity scoring (IPS) reweights each logged round by πnew(a|x)/πlog(a|x): rounds where the old policy chose what the new one would choose count more, the rarer the old policy made that choice"；数值例：旧策略 article0 占 0.90、其余各 0.05，评估「总出 article1」只能用其中 2,482 轮、每轮权重 20，估 0.055 而真值 0.060；"The variance comes from those large weights, and it is why logging policies keep some exploration: an arm the old policy never shows can never be evaluated"；代码注释逐字 "set eps = 0.0. Article 1 is never logged, every weight is zero, and IPS estimates 0: you cannot evaluate an action the old policy never took"。PracHub 逐字："Self-normalized IPS (SNIPS) reduces variance but introduces small bias; watch tail weights"；"Candidates often quote a single metric (e.g., IPS uplift) without checking weight distribution or support mismatch. If a few impressions carry huge weights, your estimate is fragile—show diagnostics: effective sample size, clipping analyses, and sensitivity to propensity misspecification"；"Direct Method, IPS, and Doubly Robust trade bias–variance; DR helps when either model or propensities are imperfect"。判据：① 报离线提升必须同时报权重分布 / 有效样本量 / 裁剪敏感性 / propensity 误设敏感性，单报一个 uplift 数字不可采信；② 支持集条件（positivity）不满足时，估计值 0 是**不可估**不是**效果为零**，禁止据此淘汰候选；③ 与 §16.2「探索预算按不确定性衰减」呼应但不同层：那条管在线 regret 最优化，本条管离线评估的可行性边界——ε=0 的纯贪心历史日志虽然在线看着省，却把整条离线评估路径关掉了。
-
-### r733C-3 ★离线结论只能排在灰度之前：三段验收链不可跳，且离线分本身有四类污染源
-
-PracHub 逐字："Another miss is jumping straight to a 50% A/B after 'good' offline results. Strong answers pair OPE with high-confidence bounds, then propose a guardrailed ramp with pre-defined stop criteria on core metrics and safety checks for long-tail cohorts"；"Confidence intervals matter: bootstrap, concentration bounds, or HCOPE for safety guarantees"；"Safe policy improvement (e.g., SPIBB) constrains changes where data are uncertain"；"Rollout tactics: canaries, shadow serving, interleaving, staged ramps, automatic kill-switches"。GeekChamp 逐字："Offline results should precede a staged rollout, not replace a holdout, guardrails, and rollback plan." ⇒ 验收链三段不可跳：**离线过滤（带置信下界）→ 小流量灰度（预置停止条件 + 长尾子群检查）→ 全量**；「离线更好」不构成发布证据。四类污染逐字："Leakage: a feature or label unavailable at decision time makes offline results unrealistically strong"；"Delayed attribution: ... require a clear link to the original action and treatment of censored outcomes"；"Perverse incentives: a policy can improve a target metric while harming users or another business objective"；"Changing scale: seasonality, inflation, traffic mix, or reward-definition changes break comparisons across time"；并要求 "Track guardrails such as complaints, bounce rate, latency, safety violations, fairness measures, and long-term retention alongside the optimized reward"。判据：① 报离线结论前逐项排除四类污染，尤其决策时不可得特征与奖励定义漂移；② 优化目标之外必须同报护栏指标，防止代理指标反激励；③ 与 §15.3 灰度双阈值 / critical:true 分工：那条给灰度内部怎么判，本条补灰度之前那道离线门与灰度之后那道护栏/回滚门；④ 与 §16.1「bandit 与 A/B 目标互斥」不冲突——本条谈的是验收链形状，不是流量分配的目标函数。
-**提升层**：可复用 Skill（AI 模块方法论）/ 工作流（决策或编排的验收链）。
-
-### r733C 来源与判非
-
-- neuralmasteryai《Multi-Armed & Contextual Bandits》→ https://neuralmasteryai.com/docs/reinforcement-learning/bandits（WebFetch 200 全文逐字，含可运行 IPS 代码与数值例，2026-11-11）
-- PracHub《Off-Policy Evaluation and Safe Rollouts》Last updated 2026-04-25 → https://prachub.com/concepts/off-policy-evaluation-and-safe-rollouts（WebFetch 200 全文逐字）
-- GeekChamp《Contextual Multi-Armed Bandits: Algorithms, Evaluation, and Deployment》2026-10-01 → https://geekchamp.com/contextual-multi-armed-bandits-in-reinforcement-learning-algorithms-evaluation-and-deployment/（WebFetch 200 全文逐字；页面含广告插入，如实登记）
-- 辅助交叉（WebSearch 快照）：inferensys.com/glossary/.../off-policy-evaluation（五类估计器偏差—方差）、lacuna.tiptreesystems.com/.../overcoming-support-deficiency-in-off-policy-evaluation（common support / positivity 定义）。
-- 判非：`off-policy` 唯一命中在豆包自留地 `wb-execute-discipline`；`propensity` / `SNIPS` / `doubly robust` / `effective sample size` 全库 0 命中；豆包自留地 WB 0 落地。
-- 窄串 `propensity` / `SNIPS` / `doubly robust` / `effective sample size` / `support deficiency` 全库 SKILL.md **0 命中**；`off-policy` 仅 1 命中，位于豆包自留地 `wb-execute-discipline`（语义为在线策略/离线评估的泛提及，无 IPS / 倾向性 / 支持集机制）；`IPS` 亦无本义命中 ⇒ 净新。
-- 既有 §15（漂移门 / 基线对照 / 双阈值）与 §16（bandit vs A/B / 探索预算 / 三失效条件）全部落在**在线改与在线验收**；本轮三点是**不部署能否评估、日志要记什么、离线与灰度的先后**，属不同层，结论不复用。
-- 豆包自留地 0 落地；A 轮 OI、B 轮 DI 结论一律不复用；r732/r731/r717/r715 各轮结论不复用。
-- 换道：Vowpal Wabbit 命令参数族、逐估计器公式推导属易漂移工具细节，只取可迁移判据不作落地；GeekChamp 页面含 Outbyte 广告插入、PracHub 为面试向内容站，均如实登记立场，结论一律与 neuralmasteryai 的可运行代码/数值例交叉后才采纳。
+## r733C · 离线策略评估的前提、方差与灰度边界（r733C 实拉 2026-11-11；正文下沉 `references/r733C_离线策略评估.md`）：日志须记 propensity+候选集+策略版本+奖励定义时间戳，缺则永久失去反事实验证；IPS 无偏高方差、权重尾部主导、positivity 不满足时估计 0=不可估非效果为零；验收链三段时间离线（带置信下界）→小流量灰度→全量，四类污染（leakage/delayed attribution/perverse incentives/changing scale）逐项排除。三独立域逐字来源见下沉文件。
 
 ## 十七、序贯检验与随时有效推断（2026-11-11 r737B 实拉，≥2 独立域一手交叉）
 
@@ -497,3 +470,11 @@ mSPRT 不控制跨指标 family-wise error（Adobe 对两个以上处理用 Bonf
 **独点3** clip 是软惩罚非硬保证（not a hard trust-region constraint，ratio 仍可跑远，usually prevents...not a hard guarantee）。RLHF 里预训练模型即信赖域、clip 保增量对齐不覆盖预训练能力；但 on-policy 不复用经验、样本效率低于 SAC、ε/lr/epochs 敏感。报「用了 PPO」写 ε/GAE λ/epoch 数/KL 系数四件。
 判重：本体 0 专节（命中的是 shield masked-PPO 与 GAE 默认值语境）；豆包自留地 WB 0 落地。
 来源与诚信：anthony0727.github.io《From TRPO to PPO》WebFetch 200 全文＋control.education/Emergent Wiki/inferensys WebFetch 逐字；Kakade-Langford 公式为文中转述标二手。逐字全文与判非见 `references/r797C_PPO裁剪代理.md`。
+
+## 三十二、SAC 软演员-评论家：把熵写进目标，off-policy 换样本效率（AI · r801C 2026-11-23 独立实拉，≥3 独立域一手交叉）
+§25 GAE 管优势怎么估、§30 PBRS 管奖励怎么设、§PPO 管每次策略更新步子多大，本章管**目标函数里加熵项**与随之而来的 off-policy 样本效率；与 PPO 是两套不同的正则/采样形态，不合并。
+**独点1** 最大熵目标与软 Bellman：目标 `J(π)=E[Σ_t γ^t (R_{t+1}+α·H(π(·|S_t)))]`，温度 `α>0` 定回报—熵权衡；soft Bellman 把 `max` 换成 log-sum-exp `v(s)=α·log Σ_a exp(q(s,a)/α)`，最优策略是 Boltzmann `π(a|s)∝exp(q(s,a)/α)`；`α→0` 退化回普通 Bellman 最优方程与贪婪策略。判据——报「用了最大熵」写 α 与目标熵（常见 `H̄=−dim(A)`），α 不是普通手调超参而是可对偶自动学出来的量（见独点3）。
+**独点2** SAC 四件套与 off-policy 取舍：twin Q critics 取 min 限高估（同 TD3）、随机策略 squashed Gaussian `a=tanh(μ_θ(s)+σ_θ(s)·ε), ε~N(0,I)` 内建探索、reparameterization 低方差梯度、actor 最小化到 Q 的 Boltzmann 分布的 KL；从 replay buffer 采样复用旧数据，连续控制上样本效率「far more sample-efficient than on-policy methods such as PPO」（control.education 逐字），熵项阻止策略过早塌成确定性。判据——别把「SAC 更稳」当普适：它引入 α/双 Q/squash 三处复杂度；与 PPO 分工写清——PPO on-policy、clip 软约束、样本效率低但实现简，SAC off-policy、熵是目标项、样本效率高但多三个旋钮。
+**独点3** α 自动调节与推断视角：温度损失 `L(α)=E_{a~π}[−α(log π(a|s)+H̄)]`，把平均熵拉到目标值；早期熵高多探索、策略变锐后自动降。最大熵框架把 acting 看成从 `∝exp(reward)` 分布采样，与概率推断对偶（kronosfusion 逐字「connects RL to probabilistic inference, where acting is cast as sampling from a distribution proportional to exponentiated reward」）。判据——报 SAC 写 α 是否自动/目标熵值/twin Q/squashed Gaussian 四件；PPO 的 clip 是「软惩罚非硬保证」、SAC 的熵是「目标函数的一项」，二者不是同一类正则旋钮，禁互换措辞。
+**判重**：`软演员-评论家`/`Soft Actor-Critic`/`最大熵强化`/`maximum entropy reinforcement`/`SAC 算法` 全库 SKILL.md+module-memory+co-learn 0 专节；§r797C PPO 末尾「样本效率低于 SAC」仅为对比提及，非 SAC 机制，本轮补成独立条目；豆包自留地 WB 0 落地。
+**来源与诚信**（≥3 独立域一手）：`https://control.education/maximum-entropy-reinforcement-learning`（WebFetch 200 全文逐字：目标式、log-sum-exp soft value、Boltzmann 策略、α→0、twin Q min、reparameterization、自动温度、off-policy vs PPO、练习题 q=(1,2)→π=(0.269,0.731)）；`https://essentials-of-eai-research.readthedocs.io/en/latest/rl/actor_critic`（一手全文：L(α) 自动温度式、squashed Gaussian、A2C/DDPG/TD3/SAC 对比表、Haarnoja 2018 ICML + arXiv:1812.05905 引文）；`https://kronosfusionenergy.com/ai/soft-actor-critic-sac.html`（一手全文：reward+entropy 目标、min twin Q−α·logπ 目标式、推断对偶、自动温度理由）；NYU Shanghai 荣誉论文 PDF（WebSearch 逐字 SAC 伪码）交叉；MDPI Appl.Sci.16(22):11159（WebSearch 逐字 soft policy iteration、双 Q、自适应 α）交叉。
