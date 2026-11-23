@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。当任务涉及该记什么/不该记什么的判断、用户级MEMORY.md与模块记忆分层、跨会话记忆写入/检索/去重、记忆容量与检索侧治理权衡、隐私不入记忆、可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆评测五能力、固化长期规则判断时使用。是13模块中MI载体；记忆巩固效用评级（十技法四变量·熟悉感错觉·即时延迟双栏·desirable difficulty）；检索即改写（再巩固窗口·可及性≠保真度·分层抗改）；矛盾解决位置（写入侧四操作vs检索侧ADD-only）·遗忘双机制（decay降权vs eviction真删）；前瞻记忆与意图兑现（事件/时间线索·四阶段·外部审计与取消意图）；交互记忆系统TMS（记忆分布在人+外部aid·who-knows-what元目录·turnover破坏目录）；检索诱发遗忘RIF（检索是抑制性选择·Rp+/Rp−/control三态·换程序须双用例回归）；睡眠依赖巩固（SO-spindle-ripple顺序耦合·TMR倒U·NREM/REM分工存争议）；错误记忆与来源监控（DRM关键诱饵·verbatim/gist双trace·高置信≠真实须逐字锚点回归）；定向遗忘两范式分离（accessibility≠availability换线索验真删）；编码特异性（线索效力来自编码时共存语境非语义相似·换线索验真删）；序列位置效应（首因LTM/近因STM双分离·延迟抹近因）；前摄/倒摄干扰（学习竞争vs检索抑制正交·延迟自发恢复推翻即时覆盖·相似性倒U）；自我参照效应SRE（自我概念是丰富组织化结构·描述性自参照优于自传式·生存加工辨析·agent迁移标推断）
-version: "2.9.0"
+description: 长期记忆治理（Memory Intelligence）。当任务涉及该记什么/不该记什么的判断、用户级MEMORY.md与模块记忆分层、跨会话记忆写入/检索/去重、记忆容量与检索侧治理权衡、隐私不入记忆、可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆评测五能力、固化长期规则判断时使用。是13模块中MI载体；记忆巩固效用评级（十技法四变量·熟悉感错觉·即时延迟双栏·desirable difficulty）；检索即改写（再巩固窗口·可及性≠保真度·分层抗改）；矛盾解决位置（写入侧四操作vs检索侧ADD-only）·遗忘双机制（decay降权vs eviction真删）；前瞻记忆与意图兑现（事件/时间线索·四阶段·外部审计与取消意图）；交互记忆系统TMS（记忆分布在人+外部aid·who-knows-what元目录·turnover破坏目录）；检索诱发遗忘RIF（检索是抑制性选择·Rp+/Rp−/control三态·换程序须双用例回归）；睡眠依赖巩固（SO-spindle-ripple顺序耦合·TMR倒U·NREM/REM分工存争议）；错误记忆与来源监控（DRM关键诱饵·verbatim/gist双trace·高置信≠真实须逐字锚点回归）；定向遗忘两范式分离（accessibility≠availability换线索验真删）；编码特异性（线索效力来自编码时共存语境非语义相似·换线索验真删）；序列位置效应（首因LTM/近因STM双分离·延迟抹近因）；前摄/倒摄干扰（学习竞争vs检索抑制正交·延迟自发恢复推翻即时覆盖·相似性倒U）；自我参照效应SRE（自我概念是丰富组织化结构·描述性自参照优于自传式·生存加工辨析·agent迁移标推断）·工作记忆多成分模型（Baddeley 1974 四成分·中央执行是注意控制非存储·多存储分离由选择性干扰证实·情景缓冲器绑定多模态并接长时记忆）
+version: "2.10.0"
 module: MI
 modules: MI,AI
 ---
@@ -375,3 +375,15 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 
 - **判重：`自我参照`/`self-reference`/`self-referential` 本体 0 专节；`加工水平`/`Craik` 本体仅 r795F 熟悉感语境一句，与 §测试效应、§编码特异性、§错误记忆分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://in.sagepub.com/sites/default/files/upm-assets/66302_book_item_66302.pdf（Sage 教材第5章 Remembering Events，WebSearch 全文逐字：Craik & Tulving 深浅加工 / Rogers 1977 四任务 3%/7%/13%/30% 图 / 生存加工对比 / transfer-appropriate processing）；https://cognitivepsychology.com/Self_Reference_Effect（全文逐字：Rogers 范式 / Symons & Johnson 129 项元分析 / 四机制 / mPFC 神经基础 / 发展与文化差异）；https://www.sciencedirect.com/science/article/pii/S1053810012002395（《Survival of the selfish》，全文逐字：自参照 vs 生存加工 conflation 争议 / Klein 复制降为不显著 / Weinstein 第三人称 / Kang 卡通角色）；https://www.sciencedirect.com/science/article/pii/S0749596X17300037（《Survival processing versus self-reference》，全文逐字：描述性自参照任务定义 / 特质形容词材料 / between-subjects 避 carry-over）；https://opentext.wsu.edu/psych105/?p=237（WSU 开放教材，全文逐字：Craik & Tulving 三级加工 / generation effect / 编码特异性）。均为 WebSearch 返回页面全文逐字；ScienceDirect 摘要页全文可见但正文受限，标注为摘要+可见段落逐字，未冒充完整正文。 逐字全文与判非见 `references/r798A_自我参照效应.md`。
+
+
+## r802A · 工作记忆多成分模型（Baddeley multicomponent）：有限的不是一条总线，而是若干可独立干扰的子系统（MI · 2026-11-23 实拉，≥2 独立域一手交叉，3 独点）
+
+**独点1** 「工作记忆」不是一个统一容量槽，1974 起被拆成中央执行 + 语音回路 + 视觉空间模板三成分、2000 再加情景缓冲器；子系统分离的证据是**选择性干扰**——声学/语义/视觉相似的干扰各自打击对应子系统，而非整体掉分（Groningen 博士论文逐字「The distinction of slave systems is mainly supported by the distinct interference effects induced by acoustic, semantic, and visual similarity」）。判据——方案把「上下文/工作记忆」当成单一 LRU 槽，无法解释为何两类不同载荷能并行、同类载荷互相踩，判未命中；应允许按模态/通道分栈并各自设容量与干扰面。
+
+**独点2** 中央执行是**注意控制与调度**，不是又一个存储器：其功能是「attention and focusing, active inhibition of stimuli, planning and decision-making, sequencing, updating, maintenance and integration of information」并与长时记忆通信（LibreTexts 逐字）；它甚至是否为单一系统仍无定论（「It is still unclear whether it is a single system or more systems working together」）。情景缓冲器才是它的「storage component」，负责把语音/视觉/长时记忆的信息绑定成带时间顺序的整合单元（episode）。判据——把「控制器」与「暂存区」合并成一个对象（调度逻辑和数据混住）判违规；控制（谁被注意、谁被抑制、排序更新）须与绑定存储分离，否则无法解释「执行功能受损但单模态存储完好」。
+
+**独点3** 语音回路自身还是两层、且行为效应可机检：一个只持续数秒的「sound storage」+ 一个靠出声/默读复述维持它的「articulatory processor」；词长效应（长词比短词难记）、发音抑制（articulatory suppression 打断复述）、语音相似效应（同音词混淆）都是它的可观测指纹（LibreTexts 逐字 + APA 词典逐字）。判据——记忆子系统的设计若声称「有复述/刷新机制」，须能对应到至少一种可测干扰或长度效应，否则是命名不是机制。agent 外推（把多成分映射为多通道 buffer + 中央调度 + 情景绑定层）属**跨领域类比，标推断不得当实证**；与 §前瞻记忆（意图通道）、§交互记忆 TMS（外部 aid 外脑）正交不互换。
+
+**判重：`工作记忆`/`working memory` 本体多处为语境提及（前瞻记忆线索、编码特异性 Godden & Baddeley 情境依赖），但 `多成分模型`/`Baddeley 1974 四成分`/`phonological loop`/`episodic buffer`/`central executive` 全库 0 专节；与 §r759A 前瞻记忆（意图）、§r763A TMS（分布外部化）、§r783A 编码特异性（线索维度）分工不复用。豆包自留地 WB 0 落地。**
+**来源与诚信**：https://socialsci.libretexts.org/.../5.02%3A_Components-Central_Executive_Phonological_Loop_Visuospatial_Sketchpad（LibreTexts 开放教材，WebFetch 200 全文逐字：1974 三成分 / 2000 情景缓冲器 / 中央执行功能清单 / 语音回路两层 / 视觉空间模板可能再分两套 / 词长效应）——第一独立域（教材一手）；https://dictionary-apa-org.libdata2015.hilbert.edu/working-memory（APA 词典镜像，WebSearch 全文逐字：multicomponent / episodic buffer binds cross-domain / essential to LTM storage / 取代 unitary STM）——第二独立域（权威词典一手）；https://pure.rug.nl/ws/portalfiles/portal/867737981/Complete_thesis.pdf（Groningen 博士论文，WebSearch 全文逐字：slave systems 由 acoustic/semantic/visual similarity 干扰分离 / episodic buffer 时序 / Cowan 嵌入加工模型批评）——第三域（学术一手）。均为教材/论文一手全文，未虚构；Cowan 批评仅取「单一存储模型争议」结论，不展开。逐字全文与判非见 `references/r802A_工作记忆多成分.md`。

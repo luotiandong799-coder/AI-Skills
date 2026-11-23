@@ -3,7 +3,7 @@ name: vi-fact-verification
 description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试、mutation testing、mutation score、变异算子、存活变异体、等价变异体、等价不可判定、胜任程序员假设、耦合效应、human oracle problem、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、补核受影响部分、核对不是危险动作、Bland-Altman、一致性界限、limits of agreement、一致性评价、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、可互换性、方法比较评分者间信度IRR（按标签类型选kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）
 module: VI
 modules: VI,EI
-version: "1.18.0"
+version: "1.19.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -390,3 +390,15 @@ version: "1.18.0"
 
 - **判重：`评分者间信度`/`inter-rater reliability`/`Krippendorff` 本体仅 §十九末一句留后续钩子（无专节）；`kappa`/`ICC` 命中为统计功效/Bland-Altman 语境异命题；与 §十九 Bland–Altman（连续两人）、§八 oracle/mutation 分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://cogn-iq.org/learn/theory/inter-rater-reliability/（全文逐字：加权 kappa≈ICC / Fleiss / Krippendorff / ICC 族与 Koo & Li / Landis & Koch / kappa 两悖论）；https://mcpanalytics.ai/articles/cohens-kappa-agreement-beyond-chance（全文逐字：kappa 公式与决策指南 / 95% 全负仍 82% 机会一致 / 246 观测样本量 / 负 kappa 涵义）；https://paloaltohealthlabs.com/resources/inter-rater-agreement-medical-data-labeling.html（全文逐字：按标签形状选系数表 / Dice-IoU-event-F1 / Koo & Li 10 种 ICC / ppos/pneg 修补）；https://casrai.org/guides/inter-rater-reliability-choosing-a-coefficient（全文逐字：95% 一致率对应 kappa 0.90/0.26/−0.02 / 信度≠效度 / Gwet AC1 争议 / Krippendorff α≥0.8）；https://quali-fi.com/learn/inter-rater-reliability（全文逐字：kappa 公式 / 低一致三因 / 信度工作流 pilot 10–20% 至少 30–50 例）。均 WebSearch 返回页面全文逐字，未冒充期刊原文。 逐字全文与判非见 `references/r798B_评分者间信度.md`。
+
+
+## 二十二、序贯检验与 peeking：同一个检验「多看几次」就会假阳性膨胀，与多重检验正交（VI · 2026-11-23 实拉，≥2 独立域一手交叉，3 独点）
+
+**独点1** 固定样本 p<0.05 的 5% 错误率只对「看一次」成立；随查看次数累积——1 次≈5%、5 次≈19%、10 次≈30%、20 次≈54%（gravityfield 逐字），「daily check and stop on significance」是从噪声里做决定（growthstack 逐字：30 天日查可把假阳性抬到 25%+，机制是零假设下运行 z 统计量是随机游走、看足够多次必穿越固定阈值）。医学原文给出概念式：「Testing twice with a 5% risk of error each time leads to an approximately 10% overall risk of error」（ScienceDirect/Statistics in Medicine 逐字）。判据——验证/监控流程若「每次跑完看一眼显著就收工」且无事先冻结的停止规则，判为 peeking 违规；与 §十一多重检验的分工：那是**横向**一次内 m 条结论（family），这是**纵向**同一条结论随时间反复看，两者不可互相顶替。
+
+**独点2** 解法一是 alpha spending：把 0.05 总预算按函数分摊到各次 interim，每次用更严阈值、总支出不超 0.05（gravityfield 逐字）；两族边界方向相反——O'Brien-Fleming「reserve most of the type I error for the final analysis」、早期极严（第一次 |z|>3.438 即 p<0.0006，末次 p<0.0471 即接近名义 0.05），Pocock「split α equally among the k analyses」（两次各 p<0.015 双侧）（ScienceDirect 逐字）。Lan-DeMets 等 flexible alpha-spending 允许事先不固定查看次数、每次查看「cost」一点 α（ScienceDirect/Principles of Clinical Research 逐字）。判据——写「随时看且不调整阈值」判违规；须声明属于固定 schedule 的 group sequential（OBF/Pocock）还是 flexible spending，并给出各次阈值。
+
+**独点3** 解法二是 e-value / always-valid inference：e_t = e_{t-1} × LR_t（逐步骤似然比相乘），e_t ≥ 1/α 即停，核心性质是「validity holds under any stopping strategy — including a discretionary one」（gravityfield 逐字）；mSPRT、confidence sequences（Howard/Ramdas）同族（growthstack 逐字）；贝叶斯事后分布理论上不受停止规则影响但操作特性仍依赖它。代价要说全：always-valid 区间比固定样本宽、无早停时达显著更慢（calibreos 逐字），且它只管统计错误、不管「novelty effect/周周期导致短期信号≠稳态」（calibreos）。判据——方案若把「随时可停」写成零成本，判不完整；须并报功效代价 + 最短运行时（至少一个完整业务周期）护栏。
+
+**判重：`序贯`/`sequential`/`alpha spending`/`peeking`/`always-valid`/`e-value`/`O'Brien-Fleming`/`Lan-DeMets` 在 VI 技能 0 专节（description 新增词条属本轮）；§十一多重检验是横向 family 校正异命题、§八 oracle 分工不复用。全库命中在 agent-evolution §mSPRT 早停（异命题，仅对比提及）、豆包自留地、co-learn 与配置文档，WB 0 落地。**
+**来源与诚信**：https://gravityfield.ai/glossary/sequential-testing（WebFetch 200 全文逐字：假阳性 1/5/10/20 次=5/19/30/54% / alpha spending / e_t=e_{t-1}×LR_t 停于 1/α / 任意停止有效 / 与贝叶斯对照）——第一独立域（工具站一手，商业立场已登记）；https://www.sciencedirect.com/topics/medicine-and-dentistry/interim-analysis（WebFetch 200 全文逐字：两次 5%≈10% / spending function / OBF 早期 3.438 p<0.0006 末次 1.985 p<0.0471 / Pocock 均分 / Lan-DeMets flexible / 伦理早停）——第二独立域（医学教材原文一手）；https://www.growthstack.dev/glossary/peeking-problem + https://www.calibreos.com/decoder/sequential-testing + https://markusloecher.github.io/pValue-Hacking-Solutions（WebSearch 全文逐字：随机游走穿越阈值 / mSPRT / confidence sequences / 功效代价 / 最短一周护栏 / 三法 recommend 顺序）——第三、四、五域交叉。数字均挂可复拉 URL；未冒充 RCT 原始论文。逐字全文与判非见 `references/r802B_序贯检验peeking.md`。

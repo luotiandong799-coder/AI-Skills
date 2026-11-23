@@ -1,7 +1,7 @@
 ---
 name: ci-context
-description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token预算与窗口退化、提示缓存命中率、多agent上下文隔离与缓存税、把每次要成立的约束放进确定性hook而非advisory context、注意力预算架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询对象、标称窗口与有效长度区分、长上下文基准族证明边界、评估顺序与配置误判时使用。是13模块中CI载体、装配逐级留痕、检索与答案评估分离、块完整性与权限判据。前缀缓存块级链式哈希/三级驱逐/隔离维度。context editing（removal≠summarization·applied_edits回执+count_tokens预览破缓存）。注意力汇聚与流式无限上下文（softmax残余压到首token·驱逐sink触发困惑度悬崖·4 sink token+滚动窗·sink量化脆弱性与off-by-one）。注意力两时间窗（H2O累积淘汰+近端双保·SnapKV预填充前投票·静态剪枝随指令错位）。RoPE外推家族（PI线性插值/NTK改base保高频/YaRN按波长混合加温度·保真注意力模式与entropy才是成败真因）。KV低比特量化（KIVI非对称2bit·key逐通道固定outlier·value逐token混合·key移注意力vs value稀释·倍率挂模型口径）。软token压缩gist/AutoCompressor·KV分层·FlashAttention（tiling增量softmax·重计算换HBM·exact非近似）·MemGPT虚拟上下文（RAM↔外存分页·70%水位换页·递归摘要失真）。选择性状态空间Mamba（S6参数随输入变·弃卷积改硬件感知扫描·状态压缩非无损·SSD对偶A=αI·固定缓存≠恒定内存·精确召回是瓶颈）·长上下文退化根因n²注意力与训练分布（位置偏倚U型·有效长度<标称）
-version: "2.9.0"
+description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token预算与窗口退化、提示缓存命中率、多agent上下文隔离与缓存税、把每次要成立的约束放进确定性hook而非advisory context、注意力预算架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询对象、标称窗口与有效长度区分、长上下文基准族证明边界、评估顺序与配置误判时使用。是13模块中CI载体、装配逐级留痕、检索与答案评估分离、块完整性与权限判据。前缀缓存块级链式哈希/三级驱逐/隔离维度。context editing（removal≠summarization·applied_edits回执+count_tokens预览破缓存）。注意力汇聚与流式无限上下文（softmax残余压到首token·驱逐sink触发困惑度悬崖·4 sink token+滚动窗·sink量化脆弱性与off-by-one）。注意力两时间窗（H2O累积淘汰+近端双保·SnapKV预填充前投票·静态剪枝随指令错位）。RoPE外推家族（PI线性插值/NTK改base保高频/YaRN按波长混合加温度·保真注意力模式与entropy才是成败真因）。KV低比特量化（KIVI非对称2bit·key逐通道固定outlier·value逐token混合·key移注意力vs value稀释·倍率挂模型口径）。软token压缩gist/AutoCompressor·KV分层·FlashAttention（tiling增量softmax·重计算换HBM·exact非近似）·MemGPT虚拟上下文（RAM↔外存分页·70%水位换页·递归摘要失真）。选择性状态空间Mamba（S6参数随输入变·弃卷积改硬件感知扫描·状态压缩非无损·SSD对偶A=αI·固定缓存≠恒定内存·精确召回是瓶颈）·长上下文退化根因n²注意力与训练分布（位置偏倚U型·有效长度<标称）·MQA/GQA 共享KV头（KV∝KV头数·MQA压到1/GQA分组H/G·与量化驱逐分页正交·uptraining均值池化5%算力·解码带宽瓶颈）
+version: "2.10.0"
 module: CI
 modules: CI
 ---
@@ -356,3 +356,15 @@ GitHub 一手整合逐字：「**Clearing invalidates the cached prefix from the
 
 - **判重：`Mamba`/`选择性状态空间`/`state space`/`线性注意力`/`SSD 对偶` 全库 0 专节；唯一「稀疏注意力」命中在豆包自留地 wb-execute-discipline 且为异命题；与 §FlashAttention/§PagedAttention/§前缀缓存/§KV 量化分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://alphaxiv.org/zh/overview/2312.00752v1（Gu & Dao，arXiv:2312.00752 中文全文概览，WebSearch 逐字：选择机制 / 硬件感知扫描 / SRAM 不存 HBM / A100 3× / 5× 吞吐 / 跨模态）；http://mp.weixin.qq.com/s/...sn=c8864a7f0c9f32a2d9e47e0c0774dee2（Mamba2 深度长文，WebSearch 逐字：SSD 当 A=αI 等价因果线性注意力 / 半可分矩阵 / chunk 分块非截断 / 2–8× 训练加速 / 状态缓存 256KiB 不随序列 / 精确召回瓶颈 / 「不是任意 softmax Transformer 等价」）；https://blog.csdn.net/u012133341/article/details/159834523（架构详解，WebSearch 逐字：复杂度对比表 / Waleffe 2024 8B 12.46×内存 10.67×速度 交叉点 220/370 token）；https://blog.csdn.net/qq_45981086/article/details/141675075（论文总结，WebSearch 逐字：S6 选择机制 / 硬件感知并行扫描）。Mamba-3/arXiv:2603.15569 仅在微信文中提及未独立取证，标未采纳。 逐字全文与判非见 `references/r798C_Mamba状态空间.md`。
+
+
+## MQA/GQA 共享 KV 头：从「每头一份 KV」到「分组共享」，与量化/驱逐/分页正交的一维压缩（CI · r802C 独立实拉 2026-11-23，≥2 独立域一手交叉，3 独点）
+
+**独点1** KV cache 大小正比于 KV 头数（「The size of this key-value (KV) cache is proportional to the number of key-value heads」，memx 逐字），而解码是 memory-bandwidth bound、每步要把全部 KV 从显存读一遍（aimlds 逐字）。三档是一个旋钮 H→G：MHA 每 query 头配独立 KV 头（质量最高、cache 最大）；MQA（Shazeer 2019）所有 query 头共享单一 KV 头、KV 缩到 1/H；GQA（Ainslie et al. 2023, EMNLP）把 query 头分成 G 组、每组共享一个 KV 头、cache 缩到 H/G（arXiv 2407.18003 综述逐字 + memx 逐字）。判据——写「G=8」须能落到具体配置（Llama 3 70B 64 query/8 KV、2,048 长度 batch 32 下 KV 20.9GB→2.6GB，aimlds 逐字）；只说「共享 KV 省内存」不给头数比判不完整。
+
+**独点2** uptraining 是把存量 MHA checkpoint 廉价迁移到 GQA 的关键：把每组内的 K/V 头 **mean-pool 成一个头**，再用约 5% 原始预训练算力短暂微调，质量接近原 MHA、速度接近 MQA（memx 逐字 + envisioning 逐字）。运行时实现是把少量 KV 头 repeat_interleave 展开回 query 头数再做 scaled_dot_product_attention；MQA = n_kv_heads=1 特例、MHA = n_kv_heads=n_q_heads 特例（memx 代码逐字）。判据——把 GQA 说成「必须从头训练」判错；但也要标清 mean-pool 是初始化手段、后续 must fine-tune，不是零成本。
+
+**独点3** 与既有 KV 压缩面正交、可叠加：本节改「每个 token 存几个 KV 头」（架构期决定），§r775B KIVI 改每头位宽、§r767B H2O/SnapKV 改哪些 token 留、§r751B vLLM/§r783B 改块放哪与前缀复用——GQA 可与 FlashAttention、量化 KV 自然组合（memx 逐字「pairs naturally with FlashAttention ... and with quantized KV caches」）；DeepSeek MLA 是同一问题的另一解（压成共享 latent 而非减头数，memx/ai360xpert 逐字）。判据——把 GQA 归入「又一种 token 驱逐」判 category error；它是训练期架构维度，与推理期缓存策略不同层。与 §r798C Mamba（换递推状态绕开注意力）亦正交。
+
+**判重：`MQA`/`GQA` 在 ci-context 本体仅 §r783B 一句成本公式因子提及（「MQA 把 Hkv 压到 1、GQA 分组共享 8B 32query/8KV=1/4」），非机制专节，本轮补成独立条目并显式分工；`多查询注意力`/`分组查询`/`uptraining`/`mean-pool` 全库 0 专节（其余命中在豆包自留地/co-learn/采购无关域）。豆包自留地 WB 0 落地。**
+**来源与诚信**：https://memx.app/glossary/grouped-query-attention（WebFetch 200 全文逐字：KV∝KV头数 / MHA-MQA-GQA 三档 / 8 KV for 64 query / mean-pool + 5% uptraining / repeat_interleave 代码 / 与 FlashAttention+量化组合 / MLA 对照）——第一独立域（技术 Glossary 一手全文）；https://arxiv.org/pdf/2407.18003v2（KV cache 优化综述，WebSearch 全文逐字：MQA KV 缩 1/n_h / GQA 缩 n_g/n_h / ng=1 即 MQA、ng=nh 即 MHA / Llama2-70B ng=2、Mistral ng=8、Yi ng=4、DeciLM 逐层变 ng / 参数节省 η=0.5+0.5(1+ng/nh)）——第二独立域（arXiv 综述一手）；https://www.envisioning.com/vocab/gqa-grouped-query-attention + https://aimlds.org/paper/attention-heads-are-not-equal + https://ai360xpert.com/papers/gqa（WebSearch 全文逐字：Ainslie 2023 EMNLP / uptraining 5% / Llama3 70B 20.9GB→2.6GB / G=8 拐点）——第三、四、五域交叉。数字挂可复拉 URL；未冒充论文原文逐字（综述/术语站为二手转述一手论文结论，已登记）。逐字全文与判非见 `references/r802C_MQA-GQA共享KV头.md`。
