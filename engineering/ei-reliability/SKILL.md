@@ -1,9 +1,9 @@
 ---
 name: ei-reliability
-description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时、TCC 预留式事务、空回滚、悬挂、事务参与记录表。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。错误预算、燃尽率、burn rate、多窗口告警、multiwindow、SLO 告警、Page/Ticket 分档、短窗口泄漏问题。触发：错误率告警阈值怎么定、告警疲劳。
+description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时、TCC 预留式事务、空回滚、悬挂、事务参与记录表。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。错误预算、燃尽率、burn rate、多窗口告警、multiwindow、SLO 告警、Page/Ticket 分档、短窗口泄漏问题。触发：错误率告警阈值怎么定、告警疲劳。触发：零停机迁移、schema 变更、expand-contract、并行变更、双写、回填、contract 收缩、DDL 锁。
 module: EI
 modules: EI,VI
-version: 1.14.0
+version: 1.15.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -325,3 +325,11 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 
 - **判重：`TCC`/`Try-Confirm-Cancel`/`空回滚`/`悬挂`/`事务参与记录表` 在本体 0 命中；`Saga`/`幂等`/`补偿事务` 命中 §二与 §五状态机节，本条取「预留式隔离+三件套」正交面，不重述 Saga 编排。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://zyfcodes.blog.csdn.net/article/details/166735422（CSDN 一手长文，WebFetch 200 全文逐字：三阶段/三件套/竞争写/五角色分工/选型）; https://alishangtian.com/ainews/article/user-2ab0e9b72a（智码视界，WebSearch 逐字：业务层 vs 资源层/三经典问题/Saga 直接执行）; https://foxfire.com.cn/article/7139.html（狐火笔记，WebSearch 逐字：资源占用/读已提交仍幻读/5 步阈值）; https://plumephp.com/workflow-saga-distributed-transaction/（WebSearch 逐字：冻结 vs 扣减/10 步编排阈值）。后三域为 WebSearch 快照非 WebFetch 全文，如实登记。 逐字全文与判非见 `references/r799B_TCC预留式事务.md`。
+
+## 二十四、Expand-Contract 并行变更：零停机 schema 演进的三阶段与锁陷阱（r803B 独立实拉 2026-11-23，≥4 独立域一手交叉，3 独点）
+
+§二十三 TCC 管「一个业务事务内先预留后转正」，本章管另一条正交轴——滚动部署期间新老两个应用版本同时连一个库，如何让 schema 改动对两边都可用（Fowler 的 ParallelChange / expand and contract）。
+**独点1** 三阶段是「先共存、再迁移、后收缩」，不执行 contract 比不做变更更糟：expand=加新结构（可空列/新表/新索引）不动旧的、旧代码无感且可独立部署；migrate=先部署写两边的代码，小批幂等回填旧数据，再用 FeatureFlag 切读（外部客户端这是最长阶段，客户端多改用 branch by abstraction），且应用代码先发布、schema 后收紧以便回滚；contract=确认旧结构零引用后在更晚 release 删旧列/停双写/去 fallback。Fowler 逐字「If the contract phase is not executed you might end up in a worse state than you started」——收缩是计划一部分不是可选清理。**判据**：contract 必须与 expand 分处不同 release，否则滚动更新时旧版本还在 SELECT 那列（Encore 称 classic outage）。
+**独点2** 锁时长实测出来、safe 与 naive 差两个数量级：JavaCodeGeeks 在 PostgreSQL 16.15 / 300 万行实测——`int→bigint` 重写整表约 3.8 秒、裸 `SET NOT NULL` 持阻塞锁扫全表约 340 毫秒、加可空列或常量默认值约 1 毫秒、单条 UPDATE 回填 300 万行 14.1 秒。绕 NOT NULL 锁写法：`ADD CONSTRAINT ... CHECK(...) NOT VALID` → `VALIDATE CONSTRAINT`（允许读写的锁下跑、中位 188.5ms）→ `SET NOT NULL` → 单独 migration 删辅助约束；阻塞从 340ms 降到约 1.3ms，且 DROP 不能与 SET NOT NULL 同命令（扫描会回来），四句各自独立 migration 否则工具包一个事务里首句锁持续到尾。大表建索引用 `CREATE INDEX CONCURRENTLY`（两次扫描、不能事务块内、失败留无效索引），MySQL 大表用 gh-ost/pt-osc。**判据**：DDL 先看引擎锁行为并在 prod-sized 表实测，回填小批+可断点+限流+盯复制延迟。
+**独点3** 双写不是保险而是四类静默分叉入口，切换顺序有硬约束：Encore 列 partial failure（第一写成功第二写失败、重试只重写一边）、缺 dual-read、顺序/唯一性不一致、过早 contract（canary 或卡住的旧任务仍跑旧二进制）。安全序列 = dual-read（新代码优先读新列、回退旧列）→ 带幂等对账的 dual-write → single-write → 观测旧路径零使用 → contract。大表 rename 可反转：先让应用兼容两列名（expand）、再做毫秒级元数据 rename、最后删 fallback，省掉昂贵回填（SchemaSmith）。Flyway/Liquibase 各记 checksum，改错新增 versioned migration 而非编辑已应用的。**判据**：验收看「旧读/写计数归零+行数一致」遥测不靠直觉，回滚窗口关闭前保留反向兼容路径。与 §二 Saga/§二十三 TCC 分工：那些是跨服务事务协议、本条是部署期兼容性纪律。不防什么：不解决多服务业务原子性、不替代对账与备份。
+- **判重：`expand-contract`/`并行变更`/`expand and contract` 在 EI 本体 0 命中（仅 wb-spec-driven KB / 豆包 co-learn 泛提及非本技能）；§十三扇出/§十五熔断/§十七舱壁异命题。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。** 来源与诚信：https://martinfowler.com/bliki/ParallelChange.html （WebFetch200全文）· https://www.javacodegeeks.com/?p=146230 （WebFetch200全文/PG16.15实测数字）· https://encore.dev/articles/zero-downtime-migration · https://schemasmith.com/guides/zero-downtime-database-migrations.html （后两域 WebSearch 快照非全文如实登记）；逐字全文与判非见 `references/r803B_ExpandContract零停机迁移.md`。

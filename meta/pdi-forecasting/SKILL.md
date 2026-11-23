@@ -3,7 +3,7 @@ name: meta/pdi-forecasting
 description: 预测与概率判断（Predictive Intelligence）：估计事件发生/时点/量级、给结论配概率、情景推演、"押个概率/预测一下"时调用。含超预测五步法（问题精化→参考类基率→内部微调→贝叶斯小步→Brier 闭环）、费米拆解、范围敏感性、Pre-Mortem、0.1–0.9 校准带；只输出可结算判断、不作行动决策。；题面可结算性（什么算/何时算/谁裁定·三类规格缺陷·回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO·误差累积与随机依赖两轴·跨视界可比与逐视界最准互斥）；加权评分（w(y)S破坏适当性·threshold/outcome-weighted两类）；回测协议（purge+embargo两漏/CPCV一条历史变多路径/PBO+Deflated Sharpe计试验数/单路径非证据）；事件型预警（point-adjustment让随机探测器拿高F1/事件级检出率·延迟·单位时间误报三栏/range-based与k-delay）；专家概率引出（分位数法X05/X50/X95/锚定两口径/Cooke种子题双评分加权/校准优先信息性/平均专家90%区间仅36%含真值）；预测组合场景依赖（adaptation 追平最佳单候选 vs improvement 超越全部/不看场景套方法即制造组合之谜/mAFTER 把简单平均当候选）；MCMC 收敛（R-hat split+rank/folded 取max+bulk·tail-ESS双达标/全局含lp__/诊断只验失败不证收敛）；多变量评分（ES=CRPS高维推广严格适当但相关误设判别力有限/VS测相关仅适当非严格/二者kernel scores互补·DM检验）；pinball分位评分（严格适当·minimizer=条件τ分位/非对称τ与1−τ·τ=.5即MAE半/coverage gap>5pp/skill score对气候基线/单点分位好≠全分布好）；分位数交叉与尾部外推（q90<q80不连贯·单调参数化/联合拟合/事后排序/极端分位外推/边际分位非联合分布）。；split conformal构造与有限样本可认证上限（四步·qhat=⌈(n+1)(1−α)⌉分位·(n+1)修正使覆盖exact·小样本上限n/(n+1)·坏预测器付宽度不付有效性·set size是信号·APS/RAPS/CQR·与置信区间/温度缩放区分）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.22.0"
+version: "1.23.0"
 ---
 # PDI · 预测与概率判断（Predictive Intelligence）
 > 本技能是 Personal AI OS 13 模块中 **PDI（预测智能）** 的唯一载体。TI 想明白因果、DI 在多方案中选择、PDI 负责"给未来事件配一个可结算的概率并持续校准"。
@@ -490,11 +490,11 @@ n=8 残差排序 {0.2,0.3,0.4,0.5,0.6,0.8,0.9,1.1}，α=0.125 时 k=⌈9×0.875�
 
 > `conf_b`/`acc_b` 分箱方向判据、`ECE=Σ(n_b/N)|acc−conf|` 与 `MCE=max|acc−conf|` 同时报、Murphy 三项 `REL−RES+UNC`、分箱数敏感性 M∈{10,15,20} 与 scikit-learn/Nixon2019/Guo2017 一手逐字与判非，全文见 `references/r796M_校准诊断.md`（25 行）。本节仅留路由，以该 references 为准。
 
-## 二十八、间歇需求 Croston：把「多久来一次」和「来多少」分开估（r799C 独立实拉 2026-11-23，≥3 独立域一手交叉，3 独点）
+> Croston/SBA/TSB 三独点（两分量分解·ADI/CV²四象限·TSB与MASE/RMSSE口径）全文见 `references/r799C_Croston间歇需求.md`（17 行）。本节仅留路由，以该 references 为准。
+## 二十九、ETS 指数平滑状态空间：把点预测升级为可自动选模+给区间的统一框架（r803C 独立实拉 2026-11-23，≥4 独立域一手交叉，3 独点）
 
-§17 回测协议管「评估会不会骗人」，本章管另一类专门的序列——**大量零期夹杂零星正需求**：此时均值与方差都被零扭曲，必须先拆「发生频率」和「发生时的量」。
-**独点1** 两分量分解避开零期拖偏：Croston 1972 对需求大小 `ẑ_t=α·d_t+(1−α)·ẑ_{t−1}` 与间隔 `p̂_t=α·q_t+(1−α)·p̂_{t−1}`（q=距上次需求期数）分别单指数平滑，均仅在正需求期更新，点预测 `ŷ=ẑ/p̂` 是**每期需求率**不是下次到货日期。SES 把零当平稳噪声拖向零而低估，Croston 避开该偏差。SBA 乘 `(1−α/2)` 修 Jensen 不等式导致的 Z/P 正偏，实证普遍优于原方法、作默认候选。
-**独点2** ADI/CV² 是模式描述不是自动选模型：`ADI=期数/有需求期数`、`CV²=正需求大小方差/均值²`（零期只进间隔不进大小）；阈值 `ADI=1.32`、`CV²=0.49`（Syntetos-Boylan-Croston 2005）分四象限 Smooth→SES、Erratic→SBA、Intermittent→Croston/SBA、Lumpy→SBA/bootstrap/逐项判断。Kostenko-Hyndman 修了 Croston 与 SBA 的理论边界，短历史或贴阈值不宜硬分类；缺货零是删失需求须标记为未观测，从无正需求 SKU 无法算 CV² 须单列。
-**独点3** TSB 与评估口径——率不是订单量：TSB 在需求发生时平滑大小但**每期更新需求概率**，零累积使预测衰减，适合走向淘汰/生命周期末期的 item（Croston/SBA 在无需求期不变，留 obsolescence 问题）。含零期 MAE/RMSE 可被「每期报 0」骗低（低 MAE 却无规划价值），间歇序列改 MASE（<1 才胜朴素）、RMSSE、fill rate/ready-rate，按 lead time 建需求分布再定再订货点，0.9 不先四舍五入（整箱/MOQ 留到库存决策时加）。与 §17 回测协议分工：那里管 purge/embargo/CPCV 防泄漏，这里管稀疏序列本身的估计与误差口径。不防什么：常数点预测不随趋势季节变、无分布输出，安全库存须另加假设或 bootstrap。
-- **判重：`Croston`/`间歇需求`/`intermittent demand`/`SBA`/`TSB`/`ADI`/`CV²` 全库 SKILL.md 与 module-memory 0 命中；`bootstrap` 命中 §17 回测语境异命题。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。**
-- **来源与诚信**：https://metricgate.com/docs/croston-method（MetricGate 官方，WebFetch 200 全文逐字：两分量公式/SBA Jensen 正偏/ADI-CV² 四分类/MASE/α 默认 0.1/无分布输出）; https://voids.ai/en/blog/intermittent-demand-forecasting-for-ecommerce（2026-11-18，WebFetch 200 全文逐字：SBA 公式/TSB 概率每期更新与淘汰/Kostenko-Hyndman/缺货删失/0.9 不取整）; https://takumilabs.io/articles/forecasting-intermittent-demand-spare-parts（WebSearch 逐字：bootstrap 胜 SES/Croston/MASE/RMSSE/fill rate）; https://intuendi.com/resource-center/intermittent-demand-forecasting/（WebSearch 逐字：零期可能是缺货/MAPE 算不出/四象限）。后两域为 WebSearch 快照非全文，如实登记。 逐字全文与判非见 `references/r799C_Croston间歇需求.md`。
+§二十八 Croston 管「零很多」的间歇需求，本章管一般趋势/季节序列——经典指数平滑只给点预测和手调 α，ETS 把它写成创新状态空间模型后才有似然、AIC 自动选模和解析预测区间。
+**独点1** ETS 不是单个模型而是 E/T/S 三成分组合出的 30 个变体族：E(误差)∈{A 加, M 乘}，T(趋势)∈{N 无, A 加, Ad 加阻尼, M 乘, Md 乘阻尼}，S(季节)∈{N 无, A 加, M 乘}；`ETS(A,N,N)`=简单指数平滑、`ETS(A,A,N)`=Holt 线性、`ETS(A,A,A)`=加性 Holt-Winters、`ETS(M,A,M)`=乘误差+加趋势+乘季节。加法季节振幅不随水平变、乘法振幅随水平放大（增长需求常见），阻尼趋势让长期外推收敛。**判据**：报结果须写清三字母规格 + 平滑参数 α/β/γ（ANU 讲义约束 `0≤α≤1, 0≤β≤α, 0≤γ≤1−α`），只说「用了 Holt-Winters」不足以复现。
+**独点2** 状态空间化收益是三件经典公式没有的东西：① proper likelihood → `AIC=−2log(L)+2p` 在 30 变体里自动选模（`forecast::ets()`/statsmodels `ETSModel`），乘性成分要求数据严格为正、AIC 选模自动排除非法模型；② 从底层状态模型解析推导预测区间（解析不可得改模拟），不再只有点预测；③ Ord/Koehler/Snyder 1997 与 Hyndman/Koehler/Snyder/Grose 2002 证明所有指数平滑法（含非线性）都是创新状态空间模型的最优预测。α 由「最小化一步预测误差平方和/MLE」拟合而非手调。**判据**：长视界乘性 ETS 区间因方差复合会极宽，改模拟多路径而非照搬解析区间；区间必须随点预测一起报。
+**独点3** ETS 与 ARIMA 是两条标准基线无 universal winner，选型靠滚动起点 CV 实测：FPP3 §9.10 明言非普遍优劣、Gardner 2006 五十年实证指 ETS 稳健且 M3 表现好；ETS 无需平稳性预处理、趋势季节形状清楚时更简单，ARIMA 直接建模自相关误差。残差仍要 Ljung-Box + 同方差 + 正态诊断（不过换误差类型/做变换），多季节用 TBATS。与 §十五多步策略分工：那里管递归/Direct/MIMO 策略、这里管单模型族；与 §十七回测协议分工：那里防泄漏、这里给模型本身；与 §二十八分工：Croston 管零膨胀、ETS 乘性遇零失效。不防什么：单季节单变量、无外生变量、假设模式延续（结构突变另处理）。
+- **判重：`ETS`/`指数平滑`/`Holt-Winters`/`状态空间` 在 PDI SKILL.md 无专节（仅 §十五一处把 ARIMA 当模型名举例）；`bootstrap` 命中 §17 回测语境异命题。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。** 来源与诚信：https://robjhyndman.com/papers/forecompijf.pdf （PDF fetch 失败取 WebSearch 逐字未冒充全文）· https://maths-people.anu.edu.au/~johnm/courses/r/ASC2008/pdf/Rtimeseries-ohp.pdf （WebFetch200全文）· https://www.forecaststudio.com.mx/blog/exponential-smoothing-ets · https://cttir.github.io/tutorials/tutorials/time-series/ets-models.html · https://ctmodelling.cn/talk/wangjiahe_ets_r （均 WebFetch200全文）；逐字全文与判非见 `references/r803C_ETS指数平滑状态空间.md`。

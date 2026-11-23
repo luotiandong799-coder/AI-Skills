@@ -1,9 +1,9 @@
 ---
 name: di-decision-tradeoff
-description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序、影响图、信息弧、决策节点、价值节点、决策基三要素、前景理论、参照点依赖、损失厌恶、框架效应、确定性效应、反射效应、禀赋效应、编辑与评价两阶段、全局敏感性分析、Morris筛选、Sobol指数、一阶效应、总效应、交互效应、因子排序、因子固定、实物期权、real options、管理灵活性、延迟扩张放弃转换期权、ROV、不可逆投资、参考类预测、reference class forecasting、外部视角、inside view、规划谬误、planning fallacy、乐观偏差、optimism bias、reference class tennis、成本超支、uplift、Flyvbjerg、博弈论决策、game theory、占优策略、最佳回应、纳什均衡、混合策略、逆向归纳、子博弈精炼、不可信威胁、可信承诺、连锁店悖论、策略互动、效用函数 elicitation、标准赌局、standard gamble、确定等价、certainty equivalent、风险容忍常数、Arrow-Pratt、凹性风险规避、vNM公理、多属性效用、加性独立性、概率轮、权衡法、ELECTRE、PROMETHEE、outranking、非补偿性排序、concordance、discordance、净流、不可比、veto阈值、心理账户、mental accounting、交易效用、获得效用、银边原则、多收益分离、多损失合并、fungibility可替代性、沉没成本剧院票
+description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序、影响图、信息弧、决策节点、价值节点、决策基三要素、前景理论、参照点依赖、损失厌恶、框架效应、确定性效应、反射效应、禀赋效应、编辑与评价两阶段、全局敏感性分析、Morris筛选、Sobol指数、一阶效应、总效应、交互效应、因子排序、因子固定、实物期权、real options、管理灵活性、延迟扩张放弃转换期权、ROV、不可逆投资、参考类预测、reference class forecasting、外部视角、inside view、规划谬误、planning fallacy、乐观偏差、optimism bias、reference class tennis、成本超支、uplift、Flyvbjerg、博弈论决策、game theory、占优策略、最佳回应、纳什均衡、混合策略、逆向归纳、子博弈精炼、不可信威胁、可信承诺、连锁店悖论、策略互动、效用函数 elicitation、标准赌局、standard gamble、确定等价、certainty equivalent、风险容忍常数、Arrow-Pratt、凹性风险规避、vNM公理、多属性效用、加性独立性、概率轮、权衡法、ELECTRE、PROMETHEE、outranking、非补偿性排序、concordance、discordance、净流、不可比、veto阈值、心理账户、mental accounting、交易效用、获得效用、银边原则、多收益分离、多损失合并、fungibility可替代性、沉没成本剧院票、随机占优、stochastic dominance、一阶FSD、二阶SSD、偏序、CDF积分、Tail尾部期望、凹效用风险厌恶
 module: DI
 modules: DI,TI
-version: "1.23.0"
+version: "1.24.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -490,11 +490,10 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 
 > 四域（Clear/Complicated/Complex/Chaotic）+ 第五域 Confusion + 四条动作链（sense-categorize-respond / sense-analyze-respond / probe-sense-respond / act-sense-respond）+ 域迁移条件 + Cynefin.io 与 OpenLearn 一手逐字与判非，全文见 `references/r796B_Cynefin.md`（23 行）。使用本方法时以该 references 为准，本节仅留路由，不内联正文。
 
-## 二十九、心理账户：钱被分进不同账户，fungibility 就失效（r799A 独立实拉 2026-11-23，≥3 独立域一手交叉，3 独点）
+> 心理账户三独点（交易效用/fungibility违反·四MAP编码与剧院票·账户预算与沉没成本处置效应）全文见 `references/r799A_心理账户.md`（18 行）。本节仅留路由，以该 references 为准。
+## 三十、随机占优：不指定效用函数也能排除劣选项（r803A 独立实拉 2026-11-23，≥4 独立域一手交叉，3 独点）
 
-§一前景理论管参照点与损失厌恶的**值函数形状**，本章管更前置的一层——**同一笔钱被放进哪个账户**，账户间的钱不可互换，规范上的 fungibility 在人的实际决策里失效。
-**独点1** 交易效用与可替代性违反：Thaler 1985 把价格作为属性引入价值函数、价格成参照点；`TU=参照价−实付价`，总效用=获得效用+交易效用。四个经典案例（赢来的钱敢下注 vs 股票赚的钱弃牌、存 15k@10% 却贷 11k@15% 买车、自购嫌贵的羊绒衫做礼物则喜）都违反「同单位货币无差别」。判据：决策记录须分两栏写「这笔钱从哪个心理账户出」与「fungibility 下的机会成本应是多少」，二者相左即心理账户在起作用。
-**独点2** 四 MAP 编码原则决定偏好方向：多收益分离 `v(x)+v(y)>v(x+y)`；多损失合并；混合收益（净收益）合并——银边原则让损失被收益吸收；混合损失看相对大小——损失远大于收益时分离、两者接近时合并。剧院票 10 美元实验：丢票 56% 不再买（该 10 计入「看戏账户」心理票价变 20），丢现金 88% 仍买（计入「丢钱账户」心理票价仍 10）。判据：同一组现金流在分离/合并两编码下翻转偏好即心理账户效应，方案必须写明编码方式，禁止把「分账户」当给定。
-**独点3** 账户预算不可互替导致沉没成本误判：沉没成本本不该进决策，但账户划分阻碍识别；处置效应里 paper loss 不平仓＝账户未关闭、回避实现亏损的痛感。与 §一前景理论分工：那里管值函数形状与参照点移动，这里管钱如何分账户、账户间预算为何不能换；与 §十六诱导 / §十七 AHP 分工不复用。不防什么：描述性理论（人实际怎么错），不提供规范性分账户规则，不替代机会成本核算。
-- **判重：`心理账户`/`mental accounting`/`交易效用`/`silver lining` 全库 SKILL.md 0 命中；`前景理论`/`损失厌恶` 命中本技能 §r762，分工见独点 3，不并存。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。**
-- **来源与诚信**：https://dept.abcdef.wiki/wiki/Mental_Accounting（葡语维基词条，WebFetch 200 全文逐字：账户创建/剧院票 56% vs 88%/损失厌恶/文献）; https://theses.gla.ac.uk/7563/1/2016Agbatophd.pdf（格拉斯哥大学博士论文，WebSearch 逐字快照：四 MAP 公式与 silver lining/fungibility 违反）; https://erepo.uef.fi/bitstreams/c8539672-7485-4f9f-9daf-c3b0f0c73c27/download（东芬兰大学论文，WebSearch 逐字：87 学生 56 人/Thaler1999 定义/处置效应）; https://jjxdt.ajcass.com/Admin/UploadFile/20150323002/2018-04-04/Issue/2x5acvui.pdf（中国社科院引介，WebSearch 逐字：四案例/可替代性/交易效用）。格拉斯哥 PDF WebFetch 非文本、逐字取自搜索快照如实登记。 逐字全文与判非见 `references/r799A_心理账户.md`。
+**独点1** 阶数是「对效用函数假设的松紧」阶梯，低阶蕴含高阶不可逆：零阶 statewise dominance 要求每个自然状态都不差；一阶 FSD 要求 CDF 处处不更高 `F_X(x)≤F_Y(x) ∀x`（至少一个严格）、等价「所有非递减效用 u∈U₁ 下 E[u(X)]≥E[u(Y)]」，只要相信越多越好就认可、风险态度不进入；二阶 SSD 要求 CDF 积分处处不更高 `∫_{−∞}^{α}F_X(t)dt≤∫_{−∞}^{α}F_Y(t)dt ∀α`、等价「所有非递减且凹（风险厌恶）u∈U₂ 下 X 优于 Y」。`FSD⊆SSD⊆TSD`，证明了一阶自动生成高阶、反之不成立。**判据**：报「X 优于 Y」必须写清几阶，CDF 相交即 FSD 不成立别硬套。§十九前景理论管参照点已知时值函数怎么变形，本章管连效用函数都无法指定时凭分布排除劣选项。
+**独点2** 这是偏序不是全序，也正是它优于均值-方差处：随机占优「does not give a total order, but rather only a partial order」，many pairs 互不占优是合法输出非分析失败。相对 MV（要求收益正态+二次效用、非正态会偏），SSD 尾部等价 `Tail_β(X)≥Tail_β(Y) ∀β`（最差 β 比例条件期望）把「Y 尾更肥=风险更大」说清。正态下 SSD 与 MV 一致是特例非通则。**判据**：非正态或只看均值/方差会误导时改用 SSD；识别「所有 SSD 有效分散策略」的复杂度如实登记（均值-基尼只是必要非充分）。
+**独点3** 与前景理论有正式冲突边界，别跨框架搬运：Schmidt–Zank 证 SSD 对 PT 要求 gain 凹、loss 也凹、gain 权重整体凸、loss 权重整体凹，实证却是 gain 凹、loss 凸、权重 inverse-S——SSD 结论属 EU/RDU 框架，不能直接外推到参照点依赖的描述场景（Manchester EDP-1123 逐字）。与 §r768C minimax regret（无概率深不确定）分工：随机占优要已知 CDF。不防什么：不产出唯一全序、不替代效用 elicitation（§r788C）、三阶 TSD 的「绝对风险厌恶递减」附加假设本条不展开。
+- **判重：`随机占优`/`stochastic dominance`/`FSD`/`SSD` 全库 SKILL.md 与 module-memory 0 专节；§十九前景理论命中但异命题（有参照点值函数 vs 无效用函数偏序），分工见独点 3。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。** 来源与诚信：https://en.wikipedia.org/wiki/Stochastic_dominance （WebFetch200全文）· https://www.mdpi.com/2227-7390/11/1/50/xml （空Title页，正文取WebSearch逐字未冒充全文）· https://hummedia.manchester.ac.uk/schools/soss/economics/discussionpapers/EDP-1123.pdf （WebFetch200全文）· 百度百科随机优势（WebFetch200）· 聚宽（WebFetch200）；逐字全文与判非见 `references/r803A_随机占优.md`。
