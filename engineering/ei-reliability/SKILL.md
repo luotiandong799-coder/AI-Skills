@@ -1,9 +1,9 @@
 ---
 name: ei-reliability
-description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。错误预算、燃尽率、burn rate、多窗口告警、multiwindow、SLO 告警、Page/Ticket 分档、短窗口泄漏问题。触发：错误率告警阈值怎么定、告警疲劳。
+description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时、TCC 预留式事务、空回滚、悬挂、事务参与记录表。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。错误预算、燃尽率、burn rate、多窗口告警、multiwindow、SLO 告警、Page/Ticket 分档、短窗口泄漏问题。触发：错误率告警阈值怎么定、告警疲劳。
 module: EI
 modules: EI,VI
-version: 1.13.0
+version: 1.14.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -312,3 +312,16 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 
 - **判重：`backpressure`/有界队列在本体仅 §16 load shedding 词组与 §75 SDK client 作用域，无专节；`wb-debug-loop` 有「背压分丢弃/阻塞两档」一句（相邻技能异命题），豆包自留地 WB 0 落地。按四态判「增」加厚。**
 - **来源与诚信**：https://github.com/reactive-streams/reactive-streams-jvm（Reactive Streams 官方规范 v1.0.4，WebFetch 200 逐字：缓冲必须有界且由订阅者控制/无限流无界致 OOM/backpressure mandatory）; https://raw.githubusercontent.com/ReactiveX/RxJava/3.x/docs/Backpressure-(2.0).md（RxJava 官方文档，WebFetch 200 逐字：下游通知上游降速/无界缓冲致堆 1M 元素/有界缓冲溢出终止/DROP 与 LATEST 两算子）; https://www.rfc-editor.org/rfc/rfc6585.txt（IETF RFC 6585，2012-04，WebFetch 逐字：429 too many requests/Retry-After）; https://www.rfc-editor.org/rfc/rfc9110.txt（IETF RFC 9110 §15.6.4，2022-06，WebFetch 逐字：503 temporary overload/Retry-After）。sre.google handling-overload 两页 fetch failed；Little's Law 公式仅 WebSearch 级证据已标注，未计一手。 逐字全文与判非见 `references/r796C_背压有界队列.md`。
+
+## 二十三、TCC 预留式事务：把 2PC 准备阶段从 DB 锁上移到业务语义（r799B 独立实拉 2026-11-23，≥3 独立域一手交叉，3 独点）
+
+§二 Saga 管「每步完整生效、靠事后补偿收回」，本章管另一条路——**先冻结、后转正**，用预留把隔离性买回来。
+
+**独点1** 预留 vs 补偿：TCC=Try 校验并预留资源（冻结金额/预占库存，不生效）→全 Try 成功才逐个 Confirm 转正→任一失败逐个 Cancel 释放。Saga 每步是完整生效的本地事务、补偿要逆向执行真实变更；TCC 的 Try 只预留，Confirm 前外界看不到生效结果，等于用「冻结」语义买回隔离性（达读已提交级但仍可能幻读）；代价是每个参与方实现三个接口、冻结字段侵入表结构，改造量约 Saga 三倍。判据：资金类短流程、预占语义现成的领域（座位/库存）选 TCC；长流程、跨团队、含外部参与方一律 Saga+状态机——外部方不会为你实现三个接口。
+
+**独点2** 空回滚/悬挂/幂等三件套共用一张事务参与记录表：空回滚＝Try 未达而 Cancel 先到，Cancel 须识别「无对应 Try」并当成功返回——报错会让协调方无限重试 Cancel 卡死；悬挂＝空回滚后迟到 Try 若照常执行则预留永久无人收口，Cancel 时插「此事务已关闭」记录、迟到 Try 查到即拒；幂等＝Confirm/Cancel 都会被重试须效果不变。三者同一张表（全局事务号唯一键+当前阶段）：空回滚查它、防悬挂靠它、幂等判它。评审 TCC 先问这张表在哪。
+
+**独点3** 超时裁决与迟到回调是同一状态的竞争写：支付中超时→迁「超时关单」并释放库存，2 秒后支付成功回调到达；正解是让超时裁决本身也做成条件更新迁移，迟到回调走条件更新时发现前置态已非「支付中」→拒绝迁移并转自动退款补偿，二者必须串行化在同一张迁移表上分出先后。与 §二 Saga / §15 熔断 / §17 舱壁分工：Saga 无隔离靠补偿、TCC 预留买隔离；熔断舱壁是网关不是事务协议。不防什么：TCC 不解决网络分区下的最终一致、不替代对账。
+
+- **判重：`TCC`/`Try-Confirm-Cancel`/`空回滚`/`悬挂`/`事务参与记录表` 在本体 0 命中；`Saga`/`幂等`/`补偿事务` 命中 §二与 §五状态机节，本条取「预留式隔离+三件套」正交面，不重述 Saga 编排。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://zyfcodes.blog.csdn.net/article/details/166735422（CSDN 一手长文，WebFetch 200 全文逐字：三阶段/三件套/竞争写/五角色分工/选型）; https://alishangtian.com/ainews/article/user-2ab0e9b72a（智码视界，WebSearch 逐字：业务层 vs 资源层/三经典问题/Saga 直接执行）; https://foxfire.com.cn/article/7139.html（狐火笔记，WebSearch 逐字：资源占用/读已提交仍幻读/5 步阈值）; https://plumephp.com/workflow-saga-distributed-transaction/（WebSearch 逐字：冻结 vs 扣减/10 步编排阈值）。后三域为 WebSearch 快照非 WebFetch 全文，如实登记。 逐字全文与判非见 `references/r799B_TCC预留式事务.md`。

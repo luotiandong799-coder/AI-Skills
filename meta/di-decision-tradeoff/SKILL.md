@@ -1,9 +1,9 @@
 ---
 name: di-decision-tradeoff
-description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序、影响图、信息弧、决策节点、价值节点、决策基三要素、前景理论、参照点依赖、损失厌恶、框架效应、确定性效应、反射效应、禀赋效应、编辑与评价两阶段、全局敏感性分析、Morris筛选、Sobol指数、一阶效应、总效应、交互效应、因子排序、因子固定、实物期权、real options、管理灵活性、延迟扩张放弃转换期权、ROV、不可逆投资、参考类预测、reference class forecasting、外部视角、inside view、规划谬误、planning fallacy、乐观偏差、optimism bias、reference class tennis、成本超支、uplift、Flyvbjerg、博弈论决策、game theory、占优策略、最佳回应、纳什均衡、混合策略、逆向归纳、子博弈精炼、不可信威胁、可信承诺、连锁店悖论、策略互动、效用函数 elicitation、标准赌局、standard gamble、确定等价、certainty equivalent、风险容忍常数、Arrow-Pratt、凹性风险规避、vNM公理、多属性效用、加性独立性、概率轮、权衡法、ELECTRE、PROMETHEE、outranking、非补偿性排序、concordance、discordance、净流、不可比、veto阈值
+description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序、影响图、信息弧、决策节点、价值节点、决策基三要素、前景理论、参照点依赖、损失厌恶、框架效应、确定性效应、反射效应、禀赋效应、编辑与评价两阶段、全局敏感性分析、Morris筛选、Sobol指数、一阶效应、总效应、交互效应、因子排序、因子固定、实物期权、real options、管理灵活性、延迟扩张放弃转换期权、ROV、不可逆投资、参考类预测、reference class forecasting、外部视角、inside view、规划谬误、planning fallacy、乐观偏差、optimism bias、reference class tennis、成本超支、uplift、Flyvbjerg、博弈论决策、game theory、占优策略、最佳回应、纳什均衡、混合策略、逆向归纳、子博弈精炼、不可信威胁、可信承诺、连锁店悖论、策略互动、效用函数 elicitation、标准赌局、standard gamble、确定等价、certainty equivalent、风险容忍常数、Arrow-Pratt、凹性风险规避、vNM公理、多属性效用、加性独立性、概率轮、权衡法、ELECTRE、PROMETHEE、outranking、非补偿性排序、concordance、discordance、净流、不可比、veto阈值、心理账户、mental accounting、交易效用、获得效用、银边原则、多收益分离、多损失合并、fungibility可替代性、沉没成本剧院票
 module: DI
 modules: DI,TI
-version: "1.22.0"
+version: "1.23.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -486,15 +486,15 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 
 - **判重：`hysteresis`/`滞后阈值`/`双阈值` 本体全库 0；与 §八 EVPI、§十五 VoI、单向/双向门分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://courses.ideate.cmu.edu/16-223/f2018/text/ex/Arduino/input-hysteresis/input-hysteresis.html（CMU IDeATe 16-223，2018 秋，WebFetch 200 逐字：历史依赖定义 / light_threshold 高于 dark_threshold / 小噪声不触发）；https://arxiv.org/html/1910.02026（Casau 等，arXiv:1910.02026，2019-10-04，WebFetch 200 逐字：hysteresis gap prevents chattering / flow μ≤δ 与 jump μ≥δ 重叠）。无。`2–3×噪声` 一类具体倍数非一手来源给出，未写入。 逐字全文与判非见 `references/r795B_决策滞后.md`。
-## 二十八、Cynefin 分域：先定因果可知性再选动作链，别拿 best practice 硬套复杂域（r796B 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+## 二十八、Cynefin 分域：先定因果可知性再选动作链（r796B · 全文下沉）
 
-§27 决策滞后管切换的状态机，本章管更前置的问题——**这件事属于哪个域**，域错了后面流程再精致也是用错方法。
+> 四域（Clear/Complicated/Complex/Chaotic）+ 第五域 Confusion + 四条动作链（sense-categorize-respond / sense-analyze-respond / probe-sense-respond / act-sense-respond）+ 域迁移条件 + Cynefin.io 与 OpenLearn 一手逐字与判非，全文见 `references/r796B_Cynefin.md`（23 行）。使用本方法时以该 references 为准，本节仅留路由，不内联正文。
 
-**独点1** 先定域再选动作链：Clear（因果自明，sense-categorize-respond）/ Complicated（因果存在但需专家分析，sense-analyze-respond）/ Complex（「no linear material causality」，只能 probe-sense-respond）/ Chaotic（无有效约束、需立即止损，act-sense-respond）。判据：对 Complex 域直接套标准流程或 best practice 判违规。Cynefin.io 官方逐字逐域定义可机检。
+## 二十九、心理账户：钱被分进不同账户，fungibility 就失效（r799A 独立实拉 2026-11-23，≥3 独立域一手交叉，3 独点）
 
-**独点2** 第五域 Confusion 必须显式：判据——先写「当前不知在哪个域」的出口（拆成子问题分别归域）再给方案，禁止把 Confusion 当 Chaotic 直接「先干再说」。OpenLearn 逐字：模型含五个域（confused/clear/complicated/chaotic/complex）。
-
-**独点3** 域随认知和约束迁移，不是永久标签：最稳定的是 Complex↔Complicated 迭代，稳定到低风险才把部分问题降到 Clear；Chaotic 须先建立约束再转 Complex→Complicated→Clear。判据：长期路线图未写域迁移条件即判静态误判。
-
-- **判重：`Cynefin` 全库 SKILL.md 0 命中；与 §六加权矩阵、§二十七滞后分工不复用。豆包自留地 WB 0 落地。**
-- **来源与诚信**：https://cynefin.io/wiki/Cynefin_Domains（Cynefin Company 官方 Wiki，2021-02 框架版，WebFetch 200 逐字：Clear/Complicated/Complex/Chaotic 逐域定义/Complex 无线性因果/Chaotic 需立即稳定/域间迭代）; https://www.open.edu/openlearn/mod/oucontent/view.php?id=140156&section=4.2（英国开放大学 OpenLearn，WebFetch 200 逐字：五域含 confused/三动作链 probe-sense-respond 与 act-sense-respond/禁止标准解法套复杂场景）。HBR 2007 付费墙仅首段、Kurtz&Snowden PDF fetch failed；均未入引文。 逐字全文与判非见 `references/r796B_Cynefin.md`。
+§一前景理论管参照点与损失厌恶的**值函数形状**，本章管更前置的一层——**同一笔钱被放进哪个账户**，账户间的钱不可互换，规范上的 fungibility 在人的实际决策里失效。
+**独点1** 交易效用与可替代性违反：Thaler 1985 把价格作为属性引入价值函数、价格成参照点；`TU=参照价−实付价`，总效用=获得效用+交易效用。四个经典案例（赢来的钱敢下注 vs 股票赚的钱弃牌、存 15k@10% 却贷 11k@15% 买车、自购嫌贵的羊绒衫做礼物则喜）都违反「同单位货币无差别」。判据：决策记录须分两栏写「这笔钱从哪个心理账户出」与「fungibility 下的机会成本应是多少」，二者相左即心理账户在起作用。
+**独点2** 四 MAP 编码原则决定偏好方向：多收益分离 `v(x)+v(y)>v(x+y)`；多损失合并；混合收益（净收益）合并——银边原则让损失被收益吸收；混合损失看相对大小——损失远大于收益时分离、两者接近时合并。剧院票 10 美元实验：丢票 56% 不再买（该 10 计入「看戏账户」心理票价变 20），丢现金 88% 仍买（计入「丢钱账户」心理票价仍 10）。判据：同一组现金流在分离/合并两编码下翻转偏好即心理账户效应，方案必须写明编码方式，禁止把「分账户」当给定。
+**独点3** 账户预算不可互替导致沉没成本误判：沉没成本本不该进决策，但账户划分阻碍识别；处置效应里 paper loss 不平仓＝账户未关闭、回避实现亏损的痛感。与 §一前景理论分工：那里管值函数形状与参照点移动，这里管钱如何分账户、账户间预算为何不能换；与 §十六诱导 / §十七 AHP 分工不复用。不防什么：描述性理论（人实际怎么错），不提供规范性分账户规则，不替代机会成本核算。
+- **判重：`心理账户`/`mental accounting`/`交易效用`/`silver lining` 全库 SKILL.md 0 命中；`前景理论`/`损失厌恶` 命中本技能 §r762，分工见独点 3，不并存。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。**
+- **来源与诚信**：https://dept.abcdef.wiki/wiki/Mental_Accounting（葡语维基词条，WebFetch 200 全文逐字：账户创建/剧院票 56% vs 88%/损失厌恶/文献）; https://theses.gla.ac.uk/7563/1/2016Agbatophd.pdf（格拉斯哥大学博士论文，WebSearch 逐字快照：四 MAP 公式与 silver lining/fungibility 违反）; https://erepo.uef.fi/bitstreams/c8539672-7485-4f9f-9daf-c3b0f0c73c27/download（东芬兰大学论文，WebSearch 逐字：87 学生 56 人/Thaler1999 定义/处置效应）; https://jjxdt.ajcass.com/Admin/UploadFile/20150323002/2018-04-04/Issue/2x5acvui.pdf（中国社科院引介，WebSearch 逐字：四案例/可替代性/交易效用）。格拉斯哥 PDF WebFetch 非文本、逐字取自搜索快照如实登记。 逐字全文与判非见 `references/r799A_心理账户.md`。

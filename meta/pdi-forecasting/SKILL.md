@@ -3,7 +3,7 @@ name: meta/pdi-forecasting
 description: 预测与概率判断（Predictive Intelligence）：估计事件发生/时点/量级、给结论配概率、情景推演、"押个概率/预测一下"时调用。含超预测五步法（问题精化→参考类基率→内部微调→贝叶斯小步→Brier 闭环）、费米拆解、范围敏感性、Pre-Mortem、0.1–0.9 校准带；只输出可结算判断、不作行动决策。；题面可结算性（什么算/何时算/谁裁定·三类规格缺陷·回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO·误差累积与随机依赖两轴·跨视界可比与逐视界最准互斥）；加权评分（w(y)S破坏适当性·threshold/outcome-weighted两类）；回测协议（purge+embargo两漏/CPCV一条历史变多路径/PBO+Deflated Sharpe计试验数/单路径非证据）；事件型预警（point-adjustment让随机探测器拿高F1/事件级检出率·延迟·单位时间误报三栏/range-based与k-delay）；专家概率引出（分位数法X05/X50/X95/锚定两口径/Cooke种子题双评分加权/校准优先信息性/平均专家90%区间仅36%含真值）；预测组合场景依赖（adaptation 追平最佳单候选 vs improvement 超越全部/不看场景套方法即制造组合之谜/mAFTER 把简单平均当候选）；MCMC 收敛（R-hat split+rank/folded 取max+bulk·tail-ESS双达标/全局含lp__/诊断只验失败不证收敛）；多变量评分（ES=CRPS高维推广严格适当但相关误设判别力有限/VS测相关仅适当非严格/二者kernel scores互补·DM检验）；pinball分位评分（严格适当·minimizer=条件τ分位/非对称τ与1−τ·τ=.5即MAE半/coverage gap>5pp/skill score对气候基线/单点分位好≠全分布好）；分位数交叉与尾部外推（q90<q80不连贯·单调参数化/联合拟合/事后排序/极端分位外推/边际分位非联合分布）。；split conformal构造与有限样本可认证上限（四步·qhat=⌈(n+1)(1−α)⌉分位·(n+1)修正使覆盖exact·小样本上限n/(n+1)·坏预测器付宽度不付有效性·set size是信号·APS/RAPS/CQR·与置信区间/温度缩放区分）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.21.0"
+version: "1.22.0"
 ---
 # PDI · 预测与概率判断（Predictive Intelligence）
 > 本技能是 Personal AI OS 13 模块中 **PDI（预测智能）** 的唯一载体。TI 想明白因果、DI 在多方案中选择、PDI 负责"给未来事件配一个可结算的概率并持续校准"。
@@ -486,15 +486,15 @@ n=8 残差排序 {0.2,0.3,0.4,0.5,0.6,0.8,0.9,1.1}，α=0.125 时 k=⌈9×0.875�
 **独点3** 概率判据：概率预测须检验预测分布的线性约束（projection 或 copula 重排）；只在点预测协调却声称「区间自动一致」无一手支持。Gaussian 框架下 MinT 最小化对数评分（arXiv:2103.11128），此为分布假设下的结论，不自动外推到任意分布。
 - **判重：`层级协调`/`hierarchical reconciliation` 本体与全库 SKILL.md 0；`reconciliation` 7 命中为冲突消解/对账异命题；与 §十 width×coverage、§十一边际 vs 条件覆盖、§25 conformal 分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://otexts.com/fpp3/hierarchical.html（Hyndman & Athanasopoulos，Forecasting: Principles and Practice 3rd ed. §11.3，作者官方站点，WebFetch 200 逐字：bottom-up/top-down/middle-out 与 only strictly hierarchical / 不 coherent / top-down 有偏 / MinT=min_trace）；https://robjhyndman.com/publications/mint/（Wickramasuriya/Athanasopoulos/Hyndman，JASA 114(526):804-819，2019-06-14，WebFetch 200 逐字：coherence 定义 / W 不可估 / 无偏下最小化 MSE）；https://arxiv.org/abs/2103.11128（Wickramasuriya，Probabilistic forecast reconciliation under the Gaussian framework，2021-03-20，WebFetch 200 逐字：incoherent→coherent 映射 / OLS·WLS·MinT / Gaussian 下 MinT 最小化 log score）。arXiv:1706.09245 抓错（实为 Kassarnig 等教育行为论文），已弃用并如实登记；MinT.pdf fetch failed，改作者 publication 页。 逐字全文与判非见 `references/r795M_层级协调.md`。
-## 二十七、校准诊断：可靠度图读方向、ECE/MCE 与held-out 分箱稳健性（r796M 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+## 二十七、校准诊断：可靠度图读方向、ECE/MCE 与 held-out 分箱稳健性（r796M · 全文下沉）
 
-§21 温度缩放与 §25 conformal 都是修正/构造，本章只做**诊断**：先看概率和频率对不对得上，再决定要不要动模型。
+> `conf_b`/`acc_b` 分箱方向判据、`ECE=Σ(n_b/N)|acc−conf|` 与 `MCE=max|acc−conf|` 同时报、Murphy 三项 `REL−RES+UNC`、分箱数敏感性 M∈{10,15,20} 与 scikit-learn/Nixon2019/Guo2017 一手逐字与判非，全文见 `references/r796M_校准诊断.md`（25 行）。本节仅留路由，以该 references 为准。
 
-**独点1** 方向判据：预测分箱后逐箱算 `conf_b=mean(p)`、`acc_b=mean(1[ŷ=y])`；`acc_b−conf_b<−δ` 判该箱过度自信（落在 y=x 对角线下方），`>+δ` 判欠自信（上方），全部箱 |差|≤δ 才判已校准。scikit-learn 逐字：predict_proba≈0.8 的样本约 80% 真属正类；Nixon 2019 逐字：overconfidence/underconfidence 由 calibration 度量。
+## 二十八、间歇需求 Croston：把「多久来一次」和「来多少」分开估（r799C 独立实拉 2026-11-23，≥3 独立域一手交叉，3 独点）
 
-**独点2** 评估集与标量判据：诊断样本须与训练/校准/修正样本互斥（held-out）；报 `ECE=Σ_b(n_b/N)|acc_b−conf_b|` 并同时报 `MCE=max_b|acc_b−conf_b|`。判据——在训练集上出图或以其 ECE 下结论判不合格；以单一 Brier 值充当校准结论判不合格，须落到 Murphy 三项 `REL−RES+UNC`（Brier 低也可能校准更差、分辨力更高）。scikit-learn 逐字：用训练输出拟合校准器会有偏、把概率推向 0/1。
-
-**独点3** 分箱稳健性判据：固定 M 的 ECE 不得为唯一结论，须做 M 敏感性（如 M∈{10,15,20} 或等频 AdaECE）；排名随 M 翻转判「分箱数敏感/不可采信」，任一箱 n_b 过小则该箱不参与判定。Nixon 2019 逐字：等距分箱受数据分布离散影响、自适应分箱更稳。与 §21/§25 分工：本条只诊断不修正，温度缩放/conformal 构造不重述。
-
-- **判重：`可靠度曲线`/`reliability diagram` 本体 0；`校准` 命中为 §21 温度缩放与 §25 conformal 区分句，本轮只取诊断读图正交面；豆包自留地 WB 0 落地。**
-- **来源与诚信**：https://scikit-learn.org/stable/modules/calibration.html（scikit-learn 官方 v1.9.1，WebFetch 200 逐字：calibration curves=reliability diagrams/分箱 x 轴=箱均预测概率/0.8→80%/训练输出拟合有偏/Brier Murphy 分解）; https://ar5iv.labs.arxiv.org/html/1904.01685（Nixon 等，arXiv:1904.01685，CVPR 2019 Workshop，WebFetch 200 逐字：ECE 等距分箱定义/过自信欠自信/等距分箱弱点/自适应分箱更稳）; https://proceedings.mlr.press/v70/guo17a.html（Guo 等，ICML 2017 PMLR 70:1321-1330，WebFetch 摘要逐字：confidence calibration 定义/温度缩放是单参数 Platt 变体；正文 PDF 非文本未取）。Guo PDF 非文本仅取 PMLR 摘要；Murphy 1973 DOI 验证码墙，三项分解由 scikit-learn 官方转述非原文。 逐字全文与判非见 `references/r796M_校准诊断.md`。
+§17 回测协议管「评估会不会骗人」，本章管另一类专门的序列——**大量零期夹杂零星正需求**：此时均值与方差都被零扭曲，必须先拆「发生频率」和「发生时的量」。
+**独点1** 两分量分解避开零期拖偏：Croston 1972 对需求大小 `ẑ_t=α·d_t+(1−α)·ẑ_{t−1}` 与间隔 `p̂_t=α·q_t+(1−α)·p̂_{t−1}`（q=距上次需求期数）分别单指数平滑，均仅在正需求期更新，点预测 `ŷ=ẑ/p̂` 是**每期需求率**不是下次到货日期。SES 把零当平稳噪声拖向零而低估，Croston 避开该偏差。SBA 乘 `(1−α/2)` 修 Jensen 不等式导致的 Z/P 正偏，实证普遍优于原方法、作默认候选。
+**独点2** ADI/CV² 是模式描述不是自动选模型：`ADI=期数/有需求期数`、`CV²=正需求大小方差/均值²`（零期只进间隔不进大小）；阈值 `ADI=1.32`、`CV²=0.49`（Syntetos-Boylan-Croston 2005）分四象限 Smooth→SES、Erratic→SBA、Intermittent→Croston/SBA、Lumpy→SBA/bootstrap/逐项判断。Kostenko-Hyndman 修了 Croston 与 SBA 的理论边界，短历史或贴阈值不宜硬分类；缺货零是删失需求须标记为未观测，从无正需求 SKU 无法算 CV² 须单列。
+**独点3** TSB 与评估口径——率不是订单量：TSB 在需求发生时平滑大小但**每期更新需求概率**，零累积使预测衰减，适合走向淘汰/生命周期末期的 item（Croston/SBA 在无需求期不变，留 obsolescence 问题）。含零期 MAE/RMSE 可被「每期报 0」骗低（低 MAE 却无规划价值），间歇序列改 MASE（<1 才胜朴素）、RMSSE、fill rate/ready-rate，按 lead time 建需求分布再定再订货点，0.9 不先四舍五入（整箱/MOQ 留到库存决策时加）。与 §17 回测协议分工：那里管 purge/embargo/CPCV 防泄漏，这里管稀疏序列本身的估计与误差口径。不防什么：常数点预测不随趋势季节变、无分布输出，安全库存须另加假设或 bootstrap。
+- **判重：`Croston`/`间歇需求`/`intermittent demand`/`SBA`/`TSB`/`ADI`/`CV²` 全库 SKILL.md 与 module-memory 0 命中；`bootstrap` 命中 §17 回测语境异命题。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。**
+- **来源与诚信**：https://metricgate.com/docs/croston-method（MetricGate 官方，WebFetch 200 全文逐字：两分量公式/SBA Jensen 正偏/ADI-CV² 四分类/MASE/α 默认 0.1/无分布输出）; https://voids.ai/en/blog/intermittent-demand-forecasting-for-ecommerce（2026-11-18，WebFetch 200 全文逐字：SBA 公式/TSB 概率每期更新与淘汰/Kostenko-Hyndman/缺货删失/0.9 不取整）; https://takumilabs.io/articles/forecasting-intermittent-demand-spare-parts（WebSearch 逐字：bootstrap 胜 SES/Croston/MASE/RMSSE/fill rate）; https://intuendi.com/resource-center/intermittent-demand-forecasting/（WebSearch 逐字：零期可能是缺货/MAPE 算不出/四象限）。后两域为 WebSearch 快照非全文，如实登记。 逐字全文与判非见 `references/r799C_Croston间歇需求.md`。
