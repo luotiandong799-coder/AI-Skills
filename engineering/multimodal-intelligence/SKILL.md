@@ -49,7 +49,6 @@ modules: PI
 
 能对任意一张用户截图给出：① 这是什么界面 ② 关键文字/数据（OCR）③ 有无异常 ④ 建议动作。四项缺一即不合格。
 
-
 ## 六、OCR 评测口径与置信度失效（2026-11-11 r737A 实拉，≥2 独立域一手交叉）
 
 ### r737A-1 ★CER/WER 不是「准确率」，无上界且分母与归一化决定数值
@@ -158,7 +157,6 @@ ACM JCDL 2026《Accessibility Annotations as OCR Ground Truth》四指标互补�
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `linear-light` / `gamma encoded` / `rendering intent` / `chromatic adaptation` / `ΔE` / `色适应` / `色彩空间` / `白点` / `色域映射` **全 0 命中**；`CIEDE2000` 2 命中在本技能 §8.3 与 r750B 来源节（Netflix libvmaf **内含指标清单**，仅列名未给口径），本轮按「**优＝加厚现有**」补色差口径，不重述 VMAF v0/v1/HDR/NEG 分代结论；与 §六 CER/WER、§七 阅读顺序、§八 FR/RR/NR 三族结论均不复用。豆包自留地 **WB 0 落地**。A / C 两轮结论一律不复用。
 - **未采纳**：CSS gamut mapping 的 OKLCH chroma reduction 具体算法与 δEOK 阈值（正文未取到）、ICC 参考介质 89% 反射率 / 500 lux / 20% surround 数值、ΔE2000 完整公式与测试数据集、各厂商 ΔE 合格阈值表 —— 属实现数值或未核验二手，不迁移为通用判据。
 
-
 ## 十、主观评测是客观质量指标的真值来源：六项控制、MOS 置信区间与方法选型（r758B · 2026-11-16 实拉）
 
 > 与 §八分工：§八讲 FR/RR/NR 客观指标**按参考可用度选型**与对齐前置；本节讲这些客观分数**凭什么算对**——它们都是对主观面板的预测，真值来自受控的主观测试。VMAF 本身就是「训练在主观分上的融合指标」（§8.3），故本节是它的验收前置，不重述分代结论。
@@ -188,7 +186,6 @@ ACM JCDL 2026《Accessibility Annotations as OCR Ground Truth》四指标互补�
 - `https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.500-13-201201-S!!TOC-HTM-E.htm`（**ITU-R BT.500-13 官方目录**）— **WebSearch 逐字快照**：§2.1 观看条件（实验室/家庭/监视器分辨率与对比度）、§2.4 条件范围与锚定、§2.5 Observers、§4 DSIS、§5 DSCQS、§6 单刺激/刺激比较/SSCQE/SDSCE、Annex 2 §2.2 置信区间计算、§2.3 观察者筛选（区分 DSIS/DSCQS 与 SSCQE）。**第四独立域（标准组织官方目录，版本 2012；现行 BT.500-15 (05/2023) 由 P.910 参考表与 Fora Soft References 双域佐证，如实登记版本差）**。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `BT.500` / `DSIS` / `SAMVIQ` / `观看条件` / `平均意见分` / `绝对类别评级` / `DSCQS` / `ACR-HR` / `ΔSCI` **全 0 命中**；`ACR` 2 命中经查为 `writing/supply-chain-thesis-master`（智能仓储「ACR/CTU 料箱机器人」，异命题）与误抓子串；`MOS` 5 命中经查为 `wb-agent-evaluation`（MOSAIC-3M 数据集名）、`win-native-app-automation`（SetWindowPos 片段）等**子串误抓/异命题**；`主观评测` 1 命中在 `engineering/wb-execute-discipline`（自纠错在「主观评测任务」信息增益为负，异命题）；`observer` 1 命中在 `wb-debug-loop`（隔离 observer，异命题）。按 rules/07 四态判「**优＝加厚现有 `engineering/multimodal-intelligence`**」，不新建并行层。PI 模块记忆 §8（FR/RR/NR 与对齐）、§9（色彩/ΔE）结论**一律不复用**；豆包自留地 **WB 0 落地**。与 r757/r756/r755 九模块结论不复用；A / C 两轮结论亦不复用。
 - **未采纳**：BT.500 Annex 2 逻辑函数拟合目标模型的具体参数、P.1401 客观模型资格评定流程、P.1203/P.1204 参数模型公式、crowdsourcing gold/trapping 题库设计、SAMVIQ 完整实现、各版本 5 点/9 点量表逐条差异 —— 属标准实现细节与工程配置，不迁移为通用判据。
-
 
 ## 十一、生成式描述的评测：语义命题 F-score 与「系统级 / 句子级」两口径（r762B · 2026-11-18 实拉）
 
@@ -355,3 +352,11 @@ alphaXiv 逐字：四种措辞下 POPE 报告平均 F1 67.43、标准差 0.78；
 
 - **判重：`ChartQA`/图表问答在本体与全库 SKILL.md 0；与 §FID/文图对齐/CHAIR-POPE/FastV 分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://arxiv.org/abs/2203.10244（ChartQA，ACL 2022 Findings，2022-03-19，WebFetch 200 逐字：复杂逻辑与算术推理/T5 生成 23111 问题）; https://arxiv.org/html/2203.10244v1（WebFetch 逐字：OCR 错误或同义词使空间编码分类法失效/表 1 双半数据量）; https://github.com/vis-nlp/ChartQA（作者官方数据集仓库，WebFetch 200 逐字：train_human.json 与 train_augmented.json 双文件/split 结构）。初抓 2003.10244 错配地球物理论文已更正 2203.10244；HTML 全文 60s 超时仅前 15000 字，metric/盲基线未取到。 逐字全文与判非见 `references/r796J_ChartQA.md`。
+
+## 视觉对比解码 VCD：training-free 解码期缓解物体幻觉（PI · r797B 2026-11-23）
+§16 CHAIR/POPE 是**测**幻觉，本章是**缓解**幻觉；与 r795J FastV（推理加速）异命题。
+**独点1** 两大幻觉根因＝统计偏差（高频物体/虚假共现）＋语言先验（视觉模糊时退化为文本 next-word）。给图像加高斯噪声＝主动造一个「偏向幻觉的分布」当负样本；噪声不是抗噪而是「幻觉放大镜」，同时放大两类 bias。对比原图与噪声图两分布剥掉幻觉概率。
+**独点2** 对比式 `diffs=(1+α)L_orig−αL_noise`（等价无分类器引导 (1+α)ε(x,c)−αε(x)，α 放大差异、α=0 回常规解码）。直接全局对比会误伤噪声图仍保留的语法常识 → 自适应合理性约束：只在原图分布高概率 token 集合内对比（β 控截断、越大越激进）。报 VCD 写清 α/β/扰动方式。
+**独点3** 收益 POPE 最高 +7.4 F1／MME 幻觉子集 +18%，跨 LLaVA-1.5/InstructBLIP/Qwen-VL；α∈[0.25,1] 与 5 种采样策略均鲁棒，7B≈13B 说明堆参数不解决幻觉。边界：只缓解存在性幻觉、噪声方式粗糙、论文用词 mitigate 非消除。
+判重：本体 0 专节；豆包自留地 WB 0 落地。
+来源与诚信：Leng 等 arXiv:2311.16922（DAMO/NTU，2023-11-28）WebFetch 200 一手（全文超时仅取前 15000 字）＋CSDN/DeepWiki/Lacuna/llm-paper-notes 方法细节逐字。逐字全文与判非见 `references/r797B_视觉对比解码VCD.md`。

@@ -234,7 +234,6 @@ Purdue OWL 逐字「The **qualifier** shows that a claim **may not be true in al
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `argumentation scheme` / `critical question` / `burden of proof` / `defeater` / `undercutter` / `举证责任` / `presumptive` / `可废止` **全 0 命中**；`图式` 命中在本技能 §十二（图尔敏论证**结构要素**）与 §180 一句「Liverpool PDF 中 AI & Law 形式化（dialogue games / argumentation schemes）整段属专门领域、未采纳」—— **r747A 明确判非且未落地**，本轮取的是「推理模式 + 该模式自带 defeater 集 + 举证责任方向」这一**内容层**，与 r747A 的结构层正交，且不取 dialogue games 形式化，故不构成重复；`meta/mi-memory` 的「要点/图式层」是记忆心理学 schema 异命题；`defaults/wb-context-compressor`（豆包自留地）「导航式/图式/多向量」是检索范式异命题。按 rules/07 四态判「**优＝加厚现有**」，不新建并行层。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` **WB 0 落地**。与 r753(AI/EI/SI)、r752(VI/DI/OI)、r751(MI/CI/RI) 九模块结论均不复用。
 - **未采纳**：Carneades 把 CQ 建模为 typed premises 的形式化、ASPIC+ / AIF / argument mining 工程线、CQs-Gen shared task 67.6 分数、Walton 1996 与 2008 目录数量考据、Blair 2001 标准批评、两项课堂对照研究细节 —— 属形式化实现、数值与专门争论，不迁移为通用判据。
 
-
 ## 十五、因果结论的跨域可迁移（外部效度）：selection diagram 与 transport formula（r758A · 2026-11-16 实拉）
 
 > 与 §十三分工：§十三问「**同一个域内**给定图 G 与分布 P，Q=P(y|do(x)) 能不能从 P 唯一算出」（识别性）；本节问「**源域做实验、目标域只能被动观测**时，目标域的 R=P*(y|do(x)) 能不能算」（可迁移性）。两道判定门，数据来源与所需假设都不同。
@@ -264,7 +263,6 @@ Purdue OWL 逐字「The **qualifier** shows that a claim **may not be true in al
 - **失败与降级如实登记**：`escholarship.org` PDF **python urllib 45s TimeoutError**（未取得全文，仅按 WebSearch 快照，不冒充一手 PDF）；`air.unimi.it`（本批 C 轮另一稿）**HTTP 403 Forbidden**。以上均不引用其正文数值之外的东西。
 - **判非**：窄串全库 `SKILL.md` 精确扫描 —— `selection diagram` / `transport formula` / `S-admissibility` / `外部效度` / `跨域因果` / `selection node` **全 0 命中**；`transportability` 1 命中＝**本技能 §十三 r750A 来源节明确写「PNAS 全篇 data-fusion / transportability 与 selection bias 的形式化 … 属专门领域或已在 §一/§三覆盖，不迁移为通用判据」＝r750A 判非未采纳**，本轮正式展开，按 rules/07 四态判「**优＝加厚现有**」而非新建并行层；`可迁移性` 3 命中经查为 `defaults/wb-context-compressor`（OTel 跨工具迁移 / DSPy 跨 locale）、`writing/supply-chain-thesis-master`（企业匿名化保留可迁移性），全为**异命题**。TI 模块记忆 §13 三条（识别性/Simpson/后门）结论**一律不复用**，本轮取正交的跨域迁移层。豆包自留地 `engineering/wb-execute-discipline` / `defaults/wb-context-compressor` **WB 0 落地**。与 r757(AI/EI/SI)、r756(DI/VI/OI)、r755(MI/CI/RI) 九模块结论不复用。
 - **未采纳**：sID 算法递归细节与 s-hedge 构造、Tian-Pearl/Shpitser 识别算法、Example 4~6 逐个图式、meta-analysis 逆方差权重公式、PNAS 2016 data-fusion 全篇、Manski 2007 边界定义原文 —— 属专门算法与形式化证明，不迁移为通用判据。
-
 
 ## 十六、认知接种：给结论预装「反驳疫苗」而非事后辟谣（r762A · 2026-11-18 实拉）
 
@@ -485,14 +483,17 @@ Barrios 三条 takeaway 逐字：①「The bias is arithmetic」——TWFE 是�
 - **判重：全库 `mediation` 4 命中均为后门/前门/调整集语境（TI §「条件于中介 M 会改变估计对象」仅一句），中介分析专节 0；与 §20 RDD、§13–23 识别策略分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://europepmc.org/articles/PMC11821701（Schuler 等，Health Serv Outcomes Res Methodol，2024-04-12，WebFetch 200 逐字：NDE+NIE=总效应 / CDE 定义 / interventional 假设更少但不分解）；https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12261401/（Gervais 等，2025，WebFetch 200 逐字：中间混杂下 natural effects 不可识别 / 无中间混杂时 IDE 退化为 NDE / 不满足单调性与严格中介零准则）。imai.princeton.edu/research/mediation.html WebFetch failed；FTP UCLA r379 PDF 非文本；均不冒充一手。 逐字全文与判非见 `references/r795A_中介分析.md`。
 ## 三十三、倾向得分：先定 estimand 再选匹配/加权，PS 不是结局模型（r796A 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
-
 §13–32 管「图上识别总效应」，本章管观察数据里另一种降维：把一堆协变量压成一个处理概率，用它做平衡而非预测结局。
-
 **独点1** estimand 先行：ATE↔IPTW（`w=1/e` 处理组、`1/(1−e)` 对照组）、ATT↔匹配、ATO↔overlap weights（每个单位权重∝被分到对立组的概率，有界且在该类平衡权重中渐近方差最小）。判据：方案只写「用了 PSM/IPW」却没声明目标人群（ATE/ATT/ATO）→ 不合格。Austin 逐字：PS 是「probability of treatment assignment conditional on observed baseline characteristics」且是 balancing score。
-
 **独点2** 平衡检验判据：先报告每个协变量绝对标准化差 SMD≤0.1（Austin/Medaglio 逐字），再画共同支撑/重叠分布并裁掉不重叠尾部，最后才报效应；禁止用 p>0.05 代替 SMD（样本量影响 p 而 SMD 不），禁止在非重叠区外推。匹配后仍须在结局模型里对残余不平衡做回归调整，禁止匹配完直接比两组均值。
-
 **独点3** PS 只由处理前协变量估计「处理概率」，用途是设计与平衡，把研究设计与结局分析分离；禁止把 PS 当结局预测模型、禁止纳入处理后变量。残余系统差异存在时须迭代修改 PS 模型而不是直接接受结果。
-
 - **判重：全库 `倾向得分`/`propensity score` 命中仅 TI §r778/RDD 判重语句，本体 0 专节；与 §13 后门、§20 RDD、§32 中介分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://europepmc.org/articles/PMC3144483（Austin，Multivariate Behav Res 46(3)，2011，WebFetch 200 逐字：PS 定义/balancing score/SMD<0.1/残余差异需修改模型/ATT 定义）; https://pmc.ncbi.nlm.nih.gov/articles/PMC9980423/（Medaglio 等，J Am Coll Clin Pharm 5(4)，2022，WebFetch 200 逐字：SMD≤0.1/common support/裁尾部/设计与分析分离）; https://arxiv.org/abs/1404.1785（Li/Morgan/Zaslavsky，arXiv:1404.1785，JASA 2018，WebFetch 逐字：overlap weights 权重∝对立组概率/有界/渐近方差最小）。tandfonline PDF 反爬、PMC 部分 URL HHS 拦截、Harvard 教材页 404；均未冒充一手。ATO 命名仅检索级证据已标注。 逐字全文与判非见 `references/r796A_倾向得分.md`。
+
+## 阴性对照 NCO/NCE：可经验证伪的偏倚探针（TI · r797A 2026-11-23）
+§22 E-value 量化「要多强混杂才能解释掉」，本章管**用一个已知无因果效应的对照变量当探针，经验检验偏倚是否存在**——解析阈值 vs 经验探针，正交不合并。
+**独点1** NCO 不被暴露因果影响但与结局共享病因；NCE 不因果影响结局但与暴露共享病因。前提「控制关联必为虚假」是演绎推出（非经验假设）：控制关联里只剩偏倚，故可当探针。Arnold 2016 把结构从「未测混杂」扩到选择偏倚/测量偏倚。
+**独点2** C（控制陈述）与 E（可交换性）的蕴含方向决定解读：C⇒E 时控制关联为零才能推主关联可识别；E⇒C 时有偏控制关联才佐证混杂。方向反了结论全反，不声明关系就解读＝逻辑倒置。Lipsitch 连接原则＝对照与主关联的共因重叠程度。
+**独点3** 阴性对照缺特异性也缺敏感性：碰撞分层/测量误差/缺失机制造假阳性，反向偏倚抵消成近零造假阴性；有限样本无法证明零假设（absence≠evidence of absence）。必须报「控制关联偏倚 vs 主关联偏倚的相对大小」，不是单个 p 值。
+判重：本体 0 专节，与 §22 E-value/§13 后门正交；豆包自留地 WB 0 落地。
+来源与诚信：Penning de Vries & Groenwold 2023（Stat Methods Med Res, DOI 10.1177/09622802231181230, PMC10515451）WebFetch 200 全文＋Arnold 2016 Epidemiology 27(5):637-641 WebFetch 逐字＋LCP/OpenRxiv 交叉。逐字全文与判非见 `references/r797A_阴性对照.md`。

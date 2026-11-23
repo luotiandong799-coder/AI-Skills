@@ -477,24 +477,23 @@ mSPRT 不控制跨指标 family-wise error（Adobe 对两个以上处理用 Bonf
 ## 主动学习：用标注预算换信息增益，随机采样是必须报告的基线（r795L 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
 
 §27/§28 管搜索预算与选点、§31 管同一批数据的顺序，本章管**该给哪些样本打标**：在反馈昂贵时，让模型自己挑最有信息量的样本，而不是把预算均摊。
-
 **独点1** 场景判据：须归入 pool-based（整池排序选样）/ stream-based（逐个到达即时决定标注或丢弃）/ membership query synthesis（合成新样本）三者之一；错分即错误条目。Settles 2009 逐字：主动学习让算法「choose the training data from which it learns」，以 fewer labeled instances 达更高精度。
-
 **独点2** 子策略判据：least confidence（top1 概率最低）、margin（top1−top2 差最小）、entropy（分布熵最大）须分列，不得互相替代或混称 QBC；QBC 用委员会分歧、expected error reduction 用预期误差下降，计算代价高须显式说明。Gal 2017 逐字：许多采集函数依赖模型不确定性，而深度模型很少表示这种不确定性。
-
 **独点3** 基线判据：声称「优于随机」须同时给 random baseline 与 cold start 处理（首轮模型太弱，常随机抽）；缺其一判证据不足。IEEE 逐字：不确定性采样是「the baseline every new method is measured against」，冷启动使早期 query 由过弱模型做出。
-
 - **判重：`主动学习`/`active learning` 本体与全库 SKILL.md 0 命中；与 §16 UCB/Thompson（决策选臂）、§31 课程学习（数据顺序）分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://minds.wisconsin.edu/handle/1793/60660（Settles，Active Learning Literature Survey，TR1648，UW-Madison CS，2009，机构元数据页逐字摘要：核心思想 / oracle 查询）；https://proceedings.mlr.press/v70/gal17a.html（Gal/Islam/Ghahramani，Deep Bayesian Active Learning with Image Data，ICML 2017，PMLR 70:1183-1192，WebFetch 200 逐字：不确定性依赖 / 深度模型缺不确定性表示）；https://technav.ieee.org/topic/active-learning（IEEE Technology Navigator，访问 2026-11-22，WebFetch 200 逐字：不确定性采样为默认基线 / cold start 首轮随机）。Settles PDF 正文 WebFetch 不支持（application/pdf），只取机构元数据页摘要，未伪装成正文引文。 逐字全文与判非见 `references/r795L_主动学习.md`。
 ## 优先经验回放 PER：按 TD error 采样，用 IS 权重把偏差买回来（r796L 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
-
 §r795L 主动学习管「该标哪些新样本」，本章管**已有经验怎么复用**：均匀回放按经历频率重放，PER 按「学得还不够好」的程度重放，但会改变收敛解。
-
 **独点1** 两变体都随 |δ| 单调：proportional `p_i=|δ_i|+ε`、rank-based `p_i=1/rank(i)`；论文逐字：rank-based「insensitive to outliers」更稳健。判据——只写「按 TD error 采样」不写明 proportional/rank-based 变体与其异常值敏感度，判不完整；均匀随机基线 = α=0 / 无 PER。
-
 **独点2** 偏差必须显式纠正：`w_i=(1/N·1/P(i))^β`，β=1 完全补偿非均匀采样偏差；论文逐字：prioritized replay changes the distribution「in an uncontrolled fashion, and therefore changes the solution that the estimates will converge to」。判据——用了优先采样却没有 IS 权重纠正，判偏差未处理。
-
 **独点3** 权衡与边界：优先回放导致 loss of diversity，用 stochastic prioritization 缓解、用 IS 纠偏；论文称 DQN+PER 在 41/49 款游戏胜过均匀回放（一手数字），但这是 Atari 设定不迁移为本仓阈值。罕见经验遗忘的原文措辞是「rapid forgetting of possibly rare experiences」，不要泛化写成「灾难性遗忘」当引用。
-
 - **判重：`优先经验回放`/`PER` 全库 SKILL.md 0；与 §23 持续学习 EWC（防遗忘）、§r795L 主动学习（选新样本）分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://arxiv.org/abs/1511.05952（Schaul 等，DeepMind，ICLR 2016，arXiv:1511.05952，WebFetch 200 逐字：均匀回放按原始频率/41 of 49 games 胜过基线）; https://arxiv.org/html/1511.05952v4（WebFetch 200 逐字：两变体对 |δ| 单调且 rank-based 抗异常/改变分布即改变收敛解/diversity 损失/IS 纠正）。DeepMind 官方实现仓库未取到一手，第三方实现全排除；abs 与 html 为同论文两视图非两独立文档已如实登记。 逐字全文与判非见 `references/r796L_PER.md`。
+
+## PPO 裁剪代理目标：信赖域与「迈多大步」（AI · r797C 2026-11-23）
+§25 GAE 管优势怎么估、§30 PBRS 管奖励怎么设、§23 shield 管安全序列；本章管**每次策略更新步子多大**。
+**独点1** 策略梯度不稳根因：更新改变访问分布，代理目标用旧 ρ 冒充新 ρ 是「一阶切平面近似」（fundamental lie），远离 π 即失真。Kakade-Langford 下界 η(π̃)≥L_π(π̃)−C·D_KL^max 给「留在信赖域内单调改进」保证，D_TV²≤½D_KL。
+**独点2** TRPO 用自然梯度 F⁻¹g＋共轭梯度＋线搜索（Fisher 度量分布而非参数，昂贵）。PPO 论证＝「TRPO 保证在 mini-batch SGD 下本就没保住，理论既已近似就用便宜机制」：L^CLIP=E[min(rÂ,clip(r,1−ε,1+ε)Â)]，r=πθ/πold、ε≈0.2，min 让 ratio 越界方向无梯度激励 → 同批数据可多 epoch 复用，一阶 SGD 无二阶/共轭梯度/线搜索。
+**独点3** clip 是软惩罚非硬保证（not a hard trust-region constraint，ratio 仍可跑远，usually prevents...not a hard guarantee）。RLHF 里预训练模型即信赖域、clip 保增量对齐不覆盖预训练能力；但 on-policy 不复用经验、样本效率低于 SAC、ε/lr/epochs 敏感。报「用了 PPO」写 ε/GAE λ/epoch 数/KL 系数四件。
+判重：本体 0 专节（命中的是 shield masked-PPO 与 GAE 默认值语境）；豆包自留地 WB 0 落地。
+来源与诚信：anthony0727.github.io《From TRPO to PPO》WebFetch 200 全文＋control.education/Emergent Wiki/inferensys WebFetch 逐字；Kakade-Langford 公式为文中转述标二手。逐字全文与判非见 `references/r797C_PPO裁剪代理.md`。
