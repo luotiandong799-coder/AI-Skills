@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。当任务涉及"该记什么/不该记什么"的判断、用户级 MEMORY.md 与模块记忆分层、跨会话记忆的写入/检索/去重、记忆容量与检索侧治理权衡、个人文件与隐私不入记忆、记忆可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆系统评测五能力、以及判断是否要固化长期规则时使用。是 13 模块中 MI 的载体。；记忆巩固效用评级（十技法四变量/熟悉感错觉/即时与延迟双栏/desirable difficulty）。检索即改写（再巩固窗口/可及性≠保真度/重整与消退两过程/分层抗改）。矛盾解决位置（写入侧四操作 vs 检索侧 ADD-only）·遗忘双机制（decay 降权 vs eviction 真删）·架构反转迁移清单；前瞻记忆与意图兑现（事件/时间线索·双成分四阶段·回顾记忆是内容底座·线索三特性·外部审计与取消意图）。交互记忆系统 TMS（记忆分布在人+外部 aid·元记忆 who-knows-what 目录·编码存储检索三过程 transactive·专长公开宣布才提升群体绩效·turnover 破坏目录）。检索诱发遗忘 RIF（检索是抑制性选择·Rp+/Rp−/control 三态·抑制说 vs 阻断说与独立线索裁决·稳健但带范式边界·换检索程序须双用例回归）。睡眠依赖系统巩固（突触巩固vs系统巩固两机制·SO-spindle-ripple顺序耦合定时·内源重激活强度预测巩固·TMR倒U与个性化·巩固周期性分期且NREM/REM分工存争议）。错误记忆与来源监控（DRM关键诱饵·模糊痕迹verbatim/gist双 trace·激活监测与来源监控失败·误导信息效应与DRM的verbatim反向作用·高置信≠真实须逐字锚点回归）。 定向遗忘两范式分离（item 编码+提取双因/list 提取抑制·accessibility≠availability 换线索验真删·直接抑制vs替代两策略）。 编码特异性检索（线索效力来自编码时共存语境而非语义相似度·情境效应主要是回忆现象须换线索验真删·线索过载与判别竞争限制匹配）。序列位置效应（首因=LTM复述/近因=STM双分离·延迟抹近因不动首因·呈现速率反向·agent按存储层分流验收）前摄/倒摄干扰（学习阶段竞争vs检索抑制RIF正交·AB/AC延迟自发恢复推翻即时覆盖·相似性倒U最危险）
-version: "2.8.0"
+description: 长期记忆治理（Memory Intelligence）。当任务涉及该记什么/不该记什么的判断、用户级MEMORY.md与模块记忆分层、跨会话记忆写入/检索/去重、记忆容量与检索侧治理权衡、隐私不入记忆、可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆评测五能力、固化长期规则判断时使用。是13模块中MI载体；记忆巩固效用评级（十技法四变量·熟悉感错觉·即时延迟双栏·desirable difficulty）；检索即改写（再巩固窗口·可及性≠保真度·分层抗改）；矛盾解决位置（写入侧四操作vs检索侧ADD-only）·遗忘双机制（decay降权vs eviction真删）；前瞻记忆与意图兑现（事件/时间线索·四阶段·外部审计与取消意图）；交互记忆系统TMS（记忆分布在人+外部aid·who-knows-what元目录·turnover破坏目录）；检索诱发遗忘RIF（检索是抑制性选择·Rp+/Rp−/control三态·换程序须双用例回归）；睡眠依赖巩固（SO-spindle-ripple顺序耦合·TMR倒U·NREM/REM分工存争议）；错误记忆与来源监控（DRM关键诱饵·verbatim/gist双trace·高置信≠真实须逐字锚点回归）；定向遗忘两范式分离（accessibility≠availability换线索验真删）；编码特异性（线索效力来自编码时共存语境非语义相似·换线索验真删）；序列位置效应（首因LTM/近因STM双分离·延迟抹近因）；前摄/倒摄干扰（学习竞争vs检索抑制正交·延迟自发恢复推翻即时覆盖·相似性倒U）；自我参照效应SRE（自我概念是丰富组织化结构·描述性自参照优于自传式·生存加工辨析·agent迁移标推断）
+version: "2.9.0"
 module: MI
 modules: MI,AI
 ---
@@ -362,3 +362,16 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 
 - **判重：`测试效应`/`testing effect`/`retrieval practice` 本体 0 命中（retrieval practice 仅豆包自留地一句），与 §r795F 双过程再认、§巩固效用分工不复用。**
 - **来源与诚信**：https://journals.sagepub.com/doi/10.1111/j.1467-9280.2006.01693.x（Roediger & Karpicke，Psychological Science 17(3)，2006，WebFetch 200 逐字：testing effect 定义/5min 与延迟反转/信心提升但保持更差）; https://journals.sagepub.com/stoken/rbtfl/dEzGRXuJ8AzLI/full（Rohrer & Pashler，Educational Researcher 39(5)，2010，WebFetch 200 逐字：提取直接强化表征/测试+学习优于等时重读/分散学习/回忆优于再认）。无 WebFetch 失败。agent 外推已标推断。 逐字全文与判非见 `references/r796F_测试效应.md`。
+
+## r798A · 自我参照效应（self-reference effect）：把信息挂到"关于我"的结构上，比一般语义更深（MI · 2026-11-23 实拉，≥2 独立域一手交叉，3 独点）
+
+§测试效应管「每次检索改造记忆」，本章管**编码阶段挂靠哪套结构**——自我概念是已有最丰富、最组织化的长期知识结构，挂上去的条目获得多重提取线索。
+
+**独点1** 深度层级排序必须写全：Rogers/Kuiper/Kirker 1977 四任务 surprise recall = 结构 3% < 语音 7% < 语义 13% < 自我参照 30%；自我参照**超过**深语义加工，故不能把「语义编码最优」当结论（Sage《Fundamentals of Cognitive Psychology》第5章逐字 + cognitivepsychology.com 逐字）。判据——方案只有「理解含义」无「关联既有自我/角色结构」判未命中。
+
+**独点2** 自我参照内部要分型、与生存加工辨析：描述性自参照（判断特质词"是否描述你"）比自传式自参照更强；Nairne 2007 生存加工优势在 Klein 改用标准自参照指令后降为不显著，且第三人称/卡通角色条件仍有效 ⇒ 生存效应是否独立于自我仍有争议（ScienceDirect S1053810012002395 + S0749596X17300037 逐字）。判据——写「生存加工必强于自我参照」判违规；须标注争议与边界条件。
+
+**独点3** 机制四源与 agent 外推边界：自我图式提供组织化 + 详述展开 + 情绪显著性 + mPFC/海马耦合四机制（Symons & Johnson 1997 129 项元分析确认稳健；cognitivepsychology.com 逐字）。把「条目与 agent 自身角色/用户画像核心绑定提升可检索性」是**跨领域类比，标推断不得当实证**；且 self-reference 与 generation effect（自己生成>读到）机制正交，两者不互换。
+
+- **判重：`自我参照`/`self-reference`/`self-referential` 本体 0 专节；`加工水平`/`Craik` 本体仅 r795F 熟悉感语境一句，与 §测试效应、§编码特异性、§错误记忆分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://in.sagepub.com/sites/default/files/upm-assets/66302_book_item_66302.pdf（Sage 教材第5章 Remembering Events，WebSearch 全文逐字：Craik & Tulving 深浅加工 / Rogers 1977 四任务 3%/7%/13%/30% 图 / 生存加工对比 / transfer-appropriate processing）；https://cognitivepsychology.com/Self_Reference_Effect（全文逐字：Rogers 范式 / Symons & Johnson 129 项元分析 / 四机制 / mPFC 神经基础 / 发展与文化差异）；https://www.sciencedirect.com/science/article/pii/S1053810012002395（《Survival of the selfish》，全文逐字：自参照 vs 生存加工 conflation 争议 / Klein 复制降为不显著 / Weinstein 第三人称 / Kang 卡通角色）；https://www.sciencedirect.com/science/article/pii/S0749596X17300037（《Survival processing versus self-reference》，全文逐字：描述性自参照任务定义 / 特质形容词材料 / between-subjects 避 carry-over）；https://opentext.wsu.edu/psych105/?p=237（WSU 开放教材，全文逐字：Craik & Tulving 三级加工 / generation effect / 编码特异性）。均为 WebSearch 返回页面全文逐字；ScienceDirect 摘要页全文可见但正文受限，标注为摘要+可见段落逐字，未冒充完整正文。 逐字全文与判非见 `references/r798A_自我参照效应.md`。

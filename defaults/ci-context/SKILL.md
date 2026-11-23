@@ -1,7 +1,7 @@
 ---
 name: ci-context
-description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token 预算与窗口退化、提示缓存（prompt caching）命中率、多 agent 上下文隔离与缓存税、把必须每次成立的约束放进确定性 hook 而非 advisory context、"上下文够不够/会不会静默丢规则"的判断、注意力预算的架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询上下文对象、标称窗口与有效上下文长度的区分、长上下文基准族各自证明不了什么、以及评估顺序与配置误判时使用。是 13 模块中 CI 的载体、装配逐级留痕、检索与答案评估分离、块完整性与权限判据。前缀缓存块级链式哈希/三级有序驱逐/隔离维度（cache_salt·LoRA ID·感知哈希）。context editing（removal≠summarization·五参数·applied_edits回执+count_tokens预览破缓存）；注意力汇聚与流式无限上下文（softmax 归一把残余注意力压到首 token·驱逐 sink 触发困惑度悬崖·4 sink token + 滚动窗·cache 相对位置编码·sink 量化脆弱性与 off-by-one 缓解）。注意力两时间窗（H2O累积淘汰+近端双保·local统计不需未来·SnapKV预填充前投票·静态剪枝随指令错位·top-k逐点留切断实体须聚类）。RoPE 外推家族（PI线性插值/NTK改base保高频/YaRN按波长混合加温度·保真注意力模式与attention entropy才是成败真因·需长序列继续训练·路线与成本画像随族分裂）。KV低比特量化（KIVI非对称2bit·key逐通道固定outlier·value逐token值加权混合·残差缓冲保流式·误差面key移注意力vs value稀释·倍率挂模型口径）。 软token压缩第三面（gist/AutoCompressor·与提示硬删/KV量化正交·summary accumulation跨段累积·收益分母与丢信息并报）·KV分层放置·IO感知精确注意力FlashAttention（tiling增量softmax·重计算换HBM·exact非近似·正交KV压缩）虚拟上下文管理MemGPT（RAM↔外存分页·主上下文三段+recall/archival·70%水位自导向换页·递归摘要静默失真）
-version: "2.8.0"
+description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token预算与窗口退化、提示缓存命中率、多agent上下文隔离与缓存税、把每次要成立的约束放进确定性hook而非advisory context、注意力预算架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询对象、标称窗口与有效长度区分、长上下文基准族证明边界、评估顺序与配置误判时使用。是13模块中CI载体、装配逐级留痕、检索与答案评估分离、块完整性与权限判据。前缀缓存块级链式哈希/三级驱逐/隔离维度。context editing（removal≠summarization·applied_edits回执+count_tokens预览破缓存）。注意力汇聚与流式无限上下文（softmax残余压到首token·驱逐sink触发困惑度悬崖·4 sink token+滚动窗·sink量化脆弱性与off-by-one）。注意力两时间窗（H2O累积淘汰+近端双保·SnapKV预填充前投票·静态剪枝随指令错位）。RoPE外推家族（PI线性插值/NTK改base保高频/YaRN按波长混合加温度·保真注意力模式与entropy才是成败真因）。KV低比特量化（KIVI非对称2bit·key逐通道固定outlier·value逐token混合·key移注意力vs value稀释·倍率挂模型口径）。软token压缩gist/AutoCompressor·KV分层·FlashAttention（tiling增量softmax·重计算换HBM·exact非近似）·MemGPT虚拟上下文（RAM↔外存分页·70%水位换页·递归摘要失真）。选择性状态空间Mamba（S6参数随输入变·弃卷积改硬件感知扫描·状态压缩非无损·SSD对偶A=αI·固定缓存≠恒定内存·精确召回是瓶颈）·长上下文退化根因n²注意力与训练分布（位置偏倚U型·有效长度<标称）
+version: "2.9.0"
 module: CI
 modules: CI
 ---
@@ -343,3 +343,16 @@ GitHub 一手整合逐字：「**Clearing invalidates the cached prefix from the
 
 - **判重：`PagedAttention` 在本体仅 r783B 未采纳句（当时判为显存产品实现未展开），无专节；与 §前缀缓存/KV 量化/FlashAttention/MemGPT 分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://arxiv.org/html/2309.06180（Kwon 等，SOSP 2023，arXiv:2309.06180，WebFetch 200 逐字：OS 分页启发/块非连续/20.4-38.2% 利用率/消除外部碎片/块级共享）; https://blog.vllm.ai/2023/06/20/vllm.html（vLLM 官方博客，2023-06-20，WebFetch 200 逐字：浪费 60-80%→under 4%/block table COW/reference count）。arXiv PDF 非文本改 HTML；docs.vllm.ai prefix caching 页 404，正交性标推断。 逐字全文与判非见 `references/r796H_PagedAttention.md`。
+
+## Mamba 选择性状态空间：把历史压进固定状态换线性复杂度，精确召回是代价（r798C 独立实拉 2026-11-23，≥2 独立域一手交叉，3 独点）
+
+§PagedAttention/PrefixCache 管「注意力 KV 怎么放/复用」，本章管**换一条路线**：不用注意力逐 token 比对，而是把历史压进固定维度状态递推——推理缓存不随序列增长，代价是无法无损召回全文细节。
+
+**独点1** 选择机制逼出算法换轨：S4 等旧 SSM 参数 Δ/A/B/C 时间不变才能用快速卷积；Mamba 的 S6 让参数**随输入变化**（按内容选择保存/遗忘），卷积不再可用，改硬件感知并行扫描——把扩展状态放 SRAM 而非 HBM，避免内存层级间 IO（A100 上比先前方法快 3×）（alphaXiv 2312.00752 全文 + 论文总结 CSDN 逐字）。判据——只写「选择性遗忘」不写「因参数随输入变而放弃卷积、改用扫描」判不完整。
+
+**独点2** SSD 对偶的等价边界，最易被夸大成「Transformer 就是 SSM」：Mamba-2 的 SSD 仅在 A_t=α_t·I（标量单位阵）结构下，SSM 等价因果线性注意力、对应半可分矩阵；**不是任意 softmax Transformer 都等价**——softmax 归一化与非线性匹配不能由该变换得到。chunk_size=256 只是计算分块，历史经块间状态向后传递、**不是把历史截断到 256 token**（Mamba2 微信公众号长文逐字）。判据——写「SSD 证明任意 Transformer 等价 SSM」或「分块=截断历史」均判错。
+
+**独点3** 复杂度与收益须带条件，别写成全面碾压：训练 O(N) vs 全注意力 O(N²)；推理状态缓存固定不随序列长（16 head×64×128 BF16≈256 KiB/层/样本，4096→32768 token 不变）。Waleffe 2024 在 8B 规模 4096 token 测内存效率 12.46×、推理快 10.67×，交叉点约 220/370 token——**特定实验设置，不代表所有模型/GPU/任务**（CSDN 架构详解引 Waleffe 逐字）。真正短板：精确召回长文中的数字/代码原文时固定状态压缩是瓶颈；短序列优化好的 FlashAttention 可能更快。与 §FlashAttention（exact 非近似）分工：那条优化注意力的 HBM 读写，本条绕开注意力换递推状态，正交。
+
+- **判重：`Mamba`/`选择性状态空间`/`state space`/`线性注意力`/`SSD 对偶` 全库 0 专节；唯一「稀疏注意力」命中在豆包自留地 wb-execute-discipline 且为异命题；与 §FlashAttention/§PagedAttention/§前缀缓存/§KV 量化分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://alphaxiv.org/zh/overview/2312.00752v1（Gu & Dao，arXiv:2312.00752 中文全文概览，WebSearch 逐字：选择机制 / 硬件感知扫描 / SRAM 不存 HBM / A100 3× / 5× 吞吐 / 跨模态）；http://mp.weixin.qq.com/s/...sn=c8864a7f0c9f32a2d9e47e0c0774dee2（Mamba2 深度长文，WebSearch 逐字：SSD 当 A=αI 等价因果线性注意力 / 半可分矩阵 / chunk 分块非截断 / 2–8× 训练加速 / 状态缓存 256KiB 不随序列 / 精确召回瓶颈 / 「不是任意 softmax Transformer 等价」）；https://blog.csdn.net/u012133341/article/details/159834523（架构详解，WebSearch 逐字：复杂度对比表 / Waleffe 2024 8B 12.46×内存 10.67×速度 交叉点 220/370 token）；https://blog.csdn.net/qq_45981086/article/details/141675075（论文总结，WebSearch 逐字：S6 选择机制 / 硬件感知并行扫描）。Mamba-3/arXiv:2603.15569 仅在微信文中提及未独立取证，标未采纳。 逐字全文与判非见 `references/r798C_Mamba状态空间.md`。

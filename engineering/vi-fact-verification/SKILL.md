@@ -1,9 +1,9 @@
 ---
 name: vi-fact-verification
-description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试、mutation testing、mutation score、变异算子、存活变异体、等价变异体、等价不可判定、胜任程序员假设、耦合效应、human oracle problem、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、补核受影响部分、核对不是危险动作、Bland-Altman、一致性界限、limits of agreement、一致性评价、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、可互换性、方法比较
+description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试、mutation testing、mutation score、变异算子、存活变异体、等价变异体、等价不可判定、胜任程序员假设、耦合效应、human oracle problem、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、补核受影响部分、核对不是危险动作、Bland-Altman、一致性界限、limits of agreement、一致性评价、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、可互换性、方法比较评分者间信度IRR（按标签类型选kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）
 module: VI
 modules: VI,EI
-version: "1.17.0"
+version: "1.18.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -377,3 +377,16 @@ version: "1.17.0"
 
 - **判重：`TOST`/`等效性检验`/`equivalence test` 全库 SKILL.md 0；与 §9 统计功效（防误判）分工不复用。豆包自留地 WB 0 落地。**
 - **来源与诚信**：https://journals.sagepub.com/servlet/linkout?dbid=4&doi=10.1177%2F14761270251410355&key=10.1177%2F1948550617697177&site=sage&suffix=e_1_3_5_47_1（Lakens，SPPS 8(4)，2017，WebFetch 200 逐字：p>α 不能推出无效应/TOST 两单侧/90%CI 排除界/0 假设不可能被支持）; https://journals.sagepub.com/servlet/linkout?dbid=4&doi=10.1177%2F25152459251323480&key=10.1177%2F2515245918770963&site=sage&suffix=e_1_3_5_19_1（Lakens/Scheel/Isager，AMPPS，2018-06，WebFetch 200 逐字：取较大 p/无需多重校正/不显著=数据不足/90%CI 全落界内/SESOI 决定样本量）。FDA 生物等效性指南限定域检索无结果，未虚构 URL；Δ 预先定的「before looking at data」原句被截断，标注为谨慎外推。 逐字全文与判非见 `references/r796D_TOST等效性.md`。
+
+## 二十一、评分者间信度（inter-rater reliability）：系数按标签形状选，kappa 低可能是流行率假象（VI · 2026-11-23 实拉，≥2 独立域一手交叉，3 独点）
+
+§十九 Bland–Altman 管「连续测量的两人一致性」，§十九末留钩子「Cohen's kappa / ICC 用于分类与评分者间信度（变量类型不同，留后续）」——本章填该坑：多 judge 判定一致时，先按标签类型选系数，再警惕 kappa 悖论。
+
+**独点1** 系数选择表按标签形状，不是按习惯：名义/2 人→Cohen's kappa；有序→weighted kappa（二次加权在标准条件下≈两因素 ICC）；名义/≥3 人→Fleiss' kappa；缺评/每人评不同条/名义到比率→Krippendorff's alpha；连续→ICC（须报 model/type/definition + 95%CI，共 10 种形式）；区域→Dice/IoU；时序事件→event-level F1（先定匹配规则）（Cogn-IQ 选择图 + Metrics Reloaded 表逐字）。判据——用 ICC 评类别、kappa 评连续分均判 category error；只报 percent agreement 判不合格（无机会校正）。可信度是效度的前提不是证据：两个 judge 按同一错定义也能高度一致（CASRAI 逐字）。
+
+**独点2** kappa 悖论必须随报告拆开：95% 观察一致率在不同流行率下 kappa 可为 0.90 / 0.26 / −0.02（CASRAI 表逐字）；原因是主导类别使机会一致项 pe 变大、压掉高于机会的余量。Feinstein & Cicchetti 要求 kappa 永远配报原始一致率与边际分布，并分报 ppos/pneg；偏斜流行率下考虑 Gwet's AC1（但其机会定义有争议，须预注册、不得事后因 kappa 难看才换）（CASRAI + Cogn-IQ + PaloAltoHealthLabs 三源逐字）。判据——只报单个 kappa 不报边际判不完整。
+
+**独点3** 阈值是约定不是推导 + 样本量按 CI 宽度反推：Landis & Koch 0.61–0.80 substantial、Krippendorff α≥0.800 都是 convention；高风险逐人决策常要求 ICC>0.90，群体研究可放宽（Koo & Li 2016）。样本量无通用下限：2 平衡类别、kappa≈0.6 要 95%CI±0.1 需约 246 观测；稀有类别需更多。Low agreement 先归因三因——定义模糊/类别重叠/训练不足，而非直接换系数（MCP Analytics + Quali-Fi 逐字）。
+
+- **判重：`评分者间信度`/`inter-rater reliability`/`Krippendorff` 本体仅 §十九末一句留后续钩子（无专节）；`kappa`/`ICC` 命中为统计功效/Bland-Altman 语境异命题；与 §十九 Bland–Altman（连续两人）、§八 oracle/mutation 分工不复用。豆包自留地 WB 0 落地。**
+- **来源与诚信**：https://cogn-iq.org/learn/theory/inter-rater-reliability/（全文逐字：加权 kappa≈ICC / Fleiss / Krippendorff / ICC 族与 Koo & Li / Landis & Koch / kappa 两悖论）；https://mcpanalytics.ai/articles/cohens-kappa-agreement-beyond-chance（全文逐字：kappa 公式与决策指南 / 95% 全负仍 82% 机会一致 / 246 观测样本量 / 负 kappa 涵义）；https://paloaltohealthlabs.com/resources/inter-rater-agreement-medical-data-labeling.html（全文逐字：按标签形状选系数表 / Dice-IoU-event-F1 / Koo & Li 10 种 ICC / ppos/pneg 修补）；https://casrai.org/guides/inter-rater-reliability-choosing-a-coefficient（全文逐字：95% 一致率对应 kappa 0.90/0.26/−0.02 / 信度≠效度 / Gwet AC1 争议 / Krippendorff α≥0.8）；https://quali-fi.com/learn/inter-rater-reliability（全文逐字：kappa 公式 / 低一致三因 / 信度工作流 pilot 10–20% 至少 30–50 例）。均 WebSearch 返回页面全文逐字，未冒充期刊原文。 逐字全文与判非见 `references/r798B_评分者间信度.md`。
