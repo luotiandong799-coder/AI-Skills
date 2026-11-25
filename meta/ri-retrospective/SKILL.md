@@ -3,7 +3,7 @@ name: ri-retrospective
 description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/主持·记录·事故负责人三分离/发言权/时间盒议程与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习深度分级（改动作/改假设策略/改学习机制本身·防御惯例与熟练无能阻断双环·反思-重构循环·学习与有效行为不等价须分层验收）。正常事故理论NAT与HRO对照（交互复杂×紧耦合·安全记录好≠高可靠·降耦合与提前预案）。 故障树FTA与事件树ETA（演绎找致祸组合vs归纳看触发后果·定性最小割集/单点失效/共因·量化=触发频率×条件概率乘积）。 FMEA/FMECA与RPN排序陷阱（模式清单≠优先级·RPN序数相乘伪精度与并列·AP表严重度主导·先分档后档内排序） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障有效/独立/可审计三门）。仍未证明栏（四块结构附没证明什么·可照做≠可审计·修正覆盖三分类）·三门有效/独立/可审计·近失改屏障状态·变更分析IS/IS-NOT）
 module: RI
 modules: RI,EI
-version: "2.12.0"
+version: "2.13.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -426,3 +426,17 @@ DevOps AI Toolkit 逐字 prep 四条「**Assemble the timeline in advance.** Pul
 - `https://www.icologiq.com/glossary/tripod-beta`（Icologiq 术语表，WebFetch 抓全文失败取 WebSearch 逐字：Version 6/2023、Tripod Foundation 维护 + Energy Institute 官方用户指南、三阶段与六步流程、基本风险因素 BRF）——第二独立域·官方方法维护链交叉（厂商词条立场登记）。
 - `https://ehs-sil.com/articles/tripod-beta-incident-investigation-guide.html` + `https://wikii.one/Tripod_Beta`（EHS-SIL 实践指南与 wikii 译本，WebSearch 逐字：三层因果/屏障状态四分/联锁旁路追组织/Trio 三要素/AND 门/从最后正常事件倒推）——第三、四域交叉（wikii 为译本非独立一手，仅作定义互证）。
 - **判非**：全库 SKILL.md / module-memory 对 `Tripod Beta`/`三脚架` 0 专节（`bowtie` 蝴蝶结在 §r791C 是屏障路径图不同方法；HFACS/CAST/STAMP/FTA 各管一段异命题）；与豆包自留地无关。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+
+## r806B · MORT（管理监督与风险树）：把「发生了什么」与「为什么允许它发生」分两侧查（RI · 2026-11-25 实拉，≥3 独立域一手交叉）
+
+### 三独点
+- **what / why 双侧检查表，不是又一条单因链**：DOE 核能手册 Appendix G 逐字把 MORT 定义为「a checklist of what happened (less-than-adequate specific barriers and controls) and why it happened (less-than-adequate management)」，四步固定：①把问题列为顶事件 ②在 what 侧识别哪些屏障/控制出了问题 ③**对每个屏障问题**在 why 侧找允许该问题的管理要素 ④逐条描述不足并汇总 findings。判据：复盘只停在 what 侧（「屏障失效／操作员误操作」）只完成一半，必须对每个屏障问题追到 why 侧管理要素（政策/计划/程序/资源/监督）。
+- **MORT 是理想管理程序的 1500+ 元素基准树，比 FTA 更泛化**：DOE/EG&G《MORT User's Manual》Rev.3（Knox & Eicher，1992，DOE/SSDC-76-45/4-Rev.3）逐字「MORT is a comprehensive analytical procedure that provides a disciplined method for determining the causes and contributing factors of major accidents. Alternatively, it serves as a tool to **evaluate the quality of an existing system**. While similar in many respects to fault tree analysis, **MORT is more generalized and presents over 1,500 specific elements of an ideal 'universal' management program**」。分析树七步＝定顶事件→熟悉系统→构树→验树→评树→权衡→给管理层建议；构树只用「necessary and sufficient」的致因事件、按系统复杂度尽量简。与 §r779C FTA/ETA（布尔割集与条件概率路径）、§r804A Tripod Beta（Trio AND 门+三层因果）、§r791C 蝴蝶结（屏障路径图）分工：MORT 多出的是**管理系统完整性基准 + what/why 双侧**，可用于评价尚未出事的现有系统。
+- **findings 按元素打勾计频，判「哪个管理要素最普遍不足」**：同一 DOE 手册 Appendix G 给出 MORT-Based Root Cause Analysis Form：每条 finding 在左栏、对应 MORT 元素下打勾（**一条 finding 可命中多元素**），汇总各元素勾数，逐字「The relative number of checks under each MORT element (the sum of all the findings) is a measure of **how widespread the element inadequacy is**. The results guide the specific and generic corrective actions」。判据：单条 finding 只定位个案，跨 finding 的元素频次才暴露系统性缺陷；某元素被打勾 1 次与 12 次的处置层级不同（个案修复 vs 体系整改）。
+
+### 来源与诚信
+- `https://www.osti.gov/biblio/10143501` + `http://osti.gov/biblio/7041102`（美国能源部 OSTI 官方 MORT User's Manual Rev.3 元数据与摘要，WebFetch/WebSearch：1,500+ 元素、evaluate quality of existing system、more generalized than FTA、1992-02-01）
+- `https://www.osti.gov/servlets/purl/5292729`（DOE《Standardization Guide for Construction and Use of MORT-Type Analytic Trees》，**WebFetch 失败取 WebSearch 全文逐字**，如实登记非全文渲染：分析树源于 1960s 航天 FTA、DOE 全机构采用、7 分析步骤、necessary and sufficient 构树原则、positive/success 与 negative/fault 树两用）
+- `https://nuclearpowerradiation.tpub.com/nst1004/Appendix-G-Management-Oversight-And-Risk-Tree-Mort-Analysis-64.htm`（DOE 核能与辐射手册 Appendix G，WebFetch 200 全文逐字：Mini-MORT 四步、barrier 定义、ORPS cause codes、打勾频次解释）
+- **判非**：全库 SKILL.md / module-memory 对 `MORT` / `Management Oversight and Risk Tree` 0 专节；`meta/ri-retrospective` §r800A 只在结尾一句提 MORT 两大核心=change analysis+barrier analysis（未立论，按「合」登记不复述）；FTA/ETA/HFACS/AcciMap/Tripod Beta/蝴蝶结均为异命题。豆包自留地 WB 0 落地。

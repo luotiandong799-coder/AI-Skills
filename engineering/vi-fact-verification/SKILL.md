@@ -3,7 +3,7 @@ name: vi-fact-verification
 description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试、mutation testing、mutation score、变异算子、存活变异体、等价变异体、等价不可判定、胜任程序员假设、耦合效应、human oracle problem、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、补核受影响部分、核对不是危险动作、Bland-Altman、一致性界限、limits of agreement、一致性评价、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、可互换性、方法比较评分者间信度IRR（按标签类型选kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）
 module: VI
 modules: VI,EI
-version: "1.19.0"
+version: "1.20.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -402,3 +402,16 @@ version: "1.19.0"
 
 **判重：`序贯`/`sequential`/`alpha spending`/`peeking`/`always-valid`/`e-value`/`O'Brien-Fleming`/`Lan-DeMets` 在 VI 技能 0 专节（description 新增词条属本轮）；§十一多重检验是横向 family 校正异命题、§八 oracle 分工不复用。全库命中在 agent-evolution §mSPRT 早停（异命题，仅对比提及）、豆包自留地、co-learn 与配置文档，WB 0 落地。**
 **来源与诚信**：https://gravityfield.ai/glossary/sequential-testing（WebFetch 200 全文逐字：假阳性 1/5/10/20 次=5/19/30/54% / alpha spending / e_t=e_{t-1}×LR_t 停于 1/α / 任意停止有效 / 与贝叶斯对照）——第一独立域（工具站一手，商业立场已登记）；https://www.sciencedirect.com/topics/medicine-and-dentistry/interim-analysis（WebFetch 200 全文逐字：两次 5%≈10% / spending function / OBF 早期 3.438 p<0.0006 末次 1.985 p<0.0471 / Pocock 均分 / Lan-DeMets flexible / 伦理早停）——第二独立域（医学教材原文一手）；https://www.growthstack.dev/glossary/peeking-problem + https://www.calibreos.com/decoder/sequential-testing + https://markusloecher.github.io/pValue-Hacking-Solutions（WebSearch 全文逐字：随机游走穿越阈值 / mSPRT / confidence sequences / 功效代价 / 最短一周护栏 / 三法 recommend 顺序）——第三、四、五域交叉。数字均挂可复拉 URL；未冒充 RCT 原始论文。逐字全文与判非见 `references/r802B_序贯检验peeking.md`。
+
+
+## 二十三、回归均值（regression to the mean）：极端样本「自然回落」不是干预的效果证据（VI · 2026-11-25 实拉，≥2 独立域一手）
+
+**独点1** RTM 是抽样选择效应，不是干预效应：凡按「含随机成分的指标」挑出极端样本（最低分阅读班、最高击球率球员、SAT 表现低于预期者），再测必向均值回落。数学必然形式是标准化回归 `ZY′ = r·ZX`——只要 `|r|<1`，预测 Y 就永远比 X 更靠近 0 均值；`r=0`（纯运气）时无论 X 多极端，重测预测恒为均值（LibreTexts 抛硬币 12 次猜对 10 次者重测最佳预测仍是 6）。判据：见到「干预后极端值显著改善」先问「当初是否按该极端值选人 + 有无对照组」；无对照则回归效应与真实效应混淆——propranolol 提 SAT 研究里 25 名学生按「表现低于预期」选出，重测涨 120 分、单纯重测预期仅 38 分，官方教材明写「regression effects and propranolol effects were confounded，no firm conclusions should be drawn」。
+
+**独点2** RTM 的成立条件比直觉宽：Britannica 逐字「**RTM does not depend on the assumption of linearity, the level of measurement of the variable (for example, the variable can be dichotomous), or measurement error. Given a less than perfect correlation between X and Y, RTM is a mathematical necessity**」——不依赖线性、变量测度水平、也不依赖测量误差；把回落一律解释成「测量误差消失」或「只在线性场合成立」是错的。相关系数越小效应越大（`r` 从 0.835 的 Math→Verbal SAT：X=1.6 SD 预测 Y=0.835×1.6=1.34 SD）。Kahneman 飞行教官「表扬后动作变差、责骂后变好」正是 RTM：极端动作含运气，运气不延续，**after the praise but not because of it**。
+
+**独点3** 四种可机检的解混淆设计：①随机分配到对照使 RTM 对两组均等，组间差才是真效应；② placebo 组均值变化估 RTM+安慰剂，处理组变化减 placebo 组变化=调整后效应；③按多次测量均值选人而非单次；④一次测量筛选、第二次治疗前测量作基线——若 post 与首次测量的 r 等于两次前测的 r，则无期望 RTM 均值变化。数字锚：Schall & Smith 2000 选 1998 年击球率最高 10 人，1999 年 7/10 下降、平均降 33 点，但个别反升——RTM 是群体预测，不对每个个体成立（「although the predicted scores for every individual will be lower, some of the predictions will be wrong」）。
+
+**判重**：全库 SKILL.md / module-memory 对 `回归均值` / `regression to the mean` / `向均值回归` 0 命中；辛普森悖论在 ti-critical-reasoning §13（因果识别「该条件化哪个变量」，异命题）、幸存者偏差在 wb-agent-evaluation/references（打分集选择偏差，异命题）、Goodhart 在 ti §10.3/agent-evolution §22（指标被优化腐蚀，异命题）、agent-evolution always-valid 节只把 SRM/RTM 列入前置检查未立论。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。
+
+**来源与诚信**：`https://stats.libretexts.org/Courses/Luther_College/Psyc_350:_Behavioral_Statistics_(Toussaint)/10:_Regression/10.07:_Regression_Toward_the_Mean`（WebFetch 200 全文逐字：抛硬币重测=6、`ZY′=r(ZX)`、SAT 0.835×1.6=1.34、Kahneman 教官、Schall & Smith 7/10 降 33 点、propranolol 120 vs 38 与无对照结论）；`https://www.britannica.com/science/regression-to-the-mean`（WebFetch 200 全文逐字：RTM 定义、不依赖线性/测度/测量误差、Galton 930 成人子女身高、四类去混淆设计）；两域均一手全文，日期 2026-11-25 实拉。

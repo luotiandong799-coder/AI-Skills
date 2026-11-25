@@ -1,7 +1,7 @@
 ---
 name: mi-memory
 description: 长期记忆治理（Memory Intelligence）。当任务涉及该记什么/不该记什么的判断、用户级MEMORY.md与模块记忆分层、跨会话记忆写入/检索/去重、记忆容量与检索侧治理权衡、隐私不入记忆、可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆评测五能力、固化长期规则判断时使用。是13模块中MI载体；记忆巩固效用评级（十技法四变量·熟悉感错觉·即时延迟双栏·desirable difficulty）；检索即改写（再巩固窗口·可及性≠保真度·分层抗改）；矛盾解决位置（写入侧四操作vs检索侧ADD-only）·遗忘双机制（decay降权vs eviction真删）；前瞻记忆与意图兑现（事件/时间线索·四阶段·外部审计与取消意图）；交互记忆系统TMS（记忆分布在人+外部aid·who-knows-what元目录·turnover破坏目录）；检索诱发遗忘RIF（检索是抑制性选择·Rp+/Rp−/control三态·换程序须双用例回归）；睡眠依赖巩固（SO-spindle-ripple顺序耦合·TMR倒U·NREM/REM分工存争议）；错误记忆与来源监控（DRM关键诱饵·verbatim/gist双trace·高置信≠真实须逐字锚点回归）；定向遗忘两范式分离（accessibility≠availability换线索验真删）；编码特异性（线索效力来自编码时共存语境非语义相似·换线索验真删）；序列位置效应（首因LTM/近因STM双分离·延迟抹近因）；前摄/倒摄干扰（学习竞争vs检索抑制正交·延迟自发恢复推翻即时覆盖·相似性倒U）；自我参照效应SRE（自我概念是丰富组织化结构·描述性自参照优于自传式·生存加工辨析·agent迁移标推断）·工作记忆多成分模型（Baddeley 1974 四成分·中央执行是注意控制非存储·多存储分离由选择性干扰证实·情景缓冲器绑定多模态并接长时记忆）
-version: "2.10.0"
+version: "2.11.0"
 module: MI
 modules: MI,AI
 ---
@@ -387,3 +387,16 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 
 **判重：`工作记忆`/`working memory` 本体多处为语境提及（前瞻记忆线索、编码特异性 Godden & Baddeley 情境依赖），但 `多成分模型`/`Baddeley 1974 四成分`/`phonological loop`/`episodic buffer`/`central executive` 全库 0 专节；与 §r759A 前瞻记忆（意图）、§r763A TMS（分布外部化）、§r783A 编码特异性（线索维度）分工不复用。豆包自留地 WB 0 落地。**
 **来源与诚信**：https://socialsci.libretexts.org/.../5.02%3A_Components-Central_Executive_Phonological_Loop_Visuospatial_Sketchpad（LibreTexts 开放教材，WebFetch 200 全文逐字：1974 三成分 / 2000 情景缓冲器 / 中央执行功能清单 / 语音回路两层 / 视觉空间模板可能再分两套 / 词长效应）——第一独立域（教材一手）；https://dictionary-apa-org.libdata2015.hilbert.edu/working-memory（APA 词典镜像，WebSearch 全文逐字：multicomponent / episodic buffer binds cross-domain / essential to LTM storage / 取代 unitary STM）——第二独立域（权威词典一手）；https://pure.rug.nl/ws/portalfiles/portal/867737981/Complete_thesis.pdf（Groningen 博士论文，WebSearch 全文逐字：slave systems 由 acoustic/semantic/visual similarity 干扰分离 / episodic buffer 时序 / Cowan 嵌入加工模型批评）——第三域（学术一手）。均为教材/论文一手全文，未虚构；Cowan 批评仅取「单一存储模型争议」结论，不展开。逐字全文与判非见 `references/r802A_工作记忆多成分.md`。
+
+
+## r806C · 双重编码理论（Paivio dual coding）：记忆条目只写文字等于只开一条检索路径（MI · 2026-11-25 实拉，≥2 独立域一手）
+
+**独点1** 两个功能独立又互联的编码系统：Paivio 1971 的言语系统处理顺序/命题单位 **logogens**，表象系统处理整体/类比单位 **imagens**；二者可并行、又互联（语词唤起图像、图像可被言语描述）。具体词（elephant）能同时激活两系统，抽象词（justice）主要只激活言语系统；双重编码=两条检索路径，忘掉言语标签仍可从表象取回，反之亦然——只有言语标签的条目一旦标签丢失就「无以为继」。可机检锚：Paivio 1965 四词表 CC/CA/AC/AA（具体-具体／具体-抽象／抽象-具体／抽象-抽象）在 16 项满分下平均答对 **11.41 / 10.01 / 7.36 / 6.05**，第一「刺激」名词充当概念挂钩。判据：关键约束/流程若只有纯文字描述、无结构化字段或示意/位置锚点，判单编码、检索面窄一半。
+
+**独点2** 具体性效应与图片优势效应都有量级：DCT 最强预测是 concreteness effect——具体可想象词优于抽象词，effect sizes typically large，在 free recall 大于 recognition、想象指令下更强；picture superiority effect 里单次短暂呈现图片的识别准确率可 >90%，**Standing 1973 在 10,000 张图片插入后仍达 90%**，机制是图片自动双编码（直接激活表象系统 + 自发言语标记）。但 Mayer 多媒体学习原则给出边界：**双编码的收益取决于言语与视觉信息的关系，添加无关图像会增加 extraneous cognitive load 反损害学习**。判据：把同一约束同时落「言语码（结构化字段/规则文本）+ 表象码（示意/位置/图谱）」才算双编码；无关联配图判负收益不得计入。
+
+**独点3** 单一表征理论的争议与外推边界：propositional theories（Pylyshyn、Anderson）主张言语与表象共用抽象命题格式，imager debate 是认知科学最激烈争论之一；当代神经影像 evidence **largely supports** 两个系统的存在（视觉想象激活与实际视觉感知许多相同脑区），障碍证据是双分离——aphantasia 表象编码减弱、aphasia 言语编码受损。判据：「两码增加检索路径」作为工程启发可用，但「人脑确有两个独立存储系统」仍是有争议的实证主张，agent 落地按 rules/08 §五标推断不作既定事实；与 §r798A 自我参照效应（自我图式组织化）、generation effect（自生成>读到）、Craik 加工深度（语义编码）正交、不互换。
+
+**判重**：全库 SKILL.md / module-memory 对 `双重编码` / `dual coding` / `Paivio` 0 专节；`r798A_自我参照效应.md` 中 Craik & Lockhart 加工深度为语境提及（异命题）、§r802A 工作记忆视觉空间模板为子系统（异命题）、图式/Bartlett 与闪光灯记忆 0 命中。豆包自留地 WB 0 落地。
+
+**来源与诚信**：`https://cognitivepsychology.com/Dual_Coding_Theory`（WebFetch 200 全文逐字：Paivio 1971、logogen/imagen、concreteness effect、Standing 1973 90%/10,000 图、Mayer 边界、Pylyshyn 反驳、aphantasia/aphasia）；`https://mooc1.chaoxing.com/mooc-ans/ztnodedetailcontroller/visitnodedetail?courseId=201903629&knowledgeId=130059500`（超星慕课「8.1.1 双代码假说」WebSearch 逐字：Paivio 1965 CC/CA/AC/AA 四词表数字、概念挂钩、Kirkpatrick 1894 / Shepard 1967）；`https://www.gklibrarykor.com/zh-hans/article/7446`（WebSearch 逐字：1971《Imagery and Verbal Processes》、Clark & Paivio 1991、logogen/imagen 术语）；`https://www.kepuchina.cn/article/articleinfo?business_type=100&ar_id=336116`（科普中国，WebSearch 逐字：直接/参照/联想三种加工类型）。Wikipedia 直连 fetch failed，如实登记未冒充一手；日期 2026-11-25 实拉。
