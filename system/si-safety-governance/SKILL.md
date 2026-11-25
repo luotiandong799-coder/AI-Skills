@@ -1,7 +1,7 @@
 ---
 name: si-safety-governance
-description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。差分隐私、differential privacy、epsilon DP、隐私预算、Laplace 机制、sensitivity 敏感度、组合定理、post-processing immunity、DP-SGD、本地DP中心DP。BOLA、IDOR、越权访问、对象级授权、broken object level authorization、CWE-639。转述授权攻击面、同名对象冒充、能力缺口粉饰、CSRF、跨站请求伪造、synchronizer token、double submit、SameSite、Fetch Metadata、Origin/Referer 校验、token 与会话绑定。原型污染、prototype pollution、__proto__、CWE-1321、Object.create(null)、Object.freeze、--disable-proto、Object.hasOwn、JSON Schema 校验
-version: 2.10.0
+description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。差分隐私、differential privacy、epsilon DP、隐私预算、Laplace 机制、sensitivity 敏感度、组合定理、post-processing immunity、DP-SGD、本地DP中心DP。BOLA、IDOR、越权访问、对象级授权、broken object level authorization、CWE-639。转述授权攻击面、同名对象冒充、能力缺口粉饰、CSRF、跨站请求伪造、synchronizer token、double submit、SameSite、Fetch Metadata、Origin/Referer 校验、token 与会话绑定。原型污染、prototype pollution、__proto__、CWE-1321、Object.create(null)、Object.freeze、--disable-proto、Object.hasOwn、JSON Schema 校验。质量分配、mass assignment、autobinding、object injection、CWE-915、DTO、可写属性白名单、allowlist 优先于 denylist
+version: 2.11.0
 module: SI
 modules: SI,EI
 ---
@@ -466,3 +466,10 @@ GitHub Docs 官方逐字：「**rotate the affected credential immediately** ...
 - `https://portswigger.net/web-security/request-smuggling`（PortSwigger Web Security Academy 官方教程，WebFetch 200 全文逐字：定义/两级链路与复用连接/CL 与 chunked 语法/规范忽略 CL 仍不够/CL·TE/TE·CL/TE·TE 三型与混淆样例/五条预防/browser-powered/HTTP2 免疫与 downgrading；2005 首记、PortSwigger 研究重兴）——第一独立域·官方一手。
 - `https://cwe.mitre.org/data/definitions/444.html`（MITRE CWE-444 Inconsistent Interpretation of HTTP Requests，WebFetch 200 全文逐字：中间 HTTP agent 与终端解析不一致/重复 TE-CL/ALLOWED 映射/Cache Poisoning·Firewall Bypass·凭据暴露三后果/三个 Demonstrative Example/CVE 观测例）——第二独立域·官方漏洞分类一手。
 - **判非**：全库 SKILL.md / module-memory 对 `请求走私`/`request smuggling`/`CWE-444`/`CL.TE` 0 专节（token smuggling 属提示注入异命题；`CL.0`/`desync` 仅字节串命中无专节）；豆包自留地 WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+## §二十六 r808C · 质量分配 / 自动绑定（CWE-915）：框架替你把请求参数写进对象，写哪些字段必须白名单（SI · 2026-11-26 实拉，2 独立域官方全文交叉，3 独点；全文见 `references/r808C_质量分配MassAssignment.md`）
+
+**独点1 根因与成立条件**：框架自动绑定 HTTP 参数到对象，攻击者追加开发者未打算改的字段（`...&isAdmin=true`）即越权写入；别名按框架分裂为 mass assignment（Rails/NodeJS）、autobinding（Spring MVC/ASP.NET MVC）、object injection（PHP）。CWE-915 定义「receives input ... specifies multiple attributes ... but it does not properly control which attributes can be modified」；OWASP 逐字「Field names may be guessed or discovered; source-code access is not required」；空构造器不是前提（Spring 支持构造器与 setter 绑定），嵌套对象同样在暴露面内；2012 GitHub 事件为实证。
+**独点2 白名单 ≠ 授权**：优先 DTO（只含可编辑字段）+ 显式字段 allow-list；OWASP「Do not rely on a block-list as the sole protection: a new or overlooked sensitive field remains bindable」，CWE「If possible, prefer allowlists over denylists」。关键边界句「DTOs and field allowlists restrict writable properties; they do not replace authorization for the requested object and operation」⇒ 与 §21 BOLA 两道门分工：BOLA 判对象+操作授权，本节判可写字段面。反模式：Spring `disallowedFields` fragile、Laravel `forceFill`/`unguard`/`$guarded=[]`、DRF `fields="__all__"`/`Meta.exclude`。
+**独点3 检出与验收**：SAST 按 source→sink 建模可发现部分实例（CWE Effectiveness: High），动态字段/嵌套/反射会漏；回归固定为「正常字段写入成功 + 多塞敏感字段后保持原值 + 新增模型字段后重跑 + 对他人对象写入仍被对象级授权拒绝」；不防业务越用、BOLA、SQLi、反序列化 gadget 链。
+**来源与判非**：`https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html`（WebFetch 200 全文）· `https://cwe.mitre.org/data/definitions/915.html`（WebFetch 200 全文）；OWASP Laravel/DRF Cheat Sheet 交叉。全库对 `mass assignment`/`autobinding`/`CWE-915` 0 专节，豆包自留地 WB 0 落地，按「增＝加厚现有」0 新建。

@@ -1,9 +1,9 @@
 ---
 name: meta/pdi-forecasting
-description: 预测与概率判断（Predictive Intelligence）：估计事件发生/时点/量级、给结论配概率、情景推演、"押个概率/预测一下"时调用。含超预测五步法（问题精化→参考类基率→内部微调→贝叶斯小步→Brier 闭环）、费米拆解、范围敏感性、Pre-Mortem、0.1–0.9 校准带；只输出可结算判断、不作行动决策。；题面可结算性（什么算/何时算/谁裁定·三类规格缺陷·回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO·误差累积与随机依赖两轴·跨视界可比与逐视界最准互斥）；加权评分（w(y)S破坏适当性·threshold/outcome-weighted两类）；回测协议（purge+embargo两漏/CPCV一条历史变多路径/PBO+Deflated Sharpe计试验数/单路径非证据）；事件型预警（point-adjustment让随机探测器拿高F1/事件级检出率·延迟·单位时间误报三栏/range-based与k-delay）；专家概率引出（分位数法X05/X50/X95/锚定两口径/Cooke种子题双评分加权/校准优先信息性/平均专家90%区间仅36%含真值）；预测组合场景依赖（adaptation 追平最佳单候选 vs improvement 超越全部/不看场景套方法即制造组合之谜/mAFTER 把简单平均当候选）；MCMC 收敛（R-hat split+rank/folded 取max+bulk·tail-ESS双达标/全局含lp__/诊断只验失败不证收敛）；多变量评分（ES=CRPS高维推广严格适当但相关误设判别力有限/VS测相关仅适当非严格/二者kernel scores互补·DM检验）；pinball分位评分（严格适当·minimizer=条件τ分位/非对称τ与1−τ·τ=.5即MAE半/coverage gap>5pp/skill score对气候基线/单点分位好≠全分布好）；分位数交叉与尾部外推（q90<q80不连贯·单调参数化/联合拟合/事后排序/极端分位外推/边际分位非联合分布）。；split conformal构造与有限样本可认证上限（四步·qhat=⌈(n+1)(1−α)⌉分位·(n+1)修正使覆盖exact·小样本上限n/(n+1)·坏预测器付宽度不付有效性·set size是信号·APS/RAPS/CQR·与置信区间/温度缩放区分）。
+description: 预测与概率判断（Predictive Intelligence）：估计事件发生/时点/量级、给结论配概率、情景推演、"押个概率/预测一下"时调用。含超预测五步法（问题精化→参考类基率→内部微调→贝叶斯小步→Brier 闭环）、费米拆解、范围敏感性、Pre-Mortem、0.1–0.9 校准带；只输出可结算判断、不作行动决策。；题面可结算性（什么算/何时算/谁裁定·三类规格缺陷·回退源）；多步预测策略（Recursive/Direct/DirRec/MIMO·误差累积与随机依赖两轴·跨视界可比与逐视界最准互斥）；加权评分（w(y)S破坏适当性·threshold/outcome-weighted两类）；回测协议（purge+embargo两漏/CPCV一条历史变多路径/PBO+Deflated Sharpe计试验数/单路径非证据）；事件型预警（point-adjustment让随机探测器拿高F1/事件级检出率·延迟·单位时间误报三栏/range-based与k-delay）；专家概率引出（X05/X50/X95/锚定/Cooke 双评分加权/校准优先信息性/90%区间仅36%含真值）；预测组合场景依赖（adaptation vs improvement/组合之谜/mAFTER 把简单平均当候选）；MCMC 收敛（R-hat split+rank/folded 取max+bulk·tail-ESS双达标/全局含lp__/诊断只验失败不证收敛）；多变量评分（ES=CRPS高维推广严格适当但相关误设判别力有限/VS测相关仅适当非严格/二者kernel scores互补·DM检验）；pinball分位评分（严格适当·minimizer=条件τ分位/非对称τ与1−τ·τ=.5即MAE半/coverage gap>5pp/skill score对气候基线/单点分位好≠全分布好）；分位数交叉与尾部外推（q90<q80不连贯·单调参数化/联合拟合/事后排序/极端分位外推/边际分位非联合分布）。；split conformal（qhat=⌈(n+1)(1−α)⌉·上限n/(n+1)·set size 是信号·APS/RAPS/CQR）；CUSUM 变点预警（累积偏差·k 参考值/h 决策区间·S_hi/S_lo 双侧递推·ARL L0 高 L1 低·小偏移优于 Shewhart·报警非变点）。
 module: PDI
 modules: PDI,TI,DI
-version: "1.23.0"
+version: "1.24.0"
 ---
 # PDI · 预测与概率判断（Predictive Intelligence）
 > 本技能是 Personal AI OS 13 模块中 **PDI（预测智能）** 的唯一载体。TI 想明白因果、DI 在多方案中选择、PDI 负责"给未来事件配一个可结算的概率并持续校准"。
@@ -478,23 +478,22 @@ n=8 残差排序 {0.2,0.3,0.4,0.5,0.6,0.8,0.9,1.1}，α=0.125 时 k=⌈9×0.875�
 ### 25.3（r794C-3）★坏预测器付宽度不付有效性；conformal set ≠ 置信区间/置信分数/温度校准
 「A bad predictor pays in the width of the set, never in the validity of the coverage」——保证把模型无知从正确性换算成集合大小；所有有效方法都达到目标覆盖，竞争在集合多小。set size 是信号：APS/RAPS 用累计概率让集合随难度变、CQR 在噪声大处变宽、Mondrian 每类单独 qhat。三类区分：置信分数是无保证的单数；温度缩放改善分数匹配但不自带覆盖；统计置信区间描述总体参数（如均值）的不确定性，conformal 集描述单个新结果落在何处。校准集须来自部署数据且漂移时刷新，否则 exchangeability 不成立（Ultralytics 逐字）。
 ### r794C 来源与判非（逐字、四域来源见 `references/r794C.md`）｜**判重**：split 构造（qhat 修正/可认证上限/三类区分）在 PDI 本体 0；§十 r734A 管 width×coverage 评分、§十一 r737C 管边际 vs 条件覆盖作用域，本条补构造机制层，明确交叉引用不重述；豆包自留地 WB 0 落地，与 r793/r792/r791 九模块及 A/B 两轮不复用。
-## 二十六、层级预测协调：分别预测各层会加总不一致，协调是投影不是归一化（r795M 独立实拉 2026-11-22，≥2 独立域一手交叉，3 独点）
+## 二十六、层级预测协调：分别预测各层会加总不一致，协调是投影不是归一化（r795M · 全文下沉）
 
-§25 conformal 管「单个预测的不确定性」，本章管**多个层级之间的加总约束**：底层加总要等于上层，分别最优的各层预测直接放在一起通常不 coherent。
-**独点1** 一致性判据：协调须满足 `S G S = S` 且 `ỹ = S G ŷ`（G 为协调矩阵）；只有「先加总再归一化」而无投影矩阵 G → 非最优协调。FPP3 逐字：分别预测的各层「they are not coherent (they don't add up correctly)」，且「no top-down method satisfies this constraint, so all top-down approaches result in biased coherent forecasts」。
-**独点2** 谱系判据：按 W 结构区分 OLS(W=I)、WLS(W=diag σ²)、MinT(完整 W)、MinT-shrink(W 向对角收缩)；混用称谓判错。MinT 原始论文逐字：coherence 是「forecasts for the most disaggregated series…add-up exactly to…aggregated series」，完整 W「impossible to estimate in practice due to identifiability conditions」，故在无偏假设下最小化全体序列协调后 MSE。
-**独点3** 概率判据：概率预测须检验预测分布的线性约束（projection 或 copula 重排）；只在点预测协调却声称「区间自动一致」无一手支持。Gaussian 框架下 MinT 最小化对数评分（arXiv:2103.11128），此为分布假设下的结论，不自动外推到任意分布。
-- **判重：`层级协调`/`hierarchical reconciliation` 本体与全库 SKILL.md 0；`reconciliation` 7 命中为冲突消解/对账异命题；与 §十 width×coverage、§十一边际 vs 条件覆盖、§25 conformal 分工不复用。豆包自留地 WB 0 落地。**
-- **来源与诚信**：https://otexts.com/fpp3/hierarchical.html（Hyndman & Athanasopoulos，Forecasting: Principles and Practice 3rd ed. §11.3，作者官方站点，WebFetch 200 逐字：bottom-up/top-down/middle-out 与 only strictly hierarchical / 不 coherent / top-down 有偏 / MinT=min_trace）；https://robjhyndman.com/publications/mint/（Wickramasuriya/Athanasopoulos/Hyndman，JASA 114(526):804-819，2019-06-14，WebFetch 200 逐字：coherence 定义 / W 不可估 / 无偏下最小化 MSE）；https://arxiv.org/abs/2103.11128（Wickramasuriya，Probabilistic forecast reconciliation under the Gaussian framework，2021-03-20，WebFetch 200 逐字：incoherent→coherent 映射 / OLS·WLS·MinT / Gaussian 下 MinT 最小化 log score）。arXiv:1706.09245 抓错（实为 Kassarnig 等教育行为论文），已弃用并如实登记；MinT.pdf fetch failed，改作者 publication 页。 逐字全文与判非见 `references/r795M_层级协调.md`。
+> `SGS=S` 与 `ỹ=SGŷ` 一致性判据、OLS/WLS/MinT/MinT-shrink 按 W 结构分族、概率协调须验分布线性约束、FPP3 + JASA 114(526) + arXiv:2103.11128 三一手逐字与判非（含抓错论文登记），全文见 `references/r795M_层级协调.md`。本节仅留路由，以该 references 为准。
 ## 二十七、校准诊断：可靠度图读方向、ECE/MCE 与 held-out 分箱稳健性（r796M · 全文下沉）
 
 > `conf_b`/`acc_b` 分箱方向判据、`ECE=Σ(n_b/N)|acc−conf|` 与 `MCE=max|acc−conf|` 同时报、Murphy 三项 `REL−RES+UNC`、分箱数敏感性 M∈{10,15,20} 与 scikit-learn/Nixon2019/Guo2017 一手逐字与判非，全文见 `references/r796M_校准诊断.md`（25 行）。本节仅留路由，以该 references 为准。
 
 > Croston/SBA/TSB 三独点（两分量分解·ADI/CV²四象限·TSB与MASE/RMSSE口径）全文见 `references/r799C_Croston间歇需求.md`（17 行）。本节仅留路由，以该 references 为准。
-## 二十九、ETS 指数平滑状态空间：把点预测升级为可自动选模+给区间的统一框架（r803C 独立实拉 2026-11-23，≥4 独立域一手交叉，3 独点）
+## 二十九、ETS 指数平滑状态空间：把点预测升级为可自动选模+给区间的统一框架（r803C · 全文下沉）
 
-§二十八 Croston 管「零很多」的间歇需求，本章管一般趋势/季节序列——经典指数平滑只给点预测和手调 α，ETS 把它写成创新状态空间模型后才有似然、AIC 自动选模和解析预测区间。
-**独点1** ETS 不是单个模型而是 E/T/S 三成分组合出的 30 个变体族：E(误差)∈{A 加, M 乘}，T(趋势)∈{N 无, A 加, Ad 加阻尼, M 乘, Md 乘阻尼}，S(季节)∈{N 无, A 加, M 乘}；`ETS(A,N,N)`=简单指数平滑、`ETS(A,A,N)`=Holt 线性、`ETS(A,A,A)`=加性 Holt-Winters、`ETS(M,A,M)`=乘误差+加趋势+乘季节。加法季节振幅不随水平变、乘法振幅随水平放大（增长需求常见），阻尼趋势让长期外推收敛。**判据**：报结果须写清三字母规格 + 平滑参数 α/β/γ（ANU 讲义约束 `0≤α≤1, 0≤β≤α, 0≤γ≤1−α`），只说「用了 Holt-Winters」不足以复现。
-**独点2** 状态空间化收益是三件经典公式没有的东西：① proper likelihood → `AIC=−2log(L)+2p` 在 30 变体里自动选模（`forecast::ets()`/statsmodels `ETSModel`），乘性成分要求数据严格为正、AIC 选模自动排除非法模型；② 从底层状态模型解析推导预测区间（解析不可得改模拟），不再只有点预测；③ Ord/Koehler/Snyder 1997 与 Hyndman/Koehler/Snyder/Grose 2002 证明所有指数平滑法（含非线性）都是创新状态空间模型的最优预测。α 由「最小化一步预测误差平方和/MLE」拟合而非手调。**判据**：长视界乘性 ETS 区间因方差复合会极宽，改模拟多路径而非照搬解析区间；区间必须随点预测一起报。
-**独点3** ETS 与 ARIMA 是两条标准基线无 universal winner，选型靠滚动起点 CV 实测：FPP3 §9.10 明言非普遍优劣、Gardner 2006 五十年实证指 ETS 稳健且 M3 表现好；ETS 无需平稳性预处理、趋势季节形状清楚时更简单，ARIMA 直接建模自相关误差。残差仍要 Ljung-Box + 同方差 + 正态诊断（不过换误差类型/做变换），多季节用 TBATS。与 §十五多步策略分工：那里管递归/Direct/MIMO 策略、这里管单模型族；与 §十七回测协议分工：那里防泄漏、这里给模型本身；与 §二十八分工：Croston 管零膨胀、ETS 乘性遇零失效。不防什么：单季节单变量、无外生变量、假设模式延续（结构突变另处理）。
-- **判重：`ETS`/`指数平滑`/`Holt-Winters`/`状态空间` 在 PDI SKILL.md 无专节（仅 §十五一处把 ARIMA 当模型名举例）；`bootstrap` 命中 §17 回测语境异命题。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。** 来源与诚信：https://robjhyndman.com/papers/forecompijf.pdf （PDF fetch 失败取 WebSearch 逐字未冒充全文）· https://maths-people.anu.edu.au/~johnm/courses/r/ASC2008/pdf/Rtimeseries-ohp.pdf （WebFetch200全文）· https://www.forecaststudio.com.mx/blog/exponential-smoothing-ets · https://cttir.github.io/tutorials/tutorials/time-series/ets-models.html · https://ctmodelling.cn/talk/wangjiahe_ets_r （均 WebFetch200全文）；逐字全文与判非见 `references/r803C_ETS指数平滑状态空间.md`。
+> E/T/S 三成分 30 变体与 α/β/γ 约束、状态空间化带来的似然/AIC 自动选模/预测区间、ETS vs ARIMA 靠滚动起点 CV 选型与残差诊断，全文见 `references/r803C_ETS指数平滑状态空间.md`。本节仅留路由，以该 references 为准。
+
+## 三十、CUSUM 累积和变点预警：单点阈值看不见的小偏移，靠累积偏差攒成信号（PDI · r808C 2026-11-26 实拉，2 独立域官方一手交叉，3 独点；全文见 `references/r808C_CUSUM变点预警.md`）
+
+§十八管事件型预警的评测协议（point-adjustment 会让随机探测器拿高 F1），本章管在线监控统计量本身；§r803C ETS 给点预测和区间，本章盯过程均值是否已经漂移。
+**独点1 机制与 ARL 证据**：`S_m=Σ(x̄_i−μ̂_0)`（或标准化除 σ_x̄），受控时绕 0 随机游走、均值上移则上漂；NIST 逐字「better than Shewhart ... when it is desired to detect shifts in the mean that are 2 sigma or less」。ARL 表（k=0.5）：受控时 CUSUM h=4→336/h=5→930 vs Shewhart 371；1σ 偏移 CUSUM 8.38/10.4 vs Shewhart 44.0；3σ 偏移 CUSUM 2.19/2.57 vs Shewhart 2.00——小偏移 CUSUM 快、大偏移 Shewhart 快，break-even 随 h 变。读表注意「表中偏移 = 第一列 + k」，直接查 1.00 行会错一档。
+**独点2 双侧递推与参数**：`S_hi(i)=max(0,S_hi(i−1)+x_i−μ_0−k)`、`S_lo(i)=max(0,S_lo(i−1)+μ_0−k−x_i)`，初值 0，任一超 h 报警；k 是参考值/允许 slack（可设 `(μ_0+μ_1)/2`，k 指定要检出的偏移），h 是决策区间；Minitab 默认 h=4、k=0.5，双侧用两张单侧图；FIR 解决「启动时已失控要几个子组才发现」的盲区；V-mask 是同一机制的图形形态（k 斜率/h 宽度）。
+**独点3 验收与失效面**：先定 μ_0/μ_1 与目标 ARL（`L0` 受控高、`L1` 失控低）再反查标准化 `k_s`、`h_s`，h/k 不跨场景硬抄；观测须独立、按时间顺序、等间隔，子组内相关会让控制限过窄误报；报警点是检出时刻不是变点时刻，须回溯到最后一次归零处估起点并报方向；非平稳趋势/季节未建模、方差漂移、自相关序列先用残差再监控。
+**来源与判非**：`https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc323.htm` + `.../pmc3231.htm`（WebFetch 200 全文：定义/V-mask/表格递推/完整 ARL 表）· `https://support.minitab.com/en-us/minitab/help-and-how-to/quality-and-process-improvement/control-charts/how-to/time-weighted-charts/cusum-chart/methods-and-formulas/methods-and-formulas/`（WebFetch 200 逐字：h=4/k=0.5/FIR/中心线 0）。CUSUM 变点检测在 PDI 本体 0 专节，豆包自留地 WB 0 落地，按「增＝加厚现有」0 新建。
