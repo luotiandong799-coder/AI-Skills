@@ -460,26 +460,27 @@ Barrios 三条 takeaway 逐字：①「The bias is arithmetic」——TWFE 是�
 判重：本体 0 专节，与 §22 E-value/§13 后门正交；豆包自留地 WB 0 落地。
 来源与诚信：Penning de Vries & Groenwold 2023（Stat Methods Med Res, DOI 10.1177/09622802231181230, PMC10515451）WebFetch 200 全文＋Arnold 2016 Epidemiology 27(5):637-641 WebFetch 逐字＋LCP/OpenRxiv 交叉。逐字全文与判非见 `references/r797A_阴性对照.md`。
 
+## 三十四、贝叶斯因子：把「证据强度」量化成赔率比（TI · r805A · 正文下沉 `references/r805A_贝叶斯因子.md`）
+> 3 独点路由：① BF 是后验赔率乘子、BF₁₀=1/BF₀₁ 方向必写、复合模型含先验加权惩罚≠普通 LRT；② BF 能量化支持零假设（p>0.05 不是支持 H0、法庭语境门槛 >1000）；③ Jeffreys 3.2/10/100 与 K&R 3/20/150 两套标度不可混引、BIC≈−2lnBF 仅大样本局部均匀先验下成立。四独立域来源与判非全段见下沉文件。与 §r801A SDT / §22 E-value 异命题。
 
-## 三十四、贝叶斯因子：把「证据强度」量化成赔率比，且能报告支持零假设的证据（TI · r805A 独立实拉 2026-11-25，≥3 独立域一手交叉，3 独点）
+## 三十五、Bradford Hill 准则：把「相关≠因果」拆成九个可审视的证据维度（TI · r809A 独立实拉 2026-11-26，≥2 独立域一手交叉，3 独点；正文下沉 `references/r809A_BradfordHill准则.md`）
 
-> 与 §r801A 信号检测论 / §22 E-value 分工：SDT 把判断拆成敏感度与标准、E-value 把「未测混杂要多强」转成 RR 阈值；本章管**两个竞争假设下观测数据的相对证据**——后验赔率 = BF × 先验赔率，回答「数据把信念推了多少、往哪边推」。与统计显著性 p 值不同：BF 是可逆的、可对零假设给证据。
+> 与 §13–21（DAG/do-calculus/IV/RDD 识别层）、§22 E-value（混杂阈值量化层）、§34 贝叶斯因子（证据强度量化层）、`agent/grill-me` r801A SDT（分辨力 vs 判定标准）分工：本章管**证据组织层**——拿到一堆观察关联如何系统审视它像不像因果。Hill 原文本身把「显著性检验」单列为第十项并明确它「contribute nothing to the 'proof'」。
 
-### 34.1（r805A-1）★BF 是后验赔率与先验赔率的乘子，不是 p 值；BF₁₀=1/BF₀₁ 方向必须写清
-- **原文**（Strimmer Lab《Bayesian model comparison》MATH27720 讲义 WebFetch 逐字）：「The Bayes factor is the **multiplicative factor that updates the prior odds to the posterior odds**」，`posterior odds = B12 × prior odds`，对数尺度 `log-posterior odds = weight of evidence + log-prior odds`。定义 `B12 = p(D|M1)/p(D|M2)`，即两模型下数据的（边缘）似然比；复合模型下 BF 是「model average of the simple models indexed by θ, with weights taken from the prior distribution」，而广义似然比用 maximization——「the Bayes factor is a **penalised version of the likelihood ratio**, with the penalty depending on the difference in complexity」。PreTeXt《Bayesian Hypothesis Tests》逐字：`BF10 = p(d|h1)/p(d|h0)`，`BF01` 反向，`BF10 = 1/BF01`，「Always be mindful which statistic you are reporting」。
-- **判据**：① 报 BF 必须带方向下标（BF₁₀ 支持 H1、BF₀₁ 支持 H0）与比值，只写「BF=6」无法判定挺谁。② BF 直接乘先验赔率得后验赔率，故**同一 BF 在不同先验下后验不同**——不可脱离先验谈「结论强度」。③ 复合模型 BF 含先验加权惩罚复杂度，不等于最大似然比；两个模型复杂度不同时拿普通 LRT 冒充 BF 会系统性偏向复杂模型。
+### 35.1（r809A-1）★这是「观点(viewpoints)」不是勾选清单；时序性是唯一不可逾越的逻辑前提
+- **原文**（PMC4792272 TABLE 1《The Bradford-Hill Criteria (1965)》WebFetch 200 全文逐字）：Strength「Both strong and slight associations are relevant. Slight associations do not mitigate causation.」Specificity「Interpretation must be cautious, as diseases may have more than one cause.」Temporality「Which is the cart and which is the horse? This criterion is particularly relevant with diseases of slow development.」玻尔科学百科逐字「时序性是唯一不可逾越的逻辑前提和『铁律』」「并非一套用于打勾的僵硬清单」。
+- **判据**：① 报告写「哪几条支持/哪几条缺失/缺失是否致命」，不写「满足 X/9 条故因果成立」。② 时序性不满足直接否掉，其余八条只调置信度、非充分条件。③ 「可逆性（原因消失则结果消失）」是增补条非 Hill 原始九条，须标注。
 
-### 34.2（r805A-2）★BF 能量化支持零假设的证据，这是相对 p 值的结构性优势
-- **原文**（PreTeXt 逐字）：「one important practical advantage of the Bayesian approach relative to the frequentist approach is that it also allows for **quantifying evidence for the null**. When that happens, the Bayes factor will be less than 1」；例 `p(d|h0)=0.2, p(d|h1)=0.1 ⇒ BF10=0.5`，翻转成 `BF01=2`，「report a Bayes factor of 2:1 in favour of the null」。Kass & Raftery 语境提醒（stir 博士论文逐字）：法庭证据等场景 BF 需 >1000 才算决定性，而非 >100——「context affects interpretation」。
-- **判据**：① 「p>0.05」只能说未拒绝零假设，不能说支持零假设；BF₀₁>1 才给出支持 H0 的正向证据。② 解释阈值依领域语境调整，法庭/高风险场景门槛远高于常规 3/20；写结论须注明所用标度与场景门槛。③ BF<1 不要直接读成「无效」——先翻转到 BF₀₁ 再看支持零的量化强度。
+### 35.2（r809A-2）★一致性与特异性不是因果证明；coherence 缺实验室证据不抵消流行病学关联
+- **原文**（同上 PMC 逐字）：Consistency「repeatedly observed by different persons, in different places, circumstances, and times?」Coherence「the failure to replicate disease in an experimental model cannot nullify human epidemiologic observations. For example, John Snow's observations on transmission of cholera by water were not invalidated by lack of contemporaneous isolation of the inciting *Vibrio cholerae* that awaited Robert Koch's work 30 years later.」Experiment「may provide the strongest support for disease causation.」
+- **判据**：① 实验证据缺席不与流行病学证据相互抵消——异质证据源不能用一边空否决另一边。② 「实验室没复现」登记为证据缺口而非结论反转。③ 合理性/类比依赖「当日生物知识」，知识更新须重评。
 
-### 34.3（r805A-3）★两套常用标度阈值不同不可混引；BIC 近似 BF 须满足大样本正则条件
-- **原文**（Statlect《Jeffreys' scale》WebFetch 逐字）：Jeffreys(1939) 原标度 1–10^0.5 barely worth mentioning / 10^0.5–10 substantial / 10–10^1.5 strong / 10^1.5–10^2 very strong / >10^2 decisive；Kass & Raftery(1995) 简化为 `1–3 barely worth mentioning / 3–20 positive / 20–150 strong / >150 very strong`（对应 `2ln(B) 0–2/2–6/6–10/>10`）。Strimmer 逐字：Schwarz(1978) 近似 `log p(D|M) ≈ ℓ(θ̂_ML) − ½ d_M log n`，「yields the BIC … penalised maximum log-likelihood」，是 Laplace 近似的特例，「assuming large n and assuming that the prior is locally uniform around the MLE」。
-- **判据**：① 引阈值必须点名标度来源（Jeffreys 1961 用 3.2/10/100，K&R 1995 用 3/20/150），混用会让「strong」含义漂移。② BIC≈−2ln BF 只是大样本局部均匀先验下的近似，小样本/信息先验不可直接套。③ big-N 下 BF 与 p 值可背离（BF 对效应量先验宽度敏感），二者结论冲突时先检先验与样本量，不强行统一。
+### 35.3（r809A-3）★四层分工：证据组织 / 识别 / 稳健性阈值 / 证据强度，缺一即标缺口
+- **判据**：① 交付因果结论时四层各写一句：Hill 维度审视（本章）/ 识别策略与假设（§13–21）/ 稳健性阈值（§22 E-value）/ 证据强度（§34 BF），任一层缺标缺口。② 禁把「p<0.05 + 满足 Hill 六条」当因果成立充分论证——Hill 第十条把显著性检验排除在证明外。③ 与 r801A SDT 分工：SDT 判「分辨力 vs 判定标准」，Hill 判「关联像不像因果」，都防「单点命中率」误读。
 
-### 来源与诚信（r805A · 2026-11-25 实拉，≥3 独立域一手）
-- `https://strimmerlab.github.io/publications/lecture-notes/MATH27720-stats2/17-bayes5.html`（Strimmer Lab 贝叶斯模型比较讲义，WebFetch 全文逐字：posterior odds=BF×prior odds / weight of evidence / 复合模型 BF 是先验加权平均≠最大化 LRT / BF 是惩罚版似然比 / Jeffreys 与 K&R 两标度表 / Schwarz 1978 近似与 BIC 惩罚 ML）——第一独立域·大学讲义一手。
-- `https://new.statlect.com/fundamentals-of-statistics/Jeffreys-scale`（Statlect《Jeffreys' scale》WebFetch 全文逐字：Jeffreys 1939 原标度全表与 Kass-Raftery 1995 简化标度全表、对数尺度等价、reciprocal 用于支持 M0、引用 Kass R. & Raftery A. 1995 JASA 90:773-795）——第二独立域·统计教学一手。
-- `https://pretextbooks.github.io/lsc/ch-bayesian-hypothesis-tests.html`（PreTeXt 贝叶斯假设检验教材，WebFetch 全文逐字：BF10/BF01 定义与互逆、K&R 与 Jeffreys 两表逐档、「quantifying evidence for the null」、BF=0.5 翻转 BF01=2 例、阈值依社区标准无硬性规则）——第三独立域·开放教材一手。
-- `https://www.storre.stir.ac.uk/bitstream/1893/32531/1/PhD%20Thesis%20Nikos%20Jakubiak%20August%202020.pdf`（Stirling 大学博士论文，WebSearch 逐字：BF=marginal likelihood 比、Jeffreys/K&R 双表、法庭 BF>1000 语境提醒）——第四独立域·学术论文（WebSearch 快照非 WebFetch 全文，如实登记）。
-- **判重**：全库 SKILL.md 对 `贝叶斯因子`/`Bayes factor`/`BF10`/`Kass` 0 专节（pdi-forecasting 命中经逐串核为无，仅 memory 层无命中）；与 §r801A SDT（敏感度vs标准）、§22 E-value（混杂阈值）异命题。豆包自留地 wb-execute-discipline/wb-context-compressor WB 0 落地。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+### 来源与诚信（r809A · 2026-11-26 实拉，≥2 独立域一手）
+- `https://pmc.ncbi.nlm.nih.gov/articles/PMC4792272/table/T1/`（NIH PMC，WebFetch 200 全文逐字：TABLE 1 九条+显著性检验逐字、John Snow/meningococcus 例）——第一独立域·官方医学文献一手。
+- `https://www.mhlw.go.jp/shingi/2005/03/dl/s0331-9b2.pdf`（日本厚生劳动省官方 PDF，WebSearch 逐字：九条+吸烟肺癌 9–10 倍/扫烟囱睾丸癌 200 倍）——第二独立域·国家级卫生机构一手。
+- `http://scipedia.bohrium.com/sciencepedia/feynman/epidemiology_undergraduate-Bradford_Hill_guidelines_for_causal_inference`（玻尔科学百科，WebSearch 逐字：时序性唯一铁律/启发式非清单）——第三独立域·科学百科一手。
+- 诚信降级：Wikipedia 原页 WebFetch fetch failed 未采纳全文；Wikiwand/Wikii 中译镜像仅作中文口径核对非一手。
+- **判重**：全库 SKILL.md/module-memory/co-learn 对 `Bradford Hill`/`希尔准则` 0 专节（r786A E-value references 仅一句旁及）；与 §22/§34/§13–21 异命题。豆包自留地 0 落地。按 rules/07「增＝加厚现有」，0 新建/0 合并/0 删除。

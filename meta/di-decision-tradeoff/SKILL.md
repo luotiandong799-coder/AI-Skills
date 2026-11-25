@@ -461,26 +461,28 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 **独点3** 与前景理论有正式冲突边界，别跨框架搬运：Schmidt–Zank 证 SSD 对 PT 要求 gain 凹、loss 也凹、gain 权重整体凸、loss 权重整体凹，实证却是 gain 凹、loss 凸、权重 inverse-S——SSD 结论属 EU/RDU 框架，不能直接外推到参照点依赖的描述场景（Manchester EDP-1123 逐字）。与 §r768C minimax regret（无概率深不确定）分工：随机占优要已知 CDF。不防什么：不产出唯一全序、不替代效用 elicitation（§r788C）、三阶 TSD 的「绝对风险厌恶递减」附加假设本条不展开。
 - **判重：`随机占优`/`stochastic dominance`/`FSD`/`SSD` 全库 SKILL.md 与 module-memory 0 专节；§十九前景理论命中但异命题（有参照点值函数 vs 无效用函数偏序），分工见独点 3。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。** 来源与诚信：https://en.wikipedia.org/wiki/Stochastic_dominance （WebFetch200全文）· https://www.mdpi.com/2227-7390/11/1/50/xml （空Title页，正文取WebSearch逐字未冒充全文）· https://hummedia.manchester.ac.uk/schools/soss/economics/discussionpapers/EDP-1123.pdf （WebFetch200全文）· 百度百科随机优势（WebFetch200）· 聚宽（WebFetch200）；逐字全文与判非见 `references/r803A_随机占优.md`。
 
+## 三十一、OODA 决策循环：靠更快完成观察-取向-决策-行动取胜（DI · r805B · 正文下沉 `references/r805B_OODA.md`）
+> 3 独点路由：① 四阶段持续循环、Orient 核心含隐性引导控制；② 优势来自相对速度（进入对方决策周期）、late commitment vs PDCA early commitment；③ 批评定义宽泛缺唯一性、承认-启动决策 RPD 是其战术形态。五独立域来源与判非全段见下沉文件。与 §r796B Cynefin / §27 hysteresis / §一 RDM 异命题。
 
-## 三十一、OODA 决策循环：竞争环境下靠更快完成观察-取向-决策-行动取胜（DI · r805B 独立实拉 2026-11-25，≥2 独立域一手交叉，3 独点）
+## 三十二、德尔菲法：无可信概率时把专家判断收敛成可审计的群体结论（DI · r809B 独立实拉 2026-11-26，≥2 独立域一手交叉，3 独点；正文下沉 `references/r809B_德尔菲法专家共识.md`）
 
-> 与 §20 minimax regret / §一 RDM 分工：那些管「无概率时如何选准则」，本章管**动态竞争环境里决策是一个持续循环、速度本身是优势**。与项目内 `TI` 的因果推断链无关；与 §27 决策滞后 hysteresis 分工：滞后治噪声震荡，OODA 治对手也在动的对抗节奏。
+> 与 §二十九社会选择/投票悖论 r736B（偏好既存，管聚合规则缺陷）、§二十 minimax regret r768C（已知选项+未知概率）、§十五 VOI 分工：本节点管**偏好/判断待生成**时用匿名多轮把专家意见收敛成群体结论。
 
-### 31.1（r805B-1）★四阶段 Observe-Orient-Decide-Act 是持续循环，Orient 是核心且含隐性引导控制
-- **原文**（加拿大国防部《Military Strategy: A Primer》官方条令 PDF WebFetch 逐字）：「The Observe – Orient – Decide – Act process seeks to model the decision-making cycle」；四阶段——Observe 吸收环境/自身/对手信息；Orient「interpret the information through a process of analysis and synthesis that creates meaning」；Decide「commits to a course of action」；Act 执行并反馈。「**Orientation actually exerts implicit guidance and control over the Observation and Action phases, as well as shaping the Decision phase**」；「the entire Loop is an ongoing, many-sided, implicit cross-referencing process of projection, empathy, correlation and rejection」。美国海军陆战队基础学校《Decision Making》教材 PDF 逐字：「The goal is to process the cycle quickly and continuously, allowing the individual to react to the changing environment more quickly than his opponent」；Orient「develop a mental image of the situation… diagnose, recognize, and analyze changes」。
-- **判据**：① 不要把 OODA 画成一次性线性流程——它是持续循环，行动结果成为新观察。② Orient 不是「分析」的别名：它含心智模型、文化、遗传、既往经验（ Boyd 的四类输入），并**隐式引导**观察与行动（可直接 Observe→Act 的反射，无需显式 Decide）；把它简化成「第三步之前的整理」会丢掉核心。③ 组织可通过设计改善决策者的 Orient（共享心智模型、训练），这是把循环做快的杠杆点，而非单纯堆信息。
+### 32.1（r809B-1）★四特征缺一不可，去掉匿名就不是德尔菲法
+- **原文**（RAND《THE DELPHI TECHNIQUE》NSA 官方 PDF WebSearch 逐字，WebFetch Access Denied 如实登记）：「Three features distinguish the Delphi technique from a simple round-table or panel technique: 1. Anonymous response, 2. Iteration and controlled feedback, and 3. Statistical derivation of a group response.」匿名避 rank/reputation/personality 支配、怕丢面子、bandwagon、噪声四类偏倚；自陈风险「the persons tabulating responses and coordinating the Delphi exercise can consciously or accidentally distort the feedback and bias the results.」
+- **判据**：① 「大家开会讨论到一致」不是德尔菲——无匿名则权威压制/怕丢面子/从众三偏倚全在。② 去掉可控反馈只剩多轮问卷、去掉统计聚合只剩定性归纳，四特征逐条落地。③ 回灌统计表由协调者编制 ⇒ 固化「回灌内容生成规则」并留痕。
 
-### 31.2（r805B-2）★快循环=进入对方决策周期取胜；与 PDCA 的差别是 late commitment 敏捷
-- **原文**（军事条令逐字）：Boyd 理论「the key to success in conflict is to **operate inside the opponent's decision cycle**. Advantages in observation and orientation enable a **tempo in decision-making and execution that outpaces the ability of the foe to react effectively in time**」。Wikipedia《OODA loop》WebFetch 逐字：「An entity … that can process this cycle quickly … can thereby **get inside the opponent's decision cycle and gain the advantage**」；「This enables **late commitment**, which is an important element of agility. This is in contrast to the PDCA cycle which requires **early commitment**」。oodaloop 官方逐字：「Make your decisions by Observing, Orienting, Deciding and Acting and **doing so faster than your opponent**」；1996  Boyd 唯一手绘版本强调「observations come from many paths, including… observations on internal status, as well as your own decisions and actions」。
-- **判据**：① 优势来自**相对速度**（比对手快）而非绝对快——对手也在循环，只报「我们决策快」无意义，须报相对节奏。② OODA 的敏捷来自延迟承诺（late commitment）：多观察、保留选项、最后一刻才定，与 PDCA 的早承诺计划-执行-检查相反；把 OODA 当成「更快的 PDCA」是框架错配。③  observing 包含自身状态与自身决策/行动的反馈，不只是外部对手——self-observation 缺失会让循环在自我强化中失真。
+### 32.2（r809B-2）★共识 ≠ 正确；阈值事前冻结，未达即报「no consensus」不硬凑
+- **原文**（Lotus《Delphi Method for Consensus Research》WebFetch 200 全文逐字）：「≥70% agreement within a predefined range」「IQR ≤ 2 indicates acceptable agreement」「Items not reaching consensus after 3 rounds are classified as 'no consensus.'」Wikipedia 逐字「reaching consensus does not necessarily show that the correct answer has been found but only that agreement has been reached among the experts.」
+- **判据**：① 阈值（70%/IQR≤2/轮数）发第一轮问卷前写死，事后改阈值=操纵结论，与 §r736B 候选项冻结同构。② 三轮未达按「no consensus」如实上报、共识与未共识条目并列。③ 报告附每轮回应率/退出原因/稳定性分析/panel 组成局限（CREDES）。
 
-### 31.3（r805B-3）★批评：定义宽泛缺唯一性，不可当万能决策理论；承认-启动决策是其战术形态
-- **原文**（Wikipedia《OODA loop》逐字）：航空史学家 Michael Hankins「the OODA loop is **vague enough that its defenders and attackers can each see what they want to see in it**… becomes so generalized as to lose its usefulness」；「merely one way among a myriad of ways of describing intuitive processes of learning and decision making… **not incorrect, but neither is it unique or especially profound**」。军事条令逐字：Orient 在战术层「involves a decision-making process known as **Recognition-Primed Decision-Making** where the decision is not based on a rationalistic, linear approach, but rather occurs when the actor perceives patterns previously experienced and adjusts those patterns mentally」。
-- **判据**：① 用 OODA 描述任何决策都对 ⇒ 解释力为零；落地时须指明**竞争/对抗语境**与「谁是对手、循环周期多长、相对快慢」，否则只是贴标签。② 战术快循环靠识别启动决策（RPD：模式匹配+心理调整），不是完整理性推演；把 OODA 用在慢速深思熟虑场景要退到分析/综合路径，别硬套。③ 与 §一 RDM 的边界：深不确定无对手时 OODA 的「取胜」目标不适用，仅借用其持续反馈结构。
+### 32.3（r809B-3）★专家排序/自评是陷阱；与投票节分工在「收什么」
+- **原文**（RAND Critique 逐字）：「ranking the experts may be as difficult as making the original decision, and attempts to use self-ratings by each expert may measure ego as much as expertise.」ArabPsychology 逐字：极端值者「required to provide a written justification」且理由匿名传播「allows experts to be persuaded by logical arguments rather than social pressure.」
+- **判据**：① 选人标准（专业/经验/视角多样/地域）先于问卷设计，不用自评排序加权。② 「探索分歧不强制一致」明选 Policy Delphi，不拿共识率当成功指标。③ 先用德尔菲生成并收敛判断，再进入 minimax regret/EVPI 准则——前者造输入、后者算选择。
 
-### 来源与诚信（r805B · 2026-11-25 实拉，≥2 独立域一手）
-- `https://publications.gc.ca/collections/collection_2023/mdn-dnd/D4-10-3-2011-eng.pdf`（加拿大国防部《Military Strategy: A Primer》官方条令 PDF WebFetch 全文逐字：OODA 四阶段逐定义 / Orientation 隐性引导控制 Observe·Act·Decide / analysis vs synthesis / Recognition-Primed Decision-Making / 进入对手决策周期与 tempo / Colin Gray 评价）——第一独立域·国家级军方条令一手。
-- `https://www.trngcmd.marines.mil/Portals/207/Docs/TBS/W170001XQ%20Decision%20Making.pdf`（美国海军陆战队基础学校《Decision Making》教材 PDF WebFetch 逐字：Boyd Cycle 定义 / 四阶段 Observe·Orient·Decide·Act 逐条 / 快而连续循环比对手更快反应 / 橄榄球例说明准备期重分析·比赛期重识别 / OODA 循环大小与主动权）——第二独立域·军方教学一手。
-- `https://wipi.ai.kr/en/OODA%20loop` + `http://ergngevd.top/wiki/OODA`（WIPI 百科与 Wikipedia 镜像《OODA loop》WebFetch 逐字：四阶段 / Orient 最重要含文化·遗传·既往经验·分析综合 / 隐性控制与 mental models / late commitment vs PDCA early commitment / Hankins 批评宽泛缺唯一性 / get inside opponent's decision cycle）——第三、四独立域·百科一手（镜像互证）。
-- `https://www.oodaloop.com/the-ooda-loop-explained-the-real-story-about-the-ultimate-model-for-decision-making-in-competitive-environments/`（OODA Loop 站点，WebFetch 逐字：Boyd 1996 唯一手绘图 / observation 多路径含内部状态与自身决策行动 / Orient 依 mental models 选决策方法 / 隐性引导可直接观察→行动 / Boyd 自称非教条）——第五独立域·Boyd 传承站（立场登记）。
-- **判重**：全库 SKILL.md/module-memory 对 `OODA`/`Boyd` 0 专节 0 命中；与 §r796B Cynefin（因果可知性分域）、§27 hysteresis（噪声震荡）、§一 RDM/DMDU（深不确定）异命题。豆包自留地 WB 0 落地。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+### 来源与诚信（r809B · 2026-11-26 实拉，≥2 独立域一手）
+- `https://media.defense.gov/2021/Jun/30/2002752865/-1/-1/0/THE%20DELPHI%20TECHNIQUE.PDF`（RAND/NSA 官方 PDF WebSearch 逐字：三特征与四类问题/迭代回灌/专家选择自评陷阱；WebFetch Access Denied 未采纳为全文如实登记）——第一独立域·官方方法原始文献一手。
+- `https://lotusaiplatform.com/resources/delphi-method-for-consensus-research`（Lotus WebFetch 200 全文逐字：四特征/10–30 专家/四轮流程/70%·IQR≤2/CREDES/三变体）——第二独立域·研究方法平台一手。
+- `https://en.wikipedia.org/wiki/Delphi_method`（Wikipedia WebSearch 逐字 consensus≠correct、实时 Delphi 无轮次）——第三独立域·百科一手。
+- `https://www.survey.org/academy/fundamentals/key-principles`（Survey.org WebSearch 逐字四原则，WebFetch fetch failed 如实登记）——第四独立域·教学一手。
+- **判重**：全库 SKILL.md/module-memory/co-learn 对 `Delphi`/`德尔菲` 0 专节（SKILL「群体决策」命中经逐串核为 §r736B 投票悖论提升层非本体）；与 §r736B/§二十/§十五 异命题。豆包自留地 0 落地。按 rules/07「增＝加厚现有」，0 新建/0 合并/0 删除。

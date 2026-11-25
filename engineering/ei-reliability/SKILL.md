@@ -358,3 +358,25 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 - `https://www.intel.cn/content/dam/develop/external/us/en/documents/gdma-2-165938.pdf`（Intel《Guide for Developing Multithreaded Application》官方 PDF WebFetch 逐字：Amdahl 批评忽略通信/同步开销与固定数据假设 / Gustafson scaled speedup 公式 / 32 核 1% 串行 31.69× 对比 Amdahl 24.43× 的完整算例）——第三独立域·厂商官方一手。
 - `https://hpc101.readthedocs.io/en/latest/tutorial/session3/limits.html`（HPC 101 教程 WebFetch 逐字：「P does not mean the same thing in the two laws… single most common point of confusion」/ 两定律 P 定义对照 / 90% 并行 10× 与 100 核 90.1× 例 / strong vs weak scaling）——第四独立域·教学一手。
 - **判重**：全库 SKILL.md/module-memory 对 `Amdahl`/`阿姆达尔`/`加速比上限`/`Gustafson` 0 专节 0 命中；与 §22 背压、§24 Expand-Contract、OI 一致哈希异命题。豆包自留地 WB 0 落地。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+## 二十六、负载丢弃与优雅降级：早丢、分层丢、按优先级丢，维护 goodput（EI · r809C 独立实拉 2026-11-26，≥2 独立域一手交叉，3 独点；正文下沉 `references/r809C_负载丢弃与优雅降级.md`）
+
+> 与 §15 熔断（防已知坏依赖）、§16 token bucket（按速率）、§12 deadline（按时间预算）、§22 背压有界队列（减速生产端）分工：本章管**自己被压垮时主动拒掉哪部分负载**——不是限速率、不是防依赖、不是等超时，而是维护「成功且客户端可用」的 goodput。
+
+### 26.1（r809C-1）★过载时 goodput 整体崩塌，不是「只丢超额部分」；早丢才省资源
+- **原文**（AWS Builder Center《Using load shedding to avoid overload》David Yanacek 2019-12-05 WebFetch 200 全文逐字）：「Throughput is the total number of requests per second... Goodput is the subset of the throughput that is handled without errors and with low enough latency for the client to make use of the response.」「When a server gets so overloaded that its latency exceeds its client's timeout, requests start to fail. This is where a latency increase transforms a latency problem into an availability problem.」「Early rejection is important because it's the cheapest place to drop excess traffic, but it comes at a cost to visibility.」vedgupta.in 逐字算例：100 槽/50ms/1s 超时 ⇒ 容量 2,000rps，offer 3,000 无 shedding 则队列每秒涨 1,000、延迟过 1s 后「goodput can fall toward zero. This is congestion collapse.」
+- **判据**：① 容量 C、到达 λ>C、超时 T 同时给定，不 shedding 的结论是「几乎全部超时」而非「只 λ−C 超时」——验收看 goodput 曲线是否 plateau。② 丢弃点尽可能早（edge/LB/iptables/反序列化鉴权前），但须分层+记录丢弃了什么以补可视性。③ 反向边界：AWS 逐字「In rare cases, quickly dropping a request can be more expensive than holding on to the request」需实测非教条。
+
+### 26.2（r809C-2）★丢弃按关键度分层；健康检查豁免；优先级只降不升
+- **原文**（System Overflow QCon SF 2025 Netflix 分享 WebSearch 逐字）：「services can only maintain or decrease priority, never escalate it」；AWS 逐字「The most important request that a server will receive is a ping request from a load balancer」；「start()/end() 两 API 必须都可调 ⇒ prioritize end() over start()」「first-page requests should be prioritized behind subsequent-page pagination requests.」Netflix Zuul 三桶 NON_CRITICAL/DEGRADED_EXPERIENCE/CRITICAL（Analytics India Magazine WebSearch 逐字）。
+- **判据**：① 优先级标签生命周期早期打、全程传递且只降不升。② 健康检查/控制面显式豁免——被丢会让 LB 判不健康进一步削减容量。③ 完成类请求优先于启动类、后续页优先于首页，按「已完成工作的沉没成本」定序非按到达先后。
+
+### 26.3（r809C-3）★队列设 TTL 与上限；静态 QPS 限不住动态容量；重试预算与 shedding 是两条独立机制
+- **原文**（AWS 逐字）：「place an upper bound on the amount of time that an incoming request sits on a queue, and we throw it out if it's too old.」「A generally safe default is to use a spillover configuration, which fast-fails instead of queueing excess requests.」vedgupta.in 逐字「a fixed 10,000 requests per second limit is wrong after a deploy that halves per-request cost or a cache flush that doubles it; adaptive concurrency limits track real capacity.」Netflix concurrency-limits 以 minRTT 为无排队基线，延迟升过基线即收紧。ESB1995 逐字惊群防护「Always include a Retry-After header with a randomised delay (e.g., 5–30 seconds with jitter)」。
+- **判据**：① 队列三件事同时写：大小上限 + 停留 TTL + client timeout hints 逐跳传递。② 自适应并发以 minRTT 为基线，与 §16 token bucket/§12 deadline/§15 熔断/§22 背压各管不同面，不互相顶替。③ 丢弃响应带 `Retry-After` + jitter（5–30s）且客户端指数退避，与 retry budget 联合打破 metastable 稳态。
+
+### 来源与诚信（r809C · 2026-11-26 实拉，≥2 独立域一手）
+- `https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/`（AWS Builder Center David Yanacek 2019-12-05 WebFetch 200 全文逐字）——第一独立域·厂商工程一手。
+- `https://system-design-in-depth.vedgupta.in/topic/load-shedding`（Updated Sep 17 2026 WebFetch 200 全文逐字：崩塌算例/200ms limit/30% 预取/Little's Law/Vegas/七行策略表/健康检查豁免）——第二独立域·系统设计教学一手。
+- `https://www.esb1995.com/en/courses/system-design/lessons/VG31PRQr` + `https://blog.systemoverflow.com/p/how-netflix-maintains-reliability` + `https://www.kbytechnologies.com/lexicon/admission-control-load-shedding`（WebSearch 逐字：惊群 jitter/QCon 2025 Netflix 分级/术语 admission control，立场登记）——第三四五独立域。
+- **判重**：全库 SKILL.md/module-memory/co-learn 对 `load shedding`/`负载丢弃`/`优雅降级`/`admission control` 0 专节（§16「负载卸载分类」一句提及非机制、§22 背压是反向流控异命题）；豆包自留地 0 落地。按 rules/07「增＝加厚现有」，0 新建/0 合并/0 删除。

@@ -1,0 +1,23 @@
+# 学习轮 r809（A/B/C）｜Bradford Hill 准则 · 德尔菲法 · 负载丢弃与优雅降级（WorkBuddy · 2026-11-26）
+
+- 轮号：r809A/B/C（上批 r808A/B/C；co-learn r767–r808 续读无跳；Qoder 已卸载，共学两写 WB/豆包，qoder 目录 0 写入）。遵用户 2026-11-25 20:56 追加指令「把所有模块学3遍、学完再来3次」：13 模块按顺序轮转（KI 论文域排除，按 12 模块 4 组轮转），本批取 TI/DI/EI，避开 r808(SI/AI/PDI)，除非另行取消不得提前停止或缩减。
+- 五层判重：全库 SKILL.md + module-memory + co-learn + references 对 `Bradford Hill`/`希尔准则`、`Delphi`/`德尔菲`、`load shedding`/`负载丢弃`/`admission control` 在对应模块本体均 0 专节；TI 与 §22 E-value（混杂阈值）/§34 BF（证据强度）/§13–21 识别层 异命题、DI 与 §r736B 投票悖论（偏好既存）/§二十 minimax regret（已知选项未知概率）/§十五 VOI 异命题、EI 与 §15 熔断/§16 token bucket/§12 deadline/§22 背压异命题。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+- 落地：3 轮 / 9 独点 / 3 技能加厚 bump / 3 份 references 新建 + TI(r805A 贝叶斯因子) 与 DI(r805B OODA) 正文下沉仅留路由腾行（内容无丢失）；TI 487 / DI 489 / EI 383 行（均 ≤500），desc 622/998/416（均 ≤1024），CR/FFFD=0，module 3/3，来源节 3/3。
+- 实拉（每轮 ≥2 独立域一手，URL+日期逐条）：A=NIH PMC4792272 TABLE1《The Bradford-Hill Criteria (1965)》WebFetch 200 全文逐字（九条+显著性检验逐字、John Snow 霍乱未分离弧菌/meningococcus 例）+ 日本厚生劳动省官方 PDF WebSearch 逐字（吸烟肺癌 9–10 倍/扫烟囱睾丸癌 200 倍/29 回顾+7 前瞻一致性判例）+ 玻尔科学百科 WebSearch 逐字（时序性唯一铁律/启发式非清单），Wikipedia 原页 WebFetch failed 未采纳全文、Wikiwand/Wikii 中译镜像仅作口径核对非一手如实登记｜B=RAND/NSA《THE DELPHI TECHNIQUE》官方 PDF WebSearch 逐字（三特征/四类偏倚/协调者扭曲风险/专家自评陷阱；WebFetch Access Denied 如实登记未冒充全文）+ Lotus《Delphi Method for Consensus Research》WebFetch 200 全文逐字（四特征/10–30 专家/四轮/70%·IQR≤2/CREDES/三变体）+ Wikipedia WebSearch 逐字 consensus≠correct + Survey.org WebSearch 逐字（WebFetch fetch failed 如实登记）+ ArabPsychology 立场登记｜C=AWS Builder Center David Yanacek《Using load shedding to avoid overload》2019-12-05 WebFetch 200 全文逐字（goodput 定义/吞吐退化/retry 反馈环/队列 TTL·LIFO/surge queue brownout/早丢代价/优先级 ping·end()·分页）+ vedgupta.in《Load shedding》Updated Sep 17 2026 WebFetch 200 全文逐字（10万/15万 QPS 崩塌、100 槽 50ms 2000rps 算例、200ms queue limit、30% 预取、Little's Law、Vegas minRTT、七行策略表、健康检查豁免）+ ESB1995/System Overflow QCon SF2025/KBY WebSearch 逐字（惊群 jitter/Netflix 分级/术语，立场登记）。
+
+## 三轮固定四列表
+| 轮 | 文件 | 版本 | 独有点 |
+|---|---|---|---|
+| r809A | meta/ti-critical-reasoning/SKILL.md | 2.11.0 | Bradford Hill 准则：九条是 viewpoints 非勾选清单，强度条 slight associations do not mitigate causation、特异性条 diseases may have more than one cause，时序性（因在前）是唯一不可逾越逻辑前提、其余只调置信度，可逆性是增补条非原始九条；一致性与特异性不构成因果证明、coherence 原文 failure to replicate in experimental model cannot nullify human epidemiologic observations（John Snow 霍乱未分离弧菌，Koch 30 年后才做到）；因果结论四层分工 Hill 证据组织 / do-calculus·IV·RDD 识别 / E-value 阈值 / BF 证据强度，Hill 第十条把显著性检验排除在证明外 contribute nothing to the proof |
+| r809B | meta/di-decision-tradeoff/SKILL.md | 1.26.0 | 德尔菲法：三特征缺一不可 anonymous response + iteration and controlled feedback + statistical derivation of group response，匿名避 rank/reputation 支配·怕丢面子·bandwagon·噪声四类偏倚，协调者编制回灌表须固化生成规则留痕（RAND 自陈可无意识扭曲结果）；共识≠正确 reaching consensus does not necessarily show the correct answer has been found，阈值事前冻结 ≥70% / IQR≤2 / 三轮未达报 no consensus，事后改阈值=操纵结论（同 §r736B 候选冻结），报告附回应率·退出·稳定性（CREDES）且共识与非共识并列；专家自评陷阱 self-ratings may measure ego as much as expertise，与 §r736B 分工在「偏好既存收完整排序 vs 偏好待生成收匿名评分+理由」，Policy Delphi 探索分歧不拿共识率当成功 |
+| r809C | engineering/ei-reliability/SKILL.md | 1.17.0 | 负载丢弃与优雅降级：goodput=无错且低延迟客户端可用的子集，延迟超客户端 timeout 时 latency problem 转 availability problem，算例 100 槽/50ms/1s ⇒ 容量 2000rps、offer 3000 无 shedding 队列每秒涨 1000 且 goodput 趋零（congestion collapse），早丢最省资源但损可视性须分层+记录，极少数场景快丢比持有更贵须实测；按关键度分层 Netflix Zuul 三桶 CRITICAL/DEGRADED_EXPERIENCE/NON_CRITICAL + score 1–100，services can only maintain or decrease priority never escalate，健康检查 ping 必须豁免（否则 LB 判不健康反削容量），完成类优先启动类 end()>start()、后续页优先首页；队列三件事大小上限+TTL+timeout hints 逐跳传递，spillover fast-fail 优于 surge queue brownout，静态 QPS 限不住动态容量故 Netflix concurrency-limits 以 minRTT 为无排队基线，Retry-After+jitter 5–30s+指数退避防惊群，与 retry budget 联合打破 metastable 稳态 |
+
+## WB 已落地清单（防重复）
+- r809A TI｜meta/ti-critical-reasoning/SKILL.md 2.11.0｜Bradford Hill 三独点 + references/r809A_BradfordHill准则.md；另把 r805A 贝叶斯因子正文下沉 references/r805A_贝叶斯因子.md 仅留路由（内容无丢失）
+- r809B DI｜meta/di-decision-tradeoff/SKILL.md 1.26.0｜德尔菲法三独点 + references/r809B_德尔菲法专家共识.md；另把 r805B OODA 正文下沉 references/r805B_OODA.md 仅留路由（内容无丢失）
+- r809C EI｜engineering/ei-reliability/SKILL.md 1.17.0｜负载丢弃三独点 + references/r809C_负载丢弃与优雅降级.md
+
+## 13 模块记忆体系已生效
+经验按模块分存 `D:\腾讯AI\WorkBuddy数据\module-memory\<模块码>\MEMORY.md`（总入口 `00_总索引.md`，C 盘仅 junction 镜像、无实体）。豆包的对应经验也按此路由写入所属模块文件（本批 TI/DI/EI 各 3 条，格式 `- ｜日期｜来源技能｜结论｜证据/落点`），两方同守；Qoder 已于 2026-11-23 卸载，`co-learn/qoder/` 席位已移除，禁止再写该目录。用户级 MEMORY.md 保持纯指针索引（≤4000 上限结构性保障，本批未写入）。
+
+本批为 r809A/B/C 独立实拉留痕，三轮标准一致、禁止复用 r808 结论。下批 r810A/B/C 按 13 模块固定顺序取 VI/RI/MI（KI 论文域排除，避开 r809 TI/DI/EI）；每模块累计计数按台账续；Qoder 席位已移除仅两写。
