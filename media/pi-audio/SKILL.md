@@ -1,9 +1,9 @@
 ---
 name: media/pi-audio
-description: 音频感知（Audio/Speech Perception）。当需要把录音/会议/播客/通话转成文字、标"谁在什么时候说了什么"、生成字幕、做语音合成（TTS）、识别音频事件（警报/音乐/故障声）或理解音频内容时调用。提供 ASR 选型（AudioTranscribe 本地/Whisper API/faster-whisper/whisperX）、长音频分段并行、VAD 去静音防幻觉、pyannote 说话人分离与时间戳对齐、LLM 后处理、SRT/VTT 输出、TTS 与隐私护栏。不用于音视频格式转码（走 rg-ffmpeg-tools）、图像理解（走 multimodal-intelligence）。；响度归一化与 LUFS 测量口径（K-weighting/双门控/M·S·I 三时间常数/真峰 dBTP）；声音事件检测 SED 评测口径（segment-based F1/ER vs event-based collar F1 vs PSDS 交集匹配/DTC·GTC·αCT·αST 参数/50 工作点/threshold-independent/跨数据集与年份分数不可比）。；语音反欺骗评测（ASVspoof 三任务 LA/PA/DF/有 ASV 看 min t-DCF 含 C0·C1·C2 串联 ASV 性能、无 ASV 的 DF 看 EER 不可跨任务比/progress→eval EER 崩塌是过拟合泛化失败/四基线 CQCC-GMM·LFCC-GMM·LFCC-LCNN·RawNet2 用 2019 数据无增强）。
+description: 音频感知（Audio/Speech Perception）。当需要把录音/会议/播客/通话转成文字、标"谁在什么时候说了什么"、生成字幕、做语音合成（TTS）、识别音频事件（警报/音乐/故障声）或理解音频内容时调用。提供 ASR 选型（AudioTranscribe 本地/Whisper API/faster-whisper/whisperX）、长音频分段并行、VAD 去静音防幻觉、pyannote 说话人分离与时间戳对齐、LLM 后处理、SRT/VTT 输出、TTS 与隐私护栏。不用于音视频格式转码（走 rg-ffmpeg-tools）、图像理解（走 multimodal-intelligence）。；响度归一化与 LUFS 测量口径（K-weighting/双门控/M·S·I 三时间常数/真峰 dBTP）；声音事件检测 SED 评测口径（segment-based F1/ER vs event-based collar F1 vs PSDS 交集匹配/DTC·GTC·αCT·αST 参数/50 工作点/threshold-independent/跨数据集与年份分数不可比）。；语音反欺骗评测（ASVspoof 三任务 LA/PA/DF/有 ASV 看 min t-DCF 含 C0·C1·C2 串联 ASV 性能、无 ASV 的 DF 看 EER 不可跨任务比/progress→eval EER 崩塌是过拟合泛化失败/四基线 CQCC-GMM·LFCC-GMM·LFCC-LCNN·RawNet2 用 2019 数据无增强）。；DTW 动态时间规整（非等长序列模板匹配·规整路径三约束边界/连续/单调·O(mn) DP 递推·不满足三角不等式非真距离·Sakoe-Chiba 带与 Itakura 平行四边形约束·soft-DTW 可微损失·与 MFCC/log mel 前端配合的孤立词识别）。
 module: PI
 modules: PI
-version: "1.6.0"
+version: "1.7.0"
 ---
 
 # PI · 音频感知（Audio / Speech Perception）
@@ -213,3 +213,16 @@ ASVspoof 2021 三任务（官方 WebFetch 逐字）：logical access（LA，TTS/
 **独点3** 深度学习弃 DCT 去相关是下游模型决定的，不是 MFCC 过时：Heittola 学术一手逐字「Along with the emergence of deep learning based approaches the decorrelation step has been dropped out because modern deep learning techniques can efficiently take advantage of correlated information in the data during the learning process」「Currently, log mel energies are the most commonly used acoustic features in deep learning based approaches for the content analysis of environmental audio」；HMM/GMM 时代因须对角协方差才选 MFCC。判据——选型看下游：HMM/GMM/对相关敏感的模型选 MFCC，DNN/CNN/Transformer 可直接吃高度相关的 log mel；「MFCC 一定更好」是错的，压缩即丢信息（mlarchive 逐字 main disadvantage = losing some information）。
 **判重**：`MFCC`/`梅尔倒谱`/`mel-spectrogram` 全库 SKILL.md+module-memory 0 专节（"mel spectrogram" 2 命中为非机制泛提及）；本技能 §十三–§十五均异命题。豆包自留地 WB 0 落地。
 **来源与诚信**（≥3 独立域一手）：`https://toni-heittola.github.io/thesis/content_analysis`（Toni Heittola 博士论文学术一手 WebFetch 200 全文逐字：mel 公式/decorrelation 两作用/12–20 系数/第 0 系数/delta 公式/深度学习弃 DCT）；`https://mlarchive.com/machine-learning/the-ultimate-guide-for-sound-features-and-their-applications`（一手全文：log→DCT 流程、DCT 压缩原理、13/40 常用值、相关敏感度选型）；`https://pmc.ncbi.nlm.nih.gov/articles/PMC13299600/`（同行评议一手：librosa n_mfcc=13/nfft=2048/hop=512/DCT-II 具体实现）；`https://libsonare.libraz.net/docs/glossary/analysis/mel-mfcc-timbre.html`（Slaney mel：1kHz 下 3mel/200Hz、上对数）。
+
+
+## 十七、DTW 动态时间规整：非等长序列的弹性模板匹配（PI · r807C 独立实拉 2026-11-25，≥2 独立域一手交叉，3 独点）
+
+**独点1** DTW 解的是「同一内容、语速/时长不同」的对齐，不是线性缩放：两段长度 n≠m 的序列，线性把短的拉长/长的缩短再比会因语音各段时长不齐而识别差（百度百科科普中国审核逐字）；DTW 找一条时间规整函数把测试时间轴非线性映射到模板时间轴、使累计距离最小，60 年代 Itakura 提出、用于孤立词模板匹配（训练时每个词录一遍提特征存模板，识别时对新词与每模板算 DTW 取最短距离）。tslearn 官方把它形式化为在路径 π 上最小化 `DTW(x,y)=min_π √(Σ_{(i,j)∈π} d(x_i,y_j)²)`，路径可看成「temporal alignment of time series such that Euclidean distance between aligned (ie. resampled) time series is minimal」。判据——报「用了 DTW」要说清对齐的两端是什么（特征序列 / 模板）、局部距离用什么，与 §十六 MFCC/log mel 前端分工：那节管「每帧提什么特征」，本节管「两串不等长特征怎么对齐算距离」。
+
+**独点2** 规整路径三约束 + O(mn) DP 递推是全部机制，别把约束当可选项：① 边界条件——路径必从左下 (1,1) 到右上 (n,m)（发音快慢可变但各部分先后次序不可变）；② 连续性——只能与相邻点对齐、不可跨点，保证两序列每个坐标都出现在路径中；③ 单调性——索引不随时间倒退。三者合起来每个格点的下一步只有右/上/斜三方向。递推 `C[i,j]=d(x_i,y_j)²+min(C[i−1,j],C[i,j−1],C[i−1,j−1])`，初值 C[0,0]=0、其余 inf，返回 √C[n,m]；可回填回溯得最优路径（tslearn 伪码逐字）。判据——「任意路径取最小」是错的，必须带三约束；O(mn) 是精确解不是近似，长序列要加约束收窄搜索空间。
+
+**独点3** 两个最易踩的语义坑：DTW 不是合法距离 + 无约束会病态对齐。tslearn 官方逐字「DTW is not a valid distance since it does not satisfy the triangular inequality」——满足非负与自相似（DTW(x,x)=0）但没有三角不等式，故不能当度量塞进依赖度量的算法（如某些聚类/索引）不声明；缓解靠约束：Sakoe-Chiba 带按半径 r 把路径压到对角线附近（搜索 O(nm)→O(n·带宽)）、Itakura 平行四边形给斜率上限、或给路径长度上限。变体：soft-DTW 用 log-sum-exp 的 soft-min 替 min 使其可微当深度损失（Cuturi & Blondel ICML 2017）、DDTW 用一阶导数抗偏移缩放、加权/subsequence DTW。工程阈值：最小累积距离与阈值比，阈值过高误拒 FRR、过低误识 FAR。与 §十三 SED/§十四增强/§十五反欺骗/§十六前端正交：那些管评测/增强/任务层/单帧特征，本节管序列对序列的对齐距离。
+
+**判重**：`DTW`/`动态时间规整`/`dynamic time warping`/`warping path`/`Sakoe-Chiba` 在 pi-audio 本体与 PI 模块记忆 0 命中（§十六 r801B 只讲 mel/MFCC 前端、§十三 SED 评测，均异命题）；全库 SKILL.md 0 命中。豆包自留地 WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+**来源与诚信**（≥2 独立域一手）：https://tslearn.readthedocs.io/en/latest/user_guide/dtw.html（tslearn 0.11 官方文档 WebFetch 200 全文逐字：优化式与路径四性质 / O(mn) DP 伪码 / 「not a valid distance since it does not satisfy the triangular inequality」/ Sakoe-Chiba 带 radius r / Itakura 斜率上限 / soft-DTW soft-min+log-sum-exp / DBA 重心 / Sakoe-Chiba 1978 IEEE 原始著录）——第一独立域·官方一手全文；https://baike.baidu.com/item/DTW（百度百科·科普中国科学百科词条审核 WebFetch 200 全文逐字：Itakura 60 年代提出 / 压扩至模板长 / 时间规整函数使累计距离最小 / warping path 三约束边界·连续·单调逐条 / 孤立词模板匹配流程 / FRR-FAR 阈值）——第二独立域·中文百科一手；https://www.wikiprompt.org/zh/wiki/dynamic-time-warping + https://cloud.baidu.com/article/5496258（WebSearch 逐字：递推式 / DDTW 加权 soft-DTW / 加速度计手势识别 / 端点检测 VAD+MFCC 帧长 25ms 帧移 10ms）——第三、四域交叉（立场登记）。公式以 tslearn 官方为准，百科公式以图片形式给出未逐字转录、已登记。

@@ -2,7 +2,7 @@
 name: personal-ai-employees
 description: >-
   个人 AI 员工体系（8 岗）总路由与五步执行协议。把用户目标自动分派给 8 个专职 AI 员工（战略顾问/供应链专家/职业发展顾问/销售顾问/学习教练/信息分析师/自动化工程师/知识管理专家），每岗统一走「任务分析→执行方案→输出结果→复盘优化→Skill沉淀」，并复用 personal-ai-os 与现有 wb-* / 专家技能，不新建重复能力。触发词：个人AI员工、AI员工体系、AI战略顾问、AI供应链、AI职业发展、AI销售顾问、AI学习教练、AI信息分析、AI自动化工程师、AI知识管理、哪岗来做、分派任务、员工路由、agency、个人AI公司、我的AI团队。finalizer、终结器、两阶段删除、deletionTimestamp、finalizers 清空、删除钩子、owner reference 清理、卡住的 finalizer、强制删除 unsafe-delete、孤儿资源清理。Actor模型、actor、消息传递、mailbox、无共享状态、位置透明、有状态worker。工作流确定性、非确定性错误、replay重放、Event History、Command比对、版本化patch、Worker Versioning、SideEffect、计时器顺序
-version: 1.13.0
+version: 1.14.0
 agent_created: true
 module: OI
 modules: OI,MI
@@ -337,3 +337,16 @@ modules: OI,MI
 - `https://vetoralabs.com/system-design/concepts/storage/partitioning/consistent-hashing` + `https://learn.padho.ai/wiki/consistent-hashing-ring-jump-maglev`（Vetora 系统设计概念页与 Padho 工程 wiki，WebSearch 逐字：Karger 1997 / K·N 迁移 / 100–256 vnodes / 方差 O(1/(V·N)) / mod-N 1/(N+1) 保位 / jump·HRW·bounded-load 变体——第二、三域交叉）。
 - `https://harshith.in/blog/consistent-hashing` + `https://codecrown.in/distributed-systems/consistent-hashing-distributed-systems`（Harshith 工程博客与 CodeCrown 分布式专栏，WebSearch 逐字：placement≠membership / 顺时针取副本 / 热键不可被哈希修复 / Dynamo·Cassandra·Ketama·Chord 应用）——第四、五域交叉（C++ 代码段未采纳，立场登记）。
 - **判非**：全库 SKILL.md / module-memory 对 `一致性哈希`/`consistent hashing` 0 专节（wb-context-compressor 仅一句「自建一致性哈希」作 session sticky，非方法论节；DLQ/扇出/背压/Lease 选主/Actor/确定性重放/CQRS 各管不同编排面）；豆包自留地 WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+
+## r807B · Process Manager 编排：显式流程状态 + 决定下一步，与 Saga 补救是正交两件事（OI · 2026-11-25 实拉，≥2 独立域一手交叉，3 独点）
+
+**独点1** Saga 与 Process Manager 是两个不同职责、可共存，别混成一个词：Saga = 一串各服务本地事务 + 配套补偿（compensating transaction），失败时语义撤销已完成步骤，**补偿不是回滚**——原交易已提交，退款/释放库存是另一笔可见新交易（Milan 逐字「A compensation is not a rollback...the refund is a second transaction, visible on the customer's statement」）；Process Manager = 持有每个流程实例显式状态、消费事件产出命令的**有状态状态机**（「Stateful / Event-consuming and command-producing / The single place where the flow is written down」）。关键分工： coordination（谁决定下一步：集中 PM/orchestration vs 分布式 choreography）与 failure-handling（重试/补偿/人工升级）是**正交两轴**——「Coordination style does not eliminate the need to choose recovery behavior」；编排式 saga 通常用 PM 跑补偿，协同式 saga 无中心协调者仍有补偿，PM 也能驱动无补偿的审批流。判据——问「用 saga 还是 PM」是错问法，应分别问「怎么协调」+「怎么补救」。
+
+**独点2** 状态放哪决定可运维性，选择判据是「分支/超时/人步骤/钱/运维要能查能解卡」：协同式 saga **无中心状态**——库存听 OrderPlaced、支付听 StockReserved、物流听 PaymentCaptured，订单 4712 卡在哪隐含在「哪些事件已发生」里，要回答得跨服务关联事件拼进度视图；PM 的持久化状态可直接暴露当前步骤、最后转移、deadline，定时 timeout 与校验过的恢复命令让人工干预显式（Milan 逐字「where is this order stuck?」对照两案）。选型起点：2–3 步线性低失败风险→choreography 保持简单；有分支、超时、人工步骤、钱、或运维必须能 inspect/unstick→PM，且补偿定义在它所撤销的流程旁边。Microsoft 官方补充：orchestration 集中控制器「stores and interprets the states of each task, and handles failure recovery by using compensating transactions」，优点避循环依赖/责任清晰、缺点引入单点故障；choreography 无单点但加步骤后「workflow can be confusing」「risk of cyclic dependency」「integration testing is difficult」。判据——纯二选一是错的，工业实践常混合：核心合规/权限用集中编排保确定性，跨领域通知/同步用事件协同。
+
+**独点3** 可靠性的五条 plumbing 是两种模式都绕不开的硬约束，加 pivot 概念定「不可逆点」：① 状态+外发消息**同事务**落库（outbox），只存状态不发命令或反之都会损坏流程，内存 outbox 不持久；② 参与者幂等（重试使每条命令可能到两次，「reserving stock twice for one order must be a no-op」）；③ 协调幂等（inbox 去重消息 ID + 拒绝非法转移，inbox 记录/状态变更/外发消息一个事务）；④ 并发投递用并发令牌或每实例锁，冲突后**重新加载并重评估事件**再重试，不盲目重发旧命令；⑤ 结果不明用稳定 operation ID——支付捕获后超时不证明捕获失败，AwaitingShipment 后重复的 PaymentCaptured 不得再排一次发货，同一操作换 payment ID 是需调查的 discrepancy 而非可忽略的重复。补偿须当**一等业务操作**（部分退款/手续费/时限由领域专家定义、可被重试失败故要 visibility+recovery），因此把最难撤销的动作排最后。Microsoft 官方三分类定 pivot：compensable（可反向）/pivot（不可返回点=最后可撤或首个可重试）/retryable（跟在 pivot 后、幂等、最终一致），数据异常靠 semantic lock/commutative updates/pessimistic view/reread/version files 缓解。与 §十三 reconcile（纠偏循环）、§十四选主（谁当主）、§r738A 恢复语义（checkpoint≠可恢复）、§r800B CQRS（读写分离）分工：那些管纠偏/资格/恢复粒度/读写边界，本节管「谁决定流程下一步 + 补偿与协调为何分轴」。
+
+**判重**：`Process Manager`/`流程管理器`/`编排式 saga`/`pivot transaction`/`协同式 saga` 在 personal-ai-employees 本体 0 命中（§r738A 只有一句 compensating activity 幂等键、§r800B 有 outbox+幂等消费，均为 CQRS 语境非机制专节）；全库 Saga 命中集中在 engineering/ei-reliability、wb-execute-discipline（豆包自留地）、ki-knowledge-graph、wb-subagent-delegation，经查均为异命题或术语提及，豆包自留地 WB 0 落地；与 r804B 一致性哈希、r781A 选主、r793A 重放等结论不复用。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+**来源与诚信**（≥2 独立域一手）：https://milanjovanovic.tech/blog/process-manager-vs-saga-pattern（Milan Jovanović 2026-09-22 一手全文 WebFetch 200 逐字：saga/PM 定义与正交性 / compensation is not a rollback / 有状态消费事件产命令 / where is order 4712 stuck / 选型起点 / 五条 plumbing / 补偿一等业务操作 / 最难撤销排最后）——第一独立域·一手全文；https://learn.microsoft.com/en-us/azure/architecture/reference-architectures/saga/saga（Microsoft Azure 官方 Saga 页 WebFetch 200 全文逐字：compensable/pivot/retryable 三分类 / pivot=point of no return / choreography vs orchestration 利弊 / 单点故障与循环依赖 / 数据异常五缓解）——第二独立域·官方一手；https://ddd-fans.github.io/ddd-guideline/modeling/oo/process-manager.html + https://praveentn.live/architecture/terms/process-manager（WebSearch 逐字：长业务流程三特征多本地事务/可暂停持久化/耗时；编制集中 vs 编排分散；PM 介于两者之间订阅事件维护状态发命令；全流程用原则选 choreography 的系统往往用状态列+定时任务蹩脚重建 PM）——第三、四域交叉（立场登记）。数字/术语挂可复拉 URL。
