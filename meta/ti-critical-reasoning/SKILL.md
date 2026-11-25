@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
-description: 因果推理与批判性思考（Thinking Intelligence）：区分相关与因果、评估方案真实贡献、反事实推演、识别 LLM 关联误判因果时调用。基于 Pearl 因果阶梯/do-calculus/SCM/DAG/后门前门调整，补齐关联推理的因果盲区。；未测混杂敏感性 E-value（RR 阈值/点估计与 CI 端各算/保守不判混杂存在/连续暴露按 IQR 标准化）；图尔敏论证图式（六要素/隐含 warrant/内部外部证成/模态限定与反驳）；论证图式与批判性问题（推定可废止/assumptions 与 exceptions 举证/图式目录覆盖缺口与错分）。；因果跨域可迁移性（S-node 指向机制/transport formula 三式/三档/meta-analysis 抹平差异之误）。；认知接种与预驳斥（弱攻击+反驳预热/counterarguing才是抗体/被动阅读优于主动自生/泛化须显式验证）。；因果发现（CPDAG 等价类/PC 与 GES 同边界/LiNGAM 非高斯定向/承重假设不可检验）。；面板数据准实验因果识别（DiD 平行趋势不可验证只能事前诊断/SCM 对 donor pool 加权构造反事实且凸包条件与过拟合风险/SDID 双权重放松平行趋势且可大面板推断）。；工具变量与 LATE（IV识别complier局部效应非全员ATE/排除限制不可数据检验/monotonicity无defiers才给正权重/多工具下单调性与异质性效应不相容）。；目标试验仿真TTE（先写七组件RCT协议再映射观察数据/设计缺陷比统计失配更常致错/94%观察CER有设计缺陷）；永生时间偏倚（未来治疗状态定义暴露却提前起随访→强制对齐 time zero）；clone-censor-weight 克隆人工删失加 IPCW 仿效宽限期策略、仍受无未测混杂与 positivity 约束。；G方法/g-formula（处理-混杂反馈致传统回归双向偏倚/g-computation 拟混杂+结局模型前向模拟再平均/与 IPTW-MSM 建模侧对称差异/g-null 悖论/双重稳健 AIPTW·TMLE）。；交错处理时点TWFE偏误（已处理单位当对照产生负权重·效应异质时系数可翻负·Goodman-Bacon分解看timing权重·CS/SA/stacked稳健估计量·多估计量一致不等于验证·预期效应是设计问题重加权修不了）。
-version: 2.9.0
+description: 因果推理与批判性思考（Thinking Intelligence）：区分相关与因果、评估真实贡献、反事实推演、识别 LLM 关联误判因果时调用。基于 Pearl 因果阶梯/do-calculus/SCM/DAG/后门前门调整。；图尔敏论证图式（六要素/隐含 warrant/证成与反驳）；认知接种与预驳斥；因果发现（CPDAG 等价类/PC·GES/LiNGAM 非高斯定向）；面板准实验（DiD 平行趋势只能事前诊断/SCM·SDID 加权反事实）；IV 与 LATE（识别 complier/排除限制不可检验/多工具失效）；RDD（阈值局部效应/带宽与 CCT 偏差修正）；目标试验仿真 TTE（七组件协议先写/设计缺陷比统计更致命/；永生时间偏倚 time-zero 对齐/clone-censor-weight+IPCW）；E-value 未测混杂阈值；G 方法（g-computation 前向模拟/与 IPTW-MSM 对称差异/g-null 悖论/双重稳健）；TWFE 偏误与稳健 DiD（异质效应负权重/CS·SA·stacked）；中介分析（estimand 先行 CDE/NDE/IDE）；倾向得分（estimand 先行/PS 非结局模型）；阴性对照 NCO/NCE 偏倚探针；贝叶斯因子 BF₁₀/BF₀₁（似然比更新赔率/可量化支持零假设/Jeffreys 与 Kass-Raftery 标度/BIC≈-2lnBF）。
+version: 2.10.0
 module: TI
 modules: TI,EI
 ---
@@ -394,47 +394,9 @@ Hahn/Todd/van der Klaau 连续性识别式 `t_SRD = lim_{x↓c} E[Y|X=x] - lim_{
 - `https://edwardlg.github.io/assip-2026-empirical-finance/textbook/book/weeks/week-04/ch43-regression-discontinuity.html`（ASSIP 实证金融教材 ch4.3 WebSearch 快照：sharp vs fuzzy、triangular kernel local-linear、「stay local stay low-order」、带宽偏差-方差、McCrary + 协变量 + compound-treatment 审计）
 - **判重**：全库 SKILL.md 精确扫描 `断点回归` 0 命中；`regression discontinuity` 3 命中全部在 `meta/ti-critical-reasoning` r770A 来源段（GSC/RDD 替代）与「未采纳：RDD 带宽选择」及 LATE 定理引文，**无专节落地**；`RDD` 3 命中同属上述语境；`propensity score`/`倾向得分` 全库 0。本轮取 §18 DiD/SCM/SDID、§19 IV/LATE 之后的正交识别策略（阈值连续性 + 带宽/RBC 工程面），不复用其结论。豆包自留地 WB 0 落地。
 
-## 二十一、目标试验仿真：先写 RCT 协议再让观察数据就位，设计缺陷比统计更致命（TI · r782A 2026-11-20 实拉，≥3 独立域交叉）
+## 二十一、目标试验仿真：先写 RCT 协议再让观察数据就位，设计缺陷比统计更致命（TI · r782A 实拉，≥3 独立域交叉；正文下沉 `references/r782A_目标试验仿真TTE.md`）：七组件协议先写（入排全基于基线/negative controls/ITT vs per-protocol，94% 观察 CER 有设计缺陷）；永生时间偏倚=time-zero 未对齐须强制对齐资格=分配=随访起点；clone-censor-weight 克隆消偏倚+IPCW 补人工删失，仍受无未测混杂与 positivity 约束。与 §13–20（给定设计后如何识别/估计）分工：本节是碰数据前的协议设计层。
 
-> 与 §13–20 分工：那些是「给定研究设计后如何识别/估计」（图识别/IV/DiD/RDD）；本节是**上一步**——在碰数据前把因果问题写成一份假说 RCT 协议，再逐条映射到观察数据。Hernán & Robins 2016 框架。
-
-### 21.1（r782A-1）★七组件协议先写、因果问题定义试验而非数据定义分析；设计缺陷比统计失配更常致错
-目标试验协议七组件（Hernán–Robins 2016，NAP 委员会 Table 2-1 逐字）：eligibility criteria（入排标准**全部基于基线时点已确定的特征**，禁事后用基线后信息定义基线资格）、treatment strategies（含初始治疗及停药/换药的方案许可理由）、treatment assignment（基线随机、可按预后因子分层）、start/end of follow-up（基线开始、死亡/结局/失访/行政截尾止）、outcomes（尽量含 negative controls 即已知不受该治疗影响的结局）、causal contrasts（ITT：被分配到策略的效应 vs per-protocol：按方案实际接受的效应）、statistical analysis（预先写明如何调整基线与随访中的预后/依从/失访因素）。关键ORDER：the causal question defines the trial; the trial defines the analysis; the data are made to fit the analysis — not the other way around。scoping review（Zuo 等，96 项研究）：94% 观察性 CER 至少一项设计缺陷，61% 用基线后信息定义基线资格、81% 未声明 ITT 还是 per-protocol；Hernán 强调**协议组件与随机分配的不完整仿效（设计面）比统计调整不足更可能导致错误推断**。判据：报观察性因果结论前先亮七组件表，缺任一格即声明该格是假设不是数据结论；「用了 IPW/PS 匹配等高级统计」不构成 TTE 合格。
-
-### 21.2（r782A-2）★永生时间偏倚是 time-zero 未对齐的产物，不是样本量或模型问题
-机制（crvscience 逐字）：用**未来的治疗状态**定义暴露、却把随访起点放在更早的临床事件（确诊/入院）——因为「晚开始用药者必须活到开药那天」，把这段治疗前生存窗口记到治疗组头上，artificially inflating survival benefits。目标试验通过强制对齐消除：每个人**恰在满足资格并被分入策略的那一刻**开始随访（time zero = eligibility met = assignment = follow-up start）。更一般的 three biases：immortal time / prevalent-user / misaligned-follow-up selection bias。扩展：资格可反复满足（多次门诊）→ sequential nested target trials（每个合格月/就诊各起一个嵌套试验、robust variance 处理同一人跨重叠试验相关）；策略含宽限期（如「3 个月内启动他汀」）→ time-zero 分配未知。判据：看到「治疗组生存更好」先核 time-zero 是否与资格/分配同一时刻；错起点下再高级的 Cox/加权也修不回。
-
-### 21.3（r782A-3）★clone-censor-weight 是宽限期策略的仿效主力，克隆消偏倚、IPCW 补信息性删失
-宽限期策略在 time-zero 无法知道分配 → 克隆：每个合格者在基线**复制到每个策略各一份**（Di={(i,a=1),(i,a=0)}），两臂都从 time-zero 起贡献人时（neutralizes immortal time bias）；当某人实际轨迹偏离所分配策略时对该 clone **人工删失**；再用 inverse probability of censoring weights（IPCW，以时变混杂为条件估计「仍依从未删失」概率的倒数）校正人工删失带来的选择偏倚，得无偏 per-protocol 生存曲线。边界（crvscience 逐字）：TTE **does not replace randomization**，因果有效性仍落在不可检验的 no unmeasured confounding（条件可交换性）+ positivity 上；价值在消除 self-inflicted design flaws（已多次调和观察研究与 RCT 的分歧：激素替代/他汀/COVID 疗法）。判据：报 per-protocol 效应须写清克隆臂、人工删失触发点、IPCW 是否施加及 positivity 是否成立；「无条件可交换性/无阳性」声明只写「用了 IPW」不合格。
-
-### r782A 来源与判非（2026-11-20 实拉，逐字核验）
-- `https://nap.edu/read/25532/chapter/4` → 重定向 `nap.nationalacademies.org` 再转 `www.nationalacademies.org`（**WebFetch 两次重定向放弃逐字抓、以 WebFetch 首跳返回全文片段逐字登记，不冒充完成 WebFetch**）：NAP 委员会 Table 2-1 七组件及逐字描述（「all inclusion and exclusion criteria are based on characteristics ascertained exclusively at baseline」、negative controls、ITT vs per-protocol、protocol/analysis follow from explicit causal question、emulation 是 iterative process）——第一独立域·政府/学术机构原文。
-- `https://www.sciencedirect.com/science/article/abs/pii/S0895435623002032`（Zuo 等 TTE scoping review，WebFetch 摘要全文逐字：96 studies / 94% 至少一设计缺陷 / 61% 基线后信息 / 81% 未定义因果对比 / time-zero 防 immortal time bias / statistical methods only a part of TTE design / Hernán 强调设计缺陷更易致错）——第二独立域·同行评议综述。
-- `https://crvscience.com/wiki/target-trial-emulation`（WebFetch 200 全文逐字：两阶段、七组件表、immortal time bias 机制、time-zero 对齐、sequential nested trials、clone-censor-weight 公式与 IPCW、does not replace randomization + 条件可交换性与 positivity 边界、Hernán-Robins 2016/JAMA 2022 著录）——第三独立域·方法学 wiki。
-- `https://metricgate.com/blogs/target-trial-emulation-observational`（WebSearch 逐字快照：七组件、time zero is sacred、clone-censor-weight recipe 与 IPW vs Matching 交叉）——第四独立域·工程教学。
-- `https://www.sciencedirect.com/science/article/abs/pii/S0003496724013220`（RA CER 系统综述 WebSearch 摘要逐字：31 研究 29(94%) 设计缺陷、七组件映射）——交叉佐证。
-- **判重**：全库 SKILL.md 精确扫描 `target trial`/`目标试验`/`immortal time`/`clone-censor` 0 命中（`emulat` 命中为 personal-ai-employees 的 K8s emulation version 与 browser-skill 的设备模拟，异命题）；`propensity score`/`倾向得分` 全库 0（r778A 判重行登记）。AIPW/DR 与 `meta/agent-evolution` §off-policy（IPS/SNIPS/Doubly Robust）有重叠按 rules/07 弃用、改取「先写 RCT 协议」这一更上游且正交的子面。豆包自留地 WB 0 落地。
-
-## 二十二、未测混杂敏感性 E-value：把「相关不等于因果」从免责句变成可量化阈值（TI · r786A 2026-11-20 实拉，≥4 独立域交叉）
-
-> 与 §13–21 分工：那些解决「怎么识别/估计因果效应」（后门/IV/DiD/RDD/TTE 都落在不可检验的 no unmeasured confounding 假设上）；本节解决**估计完成之后的诚实交代**——效应已经报出来了，要多强的未测混杂才能把它解释掉。它不是识别策略，是对既有估计的稳健性尺，且**不能判定混杂是否存在**。VanderWeele & Ding 2017（Ann Intern Med 2017;166:619-627，DOI 10.7326/M16-2607）。
-
-### 22.1（r786A-1）★E-value 是「解释掉所需的最小关联强度」，点估计与置信限各算一个
-定义（VanderWeele-Ding 原摘要逐字）：the minimum strength of association, on the risk ratio scale, that an unmeasured confounder would need to have with both the treatment and the outcome to fully explain away a specific treatment-outcome association, conditional on the measured covariates。即在已测协变量条件下，一个未测混杂因素要同时与处理、与结局达到多大 RR 关联，才能把这个效应抹平到无。大 E-value = 需要相当强的混杂才能解释掉（稳健）；小 E-value = 一点混杂就够（脆弱）。最低值为 1（E-value=1 意味着根本不需要未测混杂就能解释掉）。点估计公式 `E = RR + √(RR·(RR−1))`；RR<1 时先取倒数 1/RR 代入。置信区间另算一个——取**最靠近零的那端**（LL>1 用 LL 代公式；UL<1 取 1/UL 代公式；区间跨 1 则 E-value=1），把统计不确定性一起交代。论文建议所有旨在提供因果证据的观察性研究都报 E-value 或等价敏感性分析。判据：报观察性因果结论，稳健性栏须给两个数（点估计 E、CI 端 E）；只报点估计 E 缺统计不确定性，不合格。
-
-### 22.2（r786A-2）★E-value 是最坏情形下的保守下界，不是「混杂存在与否」的检验
-Sage 2025 实操指南逐字：E-value represents the minimum strength of association an unmeasured confounder would need to have with both the treatment and the outcome after accounting for measured confounders to fully explain the observed association；其 bias factor 由 `RR_EU × RR_UD / (RR_EU + RR_UD − 1)` 给出，E-value 是令 `RR_EU = RR_UD` 时把 `RR_ED` 拉到 1 的正解；因为取的是**最大 RR**，结果是 worst case scenario、因而**conservative**——「the E-value does not tell one whether unmeasured confounding is actually present—it simply quantifies the strength of confounding needed to fully explain an observed association」。低患病率的混杂可能根本产生不了那么大的偏倚，所以 E-value 大不等于结论就因果成立。IQSS（Harvard）逐字把 E-value 列为最常用却 also one of the most controversial and misinterpreted，并指出不存在单一最佳方法、无统一报告标准。判据：E-value 只写「要多强的混杂才能解释掉」，禁写成「已排除未测混杂」或「因果成立」；须与「该领域实际可能的混杂强度」并列解读，无参照时声明无法判断。
-
-### 22.3（r786A-3）★连续暴露/OR/HR/SMD 需先换算到可比尺度，横向比较要求同口径
-Sage 指南专门给出从 logistic（连续暴露）与 linear regression（连续暴露）算 E-value 的流程，并说明 E-value 以 RR 尺度表达但可由 OR、hazard ratio、standardized mean differences（Haneuse 2019）换算；连续暴露须按有意义的增量（IQR 或标准差）标准化成一个可比的风险比后再代入公式。ScienceDirect 概念文逐字：For any given RR reported in a study, two E-values can be calculated: one for the observed outcome, and one for the 95% confidence interval；且 VanderWeele 等给出把公式改造到 OR/HR 的补充指引。IQSS 提醒：现有方法「either depend on the analysis method used or are on a particular (non-universal) scale」，故跨研究、跨暴露类型比 E-value 数字须先确认尺度与换算口径一致。判据：报 E-value 须附「原始效应量类型 + 换算到 RR 的方式 + 连续变量的标准化增量」三件事；不同尺度/不同增量的 E-value 不可直接比高低或排序稳健性。
-
-### r786A 来源与判非（2026-11-20 实拉，逐字核验）
-- `https://www.acpjournals.org/doi/10.7326/M16-2607`（VanderWeele & Ding 2017 原论文，PubMed PMID 28693043 + TeselaGen Scholar 著录双取：E-value 定义逐字「minimum strength of association, on the risk ratio scale, that an unmeasured confounder would need to have with both the treatment and the outcome to fully explain away a specific treatment-outcome association, conditional on the measured covariates」、报点估计与最靠近 null 的 CI 端、annals 建议所有因果证据研究都报；ACP 页面需登录，用 PubMed/Scholar 一手摘要逐字，不冒充全文）——第一独立域·原论文一手摘要。
-- `https://journals.sagepub.com/doi/10.1177/25152459251326571`（Bi 等 2025《Navigating Unmeasured Confounding... A Practical Guide to Computing and Interpreting E-Value》WebFetch 200 全文逐字：bias factor 式 `RR_EU × RR_UD/(RR_EU+RR_UD−1)`、worst case/conservative、does not tell whether unmeasured confounding is actually present、连续暴露 logistic/linear 两节、RR/OR/SMD 换算、best practices）——第二独立域·实操教程一手全文。
-- `https://www.sciencedirect.com/science/article/abs/pii/S089543562300255X`（Journal of Clinical Epidemiology 概念文 WebFetch 摘要逐字：E-value 公式 `RR+RR×(RR−1)`（即 RR+√(RR·(RR−1)) 展开写法）、RR<1 取倒数、CI 端表 LL/UL 规则、最低值 1、「two E-values can be calculated」、strengths and limitations 段）——第三独立域·同行评议概念文。
-- `https://iqss.github.io/dss-ps/sensitivity.html`（Harvard IQSS WebFetch 200 全文逐字：E-value 是 transformation of the effect estimate、most common yet one of the most controversial and misinterpreted、no single best method / no agreed reporting standards / methods depend on analysis or non-universal scale、不推荐特定方法只提醒跟进该领域）——第四独立域·权威方法学机构。
-- **判重**：全库 SKILL.md 精确扫描 `E-value`/`Evalue` 0 命中本体（唯一命中为本技能 §21.3 TTE 的「no unmeasured confounding 条件可交换性」一句，是识别假设声明、非稳健性尺）；`sensitivity analysis` 命中在 skills-security-check（安全语义异命题）。本轮补的是「估计完成后如何量化稳健性」这一 §13–21 全缺的正交层，不重述后门/IV/RDD/TTE 的识别结论。豆包自留地 WB 0 落地。与 r785(OI/EI/SI)/r784(AI/VI/DI)/r783(MI/CI/RI) 九模块结论不复用；B/C 两轮结论亦不复用。
-- **未采纳**：Ioannidis 2019 批评的具体论点、Rosenbaum bounds / VanderWeele limit-based sensitivity 等其他方法的公式细节、临床试验中 E-value 的争议案例 —— 属方法学纵深，不迁移为通用验收判据。
+## 二十二、未测混杂敏感性 E-value：把「相关不等于因果」从免责句变成可量化阈值（TI · r786A 实拉，≥4 独立域交叉；正文下沉 `references/r786A_E-value.md`）：E-value=解释掉所需最小 RR 关联强度（点估计与 CI 端各算）；是 worst case 保守下界非混杂存在检验；连续暴露/OR/HR/SMD 先换算可比尺度再横向比。与 §13–21 识别/估计分工：本节给结论的稳健性阈值。
 
 ## 二十三、时变混杂的 G 方法：g-computation 与 IPTW-MSM 是同一问题的两种机制（TI · r790A 2026-11-22 实拉，≥3 独立域交叉）
 > 与 §13–22 分工：那些假定图已知在图上判 do/后门/IV/DiD/RDD/TTE，都是**单次或固定时点**的干预；本节处理「治疗反复给、且有一个被前次治疗改变的协变量夹在两轮治疗之间」——普通回归调它既过度校正（它是中介）又漏中介效应，不调它则后一轮治疗决策仍混杂。Robins 1986 提出参数 g-formula 处理 occupational healthy worker survivor effect，比 2000 年 MSM 的 IPTW 方案早十余年。
@@ -497,3 +459,27 @@ Barrios 三条 takeaway 逐字：①「The bias is arithmetic」——TWFE 是�
 **独点3** 阴性对照缺特异性也缺敏感性：碰撞分层/测量误差/缺失机制造假阳性，反向偏倚抵消成近零造假阴性；有限样本无法证明零假设（absence≠evidence of absence）。必须报「控制关联偏倚 vs 主关联偏倚的相对大小」，不是单个 p 值。
 判重：本体 0 专节，与 §22 E-value/§13 后门正交；豆包自留地 WB 0 落地。
 来源与诚信：Penning de Vries & Groenwold 2023（Stat Methods Med Res, DOI 10.1177/09622802231181230, PMC10515451）WebFetch 200 全文＋Arnold 2016 Epidemiology 27(5):637-641 WebFetch 逐字＋LCP/OpenRxiv 交叉。逐字全文与判非见 `references/r797A_阴性对照.md`。
+
+
+## 三十四、贝叶斯因子：把「证据强度」量化成赔率比，且能报告支持零假设的证据（TI · r805A 独立实拉 2026-11-25，≥3 独立域一手交叉，3 独点）
+
+> 与 §r801A 信号检测论 / §22 E-value 分工：SDT 把判断拆成敏感度与标准、E-value 把「未测混杂要多强」转成 RR 阈值；本章管**两个竞争假设下观测数据的相对证据**——后验赔率 = BF × 先验赔率，回答「数据把信念推了多少、往哪边推」。与统计显著性 p 值不同：BF 是可逆的、可对零假设给证据。
+
+### 34.1（r805A-1）★BF 是后验赔率与先验赔率的乘子，不是 p 值；BF₁₀=1/BF₀₁ 方向必须写清
+- **原文**（Strimmer Lab《Bayesian model comparison》MATH27720 讲义 WebFetch 逐字）：「The Bayes factor is the **multiplicative factor that updates the prior odds to the posterior odds**」，`posterior odds = B12 × prior odds`，对数尺度 `log-posterior odds = weight of evidence + log-prior odds`。定义 `B12 = p(D|M1)/p(D|M2)`，即两模型下数据的（边缘）似然比；复合模型下 BF 是「model average of the simple models indexed by θ, with weights taken from the prior distribution」，而广义似然比用 maximization——「the Bayes factor is a **penalised version of the likelihood ratio**, with the penalty depending on the difference in complexity」。PreTeXt《Bayesian Hypothesis Tests》逐字：`BF10 = p(d|h1)/p(d|h0)`，`BF01` 反向，`BF10 = 1/BF01`，「Always be mindful which statistic you are reporting」。
+- **判据**：① 报 BF 必须带方向下标（BF₁₀ 支持 H1、BF₀₁ 支持 H0）与比值，只写「BF=6」无法判定挺谁。② BF 直接乘先验赔率得后验赔率，故**同一 BF 在不同先验下后验不同**——不可脱离先验谈「结论强度」。③ 复合模型 BF 含先验加权惩罚复杂度，不等于最大似然比；两个模型复杂度不同时拿普通 LRT 冒充 BF 会系统性偏向复杂模型。
+
+### 34.2（r805A-2）★BF 能量化支持零假设的证据，这是相对 p 值的结构性优势
+- **原文**（PreTeXt 逐字）：「one important practical advantage of the Bayesian approach relative to the frequentist approach is that it also allows for **quantifying evidence for the null**. When that happens, the Bayes factor will be less than 1」；例 `p(d|h0)=0.2, p(d|h1)=0.1 ⇒ BF10=0.5`，翻转成 `BF01=2`，「report a Bayes factor of 2:1 in favour of the null」。Kass & Raftery 语境提醒（stir 博士论文逐字）：法庭证据等场景 BF 需 >1000 才算决定性，而非 >100——「context affects interpretation」。
+- **判据**：① 「p>0.05」只能说未拒绝零假设，不能说支持零假设；BF₀₁>1 才给出支持 H0 的正向证据。② 解释阈值依领域语境调整，法庭/高风险场景门槛远高于常规 3/20；写结论须注明所用标度与场景门槛。③ BF<1 不要直接读成「无效」——先翻转到 BF₀₁ 再看支持零的量化强度。
+
+### 34.3（r805A-3）★两套常用标度阈值不同不可混引；BIC 近似 BF 须满足大样本正则条件
+- **原文**（Statlect《Jeffreys' scale》WebFetch 逐字）：Jeffreys(1939) 原标度 1–10^0.5 barely worth mentioning / 10^0.5–10 substantial / 10–10^1.5 strong / 10^1.5–10^2 very strong / >10^2 decisive；Kass & Raftery(1995) 简化为 `1–3 barely worth mentioning / 3–20 positive / 20–150 strong / >150 very strong`（对应 `2ln(B) 0–2/2–6/6–10/>10`）。Strimmer 逐字：Schwarz(1978) 近似 `log p(D|M) ≈ ℓ(θ̂_ML) − ½ d_M log n`，「yields the BIC … penalised maximum log-likelihood」，是 Laplace 近似的特例，「assuming large n and assuming that the prior is locally uniform around the MLE」。
+- **判据**：① 引阈值必须点名标度来源（Jeffreys 1961 用 3.2/10/100，K&R 1995 用 3/20/150），混用会让「strong」含义漂移。② BIC≈−2ln BF 只是大样本局部均匀先验下的近似，小样本/信息先验不可直接套。③ big-N 下 BF 与 p 值可背离（BF 对效应量先验宽度敏感），二者结论冲突时先检先验与样本量，不强行统一。
+
+### 来源与诚信（r805A · 2026-11-25 实拉，≥3 独立域一手）
+- `https://strimmerlab.github.io/publications/lecture-notes/MATH27720-stats2/17-bayes5.html`（Strimmer Lab 贝叶斯模型比较讲义，WebFetch 全文逐字：posterior odds=BF×prior odds / weight of evidence / 复合模型 BF 是先验加权平均≠最大化 LRT / BF 是惩罚版似然比 / Jeffreys 与 K&R 两标度表 / Schwarz 1978 近似与 BIC 惩罚 ML）——第一独立域·大学讲义一手。
+- `https://new.statlect.com/fundamentals-of-statistics/Jeffreys-scale`（Statlect《Jeffreys' scale》WebFetch 全文逐字：Jeffreys 1939 原标度全表与 Kass-Raftery 1995 简化标度全表、对数尺度等价、reciprocal 用于支持 M0、引用 Kass R. & Raftery A. 1995 JASA 90:773-795）——第二独立域·统计教学一手。
+- `https://pretextbooks.github.io/lsc/ch-bayesian-hypothesis-tests.html`（PreTeXt 贝叶斯假设检验教材，WebFetch 全文逐字：BF10/BF01 定义与互逆、K&R 与 Jeffreys 两表逐档、「quantifying evidence for the null」、BF=0.5 翻转 BF01=2 例、阈值依社区标准无硬性规则）——第三独立域·开放教材一手。
+- `https://www.storre.stir.ac.uk/bitstream/1893/32531/1/PhD%20Thesis%20Nikos%20Jakubiak%20August%202020.pdf`（Stirling 大学博士论文，WebSearch 逐字：BF=marginal likelihood 比、Jeffreys/K&R 双表、法庭 BF>1000 语境提醒）——第四独立域·学术论文（WebSearch 快照非 WebFetch 全文，如实登记）。
+- **判重**：全库 SKILL.md 对 `贝叶斯因子`/`Bayes factor`/`BF10`/`Kass` 0 专节（pdi-forecasting 命中经逐串核为无，仅 memory 层无命中）；与 §r801A SDT（敏感度vs标准）、§22 E-value（混杂阈值）异命题。豆包自留地 wb-execute-discipline/wb-context-compressor WB 0 落地。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。

@@ -3,7 +3,8 @@ name: ei-reliability
 description: 执行可靠性工程（Execution Intelligence · Reliability）。当任务涉及长流程、多步骤、可失败/可重试的写操作、跨系统动作、需要崩溃续跑或补偿回滚时调用。提供 Saga 编排、补偿事务、幂等键、断点续跑（持久化步骤状态）、有界重试+抖动、死信队列、超时、TCC 预留式事务、空回滚、悬挂、事务参与记录表。与 execution_intelligence.py 互补：本技能管"失败后怎么不丢状态、能续、能回"，EI 管"规划/门禁/证书"。 触发：分布式锁安全性、fencing token、租约过期。错误预算、燃尽率、burn rate、多窗口告警、multiwindow、SLO 告警、Page/Ticket 分档、短窗口泄漏问题。触发：错误率告警阈值怎么定、告警疲劳。触发：零停机迁移、schema 变更、expand-contract、并行变更、双写、回填、contract 收缩、DDL 锁。
 module: EI
 modules: EI,VI
-version: 1.15.0
+；Amdahl 定律与 Gustafson 定律（固定问题强扩展串行比例设加速上限 S=1/((1-P)+P/N)·串行 10% 封顶 10×·增加核数不改 P 收效递减/Gustafson 弱扩展问题随核数增长 S=N+(1−P)(N−1)·两定律 P 含义不同不可混用/优化优先扩大 P 而非堆核）
+version: 1.16.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -333,3 +334,27 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 **独点2** 锁时长实测出来、safe 与 naive 差两个数量级：JavaCodeGeeks 在 PostgreSQL 16.15 / 300 万行实测——`int→bigint` 重写整表约 3.8 秒、裸 `SET NOT NULL` 持阻塞锁扫全表约 340 毫秒、加可空列或常量默认值约 1 毫秒、单条 UPDATE 回填 300 万行 14.1 秒。绕 NOT NULL 锁写法：`ADD CONSTRAINT ... CHECK(...) NOT VALID` → `VALIDATE CONSTRAINT`（允许读写的锁下跑、中位 188.5ms）→ `SET NOT NULL` → 单独 migration 删辅助约束；阻塞从 340ms 降到约 1.3ms，且 DROP 不能与 SET NOT NULL 同命令（扫描会回来），四句各自独立 migration 否则工具包一个事务里首句锁持续到尾。大表建索引用 `CREATE INDEX CONCURRENTLY`（两次扫描、不能事务块内、失败留无效索引），MySQL 大表用 gh-ost/pt-osc。**判据**：DDL 先看引擎锁行为并在 prod-sized 表实测，回填小批+可断点+限流+盯复制延迟。
 **独点3** 双写不是保险而是四类静默分叉入口，切换顺序有硬约束：Encore 列 partial failure（第一写成功第二写失败、重试只重写一边）、缺 dual-read、顺序/唯一性不一致、过早 contract（canary 或卡住的旧任务仍跑旧二进制）。安全序列 = dual-read（新代码优先读新列、回退旧列）→ 带幂等对账的 dual-write → single-write → 观测旧路径零使用 → contract。大表 rename 可反转：先让应用兼容两列名（expand）、再做毫秒级元数据 rename、最后删 fallback，省掉昂贵回填（SchemaSmith）。Flyway/Liquibase 各记 checksum，改错新增 versioned migration 而非编辑已应用的。**判据**：验收看「旧读/写计数归零+行数一致」遥测不靠直觉，回滚窗口关闭前保留反向兼容路径。与 §二 Saga/§二十三 TCC 分工：那些是跨服务事务协议、本条是部署期兼容性纪律。不防什么：不解决多服务业务原子性、不替代对账与备份。
 - **判重：`expand-contract`/`并行变更`/`expand and contract` 在 EI 本体 0 命中（仅 wb-spec-driven KB / 豆包 co-learn 泛提及非本技能）；§十三扇出/§十五熔断/§十七舱壁异命题。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。** 来源与诚信：https://martinfowler.com/bliki/ParallelChange.html （WebFetch200全文）· https://www.javacodegeeks.com/?p=146230 （WebFetch200全文/PG16.15实测数字）· https://encore.dev/articles/zero-downtime-migration · https://schemasmith.com/guides/zero-downtime-database-migrations.html （后两域 WebSearch 快照非全文如实登记）；逐字全文与判非见 `references/r803B_ExpandContract零停机迁移.md`。
+
+
+## 二十五、Amdahl 与 Gustafson 定律：加速上限由「谁固定」决定，串行比例与堆核不是一回事（EI · r805C 独立实拉 2026-11-25，≥2 独立域一手交叉，3 独点）
+
+> 与 §22 背压有界队列 / §24 Expand-Contract 分工：那些管压力与变更，本章管**并行化投入的收益上限**——先判「问题规模固定还是随核增长」，否则拿错定律得错误结论。与 OI 模块一致哈希（分片放置）异命题：那里管数据放哪，这里管加速上界。
+
+### 25.1（r805C-1）★Amdahl 固定问题规模：串行比例设硬上限，堆核收效递减
+- **原文**（NVIDIA《CUDA Best Practices Guide》官方文档 WebFetch 逐字）：「Strong scaling is a measure of how, for a fixed overall problem size, the time to solution decreases as more processors are added」；「Strong scaling is usually equated with **Amdahl's Law**, which specifies the maximum speedup」，`S = 1/((1−P) + P/N)`，P=可并行部分占比、N=核数；「if 3/4 of the running time … parallelized, the maximum speedup … 1/(1−3/4)=4」；「to get the largest speedup for a fixed problem size, it is worthwhile to spend effort on **increasing P**, maximizing the amount of code that can be parallelized」。Stanford 博士论文 Sol 组逐字：Amdahl 运行时下界 `R_t = s + (1−s)/p`，「even if p→∞, the run time cannot fall below s」。Intel《Guide for Developing Multithreaded Applications》逐字批评：Amdahl「ignoring real-world overheads such as communication, synchronization, and other thread management」「assumes a fixed data set size for whatever number of cores is used and that the percentage of overall serial execution time will remain the same」。
+- **判据**：① 先问「问题规模是否固定」——固定（如固定分子对）才用 Amdahl。② 上限公式说明：90% 可并行 ⇒ N→∞ 也只有 10×；把资源堆在 P 小的程序上收益极小，应先扩大 P（重构串行热点）。③ Amdahl 忽略通信/同步开销且假设无限核，是乐观上界；实测还要扣开销，别把理论 4× 当承诺。
+
+### 25.2（r805C-2）★Gustafson 弱扩展：问题随核增长，串行占比近似不变则加速可近线性
+- **原文**（NVIDIA 官方逐字）：「Weak scaling is a measure of how the time to solution changes as more processors are added … where the **overall problem size increases as the number of processors is increased**」；Gustafson `S = N + (1−P)(1−N)`，「another way of looking at it is that it is **not the problem size that remains constant … but rather the execution time**」。Intel 官方逐字：知名用例「1% execution time on 32 cores … serial ⇒ speedup ≤ 32 + (1−32)(0.01) = 31.69×」，同条件 Amdahl 只给 24.43×（若误把 32 核下的串行占比套进固定规模公式）。Stanford 论文逐字：`R_t = 1/(s+(1−s)p)`，「in the regime p ≫ s/(1−s), with double the processors, problems of double the size can be solved in close to the same amount of time」。
+- **判据**：① 问题规模能随资源增长（网格/蒙特卡洛精度随规模升）才用 Gustafson；规模固定的问题用它得出乐观结论是误用。② Gustafson 前提：串行部分不随规模同比增长、并行部分的通信/管理开销可控；「embarrassingly parallel」最贴合，一般系统串行setup/内存管理会增长，故是上界非实测。③ 两个定律回答不同问题，同一程序可给出两个不同加速数——不是矛盾，是先验假设不同。
+
+### 25.3（r805C-3）★两定律的 P 含义不同是最常见混淆；选型看应用画像
+- **原文**（HPC 101《Limits of Parallelism》逐字）：「**The symbol P does not mean the same thing in the two laws, and this is the single most common point of confusion**. In Amdahl's Law, P is the parallel fraction of a **fixed problem** … In Gustafson's Law, P is the parallel fraction **measured on the parallel machine, where the problem has been scaled up**… They are answers to two different questions」。NVIDIA 逐字：模型两分子相互作用（分子尺寸固定）只适用强扩展；流体/结构网格与蒙特卡洛（增规模提精度）可增长：「understand how the problem size would change if the computational performance changes and then apply either Amdahl's or Gustafson's Law」。
+- **判据**：① 报加速数必须同时报「用哪条定律 + P 的定义 + 问题规模假设」，否则数字不可比——同一程序 24× vs 32× 常源于把 32 核测的 P 误代入 Amdahl 固定规模式。② 选型流程：先定应用画像（固定规模 vs 可增长），再选强/弱扩展与对应定律估算上界，最后实测。③ 与并行性能三类瓶颈（compute/memory/latency bound）配合：Amdahl 的串行比例是结构性上限，通信/内存饱和是运行时上限，两者都要看。
+
+### 来源与诚信（r805C · 2026-11-25 实拉，≥2 独立域一手）
+- `https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html`（NVIDIA CUDA Best Practices Guide 官方 WebFetch 全文逐字：strong/weak scaling 定义 / Amdahl 公式与 3/4 例 4× / 增大 P 而非堆核 / Gustafson 公式与 execution time 恒定视角 / 固定规模 vs 可增长应用画像）——第一独立域·厂商官方一手。
+- `https://web.stanford.edu/group/SOL/dissertations/Shaked_Thesis-augmented.pdf`（Stanford Sol 组博士论文 WebFetch 逐字：Amdahl `R_t=s+(1−s)/p` 与 p→∞ 下界 s / Gustafson `R_t=1/(s+(1−s)p)` / 两定律分别对应 strong/weak scaling / 三类性能瓶颈 compute·memory·latency bound）——第二独立域·顶尖大学学术一手。
+- `https://www.intel.cn/content/dam/develop/external/us/en/documents/gdma-2-165938.pdf`（Intel《Guide for Developing Multithreaded Application》官方 PDF WebFetch 逐字：Amdahl 批评忽略通信/同步开销与固定数据假设 / Gustafson scaled speedup 公式 / 32 核 1% 串行 31.69× 对比 Amdahl 24.43× 的完整算例）——第三独立域·厂商官方一手。
+- `https://hpc101.readthedocs.io/en/latest/tutorial/session3/limits.html`（HPC 101 教程 WebFetch 逐字：「P does not mean the same thing in the two laws… single most common point of confusion」/ 两定律 P 定义对照 / 90% 并行 10× 与 100 核 90.1× 例 / strong vs weak scaling）——第四独立域·教学一手。
+- **判重**：全库 SKILL.md/module-memory 对 `Amdahl`/`阿姆达尔`/`加速比上限`/`Gustafson` 0 专节 0 命中；与 §22 背压、§24 Expand-Contract、OI 一致哈希异命题。豆包自留地 WB 0 落地。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。
