@@ -1,9 +1,9 @@
 ---
 name: vi-fact-verification
-description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试、mutation testing、mutation score、变异算子、存活变异体、等价变异体、等价不可判定、胜任程序员假设、耦合效应、human oracle problem、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、补核受影响部分、核对不是危险动作、Bland-Altman、一致性界限、limits of agreement、一致性评价、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、可互换性、方法比较评分者间信度IRR（按标签类型选kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）
+description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试（mutation testing/score·变异算子·存活与等价变异体·等价不可判定·胜任程序员假设·耦合效应·human oracle problem）、Youden指数J（Se+Sp−1·ROC最大垂直距离·阈值选取与患病率无关·Se/Sp联合置信域）、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、Bland-Altman、一致性界限、limits of agreement、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、方法比较评分者间信度IRR（按标签类型选kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）
 module: VI
 modules: VI,EI
-version: "1.20.0"
+version: "1.21.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -415,3 +415,16 @@ version: "1.20.0"
 **判重**：全库 SKILL.md / module-memory 对 `回归均值` / `regression to the mean` / `向均值回归` 0 命中；辛普森悖论在 ti-critical-reasoning §13（因果识别「该条件化哪个变量」，异命题）、幸存者偏差在 wb-agent-evaluation/references（打分集选择偏差，异命题）、Goodhart 在 ti §10.3/agent-evolution §22（指标被优化腐蚀，异命题）、agent-evolution always-valid 节只把 SRM/RTM 列入前置检查未立论。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。
 
 **来源与诚信**：`https://stats.libretexts.org/Courses/Luther_College/Psyc_350:_Behavioral_Statistics_(Toussaint)/10:_Regression/10.07:_Regression_Toward_the_Mean`（WebFetch 200 全文逐字：抛硬币重测=6、`ZY′=r(ZX)`、SAT 0.835×1.6=1.34、Kahneman 教官、Schall & Smith 7/10 降 33 点、propranolol 120 vs 38 与无对照结论）；`https://www.britannica.com/science/regression-to-the-mean`（WebFetch 200 全文逐字：RTM 定义、不依赖线性/测度/测量误差、Galton 930 成人子女身高、四类去混淆设计）；两域均一手全文，日期 2026-11-25 实拉。
+
+
+## 二十四、Youden 指数 J：选阈值时「敏感度+特异度−1」，不是准确率也不是 AUC（VI · 2026-11-26 实拉，≥3 独立域一手）
+
+**独点1** J 是二值诊断测试的单数性能量，与 PPV/准确率正交：定义 `J = sensitivity + specificity − 1 = TPR + TNR − 1 = TP/(TP+FN) + TN/(TN+FP) − 1`，展开后 `J = (TP·TN − FP·FN)/((TP+FN)(TN+FP))`。取值 0（对有病/无病两组给出相同阳性比例=无用）到 1（无假阳无假阴），形式上的负值只表示把正负标签接反了，纠正标签后回到 0–1。**J 对假阳与假阴等权**——原始论文明确「all tests with the same value of the index give the same proportion of total misclassified results」⇒ 若业务里漏报与误报代价不等（漏一个病的代价远高于多一次复查），J 相等的两个模型不可互换；此时须改显式代价加权阈值而不是默认 J。与 §十三谱偏倚分工：那里管「换人群准确率会变」，这里管「同一人群内选哪个阈值、按什么权重」。
+
+**独点2** J 用于选阈值而 AUC 用于评排序，两者不互相替代：对连续输出在每个截点 c 算 `J(c)=Se(c)+Sp(c)−1`，取 `max` 得 J-point；几何上等于 ROC 曲线到对角机会线的**最大垂直距离**（ScienceDirect 逐字），而「最近左上角」是另一个准则（只在 ROC 近似凸时才大概率与 J 重合，非同一判据）。SCI 原文强调「markers with the same Youden index can have very different sensitivity and specificity at the optimal cut-off point」⇒ 报告阈值时必须同时报该点的 Se/Sp 二元组，只报 J 或只报 AUC 都丢掉决策信息。J 相對患病率不变（PMC 逐字 `independently from the outcome prevalence`），这是它相对 PPV/NPV 的优势，但「等权」这一价值前提不会因此消失。
+
+**独点3** Se/Sp 在最优截点处相关，置信区间不能按两个独立比例各算一个：最优 c 同时由病人组与健康组数据估计，故该点的 Se 与 Sp **相关**，须报联合置信域而非两条边际区间（ScienceDirect S0167947314000450 全篇即为此）；固定预设阈值时 J 是两独立二项比例之差，可用两比例 Wald 区间；阈值是**从数据里挑出来的**时，选择过程额外引入方差，须用 delta method 或 bootstrap（Wikipedia 镜像逐字）。实证做法：PMC6355005 用 2000 次 bootstrap 重抽样给最优截点的 95% CI；另需注意 J 逼近上界（J≥0.90）时常规 bootstrap 覆盖变差，改用修正 bootstrap 或参数法。判据——凡报告「最佳阈值」，验收栏固定四格：`J 点估计 / 该点 Se·Sp / 阈值 CI（含选择不确定性）/ J 的区间方法`，缺任一判不完整。
+
+**判重**：全库 SKILL.md / module-memory / co-learn 对 `Youden` / `Youden index` / `J statistic` 0 专节；§十四似然比（验前验后与 portable）、§十九 Bland–Altman（一致性非相关）、§二十一评分者间信度（系数按标签形状选）、§九统计功效均异命题；与 PPV/准确率/ROC 是阈值选择与排序评价的分工，非重复。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。
+
+**来源与诚信**：`https://pmc.ncbi.nlm.nih.gov/articles/PMC6355005/`（WebFetch 200 全文逐字：J 定义、0–1、`independently from the outcome prevalence`、2000 repeats bootstrap CI、closest-top-left 对照）——第一独立域·同行评议开放全文；`https://www.sciencedirect.com/science/article/abs/pii/S0167947314000450`（WebSearch 摘要+Introduction 全文逐字：Se/Sp 在估计截点相关、须联合置信域、相同 J 不同 Se/Sp）——第二独立域·统计学期刊；`https://www.sciencedirect.com/science/article/pii/S0167947317300592`（WebSearch 全文逐字：最大垂直距离、等权前提、J≥0.90 边界覆盖）——第三独立域·统计学期刊；`https://wikipedia.com/wiki/Hanssen%E2%80%93Kuipers_discriminant` 镜像（WebSearch 全文逐字：展开式、负值语义、固定阈值 vs 优化阈值的区间区别；Wikipedia 原页 WebFetch failed 未冒充一手）交叉。逐字全文与判非见 `references/r810A_Youden指数J.md`。

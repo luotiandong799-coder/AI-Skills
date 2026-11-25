@@ -1,9 +1,9 @@
 ---
 name: ri-retrospective
-description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/主持·记录·事故负责人三分离/发言权/时间盒议程与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习深度分级（改动作/改假设策略/改学习机制本身·防御惯例与熟练无能阻断双环·反思-重构循环·学习与有效行为不等价须分层验收）。正常事故理论NAT与HRO对照（交互复杂×紧耦合·安全记录好≠高可靠·降耦合与提前预案）。 故障树FTA与事件树ETA（演绎找致祸组合vs归纳看触发后果·定性最小割集/单点失效/共因·量化=触发频率×条件概率乘积）。 FMEA/FMECA与RPN排序陷阱（模式清单≠优先级·RPN序数相乘伪精度与并列·AP表严重度主导·先分档后档内排序） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障有效/独立/可审计三门）。仍未证明栏（四块结构附没证明什么·可照做≠可审计·修正覆盖三分类）·三门有效/独立/可审计·近失改屏障状态·变更分析IS/IS-NOT）
+description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/角色三分离/发言权/时间盒与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习（改动作/改假设/改学习机制·防御惯例阻断双环·学习与有效行为不等价须分层验收）。NAT/HRO（交互复杂×紧耦合·安全记录≠高可靠·降耦合）。偏差正常化normalization of deviance（Vaughan·异常未即刻致灾→可接受→新常态·警告信号被重释·认证标准逐步放松·「以前这么飞没事」不是安全证据·与NAT/HRO分工）。 故障树FTA与事件树ETA（演绎找致祸组合vs归纳看触发后果·定性最小割集/单点失效/共因·量化=触发频率×条件概率乘积）。 FMEA/FMECA与RPN陷阱（RPN序数相乘伪精度·AP表严重度主导·先分档后排序） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障有效/独立/可审计三门）。仍未证明栏（四块结构附没证明什么·可照做≠可审计）·近失改屏障状态·变更分析IS/IS-NOT）
 module: RI
 modules: RI,EI
-version: "2.13.0"
+version: "2.14.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -440,3 +440,17 @@ DevOps AI Toolkit 逐字 prep 四条「**Assemble the timeline in advance.** Pul
 - `https://www.osti.gov/servlets/purl/5292729`（DOE《Standardization Guide for Construction and Use of MORT-Type Analytic Trees》，**WebFetch 失败取 WebSearch 全文逐字**，如实登记非全文渲染：分析树源于 1960s 航天 FTA、DOE 全机构采用、7 分析步骤、necessary and sufficient 构树原则、positive/success 与 negative/fault 树两用）
 - `https://nuclearpowerradiation.tpub.com/nst1004/Appendix-G-Management-Oversight-And-Risk-Tree-Mort-Analysis-64.htm`（DOE 核能与辐射手册 Appendix G，WebFetch 200 全文逐字：Mini-MORT 四步、barrier 定义、ORPS cause codes、打勾频次解释）
 - **判非**：全库 SKILL.md / module-memory 对 `MORT` / `Management Oversight and Risk Tree` 0 专节；`meta/ri-retrospective` §r800A 只在结尾一句提 MORT 两大核心=change analysis+barrier analysis（未立论，按「合」登记不复述）；FTA/ETA/HFACS/AcciMap/Tripod Beta/蝴蝶结均为异命题。豆包自留地 WB 0 落地。
+
+
+## r810B · 偏差正常化（normalization of deviance）：异常没立刻致灾，就被重释成「可接受」（RI · 2026-11-26 实拉，≥3 独立域一手）
+
+### 三独点
+- **定义是社会过程的阈值漂移，不是个人粗心**：Vaughan 原句「deviance from correct or proper behavior or rule becomes culturally normalized」；关键是「a long incubation period [before a final disaster] with early warning signs that were either misinterpreted, ignored or missed completely」——**预警信号被重释**（不是没有），且潜伏期长到让人把「这次没出事」当证据。判据：复盘遇到「一直这么干、以前都没事」时，这句话本身就是漂移的证据，不是抗辩；须追问「从哪次起这个偏差被写进可接受清单、谁批的、依据是什么」。
+- **认证标准会被逐次放松，且每次都有看似合理的理由**：Feynman 在 Challenger 委员会 Appendix F [F1] 逐字「certification criteria used in Flight Readiness Reviews often develop a gradually decreasing strictness. The argument that the same risk was flown before without failure is often accepted as an argument for the safety of accepting it again」；NASA Vol.1 Ch.6 [120] 逐字「as tests and then flights confirmed damage to the sealing rings, the reaction by both NASA and Thiokol was to **increase the amount of damage considered 'acceptable'**」；承包方措辞「the condition is not desirable but is acceptable」。判据：把「可接受偏差清单」当**会随时间腐败的活文档**，每次放宽须带独立论证与重新审批，禁止用历史无事故作唯一依据；并查管理层与工程层的风险估计差（原报告 1/100 vs 1/100,000 的分歧本身就该升级）。
+- **反制是保留异常为异常 + 建报告安全的制度，不是加大惩罚**：Feynman「erosion and blow-by are not what the design expected. They are warnings that something is wrong」「The fact that this danger did not lead to a catastrophe before is no guarantee that it will not the next time, unless it is completely understood」；玻尔百科总结漂移由 system pressure + flawed risk perception 驱动而非恶意，对策是 just culture 的报告安全感 + 人因工程把「走捷径」在结构上做不成；MBA智库给量化底线的写法（膝关节力线 3°→5°→6°→7°，超过 7° 成医源性并发症）——**偏差容忍度必须写下边界值，越界即触发而非继续商量**。与 §r775C NAT 分工：NAT 判结构（紧耦合×高交互→事故正常），本条判过程（同样结构下标准如何被一次次放松）；与 §r763C HRO 分工：HRO 给事前组织姿态，本条给漂移的早期识别；与 §r796E Just Culture 分工：那条定可责边界，本条定偏差边界。
+
+### 来源与诚信
+- `https://nasa.gov/history/rogersrep/v2appf.htm`（R. P. Feynman《Personal Observations on Reliability of Shuttle》Appendix F，WebFetch 200 全文逐字：标准逐步放松 / 「以前这么飞没事」被当成安全论据 / O-ring erosion & blow-by 是警告不是正常 / Russian roulette / 1 in 100 vs 1 in 100,000）——第一独立域·政府事故调查一手。
+- `https://nasa.gov/history/rogersrep/v1ch6.htm`（总统委员会报告 Vol.1 Ch.6《An Accident Rooted in History》，WebFetch 200，AI 摘要 60 秒超时取前 15,000/99,425 字符逐字，如实登记非全文：[120] 未认识→不修→当成可接受风险三阶段 / 允许损伤量被上调 / 「not desirable but is acceptable」）——第二独立域·官方调查报告。
+- `https://www.wikiwand.com/en/Normalisation_of_deviance`（Vaughan 定义与长潜伏期、预警被误读/忽略、corporate omerta；Wikipedia 原页 WebFetch failed 如实登记）+ `https://scipedia.bohrium.com/sciencepedia/feynman/keyword/normalization_of_deviance`（玻尔科学百科 WebSearch 逐字：系统压力+风险认知而非恶意 / just culture / 人因工程）+ `https://wiki.mbalib.com/wiki/正常化偏差`（MBA智库 WebSearch 逐字：力线 3°→7° 的量化边界）——第三、四、五域交叉。
+- **判非**：全库 SKILL.md / module-memory / co-learn 对 `normalization of deviance` / `偏差正常化` / `失范的常态化` 0 专节；与 HRO/NAT/Just Culture/结果偏差各管一段异命题。豆包自留地 WB 0 落地。逐字全文与判非见 `references/r810B_偏差正常化.md`。

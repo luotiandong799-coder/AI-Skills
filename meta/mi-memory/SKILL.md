@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。当任务涉及该记什么/不该记什么的判断、用户级MEMORY.md与模块记忆分层、跨会话记忆写入/检索/去重、记忆容量与检索侧治理权衡、隐私不入记忆、可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆评测五能力、固化长期规则判断时使用。是13模块中MI载体；记忆巩固效用评级（十技法四变量·熟悉感错觉·即时延迟双栏·desirable difficulty）；检索即改写（再巩固窗口·可及性≠保真度·分层抗改）；矛盾解决位置（写入侧四操作vs检索侧ADD-only）·遗忘双机制（decay降权vs eviction真删）；前瞻记忆与意图兑现（事件/时间线索·四阶段·外部审计与取消意图）；交互记忆系统TMS（记忆分布在人+外部aid·who-knows-what元目录·turnover破坏目录）；检索诱发遗忘RIF（检索是抑制性选择·Rp+/Rp−/control三态·换程序须双用例回归）；睡眠依赖巩固（SO-spindle-ripple顺序耦合·TMR倒U·NREM/REM分工存争议）；错误记忆与来源监控（DRM关键诱饵·verbatim/gist双trace·高置信≠真实须逐字锚点回归）；定向遗忘两范式分离（accessibility≠availability换线索验真删）；编码特异性（线索效力来自编码时共存语境非语义相似·换线索验真删）；序列位置效应（首因LTM/近因STM双分离·延迟抹近因）；前摄/倒摄干扰（学习竞争vs检索抑制正交·延迟自发恢复推翻即时覆盖·相似性倒U）；自我参照效应SRE（自我概念是丰富组织化结构·描述性自参照优于自传式·生存加工辨析·agent迁移标推断）·工作记忆多成分模型（Baddeley 1974 四成分·中央执行是注意控制非存储·多存储分离由选择性干扰证实·情景缓冲器绑定多模态并接长时记忆）
-version: "2.11.0"
+description: 长期记忆治理（Memory Intelligence）。当任务涉及该记什么/不该记什么的判断、用户级MEMORY.md与模块记忆分层、跨会话记忆写入/检索/去重、记忆容量与检索侧治理权衡、隐私不入记忆、可靠性与可恢复性、事实失效与双时态时间戳、按来源删除级联、记忆评测五能力、固化长期规则判断时使用。是13模块中MI载体；记忆巩固效用评级（十技法四变量·熟悉感错觉·即时延迟双栏·desirable difficulty）；检索即改写（再巩固窗口·可及性≠保真度·分层抗改）；矛盾解决位置（写入侧四操作vs检索侧ADD-only）·遗忘双机制（decay降权vs eviction真删）；前瞻记忆与意图兑现（事件/时间线索·四阶段·外部审计与取消意图）；交互记忆系统TMS（记忆分布在人+外部aid·who-knows-what元目录·turnover破坏目录）；检索诱发遗忘RIF（检索是抑制性选择·Rp+/Rp−/control三态·换程序须双用例回归）；睡眠依赖巩固（SO-spindle-ripple顺序耦合·TMR倒U·NREM/REM分工存争议）；错误记忆与来源监控（DRM关键诱饵·verbatim/gist双trace·高置信≠真实须逐字锚点回归）；定向遗忘两范式分离（accessibility≠availability换线索验真删）；编码特异性（线索效力来自编码时共存语境非语义相似·换线索验真删）；序列位置效应（首因LTM/近因STM双分离·延迟抹近因）；前摄/倒摄干扰（学习竞争vs检索抑制正交·延迟自发恢复推翻即时覆盖·相似性倒U）；自我参照效应SRE（自我概念是丰富组织化结构·描述性自参照优于自传式·生存加工辨析·agent迁移标推断）·工作记忆多成分模型（Baddeley 1974 四成分·中央执行是注意控制非存储·多存储分离由选择性干扰证实·情景缓冲器绑定多模态并接长时记忆）·位置记忆法method of loci（熟悉路线作检索结构·编码/回忆两阶段·意象奇特度·分层修复·认知前提边界）
+version: "2.12.0"
 module: MI
 modules: MI,AI
 ---
@@ -400,3 +400,16 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 **判重**：全库 SKILL.md / module-memory 对 `双重编码` / `dual coding` / `Paivio` 0 专节；`r798A_自我参照效应.md` 中 Craik & Lockhart 加工深度为语境提及（异命题）、§r802A 工作记忆视觉空间模板为子系统（异命题）、图式/Bartlett 与闪光灯记忆 0 命中。豆包自留地 WB 0 落地。
 
 **来源与诚信**：`https://cognitivepsychology.com/Dual_Coding_Theory`（WebFetch 200 全文逐字：Paivio 1971、logogen/imagen、concreteness effect、Standing 1973 90%/10,000 图、Mayer 边界、Pylyshyn 反驳、aphantasia/aphasia）；`https://mooc1.chaoxing.com/mooc-ans/ztnodedetailcontroller/visitnodedetail?courseId=201903629&knowledgeId=130059500`（超星慕课「8.1.1 双代码假说」WebSearch 逐字：Paivio 1965 CC/CA/AC/AA 四词表数字、概念挂钩、Kirkpatrick 1894 / Shepard 1967）；`https://www.gklibrarykor.com/zh-hans/article/7446`（WebSearch 逐字：1971《Imagery and Verbal Processes》、Clark & Paivio 1991、logogen/imagen 术语）；`https://www.kepuchina.cn/article/articleinfo?business_type=100&ar_id=336116`（科普中国，WebSearch 逐字：直接/参照/联想三种加工类型）。Wikipedia 直连 fetch failed，如实登记未冒充一手；日期 2026-11-25 实拉。
+
+
+## r810C · 位置记忆法（method of loci）：把顺序挂到稳定路线的检索结构上（MI · 2026-11-26 实拉，≥3 独立域一手）
+
+**独点1** 它是「编码+回忆」两阶段的空间化检索结构，不是把两码并列的口号：美国国家科学院《Learning to Think Spatially》Appendix D 逐字「the method of loci involves two phases: encoding and recall」——编码＝想象一个熟悉区域、生成连接可记地点的**感知丰富路径**、把每个待记项通过与某个地点互动的图像挂上去；回忆＝在脑中重走该路径、逐点「停下」取回物件。每个地点是一个 retrieval cue，全部地点合起来是 retrieval structure（Frontiers 逐字）。判据：一条记忆若只列无序要点、没有稳定路线与逐点锚位，就没有这个结构；与 §r806C 双重编码分工——那条给「语词/表象两条通路」，本条给「顺序如何由一个外部空间骨架承载」。
+
+**独点2** 检索结构不是记忆天才的独有特权，但收益有前提：Chase & Ericsson 技能记忆三原则（significant encoding / structured retrieval / acceleration），Ericsson & Kintsch 把 LT-WM 泛化到所有人；van Dijck & Fias 2011 的 SPoARC 效应显示普通人的序列也有空间位置标签（前项偏左、后项偏右），故 Frontiers 逐字「retrieval structures stop being idiosyncrasies to be reserved to experts」；Maguire 等观察 10 位顶级记忆者中 9 位用过 MoL，Pridmore 2013 用位置法破 30 秒记牌纪录。但 PMC7892625 的实证给边界：健康组 N=71 词表有改善（Wilcoxon r=0.15），5 名精神分裂症患者**无显著改善**，原因「MoL seems to require episodic memory, working memory monitoring and executive functions」⇒ 把位置法当无门槛插件会踩空，能力不足者应先补外部 aid 与结构化目录（§r763A TMS），不是强行让人脑走路线。
+
+**独点3** 失败要按层修复，且路线复用会串料：可机检结构是 `Palace → Route → Loci → Placements → Scenes → Memory Items`；召回失败分层诊断——找不到下一站＝路线问题、顺序错＝路线/点位间距问题、记得图像却答不出内容＝场景问题、答得出却忘了在哪一站＝放置问题（lociplace，商业站点立场登记）。科普中国给本土操作口径：熟悉场景中定明确路线与若干点、把项目视觉化并依次挂钩、「联想越奇特越好」，对有顺序的系列项目特别有用。边界：同一路线承载多批无关材料须清空或隔离旧场景，否则旧项目干扰新项目（与 §r791A 前摄干扰、§r767A 检索诱发遗忘正交通道不同）。PMC4056179 医学教育实证（78 名二年级医学生，28 人 MOL vs 50 人自主学习，MOL 组考核显著更好）为课堂证据，非记忆能力普适结论。
+
+**判重**：全库 SKILL.md / module-memory / co-learn 对 `method of loci` / `记忆宫殿` / `位置记忆` 0 专节；与 §r802A 工作记忆视空间模板（内部子系统）、§r806C 双重编码（言语/表象通道）、§r783A 编码特异性（线索与编码语境共存）、§r759A 前瞻记忆（意图兑现）分工，不复用。豆包自留地 WB 0 落地。
+
+**来源与诚信**：`https://www.nap.edu/read/11019/chapter/18.html`（美国国家科学院《Learning to Think Spatially》2006 Appendix D，WebSearch 逐字：两阶段定义、interactive imagery 最古老有效、比口头复述显著更好、图像抗遗忘持久）——第一独立域·国家科学院一手；`https://pmc.ncbi.nlm.nih.gov/articles/PMC4050427/`（Frontiers《2011 space odyssey》，WebFetch 200 全文逐字：技能记忆三原则、retrieval structures、SPoARC、普遍过程非专家独有、Pridmore 30 秒）——第二独立域·同行评议全文；`https://pmc.ncbi.nlm.nih.gov/articles/PMC7892625/`（WebSearch 摘要+介绍逐字：四步流程、健康 N=71 r=0.15、精神分裂症 5 人无改善、认知前提；WebFetch 返回 HHS 安全页非全文，如实登记）+ `https://pmc.ncbi.nlm.nih.gov/articles/PMC4056179/`（WebSearch 逐字：医学教育 78 人对照）+ 科普中国 + lociplace（商业立场登记）——第三、四、五、六域交叉。逐字全文与判非见 `references/r810C_位置记忆法.md`。
