@@ -2,7 +2,7 @@
 name: personal-ai-employees
 description: >-
   个人 AI 员工体系（8 岗）总路由与五步执行协议。把用户目标自动分派给 8 个专职 AI 员工（战略顾问/供应链专家/职业发展顾问/销售顾问/学习教练/信息分析师/自动化工程师/知识管理专家），每岗统一走「任务分析→执行方案→输出结果→复盘优化→Skill沉淀」，并复用 personal-ai-os 与现有 wb-* / 专家技能，不新建重复能力。触发词：个人AI员工、AI员工体系、AI战略顾问、AI供应链、AI职业发展、AI销售顾问、AI学习教练、AI信息分析、AI自动化工程师、AI知识管理、哪岗来做、分派任务、员工路由、agency、个人AI公司、我的AI团队。finalizer、终结器、两阶段删除、deletionTimestamp、finalizers 清空、删除钩子、owner reference 清理、卡住的 finalizer、强制删除 unsafe-delete、孤儿资源清理。Actor模型、actor、消息传递、mailbox、无共享状态、位置透明、有状态worker。工作流确定性、非确定性错误、replay重放、Event History、Command比对、版本化patch、Worker Versioning、SideEffect、计时器顺序
-version: 1.12.0
+version: 1.13.0
 agent_created: true
 module: OI
 modules: OI,MI
@@ -323,3 +323,17 @@ modules: OI,MI
 - `https://microservices.io/patterns/data/cqrs.html`（microservices.io 官方模式页，WebSearch 逐字：view database 订阅领域事件更新/NoSQL 优化查询/多非规范化视图/复杂度与复制滞后代价）——第三独立域·模式库一手。
 - **判非**：全库 SKILL.md / module-memory 对 `CQRS`/`command query responsibility segregation`/`bounded context` 专节 0；与 §17 工作流确定性、§16 Actor、DAG 分工不复用（那些管执行协调，本条管读写模型职责）。豆包自留地 WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
 
+
+
+## r804B · 一致性哈希：扩容只动 K/N 个键，虚拟节点才让它真的均匀（OI · 2026-11-25 实拉，≥3 独立域一手交叉，3 独点）
+
+### 三独点
+- **mod-N 扩容是全量洗牌，哈希环才是局部编辑**：`hash(key)%N` 在 N 变时绝大多数键改址——加一台时保住原位的概率仅 1/(N+1)、迁移 N/(N+1)（N=4 迁 80%，N=96 迁 99%）；一致性哈希把键与节点一同映射到同一环形空间 [0,2^m−1]，键顺时针遇到第一个节点即归它；加节点只接管其与前驱间的弧、删节点其弧顺延给后继，平均只迁 K/N（K 键数、N 节点数），是再平衡的理论下限，避免缓存雪崩/数据库被瞬时打穿｜Karger 等 1997 STOC《Consistent Hashing and Random Trees》原始构造（经 Vetora/Padho 两域逐字引述）+ nginx 官方 `hash key [consistent]` 指令（不加 consistent「adding or removing a server ... may result in remapping most of the keys」；加了用 ketama「only a few keys will be remapped ... higher cache hit ratio」，ketama_points=160）。
+- **虚拟节点不是优化项而是必需项**：裸环少量物理节点弧长极不均（N=10 时最重/最轻可达 4–5×），节点故障整段压到单一后继；给每物理节点多个环位置（vnodes，常见 100–256）后弧长方差从 O(1/N) 降到 O(1/(V·N))、偏斜 <1.05×，故障负载散到多个后继，还能用 vnodes 数量编码异构容量（大机器多给）；Dynamo(2007) 用 128–256，Cassandra 默认曾 256（新版本降到 16 因 repair 成本），Riak 64，nginx ketama=160——数字须绑版本/实现，不可写成普适默认｜nginx 官方 upstream 模块文档 WebFetch 200 全文逐字 + Vetora/Padho/CodeCrown 三域交叉（引 Dynamo/Cassandra/Ketama 数值，立场登记为二手转述）。
+- **环只决定「放哪」， membership 与复制是另外的协议**：`consistent hashing gives you placement, not membership`——谁还活着靠 gossip/健康检查；Dynamo 系沿顺时针取 N 个不同节点作副本偏好列表；变体按形状选：Jump hash（Google 2014，零状态纯算术完美均衡，但桶须编号 0..N−1、只适合末尾增删，不适配任意节点故障）、Rendezvous/HRW（每键对每节点打分取最大，无需 vnodes、小 N 优选、O(nodes) 查找）、bounded-load（Google 2017，单节点负载封顶 (1+ε)×均值、溢出顺时针顺延，治倾斜与热键）；哈希只能均衡键数、不能均衡热度，热键另需缓存/扩散策略｜Harshith《Consistent Hashing: Surviving the Resize》+ Padho 环/jump/Maglev 对比 + CodeCrown 应用清单（Akamai/DynamoDB/Cassandra/Chord/Envoy/HAProxy）三域逐字。
+
+### 来源与诚信
+- `https://nginx.org/en/docs/http/ngx_http_upstream_module.html`（nginx 官方 upstream 模块文档，WebFetch 200 全文逐字：`hash key [consistent]` 语法/1.7.2 引入/ketama 方法/删加节点 remap 范围/ketama_points=160）——第一独立域·官方实现一手。
+- `https://vetoralabs.com/system-design/concepts/storage/partitioning/consistent-hashing` + `https://learn.padho.ai/wiki/consistent-hashing-ring-jump-maglev`（Vetora 系统设计概念页与 Padho 工程 wiki，WebSearch 逐字：Karger 1997 / K·N 迁移 / 100–256 vnodes / 方差 O(1/(V·N)) / mod-N 1/(N+1) 保位 / jump·HRW·bounded-load 变体——第二、三域交叉）。
+- `https://harshith.in/blog/consistent-hashing` + `https://codecrown.in/distributed-systems/consistent-hashing-distributed-systems`（Harshith 工程博客与 CodeCrown 分布式专栏，WebSearch 逐字：placement≠membership / 顺时针取副本 / 热键不可被哈希修复 / Dynamo·Cassandra·Ketama·Chord 应用）——第四、五域交叉（C++ 代码段未采纳，立场登记）。
+- **判非**：全库 SKILL.md / module-memory 对 `一致性哈希`/`consistent hashing` 0 专节（wb-context-compressor 仅一句「自建一致性哈希」作 session sticky，非方法论节；DLQ/扇出/背压/Lease 选主/Actor/确定性重放/CQRS 各管不同编排面）；豆包自留地 WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。

@@ -3,7 +3,7 @@ name: ri-retrospective
 description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/主持·记录·事故负责人三分离/发言权/时间盒议程与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习深度分级（改动作/改假设策略/改学习机制本身·防御惯例与熟练无能阻断双环·反思-重构循环·学习与有效行为不等价须分层验收）。正常事故理论NAT与HRO对照（交互复杂×紧耦合·安全记录好≠高可靠·降耦合与提前预案）。 故障树FTA与事件树ETA（演绎找致祸组合vs归纳看触发后果·定性最小割集/单点失效/共因·量化=触发频率×条件概率乘积）。 FMEA/FMECA与RPN排序陷阱（模式清单≠优先级·RPN序数相乘伪精度与并列·AP表严重度主导·先分档后档内排序） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障有效/独立/可审计三门）。仍未证明栏（四块结构附没证明什么·可照做≠可审计·修正覆盖三分类）·三门有效/独立/可审计·近失改屏障状态·变更分析IS/IS-NOT）
 module: RI
 modules: RI,EI
-version: "2.11.0"
+version: "2.12.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -412,3 +412,17 @@ DevOps AI Toolkit 逐字 prep 四条「**Assemble the timeline in advance.** Pul
 - `https://umbrex.com/?p=342045`（Umbrex 咨询方法论页，WebSearch 逐字：曾正常现失效即 something changed/比较型证据型而非头脑风暴/五类变化维度）——第四域交叉，立场登记。
 - **判非**：全库 SKILL.md 与 module-memory 对 `变更分析`/`change analysis` 0 专节；`IS/IS-NOT` 曾在 r742C 决策时间线语境相邻出现但异命题（那条防评价偏差，本条找因）。豆包自留地 WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
 
+
+
+## r804A · Tripod Beta 事故树：不停在「人误」，沿事件—屏障—人因—组织四段重建（RI · 2026-11-25 实拉，≥3 独立域一手交叉，3 独点）
+
+### 三独点
+- **树是 AND 门串联的 Trio，不是单因链**：Trio 三要素 = 事件（状态变化及其后果）/ 对象（被改变的人或物）/ 变更代理（造成变化的驱动，如「火」作用于「人」→「被烧伤的人」）；两个事件组合成一个结果，结果又成为下一 Trio 的事件/代理，通常 2–5 个 Trio 互联成树；调查从「最后一个正常事件」逆向起手，其后发生的一切才反常。潜在事件（屏障挡住而未实现）也要建模，不能只画已发生的路径｜IEC 62740:2015 C.12 官方标准正文（融合 Reason 瑞士奶酪 + Rasmussen GEMS + Wagenaar Tripod 因果路径，树状因果网络）+ wikii.one Tripod_Beta 译本逐字（Trio 定义/AND 门/从 last normal event 起手）。
+- **先问屏障存在/可用/有效/被正确使用，再追人因**：每个关键事件问「本应有哪些预防/检测/控制/减缓屏障」，屏障状态分有效/失效/缺失（IEC 标准分三态；EHS-SIL 补「被绕过」）；联锁被旁路不能停在「操作员旁路」，须再查旁路授权、报警管理、维护积压、生产计划、风险评估与监督机制——屏障失效只是直接原因，不是结论｜Icologiq 术语表（Tripod Foundation 维护、Energy Institute 出版官方用户指南，Version 6/2023，六步流程：重建事件序列→识别屏障→直接原因→绩效影响因素→组织根因→纠正措施）× IEC 62740 标准 × EHS-SIL 实战指南三域交叉。
+- **三层因果 + 培训不是万能措施**：直接原因（紧邻事件的行为/状态）→ 前提条件（使直接原因更易出现的设备/任务/环境/人员条件，即绩效影响因素）→ 潜在原因（设计/维护/程序/培训/沟通/组织管理决策）；措施优先恢复强化关键屏障、消除共同失效原因，培训只能是措施之一，不能替代工程/设计/管理系统改进；与 §r791C 蝴蝶结（屏障路径图不追组织根因）、§r787C HFACS（四层人因分类）、§r734B CAST/STAMP（控制结构）、§r779C FTA/ETA（布尔路径）分工——本条补「事件—屏障—人因—组织」四段式树与屏障三态｜IEC 62740:2015 原文 + EHS-SIL《Tripod Beta 事故调查怎么做》+ Icologiq 三源逐字。
+
+### 来源与诚信
+- `https://ima.qq.com/wiki/?shareId=...mediaId=pdf_5d86d214...`（IEC 62740:2015 / BS EN 62740:2015 标准 C.12 Tripod Beta 节，WebSearch 逐字：融合 Reason/GEMS/Wagenaar 三理论 / 对象-变更代理 / 屏障三态 / 树状因果网络 / 流程 a-b-c）——第一独立域·标准原文（经标准库镜像取正文，页面为标准节选非全本，如实登记）。
+- `https://www.icologiq.com/glossary/tripod-beta`（Icologiq 术语表，WebFetch 抓全文失败取 WebSearch 逐字：Version 6/2023、Tripod Foundation 维护 + Energy Institute 官方用户指南、三阶段与六步流程、基本风险因素 BRF）——第二独立域·官方方法维护链交叉（厂商词条立场登记）。
+- `https://ehs-sil.com/articles/tripod-beta-incident-investigation-guide.html` + `https://wikii.one/Tripod_Beta`（EHS-SIL 实践指南与 wikii 译本，WebSearch 逐字：三层因果/屏障状态四分/联锁旁路追组织/Trio 三要素/AND 门/从最后正常事件倒推）——第三、四域交叉（wikii 为译本非独立一手，仅作定义互证）。
+- **判非**：全库 SKILL.md / module-memory 对 `Tripod Beta`/`三脚架` 0 专节（`bowtie` 蝴蝶结在 §r791C 是屏障路径图不同方法；HFACS/CAST/STAMP/FTA 各管一段异命题）；与豆包自留地无关。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。

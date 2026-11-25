@@ -1,7 +1,7 @@
 ---
 name: si-safety-governance
 description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。差分隐私、differential privacy、epsilon DP、隐私预算、Laplace 机制、sensitivity 敏感度、组合定理、post-processing immunity、DP-SGD、本地DP中心DP。BOLA、IDOR、越权访问、对象级授权、broken object level authorization、CWE-639。转述授权攻击面、同名对象冒充、能力缺口粉饰、CSRF、跨站请求伪造、synchronizer token、double submit、SameSite、Fetch Metadata、Origin/Referer 校验、token 与会话绑定。原型污染、prototype pollution、__proto__、CWE-1321、Object.create(null)、Object.freeze、--disable-proto、Object.hasOwn、JSON Schema 校验
-version: 2.9.0
+version: 2.10.0
 module: SI
 modules: SI,EI
 ---
@@ -453,3 +453,16 @@ GitHub Docs 官方逐字：「**rotate the affected credential immediately** ...
 - `https://nodejs.com.tw/learn/getting-started/security-best-practices` + `https://node.org.cn/en/learn/getting-started/security-best-practices`（Node 官方社区中译镜像两页，WebSearch 逐字：同一 CWE-1321 段繁简双译互证 CVE 与七项缓解）——第三、四域交叉（镜像非独立一手，仅作译本核对，立场登记）。
 - **判非**：全库 SKILL.md / module-memory 对 `原型污染`/`prototype pollution` 专节 0（`__proto__` 仅 co-learn 1 处子串、异命题）；与 §8.3 反序列化、§15 SSRF、§16 依赖混淆、§17 RAG 入站分工不复用。豆包自留地 WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
 
+
+
+## §二十五 r804C · HTTP 请求走私（CWE-444）：前后端对「请求边界」的分歧，不是单服务器问题（SI · 2026-11-25 实拉，2 独立域官方全文交叉，3 独点）
+
+### 三独点
+- **根因是同一字节流两套长度语义**：HTTP/1 同时允许 `Content-Length`（字节数）与 `Transfer-Encoding: chunked`（十六进制块长 + 0 块终止）；规范要求两者并存时忽略 CL，但多级链路中「有的后端不支持 TE 请求头」「有的 TE 被混淆后不处理」，前后端对边界判断不一致，攻击者让前端请求的一部分被后端当作**下一条请求的开头**前置拼接——「It is effectively prepended to the next request」（PortSwigger 官方逐字）；端到端 HTTP/2 因单一稳健长度机制天然免疫，但 HTTP/2 前端转 HTTP/1 后端的「HTTP downgrading」重新引入该面｜PortSwigger Web Security Academy 官方教程全文 + CWE-444 官方描述「does not interpret malformed HTTP requests or responses in ways that are consistent with how the messages will be processed by those entities at the ultimate destination」。
+- **三种经典形态按「谁用哪个头」分类**：CL.TE（前端按 CL、后端按 TE：0 块终止后 `SMUGGLED` 残留被后端当下一条开头）/ TE.CL（前端按 TE、后端按 CL，须关 Burp「Update Content-Length」且 0 块后带 `\r\n\r\n`）/ TE.TE（两端都支持 TE，但一端被混淆头诱导忽略——`Transfer-Encoding: xchunked`、`Transfer-Encoding : chunked` 冒号前空格、`Transfer-Encoding:[tab]chunked`、`X: X[\n]Transfer-Encoding: chunked`）；CWE-444 另列重复双 TE、双 CL（代理用第二个 CL=54、Web 服务器用第一个 CL=0 → 缓存投毒）与响应走私（头名与冒号间空格、HTTP/1.1 头经 HTTP/1.0 代理）｜PortSwigger 官方 CL.TE/TE.CL/TE.TE 三类逐字示例 + CWE-444 Demonstrative Examples 1–3 + Observed CVE-2020-8287（Node.js 双 TE）/ CVE-2021-37147（LF line ending 响应走私）/ CVE-2005-2088/2089。
+- **预防是两端协同而非单点规范化**：端到端 HTTP/2 且关降级；无法避免降级时按 HTTP/1.1 规范校验重写后的请求（拒头内换行、头名含冒号、方法含空格）；前端规范化歧义请求、**后端拒绝仍歧义的请求并关闭 TCP 连接**；「Never assume that requests won't have a body」——CL.0 与客户端 desync 的根因；服务端处理异常时默认丢弃连接；禁后端连接复用只缓解部分攻击、挡不住 request tunnelling；Browser-powered desync 用完全正常的 CL 头即可让受害者浏览器毒化自己的连接，单服务器站点同样中招｜PortSwigger 官方「How to prevent」五条逐字 + Browser-powered 段；与 §15 SSRF（出网目标面）、§12.3 OAuth state（同意时序）、§22 CSRF（浏览器自动带 cookie）分工——本条管**前后端对同一请求边界的解析分歧**，不复用其控制。
+
+### 来源与诚信
+- `https://portswigger.net/web-security/request-smuggling`（PortSwigger Web Security Academy 官方教程，WebFetch 200 全文逐字：定义/两级链路与复用连接/CL 与 chunked 语法/规范忽略 CL 仍不够/CL·TE/TE·CL/TE·TE 三型与混淆样例/五条预防/browser-powered/HTTP2 免疫与 downgrading；2005 首记、PortSwigger 研究重兴）——第一独立域·官方一手。
+- `https://cwe.mitre.org/data/definitions/444.html`（MITRE CWE-444 Inconsistent Interpretation of HTTP Requests，WebFetch 200 全文逐字：中间 HTTP agent 与终端解析不一致/重复 TE-CL/ALLOWED 映射/Cache Poisoning·Firewall Bypass·凭据暴露三后果/三个 Demonstrative Example/CVE 观测例）——第二独立域·官方漏洞分类一手。
+- **判非**：全库 SKILL.md / module-memory 对 `请求走私`/`request smuggling`/`CWE-444`/`CL.TE` 0 专节（token smuggling 属提示注入异命题；`CL.0`/`desync` 仅字节串命中无专节）；豆包自留地 WB 0 落地。按 rules/07「优＝加厚现有」，0 新建 / 0 合并 / 0 删除。
