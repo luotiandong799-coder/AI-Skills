@@ -2,7 +2,7 @@
 name: multimodal-intelligence
 description: >-
   多模态理解：让 Agent「看懂图片」「读出文字」。生成质量FID可比性陷阱（有限样本协方差使FID随样本量偏高近似1/n·2048维放大/只同样本数同网络同预处理可比·只匹配均值协方差丢多模态结构·保真度与多样性需precision-recall拆开·不读prompt无法评文图匹配）；Vision 管画面语义（界面/故障图/流程图/商品图），OCR 管图片/PDF 文字表格结构化提取：前者看懂意图，后者读取文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen）、纯代码或纯文本任务。色彩管线与色差口径：sRGB线性光·ICC渲染意图与D50 PCS·ΔE公式版本四元验收。；主观评测协议（六项控制/MOS+95%CI/ACR·DSIS·DSCQS·ACR-HR选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。；目标检测与分割评测（IoU定TP/FP/FN·COCO mAP=12指标10阈值平均·Dice=像素F1与IoU单调等价·mIoU与PixelAccuracy分报·mask/box同协议只换IoU算法）。；非视觉捷径与语言先验（VQA 盲模型靠问题文本「闭眼答对」/VQA v2 互补图配对逼模型用视觉/VQA-CP 答案分布偏移打回原形/无图像基线当主实验变量测视觉依赖/开放题归一化与多标注投票）。；文图对齐组合式验收（CLIPScore 词袋化混淆主谓颠倒/VQAScore 用 P(Yes)/GenEval 目标检测实例级计数位置属性绑定·六类分报/GenAI-Bench 1600 组合提示+15000 人评/位置墙与属性绑定是短板）。；物体幻觉评测（CHAIR-I/S 受提示措辞影响可翻倍·POPE 轮询式 yes/no 三负采样 Random·Popular·Adversarial·正负1:1·Yes率偏置·提示鲁棒性std·只测物体存在不测属性数量位置）。
-version: 2.3.0
+version: 2.4.0
 module: PI
 modules: PI
 ---
@@ -360,3 +360,17 @@ alphaXiv 逐字：四种措辞下 POPE 报告平均 F1 67.43、标准差 0.78；
 **独点3** 收益 POPE 最高 +7.4 F1／MME 幻觉子集 +18%，跨 LLaVA-1.5/InstructBLIP/Qwen-VL；α∈[0.25,1] 与 5 种采样策略均鲁棒，7B≈13B 说明堆参数不解决幻觉。边界：只缓解存在性幻觉、噪声方式粗糙、论文用词 mitigate 非消除。
 判重：本体 0 专节；豆包自留地 WB 0 落地。
 来源与诚信：Leng 等 arXiv:2311.16922（DAMO/NTU，2023-11-28）WebFetch 200 一手（全文超时仅取前 15000 字）＋CSDN/DeepWiki/Lacuna/llm-paper-notes 方法细节逐字。逐字全文与判非见 `references/r797B_视觉对比解码VCD.md`。
+
+## 图像缩放的重采样滤波器与混叠：先低通再重采样，滤波器选型是测出来的不是描述的（PI · r811C 独立实拉 2026-11-26，≥2 独立域一手交叉，3 独点）
+
+§r732A 管「服务端静默降采样改写了感知输入的分辨率」、§r750B 管 FID 的 resize 实现差异——本节补**缩放动作本身**：重采样滤波器如何决定混叠/锐度/速度，以及为何这是感知评测的前置变量。
+
+**独点1** 缩小是低通滤波再重采样，不是丢像素——最近邻缩小就是欠采样：奈奎斯特–香农定理逐字「若入射影像沒有高於某個最大值 f_max 的空間頻率…以高於 2 f_max 的取樣率…就能精確擷取訊號」；「取樣慢於此即為欠取樣（undersampling）：高頻無法被表示，而且它們不會單純消失，反而會偽裝成虛假的低頻。這就是混疊（aliasing）的根本原因」，后果是锯齿斜线/闪烁细线/摩尔纹。正解逐字「你必須在取樣之前先做頻帶限制（band-limit）…先稍微模糊，以抗鋸齒光學低通濾鏡，或對每個像素的面積取平均」；「要正確縮小影像，你必須先低通濾波再次取樣，絕不能只是丟掉像素」。判据——把「缩小」当信息无损是错的：物理层高频不可逆丢失，能做的只是按 HVS 做感知重构；此规则同样支配 SIFT/CNN 前处理的图像金字塔。
+
+**独点2** 八种滤波器是「混叠残留 × 锐度 × 速度」三维权衡，且必须看实测数字而非口号：Pillow 13.0.0 实测（1600→400 缩小）残留假图案标准差 NEAREST 90.8 / BOX 10.4 / BILINEAR 1.2 / HAMMING 4.9 / BICUBIC 1.0 / LANCZOS 0.6（越小越干净），真实细节保留 NEAREST 91.3（高只因连混叠一起保留）/ BICUBIC 69.7 / LANCZOS 79.1 / MKS2013 84.3；速度 NEAREST 0.08ms / BILINEAR 5.13ms / BICUBIC 9.12ms / LANCZOS 14.38ms。官方「Short answer」逐字：缩照片用 LANCZOS、近似质量更快用 BICUBIC、「NEAREST only for pixel art or masks whose exact values must not be blended」；「Image.ANTIALIAS was the old name of LANCZOS and was removed in Pillow 10」；Pillow 13 新增 MKS2013（「measured sharper than LANCZOS with about as little aliasing and runs faster」，但仅 resize/thumbnail 可用、rotate/transform 不接受）。判据——报「用什么缩放」须写滤波器名+库版本+是否先 reducing_gap：6000×4000→600×400 直接 LANCZOS 167.6ms、reducing_gap=3 降到 55.1ms 且最大像素差仅 3（肉眼不可见），`thumbnail()` 默认 reducing_gap=2.0；Lanczos 锐利但有振铃（高对比边缘虚假亮暗边），放大「cannot add detail; the filter only decides how to fill the gaps」。
+
+**独点3** 选滤波器要看下游用途，ML 预处理「跟模型训练时一致」压过「视觉上更锐」：「Machine-learning preprocessing → whatever the model was trained with — Usually BILINEAR or BICUBIC; mismatches cost accuracy」；分割 mask/标签图必须 NEAREST（「Other filters blend labels into values that mean nothing」），像素画/QR 码放大也要 NEAREST 保硬边与精确色值。与 §r732A 视觉输入降采样、§r750B FID 对 resize 实现敏感（PIL bicubic 为参考，换实现差 6 分以上）联动：同一张图换滤波器就换掉模型实际看到的像素，感知结论与 FID 数字都会变。判据——感知管线的 resize 滤波器须作为声明项固定并随结果上报，不能让库默认值（`resize()` 不传滤波器对照片用 BICUBIC、对 1/P 模式图用 NEAREST）暗中改变结论；色度抽样（4:2:0 牺牲色度保亮度）是与空间重采样正交的另一维压缩（二手工程口径，立场登记）。
+
+**判重**：`重采样`/`resampling`/`Lanczos`/`bicubic`/`抗锯齿`/`混叠`/`Nyquist` 在 multimodal-intelligence 本体仅 §14.3 FID 一句「换 resize 实现差 6 分」、§r732A 一句「按可控插值预缩放」提及，无滤波器机制/采样定理专节；全库 SKILL.md 0 专节（命中在 co-learn/采购域）。豆包自留地 WB 0 落地。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+**来源与诚信**（≥2 独立域一手 WebFetch 200 逐字）：https://pillowpython.com/guides/resampling-filters/（Pillow 13.0.0 实测页 Updated 2026-11-22：八滤波器枚举值与编号／残留假图案与真实细节标准差／缩小放大速度 ms／reducing_gap=3 167.6→55.1ms 最大差 3／ANTIALIAS=LANCZOS 旧名 Pillow 10 移除／MKS2013-2021／按用途选型表含 ML 预处理与 mask 用 NEAREST）——第一独立域·可复现实测一手；https://jovanaeducation.com/zh/glossary/image-sampling（影像取樣 glossary 逐字：奈奎斯特–香农 2·f_max／欠采样高频伪装低频=混叠／先 band-limit 面积平均或光学低通／「要正確縮小影像…絕不能只是丟掉像素」／最近邻缩小=欠采样／SIFT/CNN 图像金字塔）——第二独立域·术语一手；TrueSight tsight.io 两篇（插值算法对比表、色度抽样 4:2:0，WebSearch 二手立场登记，不冒充一手）。数字挂可复拉 URL；逐字全文与判非见 `references/r811C_重采样与抗锯齿.md`。
