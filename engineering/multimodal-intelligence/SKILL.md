@@ -2,7 +2,7 @@
 name: multimodal-intelligence
 description: >-
   多模态理解：让 Agent「看懂图片」「读出文字」。生成质量FID可比性陷阱（有限样本协方差使FID随样本量偏高近似1/n·2048维放大/只同样本数同网络同预处理可比·只匹配均值协方差丢多模态结构·保真度与多样性需precision-recall拆开·不读prompt无法评文图匹配）；Vision 管画面语义（界面/故障图/流程图/商品图），OCR 管图片/PDF 文字表格结构化提取：前者看懂意图，后者读取文字。当用户发来截图/照片/扫描件/带图文档并要求理解内容、识别界面、判断故障、提取文字或表格时使用。触发词：看这张图、截图分析、识别界面、读一下这个 PDF、提取表格、图片转文字、扫描件识别、流程图理解、故障截图、OCR、图文理解。不适用：生图/改图（走 ImageGen）、纯代码或纯文本任务。色彩管线与色差口径：sRGB线性光·ICC渲染意图与D50 PCS·ΔE公式版本四元验收。；主观评测协议（六项控制/MOS+95%CI/ACR·DSIS·DSCQS·ACR-HR选型/观察者筛选）。；生成式描述评测（SPICE 场景图语义命题 F-score/n-gram 重叠既不必要也不充分/系统级相关 0.88 与句子级 τ 0.45 两口径必须分开报/参考数改变绝对分）。；目标检测与分割评测（IoU定TP/FP/FN·COCO mAP=12指标10阈值平均·Dice=像素F1与IoU单调等价·mIoU与PixelAccuracy分报·mask/box同协议只换IoU算法）。；非视觉捷径与语言先验（VQA 盲模型靠问题文本「闭眼答对」/VQA v2 互补图配对逼模型用视觉/VQA-CP 答案分布偏移打回原形/无图像基线当主实验变量测视觉依赖/开放题归一化与多标注投票）。；文图对齐组合式验收（CLIPScore 词袋化混淆主谓颠倒/VQAScore 用 P(Yes)/GenEval 目标检测实例级计数位置属性绑定·六类分报/GenAI-Bench 1600 组合提示+15000 人评/位置墙与属性绑定是短板）。；物体幻觉评测（CHAIR-I/S 受提示措辞影响可翻倍·POPE 轮询式 yes/no 三负采样 Random·Popular·Adversarial·正负1:1·Yes率偏置·提示鲁棒性std·只测物体存在不测属性数量位置）。
-version: 2.4.0
+version: 2.5.0
 module: PI
 modules: PI
 ---
@@ -374,3 +374,18 @@ alphaXiv 逐字：四种措辞下 POPE 报告平均 F1 67.43、标准差 0.78；
 **判重**：`重采样`/`resampling`/`Lanczos`/`bicubic`/`抗锯齿`/`混叠`/`Nyquist` 在 multimodal-intelligence 本体仅 §14.3 FID 一句「换 resize 实现差 6 分」、§r732A 一句「按可控插值预缩放」提及，无滤波器机制/采样定理专节；全库 SKILL.md 0 专节（命中在 co-learn/采购域）。豆包自留地 WB 0 落地。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。
 
 **来源与诚信**（≥2 独立域一手 WebFetch 200 逐字）：https://pillowpython.com/guides/resampling-filters/（Pillow 13.0.0 实测页 Updated 2026-11-22：八滤波器枚举值与编号／残留假图案与真实细节标准差／缩小放大速度 ms／reducing_gap=3 167.6→55.1ms 最大差 3／ANTIALIAS=LANCZOS 旧名 Pillow 10 移除／MKS2013-2021／按用途选型表含 ML 预处理与 mask 用 NEAREST）——第一独立域·可复现实测一手；https://jovanaeducation.com/zh/glossary/image-sampling（影像取樣 glossary 逐字：奈奎斯特–香农 2·f_max／欠采样高频伪装低频=混叠／先 band-limit 面积平均或光学低通／「要正確縮小影像…絕不能只是丟掉像素」／最近邻缩小=欠采样／SIFT/CNN 图像金字塔）——第二独立域·术语一手；TrueSight tsight.io 两篇（插值算法对比表、色度抽样 4:2:0，WebSearch 二手立场登记，不冒充一手）。数字挂可复拉 URL；逐字全文与判非见 `references/r811C_重采样与抗锯齿.md`。
+
+
+## 多目标跟踪（MOT）评测：MOTA 检测偏科 / IDF1 关联偏科 / HOTA 几何平均平衡 + 五类错误分解（PI · r816C 独立实拉 2026-11-27，≥2 独立域一手交叉，3 独点）
+
+§r766B 评单帧检测/分割、§r790B 评文图对齐、§r794B 评幻觉——本节补「跨帧身份关联」这一维度：MOT 分数为何必须三指标分报、HOTA 怎么平衡、分数掉了怎么定位错误类型。
+
+**独点1** 三指标偏科不同，必须分报不可互证：原论文 Fig.1 逐字「MOTA and IDF1 overemphasize the effect of accurate detection and association respectively. HOTA balances both」；「MOTA performs both matching and association scoring at a local detection level which biases scores toward measuring detection, while IDF1 performs both at a trajectory level which ends up being biased towards association. HOTA matches at the detection level while scoring association globally over trajectories」。MOTA=1−(|FN|+|FP|+|IDSW|)/|gtDet|（式2，检测级逐帧一对一匹配，IDSW 只与「同 gtID 的上一个 TP」比、不计 ID Transfer）；IDF1=|IDTP|/(|IDTP|+0.5|IDFN|+0.5|IDFP|)（式6，轨迹级匹配，对身份保持敏感，但对检测非单调）。判据——DeepSORT「ID 切换少 45% 但 MOTA 只多 1.6 分」、FairMOT「只训检测、re-ID 随机的模型 MOTA 反而更高」均说明 MOTA 高不等于跟得对；MOTA 高 IDF1 低=老丢 ID 又重启；两者矛盾用 HOTA 裁决。
+
+**独点2** HOTA 是几何平均（不是二手常写的调和平均），且跨阈值积分有顺序约束：原式21 `HOTA_α=√(DetA_α·AssA_α)`，DetA=|TP|/(|TP|+|FN|+|FP|)、AssA=(1/|TP|)Σ𝒜(c)、𝒜(c)=|TPA|/(|TPA|+|FNA|+|FPA|)（「double Jaccard」）；最终 `HOTA=∫₀¹HOTA_αdα≈(1/19)Σ_{α∈{0.05..0.95}}`，每个 α **各自重新匹配**，且逐字「DetA and AssA should only be combined into HOTA before integrating over α values, not afterwards」。判据——CSDN 把 HOTA 写成 `2·AssA·DetA/(AssA+DetA)`（调和平均）是**错的**，以原论文几何平均为准；报 HOTA 须带 α 网格与「先合成后积分」顺序。
+
+**独点3** 五类基本错误拆成子指标，单一标量不足以定位：原论文逐字「false negatives, false positives, fragmentations, mergers and deviations … equivalent to detection recall, detection precision, association recall, association precision, and localisation」。DetRe=|TP|/(|TP|+|FN|)、DetPr=|TP|/(|TP|+|FP|)、DetA=DetRe·DetPr/(DetRe+DetPr−DetRe·DetPr)；AssRe/AssPr 逐 TP 求关联 recall/precision 再同式合成 AssA（低 AssRe=把一物体拆成多轨、低 AssPr=一轨跨多物体）；LocA=逐 TP 空间相似度跨 α 积分（「similar to MOTP, however evaluated over multiple localisation thresholds」）。MOTChallenge 官方 19 项：MOTA/IDF1/HOTA/MT/ML/FP/FN/Rcll/Prcn/AssA/DetA/AssRe/AssPr/DetRe/DetPr/LocA/FAF/ID Sw./Frag（ID Sw ratio=#ID switches/recall、Frag ratio=#FM/recall）；MOT16 MOTeD 实测 MOTA 61.9/IDF1 56.2/HOTA 46.2 说明同跟踪器三项差距大。判据——分数掉了先定位 DetRe/DetPr/AssRe/AssPr/LocA 哪一类再改模型，不拿单一 MOTA 当 go/no-go；用 TrackEval 官方脚本复现 protocol。
+
+**判重**：`MOTA`/`IDF1`/`HOTA`/`多目标跟踪` 全库 SKILL.md 0 专节；豆包自留地 WB 0 落地。与 §r766B 检测/分割（单帧 IoU/mAP/Dice）、§r790B 文图对齐、§r794B 幻觉分工：那些评单帧或单图，本节评跨帧 ID 关联与时序轨迹。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+**来源与诚信**（≥2 独立域一手）：https://arxiv.org/html/2009.07736v2（Luiten et al. IJCV，WebFetch 200 全文逐字：Fig1 三跟踪器偏科／式2 MOTA／式4-6 IDF1／式13-16 HOTA double Jaccard+跨阈值积分／式18-21 DetA·AssA 几何平均／式22-27 DetRe·DetPr·AssRe·AssPr／五基本错误分类／「combine before integrating, not afterwards」）——第一独立域·原论文一手；https://motchallenge.net/method/MOT=2950&chl=5&vidSeq=MOT16-12（MOTChallenge 官方归档 WebFetch 200 全文逐字：19 项指标全称表／MOT16 MOTA 61.9 IDF1 56.2 HOTA 46.2 ID Sw.1003(14.6%) Frag 2776(40.5%)／页面标 evaluation service closed、Archive 2026-04-16 如实登记）——第二独立域·官方一手；docsaid.org 中文解读 + qubittool 词条 + CSDN（WebSearch 逐字：DeepSORT 45%/1.6 转述／CSDN 调和平均公式错误已按一手纠正）——第三～五域交叉（立场登记）。诚信：`arXiv:2009.13713` 号错配（实为数学论文《Chaos and frequent hypercyclicity…》）WebFetch 检出后整篇弃用，改用正确号 2009.07736，不虚构；逐字全文与判非见 `references/r816C_MOT评测MOTA-IDF1-HOTA.md`。

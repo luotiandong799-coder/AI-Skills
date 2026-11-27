@@ -1,7 +1,7 @@
 ---
 name: ci-context
 description: 上下文工程与预算（Context Intelligence）。当任务涉及长上下文压缩、token预算与窗口退化、提示缓存命中率、多agent上下文隔离与缓存税、把每次要成立的约束放进确定性hook而非advisory context、注意力预算架构根因、干扰项与结构连贯性对准确率的影响、压缩不可逆与窗口外可查询对象、标称窗口与有效长度区分、长上下文基准族证明边界、评估顺序与配置误判时使用。是13模块中CI载体、装配逐级留痕、检索与答案评估分离、块完整性与权限判据。前缀缓存块级链式哈希/三级驱逐/隔离维度。context editing（removal≠summarization·applied_edits回执+count_tokens预览破缓存）。注意力汇聚与流式无限上下文（softmax残余压到首token·驱逐sink触发困惑度悬崖·4 sink token+滚动窗·sink量化脆弱性与off-by-one）。注意力两时间窗（H2O累积淘汰+近端双保·SnapKV预填充前投票·静态剪枝随指令错位）。RoPE外推家族（PI线性插值/NTK改base保高频/YaRN按波长混合加温度·保真注意力模式与entropy才是成败真因）。KV低比特量化（KIVI非对称2bit·key逐通道固定outlier·value逐token混合·key移注意力vs value稀释·倍率挂模型口径）。软token压缩gist/AutoCompressor·KV分层·FlashAttention（tiling增量softmax·重计算换HBM·exact非近似）·MemGPT虚拟上下文（RAM↔外存分页·70%水位换页·递归摘要失真）。选择性状态空间Mamba（S6参数随输入变·弃卷积改硬件感知扫描·状态压缩非无损·SSD对偶A=αI·固定缓存≠恒定内存·精确召回是瓶颈）·长上下文退化根因n²注意力与训练分布（位置偏倚U型·有效长度<标称）·MQA/GQA 共享KV头（KV∝KV头数·MQA压到1/GQA分组H/G·与量化驱逐分页正交·uptraining均值池化5%算力·解码带宽瓶颈）·投机解码（draft提k候选·目标一次并行验证·接受率min(1,p/q)+残差max(0,p−q)保分布·拒绝丢整条后缀·每目标趟承诺token才是速度量·draft对齐/词表/温度mask陷阱·Medusa/EAGLE去独立drafter）
-version: "2.12.0"
+version: "2.13.0"
 module: CI
 modules: CI
 ---
@@ -396,3 +396,18 @@ GitHub 一手整合逐字：「**Clearing invalidates the cached prefix from the
 **判重**：`BPE`/`byte fallback`/`SentencePiece`/`WordPiece`/`Unigram`/`tokenizer` 在 ci-context 本体仅 §r742B-3「Ignoring tokenization in length targets」与 §r763B「用目标 tokenizer 重数」两处**纪律性提及**，无算法/覆盖率/多语言预算的机制专节；`分词`/`子词`/`多语言 token 膨胀` 全库 SKILL.md 0 专节（命中集中在 co-learn/豆包自留地/采购域）。豆包自留地 `wb-execute-discipline`/`wb-context-compressor` WB 0 落地。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。与 §r742B 评估顺序、§r763B 提示压缩分工：那两条把分词当前提，本节补分母机制。
 
 **来源与诚信**（≥3 独立域一手 WebFetch 200 逐字）：https://www.compilenrun.com/docs/ai/llm/llm-tokenization/llm-wordpiece-unigram-sentencepiece/（三算法对比表逐字／byte fallback 256 token／character_coverage 0.9995／dummy prefix／六条 common mistakes／模型归属表）——第一独立域·一手教程；https://www.aicomputerinstitute.com/grades/12/chapters/g12s-tokenizer-bpe（▁ 可逆 detokenize／Unigram 自顶向下剪枝 shrinking_factor=0.75／subword regularization／byte-level 256 无 UNK／英印 27B vs 77B、2.85× floor 与复合放大逐字）——第二独立域·一手章节；http://aicassindra.com/blogs/transformer_math/tm_sentencepiece_deep.html（Belgavi「One library, several model types」／V×d 词表算例 32k→128k 13% vs +197M／sublinear 32–64k sweet spot 逐字）——第三独立域·一手；中文工程站 fudengji/guanweilu/tsight（多语言 token 比率表、领域词表扩充 15–20%，WebSearch 二手立场登记，不冒充一手）。数字挂可复拉 URL；逐字全文与判非见 `references/r811A_分词器与token预算.md`。
+
+
+## MLA 多头潜在注意力：把 KV 压成共享低秩 latent，解耦 RoPE 保住矩阵吸收（CI · r816A 独立实拉 2026-11-27，≥2 独立域一手交叉，3 独点）
+
+§r802C 独点3 把「DeepSeek MLA 压成共享 latent 而非减头数」作为 GQA 的对照一句带过；本节补 MLA 的完整机制：它改的是「每份 KV 的体积」（低秩），与 MQA/GQA 改「存几份」正交。
+
+**独点1** 低秩 KV 联合压缩，缓存只存 latent 不存展开的头：`c_t^{KV}=W^{DKV}h_t`（d_c≪d，DeepSeek-V2 取 512），`k^C=W^{UK}c`、`v^C=W^{UV}c` 上投影恢复多头表达，推理只缓存 c_t^{KV}。官方摘要逐字「MLA guarantees efficient inference through significantly compressing the Key-Value (KV) cache into a latent vector」，对比 DeepSeek 67B「reduces the KV cache by 93.3%, and boosts the maximum generation throughput to 5.76 times」，236B 总参/21B 激活/128K 上下文。维度算例（d=5120,h=128,d_k=d_v=128）：MHA 每 token h(d_k+d_v)=32768，MLA d_c+d_r=512+64=576，约 57×；苏剑林逐字「MLA的KV Cache大小跟h无关，增大h只会增加计算量和提升模型能力，但不会增加KV Cache」。判据——与 GQA 分工：GQA 减「存几份」（每份维度不变），MLA 压「每份体积」；「MLA被视为GQA的一般化……用一个恒等变换技巧进一步压缩KV Cache，同时用混合方法兼容RoPE」。
+
+**独点2** 矩阵吸收是推理期关键，RoPE 的位置依赖与之直接冲突：无 RoPE 时 `q_t k_i^T = x_t(W_q W_k^T)c_i^T`，K 上投影吸收进 Q 侧、V 上投影吸收进输出投影，无需把 c 解压成 K/V 即可算 attention，c 所有头共享=推理期恒等为一个 MQA。但 RoPE 插入 `R_{t-i}` 后 `W_q R_{t-i} W_k^T` 依赖相对位置、无法合并成固定投影矩阵——苏剑林逐字「MLA不是不能加RoPE，而是加了RoPE之后无法用恒等变换技巧来减少KV Cache」。判据——说「MLA 直接套 RoPE」错，必须解耦。
+
+**独点3** 解耦 RoPE + Q 也低秩但不进 cache：Q、K 各拆 content（低秩+吸收）与 RoPE part，其中 RoPE key `k_t^R` 无头标记=所有头共享、d_r=d_k/2=64；每 token cache=c(512)+k^R(64)=576。Q 压成 `c'_i`（d_c'=1536，与 d_c=512 不同、输入仍是 x_i 不是 c_i，苏剑林强调「不是笔误」），Q 不缓存、压缩只为省训练参数与激活。判据——报 MLA cache 须带 d_c/d_r/h/d 与基线，不能只说「压缩 57 倍」；低秩还原有信息损失，d_c 够大才忽略；与 §r802C MQA/GQA、§r775B KIVI 位宽、§r767B H2O/SnapKV token 去留、§r783B placement、§r807A 投机解码调度正交可叠加。
+
+**判重**：`MLA`/`多头潜在注意力`/`latent`/`低秩` 在 ci-context 本体仅 §r802C 独点3 一句对照提及，非机制专节；全库其余命中在豆包自留地/co-learn/采购域，WB 0 落地。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。
+
+**来源与诚信**（≥2 独立域一手）：https://arxiv.org/abs/2405.04434（DeepSeek-V2 官方摘要 WebFetch 200 逐字：KV 压进 latent vector／−93.3% KV cache／5.76× max generation throughput／−42.5% training cost vs DeepSeek 67B／236B-21B-128K-8.1T；Submitted 2024-05-07 v1 / revised 2024-06-19 v5）——第一独立域·原论文官方一手；https://spaces.ac.cn/archives/10091（苏剑林《MLA 的本质》WebFetch 200 全文逐字推导：c_i=x_i W_c／无 RoPE 矩阵吸收 qk^T=x(W_q W_k^T)c^T／R_{t-i} 破坏固定投影／解耦 k_t^R 共享／d_c=512 d_r=64 d_c'=1536／cache 576 vs MHA 32768／「本质是 GQA 一般化+吸收+混合兼容 RoPE」）——第二独立域·一手推导全文；CSDN wuud__/messywind/DeepSeek 社区 + 百度百科（WebSearch 逐字：56.9×／GQA 省数量 MLA 压体积／采纳于 V3 R1 Kimi K2 GLM-5）——第三～五域交叉（立场登记）。摘要数字对比基线是 DeepSeek 67B，不写成「比所有 MHA 快 5.76×」；苏剑林行向量记号与论文列向量记号已对照；57× 挂 d_c=512/d_r=64/h=128 设定；逐字全文与判非见 `references/r816A_MLA多头潜在注意力.md`。

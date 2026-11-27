@@ -2,7 +2,7 @@
 name: personal-ai-employees
 description: >-
   个人 AI 员工体系（8 岗）总路由与五步执行协议。把用户目标自动分派给 8 个专职 AI 员工（战略顾问/供应链专家/职业发展顾问/销售顾问/学习教练/信息分析师/自动化工程师/知识管理专家），每岗统一走「任务分析→执行方案→输出结果→复盘优化→Skill沉淀」，并复用 personal-ai-os 与现有 wb-* / 专家技能，不新建重复能力。触发词：个人AI员工、AI员工体系、AI战略顾问、AI供应链、AI职业发展、AI销售顾问、AI学习教练、AI信息分析、AI自动化工程师、AI知识管理、哪岗来做、分派任务、员工路由、agency、个人AI公司、我的AI团队。finalizer、终结器、两阶段删除、deletionTimestamp、finalizers 清空、删除钩子、owner reference 清理、卡住的 finalizer、强制删除 unsafe-delete、孤儿资源清理。Actor模型、actor、消息传递、mailbox、无共享状态、位置透明、有状态worker。工作流确定性、非确定性错误、replay重放、Event History、Command比对、版本化patch、Worker Versioning、SideEffect、计时器顺序
-version: 1.15.0
+version: 1.16.0
 agent_created: true
 module: OI
 modules: OI,MI
@@ -367,3 +367,19 @@ modules: OI,MI
 - `https://ithelp.ithome.com.tw/articles/10414863`（iT 邦帮忙 Day11 引 Google SRE Book：deadline 是「剩余预算」非「固定时长」，1.0s→排队 0.8s→剩 0.2s→provider 取 min(0.25,0.2)=0.2s；「每一层都有 timeout 是必要条件不是充分条件」）——第三独立域·一手技术文（对 SRE Book 为二手转述，立场登记）。
 - `https://grpc.io/blog/deadlines` + `https://engineering.denis-darkin.xyz/distributed-patterns/timeout-design`（WebSearch 逐字：always set a deadline／两端独立判定可能不一致／Timeout Budgets 每步消耗预算／Release It!+Google SRE canonical sources）——第四、五域交叉。
 - **判非**：`deadline propagation`/`截止时间传播`/`剩余预算`/`DEADLINE_EXCEEDED` 在 personal-ai-employees 本体仅 §r807B 一句「PM 状态暴露 deadline、定时 timeout 恢复命令」提及，非跨服务传播机制专节；全库 SKILL.md 0 专节（agent-guild 有 cron/审批超时但异命题），豆包自留地 WB 0 落地。与 §r765A 背压（管流速）、§r807B PM（管流程状态与补偿）、§r748C 并发预算分工：那些管流量/状态/槽位，本节管时间预算的跨跳契约。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。数字/术语挂可复拉 URL；逐字全文与判非见 `references/r811B_Deadline传播.md`。
+
+
+## r816B · Kubernetes 三类探针：失败动作各不同，慢启动用 startup 兜底（OI · 2026-11-27 实拉，≥2 独立域一手交叉，3 独点）
+
+§r777A 把「readiness probe」列为 reconcile 不解决的边界、§r811B 讲时间预算跨跳传播——本节补编排里最基础也最常被混用的三类健康探针：它们的失败动作、慢启动如何兜底、配置面两张表。
+
+### 三独点
+- **三探针是三种失败动作，不是同一检查的三个档位**：startup「检查应用是否已启动……在它成功之前不执行 liveness/readiness，仅在启动时执行一次（非周期），失败即杀容器按重启策略」；liveness「决定何时重启容器，可捕获死锁（应用在运行但无法取得进展），失败次数超过容忍即重启，不等 readiness 成功」；readiness「决定容器何时准备好接受流量，失败则由 EndpointSlice 控制器把 Pod IP 从所有匹配 Service 的 EndpointSlice 移除，容器继续跑，全生命周期持续运行」。kubelet 三结果 Success/Failure/**Unknown**（Unknown 不采取任何行动继续检查）；未提供某探针恒视为 Success，但**readiness 在初始延迟前视为 Failure**。官方警告「错误实现 liveness 会导致级联故障：高负载下重启→客户端请求失败→剩余 Pod 负载增加」「错误实现 readiness 会让容器内进程数不断增长直至资源耗尽」。判据——「加了健康检查」须回答：失败是杀还是摘、启动期一次性还是全周期、四机制选哪种。
+- **慢启动用 startup 而非拉长 liveness 间隔**：官方「不必设置较长 liveness 间隔，而是为启动阶段单独配置探针，允许比 liveness 更长的执行时间」；定量判据「容器通常启动超过 `initialDelaySeconds + failureThreshold × periodSeconds` 就应配 startup，对 liveness 同一端点检查，把 failureThreshold 调高以允许启动而不改 liveness 默认值」（periodSeconds 默认 10 秒）。分工：要区分「应用已失败」与「仍在处理启动数据」用 **readiness**；启动期加载大量数据/配置/迁移用 **startup**。liveness 常见模式=与 readiness 同低成本 HTTP 端点但 failureThreshold 更高，确保被强杀前有段时间被观察为未就绪；进程能自崩的容器未必需要 liveness（kubelet 按 restartPolicy 处理）。
+- **四检查机制与六配置字段是两张独立表**：机制 `exec`（退出码 0；每次派生多进程，高 Pod 密度+短间隔有 CPU 开销）/`grpc`（SERVING；GA v1.27；必须配 port，可用 service 区分同类探针同端点，不能按名指定端口或自定义 host）/`httpGet`（200≤code<400）/`tcpSocket`（端口开即健康；kubelet 在节点侧建连，host 不能用服务名）。字段 initialDelaySeconds(默认0/最小0，有 startup 时 liveness/readiness 延迟在 startup 成功前不计时)／periodSeconds(默认10/最小1)／timeoutSeconds(默认1/最小1)／successThreshold(默认1，liveness+startup 必须为1)／failureThreshold(默认3/最小1，startup/liveness 连续失败触发重启、readiness 只把 Ready 置 false)／terminationGracePeriodSeconds(探针级 GA v1.28，1.25+ 可设、Pod 级与探针级同时存在取探针级、**不能给 readiness 设否则 API Server 拒绝**)。HTTP 两坑：重定向只同主机跟随（跨主机或 ≥11 次视为 Success 记 `ProbeWarning`）、响应体 >10KiB 停读只看状态码（大 body 产生 connection reset/broken pipe，用专用小响应体端点）。
+
+### 来源与诚信
+- `https://kubernetes.io/zh-cn/docs/concepts/workloads/pods/probes/`（官方中文 WebFetch 200 全文逐字：三探针类型/失败动作/何时用/四机制/三结果/六字段/10KiB/探针级宽限期；页面自标「信息可能已过时，请查看英文版」如实登记）——第一独立域·官方一手。
+- `https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes`（官方英文 WebFetch 200 全文逐字：readiness 让容器自行下线/grpc SERVING/initialDelay 当前版本始终遵守/redirect same-host-only/11 redirects ProbeWarning/10KiB）——同官方英文一手（同一来源族交叉校验）。
+- `https://kubernetes.ac.cn/docs/concepts/configuration/liveness-readiness-startup-probes/`（v1.36 中文镜像 WebFetch 200 全文逐字，最后修改 2026-04-06）——第二独立域·镜像交叉。
+- **判非**：探针在 personal-ai-employees 本体仅 §r777A 一句「交给 init container/readiness probe/admission policy」提及，非机制专节；全库命中多在 engineering/* 与 co-learn 均为异命题，豆包自留地 WB 0 落地。与 §r777A reconcile（纠偏循环）、§r781A 选主、§r807B PM（流程状态与补偿）、§r811B deadline（跨跳时间预算）分工：那些管纠偏/资格/流程恢复/时间传播，本节管 kubelet 三探针的失败动作与配置面。按 rules/07「增＝加厚现有」，0 新建 / 0 合并 / 0 删除。特性状态绑版本（探针级宽限期 v1.28 GA、gRPC v1.27 GA、HTTP2/gRPC TLS v1.37 Alpha 默认禁用），User-Agent 版本号随 kubelet（1.37/1.36）不写成普适常量；逐字全文与判非见 `references/r816B_K8s三类探针.md`。

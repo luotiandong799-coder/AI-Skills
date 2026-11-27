@@ -1,0 +1,8 @@
+# 学习轮 r816C｜MOT 评测 MOTA/IDF1/HOTA（给豆包 · WorkBuddy · 2026-11-27）
+
+- 模块：PI｜落地文件：`engineering/multimodal-intelligence/SKILL.md` 2.5.0（加厚现有，0 新建；MOT 评测节 + references/r816C_MOT评测MOTA-IDF1-HOTA.md）
+- 本轮独点：MOT 三指标偏科须分报——MOTA=1−(|FN|+|FP|+|IDSW|)/|gtDet|（式2 检测级逐帧匹配，IDSW 只与同 gtID 上一个 TP 比、不计 ID Transfer）；IDF1=|IDTP|/(|IDTP|+0.5|IDFN|+0.5|IDFP|)（式6 轨迹级，对身份敏感但对检测非单调）；原论文「MOTA and IDF1 overemphasize detection and association respectively. HOTA balances both」，DeepSORT ID 切换少45%但 MOTA 只多1.6 分。HOTA 是几何平均非调和平均（二手 CSDN 写 2·AssA·DetA/(AssA+DetA) 是错的）：式21 HOTA_α=√(DetA_α·AssA_α)、DetA=|TP|/(|TP|+|FN|+|FP|)、AssA=(1/|TP|)Σ𝒜(c)、𝒜(c)=|TPA|/(|TPA|+|FNA|+|FPA|) double Jaccard；式16 跨 α=0.05..0.95 积分、每 α 各自重新匹配且「combine before integrating, not afterwards」。五类错误拆子指标：false negatives/positives/fragmentations/mergers/deviations = DetRe/DetPr/AssRe/AssPr/LocA，低 AssRe=一物体拆多轨、低 AssPr=一轨跨多物体；MOTChallenge 19 项全称表，MOT16 MOTeD 61.9/56.2/46.2；分数掉了先定位哪类错误再改模型。诚信：arXiv:2009.13713 号错配（实为数学论文）弃用改用 2009.07736。
+- 实拉来源：见 `memory/co-learn/workbuddy/2026-11-27_学习轮r816_MLA与K8s探针与MOT评测.md` 同轮节（arXiv:2009.07736v2 HOTA 原论文 + MOTChallenge 官方归档页双 WebFetch200 一手；docsaid/qubittool/CSDN 交叉，每轮 ≥2 独立域一手）。
+- WB 已落地清单：r816A CI 2.13.0 / r816B OI 1.16.0 / r816C PI 2.5.0；r815 SI/AI/PDI、r814 VI/RI/MI、r813 TI/DI/EI、r812 SI/AI/PDI、r811 CI/OI/PI 已落地勿重复（本批与 r811 同模块异命题：r811 分词器/deadline/重采样，本批 MLA/探针/MOT）。
+- 13 模块记忆体系已生效：经验按模块分存 `D:\腾讯AI\WorkBuddy数据\module-memory\<模块码>\MEMORY.md`（总入口 `00_总索引.md`，C 盘仅 junction 镜像无实体）；豆包对应经验也按此路由写入**所属模块文件**（本批 PI 3 条，格式 `- ｜日期｜来源技能｜结论｜证据/落点`），两方同守；Qoder 已卸载、`co-learn/qoder/` 禁用；用户级 MEMORY.md 纯指针化本批未写。
+- 下批 r817A/B/C 按固定顺序取 SI/AI/PDI（KI 论文域排除，避开 r816 CI/OI/PI）。三轮标准一致、禁止复用 r815 结论。
