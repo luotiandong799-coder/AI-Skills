@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
-description: 因果推理与批判性思考（Thinking Intelligence）：区分相关与因果、评估真实贡献、反事实推演、识别 LLM 关联误判因果时调用。基于 Pearl 因果阶梯/do-calculus/SCM/DAG/后门前门调整。；图尔敏论证图式（六要素/隐含 warrant/证成与反驳）；认知接种与预驳斥；因果发现（CPDAG 等价类/PC·GES/LiNGAM 非高斯定向）；面板准实验（DiD 平行趋势只能事前诊断/SCM·SDID 加权反事实）；IV 与 LATE（识别 complier/排除限制不可检验/多工具失效）；RDD（阈值局部效应/带宽与 CCT 偏差修正）；目标试验仿真 TTE（七组件协议先写/设计缺陷比统计更致命/；永生时间偏倚 time-zero 对齐/clone-censor-weight+IPCW）；E-value 未测混杂阈值；G 方法（g-computation 前向模拟/与 IPTW-MSM 对称差异/g-null 悖论/双重稳健）；TWFE 偏误与稳健 DiD（异质效应负权重/CS·SA·stacked）；中介分析（estimand 先行 CDE/NDE/IDE）；倾向得分（estimand 先行/PS 非结局模型）；阴性对照 NCO/NCE 偏倚探针；贝叶斯因子 BF₁₀/BF₀₁（似然比更新赔率/可量化支持零假设/Jeffreys 与 Kass-Raftery 标度/BIC≈-2lnBF）。
-version: 2.10.0
+description: 因果推理与批判性思考（Thinking Intelligence）：区分相关与因果、评估真实贡献、反事实推演、识别 LLM 关联误判因果时调用。基于 Pearl 因果阶梯/do-calculus/SCM/DAG/后门前门调整。；图尔敏论证图式（六要素/隐含 warrant/证成与反驳）；认知接种与预驳斥；因果发现（CPDAG 等价类/PC·GES/LiNGAM 非高斯定向）；面板准实验（DiD 平行趋势只能事前诊断/SCM·SDID 加权反事实）；IV 与 LATE（识别 complier/排除限制不可检验/多工具失效）；RDD（阈值局部效应/带宽与 CCT 偏差修正）；目标试验仿真 TTE（七组件协议先写/设计缺陷比统计更致命/；永生时间偏倚 time-zero 对齐/clone-censor-weight+IPCW）；E-value 未测混杂阈值；G 方法（g-computation 前向模拟/与 IPTW-MSM 对称差异/g-null 悖论/双重稳健）；TWFE 偏误与稳健 DiD（异质效应负权重/CS·SA·stacked）；中介分析（estimand 先行 CDE/NDE/IDE）；倾向得分（estimand 先行/PS 非结局模型）；阴性对照 NCO/NCE 偏倚探针；贝叶斯因子 BF₁₀/BF₀₁（似然比更新赔率/可量化支持零假设/Jeffreys 与 Kass-Raftery 标度/BIC≈-2lnBF）；孟德尔随机化 MR（遗传变异当工具变量模拟自然 RCT/三假设相关性 F>10·独立性 G⊥U·排他性 α=0/水平多效性双向错误/IVW·MR-Egger 截距·Weighted median 敏感性分析/群体平均效应边界）。
+version: 2.11.0
 module: TI
 modules: TI,EI
 ---
@@ -484,3 +484,10 @@ Barrios 三条 takeaway 逐字：①「The bias is arithmetic」——TWFE 是�
 - `http://scipedia.bohrium.com/sciencepedia/feynman/epidemiology_undergraduate-Bradford_Hill_guidelines_for_causal_inference`（玻尔科学百科，WebSearch 逐字：时序性唯一铁律/启发式非清单）——第三独立域·科学百科一手。
 - 诚信降级：Wikipedia 原页 WebFetch fetch failed 未采纳全文；Wikiwand/Wikii 中译镜像仅作中文口径核对非一手。
 - **判重**：全库 SKILL.md/module-memory/co-learn 对 `Bradford Hill`/`希尔准则` 0 专节（r786A E-value references 仅一句旁及）；与 §22/§34/§13–21 异命题。豆包自留地 0 落地。按 rules/07「增＝加厚现有」，0 新建/0 合并/0 删除。
+
+## 三十六、孟德尔随机化 MR：用遗传变异当工具变量模拟「自然 RCT」（TI · r813A 独立实拉 2026-11-27，≥3 独立域一手交叉，3 独点；正文下沉 `references/r813A_孟德尔随机化.md`）
+> 与 §13 IV/LATE（一般工具变量识别）、§22 E-value（混杂强度阈值）、§34 BF（证据强度）、§35 Hill（证据组织）分工：本章管**遗传工具这一具体载体**——它为何能规避反向因果、特有威胁（群体分层/水平多效）与对应敏感性分析。ratio estimate `β̂_XY=β_GY/β_GX`。
+- **36.1 三假设两条可检验、排他性只能靠生物学知识+敏感性分析**：相关性 F>10 且 p<5×10⁻⁸（查 GWAS）/独立性 G⊥U（群体分层用主成分或家系内校正）/排他性 α=0 即 G→X→Y 无水平多效（不可直接检验，MR-Egger 截距诊断）。禁写「基因随机分配所以因果成立」——随机只支撑独立性。
+- **36.2 水平多效性造双向错误**：既造虚假非因果关联（假阳性）也抵消真效应致假阴性（咖啡-吸烟例）；只防前者会漏「MR 无显著⇒无因果」误读。多方法分工非二选一：IVW 效能最高但依赖工具全有效或平衡多效、MR-Egger 诊断方向性多效但依赖 InSIDE 且效能低、Weighted median 在≥50% 工具有效时稳健；报告须主估计+≥2 敏感性分析+Cochran Q 异质性+Egger 截距。
+- **36.3 边界**：两样本 MR 须 harmonize 效应等位基因、样本重叠会偏；群体平均因果效应不是个体确定性命运，MR 只是「一条证据」非唯一/决定性证据。与 r797A 阴性对照（NCO/NCE 偏倚探针）正交。
+- 来源与诚信（r813A · 2026-11-27）：玻尔科学百科预防医学页 WebFetch200 逐字（定义/π≠0·G⊥U·α=0/群体平均边界）+ 医咖会梳理 EHJ 综述 WebFetch200 逐字（三假设/水平多效双后果）+ pdrohde 英文教程 WebFetch200 逐字（IVW/MR-Egger/Weighted median 方法比较表/Cochran Q）；Wikipedia fetch failed 未采纳、玻尔两分册按来源族折叠。逐字全文与判非见下沉文件。全库 0 专节、豆包自留地 0 落地。

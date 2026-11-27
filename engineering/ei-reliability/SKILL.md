@@ -4,7 +4,7 @@ description: 执行可靠性工程（Execution Intelligence · Reliability）。
 module: EI
 modules: EI,VI
 ；Amdahl 定律与 Gustafson 定律（固定问题强扩展串行比例设加速上限 S=1/((1-P)+P/N)·串行 10% 封顶 10×·增加核数不改 P 收效递减/Gustafson 弱扩展问题随核数增长 S=N+(1−P)(N−1)·两定律 P 含义不同不可混用/优化优先扩大 P 而非堆核）
-version: 1.16.0
+version: 1.17.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -380,3 +380,10 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 - `https://system-design-in-depth.vedgupta.in/topic/load-shedding`（Updated Sep 17 2026 WebFetch 200 全文逐字：崩塌算例/200ms limit/30% 预取/Little's Law/Vegas/七行策略表/健康检查豁免）——第二独立域·系统设计教学一手。
 - `https://www.esb1995.com/en/courses/system-design/lessons/VG31PRQr` + `https://blog.systemoverflow.com/p/how-netflix-maintains-reliability` + `https://www.kbytechnologies.com/lexicon/admission-control-load-shedding`（WebSearch 逐字：惊群 jitter/QCon 2025 Netflix 分级/术语 admission control，立场登记）——第三四五独立域。
 - **判重**：全库 SKILL.md/module-memory/co-learn 对 `load shedding`/`负载丢弃`/`优雅降级`/`admission control` 0 专节（§16「负载卸载分类」一句提及非机制、§22 背压是反向流控异命题）；豆包自留地 0 落地。按 rules/07「增＝加厚现有」，0 新建/0 合并/0 删除。
+
+## 二十七、singleflight 请求合并与惊群防护：一个 hot key 只让一个 worker 重建，且旧结果不能覆盖新结果（EI · r813C 独立实拉 2026-11-27，≥2 独立域一手交叉，3 独点；正文下沉 `references/r813C_singleflight请求合并与惊群防护.md`）
+> 与 §16 限流（控进多少）、§26 负载丢弃（过载分层丢）、§13 扇出对冲（主动复制降尾延迟）分工：本章管**同一 hot key 的重复回源合并 + 陈旧写竞态**——控「同一份工作做几次」与「旧结果能否覆盖新结果」。
+- **27.1 量级与三层防护**：200ms 重建 × 10,000 RPS ⇒ 过期瞬间约 2,000 个并发相同 DB 查询；进程内 singleflight 降到每进程 1 次（100 台⇒100 次，改善 20× 但仍 100），分布式锁 `SET lock:key token NX PX 3000` 才降到全集群 1 次，XFetch 概率早期刷新让 reader 常在过期前刷新、无人见到 miss。「本地 mutex 够了」是常见误判。
+- **27.2 singleflight 语义**：只合并「正在飞行中」的调用，非缓存非限流、不设 TTL，进程内有效、高基数 key 占内存；shared=true 表示结果被多调用方共享、**不是缓存命中**（可作热点/失效/下游变慢告警），shared=false 那次才写缓存/打点；错误也被共享，失败分支须 `Forget(key)` 让后续立即重试；fn 只放幂等纯读，扣库存/发短信副作用被合并会改语义。
+- **27.3 陈旧写竞态与租约**：reader 读旧值→writer 更新并删 key→reader 迟写旧值永久污染；singleflight 只解决 stampede 不挡 stale set。可选机制各有代价：租约（delete 使 lease 失效，迟到 set 被拒，memcache 每 key 每 10s 至多一 token）/版本化 CAS（需 DB 行版本号）/stale-while-revalidate（读者不等待但有界陈旧）/XFetch（只降同步过期概率，不保证永久驻留）；分布式锁须带 TTL + 失败回退（serve stale 或 fail fast），否则持锁者死⇒等待者挂起。
+- 来源与诚信（r813C · 2026-11-27）：System Design In Depth WebFetch200 全文逐字（算例/七行技术比较表/memcache lease/stale-set race）+ gerryyang.com WebFetch200 逐字（Do/DoChan/Forget/shared/错误共享/禁用副作用）+ 17golang + StackOverflow 官方包注释 + vikulin-va.ru 俄文 WebSearch 逐字交叉；Wikipedia cache stampede fetch failed 未采纳。逐字全文见下沉文件。全库 0 专节、豆包自留地 0 落地。

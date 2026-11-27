@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序、影响图、信息弧、决策节点、价值节点、决策基三要素、前景理论、参照点依赖、损失厌恶、框架效应、确定性效应、反射效应、禀赋效应、编辑与评价两阶段、全局敏感性分析、Morris筛选、Sobol指数、一阶效应、总效应、交互效应、因子排序、因子固定、实物期权、real options、管理灵活性、延迟扩张放弃转换期权、ROV、不可逆投资、参考类预测、reference class forecasting、外部视角、inside view、规划谬误、planning fallacy、乐观偏差、optimism bias、reference class tennis、成本超支、uplift、Flyvbjerg、博弈论决策、game theory、占优策略、最佳回应、纳什均衡、混合策略、逆向归纳、子博弈精炼、不可信威胁、可信承诺、连锁店悖论、策略互动、效用函数 elicitation、标准赌局、standard gamble、确定等价、certainty equivalent、风险容忍常数、Arrow-Pratt、凹性风险规避、vNM公理、多属性效用、加性独立性、概率轮、权衡法、ELECTRE、PROMETHEE、outranking、非补偿性排序、concordance、discordance、净流、不可比、veto阈值、心理账户、mental accounting、交易效用、获得效用、银边原则、多收益分离、多损失合并、fungibility可替代性、沉没成本剧院票、随机占优、stochastic dominance、一阶FSD、二阶SSD、偏序、CDF积分、Tail尾部期望、凹效用风险厌恶
 module: DI
 modules: DI,TI
-version: "1.25.0"
+version: "1.26.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -486,3 +486,10 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 - `https://en.wikipedia.org/wiki/Delphi_method`（Wikipedia WebSearch 逐字 consensus≠correct、实时 Delphi 无轮次）——第三独立域·百科一手。
 - `https://www.survey.org/academy/fundamentals/key-principles`（Survey.org WebSearch 逐字四原则，WebFetch fetch failed 如实登记）——第四独立域·教学一手。
 - **判重**：全库 SKILL.md/module-memory/co-learn 对 `Delphi`/`德尔菲` 0 专节（SKILL「群体决策」命中经逐串核为 §r736B 投票悖论提升层非本体）；与 §r736B/§二十/§十五 异命题。豆包自留地 0 落地。按 rules/07「增＝加厚现有」，0 新建/0 合并/0 删除。
+
+## 三十三、成本效果分析：把「值不值」落到 ICER 与机会成本阈值上（DI · r813B 独立实拉 2026-11-27，≥2 独立域一手交叉，3 独点；正文下沉 `references/r813B_成本效果分析ICER与QALY.md`）
+> 与 §r788C 效用 elicitation（测风险态度）、§二十三 参考类预测（基率）、§六 MCDA（多准则加权）、§r803A 随机占优（未知CDF偏序）分工：本章管**成本 vs 单一健康产出的效率前沿与阈值判定**，增量分析 `ICER=ΔC/ΔE`。
+- **33.1 QALY 与贴现**：CUA 用 QALY（0=死亡/1=完全健康，效用值加权）把不同疾病折算同一单位才能跨病种比；CEA 自然单位不可跨病种；DALY 标度相反不可混用；未来成本与 QALY 须同一贴现率 `PV=ΣX_t/(1+r)^t`。
+- **33.2 四象限与负 ICER 双义**：东南（ΔE>0,ΔC<0）绝对优势直接采纳、西北（ΔE<0,ΔC>0）绝对劣势直接排除，二者 ICER 均为负 ⇒ 禁只报「ICER 为负」不报 ΔC/ΔE 符号；只有东北（更贵更有效）/西南（更便宜更差）才用 ICER 比较。「ICER=每多获得一个 QALY 多花的钱」。
+- **33.3 阈值是机会成本 + 效率前沿逐级爬梯**：λ 应取预算约束下被挤出服务的边际健康产出（非主观支付意愿），报值须标国家/年份/支付方视角（0.5–1.5×人均GDP/QALY、NICE £20,000/QALY）；多方案先剔劣势与扩展劣势（某策略相邻 ICER 高于后更有效者的增量 ICER 即被扩展优势），按效果升序排效率前沿、只比相邻两级；NMB=λ·ΔE−ΔC 与 ICER≤λ 等价且在概率敏感性分析中更稳健，须标研究视角与不确定性。
+- 来源与诚信（r813B · 2026-11-27）：玻尔科学百科转化医学页 WebFetch200 全文逐字（QALY/四象限/λ=机会成本/效率前沿/NMB）+ 玻尔药学本科与 ICER 词条 WebSearch 逐字 + 百度百科 WebSearch 逐字（0.5–1.5×GDP/NICE £20k 实证）+ Astellas 日本官方术语页 WebSearch 逐字（EQ-5D-5L）。诚信降级：PMC5668200 号错配（实为 PKC 癌症综述）整篇弃用未采信。逐字全文见下沉文件。全库 DI 本体 0 命中、豆包自留地 0 落地。
