@@ -1,9 +1,9 @@
 ---
 name: ri-retrospective
-description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/角色三分离/发言权/时间盒与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习（改动作/改假设/改学习机制·防御惯例阻断双环·学习与有效行为不等价须分层验收）。NAT/HRO（交互复杂×紧耦合·安全记录≠高可靠·降耦合）。偏差正常化normalization of deviance（Vaughan·异常未即刻致灾→可接受→新常态·警告信号被重释·认证标准逐步放松·「以前这么飞没事」不是安全证据·与NAT/HRO分工）。 故障树FTA与事件树ETA（演绎找致祸组合vs归纳看触发后果·定性最小割集/单点失效/共因·量化=触发频率×条件概率乘积）。 FMEA/FMECA与RPN陷阱（RPN序数相乘伪精度·AP表严重度主导·先分档后排序） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障有效/独立/可审计三门）。仍未证明栏（四块结构附没证明什么·可照做≠可审计）·近失改屏障状态·变更分析IS/IS-NOT）
+description: 经验复盘与持续改进（Reflection Intelligence）。当任务完成或失败后需要沉淀经验、比较预期与实际、做根因分析、总结可复用规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议修改 Skills/提示词/规则/工作流，但未经授权不得直接改系统核心配置、复盘标签体系与跨事故模式聚合（severity 与 taxonomy 分工、受控枚举、已知/潜在与原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/角色三分离/发言权/时间盒与会前准备）；FRAM 功能共振分析（成功失败同源/近似调整·涌现·四原则·六方面六角·四步·两表现型 timing/precision·耦合聚合放大阻尼·管理可变性而非消除·WAD vs WAI·与 STAMP 分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习（改动作/改假设/改学习机制·防御惯例阻断双环·学习与有效行为不等价须分层验收）。NAT/HRO（交互复杂×紧耦合·安全记录≠高可靠·降耦合）。偏差正常化normalization of deviance（异常→可接受→新常态·警告被重释·标准逐步放松·「以前没事」非安全证据·与NAT/HRO分工）。 FTA/ETA（演绎组合vs归纳后果·最小割集/单点失效/共因·量化=频率×条件概率）。 FMEA/FMECA（RPN序数伪精度·AP表严重度主导） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障三门）·仍未证明栏（可照做≠可审计）·近失改屏障·变更分析IS/IS-NOT） HAZOP危险与可操作性（IEC 61882·引导词+参数=偏差·节点逐段·定性四阶段·OSHA PSM 五年再验证·与FMEA/HAZID分工·Delta渐进漂移再验证）
 module: RI
 modules: RI,EI
-version: "2.14.0"
+version: "2.15.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -454,3 +454,18 @@ DevOps AI Toolkit 逐字 prep 四条「**Assemble the timeline in advance.** Pul
 - `https://nasa.gov/history/rogersrep/v1ch6.htm`（总统委员会报告 Vol.1 Ch.6《An Accident Rooted in History》，WebFetch 200，AI 摘要 60 秒超时取前 15,000/99,425 字符逐字，如实登记非全文：[120] 未认识→不修→当成可接受风险三阶段 / 允许损伤量被上调 / 「not desirable but is acceptable」）——第二独立域·官方调查报告。
 - `https://www.wikiwand.com/en/Normalisation_of_deviance`（Vaughan 定义与长潜伏期、预警被误读/忽略、corporate omerta；Wikipedia 原页 WebFetch failed 如实登记）+ `https://scipedia.bohrium.com/sciencepedia/feynman/keyword/normalization_of_deviance`（玻尔科学百科 WebSearch 逐字：系统压力+风险认知而非恶意 / just culture / 人因工程）+ `https://wiki.mbalib.com/wiki/正常化偏差`（MBA智库 WebSearch 逐字：力线 3°→7° 的量化边界）——第三、四、五域交叉。
 - **判非**：全库 SKILL.md / module-memory / co-learn 对 `normalization of deviance` / `偏差正常化` / `失范的常态化` 0 专节；与 HRO/NAT/Just Culture/结果偏差各管一段异命题。豆包自留地 WB 0 落地。逐字全文与判非见 `references/r810B_偏差正常化.md`。
+
+
+## r814B · HAZOP（危险与可操作性研究）：用「引导词 × 参数」系统枚举偏离设计意图的场景（RI · 2026-11-27 实拉，≥3 独立域一手）
+
+**独点 1｜核心机制是「引导词 + 参数 = 偏差」，不是自由头脑风暴。** 先精确写下每个节点（node，通常是连接主要设备的管段/逻辑段）的**设计意图**（流量、温度、压力、液位、成分等过程条件），再把一组固定引导词套到相关参数上。IEC 61882 标准引导词：No/NOT（完全否定）、LESS（定量减少）、MORE（定量增加）、AS WELL AS（定性增加/伴随）、PART OF（只实现部分）、REVERSE（与设计相反）、OTHER THAN（完全替代）、EARLY/LATE（相对时间）、BEFORE/AFTER（相对顺序，后四者用于批量/序列操作）。组合无意义即弃用（温度不能「part of」）；引导词的作用是「stimulate imaginative thinking, to focus the study and elicit ideas and discussion」，不是机械勾选。每个可信偏差记录：原因 → 后果 → 现有防护是否充分 → 残余风险不可接受则派发行动。IEC 61882:2016 第二版（2016-03-10 发布，124 页，TC 56 Dependability），源于 ICI 1964 苯酚厂 Method Study、1968 Olefines V 试运行、1977 CIA 首次成文。
+
+**独点 2｜四阶段流程 + 团队构成 + 输出边界。** IAEA 归纳四阶段：definition（定范围、指派专家）→ preparation（收集数据、约定引导词）→ examination（逐偏差逐节点检查）→ documentation and follow-up（**必须验证有流程确保建议被完成**）。团队跨学科，设 leader（facilitator）+ recorder，IAEA 引 IEC 61882 理想 4 人、最多 7 人。输出是**纯定性**——worksheet 记原因/后果/防护/建议并跟踪到完成，本身不产生定量风险数。美国 OSHA PSM（29 CFR 1910.119）把 HAZOP 列为可接受的 PHA 方法之一（与 What-If/Checklist/FMEA/FTA 并列），要求团队具备工程与过程操作专长、至少一名有该工艺经验者与方法论熟手，发现与建议须及时处置记录，**至少每 5 年更新再验证**。
+
+**独点 3｜局限、变体与与相邻方法的分工——形式化结构会制造「彻底感」但不保证穷尽。** 已知弱点：① 依赖启发式而非算法，形式结构给从业者「已彻底」的感觉却不保证所有重要偏差/始发事件/场景都识别到，复杂度越高遗漏越大；② 同一危险场景常经多个偏差浮现（重复）、相邻节点受同一次扰动影响，拖慢进度；③ 纯定性不给量化风险；④ 过度堆引导词与复合偏差反降低效能；⑤ 成功高度依赖团队知识与经验，已有事故归因于无经验团队漏检；PHA 团队认知偏差可致场景漏掉、风险误估、建议遗漏。精简变体有实证收益：Bridges & Marshall 发现 what-if 远快于 2-引导词 HAZOP、后者远快于 7–8 引导词版；某非例行作业从标准 HAZOP 的数十小时降到 2–4 小时，多级 HAZOP 把填表 20h 降到 6–8h。**Delta HAZOP**（基于 CCPS 再验证）聚焦上次研究以来的微妙/渐进变化，是再验证技术而非 IEC 定义的 HAZOP；重复 2–3 轮后中高风险发现数显著下降。分工：**FMEA** 适合离散子系统/部件的量化式优先级排序，**HAZOP** 是定性、场景中心、覆盖操作偏差与人机交互；**HAZID** 是更早的概念/前端阶段粗粒度识别，HAZOP 在详细工程、有 P&ID 时用。
+
+**判据（RI 落地）**：复盘/风险审查若只做「列出可能出错的地方」，等于没有引导词的结构化枚举；反过来，把 HAZOP 当量化概率工具或认为「做过一次就穷尽」也是误用。落地动作：① 先给每个对象写一句可验证的设计意图；② 用引导词×参数逐格生成偏差，空组合显式标注弃用理由；③ 每个保留偏差走完整四栏（原因/后果/防护/行动）；④ 行动项进入跟踪并定期再验证（长周期对象 5 年锚点），把「渐进漂移」单列而非重复全套节点。与 §r804A Tripod Beta（沿事件—屏障—人因—组织重建已发生事故）、§r806B MORT（管理系统完整性基准）、§r806C 蝴蝶结（屏障路径）分工：HAZOP 用于**事前/设计期系统枚举偏差**，其余用于事后或屏障评价。
+
+**判重**：全库 SKILL.md / module-memory / co-learn 对 `HAZOP` / `危险与可操作性` 0 专节；「引导词」仅一句在 wb-execute-discipline references 提及，非机制。豆包自留地 WB 0 落地。
+
+**来源与诚信**：`https://www.edgepedia.org/hazard-and-operability-study`（WebFetch 200 全文逐字：IEC 61882:2016 版本/页数/TC56、ICI 1964 起源、引导词表、四阶段、团队 4–7 人、OSHA PSM 29 CFR 1910.119 与五年再验证、局限与精简变体、HAZOP vs FMEA/HAZID、Delta HAZOP）——第一独立域·结构化知识库；`https://www.wikiwand.com/zh-sg/articles/危害與可操作性分析`（WebSearch 全文逐字：BS IEC 61882:2002 引导词表含 EARLY/LATE/BEFORE/AFTER、参数示例「96% 硫酸 20°C 2.3kg/s」、中型化工厂约 1200 设备管路需约 40 次会议）——第二独立域·百科镜像；`https://www.safehoo.com/Item/5610574.aspx`（WebSearch 全文逐字：ICI 1974、关键词+工艺参数=偏差、四步划分单元/定义关键词/分析原因后果/制定对策、步骤可交替进行）——第三独立域·安全管理站；`https://www.safvr.com/glossary/hazop`（WebSearch 全文逐字：引导词表、节点、COMAH/OSHA 适用场景）——第四独立域·术语库；`https://sgsystemsglobal.com/glossary/hazop`（WebSearch 全文逐字：节点选择→设计意图→引导词→原因后果→防护→带 owner 与 due date 的行动、输出可审计登记簿）——第五独立域·行业 glossary。诚信：Wikiwand 为镜像非原站，按来源族折叠为一条独立证据；起源年份 1964（ICI 起步）与 1974（安全管理网口径）并列如实登记，不强行统一。逐字全文与判非见 `references/r814B_HAZOP.md`。

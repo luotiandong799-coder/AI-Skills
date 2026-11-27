@@ -1,9 +1,9 @@
 ---
 name: vi-fact-verification
-description: 事实与结果验证（Verification Intelligence）。当任务涉及事实声称、外部来源引用、数据/计算结果核对、代码或文件改动验收、或"判断任务是否真正完成"时调用。落实独立性原则与来源分级，识别未经证实的结论，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"——二者互补不重复。、变异测试（mutation testing/score·变异算子·存活与等价变异体·等价不可判定·胜任程序员假设·耦合效应·human oracle problem）、Youden指数J（Se+Sp−1·ROC最大垂直距离·阈值选取与患病率无关·Se/Sp联合置信域）、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、coverage-guided fuzzing、SanitizerCoverage、corpus、变异策略、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、Bland-Altman、一致性界限、limits of agreement、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、方法比较评分者间信度IRR（按标签类型选kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）
+description: 事实与结果验证（Verification Intelligence）。涉及事实声称/来源引用/数据计算核对/改动验收/判断是否真正完成时调用。落实独立性与来源分级，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"，互补不重复。、变异测试（mutation testing·变异算子·存活/等价变异体·等价不可判定·耦合效应·human oracle problem）、Youden指数J（Se+Sp−1·ROC最大垂直距离·阈值选取与患病率无关·Se/Sp联合置信域）、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、SanitizerCoverage、corpus、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、Bland-Altman、一致性界限、limits of agreement、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、评分者间信度IRR（kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）、量具GR&R/MSA（EV重复性/AV再现性·GRR=√(EV²+AV²)·%GRR两口径10/30·ndc≥5·均值极差vs ANOVA·10×3×3盲测·第一类研究）
 module: VI
 modules: VI,EI
-version: "1.21.0"
+version: "1.22.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -428,3 +428,18 @@ version: "1.21.0"
 **判重**：全库 SKILL.md / module-memory / co-learn 对 `Youden` / `Youden index` / `J statistic` 0 专节；§十四似然比（验前验后与 portable）、§十九 Bland–Altman（一致性非相关）、§二十一评分者间信度（系数按标签形状选）、§九统计功效均异命题；与 PPV/准确率/ROC 是阈值选择与排序评价的分工，非重复。豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。
 
 **来源与诚信**：`https://pmc.ncbi.nlm.nih.gov/articles/PMC6355005/`（WebFetch 200 全文逐字：J 定义、0–1、`independently from the outcome prevalence`、2000 repeats bootstrap CI、closest-top-left 对照）——第一独立域·同行评议开放全文；`https://www.sciencedirect.com/science/article/abs/pii/S0167947314000450`（WebSearch 摘要+Introduction 全文逐字：Se/Sp 在估计截点相关、须联合置信域、相同 J 不同 Se/Sp）——第二独立域·统计学期刊；`https://www.sciencedirect.com/science/article/pii/S0167947317300592`（WebSearch 全文逐字：最大垂直距离、等权前提、J≥0.90 边界覆盖）——第三独立域·统计学期刊；`https://wikipedia.com/wiki/Hanssen%E2%80%93Kuipers_discriminant` 镜像（WebSearch 全文逐字：展开式、负值语义、固定阈值 vs 优化阈值的区间区别；Wikipedia 原页 WebFetch failed 未冒充一手）交叉。逐字全文与判非见 `references/r810A_Youden指数J.md`。
+
+
+## 二十五、测量系统分析 MSA / 量具 GR&R：先证明「量尺本身」可信，再谈数据结论（VI · 2026-11-27 实拉，≥4 独立域一手）
+
+**独点 1｜变差分解：EV 重复性 × AV 再现性，GRR 是两个方差的合成而非相加。** 总变差 σ²_total = σ²_parts + σ²_repeatability + σ²_reproducibility。EV（equipment variation，重复性）= 同一操作者、同一量具、同一零件多次测量的波动，反映设备/夹具/分辨率/定位/方法本身；AV（appraiser variation，再现性）= 不同操作者对同一零件测量平均值的差异，反映手法/读数/基准理解/培训一致性。**GRR = √(EV² + AV²)**（按方差合成，不是 EV+AV），再与零件间变差 PV 合成总变差 TV = √(GRR² + PV²)。两口径必须分开看：`%GRR = GRR/TV × 100%`（占总变差，用于过程监控，反映测量噪声在过程波动中的占比）；`%P/T = GRR/TOL × 100%`（占公差带，用于公差判级/放行，反映测量误差吃掉多少规格）。只报一个口径不足以支撑结论——生产监控看前者、公差放行看后者。
+
+**独点 2｜AIAG MSA 4th 判定门槛与「GRR<10% 就合格」的陷阱。** 门槛：%GRR < 10% 可接受；10%–30% 条件可接受（按应用重要性/成本/风险决定）；> 30% 不可接受必须改进。可区分类别数 **ndc = 1.41 × (PV/GRR) ≥ 5**——ndc 与 %GRR 是一枚硬币两面（%GRR 越小 ndc 越大），ndc<5 说明量具分不出零件差异，即便 %GRR 数字好看也不合格。**核心陷阱：%GRR 是相对指标**，分母 TV 含零件真实差异——挑选覆盖公差带的大范围零件会压低 %GRR，制程优化后 TV 变小则同一把量具 %GRR 反而升高。故须同时检查量具分辨率、ndc、偏倚 Bias、线性 Linearity、稳定性 Stability 与实际过程能力，并核对取样零件是否代表正常过程范围；EV 明显大于 AV 时改进优先夹持定位与量具分辨率，而非先加强人员训练。
+
+**独点 3｜两算法与试验设计：均值极差法 vs ANOVA；10×3×3 与自动化第一类研究。** 均值极差法（Xbar-R）用极差估 EV、用操作者均值极差估 AV，简单可 Excel，但**无法分解「操作者×零件」交互作用**、受异常值影响大。ANOVA 把变差拆成零件、操作者、交互作用、重复性四块（EV=MSE，AV 含 (MSA−MSAP)/(n×r) 与交互 (MSAP−MSE)/r，PV=(MSP−MSAP)/(k×r)，估计值<0 取 0），可处理不平衡数据，是 AIAG MSA 4th 推荐完整方法；交互作用大 = 某些人量某些零件特别不一致（如形状导致有人侧量有人顶量），均值极差法会把它混进其他项。标准设计 **10 零件 × 3 操作者 × 3 次 = 90 读数**，零件须覆盖过程公差范围（不是挑 10 个几乎一样的），随机顺序、操作者互不知零件编号、不参考自己上轮读数（否则记忆偏差）。自动化设备/单一夹具再现性≈0 时，用**第一类研究**（一个工件 ≥25 次连续测量，σ_repeat = √(Σ(xᵢ−x̄)²/(n−1))，EV=6σ_repeat）替代完整 GR&R 在统计上更诚实；若仍有人工装载/选点则再现性重新引入，须做完整交叉/巢状 GR&R。
+
+**判据（VI 落地）**：凡以「同一套测量/标注/评分流程得出的数字」做结论——代码测试通过率、标注一致率、A/B 指标、模型评测分——先问三件事：① 量尺变差是否被分解并量化（重复 vs 再现 vs 对象差异）；② 门槛与口径是否事前声明（%GRR 还是 %P/T，阈值取几）；③ 取样范围是否被人为选择而压低了变差占比。不能回答者，结论只算「未验证测量系统下的观测」，不得升级为事实。与 §十九 Bland–Altman（两方法一致性）、§二十一 IRR（评分者间信度系数）、§九统计功效分工：本节点在「量尺自身的可重复/可再现与分辨力」，IRR 在「多个评分者系数的选择」，Bland–Altman 在「两方法可否互换」，均异命题。
+
+**判重**：全库 SKILL.md / module-memory / co-learn 对 `测量系统分析` / `GR&R` / `Grubbs` / `重复性再现性` 0 专节；豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。
+
+**来源与诚信**：`https://www.6sq.net/intro/grr/`（WebFetch 200 全文逐字：EV/AV/GRR/PV/TV 定义、两口径、10/30 门槛、ndc 公式、两算法、10×3×3 设计）——第一独立域·行业工具站；`https://jiahon.com.tw/?p=124432`（WebSearch 全文逐字：AIAG 第四版 K 系数、%GRR 对总变异 10.1% / 对公差 15.3% 算例、ndc=13、EV 9.3%>AV 3.8% 的改进指向、ANOVA 四块方差分解式）——第二独立域·计量技术页；`https://jcetech.cn/equator-grr-ppap`（WebSearch 全文逐字：PPAP 公差带口径、GRR=√(EV²+AV²)、ndc≥5、10×3×3=90 读数、零件须覆盖过程变差）——第三独立域·检测厂商；`https://industrialmonitordirect.com/zh-hant/blogs/knowledgebase/alternatives-to-grr-msa-methods-for-industrial-measurements`（WebSearch 全文逐字：AIAG 门槛表含 Study Variation 30%/60% 对应、10×3×3 三点局限、第一类研究 ≥25 次 σ_repeat 与 6σ 公式、多夹具则须完整 GR&R；明言 MSA 是参考框架非法规、CSR 可改限值）——第四独立域·工业测量站；`https://ucourse.org/p/14482`（WebSearch 全文逐字：GRR 是相对指标受制程变异影响、ndc<5 时 %GRR 5% 仍不合格）——第五独立域·质量培训。逐字全文与判非见 `references/r814A_测量系统分析GRR.md`。
