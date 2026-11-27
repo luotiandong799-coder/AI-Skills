@@ -1,7 +1,7 @@
 ---
 name: agent-evolution
-version: "1.26.0"
-description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。 触发：并发实验分层、层间正交、发布层灰度、安全探索、shield 护栏、约束 MDP、代价 critic、持续学习灾难性遗忘、EWC、Fisher 信息、弹性权重整合、在线 EWC、突触智能、经验回放、稳定性可塑性权衡、异质性处理效应、因果森林、CATE、honest splitting、GRF、DML、DR-learner。、Hyperband、Successive Halving、多保真预算分配、纯探索无限臂bandit、early stopping、bracket网格、envelope函数、BOHB、贝叶斯优化、Bayesian optimization、GP代理模型、采集函数、Expected Improvement、PI、UCB、探索利用权衡、Monte Carlo采集、异步并行评估、multi-fidelity、高维BO。、元学习、MAML、学会学习、learn to learn、快速适配、内循环外循环、支持集查询集、FOMAML、Reptile、Meta-SGD、任务分布初始化、势能奖励塑形、potential-based reward shaping、PBRS、策略不变性、F(s,s')=γΦ(s')−Φ(s)、望远镜抵消、势函数、奖励设计、稀疏奖励、Wiewiora Q值初始化、Dynamic PBRS、课程学习、curriculum learning、scoring function、pacing function、自步学习、self-paced learning、全局难度、局部难度、难例挖掘、anti-curriculum。DPO、直接偏好优化、Direct Preference Optimization、隐式奖励、参考模型、Bradley-Terry、sigmoid loss、chosen/rejected、偏好对、KL 约束、β 温度。GRPO、组相对策略优化、Group Relative Policy Optimization、组内优势归一化、去 critic、可验证奖励
+version: "1.27.0"
+description: 智能体持续进化引擎：将每次高价值任务自动沉淀为可复用 Skill、经验与规则，并统一调度已有 Skill 体系完成智能调用、持续优化、工作流记忆、安全检查与生命周期治理，杜绝重复造轮子。触发：完成复杂任务后需总结方法、发现可复用流程想生成 Skill、任务收尾想自动复盘、希望 Agent 少问多想自主进化时调用。 触发：并发实验分层、层间正交、发布层灰度、安全探索、shield 护栏、约束 MDP、代价 critic、持续学习灾难性遗忘、EWC、Fisher 信息、弹性权重整合、在线 EWC、突触智能、经验回放、稳定性可塑性权衡、异质性处理效应、因果森林、CATE、honest splitting、GRF、DML、DR-learner。、Hyperband、Successive Halving、多保真预算分配、纯探索无限臂bandit、early stopping、bracket网格、envelope函数、BOHB、贝叶斯优化、Bayesian optimization、GP代理模型、采集函数、Expected Improvement、PI、UCB、探索利用权衡、Monte Carlo采集、异步并行评估、multi-fidelity、高维BO。、元学习、MAML、学会学习、learn to learn、快速适配、内循环外循环、支持集查询集、FOMAML、Reptile、Meta-SGD、任务分布初始化、势能奖励塑形、potential-based reward shaping、PBRS、策略不变性、F(s,s')=γΦ(s')−Φ(s)、望远镜抵消、势函数、奖励设计、稀疏奖励、Wiewiora Q值初始化、Dynamic PBRS、课程学习、curriculum learning、scoring function、pacing function、自步学习、self-paced learning、全局难度、局部难度、难例挖掘、anti-curriculum。DPO、直接偏好优化、隐式奖励、参考模型、Bradley-Terry、sigmoid loss、chosen/rejected、偏好对、KL 约束、β 温度。GRPO、组相对策略优化、组内优势归一化、去 critic、可验证奖励。CQL、保守Q学习、offline RL、离线强化学习、分布偏移、OOD动作高估、保守Q函数下界
 license: MIT
 metadata:
   layer: meta
@@ -214,35 +214,9 @@ modules: AI
 - spinnaker.io/docs/guides/user/canary/canary-overview/ · /config/canary-config/（基线对照、指标分组与权重）
 - 判非：BS 分解三病灶、验收六要素等已在本仓 `engineering/*` 与 `meta/pdi-forecasting` §六，本轮不重复落。
 
-## 十六、自适应的探索-利用门：别把「在线自适应」和「确认谁更好」混成一种实验（2026-11-08 r717A 实拉）
+## 十六、探索-利用门：regret 与估计方差是两种目标（r717A · 全文下沉）
 
-> 与 §十五 分工：§15.1 ADWIN 管「何时判定策略失效」，§15.3 管「改完与同时部署的等价基线比」；本节管**改之前那笔探索预算怎么花**，以及**哪种实验目标该用哪种分配**。两节合起来覆盖「触发→探索→验收」全链。
-
-### 16.1 ★目标函数分裂：regret 最小化 ≠ 估计方差最小化
-- dswok 逐字："Bandits minimize cumulative regret during learning: the loss from not picking the best arm on each round. A/B tests minimize estimation variance on a specific contrast: the uncertainty about which arm is best after a fixed sample."；"Use A/B when a clean ship/kill decision matters more than regret during the decision period."
-- 同一页收口："Bandits are not a substitute for a well-designed A/B test when the goal is a confirmed causal effect estimate for a specific contrast."
-- ⇒ **策略改版验收（§15.3 要干净的 ship/kill 判定）与在线流量自适应是两种不同实验，禁止混用**：要「确认的因果效应估计」必须固定分配；拿自适应分配的数据去签「新版更好」的验收证书，会被流量分配本身污染。DataExpertise 逐字："Standard A/B testing is epsilon-greedy with ε = 0.5 ... which is optimal for hypothesis testing but suboptimal for regret minimisation because it never increases allocation to the better-performing variant during the test." ⇒ 反过来也成立：为省 regret 而动态调流量，就放弃了假设检验的最优性。先声明目标，再选分配。
-
-### 16.2 ★探索预算按不确定性分配，恒定随机试＝永不学习
-- DataExpertise 逐字：ε-greedy "explores uniformly — it is equally likely to explore the arm that has been pulled 5 times and the arm that has been pulled 500 times — wasting exploration budget on well-characterised arms"；UCB1 用 `argmax_k [x̄_k + sqrt(2 log t / n_k)]` 让少拉的臂自动拿到探索奖励，Thompson 用后验采样；两者 `O(K log T)`，ε-greedy 固定速率是线性 regret。
-- Vitor Sousa 逐字："Linear regret R(T) = Θ(T) would mean we're making a constant mistake forever—we never learn."；判定标准是**次线性** "R(T)=o(T)"，即平均每轮 regret 趋 0。其 10,000 轮数值：linear ~10,000 / ε-greedy ~464 / UCB ~130 / Thompson ~100；LinUCB `O(d√(T log T))` 为维度付 √d 代价。
-- ⇒ 自改进不能「每次固定拿 10% 任务随机试新写法」——那是恒定 ε、线性 regret。探索额度应随候选已被验证的次数衰减（UCB 的 n_k 项 / Thompson 后验收窄），并把「候选池的累积遗憾是否次线性」当作进化引擎是否真在学习的体检指标。Lai & Robbins 下界 `Ω(log T)` 提醒：**不确定性下的学习有不可消除的成本**，不存在零代价探索。
-
-### 16.3 三个让朴素自适应失效的现实条件（归因窗口 / 漂移 / 相关候选）
-- dswok "Common pitfalls" 逐字：① "Delayed rewards break naive bandit algorithms. Attribution windows must be modeled explicitly, or credit lands on the wrong arm."；② "Non-stationary reward distributions invalidate the regret bounds. Sliding-window or discounted-reward variants handle drift."；③ "Correlated arms (shared features, similar content) mean independent bandits waste data. Contextual bandits share statistical strength across arms with similar context."
-- Vitor Sousa 的**部分反馈**："We only observe rewards for actions we take ... we never know what would have happened if we'd chosen differently (the counterfactual outcome)." ⇒ 只跑一个候选就永远没有反事实对照，这与 §15.3「同时部署等价基线」是同源要求。
-- ⇒ 落到 Agent 自改进：任务结果常**延迟**（收尾才有 0/1 成败），必须先显式定「哪一段反馈归属于哪一版策略」的归因窗口，否则把上一版的成果记到新版头上；环境非平稳时（接 §15.2 真实漂移）regret 界失效，改用滑窗/折扣计数而非继续按原界验收；同源候选（同一提示词的多个改写）应按 context 共享统计强度，别为每份变体从零攒样本。
-- 判非：§15.1 漂移门、§15.3 基线对照与双阈值、§十三 GEPA「同样本重跑更好才接受」均不重复落地；本轮只补「探索侧」与「实验目标分叉」。
-
-### 16.4 来源（2026-11-08 r717A 实拉，逐字核验，三独立域交叉）
-
-- dswok.com/General-ML/Multi-armed-bandits（2026-07-31；"Regret vs estimation" 两目标分叉、"Common pitfalls" 延迟奖励/非平稳/相关臂、bandit 非 A/B 替代、ε-greedy 线性 regret；WebFetch 全文逐字）
-- www.dataexpertise.in/multi-armed-bandits-online-learning-thompson-sampling-explore-exploit/（2026-10 前后；ε-greedy 均匀探索浪费、UCB1 公式 `sqrt(2 log t / n_k)`、`O(K log T)`、A/B=ε=0.5 固定分配、FTRL/Vowpal Wabbit 在线学习；WebFetch 全文逐字）
-- www.vitorsousa.com/blog/contextual-bandits-math（2025-11-15；regret 界表 ε O(T^2/3) / UCB O(√(T log T)) / TS O(√T) / LinUCB O(d√(T log T))、10,000 轮 10000/464/130/100、partial feedback 反事实不可观测、`R(T)=o(T)` 次线性、Lai-Robbins Ω(log T) 下界、LinUCB α=0.1–2.0；WebFetch 全文逐字）
-- 判非：`UCB` / `LinUCB` / `epsilon-greedy` / `部分反馈` / `延迟奖励` 全库词边界 0 命中；`bandit` 命中均在豆包自留地 `defaults/wb-context-compressor/references/knowledge-base.md`（测试时算力缩放 / shadow-first bandit），与 regret 理论、探索预算分配无关，不重复；`Thompson` 命中仅为同 KB 的路由实验，不同维度。豆包自留地 WB 0 落地。
-
-## r733C · 离线策略评估的前提、方差与灰度边界（r733C 实拉 2026-11-11；正文下沉 `references/r733C_离线策略评估.md`）：日志须记 propensity+候选集+策略版本+奖励定义时间戳，缺则永久失去反事实验证；IPS 无偏高方差、权重尾部主导、positivity 不满足时估计 0=不可估非效果为零；验收链三段时间离线（带置信下界）→小流量灰度→全量，四类污染（leakage/delayed attribution/perverse incentives/changing scale）逐项排除。三独立域逐字来源见下沉文件。
-
+> 目标分叉（A/B 固定分配求干净 ship/kill vs bandit 最小 regret）、探索预算按不确定性衰减（UCB/Thompson 次线性 vs ε-greedy 线性 regret）、三个失效条件（延迟奖励/非平稳/部分反馈）三独点，全文见 `references/r717A_探索利用门.md`。本节仅留路由，以该 references 为准。
 ## 十七、序贯检验与随时有效推断（2026-11-11 r737B 实拉，≥2 独立域一手交叉）
 
 ### r737B-1 ★固定视界检验只允许「读一次」，边跑边看边改=假阳性膨胀
@@ -494,3 +468,11 @@ mSPRT 不控制跨指标 family-wise error（Adobe 对两个以上处理用 Bonf
 **独点2 机制（逐字公式）**：每问采样 G 输出得奖励 r，按组均值/标准差归一化 `Â_it=r̃_i=(r_i−mean(r))/std(r)`，赋给输出全部 token；目标式 3 保留 PPO 的 min(clip ratio) 并把 KL 从 reward 项**挪到 loss 项**「avoiding complicating the calculation of Â_it」；KL 无偏估计（式4）`π_ref/π_θ−log(π_ref/π_θ)−1` 恒正。过程监督版每步奖励同样归一化、token 优势取其后各步归一化奖励之和。报「用了 GRPO」写 G/归一化方式/ε/β/KL 位置四件。
 **独点3 边界与退化**：两个误解——省掉的是 learned critic 不是奖励（改规则可验证：答案对错/测试通过），也不是通用训练法（开放写作无可自动裁判即不适用）；一组输出全对或全错时 std→0 优势信号消失，依赖题目难度分布；可验证奖励仍受判题器/测试覆盖制约可 reward hacking，输出变长≠推理更强须正确率+泛化证明；组内归一化不天然更稳，质量受组大小/采样分布/奖励方差影响。判重：本体仅 §r768A 一句异命题 + GEPA 来源一句，非机制专节；module-memory AI 0、co-learn 标题级 0，豆包自留地 WB 0 落地。
 **来源与判非**：arXiv:2402.03300《DeepSeekMath》HTML v3（WebFetch 200 全文逐字：摘要/§4.1.1 动机+式3+式4/§4.1.2 outcome 归一化/§4.1.3 process 归一化）+ abs 页（逐字摘要，Submitted 2024-02-05）· toolnavs/aigcbaba/CSDN 教学页 WebSearch 逐字交叉（组均值基线/全对全错信号消失/两个误解，40–50% 显存挂教学页口径不作硬结论）· alphaxiv 2609.04063 虚假优势边界登记。按「增＝加厚现有」0 新建。
+
+## 三十五、CQL 保守 Q 学习：离线 RL 里压低 OOD 动作 Q 值换真实价值下界（AI · r815B 2026-11-27 实拉，2 独立域一手交叉，3 独点；全文见 `references/r815B_CQL离线强化学习.md`）
+
+§r801C SAC 管在线 off-policy + 熵目标、§r808B DPO 管偏好对分类损失、§r812B GRPO 管组内基线去 critic；本章管**只有固定数据集、零环境交互**时怎么避免把没见过的动作估得虚高。
+**独点1 病根与保守的目标**：朴素套用 off-policy value-based 方法会因数据集与所学策略的分布偏移，对 OOD 动作给出错误乐观 Q 值，策略再去抓这些虚高值自举放大；原论文摘要逐字「overestimation of values induced by the distributional shift between the dataset and the learned policy」。CQL 与 BCQ 路线不同——BCQ 约束动作候选集，CQL 直接改 Q 学习目标：让策略在该 Q 下的**期望**价值下界真实价值；只要**期望**下界而非逐点下界，就避免过度低估数据内好动作。论文报告复杂多模态数据上 final return 提升 2–5 倍。
+**独点2 正则项与两个实例化**：式1 `min_Q α E_{s~D,a~μ}[Q(s,a)] + ½ E_D[(Q−B̂^πQ^k)²]`——在任意动作分布 μ 下压低 Q；式2  tighter 版 `α(E_μ[Q] − E_{π̂β}[Q]) + ½TD`——同时抬高数据集动作 Q，拉大 in-distribution 与 OOD 的 gap。离散 CQL(H) 取相对均匀先验的负 KL：`α(E_s[log Σ_a exp Q(s,a)] − E_D[Q]) + TD`；连续 CQL(ρ) 以上一策略为先验 `R(μ)=−D_KL(μ||π_{k-1})` 稳住高维动作空间。α 是核心旋钮：太小保守不足外推膨胀复发，太大退化成行为克隆。
+**独点3 落地口径与边界**：在 SAC / QR-DQN 上「less than 20 lines of code」即可接入、无需显式估行为策略；α 可用拉格朗日对偶自动调。报「用了 CQL」须写 α（或自动调节方式）/正则形式/先验/OOD 采样分布四件。边界：离线训练必配离线评估（§r733C OPE 前提 + 仿真器全流程验证），没有评估的离线训练等于闭眼开药；与 DPO/SAC/GRPO 正交不复用；α 过大会连「数据里真出现过但少见」的好动作一起压掉，回报保守不等于策略更优。
+**来源与判非**：`https://arxiv.org/abs/2006.04779`（WebFetch 200 摘要 + 版本史：Submitted 2020-06-08 v1 / revised 2020-08-19 v3，Kumar/Zhou/Tucker/Levine）· `https://arxiv.org/pdf/2006.04779v2`（WebFetch 200 全文逐字：distributional shift / OOD / lower-bound / Q regularizer）· `https://www.alphaxiv.org/abs/2006.04779`（WebFetch 200 全文逐字：式1/式2/CQL(H) logsumexp/CQL(ρ) 先验/gap-expanding/α 对偶）· NeurIPS 2020 proceedings 摘要 + apxml/aiknowledge/jovana WebSearch 交叉。判重：全库 SKILL.md+module-memory 对 `离线强化学习`/`offline RL`/`CQL`/`保守Q学习` 0 专节（§r733C 是 OPE 评估前提、异命题；`r768A` GRPO 一句旁及），豆包自留地 WB 0 落地。
