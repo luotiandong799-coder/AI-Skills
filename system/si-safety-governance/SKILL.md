@@ -1,7 +1,7 @@
 ---
 name: si-safety-governance
-description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。差分隐私、differential privacy、epsilon DP、隐私预算、Laplace 机制、sensitivity 敏感度、组合定理、post-processing immunity、DP-SGD、本地DP中心DP。BOLA、IDOR、越权访问、对象级授权、broken object level authorization、CWE-639。转述授权攻击面、同名对象冒充、能力缺口粉饰、CSRF、跨站请求伪造、synchronizer token、double submit、SameSite、Fetch Metadata、Origin/Referer 校验、token 与会话绑定。原型污染、prototype pollution、__proto__、CWE-1321、Object.create(null)、Object.freeze、--disable-proto、Object.hasOwn、JSON Schema 校验。质量分配、mass assignment、autobinding、object injection、CWE-915、DTO、可写属性白名单、allowlist 优先于 denylist
-version: 2.11.0
+description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。差分隐私、differential privacy、epsilon DP、隐私预算、Laplace 机制、sensitivity 敏感度、组合定理、post-processing immunity、DP-SGD、本地DP中心DP。BOLA、IDOR、越权访问、对象级授权、broken object level authorization、CWE-639。转述授权攻击面、同名对象冒充、能力缺口粉饰、CSRF、跨站请求伪造、synchronizer token、double submit、SameSite、Fetch Metadata、Origin/Referer 校验、token 与会话绑定。原型污染、prototype pollution、__proto__、CWE-1321、Object.create(null)、Object.freeze、--disable-proto、Object.hasOwn、JSON Schema 校验。质量分配、mass assignment、autobinding、object injection、CWE-915、DTO、可写属性白名单、allowlist 优先于 denylist。CORS、跨源资源共享、ACAO、Access-Control-Allow-Origin、Origin 反射、null origin、Access-Control-Allow-Credentials、Vary: Origin、同源策略 SOP
+version: 2.12.0
 module: SI
 modules: SI,EI
 ---
@@ -473,3 +473,11 @@ GitHub Docs 官方逐字：「**rotate the affected credential immediately** ...
 **独点2 白名单 ≠ 授权**：优先 DTO（只含可编辑字段）+ 显式字段 allow-list；OWASP「Do not rely on a block-list as the sole protection: a new or overlooked sensitive field remains bindable」，CWE「If possible, prefer allowlists over denylists」。关键边界句「DTOs and field allowlists restrict writable properties; they do not replace authorization for the requested object and operation」⇒ 与 §21 BOLA 两道门分工：BOLA 判对象+操作授权，本节判可写字段面。反模式：Spring `disallowedFields` fragile、Laravel `forceFill`/`unguard`/`$guarded=[]`、DRF `fields="__all__"`/`Meta.exclude`。
 **独点3 检出与验收**：SAST 按 source→sink 建模可发现部分实例（CWE Effectiveness: High），动态字段/嵌套/反射会漏；回归固定为「正常字段写入成功 + 多塞敏感字段后保持原值 + 新增模型字段后重跑 + 对他人对象写入仍被对象级授权拒绝」；不防业务越用、BOLA、SQLi、反序列化 gadget 链。
 **来源与判非**：`https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html`（WebFetch 200 全文）· `https://cwe.mitre.org/data/definitions/915.html`（WebFetch 200 全文）；OWASP Laravel/DRF Cheat Sheet 交叉。全库对 `mass assignment`/`autobinding`/`CWE-915` 0 专节，豆包自留地 WB 0 落地，按「增＝加厚现有」0 新建。
+
+## §二十七 r812A · CORS 错误配置：把响应头权限建在客户端可控的 Origin 之上（SI · 2026-11-27 实拉，2 独立域一手交叉，3 独点；全文见 `references/r812A_CORS错误配置.md`）
+
+§十五 SSRF 管服务器被当代理、§二十二 CSRF 管状态变更防线、§JWT 管令牌可信；本章管浏览器侧「谁能读跨域响应」这道许可——CORS 配错等于服务端替攻击者发了一张读取凭据会话数据的授权书。
+**独点1 根因**：ACAO 建在客户端可控 Origin 上且 CORS 不是 CSRF 防护；成立需两条件同时——反射任意 Origin + `ACA-C: true`（带 cookie 在会话内处理）。SOP 只挡读响应不挡发请求。
+**独点2 五类错误形态**：①服务端反射 Origin；②白名单前缀/后缀匹配被 `hackersnormal-website.com` / `normal-website.com.evil-user.net` 绕过（同 sibling-prefix 族）；③白名单 `null`（file:/sandbox，sandbox iframe data: URL 可造）；④信任关系被被信子域 XSS 放大；⑤HTTPS 站白名单 HTTP 子域致 TLS 降级、内网 `ACAO:*` 无凭据把浏览器当代理。真实链 CVE-2025-34291 Langflow（allow_origins=* + credentials + SameSite=None → token 劫持 → RCE）。
+**独点3 修复与验收**：带凭据请求 ACAO 必须是精确源不能是 `*`（MDN 逐字 must not + 浏览器拦截 + Set-Cookie 失效）；动态白名单必须 `Vary: Origin` 防缓存串味；preflight 不带凭据、响应须 ACA-C:true；CORS 不替代服务端鉴权（攻击者可直接伪造请求）。回归四步：Origin 改恶意域/null/前后缀断言不反射、带凭据断言精确源、动态白名单断言 Vary、从被信但存 XSS 的子域复测。声明不防 CSRF/XSS/鉴权缺失/内网非浏览器客户端。
+**来源与判非**：PortSwigger Web Security Academy CORS 全文（WebFetch 200 全文逐字）· MDN HTTP CORS（WebFetch 200 逐字：通配符与凭据互斥/preflight/Vary: Origin/ACA-C 语义）；CVE-2025-34291/50579 作真实后果佐证。全库标题级 CORS/跨源 0 专节（SSRF/CSRF/零信任/RAG 宽 CORS 仅子串提及异命题），豆包自留地 WB 0 落地，按「增＝加厚现有」0 新建。
