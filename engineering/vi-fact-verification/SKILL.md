@@ -1,9 +1,9 @@
 ---
 name: vi-fact-verification
-description: 事实与结果验证（Verification Intelligence）。事实声称/来源引用/数据核对/改动验收/完成判定。独立性+来源分级+真/误导/夸大/缺证据/假评级。EI验执行过/VI验对不对，互补。、变异测试（mutation testing·变异算子·存活/等价变异体·耦合效应）、Youden指数J（Se+Sp−1·ROC最大垂直距离·阈值选取与患病率无关·Se/Sp联合置信域）、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、SanitizerCoverage、corpus、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、Bland-Altman、一致性界限、limits of agreement、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、评分者间信度IRR（kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）、量具GR&R/MSA（EV重复性/AV再现性·GRR=√(EV²+AV²)·%GRR两口径10/30·ndc≥5·均值极差vs ANOVA·10×3×3盲测·第一类研究）、生存分析（Kaplan-Meier乘积限·删失·log-rank·Cox比例风险·风险比HR·PH假设检验）
+description: 事实与结果验证（Verification Intelligence）。事实声称/来源引用/数据核对/改动验收/完成判定。独立性+来源分级+真/误导/夸大/缺证据/假评级。EI验执行过/VI验对不对，互补。、变异测试（mutation testing·变异算子·存活/等价变异体·耦合效应）、Youden指数J（Se+Sp−1·ROC最大垂直距离·阈值选取与患病率无关·Se/Sp联合置信域）、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、预设指标、DeLong检验、相关ROC AUC比较、结构分量、协方差校正、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、SanitizerCoverage、corpus、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、Bland-Altman、一致性界限、limits of agreement、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、评分者间信度IRR（kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）、量具GR&R/MSA（EV重复性/AV再现性·GRR=√(EV²+AV²)·%GRR两口径10/30·ndc≥5·均值极差vs ANOVA·10×3×3盲测·第一类研究）、生存分析（Kaplan-Meier乘积限·删失·log-rank·Cox比例风险·风险比HR·PH假设检验）
 module: VI
 modules: VI,EI
-version: "1.23.0"
+version: "1.24.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -446,3 +446,11 @@ version: "1.23.0"
 **判重**：全库 SKILL.md / module-memory / co-learn 对 `生存分析` / `Kaplan-Meier` / `log-rank` / `Cox 比例风险` 0 专节（仅豆包自留地 `wb-context-compressor` 有 `calibration` 语境一句，异命题且 WB 0 落地）；与 PDI 预测（预测值校准）、VI §十四似然比（验前验后迁移）、§十三谱偏倚（人群依赖）分工不复用。
 
 **来源与诚信**：`https://www.statsdirect.com/help/survival_analysis/kaplan_meier.htm`（WebFetch 200 全文逐字：S(t) 定义、乘积限公式与 dᵢ/nᵢ 语义、删失三条假设、Greenwood 方差、Peterson=−ln(S) 与 Nelson–Aalen、log-rank/Wilcoxon 无需分布假设、Brookmeyer–Crowley 中位 CI）——第一独立域·统计软件官方文档；`https://www.statsmodels.org/stable/duration.html`（WebFetch 200 全文逐字：right-censoring 定义、SurvfuncRight、survdiff 默认 logrank 与 FH/Gehan-Breslow/Tarone-Ware 加权、PHReg Cox 模型、HR 乘性效应、30% 死亡只能估 <0.3 分位）——第二独立域·开源统计库官方文档；`https://zh.wikibooks.org/wiki/数理统计/生存分析与打分检验`（WebSearch 快照逐字：S=exp(−H)、KM 公式、Nelson–Aalen、Cox 部分似然 L(β)、Schoenfeld 残差、Score/log-rank/Wald 三者分工）与 `https://www.eolss.net/Sample-Chapters/C02/E4-31-02-04.pdf`（Kleinbaum 等《Survival Analysis》章节 WebSearch 摘要逐字：censored 定义、PH 假设 log-log 曲线、分层/扩展 Cox）——第三、四独立域教材交叉，WebFetch 本地回退禁用（`CODEBUDDY_WEBFETCH_DISABLE_LOCAL_FALLBACK=1`）如实登记不冒充全文。诚信：`https://www.ncbi.nlm.nih.gov/books/NBK539796/` 号错配（实为桡动脉置管）整篇弃用；`biostathandbook.com/survival.html`/`statology.org/kaplan-meier-curve`/`medcalc.org/manual/cox-*` 均 404 未采纳；维基教科书与 wipedia 同族按来源族折叠。逐字全文与判非见 `references/r819A_生存分析.md`。
+
+## §四十一 r822A · DeLong 检验：AUC 差异是否超出抽样波动（VI · 2026-11-28 实拉，3 页 MedCalc 官方 + PubMed 原论文摘要，3 独点；全文见 `references/r822A_DeLong检验.md`）
+
+§r810A Youden 管选阈值、§r788B Bland-Altman 管两法一致性，本章管**两方法 AUC 谁更高且差异是否显著**。
+**独点1 配对必须带协方差，两套公式不能混用**：同一批患者测两检验 → 难分类者两法都模糊 → AUC 正相关，忽略则标准误膨胀、检验保守。DeLong 1988 非参数法起点 AUC≡Wilcoxon 秩和（核 ψ=1/0.5/0），以 structural components（jackknife 推广）估方差与协方差。配对 `z=(θ̂₁−θ̂₂)/√(Var₁+Var₂−2Cov₁₂)`、双侧 p=2Φ(−|z|)、差 CI 同根号；独立样本 Cov=0 直接用 `√(Var₁+Var₂)`，两法混用是方法论错误。
+**独点2 k≥3 先全局后两两、Hanley–McNeil 仅存旧法**：k 条同人群曲线算 k×k 协方差，取 k−1 对比向量 c，`χ²=cᵀV⁻¹c` df=k−1，显著后才逐对 z 检验（NGAL/KIM-1/cystatin C 0.84/0.79/0.76 例）。H&M 1983 用平均 AUC+原始分数 r 查表得 r′ 近似，DeLong 直接从数据估协方差故优选；H&M 仅复现旧文献。AUC 的 95%CI 用 binomial exact（**不适用 AUC 之差**）。
+**独点3 统计显著≠临床相关**：大样本 AUC 差 0.01 也 p<0.05；0.03 多可忽略、≥0.10 才实质重要；曲线交叉时整体 AUC 掩盖「高敏区 A 优/高特区 B 优」必须看图；AUC 无显著差异时选更便宜/快/低侵入者。报告须含各 AUC+CI、差+CI、p，差的 CI 比单独 p 更有信息。
+**来源与判非**：MedCalc book/medcalc.org manual 两页 + PubMed PMID 3203132 全文 WebFetch200；arXiv:1402.9224 not found、1701.06359 主题错配已弃用如实登记。全库 DeLong 0 专节、豆包自留地 WB 0 落地 ⇒「增＝加厚现有」0 新建。声明不替代：阈值选择/一致性评价/临床效用判断。

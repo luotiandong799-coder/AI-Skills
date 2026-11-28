@@ -1,9 +1,9 @@
 ---
 name: ri-retrospective
-description: 经验复盘与持续改进（Reflection Intelligence）。任务完成/失败后沉淀经验·比较预期与实际·根因分析·总结规则时调用。提供 verification-discipline / handoff-protocol / engineering-economy 等方法论、无责复盘仪式、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议改 Skills/提示词/规则/工作流，未授权不得改系统核心配置·标签体系·跨事故聚合（severity/taxonomy 分工·受控枚举·原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/角色三分离/发言权/时间盒与会前准备）；FRAM 功能共振（成功失败同源·涌现·六方面六角·timing/precision两型·耦合放大阻尼·管可变性非消除·WAD vs WAI·与STAMP分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习（改动作/改假设/改机制·防御惯例阻断双环·学习≠有效行为须分层验收）。NAT/HRO（交互复杂×紧耦合·安全记录≠高可靠·降耦合）。偏差正常化（异常→可接受→新常态·警告被重释·标准渐松·「以前没事」非证据·与NAT/HRO分工）。 FTA/ETA（演绎组合vs归纳后果·最小割集/单点失效/共因·量化=频率×条件概率）。 FMEA/FMECA（RPN序数伪精度·AP表严重度主导） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障三门）·仍未证明栏（可照做≠可审计）·近失改屏障·变更分析IS/IS-NOT） HAZOP（IEC 61882·引导词×参数=偏差·定性四阶段·OSHA五年再验证·与FMEA/HAZID分工·Delta漂移再验证）·鱼骨图/石川图（因果图·5M1E/6M分类·鱼头在右为原因型左为对策型·头脑风暴后归并·定性非定量须数据验证·与5Why/FTA/HAZOP分工）
+description: 经验复盘与持续改进（Reflection Intelligence）。任务完成/失败后沉淀经验·比较预期与实际·根因分析·总结规则时调用。提供无责复盘仪式、Kolb体验学习循环CE/RO/AC/AE、把握转化两对辩证、学习风格绕行路径、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议改 Skills/提示词/规则/工作流，未授权不得改系统核心配置·标签体系·跨事故聚合（severity/taxonomy 分工·受控枚举·原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/角色三分离/发言权/时间盒与会前准备）；FRAM 功能共振（成功失败同源·涌现·六方面六角·timing/precision两型·耦合放大阻尼·管可变性非消除·WAD vs WAI·与STAMP分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习（改动作/改假设/改机制·防御惯例阻断双环·学习≠有效行为须分层验收）。NAT/HRO（交互复杂×紧耦合·安全记录≠高可靠·降耦合）。偏差正常化（异常→可接受→新常态·警告被重释·标准渐松·「以前没事」非证据·与NAT/HRO分工）。 FTA/ETA（演绎组合vs归纳后果·最小割集/单点失效/共因·量化=频率×条件概率）。 FMEA/FMECA（RPN序数伪精度·AP表严重度主导） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障三门）·仍未证明栏（可照做≠可审计）·近失改屏障·变更分析IS/IS-NOT） HAZOP（IEC 61882·引导词×参数=偏差·定性四阶段·OSHA五年再验证·与FMEA/HAZID分工·Delta漂移再验证）·鱼骨图/石川图（因果图·5M1E/6M分类·鱼头在右为原因型左为对策型·头脑风暴后归并·定性非定量须数据验证·与5Why/FTA/HAZOP分工）
 module: RI
 modules: RI,EI
-version: "2.16.0"
+version: "2.17.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -471,3 +471,11 @@ DevOps AI Toolkit 逐字 prep 四条「**Assemble the timeline in advance.** Pul
 **判重**：全库 SKILL.md / module-memory / co-learn 对 `鱼骨图` / `石川图` / `Ishikawa` / `特性要因图` 0 专节（RI 正文有「5 Whys」「因果模型层」等异命题；wb-debug-loop / wb-subagent-delegation / ti-critical-reasoning / 采购skill 的命中均为「图/因果」语境子串，非本工具）；豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。
 
 **来源与诚信**：`https://asq.org/quality-resources/fishbone`（ASQ 美国质量学会官方质量工具页，WebFetch 200 全文逐字：定义/七大工具/Ishikawa 6M 全类与 Money 第七 M/八步绘制程序/分类可创新命名/同一因多处/复杂问题需配责任矩阵/check sheet 验证/example 两则）——第一独立域·权威机构官方一手；`https://qms.foodmate.net/news/show.php?itemid=173007`（食品伙伴网质量服务中心《鱼骨图分析法 5M1E》，WebFetch 200 全文逐字：石川磐 1950s 起源/1953 川崎重工/TQM 与六西格玛/定性方法与因果树规律/原因型-对策型-整理问题型三型/5M1E 六类含义/制作五步/20-80 与关键原因≤7/主观性+非定量局限）——第二独立域·质量资讯一手；`https://www.wikiwand.com/zh-hans/articles/石川图` 与 `https://bafybeiemxf...ipfs.4everland.io/wiki/Fishbone_chart.html`（WebSearch 快照逐字：1956 石川馨《品质管理入门》/鱼头大类中类小类层级/5M1E/8M/4P/4S/5Why 配合）——第三、四独立域百科交叉，Wikiwand WebFetch 本地回退禁用（`CODEBUDDY_WEBFETCH_DISABLE_LOCAL_FALLBACK=1`）如实登记。诚信：起源年份 1953/1956/1960s/1968 多说并存、人物「石川馨/Kaoru Ishikawa」与 foodmate「石川磐」异写，均按来源并列不强行统一；鱼骨图与思维导图类比按来源族折叠。逐字全文与判非见 `references/r819B_鱼骨图.md`。
+
+## §r822B · Kolb 体验学习循环：复盘必须走完整四阶段（RI · 2026-11-28 实拉，EBLS 官方两页 + Emerald 同行评审，3 独点；全文见 `references/r822B_Kolb体验学习循环.md`）
+
+§r767C AAR 四问管事后回顾流程、§r759C 成功失败同源管安全-II 视角、§r771C 单双三环管学习深度，本章管**经验经哪四阶段转化为知识**。
+**独点1 四阶段不是清单而是两对辩证的螺旋**：CE 具体经验↔AC 抽象概念（把握经验）、RO 反思观察↔AE 主动实验（转化经验）；学习=「knowledge created through transformation of experience」。理想循环"touches all the bases"—体验→反思→思考→行动→新体验，**递归螺旋非线性**（反 Freire「banking concept」）。落地映射：CE=任务实际经过→RO=对照预期与实际→AC=写可复用判据→AE=下轮实测判据回环；只做 CE+RO 有感受无沉淀，只做 AC+AE 套公式不校准。
+**独点2 八洞察中的三个工程判据**：①「Learning is an endlessly recurring cycle not a linear process」——复盘按连续循环组织成加深螺旋，不一次结案；④「dialectic poles motivate learning」——四模态张力是驱动力，缺任一极失去张力；⑤「learning styles are different ways of going around the cycle」——风格是绕行路径非固定能力标签，⑧循环可作真实性评估 rubric。另六命题含「all learning is re-learning」「conceived as a process not outcomes」——复盘产出是下次可改的判断，不是终版结论。
+**独点3 边界与独立交叉**：Emerald 同行评审独立追溯源流 Dewey（learner-centered、experience→reflective thought and action）/Lewin（评估方法）/Joplin（五阶段）/Kolb（1984 四阶段），确认四阶段是学界承认可考源流。Zull 神经映射（感觉皮层/整合皮层/运动脑）属单一学者提议、非 ELT 核心公理，agent 场景按 rules/08 §五标**推断**不入长期记忆。
+**来源与判非**：EBLS 官方八洞察页 + KELP 技术规范 + Rubric for Experiential Training（DOI 10.29329/ijpe.2021.366.12）WebFetch200 + Emerald WebSearch 快照；simplypsychology Cloudflare 拦、Britannica 404、EBLS PDF 本地回退禁用如实登记。全库 `Kolb`/`experiential learning`/`double-loop learning` 0 专节（豆包 r771C 一句不计落地）⇒「增＝加厚现有」0 新建。声明不替代：根因判定器/事故调查流程/复盘会组织法。
