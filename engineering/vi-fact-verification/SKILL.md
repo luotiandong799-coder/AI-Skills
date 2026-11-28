@@ -1,9 +1,9 @@
 ---
 name: vi-fact-verification
-description: 事实与结果验证（Verification Intelligence）。涉及事实声称/来源引用/数据计算核对/改动验收/判断是否真正完成时调用。落实独立性与来源分级，给出"真/误导/夸大/缺证据/假"评级。注意：EI 的 CCS 验"执行过"，VI 验"对不对"，互补不重复。、变异测试（mutation testing·变异算子·存活/等价变异体·等价不可判定·耦合效应·human oracle problem）、Youden指数J（Se+Sp−1·ROC最大垂直距离·阈值选取与患病率无关·Se/Sp联合置信域）、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、SanitizerCoverage、corpus、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、Bland-Altman、一致性界限、limits of agreement、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、评分者间信度IRR（kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）、量具GR&R/MSA（EV重复性/AV再现性·GRR=√(EV²+AV²)·%GRR两口径10/30·ndc≥5·均值极差vs ANOVA·10×3×3盲测·第一类研究）
+description: 事实与结果验证（Verification Intelligence）。事实声称/来源引用/数据核对/改动验收/完成判定。独立性+来源分级+真/误导/夸大/缺证据/假评级。EI验执行过/VI验对不对，互补。、变异测试（mutation testing·变异算子·存活/等价变异体·耦合效应）、Youden指数J（Se+Sp−1·ROC最大垂直距离·阈值选取与患病率无关·Se/Sp联合置信域）、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、spectrum effect、two-gate case-control、single-gate cohort、work-up偏倚、预设指标、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、SanitizerCoverage、corpus、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、Bland-Altman、一致性界限、limits of agreement、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、评分者间信度IRR（kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）、量具GR&R/MSA（EV重复性/AV再现性·GRR=√(EV²+AV²)·%GRR两口径10/30·ndc≥5·均值极差vs ANOVA·10×3×3盲测·第一类研究）、生存分析（Kaplan-Meier乘积限·删失·log-rank·Cox比例风险·风险比HR·PH假设检验）
 module: VI
 modules: VI,EI
-version: "1.22.0"
+version: "1.23.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -257,22 +257,10 @@ version: "1.22.0"
 - **未采纳**：STARD 报告清单逐条、Fagan nomogram 计算、似然比与预测值公式、Bayes 校正 work-up bias 的具体回归法（属诊断学建模细节，留给后续）。
 
 
-## 十四、似然比：把「检验有多强」与「这个人验前多可能」拆开，验后才能 portable（r768B 独立实拉 2026-11-19，≥2 独立域一手交叉，3 独点）
+## 十四、似然比（r768B · 全文下沉 references/r768B_似然比.md）
 
-> §13 管「准确率这个数依赖什么人群与抽样」，本章管一个互补的操作问题：**当被验证对象的验前概率与你手里的研究人群不一样时，阳性/阴性预测值不能照搬，得用似然比把它迁移过来**。这正是 §13 末尾「未采纳 Fagan/似然比」预留的位置。核心洞察：sensitivity/specificity 描述「有病的人会不会被检出」（post hoc，相对穩），预测值描述「这个结果有多可信」（随患病率变）；似然比是二者的桥。
+> 本节三独点（LR 定义与 portable 性 / 验前 odds×LR=验后 odds 与 Fagan / LR+≥3 与 DOR 与自然频率沟通）与四域一手来源逐字全文已下沉 `references/r768B_似然比.md`，结论仍有效：验前概率不同时预测值不能照搬，用 LR 迁移；与 §13 谱偏倚、§26 生存分析分工不复用。
 
-- **r768B-1 ★LR 是「给定结果时，有病与无病者的似然之比」，与患病率无关故可 portable 到个体**：定义逐字（BMJ EBM 两步 Fagan）「The LR represents the direction and the strength of evidence provided by a test result. It is calculated by dividing the likelihood of the test result among patients with the condition by the likelihood of this same test result among patients without the condition」；二值检验两个 LR 可从 sensitivity(Se)/specificity(Sp) 直接算：**LR+ = Se/(1−Sp)**，**LR− = (1−Se)/Sp**。LR 取值 0→∞，**LR=1 无诊断价值**，离 1 越远证据越强；LR+>1 支持有病、LR−<1 支持无病。关键性质（Grimes PDF 逐字）：预测值「driven by the prevalence … even excellent tests have a poor positive predictive value when the disease is rare」，而 LR「portable … useful across an array of disease frequencies … can be applied to a specific patient」；LR 含 2×2 表全部四格且不限于二值（连续/有序结果可分层各算一个 LR，不必 dichotomise 丢信息）。⇒ 验证结论迁移到新场景时，报 Se/Sp + LR，不直接报研究人群的 PPV/NPV；PPV 只在「验前概率与研究人群相同」时成立（§13 的谱偏倚正是破坏这一前提）。
-
-- **r768B-2 ★验前 odds × LR = 验后 odds，再换回概率；Fagan 列线图是免换算的图形版**：贝叶斯更新在 odds 空间是乘法（先验 × 似然 = 后验）：`验前 odds = p/(1−p)` → `验后 odds = 验前 odds × LR` → `验后概率 = odds/(1+odds)`（Wikipedia pre/post-test 逐字）。验后概率还能作为下一个检验的验前概率串联（Grimes：「the post-test odds of the first test becomes the pretest odds for the second」）。Fagan 列线图三轴（左=验前概率、中=LR、右=验后概率）画一条直线即得，刻度按 log-odds 等距（De Gruyter 逐字：「a Fagan plot works on the log scale … the tick marks are spaced at the log odds scale」）。一手数值例（PMC5707117）：Se=90%/Sp=80% ⇒ LR+=4.5、LR−=0.125；验前 2% ⇒ odds=0.0205，阳性验后 odds=0.092 → 约 8.4%；验前 25% 者阴性验后约 3%。⇒ 验证器给「结果 + 置信度」时，置信度若要随场景迁移，必须走 odds×LR 而非照搬百分比；序列验证把前一步验后当后一步验前。
-
-- **r768B-3 ★LR+≥3 才常用于确认、诊断 odds ratio 合并两个 LR；自然频率是给非专业者的无错沟通法**：一手阈值（PMC5707117）「Commonly, only tests with a LR(+) of 3 or more are considered for a positive diagnosis」，ROC 曲线上某点的斜率正是该点的 LR+（「the coordinates of the points are equal to the LR(+) of the quantity value and correspond to the slope of the ROC curve」）——把 LR 与 ROC 接起来。诊断 odds ratio = LR+/LR−（一个阳性把 odds 放大 10×、阴性缩到 0.1× ⇒ DOR=100，PMC12427917 逐字）。沟通层面（De Gruyter）：概率式「患病率 43%、Se 44%、Sp 74%」人易算错，改说**自然频率**「1000 人中 434 人患病、其中 190 人验阳；566 人健康、其中 148 人假阳」再算 PPV=190/338≈57%，误差显著下降（Hoffrage & Gigerenzer）。⇒ 验证报告三件套：报 LR+ / LR−  quantifying 证据方向与强度；DOR 给单一区分度总结（但掩盖两 LR 各自的非对称）；对人沟通验后概率用自然频率而非条件概率句式。
-
-**来源（r768B 独立实拉 2026-11-19，≥2 独立域一手交叉）**：
-- `https://ebm.bmj.com/content/18/4/125.full.pdf+html`（BMJ Evidence-Based Medicine《The two-step Fagan's nomogram》全文 PDF WebFetch 逐字）— LR 方向/强度定义、LR 取值 0→∞ 与 LR=1 无价值、LR+=DSe/(1−DSp)、LR−=(1−DSe)/DSp、二值/有序/连续均可算、Fagan 三轴用法、乳腺癌 MRI Se75%/Sp96% 验前 2% → 验后 28%/0.6% 例。**第一独立域·期刊一手**。
-- `https://pmc.ncbi.nlm.nih.gov/articles/PMC5707117`（PMC5707117《Bayes' theorem, the ROC diagram and reference values》WebSearch 一手全文逐字）— LR+/LR− 定义与 Se/Sp 关系、LR+≥3 阈值、odds 乘法公式、Se90%/Sp80% 数值例、ROC 斜率=LR+。**第二独立域·论文一手**。
-- 交叉快照（不冒充一手全文）：`https://www.mwc.com.br/files/L-Epid02-03-Grimes[A784]%20-%20Likelihood%20ratios.pdf`（Grimes《Refining clinical diagnosis with likelihood ratios》逐字：LR portable、predictive value 随 prevalence、序列检验验后串验前、2/3 已发表产科检验高估价值）· `http://en.wikipedia.com/wiki/Pre-test`（验前/验后 odds 公式与 Fagan nomogram、PPV/NPV 与验后概率数值等价的条件与局限逐字）· `https://www.degruyter.com/.../cclm-2022-0225`（De Gruyter 诊断统计 Fagan plot log 刻度、natural frequencies 43% 改 1000 人例逐字）· `https://pmc.ncbi.nlm.nih.gov/articles/PMC12427917/pdf/diagnostics-15-02148.pdf`（DOR=LR+/LR−、10×/0.1×→100 逐字）· `https://www.sciencedirect.com/science/article/pii/S0093-691X(10)00023-3`（LR+=Se/(1−Sp)=16.4、验前37.4%→验后91% ELISA 孕检例逐字）。
-- **判非 / 去重**：`似然比` / `likelihood ratio` / `Fagan` / `验后 odds` 在本技能正文仅 §13「未采纳」一句预留，本章正式展开、不覆盖 §13 谱偏倚结论；`LR+/LR−` 与 §8 AUC-PR、§12 SelfCheckGPT 一致性、§13 spectrum bias 逐条分工——§8/§12 管分数怎么算、§13 管分数依赖什么人群，本章管「验前不同时怎么把结论迁过去」。与 PDI conformal 覆盖率、DI r764C 前景理论（参照点）、TI 贝叶斯更新异命题，不并存。与 r767/r766/r765 九模块结论不复用。**豆包自留地 WB 0 落地**。
-- **未采纳**：有序/连续检验的分层 LR 具体计算、似然比置信区间公式、work-up bias 的 Bayes 回归校正、Fagan nomogram 绘图实现（诊断学建模细节，留给后续）。
 
 ## 十五、Conformal prediction：不信模型概率、只信校准集，给预测集合一个有限样本覆盖保证（r772B 独立实拉 2026-11-19，≥2 独立域一手交叉，3 独点）
 > §13 管「换个评测人群准确率就变」、§14 管「验前不同怎么迁移结论」，本章管一件更基础的事：**当模型的概率输出根本不可信时，还能不能给出一个"错率有证明"的验证结论**。Conformal prediction 的答案是——把点预测换成集合预测，用一块模型没见过的校准集，换一个可写进 SLA 的硬承诺 `P(Y∈C(x))≥1−α`。它验的不是"模型准不准"，而是"这个集合的覆盖是不是真的达到了你说的比例"。
@@ -443,3 +431,18 @@ version: "1.22.0"
 **判重**：全库 SKILL.md / module-memory / co-learn 对 `测量系统分析` / `GR&R` / `Grubbs` / `重复性再现性` 0 专节；豆包自留地 `wb-execute-discipline` / `wb-context-compressor` WB 0 落地。
 
 **来源与诚信**：`https://www.6sq.net/intro/grr/`（WebFetch 200 全文逐字：EV/AV/GRR/PV/TV 定义、两口径、10/30 门槛、ndc 公式、两算法、10×3×3 设计）——第一独立域·行业工具站；`https://jiahon.com.tw/?p=124432`（WebSearch 全文逐字：AIAG 第四版 K 系数、%GRR 对总变异 10.1% / 对公差 15.3% 算例、ndc=13、EV 9.3%>AV 3.8% 的改进指向、ANOVA 四块方差分解式）——第二独立域·计量技术页；`https://jcetech.cn/equator-grr-ppap`（WebSearch 全文逐字：PPAP 公差带口径、GRR=√(EV²+AV²)、ndc≥5、10×3×3=90 读数、零件须覆盖过程变差）——第三独立域·检测厂商；`https://industrialmonitordirect.com/zh-hant/blogs/knowledgebase/alternatives-to-grr-msa-methods-for-industrial-measurements`（WebSearch 全文逐字：AIAG 门槛表含 Study Variation 30%/60% 对应、10×3×3 三点局限、第一类研究 ≥25 次 σ_repeat 与 6σ 公式、多夹具则须完整 GR&R；明言 MSA 是参考框架非法规、CSR 可改限值）——第四独立域·工业测量站；`https://ucourse.org/p/14482`（WebSearch 全文逐字：GRR 是相对指标受制程变异影响、ndc<5 时 %GRR 5% 仍不合格）——第五独立域·质量培训。逐字全文与判非见 `references/r814A_测量系统分析GRR.md`。
+
+
+## 二十六、生存分析（time-to-event）：还没发生的样本不是「成功」，也不是缺失值（VI · 2026-11-28 实拉，≥2 独立域一手交叉，3 独点）
+
+**独点 1｜删失不是缺失值、也不是事件：KM 乘积限把「最后一次观察时间」和「是否发生事件」两列同时用起来。** 生存分析的结局是「从起点到某事件发生的时间」（故障/死亡/流失/漂移），研究结束时未发生事件者是被**右删失**（right censoring：只知事件在 t 之后、不知确切时刻），既不能当「已发生」也不能整条丢弃。Kaplan–Meier 乘积限估计 `Ŝ(t)=∏_{tᵢ≤t}(1−dᵢ/nᵢ)`：在每个事件时刻 tᵢ，dᵢ 为该时刻事件数、nᵢ 为恰在 tᵢ 前的风险集人数，删失者在其删失时刻之前计入 nᵢ、之后退出；S(t) 是「到 t 仍未发生事件」的概率，S(0)=1 随 t 递减。StatsDirect 明列三条假设：① 删失者与继续随访者生存前景相同——**无法检验且会人为压低 S**；② 早晚期入组者生存前景相同（可检验）；③ 事件在规定时刻被记录，迟记会人为抬高 S。⇒ 凡「跑一段时间才知道结论」的验证（功能多久后出错、用户多久流失、设备多久失效），验收表必须同时有「末次观察时间」与「事件是否发生」两列，只统计已发生者或把未发生当作成功都判违规。
+
+**独点 2｜中位生存期是首次 S≤0.5 的时刻，曲线比较用 log-rank 而非某一时点的率。** 中位生存期 = S 首次降到 0.5 或以下的时刻（Brookmeyer–Crowley 给 95% CI）；平均生存期是 S 曲线下面积，受最长随访时间限制，删失多时只能估到删失比例以内的分位（statsmodels：约 30% 受试者死亡时，只能估 0.3 概率点以下的分位数，如 0.25 分位），拿平均生存期冒充典型值会掩盖重尾。比较两组不能挑某个时点的生存率比大小（选点即引入选择偏差）；`survdiff` 默认 **log-rank** 是非参数、对整条曲线做检验，另有 Gehan–Breslow（按风险集人数加权，更重早期差异）、Tarone–Ware（按 √风险集加权）、Fleming–Harrington（按合并生存时间加权，p=1 更重晚期）——**不同加权回答不同问题，须事前声明**，不能看完哪条显著再挑。⇒ 验证报告写「A 组更可靠」须给出曲线、log-rank p 值与所用权重，缺一不算。
+
+**独点 3｜Cox 比例风险模型估的是乘性效应，比例风险假设是前提而非可选项。** Cox 模型 `h(t|x)=h₀(t)·exp(xᵀβ)`：基线风险 h₀(t) 非参数、不必指定形状，协变量效应以**风险比 HR=exp(βₖ)** 表达——「瞬时事件率被乘以某个倍数」，不是「某时刻生存率高多少」，也不是概率。估计用**部分似然**（只用到事件时刻的风险集）。核心前提 **PH 假设**：任意两人的风险比不随时间变化；违例时 HR 是随时间变化的平均值、不可照搬。检验用 log-log 生存曲线是否平行、Schoenfeld 残差是否随时间有趋势、或引入时变协变量；违例改用**分层 Cox**（对违背 PH 的变量分层、对其余变量估系数）或**扩展 Cox**（含时变变量）。⇒ 凡报 HR 必同时报 95% CI、PH 假设检验结果与基线风险未参数化这一事实；把 HR 讲成「概率提升 x 倍」或跳过 PH 检验，判为误读。
+
+**判据（VI 落地）**：以「经过一段时间才见分晓」的指标做验证时，先问三件事——① 删失样本是否被显式记录而不是被删/被当成功；② 曲线比较是事前声明的 log-rank 与权重，还是事后挑时点；③ 若用 Cox 报效应，是否带 CI 且验过 PH 假设。三者缺一，结论只算「在有偏观测上的描述」，不得升级为事实。与 §九统计功效（多少样本）、§二十二序贯检验（何时看）、§二十四 Youden（阈值怎么选）、§二十五 MSA（量尺是否可信）分工：本节点在「时间到事件且结局尚未全部揭晓时怎么验证」，均异命题。
+
+**判重**：全库 SKILL.md / module-memory / co-learn 对 `生存分析` / `Kaplan-Meier` / `log-rank` / `Cox 比例风险` 0 专节（仅豆包自留地 `wb-context-compressor` 有 `calibration` 语境一句，异命题且 WB 0 落地）；与 PDI 预测（预测值校准）、VI §十四似然比（验前验后迁移）、§十三谱偏倚（人群依赖）分工不复用。
+
+**来源与诚信**：`https://www.statsdirect.com/help/survival_analysis/kaplan_meier.htm`（WebFetch 200 全文逐字：S(t) 定义、乘积限公式与 dᵢ/nᵢ 语义、删失三条假设、Greenwood 方差、Peterson=−ln(S) 与 Nelson–Aalen、log-rank/Wilcoxon 无需分布假设、Brookmeyer–Crowley 中位 CI）——第一独立域·统计软件官方文档；`https://www.statsmodels.org/stable/duration.html`（WebFetch 200 全文逐字：right-censoring 定义、SurvfuncRight、survdiff 默认 logrank 与 FH/Gehan-Breslow/Tarone-Ware 加权、PHReg Cox 模型、HR 乘性效应、30% 死亡只能估 <0.3 分位）——第二独立域·开源统计库官方文档；`https://zh.wikibooks.org/wiki/数理统计/生存分析与打分检验`（WebSearch 快照逐字：S=exp(−H)、KM 公式、Nelson–Aalen、Cox 部分似然 L(β)、Schoenfeld 残差、Score/log-rank/Wald 三者分工）与 `https://www.eolss.net/Sample-Chapters/C02/E4-31-02-04.pdf`（Kleinbaum 等《Survival Analysis》章节 WebSearch 摘要逐字：censored 定义、PH 假设 log-log 曲线、分层/扩展 Cox）——第三、四独立域教材交叉，WebFetch 本地回退禁用（`CODEBUDDY_WEBFETCH_DISABLE_LOCAL_FALLBACK=1`）如实登记不冒充全文。诚信：`https://www.ncbi.nlm.nih.gov/books/NBK539796/` 号错配（实为桡动脉置管）整篇弃用；`biostathandbook.com/survival.html`/`statology.org/kaplan-meier-curve`/`medcalc.org/manual/cox-*` 均 404 未采纳；维基教科书与 wipedia 同族按来源族折叠。逐字全文与判非见 `references/r819A_生存分析.md`。
