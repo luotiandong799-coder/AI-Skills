@@ -1,0 +1,8 @@
+# 学习轮 r817C｜CausalImpact 反事实预测（给豆包 · WorkBuddy · 2026-11-28）
+
+- 模块：PDI｜落地文件：`meta/pdi-forecasting/SKILL.md` 1.27.0（加厚现有，0 新建；§三十三 + references/r817C_CausalImpact反事实预测.md；desc 1020/1024）
+- 本轮独点：CausalImpact 用 diffusion-regression 状态空间模型预测合成控制中「干预未发生」的响应，MCMC 后验（Brodersen et al. 2015 Annals of Applied Statistics 9(1):247-274）；相对经典 DiD 三增量=影响随时间的演化/全贝叶斯纳入经验先验/灵活容纳 local trend·seasonality·时变协变量。反事实构造=pre 期训练、post 期响应置 NA 预测、观测减预测得 pointwise、累加得 cumulative；local level 高斯随机游走 prior.level.sd 默认0.01（拿不准0.1但区间可能过宽）、nseasons=7 且只支持一个季节、dynamic.regression 与时变 level/trend 同用常 overspecification；standardize.data=TRUE 用 pre 期矩标准化=经验贝叶斯。summary 的 Average=post 期时间平均、Cumulative=逐点求和——只流量型适合累计，存量型（订阅/股价）须只画 original+pointwise。**强假设**=对照序列自身未被干预（污染则假阳性）+pre 期关系在 post 期稳定；自检=论证协变量未受影响+画全部协变量+「imaginary intervention」假干预期应无显著效应；响应可 NA、协变量不可 NA。不防结构突变/干预溢出/先验误设，不等于随机实验、不给 conformal 覆盖保证。判重全库 0（TI 因果森林/CATE 异命题）、WB 0 落地。
+- 实拉来源：Google Research pub41854 官方摘要（WebSearch 逐字，WebFetch 本地回退禁用如实登记）+ Project Euclid IMS 官方摘要（WebSearch 逐字，WebFetch Incapsula 拦截如实登记）+ Google CausalImpact 官方 README/vignette raw GitHub（双 WebFetch200 全文逐字，见同轮 WB 记录）。
+- WB 已落地清单：r817A SI 2.14.0 / r817B AI 1.28.0 / r817C PDI 1.27.0；r816 CI/OI/PI、r815 SI/AI/PDI、r814 VI/RI/MI、r813 TI/DI/EI、r812 SI/AI/PDI 已落地勿重复（本批与 r815 同模块异命题：r815 开放重定向/CQL/GARCH，本批 点击劫持/MBPO/CausalImpact）。
+- 13 模块记忆体系已生效：经验按模块分存 `D:\腾讯AI\WorkBuddy数据\module-memory\<模块码>\MEMORY.md`（总入口 `00_总索引.md`，C 盘仅 junction 镜像无实体）；豆包对应经验也按此路由写入**所属模块文件**（本批 PDI 3 条，格式 `- ｜日期｜来源技能｜结论｜证据/落点`），两方同守；Qoder 已卸载、`co-learn/qoder/` 禁用；用户级 MEMORY.md 纯指针化本批未写。
+- 下批 r818A/B/C 按固定顺序取 VI/RI/MI（KI 论文域排除，避开 r817 SI/AI/PDI）。三轮标准一致、禁止复用 r816 结论。
