@@ -1,7 +1,7 @@
 ---
 name: si-safety-governance
-description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。差分隐私、differential privacy、epsilon DP、隐私预算、Laplace 机制、sensitivity 敏感度、组合定理、post-processing immunity、DP-SGD、本地DP中心DP。BOLA、IDOR、越权访问、对象级授权、CWE-639。转述授权攻击面、同名对象冒充、能力缺口粉饰、CSRF、跨站请求伪造、synchronizer token、double submit、SameSite、Fetch Metadata、Origin/Referer 校验、token 与会话绑定。原型污染、prototype pollution、__proto__、CWE-1321、Object.create(null)、Object.freeze、--disable-proto、Object.hasOwn、JSON Schema 校验。质量分配、mass assignment、autobinding、object injection、CWE-915、DTO、可写属性白名单、allowlist 优先于 denylist。CORS、跨源资源共享、ACAO、Access-Control-Allow-Origin、Origin 反射、null origin、Access-Control-Allow-Credentials、Vary: Origin、同源策略 SOP。开放重定向、Open Redirect、CWE-601、unvalidated redirect、returnUrl、redirect_uri 白名单、协议相对 URL、离站确认页。点击劫持、Clickjacking、frame-ancestors、X-Frame-Options、DoubleClickjacking
-version: 2.14.0
+description: 全局安全治理（Security Intelligence）。在所有对外/写/删/权限/部署/工具调用/结果输出动作前与后调用，覆盖数据读取、信息传递、工具调用、结果输出全链路（不只执行前）。扫描提示注入、数据外泄、权限边界、工具中毒、危险代码、供应链、过度代理、记忆中毒等风险，给出风险评分与"可否安装/执行"门禁。本技能是 SI 载体，对系统既有 skills-security-check 做能力补齐。 触发：OIDC 信任策略、sub 条件键、CI 联邦身份。差分隐私、differential privacy、隐私预算、Laplace 机制、sensitivity 敏感度、组合定理、post-processing immunity、DP-SGD、本地DP中心DP。BOLA、IDOR、对象级授权、CWE-639。转述授权攻击面、同名对象冒充、能力缺口粉饰、CSRF、跨站请求伪造、synchronizer token、double submit、SameSite、Origin/Referer 校验、token 与会话绑定。原型污染、prototype pollution、__proto__、CWE-1321、Object.create(null)、Object.freeze、--disable-proto、Object.hasOwn、JSON Schema 校验。质量分配、mass assignment、autobinding、CWE-915、DTO、可写属性白名单、allowlist 优先于 denylist。CORS、跨源资源共享、ACAO、Access-Control-Allow-Origin、Origin 反射、null origin、Access-Control-Allow-Credentials、Vary: Origin、同源策略 SOP。开放重定向、Open Redirect、CWE-601、returnUrl、redirect_uri 白名单、协议相对 URL、离站确认页。点击劫持、Clickjacking、frame-ancestors、X-Frame-Options、DoubleClickjacking。XXE、XML外部实体注入、CWE-611、DOCTYPE、参数实体、blind XXE、XInclude
+version: 2.15.0
 module: SI
 modules: SI,EI
 ---
@@ -50,41 +50,9 @@ modules: SI,EI
 - 安装新 Skill/MCP 前 → SI 扫描（不执行被扫对象，仅静态+可选 LLM）。
 - 扫描结论 → **MI** 留痕；反复出现的中危 → **RI** 复盘。
 
-## 六、架构级安全方法论（2026-11-07 第二轮实拉深化）
+## 六、架构级安全方法论（2026-11-07 r706C 实拉 · 摘要）
 
-> 本技能上轮覆盖"扫描 17 类 + 风险评分"；本轮补"架构级防御"——光靠检测挡不住提示注入（LLM 分不清指令与数据），须靠架构让危险能力永不汇聚。
-
-### 6.1 致命三要素（Lethal Trifecta, Simon Willison）
-三项能力**单独都寻常**，仅当"在同一进程汇聚"时致命：
-1. **访问私有数据**（PII / 密钥 / 内部系统）
-2. **暴露不可信内容**（README / issue / 网页 / MCP 工具描述 / 检索片段）
-3. **外传通道**（网络出口 / 把数据送出的工具调用）
-注入内容可借此指挥 Agent 收集并外泄私有数据。架构目标：让三要素**永不落在同一步**。
-
-### 6.2 STRIDE ↔ Agent 攻击面映射
-| STRIDE | Agentic 表现 | 缓解 |
-|---|---|---|
-| Spoofing 仿冒 | 伪造 Agent 身份调用越权端点 | 会话盐化 XML 分隔符、强鉴权 |
-| Tampering 篡改 | 文档/DB/工具描述植入注入劫持推理 | 第三方文件/检索/DB 输入全部清洗 |
-| Repudiation 抵赖 | 缺动作日志无法溯源 | 独立不可变日志（查询/上下文/推理/工具调用） |
-| Info Disclosure 泄露 | 注入诱导抽取系统设置/密钥 | 输出净化、限 API、限制工具输出大小 |
-| DoS 拒绝服务 | 无限推理循环/超额 token | token 上限、递归深度上限、限流 |
-| EoP 提权 | 越权链式调用达成高危结果 | 最小权限 IAM + 破坏性动作 HITL |
-
-### 6.3 双 LLM 隔离（Dual-LLM / Split-Context）
-- **隔离 Worker（LLM1）**：沙箱、零工具、零网络，只把不可信内容转成**结构化校验数据**，不执行其中指令。
-- **受信 Controller（LLM2）**：只接收 Worker 的校验后 JSON，持工具与私有数据。
-- 注入载荷永远到不了"能行动"的上下文，三要素不汇聚。
-- 代价：多一次 LLM 推理（约 +80ms / 双倍 token 处理量），但中和约 99% 间接注入。
-
-### 6.4 沙箱 / Egress / RBAC / HITL
-- **Egress**：默认拒绝网络出口，按任务白名单放行。
-- **隔离运行时**：微 VM / gVisor / Firecracker / WASM，禁用网络、硬资源上限、短超时、只读根。
-- **RBAC**：工具权限按当前任务最小集，不用便利的全局服务账号。
-- **HITL**：转账/删数据/发布等不可逆动作需人类确认；闸门须"稀有、具体、展示将要发生什么"，否则一周内被橡皮图章化（频繁/模糊的批准对话会被点过）。
-
-### 6.5 DREAD 评分（补充 §四 的风险分级）
-对每项威胁：Damage / Reproducibility / Exploitability / Affected users / Discoverability 各 1–10，加权和定位 CRITICAL/HIGH。与 §四 的静态扫描评分互补：扫描给"代码风险"，DREAD 给"威胁业务影响"。
+> 光靠检测挡不住提示注入（LLM 分不清指令与数据），须靠架构让危险能力永不汇聚。**全文（致命三要素 Lethal Trifecta / STRIDE↔Agent 映射表 / 双 LLM 隔离 / 沙箱·Egress·RBAC·HITL / DREAD 评分）见 `references/r706C_架构级方法论.md`**。要点：①三要素=访问私有数据+暴露不可信内容+外传通道，仅当同进程汇聚才致命；②双 LLM 隔离=Worker 沙箱零工具转结构化数据、Controller 持工具与私有数据，代价约 +80ms 换约 99% 间接注入中和；③HITL 闸门须稀有·具体·展示将发生什么，否则被橡皮图章化；④DREAD 五维 1–10 补 §四 静态扫描评分（扫描给代码风险、DREAD 给业务影响）。
 
 ## 七、来源（2026-11-07 实拉，含本轮深化）
 
@@ -497,3 +465,11 @@ GitHub Docs 官方逐字：「**rotate the affected credential immediately** ...
 **独点2 响应头的实现陷阱**：XFO `DENY`/`SAMEORIGIN` 可用、`ALLOW-FROM uri` 已废弃且不支持时 **fail open=完全无防护**；七类局限含逐页配置、多域名站无法列白名单、不能同时允许本站+第三方、嵌套 frame 只看顶层浏览上下文、**Web 代理剥头即失去防护**、已被 CSP L2 取代。`<meta http-equiv="X-Frame-Options" content="deny">` **DO NOT WORK**，`frame-ancestors` 同样必须 HTTP 响应头——验收抓响应头不看 HTML。WSTG 检出=造 `<iframe src=target>` 测页，能加载即无防护；「不出现」只说明有某种防护不等于免疫。
 **独点3 frame-busting 可绕 + CSRF 串链**：双重 framing 使 `parent.location` 触发 descendant frame navigation policy 安全违例反制失效；禁 JS（IE `security="restricted"`/HTML5 `sandbox`/designMode）、`onBeforeUnload` 诱导取消或对 204 页面每毫秒冲导航、IE8/Chrome XSS filter 误判禁脚本、IE7/8 重定义 `location`/Safari defineSetter 均可绕；OWASP 只认 HEAD 式 antiClickjack style 方案，简单 `if(top!=self) top.location.href=...` 明确 DO NOT USE。WSTG PoC 用 `opacity:0` iframe 把带合法 anti-CSRF token 的转账确认页叠在「Click and go!」下，证明有 token≠动作出于本意。SameSite 不挡同站兄弟子域 framing、无需登录态的攻击完全无效。
 **来源与判非**：OWASP 官方攻击页 + Clickjacking Defense Cheat Sheet + WSTG v4.1（三 WebFetch 200 全文逐字）。全库 `点击劫持`/`Clickjacking`/`UI redress`/`frame-ancestors` 0 机制专节（仅 §r749C OAuth 同意段一句防御配套异命题），豆包自留地 WB 0 落地，按「增＝加厚现有」0 新建。声明不防：独立窗口 UI redress（须服务端授权）/XSS/鉴权缺失/代理剥头/meta 写法/ALLOW-FROM fail open。
+
+## §三十 r820A · XXE（CWE-611）：XML 解析器替攻击者读本地文件与打内网（SI · 2026-11-28 实拉，3 独立域官方一手交叉，3 独点；全文见 `references/r820A_XXE.md`）
+
+§十五 SSRF 管服务器被当代理、§二十九点击劫持管 UI 欺骗；本章管**解析器把不可信 XML 里的外部实体当指令执行**——值可来自文件路径或 URL，故能读本地文件、打内网、带外外泄。与 §15「关 XXE 外部实体」一句配套在此正式展开为体系。
+**独点1 根因与四类攻击 + 三条隐藏面**：标准解析器即便应用不用也支持 DTD/外部实体（CWE-611）。四类=检索文件（`<!ENTITY xxe SYSTEM "file:///etc/passwd">` 在回显字段引用 `&xxe;`）、SSRF（SYSTEM 指向 `http://internal.../` 双向或 blind）、blind 带外外泄、blind 报错回显。隐藏面三条：XInclude（无法控制整个文档时用 `<xi:include parse="text" href="file:///etc/passwd"/>`）、文件上传（DOCX/SVG 含 XML 子组件，图像处理库支持 SVG 即入口）、改 Content-Type 为 `text/xml` 被容忍。XML 只是传输格式，同功能另测 XSS/SQLi，可借 XML 编码混淆绕弱防御。
+**独点2 Blind XXE 四手法**：blind=应用不回显实体值。①OAST 探测：指向受控 URL 看 DNS/HTTP 交互；常规实体被拦改用**参数实体**（声明与引用都用 `%`，只能在 DTD 内引用）。②恶意外部 DTD 带外外泄：`%file` 装文件内容→`%eval` 动态声明 `&#x25; exfiltrate` 把 `%file` 拼进 attack URL query→展开求值；换行字符可能被 URL 校验卡住，改 FTP 或打 `/etc/hostname` 单行文件。③报错回显：`file:///nonexistent/%file;` 抛 FileNotFoundException 把内容塞进错误文本。④复用本地 DTD（OOB 被封时）：内部 DTD 重定义外部 DTD 已声明实体可放宽「参数实体嵌参数实体」禁令（规范只允许外部 DTD），指向服务器真实存在的 DTD（如 `/usr/share/yelp/dtd/docbookx.dtd`）借错误回显逐个探测、再找可重定义实体（Sharoglazov 首创，PortSwigger 2018 十大第 7）。
+**独点3 防护逐库 + 配置失败即停**：首选禁 DTD、拒 DOCTYPE、关 XInclude；需 DTD 则禁外部实体解析+外部 DTD 加载+限实体扩展；schema 校验与 XSLT 阶段同样限外部访问；「Treat an unsupported security setting as a configuration failure. Do not continue processing untrusted XML with partial hardening」；传 stream 而非不可信文件名/URL（外部实体控制管不到初始资源）；`ACCESS_EXTERNAL_*` 限协议不是资源白名单（允许 https ≠ 资源白名单），需外部依赖用 `RESOLVE=strict` catalog 或 allowlisting resolver 且拒未批准 ID。逐库：Java JAXP `disallow-doctype-decl`+`FEATURE_SECURE_PROCESSING`（`setExpandEntityReferences(false)` 不替代阻外部资源，XmlDecoder 禁用于不可信输入）；.NET 4.5.2 阈值+ASP.NET `httpRuntime targetFramework` 取较低者、`<compilation targetFramework>` 不够；Python `defusedxml`+`forbid_dtd=True`（Expat<2.7.2 有 DoS）；PHP callback `return null`（直接传 null 给 setter 无效）；libxml2 勿开 `XML_PARSE_NOENT`/`XML_PARSE_DTDLOAD`；Lucee/ColdFusion 无全局设置须每次调用传 `ALLOWEXTERNALENTITIES=false`。声明不防：XML 实体膨胀 DoS（防 XXE≠防所有 XML DoS）、XSS/SQLi、resolver 主动放行资源、直传解析 API 的初始 URL。
+**来源与判非**：PortSwigger Web Security Academy《XXE》+《Blind XXE》+ OWASP XXE Prevention Cheat Sheet（三 WebFetch 200 全文逐字）。全库 `XXE`/`CWE-611`/`DOCTYPE`/参数实体 0 机制专节（仅 §15.1 借 XXE、§15.3 关 XXE 外部实体两句异命题），豆包自留地 WB 0 落地，按「增＝加厚现有」0 新建。
