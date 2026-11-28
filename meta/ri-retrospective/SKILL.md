@@ -1,9 +1,9 @@
 ---
 name: ri-retrospective
-description: 经验复盘与持续改进（Reflection Intelligence）。任务完成/失败后沉淀经验·比较预期与实际·根因分析·总结规则时调用。提供无责复盘仪式、Kolb体验学习循环CE/RO/AC/AE、把握转化两对辩证、学习风格绕行路径、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议改 Skills/提示词/规则/工作流，未授权不得改系统核心配置·标签体系·跨事故聚合（severity/taxonomy 分工·受控枚举·原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/角色三分离/发言权/时间盒与会前准备）；FRAM 功能共振（成功失败同源·涌现·六方面六角·timing/precision两型·耦合放大阻尼·管可变性非消除·WAD vs WAI·与STAMP分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习（改动作/改假设/改机制·防御惯例阻断双环·学习≠有效行为须分层验收）。NAT/HRO（交互复杂×紧耦合·安全记录≠高可靠·降耦合）。偏差正常化（异常→可接受→新常态·警告被重释·标准渐松·「以前没事」非证据·与NAT/HRO分工）。 FTA/ETA（演绎组合vs归纳后果·最小割集/单点失效/共因·量化=频率×条件概率）。 FMEA/FMECA（RPN序数伪精度·AP表严重度主导） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障三门）·仍未证明栏（可照做≠可审计）·近失改屏障·变更分析IS/IS-NOT） HAZOP（IEC 61882·引导词×参数=偏差·定性四阶段·OSHA五年再验证·与FMEA/HAZID分工·Delta漂移再验证）·鱼骨图/石川图（因果图·5M1E/6M分类·鱼头在右为原因型左为对策型·头脑风暴后归并·定性非定量须数据验证·与5Why/FTA/HAZOP分工）
+description: 经验复盘与持续改进（Reflection Intelligence）。任务完成/失败后沉淀经验·比较预期与实际·根因分析·总结规则时调用。提供无责复盘仪式、Kolb体验学习循环CE/RO/AC/AE、把握转化两对辩证、学习风格绕行路径、复盘准入触发器、行动项可验收动词门与三类关闭态、决策质量与结果质量分栏评分、决策时间线与结果偏差/归因偏差三列门，产出复盘报告。RI 可提议改 Skills/提示词/规则/工作流，未授权不得改系统核心配置·标签体系·跨事故聚合（severity/taxonomy 分工·受控枚举·原文锚点）。关闭≠修复（implemented→verified 两阶段/原始 trigger 验证/三态结论与事前成功条件）。复盘会第二道门（准入/角色三分离/发言权/时间盒与会前准备）；FRAM 功能共振（成功失败同源·涌现·六方面六角·timing/precision两型·耦合放大阻尼·管可变性非消除·WAD vs WAI·与STAMP分工）。AAR 事后回顾薄门（四问四步·follow-up 才产生改进·引导者只问开放题不下判·正式/非正式双轨·每次行动都过的薄门与事故深挖门并存）。单/双/三环学习（改动作/改假设/改机制·防御惯例阻断双环·学习≠有效行为须分层验收）。NAT/HRO（交互复杂×紧耦合·安全记录≠高可靠·降耦合）。偏差正常化（异常→可接受→新常态·警告被重释·标准渐松·「以前没事」非证据·与NAT/HRO分工）。 FTA/ETA（演绎组合vs归纳后果·最小割集/单点失效/共因·量化=频率×条件概率）。 FMEA/FMECA（RPN序数伪精度·AP表严重度主导） HFACS人为因素分类（四层主动性失败vs潜伏条件·组织/监督/前提/不安全行为·19类·外部影响非层级·归因停在操作员=把症状当因）蝴蝶结bowtie（屏障三门）·仍未证明栏（可照做≠可审计）·近失改屏障·变更分析IS/IS-NOT） HAZOP（IEC 61882·引导词×参数=偏差·定性四阶段·OSHA五年再验证·与FMEA/HAZID分工·Delta漂移再验证）·鱼骨图/石川图（因果图·5M1E/6M分类·鱼头在右为原因型左为对策型·头脑风暴后归并·定性非定量须数据验证·与5Why/FTA/HAZOP分工）·事前验尸premortem（假设已失败倒推死因·独立写轮流念·死因配触发指标·三不适用）
 module: RI
 modules: RI,EI
-version: "2.17.0"
+version: "2.18.0"
 ---
 
 # RI · 经验复盘与持续改进（Reflection Intelligence）
@@ -479,3 +479,12 @@ DevOps AI Toolkit 逐字 prep 四条「**Assemble the timeline in advance.** Pul
 **独点2 八洞察中的三个工程判据**：①「Learning is an endlessly recurring cycle not a linear process」——复盘按连续循环组织成加深螺旋，不一次结案；④「dialectic poles motivate learning」——四模态张力是驱动力，缺任一极失去张力；⑤「learning styles are different ways of going around the cycle」——风格是绕行路径非固定能力标签，⑧循环可作真实性评估 rubric。另六命题含「all learning is re-learning」「conceived as a process not outcomes」——复盘产出是下次可改的判断，不是终版结论。
 **独点3 边界与独立交叉**：Emerald 同行评审独立追溯源流 Dewey（learner-centered、experience→reflective thought and action）/Lewin（评估方法）/Joplin（五阶段）/Kolb（1984 四阶段），确认四阶段是学界承认可考源流。Zull 神经映射（感觉皮层/整合皮层/运动脑）属单一学者提议、非 ELT 核心公理，agent 场景按 rules/08 §五标**推断**不入长期记忆。
 **来源与判非**：EBLS 官方八洞察页 + KELP 技术规范 + Rubric for Experiential Training（DOI 10.29329/ijpe.2021.366.12）WebFetch200 + Emerald WebSearch 快照；simplypsychology Cloudflare 拦、Britannica 404、EBLS PDF 本地回退禁用如实登记。全库 `Kolb`/`experiential learning`/`double-loop learning` 0 专节（豆包 r771C 一句不计落地）⇒「增＝加厚现有」0 新建。声明不替代：根因判定器/事故调查流程/复盘会组织法。
+
+
+## §r824B · Premortem 事前验尸：把无责复盘推到事故之前（RI · 2026-11-28 实拉，HBR 原文 + fourweekmba + 牛企实操，全文见 `references/r824B_premortem事前验尸.md`）
+
+§7.1/r738C 管事后复盘触发、r767C AAR 管每次行动薄门，本章管**事前**：项目未启动就假设它已经失败，让异议者合法发声。与 HAZOP（引导词枚举操作偏差）/red team 分工不同。
+**独点1 prospective hindsight 是机制**：HBR（Gary Klein, 2007-09）逐字「By making it safe for dissenters who are knowledgeable about the undertaking and worried about its weaknesses to speak up, you can improve a project's chances of success」；其引 Mitchell/Russo/Pennington 1989 实验「prospective hindsight ... increases the ability to correctly identify reasons for future outcomes by 30%」——来源观点归属原研究，非本地实测。关键动作是把「可能出什么问题」换成「已经失败了，死因是什么」，唱衰从「反对人」变成「完成任务」。
+**独点2 流程与产出是「死因→指标→责任人→触发后动作」**：HBR 流程=独立写死因（尤其平时不敢说的）→每人轮流念一条至穷尽→项目经理汇总强化方案；fourweekmba 四步 fix the outcome / explain backwards / make dissent safe / feed the plan；牛企本地版加 10 条死因门槛（第 6 条后才有真东西）、分「可防/可扛」两类、每条死因倒推可数字化的早期信号与触发后动作（「提前写好动作，等于替未来的自己做了决定」）。AI 只能列通用风险，本地风险须在场者补。
+**独点3 三不适用且不替代事后复盘**：陌生领域（死因靠想象不如调研）、团队已过度悲观（会被吓死）、已拍板只想找认同（死因全是借口）三种禁用；HBR「a premortem may be the best way to circumvent any need for a painful postmortem」是「可能免去」不是「替代」；fourweekmba 对比表明确 premortem/postmortem/scenario/risk register/red team 五者问句与时机不同。
+**来源与判非**：HBR 原文 WebFetch 摘要段 + WebSearch 快照逐字、fourweekmba WebFetch 触发 Cloudflare 检查页取快照、牛企 2026-10-13 WebFetch200 全文；全库 `premortem`/`事前验尸`/`prospective hindsight`/`推进式` WB 侧 0 命中（co-learn 豆包记录与 daily log 不算落地）。

@@ -1,9 +1,9 @@
 ---
 name: vi-fact-verification
-description: 事实与结果验证（Verification Intelligence）。事实声称/来源引用/数据核对/改动验收/完成判定。独立性+来源分级+真/误导/夸大/缺证据/假评级。EI验执行过/VI验对不对，互补。、变异测试（mutation testing·变异算子·存活/等价变异体·耦合效应）、Youden指数J（Se+Sp−1·ROC最大垂直距离·阈值选取与患病率无关·Se/Sp联合置信域）、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、预设指标、DeLong检验、相关ROC AUC比较、结构分量、协方差校正、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、SanitizerCoverage、corpus、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、Bland-Altman、一致性界限、limits of agreement、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、评分者间信度IRR（kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）、量具GR&R/MSA（EV重复性/AV再现性·GRR=√(EV²+AV²)·%GRR两口径10/30·ndc≥5·均值极差vs ANOVA·10×3×3盲测·第一类研究）、生存分析（Kaplan-Meier乘积限·删失·log-rank·Cox比例风险·风险比HR·PH假设检验）
+description: 事实与结果验证（Verification Intelligence）。事实声称/来源引用/数据核对/改动验收/完成判定。独立性+来源分级+真/误导/夸大/缺证据/假评级。EI验执行过/VI验对不对，互补。、变异测试（mutation testing·变异算子·存活/等价变异体·耦合效应）、Youden指数J（Se+Sp−1·ROC最大垂直距离·阈值选取与患病率无关·Se/Sp联合置信域）、多重检验校正、FWER、FDR、Bonferroni、Holm、Benjamini-Hochberg、q值、family边界、假阳性膨胀、SelfCheckGPT、采样一致性幻觉检测、零资源黑盒、AUC-PR、谱偏倚、验证偏倚、预设指标、DeLong检验、相关ROC AUC比较、结构分量、协方差校正、conformal prediction、保序预测、覆盖保证、非一致分数、split conformal、CQR、marginal与conditional coverage、覆盖率引导模糊测试、SanitizerCoverage、corpus、crash最小化、基准污染、benchmark contamination、去污染、decontamination、n-gram overlap、成员推断MIA、canary string、推理时去污、模糊重复fuzzy duplicate、对抗验证、adversarial validation、数据集偏移、dataset shift、covariate shift、域分类器、ROC AUC分布相似度、特征漂移归因、对抗验证集、训练服务偏斜、核验权分离、接受权限、证据复用三同、Bland-Altman、一致性界限、limits of agreement、相关不是一致、平均差、比例偏倚、异方差、可接受差异Δ、interchangeability、评分者间信度IRR（kappa/ICC/alpha·kappa悖论·信度≠效度·须报CI）、量具GR&R/MSA（EV重复性/AV再现性·GRR=√(EV²+AV²)·%GRR两口径10/30·ndc≥5·均值极差vs ANOVA·10×3×3盲测·第一类研究）、生存分析（Kaplan-Meier乘积限·删失·log-rank·Cox比例风险·风险比HR·PH假设检验）·Brier分数（严格适当评分·Murphy分解·可靠性图·低分不等于更准）
 module: VI
 modules: VI,EI
-version: "1.24.0"
+version: "1.25.0"
 ---
 
 # VI · 事实与结果验证（Verification Intelligence）
@@ -454,3 +454,12 @@ version: "1.24.0"
 **独点2 k≥3 先全局后两两、Hanley–McNeil 仅存旧法**：k 条同人群曲线算 k×k 协方差，取 k−1 对比向量 c，`χ²=cᵀV⁻¹c` df=k−1，显著后才逐对 z 检验（NGAL/KIM-1/cystatin C 0.84/0.79/0.76 例）。H&M 1983 用平均 AUC+原始分数 r 查表得 r′ 近似，DeLong 直接从数据估协方差故优选；H&M 仅复现旧文献。AUC 的 95%CI 用 binomial exact（**不适用 AUC 之差**）。
 **独点3 统计显著≠临床相关**：大样本 AUC 差 0.01 也 p<0.05；0.03 多可忽略、≥0.10 才实质重要；曲线交叉时整体 AUC 掩盖「高敏区 A 优/高特区 B 优」必须看图；AUC 无显著差异时选更便宜/快/低侵入者。报告须含各 AUC+CI、差+CI、p，差的 CI 比单独 p 更有信息。
 **来源与判非**：MedCalc book/medcalc.org manual 两页 + PubMed PMID 3203132 全文 WebFetch200；arXiv:1402.9224 not found、1701.06359 主题错配已弃用如实登记。全库 DeLong 0 专节、豆包自留地 WB 0 落地 ⇒「增＝加厚现有」0 新建。声明不替代：阈值选择/一致性评价/临床效用判断。
+
+
+## §r824A · Brier 分数与概率校准：单一误差值混合了校准与分辨力（VI · 2026-11-28 实拉，scikit-learn 官方 + 百度百科 + 三份可验算笔记，全文见 `references/r824A_Brier分数与概率校准.md`）
+
+§十 ECE 管置信度校准、§十五 Conformal 管覆盖保证、§r810A Youden 管阈值选取、§r822A DeLong 管 AUC 比较，本章管**概率预测自身的严格适当评分与三分量分解**，四者互补不复用。
+**独点1 单一 Brier 值不得单独判校准**：scikit-learn 1.16 逐字「Strictly proper scoring rules ... assess calibration (reliability) and discriminative power (resolution) ... as well as the randomness of the data (uncertainty) at the same time」「A lower Brier loss ... does not necessarily mean a better calibrated model, it could also mean a worse calibrated model with much more discriminatory power」。验收固定四格 `Brier/REL/RES/UNC`，缺分解项不得下「校准更优」结论。
+**独点2 Murphy 分解 BS=REL−RES+UNC**：REL=Σ(n_k/N)(f_k−o_k)² 越小越好（零只表示「报准了基率」不等于好模型）、RES=Σ(n_k/N)(o_k−ō)² 在恒等式中被减去故越大越好（定义在观测频率而非口头概率的分散）、UNC=ō(1−ō) 由数据固定且跨人群不可比；技能分 SS=(RES−REL)/UNC。数值反例：每次报 0.2 者 REL=0/RES=0/BS=0.16/SS=0（完美校准、零技能）；分报 0.05/0.35 两档者 REL=0.0001（大 100 倍）却 BS=0.1345 好 16%。
+**独点3 可靠性图=分箱画预测概率对实际正例频率**：x 轴各箱平均 predict_proba、y 轴箱内正例比例；形状指纹 NB 推 0/1、RF/SVC 呈 S 形；校准器 sigmoid/isotonic 须在**独立留出集**拟合，否则重演 §十泄漏。AUC 只排序，不保证概率等于真实频率。
+**来源与判非**：scikit-learn 1.16 官方 WebFetch200 全文 + 百度百科（Brier 1950/Murphy 1973/严格评分/二分类[0,1]）+ cibo.hk 数值反例/codeboy.site 符号辨析/insightful-data-lab 命名陷阱三份可验算笔记；Wikipedia WebFetch 本地回退禁用如实登记，不冒充 200。全库 `Brier`/`reliability diagram`/`calibration curve`/`Hosmer` WB 侧 0 专节，`calibration` 命中为 ECE/Conformal/豆包自留地异命题。

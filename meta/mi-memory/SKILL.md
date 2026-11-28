@@ -1,7 +1,7 @@
 ---
 name: mi-memory
-description: 长期记忆治理（Memory Intelligence）。该记什么/不该记、用户级MEMORY.md与模块记忆分层、跨会话写入/检索/去重、容量与检索侧权衡、隐私不入记忆、可恢复性、双时态时间戳、按来源删除级联、记忆评测五能力、固化长期规则时使用。是13模块中MI载体；记忆巩固效用评级、生成效应generation effect、Slamecka-Graf、元素交互性、专长反转、distinctiveness；检索即改写（再巩固窗口·可及性≠保真度·分层抗改）；矛盾解决位置（写入侧四操作vs检索侧ADD-only）·遗忘双机制（decay降权vs eviction真删）；前瞻记忆与意图兑现（事件/时间线索·四阶段·外部审计与取消意图）；交互记忆系统TMS（记忆分布在人+外部aid·who-knows-what元目录·turnover破坏目录）；检索诱发遗忘RIF（检索是抑制性选择·Rp+/Rp−/control三态·换程序须双用例回归）；睡眠依赖巩固（SO-spindle-ripple顺序耦合·TMR倒U·NREM/REM分工存争议）；错误记忆与来源监控（DRM关键诱饵·verbatim/gist双trace·高置信≠真实须逐字锚点回归）；定向遗忘两范式分离（accessibility≠availability换线索验真删）；编码特异性（线索效力来自编码时共存语境非语义相似·换线索验真删）；前摄/倒摄干扰（学习竞争vs检索抑制正交·延迟自发恢复推翻即时覆盖·相似倒U）；自我参照效应SRE（自我概念是丰富组织化结构·描述性自参照优于自传式·生存加工辨析·agent迁移标推断）·工作记忆多成分（Baddeley四成分·中央执行是注意控制非存储·选择性干扰证实分离·情景缓冲器绑定多模态接长时记忆）·位置记忆法method of loci（熟悉路线作检索结构·编码/回忆两阶段·意象奇特度·分层修复·认知边界）·蔡加尼克Zeigarnik（2025元分析59项：记忆优势不成立 recall0.99/dz0.15·Ovsiankina恢复冲动67%·Rosenzweig自我卷入反转·写计划即闭合）·闪光灯记忆flashbulb（Brown-Kulik1977·六类接收情境·鲜明自信≠准确·一致性随时间降·wrong-time-slice非巩固·情绪唤醒与复述非特殊机制·agent高置信条目须验来源）
-version: "2.15.0"
+description: 长期记忆治理（Memory Intelligence）。该记什么/不该记、用户级MEMORY.md与模块记忆分层、跨会话写入/检索/去重、容量与检索侧权衡、隐私不入记忆、可恢复性、双时态时间戳、按来源删除级联、记忆评测五能力、固化长期规则时使用。是13模块中MI载体；记忆巩固效用评级、生成效应generation effect、Slamecka-Graf、元素交互性、专长反转、distinctiveness；检索即改写（再巩固窗口·可及性≠保真度·分层抗改）；矛盾解决位置（写入侧四操作vs检索侧ADD-only）·遗忘双机制（decay降权vs eviction真删）；前瞻记忆与意图兑现（事件/时间线索·四阶段·外部审计与取消意图）；交互记忆系统TMS（记忆分布在人+外部aid·who-knows-what元目录·turnover破坏目录）；检索诱发遗忘RIF（检索是抑制性选择·Rp+/Rp−/control三态·换程序须双用例回归）；睡眠依赖巩固（SO-spindle-ripple顺序耦合·TMR倒U·NREM/REM分工存争议）；错误记忆与来源监控（DRM关键诱饵·verbatim/gist双trace·高置信≠真实须逐字锚点回归）；定向遗忘两范式分离（accessibility≠availability换线索验真删）；编码特异性（线索效力来自编码时共存语境非语义相似·换线索验真删）；前摄/倒摄干扰（学习竞争vs检索抑制正交·延迟自发恢复推翻即时覆盖·相似倒U）；自我参照效应SRE（自我概念是丰富组织化结构·描述性自参照优于自传式·生存加工辨析·agent迁移标推断）·工作记忆多成分（Baddeley四成分·中央执行是注意控制非存储·选择性干扰证实分离·情景缓冲器绑定多模态接长时记忆）·位置记忆法method of loci（熟悉路线作检索结构·编码/回忆两阶段·意象奇特度·分层修复·认知边界）·蔡加尼克Zeigarnik（2025元分析59项：记忆优势不成立 recall0.99/dz0.15·Ovsiankina恢复冲动67%·Rosenzweig自我卷入反转·写计划即闭合）·闪光灯记忆flashbulb（Brown-Kulik1977·六类接收情境·鲜明自信≠准确·wrong-time-slice·高置信须验来源）·舌尖现象TOT（语义到位语音断链·首字母音节高于猜测·三理论无定论·专名高发62%）
+version: "2.16.0"
 module: MI
 modules: MI,AI
 ---
@@ -449,3 +449,12 @@ Mem0 官方《Memory eviction and forgetting in AI agents》（Updated 2026-07-3
 **独点2 硬边界一：元素交互性×专长（Chen/Kalyuga/Sweller 2016）**：worked example effect（高指导优）与 generation effect（低指导优）的矛盾由元素交互性消解——高交互材料 worked example 优、低交互材料 generation 优；即时测验新手 worked example 优而知识较多者 generation 优，延迟测验出现三因素交互（专家在低**和**高交互材料上都 generation 优）。两者都更可能在延迟而非即时测验出现。落地：复杂且未掌握的材料先给完整范例，强行生成增 extraneous load 且引入错误。
 **独点3 硬边界二：被试间设计削弱/消失（McDaniel & Einstein 1988）**：between-subjects 部署生成 vs 阅读任务时效应可被削弱或消除；free recall 只在特定 cue-target/written-response 条件显著，recognition 与 cued recall 全条件显著；**intentional learning 指导语下未获显著效应**。agent 推断（rules/08 §五）：长存的判据让 agent 先自写表述再核对原文；验收用线索/识别式提问优于自由回忆；人类词表结论向 agent 记忆写入的迁移是推断非实证。
 **来源与判非**：ScienceDirect Chen et al. 2016 WebFetch200 全文 + McDaniel 1988/Graf 1982 WebSearch 快照 + APA 专刊 2016；Wikipedia 本地回退禁用如实登记。全库 WB 侧 `生成效应` 0 专节（豆包 r806C 一句不计）⇒「增＝加厚现有」0 新建。声明不替代：间隔练习/检索练习/双重编码。
+
+
+## §r824C · 舌尖现象 TOT：语义已到位、语音提取断链（MI · 2026-11-28 实拉，中国大百科全书 + 澎湃 + BBC/文献链，全文见 `references/r824C_舌尖现象TOT.md`）
+
+§r795F 双过程再认、§r796F 测试效应、§r783A 编码特异性、§r802A 语音回路、§r763A TMS 之外，本章补**提取流程内部的阶段分离**。
+**独点1 部分信息高于猜测⇒语义与语音输出是两阶段**：TOT=「觉得自己知道、感觉就在嘴边、可能很快想起来」却暂时取不出（中国大百科逐字）。Brown & McNeill 1966 给罕见词定义诱发 TOT，此时首字母/音节数猜测远超随机、错词多为近义或近音（sextant→sextent/sexton）。⇒ agent「条目存在但生成不出确切专名/ID」应按「语义索引在、表面形式提取断链」分层诊断，不直接判「没记住」。
+**独点2 三理论并存无定论，不可写死单一成因**：部分激活（未达提取阈限、沸点比喻）/ 传递缺陷（Burke 1991 语义充分但语音传递断裂）/ 阻抑（Wood 近邻词竞争），各有实验支持、无一绝对胜出（中国大百科与澎湃均逐字明示）⇒ 工程上取「分层诊断」而非「单因解释」，跨领域类比按 rules/08 §五标推断。
+**独点3 发生硬数据与记录偏差**：TOT 报告中专有名词占 62%、年轻人 0.98 次/周 vs 老年 1.65 次/周、压抑情绪越深越不易缓解（中国大百科/科普中国）；日记自报成功率可>90% 但「更为担心的老年人或许更留心记录...概率会偏高」（BBC 中文）⇒ 专名/ID 条目须强化拼写形式线索与别名，自报率不作精确结论。
+**来源与判非**：中国大百科全书 WebFetch200 全文 + 百度百科科普中国 + 澎湃（三理论）+ BBC 中文（WebFetch 本地回退禁用取快照，如实登记）+ enterscholar 文献链（Brown&McNeill 1966/Burke 1991/Schwartz&Metcalfe 2011）；全库 `舌尖`/`tip-of-the-tongue` WB 侧 0 专节，`phonological` 命中为 r802A 语音回路异命题。
