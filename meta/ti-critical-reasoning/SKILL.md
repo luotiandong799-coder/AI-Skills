@@ -1,7 +1,7 @@
 ---
 name: ti-critical-reasoning
-description: 因果推理与批判性思考（Thinking Intelligence）：区分相关与因果、评估真实贡献、反事实推演、识别 LLM 关联误判因果时调用。基于 Pearl 因果阶梯/do-calculus/SCM/DAG/后门前门调整。；图尔敏论证图式（六要素/隐含 warrant/证成与反驳）；认知接种与预驳斥；因果发现（CPDAG 等价类/PC·GES/LiNGAM 非高斯定向）；面板准实验（DiD 平行趋势只能事前诊断/SCM·SDID 加权反事实）；IV 与 LATE（识别 complier/排除限制不可检验/多工具失效）；RDD（阈值局部效应/带宽与 CCT 偏差修正）；目标试验仿真 TTE（七组件协议先写/设计缺陷比统计更致命/；永生时间偏倚 time-zero 对齐/clone-censor-weight+IPCW）；E-value 未测混杂阈值；G 方法（g-computation 前向模拟/与 IPTW-MSM 对称差异/g-null 悖论/双重稳健）；TWFE 偏误与稳健 DiD（异质效应负权重/CS·SA·stacked）；中介分析（estimand 先行 CDE/NDE/IDE）；倾向得分（estimand 先行/PS 非结局模型）；阴性对照 NCO/NCE 偏倚探针；贝叶斯因子 BF₁₀/BF₀₁（似然比更新赔率/可量化支持零假设/Jeffreys 与 Kass-Raftery 标度/BIC≈-2lnBF）；孟德尔随机化 MR（遗传变异当工具变量模拟自然 RCT/三假设相关性 F>10·独立性 G⊥U·排他性 α=0/水平多效性双向错误/IVW·MR-Egger 截距·Weighted median 敏感性分析/群体平均效应边界）。
-version: 2.11.0
+description: 因果推理与批判性思考（Thinking Intelligence）：区分相关与因果、评估真实贡献、反事实推演、识别 LLM 关联误判因果时调用。基于 Pearl 因果阶梯/do-calculus/SCM/DAG/后门前门调整。；图尔敏论证图式（六要素/隐含 warrant/证成与反驳）；认知接种与预驳斥；因果发现（CPDAG 等价类/PC·GES/LiNGAM 非高斯定向）；面板准实验（DiD 平行趋势只能事前诊断/SCM·SDID 加权反事实）；IV 与 LATE（识别 complier/排除限制不可检验/多工具失效）；RDD（阈值局部效应/带宽与 CCT 偏差修正）；目标试验仿真 TTE（七组件协议先写/设计缺陷比统计更致命/；永生时间偏倚 time-zero 对齐/clone-censor-weight+IPCW）；E-value 未测混杂阈值；G 方法（g-computation 前向模拟/与 IPTW-MSM 对称差异/g-null 悖论/双重稳健）；TWFE 偏误与稳健 DiD（异质效应负权重/CS·SA·stacked）；中介分析（estimand 先行 CDE/NDE/IDE）；倾向得分（estimand 先行/PS 非结局模型）；阴性对照 NCO/NCE 偏倚探针；贝叶斯因子 BF₁₀/BF₀₁（似然比更新赔率/可量化支持零假设/Jeffreys 与 Kass-Raftery 标度/BIC≈-2lnBF）；孟德尔随机化 MR（遗传变异当工具变量模拟自然 RCT/三假设相关性 F>10·独立性 G⊥U·排他性 α=0/水平多效性双向错误/IVW·MR-Egger 截距·Weighted median 敏感性分析/群体平均效应边界）；证伪主义（可证伪划界/证实与证伪逻辑不对称/单个反例即证伪而正面证据只是 corroboration 非 verified/冒险预测 risky prediction 与信息内容·预测力·可检验性成正比/Duhem-Quine 整体论无孤立检验与无 crucial experiment·失败检验只判一组里至少一处错·Neptune 成功 Vulcan 失败同一策略两结果/辅助假说调整正当但唯一动机为逃避证伪才 ad hoc/Popper 晚期收缩争议）。
+version: 2.12.0
 module: TI
 modules: TI,EI
 ---
@@ -491,3 +491,9 @@ Barrios 三条 takeaway 逐字：①「The bias is arithmetic」——TWFE 是�
 - **36.2 水平多效性造双向错误**：既造虚假非因果关联（假阳性）也抵消真效应致假阴性（咖啡-吸烟例）；只防前者会漏「MR 无显著⇒无因果」误读。多方法分工非二选一：IVW 效能最高但依赖工具全有效或平衡多效、MR-Egger 诊断方向性多效但依赖 InSIDE 且效能低、Weighted median 在≥50% 工具有效时稳健；报告须主估计+≥2 敏感性分析+Cochran Q 异质性+Egger 截距。
 - **36.3 边界**：两样本 MR 须 harmonize 效应等位基因、样本重叠会偏；群体平均因果效应不是个体确定性命运，MR 只是「一条证据」非唯一/决定性证据。与 r797A 阴性对照（NCO/NCE 偏倚探针）正交。
 - 来源与诚信（r813A · 2026-11-27）：玻尔科学百科预防医学页 WebFetch200 逐字（定义/π≠0·G⊥U·α=0/群体平均边界）+ 医咖会梳理 EHJ 综述 WebFetch200 逐字（三假设/水平多效双后果）+ pdrohde 英文教程 WebFetch200 逐字（IVW/MR-Egger/Weighted median 方法比较表/Cochran Q）；Wikipedia fetch failed 未采纳、玻尔两分册按来源族折叠。逐字全文与判非见下沉文件。全库 0 专节、豆包自留地 0 落地。
+## 三十七、证伪主义与杜恒-奎因整体论（TI · r818A 独立实拉 2026-11-28，2 独立域一手，3 独点；全文下沉 `references/r818A_证伪主义与杜恒奎因.md`）
+> 与 §十一 IBE / §十六 认知接种 / §十四 论证图式分工：本章管「一个主张能否被经验推翻、反证来时该改哪一层」，不替它们选最佳解释或抗说服。
+- **37.1 证实/证伪不对称，corroboration ≠ verified**：普遍命题不可由经验证真、单个真反例即逻辑证伪（「an exception, far from 'proving' a rule, conclusively refutes it」）；正面证据只有来自「本可能为假」的冒险预测（risky prediction）才算数——信息内容/预测力/可检验性成正比、与概率成反比，高概率同义反复不值钱。四步：内部一致→公理化排重言→比既有理论的经验内容与预测力→经验检验；通过只是 corroborated 且「不弃旧理论直到有更好替代」。方法层单个反例还需排除观察偏差/测量误差。
+- **37.2 Duhem-Quine 整体论：无孤立检验、无 crucial experiment**：假说只在与其他假说和背景信念合取时才有经验后果，失败检验只判「这组里至少一处错」却不指出是哪一处（Duhem 1914/1954,187）；holist（失败后改哪个信念不确定）与 contrastive（同一证据支持多理论）两型正交。经典对照：为保 Newton 力学质疑「太阳系只有七行星」→1846 发现海王星（策略成功），同法假设「Vulcan」解释水星近日点→失败直到广义相对论——同一保护策略没有必然对错的改法。Quine 信念网只在边缘触经验、修改服从 minimal mutilation 与简约/熟悉/范围/多产等实用德性。
+- **37.3 ad hoc 判别在动机、Popper 晚期收缩须如实标**：改辅助假说本身是正当科学实践（晚期明确承认），只有「唯一理由是为逃避证伪」才算 ad hoc⇒「马克思主义被改造以避开反驳」不等于天然伪科学。SEP §12 记录该收缩使批评者认为证伪主义「no better than verificationism」——当划界判据用须标争议，禁写成已定论。禁「已证伪所以错」/「经检验所以证实」。
+- 来源与诚信（r818A · 2026-11-28）：SEP《Karl Popper》WebFetch200 全文逐字（§2/§3/§4/§5/§6/§12）+ SEP《Underdetermination of Scientific Theory》WebFetch200 全文逐字（§1/§2.1/§3.1）；两篇同站不同条目按「SEP 哲学百科族」折叠一族；Wikipedia Falsifiability WebFetch 本地回退禁用未采纳如实登记。全库 0 专节、豆包自留地 0 落地。

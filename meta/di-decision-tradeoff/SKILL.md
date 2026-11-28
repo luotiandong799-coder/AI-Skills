@@ -3,7 +3,7 @@ name: di-decision-tradeoff
 description: 决策权衡分析（Decision Intelligence）。当用户面临 ≥2 个可行方案、需要在成本/收益/风险/可行性之间权衡、或要求"帮我选/对比/排优先级"时调用。提供加权决策矩阵、Pros&Cons 加权、Pre-Mortem、机会成本、ICE、RICE、Eisenhower、单向/双向门等框架，以及期望效用(EU)/信息价值(EVPI) 量化决策与"该不该再调研"停手线，输出结构化方案对比与推荐，绝不替用户做需授权的重大决定。、偏好反转、程序不变性、尺度兼容、诱导方式、选择与定价、权变加权、AHP一致性检验、CR/CI/RI、判断矩阵、逻辑传递性、阈值分档、标度粒度、层次总排序、影响图、信息弧、决策节点、价值节点、决策基三要素、前景理论、参照点依赖、损失厌恶、框架效应、确定性效应、反射效应、禀赋效应、编辑与评价两阶段、全局敏感性分析、Morris筛选、Sobol指数、一阶效应、总效应、交互效应、因子排序、因子固定、实物期权、real options、管理灵活性、延迟扩张放弃转换期权、ROV、不可逆投资、参考类预测、reference class forecasting、外部视角、inside view、规划谬误、planning fallacy、乐观偏差、optimism bias、reference class tennis、成本超支、uplift、Flyvbjerg、博弈论决策、game theory、占优策略、最佳回应、纳什均衡、混合策略、逆向归纳、子博弈精炼、不可信威胁、可信承诺、连锁店悖论、策略互动、效用函数 elicitation、标准赌局、standard gamble、确定等价、certainty equivalent、风险容忍常数、Arrow-Pratt、凹性风险规避、vNM公理、多属性效用、加性独立性、概率轮、权衡法、ELECTRE、PROMETHEE、outranking、非补偿性排序、concordance、discordance、净流、不可比、veto阈值、心理账户、mental accounting、交易效用、获得效用、银边原则、多收益分离、多损失合并、fungibility可替代性、沉没成本剧院票、随机占优、stochastic dominance、一阶FSD、二阶SSD、偏序、CDF积分、Tail尾部期望、凹效用风险厌恶
 module: DI
 modules: DI,TI
-version: "1.26.0"
+version: "1.27.0"
 ---
 
 # DI · 决策权衡分析（Decision Intelligence）
@@ -454,12 +454,8 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 > 四域（Clear/Complicated/Complex/Chaotic）+ 第五域 Confusion + 四条动作链（sense-categorize-respond / sense-analyze-respond / probe-sense-respond / act-sense-respond）+ 域迁移条件 + Cynefin.io 与 OpenLearn 一手逐字与判非，全文见 `references/r796B_Cynefin.md`（23 行）。使用本方法时以该 references 为准，本节仅留路由，不内联正文。
 
 > 心理账户三独点（交易效用/fungibility违反·四MAP编码与剧院票·账户预算与沉没成本处置效应）全文见 `references/r799A_心理账户.md`（18 行）。本节仅留路由，以该 references 为准。
-## 三十、随机占优：不指定效用函数也能排除劣选项（r803A 独立实拉 2026-11-23，≥4 独立域一手交叉，3 独点）
-
-**独点1** 阶数是「对效用函数假设的松紧」阶梯，低阶蕴含高阶不可逆：零阶 statewise dominance 要求每个自然状态都不差；一阶 FSD 要求 CDF 处处不更高 `F_X(x)≤F_Y(x) ∀x`（至少一个严格）、等价「所有非递减效用 u∈U₁ 下 E[u(X)]≥E[u(Y)]」，只要相信越多越好就认可、风险态度不进入；二阶 SSD 要求 CDF 积分处处不更高 `∫_{−∞}^{α}F_X(t)dt≤∫_{−∞}^{α}F_Y(t)dt ∀α`、等价「所有非递减且凹（风险厌恶）u∈U₂ 下 X 优于 Y」。`FSD⊆SSD⊆TSD`，证明了一阶自动生成高阶、反之不成立。**判据**：报「X 优于 Y」必须写清几阶，CDF 相交即 FSD 不成立别硬套。§十九前景理论管参照点已知时值函数怎么变形，本章管连效用函数都无法指定时凭分布排除劣选项。
-**独点2** 这是偏序不是全序，也正是它优于均值-方差处：随机占优「does not give a total order, but rather only a partial order」，many pairs 互不占优是合法输出非分析失败。相对 MV（要求收益正态+二次效用、非正态会偏），SSD 尾部等价 `Tail_β(X)≥Tail_β(Y) ∀β`（最差 β 比例条件期望）把「Y 尾更肥=风险更大」说清。正态下 SSD 与 MV 一致是特例非通则。**判据**：非正态或只看均值/方差会误导时改用 SSD；识别「所有 SSD 有效分散策略」的复杂度如实登记（均值-基尼只是必要非充分）。
-**独点3** 与前景理论有正式冲突边界，别跨框架搬运：Schmidt–Zank 证 SSD 对 PT 要求 gain 凹、loss 也凹、gain 权重整体凸、loss 权重整体凹，实证却是 gain 凹、loss 凸、权重 inverse-S——SSD 结论属 EU/RDU 框架，不能直接外推到参照点依赖的描述场景（Manchester EDP-1123 逐字）。与 §r768C minimax regret（无概率深不确定）分工：随机占优要已知 CDF。不防什么：不产出唯一全序、不替代效用 elicitation（§r788C）、三阶 TSD 的「绝对风险厌恶递减」附加假设本条不展开。
-- **判重：`随机占优`/`stochastic dominance`/`FSD`/`SSD` 全库 SKILL.md 与 module-memory 0 专节；§十九前景理论命中但异命题（有参照点值函数 vs 无效用函数偏序），分工见独点 3。豆包自留地 WB 0 落地。按 rules/07 判「增＝加厚现有」。** 来源与诚信：https://en.wikipedia.org/wiki/Stochastic_dominance （WebFetch200全文）· https://www.mdpi.com/2227-7390/11/1/50/xml （空Title页，正文取WebSearch逐字未冒充全文）· https://hummedia.manchester.ac.uk/schools/soss/economics/discussionpapers/EDP-1123.pdf （WebFetch200全文）· 百度百科随机优势（WebFetch200）· 聚宽（WebFetch200）；逐字全文与判非见 `references/r803A_随机占优.md`。
+## 三十、随机占优：不指定效用函数也能排除劣选项（r803A 独立实拉 2026-11-23，≥4 独立域一手交叉，3 独点；正文下沉 `references/r803A_随机占优.md`）
+> 3 独点路由：① 阶数是「效用假设松紧」阶梯 `FSD⊆SSD⊆TSD`、低阶蕴含高阶不可逆、报优须写清几阶；② 偏序不是全序、many pairs 互不占优合法、SSD 尾部等价与均值-方差的边界；③ 与前景理论有正式冲突边界不可跨框架搬运、要已知 CDF、不替代效用 elicitation。五来源与判非全段见下沉文件。
 
 ## 三十一、OODA 决策循环：靠更快完成观察-取向-决策-行动取胜（DI · r805B · 正文下沉 `references/r805B_OODA.md`）
 > 3 独点路由：① 四阶段持续循环、Orient 核心含隐性引导控制；② 优势来自相对速度（进入对方决策周期）、late commitment vs PDCA early commitment；③ 批评定义宽泛缺唯一性、承认-启动决策 RPD 是其战术形态。五独立域来源与判非全段见下沉文件。与 §r796B Cynefin / §27 hysteresis / §一 RDM 异命题。
@@ -493,3 +489,9 @@ Grafium 官方逐字诊断例：「**A decision rich in alternatives but built o
 - **33.2 四象限与负 ICER 双义**：东南（ΔE>0,ΔC<0）绝对优势直接采纳、西北（ΔE<0,ΔC>0）绝对劣势直接排除，二者 ICER 均为负 ⇒ 禁只报「ICER 为负」不报 ΔC/ΔE 符号；只有东北（更贵更有效）/西南（更便宜更差）才用 ICER 比较。「ICER=每多获得一个 QALY 多花的钱」。
 - **33.3 阈值是机会成本 + 效率前沿逐级爬梯**：λ 应取预算约束下被挤出服务的边际健康产出（非主观支付意愿），报值须标国家/年份/支付方视角（0.5–1.5×人均GDP/QALY、NICE £20,000/QALY）；多方案先剔劣势与扩展劣势（某策略相邻 ICER 高于后更有效者的增量 ICER 即被扩展优势），按效果升序排效率前沿、只比相邻两级；NMB=λ·ΔE−ΔC 与 ICER≤λ 等价且在概率敏感性分析中更稳健，须标研究视角与不确定性。
 - 来源与诚信（r813B · 2026-11-27）：玻尔科学百科转化医学页 WebFetch200 全文逐字（QALY/四象限/λ=机会成本/效率前沿/NMB）+ 玻尔药学本科与 ICER 词条 WebSearch 逐字 + 百度百科 WebSearch 逐字（0.5–1.5×GDP/NICE £20k 实证）+ Astellas 日本官方术语页 WebSearch 逐字（EQ-5D-5L）。诚信降级：PMC5668200 号错配（实为 PKC 癌症综述）整篇弃用未采信。逐字全文见下沉文件。全库 DI 本体 0 命中、豆包自留地 0 落地。
+## 三十四、DEA 数据包络分析：多投入多产出下评相对效率、不设权重不设生产函数（DI · r818B 独立实拉 2026-11-28，≥2 独立域一手交叉，3 独点；全文下沉 `references/r818B_DEA数据包络分析.md`）
+> 与 §六 MCDA（先定权重再排序）、§r813B 成本效果分析（ICER 单产出比阈值）分工：本章管**多投入多产出、权重与生产函数都由数据内生**的相对效率，靠每个 DMU 与前沿比，三者不同命题。
+- **34.1 相对效率而非绝对产出**：DEA（Charnes/Cooper/Rhodes 1978）用线性规划建生产前沿、把每个决策单元 DMU 的投入产出投影到前沿，偏离程度=效率值 0–1；效率 1 者构成前沿标杆。「不需要预设生产函数形式，完全由数据驱动」——产出大≠效率高、换一批 DMU 或换指标即换标杆；DMU 须同质（同一组投入产出指标）否则前沿无意义。
+- **34.2 CCR(CRS) / BCC(VRS) 与三效率分解**：CCR 假设规模报酬不变、分式规划 `max Σu_r y_r/Σv_i x_i` 约束各 DMU≤1（可线性化）；BCC（Banker/Charnes/Cooper 1984）加凸性约束 `Σλ=1` 容许规模报酬可变。技术效率 TE=CCR 值、纯技术效率 PTE=BCC 值、规模效率 SE=TE/PTE；规模报酬系数 Σλ<1 递增/>1 递减/>≈1 恒定判扩缩方向，纯技术效率低=技术利用不足、规模效率低=规模不优。投入导向 minθ（控成本）、产出导向 maxφ（产能固定）。
+- **34.3 有效性双条件与局限**：效率=1 **且所有松弛变量为 0** 才 Pareto-Koopmans 有效（Charnes 1978 p.433）——θ=1 但 slack 非零只是径向有效、会高估；输入 slack=冗余量、输出 slack=不足量给改进方向。数据须正数、DMU 数≥3×(投入+产出指标数) 经验法则（否则前沿过松、大量判有效），有效单元>50% 用超效率模型；给相对排名不出置信区间、对异常值敏感，禁称「绝对效率已证明」。
+- 来源与诚信（r818B · 2026-11-28）：SuperR Online《DEA数据包络法》WebFetch200 全文逐字（7 步/银行案例/Q1–Q6/DMU≥3×法则）+ Elsevier S0925527398002527 与 S037722172030792X WebSearch 逐字（Debreu–Farrell 源起/CCR 分式规划/CRS vs VRS/有效性双条件）+ 上海财大期刊 PDF WebSearch 逐字（BCC 式/SE=TE/PTE）；Wikipedia DEA WebFetch 本地回退禁用未采纳如实登记。全库 0 专节、豆包自留地 0 落地。

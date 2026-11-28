@@ -4,7 +4,8 @@ description: 执行可靠性工程（Execution Intelligence · Reliability）。
 module: EI
 modules: EI,VI
 ；Amdahl 定律与 Gustafson 定律（固定问题强扩展串行比例设加速上限 S=1/((1-P)+P/N)·串行 10% 封顶 10×·增加核数不改 P 收效递减/Gustafson 弱扩展问题随核数增长 S=N+(1−P)(N−1)·两定律 P 含义不同不可混用/优化优先扩大 P 而非堆核）
-version: 1.17.0
+触发：灾难恢复目标怎么定、RPO RTO 区别、能丢多少数据、多久能恢复、备份策略选型、恢复目标怎么验收。
+version: 1.18.0
 ---
 
 # EI · 执行可靠性（Reliability Engineering）
@@ -387,3 +388,9 @@ AWS Builders' Library 原文算例：五层调用栈、每层各重试 3 次，�
 - **27.2 singleflight 语义**：只合并「正在飞行中」的调用，非缓存非限流、不设 TTL，进程内有效、高基数 key 占内存；shared=true 表示结果被多调用方共享、**不是缓存命中**（可作热点/失效/下游变慢告警），shared=false 那次才写缓存/打点；错误也被共享，失败分支须 `Forget(key)` 让后续立即重试；fn 只放幂等纯读，扣库存/发短信副作用被合并会改语义。
 - **27.3 陈旧写竞态与租约**：reader 读旧值→writer 更新并删 key→reader 迟写旧值永久污染；singleflight 只解决 stampede 不挡 stale set。可选机制各有代价：租约（delete 使 lease 失效，迟到 set 被拒，memcache 每 key 每 10s 至多一 token）/版本化 CAS（需 DB 行版本号）/stale-while-revalidate（读者不等待但有界陈旧）/XFetch（只降同步过期概率，不保证永久驻留）；分布式锁须带 TTL + 失败回退（serve stale 或 fail fast），否则持锁者死⇒等待者挂起。
 - 来源与诚信（r813C · 2026-11-27）：System Design In Depth WebFetch200 全文逐字（算例/七行技术比较表/memcache lease/stale-set race）+ gerryyang.com WebFetch200 逐字（Do/DoChan/Forget/shared/错误共享/禁用副作用）+ 17golang + StackOverflow 官方包注释 + vikulin-va.ru 俄文 WebSearch 逐字交叉；Wikipedia cache stampede fetch failed 未采纳。逐字全文见下沉文件。全库 0 专节、豆包自留地 0 落地。
+## 二十八、RPO / RTO / MTTR：把「丢多少数据、多久恢复」写成可验收目标（EI · r818C 独立实拉 2026-11-28，≥2 独立域一手，3 独点；全文下沉 `references/r818C_RPO_RTO灾难恢复目标.md`）
+> 与 §10 请求级超时取值 / §12 deadline 传播 / §20 错误预算 / §26 负载丢弃分工：本章管**灾难级中断后的恢复目标与策略选择**，量级与决策对象不同。
+- **28.1 三指标正交、目标 vs 事实**：RTO=中断后恢复系统的最长允许时间（按「多久开始不可接受损失」倒推的目标）；RPO=可容忍最大数据丢失量、以时间窗表示（不是备份频率本身）；MTTR=实测平均恢复时间「a factual time based on data, rather than a desired estimate or goal」⇒ MTTR≫RTO 即改进空间。RPO 越低备份/复制压力越大「a balancing act between backup frequency and resource drain」，零 RPO 理想但成本陡增；按系统关键度分层 Tier（关键系统 RPO 近零、归档系统可数天；Tier1 最短 RTO、Tier3 可 24h）。
+- **28.2 RTO 四步计算**：① BIA 业务影响分析量化停机损失（营收/生产力/声誉/监管罚款逐项赋值求和）；② 定最大可容忍停机、按关键度分多档 RTO Tier；③ 评估现有恢复能力基线（备份/业务连续性计划）验证目标是否现实；④ 设计 failover/冗余/持续监控/配置管理架构降 RTO。直接拍数字不做 BIA 与基线=目标不可验收。
+- **28.3 四档恢复策略按 RTO 阶梯，资源成本递增**：backup & restore（RTO 小时~天，最常见，低 RPO 意味大量增量备份）→ pilot light（小时，最小规模核心常驻随时扩容）→ warm standby（分钟~小时，近克隆定期同步、资源密集仅关键系统）→ multi-site active-active（秒~分钟，全量并行热备、极端资源密集只用于几分钟都不能停的系统）。3-2-1 备份=≥3 副本/≥2 种介质/≥1 份异地，另留完全离线副本防勒索；DR 计划每年至少测 1–2 次并记录修复缺口——不演练的 RTO 是未验证目标。
+- 来源与诚信（r818C · 2026-11-28）：AWS 官方《What Is RTO?》WebFetch200 全文逐字（三指标差异/四步/四档策略）+ AWS《什么是数据恢复?》WebFetch200 全文逐字（RPO 定义/3-2-1/离线副本）+ AWS《什么是灾难恢复?》WebSearch 逐字（每年测 1–2 次）；三页同属 AWS 官方按来源族折叠；Azure DR 页 WebFetch 404 未采纳如实登记；IBM 词条仅作跨厂商口径交叉未取全文。全库 0 专节、豆包自留地 0 落地。
